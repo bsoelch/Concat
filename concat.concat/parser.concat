@@ -1008,6 +1008,96 @@ proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =
   =:: itrEnd
   itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
 end
+## if current procedure is a valid main
+proc( LabelId : procName Type : procType FilePosition : pos ParserState ptr.mut : state -> ) =>: checkMain
+  state [] .progContext =:: progContext
+  progContext [] .errors@ =:: errors
+  progContext [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  idContext [] .constContext@ =:: constContext
+  typeContext .labelContext@ =:: labelContext
+  MAIN_NAME string.wrap procName labelContext id.labelNameEq ! if
+    return ## no main procedure -> skip checks
+  end
+  procType typeContext types.isProcedure ! if
+    "main has to be a procedure got: " sb.wrap
+      procType typeContext sb.appendType
+    pos errors appendError
+    return
+  end
+  procName labelContext id.getLabelFile 0:FileId != and
+      procName labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
+    "main procedure is not visible from root file" sb.wrap
+    pos errors appendWarning
+    return
+  end
+  procName labelContext id.getLabelNamespace 0:NamespaceId != if
+    "main procedure is not in global namespace" sb.wrap
+    pos errors appendWarning
+    return
+  end
+  procType typeContext types.getProcIn ! assert "main procIn" =:: inTypes
+  procType typeContext types.getProcOut ! assert "main procOut" =:: outTypes
+  inTypes typeContext types.compositeEltCount 0 > if
+    "the main procedure should not take arguments" sb.wrap
+     pos errors appendError
+  end
+  outTypes typeContext types.compositeEltCount 0 > if
+    "the main procedure should not return a value" sb.wrap
+     pos errors appendWarning
+  end
+end
+## check if composite has any static elements, types are static by default
+proc( Type : composite TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
+  typeContext [] .labelContext@ =:: labelContext
+  composite typeContext types.compositeEltCount =:: eltCount
+  eltCount for =:: i
+    composite i typeContext types.compositeGetLabel
+        labelContext id.labelFlags id.FLAG_STATIC & ? if
+      true return
+    end
+    composite i typeContext types.compositeGetElement
+        typeContext types.unwrapNamed
+        types.primitive.TYPE types.typeEquals if
+      true return
+    end
+  end
+  false return
+end
+proc(
+  LabelId : procName
+  Type : procType
+  FileId : fileId
+  i64 : codeStart
+  ProgramContext ptr.mut : progContext
+-> ProcId ) =>: newProcData
+  progContext [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
+  procType typeContext types.getProcIn ..drop =:: procIn
+  procType typeContext types.getProcOut ..drop =:: procOut
+  procIn typeContext hasStaticElement =:: hasStaticArg
+  procOut typeContext hasStaticElement
+    procName labelContext id.labelFlags id.FLAG_STATIC & ? |
+  =:: isStatic
+  progContext [] .procedures
+    $ .length ProcId cast =:: procId
+    ## ProcedureInfo
+      fileId
+      procType
+      procName
+      ## CodeProcData
+        0 ProcImplementation list.create
+        0 VariableInfo list.create
+        codeStart
+        -1
+      CodeProcData new ProcImplType .code
+      hasStaticArg
+      isStatic
+    ProcedureInfo new list.append
+  progContext [] .procedures =
+  procId return
+end
 
 proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr.mut : state -> string ) =>: parseOperation
   state [] .progContext =:: progContext
@@ -1023,408 +1113,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     ..dup .length 0 == if ..drop
       return ## skip empty tokens
     end
-    ..dup 0 string.charAt '#' == if ## compiler command
-      1 string.tail
-      ..dup ":" string.wrap string.startsWith if 1 string.tail
-        ..drop
-        ## TODO annotation for (partially) disabiling constant folding in current procedure
-        return ## ignore unknown annotations
-      end
-      64 sb.create
-        "unsupported compiler command \"" sb.appendS
-        ..swap                         sb.appendStr
-        '\"'                          sb.appendC
-      fileState [] .wordStart errors appendError
-      return
-    else ..dup ":" string.wrap string.eq
-       ..over "=:" string.wrap string.eq |
-       ..over "=>:" string.wrap string.eq | _if =:: opName
-      opName ":" string.wrap string.eq ! =:: isInit
-      opName "=>:" string.wrap string.eq =:: isProc
-      false =:: mut: localDeclaration
-      state [] .constantBlocks .length 0 == state [] .currentProc optional.isEmpty & if
-        state tryInterpretGlobal ## try to interpret global operations before each declaration
-        fileState state popTypeConstant ..drop
-      else
-        ## correct type will be resolved in type-check phase
-        progContext newAutoType
-        true localDeclaration =
-      end =:: mut: valType
-      isProc localDeclaration & if
-        "procedures can only be declared at global level" sb.wrap
-        fileState [] .wordStart errors appendError
-        return
-      end
-      false =:: mut: allowImmutableDeclaration
-      false =:: mut: forceImmutable
-      state [] .constantBlocks .length 0 > if
-        IdentifierType .LABEL
-        true allowImmutableDeclaration =
-      else localDeclaration _if
-        IdentifierType .LOCAL_VAR
-      else isProc isInit ! | and valType typeContext types.isProcedure _if
-        IdentifierType .PROCEDURE
-        true forceImmutable =
-        true allowImmutableDeclaration =
-      else valType types.primitive.TYPE types.typeEquals _if
-        IdentifierType .TYPE
-        true forceImmutable =
-        true allowImmutableDeclaration =
-      else ## for comparability with old parser
-        IdentifierType .GLOBAL_VAR
-        true allowImmutableDeclaration =
-      end =:: idType
-      isProc idType .PROCEDURE ?? ! & if
-        "unexpected type for \"" sb.wrap
-          opName sb.appendStr
-          "\" expected procedure got: " sb.appendS
-          valType typeContext sb.appendType
-        fileState [] .wordStart errors appendError
-        return
-      end
-      fileState state nextWord fileState state
-        ## make pre-declared variables mutable by default
-        isInit allowImmutableDeclaration | if id.FLAG_NONE else id.FLAG_MUTABLE end
-      readLabelAddFlags =:: mut: label
-      forceImmutable and label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
-        "identifiers of type " sb.wrap
-          idType sb.appendIdType
-         " cannot be mutable" sb.appendS
-        fileState [] .wordStart errors appendError
-      end
-      label labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
-      label
-        valType
-        idType
-        -1 ## id
-        ConstValue .none
-        isInit
-        fileState [] .wordStart
-        state [] .currentFile
-        idContext
-        progContext [] .errors @
-      id.declareIdentifier if ..drop.2
-        return
-      end =:: idData label =
-      idType .TYPE ?? if
-        isInit if
-          fileState state popTypeConstant ! assert "pop type"
-          label
-          typeContext types.initializeNamedType if
-            "re-initialization of named type" sb.wrap
-            fileState [] .wordStart errors appendError
-          end
-        else
-          label
-          typeContext types.declareNamedType
-        end
-        fileState [] .wordStart newTypeConst .val
-      else idType .PROCEDURE ?? _if
-        progContext [] .procedures .length ProcId cast ConstValue .procedure
-      else isInit ! _if
-        ConstValue .none
-      else state hasConst _if
-        state peekConst .data =:: info .data =:: value
-          info [] .valueType valType false typeContext types.canCast ! if
-            "cannot cast " sb.wrap
-              info [] .valueType typeContext sb.appendType
-              " to " sb.appendS
-              valType typeContext sb.appendType
-            fileState [] .wordStart errors appendError
-          end
-        value []
-      else
-        ConstValue .none
-      end
-        label idContext id.getIdentifier
-        ! assert "label is identifier"
-      [] .constValue =
-      localDeclaration ! and
-          MAIN_NAME string.wrap label labelContext id.labelNameEq if ## main
-        idType .PROCEDURE ?? ! if
-          "main has to be a procedure got: " sb.wrap
-            idData @ id.asIdInfo labelContext sb.appendIdInfo
-          fileState [] .wordStart errors appendError
-        end
-        true =:: mut: validMain
-        label labelContext id.getLabelFile 0:FileId != and
-            idData .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
-          "main procedure is not visible from root file" sb.wrap
-          fileState [] .wordStart errors appendWarning
-          false validMain =
-        end
-        label labelContext id.getLabelNamespace 0:NamespaceId != if
-          "main procedure not in global namespace" sb.wrap
-          fileState [] .wordStart errors appendWarning
-          false validMain =
-        end
-        validMain if
-          idData .valueType typeContext types.getProcIn ..swap =:: inTypes
-          idData .valueType typeContext types.getProcOut ..swap =:: outTypes
-          #+no inTypes+# #+no outTypes+# | if
-            "could not resolve signature of main" sb.wrap
-            fileState [] .wordStart errors appendError
-          end
-          inTypes typeContext types.compositeEltCount 0 > if
-            "main procedure should not take arguments" sb.wrap
-             fileState [] .wordStart errors appendError
-          end
-          outTypes typeContext types.compositeEltCount 0 > if
-            "main procedure should not return a value" sb.wrap
-             fileState [] .wordStart errors appendWarning
-          end
-        end
-      end
-      idData .idType .TYPE ?? if
-        return
-      end
-      idData .idType .PROCEDURE ?? if
-        state [] .currentProc optional.hasData if
-          "procedures cannot be nested" sb.wrap fileState [] .wordStart errors appendError
-        end
-        valType typeContext types.getProcIn ..drop =:: procIn
-        procIn typeContext types.compositeEltCount =:: inCount
-        false =:: mut: hasStaticArg
-        0:i64 while ..dup inCount < do =:: i
-          procIn i typeContext types.compositeGetLabel
-              labelContext id.labelFlags id.FLAG_STATIC & ? if
-            true hasStaticArg =
-            i break
-          end
-          i 1 +
-        end ..drop
-        label labelContext id.labelFlags id.FLAG_STATIC & ? =:: mut: isStatic
-        valType typeContext types.getProcOut ..drop =:: procOut
-        procOut typeContext types.compositeEltCount =:: outCount
-        0:i64 while ..dup outCount < do =:: i
-          procOut i typeContext types.compositeGetLabel
-              labelContext id.labelFlags id.FLAG_STATIC & ? if
-            true isStatic =
-            i break
-          end
-          procOut i typeContext types.compositeGetElement
-              typeContext types.unwrapNamed
-              types.primitive.TYPE types.typeEquals if
-            true isStatic =
-            i break
-          end
-          i 1 +
-        end ..drop
-        progContext [] .procedures
-          ..dup .length ProcId cast =:: procId
-          isInit if
-            progContext [] .tmpOps .length
-          else -1:i64 end =:: procStart
-          ## ProcedureInfo
-            state [] .currentFile
-            valType
-            label
-            ## CodeProcData
-              0 ProcImplementation list.create
-              0 VariableInfo list.create
-              procStart
-              -1
-            CodeProcData new ProcImplType .code
-            hasStaticArg
-            isStatic
-          ProcedureInfo new list.append
-        progContext [] .procedures =
-        isInit if
-          state hasConst if
-            state popConst =:: info ..drop
-            "unexpected constant at global level" sb.wrap info .pushedAt errors appendError
-          end
-          valType experimental state openProcBlock
-          procId optional.wrap state [] .currentProc =
-          idData .valueType typeContext types.getProcIn if
-            "could not resolve procedure signature" sb.wrap fileState [] .wordStart errors appendError
-          end =:: inType
-          inType typeContext types.compositeEltCount =:: count
-          0:i64 while ..dup count < do =:: index
-            inType index typeContext types.compositeGetLabel =:: argLabel
-            inType index typeContext types.compositeGetElement =:: argType
-            argLabel i32 cast =:: argId
-              argLabel labelContext id.isLabelEmpty ! and
-                  argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! if
-                ## declareIdentifier
-                  argLabel
-                  argType
-                  IdentifierType .ARGUMENT
-                  index i32 cast
-                  ConstValue .none
-                  true
-                  fileState [] .wordStart
-                  state [] .currentFile
-                  idContext
-                  progContext [] .errors @
-                id.declareIdentifier if ..drop.2
-                  return
-                end ..drop.2
-              end
-            index 1 +
-          end ..drop
-        end
-      end
-      isInit ! localDeclaration ! & if
-        return ## no operation for global pre-declaration
-      end
-      idData .valueType idData @ id.asIdInfo fileState [] .wordStart isInit if
-        opInitializeId
-      else
-        opDeclareId
-      end
-      localDeclaration if
-        state appendOp
-        return
-      end
-      Operation ptr optional.empty state resetGlobalInterpreter
-      state appendOp
-      state skipGlobalInterpreter
-      return
-    else ..dup "=::" string.wrap string.eq _if ..drop
-      state tryInterpretGlobal
-      fileState state nextWord fileState state readLabel =:: mut: labelId
-      state hasConst if
-        state peekConst =:: info =:: value
-        info .data [] .valueType
-        $ types.isLiteral if
-          typeContext types.literalToType
-        end
-        value .data []
-      else
-        progContext newAutoType
-        ConstValue .none
-      end =:: constValue =:: constType
-      constType typeContext types.isProcedure if
-        "unexpected procedure" sb.wrap fileState [] .wordStart errors appendError
-        return
-      else constType types.primitive.TYPE types.typeEquals _if
-        IdentifierType .TYPE
-      else state [] .currentProc optional.isEmpty _if
-        IdentifierType .GLOBAL_VAR
-      else
-        IdentifierType .LOCAL_VAR
-      end =:: idType
-      ## declareIdentifier
-        labelId
-        constType
-        idType
-        -1 ## id
-        ConstValue .none
-        true
-        fileState [] .wordStart
-        state [] .currentFile
-        idContext
-        progContext [] .errors @
-      id.declareIdentifier if ..drop.2
-        return
-      end =:: idData labelId =
-      ## create constant value after creating declaration
-      idType .TYPE ?? if
-        constValue .typeId =:: typeConst
-        state popConst ..drop.2
-        typeConst typeContext types.isProcedure if
-          "declaration of a procedure type as constant\n use '=>:' to declare procedures\n" sb.wrap
-            "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
-          fileState [] .wordStart errors appendWarning
-        end
-        ## initializeNamedType
-          typeConst
-          labelId
-          typeContext
-        types.initializeNamedType if
-          "re-initialization of named type" sb.wrap
-          fileState [] .wordStart errors appendError
-        end ConstValue .typeId
-      else
-        constValue
-      end
-        labelId idContext id.getIdentifier
-        ! assert "label is identifier"
-      [] .constValue =
-      idData .idType .TYPE ?? if
-        return
-      end
-      Operation ptr optional.empty state resetGlobalInterpreter
-      idData .valueType idData @ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
-      state skipGlobalInterpreter
-      return
-    else ..dup "=" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opSetValue state appendOp
-      return
-    else ..dup "@" string.wrap string.eq _if =:: opName
-      state peekOp ..dup optional.isEmpty if ..drop
-        "unexpected \"" sb.wrap
-          opName sb.appendStr
-        '"' sb.appendC fileState [] .wordStart errors appendError
-        return
-      end .data
-      ..dup [] .val .getId ?? if
-        ..dup [] .val .getId ..over [] .val .atId =
-        fileState [] .wordStart ..swap [] .pos =
-        return
-      else ..dup [] .val .getLabel ?? _if
-        ..dup [] .val .getLabel ..over [] .val .atLabel =
-        fileState [] .wordStart ..swap [] .pos =
-        return
-      else ..dup [] .val .getElement ?? _if
-        ..dup [] .val .getElement ..over [] .val .atElement =
-        fileState [] .wordStart ..swap [] .pos =
-        return
-      else ..dup [] .val .getArrayElement ?? _if
-        ..dup [] .val .getArrayElement ..over [] .val .atArrayElement =
-        fileState [] .wordStart ..swap [] .pos =
-        return
-      else ..dup [] .val .getName ?? _if
-        ..dup [] .val .getName ..over [] .val .atName =
-        fileState [] .wordStart ..swap [] .pos =
-        return
-      else
-        "unexpected operation for \"" sb.wrap
-        opName sb.appendStr
-        "\"\n" sb.appendS
-        ..swap [] progContext sb.appendOp
-        fileState [] .wordStart errors appendError
-        return
-      end
-    else ..dup "??" string.wrap string.eq or
-         ..dup "???" string.wrap string.eq _if =:: opName
-      state peekOp ..dup optional.isEmpty if ..drop
-        "unexpected \"" sb.wrap
-          opName sb.appendStr
-        '"' sb.appendC fileState [] .wordStart errors appendError
-        return
-      end .data =:: prevOp
-      opName "???" string.wrap string.eq =:: checkExists
-      checkExists and prevOp [] .val .getId ?? if
-        ## identifier for getId always exists
-        ## opConst
-          true ConstValue .boolean
-          types.primitive.BOOL
-          fileState [] .wordStart
-        opConst prevOp [] =
-        return
-      else checkExists and prevOp [] .val .getName ?? _if
-        prevOp [] .val .getName prevOp [] .val .existsName =
-        fileState [] .wordStart prevOp [] .pos =
-        return
-      else prevOp [] .val .getLabel ?? _if
-        checkExists if
-          prevOp [] .val .getLabel prevOp [] .val .existsLabel =
-        else
-          prevOp [] .val .getLabel prevOp [] .val .hasLabel =
-        end
-        fileState [] .wordStart prevOp [] .pos =
-        return
-      else
-        "unexpected operation for \"" sb.wrap
-        opName sb.appendStr
-        "\"\n" sb.appendS
-        prevOp [] progContext sb.appendOp
-        fileState [] .wordStart errors appendError
-        return
-      end
-    else ..dup "if" string.wrap string.eq _if ..drop
+    ## 1. parse blocks
+    ## TODO "shaddow"-mode to only keep track of current block, skipping all other tokens&blocking output
+    ..dup "if" string.wrap string.eq if ..drop
       state currentBlockType =:: currentBlock
       currentBlock .AND ?? if ## sequence of ands -> allow access to local variables from if-branch
         BlockType .IF fileState [] .wordStart state convertAndOrBlock
@@ -1645,6 +1336,105 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .DEFAULT  fileState [] .wordStart opBlock  state appendOp
       BlockType .DEFAULT  state openBlockScope
       return
+    else $ "=>" string.wrap string.eq or $ "=>:" string.wrap string.eq _if =:: opName
+      opName .length 3 == =:: named
+      ## pop type before reading name
+      state tryInterpretGlobal ## XXX? run interpreter on global code by default
+      fileState state popTypeConstant ..drop =:: mut: procType
+      named if ## =>:
+        fileState state nextWord fileState state readLabel
+        $ labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+          "procedures cannot be mutable" sb.wrap
+          fileState [] .wordStart errors appendError
+        end
+      else
+        ## TODO generate name
+        id.LABEL_ID_NONE
+      end =:: mut: procName
+      procName labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
+      ## declare procedure name outside procedure scope
+      ## declare procedure
+      procName
+        procType
+        IdentifierType .PROCEDURE
+        -1 ## id
+        ConstValue .none
+        true ## isInit
+        fileState [] .wordStart
+        state [] .currentFile
+        idContext
+        progContext [] .errors@
+      id.declareIdentifier if ..drop.2
+        return
+      end =:: idData procName =
+      idData .constValue =:: procConst
+      state [] .currentProc optional.isEmpty ! =:: isNested
+      ## ensure procedure block is opened before returning
+      procType experimental state openProcBlock
+      progContext [] .tmpOps .length =:: codeStart
+      procConst .procedure ?? if
+        codeStart progContext [] .procedures
+          procConst .procedure i64 cast list.at .data
+        .implementation .code .codeStart =
+        procConst .procedure
+      else
+        procName procType state [] .currentFile codeStart progContext newProcData
+          $ ConstValue .procedure procName idContext id.getIdentifier
+              ! assert "procName is identifier"
+          [] .constValue =
+      end optional.wrap state [] .currentProc =
+      ## check for invalid procedure declaration
+      isNested if
+        "nested procedures are not supported" sb.wrap
+        fileState [] .wordStart errors appendError
+        return
+      else state [] .constantBlocks .length 0 > _if
+        "cannot declare procedure in type or initializer blocks" sb.wrap
+        fileState [] .wordStart errors appendError
+        return
+      else procType typeContext types.isProcedure ! _if
+        ## XXX? wrap non-procedure types in procedure: i32 =>: ... <-> ( -> i32 ) =>: ...
+        "unexpected type for procedure declaration: " sb.wrap
+          procType typeContext sb.appendType
+        fileState [] .wordStart errors appendError
+        return
+      end
+      ## check if current procedure is main
+      procName procType fileState [] .wordStart state checkMain
+      ## XXX? ensure global stack is empty at start of procedure?
+      idData .valueType typeContext types.getProcIn if
+        "could not resolve procedure signature" sb.wrap fileState [] .wordStart errors appendError
+      end =:: inType
+      inType typeContext types.compositeEltCount for =:: index
+        inType index typeContext types.compositeGetLabel =:: argLabel
+        inType index typeContext types.compositeGetElement =:: argType
+        argLabel i32 cast =:: argId
+        argLabel labelContext id.isLabelEmpty ! and
+            argLabel labelContext id.labelFlags id.FLAG_DUMMY & ? ! if
+          ## declareIdentifier
+            argLabel
+            argType
+            IdentifierType .ARGUMENT
+            index i32 cast
+            ConstValue .none
+            true
+            fileState [] .wordStart
+            state [] .currentFile
+            idContext
+            progContext [] .errors @
+          id.declareIdentifier if ..drop.2
+            return
+          end ..drop.2
+        end
+      end
+      ## TODO generate operation to push proc-ptr if unnamed
+      ## ? allow unnamed procedures in overload: ... end block?
+      idData .valueType idData@ id.asIdInfo fileState [] .wordStart opInitializeId
+      ## XXX? does the interpreter need to be reset when entering a procedure
+      Operation ptr optional.empty state resetGlobalInterpreter
+      state appendOp
+      state skipGlobalInterpreter
+      return
     else ..dup "return" string.wrap string.eq _if ..drop
       idContext id.currentScopeProc =:: experimental =:: procType
         procType Type .undefined types.typeEquals if
@@ -1654,6 +1444,89 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         Type .undefined
         fileState [] .wordStart
       opReturn state appendOp
+      return
+    else ..dup "namespace:" string.wrap string.eq _if =:: opName
+      fileState nextToken
+      ..dup .IDENTIFIER ?? ! if ..drop ## XXX? print type of actual token
+        "namespace names have to be identifiers" sb.wrap fileState [] .wordStart errors appendError
+        return
+      end .IDENTIFIER
+      ..dup fileState [] .wordStart progContext [] .errors @ id.checkIdentifier if
+        "\"" sb.wrap
+          ..swap sb.appendStr
+        "\" is not a valid namespace name" sb.appendS
+        fileState [] .wordStart errors appendError return
+      end
+      id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
+      idContext id.beginNamespace
+      BlockType .NAMESPACE state openBlock
+      return
+    else ..dup "overload:" string.wrap string.eq _if =:: opName
+      fileState state nextWord fileState state readLabel =:: mut: labelId
+      labelId state [] .currentFile idContext id.findIdentifierByLabel if ..drop
+        progContext [] .procBundles
+          ..dup .length ProcBundleId cast =:: bundleId
+          newProcBundle list.append
+        progContext [] .procBundles =
+        ## declareIdentifier
+          labelId
+          Type .undefined
+          IdentifierType .PROCEDURE_BUNDLE
+          -1
+          bundleId ConstValue .procedureBundle
+          true
+          fileState [] .wordStart
+          state [] .currentFile
+          idContext
+          progContext [] .errors @
+        id.declareIdentifier if ..drop.2
+          return
+        end ..drop labelId =
+        bundleId
+      else =:: idData
+        idData [] .idType .PROCEDURE_BUNDLE ?? ! if
+          "cannot overload \"" sb.wrap
+            labelId labelContext sb.appendLabelName
+            "\", incompatible id-type for previous declaration: " sb.appendS
+            idData [] .idType sb.appendIdType
+            " ( declared at " sb.appendS
+            idData [] .declaredAt sb.appendPos
+            " ) expected: " sb.appendS
+            IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
+          fileState [] .wordStart errors appendError
+          return
+        end
+        ## XXX? warn for incompatible flags
+        ## XXX? warn if overloads in different name-spaces are merged
+        idData [] .constValue .procedureBundle
+      end =:: bundleId
+      progContext [] .procBundles bundleId i64 cast list.at .data =:: bundleData
+      while fileState state nextWord =:: procName
+        procName "end" string.wrap string.eq !
+      do
+        procName state [] .currentFile idContext id.findIdentifierByName if ..drop
+          "could not find procedure \"" sb.wrap
+            procName sb.appendStr
+            '"' sb.appendC
+          fileState [] .wordStart errors appendError
+          continue
+        end =:: idData
+        idData [] .idType .PROCEDURE ?? ! if
+          256 sb.create
+            idData [] .idType sb.appendIdType
+            " \"" sb.appendS
+            idData [] .labelId labelContext sb.appendLabelName
+            "\" ( declared at " sb.appendS
+            idData [] .declaredAt sb.appendPos
+            " ) is not a procedure" sb.appendS
+            IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
+          fileState [] .wordStart errors appendError
+          return
+        end
+        bundleData [] .procedures
+          idData [] .constValue .procedure list.append
+        bundleData [] .procedures =
+      end
       return
     else ..dup "end" string.wrap string.eq _if ..drop
       ## TODO correctly handle top-level blocks
@@ -1726,147 +1599,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         closedBlock .autoClose
       do end
-      return
-    else ..dup .length 1 > and ..dup 0 string.charAt '.' == and ..dup 1 string.charAt '.' != _if
-      1 string.tail
-        ..dup "@" string.wrap string.endsWith =:: isAddr
-        isAddr if
-          ..dup .length 1 - string.head
-        end
-      =:: label
-      label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-      fileState [] .wordStart
-      isAddr if opAtLabel else opGetLabel end
-      state appendOp
-      return
-    else ..dup "[]" string.wrap string.eq _if ..drop
-      -1 fileState [] .wordStart opArrayGet state appendOp
-      return
-    else ..dup "[]@" string.wrap string.eq _if ..drop
-      -1 fileState [] .wordStart opArrayAt state appendOp
-      return
-    else ..dup "()" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opCallPtr state appendOp
-      return
-    else ..dup "new" string.wrap string.eq _if =:: opName
-      ## new in procedure -> determine type in type-check phase
-      Type .undefined fileState [] .wordStart opNew state appendOp
-      return
-    #+ TODO improve cast system +#
-    else ..dup "cast" string.wrap string.eq or ..dup "cast!" string.wrap string.eq _if =:: opName
-      opName "cast!" string.wrap string.eq =:: forceCast
-      Type .undefined
-        forceCast if
-          fileState [] .wordStart
-          opCast!
-        else
-          SignType .NONE
-          fileState [] .wordStart
-          opCast
-        end
-      state appendOp
-      return
-    else ..dup "..bitcast" string.wrap string.eq _if =:: opName
-      Type .undefined
-        fileState [] .wordStart
-      opBitCast state appendOp
-      return
-    else ..dup "cast.s" string.wrap string.eq _if =:: opName
-      Type .undefined
-        SignType .SIGNED
-        fileState [] .wordStart
-      opCast state appendOp
-      return
-    else ..dup "cast.u" string.wrap string.eq _if =:: opName
-      Type .undefined
-        SignType .UNSIGNED
-        fileState [] .wordStart
-      opCast state appendOp
-      return
-    else ..dup "==" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opEqual state appendOp
-      return
-    else ..dup "!=" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opNotEqual state appendOp
-      return
-    else ..dup "===" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opEqual state appendOp
-      return
-    else ..dup "=!=" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opNotEqual state appendOp
-      return
-    else ..dup "..length" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opLength state appendOp
-      return
-    else ..dup "..size" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opSize state appendOp
-      return
-    else ..dup "..label" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opGetEnumLabel state appendOp
-      return
-    else ..dup "..type.alignment" string.wrap string.eq or
-         ..dup "..type.size" string.wrap string.eq or
-         ..dup "..type.stride" string.wrap string.eq _if =:: opName
-     opName "..type.alignment" string.wrap string.eq if
-       TypeMemoryInfo .ALIGNMENT
-     else opName "..type.size" string.wrap string.eq _if
-       TypeMemoryInfo .SIZE
-     else
-       TypeMemoryInfo .STRIDE
-     end =:: infoType
-      Type .undefined
-      infoType fileState [] .wordStart opTypeInfo state appendOp
-      return
-    else ..dup "..unreachable" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opUnreachable state appendOp
-      return
-    else ..dup "{" string.wrap string.eq _if ..drop
-      BlockType .INITIALIZER  state openBlockScope
-      ##  remember start position, constant offset
-      ## TODO ensure using declaration within initializer block does not invalidate position of operation
-      state [] .constantBlocks
-        ## CompositeConstantOffset
-          state opCount
-          state [] .constants .length
-        CompositeConstantOffset new list.append
-      state [] .constantBlocks =
-      BlockType .INITIALIZER fileState [] .wordStart opBlock state appendOp
-      return
-    else ..dup "}" string.wrap string.eq _if =:: opName
-      state closeBlock =:: isError =:: closed
-      isError if true else closed .blockType .INITIALIZER ?? ! end if
-        "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart errors appendError
-      end
-      state [] .constantBlocks .length 0 == if
-        return
-      end
-      state [] .constantBlocks
-        list.pop =:: offset
-      state [] .constantBlocks =
-      BlockType .INITIALIZER fileState [] .wordStart opEndBlock state appendOp
-      return
-    else ..dup "ptr" string.wrap string.eq _if ..drop
-      TypeModifier .PTR fileState [] .wordStart opTypeModifier state appendOp
-      return
-    else ..dup "ptr.mut" string.wrap string.eq _if ..drop
-      TypeModifier .PTR_MUT fileState [] .wordStart opTypeModifier state appendOp
-      return
-    else ..dup "array" string.wrap string.eq _if ..drop
-      TypeModifier .ARRAY fileState [] .wordStart opTypeModifier state appendOp
-      return
-    else ..dup "mut" string.wrap string.eq _if =:: opName
-      state peekOp =:: prev
-      prev optional.hasData and
-          prev .data [] .val .typeModifier ?? and
-          prev .data [] .val .typeModifier .PTR ?? if
-        TypeModifier .PTR_MUT prev .data [] .val .typeModifier =
-        "`ptr mut` is deprecated use `ptr.mut` to declare a mutable pointer" sb.wrap
-        fileState [] .wordStart errors appendWarning
-        return
-      end
-      opName sb.fromStr
-        " can only be used after declaration ( ':' '=:' '=::' ) or 'ptr'" sb.appendS
-      fileState [] .wordStart errors appendError
       return
     else ..dup "(" string.wrap string.eq _if ..drop
       BlockType .TYPE_COMPOSITE state openBlockScope
@@ -2029,7 +1761,397 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           return
       end
       return
-    else ..dup "..dup" string.wrap string.eq _if =:: opName
+    else ..dup "{" string.wrap string.eq _if ..drop
+      BlockType .INITIALIZER  state openBlockScope
+      ##  remember start position, constant offset
+      ## TODO ensure using declaration within initializer block does not invalidate position of operation
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+          state [] .constants .length
+        CompositeConstantOffset new list.append
+      state [] .constantBlocks =
+      BlockType .INITIALIZER fileState [] .wordStart opBlock state appendOp
+      return
+    else ..dup "}" string.wrap string.eq _if =:: opName
+      state closeBlock =:: isError =:: closed
+      isError if true else closed .blockType .INITIALIZER ?? ! end if
+        "unexpected " sb.wrap opName sb.appendStr fileState [] .wordStart errors appendError
+      end
+      state [] .constantBlocks .length 0 == if
+        return
+      end
+      state [] .constantBlocks
+        list.pop =:: offset
+      state [] .constantBlocks =
+      BlockType .INITIALIZER fileState [] .wordStart opEndBlock state appendOp
+      return
+    end
+    ## 2. parse keywords & built-in operators
+    $ ":" string.wrap string.eq or $ "=:" string.wrap string.eq if =:: opName
+      ## TODO extract declaration parser into procedure?
+      opName ":" string.wrap string.eq ! =:: isInit
+      false =:: mut: localDeclaration
+      state [] .constantBlocks .length 0 == state [] .currentProc optional.isEmpty & if
+        state tryInterpretGlobal ## try to interpret global operations before each declaration
+        fileState state popTypeConstant ..drop
+      else
+        ## correct type will be resolved in type-check phase
+        progContext newAutoType
+        true localDeclaration =
+      end =:: mut: valType
+      false =:: mut: allowImmutableDeclaration
+      false =:: mut: forceImmutable
+      state [] .constantBlocks .length 0 > if
+        IdentifierType .LABEL
+        true allowImmutableDeclaration =
+      else localDeclaration _if
+        IdentifierType .LOCAL_VAR
+      else isInit ! and valType typeContext types.isProcedure _if
+        IdentifierType .PROCEDURE
+        true forceImmutable =
+        true allowImmutableDeclaration =
+      else valType types.primitive.TYPE types.typeEquals _if
+        IdentifierType .TYPE
+        true forceImmutable =
+        true allowImmutableDeclaration =
+      else ## for comparability with old parser
+        IdentifierType .GLOBAL_VAR
+        true allowImmutableDeclaration =
+      end =:: idType
+      fileState state nextWord fileState state
+        ## make pre-declared variables mutable by default
+        isInit allowImmutableDeclaration | if id.FLAG_NONE else id.FLAG_MUTABLE end
+      readLabelAddFlags =:: mut: label
+      forceImmutable and label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+        "identifiers of type " sb.wrap
+          idType sb.appendIdType
+         " cannot be mutable" sb.appendS
+        fileState [] .wordStart errors appendError
+      end
+      label labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
+      label
+        valType
+        idType
+        -1 ## id
+        ConstValue .none
+        isInit
+        fileState [] .wordStart
+        state [] .currentFile
+        idContext
+        progContext [] .errors @
+      id.declareIdentifier if ..drop.2
+        return
+      end =:: idData label =
+      idType .TYPE ?? if
+        isInit if
+          fileState state popTypeConstant ! assert "pop type"
+          label
+          typeContext types.initializeNamedType if
+            "re-initialization of named type" sb.wrap
+            fileState [] .wordStart errors appendError
+          end
+        else
+          label
+          typeContext types.declareNamedType
+        end
+        fileState [] .wordStart newTypeConst .val
+      else isInit ! _if
+        ConstValue .none
+      else state hasConst _if
+        state peekConst .data =:: info .data =:: value
+          info [] .valueType valType false typeContext types.canCast ! if
+            "cannot cast " sb.wrap
+              info [] .valueType typeContext sb.appendType
+              " to " sb.appendS
+              valType typeContext sb.appendType
+            fileState [] .wordStart errors appendError
+          end
+        value []
+      else
+        ConstValue .none
+      end
+        label idContext id.getIdentifier
+        ! assert "label is identifier"
+      [] .constValue =
+      localDeclaration ! if ## main
+        label idData .valueType fileState [] .wordStart state checkMain
+      end
+      idData .idType .TYPE ?? if
+        return
+      end
+      idData .idType .PROCEDURE ?? if
+        idData .constValue =:: procData
+        procData .procedure ?? ! if
+          label valType state [] .currentFile -1:i64 progContext newProcData
+            ConstValue .procedure
+          label idContext id.getIdentifier
+            ! assert "procName is identifier"
+          [] .constValue =
+        end
+      end
+      isInit ! localDeclaration ! & if
+        return ## no operation for global pre-declaration
+      end
+      idData .valueType idData @ id.asIdInfo fileState [] .wordStart isInit if
+        opInitializeId
+      else
+        opDeclareId
+      end
+      localDeclaration if
+        state appendOp
+        return
+      end
+      Operation ptr optional.empty state resetGlobalInterpreter
+      state appendOp
+      state skipGlobalInterpreter
+      return
+    else ..dup "=::" string.wrap string.eq _if ..drop
+      state tryInterpretGlobal
+      fileState state nextWord fileState state readLabel =:: mut: labelId
+      state hasConst if
+        state peekConst =:: info =:: value
+        info .data [] .valueType
+        $ types.isLiteral if
+          typeContext types.literalToType
+        end
+        value .data []
+      else
+        progContext newAutoType
+        ConstValue .none
+      end =:: constValue =:: constType
+      constType typeContext types.isProcedure if
+        "unexpected procedure" sb.wrap fileState [] .wordStart errors appendError
+        return
+      else constType types.primitive.TYPE types.typeEquals _if
+        IdentifierType .TYPE
+      else state [] .currentProc optional.isEmpty _if
+        IdentifierType .GLOBAL_VAR
+      else
+        IdentifierType .LOCAL_VAR
+      end =:: idType
+      ## declareIdentifier
+        labelId
+        constType
+        idType
+        -1 ## id
+        ConstValue .none
+        true
+        fileState [] .wordStart
+        state [] .currentFile
+        idContext
+        progContext [] .errors @
+      id.declareIdentifier if ..drop.2
+        return
+      end =:: idData labelId =
+      ## create constant value after creating declaration
+      idType .TYPE ?? if
+        constValue .typeId =:: typeConst
+        state popConst ..drop.2
+        typeConst typeContext types.isProcedure if
+          "declaration of a procedure type as constant\n use '=>:' to declare procedures\n" sb.wrap
+            "for declaring a procedure type constant use a explicit type declaration ( `type =:` ) " sb.appendS
+          fileState [] .wordStart errors appendWarning
+        end
+        ## initializeNamedType
+          typeConst
+          labelId
+          typeContext
+        types.initializeNamedType if
+          "re-initialization of named type" sb.wrap
+          fileState [] .wordStart errors appendError
+        end ConstValue .typeId
+      else
+        constValue
+      end
+        labelId idContext id.getIdentifier
+        ! assert "label is identifier"
+      [] .constValue =
+      idData .idType .TYPE ?? if
+        return
+      end
+      Operation ptr optional.empty state resetGlobalInterpreter
+      idData .valueType idData @ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
+      state skipGlobalInterpreter
+      return
+    else ..dup "=" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opSetValue state appendOp
+      return
+    else ..dup "@" string.wrap string.eq _if =:: opName
+      state peekOp ..dup optional.isEmpty if ..drop
+        "unexpected \"" sb.wrap
+          opName sb.appendStr
+        '"' sb.appendC fileState [] .wordStart errors appendError
+        return
+      end .data
+      ..dup [] .val .getId ?? if
+        ..dup [] .val .getId ..over [] .val .atId =
+        fileState [] .wordStart ..swap [] .pos =
+        return
+      else ..dup [] .val .getLabel ?? _if
+        ..dup [] .val .getLabel ..over [] .val .atLabel =
+        fileState [] .wordStart ..swap [] .pos =
+        return
+      else ..dup [] .val .getElement ?? _if
+        ..dup [] .val .getElement ..over [] .val .atElement =
+        fileState [] .wordStart ..swap [] .pos =
+        return
+      else ..dup [] .val .getArrayElement ?? _if
+        ..dup [] .val .getArrayElement ..over [] .val .atArrayElement =
+        fileState [] .wordStart ..swap [] .pos =
+        return
+      else ..dup [] .val .getName ?? _if
+        ..dup [] .val .getName ..over [] .val .atName =
+        fileState [] .wordStart ..swap [] .pos =
+        return
+      else
+        "unexpected operation for \"" sb.wrap
+        opName sb.appendStr
+        "\"\n" sb.appendS
+        ..swap [] progContext sb.appendOp
+        fileState [] .wordStart errors appendError
+        return
+      end
+    else ..dup "??" string.wrap string.eq or
+         ..dup "???" string.wrap string.eq _if =:: opName
+      state peekOp ..dup optional.isEmpty if ..drop
+        "unexpected \"" sb.wrap
+          opName sb.appendStr
+        '"' sb.appendC fileState [] .wordStart errors appendError
+        return
+      end .data =:: prevOp
+      opName "???" string.wrap string.eq =:: checkExists
+      checkExists and prevOp [] .val .getId ?? if
+        ## identifier for getId always exists
+        ## opConst
+          true ConstValue .boolean
+          types.primitive.BOOL
+          fileState [] .wordStart
+        opConst prevOp [] =
+        return
+      else checkExists and prevOp [] .val .getName ?? _if
+        prevOp [] .val .getName prevOp [] .val .existsName =
+        fileState [] .wordStart prevOp [] .pos =
+        return
+      else prevOp [] .val .getLabel ?? _if
+        checkExists if
+          prevOp [] .val .getLabel prevOp [] .val .existsLabel =
+        else
+          prevOp [] .val .getLabel prevOp [] .val .hasLabel =
+        end
+        fileState [] .wordStart prevOp [] .pos =
+        return
+      else
+        "unexpected operation for \"" sb.wrap
+        opName sb.appendStr
+        "\"\n" sb.appendS
+        prevOp [] progContext sb.appendOp
+        fileState [] .wordStart errors appendError
+        return
+      end
+    else ..dup .length 1 > and ..dup 0 string.charAt '.' == and ..dup 1 string.charAt '.' != _if
+      1 string.tail
+        ..dup "@" string.wrap string.endsWith =:: isAddr
+        isAddr if
+          ..dup .length 1 - string.head
+        end
+      =:: label
+      label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
+      fileState [] .wordStart
+      isAddr if opAtLabel else opGetLabel end
+      state appendOp
+      return
+    else ..dup "[]" string.wrap string.eq _if ..drop
+      -1 fileState [] .wordStart opArrayGet state appendOp
+      return
+    else ..dup "[]@" string.wrap string.eq _if ..drop
+      -1 fileState [] .wordStart opArrayAt state appendOp
+      return
+    else ..dup "()" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opCallPtr state appendOp
+      return
+    else ..dup "new" string.wrap string.eq _if =:: opName
+      ## new in procedure -> determine type in type-check phase
+      Type .undefined fileState [] .wordStart opNew state appendOp
+      return
+    #+ TODO improve cast system +#
+    else ..dup "cast" string.wrap string.eq or ..dup "cast!" string.wrap string.eq _if =:: opName
+      opName "cast!" string.wrap string.eq =:: forceCast
+      Type .undefined
+        forceCast if
+          fileState [] .wordStart
+          opCast!
+        else
+          SignType .NONE
+          fileState [] .wordStart
+          opCast
+        end
+      state appendOp
+      return
+    else ..dup "..bitcast" string.wrap string.eq _if =:: opName
+      Type .undefined
+        fileState [] .wordStart
+      opBitCast state appendOp
+      return
+    else ..dup "cast.s" string.wrap string.eq _if =:: opName
+      Type .undefined
+        SignType .SIGNED
+        fileState [] .wordStart
+      opCast state appendOp
+      return
+    else ..dup "cast.u" string.wrap string.eq _if =:: opName
+      Type .undefined
+        SignType .UNSIGNED
+        fileState [] .wordStart
+      opCast state appendOp
+      return
+    else ..dup "==" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opEqual state appendOp
+      return
+    else ..dup "!=" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opNotEqual state appendOp
+      return
+    else ..dup "===" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opEqual state appendOp
+      return
+    else ..dup "=!=" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opNotEqual state appendOp
+      return
+    else ..dup "..length" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opLength state appendOp
+      return
+    else ..dup "..size" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opSize state appendOp
+      return
+    else ..dup "..label" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opGetEnumLabel state appendOp
+      return
+    else ..dup "..type.alignment" string.wrap string.eq or
+         ..dup "..type.size" string.wrap string.eq or
+         ..dup "..type.stride" string.wrap string.eq _if =:: opName
+     opName "..type.alignment" string.wrap string.eq if
+       TypeMemoryInfo .ALIGNMENT
+     else opName "..type.size" string.wrap string.eq _if
+       TypeMemoryInfo .SIZE
+     else
+       TypeMemoryInfo .STRIDE
+     end =:: infoType
+      Type .undefined
+      infoType fileState [] .wordStart opTypeInfo state appendOp
+      return
+    else ..dup "..unreachable" string.wrap string.eq _if ..drop
+      fileState [] .wordStart opUnreachable state appendOp
+      return
+    else ..dup "ptr" string.wrap string.eq _if ..drop
+      TypeModifier .PTR fileState [] .wordStart opTypeModifier state appendOp
+      return
+    else ..dup "ptr.mut" string.wrap string.eq _if ..drop
+      TypeModifier .PTR_MUT fileState [] .wordStart opTypeModifier state appendOp
+      return
+    else ..dup "array" string.wrap string.eq _if ..drop
+      TypeModifier .ARRAY fileState [] .wordStart opTypeModifier state appendOp
+      return
+    else ..dup "..dup" string.wrap string.eq _if =:: opName ## XXX? completely repalce ..dup by $ ?
       0 StackModType .COPY fileState [] .wordStart opStackMod state appendOp
       return
     else ..dup "..over" string.wrap string.eq or
@@ -2078,22 +2200,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ..swap sb.appendToken
         " expected identifier or string" sb.appendS
       fileState [] .wordStart errors appendError
-      return
-    else ..dup "namespace:" string.wrap string.eq _if =:: opName
-      fileState nextToken
-      ..dup .IDENTIFIER ?? ! if ..drop ## XXX? print type of actual token
-        "namespace names have to be identifiers" sb.wrap fileState [] .wordStart errors appendError
-        return
-      end .IDENTIFIER
-      ..dup fileState [] .wordStart progContext [] .errors @ id.checkIdentifier if
-        "\"" sb.wrap
-          ..swap sb.appendStr
-        "\" is not a valid namespace name" sb.appendS
-        fileState [] .wordStart errors appendError return
-      end
-      id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-      idContext id.beginNamespace
-      BlockType .NAMESPACE state openBlock
       return
     else ..dup "using" string.wrap string.eq _if =:: opName
       fileState nextToken
@@ -2152,73 +2258,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         errorType
         fileState [] .wordStart
       opError state appendOp
-      return
-    else ..dup "overload:" string.wrap string.eq _if =:: opName
-      fileState state nextWord fileState state readLabel =:: mut: labelId
-      labelId state [] .currentFile idContext id.findIdentifierByLabel if ..drop
-        progContext [] .procBundles
-          ..dup .length ProcBundleId cast =:: bundleId
-          newProcBundle list.append
-        progContext [] .procBundles =
-        ## declareIdentifier
-          labelId
-          Type .undefined
-          IdentifierType .PROCEDURE_BUNDLE
-          -1
-          bundleId ConstValue .procedureBundle
-          true
-          fileState [] .wordStart
-          state [] .currentFile
-          idContext
-          progContext [] .errors @
-        id.declareIdentifier if ..drop.2
-          return
-        end ..drop labelId =
-        bundleId
-      else =:: idData
-        idData [] .idType .PROCEDURE_BUNDLE ?? ! if
-          "cannot overload \"" sb.wrap
-            labelId labelContext sb.appendLabelName
-            "\", incompatible id-type for previous declaration: " sb.appendS
-            idData [] .idType sb.appendIdType
-            " ( declared at " sb.appendS
-            idData [] .declaredAt sb.appendPos
-            " ) expected: " sb.appendS
-            IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
-          fileState [] .wordStart errors appendError
-          return
-        end
-        ## XXX? warn for incompatible flags
-        ## XXX? warn if overloads in different name-spaces are merged
-        idData [] .constValue .procedureBundle
-      end =:: bundleId
-      progContext [] .procBundles bundleId i64 cast list.at .data =:: bundleData
-      while fileState state nextWord =:: procName
-        procName "end" string.wrap string.eq !
-      do
-        procName state [] .currentFile idContext id.findIdentifierByName if ..drop
-          "could not find procedure \"" sb.wrap
-            procName sb.appendStr
-            '"' sb.appendC
-          fileState [] .wordStart errors appendError
-          continue
-        end =:: idData
-        idData [] .idType .PROCEDURE ?? ! if
-          256 sb.create
-            idData [] .idType sb.appendIdType
-            " \"" sb.appendS
-            idData [] .labelId labelContext sb.appendLabelName
-            "\" ( declared at " sb.appendS
-            idData [] .declaredAt sb.appendPos
-            " ) is not a procedure" sb.appendS
-            IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
-          fileState [] .wordStart errors appendError
-          return
-        end
-        bundleData [] .procedures
-          idData [] .constValue .procedure list.append
-        bundleData [] .procedures =
-      end
       return
     else ..dup "..?types" string.wrap string.eq or
         ..dup "..?types." string.wrap string.startsWith _if =:: mut: opName
