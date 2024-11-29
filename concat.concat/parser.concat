@@ -1792,6 +1792,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## TODO extract declaration parser into procedure?
       opName ":" string.wrap string.eq ! =:: isInit
       false =:: mut: localDeclaration
+      ## TODO? should code in constantBlocks be treated as local?
       state [] .constantBlocks .length 0 == state [] .currentProc optional.isEmpty & if
         state tryInterpretGlobal ## try to interpret global operations before each declaration
         fileState state popTypeConstant ..drop
@@ -1890,8 +1891,17 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           [] .constValue =
         end
       end
-      isInit ! localDeclaration ! & if
-        return ## no operation for global pre-declaration
+      localDeclaration ! if
+        isInit ! if
+          return ## no operation for global pre-declaration
+        end
+        label idContext id.getIdentifier
+          ! assert "label is identifier"
+        [] .constValue .none ?? ! and valType .undefined ?? ! if
+          ## don't create global operation if declaration already is complete
+          state popConst ..drop.2
+          return
+        end
       end
       idData .valueType idData @ id.asIdInfo fileState [] .wordStart isInit if
         opInitializeId
@@ -1968,6 +1978,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ! assert "label is identifier"
       [] .constValue =
       idData .idType .TYPE ?? if
+        return
+      end
+      state [] .currentProc optional.isEmpty and
+          constValue .none ?? ! and constType .undefined ?? ! if
+        ## don't create global operation if declaration already is complete
+        state popConst ..drop.2
         return
       end
       Operation ptr optional.empty state resetGlobalInterpreter
