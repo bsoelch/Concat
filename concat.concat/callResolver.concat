@@ -1109,9 +1109,8 @@ proc(
   eltCount Type list.create =:: mut: typeBuffer
   eltCount LabelId list.create =:: mut: labelBuffer
   constArgs .length 0 > and
-      progContext [] .procedures
-        candidate [] .procId i64 cast list.at .data
-      [] .implementation @ =:: implData
+      procInfo [] .isStatic ! and ## don't create implementations for static procedures
+      procInfo [] .implementation@ =:: implData
       implData [] .code ?? if
     implData [] .code .implementations @ =:: impls
     false =:: mut: isMatch

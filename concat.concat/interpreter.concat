@@ -3,6 +3,7 @@ import map
 import "interpreter/operators.concat"
 import "identifiers.concat"
 import "program.concat"
+import "callResolver.concat"
 
 ## TODO wrap in namespace
 struct(
@@ -1412,25 +1413,83 @@ proc(
         false return
       end
       idInfo [] .idType switch
-        PROCEDURE case
+        PROCEDURE PROCEDURE_BUNDLE case
           label idContext id.getIdentifier if ..drop
             "could not find " sb.wrap
               idInfo [] labelContext sb.appendIdInfo
             op [] .pos errors appendError
             true return
           end =:: idData
-          idData [] .constValue .procedure ?? ! if
+          idData [] .constValue =:: constValue
+          constValue .procedureBundle ?? if
+            constValue .procedureBundle =:: bundleId
+            program [] .procBundles
+              bundleId i64 cast list.at .data [] .procedures
+            list.asArray
+          else constValue .procedure ?? _if
+            constValue .procedure@ array.wrap
+          else
             "unexpected value for procedure constant: " sb.wrap
-              idData [] .constValue
+              constValue
                 constContext
                 typeContext
               sb.appendConstant
             op [] .pos errors appendError
             true return
+          end =:: procedures
+          context [] .stack .length StackValue list.create =:: mut: stackValues
+          context [] .stack .length 1 - while $ 0 >= do =:: i
+            stackValues
+              ## StackValue
+                context [] .stackInfo i list.at .data [] .valueType
+                context [] .stack i list.at .data []
+              StackValue new list.append
+            stackValues =
+          finally i 1 - end ..drop
+          ## resolve correct call for given arguments
+          0 sb.create =:: mut: message
+          ## resolveCall
+            procedures
+            stackValues list.asArray
+            message@ optional.wrap
+            op [] .pos
+            program
+          resolveCall =:: calledType =:: calledProc?
+          message .length 0 > if
+            context [] .evalType switch
+              FOLD_LOCAL case
+                constValue .procedure ?? ! or
+                    program [] .procedures
+                      constValue .procedure i64 cast list.at .data
+                    [] .isStatic ! if
+                  true return ## skip errors for non-static local procedures
+                end break
+              INTERPRET GLOBAL PARSER case break
+            end
+            calledProc? optional.isEmpty if
+              message op [] .pos errors appendError
+            else
+              message op [] .pos errors appendInfo
+            end
+            true return
           end
-          idData [] .constValue .procedure =:: procId
-          program [] .procedures procId i64 cast list.at .data =:: procData
-          procData [] .isStatic ! if
+          message sb.free ..drop
+          stackValues list.free ..drop
+          calledProc? .data =:: calledProc
+          calledProc .procId =:: procId
+          program [] .procedures
+            calledProc .procId i64 cast list.at .data
+          =:: calledProcData
+          calledProcData [] .implementation switch
+            builtIn case
+              ## tryEvaluateBuiltIn
+                calledType
+                calledProcData [] .implementation .builtIn .builtIn
+              op [] .pos context tryEvaluateBuiltIn return
+            code case break
+          end
+          ## TODO? allow evaluation of non-static procedures depending on interpreter-mode
+          calledProcData [] .isStatic ! if
             true return ## only evaluate static procedures in interpreter
           end
           ## static procedure -> no call resolving necessary
@@ -1438,6 +1497,7 @@ proc(
           procOut typeContext types.compositeElts =:: outTypes
           outTypes .length 1 == and
               outTypes 0 types.compositeElts.get types.primitive.TYPE types.typeEquals if
+            ## TODO move check for existing type-generator to procedure, ? merge with evalGeneratedType
             ## type-generator (procedure returning type)
             op [] .dataType typeContext types.getProcIn ..drop =:: procIn
             procIn typeContext types.compositeElts =:: inTypes
@@ -1530,7 +1590,7 @@ proc(
           end
           idData [] .constValue idData [] .valueType label op [] .pos context pushValue
           false return
-        TMP_VAR PROCEDURE_BUNDLE ITR_VAR case
+        TMP_VAR ITR_VAR case
           context [] .evalType switch
             INTERPRET case
               "unsupported operation in constant evaluation: " sb.wrap
@@ -2077,10 +2137,13 @@ proc(
           ": " sb.appendS
           0:i64 while ..dup nArgs < do =:: i
             values i [] constContext typeContext sb.appendConstant
+            ", " sb.appendS
             i 1 +
           end ..drop
         pos errors appendError
       end
+      values nArgs array.reverse
+      valInfos nArgs array.reverse
       values valInfos nArgs context unpopValues
       true return
     unimplemented case
@@ -2089,6 +2152,8 @@ proc(
           builtIn sb.appendBuiltIn
         pos errors appendError
       end
+      values nArgs array.reverse
+      valInfos nArgs array.reverse
       values valInfos nArgs context unpopValues
       true return
   end

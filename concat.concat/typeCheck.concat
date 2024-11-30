@@ -1621,6 +1621,7 @@ proc(
     argData? .data [] .valType op .dataType =
     argData? .data [] .value op .val .Constant =
   end
+  state [] .interpreterActive =:: constEvalFailed ## true if operation was already evaluated
   state [] .interpreterActive and op @ state [] .interpreter @ evaluateOperation ! if
     return ## evaluate constants
   end
@@ -1630,8 +1631,9 @@ proc(
     NOP case return
     Constant case
       op .dataType types.primitive.TYPE types.typeEquals if
-        state unfreezeInterpreter
-        op @ state [] .interpreter @ evaluateOperation if
+        constEvalFailed or
+            state unfreezeInterpreter
+            op @ state [] .interpreter @ evaluateOperation if
           "could not evaluate " sb.wrap
             op program sb.appendOp
           op .pos errors appendError
@@ -1714,8 +1716,9 @@ proc(
               procId [] i64 cast list.at .data
             =:: procData
             procData [] .isStatic if
-              state unfreezeInterpreter
-              op @ state [] .interpreter @ evaluateOperation if
+              constEvalFailed or
+                  state unfreezeInterpreter
+                  op @ state [] .interpreter @ evaluateOperation if
                 "could not evaluate " sb.wrap
                   op program sb.appendOp
                 op .pos errors appendError
@@ -1784,7 +1787,7 @@ proc(
           end
           calledType typeContext types.getProcIn ..drop =:: inTypes
           inTypes typeContext types.compositeEltCount =:: argCount
-          stackConstants argCount >= and ## enough arguments for interpreting call
+          constEvalFailed ! and stackConstants argCount >= and ## enough arguments for interpreting call
               calledProcData [] .isStatic ## only try interpreting static and built-ins
               calledProcData [] .implementation .builtIn ?? | if
             state unfreezeInterpreter
@@ -2673,10 +2676,11 @@ proc(
         TYPE_PROC_OUT
         TYPE_COMPOSITE
         INITIALIZER case
-          state unfreezeInterpreter
-          state [] .compiledOps .length state [] .blockStart =
           ## type-blocks and initializers are handled by the interpreter
-          op @ state [] .interpreter @ evaluateOperation if
+          constEvalFailed or
+              state unfreezeInterpreter
+              state [] .compiledOps .length state [] .blockStart =
+             op @ state [] .interpreter @ evaluateOperation if
             "could not evaluate " sb.wrap
               blockType sb.appendBlockType
               " block" sb.appendS
@@ -3924,9 +3928,10 @@ proc(
       state pushConstant
       return
     typeModifier case
-      state unfreezeInterpreter
       ## type-modifiers are handled by the interpreter
-      op @ state [] .interpreter @ evaluateOperation if
+      constEvalFailed or
+          state unfreezeInterpreter
+          op @ state [] .interpreter @ evaluateOperation if
         "could not evaluate type modifier " sb.wrap
           op .val .typeModifier sb.appendTypeModifier
         op .pos errors appendError
