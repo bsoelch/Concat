@@ -171,7 +171,6 @@ struct(
   FileId : mut: currentFile
   FilePosition list : mut: initializationStack
   bool : mut: reachable
-  bool : mut: isGlobal
   ## TODO flags:
   ## * disable reorganizing of operations (excluding types)
   ## * is it allowed to optimize out reading from variables
@@ -279,13 +278,7 @@ end
 
 proc( TypeCheckState ptr.mut : state -> ) =>: resetInterpreter
   state [] .interpreter @ =:: interpreter
-  interpreter
-    state [] .isGlobal if
-      InterpreterType .GLOBAL
-    else
-      InterpreterType .FOLD_LOCAL
-    end
-  interpreter.resetContext
+  interpreter InterpreterType .FOLD_LOCAL interpreter.resetContext
   true state [] .interpreterActive =
 end
 
@@ -2160,7 +2153,11 @@ proc(
         else $ types.isLiteral _if
           typeContext types.literalToType
             $ srcType =
-          container $1 op .pos state tryCastConstant ! assert "can convert literal to type"
+          container $1 op .pos state tryCastConstant if
+            "could not convert literal to type: " sb.wrap
+              srcType typeContext sb.appendType
+            op .pos errors appendError
+          end ## ! assert "can convert literal to type"
         end
       =:: mut: containerType
       ## compositeFindLabel
@@ -4064,7 +4061,7 @@ end
 proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
   ## TypeCheckState
     program
-    program -1:FileId InterpreterType .GLOBAL interpreter.wrapProgram
+    program -1:FileId InterpreterType .FOLD_LOCAL interpreter.wrapProgram
     labelHash @ labelEq @ 64 TypedValue map.create
     Type .undefined
     true
@@ -4078,45 +4075,13 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     FILE_ID_NONE
     16 FilePosition list.create
     true
-    true
   TypeCheckState new =:: mut: state
   program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  ## global code
-  0:i64 while ..dup program [] .progFiles .length < do =:: fileId
-    fileId FileId cast state .currentFile =
-    fileId FileId cast state .interpreter .currentFile =
-    program [] .progFiles fileId list.at .data =:: progFile
-    state @ clearOps
-    state @ resetInterpreter
-    ## log unhandled global operations in code
-    ## temporary addition for improving constant folding in parser
-    _EXPERIMENTAL_ and progFile [] .globalOps .length 0 > if
-      "global_log.txt" io.OPEN_APPEND io.fopenS ..drop =:: globalLog
-        "global code in file: " sb.wrap
-          progFile [] .fileName sb.appendSb
-          '\n' sb.appendC
-          progFile [] .globalOps 0 list.get program sb.appendOp
-          globalLog $1 io.fputSb ..drop
-        sb.free ..drop
-      globalLog io.fclose ..drop
-    end
-    0:i64 while ..dup progFile [] .globalOps .length < do
-      progFile [] .globalOps ..over list.get state @ typeCheckOp
-      1 +
-    end ..drop
-    progFile [] .globalOps list.clear
-      state .compiledOps progFile [] .globalOps =
-    state .compiledOps =
-    state .stack @ branchTree.clear ## TODO error on unhandled values
-    fileId 1 +
-  end ..drop
-  state @ clearOps
   state .compiledOps =:: originalOps
-  false state .isGlobal =
   ## procedures
   0:i64 while ..dup program [] .procedures .length < do =:: procId
     program [] .procedures procId i64 cast list.at .data =:: currentProc

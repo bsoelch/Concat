@@ -16,7 +16,7 @@ import "interpreter.concat"
 import "interpreter/operators.concat"
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
-struct( i64 : codeOffset i64 : constOffset ) =:: CompositeConstantOffset
+struct( i64 : codeOffset ) =:: CompositeConstantOffset
 struct( InterpreterContext : mut: context i64 : mut: offset ) =:: InterpreterInfo
 
 struct(
@@ -38,7 +38,6 @@ struct(
   BlockInfo list : mut: openBlocks
   i64 list : mut: andOrPositions
   Operation list : mut: globalOpBuffer
-  Constant list : mut: constants
   i64 : mut: constOffset
   Type list : mut: typeBuffer
   FileId : mut: currentFile
@@ -183,100 +182,32 @@ end
 proc( ParserState ptr.mut : state -> i64 ) =>: opCount
   state [] .progContext =:: progContext
   state [] .currentProc optional.isEmpty if
-    state [] .globalOpBuffer .length return
+    -1 return
   else
     progContext [] .tmpOps .length return
   end
 end
-proc( ParserState ptr.mut : state -> Operation list ptr.mut ) =>: currentOps
-  state [] .progContext =:: progContext
-  state [] .currentProc optional.isEmpty if
-    state [] .globalOpBuffer @ return
-  else
-    progContext [] .tmpOps @ return
-  end
+proc( ParserState ptr.mut : state -> InterpreterInfo ptr.mut ) =>: getInterpreter
+  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data
 end
 proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
   state [] .progContext =:: progContext
-  state currentOps =:: ops
-  ops []
-    0:i64 while ..dup state [] .constants .length < do =:: i
-      state [] .constants i list.get constantToOp list.append
-      i 1 +
-    end ..drop
-    state [] .constants list.clear state [] .constants =
-    op list.append
-  ops [] =
+  progContext [] .errors@ =:: errors
+  state [] .currentProc optional.isEmpty if
+    state getInterpreter =:: interpreter
+    op =:: op1
+    op1@ interpreter [] .context@ evaluateOperation if
+      "could not evaluate global operation: " sb.wrap
+        op progContext sb.appendOp
+      op .pos errors appendError
+    end
+  else
+    progContext [] .tmpOps
+      op list.append
+    progContext [] .tmpOps =
+  end
 end
 
-proc( ParserState ptr.mut : state -> ) =>: skipGlobalInterpreter
-  state [] .progContext [] .progFiles state [] .currentFile i64 cast list.at .data [] .globalOps @ =:: ops
-  state [] .currentProc optional.hasData if
-    return ## don't skip if inside procedure
-  end
-  state [] .constantBlocks .length 0 > if
-    return ## don't skip if inside constant block
-  end
-  ops []
-    state [] .globalOpBuffer list.appendAll
-  ops [] =
-  state [] .globalOpBuffer
-    list.clear
-  state [] .globalOpBuffer =
-end
-proc( Operation ptr optional : next? ParserState ptr.mut : state -> ) =>: resetGlobalInterpreter
-  state [] .progContext =:: progContext
-  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data =:: interpreter
-  progContext [] .progFiles state [] .currentFile i64 cast list.at .data [] .globalOps @ =:: ops
-  ##  -> store computed constants
-  0:i64 while ..dup interpreter [] .context .stack .length < do
-    interpreter [] .context .stack ..over list.at .data =:: constant
-    interpreter [] .context .stackInfo ..over list.at .data =:: constInfo
-    ops []
-      constant [] constInfo [] .valueType constInfo [] .pushedAt opConst list.append
-    ops [] =
-    1 +
-  end ..drop
-  ## -> store current operation
-  next? optional.hasData if
-    ops []
-      next? .data list.appendP
-    ops [] =
-  end
-  ##  -> reset interpreter
-  interpreter [] .context @ InterpreterType .PARSER interpreter.resetContext
-end
-proc( ParserState ptr.mut : state -> ) =>: tryInterpretGlobal
-  ## TODO sync open blocks with interpreter
-  ##   preserve positions of unclosed code-blocks
-  state [] .progContext =:: progContext
-  progContext [] .errors@ =:: errors
-  state [] .currentProc optional.hasData if
-    return ## don't interpret inside procedure
-  end
-  state [] .constantBlocks .length 0 > if
-    return ## don't interpret unfinished constant blocks
-  end
-  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data =:: interpreter
-  interpreter [] .offset =:: offset
-  offset while ..dup state [] .globalOpBuffer .length < do
-    state [] .globalOpBuffer ..over list.at .data =:: op
-    op interpreter [] .context@ evaluateOperation if
-      interpreter [] .context@ inTypeBlock if
-        "unexpected operation in type-constant: " sb.wrap
-          op [] progContext sb.appendOp
-        op [] .pos errors appendError
-      end
-      ## TODO remember opened blocks
-      ## interpreter failed
-      op Operation ptr cast optional.wrap state resetGlobalInterpreter
-    end
-    1 +
-  end ..drop
-  state [] .globalOpBuffer
-    list.clear
-  state [] .globalOpBuffer =
-end
 proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
   state [] .progContext =:: progContext
   state [] .currentProc optional.isEmpty if
@@ -287,13 +218,11 @@ proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
 end
 
 proc( Constant : const ParserState ptr.mut : state -> ) =>: pushConst
-  ## inline when code is no longer experimental
   const constantToOp state appendOp
-  return
 end
 
 proc( ParserState ptr.mut : state -> ConstValue ValueInfo ) =>: popConst
-  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data [] .context @ =:: interpreter
+  state getInterpreter [] .context@ =:: interpreter
   interpreter [] .stack
     list.pop =:: value
   interpreter [] .stack =
@@ -306,11 +235,11 @@ proc( ParserState ptr.mut : state -> bool ) =>: hasConst
   state [] .currentProc optional.hasData if
     false return ## constants only exists at global level
   end
-  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data [] .context @ =:: interpreter
+  state getInterpreter [] .context@ =:: interpreter
   interpreter [] .stack .length 0 > return
 end
 proc( ParserState ptr.mut : state -> ConstValue ptr.mut optional ValueInfo ptr.mut optional ) =>: peekConst
-  state [] .globalInterpreters state [] .currentFile i64 cast list.at .data [] .context @ =:: interpreter
+  state getInterpreter [] .context@ =:: interpreter
   interpreter [] .stack list.peek interpreter [] .stackInfo list.peek return
 end
 
@@ -342,140 +271,28 @@ proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> Type bool ) =
   end
   state popConst ..drop .typeId false return
 end
-proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> types.ArraySize arrayView bool #+fixed-size+# ) =>: popArraySize
-  state [] .progContext@ =:: progContext
-  progContext [] .errors@ =:: errors
-  progContext [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext .labelContext @ =:: labelContext
-  idContext [] .typeContext @ =:: typeContext
-  state [] .constants .length state [] .constOffset <= if
-    types.ArraySize array.empty true return
-  end
-  state [] .constants list.peek .data [] .val .wildCard ?? if
-    state [] .constants list.pop ..drop state [] .constants = ## remove wildcard constant
-    types.ArraySize array.empty false return
-  end
-  state [] .constants .length 1 - while ..dup state [] .constOffset >= do
-    state [] .constants ..over list.get .valueType typeContext types.isInt ! if
-      break
-    end
-    1 -
-  end 1 + =:: sizesOffset ##revert last decrement
-  idContext [] .arraySizeBuffer
-    list.clear
-    sizesOffset state [] .constOffset - list.ensureCap
-    sizesOffset while ..dup state [] .constants .length < do
-      ..swap
-        state [] .constants ..over.2 list.at .data =:: constant
-        constant []  .val =:: constVal
-          constVal .int ?? if
-            constVal .int types.ArraySizeType .int types.ArraySize new list.append
-          else constVal .genericArg ?? _if
-            constVal .genericArg i64 cast types.ArraySizeType .staticArg types.ArraySize new list.append
-          else
-            "unexpected constant for array size: " sb.wrap
-              constVal constContext typeContext sb.appendConstant
-            constant [] .pos errors appendError
-          end
-      ..swap
-      1 +
-    end ..drop
-  idContext [] .arraySizeBuffer =
-  state [] .constants
-    sizesOffset list.setLength
-  state [] .constants =
-  idContext [] .arraySizeBuffer list.asArray true return
-end
-proc( i64 : n FileState ptr.mut : fileState ParserState ptr.mut : state -> Type arrayView bool ) =>: popTypeConstants
-  state [] .progContext@ =:: progContext
-  progContext [] .errors@ =:: errors
-  state [] .constants .length state [] .constOffset n + < if
-    "missing type constant" sb.wrap fileState [] .wordStart errors appendError
-     Type array.empty true return
-  end
-  state [] .typeBuffer list.clear state [] .typeBuffer =
-  state [] .constants .length n - =:: newLength
-  newLength while ..dup state [] .constants .length < do
-    state [] .constants ..over list.at .data =:: constant
-    constant [] .val =:: constVal
-    constVal .typeId ?? ! if ..drop
-      "wrong type for constant, expected type" sb.wrap state [] .constants list.peek .data [] .pos errors appendError
-       Type array.empty true return
-    end
-    state [] .typeBuffer constVal .typeId list.append state [] .typeBuffer =
-    1 +
-  end ..drop
-  state [] .constants
-    newLength list.setLength
-  state [] .constants =
-  state [] .typeBuffer list.asArray false return
-end
-proc( i64 : len FileState ptr.mut : fileState ParserState ptr.mut : state -> Type arrayView ConstValue arrayView Type ) =>: popConstantArray
-  state [] .progContext@ =:: progContext
-  progContext [] .errors@ =:: errors
-  progContext [] .idContext@ =:: idContext
-  state [] .constants .length state [] .constOffset len + < if ## XXX compare size with expected size
-    "no enough constants for array" sb.wrap fileState [] .wordStart errors appendError
-     Type array.empty ConstValue array.empty Type .undefined return
-  end
-  Type .undefined =:: mut: arrayType
-  true =:: mut: hasArrayType
-  state [] .typeBuffer list.clear state [] .typeBuffer =
-  idContext [] .argBuffer .length =:: offset
-  state [] .constants .length len - =:: newLength
-  newLength while ..dup state [] .constants .length < do
-    state [] .constants ..over list.at .data =:: const
-    idContext [] .argBuffer
-      const [] .val list.append
-    idContext [] .argBuffer =
-    state [] .typeBuffer const [] .valueType list.append state [] .typeBuffer =
-    hasArrayType if
-      arrayType Type .undefined types.typeEquals if
-       const [] .valueType arrayType =
-      else arrayType const [] .valueType types.typeEquals ! _if
-        false hasArrayType =
-      end
-    end
-    1 +
-  end ..drop
-  state [] .constants
-    newLength list.setLength
-  state [] .constants =
-  idContext [] .argBuffer
-    offset list.setLength
-  idContext [] .argBuffer =
-  ## return
-    state [] .typeBuffer list.asArray
-    idContext [] .argBuffer .data offset + len array.create
-    hasArrayType if arrayType else Type .undefined end
-  return
-end
-
-proc( ParserState ptr.mut : state -> i64 ) =>: offsetConstants
-  state [] .constOffset
-    state [] .constants .length state [] .constOffset =
-  return
-end
-proc( i64 ParserState ptr.mut -> ) =>: resetConstants
-  [] .constOffset =
-end
 
 proc( BlockType : blockType ParserState ptr.mut : state -> ) =>: openBlock
   state [] .openBlocks
     ItrVarInfo optional.empty blockType -1 false false BlockInfo new list.append
   state [] .openBlocks =
 end
-proc( BlockType : blockType ParserState ptr.mut : state -> ) =>: openBlockScope
-  state [] .progContext [] .idContext @ id.openScope
+proc( BlockType : blockType bool : forceScope ParserState ptr.mut : state -> ) =>: openBlockScope
+  forceScope or state [] .currentProc optional.hasData if
+    state [] .progContext [] .idContext @ id.openScope
+    true
+  else false end =:: hasScope
   state [] .openBlocks
-    ItrVarInfo optional.empty blockType -1 false true BlockInfo new list.append
+    ItrVarInfo optional.empty blockType -1 false hasScope BlockInfo new list.append
   state [] .openBlocks =
 end
-proc( ItrVarInfo : itrVarInfo ParserState ptr.mut : state -> ) =>: openForBlock
-  state [] .progContext [] .idContext @ id.openScope
+proc( ItrVarInfo : itrVarInfo bool : forceScope ParserState ptr.mut : state -> ) =>: openForBlock
+  forceScope or state [] .currentProc optional.hasData if
+    state [] .progContext [] .idContext @ id.openScope
+    true
+  else false end =:: hasScope
   state [] .openBlocks
-    itrVarInfo optional.wrap BlockType .DO -1 false true BlockInfo new list.append
+    itrVarInfo optional.wrap BlockType .DO -1 false hasScope BlockInfo new list.append
   state [] .openBlocks =
 end
 proc( Type : valType bool : experimental ParserState ptr.mut : state -> ) =>: openProcBlock
@@ -531,17 +348,20 @@ proc(
 end
 
 proc( BlockType : mergeWith FilePosition : pos ParserState ptr.mut : state -> ) =>: convertAndOrBlock
+  state [] .currentProc optional.isEmpty if
+    return ## cannot modify and/or in global block
+  end
   state [] .progContext =:: progContext
   progContext [] .errors@ =:: errors
   state [] .andOrPositions =:: andOrPositions
   0:i64 while ..dup andOrPositions .length < do =:: i
     andOrPositions i list.get =:: opPos
-    opPos 0 <  opPos state currentOps [] .length >= | if
+    opPos 0 < or opPos progContext [] .tmpOps .length >= if
       "operations and blocks are out of sync, could not determine position of and/or" sb.wrap
       pos errors appendError
       return
     end
-    state currentOps [] opPos list.at .data =:: opData
+    progContext [] .tmpOps opPos list.at .data =:: opData
     opData [] .val .block ?? ! if
       "operations and blocks are out of sync, expected and/or got " sb.wrap
         opData [] progContext sb.appendOp
@@ -627,7 +447,7 @@ proc(
     isModifier do ..drop
       fileState nextToken ## XXX? print type of actual token
       ..dup .IDENTIFIER ?? ! if ..drop
-        "expected identifier" sb.wrap state [] .constants list.peek .data [] .pos errors appendError
+        "expected identifier" sb.wrap fileState [] .wordStart errors appendError
         "" string.wrap
       else
         .IDENTIFIER
@@ -1106,6 +926,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   idContext [] .typeContext@ =:: typeContext
   idContext [] .constContext@ =:: constContext
   typeContext .labelContext@ =:: labelContext
+  state getInterpreter [] .context@ skipCurrentBlock =:: skipBlock
   code
     token fileState state tryParseConstant if
       ..drop return
@@ -1114,7 +935,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return ## skip empty tokens
     end
     ## 1. parse blocks
-    ## TODO "shaddow"-mode to only keep track of current block, skipping all other tokens&blocking output
     ..dup "if" string.wrap string.eq if ..drop
       state currentBlockType =:: currentBlock
       currentBlock .AND ?? if ## sequence of ands -> allow access to local variables from if-branch
@@ -1128,7 +948,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       BlockType .IF  fileState [] .wordStart opBlock  state appendOp
       currentBlock .AND ?? ! if
-        BlockType .IF  state openBlockScope
+        BlockType .IF false state openBlockScope
       end
       return
     else ..dup "and" string.wrap string.eq
@@ -1138,7 +958,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state currentBlockType =:: outerBlock
       outerBlock .AND ?? ! and outerBlock .OR ?? ! if
         ## not already within an and-or chain
-        blockType  state openBlockScope
+        blockType false state openBlockScope
       else isOr _if ## remember if 'or' appeared
         state [] .openBlocks list.peek .data =:: current
         BlockType .OR current [] .blockType =
@@ -1169,7 +989,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .IF =:: blockType
       blockType fileState [] .wordStart opBlock  state appendOp
       currentType .AND ?? ! if ## no new scope for and .. _if
-        blockType state openBlockScope
+        blockType false state openBlockScope
       end
       state autoCloseCurrentBlock
       return
@@ -1182,8 +1002,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "'else' is only allowed in if-blocks" sb.wrap fileState [] .wordStart errors appendError
         return
       end
-      BlockType .ELSE  fileState [] .wordStart opBlock  state appendOp
-      BlockType .ELSE  state openBlockScope
+      BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
+      BlockType .ELSE false state openBlockScope
       closed .autoClose if
         state autoCloseCurrentBlock
       end
@@ -1204,7 +1024,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         id.LABEL_ID_NONE
       end =:: blockLabel
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
-      BlockType .WHILE  state openBlockScope
+      BlockType .WHILE false state openBlockScope
       return
     else ..dup "for" string.wrap string.eq or
         ..dup "for:" string.wrap string.eq _if =:: opName
@@ -1240,7 +1060,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ! assert "..itr.get"
       =:: itrGet
       itrGet [] .valueType itrGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
-      itrVar itrType ItrVarInfo new state openForBlock
+      itrVar itrType ItrVarInfo new false state openForBlock
       return
     else ..dup "do" string.wrap string.eq _if ..drop
       state currentBlockType =:: currentBlock
@@ -1316,7 +1136,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         id.LABEL_ID_NONE
       end =:: blockLabel
       BlockType .SWITCH blockLabel fileState [] .wordStart opLabeledBlock state appendOp
-      BlockType .SWITCH  state openBlockScope
+      BlockType .SWITCH false state openBlockScope
       return
     else ..dup "case" string.wrap string.eq _if ..drop
       state closeBlock =:: isError .blockType =:: closedBlock
@@ -1324,8 +1144,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "'case' is only allowed in switch-blocks" sb.wrap fileState [] .wordStart errors appendError
         return
       end
-      BlockType .CASE  fileState [] .wordStart opBlock  state appendOp
-      BlockType .CASE  state openBlockScope
+      BlockType .CASE fileState [] .wordStart opBlock  state appendOp
+      BlockType .CASE false state openBlockScope
       return
     else ..dup "default" string.wrap string.eq _if ..drop
       state closeBlock =:: isError =:: closed
@@ -1333,14 +1153,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "'default' is only allowed in switch-case-blocks" sb.wrap fileState [] .wordStart errors appendError
         return
       end
-      BlockType .DEFAULT  fileState [] .wordStart opBlock  state appendOp
-      BlockType .DEFAULT  state openBlockScope
+      BlockType .DEFAULT fileState [] .wordStart opBlock  state appendOp
+      BlockType .DEFAULT false state openBlockScope
       return
     else $ "=>" string.wrap string.eq or $ "=>:" string.wrap string.eq _if =:: opName
       opName .length 3 == =:: named
       ## pop type before reading name
-      state tryInterpretGlobal ## XXX? run interpreter on global code by default
       fileState state popTypeConstant ..drop =:: mut: procType
+      ## TODO? ensure global stack is empty at start of procedure
       named if ## =>:
         fileState state nextWord fileState state readLabel
         $ labelContext id.labelFlags id.FLAG_MUTABLE & ? if
@@ -1353,6 +1173,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: mut: procName
       procName labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       ## declare procedure name outside procedure scope
+      skipBlock if ## don't declare identifier in skipped block
+        -1:ProcId optional.wrap state [] .currentProc =
+        procType experimental state openProcBlock
+        return
+      end
       ## declare procedure
       procName
         procType
@@ -1369,7 +1194,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: idData procName =
       idData .constValue =:: procConst
       state [] .currentProc optional.isEmpty ! =:: isNested
-      ## ensure procedure block is opened before returning
+      ## ensure procedure block is opened after declaring procedure,
+      ##   but before early return due to error
       procType experimental state openProcBlock
       progContext [] .tmpOps .length =:: codeStart
       procConst .procedure ?? if
@@ -1430,10 +1256,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## TODO generate operation to push proc-ptr if unnamed
       ## ? allow unnamed procedures in overload: ... end block?
       idData .valueType idData@ id.asIdInfo fileState [] .wordStart opInitializeId
-      ## XXX? does the interpreter need to be reset when entering a procedure
-      Operation ptr optional.empty state resetGlobalInterpreter
       state appendOp
-      state skipGlobalInterpreter
       return
     else ..dup "return" string.wrap string.eq _if ..drop
       idContext id.currentScopeProc =:: experimental =:: procType
@@ -1573,13 +1396,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             return
           end
           state [] .currentProc .data =:: mut: currentProcId
-          progContext [] .procedures
-            currentProcId i64 cast list.at .data
-          =:: currentProc
           ProcId optional.empty state [] .currentProc =
-          progContext [] .tmpOps .length
-            currentProc [] .implementation .code .codeStart -
-          currentProc [] .implementation .code .codeLength =
+          skipBlock ! if
+            progContext [] .procedures
+              currentProcId i64 cast list.at .data
+            =:: currentProc
+            progContext [] .tmpOps .length
+              currentProc [] .implementation .code .codeStart -
+            currentProc [] .implementation .code .codeLength =
+          end
         else closedType .AND ?? or closedType .OR ?? _if
           state [] .andOrPositions list.clear state [] .andOrPositions =
         else closedType .DO ?? _if
@@ -1601,74 +1426,64 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       do end
       return
     else ..dup "(" string.wrap string.eq _if ..drop
-      BlockType .TYPE_COMPOSITE state openBlockScope
+      BlockType .TYPE_COMPOSITE true state openBlockScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
-          state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
-      state opCount
-        state [] .openBlocks list.peek .data
-      [] .blockStart =
       BlockType .TYPE_COMPOSITE fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "tuple(" string.wrap string.eq _if ..drop
-      BlockType .TYPE_TUPLE state openBlockScope
+      BlockType .TYPE_TUPLE true state openBlockScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
-          state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
       BlockType .TYPE_TUPLE fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "struct(" string.wrap string.eq _if ..drop
-      BlockType .TYPE_STRUCT state openBlockScope
+      BlockType .TYPE_STRUCT true state openBlockScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
-          state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
       BlockType .TYPE_STRUCT fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "union(" string.wrap string.eq _if ..drop
-      BlockType .TYPE_UNION state openBlockScope
+      BlockType .TYPE_UNION true state openBlockScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
-          state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
       BlockType .TYPE_UNION fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "union.raw(" string.wrap string.eq _if ..drop
-      BlockType .TYPE_UNTAGGED_UNION state openBlockScope
+      BlockType .TYPE_UNTAGGED_UNION true state openBlockScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
-          state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
       BlockType .TYPE_UNTAGGED_UNION fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "enum(" string.wrap string.eq _if ..drop
-      BlockType .TYPE_ENUM state openBlockScope
+      BlockType .TYPE_ENUM true state openBlockScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
-          state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
       BlockType .TYPE_ENUM fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "proc(" string.wrap string.eq _if ..drop
-      BlockType .TYPE_PROC_IN state openBlockScope
+      BlockType .TYPE_PROC_IN true state openBlockScope
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
-          state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
       BlockType .TYPE_PROC_IN fileState [] .wordStart opBlock state appendOp
@@ -1684,32 +1499,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError
         return
       end
-      blockType .TYPE_COMPOSITE ?? if
-        state [] .openBlocks list.peek .data [] @ =:: currentBlock
-        currentBlock [] .blockStart =:: blockStart
-        blockStart 0 <  blockStart state currentOps [] .length >= | if
-          "operations and blocks are out of sync, could not determine start of current block" sb.wrap
-          fileState [] .wordStart errors appendError
-          return
-        end
-        state currentOps [] blockStart list.at .data =:: startOp
-        startOp [] .val .block ?? and
-            startOp [] .val .block .blockType .TYPE_COMPOSITE ?? if
-          BlockType .TYPE_PROC_IN currentBlock [] .blockType =
-          BlockType .TYPE_PROC_IN
-            startOp [] .pos
-          opBlock startOp [] =
-        else
-          "operations and blocks are out of sync got: " sb.wrap
-            startOp [] progContext sb.appendOp
-            " expected: " sb.appendS
-            BlockType .TYPE_COMPOSITE sb.appendBlockType
-            " block" sb.appendS
-          fileState [] .wordStart errors appendError
-          return
-        end
-      end
-      BlockType .TYPE_PROC_OUT state openBlockScope
+      BlockType .TYPE_PROC_OUT true state openBlockScope
       ## don't update constant blocks, procedure-type is a single constant
       BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
       return
@@ -1728,8 +1518,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           break
         TYPE_PROC_OUT case
           state closeBlock  =:: isError .blockType =:: outerType
-          isError ! and outerType .TYPE_PROC_IN ?? if
-            BlockType .TYPE_PROC_IN
+          isError ! and outerType .TYPE_PROC_IN ?? or outerType .TYPE_COMPOSITE ?? if
+            outerType
               fileState [] .wordStart
             opEndBlock state appendOp
             break
@@ -1762,13 +1552,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       return
     else ..dup "{" string.wrap string.eq _if ..drop
-      BlockType .INITIALIZER  state openBlockScope
+      BlockType .INITIALIZER true state openBlockScope
       ##  remember start position, constant offset
       ## TODO ensure using declaration within initializer block does not invalidate position of operation
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
-          state [] .constants .length
         CompositeConstantOffset new list.append
       state [] .constantBlocks =
       BlockType .INITIALIZER fileState [] .wordStart opBlock state appendOp
@@ -1787,6 +1576,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .INITIALIZER fileState [] .wordStart opEndBlock state appendOp
       return
     end
+    skipBlock if
+      ..drop return ## code currently in skipped section
+    end
     ## 2. parse keywords & built-in operators
     $ ":" string.wrap string.eq or $ "=:" string.wrap string.eq if =:: opName
       ## TODO extract declaration parser into procedure?
@@ -1794,7 +1586,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       false =:: mut: localDeclaration
       ## TODO? should code in constantBlocks be treated as local?
       state [] .constantBlocks .length 0 == state [] .currentProc optional.isEmpty & if
-        state tryInterpretGlobal ## try to interpret global operations before each declaration
         fileState state popTypeConstant ..drop
       else
         ## correct type will be resolved in type-check phase
@@ -1912,12 +1703,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state appendOp
         return
       end
-      Operation ptr optional.empty state resetGlobalInterpreter
       state appendOp
-      state skipGlobalInterpreter
       return
     else ..dup "=::" string.wrap string.eq _if ..drop
-      state tryInterpretGlobal
       fileState state nextWord fileState state readLabel =:: mut: labelId
       state hasConst if
         state peekConst =:: info =:: value
@@ -1986,9 +1774,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state popConst ..drop.2
         return
       end
-      Operation ptr optional.empty state resetGlobalInterpreter
       idData .valueType idData @ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
-      state skipGlobalInterpreter
       return
     else ..dup "=" string.wrap string.eq _if ..drop
       fileState [] .wordStart opSetValue state appendOp
@@ -2470,7 +2256,6 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
     64  BlockInfo               list.create
     32  i64                     list.create
     128 Operation               list.create
-    128 Constant                list.create
     0
     128 Type                    list.create
     FILE_ID_NONE
@@ -2481,7 +2266,6 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
   ParserState new =:: mut: state
   rootFile state @ parseFile rootFile rootPos state @ checkIOError ..drop
   ## cleanup parser memory
-  state .constants list.free ..drop
   state .typeBuffer list.free ..drop
   state .constantBlocks list.free ..drop
   0:i64 while ..dup state .globalInterpreters .length < do
@@ -2508,7 +2292,7 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
     progContext [] .progFiles =
     state [] .globalInterpreters
       ## InterpreterInfo
-        progContext fileId InterpreterType .PARSER interpreter.wrapProgram
+        progContext fileId InterpreterType .GLOBAL interpreter.wrapProgram
         0
       InterpreterInfo new list.append
     state [] .globalInterpreters =

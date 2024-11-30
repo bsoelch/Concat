@@ -1,5 +1,6 @@
 missing type parameter for type-modifier ptr at typeArgConsumesNamedTypeField.concat:1:22
-unexpected operation in type-constant: typeModifier "ptr" at typeArgConsumesNamedTypeField.concat:1:22
+could not evaluate global operation: typeModifier "ptr" at typeArgConsumesNamedTypeField.concat:1:22
  at typeArgConsumesNamedTypeField.concat:1:22
-missing type constant at typeArgConsumesNamedTypeField.concat:1:37
-unexpected type for procedure declaration: undefined at typeArgConsumesNamedTypeField.concat:1:41
+not enough arguments for field-declaration expected: 1 got: 0 at typeArgConsumesNamedTypeField.concat:1:28
+could not evaluate global operation: declare ( auto[240] ) : label "itr" at typeArgConsumesNamedTypeField.concat:1:28
+ at typeArgConsumesNamedTypeField.concat:1:28

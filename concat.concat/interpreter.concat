@@ -25,7 +25,7 @@ struct(
   i64 : labelOffset
 ) =:: BlockInfo
 
-enum( PARSER GLOBAL FOLD_LOCAL INTERPRET ) =:: export: InterpreterType
+enum( GLOBAL FOLD_LOCAL INTERPRET ) =:: export: InterpreterType
 
 struct(
   ProgramContext ptr.mut : program
@@ -55,7 +55,7 @@ proc(
     canIgnoreErrorMessage if
       context [] .evalType switch
         INTERPRET GLOBAL case break
-        PARSER FOLD_LOCAL case true return
+        FOLD_LOCAL case true return
       end
     end
     "not enough arguments for " sb.wrap
@@ -178,7 +178,7 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inGlobalBlock
   end ..drop
   true return
 end
-proc( InterpreterContext ptr.mut : context -> bool ) =>: skipCurrentBlock
+proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBlock
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while $ 0 >= do
     context [] .openBlocks $1 list.at .data [] .blockType switch
@@ -430,6 +430,82 @@ proc(
   false return
 end
 
+proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeStructBlock
+  context [] .program [] .errors@ =:: errors
+  context [] .program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  op closedBlock
+    LabeledValueContext .TYPE_STRUCT
+    op [] .pos
+  context closedTypeBlock if true return end
+  closedBlock [] .labelOffset =:: labelOffset
+  closedBlock [] .valueOffset =:: valueOffset
+  closedBlock [] .typeOffset =:: typeOffset
+  closedBlock [] .blockType .TYPE_COMPOSITE ?? and context [] .typeBuffer .length typeOffset == if
+    Type .empty
+  else
+    ## newTuple
+      context [] .typeBuffer list.asArray typeOffset array.tail
+      context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+    typeContext types.newTuple if ..drop
+      "could not create structure-type" sb.wrap op [] .pos errors appendError
+      true return
+    end
+  end =:: tupleType
+  context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
+  context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
+  context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+  ## pushValue
+    tupleType ConstValue .typeId
+    types.primitive.TYPE
+    id.LABEL_ID_NONE
+    op [] .pos
+  context pushValue
+  false return
+end
+proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeProcTypeBlock
+  context [] .program [] .errors@ =:: errors
+  context [] .program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  closedBlock [] .labelOffset =:: labelOffset
+  closedBlock [] .valueOffset =:: valueOffset
+  closedBlock [] .typeOffset =:: typeOffset
+  context [] .typeBuffer .length typeOffset - 1 < or
+      ## last argument is procedure output
+      context [] .typeBuffer
+        $ .length 1 -
+      list.get .procOut ?? ! if
+    "missing return type for procedure" sb.wrap op [] .pos errors appendError
+    true return
+  end
+  context [] .typeBuffer
+    list.pop =:: procOut ## last value is return type
+  context [] .typeBuffer =
+  op closedBlock
+    LabeledValueContext .TYPE_PROC
+    op [] .pos
+  context closedTypeBlock if true return end
+  ## newProcArgs
+    context [] .typeBuffer list.asArray typeOffset array.tail
+    context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+    false
+  typeContext types.newProcArgs =:: procIn
+  procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
+    "could not create procedure-type" sb.wrap op [] .pos errors appendError
+    true return
+  end =:: newType
+  context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
+  context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
+  context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+  ## pushValue
+    newType ConstValue .typeId
+    types.primitive.TYPE
+    id.LABEL_ID_NONE
+    op [] .pos
+  context pushValue
+  false return
+end
+
 proc(
   Operation ptr : op
   BlockInfo ptr : closedBlock
@@ -496,7 +572,7 @@ proc(
         "stack underflow " sb.wrap
         pos context [] .program [] .errors @ appendError
       break
-      PARSER FOLD_LOCAL case break ## allow underflow
+      FOLD_LOCAL case break ## allow underflow
     end
     ## return
       ## ValueInfo
@@ -1008,7 +1084,7 @@ proc(
         INTERPRET GLOBAL case
           "return outside procedure" sb.wrap op [] .pos errors appendError
           break
-        PARSER FOLD_LOCAL case break
+        FOLD_LOCAL case break
       end
       true return
     block case
@@ -1021,7 +1097,7 @@ proc(
         PROCEDURE EXPERIMENTAL_PROCEDURE NAMESPACE case
           context [] .evalType switch
             INTERPRET GLOBAL case break
-            PARSER FOLD_LOCAL case true return
+            FOLD_LOCAL case true return
           end
           "unsupported block-type in constant evaluation: " sb.wrap
             op [] .val .block .blockType sb.appendBlockType
@@ -1031,11 +1107,11 @@ proc(
           ## XXX? detect if global (or in type declaration)
           ##  disable local if-folding by default (enable with optimizations)
           context [] .evalType switch
-            INTERPRET GLOBAL PARSER case break
+            INTERPRET GLOBAL case break
             FOLD_LOCAL case true return
           end
           op [] .pos context popValue if ..drop.2
-            context [] .evalType .PARSER ?? and context inTypeOrInitializer ! if
+            context [] .evalType .GLOBAL ?? and context inTypeOrInitializer ! if
               true return
             end
             "missing condition for if-statement: " sb.wrap
@@ -1067,7 +1143,6 @@ proc(
               and currentBlock .data .blockType .IF_FALSE ?? ! if
             context [] .evalType switch ## XXX remove once blocks are synchronized with parser
               INTERPRET GLOBAL case break
-              PARSER case context inGlobalBlock if true return end break
               FOLD_LOCAL case true return
             end
             "unexpected else statement, else can only appear in if-blocks" sb.wrap
@@ -1075,7 +1150,7 @@ proc(
             true return
           end
           context [] .evalType switch
-            INTERPRET GLOBAL PARSER case break
+            INTERPRET GLOBAL case break
             FOLD_LOCAL case
               currentBlock .data .blockType .IF ?? if true return end
               break
@@ -1099,11 +1174,8 @@ proc(
         AND OR AND_IF OR_IF AND_DO OR_DO
         UNKNOWN case
           context [] .evalType switch
-            INTERPRET GLOBAL PARSER case break
+            INTERPRET GLOBAL case break
             FOLD_LOCAL case true return
-          end
-          context [] .evalType .PARSER ?? and context [] .openBlocks .length 0 == if
-            true return
           end
           "unsupported block-type in constant evaluation: " sb.wrap
             op [] .val .block .blockType sb.appendBlockType
@@ -1121,7 +1193,7 @@ proc(
              "-block" sb.appendS
             op [] .pos errors appendError
           break
-          PARSER FOLD_LOCAL case break
+          FOLD_LOCAL case break
         end
         true return
       end
@@ -1144,35 +1216,16 @@ proc(
         true return
       end
       blockType switch
-        TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case
-          op closedBlock@
-            LabeledValueContext .TYPE_STRUCT
-            op [] .pos
-          context closedTypeBlock if true return end
-          closedBlock .labelOffset =:: labelOffset
-          closedBlock .valueOffset =:: valueOffset
-          closedBlock .typeOffset =:: typeOffset
-          blockType .TYPE_COMPOSITE ?? and context [] .typeBuffer .length typeOffset == if
-            Type .empty
+        TYPE_COMPOSITE case
+          context [] .typeBuffer list.peek =:: outType?
+          outType? optional.hasData and outType? .data [] .procOut ?? if
+            op closedBlock@ context closeProcTypeBlock return
           else
-            ## newTuple
-              context [] .typeBuffer list.asArray typeOffset array.tail
-              context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
-            typeContext types.newTuple if ..drop
-              "could not create structure-type" sb.wrap op [] .pos errors appendError
-              true return
-            end
-          end =:: tupleType
-          context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-          context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-          context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
-          ## pushValue
-            tupleType ConstValue .typeId
-            types.primitive.TYPE
-            id.LABEL_ID_NONE
-            op [] .pos
-          context pushValue
-          false return
+            op closedBlock@ context closeStructBlock return
+          end
+          break
+        TYPE_TUPLE TYPE_STRUCT case
+          op closedBlock@ context closeStructBlock return
         TYPE_ENUM case
           op closedBlock@
             LabeledValueContext .TYPE_ENUM
@@ -1225,43 +1278,7 @@ proc(
           context pushValue
           false return
         TYPE_PROC_IN case
-          closedBlock .labelOffset =:: labelOffset
-          closedBlock .valueOffset =:: valueOffset
-          closedBlock .typeOffset =:: typeOffset
-          context [] .typeBuffer .length typeOffset - 1 < or
-              ## last argument is procedure output
-              context [] .typeBuffer
-                $ .length 1 -
-              list.get .procOut ?? ! if
-            "missing return type for procedure" sb.wrap op [] .pos errors appendError
-            true return
-          end
-          context [] .typeBuffer
-            list.pop =:: procOut ## last value is return type
-          context [] .typeBuffer =
-          op closedBlock@
-            LabeledValueContext .TYPE_PROC
-            op [] .pos
-          context closedTypeBlock if true return end
-          ## newProcArgs
-            context [] .typeBuffer list.asArray typeOffset array.tail
-            context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
-            false
-          typeContext types.newProcArgs =:: procIn
-          procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
-            "could not create procedure-type" sb.wrap op [] .pos errors appendError
-            true return
-          end =:: newType
-          context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-          context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-          context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
-          ## pushValue
-            newType ConstValue .typeId
-            types.primitive.TYPE
-            id.LABEL_ID_NONE
-            op [] .pos
-          context pushValue
-          false return
+          op closedBlock@ context closeProcTypeBlock return
         TYPE_PROC_OUT case
           op closedBlock@
             LabeledValueContext .TYPE_PROC
@@ -1315,7 +1332,7 @@ proc(
         UNKNOWN NAMESPACE FINALLY case
           context [] .evalType switch
             INTERPRET GLOBAL case break
-            PARSER FOLD_LOCAL case true return
+            FOLD_LOCAL case true return
           end
           "unsupported block-end in constant evaluation: " sb.wrap
             op [] .val .blockEnd .blockType sb.appendBlockType
@@ -1334,7 +1351,7 @@ proc(
             "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
             op [] .pos errors appendError
           break
-          PARSER FOLD_LOCAL case break
+          FOLD_LOCAL case break
         end
         true return
       end
@@ -1389,7 +1406,7 @@ proc(
       end
       context [] .evalType switch
         INTERPRET GLOBAL case break
-        PARSER FOLD_LOCAL case
+        FOLD_LOCAL case
           context inTypeOrInitializer ! if
             true return
           end
@@ -1464,7 +1481,7 @@ proc(
                     [] .isStatic ! if
                   true return ## skip errors for non-static local procedures
                 end break
-              INTERPRET GLOBAL PARSER case break
+              INTERPRET GLOBAL case break
             end
             calledProc? optional.isEmpty if
               message op [] .pos errors appendError
@@ -1550,7 +1567,7 @@ proc(
           value? optional.isEmpty if
             context [] .evalType switch
               INTERPRET GLOBAL case break
-              PARSER FOLD_LOCAL case true return
+              FOLD_LOCAL case true return
             end
             "missing value for " sb.wrap
               op [] .val .getId labelContext sb.appendIdInfo
@@ -1576,7 +1593,7 @@ proc(
           idData [] .constValue .none ?? if
             context [] .evalType switch
               INTERPRET GLOBAL case break
-              PARSER FOLD_LOCAL case
+              FOLD_LOCAL case
                 idInfo [] .idType .TYPE ?? ! if
                   true return
                 end
@@ -1597,17 +1614,15 @@ proc(
                 op [] program sb.appendOp
               op [] .pos errors appendError
               break
-            PARSER FOLD_LOCAL GLOBAL case break
+            FOLD_LOCAL GLOBAL case break
           end
           true return
       end
       break
     initializeId autoTypedInitializeId case
       context [] .evalType switch
-        INTERPRET case break
-        PARSER FOLD_LOCAL GLOBAL case
-          ## global initialization handled by type-checker
-          true return
+        INTERPRET GLOBAL case break
+        FOLD_LOCAL case true return
       end
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
@@ -1704,7 +1719,7 @@ proc(
     getLabel case
       context [] .evalType switch
         FOLD_LOCAL case true return ## XXX? partially allow enum-label resolving in local code
-        PARSER INTERPRET GLOBAL case break
+        INTERPRET GLOBAL case break
       end
       op [] .val .getLabel =:: labelId
       op [] .pos context popValue if ..drop.2
@@ -1773,8 +1788,8 @@ proc(
         valInfo
       context unpopValue
       context [] .evalType switch
-        INTERPRET case break
-        PARSER FOLD_LOCAL GLOBAL case
+        INTERPRET GLOBAL case break
+        FOLD_LOCAL case
           ## label/name resolving handled by type-checker
           true return
       end
@@ -1785,8 +1800,8 @@ proc(
       true return
     atLabel atName hasLabel existsLabel existsName case
       context [] .evalType switch
-        INTERPRET case break
-        PARSER FOLD_LOCAL GLOBAL case
+        INTERPRET GLOBAL case break
+        FOLD_LOCAL case
           ## label/name resolving handled by type-checker
           true return
       end
@@ -1905,7 +1920,7 @@ proc(
             "missing argument for assert, expected boolean" sb.wrap
             op [] .pos errors appendError
             break
-          PARSER FOLD_LOCAL case break
+          FOLD_LOCAL case break
         end
         true return
       end =:: value =:: valInfo
@@ -1925,7 +1940,7 @@ proc(
     Error case
       context [] .evalType switch
         FOLD_LOCAL case true return ## error is handled by type-checker
-        INTERPRET GLOBAL PARSER case break
+        INTERPRET GLOBAL case break
       end
       ## appendError
         op [] .val .Error .message .length sb.create
@@ -2061,7 +2076,7 @@ proc(
             op [] program sb.appendOp
           op [] .pos errors appendError
           break
-        PARSER FOLD_LOCAL case break
+        FOLD_LOCAL case break
       end
       true return
   end
@@ -2090,7 +2105,7 @@ proc(
   0:i64 =:: mut: nArgs
   context [] .evalType switch
     INTERPRET GLOBAL case true break
-    PARSER FOLD_LOCAL case false break
+    FOLD_LOCAL case false break
   end =:: showErrors
   inTypes .length 1 - while ..dup 0 >= do =:: i
     nArgs 3 < assert "built-ins have at most three arguments"
@@ -2262,7 +2277,7 @@ proc(
   ## XXX resolve signature
   ## TODO check argument types
   context [] .evalType switch
-    PARSER GLOBAL FOLD_LOCAL case
+    GLOBAL FOLD_LOCAL case
       program [] .tmpOps break
     INTERPRET case
       program [] .progFiles
