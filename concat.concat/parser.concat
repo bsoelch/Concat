@@ -45,6 +45,7 @@ struct(
   CompositeConstantOffset list : mut: constantBlocks
   InterpreterInfo list : mut: globalInterpreters
   LabelId list : mut: labelBuffer
+  bool : saveGlobalTokens
 ) =:: ParserState
 
 proc( FilePosition : pos -> Constant ) =>: newWildcardConst
@@ -194,6 +195,14 @@ proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
   state [] .progContext =:: progContext
   progContext [] .errors@ =:: errors
   state [] .currentProc optional.isEmpty if
+    state [] .saveGlobalTokens if
+      progContext [] .progFiles
+        state [] .currentFile i64 cast
+      list.at .data =:: currentFile
+      currentFile [] .globalOps
+        op list.append
+      currentFile [] .globalOps =
+    end
     state getInterpreter =:: interpreter
     op =:: op1
     op1@ interpreter [] .context@ evaluateOperation if
@@ -2236,7 +2245,12 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr.mut : state ->
 end
 
 
-proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramContext ) =>: export: parseProgram
+proc(
+  stringBuilder : rootFile
+  string : libPath
+  string : basePath
+  bool : saveGlobalTokens
+-> ProgramContext ) =>: export: parseProgram
   newProgramContext =:: mut: programContext
   ## FilePosition
     rootFile sb.asStr
@@ -2263,6 +2277,7 @@ proc( stringBuilder : rootFile string : libPath string : basePath -> ProgramCont
     128 CompositeConstantOffset list.create
     0   InterpreterInfo         list.create
     128 LabelId                 list.create
+    saveGlobalTokens
   ParserState new =:: mut: state
   rootFile state @ parseFile rootFile rootPos state @ checkIOError ..drop
   ## cleanup parser memory

@@ -227,7 +227,7 @@ end
 proc( -> ) =>: main ## TODO check return value of fopen
   parseArgs
   ## TODO cleanup program memory after compilation
-  srcFile libPath basePath parseProgram =:: mut: prog
+  srcFile libPath basePath parserTokensFile optional.hasData parseProgram =:: mut: prog
   parserTokensFile optional.hasData if
     1024 sb.create
       prog @ sb.appendProgram
