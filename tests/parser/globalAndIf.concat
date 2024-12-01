@@ -28,28 +28,28 @@ else
 end
 
 _A_ or _B_ and _C_ if else
-  ..!error "unreachable"
+  ..compiler.error "unreachable"
 end
 _A_ and _B_ or _C_ if
-  ..!error "unreachable"
+  ..compiler.error "unreachable"
 end
 _C_ or _B_ and _A_ if else
-  ..!error "unreachable"
+  ..compiler.error "unreachable"
 end
 _C_ and _B_ or _A_ if else
-  ..!error "unreachable"
+  ..compiler.error "unreachable"
 end
 _C_ and _A_ or _B_ if else
-  ..!error "unreachable"
+  ..compiler.error "unreachable"
 end
 _C_ and _B_ and _A_ if
-  ..!error "unreachable"
+  ..compiler.error "unreachable"
 end
 _A_ or _D_ or _B_ and _C_ if else
-  ..!error "unreachable"
+  ..compiler.error "unreachable"
 end
 _A_ or _B_ and _D_ or _C_ if else
-  ..!error "unreachable"
+  ..compiler.error "unreachable"
 end
 
 proc( -> ) =>: main

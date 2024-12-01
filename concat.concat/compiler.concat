@@ -6,6 +6,7 @@ import "prepareCompile.concat"
 import "generator_qbe.concat"
 import "generator_ssa.concat"
 
+0:i64 =:: export: _VERSION_ ## compiler version
 stringBuilder : mut: srcFile
 stringBuilder : mut: outFile
 string : mut: basePath
@@ -13,7 +14,7 @@ string : mut: libPath
 string optional : mut: parserTokensFile
 string optional : mut: compilerTokensFile
 string optional : mut: errorFile
-false =:: mut: wError
+false =:: mut: export: _W_ERROR_
 ## enable constant-folding
 true =:: mut: export: _FOLD_CONSTANTS_
 false =:: mut: export: _EXPERIMENTAL_
@@ -82,7 +83,7 @@ proc( -> ) =>: parseArgs
           ArgParserState .ERR_PATH state =
           break
         'W' case
-          true wError =
+          true _W_ERROR_ =
           break
         'X' case ## experimental features
           true _EXPERIMENTAL_ =
@@ -208,7 +209,7 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
         err [] sb.appendCompilerError
         err [] .errType .ERROR ?? if
           true hasError =
-        else wError err [] .errType .WARNING ?? & _if
+        else _W_ERROR_ err [] .errType .WARNING ?? & _if
           true hasError =
         end
       ..swap 1 +

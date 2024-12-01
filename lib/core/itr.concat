@@ -42,7 +42,7 @@ namespace: ptr
   end
   namespace: itr
     proc( type : auto: T T ptr : p -> T ptrItr ) =>: prepare0D
-      ..!warning "iteration over pointer to single value"
+      ..compiler.warning "iteration over pointer to single value"
       ## ptrItr
         p
         p T _ ptr cast 1 +

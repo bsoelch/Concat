@@ -33,41 +33,41 @@ namespace: ptr
   end
 
   proc( type : auto: T T ptr T ptr -> i32 ) =>: cmp0D
-    ..!error "comparisson of value pointers is not supported"
-    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..compiler.error "comparisson of value pointers is not supported"
+    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: lt0D
-    ..!error "comparisson of value pointers is not supported"
-    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..compiler.error "comparisson of value pointers is not supported"
+    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: le0D
-    ..!error "comparisson of value pointers is not supported"
-    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..compiler.error "comparisson of value pointers is not supported"
+    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: ge0D
-    ..!error "comparisson of value pointers is not supported"
-    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..compiler.error "comparisson of value pointers is not supported"
+    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: gt0D
-    ..!error "comparisson of value pointers is not supported"
-    ..!info "to use comparison operators on value pointers cast to raw pointers first"
+    ..compiler.error "comparisson of value pointers is not supported"
+    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
     ..unreachable
   end
 
   proc( type : auto: T T ptr : p i64 : offset -> T ptr ) =>: add0D
-    ..!error "pointer arithmetic on value pointers is not supported"
+    ..compiler.error "pointer arithmetic on value pointers is not supported"
     ..unreachable
   end
   proc( type : auto: T T ptr : p i64 : offset -> T ptr ) =>: sub0D
-    ..!error "pointer arithmetic on value pointers is not supported"
+    ..compiler.error "pointer arithmetic on value pointers is not supported"
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> i64 ) =>: diff0D
-    ..!error "pointer arithmetic on value pointers is not supported"
+    ..compiler.error "pointer arithmetic on value pointers is not supported"
     ..unreachable
   end
   ## XXX? prohibit arithmetic on array pointers
@@ -79,11 +79,11 @@ namespace: ptr
       p i64 cast! offset T ..type.size * - T _ ptr.mut cast!
     end
     proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: add0D
-      ..!error "pointer arithmetic of value pointers is not supported"
+      ..compiler.error "pointer arithmetic of value pointers is not supported"
       ..unreachable
     end
     proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: sub0D
-      ..!error "pointer arithmetic of value pointers is not supported"
+      ..compiler.error "pointer arithmetic of value pointers is not supported"
       ..unreachable
     end
   end

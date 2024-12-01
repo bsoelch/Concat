@@ -164,10 +164,12 @@
                   ops(\.[0-9]+)?              |
                   parser\.ops(\.[0-9]+)?
                 ) |
-                \!(
+                compiler\.(
                   error   |
                   warning |
-                  info
+                  info    |
+                  flag.([^[:space:]\.]+) |
+                  version
                 )
              )
            )

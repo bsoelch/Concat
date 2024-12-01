@@ -2043,20 +2043,20 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart
       opAssert state appendOp
       return
-    else $ "..!error" string.wrap string.eq
-        or $ "..!warning" string.wrap string.eq
-        or $ "..!info" string.wrap string.eq _if =:: opName
+    else $ "..compiler.error" string.wrap string.eq
+        or $ "..compiler.warning" string.wrap string.eq
+        or $ "..compiler.info" string.wrap string.eq _if =:: opName
       ## create error/warning/info if operation is reachable
       fileState nextToken ## XXX? handle different string types?
       ..dup .STRING ?? ! if ..drop
         "error message has to be a string constant" sb.wrap fileState [] .wordStart errors appendError
         return
       end .STRING .value =:: message
-      opName "..!error" string.wrap string.eq if
+      opName "..compiler.error" string.wrap string.eq if
         ErrorType .ERROR
-      else opName "..!warning" string.wrap string.eq _if
+      else opName "..compiler.warning" string.wrap string.eq _if
         ErrorType .WARNING
-      else opName "..!info" string.wrap string.eq _if
+      else opName "..compiler.info" string.wrap string.eq _if
         ErrorType .INFO
       else
         "unexpected error type: " sb.wrap
@@ -2069,6 +2069,32 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         errorType
         fileState [] .wordStart
       opError state appendOp
+      return
+    else $ "..compiler.flag." string.wrap string.startsWith _if
+      "..compiler.flag." ..length string.tail =:: flagName
+      ## XXX? treat compiler constants as variables, allow ??? operator to check if constant exists
+      flagName "experimental" string.wrap string.eq if
+        _EXPERIMENTAL_ ConstValue .boolean
+        types.primitive.BOOL
+      else flagName "foldConstants" string.wrap string.eq _if
+        _FOLD_CONSTANTS_ ConstValue .boolean
+        types.primitive.BOOL
+      else flagName "noCore" string.wrap string.eq _if
+        _INCLUDE_CORE_ ! ConstValue .boolean
+        types.primitive.BOOL
+      else flagName "wError" string.wrap string.eq _if
+        _W_ERROR_ ConstValue .boolean
+        types.primitive.BOOL
+      else
+        ConstValue .none
+        Type .empty
+      end
+      fileState [] .wordStart opConst state appendOp
+      return
+    else $ "..compiler.version" string.wrap string.eq _if ..drop
+      _VERSION_ ConstValue .int
+      types.primitive.I64
+      fileState [] .wordStart opConst state appendOp
       return
     else ..dup "..?types" string.wrap string.eq or
         ..dup "..?types." string.wrap string.startsWith _if =:: mut: opName
