@@ -90,8 +90,8 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: inEnum
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
         SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
         AND OR AND_IF OR_IF AND_DO OR_DO
-        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         NAMESPACE case break
     end
     1 -
@@ -110,8 +110,8 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: inUnion
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE case break
     end
     1 -
@@ -130,8 +130,8 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: inTypeOrInitializer
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE case break
     end
     1 -
@@ -150,8 +150,8 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeBlock
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE INITIALIZER case break
     end
     1 -
@@ -170,8 +170,8 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inGlobalBlock
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE INITIALIZER case break
     end
     1 -
@@ -182,9 +182,9 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBloc
   ## XXX cache/precompute result
   context [] .openBlocks .length 1 - while $ 0 >= do
     context [] .openBlocks $1 list.at .data [] .blockType switch
-      IF_FALSE AND_IF_FALSE OR_IF_TRUE ELSE_TRUE case
+      IF_FALSE AND_FALSE OR_TRUE ELSE_TRUE case
          ..drop true return
-      IF_TRUE AND_IF_TRUE OR_IF_FALSE ELSE_FALSE
+      IF_TRUE AND_TRUE OR_FALSE ELSE_FALSE
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
@@ -208,6 +208,34 @@ proc( BlockType : blockType InterpreterContext ptr.mut : context -> ) =>: openBl
     BlockInfo new list.append
   context [] .openBlocks =
 end
+BlockType ..length 38 == assert "number of block types"
+proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
+  context [] .openBlocks list.peek =:: current
+  current optional.isEmpty if false return end
+  current .data [] .blockType switch
+    AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
+      true return
+    default
+      false return
+  end
+end
+proc( InterpreterContext ptr.mut : context -> ) =>: closeAndOrBlock
+  context [] .openBlocks list.peek =:: current
+  current optional.isEmpty if return end
+  current .data [] .blockType switch
+    AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
+        context [] .openBlocks
+          list.pop ..drop
+        context [] .openBlocks =
+      break
+    default break
+  end
+end
+## current conditional value in the and-or block (or false if not inside and/or block)
+proc( InterpreterContext ptr.mut : context -> bool ) =>: andOrCondition
+  context [] .openBlocks list.peek =:: currentBlock?
+  currentBlock? optional.hasData and currentBlock? .data [] .blockType .OR_TRUE ?? end
+end
 
 enum( TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
 proc( InterpreterContext ptr.mut : context -> i64 LabeledValueContext ) =>: getLabeledValueContext
@@ -229,8 +257,8 @@ proc( InterpreterContext ptr.mut : context -> i64 LabeledValueContext ) =>: getL
       UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
         SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
         AND OR AND_IF OR_IF AND_DO OR_DO
-        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         NAMESPACE case break
     end
   finally i 1 - end ..drop
@@ -659,6 +687,32 @@ proc(
   value valInfo context unpopValue
   valInfo Type .undefined true return
 end
+proc(
+  FilePosition : pos
+  InterpreterContext ptr.mut : context
+-> bool bool ) =>: popCondition
+  context [] .program [] .errors@ =:: errors
+  context [] .program =:: program
+  context [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  pos context popValue =:: isError =:: value =:: valInfo
+  isError if
+    false true return
+  end
+  value .boolean ?? if
+    value .boolean false return
+  end
+  "expected boolean got: " sb.wrap
+    valInfo .valueType typeContext sb.appendType
+    " ( " sb.appendS
+    value constContext typeContext sb.appendConstant
+    " )" sb.appendS
+  pos errors appendError
+  ## restore stack
+  value valInfo context unpopValue
+  false true return
+end
 
 ## TODO use wrapper procedures for stack access
 
@@ -1036,7 +1090,8 @@ proc(
   idContext [] .constContext @ =:: constContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  op [] .val .block ?? ! and op [] .val .blockEnd ?? ! and context skipCurrentBlock if
+  context skipCurrentBlock =:: skipBlock
+  skipBlock and op [] .val .block ?? ! and op [] .val .blockEnd ?? ! if
     false return ## skip operation
   end
   op [] .val switch
@@ -1104,13 +1159,14 @@ proc(
           op [] .pos errors appendError
           true return
         IF case
-          ## XXX? detect if global (or in type declaration)
-          ##  disable local if-folding by default (enable with optimizations)
+          ## XXX allow if-folding within local type-blocks
           context [] .evalType switch
             INTERPRET GLOBAL case break
             FOLD_LOCAL case true return
           end
-          op [] .pos context popValue if ..drop.2
+          skipBlock if
+            context andOrCondition
+          else op [] .pos context popCondition _if ..drop
             context [] .evalType .GLOBAL ?? and context inTypeOrInitializer ! if
               true return
             end
@@ -1118,23 +1174,11 @@ proc(
               op [] .val .block .blockType sb.appendBlockType
             op [] .pos errors appendError
             true return
-          end =:: val =:: valInfo
-          val .boolean ?? ! or valInfo .valueType types.primitive.BOOL types.typeEquals ! if
-            val valInfo context unpopValue
-            "unexpected value for if-condition, expected boolean got " sb.wrap
-              valInfo .valueType typeContext sb.appendType
-              " [ " sb.appendS
-              val constContext typeContext sb.appendConstant
-              " ]" sb.appendS
-            op [] .pos errors appendError
-            true return
-          end
-          val .boolean
+          end =:: val
+          context closeAndOrBlock
+          val
             if BlockType .IF_TRUE else BlockType .IF_FALSE end
           context openBlock
-          val .boolean ! if
-            ## TODO try to skip until next else/end
-          end
           false return
         ELSE case
           context [] .openBlocks list.peek =:: currentBlock
@@ -1167,11 +1211,38 @@ proc(
             BlockType .ELSE
           end context openBlock
           false return
-        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        AND OR case
+          ## XXX allow if-folding within local type-blocks
+          context [] .evalType switch
+            INTERPRET GLOBAL case break
+            FOLD_LOCAL case true return
+          end
+          skipBlock if
+            context inAndOrBlock if false return end
+            op [] .val .block .blockType .OR ??
+          else op [] .pos context popCondition _if ..drop
+            context [] .evalType .GLOBAL ?? and context inTypeOrInitializer ! if
+              true return
+            end
+            "missing condition for if-statement: " sb.wrap
+              op [] .val .block .blockType sb.appendBlockType
+            op [] .pos errors appendError
+            true return
+          end =:: val
+          context closeAndOrBlock
+          val
+            op [] .val .block .blockType .AND ?? if
+              if BlockType .AND_TRUE else BlockType .AND_FALSE end
+            else
+              if BlockType .OR_TRUE else BlockType .OR_FALSE end
+            end
+          context openBlock
+          false return
+        IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         FINALLY WHILE DO BREAK CONTINUE
         SWITCH BREAK_SWITCH CASE DEFAULT
-        AND OR AND_IF OR_IF AND_DO OR_DO
+        AND_IF OR_IF AND_DO OR_DO
         UNKNOWN case
           context [] .evalType switch
             INTERPRET GLOBAL case break
@@ -1327,8 +1398,8 @@ proc(
         IF ELSE WHILE DO BREAK CONTINUE
         SWITCH CASE BREAK_SWITCH DEFAULT
         AND OR AND_IF OR_IF AND_DO OR_DO
-        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         UNKNOWN NAMESPACE FINALLY case
           context [] .evalType switch
             INTERPRET GLOBAL case break

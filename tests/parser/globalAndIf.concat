@@ -1,0 +1,60 @@
+false =:: _A_
+true =:: _B_
+true =:: _C_
+false =:: _D_
+
+_A_ and _B_ if
+  true =:: A_and_B
+else
+  false =:: A_and_B
+end
+
+_A_ ! and _B_ ! if
+  true =:: not_A_and_not_B
+else
+  false =:: not_A_and_not_B
+end
+
+_A_ or _B_ if
+  true =:: A_or_B
+else
+  false =:: A_or_B
+end
+
+_A_ ! or _B_ ! if
+  true =:: not_A_or_not_B
+else
+  false =:: not_A_or_not_B
+end
+
+_A_ or _B_ and _C_ if else
+  ..!error "unreachable"
+end
+_A_ and _B_ or _C_ if
+  ..!error "unreachable"
+end
+_C_ or _B_ and _A_ if else
+  ..!error "unreachable"
+end
+_C_ and _B_ or _A_ if else
+  ..!error "unreachable"
+end
+_C_ and _A_ or _B_ if else
+  ..!error "unreachable"
+end
+_C_ and _B_ and _A_ if
+  ..!error "unreachable"
+end
+_A_ or _D_ or _B_ and _C_ if else
+  ..!error "unreachable"
+end
+_A_ or _B_ and _D_ or _C_ if else
+  ..!error "unreachable"
+end
+
+proc( -> ) =>: main
+  A_and_B ! assert "!(A&B)"
+  not_A_and_not_B ! assert "!(!A&!B)"
+  A_or_B assert "A|B"
+  not_A_or_not_B assert "(!A|!B)"
+end

@@ -1387,8 +1387,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             fileState [] .wordStart errors appendError
             break
           UNKNOWN BREAK BREAK_SWITCH CONTINUE AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-          OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE case
+          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE case
             "unexpected block type in 'end' statement: " sb.wrap
               currentBlock sb.appendBlockType
             fileState [] .wordStart errors appendError
@@ -1548,8 +1548,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
         IF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
         AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
-        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.wrap
             opName sb.appendStr

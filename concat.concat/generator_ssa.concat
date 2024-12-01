@@ -1346,7 +1346,7 @@ proc(
           newOps ## XXX? remember current branch
             ifBranch context startBranch
           return
-        AND_IF OR_IF AND_IF_TRUE AND_IF_FALSE OR_IF_TRUE OR_IF_FALSE case
+        AND_IF OR_IF AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
           context [] .openBlocks list.peek =:: ifBlock?
           ifBlock? optional.hasData and
               ifBlock? .data =:: ifBlock
@@ -1358,8 +1358,8 @@ proc(
             context [] .openBlocks list.peek .data [] .If@
           end =:: ifBlock
           op [] .val .block .blockType .OR_IF ?? or
-            op [] .val .block .blockType .OR_IF_TRUE ?? or
-            op [] .val .block .blockType .OR_IF_FALSE ?? end =:: isOr
+            op [] .val .block .blockType .OR_TRUE ?? or
+            op [] .val .block .blockType .OR_FALSE ?? end =:: isOr
           ## appendBranchId
             ssa.BranchType .NEXT
             context nextJumpLabelId
@@ -2052,8 +2052,8 @@ proc(
           newOps return
         IF DO BREAK CONTINUE CASE DEFAULT BREAK_SWITCH
         AND_IF OR_IF AND_DO OR_DO FINALLY
-        IF_TRUE IF_FALSE AND_IF_TRUE AND_IF_FALSE
-        OR_IF_TRUE OR_IF_FALSE ELSE_TRUE ELSE_FALSE
+        IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         UNKNOWN INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
