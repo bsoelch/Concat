@@ -2085,6 +2085,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       else flagName "wError" string.wrap string.eq _if
         _W_ERROR_ ConstValue .boolean
         types.primitive.BOOL
+      else flagName "incrementVersionNumber" string.wrap string.eq _if
+        _INCREMENT_VERSION_ ConstValue .boolean
+        types.primitive.BOOL
       else
         ConstValue .none
         Type .empty

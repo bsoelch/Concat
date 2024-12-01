@@ -50,7 +50,7 @@ echo "-----------------------------------------" && {
 } && {
   echo "check if compiler output is stable under recompilation"
   echo "-----------------------------------------"
-  $codeTarget2 "$compilerSrc" -o "$codeQBETarget3" ${concatArgs[@]}
+  $codeTarget2 "$compilerSrc" -o "$codeQBETarget3" ${concatArgs[@]} --no-inc-version
 } && {
   diff $codeQBETarget2 $codeQBETarget3 && {
     mv $codeTarget2 $baseCompiler
