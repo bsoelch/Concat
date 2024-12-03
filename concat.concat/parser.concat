@@ -2099,6 +2099,37 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       types.primitive.I64
       fileState [] .wordStart opConst state appendOp
       return
+    else $ "..compiler.return" string.wrap string.eq _if ..drop
+      ..drop ## discard remainder of file
+      ## close open if-blocks/switch-branches
+      while state [] .openBlocks list.peek =:: next?
+          BlockType ..length 38 == assert "no new block types"
+          next? optional.hasData and next? .data [] .blockType switch
+            IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DEFAULT case false break
+            default true break
+          end do
+        state [] .openBlocks
+          list.pop ..drop
+        state [] .openBlocks =
+      end
+      string.empty return
+    else $ "..file" string.wrap string.eq _if ..drop
+      fileState [] .wordStart .fileName =:: name
+      name labelContext id.wrapStringConstant ConstValue .str
+      types.primitive.CHAR8
+        types.ArrayType .POINTER
+        name .length types.ArraySizeType .int types.ArraySize new =:: size
+        size@ 1 array.create
+        true
+        false
+      typeContext types.newArrayType ..drop
+      fileState [] .wordStart opConst state appendOp
+      return
+    else $ "..line" string.wrap string.eq _if ..drop
+      fileState [] .wordStart .line ConstValue .int
+      types.primitive.I64
+      fileState [] .wordStart opConst state appendOp
+      return
     else ..dup "..?types" string.wrap string.eq or
         ..dup "..?types." string.wrap string.startsWith _if =:: mut: opName
       opName "..?types." ..length string.tail =:: params

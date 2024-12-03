@@ -169,8 +169,11 @@
                   warning |
                   info    |
                   flag.([^[:space:]\.]+) |
-                  version
-                )
+                  version |
+                  return
+                ) |
+                file |
+                line
              )
            )
           )(\Z|(?=[[:space:]])) # end of file or white-space

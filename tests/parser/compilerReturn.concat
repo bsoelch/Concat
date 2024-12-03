@@ -1,0 +1,5 @@
+proc( -> ) =>: main end
+true if
+..compiler.return ## terminate compilation of this file
+end
+false assert "this statement is not reached by the compiler"

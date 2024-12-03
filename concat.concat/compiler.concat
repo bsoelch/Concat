@@ -23,6 +23,7 @@ false =:: mut: export: _EXPERIMENTAL_
 true =:: mut: export: _INCLUDE_CORE_
 true =:: mut: export: _INCREMENT_VERSION_
 BackEnd .QBE =:: mut: export: _BACKEND_
+## make new compiler flags accessible in code through `..compiler.flag.<...>`
 
 proc( string : path -> ) =>: printUsage
   "usage: " sb.wrap
