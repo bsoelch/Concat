@@ -259,6 +259,18 @@ namespace: id
     context [] .nameBuffer =
     offset context [] .nameBuffer .length offset - StringConstant new return
   end
+  proc(
+    string : left
+    string : right
+    LabelContext ptr.mut : context
+  -> StringConstant ) =>: export: wrap2StringConstant
+    context [] .nameBuffer .length =:: offset
+    context [] .nameBuffer
+      left sb.appendStr
+      right sb.appendStr
+    context [] .nameBuffer =
+    offset context [] .nameBuffer .length offset - StringConstant new return
+  end
   proc( string : str FilePosition : stringStart CompilerError list ptr.mut : errors LabelContext ptr.mut : context -> StringConstant ) =>: export: parseRawStringConstant
     stringStart =:: mut: pos
     '`' pos @ updateFilePos ## string content starts after `

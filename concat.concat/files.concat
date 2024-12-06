@@ -8,7 +8,7 @@ struct( FilePosition : mut: currentPos FilePosition : mut: wordStart ) =:: expor
 
 ## XXX? special tokens for keywords
 enum( DEFAULT UTF8 UTF16 UTF32 INT_LITERAL UNKNOWN ) =:: export: StringLiteralType
-struct( string : value StringLiteralType : stringType ) =:: StringToken
+struct( string : value StringLiteralType : stringType ) =:: export: StringToken
 union(
   _ : EMPTY
   _ : EOF

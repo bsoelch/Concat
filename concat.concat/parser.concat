@@ -45,6 +45,7 @@ struct(
   CompositeConstantOffset list : mut: constantBlocks
   InterpreterInfo list : mut: globalInterpreters
   LabelId list : mut: labelBuffer
+  stringBuilder : mut: tmpString
   bool : saveGlobalTokens
 ) =:: ParserState
 
@@ -585,6 +586,84 @@ proc(
   false return
 end
 proc(
+  StringToken : token
+  bool : isRawString
+  FilePosition : pos
+  ParserState ptr.mut : state
+-> ) =>: parseStringConstant
+  state [] .progContext@ =:: progContext
+  progContext [] .errors@ =:: errors
+  state [] .progContext [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext .labelContext@ =:: labelContext
+  ## newStringConstant
+    ## parseStringConstant
+      token .value
+      pos
+      progContext [] .errors@
+      labelContext
+    isRawString if
+      id.parseRawStringConstant
+    else
+      id.parseStringConstant
+    end
+    token .stringType
+    pos
+    typeContext
+    constContext
+    progContext [] .errors@
+  newStringConstant state pushConst
+end
+proc(
+  StringToken : token
+  FilePosition : pos
+  ParserState ptr.mut : state
+-> ) =>: parseCharConstant
+  state [] .progContext@ =:: progContext
+  progContext [] .errors@ =:: errors
+  state [] .progContext [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext .labelContext@ =:: labelContext
+  token .value
+    pos progContext [] .errors@  labelContext id.parseStringConstant ## escape character
+    labelContext id.scAsStr 0 utf8.nextCodepoint =:: cp
+    #+nextIndex+# ..swap .length < if
+      "A character literal has to contain exactly one character" sb.wrap pos errors appendError
+    end
+    token .stringType switch
+      DEFAULT case "byte" string.wrap 0x80 break
+      UTF8  case "utf8-character"  string.wrap 0x80    break
+      UTF16 case "utf16-character" string.wrap 0x10000 break
+      UTF32 case "utf32-character" string.wrap utf8.MAX_CODEPOINT 1 + break
+      INT_LITERAL UNKNOWN case
+        "invalid string literal type" sb.wrap pos errors appendError
+        return
+    end
+    =:: codepointLimit =:: charTypeName
+    token .stringType .DEFAULT ?? ! and cp i32 cast 0 < if
+      "unmatched byte in " sb.wrap
+        charTypeName sb.appendStr
+        ": 0x" sb.appendS
+        cp i32 cast -_ sb.appendX
+      pos errors appendError
+    end
+    cp i32 cast codepointLimit >= if
+      "codepoint 0x"  sb.wrap
+        cp i32 cast sb.appendX
+        " ('" sb.appendS
+        cp sb.appendCodepoint
+       "') cannot be encoded as a single " sb.appendS
+       charTypeName sb.appendStr
+      pos errors appendError
+    end
+  ## newCharConstant
+    cp $ i32 cast 0 < if i32 cast -_ utf8.Codepoint cast end
+    token .stringType
+  pos newCharConstant state pushConst
+end
+proc(
   Token : literalType
   FilePosition : pos
   CompilerError list ptr.mut : errors
@@ -621,72 +700,13 @@ proc(
         "unexpected end of file in string-literal" sb.wrap fileState [] .wordStart errors appendError
         "" string.wrap true return
       STRING case
-        ## newStringConstant
-          ## parseStringConstant
-            token .STRING .value
-            fileState [] .wordStart
-            progContext [] .errors @
-            labelContext
-          id.parseStringConstant
-          token .STRING .stringType
-          fileState [] .wordStart
-          typeContext
-          constContext
-          progContext [] .errors @
-        newStringConstant state pushConst
+        token .STRING false fileState [] .wordStart state parseStringConstant
         "" string.wrap true return
       RAW_STRING case
-        ## newStringConstant
-          ## parseRawStringConstant
-            token .RAW_STRING .value
-            fileState [] .wordStart
-            progContext [] .errors @
-            labelContext
-          id.parseRawStringConstant
-          token .RAW_STRING .stringType
-          fileState [] .wordStart
-          typeContext
-          constContext
-          progContext [] .errors @
-        newStringConstant state pushConst
+        token .RAW_STRING true fileState [] .wordStart state parseStringConstant
         "" string.wrap true return
       CHAR case
-        token .CHAR .value
-          fileState [] .wordStart progContext [] .errors @  labelContext id.parseStringConstant ## escape character
-          labelContext id.scAsStr 0 utf8.nextCodepoint =:: cp
-          #+nextIndex+# ..swap .length < if
-            "A character literal has to contain exactly one character" sb.wrap fileState [] .wordStart errors appendError
-          end
-          token .CHAR .stringType switch
-            DEFAULT case "byte" string.wrap 0x80 break
-            UTF8  case "utf8-character"  string.wrap 0x80    break
-            UTF16 case "utf16-character" string.wrap 0x10000 break
-            UTF32 case "utf32-character" string.wrap utf8.MAX_CODEPOINT 1 + break
-            INT_LITERAL UNKNOWN case
-              "invalid string literal type" sb.wrap fileState [] .wordStart errors appendError
-              "" string.wrap true return
-          end
-          =:: codepointLimit =:: charTypeName
-          token .CHAR .stringType .DEFAULT ?? ! and cp i32 cast 0 < if
-            "unmatched byte in " sb.wrap
-              charTypeName sb.appendStr
-              ": 0x" sb.appendS
-              cp i32 cast -_ sb.appendX
-            fileState [] .wordStart errors appendError
-          end
-          cp i32 cast codepointLimit >= if
-            "codepoint 0x"  sb.wrap
-              cp i32 cast sb.appendX
-              " ('" sb.appendS
-              cp sb.appendCodepoint
-             "') cannot be encoded as a single " sb.appendS
-             charTypeName sb.appendStr
-            fileState [] .wordStart errors appendError
-          end
-        ## newCharConstant
-          cp $ i32 cast 0 < if i32 cast -_ utf8.Codepoint cast end
-          token .CHAR .stringType
-        fileState [] .wordStart newCharConstant state pushConst
+        token .CHAR fileState [] .wordStart state parseCharConstant
         "" string.wrap true return
       IDENTIFIER case
         token .IDENTIFIER string.empty fileState [] .wordStart state tryParseNumberLiteral if
@@ -708,14 +728,25 @@ proc(
         literalType .LITERAL_TYPE sb.appendStr
         literalStart errors appendError
         "" string.wrap true return
-      LITERAL_STRING LITERAL_RAW_STRING LITERAL_CHAR case
+      LITERAL_CHAR LITERAL_STRING LITERAL_RAW_STRING case
         fileState [] .wordStart =:: literalStart
+        token .LITERAL_STRING ?? if
+          token .LITERAL_STRING false
+        else token .LITERAL_CHAR ?? _if
+          token .LITERAL_CHAR false
+        else
+          token .LITERAL_RAW_STRING true
+        end literalStart state parseStringConstant
         fileState nextToken =:: literalType
         literalType fileState [] .wordStart errors checkLiteralType
-        "unexpected token: " sb.wrap
-        token sb.appendToken
-        literalStart errors appendError
-        "" string.wrap true return
+        ## XXX? more usefull error for missing parse procedure?
+        ## :<name> -> <name>.parse
+        state [] .tmpString
+          sb.clear ## clear tmp string
+          literalType .LITERAL_TYPE sb.appendStr
+          ".parse" sb.appendS
+        state [] .tmpString =
+        state [] .tmpString sb.asStr false return
       LITERAL_TYPE case
         "unexpected token: " sb.wrap
         token sb.appendToken
@@ -2376,6 +2407,7 @@ proc(
     128 CompositeConstantOffset list.create
     0   InterpreterInfo         list.create
     128 LabelId                 list.create
+    128 sb.create
     saveGlobalTokens
   ParserState new =:: mut: state
   rootFile state @ parseFile rootFile rootPos state @ checkIOError ..drop
@@ -2389,6 +2421,7 @@ proc(
     1 +
   end ..drop
   state .globalInterpreters list.free ..drop
+  state .tmpString sb.free ..drop
   programContext return
 end
 proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError ) =>: parseFile

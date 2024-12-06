@@ -1766,6 +1766,19 @@ proc(
             calledProc .procId i64 cast list.at .data
           =:: calledProcData
           calledType op .dataType =
+          calledType typeContext types.getProcIn ..drop =:: inTypes
+          inTypes typeContext types.compositeEltCount =:: argCount
+          constEvalFailed ! and
+              ## enough arguments for interpreting call
+              stackConstants argCount calledProc .autoArgs .length - >= and
+              calledProcData [] .isStatic or ## only try interpreting static and built-ins
+              calledProcData [] .implementation .builtIn ?? if
+            state unfreezeInterpreter
+            op@ state [] .interpreter @ evaluateOperation ! if
+              return
+            end
+            state freezeInterpreter ## constant evaluation failed
+          end
           calledProcData [] .implementation switch
             code case
               calledProc OpValue .call op .val =
@@ -1777,17 +1790,6 @@ proc(
               end
               builtInId OpValue .builtIn op .val =
             break
-          end
-          calledType typeContext types.getProcIn ..drop =:: inTypes
-          inTypes typeContext types.compositeEltCount =:: argCount
-          constEvalFailed ! and stackConstants argCount >= and ## enough arguments for interpreting call
-              calledProcData [] .isStatic ## only try interpreting static and built-ins
-              calledProcData [] .implementation .builtIn ?? | if
-            state unfreezeInterpreter
-            op @ state [] .interpreter @ evaluateOperation ! if
-              return
-            end
-            state freezeInterpreter ## constant evaluation failed
           end
           0 =:: mut: offset
           argCount 1 - while ..dup 0 >= do =:: i
