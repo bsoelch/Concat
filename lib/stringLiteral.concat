@@ -1,0 +1,23 @@
+import string
+namespace: string
+  proc( i64 : auto: k char8 k ptr : p -> string ) =>: static: export: parse
+    p k string new
+  end
+end
+namespace: string16
+  proc( i64 : auto: k char16 k ptr : p -> string16 ) =>: static: export: parse
+    p k string16 new
+  end
+end
+namespace: string32
+  proc( i64 : auto: k char32 k ptr : p -> string32 ) =>: static: export: parse
+    p k string32 new
+  end
+end
+namespace: s
+  overload: static: export: parse
+    string.parse
+    string16.parse
+    string32.parse
+  end
+end

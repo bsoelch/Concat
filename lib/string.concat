@@ -2,6 +2,8 @@ import arrayView
 import mem
 
 char8 arrayView =:: export: string
+char16 arrayView =:: export: string16
+char32 arrayView =:: export: string32
 
 namespace: string
   { "" : data 0 : length } string =: export: empty
@@ -128,4 +130,12 @@ namespace: string
   proc( string : str char8 : chr -> string string ) =>: export: splitLast
     str char8 arrayView cast chr array.splitLast ..swap string cast ..swap string cast return
   end
+end
+
+## XXX? implement procedure for string16, string32
+namespace: string16
+  { utf16"" : data 0 : length } string16 =: export: empty
+end
+namespace: string32
+  { utf32"" : data 0 : length } string32 =: export: empty
 end
