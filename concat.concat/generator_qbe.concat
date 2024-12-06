@@ -855,7 +855,7 @@ namespace: sb
       value .str32 constContext sc32AsStr =:: str32
       sb
         0:i64 while ..dup str32 .length < do =:: i
-          "h " sb.appendS
+          "w " sb.appendS
           str32 i array.get sb.appendI
           ',' sb.appendC
           i 1 +
