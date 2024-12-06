@@ -273,8 +273,7 @@ proc(
         generatorArgs
         typeContext
         constContext
-      types.findGeneratedType
-        if ## new generated type
+      types.findGeneratedType if ..drop ## new generated type
           ## initializeGeneratedType
             generatorName
             generatorArgs

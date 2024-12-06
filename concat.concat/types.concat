@@ -2277,7 +2277,7 @@ namespace: types
   #+ finds the generated type for the given type generator and arguments
      returns the type and a boolean that is true if a new GeneratedType was created +#
   proc(
-    LabelId : generator
+    LabelId : generatorName
     ConstValue arrayView : arguments
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
@@ -2286,7 +2286,7 @@ namespace: types
     typeContext [] .generatedTypes =:: genTypes
     0:i64 while ..dup genTypes .length < do
       genTypes ..over list.at .data =:: candidate
-      candidate [] .generator generator != if
+      candidate [] .generator generatorName != if
         1 + continue
       end
       candidate [] .arguments constContext constArrayAsArray =:: candidateArgs
@@ -2310,36 +2310,33 @@ namespace: types
       end
       1 +
     end ..drop
-    typeContext [] .generatedTypes
-      ..dup .length GeneratedId cast =:: newId
-      ## GeneratedType
-        generator
-        arguments constContext constArray
-        Type .undefined
-      GeneratedType new list.append
-    typeContext [] .generatedTypes =
-    newId GeneratedId cast Type .generatedType true return
+    Type .undefined true return
   end
 
   proc(
-    LabelId : base
+    LabelId : generatorName
     ConstValue arrayView : arguments
     Type : value
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
-  -> bool ) =>: export: initializeGeneratedType
+  -> Type bool ) =>: export: initializeGeneratedType
     ## findGeneratedType
-      base
+      generatorName
       arguments
       typeContext
       constContext
-    findGeneratedType ..drop .generatedType =:: id
-    typeContext [] .generatedTypes id i64 cast list.at .data =:: prevType
-    prevType [] .generated .undefined ?? ! if
+    findGeneratedType ! if
       true return
-    end
-    value prevType [] .generated =
-    false return
+    else ..drop end
+    typeContext [] .generatedTypes
+      $ .length GeneratedId cast =:: newId
+      ## GeneratedType
+        generatorName
+        arguments constContext constArray
+        value
+      GeneratedType new list.append
+    typeContext [] .generatedTypes =
+    newId GeneratedId cast Type .generatedType false return
   end
 
   proc( Type : generator TypeContext ptr : context -> Type ) =>: export: getGeneratedType

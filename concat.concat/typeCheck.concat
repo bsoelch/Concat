@@ -4092,7 +4092,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     currentProc [] .implementation .code .codeStart 0 < if
       procId 1 + continue ## procedure not implemented
     end
-    currentProc [] .hasStaticArg if
+    currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
     end
     procId ProcId cast -1 FilePosition optional.empty state@ typeCheckProcedure
@@ -4114,6 +4114,9 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
       end
       currentProc [] .hasStaticArg ! if
         procId 1 + continue ## handled by previous loop
+      end
+      currentProc [] .isStatic if
+        procId 1 + continue ## don't type-check static procedures
       end
       currentProc program nextImpl =:: nextId
       codeImpl [] .implementations .length =:: implLength

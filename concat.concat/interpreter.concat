@@ -8,7 +8,7 @@ import "callResolver.concat"
 ## TODO wrap in namespace
 struct(
   Type : mut: valueType
-  LabelId : valueId
+  LabelId : valueId ## use in typeCheck.concat
   FilePosition : mut: pushedAt
 ) =:: export: ValueInfo
 
@@ -933,21 +933,22 @@ namespace: interpreter
   proc(
     LabelId : generatorName
     ProcId : generatorProc
+    ConstantArray : autoArgs
     ConstValue arrayView : args
     FilePosition : pos
     InterpreterContext ptr.mut : context
-  -> bool ) =>: evalGeneratedType
+  -> Type bool ) =>: evalGeneratedType
     context [] .program =:: program
     program [] .errors @ =:: errors
     program [] .idContext @ =:: idContext
     idContext [] .constContext @ =:: constContext
     idContext [] .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
-    generatorProc pos context evaluateCall if
+    generatorProc autoArgs pos context evaluateCall if
       "could not initialize type-generator " sb.wrap
         generatorName labelContext sb.appendLabelName
       pos errors appendError
-      true return
+      Type .undefined true return
     end
     ## initializeGeneratedType
       generatorName
@@ -968,7 +969,7 @@ namespace: interpreter
     ConstValue arrayView : args
     FilePosition : pos
     ProgramContext ptr.mut : program
-  -> bool ) =>: export: initializeGeneratedType
+  -> Type bool ) =>: export: initializeGeneratedType
     program [] .errors @ =:: errors
     program [] .idContext @ =:: idContext
     idContext [] .constContext @ =:: constContext
@@ -978,41 +979,55 @@ namespace: interpreter
       "could not find procedure " sb.wrap
         generatorName labelContext sb.appendLabelName
       pos errors appendError
-      true return
+      Type .undefined true return
     end =:: idData
     idData [] .idType .PROCEDURE ?? ! if
       "expected procedure got: " sb.wrap
         idData id.asIdInfo labelContext sb.appendIdInfo
       pos errors appendError
-      true return
+      Type .undefined true return
     end
     idData [] .constValue .procedure =:: procId
     program [] .procedures
       procId i64 cast list.at .data
     =:: procData
     procData [] .procType =:: procType
-    procType typeContext types.getProcIn ..drop =:: inType
-    inType typeContext types.compositeElts =:: inTypes
+    procType typeContext types.getProcIn
+      ! assert "proc has in-types"
+    =:: inType
+    inType typeContext types.compositeEltCount =:: argCount
+    procType
+      ## IdentifierInfo
+        IdentifierType .PROCEDURE
+        generatorName
+        procId i32 cast
+      IdentifierInfo new
+      pos
+    opGetId =:: op ## create operation for call
+    ## TODO? directly go to evaluation of call operation (for resolving auto-args),
+    ##   instead of calling evaluateOperation
     program
       procData [] .fileId
       InterpreterType .GLOBAL
     wrapProgram =:: mut: context
       ## push arguments
-      0:i64 while ..dup inTypes .length < do =:: i
-        inTypes i types.compositeElts.get =:: argType
+      0:i64 while $ argCount < do =:: i
+        inType i typeContext types.compositeGetLabel =:: argLabel
+        argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
+          continue
+        end
+        inType i typeContext types.compositeGetElement =:: argType
         args i array.get =:: argValue
-        argValue argType id.LABEL_ID_NONE pos context @ pushValue
-        i 1 +
-      end ..drop
-      ## evalGeneratedType
-        generatorName
-        procId
-        args
-        pos
-        context @
-      evalGeneratedType
-    context @ cleanupContext
-    return
+        argValue argType id.LABEL_ID_NONE pos context@ pushValue
+      finally i 1 + end ..drop
+      op@ context@ evaluateOperation ..drop
+    context@ cleanupContext
+    ## findGeneratedType
+      generatorName
+      args
+      typeContext
+      constContext
+    types.findGeneratedType return
   end
   proc(
     Type : srcType
@@ -1114,6 +1129,27 @@ proc(
         context [] .labelBuffer
           eltLabel list.append
         context [] .labelBuffer =
+        false return
+      end
+      op [] .val .Constant .genericArg ?? if
+        op [] .val .Constant .genericArg =:: label
+        context [] .variables@ label map.get =:: value?
+        value? optional.isEmpty if
+          context [] .evalType switch
+            INTERPRET GLOBAL case break
+            FOLD_LOCAL case true return
+          end
+          "missing value for " sb.wrap
+            op [] .val .getId labelContext sb.appendIdInfo
+          op [] .pos errors appendError
+          true return
+        end
+        ## pushValue
+          value? .data .value
+          op [] .dataType
+          label
+          op [] .pos
+        context pushValue
         false return
       end
       ## pushValue
@@ -1488,7 +1524,7 @@ proc(
       op [] .pos errors appendError
       true return
     getId case
-      op [] .val .getId @ =:: idInfo
+      op [] .val .getId@ =:: idInfo
       idInfo [] .labelId =:: label
       context inEnum if
         label context getLabeledValueContext op [] .pos context checkDuplicateLabel
@@ -1576,6 +1612,7 @@ proc(
               op [] .pos context tryEvaluateBuiltIn return
             code case break
           end
+          calledProc .autoArgs =:: autoArgs
           ## TODO? allow evaluation of non-static procedures depending on interpreter-mode
           calledProcData [] .isStatic ! if
             true return ## only evaluate static procedures in interpreter
@@ -1598,7 +1635,7 @@ proc(
               context [] .stack list.asArray offset array.tail
               typeContext
               constContext
-            types.findGeneratedType if ## newType
+            types.findGeneratedType if ..drop ## newType
               idContext [] .argBuffer .length =:: argOffset
               idContext [] .argBuffer
                 ## remember procedure arguments
@@ -1609,6 +1646,7 @@ proc(
               ## evalGeneratedType
                 label
                 procId
+                autoArgs
                 idContext [] .argBuffer list.asArray
                   argOffset
                 array.tail
@@ -1632,7 +1670,7 @@ proc(
             pushValue
             false return
           end
-          procId op [] .pos context evaluateCall return
+          procId autoArgs op [] .pos context evaluateCall return
         LOCAL_VAR ARGUMENT LABEL case
           context [] .variables @ label map.get =:: value?
           value? optional.isEmpty if
@@ -2250,14 +2288,15 @@ proc(
   InterpreterContext ptr.mut : context
 ->
   bool
-) =>: export: evaluateOperations
+) =>: evaluateOperations
   0:i64 =:: mut: offset
-  context [] .openBlocks .length 1 - while ..dup 0 >= do
-    context [] .openBlocks ..over list.at .data [] .blockType
-     ..dup .PROCEDURE ?? ..swap .EXPERIMENTAL_PROCEDURE ?? | if
-      break
-    end
-    1 -
+  context [] .openBlocks list.peek =:: outerBlock
+  outerBlock optional.hasData and
+      outerBlock .data [] .blockType =:: outerType
+      outerType .PROCEDURE ?? or outerType .EXPERIMENTAL_PROCEDURE ?? if
+    context [] .openBlocks .length
+  else
+    -1
   end =:: procBlockIndex
   while offset ops .length < do
     ops offset array.at .data =:: op
@@ -2322,59 +2361,68 @@ end
 #+evaluate procedure body with the given arguments+#
 proc(
   ProcId : procId
+  ConstantArray : autoArgs
   FilePosition : pos
   InterpreterContext ptr.mut : context
 ->
   bool
-) =>: export: evaluateCall
-  context [] .program [] .errors @ =:: errors
+) =>: evaluateCall
+  context [] .program [] .errors@ =:: errors
   context [] .program =:: program
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  context [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   program [] .procedures procId i64 cast list.at .data =:: procData
   procData [] .procType =:: procType
   procType typeContext types.getProcIn ..drop =:: inType
   inType typeContext types.compositeElts =:: args
-  args .length "procedure" string.wrap true pos context checkStack if
+  args .length autoArgs .length - =:: nArgs
+  nArgs "procedure call" string.wrap false pos context checkStack if
     true return
   end
-  context [] .stack .length args .length - =:: argsOffset
+  context [] .stack .length nArgs - =:: argsOffset
   procData [] .implementation .builtIn ?? if
     "interpreting built-in procs is not implemented" sb.wrap
     pos errors appendError
     true return
   end
-  ## XXX resolve signature
-  ## TODO check argument types
-  context [] .evalType switch
-    GLOBAL FOLD_LOCAL case
-      program [] .tmpOps break
-    INTERPRET case
-      program [] .progFiles
-        procData [] .fileId i64 cast
-      list.at .data [] .localOps break
-  end
-    procData [] .implementation .code .codeStart
-    procData [] .implementation .code .codeLength
-  list.slice =:: code
-  code 0 array.at .data =:: op
-  op [] .val .initializeId ?? ! if true else
-    op [] .val .initializeId .idType .PROCEDURE ?? !
-  end if
-    "expected procedure initialization got " sb.wrap
-      op [] program sb.appendOp
-    op [] .pos errors appendError
-    true return ## not a call
-  end
   context [] .stack .length =:: stackOffset
+  0:i64 =:: mut: autoArgOffset
+  argsOffset =:: mut: argOffset
   ## process procedure arguments
-  0:i64 while ..dup args .length < do
-    context [] .stack ..over argsOffset + list.at .data =:: value
-    context [] .stackInfo ..over argsOffset + list.at .data =:: valueInfo
-    inType ..over typeContext types.compositeGetLabel =:: label
-    label id.LABEL_ID_NONE == or
-        label labelContext id.labelFlags id.FLAG_DUMMY & ? if ## push argument
+  0:i64 while $ args .length < do =:: i
+    argOffset stackOffset >= if
+      "not enough arguments for procedure " sb.wrap
+        procData [] .labelId labelContext sb.appendLabelName
+      pos errors appendError
+      context [] .stack
+        stackOffset list.setLength
+      context [] .stack =
+      true return
+    end
+    inType i typeContext types.compositeGetLabel =:: label
+    label labelContext id.labelFlags =:: labelFlags
+    labelFlags id.FLAG_AUTO & ? if
+      autoArgs autoArgOffset constContext constArrayGet =:: value
+      context [] .variables @
+        label
+        ## Constant
+          value
+          ## ValueInfo
+            args i types.compositeElts.get
+            label
+            pos
+          ValueInfo new
+        Constant new
+      map.put ..drop
+      autoArgOffset 1 + autoArgOffset =
+      continue
+    end
+    context [] .stack argOffset list.at .data =:: value
+    context [] .stackInfo argOffset list.at .data =:: valueInfo
+    argOffset 1 + argOffset =
+    label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
       context [] .stack
         value list.appendP
       context [] .stack =
@@ -2394,41 +2442,77 @@ proc(
         Constant new
       map.put ..drop
     end
-    1 +
+  finally
+    i 1 +
   end ..drop
+  context [] .evalType .GLOBAL ?? or procData [] .isStatic if
+    ## treat static procedures as global code
+    program [] .tmpOps
+  else
+    program [] .progFiles
+      procData [] .fileId i64 cast
+    list.at .data [] .localOps
+  end
+    procData [] .implementation .code .codeStart
+    procData [] .implementation .code .codeLength
+  list.slice =:: code
+  code .length 0 == if
+    "no operations in procedure " sb.wrap
+      procData [] .labelId labelContext sb.appendLabelName
+    pos errors appendError
+    true return ## not a call
+  end
+  code 0 array.at .data =:: op
+  op [] .val .implementProcedure ?? ! and
+      op [] .val .initializeId ?? ! or
+      op [] .val .initializeId .idType .PROCEDURE ?? ! if
+    "expected procedure initialization got " sb.wrap
+      op [] program sb.appendOp
+    op [] .pos errors appendError
+    true return ## not a call
+  end
   context [] .currentFile =:: oldFile
   procData [] .fileId context [] .currentFile =
   BlockType .PROCEDURE context openBlock
+  context [] .evalType .FOLD_LOCAL ?? =:: isLocalFold
+  isLocalFold if ## change intrepreter type when evaluating call
+    InterpreterType .INTERPRET context [] .evalType =
+  end
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
   evaluateOperations if
     stackOffset context truncateStack
+    isLocalFold if
+      InterpreterType .FOLD_LOCAL context [] .evalType =
+    end
     true return
-  else
-    oldFile context [] .currentFile =
-    context [] .stack .length stackOffset - =:: nReturn
-    ## mem.copy
-      context [] .stack .data argsOffset +
-      context [] .stack .data stackOffset +
-      nReturn
-    mem.copy ..drop
-    ## mem.copy
-      context [] .stackInfo .data argsOffset +
-      context [] .stackInfo .data stackOffset +
-      nReturn
-    mem.copy ..drop
-    context [] .stack
-      argsOffset nReturn + list.setLength
-    context [] .stack =
-    context [] .stackInfo
-      argsOffset nReturn + list.setLength
-    context [] .stackInfo =
-    argsOffset while ..dup context [] .stackInfo .length < do
-      ## update push position of return values
-      pos context [] .stackInfo ..over.2 list.at .data [] .pushedAt =
-      1 +
-    end ..drop
-    false return
   end
+  isLocalFold if
+    InterpreterType .FOLD_LOCAL context [] .evalType =
+  end
+  oldFile context [] .currentFile =
+  context [] .stack .length stackOffset - =:: nReturn
+  ## mem.copy
+    context [] .stack .data argsOffset +
+    context [] .stack .data stackOffset +
+    nReturn
+  mem.copy ..drop
+  ## mem.copy
+    context [] .stackInfo .data argsOffset +
+    context [] .stackInfo .data stackOffset +
+    nReturn
+  mem.copy ..drop
+  context [] .stack
+    argsOffset nReturn + list.setLength
+  context [] .stack =
+  context [] .stackInfo
+    argsOffset nReturn + list.setLength
+  context [] .stackInfo =
+  argsOffset while ..dup context [] .stackInfo .length < do
+    ## update push position of return values
+    pos context [] .stackInfo ..over.2 list.at .data [] .pushedAt =
+    1 +
+  end ..drop
+  false return
 end
