@@ -1,23 +1,23 @@
 
-proc( f64 -> i8 ) =>: no:inline: castI8
+proc( f64 -> i8 ) =>: inline.never: castI8
   i8 cast
 end
-proc( f64 -> i8 ) =>: no:inline: castU8
+proc( f64 -> i8 ) =>: inline.never: castU8
   i8 cast.u
 end
-proc( f64 -> i16 ) =>: no:inline: castI16
+proc( f64 -> i16 ) =>: inline.never: castI16
   i16 cast
 end
-proc( f64 -> i32 ) =>: no:inline: castI32
+proc( f64 -> i32 ) =>: inline.never: castI32
   i32 cast
 end
-proc( f64 -> i32 ) =>: no:inline: castU32
+proc( f64 -> i32 ) =>: inline.never: castU32
   i32 cast.u
 end
-proc( f64 -> i64 ) =>: no:inline: castI64
+proc( f64 -> i64 ) =>: inline.never: castI64
   i64 cast
 end
-proc( f64 -> i64 ) =>: no:inline: castU64
+proc( f64 -> i64 ) =>: inline.never: castU64
   i64 cast.u
 end
 

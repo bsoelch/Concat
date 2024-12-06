@@ -472,7 +472,7 @@ proc(
   string : literal
   IntLiteralType : literalType
   Type : intType
-  FileState ptr.mut : fileState
+  FilePosition : pos
   ParserState ptr.mut : state
 -> bool ) =>: tryParseIntConstant
   state [] .progContext@ =:: progContext
@@ -480,7 +480,7 @@ proc(
   progContext [] .idContext .typeContext@ =:: typeContext
   literal 0 number.tryParseInt switch
     NONE case
-      literalType intType literal fileState [] .wordStart state newIntConstant  state pushConst
+      literalType intType literal pos state newIntConstant  state pushConst
       true return
     UNSIGNED case
       literalType switch
@@ -492,44 +492,43 @@ proc(
         AUTO case
           "integer value does not fit into a signed integer: " sb.wrap
             literal sb.appendStr
-          fileState [] .wordStart errors appendWarning
+          pos errors appendWarning
           break
       end
-      literalType intType literal fileState [] .wordStart state newIntConstant  state pushConst
+      literalType intType literal pos state newIntConstant  state pushConst
       true return
     SIGN case ..drop
       "unsigned value is marked as negative: " sb.wrap
         literal sb.appendStr
-      fileState [] .wordStart errors appendWarning
+      pos errors appendWarning
       true return
     OVERFLOW case ..drop
       "integer value outside allowed range: " sb.wrap
         literal sb.appendStr
-      fileState [] .wordStart errors appendError
+      pos errors appendError
       true return
     INT INVALID_BASE case ..unreachable
     INVALID_CHAR EMPTY case ..drop
       false return
   end
 end
-proc( string : str FileState ptr.mut : fileState  ParserState ptr.mut : state -> bool ) =>: tryParseNumberLiteral
+proc(
+  string : literal
+  string : literalTypeName
+  FilePosition : pos
+  ParserState ptr.mut : state
+-> bool ) =>: tryParseNumberLiteral
   state [] .progContext@ =:: progContext
   progContext [] .errors@ =:: errors
   progContext [] .idContext@ =:: idContext
   idContext .typeContext@ =:: typeContext
-  str .length 0 == if
+  literal .length 0 == if
     false return
   end
-  str 0 string.charAt '#' == if
+  literal 0 string.charAt '#' == if
     false return ## annotations
   end
-  0 =:: mut: size
-  str ':' string.lastIndexOf =:: i
-  i 0 > and i str .length 1 - < if
-    str i string.splitIndex =:: literal =:: literalTypeName
-    literal ':'  string.contains if
-      false return ## literal cannot contain :
-    end
+  literalTypeName .length 0 > if
     literalTypeName "i8"  string.wrap string.eq if types.primitive.I8
     else literalTypeName "i16" string.wrap string.eq _if types.primitive.I16
     else literalTypeName "i32" string.wrap string.eq _if types.primitive.I32
@@ -541,53 +540,66 @@ proc( string : str FileState ptr.mut : fileState  ParserState ptr.mut : state ->
         idData .idType .TYPE ?? and idData .constValue .typeId ?? _if
       idData .constValue .typeId []
     else
-      "unexpected type for number literal: " sb.wrap
-        literalTypeName sb.appendStr
-      fileState [] .wordStart errors appendError
-      true return
+      false return
     end =:: literalType
     literalType typeContext types.isInt if
-      literalType typeContext types.sizeOf .fixed i32 cast 8 * size =
-      literal IntLiteralType .FIXED literalType fileState state tryParseIntConstant ! if
+      literal IntLiteralType .FIXED literalType pos state tryParseIntConstant ! if
         "invalid integer constant: `" sb.wrap
           literal sb.appendStr
           '`' sb.appendC
-        fileState [] .wordStart errors appendWarning
+        pos errors appendWarning
       end
       true return
     else literalType typeContext types.isFloat _if
       literal 0 number.tryParseFloat =:: errCode
       errCode .NONE ?? or errCode .INT ?? if
-        literalType fileState [] .wordStart newFloatConst state pushConst
+        literalType pos newFloatConst state pushConst
         true return
       else ..drop
         "invalid float constant: `" sb.wrap
           literal sb.appendStr
           '`' sb.appendC
-        fileState [] .wordStart errors appendWarning
+        pos errors appendWarning
       end
     else
       "unsupported literal type: " sb.wrap
         literalType typeContext sb.appendType
-      fileState [] .wordStart errors appendError
+      pos errors appendError
       true return
     end
   end
-  str IntLiteralType .AUTO Type .undefined fileState state tryParseIntConstant if
+  literal IntLiteralType .AUTO Type .undefined pos state tryParseIntConstant if
     true return
   end
-  str 0 number.tryParseFloat
+  literal 0 number.tryParseFloat
     ..dup .NONE ?? if ..drop
-      types.primitive.F64 fileState [] .wordStart newFloatConst state pushConst
+      types.primitive.F64 pos newFloatConst state pushConst
       true return
     else ..dup .INT ?? _if ..drop.2
       "integer value outside allowed range: " sb.wrap
-        str sb.appendStr
-      fileState [] .wordStart errors appendError
+        literal sb.appendStr
+      pos errors appendError
       true return
     end
   ..drop.2
   false return
+end
+proc(
+  Token : literalType
+  FilePosition : pos
+  CompilerError list ptr.mut : errors
+-> ) =>: checkLiteralType
+  literalType .LITERAL_TYPE ?? ! if
+    "expected literal type got: " sb.wrap
+    literalType sb.appendToken
+    pos errors appendError
+    return
+  end
+  literalType .LITERAL_TYPE .length 0 == if
+    "literal type should be non-empty" sb.wrap
+    pos errors appendError
+    return
+  end
 end
 proc(
   string : code
@@ -677,11 +689,38 @@ proc(
         fileState [] .wordStart newCharConstant state pushConst
         "" string.wrap true return
       IDENTIFIER case
-        token .IDENTIFIER fileState state tryParseNumberLiteral if
+        token .IDENTIFIER string.empty fileState [] .wordStart state tryParseNumberLiteral if
           "" string.wrap true return
         end
         token .IDENTIFIER
         break
+      LITERAL case
+        fileState [] .wordStart =:: literalStart
+        fileState nextToken =:: literalType
+        literalType fileState [] .wordStart errors checkLiteralType
+        token .LITERAL literalType .LITERAL_TYPE literalStart state tryParseNumberLiteral if
+          "" string.wrap true return
+        end
+        ## XXX add support for custom literal types
+        "could not resolve literal: " sb.wrap
+        token .LITERAL sb.appendStr
+        ':' sb.appendC
+        literalType .LITERAL_TYPE sb.appendStr
+        literalStart errors appendError
+        "" string.wrap true return
+      LITERAL_STRING LITERAL_RAW_STRING LITERAL_CHAR case
+        fileState [] .wordStart =:: literalStart
+        fileState nextToken =:: literalType
+        literalType fileState [] .wordStart errors checkLiteralType
+        "unexpected token: " sb.wrap
+        token sb.appendToken
+        literalStart errors appendError
+        "" string.wrap true return
+      LITERAL_TYPE case
+        "unexpected token: " sb.wrap
+        token sb.appendToken
+        fileState [] .wordStart errors appendError
+        "" string.wrap true return
     end
     ..dup "_" string.wrap string.eq if
       fileState [] .wordStart newWildcardConst  state pushConst
@@ -2105,8 +2144,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       while state [] .openBlocks list.peek =:: next?
           BlockType ..length 38 == assert "no new block types"
           next? optional.hasData and next? .data [] .blockType switch
-            IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DEFAULT case false break
-            default true break
+            IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DEFAULT case true break
+            default false break
           end do
         state [] .openBlocks
           list.pop ..drop

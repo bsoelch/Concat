@@ -16,6 +16,12 @@ union(
   StringToken : STRING
   StringToken : RAW_STRING
   StringToken : CHAR
+  ## tokens for literals <literal>:<literalType>
+  string : LITERAL_TYPE
+  string : LITERAL
+  StringToken : LITERAL_STRING
+  StringToken : LITERAL_RAW_STRING
+  StringToken : LITERAL_CHAR
 ) =:: export: Token
 
 enum( RAW_STRING STRING STRING_ESCAPE IDENTIFIER ) =:: ParserState
@@ -33,6 +39,18 @@ namespace: sb
           token .IDENTIFIER sb.appendStr
           '\"' sb.appendC
         return
+      LITERAL_TYPE case
+        sb
+          "literal type :\"" sb.appendS
+          token .LITERAL_TYPE sb.appendStr
+          '\"' sb.appendC
+        return
+      LITERAL case
+        sb
+          "literal \"" sb.appendS
+          token .LITERAL sb.appendStr
+          '\"' sb.appendC
+        return
       STRING case ## XXX print string literal types
         sb
           token .STRING .stringType sb.appendStringType
@@ -44,7 +62,7 @@ namespace: sb
         sb
           token .RAW_STRING .stringType sb.appendStringType
           "raw string `" sb.appendS
-          token .STRING .value sb.appendStr
+          token .RAW_STRING .value sb.appendStr
           '`' sb.appendC
         return
       CHAR case
@@ -53,6 +71,27 @@ namespace: sb
           "char \"" sb.appendS
           token .CHAR .value sb.appendStr
           '\"' sb.appendC
+        return
+      LITERAL_STRING case
+        sb
+          token .LITERAL_STRING .stringType sb.appendStringType
+          "literal string \"" sb.appendS
+          token .LITERAL_STRING .value sb.appendStr
+          "\":" sb.appendS
+        return
+      LITERAL_RAW_STRING case
+        sb
+          token .LITERAL_RAW_STRING .stringType sb.appendStringType
+          "raw string `" sb.appendS
+          token .LITERAL_RAW_STRING .value sb.appendStr
+          "`:" sb.appendS
+        return
+      LITERAL_CHAR case
+        sb
+          token .LITERAL_CHAR .stringType sb.appendStringType
+          "literal char \"" sb.appendS
+          token .LITERAL_CHAR .value sb.appendStr
+          "\":" sb.appendS
         return
     end
   end
@@ -122,6 +161,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
   code .length 0 <= if
     string.empty Token .EMPTY return
   end
+  code 0 string.charAt ':' == =:: isLiteralType
   ParserState .IDENTIFIER =:: mut: state
   '"' =:: mut: stringStart
   StringLiteralType .DEFAULT =:: mut: stringType
@@ -168,15 +208,41 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     end
     i break ## neither whitespace nor comment
   end
+    isLiteralType if ## skip leading `:` of literal type
+      ':' fileState [] .currentPos@ updateFilePos
+      1 +
+    end
     $ =:: mut: i0
     fileState [] .currentPos fileState [] .wordStart =
   while $ code .length < do =:: i
     code i string.charAt =:: c
     state .IDENTIFIER ?? and c char.isWhitespace or
         c '#' == and i 1 + code .length < and "#+" string.wrap code i 1 + string.charAt string.contains if
-      i i0 > assert "identifer contains at least one character"
+      isLiteralType ! if
+        i i0 > assert "identifier contains at least one character"
+      end
       code i0 i i0 - string.slice =:: idName
-      code i string.tail idName Token .IDENTIFIER return
+      code i string.tail idName
+      isLiteralType if
+        Token .LITERAL_TYPE
+      else
+        Token .IDENTIFIER
+      end return
+    end
+    ## : within identifer not followed by space or :
+    state .IDENTIFIER ?? and c ':' == and code i0 string.charAt '#' != and
+        i 1 + code .length < and code i 1 + string.charAt ':' != and
+        code i 1 + string.charAt char.isWhitespace ! if
+      isLiteralType ! if
+        i i0 > assert "identifier contains at least one character"
+      end
+      code i0 i i0 - string.slice =:: idName
+      code i string.tail idName
+      isLiteralType if
+        Token .LITERAL_TYPE
+      else
+        Token .LITERAL
+      end return
     end
     c fileState [] .currentPos@ updateFilePos
     state .STRING_ESCAPE ?? if
@@ -190,7 +256,11 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
           i 2 + continue ## escaped `
         end
         code i0 i i0 - string.slice =:: body
-        code i 1 + string.tail body stringType StringToken new Token .RAW_STRING return
+        code i 1 + string.tail body stringType StringToken new
+          i 1 + code .length < and code i 1 + string.charAt ':' == if
+            Token .LITERAL_RAW_STRING return
+          end
+        Token .RAW_STRING return
       end
       i 1 + continue
     end
@@ -199,6 +269,10 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
         code i0 i i0 - string.slice =:: body
         code i 1 + string.tail
         body stringType StringToken new
+          i 1 + code .length < and code i 1 + string.charAt ':' == if
+            stringStart '\'' == if Token .LITERAL_CHAR else Token .LITERAL_STRING end
+            return
+          end
           stringStart '\'' == if Token .CHAR else Token .STRING end
         return
       else c '\\' == _if
