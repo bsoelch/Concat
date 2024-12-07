@@ -1139,6 +1139,7 @@ proc(
     UGT_I8 UGT_I16 UGT_I32 UGT_I64 GT_C8 GT_C16 GT_C32 case
       ops ssa.OperationType .UGT pos context appendComparissonOperator return
     SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO support arguments
+    PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64 case break
   end
   "unable to compile built-in: " sb.wrap
     builtIn sb.appendBuiltIn

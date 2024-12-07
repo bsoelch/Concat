@@ -921,7 +921,7 @@ namespace: types
 
   ## array & pointer types
   ## TODO? merge size and sizeType ?
-  enum( int staticArg ) =:: export: ArraySizeType
+  enum( int staticArg ) =:: export: ArraySizeType ## XXX rename staticArg to autoArg
   struct( i64 : value ArraySizeType : sizeType ) =:: export: ArraySize
   struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut: ptrOnly bool : mutable ) =:: ArrayData
 

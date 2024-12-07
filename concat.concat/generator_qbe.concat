@@ -2376,6 +2376,11 @@ proc(
         CONCAT_ENVP_NAME sb.appendS
         '\n' sb.appendC
       return
+    PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64 case
+      "unsupported built-in" sb.wrap
+        builtIn sb.appendBuiltIn
+      pos errors appendError
+      sb return
   end
 end
 

@@ -2243,7 +2243,10 @@ proc(
   values nArgs array.reverse
   valInfos nArgs array.reverse
   ## XXX ensure type arguments for pointer built-ins are present
-  builtIn values nArgs i32 cast interpreter.evaluateBuiltIn =:: resultType =:: value
+  builtIn
+    values
+    nArgs i32 cast
+  pos labelContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
   resultType switch
     success case
       value

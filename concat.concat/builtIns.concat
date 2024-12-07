@@ -36,6 +36,7 @@ enum(
  UGT_I8 UGT_I16 UGT_I32 UGT_I64                  ## ..u>
  SYS_ARGC SYS_ARGV SYS_ENVP
  ## XXX? more built-in operations
+ PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
 ) =:: export: BuiltIn
 
 namespace: sb
@@ -90,6 +91,12 @@ namespace: sb
       SYS_ARGC case "sys.argc" sb.appendS break
       SYS_ARGV case "sys.argv" sb.appendS break
       SYS_ENVP case "sys.envp" sb.appendS break
+      PARSE_I8 case "i8.static.parse" sb.appendS break
+      PARSE_I16 case "i16.static.parse" sb.appendS break
+      PARSE_I32 case "i32.static.parse" sb.appendS break
+      PARSE_I64 case "i64.static.parse" sb.appendS break
+      PARSE_F32 case "f32.static.parse" sb.appendS break
+      PARSE_F64 case "f64.static.parse" sb.appendS break
     end
   end
 end
@@ -204,8 +211,8 @@ proc(
   ProcBundleId : bundleId
   FilePosition : pos
   ProgramContext ptr.mut : context
--> ) =>: addGenericBuiltIn
-  buildIn procLabel procType bundleId pos context true false addBuiltIn_internal
+-> ) =>: addStaticBuiltIn
+  buildIn procLabel procType bundleId pos context false true addBuiltIn_internal
 end
 
 proc(
@@ -435,6 +442,118 @@ proc(
     ! assert "can create procedure"
   =:: v_c8pp
   v_c8pp v_i64 return
+end
+proc(
+  FilePosition : pos
+  ProgramContext ptr.mut : context
+-> Type Type Type Type Type Type ) =>: parseProcTypes
+  context [] .idContext @ =:: idContext
+  idContext [] .typeContext @ =:: typeContext
+  typeContext [] .labelContext @ =:: labelContext
+  LabelId 2 array : labelData
+  Type 2 array : typeData
+  labelData@ =:: argLabels
+  typeData@ =:: argTypes
+  ## i64 : auto: k  char8 k ptr -> ...
+  types.primitive.I64 argTypes 0 [] =
+  ## newLabel
+    "k" string.wrap
+    id.FLAG_BUILT_IN id.FLAG_AUTO |
+    pos
+    -1:FileId
+    labelContext
+  id.newLabel =:: ptrSize
+  ptrSize argLabels 0 [] =
+  ptrSize i64 cast types.ArraySizeType .staticArg types.ArraySize new =:: arraySize
+  types.primitive.CHAR8
+    types.ArrayType .POINTER
+    arraySize@ 1 array.create
+    true  ## fixed-size
+    false ## mutable
+    typeContext
+  types.newArrayType
+    ! assert "can create array type"
+  argTypes 1 [] =
+  id.LABEL_ID_NONE argLabels 1 [] =
+  ## newProcArgs
+    argTypes array.wrap
+    argLabels array.wrap optional.wrap
+    false
+    typeContext
+  types.newProcArgs =:: mut: procIn
+  ## newProcedure
+    procIn
+    ## newProcArgs
+      types.primitive.I8@ 1 array.create
+      LabelId arrayView optional.empty
+      true
+      typeContext
+    types.newProcArgs
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: s_i8
+  ## newProcedure
+    procIn
+    ## newProcArgs
+      types.primitive.I16@ 1 array.create
+      LabelId arrayView optional.empty
+      true
+      typeContext
+    types.newProcArgs
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: s_i16
+  ## newProcedure
+    procIn
+    ## newProcArgs
+      types.primitive.I32@ 1 array.create
+      LabelId arrayView optional.empty
+      true
+      typeContext
+    types.newProcArgs
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: s_i32
+  ## newProcedure
+    procIn
+    ## newProcArgs
+      types.primitive.I64@ 1 array.create
+      LabelId arrayView optional.empty
+      true
+      typeContext
+    types.newProcArgs
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: s_i64
+  ## newProcedure
+    procIn
+    ## newProcArgs
+      types.primitive.F32@ 1 array.create
+      LabelId arrayView optional.empty
+      true
+      typeContext
+    types.newProcArgs
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: s_f32
+  ## newProcedure
+    procIn
+    ## newProcArgs
+      types.primitive.F64@ 1 array.create
+      LabelId arrayView optional.empty
+      true
+      typeContext
+    types.newProcArgs
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! assert "can create procedure"
+  =:: s_f64
+  s_f64 s_f32 s_i64 s_i32 s_i16 s_i8 return
 end
 
 proc(
@@ -1291,6 +1410,37 @@ proc(
     v_c8pp
     NO_BUNDLE
   pos context addBuiltIn
+  pos context parseProcTypes =:: s_i8 =:: s_i16 =:: s_i32 =:: s_i64 =:: s_f32 =:: s_f64
+  BuiltIn .PARSE_I8
+    "i8.static" "parse" pos labelContext createLabel
+    s_i8
+    NO_BUNDLE
+  pos context addStaticBuiltIn
+  BuiltIn .PARSE_I16
+    "i16.static" "parse" pos labelContext createLabel
+    s_i16
+    NO_BUNDLE
+  pos context addStaticBuiltIn
+  BuiltIn .PARSE_I32
+    "i32.static" "parse" pos labelContext createLabel
+    s_i32
+    NO_BUNDLE
+  pos context addStaticBuiltIn
+  BuiltIn .PARSE_I64
+    "i64.static" "parse" pos labelContext createLabel
+    s_i64
+    NO_BUNDLE
+  pos context addStaticBuiltIn
+  BuiltIn .PARSE_F32
+    "f32.static" "parse" pos labelContext createLabel
+    s_f32
+    NO_BUNDLE
+  pos context addStaticBuiltIn
+  BuiltIn .PARSE_F64
+    "f64.static" "parse" pos labelContext createLabel
+    s_f64
+    NO_BUNDLE
+  pos context addStaticBuiltIn
   "..itr.prepare" string.wrap pos context newBuiltInBundle
     if ..drop true return end
   bundle =

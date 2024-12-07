@@ -196,6 +196,9 @@ namespace: interpreter
     BuiltIn : builtIn
     ConstValue _ ptr : args
     i32 : k
+    FilePosition : pos
+    LabelContext ptr : labelContext
+    CompilerError list ptr.mut : errors
   -> ConstValue OperatorResult ) =>: export: evaluateBuiltIn
     builtIn switch
       NEG_I8 NEG_I16 NEG_I32 NEG_I64 case
@@ -299,6 +302,69 @@ namespace: interpreter
       UGT_I32 GT_C32 case args k i32.ugt @ cmpOperatorInt return
       UGT_I64 case args k i64.ugt @ cmpOperatorInt return
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
+      PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
+        k 1 == assert "auto-arg is ignored"
+        args 0 [] =:: argument
+        argument .str ?? assert "argument is string"
+        argument .str labelContext id.scAsStr =:: chars
+        chars 0 number.tryParseInt =:: parserError =:: parsed
+        false =:: mut: overflow
+        ## XXX ? extract error handling code
+        parserError switch
+          NONE case break
+          UNSIGNED OVERFLOW case
+            parserError .UNSIGNED ?? and builtIn .PARSE_I64 ?? if break end
+            true overflow =
+            break
+          SIGN INT EMPTY INVALID_BASE INVALID_CHAR case
+            parserError number.errorString sb.fromStr
+              " while parsing number " sb.appendS
+              chars sb.appendStr
+            pos errors appendError
+            break
+        end
+        builtIn .PARSE_I64 ?? if
+          overflow if
+            chars sb.fromStr
+              " does not fit into a 64-bit integer" sb.appendS
+            pos errors appendWarning
+          end
+        else builtIn .PARSE_I32 ?? _if
+          overflow or parsed i32.MIN i64 cast.u < or parsed i32.UMAX i64 cast.u > if
+            chars sb.fromStr
+              " does not fit into a 32-bit integer" sb.appendS
+            pos errors appendWarning
+          end
+        else builtIn .PARSE_I16 ?? _if
+          overflow or parsed i16.MIN i64 cast.u < or parsed i16.UMAX i64 cast.u > if
+            chars sb.fromStr
+              " does not fit into a 16-bit integer" sb.appendS
+            pos errors appendWarning
+          end
+        else builtIn .PARSE_I8 ?? _if
+          overflow or parsed i8.MIN i64 cast.u < or parsed i8.UMAX i64 cast.u > if
+            chars sb.fromStr
+              " does not fit into a 8-bit integer" sb.appendS
+            pos errors appendWarning
+          end
+        end
+        parsed ConstValue .int OperatorResult .success return
+      PARSE_F32 PARSE_F64 case
+        k 1 == assert "auto-arg is ignored"
+        args 0 [] =:: argument
+        argument .str ?? assert "argument is string"
+        argument .str labelContext id.scAsStr =:: chars
+        chars 0 number.tryParseFloat =:: parserError =:: parsed
+        parserError switch
+          NONE INT case break
+          UNSIGNED SIGN OVERFLOW EMPTY INVALID_BASE INVALID_CHAR case
+            parserError number.errorString sb.fromStr
+              " while parsing number " sb.appendS
+              chars sb.appendStr
+            pos errors appendError
+            break
+        end
+        parsed ConstValue .Float OperatorResult .success return
     end
     ConstValue .none  OperatorResult .unimplemented return
   end
