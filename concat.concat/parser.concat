@@ -744,7 +744,7 @@ proc(
         state [] .tmpString
           sb.clear ## clear tmp string
           literalType .LITERAL_TYPE sb.appendStr
-          ".parse" sb.appendS
+          ".static.parse" sb.appendS
         state [] .tmpString =
         state [] .tmpString sb.asStr false return
       LITERAL_TYPE case

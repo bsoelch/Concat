@@ -148,8 +148,8 @@ namespace: number
     ..drop
     res
       sign and -_ unsigned if ParserError .SIGN return end
+      overflow if ParserError .OVERFLOW return end
       signedOverflow if ParserError .UNSIGNED return end
-    overflow if ParserError .OVERFLOW return end
     ParserError .NONE return
   end
   proc( string : str  i32 : base -> i64 ParserError ) =>: export: tryParseInt
