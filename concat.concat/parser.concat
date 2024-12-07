@@ -1353,7 +1353,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "namespace names have to be identifiers" sb.wrap fileState [] .wordStart errors appendError
         return
       end .IDENTIFIER
-      ..dup fileState [] .wordStart progContext [] .errors @ id.checkIdentifier if
+      ..dup
+        id.NameContext .NAMESPACE
+      fileState [] .wordStart progContext [] .errors @ id.checkIdentifier if
         "\"" sb.wrap
           ..swap sb.appendStr
         "\" is not a valid namespace name" sb.appendS

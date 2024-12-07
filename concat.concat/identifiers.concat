@@ -373,14 +373,34 @@ namespace: id
     searchIdentifier =:: isError =:: label =:: idName
     label context getIdentifier isError | return
   end
-  proc( string : id FilePosition : pos CompilerError list ptr.mut : errors -> bool ) =>: export: checkIdentifier
+  enum( NAMESPACE DECLARATION BUILT_IN ) =:: export: NameContext
+  proc(
+    string : id
+    NameContext : context
+    FilePosition : pos
+    CompilerError list ptr.mut : errors
+  -> bool ) =>: export: checkIdentifier
     id .length 0 == if
       "identifier names have to be non-empty" sb.wrap pos errors appendError
       true return
     end
+    context .BUILT_IN ?? if
+      false return
+    end
     id 0 string.charAt '#' == if
       "identifier names cannot start with '#'" sb.wrap pos errors appendError
       true return
+    end
+    id ':' string.contains if
+      "identifier names cannot contain ':'" sb.wrap pos errors appendError
+      true return
+    end
+    id '.' string.contains if
+      "identifier names cannot contain '.'" sb.wrap pos errors appendError
+      true return
+    end
+    context .NAMESPACE ?? if
+      false return
     end
     id id .length 1 - string.charAt '@' == if
       "identifier names cannot end with '@'" sb.wrap pos errors appendError
@@ -388,14 +408,6 @@ namespace: id
     end
     id 0 string.charAt '$' == or id ">$" string.wrap string.startsWith if
       "identifier names cannot start with `$` or `>$`" sb.wrap pos errors appendError
-      true return
-    end
-    id '.' string.contains if
-      "identifier names cannot contain '.'" sb.wrap pos errors appendError
-      true return
-    end
-    id ':' string.contains if
-      "identifier names cannot contain ':'" sb.wrap pos errors appendError
       true return
     end
     false return
@@ -447,8 +459,13 @@ namespace: id
       end
     end
     ## don't check names of built-in identifiers
-    flags FLAG_BUILT_IN & ? ! and
-        name declaredAt errors checkIdentifier if
+    name
+      flags FLAG_BUILT_IN & ? if
+        NameContext .BUILT_IN
+      else
+        NameContext .DECLARATION
+      end
+    declaredAt errors checkIdentifier if
       context [] .nameBuffer sb.clear context [] .nameBuffer =
       LABEL_ID_NONE ID_NONE_DATA true return
     end
