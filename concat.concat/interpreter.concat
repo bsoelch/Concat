@@ -1613,8 +1613,8 @@ proc(
             code case break
           end
           calledProc .autoArgs =:: autoArgs
-          ## TODO? allow evaluation of non-static procedures depending on interpreter-mode
-          calledProcData [] .isStatic ! if
+          ## TODO? allow evaluation of non-static procedures in global mode
+          calledProcData [] .isStatic ! and context [] .evalType .INTERPRET ?? ! if
             true return ## only evaluate static procedures in interpreter
           end
           ## static procedure -> no call resolving necessary
