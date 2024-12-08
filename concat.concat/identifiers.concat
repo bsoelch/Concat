@@ -113,7 +113,7 @@ end
     ConstValue list : mut: argBuffer
     types.ArraySize list : mut: arraySizeBuffer
     stringBuilder : mut: nameBuffer
-    NamespaceImportId list : mut: prevImports
+    NamespaceInfo list : mut: prevNamespaces
     IdentifierInfo list : mut: itrVariables
     i32 : mut: localVarCount
   ) =:: export: IdentifierContext
@@ -125,11 +125,11 @@ namespace: id
     false Type .undefined false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     labelHash @ labelEq @ 128 IdentifierData map.create
-    32  ConstValue        list.create
-    128 types.ArraySize   list.create
-    128                     sb.create
-    32  NamespaceImportId list.create
-    32 IdentifierInfo     list.create
+    32  ConstValue      list.create
+    128 types.ArraySize list.create
+    128                 sb.create
+    32  NamespaceInfo   list.create
+    32 IdentifierInfo   list.create
     0
     IdentifierContext new =:: mut: newContext
     newContext return
@@ -395,12 +395,12 @@ namespace: id
       "identifier names cannot contain ':'" sb.wrap pos errors appendError
       true return
     end
+    context .NAMESPACE ?? if
+      false return
+    end
     id '.' string.contains if
       "identifier names cannot contain '.'" sb.wrap pos errors appendError
       true return
-    end
-    context .NAMESPACE ?? if
-      false return
     end
     id id .length 1 - string.charAt '@' == if
       "identifier names cannot end with '@'" sb.wrap pos errors appendError
@@ -715,9 +715,9 @@ namespace: sb
 end
 namespace: id
   proc( LabelId : name IdentifierContext ptr.mut : context -> ) =>: export: beginNamespace
-    context [] .prevImports
-      context [] .typeContext  .labelContext .namespaceInfo .imports list.append
-    context [] .prevImports =
+    context [] .prevNamespaces
+      context [] .typeContext  .labelContext .namespaceInfo list.append
+    context [] .prevNamespaces =
     context [] .nameBuffer
        ..dup .length 0 == assert "name buffer empty"
        name context [] .typeContext  .labelContext @ sb.appendLabelName
@@ -745,15 +745,12 @@ namespace: id
     false return
   end
   proc( IdentifierContext ptr.mut : context -> bool ) =>: export: endNamespace
-    context [] .typeContext  .labelContext .namespaceInfo .current 0:NamespaceId == if
+    context [] .prevNamespaces .length 0 == if
       true return
     end
-    context [] .typeContext  .labelContext .namespaceInfo .current context [] .typeContext  .labelContext @ parentNamespace
-    context [] .typeContext  .labelContext .namespaceInfo .current =
-    context [] .prevImports
-      list.pop ..swap
-    context [] .prevImports =
-    context [] .typeContext  .labelContext .namespaceInfo .imports =
+    context [] .prevNamespaces
+      list.pop context [] .typeContext  .labelContext .namespaceInfo =
+    context [] .prevNamespaces =
     false
   end
 end

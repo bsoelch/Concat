@@ -1362,7 +1362,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError return
       end
       id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-      idContext id.beginNamespace
+        idContext id.beginNamespace
       BlockType .NAMESPACE state openBlock
       return
     else ..dup "overload:" string.wrap string.eq _if =:: opName

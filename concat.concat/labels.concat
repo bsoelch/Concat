@@ -436,6 +436,13 @@ namespace: id
     base NAMESPACE_ID_NONE == childName .length 0 == | if
       NAMESPACE_ID_NONE return
     end
+    childName '.' string.indexOf =:: dotIndex
+    dotIndex 0 >= if ## name contains dot -> search for nested namespace
+      childName dotIndex string.splitIndex =:: head =:: tail
+      base head create context childId
+        tail create context childId
+      return
+    end
     base i64 cast 0 < or base i64 cast context [] .namespaces .length >= if
       NAMESPACE_ID_NONE return ## id out of range
     end
