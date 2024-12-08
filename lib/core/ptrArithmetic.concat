@@ -23,10 +23,10 @@ namespace: ptr
   end
 
   proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: export: add
-    p i64 cast! offset T ..type.size * + T _ ptr cast!
+    p offset []@
   end
   proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: export: sub
-    p i64 cast! offset T ..type.size * - T _ ptr cast!
+    p offset -_ []@
   end
   proc( type : auto: T T _ ptr : p T _ ptr : q -> i64 ) =>: export: diff
     p i64 cast! q i64 cast! - T ..type.size ..udiv

@@ -10,6 +10,9 @@ import array
 end
 
 namespace: list
+  ( type : T -> T list ) =>: export: empty
+    { { } : data 0 : length 0 : cap } return
+  end
   proc( i32 : k type : T -> T list ) =>: export: create_32
     k i64 cast.s T create_64
   end
