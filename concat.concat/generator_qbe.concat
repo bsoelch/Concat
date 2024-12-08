@@ -1068,7 +1068,13 @@ namespace: sb
             else
               ## appendConstQBE
                 eltType
-                value constContext constUnionElement
+                value eltIndex constContext constUnionElement if
+                  "union element index out of sync: expected " sb.wrap
+                    eltIndex sb.appendI
+                    " got " sb.appendS
+                    value .union .eltIndex sb.appendI
+                  pos errors appendError
+                end
                 isGlobal
                 pos
                 context
@@ -3775,19 +3781,23 @@ proc(
         op [] .pos sb.appendPosQBE
       =:: mut: newSb
       ## index of current auto-argument
-      0:i64 =:: mut: argIndex
+      0:i64 =:: mut: autoArgIndex
       0:i64 while ..dup argCount < do =:: i
         inTypes i typeContext types.compositeGetElement =:: mut: arg
         inTypes i typeContext types.compositeGetLabel =:: argLabel
         arg typeContext types.isEmpty if
           i 1 + continue ## skip empty arguments
         end
-        argLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+        argLabel labelContext id.labelFlags =:: argFlags
+        argFlags id.FLAG_STATIC & ? if
+          argFlags id.FLAG_AUTO & ? if
+            autoArgIndex 1 + autoArgIndex =
+          end
           i 1 + continue ## skip static arguments
         end
-        argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
-          callInfo [] .autoArgs argIndex constContext constArrayGet =:: argVal
-          argIndex 1 + argIndex =
+        argFlags id.FLAG_AUTO & ? if
+          callInfo [] .autoArgs autoArgIndex constContext constArrayGet =:: argVal
+          autoArgIndex 1 + autoArgIndex =
           argVal .none ?? ! if
             newSb
               arg argVal op [] .pos context pushConstant
@@ -3819,7 +3829,7 @@ proc(
         argIndices =
         i 1 +
       end ..drop
-      argIndices .length argIndex =
+      argIndices .length =:: mut: argIndex
       while argIndex 0 > do argIndex 1 - argIndex =
         argIndices argIndex list.at .data [] .valId 0 >= if
           continue ## argument already set

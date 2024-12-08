@@ -4038,6 +4038,7 @@ proc(
   implId -1 == if
     procFile [] .localOps .length codeImpl [] .codeStart =
     state [] .compiledOps .length codeImpl [] .codeLength =
+    ProcCodeState .TYPE_CHECKED codeImpl [] .codeState =
   else
     codeImpl [] .implementations
       implId list.at .data

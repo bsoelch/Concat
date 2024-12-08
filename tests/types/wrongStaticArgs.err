@@ -1,9 +1,9 @@
 no matching signature for arguments ( ? list  char8 5 ptr { string: "Hello" }  ..intLiteral.u7 { integer: 3 }  )
 candidates:
-  * proc[228]( type : static: T ? list : a i64 : k T[generic 1024] k[generic 1026] ptr : b -> ? list ) appendP
+  * proc[229]( type : auto: static: T ? list : a i64 : auto: k T[generic 1029] k[generic 1031] ptr : b -> ? list ) appendP
  at wrongStaticArgs.concat:5:15
 no matching signature for arguments ( ? list  char8 5 ptr { string: "Hello" }  ..intLiteral.u7 { integer: 3 }  )
 candidates:
-  * proc[218]( type : static: T ? list : elts -> ? list ) free
+  * proc[219]( type : auto: static: T ? list : elts -> ? list ) free
  at wrongStaticArgs.concat:6:3
 wrong number of return values at the end of procedure expected: 0 got: 3 at wrongStaticArgs.concat:7:1

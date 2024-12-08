@@ -1175,11 +1175,9 @@ proc(
           value .typeId typeContext types.literalToType ConstValue .typeId GenericArg .fixed
         map.put ..drop
       end
-      flags id.FLAG_STATIC & ? ! if
-        constArgs
-          value list.append
-        constArgs =
-      end
+      constArgs
+        value list.append
+      constArgs =
     end
     needArg if ## need argument from stack
       inType i typeContext types.compositeGetElement =:: eltType

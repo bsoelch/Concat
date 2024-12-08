@@ -1947,6 +1947,9 @@ namespace: sb
             label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
               "mut: " appendS
             end
+            label labelContext id.labelFlags id.FLAG_AUTO & ? if
+              "auto: " appendS
+            end
             label labelContext id.labelFlags id.FLAG_STATIC & ? if
               "static: " appendS
             end

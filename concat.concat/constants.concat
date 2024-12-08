@@ -118,10 +118,14 @@ proc( ConstValue : value i64 : index ConstantContext ptr.mut : context -> ConstV
   context [] .arrayValues =
   valueId index UnionConstant new ConstValue .union return
 end
-proc( ConstValue : union ConstantContext ptr : context -> ConstValue ) =>: export: constUnionElement
+proc(
+  ConstValue : union
+  i64 : eltIndex
+  ConstantContext ptr : context
+-> ConstValue bool ) =>: export: constUnionElement
   context [] .arrayValues
     union .union .value i64 cast
-  list.get return
+  list.get union .union .eltIndex eltIndex != return
 end
 
 proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export: constantEquals

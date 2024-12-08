@@ -32,11 +32,13 @@ struct(
   i64 : mut: codeStart
   i64 : mut: codeLength
 ) =:: export: ProcImplementation
+enum( PARSING PARSED TYPE_CHECKED ) =:: export: ProcCodeState
 struct(
   ProcImplementation list : mut: implementations
   VariableInfo list : mut: variables ## for single implementation in no-generic case
   i64 : mut: codeStart
   i64 : mut: codeLength
+  ProcCodeState : mut: codeState
 ) =:: export: CodeProcData
 struct(
   BuiltIn : builtIn

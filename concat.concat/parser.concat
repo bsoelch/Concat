@@ -1003,6 +1003,7 @@ proc(
         0 VariableInfo list.create
         codeStart
         -1
+        ProcCodeState .PARSING
       CodeProcData new ProcImplType .code
       hasStaticArg
       isStatic
@@ -1498,6 +1499,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             progContext [] .tmpOps .length
               currentProc [] .implementation .code .codeStart -
             currentProc [] .implementation .code .codeLength =
+            ProcCodeState .PARSED currentProc [] .implementation .code .codeState =
           end
         else closedType .AND ?? or closedType .OR ?? _if
           state [] .andOrPositions list.clear state [] .andOrPositions =

@@ -1088,6 +1088,7 @@ namespace: interpreter
         intVal ConstValue .int return
       end
     end
+    ## TODO? special handling for int <-> pointer
     oldValue return
   end
 end
@@ -1733,10 +1734,40 @@ proc(
         INTERPRET GLOBAL case break
         FOLD_LOCAL case true return
       end
-      "unsupported operation in constant evaluation: " sb.wrap
-        op [] program sb.appendOp
-      op [] .pos errors appendError
-      true return
+      op [] .val .initializeId ?? if
+        op [] .val .initializeId@
+      else
+        op [] .val .autoTypedInitializeId@
+      end =:: idInfo
+      idInfo [] .labelId =:: label
+      op [] .pos context popValue if ..drop.2
+        "stack underflow while evaluating operation: " sb.wrap
+          op [] program sb.appendOp
+        op [] .pos errors appendError
+        true return
+      end =:: value =:: valInfo
+      idInfo [] .idType switch
+        GLOBAL_VAR LOCAL_VAR LABEL TMP_VAR ITR_VAR TYPE case
+          context [] .variables@
+            label
+            ## Constant
+              value
+              ## ValueInfo
+                valInfo .valueType
+                label
+                op [] .pos
+              ValueInfo new
+            Constant new
+          map.put ..drop
+          false return
+        ARGUMENT PROCEDURE PROCEDURE_BUNDLE case
+          value valInfo context unpopValue
+          "unsupported operation in constant evaluation: " sb.wrap
+            op [] program sb.appendOp
+          op [] .pos errors appendError
+          true return
+      end
+      break
     typeModifier case
         true =:: mut: fixedSize
         context minStackOffset =:: minOffset
@@ -1840,20 +1871,24 @@ proc(
       value .typeId ??
           and value .typeId typeContext types.isEnum
           or value .typeId typeContext types.isTaggedUnion if
-        ## enum/union element initializer
-        value .typeId =:: containerType
-        containerType
-          labelId
-        typeContext types.compositeFindLabel i64 cast =:: elementIndex
-        elementIndex 0 < if
-          "type " sb.wrap
-            containerType typeContext sb.appendType
-            " does not have a label \"" sb.appendS
-            labelId labelContext sb.appendLabelName
-            '"' sb.appendC
-          op [] .pos errors appendError
-        end
-        containerType elementIndex typeContext types.compositeGetElement =:: eltType
+        value .typeId true
+      else
+        valInfo .valueType false
+      end  =:: isType =:: containerType
+      ## enum/union element initializer
+      containerType
+        labelId
+      typeContext types.compositeFindLabel i64 cast =:: elementIndex
+      elementIndex 0 < if
+        "type " sb.wrap
+          containerType typeContext sb.appendType
+          " does not have a label \"" sb.appendS
+          labelId labelContext sb.appendLabelName
+          '"' sb.appendC
+        op [] .pos errors appendError
+      end
+      containerType elementIndex typeContext types.compositeGetElement =:: eltType
+      isType if
         eltType .empty ?? if
           ## pushValue
             containerType typeContext types.isEnum if
@@ -1891,22 +1926,36 @@ proc(
           " got " sb.appendS
           eltValInfo .valueType typeContext sb.appendType
         op [] .pos errors appendError
+        true return
       end
-      ## unpopValue
-        value
-        valInfo
-      context unpopValue
-      context [] .evalType switch
-        INTERPRET GLOBAL case break
-        FOLD_LOCAL case
-          ## label/name resolving handled by type-checker
-          true return
-      end
-      ## label/name should have been resolved in type-checker
-      "unsupported operation in constant evaluation: " sb.wrap
-        op [] program sb.appendOp
-      op [] .pos errors appendError
-      true return
+      value .arrayConstant ?? if
+        value .arrayConstant elementIndex constContext constArrayGet
+      else value .union ?? _if
+        value elementIndex constContext constUnionElement if
+          "union index (" sb.wrap
+            elementIndex sb.appendI
+            ") does not match current value (" sb.appendS
+            value .union .eltIndex sb.appendI
+            ")" sb.appendS
+          op [] .pos errors appendError
+        end
+      else
+        "unexpected value for composite constant: " sb.wrap
+          value constContext typeContext sb.appendConstant
+        op [] .pos errors appendError
+        ## unpopValue
+          value
+          valInfo
+        context unpopValue
+        true return
+      end =:: eltValue
+      ## pushValue
+        eltValue
+        eltType
+        id.LABEL_ID_NONE ## XXX? remember label
+        op [] .pos
+      context pushValue
+      false return
     atLabel atName hasLabel existsLabel existsName case
       context [] .evalType switch
         INTERPRET GLOBAL case break
@@ -2170,6 +2219,56 @@ proc(
         context
       pushValue
       false return
+    stackMod case
+      op [] .val .stackMod .modType switch
+        DROP case
+          op [] .val .stackMod .n i64 cast.u
+            "drop" string.wrap
+            context [] .evalType .FOLD_LOCAL ??
+          op [] .pos context checkStack if
+            true return
+          end
+          context [] .stack .length op [] .val .stackMod .n i64 cast.u - context truncateStack
+          false return
+        COPY case
+          op [] .val .stackMod .n i64 cast.u 1 + =:: offset
+          offset
+            "stack modification" string.wrap
+            context [] .evalType .FOLD_LOCAL ??
+          op [] .pos context checkStack if
+            true return
+          end
+          context [] .stack
+            $ $1 .length offset - list.get list.append
+          context [] .stack =
+          context [] .stackInfo
+            $ $1 .length offset - list.get list.append
+          context [] .stackInfo =
+          false return
+        SWAP case
+          2
+            "swap" string.wrap
+            context [] .evalType .FOLD_LOCAL ??
+          op [] .pos context checkStack if
+            true return
+          end
+          op [] .pos context popValue
+            ! assert "hasValue"
+          =:: upper =:: upperInfo
+          op [] .pos context popValue
+            ! assert "hasValue"
+          =:: lower =:: lowerInfo
+          context [] .stack
+            upper list.append
+            lower list.append
+          context [] .stack =
+          context [] .stackInfo
+            upperInfo list.append
+            lowerInfo list.append
+          context [] .stackInfo =
+          false return
+      end
+      break
     atId getElement atElement getEnumLabel
     getArrayElement atArrayElement setValue
     NewEnum call callPtr
@@ -2177,7 +2276,7 @@ proc(
     autoCast bitCast NewEnumReference
     ConstantReference NewReference
     checkEnumLabel setEnumLabel
-    hasElement stackMod copy
+    hasElement copy
     compilerInfo unreachable case
       context [] .evalType switch
         INTERPRET GLOBAL case
@@ -2382,6 +2481,14 @@ proc(
   inType typeContext types.compositeElts =:: args
   args .length autoArgs .length - =:: nArgs
   nArgs "procedure call" string.wrap false pos context checkStack if
+    128 sb.create
+      "inType: " sb.appendS
+      inType typeContext sb.appendType
+      " arguments: " sb.appendS
+      args .length sb.appendI
+      " auto-args: " sb.appendS
+      autoArgs .length sb.appendI
+    pos errors appendInfo
     true return
   end
   context [] .stack .length nArgs - =:: argsOffset
@@ -2391,6 +2498,8 @@ proc(
     true return
   end
   context [] .stack .length =:: stackOffset
+  context [] .openBlocks .length =:: prevBlocks
+  BlockType .PROCEDURE context openBlock
   0:i64 =:: mut: autoArgOffset
   argsOffset =:: mut: argOffset
   ## process procedure arguments
@@ -2399,9 +2508,10 @@ proc(
       "not enough arguments for procedure " sb.wrap
         procData [] .labelId labelContext sb.appendLabelName
       pos errors appendError
-      context [] .stack
-        stackOffset list.setLength
-      context [] .stack =
+      stackOffset context truncateStack
+      context [] .openBlocks
+        prevBlocks list.setLength
+      context [] .openBlocks =
       true return
     end
     inType i typeContext types.compositeGetLabel =:: label
@@ -2448,13 +2558,20 @@ proc(
   finally
     i 1 +
   end ..drop
-  context [] .evalType .GLOBAL ?? or procData [] .isStatic if
-    ## treat static procedures as global code
-    program [] .tmpOps
-  else
-    program [] .progFiles
-      procData [] .fileId i64 cast
-    list.at .data [] .localOps
+  procData [] .implementation .code .codeState switch
+    PARSING case
+      "procedure " sb.wrap
+        procData [] .labelId labelContext sb.appendLabelName
+        " has not finished parsing" sb.appendS
+      pos errors appendInfo
+      Operation list.empty break
+    PARSED case
+      program [] .tmpOps break
+    TYPE_CHECKED case
+      program [] .progFiles
+        procData [] .fileId i64 cast
+      list.at .data [] .localOps
+      break
   end
     procData [] .implementation .code .codeStart
     procData [] .implementation .code .codeLength
@@ -2463,6 +2580,10 @@ proc(
     "no operations in procedure " sb.wrap
       procData [] .labelId labelContext sb.appendLabelName
     pos errors appendError
+    stackOffset context truncateStack
+    context [] .openBlocks
+      prevBlocks list.setLength
+    context [] .openBlocks =
     true return ## not a call
   end
   code 0 array.at .data =:: op
@@ -2472,11 +2593,14 @@ proc(
     "expected procedure initialization got " sb.wrap
       op [] program sb.appendOp
     op [] .pos errors appendError
+    stackOffset context truncateStack
+    context [] .openBlocks
+      prevBlocks list.setLength
+    context [] .openBlocks =
     true return ## not a call
   end
   context [] .currentFile =:: oldFile
   procData [] .fileId context [] .currentFile =
-  BlockType .PROCEDURE context openBlock
   context [] .evalType .FOLD_LOCAL ?? =:: isLocalFold
   isLocalFold if ## change intrepreter type when evaluating call
     InterpreterType .INTERPRET context [] .evalType =
@@ -2486,6 +2610,9 @@ proc(
     context
   evaluateOperations if
     stackOffset context truncateStack
+    context [] .openBlocks
+      prevBlocks list.setLength
+    context [] .openBlocks =
     isLocalFold if
       InterpreterType .FOLD_LOCAL context [] .evalType =
     end
