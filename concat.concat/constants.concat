@@ -15,7 +15,7 @@ union(
   _ : none
   bool : boolean
   i64 : enumLabel
-  char8 : chr
+  char8 : chr ## XXX? rename chr -> Char , int -> Int for consistency
   i64 : int
   f64 : Float
   StringConstant : str
@@ -70,6 +70,12 @@ end
 
 proc( ConstantArray : elts i64 : index ConstantContext ptr : context -> ConstValue ) =>: export: constArrayGet
   context [] .arrayValues elts .offset index + list.get return
+end
+proc( ConstantArray : elts i64 : index ConstantContext ptr : context -> i16 ) =>: export: constArray16Get
+  context [] .array16Values elts .offset index + list.get return
+end
+proc( ConstantArray : elts i64 : index ConstantContext ptr : context -> i32 ) =>: export: constArray32Get
+  context [] .array32Values elts .offset index + list.get return
 end
 
 proc( ConstantArray : elts ConstantContext ptr : context -> i16 arrayView ) =>: export: sc16AsStr

@@ -308,8 +308,13 @@ namespace: interpreter
         args 1 [] =:: argLength
         argument .str ?? assert "argument is string"
         argLength .int ?? assert "length is int"
-        argument .str .length argLength .int == assert "length is passed correctly"
-        argument .str labelContext id.scAsStr =:: chars
+        argument .str .length argLength .int < if
+          "length exceeds size of memory section" sb.wrap
+          pos errors appendError
+        end
+        argument .str labelContext id.scAsStr
+          argLength .int string.head
+        =:: chars
         chars 0 number.tryParseInt =:: parserError =:: parsed
         false =:: mut: overflow
         ## XXX ? extract error handling code
@@ -358,8 +363,13 @@ namespace: interpreter
         args 1 [] =:: argLength
         argument .str ?? assert "argument is string"
         argLength .int ?? assert "length is int"
-        argument .str .length argLength .int == assert "length is passed correctly"
-        argument .str labelContext id.scAsStr =:: chars
+        argument .str .length argLength .int < if
+          "length exceeds size of memory section" sb.wrap
+          pos errors appendError
+        end
+        argument .str labelContext id.scAsStr
+          argLength .int string.head
+        =:: chars
         chars 0 number.tryParseFloat =:: parserError =:: parsed
         parserError switch
           NONE INT case break

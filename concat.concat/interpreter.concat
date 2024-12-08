@@ -1092,6 +1092,64 @@ namespace: interpreter
     oldValue return
   end
 end
+proc(
+  i64 : index
+  i64 : length
+  FilePosition : pos
+  CompilerError list ptr.mut : errors
+-> bool ) =>: checkIndex
+  index 0 < or index length >= if
+    "index out of range: " sb.wrap
+    index sb.appendI
+    " size: " sb.appendS
+    length sb.appendI
+    pos errors appendError
+    true return
+  end
+  false return
+end
+proc(
+  ConstValue : value
+  ValueInfo : valInfo
+  i64 : elementIndex
+  FilePosition : pos
+  InterpreterContext ptr.mut : context
+-> bool ) =>: getElement
+  context [] .program@ =:: program
+  program [] .errors@ =:: errors
+  program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  valInfo .valueType elementIndex typeContext types.compositeGetElement =:: eltType
+  value .arrayConstant ?? if
+    value .arrayConstant elementIndex constContext constArrayGet
+  else value .union ?? _if
+    value elementIndex constContext constUnionElement if
+      "union index (" sb.wrap
+        elementIndex sb.appendI
+        ") does not match current value (" sb.appendS
+        value .union .eltIndex sb.appendI
+        ")" sb.appendS
+      pos errors appendError
+    end
+  else
+    "unexpected value for composite constant: " sb.wrap
+      value constContext typeContext sb.appendConstant
+    pos errors appendError
+    ## unpopValue
+      value
+      valInfo
+    context unpopValue
+    true return
+  end =:: eltValue
+  ## pushValue
+    eltValue
+    eltType
+    id.LABEL_ID_NONE
+    pos
+  context pushValue
+  false return
+end
 
 proc(
   Operation ptr : op
@@ -1729,6 +1787,14 @@ proc(
           true return
       end
       break
+    call case
+      op [] .val .call@ =:: callInfo
+      callInfo [] .implementationId 0 >= if
+        "interpreting generic procedures is not supported" sb.wrap
+        op [] .pos errors appendError
+        true return
+      end
+      callInfo [] .procId callInfo [] .autoArgs op [] .pos context evaluateCall return
     initializeId autoTypedInitializeId case
       context [] .evalType switch
         INTERPRET GLOBAL case break
@@ -1928,34 +1994,19 @@ proc(
         op [] .pos errors appendError
         true return
       end
-      value .arrayConstant ?? if
-        value .arrayConstant elementIndex constContext constArrayGet
-      else value .union ?? _if
-        value elementIndex constContext constUnionElement if
-          "union index (" sb.wrap
-            elementIndex sb.appendI
-            ") does not match current value (" sb.appendS
-            value .union .eltIndex sb.appendI
-            ")" sb.appendS
-          op [] .pos errors appendError
-        end
-      else
-        "unexpected value for composite constant: " sb.wrap
-          value constContext typeContext sb.appendConstant
+      value valInfo elementIndex op [] .pos context getElement return
+    getElement case
+      context [] .evalType switch
+        FOLD_LOCAL case true return ## XXX? partially allow enum-label resolving in local code
+        INTERPRET GLOBAL case break
+      end
+      op [] .pos context popValue if ..drop.2
+        "stack underflow while evaluating operation: " sb.wrap
+          op [] program sb.appendOp
         op [] .pos errors appendError
-        ## unpopValue
-          value
-          valInfo
-        context unpopValue
         true return
-      end =:: eltValue
-      ## pushValue
-        eltValue
-        eltType
-        id.LABEL_ID_NONE ## XXX? remember label
-        op [] .pos
-      context pushValue
-      false return
+      end =:: value =:: valInfo
+      value valInfo op [] .val .getElement op [] .pos context getElement return
     atLabel atName hasLabel existsLabel existsName case
       context [] .evalType switch
         INTERPRET GLOBAL case break
@@ -2070,6 +2121,30 @@ proc(
         context
       pushValue
       false return
+    autoCast case
+      op [] .val .autoCast =:: castInfo
+      castInfo .offset i64 cast.u 1 + =:: offset
+      offset
+        "autoCast" string.wrap
+        context [] .evalType .FOLD_LOCAL ??
+      op [] .pos context checkStack if
+        true return
+      end
+      context [] .stack $ .length offset - list.get =:: value
+      castInfo .src
+        SignType .NONE
+        value
+        op [] .dataType
+      typeContext castConstant =:: newValue
+      value context [] .stack $ .length offset - list.set
+      ## ValueInfo
+        op [] .dataType
+        id.LABEL_ID_NONE
+        op [] .pos
+      ValueInfo new context [] .stackInfo $ .length offset - list.set
+      false return
+    copy case
+      false return ## TODO change once mutable value are allowed
     Assert case
       op [] .pos context popValue if
         ..drop.2
@@ -2269,14 +2344,134 @@ proc(
           false return
       end
       break
-    atId getElement atElement getEnumLabel
-    getArrayElement atArrayElement setValue
-    NewEnum call callPtr
+    getArrayElement atArrayElement case
+      op [] .val .atArrayElement ?? =:: isPtr
+      context [] .evalType switch
+        INTERPRET GLOBAL case break
+        FOLD_LOCAL case true return
+      end
+      op [] .pos context popValue if ..drop.2
+        true return
+      end =:: indexValue =:: indexInfo
+      indexValue .int ?? if
+        indexValue .int
+      ## XXX? support generic arguments
+      else
+        indexValue indexInfo context unpopValue
+        "unexpected constant for array index: " sb.wrap
+          indexValue constContext typeContext sb.appendConstant
+        op [] .pos errors appendError
+        true return
+      end =:: index
+      op [] .pos context popValue if ..drop.2
+        indexValue indexInfo context unpopValue
+        true return
+      end =:: pointer =:: pointerInfo
+      pointerInfo .valueType =:: arrayType
+      arrayType typeContext types.isPointer ! and
+          arrayType typeContext types.isArray ! if
+        pointer pointerInfo context unpopValue
+        indexValue indexInfo context unpopValue
+        "expected pointer got: " sb.wrap
+          arrayType typeContext sb.appendType
+        op [] .pos errors appendError
+        "multi-dimensional array-access is currently not supported" sb.wrap
+        op [] .pos errors appendInfo
+      end
+      arrayType
+        typeContext types.getBaseType
+        isPtr if
+          arrayType typeContext types.isMutable typeContext types.getAddressType
+        end
+      =:: newType
+      ConstValue ..length 16 == assert "no new constant types"
+      pointer switch
+        str case
+          pointer .str =:: str
+          index str .length op [] .pos errors checkIndex if
+            pointer pointerInfo context unpopValue
+            indexValue indexInfo context unpopValue
+            true return
+          end
+          isPtr if
+            ## StringConstant
+              str .offset index +
+              str .length index -
+            StringConstant new ConstValue .str
+          else
+            str index labelContext id.scCharAt ConstValue .chr
+          end
+          break
+        str16 case
+          pointer .str16 =:: str16
+          index str16 .length op [] .pos errors checkIndex if
+            pointer pointerInfo context unpopValue
+            indexValue indexInfo context unpopValue
+            true return
+          end
+          isPtr if
+            ## ConstantArray
+              str16 .offset index +
+              str16 .length index -
+            ConstantArray new ConstValue .str16
+          else
+            str16 index constContext constArray16Get i64 cast.u ConstValue .int
+          end
+          break
+        str32 case
+          pointer .str32 =:: str32
+          index pointer .str32 .length op [] .pos errors checkIndex if
+            pointer pointerInfo context unpopValue
+            indexValue indexInfo context unpopValue
+            true return
+          end
+          isPtr if
+            ## ConstantArray
+              str32 .offset index +
+              str32 .length index -
+            ConstantArray new ConstValue .str32
+          else
+            str32 index constContext constArray32Get i64 cast.u ConstValue .int
+          end
+          break
+        arrayConstant case
+          pointer .arrayConstant =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            pointer pointerInfo context unpopValue
+            indexValue indexInfo context unpopValue
+            true return
+          end
+          isPtr if
+            ## ConstantArray
+              arrayConst .offset index +
+              arrayConst .length index -
+            ConstantArray new ConstValue .arrayConstant
+          else
+            arrayConst index constContext constArrayGet
+          end
+          break
+        default
+          pointer pointerInfo context unpopValue
+          indexValue indexInfo context unpopValue
+          "unexpected constant for pointer value: " sb.wrap
+            pointer constContext typeContext sb.appendConstant
+          op [] .pos errors appendError
+          true return
+      end =:: newValue
+      ## pushValue
+        newValue
+        newType
+        id.LABEL_ID_NONE
+        op [] .pos
+      context pushValue
+      false return
+    atId atElement getEnumLabel setValue
+    NewEnum callPtr
     argc getArg implementProcedure procPtr
-    autoCast bitCast NewEnumReference
+    bitCast NewEnumReference
     ConstantReference NewReference
     checkEnumLabel setEnumLabel
-    hasElement copy
+    hasElement
     compilerInfo unreachable case
       context [] .evalType switch
         INTERPRET GLOBAL case
