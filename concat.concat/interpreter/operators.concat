@@ -303,9 +303,12 @@ namespace: interpreter
       UGT_I64 case args k i64.ugt @ cmpOperatorInt return
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
-        k 1 == assert "auto-arg is ignored"
+        k 2 == assert "correct number of arguments"
         args 0 [] =:: argument
+        args 1 [] =:: argLength
         argument .str ?? assert "argument is string"
+        argLength .int ?? assert "length is int"
+        argument .str .length argLength .int == assert "length is passed correctly"
         argument .str labelContext id.scAsStr =:: chars
         chars 0 number.tryParseInt =:: parserError =:: parsed
         false =:: mut: overflow
@@ -350,9 +353,12 @@ namespace: interpreter
         end
         parsed ConstValue .int OperatorResult .success return
       PARSE_F32 PARSE_F64 case
-        k 1 == assert "auto-arg is ignored"
+        k 2 == assert "correct number of arguments"
         args 0 [] =:: argument
+        args 1 [] =:: argLength
         argument .str ?? assert "argument is string"
+        argLength .int ?? assert "length is int"
+        argument .str .length argLength .int == assert "length is passed correctly"
         argument .str labelContext id.scAsStr =:: chars
         chars 0 number.tryParseFloat =:: parserError =:: parsed
         parserError switch

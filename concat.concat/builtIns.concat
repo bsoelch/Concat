@@ -450,34 +450,15 @@ proc(
   context [] .idContext @ =:: idContext
   idContext [] .typeContext @ =:: typeContext
   typeContext [] .labelContext @ =:: labelContext
-  LabelId 2 array : labelData
+  LabelId arrayView optional.empty =:: argLabels
   Type 2 array : typeData
-  labelData@ =:: argLabels
   typeData@ =:: argTypes
-  ## i64 : auto: k  char8 k ptr -> ...
-  types.primitive.I64 argTypes 0 [] =
-  ## newLabel
-    "k" string.wrap
-    id.FLAG_BUILT_IN id.FLAG_AUTO |
-    pos
-    -1:FileId
-    labelContext
-  id.newLabel =:: ptrSize
-  ptrSize argLabels 0 [] =
-  ptrSize i64 cast types.ArraySizeType .staticArg types.ArraySize new =:: arraySize
-  types.primitive.CHAR8
-    types.ArrayType .POINTER
-    arraySize@ 1 array.create
-    true  ## fixed-size
-    false ## mutable
-    typeContext
-  types.newArrayType
-    ! assert "can create array type"
-  argTypes 1 [] =
-  id.LABEL_ID_NONE argLabels 1 [] =
+  ## char8 _ ptr  i64   -> ...
+  types.primitive.CHAR8 false typeContext wrapPtr argTypes 0 [] =
+  types.primitive.I64 argTypes 1 [] =
   ## newProcArgs
     argTypes array.wrap
-    argLabels array.wrap optional.wrap
+    argLabels
     false
     typeContext
   types.newProcArgs =:: mut: procIn

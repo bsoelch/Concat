@@ -590,7 +590,7 @@ proc(
   bool : isRawString
   FilePosition : pos
   ParserState ptr.mut : state
--> ) =>: parseStringConstant
+-> ConstValue ) =>: parseStringConstant
   state [] .progContext@ =:: progContext
   progContext [] .errors@ =:: errors
   state [] .progContext [] .idContext@ =:: idContext
@@ -613,7 +613,10 @@ proc(
     typeContext
     constContext
     progContext [] .errors@
-  newStringConstant state pushConst
+  newStringConstant
+    $ .val =:: stringConst
+  state pushConst
+  stringConst return
 end
 proc(
   StringToken : token
@@ -700,10 +703,10 @@ proc(
         "unexpected end of file in string-literal" sb.wrap fileState [] .wordStart errors appendError
         "" string.wrap true return
       STRING case
-        token .STRING false fileState [] .wordStart state parseStringConstant
+        token .STRING false fileState [] .wordStart state parseStringConstant ..drop
         "" string.wrap true return
       RAW_STRING case
-        token .RAW_STRING true fileState [] .wordStart state parseStringConstant
+        token .RAW_STRING true fileState [] .wordStart state parseStringConstant ..drop
         "" string.wrap true return
       CHAR case
         token .CHAR fileState [] .wordStart state parseCharConstant
@@ -736,7 +739,17 @@ proc(
           token .LITERAL_CHAR false
         else
           token .LITERAL_RAW_STRING true
-        end literalStart state parseStringConstant
+        end literalStart state parseStringConstant =:: stringConst
+        types.primitive.I_SIZE
+          stringConst .str ?? if
+            stringConst .str .length
+          else stringConst .str32 ?? _if
+            stringConst .str32 .length
+          else stringConst .str16 ?? _if
+            stringConst .str16 .length
+          else ..unreachable end ConstValue .int
+          IdentifierInfo optional.empty
+        fileState [] .wordStart Constant new state pushConst
         fileState nextToken =:: literalType
         literalType fileState [] .wordStart errors checkLiteralType
         ## XXX? more usefull error for missing parse procedure?

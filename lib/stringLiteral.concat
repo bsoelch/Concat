@@ -1,21 +1,21 @@
 import string
 namespace: string
   namespace: static
-    proc( i64 : auto: k char8 k ptr : p -> string ) =>: static: export: parse
+    proc( char8 _ ptr : p i64 : k -> string ) =>: static: export: parse
       p k string new
     end
   end
 end
 namespace: string16
   namespace: static
-    proc( i64 : auto: k char16 k ptr : p -> string16 ) =>: static: export: parse
+    proc( char16 _ ptr : p i64 : k -> string16 ) =>: static: export: parse
       p k string16 new
     end
   end
 end
 namespace: string32
   namespace: static
-    proc( i64 : auto: k char32 k ptr : p -> string32 ) =>: static: export: parse
+    proc( char32 _ ptr : p i64 : k -> string32 ) =>: static: export: parse
       p k string32 new
     end
   end
