@@ -118,29 +118,39 @@ namespace: utf8
     str i 1 + cp Codepoint cast return
   end
 
-  proc( string -> i32 list ) =>: export: toUTF32 ## XXX change output to char32 list
-    $ .length i32 list.create =:: mut: utf32chars
+  proc(
+    char32 list : buffer
+    string
+  -> char32 list ) =>: export: toUTF32
+    buffer
+      $1 .length list.ensureCap
+    =:: mut: utf32chars
     0:i64 while $1 .length $1 > do
       nextCodepoint =:: cp
       ## XXX? check codepoint for correct encoding?
-      utf32chars cp i32 cast list.append utf32chars =
+      utf32chars cp char32 cast list.append utf32chars =
     end ..drop.2
     utf32chars return
   end
-  proc( string -> i16 list ) =>: export: toUTF16 ## XXX change output to char16 list
-    $ .length i16 list.create =:: mut: utf16chars
+  proc(
+    char16 list : buffer
+    string
+  -> char16 list ) =>: export: toUTF16
+    buffer
+      $1 .length list.ensureCap
+    =:: mut: utf16chars
     0:i64 while $1 .length $1 > do
       nextCodepoint =:: cp
       cp i32 cast 0 < or cp i32 cast utf8.MAX_CODEPOINT > if
         ## skip invalid characters
       else cp i32 cast 0xffff <= _if
-        utf16chars cp i16 cast list.append utf16chars =
+        utf16chars cp char16 cast list.append utf16chars =
       else ## surrogate pair
         ## XXX? check for unicode range
         cp i32 cast 0x10000 - =:: offset
         utf16chars
-          0xD800 offset 10 >>>  | i16 cast list.append ## hi
-          0xDC00 offset 0x3ff & | i16 cast list.append ## low
+          0xD800 offset 10 >>>  | char16 cast list.append ## hi
+          0xDC00 offset 0x3ff & | char16 cast list.append ## low
         utf16chars =
       end
     end ..drop.2

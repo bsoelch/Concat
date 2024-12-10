@@ -119,7 +119,7 @@ struct(
   BranchId : mut: currentBranch
   BlockInfo list : mut: openBlocks
   LocalConst list : mut: localConstants
-  StringConstant list : mut: stringConstants
+  string list : mut: stringConstants
   PtrConstant list : mut: ptrConstants
   Type : mut: currentProc
   i64 : mut: localConstCount
@@ -773,26 +773,30 @@ namespace: sb
       ")" sb.appendS
     return
   end
+  ## XXX? merge code for string and array constants
   proc(
+    type : auto: T
     stringBuilder : sb
-    StringConstant : value
-    CompilerContext ptr.mut : context
-  -> stringBuilder ) =>: appendStringConstQBE
-    context [] .program =:: prog
-    prog [] .idContext .typeContext .labelContext @ =:: labelContext
+    T arrayView : value
+    char8 : valueChar
+    bool : nullTerminate
+  -> stringBuilder ) =>: appendPrimitiveArrayConstQBE
     sb
       0:i64 while ..dup value .length < do =:: i
-        "b " sb.appendS
-        value i labelContext id.scCharAt i32 cast.u 0xff & sb.appendI
+        valueChar sb.appendC
+        ' ' sb.appendC
+        value i array.get i64 cast.u 0xff & sb.appendI
         ',' sb.appendC
         i 1 +
       end ..drop
-      "b 0" sb.appendS
+      nullTerminate if
+        "b 0" sb.appendS
+      end
     return
   end
   proc(
     stringBuilder : sb
-    StringConstant : value
+    string : value
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendStringPtrConstQBE
     sb
@@ -812,7 +816,7 @@ namespace: sb
     FilePosition : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendPtrConstQBE
-    value .arrayConstant ?? and value .arrayConstant .length 0 == if
+    value .Array ?? and value .Array .length 0 == if
       sb 0 sb.appendI return ## pointer to zero length array -> NULL-pointer
     end
     sb
@@ -840,39 +844,20 @@ namespace: sb
     idContext .constContext@ =:: constContext
     idContext .typeContext@ =:: typeContext
     typeContext .labelContext@ =:: labelContext
-    constant [] .value =:: value
-    value .str16 ?? if
-      value .str16 constContext sc16AsStr =:: str16
-      sb
-        0:i64 while ..dup str16 .length < do =:: i
-          "h " sb.appendS
-          str16 i array.get i32 cast.u sb.appendI
-          ',' sb.appendC
-          i 1 +
-        end ..drop
-      return
-    else value .str32 ?? _if
-      value .str32 constContext sc32AsStr =:: str32
-      sb
-        0:i64 while ..dup str32 .length < do =:: i
-          "w " sb.appendS
-          str32 i array.get sb.appendI
-          ',' sb.appendC
-          i 1 +
-        end ..drop
-      return
-    else value .arrayConstant ?? _if
-      sb
-        constant [] .valType
-        value
-        true
-        constant [] .pos
-      context appendConstQBE return
-    end
-    "unsupported pointer constant: " sb.wrap
-      value constContext typeContext sb.appendConstant
-    constant [] .pos errors appendError
-    sb return
+    sb
+      constant [] .valType
+      constant [] .value
+        $ .String ?? if
+          .String string.toArray ConstValue .Array8
+        else $ .String16 ?? _if
+          .String16 string16.toArray ConstValue .Array16
+        else $ .String32 ?? _if
+          .String32 string32.toArray ConstValue .Array32
+        end
+      ## ^ value
+      true
+      constant [] .pos
+    context appendConstQBE return
   end
   proc(
     stringBuilder : sb
@@ -891,13 +876,17 @@ namespace: sb
       isGlobal and t typeContext types.isPointer or
           t typeContext types.unwrapNamed types.isPrimitive or
           t .intLiteral ?? if
-        t StorageType .STORE pos context sb.appendTypeNameQBE
-        ' ' sb.appendC
+        ## add name prefix for global constants, skip prefix for array constants
+        value .Array8 ?? ! and value .Array16 ?? ! and value .Array32 ?? ! and
+            value .Array64 ?? ! if
+          t StorageType .STORE pos context sb.appendTypeNameQBE
+          ' ' sb.appendC
+        end
       end
       value switch
-        boolean case
-          value .boolean if '1' else '0' end sb.appendC return
-        int case
+        Bool case
+          value .Bool if '1' else '0' end sb.appendC return
+        Int case
           t typeContext types.isPointer if
             ## treat pointer constants as integers of type iPtr
             types.primitive.I_PTR
@@ -911,12 +900,12 @@ namespace: sb
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
-              I8  CHAR8  case value .int 0xff &   sb.appendI return
-              I16 CHAR16 case value .int 0xffff & sb.appendI return
-              I32 CHAR32 case value .int i32 cast sb.appendI return
-              I64 case value .int sb.appendI return
-              F32 case value .int f32 cast f32.bits sb.appendI return
-              F64 case value .int f64 cast f64.bits sb.appendI return
+              I8  CHAR8  case value .Int 0xff &   sb.appendI return
+              I16 CHAR16 case value .Int 0xffff & sb.appendI return
+              I32 CHAR32 case value .Int i32 cast sb.appendI return
+              I64 case value .Int sb.appendI return
+              F32 case value .Int f32 cast f32.bits sb.appendI return
+              F64 case value .Int f64 cast f64.bits sb.appendI return
               BOOL TYPE case break
             end
           end
@@ -927,7 +916,7 @@ namespace: sb
           pos errors appendError
           return
         break
-        chr case value .chr i32 cast.u sb.appendI return
+        Char case value .Char i32 cast.u sb.appendI return
         break
         Float case
           t typeContext types.unwrapNamed
@@ -946,15 +935,15 @@ namespace: sb
             pos errors appendError
           end
           return
-        genericArg case
-          value .genericArg pos context appendGenericArg return
-        str case
+        GenericArg case
+          value .GenericArg pos context appendGenericArg return
+        String case
           ## appendStringPtrConstQBE
-            value .str
+            value .String
             context
           appendStringPtrConstQBE
           return
-        str16 str32 case
+        String16 String32 case
           ## appendPtrConstQBE
             value
             t typeContext types.ptrTarget
@@ -962,7 +951,55 @@ namespace: sb
             context
           appendPtrConstQBE
           return
-        arrayConstant case
+        Array8 case
+          isGlobal ! if break end
+          t typeContext types.isPointer if
+            ## appendPtrConstQBE
+              value
+              t typeContext types.ptrTarget
+              pos
+              context
+            appendPtrConstQBE
+            return
+          end
+          value .Array8 'b' false appendPrimitiveArrayConstQBE return
+        Array16 case
+          isGlobal ! if break end
+          t typeContext types.isPointer if
+            ## appendPtrConstQBE
+              value
+              t typeContext types.ptrTarget
+              pos
+              context
+            appendPtrConstQBE
+            return
+          end
+          value .Array16 'h' false appendPrimitiveArrayConstQBE return
+        Array32 case
+          isGlobal ! if break end
+          t typeContext types.isPointer if
+            ## appendPtrConstQBE
+              value
+              t typeContext types.ptrTarget
+              pos
+              context
+            appendPtrConstQBE
+            return
+          end
+          value .Array32 'w' false appendPrimitiveArrayConstQBE return
+        Array64 case
+          isGlobal ! if break end
+          t typeContext types.isPointer if
+            ## appendPtrConstQBE
+              value
+              t typeContext types.ptrTarget
+              pos
+              context
+            appendPtrConstQBE
+            return
+          end
+          value .Array64 'l' false appendPrimitiveArrayConstQBE return
+        Array case
           isGlobal ! if
             break
           end
@@ -982,7 +1019,7 @@ namespace: sb
             containerType typeContext types.getElementType =:: eltType
             eltType pos context typeSizeInt =:: eltSize
             eltType pos context typeStrideInt =:: eltStride
-            value .arrayConstant constContext constArrayAsArray =:: elts
+            value .Array =:: elts
             0:i64 while ..dup elts .length < do =:: i
               i 0 > if
                 ',' sb.appendC
@@ -998,7 +1035,7 @@ namespace: sb
           else containerType typeContext types.isTuple _if
             ## TODO ensure elements are ordered by memory location
             containerType typeContext types.compositeElts =:: types
-            value .arrayConstant constContext constArrayAsArray =:: elts
+            value .Array =:: elts
             0:i64 =:: mut: offset
             0:i64 while ..dup elts .length < do =:: i
               types i types.compositeElts.get =:: elt
@@ -1037,7 +1074,7 @@ namespace: sb
             return
           end
           break
-        enumLabel union case
+        EnumLabel Union case
           isGlobal ! if
             break ## XXX? support small unions as local constants
           end
@@ -1049,10 +1086,10 @@ namespace: sb
             return
           end
           t pos context enumLabelInfoInt =:: labelOffset =:: labelType
-          value .enumLabel ?? if
-            value .enumLabel
+          value .EnumLabel ?? if
+            value .EnumLabel
           else
-            value .union .eltIndex
+            value .Union .eltIndex
           end =:: eltIndex
           eltIndex 0 < if break end
           eltIndex t typeContext types.compositeEltCount >= if
@@ -1062,17 +1099,17 @@ namespace: sb
           0:i64 =:: mut: offset
           false =:: mut: needComma
           eltType typeContext types.isEmpty ! if
-            value .union ?? ! if
+            value .Union ?? ! if
               "missing element value for union constant" sb.wrap
               pos errors appendError
             else
               ## appendConstQBE
                 eltType
-                value eltIndex constContext constUnionElement if
+                value eltIndex constUnionElement if
                   "union element index out of sync: expected " sb.wrap
                     eltIndex sb.appendI
                     " got " sb.appendS
-                    value .union .eltIndex sb.appendI
+                    value .Union .eltIndex sb.appendI
                   pos errors appendError
                 end
                 isGlobal
@@ -1096,20 +1133,20 @@ namespace: sb
             needComma if ',' sb.appendC end
             ## appendConstQBE
               labelType
-              eltIndex ConstValue .int
+              eltIndex ConstValue .Int
               isGlobal
               pos
               context
             appendConstQBE
           end
           return
-        none wildCard typeId
-            procedure procedureBundle case
+        None WildCard TypeId
+            Procedure ProcedureBundle case
         break
       end
       isGlobal if
         "unsupported constant: " sb.wrap
-          value constContext typeContext sb.appendConstant
+          value typeContext sb.appendConstant
         pos errors appendError
         return
       end
@@ -1347,14 +1384,6 @@ namespace: sb
     end
     sb return
   end
-  proc( stringBuilder : sb string : str -> stringBuilder ) =>: appendEscapedString
-    sb
-      0:i64 while ..dup str .length < do =:: i
-          str i string.charAt appendEscapedChrC
-        i 1 +
-      end ..drop
-    return
-  end
   proc(
     stringBuilder : sb
     FilePosition : pos
@@ -1365,7 +1394,7 @@ namespace: sb
       ',' sb.appendC
       pos .posInLine sb.appendI
       " ## " sb.appendS
-      pos .fileName sb.appendEscapedString
+      pos .fileName sb.appendEscapedStrC
       '\n' sb.appendC
     return
   end
@@ -1823,14 +1852,14 @@ proc(
 end
 
 proc( ConstValue : label -> i64 ) =>: labelAsInt
-  label .int ?? if
-    label .int return
+  label .Int ?? if
+    label .Int return
   end
-  label .chr ?? if
-    label .chr i64 cast.u return
+  label .Char ?? if
+    label .Char i64 cast.u return
   end
-  label .enumLabel ?? if
-    label .enumLabel return
+  label .EnumLabel ?? if
+    label .EnumLabel return
   end
   ..unreachable
 end
@@ -3011,12 +3040,12 @@ proc(
   idContext [] .typeContext @ =:: typeContext
   false =:: mut: needCast
   constType =:: mut: srcType
-  value .genericArg ?? if
+  value .GenericArg ?? if
     context [] .currentProc
       typeContext types.getProcIn ! assert "procedure has arguments"
     =:: progIn
     progIn
-      value .genericArg
+      value .GenericArg
       typeContext
     types.compositeFindLabel =:: index
     index -1 != if
@@ -3796,9 +3825,9 @@ proc(
           i 1 + continue ## skip static arguments
         end
         argFlags id.FLAG_AUTO & ? if
-          callInfo [] .autoArgs autoArgIndex constContext constArrayGet =:: argVal
+          callInfo [] .autoArgs autoArgIndex array.get =:: argVal
           autoArgIndex 1 + autoArgIndex =
-          argVal .none ?? ! if
+          argVal .None ?? ! if
             newSb
               arg argVal op [] .pos context pushConstant
             newSb =
@@ -4904,7 +4933,7 @@ proc(
     Error case
       ## appendError
         op [] .val .Error .message .length sb.create
-        op [] .val .Error .message labelContext sb.appendStringConst
+        op [] .val .Error .message sb.appendStr
         op [] .pos
         errors
       op [] .val .Error .errorType switch
@@ -4989,7 +5018,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     BranchType .START 0 0 BranchId new
     32 BlockInfo list.create
     32 LocalConst list.create
-    32 StringConstant list.create
+    32 string list.create
     32 PtrConstant list.create
     Type .undefined
     0
@@ -5062,7 +5091,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       " = align " sb.appendS
       valType idData [] .declaredAt context typeAlignmentInt sb.appendI
       " {" sb.appendS
-      idData [] .constValue .none ?? ! if
+      idData [] .constValue .None ?? ! if
         valType idData [] .constValue true idData [] .declaredAt context sb.appendConstQBE
       else
         "z " sb.appendS
@@ -5095,10 +5124,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         FILE_NAME_NAME sb.appendS
         i sb.appendI
         " = {" sb.appendS
-          f [] .fileName
-            sb.asStr labelContext id.wrapStringConstant
-            context
-          sb.appendStringConstQBE
+          f [] .fileName sb.asStr string.toArray 'b' true sb.appendPrimitiveArrayConstQBE
         "} \n" sb.appendS
         0:i64 while ..dup f [] .localOps .length < do
           ..swap
@@ -5117,9 +5143,9 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       STRING_CONST_NAME sb.appendS
       i sb.appendI
       " = {" sb.appendS
-        str context sb.appendStringConstQBE
+        str string.toArray 'b' true sb.appendPrimitiveArrayConstQBE
       "} ## \"" sb.appendS
-      str labelContext sb.appendEscapedStr
+      str sb.appendEscapedStr
       "\"\n" sb.appendS
       i 1 +
     end ..drop

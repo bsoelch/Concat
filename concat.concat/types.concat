@@ -2269,7 +2269,7 @@ namespace: types
 
   struct(
     LabelId : generator
-    ConstantArray : arguments
+    ConstValue arrayView : arguments
     Type : mut: generated
   ) =:: GeneratedType
 
@@ -2292,7 +2292,7 @@ namespace: types
       candidate [] .generator generatorName != if
         1 + continue
       end
-      candidate [] .arguments constContext constArrayAsArray =:: candidateArgs
+      candidate [] .arguments =:: candidateArgs
       candidateArgs .length arguments .length != if
         1 + continue
       end
@@ -2365,13 +2365,13 @@ namespace: types
     context [] .generatedTypes t .generatedType i64 cast list.at .data =:: genData
     genData [] .generator return
   end
-  proc( Type : generator TypeContext ptr : context -> ConstantArray ) =>: export: getGeneratorArgs
+  proc( Type : generator TypeContext ptr : context -> ConstValue arrayView ) =>: export: getGeneratorArgs
     generator =:: mut: t
     t .namedType ?? if
       t context unwrapNamedKeepGenerated t =
     end
     t .generatedType ?? ! if
-      emptyConstArray return
+      ConstValue array.empty return
     end
     context [] .generatedTypes t .generatedType i64 cast list.at .data =:: genData
     genData [] .arguments return

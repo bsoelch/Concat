@@ -40,26 +40,25 @@ struct(
 
 proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   size .sizeType switch
-    int case size .value ConstValue .int return
+    int case size .value ConstValue .Int return
     staticArg case
-      size .value LabelId cast ConstValue .genericArg return
+      size .value LabelId cast ConstValue .GenericArg return
   end
 end
 proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
+  ConstValue ..length 20 == assert "no new constants"
   val switch
-    int case
+    Int case
       ## ArraySize
-        val .int
+        val .Int
         types.ArraySizeType .int
       types.ArraySize new return
-    genericArg case
+    GenericArg case
       ## ArraySize
-        val .genericArg i64 cast
+        val .GenericArg i64 cast
         types.ArraySizeType .staticArg
       types.ArraySize new return
-    none boolean enumLabel chr Float str str16 str32
-    arrayConstant typeId wildCard
-    procedure procedureBundle union case ..unreachable
+    default ..unreachable
   end
 end
 
@@ -87,9 +86,9 @@ proc(
         value? .data [] =:: value
         value switch
           fixed case
-            value .fixed .typeId return
+            value .fixed .TypeId return
           value case
-            value .value .typeId return
+            value .value .TypeId return
           nonEmpty case break
         end
       end
@@ -241,19 +240,17 @@ proc(
       idContext [] .argBuffer@ =:: argBuffer
       argBuffer [] .length =:: argOffset
       0:i64 while ..dup args .length < do =:: i
-        args i constContext constArrayGet =:: arg
+        args i array.get =:: arg
         argBuffer []
+          ConstValue ..length 20 == assert "no new constants"
           arg switch
-            none boolean enumLabel chr int Float
-            str str16 str32 arrayConstant wildCard procedure procedureBundle union case
-              arg break ## argument not generic
-            typeId case
-              arg .typeId
+            TypeId case
+              arg .TypeId
                 typeBuffer labelBuffer genericValues replaceAutoArgs pos progContext
-              replaceGenerics ConstValue .typeId
+              replaceGenerics ConstValue .TypeId
               break
-            genericArg case
-              arg .genericArg =:: argId
+            GenericArg case
+              arg .GenericArg =:: argId
               genericValues argId map.at =:: val?
               val? optional.isEmpty if arg break end
               val? .data [] switch
@@ -262,6 +259,7 @@ proc(
                 nonEmpty case arg break
               end
               break
+            default arg break ## argument not generic
           end list.append
         argBuffer [] =
         i 1 +
@@ -333,29 +331,29 @@ proc(
             end
             src break
           fixed case
-            oldValue .fixed .typeId ?? ! if
+            oldValue .fixed .TypeId ?? ! if
               false return
             end
             exactMatch if ## XXX? allow unwrapping named types for exact match
-              src oldValue .fixed .typeId types.typeEquals ! if
+              src oldValue .fixed .TypeId types.typeEquals ! if
                 true return
               end
               src break
-            else src oldValue .fixed .typeId typeContext types.canAutoCast ! _if
+            else src oldValue .fixed .TypeId typeContext types.canAutoCast ! _if
               true return
             end
-            oldValue .fixed .typeId break
+            oldValue .fixed .TypeId break
           value case
-            oldValue .value .typeId ?? ! if
+            oldValue .value .TypeId ?? ! if
               false return
             end
             exactMatch if
-              oldValue .value .typeId src typeContext types.canAutoCast ! if
+              oldValue .value .TypeId src typeContext types.canAutoCast ! if
                 true return
               end
               src break
             end
-            src oldValue .value .typeId typeContext types.mergeTypes if ..drop
+            src oldValue .value .TypeId typeContext types.mergeTypes if ..drop
               true return
             end
             break
@@ -365,7 +363,7 @@ proc(
       end =:: genericValue
       genericValues
         genericId
-        genericValue ConstValue .typeId exactMatch if
+        genericValue ConstValue .TypeId exactMatch if
           GenericArg .fixed
         else
           GenericArg .value
@@ -571,12 +569,12 @@ proc(
       src typeContext types.getGeneratorArgs =:: srcArgs
       target typeContext types.getGeneratorArgs =:: targetArgs
       0:i64 while ..dup targetArgs .length < do =:: i
-        srcArgs i constContext constArrayGet =:: srcArg
-        targetArgs i constContext constArrayGet =:: targetArg
-        targetArg .typeId ?? if
+        srcArgs i array.get =:: srcArg
+        targetArgs i array.get =:: targetArg
+        targetArg .TypeId ?? if
           ## resolveGenerics
-            srcArg .typeId
-            targetArg .typeId
+            srcArg .TypeId
+            targetArg .TypeId
             true
             needCast
             genericValues
@@ -584,8 +582,8 @@ proc(
           resolveGenerics if
             true return
           end
-        else targetArg .genericArg ?? _if
-          targetArg .genericArg =:: argId
+        else targetArg .GenericArg ?? _if
+          targetArg .GenericArg =:: argId
           genericValues
             argId
           map.at =:: prev?
@@ -742,12 +740,12 @@ proc(
   genericValues key map.at =:: eltValue?
   eltValue? optional.hasData if
     eltValue? .data [] switch
-      nonEmpty case ConstValue .none return
+      nonEmpty case ConstValue .None return
       value case eltValue? .data [] .value return
       fixed case eltValue? .data [] .fixed return
     end
   else
-    ConstValue .none return
+    ConstValue .None return
   end
 end
 
@@ -841,10 +839,10 @@ proc(
             nonEmpty case ..unreachable
           end =:: value
           ## convert literal types to corresponding base types
-          value [] .typeId ?? and value [] .typeId types.isLiteral if
+          value [] .TypeId ?? and value [] .TypeId types.isLiteral if
             current [] .genericValues @
               paramLabel
-              value [] .typeId typeContext types.literalToType ConstValue .typeId GenericArg .fixed
+              value [] .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .fixed
             map.put ..drop
           end
           current [] .paramInfo
@@ -880,7 +878,7 @@ proc(
         current currentSignatures @ appendCopy =:: copySig
         copySig [] .genericValues @
           paramId
-          Type .empty ConstValue .typeId GenericArg .fixed
+          Type .empty ConstValue .TypeId GenericArg .fixed
         map.put ..drop
         copySig [] .nEmpty
           1 +
@@ -895,7 +893,7 @@ proc(
       end
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
         stackValues stackIndex array.at .data [] .value =:: stackVal
-        stackVal .none ?? if
+        stackVal .None ?? if
           false current [] .argsMatch =
         end
         current [] .genericValues @
@@ -905,8 +903,8 @@ proc(
             prevVal? .data =:: prevVal
             prevVal [] switch
               nonEmpty case
-                stackVal .typeId ?? if
-                  stackVal .typeId .empty ??
+                stackVal .TypeId ?? if
+                  stackVal .TypeId .empty ??
                 else
                   false
                 end
@@ -1012,9 +1010,9 @@ proc(
         stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
           stackValues i array.at .data =:: val
           val [] .valType typeContext sb.appendType
-          val [] .value .none ?? ! if
+          val [] .value .None ?? ! if
             " { " sb.appendS
-            val [] .value constContext typeContext sb.appendConstant
+            val [] .value typeContext sb.appendConstant
             " }" sb.appendS
           end
           "  " sb.appendS
@@ -1054,9 +1052,9 @@ proc(
         stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
           stackValues i array.at .data =:: val
           val [] .valType typeContext sb.appendType
-          val [] .value .none ?? ! if
+          val [] .value .None ?? ! if
             " { " sb.appendS
-            val [] .value constContext typeContext sb.appendConstant
+            val [] .value typeContext sb.appendConstant
             " }" sb.appendS
           end
           "  " sb.appendS
@@ -1119,7 +1117,7 @@ proc(
       true isMatch =
       0:i64 while ..dup constArgs .length < do =:: j
         ## constEquals
-          impl [] .staticArgs j constContext constArrayGet
+          impl [] .staticArgs j array.get
           constArgs j list.get
           labelContext
         constantEquals ! if
@@ -1165,14 +1163,14 @@ proc(
     true =:: mut: needArg
     flags id.FLAG_AUTO & ? if
       candidate [] .genericValues @ eltLabel getValueOrNone =:: value
-      value .none ?? ! if
+      value .None ?? ! if
         false needArg =
       end
       ## convert literal types to corresponding types
-      value .typeId ?? and value .typeId types.isLiteral if
+      value .TypeId ?? and value .TypeId types.isLiteral if
         candidate [] .genericValues @
           eltLabel
-          value .typeId typeContext types.literalToType ConstValue .typeId GenericArg .fixed
+          value .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .fixed
         map.put ..drop
       end
       constArgs

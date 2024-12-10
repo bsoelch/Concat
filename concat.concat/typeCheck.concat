@@ -239,7 +239,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: unfreezeInterpreter
     state [] .stack @ branchTree.peek typeInfo? =
   typeInfo? optional.hasData do
     typeInfo? .data =:: typeInfo
-    typeInfo [] .value .none ?? if
+    typeInfo [] .value .None ?? if
       break
     else typeInfo [] .opIndex 0 < _if
       break
@@ -317,12 +317,9 @@ proc(
         depth
       sb.appendTypeRecursive
       printValues if
-        val [] .value .none ?? ! if
+        val [] .value .None ?? ! if
           " { " sb.appendS
-          val [] .value
-            constContext
-            typeContext
-          sb.appendConstant
+          val [] .value typeContext sb.appendConstant
           " }" sb.appendS
         end
         " pushed at " sb.appendS
@@ -361,7 +358,7 @@ proc(
 -> bool ) =>: tryCastConstant
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext .typeContext @ =:: typeContext
-  src .value .none ?? if
+  src .value .None ?? if
     true return
   end
   src .opIndex 0 < if ## XXX? why is this reachable
@@ -374,11 +371,11 @@ proc(
   ## XXX? casting between non-interger numbers
   ##   completely merge with interpreter.castConstant
   ## casting between integer constants
-  src .value .int ?? and target typeContext types.isInt if
+  src .value .Int ?? and target typeContext types.isInt if
     target .arrayIndex ?? if
-      src .value .int 0 < if
+      src .value .Int 0 < if
         "array indices cannot be less than 0 got: " sb.wrap
-        src .value .int sb.appendI
+        src .value .Int sb.appendI
         pos errors appendError
         false return
       end
@@ -386,9 +383,9 @@ proc(
       index .sizeType .int ?? ! if
         true return
       end
-      src .value .int 0 < src .value .int index .value >= | if
+      src .value .Int 0 < src .value .Int index .value >= | if
         "array index outside allowed range: " sb.wrap
-        src .value .int sb.appendI
+        src .value .Int sb.appendI
         " size: " sb.appendS
         index .value sb.appendI
         pos errors appendError
@@ -539,22 +536,22 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
     pos errors appendError
     Type .undefined return
   end
-  typeInfo [] .value .typeId ?? ! if
+  typeInfo [] .value .TypeId ?? ! if
     "expected type-constant got " sb.wrap
-      typeInfo [] .value constContext typeContext sb.appendConstant
+      typeInfo [] .value typeContext sb.appendConstant
     pos errors appendError
     Type .undefined return
   end
   typeInfo [] .opIndex state currentBlockStart < if
     "type-constant " sb.wrap
-      typeInfo [] .value constContext typeContext sb.appendConstant
+      typeInfo [] .value typeContext sb.appendConstant
       " at " sb.appendS
       typeInfo [] .pushedAt sb.appendPos
       " was declared outside current block" sb.appendS
     pos errors appendError
     Type .undefined return
   end
-  typeInfo [] .value .typeId =:: typeId
+  typeInfo [] .value .TypeId =:: typeId
     state [] .stack @ branchTree.pop ..drop ## drop value
     typeInfo [] .opIndex state deleteOp ## remove stored operation
   typeId return
@@ -654,7 +651,7 @@ proc(
     state [] .stack @
       ## TypeInfo
         types i array.get
-        ConstValue .none
+        ConstValue .None
         id.LABEL_ID_NONE
         pos
         ## multiple types from one op -> cannot modify op to modify types
@@ -872,7 +869,7 @@ proc(
       list.pop =:: mut: elt
     stackElements =
     clearConst if
-      ConstValue .none elt .value =
+      ConstValue .None elt .value =
       id.LABEL_ID_NONE elt .valueId =
       elt .valueType types.isLiteral if
         elt .valueType
@@ -1028,7 +1025,7 @@ proc(
   end
   ## TypeInfo
     mergedType
-    ConstValue .none ## XXX merge constants
+    ConstValue .None ## XXX merge constants
     id.LABEL_ID_NONE
     mergePoint .mergePoint
     OP_UNLINKED
@@ -1403,14 +1400,11 @@ proc(
         switchData [] .switchType typeContext types.isTaggedUnion if
           ## appendLabelName
             switchData [] .switchType
-            label .enumLabel i64 cast typeContext types.compositeGetLabel
+            label .EnumLabel i64 cast typeContext types.compositeGetLabel
             labelContext
           sb.appendLabelName
         else
-          label
-            constContext
-            typeContext
-          sb.appendConstant
+          label typeContext sb.appendConstant
         end
         " in switch-case" sb.appendS
       pos errors appendError
@@ -1443,11 +1437,11 @@ proc(
     stackInfo i list.at .data =:: labelInfo
     ## XXX? less strict condition for types?
     labelInfo [] .valueType switchType types.typeEquals ! if
-      label .int ?? ! if
+      label .Int ?? ! if
         "invalid constant for switch label of type " sb.wrap
           switchType typeContext sb.appendType
           " : " sb.appendS
-          label constContext typeContext sb.appendConstant
+          label typeContext sb.appendConstant
         labelInfo [] .pushedAt errors appendError
       end
       ## XXX ensure correct size of int label
@@ -1512,9 +1506,9 @@ proc(
     op [] .val .getName
   else op [] .val .Constant ?? and
       op [] .val .Constant =:: constVal
-      constVal .typeId ?? and
-      constVal .typeId types.isNamedType _if
-    constVal .typeId typeContext types.namedTypeName
+      constVal .TypeId ?? and
+      constVal .TypeId types.isNamedType _if
+    constVal .TypeId typeContext types.namedTypeName
   else
     "unsupported operation for switch label of type " sb.wrap
       switchType typeContext sb.appendType
@@ -1540,7 +1534,7 @@ proc(
     switchId
     ## ConstValue
       labelIndex
-    ConstValue .enumLabel
+    ConstValue .EnumLabel
     op [] .pos
   state newSwitchLabel
   true return
@@ -1601,14 +1595,14 @@ proc(
     op .val .existsName
       op@ state resolveIdentifer
     optional.hasData if
-      true ConstValue .boolean op .val .Constant =
+      true ConstValue .Bool op .val .Constant =
     else
-      false ConstValue .boolean op .val .Constant =
+      false ConstValue .Bool op .val .Constant =
     end
   else op .val .getId ?? and ## convert static arguments to constants
       op .val .getId .labelId =:: label
       label labelContext id.labelFlags id.FLAG_STATIC & ? and
-      ConstValue .none =:: mut: argValue
+      ConstValue .None =:: mut: argValue
       state [] .argData @ label map.at =:: argData?
       argData? optional.hasData _if
     argData? .data [] .valType op .dataType =
@@ -1648,7 +1642,7 @@ proc(
       op .val .getId =:: idInfo
       idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: mutable
       mutable if
-        ConstValue .none
+        ConstValue .None
       else
         idInfo .idType switch
           TYPE PROCEDURE PROCEDURE_BUNDLE GLOBAL_VAR LOCAL_VAR case
@@ -1667,7 +1661,7 @@ proc(
           end =:: idData
           idData [] .constValue
         else
-          ConstValue .none
+          ConstValue .None
         end
       end =:: constValue
       idInfo .idType switch
@@ -1692,7 +1686,7 @@ proc(
           return
         ARGUMENT case
           op .val .getId .labelId =:: label
-          ConstValue .none =:: mut: argValue
+          ConstValue .None =:: mut: argValue
           state [] .argData @ label map.at =:: argData?
           argData? optional.hasData if
             argData? .data [] .valType op .dataType =
@@ -1704,7 +1698,7 @@ proc(
           return
         PROCEDURE PROCEDURE_BUNDLE case
           idInfo .idType .PROCEDURE ?? if
-            constValue .procedure@ =:: procId
+            constValue .Procedure@ =:: procId
             program [] .procedures
               procId [] i64 cast list.at .data
             =:: procData
@@ -1720,7 +1714,7 @@ proc(
             end
             procId array.wrap
           else  ## PROCEDURE_BUNDLE
-            constValue .procedureBundle =:: bundleId
+            constValue .ProcedureBundle =:: bundleId
             program [] .procBundles
               bundleId i64 cast list.at .data [] .procedures
             list.asArray
@@ -1730,7 +1724,7 @@ proc(
           state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
           state [] .stack @ branchTree.itr.start while
             branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
-            headConstant and val [] .value .none ?? ! if
+            headConstant and val [] .value .None ?? ! if
               stackConstants 1 + stackConstants =
             else
               false headConstant =
@@ -1894,7 +1888,7 @@ proc(
               op .pos errors appendError
               return
             end =:: idData
-            idData [] .constValue .procedure =:: procId
+            idData [] .constValue .Procedure =:: procId
             program [] .procedures
               procId i64 cast list.at .data
             =:: procData
@@ -1922,7 +1916,7 @@ proc(
             op .dataType
               mutable
             typeContext types.getAddressType
-            ConstValue .none
+            ConstValue .None
             op
           state pushValue
           labelId state replaceLabel
@@ -1967,8 +1961,8 @@ proc(
           state [] .stack @ branchTree.peek =:: constVal?
           constVal? optional.hasData if
             constVal? .data [] .value
-          else ConstValue .none end =:: constVal
-          constVal .typeId ?? if
+          else ConstValue .None end =:: constVal
+          constVal .TypeId ?? if
             ## remove type-constant from code
             1 op .pos state discardValues
           else
@@ -1983,8 +1977,8 @@ proc(
           end
           ## update constant value in identifier if stack-value is constant
           ##   don't update mutable local variables
-          constVal .typeId ?? or
-              constVal .none ?? ! and idInfo .idType .GLOBAL_VAR ?? or
+          constVal .TypeId ?? or
+              constVal .None ?? ! and idInfo .idType .GLOBAL_VAR ?? or
               idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
             ## getIdentifier
               idInfo .labelId
@@ -1997,7 +1991,7 @@ proc(
               constVal idData [] .constValue =
             end
             ## don't create code for declaration of type-constant
-            constVal .typeId ?? if return end
+            constVal .TypeId ?? if return end
           end
           op state appendOp ..drop
           return
@@ -2030,7 +2024,7 @@ proc(
           state [] .stack @
             ## TypeInfo
               arg
-              ConstValue .none
+              ConstValue .None
               id.LABEL_ID_NONE
               op .pos
               OP_UNLINKED
@@ -2144,9 +2138,9 @@ proc(
             ..dup typeContext types.isMutable mutable =
             typeContext types.unwrapReference
          end ## no else
-        ..dup types.primitive.TYPE types.typeEquals and container .value .typeId ?? if ..drop
+        ..dup types.primitive.TYPE types.typeEquals and container .value .TypeId ?? if ..drop
           true isType =
-          container .value .typeId
+          container .value .TypeId
         else ..dup typeContext types.isPointer _if
            ..dup srcType =
            true isPtr =
@@ -2171,7 +2165,7 @@ proc(
         accessType .CHECK ?? if
           ## label does not exists
           1 op .pos state discardValues ## remove container
-          false ConstValue .boolean types.primitive.BOOL op .pos state pushConstant
+          false ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
           return
         end
         "type " sb.wrap
@@ -2187,7 +2181,7 @@ proc(
       accessType .CHECK ?? if
         ## label exists
         1 op .pos state discardValues ## remove container
-        true ConstValue .boolean types.primitive.BOOL op .pos state pushConstant
+        true ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
         return
       else accessType .CHECK_ENUM ?? _if
         isType or containerType typeContext types.isTaggedUnion ! if
@@ -2206,7 +2200,7 @@ proc(
         ## XXX? compute constant value
         ## pushValue
           types.primitive.BOOL
-          ConstValue .none
+          ConstValue .None
           containerType elementIndex op .pos opHasElement
         state pushValue
         elementLabel state replaceLabel
@@ -2230,17 +2224,17 @@ proc(
           op .pos errors appendError
           return
         end
-        ConstValue .none =:: mut: constValue
+        ConstValue .None =:: mut: constValue
         eltType .empty ?? if
           OP_UNLINKED
           ## newUnionConst
-            ConstValue .none
+            ConstValue .None
             elementIndex
           constContext newUnionConst constValue =
         else
           state [] .stack @ branchTree.peek =:: value?
           value? optional.hasData and
-              value? .data [] .value .none ?? ! if
+              value? .data [] .value .None ?? ! if
             ## newUnionConst
               value? .data [] .value
               elementIndex
@@ -2315,7 +2309,7 @@ proc(
       =:: directCopy ## operation before get element is copy
       ## pushValue
         targetType
-        ConstValue .none ## XXX compute constant value
+        ConstValue .None ## XXX compute constant value
         srcType
         elementIndex
         op .pos
@@ -2370,7 +2364,7 @@ proc(
         ..drop return
       end =:: argOffset
       enumType op .dataType =
-      enumType typeContext types.enumLabelInfo ..drop ConstValue .none op state pushValue
+      enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
       false true 1 argOffset state updateOpInfo
       return
     getElement atElement case
@@ -2498,7 +2492,7 @@ proc(
         isAddr ! if
           #+eltType+# mutable typeContext types.newReferenceType
         end
-        ConstValue .none
+        ConstValue .None
         op
       state pushValue
       mutable ! isAddr | ..dup indexCount 1 + opOffset state updateOpInfo
@@ -2525,7 +2519,7 @@ proc(
       true program [] .hasGetArgs =
       ## pushValue
         op .dataType
-        ConstValue .none
+        ConstValue .None
         op
       state pushValue
       true true 0 0 state updateOpInfo
@@ -2584,7 +2578,7 @@ proc(
       end
       ## XXX try cast constant on stack
       op .val .bitCast ?? if
-        ConstValue .none
+        ConstValue .None
       else
         value .value
       end =:: newValue
@@ -2604,7 +2598,7 @@ proc(
         op .dataType typeContext types.isFixedSize ! if
           "variable size arrays are not supported" sb.wrap op .pos errors appendError
         end
-        op .dataType ConstValue .none op state pushValue
+        op .dataType ConstValue .None op state pushValue
         true true 0 0 state updateOpInfo
         return
       end
@@ -2618,7 +2612,7 @@ proc(
         state requireTypes if
           ..drop return
         end =:: opOffset
-        op .dataType ConstValue .none op state pushValue
+        op .dataType ConstValue .None op state pushValue
         false true count opOffset state updateOpInfo
         return
       end
@@ -2659,7 +2653,7 @@ proc(
       state requireTypes if
         ..drop return
       end =:: argOffset
-      types.primitive.BOOL ConstValue .none op state pushValue
+      types.primitive.BOOL ConstValue .None op state pushValue
       true true 2 argOffset state updateOpInfo
       return
     block case
@@ -3487,7 +3481,7 @@ proc(
                     false =:: mut:  match
                     ## XXX? use array.find
                     0:i64 while ..dup labels .length < do =:: j
-                      labels j list.get .value .enumLabel i == if
+                      labels j list.get .value .EnumLabel i == if
                         true match =
                         j break
                       end
@@ -3767,7 +3761,7 @@ proc(
     Error case
       ## appendError
         op .val .Error .message .length sb.create
-        op .val .Error .message labelContext sb.appendStringConst
+        op .val .Error .message sb.appendStr
         ## TODO? append initialization stack for all error messages
         state [] .initializationStack .length 0 > if
           "\n  caused by initializing code at " sb.appendS
@@ -4146,7 +4140,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
           inTypes i types.compositeElts.get =:: argType
           labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
             implData [] .staticArgs
-              staticArgCount constContext constArrayGet
+              staticArgCount array.get
             =:: argValue
             state .argData @ labelId
               argType argValue TypedValue new
@@ -4154,7 +4148,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
             staticArgCount 1 + staticArgCount =
           else
             state .argData @ labelId
-              argType ConstValue .none TypedValue new
+              argType ConstValue .None TypedValue new
             map.put ..drop
           end
           i 1 +

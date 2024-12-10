@@ -129,10 +129,12 @@ namespace: arenaAlloc
     T ArenaAllocator : arena0
     i32 : count
   -> T ArenaAllocator T _ ptr.mut ) =>: alloc
+    count 0 >= assert "count is non-negative"
+    count 0 == if arena0 0 T _ ptr.mut cast! return end
     1 arena0 .sliceSizeShift << =:: sliceSize
     arena0 .strictOrder ! and arena0 currentCap arena0 .eltCount == if
       ## no space at end of last slice -> search for gaps in previous slices
-      arena0 .eltCount for =:: i
+      arena0 .slices .length for =:: i
         arena0 .slices i list.at .data =:: slice
         slice [] .eltCount count + sliceSize ..u<= if
           arena0 slice [] .data slice [] .eltCount i64 cast.u +
@@ -144,8 +146,9 @@ namespace: arenaAlloc
     arena0
       arena0 .eltCount count i64 cast.u + ensureCap
     =:: mut: arena
-    arena .slices $ .length 1 - list.at .data =:: lastSlice
-    lastSlice [] .eltCount count + sliceSize ..u<= if
+    arena .slices .length 0 > and
+        arena .slices $ .length 1 - list.at .data =:: lastSlice
+        lastSlice [] .eltCount count + sliceSize ..u<= if
       arena .eltCount count i64 cast.u + arena .eltCount =
       ## return
         arena
@@ -154,7 +157,8 @@ namespace: arenaAlloc
       return
     end
     ## new data does not fit into last slice
-    count i64 cast.u sliceSize i64 cast.u + 1 - arena0 .sliceSizeShift >>> =:: newSlices
+    count i64 cast.u sliceSize i64 cast.u 1 - + arena0 .sliceSizeShift >>> =:: newSlices
+    newSlices 1 >= assert "at least one new slice"
     newSlices arena0 .sliceSizeShift << T mem.alloc =:: sliceData
     arena .slices
       sliceData count sliceSize i32.umin SliceType .ALLOC T ArenaSlice new list.append
@@ -202,9 +206,19 @@ namespace: arenaAlloc
       values k i64 cast.u mem.copy T k ptr.mut cast!
     return
   end
-  ## TODO pushArray
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
+    T arrayView : values
+  -> T ArenaAllocator T arrayView ) =>: export: pushArray
+    arena values .length i32 cast.u alloc
+      values .data values .length mem.copy values .length array.create
+    return
+  end
+  ## TODO , pushListSlice pushList?
 
   ## TODO get value(s) at offset
+  ## TODO versions of push returning index instead of pointer
 
   proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: offset
     arena .eltCount return

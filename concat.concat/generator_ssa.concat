@@ -748,19 +748,19 @@ proc(
   typeContext [] .labelContext @ =:: labelContext
   constType typeContext toValueType =:: valType
   value switch ## TODO push primitive values directly onto the stack
-    boolean case break
-    chr case break
-    int case break
+    Bool case break
+    Char case break
+    Int case break
     Float case break
     ## TODO store strings globally
-    str case break
-    str16 case break
-    str32 case break
+    String case break
+    String16 case break
+    String32 case break
     ## TODO create local container value for composite values
-    arrayConstant case break
-    union case break
-    genericArg case break
-    none enumLabel procedure procedureBundle typeId wildCard case ..unreachable
+    Array Array8 Array16 Array32 Array64 case break
+    Union case break
+    GenericArg case break
+    None EnumLabel Procedure ProcedureBundle TypeId WildCard case ..unreachable
   end
   ..unreachable
 end
@@ -2099,7 +2099,7 @@ proc(
     Error case
       ## appendError
         op [] .val .Error .message .length sb.create
-        op [] .val .Error .message labelContext sb.appendStringConst
+        op [] .val .Error .message sb.appendStr
         op [] .pos
         errors
       op [] .val .Error .errorType switch

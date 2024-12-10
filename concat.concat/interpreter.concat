@@ -331,16 +331,16 @@ proc(
     TYPE_STRUCT TYPE_UNION TYPE_PROC case break
     TYPE_ENUM case ..unreachable
   end
-  value .typeId ?? ! or valueType types.primitive.TYPE types.typeEquals ! if
+  value .TypeId ?? ! or valueType types.primitive.TYPE types.typeEquals ! if
     "unexpected argument for type-field declaration expected type got " sb.wrap
       valueType typeContext sb.appendType
       " [ " sb.appendS
-      value constContext typeContext sb.appendConstant
+      value typeContext sb.appendConstant
       " ]" sb.appendS
     pos errors appendError
     true return
   end
-  value .typeId =:: typeValue
+  value .TypeId =:: typeValue
   context [] .typeBuffer
     typeValue list.append
   context [] .typeBuffer =
@@ -353,9 +353,9 @@ proc(
       label
       ## Constant
         isType if
-          label types.newGenericType ConstValue .typeId
+          label types.newGenericType ConstValue .TypeId
         else
-          label ConstValue .genericArg
+          label ConstValue .GenericArg
         end
         ## ValueInfo
           typeValue
@@ -484,7 +484,7 @@ proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut 
   context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
   context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
   ## pushValue
-    tupleType ConstValue .typeId
+    tupleType ConstValue .TypeId
     types.primitive.TYPE
     id.LABEL_ID_NONE
     op [] .pos
@@ -526,7 +526,7 @@ proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut 
   context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
   context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
   ## pushValue
-    newType ConstValue .typeId
+    newType ConstValue .TypeId
     types.primitive.TYPE
     id.LABEL_ID_NONE
     op [] .pos
@@ -608,7 +608,7 @@ proc(
         id.LABEL_ID_NONE
         pos
       ValueInfo new
-      ConstValue .none
+      ConstValue .None
     true return
   end
   context [] .stack
@@ -674,13 +674,13 @@ proc(
   isError if
     valInfo Type .undefined true return
   end
-  value .typeId ?? if
-    valInfo value .typeId false return
+  value .TypeId ?? if
+    valInfo value .TypeId false return
   end
   "expected type got: " sb.wrap
     valInfo .valueType typeContext sb.appendType
     " ( " sb.appendS
-    value constContext typeContext sb.appendConstant
+    value typeContext sb.appendConstant
     " )" sb.appendS
   pos errors appendError
   ## restore stack
@@ -700,13 +700,13 @@ proc(
   isError if
     false true return
   end
-  value .boolean ?? if
-    value .boolean false return
+  value .Bool ?? if
+    value .Bool false return
   end
   "expected boolean got: " sb.wrap
     valInfo .valueType typeContext sb.appendType
     " ( " sb.appendS
-    value constContext typeContext sb.appendConstant
+    value typeContext sb.appendConstant
     " )" sb.appendS
   pos errors appendError
   ## restore stack
@@ -775,7 +775,7 @@ namespace: interpreter
     idContext [] .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
     t typeContext types.containsGeneric if
-      ConstValue .none true return
+      ConstValue .None true return
     end
     infoType switch
       ALIGNMENT case
@@ -790,11 +790,11 @@ namespace: interpreter
     end =:: sizeValue
     sizeValue switch
       fixed case
-        sizeValue .fixed ConstValue .int false return
+        sizeValue .fixed ConstValue .Int false return
       dynamicArray case
-        ConstValue .none true return ## XXX? support generic array size
+        ConstValue .None true return ## XXX? support generic array size
       unknown case ## XXX? error message for unknown size
-        ConstValue .none true return
+        ConstValue .None true return
     end
   end
   proc(
@@ -812,13 +812,13 @@ namespace: interpreter
     false =:: mut: isType
     t typeContext types.unwrapReference =:: mut: valType
     valType types.primitive.TYPE types.typeEquals if
-      value .typeId ?? ! if
+      value .TypeId ?? ! if
         "unexpected constant value for type type: " sb.wrap
-          value constContext typeContext sb.appendConstant
+          value typeContext sb.appendConstant
         pos errors appendError
-        Type .undefined ConstValue .none true return
+        Type .undefined ConstValue .None true return
       end
-      value .typeId valType =
+      value .TypeId valType =
       true isType =
     end
     valType typeContext types.isPointer or valType typeContext types.isArray if
@@ -832,14 +832,14 @@ namespace: interpreter
           " of : " sb.appendS
           valType typeContext sb.appendType
         pos errors appendError
-        Type .undefined ConstValue .none true return
+        Type .undefined ConstValue .None true return
       end
       valType typeContext types.getArraySize =:: sizes
       isLength if
         sizes .length 0 == if
           ## return
             types.primitive.I_SIZE
-            1 ConstValue .int
+            1 ConstValue .Int
             false
           return
         end
@@ -849,7 +849,7 @@ namespace: interpreter
         outerSize .sizeType .int ?? if
           ## return
             types.primitive.I_SIZE
-            outerSize .value ConstValue .int
+            outerSize .value ConstValue .Int
             false
           return
         else outerSize .sizeType .staticArg ?? _if
@@ -857,14 +857,14 @@ namespace: interpreter
             types.primitive.I_SIZE
             outerSize .value
               LabelId cast
-            ConstValue .genericArg
+            ConstValue .GenericArg
             false
           return
         else
           "unsupported array-size type: " sb.wrap
             ## XXX? print array-size type name
           pos errors appendError
-          Type .undefined ConstValue .none true return
+          Type .undefined ConstValue .None true return
         end
       else
         idContext [] .argBuffer .length =:: offset
@@ -872,14 +872,14 @@ namespace: interpreter
           sizes i array.get =:: current
           idContext [] .argBuffer
             current .sizeType .int ?? if
-              current .value ConstValue .int list.append
+              current .value ConstValue .Int list.append
             else current .sizeType .staticArg ?? _if
-              current .value LabelId cast ConstValue .genericArg list.append
+              current .value LabelId cast ConstValue .GenericArg list.append
             else ..drop
               "unsupported array-size type: " sb.wrap
                 ## XXX? print array-size type name
               pos errors appendError
-              Type .undefined ConstValue .none true return
+              Type .undefined ConstValue .None true return
             end
           idContext [] .argBuffer =
           i 1 +
@@ -915,7 +915,7 @@ namespace: interpreter
         types.primitive.I_SIZE
         valType
           typeContext types.compositeEltCount
-        ConstValue .int
+        ConstValue .Int
         false
       return
     end
@@ -928,12 +928,12 @@ namespace: interpreter
       "-computation: " sb.appendS
       valType typeContext sb.appendType
     pos errors appendError
-    Type .undefined ConstValue .none true return
+    Type .undefined ConstValue .None true return
   end
   proc(
     LabelId : generatorName
     ProcId : generatorProc
-    ConstantArray : autoArgs
+    ConstValue arrayView : autoArgs
     ConstValue arrayView : args
     FilePosition : pos
     InterpreterContext ptr.mut : context
@@ -953,7 +953,7 @@ namespace: interpreter
     ## initializeGeneratedType
       generatorName
       args
-      context [] .stack list.peek .data [] .typeId ## return value of call
+      context [] .stack list.peek .data [] .TypeId ## return value of call
       typeContext
       constContext
     types.initializeGeneratedType if
@@ -987,7 +987,7 @@ namespace: interpreter
       pos errors appendError
       Type .undefined true return
     end
-    idData [] .constValue .procedure =:: procId
+    idData [] .constValue .Procedure =:: procId
     program [] .procedures
       procId i64 cast list.at .data
     =:: procData
@@ -1047,27 +1047,27 @@ namespace: interpreter
         targetType typeContext types.primitiveValue switch
           I8  case
             oldValue .Float unsignedCast if i8  cast.u i64 cast.u else i8  cast.s i64 cast.s end
-            ConstValue .int return
+            ConstValue .Int return
           I16 case
             oldValue .Float unsignedCast if i16 cast.u i64 cast.u else i16 cast.s i64 cast.s end
-            ConstValue .int return
+            ConstValue .Int return
           I32 case
             oldValue .Float unsignedCast if i32 cast.u i64 cast.u else i32 cast.s i64 cast.s end
-            ConstValue .int return
+            ConstValue .Int return
           I64 case
             oldValue .Float unsignedCast if i64 cast.u else i64 cast.s end
-            ConstValue .int return
+            ConstValue .Int return
           BOOL F32 F64 TYPE CHAR8 CHAR16 CHAR32 case ..unreachable
         end
       else unsignedCast _if
-        oldValue .Float i64 cast.u ConstValue .int return
+        oldValue .Float i64 cast.u ConstValue .Int return
       else
-        oldValue .Float i64 cast.s ConstValue .int return
+        oldValue .Float i64 cast.s ConstValue .Int return
       end
     end
     ## XXX? zero/sign extend small types
-    oldValue .int ?? if
-      oldValue .int i64 =: mut: intVal
+    oldValue .Int ?? if
+      oldValue .Int i64 =: mut: intVal
       srcType typeContext types.unwrapNamed types.isPrimitive if
         srcType typeContext types.primitiveValue switch
           I8  CHAR8  case intVal i8 cast
@@ -1085,7 +1085,7 @@ namespace: interpreter
       targetType typeContext types.isFloat and signType .UNSIGNED ?? or srcType typeContext types.isUnsignedInt if
         intVal f64 cast.u ConstValue .Float return
       else
-        intVal ConstValue .int return
+        intVal ConstValue .Int return
       end
     end
     ## TODO? special handling for int <-> pointer
@@ -1121,20 +1121,20 @@ proc(
   idContext [] .constContext@ =:: constContext
   idContext [] .typeContext@ =:: typeContext
   valInfo .valueType elementIndex typeContext types.compositeGetElement =:: eltType
-  value .arrayConstant ?? if
-    value .arrayConstant elementIndex constContext constArrayGet
-  else value .union ?? _if
-    value elementIndex constContext constUnionElement if
+  value .Array ?? if
+    value .Array elementIndex array.get
+  else value .Union ?? _if
+    value elementIndex constUnionElement if
       "union index (" sb.wrap
         elementIndex sb.appendI
         ") does not match current value (" sb.appendS
-        value .union .eltIndex sb.appendI
+        value .Union .eltIndex sb.appendI
         ")" sb.appendS
       pos errors appendError
     end
   else
     "unexpected value for composite constant: " sb.wrap
-      value constContext typeContext sb.appendConstant
+      value typeContext sb.appendConstant
     pos errors appendError
     ## unpopValue
       value
@@ -1174,13 +1174,13 @@ proc(
     Constant case
       context inEnum if
         op [] .val .Constant  =:: constVal
-        constVal .typeId ?? ! or constVal .typeId types.isNamedType ! if
+        constVal .TypeId ?? ! or constVal .TypeId types.isNamedType ! if
           "unexpected constant in enum declaration expected identifier got " sb.wrap
-            constVal constContext typeContext sb.appendConstant
+            constVal typeContext sb.appendConstant
           op [] .pos errors appendError
           true return
         end
-        constVal .typeId typeContext types.namedTypeName =:: eltLabel
+        constVal .TypeId typeContext types.namedTypeName =:: eltLabel
         eltLabel context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
           Type .empty list.append
@@ -1190,8 +1190,8 @@ proc(
         context [] .labelBuffer =
         false return
       end
-      op [] .val .Constant .genericArg ?? if
-        op [] .val .Constant .genericArg =:: label
+      op [] .val .Constant .GenericArg ?? if
+        op [] .val .Constant .GenericArg =:: label
         context [] .variables@ label map.get =:: value?
         value? optional.isEmpty if
           context [] .evalType switch
@@ -1411,7 +1411,7 @@ proc(
           context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
           context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
           ## pushValue
-            enumType ConstValue .typeId
+            enumType ConstValue .TypeId
             types.primitive.TYPE
             id.LABEL_ID_NONE
             op [] .pos
@@ -1437,7 +1437,7 @@ proc(
           context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
           context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
           ## pushValue
-            unionType ConstValue .typeId
+            unionType ConstValue .TypeId
             types.primitive.TYPE
             id.LABEL_ID_NONE
             op [] .pos
@@ -1532,9 +1532,9 @@ proc(
         list.pop =:: mut: value
       context [] .stack =
       op [] .val .declareId .labelId =:: labelId
-      value .wildCard ?? and context inUnion if
+      value .WildCard ?? and context inUnion if
         types.primitive.TYPE valInfo .valueType =
-        Type .empty ConstValue .typeId value =
+        Type .empty ConstValue .TypeId value =
       end
       context [] .openBlocks list.peek .data [] .stackOffset =:: stackOffset
       stackOffset initialLabelOffset valueContext op [] .pos context finishLabledValues if
@@ -1604,19 +1604,16 @@ proc(
             true return
           end =:: idData
           idData [] .constValue =:: constValue
-          constValue .procedureBundle ?? if
-            constValue .procedureBundle =:: bundleId
+          constValue .ProcedureBundle ?? if
+            constValue .ProcedureBundle =:: bundleId
             program [] .procBundles
               bundleId i64 cast list.at .data [] .procedures
             list.asArray
-          else constValue .procedure ?? _if
-            constValue .procedure@ array.wrap
+          else constValue .Procedure ?? _if
+            constValue .Procedure@ array.wrap
           else
             "unexpected value for procedure constant: " sb.wrap
-              constValue
-                constContext
-                typeContext
-              sb.appendConstant
+              constValue typeContext sb.appendConstant
             op [] .pos errors appendError
             true return
           end =:: procedures
@@ -1641,9 +1638,9 @@ proc(
           message .length 0 > if
             context [] .evalType switch
               FOLD_LOCAL case
-                constValue .procedure ?? ! or
+                constValue .Procedure ?? ! or
                     program [] .procedures
-                      constValue .procedure i64 cast list.at .data
+                      constValue .Procedure i64 cast list.at .data
                     [] .isStatic ! if
                   true return ## skip errors for non-static local procedures
                 end break
@@ -1721,7 +1718,7 @@ proc(
             end =:: generated
             offset context truncateStack
             ## pushValue
-              generated ConstValue .typeId
+              generated ConstValue .TypeId
               types.primitive.TYPE
               id.LABEL_ID_NONE
               op [] .pos
@@ -1758,7 +1755,7 @@ proc(
             ## compile-time evaluation of mutable global variables not supported
             true return
           end
-          idData [] .constValue .none ?? if
+          idData [] .constValue .None ?? if
             context [] .evalType switch
               INTERPRET GLOBAL case break
               FOLD_LOCAL case
@@ -1838,7 +1835,7 @@ proc(
         true =:: mut: fixedSize
         context minStackOffset =:: minOffset
         context [] .stack .length 1 - =:: mut: offset
-        offset minOffset > and context [] .stack offset list.get .wildCard ?? if
+        offset minOffset > and context [] .stack offset list.get .WildCard ?? if
           false fixedSize =
           offset 1 - offset =
         end
@@ -1857,24 +1854,24 @@ proc(
         idContext [] .arraySizeBuffer =
         1:i64 while ..dup intArgs <= do
           context [] .stack offset ..over.2 + list.get =:: intArg
-          intArg .int ?? if
+          intArg .Int ?? if
             ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
               ## ArraySize
-                intArg .int
+                intArg .Int
                 types.ArraySizeType .int
               types.ArraySize new list.append
             idContext [] .arraySizeBuffer =
-          else intArg .genericArg ?? _if
+          else intArg .GenericArg ?? _if
             idContext [] .arraySizeBuffer
               ## ArraySize
-                intArg .genericArg i64 cast
+                intArg .GenericArg i64 cast
                 types.ArraySizeType .staticArg
               types.ArraySize new list.append
             idContext [] .arraySizeBuffer =
           else
             "unexpected constant for array size: " sb.wrap
-              intArg constContext typeContext sb.appendConstant
+              intArg typeContext sb.appendConstant
             context [] .stackInfo ..over.2 list.at .data [] .pushedAt errors appendError
           end
           1 +
@@ -1886,11 +1883,11 @@ proc(
           true return
         end
         context [] .stack offset list.get =:: typeConstant
-        typeConstant .typeId ?? ! if
+        typeConstant .TypeId ?? ! if
           "unexpected constant parameter for type-modifier " sb.wrap
             op [] .val .typeModifier sb.appendTypeModifier
             " expected type got " sb.appendS
-            typeConstant constContext typeContext sb.appendConstant
+            typeConstant typeContext sb.appendConstant
           op [] .pos errors appendError
           true return
         end
@@ -1899,7 +1896,7 @@ proc(
           "array types must have a fixed size" sb.wrap op [] .pos errors appendError
         end
         ## newArrayType
-          typeConstant .typeId
+          typeConstant .TypeId
           isPtr if types.ArrayType .POINTER else types.ArrayType .ARRAY end
           idContext [] .arraySizeBuffer list.asArray
           fixedSize
@@ -1915,7 +1912,7 @@ proc(
         end =:: ptrType
         offset context truncateStack
         ## pushValue
-          ptrType ConstValue .typeId
+          ptrType ConstValue .TypeId
           types.primitive.TYPE
           id.LABEL_ID_NONE
           op [] .pos
@@ -1934,10 +1931,10 @@ proc(
         op [] .pos errors appendError
         true return
       end =:: value =:: valInfo
-      value .typeId ??
-          and value .typeId typeContext types.isEnum
-          or value .typeId typeContext types.isTaggedUnion if
-        value .typeId true
+      value .TypeId ??
+          and value .TypeId typeContext types.isEnum
+          or value .TypeId typeContext types.isTaggedUnion if
+        value .TypeId true
       else
         valInfo .valueType false
       end  =:: isType =:: containerType
@@ -1958,9 +1955,9 @@ proc(
         eltType .empty ?? if
           ## pushValue
             containerType typeContext types.isEnum if
-              elementIndex ConstValue .enumLabel
+              elementIndex ConstValue .EnumLabel
             else
-              ConstValue .none elementIndex constContext newUnionConst
+              ConstValue .None elementIndex constContext newUnionConst
             end
             containerType
             id.LABEL_ID_NONE ## XXX? remember label
@@ -2030,7 +2027,7 @@ proc(
         poppedType typeContext types.containsGeneric if
           ## creating tuple not possible, reset stack
           ## unpopValue
-            poppedType ConstValue .typeId
+            poppedType ConstValue .TypeId
             valInfo
           context unpopValue
           true return
@@ -2054,7 +2051,7 @@ proc(
       end
       poppedValue if
         ## unpopValue
-          poppedType ConstValue .typeId
+          poppedType ConstValue .TypeId
           valInfo
         context unpopValue
       end
@@ -2071,7 +2068,7 @@ proc(
         poppedType typeContext types.containsGeneric if
           ## casting to genetic value not possible, reset stack
           ## unpopValue
-            poppedType ConstValue .typeId
+            poppedType ConstValue .TypeId
             valInfo
           context unpopValue
           true return
@@ -2083,7 +2080,7 @@ proc(
       op [] .pos context popValue if ..drop.2
         isPoppedType if
           ## unpopValue
-            poppedType ConstValue .typeId
+            poppedType ConstValue .TypeId
             valInfo
           context unpopValue
         end
@@ -2157,16 +2154,16 @@ proc(
         end
         true return
       end =:: value =:: valInfo
-      value .boolean ?? ! if
+      value .Bool ?? ! if
         "wrong constant value for assert, expected boolean got: " sb.wrap
-          value constContext typeContext sb.appendConstant
+          value typeContext sb.appendConstant
         op [] .pos errors appendError
         value valInfo context unpopValue
         true return
       end
-      value .boolean ! if
+      value .Bool ! if
         "assertion failed: " sb.wrap
-          op [] .val .Assert labelContext sb.appendStringConst
+          op [] .val .Assert sb.appendStr
         op [] .pos errors appendError
       end
       false return
@@ -2177,7 +2174,7 @@ proc(
       end
       ## appendError
         op [] .val .Error .message .length sb.create
-        op [] .val .Error .message labelContext sb.appendStringConst
+        op [] .val .Error .message sb.appendStr
         op [] .pos
         errors
       op [] .val .Error .errorType switch
@@ -2220,7 +2217,7 @@ proc(
         poppedType typeContext types.containsGeneric if
           ## computing size not possible, reset stack
           ## unpopValue
-            poppedType ConstValue .typeId
+            poppedType ConstValue .TypeId
             valInfo
           context unpopValue
           true return
@@ -2237,7 +2234,7 @@ proc(
           ## computing size not possible, reset stack
           poppedValue if
             ## unpopValue
-              poppedType ConstValue .typeId
+              poppedType ConstValue .TypeId
               valInfo
             context unpopValue
           end
@@ -2279,15 +2276,15 @@ proc(
       ## pushValue
         values 1 [] values 0 [] resType typeContext interpreter.operatorEq if ..drop
           "unsupported values for equality check: " sb.wrap
-            values 0 [] constContext typeContext sb.appendConstant
+            values 0 [] typeContext sb.appendConstant
             " and " sb.appendS
-            values 1 [] constContext typeContext sb.appendConstant
+            values 1 [] typeContext sb.appendConstant
           op [] .pos errors appendError
           values valInfos nArgs context unpopValues
           true return
         end
           op [] .val .equalityOperator .NEQ ?? ^ ## invert result for NEQ
-        ConstValue .boolean
+        ConstValue .Bool
         types.primitive.BOOL
         id.LABEL_ID_NONE
         op [] .pos
@@ -2353,13 +2350,13 @@ proc(
       op [] .pos context popValue if ..drop.2
         true return
       end =:: indexValue =:: indexInfo
-      indexValue .int ?? if
-        indexValue .int
+      indexValue .Int ?? if
+        indexValue .Int
       ## XXX? support generic arguments
       else
         indexValue indexInfo context unpopValue
         "unexpected constant for array index: " sb.wrap
-          indexValue constContext typeContext sb.appendConstant
+          indexValue typeContext sb.appendConstant
         op [] .pos errors appendError
         true return
       end =:: index
@@ -2384,77 +2381,117 @@ proc(
           arrayType typeContext types.isMutable typeContext types.getAddressType
         end
       =:: newType
-      ConstValue ..length 16 == assert "no new constant types"
+      ConstValue ..length 20 == assert "no new constant types"
       pointer switch
-        str case
-          pointer .str =:: str
+        String case
+          pointer .String =:: str
           index str .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
             true return
           end
           isPtr if
-            ## StringConstant
-              str .offset index +
-              str .length index -
-            StringConstant new ConstValue .str
+            str index string.tail ConstValue .String
           else
-            str index labelContext id.scCharAt ConstValue .chr
+            str index string.charAt ConstValue .Char
           end
           break
-        str16 case
-          pointer .str16 =:: str16
+        String16 case
+          pointer .String16 =:: str16
           index str16 .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
             true return
           end
           isPtr if
-            ## ConstantArray
-              str16 .offset index +
-              str16 .length index -
-            ConstantArray new ConstValue .str16
+            str16 string16.toArray index array.tail string16.fromArray ConstValue .String16
           else
-            str16 index constContext constArray16Get i64 cast.u ConstValue .int
+            str16 index string16.get i64 cast.u ConstValue .Int
           end
           break
-        str32 case
-          pointer .str32 =:: str32
-          index pointer .str32 .length op [] .pos errors checkIndex if
+        String32 case
+          pointer .String32 =:: str32
+          index str32 .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
             true return
           end
           isPtr if
-            ## ConstantArray
-              str32 .offset index +
-              str32 .length index -
-            ConstantArray new ConstValue .str32
+            str32 string32.toArray index array.tail string32.fromArray ConstValue .String32
           else
-            str32 index constContext constArray32Get i64 cast.u ConstValue .int
+            str32 index string32.get i64 cast.u ConstValue .Int
           end
           break
-        arrayConstant case
-          pointer .arrayConstant =:: arrayConst
+        Array case
+          pointer .Array =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
             true return
           end
           isPtr if
-            ## ConstantArray
-              arrayConst .offset index +
-              arrayConst .length index -
-            ConstantArray new ConstValue .arrayConstant
+            arrayConst index array.tail ConstValue .Array
           else
-            arrayConst index constContext constArrayGet
+            arrayConst index array.get
+          end
+          break
+        Array8 case
+          pointer .Array8 =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            pointer pointerInfo context unpopValue
+            indexValue indexInfo context unpopValue
+            true return
+          end
+          isPtr if
+            arrayConst index array.tail ConstValue .Array8
+          else
+            arrayConst index array.get i64 cast.u ConstValue .Int
+          end
+          break
+        Array16 case
+          pointer .Array16 =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            pointer pointerInfo context unpopValue
+            indexValue indexInfo context unpopValue
+            true return
+          end
+          isPtr if
+            arrayConst index array.tail ConstValue .Array16
+          else
+            arrayConst index array.get i64 cast.u ConstValue .Int
+          end
+          break
+        Array32 case
+          pointer .Array32 =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            pointer pointerInfo context unpopValue
+            indexValue indexInfo context unpopValue
+            true return
+          end
+          isPtr if
+            arrayConst index array.tail ConstValue .Array32
+          else
+            arrayConst index array.get i64 cast.u ConstValue .Int
+          end
+          break
+        Array64 case
+          pointer .Array64 =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            pointer pointerInfo context unpopValue
+            indexValue indexInfo context unpopValue
+            true return
+          end
+          isPtr if
+            arrayConst index array.tail ConstValue .Array64
+          else
+            arrayConst index array.get ConstValue .Int
           end
           break
         default
           pointer pointerInfo context unpopValue
           indexValue indexInfo context unpopValue
           "unexpected constant for pointer value: " sb.wrap
-            pointer constContext typeContext sb.appendConstant
+            pointer typeContext sb.appendConstant
           op [] .pos errors appendError
           true return
       end =:: newValue
@@ -2540,7 +2577,7 @@ proc(
   builtIn
     values
     nArgs i32 cast
-  pos labelContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
+  pos errors interpreter.evaluateBuiltIn =:: resultType =:: value
   resultType switch
     success case
       value
@@ -2557,7 +2594,7 @@ proc(
           builtIn sb.appendBuiltIn
           ": " sb.appendS
           0:i64 while ..dup nArgs < do =:: i
-            values i [] constContext typeContext sb.appendConstant
+            values i [] typeContext sb.appendConstant
             ", " sb.appendS
             i 1 +
           end ..drop
@@ -2658,7 +2695,7 @@ end
 #+evaluate procedure body with the given arguments+#
 proc(
   ProcId : procId
-  ConstantArray : autoArgs
+  ConstValue arrayView : autoArgs
   FilePosition : pos
   InterpreterContext ptr.mut : context
 ->
@@ -2712,7 +2749,7 @@ proc(
     inType i typeContext types.compositeGetLabel =:: label
     label labelContext id.labelFlags =:: labelFlags
     labelFlags id.FLAG_AUTO & ? if
-      autoArgs autoArgOffset constContext constArrayGet =:: value
+      autoArgs autoArgOffset array.get =:: value
       context [] .variables @
         label
         ## Constant

@@ -92,7 +92,43 @@ namespace: array
     type : auto: T
     T arrayView : a
     T arrayView : b
-    proc( T ptr T ptr -> bool ) ptr : eq
+  -> bool ) =>: export: simpleEq
+    a .length b .length != if false return end
+    a .data b .data == if true return end
+    a .length for =:: i
+      a i array.get b i array.get != if
+        false return
+      end
+    end
+    true return
+  end
+  proc(
+    type : auto: T
+    type : auto: C
+    T arrayView : a
+    T arrayView : b
+    ( T T C -> bool ) ptr : eq
+    C : context
+  -> bool ) =>: export: checkedEq
+    a .length b .length != if false return end
+    a .data b .data == if true return end
+    a .length for =:: i
+      a i array.get b i array.get context eq () if
+        false return
+      end
+    end
+    true return
+  end
+  overload: export: eq
+    simpleEq
+    checkedEq
+  end
+
+  proc(
+    type : auto: T
+    T arrayView : a
+    T arrayView : b
+    proc( T ptr T ptr -> bool ) ptr : shaddow: eq
   -> i64 ) =>: export: indexOfArray
     a .length b .length < if
       -1 return
@@ -124,7 +160,7 @@ namespace: array
     type : auto: C
     T arrayView : a
     T arrayView : b
-    proc( T ptr T ptr C -> bool ) ptr : eq
+    proc( T ptr T ptr C -> bool ) ptr : shaddow: eq
     C : context
   -> i64 ) =>: export: indexOfArrayStart
     ## TODO? use faster algorithm

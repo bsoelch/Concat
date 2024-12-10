@@ -26,7 +26,7 @@ struct(
 
 struct(
   Type : procType
-  ConstantArray : staticArgs
+  ConstValue arrayView : staticArgs
   VariableInfo list : mut: variables
   FilePosition : firstUse
   i64 : mut: codeStart
@@ -59,14 +59,14 @@ struct(
 struct(
   ProcId : procId
   i64 : implementationId
-  ConstantArray : autoArgs
+  ConstValue arrayView : autoArgs
 ) =:: export: ProcedureCallInfo
 struct(
   ProcId : procId
   i64 : implementationId
 ) =:: export: ProcedureImpl
 struct(
-  StringConstant : message
+  string : message
   ErrorType : errorType
 ) =:: export: ErrorInfo
 
@@ -119,7 +119,7 @@ union(
             LabelId : mut: atName
             LabelId : mut: existsName
        TypeModifier : mut: typeModifier
-     StringConstant : Assert
+             string : Assert
           ErrorInfo : Error
      TypeMemoryInfo : typeInfo
                   _ : unreachable
@@ -302,13 +302,13 @@ proc( FilePosition : pos -> Operation ) =>: export: opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
 end
 proc(
-  StringConstant : message
+  string : message
   FilePosition : pos
 -> Operation ) =>: export: opAssert
   message OpValue .Assert Type .undefined pos Operation new return
 end
 proc(
-  StringConstant : message
+  string : message
   ErrorType : errorType
   FilePosition : pos
 -> Operation ) =>: export: opError
@@ -484,7 +484,7 @@ namespace: sb
           "constant ( " sb.appendS
           ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .Constant constContext typeContext sb.appendConstant
+          ..over .val .Constant typeContext sb.appendConstant
           break
         ConstantReference case
           ..over .val .ConstantReference =:: refId
@@ -494,7 +494,7 @@ namespace: sb
           " )[" sb.appendS
           refId i64 cast sb.appendI
           "] : " sb.appendS
-          constData [] .value constContext typeContext sb.appendConstant
+          constData [] .value typeContext sb.appendConstant
           break
         block case
           "Block: " sb.appendS
@@ -798,7 +798,7 @@ namespace: sb
           break
         Assert case
           "assert \"" sb.appendS
-          ..over .val .Assert labelContext sb.appendStringConst
+          ..over .val .Assert sb.appendStr
           '"' sb.appendC
           break
         Error case
@@ -807,7 +807,7 @@ namespace: sb
             WARNING case "warning: \"" sb.appendS break
             INFO case "info: \"" sb.appendS break
           end
-          ..over .val .Error .message labelContext sb.appendStringConst
+          ..over .val .Error .message sb.appendStr
           '"' sb.appendC
           break
         unreachable case

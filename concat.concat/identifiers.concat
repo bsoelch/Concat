@@ -53,7 +53,7 @@ namespace: id
   IdentifierName new =:: ID_NONE
   ## IdentifierData
     Type .undefined
-    ConstValue .none
+    ConstValue .None
     "" 0 string new
     0 0 FilePosition new
     LABEL_ID_NONE
@@ -63,7 +63,7 @@ namespace: id
   IdentifierData new =:: ID_NONE_DATA
   ## IdentifierData
     Type .undefined
-    ConstValue .none
+    ConstValue .None
     "" 0 string new
     0 0 FilePosition new
     LABEL_ID_NONE

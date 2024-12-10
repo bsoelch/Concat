@@ -140,7 +140,7 @@ proc(
     Type .undefined
     IdentifierType .PROCEDURE_BUNDLE
     -1
-    bundleId ConstValue .procedureBundle
+    bundleId ConstValue .ProcedureBundle
     true
     pos
     FILE_ID_BUILT_IN
@@ -180,7 +180,7 @@ proc(
     Type .undefined
     IdentifierType .PROCEDURE
     -1
-    procId ConstValue .procedure
+    procId ConstValue .Procedure
     true
     pos
     FILE_ID_BUILT_IN

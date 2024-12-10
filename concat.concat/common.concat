@@ -56,7 +56,6 @@ type : export: BuiltIn
 ## declare Type and ConstValue to allow mutual inclusion of types.concat and constants.concat
 type : export: Type
 type : export: ConstValue
-type : export: ConstantArray
 type : export: ConstantContext
 
 

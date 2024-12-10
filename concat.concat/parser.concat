@@ -50,11 +50,11 @@ struct(
 ) =:: ParserState
 
 proc( FilePosition : pos -> Constant ) =>: newWildcardConst
-  Type .undefined ConstValue .wildCard IdentifierInfo optional.empty pos Constant new return
+  Type .undefined ConstValue .WildCard IdentifierInfo optional.empty pos Constant new return
 end
 proc( bool FilePosition -> Constant ) =>: newBoolConstant
   =:: pos
-  types.primitive.BOOL ..swap ConstValue .boolean IdentifierInfo optional.empty pos Constant new return
+  types.primitive.BOOL ..swap ConstValue .Bool IdentifierInfo optional.empty pos Constant new return
 end
 proc(
   i64 : value
@@ -112,7 +112,7 @@ proc(
       types.intLiteral.U63
       break
   end =:: constType
-  constType value ConstValue .int IdentifierInfo optional.empty pos Constant new return
+  constType value ConstValue .Int IdentifierInfo optional.empty pos Constant new return
 end
 proc(
   utf8.Codepoint : char
@@ -121,40 +121,44 @@ proc(
 -> Constant ) =>: newCharConstant
   ## newConstant
     stringType switch
-      DEFAULT case types.primitive.CHAR8  char char8 cast ConstValue .chr break
-      UTF8    case types.primitive.CHAR8  char i64 cast.u 0xff & ConstValue .int break
-      UTF16   case types.primitive.CHAR16 char i64 cast.u 0xffff & ConstValue .int break
-      UTF32   case types.primitive.CHAR32 char i64 cast.u ConstValue .int break
+      DEFAULT case types.primitive.CHAR8  char char8 cast ConstValue .Char break
+      UTF8    case types.primitive.CHAR8  char i64 cast.u 0xff & ConstValue .Int break
+      UTF16   case types.primitive.CHAR16 char i64 cast.u 0xffff & ConstValue .Int break
+      UTF32   case types.primitive.CHAR32 char i64 cast.u ConstValue .Int break
       UNKNOWN INT_LITERAL case ..unreachable
     end
   IdentifierInfo optional.empty pos Constant new return
 end
 proc(
-  StringConstant : str
+  string : str
   StringLiteralType : stringType
   FilePosition : pos
   TypeContext ptr.mut : context
   ConstantContext ptr.mut : constContext
   CompilerError list ptr.mut : errors
 -> Constant ) =>: newStringConstant
-  context .labelContext =:: labelContext
   using types
   stringType switch
-    DEFAULT case str ConstValue .str str .length types.primitive.CHAR8 break
-    UTF8    case str ConstValue .str str .length types.primitive.CHAR8 break
+    DEFAULT case str ConstValue .String str .length types.primitive.CHAR8 break
+    UTF8    case str ConstValue .String str .length types.primitive.CHAR8 break
     UTF16 case
-      str labelContext id.scAsStr utf8.toUTF16 =:: str16
-      str16 list.asArray constContext newStr16Const str16 .length types.primitive.CHAR16
+      ## TODO? reuse the same buffer for all string conversion
+      0 char16 list.create str utf8.toUTF16 =:: str16
+      str16
+        list.asArray string16 cast
+      constContext newString16Const str16 .length types.primitive.CHAR16
         str16 list.free ..drop
       break
     UTF32 case
-      str labelContext id.scAsStr utf8.toUTF32 =:: str32
-      str32 list.asArray constContext newStr32Const str32 .length types.primitive.CHAR32
+      0 char32 list.create str utf8.toUTF32 =:: str32
+      str32
+        list.asArray string32 cast
+      constContext newString32Const str32 .length types.primitive.CHAR32
         str32 list.free ..drop
       break
     UNKNOWN INT_LITERAL case
       "unsupported string literal type" sb.wrap pos errors appendError
-      ConstValue .none 0 Type .undefined break
+      ConstValue .None 0 Type .undefined break
   end =:: charType =:: strLength =:: strValue
   strLength ArraySizeType .int ArraySize new =:: size
   ## Constant
@@ -165,7 +169,7 @@ proc(
 end
 proc( Type FilePosition -> Constant ) =>: newTypeConst
   =:: pos
-  types.primitive.TYPE ..swap ConstValue .typeId IdentifierInfo optional.empty pos Constant new return
+  types.primitive.TYPE ..swap ConstValue .TypeId IdentifierInfo optional.empty pos Constant new return
 end
 
 proc( f64 : value Type : constType FilePosition : pos -> Constant ) =>: newFloatConst
@@ -261,11 +265,11 @@ proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> Type bool ) =
     "missing type constant" sb.wrap fileState [] .wordStart errors appendError
     Type .undefined true return
   end
-  value? .data [] .typeId ?? ! if
+  value? .data [] .TypeId ?? ! if
     "wrong type for constant expected type" sb.wrap info? .data [] .pushedAt errors appendError
     Type .undefined true return
   end
-  value? .data [] .typeId false return
+  value? .data [] .TypeId false return
 end
 proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> Type bool ) =>: popTypeConstant
   state [] .progContext@ =:: progContext
@@ -275,11 +279,11 @@ proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> Type bool ) =
     "missing type constant" sb.wrap fileState [] .wordStart errors appendError
     Type .undefined true return
   end
-  value? .data [] .typeId ?? ! if
+  value? .data [] .TypeId ?? ! if
     "wrong type for constant expected type" sb.wrap info? .data [] .pushedAt errors appendError
     Type .undefined true return
   end
-  state popConst ..drop .typeId false return
+  state popConst ..drop .TypeId false return
 end
 
 proc( BlockType : blockType ParserState ptr.mut : state -> ) =>: openBlock
@@ -538,8 +542,8 @@ proc(
     else literalTypeName "f64" string.wrap string.eq _if types.primitive.F64
     else literalTypeName state [] .currentFile idContext id.findIdentifierByName
         ..swap =:: idData ! and
-        idData .idType .TYPE ?? and idData .constValue .typeId ?? _if
-      idData .constValue .typeId []
+        idData .idType .TYPE ?? and idData .constValue .TypeId ?? _if
+      idData .constValue .TypeId []
     else
       false return
     end =:: literalType
@@ -602,11 +606,11 @@ proc(
       token .value
       pos
       progContext [] .errors@
-      labelContext
+      constContext
     isRawString if
-      id.parseRawStringConstant
+      constants.parseRawStringConstant
     else
-      id.parseStringConstant
+      constants.parseStringConstant
     end
     token .stringType
     pos
@@ -630,8 +634,8 @@ proc(
   idContext [] .constContext@ =:: constContext
   idContext [] .typeContext .labelContext@ =:: labelContext
   token .value
-    pos progContext [] .errors@  labelContext id.parseStringConstant ## escape character
-    labelContext id.scAsStr 0 utf8.nextCodepoint =:: cp
+    pos progContext [] .errors@ constContext constants.parseStringConstant ## escape character
+      0 utf8.nextCodepoint =:: cp
     #+nextIndex+# ..swap .length < if
       "A character literal has to contain exactly one character" sb.wrap pos errors appendError
     end
@@ -741,13 +745,13 @@ proc(
           token .LITERAL_RAW_STRING true
         end literalStart state parseStringConstant =:: stringConst
         types.primitive.I_SIZE
-          stringConst .str ?? if
-            stringConst .str .length
-          else stringConst .str32 ?? _if
-            stringConst .str32 .length
-          else stringConst .str16 ?? _if
-            stringConst .str16 .length
-          else ..unreachable end ConstValue .int
+          stringConst .String ?? if
+            stringConst .String .length
+          else stringConst .String32 ?? _if
+            stringConst .String32 .length
+          else stringConst .String16 ?? _if
+            stringConst .String16 .length
+          else ..unreachable end ConstValue .Int
           IdentifierInfo optional.empty
         fileState [] .wordStart Constant new state pushConst
         fileState nextToken =:: literalType
@@ -1276,7 +1280,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         procType
         IdentifierType .PROCEDURE
         -1 ## id
-        ConstValue .none
+        ConstValue .None
         true ## isInit
         fileState [] .wordStart
         state [] .currentFile
@@ -1291,14 +1295,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ##   but before early return due to error
       procType experimental state openProcBlock
       progContext [] .tmpOps .length =:: codeStart
-      procConst .procedure ?? if
+      procConst .Procedure ?? if
         codeStart progContext [] .procedures
-          procConst .procedure i64 cast list.at .data
+          procConst .Procedure i64 cast list.at .data
         .implementation .code .codeStart =
-        procConst .procedure
+        procConst .Procedure
       else
         procName procType state [] .currentFile codeStart progContext newProcData
-          $ ConstValue .procedure procName idContext id.getIdentifier
+          $ ConstValue .Procedure procName idContext id.getIdentifier
               ! assert "procName is identifier"
           [] .constValue =
       end optional.wrap state [] .currentProc =
@@ -1335,7 +1339,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             argType
             IdentifierType .ARGUMENT
             index i32 cast
-            ConstValue .none
+            ConstValue .None
             true
             fileState [] .wordStart
             state [] .currentFile
@@ -1391,7 +1395,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           Type .undefined
           IdentifierType .PROCEDURE_BUNDLE
           -1
-          bundleId ConstValue .procedureBundle
+          bundleId ConstValue .ProcedureBundle
           true
           fileState [] .wordStart
           state [] .currentFile
@@ -1416,7 +1420,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         ## XXX? warn for incompatible flags
         ## XXX? warn if overloads in different name-spaces are merged
-        idData [] .constValue .procedureBundle
+        idData [] .constValue .ProcedureBundle
       end =:: bundleId
       progContext [] .procBundles bundleId i64 cast list.at .data =:: bundleData
       while fileState state nextWord =:: procName
@@ -1442,7 +1446,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           return
         end
         bundleData [] .procedures
-          idData [] .constValue .procedure list.append
+          idData [] .constValue .Procedure list.append
         bundleData [] .procedures =
       end
       return
@@ -1722,7 +1726,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         valType
         idType
         -1 ## id
-        ConstValue .none
+        ConstValue .None
         isInit
         fileState [] .wordStart
         state [] .currentFile
@@ -1745,7 +1749,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         fileState [] .wordStart newTypeConst .val
       else isInit ! _if
-        ConstValue .none
+        ConstValue .None
       else state hasConst _if
         state peekConst .data =:: info .data =:: value
           info [] .valueType valType false typeContext types.canCast ! if
@@ -1757,7 +1761,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           end
         value []
       else
-        ConstValue .none
+        ConstValue .None
       end
         label idContext id.getIdentifier
         ! assert "label is identifier"
@@ -1770,9 +1774,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       idData .idType .PROCEDURE ?? if
         idData .constValue =:: procData
-        procData .procedure ?? ! if
+        procData .Procedure ?? ! if
           label valType state [] .currentFile -1:i64 progContext newProcData
-            ConstValue .procedure
+            ConstValue .Procedure
           label idContext id.getIdentifier
             ! assert "procName is identifier"
           [] .constValue =
@@ -1784,7 +1788,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         label idContext id.getIdentifier
           ! assert "label is identifier"
-        [] .constValue .none ?? ! and valType .undefined ?? ! if
+        [] .constValue .None ?? ! and valType .undefined ?? ! if
           ## don't create global operation if declaration already is complete
           state popConst ..drop.2
           return
@@ -1812,7 +1816,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         value .data []
       else
         progContext newAutoType
-        ConstValue .none
+        ConstValue .None
       end =:: constValue =:: constType
       constType typeContext types.isProcedure if
         "unexpected procedure" sb.wrap fileState [] .wordStart errors appendError
@@ -1829,7 +1833,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         constType
         idType
         -1 ## id
-        ConstValue .none
+        ConstValue .None
         true
         fileState [] .wordStart
         state [] .currentFile
@@ -1840,7 +1844,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: idData labelId =
       ## create constant value after creating declaration
       idType .TYPE ?? if
-        constValue .typeId =:: typeConst
+        constValue .TypeId =:: typeConst
         state popConst ..drop.2
         typeConst typeContext types.isProcedure if
           "declaration of a procedure type as constant\n use '=>:' to declare procedures\n" sb.wrap
@@ -1854,7 +1858,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         types.initializeNamedType if
           "re-initialization of named type" sb.wrap
           fileState [] .wordStart errors appendError
-        end ConstValue .typeId
+        end ConstValue .TypeId
       else
         constValue
       end
@@ -1865,7 +1869,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       state [] .currentProc optional.isEmpty and
-          constValue .none ?? ! and constType .undefined ?? ! if
+          constValue .None ?? ! and constType .undefined ?? ! if
         ## don't create global operation if declaration already is complete
         state popConst ..drop.2
         return
@@ -1922,7 +1926,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       checkExists and prevOp [] .val .getId ?? if
         ## identifier for getId always exists
         ## opConst
-          true ConstValue .boolean
+          true ConstValue .Bool
           types.primitive.BOOL
           fileState [] .wordStart
         opConst prevOp [] =
@@ -2126,7 +2130,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end .STRING .value =:: message
       ## opAssert
-        message labelContext id.wrapStringConstant
+        message constContext newStringConst .String
         fileState [] .wordStart
       opAssert state appendOp
       return
@@ -2152,7 +2156,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ErrorType .ERROR
       end =:: errorType
       ## opAssert
-        message labelContext id.wrapStringConstant
+        message constContext newStringConst .String
         errorType
         fileState [] .wordStart
       opError state appendOp
@@ -2161,28 +2165,28 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       "..compiler.flag." ..length string.tail =:: flagName
       ## XXX? treat compiler constants as variables, allow ??? operator to check if constant exists
       flagName "experimental" string.wrap string.eq if
-        _EXPERIMENTAL_ ConstValue .boolean
+        _EXPERIMENTAL_ ConstValue .Bool
         types.primitive.BOOL
       else flagName "foldConstants" string.wrap string.eq _if
-        _FOLD_CONSTANTS_ ConstValue .boolean
+        _FOLD_CONSTANTS_ ConstValue .Bool
         types.primitive.BOOL
       else flagName "noCore" string.wrap string.eq _if
-        _INCLUDE_CORE_ ! ConstValue .boolean
+        _INCLUDE_CORE_ ! ConstValue .Bool
         types.primitive.BOOL
       else flagName "wError" string.wrap string.eq _if
-        _W_ERROR_ ConstValue .boolean
+        _W_ERROR_ ConstValue .Bool
         types.primitive.BOOL
       else flagName "incrementVersionNumber" string.wrap string.eq _if
-        _INCREMENT_VERSION_ ConstValue .boolean
+        _INCREMENT_VERSION_ ConstValue .Bool
         types.primitive.BOOL
       else
-        ConstValue .none
+        ConstValue .None
         Type .empty
       end
       fileState [] .wordStart opConst state appendOp
       return
     else $ "..compiler.version" string.wrap string.eq _if ..drop
-      _VERSION_ ConstValue .int
+      _VERSION_ ConstValue .Int
       types.primitive.I64
       fileState [] .wordStart opConst state appendOp
       return
@@ -2202,7 +2206,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       string.empty return
     else $ "..file" string.wrap string.eq _if ..drop
       fileState [] .wordStart .fileName =:: name
-      name labelContext id.wrapStringConstant ConstValue .str
+      name constContext newStringConst
       types.primitive.CHAR8
         types.ArrayType .POINTER
         name .length types.ArraySizeType .int types.ArraySize new =:: size
@@ -2213,7 +2217,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState [] .wordStart opConst state appendOp
       return
     else $ "..line" string.wrap string.eq _if ..drop
-      fileState [] .wordStart .line ConstValue .int
+      fileState [] .wordStart .line ConstValue .Int
       types.primitive.I64
       fileState [] .wordStart opConst state appendOp
       return
@@ -2289,9 +2293,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             idData id.asIdInfo labelContext sb.appendIdInfo
             " ( " sb.appendS
             idData [] .valueType typeContext sb.appendType
-            idData [] .constValue .none ?? ! if
+            idData [] .constValue .None ?? ! if
               " [ " sb.appendS
-              idData [] .constValue constContext typeContext sb.appendConstant
+              idData [] .constValue typeContext sb.appendConstant
               " ]" sb.appendS
             end
             " ) declared at " sb.appendS
@@ -2329,7 +2333,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         $ [] .labelId labelContext id.labelFlags =:: flags
         flags id.FLAG_AUTO & ? and flags id.FLAG_STATIC & ? ! if
       ## opConst
-        $ [] .labelId ConstValue .genericArg
+        $ [] .labelId ConstValue .GenericArg
         ..swap [] .valueType
         fileState [] .wordStart
       opConst state appendOp

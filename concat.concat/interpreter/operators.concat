@@ -3,63 +3,36 @@ import "builtIns.concat"
 
 namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: constAsBool
+    ConstValue ..length 20 == assert "no new constants"
     a switch
-      boolean case a .boolean false return
-      none chr int Float enumLabel str str16 str32 arrayConstant typeId wildCard genericArg
-        procedure procedureBundle union case false true return
+      Bool case a .Bool false return
+      default false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: constAsInt ## all integer calculations are done in 64 bits
+    ConstValue ..length 20 == assert "no new constants"
     a switch
-      chr case a .chr i64 cast.u false return
-      int case a .int i64 cast false return
-      none boolean enumLabel str str16 str32 arrayConstant typeId wildCard genericArg
-        Float procedure procedureBundle union case 0:i64 true return
+      Char case a .Char i64 cast.u false return
+      Int case a .Int i64 cast false return
+      default 0:i64 true return
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsFloat
+    ConstValue ..length 20 == assert "no new constants"
     a switch
-      chr case a .chr i32 cast.u f64 cast false return
-      int case a .int f64 cast false return
+      Char case a .Char i32 cast.u f64 cast false return
+      Int case a .Int f64 cast false return
       Float case a .Float f64 cast false return
-      none boolean enumLabel str str16 str32 arrayConstant typeId wildCard genericArg procedure
-        procedureBundle union case 0 f64 cast true return
-    end
-  end
-  ## backwards compatability
-  proc( ConstValue : a -> f32 bool ) =>: constAsF32
-    a switch
-      chr case a .chr i32 cast.u f32 cast false return
-      int case a .int f32 cast false return
-      Float case a .Float f32 cast false return
-      none boolean enumLabel str str16 str32 arrayConstant typeId wildCard genericArg procedure
-        procedureBundle union case 0 f32 cast true return
-    end
-  end
-  proc( ConstValue : a -> f64 bool ) =>: constAsF64
-    a switch
-      chr case a .chr i32 cast.u f64 cast false return
-      int case a .int f64 cast false return
-      Float case a .Float f64 cast false return
-      none boolean enumLabel str str16 str32 arrayConstant typeId wildCard genericArg procedure
-        procedureBundle union case 0 f64 cast true return
-    end
-  end
-  proc( ConstValue : a -> i64 bool ) =>: constAsEnumLabel
-    a switch
-      enumLabel case a .enumLabel false return
-      none boolean chr int Float str str16 str32 arrayConstant typeId wildCard genericArg procedure
-        procedureBundle union case 0 true return
+      default 0 f64 cast true return
     end
   end
   proc( ConstValue : a -> Type bool ) =>: constAsType
+    ConstValue ..length 20 == assert "no new constants"
     a switch
-      typeId case a .typeId false return
-      none boolean chr int enumLabel Float str str16 str32 arrayConstant  wildCard genericArg procedure
-        procedureBundle union case Type .undefined true return
+      TypeId case a .TypeId false return
+      default Type .undefined true return
     end
   end
-
 
   enum( success argumentError unimplemented ) =:: export: OperatorResult
   proc(
@@ -67,27 +40,27 @@ namespace: interpreter
     i32 : k
     ( bool -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorBool
-    k 1 != if ConstValue .none OperatorResult .argumentError return end
+    k 1 != if ConstValue .None OperatorResult .argumentError return end
     args 0 [] constAsBool if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end =:: a
-    a op () ConstValue .boolean OperatorResult .success return
+    a op () ConstValue .Bool OperatorResult .success return
   end
   proc(
     ConstValue _ ptr : args
     i32 : k
     type : T
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
-    k 1 != if ConstValue .none OperatorResult .argumentError return end
+    k 1 != if ConstValue .None OperatorResult .argumentError return end
     args 0 [] =:: a
+    ConstValue ..length 20 == assert "no new constants"
     a switch
-      boolean case a OperatorResult .success return
-      chr case a .chr i8 cast ? ConstValue .boolean OperatorResult .success return
-      int case a .int T cast ? ConstValue .boolean OperatorResult .success return
-      Float case a .Float T cast ? ConstValue .boolean OperatorResult .success return
-      none enumLabel str str16 str32 arrayConstant typeId wildCard genericArg
-          procedure procedureBundle union case
-        ConstValue .none OperatorResult .argumentError return
+      Bool case a OperatorResult .success return
+      Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .success return
+      Int case a .Int T cast ? ConstValue .Bool OperatorResult .success return
+      Float case a .Float T cast ? ConstValue .Bool OperatorResult .success return
+      default
+        ConstValue .None OperatorResult .argumentError return
     end
   end
   proc(
@@ -96,11 +69,11 @@ namespace: interpreter
     i32 : k
     ( T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorInt
-    k 1 != if ConstValue .none OperatorResult .argumentError return end
+    k 1 != if ConstValue .None OperatorResult .argumentError return end
     args 0 [] constAsInt if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: n
-    n op () i64 cast ConstValue .int OperatorResult .success return
+    n op () i64 cast ConstValue .Int OperatorResult .success return
   end
   proc(
     type : auto: T
@@ -108,9 +81,9 @@ namespace: interpreter
     i32 : k
     ( T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorFloat
-    k 1 != if ConstValue .none OperatorResult .argumentError return end
+    k 1 != if ConstValue .None OperatorResult .argumentError return end
     args 0 [] constAsFloat if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: n
     n op () f64 cast ConstValue .Float OperatorResult .success return
   end
@@ -120,14 +93,14 @@ namespace: interpreter
     i32 : k
     ( bool bool -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorBool
-    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .argumentError return end
     args 0 [] constAsBool  if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end =:: a
     args 1 [] constAsBool  if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end =:: b
-    a b op () ConstValue .boolean OperatorResult .success return
+    a b op () ConstValue .Bool OperatorResult .success return
   end
 
   proc(
@@ -136,14 +109,14 @@ namespace: interpreter
     i32 : k
     ( T T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorInt
-    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .argumentError return end
     args 0 [] constAsInt if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: n
     args 1 [] constAsInt if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: m
-    n m op () i64 cast ConstValue .int OperatorResult .success return
+    n m op () i64 cast ConstValue .Int OperatorResult .success return
   end
   proc(
     type : auto: T
@@ -151,12 +124,12 @@ namespace: interpreter
     i32 : k
     ( T T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorFloat
-    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .argumentError return end
     args 0 [] constAsFloat if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: x
     args 1 [] constAsFloat if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: y
     x y op () f64 cast ConstValue .Float OperatorResult .success return
   end
@@ -166,14 +139,14 @@ namespace: interpreter
     i32 : k
     ( T T -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: cmpOperatorInt
-    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .argumentError return end
     args 0 [] constAsInt if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: n
     args 1 [] constAsInt if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: m
-    n m op () ConstValue .boolean OperatorResult .success return
+    n m op () ConstValue .Bool OperatorResult .success return
   end
   proc(
     type : auto: T
@@ -181,14 +154,14 @@ namespace: interpreter
     i32 : k
     ( T T -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: cmpOperatorFloat
-    k 2 != if ConstValue .none  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .argumentError return end
     args 0 [] constAsFloat if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: x
     args 1 [] constAsFloat if ..drop
-      ConstValue .none OperatorResult .argumentError return
+      ConstValue .None OperatorResult .argumentError return
     end T cast =:: y
-    x y op () ConstValue .boolean OperatorResult .success return
+    x y op () ConstValue .Bool OperatorResult .success return
   end
 
   ## XXX? do I need differnet handling for i64i32 operations
@@ -197,7 +170,6 @@ namespace: interpreter
     ConstValue _ ptr : args
     i32 : k
     FilePosition : pos
-    LabelContext ptr : labelContext
     CompilerError list ptr.mut : errors
   -> ConstValue OperatorResult ) =>: export: evaluateBuiltIn
     builtIn switch
@@ -306,14 +278,14 @@ namespace: interpreter
         k 2 == assert "correct number of arguments"
         args 0 [] =:: argument
         args 1 [] =:: argLength
-        argument .str ?? assert "argument is string"
-        argLength .int ?? assert "length is int"
-        argument .str .length argLength .int < if
+        argument .String ?? assert "argument is string"
+        argLength .Int ?? assert "length is int"
+        argument .String .length argLength .Int < if
           "length exceeds size of memory section" sb.wrap
           pos errors appendError
         end
-        argument .str labelContext id.scAsStr
-          argLength .int string.head
+        argument .String
+          argLength .Int string.head
         =:: chars
         chars 0 number.tryParseInt =:: parserError =:: parsed
         false =:: mut: overflow
@@ -356,19 +328,19 @@ namespace: interpreter
             pos errors appendWarning
           end
         end
-        parsed ConstValue .int OperatorResult .success return
+        parsed ConstValue .Int OperatorResult .success return
       PARSE_F32 PARSE_F64 case
         k 2 == assert "correct number of arguments"
         args 0 [] =:: argument
         args 1 [] =:: argLength
-        argument .str ?? assert "argument is string"
-        argLength .int ?? assert "length is int"
-        argument .str .length argLength .int < if
+        argument .String ?? assert "argument is string"
+        argLength .Int ?? assert "length is int"
+        argument .String .length argLength .Int < if
           "length exceeds size of memory section" sb.wrap
           pos errors appendError
         end
-        argument .str labelContext id.scAsStr
-          argLength .int string.head
+        argument .String
+          argLength .Int string.head
         =:: chars
         chars 0 number.tryParseFloat =:: parserError =:: parsed
         parserError switch
@@ -382,7 +354,7 @@ namespace: interpreter
         end
         parsed ConstValue .Float OperatorResult .success return
     end
-    ConstValue .none  OperatorResult .unimplemented return
+    ConstValue .None  OperatorResult .unimplemented return
   end
 
   proc(
@@ -430,10 +402,10 @@ namespace: interpreter
       end
     end
     valType typeContext types.isPointer if
-      a .str ?? b .str ?? & if
+      a .String ?? b .String ?? & if
         ## a and b are the same string constant
-        a .str .offset b .str .offset ==
-        a .str .length b .str .length == &
+        a .String .data b .String .data ==
+        a .String .length b .String .length == &
         false return
       end
       a constAsInt if ..drop false true return end =:: x

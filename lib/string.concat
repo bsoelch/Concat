@@ -16,6 +16,12 @@ namespace: string
   proc( i64 : auto: k  char8 k ptr : str -> string ) =>: export: wrap
     str k create return
   end
+  proc( i8 arrayView : arr -> string ) =>: export: fromArray
+    arr .data char8 _ ptr cast arr .length create
+  end
+  proc( string : str -> i8 arrayView ) =>: export: toArray
+    str .data i8 _ ptr cast str .length array.create
+  end
 
   proc( string : a string : b -> i32 ) =>: export: compare
     a .length b .length < if a .length else b .length end =:: l
@@ -134,10 +140,58 @@ namespace: string
   end
 end
 
-## XXX? implement procedure for string16, string32
+## XXX? implement procedures for string16, string32
 namespace: string16
   { utf16"" : data 0 : length } string16 =: export: empty
+
+  proc( char16 _ ptr  i64 -> string16 ) =>: export: create
+    string16 new return
+  end
+  proc( i16 arrayView : arr -> string16 ) =>: export: fromArray
+    arr .data char16 _ ptr cast arr .length create
+  end
+  proc( string16 : str -> i16 arrayView ) =>: export: toArray
+    str .data i16 _ ptr cast str .length array.create
+  end
+
+  proc( string16 : str i32 : index -> char16 ) =>: export: get_32
+    str char16 arrayView cast index array.get return
+  end
+  proc( string16 : str i64 : index -> char16 ) =>: export: get_64
+    str char16 arrayView cast index array.get return
+  end
+  overload: export: get
+    get_32
+    get_64
+  end
+  proc( string16 : a string16 : b -> bool ) =>: export: eq
+    a toArray b toArray array.eq return
+  end
 end
 namespace: string32
   { utf32"" : data 0 : length } string32 =: export: empty
+
+  proc( char32 _ ptr  i64 -> string32 ) =>: export: create
+    string32 new return
+  end
+  proc( i32 arrayView : arr -> string32 ) =>: export: fromArray
+    arr .data char32 _ ptr cast arr .length create
+  end
+  proc( string32 : str -> i32 arrayView ) =>: export: toArray
+    str .data i32 _ ptr cast str .length array.create
+  end
+
+  proc( string32 : str i32 : index -> char32 ) =>: export: get_32
+    str char32 arrayView cast index array.get return
+  end
+  proc( string32 : str i64 : index -> char32 ) =>: export: get_64
+    str char32 arrayView cast index array.get return
+  end
+  overload: export: get
+    get_32
+    get_64
+  end
+  proc( string32 : a string32 : b -> bool ) =>: export: eq
+    a toArray b toArray array.eq return
+  end
 end
