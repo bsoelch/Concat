@@ -1584,7 +1584,7 @@ namespace: types
     end
     overload: export: get get_32 get_64 end
   end
-  0 Type ptr.mut cast! 0 0 Type list new =:: mut: emptyTypeBuffer ## XXX find better way to initialize empty list
+  Type list.empty =:: mut: emptyTypeBuffer
   proc( Type : composite TypeContext ptr : context -> Type arrayView ) =>: export: compositeEltArray
     composite context compositeData =:: compData?
     compData? optional.isEmpty if

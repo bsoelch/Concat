@@ -487,7 +487,7 @@ struct(
   StackElement BranchTree : mut: stackInfo
   BlockInfo list : mut: openBlocks
   LocalConst list : mut: localConstants
-  StringConstant list : mut: stringConstants
+  string list : mut: stringConstants
   ssa.BranchLabel : mut: currentBranch
   Type : mut: currentProc
   i64 : mut: localConstCount
@@ -2153,7 +2153,7 @@ proc( io.FILE : target ProgramContext ptr.mut : prog -> ) =>: export: compileToS
     StackElement branchTree.create
     32 BlockInfo list.create
     32 LocalConst list.create
-    32 StringConstant list.create
+    32 string list.create
     ssa.BranchType .START 0 0 ssa.BranchLabel new
     Type .undefined
     0

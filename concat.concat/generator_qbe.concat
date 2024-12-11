@@ -568,7 +568,7 @@ namespace: sb
       end
       label labelContext id.getLabelNamespace =:: mut: mNamespace
       while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do
-        mNamespace labelContext id.namespaceName labelContext sb.appendAsciifiedStringConst
+        mNamespace labelContext id.namespaceName sb.appendAsciified
         "." string.wrap sb.appendAsciified
         mNamespace labelContext id.parentNamespace mNamespace =
       end ## XXX? reverse order
@@ -848,7 +848,7 @@ namespace: sb
       constant [] .valType
       constant [] .value
         $ .String ?? if
-          .String string.toArray ConstValue .Array8
+          .String string.bytes ConstValue .Array8
         else $ .String16 ?? _if
           .String16 string16.toArray ConstValue .Array16
         else $ .String32 ?? _if
@@ -5124,7 +5124,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         FILE_NAME_NAME sb.appendS
         i sb.appendI
         " = {" sb.appendS
-          f [] .fileName sb.asStr string.toArray 'b' true sb.appendPrimitiveArrayConstQBE
+          f [] .fileName sb.asStr string.bytes 'b' true sb.appendPrimitiveArrayConstQBE
         "} \n" sb.appendS
         0:i64 while ..dup f [] .localOps .length < do
           ..swap
@@ -5143,7 +5143,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       STRING_CONST_NAME sb.appendS
       i sb.appendI
       " = {" sb.appendS
-        str string.toArray 'b' true sb.appendPrimitiveArrayConstQBE
+        str string.bytes 'b' true sb.appendPrimitiveArrayConstQBE
       "} ## \"" sb.appendS
       str sb.appendEscapedStr
       "\"\n" sb.appendS
