@@ -40,37 +40,37 @@ namespace: number
     -1 return
   end
   proc( string -> string i32 ) =>: export: resolveBase
-    ..dup .length 2 < if
+    $ .length 2 < if
       10 return
     end
-    ..dup 0 string.charAt '0' == if
-      ..dup 1 string.charAt switch
-        'b' 'B' case
-          2 string.tail 2 return
-        'o' 'O' case
-          2 string.tail 8 return
-        'x' 'X' case
-          2 string.tail 16 return
+    $ 0 string.charAt '0' == if
+      $ 1 string.charAt =:: intType
+      intType 'x' == or intType 'X' == if
+        2 string.tail 16 return
+      else intType 'b' == or intType 'B' == _if
+        2 string.tail 2 return
+      else intType 'o' == or intType 'O' == _if
+        2 string.tail 8 return
+      ## XXX? error on non-digit inputs?
       end
     end
     ## arbitrary base numbers <BASE>b<NUMBER>
-    ..dup 1 string.charAt 'b' ==
-        ..over 1 string.charAt 'B' ==  | if
-      ..dup 0 string.charAt '0' - i32 cast.u =:: mut: b
+    $ 1 string.charAt 'b' == or $ 1 string.charAt 'B' == if
+      $ 0 string.charAt '0' - i32 cast.u =:: mut: b
       b 0 < or b 9 > if
         2 string.tail -1 return ## invalid base
       end
       2 string.tail b return
     end
-    ..dup .length 3 > if ..dup 2 string.charAt 'b' == if ## two digits before b
-      ..dup 0 string.charAt '0' - i32 cast.u =:: mut: b1
-      ..dup 1 string.charAt '0' - i32 cast.u =:: mut: b2
+    $ .length 3 > and $ 2 string.charAt 'b' == if ## two digits before b
+      $ 0 string.charAt '0' - i32 cast.u =:: mut: b1
+      $ 1 string.charAt '0' - i32 cast.u =:: mut: b2
       b1 0 < or b1 9 > or b2 0 < or b2 9 > if
         3 string.tail -1 return ## invalid base
       end
       b1 10 * b2 + =:: b
       3 string.tail b return
-    end end
+    end
     10 return
   end
   enum( NONE INT SIGN INVALID_BASE EMPTY INVALID_CHAR UNSIGNED OVERFLOW ) =:: export: ParserError
