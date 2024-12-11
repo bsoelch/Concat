@@ -278,7 +278,9 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena0
   -> T ArenaAllocator ) =>: export: free
+    ## free allocated memory
     arena0 0 reset =:: mut: arena
+    ## free internal list
     arena .slices list.free arena .slices =
     arena return
   end
