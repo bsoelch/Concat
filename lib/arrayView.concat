@@ -32,7 +32,7 @@ namespace: array
     elts index i64 cast.u get_64
   end
   proc( type : auto: T T arrayView : elts i64 : index -> T ) =>: export: get_64
-    index 0 < index elts .length >= | if
+    index 0 < or index elts .length >= if
       ## TODO error handling
       ..unreachable
     end
