@@ -1906,8 +1906,8 @@ proc(
               ## TODO? implementations for built-in generics
             end
             ## ProcedureImpl
-              procId
               implId
+              procId
             ProcedureImpl new
               OpValue .procPtr
             op .val =
@@ -4010,8 +4010,8 @@ proc(
       procStart [] .val .initializeId ?? |
       assert "procedure starts with correct operation"
   ## ProcedureImpl
-    procId
     implId
+    procId
   ProcedureImpl new OpValue .implementProcedure procStart [] .val =
   implId 0 >= if ## update procedure type
     codeImpl [] .implementations
@@ -4039,6 +4039,7 @@ proc(
     =:: currentImpl
     procFile [] .localOps .length currentImpl [] .codeStart =
     state [] .compiledOps .length currentImpl [] .codeLength =
+    ProcCodeState .TYPE_CHECKED currentImpl [] .codeState =
   end
   procFile [] .localOps
     state [] .compiledOps list.appendAll

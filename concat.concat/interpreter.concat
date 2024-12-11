@@ -197,11 +197,20 @@ proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBloc
   false return
 end
 
-proc( BlockType : blockType InterpreterContext ptr.mut : context -> ) =>: openBlock
+proc(
+  BlockType : blockType
+  bool : truncateStack
+  InterpreterContext ptr.mut : context
+-> ) =>: openBlock
+  truncateStack if
+    context [] .stack .length
+  else
+    context minStackOffset
+  end =:: stackOffset
   context [] .openBlocks
     ## BlockInfo
       blockType
-      context [] .stack .length ## XXX add possibility to inherit offset from outer block
+      stackOffset
       context [] .typeBuffer .length
       context [] .valueBuffer .length
       context [] .labelBuffer .length
@@ -944,7 +953,7 @@ namespace: interpreter
     idContext [] .constContext @ =:: constContext
     idContext [] .typeContext @ =:: typeContext
     typeContext [] .labelContext @ =:: labelContext
-    generatorProc autoArgs pos context evaluateCall if
+    generatorProc -1:i64 autoArgs pos context evaluateCall if
       "could not initialize type-generator " sb.wrap
         generatorName labelContext sb.appendLabelName
       pos errors appendError
@@ -1242,7 +1251,7 @@ proc(
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
         INITIALIZER case
-          op [] .val .block .blockType context openBlock
+          op [] .val .block .blockType true context openBlock
           false return
         PROCEDURE EXPERIMENTAL_PROCEDURE NAMESPACE case
           context [] .evalType switch
@@ -1262,7 +1271,7 @@ proc(
           skipBlock if
             context andOrCondition
           else op [] .pos context popCondition _if ..drop
-            context [] .evalType .GLOBAL ?? and context inTypeOrInitializer ! if
+            context [] .evalType .FOLD_LOCAL ?? and context inTypeOrInitializer ! if
               true return
             end
             "missing condition for if-statement: " sb.wrap
@@ -1273,6 +1282,7 @@ proc(
           context closeAndOrBlock
           val
             if BlockType .IF_TRUE else BlockType .IF_FALSE end
+            false
           context openBlock
           false return
         ELSE case
@@ -1304,19 +1314,21 @@ proc(
             BlockType .ELSE_FALSE
           else
             BlockType .ELSE
-          end context openBlock
+          end false context openBlock
           false return
-        AND OR case
-          ## XXX allow if-folding within local type-blocks
+        AND OR AND_IF OR_IF case
+          ## TODO? distinguish global (unspecified) AND/OR from local and/or
           context [] .evalType switch
             INTERPRET GLOBAL case break
             FOLD_LOCAL case true return
           end
           skipBlock if
             context inAndOrBlock if false return end
-            op [] .val .block .blockType .OR ??
+            op [] .val .block .blockType .OR ?? or
+              op [] .val .block .blockType .OR_IF ??
+            end
           else op [] .pos context popCondition _if ..drop
-            context [] .evalType .GLOBAL ?? and context inTypeOrInitializer ! if
+            context [] .evalType .FOLD_LOCAL ?? and context inTypeOrInitializer ! if
               true return
             end
             "missing condition for if-statement: " sb.wrap
@@ -1326,18 +1338,20 @@ proc(
           end =:: val
           context closeAndOrBlock
           val
-            op [] .val .block .blockType .AND ?? if
+            op [] .val .block .blockType .AND ?? or
+                op [] .val .block .blockType .AND_IF ?? if
               if BlockType .AND_TRUE else BlockType .AND_FALSE end
             else
               if BlockType .OR_TRUE else BlockType .OR_FALSE end
             end
+            false
           context openBlock
           false return
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         FINALLY WHILE DO BREAK CONTINUE
         SWITCH BREAK_SWITCH CASE DEFAULT
-        AND_IF OR_IF AND_DO OR_DO
+        AND_DO OR_DO
         UNKNOWN case
           context [] .evalType switch
             INTERPRET GLOBAL case break
@@ -1669,9 +1683,8 @@ proc(
             code case break
           end
           calledProc .autoArgs =:: autoArgs
-          ## TODO? allow evaluation of non-static procedures in global mode
-          calledProcData [] .isStatic ! and context [] .evalType .INTERPRET ?? ! if
-            true return ## only evaluate static procedures in interpreter
+          context [] .evalType .FOLD_LOCAL ?? and calledProcData [] .isStatic ! if
+            true return ## don't evalaute non-static procedures in fold-local mode
           end
           ## static procedure -> no call resolving necessary
           op [] .dataType typeContext types.getProcOut ..drop =:: procOut
@@ -1726,7 +1739,7 @@ proc(
             pushValue
             false return
           end
-          procId autoArgs op [] .pos context evaluateCall return
+          procId -1:i64 autoArgs op [] .pos context evaluateCall return
         LOCAL_VAR ARGUMENT LABEL case
           context [] .variables @ label map.get =:: value?
           value? optional.isEmpty if
@@ -1752,6 +1765,11 @@ proc(
             true return ## unknown identifier
           end =:: idData
           idData [] .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+            context [] .evalType .FOLD_LOCAL ?? ! if
+              "mutable variables are not supported: " sb.wrap
+                label labelContext sb.appendLabelName
+              op [] .pos errors appendError
+            end
             ## compile-time evaluation of mutable global variables not supported
             true return
           end
@@ -1774,24 +1792,21 @@ proc(
           false return
         TMP_VAR ITR_VAR case
           context [] .evalType switch
-            INTERPRET case
-              "unsupported operation in constant evaluation: " sb.wrap
-                op [] program sb.appendOp
-              op [] .pos errors appendError
-              break
-            FOLD_LOCAL GLOBAL case break
+            INTERPRET GLOBAL case break
+            FOLD_LOCAL case true return
           end
+          "unsupported operation in constant evaluation: " sb.wrap
+            op [] program sb.appendOp
+          op [] .pos errors appendError
           true return
       end
       break
     call case
       op [] .val .call@ =:: callInfo
-      callInfo [] .implementationId 0 >= if
-        "interpreting generic procedures is not supported" sb.wrap
-        op [] .pos errors appendError
-        true return
-      end
-      callInfo [] .procId callInfo [] .autoArgs op [] .pos context evaluateCall return
+      callInfo [] .procId
+        callInfo [] .implementationId
+        callInfo [] .autoArgs
+      op [] .pos context evaluateCall return
     initializeId autoTypedInitializeId case
       context [] .evalType switch
         INTERPRET GLOBAL case break
@@ -2025,7 +2040,8 @@ proc(
           true return
         end poppedType = valInfo =
         poppedType typeContext types.containsGeneric if
-          ## creating tuple not possible, reset stack
+          "creating generic tuples is not supported" sb.wrap
+          op [] .pos errors appendError
           ## unpopValue
             poppedType ConstValue .TypeId
             valInfo
@@ -2039,6 +2055,11 @@ proc(
       end =:: targetType
       targetType typeContext types.isArray if
         ## TODO support constant evaluation of new array
+        context [] .evalType .FOLD_LOCAL ?? ! if
+          "unsupported operation in constant evaluation: " sb.wrap
+            op [] program sb.appendOp
+          op [] .pos errors appendError
+        end
       else targetType typeContext types.isTuple _if
         ## separate if block to avoid printing general error message on failure
         targetType op [] .pos context newTuple ! if
@@ -2066,6 +2087,8 @@ proc(
         end poppedType = valInfo =
         true isPoppedType =
         poppedType typeContext types.containsGeneric if
+          "generic casts are not supported" sb.wrap
+          op [] .pos errors appendError
           ## casting to genetic value not possible, reset stack
           ## unpopValue
             poppedType ConstValue .TypeId
@@ -2194,6 +2217,11 @@ proc(
         op [] .pos
         program
       interpreter.sizeOfValue if ..drop.2
+        context [] .evalType .FOLD_LOCAL ?? ! if
+          "could not compute size: " sb.wrap
+            op [] program sb.appendOp
+          op [] .pos errors appendError
+        end
         value valInfo context unpopValue
         true return
       end =:: constVal =:: constType
@@ -2215,6 +2243,8 @@ proc(
         end poppedType = valInfo =
         true poppedValue =
         poppedType typeContext types.containsGeneric if
+          "generic types are not supported" sb.wrap
+          op [] .pos errors appendError
           ## computing size not possible, reset stack
           ## unpopValue
             poppedType ConstValue .TypeId
@@ -2231,6 +2261,11 @@ proc(
           targetType
           op [] .val .typeInfo
         program computeTypeInfo if ..drop
+          context [] .evalType .FOLD_LOCAL ?? ! if
+            "could not compute size of type" sb.wrap
+              targetType typeContext sb.appendType
+            op [] .pos errors appendError
+          end
           ## computing size not possible, reset stack
           poppedValue if
             ## unpopValue
@@ -2543,10 +2578,7 @@ proc(
   ValueInfo 3 array new =:: mut: valInfoData
   valInfoData @ =:: valInfos
   0:i64 =:: mut: nArgs
-  context [] .evalType switch
-    INTERPRET GLOBAL case true break
-    FOLD_LOCAL case false break
-  end =:: showErrors
+  context [] .evalType .FOLD_LOCAL ?? ! =:: showErrors
   inTypes .length 1 - while ..dup 0 >= do =:: i
     nArgs 3 < assert "built-ins have at most three arguments"
     inTypes i types.compositeElts.get =:: eltType
@@ -2695,6 +2727,7 @@ end
 #+evaluate procedure body with the given arguments+#
 proc(
   ProcId : procId
+  i64 : implId
   ConstValue arrayView : autoArgs
   FilePosition : pos
   InterpreterContext ptr.mut : context
@@ -2731,7 +2764,7 @@ proc(
   end
   context [] .stack .length =:: stackOffset
   context [] .openBlocks .length =:: prevBlocks
-  BlockType .PROCEDURE context openBlock
+  BlockType .PROCEDURE true context openBlock
   0:i64 =:: mut: autoArgOffset
   argsOffset =:: mut: argOffset
   ## process procedure arguments
@@ -2790,24 +2823,48 @@ proc(
   finally
     i 1 +
   end ..drop
-  procData [] .implementation .code .codeState switch
-    PARSING case
-      "procedure " sb.wrap
-        procData [] .labelId labelContext sb.appendLabelName
-        " has not finished parsing" sb.appendS
-      pos errors appendInfo
-      Operation list.empty break
-    PARSED case
-      program [] .tmpOps break
-    TYPE_CHECKED case
-      program [] .progFiles
-        procData [] .fileId i64 cast
-      list.at .data [] .localOps
-      break
-  end
-    procData [] .implementation .code .codeStart
-    procData [] .implementation .code .codeLength
-  list.slice =:: code
+  procData [] .implementation .code@ =:: codeImpl
+  implId 0 >= if
+    program [] .progFiles
+      procData [] .fileId i64 cast
+    list.at .data [] .localOps
+      codeImpl [] .implementations
+        implId list.at .data
+      =:: currentImpl
+      currentImpl .codeState .TYPE_CHECKED ?? ! if
+        ## FIXME ensure implementation exists
+        "no implementaion for procedure " sb.wrap
+          procData [] .labelId labelContext sb.appendLabelName
+        pos errors appendError
+      end
+      currentImpl [] .codeStart
+      currentImpl [] .codeLength
+    list.slice
+  else
+    ## TODO? ensure compilation of non-static procedures
+    codeImpl [] .codeState switch
+      PARSING case
+        "procedure " sb.wrap
+          procData [] .labelId labelContext sb.appendLabelName
+          " has not finished parsing" sb.appendS
+        pos errors appendInfo
+        Operation array.empty break
+      PARSED case
+        program [] .tmpOps
+          codeImpl [] .codeStart
+          codeImpl [] .codeLength
+        list.slice
+        break
+      TYPE_CHECKED case
+        program [] .progFiles
+          procData [] .fileId i64 cast
+        list.at .data [] .localOps
+            codeImpl [] .codeStart
+            codeImpl [] .codeLength
+        list.slice
+        break
+    end
+  end =:: code
   code .length 0 == if
     "no operations in procedure " sb.wrap
       procData [] .labelId labelContext sb.appendLabelName
@@ -2833,10 +2890,16 @@ proc(
   end
   context [] .currentFile =:: oldFile
   procData [] .fileId context [] .currentFile =
-  context [] .evalType .FOLD_LOCAL ?? =:: isLocalFold
-  isLocalFold if ## change intrepreter type when evaluating call
-    InterpreterType .INTERPRET context [] .evalType =
-  end
+  context [] .evalType =:: prevType
+  prevType .FOLD_LOCAL ?? =:: isLocalFold
+  ## change intrepreter type when evaluating call
+  procData [] .labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
+    implId -1 == assert "static procedure has implId -1"
+    ## XXX? seperate interpreter type code in static procedure?
+    InterpreterType .GLOBAL
+  else
+    InterpreterType .INTERPRET
+  end context [] .evalType =
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
@@ -2845,14 +2908,10 @@ proc(
     context [] .openBlocks
       prevBlocks list.setLength
     context [] .openBlocks =
-    isLocalFold if
-      InterpreterType .FOLD_LOCAL context [] .evalType =
-    end
+    prevType context [] .evalType =
     true return
   end
-  isLocalFold if
-    InterpreterType .FOLD_LOCAL context [] .evalType =
-  end
+  prevType context [] .evalType =
   oldFile context [] .currentFile =
   context [] .stack .length stackOffset - =:: nReturn
   ## mem.copy

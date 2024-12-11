@@ -341,8 +341,8 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       ## opImplementProc
         currentProc [] .procType
         ## ProcedureImpl
-          procId ProcId cast
           -1
+          procId ProcId cast
         ProcedureImpl new
         pos
       opImplementProc list.append

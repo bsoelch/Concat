@@ -1150,6 +1150,7 @@ proc(
           pos
           -1
           -1
+          ProcCodeState .PARSING
         ProcImplementation new list.append
       impls [] =
     end

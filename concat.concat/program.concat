@@ -24,6 +24,7 @@ struct(
   LabelId : label
 ) =:: export: VariableInfo
 
+enum( PARSING PARSED TYPE_CHECKED ) =:: export: ProcCodeState
 struct(
   Type : procType
   ConstValue arrayView : staticArgs
@@ -31,8 +32,8 @@ struct(
   FilePosition : firstUse
   i64 : mut: codeStart
   i64 : mut: codeLength
+  ProcCodeState : mut: codeState
 ) =:: export: ProcImplementation
-enum( PARSING PARSED TYPE_CHECKED ) =:: export: ProcCodeState
 struct(
   ProcImplementation list : mut: implementations
   VariableInfo list : mut: variables ## for single implementation in no-generic case
@@ -62,8 +63,8 @@ struct(
   ConstValue arrayView : autoArgs
 ) =:: export: ProcedureCallInfo
 struct(
-  ProcId : procId
   i64 : implementationId
+  ProcId : procId
 ) =:: export: ProcedureImpl
 struct(
   string : message
