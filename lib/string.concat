@@ -16,10 +16,16 @@ namespace: string
   proc( i64 : auto: k  char8 k ptr : str -> string ) =>: export: wrap
     str k create return
   end
-  proc( i8 arrayView : arr -> string ) =>: export: fromArray
+  proc( char8 arrayView -> string ) =>: export: fromChars
+    string cast
+  end
+  proc( string -> char8 arrayView ) =>: export: chars
+    char8 arrayView cast
+  end
+  proc( i8 arrayView : arr -> string ) =>: export: fromBytes
     arr .data char8 _ ptr cast arr .length create
   end
-  proc( string : str -> i8 arrayView ) =>: export: toArray
+  proc( string : str -> i8 arrayView ) =>: export: bytes
     str .data i8 _ ptr cast str .length array.create
   end
 
@@ -147,6 +153,7 @@ namespace: string16
   proc( char16 _ ptr  i64 -> string16 ) =>: export: create
     string16 new return
   end
+  ## TODO casts string16 <-> char16 arrayView
   proc( i16 arrayView : arr -> string16 ) =>: export: fromArray
     arr .data char16 _ ptr cast arr .length create
   end
@@ -174,6 +181,7 @@ namespace: string32
   proc( char32 _ ptr  i64 -> string32 ) =>: export: create
     string32 new return
   end
+  ## TODO casts string32 <-> char32 arrayView
   proc( i32 arrayView : arr -> string32 ) =>: export: fromArray
     arr .data char32 _ ptr cast arr .length create
   end

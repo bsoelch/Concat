@@ -95,7 +95,7 @@ proc( i8 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: 
   elts context constArray8 ConstValue .Array8 return
 end
 proc( string : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStringConst
-  elts string.toArray context constArray8 string.fromArray ConstValue .String return
+  elts string.bytes context constArray8 string.fromBytes ConstValue .String return
 end
 proc( i16 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray16Const
   elts context constArray16 ConstValue .Array16 return
