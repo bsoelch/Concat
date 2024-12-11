@@ -8,6 +8,9 @@ namespace: sb
   proc( i64 : cap -> stringBuilder ) =>: export: create
     cap char8 list.create stringBuilder cast return
   end
+  proc( char8 _ ptr.mut : buffer i32 : buffSize -> stringBuilder ) =>: export: fromBuffer
+    buffer buffSize list.fromBuffer stringBuilder cast  return
+  end
   proc( stringBuilder -> stringBuilder ) =>: export: clear
     char8 list cast list.clear stringBuilder cast return
   end
