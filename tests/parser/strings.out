@@ -1,6 +1,6 @@
 -----------------
 identifier "str2":
- - global variable "str2" ( char8 8 ptr [ string: "A string" ] ) declared at strings.concat:3:16
+ - global variable "str2" ( char8 8 ptr [ "A string" ] ) declared at strings.concat:3:16
 -----------------
 6
 17

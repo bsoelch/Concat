@@ -1,8 +1,8 @@
 stack:
 -----------------
-empty: named[2]( "string" ) { { string: "" integer: 0 } } pushed at tupleInitializers.concat:20:3
+empty: named[2]( "string" ) { { "" 0 } } pushed at tupleInitializers.concat:20:3
 -----------------
 stack:
 -----------------
-? arrayView pushed at tupleInitializers.concat:21:7
+i32 arrayView pushed at tupleInitializers.concat:21:7
 -----------------

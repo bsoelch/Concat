@@ -2995,9 +2995,9 @@ namespace: sb
         staticArg case
           ' ' sb.appendC
           size .value LabelId cast labelContext appendLabelName
-          "[generic " sb.appendS
+          "[ " sb.appendS
           size .value sb.appendI
-          "]" sb.appendS
+          ":LabelId ]" sb.appendS
           break
       end
     return
@@ -3124,15 +3124,18 @@ namespace: sb
         t .genericType =:: labelId
         sb
           labelId labelContext appendLabelName
-          "[generic " appendS
+          "[ " appendS
           labelId  i64 cast appendI
-          "]"  appendS
+          ":LabelId ]"  appendS
         return
       generatedType case
         t .generatedType i64 cast
         context [] .generatedTypes ..swap list.at .data =:: typeData
         sb
-          "? " appendS ## TODO append arguments
+          typeData [] .arguments .length for =:: i
+            typeData [] .arguments i array.get context sb.appendConstant
+            ' ' sb.appendC
+          end
           typeData [] .generator labelContext sb.appendLabelName
           depth 0 > if
             " [ "     appendS

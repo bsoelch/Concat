@@ -1,6 +1,6 @@
 -----------------
 identifier "selfPtr":
- - type "selfPtr" ( type [ Type: named[11]( "selfPtr" ) ] ) declared at selfPtr.concat:2:8
+ - type "selfPtr" ( type [ named[11]( "selfPtr" ) ] ) declared at selfPtr.concat:2:8
 -----------------
 types:
 -----------------

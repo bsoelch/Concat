@@ -17,12 +17,13 @@ struct( ConstValue ptr : value i64 : eltIndex ) =:: export: UnionConstant
 union(
   _ : None
   bool : Bool
-  char8 : Char ## XXX? rename chr -> Char , int -> Int for consistency
+  char8 : Char
   i64 : Int
   f64 : Float
   string   : String
   string16 : String16
   string32 : String32
+  ## XXX? float arrays
   i8  arrayView : Array8
   i16 arrayView : Array16
   i32 arrayView : Array32
@@ -251,7 +252,7 @@ namespace: sb
     ConstValue : val
     TypeContext ptr : typeContext
   -> stringBuilder ) =>: export: appendConstant
-    typeContext [] .labelContext @ =:: labelContext
+    typeContext [] .labelContext@ =:: labelContext
     sb
       val switch
         None case
@@ -261,28 +262,25 @@ namespace: sb
           "_"  sb.appendS
           break
         Bool case
-          "bool: " sb.appendS
           val .Bool if "true" sb.appendS else "false" sb.appendS end
           break
         Int case
-          "integer: " sb.appendS
           val .Int    sb.appendI
           break
         Float case
-          "float: "  sb.appendS
           val .Float sb.appendF
           break
         String case
-          "string: \"" sb.appendS
+         '\"'  sb.appendC
           val .String  sb.appendEscapedStr
-                 '\"'  sb.appendC
+         '\"'  sb.appendC
           break
         String16 case
           val .String16 =:: str
-          "string16: \"" sb.appendS
+          "utf16\""  sb.appendS
             0:i64 while $ str .length < do =:: i
               str i string16.get i64 cast.u =:: c
-              c 0x20 < or c 0x7f >= if ## XXX? allow some characters outside ascii
+              c 0x20 < or c 0x7f >= if
                 "\\u" sb.appendS
                 c 0x1000   ..u< if '0' sb.appendC end
                 c 0x100    ..u< if '0' sb.appendC end
@@ -297,14 +295,14 @@ namespace: sb
           break
         String32 case
           val .String32 =:: str
-          "string32: \"" sb.appendS
+          "utf32\""  sb.appendS
             0:i64 while $ str .length < do =:: i
               str i string32.get i64 cast.u =:: cp
               cp 0 < if
                 "\\x" sb.appendS
                 cp -0x10 > if '0' sb.appendC end
                 cp -_ sb.appendX
-              else cp 0x20 < or cp 0x7f >= _if ## XXX? allow some characters outside ascii
+              else cp 0x20 < or cp 0x7f >= _if
                 "\\U00" sb.appendS
                 cp 0x100000 ..u< if '0' sb.appendC end
                 cp 0x10000  ..u< if '0' sb.appendC end
@@ -320,20 +318,19 @@ namespace: sb
          '\"'  sb.appendC
           break
         Char case
-          "char: \'" sb.appendS
+          '\''  sb.appendC
           val .Char   sb.appendEscapedChr
-               '\''  sb.appendC
+          '\''  sb.appendC
           break
         TypeId case
-          "Type: "     sb.appendS
           val .TypeId typeContext sb.appendType
           break
         EnumLabel case
           "enum label: (" sb.appendS
-          val .EnumLabel  sb.appendI
-                   ')'    sb.appendC
+            val .EnumLabel  sb.appendI
+          ')'    sb.appendC
           break
-        Array case
+        Array case ## XXX? labeled array?
           val .Array =:: mArray
           "{ " sb.appendS
           0:i64 while ..dup mArray .length < do =:: i
@@ -348,7 +345,7 @@ namespace: sb
           "{ " sb.appendS
           0:i64 while ..dup mArray .length < do =:: i
             mArray i array.get i64 cast.s appendI
-            ' ' sb.appendC
+            ":i8 " sb.appendS
             i 1 +
           end ..drop
           "}" sb.appendS
@@ -358,7 +355,7 @@ namespace: sb
           "{ " sb.appendS
           0:i64 while ..dup mArray .length < do =:: i
             mArray i array.get i64 cast.s appendI
-            ' ' sb.appendC
+            ":i16 " sb.appendS
             i 1 +
           end ..drop
           "}" sb.appendS
@@ -368,7 +365,7 @@ namespace: sb
           "{ " sb.appendS
           0:i64 while ..dup mArray .length < do =:: i
             mArray i array.get i64 cast.s appendI
-            ' ' sb.appendC
+            ":i32 " sb.appendS
             i 1 +
           end ..drop
           "}" sb.appendS
@@ -378,22 +375,22 @@ namespace: sb
           "{ " sb.appendS
           0:i64 while ..dup mArray .length < do =:: i
             mArray i array.get appendI
-            ' ' sb.appendC
+            ":i64 " sb.appendS
             i 1 +
           end ..drop
           "}" sb.appendS
           break
         Procedure case
-          "procedure: "  sb.appendS
           val .Procedure i64 cast sb.appendI
+          ":ProcId"  sb.appendS
           break
         ProcedureBundle case
-          "procedure bundle: "  sb.appendS
           val .ProcedureBundle i64 cast sb.appendI
+          ":ProcBundleId"  sb.appendS
           break
         GenericArg case
-          "generic argument: "  sb.appendS
           val .GenericArg i64 cast sb.appendI
+          ":LabelId"  sb.appendS
           ## XXX? print label
           break
         Union case

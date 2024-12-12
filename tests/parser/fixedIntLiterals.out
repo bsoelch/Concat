@@ -1,32 +1,32 @@
 -----------------
 identifier "a":
- - global variable "a" ( i64 [ integer: 10000000000000000 ] ) declared at fixedIntLiterals.concat:1:28
+ - global variable "a" ( i64 [ 10000000000000000 ] ) declared at fixedIntLiterals.concat:1:28
 -----------------
 -----------------
 identifier "b":
- - global variable "b" ( i64 [ integer: -1 ] ) declared at fixedIntLiterals.concat:2:31
+ - global variable "b" ( i64 [ -1 ] ) declared at fixedIntLiterals.concat:2:31
 -----------------
 -----------------
 identifier "c":
- - global variable "c" ( i32 [ integer: 10000000000000000 ] ) declared at fixedIntLiterals.concat:3:32
+ - global variable "c" ( i32 [ 10000000000000000 ] ) declared at fixedIntLiterals.concat:3:32
 -----------------
 -----------------
 identifier "d":
- - global variable "d" ( i32 [ integer: 4294967295 ] ) declared at fixedIntLiterals.concat:4:21
+ - global variable "d" ( i32 [ 4294967295 ] ) declared at fixedIntLiterals.concat:4:21
 -----------------
 -----------------
 identifier "e":
- - global variable "e" ( i32 [ integer: -1 ] ) declared at fixedIntLiterals.concat:5:8
+ - global variable "e" ( i32 [ -1 ] ) declared at fixedIntLiterals.concat:5:8
 -----------------
 -----------------
 identifier "f":
- - global variable "f" ( i16 [ integer: 1234 ] ) declared at fixedIntLiterals.concat:6:14
+ - global variable "f" ( i16 [ 1234 ] ) declared at fixedIntLiterals.concat:6:14
 -----------------
 -----------------
 identifier "g":
- - global variable "g" ( named[2]( "char" ) [ integer: -2 ] ) declared at fixedIntLiterals.concat:9:13
+ - global variable "g" ( named[2]( "char" ) [ -2 ] ) declared at fixedIntLiterals.concat:9:13
 -----------------
 -----------------
 identifier "h":
- - global variable "h" ( named[3]( "byte" ) [ integer: 3 ] ) declared at fixedIntLiterals.concat:10:12
+ - global variable "h" ( named[3]( "byte" ) [ 3 ] ) declared at fixedIntLiterals.concat:10:12
 -----------------
