@@ -380,14 +380,14 @@ proc(
         false return
       end
       target typeContext types.getArraySize 0 array.get =:: index
-      index .sizeType .int ?? ! if
+      index .int ?? ! if
         true return
       end
-      src .value .Int 0 < src .value .Int index .value >= | if
+      src .value .Int 0 < src .value .Int index .int >= | if
         "array index outside allowed range: " sb.wrap
         src .value .Int sb.appendI
         " size: " sb.appendS
-        index .value sb.appendI
+        index .int sb.appendI
         pos errors appendError
       end
     end

@@ -430,7 +430,7 @@ namespace: types
         tupleInfo .compositeInfo .eltCount [] =:: eltCount
         initInfo .arrayType .undefined ?? ! if
           initInfo [] .arrayType context literalToType =:: baseType
-          eltCount ArraySizeType .int ArraySize new =:: size
+          eltCount ArraySize .int =:: size
           ## newArrayType
             baseType
             ArrayType .ARRAY
@@ -886,8 +886,8 @@ namespace: types
         baseSize .fixed =:: mut: size
         0:i64 while ..dup dims .length < do =:: i
           dims i array.get =:: dim
-          dim .sizeType .int ?? if
-            size dim .value * size =
+          dim .int ?? if
+            size dim .int * size =
           else
             baseSize .fixed TypeSize .dynamicArray return
           end
@@ -920,10 +920,15 @@ namespace: types
   end
 
   ## array & pointer types
-  ## TODO? merge size and sizeType ?
-  enum( int staticArg ) =:: export: ArraySizeType ## XXX rename staticArg to autoArg
-  struct( i64 : value ArraySizeType : sizeType ) =:: export: ArraySize
-  struct( Type : base i64 : sizeOffset i64 : dims bool : fixedSize bool : mut: ptrOnly bool : mutable ) =:: ArrayData
+  union( i64 : int LabelId : genericArg ) =:: export: ArraySize
+  struct(
+    Type : base
+    i64 : sizeOffset
+    i64 : dims
+    bool : fixedSize ## XXX? seperate internal type for rawPointer
+    bool : mut: ptrOnly
+    bool : mutable ## XXX? use enum for mutability
+  ) =:: ArrayData
 
   proc( Type TypeContext ptr -> bool ) =>: export: isPointer
     unwrapNamed .pointer ?? return
@@ -1139,19 +1144,26 @@ namespace: types
     ## XXX ? allow marking named pointer types as mutable
     true return
   end
-  proc( ArraySize arrayView : a ArraySize arrayView : b -> bool ) =>: arraySizeEqual
+  proc( ArraySize : a ArraySize : b -> bool ) =>: arraySizeEqual
+    a ..label b ..label != if
+      false return
+    end
+    a switch
+      int case a .int b .int == return
+      genericArg case a .genericArg b .genericArg == return
+    end
+  end
+  proc( ArraySize arrayView : a ArraySize arrayView : b -> bool ) =>: arraySizesEqual
     a .length b .length != if
       false return
     end
-    0:i64 while ..dup a .length < do
-      a ..over array.get .sizeType b ..over.2 array.get .sizeType != if
-        ..drop false return
+    0:i64 while $ a .length < do =:: i
+      a i array.get
+        b i array.get
+      arraySizeEqual ! if
+        false return
       end
-      a ..over array.get .value b ..over.2 array.get .value != if
-        ..drop false return
-      end
-      1 +
-    end ..drop
+    finally i 1 + end ..drop
     true return
   end
   enum( POINTER ARRAY ) =:: export: ArrayType
@@ -1212,7 +1224,7 @@ namespace: types
         ..dup .base base typeEquals ! if ..drop
           1 + continue
         end
-        context [] .arraySizes ..over .sizeOffset ..over.2 .dims list.slice sizes arraySizeEqual ! if ..drop
+        context [] .arraySizes ..over .sizeOffset ..over.2 .dims list.slice sizes arraySizesEqual ! if ..drop
           1 + continue
         end
       .ptrOnly
@@ -1250,7 +1262,7 @@ namespace: types
     context [] .tupleTypes
       initInfo [] .asTuple i64 cast list.at .data =:: tupleInfo
     tupleInfo .compositeInfo .eltCount [] =:: eltCount
-    eltCount ArraySizeType .int ArraySize new =:: size
+    eltCount ArraySize .int =:: size
     ## newArrayType
       initInfo [] .arrayType
       arrayType
@@ -2462,24 +2474,28 @@ namespace: types
         context [] .arrayTypes
           t ..dup .pointer ?? if .pointer else .arrayType end i64 cast
         list.get =:: arrayType
-        arrayType .base context containsGeneric =:: mut: isStatic
-        0:i64 while ..dup arrayType .dims < do
+        arrayType .base context containsGeneric if
+          true return
+        end
+        0:i64 while $ arrayType .dims < do =:: i
           context [] .arraySizes
-             arrayType .sizeOffset ..over.2 +
-          list.get .sizeType .staticArg ?? if
-            true isStatic =
+             arrayType .sizeOffset i +
+          list.get .genericArg ?? if
+            true return
           end
-          1 +
-        end ..drop
-        isStatic return
+        finally i 1 + end ..drop
+        false return
       struct enum union procIn procOut initializer case
         t context compositeData .data [] .flags COMP_FLAG_STATIC_ARGS & ? return
       generatedType case
         false return ## TODO check if type contains generic
       procedure case
-        context [] .procTypes t .procedure i64 cast list.get
-          ..dup .in context containsGeneric =:: isStatic
-          .out context containsGeneric isStatic | return
+        context [] .procTypes
+          t .procedure i64 cast
+        list.get =:: proc
+        proc .in context containsGeneric or
+          proc .out context containsGeneric
+        end return
       namedType case
         t context unwrapNamed context containsGeneric return
       genericType case
@@ -2533,33 +2549,33 @@ namespace: types
     srcSize .length targetSize .length < if srcSize .length else targetSize .length end =:: commonPart
     1 i64 =: mut: srcTotal
     1 i64 =: mut: targetTotal
-    0:i64 while ..dup commonPart < do
-      srcSize ..over array.get .sizeType targetSize ..over.2 array.get .sizeType != if ..drop
-        false return
-      end
+    0:i64 while $ commonPart < do =:: i
+      srcSize i array.get =:: srcSizeElt
+      targetSize i array.get =:: targetSizeElt
       reshape if
-        srcSize ..over array.get .sizeType .int ?? if
-          srcTotal srcSize ..over.2 array.get .value * srcTotal =
-          targetTotal targetSize ..over.2 array.get .value * targetTotal =
-        else srcTotal targetTotal != _if ..drop
+        srcSizeElt ..label targetSizeElt ..label != if
           false return
         end
-        1 + continue
+        srcSizeElt .int ?? if
+          srcTotal srcSizeElt .int * srcTotal =
+          targetTotal targetSizeElt .int * targetTotal =
+        else srcTotal targetTotal != _if
+          false return
+        end
+        continue
       end
-      srcSize ..over array.get .value targetSize ..over.2 array.get .value != if ..drop
+      srcSizeElt targetSizeElt arraySizeEqual ! if
         false return
       end
-      1 +
-    end ..drop
+    finally i 1 + end ..drop
     reshape if ## TODO look at remaining sizes
       srcTotal targetTotal == return
     end
-    srcSize .length while ..dup targetSize .length < do
-      targetSize ..over array.get .sizeType .int ?? ! targetSize ..over.2 array.get .value 1 != | if ..drop
+    srcSize .length while $ targetSize .length < do =:: i
+      targetSize i array.get .int ?? ! or targetSize i array.get .int 1 != if
         false return
       end
-      1 +
-    end ..drop
+    finally i 1 + end ..drop
     true return
   end
 
@@ -2681,7 +2697,7 @@ namespace: types
         src context compositeEltCount =:: srcSize
         targetBase context getArraySize =:: targetSizes
         targetSizes $ .length 1 - array.get =:: outerSize
-        outerSize .sizeType .int ?? and outerSize .value srcSize == if
+        outerSize .int ?? and outerSize .int srcSize == if
           true return
       end
     end
@@ -2817,13 +2833,9 @@ namespace: types
       aSizes .length bSizes .length < if aSizes .length else bSizes .length end =:: s
       0:i64 =:: mut: commonPrefix
       while commonPrefix s < do
-        aSizes commonPrefix array.get =:: aElt
-        bSizes commonPrefix array.get =:: bElt
-        aElt .sizeType bElt .sizeType != if
-          false fixedSize =
-          break
-        end
-        aElt .value bElt .value != if
+        aSizes commonPrefix array.get
+          bSizes commonPrefix array.get
+        arraySizeEqual if
           false fixedSize =
           break
         end
@@ -2987,16 +2999,16 @@ namespace: sb
     LabelContext ptr : labelContext
   -> stringBuilder  ) =>: export: appendArraySize
     sb
-      size .sizeType switch
+      size switch
         int case
           ' ' sb.appendC
-          size .value sb.appendI
+          size .int sb.appendI
           break
-        staticArg case
+        genericArg case
           ' ' sb.appendC
-          size .value LabelId cast labelContext appendLabelName
+          size .genericArg labelContext appendLabelName
           "[ " sb.appendS
-          size .value sb.appendI
+          size .genericArg i64 cast.s sb.appendI
           ":LabelId ]" sb.appendS
           break
       end

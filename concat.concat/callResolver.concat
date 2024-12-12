@@ -39,25 +39,18 @@ struct(
 ) =:: CallSignatureInfo
 
 proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
-  size .sizeType switch
-    int case size .value ConstValue .Int return
-    staticArg case
-      size .value LabelId cast ConstValue .GenericArg return
+  size switch
+    int case size .int ConstValue .Int return
+    genericArg case size .genericArg ConstValue .GenericArg return
   end
 end
 proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
   ConstValue ..length 20 == assert "no new constants"
   val switch
     Int case
-      ## ArraySize
-        val .Int
-        types.ArraySizeType .int
-      types.ArraySize new return
+      val .Int types.ArraySize .int return
     GenericArg case
-      ## ArraySize
-        val .GenericArg i64 cast
-        types.ArraySizeType .staticArg
-      types.ArraySize new return
+      val .GenericArg types.ArraySize .genericArg return
     default ..unreachable
   end
 end
@@ -131,11 +124,11 @@ proc(
       0:i64 while ..dup sizes .length < do =:: i
         sizes i array.get =:: size
         idContext [] .arraySizeBuffer
-          size .sizeType switch
+          size switch
             int case
               size list.append break
-            staticArg case
-              size .value LabelId cast =:: genericId
+            genericArg case
+              size .genericArg =:: genericId
               genericId labelContext id.labelFlags id.FLAG_STATIC & ? ! if
                 replaceAutoArgs ! if
                   size list.append break
@@ -423,7 +416,7 @@ proc(
       src typeContext types.getArraySize =:: mut: srcSizes
       target typeContext types.getArraySize =:: mut: targetSizes
       ## treat 0D fixed arrays as 1D array of length 1
-      1:i64 types.ArraySizeType .int types.ArraySize new =:: one
+      1:i64 types.ArraySize .int =:: one
       srcFixed and srcSizes .length 0 == if
         one@ array.wrap srcSizes =
       end
@@ -442,16 +435,16 @@ proc(
       0:i64 while ..dup targetSizes .length < do =:: i
         matchedSizes i array.get =:: srcSize
         targetSizes i array.get =:: targetSize
-        targetSize .sizeType switch
+        targetSize switch
           int case
-            srcSize .sizeType .int ?? ! if
+            srcSize .int ?? ! if
               true return
-            else srcSize .value targetSize .value != _if
+            else srcSize .int targetSize .int != _if
               true return
             end
           break
-          staticArg case
-            targetSize .value LabelId cast =:: genericId
+          genericArg case
+            targetSize .genericArg =:: genericId
             srcSize sizeAsConst =:: newValue
             genericValues genericId map.at =:: oldValue?
             oldValue? optional.hasData if

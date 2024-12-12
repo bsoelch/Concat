@@ -855,18 +855,16 @@ namespace: interpreter
         sizes
           ..dup .length 1 -
         array.get =:: outerSize
-        outerSize .sizeType .int ?? if
+        outerSize .int ?? if
           ## return
             types.primitive.I_SIZE
-            outerSize .value ConstValue .Int
+            outerSize .int ConstValue .Int
             false
           return
-        else outerSize .sizeType .staticArg ?? _if
+        else outerSize .genericArg ?? _if
           ## return
             types.primitive.I_SIZE
-            outerSize .value
-              LabelId cast
-            ConstValue .GenericArg
+            outerSize .genericArg ConstValue .GenericArg
             false
           return
         else
@@ -880,10 +878,10 @@ namespace: interpreter
         0:i64 while ..dup sizes .length < do =:: i
           sizes i array.get =:: current
           idContext [] .argBuffer
-            current .sizeType .int ?? if
-              current .value ConstValue .Int list.append
-            else current .sizeType .staticArg ?? _if
-              current .value LabelId cast ConstValue .GenericArg list.append
+            current .int ?? if
+              current .int ConstValue .Int list.append
+            else current .genericArg ?? _if
+              current .genericArg ConstValue .GenericArg list.append
             else ..drop
               "unsupported array-size type: " sb.wrap
                 ## XXX? print array-size type name
@@ -893,10 +891,7 @@ namespace: interpreter
           idContext [] .argBuffer =
           i 1 +
         end ..drop
-        sizes .length
-          types.ArraySizeType .int
-          types.ArraySize new
-        =:: sizeLength
+        sizes .length types.ArraySize .int =:: sizeLength
         ## return
           ## newArrayType
             types.primitive.I_SIZE
@@ -1872,17 +1867,11 @@ proc(
           intArg .Int ?? if
             ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
-              ## ArraySize
-                intArg .Int
-                types.ArraySizeType .int
-              types.ArraySize new list.append
+              intArg .Int types.ArraySize .int list.append
             idContext [] .arraySizeBuffer =
           else intArg .GenericArg ?? _if
             idContext [] .arraySizeBuffer
-              ## ArraySize
-                intArg .GenericArg i64 cast
-                types.ArraySizeType .staticArg
-              types.ArraySize new list.append
+              intArg .GenericArg types.ArraySize .genericArg list.append
             idContext [] .arraySizeBuffer =
           else
             "unexpected constant for array size: " sb.wrap

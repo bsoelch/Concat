@@ -160,7 +160,7 @@ proc(
       "unsupported string literal type" sb.wrap pos errors appendError
       ConstValue .None 0 Type .undefined break
   end =:: charType =:: strLength =:: strValue
-  strLength ArraySizeType .int ArraySize new =:: size
+  strLength ArraySize .int =:: size
   ## Constant
     charType types.ArrayType .POINTER size @ 1 array.create true false context newArrayType ..drop
     strValue
@@ -2209,7 +2209,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       name constContext newStringConst
       types.primitive.CHAR8
         types.ArrayType .POINTER
-        name .length types.ArraySizeType .int types.ArraySize new =:: size
+        name .length types.ArraySize .int =:: size
         size@ 1 array.create
         true
         false

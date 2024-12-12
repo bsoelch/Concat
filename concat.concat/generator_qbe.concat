@@ -1256,10 +1256,10 @@ namespace: sb
       1:i64 =:: mut: S
       0:i64 while ..dup sizes .length < do =:: i
         sizes i array.get =:: size
-        size .sizeType .int ?? ! if
+        size .int ?? ! if
           sb return ## no declaration for var-size array
         end
-        S size .value * S =
+        S size .int * S =
         i 1 +
       end ..drop
       t typeContext types.getBaseType =:: baseType
@@ -2897,9 +2897,9 @@ proc(
       pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
       target typeContext types.getArraySize 0 array.get =:: size
       ## appendIndexCheck
-        size .sizeType switch
-          int case size .value IntValue .constant break
-          staticArg case size .value LabelId cast IntValue .autoArg break
+        size switch
+          int case size .int IntValue .constant break
+          genericArg case size .genericArg IntValue .autoArg break
         end
         targetId
         pos
@@ -3497,10 +3497,10 @@ proc(
           " =l mul %t" sb.appendS
           prevId sb.appendI
           ", " sb.appendS
-          size .sizeType switch
-            int case size .value sb.appendI break
-            staticArg case
-              size .value LabelId cast op [] .pos context appendGenericArg break
+          size switch
+            int case size .int sb.appendI break
+            genericArg case
+              size .genericArg op [] .pos context appendGenericArg break
           end
           '\n' sb.appendC
           argCount 0 > if
