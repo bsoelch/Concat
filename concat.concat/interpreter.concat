@@ -2087,8 +2087,10 @@ proc(
         end poppedType = valInfo =
         true isPoppedType =
         poppedType typeContext types.containsGeneric if
-          "generic casts are not supported" sb.wrap
-          op [] .pos errors appendError
+          context [] .evalType .FOLD_LOCAL ?? ! if
+            "generic casts are not supported" sb.wrap
+            op [] .pos errors appendError
+          end
           ## casting to genetic value not possible, reset stack
           ## unpopValue
             poppedType ConstValue .TypeId
