@@ -710,7 +710,7 @@ proc(
       break
     arrayIndex case
       ValueType .I64 return
-    pointer case
+    pointer rawPointer case
       ValueType .PTR return
     arrayType struct union enum initializer case
       t typeContext types.sizeOf =:: size

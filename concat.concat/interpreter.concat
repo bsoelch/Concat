@@ -898,7 +898,7 @@ namespace: interpreter
             types.ArrayType .ARRAY
             sizeLength @
             array.wrap
-            true false
+            false
           typeContext types.newArrayType ..drop
           ## newArrayConst
             ## array.create
@@ -1902,9 +1902,16 @@ proc(
         end
         ## newArrayType
           typeConstant .TypeId
-          isPtr if types.ArrayType .POINTER else types.ArrayType .ARRAY end
+          isPtr if
+            fixedSize if
+              types.ArrayType .POINTER
+            else
+              types.ArrayType .RAW_POINTER
+            end
+          else
+            types.ArrayType .ARRAY
+          end
           idContext [] .arraySizeBuffer list.asArray
-          fixedSize
           op [] .val .typeModifier .PTR_MUT ??
           typeContext
         types.newArrayType if ..drop

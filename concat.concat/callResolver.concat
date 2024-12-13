@@ -116,7 +116,7 @@ proc(
         src .mutableReference ??
         typeContext
       types.newReferenceType return
-    pointer arrayType case
+    pointer rawPointer arrayType case
       src typeContext types.getBaseType =:: base
       src typeContext types.getArraySize =:: sizes
       idContext [] .arraySizeBuffer .length =:: sizeOffset
@@ -156,11 +156,16 @@ proc(
           pos
           progContext
         replaceGenerics
-        src .pointer ?? if types.ArrayType .POINTER else types.ArrayType .ARRAY end
+        src .pointer ?? if
+          types.ArrayType .POINTER
+        else src .rawPointer ?? _if
+          types.ArrayType .RAW_POINTER
+        else
+          types.ArrayType .ARRAY
+        end
         idContext [] .arraySizeBuffer list.asArray
           sizeOffset
         array.tail
-        src typeContext types.isFixedSize
         src typeContext types.isMutable
         typeContext
       types.newArrayType
@@ -392,7 +397,7 @@ proc(
         genericValues
         progContext
       resolveGenerics return
-    pointer arrayType case
+    pointer arrayType rawPointer case
       src typeContext types.isPointer ! and
           src typeContext types.isArray ! if
         true return
@@ -477,7 +482,6 @@ proc(
           src typeContext types.getBaseType
           types.ArrayType .ARRAY
           newSrcSizes
-          srcFixed
           srcMutable
           typeContext
         types.newArrayType ! assert "can create array"

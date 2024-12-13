@@ -162,7 +162,7 @@ proc(
   end =:: charType =:: strLength =:: strValue
   strLength ArraySize .int =:: size
   ## Constant
-    charType types.ArrayType .POINTER size @ 1 array.create true false context newArrayType ..drop
+    charType types.ArrayType .POINTER size @ 1 array.create false context newArrayType ..drop
     strValue
     IdentifierInfo optional.empty
   pos Constant new return
@@ -2211,7 +2211,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         types.ArrayType .POINTER
         name .length types.ArraySize .int =:: size
         size@ 1 array.create
-        true
         false
       typeContext types.newArrayType ..drop
       fileState [] .wordStart opConst state appendOp

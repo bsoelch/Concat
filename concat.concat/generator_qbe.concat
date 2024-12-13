@@ -177,7 +177,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       context toValType return
     arrayIndex case
       ValType .I64 return
-    pointer case
+    pointer rawPointer case
       ValType .PTR return
     reference mutableReference procedure arrayType struct union enum initializer case
       ValType .REFERENCE return
@@ -665,7 +665,7 @@ namespace: sb
           end
         storeType pos context appendTypeNameQBE
         return
-      arrayIndex pointer reference mutableReference procedure case
+      arrayIndex pointer rawPointer reference mutableReference procedure case
         sb "l" sb.appendS return ## size or pointer
       arrayType case
         sb t "array" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return

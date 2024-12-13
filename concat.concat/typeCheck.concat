@@ -2480,7 +2480,6 @@ proc(
             #+baseType+#
             isAddr if types.ArrayType .POINTER else types.ArrayType .ARRAY end
             size freeDimensions array.head
-            true ## remaining dimensions always fixed size
             mutable
           typeContext types.newArrayType if
             "could not create array type" sb.wrap
@@ -2538,9 +2537,8 @@ proc(
       Type 2 array new =:: mut: typeData
       typeData @ =:: outTypes
       types.primitive.CHAR8
-        types.ArrayType .POINTER
+        types.ArrayType .RAW_POINTER
         types.ArraySize array.empty
-        false
         false
       typeContext types.newArrayType
         ! assert "successful array creation"

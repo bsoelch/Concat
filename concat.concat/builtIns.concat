@@ -107,9 +107,8 @@ proc(
   TypeContext ptr.mut : typeContext
 -> Type ) =>: wrapPtr
   base
-    types.ArrayType .POINTER
+    types.ArrayType .RAW_POINTER
     types.ArraySize array.empty
-    false
     mutable
     typeContext
   types.newArrayType
