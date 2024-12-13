@@ -1093,6 +1093,7 @@ namespace: interpreter
       end
     end
     ## TODO? special handling for int <-> pointer
+    ## TODO? convert primitive arrays to correct array type?
     oldValue return
   end
 end
@@ -2832,7 +2833,7 @@ proc(
       currentImpl [] .codeLength
     list.slice
   else
-    ## TODO? ensure compilation of non-static procedures
+    ## TODO? ensure compilation of (non-static) procedures
     codeImpl [] .codeState switch
       PARSING case
         "procedure " sb.wrap
@@ -2902,6 +2903,7 @@ proc(
     prevType context [] .evalType =
     true return
   end
+  ## FIXME static procedures don't cast their return value
   prevType context [] .evalType =
   oldFile context [] .currentFile =
   context [] .stack .length stackOffset - =:: nReturn
