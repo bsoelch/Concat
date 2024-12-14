@@ -48,6 +48,7 @@ struct(
 union(
   BuiltInData : mut: builtIn
   CodeProcData : mut: code
+  ProcId : alias
 ) =:: export: ProcImplType
 struct(
   FileId : fileId

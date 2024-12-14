@@ -452,6 +452,9 @@ proc(
       else ..dup "shaddow:" string.wrap string.eq _if
         id.FLAG_SHADDOW flags | flags =
         true isModifier =
+      else ..dup "alias:" string.wrap string.eq _if
+        id.FLAG_ALIAS flags | flags =
+        true isModifier =
       else ..dup ":" string.wrap string.endsWith _if
         true isModifier =
       end
@@ -984,6 +987,7 @@ proc(
   LabelId : procName
   Type : procType
   FileId : fileId
+  ProcId : aliasId
   i64 : codeStart
   ProgramContext ptr.mut : progContext
 -> ProcId ) =>: newProcData
@@ -1002,13 +1006,18 @@ proc(
       fileId
       procType
       procName
-      ## CodeProcData
-        0 ProcImplementation list.create
-        0 VariableInfo list.create
-        codeStart
-        -1
-        ProcCodeState .PARSING
-      CodeProcData new ProcImplType .code
+      aliasId -1:ProcId == if
+        ## CodeProcData
+          0 ProcImplementation list.create
+          0 VariableInfo list.create
+          codeStart
+          -1
+          ProcCodeState .PARSING
+        CodeProcData new ProcImplType .code
+      else
+        codeStart -1:i64 == assert "no code in proc alias"
+        aliasId ProcImplType .alias
+      end
       hasStaticArg
       isStatic
     ProcedureInfo new list.append
@@ -1260,8 +1269,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## TODO? ensure global stack is empty at start of procedure
       named if ## =>:
         fileState state nextWord fileState state readLabel
-        $ labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+        $ labelContext id.labelFlags =:: flags
+        flags id.FLAG_MUTABLE & ? if
           "procedures cannot be mutable" sb.wrap
+          fileState [] .wordStart errors appendError
+        else flags id.FLAG_ALIAS & ? _if
+          "procedure alias cannot have an implementation" sb.wrap
           fileState [] .wordStart errors appendError
         end
       else
@@ -1298,10 +1311,21 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       procConst .Procedure ?? if
         codeStart progContext [] .procedures
           procConst .Procedure i64 cast list.at .data
-        .implementation .code .codeStart =
+        =:: procData
+        procData .implementation [] .code ?? ! if
+          "unexpected implementation for " sb.wrap
+            procData [] .implementation switch
+              builtIn case " built-in procedure" sb.appendS break
+              alias case " procedure alias" sb.appendS break
+              code case ..unreachable
+            end
+          fileState [] .wordStart errors appendError
+          ..drop return
+        end
+        procData .implementation .code .codeStart =
         procConst .Procedure
       else
-        procName procType state [] .currentFile codeStart progContext newProcData
+        procName procType state [] .currentFile -1:ProcId codeStart progContext newProcData
           $ ConstValue .Procedure procName idContext id.getIdentifier
               ! assert "procName is identifier"
           [] .constValue =
@@ -1385,6 +1409,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "overload:" string.wrap string.eq _if =:: opName
       fileState state nextWord fileState state readLabel =:: mut: labelId
+      labelId labelContext id.labelFlags id.FLAG_ALIAS & ? if
+        "alias is only supported for procedure declarations" sb.wrap
+        fileState [] .wordStart errors appendError
+      end
       labelId state [] .currentFile idContext id.findIdentifierByLabel if ..drop
         progContext [] .procBundles
           ..dup .length ProcBundleId cast =:: bundleId
@@ -1715,13 +1743,23 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ## make pre-declared variables mutable by default
         isInit allowImmutableDeclaration | if id.FLAG_NONE else id.FLAG_MUTABLE end
       readLabelAddFlags =:: mut: label
-      forceImmutable and label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+      label labelContext id.labelFlags =:: labelFlags
+      labelFlags id.FLAG_ALIAS & ? =:: isAlias
+      forceImmutable and labelFlags id.FLAG_MUTABLE & ? if
         "identifiers of type " sb.wrap
           idType sb.appendIdType
          " cannot be mutable" sb.appendS
         fileState [] .wordStart errors appendError
+      else isAlias _if
+        isInit if
+          "alias cannot have an implementation" sb.wrap
+          fileState [] .wordStart errors appendError
+        else idType .PROCEDURE ?? ! _if
+          "alias is only supported for procedure declarations" sb.wrap
+          fileState [] .wordStart errors appendError
+        end
       end
-      label labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
+      labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       label
         valType
         idType
@@ -1773,9 +1811,43 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       idData .idType .PROCEDURE ?? if
+        isAlias if
+          fileState nextToken
+          $ .IDENTIFIER ?? if
+            .IDENTIFIER
+          else ..drop
+            "expected identifier" sb.wrap fileState [] .wordStart errors appendError
+            return
+          end =:: baseIdentifier
+          baseIdentifier state [] .currentFile idContext id.findIdentifierByName if ..drop
+            "cannot find identifer: " sb.wrap
+              baseIdentifier sb.appendStr
+            fileState [] .wordStart errors appendError
+            return
+          end =:: aliasData
+          aliasData .idType [] .PROCEDURE ?? ! if
+            "expected procedure name got: " sb.wrap
+              aliasData [] .idType sb.appendIdType
+            fileState [] .wordStart errors appendError
+          end
+          aliasData [] .constValue .Procedure ?? assert "procedures have const value"
+          aliasData [] .constValue .Procedure =:: aliasId
+          progContext [] .procedures aliasId i64 cast list.at .data =:: aliasProc
+          valType aliasProc [] .procType typeContext types.canAlias ! if
+            "incompatible signatures for procedure alias: " sb.wrap
+              valType typeContext sb.appendType
+              " cannot be renamed to " sb.appendS
+              aliasProc [] .procType typeContext sb.appendType
+            fileState [] .wordStart errors appendError
+          end
+          ## TODO? check for compatible flags (should alias static <-> non-static be allowed)
+          aliasId
+        else
+          -1:ProcId
+        end =:: aliasId
         idData .constValue =:: procData
         procData .Procedure ?? ! if
-          label valType state [] .currentFile -1:i64 progContext newProcData
+          label valType state [] .currentFile aliasId -1:i64 progContext newProcData
             ConstValue .Procedure
           label idContext id.getIdentifier
             ! assert "procName is identifier"
@@ -1807,6 +1879,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "=::" string.wrap string.eq _if ..drop
       fileState state nextWord fileState state readLabel =:: mut: labelId
+      labelId labelContext id.labelFlags id.FLAG_ALIAS & ? if
+        "alias is only supported for procedure declarations" sb.wrap
+        fileState [] .wordStart errors appendError
+      end
       state hasConst if
         state peekConst =:: info =:: value
         info .data [] .valueType

@@ -1784,6 +1784,7 @@ proc(
               end
               builtInId OpValue .builtIn op .val =
             break
+            alias case ..unreachable ## resolveCall unwraps alias
           end
           0 =:: mut: offset
           argCount 1 - while ..dup 0 >= do =:: i

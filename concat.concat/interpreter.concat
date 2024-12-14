@@ -1677,6 +1677,7 @@ proc(
                 calledProcData [] .implementation .builtIn .builtIn
               op [] .pos context tryEvaluateBuiltIn return
             code case break
+            alias case ..unreachable ## resolveCall unwraps alias
           end
           calledProc .autoArgs =:: autoArgs
           context [] .evalType .FOLD_LOCAL ?? and calledProcData [] .isStatic ! if

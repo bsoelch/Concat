@@ -2732,6 +2732,44 @@ namespace: types
     false return
   end
 
+  proc( Type : src0 Type : target0 TypeContext ptr.mut : context -> bool ) =>: export: canAlias
+    src0 context unwrapNamed =:: src
+    target0 context unwrapNamed =:: target
+    src target types.typeEquals if
+      true return ## same type-different names
+    end
+    ## procedure: compare call-convention, arguments and return-values
+    src .procedure ?? and target .procedure ?? if
+      ## canAlias
+        src context getCallConvention ..drop
+        target context getCallConvention ..drop
+      == and
+      ## canAlias
+        src context getProcIn ..drop
+        target context getProcIn ..drop
+      context canAlias and
+      ## canAlias
+        src context getProcOut ..drop
+        target context getProcOut ..drop
+      context canAlias end return
+    end
+    src .procIn ?? and target .procIn ?? end or
+        src .procOut ?? and target .procOut ?? if
+      src context compositeEltArray =:: srcElts
+      target context compositeEltArray =:: targetElts
+      srcElts .length targetElts .length != if
+        false return
+      end
+      srcElts .length for =:: i
+        srcElts i array.get targetElts i array.get context canAlias ! if
+          false return
+        end
+      end
+      true return
+    end
+    false return
+  end
+
   proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canAutoCast
     src target types.typeEquals if
       true return

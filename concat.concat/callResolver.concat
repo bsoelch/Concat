@@ -1086,6 +1086,12 @@ proc(
   progContext [] .procedures
     candidate [] .procId i64 cast list.at .data
   =:: procInfo
+  procInfo [] .implementation .alias ?? ! if
+    candidate [] .procId
+  else
+    ## XXX? nested alias
+    procInfo [] .implementation .alias
+  end =:: baseProcId
   procInfo [] .procType typeContext types.getProcIn ..drop =:: inType
   procInfo [] .procType typeContext types.getProcOut ..drop =:: outType
   inType typeContext types.compositeEltCount =:: eltCount
@@ -1103,8 +1109,12 @@ proc(
   eltCount Type list.create =:: mut: typeBuffer
   eltCount LabelId list.create =:: mut: labelBuffer
   constArgs .length 0 > and
-      procInfo [] .isStatic ! and ## don't create implementations for static procedures
-      procInfo [] .implementation@ =:: implData
+      progContext [] .procedures
+        baseProcId i64 cast list.at .data
+      =:: baseProcInfo
+      baseProcInfo [] .isStatic ! and ## don't create implementations for static procedures
+      baseProcInfo [] .implementation@ =:: implData
+      ## TODO support alias for generic procedures
       implData [] .code ?? if
     implData [] .code .implementations @ =:: impls
     false =:: mut: isMatch
@@ -1134,10 +1144,10 @@ proc(
         ..dup .length implId =
         ## ProcImplementation
           ## replaceGenerics
-            procInfo [] .procType
-            typeBuffer @
-            labelBuffer @
-            candidate [] .genericValues @
+            baseProcInfo [] .procType
+            typeBuffer@
+            labelBuffer@
+            candidate [] .genericValues@
             false
             pos
             progContext
@@ -1224,11 +1234,11 @@ proc(
     ! assert "can create procedure"
   =:: calledType
   ## ProcedureCallInfo
-    candidate [] .procId
+    baseProcId
     implId
     constArgs list.asArray constContext constArray
   ProcedureCallInfo new =:: result
   constArgs list.free constArgs =
-  currentSignatures @ cleanupSignatures
+  currentSignatures@ cleanupSignatures
   result optional.wrap calledType return
 end
