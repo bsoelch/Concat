@@ -1,0 +1,15 @@
+i32 =:: Label
+
+namespace: Label
+  proc( Label Label -> Label ) : alias: and  i32.and
+  proc( Label Label -> Label ) : alias: or   i32.or
+  proc( Label Label -> Label ) : alias: xor  i32.xor
+  proc( Label -> Label ) : alias: flip i32.flip
+  proc( Label -> bool ) : alias: toBool i32.toBool
+end
+
+proc( -> ) =>: main
+  1:Label 2:Label Label.or i32 cast 3 == assert "1|2==3"
+  1:Label Label.toBool assert "1 toBool"
+  0:Label Label.toBool ! assert "0 toBool !"
+end

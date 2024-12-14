@@ -32,17 +32,15 @@ namespace: id
 
   0x40000000:LabelFlag =:: export: FLAG_EXPERIMENTAL
 
-  proc( LabelFlag : a LabelFlag : b -> LabelFlag ) =>: export: flagAnd
-    a i32 cast b i32 cast i32.and LabelFlag cast
-  end
-  proc( LabelFlag : a LabelFlag : b -> LabelFlag ) =>: export: flagOr
-    a i32 cast b i32 cast i32.or LabelFlag cast
-  end
-  proc( LabelFlag -> bool ) =>: export: flagToBool
-    i32 cast i32.toBool
-  end
+  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagAnd i32.and
+  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagOr  i32.or
+  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagXor i32.xor
+  proc( LabelFlag -> LabelFlag ) : alias: flagFlip i32.flip
+  proc( LabelFlag -> bool ) : alias: flagToBool i32.toBool
   overload: &  flagAnd    end
   overload: |  flagOr     end
+  overload: ^  flagXor    end
+  overload: ~  flagFlip   end
   overload: ?  flagToBool end
 end
 

@@ -1297,16 +1297,16 @@ namespace: types
   128:CompositeFlags =:: TUPLE_FLAG_IS_PROC_IN
   256:CompositeFlags =:: TUPLE_FLAG_IS_PROC_OUT
   namespace: CompositeFlags
-    proc( CompositeFlags : a CompositeFlags : b -> CompositeFlags ) =>: and
-      a i32 cast b i32 cast i32.and CompositeFlags cast
-    end
-    proc( CompositeFlags : a CompositeFlags : b -> CompositeFlags ) =>: or
-      a i32 cast b i32 cast i32.or CompositeFlags cast
-    end
-    proc( CompositeFlags -> bool ) =>: toBool  i32 cast i32.toBool end
+    proc( CompositeFlags CompositeFlags -> CompositeFlags ) : alias: and i32.and
+    proc( CompositeFlags CompositeFlags -> CompositeFlags ) : alias: or  i32.or
+    proc( CompositeFlags CompositeFlags -> CompositeFlags ) : alias: xor i32.xor
+    proc( CompositeFlags -> CompositeFlags ) : alias: flip i32.flip
+    proc( CompositeFlags -> bool ) : alias: toBool i32.toBool
   end
   overload: & CompositeFlags.and    end
   overload: | CompositeFlags.or     end
+  overload: ^ CompositeFlags.xor    end
+  overload: ~ CompositeFlags.flip   end
   overload: ? CompositeFlags.toBool end
 
   struct(
