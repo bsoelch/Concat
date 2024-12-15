@@ -156,6 +156,20 @@ end
 struct( Type : valType ConstValue : value ) =:: TypedValue
 
 struct(
+  i64 : openBlocksOffset
+  i64 : compiledOpsOffset
+  i64 : opInfoOffset
+  i64 : childIdsOffset
+  i64 : initializationStackOffset
+  i64 : blockStart
+  branchTree.NodeId : branchRoot
+  i32 : blockCount
+  Type : currentProcType
+  FileId : currentFile
+  bool : interpreterActive
+  bool : reachable
+) =:: TypeCheckStateState
+struct(
   ProgramContext ptr.mut : program
   InterpreterContext : mut: interpreter
   LabelId TypedValue hashMap : mut: argData
@@ -170,12 +184,81 @@ struct(
   i64 list : mut: childIds
   FileId : mut: currentFile
   FilePosition list : mut: initializationStack
+  TypeCheckStateState list : mut: stateStack
   bool : mut: reachable
   ## TODO flags:
   ## * disable reorganizing of operations (excluding types)
   ## * is it allowed to optimize out reading from variables
   ## * is folding (non-type) constants allowed
 ) =:: TypeCheckState
+
+## TODO allow nested type-checking
+## TODO? remember value (?block) offset of interpreter in TypeCheckState &
+##   rewrite freeze/unfreezeInterperter to allow multiple nested interpreter instances
+proc( TypeCheckState ptr.mut : state -> bool ) =>: rememberState
+  ## XXX? flag to check if state is currently in use
+  ##   (auto-types are reset after type-checking (generic) procedure)
+  state [] .stateStack
+    ## TypeCheckStateState
+      state [] .openBlocks .length
+      state [] .compiledOps .length
+      state [] .opInfo .length
+      state [] .childIds .length
+      state [] .initializationStack .length
+      state [] .blockStart
+      state [] .stack@ -1:branchTree.NodeId branchTree.reset
+      state [] .blockCount
+      state [] .currentProcType
+      state [] .currentFile
+      state [] .interpreterActive
+      state [] .reachable
+    TypeCheckStateState new list.append
+  state [] .stateStack =
+  state freezeInterpreter
+  false return
+end
+proc( TypeCheckState ptr.mut : state -> ) =>: resetState
+  state [] .stateStack .length 0 == if
+    ## TODO error-message
+    return
+  end
+  state [] .stateStack
+    list.pop =:: prevState
+  state [] .stateStack =
+  ## TODO? error messages for open blocks/unhandled operations
+  state [] .openBlocks
+    prevState .openBlocksOffset list.setLength
+  state [] .openBlocks =
+  state [] .compiledOps
+    prevState .compiledOpsOffset list.setLength
+  state [] .compiledOps =
+  state [] .opInfo
+    prevState .opInfoOffset list.setLength
+  state [] .opInfo =
+  state [] .childIds
+    prevState .childIdsOffset list.setLength
+  state [] .childIds =
+  state [] .initializationStack
+    prevState .initializationStackOffset list.setLength
+  state [] .initializationStack =
+  prevState .blockStart state [] .blockStart =
+  state [] .stack@ prevState .branchRoot branchTree.reset =:: oldRoot
+  oldRoot -1:branchTree.NodeId != if
+    ## TODO error message for unfinished branch
+    state [] .stack@ oldRoot branchTree.endBranch
+  end
+  prevState .blockCount state [] .blockCount =
+  prevState .currentProcType state [] .currentProcType =
+  prevState .currentFile state [] .currentFile =
+  state [] .interpreterActive if
+    ## TODO reset interpreter
+    false state [] .interpreterActive =
+  end
+  prevState .interpreterActive if
+    state unfreezeInterpreter
+  end
+  prevState .reachable state [] .reachable =
+end
 
 proc( TypeCheckState ptr : state -> i64 ) =>: currentBlockStart
   state [] .blockStart return
@@ -750,7 +833,7 @@ proc(
   TypeCheckState ptr.mut : state
 -> BlockInfo ) =>: closeBlock
   state [] .program [] .errors @ =:: errors
-  state [] .openBlocks .length 0 == if
+  state [] .openBlocks .length 0 == if ## XXX? check for underflow wrt. reset-state
     BlockInfo .Unknown return
   end
   state [] .openBlocks .length 1 - =:: newLength
@@ -1265,6 +1348,17 @@ proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: clearOps
   0 state [] .blockStart =
+  state [] .stateStack list.peek =:: prevState?
+  prevState? optional.hasData if
+    prevState? .data =:: prevState
+    state [] .compiledOps
+      prevState [] .compiledOpsOffset list.setLength
+    state [] .compiledOps =
+    state [] .opInfo
+      prevState [] .opInfoOffset list.setLength
+    state [] .opInfo =
+    return
+  end
   state [] .compiledOps
     list.clear
   state [] .compiledOps =
@@ -3767,7 +3861,7 @@ proc(
           op .pos sb.appendPos
           '\n' sb.appendC
           state [] .initializationStack .length 1 - while
-            $ 0 >
+            $ 0 > ## XXX? only go until position in last reset
           do =:: i
             "  caused by initializing code at " sb.appendS
             state [] .initializationStack i list.at .data [] sb.appendPos
@@ -3984,7 +4078,8 @@ proc(
   FilePosition optional : expandedAt
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckProcedure
-  state [] .program [] .autoTypes list.copy =:: globalAutoTypes
+  ## XXX? is there a way to reset local auto-types without copying the whole list
+  state [] .program [] .autoTypes list.copy =:: prevAutoTypes
   state [] .program =:: program
   program [] .procedures procId i64 cast list.at .data =:: currentProc
   ## compile procedures to local code of given file
@@ -4044,17 +4139,21 @@ proc(
     state [] .compiledOps list.appendAll
   procFile [] .localOps =
   state [] .program [] .autoTypes
-    list.free ..drop ## XXX? can free+reassign be replaced by clear+append
-    globalAutoTypes ## reset local auto-types
+    list.free ..drop
+    prevAutoTypes ## reset local auto-types
   state [] .program [] .autoTypes =
   state [] .initializationStack
     offset list.setLength
   state [] .initializationStack =
-  state [] .stack @ branchTree.clear ## TODO error on unhandled values
+   ## TODO error on unhandled stack values
+  state [] .stateStack .length 0 > if
+    state [] .stack@ branchTree.prune
+  else
+    state [] .stack@ branchTree.clear
+  end
 end
 
 64 =:: MAX_STATIC_RECURSION
-
 proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
   ## TypeCheckState
     program
@@ -4071,6 +4170,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     128 i64       list.create
     FILE_ID_NONE
     16 FilePosition list.create
+    8 TypeCheckStateState list.create
     true
   TypeCheckState new =:: mut: state
   program [] .errors @ =:: errors
@@ -4176,5 +4276,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
   state .stack@ branchTree.free
   state .interpreter@ interpreter.cleanupContext
   state .argData@ map.free
+  state .childIds list.free ..drop ## XXX? can childIds be cleared after each procedure?
   state .initializationStack list.free ..drop
+  state .stateStack list.free ..drop
 end
