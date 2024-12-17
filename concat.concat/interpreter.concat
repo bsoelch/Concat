@@ -936,40 +936,6 @@ namespace: interpreter
   end
   proc(
     LabelId : generatorName
-    ProcId : generatorProc
-    ConstValue arrayView : autoArgs
-    ConstValue arrayView : args
-    FilePosition : pos
-    InterpreterContext ptr.mut : context
-  -> Type bool ) =>: evalGeneratedType
-    context [] .program =:: program
-    program [] .errors @ =:: errors
-    program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
-    generatorProc -1:i64 autoArgs pos context evaluateCall if
-      "could not initialize type-generator " sb.wrap
-        generatorName labelContext sb.appendLabelName
-      pos errors appendError
-      Type .undefined true return
-    end
-    ## initializeGeneratedType
-      generatorName
-      args
-      context [] .stack list.peek .data [] .TypeId ## return value of call
-      typeContext
-      constContext
-    types.initializeGeneratedType if
-      "could not initialize type-generator " sb.wrap
-        generatorName labelContext sb.appendLabelName
-      pos errors appendError
-      true return
-    end
-    false return
-  end
-  proc(
-    LabelId : generatorName
     ConstValue arrayView : args
     FilePosition : pos
     ProgramContext ptr.mut : program
@@ -1670,73 +1636,10 @@ proc(
           program [] .procedures
             calledProc .procId i64 cast list.at .data
           =:: calledProcData
-          calledProcData [] .implementation switch
-            builtIn case
-              ## tryEvaluateBuiltIn
-                calledType
-                calledProcData [] .implementation .builtIn .builtIn
-              op [] .pos context tryEvaluateBuiltIn return
-            code case break
-            alias case ..unreachable ## resolveCall unwraps alias
-          end
-          calledProc .autoArgs =:: autoArgs
           context [] .evalType .FOLD_LOCAL ?? and calledProcData [] .isStatic ! if
             true return ## don't evalaute non-static procedures in fold-local mode
           end
-          ## static procedure -> no call resolving necessary
-          op [] .dataType typeContext types.getProcOut ..drop =:: procOut
-          procOut typeContext types.compositeElts =:: outTypes
-          outTypes .length 1 == and
-              outTypes 0 types.compositeElts.get types.primitive.TYPE types.typeEquals if
-            ## TODO move check for existing type-generator to procedure, ? merge with evalGeneratedType
-            ## type-generator (procedure returning type)
-            op [] .dataType typeContext types.getProcIn ..drop =:: procIn
-            procIn typeContext types.compositeElts =:: inTypes
-            inTypes .length "type-generator" string.wrap false op [] .pos context checkStack if
-              true return
-            end
-            context [] .stack .length inTypes .length - =:: offset
-            ## findGeneratedType
-              label
-              context [] .stack list.asArray offset array.tail
-              typeContext
-              constContext
-            types.findGeneratedType if ..drop ## newType
-              idContext [] .argBuffer .length =:: argOffset
-              idContext [] .argBuffer
-                ## remember procedure arguments
-                context [] .stack list.asArray
-                  offset
-                array.tail list.appendArray
-              idContext [] .argBuffer =
-              ## evalGeneratedType
-                label
-                procId
-                autoArgs
-                idContext [] .argBuffer list.asArray
-                  argOffset
-                array.tail
-                op [] .pos
-                context
-              evalGeneratedType
-                idContext [] .argBuffer
-                  argOffset list.setLength
-                idContext [] .argBuffer =
-              if ..drop
-                true return
-              end
-            end =:: generated
-            offset context truncateStack
-            ## pushValue
-              generated ConstValue .TypeId
-              types.primitive.TYPE
-              id.LABEL_ID_NONE
-              op [] .pos
-              context
-            pushValue
-            false return
-          end
-          procId -1:i64 autoArgs op [] .pos context evaluateCall return
+          procId -1:i64 calledProc .autoArgs op [] .pos context evaluateCall return
         LOCAL_VAR ARGUMENT LABEL case
           context [] .variables @ label map.get =:: value?
           value? optional.isEmpty if
@@ -2733,7 +2636,7 @@ proc(
   InterpreterContext ptr.mut : context
 ->
   bool
-) =>: evaluateCall
+) =>: export: evaluateCall
   context [] .program [] .errors@ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext@ =:: idContext
@@ -2745,6 +2648,16 @@ proc(
   procType typeContext types.getProcIn ..drop =:: inType
   inType typeContext types.compositeElts =:: args
   args .length autoArgs .length - =:: nArgs
+  procData [] .implementation .builtIn ?? if
+    implId -1:i64 != if
+      "generic built-ins are not supported" sb.wrap
+      pos errors appendError
+    end
+    ## tryEvaluateBuiltIn
+      procType
+      procData [] .implementation .builtIn .builtIn
+    pos context tryEvaluateBuiltIn return
+  end
   nArgs "procedure call" string.wrap false pos context checkStack if
     128 sb.create
       "inType: " sb.appendS
@@ -2757,11 +2670,28 @@ proc(
     true return
   end
   context [] .stack .length nArgs - =:: argsOffset
-  procData [] .implementation .builtIn ?? if
-    "interpreting built-in procs is not implemented" sb.wrap
-    pos errors appendError
-    true return
-  end
+  procData [] .labelId =:: procName
+  procType typeContext types.getProcOut ..drop =:: outType
+  outType typeContext types.compositeEltCount 1 == and
+      outType 0 typeContext types.compositeGetElement types.primitive.TYPE types.typeEquals if
+    ## findGeneratedType
+      procName
+      context [] .stack list.asArray argsOffset array.tail
+      typeContext
+      constContext
+    types.findGeneratedType ! if =:: genType
+      argsOffset context truncateStack
+      ## pushValue
+        genType ConstValue .TypeId
+        types.primitive.TYPE
+        id.LABEL_ID_NONE
+        pos
+      context pushValue
+      false return
+      ## TODO reuse value of type-generator
+    end ..drop
+    true
+  else false end =:: isTypeGenerator
   context [] .stack .length =:: stackOffset
   context [] .openBlocks .length =:: prevBlocks
   BlockType .PROCEDURE true context openBlock
@@ -2771,7 +2701,7 @@ proc(
   0:i64 while $ args .length < do =:: i
     argOffset stackOffset >= if
       "not enough arguments for procedure " sb.wrap
-        procData [] .labelId labelContext sb.appendLabelName
+        procName labelContext sb.appendLabelName
       pos errors appendError
       stackOffset context truncateStack
       context [] .openBlocks
@@ -2834,7 +2764,7 @@ proc(
       currentImpl .codeState .TYPE_CHECKED ?? ! if
         ## FIXME ensure implementation exists
         "no implementaion for procedure " sb.wrap
-          procData [] .labelId labelContext sb.appendLabelName
+          procName labelContext sb.appendLabelName
         pos errors appendError
       end
       currentImpl [] .codeStart
@@ -2845,7 +2775,7 @@ proc(
     codeImpl [] .codeState switch
       PARSING case
         "procedure " sb.wrap
-          procData [] .labelId labelContext sb.appendLabelName
+          procName labelContext sb.appendLabelName
           " has not finished parsing" sb.appendS
         pos errors appendInfo
         Operation array.empty break
@@ -2867,7 +2797,7 @@ proc(
   end =:: code
   code .length 0 == if
     "no operations in procedure " sb.wrap
-      procData [] .labelId labelContext sb.appendLabelName
+      procName labelContext sb.appendLabelName
     pos errors appendError
     stackOffset context truncateStack
     context [] .openBlocks
@@ -2893,7 +2823,7 @@ proc(
   context [] .evalType =:: prevType
   prevType .FOLD_LOCAL ?? =:: isLocalFold
   ## change intrepreter type when evaluating call
-  procData [] .labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
+  procName labelContext id.labelFlags id.FLAG_STATIC & ? if
     implId -1 == assert "static procedure has implId -1"
     ## XXX? seperate interpreter type code in static procedure?
     InterpreterType .GLOBAL
@@ -2912,6 +2842,25 @@ proc(
     true return
   end
   ## FIXME static procedures don't cast their return value
+  isTypeGenerator if
+    context [] .stack
+      list.pop .TypeId =:: generatedType
+    context [] .stack =
+    ## initializeGeneratedType
+      procName
+      context [] .stack argsOffset nArgs list.slice
+      generatedType
+      typeContext
+      constContext
+    types.initializeGeneratedType if
+      "could not initalized type generator " sb.wrap
+        procName labelContext sb.appendLabelName
+      pos errors appendError
+    end =:: generatorType
+    context [] .stack
+      generatorType ConstValue .TypeId list.append
+    context [] .stack =
+  end
   prevType context [] .evalType =
   oldFile context [] .currentFile =
   context [] .stack .length stackOffset - =:: nReturn

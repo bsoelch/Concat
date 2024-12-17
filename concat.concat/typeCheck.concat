@@ -193,8 +193,6 @@ struct(
 ) =:: TypeCheckState
 
 ## TODO allow nested type-checking
-## TODO? remember value (?block) offset of interpreter in TypeCheckState &
-##   rewrite freeze/unfreezeInterperter to allow multiple nested interpreter instances
 proc( TypeCheckState ptr.mut : state -> bool ) =>: rememberState
   ## XXX? flag to check if state is currently in use
   ##   (auto-types are reset after type-checking (generic) procedure)
@@ -214,7 +212,7 @@ proc( TypeCheckState ptr.mut : state -> bool ) =>: rememberState
       state [] .reachable
     TypeCheckStateState new list.append
   state [] .stateStack =
-  state freezeInterpreter
+  ## TODO remember Interpreter state
   false return
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: resetState
@@ -250,19 +248,77 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   prevState .blockCount state [] .blockCount =
   prevState .currentProcType state [] .currentProcType =
   prevState .currentFile state [] .currentFile =
-  state [] .interpreterActive if
-    ## TODO reset interpreter
-    false state [] .interpreterActive =
-  end
-  prevState .interpreterActive if
-    state unfreezeInterpreter
-  end
+  prevState .interpreterActive state [] .interpreterActive =
+  ## TODO reset Interpreter state
   prevState .reachable state [] .reachable =
 end
 
 proc( TypeCheckState ptr : state -> i64 ) =>: currentBlockStart
   state [] .blockStart return
 end
+
+proc(
+  Type : procIn
+  ProcedureCallInfo : calledProc
+  bool : isStatic
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> bool ) =>: interpretCall
+  ## TODO? only push arguments onto interpreter stack
+  state unfreezeInterpreter
+  ## evaluateCall
+    calledProc .procId
+    calledProc .implementationId
+    calledProc .autoArgs
+    pos
+    state [] .interpreter@
+  evaluateCall if
+    isStatic if
+      "could not evaluate call to static procedure " sb.wrap
+        state [] .program [] .procedures
+          calledProc .procId i64 cast list.at
+        .data [] .labelId state [] .program .idContext .typeContext .labelContext sb.appendLabelName
+      pos state [] .program .errors appendError
+    end
+    ## TODO reset stack to previous state
+    state freezeInterpreter ## constant evaluation failed
+    true return
+  end
+  ## TODO directly modify value stack
+  state freezeInterpreter ## constant evaluation failed
+  false return
+end
+proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
+  ## TODO don't rely on unfreezeInterpreter
+  ## push values argument onto interperter stack (starting from first type-value)
+  ##    -> error if not enough constant values
+  state unfreezeInterpreter
+  ## TODO? directly evaluate type-modifer without evaluating operation?
+  op state [] .interpreter@ evaluateOperation if
+    "could not evaluate type modifier " sb.wrap
+      op [] .val .typeModifier sb.appendTypeModifier
+    op [] .pos state [] .program .errors appendError
+  end
+end
+proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpretTypeBlock
+  state unfreezeInterpreter
+  state [] .compiledOps .length state [] .blockStart =
+  op state [] .interpreter@ evaluateOperation if
+    "could not evaluate " sb.wrap
+      op [] .val .block .blockType sb.appendBlockType
+      " block" sb.appendS
+    op [] .pos state [] .program .errors appendError
+  end
+  ## TODO? remember that in type-block
+end
+
+
+#+ TODO? avoid freezing/unfreezing Interpeter
+  * reduce number of interpeted operations (only calls to static procedures?)
+  * push values onto interpreter stack when needed
+  * ? directly pass arguments for folding built-ins
+  * keep more involved interpreter actions for optimization phase
++#
 proc( TypeCheckState ptr.mut : state -> ) =>: freezeInterpreter
   state [] .interpreterActive ! if
     return
@@ -1711,16 +1767,6 @@ proc(
   op .val switch
     NOP case return
     Constant case
-      op .dataType types.primitive.TYPE types.typeEquals if
-        constEvalFailed or
-            state unfreezeInterpreter
-            op @ state [] .interpreter @ evaluateOperation if
-          "could not evaluate " sb.wrap
-            op program sb.appendOp
-          op .pos errors appendError
-        end
-        return
-      end
       op .val .Constant op .dataType op .pos state pushConstant
       return
     getName atName case
@@ -1796,16 +1842,6 @@ proc(
             program [] .procedures
               procId [] i64 cast list.at .data
             =:: procData
-            procData [] .isStatic if
-              constEvalFailed or
-                  state unfreezeInterpreter
-                  op @ state [] .interpreter @ evaluateOperation if
-                "could not evaluate " sb.wrap
-                  op program sb.appendOp
-                op .pos errors appendError
-              end
-              return
-            end
             procId array.wrap
           else  ## PROCEDURE_BUNDLE
             constValue .ProcedureBundle =:: bundleId
@@ -1856,16 +1892,11 @@ proc(
           calledType op .dataType =
           calledType typeContext types.getProcIn ..drop =:: inTypes
           inTypes typeContext types.compositeEltCount =:: argCount
-          constEvalFailed ! and
-              ## enough arguments for interpreting call
-              stackConstants argCount calledProc .autoArgs .length - >= and
-              calledProcData [] .isStatic or ## only try interpreting static and built-ins
-              calledProcData [] .implementation .builtIn ?? if
-            state unfreezeInterpreter
-            op@ state [] .interpreter @ evaluateOperation ! if
+          stackConstants argCount calledProc .autoArgs .length - >= and
+              calledProcData [] .isStatic if ## interpret static procedures
+            inTypes calledProc true op .pos state interpretCall ! if
               return
             end
-            state freezeInterpreter ## constant evaluation failed
           end
           calledProcData [] .implementation switch
             code case
@@ -2763,15 +2794,7 @@ proc(
         TYPE_COMPOSITE
         INITIALIZER case
           ## type-blocks and initializers are handled by the interpreter
-          constEvalFailed or
-              state unfreezeInterpreter
-              state [] .compiledOps .length state [] .blockStart =
-             op @ state [] .interpreter @ evaluateOperation if
-            "could not evaluate " sb.wrap
-              blockType sb.appendBlockType
-              " block" sb.appendS
-            op .pos errors appendError
-          end
+          op@ state prepareInterpretTypeBlock
           return
         AND_IF OR_IF case
           ## requireTypes
@@ -4015,13 +4038,7 @@ proc(
       return
     typeModifier case
       ## type-modifiers are handled by the interpreter
-      constEvalFailed or
-          state unfreezeInterpreter
-          op @ state [] .interpreter @ evaluateOperation if
-        "could not evaluate type modifier " sb.wrap
-          op .val .typeModifier sb.appendTypeModifier
-        op .pos errors appendError
-      end
+      op@ state interpretTypeModifier
       return
     autoCast copy ConstantReference NewReference NewEnumReference case
       "unsupported operation: " sb.wrap
