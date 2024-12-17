@@ -235,7 +235,7 @@ proc( Constant : const ParserState ptr.mut : state -> ) =>: pushConst
   const constantToOp state appendOp
 end
 
-proc( ParserState ptr.mut : state -> ConstValue ValueInfo ) =>: popConst
+proc( ParserState ptr.mut : state -> ConstValue interpreter.ValueInfo ) =>: popConst
   state getInterpreter [] .context@ =:: interpreter
   interpreter [] .stack
     list.pop =:: value
@@ -252,7 +252,11 @@ proc( ParserState ptr.mut : state -> bool ) =>: hasConst
   state getInterpreter [] .context@ =:: interpreter
   interpreter [] .stack .length 0 > return
 end
-proc( ParserState ptr.mut : state -> ConstValue ptr.mut optional ValueInfo ptr.mut optional ) =>: peekConst
+proc(
+  ParserState ptr.mut : state
+->
+  ConstValue ptr.mut optional interpreter.ValueInfo ptr.mut optional
+) =>: peekConst
   state getInterpreter [] .context@ =:: interpreter
   interpreter [] .stack list.peek interpreter [] .stackInfo list.peek return
 end
@@ -1032,7 +1036,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   idContext [] .typeContext@ =:: typeContext
   idContext [] .constContext@ =:: constContext
   typeContext .labelContext@ =:: labelContext
-  state getInterpreter [] .context@ skipCurrentBlock =:: skipBlock
+  state getInterpreter [] .context@ interpreter.skipCurrentBlock =:: skipBlock
   code
     token fileState state tryParseConstant if
       ..drop return

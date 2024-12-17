@@ -166,7 +166,7 @@ struct(
   i32 : blockCount
   Type : currentProcType
   FileId : currentFile
-  bool : interpreterActive
+  bool : inTypeBlock
   bool : reachable
 ) =:: TypeCheckStateState
 struct(
@@ -174,7 +174,7 @@ struct(
   InterpreterContext : mut: interpreter
   LabelId TypedValue hashMap : mut: argData
   Type : mut: currentProcType
-  bool : mut: interpreterActive
+  bool : mut: inTypeBlock
   TypeInfo BranchTree : mut: stack
   BlockInfo list : mut: openBlocks
   i32 : mut: blockCount
@@ -208,7 +208,7 @@ proc( TypeCheckState ptr.mut : state -> bool ) =>: rememberState
       state [] .blockCount
       state [] .currentProcType
       state [] .currentFile
-      state [] .interpreterActive
+      state [] .inTypeBlock
       state [] .reachable
     TypeCheckStateState new list.append
   state [] .stateStack =
@@ -248,13 +248,136 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   prevState .blockCount state [] .blockCount =
   prevState .currentProcType state [] .currentProcType =
   prevState .currentFile state [] .currentFile =
-  prevState .interpreterActive state [] .interpreterActive =
+  prevState .inTypeBlock state [] .inTypeBlock =
   ## TODO reset Interpreter state
   prevState .reachable state [] .reachable =
 end
 
 proc( TypeCheckState ptr : state -> i64 ) =>: currentBlockStart
   state [] .blockStart return
+end
+
+
+union(
+  i64 : fixedCount ## fixed number of arguments
+  _ : typeModifier ## all arguments until first type
+  _ : typeBlock ## no arguments
+) =:: InterpreterLoadMode
+proc( TypeInfo ptr : typeInfo TypeCheckState ptr.mut : state -> bool ) =>: isPopableConstant
+  typeInfo [] .value .None ?? or
+      typeInfo [] .opIndex 0 < or
+      typeInfo [] .opIndex state currentBlockStart < and
+      state [] .opInfo typeInfo [] .opIndex list.at .data =:: opInfo
+      opInfo [] .canMove ! or opInfo [] .childCount 0 != if
+    false return
+  end
+  true return
+end
+proc( TypeCheckState ptr.mut : state -> i64 bool ) =>: interpreterLoadFindType
+  0:i64 =:: mut: count
+  state [] .stack@ branchTree.itr.start while
+    branchTree.itr.hasNext
+  do branchTree.itr.next =:: val =:: itr
+    count 1 + count =
+    val state isPopableConstant ! if
+      -1:i64 true return
+    else val [] .value .TypeId ?? _if
+      count false return
+    end
+  finally itr end ..drop
+  -1:i64 true return
+end
+proc( i64 : argCount TypeCheckState ptr.mut : state -> bool ) =>: interpreterLoadCheckArgs
+  argCount 0 <= if
+    false return
+  end
+  state [] .stack branchTree.depth argCount < if
+    true return
+  end
+  0:i64 =:: mut: count
+  state [] .stack@ branchTree.itr.start while
+    branchTree.itr.hasNext
+  do branchTree.itr.next =:: val =:: itr
+    count 1 + count =
+    val state isPopableConstant ! if
+      true return
+    end
+    count argCount == if
+      false return
+    end
+  finally itr end ..drop
+  true return
+end
+import debug
+proc(
+  InterpreterLoadMode : mode
+  TypeCheckState ptr.mut : state
+-> bool ) =>: interpreterLoadContants
+  mode switch
+    fixedCount case
+      mode .fixedCount state interpreterLoadCheckArgs if
+        true return
+      end
+      mode .fixedCount break
+    typeModifier case
+      state interpreterLoadFindType if ..drop
+        true return
+      end break
+    typeBlock case false return
+  end =:: argCount
+  state [] .program =:: progContext
+  state [] .interpreter@ =:: interpreter
+  ## XXX? make code less relient on internal behaviour of list
+  interpreter [] .stack
+    $ .length argCount + list.setLength
+    $ .length 1 - =:: stackTail
+  interpreter [] .stack =
+  interpreter [] .stackInfo
+    $ .length argCount + list.setLength
+    $ .length 1 - =:: stackInfoTail
+  interpreter [] .stackInfo =
+  argCount for =:: i
+    state [] .stack@ branchTree.pop .data =:: val
+    val [] .value interpreter [] .stack stackTail i - list.set
+    ## ValueInfo
+      val [] .valueType
+      val [] .pushedAt
+    interpreter.ValueInfo new
+      interpreter [] .stackInfo
+      stackInfoTail i -
+    list.set
+    val [] .opIndex state deleteOp ## clear previous location of operation
+  end
+  state removeTrailingNOPs
+  false return
+end
+proc( i64 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: interpreterStoreConstants
+  state [] .program =:: progContext
+  progContext [] .errors@ =:: errors
+  progContext [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
+  state [] .interpreter@ =:: interpreter
+  count interpreter [] .stack .length > if
+    "stack undeflow: expected " sb.wrap
+      count sb.appendI
+      " got " sb.appendS
+      interpreter [] .stack .length sb.appendI
+    pos errors appendError
+    0:i64
+  else
+    interpreter [] .stack .length count -
+  end =:: offset
+  ##  -> store computed constants
+  offset while $ interpreter [] .stack .length < do =:: i
+    interpreter [] .stack i list.at .data =:: constant
+    interpreter [] .stackInfo i list.at .data =:: constInfo
+    ## pushConstant
+      constant  []
+      constInfo [] .valueType
+      constInfo [] .pushedAt
+    state pushConstant
+  finally i 1 + end ..drop
 end
 
 proc(
@@ -264,161 +387,88 @@ proc(
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: interpretCall
-  ## TODO? only push arguments onto interpreter stack
-  state unfreezeInterpreter
+  state [] .program =:: progContext
+  state [] .interpreter@ =:: interpreter
+  progContext [] .idContext .typeContext@ =:: typeContext
+  procIn
+    typeContext types.compositeEltCount InterpreterLoadMode .fixedCount
+  state interpreterLoadContants if
+    isStatic if
+      "could not resolve arguments of static procedure " sb.wrap
+        progContext [] .procedures
+          calledProc .procId i64 cast list.at
+        .data [] .labelId typeContext [] .labelContext@ sb.appendLabelName
+      pos progContext [] .errors@ appendError
+    end
+    true return
+  end
   ## evaluateCall
     calledProc .procId
     calledProc .implementationId
     calledProc .autoArgs
     pos
-    state [] .interpreter@
+    interpreter
   evaluateCall if
     isStatic if
       "could not evaluate call to static procedure " sb.wrap
-        state [] .program [] .procedures
+        progContext [] .procedures
           calledProc .procId i64 cast list.at
-        .data [] .labelId state [] .program .idContext .typeContext .labelContext sb.appendLabelName
-      pos state [] .program .errors appendError
+        .data [] .labelId typeContext [] .labelContext@ sb.appendLabelName
+      pos progContext [] .errors@ appendError
     end
-    ## TODO reset stack to previous state
-    state freezeInterpreter ## constant evaluation failed
+    ## reset stack to previous state
+    procIn typeContext types.compositeEltCount pos state interpreterStoreConstants
     true return
   end
-  ## TODO directly modify value stack
-  state freezeInterpreter ## constant evaluation failed
+  ## store results
+  progContext [] .procedures
+    calledProc .procId i64 cast list.at
+  .data [] .procType
+    typeContext types.getProcOut ..drop
+  typeContext types.compositeEltCount pos state interpreterStoreConstants
   false return
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
-  ## TODO don't rely on unfreezeInterpreter
-  ## push values argument onto interperter stack (starting from first type-value)
-  ##    -> error if not enough constant values
-  state unfreezeInterpreter
+  state [] .program .errors@ =:: errors
+  InterpreterLoadMode .typeModifier state interpreterLoadContants if
+    "could not resolve arguments of type Modifier " sb.wrap
+      op [] .val .typeModifier sb.appendTypeModifier
+    op [] .pos errors appendError
+    return
+  end
   ## TODO? directly evaluate type-modifer without evaluating operation?
   op state [] .interpreter@ evaluateOperation if
     "could not evaluate type modifier " sb.wrap
       op [] .val .typeModifier sb.appendTypeModifier
-    op [] .pos state [] .program .errors appendError
+    op [] .pos errors appendError
   end
+  1 op [] .pos state interpreterStoreConstants
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpretTypeBlock
-  state unfreezeInterpreter
+  InterpreterLoadMode .typeBlock state interpreterLoadContants ! assert "interpreterFindContant"
   state [] .compiledOps .length state [] .blockStart =
   op state [] .interpreter@ evaluateOperation if
     "could not evaluate " sb.wrap
       op [] .val .block .blockType sb.appendBlockType
       " block" sb.appendS
-    op [] .pos state [] .program .errors appendError
+    op [] .pos state [] .program .errors@ appendError
   end
-  ## TODO? remember that in type-block
+  true state [] .inTypeBlock =
 end
-
-
-#+ TODO? avoid freezing/unfreezing Interpeter
-  * reduce number of interpeted operations (only calls to static procedures?)
-  * push values onto interpreter stack when needed
-  * ? directly pass arguments for folding built-ins
-  * keep more involved interpreter actions for optimization phase
-+#
-proc( TypeCheckState ptr.mut : state -> ) =>: freezeInterpreter
-  state [] .interpreterActive ! if
-    return
+proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretTypeBlock
+  state [] .inTypeBlock assert "in Type-block"
+  op state [] .interpreter@ evaluateOperation if
+    "unexpected operation in Type/Initializer block: " sb.wrap
+      op [] state [] .program sb.appendOp
+    op [] .pos state [] .program .errors@ appendError
+    false return
   end
-  state [] .program =:: progContext
-  progContext [] .errors @ =:: errors
-  progContext [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  state [] .interpreter @ =:: interpreter
-  ##  -> store computed constants
-  0:i64 while ..dup interpreter [] .stack .length < do
-    interpreter [] .stack ..over list.at .data =:: constant
-    interpreter [] .stackInfo ..over list.at .data =:: constInfo
-    constInfo [] .valueType typeContext types.isReference if
-      constInfo [] .valueId idContext id.getIdentifier if
-        "cannot find identifier: " sb.wrap
-          constInfo [] .valueId
-            labelContext
-          sb.appendLabelName
-        constInfo [] .pushedAt errors appendError
-      end id.asIdInfo =:: idInfo
-      constInfo [] .valueType
-      idInfo
-      constInfo [] .pushedAt opGetId =:: tmp
-      ## pushValue
-        constInfo [] .valueType
-        constant  []
-        tmp
-      state pushValue
-    else
-      ## pushConstant
-        constant  []
-        constInfo [] .valueType
-        constInfo [] .pushedAt
-      state pushConstant
-    end
-    constInfo [] .valueId state replaceLabel
-    1 +
-  end ..drop
-  ## TODO check open blocks (cannot freeze within type-block, special cleanup for freeze in initializer)
-  ##  -> reset interpreter
-  state resetInterpreter
-  false state [] .interpreterActive =
-end
-proc( TypeCheckState ptr.mut : state -> ) =>: unfreezeInterpreter
-  state [] .interpreterActive if
-    return
+  op .val .blockEnd ?? and state [] .interpreter@ interpreter.inTypeOrInitializer ! if
+    1 op [] .pos state interpreterStoreConstants
+    false state [] .inTypeBlock =
+    true return ## consume block end
   end
-  state [] .program =:: progContext
-  state [] .interpreter @ =:: interpreter
-  ## XXX? make buffer part of state
-  state [] .stack branchTree.depth TypeInfo list.create =:: mut: buffer
-  TypeInfo ptr optional : typeInfo?
-  state currentBlockStart =:: minEditableIndex
-  while
-    state [] .stack @ branchTree.peek typeInfo? =
-  typeInfo? optional.hasData do
-    typeInfo? .data =:: typeInfo
-    typeInfo [] .value .None ?? if
-      break
-    else typeInfo [] .opIndex 0 < _if
-      break
-    else typeInfo [] .opIndex minEditableIndex < and
-        state [] .opInfo typeInfo [] .opIndex list.at .data =:: opInfo
-        opInfo [] .canMove ! or opInfo [] .childCount 0 != _if
-      break
-    end
-    buffer
-      typeInfo list.appendP
-    buffer =
-    state [] .stack @ branchTree.pop ..drop
-  end
-  ##  -> reset interpreter
-  state resetInterpreter
-  ##  -> copy values to interpreter
-  buffer .length 1 - while ..dup 0 >= do
-    buffer ..over list.at .data =:: typeInfo
-    typeInfo [] .opIndex state deleteOp ## clear previous location of operation
-    interpreter [] .stack
-      typeInfo [] .value list.append
-    interpreter [] .stack =
-    interpreter [] .stackInfo
-      ## ValueInfo
-        typeInfo [] .valueType
-        typeInfo [] .valueId
-        typeInfo [] .pushedAt
-      ValueInfo new list.append
-    interpreter [] .stackInfo =
-    1 -
-  end ..drop
-  buffer list.free ..drop
-  state removeTrailingNOPs
-  true state [] .interpreterActive =
-end
-
-proc( TypeCheckState ptr.mut : state -> ) =>: resetInterpreter
-  state [] .interpreter @ =:: interpreter
-  interpreter InterpreterType .FOLD_LOCAL interpreter.resetContext
-  true state [] .interpreterActive =
+  true return
 end
 
 proc(
@@ -1344,21 +1394,23 @@ proc( i64 : index TypeCheckState ptr.mut : state -> i64 ) =>: copyOp
   state [] .childIds .length =:: argOffset
   0 while ..dup opInfo [] .childCount < do =:: i ## copy child operations
     state [] .childIds i i64 cast.u opInfo [] .childOffset + list.get =:: childId
+    childId state copyOp =:: childCopy
+    ## ! copyOp modifies state [] .childIds
     state [] .childIds
-      childId state copyOp list.append
+      childCopy list.append
     state [] .childIds =
     i 1 +
   end ..drop
   state [] .compiledOps .length =:: copyIndex
   state [] .compiledOps
-    ..dup index list.at .data list.appendP
+    $ index list.get list.append
   state [] .compiledOps =
   state [] .compiledOps list.peek .data =:: newOp
   newOp [] .val .autoCast ?? if
     0 newOp [] .val .autoCast .offset = ## update to head of stack moving operation and arguments
   end
   state [] .opInfo
-    ..dup index list.at .data list.appendP
+    $ index list.get list.append
   state [] .opInfo =
   ## update internal data
   state [] .opInfo list.peek .data =:: newOpInfo
@@ -1570,42 +1622,10 @@ proc(
   switchData [] .labels =
 end
 proc(
-  i32 : switchId
-  Type : switchType
-  TypeCheckState ptr.mut : state
--> ) =>: resolveSwitchLabels
-  state [] .program =:: program
-  state [] .program [] .errors @ =:: errors
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  state [] .interpreter .stack =:: labels
-  state [] .interpreter .stackInfo =:: stackInfo
-  0:i64 while ..dup labels .length < do =:: i
-    labels i list.get =:: mut: label
-    stackInfo i list.at .data =:: labelInfo
-    ## XXX? less strict condition for types?
-    labelInfo [] .valueType switchType types.typeEquals ! if
-      label .Int ?? ! if
-        "invalid constant for switch label of type " sb.wrap
-          switchType typeContext sb.appendType
-          " : " sb.appendS
-          label typeContext sb.appendConstant
-        labelInfo [] .pushedAt errors appendError
-      end
-      ## XXX ensure correct size of int label
-      ## i8 257 -> i8 1
-    end
-    switchId label labelInfo [] .pushedAt state newSwitchLabel
-    i 1 +
-  end ..drop
-  state resetInterpreter
-end
-proc(
   Operation ptr : op
   TypeCheckState ptr.mut : state
 -> bool #+consume op+# ) =>: typeCheckSwitchLabel
+  ## TODO? enable const-evalution in switch-labels
   state [] .program =:: program
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
@@ -1618,10 +1638,6 @@ proc(
   op [] .val .block ?? if
     op [] .val .block .blockType switch
       CASE DEFAULT case
-        ## resolveSwitchLabels
-          switchId
-          switchType
-        state resolveSwitchLabels
         false return
       BREAK case
         switchBlock [] .allowBreak if
@@ -1633,19 +1649,44 @@ proc(
         break
     end
   else op [] .val .blockEnd ?? _if
-    ## resolveSwitchLabels
-      switchId
-      switchType
-    state resolveSwitchLabels
     false return
   end
   ## operation after switch -> don't allow break statement
   false switchBlock [] .allowBreak =
   switchType typeContext types.isTaggedUnion ! if
-    op state [] .interpreter @ evaluateOperation if
+    ## TODO? allow use of Interpreter in switch labels
+    op [] .val .Constant ?? if
+      ## newSwitchLabel
+        switchId
+        op [] .val .Constant
+        op [] .pos
+      state newSwitchLabel
+    else op [] .val .getId ?? _if
+      ## getIdentifier
+        op [] .val .getId .labelId
+        idContext
+      id.getIdentifier if ..drop
+        "could not find " sb.wrap
+          op [] .val .getId labelContext sb.appendIdInfo
+        op [] .pos errors appendError
+        true return
+      end =:: idData
+      idData [] .constValue .None ?? if
+        "Expected constant got " sb.wrap
+          op [] .val .getId labelContext sb.appendIdInfo
+        op [] .pos errors appendError
+        true return
+      end
+      ## newSwitchLabel
+        switchId
+        idData [] .constValue
+        op [] .pos
+      state newSwitchLabel
+    else
       "unsupported operation in switch label:\n " sb.wrap
         op [] program sb.appendOp
       op [] .pos errors appendError
+      true return
     end
     true return
   end
@@ -1758,11 +1799,9 @@ proc(
     argData? .data [] .valType op .dataType =
     argData? .data [] .value op .val .Constant =
   end
-  state [] .interpreterActive =:: constEvalFailed ## true if operation was already evaluated
-  state [] .interpreterActive and op @ state [] .interpreter @ evaluateOperation ! if
+  state [] .inTypeBlock and op@ state interpretTypeBlock if
     return ## evaluate constants
   end
-  state freezeInterpreter
   op @ state checkReachable
   op .val switch
     NOP case return
@@ -2133,7 +2172,6 @@ proc(
       op state appendOp ..drop
       op .dataType BlockInfo .Procedure state openBlock
       true state [] .reachable =
-      state resetInterpreter
       op .dataType typeContext types.getProcIn if ..drop
         "wrong type for procedure initialization: " sb.wrap
           op .dataType typeContext sb.appendType
@@ -4112,7 +4150,6 @@ proc(
     currentProc [] .fileId i64 cast
   list.at .data =:: procFile
   state clearOps
-  state resetInterpreter
   currentProc [] .implementation .code @ =:: codeImpl
   program [] .tmpOps
      codeImpl [] .codeStart list.at .data
@@ -4177,7 +4214,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     program -1:FileId InterpreterType .FOLD_LOCAL interpreter.wrapProgram
     labelHash @ labelEq @ 64 TypedValue map.create
     Type .undefined
-    true
+    false ## inTypeBlock
     TypeInfo branchTree.create
     32  BlockInfo list.create
     0
@@ -4188,7 +4225,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     FILE_ID_NONE
     16 FilePosition list.create
     8 TypeCheckStateState list.create
-    true
+    true ## reachable
   TypeCheckState new =:: mut: state
   program [] .errors @ =:: errors
   program [] .idContext @ =:: idContext

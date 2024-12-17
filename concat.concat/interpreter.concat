@@ -5,29 +5,28 @@ import "identifiers.concat"
 import "program.concat"
 import "callResolver.concat"
 
-## TODO wrap in namespace
-struct(
-  Type : mut: valueType
-  LabelId : valueId ## use in typeCheck.concat
-  FilePosition : mut: pushedAt
-) =:: export: ValueInfo
+namespace: interpreter
+  struct(
+    Type : mut: valueType
+    FilePosition : mut: pushedAt
+  ) =:: export: ValueInfo
 
-struct(
-  ConstValue : value
-  ValueInfo  : info
-) =:: Constant
+  struct(
+    ConstValue : value
+    ValueInfo  : info
+  ) =:: Constant
 
-struct(
-  BlockType : blockType
-  i64 : stackOffset
-  i64 : typeOffset
-  i64 : valueOffset
-  i64 : labelOffset
-) =:: BlockInfo
-
+  struct(
+    BlockType : blockType
+    i64 : stackOffset
+    i64 : typeOffset
+    i64 : valueOffset
+    i64 : labelOffset
+  ) =:: BlockInfo
+end
 enum( GLOBAL FOLD_LOCAL INTERPRET ) =:: export: InterpreterType
-
 struct(
+  using interpreter
   ProgramContext ptr.mut : program
   LabelId Constant hashMap : mut: variables
   ConstValue list : mut: stack
@@ -40,692 +39,688 @@ struct(
   InterpreterType : mut: evalType
 ) =:: export: InterpreterContext
 
-proc(
-  i64 : count
-  string : name
-  bool : canIgnoreErrorMessage
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> bool ) =>: checkStack
-  context [] .openBlocks .length 0 > if
-    context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
-  else 0:i64 end =:: offset
-  offset 0 >= assert "offset is non-negative"
-  context [] .stack .length offset - count < if
-    canIgnoreErrorMessage if
-      context [] .evalType switch
-        INTERPRET GLOBAL case break
-        FOLD_LOCAL case true return
-      end
-    end
-    "not enough arguments for " sb.wrap
-      name sb.appendStr
-      " expected: " sb.appendS
-      count sb.appendI
-      " got: " sb.appendS
-      context [] .stack .length offset - sb.appendI
-    pos context [] .program [] .errors @ appendError
-    true return
-  end
-  false return
-end
-proc( InterpreterContext ptr.mut : context -> i64 ) =>: minStackOffset
-  context [] .openBlocks .length 0 > if
-    context [] .openBlocks
-      context [] .openBlocks .length 1 - list.at .data []
-    .stackOffset return
-  end
-  0 return
-end
-
-proc( InterpreterContext ptr.mut : context -> bool ) =>: inEnum
-  ## XXX cache number of open enum blocks
-  context [] .openBlocks .length 1 - while $ 0 >= do
-    context [] .openBlocks $1 list.at .data [] .blockType switch
-      TYPE_ENUM case
-         ..drop true return
-      PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION case
-        ..drop false return
-      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-        SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-        AND OR AND_IF OR_IF AND_DO OR_DO
-        IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        NAMESPACE case break
-    end
-    1 -
-  end ..drop
-  false return
-end
-proc( InterpreterContext ptr.mut : context -> bool ) =>: inUnion
-  ## XXX cache/precompute result
-  context [] .openBlocks .length 1 - while ..dup 0 >= do
-    context [] .openBlocks ..over list.at .data [] .blockType switch
-      TYPE_UNION TYPE_UNTAGGED_UNION case
-         ..drop true return
-      PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
-        ..drop false return
-      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-          AND OR AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          NAMESPACE case break
-    end
-    1 -
-  end ..drop
-  false return
-end
-proc( InterpreterContext ptr.mut : context -> bool ) =>: inTypeOrInitializer
-  ## XXX cache/precompute result
-  context [] .openBlocks .length 1 - while ..dup 0 >= do
-    context [] .openBlocks ..over list.at .data [] .blockType switch
-      INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-        ..drop true return
-      PROCEDURE EXPERIMENTAL_PROCEDURE case
-        ..drop false return
-      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-          AND OR AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          NAMESPACE case break
-    end
-    1 -
-  end ..drop
-  false return
-end
-proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeBlock
-  ## XXX cache/precompute result
-  context [] .openBlocks .length 1 - while ..dup 0 >= do
-    context [] .openBlocks ..over list.at .data [] .blockType switch
-      TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-        ..drop true return
-      PROCEDURE EXPERIMENTAL_PROCEDURE case
-        ..drop false return
-      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-          AND OR AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          NAMESPACE INITIALIZER case break
-    end
-    1 -
-  end ..drop
-  false return
-end
-proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inGlobalBlock
-  ## XXX cache/precompute result
-  context [] .openBlocks .length 1 - while ..dup 0 >= do
-    context [] .openBlocks ..over list.at .data [] .blockType switch
-      TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-        ..drop true return
-      PROCEDURE EXPERIMENTAL_PROCEDURE case
-        ..drop false return
-      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-          AND OR AND_IF OR_IF AND_DO OR_DO
-          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          NAMESPACE INITIALIZER case break
-    end
-    1 -
-  end ..drop
-  true return
-end
-proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBlock
-  ## XXX cache/precompute result
-  context [] .openBlocks .length 1 - while $ 0 >= do
-    context [] .openBlocks $1 list.at .data [] .blockType switch
-      IF_FALSE AND_FALSE OR_TRUE ELSE_TRUE case
-         ..drop true return
-      IF_TRUE AND_TRUE OR_FALSE ELSE_FALSE
-        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION
-        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
-        SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-        AND OR AND_IF OR_IF AND_DO OR_DO
-        NAMESPACE case break
-    end
-    1 -
-  end ..drop
-  false return
-end
-
-proc(
-  BlockType : blockType
-  bool : truncateStack
-  InterpreterContext ptr.mut : context
--> ) =>: openBlock
-  truncateStack if
-    context [] .stack .length
-  else
-    context minStackOffset
-  end =:: stackOffset
-  context [] .openBlocks
-    ## BlockInfo
-      blockType
-      stackOffset
-      context [] .typeBuffer .length
-      context [] .valueBuffer .length
-      context [] .labelBuffer .length
-    BlockInfo new list.append
-  context [] .openBlocks =
-end
-BlockType ..length 38 == assert "number of block types"
-proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
-  context [] .openBlocks list.peek =:: current
-  current optional.isEmpty if false return end
-  current .data [] .blockType switch
-    AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
-      true return
-    default
-      false return
-  end
-end
-proc( InterpreterContext ptr.mut : context -> ) =>: closeAndOrBlock
-  context [] .openBlocks list.peek =:: current
-  current optional.isEmpty if return end
-  current .data [] .blockType switch
-    AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
-        context [] .openBlocks
-          list.pop ..drop
-        context [] .openBlocks =
-      break
-    default break
-  end
-end
-## current conditional value in the and-or block (or false if not inside and/or block)
-proc( InterpreterContext ptr.mut : context -> bool ) =>: andOrCondition
-  context [] .openBlocks list.peek =:: currentBlock?
-  currentBlock? optional.hasData and currentBlock? .data [] .blockType .OR_TRUE ?? end
-end
-
-enum( TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
-proc( InterpreterContext ptr.mut : context -> i64 LabeledValueContext ) =>: getLabeledValueContext
-  ## XXX cache/precompute result
-  context [] .openBlocks .length 1 - while $ 0 >= do =:: i
-    context [] .openBlocks i list.at .data =:: block
-    block [] .blockType switch
-      INITIALIZER case
-         block [] .labelOffset LabeledValueContext .INITIALIZER return
-      TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case
-         block [] .labelOffset LabeledValueContext .TYPE_STRUCT return
-      TYPE_UNION TYPE_UNTAGGED_UNION case
-         block [] .labelOffset LabeledValueContext .TYPE_UNION return
-      TYPE_ENUM case
-         block [] .labelOffset LabeledValueContext .TYPE_ENUM return
-      TYPE_PROC_IN TYPE_PROC_OUT case
-         block [] .labelOffset LabeledValueContext .TYPE_PROC return
-      PROCEDURE EXPERIMENTAL_PROCEDURE
-      UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-        SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-        AND OR AND_IF OR_IF AND_DO OR_DO
-        IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        NAMESPACE case break
-    end
-  finally i 1 - end ..drop
-  ## TODO? better default value/error condition
-  ..unreachable
-end
-proc(
-  LabelId : label
-  i64 : initialLabelOffset
-  LabeledValueContext : valueContext
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> ) =>: checkDuplicateLabel
-  label id.LABEL_ID_NONE == if return end
-  context [] .program [] .errors @ =:: errors
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  context [] .labelBuffer@ =:: labels
-  initialLabelOffset while $ labels [] .length < do =:: i
-    labels [] i list.get =:: prevLabel
-    prevLabel label labelContext id.labelNamesEq if
-      "duplicate label \"" sb.wrap
-      label labelContext sb.appendLabelName
-      "\" in " sb.appendS
-      valueContext switch
-        TYPE_STRUCT case "struct" sb.appendS break
-        TYPE_UNION case "union" sb.appendS break
-        TYPE_ENUM case "enum" sb.appendS break
-        TYPE_PROC case "procedure" sb.appendS break
-        INITIALIZER case "initializer" sb.appendS break
-      end
-      prevLabel labelContext id.labelPos =:: prevPos
-      prevPos optional.hasData if
-        " ( previous declaration at " sb.appendS
-        prevPos .data sb.appendPos
-        " )" sb.appendS
-      end
-      pos errors appendError
-    end
-  finally i 1 + end ..drop
-end
-proc(
-  LabelId : label
-  ConstValue : value
-  Type : valueType
-  i64 : initialLabelOffset
-  LabeledValueContext : valueContext
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> bool ) =>: addLabeledValue
-  label initialLabelOffset valueContext pos context checkDuplicateLabel
-  context [] .program [] .errors @ =:: errors
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  context [] .labelBuffer
-    label list.append
-  context [] .labelBuffer =
-  valueContext switch
-    INITIALIZER case
-      context [] .typeBuffer
-        valueType list.append
-      context [] .typeBuffer =
-      context [] .valueBuffer
-        value list.append
-      context [] .valueBuffer =
-      false return
-    TYPE_STRUCT TYPE_UNION TYPE_PROC case break
-    TYPE_ENUM case ..unreachable
-  end
-  value .TypeId ?? ! or valueType types.primitive.TYPE types.typeEquals ! if
-    "unexpected argument for type-field declaration expected type got " sb.wrap
-      valueType typeContext sb.appendType
-      " [ " sb.appendS
-      value typeContext sb.appendConstant
-      " ]" sb.appendS
-    pos errors appendError
-    true return
-  end
-  value .TypeId =:: typeValue
-  context [] .typeBuffer
-    typeValue list.append
-  context [] .typeBuffer =
-  label id.LABEL_ID_NONE != if
-    typeValue
-      typeContext types.unwrapNamed
-    types.primitive.TYPE types.typeEquals =:: isType
-    ## map.put
-    context [] .variables@
-      label
-      ## Constant
-        isType if
-          label types.newGenericType ConstValue .TypeId
-        else
-          label ConstValue .GenericArg
+namespace: interpreter
+  proc(
+    i64 : count
+    string : name
+    bool : canIgnoreErrorMessage
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: checkStack
+    context [] .openBlocks .length 0 > if
+      context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
+    else 0:i64 end =:: offset
+    offset 0 >= assert "offset is non-negative"
+    context [] .stack .length offset - count < if
+      canIgnoreErrorMessage if
+        context [] .evalType switch
+          INTERPRET GLOBAL case break
+          FOLD_LOCAL case true return
         end
-        ## ValueInfo
-          typeValue
-          label
-          pos
-        ValueInfo new
-      Constant new
-    map.put ..drop
+      end
+      "not enough arguments for " sb.wrap
+        name sb.appendStr
+        " expected: " sb.appendS
+        count sb.appendI
+        " got: " sb.appendS
+        context [] .stack .length offset - sb.appendI
+      pos context [] .program [] .errors @ appendError
+      true return
+    end
+    false return
   end
-  false return
-end
+  proc( InterpreterContext ptr.mut : context -> i64 ) =>: minStackOffset
+    context [] .openBlocks .length 0 > if
+      context [] .openBlocks
+        context [] .openBlocks .length 1 - list.at .data []
+      .stackOffset return
+    end
+    0 return
+  end
 
-proc(
-  i64 : stackOffset
-  i64 : initialLabelOffset
-  LabeledValueContext : valueContext
-  FilePosition : pos
-  InterpreterContext  ptr.mut : context
--> bool ) =>: finishLabledValues
-  context [] .program [] .errors@ =:: errors
-  context [] .program [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
-  context [] .stack .length stackOffset > if
-    stackOffset while $ context [] .stack .length < do =:: i
-      context [] .stack i list.at .data =:: eltVal
-      context [] .stackInfo i list.at .data =:: eltInfo
-      valueContext switch
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: inEnum
+    ## XXX cache number of open enum blocks
+    context [] .openBlocks .length 1 - while $ 0 >= do
+      context [] .openBlocks $1 list.at .data [] .blockType switch
         TYPE_ENUM case
-          "unexpected value in enum-block" sb.wrap
-            eltInfo [] .pushedAt
-          errors appendError
-          id.LABEL_ID_NONE
-          break
-        TYPE_UNION case
-          "unexpected value in union-block" sb.wrap
-            eltInfo [] .pushedAt
-          errors appendError
-          id.LABEL_ID_NONE
-          break
-        TYPE_PROC INITIALIZER case
-          id.LABEL_ID_NONE break
-        TYPE_STRUCT case
-          ## newDummyLabel
-            i stackOffset -
-            pos
-            -1:FileId ## TODO determine file-id
-            labelContext
-          id.newDummyLabel
-          break
-      end =:: eltLabel
-      ## addLabeledValue
-        eltLabel
-        eltVal []
-        eltInfo [] .valueType
-        initialLabelOffset
-        valueContext
-        eltInfo [] .pushedAt
-      context addLabeledValue if
+           ..drop true return
+        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
+            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION case
+          ..drop false return
+        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
+          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+          AND OR AND_IF OR_IF AND_DO OR_DO
+          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
+          NAMESPACE case break
+      end
+      1 -
+    end ..drop
+    false return
+  end
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: inUnion
+    ## XXX cache/precompute result
+    context [] .openBlocks .length 1 - while ..dup 0 >= do
+      context [] .openBlocks ..over list.at .data [] .blockType switch
+        TYPE_UNION TYPE_UNTAGGED_UNION case
+           ..drop true return
+        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
+            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
+          ..drop false return
+        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
+            SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+            AND OR AND_IF OR_IF AND_DO OR_DO
+            IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+            OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
+            NAMESPACE case break
+      end
+      1 -
+    end ..drop
+    false return
+  end
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeOrInitializer
+    ## XXX cache/precompute result
+    context [] .openBlocks .length 1 - while ..dup 0 >= do
+      context [] .openBlocks ..over list.at .data [] .blockType switch
+        INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+          ..drop true return
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          ..drop false return
+        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
+            SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+            AND OR AND_IF OR_IF AND_DO OR_DO
+            IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+            OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
+            NAMESPACE case break
+      end
+      1 -
+    end ..drop
+    false return
+  end
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeBlock
+    ## XXX cache/precompute result
+    context [] .openBlocks .length 1 - while ..dup 0 >= do
+      context [] .openBlocks ..over list.at .data [] .blockType switch
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+          ..drop true return
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          ..drop false return
+        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
+            SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+            AND OR AND_IF OR_IF AND_DO OR_DO
+            IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+            OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
+            NAMESPACE INITIALIZER case break
+      end
+      1 -
+    end ..drop
+    false return
+  end
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inGlobalBlock
+    ## XXX cache/precompute result
+    context [] .openBlocks .length 1 - while ..dup 0 >= do
+      context [] .openBlocks ..over list.at .data [] .blockType switch
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+          ..drop true return
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          ..drop false return
+        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
+            SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+            AND OR AND_IF OR_IF AND_DO OR_DO
+            IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+            OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
+            NAMESPACE INITIALIZER case break
+      end
+      1 -
+    end ..drop
+    true return
+  end
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBlock
+    ## XXX cache/precompute result
+    context [] .openBlocks .length 1 - while $ 0 >= do
+      context [] .openBlocks $1 list.at .data [] .blockType switch
+        IF_FALSE AND_FALSE OR_TRUE ELSE_TRUE case
+           ..drop true return
+        IF_TRUE AND_TRUE OR_FALSE ELSE_FALSE
+          PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
+          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION
+          UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
+          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+          AND OR AND_IF OR_IF AND_DO OR_DO
+          NAMESPACE case break
+      end
+      1 -
+    end ..drop
+    false return
+  end
+
+  proc(
+    BlockType : blockType
+    bool : truncateStack
+    InterpreterContext ptr.mut : context
+  -> ) =>: openBlock
+    truncateStack if
+      context [] .stack .length
+    else
+      context minStackOffset
+    end =:: stackOffset
+    context [] .openBlocks
+      ## BlockInfo
+        blockType
+        stackOffset
+        context [] .typeBuffer .length
+        context [] .valueBuffer .length
+        context [] .labelBuffer .length
+      BlockInfo new list.append
+    context [] .openBlocks =
+  end
+  BlockType ..length 38 == assert "number of block types"
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
+    context [] .openBlocks list.peek =:: current
+    current optional.isEmpty if false return end
+    current .data [] .blockType switch
+      AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
         true return
+      default
+        false return
+    end
+  end
+  proc( InterpreterContext ptr.mut : context -> ) =>: closeAndOrBlock
+    context [] .openBlocks list.peek =:: current
+    current optional.isEmpty if return end
+    current .data [] .blockType switch
+      AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
+          context [] .openBlocks
+            list.pop ..drop
+          context [] .openBlocks =
+        break
+      default break
+    end
+  end
+  ## current conditional value in the and-or block (or false if not inside and/or block)
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: andOrCondition
+    context [] .openBlocks list.peek =:: currentBlock?
+    currentBlock? optional.hasData and currentBlock? .data [] .blockType .OR_TRUE ?? end
+  end
+
+  enum( TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
+  proc( InterpreterContext ptr.mut : context -> i64 LabeledValueContext ) =>: getLabeledValueContext
+    ## XXX cache/precompute result
+    context [] .openBlocks .length 1 - while $ 0 >= do =:: i
+      context [] .openBlocks i list.at .data =:: block
+      block [] .blockType switch
+        INITIALIZER case
+           block [] .labelOffset LabeledValueContext .INITIALIZER return
+        TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case
+           block [] .labelOffset LabeledValueContext .TYPE_STRUCT return
+        TYPE_UNION TYPE_UNTAGGED_UNION case
+           block [] .labelOffset LabeledValueContext .TYPE_UNION return
+        TYPE_ENUM case
+           block [] .labelOffset LabeledValueContext .TYPE_ENUM return
+        TYPE_PROC_IN TYPE_PROC_OUT case
+           block [] .labelOffset LabeledValueContext .TYPE_PROC return
+        PROCEDURE EXPERIMENTAL_PROCEDURE
+        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
+          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+          AND OR AND_IF OR_IF AND_DO OR_DO
+          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
+          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
+          NAMESPACE case break
+      end
+    finally i 1 - end ..drop
+    ## TODO? better default value/error condition
+    ..unreachable
+  end
+  proc(
+    LabelId : label
+    i64 : initialLabelOffset
+    LabeledValueContext : valueContext
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> ) =>: checkDuplicateLabel
+    label id.LABEL_ID_NONE == if return end
+    context [] .program [] .errors @ =:: errors
+    context [] .program [] .idContext @ =:: idContext
+    idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
+    context [] .labelBuffer@ =:: labels
+    initialLabelOffset while $ labels [] .length < do =:: i
+      labels [] i list.get =:: prevLabel
+      prevLabel label labelContext id.labelNamesEq if
+        "duplicate label \"" sb.wrap
+        label labelContext sb.appendLabelName
+        "\" in " sb.appendS
+        valueContext switch
+          TYPE_STRUCT case "struct" sb.appendS break
+          TYPE_UNION case "union" sb.appendS break
+          TYPE_ENUM case "enum" sb.appendS break
+          TYPE_PROC case "procedure" sb.appendS break
+          INITIALIZER case "initializer" sb.appendS break
+        end
+        prevLabel labelContext id.labelPos =:: prevPos
+        prevPos optional.hasData if
+          " ( previous declaration at " sb.appendS
+          prevPos .data sb.appendPos
+          " )" sb.appendS
+        end
+        pos errors appendError
       end
     finally i 1 + end ..drop
-    ## truncate stack
-    stackOffset context truncateStack
   end
-  false return
-end
-proc(
-  Operation ptr : op
-  BlockInfo ptr : closedBlock
-  LabeledValueContext : closedType
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> bool ) =>: closedTypeBlock
-  ## XXX? use different contexts for different types of type-containers
-  ## finishLabledValues
-    closedBlock [] .stackOffset
-    closedBlock [] .labelOffset
-    closedType
-  pos context finishLabledValues if
-    true return
-  end
-  context [] .program [] .errors @ =:: errors
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  closedBlock [] .labelOffset =:: labelOffset
-  closedBlock [] .typeOffset =:: typeOffset
-  context [] .labelBuffer .length labelOffset - =:: elementCount
-  context [] .typeBuffer .length typeOffset - elementCount == assert "type count == label count"
-  0:i64 while $ elementCount < do =:: i
-    context [] .typeBuffer typeOffset i + list.at .data [] =:: eltType
-    context [] .labelBuffer labelOffset i + list.at .data [] =:: eltLabel
-    ## types are always static
-    eltType types.primitive.TYPE types.typeEquals if
-      eltLabel id.FLAG_STATIC labelContext id.addLabelFlags
+  proc(
+    LabelId : label
+    ConstValue : value
+    Type : valueType
+    i64 : initialLabelOffset
+    LabeledValueContext : valueContext
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: addLabeledValue
+    label initialLabelOffset valueContext pos context checkDuplicateLabel
+    context [] .program [] .errors @ =:: errors
+    context [] .program [] .idContext @ =:: idContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
+    context [] .labelBuffer
+      label list.append
+    context [] .labelBuffer =
+    valueContext switch
+      INITIALIZER case
+        context [] .typeBuffer
+          valueType list.append
+        context [] .typeBuffer =
+        context [] .valueBuffer
+          value list.append
+        context [] .valueBuffer =
+        false return
+      TYPE_STRUCT TYPE_UNION TYPE_PROC case break
+      TYPE_ENUM case ..unreachable
     end
-  finally i 1 + end ..drop
-  false return
-end
-
-proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeStructBlock
-  context [] .program [] .errors@ =:: errors
-  context [] .program [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  op closedBlock
-    LabeledValueContext .TYPE_STRUCT
-    op [] .pos
-  context closedTypeBlock if true return end
-  closedBlock [] .labelOffset =:: labelOffset
-  closedBlock [] .valueOffset =:: valueOffset
-  closedBlock [] .typeOffset =:: typeOffset
-  closedBlock [] .blockType .TYPE_COMPOSITE ?? and context [] .typeBuffer .length typeOffset == if
-    Type .empty
-  else
-    ## newTuple
-      context [] .typeBuffer list.asArray typeOffset array.tail
-      context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
-    typeContext types.newTuple if ..drop
-      "could not create structure-type" sb.wrap op [] .pos errors appendError
+    value .TypeId ?? ! or valueType types.primitive.TYPE types.typeEquals ! if
+      "unexpected argument for type-field declaration expected type got " sb.wrap
+        valueType typeContext sb.appendType
+        " [ " sb.appendS
+        value typeContext sb.appendConstant
+        " ]" sb.appendS
+      pos errors appendError
       true return
     end
-  end =:: tupleType
-  context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-  context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-  context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
-  ## pushValue
-    tupleType ConstValue .TypeId
-    types.primitive.TYPE
-    id.LABEL_ID_NONE
-    op [] .pos
-  context pushValue
-  false return
-end
-proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeProcTypeBlock
-  context [] .program [] .errors@ =:: errors
-  context [] .program [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  closedBlock [] .labelOffset =:: labelOffset
-  closedBlock [] .valueOffset =:: valueOffset
-  closedBlock [] .typeOffset =:: typeOffset
-  context [] .typeBuffer .length typeOffset - 1 < or
-      ## last argument is procedure output
-      context [] .typeBuffer
-        $ .length 1 -
-      list.get .procOut ?? ! if
-    "missing return type for procedure" sb.wrap op [] .pos errors appendError
-    true return
-  end
-  context [] .typeBuffer
-    list.pop =:: procOut ## last value is return type
-  context [] .typeBuffer =
-  op closedBlock
-    LabeledValueContext .TYPE_PROC
-    op [] .pos
-  context closedTypeBlock if true return end
-  ## newProcArgs
-    context [] .typeBuffer list.asArray typeOffset array.tail
-    context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
-    false
-  typeContext types.newProcArgs =:: procIn
-  procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
-    "could not create procedure-type" sb.wrap op [] .pos errors appendError
-    true return
-  end =:: newType
-  context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-  context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-  context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
-  ## pushValue
-    newType ConstValue .TypeId
-    types.primitive.TYPE
-    id.LABEL_ID_NONE
-    op [] .pos
-  context pushValue
-  false return
-end
-
-proc(
-  Operation ptr : op
-  BlockInfo ptr : closedBlock
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
-->
-  Type
-  bool
-) =>: closedInitializer
-  ## finishLabledValues
-    closedBlock [] .stackOffset
-    closedBlock [] .labelOffset
-    LabeledValueContext .INITIALIZER
-  pos context finishLabledValues if
-    Type .undefined true return
-  end
-  context [] .program [] .errors @ =:: errors
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  closedBlock [] .typeOffset =:: typeOffset
-  closedBlock [] .valueOffset =:: valueOffset
-  closedBlock [] .labelOffset =:: labelOffset
-  context [] .labelBuffer .length labelOffset - =:: elementCount
-  context [] .typeBuffer .length typeOffset - elementCount == assert "type count == label count"
-  context [] .valueBuffer .length valueOffset - elementCount == assert "value count == label count"
-  ## newInitializerType
-    context [] .typeBuffer list.asArray typeOffset array.tail
-    context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
-    typeContext
-  types.newInitializerType =:: initializerType
-  ## return
-    initializerType
-    false
-  return
-end
-
-proc(
-  ConstValue : value
-  Type : valType
-  LabelId : id
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> ) =>: pushValue
-  context [] .stack
-    value list.append
-  context [] .stack =
-  context [] .stackInfo
-    ## ValueInfo
-      valType
-      id
-      pos
-    ValueInfo new list.append
-  context [] .stackInfo =
-end
-proc(
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> ValueInfo ConstValue bool ) =>: popValue
-  context [] .stack .length 0 == if
-    context [] .evalType switch
-      INTERPRET GLOBAL case
-        "stack underflow " sb.wrap
-        pos context [] .program [] .errors @ appendError
-      break
-      FOLD_LOCAL case break ## allow underflow
+    value .TypeId =:: typeValue
+    context [] .typeBuffer
+      typeValue list.append
+    context [] .typeBuffer =
+    label id.LABEL_ID_NONE != if
+      typeValue
+        typeContext types.unwrapNamed
+      types.primitive.TYPE types.typeEquals =:: isType
+      ## map.put
+      context [] .variables@
+        label
+        ## Constant
+          isType if
+            label types.newGenericType ConstValue .TypeId
+          else
+            label ConstValue .GenericArg
+          end
+          ## ValueInfo
+            typeValue
+            pos
+          ValueInfo new
+        Constant new
+      map.put ..drop
     end
-    ## return
-      ## ValueInfo
-        Type .undefined
-        id.LABEL_ID_NONE
-        pos
-      ValueInfo new
-      ConstValue .None
-    true return
+    false return
   end
-  context [] .stack
-    list.pop =:: value
-  context [] .stack =
-  context [] .stackInfo
-    list.pop =:: valInfo
-  context [] .stackInfo =
-  valInfo value false return
-end
-proc(
-  ConstValue : value
-  ValueInfo : valInfo
-  InterpreterContext ptr.mut : context
-->  ) =>: unpopValue
-  context [] .stack
-     value list.append
-  context [] .stack =
-  context [] .stackInfo
-    valInfo list.append
-  context [] .stackInfo =
-end
-proc(
-  ConstValue _ ptr : values
-  ValueInfo _ ptr : valInfos
-  i64 : count
-  InterpreterContext ptr.mut : context
-->  ) =>: unpopValues
-  count 1 - while ..dup 0 >= do =:: i
-    ## unpopValue
-      values i []
-      valInfos i []
-      context
-    unpopValue
-    i 1 -
-  end ..drop
-end
-proc(
-  i64 : newLength
-  InterpreterContext ptr.mut : context
--> ) =>: truncateStack
-  context [] .stack .length context [] .stackInfo .length == assert "len(stack)=len(stackInfo)"
-  context [] .stack .length newLength >= assert "newLength<length"
-  context [] .stack
-    newLength list.setLength
-  context [] .stack =
-  context [] .stackInfo
-    newLength list.setLength
-  context [] .stackInfo =
-end
 
-proc(
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> ValueInfo Type bool ) =>: popType
-  context [] .program [] .errors @ =:: errors
-  context [] .program =:: program
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  pos context popValue =:: isError =:: value =:: valInfo
-  isError if
+  proc(
+    i64 : stackOffset
+    i64 : initialLabelOffset
+    LabeledValueContext : valueContext
+    FilePosition : pos
+    InterpreterContext  ptr.mut : context
+  -> bool ) =>: finishLabledValues
+    context [] .program [] .errors@ =:: errors
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
+    context [] .stack .length stackOffset > if
+      stackOffset while $ context [] .stack .length < do =:: i
+        context [] .stack i list.at .data =:: eltVal
+        context [] .stackInfo i list.at .data =:: eltInfo
+        valueContext switch
+          TYPE_ENUM case
+            "unexpected value in enum-block" sb.wrap
+              eltInfo [] .pushedAt
+            errors appendError
+            id.LABEL_ID_NONE
+            break
+          TYPE_UNION case
+            "unexpected value in union-block" sb.wrap
+              eltInfo [] .pushedAt
+            errors appendError
+            id.LABEL_ID_NONE
+            break
+          TYPE_PROC INITIALIZER case
+            id.LABEL_ID_NONE break
+          TYPE_STRUCT case
+            ## newDummyLabel
+              i stackOffset -
+              pos
+              -1:FileId ## TODO determine file-id
+              labelContext
+            id.newDummyLabel
+            break
+        end =:: eltLabel
+        ## addLabeledValue
+          eltLabel
+          eltVal []
+          eltInfo [] .valueType
+          initialLabelOffset
+          valueContext
+          eltInfo [] .pushedAt
+        context addLabeledValue if
+          true return
+        end
+      finally i 1 + end ..drop
+      ## truncate stack
+      stackOffset context truncateStack
+    end
+    false return
+  end
+  proc(
+    Operation ptr : op
+    BlockInfo ptr : closedBlock
+    LabeledValueContext : closedType
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: closedTypeBlock
+    ## XXX? use different contexts for different types of type-containers
+    ## finishLabledValues
+      closedBlock [] .stackOffset
+      closedBlock [] .labelOffset
+      closedType
+    pos context finishLabledValues if
+      true return
+    end
+    context [] .program [] .errors @ =:: errors
+    context [] .program [] .idContext @ =:: idContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
+    closedBlock [] .labelOffset =:: labelOffset
+    closedBlock [] .typeOffset =:: typeOffset
+    context [] .labelBuffer .length labelOffset - =:: elementCount
+    context [] .typeBuffer .length typeOffset - elementCount == assert "type count == label count"
+    0:i64 while $ elementCount < do =:: i
+      context [] .typeBuffer typeOffset i + list.at .data [] =:: eltType
+      context [] .labelBuffer labelOffset i + list.at .data [] =:: eltLabel
+      ## types are always static
+      eltType types.primitive.TYPE types.typeEquals if
+        eltLabel id.FLAG_STATIC labelContext id.addLabelFlags
+      end
+    finally i 1 + end ..drop
+    false return
+  end
+
+  proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeStructBlock
+    context [] .program [] .errors@ =:: errors
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .typeContext@ =:: typeContext
+    op closedBlock
+      LabeledValueContext .TYPE_STRUCT
+      op [] .pos
+    context closedTypeBlock if true return end
+    closedBlock [] .labelOffset =:: labelOffset
+    closedBlock [] .valueOffset =:: valueOffset
+    closedBlock [] .typeOffset =:: typeOffset
+    closedBlock [] .blockType .TYPE_COMPOSITE ?? and context [] .typeBuffer .length typeOffset == if
+      Type .empty
+    else
+      ## newTuple
+        context [] .typeBuffer list.asArray typeOffset array.tail
+        context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+      typeContext types.newTuple if ..drop
+        "could not create structure-type" sb.wrap op [] .pos errors appendError
+        true return
+      end
+    end =:: tupleType
+    context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
+    context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
+    context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+    ## pushValue
+      tupleType ConstValue .TypeId
+      types.primitive.TYPE
+      id.LABEL_ID_NONE
+      op [] .pos
+    context pushValue
+    false return
+  end
+  proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeProcTypeBlock
+    context [] .program [] .errors@ =:: errors
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .typeContext@ =:: typeContext
+    closedBlock [] .labelOffset =:: labelOffset
+    closedBlock [] .valueOffset =:: valueOffset
+    closedBlock [] .typeOffset =:: typeOffset
+    context [] .typeBuffer .length typeOffset - 1 < or
+        ## last argument is procedure output
+        context [] .typeBuffer
+          $ .length 1 -
+        list.get .procOut ?? ! if
+      "missing return type for procedure" sb.wrap op [] .pos errors appendError
+      true return
+    end
+    context [] .typeBuffer
+      list.pop =:: procOut ## last value is return type
+    context [] .typeBuffer =
+    op closedBlock
+      LabeledValueContext .TYPE_PROC
+      op [] .pos
+    context closedTypeBlock if true return end
+    ## newProcArgs
+      context [] .typeBuffer list.asArray typeOffset array.tail
+      context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+      false
+    typeContext types.newProcArgs =:: procIn
+    procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
+      "could not create procedure-type" sb.wrap op [] .pos errors appendError
+      true return
+    end =:: newType
+    context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
+    context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
+    context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+    ## pushValue
+      newType ConstValue .TypeId
+      types.primitive.TYPE
+      id.LABEL_ID_NONE
+      op [] .pos
+    context pushValue
+    false return
+  end
+
+  proc(
+    Operation ptr : op
+    BlockInfo ptr : closedBlock
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  ->
+    Type
+    bool
+  ) =>: closedInitializer
+    ## finishLabledValues
+      closedBlock [] .stackOffset
+      closedBlock [] .labelOffset
+      LabeledValueContext .INITIALIZER
+    pos context finishLabledValues if
+      Type .undefined true return
+    end
+    context [] .program [] .errors @ =:: errors
+    context [] .program [] .idContext @ =:: idContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
+    closedBlock [] .typeOffset =:: typeOffset
+    closedBlock [] .valueOffset =:: valueOffset
+    closedBlock [] .labelOffset =:: labelOffset
+    context [] .labelBuffer .length labelOffset - =:: elementCount
+    context [] .typeBuffer .length typeOffset - elementCount == assert "type count == label count"
+    context [] .valueBuffer .length valueOffset - elementCount == assert "value count == label count"
+    ## newInitializerType
+      context [] .typeBuffer list.asArray typeOffset array.tail
+      context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+      typeContext
+    types.newInitializerType =:: initializerType
+    ## return
+      initializerType
+      false
+    return
+  end
+
+  proc(
+    ConstValue : value
+    Type : valType
+    LabelId : id
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> ) =>: pushValue
+    context [] .stack
+      value list.append
+    context [] .stack =
+    context [] .stackInfo
+      ## ValueInfo
+        valType
+        pos
+      ValueInfo new list.append
+    context [] .stackInfo =
+  end
+  proc(
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> ValueInfo ConstValue bool ) =>: popValue
+    context [] .stack .length 0 == if
+      context [] .evalType switch
+        INTERPRET GLOBAL case
+          "stack underflow " sb.wrap
+          pos context [] .program [] .errors @ appendError
+        break
+        FOLD_LOCAL case break ## allow underflow
+      end
+      ## return
+        ## ValueInfo
+          Type .undefined
+          pos
+        ValueInfo new
+        ConstValue .None
+      true return
+    end
+    context [] .stack
+      list.pop =:: value
+    context [] .stack =
+    context [] .stackInfo
+      list.pop =:: valInfo
+    context [] .stackInfo =
+    valInfo value false return
+  end
+  proc(
+    ConstValue : value
+    ValueInfo : valInfo
+    InterpreterContext ptr.mut : context
+  ->  ) =>: unpopValue
+    context [] .stack
+       value list.append
+    context [] .stack =
+    context [] .stackInfo
+      valInfo list.append
+    context [] .stackInfo =
+  end
+  proc(
+    ConstValue _ ptr : values
+    ValueInfo _ ptr : valInfos
+    i64 : count
+    InterpreterContext ptr.mut : context
+  ->  ) =>: unpopValues
+    count 1 - while ..dup 0 >= do =:: i
+      ## unpopValue
+        values i []
+        valInfos i []
+        context
+      unpopValue
+      i 1 -
+    end ..drop
+  end
+  proc(
+    i64 : newLength
+    InterpreterContext ptr.mut : context
+  -> ) =>: truncateStack
+    context [] .stack .length context [] .stackInfo .length == assert "len(stack)=len(stackInfo)"
+    context [] .stack .length newLength >= assert "newLength<length"
+    context [] .stack
+      newLength list.setLength
+    context [] .stack =
+    context [] .stackInfo
+      newLength list.setLength
+    context [] .stackInfo =
+  end
+
+  proc(
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> ValueInfo Type bool ) =>: popType
+    context [] .program [] .errors @ =:: errors
+    context [] .program =:: program
+    context [] .program [] .idContext @ =:: idContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
+    pos context popValue =:: isError =:: value =:: valInfo
+    isError if
+      valInfo Type .undefined true return
+    end
+    value .TypeId ?? if
+      valInfo value .TypeId false return
+    end
+    "expected type got: " sb.wrap
+      valInfo .valueType typeContext sb.appendType
+      " ( " sb.appendS
+      value typeContext sb.appendConstant
+      " )" sb.appendS
+    pos errors appendError
+    ## restore stack
+    value valInfo context unpopValue
     valInfo Type .undefined true return
   end
-  value .TypeId ?? if
-    valInfo value .TypeId false return
-  end
-  "expected type got: " sb.wrap
-    valInfo .valueType typeContext sb.appendType
-    " ( " sb.appendS
-    value typeContext sb.appendConstant
-    " )" sb.appendS
-  pos errors appendError
-  ## restore stack
-  value valInfo context unpopValue
-  valInfo Type .undefined true return
-end
-proc(
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> bool bool ) =>: popCondition
-  context [] .program [] .errors@ =:: errors
-  context [] .program =:: program
-  context [] .program [] .idContext@ =:: idContext
-  idContext [] .constContext@ =:: constContext
-  idContext [] .typeContext@ =:: typeContext
-  pos context popValue =:: isError =:: value =:: valInfo
-  isError if
+  proc(
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool bool ) =>: popCondition
+    context [] .program [] .errors@ =:: errors
+    context [] .program =:: program
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    pos context popValue =:: isError =:: value =:: valInfo
+    isError if
+      false true return
+    end
+    value .Bool ?? if
+      value .Bool false return
+    end
+    "expected boolean got: " sb.wrap
+      valInfo .valueType typeContext sb.appendType
+      " ( " sb.appendS
+      value typeContext sb.appendConstant
+      " )" sb.appendS
+    pos errors appendError
+    ## restore stack
+    value valInfo context unpopValue
     false true return
   end
-  value .Bool ?? if
-    value .Bool false return
-  end
-  "expected boolean got: " sb.wrap
-    valInfo .valueType typeContext sb.appendType
-    " ( " sb.appendS
-    value typeContext sb.appendConstant
-    " )" sb.appendS
-  pos errors appendError
-  ## restore stack
-  value valInfo context unpopValue
-  false true return
-end
 
 ## TODO use wrapper procedures for stack access
-
-namespace: interpreter
   proc(
     ProgramContext ptr.mut : progContext
     FileId : fileId
@@ -1062,64 +1057,64 @@ namespace: interpreter
     ## TODO? convert primitive arrays to correct array type?
     oldValue return
   end
-end
-proc(
-  i64 : index
-  i64 : length
-  FilePosition : pos
-  CompilerError list ptr.mut : errors
--> bool ) =>: checkIndex
-  index 0 < or index length >= if
-    "index out of range: " sb.wrap
-    index sb.appendI
-    " size: " sb.appendS
-    length sb.appendI
-    pos errors appendError
-    true return
-  end
-  false return
-end
-proc(
-  ConstValue : value
-  ValueInfo : valInfo
-  i64 : elementIndex
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> bool ) =>: getElement
-  context [] .program@ =:: program
-  program [] .errors@ =:: errors
-  program [] .idContext@ =:: idContext
-  idContext [] .constContext@ =:: constContext
-  idContext [] .typeContext@ =:: typeContext
-  valInfo .valueType elementIndex typeContext types.compositeGetElement =:: eltType
-  value .Array ?? if
-    value .Array elementIndex array.get
-  else value .Union ?? _if
-    value elementIndex constUnionElement if
-      "union index (" sb.wrap
-        elementIndex sb.appendI
-        ") does not match current value (" sb.appendS
-        value .Union .eltIndex sb.appendI
-        ")" sb.appendS
+  proc(
+    i64 : index
+    i64 : length
+    FilePosition : pos
+    CompilerError list ptr.mut : errors
+  -> bool ) =>: checkIndex
+    index 0 < or index length >= if
+      "index out of range: " sb.wrap
+      index sb.appendI
+      " size: " sb.appendS
+      length sb.appendI
       pos errors appendError
+      true return
     end
-  else
-    "unexpected value for composite constant: " sb.wrap
-      value typeContext sb.appendConstant
-    pos errors appendError
-    ## unpopValue
-      value
-      valInfo
-    context unpopValue
-    true return
-  end =:: eltValue
-  ## pushValue
-    eltValue
-    eltType
-    id.LABEL_ID_NONE
-    pos
-  context pushValue
-  false return
+    false return
+  end
+  proc(
+    ConstValue : value
+    ValueInfo : valInfo
+    i64 : elementIndex
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: getElement
+    context [] .program@ =:: program
+    program [] .errors@ =:: errors
+    program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    valInfo .valueType elementIndex typeContext types.compositeGetElement =:: eltType
+    value .Array ?? if
+      value .Array elementIndex array.get
+    else value .Union ?? _if
+      value elementIndex constUnionElement if
+        "union index (" sb.wrap
+          elementIndex sb.appendI
+          ") does not match current value (" sb.appendS
+          value .Union .eltIndex sb.appendI
+          ")" sb.appendS
+        pos errors appendError
+      end
+    else
+      "unexpected value for composite constant: " sb.wrap
+        value typeContext sb.appendConstant
+      pos errors appendError
+      ## unpopValue
+        value
+        valInfo
+      context unpopValue
+      true return
+    end =:: eltValue
+    ## pushValue
+      eltValue
+      eltType
+      id.LABEL_ID_NONE
+      pos
+    context pushValue
+    false return
+  end
 end
 
 proc(
@@ -1732,7 +1727,6 @@ proc(
               value
               ## ValueInfo
                 valInfo .valueType
-                label
                 op [] .pos
               ValueInfo new
             Constant new
@@ -2062,7 +2056,6 @@ proc(
       value context [] .stack $ .length offset - list.set
       ## ValueInfo
         op [] .dataType
-        id.LABEL_ID_NONE
         op [] .pos
       ValueInfo new context [] .stackInfo $ .length offset - list.set
       false return
@@ -2460,95 +2453,97 @@ proc(
   end
 end
 
-proc(
-  Type : calledType
-  BuiltIn : builtIn
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> bool ) =>: tryEvaluateBuiltIn
-  context [] .program [] .errors @ =:: errors
-  context [] .program =:: program
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  calledType typeContext types.getProcIn
-    ! assert "has procedure in"
-  =:: inType
-  inType typeContext types.compositeElts =:: inTypes
-  ConstValue 3 array new =:: mut: valueData
-  valueData @ =:: values
-  ValueInfo 3 array new =:: mut: valInfoData
-  valInfoData @ =:: valInfos
-  0:i64 =:: mut: nArgs
-  context [] .evalType .FOLD_LOCAL ?? ! =:: showErrors
-  inTypes .length 1 - while ..dup 0 >= do =:: i
-    nArgs 3 < assert "built-ins have at most three arguments"
-    inTypes i types.compositeElts.get =:: eltType
-    pos context popValue if ..drop.2
-      values valInfos nArgs context unpopValues
-      true return
-    end values nArgs [] = valInfos nArgs [] =
-    valInfos nArgs [] .valueType eltType typeContext types.canAutoCast ! if
-      showErrors if
-        "wrong argument type for built-in " sb.wrap
-          builtIn sb.appendBuiltIn
-          " expected: " sb.appendS
-          eltType typeContext sb.appendType
-          " got: " sb.appendS
-          valInfos nArgs [] .valueType typeContext sb.appendType
-        pos errors appendError
+namespace: interpreter
+  proc(
+    Type : calledType
+    BuiltIn : builtIn
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: tryEvaluateBuiltIn
+    context [] .program [] .errors @ =:: errors
+    context [] .program =:: program
+    context [] .program [] .idContext @ =:: idContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
+    calledType typeContext types.getProcIn
+      ! assert "has procedure in"
+    =:: inType
+    inType typeContext types.compositeElts =:: inTypes
+    ConstValue 3 array new =:: mut: valueData
+    valueData @ =:: values
+    ValueInfo 3 array new =:: mut: valInfoData
+    valInfoData @ =:: valInfos
+    0:i64 =:: mut: nArgs
+    context [] .evalType .FOLD_LOCAL ?? ! =:: showErrors
+    inTypes .length 1 - while ..dup 0 >= do =:: i
+      nArgs 3 < assert "built-ins have at most three arguments"
+      inTypes i types.compositeElts.get =:: eltType
+      pos context popValue if ..drop.2
+        values valInfos nArgs context unpopValues
+        true return
+      end values nArgs [] = valInfos nArgs [] =
+      valInfos nArgs [] .valueType eltType typeContext types.canAutoCast ! if
+        showErrors if
+          "wrong argument type for built-in " sb.wrap
+            builtIn sb.appendBuiltIn
+            " expected: " sb.appendS
+            eltType typeContext sb.appendType
+            " got: " sb.appendS
+            valInfos nArgs [] .valueType typeContext sb.appendType
+          pos errors appendError
+        end
+        values valInfos nArgs 1 + context unpopValues
+        true return
       end
-      values valInfos nArgs 1 + context unpopValues
-      true return
+      nArgs 1 + nArgs =
+      i 1 -
+    end ..drop
+    ## bring arguments in correct order
+    values nArgs array.reverse
+    valInfos nArgs array.reverse
+    ## XXX ensure type arguments for pointer built-ins are present
+    builtIn
+      values
+      nArgs i32 cast
+    pos errors interpreter.evaluateBuiltIn =:: resultType =:: value
+    resultType switch
+      success case
+        value
+          calledType typeContext types.getProcRet
+            ! assert "has return type"
+          id.LABEL_ID_NONE
+          pos
+          context
+        pushValue
+        false return
+      argumentError case
+        showErrors if
+          "invalid arguments for built-in " sb.wrap
+            builtIn sb.appendBuiltIn
+            ": " sb.appendS
+            0:i64 while ..dup nArgs < do =:: i
+              values i [] typeContext sb.appendConstant
+              ", " sb.appendS
+              i 1 +
+            end ..drop
+          pos errors appendError
+        end
+        values nArgs array.reverse
+        valInfos nArgs array.reverse
+        values valInfos nArgs context unpopValues
+        true return
+      unimplemented case
+        showErrors if
+          "unsupported built-in in constant evaluation: " sb.wrap
+            builtIn sb.appendBuiltIn
+          pos errors appendError
+        end
+        values nArgs array.reverse
+        valInfos nArgs array.reverse
+        values valInfos nArgs context unpopValues
+        true return
     end
-    nArgs 1 + nArgs =
-    i 1 -
-  end ..drop
-  ## bring arguments in correct order
-  values nArgs array.reverse
-  valInfos nArgs array.reverse
-  ## XXX ensure type arguments for pointer built-ins are present
-  builtIn
-    values
-    nArgs i32 cast
-  pos errors interpreter.evaluateBuiltIn =:: resultType =:: value
-  resultType switch
-    success case
-      value
-        calledType typeContext types.getProcRet
-          ! assert "has return type"
-        id.LABEL_ID_NONE
-        pos
-        context
-      pushValue
-      false return
-    argumentError case
-      showErrors if
-        "invalid arguments for built-in " sb.wrap
-          builtIn sb.appendBuiltIn
-          ": " sb.appendS
-          0:i64 while ..dup nArgs < do =:: i
-            values i [] typeContext sb.appendConstant
-            ", " sb.appendS
-            i 1 +
-          end ..drop
-        pos errors appendError
-      end
-      values nArgs array.reverse
-      valInfos nArgs array.reverse
-      values valInfos nArgs context unpopValues
-      true return
-    unimplemented case
-      showErrors if
-        "unsupported built-in in constant evaluation: " sb.wrap
-          builtIn sb.appendBuiltIn
-        pos errors appendError
-      end
-      values nArgs array.reverse
-      valInfos nArgs array.reverse
-      values valInfos nArgs context unpopValues
-      true return
   end
 end
 
@@ -2558,6 +2553,7 @@ proc(
 ->
   bool
 ) =>: evaluateOperations
+  using interpreter
   0:i64 =:: mut: offset
   context [] .openBlocks list.peek =:: outerBlock
   outerBlock optional.hasData and
@@ -2581,52 +2577,52 @@ proc(
   false return
 end
 
-proc(
-  Type : tupleType
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
--> bool ) =>: newTuple
-  context [] .program [] .errors @ =:: errors
-  context [] .program =:: program
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  tupleType typeContext types.compositeElts =:: elts
-  elts .length "tuple-creation" string.wrap true pos context checkStack if
-    true return
-  end
-  context [] .stack .length elts .length - =:: offset
-  0:i64 while ..dup elts .length < do =:: i
-    context [] .stackInfo offset i + list.at .data =:: stackInfo
-    stackInfo [] .valueType elts i types.compositeElts.get typeContext types.canAutoCast ! if
-      "wrong argument for tuple creation expected: " sb.wrap
-        elts i types.compositeElts.get typeContext sb.appendType
-        " got: " sb.appendS
-        stackInfo [] .valueType typeContext sb.appendType
-      pos errors appendError
+namespace: interpreter
+  proc(
+    Type : tupleType
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: newTuple
+    context [] .program [] .errors @ =:: errors
+    context [] .program =:: program
+    context [] .program [] .idContext @ =:: idContext
+    idContext [] .constContext @ =:: constContext
+    idContext [] .typeContext @ =:: typeContext
+    typeContext [] .labelContext @ =:: labelContext
+    tupleType typeContext types.compositeElts =:: elts
+    elts .length "tuple-creation" string.wrap true pos context checkStack if
       true return
     end
-    i 1 +
-  end ..drop
-  context [] .stack list.asArray
-    offset array.tail
-  constContext newArrayConst =:: tupleConst
-  ## remove arguments and push tuple
-  offset context truncateStack
-  context [] .stack
-    tupleConst list.append
-  context [] .stack =
-  context [] .stackInfo
-    ## ValueInfo
-      tupleType
-      id.LABEL_ID_NONE
-      pos
-    ValueInfo new list.append
-  context [] .stackInfo =
-  false return
+    context [] .stack .length elts .length - =:: offset
+    0:i64 while ..dup elts .length < do =:: i
+      context [] .stackInfo offset i + list.at .data =:: stackInfo
+      stackInfo [] .valueType elts i types.compositeElts.get typeContext types.canAutoCast ! if
+        "wrong argument for tuple creation expected: " sb.wrap
+          elts i types.compositeElts.get typeContext sb.appendType
+          " got: " sb.appendS
+          stackInfo [] .valueType typeContext sb.appendType
+        pos errors appendError
+        true return
+      end
+      i 1 +
+    end ..drop
+    context [] .stack list.asArray
+      offset array.tail
+    constContext newArrayConst =:: tupleConst
+    ## remove arguments and push tuple
+    offset context truncateStack
+    context [] .stack
+      tupleConst list.append
+    context [] .stack =
+    context [] .stackInfo
+      ## ValueInfo
+        tupleType
+        pos
+      ValueInfo new list.append
+    context [] .stackInfo =
+    false return
+  end
 end
-
 #+evaluate procedure body with the given arguments+#
 proc(
   ProcId : procId
@@ -2637,6 +2633,7 @@ proc(
 ->
   bool
 ) =>: export: evaluateCall
+  using interpreter
   context [] .program [] .errors@ =:: errors
   context [] .program =:: program
   context [] .program [] .idContext@ =:: idContext
@@ -2719,7 +2716,6 @@ proc(
           value
           ## ValueInfo
             args i types.compositeElts.get
-            label
             pos
           ValueInfo new
         Constant new
@@ -2737,7 +2733,6 @@ proc(
       context [] .stackInfo
         ## ValueInfo
           valueInfo [] .valueType
-          id.LABEL_ID_NONE
           pos
         ValueInfo new list.append
       context [] .stackInfo =
