@@ -1672,7 +1672,7 @@ proc(
         true return
       end =:: idData
       idData [] .constValue .None ?? if
-        "Expected constant got " sb.wrap
+        "expected constant got " sb.wrap
           op [] .val .getId labelContext sb.appendIdInfo
         op [] .pos errors appendError
         true return
