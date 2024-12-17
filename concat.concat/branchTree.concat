@@ -403,7 +403,7 @@ namespace: branchTree
     tree [] .nodes
        tree [] .nodes
          branchHeads 0 array.get i64 cast
-       list.at .data list.appendP
+       list.get list.append
     tree [] .nodes =
     tree [] .nodes list.peek .data =:: mut: currentNode
     1 currentNode [] .childCount =
