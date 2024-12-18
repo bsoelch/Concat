@@ -5,6 +5,8 @@ import "identifiers.concat"
 import "program.concat"
 import "callResolver.concat"
 
+type : export: TypeCheckState
+
 namespace: interpreter
   struct(
     Type : mut: valueType
@@ -27,7 +29,8 @@ end
 enum( GLOBAL FOLD_LOCAL INTERPRET ) =:: export: InterpreterType
 struct(
   using interpreter
-  ProgramContext ptr.mut : program
+  ProgramContext ptr.mut : mut: program
+  TypeCheckState ptr.mut optional : mut: typeChecker
   LabelId Constant hashMap : mut: variables
   ConstValue list : mut: stack
   ValueInfo  list : mut: stackInfo
@@ -723,6 +726,7 @@ namespace: interpreter
 ## TODO use wrapper procedures for stack access
   proc(
     ProgramContext ptr.mut : progContext
+    TypeCheckState ptr.mut optional : typeChecker
     FileId : fileId
     InterpreterType : evalType
   ->
@@ -730,6 +734,7 @@ namespace: interpreter
   ) =>: export: wrapProgram
     ## InterpreterContext
       progContext
+      typeChecker
       labelHash @ labelEq @ 32 Constant map.create
       64 ConstValue list.create
       64 ValueInfo  list.create
@@ -972,6 +977,7 @@ namespace: interpreter
     ## TODO? directly go to evaluation of call operation (for resolving auto-args),
     ##   instead of calling evaluateOperation
     program
+      TypeCheckState ptr.mut optional.empty
       procData [] .fileId
       InterpreterType .GLOBAL
     wrapProgram =:: mut: context
@@ -2654,6 +2660,10 @@ proc(
       procType
       procData [] .implementation .builtIn .builtIn
     pos context tryEvaluateBuiltIn return
+  else procData [] .implementation .code ?? ! _if
+    "unexpected implementation type" sb.wrap
+    pos errors appendError
+    true return
   end
   nArgs "procedure call" string.wrap false pos context checkStack if
     128 sb.create
@@ -2689,6 +2699,9 @@ proc(
     end ..drop
     true
   else false end =:: isTypeGenerator
+  procData [] .isStatic ! and context [] .typeChecker optional.hasData if
+    procId implId pos context [] .typeChecker .data typeCheckChildProcedures
+  end
   context [] .stack .length =:: stackOffset
   context [] .openBlocks .length =:: prevBlocks
   BlockType .PROCEDURE true context openBlock
@@ -2757,7 +2770,6 @@ proc(
         implId list.at .data
       =:: currentImpl
       currentImpl .codeState .TYPE_CHECKED ?? ! if
-        ## FIXME ensure implementation exists
         "no implementaion for procedure " sb.wrap
           procName labelContext sb.appendLabelName
         pos errors appendError
@@ -2766,13 +2778,18 @@ proc(
       currentImpl [] .codeLength
     list.slice
   else
-    ## TODO? ensure compilation of (non-static) procedures
     codeImpl [] .codeState switch
       PARSING case
         "procedure " sb.wrap
           procName labelContext sb.appendLabelName
           " has not finished parsing" sb.appendS
-        pos errors appendInfo
+        pos errors appendError
+        Operation array.empty break
+      TYPE_CHECKING case
+        "procedure " sb.wrap
+          procName labelContext sb.appendLabelName
+          " has not finished type-checking" sb.appendS
+        pos errors appendError
         Operation array.empty break
       PARSED case
         program [] .tmpOps
@@ -2838,8 +2855,23 @@ proc(
   end
   ## FIXME static procedures don't cast their return value
   isTypeGenerator if
+    context [] .stack .length 1 < if
+      "could not initalized type generator " sb.wrap
+        procName labelContext sb.appendLabelName
+      pos errors appendError
+      true return
+    end
     context [] .stack
-      list.pop .TypeId =:: generatedType
+      list.pop =:: retValue
+      retValue .TypeId ?? ! if ..drop
+        "could not initalized type generator " sb.wrap
+          procName labelContext sb.appendLabelName
+          " expected type got " sb.appendS
+          retValue typeContext sb.appendConstant
+        pos errors appendError
+        true return
+      end
+      retValue .TypeId =:: generatedType
     context [] .stack =
     ## initializeGeneratedType
       procName

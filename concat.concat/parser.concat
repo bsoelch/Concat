@@ -35,6 +35,7 @@ struct(
   string : mut: basePath
   string : mut: libPath
   ProgramContext ptr.mut : progContext
+  TypeCheckState ptr.mut : typeChecker
   BlockInfo list : mut: openBlocks
   i64 list : mut: andOrPositions
   Operation list : mut: globalOpBuffer
@@ -2480,7 +2481,7 @@ proc(
   string : libPath
   string : basePath
   bool : saveGlobalTokens
--> ProgramContext ) =>: export: parseProgram
+-> ProgramContext TypeCheckState ) =>: export: parseProgram
   newProgramContext =:: mut: programContext
   ## FilePosition
     rootFile sb.asStr
@@ -2489,14 +2490,17 @@ proc(
   FilePosition new =:: rootPos
   ## initBuiltInProcs
     rootPos
-    programContext @
+    programContext@
   initBuiltInProcs if
     ## TODO handle error
   end
+  programContext@ newTypeCheckState =:: mut: typeChecker
+  programContext@ typeChecker@ updateTypeCheckerPointers
   ## ParserState
     basePath
     libPath
-    programContext @
+    programContext@
+    typeChecker@
     64  BlockInfo               list.create
     32  i64                     list.create
     128 Operation               list.create
@@ -2522,7 +2526,7 @@ proc(
   end ..drop
   state .globalInterpreters list.free ..drop
   state .tmpString sb.free ..drop
-  programContext return
+  programContext typeChecker return
 end
 proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError ) =>: parseFile
   fileName
@@ -2539,7 +2543,11 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
     progContext [] .progFiles =
     state [] .globalInterpreters
       ## InterpreterInfo
-        progContext fileId InterpreterType .GLOBAL interpreter.wrapProgram
+        progContext
+          state [] .typeChecker optional.wrap
+          fileId
+          InterpreterType .GLOBAL
+        interpreter.wrapProgram
         0
       InterpreterInfo new list.append
     state [] .globalInterpreters =

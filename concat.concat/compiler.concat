@@ -231,10 +231,11 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
   errors [] list.clear errors [] =
 end
 
-proc( -> ) =>: main ## TODO check return value of fopen
-  parseArgs
-  ## TODO cleanup program memory after compilation
-  srcFile libPath basePath parserTokensFile optional.hasData parseProgram =:: mut: prog
+proc( -> ProgramContext ) =>: parseAndTypeCheck
+  srcFile libPath basePath parserTokensFile optional.hasData parseProgram
+    =:: mut: typeCheckState
+  =:: mut: prog
+  prog@ typeCheckState@ updateTypeCheckerPointers
   parserTokensFile optional.hasData if
     1024 sb.create
       prog @ sb.appendProgram
@@ -244,20 +245,26 @@ proc( -> ) =>: main ## TODO check return value of fopen
     io.fclose ..drop
     parsedOps sb.free ..drop
   end
-  prog .errors @ checkErrors
+  prog .errors@ checkErrors
   ## new type-checker
-  prog @ typeCheckProgram2
+  typeCheckState@ typeCheckProgram
+  prog return
+end
+proc( -> ) =>: main ## TODO check return value of fopen
+  parseArgs
+  ## TODO cleanup program memory after compilation
+  parseAndTypeCheck =:: mut: prog
   compilerTokensFile optional.hasData if
     1024 sb.create
-      prog @ sb.appendProgram
+      prog@ sb.appendProgram
     =:: parsedOps
     compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop
   end
-  prog .errors @ checkErrors
-  prog @ prepareCompile
+  prog .errors@ checkErrors
+  prog@ prepareCompile
   ## TODO own flag&file for dumping tokens
   compilerTokensFile optional.hasData if
     1024 sb.create

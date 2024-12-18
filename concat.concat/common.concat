@@ -58,7 +58,6 @@ type : export: Type
 type : export: ConstValue
 type : export: ConstantContext
 
-
 namespace: sb
   proc( stringBuilder string -> stringBuilder ) =>: export: appendAsciified
     =:: str

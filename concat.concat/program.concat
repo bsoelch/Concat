@@ -24,7 +24,7 @@ struct(
   LabelId : label
 ) =:: export: VariableInfo
 
-enum( PARSING PARSED TYPE_CHECKED ) =:: export: ProcCodeState
+enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED ) =:: export: ProcCodeState
 struct(
   Type : procType
   ConstValue arrayView : staticArgs

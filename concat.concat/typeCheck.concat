@@ -154,6 +154,7 @@ end
 
 ## XXX? merge all typed-value types
 struct( Type : valType ConstValue : value ) =:: TypedValue
+enum( PROC_CHILD LINEAR ) =:: TypeCheckMode
 
 struct(
   i64 : openBlocksOffset
@@ -166,11 +167,12 @@ struct(
   i32 : blockCount
   Type : currentProcType
   FileId : currentFile
+  TypeCheckMode : mut: mode
   bool : inTypeBlock
   bool : reachable
 ) =:: TypeCheckStateState
 struct(
-  ProgramContext ptr.mut : program
+  ProgramContext ptr.mut : mut: program
   InterpreterContext : mut: interpreter
   LabelId TypedValue hashMap : mut: argData
   Type : mut: currentProcType
@@ -182,18 +184,19 @@ struct(
   i64 : mut: blockStart
   OpInfo list : mut: opInfo
   i64 list : mut: childIds
+  ProcedureImpl list : mut: missingProcs
   FileId : mut: currentFile
   FilePosition list : mut: initializationStack
   TypeCheckStateState list : mut: stateStack
+  TypeCheckMode : mut: mode
   bool : mut: reachable
   ## TODO flags:
   ## * disable reorganizing of operations (excluding types)
   ## * is it allowed to optimize out reading from variables
   ## * is folding (non-type) constants allowed
-) =:: TypeCheckState
+) =:: export: TypeCheckState
 
-## TODO allow nested type-checking
-proc( TypeCheckState ptr.mut : state -> bool ) =>: rememberState
+proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
   ## XXX? flag to check if state is currently in use
   ##   (auto-types are reset after type-checking (generic) procedure)
   state [] .stateStack
@@ -208,12 +211,12 @@ proc( TypeCheckState ptr.mut : state -> bool ) =>: rememberState
       state [] .blockCount
       state [] .currentProcType
       state [] .currentFile
+      state [] .mode
       state [] .inTypeBlock
       state [] .reachable
     TypeCheckStateState new list.append
   state [] .stateStack =
   ## TODO remember Interpreter state
-  false return
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   state [] .stateStack .length 0 == if
@@ -248,6 +251,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   prevState .blockCount state [] .blockCount =
   prevState .currentProcType state [] .currentProcType =
   prevState .currentFile state [] .currentFile =
+  prevState .mode state [] .mode =
   prevState .inTypeBlock state [] .inTypeBlock =
   ## TODO reset Interpreter state
   prevState .reachable state [] .reachable =
@@ -308,7 +312,6 @@ proc( i64 : argCount TypeCheckState ptr.mut : state -> bool ) =>: interpreterLoa
   finally itr end ..drop
   true return
 end
-import debug
 proc(
   InterpreterLoadMode : mode
   TypeCheckState ptr.mut : state
@@ -1909,7 +1912,7 @@ proc(
           ## resolveCall
             procedures
             stackValues list.asArray
-            message @ optional.wrap
+            message@ optional.wrap
             op .pos
             program
           resolveCall =:: calledType =:: calledProc?
@@ -1939,6 +1942,32 @@ proc(
           end
           calledProcData [] .implementation switch
             code case
+              state [] .mode .LINEAR ?? ! if
+                calledProcData  [] .implementation .code@ =:: codeImpl
+                calledProc .implementationId =:: implId
+                implId -1:i64 == if
+                  codeImpl [] .codeState .TYPE_CHECKED ?? ! if
+                    state [] .missingProcs
+                      ## ProcedureImpl
+                        implId
+                        calledProc .procId
+                      ProcedureImpl new list.append
+                    state [] .missingProcs =
+                  end
+                else
+                  codeImpl [] .implementations
+                    implId list.at .data
+                  [] .codeState .TYPE_CHECKED ?? ! if
+                    state [] .missingProcs
+                      ## ProcedureImpl
+                        implId
+                        calledProc .procId
+                      ProcedureImpl new list.append
+                    state [] .missingProcs =
+                  end
+                end
+                ## check if implementation exists if not add to list of missing imples
+              end
               calledProc OpValue .call op .val =
             break
             builtIn case
@@ -4128,15 +4157,89 @@ proc(
 end
 
 proc(
+  ProcCodeState : codeState
+  LabelId : procName
+  FilePosition optional : expandedAt
+  ProgramContext ptr.mut : program
+-> bool ) =>: checkProcState
+  codeState switch
+    PARSED case false return ## expected
+    TYPE_CHECKED case true return ## nothing to do
+    PARSING case
+      expandedAt optional.hasData if
+        "procedure " sb.wrap
+          procName program [] .idContext .typeContext .labelContext@ sb.appendLabelName
+          " has not finished parsing" sb.appendS
+        expandedAt .data program [] .errors@ appendError
+      end
+      true return
+    TYPE_CHECKING case
+      expandedAt optional.hasData if
+        "procedure " sb.wrap
+          procName program [] .idContext .typeContext .labelContext@ sb.appendLabelName
+          " has not finished type-checking" sb.appendS
+        expandedAt .data program [] .errors@ appendError
+      end
+      true return
+  end
+end
+proc(
   ProcId : procId
   i64 : implId
   FilePosition optional : expandedAt
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckProcedure
   ## XXX? is there a way to reset local auto-types without copying the whole list
-  state [] .program [] .autoTypes list.copy =:: prevAutoTypes
   state [] .program =:: program
+  program [] .idContext .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   program [] .procedures procId i64 cast list.at .data =:: currentProc
+  currentProc [] .implementation .code ?? ! if
+    ## TODO replace alias with underlying proc
+    ##  skip built-ins
+    return
+  end
+  currentProc [] .implementation .code@ =:: codeImpl
+  implId -1 == if
+    codeImpl [] .codeState currentProc [] .labelId expandedAt program checkProcState if
+      return
+    end
+    ProcCodeState .TYPE_CHECKING codeImpl [] .codeState =
+  else
+    codeImpl [] .implementations
+      implId list.at .data
+    =:: currentImpl
+    currentImpl [] .codeState currentProc [] .labelId expandedAt program checkProcState if
+      return
+    end
+    ProcCodeState .TYPE_CHECKING currentImpl [] .codeState =
+    currentImpl [] .procType typeContext types.getProcIn ..drop =:: procIn
+    procIn typeContext types.compositeElts =:: inTypes
+    0:i64 =:: mut: staticArgCount
+    ## XXX? clear/reset argument map
+    0:i64 while ..dup inTypes .length < do =:: i
+      procIn i typeContext types.compositeGetLabel =:: labelId
+      inTypes i types.compositeElts.get =:: argType
+      labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
+        currentImpl [] .staticArgs
+          staticArgCount array.get
+        =:: argValue
+        state [] .argData@ labelId
+          argType argValue TypedValue new
+        map.put ..drop
+        staticArgCount 1 + staticArgCount =
+      else
+        state [] .argData@ labelId
+          argType ConstValue .None TypedValue new
+        map.put ..drop
+      end
+      i 1 +
+    end ..drop
+  end
+  currentProc [] .isStatic if
+    return
+  end
+  program [] .autoTypes list.copy =:: prevAutoTypes
   ## compile procedures to local code of given file
   currentProc [] .fileId state [] .currentFile =
   state [] .initializationStack .length =:: offset
@@ -4150,7 +4253,7 @@ proc(
     currentProc [] .fileId i64 cast
   list.at .data =:: procFile
   state clearOps
-  currentProc [] .implementation .code @ =:: codeImpl
+  state [] .compiledOps .length =:: codeOffset
   program [] .tmpOps
      codeImpl [] .codeStart list.at .data
   =:: procStart
@@ -4179,19 +4282,22 @@ proc(
   ## remember new code position
   implId -1 == if
     procFile [] .localOps .length codeImpl [] .codeStart =
-    state [] .compiledOps .length codeImpl [] .codeLength =
+    state [] .compiledOps .length codeOffset - codeImpl [] .codeLength =
     ProcCodeState .TYPE_CHECKED codeImpl [] .codeState =
   else
     codeImpl [] .implementations
       implId list.at .data
     =:: currentImpl
     procFile [] .localOps .length currentImpl [] .codeStart =
-    state [] .compiledOps .length currentImpl [] .codeLength =
+    state [] .compiledOps .length codeOffset - currentImpl [] .codeLength =
     ProcCodeState .TYPE_CHECKED currentImpl [] .codeState =
   end
   procFile [] .localOps
-    state [] .compiledOps list.appendAll
+    state [] .compiledOps
+      list.asArray codeOffset array.tail
+    list.appendArray
   procFile [] .localOps =
+  state clearOps
   state [] .program [] .autoTypes
     list.free ..drop
     prevAutoTypes ## reset local auto-types
@@ -4206,13 +4312,49 @@ proc(
     state [] .stack@ branchTree.clear
   end
 end
+proc(
+  ProcId : procId
+  i64 : implId
+  FilePosition : expandedAt
+  TypeCheckState ptr.mut : state
+-> ) =>: export: typeCheckChildProcedures
+  state rememberState
+  TypeCheckMode .PROC_CHILD state [] .mode =
+  state [] .missingProcs .length =:: missingProcsOffset
+  procId implId expandedAt optional.wrap state typeCheckProcedure
+  ##  go through called procedures in breadth first order
+  missingProcsOffset while $ state [] .missingProcs .length < do =:: i
+    state [] .missingProcs i list.get =:: nextProc
+    ## typeCheckProcedure
+      nextProc .procId
+      nextProc .implementationId
+      expandedAt optional.wrap ## XXX better position?, remember complete call stack?
+    state typeCheckProcedure
+  finally i 1 + end ..drop
+  state [] .missingProcs
+    missingProcsOffset list.setLength
+  state [] .missingProcs =
+  state resetState
+end
 
-64 =:: MAX_STATIC_RECURSION
-proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
+
+proc(
+  ProgramContext ptr.mut : program
+  TypeCheckState ptr.mut : state
+->  ) =>: export: updateTypeCheckerPointers
+  program state [] .program =
+  program state [] .interpreter .program =
+  state optional.wrap state [] .interpreter .typeChecker =
+end
+proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCheckState
   ## TypeCheckState
     program
-    program -1:FileId InterpreterType .FOLD_LOCAL interpreter.wrapProgram
-    labelHash @ labelEq @ 64 TypedValue map.create
+    program
+      TypeCheckState ptr.mut optional.empty
+      -1:FileId
+      InterpreterType .FOLD_LOCAL
+    interpreter.wrapProgram
+    labelHash@ labelEq@ 64 TypedValue map.create
     Type .undefined
     false ## inTypeBlock
     TypeInfo branchTree.create
@@ -4222,16 +4364,24 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     0
     128 OpInfo    list.create
     128 i64       list.create
+    128 ProcedureImpl list.create
     FILE_ID_NONE
     16 FilePosition list.create
     8 TypeCheckStateState list.create
+    TypeCheckMode .LINEAR
     true ## reachable
-  TypeCheckState new =:: mut: state
-  program [] .errors @ =:: errors
-  program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  TypeCheckState new
+end
+64 =:: MAX_STATIC_RECURSION
+proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
+  state [] .program =:: program
+  program [] .errors@ =:: errors
+  program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
+  TypeCheckMode .LINEAR state [] .mode =
+  ## TODO reset state
   state .compiledOps =:: originalOps
   ## procedures
   0:i64 while ..dup program [] .procedures .length < do =:: procId
@@ -4246,7 +4396,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
     end
-    procId ProcId cast -1 FilePosition optional.empty state@ typeCheckProcedure
+    procId ProcId cast -1 FilePosition optional.empty state typeCheckProcedure
     procId 1 +
   end ..drop
   ## static procedures
@@ -4259,7 +4409,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
       currentProc [] .implementation .code ?? ! if
         procId 1 + continue ## procedure implementation not in code
       end
-      currentProc [] .implementation .code @ =:: codeImpl
+      currentProc [] .implementation .code@ =:: codeImpl
       codeImpl [] .codeStart 0 < if
         procId 1 + continue ## procedure not implemented
       end
@@ -4285,29 +4435,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
             ')' sb.appendC
           implData [] .firstUse errors appendError
         end
-        implData [] .procType typeContext types.getProcIn ..drop =:: procIn
-        procIn typeContext types.compositeElts =:: inTypes
-        0:i64 =:: mut: staticArgCount
-        ## XXX? clear argument map
-        0:i64 while ..dup inTypes .length < do =:: i
-          procIn i typeContext types.compositeGetLabel =:: labelId
-          inTypes i types.compositeElts.get =:: argType
-          labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
-            implData [] .staticArgs
-              staticArgCount array.get
-            =:: argValue
-            state .argData @ labelId
-              argType argValue TypedValue new
-            map.put ..drop
-            staticArgCount 1 + staticArgCount =
-          else
-            state .argData @ labelId
-              argType ConstValue .None TypedValue new
-            map.put ..drop
-          end
-          i 1 +
-        end ..drop
-        procId ProcId cast implId implData [] .firstUse optional.wrap state@ typeCheckProcedure
+        procId ProcId cast implId implData [] .firstUse optional.wrap state typeCheckProcedure
         implId 1 +
       end ..drop
       procId 1 +
@@ -4326,11 +4454,11 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: typeCheckProgram2
     list.clear ## operations have been compiled
   program [] .tmpOps =
   ## TODO? put state cleanup into procedure
-  state@ freeOps
-  state .stack@ branchTree.free
-  state .interpreter@ interpreter.cleanupContext
-  state .argData@ map.free
-  state .childIds list.free ..drop ## XXX? can childIds be cleared after each procedure?
-  state .initializationStack list.free ..drop
-  state .stateStack list.free ..drop
+  state freeOps
+  state [] .stack@ branchTree.free
+  state [] .interpreter@ interpreter.cleanupContext
+  state [] .argData@ map.free
+  state [] .childIds list.free ..drop ## XXX? can childIds be cleared after each procedure?
+  state [] .initializationStack list.free ..drop
+  state [] .stateStack list.free ..drop
 end
