@@ -15,13 +15,6 @@ struct(
   i64          : mut: copyMutableIndex
 ) =:: TypeInfo
 
-struct(
-  i32  : mut: childCount
-  i64  : mut: childOffset
-  bool : mut: canMove
-  bool : mut: canDelete ## XXX flags are not independent -> combine to single modifier
-) =:: OpInfo
-
 -1:i64 =:: OP_UNLINKED
 -2:i64 =:: OP_EMPTY
 
@@ -159,8 +152,6 @@ enum( PROC_CHILD LINEAR ) =:: TypeCheckMode
 struct(
   i64 : openBlocksOffset
   i64 : compiledOpsOffset
-  i64 : opInfoOffset
-  i64 : childIdsOffset
   i64 : initializationStackOffset
   i64 : blockStart
   branchTree.NodeId : branchRoot
@@ -182,8 +173,6 @@ struct(
   i32 : mut: blockCount
   Operation list : mut: compiledOps
   i64 : mut: blockStart
-  OpInfo list : mut: opInfo
-  i64 list : mut: childIds
   ProcedureImpl list : mut: missingProcs
   FileId : mut: currentFile
   FilePosition list : mut: initializationStack
@@ -203,8 +192,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
     ## TypeCheckStateState
       state [] .openBlocks .length
       state [] .compiledOps .length
-      state [] .opInfo .length
-      state [] .childIds .length
       state [] .initializationStack .length
       state [] .blockStart
       state [] .stack@ -1:branchTree.NodeId branchTree.reset
@@ -233,12 +220,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   state [] .compiledOps
     prevState .compiledOpsOffset list.setLength
   state [] .compiledOps =
-  state [] .opInfo
-    prevState .opInfoOffset list.setLength
-  state [] .opInfo =
-  state [] .childIds
-    prevState .childIdsOffset list.setLength
-  state [] .childIds =
   state [] .initializationStack
     prevState .initializationStackOffset list.setLength
   state [] .initializationStack =
@@ -270,9 +251,7 @@ union(
 proc( TypeInfo ptr : typeInfo TypeCheckState ptr.mut : state -> bool ) =>: isPopableConstant
   typeInfo [] .value .None ?? or
       typeInfo [] .opIndex 0 < or
-      typeInfo [] .opIndex state currentBlockStart < and
-      state [] .opInfo typeInfo [] .opIndex list.at .data =:: opInfo
-      opInfo [] .canMove ! or opInfo [] .childCount 0 != if
+      typeInfo [] .opIndex state currentBlockStart < if
     false return
   end
   true return
@@ -601,7 +580,7 @@ proc(
   i32 : stackCastOffset
   FilePosition : pos
   TypeCheckState ptr.mut : state
--> i64 #+argOffset+# bool ) =>: requireTypes
+-> bool ) =>: requireTypes
   state [] .program [] .errors @ =:: errors
   state [] .program [] .idContext @ =:: idContext
   idContext [] .constContext @ =:: constContext
@@ -617,7 +596,7 @@ proc(
       "not enough types for " sb.wrap
         name sb.appendStr
       pos errors appendError
-      state [] .childIds .length true return
+      true return
     end
     ## append dummy value for argument offset
     argOffsets
@@ -655,21 +634,6 @@ proc(
         ## no index update necessary
         i 1 + continue
       end
-      state [] .childIds
-        ..dup .length =:: argId
-        typeInfo .opIndex list.append
-      state [] .childIds =
-      state [] .opInfo
-        typeInfo .opIndex list.at .data
-      =:: opData
-      ## updateOpInfo
-        opData [] .canMove
-        opData [] .canDelete
-        1
-        argId
-        state
-      updateOpInfo_noStack
-      ## update argument offset
       opId argOffsets list.peek .data [] =
       i 1 + continue
     end
@@ -682,12 +646,8 @@ proc(
     pos errors appendError
     i 1 +
   end ..drop
-  state [] .childIds
-    ..dup .length =:: argsOffset
-    argOffsets list.appendAll
-  state [] .childIds =
   argOffsets list.free ..drop
-  argsOffset false return
+  false return
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: discardValues
   state [] .program =:: program
@@ -781,14 +741,6 @@ proc(
     state [] .compiledOps
       value valType pos opConst list.append
     state [] .compiledOps =
-    state [] .opInfo
-      ## OpInfo
-        0
-        0
-        true
-        true
-      OpInfo new list.append
-    state [] .opInfo =
 end
 proc(
   Type : valType
@@ -822,14 +774,6 @@ proc(
     state [] .compiledOps
       op list.append
     state [] .compiledOps =
-    state [] .opInfo
-      ## OpInfo
-        0
-        0
-        false
-        false
-      OpInfo new list.append
-    state [] .opInfo =
 end
 proc(
   Type arrayView : types
@@ -854,68 +798,6 @@ proc(
     branchTree.push
     i 1 +
   end ..drop
-end
-proc(
-  bool : canMove
-  bool : canDelete
-  i64 : argCount
-  i64 : argOffset
-  TypeCheckState ptr.mut : state
--> ) =>: updateOpInfo
-  state [] .program [] .errors @ =:: errors
-  state [] .stack @ branchTree.peek .data =:: typeInfo
-  typeInfo [] .opIndex =:: opIndex
-  opIndex OP_UNLINKED == if
-    "cannot update information of operations pushed outside current block" sb.wrap
-    typeInfo [] .pushedAt errors appendError
-    return
-  else opIndex OP_EMPTY == _if
-    return ## no need to update empty operation
-  end
-  canMove canDelete argCount argOffset state opIndex updateOpInfoIndex
-end
-proc(
-  bool : canMove
-  bool : canDelete
-  i64 : argCount
-  i64 : argOffset
-  TypeCheckState ptr.mut : state
--> ) =>: updateOpInfo_noStack
-  canMove canDelete argCount argOffset state state [] .opInfo .length 1 - updateOpInfoIndex
-end
-proc(
-  bool : canMove
-  bool : canDelete
-  i64 : argCount
-  i64 : argOffset
-  TypeCheckState ptr.mut : state
-  i64 : opIndex
--> ) =>: updateOpInfoIndex
-  opIndex 0 < if
-    return ## no operation to update
-  end
-  state [] .opInfo opIndex list.at .data =:: opInfo
-  argCount i32.MAX i64 cast.u < assert "argument count fits in int"
-  argCount i32 cast opInfo [] .childCount =
-  argOffset opInfo [] .childOffset =
-  true =:: mut: canMoveChildren
-  0:i64 while ..dup argCount < do
-    state [] .childIds ..over argOffset + list.get =:: childId
-    childId 0 < if
-      false canMoveChildren =
-    else state [] .opInfo childId list.at .data [] .canMove ! _if
-      false canMoveChildren =
-    end
-    1 +
-  end ..drop
-  canMove canMoveChildren & opInfo [] .canMove =
-  canDelete opInfo [] .canDelete =
-end
-proc( i64 : opIndex TypeCheckState ptr.mut : state -> ) =>: freezeOp
-  opIndex 0 < if return end
-  state [] .opInfo opIndex list.at .data =:: opInfo
-  false opInfo [] .canMove =
-  false opInfo [] .canDelete =
 end
 proc( LabelId : label TypeCheckState ptr.mut : state -> ) =>: replaceLabel
   state [] .stack @ branchTree.pop .data [] =:: mut: top
@@ -1277,14 +1159,6 @@ proc(
   state [] .compiledOps
     op list.append
   state [] .compiledOps =
-  state [] .opInfo
-    ## OpInfo
-      0
-      0
-      false
-      false
-    OpInfo new list.append
-  state [] .opInfo =
   index return
 end
 ## reserve space for count operations at the current position, returns the position of the first operation
@@ -1303,17 +1177,6 @@ proc(
     count
     pos reserveOp
   mem.fill
-  state [] .opInfo
-  0:i64 while ..dup count < do =:: i
-    ## OpInfo
-      0
-      0
-      false
-      false
-    OpInfo new list.append
-    i 1 +
-  end ..drop
-  state [] .opInfo =
   offset return
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
@@ -1324,22 +1187,10 @@ proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
   topValue .valueType typeContext types.isEmpty if
     return
   end
-  state [] .childIds
-    topValue .opIndex list.append
-  state [] .childIds =
   state [] .compiledOps .length =:: index
   state [] .compiledOps
     topValue .valueType topValue .pushedAt opCopy list.append
   state [] .compiledOps =
-  state [] .opInfo list.peek .data =:: prev
-  state [] .opInfo
-    ## OpInfo
-      1
-      state [] .childIds .length 1 -
-      prev [] .canMove
-      prev [] .canDelete
-    OpInfo new list.append
-  state [] .opInfo =
   index topValue .opIndex =
   index topValue .copyMutableIndex =
   state [] .stack @ topValue branchTree.push
@@ -1361,7 +1212,32 @@ proc(
   index state currentBlockStart < if
     false return
   end
-  state [] .opInfo index list.at .data [] .canDelete return
+  state [] .compiledOps index list.at .data =:: op
+  op [] .val .Constant ?? if
+    true return
+  end
+  op [] .val .getId ?? if
+      state [] .program .idContext =:: idContext
+      op [] .val .getId .labelId =:: labelId
+      labelId
+        idContext .typeContext .labelContext id.labelFlags
+      id.FLAG_MUTABLE & ? if
+        false return
+      end
+      ## getIdentifier
+        labelId
+        idContext
+      id.getIdentifier if ..drop
+        false return
+      end .constValue .None ?? ! return
+  end
+  false return
+end
+proc(
+  i64 : opIndex
+  TypeCheckState ptr.mut : state
+-> bool ) =>: canCopyOp
+  opIndex state canDeleteOp return
 end
 proc(
   i64 : index
@@ -1375,60 +1251,14 @@ proc(
   end
 end
 proc( i64 : index TypeCheckState ptr.mut : state -> ) =>: deleteOp
-  state [] .opInfo index list.at .data =:: opInfo
-  0 =:: mut: toDrop
-  0 while ..dup opInfo [] .childCount < do =:: i
-    state [] .childIds i i64 cast.u opInfo [] .childOffset + list.get state tryDeleteOp if
-      toDrop 1 + toDrop =
-    end
-    i 1 +
-  end ..drop
-  toDrop 0 == if
-    opValNOP state [] .compiledOps index list.at .data [] .val =
-  else
-    state [] .compiledOps index list.at .data =:: prev
-    toDrop StackModType .DROP prev [] .pos opStackMod prev [] =
-  end
-  false opInfo [] .canMove =
-  false opInfo [] .canDelete =
+  opValNOP state [] .compiledOps index list.at .data [] .val =
 end
 proc( i64 : index TypeCheckState ptr.mut : state -> i64 ) =>: copyOp
-  state [] .opInfo index list.at .data =:: opInfo
-  state [] .childIds .length =:: argOffset
-  0 while ..dup opInfo [] .childCount < do =:: i ## copy child operations
-    state [] .childIds i i64 cast.u opInfo [] .childOffset + list.get =:: childId
-    childId state copyOp =:: childCopy
-    ## ! copyOp modifies state [] .childIds
-    state [] .childIds
-      childCopy list.append
-    state [] .childIds =
-    i 1 +
-  end ..drop
   state [] .compiledOps .length =:: copyIndex
   state [] .compiledOps
     $ index list.get list.append
   state [] .compiledOps =
-  state [] .compiledOps list.peek .data =:: newOp
-  newOp [] .val .autoCast ?? if
-    0 newOp [] .val .autoCast .offset = ## update to head of stack moving operation and arguments
-  end
-  state [] .opInfo
-    $ index list.get list.append
-  state [] .opInfo =
-  ## update internal data
-  state [] .opInfo list.peek .data =:: newOpInfo
-  argOffset newOpInfo [] .childOffset =
   copyIndex return
-end
-proc(
-  i64 : opIndex
-  TypeCheckState ptr.mut : state
--> bool ) =>: canCopyOp
-  opIndex 0 < if
-    false return
-  end
-  state [] .opInfo opIndex list.at .data =:: opInfo
-  opInfo [] .canMove return
 end
 proc(
   i64 : opIndex
@@ -1453,9 +1283,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
   state [] .compiledOps
     offset list.setLength
   state [] .compiledOps =
-  state [] .opInfo
-    offset list.setLength
-  state [] .opInfo =
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: clearOps
   0 state [] .blockStart =
@@ -1465,25 +1292,16 @@ proc( TypeCheckState ptr.mut : state -> ) =>: clearOps
     state [] .compiledOps
       prevState [] .compiledOpsOffset list.setLength
     state [] .compiledOps =
-    state [] .opInfo
-      prevState [] .opInfoOffset list.setLength
-    state [] .opInfo =
     return
   end
   state [] .compiledOps
     list.clear
   state [] .compiledOps =
-  state [] .opInfo
-    list.clear
-  state [] .opInfo =
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: freeOps
   state [] .compiledOps
     list.free
   state [] .compiledOps =
-  state [] .opInfo
-    list.free
-  state [] .opInfo =
 end
 
 proc(
@@ -1563,10 +1381,9 @@ proc(
     0
     op [] .pos
   state requireTypes if
-    ..drop return
-  end =:: argsOffset
+    return
+  end
   op [] state appendOp ..drop
-  false false valCount argsOffset state updateOpInfo_noStack
   false state [] .reachable =
   state [] .stack branchTree.depth 0 > if
     state [] .stack @ branchTree.pop .data =:: val
@@ -1856,7 +1673,6 @@ proc(
             op
           state pushValue
           op .val .getId .labelId state replaceLabel
-          mutable ! true 0 0 state updateOpInfo
           mutable if ## insert copy for mutable values
             state wrapCopy
           end
@@ -1864,7 +1680,6 @@ proc(
         TYPE case
           op .dataType constValue op state pushValue
           op .val .getId .labelId state replaceLabel
-          true true 0 0 state updateOpInfo
           return
         ARGUMENT case
           op .val .getId .labelId =:: label
@@ -1876,7 +1691,6 @@ proc(
           end
           op .dataType argValue op state pushValue
           label state replaceLabel
-          true true 0 0 state updateOpInfo
           return
         PROCEDURE PROCEDURE_BUNDLE case
           idInfo .idType .PROCEDURE ?? if
@@ -1999,9 +1813,9 @@ proc(
                 offset
                 op .pos
                 state
-              requireTypes if ..drop
+              requireTypes if
                 return
-              end =:: argOffset
+              end
               offset 1 + offset =
             end
             i 1 -
@@ -2040,7 +1854,7 @@ proc(
         0
         op .pos
         state
-      requireTypes if ..drop return end ..drop
+      requireTypes if return end
       calledType op .dataType =
       calledType typeContext types.isPointer if
         calledType typeContext types.getBaseType
@@ -2056,7 +1870,7 @@ proc(
         1
         op .pos
         state
-      requireTypes if ..drop return end ..drop
+      requireTypes if return end
       op state appendOp ..drop
       procType typeContext types.getProcOut ..drop
         typeContext types.compositeEltArray
@@ -2114,7 +1928,6 @@ proc(
             op
           state pushValue
           labelId state replaceLabel
-          mutable !  true 0 0 state updateOpInfo
           return
         TYPE ARGUMENT LABEL PROCEDURE_BUNDLE case
           "taking the address of identifier " sb.wrap
@@ -2166,8 +1979,8 @@ proc(
               0
               op .pos
             state requireTypes if ## TODO? can requireTypes change constVal
-              ..drop return
-            end ..drop
+              return
+            end
           end
           ## update constant value in identifier if stack-value is constant
           ##   don't update mutable local variables
@@ -2299,8 +2112,8 @@ proc(
         0
         op .pos
       state requireTypes if
-        ..drop return
-      end ..drop
+        return
+      end
       op state appendOp ..drop
       return
     getLabel atLabel hasLabel existsLabel case
@@ -2386,10 +2199,6 @@ proc(
         state [] .stack @ branchTree.pop ..drop ## remove container from stack
         container .copyMutableIndex state removeCopy
         ## check enum label
-        state [] .childIds
-          ..dup .length =:: childOffset
-          container .opIndex list.append
-        state [] .childIds =
         ## XXX? compute constant value
         ## pushValue
           types.primitive.BOOL
@@ -2397,7 +2206,6 @@ proc(
           containerType elementIndex op .pos opHasElement
         state pushValue
         elementLabel state replaceLabel
-        mutable ! true 1 childOffset state updateOpInfo
         return
       end
       isType if
@@ -2419,7 +2227,6 @@ proc(
         end
         ConstValue .None =:: mut: constValue
         eltType .empty ?? if
-          OP_UNLINKED
           ## newUnionConst
             ConstValue .None
             elementIndex
@@ -2433,21 +2240,20 @@ proc(
               elementIndex
             constContext newUnionConst constValue =
           end
-          ## requireTypes
-            eltType @ array.wrap
-            "enum-creation" string.wrap
-            0
-            op .pos
-          state requireTypes _if
-          ..drop return
-        end =:: argOffset
+        ## requireTypes
+          eltType@ array.wrap
+          "enum-creation" string.wrap
+          0
+          op .pos
+        state requireTypes _if
+          return
+        end
         ## XXX discard operation and push constant if there is a constant value
         ## pushValue
           containerType
           constValue
           containerType elementIndex op .pos opNewEnum
         state pushValue
-        true true eltType .empty ?? if 0 else 1 end argOffset state updateOpInfo
         elementLabel state replaceLabel
         return
       end
@@ -2461,27 +2267,19 @@ proc(
         op .pos errors appendError
         return
       end
-      1:i64 =:: mut: childCount
       OP_UNLINKED =:: mut: onRead
-      state [] .childIds
-        ..dup .length =:: childOffset
-        container .opIndex list.append
-        isReference and isPtr if ## unwrap reference to pointer
-          ## opAutoCast
-            container .valueType
-            0
-            srcType
-            op .pos
-          opAutoCast state appendOp list.append
-        end
-        containerType typeContext types.isTaggedUnion if
-          containerType elementIndex op .pos opCheckEnum state appendOp onRead =
-          true true 0 0 state updateOpInfo_noStack
-          onRead list.append
-          childCount 1 + childCount =
-          true program [] .hasCheckEnum =
-        end
-      state [] .childIds =
+      isReference and isPtr if ## unwrap reference to pointer
+        ## opAutoCast
+          container .valueType
+          0
+          srcType
+          op .pos
+        opAutoCast state appendOp ..drop
+      end
+      containerType typeContext types.isTaggedUnion if
+        containerType elementIndex op .pos opCheckEnum state appendOp onRead =
+        true program [] .hasCheckEnum =
+      end
       ## can only take address of reference or pointer
       isAddr or isPtr if
         eltType mutable typeContext types.getAddressType
@@ -2513,14 +2311,13 @@ proc(
         end
       state pushValue
       elementLabel state replaceLabel
-      state [] .stack @ branchTree.pop .data [] =:: mut: topValue
+      state [] .stack@ branchTree.pop .data [] =:: mut: topValue
       onRead topValue .readEnumCheckIndex =
-      ## updateOpInfo info needs to value -> push then pop again
-      state [] .stack @ topValue branchTree.push
+      ## XXX? is pop then push neccessary
+      state [] .stack@ topValue branchTree.push
       targetType typeContext types.isEmpty if
         return
       end
-      mutable ! true childCount childOffset state updateOpInfo
       isAddr if
         container .copyMutableIndex state removeCopy
       else directCopy _if
@@ -2554,11 +2351,10 @@ proc(
       end
       ## XXX compile-time evaluation
       enumType @ array.wrap "getEnumLabel" string.wrap 0 op .pos state requireTypes if
-        ..drop return
-      end =:: argOffset
+        return
+      end
       enumType op .dataType =
       enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
-      false true 1 argOffset state updateOpInfo
       return
     getElement atElement case
       break
@@ -2657,8 +2453,8 @@ proc(
         0
         op .pos
       state requireTypes if
-        ..drop return
-      end =:: opOffset
+        return
+      end
       typeBuffer list.free ..drop
       indexCount 0 == if
         dimensions 1 -
@@ -2687,7 +2483,6 @@ proc(
         ConstValue .None
         op
       state pushValue
-      mutable ! isAddr | ..dup indexCount 1 + opOffset state updateOpInfo
       isAddr if
         srcCopyMutIndex state removeCopy
       else mutable _if
@@ -2714,7 +2509,6 @@ proc(
         ConstValue .None
         op
       state pushValue
-      true true 0 0 state updateOpInfo
       return
     getArg case
       true program [] .hasGetArgs =
@@ -2723,9 +2517,9 @@ proc(
         "program argument index" string.wrap
         0
         op .pos
-      state requireTypes if ..drop
+      state requireTypes if
         return
-      end ..drop
+      end
       op state appendOp ..drop ## ignore id
       Type 2 array new =:: mut: typeData
       typeData @ =:: outTypes
@@ -2774,11 +2568,6 @@ proc(
         value .value
       end =:: newValue
       op .dataType newValue op state pushValue
-      state [] .childIds
-        ..dup .length =:: offset
-        value .opIndex list.append
-      state [] .childIds =
-      true true 1 offset state updateOpInfo
       return
     New case
       op .dataType .undefined ?? if
@@ -2790,7 +2579,6 @@ proc(
           "variable size arrays are not supported" sb.wrap op .pos errors appendError
         end
         op .dataType ConstValue .None op state pushValue
-        true true 0 0 state updateOpInfo
         return
       end
       op .dataType typeContext types.isTuple if
@@ -2801,10 +2589,9 @@ proc(
           0
           op .pos
         state requireTypes if
-          ..drop return
-        end =:: opOffset
+          return
+        end
         op .dataType ConstValue .None op state pushValue
-        false true count opOffset state updateOpInfo
         return
       end
       break
@@ -2842,10 +2629,9 @@ proc(
         0
         op .pos
       state requireTypes if
-        ..drop return
-      end =:: argOffset
+        return
+      end
       types.primitive.BOOL ConstValue .None op state pushValue
-      true true 2 argOffset state updateOpInfo
       return
     block case
       state [] .compiledOps .length state [] .blockStart =
@@ -2870,8 +2656,8 @@ proc(
             0
             op .pos
           state requireTypes if
-            ..drop return
-          end ..drop
+            return
+          end
           false 1 op .pos state clearReferences
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty or
@@ -2906,8 +2692,8 @@ proc(
             0
             op .pos
           state requireTypes if
-            ..drop return
-          end ..drop
+            return
+          end
           false 1 op .pos state clearReferences
           ## XXX? pull constants into if branches
           state peekBlock =:: currentBlock?
@@ -3081,9 +2867,9 @@ proc(
             "switch value" string.wrap
             0
             op .pos
-          state requireTypes if ..drop
+          state requireTypes if
             return
-          end ..drop
+          end
           program [] .switchData .length i32 cast =:: switchId
           program [] .switchData
             ## SwitchData
@@ -3292,8 +3078,8 @@ proc(
             0
             op .pos
           state requireTypes if
-            ..drop return
-          end ..drop
+            return
+          end
           false 1 op .pos state clearReferences
           currentBlock? .data [] .While@ =:: whileBlock
           blockType .AND_DO ?? if
@@ -3334,8 +3120,8 @@ proc(
             0
             op .pos
           state requireTypes if
-            ..drop return
-          end ..drop
+            return
+          end
           ## TODO push current value if in for-loop
           ## passing a offset of 1 ensures that cast-offsets consider do-condition
           false 1 op .pos state clearReferences
@@ -3512,8 +3298,8 @@ proc(
             0
             op .pos
           state requireTypes if
-            ..drop return
-          end ..drop
+            return
+          end
           blockId op .val .block .blockId =
           op state appendOp ..drop
           return
@@ -3936,9 +3722,9 @@ proc(
         "assertion" string.wrap
         0
         op .pos
-      state requireTypes if ..drop
+      state requireTypes if
         return
-      end ..drop
+      end
       op state appendOp ..drop
       return
     Error case
@@ -4033,11 +3819,6 @@ proc(
               op .pos
             opAutoCast state appendOp =:: castIndex
             copied .opIndex -1 != if
-              state [] .childIds
-                ..dup .length =:: argOffset
-                copied .opIndex list.append
-              state [] .childIds =
-              true true 1 argOffset state updateOpInfo_noStack
               castIndex copied .opIndex =
               castIndex baseValue [] .opIndex =
             end
@@ -4049,7 +3830,6 @@ proc(
             ## copy value in code
             copied .opIndex state tryCopyOp if ..drop
               ## copied operation can no longer be deleted
-              copied .opIndex state freezeOp
               op state appendOp
             end copied .opIndex =
           end
@@ -4362,8 +4142,6 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     0
     128 Operation list.create
     0
-    128 OpInfo    list.create
-    128 i64       list.create
     128 ProcedureImpl list.create
     FILE_ID_NONE
     16 FilePosition list.create
@@ -4458,7 +4236,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   state [] .stack@ branchTree.free
   state [] .interpreter@ interpreter.cleanupContext
   state [] .argData@ map.free
-  state [] .childIds list.free ..drop ## XXX? can childIds be cleared after each procedure?
   state [] .initializationStack list.free ..drop
   state [] .stateStack list.free ..drop
 end
