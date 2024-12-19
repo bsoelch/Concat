@@ -4352,7 +4352,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     program
       TypeCheckState ptr.mut optional.empty
       -1:FileId
-      InterpreterType .FOLD_LOCAL
+      InterpreterType .INTERPRET
     interpreter.wrapProgram
     labelHash@ labelEq@ 64 TypedValue map.create
     Type .undefined
