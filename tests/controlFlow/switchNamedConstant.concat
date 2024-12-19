@@ -1,0 +1,17 @@
+0 =:: ZERO
+1 =:: ONE
+2 =:: TWO
+
+proc( i32 -> i32 ) =>: test
+  switch
+    ZERO case TWO return
+    ONE case ONE return
+    TWO case ZERO return
+  end
+  ..unreachable
+end
+
+proc( -> ) =>: main
+  ZERO test TWO == assert "test(0)==2"
+  ONE test ONE == assert "test(1)==1"
+end

@@ -1,0 +1,5 @@
+import list
+proc( -> ) =>: main
+  i32 list.empty =:: l
+  l .length 0 == assert "empty list"
+end
