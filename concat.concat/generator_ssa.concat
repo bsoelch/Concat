@@ -1198,8 +1198,8 @@ proc(
         ## declare local variables
         0:i64 while ..dup variables .length < do =:: i
           variables i list.get =:: varInfo
-          varInfo .varType typeContext types.alignOf =:: varAlignment
-          varInfo .varType typeContext types.sizeOf =:: varSize
+          varInfo .valueType typeContext types.alignOf =:: varAlignment
+          varInfo .valueType typeContext types.sizeOf =:: varSize
           varSize switch
             fixed case
               ## ssa.createBinary
@@ -1215,7 +1215,7 @@ proc(
               break
             unknown case
               "could not determine size of type:" sb.wrap
-                varInfo .varType typeContext sb.appendType
+                varInfo .valueType typeContext sb.appendType
               op [] .pos errors appendError
               break
           end

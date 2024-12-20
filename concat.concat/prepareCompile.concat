@@ -35,7 +35,7 @@ proc(
     labelContext
   id.newLabel =:: label
   context [] .variables
-    varType label VariableInfo new list.append
+    varType label VariableType .TMP_VAR VariableInfo new list.append
   context [] .variables =
   ## IdInfo
     IdentifierType .TMP_VAR
@@ -80,6 +80,7 @@ proc(
           ## VariableInfo
             args i typeContext types.compositeGetElement
             label
+            VariableType .ARGUMENT
           VariableInfo new list.append
           i 1 +
         end ..drop
@@ -97,6 +98,7 @@ proc(
         ## VariableInfo
           op .dataType
           idInfo .labelId
+          VariableType .LOCAL_VAR
         VariableInfo new list.append
       context [] .variables =
       newOps

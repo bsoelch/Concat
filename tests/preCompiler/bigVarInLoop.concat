@@ -1,0 +1,10 @@
+proc( char8 _ ptr -> i64 ) =>: consume
+  i64 cast!
+end
+
+proc( -> ) =>: main
+  0 while $ 64 < do =:: i
+    char8 1048576 array : localArray
+    localArray@ consume ..drop
+  finally i 1 + end ..drop
+end

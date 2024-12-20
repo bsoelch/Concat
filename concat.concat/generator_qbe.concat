@@ -1826,6 +1826,7 @@ proc(
     end ..drop
   return
 end
+## TODO move all (?most) allocations to start of procedure
 proc(
   stringBuilder : sb
   Type : valType
@@ -3250,17 +3251,6 @@ proc(
           valType context referenceOnly ! =:: isValue
           sb
             op [] .pos sb.appendPosQBE
-            idInfo .idType .LOCAL_VAR ?? if
-              "%l" sb.appendS
-              idInfo .labelId i64 cast sb.appendI
-            else idInfo .idType .ITR_VAR ?? _if
-              "%itr" sb.appendS
-              idInfo .id i64 cast sb.appendI
-            else
-              "%tmp" sb.appendS
-              idInfo .labelId i64 cast sb.appendI
-            end
-            valType op [] .pos context false appendAlloc ..drop
             assignValue if
               isValue if
                 "store" sb.appendS
@@ -3271,16 +3261,8 @@ proc(
               " %s" sb.appendS
               op [] .pos context popValue sb.appendI
               ',' sb.appendC
-              idInfo .idType .LOCAL_VAR ?? if
-                "%l" sb.appendS
-                idInfo .labelId i64 cast sb.appendI
-              else idInfo .idType .ITR_VAR ?? _if
-                "%itr" sb.appendS
-                idInfo .id i64 cast sb.appendI
-              else
-                "%tmp" sb.appendS
-                idInfo .labelId i64 cast sb.appendI
-              end
+              "%l" sb.appendS
+              idInfo .labelId i64 cast sb.appendI
               isValue ! if
                 ',' sb.appendC
                 op [] .dataType op [] .pos context typeSizeInt sb.appendI
@@ -3353,6 +3335,25 @@ proc(
           end
           i 1 +
         end ..drop
+        procInfo [] .implementation .code ?? if
+          ## allocate space for variables
+          implInfo .implementationId 0 >= if
+            procInfo [] .implementation .code .implementations
+              implInfo .implementationId list.at .data [] .variables
+          else
+            procInfo [] .implementation .code .variables
+          end =:: variables
+          variables .length for =:: i
+            variables i list.at .data =:: varInfo
+            VariableType ..length 3 == assert "no new variable types"
+            varInfo .variableType .ARGUMENT ?? if
+              continue
+            end
+            "%l" sb.appendS
+            varInfo [] .label i64 cast.u sb.appendI
+            varInfo [] .valueType op [] .pos context false appendAlloc ..drop
+          end
+        end
         true context [] .reachable =
       return
     getId atId case
@@ -3366,30 +3367,22 @@ proc(
         PROCEDURE  case
           ## procedures are handled by call & procPtr instructions
           break
-        GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
+        GLOBAL_VAR case
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
             isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
-            idInfo .idType switch
-              GLOBAL_VAR case
-                " =l copy " sb.appendS
-                idInfo .labelId -1 context sb.appendGlobalName
-                break
-              LOCAL_VAR case
-                " =l copy %l" sb.appendS
-                idInfo .labelId i64 cast sb.appendI
-                break
-             ITR_VAR case
-                " =l copy %itr" sb.appendS
-                idInfo .id i64 cast sb.appendI
-                break
-              TMP_VAR case
-                " =l copy %tmp" sb.appendS
-                idInfo .labelId i64 cast sb.appendI
-                break
-              PROCEDURE ARGUMENT TYPE LABEL PROCEDURE_BUNDLE case ..unreachable
-            end
+            " =l copy " sb.appendS
+            idInfo .labelId -1 context sb.appendGlobalName
+            '\n' sb.appendC
+          return
+        LOCAL_VAR TMP_VAR ITR_VAR case
+          sb
+            op [] .pos sb.appendPosQBE
+            "%s" sb.appendS
+            isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
+            " =l copy %l" sb.appendS
+            idInfo .labelId i64 cast sb.appendI
             '\n' sb.appendC
           return
        ARGUMENT case

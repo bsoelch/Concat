@@ -19,9 +19,12 @@ enum( EMPTY RESERVED ) =:: NopType
 
 i64 =:: ConstReferenceId
 
+## XXX? do I need a seperate type for tmp-vars
+enum( ARGUMENT LOCAL_VAR TMP_VAR ) =:: export: VariableType
 struct(
-  Type : varType
+  Type : valueType
   LabelId : label
+  VariableType : variableType
 ) =:: export: VariableInfo
 
 enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED ) =:: export: ProcCodeState
