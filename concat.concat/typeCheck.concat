@@ -258,16 +258,18 @@ proc( TypeInfo ptr : typeInfo TypeCheckState ptr.mut : state -> bool ) =>: isPop
 end
 proc( TypeCheckState ptr.mut : state -> i64 bool ) =>: interpreterLoadFindType
   0:i64 =:: mut: count
-  state [] .stack@ branchTree.itr.start while
-    branchTree.itr.hasNext
-  do branchTree.itr.next =:: val =:: itr
+  ## QBE crashes if itr is kept on stack
+  state [] .stack@ branchTree.itr.start =:: mut: itr
+  while
+    itr branchTree.itr.hasNext
+  do branchTree.itr.next =:: val itr =
     count 1 + count =
     val state isPopableConstant ! if
       -1:i64 true return
     else val [] .value .TypeId ?? _if
       count false return
     end
-  finally itr end ..drop
+  end ..drop
   -1:i64 true return
 end
 proc( i64 : argCount TypeCheckState ptr.mut : state -> bool ) =>: interpreterLoadCheckArgs
@@ -278,9 +280,11 @@ proc( i64 : argCount TypeCheckState ptr.mut : state -> bool ) =>: interpreterLoa
     true return
   end
   0:i64 =:: mut: count
-  state [] .stack@ branchTree.itr.start while
-    branchTree.itr.hasNext
-  do branchTree.itr.next =:: val =:: itr
+  ## QBE crashes if itr is kept on stack
+  state [] .stack@ branchTree.itr.start  =:: mut: itr
+  while
+    itr branchTree.itr.hasNext
+  do branchTree.itr.next =:: val itr =
     count 1 + count =
     val state isPopableConstant ! if
       true return
@@ -288,7 +292,7 @@ proc( i64 : argCount TypeCheckState ptr.mut : state -> bool ) =>: interpreterLoa
     count argCount == if
       false return
     end
-  finally itr end ..drop
+  end ..drop
   true return
 end
 proc(
