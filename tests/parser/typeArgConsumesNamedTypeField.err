@@ -2,5 +2,5 @@ missing type parameter for type-modifier ptr at typeArgConsumesNamedTypeField.co
 could not evaluate global operation: typeModifier "ptr" at typeArgConsumesNamedTypeField.concat:1:22
  at typeArgConsumesNamedTypeField.concat:1:22
 not enough arguments for field-declaration expected: 1 got: 0 at typeArgConsumesNamedTypeField.concat:1:28
-could not evaluate global operation: declare ( auto[240] ) : label "itr" at typeArgConsumesNamedTypeField.concat:1:28
+could not evaluate global operation: declare ( auto[239] ) : label "itr" at typeArgConsumesNamedTypeField.concat:1:28
  at typeArgConsumesNamedTypeField.concat:1:28

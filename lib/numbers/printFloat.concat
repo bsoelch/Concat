@@ -105,7 +105,7 @@ namespace: sb
       end
       while p eps > do
         value p / math.floor =:: d
-        d i32 cast buff @ n [] =
+        d i32 cast buff@ n [] =
         n 1 + n =
         ## XXX break loop if n large enough
         value d p * - value =
@@ -118,38 +118,47 @@ namespace: sb
         precision
       end n =
       n 0 == if 1 n = end
-      buff @ n [] base 2 / >= if
-        n 1 - =:: mut: j
-        true =:: mut: inc
-        while inc j 0 >= & do
-          buff @ j [] 1 +  buff @ j [] =
-          buff @ j [] base >= if
-            buff @ j [] base -  buff @ j [] =
-          else
-            false inc =
-          end
-          j 1 - j =
-        end
-        inc if
-          buff @ i32 _ ptr.mut cast 1 + buff @ n i64 cast.u mem.move ..drop
-          1 buff @ 0 [] =
-          n 1 + n =
-          e_max 1 + e_max =
-        end
+      buff@ n [] base 2 / >= if
+        buff@ n 1 - []
+          1 +
+        buff@ n 1 - [] =
       end
-      while n 1 - e_max > buff @ n 1 - [] 0 == & do
+      false =:: mut: inc
+      n 1 - =:: mut: j
+      while j 0 >= do
+        inc if
+          buff@ j []
+            1 +
+            $ base < if
+              false inc =
+            end
+          buff@ j [] =
+        end
+        buff@ j [] base >= if
+          true inc =
+          buff@ j [] base - buff@ j [] =
+        end
+        j 1 - j =
+      end
+      inc if
+        buff@ i32 _ ptr.mut cast 1 + buff@ n i64 cast.u mem.move ..drop
+        1 buff@ 0 [] =
+        n 1 + n =
+        e_max 1 + e_max =
+      end
+      while n 1 - e_max > and buff@ n 1 - [] 0 == do
         n 1 - n =
       end
-      sci e_max n >= | e_max -5 < | if
-        while n 1 - 0 > buff @ n 1 - [] 0 == & do
+      sci or e_max n >= or e_max -5 < if
+        while n 1 - 0 > and buff@ n 1 - [] 0 == do
           n 1 - n =
         end
-        buff @ 0 [] getDigit sb.appendC
+        buff@ 0 [] getDigit sb.appendC
         n 1 > if
           '.' sb.appendC
           1 while ..dup n < do
              ..swap
-               buff @ ..over.2 [] getDigit sb.appendC
+               buff@ ..over.2 [] getDigit sb.appendC
              ..swap 1 +
           end ..drop
         end
@@ -157,13 +166,12 @@ namespace: sb
         e_max 0 >= if '+' sb.appendC end
         e_max i64 cast.s base appendI?
       else e_max 0 >= _if
-        0 while ..dup n < do
-          ..swap
-            buff @ ..over.2 [] getDigit sb.appendC
-            ..over e_max == ..over.2 n 1 - < & if
-              '.' sb.appendC
-            end
-          ..swap 1 +
+        0 while ..dup n < do =:: i
+          buff@ i [] getDigit sb.appendC
+          i e_max == and i n 1 - < if
+            '.' sb.appendC
+          end
+          i 1 +
         end ..drop
       else
         "0." sb.appendS

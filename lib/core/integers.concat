@@ -171,33 +171,32 @@ namespace: i64
 
   ## position of the highest nonzero-bit (zero-indexed), returns -1 if the input is zero
   proc( i64 -> i32 ) =>: export: highestSetBit
-    =:: mut: x
     0
-      x 0xffff'ffff'0000'0000:i64 & ? if
-        32 +
-        x 32 >>> x =
+      $1 0xffff'ffff'0000'0000:i64 & ? if
+        32 +   ..swap
+        32 >>> ..swap
       end
-      x 0xffff'0000:i64 & ? if
-        16 +
-        x 16 >>> x =
+      $1 0xffff'0000:i64 & ? if
+        16 +   ..swap
+        16 >>> ..swap
       end
-      x 0xff00:i64 & ? if
-        8 +
-        x 8 >>> x =
+      $1 0xff00:i64 & ? if
+        8 +   ..swap
+        8 >>> ..swap
       end
-      x 0xf0:i64 & ? if
-        4 +
-        x 4 >>> x =
+      $1 0xf0:i64 & ? if
+        4 +   ..swap
+        4 >>> ..swap
       end
-      x 0b1100:i64 & ? if
-        2 +
-        x 2 >>> x =
+      $1 0b1100:i64 & ? if
+        2 +   ..swap
+        2 >>> ..swap
       end
-      x 0b10:i64 & ? if
-        1 +
-        x 1 >>> x =
+      $1 0b10:i64 & ? if
+        1 +   ..swap
+        1 >>> ..swap
       end
-    x 1 - i32 cast + return
+    ..swap 1:i64 - i32 cast + return
   end
   ## a + b + carry -> newCarry res
   proc( bool : carry i64 : a i64 : b -> bool i64 ) =>: export: addc

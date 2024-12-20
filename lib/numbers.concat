@@ -27,17 +27,41 @@ namespace: number
   end
   2 =:: export: MIN_BASE
   62 =:: export: MAX_BASE
-  proc( char8 : chr i32 : base -> i32 ) =>: export: parseDigit
-    chr '0' >= chr '9' <= & if
-      chr '0' - i32 cast.u return
-    else chr 'A' >= chr 'Z' <= & _if
-      chr 'A' - i32 cast.u 10 + return
-    else chr 'a' >= chr 'z' <= & _if
+  enum( DIGIT IGNORED INVALID ) =:: export: DigitType
+  proc( char8 : chr i32 : base -> i32 DigitType ) =>: export: parseDigit
+    chr '0' >= and chr '9' <= if
+      chr '0' - i32 cast.u
+        $ base < if
+          DigitType .DIGIT
+        else
+          DigitType .INVALID
+        end
+      return
+    else chr 'A' >= and chr 'Z' <= _if
+      chr 'A' - i32 cast.u 10 +
+        $ base < if
+          DigitType .DIGIT
+        else
+          DigitType .INVALID
+        end
+      return
+    else chr 'a' >= and chr 'z' <= _if
       chr 'a' - i32 cast.u
         base 36 > if 36 else 10 end +
+        $ base < if
+          DigitType .DIGIT
+        else
+          DigitType .INVALID
+        end
       return
     end
-    -1 return
+    -1
+      chr '_' == or chr '\'' == if
+        DigitType .IGNORED
+      else
+        DigitType .INVALID
+      end
+    return
   end
   proc( string -> string i32 ) =>: export: resolveBase
     $ .length 2 < if
@@ -86,21 +110,25 @@ namespace: number
       OVERFLOW case "overflow" string.wrap return
     end
   end
+  proc( string : str -> string bool ) =>: export: parseSign
+    str
+      $ .length 0 == if
+        false
+      else $ 0 string.charAt '-' == _if
+        1 string.tail true
+      else $ 0 string.charAt '+' == _if
+        1 string.tail false
+      else
+        false
+      end
+    return
+  end
   proc( string : str  i32 : base bool : unsigned -> i64 ParserError ) =>: tryParseIntInternal
-    false =:: mut: sign
     0 i64 =: mut: res
     false =:: mut: overflow
     false =:: mut: signedOverflow
     str
-      ..dup .length 0 == if
-        ..drop 0 ParserError .EMPTY return
-      end
-      ..dup 0 string.charAt '-' == if
-        true sign =
-        1 string.tail
-      else ..dup 0 string.charAt '+' == _if
-        1 string.tail
-      end
+      parseSign =:: sign
       ..dup .length 0 == if
         ..drop 0 ParserError .EMPTY return
       end
@@ -119,26 +147,24 @@ namespace: number
       unsigned if maxUnsignedVal else maxSignedVal end =:: maxVal
       maxVal mBase ..udiv =:: maxSafe
       maxUnsignedVal mBase ..udiv =:: maxSafeUnsigned
-      0:i64 while ..dup ..over.2 .length < do =:: i
-        ..dup i string.charAt =:: c
-          i 0 > and c '_' == or c '\'' == if
-            i 1 + continue ## ignore _ and ' in numbers
-          end
-        c mBase parseDigit =:: d
-          d 0 < or d mBase >= if
-            ..drop 0 ParserError .INVALID_CHAR return
-          end
+      0:i64 while $ $2 .length < do =:: i
+        $ i string.charAt mBase parseDigit
+          $ .DIGIT ?? ! if
+            .IGNORED ?? and i 0 > if ..drop i 1 + continue end
+            ..drop.2
+            0 ParserError .INVALID_CHAR return
+          else ..drop end
+        i64 cast.u =:: delta
         res maxSafeUnsigned > if
           true overflow =
         else res maxSafe > _if
           true signedOverflow =
         end
-        d i64 cast.u =:: delta
         res
           mBase i64 cast.u *
-          res maxSafeUnsigned == and ..dup maxUnsignedVal delta - > if
+          res maxSafeUnsigned == and $ maxUnsignedVal delta - > if
             true overflow =
-          else res maxSafe == and ..dup maxVal delta - > _if
+          else res maxSafe == and $ maxVal delta - > _if
             true signedOverflow =
           end
           delta +
@@ -171,7 +197,6 @@ namespace: number
     end
   end
   proc( string : str i32 : base -> f64 ParserError ) =>: export: tryParseFloat
-    false =:: mut: sign
     0:i64 =:: mut: c
     false bool =: mut: hasDot
     0:i64 =:: mut: e
@@ -179,15 +204,7 @@ namespace: number
     1:i64 59 << =:: mut: maxVal ## higher precision than f64, no overflow in base 62
     false =:: mut: cStyleHex
     str
-      ..dup .length 0 == if
-        ..drop 0 f64 cast ParserError .EMPTY return
-      end
-      ..dup 0 string.charAt '-' == if
-        true sign =
-        1 string.tail
-      else ..dup 0 string.charAt '+' == _if
-        1 string.tail
-      end
+      parseSign =:: sign
       ..dup .length 0 == if
         ..drop 0 f64 cast ParserError .EMPTY return
       end
@@ -223,12 +240,15 @@ namespace: number
           c 4 * c = ## scale c to power of 2
           i break
         else
-          ..dup i string.charAt mBase parseDigit =:: digit
-          digit 0 < or digit mBase >= if ..drop
-            f64.NaN ParserError .INVALID_CHAR return
-          end
+          $ i string.charAt mBase parseDigit
+            $ .DIGIT ?? ! if
+              .IGNORED ?? and i 0 > if ..drop i 1 + continue end
+              ..drop.2
+              f64.NaN ParserError .INVALID_CHAR return
+            else ..drop end
+          i64 cast.u =:: digit
           val maxVal < if
-            val mBase i64 cast.u * digit i64 cast.u + val =
+            val mBase i64 cast.u * digit + val =
             hasDot if
               c 1 - c =
             end

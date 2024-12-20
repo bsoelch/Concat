@@ -637,12 +637,15 @@ namespace: f128
           c 4 * c = ## scale c to power of 2
           i break
         else
-          ..dup i string.charAt mBase parseDigit =:: digit
-          digit 0 < or digit mBase >= if ..drop
+          $ i string.charAt mBase parseDigit
+            $ .DIGIT ?? ! if
+              .IGNORED ?? and i 0 > if ..drop i 1 + continue end
+              ..drop.2
             f128.NaN ParserError .INVALID_CHAR return
-          end
+            else ..drop end
+          i64 cast.u i128.fromU64 =:: digit
           val maxVal < if ## XXX? i128 * i64
-            val baseI128 * 0 digit i64 cast.u i128 new + val =
+            val baseI128 * digit + val =
             hasDot if
               c 1 - c =
             end
