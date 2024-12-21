@@ -18,6 +18,10 @@ else
   baseCompiler="./concat"
   concatArgs=( -W -l $libPath )
 fi
+if [[ "$@" == *"--no-core"* ]]; then
+  concatArgs+=( --no-core )
+fi
+
 {
   echo "compile code.concat"
   echo "-----------------------------------------"
