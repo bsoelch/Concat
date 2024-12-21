@@ -215,7 +215,24 @@ namespace: arenaAlloc
       values .data values .length mem.copy values .length array.create
     return
   end
-  ## TODO , pushListSlice pushList?
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
+    T arrayView.mut : values
+  -> T ArenaAllocator T arrayView.mut ) =>: export: pushMutableArray
+    arena values .length i32 cast.u alloc
+      values .data values .length mem.copy values .length array.createMutable
+    return
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
+    T list : values
+  -> T ArenaAllocator T arrayView.mut ) =>: export: pushList
+    arena values .length i32 cast.u alloc
+      values .data values .length mem.copy values .length array.createMutable
+    return
+  end
 
   ## TODO get value(s) at offset
   ## TODO versions of push returning index instead of pointer
