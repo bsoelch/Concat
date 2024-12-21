@@ -373,6 +373,12 @@ namespace: list
   proc(
     type : auto: T
     T list : elts
+  -> T arrayView.mut ) =>: export: asMutableArray
+    elts .data elts .length array.createMutable return
+  end
+  proc(
+    type : auto: T
+    T list : elts
     i64 : from
     i64 : len
   -> T arrayView ) =>: export: slice

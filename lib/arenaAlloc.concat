@@ -15,7 +15,7 @@ arena allocator
   * all elements allocated after a specific point can be freed at once
   * if strictOrder is false some elements may be freed out of order
 +#
-namespace: arenaAlloc
+namespace: arenaAlloc ## XXX? rename to `arena`
   enum( CONTINUE ALLOC ) =:: SliceType
   ( type : T -> type ) =>: ArenaSlice
     struct(
@@ -128,7 +128,7 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena0
     i32 : count
-  -> T ArenaAllocator T _ ptr.mut ) =>: alloc
+  -> T ArenaAllocator T _ ptr.mut ) =>: alloc_internal
     count 0 >= assert "count is non-negative"
     count 0 == if arena0 0 T _ ptr.mut cast! return end
     1 arena0 .sliceSizeShift << =:: sliceSize
@@ -180,10 +180,25 @@ namespace: arenaAlloc
   proc(
     type : auto: T
     T ArenaAllocator : arena
+  -> T ArenaAllocator T ptr.mut ) =>: export: alloc
+    arena 1 alloc_internal T ptr.mut cast!
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
+    i32 : size
+  -> T ArenaAllocator T arrayView.mut ) =>: export: allocArray
+    arena size alloc_internal size array.createMutable
+  end
+
+  ## XXX? distinguish: Value -> index (?push) and Value -> ptr (?copy)
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
     T : value
   -> T ArenaAllocator T ptr.mut ) =>: export: pushValue
     value =:: valData ##XXX remove intermediate step once address of arguments are fully supported
-    arena 1 alloc
+    arena 1 alloc_internal
       valData@ 1 mem.copy T ptr.mut cast!
     return
   end
@@ -192,7 +207,7 @@ namespace: arenaAlloc
     T ArenaAllocator : arena
     T ptr : value
   -> T ArenaAllocator T ptr.mut ) =>: export: pushPtr
-    arena 1 alloc
+    arena 1 alloc_internal
       value 1 mem.copy T ptr.mut cast!
     return
   end
@@ -202,7 +217,7 @@ namespace: arenaAlloc
     T ArenaAllocator : arena
     T k ptr : values
   -> T ArenaAllocator T k ptr.mut ) =>: export: pushPtrs
-    arena k alloc
+    arena k alloc_internal
       values k i64 cast.u mem.copy T k ptr.mut cast!
     return
   end
@@ -211,11 +226,28 @@ namespace: arenaAlloc
     T ArenaAllocator : arena
     T arrayView : values
   -> T ArenaAllocator T arrayView ) =>: export: pushArray
-    arena values .length i32 cast.u alloc
+    arena values .length i32 cast.u alloc_internal
       values .data values .length mem.copy values .length array.create
     return
   end
-  ## TODO , pushListSlice pushList?
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
+    T arrayView.mut : values
+  -> T ArenaAllocator T arrayView.mut ) =>: export: pushMutableArray
+    arena values .length i32 cast.u alloc_internal
+      values .data values .length mem.copy values .length array.createMutable
+    return
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
+    T list : values
+  -> T ArenaAllocator T arrayView.mut ) =>: export: pushList
+    arena values .length i32 cast.u alloc_internal
+      values .data values .length mem.copy values .length array.createMutable
+    return
+  end
 
   ## TODO get value(s) at offset
   ## TODO versions of push returning index instead of pointer
