@@ -30,8 +30,6 @@ struct(
   i64 list : mut: andOrPositions
   i64 : mut: ifCastsOffset
   BlockId : blockId
-  i64 : mut: ifPosition
-  i64 : mut: elsePosition
   bool : mut: hasIf ## XXX? do I need hasIf/hasElse
   bool : mut: hasElse
   bool : mut: ifBranchTerminates
@@ -87,8 +85,6 @@ proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos -> Blo
     16 i64 list.create
     -1
     blockId
-    -1:i64
-    -1:i64
     false
     false
     false
@@ -184,7 +180,6 @@ struct(
   i64 : initializationStackOffset
   i64 : blockStart
   branchTree.NodeId : branchRoot
-  i32 : blockCount
   Type : currentProcType
   FileId : currentFile
   TypeCheckMode : mut: mode
@@ -199,7 +194,6 @@ struct(
   bool : mut: inTypeBlock
   TypeInfo BranchTree : mut: stack
   BlockInfo list : mut: openBlocks
-  i32 : mut: blockCount
   Operation list : mut: compiledOps
   i64 : mut: blockStart
   ProcedureImpl list : mut: missingProcs
@@ -224,7 +218,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
       state [] .initializationStack .length
       state [] .blockStart
       state [] .stack@ -1:branchTree.NodeId branchTree.reset
-      state [] .blockCount
       state [] .currentProcType
       state [] .currentFile
       state [] .mode
@@ -258,7 +251,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
     ## TODO error message for unfinished branch
     state [] .stack@ oldRoot branchTree.endBranch
   end
-  prevState .blockCount state [] .blockCount =
   prevState .currentProcType state [] .currentProcType =
   prevState .currentFile state [] .currentFile =
   prevState .mode state [] .mode =
@@ -950,7 +942,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: endSwitchBranch
   currentBlock? optional.hasData and
       currentBlock? .data =:: currentBlock
       currentBlock [] .Switch ?? and
-      currentBlock? .data [] .Switch @ =:: switchBlock
+      currentBlock? .data [] .Switch@ =:: switchBlock
       switchBlock [] .inLabel ! if
     true switchBlock [] .inLabel =
     switchBlock pos state breakSwitch
@@ -1592,6 +1584,33 @@ proc(
   true return
 end
 
+proc( i64 : blockStart ProgramContext ptr.mut : program -> BlockId ) =>: createIfData
+  program [] .ifData .length =:: oldLength
+    program [] .ifData
+      ## IfData
+        blockStart
+        0:i64
+        0:i64
+        i64 array.emptyMutable
+        i64 array.emptyMutable
+        0:i32
+        0:i32
+      IfData new list.append
+    program [] .ifData =
+  oldLength BlockId cast
+end
+proc( i64 : blockStart ProgramContext ptr.mut : program -> BlockId ) =>: createAndOrData
+  program [] .andOrData .length =:: oldLength
+    program [] .andOrData
+      ## AndOrData
+        blockStart
+        i64 array.emptyMutable
+        0:i32
+      AndOrData new list.append
+    program [] .andOrData =
+  oldLength BlockId cast
+end
+
 proc(
   LabelId : label
   Operation ptr.mut : op
@@ -1613,11 +1632,11 @@ proc(
 -> ) =>: typeCheckOp
   op0 =:: mut: op
   state [] .program =:: program
-  state [] .program [] .errors @ =:: errors
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  state [] .program [] .errors@ =:: errors
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   op .dataType .autoType ?? if ## try resolving auto-types
     op .dataType types.getTypeId =:: id
     id 0 >= and id i64 cast.s program [] .autoTypes .length < if
@@ -2705,10 +2724,9 @@ proc(
               currentBlock? .data =:: currentBlock
               currentBlock [] .If ?? ! or
               currentBlock [] .If .hasIf if
-            state [] .blockCount BlockId cast =:: mut: blockId
-            state [] .blockCount 1 + state [] .blockCount =
+            state [] .compiledOps .length program createIfData =:: blockId
             blockId op .val .block .blockId =
-            state [] .stack @ branchTree.startBranch =:: ifRoot
+            state [] .stack@ branchTree.startBranch =:: ifRoot
             ifRoot blockId op .pos newIfBlock =:: mut: ifBlock
             ifBlock state openBlock
           end
@@ -2731,7 +2749,7 @@ proc(
           return
         IF case
           ## requireTypes
-            types.primitive.BOOL @ array.wrap
+            types.primitive.BOOL@ array.wrap
             "if-condition" string.wrap
             0
             op .pos
@@ -2744,39 +2762,49 @@ proc(
               currentBlock? .data =:: currentBlock
               currentBlock [] .If ?? ! or
               currentBlock [] .If .hasIf if
-            state [] .stack @ branchTree.startBranch =:: ifBranch
-            state [] .blockCount BlockId cast =:: mut: blockId
-            state [] .blockCount 1 + state [] .blockCount =
+            state [] .stack@ branchTree.startBranch =:: ifBranch
+            state [] .compiledOps .length program createIfData =:: blockId
             ifBranch blockId op .pos newIfBlock =:: mut: ifBlock
             ifBlock state openBlock
           end
           state peekBlock .data .If@ =:: ifBlock
           true ifBlock [] .hasIf =
           ifBlock [] .blockId op .val .block .blockId =
+          program [] .ifData
+            ifBlock [] .blockId i64 cast
+          list.at .data =:: ifData
           state [] .compiledOps .length =:: currentOpIndex
           op state appendOp ..drop
-          currentOpIndex ifBlock [] .ifPosition =
+          currentOpIndex ifData [] .ifPosition =
           ifBlock [] .andBranches
-              state [] .stack @ branchTree.startBranch
+              state [] .stack@ branchTree.startBranch
               op .pos
             BranchPoint new list.append
           ifBlock [] .andBranches =
           ifBlock [] .orBranches@ =:: orBranches
           orBranches [] .length 0 > if
             ifBlock [] .andOrPositions =:: andOrPos
+            program [] .labelPositions
+              orBranches [] .length i32 cast arenaAlloc.allocArray =:: orPositions
+            program [] .labelPositions =
+            0:i32 =:: mut: orCount
             andOrPos .length for =:: i
               andOrPos i list.get =:: andOrIndex
               state [] .compiledOps
                 andOrIndex
               list.at .data =:: andOrOp
               andOrOp .val .block .blockType .OR_IF ?? if
+                andOrIndex orPositions orCount array.set
+                orCount 1 + orCount =
                 currentOpIndex
                   andOrIndex - JumpDistance cast
                 andOrOp .val .block .jumpDistance =
               end
             end
+            orCount i64 cast.u orPositions .length == assert "and-counts match"
+            orPositions ifData [] .orPositions =
             orBranches []
-                state [] .stack @ branchTree.startBranch
+                state [] .stack@ branchTree.startBranch
                 op .pos
               BranchPoint new list.append
             orBranches [] =
@@ -2789,9 +2817,9 @@ proc(
               end ..drop
             =:: branchPoints
             ## mergeValues
-              state [] .stack @
+              state [] .stack@
               branchPoints list.asArray
-              mergeBranches @
+              mergeBranches@
               ## MergePoint
                 "or if block" string.wrap
                 op .pos
@@ -2844,7 +2872,7 @@ proc(
           false 0 op .pos state clearReferences
           currentBlock [] .If .blockId op .val .block .blockId =
           state [] .stack branchTree.depth =:: ifTypes
-          state [] .stack @
+          state [] .stack@
             currentBlock [] .If .branchRoot
           branchTree.reset =:: ifBranch
           state [] .reachable if
@@ -2863,25 +2891,38 @@ proc(
             true currentBlock [] .If .ifBranchTerminates =
           end
           true currentBlock [] .If .hasElse =
+          program [] .ifData
+            currentBlock [] .If .blockId i64 cast
+          list.at .data =:: ifData
           state [] .compiledOps .length =:: currentOpIndex
           currentOpIndex
-            currentBlock [] .If .ifPosition - JumpDistance cast
+            ifData [] .ifPosition - JumpDistance cast
             state [] .compiledOps
-              currentBlock [] .If .ifPosition
+              ifData [] .ifPosition
             list.at .data
           .val .block [] .jumpDistance =
+          program [] .labelPositions
+            currentBlock [] .If .andOrPositions .length
+              ifData [] .orPositions .length - i32 cast
+            arenaAlloc.allocArray =:: andPositions
+          program [] .labelPositions =
+          0:i32 =:: mut: andCount
           currentBlock [] .If .andOrPositions .length for =:: i
             currentBlock [] .If .andOrPositions i list.get =:: andOrPos
             state [] .compiledOps
               andOrPos
             list.at .data =:: andOrOp
             andOrOp .val .block [] .blockType .AND_IF ?? if
+              andOrPos andPositions andCount array.set
+              andCount 1 + andCount =
               currentOpIndex
                 andOrPos - JumpDistance cast
               andOrOp .val .block [] .jumpDistance =
             end
           end
-          currentOpIndex currentBlock [] .If .elsePosition =
+          andCount i64 cast.u andPositions .length == assert "and counts match"
+          andPositions ifData [] .andPositions =
+          currentOpIndex ifData [] .elsePosition =
           op state appendOp ..drop
           true state [] .reachable =
           currentBlock [] .If .andBranches .length 1 >= assert "if has if branch"
@@ -2893,9 +2934,9 @@ proc(
             end ..drop
           =:: branchPoints
           ## mergeValues
-            state [] .stack @
+            state [] .stack@
             branchPoints list.asArray
-            mergeBranches @
+            mergeBranches@
             ## MergePoint
               "and if block" string.wrap
               op .pos
@@ -3075,7 +3116,7 @@ proc(
           false 0 op .pos state clearReferences
           breakBlock? .data =:: breakBlock
           breakBlock [] .Switch ?? if
-            breakBlock [] .Switch @ =:: switchBlock
+            breakBlock [] .Switch@ =:: switchBlock
             state peekBlock .data =:: currentBlock
             currentBlock [] .Switch ?? and
                 currentBlock [] .Switch .blockId
@@ -3426,7 +3467,7 @@ proc(
               currentBlock [] .AndOr ?? if
             currentBlock [] .AndOr .branches@ =:: branches
             branches []
-                state [] .stack @ branchTree.startBranch
+                state [] .stack@ branchTree.startBranch
                 op .pos
               BranchPoint new list.append
             branches [] =
@@ -3435,10 +3476,9 @@ proc(
             currentBlock .AndOr [] .andOrPositions =
             currentBlock .AndOr [] .blockId
           else
-            state [] .blockCount BlockId cast =:: mut: blockId
-            state [] .blockCount 1 + state [] .blockCount =
+            state [] .compiledOps .length program createAndOrData =:: blockId
             blockId op .val .block .blockId =
-            state [] .stack @ branchTree.startBranch =:: rootBranch
+            state [] .stack@ branchTree.startBranch =:: rootBranch
             rootBranch
               blockId
               state [] .compiledOps .length
@@ -3560,13 +3600,16 @@ proc(
           end
           closed .If .blockId op .val .blockEnd .blockId =
           state [] .compiledOps .length =:: currentOpIndex
-          closed .If .ifPosition
+          program [] .ifData
+            closed .If .blockId i64 cast
+          list.at .data =:: ifData
+          ifData [] .ifPosition
             currentOpIndex - JumpDistance cast
           op .val .blockEnd .jumpDistance =
           currentOpIndex
-            closed .If .elsePosition - JumpDistance cast
+            ifData [] .elsePosition - JumpDistance cast
             state [] .compiledOps
-              closed .If .elsePosition
+              ifData [] .elsePosition
             list.at .data []
           .val .block .jumpDistance =
           op state appendOp ..drop
@@ -3593,6 +3636,7 @@ proc(
           ## XXX? check for stray labels
           closed .Switch@ =:: switchBlock
           switchBlock [] .caseBranches =:: mut: caseBranches
+          switchBlock [] .breakPositions =:: mut: breakPositions
           op .val .blockEnd .blockType .CASE ?? if
             BlockType .DEFAULT op .pos opBlock =:: mut: tmp
             switchBlock [] .blockId tmp .val .block .blockId =
@@ -3647,6 +3691,9 @@ proc(
             end
             BlockType .BREAK_SWITCH op .pos opBlock tmp =
             switchBlock [] .blockId tmp .val .block .blockId =
+            breakPositions
+              state [] .compiledOps .length list.append
+            breakPositions =
             tmp state appendOp ..drop
           end
           ## set stack head to one of the accepting branches
@@ -3693,8 +3740,8 @@ proc(
           BlockType .SWITCH op .pos opEndBlock =:: mut: tmp
           switchBlock [] .blockId tmp .val .blockEnd .blockId =
           state [] .compiledOps .length =:: currentOpIndex
-          switchBlock [] .breakPositions .length for =:: i
-            switchBlock [] .breakPositions i list.get =:: breakPos
+          breakPositions .length for =:: i
+            breakPositions i list.get =:: breakPos
             state [] .compiledOps breakPos list.at .data =:: breakOp
             currentOpIndex
               breakPos - JumpDistance cast
@@ -3704,7 +3751,7 @@ proc(
             switchBlock [] .blockId i64 cast
           list.at .data =:: switchData
           program [] .labelPositions
-            switchBlock [] .breakPositions
+            breakPositions
               arenaAlloc.pushList
             switchData [] .breakPositions =
           program [] .labelPositions =
@@ -3714,7 +3761,7 @@ proc(
             switchData [] .caseJumpDistances =
           program [] .switchJumps =
           0 switchData [] .caseCount = ## reset case-count
-          switchBlock [] .breakPositions list.free ..drop
+          breakPositions list.free ..drop
           switchBlock [] .caseJumpDistances list.free ..drop
           switchBlock [] .switchPosition
             currentOpIndex - JumpDistance cast
@@ -3895,6 +3942,13 @@ proc(
               andOrPos - JumpDistance cast
             andOrOp .val .block .jumpDistance =
           end
+          program [] .labelPositions
+            andOrBlock .andOrPositions arenaAlloc.pushList
+              program [] .andOrData
+                andOrBlock .blockId i64 cast
+              list.at .data
+            [] .andOrPositions =
+          program [] .labelPositions =
           closed .AndOr .andOrPositions 0 list.get
             currentOpIndex - JumpDistance cast
           op .val .blockEnd .jumpDistance =
@@ -3952,7 +4006,7 @@ proc(
       end
       break
     Return case
-      op @ state typeCheckReturn
+      op@ state typeCheckReturn
       op .pos state endSwitchBranch
       return
     Assert case
@@ -4379,9 +4433,8 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     false ## inTypeBlock
     TypeInfo branchTree.create
     32  BlockInfo list.create
-    0
     128 Operation list.create
-    0
+    0:i64
     128 ProcedureImpl list.create
     FILE_ID_NONE
     16 FilePosition list.create

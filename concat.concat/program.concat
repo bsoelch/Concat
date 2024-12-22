@@ -387,8 +387,20 @@ struct(
   i32 : mut: continueCount
   i32 : mut: breakCount
 ) =:: export: WhileData
-## TODO remember label-positions for all block-types
-##   needed to efficiently update jumpDistances when changing operation layout
+struct(
+  i64 : mut: blockStart
+  i64 : mut: ifPosition
+  i64 : mut: elsePosition
+  i64 arrayView.mut : mut: andPositions
+  i64 arrayView.mut : mut: orPositions
+  i32 : mut: andCount
+  i32 : mut: orCount
+) =:: export: IfData
+struct(
+  i64 : mut: blockStart
+  i64 arrayView.mut : mut: andOrPositions
+  i32 : mut: andOrCount
+) =:: export: AndOrData
 
 struct(
   ProcId list : mut: procedures
@@ -418,6 +430,8 @@ struct(
            i64 ArenaAllocator : mut: labelPositions
               SwitchData list : mut: switchData
                WhileData list : mut: whileData
+                  IfData list : mut: ifData
+               AndOrData list : mut: andOrData
            TypedConstant list : mut: constantReferences
            CompilerError list : mut: errors
                          bool : mut: hasCheckIndex
@@ -435,8 +449,10 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     128 Operation       list.create
     1024 JumpDistance   arenaAlloc.create
     1024 i64            arenaAlloc.create
-    0   SwitchData      list.create
-    0   WhileData       list.create
+    128 SwitchData      list.create
+    128 WhileData       list.create
+    256 IfData          list.create
+    128 AndOrData       list.create
     32  TypedConstant   list.create
     32  CompilerError   list.create
     false ## hasCheckIndex
@@ -958,36 +974,104 @@ namespace: sb
 end
 
 namespace: program.jumps
-  ## TODO update if-labels
   proc(
     BlockId : blockId
     i64 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateAndIf
+    program [] .ifData
+      blockId i64 cast
+    list.at .data =:: ifData
+    ifData [] .andCount ifData [] .orCount + 0 == if
+      newIndex ifData [] .blockStart =
+    end
+    ifData [] .andCount
+      newIndex ifData [] .andPositions $2 array.set
+      1 +
+    ifData [] .andCount =
   end
   proc(
     BlockId : blockId
     i64 : newIndex
     ProgramContext ptr.mut : program
-  -> ) : export: alias: updateOrIf updateAndIf
+  -> ) =>: export: updateOrIf
+    program [] .ifData
+      blockId i64 cast
+    list.at .data =:: ifData
+    ifData [] .andCount ifData [] .orCount + 0 == if
+      newIndex ifData [] .blockStart =
+    end
+    ifData [] .orCount
+      newIndex ifData [] .orPositions $2 array.set
+      1 +
+    ifData [] .orCount =
+  end
   proc(
     BlockId : blockId
     Operation arrayView.mut : newOps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateIf
+    program [] .ifData
+      blockId i64 cast
+    list.at .data =:: ifData
+    ifData [] .andCount ifData [] .orCount + 0 == if
+      newOps .length ifData [] .blockStart =
+    end
+    newOps .length ifData [] .ifPosition =
+    ifData [] .orCount for =:: i
+      ifData [] .orPositions
+        i
+      array.get =:: orPos
+      newOps .length
+        orPos - JumpDistance cast
+      newOps
+        orPos array.at .data []
+      .val .block .jumpDistance =
+    end
+    0 ifData [] .orCount =
   end
   proc(
     BlockId : blockId
     Operation arrayView.mut : newOps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateElse
+    program [] .ifData
+      blockId i64 cast
+    list.at .data =:: ifData
+    newOps .length ifData [] .elsePosition =
+    ifData [] .andCount for =:: i
+      ifData [] .andPositions
+        i
+      array.get =:: andPos
+      newOps .length
+        andPos - JumpDistance cast
+      newOps
+        andPos array.at .data []
+      .val .block .jumpDistance =
+    end
+    0 ifData [] .andCount =
+    newOps .length
+      ifData [] .ifPosition - JumpDistance cast
+    newOps
+      ifData [] .ifPosition array.at .data []
+    .val .block .jumpDistance =
   end
   proc(
     BlockId : blockId
     Operation arrayView.mut : newOps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndIf
-    0:JumpDistance
+    program [] .ifData
+      blockId i64 cast
+    list.at .data =:: ifData
+    newOps .length
+      ifData [] .elsePosition - JumpDistance cast
+    newOps
+      ifData [] .elsePosition array.at .data []
+    .val .block .jumpDistance =
+    ifData [] .blockStart
+      newOps .length -
+    JumpDistance cast
   end
 
   proc(
@@ -1183,12 +1267,21 @@ namespace: program.jumps
     loopLength -_ JumpDistance cast
   end
 
-  ## TODO update and-or labels
   proc(
     BlockId : blockId
     i64 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateAnd
+    program [] .andOrData
+      blockId i64 cast
+    list.at .data =:: andOrData
+    andOrData [] .andOrCount 0 == if
+      newIndex andOrData [] .blockStart =
+    end
+    andOrData [] .andOrCount
+      newIndex andOrData [] .andOrPositions $2 array.set
+      1 +
+    andOrData [] .andOrCount =
   end
   proc(
     BlockId : blockId
@@ -1200,6 +1293,22 @@ namespace: program.jumps
     Operation arrayView.mut : newOps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndAndOr
-    0:JumpDistance
+    program [] .andOrData
+      blockId i64 cast
+    list.at .data =:: andOrData
+    andOrData [] .andOrCount for =:: i
+      andOrData [] .andOrPositions
+        i
+      array.get =:: andOrPos
+      newOps .length
+        andOrPos - JumpDistance cast
+      newOps
+        andOrPos array.at .data []
+      .val .block .jumpDistance =
+    end
+    0 andOrData [] .andOrCount =
+    andOrData [] .blockStart
+      newOps .length -
+    JumpDistance cast
   end
 end
