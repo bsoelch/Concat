@@ -51,14 +51,14 @@ proc(
 -> Operation list ) =>: compileOp
   op0 =:: mut: op
   context [] .program =:: program
-  program [] .errors @ =:: errors
-  program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  program [] .errors@ =:: errors
+  program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   op .val switch
     NOP case
-      newOps return ## ignore nops
+      newOps return ## ignore no-ops
     builtIn equalityOperator argc getArg unreachable procPtr
     checkEnumLabel hasElement getId atId setValue getEnumLabel
     atArrayElement atElement Assert Error stackMod getArrayElement getElement setEnumLabel
@@ -201,33 +201,136 @@ proc(
       return
     ## XXX merge identical variables on independent branches
     block case
+      op .val .block .blockId =:: blockId
       op .val .block .blockType switch
-        IF ELSE SWITCH CASE
-        DEFAULT BREAK_SWITCH WHILE
-        DO BREAK CONTINUE FINALLY
+        AND_IF case
+          blockId
+            newOps .length
+          program program.jumps.updateAndIf
+          newOps op list.append return
+        OR_IF case
+          blockId
+            newOps .length
+          program program.jumps.updateOrIf
+          newOps op list.append return
+        IF case
+          blockId
+            newOps list.asMutableArray
+          program program.jumps.updateIf
+          newOps op list.append return
+        ELSE case
+          blockId
+            newOps list.asMutableArray
+          program program.jumps.updateElse
+          newOps op list.append return
+        SWITCH case
+          blockId
+            newOps .length
+          program program.jumps.updateSwitch
+          newOps op list.append return
+        CASE case
+          blockId
+            newOps .length
+          program program.jumps.updateCase
+          newOps op list.append return
+        DEFAULT case
+          blockId
+            newOps .length
+          program program.jumps.updateDefault
+          newOps op list.append return
+        BREAK_SWITCH case
+          blockId
+            newOps .length
+          program program.jumps.updateBreakSwitch
+          newOps op list.append return
+        WHILE case
+          blockId
+            newOps .length
+          program program.jumps.updateWhile
+          newOps op list.append return
+        OR_DO case
+          blockId
+            newOps .length
+          program program.jumps.updateOrDo
+          newOps op list.append return
+        AND_DO case
+          blockId
+            newOps .length
+          program program.jumps.updateAndDo
+          newOps op list.append return
+        DO case
+          blockId
+            newOps list.asMutableArray
+          program program.jumps.updateDo
+          newOps op list.append return
+        BREAK case
+          blockId
+            newOps .length
+          program program.jumps.updateBreak
+          newOps op list.append return
+        CONTINUE case
+          blockId
+            newOps .length
+          program program.jumps.updateContinue
+          newOps op list.append return
+        FINALLY case
+          blockId
+            newOps list.asMutableArray
+          program program.jumps.updateFinally
+          newOps op list.append return
+        AND case
+          blockId
+            newOps .length
+          program program.jumps.updateAnd
+          newOps op list.append return
+        OR case
+          blockId
+            newOps .length
+          program program.jumps.updateOr
+          newOps op list.append return
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        AND OR AND_IF OR_IF AND_DO OR_DO case
-          newOps
-            op list.append ## nothing to change
-          return
         UNKNOWN INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
             TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
       end
       break
     blockEnd case
+      op .val .blockEnd .blockId =:: blockId
       op .val .blockEnd .blockType switch
-        PROCEDURE EXPERIMENTAL_PROCEDURE
-        ELSE AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
+        PROCEDURE EXPERIMENTAL_PROCEDURE case
+          newOps op list.append return
+        ELSE case
+          blockId
+            newOps list.asMutableArray
+          program program.jumps.updateEndIf
+          op .val .blockEnd .jumpDistance =
+          newOps op list.append return
+        SWITCH case
+          blockId
+            newOps list.asMutableArray
+          program program.jumps.updateEndSwitch
+          op .val .blockEnd .jumpDistance =
+          newOps op list.append return
+        WHILE case
+          blockId
+            newOps list.asMutableArray
+          program program.jumps.updateEndWhile
+          op .val .blockEnd .jumpDistance =
+          newOps op list.append return
+        AND OR case
+          blockId
+            newOps list.asMutableArray
+          program program.jumps.updateEndAndOr
+          op .val .blockEnd .jumpDistance =
+          newOps op list.append return
+        AND_IF OR_IF AND_DO OR_DO FINALLY
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        SWITCH WHILE UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK CONTINUE INITIALIZER IF NAMESPACE case
-          newOps
-            op list.append ## nothing to change
-          return
+        UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK
+        CONTINUE INITIALIZER IF NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
+        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
       end
       break
     autoTypedInitializeId ConstantReference NewReference
@@ -251,15 +354,15 @@ proc(
   ConverterContext ptr.mut : context
 -> ) =>: convertProc
   context [] .program =:: program
-  program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   variables [] context [] .variables =
   newOps []
     ..dup .length codeStart [] =
-    0:i64 while ..dup ops .length < do =:: j
-      ops j array.at .data [] context compileOp
-      j 1 +
+    0:i64 while ..dup ops .length < do =:: opIndex
+      ops opIndex array.at .data [] context compileOp
+      opIndex 1 +
     end ..drop
     ..dup .length codeStart [] - codeLength [] =
   newOps [] =
@@ -276,7 +379,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     0 VariableInfo list.create
     -1:FileId
   ConverterContext new =:: mut: contextData
-  contextData @ =:: context
+  contextData@ =:: context
   0:i64 while ..dup program [] .progFiles .length < do =:: i
     program [] .progFiles i list.at .data =:: f
     f [] .tmpOps list.clear f [] .tmpOps =

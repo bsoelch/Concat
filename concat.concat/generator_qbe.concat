@@ -22,19 +22,10 @@ enum(
   START
   NEXT
   ERROR
-  IF
-  ELSE
-  END_IF
-  CASE
-  DEFAULT
-  END_SWITCH
-  WHILE
-  DO
-  CONTINUE_WHILE
-  END_WHILE
-  END_AND_OR
+  LABEL
+  LABEL_PRE
 ) =:: BranchType
-struct( BranchType : branchType i32 : id i32 : subId ) =:: BranchId
+struct( BranchType : branchType i64 : id ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
 
 struct(
@@ -68,7 +59,7 @@ struct(
   BranchId : mut: ifBranchId
   branchTree.NodeId : branchRoot
   branchTree.NodeId : mut: ifBranch
-  i32 : blockId
+  BlockId : blockId
   bool : mut: hasIf
   bool : mut: ifBranchTerminates
 ) =:: IfBlockInfo
@@ -76,7 +67,8 @@ struct(
   branchTree.NodeId list : mut: caseBranches
   BranchId list : mut: caseBranchIds
   branchTree.NodeId : branchRoot
-  i32 : blockId
+  BlockId : blockId
+  i64 : blockEnd
 ) =:: SwitchBlockInfo
 struct(
   branchTree.NodeId list : mut: continueBranches
@@ -87,12 +79,13 @@ struct(
   BranchId list : mut: doBranchIds
   i64 : loopValOffset
   branchTree.NodeId : branchRoot
-  i32 : blockId
+  BlockId : blockId
+  i64 : blockStart
 ) =:: WhileBlockInfo
 struct(
   branchTree.NodeId list : mut: branches
   BranchId list : mut: branchIds
-  i32 : blockId
+  BlockId : blockId
 ) =:: AndOrBlockInfo
 
 union(
@@ -195,22 +188,8 @@ namespace: sb
         START case "@start" sb.appendS break
         NEXT case "@next" sb.appendS branch .id sb.appendI break
         ERROR case "@error" sb.appendS branch .id sb.appendI break
-        IF case "@if_" sb.appendS branch .id sb.appendI break
-        ELSE case "@else_" sb.appendS branch .id sb.appendI break
-        END_IF case "@endIf_" sb.appendS branch .id sb.appendI break
-        CASE case
-          "@case_" sb.appendS
-          branch .id sb.appendI
-          '_' sb.appendC
-          branch .subId sb.appendI
-         break
-        DEFAULT case "@default" sb.appendS branch .id sb.appendI break
-        END_SWITCH case "@endSwitch_" sb.appendS branch .id sb.appendI break
-        WHILE case "@while_" sb.appendS branch .id sb.appendI break
-        DO case "@do_" sb.appendS branch .id sb.appendI break
-        CONTINUE_WHILE case "@continueWhile_" sb.appendS branch .id sb.appendI break
-        END_WHILE case "@endWhile_" sb.appendS branch .id sb.appendI break
-        END_AND_OR case "@endAndOr_" sb.appendS branch .id sb.appendI break
+        LABEL case "@label_" sb.appendS branch .id sb.appendI break
+        LABEL_PRE case "@label_pre" sb.appendS branch .id sb.appendI break
       end
     return
   end
@@ -271,12 +250,12 @@ proc( CompilerContext ptr.mut : context -> i64 ) =>: nextTmpId
     context [] .tmpCount =
   oldCount return
 end
-proc( CompilerContext ptr.mut : context -> i32 ) =>: nextJumpLabelId
+proc( CompilerContext ptr.mut : context -> i64 ) =>: nextJumpLabelId
   context [] .jumpLabelCount =:: oldCount
     oldCount
       1 +
     context [] .jumpLabelCount =
-  oldCount return
+  oldCount i64 cast.u return
 end
 proc( CompilerContext ptr.mut : context -> i64 ) =>: nextLocalConstId
   context [] .localConstCount =:: oldCount
@@ -392,7 +371,7 @@ end
 
 struct(
   string : blockName
-  i32 : blockId
+  BlockId : blockId
   BranchId arrayView : branchIds
   FilePosition : pos
   CompilerContext ptr.mut : context
@@ -466,7 +445,7 @@ proc( BlockInfo : block CompilerContext ptr.mut : context -> ) =>: openBlock
   context [] .openBlocks =
 end
 proc(
-  i32 : blockId
+  BlockId : blockId
   CompilerContext ptr.mut : context
 -> ) =>: openIfBlock
   ## IfBlockInfo
@@ -483,7 +462,8 @@ proc(
   IfBlockInfo new BlockInfo .If context openBlock
 end
 proc(
-  i32 : blockId
+  BlockId : blockId
+  i64 : blockEnd
   CompilerContext ptr.mut : context
 -> ) =>: openSwitchBlock
   ## SwitchBlockInfo
@@ -491,10 +471,12 @@ proc(
     16 BranchId list.create
     context [] .stackInfo @ branchTree.startBranch
     blockId
+    blockEnd
   SwitchBlockInfo new BlockInfo .Switch context openBlock
 end
 proc(
-  i32 : blockId
+  BlockId : blockId
+  i64 : blockStart
   CompilerContext ptr.mut : context
 -> ) =>: openWhileBlock
   ## WhileBlockInfo
@@ -507,13 +489,14 @@ proc(
     context [] .tmpCount
     context [] .stackInfo @ branchTree.startBranch
     blockId
+    blockStart
   WhileBlockInfo new BlockInfo .While context openBlock
   context [] .tmpCount
-    context [] .program [] .whileData blockId list.at .data [] .modifiedTypes +
+    context [] .program [] .whileData blockId i64 cast list.at .data [] .modifiedTypes +
   context [] .tmpCount =
 end
 proc(
-  i32 : blockId
+  BlockId : blockId
   CompilerContext ptr.mut : context
 -> ) =>: openAndOrBlock
   ## SwitchBlockInfo
@@ -524,7 +507,7 @@ proc(
 end
 
 proc(
-  i32 : blockId
+  BlockId : blockId
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> BlockInfo ptr.mut optional ) =>: findBreakableBlock
@@ -1515,17 +1498,14 @@ proc(
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
-    0
   BranchId new =:: check1Branch
   ## BranchId
     BranchType .ERROR
     context nextJumpLabelId
-    0
   BranchId new =:: errorBranch
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
-    0
   BranchId new =:: okBranch
   context nextTmpId =:: c1
   context nextTmpId =:: c2
@@ -1693,12 +1673,10 @@ proc(
   ## BranchId
     BranchType .ERROR
     context nextJumpLabelId
-    0
   BranchId new =:: errorBranch
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
-    0
   BranchId new =:: okBranch
   sb
     "## check enum \n" sb.appendS
@@ -1868,8 +1846,10 @@ proc(
   stringBuilder : sb
   ValType : valType
   i64 : valId
-  i32 : switchId
+  JumpDistance : defaultJumpDistance
   LabelData arrayView : labels
+  JumpDistance arrayView.mut : caseJumpDistances
+  i64 : opIndex
   i64 optional : lower
   i64 optional : upper
   FilePosition : pos
@@ -1885,15 +1865,14 @@ proc(
     end
     sb
       0:i64 while ..dup loopCount < do =:: i
+        labels i array.at .data [] .caseId =:: caseId
         ## BranchId
-          BranchType .CASE
-          switchId
-          labels i array.at .data [] .caseId
+          BranchType .LABEL
+          opIndex caseJumpDistances caseId array.get i64 cast +
         BranchId new =:: caseBranch
         ## BranchId
           BranchType .NEXT
           context nextJumpLabelId
-          0
         BranchId new =:: nextBranch
         labels i array.get .value labelAsInt =:: cmpVal
         ## cmp int
@@ -1910,17 +1889,16 @@ proc(
       end ..drop
       "jmp " sb.appendS
       contiguous if
+        labels loopCount array.at .data [] .caseId =:: caseId
         ## BranchId
-          BranchType .CASE
-          switchId
-          labels loopCount array.at .data [] .caseId
+          BranchType .LABEL
+          opIndex caseJumpDistances caseId array.get i64 cast +
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       else
         ## BranchId
-          BranchType .DEFAULT
-          switchId
-          0
+          BranchType .LABEL
+          opIndex defaultJumpDistance i64 cast +
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       end
@@ -1930,12 +1908,10 @@ proc(
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
-    0
   BranchId new =:: ltBranch
   ## BranchId
     BranchType .NEXT
     context nextJumpLabelId
-    0
   BranchId new =:: geBranch
   labels p array.get .value labelAsInt =:: cmpVal
   labels p array.cutIndex =:: lElts =:: rElts
@@ -1953,8 +1929,10 @@ proc(
     ## appendSwitchJumpTree
       valType
       valId
-      switchId
+      defaultJumpDistance
       lElts
+      caseJumpDistances
+      opIndex
       lower
       upper optional.isEmpty if
         cmpVal optional.wrap
@@ -1968,8 +1946,10 @@ proc(
     ## appendSwitchJumpTree
       valType
       valId
-      switchId
+      defaultJumpDistance
       rElts
+      caseJumpDistances
+      opIndex
       lower optional.isEmpty if
         cmpVal optional.wrap
       else
@@ -1996,8 +1976,10 @@ proc(
   stringBuilder : sb
   Type : switchType
   i64 : valId
-  i32 : switchId
+  JumpDistance : defaultJumpDistance
   LabelData list : labels
+  JumpDistance arrayView.mut : caseJumpDistances
+  i64 : opIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendSwitchTable
@@ -2048,8 +2030,10 @@ proc(
     ## appendJumpTable
       valType
       tmpId
-      switchId
+      defaultJumpDistance
       labels list.asArray
+      caseJumpDistances
+      opIndex
       i64 optional.empty
       i64 optional.empty
       pos context
@@ -2495,7 +2479,7 @@ proc(
   0 while ..dup 7 < do =:: i
     ## BranchId
       BranchType .NEXT
-      context nextJumpLabelId 0
+      context nextJumpLabelId
     BranchId new branches@ i [] =
     i 1 +
   end ..drop
@@ -3201,6 +3185,7 @@ end
 proc(
   stringBuilder : sb
   Operation ptr : op
+  i64 : opIndex
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: compileOp
   context [] .program =:: prog
@@ -3308,7 +3293,7 @@ proc(
         "{\n" sb.appendS
         ## BranchId
           BranchType .START
-          0 0
+          0
         BranchId new context startBranch
         ## push unnamed arguments
         op [] .dataType typeContext types.getProcIn ..drop =:: inType
@@ -4065,9 +4050,8 @@ proc(
       op [] .val .block .blockType switch
         IF IF_TRUE IF_FALSE case
           ## BranchId
-            BranchType .IF
-            op [] .val .block .blockId
-            0
+            BranchType .LABEL
+            opIndex
           BranchId new =:: ifBranch
           sb
             op [] .pos sb.appendPosQBE
@@ -4077,9 +4061,8 @@ proc(
             ifBranch sb.appendBranchId
             ", " sb.appendS
             ## appendBranchId
-              BranchType .ELSE
-              op [] .val .block .blockId
-              0
+              BranchType .LABEL
+              opIndex  op [] .val .block .jumpDistance i64 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
           =:: mut: newSb
@@ -4144,7 +4127,6 @@ proc(
           ## appendBranchId
             BranchType .NEXT
             context nextJumpLabelId
-            0
           BranchId new =:: nextBranch
           sb
             op [] .pos sb.appendPosQBE
@@ -4153,9 +4135,8 @@ proc(
             ", " sb.appendS
             isOr if
               ## appendBranchId
-                BranchType .IF
-                op [] .val .block .blockId
-                0
+                BranchType .LABEL
+                opIndex  op [] .val .block .jumpDistance i64 cast +
               BranchId new sb.appendBranchId
               ", " sb.appendS
             end
@@ -4163,9 +4144,8 @@ proc(
             isOr ! if
               ", " sb.appendS
               ## appendBranchId
-                BranchType .ELSE
-                op [] .val .block .blockId
-                0
+                BranchType .LABEL
+                opIndex  op [] .val .block .jumpDistance i64 cast +
               BranchId new sb.appendBranchId
             end
             '\n' sb.appendC
@@ -4198,17 +4178,15 @@ proc(
             context [] .reachable if
               "jmp " sb.appendS
               ## appendBranchId
-                BranchType .END_IF
-                op [] .val .block .blockId
-                0
+                BranchType .LABEL
+                opIndex  op [] .val .block .jumpDistance i64 cast +
               BranchId new sb.appendBranchId
               '\n' sb.appendC
             end
             ## startBranch
               ## BranchId
-                BranchType .ELSE
-                op [] .val .block .blockId
-                0
+                BranchType .LABEL
+                opIndex
               BranchId new
               context
             startBranch
@@ -4235,40 +4213,31 @@ proc(
         SWITCH case
           op [] .val .block .blockId =:: switchId
           prog [] .switchData
-            switchId list.at .data
+            switchId i64 cast list.at .data
           =:: switchData
           sb
             op [] .pos sb.appendPosQBE
             ## appendSwitchTable
               switchData [] .switchType
               op [] .pos context popValue
-              switchId
+              switchData [] .defaultJumpDistance
               switchData [] .labels
+              switchData [] .caseJumpDistances
+              opIndex
               op [] .pos
               context
             appendSwitchTable
-            switchId context openSwitchBlock
+            switchId
+              opIndex op [] .val .block .jumpDistance i64 cast +
+            context openSwitchBlock
             false context [] .reachable =
           return
-        CASE case
+        CASE DEFAULT case
             sb
               ## don't add position before label
-              op [] .val .block .blockId =:: switchId
               ## BranchId
-                BranchType .CASE
-                switchId
-                op [] .val .block .subId
-              BranchId new context startBranch
-              true context [] .reachable =
-            return
-        DEFAULT case
-            sb
-              ## don't add position before label
-              op [] .val .block .blockId =:: switchId
-              ## BranchId
-                BranchType .DEFAULT
-                switchId
-                0
+                BranchType .LABEL
+                opIndex
               BranchId new context startBranch
               true context [] .reachable =
             return
@@ -4309,9 +4278,8 @@ proc(
                 op [] .pos sb.appendPosQBE
                 "jmp " sb.appendS
                 ## BlockId
-                  BranchType .END_SWITCH
-                  breakBlock [] .Switch .blockId
-                  0
+                  BranchType .LABEL
+                  opIndex op [] .val .block .jumpDistance i64 cast +
                 BranchId new sb.appendBranchId
                 '\n' sb.appendC
               end
@@ -4322,13 +4290,14 @@ proc(
             ## don't add position before label
             op [] .val .block .blockId =:: whileId
             ## BranchId
-              BranchType .WHILE
-              whileId
-              0
+              BranchType .LABEL
+              opIndex
             BranchId new =:: branchId
-            whileId context openWhileBlock
+            whileId
+              opIndex
+            context openWhileBlock
             context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
-            prog [] .whileData whileId list.at .data =:: whileData
+            prog [] .whileData whileId i64 cast list.at .data =:: whileData
             context [] .currentBranch =:: prevBranch
             whileData [] .modifiedTypes =:: loopEltCount
             loopEltCount StackElement list.create =:: mut: loopElts
@@ -4359,9 +4328,8 @@ proc(
                 elt [] .varId sb.appendI
                 ',' sb.appendC
                 ## BranchId
-                  BranchType .CONTINUE_WHILE
-                  whileId
-                  0
+                  BranchType .LABEL_PRE
+                  opIndex op [] .val .block .jumpDistance i64 cast +
                 BranchId new sb.appendBranchId
                 " %t" sb.appendS
                 whileBlock [] .loopValOffset i + sb.appendI
@@ -4376,7 +4344,6 @@ proc(
           ## BranchId
             BranchType .NEXT
             context nextJumpLabelId
-            0
           BranchId new =:: nextBranch
           sb
             op [] .pos sb.appendPosQBE
@@ -4385,9 +4352,8 @@ proc(
             ", " sb.appendS
             isOr if
               ## appendBranchId
-                BranchType .DO
-                op [] .val .block .blockId
-                0
+                BranchType .LABEL
+                opIndex op [] .val .block .jumpDistance i64 cast +
               BranchId new sb.appendBranchId
               ", " sb.appendS
             end
@@ -4395,9 +4361,8 @@ proc(
             isOr ! if
               ", " sb.appendS
               ## appendBranchId
-                BranchType .END_WHILE
-                op [] .val .block .blockId
-                0
+                BranchType .LABEL
+                opIndex op [] .val .block .jumpDistance i64 cast +
               BranchId new sb.appendBranchId
             end
             '\n' sb.appendC
@@ -4421,9 +4386,8 @@ proc(
         DO case
           context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
           ## BranchId
-            BranchType .DO
-            op [] .val .block .blockId
-            0
+            BranchType .LABEL
+            opIndex
           BranchId new =:: doBranch
           sb
             op [] .pos sb.appendPosQBE
@@ -4433,9 +4397,8 @@ proc(
             doBranch sb.appendBranchId
             ", " sb.appendS
             ## appendBranchId
-              BranchType .END_WHILE
-              op [] .val .block .blockId
-              0
+              BranchType .LABEL
+              opIndex op [] .val .block .jumpDistance i64 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
           =:: mut: newSb
@@ -4509,9 +4472,8 @@ proc(
             op [] .pos sb.appendPosQBE
             "jmp " sb.appendS
             ## BlockId
-              blockType .CONTINUE ?? if BranchType .CONTINUE_WHILE else BranchType .END_WHILE end
-              breakBlock [] .While .blockId
-              0
+              BranchType .LABEL
+              opIndex op [] .val .block .jumpDistance i64 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
             false context [] .reachable =
@@ -4533,9 +4495,8 @@ proc(
             ## don't add position for labels
             ## startBranch
               ## BranchId
-                BranchType .CONTINUE_WHILE
-                op [] .val .block .blockId
-                0
+                BranchType .LABEL
+                opIndex
               BranchId new
               context
             startBranch
@@ -4548,7 +4509,7 @@ proc(
               mergeBranches @
               ## MergePoint
                 "while" string.wrap
-                whileBlock .blockId []
+                whileBlock [] .blockId
                 whileBlock .continueBranchIds [] list.asArray
                 op [] .pos
                 context
@@ -4580,7 +4541,6 @@ proc(
           ## BranchId
             BranchType .NEXT
             context nextJumpLabelId
-            0
           BranchId new =:: nextBranch
           sb
             op [] .pos sb.appendPosQBE
@@ -4592,9 +4552,8 @@ proc(
               ", " sb.appendS
             end
             ## appendBranchId
-              BranchType .END_AND_OR
-              op [] .val .block .blockId
-              0
+              BranchType .LABEL
+              opIndex op [] .val .block .jumpDistance i64 cast +
             BranchId new sb.appendBranchId
             isOr if
               ", " sb.appendS
@@ -4641,9 +4600,8 @@ proc(
             ## don't add position for labels
             ## startBranch
               ## BranchId
-                BranchType .END_IF
-                op [] .val .blockEnd .blockId
-                0
+                BranchType .LABEL
+                opIndex
               BranchId new
               context
             startBranch
@@ -4682,9 +4640,8 @@ proc(
             ## don't add position for labels
             ## startBranch
               ## BranchId
-                BranchType .END_SWITCH
-                op [] .val .blockEnd .blockId
-                0
+                BranchType .LABEL
+                opIndex
               BranchId new
               context
             startBranch
@@ -4716,7 +4673,7 @@ proc(
           context [] .openBlocks
             list.pop .While =:: mut: whileBlock
           context [] .openBlocks =
-          prog [] .whileData whileBlock .blockId list.at .data =:: whileData
+          prog [] .whileData whileBlock .blockId i32 cast list.at .data =:: whileData
           context [] .stackInfo branchTree.depth whileData [] .modifiedTypes < if
             "stack underflow" sb.wrap
             op [] .pos errors appendError
@@ -4735,12 +4692,15 @@ proc(
               '\n' sb.appendC
               i 1 +
             end ..drop
-            ## jump to start of loop
-            "jmp " sb.appendS
             ## BranchId
-              BranchType .WHILE
-              op [] .val .blockEnd .blockId
-              0
+              BranchType .LABEL_PRE
+              opIndex
+            BranchId new sb.appendBranchId
+            ## jump to start of loop
+            "\njmp " sb.appendS
+            ## BranchId
+              BranchType .LABEL
+              opIndex op [] .val .blockEnd .jumpDistance i64 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
           =:: mut: newSb
@@ -4748,9 +4708,8 @@ proc(
             ## don't add position for labels
             ## startBranch
               ## BranchId
-                BranchType .END_WHILE
-                op [] .val .blockEnd .blockId
-                0
+                BranchType .LABEL
+                opIndex
               BranchId new
               context
             startBranch
@@ -4796,9 +4755,8 @@ proc(
           sb
             ## startBranch
               ## BranchId
-                BranchType .END_AND_OR
-                op [] .val .blockEnd .blockId
-                0
+                BranchType .LABEL
+                opIndex
               BranchId new
               context
             startBranch
@@ -4893,12 +4851,10 @@ proc(
       ## BranchId
         BranchType .NEXT
         context nextJumpLabelId
-        0
       BranchId new =:: successBranch
       ## BranchId
         BranchType .ERROR
         context nextJumpLabelId
-        0
       BranchId new =:: errorBranch
       sb
         op [] .pos sb.appendPosQBE
@@ -5008,7 +4964,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   ## CompilerContext
     program
     StackElement branchTree.create
-    BranchType .START 0 0 BranchId new
+    BranchType .START 0 BranchId new
     32 BlockInfo list.create
     32 LocalConst list.create
     32 string list.create
@@ -5119,11 +5075,9 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         " = {" sb.appendS
           f [] .fileName sb.asStr string.bytes 'b' true sb.appendPrimitiveArrayConstQBE
         "} \n" sb.appendS
-        0:i64 while ..dup f [] .localOps .length < do
-          ..swap
-          f [] .localOps ..over.2 list.at .data context compileOp
-          ..swap 1 +
-        end ..drop
+        0:i64 while ..dup f [] .localOps .length < do =:: opIndex
+          f [] .localOps opIndex list.at .data opIndex context compileOp
+        finally opIndex 1 + end ..drop
         target ..over io.fputSb ..drop
         sb.clear
       i 1 +

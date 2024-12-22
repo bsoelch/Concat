@@ -79,8 +79,8 @@ union(
             NopType : NOP
          ConstValue : mut: Constant
    ConstReferenceId : mut: ConstantReference
-            BlockId : mut: block
-            BlockId : mut: blockEnd
+          BlockData : mut: block
+          BlockData : mut: blockEnd
      IdentifierInfo : mut: getId
      IdentifierInfo : mut: atId
      IdentifierInfo : mut: initializeId
@@ -145,16 +145,28 @@ proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation )
 end
 
 proc( BlockType FilePosition : pos -> Operation ) =>: export: opBlock
-  id.LABEL_ID_NONE -1 -1 BlockId new OpValue .block Type .undefined pos Operation new return
+  id.LABEL_ID_NONE
+    -1:BlockId
+    0:JumpDistance
+  BlockData new OpValue .block Type .undefined pos Operation new return
 end
 proc( BlockType LabelId : label FilePosition : pos -> Operation ) =>: export: opLabeledBlock
-  label -1 -1 BlockId new OpValue .block Type .undefined pos Operation new return
+  label
+    -1:BlockId
+    0:JumpDistance
+  BlockData new OpValue .block Type .undefined pos Operation new return
 end
 proc( BlockType FilePosition : pos -> Operation ) =>: export: opEndBlock
-  id.LABEL_ID_NONE -1 -1 BlockId new OpValue .blockEnd Type .undefined pos Operation new return
+  id.LABEL_ID_NONE
+    -1:BlockId
+    0:JumpDistance
+  BlockData new OpValue .blockEnd Type .undefined pos Operation new return
 end
 proc( BlockType LabelId : label FilePosition : pos -> Operation ) =>: export: opEndLabeledBlock
-  label -1 -1 BlockId new OpValue .blockEnd Type .undefined pos Operation new return
+  label
+    -1:BlockId
+    0:JumpDistance
+  BlockData new OpValue .blockEnd Type .undefined pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGetId
   =:: pos
@@ -355,9 +367,28 @@ struct(
 ) =:: export: ProgramFile
 
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export: LabelData
-struct( LabelData list : mut: labels Type : switchType i32 : mut: caseCount bool : mut: hasDefault ) =:: export: SwitchData
-struct( i64 : mut: modifiedTypes ) =:: export: WhileData
-
+struct(
+  LabelData list : mut: labels
+  Type : switchType
+  i32 : mut: caseCount
+  i32 : mut: breakCount
+  i64 : mut: switchPosition
+  JumpDistance : mut: defaultJumpDistance
+  JumpDistance arrayView.mut : mut: caseJumpDistances
+  i64 arrayView.mut : mut: breakPositions
+) =:: export: SwitchData
+struct(
+  i64 : mut: modifiedTypes
+  i64 : mut: loopStart
+  i64 arrayView.mut : mut: orPositions
+  i64 arrayView.mut : mut: continuePositions
+  i64 arrayView.mut : mut: breakPositions
+  i32 : mut: orCount
+  i32 : mut: continueCount
+  i32 : mut: breakCount
+) =:: export: WhileData
+## TODO remember label-positions for all block-types
+##   needed to efficiently update jumpDistances when changing operation layout
 
 struct(
   ProcId list : mut: procedures
@@ -377,33 +408,37 @@ struct(
 ) =:: export: TypedConstant
 
 struct(
-    IdentifierContext : mut: idContext
-     ProgramFile list : mut: progFiles
-   ProcedureInfo list : mut: procedures
- ProcedureBundle list : mut: procBundles
-            Type list : mut: autoTypes
-       Operation list : mut: tmpOps
-      SwitchData list : mut: switchData
-       WhileData list : mut: whileData
-   TypedConstant list : mut: constantReferences
-   CompilerError list : mut: errors
-                 bool : mut: hasCheckIndex
-                 bool : mut: hasCheckEnum
-                 bool : mut: hasGetArgs
+            IdentifierContext : mut: idContext
+             ProgramFile list : mut: progFiles
+           ProcedureInfo list : mut: procedures
+         ProcedureBundle list : mut: procBundles
+                    Type list : mut: autoTypes
+               Operation list : mut: tmpOps
+  JumpDistance ArenaAllocator : mut: switchJumps
+           i64 ArenaAllocator : mut: labelPositions
+              SwitchData list : mut: switchData
+               WhileData list : mut: whileData
+           TypedConstant list : mut: constantReferences
+           CompilerError list : mut: errors
+                         bool : mut: hasCheckIndex
+                         bool : mut: hasCheckEnum
+                         bool : mut: hasGetArgs
 ) =:: export: ProgramContext
 
 proc( -> ProgramContext ) =>: export: newProgramContext
   ## ProgramContext
     id.newIdentifierContext
-    16  ProgramFile           list.create
-    64  ProcedureInfo         list.create
-    64  ProcedureBundle       list.create
-    32  Type                  list.create
-    128 Operation             list.create
-    0   SwitchData            list.create
-    0   WhileData             list.create
-    32  TypedConstant         list.create
-    32  CompilerError         list.create
+    16  ProgramFile     list.create
+    64  ProcedureInfo   list.create
+    64  ProcedureBundle list.create
+    32  Type            list.create
+    128 Operation       list.create
+    1024 JumpDistance   arenaAlloc.create
+    1024 i64            arenaAlloc.create
+    0   SwitchData      list.create
+    0   WhileData       list.create
+    32  TypedConstant   list.create
+    32  CompilerError   list.create
     false ## hasCheckIndex
     false ## hasCheckEnum
     false ## has getArgs
@@ -503,16 +538,20 @@ namespace: sb
           break
         block case
           "Block: " sb.appendS
-          ..over .val .block .blockType sb.appendBlockType
+          $1 .val .block .blockType sb.appendBlockType
           " (" sb.appendS
-          ..over .val .block .blockId sb.appendI
+            $1 .val .block .blockId i64 cast sb.appendI
+            " ->" sb.appendS
+            $1 .val .block .jumpDistance i64 cast sb.appendI
           ')' sb.appendC
           break
         blockEnd case
           "End: " sb.appendS
-          ..over .val .blockEnd .blockType sb.appendBlockType
+          $1 .val .blockEnd .blockType sb.appendBlockType
           " (" sb.appendS
-          ..over .val .blockEnd .blockId sb.appendI
+            $1 .val .blockEnd .blockId i64 cast sb.appendI
+            " ->" sb.appendS
+            $1 .val .blockEnd .jumpDistance i64 cast sb.appendI
           ')' sb.appendC
           break
         getId case
@@ -918,3 +957,249 @@ namespace: sb
   end
 end
 
+namespace: program.jumps
+  ## TODO update if-labels
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateAndIf
+  end
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) : export: alias: updateOrIf updateAndIf
+  proc(
+    BlockId : blockId
+    Operation arrayView.mut : newOps
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateIf
+  end
+  proc(
+    BlockId : blockId
+    Operation arrayView.mut : newOps
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateElse
+  end
+  proc(
+    BlockId : blockId
+    Operation arrayView.mut : newOps
+    ProgramContext ptr.mut : program
+  -> JumpDistance ) =>: export: updateEndIf
+    0:JumpDistance
+  end
+
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateSwitch
+    newIndex
+      program [] .switchData blockId i64 cast list.at .data
+    [] .switchPosition =
+  end
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateCase
+    program [] .switchData
+      blockId i64 cast
+    list.at .data =:: switchData
+    switchData [] .caseCount
+      newIndex
+        switchData [] .switchPosition - JumpDistance cast
+      switchData [] .caseJumpDistances $2 array.set
+      1 +
+    switchData [] .caseCount =
+  end
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateDefault
+    program [] .switchData
+      blockId i64 cast
+    list.at .data =:: switchData
+    newIndex
+      switchData [] .switchPosition - JumpDistance cast
+    switchData [] .defaultJumpDistance =
+  end
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateBreakSwitch
+    program [] .switchData
+      blockId i64 cast
+    list.at .data =:: switchData
+    switchData [] .breakCount
+      newIndex switchData [] .breakPositions $2 array.set
+      1 +
+    switchData [] .breakCount =
+  end
+  proc(
+    BlockId : blockId
+    Operation arrayView.mut : newOps
+    ProgramContext ptr.mut : program
+  -> JumpDistance ) =>: export: updateEndSwitch
+    program [] .switchData
+      blockId i64 cast
+    list.at .data =:: switchData
+    switchData [] .breakCount for =:: i
+      switchData [] .breakPositions
+        i
+      array.get =:: breakPos
+      newOps .length
+        breakPos - JumpDistance cast
+      newOps
+        breakPos array.at .data []
+      .val .block .jumpDistance =
+    end
+    0 switchData [] .breakCount =
+    switchData [] .switchPosition
+      newOps .length -
+    JumpDistance cast
+  end
+
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateWhile
+    program [] .whileData
+      blockId i64 cast
+    list.at .data =:: whileData
+    newIndex whileData [] .loopStart =
+  end
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateOrDo
+    program [] .whileData
+      blockId i64 cast
+    list.at .data =:: whileData
+    whileData [] .orCount
+      newIndex whileData [] .orPositions $2 array.set
+      1 +
+    whileData [] .orCount =
+  end
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateBreak
+    program [] .whileData
+      blockId i64 cast
+    list.at .data =:: whileData
+    whileData [] .breakCount
+      newIndex whileData [] .breakPositions $2 array.set
+      1 +
+    whileData [] .breakCount =
+  end
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) : export: alias: updateAndDo updateBreak
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateContinue
+    program [] .whileData
+      blockId i64 cast
+    list.at .data =:: whileData
+    whileData [] .continueCount
+      newIndex whileData [] .continuePositions $2 array.set
+      1 +
+    whileData [] .continueCount =
+  end
+  proc(
+    BlockId : blockId
+    Operation arrayView.mut : newOps
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateDo
+    blockId newOps .length program updateBreak
+    program [] .whileData
+      blockId i64 cast
+    list.at .data =:: whileData
+    whileData [] .orCount for =:: i
+      whileData [] .orPositions i array.get =:: orPos
+      newOps .length
+        orPos - JumpDistance cast
+      newOps
+        orPos array.at .data []
+      .val .block .jumpDistance =
+    end
+    0 whileData [] .orCount =
+  end
+  proc(
+    BlockId : blockId
+    Operation arrayView.mut : newOps
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateFinally
+    program [] .whileData
+      blockId i64 cast
+    list.at .data =:: whileData
+    whileData [] .continueCount for =:: i
+      whileData [] .continuePositions
+        i
+      array.get =:: continuePos
+      newOps .length
+        continuePos - JumpDistance cast
+      newOps
+        continuePos array.at .data []
+      .val .block .jumpDistance =
+    end
+    0 whileData [] .continueCount =
+  end
+  proc(
+    BlockId : blockId
+    Operation arrayView.mut : newOps
+    ProgramContext ptr.mut : program
+  -> JumpDistance ) =>: export: updateEndWhile
+    program [] .whileData
+      blockId i64 cast
+    list.at .data =:: whileData
+    whileData [] .breakCount for =:: i
+      whileData [] .breakPositions i array.get =:: breakPos
+      newOps .length
+        breakPos - JumpDistance cast
+      newOps
+        breakPos array.at .data []
+      .val .block .jumpDistance =
+    end
+    0 whileData [] .breakCount =
+    newOps .length
+      whileData [] .loopStart -
+    =:: loopLength
+    loopLength JumpDistance cast
+    newOps whileData [] .loopStart
+      array.at .data []
+    .val .block .jumpDistance =
+    loopLength -_ JumpDistance cast
+  end
+
+  ## TODO update and-or labels
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) =>: export: updateAnd
+  end
+  proc(
+    BlockId : blockId
+    i64 : newIndex
+    ProgramContext ptr.mut : program
+  -> ) : export: alias: updateOr updateAnd
+  proc(
+    BlockId : blockId
+    Operation arrayView.mut : newOps
+    ProgramContext ptr.mut : program
+  -> JumpDistance ) =>: export: updateEndAndOr
+    0:JumpDistance
+  end
+end

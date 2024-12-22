@@ -39,12 +39,18 @@ enum(
   TYPE_COMPOSITE
   NAMESPACE
 ) =:: export: BlockType
+i32 =:: export: BlockId
+i32 =:: export: JumpDistance
+namespace: JumpDistance
+  ( JumpDistance -> bool ) : alias: toBool i32.toBool
+end
+overload: ? JumpDistance.toBool end
 struct(
   BlockType : blockType
   LabelId : blockLabel
-  i32 : mut: blockId
-  i32 : mut: subId
-) =:: export: BlockId
+  BlockId : mut: blockId
+  JumpDistance : mut: jumpDistance
+) =:: export: BlockData
 namespace: sb
   proc( stringBuilder BlockType -> stringBuilder ) =>: export: appendBlockType
     switch
