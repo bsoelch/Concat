@@ -188,6 +188,9 @@ namespace: arenaAlloc
     T ArenaAllocator : arena
     i32 : size
   -> T ArenaAllocator T arrayView.mut ) =>: export: allocArray
+    size 0 == if
+      arena T array.emptyMutable return
+    end
     arena size alloc_internal size array.createMutable
   end
 
