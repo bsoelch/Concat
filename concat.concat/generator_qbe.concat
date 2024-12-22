@@ -197,11 +197,16 @@ end
 proc(
   stringBuilder : sb
   BranchId : branch
+  string : branchComment
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: startBranch
   branch context [] .currentBranch =
   sb
     branch sb.appendBranchId
+    branchComment .length 0 > if
+      " ## " sb.appendS
+      branchComment sb.appendStr
+    end
     '\n' sb.appendC
   return
 end
@@ -1545,7 +1550,7 @@ proc(
     pos prog appendPosPrintfArgs
     ")\n" sb.appendS
     "call $exit (w 1)\n" sb.appendS ## use exit for flushing stdout
-    okBranch context startBranch
+    okBranch "checkIndex" string.wrap context startBranch
   return
 end
 
@@ -1700,7 +1705,7 @@ proc(
     pos prog appendPosPrintfArgs
     ")\n" sb.appendS
     "call $exit (w 1)\n" sb.appendS ## use exit for flushing stdout
-    okBranch context startBranch
+    okBranch "checkEnum" string.wrap context startBranch
   return
 end
 
@@ -2506,7 +2511,7 @@ proc(
     ", " sb.appendS branches@ 0 [] sb.appendBranchId
     ", " sb.appendS branches@ 1 [] sb.appendBranchId
     '\n' sb.appendC
-    branches@ 0 [] context startBranch
+    branches@ 0 [] "float->int" string.wrap context startBranch
     ## > min ?
     "%t" sb.appendS cMin sb.appendI
     " =w cgt" sb.appendS srcTypeName sb.appendC
@@ -2519,7 +2524,7 @@ proc(
     ", " sb.appendS branches@ 2 [] sb.appendBranchId
     ", " sb.appendS branches@ 3 [] sb.appendBranchId
     '\n' sb.appendC
-    branches@ 2 [] context startBranch
+    branches@ 2 [] "float->int: check undeflow" string.wrap context startBranch
     ## < max ?
     "%t" sb.appendS cMin sb.appendI
     " =w clt" sb.appendS srcTypeName sb.appendC
@@ -2532,7 +2537,7 @@ proc(
     ", " sb.appendS branches@ 4 [] sb.appendBranchId
     ", " sb.appendS branches@ 5 [] sb.appendBranchId
     '\n' sb.appendC
-    branches@ 4 [] context startBranch
+    branches@ 4 [] "float->int: normal" string.wrap context startBranch
     ## cast value
     "%t" sb.appendS
     tCast sb.appendI
@@ -2545,7 +2550,7 @@ proc(
     "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
     '\n' sb.appendC
     ## NaN
-    branches@ 1 [] context startBranch
+    branches@ 1 [] "float->int: NaN" string.wrap context startBranch
     "%t" sb.appendS
     tNaN sb.appendI
     " =" sb.appendS
@@ -2554,7 +2559,7 @@ proc(
     "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
     '\n' sb.appendC
     ## <Min
-    branches@ 3 [] context startBranch
+    branches@ 3 [] "float->int: underflow" string.wrap context startBranch
     "%t" sb.appendS
     tMin sb.appendI
     " =" sb.appendS
@@ -2564,7 +2569,7 @@ proc(
     "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
     '\n' sb.appendC
     ## >Max
-    branches@ 5 [] context startBranch
+    branches@ 5 [] "float->int: overflow" string.wrap context startBranch
     "%t" sb.appendS
     tMax sb.appendI
     " =" sb.appendS
@@ -2572,7 +2577,7 @@ proc(
     " copy " sb.appendS
     targetVal unsigned BoundType .MAX targetVal appendNumberBound
     '\n' sb.appendC
-    branches@ 6 [] context startBranch
+    branches@ 6 [] "float->int: end" string.wrap context startBranch
     "%s" sb.appendS
     targetIndex sb.appendI
     " =" sb.appendS
@@ -3294,7 +3299,7 @@ proc(
         ## BranchId
           BranchType .START
           0
-        BranchId new context startBranch
+        BranchId new string.empty context startBranch
         ## push unnamed arguments
         op [] .dataType typeContext types.getProcIn ..drop =:: inType
         inType typeContext types.compositeElts =:: args
@@ -4108,7 +4113,7 @@ proc(
             end
           end
           newSb
-            ifBranch context startBranch
+            ifBranch "if" string.wrap context startBranch
           return
         AND_IF OR_IF AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
           context [] .openBlocks list.peek =:: ifBlock?
@@ -4151,24 +4156,26 @@ proc(
             '\n' sb.appendC
             isOr if
               ifBlock [] .orBranches
-                context [] .stackInfo @ branchTree.startBranch list.append
+                context [] .stackInfo@ branchTree.startBranch list.append
               ifBlock [] .orBranches =
               ifBlock [] .orBranchIds
                 context [] .currentBranch list.append
               ifBlock [] .orBranchIds =
             else
               ifBlock [] .andBranches
-                context [] .stackInfo @ branchTree.startBranch list.append
+                context [] .stackInfo@ branchTree.startBranch list.append
               ifBlock [] .andBranches =
               ifBlock [] .andBranchIds
                 context [] .currentBranch list.append
               ifBlock [] .andBranchIds =
             end
-            nextBranch context startBranch
+            nextBranch
+              "and/or if" string.wrap
+            context startBranch
           return
         ELSE ELSE_TRUE ELSE_FALSE case
           context [] .openBlocks list.peek .data =:: ifBlock
-          context [] .stackInfo @ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
+          context [] .stackInfo@ ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
           context [] .reachable ifBlock [] .If .ifBranchTerminates =
           ## BranchPoint
           ifBranch ifBlock [] .If .ifBranch =
@@ -4188,6 +4195,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
+              "else" string.wrap
               context
             startBranch
             true context [] .reachable =
@@ -4234,11 +4242,13 @@ proc(
           return
         CASE DEFAULT case
             sb
-              ## don't add position before label
-              ## BranchId
-                BranchType .LABEL
-                opIndex
-              BranchId new context startBranch
+              ## startBranch
+                ## BranchId
+                  BranchType .LABEL
+                  opIndex
+                BranchId new
+                "case/default" string.wrap
+              context startBranch
               true context [] .reachable =
             return
         BREAK_SWITCH case
@@ -4315,7 +4325,7 @@ proc(
               "jmp " sb.appendS
               branchId sb.appendBranchId
               '\n' sb.appendC
-              branchId context startBranch
+              branchId "while" string.wrap context startBranch
               loopEltCount 1 - while ..dup 0 >= do =:: i
                 loopElts i list.at .data =:: elt
                 "%s" sb.appendS
@@ -4381,7 +4391,7 @@ proc(
                 context [] .currentBranch list.append
               whileBlock [] .breakBranchIds =
             end
-            nextBranch context startBranch
+            nextBranch "and/or do" string.wrap context startBranch
           return
         DO case
           context [] .openBlocks list.peek .data [] .While @ =:: whileBlock
@@ -4425,7 +4435,7 @@ proc(
                 whileBlock [] .doBranchIds list.asArray
                 op [] .pos
                 context
-                newSb @
+                newSb@
               MergePoint new
             branchTree.merge .error ?? if
               "could not merge or-do branches" sb.wrap
@@ -4433,7 +4443,7 @@ proc(
             end
           end
           newSb
-            doBranch context startBranch
+            doBranch "do" string.wrap context startBranch
           return
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
@@ -4498,6 +4508,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
+              "finally" string.wrap
               context
             startBranch
           =:: mut: newSb
@@ -4560,7 +4571,7 @@ proc(
               nextBranch sb.appendBranchId
             end
             '\n' sb.appendC
-            nextBranch context startBranch
+            nextBranch "and/or" string.wrap context startBranch
           return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
@@ -4603,6 +4614,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
+              "end if" string.wrap
               context
             startBranch
           =:: mut: newSb
@@ -4643,6 +4655,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
+              "end switch" string.wrap
               context
             startBranch
           =:: mut: newSb
@@ -4711,6 +4724,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
+              "end while" string.wrap
               context
             startBranch
           newSb =
@@ -4758,6 +4772,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
+              "end and/or" string.wrap
               context
             startBranch
           =:: mut: newSb
@@ -4876,8 +4891,7 @@ proc(
         op [] .val .Assert context sb.appendStringPtrConstQBE
         op [] .pos prog appendPosPrintfArgs
         ")\ncall $exit(w 1)\n" sb.appendS
-        successBranch context startBranch
-        '\n' sb.appendC
+        successBranch "end assert" string.wrap context startBranch
       return
     Error case
       ## appendError
