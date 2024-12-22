@@ -444,17 +444,18 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeMo
     return
   end
   ## TODO? directly evaluate type-modifer without evaluating operation?
-  op state [] .interpreter@ evaluateOperation if
+  op state [] .interpreter@ evaluateOperation .Ok ?? ! if
     "could not evaluate type modifier " sb.wrap
       op [] .val .typeModifier sb.appendTypeModifier
     op [] .pos errors appendError
   end
   1 op [] .pos state interpreterStoreConstants
 end
+## TODO? -> evaluate type-blocks in static mode
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpretTypeBlock
   InterpreterLoadMode .typeBlock state interpreterLoadContants ! assert "interpreterFindContant"
   state [] .compiledOps .length state [] .blockStart =
-  op state [] .interpreter@ evaluateOperation if
+  op state [] .interpreter@ evaluateOperation .Ok ?? ! if
     "could not evaluate " sb.wrap
       op [] .val .block .blockType sb.appendBlockType
       " block" sb.appendS
@@ -464,7 +465,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpre
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretTypeBlock
   state [] .inTypeBlock assert "in Type-block"
-  op state [] .interpreter@ evaluateOperation if
+  op state [] .interpreter@ evaluateOperation .Ok ?? ! if
     "unexpected operation in Type/Initializer block: " sb.wrap
       op [] state [] .program sb.appendOp
     op [] .pos state [] .program .errors@ appendError

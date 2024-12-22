@@ -490,7 +490,6 @@ namespace: interpreter
     ## pushValue
       tupleType ConstValue .TypeId
       types.primitive.TYPE
-      id.LABEL_ID_NONE
       op [] .pos
     context pushValue
     false return
@@ -532,7 +531,6 @@ namespace: interpreter
     ## pushValue
       newType ConstValue .TypeId
       types.primitive.TYPE
-      id.LABEL_ID_NONE
       op [] .pos
     context pushValue
     false return
@@ -579,7 +577,6 @@ namespace: interpreter
   proc(
     ConstValue : value
     Type : valType
-    LabelId : id
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> ) =>: pushValue
@@ -977,7 +974,7 @@ namespace: interpreter
         end
         inType i typeContext types.compositeGetElement =:: argType
         args i array.get =:: argValue
-        argValue argType id.LABEL_ID_NONE pos context@ pushValue
+        argValue argType pos context@ pushValue
       finally i 1 + end ..drop
       op@ context@ evaluateOperation ..drop
     context@ cleanupContext
@@ -1104,33 +1101,42 @@ namespace: interpreter
     ## pushValue
       eltValue
       eltType
-      id.LABEL_ID_NONE
       pos
     context pushValue
     false return
   end
 end
-
+namespace: interpreter
+  union(
+    _ : Ok
+    _ : Error
+    JumpDistance : Jump
+    _ : Return
+  ) =:: EvalResult
+  proc( bool -> EvalResult ) =>: wrapResult
+    if EvalResult .Error else EvalResult .Ok end
+  end
+end
 proc(
   Operation ptr : op
   InterpreterContext ptr.mut : context
 ->
-  bool
+  interpreter.EvalResult
 ) =>: export: evaluateOperation
   using interpreter
-  context [] .program [] .errors @ =:: errors
+  context [] .program [] .errors@ =:: errors
   context [] .program =:: program
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  context [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   context skipCurrentBlock =:: skipBlock
   skipBlock and op [] .val .block ?? ! and op [] .val .blockEnd ?? ! if
-    false return ## skip operation
+    EvalResult .Ok return ## skip operation
   end
   op [] .val switch
     NOP case
-      false return
+      EvalResult .Ok return
     Constant case
       context inEnum if
         op [] .val .Constant  =:: constVal
@@ -1138,7 +1144,7 @@ proc(
           "unexpected constant in enum declaration expected identifier got " sb.wrap
             constVal typeContext sb.appendConstant
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
         end
         constVal .TypeId typeContext types.namedTypeName =:: eltLabel
         eltLabel context getLabeledValueContext op [] .pos context checkDuplicateLabel
@@ -1148,7 +1154,7 @@ proc(
         context [] .labelBuffer
           eltLabel list.append
         context [] .labelBuffer =
-        false return
+        EvalResult .Ok return
       end
       op [] .val .Constant .GenericArg ?? if
         op [] .val .Constant .GenericArg =:: label
@@ -1157,23 +1163,21 @@ proc(
           "missing value for " sb.wrap
             op [] .val .getId labelContext sb.appendIdInfo
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
         end
         ## pushValue
           value? .data .value
           op [] .dataType
-          label
           op [] .pos
         context pushValue
-        false return
+        EvalResult .Ok return
       end
       ## pushValue
         op [] .val .Constant
         op [] .dataType
-        id.LABEL_ID_NONE ## XXX? remember id in op-type
         op [] .pos
       context pushValue
-      false return
+      EvalResult .Ok return
     Return case
       context [] .openBlocks .length 1 - while ..dup 0 >= do
         context [] .openBlocks ..over list.at .data [] .blockType
@@ -1182,24 +1186,25 @@ proc(
           context [] .openBlocks
             ..swap list.setLength
           context [] .openBlocks =
-          false return
+          EvalResult .Return return
         end
         1 -
       end ..drop
       "return outside procedure" sb.wrap op [] .pos errors appendError
-      true return
+      EvalResult .Error return
     block case
       op [] .val .block .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
         INITIALIZER case
           op [] .val .block .blockType true context openBlock
-          false return
+          EvalResult .Ok return
         PROCEDURE EXPERIMENTAL_PROCEDURE NAMESPACE case
           "unsupported block-type in constant evaluation: " sb.wrap
             op [] .val .block .blockType sb.appendBlockType
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
+        ## TODO use jumps from blocks
         IF case
           ## XXX allow if-folding within local type-blocks
           skipBlock if
@@ -1208,39 +1213,49 @@ proc(
             "missing condition for if-statement: " sb.wrap
               op [] .val .block .blockType sb.appendBlockType
             op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end =:: val
+          context [] .evalType .INTERPRET ?? if
+            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            val if
+              EvalResult .Ok return
+            else
+              op [] .val .block .jumpDistance EvalResult .Jump return
+            end
+          end
           context closeAndOrBlock
           val
             if BlockType .IF_TRUE else BlockType .IF_FALSE end
             false
           context openBlock
-          false return
+          EvalResult .Ok return
         ELSE case
+          context [] .evalType .INTERPRET ?? if
+            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .jumpDistance EvalResult .Jump return
+          end
           context [] .openBlocks list.peek =:: currentBlock
           currentBlock optional.isEmpty or currentBlock .data .blockType .IF ?? !
               and currentBlock .data .blockType .IF_TRUE ?? !
               and currentBlock .data .blockType .IF_FALSE ?? ! if
             "unexpected else statement, else can only appear in if-blocks" sb.wrap
             op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end
           context [] .openBlocks
             list.pop =:: closedBlock
           context [] .openBlocks =
           closedBlock .blockType .IF_TRUE ?? if
             BlockType .ELSE_TRUE
-            ## TODO skip until end of block
           else closedBlock .blockType .IF_FALSE ?? _if
             BlockType .ELSE_FALSE
           else
             BlockType .ELSE
           end false context openBlock
-          false return
+          EvalResult .Ok return
         AND OR AND_IF OR_IF case
-          ## TODO? distinguish global (unspecified) AND/OR from local and/or
           skipBlock if
-            context inAndOrBlock if false return end
+            context inAndOrBlock if EvalResult .Ok return end
             op [] .val .block .blockType .OR ?? or
               op [] .val .block .blockType .OR_IF ??
             end
@@ -1248,8 +1263,21 @@ proc(
             "missing condition for if-statement: " sb.wrap
               op [] .val .block .blockType sb.appendBlockType
             op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end =:: val
+          context [] .evalType .INTERPRET ?? if
+            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .blockType =:: blockType
+            blockType .OR_IF ?? or blockType .OR ?? end =:: isOr
+            val isOr == if
+              blockType .AND ?? or blockType .OR ?? if
+                val ConstValue .Bool types.primitive.BOOL op [] .pos context pushValue
+              end
+              op [] .val .block .jumpDistance EvalResult .Jump return
+            else
+              EvalResult .Ok return
+            end
+          end
           context closeAndOrBlock
           val
             op [] .val .block .blockType .AND ?? or
@@ -1260,7 +1288,7 @@ proc(
             end
             false
           context openBlock
-          false return
+          EvalResult .Ok return
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         FINALLY WHILE DO BREAK CONTINUE
@@ -1270,26 +1298,33 @@ proc(
           "unsupported block-type in constant evaluation: " sb.wrap
             op [] .val .block .blockType sb.appendBlockType
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
       end
       break
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
+      context [] .evalType .INTERPRET ?? if
+        BlockType ..length 38 == assert "no-new block-types"
+        blockType switch
+          ELSE WHILE SWITCH AND OR case EvalResult .Ok return
+          default break
+        end
+      end
       context [] .openBlocks .length 0 == if
         "unexpected end of " sb.wrap
          blockType sb.appendBlockType
          "-block" sb.appendS
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end
       context [] .openBlocks
         list.pop =:: closedBlock ## XXX avoid copying blockInfo into local variable
       context [] .openBlocks =
       closedBlock .blockType switch
         IF_TRUE IF_FALSE case
-          blockType .IF ?? if false return end break
+          blockType .IF ?? if EvalResult .Ok return end break
         ELSE_TRUE ELSE_FALSE case
-          blockType .ELSE ?? if false return end break
+          blockType .ELSE ?? if EvalResult .Ok return end break
         default break
       end
       closedBlock .blockType blockType != if
@@ -1298,24 +1333,24 @@ proc(
          "-block expected " sb.appendS
          closedBlock .blockType sb.appendBlockType
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end
       blockType switch
         TYPE_COMPOSITE case
           context [] .typeBuffer list.peek =:: outType?
           outType? optional.hasData and outType? .data [] .procOut ?? if
-            op closedBlock@ context closeProcTypeBlock return
+            op closedBlock@ context closeProcTypeBlock wrapResult return
           else
-            op closedBlock@ context closeStructBlock return
+            op closedBlock@ context closeStructBlock wrapResult return
           end
           break
         TYPE_TUPLE TYPE_STRUCT case
-          op closedBlock@ context closeStructBlock return
+          op closedBlock@ context closeStructBlock wrapResult return
         TYPE_ENUM case
           op closedBlock@
             LabeledValueContext .TYPE_ENUM
             op [] .pos
-          context closedTypeBlock if true return end
+          context closedTypeBlock if EvalResult .Error return end
           closedBlock .labelOffset =:: labelOffset
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
@@ -1324,7 +1359,7 @@ proc(
             context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
           typeContext types.newEnum if ..drop
             "could not create enum" sb.wrap op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end =:: enumType
           context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
           context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
@@ -1332,15 +1367,14 @@ proc(
           ## pushValue
             enumType ConstValue .TypeId
             types.primitive.TYPE
-            id.LABEL_ID_NONE
             op [] .pos
           context pushValue
-          false return
+          EvalResult .Ok return
         TYPE_UNION TYPE_UNTAGGED_UNION case
           op closedBlock@
             LabeledValueContext .TYPE_UNION
             op [] .pos
-          context closedTypeBlock if true return end
+          context closedTypeBlock if EvalResult .Error return end
           closedBlock .labelOffset =:: labelOffset
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
@@ -1350,7 +1384,7 @@ proc(
             blockType .TYPE_UNION ??
           typeContext types.newUnion if ..drop
             "could not create union-type" sb.wrap op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end =:: unionType
           context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
           context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
@@ -1358,17 +1392,16 @@ proc(
           ## pushValue
             unionType ConstValue .TypeId
             types.primitive.TYPE
-            id.LABEL_ID_NONE
             op [] .pos
           context pushValue
-          false return
+          EvalResult .Ok return
         TYPE_PROC_IN case
-          op closedBlock@ context closeProcTypeBlock return
+          op closedBlock@ context closeProcTypeBlock wrapResult return
         TYPE_PROC_OUT case
           op closedBlock@
             LabeledValueContext .TYPE_PROC
             op [] .pos
-          context closedTypeBlock if true return end
+          context closedTypeBlock if EvalResult .Error return end
           closedBlock .labelOffset =:: labelOffset
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
@@ -1383,13 +1416,13 @@ proc(
           context [] .typeBuffer
             procOut list.append
           context [] .typeBuffer =
-          false return
+          EvalResult .Ok return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           ## end procedure
-          false return
+          EvalResult .Ok return
         INITIALIZER case
           op closedBlock @ op [] .pos context closedInitializer if
-            ..drop true return
+            ..drop EvalResult .Error return
           end =:: initializerType
           closedBlock .labelOffset =:: labelOffset
           closedBlock .valueOffset =:: valueOffset
@@ -1405,10 +1438,9 @@ proc(
           ## pushValue
             value
             initializerType
-            id.LABEL_ID_NONE
             op [] .pos
           context pushValue
-          false return
+          EvalResult .Ok return
         IF ELSE WHILE DO BREAK CONTINUE
         SWITCH CASE BREAK_SWITCH DEFAULT
         AND OR AND_IF OR_IF AND_DO OR_DO
@@ -1418,7 +1450,7 @@ proc(
           "unsupported block-end in constant evaluation: " sb.wrap
             op [] .val .blockEnd .blockType sb.appendBlockType
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
       end
       break
     declareId case
@@ -1429,11 +1461,11 @@ proc(
       context inTypeOrInitializer ! if
         "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end
       context getLabeledValueContext =:: valueContext =:: initialLabelOffset
       1 "field-declaration" string.wrap op [] .pos context checkStack if
-        true return
+        EvalResult .Error return
       end
       context [] .stackInfo
         list.pop =:: mut: valInfo
@@ -1452,7 +1484,7 @@ proc(
           value
           valInfo
         context unpopValue
-        true return
+        EvalResult .Error return
       end
       ## addLabeledValue
         labelId
@@ -1467,7 +1499,7 @@ proc(
             valInfo
           context unpopValue
         end
-      return
+      wrapResult return
     getName case
       context inEnum if
         op [] .val .getName =:: eltLabel
@@ -1478,12 +1510,12 @@ proc(
         context [] .labelBuffer
           eltLabel list.append
         context [] .labelBuffer =
-        false return
+        EvalResult .Ok return
       end
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
       op [] .pos errors appendError
-      true return
+      EvalResult .Error return
     getId case
       op [] .val .getId@ =:: idInfo
       idInfo [] .labelId =:: label
@@ -1495,7 +1527,7 @@ proc(
         context [] .labelBuffer
           label list.append
         context [] .labelBuffer =
-        false return
+        EvalResult .Ok return
       end
       idInfo [] .idType switch
         PROCEDURE PROCEDURE_BUNDLE case
@@ -1503,7 +1535,7 @@ proc(
             "could not find " sb.wrap
               idInfo [] labelContext sb.appendIdInfo
             op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end =:: idData
           idData [] .constValue =:: constValue
           constValue .ProcedureBundle ?? if
@@ -1517,7 +1549,7 @@ proc(
             "unexpected value for procedure constant: " sb.wrap
               constValue typeContext sb.appendConstant
             op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end =:: procedures
           context [] .stack .length StackValue list.create =:: mut: stackValues
           context [] .stack .length 1 - while $ 0 >= do =:: i
@@ -1543,7 +1575,7 @@ proc(
             else
               message op [] .pos errors appendInfo
             end
-            true return
+            EvalResult .Error return
           end
           message sb.free ..drop
           stackValues list.free ..drop
@@ -1552,18 +1584,18 @@ proc(
           program [] .procedures
             calledProc .procId i64 cast list.at .data
           =:: calledProcData
-          procId -1:i64 calledProc .autoArgs op [] .pos context evaluateCall return
+          procId -1:i64 calledProc .autoArgs op [] .pos context evaluateCall wrapResult return
         LOCAL_VAR ARGUMENT LABEL case
-          context [] .variables @ label map.get =:: value?
+          context [] .variables@ label map.get =:: value?
           value? optional.isEmpty if
             "missing value for " sb.wrap
               op [] .val .getId labelContext sb.appendIdInfo
             op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end
           value? .data =:: value ## TODO? wrap local variable in reference?
-          value .value value .info .valueType label op [] .pos context pushValue
-          false return
+          value .value value .info .valueType op [] .pos context pushValue
+          EvalResult .Ok return
         TYPE GLOBAL_VAR case
           label
             idContext
@@ -1571,29 +1603,29 @@ proc(
             "could not find identifier: " sb.wrap
               label labelContext sb.appendLabelName
             op [] .pos errors appendError
-            true return ## unknown identifier
+            EvalResult .Error return ## unknown identifier
           end =:: idData
           idData [] .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
             "mutable variables are not supported: " sb.wrap
               label labelContext sb.appendLabelName
             op [] .pos errors appendError
             ## compile-time evaluation of mutable global variables not supported
-            true return
+            EvalResult .Error return
           end
           idData [] .constValue .None ?? if
             "identifier " sb.wrap
               label labelContext sb.appendLabelName
               " has not been initialized" sb.appendS
             op [] .pos errors appendError
-            true return
+            EvalResult .Error return
           end
-          idData [] .constValue idData [] .valueType label op [] .pos context pushValue
-          false return
+          idData [] .constValue idData [] .valueType op [] .pos context pushValue
+          EvalResult .Ok return
         TMP_VAR ITR_VAR case
           "unsupported operation in constant evaluation: " sb.wrap
             op [] program sb.appendOp
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
       end
       break
     call case
@@ -1601,7 +1633,7 @@ proc(
       callInfo [] .procId
         callInfo [] .implementationId
         callInfo [] .autoArgs
-      op [] .pos context evaluateCall return
+      op [] .pos context evaluateCall wrapResult return
     initializeId autoTypedInitializeId case
       op [] .val .initializeId ?? if
         op [] .val .initializeId@
@@ -1613,7 +1645,7 @@ proc(
         "stack underflow while evaluating operation: " sb.wrap
           op [] program sb.appendOp
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end =:: value =:: valInfo
       idInfo [] .idType switch
         GLOBAL_VAR LOCAL_VAR LABEL TMP_VAR ITR_VAR TYPE case
@@ -1627,13 +1659,13 @@ proc(
               ValueInfo new
             Constant new
           map.put ..drop
-          false return
+          EvalResult .Ok return
         ARGUMENT PROCEDURE PROCEDURE_BUNDLE case
           value valInfo context unpopValue
           "unsupported operation in constant evaluation: " sb.wrap
             op [] program sb.appendOp
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
       end
       break
     typeModifier case
@@ -1679,7 +1711,7 @@ proc(
           "missing type parameter for type-modifier " sb.wrap
             op [] .val .typeModifier sb.appendTypeModifier
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
         end
         context [] .stack offset list.get =:: typeConstant
         typeConstant .TypeId ?? ! if
@@ -1688,7 +1720,7 @@ proc(
             " expected type got " sb.appendS
             typeConstant typeContext sb.appendConstant
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
         end
         op [] .val .typeModifier .ARRAY ?? ! =:: isPtr
         fixedSize ! isPtr ! & if
@@ -1714,24 +1746,23 @@ proc(
           else
             "could not create array type" sb.wrap op [] .pos errors appendError
           end
-          true return
+          EvalResult .Error return
         end =:: ptrType
         offset context truncateStack
         ## pushValue
           ptrType ConstValue .TypeId
           types.primitive.TYPE
-          id.LABEL_ID_NONE
           op [] .pos
           context
         pushValue
-        false return
+        EvalResult .Ok return
     getLabel case
       op [] .val .getLabel =:: labelId
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.wrap
           op [] program sb.appendOp
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end =:: value =:: valInfo
       value .TypeId ??
           and value .TypeId typeContext types.isEnum
@@ -1762,25 +1793,23 @@ proc(
               ConstValue .None elementIndex constContext newUnionConst
             end
             containerType
-            id.LABEL_ID_NONE ## XXX? remember label
             op [] .pos
           context pushValue
-          false return
+          EvalResult .Ok return
         end
         op [] .pos context popValue if ..drop.2
           "stack underflow while evaluating operation: " sb.wrap
             op [] program sb.appendOp
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
         end =:: eltValue =:: eltValInfo
         eltValInfo .valueType eltType typeContext types.canAutoCast if
           ## pushValue
             eltValue elementIndex constContext newUnionConst
             containerType
-            id.LABEL_ID_NONE ## XXX? remember label
             op [] .pos
           context pushValue
-          false return
+          EvalResult .Ok return
         end
         ## unpopValue
           eltValue
@@ -1791,30 +1820,30 @@ proc(
           " got " sb.appendS
           eltValInfo .valueType typeContext sb.appendType
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end
-      value valInfo elementIndex op [] .pos context getElement return
+      value valInfo elementIndex op [] .pos context getElement wrapResult return
     getElement case
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.wrap
           op [] program sb.appendOp
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end =:: value =:: valInfo
-      value valInfo op [] .val .getElement op [] .pos context getElement return
+      value valInfo op [] .val .getElement op [] .pos context getElement wrapResult return
     atLabel atName hasLabel existsLabel existsName case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
       op [] .pos errors appendError
-      true return
+      EvalResult .Error return
     New case
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: poppedValue
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
-          true return
+          EvalResult .Error return
         end poppedType = valInfo =
         poppedType typeContext types.containsGeneric if
           "creating generic tuples is not supported" sb.wrap
@@ -1823,7 +1852,7 @@ proc(
             poppedType ConstValue .TypeId
             valInfo
           context unpopValue
-          true return
+          EvalResult .Error return
         end
         true poppedValue =
         poppedType
@@ -1838,7 +1867,7 @@ proc(
       else targetType typeContext types.isTuple _if
         ## separate if block to avoid printing general error message on failure
         targetType op [] .pos context newTuple ! if
-          false return
+          EvalResult .Ok return
         end
       else
         "unsupported operation in constant evaluation: " sb.wrap
@@ -1851,14 +1880,14 @@ proc(
           valInfo
         context unpopValue
       end
-      true return
+      EvalResult .Error return
     Cast Cast! case
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: isPoppedType
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
-          true return
+          EvalResult .Error return
         end poppedType = valInfo =
         true isPoppedType =
         poppedType typeContext types.containsGeneric if
@@ -1869,7 +1898,7 @@ proc(
             poppedType ConstValue .TypeId
             valInfo
           context unpopValue
-          true return
+          EvalResult .Error return
         end
         poppedType
       else
@@ -1882,7 +1911,7 @@ proc(
             valInfo
           context unpopValue
         end
-        true return
+        EvalResult .Error return
       end =:: oldValue valInfo = ## can overwrite value info
       ## canCast
         valInfo .valueType
@@ -1894,7 +1923,7 @@ proc(
           " to " sb.appendS
           targetType typeContext sb.appendType
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end
       op [] .val .Cast ?? if
         op [] .val .Cast .signType
@@ -1911,18 +1940,17 @@ proc(
       ## pushValue
         newValue
         targetType
-        id.LABEL_ID_NONE
         op [] .pos
         context
       pushValue
-      false return
+      EvalResult .Ok return
     autoCast case
       op [] .val .autoCast =:: castInfo
       castInfo .offset i64 cast.u 1 + =:: offset
       offset
         "autoCast" string.wrap
       op [] .pos context checkStack if
-        true return
+        EvalResult .Error return
       end
       context [] .stack $ .length offset - list.get =:: value
       castInfo .src
@@ -1935,29 +1963,29 @@ proc(
         op [] .dataType
         op [] .pos
       ValueInfo new context [] .stackInfo $ .length offset - list.set
-      false return
+      EvalResult .Ok return
     copy case
-      false return ## TODO change once mutable value are allowed
+      EvalResult .Ok return ## TODO change once mutable value are allowed
     Assert case
       op [] .pos context popValue if
         ..drop.2
         "missing argument for assert, expected boolean" sb.wrap
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end =:: value =:: valInfo
       value .Bool ?? ! if
         "wrong constant value for assert, expected boolean got: " sb.wrap
           value typeContext sb.appendConstant
         op [] .pos errors appendError
         value valInfo context unpopValue
-        true return
+        EvalResult .Error return
       end
       value .Bool ! if
         "assertion failed: " sb.wrap
           op [] .val .Assert sb.appendStr
         op [] .pos errors appendError
       end
-      false return
+      EvalResult .Ok return
     Error case
       ## appendError
         op [] .val .Error .message .length sb.create
@@ -1969,10 +1997,10 @@ proc(
         WARNING case appendWarning break
         INFO case appendInfo break
       end
-      false return
+      EvalResult .Ok return
     length size case
       op [] .pos context popValue if ..drop.2
-        true return
+        EvalResult .Error return
       end =:: value =:: valInfo
       ## sizeOfValue
         valInfo .valueType
@@ -1985,23 +2013,22 @@ proc(
           op [] program sb.appendOp
         op [] .pos errors appendError
         value valInfo context unpopValue
-        true return
+        EvalResult .Error return
       end =:: constVal =:: constType
       ## pushValue
         constVal
         constType
-        id.LABEL_ID_NONE
         op [] .pos
         context
       pushValue
-      false return
+      EvalResult .Ok return
     typeInfo case
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: poppedValue
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
-          true return
+          EvalResult .Error return
         end poppedType = valInfo =
         true poppedValue =
         poppedType typeContext types.containsGeneric if
@@ -2012,7 +2039,7 @@ proc(
             poppedType ConstValue .TypeId
             valInfo
           context unpopValue
-          true return
+          EvalResult .Error return
         end
         poppedType
       else
@@ -2033,16 +2060,15 @@ proc(
               valInfo
             context unpopValue
           end
-          true return
+          EvalResult .Error return
         end
         types.primitive.I_SIZE
-        id.LABEL_ID_NONE
         op [] .pos
         context
       pushValue
-      false return
+      EvalResult .Ok return
     builtIn case
-      op [] .dataType op [] .val .builtIn op [] .pos context tryEvaluateBuiltIn return
+      op [] .dataType op [] .val .builtIn op [] .pos context tryEvaluateBuiltIn wrapResult return
     equalityOperator case
       ConstValue 2 array new =:: mut: valueData
       valueData @ =:: values
@@ -2052,7 +2078,7 @@ proc(
       0 while ..dup 2 < do 1 +
         op [] .pos context popValue if ..drop.3
           values valInfos nArgs context unpopValues
-          true return
+          EvalResult .Error return
         end values nArgs [] = valInfos nArgs [] =
         nArgs 1 + nArgs =
       end ..drop
@@ -2066,7 +2092,7 @@ proc(
           valInfos 1 [] .valueType typeContext sb.appendType
         op [] .pos errors appendError
         values valInfos nArgs context unpopValues
-        true return
+        EvalResult .Error return
       end =:: resType
       ## pushValue
         values 1 [] values 0 [] resType typeContext interpreter.operatorEq if ..drop
@@ -2076,32 +2102,31 @@ proc(
             values 1 [] typeContext sb.appendConstant
           op [] .pos errors appendError
           values valInfos nArgs context unpopValues
-          true return
+          EvalResult .Error return
         end
           op [] .val .equalityOperator .NEQ ?? ^ ## invert result for NEQ
         ConstValue .Bool
         types.primitive.BOOL
-        id.LABEL_ID_NONE
         op [] .pos
         context
       pushValue
-      false return
+      EvalResult .Ok return
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case
           op [] .val .stackMod .n i64 cast.u
             "drop" string.wrap
           op [] .pos context checkStack if
-            true return
+            EvalResult .Error return
           end
           context [] .stack .length op [] .val .stackMod .n i64 cast.u - context truncateStack
-          false return
+          EvalResult .Ok return
         COPY case
           op [] .val .stackMod .n i64 cast.u 1 + =:: offset
           offset
             "stack modification" string.wrap
           op [] .pos context checkStack if
-            true return
+            EvalResult .Error return
           end
           context [] .stack
             $ $1 .length offset - list.get list.append
@@ -2109,12 +2134,12 @@ proc(
           context [] .stackInfo
             $ $1 .length offset - list.get list.append
           context [] .stackInfo =
-          false return
+          EvalResult .Ok return
         SWAP case
           2
             "swap" string.wrap
           op [] .pos context checkStack if
-            true return
+            EvalResult .Error return
           end
           op [] .pos context popValue
             ! assert "hasValue"
@@ -2130,13 +2155,13 @@ proc(
             upperInfo list.append
             lowerInfo list.append
           context [] .stackInfo =
-          false return
+          EvalResult .Ok return
       end
       break
     getArrayElement atArrayElement case
       op [] .val .atArrayElement ?? =:: isPtr
       op [] .pos context popValue if ..drop.2
-        true return
+        EvalResult .Error return
       end =:: indexValue =:: indexInfo
       indexValue .Int ?? if
         indexValue .Int
@@ -2146,11 +2171,11 @@ proc(
         "unexpected constant for array index: " sb.wrap
           indexValue typeContext sb.appendConstant
         op [] .pos errors appendError
-        true return
+        EvalResult .Error return
       end =:: index
       op [] .pos context popValue if ..drop.2
         indexValue indexInfo context unpopValue
-        true return
+        EvalResult .Error return
       end =:: pointer =:: pointerInfo
       pointerInfo .valueType =:: arrayType
       arrayType typeContext types.isPointer ! and
@@ -2176,7 +2201,7 @@ proc(
           index str .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
-            true return
+            EvalResult .Error return
           end
           isPtr if
             str index string.tail ConstValue .String
@@ -2189,7 +2214,7 @@ proc(
           index str16 .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
-            true return
+            EvalResult .Error return
           end
           isPtr if
             str16 string16.toArray index array.tail string16.fromArray ConstValue .String16
@@ -2202,7 +2227,7 @@ proc(
           index str32 .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
-            true return
+            EvalResult .Error return
           end
           isPtr if
             str32 string32.toArray index array.tail string32.fromArray ConstValue .String32
@@ -2215,7 +2240,7 @@ proc(
           index arrayConst .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
-            true return
+            EvalResult .Error return
           end
           isPtr if
             arrayConst index array.tail ConstValue .Array
@@ -2228,7 +2253,7 @@ proc(
           index arrayConst .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
-            true return
+            EvalResult .Error return
           end
           isPtr if
             arrayConst index array.tail ConstValue .Array8
@@ -2241,7 +2266,7 @@ proc(
           index arrayConst .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
-            true return
+            EvalResult .Error return
           end
           isPtr if
             arrayConst index array.tail ConstValue .Array16
@@ -2254,7 +2279,7 @@ proc(
           index arrayConst .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
-            true return
+            EvalResult .Error return
           end
           isPtr if
             arrayConst index array.tail ConstValue .Array32
@@ -2267,7 +2292,7 @@ proc(
           index arrayConst .length op [] .pos errors checkIndex if
             pointer pointerInfo context unpopValue
             indexValue indexInfo context unpopValue
-            true return
+            EvalResult .Error return
           end
           isPtr if
             arrayConst index array.tail ConstValue .Array64
@@ -2281,15 +2306,14 @@ proc(
           "unexpected constant for pointer value: " sb.wrap
             pointer typeContext sb.appendConstant
           op [] .pos errors appendError
-          true return
+          EvalResult .Error return
       end =:: newValue
       ## pushValue
         newValue
         newType
-        id.LABEL_ID_NONE
         op [] .pos
       context pushValue
-      false return
+      EvalResult .Ok return
     atId atElement getEnumLabel setValue
     NewEnum callPtr
     argc getArg implementProcedure procPtr
@@ -2301,7 +2325,7 @@ proc(
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
       op [] .pos errors appendError
-      true return
+      EvalResult .Error return
   end
 end
 
@@ -2361,7 +2385,6 @@ namespace: interpreter
         value
           calledType typeContext types.getProcRet
             ! assert "has return type"
-          id.LABEL_ID_NONE
           pos
           context
         pushValue
@@ -2399,26 +2422,17 @@ proc(
   bool
 ) =>: evaluateOperations
   using interpreter
-  0:i64 =:: mut: offset
-  context [] .openBlocks list.peek =:: outerBlock
-  outerBlock optional.hasData and
-      outerBlock .data [] .blockType =:: outerType
-      outerType .PROCEDURE ?? or outerType .EXPERIMENTAL_PROCEDURE ?? if
-    context [] .openBlocks .length
-  else
-    -1
-  end =:: procBlockIndex
-  while offset ops .length < do
+  0:i64 while $ ops .length < do =:: offset
     ops offset array.at .data =:: op
-      op context evaluateOperation if
-        true return
+      op context evaluateOperation =:: result
+      result switch
+        Error case true return
+        Return case false return
+        Ok case offset break
+        Jump case offset result .Jump i64 cast.u + break
       end
-      context [] .openBlocks .length procBlockIndex < if
-        false return ## break evaluation when leaving procedure block
-      end
-    offset 1 + offset =
-  end
-  ## XXX error if unwanted open blocks
+  finally 1 + end ..drop
+  ## XXX? error if unwanted open blocks
   false return
 end
 
@@ -2530,7 +2544,6 @@ proc(
       ## pushValue
         genType ConstValue .TypeId
         types.primitive.TYPE
-        id.LABEL_ID_NONE
         pos
       context pushValue
       false return

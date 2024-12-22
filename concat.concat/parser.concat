@@ -211,7 +211,7 @@ proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
     end
     state getInterpreter =:: interpreter
     op =:: op1
-    op1@ interpreter [] .context@ evaluateOperation if
+    op1@ interpreter [] .context@ evaluateOperation .Ok ?? ! if
       "could not evaluate global operation: " sb.wrap
         op progContext sb.appendOp
       op .pos errors appendError
