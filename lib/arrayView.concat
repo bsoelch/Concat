@@ -40,7 +40,7 @@ namespace: array
     T arrayView.mut new return
   end
   proc( type : auto: T T _ ptr.mut  i32 -> T arrayView.mut ) =>: export: shaddow: create_32mut
-    i64 cast.s create_64
+    i64 cast.s create_64mut
   end
   proc(
     type : auto: T
