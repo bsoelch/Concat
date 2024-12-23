@@ -692,6 +692,9 @@ namespace: interpreter
     idContext [] .typeContext@ =:: typeContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
+      ## popValue already created error message
+      "missing value for condition" sb.wrap
+      pos errors appendInfo
       false true return
     end
     value .Bool ?? if
@@ -1210,9 +1213,6 @@ proc(
           skipBlock if
             context andOrCondition
           else op [] .pos context popCondition _if ..drop
-            "missing condition for if-statement: " sb.wrap
-              op [] .val .block .blockType sb.appendBlockType
-            op [] .pos errors appendError
             EvalResult .Error return
           end =:: val
           context [] .evalType .INTERPRET ?? if
@@ -1260,9 +1260,6 @@ proc(
               op [] .val .block .blockType .OR_IF ??
             end
           else op [] .pos context popCondition _if ..drop
-            "missing condition for if-statement: " sb.wrap
-              op [] .val .block .blockType sb.appendBlockType
-            op [] .pos errors appendError
             EvalResult .Error return
           end =:: val
           context [] .evalType .INTERPRET ?? if
@@ -1289,24 +1286,60 @@ proc(
             false
           context openBlock
           EvalResult .Ok return
+        WHILE FINALLY case
+          context [] .evalType .INTERPRET ?? if
+              EvalResult .Ok return
+          end
+          break
+        DO AND_DO case
+          context [] .evalType .INTERPRET ?? if
+            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .pos context popCondition if ..drop
+              EvalResult .Error return
+            end if
+              EvalResult .Ok return
+            else
+              op [] .val .block .jumpDistance EvalResult .Jump return
+            end
+          end
+          break
+        OR_DO case
+          context [] .evalType .INTERPRET ?? if
+            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .pos context popCondition if ..drop
+              EvalResult .Error return
+            end if
+              op [] .val .block .jumpDistance EvalResult .Jump return
+            else
+              EvalResult .Ok return
+            end
+          end
+          break
+        BREAK CONTINUE BREAK_SWITCH case
+          context [] .evalType .INTERPRET ?? if
+            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .jumpDistance EvalResult .Jump return
+          end
+          break
+        SWITCH case ## TODO implement switch
+          break
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        FINALLY WHILE DO BREAK CONTINUE
-        SWITCH BREAK_SWITCH CASE DEFAULT
-        AND_DO OR_DO
-        UNKNOWN case
-          "unsupported block-type in constant evaluation: " sb.wrap
-            op [] .val .block .blockType sb.appendBlockType
-          op [] .pos errors appendError
-          EvalResult .Error return
+        CASE DEFAULT UNKNOWN case break
       end
-      break
+      "unsupported block-type in constant evaluation: " sb.wrap
+        op [] .val .block .blockType sb.appendBlockType
+      op [] .pos errors appendError
+      EvalResult .Error return
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .evalType .INTERPRET ?? if
         BlockType ..length 38 == assert "no-new block-types"
         blockType switch
-          ELSE WHILE SWITCH AND OR case EvalResult .Ok return
+          ELSE SWITCH AND OR case EvalResult .Ok return
+          WHILE case
+            op [] .val .blockEnd .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .blockEnd .jumpDistance EvalResult .Jump return
           default break
         end
       end
@@ -2429,7 +2462,7 @@ proc(
         Error case true return
         Return case false return
         Ok case offset break
-        Jump case offset result .Jump i64 cast.u + break
+        Jump case offset result .Jump i64 cast.s + break
       end
   finally 1 + end ..drop
   ## XXX? error if unwanted open blocks

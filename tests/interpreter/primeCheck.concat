@@ -1,0 +1,17 @@
+proc( i32 : n -> bool ) =>: isPrime
+  n 2 ..u< if false return end
+  2 while $ $ * n ..u<= do
+    n $1 ..umod ? ! if ..drop
+      false return
+    end
+  finally 1 + end ..drop
+  true return
+end
+1 isPrime ! assert "one is not prime"
+2 isPrime assert "two is prime"
+3 isPrime assert "three is prime"
+4 isPrime ! assert "four is not prime"
+243 isPrime ! assert "243 is not prime"
+2381 isPrime assert "2381 is prime"
+
+proc( -> ) =>: main end
