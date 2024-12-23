@@ -3638,17 +3638,21 @@ proc(
           closed .Switch@ =:: switchBlock
           switchBlock [] .caseBranches =:: mut: caseBranches
           switchBlock [] .breakPositions =:: mut: breakPositions
+          program [] .switchData
+            switchBlock [] .blockId i64 cast
+          list.at .data =:: switchData
           op .val .blockEnd .blockType .CASE ?? if
             BlockType .DEFAULT op .pos opBlock =:: mut: tmp
             switchBlock [] .blockId tmp .val .block .blockId =
+            state [] .compiledOps .length
+              switchBlock [] .switchPosition -
+              JumpDistance cast
+            switchData [] .defaultJumpDistance =
             tmp state appendOp ..drop
             switchBlock [] .switchType typeContext types.isTaggedUnion if
               switchBlock [] .switchType
                 typeContext
               types.compositeEltCount =:: eltCount
-              program [] .switchData
-                switchBlock [] .blockId i64 cast list.at .data
-              =:: switchData
               switchData [] .labels =:: labels
               labels  .length eltCount < if
                 "switch statement does not cover all labels in enum " sb.wrap
@@ -3748,9 +3752,6 @@ proc(
               breakPos - JumpDistance cast
             breakOp .val .block [] .jumpDistance =
           end
-          program [] .switchData
-            switchBlock [] .blockId i64 cast
-          list.at .data =:: switchData
           program [] .labelPositions
             breakPositions
               arenaAlloc.pushList

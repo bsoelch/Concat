@@ -1,0 +1,48 @@
+proc( char8 -> bool ) =>: isSpace
+  switch
+    '\x00' case break
+    ' ' '\n' '\t' '\v' '\f' '\r' case true return
+  end
+  false return
+end
+'A' isSpace ! assert "A is not space"
+' ' isSpace assert "' ' is space"
+'\n' isSpace assert "'\n' is space"
+
+proc( i64 -> bool ) =>: isFermatPrime
+  switch
+    3     case true break
+    5     case true break
+    17    case true break
+    257   case true break
+    65537 case true break
+    default   false break
+  end return
+end
+42 isFermatPrime ! assert "42 is not a Fermat prime"
+2381 isFermatPrime ! assert "42 is not a Fermat prime"
+17 isFermatPrime assert "42 is a Fermat prime"
+
+enum( A B C ) =:: anEnum
+proc( anEnum -> bool ) =>: isA
+  switch
+    A case true return
+    B C case false return
+  end
+end
+anEnum .A isA assert "A is A"
+anEnum .B isA ! assert "B is not A"
+anEnum .C isA ! assert "C is not A"
+
+union( i32 : integer f32 : float ) =:: number
+proc( number -> bool ) =>: isInteger
+  switch
+    integer case true return
+    float case false return
+  end
+end
+0 number .integer isInteger assert "int(0) is int"
+1 number .integer isInteger assert "int(1) is int"
+0 number .float isInteger ! assert "float is not int"
+
+proc( -> ) =>: main end

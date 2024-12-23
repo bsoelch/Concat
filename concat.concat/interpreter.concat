@@ -1321,7 +1321,29 @@ proc(
             op [] .val .block .jumpDistance EvalResult .Jump return
           end
           break
-        SWITCH case ## TODO implement switch
+        SWITCH case
+          context [] .evalType .INTERPRET ?? if
+            op [] .pos context popValue if ..drop.2
+              "stack underflow while evaluating operation: " sb.wrap
+                op [] program sb.appendOp
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end
+              $ .Union ?? if constUnionLabel end
+            =:: switchValue ..drop
+            program [] .switchData
+              op [] .val .block .blockId i64 cast.u
+            list.at .data =:: switchData
+            switchData [] .labels .length for =:: i
+              switchData [] .labels i list.at .data =:: label
+              label [] .value switchValue labelContext constantEquals if
+                switchData [] .caseJumpDistances
+                  label [] .caseId array.get
+                EvalResult .Jump return
+              end
+            end
+            switchData [] .defaultJumpDistance EvalResult .Jump return
+          end
           break
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE

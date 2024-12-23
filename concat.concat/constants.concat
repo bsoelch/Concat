@@ -136,6 +136,11 @@ proc(
 -> ConstValue bool ) =>: export: constUnionElement
   union .Union .value [] union .Union .eltIndex eltIndex != return
 end
+proc(
+  ConstValue : union
+-> ConstValue ) =>: export: constUnionLabel
+  union .Union .eltIndex ConstValue .EnumLabel return
+end
 
 proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export: constantEquals
   a ..label b ..label != if ##different constant types
