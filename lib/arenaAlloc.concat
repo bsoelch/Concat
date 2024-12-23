@@ -34,7 +34,6 @@ end
     bool : strictOrder
   )
 end
-
 namespace: arenaAlloc
   proc(
     type : auto: T
@@ -99,7 +98,7 @@ namespace: arenaAlloc
     create_S
     create_FS
   end
-  
+
   proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: currentCap
     arena .slices .length arena .sliceSizeShift << return
   end
@@ -318,5 +317,118 @@ namespace: arenaAlloc
     ## free internal list
     arena .slices list.free arena .slices =
     arena return
+  end
+end
+
+## Arena Allocator for mixed types
+## TODO? special type-constant for max-aligned type
+i64 =:: MaxAlign
+MaxAlign ArenaAllocator =:: export: MixedArenaAllocator
+namespace: mixedArena
+  proc( i64 -> i32 ) =>: alignSize
+    MaxAlign ..type.stride 1 - + MaxAlign ..type.stride ..udiv i32 cast
+  end
+  ## XXX? strictly linear version
+  proc(
+    ## size of a given memory slice, will be rounded to the nearest power of two
+    i32 : sliceSize
+  -> MixedArenaAllocator ) =>: export: create
+    ## create_internal
+      sliceSize i64 cast.u MaxAlign ..type.stride ..udiv i32 cast
+      ( MaxAlign ptr -> ) ptr optional.empty
+      false
+    arenaAlloc.create_internal MixedArenaAllocator cast
+  end
+
+  proc(
+    MixedArenaAllocator : arena
+    type : T
+  -> MixedArenaAllocator T ptr.mut ) =>: export: alloc
+    arena MaxAlign ArenaAllocator cast
+      T ..type.stride alignSize arenaAlloc.alloc_internal =:: res
+    MixedArenaAllocator cast
+    res T ptr.mut cast!
+  end
+  proc(
+    MixedArenaAllocator : arena
+    i32 : size
+    type : T
+  -> MixedArenaAllocator T arrayView.mut ) =>: export: allocArray
+    size 0 == if
+      arena T array.emptyMutable return
+    end
+    arena MaxAlign ArenaAllocator cast
+      T ..type.stride size i64 cast.u * alignSize arenaAlloc.alloc_internal =:: res
+    MixedArenaAllocator cast
+    res T _ ptr.mut cast! size array.createMutable
+  end
+
+  proc(
+    type : auto: T
+    MixedArenaAllocator : arena
+    T : value
+  -> MixedArenaAllocator T ptr.mut ) =>: export: pushValue
+    value =:: valData ##XXX remove intermediate step once address of arguments are fully supported
+    arena T alloc
+      valData@ 1 mem.copy T ptr.mut cast!
+    return
+  end
+  proc(
+    type : auto: T
+    MixedArenaAllocator : arena
+    T ptr : value
+  -> MixedArenaAllocator T ptr.mut ) =>: export: pushPtr
+    arena T alloc
+      value 1 mem.copy T ptr.mut cast!
+    return
+  end
+  proc(
+    type : auto: T
+    i32 : auto: k
+    MixedArenaAllocator : arena
+    T k ptr : values
+  -> MixedArenaAllocator T k ptr.mut ) =>: export: pushPtrs
+    arena k T allocArray .data
+      values k i64 cast.u mem.copy T k ptr.mut cast!
+    return
+  end
+  proc(
+    type : auto: T
+    MixedArenaAllocator : arena
+    T arrayView : values
+  -> MixedArenaAllocator T arrayView ) =>: export: pushArray
+    arena values .length i32 cast.u T allocArray .data
+      values .data values .length mem.copy values .length array.create
+    return
+  end
+  proc(
+    type : auto: T
+    MixedArenaAllocator : arena
+    T arrayView.mut : values
+  -> MixedArenaAllocator T arrayView.mut ) =>: export: pushMutableArray
+    arena values .length i32 cast.u T allocArray .data
+      values .data values .length mem.copy values .length array.createMutable
+    return
+  end
+  proc(
+    type : auto: T
+    MixedArenaAllocator : arena
+    T list : values
+  -> MixedArenaAllocator T arrayView.mut ) =>: export: pushList
+    arena values .length i32 cast.u T allocArray .data
+      values .data values .length mem.copy values .length array.createMutable
+    return
+  end
+
+  ## TODO implement offset/reset
+  proc(
+    type : auto: T
+    MixedArenaAllocator : arena0
+  -> MixedArenaAllocator ) =>: export: free
+    ## free allocated memory
+    arena0 MaxAlign ArenaAllocator cast 0 reset =:: mut: arena
+    ## free internal list
+    arena .slices list.free arena .slices =
+    arena MixedArenaAllocator cast return
   end
 end

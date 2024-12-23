@@ -45,47 +45,27 @@ union(
 ) =:: export: ConstValue
 
 struct(
-  i8 ArenaAllocator  : mut: array8Values
-  i16 ArenaAllocator : mut: array16Values
-  i32 ArenaAllocator : mut: array32Values
-  i64 ArenaAllocator : mut: array64Values
+  MixedArenaAllocator : mut: primitiveArrayValues
   ConstValue ArenaAllocator : mut: arrayValues
   stringBuilder : mut: stringParseBuffer
 ) =:: export: ConstantContext
 ## XXX? free const context
 proc( -> ConstantContext ) =>: export: newConstContext
   ## ConstantContext
-   4096 i8 arenaAlloc.create
-   2048 i16 arenaAlloc.create
-   1024 i32 arenaAlloc.create
-   512  i64 arenaAlloc.create
+   512  mixedArena.create
    256  ConstValue arenaAlloc.create
    256  sb.create
  ConstantContext new return
 end
 
-proc( i8 arrayView : elts ConstantContext ptr.mut : context -> i8 arrayView ) =>: constArray8
-  context [] .array8Values
-    elts arenaAlloc.pushArray =:: result
-  context [] .array8Values =
-  result return
-end
-proc( i16 arrayView : elts ConstantContext ptr.mut : context -> i16 arrayView ) =>: constArray16
-  context [] .array16Values
-    elts arenaAlloc.pushArray =:: result
-  context [] .array16Values =
-  result return
-end
-proc( i32 arrayView : elts ConstantContext ptr.mut : context -> i32 arrayView ) =>: constArray32
-  context [] .array32Values
-    elts arenaAlloc.pushArray =:: result
-  context [] .array32Values =
-  result return
-end
-proc( i64 arrayView : elts ConstantContext ptr.mut : context -> i64 arrayView ) =>: constArray64
-  context [] .array64Values
-    elts arenaAlloc.pushArray =:: result
-  context [] .array64Values =
+proc(
+ type : auto: T
+ T arrayView : elts
+ ConstantContext ptr.mut : context
+-> T arrayView ) =>: constPrimitiveArray
+  context [] .primitiveArrayValues
+    elts mixedArena.pushArray =:: result
+  context [] .primitiveArrayValues =
   result return
 end
 proc(
@@ -99,25 +79,25 @@ proc(
 end
 
 proc( i8 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray8Const
-  elts context constArray8 ConstValue .Array8 return
+  elts context constPrimitiveArray ConstValue .Array8 return
 end
 proc( string : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStringConst
-  elts string.bytes context constArray8 string.fromBytes ConstValue .String return
+  elts string.chars context constPrimitiveArray string.fromChars ConstValue .String return
 end
 proc( i16 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray16Const
-  elts context constArray16 ConstValue .Array16 return
+  elts context constPrimitiveArray ConstValue .Array16 return
 end
 proc( string16 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString16Const
-  elts string16.toArray context constArray16 string16.fromArray ConstValue .String16 return
+  elts string16.toArray context constPrimitiveArray string16.fromArray ConstValue .String16 return
 end
 proc( i32 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray32Const
-  elts context constArray32 ConstValue .Array32 return
+  elts context constPrimitiveArray ConstValue .Array32 return
 end
 proc( string32 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString32Const
-  elts string32.toArray context constArray32 string32.fromArray ConstValue .String32 return
+  elts string32.toArray context constPrimitiveArray string32.fromArray ConstValue .String32 return
 end
 proc( i64 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStr64Const
-  elts context constArray64 ConstValue .Array64 return
+  elts context constPrimitiveArray ConstValue .Array64 return
 end
 proc(
   ConstValue arrayView : elts
