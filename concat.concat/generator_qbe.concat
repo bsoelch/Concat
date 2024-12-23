@@ -838,9 +838,9 @@ namespace: sb
         $ .String ?? if
           .String string.bytes ConstValue .Array8
         else $ .String16 ?? _if
-          .String16 string16.toArray ConstValue .Array16
+          .String16 string16.toIntArray ConstValue .Array16
         else $ .String32 ?? _if
-          .String32 string32.toArray ConstValue .Array32
+          .String32 string32.toIntArray ConstValue .Array32
         end
       ## ^ value
       true

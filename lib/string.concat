@@ -153,11 +153,17 @@ namespace: string16
   proc( char16 _ ptr  i64 -> string16 ) =>: export: create
     string16 new return
   end
-  ## TODO casts string16 <-> char16 arrayView
-  proc( i16 arrayView : arr -> string16 ) =>: export: fromArray
+
+  proc( char16 arrayView -> string16 ) =>: export: fromArray
+    string16 cast
+  end
+  proc( string16 -> char16 arrayView ) =>: export: toArray
+    char16 arrayView cast
+  end
+  proc( i16 arrayView : arr -> string16 ) =>: export: fromIntArray
     arr .data char16 _ ptr cast arr .length create
   end
-  proc( string16 : str -> i16 arrayView ) =>: export: toArray
+  proc( string16 : str -> i16 arrayView ) =>: export: toIntArray
     str .data i16 _ ptr cast str .length array.create
   end
 
@@ -181,11 +187,17 @@ namespace: string32
   proc( char32 _ ptr  i64 -> string32 ) =>: export: create
     string32 new return
   end
-  ## TODO casts string32 <-> char32 arrayView
-  proc( i32 arrayView : arr -> string32 ) =>: export: fromArray
+
+  proc( char32 arrayView -> string32 ) =>: export: fromArray
+    string32 cast
+  end
+  proc( string32 -> char32 arrayView ) =>: export: toArray
+    char32 arrayView cast
+  end
+  proc( i32 arrayView : arr -> string32 ) =>: export: fromIntArray
     arr .data char32 _ ptr cast arr .length create
   end
-  proc( string32 : str -> i32 arrayView ) =>: export: toArray
+  proc( string32 : str -> i32 arrayView ) =>: export: toIntArray
     str .data i32 _ ptr cast str .length array.create
   end
 
