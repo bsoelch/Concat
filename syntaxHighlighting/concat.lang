@@ -216,17 +216,6 @@
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
-    <context id="libtype-keywords" style-ref="type-keyword">
-      <match extended="true">
-        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          list                         |
-          arrayView                    |
-          optional                     |
-          hashMap
-        )(\Z|(?=[[:space:]])) # end of file or white-space
-      </match>
-    </context>
-
     <context id="primitiveType" style-ref="type">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
@@ -250,15 +239,30 @@
           )
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
-    </context>
+    </context>    
     <context id="libType" style-ref="type">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          string          |
-          stringBuilder   |
-          (io\.)?FILE     |
-          (io\.)?IOError  |
+          string                      |
+          string16                    |
+          string32                    |
+          stringBuilder               |
+          MixedArenaAllocator         |
+          (io\.)?FILE                 |
+          (io\.)?IOError              |
           (io\.)?OpenMode
+        )(\Z|(?=[[:space:]])) # end of file or white-space
+      </match>
+    </context>
+    <context id="libtype-keywords" style-ref="type-keyword">
+      <match extended="true">
+        (\A|(?&lt;=[[:space:]]))( # start of file or white-space
+          list                         |
+          arrayView                    |
+          arrayView.mut                |
+          ArenaAllocator               |
+          optional                     |
+          hashMap
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
