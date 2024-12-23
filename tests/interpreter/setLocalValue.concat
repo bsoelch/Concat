@@ -1,0 +1,7 @@
+proc( -> ) =>: main
+  0:i32 =:: mut: x
+  x 1 + x =
+  x 1 == assert ""
+end
+
+main ## run main at compile time

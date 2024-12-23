@@ -3,14 +3,14 @@ import "builtIns.concat"
 
 namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: constAsBool
-    ConstValue ..length 20 == assert "no new constants"
+    ConstValue ..length 22 == assert "no new constants"
     a switch
       Bool case a .Bool false return
       default false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: constAsInt ## all integer calculations are done in 64 bits
-    ConstValue ..length 20 == assert "no new constants"
+    ConstValue ..length 22 == assert "no new constants"
     a switch
       Char case a .Char i64 cast.u false return
       Int case a .Int i64 cast false return
@@ -18,7 +18,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsFloat
-    ConstValue ..length 20 == assert "no new constants"
+    ConstValue ..length 22 == assert "no new constants"
     a switch
       Char case a .Char i32 cast.u f64 cast false return
       Int case a .Int f64 cast false return
@@ -27,7 +27,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> Type bool ) =>: constAsType
-    ConstValue ..length 20 == assert "no new constants"
+    ConstValue ..length 22 == assert "no new constants"
     a switch
       TypeId case a .TypeId false return
       default Type .undefined true return
@@ -53,7 +53,7 @@ namespace: interpreter
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
     k 1 != if ConstValue .None OperatorResult .argumentError return end
     args 0 [] =:: a
-    ConstValue ..length 20 == assert "no new constants"
+    ConstValue ..length 22 == assert "no new constants"
     a switch
       Bool case a OperatorResult .success return
       Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .success return

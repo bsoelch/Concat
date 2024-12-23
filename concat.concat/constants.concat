@@ -10,8 +10,12 @@ import debug
 i64 =:: export: ProcId
 i64 =:: export: ProcBundleId
 
-type :  export: ConstValue
+type : export: ConstValue
 struct( ConstValue ptr : value i64 : eltIndex ) =:: export: UnionConstant
+
+## pointers to mutable constants in interpreter
+ConstValue ptr.mut =:: export: LocalAddress
+ConstValue arrayView.mut =:: export: LocalSlice
 
 ## XXX? use wrapper types for array constants to prevent accidental assignment of external values
 union(
@@ -36,6 +40,8 @@ union(
   ProcId : Procedure
   ProcBundleId : ProcedureBundle
   UnionConstant : Union
+  LocalAddress : LocalValue
+  LocalSlice : LocalArray
 ) =:: export: ConstValue
 
 struct(
@@ -194,6 +200,13 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
       a .Union .value []
         b .Union .value []
       labelContext constantEquals return
+    LocalValue case
+      a .LocalValue b .LocalValue == return
+    LocalArray case
+      ## LocalArray is only equal if memory ranges coincide
+      a .LocalArray .data b .LocalArray .data == and
+        a .LocalArray .length b .LocalArray .length ==
+      end return
   end
 end
 
@@ -405,6 +418,21 @@ namespace: sb
             val .Union .value []
             typeContext
           sb.appendConstant
+          break
+        LocalValue case
+            "local value ("  sb.appendS
+            val .LocalValue [] typeContext sb.appendConstant
+            ")" sb.appendS
+          break
+        LocalArray case
+            "local array ("  sb.appendS
+            val .LocalArray .length for =:: i
+              val .LocalArray
+                ConstValue arrayView.mut cast i array.get
+              typeContext sb.appendConstant
+              ' ' sb.appendC
+            end
+            " )" sb.appendS
           break
       end
     return

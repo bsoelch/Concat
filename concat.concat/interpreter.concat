@@ -1,4 +1,5 @@
 import map
+import arenaAlloc
 
 import "interpreter/operators.concat"
 import "identifiers.concat"
@@ -35,6 +36,8 @@ struct(
   ConstValue list : mut: stack
   ValueInfo  list : mut: stackInfo
   BlockInfo  list : mut: openBlocks
+  ConstValue ArenaAllocator : mut: localMemory
+  ## XXX globalMemory (?heapMemory)
   Type list : mut: typeBuffer
   ConstValue list : mut: valueBuffer
   LabelId list : mut: labelBuffer
@@ -43,6 +46,41 @@ struct(
 ) =:: export: InterpreterContext
 
 namespace: interpreter
+  proc(
+    ProgramContext ptr.mut : progContext
+    TypeCheckState ptr.mut optional : typeChecker
+    FileId : fileId
+    InterpreterType : evalType
+  ->
+    InterpreterContext
+  ) =>: export: wrapProgram
+    ## InterpreterContext
+      progContext
+      typeChecker
+      labelHash@ labelEq@ 32 Constant map.create
+      64 ConstValue list.create
+      64 ValueInfo  list.create
+      64 BlockInfo  list.create
+      512 ConstValue arenaAlloc.create
+      64 Type       list.create
+      64 ConstValue list.create
+      64 LabelId    list.create
+      fileId
+      evalType
+    InterpreterContext new
+  end
+  proc(
+    InterpreterContext ptr.mut : context
+  -> ) =>: export: cleanupContext
+    context [] .variables@ map.free
+    context [] .stackInfo   list.free context [] .stackInfo =
+    context [] .openBlocks  list.free context [] .openBlocks =
+    context [] .typeBuffer  list.free context [] .typeBuffer =
+    context [] .valueBuffer list.free context [] .valueBuffer =
+    context [] .labelBuffer list.free context [] .labelBuffer =
+    context [] .stack list.free context [] .stack =
+  end
+
   proc(
     i64 : count
     string : name
@@ -712,54 +750,6 @@ namespace: interpreter
   end
 
 ## TODO use wrapper procedures for stack access
-  proc(
-    ProgramContext ptr.mut : progContext
-    TypeCheckState ptr.mut optional : typeChecker
-    FileId : fileId
-    InterpreterType : evalType
-  ->
-    InterpreterContext
-  ) =>: export: wrapProgram
-    ## InterpreterContext
-      progContext
-      typeChecker
-      labelHash @ labelEq @ 32 Constant map.create
-      64 ConstValue list.create
-      64 ValueInfo  list.create
-      64 BlockInfo  list.create
-      64 Type       list.create
-      64 ConstValue list.create
-      64 LabelId    list.create
-      fileId
-      evalType
-    InterpreterContext new
-  end
-
-  proc(
-    InterpreterContext ptr.mut : context
-    InterpreterType : evalType
-  -> ) =>: export: resetContext
-    ## TODO? clear local variables in map
-    context [] .stackInfo   list.clear context [] .stackInfo =
-    context [] .openBlocks  list.clear context [] .openBlocks =
-    context [] .typeBuffer  list.clear context [] .typeBuffer =
-    context [] .valueBuffer list.clear context [] .valueBuffer =
-    context [] .labelBuffer list.clear context [] .labelBuffer =
-    context [] .stack       list.clear context [] .stack =
-    evalType context [] .evalType =
-  end
-
-  proc(
-    InterpreterContext ptr.mut : context
-  -> ) =>: export: cleanupContext
-    context [] .variables @ map.free
-    context [] .stackInfo   list.free context [] .stackInfo =
-    context [] .openBlocks  list.free context [] .openBlocks =
-    context [] .typeBuffer  list.free context [] .typeBuffer =
-    context [] .valueBuffer list.free context [] .valueBuffer =
-    context [] .labelBuffer list.free context [] .labelBuffer =
-    context [] .stack list.free context [] .stack =
-  end
 
   proc(
     Type : t
@@ -1703,11 +1693,31 @@ proc(
         EvalResult .Error return
       end =:: value =:: valInfo
       idInfo [] .idType switch
-        GLOBAL_VAR LOCAL_VAR LABEL TMP_VAR ITR_VAR TYPE case
+        GLOBAL_VAR TYPE case
           context [] .variables@
             label
             ## Constant
               value
+              ## ValueInfo
+                valInfo .valueType
+                op [] .pos
+              ValueInfo new
+            Constant new
+          map.put ..drop
+          EvalResult .Ok return
+        LOCAL_VAR LABEL TMP_VAR ITR_VAR case
+          context [] .variables@
+            label
+            ## Constant
+              label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+                ## TODO spread out composite constants
+                context [] .localMemory
+                  value arenaAlloc.pushValue =:: localAddress
+                context [] .localMemory =
+                localAddress LocalAddress cast ConstValue .LocalValue
+              else
+                value
+              end
               ## ValueInfo
                 valInfo .valueType
                 op [] .pos
@@ -2020,6 +2030,22 @@ proc(
       ValueInfo new context [] .stackInfo $ .length offset - list.set
       EvalResult .Ok return
     copy case
+      context [] .stack list.peek =:: value?
+      value? optional.hasData if
+        value? .data [] .LocalValue ?? if
+          value? .data []
+            .LocalValue []
+          value? .data [] =
+        else value? .data [] .LocalArray ?? _if
+          "local array constants are not supported: " sb.wrap
+            value? .data [] typeContext sb.appendConstant
+          op [] .pos errors appendError
+        else
+          "unexpected constant for copy, expected local memory got: " sb.wrap
+            value? .data [] typeContext sb.appendConstant
+          op [] .pos errors appendError
+        end
+      end
       EvalResult .Ok return ## TODO change once mutable value are allowed
     Assert case
       op [] .pos context popValue if
@@ -2369,7 +2395,34 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    atId atElement getEnumLabel setValue
+    setValue case
+      op [] .pos context popValue if ..drop.2
+        EvalResult .Error return
+      end =:: targetValue =:: targetInfo
+      op [] .pos context popValue if ..drop.2
+        targetValue targetInfo context unpopValue
+        EvalResult .Error return
+      end =:: value =:: valueInfo
+      ConstValue ..length 22 == assert "no new constants"
+      targetValue switch
+        LocalValue case
+          value targetValue .LocalValue [] =
+          EvalResult .Ok return
+        LocalArray case
+          "local array is not supported: " sb.wrap
+            targetValue typeContext sb.appendConstant
+          op [] .pos errors appendError
+          EvalResult .Error return
+        default
+            "unexpected target for setValue, expected writable memory location got: " sb.wrap
+              targetValue typeContext sb.appendConstant
+            op [] .pos errors appendError
+            value valueInfo context unpopValue
+            targetValue targetInfo context unpopValue
+          EvalResult .Error return
+      end
+      break
+    atId atElement getEnumLabel
     NewEnum callPtr
     argc getArg implementProcedure procPtr
     bitCast NewEnumReference

@@ -1128,7 +1128,7 @@ namespace: sb
             appendConstQBE
           end
           return
-        None WildCard TypeId
+        None WildCard TypeId LocalValue LocalArray
             Procedure ProcedureBundle case
         break
       end
