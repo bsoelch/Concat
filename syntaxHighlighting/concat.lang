@@ -156,7 +156,7 @@
 
     <context id="compile-time" style-ref="compile-time">
       <match extended="true">
-        (\A|(?&lt;=[[:space:]]))((( # start of file or white-space
+        ((\A|(?&lt;=[[:space:]]))((( # start of file or white-space
             (
               import |
               using  |
@@ -188,7 +188,8 @@
           )|
           \.\.type\.(alignment|size|stride) |
           \.\.\?(parser\.)?find\.(?=([^[:space:]\.]+(\.[^[:space:]\.]+)*(\Z|[[:space:]])))
-        )
+        )) |
+        (?&lt;=[^[:space:]])\:\?(\Z|[[:space:]]) ## :? postfix
       </match>
     </context>
 
@@ -203,7 +204,7 @@
     <context id="field-access" style-ref="field">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          \.([^\.[:space:]])+
+          \.([^\.\:[:space:]])+
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>

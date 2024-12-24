@@ -1670,7 +1670,6 @@ proc(
       .data op .val .atId =
     else ..drop end
   else op .val .existsName ?? _if
-    types.primitive.BOOL op .dataType =
     op .val .existsName
       op@ state resolveIdentifer
     optional.hasData if
@@ -1678,6 +1677,7 @@ proc(
     else
       false ConstValue .Bool op .val .Constant =
     end
+    types.primitive.BOOL op .dataType =
   else op .val .getId ?? and ## convert static arguments to constants
       op .val .getId .labelId =:: label
       label labelContext id.labelFlags id.FLAG_STATIC & ? and

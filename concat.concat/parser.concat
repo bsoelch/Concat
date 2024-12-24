@@ -2,6 +2,7 @@ import stringIO
 import list
 import arrayView
 import numbers
+import stringLiteral
 
 import "program.concat"
 import "files.concat"
@@ -682,18 +683,19 @@ proc(
   Token : literalType
   FilePosition : pos
   CompilerError list ptr.mut : errors
--> ) =>: checkLiteralType
+-> bool ) =>: checkLiteralType
   literalType .LITERAL_TYPE ?? ! if
     "expected literal type got: " sb.wrap
     literalType sb.appendToken
     pos errors appendError
-    return
+    true return
   end
   literalType .LITERAL_TYPE .length 0 == if
     "literal type should be non-empty" sb.wrap
     pos errors appendError
-    return
+    true return
   end
+  false return
 end
 proc(
   string : code
@@ -732,9 +734,31 @@ proc(
       LITERAL case
         fileState [] .wordStart =:: literalStart
         fileState nextToken =:: literalType
-        literalType fileState [] .wordStart errors checkLiteralType
+        literalType fileState [] .wordStart errors checkLiteralType if
+          string.empty true return
+        end
+        literalType .LITERAL_TYPE "?":s string.eq if
+          false =:: mut: isElement
+          token .LITERAL
+            $ 0 string.charAt '.' == if
+              1 string.tail
+              true isElement =
+            end
+            $ "@":s string.endsWith if
+              $ .length 1 - string.head
+            end
+          =:: idName
+          idName
+            id.FLAG_NONE
+            literalStart
+          state [] .currentFile labelContext id.newLabel
+          literalStart
+            isElement if opExistsLabel else opExistsName end
+          state appendOp
+          string.empty true return
+        end
         token .LITERAL literalType .LITERAL_TYPE literalStart state tryParseNumberLiteral if
-          "" string.wrap true return
+          string.empty true return
         end
         ## XXX add support for custom literal types
         "could not resolve literal: " sb.wrap
@@ -763,7 +787,9 @@ proc(
           IdentifierInfo optional.empty
         fileState [] .wordStart Constant new state pushConst
         fileState nextToken =:: literalType
-        literalType fileState [] .wordStart errors checkLiteralType
+        literalType fileState [] .wordStart errors checkLiteralType  if
+          "" string.wrap true return
+        end
         ## XXX? more usefull error for missing parse procedure?
         ## :<name> -> <name>.parse
         state [] .tmpString
@@ -2017,33 +2043,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError
         return
       end
-    else ..dup "??" string.wrap string.eq or
-         ..dup "???" string.wrap string.eq _if =:: opName
+    else ..dup "??" string.wrap string.eq _if =:: opName
       state peekOp ..dup optional.isEmpty if ..drop
         "unexpected \"" sb.wrap
           opName sb.appendStr
         '"' sb.appendC fileState [] .wordStart errors appendError
         return
       end .data =:: prevOp
-      opName "???" string.wrap string.eq =:: checkExists
-      checkExists and prevOp [] .val .getId ?? if
-        ## identifier for getId always exists
-        ## opConst
-          true ConstValue .Bool
-          types.primitive.BOOL
-          fileState [] .wordStart
-        opConst prevOp [] =
-        return
-      else checkExists and prevOp [] .val .getName ?? _if
-        prevOp [] .val .getName prevOp [] .val .existsName =
-        fileState [] .wordStart prevOp [] .pos =
-        return
-      else prevOp [] .val .getLabel ?? _if
-        checkExists if
-          prevOp [] .val .getLabel prevOp [] .val .existsLabel =
-        else
-          prevOp [] .val .getLabel prevOp [] .val .hasLabel =
-        end
+      prevOp [] .val .getLabel ?? if
+        prevOp [] .val .getLabel prevOp [] .val .hasLabel =
         fileState [] .wordStart prevOp [] .pos =
         return
       else
@@ -2266,7 +2274,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "..compiler.flag." string.wrap string.startsWith _if
       "..compiler.flag." ..length string.tail =:: flagName
-      ## XXX? treat compiler constants as variables, allow ??? operator to check if constant exists
+      ## XXX? treat compiler constants as variables, allow :? operator to check if constant exists
       flagName "experimental" string.wrap string.eq if
         _EXPERIMENTAL_ ConstValue .Bool
         types.primitive.BOOL

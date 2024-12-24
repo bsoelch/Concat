@@ -1938,7 +1938,19 @@ proc(
         EvalResult .Error return
       end =:: value =:: valInfo
       value valInfo op [] .val .getElement op [] .pos context getElement wrapResult return
-    atLabel atName hasLabel existsLabel existsName case
+    existsName case
+      op [] .val .existsName =:: label
+      label
+        context [] .currentFile
+      idContext id.findIdentifierByLabel ! =:: exists
+      ..drop
+      ## pushValue
+        exists ConstValue .Bool
+        types.primitive.BOOL
+        op [] .pos
+      context pushValue
+      EvalResult .Ok return
+    atLabel atName hasLabel existsLabel case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
