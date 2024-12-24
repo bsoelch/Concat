@@ -1499,14 +1499,38 @@ proc(
       end
       break
     declareId case
-      context inEnum if
-        "typed enums are deprecated, use tagged unions instead " sb.wrap
-        op [] .pos errors appendError
+      op [] .val .declareId .labelId =:: labelId
+      context [] .evalType .INTERPRET ?? if
+        op [] .val .declareId .idType switch
+          GLOBAL_VAR TYPE case break
+          LOCAL_VAR TMP_VAR ITR_VAR case
+            context [] .variables@
+              labelId
+              ## XXX? mark memory as uninitialized
+              ## Constant
+                ## TODO use memory range for composite constants
+                context [] .localMemory
+                  arenaAlloc.alloc =:: localAddress
+                context [] .localMemory =
+                localAddress LocalAddress cast ConstValue .LocalValue
+                ## ValueInfo
+                  op [] .dataType
+                  op [] .pos
+                ValueInfo new
+              Constant new
+            map.put ..drop
+            EvalResult .Ok return
+          ARGUMENT PROCEDURE PROCEDURE_BUNDLE LABEL case break
+        end
       end
       context inTypeOrInitializer ! if
         "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
         op [] .pos errors appendError
         EvalResult .Error return
+      end
+      context inEnum if
+        "typed enums are deprecated, use tagged unions instead " sb.wrap
+        op [] .pos errors appendError
       end
       context getLabeledValueContext =:: valueContext =:: initialLabelOffset
       1 "field-declaration" string.wrap op [] .pos context checkStack if
@@ -1518,7 +1542,6 @@ proc(
       context [] .stack
         list.pop =:: mut: value
       context [] .stack =
-      op [] .val .declareId .labelId =:: labelId
       value .WildCard ?? and context inUnion if
         types.primitive.TYPE valInfo .valueType =
         Type .empty ConstValue .TypeId value =
@@ -1630,7 +1653,7 @@ proc(
             calledProc .procId i64 cast list.at .data
           =:: calledProcData
           procId -1:i64 calledProc .autoArgs op [] .pos context evaluateCall wrapResult return
-        LOCAL_VAR ARGUMENT LABEL case
+        LOCAL_VAR ARGUMENT LABEL TMP_VAR ITR_VAR case
           context [] .variables@ label map.get =:: value?
           value? optional.isEmpty if
             "missing value for " sb.wrap
@@ -1638,7 +1661,7 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-          value? .data =:: value ## TODO? wrap local variable in reference?
+          value? .data =:: value
           value .value value .info .valueType op [] .pos context pushValue
           EvalResult .Ok return
         TYPE GLOBAL_VAR case
@@ -1666,7 +1689,26 @@ proc(
           end
           idData [] .constValue idData [] .valueType op [] .pos context pushValue
           EvalResult .Ok return
-        TMP_VAR ITR_VAR case
+      end
+      break
+    atId case
+      op [] .val .atId@ =:: idInfo
+      idInfo [] .labelId =:: label
+      idInfo [] .idType switch
+        LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
+          ## XXX? extract common code with getId to procedure
+          context [] .variables@ label map.get =:: value?
+          value? optional.isEmpty if
+            "missing value for " sb.wrap
+              op [] .val .getId labelContext sb.appendIdInfo
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          value? .data =:: value
+          value .value value .info .valueType op [] .pos context pushValue
+          EvalResult .Ok return
+        PROCEDURE PROCEDURE_BUNDLE
+        TYPE GLOBAL_VAR LABEL case
           "unsupported operation in constant evaluation: " sb.wrap
             op [] program sb.appendOp
           op [] .pos errors appendError
@@ -2241,6 +2283,18 @@ proc(
       break
     getArrayElement atArrayElement case
       op [] .val .atArrayElement ?? =:: isPtr
+      isPtr if
+        op [] .val .atArrayElement
+      else
+        op [] .val .getArrayElement
+      end
+        $ -1 == if ..drop
+          ## TODO compute index count
+          0:i64
+        end
+        ## XXX? check index constants for fixed index count
+      =:: indexCount
+      ## TODO support get element with multiple indices
       op [] .pos context popValue if ..drop.2
         EvalResult .Error return
       end =:: indexValue =:: indexInfo
@@ -2422,7 +2476,7 @@ proc(
           EvalResult .Error return
       end
       break
-    atId atElement getEnumLabel
+    atElement getEnumLabel
     NewEnum callPtr
     argc getArg implementProcedure procPtr
     bitCast NewEnumReference
@@ -2683,7 +2737,7 @@ proc(
     label labelContext id.labelFlags =:: labelFlags
     labelFlags id.FLAG_AUTO & ? if
       autoArgs autoArgOffset array.get =:: value
-      context [] .variables @
+      context [] .variables@
         label
         ## Constant
           value

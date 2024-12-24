@@ -443,18 +443,23 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeMo
     op [] .pos errors appendError
     return
   end
-  ## TODO? directly evaluate type-modifer without evaluating operation?
-  op state [] .interpreter@ evaluateOperation .Ok ?? ! if
-    "could not evaluate type modifier " sb.wrap
-      op [] .val .typeModifier sb.appendTypeModifier
-    op [] .pos errors appendError
-  end
+  state .interpreter [] .evalType
+    InterpreterType .INTERPRET state .interpreter [] .evalType =
+    ## TODO? directly evaluate type-modifer without evaluating operation?
+    op state [] .interpreter@ evaluateOperation .Ok ?? ! if
+      "could not evaluate type modifier " sb.wrap
+        op [] .val .typeModifier sb.appendTypeModifier
+      op [] .pos errors appendError
+    end
+  state .interpreter [] .evalType =
   1 op [] .pos state interpreterStoreConstants
 end
-## TODO? -> evaluate type-blocks in static mode
+
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpretTypeBlock
   InterpreterLoadMode .typeBlock state interpreterLoadContants ! assert "interpreterFindContant"
   state [] .compiledOps .length state [] .blockStart =
+  state .interpreter [] .evalType .INTERPRET ?? assert "interpret outside type-blocks"
+  InterpreterType .GLOBAL state .interpreter [] .evalType =
   op state [] .interpreter@ evaluateOperation .Ok ?? ! if
     "could not evaluate " sb.wrap
       op [] .val .block .blockType sb.appendBlockType
@@ -465,6 +470,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpre
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretTypeBlock
   state [] .inTypeBlock assert "in Type-block"
+  state .interpreter [] .evalType .GLOBAL ?? assert "global interpreter"
   op state [] .interpreter@ evaluateOperation .Ok ?? ! if
     "unexpected operation in Type/Initializer block: " sb.wrap
       op [] state [] .program sb.appendOp
@@ -474,6 +480,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretT
   op .val .blockEnd ?? and state [] .interpreter@ interpreter.inTypeOrInitializer ! if
     1 op [] .pos state interpreterStoreConstants
     false state [] .inTypeBlock =
+    InterpreterType .INTERPRET state .interpreter [] .evalType =
     true return ## consume block end
   end
   true return
@@ -497,7 +504,7 @@ proc(
   end
     "-----------------\n" sb.appendS
   =:: mut: sb
-  state [] .stack @ branchTree.itr.start while
+  state [] .stack@ branchTree.itr.start while
     branchTree.itr.hasNext do branchTree.itr.next =:: val
     remaining 0 > and
         remaining 1 - remaining =
@@ -1179,8 +1186,8 @@ proc(
   TypeCheckState ptr.mut : state
 -> i64 #+opIndex+# ) =>: appendOp
   state [] .program =:: program
-  program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
+  program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
   op .dataType typeContext types.isEmpty if
     OP_EMPTY return
   end
@@ -1647,7 +1654,7 @@ proc(
       end
     end
   end
-  state inSwitchLabel and op @ state typeCheckSwitchLabel if
+  state inSwitchLabel and op@ state typeCheckSwitchLabel if
     return
   end
   op .val .getName ?? if
@@ -1675,7 +1682,7 @@ proc(
       op .val .getId .labelId =:: label
       label labelContext id.labelFlags id.FLAG_STATIC & ? and
       ConstValue .None =:: mut: argValue
-      state [] .argData @ label map.at =:: argData?
+      state [] .argData@ label map.at =:: argData?
       argData? optional.hasData _if
     argData? .data [] .valType op .dataType =
     argData? .data [] .value op .val .Constant =
@@ -1683,7 +1690,7 @@ proc(
   state [] .inTypeBlock and op@ state interpretTypeBlock if
     return ## evaluate constants
   end
-  op @ state checkReachable
+  op@ state checkReachable
   op .val switch
     NOP case return
     Constant case
