@@ -174,105 +174,108 @@ namespace: interpreter
   -> ConstValue OperatorResult ) =>: export: evaluateBuiltIn
     builtIn switch
       NEG_I8 NEG_I16 NEG_I32 NEG_I64 case
-         args k i64.neg @ unaryOperatorInt return
-      NEG_F32 case args k f32.neg @ unaryOperatorFloat return
-      NEG_F64 case args k f64.neg @ unaryOperatorFloat return
+         args k i64.neg@ unaryOperatorInt return
+      NEG_F32 case args k f32.neg@ unaryOperatorFloat return
+      NEG_F64 case args k f64.neg@ unaryOperatorFloat return
       ADD_I8 ADD_I16 ADD_I32 ADD_I64 case
-        args k i64.add @ binaryOperatorInt return
-      ADD_F32 case args k f32.add @ binaryOperatorFloat return
-      ADD_F64 case args k f64.add @ binaryOperatorFloat return
+        args k i64.add@ binaryOperatorInt return
+      ADD_F32 case args k f32.add@ binaryOperatorFloat return
+      ADD_F64 case args k f64.add@ binaryOperatorFloat return
       SUB_I8 SUB_I16 SUB_I32 SUB_I64 C8_DIFF C16_DIFF C32_DIFF case
-        args k i64.sub @ binaryOperatorInt return
-      SUB_F32 case args k f32.sub @ binaryOperatorFloat return
-      SUB_F64 case  args k f64.sub @ binaryOperatorFloat return
-      MUL_I32 MUL_I64 case args k i64.mul @ binaryOperatorInt return
-      MUL_F32 case args k f32.mul @ binaryOperatorFloat return
-      MUL_F64 case args k f64.mul @ binaryOperatorFloat return
-      DIV_I32 case args k i32.div @ binaryOperatorInt return
-      DIV_I64I32 DIV_I64 case args k i64.div @ binaryOperatorInt return
-      DIV_F32 case args k f32.div @ binaryOperatorFloat return
-      DIV_F64 case args k f64.div @ binaryOperatorFloat return
-      UDIV_I32 case args k i32.udiv @ binaryOperatorInt return
-      UDIV_I64I32 UDIV_I64 case args k i64.udiv @ binaryOperatorInt return
-      REM_I32 case args k i32.rem @ binaryOperatorInt return
-      REM_I64I32 REM_I64 case args k i64.rem @ binaryOperatorInt return
-      UMOD_I32 case args k i32.umod @ binaryOperatorInt return
-      UMOD_I64I32 UMOD_I64 case args k i64.umod @ binaryOperatorInt return
+        args k i64.sub@ binaryOperatorInt return
+      SUB_F32 case args k f32.sub@ binaryOperatorFloat return
+      SUB_F64 case  args k f64.sub@ binaryOperatorFloat return
+      MUL_I32 MUL_I64 case args k i64.mul@ binaryOperatorInt return
+      MUL_F32 case args k f32.mul@ binaryOperatorFloat return
+      MUL_F64 case args k f64.mul@ binaryOperatorFloat return
+      DIV_I32 case args k i32.div@ binaryOperatorInt return
+      DIV_I64I32 DIV_I64 case args k i64.div@ binaryOperatorInt return
+      DIV_F32 case args k f32.div@ binaryOperatorFloat return
+      DIV_F64 case args k f64.div@ binaryOperatorFloat return
+      UDIV_I32 case args k i32.udiv@ binaryOperatorInt return
+      UDIV_I64I32 UDIV_I64 case args k i64.udiv@ binaryOperatorInt return
+      REM_I32 case args k i32.rem@ binaryOperatorInt return
+      REM_I64I32 REM_I64 case args k i64.rem@ binaryOperatorInt return
+      UMOD_I32 case args k i32.umod@ binaryOperatorInt return
+      UMOD_I64I32 UMOD_I64 case args k i64.umod@ binaryOperatorInt return
       NOT_BOOL case
-         args k bool.not @ unaryOperatorBool return
+         args k bool.not@ unaryOperatorBool return
       FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
-         args k i64.flip @ unaryOperatorInt return
-      AND_BOOL case args k bool.and @ binaryOperatorBool return
+         args k i64.flip@ unaryOperatorInt return
+      AND_BOOL case args k bool.and@ binaryOperatorBool return
       AND_I8 AND_I16 AND_I32 AND_I64 case
-        args k i64.and @ binaryOperatorInt return
-      OR_BOOL case args k bool.or @ binaryOperatorBool return
+        args k i64.and@ binaryOperatorInt return
+      OR_BOOL case args k bool.or@ binaryOperatorBool return
       OR_I8 OR_I16 OR_I32 OR_I64 case
-        args k i64.or @ binaryOperatorInt return
-      XOR_BOOL case args k bool.xor @ binaryOperatorBool return
+        args k i64.or@ binaryOperatorInt return
+      XOR_BOOL case args k bool.xor@ binaryOperatorBool return
       XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
-        args k i64.xor @ binaryOperatorInt return
-      LSHR_I8 case args k i8.lshr @ binaryOperatorInt return
-      LSHR_I16 case args k i16.lshr @ binaryOperatorInt return
-      LSHR_I32 case args k i32.lshr @ binaryOperatorInt return
-      LSHR_I64I32 LSHR_I64 case args k i64.lshr @ binaryOperatorInt return
-      ASHR_I8 case args k i8.ashr @ binaryOperatorInt return
-      ASHR_I16 case args k i16.ashr @ binaryOperatorInt return
-      ASHR_I32 case args k i32.ashr @ binaryOperatorInt return
-      ASHR_I64I32 ASHR_I64 case args k i64.ashr @ binaryOperatorInt return
+        args k i64.xor@ binaryOperatorInt return
+      LSHR_I8 case args k i8.lshr@ binaryOperatorInt return
+      LSHR_I16 case args k i16.lshr@ binaryOperatorInt return
+      LSHR_I32 case args k i32.lshr@ binaryOperatorInt return
+      LSHR_I64I32 LSHR_I64 case args k i64.lshr@ binaryOperatorInt return
+      ASHR_I8 case args k i8.ashr@ binaryOperatorInt return
+      ASHR_I16 case args k i16.ashr@ binaryOperatorInt return
+      ASHR_I32 case args k i32.ashr@ binaryOperatorInt return
+      ASHR_I64I32 ASHR_I64 case args k i64.ashr@ binaryOperatorInt return
       SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
-        args k i64.shl @ binaryOperatorInt return
-      EQ_I8  EQ_C8  case args k i8.eq @ cmpOperatorInt return
-      EQ_I16 EQ_C16 case args k i16.eq @ cmpOperatorInt return
-      EQ_I32 EQ_C32 case args k i32.eq @ cmpOperatorInt return
-      EQ_I64 case args k i64.eq @ cmpOperatorInt return
-      EQ_F32 case args k f32.eq @ cmpOperatorFloat return
-      EQ_F64 case args k f64.eq @ cmpOperatorFloat return
-      NE_I8  NE_C8  case args k i8.ne @ cmpOperatorInt return
-      NE_I16 NE_C16 case args k i16.ne @ cmpOperatorInt return
-      NE_I32 NE_C32 case args k i32.ne @ cmpOperatorInt return
-      NE_I64 case args k i64.ne @ cmpOperatorInt return
-      NE_F32 case args k f32.ne @ cmpOperatorFloat return
-      NE_F64 case args k f64.ne @ cmpOperatorFloat return
-      LT_I8 case args k i8.lt @ cmpOperatorInt return
-      LT_I16 case args k i16.lt @ cmpOperatorInt return
-      LT_I32 case args k i32.lt @ cmpOperatorInt return
-      LT_I64 case args k i64.lt @ cmpOperatorInt return
-      LT_F32 case args k f32.lt @ cmpOperatorFloat return
-      LT_F64 case args k f64.lt @ cmpOperatorFloat return
-      LE_I8 case args k i8.le @ cmpOperatorInt return
-      LE_I16 case args k i16.le @ cmpOperatorInt return
-      LE_I32 case args k i32.le @ cmpOperatorInt return
-      LE_I64 case args k i64.le @ cmpOperatorInt return
-      LE_F32 case args k f32.le @ cmpOperatorFloat return
-      LE_F64 case args k f64.le @ cmpOperatorFloat return
-      GE_I8 case args k i8.ge @ cmpOperatorInt return
-      GE_I16 case args k i16.ge @ cmpOperatorInt return
-      GE_I32 case args k i32.ge @ cmpOperatorInt return
-      GE_I64 case args k i64.ge @ cmpOperatorInt return
-      GE_F32 case args k f32.ge @ cmpOperatorFloat return
-      GE_F64 case args k f64.ge @ cmpOperatorFloat return
-      GT_I8 case args k i8.gt @ cmpOperatorInt return
-      GT_I16 case args k i16.gt @ cmpOperatorInt return
-      GT_I32 case args k i32.gt @ cmpOperatorInt return
-      GT_I64 case args k i64.gt @ cmpOperatorInt return
-      GT_F32 case args k f32.gt @ cmpOperatorFloat return
-      GT_F64 case args k f64.gt @ cmpOperatorFloat return
-      ULT_I8  LT_C8  case args k i8.ult @ cmpOperatorInt return
-      ULT_I16 LT_C16 case args k i16.ult @ cmpOperatorInt return
-      ULT_I32 LT_C32 case args k i32.ult @ cmpOperatorInt return
-      ULT_I64 case args k i64.ult @ cmpOperatorInt return
-      ULE_I8  LE_C8  case args k i8.ule @ cmpOperatorInt return
-      ULE_I16 LE_C16 case args k i16.ule @ cmpOperatorInt return
-      ULE_I32 LE_C32 case args k i32.ule @ cmpOperatorInt return
-      ULE_I64 case args k i64.ule @ cmpOperatorInt return
-      UGE_I8  GE_C8  case args k i8.uge @ cmpOperatorInt return
-      UGE_I16 GE_C16 case args k i16.uge @ cmpOperatorInt return
-      UGE_I32 GE_C32 case args k i32.uge @ cmpOperatorInt return
-      UGE_I64 case args k i64.uge @ cmpOperatorInt return
-      UGT_I8  GT_C8  case args k i8.ugt @ cmpOperatorInt return
-      UGT_I16 GT_C16 case args k i16.ugt @ cmpOperatorInt return
-      UGT_I32 GT_C32 case args k i32.ugt @ cmpOperatorInt return
-      UGT_I64 case args k i64.ugt @ cmpOperatorInt return
+        args k i64.shl@ binaryOperatorInt return
+        ## FIXME use correct bool op
+      EQ_BOOL case args k bool.and@ binaryOperatorBool return
+      EQ_I8  EQ_C8  case args k i8.eq@ cmpOperatorInt return
+      EQ_I16 EQ_C16 case args k i16.eq@ cmpOperatorInt return
+      EQ_I32 EQ_C32 case args k i32.eq@ cmpOperatorInt return
+      EQ_I64 case args k i64.eq@ cmpOperatorInt return
+      EQ_F32 case args k f32.eq@ cmpOperatorFloat return
+      EQ_F64 case args k f64.eq@ cmpOperatorFloat return
+      NE_BOOL case args k bool.xor@ binaryOperatorBool return
+      NE_I8  NE_C8  case args k i8.ne@ cmpOperatorInt return
+      NE_I16 NE_C16 case args k i16.ne@ cmpOperatorInt return
+      NE_I32 NE_C32 case args k i32.ne@ cmpOperatorInt return
+      NE_I64 case args k i64.ne@ cmpOperatorInt return
+      NE_F32 case args k f32.ne@ cmpOperatorFloat return
+      NE_F64 case args k f64.ne@ cmpOperatorFloat return
+      LT_I8 case args k i8.lt@ cmpOperatorInt return
+      LT_I16 case args k i16.lt@ cmpOperatorInt return
+      LT_I32 case args k i32.lt@ cmpOperatorInt return
+      LT_I64 case args k i64.lt@ cmpOperatorInt return
+      LT_F32 case args k f32.lt@ cmpOperatorFloat return
+      LT_F64 case args k f64.lt@ cmpOperatorFloat return
+      LE_I8 case args k i8.le@ cmpOperatorInt return
+      LE_I16 case args k i16.le@ cmpOperatorInt return
+      LE_I32 case args k i32.le@ cmpOperatorInt return
+      LE_I64 case args k i64.le@ cmpOperatorInt return
+      LE_F32 case args k f32.le@ cmpOperatorFloat return
+      LE_F64 case args k f64.le@ cmpOperatorFloat return
+      GE_I8 case args k i8.ge@ cmpOperatorInt return
+      GE_I16 case args k i16.ge@ cmpOperatorInt return
+      GE_I32 case args k i32.ge@ cmpOperatorInt return
+      GE_I64 case args k i64.ge@ cmpOperatorInt return
+      GE_F32 case args k f32.ge@ cmpOperatorFloat return
+      GE_F64 case args k f64.ge@ cmpOperatorFloat return
+      GT_I8 case args k i8.gt@ cmpOperatorInt return
+      GT_I16 case args k i16.gt@ cmpOperatorInt return
+      GT_I32 case args k i32.gt@ cmpOperatorInt return
+      GT_I64 case args k i64.gt@ cmpOperatorInt return
+      GT_F32 case args k f32.gt@ cmpOperatorFloat return
+      GT_F64 case args k f64.gt@ cmpOperatorFloat return
+      ULT_I8  LT_C8  case args k i8.ult@ cmpOperatorInt return
+      ULT_I16 LT_C16 case args k i16.ult@ cmpOperatorInt return
+      ULT_I32 LT_C32 case args k i32.ult@ cmpOperatorInt return
+      ULT_I64 case args k i64.ult@ cmpOperatorInt return
+      ULE_I8  LE_C8  case args k i8.ule@ cmpOperatorInt return
+      ULE_I16 LE_C16 case args k i16.ule@ cmpOperatorInt return
+      ULE_I32 LE_C32 case args k i32.ule@ cmpOperatorInt return
+      ULE_I64 case args k i64.ule@ cmpOperatorInt return
+      UGE_I8  GE_C8  case args k i8.uge@ cmpOperatorInt return
+      UGE_I16 GE_C16 case args k i16.uge@ cmpOperatorInt return
+      UGE_I32 GE_C32 case args k i32.uge@ cmpOperatorInt return
+      UGE_I64 case args k i64.uge@ cmpOperatorInt return
+      UGT_I8  GT_C8  case args k i8.ugt@ cmpOperatorInt return
+      UGT_I16 GT_C16 case args k i16.ugt@ cmpOperatorInt return
+      UGT_I32 GT_C32 case args k i32.ugt@ cmpOperatorInt return
+      UGT_I64 case args k i64.ugt@ cmpOperatorInt return
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
         k 2 == assert "correct number of arguments"

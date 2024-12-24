@@ -1,0 +1,23 @@
+import core/bool
+namespace: char16
+  proc( char16 char16 -> i32 ) : export: alias: diff ..builtIn.diff.char16
+  proc( char16 char16 -> bool ) : export: alias: eq ..builtIn.eq.char16
+  proc( char16 char16 -> bool ) : export: alias: ne ..builtIn.ne.char16
+  proc( char16 char16 -> bool ) : export: alias: lt ..builtIn.lt.char16
+  proc( char16 char16 -> bool ) : export: alias: le ..builtIn.le.char16
+  proc( char16 char16 -> bool ) : export: alias: ge ..builtIn.ge.char16
+  proc( char16 char16 -> bool ) : export: alias: gt ..builtIn.gt.char16
+
+  proc( char16 : a char16 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 ..builtIn.sub.i32
+  end
+end
+
+overload: export: -     char16.diff end
+overload: export: ==    char16.eq   end
+overload: export: !=    char16.ne   end
+overload: export: <     char16.lt   end
+overload: export: <=    char16.le   end
+overload: export: >=    char16.ge   end
+overload: export: >     char16.gt   end
+overload: export: <=>   char16.cmp  end

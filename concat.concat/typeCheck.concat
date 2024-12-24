@@ -1964,9 +1964,14 @@ proc(
               op .pos errors appendError
               return
             end =:: idData
-            idData [] .constValue .Procedure =:: procId
+            idData [] .constValue .Procedure =:: mut: procId
             program [] .procedures
               procId i64 cast list.at .data
+              $ .implementation [] .alias ?? if
+                .implementation [] .alias procId =
+                program [] .procedures procId i64 cast list.at .data
+                $ .implementation [] .alias ?? ! assert "no double alias"
+              end
             =:: procData
             -1:i64 =:: mut: implId
             procData [] .procType op .dataType =
@@ -1979,7 +1984,6 @@ proc(
             end
             procData [] .implementation .builtIn ?? if
               true procData [] .implementation .builtIn .hasPtr =
-              ## TODO? implementations for built-in generics
             end
             ## ProcedureImpl
               implId

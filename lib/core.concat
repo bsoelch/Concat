@@ -1,8 +1,19 @@
 #+
 core library files, included by default
 +#
-import core/boolOps
+import core/parseNumber
+import core/bool
+import core/i8
+import core/i16
+import core/i32
+import core/i64
+import core/char8
+import core/char16
+import core/char32
+import core/f32
+import core/f64
+
+import core/system
+
 import core/itr
 import core/ptrArithmetic
-import core/integers
-import core/floats

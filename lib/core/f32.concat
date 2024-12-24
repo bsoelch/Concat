@@ -1,0 +1,181 @@
+import core/parseNumber
+import core/bool
+import core/i32
+
+namespace: f32
+  proc( f32 -> i32 ) =>: export: bits
+    i32 ..bitcast
+  end
+  proc( i32 -> f32 ) =>: export: fromBits
+    f32 ..bitcast
+  end
+  0x8000'0000:i32 =:: export: SIGN_FLAG
+  0x7f80'0000:i32 =:: export: EXP_MASK
+  0x007f'ffff:i32 =:: export: MANTISSA_MASK
+  0x0080'0000:i32 =:: export: HIDDEN_BIT
+  23 =:: export: MANTISSA_BITS
+  23 =:: export: EXP_SHIFT
+  0xff =:: export: SHIFTED_EXP_MASK
+  127 =:: export: EXP_BIAS
+
+  -0x100'0000:i32 =:: export: MIN_INT
+  0x100'0000:i32 =:: export: MAX_INT
+
+  -0xf.fffffX1f:f32 =:: export: MIN
+  0xf.fffffX1f:f32 =:: export: MAX
+  proc( -> f32 ) =>: export: NaN
+    EXP_MASK MANTISSA_MASK | fromBits
+  end
+  proc( -> f32 ) =>: export: Infinity
+    EXP_MASK fromBits
+  end
+  proc( -> f32 ) =>: export: -Infinity
+    SIGN_FLAG EXP_MASK | fromBits
+  end
+  proc( f32 : x -> bool ) =>: export: isNaN
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 !=
+  end
+  proc( f32 : x -> bool ) =>: export: isInfinite
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 ==
+  end
+  proc( f32 : x -> bool ) =>: export: isFinite
+    x bits EXP_MASK & EXP_MASK !=
+  end
+
+  proc( f32 : x -> f32 ) =>: export: truncate
+    x bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e 0 < if ## absolute value < 1
+      i SIGN_FLAG & fromBits return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    i MANTISSA_MASK ~ &
+      m MANTISSA_MASK MANTISSA_BITS e - << & |
+    fromBits return
+  end
+  proc( f32 : x -> f32 ) =>: export: floor
+    x truncate =:: y
+    x 0 < and x y != if
+      y 1 f32 cast - return
+    end
+    y return
+  end
+  proc( f32 : x -> f32 ) =>: export: ceil
+    x truncate =:: y
+    x 0 > and x y != if
+      y 1 f32 cast + return
+    end
+    y return
+  end
+  ## half-even rounding
+  proc( f32 : x -> f32 ) =>: export: round
+    x bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e -1 < if ## absolute value < 0.5
+      i SIGN_FLAG & fromBits return
+    else e -1 == _if ## 1 < |x| <= 0.5
+      m 0 == if ## |x|=0.5
+        i SIGN_FLAG & fromBits return
+      end
+      x 0 < if -1.0 f32 cast else 1.0 f32 cast end return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    m -1:i32 32 MANTISSA_BITS - e + >>> & =:: fract
+    1:i32 MANTISSA_BITS 1 - e - << =:: half
+    i MANTISSA_MASK ~ &
+      m MANTISSA_MASK MANTISSA_BITS e - << & |
+    fromBits =:: trunc
+    fract 0 == if
+      trunc return ## already an integer
+    end
+    x 0 < if -1.0 f32 cast else 1.0 f32 cast end =:: delta
+    fract half < if
+      trunc return
+    end
+    fract half > if
+      trunc delta + return
+    end
+    m HIDDEN_BIT | half 1 << & 0 != if ## half and odd
+      trunc delta + return
+    end
+    trunc return
+  end
+
+  proc( f32 -> f32 ) : export: alias: neg ..builtIn.neg.f32
+  proc( f32 f32 -> f32 ) : export: alias: add ..builtIn.add.f32
+  proc( f32 f32 -> f32 ) : export: alias: sub ..builtIn.sub.f32
+  proc( f32 f32 -> f32 ) : export: alias: mul ..builtIn.mul.f32
+  proc( f32 f32 -> f32 ) : export: alias: div ..builtIn.div.f32
+  proc( f32 f32 -> bool ) : export: alias: eq ..builtIn.eq.f32
+  proc( f32 f32 -> bool ) : export: alias: ne ..builtIn.ne.f32
+  proc( f32 f32 -> bool ) : export: alias: lt ..builtIn.lt.f32
+  proc( f32 f32 -> bool ) : export: alias: le ..builtIn.le.f32
+  proc( f32 f32 -> bool ) : export: alias: ge ..builtIn.ge.f32
+  proc( f32 f32 -> bool ) : export: alias: gt ..builtIn.gt.f32
+
+  proc( f32 : a -> f32 ) =>: export: abs
+    a bits SIGN_FLAG ~ & fromBits return
+  end
+  proc( f32 -> bool ) =>: export: toBool
+    0 !=
+  end
+  proc( f32 : a f32 : b -> f32 ) =>: export: min
+    a b < if a else b end
+  end
+  proc( f32 : a f32 : b -> f32 ) =>: export: max
+    a b > if a else b end
+  end
+  #+ strict comparison of floats
+    -NaN < -Infinity < ... < -0 < 0 < ... < Infinity < NaN +#
+  proc( f32 : a f32 : b -> i32 ) =>: export: cmp
+    a bits SIGN_FLAG & b bits SIGN_FLAG & i32.cmp =:: c0
+    c0 ? if c0 return end
+    a isNaN if
+      b isNaN if 0 return end
+      a bits 0 i32.cmp return
+    else b isNaN _if
+      0 b bits i32.cmp return
+    end
+    b a lt ?1 a b lt ?1 -
+  end
+
+  proc( f32 : a f32 : b -> f32 ) =>: export: rem
+    a b / truncate =:: d
+    a d b * - return
+  end
+  proc( f32 : a f32 : b -> f32 ) =>: export: floorDiv
+    a b / floor return
+  end
+  proc( f32 : a f32 : b -> f32 ) =>: export: mod
+    a b / floor =:: d
+    a d b * - return
+  end
+end
+
+overload: export: -_     f32.neg  end
+overload: export: +      f32.add  end
+overload: export: -      f32.sub  end
+overload: export: *      f32.mul  end
+overload: export: /      f32.div  end
+overload: export: %      f32.rem  end
+overload: export: //     f32.floorDiv end
+overload: export: %%     f32.mod  end
+overload: export: ?      f32.toBool end
+overload: export: ==     f32.eq   end
+overload: export: !=     f32.ne   end
+overload: export: <      f32.lt   end
+overload: export: <=     f32.le   end
+overload: export: >=     f32.ge   end
+overload: export: >      f32.gt   end
+overload: export: <=>    f32.cmp  end
+

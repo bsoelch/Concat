@@ -1,4 +1,4 @@
-
+import core/i64
 namespace: ptr
   proc( type : auto: T T _ ptr : p T _ ptr : q -> i32 ) =>: export: cmp
     p i64 cast! q i64 cast! i64.ucmp

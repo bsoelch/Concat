@@ -1,3 +1,6 @@
+import core/i32
+import core/i64
+import core/ptrArithmetic
 namespace: i32
   struct( i32 : i i32 : limit ) =:: export: i32Itr
   namespace: itr

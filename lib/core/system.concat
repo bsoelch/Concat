@@ -1,0 +1,5 @@
+namespace: sys
+  proc( -> i64 ) : export: alias: argc ..builtIn.sys.argc
+  proc( -> char8 _ ptr _ ptr ) : export: alias: argv ..builtIn.sys.argv
+  proc( -> char8 _ ptr _ ptr ) : export: alias: evnp ..builtIn.sys.envp
+end

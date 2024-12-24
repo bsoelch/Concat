@@ -181,29 +181,6 @@ namespace: id
     context [] .labels =
     context [] .labels .length 1 - LabelId cast return
   end
-  proc(
-    string : namespaceName
-    string : labelName
-    LabelFlag : flags
-    FilePosition : pos
-    FileId : srcFile
-    LabelContext ptr.mut : context
-  -> LabelId ) =>: export: newLabelInNamespace
-    0:NamespaceId namespaceName context createNamespace =:: namespaceId
-    context [] .nameBuffer
-      labelName string.chars arenaAlloc.pushArray string.fromChars =:: nameData
-    context [] .nameBuffer =
-    context [] .labels
-      ## Label
-        nameData
-        pos
-        namespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new
-        srcFile
-        flags
-      Label new list.append
-    context [] .labels =
-    context [] .labels .length 1 - LabelId cast return
-  end
   proc( i64 : id FilePosition : pos FileId : srcFile LabelContext ptr.mut : context -> LabelId ) =>: export: newDummyLabel
     ## create temporary string Builder backed by buffer
     char8 20 array new =:: mut: intToStrBuffer

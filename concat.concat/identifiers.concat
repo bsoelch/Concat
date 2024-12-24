@@ -373,7 +373,7 @@ namespace: id
     searchIdentifier =:: isError =:: label =:: idName
     label context getIdentifier isError | return
   end
-  enum( NAMESPACE DECLARATION BUILT_IN ) =:: export: NameContext
+  enum( NAMESPACE DECLARATION PROCEDURE_BUNDLE BUILT_IN ) =:: export: NameContext
   proc(
     string : id
     NameContext : context
@@ -399,8 +399,14 @@ namespace: id
       false return
     end
     id '.' string.contains if
-      "identifier names cannot contain '.'" sb.wrap pos errors appendError
-      true return
+      context .PROCEDURE_BUNDLE ?? ! or
+          id ".." string.wrap string.startsWith ! or
+          id 2 string.tail '.' string.contains if
+        ## proc-bundles are allowed to start with ..
+        ## TODO? rename ..u<...> bundles?
+        "identifier names cannot contain '.'" sb.wrap pos errors appendError
+        true return
+      end
     end
     id id .length 1 - string.charAt '@' == if
       "identifier names cannot end with '@'" sb.wrap pos errors appendError
@@ -424,8 +430,8 @@ namespace: id
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   ->  LabelId IdentifierData bool ) =>: export: declareIdentifier
-    context [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    context [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
       LABEL_ID_NONE ID_NONE_DATA true return
@@ -433,7 +439,7 @@ namespace: id
     label labelContext labelFlags =:: flags
     context [] .nameBuffer
       ..dup .length 0 == assert "name buffer empty"
-      label context [] .typeContext  .labelContext @ sb.appendLabelName
+      label context [] .typeContext  .labelContext@ sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer sb.asStr =:: name
     context id.isTopLevel flags FLAG_EXPORT & ? & if ## exported global -> ignore fileId
@@ -462,6 +468,8 @@ namespace: id
     name
       flags FLAG_BUILT_IN & ? if
         NameContext .BUILT_IN
+      else idType .PROCEDURE_BUNDLE ?? _if
+        NameContext .PROCEDURE_BUNDLE
       else
         NameContext .DECLARATION
       end

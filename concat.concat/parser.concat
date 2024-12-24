@@ -1413,6 +1413,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .NAMESPACE state openBlock
       return
     else ..dup "overload:" string.wrap string.eq _if =:: opName
+      skipBlock if ## skip to end of overload
+        while fileState state nextWord =:: procName
+          procName "end" string.wrap string.eq !
+        end
+        return
+      end
       fileState state nextWord fileState state readLabel =:: mut: labelId
       labelId labelContext id.labelFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.wrap
@@ -1474,7 +1480,17 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             "\" ( declared at " sb.appendS
             idData [] .declaredAt sb.appendPos
             " ) is not a procedure" sb.appendS
-            IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
+          fileState [] .wordStart errors appendError
+          return
+        else idData [] .constValue .Procedure ?? ! _if
+          256 sb.create
+            idData [] .idType sb.appendIdType
+            "missing procedure data for \"" sb.appendS
+            idData [] .labelId labelContext sb.appendLabelName
+            "\" ( declared at " sb.appendS
+            idData [] .declaredAt sb.appendPos
+            " ) expected ProcId got:" sb.appendS
+            idData [] .constValue typeContext sb.appendConstant
           fileState [] .wordStart errors appendError
           return
         end
@@ -1836,8 +1852,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             fileState [] .wordStart errors appendError
           end
           aliasData [] .constValue .Procedure ?? assert "procedures have const value"
-          aliasData [] .constValue .Procedure =:: aliasId
-          progContext [] .procedures aliasId i64 cast list.at .data =:: aliasProc
+          aliasData [] .constValue .Procedure =:: mut: aliasId
+          progContext [] .procedures aliasId i64 cast list.at .data
+            $ .implementation [] .alias ?? if
+              .implementation [] .alias aliasId =
+              progContext [] .procedures aliasId i64 cast list.at .data
+              $ .implementation [] .alias ?? ! assert "no double alias"
+            end
+          =:: aliasProc
           valType aliasProc [] .procType typeContext types.canAlias ! if
             "incompatible signatures for procedure alias: " sb.wrap
               valType typeContext sb.appendType

@@ -16,16 +16,16 @@ enum(
  ## logic
  NOT_BOOL                                       ## !
  FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64             ## ~
- AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64        ## &
- OR_BOOL  OR_I8 OR_I16 OR_I32 OR_I64            ## |
- XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64        ## ^
+ AND_BOOL OR_BOOL XOR_BOOL             ## boolean ops
+ AND_I8 AND_I16 AND_I32 AND_I64        ## &
+ OR_I8 OR_I16 OR_I32 OR_I64            ## |
+ XOR_I8 XOR_I16 XOR_I32 XOR_I64        ## ^
  LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64I32 LSHR_I64 ## >>>
  ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 ## >>
  SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64      ## <<
  ## comparison
- ## TODO? mixed inequalities ( i32 i64 <  is frequent loop condition )
- EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 ## ==
- NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 ## !=
+ EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 ## ==
+ NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 ## !=
  LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 LT_C16 LT_C32 ## <
  LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 LE_C16 LE_C32 ## <=
  GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 GE_C16 GE_C32 ## >=
@@ -38,68 +38,6 @@ enum(
  ## XXX? more built-in operations
  PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
 ) =:: export: BuiltIn
-
-namespace: sb
-  proc( stringBuilder BuiltIn -> stringBuilder ) =>: export: appendBuiltIn
-    switch
-      NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
-        "-_" sb.appendS break
-      ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
-        "+" sb.appendS break
-      SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
-          C8_DIFF C16_DIFF C32_DIFF case
-        "-" sb.appendS break
-      MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
-        "*" sb.appendS break
-      DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64 case
-        "/" sb.appendS break
-      REM_I32 REM_I64I32 REM_I64 case
-        "%" sb.appendS break
-      UDIV_I32 UDIV_I64I32 UDIV_I64 case "..udiv" sb.appendS break
-      UMOD_I32 UMOD_I64I32 UMOD_I64 case "..umod" sb.appendS break
-      NOT_BOOL case "!" sb.appendS break
-      FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
-        "~" sb.appendS break
-      AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
-        "&" sb.appendS break
-      OR_BOOL OR_I8 OR_I16 OR_I32 OR_I64 case
-        "|" sb.appendS break
-      XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
-        "^" sb.appendS break
-      LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64I32 LSHR_I64 case
-        ">>>" sb.appendS break
-      ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 case
-        ">>" sb.appendS break
-      SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
-        "<<" sb.appendS break
-      EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
-        "==" sb.appendS break
-      NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
-        "!=" sb.appendS break
-      LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 LT_C16 LT_C32 case
-        "<" sb.appendS break
-      LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 LE_C16 LE_C32 case
-        "<=" sb.appendS break
-      GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 GE_C16 GE_C32 case
-        ">=" sb.appendS break
-      GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 GT_C16 GT_C32 case
-        ">" sb.appendS break
-      ULT_I8 ULT_I16 ULT_I32 ULT_I64 case "..u<" sb.appendS break
-      ULE_I8 ULE_I16 ULE_I32 ULE_I64 case "..u<=" sb.appendS break
-      UGE_I8 UGE_I16 UGE_I32 UGE_I64 case "..u>=" sb.appendS break
-      UGT_I8 UGT_I16 UGT_I32 UGT_I64 case "..u>" sb.appendS break
-      SYS_ARGC case "sys.argc" sb.appendS break
-      SYS_ARGV case "sys.argv" sb.appendS break
-      SYS_ENVP case "sys.envp" sb.appendS break
-      PARSE_I8 case "i8.static.parse" sb.appendS break
-      PARSE_I16 case "i16.static.parse" sb.appendS break
-      PARSE_I32 case "i32.static.parse" sb.appendS break
-      PARSE_I64 case "i64.static.parse" sb.appendS break
-      PARSE_F32 case "f32.static.parse" sb.appendS break
-      PARSE_F64 case "f64.static.parse" sb.appendS break
-    end
-  end
-end
 
 proc(
   Type : base
@@ -120,9 +58,9 @@ proc(
   string : name
   FilePosition : pos
   ProgramContext ptr.mut : context
--> ProcBundleId bool ) =>: newBuiltInBundle
-  context [] .idContext @ =:: idContext
-  idContext [] .typeContext .labelContext @ =:: labelContext
+-> bool ) =>: newBuiltInBundle
+  context [] .idContext@ =:: idContext
+  idContext [] .typeContext .labelContext@ =:: labelContext
   labelContext id.resetNamespace
   context [] .procBundles
     ..dup .length ProcBundleId cast =:: bundleId
@@ -144,24 +82,23 @@ proc(
     pos
     FILE_ID_BUILT_IN
     idContext
-    context [] .errors @
+    context [] .errors@
   id.declareIdentifier =:: isError ..drop.2
-  bundleId isError return
+  isError return
 end
 -1:ProcBundleId =:: NO_BUNDLE
 proc(
   BuiltIn : buildIn
   LabelId : procLabel
   Type : procType
-  ProcBundleId : bundleId
   FilePosition : pos
   ProgramContext ptr.mut : context
   bool : hasStaticArgs
   bool : isStatic
 -> ) =>: addBuiltIn_internal
-  context [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  context [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   context [] .procedures
     ..dup .length ProcId cast =:: procId
     ## ProcedureInfo
@@ -184,49 +121,39 @@ proc(
     pos
     FILE_ID_BUILT_IN
     idContext
-    context [] .errors @
+    context [] .errors@
   id.declareIdentifier =:: isError ..drop.2
-  bundleId NO_BUNDLE != if
-    context [] .procBundles bundleId i64 cast list.at .data =:: bundle
-    bundle [] .procedures
-      procId list.append
-    bundle [] .procedures =
-  end
 end
 proc(
   BuiltIn : buildIn
   LabelId : procLabel
   Type : procType
-  ProcBundleId : bundleId
   FilePosition : pos
   ProgramContext ptr.mut : context
 -> ) =>: addBuiltIn
-  buildIn procLabel procType bundleId pos context false false addBuiltIn_internal
+  buildIn procLabel procType pos context false false addBuiltIn_internal
 end
 proc(
   BuiltIn : buildIn
   LabelId : procLabel
   Type : procType
-  ProcBundleId : bundleId
   FilePosition : pos
   ProgramContext ptr.mut : context
 -> ) =>: addStaticBuiltIn
-  buildIn procLabel procType bundleId pos context false true addBuiltIn_internal
+  buildIn procLabel procType pos context false true addBuiltIn_internal
 end
 
 proc(
-  i64 : auto: l1 char8 l1 ptr : namespace
   i64 : auto: l2 char8 l2 ptr : element
   FilePosition : pos
   LabelContext ptr.mut : labelContext
 -> LabelId ) =>: createLabel
   ## newLabel
-    namespace string.wrap
     element string.wrap
-    id.FLAG_EXPORT id.FLAG_BUILT_IN |
+    id.FLAG_EXPORT id.FLAG_SHADDOW | id.FLAG_BUILT_IN |
     pos
     FILE_ID_BUILT_IN
-  labelContext id.newLabelInNamespace
+  labelContext id.newLabel
 end
 
 proc(
@@ -575,867 +502,703 @@ proc(
   types.primitive.CHAR8  context charProcTypes =:: c8c8_i32 =:: c8c8_bool
   types.primitive.CHAR16 context charProcTypes =:: c16c16_i32 =:: c16c16_bool
   types.primitive.CHAR32 context charProcTypes =:: c32c32_i32 =:: c32c32_bool
-  "-_" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  =:: mut: bundle
   BuiltIn .NEG_I8
-    "i8"  "neg" pos labelContext createLabel
+    "..builtIn.neg.i8" pos labelContext createLabel
     i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .NEG_I16
-    "i16" "neg" pos labelContext createLabel
+    "..builtIn.neg.i16" pos labelContext createLabel
     i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .NEG_I32
-    "i32" "neg" pos labelContext createLabel
+    "..builtIn.neg.i32" pos labelContext createLabel
     i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .NEG_I64
-    "i64" "neg" pos labelContext createLabel
+    "..builtIn.neg.i64" pos labelContext createLabel
     i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .NEG_F32
-    "f32" "neg" pos labelContext createLabel
+    "..builtIn.neg.f32" pos labelContext createLabel
     f32_f32
-    bundle
   pos context addBuiltIn
   BuiltIn .NEG_F64
-    "f64" "neg" pos labelContext createLabel
+    "..builtIn.neg.f64" pos labelContext createLabel
     f64_f64
-    bundle
   pos context addBuiltIn
-  "+" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .ADD_I8
-    "i8"  "add" pos labelContext createLabel
+    "..builtIn.add.i8" pos labelContext createLabel
     i8i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .ADD_I16
-    "i16" "add" pos labelContext createLabel
+    "..builtIn.add.i16" pos labelContext createLabel
     i16i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .ADD_I32
-    "i32" "add" pos labelContext createLabel
+    "..builtIn.add.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .ADD_I64
-    "i64" "add" pos labelContext createLabel
+    "..builtIn.add.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .ADD_F32
-    "f32" "add" pos labelContext createLabel
+    "..builtIn.add.f32" pos labelContext createLabel
     f32f32_f32
-    bundle
   pos context addBuiltIn
   BuiltIn .ADD_F64
-    "f64" "add" pos labelContext createLabel
+    "..builtIn.add.f64" pos labelContext createLabel
     f64f64_f64
-    bundle
   pos context addBuiltIn
-  "-" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .SUB_I8
-    "i8"  "sub" pos labelContext createLabel
+    "..builtIn.sub.i8" pos labelContext createLabel
     i8i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .SUB_I16
-    "i16" "sub" pos labelContext createLabel
+    "..builtIn.sub.i16" pos labelContext createLabel
     i16i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .SUB_I32
-    "i32" "sub" pos labelContext createLabel
+    "..builtIn.sub.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .SUB_I64
-    "i64" "sub" pos labelContext createLabel
+    "..builtIn.sub.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .SUB_F32
-    "f32" "sub" pos labelContext createLabel
+    "..builtIn.sub.f32" pos labelContext createLabel
     f32f32_f32
-    bundle
   pos context addBuiltIn
   BuiltIn .SUB_F64
-    "f64" "sub" pos labelContext createLabel
+    "..builtIn.sub.f64" pos labelContext createLabel
     f64f64_f64
-    bundle
   pos context addBuiltIn
   BuiltIn .C8_DIFF
-    "char8" "difference" pos labelContext createLabel
+    "..builtIn.diff.char8" pos labelContext createLabel
     c8c8_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .C16_DIFF
-    "char16" "difference" pos labelContext createLabel
+    "..builtIn.diff.char16" pos labelContext createLabel
     c16c16_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .C32_DIFF
-    "char32" "difference" pos labelContext createLabel
+    "..builtIn.diff.char32" pos labelContext createLabel
     c32c32_i32
-    bundle
   pos context addBuiltIn
-  "*" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .MUL_I32
-    "i32" "mul" pos labelContext createLabel
+    "..builtIn.mul.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .MUL_I64
-    "i64" "mul" pos labelContext createLabel
+    "..builtIn.mul.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .MUL_F32
-    "f32" "mul" pos labelContext createLabel
+    "..builtIn.mul.f32" pos labelContext createLabel
     f32f32_f32
-    bundle
   pos context addBuiltIn
   BuiltIn .MUL_F64
-    "f64" "mul" pos labelContext createLabel
+    "..builtIn.mul.f64" pos labelContext createLabel
     f64f64_f64
-    bundle
   pos context addBuiltIn
-  "/" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .DIV_I32
-    "i32" "div" pos labelContext createLabel
+    "..builtIn.div.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .DIV_I64
-    "i64" "div" pos labelContext createLabel
+    "..builtIn.div.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .DIV_I64I32
-    "i64i32" "div" pos labelContext createLabel
+    "..builtIn.div.i64i32" pos labelContext createLabel
     i64i32_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .DIV_F32
-    "f32" "div" pos labelContext createLabel
+    "..builtIn.div.f32" pos labelContext createLabel
     f32f32_f32
-    bundle
   pos context addBuiltIn
   BuiltIn .DIV_F64
-    "f64" "div" pos labelContext createLabel
+    "..builtIn.div.f64" pos labelContext createLabel
     f64f64_f64
-    bundle
   pos context addBuiltIn
-  "%" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .REM_I32
-    "i32" "rem" pos labelContext createLabel
+    "..builtIn.rem.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .REM_I64
-    "i64" "rem" pos labelContext createLabel
+    "..builtIn.rem.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .REM_I64I32
-    "i64i32" "rem" pos labelContext createLabel
+    "..builtIn.rem.i64i32" pos labelContext createLabel
     i64i32_i32
-    bundle
   pos context addBuiltIn
   ## float remainder defined in standard library (numbers/float)
-  "..udiv" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .UDIV_I32
-    "i32" "udiv" pos labelContext createLabel
+    "..builtIn.udiv.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .UDIV_I64
-    "i64" "udiv" pos labelContext createLabel
+    "..builtIn.udiv.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .UDIV_I64I32
-    "i64i32" "udiv" pos labelContext createLabel
+    "..builtIn.udiv.i64i32" pos labelContext createLabel
     i64i32_i64
-    bundle
   pos context addBuiltIn
-  "..umod" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .UMOD_I32
-    "i32" "umod" pos labelContext createLabel
+    "..builtIn.umod.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .UMOD_I64I32
-    "i64i32" "umod" pos labelContext createLabel
+    "..builtIn.umod.i64i32" pos labelContext createLabel
     i64i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .UMOD_I64
-    "i64" "umod" pos labelContext createLabel
+    "..builtIn.umod.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
-  "!" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .NOT_BOOL
-    "bool" "not" pos labelContext createLabel
+    "..builtIn.not.bool" pos labelContext createLabel
     bool_bool
-    bundle
   pos context addBuiltIn
-  "~" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .FLIP_I8
-    "i8"  "flip" pos labelContext createLabel
+    "..builtIn.flip.i8" pos labelContext createLabel
     i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .FLIP_I16
-    "i16" "flip" pos labelContext createLabel
+    "..builtIn.flip.i16" pos labelContext createLabel
     i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .FLIP_I32
-    "i32" "flip" pos labelContext createLabel
+    "..builtIn.flip.i32" pos labelContext createLabel
     i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .FLIP_I64
-    "i64" "flip" pos labelContext createLabel
+    "..builtIn.flip.i64" pos labelContext createLabel
     i64_i64
-    bundle
   pos context addBuiltIn
-  "&" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .AND_BOOL
-    "bool" "and" pos labelContext createLabel
+    "..builtIn.and.bool" pos labelContext createLabel
     boolbool_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .AND_I8
-    "i8"  "and" pos labelContext createLabel
+    "..builtIn.and.i8" pos labelContext createLabel
     i8i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .AND_I16
-    "i16" "and" pos labelContext createLabel
+    "..builtIn.and.i16" pos labelContext createLabel
     i16i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .AND_I32
-    "i32" "and" pos labelContext createLabel
+    "..builtIn.and.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .AND_I64
-    "i64" "and" pos labelContext createLabel
+    "..builtIn.and.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
-  "|" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .OR_BOOL
-    "bool" "or" pos labelContext createLabel
+    "..builtIn.or.bool" pos labelContext createLabel
     boolbool_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .OR_I8
-    "i8"  "or" pos labelContext createLabel
+    "..builtIn.or.i8" pos labelContext createLabel
     i8i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .OR_I16
-    "i18" "or" pos labelContext createLabel
+    "..builtIn.or.i16" pos labelContext createLabel
     i16i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .OR_I32
-    "i32" "or" pos labelContext createLabel
+    "..builtIn.or.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .OR_I64
-    "i64" "or" pos labelContext createLabel
+    "..builtIn.or.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
-  "^" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .XOR_BOOL
-    "bool" "xor" pos labelContext createLabel
+    "..builtIn.xor.bool" pos labelContext createLabel
     boolbool_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .XOR_I8
-    "i8"  "xor" pos labelContext createLabel
+    "..builtIn.xor.i8" pos labelContext createLabel
     i8i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .XOR_I16
-    "i16" "xor" pos labelContext createLabel
+    "..builtIn.xor.i16" pos labelContext createLabel
     i16i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .XOR_I32
-    "i32" "xor" pos labelContext createLabel
+    "..builtIn.xor.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .XOR_I64
-    "i64" "xor" pos labelContext createLabel
+    "..builtIn.xor.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
-  ">>>" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .LSHR_I8
-    "i8"  "lshr" pos labelContext createLabel
+    "..builtIn.lshr.i8" pos labelContext createLabel
     i8i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .LSHR_I16
-    "i16" "lshr" pos labelContext createLabel
+    "..builtIn.lshr.i16" pos labelContext createLabel
     i16i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .LSHR_I32
-    "i32" "lshr" pos labelContext createLabel
+    "..builtIn.lshr.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .LSHR_I64
-    "i64" "lshr" pos labelContext createLabel
+    "..builtIn.lshr.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .LSHR_I64I32
-    "i64i32" "lshr" pos labelContext createLabel
+    "..builtIn.lshr.i64i32" pos labelContext createLabel
     i64i32_i64
-    bundle
   pos context addBuiltIn
-  ">>" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .ASHR_I8
-    "i8"  "ashr" pos labelContext createLabel
+    "..builtIn.ashr.i8" pos labelContext createLabel
     i8i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .ASHR_I16
-    "i16" "ashr" pos labelContext createLabel
+    "..builtIn.ashr.i16" pos labelContext createLabel
     i16i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .ASHR_I32
-    "i32" "ashr" pos labelContext createLabel
+    "..builtIn.ashr.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .ASHR_I64
-    "i64" "ashr" pos labelContext createLabel
+    "..builtIn.ashr.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .ASHR_I64I32
-    "i64i32" "ashr" pos labelContext createLabel
+    "..builtIn.ashr.i64i32" pos labelContext createLabel
     i64i32_i64
-    bundle
   pos context addBuiltIn
-  "<<" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .SHL_I8
-    "i8"  "shl" pos labelContext createLabel
+    "..builtIn.shl.i8" pos labelContext createLabel
     i8i8_i8
-    bundle
   pos context addBuiltIn
   BuiltIn .SHL_I16
-    "i16" "shl" pos labelContext createLabel
+    "..builtIn.shl.i16" pos labelContext createLabel
     i16i16_i16
-    bundle
   pos context addBuiltIn
   BuiltIn .SHL_I32
-    "i32" "shl" pos labelContext createLabel
+    "..builtIn.shl.i32" pos labelContext createLabel
     i32i32_i32
-    bundle
   pos context addBuiltIn
   BuiltIn .SHL_I64
-    "i64" "shl" pos labelContext createLabel
+    "..builtIn.shl.i64" pos labelContext createLabel
     i64i64_i64
-    bundle
   pos context addBuiltIn
   BuiltIn .SHL_I64I32
-    "i64i32" "shl" pos labelContext createLabel
+    "..builtIn.shl.i64i32" pos labelContext createLabel
     i64i32_i64
-    bundle
   pos context addBuiltIn
-  "==" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
+  BuiltIn .EQ_BOOL
+    "..builtIn.eq.bool" pos labelContext createLabel
+    boolbool_bool
+  pos context addBuiltIn
   BuiltIn .EQ_I8
-    "i8"  "eq" pos labelContext createLabel
+    "..builtIn.eq.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .EQ_I16
-    "i16" "eq" pos labelContext createLabel
+    "..builtIn.eq.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .EQ_I32
-    "i32" "eq" pos labelContext createLabel
+    "..builtIn.eq.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .EQ_I64
-    "i64" "eq" pos labelContext createLabel
+    "..builtIn.eq.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .EQ_F32
-    "f32" "eq" pos labelContext createLabel
+    "..builtIn.eq.f32" pos labelContext createLabel
     f32f32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .EQ_F64
-    "f64" "eq" pos labelContext createLabel
+    "..builtIn.eq.f64" pos labelContext createLabel
     f64f64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .EQ_C8
-    "char8"  "eq" pos labelContext createLabel
+    "..builtIn.eq.char8" pos labelContext createLabel
     c8c8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .EQ_C16
-    "char16" "eq" pos labelContext createLabel
+    "..builtIn.eq.char16" pos labelContext createLabel
     c16c16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .EQ_C32
-    "char32" "eq" pos labelContext createLabel
+    "..builtIn.eq.char32" pos labelContext createLabel
     c32c32_bool
-    bundle
   pos context addBuiltIn
-  "!=" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
+  BuiltIn .NE_BOOL
+    "..builtIn.ne.bool" pos labelContext createLabel
+    boolbool_bool
+  pos context addBuiltIn
   BuiltIn .NE_I8
-    "i8"  "ne" pos labelContext createLabel
+    "..builtIn.ne.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .NE_I16
-    "i16" "ne" pos labelContext createLabel
+    "..builtIn.ne.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .NE_I32
-    "i32" "ne" pos labelContext createLabel
+    "..builtIn.ne.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .NE_I64
-    "i64" "ne" pos labelContext createLabel
+    "..builtIn.ne.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .NE_F32
-    "f32" "ne" pos labelContext createLabel
+    "..builtIn.ne.f32" pos labelContext createLabel
     f32f32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .NE_F64
-    "f64" "ne" pos labelContext createLabel
+    "..builtIn.ne.f64" pos labelContext createLabel
     f64f64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .NE_C8
-    "char8"  "ne" pos labelContext createLabel
+    "..builtIn.ne.char8" pos labelContext createLabel
     c8c8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .NE_C16
-    "char16" "ne" pos labelContext createLabel
+    "..builtIn.ne.char16" pos labelContext createLabel
     c16c16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .NE_C32
-    "char32" "ne" pos labelContext createLabel
+    "..builtIn.ne.char32" pos labelContext createLabel
     c32c32_bool
-    bundle
   pos context addBuiltIn
-  "<" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .LT_I8
-    "i8"  "lt" pos labelContext createLabel
+    "..builtIn.lt.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LT_I16
-    "i16" "lt" pos labelContext createLabel
+    "..builtIn.lt.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LT_I32
-    "i32" "lt" pos labelContext createLabel
+    "..builtIn.lt.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LT_I64
-    "i64" "lt" pos labelContext createLabel
+    "..builtIn.lt.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LT_F32
-    "f32" "lt" pos labelContext createLabel
+    "..builtIn.lt.f32" pos labelContext createLabel
     f32f32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LT_F64
-    "f64" "lt" pos labelContext createLabel
+    "..builtIn.lt.f64" pos labelContext createLabel
     f64f64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LT_C8
-    "char8"  "lt" pos labelContext createLabel
+    "..builtIn.lt.char8" pos labelContext createLabel
     c8c8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LT_C16
-    "char16" "lt" pos labelContext createLabel
+    "..builtIn.lt.char16" pos labelContext createLabel
     c16c16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LT_C32
-    "char32" "lt" pos labelContext createLabel
+    "..builtIn.lt.char32" pos labelContext createLabel
     c32c32_bool
-    bundle
   pos context addBuiltIn
-  "<=" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .LE_I8
-    "i8"  "le" pos labelContext createLabel
+    "..builtIn.le.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LE_I16
-    "i16" "le" pos labelContext createLabel
+    "..builtIn.le.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LE_I32
-    "i32" "le" pos labelContext createLabel
+    "..builtIn.le.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LE_I64
-    "i64" "le" pos labelContext createLabel
+    "..builtIn.le.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LE_F32
-    "f32" "le" pos labelContext createLabel
+    "..builtIn.le.f32" pos labelContext createLabel
     f32f32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LE_F64
-    "f64" "le" pos labelContext createLabel
+    "..builtIn.le.f64" pos labelContext createLabel
     f64f64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LE_C8
-    "char8"  "le" pos labelContext createLabel
+    "..builtIn.le.char8" pos labelContext createLabel
     c8c8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LE_C16
-    "char16" "le" pos labelContext createLabel
+    "..builtIn.le.char16" pos labelContext createLabel
     c16c16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .LE_C32
-    "char32" "le" pos labelContext createLabel
+    "..builtIn.le.char32" pos labelContext createLabel
     c32c32_bool
-    bundle
   pos context addBuiltIn
-  ">=" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .GE_I8
-    "i8"  "ge" pos labelContext createLabel
+    "..builtIn.ge.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GE_I16
-    "i16" "ge" pos labelContext createLabel
+    "..builtIn.ge.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GE_I32
-    "i32" "ge" pos labelContext createLabel
+    "..builtIn.ge.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GE_I64
-    "i64" "ge" pos labelContext createLabel
+    "..builtIn.ge.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GE_F32
-    "f32" "ge" pos labelContext createLabel
+    "..builtIn.ge.f32" pos labelContext createLabel
     f32f32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GE_F64
-    "f64" "ge" pos labelContext createLabel
+    "..builtIn.ge.f64" pos labelContext createLabel
     f64f64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GE_C8
-    "char8"  "ge" pos labelContext createLabel
+    "..builtIn.ge.char8" pos labelContext createLabel
     c8c8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GE_C16
-    "char16" "ge" pos labelContext createLabel
+    "..builtIn.ge.char16" pos labelContext createLabel
     c16c16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GE_C32
-    "char32" "ge" pos labelContext createLabel
+    "..builtIn.ge.char32" pos labelContext createLabel
     c32c32_bool
-    bundle
   pos context addBuiltIn
-  ">" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .GT_I8
-    "i8"  "gt" pos labelContext createLabel
+    "..builtIn.gt.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GT_I16
-    "i16" "gt" pos labelContext createLabel
+    "..builtIn.gt.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GT_I32
-    "i32" "gt" pos labelContext createLabel
+    "..builtIn.gt.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GT_I64
-    "i64" "gt" pos labelContext createLabel
+    "..builtIn.gt.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GT_F32
-    "f32" "gt" pos labelContext createLabel
+    "..builtIn.gt.f32" pos labelContext createLabel
     f32f32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GT_F64
-    "f64" "gt" pos labelContext createLabel
+    "..builtIn.gt.f64" pos labelContext createLabel
     f64f64_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GT_C8
-    "char8"  "gt" pos labelContext createLabel
+    "..builtIn.gt.char8" pos labelContext createLabel
     c8c8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GT_C16
-    "char16" "gt" pos labelContext createLabel
+    "..builtIn.gt.char16" pos labelContext createLabel
     c16c16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .GT_C32
-    "char32" "gt" pos labelContext createLabel
+    "..builtIn.gt.char32" pos labelContext createLabel
     c32c32_bool
-    bundle
   pos context addBuiltIn
-  "..u<" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .ULT_I8
-    "i8"  "ult" pos labelContext createLabel
+    "..builtIn.ult.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .ULT_I16
-    "i16" "ult" pos labelContext createLabel
+    "..builtIn.ult.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .ULT_I32
-    "i32" "ult" pos labelContext createLabel
+    "..builtIn.ult.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .ULT_I64
-    "i64" "ult" pos labelContext createLabel
+    "..builtIn.ult.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
-  "..u<=" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .ULE_I8
-    "i8"  "ule" pos labelContext createLabel
+    "..builtIn.ule.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .ULE_I16
-    "i16" "ule" pos labelContext createLabel
+    "..builtIn.ule.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .ULE_I32
-    "i32" "ule" pos labelContext createLabel
+    "..builtIn.ule.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .ULE_I64
-    "i64" "ule" pos labelContext createLabel
+    "..builtIn.ule.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
-  "..u>=" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .UGE_I8
-    "i8"  "uge" pos labelContext createLabel
+    "..builtIn.uge.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .UGE_I16
-    "i16" "uge" pos labelContext createLabel
+    "..builtIn.uge.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .UGE_I32
-    "i32" "uge" pos labelContext createLabel
+    "..builtIn.uge.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .UGE_I64
-    "i64" "uge" pos labelContext createLabel
+    "..builtIn.uge.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
-  "..u>" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
   BuiltIn .UGT_I8
-    "i8"  "ugt" pos labelContext createLabel
+    "..builtIn.ugt.i8" pos labelContext createLabel
     i8i8_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .UGT_I16
-    "i16" "ugt" pos labelContext createLabel
+    "..builtIn.ugt.i16" pos labelContext createLabel
     i16i16_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .UGT_I32
-    "i32" "ugt" pos labelContext createLabel
+    "..builtIn.ugt.i32" pos labelContext createLabel
     i32i32_bool
-    bundle
   pos context addBuiltIn
   BuiltIn .UGT_I64
-    "i64" "ugt" pos labelContext createLabel
+    "..builtIn.ugt.i64" pos labelContext createLabel
     i64i64_bool
-    bundle
   pos context addBuiltIn
   context sysProcTypes =:: v_i64 =:: v_c8pp
   BuiltIn .SYS_ARGC
-    "sys" "argc" pos labelContext createLabel
+    "..builtIn.sys.argc" pos labelContext createLabel
     v_i64
-    NO_BUNDLE
   pos context addBuiltIn
   BuiltIn .SYS_ARGV
-    "sys" "argv" pos labelContext createLabel
+    "..builtIn.sys.argv" pos labelContext createLabel
     v_c8pp
-    NO_BUNDLE
   pos context addBuiltIn
   BuiltIn .SYS_ARGC
-    "sys" "envp" pos labelContext createLabel
+    "..builtIn.sys.envp" pos labelContext createLabel
     v_c8pp
-    NO_BUNDLE
   pos context addBuiltIn
   pos context parseProcTypes =:: s_i8 =:: s_i16 =:: s_i32 =:: s_i64 =:: s_f32 =:: s_f64
   BuiltIn .PARSE_I8
-    "i8.static" "parse" pos labelContext createLabel
+    "..builtIn.parse.i8" pos labelContext createLabel
     s_i8
-    NO_BUNDLE
   pos context addStaticBuiltIn
   BuiltIn .PARSE_I16
-    "i16.static" "parse" pos labelContext createLabel
+    "..builtIn.parse.i16" pos labelContext createLabel
     s_i16
-    NO_BUNDLE
   pos context addStaticBuiltIn
   BuiltIn .PARSE_I32
-    "i32.static" "parse" pos labelContext createLabel
+    "..builtIn.parse.i32" pos labelContext createLabel
     s_i32
-    NO_BUNDLE
   pos context addStaticBuiltIn
   BuiltIn .PARSE_I64
-    "i64.static" "parse" pos labelContext createLabel
+    "..builtIn.parse.i64" pos labelContext createLabel
     s_i64
-    NO_BUNDLE
   pos context addStaticBuiltIn
   BuiltIn .PARSE_F32
-    "f32.static" "parse" pos labelContext createLabel
+    "..builtIn.parse.f32" pos labelContext createLabel
     s_f32
-    NO_BUNDLE
   pos context addStaticBuiltIn
   BuiltIn .PARSE_F64
-    "f64.static" "parse" pos labelContext createLabel
+    "..builtIn.parse.f64" pos labelContext createLabel
     s_f64
-    NO_BUNDLE
   pos context addStaticBuiltIn
+  ## declare bundles for for-loop iterators
   "..itr.prepare" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
+  if true return end
   "..itr.check" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
+  if true return end
   "..itr.get" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
+  if true return end
   "..itr.step" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
+  if true return end
   "..itr.end" string.wrap pos context newBuiltInBundle
-    if ..drop true return end
-  bundle =
+  if true return end
   labelContext id.resetNamespace
   false return
 end
+
+## XXX? directly link names to labels
+import stringLiteral
+{
+  "..builtIn.neg.i8":s "..builtIn.neg.i16":s "..builtIn.neg.i32":s "..builtIn.neg.i64":s
+    "..builtIn.neg.f32":s "..builtIn.neg.f64":s
+  "..builtIn.add.i8":s "..builtIn.add.i16":s "..builtIn.add.i32":s "..builtIn.add.i64":s
+    "..builtIn.add.f32":s "..builtIn.add.f64":s
+  "..builtIn.sub.i8":s "..builtIn.sub.i16":s "..builtIn.sub.i32":s "..builtIn.sub.i64":s
+    "..builtIn.sub.f32":s "..builtIn.sub.f64":s
+    "..builtIn.diff.char8":s "..builtIn.diff.char16":s "..builtIn.diff.char32":s
+  "..builtIn.mul.i32":s "..builtIn.mul.i64":s "..builtIn.mul.f32":s "..builtIn.mul.f64":s "..builtIn.div.i32":s "..builtIn.div.i64i32":s "..builtIn.div.i64":s
+    "..builtIn.div.f32":s "..builtIn.div.f64":s
+  "..builtIn.rem.i32":s "..builtIn.rem.i64i32":s "..builtIn.rem.i64":s
+  "..builtIn.udiv.i32":s "..builtIn.udiv.i64i32":s "..builtIn.udiv.i64":s
+  "..builtIn.umod.i32":s "..builtIn.umod.i64i32":s "..builtIn.umod.i64":s
+  "..builtIn.not.bool":s
+  "..builtIn.flip.i8":s "..builtIn.flip.i16":s "..builtIn.flip.i32":s "..builtIn.flip.i64":s
+  "..builtIn.and.bool":s "..builtIn.or.bool":s "..builtIn.xor.bool":s
+  "..builtIn.and.i8":s "..builtIn.and.i16":s "..builtIn.and.i32":s "..builtIn.and.i64":s
+  "..builtIn.or.i8":s "..builtIn.or.i16":s "..builtIn.or.i32":s "..builtIn.or.i64":s
+  "..builtIn.xor.i8":s "..builtIn.xor.i16":s "..builtIn.xor.i32":s "..builtIn.xor.i64":s
+  "..builtIn.lshr.i8":s "..builtIn.lshr.i16":s "..builtIn.lshr.i32":s
+    "..builtIn.lshr.i64i32":s "..builtIn.lshr.i64":s
+  "..builtIn.ashr.i8":s "..builtIn.ashr.i16":s "..builtIn.ashr.i32":s
+    "..builtIn.ashr.i64i32":s "..builtIn.ashr.i64":s
+  "..builtIn.shl.i8":s "..builtIn.shl.i16":s "..builtIn.shl.i32":s
+    "..builtIn.shl.i64i32":s "..builtIn.shl.i64":s
+  "..builtIn.eq.bool":s "..builtIn.eq.i8":s "..builtIn.eq.i16":s "..builtIn.eq.i32":s
+    "..builtIn.eq.i64":s "..builtIn.eq.f32":s "..builtIn.eq.f64":s
+    "..builtIn.eq.char8":s "..builtIn.eq.char16":s "..builtIn.eq.char32":s
+  "..builtIn.ne.bool":s "..builtIn.ne.i8":s "..builtIn.ne.i16":s "..builtIn.ne.i32":s
+    "..builtIn.ne.i64":s "..builtIn.ne.f32":s "..builtIn.ne.f64":s
+    "..builtIn.ne.char8":s "..builtIn.ne.char16":s "..builtIn.ne.char32":s
+  "..builtIn.lt.i8":s "..builtIn.lt.i16":s "..builtIn.lt.i32":s "..builtIn.lt.i64":s
+    "..builtIn.lt.f32":s "..builtIn.lt.f64":s
+    "..builtIn.lt.char8":s "..builtIn.lt.char16":s "..builtIn.lt.char32":s
+  "..builtIn.le.i8":s "..builtIn.le.i16":s "..builtIn.le.i32":s "..builtIn.le.i64":s
+    "..builtIn.le.f32":s "..builtIn.le.f64":s
+    "..builtIn.le.char8":s "..builtIn.le.char16":s "..builtIn.le.char32":s
+  "..builtIn.ge.i8":s "..builtIn.ge.i16":s "..builtIn.ge.i32":s "..builtIn.ge.i64":s
+    "..builtIn.ge.f32":s "..builtIn.ge.f64":s
+    "..builtIn.ge.char8":s "..builtIn.ge.char16":s "..builtIn.ge.char32":s
+  "..builtIn.gt.i8":s "..builtIn.gt.i16":s "..builtIn.gt.i32":s "..builtIn.gt.i64":s
+    "..builtIn.gt.f32":s "..builtIn.gt.f64":s
+    "..builtIn.gt.char8":s "..builtIn.gt.char16":s "..builtIn.gt.char32":s
+  "..builtIn.ult.i8":s "..builtIn.ult.i16":s "..builtIn.ult.i32":s "..builtIn.ult.i64":s
+  "..builtIn.ule.i8":s "..builtIn.ule.i16":s "..builtIn.ule.i32":s "..builtIn.ule.i64":s
+  "..builtIn.uge.i8":s "..builtIn.uge.i16":s "..builtIn.uge.i32":s "..builtIn.uge.i64":s
+  "..builtIn.ugt.i8":s "..builtIn.ugt.i16":s "..builtIn.ugt.i32":s "..builtIn.ugt.i64":s
+  "..builtIn.sys.argc":s "..builtIn.sys.argv":s "..builtIn.sys.envp":s
+  "..builtIn.parse.i8":s "..builtIn.parse.i16":s "..builtIn.parse.i32":s "..builtIn.parse.i64":s
+    "..builtIn.parse.f32":s "..builtIn.parse.f64":s
+} =:: builtInNames
+BuiltIn ..length builtInNames ..length == assert "correct number of names"
+namespace: sb
+  proc( stringBuilder : sb BuiltIn : builtIn -> stringBuilder ) =>: export: appendBuiltIn
+    sb
+      builtInNames builtIn ..label [] sb.appendStr
+    return
+  end
+end
+

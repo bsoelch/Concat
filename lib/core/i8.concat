@@ -1,0 +1,74 @@
+import core/bool
+import core/parseNumber
+namespace: i8
+  -0x80:i8 i8 =: export: MIN
+   0x7f:i8 i8 =: export: MAX
+   0xff:i16 i16 =: export: UMAX
+   0xff:i16 i16 =: export: MASK
+
+  proc( i8 -> i8 ) : export: alias: neg ..builtIn.neg.i8
+  proc( i8 i8 -> i8 ) : export: alias: add ..builtIn.add.i8
+  proc( i8 i8 -> i8 ) : export: alias: sub ..builtIn.sub.i8
+  proc( i8 -> i8 ) : export: alias: flip ..builtIn.flip.i8
+  proc( i8 i8 -> i8 ) : export: alias: and ..builtIn.and.i8
+  proc( i8 i8 -> i8 ) : export: alias: or ..builtIn.or.i8
+  proc( i8 i8 -> i8 ) : export: alias: xor ..builtIn.xor.i8
+  proc( i8 i8 -> i8 ) : export: alias: shl ..builtIn.shl.i8
+  proc( i8 i8 -> i8 ) : export: alias: lshr ..builtIn.lshr.i8
+  proc( i8 i8 -> i8 ) : export: alias: ashr ..builtIn.ashr.i8
+  proc( i8 i8 -> bool ) : export: alias: eq ..builtIn.eq.i8
+  proc( i8 i8 -> bool ) : export: alias: ne ..builtIn.ne.i8
+  proc( i8 i8 -> bool ) : export: alias: lt ..builtIn.lt.i8
+  proc( i8 i8 -> bool ) : export: alias: le ..builtIn.le.i8
+  proc( i8 i8 -> bool ) : export: alias: ge ..builtIn.ge.i8
+  proc( i8 i8 -> bool ) : export: alias: gt ..builtIn.gt.i8
+  proc( i8 i8 -> bool ) : export: alias: ult ..builtIn.ult.i8
+  proc( i8 i8 -> bool ) : export: alias: ule ..builtIn.ule.i8
+  proc( i8 i8 -> bool ) : export: alias: uge ..builtIn.uge.i8
+  proc( i8 i8 -> bool ) : export: alias: ugt ..builtIn.ugt.i8
+
+  proc( i8 : a i8 : b -> i8 ) =>: export: min
+    a b < if a else b end
+  end
+  proc( i8 : a i8 : b -> i8 ) =>: export: umin
+    a b ..u< if a else b end
+  end
+  proc( i8 : a i8 : b -> i8 ) =>: export: max
+    a b > if a else b end
+  end
+  proc( i8 : a i8 : b -> i8 ) =>: export: umax
+    a b ..u> if a else b end
+  end
+  proc( i8 : a -> i8 ) =>: export: abs
+    a 0 < if a -_ else a end
+  end
+  proc( i8 : a i8 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 ..builtIn.sub.i32
+  end
+  proc( i8 -> bool ) =>: export: toBool
+    0 !=
+  end
+end
+
+overload: export: -_    i8.neg  end
+overload: export: +     i8.add  end
+overload: export: -     i8.sub  end
+overload: export: ?     i8.toBool end
+overload: export: ~     i8.flip end
+overload: export: &     i8.and  end
+overload: export: |     i8.or   end
+overload: export: ^     i8.xor  end
+overload: export: <<    i8.shl  end
+overload: export: >>    i8.ashr end
+overload: export: >>>   i8.lshr end
+overload: export: ==    i8.eq   end
+overload: export: !=    i8.ne   end
+overload: export: <     i8.lt   end
+overload: export: <=    i8.le   end
+overload: export: >=    i8.ge   end
+overload: export: >     i8.gt   end
+overload: export: ..u<  i8.ult  end
+overload: export: ..u<= i8.ule  end
+overload: export: ..u>= i8.uge  end
+overload: export: ..u>  i8.ugt  end
+overload: export: <=>   i8.cmp  end

@@ -1,0 +1,74 @@
+import core/bool
+import core/parseNumber
+namespace: i16
+  -0x8000:i16 i16 =: export: MIN
+   0x7fff:i16 i16 =: export: MAX
+   0xffff:i32 i32 =: export: UMAX
+   0xffff     i32 =: export: MASK
+
+  proc( i16 -> i16 ) : export: alias: neg ..builtIn.neg.i16
+  proc( i16 i16 -> i16 ) : export: alias: add ..builtIn.add.i16
+  proc( i16 i16 -> i16 ) : export: alias: sub ..builtIn.sub.i16
+  proc( i16 -> i16 ) : export: alias: flip ..builtIn.flip.i16
+  proc( i16 i16 -> i16 ) : export: alias: and ..builtIn.and.i16
+  proc( i16 i16 -> i16 ) : export: alias: or ..builtIn.or.i16
+  proc( i16 i16 -> i16 ) : export: alias: xor ..builtIn.xor.i16
+  proc( i16 i16 -> i16 ) : export: alias: shl ..builtIn.shl.i16
+  proc( i16 i16 -> i16 ) : export: alias: lshr ..builtIn.lshr.i16
+  proc( i16 i16 -> i16 ) : export: alias: ashr ..builtIn.ashr.i16
+  proc( i16 i16 -> bool ) : export: alias: eq ..builtIn.eq.i16
+  proc( i16 i16 -> bool ) : export: alias: ne ..builtIn.ne.i16
+  proc( i16 i16 -> bool ) : export: alias: lt ..builtIn.lt.i16
+  proc( i16 i16 -> bool ) : export: alias: le ..builtIn.le.i16
+  proc( i16 i16 -> bool ) : export: alias: ge ..builtIn.ge.i16
+  proc( i16 i16 -> bool ) : export: alias: gt ..builtIn.gt.i16
+  proc( i16 i16 -> bool ) : export: alias: ult ..builtIn.ult.i16
+  proc( i16 i16 -> bool ) : export: alias: ule ..builtIn.ule.i16
+  proc( i16 i16 -> bool ) : export: alias: uge ..builtIn.uge.i16
+  proc( i16 i16 -> bool ) : export: alias: ugt ..builtIn.ugt.i16
+
+  proc( i16 : a i16 : b -> i16 ) =>: export: min
+    a b < if a else b end
+  end
+  proc( i16 : a i16 : b -> i16 ) =>: export: umin
+    a b ..u< if a else b end
+  end
+  proc( i16 : a i16 : b -> i16 ) =>: export: max
+    a b > if a else b end
+  end
+  proc( i16 : a i16 : b -> i16 ) =>: export: umax
+    a b ..u> if a else b end
+  end
+  proc( i16 : a -> i16 ) =>: export: abs
+    a 0 < if a -_ else a end
+  end
+  proc( i16 : a i16 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 ..builtIn.sub.i32
+  end
+  proc( i16 -> bool ) =>: export: toBool
+    0 !=
+  end
+end
+
+overload: export: -_    i16.neg  end
+overload: export: +     i16.add  end
+overload: export: -     i16.sub  end
+overload: export: ?     i16.toBool end
+overload: export: ~     i16.flip end
+overload: export: &     i16.and  end
+overload: export: |     i16.or   end
+overload: export: ^     i16.xor  end
+overload: export: <<    i16.shl  end
+overload: export: >>    i16.ashr end
+overload: export: >>>   i16.lshr end
+overload: export: ==    i16.eq   end
+overload: export: !=    i16.ne   end
+overload: export: <     i16.lt   end
+overload: export: <=    i16.le   end
+overload: export: >=    i16.ge   end
+overload: export: >     i16.gt   end
+overload: export: ..u<  i16.ult  end
+overload: export: ..u<= i16.ule  end
+overload: export: ..u>= i16.uge  end
+overload: export: ..u>  i16.ugt  end
+overload: export: <=>   i16.cmp end

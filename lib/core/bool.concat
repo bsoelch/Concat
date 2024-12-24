@@ -1,0 +1,21 @@
+namespace: bool
+  proc( bool -> bool ) : export: alias: not ..builtIn.not.bool
+  proc( bool bool -> bool ) : export: alias: and ..builtIn.and.bool
+  proc( bool bool -> bool ) : export: alias: or ..builtIn.or.bool
+  proc( bool bool -> bool ) : export: alias: xor ..builtIn.xor.bool
+  proc( bool bool -> bool ) : export: alias: eq ..builtIn.eq.bool
+  proc( bool bool -> bool ) : export: alias: ne ..builtIn.ne.bool
+
+  proc( bool -> i32 ) =>: export: asInt
+    if 1 else 0 end
+  end
+end
+
+overload: export: !  bool.not   end
+overload: export: &  bool.and   end
+overload: export: |  bool.or    end
+overload: export: ^  bool.xor   end
+overload: export: == bool.eq    end
+overload: export: != bool.ne    end
+
+overload: export: ?1 bool.asInt end

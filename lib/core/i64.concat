@@ -1,0 +1,178 @@
+import core/bool
+import core/i32
+import core/parseNumber
+namespace: i64
+  -0x8000_0000_0000_0000:i64 =:: export: MIN
+   0x7fff_ffff_ffff_ffff:i64 =:: export: MAX
+   0xffff_ffff_ffff_ffff:i64 =:: export: UMAX
+
+  proc( i64 -> i64 ) : export: alias: neg ..builtIn.neg.i64
+  proc( i64 i64 -> i64 ) : export: alias: add ..builtIn.add.i64
+  proc( i64 i64 -> i64 ) : export: alias: sub ..builtIn.sub.i64
+  proc( i64 i64 -> i64 ) : export: alias: mul ..builtIn.mul.i64
+  proc( i64 i64 -> i64 ) : export: alias: div ..builtIn.div.i64
+  proc( i64 i32 -> i64 ) : export: alias: div32 ..builtIn.div.i64i32
+  proc( i64 i64 -> i64 ) : export: alias: rem ..builtIn.rem.i64
+  proc( i64 i32 -> i32 ) : export: alias: rem32 ..builtIn.rem.i64i32
+  proc( i64 i64 -> i64 ) : export: alias: udiv ..builtIn.udiv.i64
+  proc( i64 i32 -> i64 ) : export: alias: udiv32 ..builtIn.udiv.i64i32
+  proc( i64 i64 -> i64 ) : export: alias: umod ..builtIn.umod.i64
+  proc( i64 i32 -> i32 ) : export: alias: umod32 ..builtIn.umod.i64i32
+  proc( i64 -> i64 ) : export: alias: flip ..builtIn.flip.i64
+  proc( i64 i64 -> i64 ) : export: alias: and ..builtIn.and.i64
+  proc( i64 i64 -> i64 ) : export: alias: or ..builtIn.or.i64
+  proc( i64 i64 -> i64 ) : export: alias: xor ..builtIn.xor.i64
+  proc( i64 i64 -> i64 ) : export: alias: shl ..builtIn.shl.i64
+  proc( i64 i32 -> i64 ) : export: alias: shl32 ..builtIn.shl.i64i32
+  proc( i64 i64 -> i64 ) : export: alias: lshr ..builtIn.lshr.i64
+  proc( i64 i32 -> i64 ) : export: alias: lshr32 ..builtIn.lshr.i64i32
+  proc( i64 i64 -> i64 ) : export: alias: ashr ..builtIn.ashr.i64
+  proc( i64 i32 -> i64 ) : export: alias: ashr32 ..builtIn.ashr.i64i32
+  proc( i64 i64 -> bool ) : export: alias: eq ..builtIn.eq.i64
+  proc( i64 i64 -> bool ) : export: alias: ne ..builtIn.ne.i64
+  proc( i64 i64 -> bool ) : export: alias: lt ..builtIn.lt.i64
+  proc( i64 i64 -> bool ) : export: alias: le ..builtIn.le.i64
+  proc( i64 i64 -> bool ) : export: alias: ge ..builtIn.ge.i64
+  proc( i64 i64 -> bool ) : export: alias: gt ..builtIn.gt.i64
+  proc( i64 i64 -> bool ) : export: alias: ult ..builtIn.ult.i64
+  proc( i64 i64 -> bool ) : export: alias: ule ..builtIn.ule.i64
+  proc( i64 i64 -> bool ) : export: alias: uge ..builtIn.uge.i64
+  proc( i64 i64 -> bool ) : export: alias: ugt ..builtIn.ugt.i64
+
+  proc( i64 : a i64 : b -> i64 ) =>: export: min
+    a b < if a else b end
+  end
+  proc( i64 : a i64 : b -> i64 ) =>: export: umin
+    a b ..u< if a else b end
+  end
+  proc( i64 : a i64 : b -> i64 ) =>: export: max
+    a b > if a else b end
+  end
+  proc( i64 : a i64 : b -> i64 ) =>: export: umax
+    a b ..u> if a else b end
+  end
+  proc( i64 : a -> i64 ) =>: export: abs
+    a 0 < if a -_ else a end
+  end
+  proc( i64 -> bool ) =>: export: toBool
+    0 !=
+  end
+  proc( i64 : a i64 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 ..builtIn.sub.i32
+  end
+  proc( i64 : a i64 : b -> i64 ) =>: export: floorDiv
+    a b /
+      a b % ? and a 0 < b 0 < ^ if
+        1 -
+      end
+    return
+  end
+  proc( i64 : a i64 : b -> i64 ) =>: export: mod
+    b 0 > if
+      a b %
+        ..dup 0 < if b + end
+      return
+    else
+      a b %
+        ..dup 0 > if b + end ## b = -|b|
+      return
+    end
+  end
+
+  ## position of the highest nonzero-bit (zero-indexed), returns -1 if the input is zero
+  proc( i64 -> i32 ) =>: export: highestSetBit
+    0
+      $1 0xffff'ffff'0000'0000:i64 & ? if
+        32 +   ..swap
+        32 >>> ..swap
+      end
+      $1 0xffff'0000:i64 & ? if
+        16 +   ..swap
+        16 >>> ..swap
+      end
+      $1 0xff00:i64 & ? if
+        8 +   ..swap
+        8 >>> ..swap
+      end
+      $1 0xf0:i64 & ? if
+        4 +   ..swap
+        4 >>> ..swap
+      end
+      $1 0b1100:i64 & ? if
+        2 +   ..swap
+        2 >>> ..swap
+      end
+      $1 0b10:i64 & ? if
+        1 +   ..swap
+        1 >>> ..swap
+      end
+    ..swap 1:i64 - i32 cast + return
+  end
+  ## a + b + carry -> newCarry res
+  proc( bool : carry i64 : a i64 : b -> bool i64 ) =>: export: addc
+    a b +
+      ..dup b ..u< =:: mut: resCarry
+      carry if
+        1 +
+        resCarry ..over 0 == | resCarry =
+      end
+    resCarry ..swap return
+  end
+  ## a - (b + carry) -> newCarry res
+  proc( bool : carry i64 : a i64 : b -> bool i64 ) =>: export: subb
+    a b ..u< =:: mut: resCarry
+    a b -
+      carry if
+        1 -
+        resCarry ..over 0 == | resCarry =
+      end
+    resCarry ..swap return
+  end
+  proc( i64 : a i64 : b -> i64 i64 ) =>: export: umul2
+    a i32.MASK &  i64 =: aLow
+    a 32 >>> i64 =: aHi
+    b i32.MASK &  i64 =: bLow
+    b 32 >>> i64 =: bHi
+    aLow bLow * =:: x00
+    aLow bHi  * =:: x01
+    aHi  bLow * =:: x10
+    aHi  bHi  * =:: x11
+    x01 x10 + =:: mid
+    false
+      x00 mid 32 << addc =:: low
+      x11 mid 32 >>> addc =:: hi
+    ! assert "umul2 does not overflow"
+    hi low return
+  end
+end
+
+overload: export: -_     i64.neg  end
+overload: export: +      i64.add  end
+overload: export: -      i64.sub  end
+overload: export: *      i64.mul  end
+overload: export: /      i64.div  i64.div32 end
+overload: export: %      i64.rem  i64.rem32 end
+overload: export: ..udiv i64.udiv i64.udiv32 end
+overload: export: ..umod i64.umod i64.umod32 end
+overload: export: //     i64.floorDiv end
+overload: export: %%     i64.mod  end
+## XXX? floorDiv32/mod32
+overload: export: ?      i64.toBool end
+overload: export: ~      i64.flip end
+overload: export: &      i64.and  end
+overload: export: |      i64.or   end
+overload: export: ^      i64.xor  end
+overload: export: <<     i64.shl  i64.shl32  end
+overload: export: >>     i64.ashr i64.ashr32 end
+overload: export: >>>    i64.lshr i64.lshr32 end
+overload: export: ==     i64.eq   end
+overload: export: !=     i64.ne   end
+overload: export: <      i64.lt   end
+overload: export: <=     i64.le   end
+overload: export: >=     i64.ge   end
+overload: export: >      i64.gt   end
+overload: export: ..u<   i64.ult  end
+overload: export: ..u<=  i64.ule  end
+overload: export: ..u>=  i64.uge  end
+overload: export: ..u>   i64.ugt  end
+overload: export: <=>    i64.cmp  end

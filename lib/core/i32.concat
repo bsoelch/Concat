@@ -1,0 +1,132 @@
+import core/bool
+import core/parseNumber
+namespace: i32
+  -0x8000_0000 i32 =: export: MIN
+   0x7fff_ffff i32 =: export: MAX
+   0xffff_ffff:i64 i64 =: export: UMAX
+   0xffff_ffff     i64 =: export: MASK
+
+  proc( i32 -> i32 ) : export: alias: neg ..builtIn.neg.i32
+  proc( i32 i32 -> i32 ) : export: alias: add ..builtIn.add.i32
+  proc( i32 i32 -> i32 ) : export: alias: sub ..builtIn.sub.i32
+  proc( i32 i32 -> i32 ) : export: alias: mul ..builtIn.mul.i32
+  proc( i32 i32 -> i32 ) : export: alias: div ..builtIn.div.i32
+  proc( i32 i32 -> i32 ) : export: alias: rem ..builtIn.rem.i32
+  proc( i32 i32 -> i32 ) : export: alias: udiv ..builtIn.udiv.i32
+  proc( i32 i32 -> i32 ) : export: alias: umod ..builtIn.umod.i32
+  proc( i32 -> i32 ) : export: alias: flip ..builtIn.flip.i32
+  proc( i32 i32 -> i32 ) : export: alias: and ..builtIn.and.i32
+  proc( i32 i32 -> i32 ) : export: alias: or ..builtIn.or.i32
+  proc( i32 i32 -> i32 ) : export: alias: xor ..builtIn.xor.i32
+  proc( i32 i32 -> i32 ) : export: alias: shl ..builtIn.shl.i32
+  proc( i32 i32 -> i32 ) : export: alias: lshr ..builtIn.lshr.i32
+  proc( i32 i32 -> i32 ) : export: alias: ashr ..builtIn.ashr.i32
+  proc( i32 i32 -> bool ) : export: alias: eq ..builtIn.eq.i32
+  proc( i32 i32 -> bool ) : export: alias: ne ..builtIn.ne.i32
+  proc( i32 i32 -> bool ) : export: alias: lt ..builtIn.lt.i32
+  proc( i32 i32 -> bool ) : export: alias: le ..builtIn.le.i32
+  proc( i32 i32 -> bool ) : export: alias: ge ..builtIn.ge.i32
+  proc( i32 i32 -> bool ) : export: alias: gt ..builtIn.gt.i32
+  proc( i32 i32 -> bool ) : export: alias: ult ..builtIn.ult.i32
+  proc( i32 i32 -> bool ) : export: alias: ule ..builtIn.ule.i32
+  proc( i32 i32 -> bool ) : export: alias: uge ..builtIn.uge.i32
+  proc( i32 i32 -> bool ) : export: alias: ugt ..builtIn.ugt.i32
+
+  proc( i32 : a i32 : b -> i32 ) =>: export: min
+    a b < if a else b end
+  end
+  proc( i32 : a i32 : b -> i32 ) =>: export: umin
+    a b ..u< if a else b end
+  end
+  proc( i32 : a i32 : b -> i32 ) =>: export: max
+    a b > if a else b end
+  end
+  proc( i32 : a i32 : b -> i32 ) =>: export: umax
+    a b ..u> if a else b end
+  end
+  proc( i32 : a -> i32 ) =>: export: abs
+    a 0 < if a -_ else a end
+  end
+  proc( i32 -> bool ) =>: export: toBool
+    0 !=
+  end
+  proc( i32 : a i32 : b -> i32 ) =>: export: cmp
+    b a lt ?1 a b lt ?1 -
+  end
+  proc( i32 : a i32 : b -> i32 ) =>: export: floorDiv
+    a b /
+      a b % ? and a 0 < b 0 < ^ if
+        1 -
+      end
+    return
+  end
+  proc( i32 : a i32 : b -> i32 ) =>: export: mod
+    b 0 > if
+      a b %
+        ..dup 0 < if b + end
+      return
+    else
+      a b %
+        ..dup 0 > if b + end ## b = -|b|
+      return
+    end
+  end
+
+  ## position of the highest nonzero-bit (zero-indexed), returns -1 if the input is zero
+  proc( i32 -> i32 ) =>: export: highestSetBit
+    =:: mut: x
+    0
+      x 0xffff'0000:i32 & ? if
+        16 +
+        x 16 >>> x =
+      end
+      x 0xff00:i32 & ? if
+        8 +
+        x 8 >>> x =
+      end
+      x 0xf0:i32 & ? if
+        4 +
+        x 4 >>> x =
+      end
+      x 0b1100:i32 & ? if
+        2 +
+        x 2 >>> x =
+      end
+      x 0b10:i32 & ? if
+        1 +
+        x 1 >>> x =
+      end
+    x 1 - i32 cast + return
+  end
+end
+
+overload: export: -_     i32.neg  end
+overload: export: +      i32.add  end
+overload: export: -      i32.sub  end
+overload: export: *      i32.mul  end
+overload: export: /      i32.div  end
+overload: export: %      i32.rem  end
+overload: export: ..udiv i32.udiv end
+overload: export: ..umod i32.umod end
+overload: export: //     i32.floorDiv end
+overload: export: %%     i32.mod  end
+overload: export: ?      i32.toBool end
+overload: export: ~      i32.flip end
+overload: export: &      i32.and  end
+overload: export: |      i32.or   end
+overload: export: ^      i32.xor  end
+overload: export: <<     i32.shl  end
+overload: export: >>     i32.ashr end
+overload: export: >>>    i32.lshr end
+overload: export: ==     i32.eq   end
+overload: export: !=     i32.ne   end
+overload: export: <      i32.lt   end
+overload: export: <=     i32.le   end
+overload: export: >=     i32.ge   end
+overload: export: >      i32.gt   end
+overload: export: ..u<   i32.ult  end
+overload: export: ..u<=  i32.ule  end
+overload: export: ..u>=  i32.uge  end
+overload: export: ..u>   i32.ugt  end
+overload: export: <=>    i32.cmp  end
+
