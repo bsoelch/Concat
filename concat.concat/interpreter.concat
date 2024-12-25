@@ -2846,7 +2846,7 @@ proc(
         ValueInfo new list.append
       context [] .stackInfo =
     else ## store argument as value
-      context [] .variables @
+      context [] .variables@
         label
         ## Constant
           value []
@@ -2937,17 +2937,25 @@ proc(
   else
     InterpreterType .INTERPRET
   end context [] .evalType =
+  context [] .localMemory arenaAlloc.offset =:: offset
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
   evaluateOperations if
     stackOffset context truncateStack
+    context [] .localMemory
+      offset arenaAlloc.reset
+    context [] .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
     context [] .openBlocks =
     prevType context [] .evalType =
     true return
   end
+  ## TODO ensure returned values do not point to deleted local memory
+  context [] .localMemory
+    offset arenaAlloc.reset
+  context [] .localMemory =
   ## FIXME static procedures don't cast their return value
   isTypeGenerator if
     context [] .stack .length 1 < if
