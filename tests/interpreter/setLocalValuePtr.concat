@@ -1,0 +1,10 @@
+proc( i64 ptr.mut : p -> ) =>: setX
+  5 p [] =
+end
+
+proc( -> ) =>: main
+  i64 : x
+  x@ setX
+  x 5 == assert "x is five"
+end
+main ## run main at compile time
