@@ -29,8 +29,8 @@ end
   struct(
     T arenaAlloc.ArenaSlice list : mut: slices
     ( T ptr -> ) ptr optional : freeElt
-    i64 : mut: eltCount
-    i32 : sliceSizeShift
+    i32 : mut: fullSlices ## number of completely filled slices at bottom of allocated area
+    i32 : sliceSizeShift ## XXX? use i8 instead?
     bool : strictOrder
   )
 end
@@ -131,24 +131,25 @@ namespace: arenaAlloc
     count 0 >= assert "count is non-negative"
     count 0 == if arena0 0 T _ ptr.mut cast! return end
     1 arena0 .sliceSizeShift << =:: sliceSize
-    arena0 .strictOrder ! and arena0 currentCap arena0 .eltCount == if
-      ## no space at end of last slice -> search for gaps in previous slices
-      arena0 .slices .length for =:: i
-        arena0 .slices i list.at .data =:: slice
+    arena0 =:: mut: arena
+    arena .strictOrder ! if
+      ## search for gaps in previous slices
+      arena .fullSlices i64 cast.u while $ arena .slices .length < do =:: i
+        arena .slices i list.at .data =:: slice
+        slice [] .eltCount sliceSize == if
+          ## slice full -> skip on next allocation
+          arena .fullSlices 1 + arena .fullSlices =
+        end
         slice [] .eltCount count + sliceSize ..u<= if
-          arena0 slice [] .data slice [] .eltCount i64 cast.u +
+          arena slice [] .data slice [] .eltCount i64 cast.u +
             slice [] .eltCount count + slice [] .eltCount =
           return
         end
-      end
+      finally i 1 + end ..drop
     end
-    arena0
-      arena0 .eltCount count i64 cast.u + ensureCap
-    =:: mut: arena
     arena .slices .length 0 > and
         arena .slices $ .length 1 - list.at .data =:: lastSlice
         lastSlice [] .eltCount count + sliceSize ..u<= if
-      arena .eltCount count i64 cast.u + arena .eltCount =
       ## return
         arena
         lastSlice [] .data lastSlice [] .eltCount i64 cast.u +
@@ -255,19 +256,28 @@ namespace: arenaAlloc
   ## TODO versions of push returning index instead of pointer
 
   proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: offset
-    arena .eltCount return
+    arena .slices .length
+      $ =:: sliceCount
+      sliceCount 0 > if
+        1 - arena .sliceSizeShift <<
+        arena .slices
+          sliceCount 1 -
+        list.at .data [] .eltCount i64 cast.u +
+      end
+    return
   end
   proc(
     type : auto: T
     T ArenaAllocator : arena0
     i64 : newLength
   -> T ArenaAllocator ) =>: export: reset
-    newLength arena0 .eltCount <= assert "reset point inside allocated area"
-    arena0 =:: mut: arena ## XXX? prevent copy of old slice data
-    1 arena .sliceSizeShift << 1 - =:: sliceSize
+    newLength 1:i64 arena0 .sliceSizeShift << 1 - & i32 cast =:: newEltCount
     newLength
-      sliceSize i64 cast.u 1 - +
-    arena .sliceSizeShift >>> =:: newSliceCount
+      arena0 .sliceSizeShift >>>
+      newEltCount 0 ..u> if 1 + end
+    =:: newSliceCount
+    newSliceCount arena0 .slices .length <= assert "reset point inside allocated slice"
+    arena0 =:: mut: arena ## XXX? prevent copy of old slice data
     arena .slices =:: mut: slices
     arena .freeElt =:: freeElt
     0 =:: mut: continueChunkCount ## continue chunks after last chunk
@@ -291,19 +301,24 @@ namespace: arenaAlloc
       newSliceCount continueChunkCount i64 cast.u + list.setLength
     slices =
     newSliceCount 0 > if
+      arena .fullSlices
+        ## adjust number of full slices
+        newSliceCount i32 cast 1 - i32.min
+      arena .fullSlices =
       ## shrink last slice if neccessary
-      newSliceCount 1 - arena .sliceSizeShift << =:: sliceStart
-      sliceStart newLength <= assert "slice start < new length"
-      newLength sliceStart - i32 cast =:: newSliceElts
       slices newSliceCount 1 - list.at .data =:: lastSlice
+      lastSlice [] .eltCount newEltCount >= assert "reset point inside allocated memory"
       freeElt optional.hasData if
-        lastSlice [] .eltCount 1 - while $ newSliceElts >= do =:: j
+        lastSlice [] .eltCount 1 - while $ newEltCount >= do =:: j
           lastSlice [] .data j i64 cast.u + T ptr cast! freeElt .data ()
         finally j 1 - end ..drop
       end
-      lastSlice [] .eltCount newSliceElts > if
-        newSliceElts lastSlice [] .eltCount =
+      lastSlice [] .eltCount newEltCount > if
+        newEltCount lastSlice [] .eltCount =
       end
+    else
+      0 arena .fullSlices =
+      newEltCount 0 == assert "no elements for empty slice"
     end
     slices arena .slices =
     arena return
