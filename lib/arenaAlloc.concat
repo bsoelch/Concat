@@ -236,6 +236,15 @@ namespace: arenaAlloc
   proc(
     type : auto: T
     T ArenaAllocator : arena
+    T arrayView : values
+  -> T ArenaAllocator T arrayView.mut ) =>: export: copyArray
+    arena values .length i32 cast.u alloc_internal
+      values .data values .length mem.copy values .length array.createMutable
+    return
+  end
+  proc(
+    type : auto: T
+    T ArenaAllocator : arena
     T arrayView.mut : values
   -> T ArenaAllocator T arrayView.mut ) =>: export: pushMutableArray
     arena values .length i32 cast.u alloc_internal

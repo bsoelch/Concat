@@ -125,6 +125,9 @@ namespace: array
   overload: export: set
     set_32 set_64
   end
+  proc( type : auto: T T : elt T arrayView.mut : elts -> ) =>: export: fill
+    elts .data elts .length elt mem.fill
+  end
 
   ## TODO? support mutable arrayView
   proc(
