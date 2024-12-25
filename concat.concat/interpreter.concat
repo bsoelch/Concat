@@ -61,7 +61,8 @@ namespace: interpreter
       64 ConstValue list.create
       64 ValueInfo  list.create
       64 BlockInfo  list.create
-      512 ConstValue arenaAlloc.create
+      ## no reordering of allocated blocks to prevent allocation below start of current stack frame
+      512 true ConstValue arenaAlloc.create
       64 Type       list.create
       64 ConstValue list.create
       64 LabelId    list.create
@@ -2929,7 +2930,7 @@ proc(
   context [] .currentFile =:: oldFile
   procData [] .fileId context [] .currentFile =
   context [] .evalType =:: prevType
-  ## change intrepreter type when evaluating call
+  ## change interpreter type when evaluating call
   procName labelContext id.labelFlags id.FLAG_STATIC & ? if
     implId -1 == assert "static procedure has implId -1"
     ## XXX? seperate interpreter type code in static procedure?
