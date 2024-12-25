@@ -400,19 +400,19 @@ namespace: sb
           sb.appendConstant
           break
         LocalValue case
-            "local value ("  sb.appendS
+            "local value ( "  sb.appendS
             val .LocalValue [] typeContext sb.appendConstant
-            ")" sb.appendS
+            " )" sb.appendS
           break
         LocalArray case
-            "local array ("  sb.appendS
+            "local array ( "  sb.appendS
             val .LocalArray .length for =:: i
               val .LocalArray
                 ConstValue arrayView.mut cast i array.get
               typeContext sb.appendConstant
               ' ' sb.appendC
             end
-            " )" sb.appendS
+            ")" sb.appendS
           break
       end
     return

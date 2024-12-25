@@ -1537,13 +1537,38 @@ proc(
           LOCAL_VAR TMP_VAR ITR_VAR case
             context [] .variables@
               labelId
-              ## XXX? mark memory as uninitialized
               ## Constant
-                ## TODO use memory range for composite constants
-                context [] .localMemory
-                  arenaAlloc.alloc =:: localAddress
-                context [] .localMemory =
-                localAddress LocalAddress cast ConstValue .LocalValue
+                op [] .dataType typeContext types.isTuple if
+                  op [] .dataType typeContext types.compositeEltCount =:: eltCount
+                  context [] .localMemory
+                    eltCount i32 cast arenaAlloc.allocArray =:: localSlice
+                  context [] .localMemory =
+                  ConstValue .None localSlice array.fill
+                  localSlice LocalSlice cast ConstValue .LocalArray
+                else op [] .dataType typeContext types.isArray _if
+                  ## XXX merge with previous case
+                  op [] .dataType typeContext types.getArraySize =:: arraySizes
+                  arraySizes .length 0 > if
+                    arraySizes $ .length 1 - array.get =:: arraySize
+                    arraySize .int ?? if
+                      arraySize .int
+                    else
+                      "generic arrays are not supported" sb.wrap
+                      op [] .pos errors appendError
+                      0
+                    end
+                  else 1 end =:: eltCount
+                  context [] .localMemory
+                    eltCount i32 cast arenaAlloc.allocArray =:: localSlice
+                  context [] .localMemory =
+                  ConstValue .None localSlice array.fill
+                  localSlice LocalSlice cast ConstValue .LocalArray
+                else
+                  context [] .localMemory
+                    ConstValue .None arenaAlloc.pushValue =:: localAddress
+                  context [] .localMemory =
+                  localAddress LocalAddress cast ConstValue .LocalValue
+                end
                 ## ValueInfo
                   op [] .dataType
                   op [] .pos
@@ -1787,11 +1812,17 @@ proc(
             label
             ## Constant
               label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
-                ## TODO spread out composite constants
-                context [] .localMemory
-                  value arenaAlloc.pushValue =:: localAddress
-                context [] .localMemory =
-                localAddress LocalAddress cast ConstValue .LocalValue
+                value .Array ?? if
+                  context [] .localMemory
+                    value .Array arenaAlloc.copyArray =:: localSlice
+                  context [] .localMemory =
+                  localSlice LocalSlice cast ConstValue .LocalArray
+                else
+                  context [] .localMemory
+                    value arenaAlloc.pushValue =:: localAddress
+                  context [] .localMemory =
+                  localAddress LocalAddress cast ConstValue .LocalValue
+                end
               else
                 value
               end
