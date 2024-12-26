@@ -1103,6 +1103,19 @@ namespace: interpreter
     valInfo .valueType elementIndex typeContext types.compositeGetElement =:: eltType
     value .Array ?? if
       value .Array elementIndex array.get
+    else value .LocalArray ?? _if
+      value .LocalArray ConstValue arrayView.mut cast
+        elementIndex array.at .data
+      $ [] .LocalValue ?? ! and $ [] .LocalArray ?? ! if
+        $ [] .Array ?? if [] .Array =:: arrayValue
+          context [] .localMemory
+            arrayValue arenaAlloc.copyArray =:: localSlice
+          context [] .localMemory =
+          localSlice LocalSlice cast ConstValue .LocalArray
+        else
+          LocalAddress cast ConstValue .LocalValue
+        end
+      else [] end
     else value .Union ?? _if
       value elementIndex constUnionElement if
         "union index (" sb.wrap
@@ -1129,8 +1142,27 @@ namespace: interpreter
     context pushValue
     false return
   end
-end
-namespace: interpreter
+  proc(
+    LocalSlice : data
+    ConstValue ArenaAllocator ptr.mut : allocator
+    ConstantContext ptr.mut : constContext
+  -> ConstValue ) =>: copyLocalArray
+    data ConstValue arrayView.mut cast =:: dataArray
+    allocator []
+      dataArray arenaAlloc.copyMutableArray =:: tmpArray
+    allocator [] =
+    ## 1. copy elements
+    dataArray .length for =:: i
+      dataArray i array.get =:: elt
+      elt .LocalValue ?? if
+        elt .LocalValue []
+      else elt .LocalArray ?? _if
+        elt .LocalArray allocator constContext copyLocalArray
+      else elt end tmpArray i array.set
+    end
+    ## XXX? reduce number of identical constants
+    tmpArray array.freeze constContext newArrayConst
+  end
   union(
     _ : Ok
     _ : Error
@@ -2157,9 +2189,15 @@ proc(
             .LocalValue []
           value? .data [] =
         else value? .data [] .LocalArray ?? _if
-          "local array constants are not supported: " sb.wrap
-            value? .data [] typeContext sb.appendConstant
-          op [] .pos errors appendError
+          value? .data [] .LocalArray =:: localArray
+          context [] .localMemory arenaAlloc.offset =:: localOffset
+          localArray
+            context [] .localMemory@ constContext copyLocalArray
+          value? .data [] =
+          ## clear memory used by copy
+          context [] .localMemory
+            localOffset arenaAlloc.reset
+          context [] .localMemory =
         else
           "unexpected constant for copy, expected local memory got: " sb.wrap
             value? .data [] typeContext sb.appendConstant
