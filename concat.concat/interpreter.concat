@@ -1107,14 +1107,7 @@ namespace: interpreter
       value .LocalArray ConstValue arrayView.mut cast
         elementIndex array.at .data
       $ [] .LocalValue ?? ! and $ [] .LocalArray ?? ! if
-        $ [] .Array ?? if [] .Array =:: arrayValue
-          context [] .localMemory
-            arrayValue arenaAlloc.copyArray =:: localSlice
-          context [] .localMemory =
-          localSlice LocalSlice cast ConstValue .LocalArray
-        else
-          LocalAddress cast ConstValue .LocalValue
-        end
+        LocalAddress cast ConstValue .LocalValue
       else [] end
     else value .Union ?? _if
       value elementIndex constUnionElement if
@@ -1162,6 +1155,84 @@ namespace: interpreter
     end
     ## XXX? reduce number of identical constants
     tmpArray array.freeze constContext newArrayConst
+  end
+  proc( ConstValue : value InterpreterContext ptr.mut : context -> ConstValue ) =>: localCopy
+    value .Array ?? if
+      context [] .localMemory
+        value .Array arenaAlloc.copyArray =:: localSlice
+      context [] .localMemory =
+      ## copy sub-arrays
+      localSlice .length for =:: i
+        localSlice i array.at .data =:: elt
+        elt [] .Array ?? if
+          elt [] context localCopy elt [] =
+        end
+      end
+      localSlice LocalSlice cast ConstValue .LocalArray
+    ## TODO? replace union element by local copy
+    else
+      context [] .localMemory
+        value arenaAlloc.copyValue =:: localAddress
+      context [] .localMemory =
+      localAddress LocalAddress cast ConstValue .LocalValue
+    end
+  end
+  proc(
+    Type : dataType
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> ConstValue ) =>: allocLocalValue
+    context [] .program@ =:: program
+    program [] .errors@ =:: errors
+    program [] .idContext .typeContext@ =:: typeContext
+    ## XXX? better way to detect multi-value types
+    dataType typeContext types.isTuple if
+      dataType typeContext types.compositeEltCount =:: eltCount
+      context [] .localMemory
+        eltCount i32 cast arenaAlloc.allocArray =:: localSlice
+      context [] .localMemory =
+      eltCount for =:: i
+        dataType i typeContext types.compositeGetElement =:: eltType
+        eltType typeContext types.isTuple or eltType typeContext types.isArray if
+          eltType pos context allocLocalValue
+        else
+          ConstValue .None
+        end localSlice i array.set
+      end
+      localSlice LocalSlice cast ConstValue .LocalArray
+    else dataType typeContext types.isArray _if
+      ## XXX? merge with previous case
+      dataType typeContext types.getArraySize =:: arraySizes
+      arraySizes .length 0 > if
+        arraySizes $ .length 1 - array.get =:: arraySize
+        arraySize .int ?? if
+          arraySize .int
+        else
+          "generic arrays are not supported" sb.wrap
+          pos errors appendError
+          0
+        end
+      else 1 end =:: eltCount
+      context [] .localMemory
+        eltCount i32 cast arenaAlloc.allocArray =:: localSlice
+      context [] .localMemory =
+      dataType typeContext types.getElementType =:: eltType
+      eltType typeContext types.isTuple or eltType typeContext types.isArray if
+        eltCount for =:: i
+          ## array.set
+            eltType pos context allocLocalValue
+          localSlice i array.set
+        end
+      else
+        ConstValue .None localSlice array.fill
+      end
+      localSlice LocalSlice cast ConstValue .LocalArray
+    else
+      context [] .localMemory
+        ConstValue .None arenaAlloc.copyValue =:: localAddress
+      context [] .localMemory =
+      localAddress LocalAddress cast ConstValue .LocalValue
+    end
   end
   union(
     _ : Ok
@@ -1570,37 +1641,7 @@ proc(
             context [] .variables@
               labelId
               ## Constant
-                op [] .dataType typeContext types.isTuple if
-                  op [] .dataType typeContext types.compositeEltCount =:: eltCount
-                  context [] .localMemory
-                    eltCount i32 cast arenaAlloc.allocArray =:: localSlice
-                  context [] .localMemory =
-                  ConstValue .None localSlice array.fill
-                  localSlice LocalSlice cast ConstValue .LocalArray
-                else op [] .dataType typeContext types.isArray _if
-                  ## XXX merge with previous case
-                  op [] .dataType typeContext types.getArraySize =:: arraySizes
-                  arraySizes .length 0 > if
-                    arraySizes $ .length 1 - array.get =:: arraySize
-                    arraySize .int ?? if
-                      arraySize .int
-                    else
-                      "generic arrays are not supported" sb.wrap
-                      op [] .pos errors appendError
-                      0
-                    end
-                  else 1 end =:: eltCount
-                  context [] .localMemory
-                    eltCount i32 cast arenaAlloc.allocArray =:: localSlice
-                  context [] .localMemory =
-                  ConstValue .None localSlice array.fill
-                  localSlice LocalSlice cast ConstValue .LocalArray
-                else
-                  context [] .localMemory
-                    ConstValue .None arenaAlloc.copyValue =:: localAddress
-                  context [] .localMemory =
-                  localAddress LocalAddress cast ConstValue .LocalValue
-                end
+                op [] .dataType op [] .pos context allocLocalValue
                 ## ValueInfo
                   op [] .dataType
                   op [] .pos
@@ -1844,17 +1885,7 @@ proc(
             label
             ## Constant
               label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
-                value .Array ?? if
-                  context [] .localMemory
-                    value .Array arenaAlloc.copyArray =:: localSlice
-                  context [] .localMemory =
-                  localSlice LocalSlice cast ConstValue .LocalArray
-                else
-                  context [] .localMemory
-                    value arenaAlloc.copyValue =:: localAddress
-                  context [] .localMemory =
-                  localAddress LocalAddress cast ConstValue .LocalValue
-                end
+                value context localCopy
               else
                 value
               end
@@ -2615,10 +2646,29 @@ proc(
           value targetValue .LocalValue [] =
           EvalResult .Ok return
         LocalArray case
-          "local array is not supported: " sb.wrap
-            targetValue typeContext sb.appendConstant
-          op [] .pos errors appendError
-          EvalResult .Error return
+          value .Array ?? if
+            value .Array
+          else value .LocalArray ?? _if
+            value .LocalArray ConstValue arrayView.mut cast array.freeze
+          else
+            "unexpected source for assignment expected array got:" sb.wrap
+              value typeContext sb.appendConstant
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end =:: srcArray
+          targetValue .LocalArray =:: targetArray
+          srcArray .length targetArray .length != if
+            "invalid array length for assignment expected " sb.wrap
+              targetArray .length sb.appendI
+              " got:" sb.appendS
+              srcArray .length sb.appendI
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          targetArray .data srcArray .data != if
+            targetArray .data srcArray .data srcArray .length mem.copy ..drop
+          end
+          EvalResult .Ok return
         default
             "unexpected target for setValue, expected writable memory location got: " sb.wrap
               targetValue typeContext sb.appendConstant
