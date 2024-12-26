@@ -3765,12 +3765,12 @@ proc(
           end
           program [] .labelPositions
             breakPositions
-              arenaAlloc.pushList
+              arenaAlloc.copyList
             switchData [] .breakPositions =
           program [] .labelPositions =
           program [] .switchJumps
             switchBlock [] .caseJumpDistances
-              arenaAlloc.pushList
+              arenaAlloc.copyList
             switchData [] .caseJumpDistances =
           program [] .switchJumps =
           0 switchData [] .caseCount = ## reset case-count
@@ -3956,7 +3956,7 @@ proc(
             andOrOp .val .block .jumpDistance =
           end
           program [] .labelPositions
-            andOrBlock .andOrPositions arenaAlloc.pushList
+            andOrBlock .andOrPositions arenaAlloc.copyList
               program [] .andOrData
                 andOrBlock .blockId i64 cast
               list.at .data

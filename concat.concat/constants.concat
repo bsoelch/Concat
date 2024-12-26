@@ -64,7 +64,7 @@ proc(
  ConstantContext ptr.mut : context
 -> T arrayView ) =>: constPrimitiveArray
   context [] .primitiveArrayValues
-    elts mixedArena.pushArray =:: result
+    elts mixedArena.copyArray array.freeze =:: result
   context [] .primitiveArrayValues =
   result return
 end
@@ -73,7 +73,7 @@ proc(
   ConstantContext ptr.mut : context
 -> ConstValue arrayView ) =>: export: constArray
   context [] .arrayValues
-    elts arenaAlloc.pushArray =:: result
+    elts arenaAlloc.copyArray array.freeze =:: result
   context [] .arrayValues =
   result return
 end
@@ -112,7 +112,7 @@ proc(
   ConstantContext ptr.mut : context
 -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
-    value arenaAlloc.pushValue =:: valuePtr
+    value arenaAlloc.copyValue =:: valuePtr
   context [] .arrayValues =
   valuePtr index UnionConstant new ConstValue .Union return
 end

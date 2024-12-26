@@ -1565,7 +1565,7 @@ proc(
                   localSlice LocalSlice cast ConstValue .LocalArray
                 else
                   context [] .localMemory
-                    ConstValue .None arenaAlloc.pushValue =:: localAddress
+                    ConstValue .None arenaAlloc.copyValue =:: localAddress
                   context [] .localMemory =
                   localAddress LocalAddress cast ConstValue .LocalValue
                 end
@@ -1819,7 +1819,7 @@ proc(
                   localSlice LocalSlice cast ConstValue .LocalArray
                 else
                   context [] .localMemory
-                    value arenaAlloc.pushValue =:: localAddress
+                    value arenaAlloc.copyValue =:: localAddress
                   context [] .localMemory =
                   localAddress LocalAddress cast ConstValue .LocalValue
                 end

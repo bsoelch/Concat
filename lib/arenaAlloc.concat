@@ -199,7 +199,7 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena
     T : value
-  -> T ArenaAllocator T ptr.mut ) =>: export: pushValue
+  -> T ArenaAllocator T ptr.mut ) =>: export: copyValue
     value =:: valData ##XXX remove intermediate step once address of arguments are fully supported
     arena 1 alloc_internal
       valData@ 1 mem.copy T ptr.mut cast!
@@ -209,7 +209,7 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena
     T ptr : value
-  -> T ArenaAllocator T ptr.mut ) =>: export: pushPtr
+  -> T ArenaAllocator T ptr.mut ) =>: export: copyPtr
     arena 1 alloc_internal
       value 1 mem.copy T ptr.mut cast!
     return
@@ -219,18 +219,9 @@ namespace: arenaAlloc
     i32 : auto: k
     T ArenaAllocator : arena
     T k ptr : values
-  -> T ArenaAllocator T k ptr.mut ) =>: export: pushPtrs
+  -> T ArenaAllocator T k ptr.mut ) =>: export: copyPtrs
     arena k alloc_internal
       values k i64 cast.u mem.copy T k ptr.mut cast!
-    return
-  end
-  proc(
-    type : auto: T
-    T ArenaAllocator : arena
-    T arrayView : values
-  -> T ArenaAllocator T arrayView ) =>: export: pushArray
-    arena values .length i32 cast.u alloc_internal
-      values .data values .length mem.copy values .length array.create
     return
   end
   proc(
@@ -246,7 +237,7 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena
     T arrayView.mut : values
-  -> T ArenaAllocator T arrayView.mut ) =>: export: pushMutableArray
+  -> T ArenaAllocator T arrayView.mut ) =>: export: copyMutableArray
     arena values .length i32 cast.u alloc_internal
       values .data values .length mem.copy values .length array.createMutable
     return
@@ -255,7 +246,7 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena
     T list : values
-  -> T ArenaAllocator T arrayView.mut ) =>: export: pushList
+  -> T ArenaAllocator T arrayView.mut ) =>: export: copyList
     arena values .length i32 cast.u alloc_internal
       values .data values .length mem.copy values .length array.createMutable
     return
@@ -391,7 +382,7 @@ namespace: mixedArena
     type : auto: T
     MixedArenaAllocator : arena
     T : value
-  -> MixedArenaAllocator T ptr.mut ) =>: export: pushValue
+  -> MixedArenaAllocator T ptr.mut ) =>: export: copyValue
     value =:: valData ##XXX remove intermediate step once address of arguments are fully supported
     arena T alloc
       valData@ 1 mem.copy T ptr.mut cast!
@@ -401,7 +392,7 @@ namespace: mixedArena
     type : auto: T
     MixedArenaAllocator : arena
     T ptr : value
-  -> MixedArenaAllocator T ptr.mut ) =>: export: pushPtr
+  -> MixedArenaAllocator T ptr.mut ) =>: export: copyPtr
     arena T alloc
       value 1 mem.copy T ptr.mut cast!
     return
@@ -411,7 +402,7 @@ namespace: mixedArena
     i32 : auto: k
     MixedArenaAllocator : arena
     T k ptr : values
-  -> MixedArenaAllocator T k ptr.mut ) =>: export: pushPtrs
+  -> MixedArenaAllocator T k ptr.mut ) =>: export: copyPtrs
     arena k T allocArray .data
       values k i64 cast.u mem.copy T k ptr.mut cast!
     return
@@ -420,16 +411,16 @@ namespace: mixedArena
     type : auto: T
     MixedArenaAllocator : arena
     T arrayView : values
-  -> MixedArenaAllocator T arrayView ) =>: export: pushArray
+  -> MixedArenaAllocator T arrayView.mut ) =>: export: copyArray
     arena values .length i32 cast.u T allocArray .data
-      values .data values .length mem.copy values .length array.create
+      values .data values .length mem.copy values .length array.createMutable
     return
   end
   proc(
     type : auto: T
     MixedArenaAllocator : arena
     T arrayView.mut : values
-  -> MixedArenaAllocator T arrayView.mut ) =>: export: pushMutableArray
+  -> MixedArenaAllocator T arrayView.mut ) =>: export: copyMutableArray
     arena values .length i32 cast.u T allocArray .data
       values .data values .length mem.copy values .length array.createMutable
     return
@@ -438,7 +429,7 @@ namespace: mixedArena
     type : auto: T
     MixedArenaAllocator : arena
     T list : values
-  -> MixedArenaAllocator T arrayView.mut ) =>: export: pushList
+  -> MixedArenaAllocator T arrayView.mut ) =>: export: copyList
     arena values .length i32 cast.u T allocArray .data
       values .data values .length mem.copy values .length array.createMutable
     return

@@ -16,27 +16,27 @@ proc( -> ) =>: main
   1024 freeVal@ arenaAlloc.create =:: allocator
   newInt =:: anInt
   allocator
-    anInt@ arenaAlloc.pushPtr ..drop
-    newInt arenaAlloc.pushValue ..drop
-    newInt arenaAlloc.pushValue ..drop
-    newInt arenaAlloc.pushValue =:: a
+    anInt@ arenaAlloc.copyPtr ..drop
+    newInt arenaAlloc.copyValue ..drop
+    newInt arenaAlloc.copyValue ..drop
+    newInt arenaAlloc.copyValue =:: a
     a [] 3 == assert "3 stored in a"
-    newInt arenaAlloc.pushValue ..drop
-    newInt arenaAlloc.pushValue ..drop
+    newInt arenaAlloc.copyValue ..drop
+    newInt arenaAlloc.copyValue ..drop
     $ arenaAlloc.offset =:: offset
-    newInt arenaAlloc.pushValue =:: b
+    newInt arenaAlloc.copyValue =:: b
     b [] 6 == assert "6 stored in b"
-    newInt arenaAlloc.pushValue ..drop
-    newInt arenaAlloc.pushValue ..drop
+    newInt arenaAlloc.copyValue ..drop
+    newInt arenaAlloc.copyValue ..drop
     offset arenaAlloc.reset
     valCount 6 == assert "values at end of arena freed"
-    newInt arenaAlloc.pushValue ..drop
+    newInt arenaAlloc.copyValue ..drop
     b [] 9 == assert "9 stored in b"
     3000 i32 mem.alloc i32 3000 ptr.mut cast! =:: largeArray
     3000:i64 for =:: i
       newInt largeArray i [] =
     end
-    largeArray arenaAlloc.pushPtrs ..drop
+    largeArray arenaAlloc.copyPtrs ..drop
     largeArray mem.free
   arenaAlloc.free ..drop
   0 valCount == assert "all values freed"

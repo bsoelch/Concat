@@ -34,7 +34,7 @@ namespace: array
   -> T arrayView ) =>: export: wrap
     elts k create return
   end
-  proc( type : auto: T T arrayView.mut : a -> T arrayView ) =>: export: immutableCopy
+  proc( type : auto: T T arrayView.mut : a -> T arrayView ) =>: export: freeze
     a .data a .length array.create_64
   end
   proc( type : auto: T T _ ptr.mut  i64 -> T arrayView.mut ) =>: export: shaddow: create_64mut
