@@ -1092,6 +1092,7 @@ namespace: interpreter
     ConstValue : value
     ValueInfo : valInfo
     i64 : elementIndex
+    bool : isPtr0
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: getElement
@@ -1100,7 +1101,23 @@ namespace: interpreter
     program [] .idContext@ =:: idContext
     idContext [] .constContext@ =:: constContext
     idContext [] .typeContext@ =:: typeContext
-    valInfo .valueType elementIndex typeContext types.compositeGetElement =:: eltType
+    isPtr0 =:: mut: isPtr
+      ## TODO! use correct base mutablity
+    true =:: mut: eltMutable ## XXX ignore pointer mutability in interpreter?
+    valInfo .valueType
+      $ typeContext types.isPointer if
+        $ typeContext types.isMutable eltMutable & eltMutable =
+        typeContext types.getBaseType
+        true isPtr =
+      end
+      eltMutable and $ elementIndex typeContext types.compositeGetLabel
+        typeContext .labelContext@ id.labelFlags
+      id.FLAG_MUTABLE & ? ! if
+        false eltMutable =
+      end
+      elementIndex typeContext types.compositeGetElement
+      isPtr if eltMutable typeContext types.getAddressType end
+    =:: eltType
     value .Array ?? if
       value .Array elementIndex array.get
     else value .LocalArray ?? _if
@@ -1803,7 +1820,7 @@ proc(
             EvalResult .Error return ## unknown identifier
           end =:: idData
           idData [] .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
-            "mutable variables are not supported: " sb.wrap
+            "mutable global variables are not supported: " sb.wrap
               label labelContext sb.appendLabelName
             op [] .pos errors appendError
             ## compile-time evaluation of mutable global variables not supported
@@ -1992,8 +2009,13 @@ proc(
           context
         pushValue
         EvalResult .Ok return
-    getLabel case
-      op [] .val .getLabel =:: labelId
+    getLabel atLabel case
+      op [] .val .atLabel ?? =:: isPtr
+      isPtr if
+        op [] .val .atLabel
+      else
+        op [] .val .getLabel
+      end =:: labelId
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.wrap
           op [] program sb.appendOp
@@ -2058,15 +2080,21 @@ proc(
         op [] .pos errors appendError
         EvalResult .Error return
       end
-      value valInfo elementIndex op [] .pos context getElement wrapResult return
-    getElement case
+      value valInfo elementIndex isPtr op [] .pos context getElement wrapResult return
+    getElement atElement case
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.wrap
           op [] program sb.appendOp
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      value valInfo op [] .val .getElement op [] .pos context getElement wrapResult return
+      op [] .val .atElement ?? =:: isPtr
+      isPtr if
+        op [] .val .atElement
+      else
+        op [] .val .getElement
+      end =:: eltIndex
+      value valInfo eltIndex isPtr op [] .pos context getElement wrapResult return
     existsName case
       op [] .val .existsName =:: label
       label
@@ -2079,7 +2107,7 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    atLabel atName hasLabel existsLabel case
+    atName hasLabel existsLabel case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
@@ -2678,7 +2706,7 @@ proc(
           EvalResult .Error return
       end
       break
-    atElement getEnumLabel
+    getEnumLabel
     NewEnum callPtr
     argc getArg implementProcedure procPtr
     bitCast NewEnumReference
