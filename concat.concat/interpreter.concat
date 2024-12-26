@@ -1267,6 +1267,55 @@ namespace: interpreter
       localAddress LocalAddress cast ConstValue .LocalValue
     end
   end
+  ## TODO try to (partially) merge with typeCheck.printType
+  proc(
+    bool : printValues
+    i32 : maxCount
+    i32 : depth
+    InterpreterContext ptr.mut : context
+  -> ) =>: printTypes
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
+    idContext [] .constContext@ =:: constContext
+    printValues if
+      "stack:\n" sb.wrap
+    else
+      "types:\n" sb.wrap
+    end
+      "-----------------\n" sb.appendS
+    =:: mut: sb
+    ## TODO? print only up to some stack offset
+    maxCount 0 > if
+      context [] .stack .length
+        maxCount i64 cast.u -
+      0 i64.max
+    else 0 end =:: minOffset
+    context [] .stack .length 1 - while $ minOffset >= do =:: i
+      context [] .stack i list.at .data =:: value
+      context [] .stackInfo i list.at .data =:: valueInfo
+      sb
+        valueInfo [] .valueType
+          typeContext
+          depth
+        sb.appendTypeRecursive
+        printValues if
+          value [] .None ?? ! if
+            " { " sb.appendS
+            value [] typeContext sb.appendConstant
+            " }" sb.appendS
+          end
+          " pushed at " sb.appendS
+          valueInfo [] .pushedAt sb.appendPos
+        end
+        '\n' sb.appendC
+      sb =
+    finally i 1 - end ..drop
+    sb
+      "-----------------\n" sb.appendS
+      io.stdOut $1 io.fputSb ..drop
+    sb.free ..drop
+  end
   union(
     _ : Ok
     _ : Error
@@ -2797,13 +2846,36 @@ proc(
           EvalResult .Error return
       end
       break
+    compilerInfo case
+      op [] .val .compilerInfo switch
+        typeInfo case
+          op [] .val .compilerInfo .typeInfo =:: info
+          ## printTypes
+            false
+            info .count
+            info .depth
+          context printTypes
+          EvalResult .Ok return
+        stackInfo case
+          ## printTypes
+            true
+            op [] .val .compilerInfo .stackInfo
+            0
+          context printTypes
+          EvalResult .Ok return
+        compiledOps case
+          EvalResult .Ok return ## TODO print ops
+        find case
+          EvalResult .Ok return ## TODO find
+      end
+      break
     getEnumLabel
     NewEnumReference callPtr
     argc getArg implementProcedure procPtr
     bitCast
     ConstantReference NewReference
     checkEnumLabel setEnumLabel
-    compilerInfo unreachable case
+    unreachable case
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
       op [] .pos errors appendError

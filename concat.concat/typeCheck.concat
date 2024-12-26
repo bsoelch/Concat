@@ -492,10 +492,10 @@ proc(
   i32 : depth
   TypeCheckState ptr.mut : state
 -> ) =>: printTypes
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  idContext [] .constContext @ =:: constContext
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
+  idContext [] .constContext@ =:: constContext
   maxCount =:: mut: remaining
   printValues if
     "stack:\n" sb.wrap
@@ -4200,6 +4200,8 @@ proc(
       op .pos errors appendError
       return
     compilerInfo case
+      ## remeber operation for interpreter
+      op state appendOp ..drop
       op .val .compilerInfo switch
         typeInfo case
           op .val .compilerInfo .typeInfo =:: info

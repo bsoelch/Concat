@@ -333,9 +333,11 @@ proc(
         TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
       end
       break
+    compilerInfo case ## XXX? preserve compilerInfo ops
+      newOps return
     autoTypedInitializeId ConstantReference NewReference
     typeInfo NewEnumReference
-    compilerInfo getName atName getLabel
+    getName atName getLabel
     atLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
