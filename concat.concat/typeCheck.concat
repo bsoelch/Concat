@@ -1776,7 +1776,7 @@ proc(
           0:i64 =:: mut: stackConstants
           true =:: mut: headConstant
           state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
-          state [] .stack @ branchTree.itr.start while
+          state [] .stack@ branchTree.itr.start while
             branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
             headConstant and val [] .value .None ?? ! if
               stackConstants 1 + stackConstants =
@@ -1900,7 +1900,7 @@ proc(
       end
       break
     callPtr case
-      state [] .stack @ branchTree.peek =:: value?
+      state [] .stack@ branchTree.peek =:: value?
       value? optional.isEmpty if
         ## TODO? print instruction name instead of 'call'
         "missing argument for call, expected procedure pointer" sb.wrap
@@ -3545,7 +3545,7 @@ proc(
           state [] .reachable if
             ## create explicit return operation if end of procedure reachable
             closed .Procedure op .pos opReturn =:: mut: tmp
-            tmp @ state typeCheckReturn
+            tmp@ state typeCheckReturn
           end
           op state appendOp ..drop
           return
@@ -4235,14 +4235,18 @@ proc(
   ProcedureInfo ptr : procInfo
   ProgramContext ptr.mut : program
 -> i64 ) =>: nextImpl
-  program [] .tmpOps
-    procInfo [] .implementation .code .codeStart list.at .data
-  =:: procStart
-  procStart [] .val .implementProcedure ?? ! if
-    0 return
-  end
-  ## implementationId contains id of last compiled implementation
-  procStart [] .val .implementProcedure .implementationId 1 + return
+  ## TODO remember index up to which all operations have been checked
+  procInfo [] .implementation .code@ =:: codeImpl
+  codeImpl [] .implementations .length =:: implLength
+  0:i64 while $ implLength < do =:: implId
+    codeImpl [] .implementations
+      implId list.at .data
+    =:: implData
+    implData .codeState .TYPE_CHECKED ?? ! if
+      implId return
+    end
+  finally implId 1 + end ..drop
+  implLength return
 end
 
 proc(
