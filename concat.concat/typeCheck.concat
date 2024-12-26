@@ -2205,7 +2205,7 @@ proc(
       1 op .pos state checkStackSize if
         return
       end
-      state [] .stack @ branchTree.peek .data [] =:: container
+      state [] .stack@ branchTree.peek .data [] =:: container
       false =:: mut: mutable
       container .valueType =:: mut: srcType
       false =:: mut: isPtr

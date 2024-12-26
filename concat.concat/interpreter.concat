@@ -2111,6 +2111,41 @@ proc(
         op [] .val .getElement
       end =:: eltIndex
       value valInfo eltIndex isPtr op [] .pos context getElement wrapResult return
+    hasElement hasLabel case
+      op [] .pos context popValue if ..drop.2
+        "stack underflow while evaluating operation: " sb.wrap
+          op [] program sb.appendOp
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end =:: value =:: valInfo
+      op [] .val .hasElement ?? if
+        op [] .val .hasElement
+      else
+        op [] .val .hasLabel =:: labelId
+        valInfo .valueType typeContext types.isTaggedUnion ! if
+          value valInfo context unpopValue
+          "unexpected type for hasLabel: " sb.wrap
+            valInfo .valueType typeContext sb.appendType
+          op [] .pos errors appendError
+          EvalResult .Error return
+        end
+        valInfo .valueType labelId typeContext types.compositeFindLabel
+      end =:: expectedIndex
+      value .EnumLabel ?? if
+        value .EnumLabel expectedIndex == ConstValue .Bool
+      else value .Union ?? _if
+        value constUnionLabel .EnumLabel expectedIndex == ConstValue .Bool
+      else
+        value valInfo context unpopValue
+        "unexpected value for hasElement: " sb.wrap
+          value typeContext sb.appendConstant
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end
+        types.primitive.BOOL
+        op [] .pos
+      context pushValue
+      EvalResult .Ok return
     existsName case
       op [] .val .existsName =:: label
       label
@@ -2123,7 +2158,7 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    atName hasLabel existsLabel case
+    atName existsLabel case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
@@ -2173,10 +2208,46 @@ proc(
         context unpopValue
       end
       EvalResult .Error return
-    NewEnum case ## TODO rename op to newTaggedUnion
-      "new enum is not supported: " sb.wrap
-      op [] .pos errors appendError
-      EvalResult .Error return
+    NewEnum case
+      op [] .val .NewEnum =:: elementIndex
+      op [] .dataType =:: unionType
+      unionType typeContext types.isEnum if
+        elementIndex ConstValue .EnumLabel
+      else unionType typeContext types.isUnion _if
+        unionType
+          elementIndex
+        typeContext types.compositeGetElement =:: eltType
+        eltType .empty ?? ! if
+          op [] .pos context popValue if ..drop.2
+            "missing argument for union element expected" sb.wrap
+              eltType typeContext sb.appendType
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end =:: eltValue =:: eltInfo
+          eltInfo .valueType eltType typeContext types.canAutoCast ! if
+            eltValue eltInfo context unpopValue
+            "wrong type for union element expected" sb.wrap
+              eltType typeContext sb.appendType
+              " got " sb.appendS
+              eltInfo .valueType typeContext sb.appendType
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          eltValue elementIndex constContext newUnionConst
+        else
+          ConstValue .None elementIndex constContext newUnionConst
+        end
+      else
+        "unexpected type for new enum: " sb.wrap
+          unionType typeContext sb.appendType
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end
+        unionType
+        op [] .pos
+        context
+      pushValue
+      EvalResult .Ok return
     Cast Cast! case
       Type : poppedType
       ValueInfo : valInfo
@@ -2732,7 +2803,6 @@ proc(
     bitCast
     ConstantReference NewReference
     checkEnumLabel setEnumLabel
-    hasElement
     compilerInfo unreachable case
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
