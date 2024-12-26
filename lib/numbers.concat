@@ -155,16 +155,16 @@ namespace: number
             0 ParserError .INVALID_CHAR return
           else ..drop end
         i64 cast.u =:: delta
-        res maxSafeUnsigned > if
+        res maxSafeUnsigned ..u> if
           true overflow =
-        else res maxSafe > _if
+        else res maxSafe ..u> _if
           true signedOverflow =
         end
         res
           mBase i64 cast.u *
-          res maxSafeUnsigned == and $ maxUnsignedVal delta - > if
+          res maxSafeUnsigned == and $ maxUnsignedVal delta - ..u> if
             true overflow =
-          else res maxSafe == and $ maxVal delta - > _if
+          else res maxSafe == and $ maxVal delta - ..u> _if
             true signedOverflow =
           end
           delta +

@@ -329,6 +329,7 @@ namespace: i128
   -> i128 number.ParserError ) =>: export: parse
     using number
     false =:: mut: overflow
+    false =:: mut: signedOverflow
     str
       parseSign =:: sign
       ..dup .length 0 == if ..drop
@@ -344,8 +345,9 @@ namespace: i128
       else mBase 2 < or mBase 62 > _if ..drop
         0 0 i128 new ParserError .INVALID_BASE return
       end
+      -1:i64 -1:i64 i128 new =:: maxUnsigned
       unsigned if
-        -1:i64 -1:i64 i128 new
+        maxUnsigned
       else sign _if
         -0x8000_0000_0000_0000:i64 0:i64 i128 new
       else
@@ -353,6 +355,7 @@ namespace: i128
       end =:: maxVal
       0 0 i128 new =:: mut: res
       0 mBase i64 cast.u i128 new =:: baseI128
+      maxUnsigned baseI128 ..udiv =:: maxSafeUnsigned
       maxVal baseI128 ..udiv =:: maxSafe ## XXX? udiv i128 by i64
       0:i64 while ..dup ..over.2 .length < do =:: i
         ..dup i string.charAt =:: c
@@ -366,13 +369,17 @@ namespace: i128
             0 0 i128 new ParserError .INVALID_CHAR return
           else ..drop end
         i64 cast.u i128.fromU64 =:: delta
-        res maxSafe > if
+        res maxSafeUnsigned ..u> if
           true overflow =
+        else res maxSafe ..u> _if
+          true signedOverflow =
         end
         res
           baseI128 * ## XXX mul i128 by i64  ## XXX add/sub i128 to/from i64
-          res maxSafe i128.cmp 0 == and ..dup maxVal delta - > if
+          res maxSafeUnsigned i128.eq and $ maxUnsigned delta - ..u> if
             true overflow =
+          else res maxSafe i128.eq and $ maxVal delta - ..u> _if
+            true signedOverflow =
           end
           delta +
         res =
@@ -381,7 +388,8 @@ namespace: i128
     ..drop
     res
       sign and -_ unsigned if ParserError .SIGN return end
-    overflow if ParserError .OVERFLOW return end
+      overflow if ParserError .OVERFLOW return end
+      signedOverflow if ParserError .UNSIGNED return end
     ParserError .NONE return
   end
 end
