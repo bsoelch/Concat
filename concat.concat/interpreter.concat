@@ -3056,8 +3056,19 @@ proc(
   program [] .procedures procId i64 cast list.at .data =:: procData
   procData [] .procType =:: procType
   procType typeContext types.getProcIn ..drop =:: inType
+  0:i64 ## XXX? is there a better way to get number of non-auto static args
+    implId -1:i64 != if
+      inType typeContext types.compositeEltCount for =:: i
+        inType i typeContext types.compositeGetLabel =:: label
+        label labelContext id.labelFlags =:: flags
+        flags id.FLAG_STATIC & ? and flags id.FLAG_AUTO & ? ! if
+          1 +
+        end
+      end
+    end
+  =:: nStaticArgs
   inType typeContext types.compositeElts =:: args
-  args .length autoArgs .length - =:: nArgs
+  args .length autoArgs .length - nStaticArgs - =:: nArgs
   procData [] .implementation .builtIn ?? if
     implId -1:i64 != if
       "generic built-ins are not supported" sb.wrap
@@ -3074,9 +3085,9 @@ proc(
   end
   nArgs "procedure call" string.wrap pos context checkStack if
     128 sb.create
-      "inType: " sb.appendS
+      "inType: (" sb.appendS
       inType typeContext sb.appendType
-      " arguments: " sb.appendS
+      "-> ... ) arguments: " sb.appendS
       args .length sb.appendI
       " auto-args: " sb.appendS
       autoArgs .length sb.appendI
@@ -3112,6 +3123,7 @@ proc(
   context [] .openBlocks .length =:: prevBlocks
   BlockType .PROCEDURE true context openBlock
   0:i64 =:: mut: autoArgOffset
+  0:i64 =:: mut: staticArgOffset
   argsOffset =:: mut: argOffset
   ## process procedure arguments
   0:i64 while $ args .length < do =:: i
@@ -3140,6 +3152,26 @@ proc(
         Constant new
       map.put ..drop
       autoArgOffset 1 + autoArgOffset =
+      labelFlags id.FLAG_STATIC & ? if
+        staticArgOffset 1 + staticArgOffset =
+      end
+      continue
+    end
+    procData [] .isStatic ! and labelFlags id.FLAG_STATIC & ? if
+      procData .implementation .code [] .implementations
+        implId list.at .data
+      [] .staticArgs staticArgOffset array.get =:: value
+      context [] .variables@
+        label
+        ## Constant
+          value
+          ## ValueInfo
+            args i types.compositeElts.get
+            pos
+          ValueInfo new
+        Constant new
+      map.put ..drop
+      staticArgOffset 1 + staticArgOffset =
       continue
     end
     context [] .stack argOffset list.at .data =:: value
