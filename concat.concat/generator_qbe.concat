@@ -3506,7 +3506,7 @@ proc(
         " =l mul %t" sb.appendS
         prevId sb.appendI
         ", " sb.appendS
-        baseType op [] .pos context typeSizeInt sb.appendI
+        baseType op [] .pos context typeStrideInt sb.appendI
         " ## " sb.appendS
         baseType typeContext sb.appendType
         '\n' sb.appendC

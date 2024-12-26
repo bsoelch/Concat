@@ -29,7 +29,7 @@ namespace: ptr
     p offset -_ []@
   end
   proc( type : auto: T T _ ptr : p T _ ptr : q -> i64 ) =>: export: diff
-    p i64 cast! q i64 cast! - T ..type.size ..udiv
+    p i64 cast! q i64 cast! - T ..type.stride ..udiv
   end
 
   proc( type : auto: T T ptr T ptr -> i32 ) =>: cmp0D
@@ -73,10 +73,10 @@ namespace: ptr
   ## XXX? prohibit arithmetic on array pointers
   namespace: mut
     proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: add
-      p i64 cast! offset T ..type.size * + T _ ptr.mut cast!
+      p offset []@
     end
     proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: sub
-      p i64 cast! offset T ..type.size * - T _ ptr.mut cast!
+      p offset -_ []@
     end
     proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: add0D
       ..compiler.error "pointer arithmetic of value pointers is not supported"
