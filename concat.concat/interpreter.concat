@@ -1103,7 +1103,7 @@ namespace: interpreter
     idContext [] .typeContext@ =:: typeContext
     isPtr0 =:: mut: isPtr
       ## TODO! use correct base mutablity
-    true =:: mut: eltMutable ## XXX ignore pointer mutability in interpreter?
+    true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
       $ typeContext types.isPointer if
         $ typeContext types.isMutable eltMutable & eltMutable =
@@ -1173,16 +1173,32 @@ namespace: interpreter
     ## XXX? reduce number of identical constants
     tmpArray array.freeze constContext newArrayConst
   end
-  proc( ConstValue : value InterpreterContext ptr.mut : context -> ConstValue ) =>: localCopy
-    value .Array ?? if
+  proc(
+    ConstValue : value
+    Type : valType
+    InterpreterContext ptr.mut : context
+  -> ConstValue ) =>: localCopy
+    context [] .program .idContext .typeContext@ =:: typeContext
+    valType typeContext types.isPointer ! and
+        value .Array ?? or value .LocalArray ?? if
       context [] .localMemory
-        value .Array arenaAlloc.copyArray =:: localSlice
+        value .Array ?? if
+          value .Array
+        else
+          value .LocalArray ConstValue arrayView.mut cast array.freeze
+        end arenaAlloc.copyArray =:: localSlice
       context [] .localMemory =
+      valType typeContext types.getBaseType =:: arrayBase
       ## copy sub-arrays
       localSlice .length for =:: i
         localSlice i array.at .data =:: elt
+        arrayBase .undefined ?? ! if
+          arrayBase
+        else
+          valType i typeContext types.compositeGetElement
+        end =:: eltType
         elt [] .Array ?? if
-          elt [] context localCopy elt [] =
+          elt [] eltType context localCopy elt [] =
         end
       end
       localSlice LocalSlice cast ConstValue .LocalArray
@@ -1902,7 +1918,7 @@ proc(
             label
             ## Constant
               label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
-                value context localCopy
+                value valInfo .valueType context localCopy
               else
                 value
               end
@@ -2156,6 +2172,10 @@ proc(
           valInfo
         context unpopValue
       end
+      EvalResult .Error return
+    NewEnum case ## TODO rename op to newTaggedUnion
+      "new enum is not supported: " sb.wrap
+      op [] .pos errors appendError
       EvalResult .Error return
     Cast Cast! case
       Type : poppedType
@@ -2707,9 +2727,9 @@ proc(
       end
       break
     getEnumLabel
-    NewEnum callPtr
+    NewEnumReference callPtr
     argc getArg implementProcedure procPtr
-    bitCast NewEnumReference
+    bitCast
     ConstantReference NewReference
     checkEnumLabel setEnumLabel
     hasElement
