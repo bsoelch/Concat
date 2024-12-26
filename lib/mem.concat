@@ -111,6 +111,10 @@ namespace: mem
     n 0 <= if
       target return
     end
+    src target == if
+      ## no copy needed
+      target return
+    end
     ## memcpy
       target ..ctype.void _ ptr.mut cast!
       src ..ctype.void _ ptr cast!
@@ -124,6 +128,10 @@ namespace: mem
     i64 : n
   -> T _ ptr.mut ) =>: export: move
     n 0 <= if
+      target return
+    end
+    src target == if
+      ## no copy needed
       target return
     end
     ## memmove
