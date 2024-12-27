@@ -99,7 +99,7 @@ namespace: mem
     ## memset
       src ..ctype.void _ ptr.mut cast!
       0 ..ctype.int cast
-      T ..type.stride n 1 - * T ..type.size +  ..ctype.size cast
+      n 1 == if T ..type.size else T ..type.stride n * end ..ctype.size cast
     c.memset checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -118,7 +118,7 @@ namespace: mem
     ## memcpy
       target ..ctype.void _ ptr.mut cast!
       src ..ctype.void _ ptr cast!
-      T ..type.stride n 1 - * T ..type.size +  ..ctype.size cast
+      n 1 == if T ..type.size else T ..type.stride n * end ..ctype.size cast
     c.memcpy checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -137,7 +137,7 @@ namespace: mem
     ## memmove
       target ..ctype.void _ ptr.mut cast!
       src ..ctype.void _ ptr cast!
-      T ..type.stride n 1 - * T ..type.size +  ..ctype.size cast
+      n 1 == if T ..type.size else T ..type.stride n * end ..ctype.size cast
     c.memmove checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -152,7 +152,7 @@ namespace: mem
     ## memcmp
       a ..ctype.void _ ptr cast!
       b ..ctype.void _ ptr cast!
-      T ..type.stride n 1 - * T ..type.size + ..ctype.size cast
+      n 1 == if T ..type.size else T ..type.stride n * end ..ctype.size cast
     c.memcmp i32 cast return
   end
   proc(
