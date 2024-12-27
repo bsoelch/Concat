@@ -172,7 +172,7 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
     LocalValue case
       a .LocalValue b .LocalValue == return
     LocalArray case
-      ## LocalArray is only equal if memory ranges coincide
+      ## local arrays are only equal if memory ranges coincide
       a .LocalArray .data b .LocalArray .data == and
         a .LocalArray .length b .LocalArray .length ==
       end return
@@ -320,6 +320,12 @@ namespace: sb
       end ..drop
     return
   end
+  8:i64 =:: MAX_ARRAY_ELEMENTS
+  12:i64 =:: MAX_PRIMITIVE_ARRAY_ELEMENTS
+  36:i64 =:: MAX_STRING_CHARS
+  24:i64 =:: MAX_STRING_CHARS_HEAD
+  8:i64 =:: MAX_STRING_CHARS_TAIL
+  ## XXX? limit call depth (to prevent infinite recursion)
   proc(
     stringBuilder : sb
     ConstValue : val
@@ -358,70 +364,146 @@ namespace: sb
           break
         Array case ## XXX? labeled array?
           val .Array =:: mArray
+          mArray .length
+            MAX_ARRAY_ELEMENTS 1 - i64.min
+          =:: maxElements
           "{ " sb.appendS
-          0:i64 while ..dup mArray .length < do =:: i
+          0:i64 while ..dup maxElements < do =:: i
             mArray i array.get typeContext appendConstant
             ' ' sb.appendC
             i 1 +
           end ..drop
+          mArray .length MAX_ARRAY_ELEMENTS >= if
+            mArray .length MAX_ARRAY_ELEMENTS > if "... " sb.appendS end
+            mArray $ .length 1 - array.get typeContext appendConstant
+            ' ' sb.appendC
+          end
           "}" sb.appendS
           break
         Array8 case
           val .Array8 =:: mArray
           mArray constant.isString if ## array is string constant
-            '\"'  sb.appendC
-            val .Array8 string.fromBytes sb.appendEscapedStr
-            '\"'  sb.appendC
+            mArray .length MAX_STRING_CHARS <= if
+              '\"'  sb.appendC
+              mArray string.fromBytes sb.appendEscapedStr
+              '\"'  sb.appendC
+            else
+              '\"'  sb.appendC
+              mArray
+                MAX_STRING_CHARS_HEAD array.head
+              string.fromBytes sb.appendEscapedStr
+              "\"...\""  sb.appendS
+              mArray
+                $ .length MAX_STRING_CHARS_TAIL - array.tail
+              string.fromBytes sb.appendEscapedStr
+              '\"'  sb.appendC
+            end
             return
           end
+          mArray .length
+            MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
+          =:: maxElements
           "{ " sb.appendS
-          0:i64 while ..dup mArray .length < do =:: i
+          0:i64 while ..dup maxElements < do =:: i
             mArray i array.get i64 cast.s appendI
             ":i8 " sb.appendS
             i 1 +
           end ..drop
+          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
+            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
+            mArray $ .length 1 - array.get i64 cast.s appendI
+            ":i8 " sb.appendS
+          end
           "}" sb.appendS
           break
         Array16 case
           val .Array16 =:: mArray
           mArray constant.isString16 if ## array is string constant
-            "utf16\""  sb.appendS
-            val .Array16 string16.fromIntArray sb.appendEscapedStr16
-            '\"'  sb.appendC
+            mArray .length MAX_STRING_CHARS <= if
+              "utf16\""  sb.appendS
+              mArray string16.fromIntArray sb.appendEscapedStr16
+              '\"'  sb.appendC
+            else
+              "utf16\""  sb.appendS
+              mArray
+                MAX_STRING_CHARS_HEAD array.head
+              string16.fromIntArray sb.appendEscapedStr16
+              "\"...\""  sb.appendS
+              mArray
+                $ .length MAX_STRING_CHARS_TAIL - array.tail
+              string16.fromIntArray sb.appendEscapedStr16
+              '\"'  sb.appendC
+            end
             return
           end
+          mArray .length
+            MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
+          =:: maxElements
           "{ " sb.appendS
-          0:i64 while ..dup mArray .length < do =:: i
+          0:i64 while ..dup maxElements < do =:: i
             mArray i array.get i64 cast.s appendI
             ":i16 " sb.appendS
             i 1 +
           end ..drop
+          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
+            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
+            mArray $ .length 1 - array.get i64 cast.s appendI
+            ":i16 " sb.appendS
+          end
           "}" sb.appendS
           break
         Array32 case
           val .Array32 =:: mArray
           mArray constant.isString32 if ## array is string constant
-            "utf32\""  sb.appendS
-            val .Array32 string32.fromIntArray sb.appendEscapedStr32
-            '\"'  sb.appendC
+            mArray .length MAX_STRING_CHARS <= if
+              "utf32\""  sb.appendS
+              mArray string32.fromIntArray sb.appendEscapedStr32
+              '\"'  sb.appendC
+            else
+              "utf32\""  sb.appendS
+              mArray
+                MAX_STRING_CHARS_HEAD array.head
+              string32.fromIntArray sb.appendEscapedStr32
+              "\"...\""  sb.appendS
+              mArray
+                $ .length MAX_STRING_CHARS_TAIL - array.tail
+              string32.fromIntArray sb.appendEscapedStr32
+              '\"'  sb.appendC
+            end
             return
           end
+          mArray .length
+            MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
+          =:: maxElements
           "{ " sb.appendS
-          0:i64 while ..dup mArray .length < do =:: i
+          0:i64 while ..dup maxElements < do =:: i
             mArray i array.get i64 cast.s appendI
             ":i32 " sb.appendS
             i 1 +
           end ..drop
+          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
+            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
+            mArray $ .length 1 - array.get i64 cast.s appendI
+            ":i32 " sb.appendS
+          end
           "}" sb.appendS
           break
         Array64 case
           val .Array64 =:: mArray
           "{ " sb.appendS
-          0:i64 while ..dup mArray .length < do =:: i
+          mArray .length
+            MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
+          =:: maxElements
+          0:i64 while ..dup maxElements < do =:: i
             mArray i array.get appendI
             ":i64 " sb.appendS
             i 1 +
           end ..drop
+          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
+            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
+            mArray $ .length 1 - array.get i64 cast.s appendI
+            ":i64 " sb.appendS
+          end
           "}" sb.appendS
           break
         Procedure case
@@ -452,12 +534,9 @@ namespace: sb
           break
         LocalArray case
             "local array ( "  sb.appendS
-            val .LocalArray .length for =:: i
               val .LocalArray
-                ConstValue arrayView.mut cast i array.get
-              typeContext sb.appendConstant
-              ' ' sb.appendC
-            end
+                ConstValue arrayView.mut cast array.freeze
+              ConstValue .Array typeContext sb.appendConstant
             ")" sb.appendS
           break
       end

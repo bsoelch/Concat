@@ -1,0 +1,9 @@
+proc( -> ) =>: main  
+  "This is a string with 36 characters!" ..?stack ..drop
+  "This is a string with 36 characters!!" ..?stack ..drop
+  { 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 } =:: a
+  a ..?stack ..drop
+  "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10" ..?stack ..drop
+  utf16"\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u0009\u000a\u000b\u000c\u000d\u000e\u000f\u0010" ..?stack ..drop 
+  utf32"\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u0009\u000a\u000b\u000c\u000d\u000e\u000f\u0010" ..?stack ..drop
+end
