@@ -1744,69 +1744,80 @@ proc(
       break
     declareId case
       op [] .val .declareId .labelId =:: labelId
-      context [] .evalType .INTERPRET ?? if
-        op [] .val .declareId .idType switch
-          GLOBAL_VAR TYPE case break
-          LOCAL_VAR TMP_VAR ITR_VAR case
-            context [] .variables@
-              labelId
-              ## Constant
-                op [] .dataType op [] .pos context allocLocalValue
-                ## ValueInfo
-                  op [] .dataType
-                  op [] .pos
-                ValueInfo new
-              Constant new
-            map.put ..drop
-            EvalResult .Ok return
-          ARGUMENT PROCEDURE PROCEDURE_BUNDLE LABEL case break
-        end
-      end
-      context inTypeOrInitializer ! if
-        "interpreting declarations is currently only supported in type-blocks and initializers " sb.wrap
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end
-      context inEnum if
-        "typed enums are deprecated, use tagged unions instead " sb.wrap
-        op [] .pos errors appendError
-      end
-      context getLabeledValueContext =:: valueContext =:: initialLabelOffset
-      1 "field-declaration" string.wrap op [] .pos context checkStack if
-        EvalResult .Error return
-      end
-      context [] .stackInfo
-        list.pop =:: mut: valInfo
-      context [] .stackInfo =
-      context [] .stack
-        list.pop =:: mut: value
-      context [] .stack =
-      value .WildCard ?? and context inUnion if
-        types.primitive.TYPE valInfo .valueType =
-        Type .empty ConstValue .TypeId value =
-      end
-      context [] .openBlocks list.peek .data [] .stackOffset =:: stackOffset
-      stackOffset initialLabelOffset valueContext op [] .pos context finishLabledValues if
-        ## unpopValue
-          value
-          valInfo
-        context unpopValue
-        EvalResult .Error return
-      end
-      ## addLabeledValue
-        labelId
-        value
-        valInfo .valueType
-        initialLabelOffset
-        valueContext
-      op [] .pos context addLabeledValue
-        $ if
-          ## unpopValue
+      op [] .val .declareId .idType switch
+        GLOBAL_VAR TYPE case
+          break
+        LOCAL_VAR TMP_VAR ITR_VAR case
+          ## XXX? common procedure for resolving of auto-types
+          op [] .dataType types.isAutoType if
+            op [] .pos context popType if ..drop.2
+              EvalResult .Error return
+            end =:: dataType ..drop
+            dataType program [] .autoTypes
+              op [] .dataType types.getTypeId
+            list.set
+            dataType
+          else
+            op [] .dataType
+          end =:: dataType
+          context [] .variables@
+            labelId
+            ## Constant
+              dataType op [] .pos context allocLocalValue
+              ## ValueInfo
+                dataType
+                op [] .pos
+              ValueInfo new
+            Constant new
+          map.put ..drop
+          EvalResult .Ok return
+        LABEL case
+          context inEnum if
+            "typed enums are deprecated, use tagged unions instead " sb.wrap
+            op [] .pos errors appendError
+          end
+          context getLabeledValueContext =:: valueContext =:: initialLabelOffset
+          1 "field-declaration" string.wrap op [] .pos context checkStack if
+            EvalResult .Error return
+          end
+          context [] .stackInfo
+            list.pop =:: mut: valInfo
+          context [] .stackInfo =
+          context [] .stack
+            list.pop =:: mut: value
+          context [] .stack =
+          value .WildCard ?? and context inUnion if
+            types.primitive.TYPE valInfo .valueType =
+            Type .empty ConstValue .TypeId value =
+          end
+          context [] .openBlocks list.peek .data [] .stackOffset =:: stackOffset
+          stackOffset initialLabelOffset valueContext op [] .pos context finishLabledValues if
+            ## unpopValue
+              value
+              valInfo
+            context unpopValue
+            EvalResult .Error return
+          end
+          ## addLabeledValue
+            labelId
             value
-            valInfo
-          context unpopValue
-        end
-      wrapResult return
+            valInfo .valueType
+            initialLabelOffset
+            valueContext
+          op [] .pos context addLabeledValue
+            $ if
+              ## unpopValue
+                value
+                valInfo
+              context unpopValue
+            end
+          wrapResult return
+        ARGUMENT PROCEDURE PROCEDURE_BUNDLE case break
+      end
+      "unsupported operation in constant evaluation: " sb.wrap
+        op [] program sb.appendOp
+      op [] .pos errors appendError
+      EvalResult .Error return
     getName case
       context inEnum if
         op [] .val .getName =:: eltLabel
@@ -3175,7 +3186,21 @@ proc(
     inType i typeContext types.compositeGetLabel =:: label
     label labelContext id.labelFlags =:: labelFlags
     labelFlags id.FLAG_AUTO & ? if
-      autoArgs autoArgOffset array.get =:: value
+      autoArgs autoArgOffset array.get
+        $ .GenericArg ?? if
+          .GenericArg =:: varId
+          context [] .variables@ varId map.get =:: labelValue?
+          labelValue? ? if
+            labelValue? .data .value
+          else
+            "missing generic value " sb.wrap
+              varId i64 cast sb.appendI
+              ":LabelId" sb.appendS
+            pos errors appendError
+            varId ConstValue .GenericArg
+          end
+        end
+      =:: value
       context [] .variables@
         label
         ## Constant

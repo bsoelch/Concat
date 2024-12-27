@@ -1,0 +1,7 @@
+proc( i32 : auto: k char8 k ptr : p -> i32 ) =>: getLen k end
+proc( i32 : auto: k char8 k ptr : p -> i32 ) =>: getLen2 p getLen end
+proc( -> ) =>: main
+  "Test" getLen 4 == "Test has length 4" assert
+  "Test" getLen2 4 == "Test has length 4" assert
+end
+main
