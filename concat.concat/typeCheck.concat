@@ -706,13 +706,13 @@ end
 
 proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
   state [] .program =:: program
-  state [] .program [] .errors @ =:: errors
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  state [] .program [] .errors@ =:: errors
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   1 pos state checkStackSize if Type .undefined return end
-  state [] .stack @ branchTree.peek .data =:: typeInfo
+  state [] .stack@ branchTree.peek .data =:: typeInfo
   typeInfo [] .valueType =:: mut: valType
   valType typeContext types.unwrapReference valType =
   valType types.primitive.TYPE types.typeEquals ! if
@@ -740,6 +740,36 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
     state [] .stack @ branchTree.pop ..drop ## drop value
     typeInfo [] .opIndex state deleteOp ## remove stored operation
   typeId return
+end
+proc( FilePosition : pos TypeCheckState ptr.mut : state -> string ) =>: popString
+  state [] .program =:: program
+  state [] .program [] .errors@ =:: errors
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
+  1 pos state checkStackSize if string.empty return end
+  state [] .stack@ branchTree.peek .data =:: typeInfo
+  ## XXX? allow Array: { string, i64 } as string constant
+  typeInfo [] .value .String ?? ! if
+    "expected string-constant got " sb.wrap
+      typeInfo [] .value typeContext sb.appendConstant
+    pos errors appendError
+    string.empty return
+  end
+  typeInfo [] .opIndex state currentBlockStart < if
+    "string-constant " sb.wrap
+      typeInfo [] .value typeContext sb.appendConstant
+      " at " sb.appendS
+      typeInfo [] .pushedAt sb.appendPos
+      " was declared outside current block" sb.appendS
+    pos errors appendError
+    string.empty return
+  end
+  typeInfo [] .value .String =:: stringValue
+    state [] .stack@ branchTree.pop ..drop ## drop value
+    typeInfo [] .opIndex state deleteOp ## remove stored operation
+  stringValue return
 end
 
 proc(
@@ -4025,7 +4055,7 @@ proc(
     Assert case
       ## XXX try to evaluate at compile time
       ## requireTypes
-        types.primitive.BOOL @ array.wrap
+        types.primitive.BOOL@ array.wrap
         "assertion" string.wrap
         0
         op .pos
@@ -4036,8 +4066,7 @@ proc(
       return
     Error case
       ## appendError
-        op .val .Error .message .length sb.create
-        op .val .Error .message sb.appendStr
+        op .pos state popString sb.fromStr
         ## TODO? append initialization stack for all error messages
         state [] .initializationStack .length 0 > if
           "\n  caused by initializing code at " sb.appendS
@@ -4055,14 +4084,14 @@ proc(
           op .pos
         end
         errors
-      op .val .Error .errorType switch
+      op .val .Error switch
         ERROR case appendError break
         WARNING case appendWarning break
         INFO case appendInfo break
       end
       return
     length size case
-      state [] .stack @ branchTree.peek =:: value?
+      state [] .stack@ branchTree.peek =:: value?
       value? optional.isEmpty if
         "missing argument for " sb.wrap
           op program sb.appendOp

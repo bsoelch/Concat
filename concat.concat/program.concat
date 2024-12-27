@@ -70,10 +70,6 @@ struct(
   i64 : implementationId
   ProcId : procId
 ) =:: export: ProcedureImpl
-struct(
-  string : message
-  ErrorType : errorType
-) =:: export: ErrorInfo
 
 union(
             NopType : NOP
@@ -125,7 +121,7 @@ union(
             LabelId : mut: existsName
        TypeModifier : mut: typeModifier
              string : Assert
-          ErrorInfo : Error
+          ErrorType : Error
      TypeMemoryInfo : typeInfo
                   _ : unreachable
        CompilerInfo : compilerInfo
@@ -333,11 +329,10 @@ proc(
   message OpValue .Assert Type .undefined pos Operation new return
 end
 proc(
-  string : message
   ErrorType : errorType
   FilePosition : pos
 -> Operation ) =>: export: opError
-  message errorType ErrorInfo new OpValue .Error Type .undefined pos Operation new return
+  errorType OpValue .Error Type .undefined pos Operation new return
 end
 proc(
   i32 : count
@@ -870,13 +865,11 @@ namespace: sb
           '"' sb.appendC
           break
         Error case
-          ..over .val .Error .errorType switch
-            ERROR case "error: \"" sb.appendS break
-            WARNING case "warning: \"" sb.appendS break
-            INFO case "info: \"" sb.appendS break
+          ..over .val .Error switch
+            ERROR case "..compiler.error" sb.appendS break
+            WARNING case "..compiler.warning" sb.appendS break
+            INFO case "..compiler.info" sb.appendS break
           end
-          ..over .val .Error .message sb.appendStr
-          '"' sb.appendC
           break
         unreachable case
           "unreachable " sb.appendS

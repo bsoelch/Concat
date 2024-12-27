@@ -33,41 +33,41 @@ namespace: ptr
   end
 
   proc( type : auto: T T ptr T ptr -> i32 ) =>: cmp0D
-    ..compiler.error "comparisson of value pointers is not supported"
-    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: lt0D
-    ..compiler.error "comparisson of value pointers is not supported"
-    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: le0D
-    ..compiler.error "comparisson of value pointers is not supported"
-    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: ge0D
-    ..compiler.error "comparisson of value pointers is not supported"
-    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: gt0D
-    ..compiler.error "comparisson of value pointers is not supported"
-    ..compiler.info "to use comparison operators on value pointers cast to raw pointers first"
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
     ..unreachable
   end
 
   proc( type : auto: T T ptr : p i64 : offset -> T ptr ) =>: add0D
-    ..compiler.error "pointer arithmetic on value pointers is not supported"
+    "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
     ..unreachable
   end
   proc( type : auto: T T ptr : p i64 : offset -> T ptr ) =>: sub0D
-    ..compiler.error "pointer arithmetic on value pointers is not supported"
+    "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
     ..unreachable
   end
   proc( type : auto: T T ptr : p T ptr : q -> i64 ) =>: diff0D
-    ..compiler.error "pointer arithmetic on value pointers is not supported"
+    "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
     ..unreachable
   end
   ## XXX? prohibit arithmetic on array pointers
@@ -79,11 +79,11 @@ namespace: ptr
       p offset -_ []@
     end
     proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: add0D
-      ..compiler.error "pointer arithmetic of value pointers is not supported"
+      "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
       ..unreachable
     end
     proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: sub0D
-      ..compiler.error "pointer arithmetic of value pointers is not supported"
+      "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
       ..unreachable
     end
   end

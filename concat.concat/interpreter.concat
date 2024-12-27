@@ -779,6 +779,34 @@ namespace: interpreter
     value valInfo context unpopValue
     -1:i64 true return
   end
+  proc(
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> ValueInfo string bool ) =>: popString
+    context [] .program [] .errors@ =:: errors
+    context [] .program =:: program
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
+    pos context popValue =:: isError =:: value =:: valInfo
+    isError if
+      valInfo string.empty true return
+    end
+    value .String ?? if
+      valInfo value .String false return
+    end
+   ## XXX? allow Array: { string, i64 } as string constant
+    "expected string got: " sb.wrap
+      valInfo .valueType typeContext sb.appendType
+      " ( " sb.appendS
+      value typeContext sb.appendConstant
+      " )" sb.appendS
+    pos errors appendError
+    ## restore stack
+    value valInfo context unpopValue
+    valInfo string.empty true return
+  end
 
 ## TODO use wrapper procedures for stack access
 
@@ -2425,12 +2453,13 @@ proc(
       end
       EvalResult .Ok return
     Error case
-      ## appendError
-        op [] .val .Error .message .length sb.create
-        op [] .val .Error .message sb.appendStr
+      op [] .pos context popString if ..drop.2
+        EvalResult .Error return
+      end =:: msg ..drop
+      msg sb.fromStr
         op [] .pos
         errors
-      op [] .val .Error .errorType switch
+      op [] .val .Error switch
         ERROR case appendError break
         WARNING case appendWarning break
         INFO case appendInfo break

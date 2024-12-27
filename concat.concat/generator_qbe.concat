@@ -4893,18 +4893,6 @@ proc(
         ")\ncall $exit(w 1)\n" sb.appendS
         successBranch "end assert" string.wrap context startBranch
       return
-    Error case
-      ## appendError
-        op [] .val .Error .message .length sb.create
-        op [] .val .Error .message sb.appendStr
-        op [] .pos
-        errors
-      op [] .val .Error .errorType switch
-        ERROR case appendError break
-        WARNING case appendWarning break
-        INFO case appendInfo break
-      end
-      sb return
     unreachable case
       false context [] .reachable =
       sb
@@ -4941,14 +4929,14 @@ proc(
             op [] .pos errors appendError
             sb return
           end
-          context [] .stackInfo @ branchTree.swap
+          context [] .stackInfo@ branchTree.swap
           sb return
       end
       break
     compilerInfo case
       sb return ## XXX? print compiler info
     autoTypedInitializeId typeInfo
-    getName atName getLabel
+    getName atName getLabel Error
     atLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end

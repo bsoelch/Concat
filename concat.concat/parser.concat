@@ -2249,11 +2249,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         or $ "..compiler.warning" string.wrap string.eq
         or $ "..compiler.info" string.wrap string.eq _if =:: opName
       ## create error/warning/info if operation is reachable
-      fileState nextToken ## XXX? handle different string types?
-      ..dup .STRING ?? ! if ..drop
-        "error message has to be a string constant" sb.wrap fileState [] .wordStart errors appendError
-        return
-      end .STRING .value =:: message
       opName "..compiler.error" string.wrap string.eq if
         ErrorType .ERROR
       else opName "..compiler.warning" string.wrap string.eq _if
@@ -2266,8 +2261,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError
         ErrorType .ERROR
       end =:: errorType
-      ## opAssert
-        message constContext newStringConst .String
+      ## opError
         errorType
         fileState [] .wordStart
       opError state appendOp

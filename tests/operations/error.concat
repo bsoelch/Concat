@@ -1,0 +1,3 @@
+"This is a warning" ..compiler.warning
+"This is an error" ..compiler.error
+"An error occured on the previous line" ..compiler.info
