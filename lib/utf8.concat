@@ -2,7 +2,7 @@ import stringBuilder
 ## TODO? rename file unicode.concat
 
 ## XXX replace Codepoint to char32?
-namespace: utf8
+namespace: utf8 ## XXX -> move general unicode constants to namespace `unicode`
   i32 =:: export: Codepoint
   -0x1000:Codepoint =:: export: UNKNOWN_CODEPOINT
   0:i32 =:: export: MIN_CODEPOINT
@@ -72,7 +72,7 @@ namespace: utf8
     end
     index =:: mut: i
     str i string.charAt i32 cast.u 0xff & =:: mut: c
-    c 0xc0 & 0x80 == c 0xfe >= | if ## invalid starting character
+    c 0xc0 & 0x80 == or c 0xfe >= if ## invalid starting character
       str index 1 + c -_ Codepoint cast return
     end
     c 0x80 < if ## 0x00 - 0x7f
@@ -155,5 +155,38 @@ namespace: utf8
       end
     end ..drop.2
     utf16chars return
+  end
+end
+namespace: utf16
+  0xD800:i32 =:: MIN_SURROGATE
+  0xDFFF:i32 =:: MAX_SURROGATE
+  0xFC00:i32 =:: SURROGATE_MASK
+  0xDC00:i32 =:: LOW_SURROGATE_FLAG
+  0x03FF:i32 =:: SURROGATE_DATA_MASK
+  10:i32 =:: SURROGATE_SHIFT
+  0x10000:i32 =:: SURROGATE_BIAS
+  proc( string16  : str i64 : index -> string16 i64 utf8.Codepoint ) =>: export: nextCodepoint
+    index str .length >= if
+      str str .length utf8.UNKNOWN_CODEPOINT return
+    end
+    str index string16.get i32 cast.u =:: mut: c
+    c MIN_SURROGATE < or c MAX_SURROGATE > if ## normal character
+      str index 1 + c utf8.Codepoint cast return
+    end
+    c SURROGATE_MASK & LOW_SURROGATE_FLAG == if ## unpaired low surrogate
+      str index 1 + c -_ utf8.Codepoint cast return
+    end
+    index 1 + str .length >= if ## not enough characters
+      str index 1 + c -_ utf8.Codepoint cast return
+    end
+    str index 1 + string16.get i32 cast.u =:: lower
+    lower SURROGATE_MASK & LOW_SURROGATE_FLAG != if ## invalid low surrogate
+      str index 1 + c -_ utf8.Codepoint cast return
+    end
+    str
+      index 2 +
+    c SURROGATE_DATA_MASK & SURROGATE_SHIFT <<
+      lower SURROGATE_DATA_MASK & |
+    SURROGATE_BIAS + utf8.Codepoint cast return
   end
 end

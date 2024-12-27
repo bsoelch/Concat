@@ -794,8 +794,8 @@ namespace: interpreter
     isError if
       valInfo string.empty true return
     end
-    value .String ?? if
-      valInfo value .String false return
+    value .Array8 ?? if
+      valInfo value .Array8 string.fromBytes false return
     end
    ## XXX? allow Array: { string, i64 } as string constant
     "expected string got: " sb.wrap
@@ -2705,48 +2705,6 @@ proc(
       list.at .data [] =:: ptrValue
       ## XXX? directly read index constants from stack
       ptrValue switch
-        String case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
-          ptrValue .String =:: str
-          index str .length op [] .pos errors checkIndex if
-            EvalResult .Error return
-          end
-          isPtr if
-            str index string.tail ConstValue .String
-          else
-            str index string.charAt ConstValue .Char
-          end
-          break
-        String16 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
-          ptrValue .String16 =:: str16
-          index str16 .length op [] .pos errors checkIndex if
-            EvalResult .Error return
-          end
-          isPtr if
-            str16 string16.toArray index array.tail string16.fromArray ConstValue .String16
-          else
-            str16 index string16.get i64 cast.u ConstValue .Int
-          end
-          break
-        String32 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
-          ptrValue .String32 =:: str32
-          index str32 .length op [] .pos errors checkIndex if
-            EvalResult .Error return
-          end
-          isPtr if
-            str32 string32.toArray index array.tail string32.fromArray ConstValue .String32
-          else
-            str32 index string32.get i64 cast.u ConstValue .Int
-          end
-          break
         Array8 case
           indexCount 0 > if
             op [] .pos context popIndex if ..drop EvalResult .Error return end
@@ -2855,7 +2813,7 @@ proc(
         targetValue targetInfo context unpopValue
         EvalResult .Error return
       end =:: value =:: valueInfo
-      ConstValue ..length 22 == "no new constants" assert
+      ConstValue ..length 19 == "no new constants" assert
       targetValue switch
         LocalValue case
           value targetValue .LocalValue [] =

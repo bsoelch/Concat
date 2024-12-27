@@ -45,7 +45,7 @@ proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   end
 end
 proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
-  ConstValue ..length 22 == "no new constants" assert
+  ConstValue ..length 19 == "no new constants" assert
   val switch
     Int case
       val .Int types.ArraySize .int return
@@ -240,7 +240,7 @@ proc(
       0:i64 while ..dup args .length < do =:: i
         args i array.get =:: arg
         argBuffer []
-          ConstValue ..length 22 == "no new constants" assert
+          ConstValue ..length 19 == "no new constants" assert
           arg switch
             TypeId case
               arg .TypeId

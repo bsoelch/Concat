@@ -751,7 +751,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> string ) =>: popStrin
   1 pos state checkStackSize if string.empty return end
   state [] .stack@ branchTree.peek .data =:: typeInfo
   ## XXX? allow Array: { string, i64 } as string constant
-  typeInfo [] .value .String ?? ! if
+  typeInfo [] .value .Array8 ?? ! if
     "expected string-constant got " sb.wrap
       typeInfo [] .value typeContext sb.appendConstant
     pos errors appendError
@@ -766,7 +766,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> string ) =>: popStrin
     pos errors appendError
     string.empty return
   end
-  typeInfo [] .value .String =:: stringValue
+  typeInfo [] .value .Array8 string.fromBytes =:: stringValue
     state [] .stack@ branchTree.pop ..drop ## drop value
     typeInfo [] .opIndex state deleteOp ## remove stored operation
   stringValue return

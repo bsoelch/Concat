@@ -3,14 +3,14 @@ import "builtIns.concat"
 
 namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: constAsBool
-    ConstValue ..length 22 == "no new constants" assert
+    ConstValue ..length 19 == "no new constants" assert
     a switch
       Bool case a .Bool false return
       default false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: constAsInt ## all integer calculations are done in 64 bits
-    ConstValue ..length 22 == "no new constants" assert
+    ConstValue ..length 19 == "no new constants" assert
     a switch
       Char case a .Char i64 cast.u false return
       Int case a .Int i64 cast false return
@@ -18,7 +18,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsFloat
-    ConstValue ..length 22 == "no new constants" assert
+    ConstValue ..length 19 == "no new constants" assert
     a switch
       Char case a .Char i32 cast.u f64 cast false return
       Int case a .Int f64 cast false return
@@ -27,7 +27,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> Type bool ) =>: constAsType
-    ConstValue ..length 22 == "no new constants" assert
+    ConstValue ..length 19 == "no new constants" assert
     a switch
       TypeId case a .TypeId false return
       default Type .undefined true return
@@ -53,7 +53,7 @@ namespace: interpreter
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
     k 1 != if ConstValue .None OperatorResult .argumentError return end
     args 0 [] =:: a
-    ConstValue ..length 22 == "no new constants" assert
+    ConstValue ..length 19 == "no new constants" assert
     a switch
       Bool case a OperatorResult .success return
       Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .success return
@@ -281,13 +281,13 @@ namespace: interpreter
         k 2 == "correct number of arguments" assert
         args 0 [] =:: argument
         args 1 [] =:: argLength
-        argument .String ?? "argument is string" assert
+        argument .Array8 ?? "argument is string" assert
         argLength .Int ?? "length is int" assert
-        argument .String .length argLength .Int < if
+        argument .Array8 .length argLength .Int < if
           "length exceeds size of memory section" sb.wrap
           pos errors appendError
         end
-        argument .String
+        argument .Array8 string.fromBytes
           argLength .Int string.head
         =:: chars
         chars 0 number.tryParseInt =:: parserError =:: parsed
@@ -336,13 +336,13 @@ namespace: interpreter
         k 2 == "correct number of arguments" assert
         args 0 [] =:: argument
         args 1 [] =:: argLength
-        argument .String ?? "argument is string" assert
+        argument .Array8 ?? "argument is string" assert
         argLength .Int ?? "length is int" assert
-        argument .String .length argLength .Int < if
+        argument .Array8 .length argLength .Int < if
           "length exceeds size of memory section" sb.wrap
           pos errors appendError
         end
-        argument .String
+        argument .Array8 string.fromBytes
           argLength .Int string.head
         =:: chars
         chars 0 number.tryParseFloat =:: parserError =:: parsed
@@ -405,7 +405,7 @@ namespace: interpreter
       end
     end
     valType typeContext types.isPointer if
-      ConstValue ..length 22 == "no new constants" assert
+      ConstValue ..length 19 == "no new constants" assert
       a switch
         Int case
           b .Int ?? ! if false false return end
@@ -413,21 +413,6 @@ namespace: interpreter
         LocalValue case
           b .LocalValue ?? ! if false false return end
           a .LocalValue b .LocalValue == false return
-        String case
-          b .String ?? ! if false false return end
-          a .String .data b .String .data == and
-            a .String .length b .String .length ==
-          end false return
-        String16 case
-          b .String16 ?? ! if false false return end
-          a .String16 .data b .String16 .data == and
-            a .String16 .length b .String16 .length ==
-          end false return
-        String32 case
-          b .String32 ?? ! if false false return end
-          a .String32 .data b .String32 .data == and
-            a .String32 .length b .String32 .length ==
-          end false return
         Array8 case
           b .Array8 ?? ! if false false return end
           a .Array8 .data b .Array8 .data == and
@@ -468,32 +453,17 @@ namespace: interpreter
   proc(
     ConstValue : src
   -> i8 _ ptr i64 i64 bool ) =>: constantAsRawMemory
-    ConstValue ..length 22 == "no new constants" assert
+    ConstValue ..length 19 == "no new constants" assert
     src switch
-      String case
-        src .String .data i8 _ ptr cast!
-        src .String .length
-        i8 ..type.stride
-        false return
       Array8 case
         src .Array8 .data i8 _ ptr cast!
         src .Array8 .length
         i8 ..type.stride
         false return
-      String16 case
-        src .String16 .data i8 _ ptr cast!
-        src .String16 .length
-        i16 ..type.stride
-        false return
       Array16 case
         src .Array16 .data i8 _ ptr cast!
         src .Array16 .length
         i16 ..type.stride
-        false return
-      String32 case
-        src .String32 .data i8 _ ptr cast!
-        src .String32 .length
-        i32 ..type.stride
         false return
       Array32 case
         src .Array32 .data i8 _ ptr cast!
@@ -511,7 +481,7 @@ namespace: interpreter
   proc(
     ConstValue : src
   -> i8 _ ptr.mut i64 i64 bool ) =>: constantAsRawMutableMemory
-    ConstValue ..length 22 == "no new constants" assert
+    ConstValue ..length 19 == "no new constants" assert
     ## TODO add LocalArray8 .. LocalArray64 types
     0 i8 _ ptr.mut cast! 0 0 true return
   end

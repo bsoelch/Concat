@@ -832,17 +832,30 @@ namespace: sb
     idContext .constContext@ =:: constContext
     idContext .typeContext@ =:: typeContext
     typeContext .labelContext@ =:: labelContext
-    sb
+    constant [] .value =:: value
+    constant [] .valType types.isPrimitive or constant [] .valType .intLiteral ?? and
+        ConstValue ..length 19 == "no new constants" assert
+        value switch
+          Array8  case value .Array8  .length 0 == break
+          Array16 case value .Array16 .length 0 == break
+          Array32 case value .Array32 .length 0 == break
+          Array64 case value .Array64 .length 0 == break
+          Array   case value .Array   .length 0 == break
+          default false break
+        end if ## zero length array as primitive type
+      0 types.ArraySize .int =:: size
+      ## newArrayType
+        constant [] .valType
+        types.ArrayType .ARRAY
+        size@ array.wrap ## size
+        false ## mutable
+      typeContext types.newArrayType ! "can create array" assert
+    else
       constant [] .valType
-      constant [] .value
-        $ .String ?? if
-          .String string.bytes ConstValue .Array8
-        else $ .String16 ?? _if
-          .String16 string16.toIntArray ConstValue .Array16
-        else $ .String32 ?? _if
-          .String32 string32.toIntArray ConstValue .Array32
-        end
-      ## ^ value
+    end =:: valType
+    sb
+      valType
+      value
       true
       constant [] .pos
     context appendConstQBE return
@@ -864,12 +877,9 @@ namespace: sb
       isGlobal and t typeContext types.isPointer or
           t typeContext types.unwrapNamed types.isPrimitive or
           t .intLiteral ?? if
-        ## add name prefix for global constants, skip prefix for array constants
-        value .Array8 ?? ! and value .Array16 ?? ! and value .Array32 ?? ! and
-            value .Array64 ?? ! if
-          t StorageType .STORE pos context sb.appendTypeNameQBE
-          ' ' sb.appendC
-        end
+        ## add name prefix for global constants, skip prefix for zero-length array constants
+        t StorageType .STORE pos context sb.appendTypeNameQBE
+        ' ' sb.appendC
       end
       value switch
         Bool case
@@ -925,22 +935,7 @@ namespace: sb
           return
         GenericArg case
           value .GenericArg pos context appendGenericArg return
-        String case
-          ## appendStringPtrConstQBE
-            value .String
-            context
-          appendStringPtrConstQBE
-          return
-        String16 String32 case
-          ## appendPtrConstQBE
-            value
-            t typeContext types.ptrTarget
-            pos
-            context
-          appendPtrConstQBE
-          return
         Array8 case
-          isGlobal ! if break end
           t typeContext types.isPointer if
             ## appendPtrConstQBE
               value
@@ -950,9 +945,9 @@ namespace: sb
             appendPtrConstQBE
             return
           end
+          isGlobal ! if break end
           value .Array8 'b' false appendPrimitiveArrayConstQBE return
         Array16 case
-          isGlobal ! if break end
           t typeContext types.isPointer if
             ## appendPtrConstQBE
               value
@@ -962,9 +957,9 @@ namespace: sb
             appendPtrConstQBE
             return
           end
+          isGlobal ! if break end
           value .Array16 'h' false appendPrimitiveArrayConstQBE return
         Array32 case
-          isGlobal ! if break end
           t typeContext types.isPointer if
             ## appendPtrConstQBE
               value
@@ -974,9 +969,9 @@ namespace: sb
             appendPtrConstQBE
             return
           end
+          isGlobal ! if break end
           value .Array32 'w' false appendPrimitiveArrayConstQBE return
         Array64 case
-          isGlobal ! if break end
           t typeContext types.isPointer if
             ## appendPtrConstQBE
               value
@@ -986,11 +981,9 @@ namespace: sb
             appendPtrConstQBE
             return
           end
+          isGlobal ! if break end
           value .Array64 'l' false appendPrimitiveArrayConstQBE return
         Array case
-          isGlobal ! if
-            break
-          end
           t typeContext types.isPointer if
             ## appendPtrConstQBE
               value
@@ -1000,6 +993,7 @@ namespace: sb
             appendPtrConstQBE
             return
           end
+          isGlobal ! if break end
           t
             typeContext types.unwrapReference
           =:: containerType

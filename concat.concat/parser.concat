@@ -132,7 +132,7 @@ proc(
   IdentifierInfo optional.empty pos Constant new return
 end
 proc(
-  string : str
+  ConstValue : str
   StringLiteralType : stringType
   FilePosition : pos
   TypeContext ptr.mut : context
@@ -140,21 +140,22 @@ proc(
   CompilerError list ptr.mut : errors
 -> Constant ) =>: newStringConstant
   using types
+  str .Array8 ?? "string has type Array8" assert
   stringType switch
-    DEFAULT case str ConstValue .String str .length types.primitive.CHAR8 break
-    UTF8    case str ConstValue .String str .length types.primitive.CHAR8 break
+    DEFAULT case str str .Array8 .length types.primitive.CHAR8 break
+    UTF8    case str str .Array8 .length types.primitive.CHAR8 break
     UTF16 case
       ## TODO? reuse the same buffer for all string conversion
-      0 char16 list.create str utf8.toUTF16 =:: str16
+      0 char16 list.create str .Array8 string.fromBytes utf8.toUTF16 =:: str16
       str16
-        list.asArray string16 cast
+        list.asArray string16.fromArray
       constContext newString16Const str16 .length types.primitive.CHAR16
         str16 list.free ..drop
       break
     UTF32 case
-      0 char32 list.create str utf8.toUTF32 =:: str32
+      0 char32 list.create str .Array8 string.fromBytes  utf8.toUTF32 =:: str32
       str32
-        list.asArray string32 cast
+        list.asArray string32.fromArray
       constContext newString32Const str32 .length types.primitive.CHAR32
         str32 list.free ..drop
       break
@@ -644,6 +645,7 @@ proc(
   idContext [] .typeContext .labelContext@ =:: labelContext
   token .value
     pos progContext [] .errors@ constContext constants.parseStringConstant ## escape character
+      .Array8 string.fromBytes
       0 utf8.nextCodepoint =:: cp
     #+nextIndex+# ..swap .length < if
       "A character literal has to contain exactly one character" sb.wrap pos errors appendError
@@ -777,12 +779,12 @@ proc(
           token .LITERAL_RAW_STRING true
         end literalStart state parseStringConstant =:: stringConst
         types.primitive.I_SIZE
-          stringConst .String ?? if
-            stringConst .String .length
-          else stringConst .String32 ?? _if
-            stringConst .String32 .length
-          else stringConst .String16 ?? _if
-            stringConst .String16 .length
+          stringConst .Array8 ?? if
+            stringConst .Array8 .length
+          else stringConst .Array32 ?? _if
+            stringConst .Array32 .length
+          else stringConst .Array16 ?? _if
+            stringConst .Array16 .length
           else ..unreachable end ConstValue .Int
           IdentifierInfo optional.empty
         fileState [] .wordStart Constant new state pushConst
