@@ -42,15 +42,13 @@ union(
 ) =:: export: ConstValue
 
 struct(
-  MixedArenaAllocator : mut: primitiveArrayValues
-  ConstValue ArenaAllocator : mut: arrayValues
+  MixedArenaAllocator : mut: arrayValues
   stringBuilder : mut: stringParseBuffer
 ) =:: export: ConstantContext
 ## XXX? free const context
 proc( -> ConstantContext ) =>: export: newConstContext
   ## ConstantContext
-   512  mixedArena.create
-   256  ConstValue arenaAlloc.create
+   4096 mixedArena.create
    256  sb.create
  ConstantContext new return
 end
@@ -60,9 +58,9 @@ proc(
  T arrayView : elts
  ConstantContext ptr.mut : context
 -> T arrayView ) =>: constPrimitiveArray
-  context [] .primitiveArrayValues
+  context [] .arrayValues
     elts mixedArena.copyArray array.freeze =:: result
-  context [] .primitiveArrayValues =
+  context [] .arrayValues =
   result return
 end
 proc(
@@ -70,7 +68,7 @@ proc(
   ConstantContext ptr.mut : context
 -> ConstValue arrayView ) =>: export: constArray
   context [] .arrayValues
-    elts arenaAlloc.copyArray array.freeze =:: result
+    elts mixedArena.copyArray array.freeze =:: result
   context [] .arrayValues =
   result return
 end
@@ -109,7 +107,7 @@ proc(
   ConstantContext ptr.mut : context
 -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
-    value arenaAlloc.copyValue =:: valuePtr
+    value mixedArena.copyValue =:: valuePtr
   context [] .arrayValues =
   valuePtr index UnionConstant new ConstValue .Union return
 end

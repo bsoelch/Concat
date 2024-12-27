@@ -37,7 +37,7 @@ struct(
   ConstValue list : mut: stack
   ValueInfo  list : mut: stackInfo
   BlockInfo  list : mut: openBlocks
-  ConstValue ArenaAllocator : mut: localMemory
+  MixedArenaAllocator : mut: localMemory
   ## XXX globalMemory (?heapMemory)
   Type list : mut: typeBuffer
   ConstValue list : mut: valueBuffer
@@ -63,7 +63,7 @@ namespace: interpreter
       64 ValueInfo  list.create
       64 BlockInfo  list.create
       ## no reordering of allocated blocks to prevent allocation below start of current stack frame
-      512 true ConstValue arenaAlloc.create
+      4096 true mixedArena.create
       64 Type       list.create
       64 ConstValue list.create
       64 LabelId    list.create
@@ -1183,12 +1183,12 @@ namespace: interpreter
   end
   proc(
     LocalSlice : data
-    ConstValue ArenaAllocator ptr.mut : allocator
+    MixedArenaAllocator ptr.mut : allocator
     ConstantContext ptr.mut : constContext
   -> ConstValue ) =>: copyLocalArray
     data ConstValue arrayView.mut cast =:: dataArray
     allocator []
-      dataArray arenaAlloc.copyMutableArray =:: tmpArray
+      dataArray mixedArena.copyMutableArray =:: tmpArray
     allocator [] =
     ## 1. copy elements
     dataArray .length for =:: i
@@ -1215,7 +1215,7 @@ namespace: interpreter
           value .Array
         else
           value .LocalArray ConstValue arrayView.mut cast array.freeze
-        end arenaAlloc.copyArray =:: localSlice
+        end mixedArena.copyArray =:: localSlice
       context [] .localMemory =
       valType typeContext types.getBaseType =:: arrayBase
       ## copy sub-arrays
@@ -1234,7 +1234,7 @@ namespace: interpreter
     ## TODO? replace union element by local copy
     else
       context [] .localMemory
-        value arenaAlloc.copyValue =:: localAddress
+        value mixedArena.copyValue =:: localAddress
       context [] .localMemory =
       localAddress LocalAddress cast ConstValue .LocalValue
     end
@@ -1251,7 +1251,7 @@ namespace: interpreter
     dataType typeContext types.isTuple if
       dataType typeContext types.compositeEltCount =:: eltCount
       context [] .localMemory
-        eltCount i32 cast arenaAlloc.allocArray =:: localSlice
+        eltCount i32 cast ConstValue mixedArena.allocArray =:: localSlice
       context [] .localMemory =
       eltCount for =:: i
         dataType i typeContext types.compositeGetElement =:: eltType
@@ -1276,7 +1276,7 @@ namespace: interpreter
         end
       else 1 end =:: eltCount
       context [] .localMemory
-        eltCount i32 cast arenaAlloc.allocArray =:: localSlice
+        eltCount i32 cast ConstValue mixedArena.allocArray =:: localSlice
       context [] .localMemory =
       dataType typeContext types.getElementType =:: eltType
       eltType typeContext types.isTuple or eltType typeContext types.isArray if
@@ -1291,7 +1291,7 @@ namespace: interpreter
       localSlice LocalSlice cast ConstValue .LocalArray
     else
       context [] .localMemory
-        ConstValue .None arenaAlloc.copyValue =:: localAddress
+        ConstValue .None mixedArena.copyValue =:: localAddress
       context [] .localMemory =
       localAddress LocalAddress cast ConstValue .LocalValue
     end
@@ -2429,13 +2429,13 @@ proc(
           value? .data [] =
         else value? .data [] .LocalArray ?? _if
           value? .data [] .LocalArray =:: localArray
-          context [] .localMemory arenaAlloc.offset =:: localOffset
+          context [] .localMemory mixedArena.offset =:: localOffset
           localArray
             context [] .localMemory@ constContext copyLocalArray
           value? .data [] =
           ## clear memory used by copy
           context [] .localMemory
-            localOffset arenaAlloc.reset
+            localOffset mixedArena.reset
           context [] .localMemory =
         else
           "unexpected constant for copy, expected local memory got: " sb.wrap
@@ -3357,14 +3357,14 @@ proc(
   else
     InterpreterType .INTERPRET
   end context [] .evalType =
-  context [] .localMemory arenaAlloc.offset =:: offset
+  context [] .localMemory mixedArena.offset =:: offset
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
   evaluateOperations if
     stackOffset context truncateStack
     context [] .localMemory
-      offset arenaAlloc.reset
+      offset mixedArena.reset
     context [] .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
@@ -3374,7 +3374,7 @@ proc(
   end
   ## TODO ensure returned values do not point to deleted local memory
   context [] .localMemory
-    offset arenaAlloc.reset
+    offset mixedArena.reset
   context [] .localMemory =
   ## FIXME static procedures don't cast their return value
   isTypeGenerator if

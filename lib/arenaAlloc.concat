@@ -41,7 +41,7 @@ namespace: arenaAlloc
     i32 : sliceSize
     ( T ptr -> ) ptr optional : freeElt
     ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
-    bool : strictLinear
+    bool : strictOrder
   -> T ArenaAllocator ) =>: create_internal
     ## XXX? nearest of next largest power of 2
     ## XXX? find better way to convert slice size to power of 2
@@ -55,7 +55,7 @@ namespace: arenaAlloc
       freeElt
       0
       sizeBits
-      strictLinear
+      strictOrder
     T ArenaAllocator new
   end
   proc(
@@ -63,10 +63,10 @@ namespace: arenaAlloc
     ## size of a given memory slice, will be rounded to the nearest power of two
     i32 : sliceSize
     ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
-    bool : strictLinear
+    bool : strictOrder
     ( T ptr -> ) ptr : freeElt
   -> T ArenaAllocator ) =>: create_FS
-    sliceSize freeElt optional.wrap strictLinear create_internal
+    sliceSize freeElt optional.wrap strictOrder create_internal
   end
   proc(
     type : auto: T
@@ -80,10 +80,10 @@ namespace: arenaAlloc
     ## size of a given memory slice, will be rounded to the nearest power of two
     i32 : sliceSize
     ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
-    bool : strictLinear
+    bool : strictOrder
     type : T
   -> T ArenaAllocator ) =>: create_S
-    sliceSize ( T ptr -> ) ptr optional.empty strictLinear create_internal
+    sliceSize ( T ptr -> ) ptr optional.empty strictOrder create_internal
   end
   proc(
     ## size of a given memory slice, will be rounded to the nearest power of two
@@ -343,17 +343,29 @@ namespace: mixedArena
   proc( i64 -> i32 ) =>: alignSize
     MaxAlign ..type.stride 1 - + MaxAlign ..type.stride ..udiv i32 cast
   end
-  ## XXX? strictly linear version
   proc(
     ## size of a given memory slice, will be rounded to the nearest power of two
     i32 : sliceSize
-  -> MixedArenaAllocator ) =>: export: create
+    ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
+    bool : strictOrder
+  -> MixedArenaAllocator ) =>: export: create_S
+    ## create_internal
+      sliceSize i64 cast.u MaxAlign ..type.stride ..udiv i32 cast
+      ( MaxAlign ptr -> ) ptr optional.empty
+      strictOrder
+    arenaAlloc.create_internal MixedArenaAllocator cast
+  end
+  proc(
+    ## size of a given memory slice, will be rounded to the nearest power of two
+    i32 : sliceSize
+  -> MixedArenaAllocator ) =>: export: create_0
     ## create_internal
       sliceSize i64 cast.u MaxAlign ..type.stride ..udiv i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       false
     arenaAlloc.create_internal MixedArenaAllocator cast
   end
+  overload: export: create create_0 create_S end
 
   proc(
     MixedArenaAllocator : arena
@@ -435,7 +447,18 @@ namespace: mixedArena
     return
   end
 
-  ## TODO implement offset/reset
+  proc( MixedArenaAllocator : arena -> i64 ) =>: export: offset
+    arena MaxAlign ArenaAllocator cast arenaAlloc.offset
+  end
+  proc(
+    MixedArenaAllocator : arena
+    i64 : newLength
+  -> MixedArenaAllocator ) =>: export: reset
+    arena MaxAlign ArenaAllocator cast
+      newLength arenaAlloc.reset
+    MixedArenaAllocator cast
+  end
+
   proc(
     type : auto: T
     MixedArenaAllocator : arena0
