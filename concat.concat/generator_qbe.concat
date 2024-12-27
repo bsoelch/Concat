@@ -834,7 +834,7 @@ namespace: sb
     typeContext .labelContext@ =:: labelContext
     constant [] .value =:: value
     constant [] .valType types.isPrimitive or constant [] .valType .intLiteral ?? and
-        ConstValue ..length 19 == "no new constants" assert
+        ConstValue ..length 23 == "no new constants" assert
         value switch
           Array8  case value .Array8  .length 0 == break
           Array16 case value .Array16 .length 0 == break
@@ -1123,6 +1123,7 @@ namespace: sb
           end
           return
         None WildCard TypeId LocalValue LocalArray
+            LocalArray8 LocalArray16 LocalArray32 LocalArray64
             Procedure ProcedureBundle case
         break
       end

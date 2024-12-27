@@ -16,6 +16,10 @@ struct( ConstValue ptr : value i64 : eltIndex ) =:: export: UnionConstant
 ## pointers to mutable constants in interpreter
 ConstValue ptr.mut =:: export: LocalAddress
 ConstValue arrayView.mut =:: export: LocalSlice
+i8 arrayView.mut =:: export: LocalSlice8
+i16 arrayView.mut =:: export: LocalSlice16
+i32 arrayView.mut =:: export: LocalSlice32
+i64 arrayView.mut =:: export: LocalSlice64
 
 ## XXX? use wrapper types for array constants to prevent accidental assignment of external values
 union(
@@ -39,6 +43,10 @@ union(
   UnionConstant : Union
   LocalAddress : LocalValue
   LocalSlice : LocalArray
+  LocalSlice8 : LocalArray8
+  LocalSlice16 : LocalArray16
+  LocalSlice32 : LocalArray32
+  LocalSlice64 : LocalArray64
 ) =:: export: ConstValue
 
 struct(
@@ -175,6 +183,26 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
       ## local arrays are only equal if memory ranges coincide
       a .LocalArray .data b .LocalArray .data == and
         a .LocalArray .length b .LocalArray .length ==
+      end return
+    LocalArray8 case
+      ## local arrays are only equal if memory ranges coincide
+      a .LocalArray8 .data b .LocalArray8 .data == and
+        a .LocalArray8 .length b .LocalArray8 .length ==
+      end return
+    LocalArray16 case
+      ## local arrays are only equal if memory ranges coincide
+      a .LocalArray16 .data b .LocalArray16 .data == and
+        a .LocalArray16 .length b .LocalArray16 .length ==
+      end return
+    LocalArray32 case
+      ## local arrays are only equal if memory ranges coincide
+      a .LocalArray32 .data b .LocalArray32 .data == and
+        a .LocalArray32 .length b .LocalArray32 .length ==
+      end return
+    LocalArray64 case
+      ## local arrays are only equal if memory ranges coincide
+      a .LocalArray64 .data b .LocalArray64 .data == and
+        a .LocalArray64 .length b .LocalArray64 .length ==
       end return
   end
 end
@@ -537,6 +565,34 @@ namespace: sb
               val .LocalArray
                 ConstValue arrayView.mut cast array.freeze
               ConstValue .Array typeContext sb.appendConstant
+            ")" sb.appendS
+          break
+        LocalArray8 case
+            "local array8 ( "  sb.appendS
+              val .LocalArray8
+                i8 arrayView.mut cast array.freeze
+              ConstValue .Array8 typeContext sb.appendConstant
+            ")" sb.appendS
+          break
+        LocalArray16 case
+            "local array16 ( "  sb.appendS
+              val .LocalArray16
+                i16 arrayView.mut cast array.freeze
+              ConstValue .Array16 typeContext sb.appendConstant
+            ")" sb.appendS
+          break
+        LocalArray32 case
+            "local array32 ( "  sb.appendS
+              val .LocalArray32
+                i32 arrayView.mut cast array.freeze
+              ConstValue .Array32 typeContext sb.appendConstant
+            ")" sb.appendS
+          break
+        LocalArray64 case
+            "local array64 ( "  sb.appendS
+              val .LocalArray64
+                i64 arrayView.mut cast array.freeze
+              ConstValue .Array64 typeContext sb.appendConstant
             ")" sb.appendS
           break
       end

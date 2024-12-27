@@ -2813,7 +2813,7 @@ proc(
         targetValue targetInfo context unpopValue
         EvalResult .Error return
       end =:: value =:: valueInfo
-      ConstValue ..length 19 == "no new constants" assert
+      ConstValue ..length 23 == "no new constants" assert
       targetValue switch
         LocalValue case
           value targetValue .LocalValue [] =
@@ -2842,12 +2842,20 @@ proc(
             targetArray .data srcArray .data srcArray .length mem.copy ..drop
           end
           EvalResult .Ok return
+        LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
+          ## TODO support writing to primitive local arrays
+          "primitive local arrays are not supported: " sb.wrap
+            targetValue typeContext sb.appendConstant
+          op [] .pos errors appendError
+          value valueInfo context unpopValue
+          targetValue targetInfo context unpopValue
+          EvalResult .Error return
         default
-            "unexpected target for setValue, expected writable memory location got: " sb.wrap
-              targetValue typeContext sb.appendConstant
-            op [] .pos errors appendError
-            value valueInfo context unpopValue
-            targetValue targetInfo context unpopValue
+          "unexpected target for setValue, expected writable memory location got: " sb.wrap
+            targetValue typeContext sb.appendConstant
+          op [] .pos errors appendError
+          value valueInfo context unpopValue
+          targetValue targetInfo context unpopValue
           EvalResult .Error return
       end
       break

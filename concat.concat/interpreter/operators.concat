@@ -3,14 +3,14 @@ import "builtIns.concat"
 
 namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: constAsBool
-    ConstValue ..length 19 == "no new constants" assert
+    ConstValue ..length 23 == "no new constants" assert
     a switch
       Bool case a .Bool false return
       default false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: constAsInt ## all integer calculations are done in 64 bits
-    ConstValue ..length 19 == "no new constants" assert
+    ConstValue ..length 23 == "no new constants" assert
     a switch
       Char case a .Char i64 cast.u false return
       Int case a .Int i64 cast false return
@@ -18,7 +18,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsFloat
-    ConstValue ..length 19 == "no new constants" assert
+    ConstValue ..length 23 == "no new constants" assert
     a switch
       Char case a .Char i32 cast.u f64 cast false return
       Int case a .Int f64 cast false return
@@ -27,7 +27,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> Type bool ) =>: constAsType
-    ConstValue ..length 19 == "no new constants" assert
+    ConstValue ..length 23 == "no new constants" assert
     a switch
       TypeId case a .TypeId false return
       default Type .undefined true return
@@ -53,7 +53,7 @@ namespace: interpreter
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
     k 1 != if ConstValue .None OperatorResult .argumentError return end
     args 0 [] =:: a
-    ConstValue ..length 19 == "no new constants" assert
+    ConstValue ..length 23 == "no new constants" assert
     a switch
       Bool case a OperatorResult .success return
       Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .success return
@@ -405,7 +405,7 @@ namespace: interpreter
       end
     end
     valType typeContext types.isPointer if
-      ConstValue ..length 19 == "no new constants" assert
+      ConstValue ..length 23 == "no new constants" assert
       a switch
         Int case
           b .Int ?? ! if false false return end
@@ -443,6 +443,26 @@ namespace: interpreter
           a .LocalArray .data b .LocalArray .data == and
             a .LocalArray .length b .LocalArray .length ==
           end false return
+        LocalArray8 case
+          b .LocalArray8 ?? ! if false false return end
+          a .LocalArray8 .data b .LocalArray8 .data == and
+            a .LocalArray8 .length b .LocalArray8 .length ==
+          end false return
+        LocalArray16 case
+          b .LocalArray16 ?? ! if false false return end
+          a .LocalArray16 .data b .LocalArray16 .data == and
+            a .LocalArray16 .length b .LocalArray16 .length ==
+          end false return
+        LocalArray32 case
+          b .LocalArray32 ?? ! if false false return end
+          a .LocalArray32 .data b .LocalArray32 .data == and
+            a .LocalArray32 .length b .LocalArray32 .length ==
+          end false return
+        LocalArray64 case
+          b .LocalArray64 ?? ! if false false return end
+          a .LocalArray64 .data b .LocalArray64 .data == and
+            a .LocalArray64 .length b .LocalArray64 .length ==
+          end false return
         default ## unexpected type for pointer
           true false return
       end
@@ -453,7 +473,7 @@ namespace: interpreter
   proc(
     ConstValue : src
   -> i8 _ ptr i64 i64 bool ) =>: constantAsRawMemory
-    ConstValue ..length 19 == "no new constants" assert
+    ConstValue ..length 23 == "no new constants" assert
     src switch
       Array8 case
         src .Array8 .data i8 _ ptr cast!
@@ -475,15 +495,56 @@ namespace: interpreter
         src .Array64 .length
         i64 ..type.stride
         false return
+      LocalArray8 case
+        src .LocalArray8 .data i8 _ ptr cast!
+        src .LocalArray8 .length
+        i8 ..type.stride
+        false return
+      LocalArray16 case
+        src .LocalArray16 .data i8 _ ptr cast!
+        src .LocalArray16 .length
+        i16 ..type.stride
+        false return
+      LocalArray32 case
+        src .LocalArray32 .data i8 _ ptr cast!
+        src .LocalArray32 .length
+        i32 ..type.stride
+        false return
+      LocalArray64 case
+        src .LocalArray64 .data i8 _ ptr cast!
+        src .LocalArray64 .length
+        i64 ..type.stride
+        false return
       default 0 i8 _ ptr cast! 0 0 true return
     end
   end
   proc(
     ConstValue : src
   -> i8 _ ptr.mut i64 i64 bool ) =>: constantAsRawMutableMemory
-    ConstValue ..length 19 == "no new constants" assert
-    ## TODO add LocalArray8 .. LocalArray64 types
-    0 i8 _ ptr.mut cast! 0 0 true return
+    ConstValue ..length 23 == "no new constants" assert
+    src switch
+      LocalArray8 case
+        src .LocalArray8 .data i8 _ ptr.mut cast!
+        src .LocalArray8 .length
+        i8 ..type.stride
+        false return
+      LocalArray16 case
+        src .LocalArray16 .data i8 _ ptr.mut cast!
+        src .LocalArray16 .length
+        i16 ..type.stride
+        false return
+      LocalArray32 case
+        src .LocalArray32 .data i8 _ ptr.mut cast!
+        src .LocalArray32 .length
+        i32 ..type.stride
+        false return
+      LocalArray64 case
+        src .LocalArray64 .data i8 _ ptr.mut cast!
+        src .LocalArray64 .length
+        i64 ..type.stride
+        false return
+      default 0 i8 _ ptr.mut cast! 0 0 true return
+    end
   end
   proc(
     ConstValue : target
