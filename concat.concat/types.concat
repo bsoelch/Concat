@@ -33,7 +33,7 @@ namespace: types
     LONG LONGLONG U_LONG U_LONGLONG SIZE
     FLOAT DOUBLE
     ## XXX? add support for long double
-    STRUCT_PTR UNION_PTR
+    STRUCT_PTR UNION_PTR ## TODO? replace STRUCT_PTR -> STRUCT, explicitly wrap in pointer
   ) =:: CType
   enum(
     U7  S8  U8  ## largest numbers castable to i8;  -> i32 by default
@@ -318,6 +318,19 @@ namespace: types
       ..dup isPrimitive ! if ..drop
         false return
       end .primitiveType isIntPrimitive
+  end
+  ## integer or cType integer
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isIntLike
+    context unwrapNamed =:: t
+    t context isInt if true return end
+    t .cType ?? if
+      t .cType switch
+        S_CHAR CHAR U_CHAR SHORT U_SHORT INT U_INT
+          LONG U_LONG LONGLONG U_LONGLONG SIZE case true return
+        VOID BOOL FLOAT DOUBLE STRUCT_PTR UNION_PTR case false return
+      end
+    end
+    false return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isSignedInt
     unwrapNamed

@@ -1,5 +1,6 @@
 import map
 import arenaAlloc
+import stringLiteral
 
 import "interpreter/operators.concat"
 import "identifiers.concat"
@@ -3013,6 +3014,60 @@ namespace: interpreter
         true return
     end
   end
+  proc(
+    LabelId : procName
+    Type : procIn
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: evaluateExternCall
+    context [] .program =:: program
+    program [] .errors@ =:: errors
+    program [] .idContext .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
+    "memcpy":s procName labelContext id.labelNameEq if
+      procIn typeContext types.compositeEltArray =:: args
+      args .length 3 != or
+          args 0 array.get typeContext types.isPointer ! or
+          args 0 array.get typeContext types.isMutable ! or
+          args 1 array.get typeContext types.isPointer ! or
+          args 2 array.get typeContext types.isIntLike ! if
+        "unexpected arguments for `memcpy` expected: " sb.wrap
+          "( <ptr.mut> <ptr> <int-primitive> -> ... ) got: ( " sb.appendS
+          procIn typeContext sb.appendType
+          " -> ... )" sb.appendS
+        pos errors appendError
+        true return
+      end
+      3 "memcpy":s pos context checkStack if
+        true return
+      end
+      pos context popValue ! "hasValue" assert =:: lenValue =:: lenInfo
+      pos context popValue ! "hasValue" assert =:: srcValue =:: srcInfo
+      pos context popValue ! "hasValue" assert =:: targetValue =:: targetInfo
+      lenValue .Int ?? if
+        lenValue .Int
+      else ## XXX? support GenericArg as length
+        "unexpected argument for memcpy, expected Integer got: " sb.wrap
+          lenValue typeContext sb.appendConstant
+        pos errors appendError
+        targetValue targetInfo context unpopValue
+        srcValue srcInfo context unpopValue
+        lenValue lenInfo context unpopValue
+        true return
+      end =:: length
+      targetValue srcValue length pos program opMemcopy if
+        targetValue targetInfo context unpopValue
+        srcValue srcInfo context unpopValue
+        lenValue lenInfo context unpopValue
+        true return
+      end
+      false return
+    end
+    "call to unsupported extern procedure: " sb.wrap
+      procName labelContext sb.appendLabelName
+    pos errors appendInfo
+    true return
+  end
 end
 
 proc(
@@ -3162,6 +3217,11 @@ proc(
     end ..drop
     true
   else false end =:: isTypeGenerator
+  procName labelContext id.labelFlags id.FLAG_EXTERN & ? and
+      procData [] .implementation .code ?? and
+      procData [] .implementation .code .codeState .PARSING ?? if
+    procName inType pos context evaluateExternCall return
+  end
   procData [] .isStatic ! and context [] .typeChecker optional.hasData if
     procId implId pos context [] .typeChecker .data typeCheckChildProcedures
   end

@@ -405,16 +405,142 @@ namespace: interpreter
       end
     end
     valType typeContext types.isPointer if
-      a .String ?? b .String ?? & if
-        ## a and b are the same string constant
-        a .String .data b .String .data ==
-        a .String .length b .String .length == &
-        false return
+      ConstValue ..length 22 == "no new constants" assert
+      a switch
+        Int case
+          b .Int ?? ! if false false return end
+          a .Int b .Int == false return
+        LocalValue case
+          b .LocalValue ?? ! if false false return end
+          a .LocalValue b .LocalValue == false return
+        String case
+          b .String ?? ! if false false return end
+          a .String .data b .String .data == and
+            a .String .length b .String .length ==
+          end false return
+        String16 case
+          b .String16 ?? ! if false false return end
+          a .String16 .data b .String16 .data == and
+            a .String16 .length b .String16 .length ==
+          end false return
+        String32 case
+          b .String32 ?? ! if false false return end
+          a .String32 .data b .String32 .data == and
+            a .String32 .length b .String32 .length ==
+          end false return
+        Array8 case
+          b .Array8 ?? ! if false false return end
+          a .Array8 .data b .Array8 .data == and
+            a .Array8 .length b .Array8 .length ==
+          end false return
+        Array16 case
+          b .Array16 ?? ! if false false return end
+          a .Array16 .data b .Array16 .data == and
+            a .Array16 .length b .Array16 .length ==
+          end false return
+        Array32 case
+          b .Array32 ?? ! if false false return end
+          a .Array32 .data b .Array32 .data == and
+            a .Array32 .length b .Array32 .length ==
+          end false return
+        Array64 case
+          b .Array64 ?? ! if false false return end
+          a .Array64 .data b .Array64 .data == and
+            a .Array64 .length b .Array64 .length ==
+          end false return
+        Array case
+          b .Array ?? ! if false false return end
+          a .Array .data b .Array .data == and
+            a .Array .length b .Array .length ==
+          end false return
+        LocalArray case
+          b .LocalArray ?? ! if false false return end
+          a .LocalArray .data b .LocalArray .data == and
+            a .LocalArray .length b .LocalArray .length ==
+          end false return
+        default ## unexpected type for pointer
+          true false return
       end
-      a constAsInt if ..drop false true return end =:: x
-      b constAsInt if ..drop false true return end =:: y
-      x y == false return
     end
     false true return
+  end
+
+  proc(
+    ConstValue : src
+  -> i8 _ ptr i64 i64 bool ) =>: constantAsRawMemory
+    ConstValue ..length 22 == "no new constants" assert
+    src switch
+      String case
+        src .String .data i8 _ ptr cast!
+        src .String .length
+        i8 ..type.stride
+        false return
+      Array8 case
+        src .Array8 .data i8 _ ptr cast!
+        src .Array8 .length
+        i8 ..type.stride
+        false return
+      String16 case
+        src .String16 .data i8 _ ptr cast!
+        src .String16 .length
+        i16 ..type.stride
+        false return
+      Array16 case
+        src .Array16 .data i8 _ ptr cast!
+        src .Array16 .length
+        i16 ..type.stride
+        false return
+      String32 case
+        src .String32 .data i8 _ ptr cast!
+        src .String32 .length
+        i32 ..type.stride
+        false return
+      Array32 case
+        src .Array32 .data i8 _ ptr cast!
+        src .Array32 .length
+        i32 ..type.stride
+        false return
+      Array64 case
+        src .Array64 .data i8 _ ptr cast!
+        src .Array64 .length
+        i64 ..type.stride
+        false return
+      default 0 i8 _ ptr cast! 0 0 true return
+    end
+  end
+  proc(
+    ConstValue : src
+  -> i8 _ ptr.mut i64 i64 bool ) =>: constantAsRawMutableMemory
+    ConstValue ..length 22 == "no new constants" assert
+    ## TODO add LocalArray8 .. LocalArray64 types
+    0 i8 _ ptr.mut cast! 0 0 true return
+  end
+  proc(
+    ConstValue : target
+    ConstValue : src
+    i64 : length
+    FilePosition : pos
+    ProgramContext ptr.mut : program
+  -> bool ) =>: export: opMemcopy
+    length 0 <= if
+      false return
+    end
+    program [] .errors@ =:: errors
+    program [] .idContext .typeContext@ =:: typeContext
+    src constantAsRawMemory if ..drop.3
+      "unsupported constant for memcopy source: " sb.wrap
+        src typeContext sb.appendConstant
+      pos errors appendError
+      true return
+    end =:: srcStride =:: srcLength =:: srcData
+    target constantAsRawMutableMemory if ..drop.3
+      "unsupported constant for memcopy target: " sb.wrap
+        target typeContext sb.appendConstant
+      pos errors appendError
+      true return
+    end =:: targetStride =:: targetLength =:: targetData
+    "memcopy is not implemented" sb.wrap
+    pos errors appendError
+    true return
   end
 end
