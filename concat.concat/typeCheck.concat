@@ -4282,9 +4282,11 @@ proc(
   implLength return
 end
 
+enum( SKIP_UNDEFINED REQUIRE_DEFINED ) =:: ProcCheckType
 proc(
   ProcCodeState : codeState
   LabelId : procName
+  ProcCheckType : checkType
   FilePosition optional : expandedAt
   ProgramContext ptr.mut : program
 -> bool ) =>: checkProcState
@@ -4292,7 +4294,7 @@ proc(
     PARSED case false return ## expected
     TYPE_CHECKED case true return ## nothing to do
     PARSING case
-      expandedAt optional.hasData if
+      checkType .REQUIRE_DEFINED ?? and expandedAt optional.hasData if
         "procedure " sb.wrap
           procName program [] .idContext .typeContext .labelContext@ sb.appendLabelName
           " has not finished parsing" sb.appendS
@@ -4300,7 +4302,7 @@ proc(
       end
       true return
     TYPE_CHECKING case
-      expandedAt optional.hasData if
+      checkType .REQUIRE_DEFINED ?? and expandedAt optional.hasData if
         "procedure " sb.wrap
           procName program [] .idContext .typeContext .labelContext@ sb.appendLabelName
           " has not finished type-checking" sb.appendS
@@ -4312,6 +4314,7 @@ end
 proc(
   ProcId : procId
   i64 : implId
+  ProcCheckType : checkType
   FilePosition optional : expandedAt
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckProcedure
@@ -4327,7 +4330,7 @@ proc(
   end
   currentProc [] .implementation .code@ =:: codeImpl
   implId -1 == if
-    codeImpl [] .codeState currentProc [] .labelId expandedAt program checkProcState if
+    codeImpl [] .codeState currentProc [] .labelId checkType expandedAt program checkProcState if
       return
     end
     ProcCodeState .TYPE_CHECKING codeImpl [] .codeState =
@@ -4335,7 +4338,7 @@ proc(
     codeImpl [] .implementations
       implId list.at .data
     =:: currentImpl
-    currentImpl [] .codeState currentProc [] .labelId expandedAt program checkProcState if
+    currentImpl [] .codeState currentProc [] .labelId checkType expandedAt program checkProcState if
       return
     end
     ProcCodeState .TYPE_CHECKING currentImpl [] .codeState =
@@ -4447,13 +4450,14 @@ proc(
   state rememberState
   TypeCheckMode .PROC_CHILD state [] .mode =
   state [] .missingProcs .length =:: missingProcsOffset
-  procId implId expandedAt optional.wrap state typeCheckProcedure
+  procId implId ProcCheckType .REQUIRE_DEFINED expandedAt optional.wrap state typeCheckProcedure
   ##  go through called procedures in breadth first order
   missingProcsOffset while $ state [] .missingProcs .length < do =:: i
     state [] .missingProcs i list.get =:: nextProc
     ## typeCheckProcedure
       nextProc .procId
       nextProc .implementationId
+      ProcCheckType .SKIP_UNDEFINED
       expandedAt optional.wrap ## XXX better position?, remember complete call stack?
     state typeCheckProcedure
   finally i 1 + end ..drop
@@ -4519,7 +4523,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
     end
-    procId ProcId cast -1 FilePosition optional.empty state typeCheckProcedure
+    procId ProcId cast -1 ProcCheckType .REQUIRE_DEFINED FilePosition optional.empty state typeCheckProcedure
     procId 1 +
   end ..drop
   ## static procedures
@@ -4558,7 +4562,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
             ')' sb.appendC
           implData [] .firstUse errors appendError
         end
-        procId ProcId cast implId implData [] .firstUse optional.wrap state typeCheckProcedure
+        procId ProcId cast implId ProcCheckType .REQUIRE_DEFINED implData [] .firstUse optional.wrap state typeCheckProcedure
         implId 1 +
       end ..drop
       procId 1 +
