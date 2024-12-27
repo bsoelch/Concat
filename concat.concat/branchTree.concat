@@ -30,7 +30,7 @@ namespace: branchTree
     root i64 cast =:: mut: nodeId
     while nodeId 0 >= do
       tree [] .nodes nodeId list.at .data =:: node
-      node [] .childCount 0 > assert "positive child count"
+      node [] .childCount 0 > "positive child count" assert
       node [] .parent i64 cast nodeId =
     end
   end
@@ -75,11 +75,11 @@ namespace: branchTree
       itr .tree [] .nodes itr .id i64 cast list.at .data =:: node
       ## return
         itr .tree node [] .parent T BranchItr new
-      node [] .data @ return
+      node [] .data@ return
     end
     proc( type : auto: T T BranchItr : itr -> T BranchItr T ptr ) =>: export: peekNext
       itr .tree [] .nodes itr .id i64 cast list.at .data =:: node
-      itr node [] .data @ return
+      itr node [] .data@ return
     end
     proc( type : auto: T T BranchItr : itr -> T BranchItr ) =>: export: skipNext
       itr .tree [] .nodes itr .id i64 cast list.at .data =:: node
@@ -226,7 +226,7 @@ namespace: branchTree
       1 -
     end ..drop
     tree [] .nodes nodeId list.at
-      .data [] .data @ T ptr cast
+      .data [] .data@ T ptr cast
     optional.wrap return
   end
   ## returns a mutable pointer to the stack element at the given index (0-indexed from top), writing to the returned pointer will only modify the current branch
@@ -252,7 +252,7 @@ namespace: branchTree
     needCopy ! and
         tree [] .nodes nodeId list.at .data =:: node
         node [] .childCount 1 <= if
-      node [] .data @ optional.wrap return
+      node [] .data@ optional.wrap return
     end
     ## copy branch to prevent modification of other branches
     ## TODO keep part of tree only present in current branch
@@ -291,7 +291,7 @@ namespace: branchTree
     end
     tree oldHead endBranch ## remove old head from branch
     tree [] .nodes nodeId list.at
-      .data [] .data @
+      .data [] .data@
     optional.wrap return
   end
   proc(
@@ -315,7 +315,7 @@ namespace: branchTree
     end
     tree nodeId NodeId cast unlinkNode
     tree check
-    popped [] .data @ T ptr cast optional.wrap return
+    popped [] .data@ T ptr cast optional.wrap return
   end
   proc(
     type : auto: T
@@ -416,7 +416,7 @@ namespace: branchTree
     while
       tree [] .nodes heads 0 [] i64 cast list.at .data =:: root
       root [] .parent parentId =
-      root [] .data @ buffer 0 [] =
+      root [] .data@ buffer 0 [] =
       ## store parent node before unlinking child
       parentId -1:NodeId != if
         tree [] .nodes parentId i64 cast list.get optional.wrap
@@ -433,7 +433,7 @@ namespace: branchTree
         next [] .parent parentId != if
           true needMerge =
         end
-        next [] .data @ buffer i [] =
+        next [] .data@ buffer i [] =
         next [] .childCount 0 == if
           ## TODO? are the child counts updated correctly
           tree heads i [] unlinkNode

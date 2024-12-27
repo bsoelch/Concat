@@ -456,9 +456,9 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeMo
 end
 
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpretTypeBlock
-  InterpreterLoadMode .typeBlock state interpreterLoadContants ! assert "interpreterFindContant"
+  InterpreterLoadMode .typeBlock state interpreterLoadContants ! "interpreterFindContant" assert
   state [] .compiledOps .length state [] .blockStart =
-  state .interpreter [] .evalType .INTERPRET ?? assert "interpret outside type-blocks"
+  state .interpreter [] .evalType .INTERPRET ?? "interpret outside type-blocks" assert
   InterpreterType .GLOBAL state .interpreter [] .evalType =
   op state [] .interpreter@ evaluateOperation .Ok ?? ! if
     "could not evaluate " sb.wrap
@@ -469,8 +469,8 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpre
   true state [] .inTypeBlock =
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretTypeBlock
-  state [] .inTypeBlock assert "in Type-block"
-  state .interpreter [] .evalType .GLOBAL ?? assert "global interpreter"
+  state [] .inTypeBlock "in Type-block" assert
+  state .interpreter [] .evalType .GLOBAL ?? "global interpreter" assert
   op state [] .interpreter@ evaluateOperation .Ok ?? ! if
     "unexpected operation in Type/Initializer block: " sb.wrap
       op [] state [] .program sb.appendOp
@@ -548,7 +548,7 @@ proc(
       count sb.appendI
       " values got " sb.appendS
       state [] .stack branchTree.depth sb.appendI
-    pos state [] .program [] .errors @ appendError
+    pos state [] .program [] .errors@ appendError
     true return
   end
   false return
@@ -560,8 +560,8 @@ proc(
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: tryCastConstant
-  state [] .program [] .errors @ =:: errors
-  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .errors@ =:: errors
+  state [] .program [] .idContext .typeContext@ =:: typeContext
   src .value .None ?? if
     true return
   end
@@ -614,11 +614,11 @@ proc(
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: requireTypes
-  state [] .program [] .errors @ =:: errors
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  state [] .program [] .errors@ =:: errors
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   types .length i64 list.create =:: mut: argOffsets
   1:i64 while ..dup types .length <= do =:: i
     types types .length i - array.get =:: expectedType
@@ -636,12 +636,12 @@ proc(
       OP_UNLINKED list.append
     argOffsets =
     expectedType .empty ?? if
-      state [] .stack @ branchTree.peek .data =:: typeInfo
+      state [] .stack@ branchTree.peek .data =:: typeInfo
       typeInfo [] .valueType typeContext types.isEmpty ! if
         i 1 + continue ## skip empty if stack value non-empty
       end
     end
-    state [] .stack @ branchTree.pop .data [] =:: typeInfo
+    state [] .stack@ branchTree.pop .data [] =:: typeInfo
     ## set argument offset to correct value
     typeInfo .opIndex argOffsets list.peek .data [] =
     typeInfo .valueType expectedType types.typeEquals if
@@ -684,12 +684,12 @@ proc(
 end
 proc( i64 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: discardValues
   state [] .program =:: program
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
   count pos state checkStackSize if return end
   0 =:: mut: toDrop
   0:i64 while ..dup count < do
-    state [] .stack @ branchTree.pop .data =:: typeInfo
+    state [] .stack@ branchTree.pop .data =:: typeInfo
     typeInfo [] .valueType typeContext types.isEmpty if
       1 + continue
     end
@@ -737,7 +737,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
     Type .undefined return
   end
   typeInfo [] .value .TypeId =:: typeId
-    state [] .stack @ branchTree.pop ..drop ## drop value
+    state [] .stack@ branchTree.pop ..drop ## drop value
     typeInfo [] .opIndex state deleteOp ## remove stored operation
   typeId return
 end
@@ -779,15 +779,15 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: pushConstant
     state [] .program =:: program
-    program [] .idContext @ =:: idContext
-    idContext [] .typeContext @ =:: typeContext
+    program [] .idContext@ =:: idContext
+    idContext [] .typeContext@ =:: typeContext
     valType typeContext types.isEmpty if
       OP_EMPTY
     else
       state [] .compiledOps .length
     end =:: opIndex
     ## branchTree.push
-      state [] .stack @
+      state [] .stack@
       ## TypeInfo
         valType
         value
@@ -812,15 +812,15 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: pushValue
     state [] .program =:: program
-    program [] .idContext @ =:: idContext
-    idContext [] .typeContext @ =:: typeContext
+    program [] .idContext@ =:: idContext
+    idContext [] .typeContext@ =:: typeContext
     valType typeContext types.isEmpty if
       OP_EMPTY
     else
       state [] .compiledOps .length
     end =:: opIndex
     ## branchTree.push
-      state [] .stack @
+      state [] .stack@
       ## TypeInfo
         valType
         value
@@ -844,10 +844,10 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: pushTypes
   state [] .program [] .idContext
-    .typeContext @
+    .typeContext@
   =:: typeContext
   0:i64 while ..dup types .length < do =:: i
-    state [] .stack @
+    state [] .stack@
       ## TypeInfo
         types i array.get
         ConstValue .None
@@ -863,9 +863,9 @@ proc(
   end ..drop
 end
 proc( LabelId : label TypeCheckState ptr.mut : state -> ) =>: replaceLabel
-  state [] .stack @ branchTree.pop .data [] =:: mut: top
+  state [] .stack@ branchTree.pop .data [] =:: mut: top
   label top .valueId =
-  state [] .stack @ top branchTree.push
+  state [] .stack@ top branchTree.push
 end
 
 proc(
@@ -886,7 +886,7 @@ proc(
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> BlockInfo ) =>: closeBlock
-  state [] .program [] .errors @ =:: errors
+  state [] .program [] .errors@ =:: errors
   state [] .openBlocks .length 0 == if ## XXX? check for underflow wrt. reset-state
     BlockInfo .Unknown return
   end
@@ -916,7 +916,7 @@ proc(
   program [] .idContext@ =:: idContext
   idContext [] .typeContext@ =:: typeContext
   typeContext [] .labelContext@ =:: labelContext
-  program [] .errors @ =:: errors
+  program [] .errors@ =:: errors
   state [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
     state [] .openBlocks i list.at .data =:: block
     block [] .While ?? and blockLabel id.LABEL_ID_NONE == or
@@ -994,11 +994,11 @@ proc(
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> ) =>: clearReferences
-  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .idContext .typeContext@ =:: typeContext
   ## list.create
     state [] .stack branchTree.depth
   TypeInfo list.create =:: mut: stackElements
-  while state [] .stack @ branchTree.pop =:: next?
+  while state [] .stack@ branchTree.pop =:: next?
       next? optional.hasData do
     stackElements
       next? .data list.appendP
@@ -1033,7 +1033,7 @@ proc(
       ## remove possibility to overwrite copy
       OP_UNLINKED elt .copyMutableIndex =
     end
-    state [] .stack @
+    state [] .stack@
       elt
     branchTree.push
   end
@@ -1055,11 +1055,11 @@ proc(
   MergePoint : mergePoint
 -> TypeInfo ) =>: mergeBranches
   mergePoint .state [] .program =:: program
-  program [] .errors @ =:: errors
-  program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  program [] .errors@ =:: errors
+  program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   toMerge .length 1 == if
     toMerge 0 array.get [] return
   end
@@ -1200,11 +1200,11 @@ proc(
     default break
   end
   state [] .program =:: program
-  program [] .errors @ =:: errors
-  program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  program [] .errors@ =:: errors
+  program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   "unreachable operation: " sb.wrap
     op [] program sb.appendOp
   op [] .pos errors appendError
@@ -1247,9 +1247,9 @@ proc(
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
   state [] .program =:: program
-  program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  state [] .stack @ branchTree.pop .data [] =:: mut: topValue
+  program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  state [] .stack@ branchTree.pop .data [] =:: mut: topValue
   topValue .valueType typeContext types.isEmpty if
     return
   end
@@ -1259,7 +1259,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
   state [] .compiledOps =
   index topValue .opIndex =
   index topValue .copyMutableIndex =
-  state [] .stack @ topValue branchTree.push
+  state [] .stack@ topValue branchTree.push
 end
 proc(
   i64 : copyMutableIndex
@@ -1375,13 +1375,13 @@ proc(
   bool : autoTyped
   TypeCheckState ptr.mut : state
 -> ) =>: resolveAutoType
-  state [] .program [] .errors @ =:: errors
-  state [] .program [] .autoTypes @ =:: autoTypes
-  state [] .program [] .idContext .typeContext @ =:: typeContext
+  state [] .program [] .errors@ =:: errors
+  state [] .program [] .autoTypes@ =:: autoTypes
+  state [] .program [] .idContext .typeContext@ =:: typeContext
   op [] .dataType .autoType ?? if
     op [] .dataType types.getTypeId =:: id
     autoTyped if
-      state [] .stack @ branchTree.peek =:: value?
+      state [] .stack@ branchTree.peek =:: value?
       value? optional.hasData if
         value? .data [] .valueType
           typeContext
@@ -1414,10 +1414,10 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckReturn
   state [] .program =:: program
-  state [] .program [] .errors @ =:: errors
-  program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  state [] .program [] .errors@ =:: errors
+  program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   state [] .currentProcType =:: procType
   procType op [] .dataType =
   procType typeContext types.isProcedure ! if
@@ -1452,7 +1452,7 @@ proc(
   op [] state appendOp ..drop
   false state [] .reachable =
   state [] .stack branchTree.depth 0 > if
-    state [] .stack @ branchTree.pop .data =:: val
+    state [] .stack@ branchTree.pop .data =:: val
     "extra value at the end of procedure" sb.wrap
        val [] .valueType typeContext sb.appendType
        " ( pushed at " sb.appendS
@@ -1470,11 +1470,11 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: newSwitchLabel
   state [] .program =:: program
-  state [] .program [] .errors @ =:: errors
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  state [] .program [] .errors@ =:: errors
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   program [] .switchData
     switchId i64 cast.u list.at .data
   =:: switchData
@@ -1514,12 +1514,12 @@ proc(
 -> bool #+consume op+# ) =>: typeCheckSwitchLabel
   ## TODO? enable const-evalution in switch-labels
   state [] .program =:: program
-  state [] .program [] .errors @ =:: errors
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .constContext @ =:: constContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
-  state peekBlock .data [] .Switch @ =:: switchBlock
+  state [] .program [] .errors@ =:: errors
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .constContext@ =:: constContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
+  state peekBlock .data [] .Switch@ =:: switchBlock
   switchBlock [] .switchType =:: switchType
   switchBlock [] .blockId =:: switchId
   switchBlock [] .switchPosition =:: switchPosition
@@ -1655,8 +1655,8 @@ proc(
   TypeCheckState ptr.mut : state
 -> IdentifierInfo optional ) =>: resolveIdentifer
   state [] .program =:: program
-  state [] .program [] .idContext @ =:: idContext
-  idContext [] .typeContext .labelContext @ =:: labelContext
+  state [] .program [] .idContext@ =:: idContext
+  idContext [] .typeContext .labelContext@ =:: labelContext
   label labelContext id.inLabelNamespace
   label state [] .currentFile idContext id.findIdentifierByLabel if
     ..drop IdentifierInfo optional.empty return
@@ -1689,13 +1689,13 @@ proc(
   end
   op .val .getName ?? if
     op .val .getName
-      op @ state resolveIdentifer
+      op@ state resolveIdentifer
     ..dup optional.hasData if
       .data op .val .getId =
     else ..drop end
   else op .val .atName ?? _if
     op .val .atName
-      op @ state resolveIdentifer
+      op@ state resolveIdentifer
     ..dup optional.hasData if
       .data op .val .atId =
     else ..drop end
@@ -1782,7 +1782,7 @@ proc(
         ARGUMENT case
           op .val .getId .labelId =:: label
           ConstValue .None =:: mut: argValue
-          state [] .argData @ label map.at =:: argData?
+          state [] .argData@ label map.at =:: argData?
           argData? optional.hasData if
             argData? .data [] .valType op .dataType =
             argData? .data [] .value argValue =
@@ -1897,7 +1897,7 @@ proc(
             inTypes i typeContext types.compositeGetElement =:: elt
             eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
               ## remove static arguments from stack
-              state [] .stack @ branchTree.pop .data =:: opData
+              state [] .stack@ branchTree.pop .data =:: opData
               opData [] .opIndex state tryDeleteOp if
                 "could not remove static argument ( pushed at " sb.wrap
                   opData [] .pushedAt sb.appendPos
@@ -1906,7 +1906,7 @@ proc(
               end
             else ## next argument at top of stack
               ## requireTypes
-                elt @ array.wrap
+                elt@ array.wrap
                 "procedure argument" string.wrap
                 offset
                 op .pos
@@ -1947,7 +1947,7 @@ proc(
         return
       end
       ## requireTypes
-        calledType @ array.wrap
+        calledType@ array.wrap
         "procedure pointer" string.wrap
         0
         op .pos
@@ -1960,7 +1960,7 @@ proc(
         calledType
       end =:: procType
       procType typeContext types.getProcIn
-        ! assert "procType has arguments"
+        ! "procType has arguments" assert
       =:: inTypes
       ## requireTypes
         inTypes typeContext types.compositeEltArray
@@ -2000,7 +2000,7 @@ proc(
               $ .implementation [] .alias ?? if
                 .implementation [] .alias procId =
                 program [] .procedures procId i64 cast list.at .data
-                $ .implementation [] .alias ?? ! assert "no double alias"
+                $ .implementation [] .alias ?? ! "no double alias" assert
               end
             =:: procData
             -1:i64 =:: mut: implId
@@ -2040,7 +2040,7 @@ proc(
       end
       break
     declareId case
-      op @ false state resolveAutoType
+      op@ false state resolveAutoType
       op .val .declareId .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
           op state appendOp ..drop
@@ -2063,11 +2063,11 @@ proc(
         true
       else false end =:: autoTyped
       op .val .initializeId =:: idInfo
-      op @ autoTyped state resolveAutoType
+      op@ autoTyped state resolveAutoType
       idInfo op .val .initializeId = ## auto-typed initializations have been resolved
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR ITR_VAR case
-          state [] .stack @ branchTree.peek =:: constVal?
+          state [] .stack@ branchTree.peek =:: constVal?
           constVal? optional.hasData if
             constVal? .data [] .value
           else ConstValue .None end =:: constVal
@@ -2076,7 +2076,7 @@ proc(
             1 op .pos state discardValues
           else
             ## requireTypes
-              op .dataType @ array.wrap
+              op .dataType@ array.wrap
               "initialization" string.wrap
               0
               op .pos
@@ -2129,7 +2129,7 @@ proc(
         inType i typeContext types.compositeGetLabel =:: label
         label id.LABEL_ID_NONE == if ## push argument
           args i types.compositeElts.get =:: arg
-          state [] .stack @
+          state [] .stack@
             ## TypeInfo
               arg
               ConstValue .None
@@ -2148,7 +2148,7 @@ proc(
       1 op .pos state checkStackSize if
         return
       end
-      state [] .stack @ branchTree.peek .data =:: target
+      state [] .stack@ branchTree.peek .data =:: target
       target [] .valueType typeContext types.isReference =:: isReference
       isReference target [] .valueType typeContext types.isPointer | ! if
         "can only assign to pointers or references got: " sb.wrap
@@ -2205,7 +2205,7 @@ proc(
       =:: base
       base op .dataType =
       Type 2 array new =:: mut: argData
-      argData @ =:: args
+      argData@ =:: args
       base args 0 [] =
       target [] .valueType args 1 [] =
       ## requireTypes
@@ -2261,7 +2261,7 @@ proc(
             "could not convert literal to type: " sb.wrap
               srcType typeContext sb.appendType
             op .pos errors appendError
-          end ## ! assert "can convert literal to type"
+          end ## ! "can convert literal to type" assert
         end
       =:: mut: containerType
       ## compositeFindLabel
@@ -2298,7 +2298,7 @@ proc(
             " is not an enum or union" sb.appendS
           op .pos errors appendError
         end
-        state [] .stack @ branchTree.pop ..drop ## remove container from stack
+        state [] .stack@ branchTree.pop ..drop ## remove container from stack
         container .copyMutableIndex state removeCopy
         ## check enum label
         ## XXX? compute constant value
@@ -2334,7 +2334,7 @@ proc(
             elementIndex
           constContext newUnionConst constValue =
         else
-          state [] .stack @ branchTree.peek =:: value?
+          state [] .stack@ branchTree.peek =:: value?
           value? optional.hasData and
               value? .data [] .value .None ?? ! if
             ## newUnionConst
@@ -2395,7 +2395,7 @@ proc(
         1 op .pos state discardValues
       else
         ## remove container from stack
-        state [] .stack @ branchTree.pop ..drop
+        state [] .stack@ branchTree.pop ..drop
       end
       container .copyMutableIndex
         state [] .compiledOps .length 1 - ==
@@ -2428,13 +2428,13 @@ proc(
         container .copyMutableIndex state removeCopy
         state wrapCopy
       else
-        state [] .stack @ branchTree.pop .data [] topValue =
+        state [] .stack@ branchTree.pop .data [] topValue =
         container .copyMutableIndex topValue .copyMutableIndex =
-        state [] .stack @ topValue branchTree.push
+        state [] .stack@ topValue branchTree.push
       end
       return
     getEnumLabel case
-      state [] .stack @ branchTree.peek =:: label?
+      state [] .stack@ branchTree.peek =:: label?
       label? optional.isEmpty if
         "missing argument for operation " sb.wrap
           op program sb.appendOp
@@ -2452,7 +2452,7 @@ proc(
         op .pos errors appendError
       end
       ## XXX compile-time evaluation
-      enumType @ array.wrap "getEnumLabel" string.wrap 0 op .pos state requireTypes if
+      enumType@ array.wrap "getEnumLabel" string.wrap 0 op .pos state requireTypes if
         return
       end
       enumType op .dataType =
@@ -2463,7 +2463,7 @@ proc(
     getArrayElement atArrayElement case ## TODO? extract to procedure
       op .val .atArrayElement ?? =:: isAddr
       0:i64 =:: mut: indexCount
-      state [] .stack @ branchTree.itr.start while
+      state [] .stack@ branchTree.itr.start while
         branchTree.itr.hasNext
       do branchTree.itr.peekNext =:: typeInfo ## don't consume value
         typeInfo [] .valueType
@@ -2501,7 +2501,7 @@ proc(
         srcArray [] .valueType
           $ types.isLiteral if
             typeContext types.literalToType
-            srcArray [] $1 op .pos state tryCastConstant ! assert "can convert literal to type"
+            srcArray [] $1 op .pos state tryCastConstant ! "can convert literal to type" assert
           end
         =:: srcType
         srcArray [] .copyMutableIndex =:: srcCopyMutIndex
@@ -2596,11 +2596,11 @@ proc(
           srcCopyMutIndex state removeCopy
           state wrapCopy
         else
-          state [] .stack @
+          state [] .stack@
             branchTree.pop .data []
           =:: mut: topValue
           srcCopyMutIndex topValue .copyMutableIndex =
-          state [] .stack @ topValue branchTree.push
+          state [] .stack@ topValue branchTree.push
         end
       end
       return
@@ -2615,7 +2615,7 @@ proc(
     getArg case
       true program [] .hasGetArgs =
       ## requireTypes
-        types.primitive.I_SIZE @ array.wrap
+        types.primitive.I_SIZE@ array.wrap
         "program argument index" string.wrap
         0
         op .pos
@@ -2624,13 +2624,13 @@ proc(
       end
       op state appendOp ..drop ## ignore id
       Type 2 array new =:: mut: typeData
-      typeData @ =:: outTypes
+      typeData@ =:: outTypes
       types.primitive.CHAR8
         types.ArrayType .RAW_POINTER
         types.ArraySize array.empty
         false
       typeContext types.newArrayType
-        ! assert "successful array creation"
+        ! "successful array creation" assert
       outTypes 0 [] =
       types.primitive.I_SIZE outTypes 1 [] =
       outTypes array.wrap op .pos state pushTypes
@@ -2643,7 +2643,7 @@ proc(
       1 op .pos state checkStackSize if
         return
       end
-      state [] .stack @ branchTree.pop .data [] =:: value
+      state [] .stack@ branchTree.pop .data [] =:: value
       op .val .Cast ?? if
         value .valueType op .val .Cast .src =
       else op .val .bitCast ?? _if
@@ -2702,18 +2702,18 @@ proc(
         return
       end
       Type 2 array new =:: mut: params
-      state [] .stack @
+      state [] .stack@
          0 branchTree.at .data [] .valueType typeContext types.unwrapReference
-      params @ 0 [] =
-      state [] .stack @
+      params@ 0 [] =
+      state [] .stack@
          1 branchTree.at .data [] .valueType  typeContext types.unwrapReference
-      params @ 1 [] =
-      params @ 0 [] params @ 1 [] typeContext types.mergeTypes if
+      params@ 1 [] =
+      params@ 0 [] params@ 1 [] typeContext types.mergeTypes if
         ..drop
         "cannot check for equality between of values of types " sb.wrap
-          params @ 0 [] typeContext sb.appendType
+          params@ 0 [] typeContext sb.appendType
           " and " sb.appendS
-          params @ 1 [] typeContext sb.appendType
+          params@ 1 [] typeContext sb.appendType
         op .pos errors appendError
         return
       end =:: argType
@@ -2722,11 +2722,11 @@ proc(
         "the old behaviour of enum equality is deprecared use `..label` for comparing the labels of enums" sb.wrap
         op .pos errors appendWarning
       end
-      argType params @ 0 [] =
-      argType params @ 1 [] =
+      argType params@ 0 [] =
+      argType params@ 1 [] =
       argType op .dataType =
       ## requireTypes
-        params @ array.wrap
+        params@ array.wrap
         "equality-check" string.wrap
         0
         op .pos
@@ -2753,7 +2753,7 @@ proc(
           return
         AND_IF OR_IF case
           ## requireTypes
-            types.primitive.BOOL @ array.wrap
+            types.primitive.BOOL@ array.wrap
             "and/or-condition" string.wrap
             0
             op .pos
@@ -2779,7 +2779,7 @@ proc(
             ifBlock [] .orBranches@
           end =:: branches
           branches []
-              state [] .stack @ branchTree.startBranch
+              state [] .stack@ branchTree.startBranch
               op .pos
             BranchPoint new list.append
           branches [] =
@@ -2843,7 +2843,7 @@ proc(
                 andOrOp .val .block .jumpDistance =
               end
             end
-            orCount i64 cast.u orPositions .length == assert "and-counts match"
+            orCount i64 cast.u orPositions .length == "and-counts match" assert
             orPositions ifData [] .orPositions =
             orBranches []
                 state [] .stack@ branchTree.startBranch
@@ -2962,12 +2962,12 @@ proc(
               andOrOp .val .block [] .jumpDistance =
             end
           end
-          andCount i64 cast.u andPositions .length == assert "and counts match"
+          andCount i64 cast.u andPositions .length == "and counts match" assert
           andPositions ifData [] .andPositions =
           currentOpIndex ifData [] .elsePosition =
           op state appendOp ..drop
           true state [] .reachable =
-          currentBlock [] .If .andBranches .length 1 >= assert "if has if branch"
+          currentBlock [] .If .andBranches .length 1 >= "if has if branch" assert
           currentBlock [] .If .andBranches .length =:: nodeCount
           nodeCount branchTree.NodeId list.create
             0:i64 while ..dup nodeCount < do =:: i
@@ -3022,7 +3022,7 @@ proc(
             op .pos errors appendError
           end
           ## requireTypes
-            switchType @ array.wrap
+            switchType@ array.wrap
             "switch value" string.wrap
             0
             op .pos
@@ -3170,7 +3170,7 @@ proc(
             switchBlock op .pos state breakSwitch
             return
           else breakBlock [] .While ?? _if
-            breakBlock [] .While @ =:: whileBlock
+            breakBlock [] .While@ =:: whileBlock
             blockType .CONTINUE ?? if
               whileBlock .hasFinally [] if
                 "unexpected " sb.wrap
@@ -3202,7 +3202,7 @@ proc(
             ## remember while branch
             branches []
               ## BranchPoint
-                state [] .stack @ branchTree.startBranch
+                state [] .stack@ branchTree.startBranch
                 op .pos
               BranchPoint new list.append
             branches [] =
@@ -3257,7 +3257,7 @@ proc(
             return
           end
           ## requireTypes
-            types.primitive.BOOL @ array.wrap
+            types.primitive.BOOL@ array.wrap
             "and/or-condition" string.wrap
             0
             op .pos
@@ -3278,7 +3278,7 @@ proc(
             whileBlock [] .doBranches@
           end =:: branches
           branches []
-              state [] .stack @ branchTree.startBranch
+              state [] .stack@ branchTree.startBranch
               op .pos
             BranchPoint new list.append
           branches [] =
@@ -3305,7 +3305,7 @@ proc(
           end
           currentBlock? .data =:: currentBlock
           ## requireTypes
-            types.primitive.BOOL @ array.wrap
+            types.primitive.BOOL@ array.wrap
             "while-condition" string.wrap
             0
             op .pos
@@ -3324,14 +3324,14 @@ proc(
           whileBlock [] .breakCastOffsets =
           whileBlock [] .breakBranches
             ## BranchPoint
-              state [] .stack @ branchTree.startBranch
+              state [] .stack@ branchTree.startBranch
               op .pos
             BranchPoint new list.append
           whileBlock [] .breakBranches =
           whileBlock [] .doBranches@ =:: doBranches
           doBranches [] .length 0 > if
             doBranches []
-                state [] .stack @ branchTree.startBranch
+                state [] .stack@ branchTree.startBranch
                 op .pos
               BranchPoint new list.append
             doBranches [] =
@@ -3344,9 +3344,9 @@ proc(
               end ..drop
             =:: branchPoints
             ## mergeValues
-              state [] .stack @
+              state [] .stack@
               branchPoints list.asArray
-              mergeBranches @
+              mergeBranches@
               ## MergePoint
                 "or do block" string.wrap
                 op .pos
@@ -3529,7 +3529,7 @@ proc(
             blockId
           end =:: blockId
           ## requireTypes
-            types.primitive.BOOL @ array.wrap
+            types.primitive.BOOL@ array.wrap
             "and/or-condition" string.wrap
             0
             op .pos
@@ -3602,24 +3602,24 @@ proc(
           i64 2 array new =:: mut: castOffsets
           0 =:: mut: nBranches
           closed .If .ifBranchTerminates if
-            closed .If .ifBranch .node branches @ nBranches [] =
-            closed .If .ifCastsOffset castOffsets @ nBranches [] =
+            closed .If .ifBranch .node branches@ nBranches [] =
+            closed .If .ifCastsOffset castOffsets@ nBranches [] =
             nBranches 1 + nBranches =
           end
           state [] .reachable if
-            state [] .stack @ branchTree.startBranch branches @ nBranches [] =
-            elseCastOffset castOffsets @ nBranches [] =
+            state [] .stack@ branchTree.startBranch branches@ nBranches [] =
+            elseCastOffset castOffsets@ nBranches [] =
             nBranches 1 + nBranches =
           end
           nBranches 1 >= if
             ## mergeValues
-              state [] .stack @
-              branches @ nBranches array.create
-              mergeBranches @
+              state [] .stack@
+              branches@ nBranches array.create
+              mergeBranches@
               ## MergePoint
                 "if-else block" string.wrap
                 op .pos
-                castOffsets @ nBranches array.create
+                castOffsets@ nBranches array.create
                 state
                 0
                 MergeType .MERGE
@@ -3635,7 +3635,7 @@ proc(
                 closed .If .ifBranch .pos sb.appendPos
                 "\n  * elseBranch: " sb.appendS
                 state [] .stack
-                  branches @ 1 []
+                  branches@ 1 []
                 branchTree.depthFrom sb.appendI
               op .pos errors appendError
             end
@@ -3832,11 +3832,11 @@ proc(
             state [] .stack@ branchTree.startBranch list.append
           =:: mut: branchPoints
           i64 2 array new =:: mut: castOffsets
-          OP_UNLINKED castOffsets @ 0 [] =
+          OP_UNLINKED castOffsets@ 0 [] =
           ## reserveOps
             state [] .stack branchTree.depth
             op .pos
-          state reserveOps castOffsets @ 1 [] =
+          state reserveOps castOffsets@ 1 [] =
           ## mergeValues
             state [] .stack@
             branchPoints list.asArray
@@ -3886,9 +3886,9 @@ proc(
               end ..drop
             branchPoints =
             ## mergeValues
-              state [] .stack @
+              state [] .stack@
               branchPoints list.asArray
-              mergeBranches @
+              mergeBranches@
               ## MergePoint
                 "while block" string.wrap
                 op .pos
@@ -3999,7 +3999,7 @@ proc(
           op state appendOp ..drop
           andOrBlock .branches =:: mut: branches
           branches
-              state [] .stack @ branchTree.startBranch
+              state [] .stack@ branchTree.startBranch
                 op .pos
               BranchPoint new list.append
           branches =
@@ -4011,9 +4011,9 @@ proc(
             end ..drop
           =:: branchPoints
           ## mergeValues
-            state [] .stack @
+            state [] .stack@
             branchPoints list.asArray
-            mergeBranches @
+            mergeBranches@
             ## MergePoint
               "and or block" string.wrap
               op .pos
@@ -4052,7 +4052,11 @@ proc(
       op@ state typeCheckReturn
       op .pos state endSwitchBranch
       return
-    Assert case
+    Assert RuntimeAssert case
+      op .val .Assert ?? if
+        op .pos state popString =:: message
+        message op .pos opRuntimeAssert op =
+      end
       ## XXX try to evaluate at compile time
       ## requireTypes
         types.primitive.BOOL@ array.wrap
@@ -4134,7 +4138,7 @@ proc(
             return
           end
           ## copy value on stack
-          state [] .stack @
+          state [] .stack@
             offset
           branchTree.at .data [] =:: mut: copied
           copied .valueType typeContext types.isReference if
@@ -4145,7 +4149,7 @@ proc(
             copied .valueType =
             ## update value in stack & code
             copied .valueType
-              state [] .stack @ offset
+              state [] .stack@ offset
             branchTree.replaceAt .data =:: baseValue
             baseValue [] .valueType =
             ## opAutoCast
@@ -4169,14 +4173,14 @@ proc(
               op state appendOp
             end copied .opIndex =
           end
-          state [] .stack @ copied branchTree.push
+          state [] .stack@ copied branchTree.push
           return
         SWAP case
           2 op .pos state checkStackSize if
             return
           end
-          state [] .stack @ branchTree.pop .data [] =:: upper
-          state [] .stack @ branchTree.pop .data [] =:: mut: lower
+          state [] .stack@ branchTree.pop .data [] =:: upper
+          state [] .stack@ branchTree.pop .data [] =:: mut: lower
           lower .valueType typeContext types.isEmpty ! and
               upper .valueType typeContext types.isEmpty ! if
             ## swap values in code
@@ -4195,8 +4199,8 @@ proc(
             end
           end
           ## swap values on stack
-          state [] .stack @ upper branchTree.push
-          state [] .stack @ lower branchTree.push
+          state [] .stack@ upper branchTree.push
+          state [] .stack@ lower branchTree.push
           return
       end
       break
@@ -4381,7 +4385,7 @@ proc(
   =:: procStart
   procStart [] .val .implementProcedure ??
       procStart [] .val .initializeId ?? |
-      assert "procedure starts with correct operation"
+      "procedure starts with correct operation" assert
   ## ProcedureImpl
     implId
     procId

@@ -10,5 +10,5 @@ proc( -> ) =>: main
     char case 2 break
     int case 3 break
      x case x i32 cast break
-  end 1 == assert "anEnum .string"
+  end 1 == "anEnum .string" assert
 end

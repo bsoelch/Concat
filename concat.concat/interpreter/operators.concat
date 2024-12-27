@@ -3,14 +3,14 @@ import "builtIns.concat"
 
 namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: constAsBool
-    ConstValue ..length 22 == assert "no new constants"
+    ConstValue ..length 22 == "no new constants" assert
     a switch
       Bool case a .Bool false return
       default false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: constAsInt ## all integer calculations are done in 64 bits
-    ConstValue ..length 22 == assert "no new constants"
+    ConstValue ..length 22 == "no new constants" assert
     a switch
       Char case a .Char i64 cast.u false return
       Int case a .Int i64 cast false return
@@ -18,7 +18,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: constAsFloat
-    ConstValue ..length 22 == assert "no new constants"
+    ConstValue ..length 22 == "no new constants" assert
     a switch
       Char case a .Char i32 cast.u f64 cast false return
       Int case a .Int f64 cast false return
@@ -27,7 +27,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> Type bool ) =>: constAsType
-    ConstValue ..length 22 == assert "no new constants"
+    ConstValue ..length 22 == "no new constants" assert
     a switch
       TypeId case a .TypeId false return
       default Type .undefined true return
@@ -53,7 +53,7 @@ namespace: interpreter
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
     k 1 != if ConstValue .None OperatorResult .argumentError return end
     args 0 [] =:: a
-    ConstValue ..length 22 == assert "no new constants"
+    ConstValue ..length 22 == "no new constants" assert
     a switch
       Bool case a OperatorResult .success return
       Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .success return
@@ -278,11 +278,11 @@ namespace: interpreter
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
-        k 2 == assert "correct number of arguments"
+        k 2 == "correct number of arguments" assert
         args 0 [] =:: argument
         args 1 [] =:: argLength
-        argument .String ?? assert "argument is string"
-        argLength .Int ?? assert "length is int"
+        argument .String ?? "argument is string" assert
+        argLength .Int ?? "length is int" assert
         argument .String .length argLength .Int < if
           "length exceeds size of memory section" sb.wrap
           pos errors appendError
@@ -333,11 +333,11 @@ namespace: interpreter
         end
         parsed ConstValue .Int OperatorResult .success return
       PARSE_F32 PARSE_F64 case
-        k 2 == assert "correct number of arguments"
+        k 2 == "correct number of arguments" assert
         args 0 [] =:: argument
         args 1 [] =:: argLength
-        argument .String ?? assert "argument is string"
-        argLength .Int ?? assert "length is int"
+        argument .String ?? "argument is string" assert
+        argLength .Int ?? "length is int" assert
         argument .String .length argLength .Int < if
           "length exceeds size of memory section" sb.wrap
           pos errors appendError

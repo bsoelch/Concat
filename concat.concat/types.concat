@@ -442,7 +442,7 @@ namespace: types
             size@ array.wrap ## size
             false ## mutable
           context newArrayType
-            ! assert "can create array"
+            ! "can create array" assert
           return
         end
         tupleInfo .compositeInfo .flags [] COMP_FLAG_CONTAINS_LITERAL & ? if
@@ -463,7 +463,7 @@ namespace: types
             end
             context
           newTuple
-            ! assert "can create tuple"
+            ! "can create tuple" assert
             newElements list.free newElements =
           return
           ## TODO correctly convert element types if elements are literals
@@ -1036,7 +1036,7 @@ namespace: types
       mutable
       context
     newArrayType
-      ! assert "can create array"
+      ! "can create array" assert
     return
   end
   proc( Type : box TypeContext ptr : context -> i64 ) =>: export: getArrayDims
@@ -1171,7 +1171,7 @@ namespace: types
     bool : makeMutable
     TypeContext ptr.mut : context
   -> Type bool ) =>: export: newArrayType
-    context [] .labelContext @ =:: labelContext
+    context [] .labelContext@ =:: labelContext
     arrayType .ARRAY ?? if false else makeMutable end =:: mutable
     target .arrayType ?? if ## merge array/pointer of arrays to single pointer/array
       target context getArraySize =:: targetSize
@@ -1204,7 +1204,7 @@ namespace: types
         end
       base =
     end
-    context [] .arrayTypes @ =:: arrays
+    context [] .arrayTypes@ =:: arrays
     0:i64 while ..dup arrays [] .length < do
       arrays [] ..over list.get
         $ .mutable mutable != if ..drop
@@ -1263,7 +1263,7 @@ namespace: types
       size@ array.wrap ## size
       false ## mutable
     context newArrayType
-      ! assert "can create array"
+      ! "can create array" assert
     return
   end
   proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsArray
@@ -1447,7 +1447,7 @@ namespace: types
     LabelId : name
     TypeContext ptr : context
   -> i64 ) =>: export: compositeFindLabel
-    context [] .labelContext @ =:: labelContext
+    context [] .labelContext@ =:: labelContext
     composite context unwrapNamed
       ..dup switch
         struct enum union procIn procOut initializer case
@@ -1483,7 +1483,7 @@ namespace: types
     Type : elt
     TypeContext ptr.mut : context
   -> i64 bool ) =>: export: findUnionTypeIndex
-    context [] .labelContext @ =:: labelContext
+    context [] .labelContext@ =:: labelContext
     union context compositeElts =:: elts
     0:i64 while ..dup elts .length < do
       elt elts ..over.2 compositeElts.get typeEquals if
@@ -1581,7 +1581,7 @@ namespace: types
       elts index i64 cast.s get_64
     end
     proc( CompositeElts : elts i64 : index -> Type ) =>: export: get_64
-      index 0 >= index elts .length < & assert "index in range" ## TODO error handling
+      index 0 >= index elts .length < & "index in range" assert ## TODO error handling
       elts .onlyEmpty if
         Type .empty return
       end
@@ -1651,7 +1651,7 @@ namespace: types
     end
     context [] .compositeData list.asArray
       elts
-      typePtrEq @
+      typePtrEq@
       0
     array.indexOfArrayStart =:: mut: offset
     offset elts .length + context [] .compositeData .length < if
@@ -1684,7 +1684,7 @@ namespace: types
     LabelId arrayView optional : labels?
     TypeContext ptr.mut : context
   -> LabelOffset ) =>: computeLabelOffset
-    context [] .labelContext @ =:: labelContext
+    context [] .labelContext@ =:: labelContext
     labels? optional.isEmpty if
       UNLABELED return
     end
@@ -1702,7 +1702,7 @@ namespace: types
     end
     context [] .elementLabels list.asArray
       labels
-      labelPtrEq @
+      labelPtrEq@
       labelContext
     array.indexOfArrayStart =:: mut: offset
     offset labels .length + context [] .elementLabels .length < if
@@ -1722,7 +1722,7 @@ namespace: types
     CompositeFlags : flags0
     TypeContext ptr.mut : context
   -> TupleId ) =>: findTupleInfo
-    context [] .labelContext @ =:: labelContext
+    context [] .labelContext@ =:: labelContext
     elts context computeEltsOffset flags0 | =:: flags =:: eltsOffset
     labels context computeLabelOffset =:: labelOffset
     context [] .tupleTypes =:: tuples
@@ -1924,7 +1924,7 @@ namespace: sb
     i32 : depth
     TypeContext ptr : context
   -> stringBuilder ) =>: appendComposite
-    context [] .labelContext @ =:: labelContext
+    context [] .labelContext@ =:: labelContext
     sb
       t context types.compositeData .data =:: comp
       comp [] .labelOffset types.UNLABELED == =:: unlabeled
@@ -2033,7 +2033,7 @@ namespace: types
     in .undefined ?? or out .undefined ?? if
       Type .undefined true return
     end
-    context [] .procTypes @ =:: procs
+    context [] .procTypes@ =:: procs
     0:i64 while ..dup procs [] .length < do =:: i
       procs [] i list.at .data =:: elt
       elt [] .callingConvention callConvention == and
@@ -2250,7 +2250,7 @@ namespace: sb
     TypeContext ptr : context
     i32 : depth
   -> stringBuilder ) =>: appendNamedType
-    context [] .labelContext @ =:: labelContext
+    context [] .labelContext@ =:: labelContext
     sb
       '"' sb.appendC
       named .name labelContext sb.appendLabelName
@@ -2289,7 +2289,7 @@ namespace: types
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> Type bool ) =>: export: findGeneratedType
-    typeContext [] .labelContext @ =:: labelContext
+    typeContext [] .labelContext@ =:: labelContext
     typeContext [] .generatedTypes =:: genTypes
     0:i64 while ..dup genTypes .length < do
       genTypes ..over list.at .data =:: candidate
@@ -3085,7 +3085,7 @@ namespace: sb
     TypeContext ptr : context
     i32 : depth
   -> stringBuilder ) =>: export: appendTypeRecursive
-    context [] .labelContext @ =:: labelContext
+    context [] .labelContext@ =:: labelContext
     t switch
       undefined case
         sb "undefined" appendS return

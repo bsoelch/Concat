@@ -7,20 +7,20 @@ proc( -> ) =>: main
   pi e - =:: x2
   pi e * =:: x3
   pi e / =:: x4
-  pi .hi  0x4000921FB54442D1:i64 == assert "pi .hi"
-  pi .low 0x8469898CC51701B8:i64 == assert "pi .low"
-  e  .hi  0x40005BF0A8B14576:i64 == assert "e .hi"
-  e  .low 0x95355FB8AC404E7A:i64 == assert "e .low"
-  x1 .hi  0x400177082EFAC424:i64 == assert "pi+e .hi"
-  x1 .low 0x0CCF74A2B8ABA819:i64 == assert "pi+e .low"
-  x2 .hi  0x3FFDB1786497EAD7:i64 == assert "pi-e .hi"
-  x2 .low 0x79A14EA0C6B599F0:i64 == assert "pi-e .low"
-  x3 .hi  0x4002114580B45D47:i64 == assert "pi*e .hi"
-  x3 .low 0x49E6108579A2D0CA:i64 == assert "pi*e .low"
-  x4 .hi  0x3FFF27DDBF6271DB:i64 == assert "pi/e .hi"
-  x4 .low 0xDEFDC3B8933CC9F1:i64 == assert "pi/e .low"
-  pi e < ! assert "! pi < e"
-  pi e > assert "pi > e"
-  f128.NaN f128.NaN <= ! assert "! NaN <= NaN"
-  f128.NaN f128.Infinity f128.compare 1 == assert "cmp(NaN,Infinity)==1"
+  pi .hi  0x4000921FB54442D1:i64 == "pi .hi" assert
+  pi .low 0x8469898CC51701B8:i64 == "pi .low" assert
+  e  .hi  0x40005BF0A8B14576:i64 == "e .hi" assert
+  e  .low 0x95355FB8AC404E7A:i64 == "e .low" assert
+  x1 .hi  0x400177082EFAC424:i64 == "pi+e .hi" assert
+  x1 .low 0x0CCF74A2B8ABA819:i64 == "pi+e .low" assert
+  x2 .hi  0x3FFDB1786497EAD7:i64 == "pi-e .hi" assert
+  x2 .low 0x79A14EA0C6B599F0:i64 == "pi-e .low" assert
+  x3 .hi  0x4002114580B45D47:i64 == "pi*e .hi" assert
+  x3 .low 0x49E6108579A2D0CA:i64 == "pi*e .low" assert
+  x4 .hi  0x3FFF27DDBF6271DB:i64 == "pi/e .hi" assert
+  x4 .low 0xDEFDC3B8933CC9F1:i64 == "pi/e .low" assert
+  pi e < ! "! pi < e" assert
+  pi e > "pi > e" assert
+  f128.NaN f128.NaN <= ! "! NaN <= NaN" assert
+  f128.NaN f128.Infinity f128.compare 1 == "cmp(NaN,Infinity)==1" assert
 end

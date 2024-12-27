@@ -1,17 +1,17 @@
 proc( -> ) =>: copyTest
   { 1 2 3 } =:: mut: mutableArray
   mutableArray
-    5 mutableArray @ 1 [] =
+    5 mutableArray@ 1 [] =
   =:: original
-  original @ 1 [] 2 == assert "copy works"
+  original@ 1 [] 2 == "copy works" assert
 end
 
 proc( -> ) =>: copyLargeTest
   { 1 2 3 4 5 6 } =:: mut: mutableArray
   mutableArray
-    5 mutableArray @ 1 [] =
+    5 mutableArray@ 1 [] =
   =:: original
-  original @ 1 [] 2 == assert "copy works"
+  original@ 1 [] 2 == "copy works" assert
 end
 
 proc( -> ) =>: main end

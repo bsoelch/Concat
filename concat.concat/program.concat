@@ -120,7 +120,8 @@ union(
             LabelId : mut: atName
             LabelId : mut: existsName
        TypeModifier : mut: typeModifier
-             string : Assert
+                  _ : Assert
+             string : RuntimeAssert
           ErrorType : Error
      TypeMemoryInfo : typeInfo
                   _ : unreachable
@@ -323,10 +324,15 @@ proc( FilePosition : pos -> Operation ) =>: export: opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
 end
 proc(
-  string : message
   FilePosition : pos
 -> Operation ) =>: export: opAssert
-  message OpValue .Assert Type .undefined pos Operation new return
+  OpValue .Assert Type .undefined pos Operation new return
+end
+proc(
+  string : message
+  FilePosition : pos
+-> Operation ) =>: export: opRuntimeAssert
+  message OpValue .RuntimeAssert Type .undefined pos Operation new return
 end
 proc(
   ErrorType : errorType
@@ -860,9 +866,12 @@ namespace: sb
           ..over .val .existsName labelContext sb.appendLabelName
           break
         Assert case
-          "assert \"" sb.appendS
-          ..over .val .Assert sb.appendStr
+          "assert" sb.appendS
+          break
+        RuntimeAssert case
           '"' sb.appendC
+          ..over .val .RuntimeAssert sb.appendStr
+          "\" assert" sb.appendS
           break
         Error case
           ..over .val .Error switch

@@ -4,22 +4,22 @@ import debug
 
 proc( -> ) =>: main
   i8 64 array new =:: mut: buff
-  stdIn buff @  0 16 fread io.FILE_ERROR_NONE == assert "fread works" debug.print
-  stdIn buff @ 16 32 fread io.FILE_ERR_END_OF_FILE == assert "EOF detection" debug.print
+  stdIn buff@  0 16 fread io.FILE_ERROR_NONE == "fread works" assert debug.print
+  stdIn buff@ 16 32 fread io.FILE_ERR_END_OF_FILE == "EOF detection" assert debug.print
 
-  stdOut "Hello World!" 0 5 fwrite io.FILE_ERROR_NONE == assert "fwrite works" debug.print
-  stdOut "Hello World!" 6 5 fwrite io.FILE_ERROR_NONE == assert "fwrite works" debug.print
-  "!" puts io.FILE_ERROR_NONE == assert "puts works"
-  stdOut buff @ 0 45 fwrite io.FILE_ERROR_NONE == assert "fwrite works" debug.print
-  stdOut '\n' fputc io.FILE_ERROR_NONE == assert "fputc works"
-  "../lib" OPEN_WRITE fopenS io.FILE_ERR_FILE_IS_DIR == assert "open directory" =:: empty
+  stdOut "Hello World!" 0 5 fwrite io.FILE_ERROR_NONE == "fwrite works" assert debug.print
+  stdOut "Hello World!" 6 5 fwrite io.FILE_ERROR_NONE == "fwrite works" assert debug.print
+  "!" puts io.FILE_ERROR_NONE == "puts works" assert
+  stdOut buff@ 0 45 fwrite io.FILE_ERROR_NONE == "fwrite works" assert debug.print
+  stdOut '\n' fputc io.FILE_ERROR_NONE == "fputc works" assert
+  "../lib" OPEN_WRITE fopenS io.FILE_ERR_FILE_IS_DIR == "open directory" assert =:: empty
   empty ( ) ptr cast! debug.print
-  empty fclose io.FILE_ERR_INVALID_FILE == assert "fclose invalid"
-  "./.io.out" OPEN_READ OPEN_WRITE | fopenS io.FILE_ERROR_NONE == assert "fopenS works" =:: file
-  file "Written directly to file!\n" fputs io.FILE_ERROR_NONE == assert "fputs works"
-  file fflush io.FILE_ERROR_NONE == assert "fflush works"
-  file fclose io.FILE_ERROR_NONE == assert "fclose works"
-  stdErr "printing to stderr" fputs io.FILE_ERROR_NONE == assert "fputs works"
-  stdErr '\n' fputc io.FILE_ERROR_NONE == assert "fputc works"
-  stdErr "non ASCII string: ä×√φ\U0001F4BB□\n" fputs io.FILE_ERROR_NONE == assert "fputs works"
+  empty fclose io.FILE_ERR_INVALID_FILE == "fclose invalid" assert
+  "./.io.out" OPEN_READ OPEN_WRITE | fopenS io.FILE_ERROR_NONE == "fopenS works" assert =:: file
+  file "Written directly to file!\n" fputs io.FILE_ERROR_NONE == "fputs works" assert
+  file fflush io.FILE_ERROR_NONE == "fflush works" assert
+  file fclose io.FILE_ERROR_NONE == "fclose works" assert
+  stdErr "printing to stderr" fputs io.FILE_ERROR_NONE == "fputs works" assert
+  stdErr '\n' fputc io.FILE_ERROR_NONE == "fputc works" assert
+  stdErr "non ASCII string: ä×√φ\U0001F4BB□\n" fputs io.FILE_ERROR_NONE == "fputs works" assert
 end

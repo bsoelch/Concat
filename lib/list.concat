@@ -22,14 +22,14 @@ namespace: list
     k i64 cast.s T create_64
   end
   proc( i64 : k type : T -> T list ) =>: export: create_64
-    k 0 >= assert "list has non-negative capacity"
+    k 0 >= "list has non-negative capacity" assert
     k T mem.alloc  0 k listCap cast.u T list new return
   end
   overload: export: create create_32 create_64 end
 
   ## creates zero-initialized list of the given length
   proc( i64 : k type : T -> T list ) =>: export: createZeroInit
-    k 0 >= assert "list has non-negative capacity"
+    k 0 >= "list has non-negative capacity" assert
     k T mem.calloc  k k listCap cast.u T list new return
   end
   proc(
@@ -37,7 +37,7 @@ namespace: list
     T arrayView : data
   -> T list ) =>: export: fromArray
     data .length ..dup 8 / + =:: C
-    C 0 >= assert "list has non-negative capacity"
+    C 0 >= "list has non-negative capacity" assert
     ## list
       C T mem.alloc
         data .data
@@ -111,10 +111,10 @@ namespace: list
     prevCap minCap > if
       elts0 return
     end
-    elts0 .cap i64 cast.s 0 >= assert "fixed buffer list is not reallocated"
+    elts0 .cap i64 cast.s 0 >= "fixed buffer list is not reallocated" assert
     elts0 =:: mut: elts
       minCap minCap 8 / + 8 + =:: newCap
-      newCap 0 >= assert "list has non-negative capacity"
+      newCap 0 >= "list has non-negative capacity" assert
       elts .data
         newCap mem.realloc
       elts .data =

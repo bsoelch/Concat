@@ -6,5 +6,5 @@ end
 
 proc( -> ) =>: main
   37 42 aStruct new =:: X
-  X @ get .b 42 == assert "get .b 42 =="
+  X@ get .b 42 == "get .b 42 ==" assert
 end

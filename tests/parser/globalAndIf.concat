@@ -53,8 +53,8 @@ _A_ or _B_ and _D_ or _C_ if else
 end
 
 proc( -> ) =>: main
-  A_and_B ! assert "!(A&B)"
-  not_A_and_not_B ! assert "!(!A&!B)"
-  A_or_B assert "A|B"
-  not_A_or_not_B assert "(!A|!B)"
+  A_and_B ! "!(A&B)" assert
+  not_A_and_not_B ! "!(!A&!B)" assert
+  A_or_B "A|B" assert
+  not_A_or_not_B "(!A|!B)" assert
 end

@@ -1,6 +1,6 @@
 import debug
 proc( i32 -> i32 ) =>: positive
-  ..dup 0 > assert "positive"
+  ..dup 0 > "positive" assert
 end
 
 proc( -> ) =>: main

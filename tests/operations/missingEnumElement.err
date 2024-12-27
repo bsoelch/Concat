@@ -3,4 +3,4 @@ no matching signature for arguments ( named[2]( "e" ) { union element (0):none }
 candidates:
   * proc[1]( bool -> bool ) not
  at missingEnumElement.concat:5:14
-wrong type for assertion expected bool got named[2]( "e" ) at missingEnumElement.concat:5:23
+wrong type for assertion expected bool got named[2]( "e" ) at missingEnumElement.concat:5:36

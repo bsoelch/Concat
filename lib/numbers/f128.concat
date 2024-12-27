@@ -295,7 +295,7 @@ namespace: f128
     false
       aLow bLow i64.addc =:: mut: lowSum
       aHi bHi i64.addc =:: mut: hiSum
-    ! assert "on overflow"
+    ! "no overflow" assert
     ## check for overflow of mantissa
     hiSum HIDDEN_BIT_HI MANTISSA_MASK_HI | > if
       nz nextBit | nz =
@@ -388,7 +388,7 @@ namespace: f128
         bHi shift >>> bHi =
       end
     end
-    aHi bHi >= or aHi bHi == and aLow bLow >= assert "a>=b"
+    aHi bHi >= or aHi bHi == and aLow bLow >= end "a>=b" assert
     aHi bHi -
       bLow aLow > if 1 - end ## underflow
     =:: mut: hiDiff
@@ -472,7 +472,7 @@ namespace: f128
     ## truncate result to 113 bits
     resHi .hi 33 >>> ? =:: overflow
     overflow if
-      resHi .hi 33 >>> 1 == assert "res < 2^226"
+      resHi .hi 33 >>> 1 == "res < 2^226" assert
       15
     else
       16
@@ -960,7 +960,7 @@ namespace: f160
         bHi shift >>> bHi =
       end
     end
-    a .hi bHi ..u> or a .hi bHi == and a .low bLow ..u>= assert "a>=b"
+    a .hi bHi ..u> or a .hi bHi == and a .low bLow ..u>= end "a>=b" assert
     false
       a .low bLow i64.subb =:: mut: low
       a .hi  bHi  i64.subb =:: mut: hi

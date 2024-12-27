@@ -4,10 +4,10 @@ proc( -> ) =>: main
   "This is a string literal":s =:: str
   utf16"This is a UTF16-String👍":s =:: str16
   utf32"This is a UTF32-String👍":s =:: str32
-  str .data:? assert "str has data"
-  str16 .data:? assert "str16 has data"
-  str32 .data:? assert "str32 has data"
-  str .length 24 == assert "str.length == 24"
-  str16 .length 24 == assert "str16.length == 24"
-  str32 .length 23 == assert "str32.length == 23"
+  str .data:? "str has data" assert
+  str16 .data:? "str16 has data" assert
+  str32 .data:? "str32 has data" assert
+  str .length 24 == "str.length == 24" assert
+  str16 .length 24 == "str16.length == 24" assert
+  str32 .length 23 == "str32.length == 23" assert
 end

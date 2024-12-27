@@ -5,6 +5,6 @@ end
 proc( -> ) =>: main
   i64 : x
   x@ setX
-  x 5 == assert "x is five"
+  x 5 == "x is five" assert
 end
 main ## run main at compile time

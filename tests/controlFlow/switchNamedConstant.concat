@@ -12,6 +12,6 @@ proc( i32 -> i32 ) =>: test
 end
 
 proc( -> ) =>: main
-  ZERO test TWO == assert "test(0)==2"
-  ONE test ONE == assert "test(1)==1"
+  ZERO test TWO == "test(0)==2" assert
+  ONE test ONE == "test(1)==1" assert
 end

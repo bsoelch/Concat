@@ -20,18 +20,18 @@ proc( -> ) =>: main
     newInt arenaAlloc.copyValue ..drop
     newInt arenaAlloc.copyValue ..drop
     newInt arenaAlloc.copyValue =:: a
-    a [] 3 == assert "3 stored in a"
+    a [] 3 == "3 stored in a" assert
     newInt arenaAlloc.copyValue ..drop
     newInt arenaAlloc.copyValue ..drop
     $ arenaAlloc.offset =:: offset
     newInt arenaAlloc.copyValue =:: b
-    b [] 6 == assert "6 stored in b"
+    b [] 6 == "6 stored in b" assert
     newInt arenaAlloc.copyValue ..drop
     newInt arenaAlloc.copyValue ..drop
     offset arenaAlloc.reset
-    valCount 6 == assert "values at end of arena freed"
+    valCount 6 == "values at end of arena freed" assert
     newInt arenaAlloc.copyValue ..drop
-    b [] 9 == assert "9 stored in b"
+    b [] 9 == "9 stored in b" assert
     3000 i32 mem.alloc i32 3000 ptr.mut cast! =:: largeArray
     3000:i64 for =:: i
       newInt largeArray i [] =
@@ -39,5 +39,5 @@ proc( -> ) =>: main
     largeArray arenaAlloc.copyPtrs ..drop
     largeArray mem.free
   arenaAlloc.free ..drop
-  0 valCount == assert "all values freed"
+  0 valCount == "all values freed" assert
 end

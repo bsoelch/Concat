@@ -29,11 +29,11 @@ else
 end
 
 proc( -> ) =>: main
-  0x123456789abcdef hton 0xefcdab8967452301:i64 == assert "hton"
+  0x123456789abcdef hton 0xefcdab8967452301:i64 == "hton" assert
   1 2 createI128 =:: i
-  i .hi 2 == assert "<low> <hi> createI128"
-  i .low 1 == assert "<low> <hi> createI128"
+  i .hi 2 == "<low> <hi> createI128" assert
+  i .low 1 == "<low> <hi> createI128" assert
   i@ i64 _ ptr cast! =:: p
-  p 0 [] 1 == assert "i128 {low,hi}"
-  p 1 [] 2 == assert "i128 {low,hi}"
+  p 0 [] 1 == "i128 {low,hi}" assert
+  p 1 [] 2 == "i128 {low,hi}" assert
 end

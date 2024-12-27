@@ -19,8 +19,8 @@ proc( bool : a bool : b bool : c -> i32 ) =>: andOrTest
 end
 
 proc( -> ) =>: main
-  false false true  andOrTest 0 == assert "f f t -> 0"
-  true  true  false andOrTest 8 == assert "t t f -> 8"
-  false true  true  andOrTest 2 == assert "f t t -> 1"
-  true  false false andOrTest 2 == assert "f f t -> 2"
+  false false true  andOrTest 0 == "f f t -> 0" assert
+  true  true  false andOrTest 8 == "t t f -> 8" assert
+  false true  true  andOrTest 2 == "f t t -> 1" assert
+  true  false false andOrTest 2 == "f f t -> 2" assert
 end

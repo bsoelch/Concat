@@ -1,11 +1,11 @@
-1 1 + 2 == assert "1+1=2"
-"Hello" ..length 5 == assert "string length"
-1 0 > assert "ordering"
+1 1 + 2 == "1+1=2" assert
+"Hello" ..length 5 == "string length" assert
+1 0 > "ordering" assert
 
 enum( A B C D E ) =:: anEnum
 
-anEnum ..length 5 == assert "enum length"
+anEnum ..length 5 == "enum length" assert
 
-i32 2 3 array ..length 3 == assert "multi-dim. array length"
+i32 2 3 array ..length 3 == "multi-dim. array length" assert
 
 proc( -> ) =>: main end

@@ -91,7 +91,7 @@ namespace: interpreter
     context [] .openBlocks .length 0 > if
       context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
     else 0:i64 end =:: offset
-    offset 0 >= assert "offset is non-negative"
+    offset 0 >= "offset is non-negative" assert
     context [] .stack .length offset - count < if
       "not enough arguments for " sb.wrap
         name sb.appendStr
@@ -99,7 +99,7 @@ namespace: interpreter
         count sb.appendI
         " got: " sb.appendS
         context [] .stack .length offset - sb.appendI
-      pos context [] .program [] .errors @ appendError
+      pos context [] .program [] .errors@ appendError
       true return
     end
     false return
@@ -252,7 +252,7 @@ namespace: interpreter
       BlockInfo new list.append
     context [] .openBlocks =
   end
-  BlockType ..length 38 == assert "number of block types"
+  BlockType ..length 38 == "number of block types" assert
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
     context [] .openBlocks list.peek =:: current
     current optional.isEmpty if false return end
@@ -317,10 +317,10 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> ) =>: checkDuplicateLabel
     label id.LABEL_ID_NONE == if return end
-    context [] .program [] .errors @ =:: errors
-    context [] .program [] .idContext @ =:: idContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    context [] .program [] .errors@ =:: errors
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     context [] .labelBuffer@ =:: labels
     initialLabelOffset while $ labels [] .length < do =:: i
       labels [] i list.get =:: prevLabel
@@ -355,11 +355,11 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> bool ) =>: addLabeledValue
     label initialLabelOffset valueContext pos context checkDuplicateLabel
-    context [] .program [] .errors @ =:: errors
-    context [] .program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    context [] .program [] .errors@ =:: errors
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     context [] .labelBuffer
       label list.append
     context [] .labelBuffer =
@@ -481,15 +481,15 @@ namespace: interpreter
     pos context finishLabledValues if
       true return
     end
-    context [] .program [] .errors @ =:: errors
-    context [] .program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    context [] .program [] .errors@ =:: errors
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     closedBlock [] .labelOffset =:: labelOffset
     closedBlock [] .typeOffset =:: typeOffset
     context [] .labelBuffer .length labelOffset - =:: elementCount
-    context [] .typeBuffer .length typeOffset - elementCount == assert "type count == label count"
+    context [] .typeBuffer .length typeOffset - elementCount == "type count == label count" assert
     0:i64 while $ elementCount < do =:: i
       context [] .typeBuffer typeOffset i + list.at .data [] =:: eltType
       context [] .labelBuffer labelOffset i + list.at .data [] =:: eltLabel
@@ -591,17 +591,17 @@ namespace: interpreter
     pos context finishLabledValues if
       Type .undefined true return
     end
-    context [] .program [] .errors @ =:: errors
-    context [] .program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    context [] .program [] .errors@ =:: errors
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     closedBlock [] .typeOffset =:: typeOffset
     closedBlock [] .valueOffset =:: valueOffset
     closedBlock [] .labelOffset =:: labelOffset
     context [] .labelBuffer .length labelOffset - =:: elementCount
-    context [] .typeBuffer .length typeOffset - elementCount == assert "type count == label count"
-    context [] .valueBuffer .length valueOffset - elementCount == assert "value count == label count"
+    context [] .typeBuffer .length typeOffset - elementCount == "type count == label count" assert
+    context [] .valueBuffer .length valueOffset - elementCount == "value count == label count" assert
     ## newInitializerType
       context [] .typeBuffer list.asArray typeOffset array.tail
       context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
@@ -683,8 +683,8 @@ namespace: interpreter
     i64 : newLength
     InterpreterContext ptr.mut : context
   -> ) =>: truncateStack
-    context [] .stack .length context [] .stackInfo .length == assert "len(stack)=len(stackInfo)"
-    context [] .stack .length newLength >= assert "newLength<length"
+    context [] .stack .length context [] .stackInfo .length == "len(stack)=len(stackInfo)" assert
+    context [] .stack .length newLength >= "newLength<length" assert
     context [] .stack
       newLength list.setLength
     context [] .stack =
@@ -697,12 +697,12 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> ValueInfo Type bool ) =>: popType
-    context [] .program [] .errors @ =:: errors
+    context [] .program [] .errors@ =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
       valInfo Type .undefined true return
@@ -815,11 +815,11 @@ namespace: interpreter
     TypeMemoryInfo : infoType
     ProgramContext ptr.mut : program
   -> ConstValue bool ) =>: export: computeTypeInfo
-    program [] .errors @ =:: errors
-    program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    program [] .errors@ =:: errors
+    program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     t typeContext types.containsGeneric if
       ConstValue .None true return
     end
@@ -851,10 +851,10 @@ namespace: interpreter
     ProgramContext ptr.mut : program
   -> Type ConstValue bool ) =>: export: sizeOfValue
     ## TODO support length of initializers
-    program [] .errors @ =:: errors
-    program [] .idContext @ =:: idContext
-    idContext [] .typeContext @ =:: typeContext
-    idContext [] .constContext @ =:: constContext
+    program [] .errors@ =:: errors
+    program [] .idContext@ =:: idContext
+    idContext [] .typeContext@ =:: typeContext
+    idContext [] .constContext@ =:: constContext
     false =:: mut: isType
     t typeContext types.unwrapReference =:: mut: valType
     valType types.primitive.TYPE types.typeEquals if
@@ -933,7 +933,7 @@ namespace: interpreter
           ## newArrayType
             types.primitive.I_SIZE
             types.ArrayType .ARRAY
-            sizeLength @
+            sizeLength@
             array.wrap
             false
           typeContext types.newArrayType ..drop
@@ -942,7 +942,7 @@ namespace: interpreter
               idContext [] .argBuffer .data offset +
               idContext [] .argBuffer .length offset -
             array.create
-            idContext [] .constContext @
+            idContext [] .constContext@
           newArrayConst
           idContext [] .argBuffer
             offset list.setLength
@@ -977,11 +977,11 @@ namespace: interpreter
     FilePosition : pos
     ProgramContext ptr.mut : program
   -> Type bool ) =>: export: initializeGeneratedType
-    program [] .errors @ =:: errors
-    program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    program [] .errors@ =:: errors
+    program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     generatorName idContext id.getIdentifier if ..drop
       "could not find procedure " sb.wrap
         generatorName labelContext sb.appendLabelName
@@ -1000,7 +1000,7 @@ namespace: interpreter
     =:: procData
     procData [] .procType =:: procType
     procType typeContext types.getProcIn
-      ! assert "proc has in-types"
+      ! "proc has in-types" assert
     =:: inType
     inType typeContext types.compositeEltCount =:: argCount
     procType
@@ -1450,7 +1450,7 @@ proc(
             EvalResult .Error return
           end =:: val
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
             val if
               EvalResult .Ok return
             else
@@ -1465,7 +1465,7 @@ proc(
           EvalResult .Ok return
         ELSE case
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
             op [] .val .block .jumpDistance EvalResult .Jump return
           end
           context [] .openBlocks list.peek =:: currentBlock
@@ -1497,7 +1497,7 @@ proc(
             EvalResult .Error return
           end =:: val
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
             op [] .val .block .blockType =:: blockType
             blockType .OR_IF ?? or blockType .OR ?? end =:: isOr
             val isOr == if
@@ -1527,7 +1527,7 @@ proc(
           break
         DO AND_DO case
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
             op [] .pos context popCondition if ..drop
               EvalResult .Error return
             end if
@@ -1539,7 +1539,7 @@ proc(
           break
         OR_DO case
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
             op [] .pos context popCondition if ..drop
               EvalResult .Error return
             end if
@@ -1551,7 +1551,7 @@ proc(
           break
         BREAK CONTINUE BREAK_SWITCH case
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
             op [] .val .block .jumpDistance EvalResult .Jump return
           end
           break
@@ -1590,11 +1590,11 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .evalType .INTERPRET ?? if
-        BlockType ..length 38 == assert "no-new block-types"
+        BlockType ..length 38 == "no-new block-types" assert
         blockType switch
           ELSE SWITCH AND OR case EvalResult .Ok return
           WHILE case
-            op [] .val .blockEnd .jumpDistance 0:JumpDistance != assert "non-zero jump"
+            op [] .val .blockEnd .jumpDistance 0:JumpDistance != "non-zero jump" assert
             op [] .val .blockEnd .jumpDistance EvalResult .Jump return
           default break
         end
@@ -1710,7 +1710,7 @@ proc(
           ## end procedure
           EvalResult .Ok return
         INITIALIZER case
-          op closedBlock @ op [] .pos context closedInitializer if
+          op closedBlock@ op [] .pos context closedInitializer if
             ..drop EvalResult .Error return
           end =:: initializerType
           closedBlock .labelOffset =:: labelOffset
@@ -2432,7 +2432,14 @@ proc(
         end
       end
       EvalResult .Ok return ## TODO change once mutable value are allowed
-    Assert case
+    Assert RuntimeAssert case
+      op [] .val .Assert ?? if
+        op [] .pos context popString if ..drop.2
+          EvalResult .Error return
+        end ..swap ..drop
+      else
+        op [] .val .RuntimeAssert
+      end =:: message
       op [] .pos context popValue if
         ..drop.2
         "missing argument for assert, expected boolean" sb.wrap
@@ -2443,12 +2450,11 @@ proc(
         "wrong constant value for assert, expected boolean got: " sb.wrap
           value typeContext sb.appendConstant
         op [] .pos errors appendError
-        value valInfo context unpopValue
-        EvalResult .Error return
+        EvalResult .Ok return
       end
       value .Bool ! if
         "assertion failed: " sb.wrap
-          op [] .val .Assert sb.appendStr
+          message sb.appendStr
         op [] .pos errors appendError
       end
       EvalResult .Ok return
@@ -2538,9 +2544,9 @@ proc(
       op [] .dataType op [] .val .builtIn op [] .pos context tryEvaluateBuiltIn wrapResult return
     equalityOperator case
       ConstValue 2 array new =:: mut: valueData
-      valueData @ =:: values
+      valueData@ =:: values
       ValueInfo 2 array new =:: mut: valInfoData
-      valInfoData @ =:: valInfos
+      valInfoData@ =:: valInfos
       0:i64 =:: mut: nArgs
       0 while ..dup 2 < do 1 +
         op [] .pos context popValue if ..drop.3
@@ -2609,10 +2615,10 @@ proc(
             EvalResult .Error return
           end
           op [] .pos context popValue
-            ! assert "hasValue"
+            ! "hasValue" assert
           =:: upper =:: upperInfo
           op [] .pos context popValue
-            ! assert "hasValue"
+            ! "hasValue" assert
           =:: lower =:: lowerInfo
           context [] .stack
             upper list.append
@@ -2837,7 +2843,7 @@ proc(
         targetValue targetInfo context unpopValue
         EvalResult .Error return
       end =:: value =:: valueInfo
-      ConstValue ..length 22 == assert "no new constants"
+      ConstValue ..length 22 == "no new constants" assert
       targetValue switch
         LocalValue case
           value targetValue .LocalValue [] =
@@ -2919,23 +2925,23 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: tryEvaluateBuiltIn
-    context [] .program [] .errors @ =:: errors
+    context [] .program [] .errors@ =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     calledType typeContext types.getProcIn
-      ! assert "has procedure in"
+      ! "has procedure in" assert
     =:: inType
     inType typeContext types.compositeElts =:: inTypes
     ConstValue 3 array new =:: mut: valueData
-    valueData @ =:: values
+    valueData@ =:: values
     ValueInfo 3 array new =:: mut: valInfoData
-    valInfoData @ =:: valInfos
+    valInfoData@ =:: valInfos
     0:i64 =:: mut: nArgs
     inTypes .length 1 - while ..dup 0 >= do =:: i
-      nArgs 3 < assert "built-ins have at most three arguments"
+      nArgs 3 < "built-ins have at most three arguments" assert
       inTypes i types.compositeElts.get =:: eltType
       pos context popValue if ..drop.2
         values valInfos nArgs context unpopValues
@@ -2967,7 +2973,7 @@ namespace: interpreter
       success case
         value
           calledType typeContext types.getProcRet
-            ! assert "has return type"
+            ! "has return type" assert
           pos
           context
         pushValue
@@ -3025,12 +3031,12 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: newTuple
-    context [] .program [] .errors @ =:: errors
+    context [] .program [] .errors@ =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext @ =:: idContext
-    idContext [] .constContext @ =:: constContext
-    idContext [] .typeContext @ =:: typeContext
-    typeContext [] .labelContext @ =:: labelContext
+    context [] .program [] .idContext@ =:: idContext
+    idContext [] .constContext@ =:: constContext
+    idContext [] .typeContext@ =:: typeContext
+    typeContext [] .labelContext@ =:: labelContext
     tupleType typeContext types.compositeElts =:: elts
     elts .length "tuple-creation" string.wrap pos context checkStack if
       true return
@@ -3302,7 +3308,7 @@ proc(
   context [] .evalType =:: prevType
   ## change interpreter type when evaluating call
   procName labelContext id.labelFlags id.FLAG_STATIC & ? if
-    implId -1 == assert "static procedure has implId -1"
+    implId -1 == "static procedure has implId -1" assert
     ## XXX? seperate interpreter type code in static procedure?
     InterpreterType .GLOBAL
   else

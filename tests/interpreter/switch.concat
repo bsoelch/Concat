@@ -5,9 +5,9 @@ proc( char8 -> bool ) =>: isSpace
   end
   false return
 end
-'A' isSpace ! assert "A is not space"
-' ' isSpace assert "' ' is space"
-'\n' isSpace assert "'\n' is space"
+'A' isSpace ! "A is not space" assert
+' ' isSpace "' ' is space" assert
+'\n' isSpace "'\n' is space" assert
 
 proc( i64 -> bool ) =>: isFermatPrime
   switch
@@ -19,9 +19,9 @@ proc( i64 -> bool ) =>: isFermatPrime
     default   false break
   end return
 end
-42 isFermatPrime ! assert "42 is not a Fermat prime"
-2381 isFermatPrime ! assert "42 is not a Fermat prime"
-17 isFermatPrime assert "42 is a Fermat prime"
+42 isFermatPrime ! "42 is not a Fermat prime" assert
+2381 isFermatPrime ! "42 is not a Fermat prime" assert
+17 isFermatPrime "42 is a Fermat prime" assert
 
 enum( A B C ) =:: anEnum
 proc( anEnum -> bool ) =>: isA
@@ -30,9 +30,9 @@ proc( anEnum -> bool ) =>: isA
     B C case false return
   end
 end
-anEnum .A isA assert "A is A"
-anEnum .B isA ! assert "B is not A"
-anEnum .C isA ! assert "C is not A"
+anEnum .A isA "A is A" assert
+anEnum .B isA ! "B is not A" assert
+anEnum .C isA ! "C is not A" assert
 
 union( i32 : integer f32 : float ) =:: number
 proc( number -> bool ) =>: isInteger
@@ -41,8 +41,8 @@ proc( number -> bool ) =>: isInteger
     float case false return
   end
 end
-0 number .integer isInteger assert "int(0) is int"
-1 number .integer isInteger assert "int(1) is int"
-0 number .float isInteger ! assert "float is not int"
+0 number .integer isInteger "int(0) is int" assert
+1 number .integer isInteger "int(1) is int" assert
+0 number .float isInteger ! "float is not int" assert
 
 proc( -> ) =>: main end

@@ -7,11 +7,11 @@ proc( i32 : n -> bool ) =>: isPrime
   finally 1 + end ..drop
   true return
 end
-1 isPrime ! assert "one is not prime"
-2 isPrime assert "two is prime"
-3 isPrime assert "three is prime"
-4 isPrime ! assert "four is not prime"
-243 isPrime ! assert "243 is not prime"
-2381 isPrime assert "2381 is prime"
+1 isPrime ! "one is not prime" assert
+2 isPrime "two is prime" assert
+3 isPrime "three is prime" assert
+4 isPrime ! "four is not prime" assert
+243 isPrime ! "243 is not prime" assert
+2381 isPrime "2381 is prime" assert
 
 proc( -> ) =>: main end

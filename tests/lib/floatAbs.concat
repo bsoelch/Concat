@@ -1,11 +1,11 @@
 proc( -> ) =>: main
-  -0.0 f64.abs 0.0 == assert "|-0|==0"
-  -5e-324 f64.abs 5e-324 == assert "|-5e-324|==5e-324"
-  5e-324  f64.abs 5e-324 == assert "|5e-324|==5e-324"
-  -0.3 f64.abs 0.3 == assert "|-0.3|==0.3"
-  -1.0 f64.abs 1.0 == assert "|-1.0|==1.0"
-  f64.-Infinity f64.abs f64.Infinity == assert "|-Inf|==Inf"
-  f64.Infinity  f64.abs f64.Infinity == assert "|Inf|==Inf"
-  2.25:f32 f32.abs 2.25:f32 == assert "|2.25|==2.25"
-  -3.14159265:f32 f32.abs 3.14159265:f32 == assert "|-3.14159265|==3.14159265:f32"
+  -0.0 f64.abs 0.0 == "|-0|==0" assert
+  -5e-324 f64.abs 5e-324 == "|-5e-324|==5e-324" assert
+  5e-324  f64.abs 5e-324 == "|5e-324|==5e-324" assert
+  -0.3 f64.abs 0.3 == "|-0.3|==0.3" assert
+  -1.0 f64.abs 1.0 == "|-1.0|==1.0" assert
+  f64.-Infinity f64.abs f64.Infinity == "|-Inf|==Inf" assert
+  f64.Infinity  f64.abs f64.Infinity == "|Inf|==Inf" assert
+  2.25:f32 f32.abs 2.25:f32 == "|2.25|==2.25" assert
+  -3.14159265:f32 f32.abs 3.14159265:f32 == "|-3.14159265|==3.14159265:f32" assert
 end

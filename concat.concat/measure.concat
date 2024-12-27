@@ -20,7 +20,7 @@ proc(
   visited declared map.at ..dup optional.hasData if .data []
     ptrLevel == if
       0 sb.create
-        declared prog [] .idContext .typeContext @ sb.appendType
+        declared prog [] .idContext .typeContext@ sb.appendType
         "! \n" sb.appendS
       pos errors appendError
     end
@@ -110,35 +110,35 @@ proc( Operation ptr : op ProgramContext ptr.mut : prog Type i32 hashMap ptr.mut 
 end
 
 proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
-  types.typeHash @ types.typeEquals @ 128 i32 map.create =:: mut: visited ## XXX start with power of two closest to total type count as capacity
+  types.typeHash@ types.typeEquals@ 128 i32 map.create =:: mut: visited ## XXX start with power of two closest to total type count as capacity
   128 Type list.create =:: mut: types
-  prog [] .idContext @ =:: idContext 
-  idContext [] .globalScope .identifierNames @ map.itr.start while map.itr.hasNext do map.itr.next
+  prog [] .idContext@ =:: idContext
+  idContext [] .globalScope .identifierNames@ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## XXX find out which declarations are actually used
     declaration .1 [] =:: labelId
     labelId idContext id.getIdentifier
-      ! assert "identifier exists"
+      ! "identifier exists" assert
     =:: idData
     idData [] .idType .GLOBAL_VAR ?? ! if
       continue
     end
-    idData [] .valueType 0 idData [] .declaredAt prog visited @ types @ declaredType
+    idData [] .valueType 0 idData [] .declaredAt prog visited@ types@ declaredType
   end ..drop
   0:i64 while ..dup prog [] .progFiles .length < do
     prog [] .progFiles ..over list.at .data
       0:i64 while ..dup ..over.2 [] .globalOps .length < do
         ..swap
-          ..dup [] .globalOps ..over.2 list.at .data prog visited @ types @ addOpType
+          ..dup [] .globalOps ..over.2 list.at .data prog visited@ types@ addOpType
         ..swap 1 +
       end ..drop
       0:i64 while ..dup ..over.2 [] .localOps .length < do
         ..swap
-          ..dup [] .localOps ..over.2 list.at .data prog visited @ types @ addOpType
+          ..dup [] .localOps ..over.2 list.at .data prog visited@ types@ addOpType
         ..swap 1 +
       end ..drop
     ..drop
     1 +
   end ..drop
-  visited @ map.free
+  visited@ map.free
   types return
 end

@@ -45,7 +45,7 @@ proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   end
 end
 proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
-  ConstValue ..length 22 == assert "no new constants"
+  ConstValue ..length 22 == "no new constants" assert
   val switch
     Int case
       val .Int types.ArraySize .int return
@@ -172,7 +172,7 @@ proc(
         idContext [] .arraySizeBuffer
           sizeOffset list.setLength
         idContext [] .arraySizeBuffer =
-        ! assert "can create array"
+        ! "can create array" assert
       src .arrayType ?? and genericSize if ## wrap generic array parameters in reference
         false typeContext types.newReferenceType
       end
@@ -216,7 +216,7 @@ proc(
         ## reset buffer
         typeBuffer [] typeOffset list.setLength typeBuffer [] =
         labelBuffer [] labelOffset list.setLength labelBuffer [] =
-        ! assert "can create composite"
+        ! "can create composite" assert
       return
     procedure case
       src typeContext types.getProcIn ..drop =:: inTypes
@@ -231,7 +231,7 @@ proc(
         src typeContext types.getCallConvention ..drop
         typeContext
       types.newProcedure
-        ! assert "can create procedure"
+        ! "can create procedure" assert
       return
     generatedType case
       src typeContext types.getGeneratorArgs =:: args
@@ -240,7 +240,7 @@ proc(
       0:i64 while ..dup args .length < do =:: i
         args i array.get =:: arg
         argBuffer []
-          ConstValue ..length 22 == assert "no new constants"
+          ConstValue ..length 22 == "no new constants" assert
           arg switch
             TypeId case
               arg .TypeId
@@ -484,7 +484,7 @@ proc(
           newSrcSizes
           srcMutable
           typeContext
-        types.newArrayType ! assert "can create array"
+        types.newArrayType ! "can create array" assert
       else
         src typeContext types.getBaseType
       end =:: srcBase
@@ -965,7 +965,7 @@ proc(
         ## TODO extra casts for move complicated literal conversion
         fromType paramType types.typeEquals ! if
           fromType .intLiteral ?? and
-              fromType .intLiteral types.intLiteralAsInt 
+              fromType .intLiteral types.intLiteralAsInt
               paramType typeContext types.unwrapNamed types.typeEquals ! if
             ## resizing int-literal counts as additional cast
             current [] .nCasts 1 + current [] .nCasts =
@@ -1120,7 +1120,7 @@ proc(
     false =:: mut: isMatch
     0:i64 while ..dup impls [] .length < do =:: i
       impls [] i list.at .data =:: impl
-      impl [] .staticArgs .length constArgs .length == assert "correct number of static arguments"
+      impl [] .staticArgs .length constArgs .length == "correct number of static arguments" assert
       true isMatch =
       0:i64 while ..dup constArgs .length < do =:: j
         ## constEquals
@@ -1231,7 +1231,7 @@ proc(
     procInfo [] .procType typeContext types.getCallConvention ..drop
     typeContext
   types.newProcedure
-    ! assert "can create procedure"
+    ! "can create procedure" assert
   =:: calledType
   ## ProcedureCallInfo
     baseProcId

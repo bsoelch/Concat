@@ -9,7 +9,7 @@ namespace: Label
 end
 
 proc( -> ) =>: main
-  1:Label 2:Label Label.or i32 cast 3 == assert "1|2==3"
-  1:Label Label.toBool assert "1 toBool"
-  0:Label Label.toBool ! assert "0 toBool !"
+  1:Label 2:Label Label.or i32 cast 3 == "1|2==3" assert
+  1:Label Label.toBool "1 toBool" assert
+  0:Label Label.toBool ! "0 toBool !" assert
 end

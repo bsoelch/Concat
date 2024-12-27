@@ -22,8 +22,8 @@ proc(
   FilePosition : pos
   ConverterContext ptr.mut : context
 -> IdentifierInfo ) =>: newTmpVar
-  context [] .program [] .idContext @ =:: idContext
-  idContext [] .typeContext .labelContext @ =:: labelContext
+  context [] .program [] .idContext@ =:: idContext
+  idContext [] .typeContext .labelContext@ =:: labelContext
   id.FLAG_NONE mutable if
     id.FLAG_MUTABLE | LabelFlag cast
   end =:: flags
@@ -61,14 +61,14 @@ proc(
       newOps return ## ignore no-ops
     builtIn equalityOperator argc getArg unreachable procPtr
     checkEnumLabel hasElement getId atId setValue getEnumLabel
-    atArrayElement atElement Assert Error stackMod getArrayElement getElement setEnumLabel
+    atArrayElement atElement RuntimeAssert Error stackMod getArrayElement getElement setEnumLabel
     autoCast Cast Cast! bitCast Return case
       newOps
         op list.append ## nothing to change
       return
     implementProcedure case
       op .dataType typeContext types.getProcIn
-        ! assert "procedure has arguments"
+        ! "procedure has arguments" assert
       =:: args
       args typeContext types.compositeEltCount =:: argCount
       context [] .variables
@@ -172,7 +172,7 @@ proc(
           typeContext types.getBaseType
         end
       typeContext types.getProcOutArgs
-        ! assert "calledType has arguments"
+        ! "calledType has arguments" assert
       =:: outArgs
       op .val .callPtr ?? if
         ## remember number of out-args in call operation
@@ -337,7 +337,7 @@ proc(
       newOps return
     autoTypedInitializeId ConstantReference NewReference
     typeInfo NewEnumReference
-    getName atName getLabel
+    getName atName getLabel Assert
     atLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
@@ -373,9 +373,9 @@ end
 
 ## TODO better name for file&procedure, find good description of compilation-step
 proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
-  program [] .idContext @ =:: idContext
-  idContext [] .typeContext @ =:: typeContext
-  typeContext [] .labelContext @ =:: labelContext
+  program [] .idContext@ =:: idContext
+  idContext [] .typeContext@ =:: typeContext
+  typeContext [] .labelContext@ =:: labelContext
   ## ConverterContext
     program
     0 VariableInfo list.create
@@ -396,7 +396,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     program [] .progFiles
       currentProc [] .fileId i64 cast
     list.at .data =:: f
-    currentProc [] .implementation .code @ =:: impl
+    currentProc [] .implementation .code@ =:: impl
     currentProc [] .hasStaticArg if
       0:i64 while ..dup impl [] .implementations .length < do =:: implId
         impl [] .implementations implId list.at .data =:: currentImpl
@@ -405,10 +405,10 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
             currentImpl [] .codeStart
             currentImpl [] .codeLength
           list.slice
-          f [] .tmpOps @
-          currentImpl [] .variables @
-          currentImpl [] .codeStart @
-          currentImpl [] .codeLength @
+          f [] .tmpOps@
+          currentImpl [] .variables@
+          currentImpl [] .codeStart@
+          currentImpl [] .codeLength@
           context
         convertProc
         implId 1 +
@@ -416,10 +416,10 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     else
       ## convertProc
         f [] .localOps impl [] .codeStart impl [] .codeLength list.slice
-        f [] .tmpOps @
-        impl [] .variables @
-        impl [] .codeStart @
-        impl [] .codeLength @
+        f [] .tmpOps@
+        impl [] .variables@
+        impl [] .codeStart@
+        impl [] .codeLength@
         context
       convertProc
     end

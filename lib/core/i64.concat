@@ -141,7 +141,7 @@ namespace: i64
     false
       x00 mid 32 << addc =:: low
       x11 mid 32 >>> addc =:: hi
-    ! assert "umul2 does not overflow"
+    ! "umul2 does not overflow" assert
     hi low return
   end
 end

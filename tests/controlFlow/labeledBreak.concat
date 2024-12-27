@@ -4,7 +4,7 @@ proc( -> ) =>: main
       i 2 == if i break.outer end
       j 1 +
     end ..drop
-    i 2 < assert "break left loop"
+    i 2 < "break left loop" assert
     i 1 +
   end ..drop
 end

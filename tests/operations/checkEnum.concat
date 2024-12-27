@@ -1,5 +1,5 @@
 enum( A B C ) =:: E
 proc( -> ) =>: main
-  E .A .A ?? assert "E .A .A ??"
-  E .A .C ?? ! assert "E .A .C ?? !"
+  E .A .A ?? "E .A .A ??" assert
+  E .A .C ?? ! "E .A .C ?? !" assert
 end

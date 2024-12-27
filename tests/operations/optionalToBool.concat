@@ -5,7 +5,7 @@ proc( i32 optional : n -> bool ) =>: isEven
 end
 
 proc( -> ) =>: main
-  i32 optional.empty isEven ! assert "empty is not even"
-  5 optional.wrap isEven ! assert "5 is not even"
-  -16 optional.wrap isEven assert "-16 is even"
+  i32 optional.empty isEven ! "empty is not even" assert
+  5 optional.wrap isEven ! "5 is not even" assert
+  -16 optional.wrap isEven "-16 is even" assert
 end

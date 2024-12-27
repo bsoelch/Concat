@@ -128,7 +128,7 @@ namespace: arenaAlloc
     T ArenaAllocator : arena0
     i32 : count
   -> T ArenaAllocator T _ ptr.mut ) =>: alloc_internal
-    count 0 >= assert "count is non-negative"
+    count 0 >= "count is non-negative" assert
     count 0 == if arena0 0 T _ ptr.mut cast! return end
     1 arena0 .sliceSizeShift << =:: sliceSize
     arena0 =:: mut: arena
@@ -158,14 +158,14 @@ namespace: arenaAlloc
     end
     ## new data does not fit into last slice
     count i64 cast.u sliceSize i64 cast.u 1 - + arena0 .sliceSizeShift >>> =:: newSlices
-    newSlices 1 >= assert "at least one new slice"
+    newSlices 1 >= "at least one new slice" assert
     newSlices arena0 .sliceSizeShift << T mem.alloc =:: sliceData
     arena .slices
       sliceData count sliceSize i32.umin SliceType .ALLOC T ArenaSlice new list.append
       count sliceSize - =:: mut: newCount
       sliceData sliceSize i64 cast.u + =:: mut: newOffset
       newSlices 1 - for ..drop
-        newCount 0 > assert "remaining count >0"
+        newCount 0 > "remaining count >0" assert
         ## ArenaSlice
           newOffset
           newCount sliceSize i32.umin
@@ -276,7 +276,7 @@ namespace: arenaAlloc
       arena0 .sliceSizeShift >>>
       newEltCount 0 ..u> if 1 + end
     =:: newSliceCount
-    newSliceCount arena0 .slices .length <= assert "reset point inside allocated slice"
+    newSliceCount arena0 .slices .length <= "reset point inside allocated slice" assert
     arena0 =:: mut: arena ## XXX? prevent copy of old slice data
     arena .slices =:: mut: slices
     arena .freeElt =:: freeElt
@@ -307,7 +307,7 @@ namespace: arenaAlloc
       arena .fullSlices =
       ## shrink last slice if neccessary
       slices newSliceCount 1 - list.at .data =:: lastSlice
-      lastSlice [] .eltCount newEltCount >= assert "reset point inside allocated memory"
+      lastSlice [] .eltCount newEltCount >= "reset point inside allocated memory" assert
       freeElt optional.hasData if
         lastSlice [] .eltCount 1 - while $ newEltCount >= do =:: j
           lastSlice [] .data j i64 cast.u + T ptr cast! freeElt .data ()
@@ -318,7 +318,7 @@ namespace: arenaAlloc
       end
     else
       0 arena .fullSlices =
-      newEltCount 0 == assert "no elements for empty slice"
+      newEltCount 0 == "no elements for empty slice" assert
     end
     slices arena .slices =
     arena return

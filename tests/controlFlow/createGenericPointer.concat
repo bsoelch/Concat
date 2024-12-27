@@ -8,8 +8,8 @@ proc( -> ) =>: main
   "Test"
     $ =:: src
   strDup =:: copy
-  src copy != assert "strDup changed address"
+  src copy != "strDup changed address" assert
   0:i64 while $ src ..length < do =:: i
-    src i [] copy i [] == assert "copy success full"
+    src i [] copy i [] == "copy success full" assert
   finally i 1 + end ..drop
 end

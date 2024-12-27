@@ -164,7 +164,7 @@ proc(
   end =:: charType =:: strLength =:: strValue
   strLength ArraySize .int =:: size
   ## Constant
-    charType types.ArrayType .POINTER size @ 1 array.create false context newArrayType ..drop
+    charType types.ArrayType .POINTER size@ 1 array.create false context newArrayType ..drop
     strValue
     IdentifierInfo optional.empty
   pos Constant new return
@@ -299,7 +299,7 @@ proc( BlockType : blockType ParserState ptr.mut : state -> ) =>: openBlock
 end
 proc( BlockType : blockType bool : forceScope ParserState ptr.mut : state -> ) =>: openBlockScope
   forceScope or state [] .currentProc optional.hasData if
-    state [] .progContext [] .idContext @ id.openScope
+    state [] .progContext [] .idContext@ id.openScope
     true
   else false end =:: hasScope
   state [] .openBlocks
@@ -308,7 +308,7 @@ proc( BlockType : blockType bool : forceScope ParserState ptr.mut : state -> ) =
 end
 proc( ItrVarInfo : itrVarInfo bool : forceScope ParserState ptr.mut : state -> ) =>: openForBlock
   forceScope or state [] .currentProc optional.hasData if
-    state [] .progContext [] .idContext @ id.openScope
+    state [] .progContext [] .idContext@ id.openScope
     true
   else false end =:: hasScope
   state [] .openBlocks
@@ -319,7 +319,7 @@ proc( Type : valType bool : experimental ParserState ptr.mut : state -> ) =>: op
   ## openProcScope
     valType
     experimental
-  state [] .progContext [] .idContext @ id.openProcScope
+  state [] .progContext [] .idContext@ id.openProcScope
   state [] .openBlocks
     ## BlockInfo
       ItrVarInfo optional.empty
@@ -361,7 +361,7 @@ proc(
   state [] .openBlocks =
   closed .hasScope if
     closed
-      state [] .progContext [] .idContext @ id.closeScope
+      state [] .progContext [] .idContext@ id.closeScope
     return
   end
   closed false return
@@ -476,7 +476,7 @@ proc(
         .IDENTIFIER
       end
     end
-  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext [] .idContext .typeContext .labelContext @ id.newLabel return
+  flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext [] .idContext .typeContext .labelContext@ id.newLabel return
 end
 proc( string : code string : start FileState ptr.mut : fileState  ParserState ptr.mut : state -> string LabelId ) =>: readLabel
   code start fileState state 0:LabelFlag readLabelAddFlags
@@ -944,7 +944,7 @@ proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =
   varInfo .itrType varInfo .itrVar pos opGetId =:: getItr
   getItr state appendOp
   "..itr.step" string.wrap state [] .currentFile idContext id.findIdentifierByName
-    ! assert "..itr.step"
+    ! "..itr.step" assert
   =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
   getItr state appendOp
@@ -954,7 +954,7 @@ proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =
   state [] .progContext [] .idContext@ =:: idContext
   varInfo .itrType varInfo .itrVar pos opGetId state appendOp
   "..itr.end" string.wrap state [] .currentFile idContext id.findIdentifierByName
-    ! assert "..itr.end"
+    ! "..itr.end" assert
   =:: itrEnd
   itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
 end
@@ -986,8 +986,8 @@ proc( LabelId : procName Type : procType FilePosition : pos ParserState ptr.mut 
     pos errors appendWarning
     return
   end
-  procType typeContext types.getProcIn ! assert "main procIn" =:: inTypes
-  procType typeContext types.getProcOut ! assert "main procOut" =:: outTypes
+  procType typeContext types.getProcIn ! "main procIn" assert =:: inTypes
+  procType typeContext types.getProcOut ! "main procOut" assert =:: outTypes
   inTypes typeContext types.compositeEltCount 0 > if
     "the main procedure should not take arguments" sb.wrap
      pos errors appendError
@@ -1046,7 +1046,7 @@ proc(
           ProcCodeState .PARSING
         CodeProcData new ProcImplType .code
       else
-        codeStart -1:i64 == assert "no code in proc alias"
+        codeStart -1:i64 == "no code in proc alias" assert
         aliasId ProcImplType .alias
       end
       hasStaticArg
@@ -1079,8 +1079,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state [] .openBlocks list.peek .data =:: current
         BlockType .IF current [] .blockType =
       else currentBlock .OR ?? _if
-        state closeBlock ! assert "correctly closed block"
-        .blockType currentBlock == assert "closed block matches current block"
+        state closeBlock ! "correctly closed block" assert
+        .blockType currentBlock == "closed block matches current block" assert
         BlockType .IF fileState [] .wordStart state convertAndOrBlock
       end
       BlockType .IF  fileState [] .wordStart opBlock  state appendOp
@@ -1113,8 +1113,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state [] .openBlocks list.peek .data =:: current
           BlockType .IF current [] .blockType =
         else ..dup .OR ?? _if
-          state closeBlock ! assert "correctly closed block"
-          .blockType == assert "closed block matches current block"
+          state closeBlock ! "correctly closed block" assert
+          .blockType == "closed block matches current block" assert
           BlockType .IF fileState [] .wordStart state convertAndOrBlock
           state currentBlockType ## get new enclosing block
         end
@@ -1179,7 +1179,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         id.LABEL_ID_NONE
       end =:: blockLabel
       "..itr.prepare" string.wrap state [] .currentFile idContext id.findIdentifierByName
-        ! assert "..itr.prepare"
+        ! "..itr.prepare" assert
       =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo fileState [] .wordStart opGetId state appendOp
       progContext newAutoType =:: itrType
@@ -1188,13 +1188,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       itrType itrVar fileState [] .wordStart opGetId state appendOp
       "..itr.check" string.wrap state [] .currentFile idContext id.findIdentifierByName
-        ! assert "..itr.check"
+        ! "..itr.check" assert
       =:: itrCheck
       itrCheck [] .valueType itrCheck id.asIdInfo fileState [] .wordStart opGetId state appendOp
       BlockType .DO fileState [] .wordStart opBlock  state appendOp
       itrType itrVar fileState [] .wordStart opGetId state appendOp
       "..itr.get" string.wrap state [] .currentFile idContext id.findIdentifierByName
-        ! assert "..itr.get"
+        ! "..itr.get" assert
       =:: itrGet
       itrGet [] .valueType itrGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
       itrVar itrType ItrVarInfo new false state openForBlock
@@ -1202,8 +1202,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "do" string.wrap string.eq _if ..drop
       state currentBlockType =:: currentBlock
       currentBlock .AND ?? currentBlock .OR ?? | if
-        state closeBlock ! assert "correctly closed block"
-        .blockType currentBlock == assert "closed block matches current block"
+        state closeBlock ! "correctly closed block" assert
+        .blockType currentBlock == "closed block matches current block" assert
         BlockType .DO fileState [] .wordStart state convertAndOrBlock
       end
       state [] .openBlocks list.peek =:: current?
@@ -1358,7 +1358,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       else
         procName procType state [] .currentFile -1:ProcId codeStart progContext newProcData
           $ ConstValue .Procedure procName idContext id.getIdentifier
-              ! assert "procName is identifier"
+              ! "procName is identifier" assert
           [] .constValue =
       end optional.wrap state [] .currentProc =
       ## check for invalid procedure declaration
@@ -1399,7 +1399,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             fileState [] .wordStart
             state [] .currentFile
             idContext
-            progContext [] .errors @
+            progContext [] .errors@
           id.declareIdentifier if ..drop.2
             return
           end ..drop.2
@@ -1428,7 +1428,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end .IDENTIFIER
       ..dup
         id.NameContext .NAMESPACE
-      fileState [] .wordStart progContext [] .errors @ id.checkIdentifier if
+      fileState [] .wordStart progContext [] .errors@ id.checkIdentifier if
         "\"" sb.wrap
           ..swap sb.appendStr
         "\" is not a valid namespace name" sb.appendS
@@ -1465,7 +1465,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState [] .wordStart
           state [] .currentFile
           idContext
-          progContext [] .errors @
+          progContext [] .errors@
         id.declareIdentifier if ..drop.2
           return
         end ..drop labelId =
@@ -1816,13 +1816,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart
         state [] .currentFile
         idContext
-        progContext [] .errors @
+        progContext [] .errors@
       id.declareIdentifier if ..drop.2
         return
       end =:: idData label =
       idType .TYPE ?? if
         isInit if
-          fileState state popTypeConstant ! assert "pop type"
+          fileState state popTypeConstant ! "pop type" assert
           label
           typeContext types.initializeNamedType if
             "re-initialization of named type" sb.wrap
@@ -1849,7 +1849,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ConstValue .None
       end
         label idContext id.getIdentifier
-        ! assert "label is identifier"
+        ! "label is identifier" assert
       [] .constValue =
       localDeclaration ! if ## main
         label idData .valueType fileState [] .wordStart state checkMain
@@ -1877,13 +1877,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               aliasData [] .idType sb.appendIdType
             fileState [] .wordStart errors appendError
           end
-          aliasData [] .constValue .Procedure ?? assert "procedures have const value"
+          aliasData [] .constValue .Procedure ?? "procedures have const value" assert
           aliasData [] .constValue .Procedure =:: mut: aliasId
           progContext [] .procedures aliasId i64 cast list.at .data
             $ .implementation [] .alias ?? if
               .implementation [] .alias aliasId =
               progContext [] .procedures aliasId i64 cast list.at .data
-              $ .implementation [] .alias ?? ! assert "no double alias"
+              $ .implementation [] .alias ?? ! "no double alias" assert
             end
           =:: aliasProc
           valType aliasProc [] .procType typeContext types.canAlias ! if
@@ -1903,7 +1903,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           label valType state [] .currentFile aliasId -1:i64 progContext newProcData
             ConstValue .Procedure
           label idContext id.getIdentifier
-            ! assert "procName is identifier"
+            ! "procName is identifier" assert
           [] .constValue =
         end
       end
@@ -1912,14 +1912,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           return ## no operation for global pre-declaration
         end
         label idContext id.getIdentifier
-          ! assert "label is identifier"
+          ! "label is identifier" assert
         [] .constValue .None ?? ! and valType .undefined ?? ! if
           ## don't create global operation if declaration already is complete
           state popConst ..drop.2
           return
         end
       end
-      idData .valueType idData @ id.asIdInfo fileState [] .wordStart isInit if
+      idData .valueType idData@ id.asIdInfo fileState [] .wordStart isInit if
         opInitializeId
       else
         opDeclareId
@@ -1967,7 +1967,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart
         state [] .currentFile
         idContext
-        progContext [] .errors @
+        progContext [] .errors@
       id.declareIdentifier if ..drop.2
         return
       end =:: idData labelId =
@@ -1992,7 +1992,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         constValue
       end
         labelId idContext id.getIdentifier
-        ! assert "label is identifier"
+        ! "label is identifier" assert
       [] .constValue =
       idData .idType .TYPE ?? if
         return
@@ -2003,7 +2003,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state popConst ..drop.2
         return
       end
-      idData .valueType idData @ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
+      idData .valueType idData@ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
       return
     else ..dup "=" string.wrap string.eq _if ..drop
       fileState [] .wordStart opSetValue state appendOp
@@ -2227,21 +2227,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "\" does not exist" sb.appendS fileState [] .wordStart errors appendError
       else ..drop end
       return
-    else ..dup "assert" string.wrap string.eq _if =:: opName
-      state currentBlockType =:: currentBlock
-      currentBlock .AND ?? or currentBlock .OR ?? if
-        state closeBlock ! assert "correctly closed block"
-        .blockType currentBlock == assert "closed block matches current block"
-        currentBlock fileState [] .wordStart opEndBlock  state appendOp
-        state [] .andOrPositions list.clear state [] .andOrPositions =
-      end
-      fileState nextToken ## XXX? handle different string types?
-      ..dup .STRING ?? ! if ..drop
-        "assertion message has to be a string constant" sb.wrap fileState [] .wordStart errors appendError
-        return
-      end .STRING .value =:: message
+    else $ "assert" string.wrap string.eq _if =:: opName
       ## opAssert
-        message constContext newStringConst .String
         fileState [] .wordStart
       opAssert state appendOp
       return
@@ -2299,7 +2286,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ..drop ## discard remainder of file
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek =:: next?
-          BlockType ..length 38 == assert "no new block types"
+          BlockType ..length 38 == "no new block types" assert
           next? optional.hasData and next? .data [] .blockType switch
             IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DEFAULT case true break
             default false break
@@ -2385,13 +2372,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..?parser.find." string.wrap string.startsWith _if =:: mut: opName
         opName "..?parser.find." ..length string.tail =:: idName
         16 IdentifierMatch list.create =:: mut: matches
-        idName state [] .currentFile idContext matches @ optional.wrap id.searchIdentifier ..drop.3
+        idName state [] .currentFile idContext matches@ optional.wrap id.searchIdentifier ..drop.3
         "-----------------\n" sb.wrap
           "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
           0:i64 while ..dup matches .length < do =:: i
             matches i list.at .data =:: match
             match [] .labelId idContext id.getIdentifier
-              ! assert "matched identifier exists"
+              ! "matched identifier exists" assert
             =:: idData
             " - " sb.appendS
             idData id.asIdInfo labelContext sb.appendIdInfo
@@ -2538,13 +2525,13 @@ proc(
     128 sb.create
     saveGlobalTokens
   ParserState new =:: mut: state
-  rootFile state @ parseFile rootFile rootPos state @ checkIOError ..drop
+  rootFile state@ parseFile rootFile rootPos state@ checkIOError ..drop
   ## cleanup parser memory
   state .typeBuffer list.free ..drop
   state .constantBlocks list.free ..drop
   0:i64 while ..dup state .globalInterpreters .length < do
     state .globalInterpreters
-      ..over list.at .data [] .context @
+      ..over list.at .data [] .context@
     interpreter.cleanupContext
     1 +
   end ..drop
@@ -2563,7 +2550,7 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
     ..dup sb.asStr 0 1 FilePosition new ..dup FileState new =:: mut: fileState
     progContext [] .progFiles .length FileId cast =:: fileId
     progContext [] .progFiles
-      ..over fileId progContext [] .idContext @ newProgFile list.append
+      ..over fileId progContext [] .idContext@ newProgFile list.append
     progContext [] .progFiles =
     state [] .globalInterpreters
       ## InterpreterInfo
@@ -2600,7 +2587,7 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
     _INCLUDE_CORE_ if
       "core" string.wrap fileState .currentPos state importLibraryFile
     end
-    fileState @
+    fileState@
       fileBody sb.asStr while
         ..over nextToken ..over.2 state parseOperation
         ..dup .length 0 >

@@ -119,7 +119,7 @@ end
 proc( string -> ) =>: export: printTokens
   "test" ..dup ..length string.create 0 1 FilePosition new ..dup FileState new =:: mut: state
   while
-    state @ nextToken
+    state@ nextToken
     128 sb.create
       ..swap sb.appendToken
       " at " sb.appendS
@@ -219,7 +219,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     state .IDENTIFIER ?? and c char.isWhitespace or
         c '#' == and i 1 + code .length < and "#+" string.wrap code i 1 + string.charAt string.contains if
       isLiteralType ! if
-        i i0 > assert "identifier contains at least one character"
+        i i0 > "identifier contains at least one character" assert
       end
       code i0 i i0 - string.slice =:: idName
       code i string.tail idName
@@ -234,7 +234,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
         i 1 + code .length < and code i 1 + string.charAt ':' != and
         code i 1 + string.charAt char.isWhitespace ! if
       isLiteralType ! if
-        i i0 > assert "identifier contains at least one character"
+        i i0 > "identifier contains at least one character" assert
       end
       code i0 i i0 - string.slice =:: idName
       code i string.tail idName
