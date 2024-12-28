@@ -221,7 +221,7 @@ namespace: constant
       end
     end ..drop.2
     ## at most 1/8 non-printable chars
-    nonPrintable bytes .length 8 / 2 + < return
+    nonPrintable bytes .length 4 + 8 / <= return
   end
   ## Detect if a given i8 array is a string constant
   proc( i16 arrayView : ints -> bool ) =>: isString16
@@ -237,7 +237,7 @@ namespace: constant
       end
     end ..drop.2
     ## at most 1/8 non-printable chars
-    nonPrintable ints .length 8 / 2 + < return
+    nonPrintable ints .length 4 + 8 / <= return
   end
   ## Detect if a given i8 array is a string constant
   proc( i32 arrayView : ints -> bool ) =>: isString32
@@ -252,7 +252,7 @@ namespace: constant
       end
     end
     ## at most 1/8 non-printable chars
-    nonPrintable ints .length 8 / 2 + < return
+    nonPrintable ints .length 4 + 8 / <= return
   end
 end
 namespace: sb
@@ -565,35 +565,35 @@ namespace: sb
               val .LocalArray
                 ConstValue arrayView.mut cast array.freeze
               ConstValue .Array typeContext sb.appendConstant
-            ")" sb.appendS
+            " )" sb.appendS
           break
         LocalArray8 case
             "local array8 ( "  sb.appendS
               val .LocalArray8
                 i8 arrayView.mut cast array.freeze
               ConstValue .Array8 typeContext sb.appendConstant
-            ")" sb.appendS
+            " )" sb.appendS
           break
         LocalArray16 case
             "local array16 ( "  sb.appendS
               val .LocalArray16
                 i16 arrayView.mut cast array.freeze
               ConstValue .Array16 typeContext sb.appendConstant
-            ")" sb.appendS
+            " )" sb.appendS
           break
         LocalArray32 case
             "local array32 ( "  sb.appendS
               val .LocalArray32
                 i32 arrayView.mut cast array.freeze
               ConstValue .Array32 typeContext sb.appendConstant
-            ")" sb.appendS
+            " )" sb.appendS
           break
         LocalArray64 case
             "local array64 ( "  sb.appendS
               val .LocalArray64
                 i64 arrayView.mut cast array.freeze
               ConstValue .Array64 typeContext sb.appendConstant
-            ")" sb.appendS
+            " )" sb.appendS
           break
       end
     return

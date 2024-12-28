@@ -551,9 +551,9 @@ namespace: interpreter
     i64 : length
     FilePosition : pos
     ProgramContext ptr.mut : program
-  -> bool ) =>: export: opMemcopy
+  -> ConstValue bool ) =>: export: opMemcopy
     length 0 <= if
-      false return
+      target false return
     end
     program [] .errors@ =:: errors
     program [] .idContext .typeContext@ =:: typeContext
@@ -561,16 +561,27 @@ namespace: interpreter
       "unsupported constant for memcopy source: " sb.wrap
         src typeContext sb.appendConstant
       pos errors appendError
-      true return
+      target true return
     end =:: srcStride =:: srcLength =:: srcData
     target constantAsRawMutableMemory if ..drop.3
       "unsupported constant for memcopy target: " sb.wrap
         target typeContext sb.appendConstant
       pos errors appendError
-      true return
+      target true return
     end =:: targetStride =:: targetLength =:: targetData
-    "memcopy is not implemented" sb.wrap
-    pos errors appendError
-    true return
+    srcStride targetStride != or
+        length srcStride ..umod 0 != or
+        length targetStride ..umod 0 != if
+      "unaligned copy is not supported" sb.wrap
+      pos errors appendError
+      target true return
+    end
+    srcStride srcLength * length < or targetStride targetLength * length < if
+      "out of bounds memory access" sb.wrap
+      pos errors appendError
+      target true return
+    end
+    targetData srcData length mem.copy ..drop
+    target false return
   end
 end

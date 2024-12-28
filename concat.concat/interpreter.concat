@@ -1424,6 +1424,57 @@ namespace: interpreter
       localAddress LocalAddress cast ConstValue .LocalValue return
     end
   end
+  proc(
+    type : auto: W
+    ConstValue : src
+    W : localArray
+    type : T
+  -> bool ) =>: primitiveArrayTrySetElement
+    localArray T arrayView.mut cast =:: arrayData
+    arrayData .length 1 != if
+      false return ## wrong size
+    end
+    ConstValue ..length 23 == "no new constants" assert
+    src switch
+      Char case src .Char i64 cast.u break
+      Int case src .Int break
+      ## XXX? support generic args
+      ## XXX? support floats?
+      ## XXX? support primitive values
+      default false return
+    end =:: intValue
+    intValue T cast arrayData 0 array.set
+    true return
+  end
+  union(
+    _ : Ok
+    _ : Error
+    JumpDistance : Jump
+    _ : Return
+  ) =:: EvalResult
+  proc( bool -> EvalResult ) =>: wrapResult
+    if EvalResult .Error else EvalResult .Ok end
+  end
+  proc(
+    type : auto: W type : auto: T
+    W : targetArray
+    T arrayView : srcArray
+    FilePosition : pos
+    CompilerError list ptr.mut : errors
+  -> EvalResult ) =>: setLocalArray
+    srcArray .length targetArray .length != if
+      "invalid array length for assignment expected " sb.wrap
+        targetArray .length sb.appendI
+        " got:" sb.appendS
+        srcArray .length sb.appendI
+      pos errors appendError
+      EvalResult .Error return
+    end
+    targetArray .data srcArray .data != if
+      targetArray .data srcArray .data srcArray .length mem.copy ..drop
+    end
+    EvalResult .Ok return
+  end
   ## TODO try to (partially) merge with typeCheck.printType
   proc(
     bool : printValues
@@ -1472,15 +1523,6 @@ namespace: interpreter
       "-----------------\n" sb.appendS
       io.stdOut $1 io.fputSb ..drop
     sb.free ..drop
-  end
-  union(
-    _ : Ok
-    _ : Error
-    JumpDistance : Jump
-    _ : Return
-  ) =:: EvalResult
-  proc( bool -> EvalResult ) =>: wrapResult
-    if EvalResult .Error else EvalResult .Ok end
   end
 end
 proc(
@@ -2933,7 +2975,7 @@ proc(
           isPtr if
             arrayConst index array.tail LocalSlice cast ConstValue .LocalArray
           else
-            arrayConst index array.get
+            arrayConst index array.at .data LocalAddress cast ConstValue .LocalValue
           end
           break
         LocalArray8 case
@@ -2945,10 +2987,10 @@ proc(
             EvalResult .Error return
           end
           isPtr if
-            arrayConst index array.tail LocalSlice8 cast ConstValue .LocalArray8
+            arrayConst index array.tail
           else
-            arrayConst index array.get i64 cast.u ConstValue .Int
-          end
+            arrayConst index array.at .data 1 array.createMutable
+          end LocalSlice8 cast ConstValue .LocalArray8
           break
         LocalArray16 case
           indexCount 0 > if
@@ -2959,10 +3001,10 @@ proc(
             EvalResult .Error return
           end
           isPtr if
-            arrayConst index array.tail LocalSlice16 cast ConstValue .LocalArray16
+            arrayConst index array.tail
           else
-            arrayConst index array.get i64 cast.u ConstValue .Int
-          end
+            arrayConst index array.at .data 1 array.createMutable
+          end LocalSlice16 cast ConstValue .LocalArray16
           break
         LocalArray32 case
           indexCount 0 > if
@@ -2973,10 +3015,10 @@ proc(
             EvalResult .Error return
           end
           isPtr if
-            arrayConst index array.tail LocalSlice32 cast ConstValue .LocalArray32
+            arrayConst index array.tail
           else
-            arrayConst index array.get i64 cast.u ConstValue .Int
-          end
+            arrayConst index array.at .data 1 array.createMutable
+          end LocalSlice32 cast ConstValue .LocalArray32
           break
         LocalArray64 case
           indexCount 0 > if
@@ -2987,10 +3029,10 @@ proc(
             EvalResult .Error return
           end
           isPtr if
-            arrayConst index array.tail LocalSlice64 cast ConstValue .LocalArray64
+            arrayConst index array.tail
           else
-            arrayConst index array.get i64 cast.u ConstValue .Int
-          end
+            arrayConst index array.at .data 1 array.createMutable
+          end LocalSlice64 cast ConstValue .LocalArray64
           break
         default
           "unexpected constant for pointer value: " sb.wrap
@@ -3029,27 +3071,67 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: srcArray
-          targetValue .LocalArray =:: targetArray
-          srcArray .length targetArray .length != if
-            "invalid array length for assignment expected " sb.wrap
-              targetArray .length sb.appendI
-              " got:" sb.appendS
-              srcArray .length sb.appendI
+          targetValue .LocalArray srcArray op [] .pos errors setLocalArray return
+        LocalArray8 case
+          value targetValue .LocalArray8 i8 primitiveArrayTrySetElement if
+            EvalResult .Ok return
+          end
+          value .Array8 ?? if
+            value .Array8
+          else value .LocalArray8 ?? _if
+            value .LocalArray8 i8 arrayView.mut cast array.freeze
+          else
+            "unexpected source for assignment expected array got:" sb.wrap
+              value typeContext sb.appendConstant
             op [] .pos errors appendError
             EvalResult .Error return
+          end =:: srcArray
+          targetValue .LocalArray8 srcArray op [] .pos errors setLocalArray return
+        LocalArray16 case
+          value targetValue .LocalArray16 i16 primitiveArrayTrySetElement if
+            EvalResult .Ok return
           end
-          targetArray .data srcArray .data != if
-            targetArray .data srcArray .data srcArray .length mem.copy ..drop
+          value .Array16 ?? if
+            value .Array16
+          else value .LocalArray16 ?? _if
+            value .LocalArray16 i16 arrayView.mut cast array.freeze
+          else
+            "unexpected source for assignment expected array got:" sb.wrap
+              value typeContext sb.appendConstant
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end =:: srcArray
+          targetValue .LocalArray16 srcArray op [] .pos errors setLocalArray return
+        LocalArray32 case
+          value targetValue .LocalArray32 i32 primitiveArrayTrySetElement if
+            EvalResult .Ok return
           end
-          EvalResult .Ok return
-        LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
-          ## TODO support writing to primitive local arrays
-          "primitive local arrays are not supported: " sb.wrap
-            targetValue typeContext sb.appendConstant
-          op [] .pos errors appendError
-          value valueInfo context unpopValue
-          targetValue targetInfo context unpopValue
-          EvalResult .Error return
+          value .Array32 ?? if
+            value .Array32
+          else value .LocalArray32 ?? _if
+            value .LocalArray32 i32 arrayView.mut cast array.freeze
+          else
+            "unexpected source for assignment expected array got:" sb.wrap
+              value typeContext sb.appendConstant
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end =:: srcArray
+          targetValue .LocalArray32 srcArray op [] .pos errors setLocalArray return
+        LocalArray64 case
+          value targetValue .LocalArray64 i64 primitiveArrayTrySetElement if
+            EvalResult .Ok return
+          end
+          value .Array64 ?? if
+            value .Array64
+          else value .LocalArray64 ?? _if
+            value .LocalArray64 i64 arrayView.mut cast array.freeze
+          else
+            "unexpected source for assignment expected array got:" sb.wrap
+              value typeContext sb.appendConstant
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end =:: srcArray
+          targetValue .LocalArray64 srcArray op [] .pos errors setLocalArray return
         default
           "unexpected target for setValue, expected writable memory location got: " sb.wrap
             targetValue typeContext sb.appendConstant
@@ -3221,12 +3303,16 @@ namespace: interpreter
         lenValue lenInfo context unpopValue
         true return
       end =:: length
-      targetValue srcValue length pos program opMemcopy if
+      targetValue srcValue length pos program opMemcopy if ..drop
         targetValue targetInfo context unpopValue
         srcValue srcInfo context unpopValue
         lenValue lenInfo context unpopValue
         true return
-      end
+      end =:: resPtr
+      resPtr
+        args 0 array.get
+        pos
+      context pushValue
       false return
     end
     "call to unsupported extern procedure: " sb.wrap
