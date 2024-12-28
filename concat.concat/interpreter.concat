@@ -781,12 +781,45 @@ namespace: interpreter
     -1:i64 true return
   end
   proc(
+    bool : persistentCopy
+    ConstValue : value
+    bool : allowArray
+    ConstantContext ptr.mut : constContext
+  -> string bool ) =>: constValueAsString
+    value .Array8 ?? if
+      value .Array8 string.fromBytes false return
+    else value .LocalArray8 ?? _if
+      value .LocalArray8 i8 arrayView.mut cast array.freeze
+        persistentCopy if
+          constContext newArray8Const .Array8
+        end
+      string.fromBytes
+      false return
+    else allowArray ! _if
+      string.empty true return
+    end
+    value .Array ?? and value .Array .length 2 == if
+      value .Array
+    else value .LocalArray ?? and value .LocalArray .length 2 == _if
+      value .LocalArray ConstValue arrayView.mut cast array.freeze
+    else
+      string.empty true return
+    end =:: str
+    str 1 array.get .Int ?? ! if string.empty true return end
+    str 1 array.get .Int =:: length
+    persistentCopy str 0 array.get false constContext constValueAsString =:: isErr
+      $ .length length < if true return end
+      length string.head
+    isErr return
+  end
+  proc(
+    bool : persistentCopy
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> ValueInfo string bool ) =>: popString
-    context [] .program [] .errors@ =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext@ =:: idContext
+    program .errors@ =:: errors
+    program .idContext@ =:: idContext
     idContext [] .constContext@ =:: constContext
     idContext [] .typeContext@ =:: typeContext
     typeContext [] .labelContext@ =:: labelContext
@@ -794,19 +827,18 @@ namespace: interpreter
     isError if
       valInfo string.empty true return
     end
-    value .Array8 ?? if
-      valInfo value .Array8 string.fromBytes false return
+    valInfo persistentCopy value true constContext constValueAsString if
+      "expected string got: " sb.wrap
+        valInfo .valueType typeContext sb.appendType
+        " ( " sb.appendS
+        value typeContext sb.appendConstant
+        " )" sb.appendS
+      pos errors appendError
+      ## restore stack
+      value valInfo context unpopValue
+       true return
     end
-   ## XXX? allow Array: { string, i64 } as string constant
-    "expected string got: " sb.wrap
-      valInfo .valueType typeContext sb.appendType
-      " ( " sb.appendS
-      value typeContext sb.appendConstant
-      " )" sb.appendS
-    pos errors appendError
-    ## restore stack
-    value valInfo context unpopValue
-    valInfo string.empty true return
+    false return
   end
 
 ## TODO use wrapper procedures for stack access
@@ -2622,7 +2654,7 @@ proc(
       EvalResult .Ok return
     Assert RuntimeAssert case
       op [] .val .Assert ?? if
-        op [] .pos context popString if ..drop.2
+        true op [] .pos context popString if ..drop.2
           EvalResult .Error return
         end ..swap ..drop
       else
@@ -2647,7 +2679,7 @@ proc(
       end
       EvalResult .Ok return
     Error case
-      op [] .pos context popString if ..drop.2
+      false op [] .pos context popString if ..drop.2
         EvalResult .Error return
       end =:: msg ..drop
       msg sb.fromStr
