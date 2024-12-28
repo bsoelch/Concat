@@ -221,15 +221,14 @@ namespace: interpreter
       ASHR_I64I32 ASHR_I64 case args k i64.ashr@ binaryOperatorInt return
       SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
         args k i64.shl@ binaryOperatorInt return
-        ## FIXME use correct bool op
-      EQ_BOOL case args k bool.and@ binaryOperatorBool return
+      EQ_BOOL case args k bool.eq@ binaryOperatorBool return
       EQ_I8  EQ_C8  case args k i8.eq@ cmpOperatorInt return
       EQ_I16 EQ_C16 case args k i16.eq@ cmpOperatorInt return
       EQ_I32 EQ_C32 case args k i32.eq@ cmpOperatorInt return
       EQ_I64 case args k i64.eq@ cmpOperatorInt return
       EQ_F32 case args k f32.eq@ cmpOperatorFloat return
       EQ_F64 case args k f64.eq@ cmpOperatorFloat return
-      NE_BOOL case args k bool.xor@ binaryOperatorBool return
+      NE_BOOL case args k bool.ne@ binaryOperatorBool return
       NE_I8  NE_C8  case args k i8.ne@ cmpOperatorInt return
       NE_I16 NE_C16 case args k i16.ne@ cmpOperatorInt return
       NE_I32 NE_C32 case args k i32.ne@ cmpOperatorInt return
