@@ -1147,6 +1147,7 @@ namespace: interpreter
       elementIndex typeContext types.compositeGetElement
       isPtr if eltMutable typeContext types.getAddressType end
     =:: eltType
+    ## XXX? support (Local)Array8 ... Array64
     value .Array ?? if
       value .Array elementIndex array.get
     else value .LocalArray ?? _if
@@ -1181,25 +1182,66 @@ namespace: interpreter
     context pushValue
     false return
   end
+  ## TODO try merging Array.. / LocalArray.. code (? is there a good generic signature)
   proc(
-    LocalSlice : data
+    ConstValue : localArray
+    Type : valType
     MixedArenaAllocator ptr.mut : allocator
-    ConstantContext ptr.mut : constContext
+    ProgramContext ptr.mut : program
   -> ConstValue ) =>: copyLocalArray
-    data ConstValue arrayView.mut cast =:: dataArray
+    program .idContext .typeContext@ =:: typeContext
+    program .idContext .constContext@ =:: constContext
+    valType typeContext types.isPointer if
+      ## don't copy pointers
+      localArray return
+    end
+    ConstValue ..length 23 == "no new constants" assert
+    localArray switch
+      LocalArray case break
+      LocalArray8 case
+        allocator []
+          localArray .LocalArray8 i8 arrayView.mut cast mixedArena.copyMutableArray =:: tmpArray
+        allocator [] =
+        tmpArray array.freeze constContext newArray8Const return
+      LocalArray16 case
+        allocator []
+          localArray .LocalArray16 i16 arrayView.mut cast mixedArena.copyMutableArray =:: tmpArray
+        allocator [] =
+        tmpArray array.freeze constContext newArray16Const return
+      LocalArray32 case
+        allocator []
+          localArray .LocalArray32 i32 arrayView.mut cast mixedArena.copyMutableArray =:: tmpArray
+        allocator [] =
+        tmpArray array.freeze constContext newArray32Const return
+      LocalArray64 case
+        allocator []
+          localArray .LocalArray64 i64 arrayView.mut cast mixedArena.copyMutableArray =:: tmpArray
+        allocator [] =
+        tmpArray array.freeze constContext newArray64Const return
+      default ..unreachable
+    end
+    localArray .LocalArray ConstValue arrayView.mut cast =:: dataArray
     allocator []
       dataArray mixedArena.copyMutableArray =:: tmpArray
     allocator [] =
+    valType typeContext types.getElementType =:: arrayBase
     ## 1. copy elements
     dataArray .length for =:: i
       dataArray i array.get =:: elt
-      elt .LocalValue ?? if
-        elt .LocalValue []
-      else elt .LocalArray ?? _if
-        elt .LocalArray allocator constContext copyLocalArray
-      else elt end tmpArray i array.set
+      arrayBase .undefined ?? ! if
+        arrayBase
+      else
+        valType i typeContext types.compositeGetElement
+      end =:: eltType
+      ConstValue ..length 23 == "no new constants" assert
+      elt switch
+        LocalValue case elt .LocalValue [] break
+        LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
+          elt eltType allocator program copyLocalArray break
+        default elt break
+      end tmpArray i array.set
     end
-    ## XXX? reduce number of identical constants
+    ## TODO find a way to avoid recreation of identical constants
     tmpArray array.freeze constContext newArrayConst
   end
   proc(
@@ -1208,36 +1250,92 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> ConstValue ) =>: localCopy
     context [] .program .idContext .typeContext@ =:: typeContext
-    valType typeContext types.isPointer ! and
-        value .Array ?? or value .LocalArray ?? if
-      context [] .localMemory
-        value .Array ?? if
-          value .Array
-        else
-          value .LocalArray ConstValue arrayView.mut cast array.freeze
-        end mixedArena.copyArray =:: localSlice
-      context [] .localMemory =
-      valType typeContext types.getBaseType =:: arrayBase
-      ## copy sub-arrays
-      localSlice .length for =:: i
-        localSlice i array.at .data =:: elt
-        arrayBase .undefined ?? ! if
-          arrayBase
-        else
-          valType i typeContext types.compositeGetElement
-        end =:: eltType
-        elt [] .Array ?? if
-          elt [] eltType context localCopy elt [] =
-        end
-      end
-      localSlice LocalSlice cast ConstValue .LocalArray
-    ## TODO? replace union element by local copy
-    else
+    valType typeContext types.isPointer if ## XXX? merge with default branch
       context [] .localMemory
         value mixedArena.copyValue =:: localAddress
       context [] .localMemory =
-      localAddress LocalAddress cast ConstValue .LocalValue
+      localAddress LocalAddress cast ConstValue .LocalValue return
     end
+    ConstValue ..length 23 == "no new constants" assert
+    value switch
+      Array LocalArray case break
+      Array8 case
+        context [] .localMemory
+          value .Array8 mixedArena.copyArray =:: localAddress
+        context [] .localMemory =
+        localAddress LocalSlice8 cast ConstValue .LocalArray8
+        return
+      LocalArray8 case
+        context [] .localMemory
+          value .LocalArray8 i8 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
+        context [] .localMemory =
+        localAddress LocalSlice8 cast ConstValue .LocalArray8
+        return
+      Array16 case
+        context [] .localMemory
+          value .Array16 mixedArena.copyArray =:: localAddress
+        context [] .localMemory =
+        localAddress LocalSlice16 cast ConstValue .LocalArray16
+        return
+      LocalArray16 case
+        context [] .localMemory
+          value .LocalArray16 i16 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
+        context [] .localMemory =
+        localAddress LocalSlice16 cast ConstValue .LocalArray16
+        return
+      Array32 case
+        context [] .localMemory
+          value .Array32 mixedArena.copyArray =:: localAddress
+        context [] .localMemory =
+        localAddress LocalSlice32 cast ConstValue .LocalArray32
+        return
+      LocalArray32 case
+        context [] .localMemory
+          value .LocalArray32 i32 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
+        context [] .localMemory =
+        localAddress LocalSlice32 cast ConstValue .LocalArray32
+        return
+      Array64 case
+        context [] .localMemory
+          value .Array64 mixedArena.copyArray =:: localAddress
+        context [] .localMemory =
+        localAddress LocalSlice64 cast ConstValue .LocalArray64
+        return
+      LocalArray64 case
+        context [] .localMemory
+          value .LocalArray64 i64 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
+        context [] .localMemory =
+        localAddress LocalSlice64 cast ConstValue .LocalArray64
+        return
+      ## TODO? replace union element by local copy
+      default
+        context [] .localMemory
+          value mixedArena.copyValue =:: localAddress
+        context [] .localMemory =
+        localAddress LocalAddress cast ConstValue .LocalValue
+        return
+    end
+    context [] .localMemory
+      value .Array ?? if
+        value .Array
+      else
+        value .LocalArray ConstValue arrayView.mut cast array.freeze
+      end mixedArena.copyArray =:: localSlice
+    context [] .localMemory =
+    valType typeContext types.getElementType =:: arrayBase
+    ## copy sub-arrays
+    localSlice .length for =:: i
+      localSlice i array.at .data =:: elt
+      arrayBase .undefined ?? ! if
+        arrayBase
+      else
+        valType i typeContext types.compositeGetElement
+      end =:: eltType
+      elt [] .Array ?? if
+        elt [] eltType context localCopy elt [] =
+      end
+    end
+    localSlice LocalSlice cast ConstValue .LocalArray
   end
   proc(
     Type : dataType
@@ -1261,7 +1359,7 @@ namespace: interpreter
           ConstValue .None
         end localSlice i array.set
       end
-      localSlice LocalSlice cast ConstValue .LocalArray
+      localSlice LocalSlice cast ConstValue .LocalArray return
     else dataType typeContext types.isArray _if
       ## XXX? merge with previous case
       dataType typeContext types.getArraySize =:: arraySizes
@@ -1275,10 +1373,40 @@ namespace: interpreter
           0
         end
       else 1 end =:: eltCount
+      dataType typeContext types.getElementType =:: eltType
+      eltType typeContext types.unwrapNamed =:: eltBase
+      eltBase types.isPrimitive if
+        eltBase typeContext types.primitiveValue switch
+          BOOL I8 CHAR8 case
+            context [] .localMemory
+              eltCount i32 cast i8 mixedArena.allocArray =:: localSlice
+            context [] .localMemory =
+            0:i8 localSlice array.fill
+            localSlice LocalSlice8 cast ConstValue .LocalArray8 return
+          I16 CHAR16 case
+            context [] .localMemory
+              eltCount i32 cast i16 mixedArena.allocArray =:: localSlice
+            context [] .localMemory =
+            0:i16 localSlice array.fill
+            localSlice LocalSlice16 cast ConstValue .LocalArray16 return
+          I32 CHAR32 case
+            context [] .localMemory
+              eltCount i32 cast i32 mixedArena.allocArray =:: localSlice
+            context [] .localMemory =
+            0:i32 localSlice array.fill
+            localSlice LocalSlice32 cast ConstValue .LocalArray32 return
+          I64 case
+            context [] .localMemory
+              eltCount i32 cast i64 mixedArena.allocArray =:: localSlice
+            context [] .localMemory =
+            0:i64 localSlice array.fill
+            localSlice LocalSlice64 cast ConstValue .LocalArray64 return
+          F32 F64 TYPE case break ## XXX? store float arrays in Array32/Array64
+        end
+      end
       context [] .localMemory
         eltCount i32 cast ConstValue mixedArena.allocArray =:: localSlice
       context [] .localMemory =
-      dataType typeContext types.getElementType =:: eltType
       eltType typeContext types.isTuple or eltType typeContext types.isArray if
         eltCount for =:: i
           ## array.set
@@ -1288,12 +1416,12 @@ namespace: interpreter
       else
         ConstValue .None localSlice array.fill
       end
-      localSlice LocalSlice cast ConstValue .LocalArray
+      localSlice LocalSlice cast ConstValue .LocalArray return
     else
       context [] .localMemory
         ConstValue .None mixedArena.copyValue =:: localAddress
       context [] .localMemory =
-      localAddress LocalAddress cast ConstValue .LocalValue
+      localAddress LocalAddress cast ConstValue .LocalValue return
     end
   end
   ## TODO try to (partially) merge with typeCheck.printType
@@ -2423,15 +2551,21 @@ proc(
     copy case
       context [] .stack list.peek =:: value?
       value? optional.hasData if
+        context [] .stackInfo
+          list.peek .data [] .valueType
+        =:: valType
         value? .data [] .LocalValue ?? if
           value? .data []
             .LocalValue []
           value? .data [] =
-        else value? .data [] .LocalArray ?? _if
-          value? .data [] .LocalArray =:: localArray
+        else value? .data [] .LocalArray ?? or
+            value? .data [] .LocalArray8 ?? or
+            value? .data [] .LocalArray16 ?? or
+            value? .data [] .LocalArray32 ?? or
+            value? .data [] .LocalArray64 ?? _if
           context [] .localMemory mixedArena.offset =:: localOffset
-          localArray
-            context [] .localMemory@ constContext copyLocalArray
+          value? .data []
+            valType context [] .localMemory@ program copyLocalArray
           value? .data [] =
           ## clear memory used by copy
           context [] .localMemory
@@ -2443,7 +2577,7 @@ proc(
           op [] .pos errors appendError
         end
       end
-      EvalResult .Ok return ## TODO change once mutable value are allowed
+      EvalResult .Ok return
     Assert RuntimeAssert case
       op [] .val .Assert ?? if
         op [] .pos context popString if ..drop.2
@@ -2704,6 +2838,7 @@ proc(
         ptrOffset
       list.at .data [] =:: ptrValue
       ## XXX? directly read index constants from stack
+      ConstValue ..length 23 == "no new constants" assert
       ptrValue switch
         Array8 case
           indexCount 0 > if
@@ -2787,11 +2922,76 @@ proc(
           ptrValue ## value does not change
           break
         LocalArray case
-          ## TODO add support for local memory
-          "local memory is currently not supoorted: " sb.wrap
-            ptrValue typeContext sb.appendConstant
-          op [] .pos errors appendError
-          EvalResult .Error return
+          indexCount 0 > if
+            op [] .pos context popIndex if ..drop EvalResult .Error return end
+          else 0 end =:: index
+          ## XXX? support multi-dimmensional indexing
+          ptrValue .LocalArray ConstValue arrayView.mut cast =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            EvalResult .Error return
+          end
+          isPtr if
+            arrayConst index array.tail LocalSlice cast ConstValue .LocalArray
+          else
+            arrayConst index array.get
+          end
+          break
+        LocalArray8 case
+          indexCount 0 > if
+            op [] .pos context popIndex if ..drop EvalResult .Error return end
+          else 0 end =:: index
+          ptrValue .LocalArray8 i8 arrayView.mut cast =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            EvalResult .Error return
+          end
+          isPtr if
+            arrayConst index array.tail LocalSlice8 cast ConstValue .LocalArray8
+          else
+            arrayConst index array.get i64 cast.u ConstValue .Int
+          end
+          break
+        LocalArray16 case
+          indexCount 0 > if
+            op [] .pos context popIndex if ..drop EvalResult .Error return end
+          else 0 end =:: index
+          ptrValue .LocalArray16 i16 arrayView.mut cast =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            EvalResult .Error return
+          end
+          isPtr if
+            arrayConst index array.tail LocalSlice16 cast ConstValue .LocalArray16
+          else
+            arrayConst index array.get i64 cast.u ConstValue .Int
+          end
+          break
+        LocalArray32 case
+          indexCount 0 > if
+            op [] .pos context popIndex if ..drop EvalResult .Error return end
+          else 0 end =:: index
+          ptrValue .LocalArray32 i32 arrayView.mut cast =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            EvalResult .Error return
+          end
+          isPtr if
+            arrayConst index array.tail LocalSlice32 cast ConstValue .LocalArray32
+          else
+            arrayConst index array.get i64 cast.u ConstValue .Int
+          end
+          break
+        LocalArray64 case
+          indexCount 0 > if
+            op [] .pos context popIndex if ..drop EvalResult .Error return end
+          else 0 end =:: index
+          ptrValue .LocalArray64 i64 arrayView.mut cast =:: arrayConst
+          index arrayConst .length op [] .pos errors checkIndex if
+            EvalResult .Error return
+          end
+          isPtr if
+            arrayConst index array.tail LocalSlice64 cast ConstValue .LocalArray64
+          else
+            arrayConst index array.get i64 cast.u ConstValue .Int
+          end
+          break
         default
           "unexpected constant for pointer value: " sb.wrap
             ptrValue typeContext sb.appendConstant

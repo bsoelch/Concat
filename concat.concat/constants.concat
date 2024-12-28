@@ -99,7 +99,7 @@ end
 proc( string32 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString32Const
   elts string32.toIntArray context newArray32Const return
 end
-proc( i64 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStr64Const
+proc( i64 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray64Const
   elts context constPrimitiveArray ConstValue .Array64 return
 end
 proc(

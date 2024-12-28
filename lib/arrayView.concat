@@ -271,7 +271,7 @@ namespace: array
     type : auto: T
     T arrayView : elts
     i64 : n
-  -> T arrayView ) =>: export: head
+  -> T arrayView ) =>: export: head_64
     n 0 <= if
       T empty return
     end
@@ -280,12 +280,27 @@ namespace: array
     end
     elts .data  n create return
   end
+  proc(
+    type : auto: T
+    T arrayView.mut : elts
+    i64 : n
+  -> T arrayView.mut ) =>: export: head_64mut
+    n 0 <= if
+      T emptyMutable return
+    end
+    n elts .length >= if
+      elts return
+    end
+    elts .data  n createMutable return
+  end
+  overload: export: head head_64 head_64mut end
+
   ## everything excluding the first n characters
   proc(
     type : auto: T
     T arrayView : elts
     i64 : n
-  -> T arrayView ) =>: export: tail
+  -> T arrayView ) =>: export: tail_64
     n 0 <= if
       elts return
     end
@@ -294,6 +309,20 @@ namespace: array
     end
     elts .data n +  elts .length n -  create return
   end
+  proc(
+    type : auto: T
+    T arrayView.mut : elts
+    i64 : n
+  -> T arrayView.mut ) =>: export: tail_64mut
+    n 0 <= if
+      elts return
+    end
+    n elts .length >= if
+      T emptyMutable return
+    end
+    elts .data n +  elts .length n -  createMutable return
+  end
+  overload: export: tail tail_64 tail_64mut end
   ## equivalent to:  <from> tail <len> head
   proc(
     type : auto: T
