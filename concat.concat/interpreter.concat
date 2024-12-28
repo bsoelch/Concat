@@ -42,6 +42,7 @@ struct(
   Type list : mut: typeBuffer
   ConstValue list : mut: valueBuffer
   LabelId list : mut: labelBuffer
+  FilePosition list : mut: callPositions
   FileId : mut: currentFile
   InterpreterType : mut: evalType
 ) =:: export: InterpreterContext
@@ -67,6 +68,7 @@ namespace: interpreter
       64 Type       list.create
       64 ConstValue list.create
       64 LabelId    list.create
+      64 FilePosition list.create
       fileId
       evalType
     InterpreterContext new
@@ -80,6 +82,7 @@ namespace: interpreter
     context [] .typeBuffer  list.free context [] .typeBuffer =
     context [] .valueBuffer list.free context [] .valueBuffer =
     context [] .labelBuffer list.free context [] .labelBuffer =
+    context [] .callPositions list.free context [] .callPositions =
     context [] .stack list.free context [] .stack =
   end
 
@@ -2683,7 +2686,11 @@ proc(
         EvalResult .Error return
       end =:: msg ..drop
       msg sb.fromStr
-        op [] .pos
+        context [] .callPositions .length 0 > if
+          context [] .callPositions list.peek .data []
+        else
+          op [] .pos
+        end
         errors
       op [] .val .Error switch
         ERROR case appendError break
@@ -3683,12 +3690,18 @@ proc(
   else
     InterpreterType .INTERPRET
   end context [] .evalType =
+  context [] .callPositions
+    pos list.append
+  context [] .callPositions =
   context [] .localMemory mixedArena.offset =:: offset
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
   evaluateOperations if
     stackOffset context truncateStack
+    context [] .callPositions
+      list.pop ..drop
+    context [] .callPositions =
     context [] .localMemory
       offset mixedArena.reset
     context [] .localMemory =
@@ -3698,6 +3711,9 @@ proc(
     prevType context [] .evalType =
     true return
   end
+  context [] .callPositions
+    list.pop ..drop
+  context [] .callPositions =
   ## TODO ensure returned values do not point to deleted local memory
   context [] .localMemory
     offset mixedArena.reset
