@@ -540,7 +540,7 @@ namespace: f128
       sign INF_HI | INF_LOW f128 new return
     else exp 0 <= _if ## subnormal number
       ## f128
-        sign hi | MANTISSA_MASK_HI &
+        sign hi MANTISSA_MASK_HI & |
         low
       f128 new return
     end
@@ -571,15 +571,12 @@ namespace: f128
     end
     x =:: mut: xPow
     f128.ONE
-      p while ..dup 0 != do
-        ..dup 1 & 0 != if
-        ..swap
+      p while $ 0 != do =:: p1
+        p1 1 & 0 != if
           xPow *
-        ..swap
         end
-        1 >>
         xPow xPow * xPow =
-      end ..drop
+      finally p1 1 >>> end ..drop
     return
   end
   proc( string : str i32 : base -> f128 number.ParserError ) =>: export: parse
@@ -670,12 +667,12 @@ namespace: f128
       sign if -_ end
     c 0 >= if
        mBase f128.fromI32 c powI *
-    else c -100 > _if
+    else c -1024 > _if
        mBase f128.fromI32 c -_ powI /
     else
        ## split of factor of base^64 to prevent underflow of intermediate results
-       mBase f128.fromI32 c 64 + -_ powI /
-       mBase f128.fromI32 64 powI /
+       mBase f128.fromI32 c 1024 + -_ powI /
+       mBase f128.fromI32 1024 powI /
     end
     hasDot or e 0 > if ParserError .NONE return else ParserError .INT return end
   end
