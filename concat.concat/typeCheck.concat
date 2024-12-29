@@ -4448,6 +4448,8 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckChildProcedures
   state rememberState
+  state [] .program .idContext .typeContext .labelContext =:: labelContext
+  labelContext id.currentNamespace =:: prevNamespace
   TypeCheckMode .PROC_CHILD state [] .mode =
   state [] .missingProcs .length =:: missingProcsOffset
   procId implId ProcCheckType .REQUIRE_DEFINED expandedAt optional.wrap state typeCheckProcedure
@@ -4464,6 +4466,7 @@ proc(
   state [] .missingProcs
     missingProcsOffset list.setLength
   state [] .missingProcs =
+  prevNamespace labelContext id.resetNamespace
   state resetState
 end
 

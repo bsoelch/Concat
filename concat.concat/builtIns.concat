@@ -61,7 +61,7 @@ proc(
 -> bool ) =>: newBuiltInBundle
   context [] .idContext@ =:: idContext
   idContext [] .typeContext .labelContext@ =:: labelContext
-  labelContext id.resetNamespace
+  labelContext id.clearNamespace
   context [] .procBundles
     ..dup .length ProcBundleId cast =:: bundleId
     newProcBundle list.append
@@ -1136,7 +1136,7 @@ proc(
   if true return end
   "..itr.end" string.wrap pos context newBuiltInBundle
   if true return end
-  labelContext id.resetNamespace
+  labelContext id.clearNamespace
   false return
 end
 

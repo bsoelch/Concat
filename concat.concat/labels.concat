@@ -105,6 +105,9 @@ namespace: id
     end
     label? .data [] .srcFile return
   end
+  proc( LabelContext ptr.mut : context -> NamespaceInfo ) =>: export: currentNamespace
+    context [] .namespaceInfo return
+  end
   proc( LabelId : id LabelContext ptr.mut : context -> ) =>: export: inLabelNamespace
     id context getLabel =:: label?
     label? optional.isEmpty if
@@ -112,7 +115,10 @@ namespace: id
     end
     label? .data [] .namespaceInfo context [] .namespaceInfo =
   end
-  proc( LabelContext ptr.mut : context -> ) =>: export: resetNamespace
+  proc( NamespaceInfo LabelContext ptr.mut : context -> ) =>: export: resetNamespace
+    context [] .namespaceInfo =
+  end
+  proc( LabelContext ptr.mut : context -> ) =>: export: clearNamespace
     0:NamespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new context [] .namespaceInfo =
   end
   proc( string : str LabelId : id LabelContext ptr : context -> bool ) =>: export: labelNameEq
