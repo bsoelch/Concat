@@ -400,7 +400,11 @@ namespace: interpreter
         typeContext types.unwrapNamed
       types.primitive.TYPE types.typeEquals =:: isType
       ## map.put
-      context [] .globalVariables@
+      context [] .localVariables optional.hasData if
+        context [] .localVariables .data
+      else
+        context [] .globalVariables@
+      end
         label
         ## Constant
           isType if
@@ -2160,7 +2164,11 @@ proc(
           value .value value .info .valueType op [] .pos context pushValue
           EvalResult .Ok return
         LABEL case
-          context [] .globalVariables@ label map.get =:: value?
+          context [] .localVariables optional.hasData if
+            context [] .localVariables .data
+          else
+            context [] .globalVariables@
+          end label map.get =:: value?
           value? optional.isEmpty if
             "missing value for " sb.wrap
               op [] .val .getId labelContext sb.appendIdInfo
