@@ -89,16 +89,16 @@ namespace: io
     fileName nameLength 1 - [] '\x00' == if ## name not null-terminated
       fileName
     else
-      nameLength fileNameBuffer @ ..length >= if
+      nameLength fileNameBuffer@ ..length >= if
         c.nullPtr FILE cast! FILE_ERR_PATH_OVERFLOW return
       end
       ## mem.copy
-        fileNameBuffer @
+        fileNameBuffer@
         fileName
         nameLength
       mem.copy ..drop
-      '\x00' fileNameBuffer @ nameLength [] =
-      fileNameBuffer @ char8 _ ptr cast
+      '\x00' fileNameBuffer@ nameLength [] =
+      fileNameBuffer@ char8 _ ptr cast
     end =:: path
     "r+b\x00" char8 _ ptr =: mut: openMode
     mode OPEN_READ & ? if
@@ -214,7 +214,7 @@ namespace: io
   proc( FILE : file char8 : chr -> IOError ) =>: export: fputc
     ## TODO? add support for pointers to stack values
     chr =:: tmp
-    file tmp @ 0 1 fwrite ..swap ..drop return
+    file tmp@ 0 1 fwrite ..swap ..drop return
   end
   proc( FILE : file  i64 : k  char8 _ ptr : str -> IOError ) =>: export: fputArray
     0 i64 =: mut: off
@@ -235,6 +235,9 @@ namespace: io
     file k str fputArray
   end
 
+  proc( char8 : c -> IOError ) =>: export: putc
+    stdOut c fputc
+  end
   proc( i64 : auto: k  char8 k ptr : str -> IOError ) =>: export: puts
     k 1 + sb.create
       str sb.appendS
@@ -243,6 +246,14 @@ namespace: io
       stdOut chars .length chars .data fputArray =:: errId
     chars sb.free ..drop
     errId return
+  end
+  proc( -> char8 IOError ) =>: export: getChar
+    char8 : res
+    io.stdIn res@ 0 1 fread =:: err =:: count
+    count 0 == and err FILE_ERROR_NONE == if
+      res FILE_ERR_IO return ## could not read byte
+    end
+    res err
   end
 end
 
