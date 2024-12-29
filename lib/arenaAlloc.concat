@@ -300,25 +300,29 @@ namespace: arenaAlloc
     slices
       newSliceCount continueChunkCount i64 cast.u + list.setLength
     slices =
-    newSliceCount 0 > if
+    newEltCount 0 == if
       arena .fullSlices
         ## adjust number of full slices
-        newSliceCount i32 cast 1 - i32.min
+        newSliceCount i32 cast i32.min
       arena .fullSlices =
-      ## shrink last slice if neccessary
-      slices newSliceCount 1 - list.at .data =:: lastSlice
-      lastSlice [] .eltCount newEltCount >= "reset point inside allocated memory" assert
-      freeElt optional.hasData if
-        lastSlice [] .eltCount 1 - while $ newEltCount >= do =:: j
-          lastSlice [] .data j i64 cast.u + T ptr cast! freeElt .data ()
-        finally j 1 - end ..drop
-      end
-      lastSlice [] .eltCount newEltCount > if
-        newEltCount lastSlice [] .eltCount =
-      end
-    else
-      0 arena .fullSlices =
-      newEltCount 0 == "no elements for empty slice" assert
+      slices arena .slices =
+      arena return
+    end
+    newSliceCount 0 > "arena with elements has slice" assert
+    arena .fullSlices
+      ## adjust number of full slices
+      newSliceCount i32 cast 1 - i32.min
+    arena .fullSlices =
+    ## shrink last slice if neccessary
+    slices newSliceCount 1 - list.at .data =:: lastSlice
+    lastSlice [] .eltCount newEltCount >= "reset point inside allocated memory" assert
+    freeElt optional.hasData if
+      lastSlice [] .eltCount 1 - while $ newEltCount >= do =:: j
+        lastSlice [] .data j i64 cast.u + T ptr cast! freeElt .data ()
+      finally j 1 - end ..drop
+    end
+    lastSlice [] .eltCount newEltCount > if
+      newEltCount lastSlice [] .eltCount =
     end
     slices arena .slices =
     arena return
