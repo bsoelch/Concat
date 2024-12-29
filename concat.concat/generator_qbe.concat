@@ -3385,6 +3385,9 @@ proc(
           else
             op [] .dataType context toValType
           end =:: valType
+          idInfo .labelId idContext id.getIdentifier
+            ! "labelId is identifier" assert
+          =:: idData
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
@@ -3392,7 +3395,7 @@ proc(
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
-            idInfo .id i64 cast idInfo .labelId context sb.appendArgName
+            idData [] .index i64 cast idInfo .labelId context sb.appendArgName
             '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case

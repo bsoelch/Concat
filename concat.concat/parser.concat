@@ -317,11 +317,7 @@ proc( ItrVarInfo : itrVarInfo bool : forceScope ParserState ptr.mut : state -> )
     itrVarInfo optional.wrap BlockType .DO -1 false hasScope BlockInfo new list.append
   state [] .openBlocks =
 end
-proc( Type : valType bool : experimental ParserState ptr.mut : state -> ) =>: openProcBlock
-  ## openProcScope
-    valType
-    experimental
-  state [] .progContext [] .idContext@ id.openProcScope
+proc( bool : hasScope bool : experimental ParserState ptr.mut : state -> ) =>: openProcBlock
   state [] .openBlocks
     ## BlockInfo
       ItrVarInfo optional.empty
@@ -332,7 +328,7 @@ proc( Type : valType bool : experimental ParserState ptr.mut : state -> ) =>: op
       end
       -1
       false
-      true
+      hasScope
     BlockInfo new list.append
   state [] .openBlocks =
 end
@@ -1319,14 +1315,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## declare procedure name outside procedure scope
       skipBlock if ## don't declare identifier in skipped block
         -1:ProcId optional.wrap state [] .currentProc =
-        procType experimental state openProcBlock
+        false experimental state openProcBlock
         return
       end
       ## declare procedure
       procName
         procType
         IdentifierType .PROCEDURE
-        -1 ## id
+        -1 ## index
         ConstValue .None
         true ## isInit
         fileState [] .wordStart
@@ -1340,7 +1336,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state [] .currentProc optional.isEmpty ! =:: isNested
       ## ensure procedure block is opened after declaring procedure,
       ##   but before early return due to error
-      procType experimental state openProcBlock
+      true experimental state openProcBlock
       progContext [] .tmpOps .length =:: codeStart
       procConst .Procedure ?? if
         codeStart progContext [] .procedures
@@ -1363,7 +1359,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           $ ConstValue .Procedure procName idContext id.getIdentifier
               ! "procName is identifier" assert
           [] .constValue =
-      end optional.wrap state [] .currentProc =
+      end =:: procId
+      procId experimental idContext id.openProcScope
+      procId optional.wrap state [] .currentProc =
       ## check for invalid procedure declaration
       isNested if
         "nested procedures are not supported" sb.wrap
@@ -1414,8 +1412,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state appendOp
       return
     else ..dup "return" string.wrap string.eq _if ..drop
-      idContext id.currentScopeProc =:: experimental =:: procType
-        procType Type .undefined types.typeEquals if
+      skipBlock if return end
+      idContext id.currentScopeProc =:: experimental =:: procId
+        procId -1:ProcId == if
           "return outside procedure" sb.wrap fileState [] .wordStart errors appendError
         end
       ## opReturn
@@ -1813,7 +1812,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       label
         valType
         idType
-        -1 ## id
+        -1 ## index
         ConstValue .None
         isInit
         fileState [] .wordStart
@@ -1964,7 +1963,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         labelId
         constType
         idType
-        -1 ## id
+        -1 ## index
         ConstValue .None
         true
         fileState [] .wordStart

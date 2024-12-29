@@ -1044,7 +1044,6 @@ namespace: interpreter
       ## IdentifierInfo
         IdentifierType .PROCEDURE
         generatorName
-        procId i32 cast
       IdentifierInfo new
       pos
     opGetId =:: op ## create operation for call

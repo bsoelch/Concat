@@ -25,14 +25,13 @@ struct(
   ConstValue : mut: constValue
   FilePosition : mut: declaredAt
   LabelId : labelId
-  i32 : mut: id
+  i32 : mut: index
   IdentifierType : idType
   bool : mut: declarationOnly
 ) =:: IdentifierData
 struct(
   IdentifierType : idType
   LabelId : labelId
-  i32 : mut: id
 ) =:: export: IdentifierInfo
 
 struct(
@@ -87,20 +86,20 @@ namespace: id
   struct(
     IdentifierName LabelId hashMap : mut: identifierNames
     char8 _ ptr.mut list : mut: scopeStrings ## strings allocated for this scope
-    bool : isProcScope
-    Type : currentProc
-    bool : experimental
     NamespaceImportId : prevImports
+    ProcId : currentProc
+    bool : isProcScope
+    bool : experimental
   ) =:: Scope
 
-  proc( bool : isProc Type : procType bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
+  proc( bool : isProc ProcId : procId bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
      ## Scope
       idHash@ idEq@ 128 LabelId map.create
       128 char8 _ ptr.mut list.create
-      isProc
-      procType
-      experimental
       imports
+      procId
+      isProc
+      experimental
     Scope new return
   end
 end
@@ -114,51 +113,45 @@ end
     types.ArraySize list : mut: arraySizeBuffer
     stringBuilder : mut: nameBuffer
     NamespaceInfo list : mut: prevNamespaces
-    IdentifierInfo list : mut: itrVariables
-    i32 : mut: localVarCount
   ) =:: export: IdentifierContext
 namespace: id
 
   proc( -> IdentifierContext ) =>: export: newIdentifierContext
     types.newTypeContext
     newConstContext
-    false Type .undefined false NAMESPACE_IMPORT_NONE newScope
+    false -1:ProcId false NAMESPACE_IMPORT_NONE newScope
     128 Scope list.create
     labelHash@ labelEq@ 128 IdentifierData map.create
     32  ConstValue      list.create
     128 types.ArraySize list.create
     128                 sb.create
     32  NamespaceInfo   list.create
-    32 IdentifierInfo   list.create
-    0
-    IdentifierContext new =:: mut: newContext
-    newContext return
+    IdentifierContext new return
   end
   ## XXX? free IdentifierContext
 
   proc( IdentifierData ptr : idData -> IdentifierInfo ) =>: export: asIdInfo
     idData [] .idType
     idData [] .labelId
-    idData [] .id
     IdentifierInfo new return
   end
 
   proc( IdentifierContext ptr.mut : context -> bool ) =>: isTopLevel
     context [] .openScopes .length 0 == return
   end
-  proc( Type : procType bool : experimental IdentifierContext ptr.mut : context -> ) =>: export: openProcScope
+  proc( ProcId : procId bool : experimental IdentifierContext ptr.mut : context -> ) =>: export: openProcScope
     context [] .openScopes
-       ## newScope
-         true
-         procType
-         experimental
-         context [] .typeContext .labelContext .namespaceInfo .imports
-       newScope list.append
+      ## newScope
+        true
+        procId
+        experimental
+        context [] .typeContext .labelContext .namespaceInfo .imports
+      newScope list.append
     context [] .openScopes =
   end
   proc( IdentifierContext ptr.mut : context -> ) =>: export: openScope
     context [] .openScopes .length 0 == if
-      Type .undefined false
+      -1:ProcId false
     else
       context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental
     end =:: experimental =:: currentProc
@@ -167,9 +160,9 @@ namespace: id
        list.append
     context [] .openScopes =
   end
-  proc( IdentifierContext ptr.mut : context -> Type bool ) =>: export: currentScopeProc
+  proc( IdentifierContext ptr.mut : context -> ProcId bool ) =>: export: currentScopeProc
     context [] .openScopes .length 0 == if
-      Type .undefined false return
+      -1:ProcId false return
     end
     context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental return
   end
@@ -194,9 +187,6 @@ namespace: id
     closed .scopeStrings freeScopeStrings closed .scopeStrings =
     closed .identifierNames@ map.free
     closed .prevImports context [] .typeContext .labelContext .namespaceInfo .imports =
-    closed .isProcScope if
-      0 context [] .localVarCount = ## XXX handle nested procedures
-    end
     false return
   end
 
@@ -422,7 +412,7 @@ namespace: id
     LabelId : label
     Type : valType
     IdentifierType : idType
-    i32 : id
+    i32 : index
     ConstValue : constVal
     bool : isInit
     FilePosition : declaredAt
@@ -539,7 +529,7 @@ namespace: id
         isInit if
           valType prevDec [] .valueType =
           constVal prevDec [] .constValue =
-          id prevDec [] .id =
+          index prevDec [] .index =
           declaredAt prevDec [] .declaredAt =
           false prevDec [] .declarationOnly =
         end
@@ -572,12 +562,7 @@ namespace: id
       constVal
       declaredAt
       label
-      id -1 == idType .LOCAL_VAR ?? & if
-        context [] .localVarCount
-          ..dup 1 + context [] .localVarCount =
-      else
-        id
-      end
+      index
       idType
       isInit !
     IdentifierData new =:: idData
@@ -601,18 +586,8 @@ namespace: id
         pos
         currentFile
       context .typeContext .labelContext newLabel
-      context .itrVariables .length [] i32 cast
     IdentifierInfo new =:: idInfo
-    context .itrVariables []
-      idInfo list.append
-    context .itrVariables [] =
     idInfo return
-  end
-  proc(
-    IdentifierContext ptr.mut : context
-    i32 : id
-  -> IdentifierInfo ) =>: export: getItrVar
-    context .itrVariables [] id list.get return
   end
 end
 namespace: sb
@@ -692,29 +667,23 @@ namespace: sb
           "\"" sb.appendS
           return
         LOCAL_VAR case
-          "local variable (" sb.appendS
-          id .id sb.appendI
-          ") \"" sb.appendS
+          "local variable: \"" sb.appendS
           id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         ARGUMENT case
-          "procedure argument (" sb.appendS
-          id .id sb.appendI
-          ") \"" sb.appendS
+          "procedure argument \"" sb.appendS
           id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         TMP_VAR case
-          "temporary variable (" sb.appendS
-          id .id sb.appendI
-          ") \"" sb.appendS
+          "temporary variable \"" sb.appendS
           id .labelId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         ITR_VAR case
           "iterator variable (" sb.appendS
-          id .id sb.appendI
+          id .labelId i64 cast sb.appendI
           ")" sb.appendS
           return
       end
