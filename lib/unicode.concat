@@ -1,16 +1,28 @@
 import stringBuilder
-## TODO? rename file unicode.concat
 
-## XXX replace Codepoint to char32?
-namespace: utf8 ## XXX -> move general unicode constants to namespace `unicode`
+namespace: unicode
   i32 =:: export: Codepoint
   -0x1000:Codepoint =:: export: UNKNOWN_CODEPOINT
-  0:i32 =:: export: MIN_CODEPOINT
-  0x10FFFF:i32 =:: export: MAX_CODEPOINT
+  0:Codepoint =:: export: MIN_CODEPOINT
+  0x10FFFF:Codepoint =:: export: MAX_CODEPOINT
+  namespace: Codepoint
+    proc( Codepoint Codepoint -> bool ) : alias: lt i32.lt
+    proc( Codepoint Codepoint -> bool ) : alias: le i32.le
+    proc( Codepoint Codepoint -> bool ) : alias: eq i32.eq
+    proc( Codepoint Codepoint -> bool ) : alias: ne i32.ne
+    proc( Codepoint Codepoint -> bool ) : alias: ge i32.ge
+    proc( Codepoint Codepoint -> bool ) : alias: gt i32.gt
+  end
 end
+overload:  < unicode.Codepoint.lt end
+overload: <= unicode.Codepoint.le end
+overload: == unicode.Codepoint.eq end
+overload: != unicode.Codepoint.ne end
+overload: >= unicode.Codepoint.ge end
+overload:  > unicode.Codepoint.gt end
 
 namespace: sb
-  proc( stringBuilder : sb utf8.Codepoint : cp -> stringBuilder ) =>: export: appendCodepoint
+  proc( stringBuilder : sb unicode.Codepoint : cp -> stringBuilder ) =>: export: appendCodepoint
     cp i32 cast 0 < if ## invalid code point
       cp i32 cast -0x100 > if ## -0xff - -0x01 -> fixed bit encoding
         sb cp i32 cast -_ char8 cast sb.appendC return
@@ -63,8 +75,9 @@ namespace: sb
   end
 end
 namespace: utf8
-  proc( Codepoint -> bool ) =>: export: isValid
-    i32 cast ..dup 0 >= ..swap MAX_CODEPOINT <= & return
+  using unicode
+  proc( Codepoint : c -> bool ) =>: export: isValid
+    c MIN_CODEPOINT >= and c MAX_CODEPOINT <= end return
   end
   proc( string  : str i64 : index -> string i64 Codepoint ) =>: export: nextCodepoint ## XXX? strict UTF8 version than only reads valid codepoints
     index str .length >= if
@@ -141,52 +154,75 @@ namespace: utf8
     =:: mut: utf16chars
     0:i64 while $1 .length $1 > do
       nextCodepoint =:: cp
-      cp i32 cast 0 < or cp i32 cast utf8.MAX_CODEPOINT > if
-        ## skip invalid characters
-      else cp i32 cast 0xffff <= _if
-        utf16chars cp char16 cast list.append utf16chars =
-      else ## surrogate pair
-        ## XXX? check for unicode range
-        cp i32 cast 0x10000 - =:: offset
-        utf16chars
-          0xD800 offset 10 >>>  | char16 cast list.append ## hi
-          0xDC00 offset 0x3ff & | char16 cast list.append ## low
-        utf16chars =
-      end
+      utf16chars
+        cp utf16.appendCodepoint
+      utf16chars =
     end ..drop.2
     utf16chars return
   end
 end
 namespace: utf16
+  using unicode
   0xD800:i32 =:: MIN_SURROGATE
   0xDFFF:i32 =:: MAX_SURROGATE
   0xFC00:i32 =:: SURROGATE_MASK
+  0xD800:i32 =:: HI_SURROGATE_FLAG
   0xDC00:i32 =:: LOW_SURROGATE_FLAG
   0x03FF:i32 =:: SURROGATE_DATA_MASK
   10:i32 =:: SURROGATE_SHIFT
   0x10000:i32 =:: SURROGATE_BIAS
-  proc( string16  : str i64 : index -> string16 i64 utf8.Codepoint ) =>: export: nextCodepoint
+  proc( string16  : str i64 : index -> string16 i64 unicode.Codepoint ) =>: export: nextCodepoint
     index str .length >= if
-      str str .length utf8.UNKNOWN_CODEPOINT return
+      str str .length UNKNOWN_CODEPOINT return
     end
     str index string16.get i32 cast.u =:: mut: c
     c MIN_SURROGATE < or c MAX_SURROGATE > if ## normal character
-      str index 1 + c utf8.Codepoint cast return
+      str index 1 + c Codepoint cast return
     end
     c SURROGATE_MASK & LOW_SURROGATE_FLAG == if ## unpaired low surrogate
-      str index 1 + c -_ utf8.Codepoint cast return
+      str index 1 + c -_ Codepoint cast return
     end
     index 1 + str .length >= if ## not enough characters
-      str index 1 + c -_ utf8.Codepoint cast return
+      str index 1 + c -_ Codepoint cast return
     end
     str index 1 + string16.get i32 cast.u =:: lower
     lower SURROGATE_MASK & LOW_SURROGATE_FLAG != if ## invalid low surrogate
-      str index 1 + c -_ utf8.Codepoint cast return
+      str index 1 + c -_ Codepoint cast return
     end
     str
       index 2 +
     c SURROGATE_DATA_MASK & SURROGATE_SHIFT <<
       lower SURROGATE_DATA_MASK & |
-    SURROGATE_BIAS + utf8.Codepoint cast return
+    SURROGATE_BIAS + Codepoint cast return
+  end
+  proc( char16 list Codepoint : cp -> char16 list ) =>: export: appendCodepoint
+    cp MIN_CODEPOINT < or cp MAX_CODEPOINT > if
+      cp i32 cast -_ =:: value
+      value MIN_SURROGATE >= and value MAX_SURROGATE <= if
+        ## unpaired surrogate
+        value char16 cast list.append return
+      end
+      ## skip invalid characters
+      ## XXX? better error handling behavior
+    else cp i32 cast 0xffff <= _if
+      cp char16 cast list.append
+    else ## surrogate pair
+      cp i32 cast 0x10000 - =:: offset
+      0xD800 offset 10 >>>  | char16 cast list.append ## hi
+      0xDC00 offset 0x3ff & | char16 cast list.append ## low
+    end
+  end
+   proc(
+    stringBuilder : buffer
+    string16
+  -> stringBuilder ) =>: export: toUTF8
+    buffer
+      $1 .length sb.ensureCap
+    =:: mut: utf8chars
+    0:i64 while $1 .length $1 > do
+      nextCodepoint =:: cp
+      utf8chars cp sb.appendCodepoint utf8chars =
+    end ..drop.2
+    utf8chars return
   end
 end

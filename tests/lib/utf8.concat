@@ -1,4 +1,4 @@
-import utf8
+import unicode
 import debug
 
 proc( -> ) =>: main

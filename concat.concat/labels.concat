@@ -3,7 +3,6 @@ import string
 import stringBuilder
 import list
 import optional
-import utf8
 import arenaAlloc
 
 import "files.concat"

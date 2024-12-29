@@ -3,6 +3,7 @@ import list
 import arrayView
 import numbers
 import stringLiteral
+import unicode
 
 import "program.concat"
 import "files.concat"
@@ -117,7 +118,7 @@ proc(
   constType value ConstValue .Int IdentifierInfo optional.empty pos Constant new return
 end
 proc(
-  utf8.Codepoint : char
+  unicode.Codepoint : char
   StringLiteralType : stringType
   FilePosition : pos
 -> Constant ) =>: newCharConstant
@@ -651,15 +652,15 @@ proc(
       "A character literal has to contain exactly one character" sb.wrap pos errors appendError
     end
     token .stringType switch
-      DEFAULT case "byte" string.wrap 0x80 break
-      UTF8  case "utf8-character"  string.wrap 0x80    break
-      UTF16 case "utf16-character" string.wrap 0x10000 break
-      UTF32 case "utf32-character" string.wrap utf8.MAX_CODEPOINT 1 + break
+      DEFAULT case "byte" string.wrap 0x7F break
+      UTF8  case "utf8-character"  string.wrap 0x7F    break
+      UTF16 case "utf16-character" string.wrap 0xFFFF break
+      UTF32 case "utf32-character" string.wrap unicode.MAX_CODEPOINT i32 cast.u break
       INT_LITERAL UNKNOWN case
         "invalid string literal type" sb.wrap pos errors appendError
         return
     end
-    =:: codepointLimit =:: charTypeName
+    =:: maxCodepoint =:: charTypeName
     token .stringType .DEFAULT ?? ! and cp i32 cast 0 < if
       "unmatched byte in " sb.wrap
         charTypeName sb.appendStr
@@ -667,7 +668,7 @@ proc(
         cp i32 cast -_ sb.appendX
       pos errors appendError
     end
-    cp i32 cast codepointLimit >= if
+    cp i32 cast maxCodepoint > if
       "codepoint 0x"  sb.wrap
         cp i32 cast sb.appendX
         " ('" sb.appendS
@@ -677,7 +678,7 @@ proc(
       pos errors appendError
     end
   ## newCharConstant
-    cp $ i32 cast 0 < if i32 cast -_ utf8.Codepoint cast end
+    cp $ i32 cast 0 < if i32 cast -_ unicode.Codepoint cast end
     token .stringType
   pos newCharConstant state pushConst
 end

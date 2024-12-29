@@ -1,5 +1,6 @@
 import stringBuilder
 import arenaAlloc
+import unicode
 
 import "files.concat"
 import "labels.concat"
@@ -212,11 +213,12 @@ namespace: constant
     0:i64 =:: mut: nonPrintable
     bytes string.fromBytes
     0:i64 while $1 .length $1 > do
-      utf8.nextCodepoint i32 cast =:: cp
-      cp utf8.MIN_CODEPOINT < or cp utf8.MAX_CODEPOINT > if
+      utf8.nextCodepoint =:: cp
+      cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
         ..drop.2 false return ## definitely no string
       end
-      cp #+newLine+# 0x0a != and cp 0x20 < or cp 0x7f == if ## non-printable ascii
+      cp i32 cast =:: intValue
+      intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
         nonPrintable 1 + nonPrintable =
       end
     end ..drop.2
@@ -228,11 +230,12 @@ namespace: constant
     0:i64 =:: mut: nonPrintable
     ints string16.fromIntArray
     0:i64 while $1 .length $1 > do
-      utf16.nextCodepoint i32 cast =:: cp
-      cp utf8.MIN_CODEPOINT < or cp utf8.MAX_CODEPOINT > if
+      utf16.nextCodepoint =:: cp
+      cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
         ..drop.2 false return ## definitely no string
       end
-      cp #+newLine+# 0x0a != and cp 0x20 < or cp 0x7f == if ## non-printable ascii
+      cp i32 cast =:: intValue
+      intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
         nonPrintable 1 + nonPrintable =
       end
     end ..drop.2
@@ -243,11 +246,12 @@ namespace: constant
   proc( i32 arrayView : ints -> bool ) =>: isString32
     0:i64 =:: mut: nonPrintable
     ints .length for =:: i
-      ints i array.get =:: cp
-      cp utf8.MIN_CODEPOINT < or cp utf8.MAX_CODEPOINT > if
+      ints i array.get unicode.Codepoint cast =:: cp
+      cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
         false return ## definitely no string
       end
-      cp #+newLine+# 0x0a != and cp 0x20 < or cp 0x7f == if ## non-printable ascii
+      cp i32 cast =:: intValue
+      intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
         nonPrintable 1 + nonPrintable =
       end
     end
@@ -675,17 +679,17 @@ namespace: constants
                 c 'x' == if
                   char8 cast sb.appendC
                 else c 'u' == _if
-                  utf8.Codepoint cast sb.appendCodepoint
+                  unicode.Codepoint cast sb.appendCodepoint
                 else c 'U' == _if
-                  $ utf8.MAX_CODEPOINT i64 cast.u > if
+                  $ unicode.MAX_CODEPOINT i64 cast.u > if
                     "code-point outside allowed range: \"\\U" sb.wrap
                       str .data i + nChars string.create sb.appendStr
                       "\" (maximum: 0x" sb.appendS
-                      utf8.MAX_CODEPOINT sb.appendX
+                      unicode.MAX_CODEPOINT i64 cast.u sb.appendX
                       ")" sb.appendS
                     pos errors appendWarning
                   end
-                  utf8.Codepoint cast sb.appendCodepoint
+                  unicode.Codepoint cast sb.appendCodepoint
                 else ..drop
                   "unknown hex-escape sequence: \"\\" sb.wrap
                     c sb.appendC '\"'
