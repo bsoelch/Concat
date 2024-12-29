@@ -3608,8 +3608,8 @@ proc(
       autoArgs autoArgOffset array.get
         $ .GenericArg ?? if
           .GenericArg =:: varId
-          context [] .localVariables optional.hasData and
-              context [] .localVariables .data varId map.get =:: labelValue?
+          prevVariables optional.hasData and
+              prevVariables .data varId map.get =:: labelValue?
             labelValue? ? if
             labelValue? .data .value
           else
