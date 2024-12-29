@@ -1282,10 +1282,14 @@ namespace: interpreter
   proc(
     ConstValue : value
     Type : valType
+    bool : wrapPointers
     InterpreterContext ptr.mut : context
   -> ConstValue ) =>: localCopy
     context [] .program .idContext .typeContext@ =:: typeContext
     valType typeContext types.isPointer if ## XXX? merge with default branch
+      wrapPointers ! if
+        value return
+      end
       context [] .localMemory
         value mixedArena.copyValue =:: localAddress
       context [] .localMemory =
@@ -1367,7 +1371,7 @@ namespace: interpreter
         valType i typeContext types.compositeGetElement
       end =:: eltType
       elt [] .Array ?? if
-        elt [] eltType context localCopy elt [] =
+        elt [] eltType false context localCopy elt [] =
       end
     end
     localSlice LocalSlice cast ConstValue .LocalArray
@@ -2212,7 +2216,7 @@ proc(
             label
             ## Constant
               label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
-                value valInfo .valueType context localCopy
+                value valInfo .valueType true context localCopy
               else
                 value
               end
@@ -2922,9 +2926,8 @@ proc(
       ConstValue ..length 23 == "no new constants" assert
       ptrValue switch
         Array8 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ptrValue .Array8 =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             EvalResult .Error return
@@ -2936,9 +2939,8 @@ proc(
           end
           break
         Array16 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ptrValue .Array16 =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             EvalResult .Error return
@@ -2950,9 +2952,8 @@ proc(
           end
           break
         Array32 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ptrValue .Array32 =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             EvalResult .Error return
@@ -2964,9 +2965,8 @@ proc(
           end
           break
         Array64 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ptrValue .Array64 =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             EvalResult .Error return
@@ -2978,9 +2978,8 @@ proc(
           end
           break
         Array case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ## XXX? support multi-dimmensional indexing
           ptrValue .Array =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
@@ -2993,9 +2992,8 @@ proc(
           end
           break
         LocalValue case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           index 1 op [] .pos errors checkIndex if
             EvalResult .Error return
           end
@@ -3003,9 +3001,8 @@ proc(
           ptrValue ## value does not change
           break
         LocalArray case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ## XXX? support multi-dimmensional indexing
           ptrValue .LocalArray ConstValue arrayView.mut cast =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
@@ -3018,9 +3015,8 @@ proc(
           end
           break
         LocalArray8 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ptrValue .LocalArray8 i8 arrayView.mut cast =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             EvalResult .Error return
@@ -3032,9 +3028,8 @@ proc(
           end LocalSlice8 cast ConstValue .LocalArray8
           break
         LocalArray16 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ptrValue .LocalArray16 i16 arrayView.mut cast =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             EvalResult .Error return
@@ -3046,9 +3041,8 @@ proc(
           end LocalSlice16 cast ConstValue .LocalArray16
           break
         LocalArray32 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ptrValue .LocalArray32 i32 arrayView.mut cast =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             EvalResult .Error return
@@ -3060,9 +3054,8 @@ proc(
           end LocalSlice32 cast ConstValue .LocalArray32
           break
         LocalArray64 case
-          indexCount 0 > if
-            op [] .pos context popIndex if ..drop EvalResult .Error return end
-          else 0 end =:: index
+          indexCount 0 == if ptrValue break end
+          op [] .pos context popIndex if ..drop EvalResult .Error return end =:: index
           ptrValue .LocalArray64 i64 arrayView.mut cast =:: arrayConst
           index arrayConst .length op [] .pos errors checkIndex if
             EvalResult .Error return
