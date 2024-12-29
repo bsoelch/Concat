@@ -33,7 +33,8 @@ struct(
   using interpreter
   ProgramContext ptr.mut : mut: program
   TypeCheckState ptr.mut optional : mut: typeChecker
-  LabelId Constant hashMap : mut: variables
+  LabelId Constant hashMap : mut: globalVariables
+  LabelId Constant hashMap ptr.mut optional : mut: localVariables
   ConstValue list : mut: stack
   ValueInfo  list : mut: stackInfo
   BlockInfo  list : mut: openBlocks
@@ -59,7 +60,8 @@ namespace: interpreter
     ## InterpreterContext
       progContext
       typeChecker
-      labelHash@ labelEq@ 32 Constant map.create
+      labelHash@ labelEq@ 512 Constant map.create
+      LabelId Constant hashMap ptr.mut optional.empty
       64 ConstValue list.create
       64 ValueInfo  list.create
       64 BlockInfo  list.create
@@ -76,7 +78,7 @@ namespace: interpreter
   proc(
     InterpreterContext ptr.mut : context
   -> ) =>: export: cleanupContext
-    context [] .variables@ map.free
+    context [] .globalVariables@ map.free
     context [] .stackInfo   list.free context [] .stackInfo =
     context [] .openBlocks  list.free context [] .openBlocks =
     context [] .typeBuffer  list.free context [] .typeBuffer =
@@ -398,7 +400,7 @@ namespace: interpreter
         typeContext types.unwrapNamed
       types.primitive.TYPE types.typeEquals =:: isType
       ## map.put
-      context [] .variables@
+      context [] .globalVariables@
         label
         ## Constant
           isType if
@@ -1619,9 +1621,9 @@ proc(
         context [] .labelBuffer =
         EvalResult .Ok return
       end
-      op [] .val .Constant .GenericArg ?? if
+      op [] .val .Constant .GenericArg ?? and context [] .localVariables ? if
         op [] .val .Constant .GenericArg =:: label
-        context [] .variables@ label map.get =:: value?
+        context [] .localVariables .data label map.get =:: value?
         value? optional.isEmpty if
           "missing value for " sb.wrap
             op [] .val .getId labelContext sb.appendIdInfo
@@ -1993,7 +1995,12 @@ proc(
           else
             op [] .dataType
           end =:: dataType
-          context [] .variables@
+          context [] .localVariables optional.isEmpty if
+            "missing local variables " sb.wrap
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          context [] .localVariables .data
             labelId
             ## Constant
               dataType op [] .pos context allocLocalValue
@@ -2136,8 +2143,24 @@ proc(
             calledProc .procId i64 cast list.at .data
           =:: calledProcData
           procId -1:i64 calledProc .autoArgs op [] .pos context evaluateCall wrapResult return
-        LOCAL_VAR ARGUMENT LABEL TMP_VAR ITR_VAR case
-          context [] .variables@ label map.get =:: value?
+        LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
+          context [] .localVariables optional.isEmpty if
+            "missing local variables " sb.wrap
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          context [] .localVariables .data label map.get =:: value?
+          value? optional.isEmpty if
+            "missing value for " sb.wrap
+              op [] .val .getId labelContext sb.appendIdInfo
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          value? .data =:: value
+          value .value value .info .valueType op [] .pos context pushValue
+          EvalResult .Ok return
+        LABEL case
+          context [] .globalVariables@ label map.get =:: value?
           value? optional.isEmpty if
             "missing value for " sb.wrap
               op [] .val .getId labelContext sb.appendIdInfo
@@ -2180,7 +2203,12 @@ proc(
       idInfo [] .idType switch
         LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
           ## XXX? extract common code with getId to procedure
-          context [] .variables@ label map.get =:: value?
+          context [] .localVariables optional.isEmpty if
+            "missing local variables " sb.wrap
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          context [] .localVariables .data label map.get =:: value?
           value? optional.isEmpty if
             "missing value for " sb.wrap
               op [] .val .getId labelContext sb.appendIdInfo
@@ -2223,7 +2251,7 @@ proc(
       end =:: value =:: valInfo
       idInfo [] .idType switch
         GLOBAL_VAR TYPE case
-          context [] .variables@
+          context [] .globalVariables@
             label
             ## Constant
               value
@@ -2235,7 +2263,12 @@ proc(
           map.put ..drop
           EvalResult .Ok return
         LOCAL_VAR LABEL TMP_VAR ITR_VAR case
-          context [] .variables@
+          context [] .localVariables optional.isEmpty if
+            "missing local variables " sb.wrap
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          context [] .localVariables .data
             label
             ## Constant
               label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
@@ -3538,6 +3571,14 @@ proc(
   0:i64 =:: mut: autoArgOffset
   0:i64 =:: mut: staticArgOffset
   argsOffset =:: mut: argOffset
+  context [] .localVariables =:: prevVariables
+  context [] .localMemory mixedArena.offset =:: offset
+  context [] .localMemory
+    LabelId Constant hashMap mixedArena.alloc =:: newVariables
+  context [] .localMemory =
+  ## XXX? allocate lookup table in localMemory
+  labelHash@ labelEq@ 256 Constant map.create newVariables [] =
+  newVariables optional.wrap context [] .localVariables =
   ## process procedure arguments
   0:i64 while $ args .length < do =:: i
     argOffset stackOffset >= if
@@ -3545,6 +3586,9 @@ proc(
         procName labelContext sb.appendLabelName
       pos errors appendError
       stackOffset context truncateStack
+      context [] .localVariables .data map.free
+      prevVariables context [] .localVariables =
+      context [] .localMemory offset mixedArena.reset context [] .localMemory =
       context [] .openBlocks
         prevBlocks list.setLength
       context [] .openBlocks =
@@ -3556,8 +3600,9 @@ proc(
       autoArgs autoArgOffset array.get
         $ .GenericArg ?? if
           .GenericArg =:: varId
-          context [] .variables@ varId map.get =:: labelValue?
-          labelValue? ? if
+          context [] .localVariables optional.hasData and
+              context [] .localVariables .data varId map.get =:: labelValue?
+            labelValue? ? if
             labelValue? .data .value
           else
             "missing generic value " sb.wrap
@@ -3568,7 +3613,7 @@ proc(
           end
         end
       =:: value
-      context [] .variables@
+      context [] .localVariables .data
         label
         ## Constant
           value
@@ -3588,7 +3633,7 @@ proc(
       procData .implementation .code [] .implementations
         implId list.at .data
       [] .staticArgs staticArgOffset array.get =:: value
-      context [] .variables@
+      context [] .localVariables .data
         label
         ## Constant
           value
@@ -3615,7 +3660,7 @@ proc(
         ValueInfo new list.append
       context [] .stackInfo =
     else ## store argument as value
-      context [] .variables@
+      context [] .localVariables .data
         label
         ## Constant
           value []
@@ -3677,6 +3722,9 @@ proc(
       procName labelContext sb.appendLabelName
     pos errors appendError
     stackOffset context truncateStack
+    context [] .localVariables .data map.free
+    prevVariables context [] .localVariables =
+    context [] .localMemory offset mixedArena.reset context [] .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
     context [] .openBlocks =
@@ -3690,6 +3738,9 @@ proc(
       op [] program sb.appendOp
     op [] .pos errors appendError
     stackOffset context truncateStack
+    context [] .localVariables .data map.free
+    prevVariables context [] .localVariables =
+    context [] .localMemory offset mixedArena.reset context [] .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
     context [] .openBlocks =
@@ -3709,7 +3760,6 @@ proc(
   context [] .callPositions
     pos list.append
   context [] .callPositions =
-  context [] .localMemory mixedArena.offset =:: offset
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
@@ -3718,9 +3768,9 @@ proc(
     context [] .callPositions
       list.pop ..drop
     context [] .callPositions =
-    context [] .localMemory
-      offset mixedArena.reset
-    context [] .localMemory =
+    context [] .localVariables .data map.free
+    prevVariables context [] .localVariables =
+    context [] .localMemory offset mixedArena.reset context [] .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
     context [] .openBlocks =
@@ -3731,6 +3781,8 @@ proc(
     list.pop ..drop
   context [] .callPositions =
   ## TODO ensure returned values do not point to deleted local memory
+  context [] .localVariables .data map.free
+  prevVariables context [] .localVariables =
   context [] .localMemory
     offset mixedArena.reset
   context [] .localMemory =
