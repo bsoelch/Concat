@@ -1234,23 +1234,39 @@ namespace: interpreter
     localArray switch
       LocalArray case break
       LocalArray8 case
+        localArray .LocalArray8 i8 arrayView.mut cast =:: arrayData
+        localArray .LocalArray8 .length 1 == and valType typeContext types.isIntLike if
+          arrayData 0 array.get i64 cast.u ConstValue .Int return
+        end
         allocator []
-          localArray .LocalArray8 i8 arrayView.mut cast mixedArena.copyMutableArray =:: tmpArray
+          arrayData mixedArena.copyMutableArray =:: tmpArray
         allocator [] =
         tmpArray array.freeze constContext newArray8Const return
       LocalArray16 case
+        localArray .LocalArray16 i16 arrayView.mut cast =:: arrayData
+        arrayData .length 1 == and valType typeContext types.isIntLike if
+          arrayData 0 array.get i64 cast.u ConstValue .Int return
+        end
         allocator []
-          localArray .LocalArray16 i16 arrayView.mut cast mixedArena.copyMutableArray =:: tmpArray
+          arrayData mixedArena.copyMutableArray =:: tmpArray
         allocator [] =
         tmpArray array.freeze constContext newArray16Const return
       LocalArray32 case
+        localArray .LocalArray32 i32 arrayView.mut cast =:: arrayData
+        arrayData .length 1 == and valType typeContext types.isIntLike if
+          arrayData 0 array.get i64 cast.u ConstValue .Int return
+        end
         allocator []
-          localArray .LocalArray32 i32 arrayView.mut cast mixedArena.copyMutableArray =:: tmpArray
+          arrayData mixedArena.copyMutableArray =:: tmpArray
         allocator [] =
         tmpArray array.freeze constContext newArray32Const return
       LocalArray64 case
+        localArray .LocalArray64 i64 arrayView.mut cast =:: arrayData
+        arrayData .length 1 == and valType typeContext types.isIntLike if
+          arrayData 0 array.get ConstValue .Int return
+        end
         allocator []
-          localArray .LocalArray64 i64 arrayView.mut cast mixedArena.copyMutableArray =:: tmpArray
+          arrayData mixedArena.copyMutableArray =:: tmpArray
         allocator [] =
         tmpArray array.freeze constContext newArray64Const return
       default ..unreachable
@@ -1778,9 +1794,16 @@ proc(
             program [] .switchData
               op [] .val .block .blockId i64 cast.u
             list.at .data =:: switchData
+            switchData [] .switchType =:: switchType
             switchData [] .labels .length for =:: i
               switchData [] .labels i list.at .data =:: label
-              label [] .value switchValue labelContext constantEquals if
+              label [] .value switchValue switchType typeContext operatorEq if
+                "cannot check equality of switch value " sb.wrap
+                  switchValue typeContext sb.appendConstant
+                  " with label " sb.appendS
+                  label [] .value typeContext sb.appendConstant
+                op [] .pos errors appendError
+              end if
                 switchData [] .caseJumpDistances
                   label [] .caseId array.get
                 EvalResult .Jump return

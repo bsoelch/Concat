@@ -402,8 +402,11 @@ namespace: interpreter
           x y types.typeEquals false
         return
       end
-    end
-    valType typeContext types.isPointer if
+    else valType typeContext types.isEnum or valType typeContext types.isUnion _if
+      a .EnumLabel ?? and b .EnumLabel ?? if
+        a .EnumLabel b .EnumLabel == false return
+      end
+    else valType typeContext types.isPointer _if
       ConstValue ..length 23 == "no new constants" assert
       a switch
         Int case
