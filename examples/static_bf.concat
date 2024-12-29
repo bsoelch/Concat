@@ -1,0 +1,82 @@
+#+
+Compile-time Brainfuck interpreter
++#
+import stringBuilder
+import list
+import io
+
+proc( i64 : ip string : code -> i64 ) =>: skipLoop
+  1 =:: mut: n
+  ip 1 + while $ code .length < do =:: i
+    code i string.charAt '[' == if
+      n 1 + n =
+    else code i string.charAt ']' == _if
+      n 1 - n =
+      n 0 <= if i return end
+    end
+  finally i 1 + end return
+end
+
+0x100:i64 =:: TAPE_CAP ## Number of cells in Brainfuck tape
+0x100:i32 =:: OUT_CAP ## maximum number of characters in output
+proc(
+  stringBuilder ptr.mut : outBuffer
+  i8 TAPE_CAP ptr.mut : tape
+  string : code
+  i64 : mp0
+  i64 : loopStart
+-> i64 i64 ) =>: runBf_rec
+  mp0 =:: mut: mp
+  loopStart 1 + =:: mut: ip
+  while ip code .length < do
+    code ip string.charAt switch
+      '+' case tape mp [] 1 + tape mp [] = break
+      '-' case tape mp [] 1 - tape mp [] = break
+      '>' case mp 1 + TAPE_CAP %% mp = break
+      '<' case mp 1 - TAPE_CAP %% mp = break
+      '.' case
+        outBuffer [] tape mp [] char8 cast sb.appendC outBuffer [] = break
+      ',' case 0:i8 tape mp [] = break
+      '[' case
+        tape mp [] ? if
+          outBuffer tape code mp ip runBf_rec ip = mp =
+          continue
+        end
+        ip code skipLoop ip =
+        break
+      ']' case
+        tape mp [] ? if
+          loopStart ip =
+          continue
+        else
+          mp ip return
+        end
+        break
+    end
+  finally ip 1 + ip = end
+  mp ip return
+end
+proc(
+  char8 OUT_CAP ptr.mut : outBuffer
+  i8 TAPE_CAP ptr.mut : tape
+  string : code
+-> stringBuilder ) =>: runBf
+  outBuffer $ ..length i32 cast sb.fromBuffer =:: mut: outStream
+  outStream@ tape code TAPE_CAP 2 / -1 runBf_rec ..drop.2
+  outStream return
+end
+namespace: bf.static
+  proc( char8 _ ptr : chars i64 : len -> ) =>: static: parse  
+    i8 TAPE_CAP array : tape
+    char8 OUT_CAP array : outBuffer
+    outBuffer@
+      tape@ chars len string.create runBf
+    sb.asStr ..compiler.error
+  end
+end
+
+#+
+appending :bf at the end of a string literal runs the string as brainfuck code
+and prints the program output as error message
++#
+"+[-->-[>>+>-----<<]<--<---]>-.>>>+.>>..+++[.>]<<<<.+++.------.<<-.>>>>+.":bf

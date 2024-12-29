@@ -61,6 +61,8 @@ the factors of 2381 are: 2381
 +#
 ```
 
+more examples can be found in the `expamples` folder
+
 ## Usage
 Currently Concat used QBE <!--TODO link to QBE --> as its only back-end.
 To use Concant you will need QBE and some Assembler for your target architecture.

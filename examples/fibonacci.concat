@@ -1,0 +1,23 @@
+#+
+Computes the n-th Fibonacci number
++#
+import debug
+
+proc( i64 -> i64 ) =>: fib
+  =:: mut: n
+  0:i64 1:i64
+    while n 0 > do
+      $1 + ..swap
+    finally n 1 - n = end
+  ..drop
+end
+
+proc( -> ) =>: main
+  1 fib debug.print
+  2 fib debug.print
+  3 fib debug.print
+  4 fib debug.print
+  5 fib debug.print
+  10 fib debug.print
+  20 fib debug.print
+end

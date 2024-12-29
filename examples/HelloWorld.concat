@@ -1,0 +1,5 @@
+import io
+
+proc( -> ) =>: main
+  "Hello World!" io.puts ..drop
+end
