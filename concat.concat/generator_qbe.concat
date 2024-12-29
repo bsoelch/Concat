@@ -511,8 +511,10 @@ proc(
   AndOrBlockInfo new BlockInfo .AndOr context openBlock
 end
 
+enum( WHILE SWITCH ) =:: BreakType
 proc(
   BlockId : blockId
+  BreakType : breakType
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> BlockInfo ptr.mut optional ) =>: findBreakableBlock
@@ -520,10 +522,12 @@ proc(
   program [] .errors@ =:: errors
   context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
     context [] .openBlocks i list.at .data =:: block
-    block [] .While ?? and block [] .While .blockId blockId == if
+    breakType .WHILE ?? and block [] .While ?? and
+        block [] .While .blockId blockId == if
       block optional.wrap return
     end
-    block [] .Switch ?? and block [] .Switch .blockId blockId == if
+    breakType .SWITCH ?? and block [] .Switch ?? and
+        block [] .Switch .blockId blockId == if
       block optional.wrap return
     end
     i 1 -
@@ -4249,6 +4253,7 @@ proc(
         BREAK_SWITCH case
             ## findBreakableBlock
               op [] .val .block .blockId
+              BreakType .SWITCH
               op [] .pos
               context
             findBreakableBlock =:: breakBlock?
@@ -4444,6 +4449,7 @@ proc(
           op [] .val .block .blockType =:: blockType
           ## findBreakableBlock
             op [] .val .block .blockId
+            BreakType .WHILE
             op [] .pos
             context
           findBreakableBlock =:: breakBlock?

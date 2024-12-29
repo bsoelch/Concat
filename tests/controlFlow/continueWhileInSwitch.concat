@@ -1,0 +1,9 @@
+proc( -> ) =>: main
+  0 while $ 3 < do =:: i
+    i switch
+      1 case continue
+      2 case break
+      3 case return
+    end
+  finally i 1 + end ..drop
+end
