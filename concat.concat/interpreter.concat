@@ -83,6 +83,7 @@ namespace: interpreter
     context [] .valueBuffer list.free context [] .valueBuffer =
     context [] .labelBuffer list.free context [] .labelBuffer =
     context [] .callPositions list.free context [] .callPositions =
+    context [] .localMemory mixedArena.free context [] .localMemory =
     context [] .stack list.free context [] .stack =
   end
 
@@ -2905,15 +2906,15 @@ proc(
           $ computedIndexCount != if
             =:: expectedIndexCount
             expectedIndexCount computedIndexCount < if
-              "unexpected constant for array index: " sb.wrap
-                context [] .stack
-                  ptrOffset
-                list.at .data [] typeContext sb.appendConstant
-              op [] .pos errors appendError
-            else
               "unexpected constant for array access expected pointer got: " sb.wrap
                 context [] .stack
                   context [] .stack .length expectedIndexCount -
+                list.at .data [] typeContext sb.appendConstant
+              op [] .pos errors appendError
+            else
+              "unexpected constant for array index: " sb.wrap
+                context [] .stack
+                  ptrOffset
                 list.at .data [] typeContext sb.appendConstant
               op [] .pos errors appendError
             end

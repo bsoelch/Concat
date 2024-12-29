@@ -460,11 +460,10 @@ namespace: mixedArena
   end
 
   proc(
-    type : auto: T
     MixedArenaAllocator : arena0
   -> MixedArenaAllocator ) =>: export: free
     ## free allocated memory
-    arena0 MaxAlign ArenaAllocator cast 0 reset =:: mut: arena
+    arena0 MaxAlign ArenaAllocator cast 0 arenaAlloc.reset =:: mut: arena
     ## free internal list
     arena .slices list.free arena .slices =
     arena MixedArenaAllocator cast return
