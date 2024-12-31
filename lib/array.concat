@@ -1,6 +1,6 @@
 import mem
 
-namespace: array
+namespace: array ## XXX? use different namespace (array is already in use for arrayView)
   proc(
     type : auto: T
     type : auto: C
@@ -83,5 +83,36 @@ namespace: array
       data last i - [] =
       i 1 +
     end ..drop
+  end
+
+  ## returns the index of the largest element in the list that is less than or equal to `value`
+  ## if no value is smaller zero is returned
+  ## assumes the list is sorted in increasing order
+  ## XXX? pass context as additional parameter
+  proc(
+    type : auto: K  type : auto: T
+    T _ ptr : data
+    i64 : size
+    proc( K T ptr -> i32 ) ptr : cmp
+    K : value
+  -> i64 ) =>: export: firstBelow ## TODO better name
+    0:i64 =:: mut: head
+    size =:: mut: tail
+    size 2 / =:: mut: mid
+    while mid head > do
+      value data mid []@ cmp () =:: c
+      c 0 == if
+        mid return
+      else c 0 > _if
+        mid head =
+      else
+        mid tail =
+      end
+      head tail + 2 / mid =
+    end
+    tail size < and value data head []@ cmp () 0 > if
+      tail return
+    end
+    head return
   end
 end
