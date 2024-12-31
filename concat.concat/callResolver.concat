@@ -267,6 +267,7 @@ proc(
       ##findGeneratedType
         generatorName
         generatorArgs
+        false
         typeContext
         constContext
       types.findGeneratedType if ..drop ## new generated type

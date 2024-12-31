@@ -2299,6 +2299,7 @@ namespace: types
   proc(
     LabelId : generatorName
     ConstValue arrayView : arguments
+    bool : create
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> Type bool ) =>: export: findGeneratedType
@@ -2330,6 +2331,17 @@ namespace: types
       end
       1 +
     end ..drop
+    create if
+      typeContext [] .generatedTypes
+        $ .length GeneratedId cast =:: newId
+        ## GeneratedType
+          generatorName
+          arguments constContext constArray
+          Type .undefined
+        GeneratedType new list.append
+      typeContext [] .generatedTypes =
+      newId GeneratedId cast Type .generatedType true return
+    end
     Type .undefined true return
   end
 
@@ -2339,24 +2351,20 @@ namespace: types
     Type : value
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
-  -> Type bool ) =>: export: initializeGeneratedType
+  -> Type ) =>: export: initializeGeneratedType
     ## findGeneratedType
       generatorName
       arguments
+      true
       typeContext
       constContext
-    findGeneratedType ! if
-      true return
-    else ..drop end
-    typeContext [] .generatedTypes
-      $ .length GeneratedId cast =:: newId
-      ## GeneratedType
-        generatorName
-        arguments constContext constArray
-        value
-      GeneratedType new list.append
-    typeContext [] .generatedTypes =
-    newId GeneratedId cast Type .generatedType false return
+    findGeneratedType ..drop =:: prevType
+    value
+      typeContext [] .generatedTypes
+        prevType .generatedType i64 cast
+      list.at .data
+    [] .generated =
+    prevType return
   end
 
   proc( Type : generator TypeContext ptr : context -> Type ) =>: export: getGeneratedType

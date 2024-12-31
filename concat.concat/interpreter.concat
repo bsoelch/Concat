@@ -1075,6 +1075,7 @@ namespace: interpreter
     ## findGeneratedType
       generatorName
       args
+      false
       typeContext
       constContext
     types.findGeneratedType return
@@ -3061,6 +3062,7 @@ proc(
           index 1 op [] .pos errors checkIndex if
             EvalResult .Error return
           end
+          ## TODO handle local value ( local array ... )
           ## XXX? do I need to unwrap immutable primitive values
           ptrValue ## value does not change
           break
@@ -3551,6 +3553,7 @@ proc(
     ## findGeneratedType
       procName
       context [] .stack list.asArray argsOffset array.tail
+      true
       typeContext
       constContext
     types.findGeneratedType ! if =:: genType
@@ -3820,11 +3823,7 @@ proc(
       generatedType
       typeContext
       constContext
-    types.initializeGeneratedType if
-      "could not initalized type generator " sb.wrap
-        procName labelContext sb.appendLabelName
-      pos errors appendError
-    end =:: generatorType
+    types.initializeGeneratedType =:: generatorType
     context [] .stack
       generatorType ConstValue .TypeId list.append
     context [] .stack =
