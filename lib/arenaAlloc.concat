@@ -345,7 +345,7 @@ i64 =:: MaxAlign
 MaxAlign ArenaAllocator =:: export: MixedArenaAllocator
 namespace: mixedArena
   proc( i64 -> i32 ) =>: alignSize
-    MaxAlign ..type.stride 1 - + MaxAlign ..type.stride ..udiv i32 cast
+    MaxAlign ..types.stride 1 - + MaxAlign ..types.stride ..udiv i32 cast
   end
   proc(
     ## size of a given memory slice, will be rounded to the nearest power of two
@@ -354,7 +354,7 @@ namespace: mixedArena
     bool : strictOrder
   -> MixedArenaAllocator ) =>: export: create_S
     ## create_internal
-      sliceSize i64 cast.u MaxAlign ..type.stride ..udiv i32 cast
+      sliceSize i64 cast.u MaxAlign ..types.stride ..udiv i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       strictOrder
     arenaAlloc.create_internal MixedArenaAllocator cast
@@ -364,7 +364,7 @@ namespace: mixedArena
     i32 : sliceSize
   -> MixedArenaAllocator ) =>: export: create_0
     ## create_internal
-      sliceSize i64 cast.u MaxAlign ..type.stride ..udiv i32 cast
+      sliceSize i64 cast.u MaxAlign ..types.stride ..udiv i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       false
     arenaAlloc.create_internal MixedArenaAllocator cast
@@ -376,7 +376,7 @@ namespace: mixedArena
     type : T
   -> MixedArenaAllocator T ptr.mut ) =>: export: alloc
     arena MaxAlign ArenaAllocator cast
-      T ..type.stride alignSize arenaAlloc.alloc_internal =:: res
+      T ..types.stride alignSize arenaAlloc.alloc_internal =:: res
     MixedArenaAllocator cast
     res T ptr.mut cast!
   end
@@ -389,7 +389,7 @@ namespace: mixedArena
       arena T array.emptyMutable return
     end
     arena MaxAlign ArenaAllocator cast
-      T ..type.stride size i64 cast.u * alignSize arenaAlloc.alloc_internal =:: res
+      T ..types.stride size i64 cast.u * alignSize arenaAlloc.alloc_internal =:: res
     MixedArenaAllocator cast
     res T _ ptr.mut cast! size array.createMutable
   end

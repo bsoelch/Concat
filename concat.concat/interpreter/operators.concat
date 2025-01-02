@@ -480,42 +480,42 @@ namespace: interpreter
       Array8 case
         src .Array8 .data i8 _ ptr cast!
         src .Array8 .length
-        i8 ..type.stride
+        i8 ..types.stride
         false return
       Array16 case
         src .Array16 .data i8 _ ptr cast!
         src .Array16 .length
-        i16 ..type.stride
+        i16 ..types.stride
         false return
       Array32 case
         src .Array32 .data i8 _ ptr cast!
         src .Array32 .length
-        i32 ..type.stride
+        i32 ..types.stride
         false return
       Array64 case
         src .Array64 .data i8 _ ptr cast!
         src .Array64 .length
-        i64 ..type.stride
+        i64 ..types.stride
         false return
       LocalArray8 case
         src .LocalArray8 .data i8 _ ptr cast!
         src .LocalArray8 .length
-        i8 ..type.stride
+        i8 ..types.stride
         false return
       LocalArray16 case
         src .LocalArray16 .data i8 _ ptr cast!
         src .LocalArray16 .length
-        i16 ..type.stride
+        i16 ..types.stride
         false return
       LocalArray32 case
         src .LocalArray32 .data i8 _ ptr cast!
         src .LocalArray32 .length
-        i32 ..type.stride
+        i32 ..types.stride
         false return
       LocalArray64 case
         src .LocalArray64 .data i8 _ ptr cast!
         src .LocalArray64 .length
-        i64 ..type.stride
+        i64 ..types.stride
         false return
       default 0 i8 _ ptr cast! 0 0 true return
     end
@@ -528,22 +528,22 @@ namespace: interpreter
       LocalArray8 case
         src .LocalArray8 .data i8 _ ptr.mut cast!
         src .LocalArray8 .length
-        i8 ..type.stride
+        i8 ..types.stride
         false return
       LocalArray16 case
         src .LocalArray16 .data i8 _ ptr.mut cast!
         src .LocalArray16 .length
-        i16 ..type.stride
+        i16 ..types.stride
         false return
       LocalArray32 case
         src .LocalArray32 .data i8 _ ptr.mut cast!
         src .LocalArray32 .length
-        i32 ..type.stride
+        i32 ..types.stride
         false return
       LocalArray64 case
         src .LocalArray64 .data i8 _ ptr.mut cast!
         src .LocalArray64 .length
-        i64 ..type.stride
+        i64 ..types.stride
         false return
       default 0 i8 _ ptr.mut cast! 0 0 true return
     end

@@ -146,7 +146,7 @@ namespace: io
     c.concatIOHelper_resetErrno
     ## fread
       buffer off + ..ctype.void ptr.mut cast!
-      count 1 == if T ..type.size else T ..type.stride end  ..ctype.size cast
+      count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
       count  ..ctype.size cast
       file
     c.fread i64 cast
@@ -173,7 +173,7 @@ namespace: io
     c.concatIOHelper_resetErrno
     ## fread
       buffer off + ..ctype.void ptr cast!
-      count 1 == if T ..type.size else T ..type.stride end  ..ctype.size cast
+      count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
       count ..ctype.size cast
       file
     c.fwrite i64 cast

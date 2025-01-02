@@ -11,14 +11,13 @@ struct(
   i32 : mut: chunkType ## XXX? remember alignment offset
   i32 : mut: size
 ) =:: export: CellHeader ## TODO only exported for testing purposes
-CellHeader ..type.stride 16 == "CellHeader has expected size" assert
+CellHeader ..types.stride 16 == "CellHeader has expected size" assert
 -1:i32 =:: CELLSIZE_FREED
 128:i32 =:: MAX_CELL_COUNT
 
 type : export: ChunkHeader
 struct(
   ChunkHeader ptr.mut : mut: next
-  ## ..type.align8
   ChunkHeader ptr.mut : mut: prev
   ## TODO keep track of freeCells/firstEmpty
   i32 : mut: freeCells ## number of free cells in this chunk
@@ -29,7 +28,7 @@ struct(
   ## padding
   ## Cell ... array : cells
 ) =:: export: ChunkHeader ## TODO only exported for testing purposes
-ChunkHeader ..type.stride 32 == "ChunkHeader has expected size" assert
+ChunkHeader ..types.stride 32 == "ChunkHeader has expected size" assert
 
 struct( i16 : cellSize i16 : cellCount i16 : dataOffset ) =:: ChunkCellSize
 {
@@ -368,12 +367,12 @@ proc( i64 : count CellSizeInfo ptr : cellInfo -> i32 ) =>: cellInfoCmp
 end
 proc( ..ctype.void ptr.mut : mem -> CellHeader ptr.mut ) =>: export: getCellHeader ## XXX exported only for debug purposes
   mem
-    i8 _ ptr.mut cast! CellHeader ..type.stride -
+    i8 _ ptr.mut cast! CellHeader ..types.stride -
   CellHeader ptr.mut cast!
 end
 proc( CellHeader ptr.mut : head -> ..ctype.void ptr.mut ) =>: getCellMemory
   head
-    i8 _ ptr.mut cast! CellHeader ..type.stride +
+    i8 _ ptr.mut cast! CellHeader ..types.stride +
   ..ctype.void ptr.mut cast!
 end
 proc( i64 : size -> CellHeader ptr.mut ) =>: allocateCell
@@ -408,7 +407,7 @@ proc( i64 : size -> ..ctype.void ptr.mut ) =>: export: allocate
   size 0 == if ## empty alloc -> nullPtr
     0 ..ctype.void ptr.mut cast! return
   end
-  size CellHeader ..type.stride + allocateCell getCellMemory
+  size CellHeader ..types.stride + allocateCell getCellMemory
 end
 proc( CellHeader ptr.mut : cell -> ) =>: freeCell
   cell [] .chunkType ChunkType.noChunk i32 cast.s == if
@@ -448,7 +447,7 @@ proc( ..ctype.void ptr.mut : p i64 : newSize -> ..ctype.void ptr.mut ) =>: expor
     default ..unreachable ## unknown cell size
   end =:: oldCellSize
   oldCellSize oldHeader [] .size i64 cast.u * oldHeader i64 cast! p i64 cast! - - =:: oldSize
-  newSize CellHeader ..type.stride + =:: newSizeWithHeader
+  newSize CellHeader ..types.stride + =:: newSizeWithHeader
   newSizeWithHeader 32 + oldCellSize 4 / >= and newSizeWithHeader oldCellSize MAX_CELL_COUNT i64 cast.u * <= if
     oldHeader [] .chunkType ChunkType.noChunk i32 cast.s == if
       ## TODO reallocareLargeChunk

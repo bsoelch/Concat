@@ -58,7 +58,7 @@ namespace: mem
       c.nullPtr T _ ptr.mut cast! return
     end
     ## malloc
-      n T ..type.stride * ..ctype.size cast
+      n T ..types.stride * ..ctype.size cast
     c.malloc checkPtr T _ ptr.mut cast! return
   end
   proc( i64 : n type : T -> T _ ptr.mut ) =>: export: calloc
@@ -67,7 +67,7 @@ namespace: mem
     end
     ## calloc
       n ..ctype.size cast
-      T ..type.stride ..ctype.size cast
+      T ..types.stride ..ctype.size cast
     c.calloc checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -81,7 +81,7 @@ namespace: mem
     end
     ## realloc
       prev ..ctype.void _ ptr.mut cast!
-      T ..type.stride n *  ..ctype.size cast
+      T ..types.stride n *  ..ctype.size cast
     c.realloc checkPtr T _ ptr.mut cast! return
   end
   proc( type : auto: T T _ ptr.mut : p -> ) =>: export: free
@@ -99,7 +99,7 @@ namespace: mem
     ## memset
       src ..ctype.void _ ptr.mut cast!
       0 ..ctype.int cast
-      n 1 == if T ..type.size else T ..type.stride n * end ..ctype.size cast
+      n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
     c.memset checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -118,7 +118,7 @@ namespace: mem
     ## memcpy
       target ..ctype.void _ ptr.mut cast!
       src ..ctype.void _ ptr cast!
-      n 1 == if T ..type.size else T ..type.stride n * end ..ctype.size cast
+      n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
     c.memcpy checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -137,7 +137,7 @@ namespace: mem
     ## memmove
       target ..ctype.void _ ptr.mut cast!
       src ..ctype.void _ ptr cast!
-      n 1 == if T ..type.size else T ..type.stride n * end ..ctype.size cast
+      n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
     c.memmove checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -152,7 +152,7 @@ namespace: mem
     ## memcmp
       a ..ctype.void _ ptr cast!
       b ..ctype.void _ ptr cast!
-      n 1 == if T ..type.size else T ..type.stride n * end ..ctype.size cast
+      n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
     c.memcmp i32 cast return
   end
   proc(

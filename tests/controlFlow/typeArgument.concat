@@ -1,6 +1,6 @@
 import debug
 proc( i64 : c type : T -> i64 ) =>: test
-  c T ..type.size *
+  c T ..types.size *
 end
 
 proc( -> ) =>: main

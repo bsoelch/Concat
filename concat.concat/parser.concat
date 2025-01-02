@@ -2169,22 +2169,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       Type .undefined
       infoType fileState [] .wordStart opTypeInfo state appendOp
       return
-    else ..dup "..type.alignment" string.wrap string.eq or
-         ..dup "..type.size" string.wrap string.eq or
-         ..dup "..type.stride" string.wrap string.eq _if =:: opName
-     opName sb.fromStr
-       " is deprecated use ..types.<...> instead" sb.appendS
-     fileState [] .wordStart errors appendWarning
-     opName "..type.alignment" string.wrap string.eq if
-       TypeMemoryInfo .ALIGNMENT
-     else opName "..type.size" string.wrap string.eq _if
-       TypeMemoryInfo .SIZE
-     else
-       TypeMemoryInfo .STRIDE
-     end =:: infoType
-      Type .undefined
-      infoType fileState [] .wordStart opTypeInfo state appendOp
-      return
     else ..dup "..unreachable" string.wrap string.eq _if ..drop
       fileState [] .wordStart opUnreachable state appendOp
       return
