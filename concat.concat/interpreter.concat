@@ -454,7 +454,7 @@ namespace: interpreter
             id.LABEL_ID_NONE break
           TYPE_STRUCT case
             ## newDummyLabel
-              i stackOffset -
+              context [] .labelBuffer .length initialLabelOffset -
               pos
               -1:FileId ## TODO determine file-id
               labelContext
