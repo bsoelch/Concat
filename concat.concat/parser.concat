@@ -899,6 +899,21 @@ proc(
     else ..dup "..ctype.union*" string.wrap string.eq _if
       types.ctype.UNION_PTR fileState [] .wordStart newTypeConst  state pushConst
       true return
+    else ..dup "..type.align2" string.wrap string.eq _if
+      2 Type .align fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "..type.align4" string.wrap string.eq _if
+      4 Type .align fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "..type.align8" string.wrap string.eq _if
+      8 Type .align fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "..type.align16" string.wrap string.eq _if
+      16 Type .align fileState [] .wordStart newTypeConst  state pushConst
+      true return
+    else ..dup "..type.align32" string.wrap string.eq _if
+      32 Type .align fileState [] .wordStart newTypeConst  state pushConst
+      true return
     end
   false return
 end
@@ -2141,9 +2156,25 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..label" string.wrap string.eq _if ..drop
       fileState [] .wordStart opGetEnumLabel state appendOp
       return
+    else ..dup "..types.alignment" string.wrap string.eq or
+         ..dup "..types.size" string.wrap string.eq or
+         ..dup "..types.stride" string.wrap string.eq _if =:: opName
+     opName "..types.alignment" string.wrap string.eq if
+       TypeMemoryInfo .ALIGNMENT
+     else opName "..types.size" string.wrap string.eq _if
+       TypeMemoryInfo .SIZE
+     else
+       TypeMemoryInfo .STRIDE
+     end =:: infoType
+      Type .undefined
+      infoType fileState [] .wordStart opTypeInfo state appendOp
+      return
     else ..dup "..type.alignment" string.wrap string.eq or
          ..dup "..type.size" string.wrap string.eq or
          ..dup "..type.stride" string.wrap string.eq _if =:: opName
+     opName sb.fromStr
+       " is deprecated use ..types.<...> instead" sb.appendS
+     fileState [] .wordStart errors appendWarning
      opName "..type.alignment" string.wrap string.eq if
        TypeMemoryInfo .ALIGNMENT
      else opName "..type.size" string.wrap string.eq _if

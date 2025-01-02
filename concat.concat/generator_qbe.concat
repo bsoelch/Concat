@@ -175,7 +175,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     reference mutableReference procedure arrayType struct union enum initializer case
       ValType .REFERENCE return
     undefined empty genericType autoType
-    procIn procOut case
+    procIn procOut align case
       ValType .EMPTY return
   end
 end
@@ -672,7 +672,7 @@ namespace: sb
         sb t "enum" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       undefined empty genericType autoType
-      procIn procOut initializer case
+      procIn procOut initializer align case
         break
     end
     "unsupported type " sb.wrap

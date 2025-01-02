@@ -186,7 +186,7 @@
            )
           )(\Z|(?=[[:space:]])) # end of file or white-space
           )|
-          \.\.type\.(alignment|size|stride) |
+          \.\.types\.(alignment|size|stride) |
           \.\.\?(parser\.)?find\.(?=([^[:space:]\.]+(\.[^[:space:]\.]+)*(\Z|[[:space:]])))
         )) |
         (?&lt;=[^[:space:]])\:\?(\Z|[[:space:]]) ## :? postfix
@@ -233,7 +233,8 @@
           char(8|16|32)  |
           f32            |
           f64            |
-          type
+          type           |
+          \.\.type\.align(2|4|8|16|32)
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>

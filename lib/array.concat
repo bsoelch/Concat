@@ -96,8 +96,8 @@ namespace: array ## XXX? use different namespace (array is already in use for ar
     proc( K T ptr -> i32 ) ptr : cmp
     K : value
   -> i64 ) =>: export: firstBelow ## TODO better name
-    0:i64 =:: mut: head
-    size =:: mut: tail
+    0:i64 =:: mut: shaddow: head
+    size =:: mut: shaddow: tail
     size 2 / =:: mut: mid
     while mid head > do
       value data mid []@ cmp () =:: c
