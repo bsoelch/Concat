@@ -1,0 +1,586 @@
+import array
+import arrayView
+import linux/syscalls
+
+## TODO? use different type for opaque pointer
+struct(
+  ..ctype.void ptr.mut : mut: chunkStart
+  i32 : mut: chunkType ## XXX? remember alignment offset
+  i32 : mut: size
+) =:: export: CellHeader ## TODO only exported for testing purposes
+CellHeader ..type.stride 16 == "CellHeader has expected size" assert
+-1:i32 =:: CELLSIZE_FREED
+128:i32 =:: MAX_CELL_COUNT
+
+type : export: ChunkHeader
+struct(
+  ChunkHeader ptr.mut : mut: next
+  ## ..type.align8
+  ChunkHeader ptr.mut : mut: prev
+  i32 : mut: freeCells
+  i32 : mut: firstAvailable
+  i32 : mut: firstEmpty
+  i32 1 array : padding ## XXX? store info about chunk in header ( #freeCells, index of first completely unused cell )
+  ## i64 ... array : cellInfo
+  ## padding
+  ## Cell ... array : cells
+) =:: export: ChunkHeader ## TODO only exported for testing purposes
+ChunkHeader ..type.stride 32 == "ChunkHeader has expected size" assert
+
+struct( i16 : cellSize i16 : cellCount i16 : dataOffset ) =:: ChunkCellSize
+{
+  { 48 : cellSize 10893 : cellCount 1408 : dataOffset } ChunkCellSize cast
+  { 80 : cellSize 13086 : cellCount 1680 : dataOffset } ChunkCellSize cast
+  { 208 : cellSize 5038 : cellCount 672  : dataOffset } ChunkCellSize cast
+  { 368 : cellSize  712 : cellCount 128  : dataOffset } ChunkCellSize cast
+  { 656 : cellSize  799 : cellCount 144  : dataOffset } ChunkCellSize cast
+  { 1072 : cellSize 978 : cellCount 160  : dataOffset } ChunkCellSize cast
+  { 4128 : cellSize 254 : cellCount 64   : dataOffset } ChunkCellSize cast ChunkCellSize cast
+} =:: chunkInfo
+## XXX? are rootChunks zero-initialized
+ChunkHeader ptr.mut chunkInfo ..length array : mut: rootChunks
+i8 =:: ChunkType
+namespace: ChunkType
+  -1:ChunkType =:: noChunk
+  0:ChunkType =:: chunk48
+  1:ChunkType =:: chunk80
+  2:ChunkType =:: chunk208
+  3:ChunkType =:: chunk368
+  4:ChunkType =:: chunk656
+  5:ChunkType =:: chunk1072
+  6:ChunkType =:: chunk4128
+end
+struct(
+  ChunkHeader ptr.mut : chunkStart
+  ChunkType : chunkType
+) =:: ChunkInfo
+4096:i64 =:: PAGE_SIZE ## TODO find good way to determine page size
+
+proc( type : auto: T T _ ptr -> bool ) =>: isValidPtr
+  i64 cast! 0 >
+end
+
+proc( i64 : size -> ..ctype.void _ ptr.mut ) =>: mapMemory
+  ## sys_mmap
+    linux.nullPtr
+    size
+    linux.mmap.PROT_READ linux.mmap.PROT_WRITE |
+    linux.mmap.MAP_PRIVATE linux.mmap.MAP_ANONYMOUS |
+    linux.mmap.NO_FILE 0
+  linux.sys_mmap
+    $ i64 cast! 0 < if ..drop
+      ## TODO error handling
+      ..unreachable
+    end
+end
+proc(  ..ctype.void _ ptr.mut : addr i64 : size -> ) =>: unmapMemory
+  ## sys_mmap
+    addr
+    size
+  linux.sys_munmap 0 == "unmap successfull" assert
+end
+
+proc( i64 : size -> CellHeader ptr.mut ) =>: allocLargeChunk
+  size PAGE_SIZE 1 - + PAGE_SIZE 1 - ~ & =:: pageAlignedSize
+  ## XXX? additional alignment
+  pageAlignedSize mapMemory CellHeader ptr.mut cast! =:: cellData
+    cellData ..ctype.void ptr.mut cast! cellData [] .chunkStart =
+    ChunkType.noChunk i32 cast.s cellData [] .chunkType =
+    size PAGE_SIZE / i32 cast cellData [] .size =
+  cellData return
+end
+## XXX reallocate large chunk
+proc( CellHeader ptr.mut : cell -> ) =>: freeLargeChunk
+  cell [] .chunkStart cell ..ctype.void _ ptr.mut cast! <= "cell comes after start of memory region" assert
+  cell [] .chunkStart i64 cast! cell [] .size i64 cast.u + cell i64 cast! > "cell with page" assert
+  cell [] .chunkStart cell [] .size i64 cast.u PAGE_SIZE * unmapMemory
+end
+
+proc( ChunkType : chunkType -> ChunkInfo ) =>: createChunk
+  chunkInfo chunkType i32 cast.u [] =:: chunkData
+  chunkData .cellSize i64 cast.u
+    chunkData .cellCount i64 cast.u *
+  chunkData .dataOffset i64 cast.u + =:: chunkSize
+  chunkSize mapMemory ChunkHeader ptr.mut cast! chunkType ChunkInfo new =:: chunk
+  ## add new chunk start start of chunk-root list
+  rootChunks chunkType i32 cast.u [] =:: oldRoot
+  oldRoot chunk .chunkStart [] .next =
+  oldRoot isValidPtr if
+    chunk .chunkStart oldRoot [] .prev =
+  end
+  chunk .chunkStart rootChunks chunkType i32 cast.u [] =
+  ## initialize cellInfo
+  ## mmap returns zero initialized memory -> only need to set padding bits in last element to one
+  chunkData .cellCount i32 cast.u 63 & =:: tailBits
+  tailBits 0 > if
+    chunk getCellInfo =:: cellInfo
+    -1:i64 tailBits >>> cellInfo $ .length 1 - array.set
+  end
+  chunk return
+end
+proc( ChunkInfo : chunk -> i64 arrayView.mut ) =>: getCellInfo
+  chunk .chunkStart ChunkHeader _ ptr.mut cast 1 []@ i64 ptr.mut cast! ## end of chunk header
+    chunkInfo chunk .chunkType i32 cast.u [] .cellCount i64 cast.u 63:i64 + 64 ..udiv
+  array.createMutable
+end
+
+## XXX? add parameter for alignment
+## XXX? add parameter for requiring cleared memory
+proc( ChunkInfo : chunk i32 : count -> CellHeader ptr.mut optional ) =>: allocateBlock
+  count 0 > "at least one cell" assert
+  count 16 >= if
+    count 65 <= "count at most 65" assert ## cannot detect higher counts
+    ## TODO use different algorithm for high cell count
+  end
+  chunk getCellInfo =:: cellInfo
+  chunk .chunkStart [] .firstAvailable i64 cast.u =:: mut: firstAvailable 
+  firstAvailable while ..dup cellInfo .length < do =:: i
+    ## XXX? allocate new cells in a way that makes extending cells easier
+    cellInfo i array.get =:: current
+    i firstAvailable == and current -1 == if
+      i 1 + firstAvailable =
+    end
+    i 1 + cellInfo .length < if
+      cellInfo i 1 + array.get
+    else -1 end =:: next
+    current
+      1 while $ count < do =:: shift
+        current shift << | next 64 shift - >>> |
+      finally shift 1 + end ..drop
+    =:: check
+    check ~ ? if ## found free slice of given length
+      check ~ i64.highestSetBit 1 + =:: cellBitIndex
+      ## mark cells as used
+      cellBitIndex count >= if
+        1:i64 count << 1 - cellBitIndex count - << =:: cellMask
+        current cellMask & 0 == "cells are not allocated" assert
+        current cellMask | =:: newVal
+        newVal cellInfo i array.set
+        i firstAvailable == and newVal -1 == if
+          i 1 + firstAvailable =
+        end
+      else
+        1:i64 cellBitIndex << 1 - =:: hiCellMask
+        current hiCellMask & 0 == "cells are not allocated" assert
+        current hiCellMask | =:: newVal
+        newVal cellInfo i array.set
+        i firstAvailable == and newVal -1 == if
+          i 1 + firstAvailable =
+        end
+        -1:i64 64 count cellBitIndex - - << =:: lowCellMask
+        next lowCellMask & 0 == "cells are not allocated" assert
+        next lowCellMask | cellInfo i 1 + array.set
+      end
+      firstAvailable i32 cast chunk .chunkStart [] .firstAvailable =
+      i 64 * 64 cellBitIndex - i64 cast.u + =:: cellIndex ## TODO? use lowerstSetBit for cell index
+      chunkInfo chunk .chunkType i32 cast.u [] =:: chunkData
+      chunk .chunkStart i8 _ ptr.mut cast!
+         chunkData .dataOffset i64 cast.u +
+         cellIndex chunkData .cellSize i64 cast.u * +
+      CellHeader ptr.mut cast! =:: cellPtr
+        chunk .chunkStart ..ctype.void ptr.mut cast! cellPtr [] .chunkStart =
+        chunk .chunkType i32 cast.u cellPtr [] .chunkType =
+        count cellPtr [] .size =
+      cellPtr optional.wrap return
+    end
+  finally i 1 + end ..drop
+  firstAvailable i32 cast chunk .chunkStart [] .firstAvailable =
+  CellHeader ptr.mut optional.empty return
+end
+proc( ChunkType : chunkType i32 : count -> CellHeader ptr.mut optional ) =>: searchAvailableCells
+  rootChunks chunkType i32 cast.u [] ChunkHeader ptr.mut cast!
+    while $ isValidPtr do =:: current
+      current chunkType ChunkInfo new count allocateBlock
+        $ optional.hasData if return end
+      ..drop
+    finally current [] .next end
+  ..drop
+  CellHeader ptr.mut optional.empty return
+end
+proc( CellHeader ptr.mut : cell ChunkInfo : chunk -> i64 ) =>: computeCellIndex
+  chunkInfo chunk .chunkType i32 cast.u [] =:: cellChunkInfo
+  cell i64 cast!
+    cell [] .chunkStart i64 cast! cellChunkInfo .dataOffset i64 cast.u + -
+    $ cellChunkInfo .cellSize i64 cast.u ..umod ? if
+      ..unreachable ## missaligned cell
+    end
+  cellChunkInfo .cellSize i64 cast.u ..udiv return
+end
+union(
+    _ : free ## completely free cell
+  i32 : resizeStart ## add/remove cells at start
+  i32 : resizeEnd ## add/remove cells at end
+) =:: ResizeType
+proc( i64 arrayView.mut : cellInfo i64 : cellInfoOffset i32 : cellIndexBit i32 : cellCount -> ) =>: unlinkCells
+## TODO? better name for procedure
+  cellIndexBit cellCount + 64 ..u<= if
+    1:i64 cellCount << 1 - 64 cellIndexBit - cellCount - << =:: cellsMask
+    cellInfo cellInfoOffset array.get
+      $ cellsMask & cellsMask == "freed cells have been allocated" assert
+      cellsMask ^
+    cellInfo cellInfoOffset array.set
+    return
+  end
+  -1:i64 cellIndexBit >>> =:: cellsMaskHi
+  cellInfo cellInfoOffset array.get
+    $ cellsMaskHi & cellsMaskHi == "freed cells have been allocated" assert
+    cellsMaskHi ^
+  cellInfo cellInfoOffset array.set
+  cellCount 64 cellIndexBit - - =:: mut: remaining
+  cellInfoOffset 1 + =:: mut: nextCellInfoOffset
+  while remaining 64 >= do
+    cellInfo nextCellInfoOffset array.get -1 == "freed cells have been allocated" assert
+    0 cellInfo nextCellInfoOffset array.set
+    remaining 64 - remaining =
+    nextCellInfoOffset 1 + nextCellInfoOffset =
+  end
+  -1:i64 64 remaining - << =:: cellsMaskLow
+  cellInfo nextCellInfoOffset array.get
+    $ cellsMaskLow & cellsMaskLow == "freed cells have been allocated" assert
+    cellsMaskLow ^
+  cellInfo nextCellInfoOffset array.set
+end
+proc( CellHeader ptr.mut : cell ResizeType : resizeType -> CellHeader ptr.mut optional ) =>: resizeBlock
+  cell [] .size 0 < or cell [] .size MAX_CELL_COUNT > if
+    ..unreachable ## invalid cell size
+  end
+  resizeType switch
+    free case 0 break
+    resizeStart case
+      resizeType .resizeStart 0 > "new size is positive" assert
+      resizeType .resizeStart
+      break
+    resizeEnd case
+      resizeType .resizeEnd 0 > "new size is positive" assert
+      resizeType .resizeEnd
+      break
+  end =:: newSize
+  newSize cell [] .size == if
+    cell optional.wrap return
+  end
+  cell [] .chunkStart ChunkHeader ptr.mut cast!
+    cell [] .chunkType ChunkType cast
+  ChunkInfo new =:: chunk
+  cell chunk computeCellIndex =:: cellIndex
+  cellIndex cell [] .size i64 cast.u + chunkInfo chunk .chunkType i32 cast.u [] .cellCount i64 cast.u > if
+    ..unreachable ## invalid cell offset
+  end
+  chunk getCellInfo =:: cellInfo
+  newSize cell [] .size < if
+    cell [] .size newSize - =:: amount
+    resizeType .resizeEnd ?? if
+      cellIndex newSize i64 cast.u +
+    else
+      cellIndex
+    end =:: clearOffset
+    clearOffset 64 ..udiv =:: cellInfoOffset
+    clearOffset 64 ..umod i32 cast =:: cellIndexBit
+    cellInfo cellInfoOffset cellIndexBit amount unlinkCells
+    ## shrink cell
+    cellInfoOffset chunk .chunkStart [] .firstAvailable i64 cast.u < if
+      cellInfoOffset i32 cast chunk .chunkStart [] .firstAvailable =
+    end
+    resizeType .resizeEnd ?? if
+      newSize cell [] .size =
+      cell optional.wrap return
+    end
+    CELLSIZE_FREED cell [] .size =
+    resizeType .free ?? if
+      CellHeader ptr.mut optional.empty return
+    end
+    cell CellHeader _ ptr.mut cast! amount i64 cast.u []@ CellHeader ptr.mut cast! =:: newHead
+    cell [] .chunkStart newHead [] .chunkStart =
+    cell [] .chunkType newHead [] .chunkType =
+    newSize newHead [] .size =
+    newHead optional.wrap return
+  end
+  ## TODO try to grow cell
+  CellHeader ptr.mut optional.empty return
+end
+
+struct(
+  i32 : eltCount
+  i16 : cellSize
+  i8 : cellCount
+  ChunkType : chunkType
+) =:: CellSizeInfo
+
+proc( i64 : count CellSizeInfo ptr : cellInfo -> i32 ) =>: cellInfoCmp
+  count cellInfo [] .eltCount i64 cast.u <=>
+end
+proc( ..ctype.void ptr.mut : mem -> CellHeader ptr.mut ) =>: export: getCellHeader ## XXX exported only for debug purposes
+  mem
+    i8 _ ptr.mut cast! CellHeader ..type.stride -
+  CellHeader ptr.mut cast!
+end
+proc( CellHeader ptr.mut : head -> ..ctype.void ptr.mut ) =>: getCellMemory
+  head
+    i8 _ ptr.mut cast! CellHeader ..type.stride +
+  ..ctype.void ptr.mut cast!
+end
+proc( i64 : size -> CellHeader ptr.mut ) =>: allocateCell
+  size 15:i64 + 15:i64 ~ & =:: alignedSize
+  cellSizes@ cellSizes ..length cellInfoCmp@ alignedSize array.firstBelow =:: cellSizeIndex
+  cellSizes cellSizeIndex [] =:: cellSize
+  cellSize .chunkType ChunkType.noChunk == if
+    size allocLargeChunk return
+  end
+  ## try finding matching chunk sequence in chunk
+  rootChunks cellSize .chunkType i32 cast.u [] =:: root
+  cellSize .chunkType cellSize .cellCount i32 cast.u searchAvailableCells $ optional.hasData if
+    .data return
+  end ..drop
+  ## check for chunk sequence in next larger size
+  cellSizeIndex 1 + cellSizes ..length < if
+    cellSizes cellSizeIndex 1 + [] =:: nextSize
+    nextSize .chunkType ChunkType.noChunk == if
+      size allocLargeChunk return
+    end
+    rootChunks nextSize .chunkType i32 cast.u [] =:: nextRoot
+    nextSize .chunkType nextSize .cellCount i32 cast.u searchAvailableCells $ optional.hasData if
+      .data return
+    end ..drop
+  end
+  ## allocate cells in a new chunk
+  cellSize .chunkType createChunk =:: newChunk
+  newChunk cellSize .cellCount i32 cast.u allocateBlock .data return
+end
+## TODO add: allignedAlloc, clearedAlloc, realloc, (?realloc_downwards)
+proc( i64 : size -> ..ctype.void ptr.mut ) =>: export: allocate
+  size 0 == if ## empty alloc -> nullPtr
+    0 ..ctype.void ptr.mut cast! return
+  end
+  size CellHeader ..type.stride + allocateCell getCellMemory
+end
+proc( CellHeader ptr.mut : cell -> ) =>: freeCell
+  cell [] .chunkType ChunkType.noChunk i32 cast.s == if
+    cell freeLargeChunk return
+  end
+  cell [] .chunkType 0 < or cell [] .chunkType i64 cast.u chunkInfo ..length >= if
+    ..unreachable ## invalid chunk type
+  end
+  ## resizeBlock
+    cell
+    ResizeType .free
+  resizeBlock
+    .empty ?? "freeing block returns empty optional" assert
+  return
+end
+proc( ..ctype.void ptr.mut : p -> ) =>: export: free_ ## TODO remove _ once procedure is in namespace
+  p i64 cast! 0 == if return end ## ignore free of null-pointer
+  p getCellHeader freeCell
+end
+proc( ..ctype.void ptr.mut : p i64 : newSize -> ..ctype.void ptr.mut ) =>: export: reallocate
+  p i64 cast! 0 == if
+    newSize allocate return 
+  else newSize 0 == _if
+    p free_
+    0 ..ctype.void ptr.mut cast! return
+  end
+  p getCellHeader =:: oldHeader
+  oldHeader [] .chunkType switch
+    ChunkType.noChunk case PAGE_SIZE break
+    ChunkType.chunk48 case 48:i64 break
+    ChunkType.chunk80 case 80:i64 break
+    ChunkType.chunk208 case 208:i64 break
+    ChunkType.chunk368 case 368:i64 break
+    ChunkType.chunk656 case 656:i64 break
+    ChunkType.chunk1072 case 1072:i64 break
+    ChunkType.chunk4128 case 4128:i64 break
+    default ..unreachable ## unknown cell size
+  end =:: oldCellSize
+  oldCellSize oldHeader [] .size i64 cast.u * oldHeader i64 cast! p i64 cast! - - =:: oldSize
+  newSize CellHeader ..type.stride + =:: newSizeWithHeader
+  newSizeWithHeader 32 + oldCellSize 4 / >= and newSizeWithHeader oldCellSize MAX_CELL_COUNT i64 cast.u * <= if
+    oldHeader [] .chunkType ChunkType.noChunk i32 cast.s == if
+      ## TODO reallocareLargeChunk
+      ..unreachable
+    end
+    newSizeWithHeader oldCellSize 1 - + oldCellSize ..udiv i32 cast =:: newCellCount
+    ## try to resize pointer in place
+    oldHeader
+      newCellCount ResizeType .resizeEnd
+    resizeBlock =:: newHeader?
+    newHeader? optional.hasData if
+      newHeader? .data getCellMemory return
+    end
+  end
+  newSize allocate =:: newP
+  newP p oldSize newSize i64.min mem.copy ..drop
+  p free_
+  newP return
+end
+## TODO? realloc_inPlace (reallocate without moving, error if move neccessary) reallocate_downwards
+
+## helper procedures for testing purposes TODO remove once implementation is stable
+proc( ..ctype.void ptr.mut : mem -> i64 arrayView i64 ) =>: export: getChunkCellInfo
+  mem i64 cast! 0 == if
+    i64 array.empty -1:i64 return  
+  end
+  mem getCellHeader =:: cellHeader
+  cellHeader [] .chunkType ChunkType.noChunk i32 cast.s == if
+    i64 array.empty -1:i64 return
+  end
+  cellHeader [] .chunkStart ChunkHeader ptr.mut cast!
+    cellHeader [] .chunkType ChunkType cast
+  ChunkInfo new =:: cellChunkInfo
+  cellChunkInfo getCellInfo array.freeze
+  cellHeader cellChunkInfo computeCellIndex 64 ..udiv
+end
+
+
+## TODO? remove sizes with large cellCount that are close to other sizes
+{
+  { 16 : eltCount 48 : cellSize 1 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 32 : eltCount 48 : cellSize 1 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 48 : eltCount 48 : cellSize 1 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 80 : eltCount 80 : cellSize 1 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 96 : eltCount 48 : cellSize 2 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 144 : eltCount 48 : cellSize 3 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 160 : eltCount 80 : cellSize 2 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 192 : eltCount 48 : cellSize 4 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 208 : eltCount 208 : cellSize 1 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 240 : eltCount 80 : cellSize 3 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 288 : eltCount 48 : cellSize 6 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 320 : eltCount 80 : cellSize 4 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 336 : eltCount 48 : cellSize 7 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 368 : eltCount 368 : cellSize 1 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 384 : eltCount 48 : cellSize 8 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 400 : eltCount 80 : cellSize 5 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 416 : eltCount 208 : cellSize 2 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 432 : eltCount 48 : cellSize 9 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 480 : eltCount 80 : cellSize 6 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 528 : eltCount 48 : cellSize 11 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 560 : eltCount 80 : cellSize 7 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 576 : eltCount 48 : cellSize 12 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 624 : eltCount 208 : cellSize 3 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 640 : eltCount 80 : cellSize 8 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 656 : eltCount 656 : cellSize 1 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 672 : eltCount 48 : cellSize 14 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 720 : eltCount 80 : cellSize 9 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 736 : eltCount 368 : cellSize 2 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 768 : eltCount 48 : cellSize 16 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 800 : eltCount 80 : cellSize 10 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 816 : eltCount 48 : cellSize 17 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 832 : eltCount 208 : cellSize 4 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 864 : eltCount 48 : cellSize 18 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 880 : eltCount 80 : cellSize 11 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 912 : eltCount 48 : cellSize 19 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 960 : eltCount 80 : cellSize 12 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1008 : eltCount 48 : cellSize 21 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 1040 : eltCount 208 : cellSize 5 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 1056 : eltCount 48 : cellSize 22 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 1072 : eltCount 1072 : cellSize 1 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 1104 : eltCount 368 : cellSize 3 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 1120 : eltCount 80 : cellSize 14 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1152 : eltCount 48 : cellSize 24 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 1200 : eltCount 80 : cellSize 15 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1248 : eltCount 208 : cellSize 6 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 1280 : eltCount 80 : cellSize 16 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1296 : eltCount 48 : cellSize 27 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 1312 : eltCount 656 : cellSize 2 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 1344 : eltCount 48 : cellSize 28 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 1360 : eltCount 80 : cellSize 17 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1392 : eltCount 48 : cellSize 29 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 1440 : eltCount 80 : cellSize 18 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1456 : eltCount 208 : cellSize 7 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 1472 : eltCount 368 : cellSize 4 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 1488 : eltCount 48 : cellSize 31 : cellCount ChunkType.chunk48 : chunkType } CellSizeInfo cast
+  { 1520 : eltCount 80 : cellSize 19 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1600 : eltCount 80 : cellSize 20 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1664 : eltCount 208 : cellSize 8 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 1680 : eltCount 80 : cellSize 21 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1760 : eltCount 80 : cellSize 22 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1840 : eltCount 368 : cellSize 5 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 1872 : eltCount 208 : cellSize 9 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 1920 : eltCount 80 : cellSize 24 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 1968 : eltCount 656 : cellSize 3 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 2000 : eltCount 80 : cellSize 25 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 2080 : eltCount 208 : cellSize 10 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 2144 : eltCount 1072 : cellSize 2 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 2160 : eltCount 80 : cellSize 27 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 2208 : eltCount 368 : cellSize 6 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 2240 : eltCount 80 : cellSize 28 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 2288 : eltCount 208 : cellSize 11 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 2320 : eltCount 80 : cellSize 29 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 2400 : eltCount 80 : cellSize 30 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 2480 : eltCount 80 : cellSize 31 : cellCount ChunkType.chunk80 : chunkType } CellSizeInfo cast
+  { 2496 : eltCount 208 : cellSize 12 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 2576 : eltCount 368 : cellSize 7 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 2624 : eltCount 656 : cellSize 4 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 2704 : eltCount 208 : cellSize 13 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 2912 : eltCount 208 : cellSize 14 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 2944 : eltCount 368 : cellSize 8 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 3120 : eltCount 208 : cellSize 15 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 3216 : eltCount 1072 : cellSize 3 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 3280 : eltCount 656 : cellSize 5 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 3312 : eltCount 368 : cellSize 9 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 3328 : eltCount 208 : cellSize 16 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 3536 : eltCount 208 : cellSize 17 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 3680 : eltCount 368 : cellSize 10 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 3744 : eltCount 208 : cellSize 18 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 3936 : eltCount 656 : cellSize 6 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 3952 : eltCount 208 : cellSize 19 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 4048 : eltCount 368 : cellSize 11 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 4128 : eltCount 4128 : cellSize 1 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 4160 : eltCount 208 : cellSize 20 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 4288 : eltCount 1072 : cellSize 4 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 4368 : eltCount 208 : cellSize 21 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 4416 : eltCount 368 : cellSize 12 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 4576 : eltCount 208 : cellSize 22 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 4592 : eltCount 656 : cellSize 7 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 4784 : eltCount 368 : cellSize 13 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 4992 : eltCount 208 : cellSize 24 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 5152 : eltCount 368 : cellSize 14 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 5200 : eltCount 208 : cellSize 25 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 5248 : eltCount 656 : cellSize 8 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 5360 : eltCount 1072 : cellSize 5 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 5408 : eltCount 208 : cellSize 26 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 5520 : eltCount 368 : cellSize 15 : cellCount ChunkType.chunk368 : chunkType } CellSizeInfo cast
+  { 5616 : eltCount 208 : cellSize 27 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 5824 : eltCount 208 : cellSize 28 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 5904 : eltCount 656 : cellSize 9 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 6032 : eltCount 208 : cellSize 29 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 6240 : eltCount 208 : cellSize 30 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 6432 : eltCount 1072 : cellSize 6 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 6448 : eltCount 208 : cellSize 31 : cellCount ChunkType.chunk208 : chunkType } CellSizeInfo cast
+  { 6560 : eltCount 656 : cellSize 10 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 7216 : eltCount 656 : cellSize 11 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 7504 : eltCount 1072 : cellSize 7 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 7872 : eltCount 656 : cellSize 12 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 8256 : eltCount 4128 : cellSize 2 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 8528 : eltCount 656 : cellSize 13 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 8576 : eltCount 1072 : cellSize 8 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 9184 : eltCount 656 : cellSize 14 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 9648 : eltCount 1072 : cellSize 9 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 9840 : eltCount 656 : cellSize 15 : cellCount ChunkType.chunk656 : chunkType } CellSizeInfo cast
+  { 10720 : eltCount 1072 : cellSize 10 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 11792 : eltCount 1072 : cellSize 11 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 12384 : eltCount 4128 : cellSize 3 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 12864 : eltCount 1072 : cellSize 12 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 13936 : eltCount 1072 : cellSize 13 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 15008 : eltCount 1072 : cellSize 14 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 16080 : eltCount 1072 : cellSize 15 : cellCount ChunkType.chunk1072 : chunkType } CellSizeInfo cast
+  { 16512 : eltCount 4128 : cellSize 4 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 20640 : eltCount 4128 : cellSize 5 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 24768 : eltCount 4128 : cellSize 6 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 28672 : eltCount 4096 : cellSize 7 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 28896 : eltCount 4128 : cellSize 7 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 32768 : eltCount 4096 : cellSize 8 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 33024 : eltCount 4128 : cellSize 8 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 36864 : eltCount 4096 : cellSize 9 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 37152 : eltCount 4128 : cellSize 9 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 40960 : eltCount 4096 : cellSize 10 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 41280 : eltCount 4128 : cellSize 10 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 45056 : eltCount 4096 : cellSize 11 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 45408 : eltCount 4128 : cellSize 11 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 49152 : eltCount 4096 : cellSize 12 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 49536 : eltCount 4128 : cellSize 12 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 53248 : eltCount 4096 : cellSize 13 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 53664 : eltCount 4128 : cellSize 13 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 57344 : eltCount 4096 : cellSize 14 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 57792 : eltCount 4128 : cellSize 14 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 61440 : eltCount 4096 : cellSize 15 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+  { 61920 : eltCount 4128 : cellSize 15 : cellCount ChunkType.chunk4128 : chunkType } CellSizeInfo cast
+  { 65536 : eltCount 4096 : cellSize 16 : cellCount ChunkType.noChunk : chunkType } CellSizeInfo cast
+} =:: cellSizes
