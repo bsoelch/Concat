@@ -22,6 +22,14 @@ if [[ "$@" == *"--no-core"* ]]; then
   concatArgs+=( --no-core )
 fi
 
+externFiles=(  )
+if [[ "$@" == *"-L"* ]]; then
+  externFiles+=( "lib/linux/linux_SYSV.o" )
+fi
+if [[ "$@" != *"--no-libc"* ]]; then
+  externFiles+=( "extern.c" )
+fi
+
 {
   echo "compile code.concat"
   echo "-----------------------------------------"
@@ -33,7 +41,7 @@ fi
 } && {
   echo "compile generated Assembly-code"
   echo "-----------------------------------------"
-  gcc ${cArgs[@]} $codeAsmTarget "extern.c" -o $codeTarget
+  gcc ${cArgs[@]} $codeAsmTarget ${externFiles[@]} -o $codeTarget
 } && {
   echo "run compiled code"
   echo "-----------------------------------------"

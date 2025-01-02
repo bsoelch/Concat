@@ -1,0 +1,86 @@
+## TODO? are the flags stable accross different systems
+namespace: linux
+  0 ..ctype.void _ ptr.mut cast! =:: export: nullPtr
+
+  i32 =:: export: FileId
+  0:FileId =:: export: stdIn
+  1:FileId =:: export: stdOut
+  2:FileId =:: export: stdErr
+  ## XXX open
+  proc(
+    FileId : file
+    char8 _ ptr.mut : buffer
+    i64 : count
+  -> i64 ) : extern: export: sys_read
+  proc(
+    FileId : file
+    char8 _ ptr : buffer
+    i64 : count
+  -> i64 ) : extern: export: sys_write
+  proc(
+    FileId : file
+  -> i64 ) : extern: export: sys_close
+
+  namespace: mmap
+    -1:FileId =:: export: NO_FILE
+    i32 =:: export: Protection
+    0x0:Protection =:: export: PROT_NONE
+    0x1:Protection =:: export: PROT_READ
+    0x2:Protection =:: export: PROT_WRITE
+    0x4:Protection =:: export: PROT_EXEC
+    proc( Protection Protection -> Protection ) : alias: or_prot i32.or
+    proc( Protection Protection -> bool ) : alias: eq_prot i32.eq
+    proc( Protection Protection -> bool ) : alias: ne_prot i32.ne
+    i32 =:: export: Flags
+    0x1:Flags      =:: export: MAP_SHARED
+    0x2:Flags      =:: export: MAP_PRIVATE
+    0x3:Flags      =:: export: MAP_SHARED_VALIDATE
+    0x10:Flags     =:: export: MAP_FIXED
+    0x20:Flags     =:: export: MAP_ANONYMOUS
+    0x40:Flags     =:: export: MAP_32BIT
+    0x100:Flags    =:: export: MAP_GROWSDOWN
+    0x800:Flags    =:: export: MAP_DENYWRITE
+    0x2000:Flags   =:: export: MAP_LOCKED
+    0x80000:Flags  =:: export: MAP_SYNC 
+    0x100000:Flags =:: export: MAP_FIXED_NOREPLACE
+    proc( Flags Flags -> Flags ) : alias: or_flags i32.or
+    proc( Flags Flags -> bool ) : alias: eq_flags i32.eq
+    proc( Flags Flags -> bool ) : alias: ne_flags i32.ne
+    overload: |  or_prot or_flags end
+    overload: == eq_prot eq_flags end
+    overload: != ne_prot ne_flags end
+  end
+  namespace: mremap
+    i32 =:: Flags
+    0x1:Flags      =:: MAYMOVE
+    0x2:Flags      =:: FIXED
+    0x4:Flags      =:: DONTUNMAP
+  end
+  proc(
+    ..ctype.void _ ptr.mut : addr
+    i64 : length
+    mmap.Protection : prot
+    mmap.Flags : flags
+    FileId : fd
+    i64 : offset
+  -> ..ctype.void _ ptr.mut ) : extern: export: sys_mmap
+  proc(
+    ..ctype.void _ ptr.mut : addr
+    i64 : length
+    mmap.Protection : prot
+  -> ..ctype.void _ ptr.mut ) : extern: export: sys_protect
+  proc(
+    ..ctype.void _ ptr.mut : addr
+    i64 : length
+  -> i64 ) : extern: export: sys_munmap
+  proc(
+    ..ctype.void _ ptr.mut : addr
+    i64 : length
+    i64 : newLength
+    mremap.Flags : flags
+    ..ctype.void _ ptr.mut : newAddr
+  -> i64 ) : extern: export: sys_mremap
+
+  
+  proc( i32 -> i32 ) : extern: export: sys_exit
+end
