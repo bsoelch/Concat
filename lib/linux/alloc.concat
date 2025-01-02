@@ -2,6 +2,9 @@ import array
 import arrayView
 import linux/syscalls
 
+## TODO consistent naming Cell/Block/Chunk
+## TODO? change bit order in chunkInfo? bit 0 <-> cell 0
+
 ## TODO? use different type for opaque pointer
 struct(
   ..ctype.void ptr.mut : mut: chunkStart
@@ -17,10 +20,11 @@ struct(
   ChunkHeader ptr.mut : mut: next
   ## ..type.align8
   ChunkHeader ptr.mut : mut: prev
-  i32 : mut: freeCells
-  i32 : mut: firstAvailable
-  i32 : mut: firstEmpty
-  i32 1 array : padding ## XXX? store info about chunk in header ( #freeCells, index of first completely unused cell )
+  ## TODO keep track of freeCells/firstEmpty
+  i32 : mut: freeCells ## number of free cells in this chunk
+  i32 : mut: firstAvailable ## index (in CellInfo table) of first available Cell
+  i32 : mut: firstEmpty ## cell index of first previouly unallocated cell
+  i32 1 array : padding ## XXX? store chunkType/cellCount/dataOffset in chunk
   ## i64 ... array : cellInfo
   ## padding
   ## Cell ... array : cells
@@ -211,8 +215,7 @@ union(
   i32 : resizeStart ## add/remove cells at start
   i32 : resizeEnd ## add/remove cells at end
 ) =:: ResizeType
-proc( i64 arrayView.mut : cellInfo i64 : cellInfoOffset i32 : cellIndexBit i32 : cellCount -> ) =>: unlinkCells
-## TODO? better name for procedure
+proc( i64 arrayView.mut : cellInfo i64 : cellInfoOffset i32 : cellIndexBit i32 : cellCount -> ) =>: freeCells
   cellIndexBit cellCount + 64 ..u<= if
     1:i64 cellCount << 1 - 64 cellIndexBit - cellCount - << =:: cellsMask
     cellInfo cellInfoOffset array.get
@@ -234,6 +237,7 @@ proc( i64 arrayView.mut : cellInfo i64 : cellInfoOffset i32 : cellIndexBit i32 :
     remaining 64 - remaining =
     nextCellInfoOffset 1 + nextCellInfoOffset =
   end
+  remaining 0 == if return end
   -1:i64 64 remaining - << =:: cellsMaskLow
   cellInfo nextCellInfoOffset array.get
     $ cellsMaskLow & cellsMaskLow == "freed cells have been allocated" assert
@@ -275,7 +279,7 @@ proc( CellHeader ptr.mut : cell ResizeType : resizeType -> CellHeader ptr.mut op
     end =:: clearOffset
     clearOffset 64 ..udiv =:: cellInfoOffset
     clearOffset 64 ..umod i32 cast =:: cellIndexBit
-    cellInfo cellInfoOffset cellIndexBit amount unlinkCells
+    cellInfo cellInfoOffset cellIndexBit amount freeCells
     ## shrink cell
     cellInfoOffset chunk .chunkStart [] .firstAvailable i64 cast.u < if
       cellInfoOffset i32 cast chunk .chunkStart [] .firstAvailable =
@@ -294,8 +298,62 @@ proc( CellHeader ptr.mut : cell ResizeType : resizeType -> CellHeader ptr.mut op
     newSize newHead [] .size =
     newHead optional.wrap return
   end
-  ## TODO try to grow cell
-  CellHeader ptr.mut optional.empty return
+  newSize cell [] .size - =:: newCells
+  resizeType .resizeEnd ?? if
+    cellIndex cell [] .size i64 cast.u +
+    $ chunkInfo chunk .chunkType i64 cast.u [] .cellCount i64 cast.u > if ..drop
+      CellHeader ptr.mut optional.empty return ## not enough cells
+    end
+  else
+    cellIndex newCells i64 cast.u < if
+      CellHeader ptr.mut optional.empty return ## not enough cells
+    end
+    cellIndex newCells i64 cast.u -
+  end =:: newCellsOffset
+  newCellsOffset 64 ..udiv =:: cellInfoOffset
+  newCellsOffset 64 ..umod i32 cast =:: cellIndexBit
+  newCells 64 cellIndexBit - <= if
+    1:i64 newCells << 1 - 64 cellIndexBit - newCells - << =:: cellMask
+    cellInfo cellInfoOffset array.get =:: prevCells
+    prevCells cellMask & ? if
+      CellHeader ptr.mut optional.empty return ## cells are blocked
+    end
+    prevCells cellMask | cellInfo cellInfoOffset array.set
+  else
+    -1:i64 cellIndexBit >>> =:: hiMask
+    cellInfo cellInfoOffset array.get =:: prevCellsHi
+    prevCellsHi hiMask & ? if
+      CellHeader ptr.mut optional.empty return ## cells are blocked
+    end
+    newCells cellIndexBit - =:: mut: remaining
+    cellInfoOffset 1 + =:: mut: nextIndex
+    while remaining 64 >= do
+      cellInfo nextIndex array.get ? if
+        CellHeader ptr.mut optional.empty return ## cells are blocked
+      end
+      nextIndex 1 + nextIndex =
+      remaining 64 - remaining =
+    end
+    -1:i64 64 remaining - << =:: lowMask
+    cellInfo nextIndex array.get =:: prevCellsLow
+    prevCellsLow lowMask & ? if
+      CellHeader ptr.mut optional.empty return ## cells are blocked
+    end
+    prevCellsHi hiMask | cellInfo cellInfoOffset array.set
+    prevCellsLow lowMask | cellInfo nextIndex array.set
+    cellInfoOffset 1 + while $ nextIndex < do =:: i
+      -1:i64 cellInfo i array.set
+    finally i 1 + end ..drop
+  end
+  resizeType .resizeEnd ?? if
+    newSize cell [] .size =
+    cell optional.wrap return
+  end
+  cell CellHeader _ ptr.mut cast! newCells -_ i64 cast.u []@ CellHeader ptr.mut cast! =:: newHead
+  cell [] .chunkStart newHead [] .chunkStart =
+  cell [] .chunkType newHead [] .chunkType =
+  newSize newHead [] .size =
+  newHead optional.wrap return
 end
 
 struct(
