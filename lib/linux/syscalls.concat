@@ -52,9 +52,9 @@ namespace: linux
   end
   namespace: mremap
     i32 =:: Flags
-    0x1:Flags      =:: MAYMOVE
-    0x2:Flags      =:: FIXED
-    0x4:Flags      =:: DONTUNMAP
+    0x1:Flags      =:: export: MAY_MOVE
+    0x2:Flags      =:: export: FIXED
+    0x4:Flags      =:: export: DONT_UNMAP
   end
   proc(
     ..ctype.void _ ptr.mut : addr
@@ -79,7 +79,7 @@ namespace: linux
     i64 : newLength
     mremap.Flags : flags
     ..ctype.void _ ptr.mut : newAddr
-  -> i64 ) : extern: export: sys_mremap
+  -> ..ctype.void _ ptr.mut ) : extern: export: sys_mremap
 
   
   proc( i32 -> i32 ) : extern: export: sys_exit
