@@ -7,13 +7,28 @@ import linux/syscalls
 
 ..type.align16 =:: export: MemoryValue ## XXX? move to core/ptrArithmetic
 
+i8 =:: ChunkType
+namespace: ChunkType
+  -1:ChunkType =:: noChunk
+  0:ChunkType =:: chunk48
+  1:ChunkType =:: chunk80
+  2:ChunkType =:: chunk208
+  3:ChunkType =:: chunk368
+  4:ChunkType =:: chunk656
+  5:ChunkType =:: chunk1072
+  6:ChunkType =:: chunk4128
+end
+
 struct(
   MemoryValue ptr.mut : mut: chunkStart ## ..type.alignPage ?
   ..type.align8
-  i32 : mut: chunkType ## XXX? remember alignment offset
+  ChunkType : mut: chunkType
+  i8 : padding
+  i16 : mut: cellIndex
   i32 : mut: size
 ) =:: export: CellHeader ## TODO only exported for testing purposes
 CellHeader ..types.stride 16 == "CellHeader has expected size" assert
+16:i32 =:: minAlignment
 -1:i32 =:: CELLSIZE_FREED
 128:i32 =:: MAX_CELL_COUNT
 
@@ -23,11 +38,10 @@ struct(
   ..type.align8
   ChunkHeader ptr.mut : mut: prev
   ..type.align8
-  ## TODO keep track of freeCells/firstEmpty
-  i32 : mut: freeCells ## number of free cells in this chunk
+  ## TODO keep track of firstEmpty
   i32 : mut: firstAvailable ## index (in CellInfo table) of first available Cell
   i32 : mut: firstEmpty ## cell index of first previouly unallocated cell
-  i32 1 array : padding ## XXX? store chunkType/cellCount/dataOffset in chunk
+  i32 2 array : padding ## XXX? store chunkType/cellCount/dataOffset in chunk
   ## i64 ... array : cellInfo
   ## padding
   ## Cell ... array : cells
@@ -46,17 +60,6 @@ struct( i16 : cellSize i16 : cellCount i16 : dataOffset ) =:: ChunkCellSize
 } =:: chunkInfo
 ## XXX? are rootChunks zero-initialized
 ChunkHeader ptr.mut chunkInfo ..length array : mut: rootChunks
-i8 =:: ChunkType
-namespace: ChunkType
-  -1:ChunkType =:: noChunk
-  0:ChunkType =:: chunk48
-  1:ChunkType =:: chunk80
-  2:ChunkType =:: chunk208
-  3:ChunkType =:: chunk368
-  4:ChunkType =:: chunk656
-  5:ChunkType =:: chunk1072
-  6:ChunkType =:: chunk4128
-end
 struct(
   ChunkHeader ptr.mut : chunkStart
   ChunkType : chunkType
@@ -100,25 +103,29 @@ proc( MemoryValue _ ptr.mut : addr i64 : size -> ) =>: unmapMemory
   linux.sys_munmap 0 == "munmap successfull" assert
 end
 
-proc( i64 : size -> CellHeader ptr.mut ) =>: allocLargeChunk
+proc( i64 : size i32 : alignment -> CellHeader ptr.mut ) =>: allocLargeChunk
   size PAGE_SIZE 1 - + PAGE_SIZE 1 - ~ & =:: pageAlignedSize
-  ## XXX? additional alignment
-  pageAlignedSize mapMemory CellHeader ptr.mut cast! =:: cellData
-    cellData MemoryValue ptr.mut cast! cellData [] .chunkStart =
-    ChunkType.noChunk i32 cast.s cellData [] .chunkType =
+  pageAlignedSize mapMemory CellHeader ptr.mut cast! =:: cellRoot
+  cellRoot i64 cast! alignment i64 cast.u 1 - | 1 + CellHeader ..types.stride - CellHeader ptr.mut cast! =:: cellData
+    cellRoot MemoryValue ptr.mut cast! cellData [] .chunkStart =
+    ChunkType.noChunk cellData [] .chunkType =
     pageAlignedSize PAGE_SIZE / i32 cast cellData [] .size =
   cellData return
 end
-proc( CellHeader ptr.mut : cell i64 : newSize -> CellHeader ptr.mut ) =>: reallocateLargeChunk
+## XXX? reallocate with fixed alignment
+proc( CellHeader ptr.mut : cell i64 : newSize i32 : alignment -> CellHeader ptr.mut ) =>: reallocateLargeChunk
   cell [] .chunkStart cell MemoryValue _ ptr.mut cast! <= "cell comes after start of memory region" assert
-  cell [] .chunkStart i64 cast! cell [] .size i64 cast.u + cell i64 cast! > "cell with page" assert
+  cell [] .chunkStart i64 cast! cell [] .size i64 cast.u + cell i64 cast! > "cell within page" assert
   newSize PAGE_SIZE 1 - + PAGE_SIZE 1 - ~ & =:: alignedNewSize
   alignedNewSize PAGE_SIZE / =:: newPageCount
   newPageCount cell [] .size i64 cast.u == if cell return end
   cell [] .chunkStart
     cell [] .size i64 cast.u PAGE_SIZE *
     alignedNewSize
-  remapMemory CellHeader ptr.mut cast! =:: mut: newCellData
+  remapMemory CellHeader ptr.mut cast! =:: mut: newCellRoot
+  newCellRoot
+    i64 cast! alignment i64 cast.u 1 - | 1 + CellHeader ..types.stride -
+  CellHeader ptr.mut cast! =:: newCellData
     newCellData MemoryValue ptr.mut cast! newCellData [] .chunkStart =
     newPageCount i32 cast newCellData [] .size =
   newCellData return
@@ -157,9 +164,8 @@ proc( ChunkInfo : chunk -> i64 arrayView.mut ) =>: getCellInfo
   array.createMutable
 end
 
-## XXX? add parameter for alignment
-## XXX? add parameter for requiring cleared memory
-proc( ChunkInfo : chunk i32 : count -> CellHeader ptr.mut optional ) =>: allocateBlock
+## XXX? use parameter for requiring cleared memory
+proc( ChunkInfo : chunk i32 : count i32 : alignment bool : clearMemory -> CellHeader ptr.mut optional ) =>: allocateBlock
   count 0 > "at least one cell" assert
   count 16 >= if
     count 65 <= "count at most 65" assert ## cannot detect higher counts
@@ -211,34 +217,33 @@ proc( ChunkInfo : chunk i32 : count -> CellHeader ptr.mut optional ) =>: allocat
       chunk .chunkStart i8 _ ptr.mut cast!
          chunkData .dataOffset i64 cast.u +
          cellIndex chunkData .cellSize i64 cast.u * +
-      CellHeader ptr.mut cast! =:: cellPtr
-        chunk .chunkStart MemoryValue ptr.mut cast! cellPtr [] .chunkStart =
-        chunk .chunkType i32 cast.u cellPtr [] .chunkType =
-        count cellPtr [] .size =
+      CellHeader ptr.mut cast! =:: cellRoot
+      cellRoot i64 cast! alignment i64 cast.u 1 - | 1 + CellHeader ..types.stride - CellHeader ptr.mut cast! =:: cellPtr
+      cellPtr i64 cast! cellRoot i64 cast! - chunkData .cellSize i64 cast.u >= if
+        cellPtr i64 cast! cellRoot i64 cast! - chunkData .cellSize i64 cast.u ..udiv =:: nEmpty
+        cellInfo i 64 cellBitIndex - nEmpty i32 cast freeCells ## XXX! consitent order for cellBits
+        ## XXX? truncate end to minimum neccessary size
+        nEmpty i32 cast
+      else 0 end =:: nEmpty
+      chunk .chunkStart MemoryValue ptr.mut cast! cellPtr [] .chunkStart =
+      chunk .chunkType cellPtr [] .chunkType =
+      cellIndex i32 cast nEmpty + i16 cast.u cellPtr [] .cellIndex =
+      count nEmpty - cellPtr [] .size =
       cellPtr optional.wrap return
     end
   finally i 1 + end ..drop
   firstAvailable i32 cast chunk .chunkStart [] .firstAvailable =
   CellHeader ptr.mut optional.empty return
 end
-proc( ChunkType : chunkType i32 : count -> CellHeader ptr.mut optional ) =>: searchAvailableCells
+proc( ChunkType : chunkType i32 : count i32 : alignment bool : clearMemory -> CellHeader ptr.mut optional ) =>: searchAvailableCells
   rootChunks chunkType i32 cast.u [] ChunkHeader ptr.mut cast!
     while $ isValidPtr do =:: current
-      current chunkType ChunkInfo new count allocateBlock
+      current chunkType ChunkInfo new count alignment clearMemory allocateBlock
         $ optional.hasData if return end
       ..drop
     finally current [] .next end
   ..drop
   CellHeader ptr.mut optional.empty return
-end
-proc( CellHeader ptr.mut : cell ChunkInfo : chunk -> i64 ) =>: computeCellIndex
-  chunkInfo chunk .chunkType i32 cast.u [] =:: cellChunkInfo
-  cell i64 cast!
-    cell [] .chunkStart i64 cast! cellChunkInfo .dataOffset i64 cast.u + -
-    $ cellChunkInfo .cellSize i64 cast.u ..umod ? if
-      ..unreachable ## missaligned cell
-    end
-  cellChunkInfo .cellSize i64 cast.u ..udiv return
 end
 union(
     _ : free ## completely free cell
@@ -293,9 +298,9 @@ proc( CellHeader ptr.mut : cell ResizeType : resizeType -> CellHeader ptr.mut op
     cell optional.wrap return
   end
   cell [] .chunkStart ChunkHeader ptr.mut cast!
-    cell [] .chunkType ChunkType cast
+    cell [] .chunkType
   ChunkInfo new =:: chunk
-  cell chunk computeCellIndex =:: cellIndex
+  cell [] .cellIndex i64 cast.u =:: cellIndex
   cellIndex cell [] .size i64 cast.u + chunkInfo chunk .chunkType i32 cast.u [] .cellCount i64 cast.u > if
     ..unreachable ## invalid cell offset
   end
@@ -406,45 +411,59 @@ proc( CellHeader ptr.mut : head -> MemoryValue ptr.mut ) =>: getCellMemory
     1 []@
   MemoryValue ptr.mut cast!
 end
-proc( i64 : size -> CellHeader ptr.mut ) =>: allocateCell
+proc( i64 : size i32 : alignment bool : clearMemory -> CellHeader ptr.mut ) =>: allocateCell
   size 15:i64 + 15:i64 ~ & =:: alignedSize
   cellSizes@ cellSizes ..length cellInfoCmp@ alignedSize array.firstBelow =:: cellSizeIndex
   cellSizes cellSizeIndex [] =:: cellSize
   cellSize .chunkType ChunkType.noChunk == if
-    size allocLargeChunk return
+    size alignment allocLargeChunk return
   end
   ## try finding matching chunk sequence in chunk
   rootChunks cellSize .chunkType i32 cast.u [] =:: root
-  cellSize .chunkType cellSize .cellCount i32 cast.u searchAvailableCells $ optional.hasData if
+  cellSize .chunkType cellSize .cellCount i32 cast.u alignment clearMemory searchAvailableCells $ optional.hasData if
     .data return
   end ..drop
   ## check for chunk sequence in next larger size
   cellSizeIndex 1 + cellSizes ..length < if
     cellSizes cellSizeIndex 1 + [] =:: nextSize
     nextSize .chunkType ChunkType.noChunk == if
-      size allocLargeChunk return
+      size alignment allocLargeChunk return
     end
     rootChunks nextSize .chunkType i32 cast.u [] =:: nextRoot
-    nextSize .chunkType nextSize .cellCount i32 cast.u searchAvailableCells $ optional.hasData if
+    nextSize .chunkType nextSize .cellCount i32 cast.u alignment clearMemory searchAvailableCells $ optional.hasData if
       .data return
     end ..drop
   end
   ## allocate cells in a new chunk
   cellSize .chunkType createChunk =:: newChunk
-  newChunk cellSize .cellCount i32 cast.u allocateBlock .data return
+  newChunk cellSize .cellCount i32 cast.u alignment clearMemory allocateBlock .data return
 end
-## TODO add: allignedAlloc, clearedAlloc, realloc, (?realloc_downwards)
 proc( i64 : size -> MemoryValue ptr.mut ) =>: export: allocate
   size 0 == if ## empty alloc -> nullPtr
     0 MemoryValue ptr.mut cast! return
   end
-  size CellHeader ..types.stride + allocateCell getCellMemory
+  size CellHeader ..types.stride + minAlignment false allocateCell getCellMemory
 end
+proc( i64 : size i32 : alignment -> MemoryValue ptr.mut ) =>: export: aligned_allocate
+  alignment alignment -_ & alignment == "alignment is power of two" assert
+  size 0 == if ## empty alloc -> nullPtr
+    0 MemoryValue ptr.mut cast! return
+  end
+  CellHeader ..types.stride alignment i64 cast.u i64.max =:: cellAlignment
+  size cellAlignment + alignment minAlignment i32.max false allocateCell getCellMemory
+end
+proc( i64 : size -> MemoryValue ptr.mut ) =>: export: clearedAllocate
+  size 0 == if ## empty alloc -> nullPtr
+    0 MemoryValue ptr.mut cast! return
+  end
+  size CellHeader ..types.stride + minAlignment true allocateCell getCellMemory
+end
+## XXX? aligned cleared allocated
 proc( CellHeader ptr.mut : cell -> ) =>: freeCell
-  cell [] .chunkType ChunkType.noChunk i32 cast.s == if
+  cell [] .chunkType ChunkType.noChunk == if
     cell freeLargeChunk return
   end
-  cell [] .chunkType 0 < or cell [] .chunkType i64 cast.u chunkInfo ..length >= if
+  cell [] .chunkType i64 cast.u chunkInfo ..length >= if
     ..unreachable ## invalid chunk type
   end
   ## resizeBlock
@@ -458,6 +477,8 @@ proc( MemoryValue ptr.mut : p -> ) =>: export: free_ ## TODO remove _ once proce
   p i64 cast! 0 == if return end ## ignore free of null-pointer
   p getCellHeader freeCell
 end
+## TODO correctly handle reallocation of aligned memory
+## TODO aligned_realloc
 proc( MemoryValue ptr.mut : p i64 : newSize -> MemoryValue ptr.mut ) =>: export: reallocate
   p i64 cast! 0 == if
     newSize allocate return
@@ -466,21 +487,24 @@ proc( MemoryValue ptr.mut : p i64 : newSize -> MemoryValue ptr.mut ) =>: export:
     0 MemoryValue ptr.mut cast! return
   end
   p getCellHeader =:: oldHeader
-  oldHeader [] .chunkType switch
-    ChunkType.noChunk case PAGE_SIZE break
-    ChunkType.chunk48 case 48:i64 break
-    ChunkType.chunk80 case 80:i64 break
-    ChunkType.chunk208 case 208:i64 break
-    ChunkType.chunk368 case 368:i64 break
-    ChunkType.chunk656 case 656:i64 break
-    ChunkType.chunk1072 case 1072:i64 break
-    ChunkType.chunk4128 case 4128:i64 break
-    default ..unreachable ## unknown cell size
+  oldHeader [] .chunkType ChunkType.noChunk == if
+    PAGE_SIZE
+  else
+    oldHeader [] .chunkType switch
+      ChunkType.chunk48 case 48:i64 break
+      ChunkType.chunk80 case 80:i64 break
+      ChunkType.chunk208 case 208:i64 break
+      ChunkType.chunk368 case 368:i64 break
+      ChunkType.chunk656 case 656:i64 break
+      ChunkType.chunk1072 case 1072:i64 break
+      ChunkType.chunk4128 case 4128:i64 break
+      default ..unreachable ## unknown cell size
+    end
   end =:: oldCellSize
   newSize CellHeader ..types.stride + =:: newSizeWithHeader
   newSizeWithHeader 32 + oldCellSize 4 / >= and newSizeWithHeader oldCellSize MAX_CELL_COUNT i64 cast.u * <= if
-    oldHeader [] .chunkType ChunkType.noChunk i32 cast.s == if
-      oldHeader newSizeWithHeader reallocateLargeChunk getCellMemory return
+    oldHeader [] .chunkType ChunkType.noChunk == if
+      oldHeader newSizeWithHeader minAlignment reallocateLargeChunk getCellMemory return
     end
     newSizeWithHeader oldCellSize 1 - + oldCellSize ..udiv i32 cast =:: newCellCount
     ## try to resize pointer in place
@@ -497,7 +521,7 @@ proc( MemoryValue ptr.mut : p i64 : newSize -> MemoryValue ptr.mut ) =>: export:
   p free_
   newP return
 end
-## TODO? realloc_inPlace (reallocate without moving, error if move neccessary) reallocate_downwards
+## TODO? realloc_inPlace (reallocate without moving, error if move neccessary), reallocate_downwards
 
 ## helper procedures for testing purposes TODO remove once implementation is stable
 proc( MemoryValue ptr.mut : mem -> i64 arrayView i64 ) =>: export: getChunkCellInfo
@@ -505,14 +529,14 @@ proc( MemoryValue ptr.mut : mem -> i64 arrayView i64 ) =>: export: getChunkCellI
     i64 array.empty -1:i64 return
   end
   mem getCellHeader =:: cellHeader
-  cellHeader [] .chunkType ChunkType.noChunk i32 cast.s == if
+  cellHeader [] .chunkType ChunkType.noChunk == if
     i64 array.empty -1:i64 return
   end
   cellHeader [] .chunkStart ChunkHeader ptr.mut cast!
-    cellHeader [] .chunkType ChunkType cast
+    cellHeader [] .chunkType
   ChunkInfo new =:: cellChunkInfo
   cellChunkInfo getCellInfo array.freeze
-  cellHeader cellChunkInfo computeCellIndex 64 ..udiv
+  cellHeader [] .cellIndex i64 cast.u 64 ..udiv
 end
 
 
