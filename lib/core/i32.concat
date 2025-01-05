@@ -98,6 +98,17 @@ namespace: i32
       end
     x 1 - i32 cast + return
   end
+  ## position of the lowest nonzero-bit (zero-indexed), returns 0 if the input is zero
+  proc( i32 -> i32 ) =>: export: lowestSetBit
+    $ -_ & =:: lowBit ## isolate lowest bit
+    0
+      lowBit 0xffff'0000:i32 & ? if 16 + end
+      lowBit 0xff00'ff00:i32 & ? if  8 + end
+      lowBit 0xf0f0'f0f0:i32 & ? if  4 + end
+      lowBit 0xcccc'cccc:i32 & ? if  2 + end
+      lowBit 0xaaaa'aaaa:i32 & ? if  1 + end
+    return
+  end ## TODO check algorithm, ? return -1 if input is zero
 end
 
 overload: export: -_     i32.neg  end
