@@ -898,19 +898,16 @@ namespace: allocator.linux
       0 MemoryValue ptr.mut cast! return
     end
     p getCellHeader =:: oldHeader
-    oldHeader [] .chunkType ChunkType.noChunk == if
-      PAGE_SIZE
-    else
-      oldHeader [] .chunkType switch
-        ChunkType.chunk48 case 48:i64 break
-        ChunkType.chunk80 case 80:i64 break
-        ChunkType.chunk208 case 208:i64 break
-        ChunkType.chunk368 case 368:i64 break
-        ChunkType.chunk656 case 656:i64 break
-        ChunkType.chunk1072 case 1072:i64 break
-        ChunkType.chunk4128 case 4128:i64 break
-        default ..unreachable ## unknown cell size
-      end
+    oldHeader [] .chunkType switch
+      ChunkType.chunk48 case 48:i64 break
+      ChunkType.chunk80 case 80:i64 break
+      ChunkType.chunk208 case 208:i64 break
+      ChunkType.chunk368 case 368:i64 break
+      ChunkType.chunk656 case 656:i64 break
+      ChunkType.chunk1072 case 1072:i64 break
+      ChunkType.chunk4128 case 4128:i64 break
+      ChunkType.noChunk case PAGE_SIZE break
+      default ..unreachable ## unknown cell size
     end =:: oldCellSize
     newSize
       p i64 cast! oldHeader getCellRoot i64 cast! - +
