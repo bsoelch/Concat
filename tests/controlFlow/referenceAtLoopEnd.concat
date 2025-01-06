@@ -1,0 +1,13 @@
+( -> type ) =>: link
+  struct(
+    i32 : val
+    link ptr : next
+  )
+end
+
+proc( -> ) =>: main
+  { 1 : val { 2 : val 0 link ptr cast! : next } link ptr cast : next } link =: l
+  l@ while $ i64 cast! 0 != do =:: x
+    x [] .next
+  end ..drop
+end
