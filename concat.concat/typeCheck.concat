@@ -3425,7 +3425,7 @@ proc(
             return
           end
           currentBlock? .data =:: currentBlock
-          false 1 op .pos state clearReferences
+          false 0 op .pos state clearReferences
           currentBlock [] .While@ =:: whileBlock
           true whileBlock [] .hasFinally =
           whileBlock [] .blockId op .val .block .blockId =
