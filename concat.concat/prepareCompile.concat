@@ -388,7 +388,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   end ..drop
   0:i64 while ..dup program [] .procedures .length < do =:: i
     program [] .procedures i list.at .data =:: currentProc
-    currentProc [] .implementation .code ?? ! if
+    currentProc [] .implementation .code ?? ! or currentProc [] .isStatic if
       i 1 + continue
     end
     currentProc [] .fileId context [] .currentFile =
