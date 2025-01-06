@@ -1,0 +1,1 @@
+duplicate label 65535 in switch-case ( previous occurence at duplicateSwitchLabel.concat:3:5 ) at duplicateSwitchLabel.concat:4:5

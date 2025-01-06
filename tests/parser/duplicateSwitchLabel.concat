@@ -1,0 +1,7 @@
+proc( -> ) =>: main
+  -1:i16 switch
+    -1:i16 case break
+    0xffff case break
+    default ..unreachable
+  end
+end

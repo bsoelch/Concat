@@ -1465,7 +1465,7 @@ end
 proc(
   BlockId : switchId
   i64 : switchPosition
-  ConstValue : label
+  ConstValue : label0
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> ) =>: newSwitchLabel
@@ -1478,14 +1478,24 @@ proc(
   program [] .switchData
     switchId i64 cast.u list.at .data
   =:: switchData
+  label0
+    $ .Int ?? and ## truncate constant to correct number of bits (switch-lables are treated as unsigned numbers)
+        switchData [] .switchType =:: switchType
+        switchType typeContext types.isIntOrChar and
+        switchType typeContext types.sizeOf .fixed ?? and
+        switchType typeContext types.sizeOf .fixed =:: size
+        size 8 < if
+      .Int 1:i64 size 8 * << 1 - & ConstValue .Int
+    end
+  =:: label
   0:i64 while ..dup switchData [] .labels .length < do =:: i
+    switchData [] .labels i list.at .data =:: labelData
     ## constantEquals
-      switchData [] .labels i list.at .data [] .value
+      labelData [] .value
       label
       labelContext
     constantEquals if
       "duplicate label " sb.wrap
-        ## TODO? print position of previous occurrence
         switchData [] .switchType typeContext types.isTaggedUnion if
           ## appendLabelName
             switchData [] .switchType
@@ -1493,9 +1503,11 @@ proc(
             labelContext
           sb.appendLabelName
         else
-          label typeContext sb.appendConstant
+          label0 typeContext sb.appendConstant
         end
-        " in switch-case" sb.appendS
+        " in switch-case ( previous occurence at " sb.appendS
+        labelData [] .pos sb.appendPos
+        " )" sb.appendS
       pos errors appendError
     end
     i 1 +
