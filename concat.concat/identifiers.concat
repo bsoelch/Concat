@@ -545,13 +545,17 @@ namespace: id
       LABEL_ID_NONE ID_NONE_DATA true return
     end
     flags FLAG_SHADDOW & ? ! if
-      name fileId context findIdentifierByName ! if
-        "declaration of identifier \"" sb.wrap
-          label labelContext sb.appendLabelName
-          '\"' sb.appendC
-        declaredAt errors appendWarning
-        "shadows previous declaration " sb.wrap ..over [] .declaredAt errors appendInfo
-      end ..drop
+      name fileId context findIdentifierByName ! if =:: shaddowed
+        ## allow shaddoing for labels
+        ## TODO? only allow shaddowed labels in initializers
+        idType .LABEL ?? ! or shaddowed [] .idType .LABEL ?? ! if
+          "declaration of identifier \"" sb.wrap
+            label labelContext sb.appendLabelName
+            '\"' sb.appendC
+          declaredAt errors appendWarning
+          "shadows previous declaration " sb.wrap shaddowed [] .declaredAt errors appendInfo
+        end
+      else ..drop end
     end
     mScope [] .identifierNames@
       idName
