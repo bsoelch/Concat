@@ -2888,7 +2888,29 @@ proc(
       ## appendIndexCheck
         size switch
           int case size .int IntValue .constant break
-          genericArg case size .genericArg IntValue .autoArg break
+          genericArg case
+            size .genericArg idContext id.getIdentifier
+              ! "genericId is identifier" assert
+            =:: genericIdData
+            genericIdData [] .valueType =:: sizeType
+            sizeType typeContext types.isInt "sizeType is integer" assert
+            sizeType context toValType .I64 ?? if
+              size .genericArg IntValue .autoArg
+            else ## extend size to 64-bits
+              context nextTmpId =:: tmpId
+              "%t" sb.appendS tmpId sb.appendI
+              sizeType typeContext types.sizeOf .fixed 4 == if
+                " =l extuw " sb.appendS
+              else
+                " =l ext" sb.appendS
+                sizeType StorageType .ULOAD pos context sb.appendTypeNameQBE
+                ' ' sb.appendC
+              end
+              size .genericArg pos context appendGenericArg
+              '\n' sb.appendC
+              tmpId IntValue .tmpId
+            end
+            break
         end
         targetId
         pos
