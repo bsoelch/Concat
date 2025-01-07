@@ -2481,7 +2481,7 @@ namespace: types
     t0 context unwrapNamed .genericType ?? return
   end
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
-    t0 context unwrapNamed =:: t
+    t0 context unwrapNamedKeepGenerated =:: t
     t switch
       undefined empty primitiveType autoType arrayIndex cType intLiteral align case
         false return
@@ -2513,7 +2513,16 @@ namespace: types
       struct enum union procIn procOut initializer case
         t context compositeData .data [] .flags COMP_FLAG_STATIC_ARGS & ? return
       generatedType case
-        false return ## TODO check if type contains generic
+        context [] .generatedTypes t .generatedType i64 cast.u list.at .data =:: genType
+        genType [] .generated context containsGeneric if ## XXX? is checking generatedType neccessary
+          true return
+        end
+        genType .arguments [] .length for =:: i
+          genType [] .arguments i array.get .GenericArg ?? if
+            true return
+          end
+        end
+        false return
       procedure case
         context [] .procTypes
           t .procedure i64 cast

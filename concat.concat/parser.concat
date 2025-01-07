@@ -1805,7 +1805,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: idType
       fileState state nextWord fileState state
         ## make pre-declared variables mutable by default
-        isInit allowImmutableDeclaration | if id.FLAG_NONE else id.FLAG_MUTABLE end
+        isInit or allowImmutableDeclaration if id.FLAG_NONE else id.FLAG_MUTABLE end
       readLabelAddFlags =:: mut: label
       label labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_ALIAS & ? =:: isAlias
