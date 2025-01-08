@@ -3591,6 +3591,8 @@ proc(
   labelHash@ labelEq@ 256 Constant map.create newVariables [] =
   newVariables optional.wrap context [] .localVariables =
   ## process procedure arguments
+  false =:: mut: hasGenericArg
+  false =:: mut: hasNonStaticGenericArg
   0:i64 while $ args .length < do =:: i
     argOffset stackOffset >= if
       "not enough arguments for procedure " sb.wrap
@@ -3659,6 +3661,16 @@ proc(
     end
     context [] .stack argOffset list.at .data =:: value
     context [] .stackInfo argOffset list.at .data =:: valueInfo
+    value [] .GenericArg ?? if
+      true hasGenericArg =
+      isTypeGenerator and
+          value [] .GenericArg labelContext id.labelFlags id.FLAG_STATIC & ? ! if
+        "Arguments for Type-generators should be static" sb.wrap
+        valueInfo [] .pushedAt errors appendError
+      end
+    else value [] .TypeId ?? and value [] .TypeId typeContext types.isGeneric _if
+      true hasGenericArg =
+    end
     argOffset 1 + argOffset =
     label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
       context [] .stack
@@ -3682,6 +3694,29 @@ proc(
   finally
     i 1 +
   end ..drop
+  ## don't evaluate type-generator for generic arguments
+  isTypeGenerator and hasGenericArg if
+    ## initializeGeneratedType
+      procName
+      context [] .stack argsOffset nArgs list.slice
+      Type .undefined
+      typeContext
+      constContext
+    types.initializeGeneratedType =:: generatorType
+    argsOffset context truncateStack
+    ## pushValue
+      generatorType ConstValue .TypeId
+      types.primitive.TYPE
+      pos
+    context pushValue
+    context [] .localVariables .data map.free
+    prevVariables context [] .localVariables =
+    context [] .localMemory offset mixedArena.reset context [] .localMemory =
+    context [] .openBlocks
+      prevBlocks list.setLength
+    context [] .openBlocks =
+    false return
+  end
   procData [] .implementation .code@ =:: codeImpl
   implId 0 >= if
     program [] .progFiles
@@ -3761,7 +3796,7 @@ proc(
   procData [] .fileId context [] .currentFile =
   context [] .evalType =:: prevType
   ## change interpreter type when evaluating call
-  procName labelContext id.labelFlags id.FLAG_STATIC & ? if
+  procData [] .isStatic if
     implId -1 == "static procedure has implId -1" assert
     ## XXX? seperate interpreter type code in static procedure?
     InterpreterType .GLOBAL

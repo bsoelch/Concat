@@ -2514,11 +2514,11 @@ namespace: types
         t context compositeData .data [] .flags COMP_FLAG_STATIC_ARGS & ? return
       generatedType case
         context [] .generatedTypes t .generatedType i64 cast.u list.at .data =:: genType
-        genType [] .generated context containsGeneric if ## XXX? is checking generatedType neccessary
-          true return
-        end
+        ## a generatedType is generic if one of its arguments is generic
         genType .arguments [] .length for =:: i
-          genType [] .arguments i array.get .GenericArg ?? if
+          genType [] .arguments i array.get =:: arg
+          ConstValue ..length 23 == "no new constants" assert
+          arg .GenericArg ?? or arg .TypeId ?? and arg .TypeId context containsGeneric if
             true return
           end
         end
