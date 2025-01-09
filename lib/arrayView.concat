@@ -54,8 +54,7 @@ namespace: array
 
   proc( i64 : index i64 : length -> ) =>: checkIndex
     index 0 < or index length >= if
-      ## TODO error handling
-      ..unreachable
+      "array index outside range" ..panic
     end
   end
   proc( type : auto: T T arrayView : elts i64 : index -> T ) =>: export: get_64
@@ -263,7 +262,7 @@ namespace: array
       end
       i 1 +
     end ..drop
-    ..unreachable
+    ..unreachable ## TODO! is this realy unreachable
   end
 
   ## first n characters

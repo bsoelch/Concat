@@ -137,8 +137,7 @@ namespace: list
     i64 : newLength
   -> T list ) =>: export: setLength
     newLength 0 < if
-      ## TODO error handling
-      ..unreachable
+      "negative new length" ..panic
     end
     src =:: mut: l
     l
@@ -161,8 +160,7 @@ namespace: list
     i64 : index
   -> T ) =>: export: get_64
     index 0 < or index elts .length >= if
-      ## TODO error handling
-      ..unreachable
+      "list index outside range" ..panic
     end
     elts .data index [] return
   end
@@ -204,8 +202,7 @@ namespace: list
     i64 : index
   -> ) =>: export: set_64
     index 0 < index elts .length >= | if
-      ## TODO error handling
-      ..unreachable
+      "list index outside range" ..panic
     end
     elt elts .data index [] =
   end
@@ -353,8 +350,7 @@ namespace: list
     T list : elts0
   -> T list T ) =>: export: pop
     elts0 .length 0 <= if
-      ## TODO error handling
-      ..unreachable
+      "pop from empty list" ..panic
     end
     elts0 =:: mut: elts
     elts .length 1 - elts .length =

@@ -46,7 +46,7 @@ namespace: mem
     ..ctype.void _ ptr.mut : p
   -> ..ctype.void _ ptr.mut ) =>: checkPtr
     p c.nullPtr == if ## check for null-ptr
-      ..unreachable ## TODO handle error
+      "unexpected null-pointer" ..panic
     end
     p return
   end
