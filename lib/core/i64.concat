@@ -144,6 +144,22 @@ namespace: i64
     ! "umul2 does not overflow" assert
     hi low return
   end
+  proc( i64 : a i64 : b -> i64 i64 ) =>: export: smul2
+    a i32.MASK &  i64 =: aLow
+    a 32 >> i64 =: aHi
+    b i32.MASK &  i64 =: bLow
+    b 32 >> i64 =: bHi
+    aLow bLow * =:: x00
+    aLow bHi  * =:: x01
+    aHi  bLow * =:: x10
+    aHi  bHi  * =:: x11
+    x01 x10 + =:: mid
+    false
+      x00 mid 32 << addc =:: low
+      x11 mid 32 >>> addc =:: hi
+    ! "umul2 does not overflow" assert
+    hi low return
+  end
 end
 
 overload: export: -_     i64.neg  end
