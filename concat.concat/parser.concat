@@ -893,11 +893,11 @@ proc(
     else ..dup "..ctype.double" string.wrap string.eq _if
       types.ctype.DOUBLE fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else ..dup "..ctype.struct*" string.wrap string.eq _if
-      types.ctype.STRUCT_PTR fileState [] .wordStart newTypeConst  state pushConst
+    else ..dup "..ctype.struct" string.wrap string.eq _if
+      types.ctype.STRUCT fileState [] .wordStart newTypeConst  state pushConst
       true return
-    else ..dup "..ctype.union*" string.wrap string.eq _if
-      types.ctype.UNION_PTR fileState [] .wordStart newTypeConst  state pushConst
+    else ..dup "..ctype.union" string.wrap string.eq _if
+      types.ctype.UNION fileState [] .wordStart newTypeConst  state pushConst
       true return
     else ..dup "..type.align2" string.wrap string.eq _if
       2 Type .align fileState [] .wordStart newTypeConst  state pushConst

@@ -36,7 +36,7 @@ namespace: io
   overload: |  OpenMode.or     end
   overload: ?  OpenMode.toBool end
 
-  ..ctype.struct* =:: export: FILE ## XXX ? wrapper type
+  ..ctype.struct ptr.mut =:: export: FILE ## XXX ? wrapper type
 end
 
 namespace: c
