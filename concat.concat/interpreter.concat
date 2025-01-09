@@ -2147,7 +2147,11 @@ proc(
           program [] .procedures
             calledProc .procId i64 cast list.at .data
           =:: calledProcData
-          procId -1:i64 calledProc .autoArgs op [] .pos context evaluateCall wrapResult return
+          procId
+            calledProc .implementationId
+            calledProc .autoArgs
+            true
+          op [] .pos context evaluateCall wrapResult return
         LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
           context [] .localVariables optional.isEmpty if
             "missing local variables " sb.wrap
@@ -2244,6 +2248,7 @@ proc(
       callInfo [] .procId
         callInfo [] .implementationId
         callInfo [] .autoArgs
+        false
       op [] .pos context evaluateCall wrapResult return
     initializeId autoTypedInitializeId case
       op [] .val .initializeId ?? if
@@ -3492,6 +3497,7 @@ proc(
   ProcId : procId
   i64 : implId
   ConstValue arrayView : autoArgs
+  bool : consumeStaticArgs
   FilePosition : pos
   InterpreterContext ptr.mut : context
 ->
@@ -3519,7 +3525,9 @@ proc(
     end
   =:: nStaticArgs
   inType typeContext types.compositeElts =:: args
-  args .length autoArgs .length - nStaticArgs - =:: nArgs
+  args .length autoArgs .length -
+    consumeStaticArgs ! if nStaticArgs - end
+  =:: nArgs
   procData [] .implementation .builtIn ?? if
     implId -1:i64 != if
       "generic built-ins are not supported" sb.wrap
@@ -3594,19 +3602,6 @@ proc(
   false =:: mut: hasGenericArg
   false =:: mut: hasNonStaticGenericArg
   0:i64 while $ args .length < do =:: i
-    argOffset stackOffset >= if
-      "not enough arguments for procedure " sb.wrap
-        procName labelContext sb.appendLabelName
-      pos errors appendError
-      stackOffset context truncateStack
-      context [] .localVariables .data map.free
-      prevVariables context [] .localVariables =
-      context [] .localMemory offset mixedArena.reset context [] .localMemory =
-      context [] .openBlocks
-        prevBlocks list.setLength
-      context [] .openBlocks =
-      true return
-    end
     inType i typeContext types.compositeGetLabel =:: label
     label labelContext id.labelFlags =:: labelFlags
     labelFlags id.FLAG_AUTO & ? if
@@ -3642,7 +3637,8 @@ proc(
       end
       continue
     end
-    procData [] .isStatic ! and labelFlags id.FLAG_STATIC & ? if
+    consumeStaticArgs ! and procData [] .isStatic ! and labelFlags id.FLAG_STATIC & ? if
+      implId 0 >= "implId is not negative" assert
       procData .implementation .code [] .implementations
         implId list.at .data
       [] .staticArgs staticArgOffset array.get =:: value
@@ -3658,6 +3654,19 @@ proc(
       map.put ..drop
       staticArgOffset 1 + staticArgOffset =
       continue
+    end
+    argOffset stackOffset >= if
+      "not enough arguments for procedure " sb.wrap
+        procName labelContext sb.appendLabelName
+      pos errors appendError
+      stackOffset context truncateStack
+      context [] .localVariables .data map.free
+      prevVariables context [] .localVariables =
+      context [] .localMemory offset mixedArena.reset context [] .localMemory =
+      context [] .openBlocks
+        prevBlocks list.setLength
+      context [] .openBlocks =
+      true return
     end
     context [] .stack argOffset list.at .data =:: value
     context [] .stackInfo argOffset list.at .data =:: valueInfo

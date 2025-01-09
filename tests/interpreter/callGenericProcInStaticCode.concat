@@ -1,0 +1,9 @@
+proc( i32 : x i32 : static: y -> i32 ) =>: testStaticArg x y + end
+
+proc( -> ) =>: static: test
+  1 1 testStaticArg ..drop
+end
+
+proc( -> ) =>: main
+  test
+end

@@ -413,6 +413,7 @@ proc(
     calledProc .procId
     calledProc .implementationId
     calledProc .autoArgs
+    false
     pos
     interpreter
   evaluateCall if
