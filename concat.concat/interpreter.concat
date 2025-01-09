@@ -2755,6 +2755,18 @@ proc(
         op [] .pos errors appendError
       end
       EvalResult .Ok return
+    panic panicWithMessage case
+      op [] .val .panic ?? if
+        true op [] .pos context popString if ..drop.2
+          EvalResult .Error return
+        end ..swap ..drop
+      else
+        op [] .val .panicWithMessage
+      end =:: message
+      "PANIC!: " sb.wrap
+        message sb.appendStr
+      op [] .pos errors appendError
+      EvalResult .Error return
     Error case
       false op [] .pos context popString if ..drop.2
         EvalResult .Error return

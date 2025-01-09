@@ -16,6 +16,7 @@ import "branchTree.concat"
 "cctI_checkIndexFormat" =:: CHECK_INDEX_FORMAT
 "cctI_checkEnumFormat" =:: CHECK_ENUM_FORMAT
 "cctI_assertFormat" =:: ASSERT_FORMAT
+"cctI_panicFormat" =:: PANIC_FORMAT
 "fileName" =:: FILE_NAME_NAME
 
 enum(
@@ -1548,7 +1549,7 @@ proc(
     end
     pos prog appendPosPrintfArgs
     ")\n" sb.appendS
-    "call $exit (w 1)\n" sb.appendS ## use exit for flushing stdout
+    "call $exit (w 1)\nhlt\n" sb.appendS ## use exit for flushing stdout
     okBranch "checkIndex" string.wrap context startBranch
   return
 end
@@ -1703,7 +1704,7 @@ proc(
     expectedIndex sb.appendI
     pos prog appendPosPrintfArgs
     ")\n" sb.appendS
-    "call $exit (w 1)\n" sb.appendS ## use exit for flushing stdout
+    "call $exit (w 1)\nhlt\n" sb.appendS ## use exit for flushing stdout
     okBranch "checkEnum" string.wrap context startBranch
   return
 end
@@ -4916,8 +4917,20 @@ proc(
         ",l " sb.appendS
         op [] .val .RuntimeAssert context sb.appendStringPtrConstQBE
         op [] .pos prog appendPosPrintfArgs
-        ")\ncall $exit(w 1)\n" sb.appendS
+        ")\ncall $exit(w 1)\nhlt\n" sb.appendS
         successBranch "end assert" string.wrap context startBranch
+      return
+    panicWithMessage case
+      false context [] .reachable =
+      sb
+        op [] .pos sb.appendPosQBE
+        "call $printf(l $" sb.appendS
+        PANIC_FORMAT sb.appendS
+        ",l " sb.appendS
+        op [] .val .panicWithMessage .length sb.appendI
+        ",l " sb.appendS
+        op [] .val .panicWithMessage context sb.appendStringPtrConstQBE
+        ")\ncall $exit(w 1)\nhlt\n" sb.appendS
       return
     unreachable case
       false context [] .reachable =
@@ -4962,7 +4975,7 @@ proc(
     compilerInfo case
       sb return ## XXX? print compiler info
     autoTypedInitializeId typeInfo
-    getName atName getLabel Error Assert
+    getName atName getLabel Error Assert panic
     atLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
@@ -5035,6 +5048,9 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     "data $" sb.appendS
     ASSERT_FORMAT sb.appendS
     " = { b \"assertion failed: \\\"%.*s\\\" at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
+    "data $" sb.appendS
+    PANIC_FORMAT sb.appendS
+    " = { b \"PANIC!: \\\"%.*s\\\"\\n\", b 0 }\n" sb.appendS
   =:: mut: sb
   idContext [] .globalScope .identifierNames@ map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used

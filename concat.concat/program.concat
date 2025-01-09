@@ -125,6 +125,8 @@ union(
           ErrorType : Error
      TypeMemoryInfo : typeInfo
                   _ : unreachable
+                  _ : panic
+             string : panicWithMessage
        CompilerInfo : compilerInfo
 ) =:: export: OpValue
 struct( OpValue : mut: val Type : mut: dataType FilePosition : mut: pos ) =:: export: Operation
@@ -322,6 +324,12 @@ proc( TypeModifier FilePosition  -> Operation ) =>: export: opTypeModifier
 end
 proc( FilePosition : pos -> Operation ) =>: export: opUnreachable
   OpValue .unreachable Type .undefined pos Operation new return
+end
+proc( FilePosition : pos -> Operation ) =>: export: opPanic
+  OpValue .panic Type .undefined pos Operation new return
+end
+proc( string : message FilePosition : pos -> Operation ) =>: export: opPanicWithMessage
+  message OpValue .panicWithMessage Type .undefined pos Operation new return
 end
 proc(
   FilePosition : pos
@@ -881,7 +889,15 @@ namespace: sb
           end
           break
         unreachable case
-          "unreachable " sb.appendS
+          "unreachable" sb.appendS
+          break
+        panic case
+          "..panic" sb.appendS
+          break
+        panicWithMessage case
+          '"' sb.appendC
+          ..over .val .panicWithMessage sb.appendEscapedStr
+          "\" ..panic" sb.appendS
           break
         compilerInfo case
           ..over .val .compilerInfo labelContext sb.appendCompilerInfo

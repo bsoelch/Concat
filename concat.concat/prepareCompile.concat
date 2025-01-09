@@ -58,7 +58,7 @@ proc(
   op .val switch
     NOP case
       newOps return ## ignore no-ops
-    builtIn equalityOperator argc getArg unreachable procPtr
+    builtIn equalityOperator argc getArg unreachable procPtr panic panicWithMessage
     checkEnumLabel hasElement getId atId setValue getEnumLabel
     atArrayElement atElement RuntimeAssert Error stackMod getArrayElement getElement setEnumLabel
     autoCast Cast Cast! bitCast Return case

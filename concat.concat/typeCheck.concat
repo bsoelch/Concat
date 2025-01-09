@@ -4081,6 +4081,18 @@ proc(
       end
       op state appendOp ..drop
       return
+    panic case
+      op .pos state popString =:: message
+      message op .pos opPanicWithMessage op =
+      false state [] .reachable =
+      op state appendOp ..drop
+      op .pos state endSwitchBranch
+      return
+    panicWithMessage case
+      false state [] .reachable =
+      op state appendOp ..drop
+      op .pos state endSwitchBranch
+      return
     Error case
       ## appendError
         op .pos state popString sb.fromStr

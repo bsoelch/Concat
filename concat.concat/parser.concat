@@ -2169,8 +2169,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       Type .undefined
       infoType fileState [] .wordStart opTypeInfo state appendOp
       return
-    else ..dup "..unreachable" string.wrap string.eq _if ..drop
-      fileState [] .wordStart opUnreachable state appendOp
+    else ..dup "..unreachable":s string.eq _if ..drop
+      "reached `..unreachable` statement":s fileState [] .wordStart opPanicWithMessage state appendOp
+      return
+    else ..dup "..panic":s string.eq _if ..drop
+      fileState [] .wordStart opPanic state appendOp
       return
     else ..dup "ptr" string.wrap string.eq _if ..drop
       TypeModifier .PTR fileState [] .wordStart opTypeModifier state appendOp
