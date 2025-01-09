@@ -1,7 +1,7 @@
 proc( i32 : n -> bool ) =>: isPrime
-  n 2 ..u< if false return end
-  2 while $ $ * n ..u<= do
-    n $1 ..umod ? ! if ..drop
+  n 2 u< if false return end
+  2 while $ $ * n u<= do
+    n $1 u% ? ! if ..drop
       false return
     end
   finally 1 + end ..drop
