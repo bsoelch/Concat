@@ -140,7 +140,7 @@ namespace: arenaAlloc
           ## slice full -> skip on next allocation
           arena .fullSlices 1 + arena .fullSlices =
         end
-        slice [] .eltCount count + sliceSize ..u<= if
+        slice [] .eltCount count + sliceSize u<= if
           arena slice [] .data slice [] .eltCount i64 cast.u +
             slice [] .eltCount count + slice [] .eltCount =
           return
@@ -149,7 +149,7 @@ namespace: arenaAlloc
     end
     arena .slices .length 0 > and
         arena .slices $ .length 1 - list.at .data =:: lastSlice
-        lastSlice [] .eltCount count + sliceSize ..u<= if
+        lastSlice [] .eltCount count + sliceSize u<= if
       ## return
         arena
         lastSlice [] .data lastSlice [] .eltCount i64 cast.u +
@@ -274,7 +274,7 @@ namespace: arenaAlloc
     newLength 1:i64 arena0 .sliceSizeShift << 1 - & i32 cast =:: newEltCount
     newLength
       arena0 .sliceSizeShift >>>
-      newEltCount 0 ..u> if 1 + end
+      newEltCount 0 u> if 1 + end
     =:: newSliceCount
     newSliceCount arena0 .slices .length <= "reset point inside allocated slice" assert
     arena0 =:: mut: arena ## XXX? prevent copy of old slice data
@@ -341,11 +341,12 @@ end
 
 ## Arena Allocator for mixed types
 ## TODO? special type-constant for max-aligned type
+## TODO? switch to i8-allocator& align elements seperately
 i64 =:: MaxAlign
 MaxAlign ArenaAllocator =:: export: MixedArenaAllocator
 namespace: mixedArena
   proc( i64 -> i32 ) =>: alignSize
-    MaxAlign ..types.stride 1 - + MaxAlign ..types.stride ..udiv i32 cast
+    MaxAlign ..types.stride 1 - + MaxAlign ..types.stride u/ i32 cast
   end
   proc(
     ## size of a given memory slice, will be rounded to the nearest power of two
@@ -354,7 +355,7 @@ namespace: mixedArena
     bool : strictOrder
   -> MixedArenaAllocator ) =>: export: create_S
     ## create_internal
-      sliceSize i64 cast.u MaxAlign ..types.stride ..udiv i32 cast
+      sliceSize i64 cast.u MaxAlign ..types.stride u/ i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       strictOrder
     arenaAlloc.create_internal MixedArenaAllocator cast
@@ -364,7 +365,7 @@ namespace: mixedArena
     i32 : sliceSize
   -> MixedArenaAllocator ) =>: export: create_0
     ## create_internal
-      sliceSize i64 cast.u MaxAlign ..types.stride ..udiv i32 cast
+      sliceSize i64 cast.u MaxAlign ..types.stride u/ i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       false
     arenaAlloc.create_internal MixedArenaAllocator cast

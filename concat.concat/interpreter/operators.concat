@@ -573,8 +573,8 @@ namespace: interpreter
       target true return
     end =:: targetStride =:: targetLength =:: targetData
     srcStride targetStride != or
-        length srcStride ..umod 0 != or
-        length targetStride ..umod 0 != if
+        length srcStride u% 0 != or
+        length targetStride u% 0 != if
       "unaligned copy is not supported" sb.wrap
       pos errors appendError
       target true return

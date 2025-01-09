@@ -20,15 +20,15 @@ namespace: sb
       63 ..swap ## index in chrBuff
         while ..dup 0 != do
           ..swap ## <buffer> <i> <chrIndex>
-            ..over base ..umod stringChars ..swap []
-            ..over chrBuff @ ..swap [] =
+            ..over base u% stringChars ..swap []
+            ..over chrBuff@ ..swap [] =
             1 -
           ..swap
-          base ..udiv
+          base u/
         end ..drop
         while 1 + ..dup 64 < do
           ..swap ## <chrIndex> <buffer>
-            ..over chrBuff @ ..swap [] appendC
+            ..over chrBuff@ ..swap [] appendC
           ..swap
         end
       ..drop

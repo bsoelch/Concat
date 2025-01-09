@@ -92,7 +92,7 @@ namespace: map
     data [] .cap 0 == if ## TODO ensure cap/ error message
        0:NodeId return
     end
-    key data [] .hash () i64 cast.u data [] .cap ..umod ## sync types in loop
+    key data [] .hash () i64 cast.u data [] .cap u% ## sync types in loop
       data [] .data ..over []
         ..dup 0:NodeId == if ..drop
           newNode if

@@ -11,8 +11,8 @@ enum(
  ## XXX? div f64 i32
  DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64     ## /
  REM_I32 REM_I64I32 REM_I64                     ## %
- UDIV_I32 UDIV_I64I32 UDIV_I64                  ## ..udiv
- UMOD_I32 UMOD_I64I32 UMOD_I64                  ## ..umod
+ UDIV_I32 UDIV_I64I32 UDIV_I64                  ## u/
+ UMOD_I32 UMOD_I64I32 UMOD_I64                  ## u%
  ## logic
  NOT_BOOL                                       ## !
  FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64             ## ~
@@ -30,10 +30,10 @@ enum(
  LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 LE_C16 LE_C32 ## <=
  GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 GE_C16 GE_C32 ## >=
  GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 GT_C16 GT_C32 ## >
- ULT_I8 ULT_I16 ULT_I32 ULT_I64                  ## ..u<
- ULE_I8 ULE_I16 ULE_I32 ULE_I64                  ## ..u<=
- UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## ..u>=
- UGT_I8 UGT_I16 UGT_I32 UGT_I64                  ## ..u>
+ ULT_I8 ULT_I16 ULT_I32 ULT_I64                  ## u<
+ ULE_I8 ULE_I16 ULE_I32 ULE_I64                  ## u<=
+ UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## u>=
+ UGT_I8 UGT_I16 UGT_I32 UGT_I64                  ## u>
  SYS_ARGC SYS_ARGV SYS_ENVP
  ## XXX? more built-in operations
  PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64

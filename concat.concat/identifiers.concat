@@ -389,14 +389,8 @@ namespace: id
       false return
     end
     id '.' string.contains if
-      context .PROCEDURE_BUNDLE ?? ! or
-          id ".." string.wrap string.startsWith ! or
-          id 2 string.tail '.' string.contains if
-        ## proc-bundles are allowed to start with ..
-        ## TODO? rename ..u<...> bundles?
-        "identifier names cannot contain '.'" sb.wrap pos errors appendError
-        true return
-      end
+      "identifier names cannot contain '.'" sb.wrap pos errors appendError
+      true return
     end
     id id .length 1 - string.charAt '@' == if
       "identifier names cannot end with '@'" sb.wrap pos errors appendError

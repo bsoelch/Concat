@@ -43,13 +43,13 @@ namespace: i64
     a b < if a else b end
   end
   proc( i64 : a i64 : b -> i64 ) =>: export: umin
-    a b ..u< if a else b end
+    a b u< if a else b end
   end
   proc( i64 : a i64 : b -> i64 ) =>: export: max
     a b > if a else b end
   end
   proc( i64 : a i64 : b -> i64 ) =>: export: umax
-    a b ..u> if a else b end
+    a b u> if a else b end
   end
   proc( i64 : a -> i64 ) =>: export: abs
     a 0 < if a -_ else a end
@@ -111,7 +111,7 @@ namespace: i64
   ## a + b + carry -> newCarry res
   proc( bool : carry i64 : a i64 : b -> bool i64 ) =>: export: addc
     a b +
-      ..dup b ..u< =:: mut: resCarry
+      ..dup b u< =:: mut: resCarry
       carry if
         1 +
         resCarry ..over 0 == | resCarry =
@@ -120,7 +120,7 @@ namespace: i64
   end
   ## a - (b + carry) -> newCarry res
   proc( bool : carry i64 : a i64 : b -> bool i64 ) =>: export: subb
-    a b ..u< =:: mut: resCarry
+    a b u< =:: mut: resCarry
     a b -
       carry if
         1 -
@@ -162,16 +162,16 @@ namespace: i64
   end
 end
 
-overload: export: -_     i64.neg  end
-overload: export: +      i64.add  end
-overload: export: -      i64.sub  end
-overload: export: *      i64.mul  end
-overload: export: /      i64.div  i64.div32 end
-overload: export: %      i64.rem  i64.rem32 end
-overload: export: ..udiv i64.udiv i64.udiv32 end
-overload: export: ..umod i64.umod i64.umod32 end
-overload: export: //     i64.floorDiv end
-overload: export: %%     i64.mod  end
+overload: export: -_ i64.neg  end
+overload: export: +  i64.add  end
+overload: export: -  i64.sub  end
+overload: export: *  i64.mul  end
+overload: export: /  i64.div  i64.div32 end
+overload: export: %  i64.rem  i64.rem32 end
+overload: export: u/ i64.udiv i64.udiv32 end
+overload: export: u% i64.umod i64.umod32 end
+overload: export: // i64.floorDiv end
+overload: export: %% i64.mod  end
 ## XXX? floorDiv32/mod32
 overload: export: ?      i64.toBool end
 overload: export: ~      i64.flip end
@@ -187,8 +187,8 @@ overload: export: <      i64.lt   end
 overload: export: <=     i64.le   end
 overload: export: >=     i64.ge   end
 overload: export: >      i64.gt   end
-overload: export: ..u<   i64.ult  end
-overload: export: ..u<=  i64.ule  end
-overload: export: ..u>=  i64.uge  end
-overload: export: ..u>   i64.ugt  end
+overload: export: u<   i64.ult  end
+overload: export: u<=  i64.ule  end
+overload: export: u>=  i64.uge  end
+overload: export: u>   i64.ugt  end
 overload: export: <=>    i64.cmp  end

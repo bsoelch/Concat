@@ -60,7 +60,7 @@ namespace: f128
         ..dup .low 1 shift << 1 - & =:: lowBits
         shift >>>
         1:i64 shift 1 - << =:: half
-        lowBits half ..u> or lowBits half == and ..dup .low 1 & ? if
+        lowBits half u> or lowBits half == and ..dup .low 1 & ? if
           i128.ONE + ## round up
         end
         ..dup .hi 1:i64 EXP_SHIFT_HI 1 + << & ? if
@@ -131,11 +131,11 @@ namespace: f128
     x .hi SIGN_FLAG_HI ~ & =:: xHi
     y .hi SIGN_FLAG_HI ~ & =:: yHi
     xHi yHi != if
-      xHi yHi ..u< if sign -_ else sign end return
+      xHi yHi u< if sign -_ else sign end return
     end
-    x .low y .low ..u< if
+    x .low y .low u< if
       sign -_
-    else x .low y .low ..u> _if
+    else x .low y .low u> _if
       sign
     else 0 end return
   end
@@ -249,7 +249,7 @@ namespace: f128
       ## Inf +y x+Inf -> Inf
       sign INF_HI | INF_LOW f128 new return
     end
-    x .hi y .hi ..u< or x .hi y .hi == and x .low y .low ..u< if
+    x .hi y .hi u< or x .hi y .hi == and x .low y .low u< if
       y x
     else
       x y
@@ -345,7 +345,7 @@ namespace: f128
     else y isInfinite _if
       y neg return
     end
-    x .hi y .hi ..u< or x .hi y .hi == and x .low y .low ..u< end =:: swapped
+    x .hi y .hi u< or x .hi y .hi == and x .low y .low u< end =:: swapped
     swapped if y x else x y end =:: b =:: a ## a >= b
     x .hi SIGN_FLAG_HI & =:: mut: sign
     a .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & =:: exp0A
@@ -916,8 +916,8 @@ namespace: f160
       x y neg add return
     end
     x .exp y .exp < or
-      x .exp y .exp == and x .hi y .hi ..u< or
-      x .hi y .hi == and x .low y .low ..u<
+      x .exp y .exp == and x .hi y .hi u< or
+      x .hi y .hi == and x .low y .low u<
     end =:: swapped
     swapped if y x else x y end =:: b =:: a
     b .low =:: mut: bLow
@@ -957,7 +957,7 @@ namespace: f160
         bHi shift >>> bHi =
       end
     end
-    a .hi bHi ..u> or a .hi bHi == and a .low bLow ..u>= end "a>=b" assert
+    a .hi bHi u> or a .hi bHi == and a .low bLow u>= end "a>=b" assert
     false
       a .low bLow i64.subb =:: mut: low
       a .hi  bHi  i64.subb =:: mut: hi

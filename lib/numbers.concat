@@ -145,8 +145,8 @@ namespace: number
       -1:i64 =:: maxUnsignedVal
       sign if -0x8000_0000_0000_0000 else 0x7fff_ffff_ffff_ffff end =:: maxSignedVal
       unsigned if maxUnsignedVal else maxSignedVal end =:: maxVal
-      maxVal mBase ..udiv =:: maxSafe
-      maxUnsignedVal mBase ..udiv =:: maxSafeUnsigned
+      maxVal mBase u/ =:: maxSafe
+      maxUnsignedVal mBase u/ =:: maxSafeUnsigned
       0:i64 while $ $2 .length < do =:: i
         $ i string.charAt mBase parseDigit
           $ .DIGIT ?? ! if
@@ -155,16 +155,16 @@ namespace: number
             0 ParserError .INVALID_CHAR return
           else ..drop end
         i64 cast.u =:: delta
-        res maxSafeUnsigned ..u> if
+        res maxSafeUnsigned u> if
           true overflow =
-        else res maxSafe ..u> _if
+        else res maxSafe u> _if
           true signedOverflow =
         end
         res
           mBase i64 cast.u *
-          res maxSafeUnsigned == and $ maxUnsignedVal delta - ..u> if
+          res maxSafeUnsigned == and $ maxUnsignedVal delta - u> if
             true overflow =
-          else res maxSafe == and $ maxVal delta - ..u> _if
+          else res maxSafe == and $ maxVal delta - u> _if
             true signedOverflow =
           end
           delta +

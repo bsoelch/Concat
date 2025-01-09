@@ -10,7 +10,7 @@ overload: <+ sb.appendC sb.appendS sb.appendI64 end
 proc( stringBuilder i64 -> stringBuilder ) =>: appendFactors
   $ 0 < if -_ end =:: mut: n ## ensure number is non-negative
   2:i64 while $ $ * n <= do =:: p
-    while n p ..umod 0 == do
+    while n p u% 0 == do
       ' ' <+ p <+
       n p / n =
     end

@@ -120,14 +120,14 @@ namespace: i128
     x .hi i64.highestSetBit 64 + return
   end
   proc( i128 : a i128 : b -> i32 ) =>: export: ucmp
-    a .hi b .hi ..u< if
+    a .hi b .hi u< if
       -1 return
-    else a .hi b .hi ..u> _if
+    else a .hi b .hi u> _if
       1 return
     end
-    a .low b .low ..u< if
+    a .low b .low u< if
       -1 return
-    else a .low b .low ..u> _if
+    else a .low b .low u> _if
       1 return
     else
       0 return
@@ -183,13 +183,13 @@ namespace: i128
   proc( i128 : a i128 : b -> i128 ) =>: export: add
     a .low b .low i64.add =:: lowSum
     ## i128
-      a .hi b .hi i64.add  lowSum a .low ..u< if 1 + end
+      a .hi b .hi i64.add  lowSum a .low u< if 1 + end
       lowSum
     i128 new
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: sub
     ## i128
-      a .hi b .hi i64.sub  a .low b .low ..u< if 1 - end
+      a .hi b .hi i64.sub  a .low b .low u< if 1 - end
       a .low b .low i64.sub
     i128 new
   end
@@ -355,8 +355,8 @@ namespace: i128
       end =:: maxVal
       0 0 i128 new =:: mut: res
       0 mBase i64 cast.u i128 new =:: baseI128
-      maxUnsigned baseI128 ..udiv =:: maxSafeUnsigned
-      maxVal baseI128 ..udiv =:: maxSafe ## XXX? udiv i128 by i64
+      maxUnsigned baseI128 u/ =:: maxSafeUnsigned
+      maxVal baseI128 u/ =:: maxSafe ## XXX? udiv i128 by i64
       0:i64 while ..dup ..over.2 .length < do =:: i
         ..dup i string.charAt =:: c
         i 0 > and c '_' == or c '\'' == if
@@ -369,16 +369,16 @@ namespace: i128
             0 0 i128 new ParserError .INVALID_CHAR return
           else ..drop end
         i64 cast.u i128.fromU64 =:: delta
-        res maxSafeUnsigned ..u> if
+        res maxSafeUnsigned u> if
           true overflow =
-        else res maxSafe ..u> _if
+        else res maxSafe u> _if
           true signedOverflow =
         end
         res
           baseI128 * ## XXX mul i128 by i64  ## XXX add/sub i128 to/from i64
-          res maxSafeUnsigned i128.eq and $ maxUnsigned delta - ..u> if
+          res maxSafeUnsigned i128.eq and $ maxUnsigned delta - u> if
             true overflow =
-          else res maxSafe i128.eq and $ maxVal delta - ..u> _if
+          else res maxSafe i128.eq and $ maxVal delta - u> _if
             true signedOverflow =
           end
           delta +
@@ -404,8 +404,8 @@ overload: / i128.div end
 overload: % i128.rem end
 ## overload: // i128.floorDiv end
 ## overload: %% i128.mod end
-overload: ..udiv i128.udiv end
-overload: ..umod i128.umod end
+overload: u/ i128.udiv end
+overload: u% i128.umod end
 overload: ~ i128.flip end
 overload: & i128.and end
 overload: | i128.or end
@@ -414,10 +414,10 @@ overload: << i128.shl i128.shl_i64 i128.shl_i32 end
 overload: >>> i128.lshr i128.lshr_i64 i128.lshr_i32 end
 overload: >> i128.ashr i128.ashr_i64 i128.ashr_i32 end
 overload: <=> i128.cmp end
-overload: ..u< i128.ult end
-overload: ..u<= i128.ule end
-overload: ..u>= i128.uge end
-overload: ..u> i128.ugt end
+overload: u< i128.ult end
+overload: u<= i128.ule end
+overload: u>= i128.uge end
+overload: u> i128.ugt end
 overload: < i128.lt end
 overload: <= i128.le end
 overload: >= i128.ge end

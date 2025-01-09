@@ -29,7 +29,7 @@ namespace: ptr
     p offset -_ []@
   end
   proc( type : auto: T T _ ptr : p T _ ptr : q -> i64 ) =>: export: diff
-    p i64 cast! q i64 cast! - T ..types.stride ..udiv
+    p i64 cast! q i64 cast! - T ..types.stride u/
   end
 
   proc( type : auto: T T ptr T ptr -> i32 ) =>: cmp0D

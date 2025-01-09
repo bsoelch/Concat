@@ -318,12 +318,12 @@ namespace: sb
     sb
       0:i64 while ..dup str .length < do =:: i
         str i string16.get i32 cast.u =:: c
-        c 0x80 ..u< if
+        c 0x80 u< if
           c char8 cast appendEscapedChr
         else
           "\\u" sb.appendS
-               c 0x100 ..u< if  "00" sb.appendS
-          else c 0x1000 ..u< _if "0" sb.appendS
+               c 0x100 u< if  "00" sb.appendS
+          else c 0x1000 u< _if "0" sb.appendS
           end
           c sb.appendUX
         end
@@ -335,16 +335,16 @@ namespace: sb
     sb
       0:i64 while ..dup str .length < do =:: i
         str i string32.get i32 cast.u =:: c
-        c 0x80 ..u< if
+        c 0x80 u< if
           c char8 cast appendEscapedChr
         else
           "\\U" sb.appendS
-               c 0x100 ..u<  if "000000" sb.appendS
-          else c 0x1000 ..u< _if "00000" sb.appendS
-          else c 0x10000 ..u< _if "0000" sb.appendS
-          else c 0x100000 ..u< _if "000" sb.appendS
-          else c 0x1000000 ..u< _if "00" sb.appendS
-          else c 0x10000000 ..u< _if "0" sb.appendS
+               c 0x100 u<  if "000000" sb.appendS
+          else c 0x1000 u< _if "00000" sb.appendS
+          else c 0x10000 u< _if "0000" sb.appendS
+          else c 0x100000 u< _if "000" sb.appendS
+          else c 0x1000000 u< _if "00" sb.appendS
+          else c 0x10000000 u< _if "0" sb.appendS
           end
           c sb.appendUX
         end
