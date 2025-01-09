@@ -702,8 +702,7 @@ namespace: types
   end
   proc( CType -> i64 ) =>: sizeOfCType
     switch ## sizes for linux-x86-gcc
-      VOID case 0 return
-      BOOL CHAR S_CHAR U_CHAR case 1 return
+      BOOL CHAR S_CHAR U_CHAR VOID case 1 return
       SHORT U_SHORT case 2 return
       INT U_INT case 4 return
       LONG LONGLONG U_LONG U_LONGLONG SIZE case 8 return
