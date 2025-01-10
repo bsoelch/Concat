@@ -3383,8 +3383,21 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
-            isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
-            " =l copy " sb.appendS
+            isAddr or op [] .dataType context referenceOnly if
+              isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
+              " =l copy " sb.appendS
+            else
+              op [] .dataType context toValType =:: valType
+              valType context pushValue sb.appendI
+              " =" sb.appendS
+              valType sb.appendValTypeQBE
+              " load" sb.appendS
+              op [] .dataType StorageType .LOAD
+                op [] .pos
+                context
+              sb.appendTypeNameQBE
+              " " sb.appendS
+            end
             idInfo .labelId -1 context sb.appendGlobalName
             '\n' sb.appendC
           return
@@ -3392,8 +3405,21 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
-            isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
-            " =l copy %l" sb.appendS
+            isAddr or op [] .dataType context referenceOnly if
+              isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
+              " =l copy %l" sb.appendS
+            else
+              op [] .dataType context toValType =:: valType
+              valType context pushValue sb.appendI
+              " =" sb.appendS
+              valType sb.appendValTypeQBE
+              " load" sb.appendS
+              op [] .dataType StorageType .LOAD
+                op [] .pos
+                context
+              sb.appendTypeNameQBE
+              " %l" sb.appendS
+            end
             idInfo .labelId i64 cast sb.appendI
             '\n' sb.appendC
           return
