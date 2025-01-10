@@ -500,7 +500,7 @@ proc(
     ..dup .length ConstReferenceId cast =:: refId
     constType constValue pos TypedConstant new list.append
   program [] .constantReferences =
-  program [] .idContext .typeContext @ =:: typeContext
+  program .idContext .typeContext =:: typeContext
   ## Operation
     refId OpValue .ConstantReference
     constType false typeContext types.newReferenceType
@@ -545,9 +545,9 @@ namespace: sb
   end
   proc( stringBuilder Operation ProgramContext ptr -> stringBuilder ) =>: export: appendOp
     =:: progContext
-    progContext [] .idContext .typeContext @ =:: typeContext
-    progContext [] .idContext .typeContext .labelContext @ =:: labelContext
-    progContext [] .idContext .constContext @ =:: constContext
+    progContext .idContext .typeContext =:: typeContext
+    progContext .idContext .typeContext .labelContext =:: labelContext
+    progContext .idContext .constContext =:: constContext
     ..swap
       ..over .val switch
         NOP case
@@ -594,7 +594,7 @@ namespace: sb
           ..over .val .getId labelContext sb.appendIdInfo
           break
         call case ..over =:: op
-          op .val .call @ =:: callInfo
+          op@ .val .call =:: callInfo
           "call ( " sb.appendS
           op .dataType  typeContext sb.appendType
           " ) : " sb.appendS
@@ -629,7 +629,7 @@ namespace: sb
           ..over .val .initializeId labelContext sb.appendIdInfo
           break
         implementProcedure case ..over =:: op
-          op .val .implementProcedure @ =:: implInfo
+          op@ .val .implementProcedure =:: implInfo
           "implement ( " sb.appendS
           op .dataType typeContext sb.appendType
           " ) : " sb.appendS
@@ -645,7 +645,7 @@ namespace: sb
           end
           break
         procPtr case ..over =:: op
-          op .val .procPtr @ =:: implInfo
+          op@ .val .procPtr =:: implInfo
           "procedure pointer ( " sb.appendS
           op .dataType typeContext sb.appendType
           " ) : " sb.appendS

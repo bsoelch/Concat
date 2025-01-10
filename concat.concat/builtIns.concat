@@ -59,8 +59,8 @@ proc(
   FilePosition : pos
   ProgramContext ptr.mut : context
 -> bool ) =>: newBuiltInBundle
-  context [] .idContext@ =:: idContext
-  idContext [] .typeContext .labelContext@ =:: labelContext
+  context .idContext =:: idContext
+  idContext .typeContext .labelContext =:: labelContext
   labelContext id.clearNamespace
   context [] .procBundles
     ..dup .length ProcBundleId cast =:: bundleId
@@ -82,7 +82,7 @@ proc(
     pos
     FILE_ID_BUILT_IN
     idContext
-    context [] .errors@
+    context .errors
   id.declareIdentifier =:: isError ..drop.2
   isError return
 end
@@ -96,9 +96,9 @@ proc(
   bool : hasStaticArgs
   bool : isStatic
 -> ) =>: addBuiltIn_internal
-  context [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   context [] .procedures
     ..dup .length ProcId cast =:: procId
     ## ProcedureInfo
@@ -121,7 +121,7 @@ proc(
     pos
     FILE_ID_BUILT_IN
     idContext
-    context [] .errors@
+    context .errors
   id.declareIdentifier =:: isError ..drop.2
 end
 proc(
@@ -160,9 +160,9 @@ proc(
   Type : t
   ProgramContext ptr.mut : context
 -> Type Type Type Type Type ) =>: operatorProcTypes
-  context [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   ## TODO? own calling convention for built-ins
   LabelId arrayView optional.empty =:: argLabels
   Type 2 array new =:: mut: args
@@ -242,9 +242,9 @@ proc(
   Type : t2
   ProgramContext ptr.mut : context
 -> Type Type ) =>: mixedProcTypes
-  context [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   LabelId arrayView optional.empty =:: argLabels
   Type 2 array new =:: mut: args
   t1 args@ 0 [] =
@@ -288,9 +288,9 @@ proc(
   Type : t1
   ProgramContext ptr.mut : context
 -> Type Type ) =>: charProcTypes ## c?c?_bool c?c?_i32
-  context [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   LabelId arrayView optional.empty =:: argLabels
   Type 2 array new =:: mut: args
   t1 args@ 0 [] =
@@ -332,9 +332,9 @@ end
 proc(
   ProgramContext ptr.mut : context
 -> Type Type ) =>: sysProcTypes
-  context [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   LabelId arrayView optional.empty =:: argLabels
   ## newProcArgs
     Type array.empty
@@ -373,9 +373,9 @@ proc(
   FilePosition : pos
   ProgramContext ptr.mut : context
 -> Type Type Type Type Type Type ) =>: parseProcTypes
-  context [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   LabelId arrayView optional.empty =:: argLabels
   Type 2 array : typeData
   typeData@ =:: argTypes
@@ -467,9 +467,9 @@ proc(
   FilePosition : pos
   ProgramContext ptr.mut : context
 -> bool ) =>: export: initBuiltInProcs
-  context [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   types.primitive.BOOL
     context operatorProcTypes
   =:: consume_bool =:: bool_bool =:: boolbool_bool ..drop.2

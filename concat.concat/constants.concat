@@ -363,7 +363,7 @@ namespace: sb
     ConstValue : val
     TypeContext ptr : typeContext
   -> stringBuilder ) =>: export: appendConstant
-    typeContext [] .labelContext@ =:: labelContext
+    typeContext .labelContext =:: labelContext
     sb
       val switch
         None case

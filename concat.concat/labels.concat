@@ -152,7 +152,7 @@ namespace: id
     label? optional.isEmpty if
       return
     end
-    label? .data .flags@ =:: flags
+    label? .data .flags =:: flags
     flags []
       newFlags |
     flags [] =

@@ -3,32 +3,32 @@ struct( i32 : mut: a i32 : b ) =:: struct
 
 proc( -> ) =>: main
   0 0 struct new =:: s
-  s .a @
-  s .b @
+  s@ .a
+  s@ .b
   ..?types
   ..drop.2
   s .a debug.print
   s .b debug.print
 
   0 0 struct new =:: mut: mutS
-  mutS .a @
-  mutS .b @
+  mutS@ .a
+  mutS@ .b
   ..?types
   ..drop 1 ..swap [] =
   mutS .a debug.print
   mutS .b debug.print
 
-  s @ =:: sP
-  sP [] .a @
-  sP [] .b @
+  s@ =:: sP
+  sP .a
+  sP .b
   ..?types
   ..drop.2
   sP [] .a debug.print
   sP [] .b debug.print
 
-  mutS @ =:: mutSP
-  mutSP [] .a @
-  mutSP [] .b @
+  mutS@ =:: mutSP
+  mutSP .a
+  mutSP .b
   ..?types
   ..drop 2 ..swap [] =
   mutSP [] .a debug.print

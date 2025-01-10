@@ -2,8 +2,8 @@ import debug
 0 i32 =: x
   
 proc( -> ( ( i32 i32 _ ptr ) _ ptr i32 ) ) =>: ptrTest
-  0  x @  ( i32  i32 _ ptr ) new =:: y
-  y @ 0 ( ( i32  i32 _ ptr ) _ ptr i32 ) new return
+  0  x@  ( i32  i32 _ ptr ) new =:: y
+  y@ 0 ( ( i32  i32 _ ptr ) _ ptr i32 ) new return
 end
 
 proc( -> ) =>: main
@@ -11,15 +11,15 @@ proc( -> ) =>: main
   
   1 2 ( i64 i64 ) new =:: mut: tmp
   
-  tmp .0 @ [] debug.print
-  tmp @ ( i64 i64 ) _ ptr =: tmpPtr
+  tmp@ .0 [] debug.print
+  tmp@ ( i64 i64 ) _ ptr =: tmpPtr
   tmpPtr [] .1 debug.print
   
   "Hello World!" 1 [] debug.print
   "World" ..length debug.print
   
   0 =:: mut: A
-  A @  i32 _ ptr.mut =: mut: aPtr
+  A@  i32 _ ptr.mut =: mut: aPtr
   -312512  aPtr [] =
   aPtr [] debug.print
   A debug.print

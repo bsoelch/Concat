@@ -64,10 +64,10 @@ proc(
   FilePosition : pos
   ProgramContext ptr.mut : progContext
 -> Type ) =>: replaceGenerics
-  progContext [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
-  idContext [] .constContext@ =:: constContext
+  progContext .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  idContext .constContext =:: constContext
   src typeContext types.containsGeneric ! if
     src return
   end
@@ -235,7 +235,7 @@ proc(
       return
     generatedType case
       src typeContext types.getGeneratorArgs =:: args
-      idContext [] .argBuffer@ =:: argBuffer
+      idContext .argBuffer =:: argBuffer
       argBuffer [] .length =:: argOffset
       0:i64 while ..dup args .length < do =:: i
         args i array.get =:: arg
@@ -295,10 +295,10 @@ proc(
   LabelId GenericArg hashMap ptr.mut : genericValues
   ProgramContext ptr.mut : progContext
 -> bool ) =>: resolveGenerics
-  progContext [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
-  idContext [] .constContext@ =:: constContext
+  progContext .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  idContext .constContext =:: constContext
   target typeContext types.containsGeneric ! if
     src0 target typeContext types.canAutoCast ! return
   end
@@ -723,7 +723,7 @@ proc(
     elt [] .paramInfo
       list.free
     elt [] .paramInfo =
-    elt [] .genericValues@ map.free
+    elt .genericValues map.free
     i 1 +
   end ..drop
   signatures []
@@ -757,10 +757,10 @@ proc(
   FilePosition : pos
   ProgramContext ptr.mut : progContext
 -> ProcedureCallInfo optional Type ) =>: export: resolveCall
-  progContext [] .idContext@ =:: idContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
-  idContext [] .constContext@ =:: constContext
+  progContext .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  idContext .constContext =:: constContext
   procedureIds .length 0 == if
     errorMessage optional.hasData if
       errorMessage .data []
@@ -829,16 +829,16 @@ proc(
           current [] .paramInfo =
           paramIndex 1 - paramIndex =
         else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? and
-            current [] .genericValues@ paramLabel map.at =:: autoValue
+            current .genericValues paramLabel map.at =:: autoValue
             autoValue optional.isEmpty ! and autoValue .data [] .nonEmpty ?? ! _if
           autoValue .data [] switch
-            fixed case autoValue .data [] .fixed@ break
-            value case autoValue .data [] .value@ break
+            fixed case autoValue .data .fixed break
+            value case autoValue .data .value break
             nonEmpty case ..unreachable
           end =:: value
           ## convert literal types to corresponding base types
           value [] .TypeId ?? and value [] .TypeId types.isLiteral if
-            current [] .genericValues@
+            current .genericValues
               paramLabel
               value [] .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .fixed
             map.put ..drop
@@ -869,12 +869,12 @@ proc(
           paramType
             typeContext types.unwrapNamed
           types.getTypeId LabelId cast =:: paramId
-          current [] .genericValues@
+          current .genericValues
             paramId
           map.at optional.isEmpty if
         ## add copy of signature with generic type set to empty
         current currentSignatures@ appendCopy =:: copySig
-        copySig [] .genericValues@
+        copySig .genericValues
           paramId
           Type .empty ConstValue .TypeId GenericArg .fixed
         map.put ..drop
@@ -882,7 +882,7 @@ proc(
           1 +
         copySig [] .nEmpty =
         ## mark generic as non-empty
-        current [] .genericValues@
+        current .genericValues
           paramId
           GenericArg .nonEmpty
         map.put ..drop
@@ -894,7 +894,7 @@ proc(
         stackVal .None ?? if
           false current [] .argsMatch =
         end
-        current [] .genericValues@
+        current .genericValues
           paramLabel
         map.at =:: prevVal?
         prevVal? optional.hasData and
@@ -916,7 +916,7 @@ proc(
             end if
           false current [] .argsMatch =
         else
-          current [] .genericValues@
+          current .genericValues
             paramLabel
             stackVal GenericArg .fixed
           map.put ..drop
@@ -944,7 +944,7 @@ proc(
             paramType
             false
             needCast@
-            current [] .genericValues@
+            current .genericValues
             progContext
           resolveGenerics ! if
         MatchType .GENERIC matchType =
@@ -1101,7 +1101,7 @@ proc(
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
       constArgs
-        candidate [] .genericValues@ eltLabel getValueOrNone list.append
+        candidate .genericValues eltLabel getValueOrNone list.append
       constArgs =
     end
     i 1 +
@@ -1114,10 +1114,10 @@ proc(
         baseProcId i64 cast list.at .data
       =:: baseProcInfo
       baseProcInfo [] .isStatic ! and ## don't create implementations for static procedures
-      baseProcInfo [] .implementation@ =:: implData
+      baseProcInfo .implementation =:: implData
       ## TODO support alias for generic procedures
       implData [] .code ?? if
-    implData [] .code .implementations@ =:: impls
+    implData .code .implementations =:: impls
     false =:: mut: isMatch
     0:i64 while ..dup impls [] .length < do =:: i
       impls [] i list.at .data =:: impl
@@ -1148,7 +1148,7 @@ proc(
             baseProcInfo [] .procType
             typeBuffer@
             labelBuffer@
-            candidate [] .genericValues@
+            candidate .genericValues
             false
             pos
             progContext
@@ -1171,13 +1171,13 @@ proc(
     eltLabel labelContext id.labelFlags =:: flags
     true =:: mut: needArg
     flags id.FLAG_AUTO & ? if
-      candidate [] .genericValues@ eltLabel getValueOrNone =:: value
+      candidate .genericValues eltLabel getValueOrNone =:: value
       value .None ?? ! if
         false needArg =
       end
       ## convert literal types to corresponding types
       value .TypeId ?? and value .TypeId types.isLiteral if
-        candidate [] .genericValues@
+        candidate .genericValues
           eltLabel
           value .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .fixed
         map.put ..drop
@@ -1192,7 +1192,7 @@ proc(
         eltType
         typeBuffer@
         labelBuffer@
-        candidate [] .genericValues@
+        candidate .genericValues
         true
         pos
         progContext
@@ -1219,7 +1219,7 @@ proc(
     outType
     typeBuffer@
     labelBuffer@
-    candidate [] .genericValues@
+    candidate .genericValues
     true
     pos
     progContext

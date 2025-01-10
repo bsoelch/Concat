@@ -233,14 +233,14 @@ proc( -> ProgramContext ) =>: parseAndTypeCheck
   prog@ typeCheckState@ updateTypeCheckerPointers
   parserTokensFile optional.hasData if
     1024 sb.create
-      prog @ sb.appendProgram
+      prog@ sb.appendProgram
     =:: parsedOps
     parserTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop
   end
-  prog .errors@ checkErrors
+  prog@ .errors checkErrors
   ## new type-checker
   typeCheckState@ typeCheckProgram
   prog return
@@ -258,12 +258,12 @@ proc( -> ) =>: main ## TODO check return value of fopen
     io.fclose ..drop
     parsedOps sb.free ..drop
   end
-  prog .errors@ checkErrors
+  prog@ .errors checkErrors
   prog@ prepareCompile
   ## TODO own flag&file for dumping tokens
   compilerTokensFile optional.hasData if
     1024 sb.create
-      prog @ sb.appendProgram
+      prog@ sb.appendProgram
     =:: parsedOps
     compilerTokensFile .data io.OPEN_APPEND io.fopenStr ..drop
       ..dup "\n-----------------\n" io.fputs ..drop
@@ -271,12 +271,12 @@ proc( -> ) =>: main ## TODO check return value of fopen
     io.fclose ..drop
     parsedOps sb.free ..drop
   end
-  prog .errors @ checkErrors
+  prog@ .errors checkErrors
   ## QBE backend
   outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
     _BACKEND_ switch
-      QBE case ..dup prog @ compileToQBE break
+      QBE case ..dup prog@ compileToQBE break
     end
   io.fclose ..drop
-  prog .errors @ checkErrors
+  prog@ .errors checkErrors
 end

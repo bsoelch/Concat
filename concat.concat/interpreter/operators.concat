@@ -558,8 +558,8 @@ namespace: interpreter
     length 0 <= if
       target false return
     end
-    program [] .errors@ =:: errors
-    program [] .idContext .typeContext@ =:: typeContext
+    program .errors =:: errors
+    program .idContext .typeContext =:: typeContext
     src constantAsRawMemory if ..drop.3
       "unsupported constant for memcopy source: " sb.wrap
         src typeContext sb.appendConstant

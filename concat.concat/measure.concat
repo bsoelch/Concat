@@ -15,12 +15,12 @@ proc(
   Type i32 hashMap ptr.mut : visited
   Type list ptr.mut : types
 -> ) =>: declaredType
-  prog [] .errors@ =:: errors
-  prog [] .idContext .typeContext@ =:: typeContext
+  prog .errors =:: errors
+  prog .idContext .typeContext =:: typeContext
   visited declared map.at ..dup optional.hasData if .data []
     ptrLevel == if
       0 sb.create
-        declared prog [] .idContext .typeContext@ sb.appendType
+        declared prog .idContext .typeContext sb.appendType
         "! \n" sb.appendS
       pos errors appendError
     end
@@ -112,8 +112,8 @@ end
 proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
   types.typeHash@ types.typeEquals@ 128 i32 map.create =:: mut: visited ## XXX start with power of two closest to total type count as capacity
   128 Type list.create =:: mut: types
-  prog [] .idContext@ =:: idContext
-  idContext [] .globalScope .identifierNames@ map.itr.start while map.itr.hasNext do map.itr.next
+  prog .idContext =:: idContext
+  idContext .globalScope .identifierNames map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## XXX find out which declarations are actually used
     declaration .1 [] =:: labelId
     labelId idContext id.getIdentifier

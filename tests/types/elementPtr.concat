@@ -1,13 +1,13 @@
 proc( -> ) =>: main
   1 2 struct( i32 : a i32 : b ) new =:: x
   x@ =:: xPtr
-  xPtr .b@ =:: bPtr
+  xPtr .b =:: bPtr
   bPtr [] 2 == "2 x .b ==" assert
-  x .a@ xPtr .a@ == "xPtr .a@ x .a@ ==" assert
+  x@ .a xPtr .a == "xPtr .a x@ .a ==" assert
 
   3 4 struct( i32 : a i32 : mut: b ) new =:: mut: y
   y@ =:: yPtr
-  yPtr .b@ =:: ybPtr
+  yPtr .b =:: ybPtr
   5 y .b =
   ybPtr [] 5 == "5 y .b ==" assert
 end

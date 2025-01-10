@@ -144,7 +144,7 @@ namespace: map
     data [] .nodeBuffer ..swap i64 cast 1 - list.at ..dup optional.isEmpty if ..drop
       V ptr.mut optional.empty return
     end
-    .data [] .value @ optional.wrap return
+    .data .value optional.wrap return
   end
   proc(
     type : auto: K
@@ -210,7 +210,7 @@ namespace: map
           itr .index 1 + itr .index =
         end
       end
-      itr res [] .key @ res [] .value @ ( K ptr V ptr.mut ) new return
+      itr res .key res .value ( K ptr V ptr.mut ) new return
     end
   end
 end

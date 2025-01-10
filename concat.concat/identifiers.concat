@@ -185,7 +185,7 @@ namespace: id
       list.pop =:: mut: closed
     context [] .openScopes =
     closed .scopeStrings freeScopeStrings closed .scopeStrings =
-    closed .identifierNames@ map.free
+    closed@ .identifierNames map.free
     closed .prevImports context [] .typeContext .labelContext .namespaceInfo .imports =
     false return
   end
@@ -208,14 +208,14 @@ namespace: id
     LabelId optional : idLabel?
     LabelId : idLabel
     ## 1. search in local scopes
-    mNamespace path  context [] .typeContext .labelContext@ findNamespace relSpace =
+    mNamespace path  context .typeContext .labelContext findNamespace relSpace =
     name relSpace fileId IdentifierName new =:: mut: idName
     relSpace NAMESPACE_ID_NONE != if
       context [] .openScopes .length 1 -
       while ..dup 0 >= do =:: i
         context [] .openScopes
           i list.at .data
-        [] .identifierNames@ idName map.get idLabel? =
+        .identifierNames idName map.get idLabel? =
         idLabel? optional.hasData if
           idLabel? .data idLabel =
           matches optional.isEmpty if
@@ -231,11 +231,11 @@ namespace: id
     ## 2. search global variable in current&parent namespaces
     name relSpace FILE_ID_NONE IdentifierName new =:: mut: globalName
     while mNamespace NAMESPACE_ID_NONE != do
-      mNamespace path  context [] .typeContext .labelContext@ findNamespace relSpace =
+      mNamespace path  context .typeContext .labelContext findNamespace relSpace =
       relSpace idName .namespace =
       relSpace globalName .namespace =
       relSpace NAMESPACE_ID_NONE != if
-        context [] .globalScope .identifierNames@
+        context .globalScope .identifierNames
           idName
         map.get idLabel? =
         idLabel? optional.hasData if
@@ -247,7 +247,7 @@ namespace: id
             idName idLabel IdentifierMatch new list.append
           matches .data [] =
         end
-        context [] .globalScope .identifierNames@
+        context .globalScope .identifierNames
            globalName
         map.get idLabel? =
         idLabel? optional.hasData if
@@ -268,11 +268,11 @@ namespace: id
     false =:: mut: matchGlobal
     context [] .typeContext .labelContext .namespaceInfo .imports while ..dup NAMESPACE_IMPORT_NONE != do
       context [] .typeContext .labelContext .namespaceImports ..swap i64 cast list.get
-        ..dup .imported path  context [] .typeContext .labelContext@ findNamespace relSpace =
+        ..dup .imported path  context .typeContext .labelContext findNamespace relSpace =
         relSpace idName .namespace =
         relSpace globalName .namespace =
         relSpace NAMESPACE_ID_NONE != if
-          context [] .globalScope .identifierNames@
+          context .globalScope .identifierNames
             idName
           map.get idLabel? =
           idLabel? optional.hasData if
@@ -290,7 +290,7 @@ namespace: id
               true multiMatch =
             end
           end
-          context [] .globalScope .identifierNames@
+          context .globalScope .identifierNames
             globalName
           map.get idLabel? =
           idLabel? optional.hasData if
@@ -321,7 +321,7 @@ namespace: id
     nameId LABEL_ID_TMP == if
       ID_TMP_DATA@ false return
     end
-    context [] .identifierData@
+    context .identifierData
       nameId
     map.at =:: data?
     data? optional.isEmpty if
@@ -336,7 +336,7 @@ namespace: id
   -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByLabel
     context [] .nameBuffer
       ..dup .length 0 == "name buffer is empty" assert
-      nameId context [] .typeContext  .labelContext@ sb.appendLabelName
+      nameId context .typeContext  .labelContext sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer sb.asStr =:: name
     ## searchIdentifier
@@ -414,8 +414,8 @@ namespace: id
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   ->  LabelId IdentifierData bool ) =>: export: declareIdentifier
-    context [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    context .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     label LABEL_ID_NONE == if
       "invalid label id" sb.wrap declaredAt errors appendError
       LABEL_ID_NONE ID_NONE_DATA true return
@@ -423,7 +423,7 @@ namespace: id
     label labelContext labelFlags =:: flags
     context [] .nameBuffer
       ..dup .length 0 == "name buffer empty" assert
-      label context [] .typeContext  .labelContext@ sb.appendLabelName
+      label context .typeContext  .labelContext sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer sb.asStr =:: name
     context id.isTopLevel flags FLAG_EXPORT & ? & if ## exported global -> ignore fileId
@@ -472,10 +472,10 @@ namespace: id
       mScope [] .scopeStrings =
     sb.asStr
     labelContext [] .namespaceInfo .current fileId IdentifierName new =:: mut: idName
-    mScope [] .identifierNames@ idName map.get =:: prevId?
+    mScope .identifierNames idName map.get =:: prevId?
     prevId? optional.hasData if
       prevId? .data =:: prevId
-      context [] .identifierData@ prevId map.at .data =:: prevDec
+      context .identifierData prevId map.at .data =:: prevDec
       ## initialization for declaration / declaration for initialized identifier
       prevDec [] .declarationOnly isInit ! | and
           idType .GLOBAL_VAR ?? or idType .TYPE ?? or
@@ -551,7 +551,7 @@ namespace: id
         end
       else ..drop end
     end
-    mScope [] .identifierNames@
+    mScope .identifierNames
       idName
       label
     map.put ..drop ## previous entry is always empty
@@ -564,7 +564,7 @@ namespace: id
       idType
       isInit !
     IdentifierData new =:: idData
-    context [] .identifierData@
+    context .identifierData
       label
       idData
     map.put ..drop ## previous entry is always empty
@@ -694,27 +694,27 @@ namespace: id
     context [] .prevNamespaces =
     context [] .nameBuffer
        ..dup .length 0 == "name buffer empty" assert
-       name context [] .typeContext  .labelContext@ sb.appendLabelName
+       name context .typeContext  .labelContext sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer sb.asStr =:: nameAsStr
     context [] .typeContext  .labelContext .namespaceInfo .current
-      nameAsStr true context [] .typeContext  .labelContext@ childId
+      nameAsStr true context .typeContext  .labelContext childId
     context [] .typeContext  .labelContext .namespaceInfo .current =
     context [] .nameBuffer sb.clear context [] .nameBuffer =
   end
   proc( LabelId : name IdentifierContext ptr.mut : context -> bool ) =>: export: importNamespace
     context [] .nameBuffer
        ..dup .length 0 == "name buffer empty" assert
-       name context [] .typeContext  .labelContext@ sb.appendLabelName
+       name context .typeContext  .labelContext sb.appendLabelName
     context [] .nameBuffer =
     context [] .nameBuffer sb.asStr =:: nameAsStr
-    0 NamespaceId cast nameAsStr context [] .typeContext  .labelContext@ findNamespace
+    0 NamespaceId cast nameAsStr context .typeContext  .labelContext findNamespace
     context [] .nameBuffer sb.clear context [] .nameBuffer =
     ..dup NAMESPACE_ID_NONE == if ..drop
       true return
     end
     context [] .typeContext  .labelContext .namespaceInfo .imports
-      ..swap context [] .typeContext  .labelContext@ getNamespaceImportId
+      ..swap context .typeContext  .labelContext getNamespaceImportId
     context [] .typeContext  .labelContext .namespaceInfo .imports =
     false return
   end

@@ -169,36 +169,36 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     code i string.charAt =:: c
     ## only update position if char is skipped
     c char.isWhitespace if
-      c fileState [] .currentPos@ updateFilePos
+      c fileState .currentPos updateFilePos
       i 1 + continue
     end
     c '#' == and i 1 + code .length < if
       code i 1 + string.charAt =:: nxt
       nxt '#' == if ## XXX? allow '# ' as line comment
-        c fileState [] .currentPos@ updateFilePos
-        nxt fileState [] .currentPos@ updateFilePos
+        c fileState .currentPos updateFilePos
+        nxt fileState .currentPos updateFilePos
         ## line comment
         i 2 + while $ code .length < do
           code $1 string.charAt =:: c2
           1 + ## checked character
-          c2 fileState [] .currentPos@ updateFilePos
+          c2 fileState .currentPos updateFilePos
           c2 '\n' == if break end
         end continue
       else nxt '+' == _if
-        c fileState [] .currentPos@ updateFilePos
-        nxt fileState [] .currentPos@ updateFilePos
+        c fileState .currentPos updateFilePos
+        nxt fileState .currentPos updateFilePos
         ## block-comment
         1 =:: mut: k
         i 2 + while $ code .length 1 - < do
           code $1 string.charAt =:: c2
-          c2 fileState [] .currentPos@ updateFilePos
+          c2 fileState .currentPos updateFilePos
           c2 '+' == and code $1 1 + string.charAt '#' == if
-            '#' fileState [] .currentPos@ updateFilePos
+            '#' fileState .currentPos updateFilePos
             k 1 - k =
             k 0 == if 2 + break end
             2 + continue
           else c2 '#' == and code $1 1 + string.charAt '+' == _if
-            '+' fileState [] .currentPos@ updateFilePos
+            '+' fileState .currentPos updateFilePos
             k 1 + k =
             2 + continue
           end
@@ -209,7 +209,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     i break ## neither whitespace nor comment
   end
     isLiteralType if ## skip leading `:` of literal type
-      ':' fileState [] .currentPos@ updateFilePos
+      ':' fileState .currentPos updateFilePos
       1 +
     end
     $ =:: mut: i0
@@ -244,7 +244,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
         Token .LITERAL
       end return
     end
-    c fileState [] .currentPos@ updateFilePos
+    c fileState .currentPos updateFilePos
     state .STRING_ESCAPE ?? if
       ParserState .STRING state =
       i 1 + continue
@@ -252,7 +252,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     state .RAW_STRING ?? if
       c '`' == if
         i 1 + code .length < and code i 1 + string.charAt '`' == if
-          '`' fileState [] .currentPos@ updateFilePos
+          '`' fileState .currentPos updateFilePos
           i 2 + continue ## escaped `
         end
         code i0 i i0 - string.slice =:: body

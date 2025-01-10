@@ -78,7 +78,7 @@ namespace: interpreter
   proc(
     InterpreterContext ptr.mut : context
   -> ) =>: export: cleanupContext
-    context [] .globalVariables@ map.free
+    context .globalVariables map.free
     context [] .stackInfo   list.free context [] .stackInfo =
     context [] .openBlocks  list.free context [] .openBlocks =
     context [] .typeBuffer  list.free context [] .typeBuffer =
@@ -106,7 +106,7 @@ namespace: interpreter
         count sb.appendI
         " got: " sb.appendS
         context [] .stack .length offset - sb.appendI
-      pos context [] .program [] .errors@ appendError
+      pos context [] .program .errors appendError
       true return
     end
     false return
@@ -324,11 +324,11 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> ) =>: checkDuplicateLabel
     label id.LABEL_ID_NONE == if return end
-    context [] .program [] .errors@ =:: errors
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
-    context [] .labelBuffer@ =:: labels
+    context [] .program .errors =:: errors
+    context [] .program .idContext =:: idContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
+    context .labelBuffer =:: labels
     initialLabelOffset while $ labels [] .length < do =:: i
       labels [] i list.get =:: prevLabel
       prevLabel label labelContext id.labelNamesEq if
@@ -362,11 +362,11 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> bool ) =>: addLabeledValue
     label initialLabelOffset valueContext pos context checkDuplicateLabel
-    context [] .program [] .errors@ =:: errors
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    context [] .program .errors =:: errors
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     context [] .labelBuffer
       label list.append
     context [] .labelBuffer =
@@ -403,7 +403,7 @@ namespace: interpreter
       context [] .localVariables optional.hasData if
         context [] .localVariables .data
       else
-        context [] .globalVariables@
+        context [] .globalVariables@ ## TODO need [] .<...>@ due to compiler error
       end
         label
         ## Constant
@@ -429,10 +429,10 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext  ptr.mut : context
   -> bool ) =>: finishLabledValues
-    context [] .program [] .errors@ =:: errors
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    context [] .program .errors =:: errors
+    context [] .program .idContext =:: idContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     context [] .stack .length stackOffset > if
       stackOffset while $ context [] .stack .length < do =:: i
         context [] .stack i list.at .data =:: eltVal
@@ -492,11 +492,11 @@ namespace: interpreter
     pos context finishLabledValues if
       true return
     end
-    context [] .program [] .errors@ =:: errors
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    context [] .program .errors =:: errors
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     closedBlock [] .labelOffset =:: labelOffset
     closedBlock [] .typeOffset =:: typeOffset
     context [] .labelBuffer .length labelOffset - =:: elementCount
@@ -513,9 +513,9 @@ namespace: interpreter
   end
 
   proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeStructBlock
-    context [] .program [] .errors@ =:: errors
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .typeContext@ =:: typeContext
+    context [] .program .errors =:: errors
+    context [] .program .idContext =:: idContext
+    idContext .typeContext =:: typeContext
     op closedBlock
       LabeledValueContext .TYPE_STRUCT
       op [] .pos
@@ -545,9 +545,9 @@ namespace: interpreter
     false return
   end
   proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeProcTypeBlock
-    context [] .program [] .errors@ =:: errors
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .typeContext@ =:: typeContext
+    context [] .program .errors =:: errors
+    context [] .program .idContext =:: idContext
+    idContext .typeContext =:: typeContext
     closedBlock [] .labelOffset =:: labelOffset
     closedBlock [] .valueOffset =:: valueOffset
     closedBlock [] .typeOffset =:: typeOffset
@@ -602,11 +602,11 @@ namespace: interpreter
     pos context finishLabledValues if
       Type .undefined true return
     end
-    context [] .program [] .errors@ =:: errors
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    context [] .program .errors =:: errors
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     closedBlock [] .typeOffset =:: typeOffset
     closedBlock [] .valueOffset =:: valueOffset
     closedBlock [] .labelOffset =:: labelOffset
@@ -646,7 +646,7 @@ namespace: interpreter
   -> ValueInfo ConstValue bool ) =>: popValue
     context [] .stack .length 0 == if
       "stack underflow " sb.wrap
-      pos context [] .program [] .errors@ appendError
+      pos context [] .program .errors appendError
       ## return
         ## ValueInfo
           Type .undefined
@@ -708,12 +708,12 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> ValueInfo Type bool ) =>: popType
-    context [] .program [] .errors@ =:: errors
+    context [] .program .errors =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
       valInfo Type .undefined true return
@@ -735,11 +735,11 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool bool ) =>: popCondition
-    context [] .program [] .errors@ =:: errors
+    context [] .program .errors =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
       ## popValue already created error message
@@ -764,11 +764,11 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> i64 bool ) =>: popIndex
-    context [] .program [] .errors@ =:: errors
+    context [] .program .errors =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
       ## popValue already created error message
@@ -828,11 +828,11 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> ValueInfo string bool ) =>: popString
     context [] .program =:: program
-    program .errors@ =:: errors
-    program .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    program .errors =:: errors
+    program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
       valInfo string.empty true return
@@ -858,11 +858,11 @@ namespace: interpreter
     TypeMemoryInfo : infoType
     ProgramContext ptr.mut : program
   -> ConstValue bool ) =>: export: computeTypeInfo
-    program [] .errors@ =:: errors
-    program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    program .errors =:: errors
+    program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     t typeContext types.containsGeneric if
       ConstValue .None true return
     end
@@ -894,10 +894,10 @@ namespace: interpreter
     ProgramContext ptr.mut : program
   -> Type ConstValue bool ) =>: export: sizeOfValue
     ## TODO support length of initializers
-    program [] .errors@ =:: errors
-    program [] .idContext@ =:: idContext
-    idContext [] .typeContext@ =:: typeContext
-    idContext [] .constContext@ =:: constContext
+    program .errors =:: errors
+    program .idContext =:: idContext
+    idContext .typeContext =:: typeContext
+    idContext .constContext =:: constContext
     false =:: mut: isType
     t typeContext types.unwrapReference =:: mut: valType
     valType types.primitive.TYPE types.typeEquals if
@@ -985,7 +985,7 @@ namespace: interpreter
               idContext [] .argBuffer .data offset +
               idContext [] .argBuffer .length offset -
             array.create
-            idContext [] .constContext@
+            idContext .constContext
           newArrayConst
           idContext [] .argBuffer
             offset list.setLength
@@ -1020,11 +1020,11 @@ namespace: interpreter
     FilePosition : pos
     ProgramContext ptr.mut : program
   -> Type bool ) =>: export: initializeGeneratedType
-    program [] .errors@ =:: errors
-    program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    program .errors =:: errors
+    program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     generatorName idContext id.getIdentifier if ..drop
       "could not find procedure " sb.wrap
         generatorName labelContext sb.appendLabelName
@@ -1167,11 +1167,11 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: getElement
-    context [] .program@ =:: program
-    program [] .errors@ =:: errors
-    program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
+    context [] .program =:: program
+    program .errors =:: errors
+    program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
     isPtr0 =:: mut: isPtr
       ## TODO! use correct base mutablity
     true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
@@ -1182,7 +1182,7 @@ namespace: interpreter
         true isPtr =
       end
       eltMutable and $ elementIndex typeContext types.compositeGetLabel
-        typeContext .labelContext@ id.labelFlags
+        typeContext .labelContext id.labelFlags
       id.FLAG_MUTABLE & ? ! if
         false eltMutable =
       end
@@ -1231,8 +1231,8 @@ namespace: interpreter
     MixedArenaAllocator ptr.mut : allocator
     ProgramContext ptr.mut : program
   -> ConstValue ) =>: copyLocalArray
-    program .idContext .typeContext@ =:: typeContext
-    program .idContext .constContext@ =:: constContext
+    program .idContext .typeContext =:: typeContext
+    program .idContext .constContext =:: constContext
     valType typeContext types.isPointer if
       ## don't copy pointers
       localArray return
@@ -1308,7 +1308,7 @@ namespace: interpreter
     bool : wrapPointers
     InterpreterContext ptr.mut : context
   -> ConstValue ) =>: localCopy
-    context [] .program .idContext .typeContext@ =:: typeContext
+    context [] .program .idContext .typeContext =:: typeContext
     valType typeContext types.isPointer if ## XXX? merge with default branch
       wrapPointers ! if
         value return
@@ -1404,9 +1404,9 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> ConstValue ) =>: allocLocalValue
-    context [] .program@ =:: program
-    program [] .errors@ =:: errors
-    program [] .idContext .typeContext@ =:: typeContext
+    context [] .program =:: program
+    program .errors =:: errors
+    program .idContext .typeContext =:: typeContext
     ## XXX? better way to detect multi-value types
     dataType typeContext types.isTuple if
       dataType typeContext types.compositeEltCount =:: eltCount
@@ -1544,10 +1544,10 @@ namespace: interpreter
     i32 : depth
     InterpreterContext ptr.mut : context
   -> ) =>: printTypes
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
-    idContext [] .constContext@ =:: constContext
+    context [] .program .idContext =:: idContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
+    idContext .constContext =:: constContext
     printValues if
       "stack:\n" sb.wrap
     else
@@ -1594,12 +1594,12 @@ proc(
   interpreter.EvalResult
 ) =>: export: evaluateOperation
   using interpreter
-  context [] .program [] .errors@ =:: errors
+  context [] .program .errors =:: errors
   context [] .program =:: program
-  context [] .program [] .idContext@ =:: idContext
-  idContext [] .constContext@ =:: constContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context [] .program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   context skipCurrentBlock =:: skipBlock
   skipBlock and op [] .val .block ?? ! and op [] .val .blockEnd ?? ! if
     EvalResult .Ok return ## skip operation
@@ -1959,7 +1959,7 @@ proc(
           context [] .valueBuffer list.asArray valueOffset array.tail =:: values
           ## newArrayConst
             values
-            idContext [] .constContext@
+            idContext .constContext
           newArrayConst =:: value
           context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
           context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
@@ -2080,7 +2080,7 @@ proc(
       op [] .pos errors appendError
       EvalResult .Error return
     getId case
-      op [] .val .getId@ =:: idInfo
+      op .val .getId =:: idInfo
       idInfo [] .labelId =:: label
       context inEnum if
         label context getLabeledValueContext op [] .pos context checkDuplicateLabel
@@ -2107,7 +2107,7 @@ proc(
               bundleId i64 cast list.at .data [] .procedures
             list.asArray
           else constValue .Procedure ?? _if
-            constValue .Procedure@ array.wrap
+            constValue@ .Procedure array.wrap
           else
             "unexpected value for procedure constant: " sb.wrap
               constValue typeContext sb.appendConstant
@@ -2211,7 +2211,7 @@ proc(
       end
       break
     atId case
-      op [] .val .atId@ =:: idInfo
+      op .val .atId =:: idInfo
       idInfo [] .labelId =:: label
       idInfo [] .idType switch
         LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
@@ -2244,7 +2244,7 @@ proc(
       end
       break
     call case
-      op [] .val .call@ =:: callInfo
+      op .val .call =:: callInfo
       callInfo [] .procId
         callInfo [] .implementationId
         callInfo [] .autoArgs
@@ -2252,9 +2252,9 @@ proc(
       op [] .pos context evaluateCall wrapResult return
     initializeId autoTypedInitializeId case
       op [] .val .initializeId ?? if
-        op [] .val .initializeId@
+        op .val .initializeId
       else
-        op [] .val .autoTypedInitializeId@
+        op .val .autoTypedInitializeId
       end =:: idInfo
       idInfo [] .labelId =:: label
       op [] .pos context popValue if ..drop.2
@@ -2265,7 +2265,7 @@ proc(
       end =:: value =:: valInfo
       idInfo [] .idType switch
         GLOBAL_VAR TYPE case
-          context [] .globalVariables@
+          context .globalVariables
             label
             ## Constant
               value
@@ -2716,7 +2716,7 @@ proc(
             value? .data [] .LocalArray64 ?? _if
           context [] .localMemory mixedArena.offset =:: localOffset
           value? .data []
-            valType context [] .localMemory@ program copyLocalArray
+            valType context .localMemory program copyLocalArray
           value? .data [] =
           ## clear memory used by copy
           context [] .localMemory
@@ -3300,12 +3300,12 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: tryEvaluateBuiltIn
-    context [] .program [] .errors@ =:: errors
+    context [] .program .errors =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     calledType typeContext types.getProcIn
       ! "has procedure in" assert
     =:: inType
@@ -3384,9 +3384,9 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> bool ) =>: evaluateExternCall
     context [] .program =:: program
-    program [] .errors@ =:: errors
-    program [] .idContext .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    program .errors =:: errors
+    program .idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     "memcpy":s procName labelContext id.labelNameEq if
       procIn typeContext types.compositeEltArray =:: args
       args .length 3 != or
@@ -3464,12 +3464,12 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: newTuple
-    context [] .program [] .errors@ =:: errors
+    context [] .program .errors =:: errors
     context [] .program =:: program
-    context [] .program [] .idContext@ =:: idContext
-    idContext [] .constContext@ =:: constContext
-    idContext [] .typeContext@ =:: typeContext
-    typeContext [] .labelContext@ =:: labelContext
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     tupleType typeContext types.compositeElts =:: elts
     elts .length "tuple-creation" string.wrap pos context checkStack if
       true return
@@ -3516,12 +3516,12 @@ proc(
   bool
 ) =>: export: evaluateCall
   using interpreter
-  context [] .program [] .errors@ =:: errors
+  context [] .program .errors =:: errors
   context [] .program =:: program
-  context [] .program [] .idContext@ =:: idContext
-  idContext [] .constContext@ =:: constContext
-  idContext [] .typeContext@ =:: typeContext
-  typeContext [] .labelContext@ =:: labelContext
+  context [] .program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   program [] .procedures procId i64 cast list.at .data =:: procData
   procData [] .procType =:: procType
   procType typeContext types.getProcIn ..drop =:: inType
@@ -3738,7 +3738,7 @@ proc(
     context [] .openBlocks =
     false return
   end
-  procData [] .implementation .code@ =:: codeImpl
+  procData .implementation .code =:: codeImpl
   implId 0 >= if
     program [] .progFiles
       procData [] .fileId i64 cast

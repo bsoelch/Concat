@@ -7,5 +7,5 @@ struct( i32 : x i32 : y ) =:: Point
 proc( -> ) =>: export: main
   f@ ..?types ..drop
   1 2 Point new =:: p
-  p .x@ ..?types ..drop
+  p@ .x ..?types ..drop
 end
