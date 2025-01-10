@@ -85,7 +85,7 @@ union(
       ProcedureImpl : mut: implementProcedure
       ProcedureImpl : mut: procPtr
             LabelId : getLabel
-            LabelId : mut: atLabel
+            LabelId : mut: atLabel ## XXX? remove atLabel/atElement operations?
             LabelId : mut: hasLabel
             LabelId : mut: existsLabel
                 i64 : mut: getElement
@@ -221,10 +221,6 @@ end
 proc( LabelId FilePosition  -> Operation ) =>: export: opGetLabel
   =:: pos
   OpValue .getLabel Type .undefined pos Operation new return
-end
-proc( LabelId FilePosition  -> Operation ) =>: export: opAtLabel
-  =:: pos
-  OpValue .atLabel Type .undefined pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opExistsLabel
   =:: pos

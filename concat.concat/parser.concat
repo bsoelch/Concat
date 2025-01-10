@@ -2086,10 +2086,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           ..dup .length 1 - string.head
         end
       =:: label
+      isAddr if
+        "directly getting the address of an element is not supported," sb.wrap
+          "to get the address of an element access the corresponding label on a pointer to the base type (`x@ .a` instead of `x .a@`)" sb.appendS
+        fileState [] .wordStart errors appendError
+      end
       label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
       fileState [] .wordStart
-      isAddr if opAtLabel else opGetLabel end
-      state appendOp
+      opGetLabel state appendOp
       return
     else ..dup "[]" string.wrap string.eq _if ..drop
       -1 fileState [] .wordStart opArrayGet state appendOp
