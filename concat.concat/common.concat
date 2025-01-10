@@ -19,17 +19,17 @@ struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: exp
 proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : errors -> ) =>: export: appendError
   errors []
     message ErrorType .ERROR pos CompilerError new list.append
-  errors [] =
+  errors =
 end
 proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : errors -> ) =>: export: appendWarning
   errors []
     message ErrorType .WARNING pos CompilerError new list.append
-  errors [] =
+  errors =
 end
 proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : errors -> ) =>: export: appendInfo
   errors []
     message ErrorType .INFO pos CompilerError new list.append
-  errors [] =
+  errors =
 end
 
 i32 =:: export: LabelId

@@ -36,7 +36,7 @@ proc(
   id.newLabel =:: label
   context [] .variables
     varType label VariableType .TMP_VAR VariableInfo new list.append
-  context [] .variables =
+  context .variables =
   ## IdInfo
     IdentifierType .TMP_VAR
     label
@@ -83,7 +83,7 @@ proc(
           VariableInfo new list.append
           i 1 +
         end ..drop
-      context [] .variables =
+      context .variables =
       newOps
         op list.append ## nothing to change
       return
@@ -99,7 +99,7 @@ proc(
           idInfo .labelId
           VariableType .LOCAL_VAR
         VariableInfo new list.append
-      context [] .variables =
+      context .variables =
       newOps
         op list.append ## nothing to change
       return
@@ -175,7 +175,7 @@ proc(
       =:: outArgs
       op .val .callPtr ?? if
         ## remember number of out-args in call operation
-        outArgs .length op .val .callPtr =
+        outArgs .length op@ .val .callPtr =
       end
       newOps
         0:i64 while ..dup outArgs .length < do =:: i
@@ -303,25 +303,25 @@ proc(
           blockId
             newOps list.asMutableArray
           program program.jumps.updateEndIf
-          op .val .blockEnd .jumpDistance =
+          op@ .val .blockEnd .jumpDistance =
           newOps op list.append return
         SWITCH case
           blockId
             newOps list.asMutableArray
           program program.jumps.updateEndSwitch
-          op .val .blockEnd .jumpDistance =
+          op@ .val .blockEnd .jumpDistance =
           newOps op list.append return
         WHILE case
           blockId
             newOps list.asMutableArray
           program program.jumps.updateEndWhile
-          op .val .blockEnd .jumpDistance =
+          op@ .val .blockEnd .jumpDistance =
           newOps op list.append return
         AND OR case
           blockId
             newOps list.asMutableArray
           program program.jumps.updateEndAndOr
-          op .val .blockEnd .jumpDistance =
+          op@ .val .blockEnd .jumpDistance =
           newOps op list.append return
         AND_IF OR_IF AND_DO OR_DO FINALLY
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
@@ -358,16 +358,16 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  variables [] context [] .variables =
+  variables [] context .variables =
   newOps []
-    ..dup .length codeStart [] =
+    ..dup .length codeStart =
     0:i64 while ..dup ops .length < do =:: opIndex
       ops opIndex array.at .data [] context compileOp
       opIndex 1 +
     end ..drop
-    ..dup .length codeStart [] - codeLength [] =
-  newOps [] =
-  context [] .variables variables [] =
+    ..dup .length codeStart [] - codeLength =
+  newOps =
+  context [] .variables variables =
 end
 
 ## TODO better name for file&procedure, find good description of compilation-step
@@ -383,7 +383,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   contextData@ =:: context
   0:i64 while ..dup program [] .progFiles .length < do =:: i
     program [] .progFiles i list.at .data =:: f
-    f [] .tmpOps list.clear f [] .tmpOps =
+    f [] .tmpOps list.clear f .tmpOps =
     i 1 +
   end ..drop
   0:i64 while ..dup program [] .procedures .length < do =:: i
@@ -391,7 +391,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc [] .implementation .code ?? ! or currentProc [] .isStatic if
       i 1 + continue
     end
-    currentProc [] .fileId context [] .currentFile =
+    currentProc [] .fileId context .currentFile =
     program [] .progFiles
       currentProc [] .fileId i64 cast
     list.at .data =:: f
@@ -428,8 +428,8 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     program [] .progFiles i list.at .data =:: f
     f [] .localOps list.clear
       f [] .tmpOps
-      f [] .localOps =
-    f [] .tmpOps =
+      f .localOps =
+    f .tmpOps =
     i 1 +
   end ..drop
   ## create implementations for built-in procedure-pointers
@@ -459,7 +459,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       opBuiltIn list.append
       currentProc [] .procType pos opReturn list.append
       BlockType .PROCEDURE pos opEndBlock list.append
-    procFile [] .localOps =
+    procFile .localOps =
     procId 1 +
   end ..drop
 end

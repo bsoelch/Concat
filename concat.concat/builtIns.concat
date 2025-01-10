@@ -65,7 +65,7 @@ proc(
   context [] .procBundles
     ..dup .length ProcBundleId cast =:: bundleId
     newProcBundle list.append
-  context [] .procBundles =
+  context .procBundles =
   ## newLabel
     name
     id.FLAG_EXPORT id.FLAG_BUILT_IN |
@@ -109,7 +109,7 @@ proc(
       hasStaticArgs
       isStatic
     ProcedureInfo new list.append
-  context [] .procedures =
+  context .procedures =
   procLabel labelContext id.inLabelNamespace
   ## declareIdentifier
     procLabel
@@ -166,8 +166,8 @@ proc(
   ## TODO? own calling convention for built-ins
   LabelId arrayView optional.empty =:: argLabels
   Type 2 array new =:: mut: args
-  t args@ 0 [] =
-  t args@ 1 [] =
+  t args@ 0 []@ =
+  t args@ 1 []@ =
   ## newProcArgs
     args@ 1 array.create
     argLabels
@@ -190,7 +190,7 @@ proc(
     args@ 1 array.create
     argLabels
     true
-  typeContext types.newProcArgs procOut =
+  typeContext types.newProcArgs procOut@ =
   ## newProcedure
     procIn
     procOut
@@ -202,7 +202,7 @@ proc(
     args@ array.wrap
     argLabels
     false
-  typeContext types.newProcArgs procIn =
+  typeContext types.newProcArgs procIn@ =
   ## newProcedure
     procIn
     procOut
@@ -210,12 +210,12 @@ proc(
   typeContext types.newProcedure
     ! "can create procedure" assert
   =:: binOpProc
-  types.primitive.BOOL args@ 0 [] =
+  types.primitive.BOOL args@ 0 []@ =
   ## newProcArgs
     args@ 1 array.create
     argLabels
     true
-  typeContext types.newProcArgs procOut =
+  typeContext types.newProcArgs procOut@ =
   ## newProcedure
     procIn
     procOut
@@ -227,7 +227,7 @@ proc(
     args@ 1 []@ 1 array.create
     argLabels
     false
-  typeContext types.newProcArgs procIn =
+  typeContext types.newProcArgs procIn@ =
   ## newProcedure
     procIn
     procOut
@@ -247,8 +247,8 @@ proc(
   typeContext .labelContext =:: labelContext
   LabelId arrayView optional.empty =:: argLabels
   Type 2 array new =:: mut: args
-  t1 args@ 0 [] =
-  t2 args@ 1 [] =
+  t1 args@ 0 []@ =
+  t2 args@ 1 []@ =
   ## newProcArgs
     args@ 2 array.create
     argLabels
@@ -271,7 +271,7 @@ proc(
     args@ 1 []@ 1 array.create
     argLabels
     true
-  typeContext types.newProcArgs procOut =
+  typeContext types.newProcArgs procOut@ =
   ## newProcedure
     procIn
     procOut
@@ -293,15 +293,15 @@ proc(
   typeContext .labelContext =:: labelContext
   LabelId arrayView optional.empty =:: argLabels
   Type 2 array new =:: mut: args
-  t1 args@ 0 [] =
-  t1 args@ 1 [] =
+  t1 args@ 0 []@ =
+  t1 args@ 1 []@ =
   ## newProcArgs
     args@ 2 array.create
     argLabels
     false
     typeContext
   types.newProcArgs =:: mut: procIn
-  types.primitive.BOOL args@ 0 [] =
+  types.primitive.BOOL args@ 0 []@ =
   ## newProcArgs
     args@ 1 array.create
     argLabels
@@ -314,12 +314,12 @@ proc(
   typeContext types.newProcedure
     ! "can create procedure" assert
   =:: cc_b
-  types.primitive.I32 args@ 0 [] =
+  types.primitive.I32 args@ 0 []@ =
   ## newProcArgs
     args@ 1 array.create
     argLabels
     true
-  typeContext types.newProcArgs procOut =
+  typeContext types.newProcArgs procOut@ =
   ## newProcedure
     procIn
     procOut
@@ -380,8 +380,8 @@ proc(
   Type 2 array : typeData
   typeData@ =:: argTypes
   ## char8 _ ptr  i64   -> ...
-  types.primitive.CHAR8 false typeContext wrapPtr argTypes 0 [] =
-  types.primitive.I64 argTypes 1 [] =
+  types.primitive.CHAR8 false typeContext wrapPtr argTypes 0 []@ =
+  types.primitive.I64 argTypes 1 []@ =
   ## newProcArgs
     argTypes array.wrap
     argLabels

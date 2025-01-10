@@ -469,7 +469,7 @@ namespace: types
             0:i64 while $ eltCount < do =:: i
               oldElts i array.get context literalToType list.append
             finally i 1 + end ..drop
-          newElements =
+          newElements@ =
           tupleInfo .compositeInfo .labelOffset [] =:: labelOffset
           ## gohere
             newElements list.asArray
@@ -481,7 +481,7 @@ namespace: types
             context
           newTuple
             ! "can create tuple" assert
-            newElements list.free newElements =
+            newElements list.free newElements@ =
           return
           ## TODO correctly convert element types if elements are literals
         end
@@ -737,26 +737,26 @@ namespace: types
       eltAlignData .fixed =:: eltAlign
       eltSizeData .fixed =:: eltSize
       eltAlign alignment > if
-        eltAlign alignment =
+        eltAlign alignment@ =
       end
       size eltAlign alignSize =:: eltOffset
-      eltOffset eltSize + size =
+      eltOffset eltSize + size@ =
       offsetBuffer
         eltOffset list.append
-      offsetBuffer =
+      offsetBuffer@ =
       i 1 +
     end ..drop
     ## XXX? compress tupleOffsets list ( search for previous occurrence of current elements )
     typeContext [] .tupleOffsets
-      ..dup .length tupleInfo [] .offsetsStart =
+      ..dup .length tupleInfo .offsetsStart =
       offsetBuffer list.appendAll
-    typeContext [] .tupleOffsets =
+    typeContext .tupleOffsets =
     offsetBuffer list.free ..drop
-    alignment tupleInfo [] .compositeInfo .alignment =
-    size tupleInfo [] .compositeInfo .size =
+    alignment tupleInfo .compositeInfo .alignment =
+    size tupleInfo .compositeInfo .size =
     tupleInfo [] .compositeInfo .flags
       COMP_SIZE_KNOWN |
-    tupleInfo [] .compositeInfo .flags =
+    tupleInfo .compositeInfo .flags =
     false return
   end
   proc(
@@ -784,29 +784,29 @@ namespace: types
       eltAlignData .fixed =:: eltAlign
       eltSizeData .fixed =:: eltSize
       eltAlign alignment > if
-        eltAlign alignment =
+        eltAlign alignment@ =
       end
       eltSize size > if
-        eltSize size =
+        eltSize size@ =
       end
       i 1 +
     end ..drop
     unionInfo [] .labelType typeContext isEmpty ! if
       unionInfo [] .labelType typeContext alignOf .fixed =:: labelAlign
       labelAlign alignment > if
-        labelAlign alignment =
+        labelAlign alignment@ =
       end
       size
         labelAlign alignSize
-        ..dup unionInfo [] .enumLabelOffset =
+        ..dup unionInfo .enumLabelOffset =
         unionInfo [] .labelType typeContext sizeOf .fixed +
-      size =
+      size@ =
     end
-    alignment unionInfo [] .compositeInfo .alignment =
-    size unionInfo [] .compositeInfo .size =
+    alignment unionInfo .compositeInfo .alignment =
+    size unionInfo .compositeInfo .size =
     unionInfo [] .compositeInfo .flags
       COMP_SIZE_KNOWN |
-    unionInfo [] .compositeInfo .flags =
+    unionInfo .compositeInfo .flags =
     false return
   end
   proc(
@@ -909,7 +909,7 @@ namespace: types
         0:i64 while ..dup dims .length < do =:: i
           dims i array.get =:: dim
           dim .int ?? if
-            size dim .int * size =
+            size dim .int * size@ =
           else
             baseSize .fixed TypeSize .dynamicArray return
           end
@@ -1109,7 +1109,7 @@ namespace: types
         context [] .arrayTypes ..swap .pointer i64 cast list.get
       else $ .rawPointer ?? _if
         n 0 == if ..drop primitive.I_SIZE false return end
-        offset 1 - offset =
+        offset 1 - offset@ =
         context [] .arrayTypes ..swap .rawPointer i64 cast list.get
       else $ .arrayType ?? _if
         context [] .arrayTypes ..swap .arrayType i64 cast list.get
@@ -1153,7 +1153,7 @@ namespace: types
         mutable
       context newArrayType if
         ..drop true return
-      end t [] =
+      end t []@ =
       false return
     end
     ## XXX ? allow marking named pointer types as mutable
@@ -1220,7 +1220,7 @@ namespace: types
         context asUnlabeledProc if ..drop
           Type .undefined true return
         end
-      base =
+      base@ =
     end
     context .arrayTypes =:: arrays
     0:i64 while ..dup arrays [] .length < do
@@ -1239,7 +1239,7 @@ namespace: types
         end
       .ptrOnly
         arrayType .ARRAY ?? ! &
-      arrays [] ..over.2 list.at .data [] .ptrOnly = ## update ptrOnly flag
+      arrays [] ..over.2 list.at .data .ptrOnly = ## update ptrOnly flag
       ## found match
       ArrayId cast
         arrayType switch
@@ -1252,10 +1252,10 @@ namespace: types
     context [] .arraySizes
       ..dup .length =:: sizeOffset
       sizes list.appendArray
-    context [] .arraySizes =
+    context .arraySizes =
     arrays []
       base sizeOffset sizes .length arrayType .ARRAY ?? ! mutable ArrayData new list.append
-    arrays [] =
+    arrays []@ =
     arrays [] .length 1 - ArrayId cast
       arrayType switch
         POINTER case Type .pointer break
@@ -1617,11 +1617,11 @@ namespace: types
     compData [] .flags COMP_FLAG_ONLY_EMPTY & ? if
       emptyTypeBuffer
         compData [] .eltCount list.ensureCap
-      emptyTypeBuffer =
+      emptyTypeBuffer@ =
       while emptyTypeBuffer .length compData [] .eltCount < do
         emptyTypeBuffer
           Type .empty list.append
-        emptyTypeBuffer =
+        emptyTypeBuffer@ =
       end
       emptyTypeBuffer 0 compData [] .eltCount list.slice return
     end
@@ -1649,23 +1649,23 @@ namespace: types
     0:i64 while ..dup elts .length < do
       elts ..over array.get =:: elt
       elt .empty ?? ! if
-        false onlyEmpty =
+        false onlyEmpty@ =
       end
       elt context isEmpty ! if
-        false emptyData =
+        false emptyData@ =
       end
       elt context containsGeneric if
-        flags COMP_FLAG_STATIC_ARGS | flags =
+        flags COMP_FLAG_STATIC_ARGS | flags@ =
       end
       elt isLiteral if
-        flags COMP_FLAG_CONTAINS_LITERAL | flags =
+        flags COMP_FLAG_CONTAINS_LITERAL | flags@ =
       end
       1 +
     end ..drop
     onlyEmpty if
       0 COMP_MASK_ONLY_EMPTY flags | return
     else emptyData _if
-       flags COMP_FLAG_EMPTY | flags =
+       flags COMP_FLAG_EMPTY | flags@ =
     end
     context [] .compositeData list.asArray
       elts
@@ -1679,7 +1679,7 @@ namespace: types
       elts ## skip overlap
         context [] .compositeData .length offset - array.tail
       list.appendArray
-    context [] .compositeData =
+    context .compositeData =
     offset flags return
   end
   proc(
@@ -1710,7 +1710,7 @@ namespace: types
     true =:: mut: unlabled
     0:i64 while ..dup labels .length < do
       labels ..over array.get id.LABEL_ID_NONE != if
-        false unlabled =
+        false unlabled@ =
         break
       end
       1 +
@@ -1730,7 +1730,7 @@ namespace: types
       labels ## skip overlap
         context [] .elementLabels .length offset - array.tail
       list.appendArray
-    context [] .elementLabels =
+    context .elementLabels =
     offset LabelOffset cast return
   end
 
@@ -1752,7 +1752,7 @@ namespace: types
           t [] .compositeInfo .flags COMP_MASK_CONTENT_FLAGS &
             flags COMP_MASK_CONTENT_FLAGS &
           == if
-        t [] .compositeInfo .flags flags | t [] .compositeInfo .flags =
+        t [] .compositeInfo .flags flags | t .compositeInfo .flags =
         TupleId cast return
       end
       1 +
@@ -1770,7 +1770,7 @@ namespace: types
         CompositeInfo new
         -1
       TupleInfo new list.append
-    context [] .tupleTypes =
+    context .tupleTypes =
     newId return
   end
   ## creates struct
@@ -1820,13 +1820,13 @@ namespace: types
       labels optional.hasData and
         labels .data i array.get id.LABEL_ID_NONE != if
         ## if there is a labeled element the initializer is not an array
-        Type .undefined arrayType =
+        Type .undefined arrayType@ =
         i break
       end
       arrayType eltType context mergeTypes ! if
-        #+mergedType+# arrayType =
+        #+mergedType+# arrayType@ =
       else ..drop
-        Type .undefined arrayType =
+        Type .undefined arrayType@ =
         i break
       end
     finally i 1 + end ..drop
@@ -1836,7 +1836,7 @@ namespace: types
         tupleId
         arrayType
       InitializerInfo new list.append
-    context [] .initializerTypes =
+    context .initializerTypes =
     initializerId InitializerId cast Type .initializer return
   end
   proc(
@@ -1898,7 +1898,7 @@ namespace: types
         0
         labelType
        UnionInfo new list.append
-     context [] .unionTypes =
+     context .unionTypes =
     end
     unionId UnionId cast return
   end
@@ -2063,7 +2063,7 @@ namespace: types
     end ..drop
     procs []
       in out callConvention ProcType new list.append
-    procs [] =
+    procs []@ =
     procs [] .length 1 - ProcId cast Type .procedure
     false return
   end
@@ -2078,7 +2078,7 @@ namespace: types
       false =:: mut: isPtr
       ..dup context isPointer if
         context getBaseType
-        true isPtr =
+        true isPtr@ =
       end
     =:: mProc
     context [] .procTypes mProc .procedure i64 cast list.get =:: procData
@@ -2109,7 +2109,7 @@ namespace: types
       false =:: mut: isPtr
       ..dup context isPointer if
         context getBaseType
-        true isPtr =
+        true isPtr@ =
       end
     =:: mProc
     context [] .procTypes mProc .procedure i64 cast list.get =:: procData
@@ -2144,7 +2144,7 @@ namespace: types
         label
         implId
       NamedType new list.append
-    context [] .namedTypes =
+    context .namedTypes =
     context [] .namedTypes .length 1 - NamedTypeId cast return
   end
   proc(
@@ -2170,7 +2170,7 @@ namespace: types
     named [] .data Type .undefined typeEquals ! if
       id Type .namedType true return
     end
-    value named [] .data =
+    value named .data =
     id Type .namedType false return
   end
   proc(
@@ -2185,7 +2185,7 @@ namespace: types
         label
         -1
       NamedType new list.append
-    context [] .namedTypes =
+    context .namedTypes =
     context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType return
   end
   proc( Type -> bool ) =>: export: isNamedType
@@ -2253,7 +2253,7 @@ namespace: types
     named .namedType ?? if
       context [] .namedTypes named .namedType i64 cast list.at .data =:: elt
       elt [] .data Type .undefined typeEquals if
-        value elt [] .data =
+        value elt .data =
         false return
       end
     end
@@ -2326,7 +2326,7 @@ namespace: types
           arguments ..over.2 array.get
           labelContext
         constantEquals ! if
-          false match =
+          false match@ =
           break
         end
         1 +
@@ -2344,7 +2344,7 @@ namespace: types
           arguments constContext constArray
           Type .undefined
         GeneratedType new list.append
-      typeContext [] .generatedTypes =
+      typeContext .generatedTypes =
       newId GeneratedId cast Type .generatedType true return
     end
     Type .undefined true return
@@ -2368,14 +2368,14 @@ namespace: types
       typeContext [] .generatedTypes
         prevType .generatedType i64 cast
       list.at .data
-    [] .generated =
+    .generated =
     prevType return
   end
 
   proc( Type : generator TypeContext ptr : context -> Type ) =>: export: getGeneratedType
     generator =:: mut: t
     t .namedType ?? if
-      t context unwrapNamedKeepGenerated t =
+      t context unwrapNamedKeepGenerated t@ =
     end
     t .generatedType ?? ! if
       generator return
@@ -2387,7 +2387,7 @@ namespace: types
   proc( Type : generator TypeContext ptr : context -> LabelId ) =>: export: getGeneratorLabel
     generator =:: mut: t
     t .namedType ?? if
-      t context unwrapNamedKeepGenerated t =
+      t context unwrapNamedKeepGenerated t@ =
     end
     t .generatedType ?? ! if
       id.LABEL_ID_NONE return
@@ -2398,7 +2398,7 @@ namespace: types
   proc( Type : generator TypeContext ptr : context -> ConstValue arrayView ) =>: export: getGeneratorArgs
     generator =:: mut: t
     t .namedType ?? if
-      t context unwrapNamedKeepGenerated t =
+      t context unwrapNamedKeepGenerated t@ =
     end
     t .generatedType ?? ! if
       ConstValue array.empty return
@@ -2418,7 +2418,7 @@ namespace: types
     id context [] .compositeData .length == if
       context [] .compositeData
         base list.append
-      context [] .compositeData =
+      context .compositeData =
     end
     id ReferenceId cast mutable if Type .mutableReference else Type .reference end return
   end
@@ -2585,8 +2585,8 @@ namespace: types
           false return
         end
         srcSizeElt .int ?? if
-          srcTotal srcSizeElt .int * srcTotal =
-          targetTotal targetSizeElt .int * targetTotal =
+          srcTotal srcSizeElt .int * srcTotal@ =
+          targetTotal targetSizeElt .int * targetTotal@ =
         else srcTotal targetTotal != _if
           false return
         end
@@ -2599,11 +2599,11 @@ namespace: types
     reshape if
       srcSize .length while $ targetSize .length < do =:: i
         targetSize i array.get .int ?? ! if false return end
-        targetTotal targetSize i array.get .int * targetTotal =
+        targetTotal targetSize i array.get .int * targetTotal@ =
       finally i 1 + end ..drop
       targetSize .length while $ srcSize .length < do =:: i
         srcSize i array.get .int ?? ! if false return end
-        srcTotal srcSize i array.get .int * srcTotal =
+        srcTotal srcSize i array.get .int * srcTotal@ =
       finally i 1 + end ..drop
       srcTotal targetTotal == return
     end
@@ -2648,8 +2648,8 @@ namespace: types
     src0 =:: mut: src
     target0 =:: mut: target
     allowRename if
-      src context unwrapNamed src =
-      target context unwrapNamed target =
+      src context unwrapNamed src@ =
+      target context unwrapNamed target@ =
     end
     src target types.typeEquals if
       true return
@@ -2918,10 +2918,10 @@ namespace: types
         aSizes commonPrefix array.get
           bSizes commonPrefix array.get
         arraySizeEqual if
-          false fixedSize =
+          false fixedSize@ =
           break
         end
-        commonPrefix 1 + commonPrefix =
+        commonPrefix 1 + commonPrefix@ =
       end
       ## newArrayType
         a context types.getBaseType
@@ -2984,17 +2984,17 @@ namespace: types
   end
   proc( TypeContext : context -> TypeContext ) =>: export: freeTypeContent
     context =:: mut: cleared
-      cleared .labelContext id.freeLabelContext cleared .labelContext =
-      cleared .arrayTypes       list.free cleared .arrayTypes =
-      cleared .arraySizes       list.free cleared .arraySizes =
-      cleared .tupleTypes       list.free cleared .tupleTypes =
-      cleared .unionTypes       list.free cleared .unionTypes =
-      cleared .initializerTypes list.free cleared .initializerTypes =
-      cleared .compositeData    list.free cleared .compositeData =
-      cleared .tupleOffsets     list.free cleared .tupleOffsets =
-      cleared .procTypes        list.free cleared .procTypes =
-      cleared .namedTypes       list.free cleared .namedTypes =
-      cleared .elementLabels    list.free cleared .elementLabels =
+      cleared .labelContext id.freeLabelContext cleared@ .labelContext =
+      cleared .arrayTypes       list.free cleared@ .arrayTypes =
+      cleared .arraySizes       list.free cleared@ .arraySizes =
+      cleared .tupleTypes       list.free cleared@ .tupleTypes =
+      cleared .unionTypes       list.free cleared@ .unionTypes =
+      cleared .initializerTypes list.free cleared@ .initializerTypes =
+      cleared .compositeData    list.free cleared@ .compositeData =
+      cleared .tupleOffsets     list.free cleared@ .tupleOffsets =
+      cleared .procTypes        list.free cleared@ .procTypes =
+      cleared .namedTypes       list.free cleared@ .namedTypes =
+      cleared .elementLabels    list.free cleared@ .elementLabels =
     cleared return
   end
 end

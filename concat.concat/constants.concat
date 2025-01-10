@@ -69,7 +69,7 @@ proc(
 -> T arrayView ) =>: constPrimitiveArray
   context [] .arrayValues
     elts mixedArena.copyArray array.freeze =:: result
-  context [] .arrayValues =
+  context .arrayValues =
   result return
 end
 proc(
@@ -78,7 +78,7 @@ proc(
 -> ConstValue arrayView ) =>: export: constArray
   context [] .arrayValues
     elts mixedArena.copyArray array.freeze =:: result
-  context [] .arrayValues =
+  context .arrayValues =
   result return
 end
 
@@ -117,7 +117,7 @@ proc(
 -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
     value mixedArena.copyValue =:: valuePtr
-  context [] .arrayValues =
+  context .arrayValues =
   valuePtr index UnionConstant new ConstValue .Union return
 end
 proc(
@@ -219,7 +219,7 @@ namespace: constant
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable =
+        nonPrintable 1 + nonPrintable@ =
       end
     end ..drop.2
     ## at most 1/8 non-printable chars
@@ -236,7 +236,7 @@ namespace: constant
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable =
+        nonPrintable 1 + nonPrintable@ =
       end
     end ..drop.2
     ## at most 1/8 non-printable chars
@@ -252,7 +252,7 @@ namespace: constant
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable =
+        nonPrintable 1 + nonPrintable@ =
       end
     end
     ## at most 1/8 non-printable chars
@@ -624,7 +624,7 @@ namespace: constants
           sb.appendC
           continue
         end ..drop
-        i 1 + i =
+        i 1 + i@ =
         str i string.charAt $ switch
           '\\' '\'' '"' case
             $ pos@ updateFilePos
@@ -656,7 +656,7 @@ namespace: constants
             break
           'x' 'u' 'U' case =:: c
             c pos@ updateFilePos
-            i 1 + i =
+            i 1 + i@ =
             c 'x' == if 2:i64 else c 'u' == _if 4:i64 else 8:i64 end =:: nChars
             i nChars + str .length > if
               "not enough characters for escape sequence \"\\" sb.wrap
@@ -707,7 +707,7 @@ namespace: constants
             0:i64 while $ nChars < do =:: j
               str i j + string.charAt pos@ updateFilePos
             finally j 1 + end ..drop
-            i nChars 1 - + i =
+            i nChars 1 - + i@ =
             continue
           default
             "unknown escape sequence \"\\" sb.wrap
@@ -717,13 +717,13 @@ namespace: constants
             pos@ updateFilePos
         end
       finally i 1 + end ..drop
-    context [] .stringParseBuffer =
+    context .stringParseBuffer =
     context [] .stringParseBuffer
       sb.asStr offset string.tail
     context newStringConst
       context [] .stringParseBuffer
         offset sb.setLength
-      context [] .stringParseBuffer =
+      context .stringParseBuffer =
     return
   end
   proc(
@@ -753,13 +753,13 @@ namespace: constants
         sb.appendC
         i 2 +
       end ..drop
-    context [] .stringParseBuffer =
+    context .stringParseBuffer =
     context [] .stringParseBuffer
       sb.asStr offset string.tail
     context newStringConst
       context [] .stringParseBuffer
         offset sb.setLength
-      context [] .stringParseBuffer =
+      context .stringParseBuffer =
     return
   end
 end

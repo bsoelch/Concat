@@ -296,7 +296,7 @@ namespace: interpreter
           NONE case break
           UNSIGNED OVERFLOW case
             parserError .UNSIGNED ?? and builtIn .PARSE_I64 ?? if break end
-            true overflow =
+            true overflow@ =
             break
           SIGN INT EMPTY INVALID_BASE INVALID_CHAR case
             parserError number.errorString sb.fromStr

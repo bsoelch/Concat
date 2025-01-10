@@ -353,7 +353,7 @@ namespace: list
       "pop from empty list" ..panic
     end
     elts0 =:: mut: elts
-    elts .length 1 - elts .length =
+    elts .length 1 - elts@ .length =
     ## return
       elts
       elts .data elts .length []

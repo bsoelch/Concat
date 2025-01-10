@@ -47,11 +47,11 @@ proc( -> ) =>: parseArgs
   false =:: mut: hasSrc
   false =:: mut: hasOut
   false =:: mut: hasLib
-  0 sb.create srcFile =
-  0 sb.create outFile =
-  string optional.empty parserTokensFile =
-  string optional.empty compilerTokensFile =
-  string optional.empty errorFile =
+  0 sb.create srcFile@ =
+  0 sb.create outFile@ =
+  string optional.empty parserTokensFile@ =
+  string optional.empty compilerTokensFile@ =
+  string optional.empty errorFile@ =
   0 sys.getArg string.create =:: path
   ArgParserState .IN =:: mut: state
   1:i64 while ..dup sys.argc < do
@@ -68,36 +68,36 @@ proc( -> ) =>: parseArgs
         'h' case
           printedUsage if break end
           path printUsage
-          true printedUsage =
+          true printedUsage@ =
           break
         'o' case
-          ArgParserState .OUT state =
+          ArgParserState .OUT state@ =
           break
         'p' case
-          ArgParserState .TOKENS_PARSER state =
+          ArgParserState .TOKENS_PARSER state@ =
           break
         't' case
-          ArgParserState .TOKENS_COMPILER state =
+          ArgParserState .TOKENS_COMPILER state@ =
           break
         'l' case
-          ArgParserState .LIB_PATH state =
+          ArgParserState .LIB_PATH state@ =
           break
         'e' case
-          ArgParserState .ERR_PATH state =
+          ArgParserState .ERR_PATH state@ =
           break
         'W' case
-          true _W_ERROR_ =
+          true _W_ERROR_@ =
           break
         'X' case ## experimental features
-          true _EXPERIMENTAL_ =
+          true _EXPERIMENTAL_@ =
           break
         'q' case
           break
         '-' case
           arg "--no-core" string.wrap string.eq if
-            false _INCLUDE_CORE_ = break
+            false _INCLUDE_CORE_@ = break
           else arg "--no-inc-version" string.wrap string.eq _if
-            false _INCREMENT_VERSION_ = break
+            false _INCREMENT_VERSION_@ = break
           end
           "unknown compiler option: \"" sb.wrap
             arg sb.appendStr
@@ -123,31 +123,31 @@ proc( -> ) =>: parseArgs
         sb.free ..drop
         break
       IN case
-        srcFile sb.clear arg sb.appendStr srcFile =
-        true hasSrc =
-        ArgParserState .NONE state =
+        srcFile sb.clear arg sb.appendStr srcFile@ =
+        true hasSrc@ =
+        ArgParserState .NONE state@ =
         break
       OUT case
-        outFile sb.clear arg sb.appendStr outFile =
-        true hasOut =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        outFile sb.clear arg sb.appendStr outFile@ =
+        true hasOut@ =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
         break
       TOKENS_PARSER case
-        arg optional.wrap parserTokensFile =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        arg optional.wrap parserTokensFile@ =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
         break
       TOKENS_COMPILER case
-        arg optional.wrap compilerTokensFile =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        arg optional.wrap compilerTokensFile@ =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
         break
       ERR_PATH case
-        arg optional.wrap errorFile =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        arg optional.wrap errorFile@ =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
         break
       LIB_PATH case
-        arg libPath =
-        true hasLib =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state =
+        arg libPath@ =
+        true hasLib@ =
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
         break
     end
     1 +
@@ -167,27 +167,27 @@ proc( -> ) =>: parseArgs
   srcFile sb.asStr '.' string.lastIndexOf =:: mut: iDot
   srcFile sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
   iDot iSlash < if
-    -1 iDot =
+    -1 iDot@ =
   end
   hasOut ! if
     outFile
       sb.clear
       srcFile sb.appendSb
-    outFile =
+    outFile@ =
     iDot 0 > if
       outFile
         iDot sb.setLength
-      outFile =
+      outFile@ =
     end
     outFile
       _BACKEND_ switch
         QBE case ".ssa\x00" sb.appendS break
       end
-    outFile =
+    outFile@ =
   end
-  iSlash 0 < if "./" string.wrap else srcFile .data iSlash 1 + string.create end basePath =
+  iSlash 0 < if "./" string.wrap else srcFile .data iSlash 1 + string.create end basePath@ =
   hasLib ! if
-    "./lib/" string.wrap libPath =
+    "./lib/" string.wrap libPath@ =
   else libPath ..dup .length 1 - string.charAt ..dup '/' != ..swap '\\' != & _if
     io.stdErr "library path has to end with '/' or '\\'\n" io.fputs ..drop
     srcFile sb.free
@@ -209,9 +209,9 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
         errors [] ..over.2 list.at .data =:: err
         err [] sb.appendCompilerError
         err [] .errType .ERROR ?? if
-          true hasError =
+          true hasError@ =
         else _W_ERROR_ err [] .errType .WARNING ?? & _if
-          true hasError =
+          true hasError@ =
         end
       ..swap 1 +
     end ..drop
@@ -223,7 +223,7 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
     1 sys.exit
     ..unreachable
   end
-  errors [] list.clear errors [] =
+  errors [] list.clear errors []@ =
 end
 
 proc( -> ProgramContext ) =>: parseAndTypeCheck

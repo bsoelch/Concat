@@ -34,13 +34,13 @@ proc(
       declared typeContext types.getBaseType ptrLevel 1 + pos prog visited types declaredType
       types []
         declared list.append
-      types [] =
+      types =
       break
     arrayType reference mutableReference case
       declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
       types []
         declared list.append
-      types [] =
+      types =
       break
     struct union procIn procOut enum initializer case
       declared typeContext types.compositeElts =:: elts
@@ -61,7 +61,7 @@ proc(
       end
       types []
         declared list.append
-      types [] =
+      types =
       break
     procedure case
       declared typeContext types.getProcIn ..drop ptrLevel pos prog visited types declaredType
@@ -73,16 +73,16 @@ proc(
       declared typeContext types.unwrapNamed ptrLevel pos prog visited types declaredType
       types []
         declared list.append
-      types [] =
+      types =
       break
     generatedType case
       declared typeContext types.getGeneratedType ptrLevel pos prog visited types declaredType
       types []
         declared list.append
-      types [] =
+      types =
       break
   end
-  -1 visited declared map.at .data [] = ## finished declaration
+  -1 visited declared map.at .data []@ = ## finished declaration
 end
 
 proc( Operation ptr : op ProgramContext ptr.mut : prog Type i32 hashMap ptr.mut : visited Type list ptr.mut : types -> ) =>: addOpType

@@ -79,14 +79,14 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> ) =>: export: cleanupContext
     context .globalVariables map.free
-    context [] .stackInfo   list.free context [] .stackInfo =
-    context [] .openBlocks  list.free context [] .openBlocks =
-    context [] .typeBuffer  list.free context [] .typeBuffer =
-    context [] .valueBuffer list.free context [] .valueBuffer =
-    context [] .labelBuffer list.free context [] .labelBuffer =
-    context [] .callPositions list.free context [] .callPositions =
-    context [] .localMemory mixedArena.free context [] .localMemory =
-    context [] .stack list.free context [] .stack =
+    context [] .stackInfo   list.free context .stackInfo =
+    context [] .openBlocks  list.free context .openBlocks =
+    context [] .typeBuffer  list.free context .typeBuffer =
+    context [] .valueBuffer list.free context .valueBuffer =
+    context [] .labelBuffer list.free context .labelBuffer =
+    context [] .callPositions list.free context .callPositions =
+    context [] .localMemory mixedArena.free context .localMemory =
+    context [] .stack list.free context .stack =
   end
 
   proc(
@@ -257,7 +257,7 @@ namespace: interpreter
         context [] .valueBuffer .length
         context [] .labelBuffer .length
       BlockInfo new list.append
-    context [] .openBlocks =
+    context .openBlocks =
   end
   BlockType ..length 38 == "number of block types" assert
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
@@ -277,7 +277,7 @@ namespace: interpreter
       AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
           context [] .openBlocks
             list.pop ..drop
-          context [] .openBlocks =
+          context .openBlocks =
         break
       default break
     end
@@ -369,15 +369,15 @@ namespace: interpreter
     typeContext .labelContext =:: labelContext
     context [] .labelBuffer
       label list.append
-    context [] .labelBuffer =
+    context .labelBuffer =
     valueContext switch
       INITIALIZER case
         context [] .typeBuffer
           valueType list.append
-        context [] .typeBuffer =
+        context .typeBuffer =
         context [] .valueBuffer
           value list.append
-        context [] .valueBuffer =
+        context .valueBuffer =
         false return
       TYPE_STRUCT TYPE_UNION TYPE_PROC case break
       TYPE_ENUM case ..unreachable
@@ -394,7 +394,7 @@ namespace: interpreter
     value .TypeId =:: typeValue
     context [] .typeBuffer
       typeValue list.append
-    context [] .typeBuffer =
+    context .typeBuffer =
     label id.LABEL_ID_NONE != if
       typeValue
         typeContext types.unwrapNamed
@@ -534,9 +534,9 @@ namespace: interpreter
         true return
       end
     end =:: tupleType
-    context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-    context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-    context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+    context [] .typeBuffer typeOffset list.setLength context .typeBuffer =
+    context [] .valueBuffer valueOffset list.setLength context .valueBuffer =
+    context [] .labelBuffer labelOffset list.setLength context .labelBuffer =
     ## pushValue
       tupleType ConstValue .TypeId
       types.primitive.TYPE
@@ -561,7 +561,7 @@ namespace: interpreter
     end
     context [] .typeBuffer
       list.pop =:: procOut ## last value is return type
-    context [] .typeBuffer =
+    context .typeBuffer =
     op closedBlock
       LabeledValueContext .TYPE_PROC
       op [] .pos
@@ -575,9 +575,9 @@ namespace: interpreter
       "could not create procedure-type" sb.wrap op [] .pos errors appendError
       true return
     end =:: newType
-    context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-    context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-    context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+    context [] .typeBuffer typeOffset list.setLength context .typeBuffer =
+    context [] .valueBuffer valueOffset list.setLength context .valueBuffer =
+    context [] .labelBuffer labelOffset list.setLength context .labelBuffer =
     ## pushValue
       newType ConstValue .TypeId
       types.primitive.TYPE
@@ -632,13 +632,13 @@ namespace: interpreter
   -> ) =>: pushValue
     context [] .stack
       value list.append
-    context [] .stack =
+    context .stack =
     context [] .stackInfo
       ## ValueInfo
         valType
         pos
       ValueInfo new list.append
-    context [] .stackInfo =
+    context .stackInfo =
   end
   proc(
     FilePosition : pos
@@ -657,10 +657,10 @@ namespace: interpreter
     end
     context [] .stack
       list.pop =:: value
-    context [] .stack =
+    context .stack =
     context [] .stackInfo
       list.pop =:: valInfo
-    context [] .stackInfo =
+    context .stackInfo =
     valInfo value false return
   end
   proc(
@@ -670,10 +670,10 @@ namespace: interpreter
   ->  ) =>: unpopValue
     context [] .stack
        value list.append
-    context [] .stack =
+    context .stack =
     context [] .stackInfo
       valInfo list.append
-    context [] .stackInfo =
+    context .stackInfo =
   end
   proc(
     ConstValue _ ptr : values
@@ -698,10 +698,10 @@ namespace: interpreter
     context [] .stack .length newLength >= "newLength<length" assert
     context [] .stack
       newLength list.setLength
-    context [] .stack =
+    context .stack =
     context [] .stackInfo
       newLength list.setLength
-    context [] .stackInfo =
+    context .stackInfo =
   end
 
   proc(
@@ -907,8 +907,8 @@ namespace: interpreter
         pos errors appendError
         Type .undefined ConstValue .None true return
       end
-      value .TypeId valType =
-      true isType =
+      value .TypeId valType@ =
+      true isType@ =
     end
     valType typeContext types.isPointer or valType typeContext types.isArray if
       valType typeContext types.isFixedSize ! if
@@ -968,7 +968,7 @@ namespace: interpreter
               pos errors appendError
               Type .undefined ConstValue .None true return
             end
-          idContext [] .argBuffer =
+          idContext .argBuffer =
           i 1 +
         end ..drop
         sizes .length types.ArraySize .int =:: sizeLength
@@ -989,7 +989,7 @@ namespace: interpreter
           newArrayConst
           idContext [] .argBuffer
             offset list.setLength
-          idContext [] .argBuffer =
+          idContext .argBuffer =
           false
         return
       end
@@ -1122,11 +1122,11 @@ namespace: interpreter
       srcType typeContext types.unwrapNamed types.isPrimitive if
         srcType typeContext types.primitiveValue switch
           I8  CHAR8  case intVal i8 cast
-            unsignedCast if i64 cast.u else i64 cast.s end intVal = break
+            unsignedCast if i64 cast.u else i64 cast.s end intVal@ = break
           I16 CHAR16 case intVal i16 cast
-            unsignedCast if i64 cast.u else i64 cast.s end intVal = break
+            unsignedCast if i64 cast.u else i64 cast.s end intVal@ = break
           I32 CHAR32 case intVal i32 cast
-            unsignedCast if i64 cast.u else i64 cast.s end intVal = break
+            unsignedCast if i64 cast.u else i64 cast.s end intVal@ = break
           F32 F64 case break ## XXX? handle precission loss due to representing int as float
           I64 case break ## no change neccessary
           BOOL TYPE case ..unreachable
@@ -1177,14 +1177,14 @@ namespace: interpreter
     true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
       $ typeContext types.isPointer if
-        $ typeContext types.isMutable eltMutable & eltMutable =
+        $ typeContext types.isMutable eltMutable & eltMutable@ =
         typeContext types.getBaseType
-        true isPtr =
+        true isPtr@ =
       end
       eltMutable and $ elementIndex typeContext types.compositeGetLabel
         typeContext .labelContext id.labelFlags
       id.FLAG_MUTABLE & ? ! if
-        false eltMutable =
+        false eltMutable@ =
       end
       elementIndex typeContext types.compositeGetElement
       isPtr if eltMutable typeContext types.getAddressType end
@@ -1248,7 +1248,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableArray =:: tmpArray
-        allocator [] =
+        allocator []@ =
         tmpArray array.freeze constContext newArray8Const return
       LocalArray16 case
         localArray .LocalArray16 i16 arrayView.mut cast =:: arrayData
@@ -1257,7 +1257,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableArray =:: tmpArray
-        allocator [] =
+        allocator []@ =
         tmpArray array.freeze constContext newArray16Const return
       LocalArray32 case
         localArray .LocalArray32 i32 arrayView.mut cast =:: arrayData
@@ -1266,7 +1266,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableArray =:: tmpArray
-        allocator [] =
+        allocator []@ =
         tmpArray array.freeze constContext newArray32Const return
       LocalArray64 case
         localArray .LocalArray64 i64 arrayView.mut cast =:: arrayData
@@ -1275,14 +1275,14 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableArray =:: tmpArray
-        allocator [] =
+        allocator []@ =
         tmpArray array.freeze constContext newArray64Const return
       default ..unreachable
     end
     localArray .LocalArray ConstValue arrayView.mut cast =:: dataArray
     allocator []
       dataArray mixedArena.copyMutableArray =:: tmpArray
-    allocator [] =
+    allocator []@ =
     valType typeContext types.getElementType =:: arrayBase
     ## 1. copy elements
     dataArray .length for =:: i
@@ -1316,7 +1316,7 @@ namespace: interpreter
       end
       context [] .localMemory
         value mixedArena.copyValue =:: localAddress
-      context [] .localMemory =
+      context .localMemory =
       localAddress LocalAddress cast ConstValue .LocalValue return
     end
     ConstValue ..length 23 == "no new constants" assert
@@ -1325,56 +1325,56 @@ namespace: interpreter
       Array8 case
         context [] .localMemory
           value .Array8 mixedArena.copyArray =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalSlice8 cast ConstValue .LocalArray8
         return
       LocalArray8 case
         context [] .localMemory
           value .LocalArray8 i8 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalSlice8 cast ConstValue .LocalArray8
         return
       Array16 case
         context [] .localMemory
           value .Array16 mixedArena.copyArray =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalSlice16 cast ConstValue .LocalArray16
         return
       LocalArray16 case
         context [] .localMemory
           value .LocalArray16 i16 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalSlice16 cast ConstValue .LocalArray16
         return
       Array32 case
         context [] .localMemory
           value .Array32 mixedArena.copyArray =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalSlice32 cast ConstValue .LocalArray32
         return
       LocalArray32 case
         context [] .localMemory
           value .LocalArray32 i32 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalSlice32 cast ConstValue .LocalArray32
         return
       Array64 case
         context [] .localMemory
           value .Array64 mixedArena.copyArray =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalSlice64 cast ConstValue .LocalArray64
         return
       LocalArray64 case
         context [] .localMemory
           value .LocalArray64 i64 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalSlice64 cast ConstValue .LocalArray64
         return
       ## TODO? replace union element by local copy
       default
         context [] .localMemory
           value mixedArena.copyValue =:: localAddress
-        context [] .localMemory =
+        context .localMemory =
         localAddress LocalAddress cast ConstValue .LocalValue
         return
     end
@@ -1384,7 +1384,7 @@ namespace: interpreter
       else
         value .LocalArray ConstValue arrayView.mut cast array.freeze
       end mixedArena.copyArray =:: localSlice
-    context [] .localMemory =
+    context .localMemory =
     valType typeContext types.getElementType =:: arrayBase
     ## copy sub-arrays
     localSlice .length for =:: i
@@ -1395,7 +1395,7 @@ namespace: interpreter
         valType i typeContext types.compositeGetElement
       end =:: eltType
       elt [] .Array ?? if
-        elt [] eltType false context localCopy elt [] =
+        elt [] eltType false context localCopy elt []@ =
       end
     end
     localSlice LocalSlice cast ConstValue .LocalArray
@@ -1413,7 +1413,7 @@ namespace: interpreter
       dataType typeContext types.compositeEltCount =:: eltCount
       context [] .localMemory
         eltCount i32 cast ConstValue mixedArena.allocArray =:: localSlice
-      context [] .localMemory =
+      context .localMemory =
       eltCount for =:: i
         dataType i typeContext types.compositeGetElement =:: eltType
         eltType typeContext types.isTuple or eltType typeContext types.isArray if
@@ -1443,25 +1443,25 @@ namespace: interpreter
           BOOL I8 CHAR8 case
             context [] .localMemory
               eltCount i32 cast i8 mixedArena.allocArray =:: localSlice
-            context [] .localMemory =
+            context .localMemory =
             0:i8 localSlice array.fill
             localSlice LocalSlice8 cast ConstValue .LocalArray8 return
           I16 CHAR16 case
             context [] .localMemory
               eltCount i32 cast i16 mixedArena.allocArray =:: localSlice
-            context [] .localMemory =
+            context .localMemory =
             0:i16 localSlice array.fill
             localSlice LocalSlice16 cast ConstValue .LocalArray16 return
           I32 CHAR32 case
             context [] .localMemory
               eltCount i32 cast i32 mixedArena.allocArray =:: localSlice
-            context [] .localMemory =
+            context .localMemory =
             0:i32 localSlice array.fill
             localSlice LocalSlice32 cast ConstValue .LocalArray32 return
           I64 case
             context [] .localMemory
               eltCount i32 cast i64 mixedArena.allocArray =:: localSlice
-            context [] .localMemory =
+            context .localMemory =
             0:i64 localSlice array.fill
             localSlice LocalSlice64 cast ConstValue .LocalArray64 return
           F32 F64 TYPE case break ## XXX? store float arrays in Array32/Array64
@@ -1469,7 +1469,7 @@ namespace: interpreter
       end
       context [] .localMemory
         eltCount i32 cast ConstValue mixedArena.allocArray =:: localSlice
-      context [] .localMemory =
+      context .localMemory =
       eltType typeContext types.isTuple or eltType typeContext types.isArray if
         eltCount for =:: i
           ## array.set
@@ -1483,7 +1483,7 @@ namespace: interpreter
     else
       context [] .localMemory
         ConstValue .None mixedArena.copyValue =:: localAddress
-      context [] .localMemory =
+      context .localMemory =
       localAddress LocalAddress cast ConstValue .LocalValue return
     end
   end
@@ -1577,7 +1577,7 @@ namespace: interpreter
           valueInfo [] .pushedAt sb.appendPos
         end
         '\n' sb.appendC
-      sb =
+      sb@ =
     finally i 1 - end ..drop
     sb
       "-----------------\n" sb.appendS
@@ -1618,10 +1618,10 @@ proc(
         eltLabel context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
           Type .empty list.append
-        context [] .typeBuffer =
+        context .typeBuffer =
         context [] .labelBuffer
           eltLabel list.append
-        context [] .labelBuffer =
+        context .labelBuffer =
         EvalResult .Ok return
       end
       op [] .val .Constant .GenericArg ?? and context [] .localVariables ? if
@@ -1653,7 +1653,7 @@ proc(
           ## close procedure block
           context [] .openBlocks
             ..swap list.setLength
-          context [] .openBlocks =
+          context .openBlocks =
           EvalResult .Return return
         end
         1 -
@@ -1709,7 +1709,7 @@ proc(
           end
           context [] .openBlocks
             list.pop =:: closedBlock
-          context [] .openBlocks =
+          context .openBlocks =
           closedBlock .blockType .IF_TRUE ?? if
             BlockType .ELSE_TRUE
           else closedBlock .blockType .IF_FALSE ?? _if
@@ -1846,7 +1846,7 @@ proc(
       end
       context [] .openBlocks
         list.pop =:: closedBlock ## XXX avoid copying blockInfo into local variable
-      context [] .openBlocks =
+      context .openBlocks =
       closedBlock .blockType switch
         IF_TRUE IF_FALSE case
           blockType .IF ?? if EvalResult .Ok return end break
@@ -1888,9 +1888,9 @@ proc(
             "could not create enum" sb.wrap op [] .pos errors appendError
             EvalResult .Error return
           end =:: enumType
-          context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-          context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-          context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+          context [] .typeBuffer typeOffset list.setLength context .typeBuffer =
+          context [] .valueBuffer valueOffset list.setLength context .valueBuffer =
+          context [] .labelBuffer labelOffset list.setLength context .labelBuffer =
           ## pushValue
             enumType ConstValue .TypeId
             types.primitive.TYPE
@@ -1913,9 +1913,9 @@ proc(
             "could not create union-type" sb.wrap op [] .pos errors appendError
             EvalResult .Error return
           end =:: unionType
-          context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-          context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-          context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+          context [] .typeBuffer typeOffset list.setLength context .typeBuffer =
+          context [] .valueBuffer valueOffset list.setLength context .valueBuffer =
+          context [] .labelBuffer labelOffset list.setLength context .labelBuffer =
           ## pushValue
             unionType ConstValue .TypeId
             types.primitive.TYPE
@@ -1937,12 +1937,12 @@ proc(
             context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
             true
           typeContext types.newProcArgs =:: procOut
-          context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-          context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-          context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+          context [] .typeBuffer typeOffset list.setLength context .typeBuffer =
+          context [] .valueBuffer valueOffset list.setLength context .valueBuffer =
+          context [] .labelBuffer labelOffset list.setLength context .labelBuffer =
           context [] .typeBuffer
             procOut list.append
-          context [] .typeBuffer =
+          context .typeBuffer =
           EvalResult .Ok return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           ## end procedure
@@ -1959,9 +1959,9 @@ proc(
             values
             idContext .constContext
           newArrayConst =:: value
-          context [] .typeBuffer typeOffset list.setLength context [] .typeBuffer =
-          context [] .valueBuffer valueOffset list.setLength context [] .valueBuffer =
-          context [] .labelBuffer labelOffset list.setLength context [] .labelBuffer =
+          context [] .typeBuffer typeOffset list.setLength context .typeBuffer =
+          context [] .valueBuffer valueOffset list.setLength context .valueBuffer =
+          context [] .labelBuffer labelOffset list.setLength context .labelBuffer =
           ## pushValue
             value
             initializerType
@@ -2025,13 +2025,13 @@ proc(
           end
           context [] .stackInfo
             list.pop =:: mut: valInfo
-          context [] .stackInfo =
+          context .stackInfo =
           context [] .stack
             list.pop =:: mut: value
-          context [] .stack =
+          context .stack =
           value .WildCard ?? and context inUnion if
-            types.primitive.TYPE valInfo .valueType =
-            Type .empty ConstValue .TypeId value =
+            types.primitive.TYPE valInfo@ .valueType =
+            Type .empty ConstValue .TypeId value@ =
           end
           context [] .openBlocks list.peek .data [] .stackOffset =:: stackOffset
           stackOffset initialLabelOffset valueContext op [] .pos context finishLabledValues if
@@ -2067,10 +2067,10 @@ proc(
         eltLabel context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
           Type .empty list.append
-        context [] .typeBuffer =
+        context .typeBuffer =
         context [] .labelBuffer
           eltLabel list.append
-        context [] .labelBuffer =
+        context .labelBuffer =
         EvalResult .Ok return
       end
       "unsupported operation in constant evaluation: " sb.wrap
@@ -2084,10 +2084,10 @@ proc(
         label context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
           Type .empty list.append
-        context [] .typeBuffer =
+        context .typeBuffer =
         context [] .labelBuffer
           label list.append
-        context [] .labelBuffer =
+        context .labelBuffer =
         EvalResult .Ok return
       end
       idInfo [] .idType switch
@@ -2119,7 +2119,7 @@ proc(
                 context [] .stackInfo i list.at .data [] .valueType
                 context [] .stack i list.at .data []
               StackValue new list.append
-            stackValues =
+            stackValues@ =
           finally i 1 - end ..drop
           ## resolve correct call for given arguments
           0 sb.create =:: mut: message
@@ -2308,8 +2308,8 @@ proc(
         context minStackOffset =:: minOffset
         context [] .stack .length 1 - =:: mut: offset
         offset minOffset > and context [] .stack offset list.get .WildCard ?? if
-          false fixedSize =
-          offset 1 - offset =
+          false fixedSize@ =
+          offset 1 - offset@ =
         end
         0:i64 =:: mut: intArgs
         offset while ..dup minOffset >= do
@@ -2317,24 +2317,24 @@ proc(
               typeContext types.unwrapReference typeContext types.isInt ! if
             break
           end
-          intArgs 1 + intArgs =
+          intArgs 1 + intArgs@ =
           1 -
-        end offset =
+        end offset@ =
         idContext [] .arraySizeBuffer
           list.clear
           intArgs list.ensureCap
-        idContext [] .arraySizeBuffer =
+        idContext .arraySizeBuffer =
         1:i64 while ..dup intArgs <= do
           context [] .stack offset ..over.2 + list.get =:: intArg
           intArg .Int ?? if
             ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
               intArg .Int types.ArraySize .int list.append
-            idContext [] .arraySizeBuffer =
+            idContext .arraySizeBuffer =
           else intArg .GenericArg ?? _if
             idContext [] .arraySizeBuffer
               intArg .GenericArg types.ArraySize .genericArg list.append
-            idContext [] .arraySizeBuffer =
+            idContext .arraySizeBuffer =
           else
             "unexpected constant for array size: " sb.wrap
               intArg typeContext sb.appendConstant
@@ -2537,7 +2537,7 @@ proc(
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType = valInfo =
+        end poppedType@ = valInfo@ =
         poppedType typeContext types.containsGeneric if
           "creating generic tuples is not supported" sb.wrap
           op [] .pos errors appendError
@@ -2547,7 +2547,7 @@ proc(
           context unpopValue
           EvalResult .Error return
         end
-        true poppedValue =
+        true poppedValue@ =
         poppedType
       else
         op [] .dataType
@@ -2621,8 +2621,8 @@ proc(
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType = valInfo =
-        true isPoppedType =
+        end poppedType@ = valInfo@ =
+        true isPoppedType@ =
         poppedType typeContext types.containsGeneric if
           "generic casts are not supported" sb.wrap
           op [] .pos errors appendError
@@ -2645,7 +2645,7 @@ proc(
           context unpopValue
         end
         EvalResult .Error return
-      end =:: oldValue valInfo = ## can overwrite value info
+      end =:: oldValue valInfo@ = ## can overwrite value info
       ## canCast
         valInfo .valueType
         targetType
@@ -2706,7 +2706,7 @@ proc(
         value? .data [] .LocalValue ?? if
           value? .data []
             .LocalValue []
-          value? .data [] =
+          value? .data []@ =
         else value? .data [] .LocalArray ?? or
             value? .data [] .LocalArray8 ?? or
             value? .data [] .LocalArray16 ?? or
@@ -2715,11 +2715,11 @@ proc(
           context [] .localMemory mixedArena.offset =:: localOffset
           value? .data []
             valType context .localMemory program copyLocalArray
-          value? .data [] =
+          value? .data []@ =
           ## clear memory used by copy
           context [] .localMemory
             localOffset mixedArena.reset
-          context [] .localMemory =
+          context .localMemory =
         else
           "unexpected constant for copy, expected local memory got: " sb.wrap
             value? .data [] typeContext sb.appendConstant
@@ -2813,8 +2813,8 @@ proc(
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType = valInfo =
-        true poppedValue =
+        end poppedType@ = valInfo@ =
+        true poppedValue@ =
         poppedType typeContext types.containsGeneric if
           "generic types are not supported" sb.wrap
           op [] .pos errors appendError
@@ -2863,8 +2863,8 @@ proc(
         op [] .pos context popValue if ..drop.3
           values valInfos nArgs context unpopValues
           EvalResult .Error return
-        end values nArgs [] = valInfos nArgs [] =
-        nArgs 1 + nArgs =
+        end values nArgs []@ = valInfos nArgs []@ =
+        nArgs 1 + nArgs@ =
       end ..drop
       ## mergeTypes
         valInfos 0 [] .valueType
@@ -2914,10 +2914,10 @@ proc(
           end
           context [] .stack
             $ $1 .length offset - list.get list.append
-          context [] .stack =
+          context .stack =
           context [] .stackInfo
             $ $1 .length offset - list.get list.append
-          context [] .stackInfo =
+          context .stackInfo =
           EvalResult .Ok return
         SWAP case
           2
@@ -2934,11 +2934,11 @@ proc(
           context [] .stack
             upper list.append
             lower list.append
-          context [] .stack =
+          context .stack =
           context [] .stackInfo
             upperInfo list.append
             lowerInfo list.append
-          context [] .stackInfo =
+          context .stackInfo =
           EvalResult .Ok return
       end
       break
@@ -3171,7 +3171,7 @@ proc(
       ConstValue ..length 23 == "no new constants" assert
       targetValue switch
         LocalValue case
-          value targetValue .LocalValue [] =
+          value targetValue .LocalValue []@ =
           EvalResult .Ok return
         LocalArray case
           value .Array ?? if
@@ -3319,7 +3319,7 @@ namespace: interpreter
       pos context popValue if ..drop.2
         values valInfos nArgs context unpopValues
         true return
-      end values nArgs [] = valInfos nArgs [] =
+      end values nArgs []@ = valInfos nArgs []@ =
       valInfos nArgs [] .valueType eltType typeContext types.canAutoCast ! if
         "wrong argument type for built-in " sb.wrap
           builtIn sb.appendBuiltIn
@@ -3331,7 +3331,7 @@ namespace: interpreter
         values valInfos nArgs 1 + context unpopValues
         true return
       end
-      nArgs 1 + nArgs =
+      nArgs 1 + nArgs@ =
       i 1 -
     end ..drop
     ## bring arguments in correct order
@@ -3492,13 +3492,13 @@ namespace: interpreter
     offset context truncateStack
     context [] .stack
       tupleConst list.append
-    context [] .stack =
+    context .stack =
     context [] .stackInfo
       ## ValueInfo
         tupleType
         pos
       ValueInfo new list.append
-    context [] .stackInfo =
+    context .stackInfo =
     false return
   end
 end
@@ -3604,10 +3604,10 @@ proc(
   context [] .localMemory mixedArena.offset =:: offset
   context [] .localMemory
     LabelId Constant hashMap mixedArena.alloc =:: newVariables
-  context [] .localMemory =
+  context .localMemory =
   ## XXX? allocate lookup table in localMemory
-  labelHash@ labelEq@ 256 Constant map.create newVariables [] =
-  newVariables optional.wrap context [] .localVariables =
+  labelHash@ labelEq@ 256 Constant map.create newVariables []@ =
+  newVariables optional.wrap context .localVariables =
   ## process procedure arguments
   false =:: mut: hasGenericArg
   false =:: mut: hasNonStaticGenericArg
@@ -3641,9 +3641,9 @@ proc(
           ValueInfo new
         Constant new
       map.put ..drop
-      autoArgOffset 1 + autoArgOffset =
+      autoArgOffset 1 + autoArgOffset@ =
       labelFlags id.FLAG_STATIC & ? if
-        staticArgOffset 1 + staticArgOffset =
+        staticArgOffset 1 + staticArgOffset@ =
       end
       continue
     end
@@ -3662,7 +3662,7 @@ proc(
           ValueInfo new
         Constant new
       map.put ..drop
-      staticArgOffset 1 + staticArgOffset =
+      staticArgOffset 1 + staticArgOffset@ =
       continue
     end
     argOffset stackOffset >= if
@@ -3671,36 +3671,36 @@ proc(
       pos errors appendError
       stackOffset context truncateStack
       context [] .localVariables .data map.free
-      prevVariables context [] .localVariables =
-      context [] .localMemory offset mixedArena.reset context [] .localMemory =
+      prevVariables context .localVariables =
+      context [] .localMemory offset mixedArena.reset context .localMemory =
       context [] .openBlocks
         prevBlocks list.setLength
-      context [] .openBlocks =
+      context .openBlocks =
       true return
     end
     context [] .stack argOffset list.at .data =:: value
     context [] .stackInfo argOffset list.at .data =:: valueInfo
     value [] .GenericArg ?? if
-      true hasGenericArg =
+      true hasGenericArg@ =
       isTypeGenerator and
           value [] .GenericArg labelContext id.labelFlags id.FLAG_STATIC & ? ! if
         "Arguments for Type-generators should be static" sb.wrap
         valueInfo [] .pushedAt errors appendError
       end
     else value [] .TypeId ?? and value [] .TypeId typeContext types.isGeneric _if
-      true hasGenericArg =
+      true hasGenericArg@ =
     end
-    argOffset 1 + argOffset =
+    argOffset 1 + argOffset@ =
     label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
       context [] .stack
         value list.appendP
-      context [] .stack =
+      context .stack =
       context [] .stackInfo
         ## ValueInfo
           valueInfo [] .valueType
           pos
         ValueInfo new list.append
-      context [] .stackInfo =
+      context .stackInfo =
     else ## store argument as value
       context [] .localVariables .data
         label
@@ -3729,11 +3729,11 @@ proc(
       pos
     context pushValue
     context [] .localVariables .data map.free
-    prevVariables context [] .localVariables =
-    context [] .localMemory offset mixedArena.reset context [] .localMemory =
+    prevVariables context .localVariables =
+    context [] .localMemory offset mixedArena.reset context .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
-    context [] .openBlocks =
+    context .openBlocks =
     false return
   end
   procData .implementation .code =:: codeImpl
@@ -3788,11 +3788,11 @@ proc(
     pos errors appendError
     stackOffset context truncateStack
     context [] .localVariables .data map.free
-    prevVariables context [] .localVariables =
-    context [] .localMemory offset mixedArena.reset context [] .localMemory =
+    prevVariables context .localVariables =
+    context [] .localMemory offset mixedArena.reset context .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
-    context [] .openBlocks =
+    context .openBlocks =
     true return ## not a call
   end
   code 0 array.at .data =:: op
@@ -3804,15 +3804,15 @@ proc(
     op [] .pos errors appendError
     stackOffset context truncateStack
     context [] .localVariables .data map.free
-    prevVariables context [] .localVariables =
-    context [] .localMemory offset mixedArena.reset context [] .localMemory =
+    prevVariables context .localVariables =
+    context [] .localMemory offset mixedArena.reset context .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
-    context [] .openBlocks =
+    context .openBlocks =
     true return ## not a call
   end
   context [] .currentFile =:: oldFile
-  procData [] .fileId context [] .currentFile =
+  procData [] .fileId context .currentFile =
   context [] .evalType =:: prevType
   ## change interpreter type when evaluating call
   procData [] .isStatic if
@@ -3821,10 +3821,10 @@ proc(
     InterpreterType .GLOBAL
   else
     InterpreterType .INTERPRET
-  end context [] .evalType =
+  end context .evalType =
   context [] .callPositions
     pos list.append
-  context [] .callPositions =
+  context .callPositions =
   ## evaluateOperations
     code 1 array.tail ## first operation declares procedure
     context
@@ -3832,25 +3832,25 @@ proc(
     stackOffset context truncateStack
     context [] .callPositions
       list.pop ..drop
-    context [] .callPositions =
+    context .callPositions =
     context [] .localVariables .data map.free
-    prevVariables context [] .localVariables =
-    context [] .localMemory offset mixedArena.reset context [] .localMemory =
+    prevVariables context .localVariables =
+    context [] .localMemory offset mixedArena.reset context .localMemory =
     context [] .openBlocks
       prevBlocks list.setLength
-    context [] .openBlocks =
-    prevType context [] .evalType =
+    context .openBlocks =
+    prevType context .evalType =
     true return
   end
   context [] .callPositions
     list.pop ..drop
-  context [] .callPositions =
+  context .callPositions =
   ## TODO ensure returned values do not point to deleted local memory
   context [] .localVariables .data map.free
-  prevVariables context [] .localVariables =
+  prevVariables context .localVariables =
   context [] .localMemory
     offset mixedArena.reset
-  context [] .localMemory =
+  context .localMemory =
   ## FIXME static procedures don't cast their return value
   isTypeGenerator if
     context [] .stack .length 1 < if
@@ -3870,7 +3870,7 @@ proc(
         true return
       end
       retValue .TypeId =:: generatedType
-    context [] .stack =
+    context .stack =
     ## initializeGeneratedType
       procName
       context [] .stack argsOffset nArgs list.slice
@@ -3880,10 +3880,10 @@ proc(
     types.initializeGeneratedType =:: generatorType
     context [] .stack
       generatorType ConstValue .TypeId list.append
-    context [] .stack =
+    context .stack =
   end
-  prevType context [] .evalType =
-  oldFile context [] .currentFile =
+  prevType context .evalType =
+  oldFile context .currentFile =
   context [] .stack .length stackOffset - =:: nReturn
   ## mem.copy
     context [] .stack .data argsOffset +
@@ -3897,13 +3897,13 @@ proc(
   mem.copy ..drop
   context [] .stack
     argsOffset nReturn + list.setLength
-  context [] .stack =
+  context .stack =
   context [] .stackInfo
     argsOffset nReturn + list.setLength
-  context [] .stackInfo =
+  context .stackInfo =
   argsOffset while ..dup context [] .stackInfo .length < do
     ## update push position of return values
-    pos context [] .stackInfo ..over.2 list.at .data [] .pushedAt =
+    pos context [] .stackInfo ..over.2 list.at .data .pushedAt =
     1 +
   end ..drop
   false return

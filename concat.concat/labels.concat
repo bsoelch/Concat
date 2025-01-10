@@ -71,15 +71,15 @@ namespace: id
   end
   proc( LabelContext -> LabelContext ) =>: export: freeLabelContext
     =:: mut: context
-    context .nameBuffer arenaAlloc.free context .nameBuffer =
-    context .labels           list.free context .labels =
+    context .nameBuffer arenaAlloc.free context@ .nameBuffer =
+    context .labels           list.free context@ .labels =
     0:i64 while ..dup context .namespaces .length < do =:: i
       context .namespaces i list.at .data =:: namespace
-      namespace [] .children list.free namespace [] .children =
+      namespace [] .children list.free namespace .children =
       i 1 +
     end ..drop
-    context .namespaces       list.free context .namespaces =
-    context .namespaceImports list.free context .namespaceImports =
+    context .namespaces       list.free context@ .namespaces =
+    context .namespaceImports list.free context@ .namespaceImports =
     context return
   end
 
@@ -113,13 +113,13 @@ namespace: id
     label? optional.isEmpty if
        return
     end
-    label? .data [] .namespaceInfo context [] .namespaceInfo =
+    label? .data [] .namespaceInfo context .namespaceInfo =
   end
   proc( NamespaceInfo LabelContext ptr.mut : context -> ) =>: export: resetNamespace
-    context [] .namespaceInfo =
+    context .namespaceInfo =
   end
   proc( LabelContext ptr.mut : context -> ) =>: export: clearNamespace
-    0:NamespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new context [] .namespaceInfo =
+    0:NamespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new context .namespaceInfo =
   end
   proc( string : str LabelId : id LabelContext ptr : context -> bool ) =>: export: labelNameEq
     id context getLabel =:: label?
@@ -155,7 +155,7 @@ namespace: id
     label? .data .flags =:: flags
     flags []
       newFlags |
-    flags [] =
+    flags []@ =
   end
   proc( LabelId : id LabelContext ptr : context -> bool ) =>: export: isLabelEmpty
     id context getLabel =:: label?
@@ -174,7 +174,7 @@ namespace: id
   proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr.mut : context -> LabelId ) =>: export: newLabel
     context [] .nameBuffer
       str string.chars arenaAlloc.copyArray array.freeze string.fromChars =:: nameData
-    context [] .nameBuffer =
+    context .nameBuffer =
     context [] .labels
       ## Label
         nameData
@@ -183,7 +183,7 @@ namespace: id
         srcFile
         flags
       Label new list.append
-    context [] .labels =
+    context .labels =
     context [] .labels .length 1 - LabelId cast return
   end
   proc( i64 : id FilePosition : pos FileId : srcFile LabelContext ptr.mut : context -> LabelId ) =>: export: newDummyLabel
@@ -194,7 +194,7 @@ namespace: id
     sb.asStr =:: str
     context [] .nameBuffer
       str string.chars arenaAlloc.copyArray array.freeze string.fromChars =:: nameData
-    context [] .nameBuffer =
+    context .nameBuffer =
     context [] .labels
       ## Label
         nameData
@@ -203,21 +203,21 @@ namespace: id
         srcFile
         id.FLAG_DUMMY id.FLAG_MUTABLE |
       Label new list.append
-    context [] .labels =
+    context .labels =
     context [] .labels .length 1 - LabelId cast return
   end
 
   proc( NamespaceId : parent string : name  LabelContext ptr.mut : context -> NamespaceId ) =>: newNamespace
     context [] .nameBuffer
       name string.chars arenaAlloc.copyArray array.freeze string.fromChars =:: nameData
-    context [] .nameBuffer =
+    context .nameBuffer =
     context [] .namespaces .length =:: id
     context [] .namespaces
       nameData
       16 NamespaceId list.create
       parent
       Namespace new list.append
-    context [] .namespaces =
+    context .namespaces =
     id NamespaceId cast return
   end
   proc( NamespaceId : base string : childName bool : create  LabelContext ptr.mut : context  -> NamespaceId ) =>: export: childId
@@ -249,7 +249,7 @@ namespace: id
       context [] .namespaces base i64 cast list.at .data
         ..dup [] .children
           ..over.2 list.append
-      ..swap [] .children =
+      ..swap .children =
     return
   end
   proc(
@@ -262,7 +262,7 @@ namespace: id
     path
       while ..dup .length 0 > do
         '.' string.split
-        id ..swap create context childId id =
+        id ..swap create context childId id@ =
         id NAMESPACE_ID_NONE == if
           break
         end
@@ -305,7 +305,7 @@ namespace: id
       end
       ..dup NAMESPACE_IMPORT_NONE == if
         context [] .namespaceImports .length NamespaceImportId cast
-          context [] .namespaceImports parent i64 cast list.at .data [] .firstChild =
+          context [] .namespaceImports parent i64 cast list.at .data .firstChild =
       end
       NAMESPACE_IMPORT_NONE ..swap
         while ..dup NAMESPACE_IMPORT_NONE != do ..swap ..drop
@@ -316,7 +316,7 @@ namespace: id
         end ..drop
       ..dup NAMESPACE_IMPORT_NONE != if
         context [] .namespaceImports .length NamespaceImportId cast
-          context [] .namespaceImports ..over.2 i64 cast list.at .data [] .next =
+          context [] .namespaceImports ..over.2 i64 cast list.at .data .next =
       end ..drop
     end
     context [] .namespaceImports
@@ -325,7 +325,7 @@ namespace: id
       NAMESPACE_IMPORT_NONE
       NAMESPACE_IMPORT_NONE
       NamespaceImport new list.append
-    context [] .namespaceImports =
+    context .namespaceImports =
     context [] .namespaceImports .length 1 - NamespaceImportId cast return
   end
 end
