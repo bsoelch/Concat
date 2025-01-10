@@ -58,9 +58,9 @@ namespace: map
   -> ) =>: export: free
     data [] .nodeBuffer
       list.free
-    data [] .nodeBuffer =
+    data .nodeBuffer =
     data [] .data mem.free
-    0 data [] .cap =
+    0 data .cap =
   end
   proc(
     type : auto: K
@@ -77,9 +77,9 @@ namespace: map
         1 +
       end ..drop
       list.free
-    data [] .nodeBuffer =
+    data .nodeBuffer =
     data [] .data mem.free
-    0 data [] .cap =
+    0 data .cap =
   end
 
   proc(
@@ -97,7 +97,7 @@ namespace: map
         ..dup 0:NodeId == if ..drop
           newNode if
             data [] .nodeBuffer .length 1 +
-              ..dup NodeId cast data [] .data ..over.3 [] =
+              ..dup NodeId cast data [] .data ..over.3 []@ =
             ..swap ..drop
             NodeId cast return
           end
@@ -112,7 +112,7 @@ namespace: map
         end ..drop
       newNode if
         data [] .nodeBuffer .length 1 +
-          ..dup NodeId cast data [] .nodeBuffer ..over.3 1 - list.at .data [] .next =
+          ..dup NodeId cast data [] .nodeBuffer ..over.3 1 - list.at .data .next =
         ..swap ..drop
         NodeId cast return
       end
@@ -157,12 +157,12 @@ namespace: map
       ..dup i64 cast data [] .nodeBuffer .length > if ..drop
         data [] .nodeBuffer
           key value 0:NodeId K V Node new list.append
-        data [] .nodeBuffer =
+        data .nodeBuffer =
         V optional.empty return
       end
     data [] .nodeBuffer ..swap i64 cast 1 - list.at .data
       ..dup [] .value ..swap
-      value ..swap [] .value =
+      value ..swap []@ .value =
     optional.wrap return
   end
 
@@ -199,15 +199,15 @@ namespace: map
       itr .map [] .nodeBuffer
         itr .next i64 cast 1 -
       list.at .data =:: res
-      res [] .next itr .next =
+      res [] .next itr@ .next =
       itr .next 0:NodeId == if
         while itr .index itr .map [] .cap < do
           itr .map [] .data itr .index [] 0:NodeId != if
-            itr .map [] .data itr .index [] itr .next =
-            itr .index 1 + itr .index =
+            itr .map [] .data itr .index [] itr@ .next =
+            itr .index 1 + itr@ .index =
             break
           end
-          itr .index 1 + itr .index =
+          itr .index 1 + itr@ .index =
         end
       end
       itr res .key res .value ( K ptr V ptr.mut ) new return

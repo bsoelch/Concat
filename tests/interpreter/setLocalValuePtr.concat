@@ -1,5 +1,5 @@
 proc( i64 ptr.mut : p -> ) =>: setX
-  5 p [] =
+  5 p =
 end
 
 proc( -> ) =>: main

@@ -94,8 +94,8 @@ namespace: utf8
     0x80 =:: mut: mask
     0 =:: mut: count
     while c mask & 0 != do
-      mask 1 >>> mask =
-      count 1 + count =
+      mask 1 >>> mask@ =
+      count 1 + count@ =
     end
     c mask 1 - & =:: mut: cp
     c =:: c0
@@ -104,14 +104,14 @@ namespace: utf8
       str i0 1 + c0 -_ Codepoint cast return
     end
     while count 1 > do
-      cp 6 << cp =
-      i 1 + i =
-      str i string.charAt i32 cast.u 0xff & c =
+      cp 6 << cp@ =
+      i 1 + i@ =
+      str i string.charAt i32 cast.u 0xff & c@ =
       c 0xc0 & 0x80 != if ## invalid character in sequence
         str i0 1 + c0 -_ Codepoint cast return
       end
-      cp c 0x3f & | cp =
-      count 1 - count =
+      cp c 0x3f & | cp@ =
+      count 1 - count@ =
     end
     cp 0x80 < if ## overlong single char
       str i0 1 + c0 -_ Codepoint cast return
@@ -141,7 +141,7 @@ namespace: utf8
     0:i64 while $1 .length $1 > do
       nextCodepoint =:: cp
       ## XXX? check codepoint for correct encoding?
-      utf32chars cp char32 cast list.append utf32chars =
+      utf32chars cp char32 cast list.append utf32chars@ =
     end ..drop.2
     utf32chars return
   end
@@ -156,7 +156,7 @@ namespace: utf8
       nextCodepoint =:: cp
       utf16chars
         cp utf16.appendCodepoint
-      utf16chars =
+      utf16chars@ =
     end ..drop.2
     utf16chars return
   end
@@ -221,7 +221,7 @@ namespace: utf16
     =:: mut: utf8chars
     0:i64 while $1 .length $1 > do
       nextCodepoint =:: cp
-      utf8chars cp sb.appendCodepoint utf8chars =
+      utf8chars cp sb.appendCodepoint utf8chars@ =
     end ..drop.2
     utf8chars return
   end

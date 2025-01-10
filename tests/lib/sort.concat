@@ -7,7 +7,7 @@ end
 
 proc( -> ) =>: main
   "Hello, World!" sb.wrap
-     ..dup char8 list cast cmp @ 0 list.sort
+     ..dup char8 list cast cmp@ 0 list.sort
      '\n' sb.appendC
      io.stdOut ..over io.fputSb ..drop
    sb.free ..drop

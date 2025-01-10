@@ -19,10 +19,10 @@ proc( -> ) =>: main
   str 'c' contains debug.print
   i32 10 array new =:: mut: a
   0 while ..dup i64 cast.u a ..length < do
-    ..dup ..dup * a @ ..over.2 [] =
+    ..dup ..dup * a@ ..over.2 []@ =
     1 +
   end ..drop
-  a @ 8 array.create
+  a@ 8 array.create
     ..dup 3 head printArray
     -141516511 debug.print
     ..dup 5 tail printArray

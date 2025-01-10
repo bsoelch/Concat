@@ -3,7 +3,7 @@ import debug
   T ptr.mut
 end
 proc( type : auto: T T box : a T box : b T box : out -> ) =>: boxAdd
-  a [] b [] + out [] =
+  a [] b [] + out []@ =
 end
 
 proc( -> ) =>: main
@@ -11,9 +11,9 @@ proc( -> ) =>: main
   2 =:: mut: two
   i32 : mut: res
   ## boxAdd
-    one @ i32 box cast
-    two @ i32 box cast 
-    res @ i32 box cast
+    one@ i32 box cast
+    two@ i32 box cast 
+    res@ i32 box cast
   boxAdd
   res debug.print
 end

@@ -955,13 +955,12 @@ proc( ProgramContext ptr.mut : progContext -> Type ) =>: newAutoType
 end
 proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrStep
   state [] .progContext .idContext =:: idContext
-  varInfo .itrType varInfo .itrVar pos opGetId =:: getItr
-  getItr state appendOp
+  varInfo .itrType varInfo .itrVar pos opGetId state appendOp
   "..itr.step" string.wrap state [] .currentFile idContext id.findIdentifierByName
     ! "..itr.step" assert
   =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
-  getItr state appendOp
+  varInfo .itrType varInfo .itrVar pos opAtId state appendOp
   pos opSetValue state appendOp
 end
 proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrEnd

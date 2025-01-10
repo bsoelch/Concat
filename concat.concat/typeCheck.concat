@@ -2167,6 +2167,10 @@ proc(
         op .pos errors appendError
         return
       end
+      isReference if
+        "assignment to references may be removed in a future version" sb.wrap
+        op .pos errors appendError
+      end
       target [] .valueType typeContext types.isMutable ! if
         target [] .valueId id.LABEL_ID_NONE != if
           ## TODO? resolve reference path from operation

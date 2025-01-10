@@ -20,7 +20,7 @@ proc( -> ) =>: main
   
   0 =:: mut: A
   A@  i32 _ ptr.mut =: mut: aPtr
-  -312512  aPtr [] =
+  -312512  aPtr []@ =
   aPtr [] debug.print
   A debug.print
 end

@@ -3,7 +3,7 @@ proc( -> ) =>: main
   str1 ..length debug.print
   str1 12 [] debug.print
   c0 debug.print
-  'B' c0 =  
+  'B' c0@ =  
   c0 debug.print
   ..?parser.find.y
 end

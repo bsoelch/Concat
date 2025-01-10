@@ -20,7 +20,7 @@ namespace: array ## XXX? use different namespace (array is already in use for ar
       depth 1 & 0 == if
         return ## data in src & data to src
       end
-      src offset [] buff offset [] =
+      src offset [] buff offset []@ =
     end
     src buff offset mid cmp context depth 1 + mergeSortRec
     src buff offset mid + size mid - cmp context depth 1 + mergeSortRec
@@ -38,23 +38,23 @@ namespace: array ## XXX? use different namespace (array is already in use for ar
         from offset j + + []
         context
       cmp () 0 < if
-        from offset i + [] to offset k + [] =
-        i 1 + i =
+        from offset i + [] to offset k + []@ =
+        i 1 + i@ =
       else
-        from offset j + [] to offset k + [] =
-        j 1 + j =
+        from offset j + [] to offset k + []@ =
+        j 1 + j@ =
       end
-      k 1 + k =
+      k 1 + k@ =
     end
     while i mid < do
-      from offset i + [] to offset k + [] =
-      i 1 + i =
-      k 1 + k =
+      from offset i + [] to offset k + []@ =
+      i 1 + i@ =
+      k 1 + k@ =
     end
     while j size < do
-      from offset j + [] to offset k + [] =
-      j 1 + j =
-      k 1 + k =
+      from offset j + [] to offset k + []@ =
+      j 1 + j@ =
+      k 1 + k@ =
     end
   end
   proc(
@@ -79,8 +79,8 @@ namespace: array ## XXX? use different namespace (array is already in use for ar
     0:i64 while ..dup mid < do =:: i
       data i []
         data last i - []
-        data i [] =
-      data last i - [] =
+        data i []@ =
+      data last i - []@ =
       i 1 +
     end ..drop
   end
@@ -104,11 +104,11 @@ namespace: array ## XXX? use different namespace (array is already in use for ar
       c 0 == if
         mid return
       else c 0 > _if
-        mid head =
+        mid head@ =
       else
-        mid tail =
+        mid tail@ =
       end
-      head tail + 2 / mid =
+      head tail + 2 / mid@ =
     end
     tail size < and value data head []@ cmp () 0 > if
       tail return

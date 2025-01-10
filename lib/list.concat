@@ -87,7 +87,7 @@ namespace: list
     0 while ..dup newList .length < do =:: i
       src .data i []
         copyElt ()
-      newList .data i [] =
+      newList .data i []@ =
       i 1 +
     end ..drop
     newList return
@@ -117,8 +117,8 @@ namespace: list
       newCap 0 >= "list has non-negative capacity" assert
       elts .data
         newCap mem.realloc
-      elts .data =
-      newCap listCap cast.u elts .cap =
+      elts@ .data =
+      newCap listCap cast.u elts@ .cap =
     elts return
   end
   overload: export: ensureCap ensureCap_32 ensureCap_64 end
@@ -128,7 +128,7 @@ namespace: list
   end
   proc( type : auto: T T list : elts0 -> T list ) =>: export: clear
     elts0 =:: mut: elts
-      0 elts .length =
+      0 elts@ .length =
     elts return
   end
   proc(
@@ -142,8 +142,8 @@ namespace: list
     src =:: mut: l
     l
       newLength ensureCap
-    l =
-    newLength l .length =
+    l@ =
+    newLength l@ .length =
     l return
   end
 
@@ -204,7 +204,7 @@ namespace: list
     index 0 < index elts .length >= | if
       "list index outside range" ..panic
     end
-    elt elts .data index [] =
+    elt elts .data index []@ =
   end
   overload: export: set
     set_32 set_64
@@ -217,13 +217,13 @@ namespace: list
     elts0 =:: mut: elts
       elts
         elts .length 1 + ensureCap
-      elts =
+      elts@ =
       elt elts .data
         elts .length
-      [] =
+      []@ =
       elts .length
         1 +
-      elts .length =
+      elts@ .length =
     elts return
   end
   proc(
@@ -235,9 +235,9 @@ namespace: list
     a =:: mut: elts
       elts
         elts .length k + ensureCap
-      elts =
+      elts@ =
       elts .data elts .length + b T _ ptr cast k mem.copy ..drop
-      elts .length k + elts .length =
+      elts .length k + elts@ .length =
     elts return
   end
   proc(
@@ -248,9 +248,9 @@ namespace: list
     a =:: mut: elts
       elts
         elts .length b .length + ensureCap
-      elts =
+      elts@ =
       elts .data elts .length + b .data b .length mem.copy ..drop
-      elts .length   b .length + elts .length =
+      elts .length   b .length + elts@ .length =
     elts return
   end
   proc(
@@ -261,9 +261,9 @@ namespace: list
     a =:: mut: elts
       elts
         elts .length b .length + ensureCap
-      elts =
+      elts@ =
       elts .data elts .length + b .data b .length mem.copy ..drop
-      elts .length   b .length + elts .length =
+      elts .length   b .length + elts@ .length =
     elts return
   end
 

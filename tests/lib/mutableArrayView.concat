@@ -3,7 +3,7 @@ import arrayView
 proc( -> ) =>: main
   i32 64 array new =:: mut: anArray
   anArray@ $ ..length array.createMutable =:: view
-  5 view 3 array.at .data [] =
+  5 view 3 array.at .data []@ =
   42 view 9 array.set
   view 3 array.get 5 == "view[3]==5" assert
   view 9 array.get 42 == "view[9]==42" assert

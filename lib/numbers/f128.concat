@@ -65,7 +65,7 @@ namespace: f128
         end
         ..dup .hi 1:i64 EXP_SHIFT_HI 1 + << & ? if
           1 >>>
-          bitCount 1 + bitCount =
+          bitCount 1 + bitCount@ =
         end
       else shift 0 < _if
         shift -_ <<
@@ -180,45 +180,45 @@ namespace: f128
     0 =:: mut: baseShift
     xHi 0 == if
       xLow HIDDEN_BIT_HI MANTISSA_MASK_HI | <= if
-        xLow xHi =
-        0 xLow =
-        64 baseShift =
+        xLow xHi@ =
+        0 xLow@ =
+        64 baseShift@ =
       else
-        xLow 16 >>> xHi =
-        xLow 48 << xLow =
-        48 baseShift =
+        xLow 16 >>> xHi@ =
+        xLow 48 << xLow@ =
+        48 baseShift@ =
       end
     end
     ## shift high bits
     xHi 0x1'ffff'fffe'0000 & ? ! if
       ## nothing in high 31+1 bits of mantissa
-      xHi 32 << xHi =
-      shift 32 + shift =
+      xHi 32 << xHi@ =
+      shift 32 + shift@ =
     end
     xHi 0x1fffe00000000 & ? ! if
       ## nothing in high 15+1 bits of mantissa
-      xHi 16 << xHi =
-      shift 16 + shift =
+      xHi 16 << xHi@ =
+      shift 16 + shift@ =
     end
     xHi 0x1fe0000000000 & ? ! if
       ## nothing in high 7+1 bits of mantissa
-      xHi 8 << xHi =
-      shift 8 + shift =
+      xHi 8 << xHi@ =
+      shift 8 + shift@ =
     end
     xHi 0x1e00000000000 & ? ! if
       ## nothing in high 3+1 bits of mantissa
-      xHi 4 << xHi =
-      shift 4 + shift =
+      xHi 4 << xHi@ =
+      shift 4 + shift@ =
     end
     xHi 0x1800000000000 & ? ! if
       ## nothing in high 1+1 bits of mantissa
-      xHi 2 << xHi =
-      shift 2 + shift =
+      xHi 2 << xHi@ =
+      shift 2 + shift@ =
     end
     xHi 0x1000000000000 & ? ! if
       ## nothing in hidden bit of mantissa
-      xHi 1 << xHi =
-      shift 1 + shift =
+      xHi 1 << xHi@ =
+      shift 1 + shift@ =
     end
     ## return
       ## f128
@@ -278,18 +278,18 @@ namespace: f128
         1:i64 shift 64 1 - - << =:: nextBitMask
         bLow
           bHi nextBitMask 1 - & |
-        ? nz =
-        bHi nextBitMask & ? nextBit =
-        bHi shift 64 - >>> bLow =
-        0 bHi =
+        ? nz@ =
+        bHi nextBitMask & ? nextBit@ =
+        bHi shift 64 - >>> bLow@ =
+        0 bHi@ =
       else
         1:i64 shift 1 - << =:: nextBitMask
-        bLow nextBitMask 1 - & ? nz =
-        bLow nextBitMask & ? nextBit =
+        bLow nextBitMask 1 - & ? nz@ =
+        bLow nextBitMask & ? nextBit@ =
         bLow shift >>>
           bHi 64 shift - << |
-        bLow =
-        bHi shift >>> bHi =
+        bLow@ =
+        bHi shift >>> bHi@ =
       end
     end
     false
@@ -298,28 +298,28 @@ namespace: f128
     ! "no overflow" assert
     ## check for overflow of mantissa
     hiSum HIDDEN_BIT_HI MANTISSA_MASK_HI | > if
-      nz nextBit | nz =
-      lowSum 1 & ? nextBit =
+      nz nextBit | nz@ =
+      lowSum 1 & ? nextBit@ =
       lowSum 1 >>>
         hiSum 63 << |
-      lowSum =
-      hiSum 1 >>> hiSum =
-      exp 1 + exp =
+      lowSum@ =
+      hiSum 1 >>> hiSum@ =
+      exp 1 + exp@ =
     end
     ## rounding
     nextBit and nz or x .low 1 & ? if
       ## round up if next bit is 1 and lower bits nonzero or number odd
-      lowSum 1 + lowSum =
+      lowSum 1 + lowSum@ =
       lowSum 0 == if
-        hiSum 1 + hiSum =
+        hiSum 1 + hiSum@ =
       end
     end
     ## overflow due to rounding
     hiSum HIDDEN_BIT_HI MANTISSA_MASK_HI | > if
       ## when rounding overflows, then lowSum is zero
-      hiSum 63 << lowSum =
-      hiSum 1 >>> hiSum =
-      exp 1 + exp =
+      hiSum 63 << lowSum@ =
+      hiSum 1 >>> hiSum@ =
+      exp 1 + exp@ =
     end
     exp SHIFTED_EXP_MASK >= if
       ## number overflowed
@@ -374,18 +374,18 @@ namespace: f128
         1:i64 shift 64 1 - - << =:: nextBitMask
         bLow
           bHi nextBitMask 1 - & |
-        ? nz =
-        bHi nextBitMask & ? nextBit =
-        bHi shift 64 - >>> bLow =
-        0 bHi =
+        ? nz@ =
+        bHi nextBitMask & ? nextBit@ =
+        bHi shift 64 - >>> bLow@ =
+        0 bHi@ =
       else
         1:i64 shift 1 - << =:: nextBitMask
-        bLow nextBitMask 1 - & ? nz =
-        bLow nextBitMask & ? nextBit =
+        bLow nextBitMask 1 - & ? nz@ =
+        bLow nextBitMask & ? nextBit@ =
         bLow shift >>>
           bHi 64 shift - << |
-        bLow =
-        bHi shift >>> bHi =
+        bLow@ =
+        bHi shift >>> bHi@ =
       end
     end
     aHi bHi >= or aHi bHi == and aLow bLow >= end "a>=b" assert
@@ -397,14 +397,14 @@ namespace: f128
     nextBit and nz or x .low 1 & ? if
       ## round up/down if next bit is 1 and lower bits nonzero or number odd
       swapped if
-        lowDiff 1 + lowDiff =
+        lowDiff 1 + lowDiff@ =
         lowDiff 0 == if
-          hiDiff 1 + hiDiff =
+          hiDiff 1 + hiDiff@ =
         end
       else
-        lowDiff 1 - lowDiff =
+        lowDiff 1 - lowDiff@ =
         lowDiff 0 == if
-          hiDiff 1 - hiDiff =
+          hiDiff 1 - hiDiff@ =
         end
       end
     end
@@ -418,7 +418,7 @@ namespace: f128
       f128 new return
     end
     hiDiff lowDiff f128 new normalizeMantissa =:: delta =:: mag
-    exp delta i64 cast.s - exp =
+    exp delta i64 cast.s - exp@ =
     ## handle subnormal numbers
     ## shifts increased by 1 to undo shifting of top bit into hidden bit
     ## no rounding necessary as total right shift at most left shift from normalization
@@ -499,40 +499,40 @@ namespace: f128
           nextBit |
           low ? |
           hi nextBitMask 1 - & ? |
-        nz =
-        hi nextBitMask & ? nextBit =
-        hi shift 64 - >>> low =
-        0 hi =
+        nz@ =
+        hi nextBitMask & ? nextBit@ =
+        hi shift 64 - >>> low@ =
+        0 hi@ =
       else shift 64 == _if
         nz
           nextBit |
           low 1:i64 63 << 1 - & ? |
-        nz =
-        low 1:i64 63 << & ? nextBit =
-        hi low =
-        0 hi =
+        nz@ =
+        low 1:i64 63 << & ? nextBit@ =
+        hi low@ =
+        0 hi@ =
       else
         1:i64 shift 1 - << =:: nextBitMask
         nz
           nextBit |
           low nextBitMask 1 - & ? |
-        nz =
-        low nextBitMask & ? nextBit =
+        nz@ =
+        low nextBitMask & ? nextBit@ =
         low shift >>>
           hi 64 shift - << |
-        low =
-        hi shift >>> hi =
+        low@ =
+        hi shift >>> hi@ =
       end
     end
     ## rounding
     nextBit and nz or low 1 & ? if
       ## round up if next bit 1 and remainder >0.5 or remainder ==0.5 and number odd
-      low 1 + low =
+      low 1 + low@ =
       low 0 == if ## overflow
-        hi 1 + hi =
+        hi 1 + hi@ =
         hi HIDDEN_BIT_HI 1 << & ? if
-          hi 63 << low =
-          hi 1 >>> hi =
+          hi 63 << low@ =
+          hi 1 >>> hi@ =
         end
       end
     end
@@ -575,7 +575,7 @@ namespace: f128
         p1 1 & 0 != if
           xPow *
         end
-        xPow xPow * xPow =
+        xPow xPow * xPow@ =
       finally p1 1 >>> end ..drop
     return
   end
@@ -593,7 +593,7 @@ namespace: f128
         ..drop 0 0 f128 new ParserError .EMPTY return
       end
       ..dup 0 string.charAt '-' == if
-        true sign =
+        true sign@ =
         1 string.tail
       else ..dup 0 string.charAt '+' == _if
         1 string.tail
@@ -617,21 +617,21 @@ namespace: f128
           i 0 == or hasDot if ..drop ## . cannot be first character
             f128.NaN ParserError .INVALID_CHAR return
           end
-          true hasDot =
+          true hasDot@ =
         else ..dup i string.charAt mBase isExpChar _if
           i 0 == if ..drop ##-exp char cannot be first character
             f128.NaN ParserError .INVALID_CHAR return
           end
-          i 1 + e =
+          i 1 + e@ =
           i break
         else ..dup i string.charAt ..dup 'p' == ..swap 'P' == | mBase 16 == & _if
           i 0 == if ..drop ##-exp char cannot be first character
             f128.NaN ParserError .INVALID_CHAR return
           end
-          i 1 + e =
-          true cStyleHex =
-          10 mBase = ## exponent written in base 10
-          c 4 * c = ## scale c to power of 2
+          i 1 + e@ =
+          true cStyleHex@ =
+          10 mBase@ = ## exponent written in base 10
+          c 4 * c@ = ## scale c to power of 2
           i break
         else
           $ i string.charAt mBase parseDigit
@@ -642,12 +642,12 @@ namespace: f128
             else ..drop end
           i64 cast.u i128.fromU64 =:: digit
           val maxVal < if ## XXX? i128 * i64
-            val baseI128 * digit + val =
+            val baseI128 * digit + val@ =
             hasDot if
-              c 1 - c =
+              c 1 - c@ =
             end
           else hasDot ! _if
-            c 1 - c =
+            c 1 - c@ =
           end
         end
         i 1 +
@@ -657,11 +657,11 @@ namespace: f128
           ..dup .NONE ?? ! if =:: err
             ..drop.2 f128.NaN err return
           end ..drop
-        c + c =
+        c + c@ =
       end
     ..drop
     cStyleHex if ## calculate powers of 2 instead of powers of base
-      2 mBase =
+      2 mBase@ =
     end
     val f128.fromI128
       sign if -_ end
@@ -729,21 +729,21 @@ namespace: f160
       1:i64 shift 64 - 1 - << =:: nextBitMask
       x .low
         x .hi nextBitMask 1 - & |
-      ? nz =
-      x .hi nextBitMask & ? nextBit =
+      ? nz@ =
+      x .hi nextBitMask & ? nextBit@ =
     else
       x .low shift >>> x .hi 64 shift - << |
       x .hi shift >>>
       1:i64 shift 1 - << =:: nextBitMask
-      x .low nextBitMask 1 - & ? nz =
-      x .low nextBitMask & ? nextBit =
+      x .low nextBitMask 1 - & ? nz@ =
+      x .low nextBitMask & ? nextBit@ =
     end =:: mut: hi =:: mut: low
     ## rounding
     nextBit and nz or low 1 & ? if
       ## round up if next bit 1 and remainder >0.5 or remainder ==0.5 and number odd
-      low 1 + low =
+      low 1 + low@ =
       low 0 == if ## overflow
-        hi 1 + hi =
+        hi 1 + hi@ =
       end
     end
     hi f128.HIDDEN_BIT_HI 1 << & ? =:: overflow
@@ -751,8 +751,8 @@ namespace: f160
       exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - >= if  ## overflows finite number
         x .sign if f128.-Infinity else f128.Infinity end return
       end
-      hi 63 << low =
-      hi 1 >>> hi =
+      hi 63 << low@ =
+      hi 1 >>> hi@ =
     end
     ## f128
       hi f128.MANTISSA_MASK_HI &
@@ -784,10 +784,10 @@ namespace: f160
     else
       hi 1 <<
         low 63 >>> |
-      hi =
+      hi@ =
       low 1 <<
         resLow .hi 63 >>> |
-      low =
+      low@ =
       1:i64 62 << =:: nextBitMask
       resLow .hi nextBitMask & ?
       resLow .hi nextBitMask 1 - & resLow .low | ?
@@ -796,12 +796,12 @@ namespace: f160
     ## rounding
     nextBit and nz or low 1 & ? if
       ## round up if next bit 1 and remainder >0.5 or remainder ==0.5 and number odd
-      low 1 + low =
+      low 1 + low@ =
       low 0 == if ## overflow
-        hi 1 + hi =
+        hi 1 + hi@ =
         hi 0 == if
-          true overflow =
-          1:i64 63 << hi =
+          true overflow@ =
+          1:i64 63 << hi@ =
         end
       end
     end
@@ -850,26 +850,26 @@ namespace: f160
       shift 128 == if
         bLow
           bHi 1:i64 63 << 1 - & |
-        ? nz =
-        bHi 63 >>> ? nextBit =
-        0 bHi =
-        0 bLow =
+        ? nz@ =
+        bHi 63 >>> ? nextBit@ =
+        0 bHi@ =
+        0 bLow@ =
       else shift 64 >= _if
         1:i64 shift 64 1 - - << =:: nextBitMask
         bLow
           bHi nextBitMask 1 - & |
-        ? nz =
-        bHi nextBitMask & ? nextBit =
-        bHi shift 64 - >>> bLow =
-        0 bHi =
+        ? nz@ =
+        bHi nextBitMask & ? nextBit@ =
+        bHi shift 64 - >>> bLow@ =
+        0 bHi@ =
       else
         1:i64 shift 1 - << =:: nextBitMask
-        bLow nextBitMask 1 - & ? nz =
-        bLow nextBitMask & ? nextBit =
+        bLow nextBitMask 1 - & ? nz@ =
+        bLow nextBitMask & ? nextBit@ =
         bLow shift >>>
           bHi 64 shift - << |
-        bLow =
-        bHi shift >>> bHi =
+        bLow@ =
+        bHi shift >>> bHi@ =
       end
     end
     false
@@ -877,23 +877,23 @@ namespace: f160
       a .hi  bHi  i64.addc =:: mut: hi
     =:: mut: carry
     carry if
-      nz nextBit | nz =
-      low 1 & ? nextBit =
+      nz nextBit | nz@ =
+      low 1 & ? nextBit@ =
       low 1 >>>
         hi 63 << |
-      low =
+      low@ =
       hi 1 >>>
         1:i64 63 << |
-      hi =
+      hi@ =
     end
     ## rounding
     nextBit and nz or x .low 1 & ? if
-      low 1 + low =
+      low 1 + low@ =
       low 0 == if
-        hi 1 + hi =
+        hi 1 + hi@ =
         hi 0 == if
-          true carry =
-          1:i64 63 << hi =
+          true carry@ =
+          1:i64 63 << hi@ =
         end
       end
     end
@@ -935,26 +935,26 @@ namespace: f160
       shift 128 == if
         bLow
           bHi 1:i64 63 << 1 - & |
-        ? nz =
-        bHi 63 >>> ? nextBit =
-        0 bHi =
-        0 bLow =
+        ? nz@ =
+        bHi 63 >>> ? nextBit@ =
+        0 bHi@ =
+        0 bLow@ =
       else shift 64 >= _if
         1:i64 shift 64 - 1 - << =:: nextBitMask
         bLow
           bHi nextBitMask 1 - & |
-        ? nz =
-        bHi nextBitMask & ? nextBit =
-        bHi shift 64 - >>> bLow =
-        0 bHi =
+        ? nz@ =
+        bHi nextBitMask & ? nextBit@ =
+        bHi shift 64 - >>> bLow@ =
+        0 bHi@ =
       else
         1:i64 shift 1 - << =:: nextBitMask
-        bLow nextBitMask 1 - & ? nz =
-        bLow nextBitMask & ? nextBit =
+        bLow nextBitMask 1 - & ? nz@ =
+        bLow nextBitMask & ? nextBit@ =
         bLow shift >>>
           bHi 64 shift - << |
-        bLow =
-        bHi shift >>> bHi =
+        bLow@ =
+        bHi shift >>> bHi@ =
       end
     end
     a .hi bHi u> or a .hi bHi == and a .low bLow u>= end "a>=b" assert
@@ -966,15 +966,15 @@ namespace: f160
     nextBit and nz or x .low 1 & ? if
       ## round up/down if next bit is 1 and lower bits nonzero or number odd
       swapped if
-        low 1 + low =
+        low 1 + low@ =
         low 0 == if
-          hi 1 + hi =
+          hi 1 + hi@ =
           ## number cannot overflow in subtraction
         end
       else
-        low 1 - low =
+        low 1 - low@ =
         low 0 == if
-          hi 1 - hi =
+          hi 1 - hi@ =
         end
       end
     end
@@ -988,15 +988,15 @@ namespace: f160
       0
     else hi 0 == _if
       63 low i64.highestSetBit - =:: shift
-      low shift << hi =
-      0 low =
+      low shift << hi@ =
+      0 low@ =
       64 shift +
     else
       63 hi i64.highestSetBit - =:: shift
       hi shift <<
         low 64 shift - >>> |
-      hi =
-      low shift << low =
+      hi@ =
+      low shift << low@ =
       shift
     end =:: shift
     a .exp -0x8000'0000 shift + < if ## underflow

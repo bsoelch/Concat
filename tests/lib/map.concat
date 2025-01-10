@@ -22,8 +22,8 @@ proc( i64 optional -> ) =>: printOpt
 end
 
 proc( -> ) =>: main
-  i32Hash @ i32Eq @ 16 i64 map.create =:: mut: myMap
-  myMap @
+  i32Hash@ i32Eq@ 16 i64 map.create =:: mut: myMap
+  myMap@
     ..dup 0   1 map.put printOpt
     ..dup -5  2 map.put printOpt
     ..dup 2   3 map.put printOpt

@@ -6,17 +6,17 @@ end
 
 proc( i32 i32 -> i32 2 array ) =>: #:experimental: array2
   i32 2 array new =:: mut: data
-    data @ 1 [] =
-    data @ 0 [] =
+    data@ 1 []@ =
+    data@ 0 []@ =
   data return
 end
 
 proc( i64 i64 i64 i64 -> i64 4 array ) =>: #:experimental: array4
   i64 4 array new =:: mut: data
-    data @ 3 [] =
-    data @ 2 [] =
-    data @ 1 [] =
-    data @ 0 [] =
+    data@ 3 []@ =
+    data@ 2 []@ =
+    data@ 1 []@ =
+    data@ 0 []@ =
   data return
 end
 
@@ -54,13 +54,13 @@ proc( -> ) =>: main
   43 17 divMod ..swap debug.print debug.print
   5 7 cmp debug.print
   1 2 array2 =:: A
-  A @ 0 [] debug.print
-  A @ 1 [] debug.print
+  A@ 0 [] debug.print
+  A@ 1 [] debug.print
   1 2 3 4 array4 =:: B
-  B @ 0 [] debug.print
-  B @ 1 [] debug.print
-  B @ 2 [] debug.print
-  B @ 3 [] debug.print
+  B@ 0 [] debug.print
+  B@ 1 [] debug.print
+  B@ 2 [] debug.print
+  B@ 3 [] debug.print
   "Hello" startItr while nextChar do
     #+char+# debug.print
   end endItr
