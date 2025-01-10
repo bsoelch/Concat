@@ -403,7 +403,7 @@ namespace: interpreter
       context [] .localVariables optional.hasData if
         context [] .localVariables .data
       else
-        context [] .globalVariables@ ## TODO need [] .<...>@ due to compiler error
+        context .globalVariables
       end
         label
         ## Constant
@@ -2172,7 +2172,7 @@ proc(
           context [] .localVariables optional.hasData if
             context [] .localVariables .data
           else
-            context [] .globalVariables@
+            context .globalVariables
           end label map.get =:: value?
           value? optional.isEmpty if
             "missing value for " sb.wrap

@@ -464,7 +464,7 @@ namespace: id
     context [] .openScopes .length 0 > if
       context [] .openScopes ..dup .length 1 - list.at .data
     else
-      context [] .globalScope@
+      context .globalScope
     end =:: mScope
     0 sb.create label labelContext sb.appendLabelName ## ensure name allocation stays valid for whole lifetime of scope
       mScope [] .scopeStrings

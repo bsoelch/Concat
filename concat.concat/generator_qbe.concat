@@ -3553,8 +3553,11 @@ proc(
       op [] .val .atElement ?? =:: isAddr
       op [] .dataType =:: mut: containerType
       false =:: mut: ptrSrc
-      containerType typeContext types.isReference or
-          containerType typeContext types.isPointer if
+      false =:: mut: refrenceSrc
+      containerType typeContext types.isReference if
+        containerType typeContext types.unwrapReference containerType =
+        true refrenceSrc =
+      else containerType typeContext types.isPointer _if
         containerType typeContext types.getBaseType containerType =
         true ptrSrc =
       end
@@ -3562,9 +3565,9 @@ proc(
         index
         typeContext
       types.compositeGetElement =:: eltType
-      isAddr if
+      isAddr or ptrSrc if
         ValType .PTR
-      else ptrSrc _if
+      else refrenceSrc _if
         ValType .REFERENCE
       else
         eltType context toValType
@@ -3585,7 +3588,7 @@ proc(
       else
         break ## unsupported type
       end
-        isAddr or ptrSrc or eltType context referenceOnly if
+        isAddr or ptrSrc or refrenceSrc or eltType context referenceOnly if
           return
         end
         op [] .pos context popValue =:: srcId
