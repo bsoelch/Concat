@@ -2369,6 +2369,75 @@ proc(
         baseType false pos context extendArguments
         "ugt" string.wrap baseVal pos context appendComparisonOperator
       return
+    GET_PTR GET_PTR_MUT case
+      ## base-type is pointer to value
+      baseType typeContext types.getBaseType =:: valueType
+      valueType context toValType =:: valType
+      valueType context referenceOnly if
+        sb return
+      end
+      pos context popValue =:: valPtr
+      sb
+        "%s" sb.appendS
+        valType context pushValue sb.appendI
+        " =" sb.appendS
+        valType sb.appendValTypeQBE
+        " load" sb.appendS
+        valueType StorageType .LOAD pos context sb.appendTypeNameQBE
+        " %s" sb.appendS
+        valPtr sb.appendI
+        '\n' sb.appendC
+      return
+    SET_PTR case
+      pos context popValue =:: targetPtr
+      pos context popValue =:: srcVal
+      sb
+        baseType context referenceOnly if
+          "blit %s" sb.appendS
+        else
+          "store" sb.appendS
+          baseType StorageType .LOAD pos context sb.appendTypeNameQBE
+          " %s" sb.appendS
+        end
+        srcVal sb.appendI
+        ", %s" sb.appendS
+        targetPtr sb.appendI
+        baseType context referenceOnly if
+          ", " sb.appendS
+          baseType pos context typeStrideInt sb.appendI
+        end
+        '\n' sb.appendC
+      return
+    OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 case
+      ## baseType is pointer type
+      baseType typeContext types.getBaseType =:: eltType
+      sb
+        builtIn .OFFSET_PTR_I32 ?? or builtIn .OFFSET_PTR_MUT_I32 ?? if
+          pos context popValue =:: offset32
+          "%s" sb.appendS
+          ValType .I64 context pushValue sb.appendI
+          " =l extsw %s" sb.appendS
+          offset32 sb.appendI
+          '\n' sb.appendC
+        end
+        pos context popValue =:: baseOffset
+        "%s" sb.appendS
+        ValType .I64 context pushValue sb.appendI
+        " =l mul %s" sb.appendS
+        baseOffset sb.appendI
+        ", " sb.appendS
+        eltType pos context typeStrideInt sb.appendI
+        '\n' sb.appendC
+        pos context popValue =:: offset
+        pos context popValue =:: srcPtr
+        "%s" sb.appendS
+        ValType .PTR context pushValue sb.appendI
+        " =l add %s" sb.appendS
+        srcPtr sb.appendI
+        ", %s" sb.appendS
+        offset sb.appendI
+        '\n' sb.appendC
+      return
     SYS_ARGC case
       sb
         "%s" sb.appendS

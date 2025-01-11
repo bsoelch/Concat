@@ -275,6 +275,15 @@ namespace: interpreter
       UGT_I16 GT_C16 case args k i16.ugt@ cmpOperatorInt return
       UGT_I32 GT_C32 case args k i32.ugt@ cmpOperatorInt return
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
+      GET_PTR GET_PTR_MUT case
+        ## TODO! implement pointer operations
+        break
+      SET_PTR case
+        ## TODO! implement pointer operations
+        break
+      OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 case
+        ## TODO! implement pointer operations
+        break
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
         k 2 == "correct number of arguments" assert
