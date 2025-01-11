@@ -223,7 +223,7 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
     1 sys.exit
     ..unreachable
   end
-  errors [] list.clear errors []@ =
+  errors [] list.clear errors []=
 end
 
 proc( -> ProgramContext ) =>: parseAndTypeCheck

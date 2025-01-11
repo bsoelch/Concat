@@ -1248,7 +1248,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableArray =:: tmpArray
-        allocator []@ =
+        allocator []=
         tmpArray array.freeze constContext newArray8Const return
       LocalArray16 case
         localArray .LocalArray16 i16 arrayView.mut cast =:: arrayData
@@ -1257,7 +1257,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableArray =:: tmpArray
-        allocator []@ =
+        allocator []=
         tmpArray array.freeze constContext newArray16Const return
       LocalArray32 case
         localArray .LocalArray32 i32 arrayView.mut cast =:: arrayData
@@ -1266,7 +1266,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableArray =:: tmpArray
-        allocator []@ =
+        allocator []=
         tmpArray array.freeze constContext newArray32Const return
       LocalArray64 case
         localArray .LocalArray64 i64 arrayView.mut cast =:: arrayData
@@ -1275,14 +1275,14 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableArray =:: tmpArray
-        allocator []@ =
+        allocator []=
         tmpArray array.freeze constContext newArray64Const return
       default ..unreachable
     end
     localArray .LocalArray ConstValue arrayView.mut cast =:: dataArray
     allocator []
       dataArray mixedArena.copyMutableArray =:: tmpArray
-    allocator []@ =
+    allocator []=
     valType typeContext types.getElementType =:: arrayBase
     ## 1. copy elements
     dataArray .length for =:: i
@@ -1395,7 +1395,7 @@ namespace: interpreter
         valType i typeContext types.compositeGetElement
       end =:: eltType
       elt [] .Array ?? if
-        elt [] eltType false context localCopy elt []@ =
+        elt [] eltType false context localCopy elt []=
       end
     end
     localSlice LocalSlice cast ConstValue .LocalArray
@@ -2705,7 +2705,7 @@ proc(
         value? .data [] .LocalValue ?? if
           value? .data []
             .LocalValue []
-          value? .data []@ =
+          value? .data []=
         else value? .data [] .LocalArray ?? or
             value? .data [] .LocalArray8 ?? or
             value? .data [] .LocalArray16 ?? or
@@ -2714,7 +2714,7 @@ proc(
           context [] .localMemory mixedArena.offset =:: localOffset
           value? .data []
             valType context .localMemory program copyLocalArray
-          value? .data []@ =
+          value? .data []=
           ## clear memory used by copy
           context [] .localMemory
             localOffset mixedArena.reset
@@ -2862,7 +2862,7 @@ proc(
         op [] .pos context popValue if ..drop.3
           values valInfos nArgs context unpopValues
           EvalResult .Error return
-        end values nArgs []@ = valInfos nArgs []@ =
+        end values nArgs []= valInfos nArgs []=
         nArgs 1 + nArgs@ =
       end ..drop
       ## mergeTypes
@@ -3170,7 +3170,7 @@ proc(
       ConstValue ..length 23 == "no new constants" assert
       targetValue switch
         LocalValue case
-          value targetValue .LocalValue []@ =
+          value targetValue .LocalValue ConstValue _ ptr.mut cast []=
           EvalResult .Ok return
         LocalArray case
           value .Array ?? if
@@ -3318,7 +3318,7 @@ namespace: interpreter
       pos context popValue if ..drop.2
         values valInfos nArgs context unpopValues
         true return
-      end values nArgs []@ = valInfos nArgs []@ =
+      end values nArgs []= valInfos nArgs []=
       valInfos nArgs [] .valueType eltType typeContext types.canAutoCast ! if
         "wrong argument type for built-in " sb.wrap
           builtIn sb.appendBuiltIn
@@ -3605,7 +3605,7 @@ proc(
     LabelId Constant hashMap mixedArena.alloc =:: newVariables
   context .localMemory =
   ## XXX? allocate lookup table in localMemory
-  labelHash@ labelEq@ 256 Constant map.create newVariables []@ =
+  labelHash@ labelEq@ 256 Constant map.create newVariables []=
   newVariables optional.wrap context .localVariables =
   ## process procedure arguments
   false =:: mut: hasGenericArg

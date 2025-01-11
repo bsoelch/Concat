@@ -3,7 +3,7 @@ import debug
   T ptr.mut
 end
 proc( type : auto: T T box : a T box : b T box : out -> ) =>: boxAdd
-  a [] b [] + out []@ =
+  a [] b [] + out []=
 end
 
 proc( -> ) =>: main

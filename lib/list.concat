@@ -87,7 +87,7 @@ namespace: list
     0 while ..dup newList .length < do =:: i
       src .data i []
         copyElt ()
-      newList .data i []@ =
+      newList .data i []=
       i 1 +
     end ..drop
     newList return
@@ -204,7 +204,7 @@ namespace: list
     index 0 < index elts .length >= | if
       "list index outside range" ..panic
     end
-    elt elts .data index []@ =
+    elt elts .data index []=
   end
   overload: export: set
     set_32 set_64
@@ -220,7 +220,7 @@ namespace: list
       elts@ =
       elt elts .data
         elts .length
-      []@ =
+      []=
       elts .length
         1 +
       elts@ .length =

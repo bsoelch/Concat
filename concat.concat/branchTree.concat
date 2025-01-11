@@ -416,7 +416,7 @@ namespace: branchTree
     while
       tree [] .nodes heads 0 [] i64 cast list.at .data =:: root
       root [] .parent parentId@ =
-      root .data buffer 0 []@ =
+      root .data buffer 0 []=
       ## store parent node before unlinking child
       parentId -1:NodeId != if
         tree [] .nodes parentId i64 cast list.get optional.wrap
@@ -426,19 +426,19 @@ namespace: branchTree
       root [] .childCount 0 == if
         tree heads 0 [] unlinkNode
       end
-      parentId heads 0 []@ =
+      parentId heads 0 []=
       false needMerge@ =
       1:i64 =:: mut: i while i headCount < do
         tree [] .nodes heads i [] i64 cast list.at .data =:: next
         next [] .parent parentId != if
           true needMerge@ =
         end
-        next .data buffer i []@ =
+        next .data buffer i []=
         next [] .childCount 0 == if
           ## TODO? are the child counts updated correctly
           tree heads i [] unlinkNode
         end
-        next [] .parent heads i []@ =
+        next [] .parent heads i []=
         i 1 + i@ =
       end
       ## mergeValues

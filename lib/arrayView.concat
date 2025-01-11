@@ -116,7 +116,7 @@ namespace: array
   end
   proc( type : auto: T T : elt T arrayView.mut : elts i64 : index -> ) =>: export: set_64
     index elts .length checkIndex
-    elt elts .data index []@ =
+    elt elts .data index []=
   end
   proc( type : auto: T T : elt T arrayView.mut : elts i32 : index -> ) =>: export: set_32
     elt elts index i64 cast.u set_64

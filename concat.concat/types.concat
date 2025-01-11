@@ -1112,7 +1112,7 @@ namespace: types
         mutable
       context newArrayType if
         ..drop true return
-      end t []@ =
+      end t []=
       false return
     end
     ## XXX ? allow marking named pointer types as mutable
@@ -1214,7 +1214,7 @@ namespace: types
     context .arraySizes =
     arrays []
       base sizeOffset sizes .length arrayType .ARRAY ?? ! mutable ArrayData new list.append
-    arrays []@ =
+    arrays []=
     arrays [] .length 1 - ArrayId cast
       arrayType switch
         POINTER case Type .pointer break
@@ -2022,7 +2022,7 @@ namespace: types
     end ..drop
     procs []
       in out callConvention ProcType new list.append
-    procs []@ =
+    procs []=
     procs [] .length 1 - ProcId cast Type .procedure
     false return
   end

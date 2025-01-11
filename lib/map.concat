@@ -97,7 +97,7 @@ namespace: map
         ..dup 0:NodeId == if ..drop
           newNode if
             data [] .nodeBuffer .length 1 +
-              ..dup NodeId cast data [] .data ..over.3 []@ =
+              ..dup NodeId cast data [] .data ..over.3 []=
             ..swap ..drop
             NodeId cast return
           end
@@ -162,7 +162,7 @@ namespace: map
       end
     data [] .nodeBuffer ..swap i64 cast 1 - list.at .data
       ..dup [] .value ..swap
-      value ..swap []@ .value =
+      value ..swap .value =
     optional.wrap return
   end
 

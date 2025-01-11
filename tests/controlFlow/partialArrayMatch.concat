@@ -1,8 +1,8 @@
 proc( type : auto: T  i64 : auto: k T k ptr i32 -> T ptr ) =>: getEltPtr
-  []@
+  @[]
 end
 proc( type : auto: T  i64 : auto: k i64 : auto: l T k l ptr i32 -> T ptr ) =>: getEltPtr2D
-  $ []@
+  $ @[]
 end
 overload: getDiagonalEltPtr
   getEltPtr

@@ -163,7 +163,7 @@ namespace: allocator.linux
     chunk return
   end
   proc( ChunkInfo : chunk -> i64 arrayView.mut ) =>: getCellInfo
-    chunk .chunkStart ChunkHeader _ ptr.mut cast 1 []@ i64 _ ptr.mut cast! ## end of chunk header
+    chunk .chunkStart ChunkHeader _ ptr.mut cast 1 @[] i64 _ ptr.mut cast! ## end of chunk header
       chunkInfo chunk .chunkType i32 cast.u [] .cellCount i64 cast.u 63:i64 + 64 u/
     array.createMutable
   end
@@ -375,7 +375,7 @@ namespace: allocator.linux
   end
   proc( MemoryValue ptr.mut : mem -> CellHeader ptr.mut ) =>: export: getCellHeader ## XXX exported only for debug purposes
     mem CellHeader _ ptr.mut cast!
-      -1 []@
+      -1 @[]
     CellHeader ptr.mut cast!
   end
   proc( CellHeader ptr.mut : cell -> MemoryValue ptr.mut ) =>: getCellRoot
@@ -390,7 +390,7 @@ namespace: allocator.linux
   end
   proc( CellHeader ptr.mut : head -> MemoryValue ptr.mut ) =>: getCellMemory
     head CellHeader _ ptr.mut cast!
-      1 []@
+      1 @[]
     MemoryValue ptr.mut cast!
   end
   proc( i64 : size i32 : alignment bool : clearMemory -> CellHeader ptr.mut ) =>: allocateCell

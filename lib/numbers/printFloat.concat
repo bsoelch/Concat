@@ -105,7 +105,7 @@ namespace: sb
       end
       while p eps > do
         value p / math.floor =:: d
-        d i32 cast buff@ n []@ =
+        d i32 cast buff@ n []=
         n 1 + n@ =
         ## XXX break loop if n large enough
         value d p * - value@ =
@@ -121,7 +121,7 @@ namespace: sb
       buff@ n [] base 2 / >= if
         buff@ n 1 - []
           1 +
-        buff@ n 1 - []@ =
+        buff@ n 1 - []=
       end
       false =:: mut: inc
       n 1 - =:: mut: j
@@ -132,17 +132,17 @@ namespace: sb
             $ base < if
               false inc@ =
             end
-          buff@ j []@ =
+          buff@ j []=
         end
         buff@ j [] base >= if
           true inc@ =
-          buff@ j [] base - buff@ j []@ =
+          buff@ j [] base - buff@ j []=
         end
         j 1 - j@ =
       end
       inc if
         buff@ i32 _ ptr.mut cast 1 + buff@ n i64 cast.u mem.move ..drop
-        1 buff@ 0 []@ =
+        1 buff@ 0 []=
         n 1 + n@ =
         e_max 1 + e_max@ =
       end

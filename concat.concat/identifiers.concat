@@ -223,7 +223,7 @@ namespace: id
           end
           matches .data []
             idName idLabel IdentifierMatch new list.append
-          matches .data []@ =
+          matches .data []=
         end
         i 1 -
       end ..drop
@@ -245,7 +245,7 @@ namespace: id
           end
           matches .data []
             idName idLabel IdentifierMatch new list.append
-          matches .data []@ =
+          matches .data []=
         end
         context .globalScope .identifierNames
            globalName
@@ -257,7 +257,7 @@ namespace: id
           end
           matches .data []
             globalName idLabel IdentifierMatch new list.append
-          matches .data []@ =
+          matches .data []=
         end
       end
       context [] .typeContext .labelContext .namespaces mNamespace i64 cast list.get .parent mNamespace@ =
@@ -280,7 +280,7 @@ namespace: id
             matches optional.hasData if
               matches .data []
                 idName idLabel IdentifierMatch new list.append
-              matches .data []@ =
+              matches .data []=
             end
             mNamespace NAMESPACE_ID_NONE == if
               idLabel optional.wrap match@ =
@@ -298,7 +298,7 @@ namespace: id
             matches optional.hasData if
               matches .data []
                 globalName idLabel IdentifierMatch new list.append
-              matches .data []@ =
+              matches .data []=
             end
             mNamespace NAMESPACE_ID_NONE == if
               idLabel optional.wrap match@ =

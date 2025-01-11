@@ -155,7 +155,7 @@ namespace: id
     label? .data .flags =:: flags
     flags []
       newFlags |
-    flags []@ =
+    flags []=
   end
   proc( LabelId : id LabelContext ptr : context -> bool ) =>: export: isLabelEmpty
     id context getLabel =:: label?

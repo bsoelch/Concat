@@ -438,7 +438,7 @@ proc(
       i 1 +
     end ..drop
     '\n' sb.appendC
-  mergePoint .out []@ =
+  mergePoint .out []=
   ## StackElement
     newId
     rootValue [] .valType
@@ -2178,8 +2178,8 @@ proc(
   src typeContext types.primitiveValue types.sizeOfPrimitive 4 >= if
     sb return
   end
-  pos context popValue args@ 1 []@ =
-  pos context popValue args@ 0 []@ =
+  pos context popValue args@ 1 []=
+  pos context popValue args@ 0 []=
   sb
     0 while ..dup 2 < do =:: i
       "%s" sb.appendS
@@ -2396,7 +2396,7 @@ proc(
           "blit %s" sb.appendS
         else
           "store" sb.appendS
-          baseType StorageType .LOAD pos context sb.appendTypeNameQBE
+          baseType StorageType .STORE pos context sb.appendTypeNameQBE
           " %s" sb.appendS
         end
         srcVal sb.appendI
@@ -2552,7 +2552,7 @@ proc(
     ## BranchId
       BranchType .NEXT
       context nextJumpLabelId
-    BranchId new branches@ i []@ =
+    BranchId new branches@ i []=
     i 1 +
   end ..drop
   context nextTmpId =:: cNaN
@@ -3213,7 +3213,7 @@ proc(
       '\n' sb.appendC
       i 1 +
     end ..drop
-    argIndices [] list.free argIndices []@ =
+    argIndices [] list.free argIndices []=
   return
 end
 
@@ -4530,7 +4530,7 @@ proc(
           branches [] @ =
           branchIds []
             context [] .currentBranch list.append
-          branchIds []@ =
+          branchIds []=
           sb
             op [] .pos sb.appendPosQBE
             "jmp " sb.appendS
@@ -4549,10 +4549,10 @@ proc(
           context [] .reachable if
             whileBlock .continueBranchIds []
               context [] .currentBranch list.append
-            whileBlock .continueBranchIds []@ =
+            whileBlock .continueBranchIds []=
             continueBranches []
               context .stackInfo branchTree.startBranch list.append
-            continueBranches []@ =
+            continueBranches []=
           end
           sb
             ## don't add position for labels
@@ -4651,13 +4651,13 @@ proc(
           BranchId 2 array new =:: mut: branchIds
           0 =:: mut: nBranches
           ifBlock .ifBranchTerminates if
-            ifBlock .ifBranch branches@ nBranches []@ =
-            ifBlock .ifBranchId branchIds@ nBranches []@ =
+            ifBlock .ifBranch branches@ nBranches []=
+            ifBlock .ifBranchId branchIds@ nBranches []=
             nBranches 1 + nBranches@ =
           end
           context [] .reachable if
-            context .stackInfo branchTree.startBranch branches@ nBranches []@ =
-            context [] .currentBranch branchIds@ nBranches []@ =
+            context .stackInfo branchTree.startBranch branches@ nBranches []=
+            context [] .currentBranch branchIds@ nBranches []=
             nBranches 1 + nBranches@ =
           end
           sb

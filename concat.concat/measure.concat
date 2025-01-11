@@ -82,7 +82,7 @@ proc(
       types =
       break
   end
-  -1 visited declared map.at .data []@ = ## finished declaration
+  -1 visited declared map.at .data []= ## finished declaration
 end
 
 proc( Operation ptr : op ProgramContext ptr.mut : prog Type i32 hashMap ptr.mut : visited Type list ptr.mut : types -> ) =>: addOpType
