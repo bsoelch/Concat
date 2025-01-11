@@ -3340,7 +3340,7 @@ namespace: interpreter
     builtIn
       values
       nArgs i32 cast
-    pos errors interpreter.evaluateBuiltIn =:: resultType =:: value
+    pos typeContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
     resultType switch
       success case
         value

@@ -170,6 +170,7 @@ namespace: interpreter
     ConstValue _ ptr : args
     i32 : k
     FilePosition : pos
+    TypeContext ptr.mut : typeContext
     CompilerError list ptr.mut : errors
   -> ConstValue OperatorResult ) =>: export: evaluateBuiltIn
     builtIn switch
@@ -276,14 +277,35 @@ namespace: interpreter
       UGT_I32 GT_C32 case args k i32.ugt@ cmpOperatorInt return
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
       GET_PTR GET_PTR_MUT case
-        ## TODO! implement pointer operations
-        break
-      SET_PTR case
-        ## TODO! implement pointer operations
-        break
+        k 1 == "correct number of arguments" assert
+        ## getOrOffset
+          args 0 []
+          false -1
+          pos
+          typeContext
+        errors getOrOffset return
       OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 case
-        ## TODO! implement pointer operations
-        break
+        k 2 == "correct number of arguments" assert
+        ## getOrOffset
+          args 0 []
+          true
+          args 1 [] constAsInt if ..drop.3
+            "unexpected constant for pointer offset expected integer: " sb.wrap
+              args 1 [] typeContext sb.appendConstant
+            pos errors appendError
+            ConstValue .None OperatorResult .argumentError return
+          end
+          pos
+          typeContext
+        errors getOrOffset return
+      SET_PTR case
+        k 2 == "correct number of arguments" assert
+        ConstValue .None
+          args 0 []
+          args 1 []
+          pos
+          typeContext
+        errors setPointer return
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
         k 2 == "correct number of arguments" assert
@@ -366,6 +388,237 @@ namespace: interpreter
         parsed ConstValue .Float OperatorResult .success return
     end
     ConstValue .None  OperatorResult .unimplemented return
+  end
+
+  proc(
+    ConstValue : ptrValue
+    bool : isOffset
+    i64 : offset
+    FilePosition : pos
+    TypeContext ptr.mut : typeContext
+    CompilerError list ptr.mut : errors
+  -> ConstValue OperatorResult ) =>: getOrOffset
+    ConstValue ..length 23 == "no new constants" assert
+    ptrValue switch
+      Array8 case
+        ptrValue .Array8 =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail ConstValue .Array8
+          else
+            arrayConst 0 array.get i64 cast.u ConstValue .Int
+          end
+        OperatorResult .success return
+      Array16 case
+        ptrValue .Array16 =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail ConstValue .Array16
+          else
+            arrayConst 0 array.get i64 cast.u ConstValue .Int
+          end
+        OperatorResult .success return
+      Array32 case
+        ptrValue .Array32 =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail ConstValue .Array32
+          else
+            arrayConst 0 array.get i64 cast.u ConstValue .Int
+          end
+        OperatorResult .success return
+      Array64 case
+        ptrValue .Array64 =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail ConstValue .Array64
+          else
+            arrayConst 0 array.get i64 cast.u ConstValue .Int
+          end
+        OperatorResult .success return
+      Array case
+        ptrValue .Array =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail ConstValue .Array
+          else
+            arrayConst 0 array.get
+          end
+        OperatorResult .success return
+      LocalValue case
+        ## TODO handle local value ( local array ... )
+        ## XXX? do I need to unwrap immutable primitive values
+        ptrValue OperatorResult .success return
+      LocalArray case
+        ptrValue .LocalArray ConstValue arrayView.mut cast =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail LocalSlice cast ConstValue .LocalArray
+          else
+            arrayConst 0 array.at .data LocalAddress cast ConstValue .LocalValue
+          end
+        OperatorResult .success return
+      LocalArray8 case
+        ptrValue .LocalArray8 i8 arrayView.mut cast =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail
+          else
+            arrayConst .data 1 array.createMutable
+          end LocalSlice8 cast
+        ConstValue .LocalArray8 OperatorResult .success return
+      LocalArray16 case
+        ptrValue .LocalArray16 i16 arrayView.mut cast =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail
+          else
+            arrayConst .data 1 array.createMutable
+          end LocalSlice16 cast
+        ConstValue .LocalArray16 OperatorResult .success return
+      LocalArray32 case
+        ptrValue .LocalArray32 i32 arrayView.mut cast =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail
+          else
+            arrayConst .data 1 array.createMutable
+          end LocalSlice32 cast
+        ConstValue .LocalArray32 OperatorResult .success return
+      LocalArray64 case
+        ptrValue .LocalArray64 i64 arrayView.mut cast =:: arrayConst
+          isOffset if
+            arrayConst offset array.tail
+          else
+            arrayConst .data 1 array.createMutable
+          end LocalSlice64 cast
+        ConstValue .LocalArray64 OperatorResult .success return
+      default
+        "unexpected constant for pointer value: " sb.wrap
+          ptrValue typeContext sb.appendConstant
+        pos errors appendError
+        ConstValue .None OperatorResult .argumentError return
+    end
+  end
+
+  proc(
+    type : auto: W
+    ConstValue : src
+    W : localArray
+    type : T
+  -> bool ) =>: primitiveArrayTrySetElement
+    localArray T arrayView.mut cast =:: arrayData
+    ConstValue ..length 23 == "no new constants" assert
+    src switch
+      Char case src .Char i64 cast.u break
+      Int case src .Int break
+      ## XXX? support floats?
+      default false return
+    end =:: intValue
+    intValue T cast arrayData 0 array.set
+    true return
+  end
+  proc(
+    type : auto: W type : auto: T
+    W : targetArray
+    T arrayView : srcArray
+    FilePosition : pos
+    CompilerError list ptr.mut : errors
+  -> OperatorResult ) =>: setLocalArray
+    srcArray .length targetArray .length != if
+      "invalid array length for assignment expected " sb.wrap
+        targetArray .length sb.appendI
+        " got:" sb.appendS
+        srcArray .length sb.appendI
+      pos errors appendError
+      OperatorResult .argumentError return
+    end
+    targetArray .data srcArray .data != if
+      targetArray .data srcArray .data srcArray .length mem.copy ..drop
+    end
+    OperatorResult .success return
+  end
+  proc(
+    ConstValue : newValue
+    ConstValue : targetValue
+    FilePosition : pos
+    TypeContext ptr.mut : typeContext
+    CompilerError list ptr.mut : errors
+  -> OperatorResult ) =>: setPointer
+    ConstValue ..length 23 == "no new constants" assert
+    targetValue switch
+      LocalValue case
+        newValue targetValue .LocalValue []@ =
+        OperatorResult .success return
+      LocalArray case
+        newValue .Array ?? if
+          newValue .Array
+        else newValue .LocalArray ?? _if
+          newValue .LocalArray ConstValue arrayView.mut cast array.freeze
+        else
+          "unexpected source for assignment expected array got:" sb.wrap
+            newValue typeContext sb.appendConstant
+          pos errors appendError
+          OperatorResult .argumentError return
+        end =:: srcArray
+        targetValue .LocalArray srcArray pos errors setLocalArray return
+      LocalArray8 case
+        newValue targetValue .LocalArray8 i8 primitiveArrayTrySetElement if
+          OperatorResult .success return
+        end
+        newValue .Array8 ?? if
+          newValue .Array8
+        else newValue .LocalArray8 ?? _if
+          newValue .LocalArray8 i8 arrayView.mut cast array.freeze
+        else
+          "unexpected source for assignment expected array got:" sb.wrap
+            newValue typeContext sb.appendConstant
+          pos errors appendError
+          OperatorResult .argumentError return
+        end =:: srcArray
+        targetValue .LocalArray8 srcArray pos errors setLocalArray return
+      LocalArray16 case
+        newValue targetValue .LocalArray16 i16 primitiveArrayTrySetElement if
+          OperatorResult .success return
+        end
+        newValue .Array16 ?? if
+          newValue .Array16
+        else newValue .LocalArray16 ?? _if
+          newValue .LocalArray16 i16 arrayView.mut cast array.freeze
+        else
+          "unexpected source for assignment expected array got:" sb.wrap
+            newValue typeContext sb.appendConstant
+          pos errors appendError
+          OperatorResult .argumentError return
+        end =:: srcArray
+        targetValue .LocalArray16 srcArray pos errors setLocalArray return
+      LocalArray32 case
+        newValue targetValue .LocalArray32 i32 primitiveArrayTrySetElement if
+          OperatorResult .success return
+        end
+        newValue .Array32 ?? if
+          newValue .Array32
+        else newValue .LocalArray32 ?? _if
+          newValue .LocalArray32 i32 arrayView.mut cast array.freeze
+        else
+          "unexpected source for assignment expected array got:" sb.wrap
+            newValue typeContext sb.appendConstant
+          pos errors appendError
+          OperatorResult .argumentError return
+        end =:: srcArray
+        targetValue .LocalArray32 srcArray pos errors setLocalArray return
+      LocalArray64 case
+        newValue targetValue .LocalArray64 i64 primitiveArrayTrySetElement if
+          OperatorResult .success return
+        end
+        newValue .Array64 ?? if
+          newValue .Array64
+        else newValue .LocalArray64 ?? _if
+          newValue .LocalArray64 i64 arrayView.mut cast array.freeze
+        else
+          "unexpected source for assignment expected array got:" sb.wrap
+            newValue typeContext sb.appendConstant
+          pos errors appendError
+          OperatorResult .argumentError return
+        end =:: srcArray
+        targetValue .LocalArray64 srcArray pos errors setLocalArray return
+      default
+        "unexpected target for setValue, expected writable memory location got: " sb.wrap
+          targetValue typeContext sb.appendConstant
+        pos errors appendError
+        OperatorResult .argumentError return
+    end
   end
 
   proc(
