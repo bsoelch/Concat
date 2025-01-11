@@ -4,6 +4,6 @@ identifier "selfPtr":
 -----------------
 types:
 -----------------
-named[12]( "selfPtr" [ struct[463]( i32 named[12]( "selfPtr" [ struct[463]( i32 named[12]( "selfPtr" ) ptr ) ] ) ptr ) ] )
+named[12]( "selfPtr" [ struct[473]( i32 named[12]( "selfPtr" [ struct[473]( i32 named[12]( "selfPtr" ) ptr ) ] ) ptr ) ] )
 -----------------
 true
