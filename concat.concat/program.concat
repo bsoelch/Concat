@@ -499,7 +499,7 @@ proc(
   program .idContext .typeContext =:: typeContext
   ## Operation
     refId OpValue .ConstantReference
-    constType false typeContext types.newReferenceType
+    constType
     pos
   Operation new return
 end

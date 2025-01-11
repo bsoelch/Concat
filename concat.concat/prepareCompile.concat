@@ -113,14 +113,12 @@ proc(
         op .val .Constant op .dataType op .pos program opConstReference list.append
       return
     copy case
-      op .dataType typeContext types.unwrapReference =:: baseType
-      ## TODO change to check for reference only once composite stack values are supported by QBE back-end
+      op .dataType =:: baseType
+      ## TODO change to check for reference-only once composite stack values are supported by QBE back-end
       ## baseType typeContext types.referenceOnly ! if
-      baseType typeContext types.unwrapNamed types.isPrimitive
-          baseType typeContext types.isPointer | if
-        newOps
-          op list.append ## values fits on stack, no variable needed
-        return
+      baseType typeContext types.unwrapNamed types.isPrimitive or
+          baseType typeContext types.isPointer if
+        newOps return ## primitive copy is no-op
       end
       baseType true op .pos context newTmpVar =:: tmpId
       newOps

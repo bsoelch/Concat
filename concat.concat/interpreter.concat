@@ -899,7 +899,7 @@ namespace: interpreter
     idContext .typeContext =:: typeContext
     idContext .constContext =:: constContext
     false =:: mut: isType
-    t typeContext types.unwrapReference =:: mut: valType
+    t =:: mut: valType
     valType types.primitive.TYPE types.typeEquals if
       value .TypeId ?? ! if
         "unexpected constant value for type type: " sb.wrap
@@ -2313,8 +2313,7 @@ proc(
         end
         0:i64 =:: mut: intArgs
         offset while ..dup minOffset >= do
-          context [] .stackInfo ..over list.at .data [] .valueType
-              typeContext types.unwrapReference typeContext types.isInt ! if
+          context [] .stackInfo ..over list.at .data [] .valueType typeContext types.isInt ! if
             break
           end
           intArgs 1 + intArgs@ =

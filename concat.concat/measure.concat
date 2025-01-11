@@ -36,7 +36,7 @@ proc(
         declared list.append
       types =
       break
-    arrayType reference mutableReference case
+    arrayType case
       declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
       types []
         declared list.append

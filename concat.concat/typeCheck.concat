@@ -714,8 +714,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
   typeContext .labelContext =:: labelContext
   1 pos state checkStackSize if Type .undefined return end
   state .stack branchTree.peek .data =:: typeInfo
-  typeInfo [] .valueType =:: mut: valType
-  valType typeContext types.unwrapReference valType@ =
+  typeInfo [] .valueType =:: valType
   valType types.primitive.TYPE types.typeEquals ! if
     "expected type got " sb.wrap
       valType typeContext sb.appendType
@@ -1017,21 +1016,6 @@ proc(
       end
     end
     OP_UNLINKED elt@ .opIndex =
-    elt .valueType typeContext types.isReference if
-      elt .valueType =:: srcType
-      elt .valueType
-        typeContext types.getBaseType
-      elt@ .valueType =
-      ## update stack value
-      ## opAutoCast
-        srcType
-        stackElements .length i32 cast offset +
-        elt .valueType
-        pos
-      opAutoCast state appendOp ..drop
-      ## remove possibility to overwrite copy
-      OP_UNLINKED elt@ .copyMutableIndex =
-    end
     state .stack
       elt
     branchTree.push
@@ -1383,8 +1367,6 @@ proc(
       state .stack branchTree.peek =:: value?
       value? optional.hasData if
         value? .data [] .valueType
-          typeContext
-        types.unwrapReference
         $ types.isLiteral if
           typeContext types.literalToType
         end
@@ -1946,9 +1928,7 @@ proc(
         op .pos errors appendError
         return
       end
-      value? .data [] .valueType
-        typeContext types.unwrapReference
-      =:: calledType
+      value? .data [] .valueType =:: calledType
       calledType typeContext types.isCallable ! if
         "cannot call values of type " sb.wrap
           calledType typeContext sb.appendType
@@ -2158,16 +2138,11 @@ proc(
         return
       end
       state .stack branchTree.peek .data =:: target
-      target [] .valueType typeContext types.isReference =:: isReference
-      isReference target [] .valueType typeContext types.isPointer | ! if
-        "can only assign to pointers or references got: " sb.wrap
+      target [] .valueType typeContext types.isPointer ! if
+        "can only assign to pointers got: " sb.wrap
           target [] .valueType typeContext sb.appendType
         op .pos errors appendError
         return
-      end
-      isReference if
-        "assignment to references may be removed in a future version" sb.wrap
-        op .pos errors appendError
       end
       target [] .valueType typeContext types.isMutable ! if
         target [] .valueId id.LABEL_ID_NONE != if
@@ -2183,16 +2158,6 @@ proc(
             target [] .valueType typeContext sb.appendType
           op .pos errors appendError
         end
-        return
-      end
-      isReference and
-          target [] .opIndex OP_EMPTY != and
-          target [] .opIndex state currentBlockStart < if
-        "cannot assign value to reference on different branch" sb.wrap
-          "( pushed at" sb.appendS
-          target [] .pushedAt sb.appendPos
-          " )" sb.appendS
-        op .pos errors appendError
         return
       end
       target [] .readEnumCheckIndex 0 >= if
@@ -2254,11 +2219,6 @@ proc(
       false =:: mut: isPtr
       false =:: mut: isType
       srcType
-         ..dup typeContext types.isReference =:: isReference
-         isReference if
-            ..dup typeContext types.isMutable mutable@ =
-            typeContext types.unwrapReference
-         end ## no else
         ..dup types.primitive.TYPE types.typeEquals and container .value .TypeId ?? if ..drop
           true isType@ =
           container .value .TypeId
@@ -2376,14 +2336,14 @@ proc(
         false mutable@ =
       end
       ## TODO clarify message
-      isAddr and isPtr ! and isReference ! if
+      isAddr and isPtr ! if
         "cannot take the address of a stack value: \"" sb.wrap
         srcType typeContext sb.appendType
         op .pos errors appendError
         return
       end
       OP_UNLINKED =:: mut: onRead
-      isReference and isPtr if ## unwrap reference to pointer
+      isPtr if ## unwrap reference to pointer
         ## opAutoCast
           container .valueType
           0
@@ -2398,8 +2358,6 @@ proc(
       ## can only take address of reference or pointer
       isAddr or isPtr if
         eltType mutable typeContext types.getAddressType
-      else isReference _if
-        eltType mutable typeContext types.newReferenceType
       else
         eltType
       end =:: targetType
@@ -2456,9 +2414,7 @@ proc(
         return
       end
       label? .data =:: label
-      label [] .valueType
-        typeContext types.unwrapReference
-      =:: enumType
+      label [] .valueType =:: enumType
       enumType typeContext types.isTaggedUnion ! if
         "wrong argument type for getEnumLabel expected enum got " sb.wrap
           enumType typeContext sb.appendType
@@ -2479,9 +2435,7 @@ proc(
       state .stack branchTree.itr.start while
         branchTree.itr.hasNext
       do branchTree.itr.peekNext =:: typeInfo ## don't consume value
-        typeInfo [] .valueType
-          typeContext types.unwrapReference
-        =:: baseType
+        typeInfo [] .valueType =:: baseType
         baseType typeContext types.isPointer if
           break
         end
@@ -2522,9 +2476,7 @@ proc(
           state [] .compiledOps .length 1 - ==
         =:: directCopy ## operation before get element is copy
       ..drop
-      srcType
-        typeContext types.unwrapReference
-      =:: arrayType
+      srcType =:: arrayType
       arrayType typeContext types.isArray if
         srcType
       else
@@ -2591,9 +2543,6 @@ proc(
           end
         else isAddr _if
           mutable typeContext types.getAddressType
-        end
-        isAddr ! if
-          #+eltType+# mutable typeContext types.newReferenceType
         end
         ConstValue .None
         op
@@ -2716,10 +2665,10 @@ proc(
       end
       Type 2 array new =:: mut: params
       state .stack
-         0 branchTree.at .data [] .valueType typeContext types.unwrapReference
+         0 branchTree.at .data [] .valueType
       params@ 0 []@ =
       state .stack
-         1 branchTree.at .data [] .valueType  typeContext types.unwrapReference
+         1 branchTree.at .data [] .valueType
       params@ 1 []@ =
       params@ 0 [] params@ 1 [] typeContext types.mergeTypes if
         ..drop
@@ -3024,9 +2973,7 @@ proc(
             op .pos errors appendError
             return
           end
-          value? .data [] .valueType
-            typeContext types.unwrapReference
-          =:: switchType
+          value? .data [] .valueType =:: switchType
           switchType typeContext types.isInt ! and
           switchType typeContext types.isChar ! and
               switchType typeContext types.isTaggedUnion ! if
@@ -4166,29 +4113,6 @@ proc(
           state .stack
             offset
           branchTree.at .data [] =:: mut: copied
-          copied .valueType typeContext types.isReference if
-            copied .valueType =:: srcType
-            ## copying converts reference to value
-            copied .valueType
-              typeContext types.getBaseType
-            copied@ .valueType =
-            ## update value in stack & code
-            copied .valueType
-              state .stack offset
-            branchTree.replaceAt .data =:: baseValue
-            baseValue .valueType =
-            ## opAutoCast
-              srcType
-              offset
-              copied .valueType
-              op .pos
-            opAutoCast state appendOp =:: castIndex
-            copied .opIndex -1 != if
-              castIndex copied@ .opIndex =
-              castIndex baseValue .opIndex =
-            end
-            OP_UNLINKED copied@ .copyMutableIndex = ## remove possibility to overwrite copy
-          end
           op .pos copied@ .pushedAt =
           copied .valueType typeContext types.isEmpty ! if
             ## TODO? don't copy composite operations

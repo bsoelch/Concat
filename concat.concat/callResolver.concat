@@ -102,20 +102,6 @@ proc(
         name
         typeContext
       types.newNamedType return
-    reference mutableReference case
-      ## newReferenceType
-        ## replaceGenerics
-          src typeContext types.getBaseType
-          typeBuffer
-          labelBuffer
-          genericValues
-          replaceAutoArgs
-          pos
-          progContext
-        replaceGenerics
-        src .mutableReference ??
-        typeContext
-      types.newReferenceType return
     pointer rawPointer arrayType case
       src typeContext types.getBaseType =:: base
       src typeContext types.getArraySize =:: sizes
@@ -156,7 +142,7 @@ proc(
           pos
           progContext
         replaceGenerics
-        src .pointer ?? if
+        src .pointer ?? or src .arrayType ?? and genericSize if
           types.ArrayType .POINTER
         else src .rawPointer ?? _if
           types.ArrayType .RAW_POINTER
@@ -173,9 +159,6 @@ proc(
           sizeOffset list.setLength
         idContext .arraySizeBuffer =
         ! "can create array" assert
-      src .arrayType ?? and genericSize if ## wrap generic array parameters in reference
-        false typeContext types.newReferenceType
-      end
       return
     struct union procIn procOut enum initializer case
       typeBuffer [] .length =:: typeOffset
@@ -303,11 +286,6 @@ proc(
     src0 target typeContext types.canAutoCast ! return
   end
   src0 =:: mut: src
-  ## unwrap reference in src argument if target is not a reference
-  src typeContext types.isReference and
-      target typeContext types.isReference ! if
-    src typeContext types.getBaseType src@ =
-  end
   src .initializer ?? if
     target typeContext types.isArray and src typeContext types.isArrayLiteral if
       src typeContext types.initializerAsArray src@ =
@@ -382,18 +360,6 @@ proc(
         unwrapSrc
         unwrapTarget
         exactMatch
-        needCast
-        genericValues
-        progContext
-      resolveGenerics return
-    reference mutableReference case
-      src typeContext types.isReference ! if
-        true return
-      end
-      ## resolveGenerics
-        src typeContext types.getBaseType
-        target typeContext types.getBaseType
-        true
         needCast
         genericValues
         progContext
@@ -957,12 +923,6 @@ proc(
       else stackType paramType typeContext types.canAutoCast _if
         MatchType .CAST matchType@ =
         stackType =:: mut: fromType
-        ## count conversion reference -> value as separate cast
-        stackType typeContext types.isReference
-            paramType typeContext types.isReference ! & if
-          stackType typeContext types.getBaseType fromType@ =
-          current [] .nCasts 1 + current .nCasts =
-        end
         ## TODO extra casts for move complicated literal conversion
         fromType paramType types.typeEquals ! if
           fromType .intLiteral ?? and

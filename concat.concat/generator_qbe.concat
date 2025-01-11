@@ -173,7 +173,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       ValType .I64 return
     pointer rawPointer case
       ValType .PTR return
-    reference mutableReference procedure arrayType struct union enum initializer case
+    procedure arrayType struct union enum initializer case
       ValType .REFERENCE return
     undefined empty genericType autoType
     procIn procOut align case
@@ -658,7 +658,7 @@ namespace: sb
           end
         storeType pos context appendTypeNameQBE
         return
-      arrayIndex pointer rawPointer reference mutableReference procedure case
+      arrayIndex pointer rawPointer procedure case
         sb "l" sb.appendS return ## size or pointer
       arrayType case
         sb t "array" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
@@ -722,9 +722,9 @@ namespace: sb
       0:i64 while ..dup args .length < do =:: i
         args i types.compositeElts.get =:: mut: arg
         arg typeContext types.containsGeneric if
-          arg typeContext types.unwrapReference typeContext types.isArray if
+          arg typeContext types.isArray if
             arg
-              false typeContext types.newReferenceType
+              false typeContext types.getAddressType
             arg@ =
           else arg typeContext types.isPointer ! _if
             "unexpected generic argument: " sb.wrap
@@ -999,9 +999,7 @@ namespace: sb
             return
           end
           isGlobal ! if break end
-          t
-            typeContext types.unwrapReference
-          =:: containerType
+          t =:: containerType
           containerType typeContext types.isArray if
             containerType typeContext types.getElementType =:: eltType
             eltType pos context typeSizeInt =:: eltSize
@@ -2967,70 +2965,6 @@ proc(
       pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
     return
   end
-  src typeContext types.isReference and target typeContext types.isReference ! if
-    src typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
-    sb
-      "%s" sb.appendS
-      targetId sb.appendI
-      " =" sb.appendS
-      baseType StorageType .STACK pos context sb.appendTypeNameQBE
-      baseType context referenceOnly ! and valType .REFERENCE ?? if ## unwrap reference
-        " load" sb.appendS
-        baseType StorageType .LOAD pos context sb.appendTypeNameQBE
-      else
-        " copy" sb.appendS
-      end
-      " %s" sb.appendS
-      srcId sb.appendI
-      '\n' sb.appendC
-      ## cast value
-      baseType target types.typeEquals ! if
-        ## compileCast
-          castType
-          signType
-          baseType
-          offset
-          target
-          pos
-          context
-        compileCast
-      end
-    return
-  end
-  target typeContext types.isReference and src typeContext types.isReference ! if
-    target typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
-    sb
-      ## cast value
-      src baseType types.typeEquals ! if
-        ## compileCast
-          castType
-          signType
-          src
-          offset
-          baseType
-          pos
-          context
-        compileCast
-      end
-      "%s" sb.appendS
-      targetId sb.appendI
-      " =" sb.appendS
-      baseType context referenceOnly or valType .REFERENCE ?? ! if ## value is already reference
-        baseType StorageType .STACK pos context sb.appendTypeNameQBE
-        " copy" sb.appendS
-      else ## TODO convert value type to pointe
-        "casting from " sb.wrap
-          src typeContext sb.appendType
-          " to " sb.appendS
-          target typeContext sb.appendType
-          " is not implemented" sb.appendS
-        pos errors appendError
-      end
-      " %s" sb.appendS
-      srcId sb.appendI
-      '\n' sb.appendC
-    return
-  end
   "casting from " sb.wrap
     src typeContext sb.appendType
     " to " sb.appendS
@@ -3186,23 +3120,28 @@ proc(
     end
     ## convert out-arg references to values
     outArgsOffset while ..dup argIndices [] .length < do =:: i
-      argIndices [] i list.at .data [] .valType =:: outArg
-      outArg context referenceOnly if
+      argIndices [] i list.at .data [] .valType =:: argType
+      argType context referenceOnly if
         i 1 + continue
       end
-      ## compileCast
-        CastType .autoCast
-        SignType .NONE
-        outArg
-          false
-          typeContext
-        types.newReferenceType
-        ## (len-1-i) +1 for return value
-        argIndices [] .length i - i32 cast
-        outArg
-        pos
-        context
-      compileCast
+      ## TODO? extract load operations to common procedure
+      argIndices [] .length i - i32 cast =:: offset
+      context .stackInfo offset branchTree.at .data [] .valType =:: valType
+      context .stackInfo offset branchTree.at .data [] .varId =:: srcId
+      argType context toValType offset context replaceValue =:: targetId
+      "%s" sb.appendS
+      targetId sb.appendI
+      " =" sb.appendS
+      argType StorageType .STACK pos context sb.appendTypeNameQBE
+      valType .REFERENCE ?? if ## unwrap reference
+        " load" sb.appendS
+        argType StorageType .LOAD pos context sb.appendTypeNameQBE
+      else
+        " copy" sb.appendS
+      end
+      " %s" sb.appendS
+      srcId sb.appendI
+      '\n' sb.appendC
       i 1 +
     end ..drop
     argIndices [] list.free argIndices []@ =
@@ -3496,12 +3435,8 @@ proc(
         op [] .val .atArrayElement
       end =:: mut: argCount
       op [] .val .atArrayElement ?? =:: isAddr
-      op [] .dataType =:: mut: arrayType
-      arrayType typeContext types.isPointer =:: mut: isPtr
-      arrayType typeContext types.isReference if
-        arrayType typeContext types.getBaseType arrayType@ =
-        true isPtr@ =
-      end
+      op [] .dataType =:: arrayType
+      arrayType typeContext types.isPointer =:: isPtr
       arrayType typeContext types.getArraySize =:: sizes
       arrayType typeContext types.getBaseType =:: baseType
       sizes .length
@@ -3569,6 +3504,21 @@ proc(
         ", %t" sb.appendS
         offsetId sb.appendI
         '\n' sb.appendC
+        isAddr or baseType context referenceOnly if
+          return
+        end
+        ## unwrap value
+        op [] .pos context popValue =:: ptrId
+        baseType context toValType =:: baseValType
+        "%s" sb.appendS
+        baseValType context pushValue sb.appendI
+        " =" sb.appendS
+        baseValType sb.appendValTypeQBE
+        " load" sb.appendS
+        baseType StorageType .LOAD op [] .pos context sb.appendTypeNameQBE
+        " %s" sb.appendS
+        ptrId sb.appendI
+        '\n' sb.appendC
       return
     getElement atElement case
       op [] .val .getElement ?? if
@@ -3579,11 +3529,7 @@ proc(
       op [] .val .atElement ?? =:: isAddr
       op [] .dataType =:: mut: containerType
       false =:: mut: ptrSrc
-      false =:: mut: refrenceSrc
-      containerType typeContext types.isReference if
-        containerType typeContext types.unwrapReference containerType@ =
-        true refrenceSrc@ =
-      else containerType typeContext types.isPointer _if
+      containerType typeContext types.isPointer if
         containerType typeContext types.getBaseType containerType@ =
         true ptrSrc@ =
       end
@@ -3593,8 +3539,6 @@ proc(
       types.compositeGetElement =:: eltType
       isAddr or ptrSrc if
         ValType .PTR
-      else refrenceSrc _if
-        ValType .REFERENCE
       else
         eltType context toValType
       end =:: valType
@@ -3614,7 +3558,7 @@ proc(
       else
         break ## unsupported type
       end
-        isAddr or ptrSrc or refrenceSrc or eltType context referenceOnly if
+        isAddr or ptrSrc or eltType context referenceOnly if
           return
         end
         op [] .pos context popValue =:: srcId
@@ -3762,11 +3706,7 @@ proc(
         storeEnumLabel
       return
     hasElement case
-      op [] .dataType
-        ..dup typeContext types.isReference if
-           typeContext types.getBaseType
-        end
-      =:: containerType
+      op [] .dataType =:: containerType
       containerType typeContext types.isTaggedUnion ! if
         break
       end
@@ -3780,18 +3720,6 @@ proc(
         c sb.appendI
         '\n' sb.appendC
       return
-    copy case
-      sb
-        op [] .pos sb.appendPosQBE
-        CastType .autoCast
-        SignType .NONE
-        op [] .dataType
-        0
-        op [] .dataType typeContext types.unwrapReference
-        op [] .pos
-        context
-      compileCast return
-      break
     autoCast case
       sb
         op [] .pos sb.appendPosQBE
@@ -3875,7 +3803,7 @@ proc(
           end
         end
         arg typeContext types.isArray and arg typeContext types.containsGeneric if
-          arg false typeContext types.newReferenceType arg@ =
+          arg false typeContext types.getAddressType arg@ =
         end
         argIndices
           arg -1 TypedValId new list.append
@@ -3963,7 +3891,7 @@ proc(
         inTypes
           i typeContext types.compositeGetElement
           $ typeContext types.isArray and $ typeContext types.containsGeneric if
-            false typeContext types.newReferenceType
+            false typeContext types.getAddressType
           end
         =:: arg
         arg typeContext types.isEmpty if
@@ -5003,7 +4931,7 @@ proc(
       break
     compilerInfo case
       sb return ## XXX? print compiler info
-    autoTypedInitializeId typeInfo
+    autoTypedInitializeId typeInfo copy
     getName atName getLabel Error Assert panic
     atLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message

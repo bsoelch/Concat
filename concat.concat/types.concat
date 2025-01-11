@@ -22,7 +22,6 @@ namespace: types
   i32 =:: ProcId
   i32 =:: NamedTypeId
   i32 =:: GeneratedId
-  i32 =:: ReferenceId
   i32 =:: SizeId
   ## primitive C-types for C interoperability
   enum(
@@ -62,8 +61,6 @@ union(
   types.InitializerId : initializer
          types.ProcId : procedure
     types.NamedTypeId : namedType
-    types.ReferenceId : reference
-    types.ReferenceId : mutableReference
                   i32 : autoType
               LabelId : genericType
     types.GeneratedId : generatedType
@@ -112,10 +109,6 @@ namespace: types
         a .genericType b .genericType == return
       generatedType case
         a .generatedType b .generatedType == return
-      reference case
-        a .reference b .reference == return
-      mutableReference case
-        a .mutableReference b .mutableReference == return
       arrayIndex case
         a .arrayIndex b .arrayIndex == return
       cType case
@@ -214,22 +207,18 @@ namespace: types
         bigPrime 37 * a .genericType i32 cast + return
       generatedType case
         bigPrime 43 * a .generatedType i32 cast + return
-      reference case
-        bigPrime 47 * a .reference i32 cast + return
-      mutableReference case
-        bigPrime 53 * a .mutableReference i32 cast + return
       arrayIndex case
-        bigPrime 59 * a .arrayIndex i32 cast + return
+        bigPrime 47 * a .arrayIndex i32 cast + return
       cType case
-        bigPrime 61 * a .cType cTypeId + return
+        bigPrime 53 * a .cType cTypeId + return
       intLiteral case
-        bigPrime 67 * a .intLiteral intLiteralId + return
+        bigPrime 59 * a .intLiteral intLiteralId + return
       initializer case
-        bigPrime 71 * a .initializer i32 cast + return
+        bigPrime 61 * a .initializer i32 cast + return
       rawPointer case
-        bigPrime 73 * a .rawPointer i32 cast + return
+        bigPrime 67 * a .rawPointer i32 cast + return
       align case
-        bigPrime 79 * a .align + return
+        bigPrime 71 * a .align + return
     end
   end
 end
@@ -286,8 +275,8 @@ namespace: types
     t0 context unwrapNamed =:: t
     t switch
        empty align case true return
-       arrayType reference mutableReference case
-         ## arrays/reference of empty values are empty
+       arrayType case
+         ## arrays of empty values are empty
          t context getBaseType context isEmpty return
        undefined primitiveType procedure cType pointer rawPointer
          namedType autoType genericType intLiteral
@@ -433,7 +422,7 @@ namespace: types
   proc( Type -> bool ) =>: export: isLiteral
     switch
        intLiteral initializer case true return
-       empty arrayType reference mutableReference
+       empty arrayType
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
            generatedType arrayIndex enum align
@@ -486,7 +475,7 @@ namespace: types
           ## TODO correctly convert element types if elements are literals
         end
         initInfo .asTuple [] Type .struct return
-       empty arrayType reference mutableReference
+       empty arrayType
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
            generatedType arrayIndex enum align
@@ -833,7 +822,7 @@ namespace: types
         typeContext tryComputeTupleSize return
       undefined empty autoType genericType rawPointer
       primitiveType intLiteral cType arrayIndex arrayType
-      pointer reference mutableReference procedure align
+      pointer procedure align
       namedType generatedType case ..unreachable ## XXX? use assertion
     end
   end
@@ -854,7 +843,7 @@ namespace: types
         t .cType sizeOfCType TypeSize .fixed return
       arrayIndex case
         I_SIZE_SIZE TypeSize .fixed return
-      pointer rawPointer reference mutableReference procedure case
+      pointer rawPointer procedure case
         PTR_SIZE TypeSize .fixed return
       arrayType case
         t context getBaseType context alignOf return
@@ -897,7 +886,7 @@ namespace: types
         t .cType sizeOfCType TypeSize .fixed return
       arrayIndex case
         I_SIZE_SIZE TypeSize .fixed return
-      pointer reference mutableReference rawPointer procedure case
+      pointer rawPointer procedure case
         PTR_SIZE TypeSize .fixed return
       arrayType case
         t context getArraySize =:: dims
@@ -976,30 +965,6 @@ namespace: types
       base .initializer i64 cast list.at .data []
     .arrayType .undefined ?? ! return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isReference
-    unwrapNamed =:: t
-    t .reference ?? or t .mutableReference ?? end return
-  end
-  proc(
-    Type : box
-    TypeContext ptr : context
-  -> Type ) =>: export: unwrapReference
-    box context isReference ! if
-      box return
-    end
-    box
-      ..dup .reference ?? if
-        context [] .compositeData
-          ..swap .reference i64 cast
-        list.get return
-      end
-      ..dup .mutableReference ?? if
-        context [] .compositeData
-          ..swap .mutableReference i64 cast
-        list.get return
-      end
-    ..unreachable
-  end
   proc( Type TypeContext ptr -> bool ) =>: export: isFixedSize
      unwrapNamed =:: t
      t .pointer ?? or t .arrayType ?? end return
@@ -1020,12 +985,6 @@ namespace: types
       end
       $ .arrayType ?? if
         context [] .arrayTypes ..swap .arrayType i64 cast list.get .base return
-      end
-      $ .reference ?? if
-        context [] .compositeData ..swap .reference i64 cast list.get return
-      end
-      $ .mutableReference ?? if
-        context [] .compositeData ..swap .mutableReference i64 cast list.get return
       end
     ..drop
     Type .undefined return
@@ -1131,7 +1090,7 @@ namespace: types
       else $ .rawPointer ?? _if
         context [] .arrayTypes ..swap .rawPointer i64 cast list.get .mutable return
       end
-    .mutableReference ?? return
+    ..drop false return
   end
   proc( Type ptr.mut : t bool : mutable TypeContext ptr.mut : context -> bool ) =>: export: setMutability
     t [] context isMutable  mutable == if
@@ -1356,7 +1315,7 @@ namespace: types
         true return
       undefined empty primitiveType pointer arrayType procedure
         namedType autoType genericType generatedType intLiteral align
-        reference mutableReference arrayIndex cType rawPointer case
+        arrayIndex cType rawPointer case
         false return
     end
   end
@@ -1375,7 +1334,7 @@ namespace: types
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer rawPointer
-        reference mutableReference arrayIndex cType align case ..drop
+       arrayIndex cType align case ..drop
          false return
     end =:: unionId
     typeContext [] .unionTypes unionId i64 cast list.at .data =:: unionInfo
@@ -1425,7 +1384,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         reference mutableReference arrayIndex cType rawPointer case
+         arrayIndex cType rawPointer case
           ..drop CompositeInfo ptr optional.empty return
       end
   end
@@ -1443,7 +1402,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-          reference mutableReference arrayIndex cType rawPointer case
+         arrayIndex cType rawPointer case
           ..drop id.LABEL_ID_NONE return
       end
     context compositeData
@@ -1472,7 +1431,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         reference mutableReference arrayIndex cType rawPointer case
+         arrayIndex cType rawPointer case
           ..drop -1 return
       end
     context compositeData
@@ -1531,7 +1490,7 @@ namespace: types
         .procOut break
       enum union undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
-        reference mutableReference arrayIndex cType rawPointer case ..drop
+       arrayIndex cType rawPointer case ..drop
          i64 optional.empty return
     end =:: tupleId
     tuple tupleId typeContext tryComputeTupleSize if
@@ -1556,7 +1515,7 @@ namespace: types
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
-        reference mutableReference arrayIndex cType rawPointer case ..drop
+       arrayIndex cType rawPointer case ..drop
          Type .empty i64 optional.empty return
     end =:: enumId
     enum enumId typeContext tryComputeUnionSize =:: isError
@@ -2407,23 +2366,6 @@ namespace: types
     genData [] .arguments return
   end
 
-  proc( Type : base bool : mutable TypeContext ptr.mut : context -> Type ) =>: export: newReferenceType
-    0:i64 while ..dup context [] .compositeData .length < do
-      context [] .compositeData ..over list.get =:: typeData
-      base typeData typeEquals if
-        break
-      end
-      1 +
-    end =:: id
-    id context [] .compositeData .length == if
-      context [] .compositeData
-        base list.append
-      context .compositeData =
-    end
-    id ReferenceId cast mutable if Type .mutableReference else Type .reference end return
-  end
-
-
   ## generic & auto-types
   proc( i32 : id -> Type ) =>: export: newAutoType
     id Type .autoType return
@@ -2451,8 +2393,6 @@ namespace: types
       procOut case .procOut i32 cast return
       procedure case .procedure i32 cast return
       namedType case .namedType i32 cast return
-      reference case .reference i32 cast return
-      mutableReference case .mutableReference i32 cast return
       arrayIndex case .arrayIndex i32 cast return
       align case .align return
       undefined empty primitiveType intLiteral cType case ..drop -1 return
@@ -2481,8 +2421,6 @@ namespace: types
     t switch
       undefined empty primitiveType autoType arrayIndex cType intLiteral align case
         false return
-      reference mutableReference case
-        t context getBaseType context containsGeneric return
       pointer rawPointer arrayType case
         context [] .arrayTypes
           t
@@ -2803,12 +2741,6 @@ namespace: types
     src target types.typeEquals if
       true return
     end
-    src context types.isReference and src context getBaseType target context canAutoCast if
-      true return
-    end
-    target context types.isReference and src target context getBaseType context canAutoCast if
-      true return
-    end
     src .initializer ?? if
       src target context canAutoCastInitializer return
     end
@@ -2868,9 +2800,6 @@ namespace: types
         src target true false context canCastPtr if
       true return
     end
-    src context types.isReference and src context getBaseType target forceCast context canCast if
-      true return
-    end
     forceCast ! if
       false return
     end
@@ -2888,17 +2817,6 @@ namespace: types
   proc( Type : a Type : b TypeContext ptr.mut : context -> Type bool ) =>: export: mergeTypes
     a b types.typeEquals if
       a false return
-    end
-    ## unwrap references
-    a context types.isReference if
-      a context getBaseType b context mergeTypes ! if
-        false return
-      else ..drop end
-    end
-    b context types.isReference if
-      a b context getBaseType context mergeTypes ! if
-        false return
-      else ..drop end
     end
     ## don't merge different named types
     a .namedType ?? or b .namedType ?? if
@@ -3235,24 +3153,6 @@ namespace: sb
               typeData [] .generated context depth 1 - appendTypeRecursive
             " ]"     appendS
           end
-        return
-      reference case
-        sb
-          ## appendTypeRecursive
-            context [] .compositeData t .reference i64 cast list.get
-            context
-            depth
-          appendTypeRecursive
-        " reference" appendS
-        return
-      mutableReference case
-        sb
-          ## appendTypeRecursive
-            context [] .compositeData t .mutableReference i64 cast list.get
-            context
-            depth
-          appendTypeRecursive
-        " reference.mut" appendS
         return
       align case
         sb
