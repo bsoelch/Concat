@@ -3558,8 +3558,15 @@ proc(
           typeContext types.getBaseType
         end
       =:: structType
+      structType index typeContext types.compositeGetElement =:: eltType
       sb
+        structType typeContext types.isEmpty if
+          return ## XXX? is this check neccessary
+        end
         op [] .pos context popValue =:: structId
+        eltType typeContext types.isEmpty if
+          return
+        end
         op [] .pos sb.appendPosQBE
         "%s" sb.appendS
         isPtr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
@@ -3568,7 +3575,6 @@ proc(
         "," sb.appendS
         structType index op [] .pos context tupleEltOffsetInt sb.appendI
         '\n' sb.appendC
-        structType index typeContext types.compositeGetElement =:: eltType
         op [] .pos context popValue =:: targetId
         op [] .pos context popValue =:: valueId
         eltType context referenceOnly if
@@ -3736,6 +3742,9 @@ proc(
         storeEnumLabel
         op [] .val .setEnumElement ?? if
           enumType elementId typeContext types.compositeGetElement =:: eltType
+          eltType typeContext types.isEmpty if
+            return
+          end
           op [] .pos context popValue =:: unionId
           op [] .pos context popValue =:: valueId
           eltType context referenceOnly if
