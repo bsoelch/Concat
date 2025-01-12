@@ -2079,14 +2079,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
     else ..dup .length 1 > and ..dup 0 string.charAt '.' == and ..dup 1 string.charAt '.' != _if
       1 string.tail
-        ..dup "@" string.wrap string.endsWith =:: isAddr
-        isAddr if
+        ..dup "=" string.wrap string.endsWith =:: isWrite
+        isWrite if
           ..dup .length 1 - string.head
         end
       =:: label
-      isAddr if
-        "directly getting the address of an element is not supported," sb.wrap
-          "to get the address of an element access the corresponding label on a pointer to the base type (`x@ .a` instead of `x .a@`)" sb.appendS
+      isWrite if
+        "direct write to structure fields is not supported" sb.wrap
         fileState [] .wordStart errors appendError
       end
       label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel

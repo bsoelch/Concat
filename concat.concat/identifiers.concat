@@ -363,7 +363,7 @@ namespace: id
     searchIdentifier =:: isError =:: label =:: idName
     label context getIdentifier isError | return
   end
-  enum( NAMESPACE DECLARATION PROCEDURE_BUNDLE BUILT_IN ) =:: export: NameContext
+  enum( NAMESPACE DECLARATION LABEL PROCEDURE_BUNDLE BUILT_IN ) =:: export: NameContext
   proc(
     string : id
     NameContext : context
@@ -387,6 +387,10 @@ namespace: id
     end
     context .NAMESPACE ?? if
       false return
+    end
+    context .LABEL ?? and id id .length 1 - string.charAt '=' == if
+      "label names cannot end with '='" sb.wrap pos errors appendError
+      true return
     end
     id '.' string.contains if
       "identifier names cannot contain '.'" sb.wrap pos errors appendError
@@ -454,6 +458,8 @@ namespace: id
         NameContext .BUILT_IN
       else idType .PROCEDURE_BUNDLE ?? _if
         NameContext .PROCEDURE_BUNDLE
+      else idType .LABEL ?? _if
+        NameContext .LABEL
       else
         NameContext .DECLARATION
       end
