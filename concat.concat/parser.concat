@@ -2195,6 +2195,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..swap" string.wrap string.eq _if =:: opName
       1 StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
       return
+    else ..dup ">$" string.wrap string.eq _if =:: opName
+      1 StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
+      return
     else ..dup "..drop" string.wrap string.eq or
          ..dup "..drop." string.wrap string.startsWith _if =:: mut: opName
       opName "..drop." ..length string.tail =:: params
