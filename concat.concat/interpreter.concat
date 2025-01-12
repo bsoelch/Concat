@@ -3157,6 +3157,7 @@ namespace: interpreter
     values nArgs array.reverse
     valInfos nArgs array.reverse
     builtIn
+      inType
       values
       nArgs i32 cast
     pos typeContext errors interpreter.evaluateBuiltIn =:: resultType =:: value

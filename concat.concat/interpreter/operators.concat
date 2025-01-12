@@ -167,6 +167,7 @@ namespace: interpreter
   ## XXX? do I need differnet handling for i64i32 operations
   proc(
     BuiltIn : builtIn
+    Type : inType
     ConstValue _ ptr : args
     i32 : k
     FilePosition : pos
@@ -278,6 +279,10 @@ namespace: interpreter
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
       GET_PTR GET_PTR_MUT case
         k 1 == "correct number of arguments" assert
+        inType 0 typeContext types.compositeGetElement typeContext types.getElementType =:: baseType
+        baseType typeContext types.isComposite or baseType typeContext types.isArray if
+          args 0 [] OperatorResult .success return
+        end
         ## getOrOffset
           args 0 []
           false -1
@@ -441,9 +446,8 @@ namespace: interpreter
           end
         OperatorResult .success return
       LocalValue case
-        ## TODO handle local value ( local array ... )
-        ## XXX? do I need to unwrap immutable primitive values
-        ptrValue OperatorResult .success return
+        ## XXX? correctly handle local value ( local array ( ... ) )
+        ptrValue .LocalValue ConstValue ptr.mut cast [] OperatorResult .success return
       LocalArray case
         ptrValue .LocalArray ConstValue arrayView.mut cast =:: arrayConst
           isOffset if
@@ -455,35 +459,32 @@ namespace: interpreter
       LocalArray8 case
         ptrValue .LocalArray8 i8 arrayView.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail
+            arrayConst offset array.tail LocalSlice8 cast ConstValue .LocalArray8
           else
-            arrayConst .data 1 array.createMutable
-          end LocalSlice8 cast
-        ConstValue .LocalArray8 OperatorResult .success return
+            arrayConst 0 array.get i64 cast.u ConstValue .Int
+          end
+        OperatorResult .success return
       LocalArray16 case
         ptrValue .LocalArray16 i16 arrayView.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail
+            arrayConst offset array.tail LocalSlice16 cast ConstValue .LocalArray16
           else
-            arrayConst .data 1 array.createMutable
-          end LocalSlice16 cast
-        ConstValue .LocalArray16 OperatorResult .success return
+            arrayConst 0 array.get i64 cast.u ConstValue .Int
+          end OperatorResult .success return
       LocalArray32 case
         ptrValue .LocalArray32 i32 arrayView.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail
+            arrayConst offset array.tail LocalSlice32 cast ConstValue .LocalArray32
           else
-            arrayConst .data 1 array.createMutable
-          end LocalSlice32 cast
-        ConstValue .LocalArray32 OperatorResult .success return
+            arrayConst 0 array.get i64 cast.u ConstValue .Int
+          end OperatorResult .success return
       LocalArray64 case
         ptrValue .LocalArray64 i64 arrayView.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail
+            arrayConst offset array.tail LocalSlice64 cast ConstValue .LocalArray64
           else
-            arrayConst .data 1 array.createMutable
-          end LocalSlice64 cast
-        ConstValue .LocalArray64 OperatorResult .success return
+            arrayConst 0 array.get i64 cast.u ConstValue .Int
+          end OperatorResult .success return
       default
         "unexpected constant for pointer value: " sb.wrap
           ptrValue typeContext sb.appendConstant
