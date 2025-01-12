@@ -111,7 +111,8 @@ union(
    EqualityOperator : equalityOperator
                   _ : getEnumLabel
                 i64 : checkEnumLabel
-                i64 : mut: setEnumLabel
+                i64 : mut: setEnumElement
+                i64 : mut: setEnumLabel ## backwards compatibility
                   _ : copy
   StackModification : stackMod
             LabelId : getName
@@ -290,9 +291,9 @@ proc( Type i64 FilePosition -> Operation ) =>: export: opCheckEnum
   =:: pos
   OpValue .checkEnumLabel ..swap pos Operation new return
 end
-proc( Type i64 FilePosition -> Operation ) =>: export: opSetEnumLabel
+proc( Type i64 FilePosition -> Operation ) =>: export: opSetEnumElement
   =:: pos
-  OpValue .setEnumLabel ..swap pos Operation new return
+  OpValue .setEnumElement ..swap pos Operation new return
 end
 proc( Type : t FilePosition : pos -> Operation ) =>: export: opCopy
   OpValue .copy t pos Operation new return
@@ -830,6 +831,12 @@ namespace: sb
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .setEnumLabel sb.appendI
+          break
+        setEnumElement case
+          "set enum element ( " sb.appendS
+          ..over .dataType typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .setEnumElement sb.appendI
           break
         stackMod case
           "stack modification: " sb.appendS

@@ -1,0 +1,18 @@
+struct(
+  i32 : mut: x
+  i32 : mut: y
+) =:: aStruct
+proc( -> ) =>: main
+  0 0 aStruct new =:: mut: p
+  p@
+    1 ..over .x=
+    2 ..over .y=
+  [] .x 1 == "p .x 1 ==" assert
+  p
+    3 ..swap .x=
+    4 ..swap .y=
+  =:: q
+  q .x 3 == "q .x 3 ==" assert
+  q .y 4 == "q .y 4 ==" assert
+  p .y 2 == "p .y 2 ==" assert
+end

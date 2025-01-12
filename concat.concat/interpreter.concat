@@ -3073,7 +3073,7 @@ proc(
     argc getArg implementProcedure procPtr
     bitCast
     ConstantReference NewReference
-    checkEnumLabel setEnumLabel
+    checkEnumLabel setEnumLabel setEnumElement
     unreachable case
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp

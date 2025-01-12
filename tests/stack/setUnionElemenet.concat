@@ -1,0 +1,17 @@
+union(
+  i32 : mut: A
+  _ : B
+  i64 : mut: C
+) =:: anUnion
+proc( -> ) =>: main
+  anUnion .B =:: mut: x
+  x@
+    1 ..over .C=
+    2 ..over .A=
+  [] .A 2 == "x .A 2 ==" assert
+  x
+    3 ..swap .A=
+    4 ..swap .C=
+  .C 4 == ".C 4 ==" assert
+  x .A 2 == "x .A 2 ==" assert
+end

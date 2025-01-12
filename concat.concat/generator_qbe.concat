@@ -3549,7 +3549,52 @@ proc(
         srcId sb.appendI
         '\n' sb.appendC
       return
-    setElement case break
+    setElement case
+      op [] .val .setElement =:: index
+      ## TODO? special handling for access through pointer?
+      op [] .dataType
+        $ typeContext types.isPointer =:: isPtr
+        isPtr if
+          typeContext types.getBaseType
+        end
+      =:: structType
+      sb
+        op [] .pos context popValue =:: structId
+        op [] .pos sb.appendPosQBE
+        "%s" sb.appendS
+        isPtr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
+        " =l add %s" sb.appendS
+        structId sb.appendI
+        "," sb.appendS
+        structType index op [] .pos context tupleEltOffsetInt sb.appendI
+        '\n' sb.appendC
+        structType index typeContext types.compositeGetElement =:: eltType
+        op [] .pos context popValue =:: targetId
+        op [] .pos context popValue =:: valueId
+        eltType context referenceOnly if
+          "blit %s" sb.appendS
+        else
+          "store" sb.appendS
+          eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+          " %s" sb.appendS
+        end
+        valueId sb.appendI
+        ", %s" sb.appendS
+        targetId sb.appendI
+        eltType context referenceOnly if
+          ',' sb.appendC
+          eltType op [] .pos context typeSizeInt sb.appendI
+        end
+        '\n' sb.appendC
+        isPtr ! if
+          ## keep non-pointer value on stack
+          "%s" sb.appendS
+          ValType .REFERENCE context pushValue sb.appendI
+          " =l copy %s" sb.appendS
+          structId sb.appendI
+          '\n' sb.appendC
+        end
+      return
     New NewEnum NewReference NewEnumReference case
       op [] .val .NewReference ?? op [] .val .NewEnumReference ?? | =:: hasReference
       op [] .val .NewEnum ?? op [] .val .NewEnumReference ?? | =:: isEnum
@@ -3660,23 +3705,63 @@ proc(
           context
         appendEnumCheck
       return
-    setEnumLabel case
+    setEnumLabel setEnumElement case
       context .stackInfo branchTree.peek =:: srcVal?
       srcVal? optional.isEmpty if
         "stack underflow" sb.wrap
         op [] .pos errors appendError
         sb return
       end
+      ## TODO? special handling for access through pointer?
+      op [] .dataType
+        $ typeContext types.isPointer =:: isPtr
+        isPtr if
+          typeContext types.getBaseType
+        end
+      =:: enumType
+      op [] .val .setEnumLabel ?? if
+        op [] .val .setEnumLabel
+      else
+        op [] .val .setEnumElement
+      end =:: elementId
       sb
         op [] .pos sb.appendPosQBE
         ## storeEnumLabel
-          op [] .dataType
+          enumType
           's'
           srcVal? .data [] .varId
-          op [] .val .setEnumLabel
+          elementId
           op [] .pos
           context
         storeEnumLabel
+        op [] .val .setEnumElement ?? if
+          enumType elementId typeContext types.compositeGetElement =:: eltType
+          op [] .pos context popValue =:: unionId
+          op [] .pos context popValue =:: valueId
+          eltType context referenceOnly if
+            "blit %s" sb.appendS
+          else
+            "store" sb.appendS
+            eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+            " %s" sb.appendS
+          end
+          valueId sb.appendI
+          ", %s" sb.appendS
+          unionId sb.appendI
+          eltType context referenceOnly if
+            ',' sb.appendC
+            eltType op [] .pos context typeSizeInt sb.appendI
+          end
+          '\n' sb.appendC
+          isPtr ! if
+            ## keep non-pointer value on stack
+            "%s" sb.appendS
+            ValType .REFERENCE context pushValue sb.appendI
+            " =l copy %s" sb.appendS
+            unionId sb.appendI
+            '\n' sb.appendC
+          end
+        end
       return
     hasElement case
       op [] .dataType =:: containerType

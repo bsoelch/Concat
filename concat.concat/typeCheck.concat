@@ -2210,12 +2210,7 @@ proc(
       else
         op .val .setLabel true
       end =:: isWrite =:: labelId
-      isWrite if
-        ## TODO! support setLabel operation
-        "type-checking for setLabel is not supported" sb.wrap
-        op .pos errors appendError
-      end
-      1 op .pos state checkStackSize if
+      1:i64 isWrite if 1 + end op .pos state checkStackSize if
         return
       end
       state .stack branchTree.peek .data [] =:: container
@@ -2293,10 +2288,13 @@ proc(
         containerType typeContext types.isEnum ! and
             containerType typeContext types.isUnion ! if
           256 sb.create
-          containerType typeContext sb.appendType
-          " is not an enum or union " sb.appendS
+            containerType typeContext sb.appendType
+            " is not an enum or union " sb.appendS
           op .pos errors appendError
           return
+        else isWrite _if
+          "cannot write to enum/union-generator" sb.wrap
+          op .pos errors appendError
         end
         ConstValue .None =:: mut: constValue
         eltType .empty ?? if
@@ -2334,24 +2332,48 @@ proc(
         false mutable@ =
       end
       OP_UNLINKED =:: mut: onRead
-      isPtr if ## unwrap reference to pointer
-        ## opAutoCast
-          container .valueType
-          0
-          srcType
-          op .pos
-        opAutoCast state appendOp ..drop
-      end
-      containerType typeContext types.isTaggedUnion if
+      isWrite ! and containerType typeContext types.isTaggedUnion if
         containerType elementIndex op .pos opCheckEnum state appendOp onRead@ =
         true program .hasCheckEnum =
       end
       ## can only take address of reference or pointer
-      isPtr if
+      isPtr and isWrite ! if
         eltType mutable typeContext types.getAddressType
       else
         eltType
       end =:: targetType
+      isWrite if
+        Type 2 array : args
+        targetType args@ 0 []=
+        srcType args@ 1 []=
+        ## requireTypes
+          args@ array.wrap
+          "element write" string.wrap
+          0
+          op .pos
+        state requireTypes  if
+          return
+        end
+        ## opSetElement
+          srcType
+          elementIndex
+          op .pos
+        containerType typeContext types.isTaggedUnion if
+          opSetEnumElement
+        else
+          opSetElement
+        end =:: newOp
+        isPtr if
+          newOp state appendOp ..drop
+        else
+          ## pushValue
+            srcType
+            ConstValue .None ## XXX? update constant
+            newOp
+          state pushValue
+        end
+        return
+      end
       targetType typeContext types.isEmpty if
         ## discard container from stack and operations
         1 op .pos state discardValues
@@ -2366,8 +2388,8 @@ proc(
         targetType
         ConstValue .None ## XXX compute constant value
         srcType
-        elementIndex
-        op .pos
+          elementIndex
+          op .pos
         opGetElement
       state pushValue
       elementLabel state replaceLabel
@@ -2412,7 +2434,7 @@ proc(
       enumType op@ .dataType =
       enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
       return
-    getElement setElement case
+    getElement setElement setEnumElement case
       break
     argc case
       true program .hasGetArgs =
