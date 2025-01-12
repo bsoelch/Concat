@@ -67,7 +67,7 @@ proc(
   context [] .procBundles
     ..dup .length ProcBundleId cast =:: bundleId
     newProcBundle list.append
-  context .procBundles =
+  context .procBundles=
   ## newLabel
     name
     id.FLAG_EXPORT id.FLAG_BUILT_IN |
@@ -111,7 +111,7 @@ proc(
       hasStaticArgs
       isStatic
     ProcedureInfo new list.append
-  context .procedures =
+  context .procedures=
   procLabel labelContext id.inLabelNamespace
   ## declareIdentifier
     procLabel

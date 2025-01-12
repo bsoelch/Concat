@@ -104,10 +104,10 @@ namespace: allocator.linux
     size PAGE_SIZE 1 - + PAGE_SIZE 1 - ~ & =:: pageAlignedSize
     pageAlignedSize mapMemory CellHeader ptr.mut cast! =:: cellRoot
     cellRoot i64 cast! alignment i64 cast.u 1 - | 1 + CellHeader ..types.stride - CellHeader ptr.mut cast! =:: cellData
-      cellRoot MemoryValue ptr.mut cast! cellData [] .chunkStart =
-      ChunkType.noChunk cellData [] .chunkType =
-      alignment i32.lowestSetBit i8 cast cellData [] .alignmentBits =
-      pageAlignedSize PAGE_SIZE / i32 cast cellData [] .size =
+      cellRoot MemoryValue ptr.mut cast! cellData .chunkStart=
+      ChunkType.noChunk cellData .chunkType=
+      alignment i32.lowestSetBit i8 cast cellData .alignmentBits=
+      pageAlignedSize PAGE_SIZE / i32 cast cellData .size=
     cellData return
   end
   proc( CellHeader ptr.mut : cell i64 : newSize -> CellHeader ptr.mut ) =>: reallocateLargeChunk
@@ -129,8 +129,8 @@ namespace: allocator.linux
       alignment i64 cast.u PAGE_SIZE > "missalignemnt only for alignment larger that page size" assert
       "missaligned memory" ..panic
     end
-      newCellData MemoryValue ptr.mut cast! newCellData [] .chunkStart =
-      newPageCount i32 cast newCellData [] .size =
+      newCellData MemoryValue ptr.mut cast! newCellData .chunkStart=
+      newPageCount i32 cast newCellData .size=
     newCellData return
   end
   proc( CellHeader ptr.mut : cell -> ) =>: freeLargeChunk
@@ -148,9 +148,9 @@ namespace: allocator.linux
     chunkSize mapMemory ChunkHeader ptr.mut cast! chunkType ChunkInfo new =:: chunk
     ## add new chunk start start of chunk-root list
     rootChunks chunkType i32 cast.u [] =:: oldRoot
-    oldRoot chunk .chunkStart [] .next =
+    oldRoot chunk .chunkStart .next=
     oldRoot isValidPtr if
-      chunk .chunkStart oldRoot [] .prev =
+      chunk .chunkStart oldRoot .prev=
     end
     chunk .chunkStart rootChunks chunkType i32 cast.u [] =
     ## initialize cellInfo
@@ -214,7 +214,7 @@ namespace: allocator.linux
           next lowCellMask & 0 == "cells are not allocated" assert
           next lowCellMask | cellInfo i 1 + array.set
         end
-        firstAvailable i32 cast chunk .chunkStart [] .firstAvailable =
+        firstAvailable i32 cast chunk .chunkStart .firstAvailable=
         i 64 * 64 cellBitIndex - i64 cast.u + =:: cellIndex
         chunkInfo chunk .chunkType i32 cast.u [] =:: chunkData
         cellIndex 0 >= and cellIndex chunkData .cellCount i64 cast.u < end "cellIndex in range" assert
@@ -229,11 +229,11 @@ namespace: allocator.linux
           ## XXX? truncate end to minimum neccessary size
           nEmpty i32 cast
         else 0 end =:: nEmpty
-        chunk .chunkStart MemoryValue ptr.mut cast! cellPtr [] .chunkStart =
-        chunk .chunkType cellPtr [] .chunkType =
-        alignment i32.lowestSetBit i8 cast cellPtr [] .alignmentBits =
-        cellIndex i32 cast nEmpty + i16 cast.u cellPtr [] .cellIndex =
-        count nEmpty - cellPtr [] .size =
+        chunk .chunkStart MemoryValue ptr.mut cast! cellPtr .chunkStart=
+        chunk .chunkType cellPtr .chunkType=
+        alignment i32.lowestSetBit i8 cast cellPtr .alignmentBits=
+        cellIndex i32 cast nEmpty + i16 cast.u cellPtr .cellIndex=
+        count nEmpty - cellPtr .size=
         clearMemory if
           cellPtr i8 _ ptr.mut cast! CellHeader ..types.stride + =:: headPtr
           chunk .chunkStart i8 _ ptr.mut cast!
@@ -245,7 +245,7 @@ namespace: allocator.linux
         cellPtr optional.wrap return
       end
     finally i 1 + end ..drop
-    firstAvailable i32 cast chunk .chunkStart [] .firstAvailable =
+    firstAvailable i32 cast chunk .chunkStart .firstAvailable=
     CellHeader ptr.mut optional.empty return
   end
   proc( ChunkType : chunkType i32 : count i32 : alignment bool : clearMemory -> CellHeader ptr.mut optional ) =>: searchAvailableCells
@@ -310,13 +310,13 @@ namespace: allocator.linux
       cellInfo cellInfoOffset cellIndexBit amount freeCells
       ## shrink cell
       cellInfoOffset chunk .chunkStart [] .firstAvailable i64 cast.u < if
-        cellInfoOffset i32 cast chunk .chunkStart [] .firstAvailable =
+        cellInfoOffset i32 cast chunk .chunkStart .firstAvailable=
       end
       newSize 0 == if
-        CELLSIZE_FREED cell [] .size =
+        CELLSIZE_FREED cell .size=
         CellHeader ptr.mut optional.empty return
       end
-      newSize cell [] .size =
+      newSize cell .size=
       cell optional.wrap return
     end
     newSize cell [] .size - =:: newCells
@@ -359,7 +359,7 @@ namespace: allocator.linux
         -1:i64 cellInfo i array.set
       finally i 1 + end ..drop
     end
-    newSize cell [] .size =
+    newSize cell .size=
     cell optional.wrap return
   end
 

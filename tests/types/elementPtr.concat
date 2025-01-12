@@ -8,6 +8,6 @@ proc( -> ) =>: main
   3 4 struct( i32 : a i32 : mut: b ) new =:: mut: y
   y@ =:: yPtr
   yPtr .b =:: ybPtr
-  5 y@ .b =
+  5 y@ .b=
   ybPtr [] 5 == "5 y .b ==" assert
 end

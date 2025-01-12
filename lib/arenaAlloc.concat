@@ -120,7 +120,7 @@ namespace: arenaAlloc
       minSlices $1 .length - for ..drop
         sliceSize i64 cast.u T mem.alloc 0 SliceType .ALLOC T ArenaSlice new list.append
       end
-    arena@ .slices =
+    arena@ .slices=
     arena return
   end
   proc(
@@ -138,11 +138,11 @@ namespace: arenaAlloc
         arena .slices i list.at .data =:: slice
         slice [] .eltCount sliceSize == if
           ## slice full -> skip on next allocation
-          arena .fullSlices 1 + arena@ .fullSlices =
+          arena .fullSlices 1 + arena@ .fullSlices=
         end
         slice [] .eltCount count + sliceSize u<= if
           arena slice [] .data slice [] .eltCount i64 cast.u +
-            slice [] .eltCount count + slice .eltCount =
+            slice [] .eltCount count + slice .eltCount=
           return
         end
       finally i 1 + end ..drop
@@ -153,7 +153,7 @@ namespace: arenaAlloc
       ## return
         arena
         lastSlice [] .data lastSlice [] .eltCount i64 cast.u +
-          lastSlice [] .eltCount count + lastSlice .eltCount =
+          lastSlice [] .eltCount count + lastSlice .eltCount=
       return
     end
     ## new data does not fit into last slice
@@ -173,7 +173,7 @@ namespace: arenaAlloc
         newOffset sliceSize i64 cast.u + newOffset@ =
         newCount sliceSize - newCount@ =
       end
-    arena@ .slices =
+    arena@ .slices=
     arena sliceData return
   end
 
@@ -304,15 +304,15 @@ namespace: arenaAlloc
       arena .fullSlices
         ## adjust number of full slices
         newSliceCount i32 cast i32.min
-      arena@ .fullSlices =
-      slices arena@ .slices =
+      arena@ .fullSlices=
+      slices arena@ .slices=
       arena return
     end
     newSliceCount 0 > "arena with elements has slice" assert
     arena .fullSlices
       ## adjust number of full slices
       newSliceCount i32 cast 1 - i32.min
-    arena@ .fullSlices =
+    arena@ .fullSlices=
     ## shrink last slice if neccessary
     slices newSliceCount 1 - list.at .data =:: lastSlice
     lastSlice [] .eltCount newEltCount >= "reset point inside allocated memory" assert
@@ -322,9 +322,9 @@ namespace: arenaAlloc
       finally j 1 - end ..drop
     end
     lastSlice [] .eltCount newEltCount > if
-      newEltCount lastSlice .eltCount =
+      newEltCount lastSlice .eltCount=
     end
-    slices arena@ .slices =
+    slices arena@ .slices=
     arena return
   end
   proc(
@@ -334,7 +334,7 @@ namespace: arenaAlloc
     ## free allocated memory
     arena0 0 reset =:: mut: arena
     ## free internal list
-    arena .slices list.free arena@ .slices =
+    arena .slices list.free arena@ .slices=
     arena return
   end
 end
@@ -470,7 +470,7 @@ namespace: mixedArena
     ## free allocated memory
     arena0 MaxAlign ArenaAllocator cast 0 arenaAlloc.reset =:: mut: arena
     ## free internal list
-    arena .slices list.free arena@ .slices =
+    arena .slices list.free arena@ .slices=
     arena MixedArenaAllocator cast return
   end
 end

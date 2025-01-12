@@ -737,15 +737,15 @@ namespace: types
     end ..drop
     ## XXX? compress tupleOffsets list ( search for previous occurrence of current elements )
     typeContext [] .tupleOffsets
-      ..dup .length tupleInfo .offsetsStart =
+      ..dup .length tupleInfo .offsetsStart=
       offsetBuffer list.appendAll
-    typeContext .tupleOffsets =
+    typeContext .tupleOffsets=
     offsetBuffer list.free ..drop
-    alignment tupleInfo .compositeInfo .alignment =
-    size tupleInfo .compositeInfo .size =
+    alignment tupleInfo .compositeInfo .alignment=
+    size tupleInfo .compositeInfo .size=
     tupleInfo [] .compositeInfo .flags
       COMP_SIZE_KNOWN |
-    tupleInfo .compositeInfo .flags =
+    tupleInfo .compositeInfo .flags=
     false return
   end
   proc(
@@ -787,15 +787,15 @@ namespace: types
       end
       size
         labelAlign alignSize
-        ..dup unionInfo .enumLabelOffset =
+        ..dup unionInfo .enumLabelOffset=
         unionInfo [] .labelType typeContext sizeOf .fixed +
       size@ =
     end
-    alignment unionInfo .compositeInfo .alignment =
-    size unionInfo .compositeInfo .size =
+    alignment unionInfo .compositeInfo .alignment=
+    size unionInfo .compositeInfo .size=
     unionInfo [] .compositeInfo .flags
       COMP_SIZE_KNOWN |
-    unionInfo .compositeInfo .flags =
+    unionInfo .compositeInfo .flags=
     false return
   end
   proc(
@@ -1191,7 +1191,7 @@ namespace: types
         end
       .ptrOnly
         arrayType .ARRAY ?? ! &
-      arrays [] ..over.2 list.at .data .ptrOnly = ## update ptrOnly flag
+      arrays [] ..over.2 list.at .data .ptrOnly= ## update ptrOnly flag
       ## found match
       ArrayId cast
         arrayType switch
@@ -1204,7 +1204,7 @@ namespace: types
     context [] .arraySizes
       ..dup .length =:: sizeOffset
       sizes list.appendArray
-    context .arraySizes =
+    context .arraySizes=
     arrays []
       base sizeOffset sizes .length arrayType .ARRAY ?? ! mutable ArrayData new list.append
     arrays []=
@@ -1631,7 +1631,7 @@ namespace: types
       elts ## skip overlap
         context [] .compositeData .length offset - array.tail
       list.appendArray
-    context .compositeData =
+    context .compositeData=
     offset flags return
   end
   proc(
@@ -1682,7 +1682,7 @@ namespace: types
       labels ## skip overlap
         context [] .elementLabels .length offset - array.tail
       list.appendArray
-    context .elementLabels =
+    context .elementLabels=
     offset LabelOffset cast return
   end
 
@@ -1704,7 +1704,7 @@ namespace: types
           t [] .compositeInfo .flags COMP_MASK_CONTENT_FLAGS &
             flags COMP_MASK_CONTENT_FLAGS &
           == if
-        t [] .compositeInfo .flags flags | t .compositeInfo .flags =
+        t [] .compositeInfo .flags flags | t .compositeInfo .flags=
         TupleId cast return
       end
       1 +
@@ -1722,7 +1722,7 @@ namespace: types
         CompositeInfo new
         -1
       TupleInfo new list.append
-    context .tupleTypes =
+    context .tupleTypes=
     newId return
   end
   ## creates struct
@@ -1788,7 +1788,7 @@ namespace: types
         tupleId
         arrayType
       InitializerInfo new list.append
-    context .initializerTypes =
+    context .initializerTypes=
     initializerId InitializerId cast Type .initializer return
   end
   proc(
@@ -1850,7 +1850,7 @@ namespace: types
         0
         labelType
        UnionInfo new list.append
-     context .unionTypes =
+     context .unionTypes=
     end
     unionId UnionId cast return
   end
@@ -2096,7 +2096,7 @@ namespace: types
         label
         implId
       NamedType new list.append
-    context .namedTypes =
+    context .namedTypes=
     context [] .namedTypes .length 1 - NamedTypeId cast return
   end
   proc(
@@ -2122,7 +2122,7 @@ namespace: types
     named [] .data Type .undefined typeEquals ! if
       id Type .namedType true return
     end
-    value named .data =
+    value named .data=
     id Type .namedType false return
   end
   proc(
@@ -2137,7 +2137,7 @@ namespace: types
         label
         -1
       NamedType new list.append
-    context .namedTypes =
+    context .namedTypes=
     context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType return
   end
   proc( Type -> bool ) =>: export: isNamedType
@@ -2205,7 +2205,7 @@ namespace: types
     named .namedType ?? if
       context [] .namedTypes named .namedType i64 cast list.at .data =:: elt
       elt [] .data Type .undefined typeEquals if
-        value elt .data =
+        value elt .data=
         false return
       end
     end
@@ -2296,7 +2296,7 @@ namespace: types
           arguments constContext constArray
           Type .undefined
         GeneratedType new list.append
-      typeContext .generatedTypes =
+      typeContext .generatedTypes=
       newId GeneratedId cast Type .generatedType true return
     end
     Type .undefined true return
@@ -2320,7 +2320,7 @@ namespace: types
       typeContext [] .generatedTypes
         prevType .generatedType i64 cast
       list.at .data
-    .generated =
+    .generated=
     prevType return
   end
 
@@ -2894,19 +2894,19 @@ namespace: types
     TypeContext new return
   end
   proc( TypeContext : context -> TypeContext ) =>: export: freeTypeContent
-    context =:: mut: cleared
-      cleared .labelContext id.freeLabelContext cleared@ .labelContext =
-      cleared .arrayTypes       list.free cleared@ .arrayTypes =
-      cleared .arraySizes       list.free cleared@ .arraySizes =
-      cleared .tupleTypes       list.free cleared@ .tupleTypes =
-      cleared .unionTypes       list.free cleared@ .unionTypes =
-      cleared .initializerTypes list.free cleared@ .initializerTypes =
-      cleared .compositeData    list.free cleared@ .compositeData =
-      cleared .tupleOffsets     list.free cleared@ .tupleOffsets =
-      cleared .procTypes        list.free cleared@ .procTypes =
-      cleared .namedTypes       list.free cleared@ .namedTypes =
-      cleared .elementLabels    list.free cleared@ .elementLabels =
-    cleared return
+    context
+      $ .labelContext id.freeLabelContext >$ .labelContext=
+      $ .arrayTypes       list.free >$ .arrayTypes=
+      $ .arraySizes       list.free >$ .arraySizes=
+      $ .tupleTypes       list.free >$ .tupleTypes=
+      $ .unionTypes       list.free >$ .unionTypes=
+      $ .initializerTypes list.free >$ .initializerTypes=
+      $ .compositeData    list.free >$ .compositeData=
+      $ .tupleOffsets     list.free >$ .tupleOffsets=
+      $ .procTypes        list.free >$ .procTypes=
+      $ .namedTypes       list.free >$ .namedTypes=
+      $ .elementLabels    list.free >$ .elementLabels=
+    return
   end
 end
 namespace: sb

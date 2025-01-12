@@ -19,7 +19,8 @@ struct( ( ) : mut: empty i32 : nonEmpty ) =:: testStruct
 
 proc( ( ) : v testStruct ptr.mut : S -> ( ( ) ) ( ) ) =>: assignEmpty
   S [] .empty =:: p
-    v S .empty =
+    v S .empty=
+    v S .empty = ## test once for each type of assignment
   p ( ( ) ) new 0 f2@ p test return
 end
 

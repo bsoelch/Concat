@@ -69,7 +69,7 @@ proc(
 -> T arrayView ) =>: constPrimitiveArray
   context [] .arrayValues
     elts mixedArena.copyArray array.freeze =:: result
-  context .arrayValues =
+  context .arrayValues=
   result return
 end
 proc(
@@ -78,7 +78,7 @@ proc(
 -> ConstValue arrayView ) =>: export: constArray
   context [] .arrayValues
     elts mixedArena.copyArray array.freeze =:: result
-  context .arrayValues =
+  context .arrayValues=
   result return
 end
 
@@ -117,7 +117,7 @@ proc(
 -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
     value mixedArena.copyValue =:: valuePtr
-  context .arrayValues =
+  context .arrayValues=
   valuePtr index UnionConstant new ConstValue .Union return
 end
 proc(
@@ -717,13 +717,13 @@ namespace: constants
             pos@ updateFilePos
         end
       finally i 1 + end ..drop
-    context .stringParseBuffer =
+    context .stringParseBuffer=
     context [] .stringParseBuffer
       sb.asStr offset string.tail
     context newStringConst
       context [] .stringParseBuffer
         offset sb.setLength
-      context .stringParseBuffer =
+      context .stringParseBuffer=
     return
   end
   proc(
@@ -753,13 +753,13 @@ namespace: constants
         sb.appendC
         i 2 +
       end ..drop
-    context .stringParseBuffer =
+    context .stringParseBuffer=
     context [] .stringParseBuffer
       sb.asStr offset string.tail
     context newStringConst
       context [] .stringParseBuffer
         offset sb.setLength
-      context .stringParseBuffer =
+      context .stringParseBuffer=
     return
   end
 end

@@ -201,7 +201,7 @@ proc(
   string : branchComment
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: startBranch
-  branch context .currentBranch =
+  branch context .currentBranch=
   sb
     branch sb.appendBranchId
     branchComment .length 0 > if
@@ -219,13 +219,13 @@ proc( ValType : valType CompilerContext ptr.mut : context -> i64 ) =>: pushValue
     StackElement new branchTree.push
     oldCount
       1 +
-    context .stackCount =
+    context .stackCount=
   oldCount return
 end
 proc( CompilerContext ptr.mut : context -> i64 ) =>: nextValueId
   context [] .stackCount =:: oldCount
     oldCount 1 +
-  context .stackCount =
+  context .stackCount=
   oldCount return
 end
 proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> i64 ) =>: replaceValue
@@ -233,8 +233,8 @@ proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> i64 ) 
   context .stackInfo
     offset
   branchTree.replaceAt .data =:: stackElt
-  newId stackElt .varId =
-  valType stackElt .valType =
+  newId stackElt .varId=
+  valType stackElt .valType=
   newId return
 end
 proc(
@@ -253,21 +253,21 @@ proc( CompilerContext ptr.mut : context -> i64 ) =>: nextTmpId
   context [] .tmpCount =:: oldCount
     oldCount
       1 +
-    context .tmpCount =
+    context .tmpCount=
   oldCount return
 end
 proc( CompilerContext ptr.mut : context -> i64 ) =>: nextJumpLabelId
   context [] .jumpLabelCount =:: oldCount
     oldCount
       1 +
-    context .jumpLabelCount =
+    context .jumpLabelCount=
   oldCount i64 cast.u return
 end
 proc( CompilerContext ptr.mut : context -> i64 ) =>: nextLocalConstId
   context [] .localConstCount =:: oldCount
     oldCount
       1 +
-    context .localConstCount =
+    context .localConstCount=
   oldCount return
 end
 
@@ -448,7 +448,7 @@ end
 proc( BlockInfo : block CompilerContext ptr.mut : context -> ) =>: openBlock
   context [] .openBlocks
     block list.append
-  context .openBlocks =
+  context .openBlocks=
 end
 proc(
   BlockId : blockId
@@ -499,7 +499,7 @@ proc(
   WhileBlockInfo new BlockInfo .While context openBlock
   context [] .tmpCount
     context [] .program [] .whileData blockId i64 cast list.at .data [] .modifiedTypes +
-  context .tmpCount =
+  context .tmpCount=
 end
 proc(
   BlockId : blockId
@@ -798,7 +798,7 @@ namespace: sb
       context [] .stringConstants
         ..dup .length =:: strId
         value list.append
-      context .stringConstants =
+      context .stringConstants=
       strId sb.appendI
     return
   end
@@ -822,7 +822,7 @@ namespace: sb
           valueType
           pos
         PtrConstant new list.append
-      context .ptrConstants =
+      context .ptrConstants=
       ptrId sb.appendI
     return
   end
@@ -1144,7 +1144,7 @@ namespace: sb
           pos
           constId
         LocalConst new list.append
-      context .localConstants =
+      context .localConstants=
       "$" sb.appendS
       LOCAL_CONST_NAME sb.appendS
       constId sb.appendI
@@ -1171,7 +1171,7 @@ namespace: sb
       end ..drop
       context [] .localConstants
         list.clear
-      context .localConstants =
+      context .localConstants=
     return
   end
 
@@ -3299,12 +3299,12 @@ proc(
       prog [] .procedures
         implInfo .procId i64 cast list.at .data
       =:: procInfo
-      op [] .dataType context .currentProc =
+      op [] .dataType context .currentProc=
       procInfo [] .labelId labelContext id.labelFlags =:: labelFlags
       ## reset stack-info in context
-      0 context .stackCount =
-      0 context .tmpCount =
-      0 context .jumpLabelCount =
+      0 context .stackCount=
+      0 context .tmpCount=
+      0 context .jumpLabelCount=
       context .stackInfo branchTree.clear
       sb
         implInfo .implementationId  0 < and
@@ -3374,7 +3374,7 @@ proc(
             varInfo [] .valueType op [] .pos context false appendAlloc ..drop
           end
         end
-        true context .reachable =
+        true context .reachable=
       return
     getId atId case
       op [] .val .getId ?? if
@@ -3888,7 +3888,7 @@ proc(
         end
         ## get argument from stack
         argIndices argIndex list.at .data =:: arg
-        op [] .pos context popValue arg .valId =
+        op [] .pos context popValue arg .valId=
       end
       newSb
         calledType
@@ -3936,7 +3936,7 @@ proc(
           ## skip empty arguments
           i 1 + continue
         end
-        arg argIndices outArgCount list.at .data .valType =
+        arg argIndices outArgCount list.at .data .valType=
         outArgCount 1 + outArgCount@ =
         i 1 +
       end ..drop
@@ -4121,20 +4121,20 @@ proc(
             op [] .val .block .blockId context openIfBlock
             context [] .openBlocks list.peek .data .If
           end =:: ifBlock
-          true ifBlock .hasIf =
+          true ifBlock .hasIf=
           ifBlock [] .andBranches
             context .stackInfo branchTree.startBranch list.append
-          ifBlock .andBranches =
+          ifBlock .andBranches=
           ifBlock [] .andBranchIds
             context [] .currentBranch list.append
-          ifBlock .andBranchIds =
+          ifBlock .andBranchIds=
           ifBlock [] .orBranches .length 0 > if
             ifBlock [] .orBranches
               context .stackInfo branchTree.startBranch list.append
-            ifBlock .orBranches =
+            ifBlock .orBranches=
             ifBlock [] .orBranchIds
               context [] .currentBranch list.append
-            ifBlock .orBranchIds =
+            ifBlock .orBranchIds=
             ## mergeValues
               context .stackInfo
               ifBlock [] .orBranches list.asArray
@@ -4197,17 +4197,17 @@ proc(
             isOr if
               ifBlock [] .orBranches
                 context .stackInfo branchTree.startBranch list.append
-              ifBlock .orBranches =
+              ifBlock .orBranches=
               ifBlock [] .orBranchIds
                 context [] .currentBranch list.append
-              ifBlock .orBranchIds =
+              ifBlock .orBranchIds=
             else
               ifBlock [] .andBranches
                 context .stackInfo branchTree.startBranch list.append
-              ifBlock .andBranches =
+              ifBlock .andBranches=
               ifBlock [] .andBranchIds
                 context [] .currentBranch list.append
-              ifBlock .andBranchIds =
+              ifBlock .andBranchIds=
             end
             nextBranch
               "and/or if" string.wrap
@@ -4216,10 +4216,10 @@ proc(
         ELSE ELSE_TRUE ELSE_FALSE case
           context [] .openBlocks list.peek .data =:: ifBlock
           context .stackInfo ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
-          context [] .reachable ifBlock .If .ifBranchTerminates =
+          context [] .reachable ifBlock .If .ifBranchTerminates=
           ## BranchPoint
-          ifBranch ifBlock .If .ifBranch =
-          context [] .currentBranch ifBlock .If .ifBranchId =
+          ifBranch ifBlock .If .ifBranch=
+          context [] .currentBranch ifBlock .If .ifBranchId=
           sb
             ## don't add position for labels
             context [] .reachable if
@@ -4238,7 +4238,7 @@ proc(
               "else" string.wrap
               context
             startBranch
-            true context .reachable =
+            true context .reachable=
           =:: mut: newSb
           ifBlock [] .If .andBranches .length 1 >= "if block has if branch" assert
           ## mergeValues
@@ -4278,7 +4278,7 @@ proc(
             switchId
               opIndex op [] .val .block .jumpDistance i64 cast +
             context openSwitchBlock
-            false context .reachable =
+            false context .reachable=
           return
         CASE DEFAULT case
             sb
@@ -4289,7 +4289,7 @@ proc(
                 BranchId new
                 "case/default" string.wrap
               context startBranch
-              true context .reachable =
+              true context .reachable=
             return
         BREAK_SWITCH case
             ## findBreakableBlock
@@ -4318,10 +4318,10 @@ proc(
             context [] .reachable if
               breakBlock [] .Switch .caseBranches
                 caseBranchId list.append
-              breakBlock .Switch .caseBranches =
+              breakBlock .Switch .caseBranches=
               breakBlock [] .Switch .caseBranchIds
                 context [] .currentBranch list.append
-              breakBlock .Switch .caseBranchIds =
+              breakBlock .Switch .caseBranchIds=
             end
             sb
               context [] .reachable if
@@ -4334,7 +4334,7 @@ proc(
                 BranchId new sb.appendBranchId
                 '\n' sb.appendC
               end
-              false context .reachable =
+              false context .reachable=
             return
           break
         WHILE case
@@ -4420,17 +4420,17 @@ proc(
             isOr if
               whileBlock [] .doBranches
                 context .stackInfo branchTree.startBranch list.append
-              whileBlock .doBranches =
+              whileBlock .doBranches=
               whileBlock [] .doBranchIds
                 context [] .currentBranch list.append
-              whileBlock .doBranchIds =
+              whileBlock .doBranchIds=
             else
               whileBlock [] .breakBranches
                 context .stackInfo branchTree.startBranch list.append
-              whileBlock .breakBranches =
+              whileBlock .breakBranches=
               whileBlock [] .breakBranchIds
                 context [] .currentBranch list.append
-              whileBlock .breakBranchIds =
+              whileBlock .breakBranchIds=
             end
             nextBranch "and/or do" string.wrap context startBranch
           return
@@ -4455,17 +4455,17 @@ proc(
           =:: mut: newSb
           whileBlock [] .breakBranches
             context .stackInfo branchTree.startBranch list.append
-          whileBlock .breakBranches =
+          whileBlock .breakBranches=
           whileBlock [] .breakBranchIds
             context [] .currentBranch list.append
-          whileBlock .breakBranchIds =
+          whileBlock .breakBranchIds=
           whileBlock [] .doBranches .length 0 > if
             whileBlock [] .doBranches
               context .stackInfo branchTree.startBranch list.append
-            whileBlock .doBranches =
+            whileBlock .doBranches=
             whileBlock [] .doBranchIds
               context [] .currentBranch list.append
-            whileBlock .doBranchIds =
+            whileBlock .doBranchIds=
             ## mergeValues
             context .stackInfo
             whileBlock [] .doBranches list.asArray
@@ -4528,7 +4528,7 @@ proc(
               opIndex op [] .val .block .jumpDistance i64 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
-            false context .reachable =
+            false context .reachable=
           return
         FINALLY case
           context [] .openBlocks list.peek
@@ -4587,10 +4587,10 @@ proc(
           end =:: andOrBlock
           andOrBlock [] .branches
             context .stackInfo branchTree.startBranch list.append
-          andOrBlock .branches =
+          andOrBlock .branches=
           andOrBlock [] .branchIds
             context [] .currentBranch list.append
-          andOrBlock .branchIds =
+          andOrBlock .branchIds=
           ## BranchId
             BranchType .NEXT
             context nextJumpLabelId
@@ -4625,7 +4625,7 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType switch
         PROCEDURE EXPERIMENTAL_PROCEDURE case
-          Type .undefined context .currentProc =
+          Type .undefined context .currentProc=
           sb
             ## end of procedure block always unreachable
             ## ( type-checker ensures there is a return before end )
@@ -4635,7 +4635,7 @@ proc(
         ELSE case
           context [] .openBlocks
             list.pop .If =:: ifBlock
-          context .openBlocks =
+          context .openBlocks=
           branchTree.NodeId 2 array new =:: mut: branches
           BranchId 2 array new =:: mut: branchIds
           0 =:: mut: nBranches
@@ -4678,7 +4678,7 @@ proc(
               op [] .pos errors appendError
             end
           end
-          nBranches 0 > context .reachable =
+          nBranches 0 > context .reachable=
           ifBlock .andBranches list.free ..drop
           ifBlock .andBranchIds list.free ..drop
           ifBlock .orBranches list.free ..drop
@@ -4687,9 +4687,9 @@ proc(
         SWITCH case
           context [] .openBlocks
             list.pop .Switch =:: switchBlock
-          context .openBlocks =
+          context .openBlocks=
           switchBlock .caseBranches =:: caseBranches
-          caseBranches .length 0 > context .reachable =
+          caseBranches .length 0 > context .reachable=
           sb
             ## don't add position for labels
             ## startBranch
@@ -4720,14 +4720,14 @@ proc(
               op [] .pos errors appendError
             end
           end
-          caseBranches .length 0 > context .reachable =
+          caseBranches .length 0 > context .reachable=
           caseBranches list.free ..drop
           switchBlock .caseBranchIds list.free ..drop
           newSb return
         WHILE case
           context [] .openBlocks
             list.pop .While =:: mut: whileBlock
-          context .openBlocks =
+          context .openBlocks=
           prog [] .whileData whileBlock .blockId i32 cast list.at .data =:: whileData
           context [] .stackInfo branchTree.depth whileData [] .modifiedTypes < if
             "stack underflow" sb.wrap
@@ -4790,7 +4790,7 @@ proc(
               op [] .pos errors appendError
             end
           end
-          breakBranches .length 0 > context .reachable =
+          breakBranches .length 0 > context .reachable=
           breakBranches list.free ..drop
           whileBlock .breakBranchIds list.free ..drop
           whileBlock .continueBranches list.free ..drop
@@ -4801,13 +4801,13 @@ proc(
         AND OR case
           context [] .openBlocks
             list.pop .AndOr =:: mut: andOrBlock
-          context .openBlocks =
+          context .openBlocks=
           andOrBlock .branches
             context .stackInfo branchTree.startBranch list.append
-          andOrBlock@ .branches =
+          andOrBlock@ .branches=
           andOrBlock .branchIds
             context [] .currentBranch list.append
-          andOrBlock@ .branchIds =
+          andOrBlock@ .branchIds=
           sb
             ## startBranch
               ## BranchId
@@ -4860,7 +4860,7 @@ proc(
       retType typeContext types.isProcOut if
           retType typeContext types.compositeEltCount
         else retType typeContext types.isEmpty _if 0:i64 else 1:i64 end =:: retCount
-      false context .reachable =
+      false context .reachable=
       sb
         op [] .pos sb.appendPosQBE
         retCount 1 == if
@@ -4936,7 +4936,7 @@ proc(
         successBranch "end assert" string.wrap context startBranch
       return
     panicWithMessage case
-      false context .reachable =
+      false context .reachable=
       sb
         op [] .pos sb.appendPosQBE
         "call $printf(l $" sb.appendS
@@ -4948,7 +4948,7 @@ proc(
         ")\ncall $exit(w 1)\nhlt\n" sb.appendS
       return
     unreachable case
-      false context .reachable =
+      false context .reachable=
       sb
         op [] .pos sb.appendPosQBE
         "## unreachable\n" sb.appendS
@@ -5004,16 +5004,16 @@ proc( CompilerContext ptr.mut : context -> ) =>: cleanupCompilerContext
   context .stackInfo branchTree.free
   context [] .openBlocks
     list.free
-  context .openBlocks =
+  context .openBlocks=
   context [] .localConstants
     list.free
-  context .localConstants =
+  context .localConstants=
   context [] .stringConstants
     list.free
-  context .stringConstants =
+  context .stringConstants=
   context [] .ptrConstants
     list.free
-  context .ptrConstants =
+  context .ptrConstants=
 end
 proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compileToQBE
   program .idContext =:: idContext

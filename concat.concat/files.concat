@@ -133,10 +133,10 @@ end
 
 proc( char8 : chr  FilePosition ptr.mut : currentPos -> ) =>: export: updateFilePos
   chr '\n' == if
-      currentPos [] .line 1 + currentPos .line =
-    1 currentPos .posInLine =
+      currentPos [] .line 1 + currentPos .line=
+    1 currentPos .posInLine=
   else
-    currentPos [] .posInLine 1 + currentPos .posInLine =
+    currentPos [] .posInLine 1 + currentPos .posInLine=
   end
 end
 proc( string -> StringLiteralType ) =>: checkStringPrefix
@@ -213,7 +213,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       1 +
     end
     $ =:: mut: i0
-    fileState [] .currentPos fileState .wordStart =
+    fileState [] .currentPos fileState .wordStart=
   while $ code .length < do =:: i
     code i string.charAt =:: c
     state .IDENTIFIER ?? and c char.isWhitespace or

@@ -95,41 +95,39 @@ namespace: list
 
   proc(
     type : auto: T
-    T list : elts0
+    T list : elts
     i32 : minCap
   -> T list ) =>: export: ensureCap_32
-    elts0 minCap i64 cast.s ensureCap_64
+    elts minCap i64 cast.s ensureCap_64
   end
   proc(
     type : auto: T
-    T list : elts0
+    T list : elts
     i64 : minCap
   -> T list ) =>: export: ensureCap_64
-    elts0 .cap i64 cast.s
+    elts .cap i64 cast.s
       $ 0 < if -_ end
     =:: prevCap
     prevCap minCap > if
-      elts0 return
+      elts return
     end
-    elts0 .cap i64 cast.s 0 >= "fixed buffer list is not reallocated" assert
-    elts0 =:: mut: elts
+    elts .cap i64 cast.s 0 >= "fixed buffer list is not reallocated" assert
+    elts
       minCap minCap 8 / + 8 + =:: newCap
       newCap 0 >= "list has non-negative capacity" assert
-      elts .data
-        newCap mem.realloc
-      elts@ .data =
-      newCap listCap cast.u elts@ .cap =
-    elts return
+      $ .data  newCap mem.realloc  >$ .data=
+      newCap listCap cast.u >$ .cap=
+    return
   end
   overload: export: ensureCap ensureCap_32 ensureCap_64 end
   proc( type : auto: T T list : elts -> T list ) =>: export: free
     elts .data mem.free
     T mem.nullPtr 0 0:listCap T list new return
   end
-  proc( type : auto: T T list : elts0 -> T list ) =>: export: clear
-    elts0 =:: mut: elts
-      0 elts@ .length =
-    elts return
+  proc( type : auto: T T list : elts -> T list ) =>: export: clear
+    elts
+      0 >$ .length=
+    return
   end
   proc(
     type : auto: T
@@ -139,12 +137,10 @@ namespace: list
     newLength 0 < if
       "negative new length" ..panic
     end
-    src =:: mut: l
-    l
+    src
       newLength ensureCap
-    l@ =
-    newLength l@ .length =
-    l return
+      newLength >$ .length=
+    return
   end
 
   proc(
@@ -211,60 +207,48 @@ namespace: list
   end
   proc(
     type : auto: T
-    T list : elts0
+    T list : elts
     T : elt
   -> T list ) =>: export: append
-    elts0 =:: mut: elts
-      elts
-        elts .length 1 + ensureCap
-      elts@ =
-      elt elts .data
-        elts .length
-      []=
-      elts .length
-        1 +
-      elts@ .length =
-    elts return
+    elts
+      $ .length 1 + ensureCap
+      elt $1 .data $2 .length []=
+      $ .length 1 + >$ .length=
+    return
   end
   proc(
     type : auto: T
-    T list : a
+    T list : elts
     i64 : auto: k
-    T k ptr : b
+    T k ptr : p
   -> T list ) =>: export: appendP
-    a =:: mut: elts
-      elts
-        elts .length k + ensureCap
-      elts@ =
-      elts .data elts .length + b T _ ptr cast k mem.copy ..drop
-      elts .length k + elts@ .length =
-    elts return
+    elts
+      $ .length k + ensureCap
+      $ .data $1 .length + p T _ ptr cast k mem.copy ..drop
+      $ .length k + >$ .length=
+    return
   end
   proc(
     type : auto: T
     T list : a
     T arrayView : b
   -> T list ) =>: export: appendArray
-    a =:: mut: elts
-      elts
-        elts .length b .length + ensureCap
-      elts@ =
-      elts .data elts .length + b .data b .length mem.copy ..drop
-      elts .length   b .length + elts@ .length =
-    elts return
+    a
+      $ .length b .length + ensureCap
+      $ .data $1 .length + b .data b .length mem.copy ..drop
+      $ .length b .length + >$ .length=
+    return
   end
   proc(
     type : auto: T
     T list : a
     T list : b
   -> T list ) =>: export: appendAll
-    a =:: mut: elts
-      elts
-        elts .length b .length + ensureCap
-      elts@ =
-      elts .data elts .length + b .data b .length mem.copy ..drop
-      elts .length   b .length + elts@ .length =
-    elts return
+    a
+      $ .length b .length + ensureCap
+      $ .data $1 .length + b .data b .length mem.copy ..drop
+      $ .length b .length + >$ .length=
+    return
   end
 
   proc(
@@ -273,14 +257,12 @@ namespace: list
     T : elt
     i64 : index
   -> T list ) =>: export: insert
-    a =:: mut: elts
-    elts
-      elts .length 1 + ensureCap
-    elts =
-    elts .data index 1 + + elts .data index + elts .length index - mem.move ..drop
-    elt elts .data index [] =
-    elts .length 1 + elts .length =
-    elts return
+    a
+      $ .length 1 + ensureCap
+      $ .data index 1 + + $1 .data index + $2 .length index - mem.move ..drop
+      elt $1 .data index []=
+      $ .length 1 + >$ .length=
+    return
   end
   proc(
     type : auto: T
@@ -289,14 +271,12 @@ namespace: list
     T k ptr : b
     i64 : index
   -> T list ) =>: export: insertP
-    a =:: mut: elts
-    elts
-      elts .length k + ensureCap
-    elts =
-    elts .data index k + +  elts .data index +  elts .length index -  mem.move ..drop
-    elts .data index +  b T _ ptr cast  k  mem.copy ..drop
-    elts .length k + elts .length =
-    elts return
+    a
+      $ .length k + ensureCap
+      $ .data index k + +  $1 .data index +  $2 .length index -  mem.move ..drop
+      $ .data index +  b T _ ptr cast  k  mem.copy ..drop
+      $ .length k + >$ .length=
+    return
   end
   proc(
     type : auto: T
@@ -304,14 +284,12 @@ namespace: list
     T arrayView : b
     i64 : index
   -> T list ) =>: export: insertArray
-    a =:: mut: elts
-    elts
-      elts .length b .length + ensureCap
-    elts =
-    elts .data index b .length + +  elts .data index +  elts .length index -  mem.move ..drop
-    elts .data index +  b .data b .length  mem.copy ..drop
-    elts .length b .length + elts .length =
-    elts return
+    a
+      $ .length b .length + ensureCap
+      $ .data index b .length + +  $1 .data index +  $2 .length index -  mem.move ..drop
+      $ .data index +  b .data b .length  mem.copy ..drop
+      $ .length b .length + >$ .length=
+    return
   end
   proc(
     type : auto: T
@@ -319,14 +297,12 @@ namespace: list
     T list : b
     i64 : index
   -> T list ) =>: export: insertAll
-    a =:: mut: elts
-    elts
-      elts .length b .length + ensureCap
-    elts =
-    elts .data index b .length + +  elts .data index +  elts .length index -  mem.move ..drop
-    elts .data index +  b .data b .length  mem.copy ..drop
-    elts .length b .length + elts .length =
-    elts return
+    a
+      $ .length b .length + ensureCap
+      $ .data index b .length + +  $1 .data index +  $2 .length index -  mem.move ..drop
+      $ .data index +  b .data b .length  mem.copy ..drop
+      $ .length b .length + >$ .length=
+    return
   end
 
   proc(
@@ -347,16 +323,14 @@ namespace: list
   end
   proc(
     type : auto: T
-    T list : elts0
+    T list : elts
   -> T list T ) =>: export: pop
-    elts0 .length 0 <= if
+    elts .length 0 <= if
       "pop from empty list" ..panic
     end
-    elts0 =:: mut: elts
-    elts .length 1 - elts@ .length =
-    ## return
-      elts
-      elts .data elts .length []
+    elts
+      $ .length 1 - >$ .length=
+      $ .data $1 .length []
     return
   end
 

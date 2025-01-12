@@ -129,7 +129,7 @@ proc(
               end
               break
           end
-        idContext .arraySizeBuffer =
+        idContext .arraySizeBuffer=
         i 1 +
       end ..drop
       ## newArrayType
@@ -157,7 +157,7 @@ proc(
       types.newArrayType
         idContext [] .arraySizeBuffer
           sizeOffset list.setLength
-        idContext .arraySizeBuffer =
+        idContext .arraySizeBuffer=
         ! "can create array" assert
       return
     struct union procIn procOut enum initializer case
@@ -584,8 +584,8 @@ proc(
     src list.appendP
   elts []=
   elts [] list.peek .data =:: newVal
-    src [] .paramInfo list.copy newVal .paramInfo =
-    src [] .genericValues map.copy newVal .genericValues =
+    src [] .paramInfo list.copy newVal .paramInfo=
+    src [] .genericValues map.copy newVal .genericValues=
   newVal return
 end
 
@@ -688,7 +688,7 @@ proc(
     signatures [] i list.at .data =:: elt
     elt [] .paramInfo
       list.free
-    elt .paramInfo =
+    elt .paramInfo=
     elt .genericValues map.free
     i 1 +
   end ..drop
@@ -792,7 +792,7 @@ proc(
               stackIndex i32 cast 0
               MatchType .EMPTY
             ParameterInfo new list.append
-          current .paramInfo =
+          current .paramInfo=
           paramIndex 1 - paramIndex@ =
         else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? and
             current .genericValues paramLabel map.at =:: autoValue
@@ -814,7 +814,7 @@ proc(
               stackIndex i32 cast 0
               MatchType .AUTO
             ParameterInfo new list.append
-          current .paramInfo =
+          current .paramInfo=
           paramIndex 1 - paramIndex@ =
         else
           break
@@ -824,7 +824,7 @@ proc(
         inTypes paramIndex typeContext types.compositeGetLabel paramLabel@ =
       end
       paramIndex 0 < if
-        false current .needsParam =
+        false current .needsParam=
         i 1 + continue
       end
       stackIndex stackValues .length >= if
@@ -846,7 +846,7 @@ proc(
         map.put ..drop
         copySig [] .nEmpty
           1 +
-        copySig .nEmpty =
+        copySig .nEmpty=
         ## mark generic as non-empty
         current .genericValues
           paramId
@@ -858,7 +858,7 @@ proc(
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
         stackValues stackIndex array.at .data [] .value =:: stackVal
         stackVal .None ?? if
-          false current .argsMatch =
+          false current .argsMatch=
         end
         current .genericValues
           paramLabel
@@ -880,7 +880,7 @@ proc(
                 prevVal [] .fixed stackVal labelContext constantEquals !
                 break
             end if
-          false current .argsMatch =
+          false current .argsMatch=
         else
           current .genericValues
             paramLabel
@@ -891,17 +891,17 @@ proc(
       paramType typeContext types.isPointer or paramType typeContext types.isArray if
         current [] .arraySizeArguments
           paramType typeContext types.getArrayDims i32 cast +
-        current .arraySizeArguments =
+        current .arraySizeArguments=
       end
       stackType typeContext types.getArrayDims 0 == and paramType typeContext types.getArrayDims 0 > if
         ## count conversion from 0D ptr to 1D ptr as cast
         current [] .nCasts
           1 +
-        current .nCasts =
+        current .nCasts=
       end
       current [] .signatureWeigth
         paramType typeContext computeTypeWeigth +
-      current .signatureWeigth =
+      current .signatureWeigth=
       ## try matching type
       paramType typeContext types.containsGeneric and
           false =:: mut: needCast
@@ -914,9 +914,9 @@ proc(
             progContext
           resolveGenerics ! if
         MatchType .GENERIC matchType@ =
-        current [] .nGenerics 1 + current .nGenerics =
+        current [] .nGenerics 1 + current .nGenerics=
         needCast if ## ptr.mut -> ptr
-          current [] .nCasts 1 + current .nCasts =
+          current [] .nCasts 1 + current .nCasts=
         end
       else stackType paramType types.typeEquals _if
         MatchType .MATCH matchType@ =
@@ -929,19 +929,19 @@ proc(
               fromType .intLiteral types.intLiteralAsInt
               paramType typeContext types.unwrapNamed types.typeEquals ! if
             ## resizing int-literal counts as additional cast
-            current [] .nCasts 1 + current .nCasts =
+            current [] .nCasts 1 + current .nCasts=
           end
           fromType typeContext types.unwrapNamed
               paramType typeContext types.unwrapNamed
               types.typeEquals if
             ## same underlying type but different name
-            current [] .nRenames 1 + current .nRenames =
+            current [] .nRenames 1 + current .nRenames=
           else
-            current [] .nCasts 1 + current .nCasts =
+            current [] .nCasts 1 + current .nCasts=
           end
         end
       else
-        false current .argsMatch =
+        false current .argsMatch=
       end
       current [] .paramInfo
         ## ParameterInfo
@@ -949,9 +949,9 @@ proc(
           1
           matchType
         ParameterInfo new list.append
-      current .paramInfo =
+      current .paramInfo=
       paramIndex 0 == and current [] .argsMatch if
-        false current .needsParam =
+        false current .needsParam=
       end
       i 1 +
     end ..drop

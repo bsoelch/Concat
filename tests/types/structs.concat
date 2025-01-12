@@ -7,7 +7,7 @@ proc( -> ) =>: main
   struct .id debug.print
   struct .p .x debug.print
   struct =:: mut: mutStruct
-  4141 -53231 pos new mutStruct@ .p =
+  4141 -53231 pos new mutStruct@ .p=
   mutStruct .id debug.print
   mutStruct .p .y debug.print
 end

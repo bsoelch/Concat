@@ -14,7 +14,7 @@ proc( -> ) =>: main
   anArray@  i64 2 3 array new arrayTest
   
   ( i32 i64 ) 2 array new =:: mut: tupleArray
-  1 tupleArray@ 0 @[] .0 =
+  1 tupleArray@ 0 @[] .0=
   
   i32 2 3 array new =:: mut: matrix
   -14121 matrix@ 2 @[] 1 []= ##  0 1  2 3  4 5

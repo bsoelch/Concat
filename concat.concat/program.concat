@@ -491,7 +491,7 @@ proc(
   program [] .constantReferences
     ..dup .length ConstReferenceId cast =:: refId
     constType constValue pos TypedConstant new list.append
-  program .constantReferences =
+  program .constantReferences=
   program .idContext .typeContext =:: typeContext
   ## Operation
     refId OpValue .ConstantReference
@@ -995,12 +995,12 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
-      newIndex ifData .blockStart =
+      newIndex ifData .blockStart=
     end
     ifData [] .andCount
       newIndex ifData [] .andPositions $2 array.set
       1 +
-    ifData .andCount =
+    ifData .andCount=
   end
   proc(
     BlockId : blockId
@@ -1011,12 +1011,12 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
-      newIndex ifData .blockStart =
+      newIndex ifData .blockStart=
     end
     ifData [] .orCount
       newIndex ifData [] .orPositions $2 array.set
       1 +
-    ifData .orCount =
+    ifData .orCount=
   end
   proc(
     BlockId : blockId
@@ -1027,9 +1027,9 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
-      newOps .length ifData .blockStart =
+      newOps .length ifData .blockStart=
     end
-    newOps .length ifData .ifPosition =
+    newOps .length ifData .ifPosition=
     ifData [] .orCount for =:: i
       ifData [] .orPositions
         i
@@ -1038,9 +1038,9 @@ namespace: program.jumps
         orPos - JumpDistance cast
       newOps
         orPos array.at .data
-      .val .block .jumpDistance =
+      .val .block .jumpDistance=
     end
-    0 ifData .orCount =
+    0 ifData .orCount=
   end
   proc(
     BlockId : blockId
@@ -1050,7 +1050,7 @@ namespace: program.jumps
     program [] .ifData
       blockId i64 cast
     list.at .data =:: ifData
-    newOps .length ifData .elsePosition =
+    newOps .length ifData .elsePosition=
     ifData [] .andCount for =:: i
       ifData [] .andPositions
         i
@@ -1059,14 +1059,14 @@ namespace: program.jumps
         andPos - JumpDistance cast
       newOps
         andPos array.at .data
-      .val .block .jumpDistance =
+      .val .block .jumpDistance=
     end
-    0 ifData .andCount =
+    0 ifData .andCount=
     newOps .length
       ifData [] .ifPosition - JumpDistance cast
     newOps
       ifData [] .ifPosition array.at .data
-    .val .block .jumpDistance =
+    .val .block .jumpDistance=
   end
   proc(
     BlockId : blockId
@@ -1080,7 +1080,7 @@ namespace: program.jumps
       ifData [] .elsePosition - JumpDistance cast
     newOps
       ifData [] .elsePosition array.at .data
-    .val .block .jumpDistance =
+    .val .block .jumpDistance=
     ifData [] .blockStart
       newOps .length -
     JumpDistance cast
@@ -1093,7 +1093,7 @@ namespace: program.jumps
   -> ) =>: export: updateSwitch
     newIndex
       program [] .switchData blockId i64 cast list.at .data
-    .switchPosition =
+    .switchPosition=
   end
   proc(
     BlockId : blockId
@@ -1108,7 +1108,7 @@ namespace: program.jumps
         switchData [] .switchPosition - JumpDistance cast
       switchData [] .caseJumpDistances $2 array.set
       1 +
-    switchData .caseCount =
+    switchData .caseCount=
   end
   proc(
     BlockId : blockId
@@ -1120,7 +1120,7 @@ namespace: program.jumps
     list.at .data =:: switchData
     newIndex
       switchData [] .switchPosition - JumpDistance cast
-    switchData .defaultJumpDistance =
+    switchData .defaultJumpDistance=
   end
   proc(
     BlockId : blockId
@@ -1133,7 +1133,7 @@ namespace: program.jumps
     switchData [] .breakCount
       newIndex switchData [] .breakPositions $2 array.set
       1 +
-    switchData .breakCount =
+    switchData .breakCount=
   end
   proc(
     BlockId : blockId
@@ -1151,9 +1151,9 @@ namespace: program.jumps
         breakPos - JumpDistance cast
       newOps
         breakPos array.at .data
-      .val .block .jumpDistance =
+      .val .block .jumpDistance=
     end
-    0 switchData .breakCount =
+    0 switchData .breakCount=
     switchData [] .switchPosition
       newOps .length -
     JumpDistance cast
@@ -1167,7 +1167,7 @@ namespace: program.jumps
     program [] .whileData
       blockId i64 cast
     list.at .data =:: whileData
-    newIndex whileData .loopStart =
+    newIndex whileData .loopStart=
   end
   proc(
     BlockId : blockId
@@ -1180,7 +1180,7 @@ namespace: program.jumps
     whileData [] .orCount
       newIndex whileData [] .orPositions $2 array.set
       1 +
-    whileData .orCount =
+    whileData .orCount=
   end
   proc(
     BlockId : blockId
@@ -1193,7 +1193,7 @@ namespace: program.jumps
     whileData [] .breakCount
       newIndex whileData [] .breakPositions $2 array.set
       1 +
-    whileData .breakCount =
+    whileData .breakCount=
   end
   proc(
     BlockId : blockId
@@ -1211,7 +1211,7 @@ namespace: program.jumps
     whileData [] .continueCount
       newIndex whileData [] .continuePositions $2 array.set
       1 +
-    whileData .continueCount =
+    whileData .continueCount=
   end
   proc(
     BlockId : blockId
@@ -1228,9 +1228,9 @@ namespace: program.jumps
         orPos - JumpDistance cast
       newOps
         orPos array.at .data
-      .val .block .jumpDistance =
+      .val .block .jumpDistance=
     end
-    0 whileData .orCount =
+    0 whileData .orCount=
   end
   proc(
     BlockId : blockId
@@ -1248,9 +1248,9 @@ namespace: program.jumps
         continuePos - JumpDistance cast
       newOps
         continuePos array.at .data
-      .val .block .jumpDistance =
+      .val .block .jumpDistance=
     end
-    0 whileData .continueCount =
+    0 whileData .continueCount=
   end
   proc(
     BlockId : blockId
@@ -1266,16 +1266,16 @@ namespace: program.jumps
         breakPos - JumpDistance cast
       newOps
         breakPos array.at .data
-      .val .block .jumpDistance =
+      .val .block .jumpDistance=
     end
-    0 whileData .breakCount =
+    0 whileData .breakCount=
     newOps .length
       whileData [] .loopStart -
     =:: loopLength
     loopLength JumpDistance cast
     newOps whileData [] .loopStart
       array.at .data
-    .val .block .jumpDistance =
+    .val .block .jumpDistance=
     loopLength -_ JumpDistance cast
   end
 
@@ -1288,12 +1288,12 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: andOrData
     andOrData [] .andOrCount 0 == if
-      newIndex andOrData .blockStart =
+      newIndex andOrData .blockStart=
     end
     andOrData [] .andOrCount
       newIndex andOrData [] .andOrPositions $2 array.set
       1 +
-    andOrData .andOrCount =
+    andOrData .andOrCount=
   end
   proc(
     BlockId : blockId
@@ -1316,9 +1316,9 @@ namespace: program.jumps
         andOrPos - JumpDistance cast
       newOps
         andOrPos array.at .data
-      .val .block .jumpDistance =
+      .val .block .jumpDistance=
     end
-    0 andOrData .andOrCount =
+    0 andOrData .andOrCount=
     andOrData [] .blockStart
       newOps .length -
     JumpDistance cast
