@@ -10,13 +10,9 @@ end
 proc( i64 : auto: k i32 k ptr : i32ptr i64 : index -> i32 ) =>: get6464
   i32ptr index []
 end
-proc( i8 : auto: k i32 k ptr : i32ptr i8 : index -> i32 ) =>: get88
-  i32ptr index []
-end
 proc( -> ) =>: main
   { 1 2 3 } 1 get3232 2 == "{ 1 2 3 } 1 get3232 == 2" assert
   { 1 2 3 } 1 get3264 2 == "{ 1 2 3 } 1 get3264 == 2" assert
   { 1 2 3 } 1 get6432 2 == "{ 1 2 3 } 1 get6432 == 2" assert
   { 1 2 3 } 1 get6464 2 == "{ 1 2 3 } 1 get6464 == 2" assert
-  { 1 2 3 } 1 get88 2 == "{ 1 2 3 } 1 get88 == 2" assert
 end

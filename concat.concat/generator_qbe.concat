@@ -4527,7 +4527,7 @@ proc(
           end =:: branchIds =:: branches
           branches []
             context .stackInfo branchTree.startBranch list.append
-          branches [] @ =
+          branches []=
           branchIds []
             context [] .currentBranch list.append
           branchIds []=

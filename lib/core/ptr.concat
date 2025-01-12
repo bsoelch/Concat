@@ -1,0 +1,315 @@
+import core/i64
+namespace: ptr
+  proc( type : auto: T T _ ptr : p -> T ) =>: export: get
+    p ..builtIn.get.ptr
+  end
+  proc( type : auto: T T : newVal T _ ptr.mut : p -> ) =>: export: set
+    newVal p ..builtIn.set.ptr
+  end
+
+  proc( type : auto: T T _ ptr : p i32 : index -> T _ ptr ) =>: export: at32
+    p index ..builtIn.offset.ptr.i32
+  end
+  proc( type : auto: T T _ ptr : p i64 : index -> T _ ptr ) =>: export: at64
+    p index ..builtIn.offset.ptr.i64
+  end
+  proc( type : auto: T T _ ptr : p i32 : index -> T ) =>: export: get32
+    p index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
+  end
+  proc( type : auto: T T _ ptr : p i64 : index -> T ) =>: export: get64
+    p index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
+  end
+  proc( type : auto: T T : newVal T _ ptr.mut : p i32 : index -> ) =>: export: set32
+    newVal p index ..builtIn.offset.ptr.mut.i32 ..builtIn.set.ptr
+  end
+  proc( type : auto: T T : newVal T _ ptr.mut : p i64 : index -> ) =>: export: set64
+    newVal p index ..builtIn.offset.ptr.mut.i64 ..builtIn.set.ptr
+  end
+
+  proc( i64 : index i64 : size -> ) =>: checkIndex
+    index 0 < if "pointer index is negative" ..panic end
+    index size >= if "pointer index larger than size" ..panic end
+    ## TODO better error message (print actual index)
+    ## TODO? is it possible print message at call-position of pointer access
+  end
+  proc(
+    type : auto: T i64 : auto: k
+    T k ptr : p
+    i32 : index
+  -> T ptr ) =>: export: at32checked
+    index i64 cast.s k checkIndex
+    p index ..builtIn.offset.ptr.i32 T ptr cast!
+  end
+  proc(
+    type : auto: T i64 : auto: k
+    T k ptr : p
+    i64 : index
+  -> T ptr ) =>: export: at64checked
+    index k checkIndex
+    p index ..builtIn.offset.ptr.i64 T ptr cast!
+  end
+  proc(
+    type : auto: T i64 : auto: k
+    T k ptr : p
+    i32 : index
+  -> T ) =>: export: get32checked
+    index i64 cast.s k checkIndex
+    p index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
+  end
+  proc(
+    type : auto: T i64 : auto: k
+    T k ptr : p
+    i64 : index
+  -> T ) =>: export: get64checked
+    index k checkIndex
+    p index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
+  end
+  proc(
+    type : auto: T i64 : auto: k
+    T k array : p
+    i32 : index
+  -> T ) =>: export: getArray32
+    index i64 cast.s k checkIndex
+    p =:: t ## TODO use address of p once taking address to generic ptr-arg is supported
+    t@ index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
+  end
+  proc(
+    type : auto: T i64 : auto: k
+    T k array : p
+    i64 : index
+  -> T ) =>: export: getArray64
+    index k checkIndex
+    p =:: t
+    t@ index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
+  end
+  proc(
+    type : auto: T i64 : auto: k
+    T : newVal
+    T k ptr : p
+    i32 : index
+  -> ) =>: export: set32checked
+    index i64 cast.s k checkIndex
+    newVal p index ..builtIn.offset.ptr.mut.i32 ..builtIn.set.ptr
+  end
+  proc(
+    type : auto: T i64 : auto: k
+    T : newVal
+    T k ptr : p
+    i64 : index
+  -> ) =>: export: set64checked
+    index k checkIndex
+    newVal p index ..builtIn.offset.ptr.mut.i64 ..builtIn.set.ptr
+  end
+
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> i32 ) =>: export: cmp
+    p i64 cast! q i64 cast! i64.ucmp
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: lt
+    p i64 cast! q i64 cast! i64.ult
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: le
+    p i64 cast! q i64 cast! i64.ule
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: eq
+    p i64 cast! q i64 cast! i64.eq
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: ne
+    p i64 cast! q i64 cast! i64.ne
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: ge
+    p i64 cast! q i64 cast! i64.uge
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: gt
+    p i64 cast! q i64 cast! i64.ugt
+  end
+
+  proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: export: add
+    p offset ..builtIn.offset.ptr.i64
+  end
+  proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: export: sub
+    p offset -_ ..builtIn.offset.ptr.i64
+  end
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> i64 ) =>: export: diff
+    p i64 cast! q i64 cast! - T ..types.stride u/
+  end
+
+  proc( type : auto: T T ptr T ptr -> i32 ) =>: cmp0D
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: lt0D
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: le0D
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: ge0D
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: gt0D
+    "comparisson of fixed-size pointers is not supported" ..compiler.error
+    "to use comparison operators cast to raw pointers first" ..compiler.info
+    ..unreachable
+  end
+
+  proc( type : auto: T T ptr : p i64 : offset -> T ptr ) =>: add0D
+    "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p i64 : offset -> T ptr ) =>: sub0D
+    "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
+    ..unreachable
+  end
+  proc( type : auto: T T ptr : p T ptr : q -> i64 ) =>: diff0D
+    "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
+    ..unreachable
+  end
+  ## XXX? prohibit arithmetic on array pointers
+  namespace: mut
+    proc( type : auto: T T _ ptr.mut : p -> T ) =>: shaddow: export: get
+      p ..builtIn.get.ptr.mut
+    end
+
+    proc( type : auto: T T _ ptr.mut : p i32 : offset -> T _ ptr.mut ) =>: shaddow: export: at32
+      p offset ..builtIn.offset.ptr.mut.i32
+    end
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: at64
+      p offset ..builtIn.offset.ptr.mut.i64
+    end
+    proc( type : auto: T T _ ptr.mut : p i32 : index -> T ) =>: shaddow: export: get32
+      p index ..builtIn.offset.ptr.mut.i32 ..builtIn.get.ptr
+    end
+    proc( type : auto: T T _ ptr.mut : p i64 : index -> T ) =>: shaddow: export: get64
+      p index ..builtIn.offset.ptr.mut.i64 ..builtIn.get.ptr
+    end
+    proc(
+      type : auto: T i64 : auto: k
+      T k ptr.mut : p
+      i32 : index
+    -> T ptr.mut ) =>: shaddow: export: at32checked
+      index i64 cast.s k checkIndex
+      p index ..builtIn.offset.ptr.mut.i32 T ptr.mut cast!
+    end
+    proc(
+      type : auto: T i64 : auto: k
+      T k ptr.mut : p
+      i64 : index
+    -> T ptr.mut ) =>: shaddow: export: at64checked
+      index k checkIndex
+      p index ..builtIn.offset.ptr.mut.i64 T ptr.mut cast!
+    end
+    proc(
+      type : auto: T i64 : auto: k
+      T k ptr.mut : p
+      i32 : index
+    -> T ) =>: shaddow: export: get32checked
+      index i64 cast.s k checkIndex
+      p index ..builtIn.offset.ptr.mut.i32 ..builtIn.get.ptr
+    end
+    proc(
+      type : auto: T i64 : auto: k
+      T k ptr.mut : p
+      i64 : index
+    -> T ) =>: shaddow: export: get64checked
+      index k checkIndex
+      p index ..builtIn.offset.ptr.mut.i64 ..builtIn.get.ptr
+    end
+
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: add
+      p offset ..builtIn.offset.ptr.mut.i64
+    end
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: sub
+      p offset -_ ..builtIn.offset.ptr.mut.i64
+    end
+    proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: add0D
+      "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
+      ..unreachable
+    end
+    proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: sub0D
+      "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
+      ..unreachable
+    end
+  end
+end
+
+overload: export: []
+  ptr.get
+  ptr.get32
+  ptr.get64
+  ptr.getArray32
+  ptr.getArray64
+  ptr.mut.get32
+  ptr.mut.get64
+  ptr.get32checked
+  ptr.get64checked
+  ptr.mut.get32checked
+  ptr.mut.get64checked
+end
+overload: export: =
+  ptr.set
+end
+overload: export: []=
+  ptr.set
+  ptr.set32
+  ptr.set64
+  ptr.set32checked
+  ptr.set64checked
+end
+overload: export: @[]
+  ptr.at32
+  ptr.at64
+  ptr.mut.at32
+  ptr.mut.at64
+  ptr.at32checked
+  ptr.at64checked
+  ptr.mut.at32checked
+  ptr.mut.at64checked
+end
+
+overload: export: +
+  ptr.add
+  ptr.add0D
+  ptr.mut.add
+  ptr.mut.add0D
+end
+overload: export: -
+  ptr.sub
+  ptr.sub0D
+  ptr.mut.sub
+  ptr.mut.sub0D
+  ptr.diff
+  ptr.diff0D
+end
+overload: export: <
+  ptr.lt
+  ptr.lt0D
+end
+overload: export: <=
+  ptr.le
+  ptr.le0D
+end
+overload: export: ==
+  ptr.eq
+end
+overload: export: !=
+  ptr.ne
+end
+overload: export: >=
+  ptr.ge
+  ptr.ge0D
+end
+overload: export: >
+  ptr.gt
+  ptr.gt0D
+end
+overload: export: <=>
+  ptr.cmp
+  ptr.cmp0D
+end

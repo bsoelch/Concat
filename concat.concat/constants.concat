@@ -561,7 +561,7 @@ namespace: sb
           break
         LocalValue case
             "local value ( "  sb.appendS
-            val .LocalValue [] typeContext sb.appendConstant
+            val .LocalValue ConstValue ptr.mut cast [] typeContext sb.appendConstant
             " )" sb.appendS
           break
         LocalArray case

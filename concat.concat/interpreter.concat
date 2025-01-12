@@ -1294,7 +1294,7 @@ namespace: interpreter
       end =:: eltType
       ConstValue ..length 23 == "no new constants" assert
       elt switch
-        LocalValue case elt .LocalValue [] break
+        LocalValue case elt .LocalValue ConstValue ptr.mut cast [] break
         LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
           elt eltType allocator program copyLocalArray break
         default elt break
@@ -2704,7 +2704,7 @@ proc(
         =:: valType
         value? .data [] .LocalValue ?? if
           value? .data []
-            .LocalValue []
+            .LocalValue ConstValue ptr.mut cast []
           value? .data []=
         else value? .data [] .LocalArray ?? or
             value? .data [] .LocalArray8 ?? or
@@ -3336,19 +3336,22 @@ namespace: interpreter
     ## bring arguments in correct order
     values nArgs array.reverse
     valInfos nArgs array.reverse
-    ## XXX ensure type arguments for pointer built-ins are present
     builtIn
       values
       nArgs i32 cast
     pos typeContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
     resultType switch
       success case
-        value
-          calledType typeContext types.getProcRet
-            ! "has return type" assert
-          pos
-          context
-        pushValue
+        calledType typeContext types.getProcRet
+          ! "has return type" assert
+        =:: retType
+        retType .empty ?? ! if
+          value
+            retType
+            pos
+            context
+          pushValue
+        end
         false return
       argumentError case
         "invalid arguments for built-in " sb.wrap

@@ -1,7 +1,6 @@
 #+
 core library files, included by default
 +#
-import core/parseNumber
 import core/bool
 import core/i8
 import core/i16
@@ -12,8 +11,10 @@ import core/char16
 import core/char32
 import core/f32
 import core/f64
+import core/ptr
+
+import core/parseNumber
 
 import core/system
 
 import core/itr
-import core/ptrArithmetic

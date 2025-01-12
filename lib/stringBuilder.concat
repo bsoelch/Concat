@@ -37,7 +37,7 @@ namespace: sb
     buffer char8 list cast minCap list.ensureCap stringBuilder cast return
   end
   proc( stringBuilder : buffer char8 : chr -> stringBuilder ) =>: export: appendC
-    buffer char8 list cast chr list.append stringBuilder cast return
+     buffer char8 list cast chr list.append stringBuilder cast return
   end
   proc( stringBuilder : buffer i64 : auto: k char8 k ptr : str -> stringBuilder ) =>: export: appendS
     buffer char8 list cast str list.appendP stringBuilder cast return

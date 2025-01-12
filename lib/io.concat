@@ -1,4 +1,4 @@
-import core/ptrArithmetic
+import core/ptr
 import core/integers
 import mem
 import stringBuilder
