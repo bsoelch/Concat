@@ -2196,7 +2196,7 @@ proc(
       end
       op state appendOp ..drop
       return
-    getLabel atLabel hasLabel existsLabel case
+    getLabel setLabel hasLabel existsLabel case
       enum( CHECK CHECK_ENUM GET ) =:: LabelAccessType
       LabelAccessType .GET =:: mut: accessType
       op .val .hasLabel ?? if
@@ -2208,8 +2208,13 @@ proc(
       else op .val .getLabel ?? _if
         op .val .getLabel false
       else
-        op .val .atLabel true
-      end =:: isAddr =:: labelId
+        op .val .setLabel true
+      end =:: isWrite =:: labelId
+      isWrite if
+        ## TODO! support setLabel operation
+        "type-checking for setLabel is not supported" sb.wrap
+        op .pos errors appendError
+      end
       1 op .pos state checkStackSize if
         return
       end
@@ -2285,15 +2290,8 @@ proc(
       end
       isType if
         1 op .pos state discardValues ## remove container
-        isAddr if
-          "cannot take address of enum-creator \"" sb.wrap
-          labelId labelContext sb.appendLabelName
-          "\" in " sb.appendS
-          containerType typeContext sb.appendType
-          op .pos errors appendError
-          return
-        else containerType typeContext types.isEnum ! and
-            containerType typeContext types.isUnion ! _if
+        containerType typeContext types.isEnum ! and
+            containerType typeContext types.isUnion ! if
           256 sb.create
           containerType typeContext sb.appendType
           " is not an enum or union " sb.appendS
@@ -2335,13 +2333,6 @@ proc(
       elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
         false mutable@ =
       end
-      ## TODO clarify message
-      isAddr and isPtr ! if
-        "cannot take the address of a stack value: \"" sb.wrap
-        srcType typeContext sb.appendType
-        op .pos errors appendError
-        return
-      end
       OP_UNLINKED =:: mut: onRead
       isPtr if ## unwrap reference to pointer
         ## opAutoCast
@@ -2356,7 +2347,7 @@ proc(
         true program .hasCheckEnum =
       end
       ## can only take address of reference or pointer
-      isAddr or isPtr if
+      isPtr if
         eltType mutable typeContext types.getAddressType
       else
         eltType
@@ -2377,11 +2368,7 @@ proc(
         srcType
         elementIndex
         op .pos
-        isAddr if
-          opAtElement
-        else
-          opGetElement
-        end
+        opGetElement
       state pushValue
       elementLabel state replaceLabel
       state .stack branchTree.pop .data [] =:: mut: topValue
@@ -2391,9 +2378,7 @@ proc(
       targetType typeContext types.isEmpty if
         return
       end
-      isAddr if
-        container .copyMutableIndex state removeCopy
-      else directCopy _if
+      directCopy if
         ## copy is operation directly before get element
         ## -> copy element instead of tuple
         container .copyMutableIndex state removeCopy
@@ -2427,7 +2412,7 @@ proc(
       enumType op@ .dataType =
       enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
       return
-    getElement atElement case
+    getElement setElement case
       break
     argc case
       true program .hasGetArgs =

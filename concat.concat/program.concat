@@ -85,11 +85,11 @@ union(
       ProcedureImpl : mut: implementProcedure
       ProcedureImpl : mut: procPtr
             LabelId : getLabel
-            LabelId : mut: atLabel ## XXX? remove atLabel/atElement operations?
+            LabelId : setLabel
             LabelId : mut: hasLabel
             LabelId : mut: existsLabel
                 i64 : mut: getElement
-                i64 : mut: atElement
+                i64 : mut: setElement
                 i64 : mut: hasElement
                   _ : setValue
                   _ : Return
@@ -203,8 +203,8 @@ end
 proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opGetElement
   index OpValue .getElement base pos Operation new return
 end
-proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opAtElement
-  index OpValue .atElement base pos Operation new return
+proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opSetElement
+  index OpValue .setElement base pos Operation new return
 end
 proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opHasElement
   index OpValue .hasElement base pos Operation new return
@@ -212,6 +212,10 @@ end
 proc( LabelId FilePosition  -> Operation ) =>: export: opGetLabel
   =:: pos
   OpValue .getLabel Type .undefined pos Operation new return
+end
+proc( LabelId FilePosition  -> Operation ) =>: export: opSetLabel
+  =:: pos
+  OpValue .setLabel Type .undefined pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opExistsLabel
   =:: pos
@@ -665,11 +669,11 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .getLabel labelContext sb.appendLabelName
           break
-        atLabel case
-          "label address ( " sb.appendS
+        setLabel case
+          "set label ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .atLabel labelContext sb.appendLabelName
+          ..over .val .setLabel labelContext sb.appendLabelName
           break
         hasLabel case
           "has label ( " sb.appendS
@@ -694,11 +698,11 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .getElement sb.appendI
           break
-        atElement case
-          "element address ( " sb.appendS
+        setElement case
+          "set element ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
-          ..over .val .atElement sb.appendI
+          ..over .val .setElement sb.appendI
           break
         hasElement case
           "has element ( " sb.appendS

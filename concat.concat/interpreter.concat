@@ -2390,10 +2390,10 @@ proc(
           context
         pushValue
         EvalResult .Ok return
-    getLabel atLabel case
-      op [] .val .atLabel ?? =:: isPtr
-      isPtr if
-        op [] .val .atLabel
+    getLabel setLabel case
+      op [] .val .setLabel ?? =:: isWrite
+      isWrite if
+        op [] .val .setLabel
       else
         op [] .val .getLabel
       end =:: labelId
@@ -2461,21 +2461,31 @@ proc(
         op [] .pos errors appendError
         EvalResult .Error return
       end
-      value valInfo elementIndex isPtr op [] .pos context getElement wrapResult return
-    getElement atElement case
+      isWrite if
+        "setLabel is not supported " sb.wrap
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end
+      value valInfo elementIndex false op [] .pos context getElement wrapResult return
+    getElement setElement case
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.wrap
           op [] program sb.appendOp
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      op [] .val .atElement ?? =:: isPtr
-      isPtr if
-        op [] .val .atElement
+      op [] .val .setElement ?? =:: isWrite
+      isWrite if
+        op [] .val .setElement
       else
         op [] .val .getElement
       end =:: eltIndex
-      value valInfo eltIndex isPtr op [] .pos context getElement wrapResult return
+      isWrite if
+        "setElement is not supported " sb.wrap
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end
+      value valInfo eltIndex false op [] .pos context getElement wrapResult return
     hasElement hasLabel case
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.wrap

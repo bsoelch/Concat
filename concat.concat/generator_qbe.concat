@@ -3497,13 +3497,8 @@ proc(
         end
         '\n' sb.appendC
       return
-    getElement atElement case
-      op [] .val .getElement ?? if
-        op [] .val .getElement
-      else
-        op [] .val .atElement
-      end =:: index
-      op [] .val .atElement ?? =:: isAddr
+    getElement case
+      op [] .val .getElement =:: index
       op [] .dataType =:: mut: containerType
       false =:: mut: ptrSrc
       containerType typeContext types.isPointer if
@@ -3514,7 +3509,7 @@ proc(
         index
         typeContext
       types.compositeGetElement =:: eltType
-      isAddr or ptrSrc if
+      ptrSrc if
         ValType .PTR
       else
         eltType context toValType
@@ -3535,7 +3530,7 @@ proc(
       else
         break ## unsupported type
       end
-        isAddr or ptrSrc or eltType context referenceOnly if
+        ptrSrc or eltType context referenceOnly if
           return
         end
         op [] .pos context popValue =:: srcId
@@ -3554,6 +3549,7 @@ proc(
         srcId sb.appendI
         '\n' sb.appendC
       return
+    setElement case break
     New NewEnum NewReference NewEnumReference case
       op [] .val .NewReference ?? op [] .val .NewEnumReference ?? | =:: hasReference
       op [] .val .NewEnum ?? op [] .val .NewEnumReference ?? | =:: isEnum
@@ -4910,7 +4906,7 @@ proc(
       sb return ## XXX? print compiler info
     autoTypedInitializeId typeInfo copy
     getName atName getLabel Error Assert panic
-    atLabel length size typeModifier hasLabel existsLabel existsName case
+    setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
   "unable to compile operation " sb.wrap
