@@ -434,6 +434,9 @@ proc(
         true isModifier@ =
       else ..dup "auto:" string.wrap string.eq _if
         id.FLAG_AUTO flags | flags@ =
+        id.FLAG_STATIC flags | flags@ =
+        ## XXX? is there any situation where a non-static auto-arg makes sense?
+        ##  auto-args used only in type-generators & args of type-generators should be static
         true isModifier@ =
       else ..dup "static:" string.wrap string.eq _if
         id.FLAG_STATIC flags | flags@ =

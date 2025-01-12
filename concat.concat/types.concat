@@ -998,18 +998,11 @@ namespace: types
       $ context getArraySize =:: size
       $ context isMutable =:: mutable
       $ context getBaseType =:: base
-    $ .rawPointer ?? if
-      ## removing innermost argument converts raw-pointer to pointer
-      .rawPointer Type .pointer return
-    else .pointer ?? _if
-      ArrayType .POINTER
-    else
-      ArrayType .ARRAY
-    end =:: arrayType
+    .rawPointer ?? =:: rawPointer
     ## newArrayType
       base
-      arrayType
-      size $ .length 1 - array.head
+      ArrayType .ARRAY
+      size rawPointer ! if $ .length 1 - array.head end
       mutable
       context
     newArrayType

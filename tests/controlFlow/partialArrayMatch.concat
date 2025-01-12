@@ -1,8 +1,8 @@
 proc( type : auto: T  i64 : auto: k T k ptr i32 -> T ptr ) =>: getEltPtr
   @[]
 end
-proc( type : auto: T  i64 : auto: k i64 : auto: l T k l ptr i32 -> T ptr ) =>: getEltPtr2D
-  $ @[]
+proc( type : auto: T  i64 : auto: k i64 : auto: l T k l ptr i32 : offset -> T ptr ) =>: getEltPtr2D
+  offset @[] offset @[]
 end
 overload: getDiagonalEltPtr
   getEltPtr
@@ -11,5 +11,6 @@ end
 proc( -> ) =>: main
   { { 1 2 3 } { 4 5 6 } } i32 3 2 array =: matrix
   matrix@ 0 getEltPtr 1 [] 2 == "matrix[0][1]==2" assert
+  matrix@ 1 getEltPtr 0 [] 4 == "matrix[1][0]==4" assert
   matrix@ 1 getDiagonalEltPtr [] 5 == "matrix[1][1]==5" assert
 end

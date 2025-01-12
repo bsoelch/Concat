@@ -9,11 +9,11 @@ namespace: ptr
   proc( type : auto: T T : newVal T _ ptr.mut : p i64 : index -> ) =>: export: set64
     newVal p index []@ =
   end
-  proc( type : auto: T T _ ptr : p i32 : index -> T _ ptr ) =>: export: at32
-    p index []@
+  proc( type : auto: T T _ ptr : p i32 : index -> T ptr ) =>: export: at32
+    p index i64 cast at64 T ptr cast!
   end
-  proc( type : auto: T T _ ptr : p i64 : index -> T _ ptr ) =>: export: at64
-    p index []@
+  proc( type : auto: T T _ ptr : p i64 : index -> T ptr ) =>: export: at64
+    p index []@ T ptr cast!
   end
 
   proc( type : auto: T T _ ptr : p T _ ptr : q -> i32 ) =>: export: cmp
@@ -88,11 +88,11 @@ namespace: ptr
   end
   ## XXX? prohibit arithmetic on array pointers
   namespace: mut
-    proc( type : auto: T T _ ptr.mut : p i32 : offset -> T _ ptr.mut ) =>: shaddow: export: at32
-      p offset ..builtIn.offset.ptr.mut.i32
+    proc( type : auto: T T _ ptr.mut : p i32 : offset -> T ptr.mut ) =>: shaddow: export: at32
+      p offset i64 cast []@
     end
-    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: at64
-      p offset ..builtIn.offset.ptr.mut.i64
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: export: at64
+      p offset []@
     end
 
     proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: add

@@ -2410,7 +2410,7 @@ proc(
       return
     OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 case
       ## baseType is pointer type
-      baseType typeContext types.getBaseType =:: eltType
+      baseType typeContext types.getElementType =:: eltType
       sb
         builtIn .OFFSET_PTR_I32 ?? or builtIn .OFFSET_PTR_MUT_I32 ?? if
           pos context popValue =:: offset32

@@ -395,7 +395,7 @@ proc(
       targetFixed and targetSizes .length 0 == if
         one@ array.wrap targetSizes@ =
       end
-      targetFixed ! if
+      srcFixed and targetFixed ! if
         srcSizes $ .length 1 - array.head srcSizes@ =
       end
       srcSizes .length targetSizes .length < if
