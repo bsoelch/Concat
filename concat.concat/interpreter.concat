@@ -1681,7 +1681,11 @@ proc(
             EvalResult .Error return
           end =:: val
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
+            op [] .val .block .jumpDistance 0:JumpDistance == if
+              "jump distance should be non-zero" sb.wrap
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end
             val if
               EvalResult .Ok return
             else
@@ -1696,7 +1700,11 @@ proc(
           EvalResult .Ok return
         ELSE case
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
+            op [] .val .block .jumpDistance 0:JumpDistance == if
+              "jump distance should be non-zero" sb.wrap
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end
             op [] .val .block .jumpDistance EvalResult .Jump return
           end
           context [] .openBlocks list.peek =:: currentBlock
@@ -1728,7 +1736,11 @@ proc(
             EvalResult .Error return
           end =:: val
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
+            op [] .val .block .jumpDistance 0:JumpDistance == if
+              "jump distance should be non-zero" sb.wrap
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end
             op [] .val .block .blockType =:: blockType
             blockType .OR_IF ?? or blockType .OR ?? end =:: isOr
             val isOr == if
@@ -1758,7 +1770,11 @@ proc(
           break
         DO AND_DO case
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
+            op [] .val .block .jumpDistance 0:JumpDistance == if
+              "jump distance should be non-zero" sb.wrap
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end
             op [] .pos context popCondition if ..drop
               EvalResult .Error return
             end if
@@ -1770,7 +1786,11 @@ proc(
           break
         OR_DO case
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
+            op [] .val .block .jumpDistance 0:JumpDistance == if
+              "jump distance should be non-zero" sb.wrap
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end
             op [] .pos context popCondition if ..drop
               EvalResult .Error return
             end if
@@ -1782,7 +1802,11 @@ proc(
           break
         BREAK CONTINUE BREAK_SWITCH case
           context [] .evalType .INTERPRET ?? if
-            op [] .val .block .jumpDistance 0:JumpDistance != "non-zero jump" assert
+            op [] .val .block .jumpDistance 0:JumpDistance == if
+              "jump distance should be non-zero" sb.wrap
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end
             op [] .val .block .jumpDistance EvalResult .Jump return
           end
           break
@@ -1832,7 +1856,11 @@ proc(
         blockType switch
           ELSE SWITCH AND OR case EvalResult .Ok return
           WHILE case
-            op [] .val .blockEnd .jumpDistance 0:JumpDistance != "non-zero jump" assert
+            op [] .val .blockEnd .jumpDistance 0:JumpDistance == if
+              "jump distance should be non-zero" sb.wrap
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end
             op [] .val .blockEnd .jumpDistance EvalResult .Jump return
           default break
         end
