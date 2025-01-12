@@ -8,7 +8,7 @@ proc( i64 -> i64 ) =>: fib
   0:i64 1:i64
     while n 0 > do
       $1 + ..swap
-    finally n 1 - n = end
+    finally n 1 - n@ = end
   ..drop
 end
 
