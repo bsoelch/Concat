@@ -91,8 +91,6 @@ union(
                 i64 : mut: getElement
                 i64 : mut: atElement
                 i64 : mut: hasElement
-                i64 : mut: getArrayElement
-                i64 : mut: atArrayElement
                   _ : setValue
                   _ : Return
                   _ : New
@@ -197,13 +195,6 @@ end
 proc( Type BuiltIn FilePosition  -> Operation ) =>: export: opBuiltIn
   =:: pos
   OpValue .builtIn ..swap pos Operation new return
-end
-proc( i64 FilePosition  -> Operation ) =>: export: opArrayGet
-  =:: pos
-  OpValue .getArrayElement Type .undefined pos Operation new return
-end
-proc( i64 FilePosition : pos -> Operation ) =>: export: opArrayAt
-  OpValue .atArrayElement Type .undefined pos Operation new return
 end
 proc( i64 FilePosition  -> Operation ) =>: export: opTupleGet
   =:: pos
@@ -714,18 +705,6 @@ namespace: sb
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .hasElement sb.appendI
-          break
-        getArrayElement case
-          "get array element ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .getArrayElement sb.appendI
-          break
-        atArrayElement case
-          "array element address ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .atArrayElement sb.appendI
           break
         setValue case
           "set value ( " sb.appendS

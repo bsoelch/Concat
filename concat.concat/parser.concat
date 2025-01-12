@@ -964,7 +964,7 @@ proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =
   =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
   varInfo .itrType varInfo .itrVar pos opAtId state appendOp
-  pos opSetValue state appendOp
+  pos opSetValue state appendOp ## TODO replace setValue with ..builtIn.set.ptr
 end
 proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrEnd
   state [] .progContext .idContext =:: idContext
@@ -2044,10 +2044,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       else ..dup [] .val .getElement ?? _if
         ..dup [] .val .getElement ..over .val .atElement =
-        fileState [] .wordStart ..swap .pos =
-        return
-      else ..dup [] .val .getArrayElement ?? _if
-        ..dup [] .val .getArrayElement ..over .val .atArrayElement =
         fileState [] .wordStart ..swap .pos =
         return
       else ..dup [] .val .getName ?? _if
