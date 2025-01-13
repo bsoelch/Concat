@@ -388,7 +388,7 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: int
 end
 
 proc(
-  Type : procIn
+  Type : calledType
   ProcedureCallInfo : calledProc
   bool : isStatic
   FilePosition : pos
@@ -397,6 +397,7 @@ proc(
   state [] .program =:: progContext
   state .interpreter =:: interpreter
   progContext .idContext .typeContext =:: typeContext
+  calledType typeContext types.getProcIn ..drop =:: procIn
   procIn
     typeContext types.compositeEltCount InterpreterLoadMode .fixedCount
   state interpreterLoadContants if
@@ -412,6 +413,7 @@ proc(
   ## evaluateCall
     calledProc .procId
     calledProc .implementationId
+    calledType
     calledProc .autoArgs
     false
     pos
@@ -1839,7 +1841,7 @@ proc(
           inTypes typeContext types.compositeEltCount =:: argCount
           stackConstants argCount calledProc .autoArgs .length - >= and
               calledProcData [] .isStatic if ## interpret static procedures
-            inTypes calledProc true op .pos state interpretCall ! if
+            calledType calledProc true op .pos state interpretCall ! if
               return
             end
           end

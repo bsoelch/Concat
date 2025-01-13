@@ -1163,7 +1163,6 @@ namespace: interpreter
     ConstValue : value
     ValueInfo : valInfo
     i64 : elementIndex
-    bool : isPtr0
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: getElement
@@ -1172,7 +1171,7 @@ namespace: interpreter
     program .idContext =:: idContext
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    isPtr0 =:: mut: isPtr
+    false =:: mut: isPtr
       ## TODO! use correct base mutablity
     true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
@@ -1190,27 +1189,32 @@ namespace: interpreter
       isPtr if eltMutable typeContext types.getAddressType end
     =:: eltType
     ## XXX? support (Local)Array8 ... Array64
-    value .Array ?? if
-      value .Array elementIndex array.get
-    else value .LocalArray ?? _if
-      value .LocalArray ConstValue arrayView.mut cast
+    value
+      $ .LocalValue ?? if
+        .LocalValue ConstValue ptr.mut cast []
+      end
+    =:: containerValue
+    containerValue .Array ?? if
+      containerValue .Array elementIndex array.get
+    else containerValue .LocalArray ?? _if
+      containerValue .LocalArray ConstValue arrayView.mut cast
         elementIndex array.at .data
-      $ [] .LocalValue ?? ! and $ [] .LocalArray ?? ! and $ [] .LocalArray8 ?? ! and
+      isPtr and $ [] .LocalValue ?? ! and $ [] .LocalArray ?? ! and $ [] .LocalArray8 ?? ! and
           $ [] .LocalArray16 ?? ! and $ [] .LocalArray32 ?? ! and $ [] .LocalArray64 ?? ! if
         LocalAddress cast ConstValue .LocalValue
       else [] end
-    else value .Union ?? _if
-      value elementIndex constUnionElement if
+    else containerValue .Union ?? _if
+      containerValue elementIndex constUnionElement if
         "union index (" sb.wrap
           elementIndex sb.appendI
           ") does not match current value (" sb.appendS
-          value .Union .eltIndex sb.appendI
+          containerValue .Union .eltIndex sb.appendI
           ")" sb.appendS
         pos errors appendError
       end
     else
       "unexpected value for composite constant: " sb.wrap
-        value typeContext sb.appendConstant
+        containerValue typeContext sb.appendConstant
       pos errors appendError
       ## unpopValue
         value
@@ -1223,6 +1227,98 @@ namespace: interpreter
       eltType
       pos
     context pushValue
+    false return
+  end
+  proc(
+    ConstValue : value
+    ValueInfo : valInfo
+    i64 : elementIndex
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: setElement
+    context [] .program =:: program
+    program .errors =:: errors
+    program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    false =:: mut: isPtr
+      ## TODO! use correct base mutablity
+    true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
+    valInfo .valueType
+      $ typeContext types.isPointer if
+        $ typeContext types.isMutable eltMutable & eltMutable@ =
+        typeContext types.getBaseType
+        true isPtr@ =
+      end
+      eltMutable and $ elementIndex typeContext types.compositeGetLabel
+        typeContext .labelContext id.labelFlags
+      id.FLAG_MUTABLE & ? ! if
+        false eltMutable@ =
+      end
+      elementIndex typeContext types.compositeGetElement
+    =:: eltType
+    eltMutable ! if
+      ## XXX? better message
+      "cannot write to immutable structure element" sb.wrap
+      pos errors appendError
+      value valInfo context unpopValue
+      true return
+    end
+    pos context popValue if ..drop.2
+      ## unpopValue
+        value
+        valInfo
+      context unpopValue
+      true return
+    end =:: newValue =:: newValInfo
+    newValInfo .valueType eltType typeContext types.canAutoCast ! if
+      "cannot assign value of type " sb.wrap
+        newValInfo .valueType typeContext sb.appendType
+        " to element of type " sb.appendS
+        eltType typeContext sb.appendType
+      pos errors appendError
+      newValue newValInfo context unpopValue
+      value valInfo context unpopValue
+      true return
+    end
+    value .LocalValue ?? =:: wrapped
+    value
+      wrapped if
+        .LocalValue ConstValue ptr.mut cast []
+      end
+    =:: containerValue
+    ## XXX? support (Local)Array8 ...  Array64
+    containerValue .Array ?? if
+      context [] .localMemory
+        containerValue .Array mixedArena.copyArray =:: localAddress
+      context .localMemory=
+      newValue localAddress elementIndex array.set
+      localAddress LocalSlice cast ConstValue .LocalArray
+    else containerValue .LocalArray ?? _if
+      newValue
+        containerValue .LocalArray ConstValue arrayView.mut cast
+      elementIndex array.set
+      containerValue
+    else containerValue .Union ?? _if
+      newValue elementIndex constContext newUnionConst
+    else
+      "unexpected value for writable constant: " sb.wrap
+        containerValue typeContext sb.appendConstant
+      pos errors appendError
+      newValue newValInfo context unpopValue
+      containerValue valInfo context unpopValue
+      true return
+    end =:: newContainer
+    wrapped if
+      newContainer value .LocalValue ConstValue ptr.mut cast []=
+    end
+    isPtr ! if
+      ## pushValue
+        wrapped if value else newContainer end
+        valInfo .valueType
+        pos
+      context pushValue
+    end
     false return
   end
   ## TODO try merging Array.. / LocalArray.. code (? is there a good generic signature)
@@ -2175,6 +2271,7 @@ proc(
           =:: calledProcData
           procId
             calledProc .implementationId
+            calledType
             calledProc .autoArgs
             true
           op [] .pos context evaluateCall wrapResult return
@@ -2273,6 +2370,7 @@ proc(
       op .val .call =:: callInfo
       callInfo [] .procId
         callInfo [] .implementationId
+        op [] .dataType
         callInfo [] .autoArgs
         false
       op [] .pos context evaluateCall wrapResult return
@@ -2490,30 +2588,28 @@ proc(
         EvalResult .Error return
       end
       isWrite if
-        "setLabel is not supported " sb.wrap
-        op [] .pos errors appendError
-        EvalResult .Error return
+        value valInfo elementIndex op [] .pos context setElement wrapResult return
       end
-      value valInfo elementIndex false op [] .pos context getElement wrapResult return
-    getElement setElement case
+      value valInfo elementIndex op [] .pos context getElement wrapResult return
+    getElement setElement setEnumElement case
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.wrap
           op [] program sb.appendOp
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      op [] .val .setElement ?? =:: isWrite
-      isWrite if
+      op [] .val .getElement ?? ! =:: isWrite
+      op [] .val .setEnumElement ?? if
+        op [] .val .setEnumElement
+      else isWrite _if
         op [] .val .setElement
       else
         op [] .val .getElement
       end =:: eltIndex
       isWrite if
-        "setElement is not supported " sb.wrap
-        op [] .pos errors appendError
-        EvalResult .Error return
+        value valInfo eltIndex op [] .pos context setElement wrapResult return
       end
-      value valInfo eltIndex false op [] .pos context getElement wrapResult return
+      value valInfo eltIndex op [] .pos context getElement wrapResult return
     hasElement hasLabel case
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.wrap
@@ -2740,27 +2836,24 @@ proc(
         context [] .stackInfo
           list.peek .data [] .valueType
         =:: valType
-        value? .data [] .LocalValue ?? if
-          value? .data []
-            .LocalValue ConstValue ptr.mut cast []
-          value? .data []=
-        else value? .data [] .LocalArray ?? or
-            value? .data [] .LocalArray8 ?? or
-            value? .data [] .LocalArray16 ?? or
-            value? .data [] .LocalArray32 ?? or
-            value? .data [] .LocalArray64 ?? _if
-          context [] .localMemory mixedArena.offset =:: localOffset
-          value? .data []
-            valType context .localMemory program copyLocalArray
-          value? .data []=
-          ## clear memory used by copy
-          context [] .localMemory
-            localOffset mixedArena.reset
-          context .localMemory=
-        else
-          "unexpected constant for copy, expected local memory got: " sb.wrap
-            value? .data [] typeContext sb.appendConstant
-          op [] .pos errors appendError
+        ConstValue ..length 23 == "no new constants" assert
+        value? .data [] switch
+          LocalValue case
+            value? .data []
+              .LocalValue ConstValue ptr.mut cast []
+            value? .data []=
+            break
+          LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
+            context [] .localMemory mixedArena.offset =:: localOffset
+            value? .data []
+              valType context .localMemory program copyLocalArray
+            value? .data []=
+            ## clear memory used by copy
+            context [] .localMemory
+              localOffset mixedArena.reset
+            context .localMemory=
+            break
+          default break ## nothing to copy
         end
       end
       EvalResult .Ok return
@@ -3101,7 +3194,7 @@ proc(
     argc getArg implementProcedure procPtr
     bitCast
     ConstantReference NewReference
-    checkEnumLabel setEnumLabel setEnumElement
+    checkEnumLabel setEnumLabel
     unreachable case
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
@@ -3329,6 +3422,7 @@ end
 proc(
   ProcId : procId
   i64 : implId
+  Type : calledType
   ConstValue arrayView : autoArgs
   bool : consumeStaticArgs
   FilePosition : pos
@@ -3668,13 +3762,65 @@ proc(
   context [] .callPositions
     list.pop ..drop
   context .callPositions=
-  ## TODO ensure returned values do not point to deleted local memory
+  calledType typeContext types.getProcOut
+    ! "proc has out" assert
+  typeContext types.compositeEltArray =:: outTypes
+  outTypes .length "return":s pos context checkStack if
+    stackOffset context truncateStack
+    context [] .localVariables .data map.free
+    prevVariables context .localVariables=
+    context [] .localMemory offset mixedArena.reset context .localMemory=
+    context [] .openBlocks
+      prevBlocks list.setLength
+    context .openBlocks=
+    prevType context .evalType=
+    true return
+  end
+  context [] .stack .length outTypes .length - =:: outOffset
+  outTypes .length for =:: i
+    outTypes i array.get
+      $ typeContext types.containsGeneric if
+        ## TODO update generics
+      end
+    =:: valType
+    context [] .stackInfo outOffset i + list.at .data =:: outValInfo
+    outValInfo [] .valueType valType typeContext types.canAutoCast ! if
+      "cannot cast " sb.wrap
+        outValInfo [] .valueType typeContext sb.appendType
+        " to " sb.appendS
+        valType typeContext sb.appendType
+      pos errors appendError
+    end
+    context [] .stack outOffset i + list.get
+      ## TODO ensure returned values do not point to deleted local memory
+      valType typeContext types.isPointer ! if
+        ## unwrap local values
+        $ switch ## XXX? handle nested local values
+          LocalValue case .LocalValue ConstValue ptr.mut cast [] break
+          LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
+            valType context .localMemory program copyLocalArray
+            break
+          default break
+        end
+      end
+      outValInfo [] .valueType valType types.typeEquals ! if
+        =:: oldValue
+        ## castConstant
+          outValInfo [] .valueType
+          SignType .NONE
+          oldValue
+          valType
+          typeContext
+        castConstant
+        valType outValInfo .valueType=
+      end
+    context [] .stack outOffset i + list.set
+  end
   context [] .localVariables .data map.free
   prevVariables context .localVariables=
   context [] .localMemory
     offset mixedArena.reset
   context .localMemory=
-  ## FIXME static procedures don't cast their return value
   isTypeGenerator if
     context [] .stack .length 1 < if
       "could not initalized type generator " sb.wrap
