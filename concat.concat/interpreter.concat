@@ -3791,6 +3791,7 @@ proc(
         valType typeContext sb.appendType
       pos errors appendError
     end
+    ## TODO why is return value of list.empty not cast correctly (struct(...) instead of `T list`)
     context [] .stack outOffset i + list.get
       ## TODO ensure returned values do not point to deleted local memory
       valType typeContext types.isPointer ! if
