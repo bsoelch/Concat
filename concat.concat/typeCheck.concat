@@ -2343,6 +2343,13 @@ proc(
         eltType
       end =:: targetType
       isWrite if
+        targetType typeContext types.isEmpty and
+            containerType typeContext types.isTaggedUnion ! if
+          ## discard container and argument from stack
+          2 op .pos state discardValues
+          return
+        end
+        ## XXX? when writing empty value to union, elementIndex still needs to be changed
         Type 2 array : args
         targetType args@ 0 []=
         srcType args@ 1 []=

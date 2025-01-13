@@ -3560,13 +3560,7 @@ proc(
       =:: structType
       structType index typeContext types.compositeGetElement =:: eltType
       sb
-        structType typeContext types.isEmpty if
-          return ## XXX? is this check neccessary
-        end
         op [] .pos context popValue =:: structId
-        eltType typeContext types.isEmpty if
-          return
-        end
         op [] .pos sb.appendPosQBE
         "%s" sb.appendS
         isPtr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
