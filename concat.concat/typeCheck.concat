@@ -1,3 +1,6 @@
+import string
+using std.literals
+
 import "program.concat"
 import "types.concat"
 import "identifiers.concat"
@@ -1426,7 +1429,7 @@ proc(
   end
   ## requireTypes
     procOut typeContext types.compositeEltArray
-    "return statement" string.wrap
+    "return statement":s
     0
     op [] .pos
   state requireTypes if
@@ -1900,7 +1903,7 @@ proc(
             else ## next argument at top of stack
               ## requireTypes
                 elt@ array.wrap
-                "procedure argument" string.wrap
+                "procedure argument":s
                 offset
                 op .pos
                 state
@@ -1939,7 +1942,7 @@ proc(
       end
       ## requireTypes
         calledType@ array.wrap
-        "procedure pointer" string.wrap
+        "procedure pointer":s
         0
         op .pos
         state
@@ -1955,7 +1958,7 @@ proc(
       =:: inTypes
       ## requireTypes
         inTypes typeContext types.compositeEltArray
-        "procedure argument" string.wrap
+        "procedure argument":s
         1
         op .pos
         state
@@ -2068,7 +2071,7 @@ proc(
           else
             ## requireTypes
               op@ .dataType array.wrap
-              "initialization" string.wrap
+              "initialization":s
               0
               op .pos
             state requireTypes if ## TODO? can requireTypes change constVal
@@ -2190,7 +2193,7 @@ proc(
       target [] .valueType args 1 []=
       ## requireTypes
         args array.wrap
-        "assignment" string.wrap
+        "assignment":s
         0
         op .pos
       state requireTypes if
@@ -2315,7 +2318,7 @@ proc(
           end
         ## requireTypes
           eltType@ array.wrap
-          "enum-creation" string.wrap
+          "enum-creation":s
           0
           op .pos
         state requireTypes _if
@@ -2357,7 +2360,7 @@ proc(
         srcType args@ 1 []=
         ## requireTypes
           args@ array.wrap
-          "element write" string.wrap
+          "element write":s
           0
           op .pos
         state requireTypes  if
@@ -2437,7 +2440,7 @@ proc(
         op .pos errors appendError
       end
       ## XXX compile-time evaluation
-      enumType@ array.wrap "getEnumLabel" string.wrap 0 op .pos state requireTypes if
+      enumType@ array.wrap "getEnumLabel":s 0 op .pos state requireTypes if
         return
       end
       enumType op@ .dataType=
@@ -2457,7 +2460,7 @@ proc(
       true program .hasGetArgs=
       ## requireTypes
         types.primitive.I_SIZE@ array.wrap
-        "program argument index" string.wrap
+        "program argument index":s
         0
         op .pos
       state requireTypes if
@@ -2528,7 +2531,7 @@ proc(
         op .dataType typeContext types.compositeEltCount =:: count
         ## requireTypes
           op .dataType typeContext types.compositeEltArray
-          "tuple element" string.wrap
+          "tuple element":s
           0
           op .pos
         state requireTypes if
@@ -2568,7 +2571,7 @@ proc(
       argType op@ .dataType=
       ## requireTypes
         params@ array.wrap
-        "equality-check" string.wrap
+        "equality-check":s
         0
         op .pos
       state requireTypes if
@@ -2595,7 +2598,7 @@ proc(
         AND_IF OR_IF case
           ## requireTypes
             types.primitive.BOOL@ array.wrap
-            "and/or-condition" string.wrap
+            "and/or-condition":s
             0
             op .pos
           state requireTypes if
@@ -2633,7 +2636,7 @@ proc(
         IF case
           ## requireTypes
             types.primitive.BOOL@ array.wrap
-            "if-condition" string.wrap
+            "if-condition":s
             0
             op .pos
           state requireTypes if
@@ -2704,7 +2707,7 @@ proc(
               branchPoints list.asArray
               mergeBranches@
               ## MergePoint
-                "or if block" string.wrap
+                "or if block":s
                 op .pos
                 i64 array.empty
                 state
@@ -2821,7 +2824,7 @@ proc(
             branchPoints list.asArray
             mergeBranches@
             ## MergePoint
-              "and if block" string.wrap
+              "and if block":s
               op .pos
               i64 array.empty
               state
@@ -2862,7 +2865,7 @@ proc(
           end
           ## requireTypes
             switchType@ array.wrap
-            "switch value" string.wrap
+            "switch value":s
             0
             op .pos
           state requireTypes if
@@ -3097,7 +3100,7 @@ proc(
           end
           ## requireTypes
             types.primitive.BOOL@ array.wrap
-            "and/or-condition" string.wrap
+            "and/or-condition":s
             0
             op .pos
           state requireTypes if
@@ -3145,7 +3148,7 @@ proc(
           currentBlock? .data =:: currentBlock
           ## requireTypes
             types.primitive.BOOL@ array.wrap
-            "while-condition" string.wrap
+            "while-condition":s
             0
             op .pos
           state requireTypes if
@@ -3187,7 +3190,7 @@ proc(
               branchPoints list.asArray
               mergeBranches@
               ## MergePoint
-                "or do block" string.wrap
+                "or do block":s
                 op .pos
                 i64 array.empty
                 state
@@ -3288,7 +3291,7 @@ proc(
               branchPoints list.asArray
               mergeBranches@
               ## MergePoint
-                "while block" string.wrap
+                "while block":s
                 op .pos
                 whileBlock [] .continueCastOffsets list.asArray
                 state
@@ -3369,7 +3372,7 @@ proc(
           end =:: blockId
           ## requireTypes
             types.primitive.BOOL@ array.wrap
-            "and/or-condition" string.wrap
+            "and/or-condition":s
             0
             op .pos
           state requireTypes if
@@ -3456,7 +3459,7 @@ proc(
               branches@ nBranches array.create
               mergeBranches@
               ## MergePoint
-                "if-else block" string.wrap
+                "if-else block":s
                 op .pos
                 castOffsets@ nBranches array.create
                 state
@@ -3597,7 +3600,7 @@ proc(
               branchPoints list.asArray
               mergeBranches@
               ## MergePoint
-                "switch-case block" string.wrap
+                "switch-case block":s
                 op .pos
                 switchBlock [] .castOffsets list.asArray
                 state
@@ -3681,7 +3684,7 @@ proc(
             branchPoints list.asArray
             mergeBranches@
             ## MergePoint
-              "while loop" string.wrap
+              "while loop":s
               op .pos
               castOffsets@ 2 array.create
               state
@@ -3729,7 +3732,7 @@ proc(
               branchPoints list.asArray
               mergeBranches@
               ## MergePoint
-                "while block" string.wrap
+                "while block":s
                 op .pos
                 whileBlock [] .breakCastOffsets list.asArray
                 state
@@ -3854,7 +3857,7 @@ proc(
             branchPoints list.asArray
             mergeBranches@
             ## MergePoint
-              "and or block" string.wrap
+              "and or block":s
               op .pos
               i64 array.empty
               state
@@ -3899,7 +3902,7 @@ proc(
       ## XXX try to evaluate at compile time
       ## requireTypes
         types.primitive.BOOL@ array.wrap
-        "assertion" string.wrap
+        "assertion":s
         0
         op .pos
       state requireTypes if

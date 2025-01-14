@@ -1,6 +1,8 @@
+import string
 import stringBuilder
 import map
 import optional
+using std.literals
 
 import "constants.concat"
 import "types.concat"
@@ -194,13 +196,13 @@ namespace: id
     context [] .typeContext .labelContext .namespaceInfo .current =:: mut: mNamespace
     NamespaceId : mut: relSpace
     mNamespace NAMESPACE_ID_NONE == if
-      "invalid current namespace id" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
+      "invalid current namespace id":s NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
     end
     id 0 string.charAt '.' == if
       id .length 2 >= and id 1 string.charAt '.' == if
         id string.empty
       else
-        "identifiers cannot start with ." string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
+        "identifiers cannot start with .":s NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
       end
     else
       id '.' string.splitLast
@@ -314,7 +316,7 @@ namespace: id
     matches optional.isEmpty match optional.hasData & if ## TODO return value indicating multi-match
       matchGlobal if globalName else idName end match .data false return
     end
-    "could not find identifier" string.wrap NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
+    "could not find identifier":s NAMESPACE_ID_NONE fileId IdentifierName new id.LABEL_ID_NONE true return
   end
 
   proc( LabelId : nameId IdentifierContext ptr.mut : context -> IdentifierData ptr.mut bool ) =>: export: getIdentifier
@@ -400,7 +402,7 @@ namespace: id
       "identifier names cannot end with '@'" sb.wrap pos errors appendError
       true return
     end
-    id 0 string.charAt '$' == or id ">$" string.wrap string.startsWith if
+    id 0 string.charAt '$' == or id ">$":s string.startsWith if
       "identifier names cannot start with `$` or `>$`" sb.wrap pos errors appendError
       true return
     end
@@ -585,7 +587,7 @@ namespace: id
     ## IdentifierInfo
       IdentifierType .ITR_VAR
       ## newLabel
-        "" string.wrap
+        string.empty
         id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
         pos
         currentFile

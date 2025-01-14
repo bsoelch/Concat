@@ -1,6 +1,8 @@
 import stringIO
 import numbers
 import chars
+import string
+using std.literals
 
 import "common.concat"
 
@@ -142,11 +144,11 @@ end
 proc( string -> StringLiteralType ) =>: checkStringPrefix
   $ .length 0 == if ..drop
     StringLiteralType .DEFAULT return
-  else $ "utf8" string.wrap string.eq _if ..drop
+  else $ "utf8":s string.eq _if ..drop
     StringLiteralType .UTF8  return
-  else $ "utf16" string.wrap string.eq _if ..drop
+  else $ "utf16":s string.eq _if ..drop
     StringLiteralType .UTF16 return
-  else $ "utf32" string.wrap string.eq _if ..drop
+  else $ "utf32":s string.eq _if ..drop
     StringLiteralType .UTF32 return
   else $ 0 string.charAt '0' >= and $ 0 string.charAt '9' <= _if ..drop
     StringLiteralType .INT_LITERAL return ## first char of prefix is digit -> int-literal
@@ -217,7 +219,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
   while $ code .length < do =:: i
     code i string.charAt =:: c
     state .IDENTIFIER ?? and c char.isWhitespace or
-        c '#' == and i 1 + code .length < and "#+" string.wrap code i 1 + string.charAt string.contains if
+        c '#' == and i 1 + code .length < and "#+":s code i 1 + string.charAt string.contains if
       isLiteralType ! if
         i i0 > "identifier contains at least one character" assert
       end

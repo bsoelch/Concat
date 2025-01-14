@@ -1,4 +1,6 @@
 import sys
+import string
+using std.literals
 
 import "parser.concat"
 import "typeCheck.concat"
@@ -94,9 +96,9 @@ proc( -> ) =>: parseArgs
         'q' case
           break
         '-' case
-          arg "--no-core" string.wrap string.eq if
+          arg "--no-core":s string.eq if
             false _INCLUDE_CORE_@ = break
-          else arg "--no-inc-version" string.wrap string.eq _if
+          else arg "--no-inc-version":s string.eq _if
             false _INCREMENT_VERSION_@ = break
           end
           "unknown compiler option: \"" sb.wrap
@@ -185,9 +187,9 @@ proc( -> ) =>: parseArgs
       end
     outFile@ =
   end
-  iSlash 0 < if "./" string.wrap else srcFile .data iSlash 1 + string.create end basePath@ =
+  iSlash 0 < if "./":s else srcFile .data iSlash 1 + string.create end basePath@ =
   hasLib ! if
-    "./lib/" string.wrap libPath@ =
+    "./lib/":s libPath@ =
   else libPath ..dup .length 1 - string.charAt ..dup '/' != ..swap '\\' != & _if
     io.stdErr "library path has to end with '/' or '\\'\n" io.fputs ..drop
     srcFile sb.free

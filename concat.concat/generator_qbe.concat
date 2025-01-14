@@ -1,4 +1,6 @@
+import string
 import stringIO
+using std.literals
 
 import "program.concat"
 import "measure.concat"
@@ -562,7 +564,7 @@ namespace: sb
       label labelContext id.getLabelNamespace =:: mut: mNamespace
       while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do
         mNamespace labelContext id.namespaceName sb.appendAsciified
-        "." string.wrap sb.appendAsciified
+        ".":s sb.appendAsciified
         mNamespace labelContext id.parentNamespace mNamespace@ =
       end ## XXX? reverse order
       label labelContext sb.appendAsciifiedLabelName
@@ -661,16 +663,16 @@ namespace: sb
       arrayIndex pointer rawPointer procedure case
         sb "l" sb.appendS return ## size or pointer
       arrayType case
-        sb t "array" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
+        sb t "array":s storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       struct case
-        sb t "struct" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
+        sb t "struct":s storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       union case
-        sb t "union" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
+        sb t "union":s storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       enum case
-        sb t "enum" string.wrap storeType .STACK ?? ! appendCompositeTypeQBE return
+        sb t "enum":s storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       undefined empty genericType autoType
       procIn procOut initializer align case
@@ -1517,7 +1519,7 @@ proc(
     ## cmp int
       ValType .I64
       's' valId
-      "slt" string.wrap
+      "slt":s
       0 IntValue .constant
       errorBranch
       check1Branch
@@ -1527,7 +1529,7 @@ proc(
     ## cmp int
       ValType .I64
       's' valId
-      "sge" string.wrap
+      "sge":s
       size
       errorBranch
       okBranch
@@ -1548,7 +1550,7 @@ proc(
     pos prog appendPosPrintfArgs
     ")\n" sb.appendS
     "call $exit (w 1)\nhlt\n" sb.appendS ## use exit for flushing stdout
-    okBranch "checkIndex" string.wrap context startBranch
+    okBranch "checkIndex":s context startBranch
   return
 end
 
@@ -1703,7 +1705,7 @@ proc(
     pos prog appendPosPrintfArgs
     ")\n" sb.appendS
     "call $exit (w 1)\nhlt\n" sb.appendS ## use exit for flushing stdout
-    okBranch "checkEnum" string.wrap context startBranch
+    okBranch "checkEnum":s context startBranch
   return
 end
 
@@ -1881,7 +1883,7 @@ proc(
         ## cmp int
           valType
           't' valId
-          "eq" string.wrap
+          "eq":s
           cmpVal IntValue .constant
           caseBranch
           nextBranch
@@ -1922,7 +1924,7 @@ proc(
     ## cmp int
       valType
       't' valId
-      "slt" string.wrap
+      "slt":s
       cmpVal IntValue .constant
       ltBranch
       geBranch
@@ -2227,40 +2229,40 @@ proc(
   baseType context toValType =:: baseVal
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
-      sb "neg" string.wrap baseVal pos context appendUnaryOperator
+      sb "neg":s baseVal pos context appendUnaryOperator
       return
     ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
-      sb "add" string.wrap baseVal pos context appendBinaryOperator
+      sb "add":s baseVal pos context appendBinaryOperator
       return
     SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 C8_DIFF C16_DIFF C32_DIFF case
-      sb "sub" string.wrap baseVal pos context appendBinaryOperator
+      sb "sub":s baseVal pos context appendBinaryOperator
       return ## TODO ensure char-diff arguments are zero extended
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
-      sb "mul" string.wrap baseVal pos context appendBinaryOperator
+      sb "mul":s baseVal pos context appendBinaryOperator
       return
     DIV_I32  DIV_I64 DIV_F32 DIV_F64 case
-      sb "div" string.wrap baseVal pos context appendBinaryOperator
+      sb "div":s baseVal pos context appendBinaryOperator
       return
     DIV_I64I32 case
-      sb "div" string.wrap baseVal ValType .I32 true pos context appendMixedDivisionOperator
+      sb "div":s baseVal ValType .I32 true pos context appendMixedDivisionOperator
       return
     REM_I32 REM_I64 case
-      sb "rem" string.wrap baseVal pos context appendBinaryOperator
+      sb "rem":s baseVal pos context appendBinaryOperator
       return
     REM_I64I32 case
-      sb "rem" string.wrap baseVal ValType .I32 true pos context appendMixedDivisionOperator
+      sb "rem":s baseVal ValType .I32 true pos context appendMixedDivisionOperator
       return
     UDIV_I32 UDIV_I64 case
-      sb "udiv" string.wrap baseVal pos context appendBinaryOperator
+      sb "udiv":s baseVal pos context appendBinaryOperator
       return
     UDIV_I64I32 case
-      sb "udiv" string.wrap baseVal ValType .I32 false pos context appendMixedDivisionOperator
+      sb "udiv":s baseVal ValType .I32 false pos context appendMixedDivisionOperator
       return
     UMOD_I32 UMOD_I64 case
-      sb "urem" string.wrap baseVal pos context appendBinaryOperator
+      sb "urem":s baseVal pos context appendBinaryOperator
       return
     UMOD_I64I32 case
-      sb "urem" string.wrap baseVal ValType .I32 false pos context appendMixedDivisionOperator
+      sb "urem":s baseVal ValType .I32 false pos context appendMixedDivisionOperator
       return
     NOT_BOOL case
       pos context popValue =:: arg
@@ -2270,104 +2272,104 @@ proc(
         " =w extub %s" sb.appendS
         arg sb.appendI
         '\n' sb.appendC
-        "ceqw 0," string.wrap baseVal pos context appendUnaryOperator
+        "ceqw 0,":s baseVal pos context appendUnaryOperator
       return
     FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
       sb
-        "xor -1," string.wrap baseVal pos context appendUnaryOperator
+        "xor -1,":s baseVal pos context appendUnaryOperator
       return
     AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
-      sb "and" string.wrap baseVal pos context appendBinaryOperator
+      sb "and":s baseVal pos context appendBinaryOperator
       return
     OR_BOOL  OR_I8 OR_I16 OR_I32 OR_I64 case
-      sb "or" string.wrap baseVal pos context appendBinaryOperator
+      sb "or":s baseVal pos context appendBinaryOperator
       return
     XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
-      sb "xor" string.wrap baseVal pos context appendBinaryOperator
+      sb "xor":s baseVal pos context appendBinaryOperator
       return
     ## shift truncates second operand, no special handling for mixed size needed
     LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64I32 LSHR_I64 case
       sb
         baseType false pos context extendArguments
-        "shr" string.wrap baseVal pos context appendBinaryOperator
+        "shr":s baseVal pos context appendBinaryOperator
       return
     ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 case
       sb
         baseType true pos context extendArguments
-        "sar" string.wrap baseVal pos context appendBinaryOperator
+        "sar":s baseVal pos context appendBinaryOperator
       return
     SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
-      sb "shl" string.wrap baseVal pos context appendBinaryOperator
+      sb "shl":s baseVal pos context appendBinaryOperator
       return
     EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
       sb
         baseType true pos context extendArguments
-        "eq" string.wrap baseVal pos context appendComparisonOperator
+        "eq":s baseVal pos context appendComparisonOperator
       return
     NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
       sb
         baseType true pos context extendArguments
-        "ne" string.wrap baseVal pos context appendComparisonOperator
+        "ne":s baseVal pos context appendComparisonOperator
       return
     LT_I8 LT_I16 LT_I32 LT_I64 case
       sb
         baseType true pos context extendArguments
-        "slt" string.wrap baseVal pos context appendComparisonOperator
+        "slt":s baseVal pos context appendComparisonOperator
       return
     LE_I8 LE_I16 LE_I32 LE_I64 case
       sb
         baseType true pos context extendArguments
-        "sle" string.wrap baseVal pos context appendComparisonOperator
+        "sle":s baseVal pos context appendComparisonOperator
       return
     GE_I8 GE_I16 GE_I32 GE_I64 case
       sb
         baseType true pos context extendArguments
-        "sge" string.wrap baseVal pos context appendComparisonOperator
+        "sge":s baseVal pos context appendComparisonOperator
       return
     GT_I8 GT_I16 GT_I32 GT_I64 case
       sb
         baseType true pos context extendArguments
-        "sgt" string.wrap baseVal pos context appendComparisonOperator
+        "sgt":s baseVal pos context appendComparisonOperator
       return
     LT_F32 LT_F64 case
       sb
         baseType true pos context extendArguments
-        "lt" string.wrap baseVal pos context appendComparisonOperator
+        "lt":s baseVal pos context appendComparisonOperator
       return
     LE_F32 LE_F64 case
       sb
         baseType true pos context extendArguments
-        "le" string.wrap baseVal pos context appendComparisonOperator
+        "le":s baseVal pos context appendComparisonOperator
       return
     GE_F32 GE_F64 case
       sb
         baseType true pos context extendArguments
-        "ge" string.wrap baseVal pos context appendComparisonOperator
+        "ge":s baseVal pos context appendComparisonOperator
       return
     GT_F32 GT_F64  case
       sb
         baseType true pos context extendArguments
-        "gt" string.wrap baseVal pos context appendComparisonOperator
+        "gt":s baseVal pos context appendComparisonOperator
       return
     ULT_I8 ULT_I16 ULT_I32 ULT_I64 LT_C8 LT_C16 LT_C32 case
       sb
         baseType false pos context extendArguments
-        "ult" string.wrap baseVal pos context appendComparisonOperator
+        "ult":s baseVal pos context appendComparisonOperator
       return
     ULE_I8 ULE_I16 ULE_I32 ULE_I64 LE_C8 LE_C16 LE_C32 case
       sb
         baseType false pos context extendArguments
-        "ule" string.wrap baseVal pos context appendComparisonOperator
+        "ule":s baseVal pos context appendComparisonOperator
       return
     UGE_I8 UGE_I16 UGE_I32 UGE_I64 GE_C8 GE_C16 GE_C32 case
       sb
         baseType false pos context extendArguments
-        "uge" string.wrap baseVal pos context appendComparisonOperator
+        "uge":s baseVal pos context appendComparisonOperator
       return
     UGT_I8 UGT_I16 UGT_I32 UGT_I64 GT_C8 GT_C16 GT_C32 case
       sb
         baseType false pos context extendArguments
-        "ugt" string.wrap baseVal pos context appendComparisonOperator
+        "ugt":s baseVal pos context appendComparisonOperator
       return
     GET_PTR GET_PTR_MUT case
       ## base-type is pointer to value
@@ -2578,7 +2580,7 @@ proc(
     ", " sb.appendS branches@ 0 [] sb.appendBranchId
     ", " sb.appendS branches@ 1 [] sb.appendBranchId
     '\n' sb.appendC
-    branches@ 0 [] "float->int" string.wrap context startBranch
+    branches@ 0 [] "float->int":s context startBranch
     ## > min ?
     "%t" sb.appendS cMin sb.appendI
     " =w cgt" sb.appendS srcTypeName sb.appendC
@@ -2591,7 +2593,7 @@ proc(
     ", " sb.appendS branches@ 2 [] sb.appendBranchId
     ", " sb.appendS branches@ 3 [] sb.appendBranchId
     '\n' sb.appendC
-    branches@ 2 [] "float->int: check undeflow" string.wrap context startBranch
+    branches@ 2 [] "float->int: check undeflow":s context startBranch
     ## < max ?
     "%t" sb.appendS cMin sb.appendI
     " =w clt" sb.appendS srcTypeName sb.appendC
@@ -2604,7 +2606,7 @@ proc(
     ", " sb.appendS branches@ 4 [] sb.appendBranchId
     ", " sb.appendS branches@ 5 [] sb.appendBranchId
     '\n' sb.appendC
-    branches@ 4 [] "float->int: normal" string.wrap context startBranch
+    branches@ 4 [] "float->int: normal":s context startBranch
     ## cast value
     "%t" sb.appendS
     tCast sb.appendI
@@ -2617,7 +2619,7 @@ proc(
     "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
     '\n' sb.appendC
     ## NaN
-    branches@ 1 [] "float->int: NaN" string.wrap context startBranch
+    branches@ 1 [] "float->int: NaN":s context startBranch
     "%t" sb.appendS
     tNaN sb.appendI
     " =" sb.appendS
@@ -2626,7 +2628,7 @@ proc(
     "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
     '\n' sb.appendC
     ## <Min
-    branches@ 3 [] "float->int: underflow" string.wrap context startBranch
+    branches@ 3 [] "float->int: underflow":s context startBranch
     "%t" sb.appendS
     tMin sb.appendI
     " =" sb.appendS
@@ -2636,7 +2638,7 @@ proc(
     "\njmp " sb.appendS branches@ 6 [] sb.appendBranchId
     '\n' sb.appendC
     ## >Max
-    branches@ 5 [] "float->int: overflow" string.wrap context startBranch
+    branches@ 5 [] "float->int: overflow":s context startBranch
     "%t" sb.appendS
     tMax sb.appendI
     " =" sb.appendS
@@ -2644,7 +2646,7 @@ proc(
     " copy " sb.appendS
     targetVal unsigned BoundType .MAX targetVal appendNumberBound
     '\n' sb.appendC
-    branches@ 6 [] "float->int: end" string.wrap context startBranch
+    branches@ 6 [] "float->int: end":s context startBranch
     "%s" sb.appendS
     targetIndex sb.appendI
     " =" sb.appendS
@@ -3995,9 +3997,9 @@ proc(
       return
     equalityOperator case
       op [] .val .equalityOperator .EQ ?? if
-        "eq" string.wrap
+        "eq":s
       else
-        "ne" string.wrap
+        "ne":s
       end =:: cmpName
       op [] .dataType context referenceOnly ! if
         op [] .dataType context toValType =:: valType
@@ -4143,7 +4145,7 @@ proc(
               ifBlock [] .orBranches list.asArray
               mergeBranches@
               ## MergePoint
-                "or-if" string.wrap
+                "or-if":s
                 ifBlock [] .blockId
                 ifBlock [] .orBranchIds list.asArray
                 op [] .pos
@@ -4156,7 +4158,7 @@ proc(
             end
           end
           newSb
-            ifBranch "if" string.wrap context startBranch
+            ifBranch "if":s context startBranch
           return
         AND_IF OR_IF AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
           context [] .openBlocks list.peek =:: ifBlock?
@@ -4213,7 +4215,7 @@ proc(
               ifBlock .andBranchIds=
             end
             nextBranch
-              "and/or if" string.wrap
+              "and/or if":s
             context startBranch
           return
         ELSE ELSE_TRUE ELSE_FALSE case
@@ -4238,7 +4240,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
-              "else" string.wrap
+              "else":s
               context
             startBranch
             true context .reachable=
@@ -4249,7 +4251,7 @@ proc(
             ifBlock [] .If .andBranches list.asArray
             mergeBranches@
             ## MergePoint
-              "and-if" string.wrap
+              "and-if":s
               ifBlock [] .If .blockId
               ifBlock [] .If .andBranchIds list.asArray
               op [] .pos
@@ -4290,7 +4292,7 @@ proc(
                   BranchType .LABEL
                   opIndex
                 BranchId new
-                "case/default" string.wrap
+                "case/default":s
               context startBranch
               true context .reachable=
             return
@@ -4369,7 +4371,7 @@ proc(
               "jmp " sb.appendS
               branchId sb.appendBranchId
               '\n' sb.appendC
-              branchId "while" string.wrap context startBranch
+              branchId "while":s context startBranch
               loopEltCount 1 - while ..dup 0 >= do =:: i
                 loopElts i list.at .data =:: elt
                 "%s" sb.appendS
@@ -4435,7 +4437,7 @@ proc(
                 context [] .currentBranch list.append
               whileBlock .breakBranchIds=
             end
-            nextBranch "and/or do" string.wrap context startBranch
+            nextBranch "and/or do":s context startBranch
           return
         DO case
           context [] .openBlocks list.peek .data .While =:: whileBlock
@@ -4474,7 +4476,7 @@ proc(
             whileBlock [] .doBranches list.asArray
             mergeBranches@
             ## MergePoint
-                "or-do" string.wrap
+                "or-do":s
                 whileBlock [] .blockId
                 whileBlock [] .doBranchIds list.asArray
                 op [] .pos
@@ -4487,7 +4489,7 @@ proc(
             end
           end
           newSb
-            doBranch "do" string.wrap context startBranch
+            doBranch "do":s context startBranch
           return
         BREAK CONTINUE case
           op [] .val .block .blockType =:: blockType
@@ -4553,7 +4555,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
-              "finally" string.wrap
+              "finally":s
               context
             startBranch
           =:: mut: newSb
@@ -4564,7 +4566,7 @@ proc(
               continueBranches [] list.asArray
               mergeBranches@
               ## MergePoint
-                "while" string.wrap
+                "while":s
                 whileBlock [] .blockId
                 whileBlock .continueBranchIds [] list.asArray
                 op [] .pos
@@ -4616,7 +4618,7 @@ proc(
               nextBranch sb.appendBranchId
             end
             '\n' sb.appendC
-            nextBranch "and/or" string.wrap context startBranch
+            nextBranch "and/or":s context startBranch
           return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
@@ -4659,7 +4661,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
-              "end if" string.wrap
+              "end if":s
               context
             startBranch
           =:: mut: newSb
@@ -4669,7 +4671,7 @@ proc(
               branches@ nBranches array.create
               mergeBranches@
               ## MergeIf
-                "if" string.wrap
+                "if":s
                 ifBlock .blockId
                 branchIds@ nBranches array.create
                 op [] .pos
@@ -4700,7 +4702,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
-              "end switch" string.wrap
+              "end switch":s
               context
             startBranch
           =:: mut: newSb
@@ -4711,7 +4713,7 @@ proc(
               caseBranches list.asArray
               mergeBranches@
               ## MergePoint
-                "switch" string.wrap
+                "switch":s
                 switchBlock .blockId
                 switchBlock .caseBranchIds list.asArray
                 op [] .pos
@@ -4769,7 +4771,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
-              "end while" string.wrap
+              "end while":s
               context
             startBranch
           newSb@ =
@@ -4781,7 +4783,7 @@ proc(
               breakBranches list.asArray
               mergeBranches@
               ## MergePoint
-                "while" string.wrap
+                "while":s
                 whileBlock .blockId
                 whileBlock .breakBranchIds list.asArray
                 op [] .pos
@@ -4817,7 +4819,7 @@ proc(
                 BranchType .LABEL
                 opIndex
               BranchId new
-              "end and/or" string.wrap
+              "end and/or":s
               context
             startBranch
           =:: mut: newSb
@@ -4826,7 +4828,7 @@ proc(
             andOrBlock .branches list.asArray
             mergeBranches@
             ## MergePoint
-              "and/or" string.wrap
+              "and/or":s
               andOrBlock .blockId
               andOrBlock .branchIds list.asArray
               op [] .pos
@@ -4868,12 +4870,12 @@ proc(
         op [] .pos sb.appendPosQBE
         retCount 1 == if
           op [] .pos context popValue
-          "ret %s" string.wrap
+          "ret %s":s
         else retCount 0 > _if
           retType op [] .pos context true appendAlloc =:: tmpId
           retType 't' tmpId op [] .pos context initializeTupleQBE
           tmpId
-          "ret %t" string.wrap
+          "ret %t":s
         else
           -1:i64  string.empty ## values will be ignored
         end =:: retStr =:: retId
@@ -4936,7 +4938,7 @@ proc(
         op [] .val .RuntimeAssert context sb.appendStringPtrConstQBE
         op [] .pos prog appendPosPrintfArgs
         ")\ncall $exit(w 1)\nhlt\n" sb.appendS
-        successBranch "end assert" string.wrap context startBranch
+        successBranch "end assert":s context startBranch
       return
     panicWithMessage case
       false context .reachable=

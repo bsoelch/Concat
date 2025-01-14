@@ -1311,15 +1311,15 @@ proc(
     s_f64
   pos context addStaticBuiltIn
   ## declare bundles for for-loop iterators
-  "..itr.prepare" string.wrap pos context newBuiltInBundle
+  "..itr.prepare":s pos context newBuiltInBundle
   if true return end
-  "..itr.check" string.wrap pos context newBuiltInBundle
+  "..itr.check":s pos context newBuiltInBundle
   if true return end
-  "..itr.get" string.wrap pos context newBuiltInBundle
+  "..itr.get":s pos context newBuiltInBundle
   if true return end
-  "..itr.step" string.wrap pos context newBuiltInBundle
+  "..itr.step":s pos context newBuiltInBundle
   if true return end
-  "..itr.end" string.wrap pos context newBuiltInBundle
+  "..itr.end":s pos context newBuiltInBundle
   if true return end
   labelContext id.clearNamespace
   false return

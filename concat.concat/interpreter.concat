@@ -2145,7 +2145,7 @@ proc(
             op [] .pos errors appendError
           end
           context getLabeledValueContext =:: valueContext =:: initialLabelOffset
-          1 "field-declaration" string.wrap op [] .pos context checkStack if
+          1 "field-declaration":s op [] .pos context checkStack if
             EvalResult .Error return
           end
           context [] .stackInfo
@@ -2815,7 +2815,7 @@ proc(
       op [] .val .autoCast =:: castInfo
       castInfo .offset i64 cast.u 1 + =:: offset
       offset
-        "autoCast" string.wrap
+        "autoCast":s
       op [] .pos context checkStack if
         EvalResult .Error return
       end
@@ -3030,7 +3030,7 @@ proc(
       op [] .val .stackMod .modType switch
         DROP case
           op [] .val .stackMod .n i64 cast.u
-            "drop" string.wrap
+            "drop":s
           op [] .pos context checkStack if
             EvalResult .Error return
           end
@@ -3039,7 +3039,7 @@ proc(
         COPY case
           op [] .val .stackMod .n i64 cast.u 1 + =:: offset
           offset
-            "stack modification" string.wrap
+            "stack modification":s
           op [] .pos context checkStack if
             EvalResult .Error return
           end
@@ -3052,7 +3052,7 @@ proc(
           EvalResult .Ok return
         SWAP case
           2
-            "swap" string.wrap
+            "swap":s
           op [] .pos context checkStack if
             EvalResult .Error return
           end
@@ -3386,7 +3386,7 @@ namespace: interpreter
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     tupleType typeContext types.compositeElts =:: elts
-    elts .length "tuple-creation" string.wrap pos context checkStack if
+    elts .length "tuple-creation":s pos context checkStack if
       true return
     end
     context [] .stack .length elts .length - =:: offset
@@ -3470,7 +3470,7 @@ proc(
     pos errors appendError
     true return
   end
-  nArgs "procedure call" string.wrap pos context checkStack if
+  nArgs "procedure call":s pos context checkStack if
     128 sb.create
       "inType: (" sb.appendS
       inType typeContext sb.appendType
