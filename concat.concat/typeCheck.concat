@@ -1183,7 +1183,7 @@ proc(
         default break
       end
       break
-    implementProcedure blockEnd unreachable NOP compilerInfo case
+    implementProcedure blockEnd NOP compilerInfo panic panicWithMessage case
       return
     default break
   end
@@ -3568,7 +3568,7 @@ proc(
                   end ..drop
                 op .pos errors appendError
               end
-              op .pos opUnreachable state appendOp ..drop
+              "enum label outside expected range":s op .pos opPanicWithMessage state appendOp ..drop
             else
               caseBranches
                 ## BranchPoint
@@ -3976,11 +3976,6 @@ proc(
     NewEnum call checkEnumLabel setEnumLabel
     existsName hasElement case
       break
-    unreachable case
-      false state .reachable=
-      op state appendOp ..drop
-      op .pos state endSwitchBranch
-      return
     stackMod case
       op .val .stackMod .modType switch
         DROP case

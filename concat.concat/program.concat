@@ -123,7 +123,6 @@ union(
              string : RuntimeAssert
           ErrorType : Error
      TypeMemoryInfo : typeInfo
-                  _ : unreachable
                   _ : panic
              string : panicWithMessage
        CompilerInfo : compilerInfo
@@ -313,9 +312,6 @@ end
 proc( TypeModifier FilePosition  -> Operation ) =>: export: opTypeModifier
   =:: pos
   OpValue .typeModifier Type .undefined pos Operation new return
-end
-proc( FilePosition : pos -> Operation ) =>: export: opUnreachable
-  OpValue .unreachable Type .undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opPanic
   OpValue .panic Type .undefined pos Operation new return
@@ -873,9 +869,6 @@ namespace: sb
             WARNING case "..compiler.warning" sb.appendS break
             INFO case "..compiler.info" sb.appendS break
           end
-          break
-        unreachable case
-          "unreachable" sb.appendS
           break
         panic case
           "..panic" sb.appendS

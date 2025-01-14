@@ -3196,7 +3196,7 @@ proc(
     bitCast
     ConstantReference NewReference
     checkEnumLabel setEnumLabel
-    unreachable case
+    case
       "unsupported operation in constant evaluation: " sb.wrap
         op [] program sb.appendOp
       op [] .pos errors appendError

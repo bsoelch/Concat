@@ -4944,20 +4944,13 @@ proc(
       false context .reachable=
       sb
         op [] .pos sb.appendPosQBE
-        "call $printf(l $" sb.appendS
+        "call $printf(l $" sb.appendS ## TODO? print to stderr
         PANIC_FORMAT sb.appendS
         ",l " sb.appendS
         op [] .val .panicWithMessage .length sb.appendI
         ",l " sb.appendS
         op [] .val .panicWithMessage context sb.appendStringPtrConstQBE
         ")\ncall $exit(w 1)\nhlt\n" sb.appendS
-      return
-    unreachable case
-      false context .reachable=
-      sb
-        op [] .pos sb.appendPosQBE
-        "## unreachable\n" sb.appendS
-        "hlt\n" sb.appendS
       return
     stackMod case
       op [] .val .stackMod .modType switch
