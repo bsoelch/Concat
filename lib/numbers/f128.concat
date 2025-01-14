@@ -1043,6 +1043,28 @@ namespace: f160
   end
   ## XXX div
 end
+namespace: std.literals.f128.static
+  proc( char8 _ ptr : chars i64 : k -> f128 ) =>: static: export: shaddow: parse
+    char8 128 array : errMessageBuffer
+    chars k string.create =:: str
+    str 0 f128.parse =:: err
+    err .NONE ?? or err .INT ?? if
+      return
+    else err .OVERFLOW ?? _if
+      errMessageBuffer@ $ ..length i32 cast sb.fromBuffer
+        "float literal overflows size for type f128: `" sb.appendS
+        str sb.appendStr
+        '`' sb.appendC
+      sb.asStr ..compiler.warning
+      return
+    end
+    errMessageBuffer@ $ ..length i32 cast sb.fromBuffer
+      "invalid float constant: `" sb.appendS
+      str sb.appendStr
+      '`' sb.appendC
+    sb.asStr ..compiler.error
+  end
+end
 
 ## define operator overloads
 overload: -_ f128.neg f160.neg end

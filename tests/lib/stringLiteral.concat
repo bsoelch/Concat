@@ -1,4 +1,5 @@
-import stringLiteral
+import string
+using std.literals
 
 proc( -> ) =>: main
   "This is a string literal":s =:: str

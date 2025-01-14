@@ -1,3 +1,6 @@
+import string
+using std.literals
+
 import "program.concat"
 
 ## TODO? char+-int
@@ -1323,7 +1326,6 @@ proc(
 end
 
 ## XXX? directly link names to labels
-import stringLiteral
 {
   "..builtIn.neg.i8":s "..builtIn.neg.i16":s "..builtIn.neg.i32":s "..builtIn.neg.i64":s
     "..builtIn.neg.f32":s "..builtIn.neg.f64":s

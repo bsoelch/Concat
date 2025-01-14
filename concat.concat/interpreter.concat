@@ -1,6 +1,7 @@
 import map
 import arenaAlloc
-import stringLiteral
+import string
+using std.literals
 
 import "interpreter/operators.concat"
 import "identifiers.concat"

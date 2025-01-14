@@ -9,16 +9,13 @@ import map
 import math
 import mem
 import numbers/i128
-import numbers/i128Literal
 import numbers/f128
-import numbers/f128Literal
 import numbers/printFloat
 import numbers/printInt
 import numbers
 import optional
 import string
 import stringBuilder
-import stringLiteral
 import stringIO
 import sys
 import unicode

@@ -1,9 +1,10 @@
 import stringIO
 import list
 import arrayView
+import string
 import numbers
-import stringLiteral
 import unicode
+using std.literals
 
 import "program.concat"
 import "files.concat"
@@ -435,8 +436,8 @@ proc(
       else ..dup "auto:" string.wrap string.eq _if
         id.FLAG_AUTO flags | flags@ =
         id.FLAG_STATIC flags | flags@ =
-        ## XXX? is there any situation where a non-static auto-arg makes sense?
-        ##  auto-args used only in type-generators & args of type-generators should be static
+        ## XXX? allow auto-args to be non-static
+        ##  + error when generic-argument passed to sub-procedure
         true isModifier@ =
       else ..dup "static:" string.wrap string.eq _if
         id.FLAG_STATIC flags | flags@ =

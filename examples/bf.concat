@@ -2,9 +2,9 @@
 simple Brainfuck interpreter
 +#
 import string
-import stringLiteral
 import list
 import io
+using std.literals ## move literals to top-level namespace
 
 proc( string -> i8 ) =>: runBf_0
   0x100 runBf_C

@@ -215,3 +215,36 @@ namespace: string32
     a toArray b toArray array.eq return
   end
 end
+
+namespace: std.literals
+  namespace: string
+    namespace: static
+      proc( char8 _ ptr : p i64 : k -> string ) =>: static: export: parse
+        p k string new
+      end
+    end
+  end
+  namespace: string16
+    namespace: static
+      proc( char16 _ ptr : p i64 : k -> string16 ) =>: static: export: parse
+        p k string16 new
+      end
+    end
+  end
+  namespace: string32
+    namespace: static
+      proc( char32 _ ptr : p i64 : k -> string32 ) =>: static: export: parse
+        p k string32 new
+      end
+    end
+  end
+  namespace: s
+    namespace: static
+      overload: static: export: parse
+        string.static.parse
+        string16.static.parse
+        string32.static.parse
+      end
+    end
+  end
+end

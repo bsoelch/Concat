@@ -1,5 +1,7 @@
-import numbers/i128Literal
-import numbers/f128Literal
+import numbers/i128
+import numbers/f128
+using std.literals
+
 proc( -> ) =>: main
   "0":i128 0 i128.fromU64 i128.eq "0" assert
   "0b11'00_10'01":i128 0b11001001 i128.fromU64 i128.eq "11001001" assert
