@@ -385,4 +385,159 @@ namespace: array
       end
     splitIndex return
   end
+
+  ( type : T -> type ) =>: getItr
+    struct(
+      T arrayView : data
+      i64 : index
+    )
+  end
+  ( type : T -> type ) =>: mapItr
+    struct(
+      T arrayView.mut : data
+      i64 : index
+    )
+  end
+  ( type : S type : T -> type ) =>: mapToItr
+    struct(
+      S arrayView : src
+      T arrayView.mut : target
+      i64 : index
+    )
+  end
+
+  proc( type : auto: T
+    T arrayView.mut
+  -> T array.mapItr ) =>: export: itrMap
+    0 T array.mapItr new
+  end
+  proc( type : auto: T
+    T arrayView.mut : data
+    ( T -> T ) ptr : f
+  -> T arrayView.mut ) =>: export: fMap
+    data itrMap for f () end return
+  end
+  overload: export: map itrMap fMap end
+  proc( type : auto: S type : auto: T
+    S arrayView : src
+    T arrayView.mut : target
+  -> S T array.mapToItr ) =>: export: itrMapTo
+    target .length src .length < if
+      "target list cannot hold all values in source" ..panic
+    end
+    src target 0 S T array.mapToItr new
+  end
+  proc( type : auto: S type : auto: T
+    S arrayView : src
+    T arrayView.mut : target
+    ( S -> T ) ptr : f
+  -> T arrayView.mut ) =>: export: fMapTo
+    src target itrMapTo for f () end return
+  end
+  proc( type : auto: S type : auto: T
+    S arrayView.mut : src
+    T arrayView.mut : target
+  -> S T array.mapToItr ) =>: export: itrMapMutTo
+    src freeze target itrMapTo
+  end
+  proc( type : auto: S type : auto: T
+    S arrayView.mut : src
+    T arrayView.mut : target
+  -> T arrayView.mut ) =>: export: fMapMutTo
+    src freeze target fMapTo
+  end
+  overload: export: mapTo
+    itrMapTo fMapTo itrMapMutTo fMapMutTo
+  end
+  namespace: mapItr
+    proc( type : auto: T T array.mapItr -> T array.mapItr ) =>: prepare end
+    proc( type : auto: S type : auto: T
+      S T array.mapToItr
+    -> S T array.mapToItr ) =>: prepareTo end
+    proc( type : auto: T T array.mapItr : itr -> bool ) =>: check
+      itr .index itr .data .length <
+    end
+    proc( type : auto: S type : auto: T
+      S T array.mapToItr : itr
+    -> bool ) =>: checkTo
+      itr .index itr .src .length <
+    end
+    proc( type : auto: T T array.mapItr : itr -> T ) =>: shaddow: get
+      itr .data itr .index array.get
+    end
+    proc( type : auto: S type : auto: T
+      S T array.mapToItr : itr
+    -> S ) =>: getTo
+      itr .src itr .index array.get
+    end
+    proc( type : auto: T T : newVal T array.mapItr : itr -> T array.mapItr ) =>: step
+      newVal itr .data itr .index array.set
+      itr
+        $ .index 1 + >$ .index=
+      return
+    end
+    proc( type : auto: S type : auto: T
+      T : newVal
+      S T array.mapToItr : itr
+    -> S T array.mapToItr ) =>: stepTo
+      newVal itr .target itr .index array.set
+      itr
+        $ .index 1 + >$ .index=
+      return
+    end
+    proc( type : auto: T T array.mapItr : itr -> T arrayView.mut ) =>: end
+      itr .data
+    end
+    proc( type : auto: S type : auto: T
+      S T array.mapToItr : itr
+    -> T arrayView.mut ) =>: endTo
+      itr .target
+    end
+  end
+  namespace: itr
+    proc( type : auto: T T arrayView -> T array.getItr ) =>: prepare
+      0 T array.getItr new
+    end
+    proc( type : auto: T T arrayView.mut -> T array.getItr ) =>: prepareMut
+      freeze 0 T array.getItr new
+    end
+    proc( type : auto: T T array.getItr : itr -> bool ) =>: check
+      itr .index itr .data .length <
+    end
+    proc( type : auto: T T array.getItr : itr -> T ) =>: shaddow: get
+      itr .data itr .index array.get
+    end
+    proc( type : auto: T T array.getItr : itr -> T array.getItr ) =>: step
+      itr
+        $ .index 1 + >$ .index=
+      return
+    end
+    proc( type : auto: T T array.getItr : itr -> ) =>: end end
+  end
+end
+overload: export: ..itr.prepare
+  array.mapItr.prepare
+  array.mapItr.prepareTo
+  array.itr.prepare
+  array.itr.prepareMut
+end
+overload: export: ..itr.check
+  array.mapItr.check
+  array.mapItr.checkTo
+  array.itr.check
+end
+overload: export: ..itr.get
+  array.mapItr.get
+  array.mapItr.getTo
+  array.itr.get
+end
+overload: export: ..itr.step
+  array.mapItr.step
+  array.mapItr.stepTo
+  array.itr.step
+end
+overload: export: ..itr.end
+  array.mapItr.end
+  array.mapItr.endTo
+  array.itr.end
 end
