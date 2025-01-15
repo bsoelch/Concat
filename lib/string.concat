@@ -1,11 +1,11 @@
 import core/ptr
 
-import arrayView
+import slice
 import mem
 
-char8 arrayView =:: export: string
-char16 arrayView =:: export: string16
-char32 arrayView =:: export: string32
+char8 slice =:: export: string
+char16 slice =:: export: string16
+char32 slice =:: export: string32
 
 namespace: string
   { "" : data 0 : length } string =: export: empty
@@ -16,17 +16,17 @@ namespace: string
   proc( i64 : auto: k  char8 k ptr : str -> string ) =>: export: wrap
     str k create return
   end
-  proc( char8 arrayView -> string ) =>: export: fromChars
+  proc( char8 slice -> string ) =>: export: fromChars
     string cast
   end
-  proc( string -> char8 arrayView ) =>: export: chars
-    char8 arrayView cast
+  proc( string -> char8 slice ) =>: export: chars
+    char8 slice cast
   end
-  proc( i8 arrayView : arr -> string ) =>: export: fromBytes
+  proc( i8 slice : arr -> string ) =>: export: fromBytes
     arr .data char8 _ ptr cast arr .length create
   end
-  proc( string : str -> i8 arrayView ) =>: export: bytes
-    str .data i8 _ ptr cast str .length array.create
+  proc( string : str -> i8 slice ) =>: export: bytes
+    str .data i8 _ ptr cast str .length slice.create
   end
 
   proc( string : a string : b -> i32 ) =>: export: compare
@@ -57,10 +57,10 @@ namespace: string
   end
 
   proc( string : str i32 : index -> char8 ) =>: export: charAt_32
-    str char8 arrayView cast index array.get return
+    str char8 slice cast index slice.get return
   end
   proc( string : str i64 : index -> char8 ) =>: export: charAt_64
-    str char8 arrayView cast index array.get return
+    str char8 slice cast index slice.get return
   end
   overload: export: charAt
     charAt_32
@@ -68,12 +68,12 @@ namespace: string
   end
 
   proc( string : str char8 : chr -> i64 ) =>: export: indexOf
-    str char8 arrayView cast chr array.indexOf return
+    str char8 slice cast chr slice.indexOf return
   end
   proc( string : str char8 : chr -> i64 ) =>: export: lastIndexOf
-    str char8 arrayView cast chr array.lastIndexOf return
+    str char8 slice cast chr slice.lastIndexOf return
   end
-  proc( string : base string : subStr -> i64 ) =>: export: indexOfStr ## XXX move to arrayView
+  proc( string : base string : subStr -> i64 ) =>: export: indexOfStr ## XXX move to slice
     subStr .length base .length > if
       -1 return
     end
@@ -114,7 +114,7 @@ namespace: string
   end
 
   proc( string : str char8 : chr -> bool ) =>: export: contains
-    str char8 arrayView cast chr array.indexOf -1 != return
+    str char8 slice cast chr slice.indexOf -1 != return
   end
   proc( string : base string : subStr -> bool ) =>: export: isSubstring
     base subStr indexOfStr -1 != return
@@ -122,27 +122,27 @@ namespace: string
 
   ## first n characters
   proc( string : str i64 : n -> string ) =>: export: head
-    str char8 arrayView cast n array.head string cast return
+    str char8 slice cast n slice.head string cast return
   end
   ## everything excluding the first n characters
   proc( string : str i64 : n -> string ) =>: export: tail
-    str char8 arrayView cast n array.tail string cast return
+    str char8 slice cast n slice.tail string cast return
   end
   ## equivalent to:  <from> tail <len> head
-  proc( string : str i64 : from i64 : len -> string ) =>: export: slice
-    str char8 arrayView cast from len array.slice string cast return
+  proc( string : str i64 : from i64 : len -> string ) =>: export: getSlice
+    str char8 slice cast from len slice.getSlice string cast return
   end
   proc( string : str i64 : index -> string string ) =>: export: cutIndex
-    str char8 arrayView cast index array.cutIndex ..swap string cast ..swap string cast return
+    str char8 slice cast index slice.cutIndex ..swap string cast ..swap string cast return
   end
   proc( string : str i64 : index -> string string ) =>: export: splitIndex
-    str char8 arrayView cast index array.splitIndex ..swap string cast ..swap string cast return
+    str char8 slice cast index slice.splitIndex ..swap string cast ..swap string cast return
   end
   proc( string : str char8 : chr -> string string ) =>: export: split
-    str char8 arrayView cast chr array.split ..swap string cast ..swap string cast return
+    str char8 slice cast chr slice.split ..swap string cast ..swap string cast return
   end
   proc( string : str char8 : chr -> string string ) =>: export: splitLast
-    str char8 arrayView cast chr array.splitLast ..swap string cast ..swap string cast return
+    str char8 slice cast chr slice.splitLast ..swap string cast ..swap string cast return
   end
 end
 
@@ -154,31 +154,31 @@ namespace: string16
     string16 new return
   end
 
-  proc( char16 arrayView -> string16 ) =>: export: fromArray
+  proc( char16 slice -> string16 ) =>: export: fromArray
     string16 cast
   end
-  proc( string16 -> char16 arrayView ) =>: export: toArray
-    char16 arrayView cast
+  proc( string16 -> char16 slice ) =>: export: toArray
+    char16 slice cast
   end
-  proc( i16 arrayView : arr -> string16 ) =>: export: fromIntArray
+  proc( i16 slice : arr -> string16 ) =>: export: fromIntArray
     arr .data char16 _ ptr cast arr .length create
   end
-  proc( string16 : str -> i16 arrayView ) =>: export: toIntArray
-    str .data i16 _ ptr cast str .length array.create
+  proc( string16 : str -> i16 slice ) =>: export: toIntArray
+    str .data i16 _ ptr cast str .length slice.create
   end
 
   proc( string16 : str i32 : index -> char16 ) =>: export: get_32
-    str char16 arrayView cast index array.get return
+    str char16 slice cast index slice.get return
   end
   proc( string16 : str i64 : index -> char16 ) =>: export: get_64
-    str char16 arrayView cast index array.get return
+    str char16 slice cast index slice.get return
   end
   overload: export: get
     get_32
     get_64
   end
   proc( string16 : a string16 : b -> bool ) =>: export: eq
-    a toArray b toArray array.eq return
+    a toArray b toArray slice.eq return
   end
 end
 namespace: string32
@@ -188,31 +188,31 @@ namespace: string32
     string32 new return
   end
 
-  proc( char32 arrayView -> string32 ) =>: export: fromArray
+  proc( char32 slice -> string32 ) =>: export: fromArray
     string32 cast
   end
-  proc( string32 -> char32 arrayView ) =>: export: toArray
-    char32 arrayView cast
+  proc( string32 -> char32 slice ) =>: export: toArray
+    char32 slice cast
   end
-  proc( i32 arrayView : arr -> string32 ) =>: export: fromIntArray
+  proc( i32 slice : arr -> string32 ) =>: export: fromIntArray
     arr .data char32 _ ptr cast arr .length create
   end
-  proc( string32 : str -> i32 arrayView ) =>: export: toIntArray
-    str .data i32 _ ptr cast str .length array.create
+  proc( string32 : str -> i32 slice ) =>: export: toIntArray
+    str .data i32 _ ptr cast str .length slice.create
   end
 
   proc( string32 : str i32 : index -> char32 ) =>: export: get_32
-    str char32 arrayView cast index array.get return
+    str char32 slice cast index slice.get return
   end
   proc( string32 : str i64 : index -> char32 ) =>: export: get_64
-    str char32 arrayView cast index array.get return
+    str char32 slice cast index slice.get return
   end
   overload: export: get
     get_32
     get_64
   end
   proc( string32 : a string32 : b -> bool ) =>: export: eq
-    a toArray b toArray array.eq return
+    a toArray b toArray slice.eq return
   end
 end
 

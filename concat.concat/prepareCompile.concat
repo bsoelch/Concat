@@ -177,7 +177,7 @@ proc(
       end
       newOps
         0:i64 while ..dup outArgs .length < do =:: i
-          outArgs i array.get =:: arg
+          outArgs i slice.get =:: arg
           arg typeContext types.isEmpty if
             i 1 + continue
           end
@@ -212,12 +212,12 @@ proc(
           newOps op list.append return
         IF case
           blockId
-            newOps list.asMutableArray
+            newOps list.asMutableSlice
           program program.jumps.updateIf
           newOps op list.append return
         ELSE case
           blockId
-            newOps list.asMutableArray
+            newOps list.asMutableSlice
           program program.jumps.updateElse
           newOps op list.append return
         SWITCH case
@@ -257,7 +257,7 @@ proc(
           newOps op list.append return
         DO case
           blockId
-            newOps list.asMutableArray
+            newOps list.asMutableSlice
           program program.jumps.updateDo
           newOps op list.append return
         BREAK case
@@ -272,7 +272,7 @@ proc(
           newOps op list.append return
         FINALLY case
           blockId
-            newOps list.asMutableArray
+            newOps list.asMutableSlice
           program program.jumps.updateFinally
           newOps op list.append return
         AND case
@@ -299,25 +299,25 @@ proc(
           newOps op list.append return
         ELSE case
           blockId
-            newOps list.asMutableArray
+            newOps list.asMutableSlice
           program program.jumps.updateEndIf
           op@ .val .blockEnd .jumpDistance=
           newOps op list.append return
         SWITCH case
           blockId
-            newOps list.asMutableArray
+            newOps list.asMutableSlice
           program program.jumps.updateEndSwitch
           op@ .val .blockEnd .jumpDistance=
           newOps op list.append return
         WHILE case
           blockId
-            newOps list.asMutableArray
+            newOps list.asMutableSlice
           program program.jumps.updateEndWhile
           op@ .val .blockEnd .jumpDistance=
           newOps op list.append return
         AND OR case
           blockId
-            newOps list.asMutableArray
+            newOps list.asMutableSlice
           program program.jumps.updateEndAndOr
           op@ .val .blockEnd .jumpDistance=
           newOps op list.append return
@@ -345,7 +345,7 @@ proc(
 end
 
 proc(
-  Operation arrayView : ops
+  Operation slice : ops
   Operation list ptr.mut : newOps
   VariableInfo list ptr.mut : variables
   i64 ptr.mut : codeStart
@@ -360,7 +360,7 @@ proc(
   newOps []
     ..dup .length codeStart =
     0:i64 while ..dup ops .length < do =:: opIndex
-      ops opIndex array.at .data [] context compileOp
+      ops opIndex slice.at .data [] context compileOp
       opIndex 1 +
     end ..drop
     ..dup .length codeStart [] - codeLength =
@@ -401,7 +401,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
           f [] .localOps
             currentImpl [] .codeStart
             currentImpl [] .codeLength
-          list.slice
+          list.getSlice
           f .tmpOps
           currentImpl .variables
           currentImpl .codeStart
@@ -412,7 +412,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       end ..drop
     else
       ## convertProc
-        f [] .localOps impl [] .codeStart impl [] .codeLength list.slice
+        f [] .localOps impl [] .codeStart impl [] .codeLength list.getSlice
         f .tmpOps
         impl .variables
         impl .codeStart

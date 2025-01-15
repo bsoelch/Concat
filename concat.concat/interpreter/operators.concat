@@ -408,82 +408,82 @@ namespace: interpreter
       Array8 case
         ptrValue .Array8 =:: arrayConst
           isOffset if
-            arrayConst offset array.tail ConstValue .Array8
+            arrayConst offset slice.tail ConstValue .Array8
           else
-            arrayConst 0 array.get i64 cast.u ConstValue .Int
+            arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       Array16 case
         ptrValue .Array16 =:: arrayConst
           isOffset if
-            arrayConst offset array.tail ConstValue .Array16
+            arrayConst offset slice.tail ConstValue .Array16
           else
-            arrayConst 0 array.get i64 cast.u ConstValue .Int
+            arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       Array32 case
         ptrValue .Array32 =:: arrayConst
           isOffset if
-            arrayConst offset array.tail ConstValue .Array32
+            arrayConst offset slice.tail ConstValue .Array32
           else
-            arrayConst 0 array.get i64 cast.u ConstValue .Int
+            arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       Array64 case
         ptrValue .Array64 =:: arrayConst
           isOffset if
-            arrayConst offset array.tail ConstValue .Array64
+            arrayConst offset slice.tail ConstValue .Array64
           else
-            arrayConst 0 array.get i64 cast.u ConstValue .Int
+            arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       Array case
         ptrValue .Array =:: arrayConst
           isOffset if
-            arrayConst offset array.tail ConstValue .Array
+            arrayConst offset slice.tail ConstValue .Array
           else
-            arrayConst 0 array.get
+            arrayConst 0 slice.get
           end
         OperatorResult .success return
       LocalValue case
         ## XXX? correctly handle local value ( local array ( ... ) )
         ptrValue .LocalValue ConstValue ptr.mut cast [] OperatorResult .success return
       LocalArray case
-        ptrValue .LocalArray ConstValue arrayView.mut cast =:: arrayConst
+        ptrValue .LocalArray ConstValue slice.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail LocalSlice cast ConstValue .LocalArray
+            arrayConst offset slice.tail LocalSlice cast ConstValue .LocalArray
           else
-            arrayConst 0 array.at .data LocalAddress cast ConstValue .LocalValue
+            arrayConst 0 slice.at .data LocalAddress cast ConstValue .LocalValue
           end
         OperatorResult .success return
       LocalArray8 case
-        ptrValue .LocalArray8 i8 arrayView.mut cast =:: arrayConst
+        ptrValue .LocalArray8 i8 slice.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail LocalSlice8 cast ConstValue .LocalArray8
+            arrayConst offset slice.tail LocalSlice8 cast ConstValue .LocalArray8
           else
-            arrayConst 0 array.get i64 cast.u ConstValue .Int
+            arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       LocalArray16 case
-        ptrValue .LocalArray16 i16 arrayView.mut cast =:: arrayConst
+        ptrValue .LocalArray16 i16 slice.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail LocalSlice16 cast ConstValue .LocalArray16
+            arrayConst offset slice.tail LocalSlice16 cast ConstValue .LocalArray16
           else
-            arrayConst 0 array.get i64 cast.u ConstValue .Int
+            arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end OperatorResult .success return
       LocalArray32 case
-        ptrValue .LocalArray32 i32 arrayView.mut cast =:: arrayConst
+        ptrValue .LocalArray32 i32 slice.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail LocalSlice32 cast ConstValue .LocalArray32
+            arrayConst offset slice.tail LocalSlice32 cast ConstValue .LocalArray32
           else
-            arrayConst 0 array.get i64 cast.u ConstValue .Int
+            arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end OperatorResult .success return
       LocalArray64 case
-        ptrValue .LocalArray64 i64 arrayView.mut cast =:: arrayConst
+        ptrValue .LocalArray64 i64 slice.mut cast =:: arrayConst
           isOffset if
-            arrayConst offset array.tail LocalSlice64 cast ConstValue .LocalArray64
+            arrayConst offset slice.tail LocalSlice64 cast ConstValue .LocalArray64
           else
-            arrayConst 0 array.get i64 cast.u ConstValue .Int
+            arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end OperatorResult .success return
       default
         "unexpected constant for pointer value: " sb.wrap
@@ -499,7 +499,7 @@ namespace: interpreter
     W : localArray
     type : T
   -> bool ) =>: primitiveArrayTrySetElement
-    localArray T arrayView.mut cast =:: arrayData
+    localArray T slice.mut cast =:: arrayData
     ConstValue ..length 23 == "no new constants" assert
     src switch
       Char case src .Char i64 cast.u break
@@ -507,13 +507,13 @@ namespace: interpreter
       ## XXX? support floats?
       default false return
     end =:: intValue
-    intValue T cast arrayData 0 array.set
+    intValue T cast arrayData 0 slice.set
     true return
   end
   proc(
     type : auto: W type : auto: T
     W : targetArray
-    T arrayView : srcArray
+    T slice : srcArray
     FilePosition : pos
     CompilerError list ptr.mut : errors
   -> OperatorResult ) =>: setLocalArray
@@ -546,7 +546,7 @@ namespace: interpreter
         newValue .Array ?? if
           newValue .Array
         else newValue .LocalArray ?? _if
-          newValue .LocalArray ConstValue arrayView.mut cast array.freeze
+          newValue .LocalArray ConstValue slice.mut cast slice.freeze
         else
           "unexpected source for assignment expected array got:" sb.wrap
             newValue typeContext sb.appendConstant
@@ -561,7 +561,7 @@ namespace: interpreter
         newValue .Array8 ?? if
           newValue .Array8
         else newValue .LocalArray8 ?? _if
-          newValue .LocalArray8 i8 arrayView.mut cast array.freeze
+          newValue .LocalArray8 i8 slice.mut cast slice.freeze
         else
           "unexpected source for assignment expected array got:" sb.wrap
             newValue typeContext sb.appendConstant
@@ -576,7 +576,7 @@ namespace: interpreter
         newValue .Array16 ?? if
           newValue .Array16
         else newValue .LocalArray16 ?? _if
-          newValue .LocalArray16 i16 arrayView.mut cast array.freeze
+          newValue .LocalArray16 i16 slice.mut cast slice.freeze
         else
           "unexpected source for assignment expected array got:" sb.wrap
             newValue typeContext sb.appendConstant
@@ -591,7 +591,7 @@ namespace: interpreter
         newValue .Array32 ?? if
           newValue .Array32
         else newValue .LocalArray32 ?? _if
-          newValue .LocalArray32 i32 arrayView.mut cast array.freeze
+          newValue .LocalArray32 i32 slice.mut cast slice.freeze
         else
           "unexpected source for assignment expected array got:" sb.wrap
             newValue typeContext sb.appendConstant
@@ -606,7 +606,7 @@ namespace: interpreter
         newValue .Array64 ?? if
           newValue .Array64
         else newValue .LocalArray64 ?? _if
-          newValue .LocalArray64 i64 arrayView.mut cast array.freeze
+          newValue .LocalArray64 i64 slice.mut cast slice.freeze
         else
           "unexpected source for assignment expected array got:" sb.wrap
             newValue typeContext sb.appendConstant

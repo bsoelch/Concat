@@ -3,11 +3,10 @@ import core/integers
 import core/ptr
 
 import mem
-import arrayView
+import slice
 import optional
 import list
 
-## XXX allow auto-cast from list -> arrayView
 #+
 arena allocator
   * allows to allocate memory in mostly linear
@@ -16,42 +15,42 @@ arena allocator
   * if strictOrder is false some elements may be freed out of order
 +#
 namespace: arenaAlloc ## XXX? rename to `arena`
-  enum( CONTINUE ALLOC ) =:: SliceType
-  ( type : T -> type ) =>: ArenaSlice
+  enum( CONTINUE ALLOC ) =:: ChunkType
+  ( type : T -> type ) =>: ArenaChunk
     struct(
       T _ ptr.mut : data
       i32 : mut: eltCount
-      SliceType : sliceType
+      ChunkType : chunkType
     )
   end
 end
 ( type : T -> type ) =>: export: ArenaAllocator
   struct(
-    T arenaAlloc.ArenaSlice list : mut: slices
+    T arenaAlloc.ArenaChunk list : mut: chunks
     ( T ptr -> ) ptr optional : freeElt
-    i32 : mut: fullSlices ## number of completely filled slices at bottom of allocated area
-    i32 : sliceSizeShift ## XXX? use i8 instead?
+    i32 : mut: fullChunks ## number of completely filled chunks at bottom of allocated area
+    i32 : chunkSizeShift ## XXX? use i8 instead?
     bool : strictOrder
   )
 end
 namespace: arenaAlloc
   proc(
     type : auto: T
-    ## size of a given memory slice, will be rounded to the nearest power of two
-    i32 : sliceSize
+    ## size of a given memory chunk, will be rounded to the nearest power of two
+    i32 : chunkSize
     ( T ptr -> ) ptr optional : freeElt
     ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
     bool : strictOrder
   -> T ArenaAllocator ) =>: create_internal
     ## XXX? nearest of next largest power of 2
-    ## XXX? find better way to convert slice size to power of 2
+    ## XXX? find better way to convert chunk size to power of 2
     8 =:: mut: sizeBits ## 2**8= 256
-    sliceSize 8 >>> while $ 1 > do
+    chunkSize 8 >>> while $ 1 > do
       sizeBits 1 + sizeBits@ =
       1 >>>
     end ..drop
     ## ArenaAllocator
-      16 T ArenaSlice list.create
+      16 T ArenaChunk list.create
       freeElt
       0
       sizeBits
@@ -60,37 +59,37 @@ namespace: arenaAlloc
   end
   proc(
     type : auto: T
-    ## size of a given memory slice, will be rounded to the nearest power of two
-    i32 : sliceSize
+    ## size of a given memory chunk, will be rounded to the nearest power of two
+    i32 : chunkSize
     ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
     bool : strictOrder
     ( T ptr -> ) ptr : freeElt
   -> T ArenaAllocator ) =>: create_FS
-    sliceSize freeElt optional.wrap strictOrder create_internal
+    chunkSize freeElt optional.wrap strictOrder create_internal
   end
   proc(
     type : auto: T
-    ## size of a given memory slice, will be rounded to the nearest power of two
-    i32 : sliceSize
+    ## size of a given memory chunk, will be rounded to the nearest power of two
+    i32 : chunkSize
     ( T ptr -> ) ptr : freeElt
   -> T ArenaAllocator ) =>: create_F
-    sliceSize freeElt optional.wrap false create_internal
+    chunkSize freeElt optional.wrap false create_internal
   end
   proc(
-    ## size of a given memory slice, will be rounded to the nearest power of two
-    i32 : sliceSize
+    ## size of a given memory chunk, will be rounded to the nearest power of two
+    i32 : chunkSize
     ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
     bool : strictOrder
     type : T
   -> T ArenaAllocator ) =>: create_S
-    sliceSize ( T ptr -> ) ptr optional.empty strictOrder create_internal
+    chunkSize ( T ptr -> ) ptr optional.empty strictOrder create_internal
   end
   proc(
-    ## size of a given memory slice, will be rounded to the nearest power of two
-    i32 : sliceSize
+    ## size of a given memory chunk, will be rounded to the nearest power of two
+    i32 : chunkSize
     type : T
   -> T ArenaAllocator ) =>: create_0
-    sliceSize ( T ptr -> ) ptr optional.empty false create_internal
+    chunkSize ( T ptr -> ) ptr optional.empty false create_internal
   end
   overload: export: create
     create_0
@@ -100,7 +99,7 @@ namespace: arenaAlloc
   end
 
   proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: currentCap
-    arena .slices .length arena .sliceSizeShift << return
+    arena .chunks .length arena .chunkSizeShift << return
   end
   proc(
     type : auto: T
@@ -108,19 +107,19 @@ namespace: arenaAlloc
     i64 : newCap
   -> T ArenaAllocator ) =>: export: ensureCap
     newCap arena0 currentCap <= if arena0 return end
-    1 arena0 .sliceSizeShift << =:: sliceSize
+    1 arena0 .chunkSizeShift << =:: chunkSize
     newCap
-      sliceSize 1 - i64 cast.u +
-      arena0 .sliceSizeShift >>>
-    =:: minSlices
-    arena0 .slices .length minSlices >= if  arena0 return end
+      chunkSize 1 - i64 cast.u +
+      arena0 .chunkSizeShift >>>
+    =:: minChunks
+    arena0 .chunks .length minChunks >= if  arena0 return end
     arena0 =:: mut: arena
-    arena .slices
-      minSlices list.ensureCap
-      minSlices $1 .length - for ..drop
-        sliceSize i64 cast.u T mem.alloc 0 SliceType .ALLOC T ArenaSlice new list.append
+    arena .chunks
+      minChunks list.ensureCap
+      minChunks $1 .length - for ..drop
+        chunkSize i64 cast.u T mem.alloc 0 ChunkType .ALLOC T ArenaChunk new list.append
       end
-    arena@ .slices=
+    arena@ .chunks=
     arena return
   end
   proc(
@@ -130,51 +129,51 @@ namespace: arenaAlloc
   -> T ArenaAllocator T _ ptr.mut ) =>: alloc_internal
     count 0 >= "count is non-negative" assert
     count 0 == if arena0 0 T _ ptr.mut cast! return end
-    1 arena0 .sliceSizeShift << =:: sliceSize
+    1 arena0 .chunkSizeShift << =:: chunkSize
     arena0 =:: mut: arena
     arena .strictOrder ! if
-      ## search for gaps in previous slices
-      arena .fullSlices i64 cast.u while $ arena .slices .length < do =:: i
-        arena .slices i list.at .data =:: slice
-        slice [] .eltCount sliceSize == if
-          ## slice full -> skip on next allocation
-          arena .fullSlices 1 + arena@ .fullSlices=
+      ## search for gaps in previous chunks
+      arena .fullChunks i64 cast.u while $ arena .chunks .length < do =:: i
+        arena .chunks i list.at .data =:: chunk
+        chunk [] .eltCount chunkSize == if
+          ## chunk full -> skip on next allocation
+          arena .fullChunks 1 + arena@ .fullChunks=
         end
-        slice [] .eltCount count + sliceSize u<= if
-          arena slice [] .data slice [] .eltCount i64 cast.u +
-            slice [] .eltCount count + slice .eltCount=
+        chunk [] .eltCount count + chunkSize u<= if
+          arena chunk [] .data chunk [] .eltCount i64 cast.u +
+            chunk [] .eltCount count + chunk .eltCount=
           return
         end
       finally i 1 + end ..drop
     end
-    arena .slices .length 0 > and
-        arena .slices $ .length 1 - list.at .data =:: lastSlice
-        lastSlice [] .eltCount count + sliceSize u<= if
+    arena .chunks .length 0 > and
+        arena .chunks $ .length 1 - list.at .data =:: lastChunk
+        lastChunk [] .eltCount count + chunkSize u<= if
       ## return
         arena
-        lastSlice [] .data lastSlice [] .eltCount i64 cast.u +
-          lastSlice [] .eltCount count + lastSlice .eltCount=
+        lastChunk [] .data lastChunk [] .eltCount i64 cast.u +
+          lastChunk [] .eltCount count + lastChunk .eltCount=
       return
     end
-    ## new data does not fit into last slice
-    count i64 cast.u sliceSize i64 cast.u 1 - + arena0 .sliceSizeShift >>> =:: newSlices
-    newSlices 1 >= "at least one new slice" assert
-    newSlices arena0 .sliceSizeShift << T mem.alloc =:: sliceData
-    arena .slices
-      sliceData count sliceSize i32.umin SliceType .ALLOC T ArenaSlice new list.append
-      count sliceSize - =:: mut: newCount
-      sliceData sliceSize i64 cast.u + =:: mut: newOffset
-      newSlices 1 - for ..drop
+    ## new data does not fit into last chunk
+    count i64 cast.u chunkSize i64 cast.u 1 - + arena0 .chunkSizeShift >>> =:: newChunks
+    newChunks 1 >= "at least one new chunk" assert
+    newChunks arena0 .chunkSizeShift << T mem.alloc =:: chunkData
+    arena .chunks
+      chunkData count chunkSize i32.umin ChunkType .ALLOC T ArenaChunk new list.append
+      count chunkSize - =:: mut: newCount
+      chunkData chunkSize i64 cast.u + =:: mut: newOffset
+      newChunks 1 - for ..drop
         newCount 0 > "remaining count >0" assert
-        ## ArenaSlice
+        ## ArenaChunk
           newOffset
-          newCount sliceSize i32.umin
-        SliceType .CONTINUE T ArenaSlice new list.append
-        newOffset sliceSize i64 cast.u + newOffset@ =
-        newCount sliceSize - newCount@ =
+          newCount chunkSize i32.umin
+        ChunkType .CONTINUE T ArenaChunk new list.append
+        newOffset chunkSize i64 cast.u + newOffset@ =
+        newCount chunkSize - newCount@ =
       end
-    arena@ .slices=
-    arena sliceData return
+    arena@ .chunks=
+    arena chunkData return
   end
 
   proc(
@@ -187,11 +186,11 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena
     i32 : size
-  -> T ArenaAllocator T arrayView.mut ) =>: export: allocArray
+  -> T ArenaAllocator T slice.mut ) =>: export: allocSlice
     size 0 == if
-      arena T array.emptyMutable return
+      arena T slice.emptyMutable return
     end
-    arena size alloc_internal size array.createMutable
+    arena size alloc_internal size slice.createMutable
   end
 
   ## XXX? distinguish: Value -> index (?push) and Value -> ptr (?copy)
@@ -227,28 +226,28 @@ namespace: arenaAlloc
   proc(
     type : auto: T
     T ArenaAllocator : arena
-    T arrayView : values
-  -> T ArenaAllocator T arrayView.mut ) =>: export: copyArray
+    T slice : values
+  -> T ArenaAllocator T slice.mut ) =>: export: copySlice
     arena values .length i32 cast.u alloc_internal
-      values .data values .length mem.copy values .length array.createMutable
+      values .data values .length mem.copy values .length slice.createMutable
     return
   end
   proc(
     type : auto: T
     T ArenaAllocator : arena
-    T arrayView.mut : values
-  -> T ArenaAllocator T arrayView.mut ) =>: export: copyMutableArray
+    T slice.mut : values
+  -> T ArenaAllocator T slice.mut ) =>: export: copyMutableSlice
     arena values .length i32 cast.u alloc_internal
-      values .data values .length mem.copy values .length array.createMutable
+      values .data values .length mem.copy values .length slice.createMutable
     return
   end
   proc(
     type : auto: T
     T ArenaAllocator : arena
     T list : values
-  -> T ArenaAllocator T arrayView.mut ) =>: export: copyList
+  -> T ArenaAllocator T slice.mut ) =>: export: copyList
     arena values .length i32 cast.u alloc_internal
-      values .data values .length mem.copy values .length array.createMutable
+      values .data values .length mem.copy values .length slice.createMutable
     return
   end
 
@@ -256,12 +255,12 @@ namespace: arenaAlloc
   ## TODO versions of push returning index instead of pointer
 
   proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: offset
-    arena .slices .length
-      $ =:: sliceCount
-      sliceCount 0 > if
-        1 - arena .sliceSizeShift <<
-        arena .slices
-          sliceCount 1 -
+    arena .chunks .length
+      $ =:: chunkCount
+      chunkCount 0 > if
+        1 - arena .chunkSizeShift <<
+        arena .chunks
+          chunkCount 1 -
         list.at .data [] .eltCount i64 cast.u +
       end
     return
@@ -271,60 +270,60 @@ namespace: arenaAlloc
     T ArenaAllocator : arena0
     i64 : newLength
   -> T ArenaAllocator ) =>: export: reset
-    newLength 1:i64 arena0 .sliceSizeShift << 1 - & i32 cast =:: newEltCount
+    newLength 1:i64 arena0 .chunkSizeShift << 1 - & i32 cast =:: newEltCount
     newLength
-      arena0 .sliceSizeShift >>>
+      arena0 .chunkSizeShift >>>
       newEltCount 0 u> if 1 + end
-    =:: newSliceCount
-    newSliceCount arena0 .slices .length <= "reset point inside allocated slice" assert
-    arena0 =:: mut: arena ## XXX? prevent copy of old slice data
-    arena .slices =:: mut: slices
+    =:: newChunkCount
+    newChunkCount arena0 .chunks .length <= "reset point inside allocated chunk" assert
+    arena0 =:: mut: arena ## XXX? prevent copy of old chunk data
+    arena .chunks =:: mut: chunks
     arena .freeElt =:: freeElt
     0 =:: mut: continueChunkCount ## continue chunks after last chunk
-    slices .length 1 - while $ newSliceCount >= do =:: i
-      slices i list.at .data =:: slice
+    chunks .length 1 - while $ newChunkCount >= do =:: i
+      chunks i list.at .data =:: chunk
       freeElt optional.hasData if
-        slice [] .eltCount 1 - while $ 0 >= do =:: j
-          slice [] .data j i64 cast.u + T ptr cast! freeElt .data ()
+        chunk [] .eltCount 1 - while $ 0 >= do =:: j
+          chunk [] .data j i64 cast.u + T ptr cast! freeElt .data ()
         finally j 1 - end ..drop
       end
-      slice [] .sliceType switch
+      chunk [] .chunkType switch
         ALLOC case
           0 continueChunkCount@ =
-          slice [] .data mem.free
+          chunk [] .data mem.free
           break
         CONTINUE case
           continueChunkCount 1 + continueChunkCount@ = break
       end
     finally i 1 - end ..drop
-    slices
-      newSliceCount continueChunkCount i64 cast.u + list.setLength
-    slices@ =
+    chunks
+      newChunkCount continueChunkCount i64 cast.u + list.setLength
+    chunks@ =
     newEltCount 0 == if
-      arena .fullSlices
-        ## adjust number of full slices
-        newSliceCount i32 cast i32.min
-      arena@ .fullSlices=
-      slices arena@ .slices=
+      arena .fullChunks
+        ## adjust number of full chunks
+        newChunkCount i32 cast i32.min
+      arena@ .fullChunks=
+      chunks arena@ .chunks=
       arena return
     end
-    newSliceCount 0 > "arena with elements has slice" assert
-    arena .fullSlices
-      ## adjust number of full slices
-      newSliceCount i32 cast 1 - i32.min
-    arena@ .fullSlices=
-    ## shrink last slice if neccessary
-    slices newSliceCount 1 - list.at .data =:: lastSlice
-    lastSlice [] .eltCount newEltCount >= "reset point inside allocated memory" assert
+    newChunkCount 0 > "arena with elements has chunk" assert
+    arena .fullChunks
+      ## adjust number of full chunks
+      newChunkCount i32 cast 1 - i32.min
+    arena@ .fullChunks=
+    ## shrink last chunk if neccessary
+    chunks newChunkCount 1 - list.at .data =:: lastChunk
+    lastChunk [] .eltCount newEltCount >= "reset point inside allocated memory" assert
     freeElt optional.hasData if
-      lastSlice [] .eltCount 1 - while $ newEltCount >= do =:: j
-        lastSlice [] .data j i64 cast.u + T ptr cast! freeElt .data ()
+      lastChunk [] .eltCount 1 - while $ newEltCount >= do =:: j
+        lastChunk [] .data j i64 cast.u + T ptr cast! freeElt .data ()
       finally j 1 - end ..drop
     end
-    lastSlice [] .eltCount newEltCount > if
-      newEltCount lastSlice .eltCount=
+    lastChunk [] .eltCount newEltCount > if
+      newEltCount lastChunk .eltCount=
     end
-    slices arena@ .slices=
+    chunks arena@ .chunks=
     arena return
   end
   proc(
@@ -334,7 +333,7 @@ namespace: arenaAlloc
     ## free allocated memory
     arena0 0 reset =:: mut: arena
     ## free internal list
-    arena .slices list.free arena@ .slices=
+    arena .chunks list.free arena@ .chunks=
     arena return
   end
 end
@@ -349,23 +348,23 @@ namespace: mixedArena
     MaxAlign ..types.stride 1 - + MaxAlign ..types.stride u/ i32 cast
   end
   proc(
-    ## size of a given memory slice, will be rounded to the nearest power of two
-    i32 : sliceSize
+    ## size of a given memory chunk, will be rounded to the nearest power of two
+    i32 : chunkSize
     ## new elements have be be allocated in strictly increasing order, this may be less memory efficient
     bool : strictOrder
   -> MixedArenaAllocator ) =>: export: create_S
     ## create_internal
-      sliceSize i64 cast.u MaxAlign ..types.stride u/ i32 cast
+      chunkSize i64 cast.u MaxAlign ..types.stride u/ i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       strictOrder
     arenaAlloc.create_internal MixedArenaAllocator cast
   end
   proc(
-    ## size of a given memory slice, will be rounded to the nearest power of two
-    i32 : sliceSize
+    ## size of a given memory chunk, will be rounded to the nearest power of two
+    i32 : chunkSize
   -> MixedArenaAllocator ) =>: export: create_0
     ## create_internal
-      sliceSize i64 cast.u MaxAlign ..types.stride u/ i32 cast
+      chunkSize i64 cast.u MaxAlign ..types.stride u/ i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       false
     arenaAlloc.create_internal MixedArenaAllocator cast
@@ -385,14 +384,14 @@ namespace: mixedArena
     MixedArenaAllocator : arena
     i32 : size
     type : T
-  -> MixedArenaAllocator T arrayView.mut ) =>: export: allocArray
+  -> MixedArenaAllocator T slice.mut ) =>: export: allocSlice
     size 0 == if
-      arena T array.emptyMutable return
+      arena T slice.emptyMutable return
     end
     arena MaxAlign ArenaAllocator cast
       T ..types.stride size i64 cast.u * alignSize arenaAlloc.alloc_internal =:: res
     MixedArenaAllocator cast
-    res T _ ptr.mut cast! size array.createMutable
+    res T _ ptr.mut cast! size slice.createMutable
   end
 
   proc(
@@ -420,35 +419,35 @@ namespace: mixedArena
     MixedArenaAllocator : arena
     T k ptr : values
   -> MixedArenaAllocator T k ptr.mut ) =>: export: copyPtrs
-    arena k T allocArray .data
+    arena k T allocSlice .data
       values k i64 cast.u mem.copy T k ptr.mut cast!
     return
   end
   proc(
     type : auto: T
     MixedArenaAllocator : arena
-    T arrayView : values
-  -> MixedArenaAllocator T arrayView.mut ) =>: export: copyArray
-    arena values .length i32 cast.u T allocArray .data
-      values .data values .length mem.copy values .length array.createMutable
+    T slice : values
+  -> MixedArenaAllocator T slice.mut ) =>: export: copySlice
+    arena values .length i32 cast.u T allocSlice .data
+      values .data values .length mem.copy values .length slice.createMutable
     return
   end
   proc(
     type : auto: T
     MixedArenaAllocator : arena
-    T arrayView.mut : values
-  -> MixedArenaAllocator T arrayView.mut ) =>: export: copyMutableArray
-    arena values .length i32 cast.u T allocArray .data
-      values .data values .length mem.copy values .length array.createMutable
+    T slice.mut : values
+  -> MixedArenaAllocator T slice.mut ) =>: export: copyMutableSlice
+    arena values .length i32 cast.u T allocSlice .data
+      values .data values .length mem.copy values .length slice.createMutable
     return
   end
   proc(
     type : auto: T
     MixedArenaAllocator : arena
     T list : values
-  -> MixedArenaAllocator T arrayView.mut ) =>: export: copyList
-    arena values .length i32 cast.u T allocArray .data
-      values .data values .length mem.copy values .length array.createMutable
+  -> MixedArenaAllocator T slice.mut ) =>: export: copyList
+    arena values .length i32 cast.u T allocSlice .data
+      values .data values .length mem.copy values .length slice.createMutable
     return
   end
 
@@ -470,7 +469,7 @@ namespace: mixedArena
     ## free allocated memory
     arena0 MaxAlign ArenaAllocator cast 0 arenaAlloc.reset =:: mut: arena
     ## free internal list
-    arena .slices list.free arena@ .slices=
+    arena .chunks list.free arena@ .chunks=
     arena MixedArenaAllocator cast return
   end
 end

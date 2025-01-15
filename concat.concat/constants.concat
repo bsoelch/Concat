@@ -16,11 +16,11 @@ struct( ConstValue ptr : value i64 : eltIndex ) =:: export: UnionConstant
 
 ## pointers to mutable constants in interpreter
 ConstValue ptr.mut =:: export: LocalAddress
-ConstValue arrayView.mut =:: export: LocalSlice
-i8 arrayView.mut =:: export: LocalSlice8
-i16 arrayView.mut =:: export: LocalSlice16
-i32 arrayView.mut =:: export: LocalSlice32
-i64 arrayView.mut =:: export: LocalSlice64
+ConstValue slice.mut =:: export: LocalSlice
+i8 slice.mut =:: export: LocalSlice8
+i16 slice.mut =:: export: LocalSlice16
+i32 slice.mut =:: export: LocalSlice32
+i64 slice.mut =:: export: LocalSlice64
 
 ## XXX? use wrapper types for array constants to prevent accidental assignment of external values
 union(
@@ -30,11 +30,11 @@ union(
   i64 : Int
   f64 : Float
   ## XXX? float arrays
-  i8  arrayView : Array8
-  i16 arrayView : Array16
-  i32 arrayView : Array32
-  i64 arrayView : Array64
-  ConstValue arrayView : Array
+  i8  slice : Array8
+  i16 slice : Array16
+  i32 slice : Array32
+  i64 slice : Array64
+  ConstValue slice : Array
   i64 : EnumLabel
   Type : TypeId
   _ : WildCard
@@ -64,47 +64,47 @@ end
 
 proc(
  type : auto: T
- T arrayView : elts
+ T slice : elts
  ConstantContext ptr.mut : context
--> T arrayView ) =>: constPrimitiveArray
+-> T slice ) =>: constPrimitiveArray
   context [] .arrayValues
-    elts mixedArena.copyArray array.freeze =:: result
+    elts mixedArena.copySlice slice.freeze =:: result
   context .arrayValues=
   result return
 end
 proc(
-  ConstValue arrayView : elts
+  ConstValue slice : elts
   ConstantContext ptr.mut : context
--> ConstValue arrayView ) =>: export: constArray
+-> ConstValue slice ) =>: export: constArray
   context [] .arrayValues
-    elts mixedArena.copyArray array.freeze =:: result
+    elts mixedArena.copySlice slice.freeze =:: result
   context .arrayValues=
   result return
 end
 
-proc( i8 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray8Const
+proc( i8 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray8Const
   elts context constPrimitiveArray ConstValue .Array8 return
 end
 proc( string : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStringConst
   elts string.bytes context newArray8Const return
 end
-proc( i16 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray16Const
+proc( i16 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray16Const
   elts context constPrimitiveArray ConstValue .Array16 return
 end
 proc( string16 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString16Const
   elts string16.toIntArray context newArray16Const return
 end
-proc( i32 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray32Const
+proc( i32 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray32Const
   elts context constPrimitiveArray ConstValue .Array32 return
 end
 proc( string32 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString32Const
   elts string32.toIntArray context newArray32Const return
 end
-proc( i64 arrayView : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray64Const
+proc( i64 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray64Const
   elts context constPrimitiveArray ConstValue .Array64 return
 end
 proc(
-  ConstValue arrayView : elts
+  ConstValue slice : elts
   ConstantContext ptr.mut : context
 -> ConstValue ) =>: export: newArrayConst
   elts context constArray ConstValue .Array return
@@ -150,15 +150,15 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
     Char case
       a .Char b .Char == return
     Array8 case
-      a .Array8 b .Array8 array.eq return
+      a .Array8 b .Array8 slice.eq return
     Array16 case
-      a .Array16 b .Array16 array.eq return
+      a .Array16 b .Array16 slice.eq return
     Array32 case
-      a .Array32 b .Array32 array.eq return
+      a .Array32 b .Array32 slice.eq return
     Array64 case
-      a .Array64 b .Array64 array.eq return
+      a .Array64 b .Array64 slice.eq return
     Array case
-      a .Array b .Array constantEquals@ labelContext array.eq return
+      a .Array b .Array constantEquals@ labelContext slice.eq return
     TypeId case
       a .TypeId b .TypeId types.typeEquals return
     Procedure case
@@ -209,7 +209,7 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
 end
 namespace: constant
   ## Detect if a given i8 array is a string constant
-  proc( i8 arrayView : bytes -> bool ) =>: isString
+  proc( i8 slice : bytes -> bool ) =>: isString
     0:i64 =:: mut: nonPrintable
     bytes string.fromBytes
     0:i64 while $1 .length $1 > do
@@ -226,7 +226,7 @@ namespace: constant
     nonPrintable bytes .length 4 + 8 / <= return
   end
   ## Detect if a given i8 array is a string constant
-  proc( i16 arrayView : ints -> bool ) =>: isString16
+  proc( i16 slice : ints -> bool ) =>: isString16
     0:i64 =:: mut: nonPrintable
     ints string16.fromIntArray
     0:i64 while $1 .length $1 > do
@@ -243,10 +243,10 @@ namespace: constant
     nonPrintable ints .length 4 + 8 / <= return
   end
   ## Detect if a given i8 array is a string constant
-  proc( i32 arrayView : ints -> bool ) =>: isString32
+  proc( i32 slice : ints -> bool ) =>: isString32
     0:i64 =:: mut: nonPrintable
     ints .length for =:: i
-      ints i array.get unicode.Codepoint cast =:: cp
+      ints i slice.get unicode.Codepoint cast =:: cp
       cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
         false return ## definitely no string
       end
@@ -401,13 +401,13 @@ namespace: sb
           =:: maxElements
           "{ " sb.appendS
           0:i64 while ..dup maxElements < do =:: i
-            mArray i array.get typeContext appendConstant
+            mArray i slice.get typeContext appendConstant
             ' ' sb.appendC
             i 1 +
           end ..drop
           mArray .length MAX_ARRAY_ELEMENTS >= if
             mArray .length MAX_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - array.get typeContext appendConstant
+            mArray $ .length 1 - slice.get typeContext appendConstant
             ' ' sb.appendC
           end
           "}" sb.appendS
@@ -422,11 +422,11 @@ namespace: sb
             else
               '\"'  sb.appendC
               mArray
-                MAX_STRING_CHARS_HEAD array.head
+                MAX_STRING_CHARS_HEAD slice.head
               string.fromBytes sb.appendEscapedStr
               "\"...\""  sb.appendS
               mArray
-                $ .length MAX_STRING_CHARS_TAIL - array.tail
+                $ .length MAX_STRING_CHARS_TAIL - slice.tail
               string.fromBytes sb.appendEscapedStr
               '\"'  sb.appendC
             end
@@ -437,13 +437,13 @@ namespace: sb
           =:: maxElements
           "{ " sb.appendS
           0:i64 while ..dup maxElements < do =:: i
-            mArray i array.get i64 cast.s appendI
+            mArray i slice.get i64 cast.s appendI
             ":i8 " sb.appendS
             i 1 +
           end ..drop
           mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
             mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - array.get i64 cast.s appendI
+            mArray $ .length 1 - slice.get i64 cast.s appendI
             ":i8 " sb.appendS
           end
           "}" sb.appendS
@@ -458,11 +458,11 @@ namespace: sb
             else
               "utf16\""  sb.appendS
               mArray
-                MAX_STRING_CHARS_HEAD array.head
+                MAX_STRING_CHARS_HEAD slice.head
               string16.fromIntArray sb.appendEscapedStr16
               "\"...\""  sb.appendS
               mArray
-                $ .length MAX_STRING_CHARS_TAIL - array.tail
+                $ .length MAX_STRING_CHARS_TAIL - slice.tail
               string16.fromIntArray sb.appendEscapedStr16
               '\"'  sb.appendC
             end
@@ -473,13 +473,13 @@ namespace: sb
           =:: maxElements
           "{ " sb.appendS
           0:i64 while ..dup maxElements < do =:: i
-            mArray i array.get i64 cast.s appendI
+            mArray i slice.get i64 cast.s appendI
             ":i16 " sb.appendS
             i 1 +
           end ..drop
           mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
             mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - array.get i64 cast.s appendI
+            mArray $ .length 1 - slice.get i64 cast.s appendI
             ":i16 " sb.appendS
           end
           "}" sb.appendS
@@ -494,11 +494,11 @@ namespace: sb
             else
               "utf32\""  sb.appendS
               mArray
-                MAX_STRING_CHARS_HEAD array.head
+                MAX_STRING_CHARS_HEAD slice.head
               string32.fromIntArray sb.appendEscapedStr32
               "\"...\""  sb.appendS
               mArray
-                $ .length MAX_STRING_CHARS_TAIL - array.tail
+                $ .length MAX_STRING_CHARS_TAIL - slice.tail
               string32.fromIntArray sb.appendEscapedStr32
               '\"'  sb.appendC
             end
@@ -509,13 +509,13 @@ namespace: sb
           =:: maxElements
           "{ " sb.appendS
           0:i64 while ..dup maxElements < do =:: i
-            mArray i array.get i64 cast.s appendI
+            mArray i slice.get i64 cast.s appendI
             ":i32 " sb.appendS
             i 1 +
           end ..drop
           mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
             mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - array.get i64 cast.s appendI
+            mArray $ .length 1 - slice.get i64 cast.s appendI
             ":i32 " sb.appendS
           end
           "}" sb.appendS
@@ -527,13 +527,13 @@ namespace: sb
             MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
           =:: maxElements
           0:i64 while ..dup maxElements < do =:: i
-            mArray i array.get appendI
+            mArray i slice.get appendI
             ":i64 " sb.appendS
             i 1 +
           end ..drop
           mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
             mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - array.get i64 cast.s appendI
+            mArray $ .length 1 - slice.get i64 cast.s appendI
             ":i64 " sb.appendS
           end
           "}" sb.appendS
@@ -567,35 +567,35 @@ namespace: sb
         LocalArray case
             "local array ( "  sb.appendS
               val .LocalArray
-                ConstValue arrayView.mut cast array.freeze
+                ConstValue slice.mut cast slice.freeze
               ConstValue .Array typeContext sb.appendConstant
             " )" sb.appendS
           break
         LocalArray8 case
             "local array8 ( "  sb.appendS
               val .LocalArray8
-                i8 arrayView.mut cast array.freeze
+                i8 slice.mut cast slice.freeze
               ConstValue .Array8 typeContext sb.appendConstant
             " )" sb.appendS
           break
         LocalArray16 case
             "local array16 ( "  sb.appendS
               val .LocalArray16
-                i16 arrayView.mut cast array.freeze
+                i16 slice.mut cast slice.freeze
               ConstValue .Array16 typeContext sb.appendConstant
             " )" sb.appendS
           break
         LocalArray32 case
             "local array32 ( "  sb.appendS
               val .LocalArray32
-                i32 arrayView.mut cast array.freeze
+                i32 slice.mut cast slice.freeze
               ConstValue .Array32 typeContext sb.appendConstant
             " )" sb.appendS
           break
         LocalArray64 case
             "local array64 ( "  sb.appendS
               val .LocalArray64
-                i64 arrayView.mut cast array.freeze
+                i64 slice.mut cast slice.freeze
               ConstValue .Array64 typeContext sb.appendConstant
             " )" sb.appendS
           break

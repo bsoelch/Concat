@@ -1,0 +1,40 @@
+import slice
+import debug
+
+proc( type : auto: T  T slice : l -> ) =>: printArray
+  0:i64 while ..dup l .length < do
+    l .data ..over [] debug.print
+    1 +
+  end ..drop
+end
+
+proc( -> ) =>: main
+  "Hello World" slice.wrap =:: str
+  str 5 slice.get debug.print
+  str 'A' slice.indexOf debug.print
+  str 'o' slice.indexOf debug.print
+  str 'A' slice.lastIndexOf debug.print
+  str 'o' slice.lastIndexOf debug.print
+  str 'c' slice.contains debug.print
+  i32 10 array new =:: mut: a
+  0 while ..dup i64 cast.u a ..length < do
+    ..dup ..dup * a@ ..over.2 []=
+    1 +
+  end ..drop
+  a@ 8 slice.create
+    ..dup 3 slice.head printArray
+    -141516511 debug.print
+    ..dup 5 slice.tail printArray
+    -34731715 debug.print
+    ..dup 1 4 slice.getSlice printArray
+    -82745267 debug.print
+    ..dup -1 12 slice.getSlice printArray
+    -125136145 debug.print
+    ..dup 4 slice.cutIndex printArray -313123 debug.print printArray
+    -991749124 debug.print
+    ..dup 3 slice.split printArray -112414 debug.print printArray
+    -124151151 debug.print
+    ..dup 16 slice.split printArray -112414 debug.print printArray
+    -434262161 debug.print
+  printArray
+end

@@ -1,6 +1,6 @@
 import mem
 
-namespace: array ## XXX? use different namespace (array is already in use for arrayView)
+namespace: array
   proc(
     type : auto: T
     type : auto: C

@@ -4,5 +4,5 @@ empty: named[2]( "string" ) { { "" 0 } } pushed at tupleInitializers.concat:20:3
 -----------------
 stack:
 -----------------
-i32 arrayView pushed at tupleInitializers.concat:21:7
+i32 slice pushed at tupleInitializers.concat:21:7
 -----------------

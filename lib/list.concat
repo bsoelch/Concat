@@ -1,9 +1,9 @@
 import mem
-import arrayView
+import slice
 import optional
 import array
 
-## XXX allow auto-cast from list -> arrayView
+## XXX allow auto-cast from list -> slice
 
 ## negative capacity indictes fixed buffer
 namespace: list
@@ -34,8 +34,8 @@ namespace: list
   end
   proc(
     type : auto: T
-    T arrayView : data
-  -> T list ) =>: export: fromArray
+    T slice : data
+  -> T list ) =>: export: fromSlice
     data .length ..dup 8 / + =:: C
     C 0 >= "list has non-negative capacity" assert
     ## list
@@ -231,8 +231,8 @@ namespace: list
   proc(
     type : auto: T
     T list : a
-    T arrayView : b
-  -> T list ) =>: export: appendArray
+    T slice : b
+  -> T list ) =>: export: appendSlice
     a
       $ .length b .length + ensureCap
       $ .data $1 .length + b .data b .length mem.copy ..drop
@@ -287,9 +287,9 @@ namespace: list
   proc(
     type : auto: T
     T list : a
-    T arrayView : b
+    T slice : b
     i64 : index
-  -> T list ) =>: export: insertArray
+  -> T list ) =>: export: insertSlice
     index 0 < or index elts .length > if
       "list index outside range" ..panic
     end
@@ -349,22 +349,22 @@ namespace: list
   proc(
     type : auto: T
     T list : elts
-  -> T arrayView ) =>: export: asArray
-    elts .data elts .length array.create return
+  -> T slice ) =>: export: asSlice
+    elts .data elts .length slice.create return
   end
   proc(
     type : auto: T
     T list : elts
-  -> T arrayView.mut ) =>: export: asMutableArray
-    elts .data elts .length array.createMutable return
+  -> T slice.mut ) =>: export: asMutableSlice
+    elts .data elts .length slice.createMutable return
   end
   proc(
     type : auto: T
     T list : elts
     i64 : from
     i64 : len
-  -> T arrayView ) =>: export: slice
-    elts asArray from len array.slice return
+  -> T slice ) =>: export: getSlice
+    elts asSlice from len slice.getSlice return
   end
 
   proc(

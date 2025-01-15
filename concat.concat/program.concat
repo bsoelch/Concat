@@ -30,7 +30,7 @@ struct(
 enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED ) =:: export: ProcCodeState
 struct(
   Type : procType
-  ConstValue arrayView : staticArgs
+  ConstValue slice : staticArgs
   VariableInfo list : mut: variables
   FilePosition : firstUse
   i64 : mut: codeStart
@@ -64,7 +64,7 @@ struct(
 struct(
   ProcId : procId
   i64 : implementationId
-  ConstValue arrayView : autoArgs
+  ConstValue slice : autoArgs
 ) =:: export: ProcedureCallInfo
 struct(
   i64 : implementationId
@@ -379,15 +379,15 @@ struct(
   i32 : mut: breakCount
   i64 : mut: switchPosition
   JumpDistance : mut: defaultJumpDistance
-  JumpDistance arrayView.mut : mut: caseJumpDistances
-  i64 arrayView.mut : mut: breakPositions
+  JumpDistance slice.mut : mut: caseJumpDistances
+  i64 slice.mut : mut: breakPositions
 ) =:: export: SwitchData
 struct(
   i64 : mut: modifiedTypes
   i64 : mut: loopStart
-  i64 arrayView.mut : mut: orPositions
-  i64 arrayView.mut : mut: continuePositions
-  i64 arrayView.mut : mut: breakPositions
+  i64 slice.mut : mut: orPositions
+  i64 slice.mut : mut: continuePositions
+  i64 slice.mut : mut: breakPositions
   i32 : mut: orCount
   i32 : mut: continueCount
   i32 : mut: breakCount
@@ -396,14 +396,14 @@ struct(
   i64 : mut: blockStart
   i64 : mut: ifPosition
   i64 : mut: elsePosition
-  i64 arrayView.mut : mut: andPositions
-  i64 arrayView.mut : mut: orPositions
+  i64 slice.mut : mut: andPositions
+  i64 slice.mut : mut: orPositions
   i32 : mut: andCount
   i32 : mut: orCount
 ) =:: export: IfData
 struct(
   i64 : mut: blockStart
-  i64 arrayView.mut : mut: andOrPositions
+  i64 slice.mut : mut: andOrPositions
   i32 : mut: andOrCount
 ) =:: export: AndOrData
 
@@ -991,7 +991,7 @@ namespace: program.jumps
       newIndex ifData .blockStart=
     end
     ifData [] .andCount
-      newIndex ifData [] .andPositions $2 array.set
+      newIndex ifData [] .andPositions $2 slice.set
       1 +
     ifData .andCount=
   end
@@ -1007,13 +1007,13 @@ namespace: program.jumps
       newIndex ifData .blockStart=
     end
     ifData [] .orCount
-      newIndex ifData [] .orPositions $2 array.set
+      newIndex ifData [] .orPositions $2 slice.set
       1 +
     ifData .orCount=
   end
   proc(
     BlockId : blockId
-    Operation arrayView.mut : newOps
+    Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateIf
     program [] .ifData
@@ -1026,18 +1026,18 @@ namespace: program.jumps
     ifData [] .orCount for =:: i
       ifData [] .orPositions
         i
-      array.get =:: orPos
+      slice.get =:: orPos
       newOps .length
         orPos - JumpDistance cast
       newOps
-        orPos array.at .data
+        orPos slice.at .data
       .val .block .jumpDistance=
     end
     0 ifData .orCount=
   end
   proc(
     BlockId : blockId
-    Operation arrayView.mut : newOps
+    Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateElse
     program [] .ifData
@@ -1047,23 +1047,23 @@ namespace: program.jumps
     ifData [] .andCount for =:: i
       ifData [] .andPositions
         i
-      array.get =:: andPos
+      slice.get =:: andPos
       newOps .length
         andPos - JumpDistance cast
       newOps
-        andPos array.at .data
+        andPos slice.at .data
       .val .block .jumpDistance=
     end
     0 ifData .andCount=
     newOps .length
       ifData [] .ifPosition - JumpDistance cast
     newOps
-      ifData [] .ifPosition array.at .data
+      ifData [] .ifPosition slice.at .data
     .val .block .jumpDistance=
   end
   proc(
     BlockId : blockId
-    Operation arrayView.mut : newOps
+    Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndIf
     program [] .ifData
@@ -1072,7 +1072,7 @@ namespace: program.jumps
     newOps .length
       ifData [] .elsePosition - JumpDistance cast
     newOps
-      ifData [] .elsePosition array.at .data
+      ifData [] .elsePosition slice.at .data
     .val .block .jumpDistance=
     ifData [] .blockStart
       newOps .length -
@@ -1099,7 +1099,7 @@ namespace: program.jumps
     switchData [] .caseCount
       newIndex
         switchData [] .switchPosition - JumpDistance cast
-      switchData [] .caseJumpDistances $2 array.set
+      switchData [] .caseJumpDistances $2 slice.set
       1 +
     switchData .caseCount=
   end
@@ -1124,13 +1124,13 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: switchData
     switchData [] .breakCount
-      newIndex switchData [] .breakPositions $2 array.set
+      newIndex switchData [] .breakPositions $2 slice.set
       1 +
     switchData .breakCount=
   end
   proc(
     BlockId : blockId
-    Operation arrayView.mut : newOps
+    Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndSwitch
     program [] .switchData
@@ -1139,11 +1139,11 @@ namespace: program.jumps
     switchData [] .breakCount for =:: i
       switchData [] .breakPositions
         i
-      array.get =:: breakPos
+      slice.get =:: breakPos
       newOps .length
         breakPos - JumpDistance cast
       newOps
-        breakPos array.at .data
+        breakPos slice.at .data
       .val .block .jumpDistance=
     end
     0 switchData .breakCount=
@@ -1171,7 +1171,7 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: whileData
     whileData [] .orCount
-      newIndex whileData [] .orPositions $2 array.set
+      newIndex whileData [] .orPositions $2 slice.set
       1 +
     whileData .orCount=
   end
@@ -1184,7 +1184,7 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: whileData
     whileData [] .breakCount
-      newIndex whileData [] .breakPositions $2 array.set
+      newIndex whileData [] .breakPositions $2 slice.set
       1 +
     whileData .breakCount=
   end
@@ -1202,13 +1202,13 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: whileData
     whileData [] .continueCount
-      newIndex whileData [] .continuePositions $2 array.set
+      newIndex whileData [] .continuePositions $2 slice.set
       1 +
     whileData .continueCount=
   end
   proc(
     BlockId : blockId
-    Operation arrayView.mut : newOps
+    Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateDo
     blockId newOps .length program updateBreak
@@ -1216,18 +1216,18 @@ namespace: program.jumps
       blockId i64 cast
     list.at .data =:: whileData
     whileData [] .orCount for =:: i
-      whileData [] .orPositions i array.get =:: orPos
+      whileData [] .orPositions i slice.get =:: orPos
       newOps .length
         orPos - JumpDistance cast
       newOps
-        orPos array.at .data
+        orPos slice.at .data
       .val .block .jumpDistance=
     end
     0 whileData .orCount=
   end
   proc(
     BlockId : blockId
-    Operation arrayView.mut : newOps
+    Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateFinally
     program [] .whileData
@@ -1236,29 +1236,29 @@ namespace: program.jumps
     whileData [] .continueCount for =:: i
       whileData [] .continuePositions
         i
-      array.get =:: continuePos
+      slice.get =:: continuePos
       newOps .length
         continuePos - JumpDistance cast
       newOps
-        continuePos array.at .data
+        continuePos slice.at .data
       .val .block .jumpDistance=
     end
     0 whileData .continueCount=
   end
   proc(
     BlockId : blockId
-    Operation arrayView.mut : newOps
+    Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndWhile
     program [] .whileData
       blockId i64 cast
     list.at .data =:: whileData
     whileData [] .breakCount for =:: i
-      whileData [] .breakPositions i array.get =:: breakPos
+      whileData [] .breakPositions i slice.get =:: breakPos
       newOps .length
         breakPos - JumpDistance cast
       newOps
-        breakPos array.at .data
+        breakPos slice.at .data
       .val .block .jumpDistance=
     end
     0 whileData .breakCount=
@@ -1267,7 +1267,7 @@ namespace: program.jumps
     =:: loopLength
     loopLength JumpDistance cast
     newOps whileData [] .loopStart
-      array.at .data
+      slice.at .data
     .val .block .jumpDistance=
     loopLength -_ JumpDistance cast
   end
@@ -1284,7 +1284,7 @@ namespace: program.jumps
       newIndex andOrData .blockStart=
     end
     andOrData [] .andOrCount
-      newIndex andOrData [] .andOrPositions $2 array.set
+      newIndex andOrData [] .andOrPositions $2 slice.set
       1 +
     andOrData .andOrCount=
   end
@@ -1295,7 +1295,7 @@ namespace: program.jumps
   -> ) : export: alias: updateOr updateAnd
   proc(
     BlockId : blockId
-    Operation arrayView.mut : newOps
+    Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndAndOr
     program [] .andOrData
@@ -1304,11 +1304,11 @@ namespace: program.jumps
     andOrData [] .andOrCount for =:: i
       andOrData [] .andOrPositions
         i
-      array.get =:: andOrPos
+      slice.get =:: andOrPos
       newOps .length
         andOrPos - JumpDistance cast
       newOps
-        andOrPos array.at .data
+        andOrPos slice.at .data
       .val .block .jumpDistance=
     end
     0 andOrData .andOrCount=

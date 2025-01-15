@@ -380,13 +380,13 @@ end
 struct(
   string : blockName
   BlockId : blockId
-  BranchId arrayView : branchIds
+  BranchId slice : branchIds
   FilePosition : pos
   CompilerContext ptr.mut : context
   stringBuilder ptr.mut : out
 ) =:: MergePoint
 proc(
-  StackElement ptr arrayView : toMerge
+  StackElement ptr slice : toMerge
   i64 : offset
   MergePoint : mergePoint
 -> StackElement ) =>: mergeBranches
@@ -397,11 +397,11 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  toMerge 0 array.get =:: rootValue
+  toMerge 0 slice.get =:: rootValue
   rootValue [] .varId =:: rootId
   true =:: mut: isMerged
   1:i64 while ..dup toMerge .length < do =:: i
-    toMerge i array.get [] .varId rootId != if
+    toMerge i slice.get [] .varId rootId != if
       false isMerged@ =
       i break
     end
@@ -411,13 +411,13 @@ proc(
     rootValue [] return
   end
   1:i64 while ..dup toMerge .length < do =:: i
-    toMerge i array.get [] .valType rootValue [] .valType != if
+    toMerge i slice.get [] .valType rootValue [] .valType != if
       "branches of " sb.wrap
          mergePoint .blockName sb.appendStr
          "-statement are out of sync expected: " sb.appendS
          rootValue [] .valType sb.appendValType
          " got: " sb.appendS
-         toMerge i array.get [] .valType sb.appendValType
+         toMerge i slice.get [] .valType sb.appendValType
       mergePoint .pos errors appendError
       i break
     end
@@ -434,9 +434,9 @@ proc(
       i 0 > if
         ", " sb.appendS
       end
-      mergePoint .branchIds i array.get sb.appendBranchId
+      mergePoint .branchIds i slice.get sb.appendBranchId
       " %s" sb.appendS
-      toMerge i array.get [] .varId sb.appendI
+      toMerge i slice.get [] .varId sb.appendI
       i 1 +
     end ..drop
     '\n' sb.appendC
@@ -752,7 +752,7 @@ namespace: sb
         i 1 +
       end ..drop
       0:i64 while ..dup outArgs .length < do =:: i
-          outArgs i array.get =:: arg
+          outArgs i slice.get =:: arg
           arg typeContext types.isEmpty if
             ## skip empty arguments
             i 1 + continue
@@ -772,7 +772,7 @@ namespace: sb
   proc(
     type : auto: T
     stringBuilder : sb
-    T arrayView : value
+    T slice : value
     char8 : valueChar
     bool : nullTerminate
   -> stringBuilder ) =>: appendPrimitiveArrayConstQBE
@@ -780,7 +780,7 @@ namespace: sb
       0:i64 while ..dup value .length < do =:: i
         valueChar sb.appendC
         ' ' sb.appendC
-        value i array.get i64 cast.u 0xff & sb.appendI
+        value i slice.get i64 cast.u 0xff & sb.appendI
         ',' sb.appendC
         i 1 +
       end ..drop
@@ -854,7 +854,7 @@ namespace: sb
       ## newArrayType
         constant [] .valType
         types.ArrayType .ARRAY
-        size@ array.wrap ## size
+        size@ slice.wrap ## size
         false ## mutable
       typeContext types.newArrayType ! "can create array" assert
     else
@@ -1011,7 +1011,7 @@ namespace: sb
               i 0 > if
                 ',' sb.appendC
               end
-              eltType elts i array.get true pos context appendConstQBE
+              eltType elts i slice.get true pos context appendConstQBE
               eltSize eltStride < if
                 ",z " sb.appendS
                 eltStride eltSize - sb.appendI
@@ -1038,7 +1038,7 @@ namespace: sb
               end
               ## appendConstQBE
                 elt
-                elts i array.get
+                elts i slice.get
                 true
                 pos
               context appendConstQBE
@@ -1243,7 +1243,7 @@ namespace: sb
       t typeContext types.getArraySize =:: sizes
       1:i64 =:: mut: S
       0:i64 while ..dup sizes .length < do =:: i
-        sizes i array.get =:: size
+        sizes i slice.get =:: size
         size .int ?? ! if
           sb return ## no declaration for var-size array
         end
@@ -1852,8 +1852,8 @@ proc(
   ValType : valType
   i64 : valId
   JumpDistance : defaultJumpDistance
-  LabelData arrayView : labels
-  JumpDistance arrayView.mut : caseJumpDistances
+  LabelData slice : labels
+  JumpDistance slice.mut : caseJumpDistances
   i64 : opIndex
   i64 optional : lower
   i64 optional : upper
@@ -1870,16 +1870,16 @@ proc(
     end
     sb
       0:i64 while ..dup loopCount < do =:: i
-        labels i array.at .data [] .caseId =:: caseId
+        labels i slice.at .data [] .caseId =:: caseId
         ## BranchId
           BranchType .LABEL
-          opIndex caseJumpDistances caseId array.get i64 cast +
+          opIndex caseJumpDistances caseId slice.get i64 cast +
         BranchId new =:: caseBranch
         ## BranchId
           BranchType .NEXT
           context nextJumpLabelId
         BranchId new =:: nextBranch
-        labels i array.get .value labelAsInt =:: cmpVal
+        labels i slice.get .value labelAsInt =:: cmpVal
         ## cmp int
           valType
           't' valId
@@ -1894,10 +1894,10 @@ proc(
       end ..drop
       "jmp " sb.appendS
       contiguous if
-        labels loopCount array.at .data [] .caseId =:: caseId
+        labels loopCount slice.at .data [] .caseId =:: caseId
         ## BranchId
           BranchType .LABEL
-          opIndex caseJumpDistances caseId array.get i64 cast +
+          opIndex caseJumpDistances caseId slice.get i64 cast +
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       else
@@ -1918,8 +1918,8 @@ proc(
     BranchType .NEXT
     context nextJumpLabelId
   BranchId new =:: geBranch
-  labels p array.get .value labelAsInt =:: cmpVal
-  labels p array.cutIndex =:: lElts =:: rElts
+  labels p slice.get .value labelAsInt =:: cmpVal
+  labels p slice.cutIndex =:: lElts =:: rElts
   sb
     ## cmp int
       valType
@@ -1983,7 +1983,7 @@ proc(
   i64 : valId
   JumpDistance : defaultJumpDistance
   LabelData list : labels
-  JumpDistance arrayView.mut : caseJumpDistances
+  JumpDistance slice.mut : caseJumpDistances
   i64 : opIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
@@ -2036,7 +2036,7 @@ proc(
       valType
       tmpId
       defaultJumpDistance
-      labels list.asArray
+      labels list.asSlice
       caseJumpDistances
       opIndex
       i64 optional.empty
@@ -2954,7 +2954,7 @@ proc(
         src srcId
         types.primitive.I_SIZE targetId
       pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
-      target typeContext types.getArraySize 0 array.get =:: size
+      target typeContext types.getArraySize 0 slice.get =:: size
       ## appendIndexCheck
         size switch
           int case size .int IntValue .constant break
@@ -3853,7 +3853,7 @@ proc(
           i 1 + continue ## skip static arguments
         end
         argFlags id.FLAG_AUTO & ? if
-          callInfo [] .autoArgs autoArgIndex array.get =:: argVal
+          callInfo [] .autoArgs autoArgIndex slice.get =:: argVal
           autoArgIndex 1 + autoArgIndex@ =
           argVal .None ?? ! if
             newSb
@@ -3876,7 +3876,7 @@ proc(
       argIndices .length =:: outArgOffset
       ## reserve space for out-arguments
       0:i64 while ..dup outArgs .length < do =:: i
-        outArgs i array.get =:: arg
+        outArgs i slice.get =:: arg
         arg typeContext types.isEmpty if
           ## skip empty arguments
           i 1 + continue
@@ -3936,7 +3936,7 @@ proc(
       =:: outArgs
       0:i64 =:: mut: outArgCount
       0:i64 while ..dup outArgs .length < do =:: i
-        outArgs i array.get =:: arg
+        outArgs i slice.get =:: arg
         arg typeContext types.isEmpty if
           ## skip empty arguments
           i 1 + continue
@@ -4142,12 +4142,12 @@ proc(
             ifBlock .orBranchIds=
             ## mergeValues
               context .stackInfo
-              ifBlock [] .orBranches list.asArray
+              ifBlock [] .orBranches list.asSlice
               mergeBranches@
               ## MergePoint
                 "or-if":s
                 ifBlock [] .blockId
-                ifBlock [] .orBranchIds list.asArray
+                ifBlock [] .orBranchIds list.asSlice
                 op [] .pos
                 context
                 newSb@
@@ -4248,12 +4248,12 @@ proc(
           ifBlock [] .If .andBranches .length 1 >= "if block has if branch" assert
           ## mergeValues
             context .stackInfo
-            ifBlock [] .If .andBranches list.asArray
+            ifBlock [] .If .andBranches list.asSlice
             mergeBranches@
             ## MergePoint
               "and-if":s
               ifBlock [] .If .blockId
-              ifBlock [] .If .andBranchIds list.asArray
+              ifBlock [] .If .andBranchIds list.asSlice
               op [] .pos
               context
               newSb@
@@ -4473,12 +4473,12 @@ proc(
             whileBlock .doBranchIds=
             ## mergeValues
             context .stackInfo
-            whileBlock [] .doBranches list.asArray
+            whileBlock [] .doBranches list.asSlice
             mergeBranches@
             ## MergePoint
                 "or-do":s
                 whileBlock [] .blockId
-                whileBlock [] .doBranchIds list.asArray
+                whileBlock [] .doBranchIds list.asSlice
                 op [] .pos
                 context
                 newSb@
@@ -4563,12 +4563,12 @@ proc(
             continueBranches .length [] =:: nodeCount
             ## mergeValues
               context .stackInfo
-              continueBranches [] list.asArray
+              continueBranches [] list.asSlice
               mergeBranches@
               ## MergePoint
                 "while":s
                 whileBlock [] .blockId
-                whileBlock .continueBranchIds [] list.asArray
+                whileBlock .continueBranchIds [] list.asSlice
                 op [] .pos
                 context
                 newSb@
@@ -4668,12 +4668,12 @@ proc(
           nBranches 1 >= if
             ## mergeValues
               context .stackInfo
-              branches@ nBranches array.create
+              branches@ nBranches slice.create
               mergeBranches@
               ## MergeIf
                 "if":s
                 ifBlock .blockId
-                branchIds@ nBranches array.create
+                branchIds@ nBranches slice.create
                 op [] .pos
                 context
                 newSb@
@@ -4710,12 +4710,12 @@ proc(
             caseBranches .length =:: nodeCount
             ## mergeValues
               context .stackInfo
-              caseBranches list.asArray
+              caseBranches list.asSlice
               mergeBranches@
               ## MergePoint
                 "switch":s
                 switchBlock .blockId
-                switchBlock .caseBranchIds list.asArray
+                switchBlock .caseBranchIds list.asSlice
                 op [] .pos
                 context
                 newSb@
@@ -4780,12 +4780,12 @@ proc(
             breakBranches .length =:: nodeCount
             ## mergeValues
               context .stackInfo
-              breakBranches list.asArray
+              breakBranches list.asSlice
               mergeBranches@
               ## MergePoint
                 "while":s
                 whileBlock .blockId
-                whileBlock .breakBranchIds list.asArray
+                whileBlock .breakBranchIds list.asSlice
                 op [] .pos
                 context
                 newSb@
@@ -4825,12 +4825,12 @@ proc(
           =:: mut: newSb
           ## mergeValues
             context .stackInfo
-            andOrBlock .branches list.asArray
+            andOrBlock .branches list.asSlice
             mergeBranches@
             ## MergePoint
               "and/or":s
               andOrBlock .blockId
-              andOrBlock .branchIds list.asArray
+              andOrBlock .branchIds list.asSlice
               op [] .pos
               context
               newSb@
@@ -4880,7 +4880,7 @@ proc(
           -1:i64  string.empty ## values will be ignored
         end =:: retStr =:: retId
         outTypes .length 1 - while ..dup 0 >= do =:: i
-          outTypes i array.get =:: elt
+          outTypes i slice.get =:: elt
           elt typeContext types.isEmpty if
             i 1 - continue
           end

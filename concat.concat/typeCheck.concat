@@ -589,7 +589,7 @@ proc(
         pos errors appendError
         false return
       end
-      target typeContext types.getArraySize 0 array.get =:: index
+      target typeContext types.getArraySize 0 slice.get =:: index
       index .int ?? ! if
         true return
       end
@@ -613,7 +613,7 @@ proc(
   true return
 end
 proc(
-  Type arrayView : types
+  Type slice : types
   string : name
   ## number of values already popped by instruction
   i32 : stackCastOffset
@@ -627,7 +627,7 @@ proc(
   typeContext .labelContext =:: labelContext
   types .length i64 list.create =:: mut: argOffsets
   1:i64 while ..dup types .length <= do =:: i
-    types types .length i - array.get =:: expectedType
+    types types .length i - slice.get =:: expectedType
     state [] .stack branchTree.depth 0 <= if
       expectedType .empty ?? if
         i 1 + continue ## skip empty arguments if no values on stack
@@ -844,7 +844,7 @@ proc(
     state .compiledOps=
 end
 proc(
-  Type arrayView : types
+  Type slice : types
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> ) =>: pushTypes
@@ -852,7 +852,7 @@ proc(
   0:i64 while ..dup types .length < do =:: i
     state .stack
       ## TypeInfo
-        types i array.get
+        types i slice.get
         ConstValue .None
         id.LABEL_ID_NONE
         pos
@@ -1032,13 +1032,13 @@ enum( MERGE MERGE_ROOT NO_CAST ) =:: MergeType
 struct(
   string : blockName
   FilePosition : mergePoint
-  i64 arrayView : castPointOffsets
+  i64 slice : castPointOffsets
   TypeCheckState ptr.mut : state
   i64 : rootBranch
   MergeType : mergeType
 ) =:: MergePoint
 proc(
-  TypeInfo ptr arrayView : toMerge
+  TypeInfo ptr slice : toMerge
   i64 : offset
   MergePoint : mergePoint
 -> TypeInfo ) =>: mergeBranches
@@ -1049,9 +1049,9 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   toMerge .length 1 == if
-    toMerge 0 array.get [] return
+    toMerge 0 slice.get [] return
   end
-  toMerge mergePoint .rootBranch array.get =:: root
+  toMerge mergePoint .rootBranch slice.get =:: root
   root [] .valueType =:: mut: mergedType
   mergedType types.isLiteral if
     mergePoint .mergeType switch
@@ -1066,7 +1066,7 @@ proc(
     i mergePoint .rootBranch == if
       i 1 + continue
     end
-    toMerge i array.get =:: current
+    toMerge i slice.get =:: current
     current [] .valueType
       $ types.isLiteral and mergePoint .mergeType .NO_CAST ?? if
         typeContext types.literalToType
@@ -1120,12 +1120,12 @@ proc(
   end ..drop
   noError if ## don't try casting values if merging types failed
     0:i64 while ..dup toMerge .length < do =:: i
-      toMerge i array.get =:: current
+      toMerge i slice.get =:: current
         current [] .valueType
           $ types.isLiteral if typeContext types.literalToType end
         =:: currentType
         currentType mergedType types.typeEquals ! if
-          mergePoint .castPointOffsets i array.get =:: castRoot
+          mergePoint .castPointOffsets i slice.get =:: castRoot
           castRoot 0 >= if
             mergePoint .state [] .compiledOps castRoot offset + list.at .data =:: castPoint
             castPoint [] .val .NOP ?? and castPoint [] .val .NOP .RESERVED ?? if
@@ -1627,8 +1627,8 @@ proc( i64 : blockStart ProgramContext ptr.mut : program -> BlockId ) =>: createI
         blockStart
         0:i64
         0:i64
-        i64 array.emptyMutable
-        i64 array.emptyMutable
+        i64 slice.emptyMutable
+        i64 slice.emptyMutable
         0:i32
         0:i32
       IfData new list.append
@@ -1640,7 +1640,7 @@ proc( i64 : blockStart ProgramContext ptr.mut : program -> BlockId ) =>: createA
     program [] .andOrData
       ## AndOrData
         blockStart
-        i64 array.emptyMutable
+        i64 slice.emptyMutable
         0:i32
       AndOrData new list.append
     program .andOrData=
@@ -1792,12 +1792,12 @@ proc(
             program [] .procedures
               procId [] i64 cast list.at .data
             =:: procData
-            procId array.wrap
+            procId slice.wrap
           else  ## PROCEDURE_BUNDLE
             constValue .ProcedureBundle =:: bundleId
             program [] .procBundles
               bundleId i64 cast list.at .data [] .procedures
-            list.asArray
+            list.asSlice
           end =:: procedures
           0:i64 =:: mut: stackConstants
           true =:: mut: headConstant
@@ -1819,7 +1819,7 @@ proc(
           0 sb.create =:: mut: message
           ## resolveCall
             procedures
-            stackValues list.asArray
+            stackValues list.asSlice
             message@ optional.wrap
             op .pos
             program
@@ -1902,7 +1902,7 @@ proc(
               end
             else ## next argument at top of stack
               ## requireTypes
-                elt@ array.wrap
+                elt@ slice.wrap
                 "procedure argument":s
                 offset
                 op .pos
@@ -1941,7 +1941,7 @@ proc(
         return
       end
       ## requireTypes
-        calledType@ array.wrap
+        calledType@ slice.wrap
         "procedure pointer":s
         0
         op .pos
@@ -2070,7 +2070,7 @@ proc(
             1 op .pos state discardValues
           else
             ## requireTypes
-              op@ .dataType array.wrap
+              op@ .dataType slice.wrap
               "initialization":s
               0
               op .pos
@@ -2192,7 +2192,7 @@ proc(
       base args 0 []=
       target [] .valueType args 1 []=
       ## requireTypes
-        args array.wrap
+        args slice.wrap
         "assignment":s
         0
         op .pos
@@ -2317,7 +2317,7 @@ proc(
             constContext newUnionConst constValue@ =
           end
         ## requireTypes
-          eltType@ array.wrap
+          eltType@ slice.wrap
           "enum-creation":s
           0
           op .pos
@@ -2359,7 +2359,7 @@ proc(
         targetType args@ 0 []=
         srcType args@ 1 []=
         ## requireTypes
-          args@ array.wrap
+          args@ slice.wrap
           "element write":s
           0
           op .pos
@@ -2440,7 +2440,7 @@ proc(
         op .pos errors appendError
       end
       ## XXX compile-time evaluation
-      enumType@ array.wrap "getEnumLabel":s 0 op .pos state requireTypes if
+      enumType@ slice.wrap "getEnumLabel":s 0 op .pos state requireTypes if
         return
       end
       enumType op@ .dataType=
@@ -2459,7 +2459,7 @@ proc(
     getArg case
       true program .hasGetArgs=
       ## requireTypes
-        types.primitive.I_SIZE@ array.wrap
+        types.primitive.I_SIZE@ slice.wrap
         "program argument index":s
         0
         op .pos
@@ -2471,13 +2471,13 @@ proc(
       typeData@ =:: outTypes
       types.primitive.CHAR8
         types.ArrayType .RAW_POINTER
-        types.ArraySize array.empty
+        types.ArraySize slice.empty
         false
       typeContext types.newArrayType
         ! "successful array creation" assert
       outTypes 0 []=
       types.primitive.I_SIZE outTypes 1 []=
-      outTypes array.wrap op .pos state pushTypes
+      outTypes slice.wrap op .pos state pushTypes
       return
     Cast Cast! bitCast case
       op .dataType .undefined ?? if
@@ -2570,7 +2570,7 @@ proc(
       argType params@ 1 []=
       argType op@ .dataType=
       ## requireTypes
-        params@ array.wrap
+        params@ slice.wrap
         "equality-check":s
         0
         op .pos
@@ -2597,7 +2597,7 @@ proc(
           return
         AND_IF OR_IF case
           ## requireTypes
-            types.primitive.BOOL@ array.wrap
+            types.primitive.BOOL@ slice.wrap
             "and/or-condition":s
             0
             op .pos
@@ -2635,7 +2635,7 @@ proc(
           return
         IF case
           ## requireTypes
-            types.primitive.BOOL@ array.wrap
+            types.primitive.BOOL@ slice.wrap
             "if-condition":s
             0
             op .pos
@@ -2671,7 +2671,7 @@ proc(
           orBranches [] .length 0 > if
             ifBlock [] .andOrPositions =:: andOrPos
             program [] .labelPositions
-              orBranches [] .length i32 cast arenaAlloc.allocArray =:: orPositions
+              orBranches [] .length i32 cast arenaAlloc.allocSlice =:: orPositions
             program .labelPositions=
             0:i32 =:: mut: orCount
             andOrPos .length for =:: i
@@ -2680,7 +2680,7 @@ proc(
                 andOrIndex
               list.at .data =:: andOrOp
               andOrOp .val .block .blockType .OR_IF ?? if
-                andOrIndex orPositions orCount array.set
+                andOrIndex orPositions orCount slice.set
                 orCount 1 + orCount@ =
                 currentOpIndex
                   andOrIndex - JumpDistance cast
@@ -2704,12 +2704,12 @@ proc(
             =:: branchPoints
             ## mergeValues
               state .stack
-              branchPoints list.asArray
+              branchPoints list.asSlice
               mergeBranches@
               ## MergePoint
                 "or if block":s
                 op .pos
-                i64 array.empty
+                i64 slice.empty
                 state
                 0
                 MergeType .NO_CAST
@@ -2790,7 +2790,7 @@ proc(
           program [] .labelPositions
             currentBlock [] .If .andOrPositions .length
               ifData [] .orPositions .length - i32 cast
-            arenaAlloc.allocArray =:: andPositions
+            arenaAlloc.allocSlice =:: andPositions
           program .labelPositions=
           0:i32 =:: mut: andCount
           currentBlock [] .If .andOrPositions .length for =:: i
@@ -2799,7 +2799,7 @@ proc(
               andOrPos
             list.at .data =:: andOrOp
             andOrOp .val .block [] .blockType .AND_IF ?? if
-              andOrPos andPositions andCount array.set
+              andOrPos andPositions andCount slice.set
               andCount 1 + andCount@ =
               currentOpIndex
                 andOrPos - JumpDistance cast
@@ -2821,12 +2821,12 @@ proc(
           =:: branchPoints
           ## mergeValues
             state .stack
-            branchPoints list.asArray
+            branchPoints list.asSlice
             mergeBranches@
             ## MergePoint
               "and if block":s
               op .pos
-              i64 array.empty
+              i64 slice.empty
               state
               0
               MergeType .NO_CAST
@@ -2864,7 +2864,7 @@ proc(
             op .pos errors appendError
           end
           ## requireTypes
-            switchType@ array.wrap
+            switchType@ slice.wrap
             "switch value":s
             0
             op .pos
@@ -2884,8 +2884,8 @@ proc(
               0 ## break-count
               currentOpIndex
               0:JumpDistance ## default jump distance
-              JumpDistance array.emptyMutable
-              i64 array.emptyMutable
+              JumpDistance slice.emptyMutable
+              i64 slice.emptyMutable
             SwitchData new list.append
           program .switchData=
           state .stack branchTree.startBranch =:: switchBranch
@@ -3068,9 +3068,9 @@ proc(
             ## WhileData
               -1
               currentOpIndex
-              i64 array.emptyMutable
-              i64 array.emptyMutable
-              i64 array.emptyMutable
+              i64 slice.emptyMutable
+              i64 slice.emptyMutable
+              i64 slice.emptyMutable
               0:i32 0:i32 0:i32
             WhileData new list.append
           program .whileData=
@@ -3099,7 +3099,7 @@ proc(
             return
           end
           ## requireTypes
-            types.primitive.BOOL@ array.wrap
+            types.primitive.BOOL@ slice.wrap
             "and/or-condition":s
             0
             op .pos
@@ -3147,7 +3147,7 @@ proc(
           end
           currentBlock? .data =:: currentBlock
           ## requireTypes
-            types.primitive.BOOL@ array.wrap
+            types.primitive.BOOL@ slice.wrap
             "while-condition":s
             0
             op .pos
@@ -3187,12 +3187,12 @@ proc(
             =:: branchPoints
             ## mergeValues
               state .stack
-              branchPoints list.asArray
+              branchPoints list.asSlice
               mergeBranches@
               ## MergePoint
                 "or do block":s
                 op .pos
-                i64 array.empty
+                i64 slice.empty
                 state
                 0
                 MergeType .NO_CAST
@@ -3215,7 +3215,7 @@ proc(
             branchPoints list.free ..drop
           end
           program [] .labelPositions
-            whileBlock [] .orCount arenaAlloc.allocArray =:: orPositions
+            whileBlock [] .orCount arenaAlloc.allocSlice =:: orPositions
           program .labelPositions=
           state [] .compiledOps .length =:: currentOpIndex
           whileBlock [] .labelPositions .length for =:: i
@@ -3226,7 +3226,7 @@ proc(
                 orPos - JumpDistance cast
               orOp .val .block .jumpDistance=
               whileBlock [] .orCount 1 -
-                orPos orPositions $2 array.set
+                orPos orPositions $2 slice.set
               whileBlock .orCount=
             end
           end
@@ -3288,12 +3288,12 @@ proc(
             branchPoints@ =
             ## mergeValues
               state .stack
-              branchPoints list.asArray
+              branchPoints list.asSlice
               mergeBranches@
               ## MergePoint
                 "while block":s
                 op .pos
-                whileBlock [] .continueCastOffsets list.asArray
+                whileBlock [] .continueCastOffsets list.asSlice
                 state
                 0
                 MergeType .MERGE
@@ -3322,7 +3322,7 @@ proc(
             return
           end
           program [] .labelPositions
-            whileBlock [] .continueCount arenaAlloc.allocArray =:: continuePositions
+            whileBlock [] .continueCount arenaAlloc.allocSlice =:: continuePositions
           program .labelPositions=
           state [] .compiledOps .length =:: currentOpIndex
           whileBlock [] .labelPositions .length for =:: i
@@ -3333,7 +3333,7 @@ proc(
                 continuePos - JumpDistance cast
               continueOp .val .block .jumpDistance=
               whileBlock [] .continueCount 1 -
-                continuePos continuePositions $2 array.set
+                continuePos continuePositions $2 slice.set
               whileBlock .continueCount=
             end
           end
@@ -3371,7 +3371,7 @@ proc(
             blockId
           end =:: blockId
           ## requireTypes
-            types.primitive.BOOL@ array.wrap
+            types.primitive.BOOL@ slice.wrap
             "and/or-condition":s
             0
             op .pos
@@ -3456,12 +3456,12 @@ proc(
           nBranches 1 >= if
             ## mergeValues
               state .stack
-              branches@ nBranches array.create
+              branches@ nBranches slice.create
               mergeBranches@
               ## MergePoint
                 "if-else block":s
                 op .pos
-                castOffsets@ nBranches array.create
+                castOffsets@ nBranches slice.create
                 state
                 0
                 MergeType .MERGE
@@ -3545,7 +3545,7 @@ proc(
                   "\nmissing labels:\n" sb.appendS
                   0:i64 while ..dup eltCount < do =:: i
                     false =:: mut:  match
-                    ## XXX? use array.find
+                    ## XXX? use slice.find
                     0:i64 while ..dup labels .length < do =:: j
                       labels j list.get .value .EnumLabel i == if
                         true match@ =
@@ -3597,12 +3597,12 @@ proc(
             =:: branchPoints
             ## mergeValues
               state .stack
-              branchPoints list.asArray
+              branchPoints list.asSlice
               mergeBranches@
               ## MergePoint
                 "switch-case block":s
                 op .pos
-                switchBlock [] .castOffsets list.asArray
+                switchBlock [] .castOffsets list.asSlice
                 state
                 0
                 MergeType .MERGE
@@ -3681,12 +3681,12 @@ proc(
           state reserveOps castOffsets@ 1 []=
           ## mergeValues
             state .stack
-            branchPoints list.asArray
+            branchPoints list.asSlice
             mergeBranches@
             ## MergePoint
               "while loop":s
               op .pos
-              castOffsets@ 2 array.create
+              castOffsets@ 2 slice.create
               state
               0
               MergeType .MERGE_ROOT
@@ -3729,12 +3729,12 @@ proc(
             branchPoints@ =
             ## mergeValues
               state .stack
-              branchPoints list.asArray
+              branchPoints list.asSlice
               mergeBranches@
               ## MergePoint
                 "while block":s
                 op .pos
-                whileBlock [] .breakCastOffsets list.asArray
+                whileBlock [] .breakCastOffsets list.asSlice
                 state
                 whileBlock [] .doBranchIndex
                 MergeType .MERGE_ROOT
@@ -3768,7 +3768,7 @@ proc(
             whileBlock [] .labelPositions .length
               whileBlock [] .orCount i64 cast.u -
               whileBlock [] .continueCount i64 cast.u -
-            i32 cast arenaAlloc.allocArray =:: breakPositions
+            i32 cast arenaAlloc.allocSlice =:: breakPositions
           program .labelPositions=
           0:i32 =:: mut: breakCount
           whileBlock [] .labelPositions .length for =:: i
@@ -3782,7 +3782,7 @@ proc(
               currentOpIndex
                 labelPos - JumpDistance cast
               labelOp .val .block .jumpDistance=
-              labelPos breakPositions breakCount array.set
+              labelPos breakPositions breakCount slice.set
             end
           end
           breakPositions whileData .breakPositions=
@@ -3854,12 +3854,12 @@ proc(
           =:: branchPoints
           ## mergeValues
             state .stack
-            branchPoints list.asArray
+            branchPoints list.asSlice
             mergeBranches@
             ## MergePoint
               "and or block":s
               op .pos
-              i64 array.empty
+              i64 slice.empty
               state
               0
               MergeType .NO_CAST
@@ -3901,7 +3901,7 @@ proc(
       end
       ## XXX try to evaluate at compile time
       ## requireTypes
-        types.primitive.BOOL@ array.wrap
+        types.primitive.BOOL@ slice.wrap
         "assertion":s
         0
         op .pos
@@ -4177,7 +4177,7 @@ proc(
       inTypes i types.compositeElts.get =:: argType
       labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
         currentImpl [] .staticArgs
-          staticArgCount array.get
+          staticArgCount slice.get
         =:: argValue
         state .argData labelId
           argType argValue TypedValue new
@@ -4249,8 +4249,8 @@ proc(
   end
   procFile [] .localOps
     state [] .compiledOps
-      list.asArray codeOffset array.tail
-    list.appendArray
+      list.asSlice codeOffset slice.tail
+    list.appendSlice
   procFile .localOps=
   state clearOps
   state [] .program [] .autoTypes

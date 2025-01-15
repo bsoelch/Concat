@@ -268,8 +268,8 @@
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
           list                         |
-          arrayView                    |
-          arrayView.mut                |
+          slice                        |
+          slice.mut                    |
           ArenaAllocator               |
           optional                     |
           hashMap

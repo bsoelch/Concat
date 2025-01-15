@@ -528,8 +528,8 @@ namespace: interpreter
       Type .empty
     else
       ## newTuple
-        context [] .typeBuffer list.asArray typeOffset array.tail
-        context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+        context [] .typeBuffer list.asSlice typeOffset slice.tail
+        context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
       typeContext types.newTuple if ..drop
         "could not create structure-type" sb.wrap op [] .pos errors appendError
         true return
@@ -568,8 +568,8 @@ namespace: interpreter
       op [] .pos
     context closedTypeBlock if true return end
     ## newProcArgs
-      context [] .typeBuffer list.asArray typeOffset array.tail
-      context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+      context [] .typeBuffer list.asSlice typeOffset slice.tail
+      context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
       false
     typeContext types.newProcArgs =:: procIn
     procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
@@ -615,8 +615,8 @@ namespace: interpreter
     context [] .typeBuffer .length typeOffset - elementCount == "type count == label count" assert
     context [] .valueBuffer .length valueOffset - elementCount == "value count == label count" assert
     ## newInitializerType
-      context [] .typeBuffer list.asArray typeOffset array.tail
-      context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+      context [] .typeBuffer list.asSlice typeOffset slice.tail
+      context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
       typeContext
     types.newInitializerType =:: initializerType
     ## return
@@ -800,7 +800,7 @@ namespace: interpreter
     value .Array8 ?? if
       value .Array8 string.fromBytes false return
     else value .LocalArray8 ?? _if
-      value .LocalArray8 i8 arrayView.mut cast array.freeze
+      value .LocalArray8 i8 slice.mut cast slice.freeze
         persistentCopy if
           constContext newArray8Const .Array8
         end
@@ -812,13 +812,13 @@ namespace: interpreter
     value .Array ?? and value .Array .length 2 == if
       value .Array
     else value .LocalArray ?? and value .LocalArray .length 2 == _if
-      value .LocalArray ConstValue arrayView.mut cast array.freeze
+      value .LocalArray ConstValue slice.mut cast slice.freeze
     else
       string.empty true return
     end =:: str
-    str 1 array.get .Int ?? ! if string.empty true return end
-    str 1 array.get .Int =:: length
-    persistentCopy str 0 array.get false constContext constValueAsString =:: isErr
+    str 1 slice.get .Int ?? ! if string.empty true return end
+    str 1 slice.get .Int =:: length
+    persistentCopy str 0 slice.get false constContext constValueAsString =:: isErr
       $ .length length < if true return end
       length string.head
     isErr return
@@ -935,7 +935,7 @@ namespace: interpreter
         end
         sizes
           ..dup .length 1 -
-        array.get =:: outerSize
+        slice.get =:: outerSize
         outerSize .int ?? if
           ## return
             types.primitive.I_SIZE
@@ -957,7 +957,7 @@ namespace: interpreter
       else
         idContext [] .argBuffer .length =:: offset
         0:i64 while ..dup sizes .length < do =:: i
-          sizes i array.get =:: current
+          sizes i slice.get =:: current
           idContext [] .argBuffer
             current .int ?? if
               current .int ConstValue .Int list.append
@@ -978,14 +978,14 @@ namespace: interpreter
             types.primitive.I_SIZE
             types.ArrayType .ARRAY
             sizeLength@
-            array.wrap
+            slice.wrap
             false
           typeContext types.newArrayType ..drop
           ## newArrayConst
-            ## array.create
+            ## slice.create
               idContext [] .argBuffer .data offset +
               idContext [] .argBuffer .length offset -
-            array.create
+            slice.create
             idContext .constContext
           newArrayConst
           idContext [] .argBuffer
@@ -1017,7 +1017,7 @@ namespace: interpreter
   end
   proc(
     LabelId : generatorName
-    ConstValue arrayView : args
+    ConstValue slice : args
     FilePosition : pos
     ProgramContext ptr.mut : program
   -> Type bool ) =>: export: initializeGeneratedType
@@ -1068,7 +1068,7 @@ namespace: interpreter
           continue
         end
         inType i typeContext types.compositeGetElement =:: argType
-        args i array.get =:: argValue
+        args i slice.get =:: argValue
         argValue argType pos context@ pushValue
       finally i 1 + end ..drop
       op@ context@ evaluateOperation ..drop
@@ -1196,10 +1196,10 @@ namespace: interpreter
       end
     =:: containerValue
     containerValue .Array ?? if
-      containerValue .Array elementIndex array.get
+      containerValue .Array elementIndex slice.get
     else containerValue .LocalArray ?? _if
-      containerValue .LocalArray ConstValue arrayView.mut cast
-        elementIndex array.at .data
+      containerValue .LocalArray ConstValue slice.mut cast
+        elementIndex slice.at .data
       isPtr and $ [] .LocalValue ?? ! and $ [] .LocalArray ?? ! and $ [] .LocalArray8 ?? ! and
           $ [] .LocalArray16 ?? ! and $ [] .LocalArray32 ?? ! and $ [] .LocalArray64 ?? ! if
         LocalAddress cast ConstValue .LocalValue
@@ -1291,14 +1291,14 @@ namespace: interpreter
     ## XXX? support (Local)Array8 ...  Array64
     containerValue .Array ?? if
       context [] .localMemory
-        containerValue .Array mixedArena.copyArray =:: localAddress
+        containerValue .Array mixedArena.copySlice =:: localAddress
       context .localMemory=
-      newValue localAddress elementIndex array.set
+      newValue localAddress elementIndex slice.set
       localAddress LocalSlice cast ConstValue .LocalArray
     else containerValue .LocalArray ?? _if
       newValue
-        containerValue .LocalArray ConstValue arrayView.mut cast
-      elementIndex array.set
+        containerValue .LocalArray ConstValue slice.mut cast
+      elementIndex slice.set
       containerValue
     else containerValue .Union ?? _if
       newValue elementIndex constContext newUnionConst
@@ -1322,7 +1322,7 @@ namespace: interpreter
     end
     false return
   end
-  ## TODO try merging Array.. / LocalArray.. code (? is there a good generic signature)
+  ## TODO try merging slice.. / Localslice.. code (? is there a good generic signature)
   proc(
     ConstValue : localArray
     Type : valType
@@ -1339,51 +1339,51 @@ namespace: interpreter
     localArray switch
       LocalArray case break
       LocalArray8 case
-        localArray .LocalArray8 i8 arrayView.mut cast =:: arrayData
+        localArray .LocalArray8 i8 slice.mut cast =:: arrayData
         localArray .LocalArray8 .length 1 == and valType typeContext types.isIntLike if
-          arrayData 0 array.get i64 cast.u ConstValue .Int return
+          arrayData 0 slice.get i64 cast.u ConstValue .Int return
         end
         allocator []
-          arrayData mixedArena.copyMutableArray =:: tmpArray
+          arrayData mixedArena.copyMutableSlice =:: tmpArray
         allocator []=
-        tmpArray array.freeze constContext newArray8Const return
+        tmpArray slice.freeze constContext newArray8Const return
       LocalArray16 case
-        localArray .LocalArray16 i16 arrayView.mut cast =:: arrayData
+        localArray .LocalArray16 i16 slice.mut cast =:: arrayData
         arrayData .length 1 == and valType typeContext types.isIntLike if
-          arrayData 0 array.get i64 cast.u ConstValue .Int return
+          arrayData 0 slice.get i64 cast.u ConstValue .Int return
         end
         allocator []
-          arrayData mixedArena.copyMutableArray =:: tmpArray
+          arrayData mixedArena.copyMutableSlice =:: tmpArray
         allocator []=
-        tmpArray array.freeze constContext newArray16Const return
+        tmpArray slice.freeze constContext newArray16Const return
       LocalArray32 case
-        localArray .LocalArray32 i32 arrayView.mut cast =:: arrayData
+        localArray .LocalArray32 i32 slice.mut cast =:: arrayData
         arrayData .length 1 == and valType typeContext types.isIntLike if
-          arrayData 0 array.get i64 cast.u ConstValue .Int return
+          arrayData 0 slice.get i64 cast.u ConstValue .Int return
         end
         allocator []
-          arrayData mixedArena.copyMutableArray =:: tmpArray
+          arrayData mixedArena.copyMutableSlice =:: tmpArray
         allocator []=
-        tmpArray array.freeze constContext newArray32Const return
+        tmpArray slice.freeze constContext newArray32Const return
       LocalArray64 case
-        localArray .LocalArray64 i64 arrayView.mut cast =:: arrayData
+        localArray .LocalArray64 i64 slice.mut cast =:: arrayData
         arrayData .length 1 == and valType typeContext types.isIntLike if
-          arrayData 0 array.get ConstValue .Int return
+          arrayData 0 slice.get ConstValue .Int return
         end
         allocator []
-          arrayData mixedArena.copyMutableArray =:: tmpArray
+          arrayData mixedArena.copyMutableSlice =:: tmpArray
         allocator []=
-        tmpArray array.freeze constContext newArray64Const return
+        tmpArray slice.freeze constContext newArray64Const return
       default ..unreachable
     end
-    localArray .LocalArray ConstValue arrayView.mut cast =:: dataArray
+    localArray .LocalArray ConstValue slice.mut cast =:: dataArray
     allocator []
-      dataArray mixedArena.copyMutableArray =:: tmpArray
+      dataArray mixedArena.copyMutableSlice =:: tmpArray
     allocator []=
     valType typeContext types.getElementType =:: arrayBase
     ## 1. copy elements
     dataArray .length for =:: i
-      dataArray i array.get =:: elt
+      dataArray i slice.get =:: elt
       arrayBase .undefined ?? ! if
         arrayBase
       else
@@ -1395,10 +1395,10 @@ namespace: interpreter
         LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
           elt eltType allocator program copyLocalArray break
         default elt break
-      end tmpArray i array.set
+      end tmpArray i slice.set
     end
     ## TODO find a way to avoid recreation of identical constants
-    tmpArray array.freeze constContext newArrayConst
+    tmpArray slice.freeze constContext newArrayConst
   end
   proc(
     ConstValue : value
@@ -1421,49 +1421,49 @@ namespace: interpreter
       Array LocalArray case break
       Array8 case
         context [] .localMemory
-          value .Array8 mixedArena.copyArray =:: localAddress
+          value .Array8 mixedArena.copySlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice8 cast ConstValue .LocalArray8
         return
       LocalArray8 case
         context [] .localMemory
-          value .LocalArray8 i8 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
+          value .LocalArray8 i8 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice8 cast ConstValue .LocalArray8
         return
       Array16 case
         context [] .localMemory
-          value .Array16 mixedArena.copyArray =:: localAddress
+          value .Array16 mixedArena.copySlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice16 cast ConstValue .LocalArray16
         return
       LocalArray16 case
         context [] .localMemory
-          value .LocalArray16 i16 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
+          value .LocalArray16 i16 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice16 cast ConstValue .LocalArray16
         return
       Array32 case
         context [] .localMemory
-          value .Array32 mixedArena.copyArray =:: localAddress
+          value .Array32 mixedArena.copySlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice32 cast ConstValue .LocalArray32
         return
       LocalArray32 case
         context [] .localMemory
-          value .LocalArray32 i32 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
+          value .LocalArray32 i32 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice32 cast ConstValue .LocalArray32
         return
       Array64 case
         context [] .localMemory
-          value .Array64 mixedArena.copyArray =:: localAddress
+          value .Array64 mixedArena.copySlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice64 cast ConstValue .LocalArray64
         return
       LocalArray64 case
         context [] .localMemory
-          value .LocalArray64 i64 arrayView.mut cast mixedArena.copyMutableArray =:: localAddress
+          value .LocalArray64 i64 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice64 cast ConstValue .LocalArray64
         return
@@ -1479,13 +1479,13 @@ namespace: interpreter
       value .Array ?? if
         value .Array
       else
-        value .LocalArray ConstValue arrayView.mut cast array.freeze
-      end mixedArena.copyArray =:: localSlice
+        value .LocalArray ConstValue slice.mut cast slice.freeze
+      end mixedArena.copySlice =:: localSlice
     context .localMemory=
     valType typeContext types.getElementType =:: arrayBase
     ## copy sub-arrays
     localSlice .length for =:: i
-      localSlice i array.at .data =:: elt
+      localSlice i slice.at .data =:: elt
       arrayBase .undefined ?? ! if
         arrayBase
       else
@@ -1509,7 +1509,7 @@ namespace: interpreter
     dataType typeContext types.isTuple if
       dataType typeContext types.compositeEltCount =:: eltCount
       context [] .localMemory
-        eltCount i32 cast ConstValue mixedArena.allocArray =:: localSlice
+        eltCount i32 cast ConstValue mixedArena.allocSlice =:: localSlice
       context .localMemory=
       eltCount for =:: i
         dataType i typeContext types.compositeGetElement =:: eltType
@@ -1517,14 +1517,14 @@ namespace: interpreter
           eltType pos context allocLocalValue
         else
           ConstValue .None
-        end localSlice i array.set
+        end localSlice i slice.set
       end
       localSlice LocalSlice cast ConstValue .LocalArray return
     else dataType typeContext types.isArray _if
       ## XXX? merge with previous case
       dataType typeContext types.getArraySize =:: arraySizes
       arraySizes .length 0 > if
-        arraySizes $ .length 1 - array.get =:: arraySize
+        arraySizes $ .length 1 - slice.get =:: arraySize
         arraySize .int ?? if
           arraySize .int
         else
@@ -1539,42 +1539,42 @@ namespace: interpreter
         eltBase typeContext types.primitiveValue switch
           BOOL I8 CHAR8 case
             context [] .localMemory
-              eltCount i32 cast i8 mixedArena.allocArray =:: localSlice
+              eltCount i32 cast i8 mixedArena.allocSlice =:: localSlice
             context .localMemory=
-            0:i8 localSlice array.fill
+            0:i8 localSlice slice.fill
             localSlice LocalSlice8 cast ConstValue .LocalArray8 return
           I16 CHAR16 case
             context [] .localMemory
-              eltCount i32 cast i16 mixedArena.allocArray =:: localSlice
+              eltCount i32 cast i16 mixedArena.allocSlice =:: localSlice
             context .localMemory=
-            0:i16 localSlice array.fill
+            0:i16 localSlice slice.fill
             localSlice LocalSlice16 cast ConstValue .LocalArray16 return
           I32 CHAR32 case
             context [] .localMemory
-              eltCount i32 cast i32 mixedArena.allocArray =:: localSlice
+              eltCount i32 cast i32 mixedArena.allocSlice =:: localSlice
             context .localMemory=
-            0:i32 localSlice array.fill
+            0:i32 localSlice slice.fill
             localSlice LocalSlice32 cast ConstValue .LocalArray32 return
           I64 case
             context [] .localMemory
-              eltCount i32 cast i64 mixedArena.allocArray =:: localSlice
+              eltCount i32 cast i64 mixedArena.allocSlice =:: localSlice
             context .localMemory=
-            0:i64 localSlice array.fill
+            0:i64 localSlice slice.fill
             localSlice LocalSlice64 cast ConstValue .LocalArray64 return
           F32 F64 TYPE case break ## XXX? store float arrays in Array32/Array64
         end
       end
       context [] .localMemory
-        eltCount i32 cast ConstValue mixedArena.allocArray =:: localSlice
+        eltCount i32 cast ConstValue mixedArena.allocSlice =:: localSlice
       context .localMemory=
       eltType typeContext types.isTuple or eltType typeContext types.isArray if
         eltCount for =:: i
-          ## array.set
+          ## slice.set
             eltType pos context allocLocalValue
-          localSlice i array.set
+          localSlice i slice.set
         end
       else
-        ConstValue .None localSlice array.fill
+        ConstValue .None localSlice slice.fill
       end
       localSlice LocalSlice cast ConstValue .LocalArray return
     else
@@ -1590,7 +1590,7 @@ namespace: interpreter
     W : localArray
     type : T
   -> bool ) =>: primitiveArrayTrySetElement
-    localArray T arrayView.mut cast =:: arrayData
+    localArray T slice.mut cast =:: arrayData
     ConstValue ..length 23 == "no new constants" assert
     src switch
       Char case src .Char i64 cast.u break
@@ -1600,7 +1600,7 @@ namespace: interpreter
       ## XXX? support primitive values
       default false return
     end =:: intValue
-    intValue T cast arrayData 0 array.set
+    intValue T cast arrayData 0 slice.set
     true return
   end
   union(
@@ -1615,7 +1615,7 @@ namespace: interpreter
   proc(
     type : auto: W type : auto: T
     W : targetArray
-    T arrayView : srcArray
+    T slice : srcArray
     FilePosition : pos
     CompilerError list ptr.mut : errors
   -> EvalResult ) =>: setLocalArray
@@ -1931,7 +1931,7 @@ proc(
                 op [] .pos errors appendError
               end if
                 switchData [] .caseJumpDistances
-                  label [] .caseId array.get
+                  label [] .caseId slice.get
                 EvalResult .Jump return
               end
             end
@@ -2007,8 +2007,8 @@ proc(
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
           ## newEnum
-            context [] .typeBuffer list.asArray typeOffset array.tail
-            context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+            context [] .typeBuffer list.asSlice typeOffset slice.tail
+            context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
           typeContext types.newEnum if ..drop
             "could not create enum" sb.wrap op [] .pos errors appendError
             EvalResult .Error return
@@ -2031,8 +2031,8 @@ proc(
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
           ## newUnion
-            context [] .typeBuffer list.asArray typeOffset array.tail
-            context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+            context [] .typeBuffer list.asSlice typeOffset slice.tail
+            context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
             blockType .TYPE_UNION ??
           typeContext types.newUnion if ..drop
             "could not create union-type" sb.wrap op [] .pos errors appendError
@@ -2058,8 +2058,8 @@ proc(
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
           ## newProcArgs
-            context [] .typeBuffer list.asArray typeOffset array.tail
-            context [] .labelBuffer list.asArray labelOffset array.tail optional.wrap
+            context [] .typeBuffer list.asSlice typeOffset slice.tail
+            context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
             true
           typeContext types.newProcArgs =:: procOut
           context [] .typeBuffer typeOffset list.setLength context .typeBuffer=
@@ -2079,7 +2079,7 @@ proc(
           closedBlock .labelOffset =:: labelOffset
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
-          context [] .valueBuffer list.asArray valueOffset array.tail =:: values
+          context [] .valueBuffer list.asSlice valueOffset slice.tail =:: values
           ## newArrayConst
             values
             idContext .constContext
@@ -2228,9 +2228,9 @@ proc(
             constValue .ProcedureBundle =:: bundleId
             program [] .procBundles
               bundleId i64 cast list.at .data [] .procedures
-            list.asArray
+            list.asSlice
           else constValue .Procedure ?? _if
-            constValue@ .Procedure array.wrap
+            constValue@ .Procedure slice.wrap
           else
             "unexpected value for procedure constant: " sb.wrap
               constValue typeContext sb.appendConstant
@@ -2250,7 +2250,7 @@ proc(
           0 sb.create =:: mut: message
           ## resolveCall
             procedures
-            stackValues list.asArray
+            stackValues list.asSlice
             message@ optional.wrap
             op [] .pos
             program
@@ -2498,7 +2498,7 @@ proc(
           else
             types.ArrayType .ARRAY
           end
-          idContext [] .arraySizeBuffer list.asArray
+          idContext [] .arraySizeBuffer list.asSlice
           op [] .val .typeModifier .PTR_MUT ??
           typeContext
         types.newArrayType if ..drop
@@ -3090,7 +3090,7 @@ proc(
           value .Array ?? if
             value .Array
           else value .LocalArray ?? _if
-            value .LocalArray ConstValue arrayView.mut cast array.freeze
+            value .LocalArray ConstValue slice.mut cast slice.freeze
           else
             "unexpected source for assignment expected array got:" sb.wrap
               value typeContext sb.appendConstant
@@ -3105,7 +3105,7 @@ proc(
           value .Array8 ?? if
             value .Array8
           else value .LocalArray8 ?? _if
-            value .LocalArray8 i8 arrayView.mut cast array.freeze
+            value .LocalArray8 i8 slice.mut cast slice.freeze
           else
             "unexpected source for assignment expected array got:" sb.wrap
               value typeContext sb.appendConstant
@@ -3120,7 +3120,7 @@ proc(
           value .Array16 ?? if
             value .Array16
           else value .LocalArray16 ?? _if
-            value .LocalArray16 i16 arrayView.mut cast array.freeze
+            value .LocalArray16 i16 slice.mut cast slice.freeze
           else
             "unexpected source for assignment expected array got:" sb.wrap
               value typeContext sb.appendConstant
@@ -3135,7 +3135,7 @@ proc(
           value .Array32 ?? if
             value .Array32
           else value .LocalArray32 ?? _if
-            value .LocalArray32 i32 arrayView.mut cast array.freeze
+            value .LocalArray32 i32 slice.mut cast slice.freeze
           else
             "unexpected source for assignment expected array got:" sb.wrap
               value typeContext sb.appendConstant
@@ -3150,7 +3150,7 @@ proc(
           value .Array64 ?? if
             value .Array64
           else value .LocalArray64 ?? _if
-            value .LocalArray64 i64 arrayView.mut cast array.freeze
+            value .LocalArray64 i64 slice.mut cast slice.freeze
           else
             "unexpected source for assignment expected array got:" sb.wrap
               value typeContext sb.appendConstant
@@ -3305,10 +3305,10 @@ namespace: interpreter
     "memcpy":s procName labelContext id.labelNameEq if
       procIn typeContext types.compositeEltArray =:: args
       args .length 3 != or
-          args 0 array.get typeContext types.isPointer ! or
-          args 0 array.get typeContext types.isMutable ! or
-          args 1 array.get typeContext types.isPointer ! or
-          args 2 array.get typeContext types.isIntLike ! if
+          args 0 slice.get typeContext types.isPointer ! or
+          args 0 slice.get typeContext types.isMutable ! or
+          args 1 slice.get typeContext types.isPointer ! or
+          args 2 slice.get typeContext types.isIntLike ! if
         "unexpected arguments for `memcpy` expected: " sb.wrap
           "( <ptr.mut> <ptr> <int-primitive> -> ... ) got: ( " sb.appendS
           procIn typeContext sb.appendType
@@ -3340,7 +3340,7 @@ namespace: interpreter
         true return
       end =:: resPtr
       resPtr
-        args 0 array.get
+        args 0 slice.get
         pos
       context pushValue
       false return
@@ -3353,14 +3353,14 @@ namespace: interpreter
 end
 
 proc(
-  Operation arrayView : ops
+  Operation slice : ops
   InterpreterContext ptr.mut : context
 ->
   bool
 ) =>: evaluateOperations
   using interpreter
   0:i64 while $ ops .length < do =:: offset
-    ops offset array.at .data =:: op
+    ops offset slice.at .data =:: op
       op context evaluateOperation =:: result
       result switch
         Error case true return
@@ -3402,8 +3402,8 @@ namespace: interpreter
       end
       i 1 +
     end ..drop
-    context [] .stack list.asArray
-      offset array.tail
+    context [] .stack list.asSlice
+      offset slice.tail
     constContext newArrayConst =:: tupleConst
     ## remove arguments and push tuple
     offset context truncateStack
@@ -3424,7 +3424,7 @@ proc(
   ProcId : procId
   i64 : implId
   Type : calledType
-  ConstValue arrayView : autoArgs
+  ConstValue slice : autoArgs
   bool : consumeStaticArgs
   FilePosition : pos
   InterpreterContext ptr.mut : context
@@ -3488,7 +3488,7 @@ proc(
       outType 0 typeContext types.compositeGetElement types.primitive.TYPE types.typeEquals if
     ## findGeneratedType
       procName
-      context [] .stack list.asArray argsOffset array.tail
+      context [] .stack list.asSlice argsOffset slice.tail
       true
       typeContext
       constContext
@@ -3533,7 +3533,7 @@ proc(
     inType i typeContext types.compositeGetLabel =:: label
     label labelContext id.labelFlags =:: labelFlags
     labelFlags id.FLAG_AUTO & ? if
-      autoArgs autoArgOffset array.get
+      autoArgs autoArgOffset slice.get
         $ .GenericArg ?? if
           .GenericArg =:: varId
           prevVariables optional.hasData and
@@ -3569,7 +3569,7 @@ proc(
       implId 0 >= "implId is not negative" assert
       procData .implementation .code [] .implementations
         implId list.at .data
-      [] .staticArgs staticArgOffset array.get =:: value
+      [] .staticArgs staticArgOffset slice.get =:: value
       context [] .localVariables .data
         label
         ## Constant
@@ -3635,7 +3635,7 @@ proc(
   isTypeGenerator and hasGenericArg if
     ## initializeGeneratedType
       procName
-      context [] .stack argsOffset nArgs list.slice
+      context [] .stack argsOffset nArgs list.getSlice
       Type .undefined
       typeContext
       constContext
@@ -3669,7 +3669,7 @@ proc(
       end
       currentImpl [] .codeStart
       currentImpl [] .codeLength
-    list.slice
+    list.getSlice
   else
     codeImpl [] .codeState switch
       PARSING case
@@ -3677,18 +3677,18 @@ proc(
           procName labelContext sb.appendLabelName
           " has not finished parsing" sb.appendS
         pos errors appendError
-        Operation array.empty break
+        Operation slice.empty break
       TYPE_CHECKING case
         "procedure " sb.wrap
           procName labelContext sb.appendLabelName
           " has not finished type-checking" sb.appendS
         pos errors appendError
-        Operation array.empty break
+        Operation slice.empty break
       PARSED case
         program [] .tmpOps
           codeImpl [] .codeStart
           codeImpl [] .codeLength
-        list.slice
+        list.getSlice
         break
       TYPE_CHECKED case
         program [] .progFiles
@@ -3696,7 +3696,7 @@ proc(
         list.at .data [] .localOps
             codeImpl [] .codeStart
             codeImpl [] .codeLength
-        list.slice
+        list.getSlice
         break
     end
   end =:: code
@@ -3713,7 +3713,7 @@ proc(
     context .openBlocks=
     true return ## not a call
   end
-  code 0 array.at .data =:: op
+  code 0 slice.at .data =:: op
   op [] .val .implementProcedure ?? ! and
       op [] .val .initializeId ?? ! or
       op [] .val .initializeId .idType .PROCEDURE ?? ! if
@@ -3744,7 +3744,7 @@ proc(
     pos list.append
   context .callPositions=
   ## evaluateOperations
-    code 1 array.tail ## first operation declares procedure
+    code 1 slice.tail ## first operation declares procedure
     context
   evaluateOperations if
     stackOffset context truncateStack
@@ -3779,7 +3779,7 @@ proc(
   end
   context [] .stack .length outTypes .length - =:: outOffset
   outTypes .length for =:: i
-    outTypes i array.get
+    outTypes i slice.get
       $ typeContext types.containsGeneric if
         ## TODO update generics
       end
@@ -3844,7 +3844,7 @@ proc(
     context .stack=
     ## initializeGeneratedType
       procName
-      context [] .stack argsOffset nArgs list.slice
+      context [] .stack argsOffset nArgs list.getSlice
       generatedType
       typeContext
       constContext

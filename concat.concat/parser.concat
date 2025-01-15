@@ -1,6 +1,6 @@
 import stringIO
 import list
-import arrayView
+import slice
 import string
 import numbers
 import unicode
@@ -150,14 +150,14 @@ proc(
       ## TODO? reuse the same buffer for all string conversion
       0 char16 list.create str .Array8 string.fromBytes utf8.toUTF16 =:: str16
       str16
-        list.asArray string16.fromArray
+        list.asSlice string16.fromArray
       constContext newString16Const str16 .length types.primitive.CHAR16
         str16 list.free ..drop
       break
     UTF32 case
       0 char32 list.create str .Array8 string.fromBytes  utf8.toUTF32 =:: str32
       str32
-        list.asArray string32.fromArray
+        list.asSlice string32.fromArray
       constContext newString32Const str32 .length types.primitive.CHAR32
         str32 list.free ..drop
       break
@@ -167,7 +167,7 @@ proc(
   end =:: charType =:: strLength =:: strValue
   strLength ArraySize .int =:: size
   ## Constant
-    charType types.ArrayType .POINTER size@ 1 array.create false context newArrayType ..drop
+    charType types.ArrayType .POINTER size@ 1 slice.create false context newArrayType ..drop
     strValue
     IdentifierInfo optional.empty
   pos Constant new return
@@ -2313,7 +2313,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       types.primitive.CHAR8
         types.ArrayType .POINTER
         name .length types.ArraySize .int =:: size
-        size@ 1 array.create
+        size@ 1 slice.create
         false
       typeContext types.newArrayType ..drop
       fileState [] .wordStart opConst state appendOp

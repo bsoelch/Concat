@@ -1,4 +1,4 @@
-import arrayView
+import slice
 
 import "constants.concat"
 import "types.concat"
@@ -108,7 +108,7 @@ proc(
       idContext [] .arraySizeBuffer .length =:: sizeOffset
       false =:: mut: genericSize
       0:i64 while ..dup sizes .length < do =:: i
-        sizes i array.get =:: size
+        sizes i slice.get =:: size
         idContext [] .arraySizeBuffer
           size switch
             int case
@@ -149,9 +149,9 @@ proc(
         else
           types.ArrayType .ARRAY
         end
-        idContext [] .arraySizeBuffer list.asArray
+        idContext [] .arraySizeBuffer list.asSlice
           sizeOffset
-        array.tail
+        slice.tail
         src typeContext types.isMutable
         typeContext
       types.newArrayType
@@ -184,8 +184,8 @@ proc(
         i 1 +
       end ..drop
       ## newComposite
-        typeBuffer [] list.asArray typeOffset array.tail
-        labelBuffer [] list.asArray labelOffset array.tail optional.wrap
+        typeBuffer [] list.asSlice typeOffset slice.tail
+        labelBuffer [] list.asSlice labelOffset slice.tail optional.wrap
         typeContext
         src switch
           struct case types.newTuple break
@@ -221,7 +221,7 @@ proc(
       idContext .argBuffer =:: argBuffer
       argBuffer [] .length =:: argOffset
       0:i64 while ..dup args .length < do =:: i
-        args i array.get =:: arg
+        args i slice.get =:: arg
         argBuffer []
           ConstValue ..length 23 == "no new constants" assert
           arg switch
@@ -246,7 +246,7 @@ proc(
         i 1 +
       end ..drop
       src typeContext types.getGeneratorLabel =:: generatorName
-      argBuffer [] list.asArray argOffset array.tail =:: generatorArgs
+      argBuffer [] list.asSlice argOffset slice.tail =:: generatorArgs
       ##findGeneratedType
         generatorName
         generatorArgs
@@ -390,23 +390,23 @@ proc(
       ## treat 0D fixed arrays as 1D array of length 1
       1:i64 types.ArraySize .int =:: one
       srcFixed and srcSizes .length 0 == if
-        one@ array.wrap srcSizes@ =
+        one@ slice.wrap srcSizes@ =
       end
       targetFixed and targetSizes .length 0 == if
-        one@ array.wrap targetSizes@ =
+        one@ slice.wrap targetSizes@ =
       end
       srcFixed and targetFixed ! if
-        srcSizes $ .length 1 - array.head srcSizes@ =
+        srcSizes $ .length 1 - slice.head srcSizes@ =
       end
       srcSizes .length targetSizes .length < if
         true return ## target sizes have to be matched
       end
       srcSizes
         srcSizes .length targetSizes .length -
-      array.cutIndex =:: newSrcSizes =:: matchedSizes
+      slice.cutIndex =:: newSrcSizes =:: matchedSizes
       0:i64 while ..dup targetSizes .length < do =:: i
-        matchedSizes i array.get =:: srcSize
-        targetSizes i array.get =:: targetSize
+        matchedSizes i slice.get =:: srcSize
+        targetSizes i slice.get =:: targetSize
         targetSize switch
           int case
             srcSize .int ?? ! if
@@ -533,8 +533,8 @@ proc(
       src typeContext types.getGeneratorArgs =:: srcArgs
       target typeContext types.getGeneratorArgs =:: targetArgs
       0:i64 while ..dup targetArgs .length < do =:: i
-        srcArgs i array.get =:: srcArg
-        targetArgs i array.get =:: targetArg
+        srcArgs i slice.get =:: srcArg
+        targetArgs i slice.get =:: targetArg
         targetArg .TypeId ?? if
           ## resolveGenerics
             srcArg .TypeId
@@ -717,8 +717,8 @@ end
 5:i64 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
 
 proc(
-  ProcId arrayView : procedureIds
-  StackValue arrayView : stackValues
+  ProcId slice : procedureIds
+  StackValue slice : stackValues
   stringBuilder ptr.mut optional : errorMessage
   FilePosition : pos
   ProgramContext ptr.mut : progContext
@@ -738,7 +738,7 @@ proc(
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
   MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
   0:i64 while ..dup procedureIds .length < do =:: i
-    procedureIds i array.get =:: procId
+    procedureIds i slice.get =:: procId
     progContext [] .procedures procId i64 cast list.at .data =:: procInfo
     procInfo [] .procType
       typeContext types.getProcIn ..drop typeContext types.compositeEltCount
@@ -763,7 +763,7 @@ proc(
   end ..drop
   0:i64 while ..dup stackValues .length <= do =:: stackIndex
     stackIndex stackValues .length < if
-      stackValues stackIndex array.at .data [] .valType
+      stackValues stackIndex slice.at .data [] .valType
     else
       ## add dummy type below stack to ensure auto-arguments get matched
       Type .undefined
@@ -856,7 +856,7 @@ proc(
         currentSignatures i list.at .data current@ =
       end
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
-        stackValues stackIndex array.at .data [] .value =:: stackVal
+        stackValues stackIndex slice.at .data [] .value =:: stackVal
         stackVal .None ?? if
           false current .argsMatch=
         end
@@ -966,7 +966,7 @@ proc(
         "no matching signature for arguments ( " sb.appendS
         stackValues .length maxArgs > if "... " sb.appendS end
         stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
-          stackValues i array.at .data =:: val
+          stackValues i slice.at .data =:: val
           val [] .valType typeContext sb.appendType
           val [] .value .None ?? ! if
             " { " sb.appendS
@@ -1008,7 +1008,7 @@ proc(
         "multiple matching signature for arguments ( " sb.appendS
         stackValues .length maxArgs > if "... " sb.appendS end
         stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
-          stackValues i array.at .data =:: val
+          stackValues i slice.at .data =:: val
           val [] .valType typeContext sb.appendType
           val [] .value .None ?? ! if
             " { " sb.appendS
@@ -1085,7 +1085,7 @@ proc(
       true isMatch@ =
       0:i64 while ..dup constArgs .length < do =:: j
         ## constEquals
-          impl [] .staticArgs j array.get
+          impl [] .staticArgs j slice.get
           constArgs j list.get
           labelContext
         constantEquals ! if
@@ -1113,7 +1113,7 @@ proc(
             pos
             progContext
           replaceGenerics
-          constArgs list.asArray constContext constArray
+          constArgs list.asSlice constContext constArray
           0 VariableInfo list.create
           pos
           -1
@@ -1168,8 +1168,8 @@ proc(
     i 1 +
   end ..drop
   ## newProcArgs
-    typeBuffer list.asArray
-    labelBuffer list.asArray optional.wrap
+    typeBuffer list.asSlice
+    labelBuffer list.asSlice optional.wrap
     false
     typeContext
   types.newProcArgs =:: newIn
@@ -1197,7 +1197,7 @@ proc(
   ## ProcedureCallInfo
     baseProcId
     implId
-    constArgs list.asArray constContext constArray
+    constArgs list.asSlice constContext constArray
   ProcedureCallInfo new =:: result
   constArgs list.free constArgs@ =
   currentSignatures@ cleanupSignatures

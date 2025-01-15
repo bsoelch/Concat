@@ -1,25 +1,25 @@
-import arrayView
+import slice
 import debug
 proc( -> ) =>: main
-  { 1 2 3 4 5 6 7 8 9 } =:: mut: arrayData
+  { 1 2 3 4 5 6 7 8 9 } =:: mut: data1
   { -1.5 -1.0 -0.75 -0.5 0.0 0.5 0.75 1.0 1.5 } =:: data2
-  arrayData@ array.wrapMutable
-    array.map for $ * end
+  data1@ slice.wrapMutable
+    slice.map for $ * end
   for debug.print end
   ' ' debug.print
-  data2@ array.wrap
-    arrayData@ array.wrapMutable array.mapTo for
+  data2@ slice.wrap
+    data1@ slice.wrapMutable slice.mapTo for
       i32 cast
     end
   for debug.print end
   ' ' debug.print
   { -3 -2 -1 0 1 2 3 } =:: mut: data3
-  data3@ array.wrapMutable i32.abs@ array.map for
+  data3@ slice.wrapMutable i32.abs@ slice.map for
     debug.print
   end
   ' ' debug.print
   f64 9 array : data4
-  data2@ array.wrap data4@ array.wrapMutable f64.round@ array.mapTo for
+  data2@ slice.wrap data4@ slice.wrapMutable f64.round@ slice.mapTo for
     debug.print
   end
 end

@@ -223,7 +223,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       isLiteralType ! if
         i i0 > "identifier contains at least one character" assert
       end
-      code i0 i i0 - string.slice =:: idName
+      code i0 i i0 - string.getSlice =:: idName
       code i string.tail idName
       isLiteralType if
         Token .LITERAL_TYPE
@@ -238,7 +238,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       isLiteralType ! if
         i i0 > "identifier contains at least one character" assert
       end
-      code i0 i i0 - string.slice =:: idName
+      code i0 i i0 - string.getSlice =:: idName
       code i string.tail idName
       isLiteralType if
         Token .LITERAL_TYPE
@@ -257,7 +257,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
           '`' fileState .currentPos updateFilePos
           i 2 + continue ## escaped `
         end
-        code i0 i i0 - string.slice =:: body
+        code i0 i i0 - string.getSlice =:: body
         code i 1 + string.tail body stringType StringToken new
           i 1 + code .length < and code i 1 + string.charAt ':' == if
             Token .LITERAL_RAW_STRING return
@@ -268,7 +268,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     end
     state .STRING ?? if
       c stringStart == if
-        code i0 i i0 - string.slice =:: body
+        code i0 i i0 - string.getSlice =:: body
         code i 1 + string.tail
         body stringType StringToken new
           i 1 + code .length < and code i 1 + string.charAt ':' == if
@@ -283,7 +283,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       i 1 + continue
     end
     c '\'' == or c '"' == or c '`' == if  ## char/string-literal
-      code i0 i i0 - string.slice checkStringPrefix stringType@ =
+      code i0 i i0 - string.getSlice checkStringPrefix stringType@ =
       stringType .INT_LITERAL ?? if i 1 + continue end
       i 1 + i0@ =
       c stringStart@ =

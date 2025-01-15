@@ -173,7 +173,7 @@ namespace: id
   end
   proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr.mut : context -> LabelId ) =>: export: newLabel
     context [] .nameBuffer
-      str string.chars arenaAlloc.copyArray array.freeze string.fromChars =:: nameData
+      str string.chars arenaAlloc.copySlice slice.freeze string.fromChars =:: nameData
     context .nameBuffer=
     context [] .labels
       ## Label
@@ -193,7 +193,7 @@ namespace: id
       id sb.appendU
     sb.asStr =:: str
     context [] .nameBuffer
-      str string.chars arenaAlloc.copyArray array.freeze string.fromChars =:: nameData
+      str string.chars arenaAlloc.copySlice slice.freeze string.fromChars =:: nameData
     context .nameBuffer=
     context [] .labels
       ## Label
@@ -209,7 +209,7 @@ namespace: id
 
   proc( NamespaceId : parent string : name  LabelContext ptr.mut : context -> NamespaceId ) =>: newNamespace
     context [] .nameBuffer
-      name string.chars arenaAlloc.copyArray array.freeze string.fromChars =:: nameData
+      name string.chars arenaAlloc.copySlice slice.freeze string.fromChars =:: nameData
     context .nameBuffer=
     context [] .namespaces .length =:: id
     context [] .namespaces

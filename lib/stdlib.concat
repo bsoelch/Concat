@@ -1,6 +1,6 @@
 ## import the complete standard library
 import array
-import arrayView
+import slice
 import chars
 import debug
 import io

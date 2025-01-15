@@ -1,5 +1,5 @@
 import array
-import arrayView
+import slice
 import linux/syscalls
 
 ## XXX? change bit order in chunkInfo? bit 0 <-> cell 0
@@ -158,14 +158,14 @@ namespace: allocator.linux
     chunkData .cellCount i32 cast.u 63 & =:: tailBits
     tailBits 0 > if
       chunk getCellInfo =:: cellInfo
-      -1:i64 tailBits >>> cellInfo $ .length 1 - array.set
+      -1:i64 tailBits >>> cellInfo $ .length 1 - slice.set
     end
     chunk return
   end
-  proc( ChunkInfo : chunk -> i64 arrayView.mut ) =>: getCellInfo
+  proc( ChunkInfo : chunk -> i64 slice.mut ) =>: getCellInfo
     chunk .chunkStart ChunkHeader _ ptr.mut cast 1 @[] i64 _ ptr.mut cast! ## end of chunk header
       chunkInfo chunk .chunkType i32 cast.u [] .cellCount i64 cast.u 63:i64 + 64 u/
-    array.createMutable
+    slice.createMutable
   end
 
   proc( ChunkInfo : chunk i32 : count i32 : alignment bool : clearMemory -> CellHeader ptr.mut optional ) =>: allocateBlock
@@ -179,12 +179,12 @@ namespace: allocator.linux
     chunk .chunkStart [] .firstAvailable i64 cast.u =:: mut: firstAvailable
     firstAvailable while ..dup cellInfo .length < do =:: i
       ## XXX? allocate new cells in a way that makes extending cells easier
-      cellInfo i array.get =:: current
+      cellInfo i slice.get =:: current
       i firstAvailable == and current -1 == if
         i 1 + firstAvailable =
       end
       i 1 + cellInfo .length < if
-        cellInfo i 1 + array.get
+        cellInfo i 1 + slice.get
       else -1 end =:: next
       current
         1 while $ count < do =:: shift
@@ -198,7 +198,7 @@ namespace: allocator.linux
           1:i64 count << 1 - cellBitIndex count - << =:: cellMask
           current cellMask & 0 == "cells are not allocated" assert
           current cellMask | =:: newVal
-          newVal cellInfo i array.set
+          newVal cellInfo i slice.set
           i firstAvailable == and newVal -1 == if
             i 1 + firstAvailable =
           end
@@ -206,13 +206,13 @@ namespace: allocator.linux
           1:i64 cellBitIndex << 1 - =:: hiCellMask
           current hiCellMask & 0 == "cells are not allocated" assert
           current hiCellMask | =:: newVal
-          newVal cellInfo i array.set
+          newVal cellInfo i slice.set
           i firstAvailable == and newVal -1 == if
             i 1 + firstAvailable =
           end
           -1:i64 64 count cellBitIndex - - << =:: lowCellMask
           next lowCellMask & 0 == "cells are not allocated" assert
-          next lowCellMask | cellInfo i 1 + array.set
+          next lowCellMask | cellInfo i 1 + slice.set
         end
         firstAvailable i32 cast chunk .chunkStart .firstAvailable=
         i 64 * 64 cellBitIndex - i64 cast.u + =:: cellIndex
@@ -258,34 +258,34 @@ namespace: allocator.linux
     ..drop
     CellHeader ptr.mut optional.empty return
   end
-  proc( i64 arrayView.mut : cellInfo i64 : cellInfoOffset i32 : cellIndexBit i32 : cellCount -> ) =>: freeCells
+  proc( i64 slice.mut : cellInfo i64 : cellInfoOffset i32 : cellIndexBit i32 : cellCount -> ) =>: freeCells
     cellIndexBit cellCount + 64 u<= if
       1:i64 cellCount << 1 - 64 cellIndexBit - cellCount - << =:: cellsMask
-      cellInfo cellInfoOffset array.get
+      cellInfo cellInfoOffset slice.get
         $ cellsMask & cellsMask == "freed cells have been allocated" assert
         cellsMask ^
-      cellInfo cellInfoOffset array.set
+      cellInfo cellInfoOffset slice.set
       return
     end
     -1:i64 cellIndexBit >>> =:: cellsMaskHi
-    cellInfo cellInfoOffset array.get
+    cellInfo cellInfoOffset slice.get
       $ cellsMaskHi & cellsMaskHi == "freed cells have been allocated" assert
       cellsMaskHi ^
-    cellInfo cellInfoOffset array.set
+    cellInfo cellInfoOffset slice.set
     cellCount 64 cellIndexBit - - =:: mut: remaining
     cellInfoOffset 1 + =:: mut: nextCellInfoOffset
     while remaining 64 >= do
-      cellInfo nextCellInfoOffset array.get -1 == "freed cells have been allocated" assert
-      0 cellInfo nextCellInfoOffset array.set
+      cellInfo nextCellInfoOffset slice.get -1 == "freed cells have been allocated" assert
+      0 cellInfo nextCellInfoOffset slice.set
       remaining 64 - remaining =
       nextCellInfoOffset 1 + nextCellInfoOffset =
     end
     remaining 0 == if return end
     -1:i64 64 remaining - << =:: cellsMaskLow
-    cellInfo nextCellInfoOffset array.get
+    cellInfo nextCellInfoOffset slice.get
       $ cellsMaskLow & cellsMaskLow == "freed cells have been allocated" assert
       cellsMaskLow ^
-    cellInfo nextCellInfoOffset array.set
+    cellInfo nextCellInfoOffset slice.set
   end
   proc( CellHeader ptr.mut : cell i32 : newSize -> CellHeader ptr.mut optional ) =>: resizeBlock
     cell [] .size 0 < or cell [] .size MAX_CELL_COUNT > if
@@ -328,35 +328,35 @@ namespace: allocator.linux
     newCellsOffset 64 u% i32 cast =:: cellIndexBit
     newCells 64 cellIndexBit - <= if
       1:i64 newCells << 1 - 64 cellIndexBit - newCells - << =:: cellMask
-      cellInfo cellInfoOffset array.get =:: prevCells
+      cellInfo cellInfoOffset slice.get =:: prevCells
       prevCells cellMask & ? if
         CellHeader ptr.mut optional.empty return ## cells are blocked
       end
-      prevCells cellMask | cellInfo cellInfoOffset array.set
+      prevCells cellMask | cellInfo cellInfoOffset slice.set
     else
       -1:i64 cellIndexBit >>> =:: hiMask
-      cellInfo cellInfoOffset array.get =:: prevCellsHi
+      cellInfo cellInfoOffset slice.get =:: prevCellsHi
       prevCellsHi hiMask & ? if
         CellHeader ptr.mut optional.empty return ## cells are blocked
       end
       newCells cellIndexBit - =:: mut: remaining
       cellInfoOffset 1 + =:: mut: nextIndex
       while remaining 64 >= do
-        cellInfo nextIndex array.get ? if
+        cellInfo nextIndex slice.get ? if
           CellHeader ptr.mut optional.empty return ## cells are blocked
         end
         nextIndex 1 + nextIndex =
         remaining 64 - remaining =
       end
       -1:i64 64 remaining - << =:: lowMask
-      cellInfo nextIndex array.get =:: prevCellsLow
+      cellInfo nextIndex slice.get =:: prevCellsLow
       prevCellsLow lowMask & ? if
         CellHeader ptr.mut optional.empty return ## cells are blocked
       end
-      prevCellsHi hiMask | cellInfo cellInfoOffset array.set
-      prevCellsLow lowMask | cellInfo nextIndex array.set
+      prevCellsHi hiMask | cellInfo cellInfoOffset slice.set
+      prevCellsLow lowMask | cellInfo nextIndex slice.set
       cellInfoOffset 1 + while $ nextIndex < do =:: i
-        -1:i64 cellInfo i array.set
+        -1:i64 cellInfo i slice.set
       finally i 1 + end ..drop
     end
     newSize cell .size=

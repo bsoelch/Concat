@@ -4,71 +4,69 @@ import core/itr
 import mem
 import optional
 
-( type : T -> type ) =>: export: arrayView
+( type : T -> type ) =>: export: slice
   struct( T _ ptr : data i64 : length )
 end
-namespace: arrayView
+namespace: slice
   ( type : T -> type ) =>: export: mut
     struct( T _ ptr.mut : data i64 : length )
   end
-end
 
-namespace: array
-  proc( type : T -> T arrayView ) =>: export: empty
+  proc( type : T -> T slice ) =>: export: empty
     { { } : data 0 : length } return
   end
-  proc( type : T -> T arrayView.mut ) =>: export: emptyMutable
+  proc( type : T -> T slice.mut ) =>: export: emptyMutable
     { { } : data 0 : length } return
   end
-  proc( type : auto: T T _ ptr  i32 -> T arrayView ) =>: export: create_32
+  proc( type : auto: T T _ ptr  i32 -> T slice ) =>: export: create_32
     i64 cast.s create_64
   end
-  proc( type : auto: T T _ ptr  i64 -> T arrayView ) =>: export: create_64
-    T arrayView new return
+  proc( type : auto: T T _ ptr  i64 -> T slice ) =>: export: create_64
+    T slice new return
   end
   overload: export: create create_32 create_64 end
   proc(
     type : auto: T
     i64 : auto: k
     T k ptr : elts
-  -> T arrayView ) =>: export: wrap
+  -> T slice ) =>: export: wrap
     elts k create return
   end
-  proc( type : auto: T T arrayView.mut : a -> T arrayView ) =>: export: freeze
-    a .data a .length array.create_64
+  proc( type : auto: T T slice.mut : a -> T slice ) =>: export: freeze
+    a .data a .length slice.create_64
   end
-  proc( type : auto: T T _ ptr.mut  i64 -> T arrayView.mut ) =>: export: shaddow: create_64mut
-    T arrayView.mut new return
+  proc( type : auto: T T _ ptr.mut  i64 -> T slice.mut ) =>: export: shaddow: create_64mut
+    T slice.mut new return
   end
-  proc( type : auto: T T _ ptr.mut  i32 -> T arrayView.mut ) =>: export: shaddow: create_32mut
+  proc( type : auto: T T _ ptr.mut  i32 -> T slice.mut ) =>: export: shaddow: create_32mut
     i64 cast.s create_64mut
   end
   proc(
     type : auto: T
     i64 : auto: k
     T k ptr.mut : elts
-  -> T arrayView.mut ) =>: export: shaddow: wrapMutable
+  -> T slice.mut ) =>: export: shaddow: wrapMutable
     elts k create_64mut return
   end
   overload: export: shaddow: createMutable create_32mut create_64mut end
 
   proc( i64 : index i64 : length -> ) =>: checkIndex
     index 0 < or index length >= if
-      "array index outside range" ..panic
+      "slice index outside range" ..panic
     end
   end
-  proc( type : auto: T T arrayView : elts i64 : index -> T ) =>: export: get_64
+  proc( type : auto: T T slice : elts i64 : index -> T ) =>: export: get_64
     index elts .length checkIndex
     elts .data index [] return
   end
-  proc( type : auto: T T arrayView : elts i32 : index -> T ) =>: export: get_32
+  proc( type : auto: T T slice : elts i32 : index -> T ) =>: export: get_32
     elts index i64 cast.u get_64
   end
-  proc( type : auto: T T arrayView.mut : elts i64 : index -> T ) =>: export: get_64mut
+  proc( type : auto: T T slice.mut : elts i64 : index -> T ) =>: export: get_64mut
     index elts .length checkIndex
     elts .data index [] return
   end
-  proc( type : auto: T T arrayView.mut : elts i32 : index -> T ) =>: export: get_32mut
+  proc( type : auto: T T slice.mut : elts i32 : index -> T ) =>: export: get_32mut
     elts index i64 cast.u get_64mut
   end
   overload: export: get
@@ -79,7 +77,7 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     i64 : index
   -> T ptr optional ) =>: export: at_64
     index 0 < or index elts .length >= if
@@ -89,14 +87,14 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     i32 : index
   -> T ptr optional ) =>: export: at_32
     elts index i64 cast.u at_64
   end
   proc(
     type : auto: T
-    T arrayView.mut : elts
+    T slice.mut : elts
     i64 : index
   -> T ptr.mut optional ) =>: export: at_64mut
     index 0 < or index elts .length >= if
@@ -106,7 +104,7 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView.mut : elts
+    T slice.mut : elts
     i32 : index
   -> T ptr.mut optional ) =>: export: at_32mut
     elts index i64 cast.u at_64mut
@@ -114,24 +112,24 @@ namespace: array
   overload: export: at
     at_32 at_64 at_32mut at_64mut
   end
-  proc( type : auto: T T : elt T arrayView.mut : elts i64 : index -> ) =>: export: set_64
+  proc( type : auto: T T : elt T slice.mut : elts i64 : index -> ) =>: export: set_64
     index elts .length checkIndex
     elt elts .data index []=
   end
-  proc( type : auto: T T : elt T arrayView.mut : elts i32 : index -> ) =>: export: set_32
+  proc( type : auto: T T : elt T slice.mut : elts i32 : index -> ) =>: export: set_32
     elt elts index i64 cast.u set_64
   end
   overload: export: set
     set_32 set_64
   end
-  proc( type : auto: T T : elt T arrayView.mut : elts -> ) =>: export: fill
+  proc( type : auto: T T : elt T slice.mut : elts -> ) =>: export: fill
     elts .data elts .length elt mem.fill
   end
 
-  ## TODO? support mutable arrayView
+  ## TODO? support mutable slice
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     T : elt
   -> i64 ) =>: export: indexOf
     0:i64 while ..dup elts .length < do
@@ -145,7 +143,7 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     T : elt
   -> i64 ) =>: export: lastIndexOf
     elts .length 1 - ## index
@@ -159,7 +157,7 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     T : elt
   -> bool ) =>: export: contains
     elts elt indexOf -1 != return
@@ -167,13 +165,13 @@ namespace: array
 
   proc(
     type : auto: T
-    T arrayView : a
-    T arrayView : b
+    T slice : a
+    T slice : b
   -> bool ) =>: export: simpleEq
     a .length b .length != if false return end
     a .data b .data == if true return end
     a .length for =:: i
-      a i array.get b i array.get != if
+      a i slice.get b i slice.get != if
         false return
       end
     end
@@ -182,15 +180,15 @@ namespace: array
   proc(
     type : auto: T
     type : auto: C
-    T arrayView : a
-    T arrayView : b
+    T slice : a
+    T slice : b
     ( T T C -> bool ) ptr : eq
     C : context
   -> bool ) =>: export: checkedEq
     a .length b .length != if false return end
     a .data b .data == if true return end
     a .length for =:: i
-      a i array.get b i array.get context eq () if
+      a i slice.get b i slice.get context eq () if
         false return
       end
     end
@@ -203,10 +201,10 @@ namespace: array
 
   proc(
     type : auto: T
-    T arrayView : a
-    T arrayView : b
+    T slice : a
+    T slice : b
     proc( T ptr T ptr -> bool ) ptr : shaddow: eq
-  -> i64 ) =>: export: indexOfArray
+  -> i64 ) =>: export: indexOfSlice
     a .length b .length < if
       -1 return
     end
@@ -215,8 +213,8 @@ namespace: array
       true =:: mut: match
       0 while ..dup b .length < do =:: j
         ## eq
-          a i j + array.at .data
-          b j array.at .data
+          a i j + slice.at .data
+          b j slice.at .data
         eq () ! if
           false match@ =
           j break
@@ -230,16 +228,16 @@ namespace: array
     end ..drop
     -1 return
   end
-  ## find lowest index of array,
-  ## if the array is not a sub-sequence contain the smallest possible start index
+  ## find lowest index of slice,
+  ## if the slice is not a sub-sequence contain the smallest possible start index
   proc(
     type : auto: T
     type : auto: C
-    T arrayView : a
-    T arrayView : b
+    T slice : a
+    T slice : b
     proc( T ptr T ptr C -> bool ) ptr : shaddow: eq
     C : context
-  -> i64 ) =>: export: indexOfArrayStart
+  -> i64 ) =>: export: indexOfSliceStart
     ## TODO? use faster algorithm
     0:i64 while ..dup a .length <= do =:: i
       true =:: mut: match
@@ -248,8 +246,8 @@ namespace: array
           j break
         end
         ## eq
-          a i j + array.at .data
-          b j array.at .data
+          a i j + slice.at .data
+          b j slice.at .data
           context
         eq () ! if
           false match@ =
@@ -268,9 +266,9 @@ namespace: array
   ## first n characters
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     i64 : n
-  -> T arrayView ) =>: export: head_64
+  -> T slice ) =>: export: head_64
     n 0 <= if
       T empty return
     end
@@ -281,9 +279,9 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView.mut : elts
+    T slice.mut : elts
     i64 : n
-  -> T arrayView.mut ) =>: export: head_64mut
+  -> T slice.mut ) =>: export: head_64mut
     n 0 <= if
       T emptyMutable return
     end
@@ -297,9 +295,9 @@ namespace: array
   ## everything excluding the first n characters
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     i64 : n
-  -> T arrayView ) =>: export: tail_64
+  -> T slice ) =>: export: tail_64
     n 0 <= if
       elts return
     end
@@ -310,9 +308,9 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView.mut : elts
+    T slice.mut : elts
     i64 : n
-  -> T arrayView.mut ) =>: export: tail_64mut
+  -> T slice.mut ) =>: export: tail_64mut
     n 0 <= if
       elts return
     end
@@ -325,10 +323,10 @@ namespace: array
   ## equivalent to:  <from> tail <len> head
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     i64 : from
     i64 : len
-  -> T arrayView ) =>: export: slice
+  -> T slice ) =>: export: getSlice
     len 0 <= if
       T empty return
     end
@@ -345,18 +343,18 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     i64 : index
-  -> T arrayView T arrayView ) =>: export: cutIndex
+  -> T slice T slice ) =>: export: cutIndex
     elts index tail
     elts index head
     return
   end
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     i64 : index
-  -> T arrayView T arrayView ) =>: export: splitIndex
+  -> T slice T slice ) =>: export: splitIndex
     index 0 < if
       T empty elts return
     end
@@ -366,18 +364,18 @@ namespace: array
   end
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     T : elt
-  -> T arrayView T arrayView ) =>: export: split
+  -> T slice T slice ) =>: export: split
     elts
       elts elt indexOf
     splitIndex return
   end
   proc(
     type : auto: T
-    T arrayView : elts
+    T slice : elts
     T : elt
-  -> T arrayView T arrayView ) =>: export: splitLast
+  -> T slice T slice ) =>: export: splitLast
     elts
       elts elt lastIndexOf
       ..dup -1 == if ..drop.2
@@ -388,156 +386,156 @@ namespace: array
 
   ( type : T -> type ) =>: getItr
     struct(
-      T arrayView : data
+      T slice : data
       i64 : index
     )
   end
   ( type : T -> type ) =>: mapItr
     struct(
-      T arrayView.mut : data
+      T slice.mut : data
       i64 : index
     )
   end
   ( type : S type : T -> type ) =>: mapToItr
     struct(
-      S arrayView : src
-      T arrayView.mut : target
+      S slice : src
+      T slice.mut : target
       i64 : index
     )
   end
 
   proc( type : auto: T
-    T arrayView.mut
-  -> T array.mapItr ) =>: export: itrMap
-    0 T array.mapItr new
+    T slice.mut
+  -> T slice.mapItr ) =>: export: itrMap
+    0 T slice.mapItr new
   end
   proc( type : auto: T
-    T arrayView.mut : data
+    T slice.mut : data
     ( T -> T ) ptr : f
-  -> T arrayView.mut ) =>: export: fMap
+  -> T slice.mut ) =>: export: fMap
     data itrMap for f () end return
   end
   overload: export: map itrMap fMap end
   proc( type : auto: S type : auto: T
-    S arrayView : src
-    T arrayView.mut : target
-  -> S T array.mapToItr ) =>: export: itrMapTo
+    S slice : src
+    T slice.mut : target
+  -> S T slice.mapToItr ) =>: export: itrMapTo
     target .length src .length < if
       "target list cannot hold all values in source" ..panic
     end
-    src target 0 S T array.mapToItr new
+    src target 0 S T slice.mapToItr new
   end
   proc( type : auto: S type : auto: T
-    S arrayView : src
-    T arrayView.mut : target
+    S slice : src
+    T slice.mut : target
     ( S -> T ) ptr : f
-  -> T arrayView.mut ) =>: export: fMapTo
+  -> T slice.mut ) =>: export: fMapTo
     src target itrMapTo for f () end return
   end
   proc( type : auto: S type : auto: T
-    S arrayView.mut : src
-    T arrayView.mut : target
-  -> S T array.mapToItr ) =>: export: itrMapMutTo
+    S slice.mut : src
+    T slice.mut : target
+  -> S T slice.mapToItr ) =>: export: itrMapMutTo
     src freeze target itrMapTo
   end
   proc( type : auto: S type : auto: T
-    S arrayView.mut : src
-    T arrayView.mut : target
-  -> T arrayView.mut ) =>: export: fMapMutTo
+    S slice.mut : src
+    T slice.mut : target
+  -> T slice.mut ) =>: export: fMapMutTo
     src freeze target fMapTo
   end
   overload: export: mapTo
     itrMapTo fMapTo itrMapMutTo fMapMutTo
   end
   namespace: mapItr
-    proc( type : auto: T T array.mapItr -> T array.mapItr ) =>: prepare end
+    proc( type : auto: T T slice.mapItr -> T slice.mapItr ) =>: prepare end
     proc( type : auto: S type : auto: T
-      S T array.mapToItr
-    -> S T array.mapToItr ) =>: prepareTo end
-    proc( type : auto: T T array.mapItr : itr -> bool ) =>: check
+      S T slice.mapToItr
+    -> S T slice.mapToItr ) =>: prepareTo end
+    proc( type : auto: T T slice.mapItr : itr -> bool ) =>: check
       itr .index itr .data .length <
     end
     proc( type : auto: S type : auto: T
-      S T array.mapToItr : itr
+      S T slice.mapToItr : itr
     -> bool ) =>: checkTo
       itr .index itr .src .length <
     end
-    proc( type : auto: T T array.mapItr : itr -> T ) =>: shaddow: get
-      itr .data itr .index array.get
+    proc( type : auto: T T slice.mapItr : itr -> T ) =>: shaddow: get
+      itr .data itr .index slice.get
     end
     proc( type : auto: S type : auto: T
-      S T array.mapToItr : itr
+      S T slice.mapToItr : itr
     -> S ) =>: getTo
-      itr .src itr .index array.get
+      itr .src itr .index slice.get
     end
-    proc( type : auto: T T : newVal T array.mapItr : itr -> T array.mapItr ) =>: step
-      newVal itr .data itr .index array.set
+    proc( type : auto: T T : newVal T slice.mapItr : itr -> T slice.mapItr ) =>: step
+      newVal itr .data itr .index slice.set
       itr
         $ .index 1 + >$ .index=
       return
     end
     proc( type : auto: S type : auto: T
       T : newVal
-      S T array.mapToItr : itr
-    -> S T array.mapToItr ) =>: stepTo
-      newVal itr .target itr .index array.set
+      S T slice.mapToItr : itr
+    -> S T slice.mapToItr ) =>: stepTo
+      newVal itr .target itr .index slice.set
       itr
         $ .index 1 + >$ .index=
       return
     end
-    proc( type : auto: T T array.mapItr : itr -> T arrayView.mut ) =>: end
+    proc( type : auto: T T slice.mapItr : itr -> T slice.mut ) =>: end
       itr .data
     end
     proc( type : auto: S type : auto: T
-      S T array.mapToItr : itr
-    -> T arrayView.mut ) =>: endTo
+      S T slice.mapToItr : itr
+    -> T slice.mut ) =>: endTo
       itr .target
     end
   end
   namespace: itr
-    proc( type : auto: T T arrayView -> T array.getItr ) =>: prepare
-      0 T array.getItr new
+    proc( type : auto: T T slice -> T slice.getItr ) =>: prepare
+      0 T slice.getItr new
     end
-    proc( type : auto: T T arrayView.mut -> T array.getItr ) =>: prepareMut
-      freeze 0 T array.getItr new
+    proc( type : auto: T T slice.mut -> T slice.getItr ) =>: prepareMut
+      freeze 0 T slice.getItr new
     end
-    proc( type : auto: T T array.getItr : itr -> bool ) =>: check
+    proc( type : auto: T T slice.getItr : itr -> bool ) =>: check
       itr .index itr .data .length <
     end
-    proc( type : auto: T T array.getItr : itr -> T ) =>: shaddow: get
-      itr .data itr .index array.get
+    proc( type : auto: T T slice.getItr : itr -> T ) =>: shaddow: get
+      itr .data itr .index slice.get
     end
-    proc( type : auto: T T array.getItr : itr -> T array.getItr ) =>: step
+    proc( type : auto: T T slice.getItr : itr -> T slice.getItr ) =>: step
       itr
         $ .index 1 + >$ .index=
       return
     end
-    proc( type : auto: T T array.getItr : itr -> ) =>: end end
+    proc( type : auto: T T slice.getItr : itr -> ) =>: end end
   end
 end
 overload: export: ..itr.prepare
-  array.mapItr.prepare
-  array.mapItr.prepareTo
-  array.itr.prepare
-  array.itr.prepareMut
+  slice.mapItr.prepare
+  slice.mapItr.prepareTo
+  slice.itr.prepare
+  slice.itr.prepareMut
 end
 overload: export: ..itr.check
-  array.mapItr.check
-  array.mapItr.checkTo
-  array.itr.check
+  slice.mapItr.check
+  slice.mapItr.checkTo
+  slice.itr.check
 end
 overload: export: ..itr.get
-  array.mapItr.get
-  array.mapItr.getTo
-  array.itr.get
+  slice.mapItr.get
+  slice.mapItr.getTo
+  slice.itr.get
 end
 overload: export: ..itr.step
-  array.mapItr.step
-  array.mapItr.stepTo
-  array.itr.step
+  slice.mapItr.step
+  slice.mapItr.stepTo
+  slice.itr.step
 end
 overload: export: ..itr.end
-  array.mapItr.end
-  array.mapItr.endTo
-  array.itr.end
+  slice.mapItr.end
+  slice.mapItr.endTo
+  slice.itr.end
 end
