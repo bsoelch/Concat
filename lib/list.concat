@@ -175,7 +175,7 @@ namespace: list
     T list : elts
     i64 : index
   -> T ptr.mut optional ) =>: export: at_64
-    index 0 < index elts .length >= | if
+    index 0 < or index elts .length >= if
       T ptr.mut optional.empty return
     end
     elts .data index + T ptr.mut cast! optional.wrap return
@@ -197,7 +197,7 @@ namespace: list
     T list : elts
     i64 : index
   -> ) =>: export: set_64
-    index 0 < index elts .length >= | if
+    index 0 < or index elts .length >= if
       "list index outside range" ..panic
     end
     elt elts .data index []=
@@ -257,6 +257,9 @@ namespace: list
     T : elt
     i64 : index
   -> T list ) =>: export: insert
+    index 0 < or index elts .length > if
+      "list index outside range" ..panic
+    end
     a
       $ .length 1 + ensureCap
       $ .data index 1 + + $1 .data index + $2 .length index - mem.move ..drop
@@ -271,6 +274,9 @@ namespace: list
     T k ptr : b
     i64 : index
   -> T list ) =>: export: insertP
+    index 0 < or index elts .length > if
+      "list index outside range" ..panic
+    end
     a
       $ .length k + ensureCap
       $ .data index k + +  $1 .data index +  $2 .length index -  mem.move ..drop
@@ -284,6 +290,9 @@ namespace: list
     T arrayView : b
     i64 : index
   -> T list ) =>: export: insertArray
+    index 0 < or index elts .length > if
+      "list index outside range" ..panic
+    end
     a
       $ .length b .length + ensureCap
       $ .data index b .length + +  $1 .data index +  $2 .length index -  mem.move ..drop
@@ -297,6 +306,9 @@ namespace: list
     T list : b
     i64 : index
   -> T list ) =>: export: insertAll
+    index 0 < or index elts .length > if
+      "list index outside range" ..panic
+    end
     a
       $ .length b .length + ensureCap
       $ .data index b .length + +  $1 .data index +  $2 .length index -  mem.move ..drop

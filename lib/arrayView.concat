@@ -46,9 +46,9 @@ namespace: array
   proc(
     type : auto: T
     i64 : auto: k
-    T k ptr : elts
+    T k ptr.mut : elts
   -> T arrayView.mut ) =>: export: shaddow: wrapMutable
-    elts k create_64 return
+    elts k create_64mut return
   end
   overload: export: shaddow: createMutable create_32mut create_64mut end
 
@@ -82,7 +82,7 @@ namespace: array
     T arrayView : elts
     i64 : index
   -> T ptr optional ) =>: export: at_64
-    index 0 < index elts .length >= | if
+    index 0 < or index elts .length >= if
       T ptr optional.empty return
     end
     elts .data index + T ptr cast! optional.wrap return
@@ -99,7 +99,7 @@ namespace: array
     T arrayView.mut : elts
     i64 : index
   -> T ptr.mut optional ) =>: export: at_64mut
-    index 0 < index elts .length >= | if
+    index 0 < or index elts .length >= if
       T ptr.mut optional.empty return
     end
     elts .data index + T ptr.mut cast! optional.wrap return
