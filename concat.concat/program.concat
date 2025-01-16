@@ -589,7 +589,7 @@ namespace: sb
           progContext [] .procedures
             callInfo [] .procId i64 cast list.at .data
           =:: procInfo
-          procInfo [] .labelId labelContext sb.appendLabelName
+          procInfo [] .labelId labelContext sb.appendLabelPath
           callInfo [] .implementationId 0 >= if
             ## XXX append static args instead of impl id
             " (" sb.appendS
@@ -624,7 +624,7 @@ namespace: sb
           progContext [] .procedures
             implInfo [] .procId i64 cast list.at .data
           =:: procInfo
-          procInfo [] .labelId labelContext sb.appendLabelName
+          procInfo [] .labelId labelContext sb.appendLabelPath
           implInfo [] .implementationId 0 >= if
             ## XXX append static args instead of impl id
             " (" sb.appendS
@@ -640,7 +640,7 @@ namespace: sb
           progContext [] .procedures
             implInfo [] .procId i64 cast list.at .data
           =:: procInfo
-          procInfo [] .labelId labelContext sb.appendLabelName
+          procInfo [] .labelId labelContext sb.appendLabelPath
           implInfo [] .implementationId 0 >= if
             ## XXX append static args instead of impl id
             " (" sb.appendS
@@ -845,15 +845,15 @@ namespace: sb
           break
         getName case
           "get: " sb.appendS
-          ..over .val .getName labelContext sb.appendLabelName
+          ..over .val .getName labelContext sb.appendLabelPath
           break
         atName case
           "address of: " sb.appendS
-          ..over .val .atName labelContext sb.appendLabelName
+          ..over .val .atName labelContext sb.appendLabelPath
           break
         existsName case
           "exists name: " sb.appendS
-          ..over .val .existsName labelContext sb.appendLabelName
+          ..over .val .existsName labelContext sb.appendLabelPath
           break
         Assert case
           "assert" sb.appendS
@@ -925,7 +925,7 @@ namespace: sb
         break
       find case
         "..?find." sb.appendS
-        info .find labelContext sb.appendLabelName
+        info .find labelContext sb.appendLabelPath
         break
     end
   end

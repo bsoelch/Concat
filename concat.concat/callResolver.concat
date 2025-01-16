@@ -986,7 +986,7 @@ proc(
           "  * " sb.appendS
           procInfo [] .procType typeContext sb.appendType
           ' ' sb.appendC
-          procInfo [] .labelId labelContext sb.appendLabelName
+          procInfo [] .labelId labelContext sb.appendLabelPath
           '\n' sb.appendC
           i 1 +
         end ..drop
@@ -1034,7 +1034,7 @@ proc(
           "  * " sb.appendS
           procInfo [] .procType typeContext sb.appendType
           ' ' sb.appendC
-          procInfo [] .labelId labelContext sb.appendLabelName
+          procInfo [] .labelId labelContext sb.appendLabelPath
           '\n' sb.appendC
           i 1 +
         end ..drop

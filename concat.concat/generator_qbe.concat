@@ -561,13 +561,7 @@ namespace: sb
         label labelContext id.getLabelFile i64 cast sb.appendI
         "_F" sb.appendS
       end
-      label labelContext id.getLabelNamespace =:: mut: mNamespace
-      while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do
-        mNamespace labelContext id.namespaceName sb.appendAsciified
-        ".":s sb.appendAsciified
-        mNamespace labelContext id.parentNamespace mNamespace@ =
-      end ## XXX? reverse order
-      label labelContext sb.appendAsciifiedLabelName
+      label labelContext sb.appendAsciifiedLabelPath
       implId 0 >= if
         "_I" sb.appendS
         implId sb.appendI

@@ -493,7 +493,7 @@ namespace: id
             prevDec [] .valueType  typeContext types.asUnlabeledProc ..drop
             types.typeEquals ! if
           "incompatible types for declaration and initialization of \"" sb.wrap
-            label labelContext sb.appendLabelName
+            label labelContext sb.appendLabelPath
             "\":\n  * " sb.appendS
             prevDec [] .valueType typeContext sb.appendType
             " at " sb.appendS
@@ -506,7 +506,7 @@ namespace: id
         end
         prevDec [] .idType idType != if
           "declaration and initialization of \"" sb.wrap
-            label labelContext sb.appendLabelName
+            label labelContext sb.appendLabelPath
             "\" are not compatible expected: " sb.appendS
             prevDec [] .idType sb.appendIdType
             " ( declared at " sb.appendS
@@ -520,7 +520,7 @@ namespace: id
         end
         prevDec [] .labelId labelContext labelFlags flags != if
           "flags for declaration and initialization of \"" sb.wrap
-            label labelContext sb.appendLabelName
+            label labelContext sb.appendLabelPath
             "\" differ: " sb.appendS
             ## TODO? print flags
             " ( declaration at " sb.appendS
@@ -539,7 +539,7 @@ namespace: id
         prevDec [] .labelId prevDec [] false return
       end
       "re declaration of identifier \"" sb.wrap
-        label labelContext sb.appendLabelName
+        label labelContext sb.appendLabelPath
         '\"' sb.appendC
       declaredAt errors appendWarning
       "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
@@ -552,7 +552,7 @@ namespace: id
         ## TODO? only allow shaddowed labels in initializers
         idType .LABEL ?? ! or shaddowed [] .idType .LABEL ?? ! if
           "declaration of identifier \"" sb.wrap
-            label labelContext sb.appendLabelName
+            label labelContext sb.appendLabelPath
             '\"' sb.appendC
           declaredAt errors appendWarning
           "shadows previous declaration " sb.wrap shaddowed [] .declaredAt errors appendInfo
@@ -649,22 +649,22 @@ namespace: sb
       id .idType switch
         TYPE case
           "type \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
+          id .labelId labelContext sb.appendLabelPath
           "\"" sb.appendS
           return
         PROCEDURE case
           "procedure \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
+          id .labelId labelContext sb.appendLabelPath
           "\"" sb.appendS
           return
         PROCEDURE_BUNDLE case
           "procedure bundle  \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
+          id .labelId labelContext sb.appendLabelPath
           "\"" sb.appendS
           return
         GLOBAL_VAR case
           "global variable \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
+          id .labelId labelContext sb.appendLabelPath
           "\"" sb.appendS
           return
         LABEL case

@@ -1,6 +1,6 @@
 stack:
 -----------------
-empty: named[2]( "string" ) { { "" 0 } } pushed at tupleInitializers.concat:20:3
+string.empty: named[2]( "string" ) { { "" 0 } } pushed at tupleInitializers.concat:20:3
 -----------------
 stack:
 -----------------

@@ -284,13 +284,13 @@ namespace: id
   -> NamespaceId ) =>: export: createNamespace
     base path context true findNamespace_internal
   end
-  proc( NamespaceId : id LabelContext ptr.mut : context -> string ) =>: export: namespaceName
+  proc( NamespaceId : id LabelContext ptr : context -> string ) =>: export: namespaceName
     id NAMESPACE_ID_NONE == if
       string.empty return
     end
     context [] .namespaces id i64 cast list.get .name return
   end
-  proc( NamespaceId : id LabelContext ptr.mut : context -> NamespaceId ) =>: export: parentNamespace
+  proc( NamespaceId : id LabelContext ptr : context -> NamespaceId ) =>: export: parentNamespace
     id NAMESPACE_ID_NONE == if
       NAMESPACE_ID_NONE return
     end
@@ -338,12 +338,41 @@ namespace: sb
     end
     sb label? .data [] .name sb.appendStr return
   end
-  proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendAsciifiedLabelName
+  proc( stringBuilder : sb LabelId : id LabelContext ptr : context bool : asciify -> stringBuilder ) =>: appendLabelPath_internal
     id context id.getLabel =:: label?
     label? optional.isEmpty if
       sb return
     end
-    sb label? .data [] .name sb.appendAsciified return
+    string 64 array : pathBuffer
+    pathBuffer@ 64 list.fromBuffer
+      label? .data [] .namespaceInfo .current =:: mut: mNamespace
+      while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do
+        mNamespace context id.namespaceName list.append
+        mNamespace context id.parentNamespace mNamespace@ =
+      end
+    =:: namePath
+    asciify if
+      sb
+        namePath .length 1 - while $ 0 >= do =:: i
+          namePath i list.get sb.appendAsciified
+          ".":s sb.appendAsciified
+        finally i 1 - end ..drop
+        label? .data [] .name sb.appendAsciified
+      return
+    else
+      sb
+        namePath .length 1 - while $ 0 >= do =:: i
+          namePath i list.get sb.appendStr
+          '.' sb.appendC
+        finally i 1 - end ..drop
+        label? .data [] .name sb.appendStr
+      return
+    end
+  end
+  proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendLabelPath
+    sb id context false appendLabelPath_internal
+  end
+  proc( stringBuilder : sb LabelId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendAsciifiedLabelPath
+    sb id context true appendLabelPath_internal
   end
 end
-import debug

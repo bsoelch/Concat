@@ -2223,7 +2223,7 @@ namespace: sb
     context .labelContext =:: labelContext
     sb
       '"' sb.appendC
-      named .name labelContext sb.appendLabelName
+      named .name labelContext sb.appendLabelPath
       '"' sb.appendC
       depth 0 > if
         " [ " sb.appendS
@@ -3140,7 +3140,7 @@ namespace: sb
             typeData [] .arguments i slice.get context sb.appendConstant
             ' ' sb.appendC
           end
-          typeData [] .generator labelContext sb.appendLabelName
+          typeData [] .generator labelContext sb.appendLabelPath
           depth 0 > if
             " [ "     appendS
               typeData [] .generated context depth 1 - appendTypeRecursive

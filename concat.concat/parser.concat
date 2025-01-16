@@ -1492,7 +1492,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       else =:: idData
         idData [] .idType .PROCEDURE_BUNDLE ?? ! if
           "cannot overload \"" sb.wrap
-            labelId labelContext sb.appendLabelName
+            labelId labelContext sb.appendLabelPath
             "\", incompatible id-type for previous declaration: " sb.appendS
             idData [] .idType sb.appendIdType
             " ( declared at " sb.appendS
@@ -1521,7 +1521,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           256 sb.create
             idData [] .idType sb.appendIdType
             " \"" sb.appendS
-            idData [] .labelId labelContext sb.appendLabelName
+            idData [] .labelId labelContext sb.appendLabelPath
             "\" ( declared at " sb.appendS
             idData [] .declaredAt sb.appendPos
             " ) is not a procedure" sb.appendS
@@ -1531,7 +1531,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           256 sb.create
             idData [] .idType sb.appendIdType
             "missing procedure data for \"" sb.appendS
-            idData [] .labelId labelContext sb.appendLabelName
+            idData [] .labelId labelContext sb.appendLabelPath
             "\" ( declared at " sb.appendS
             idData [] .declaredAt sb.appendPos
             " ) expected ProcId got:" sb.appendS

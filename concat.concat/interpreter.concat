@@ -1028,7 +1028,7 @@ namespace: interpreter
     typeContext .labelContext =:: labelContext
     generatorName idContext id.getIdentifier if ..drop
       "could not find procedure " sb.wrap
-        generatorName labelContext sb.appendLabelName
+        generatorName labelContext sb.appendLabelPath
       pos errors appendError
       Type .undefined true return
     end =:: idData
@@ -2312,20 +2312,20 @@ proc(
             idContext
           id.getIdentifier if ..drop
             "could not find identifier: " sb.wrap
-              label labelContext sb.appendLabelName
+              label labelContext sb.appendLabelPath
             op [] .pos errors appendError
             EvalResult .Error return ## unknown identifier
           end =:: idData
           idData [] .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
             "mutable global variables are not supported: " sb.wrap
-              label labelContext sb.appendLabelName
+              label labelContext sb.appendLabelPath
             op [] .pos errors appendError
             ## compile-time evaluation of mutable global variables not supported
             EvalResult .Error return
           end
           idData [] .constValue .None ?? if
             "identifier " sb.wrap
-              label labelContext sb.appendLabelName
+              label labelContext sb.appendLabelPath
               " has not been initialized" sb.appendS
             op [] .pos errors appendError
             EvalResult .Error return
@@ -3346,7 +3346,7 @@ namespace: interpreter
       false return
     end
     "call to unsupported extern procedure: " sb.wrap
-      procName labelContext sb.appendLabelName
+      procName labelContext sb.appendLabelPath
     pos errors appendInfo
     true return
   end
@@ -3585,7 +3585,7 @@ proc(
     end
     argOffset stackOffset >= if
       "not enough arguments for procedure " sb.wrap
-        procName labelContext sb.appendLabelName
+        procName labelContext sb.appendLabelPath
       pos errors appendError
       stackOffset context truncateStack
       context [] .localVariables .data map.free
@@ -3664,7 +3664,7 @@ proc(
       =:: currentImpl
       currentImpl .codeState .TYPE_CHECKED ?? ! if
         "no implementaion for procedure " sb.wrap
-          procName labelContext sb.appendLabelName
+          procName labelContext sb.appendLabelPath
         pos errors appendError
       end
       currentImpl [] .codeStart
@@ -3674,13 +3674,13 @@ proc(
     codeImpl [] .codeState switch
       PARSING case
         "procedure " sb.wrap
-          procName labelContext sb.appendLabelName
+          procName labelContext sb.appendLabelPath
           " has not finished parsing" sb.appendS
         pos errors appendError
         Operation slice.empty break
       TYPE_CHECKING case
         "procedure " sb.wrap
-          procName labelContext sb.appendLabelName
+          procName labelContext sb.appendLabelPath
           " has not finished type-checking" sb.appendS
         pos errors appendError
         Operation slice.empty break
@@ -3702,7 +3702,7 @@ proc(
   end =:: code
   code .length 0 == if
     "no operations in procedure " sb.wrap
-      procName labelContext sb.appendLabelName
+      procName labelContext sb.appendLabelPath
     pos errors appendError
     stackOffset context truncateStack
     context [] .localVariables .data map.free
@@ -3826,7 +3826,7 @@ proc(
   isTypeGenerator if
     context [] .stack .length 1 < if
       "could not initalized type generator " sb.wrap
-        procName labelContext sb.appendLabelName
+        procName labelContext sb.appendLabelPath
       pos errors appendError
       true return
     end
@@ -3834,7 +3834,7 @@ proc(
       list.pop =:: retValue
       retValue .TypeId ?? ! if ..drop
         "could not initalized type generator " sb.wrap
-          procName labelContext sb.appendLabelName
+          procName labelContext sb.appendLabelPath
           " expected type got " sb.appendS
           retValue typeContext sb.appendConstant
         pos errors appendError

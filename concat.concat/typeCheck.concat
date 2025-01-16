@@ -408,7 +408,7 @@ proc(
       "could not resolve arguments of static procedure " sb.wrap
         progContext [] .procedures
           calledProc .procId i64 cast list.at
-        .data [] .labelId typeContext .labelContext sb.appendLabelName
+        .data [] .labelId typeContext .labelContext sb.appendLabelPath
       pos progContext .errors appendError
     end
     true return
@@ -426,7 +426,7 @@ proc(
       "could not evaluate call to static procedure " sb.wrap
         progContext [] .procedures
           calledProc .procId i64 cast list.at
-        .data [] .labelId typeContext .labelContext sb.appendLabelName
+        .data [] .labelId typeContext .labelContext sb.appendLabelPath
       pos progContext .errors appendError
     end
     ## reset stack to previous state
@@ -519,7 +519,7 @@ proc(
     end
     sb
       printValues and val [] .valueId id.LABEL_ID_NONE != if
-        val [] .valueId labelContext sb.appendLabelName
+        val [] .valueId labelContext sb.appendLabelPath
         ": " sb.appendS
       end
       val [] .valueType
@@ -1730,7 +1730,7 @@ proc(
           op .val .getName
         else
           op .val .atName
-        end labelContext sb.appendLabelName
+        end labelContext sb.appendLabelPath
       op .pos errors appendError
       return
     getId case
@@ -2155,7 +2155,7 @@ proc(
           "cannot assign to immutable value of type " sb.wrap
             target [] .valueType typeContext sb.appendType
             " in \"" sb.appendS
-            target [] .valueId labelContext sb.appendLabelName
+            target [] .valueId labelContext sb.appendLabelPath
             '"' sb.appendC
           op .pos errors appendError
         else
@@ -3559,7 +3559,7 @@ proc(
                         typeContext
                       types.compositeGetLabel =:: label
                       " - \"" sb.appendS
-                      label labelContext sb.appendLabelName
+                      label labelContext sb.appendLabelPath
                       "\" declaredAt" sb.appendS
                       label labelContext id.labelPos .data sb.appendPos
                       '\n' sb.appendC
@@ -4122,7 +4122,7 @@ proc(
     PARSING case
       checkType .REQUIRE_DEFINED ?? and expandedAt optional.hasData if
         "procedure " sb.wrap
-          procName program .idContext .typeContext .labelContext sb.appendLabelName
+          procName program .idContext .typeContext .labelContext sb.appendLabelPath
           " has not finished parsing" sb.appendS
         expandedAt .data program .errors appendError
       end
@@ -4130,7 +4130,7 @@ proc(
     TYPE_CHECKING case
       checkType .REQUIRE_DEFINED ?? and expandedAt optional.hasData if
         "procedure " sb.wrap
-          procName program .idContext .typeContext .labelContext sb.appendLabelName
+          procName program .idContext .typeContext .labelContext sb.appendLabelPath
           " has not finished type-checking" sb.appendS
         expandedAt .data program .errors appendError
       end
