@@ -391,3 +391,13 @@ namespace: list
     array.reverse
   end
 end
+## XXX? change get to return optional, use [] `getValue` for throwing version
+overload: export: []
+  list.get_32
+  list.get_64
+end
+## XXX? support @[] ( `valueAt` )
+overload: export: []=
+  list.set_32
+  list.set_64
+end

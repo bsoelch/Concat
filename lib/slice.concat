@@ -513,6 +513,18 @@ namespace: slice
     proc( type : auto: T T slice.getItr : itr -> ) =>: end end
   end
 end
+## XXX? change get to return optional, use [] `getValue` for throwing version
+overload: export: []
+  slice.get_32
+  slice.get_64
+  slice.get_32mut
+  slice.get_64mut
+end
+## XXX? support @[] ( `valueAt` )
+overload: export: []=
+  slice.set_32
+  slice.set_64
+end
 overload: export: ..itr.prepare
   slice.mapItr.prepare
   slice.mapItr.prepareTo
