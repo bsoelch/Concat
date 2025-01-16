@@ -154,16 +154,16 @@ namespace: string16
     string16 new return
   end
 
-  proc( char16 slice -> string16 ) =>: export: fromArray
+  proc( char16 slice -> string16 ) =>: export: fromSlice
     string16 cast
   end
-  proc( string16 -> char16 slice ) =>: export: toArray
+  proc( string16 -> char16 slice ) =>: export: toSlice
     char16 slice cast
   end
-  proc( i16 slice : arr -> string16 ) =>: export: fromIntArray
+  proc( i16 slice : arr -> string16 ) =>: export: fromIntSlice
     arr .data char16 _ ptr cast arr .length create
   end
-  proc( string16 : str -> i16 slice ) =>: export: toIntArray
+  proc( string16 : str -> i16 slice ) =>: export: toIntSlice
     str .data i16 _ ptr cast str .length slice.create
   end
 
@@ -178,7 +178,7 @@ namespace: string16
     get_64
   end
   proc( string16 : a string16 : b -> bool ) =>: export: eq
-    a toArray b toArray slice.eq return
+    a toSlice b toSlice slice.eq return
   end
 end
 namespace: string32
@@ -188,16 +188,16 @@ namespace: string32
     string32 new return
   end
 
-  proc( char32 slice -> string32 ) =>: export: fromArray
+  proc( char32 slice -> string32 ) =>: export: fromSlice
     string32 cast
   end
-  proc( string32 -> char32 slice ) =>: export: toArray
+  proc( string32 -> char32 slice ) =>: export: toSlice
     char32 slice cast
   end
-  proc( i32 slice : arr -> string32 ) =>: export: fromIntArray
+  proc( i32 slice : arr -> string32 ) =>: export: fromIntSlice
     arr .data char32 _ ptr cast arr .length create
   end
-  proc( string32 : str -> i32 slice ) =>: export: toIntArray
+  proc( string32 : str -> i32 slice ) =>: export: toIntSlice
     str .data i32 _ ptr cast str .length slice.create
   end
 
@@ -212,7 +212,7 @@ namespace: string32
     get_64
   end
   proc( string32 : a string32 : b -> bool ) =>: export: eq
-    a toArray b toArray slice.eq return
+    a toSlice b toSlice slice.eq return
   end
 end
 

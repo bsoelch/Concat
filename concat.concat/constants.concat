@@ -92,13 +92,13 @@ proc( i16 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: exp
   elts context constPrimitiveArray ConstValue .Array16 return
 end
 proc( string16 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString16Const
-  elts string16.toIntArray context newArray16Const return
+  elts string16.toIntSlice context newArray16Const return
 end
 proc( i32 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray32Const
   elts context constPrimitiveArray ConstValue .Array32 return
 end
 proc( string32 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString32Const
-  elts string32.toIntArray context newArray32Const return
+  elts string32.toIntSlice context newArray32Const return
 end
 proc( i64 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray64Const
   elts context constPrimitiveArray ConstValue .Array64 return
@@ -228,7 +228,7 @@ namespace: constant
   ## Detect if a given i8 array is a string constant
   proc( i16 slice : ints -> bool ) =>: isString16
     0:i64 =:: mut: nonPrintable
-    ints string16.fromIntArray
+    ints string16.fromIntSlice
     0:i64 while $1 .length $1 > do
       utf16.nextCodepoint =:: cp
       cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
@@ -453,17 +453,17 @@ namespace: sb
           mArray constant.isString16 if ## array is string constant
             mArray .length MAX_STRING_CHARS <= if
               "utf16\""  sb.appendS
-              mArray string16.fromIntArray sb.appendEscapedStr16
+              mArray string16.fromIntSlice sb.appendEscapedStr16
               '\"'  sb.appendC
             else
               "utf16\""  sb.appendS
               mArray
                 MAX_STRING_CHARS_HEAD slice.head
-              string16.fromIntArray sb.appendEscapedStr16
+              string16.fromIntSlice sb.appendEscapedStr16
               "\"...\""  sb.appendS
               mArray
                 $ .length MAX_STRING_CHARS_TAIL - slice.tail
-              string16.fromIntArray sb.appendEscapedStr16
+              string16.fromIntSlice sb.appendEscapedStr16
               '\"'  sb.appendC
             end
             return
@@ -489,17 +489,17 @@ namespace: sb
           mArray constant.isString32 if ## array is string constant
             mArray .length MAX_STRING_CHARS <= if
               "utf32\""  sb.appendS
-              mArray string32.fromIntArray sb.appendEscapedStr32
+              mArray string32.fromIntSlice sb.appendEscapedStr32
               '\"'  sb.appendC
             else
               "utf32\""  sb.appendS
               mArray
                 MAX_STRING_CHARS_HEAD slice.head
-              string32.fromIntArray sb.appendEscapedStr32
+              string32.fromIntSlice sb.appendEscapedStr32
               "\"...\""  sb.appendS
               mArray
                 $ .length MAX_STRING_CHARS_TAIL - slice.tail
-              string32.fromIntArray sb.appendEscapedStr32
+              string32.fromIntSlice sb.appendEscapedStr32
               '\"'  sb.appendC
             end
             return

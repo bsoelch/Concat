@@ -150,14 +150,14 @@ proc(
       ## TODO? reuse the same buffer for all string conversion
       0 char16 list.create str .Array8 string.fromBytes utf8.toUTF16 =:: str16
       str16
-        list.asSlice string16.fromArray
+        list.asSlice string16.fromSlice
       constContext newString16Const str16 .length types.primitive.CHAR16
         str16 list.free ..drop
       break
     UTF32 case
       0 char32 list.create str .Array8 string.fromBytes  utf8.toUTF32 =:: str32
       str32
-        list.asSlice string32.fromArray
+        list.asSlice string32.fromSlice
       constContext newString32Const str32 .length types.primitive.CHAR32
         str32 list.free ..drop
       break
