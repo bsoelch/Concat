@@ -2373,6 +2373,9 @@ proc(
         sb return
       end
       pos context popValue =:: valPtr
+      valueType typeContext types.isEmpty if
+        sb return
+      end
       sb
         "%s" sb.appendS
         valType context pushValue sb.appendI
@@ -2386,6 +2389,9 @@ proc(
       return
     SET_PTR case
       pos context popValue =:: targetPtr
+      baseType typeContext types.isEmpty if
+        sb return
+      end
       pos context popValue =:: srcVal
       sb
         baseType context referenceOnly if

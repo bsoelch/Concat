@@ -1239,6 +1239,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
   idContext .typeContext =:: typeContext
   state .stack branchTree.pop .data [] =:: mut: topValue
   topValue .valueType typeContext types.isEmpty if
+    state .stack topValue branchTree.push
     return
   end
   state [] .compiledOps .length =:: index
@@ -2016,13 +2017,23 @@ proc(
               OpValue .procPtr
             op@ .val=
           end
-          ## pushValue
-            op .dataType
-              mutable
-            typeContext types.getAddressType
-            ConstValue .None
-            op
-          state pushValue
+          op .dataType typeContext types.isEmpty if
+            ## pushValue
+              0 ConstValue .Int
+              op .dataType
+                mutable
+              typeContext types.getAddressType
+              op .pos
+            state pushConstant
+          else
+            ## pushValue
+              op .dataType
+                mutable
+              typeContext types.getAddressType
+              ConstValue .None
+              op
+            state pushValue
+          end
           labelId state replaceLabel
           return
         TYPE ARGUMENT LABEL PROCEDURE_BUNDLE case
@@ -2386,7 +2397,8 @@ proc(
         end
         return
       end
-      targetType typeContext types.isEmpty if
+      eltType typeContext types.isEmpty =:: emptyValue
+      emptyValue if ## empty or pointer to empty
         ## discard container from stack and operations
         1 op .pos state discardValues
       else
@@ -2396,6 +2408,14 @@ proc(
       container .copyMutableIndex
         state [] .compiledOps .length 1 - ==
       =:: directCopy ## operation before get element is copy
+      emptyValue and isPtr if
+        ## pushConstant
+          0 ConstValue .Int
+          targetType
+          op .pos
+        state pushConstant
+        return
+      end
       ## pushValue
         targetType
         ConstValue .None ## XXX compute constant value
