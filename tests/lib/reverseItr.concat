@@ -3,7 +3,7 @@ import debug
 proc( -> ) =>: main
   { 1 2 3 4 5 } =:: mut: buffer
   buffer@ list.wrapBuffer
-    buffer ..length list.setLength
+    buffer ..length >$ .length=
   =:: l
   l list.reversed for
     debug.print
