@@ -27,7 +27,7 @@ BackEnd .QBE =:: mut: export: _BACKEND_
 ## make new compiler flags accessible in code through `..compiler.flag.<...>`
 
 proc( string : path -> ) =>: printUsage
-  "usage: " sb.wrap
+  "usage: " sb.copyPtr
     path sb.appendStr
     " \"inputFile\" [-o \"outputFile\"]\n" sb.appendS
     "options:\n" sb.appendS
@@ -101,14 +101,14 @@ proc( -> ) =>: parseArgs
           else arg "--no-inc-version":s string.eq _if
             false _INCREMENT_VERSION_@ = break
           end
-          "unknown compiler option: \"" sb.wrap
+          "unknown compiler option: \"" sb.copyPtr
             arg sb.appendStr
             "\"\n" sb.appendS
             io.stdErr ..over io.fputSb ..drop
           sb.free ..drop
           break
         default
-          "unknown compiler option: \"" sb.wrap
+          "unknown compiler option: \"" sb.copyPtr
             arg sb.appendStr
             "\"\n" sb.appendS
             io.stdErr ..over io.fputSb ..drop
@@ -118,7 +118,7 @@ proc( -> ) =>: parseArgs
     end
     state switch
       NONE case
-        "expected compiler option got \"" sb.wrap
+        "expected compiler option got \"" sb.copyPtr
           arg sb.appendStr
           "\"\n" sb.appendS
           io.stdErr ..over io.fputSb ..drop

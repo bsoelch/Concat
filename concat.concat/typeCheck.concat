@@ -369,7 +369,7 @@ proc( i64 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: int
   typeContext .labelContext =:: labelContext
   state .interpreter =:: interpreter
   count interpreter [] .stack .length > if
-    "stack undeflow: expected " sb.wrap
+    "stack undeflow: expected " sb.copyPtr
       count sb.appendI
       " got " sb.appendS
       interpreter [] .stack .length sb.appendI
@@ -405,7 +405,7 @@ proc(
     typeContext types.compositeEltCount InterpreterLoadMode .fixedCount
   state interpreterLoadContants if
     isStatic if
-      "could not resolve arguments of static procedure " sb.wrap
+      "could not resolve arguments of static procedure " sb.copyPtr
         progContext [] .procedures
           calledProc .procId i64 cast list.at
         .data [] .labelId typeContext .labelContext sb.appendLabelPath
@@ -423,7 +423,7 @@ proc(
     interpreter
   evaluateCall if
     isStatic if
-      "could not evaluate call to static procedure " sb.wrap
+      "could not evaluate call to static procedure " sb.copyPtr
         progContext [] .procedures
           calledProc .procId i64 cast list.at
         .data [] .labelId typeContext .labelContext sb.appendLabelPath
@@ -444,7 +444,7 @@ end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
   state [] .program .errors =:: errors
   InterpreterLoadMode .typeModifier state interpreterLoadContants if
-    "could not resolve arguments of type Modifier " sb.wrap
+    "could not resolve arguments of type Modifier " sb.copyPtr
       op [] .val .typeModifier sb.appendTypeModifier
     op [] .pos errors appendError
     return
@@ -453,7 +453,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeMo
     InterpreterType .INTERPRET state .interpreter .evalType=
     ## TODO? directly evaluate type-modifer without evaluating operation?
     op state .interpreter evaluateOperation .Ok ?? ! if
-      "could not evaluate type modifier " sb.wrap
+      "could not evaluate type modifier " sb.copyPtr
         op [] .val .typeModifier sb.appendTypeModifier
       op [] .pos errors appendError
     end
@@ -467,7 +467,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpre
   state .interpreter [] .evalType .INTERPRET ?? "interpret outside type-blocks" assert
   InterpreterType .GLOBAL state .interpreter .evalType=
   op state .interpreter evaluateOperation .Ok ?? ! if
-    "could not evaluate " sb.wrap
+    "could not evaluate " sb.copyPtr
       op [] .val .block .blockType sb.appendBlockType
       " block" sb.appendS
     op [] .pos state [] .program .errors appendError
@@ -478,7 +478,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretT
   state [] .inTypeBlock "in Type-block" assert
   state .interpreter [] .evalType .GLOBAL ?? "global interpreter" assert
   op state .interpreter evaluateOperation .Ok ?? ! if
-    "unexpected operation in Type/Initializer block: " sb.wrap
+    "unexpected operation in Type/Initializer block: " sb.copyPtr
       op [] state [] .program sb.appendOp
     op [] .pos state [] .program .errors appendError
     false return
@@ -504,9 +504,9 @@ proc(
   idContext .constContext =:: constContext
   maxCount =:: mut: remaining
   printValues if
-    "stack:\n" sb.wrap
+    "stack:\n" sb.copyPtr
   else
-    "types:\n" sb.wrap
+    "types:\n" sb.copyPtr
   end
     "-----------------\n" sb.appendS
   =:: mut: sb
@@ -550,7 +550,7 @@ proc(
   TypeCheckState ptr.mut : state
 -> bool ) =>: checkStackSize
   state [] .stack branchTree.depth count < if
-    "stack underflow: need " sb.wrap
+    "stack underflow: need " sb.copyPtr
       count sb.appendI
       " values got " sb.appendS
       state [] .stack branchTree.depth sb.appendI
@@ -584,7 +584,7 @@ proc(
   src .value .Int ?? and target typeContext types.isInt if
     target .arrayIndex ?? if
       src .value .Int 0 < if
-        "array indices cannot be less than 0 got: " sb.wrap
+        "array indices cannot be less than 0 got: " sb.copyPtr
         src .value .Int sb.appendI
         pos errors appendError
         false return
@@ -594,7 +594,7 @@ proc(
         true return
       end
       src .value .Int 0 < src .value .Int index .int >= | if
-        "array index outside allowed range: " sb.wrap
+        "array index outside allowed range: " sb.copyPtr
         src .value .Int sb.appendI
         " size: " sb.appendS
         index .int sb.appendI
@@ -632,7 +632,7 @@ proc(
       expectedType .empty ?? if
         i 1 + continue ## skip empty arguments if no values on stack
       end
-      "not enough types for " sb.wrap
+      "not enough types for " sb.copyPtr
         name sb.appendStr
       pos errors appendError
       true return
@@ -676,7 +676,7 @@ proc(
       opId argOffsets list.peek .data []=
       i 1 + continue
     end
-    "wrong type for " sb.wrap
+    "wrong type for " sb.copyPtr
       name sb.appendStr
       " expected " sb.appendS
       expectedType typeContext sb.appendType
@@ -721,19 +721,19 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
   state .stack branchTree.peek .data =:: typeInfo
   typeInfo [] .valueType =:: valType
   valType types.primitive.TYPE types.typeEquals ! if
-    "expected type got " sb.wrap
+    "expected type got " sb.copyPtr
       valType typeContext sb.appendType
     pos errors appendError
     Type .undefined return
   end
   typeInfo [] .value .TypeId ?? ! if
-    "expected type-constant got " sb.wrap
+    "expected type-constant got " sb.copyPtr
       typeInfo [] .value typeContext sb.appendConstant
     pos errors appendError
     Type .undefined return
   end
   typeInfo [] .opIndex state currentBlockStart < if
-    "type-constant " sb.wrap
+    "type-constant " sb.copyPtr
       typeInfo [] .value typeContext sb.appendConstant
       " at " sb.appendS
       typeInfo [] .pushedAt sb.appendPos
@@ -757,13 +757,13 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> string ) =>: popStrin
   state .stack branchTree.peek .data =:: typeInfo
   ## XXX? allow Array: { string, i64 } as string constant
   typeInfo [] .value .Array8 ?? ! if
-    "expected string-constant got " sb.wrap
+    "expected string-constant got " sb.copyPtr
       typeInfo [] .value typeContext sb.appendConstant
     pos errors appendError
     string.empty return
   end
   typeInfo [] .opIndex state currentBlockStart < if
-    "string-constant " sb.wrap
+    "string-constant " sb.copyPtr
       typeInfo [] .value typeContext sb.appendConstant
       " at " sb.appendS
       typeInfo [] .pushedAt sb.appendPos
@@ -1075,7 +1075,7 @@ proc(
     mergePoint .mergeType switch
       MERGE case
         currentType mergedType typeContext types.mergeTypes if ..drop
-          "cannot merge the branches of " sb.wrap
+          "cannot merge the branches of " sb.copyPtr
             mergePoint .blockName sb.appendStr
             "\n cannot merge types " sb.appendS
             mergedType typeContext sb.appendType
@@ -1100,7 +1100,7 @@ proc(
             typeContext types.canAutoCast !
           end
         if
-          "cannot merge the branches of " sb.wrap
+          "cannot merge the branches of " sb.copyPtr
             mergePoint .blockName sb.appendStr
             "\n expected: " sb.appendS
             mergedType typeContext sb.appendType
@@ -1137,11 +1137,11 @@ proc(
               opAutoCast castPoint []=
               i 1 + continue
             end
-            "operation is not a NO-OP: " sb.wrap
+            "operation is not a NO-OP: " sb.copyPtr
               castPoint [] program sb.appendOp
             mergePoint .mergePoint errors appendError
           end
-          "cannot cast " sb.wrap
+          "cannot cast " sb.copyPtr
             offset sb.appendI
             "th value in " sb.appendS
             i sb.appendI
@@ -1193,7 +1193,7 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  "unreachable operation: " sb.wrap
+  "unreachable operation: " sb.copyPtr
     op [] program sb.appendOp
   op [] .pos errors appendError
 end
@@ -1376,7 +1376,7 @@ proc(
           typeContext types.literalToType
         end
       else
-        "missing type for declaration" sb.wrap op [] .pos errors appendError
+        "missing type for declaration" sb.copyPtr op [] .pos errors appendError
         return
       end
     else
@@ -1384,7 +1384,7 @@ proc(
     end =:: valType
     valType op .dataType=
     id 0 < or id i64 cast.s autoTypes [] .length >= if
-      "auto-type id outside allowed range:" sb.wrap
+      "auto-type id outside allowed range:" sb.copyPtr
         id sb.appendI
         " maximum:" sb.appendS
         autoTypes [] .length 1 - sb.appendI
@@ -1407,19 +1407,19 @@ proc(
   state [] .currentProcType =:: procType
   procType op .dataType=
   procType typeContext types.isProcedure ! if
-    "unexpected type for return: " sb.wrap
+    "unexpected type for return: " sb.copyPtr
       procType typeContext sb.appendType
       " expected procedure" sb.appendS
     op [] .pos errors appendError
     return
   end
   procType typeContext types.getProcOut if ..drop
-    "could not resolve procedure return value" sb.wrap op [] .pos errors appendError
+    "could not resolve procedure return value" sb.copyPtr op [] .pos errors appendError
     return
   end =:: procOut
   procOut typeContext types.compositeEltCount =:: valCount
   valCount state [] .stack branchTree.depth < if
-    "wrong number of return values at the end of procedure expected: " sb.wrap
+    "wrong number of return values at the end of procedure expected: " sb.copyPtr
       valCount      sb.appendI
       " got: " sb.appendS
       state [] .stack branchTree.depth sb.appendI
@@ -1439,7 +1439,7 @@ proc(
   false state .reachable=
   state [] .stack branchTree.depth 0 > if
     state .stack branchTree.pop .data =:: val
-    "extra value at the end of procedure" sb.wrap
+    "extra value at the end of procedure" sb.copyPtr
        val [] .valueType typeContext sb.appendType
        " ( pushed at " sb.appendS
        val [] .pushedAt sb.appendPos
@@ -1481,7 +1481,7 @@ proc(
       label
       labelContext
     constantEquals if
-      "duplicate label " sb.wrap
+      "duplicate label " sb.copyPtr
         switchData [] .switchType typeContext types.isTaggedUnion if
           ## appendLabelName
             switchData [] .switchType
@@ -1553,13 +1553,13 @@ proc(
         op [] .val .getId .labelId
         idContext
       id.getIdentifier if ..drop
-        "could not find " sb.wrap
+        "could not find " sb.copyPtr
           op [] .val .getId labelContext sb.appendIdInfo
         op [] .pos errors appendError
         true return
       end =:: idData
       idData [] .constValue .None ?? if
-        "expected constant got " sb.wrap
+        "expected constant got " sb.copyPtr
           op [] .val .getId labelContext sb.appendIdInfo
         op [] .pos errors appendError
         true return
@@ -1571,7 +1571,7 @@ proc(
         op [] .pos
       state newSwitchLabel
     else
-      "unsupported operation in switch label:\n " sb.wrap
+      "unsupported operation in switch label:\n " sb.copyPtr
         op [] program sb.appendOp
       op [] .pos errors appendError
       true return
@@ -1589,7 +1589,7 @@ proc(
       constVal .TypeId types.isNamedType _if
     constVal .TypeId typeContext types.namedTypeName
   else
-    "unsupported operation for switch label of type " sb.wrap
+    "unsupported operation for switch label of type " sb.copyPtr
       switchType typeContext sb.appendType
       " : " sb.appendS
       op [] program sb.appendOp
@@ -1602,7 +1602,7 @@ proc(
     labelId
   typeContext types.compositeFindLabel =:: labelIndex
   labelIndex 0 < if
-    "enum " sb.wrap
+    "enum " sb.copyPtr
       switchType typeContext sb.appendType
       " does not have a label " sb.appendS
       labelId labelContext sb.appendLabelName
@@ -1725,7 +1725,7 @@ proc(
       op .val .Constant op .dataType op .pos state pushConstant
       return
     getName atName case
-      "could not find identifier: " sb.wrap
+      "could not find identifier: " sb.copyPtr
         op .val .getName ?? if
           op .val .getName
         else
@@ -1749,7 +1749,7 @@ proc(
             idInfo .labelId
             idContext
           id.getIdentifier if ..drop
-            "could not find " sb.wrap
+            "could not find " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op .pos errors appendError
             return
@@ -1895,7 +1895,7 @@ proc(
               ## remove static arguments from stack
               state .stack branchTree.pop .data =:: opData
               opData [] .opIndex state tryDeleteOp if
-                "could not remove static argument ( pushed at " sb.wrap
+                "could not remove static argument ( pushed at " sb.copyPtr
                   opData [] .pushedAt sb.appendPos
                   " )" sb.appendS
                 op .pos errors appendError
@@ -1929,13 +1929,13 @@ proc(
       state .stack branchTree.peek =:: value?
       value? optional.isEmpty if
         ## TODO? print instruction name instead of 'call'
-        "missing argument for call, expected procedure pointer" sb.wrap
+        "missing argument for call, expected procedure pointer" sb.copyPtr
         op .pos errors appendError
         return
       end
       value? .data [] .valueType =:: calledType
       calledType typeContext types.isCallable ! if
-        "cannot call values of type " sb.wrap
+        "cannot call values of type " sb.copyPtr
           calledType typeContext sb.appendType
         op .pos errors appendError
         return
@@ -1983,7 +1983,7 @@ proc(
               idInfo .labelId
               idContext
             id.getIdentifier if ..drop
-              "could not find " sb.wrap
+              "could not find " sb.copyPtr
                 idInfo labelContext sb.appendIdInfo
               op .pos errors appendError
               return
@@ -2026,7 +2026,7 @@ proc(
           labelId state replaceLabel
           return
         TYPE ARGUMENT LABEL PROCEDURE_BUNDLE case
-          "taking the address of identifier " sb.wrap
+          "taking the address of identifier " sb.copyPtr
             idInfo labelContext sb.appendIdInfo
             " is not supported" sb.appendS
           op .pos errors appendError
@@ -2040,12 +2040,12 @@ proc(
           op state appendOp ..drop
           return
         PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
-          "unexpected declaration of identifier " sb.wrap
+          "unexpected declaration of identifier " sb.copyPtr
             op .val .declareId labelContext sb.appendIdInfo
           op .pos errors appendError
           return
         ARGUMENT case
-          "cannot declare identifier " sb.wrap
+          "cannot declare identifier " sb.copyPtr
             op .val .declareId labelContext sb.appendIdInfo
           op .pos errors appendError
           return
@@ -2087,7 +2087,7 @@ proc(
               idInfo .labelId
               idContext
             id.getIdentifier if ..drop
-              "could not find " sb.wrap
+              "could not find " sb.copyPtr
                 idInfo labelContext sb.appendIdInfo
               op .pos errors appendError
             else =:: idData
@@ -2100,7 +2100,7 @@ proc(
           return
         PROCEDURE PROCEDURE_BUNDLE TYPE
             LABEL ARGUMENT TMP_VAR case
-          "unexpected initialization of identifier " sb.wrap
+          "unexpected initialization of identifier " sb.copyPtr
             idInfo labelContext sb.appendIdInfo
           op .pos errors appendError
           return
@@ -2111,7 +2111,7 @@ proc(
       op .dataType BlockInfo .Procedure state openBlock
       true state .reachable=
       op .dataType typeContext types.getProcIn if ..drop
-        "wrong type for procedure initialization: " sb.wrap
+        "wrong type for procedure initialization: " sb.copyPtr
           op .dataType typeContext sb.appendType
           " expected procedure" sb.appendS
         op .pos errors appendError
@@ -2144,7 +2144,7 @@ proc(
       end
       state .stack branchTree.peek .data =:: target
       target [] .valueType typeContext types.isPointer ! if
-        "can only assign to pointers got: " sb.wrap
+        "can only assign to pointers got: " sb.copyPtr
           target [] .valueType typeContext sb.appendType
         op .pos errors appendError
         return
@@ -2152,14 +2152,14 @@ proc(
       target [] .valueType typeContext types.isMutable ! if
         target [] .valueId id.LABEL_ID_NONE != if
           ## TODO? resolve reference path from operation
-          "cannot assign to immutable value of type " sb.wrap
+          "cannot assign to immutable value of type " sb.copyPtr
             target [] .valueType typeContext sb.appendType
             " in \"" sb.appendS
             target [] .valueId labelContext sb.appendLabelPath
             '"' sb.appendC
           op .pos errors appendError
         else
-          "cannot assign to immutable type: " sb.wrap
+          "cannot assign to immutable type: " sb.copyPtr
             target [] .valueType typeContext sb.appendType
           op .pos errors appendError
         end
@@ -2168,7 +2168,7 @@ proc(
       target [] .readEnumCheckIndex 0 >= if
         target [] .readEnumCheckIndex =:: index
         index state currentBlockStart < if
-          "cannot write to enum pushed on different branch" sb.wrap
+          "cannot write to enum pushed on different branch" sb.copyPtr
           op .pos errors appendError
           return
         end
@@ -2177,7 +2177,7 @@ proc(
             enumCheck [] .val .checkEnumLabel ?? if
           enumCheck [] .val .checkEnumLabel enumCheck .val .setEnumLabel=
         else
-          "could not update enum index" sb.wrap
+          "could not update enum index" sb.copyPtr
           op .pos errors appendError
           return
         end
@@ -2236,7 +2236,7 @@ proc(
           typeContext types.literalToType
             $ srcType@ =
           container $1 op .pos state tryCastConstant if
-            "could not convert literal to type: " sb.wrap
+            "could not convert literal to type: " sb.copyPtr
               srcType typeContext sb.appendType
             op .pos errors appendError
           end ## ! "can convert literal to type" assert
@@ -2254,7 +2254,7 @@ proc(
           false ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
           return
         end
-        "type " sb.wrap
+        "type " sb.copyPtr
           containerType typeContext sb.appendType
           " does not have a label \"" sb.appendS
           labelId labelContext sb.appendLabelName
@@ -2271,7 +2271,7 @@ proc(
         return
       else accessType .CHECK_ENUM ?? _if
         isType or containerType typeContext types.isTaggedUnion ! if
-          "type " sb.wrap
+          "type " sb.copyPtr
             containerType typeContext sb.appendType
             " is not an enum or union" sb.appendS
           op .pos errors appendError
@@ -2298,7 +2298,7 @@ proc(
           op .pos errors appendError
           return
         else isWrite _if
-          "cannot write to enum/union-generator" sb.wrap
+          "cannot write to enum/union-generator" sb.copyPtr
           op .pos errors appendError
         end
         ConstValue .None =:: mut: constValue
@@ -2426,7 +2426,7 @@ proc(
     getEnumLabel case
       state .stack branchTree.peek =:: label?
       label? optional.isEmpty if
-        "missing argument for operation " sb.wrap
+        "missing argument for operation " sb.copyPtr
           op program sb.appendOp
           " expected enum" sb.appendS
         op .pos errors appendError
@@ -2435,7 +2435,7 @@ proc(
       label? .data =:: label
       label [] .valueType =:: enumType
       enumType typeContext types.isTaggedUnion ! if
-        "wrong argument type for getEnumLabel expected enum got " sb.wrap
+        "wrong argument type for getEnumLabel expected enum got " sb.copyPtr
           enumType typeContext sb.appendType
         op .pos errors appendError
       end
@@ -2501,7 +2501,7 @@ proc(
         op .dataType
         op .val .Cast ?? !
       typeContext types.canCast ! if
-        "cannot cast " sb.wrap
+        "cannot cast " sb.copyPtr
           value .valueType typeContext sb.appendType
           " to " sb.appendS
           op .dataType typeContext sb.appendType
@@ -2522,7 +2522,7 @@ proc(
       end
       op .dataType typeContext types.isArray if
         op .dataType typeContext types.isFixedSize ! if
-          "variable size arrays are not supported" sb.wrap op .pos errors appendError
+          "variable size arrays are not supported" sb.copyPtr op .pos errors appendError
         end
         op .dataType ConstValue .None op state pushValue
         return
@@ -2554,7 +2554,7 @@ proc(
       params@ 1 []=
       params@ 0 [] params@ 1 [] typeContext types.mergeTypes if
         ..drop
-        "cannot check for equality between of values of types " sb.wrap
+        "cannot check for equality between of values of types " sb.copyPtr
           params@ 0 [] typeContext sb.appendType
           " and " sb.appendS
           params@ 1 [] typeContext sb.appendType
@@ -2563,7 +2563,7 @@ proc(
       end =:: argType
       argType typeContext types.isTaggedUnion and
           argType typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
-        "the old behaviour of enum equality is deprecared use `..label` for comparing the labels of enums" sb.wrap
+        "the old behaviour of enum equality is deprecared use `..label` for comparing the labels of enums" sb.copyPtr
         op .pos errors appendWarning
       end
       argType params@ 0 []=
@@ -2715,7 +2715,7 @@ proc(
                 MergeType .NO_CAST
               MergePoint new
             branchTree.merge .error ?? if
-              "different number of types at the start of if-branch: " sb.wrap
+              "different number of types at the start of if-branch: " sb.copyPtr
                 0:i64 while ..dup orBranches [] .length < do =:: i
                   "\n  * " sb.appendS
                   orBranches [] i list.at .data =:: branchPoint
@@ -2735,23 +2735,23 @@ proc(
         ELSE case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty if
-            "unexpected else-statement, else can only appear in if-blocks" sb.wrap
+            "unexpected else-statement, else can only appear in if-blocks" sb.copyPtr
             op .pos errors appendError
             return
           end
           currentBlock? .data =:: currentBlock
           currentBlock [] .If ?? ! if
-            "unexpected else-statement, else can only appear in if-blocks" sb.wrap
+            "unexpected else-statement, else can only appear in if-blocks" sb.copyPtr
             op .pos errors appendError
             return
           end
           currentBlock [] .If .hasElse if
-            "unexpected else-statement, if-else block can only contain one else statement" sb.wrap
+            "unexpected else-statement, if-else block can only contain one else statement" sb.copyPtr
             op .pos errors appendError
             return
           end
           currentBlock [] .If .hasIf ! if
-            "unexpected else-statement, else has to appear after if" sb.wrap
+            "unexpected else-statement, else has to appear after if" sb.copyPtr
             op .pos errors appendError
             return
           end
@@ -2832,7 +2832,7 @@ proc(
               MergeType .NO_CAST
             MergePoint new
           branchTree.merge .error ?? if
-            "different number of types at the start of else-branch: " sb.wrap
+            "different number of types at the start of else-branch: " sb.copyPtr
               0:i64 while ..dup currentBlock [] .If .andBranches .length < do =:: i
                 "\n  * " sb.appendS
                 currentBlock [] .If .andBranches i list.at .data =:: branchPoint
@@ -2851,7 +2851,7 @@ proc(
         SWITCH case
           state .stack branchTree.peek =:: value?
           value? optional.isEmpty if
-            "missing argument for switch-statement" sb.wrap
+            "missing argument for switch-statement" sb.copyPtr
             op .pos errors appendError
             return
           end
@@ -2859,7 +2859,7 @@ proc(
           switchType typeContext types.isInt ! and
           switchType typeContext types.isChar ! and
               switchType typeContext types.isTaggedUnion ! if
-            "cannot switch values of type " sb.wrap
+            "cannot switch values of type " sb.copyPtr
               switchType typeContext sb.appendType
             op .pos errors appendError
           end
@@ -2905,7 +2905,7 @@ proc(
           currentBlock? optional.isEmpty if true else
             currentBlock? .data [] .Switch ?? !
           end if
-            "unexpected " sb.wrap
+            "unexpected " sb.copyPtr
               blockType sb.appendBlockType
               ", " sb.appendS
               blockType sb.appendBlockType
@@ -2917,7 +2917,7 @@ proc(
           end
           currentBlock? .data .Switch =:: switchBlock
           switchBlock [] .inLabel ! if
-            "missing break statement at end of switch branch" sb.wrap
+            "missing break statement at end of switch branch" sb.copyPtr
             op .pos errors appendError
           end
           false switchBlock .inLabel=
@@ -2925,7 +2925,7 @@ proc(
             switchBlock [] .blockId i64 cast list.at .data
           =:: switchData
           switchData [] .defaultJumpDistance ? if
-            "unexpected " sb.wrap
+            "unexpected " sb.copyPtr
               blockType sb.appendBlockType
               ", " sb.appendS
               BlockType .DEFAULT sb.appendBlockType
@@ -2958,7 +2958,7 @@ proc(
             switchBlock .caseJumpDistances=
           else
             prev? optional.isEmpty if
-              "unexpected " sb.wrap
+              "unexpected " sb.copyPtr
                 BlockType .DEFAULT sb.appendBlockType
                 "-statement, " sb.appendS
                 BlockType .SWITCH sb.appendBlockType
@@ -3015,7 +3015,7 @@ proc(
             breakBlock .While =:: whileBlock
             blockType .CONTINUE ?? if
               whileBlock .hasFinally [] if
-                "unexpected " sb.wrap
+                "unexpected " sb.copyPtr
                   blockType sb.appendBlockType
                   "-statement, " sb.appendS
                   blockType sb.appendBlockType
@@ -3088,7 +3088,7 @@ proc(
           currentBlock? optional.isEmpty or
               currentBlock? .data =:: currentBlock
               currentBlock [] .While ?? ! if
-            "unexpected " sb.wrap
+            "unexpected " sb.copyPtr
               blockType sb.appendBlockType
               "-statement, " sb.appendS
               blockType sb.appendBlockType
@@ -3135,7 +3135,7 @@ proc(
           currentBlock? optional.isEmpty or
               currentBlock? .data =:: currentBlock
               currentBlock [] .While ?? ! if
-            "unexpected " sb.wrap
+            "unexpected " sb.copyPtr
               BlockType .DO sb.appendBlockType
               "-statement, " sb.appendS
               BlockType .DO sb.appendBlockType
@@ -3198,7 +3198,7 @@ proc(
                 MergeType .NO_CAST
               MergePoint new
             branchTree.merge .error ?? if
-              "different number of types at the start of do-branch: " sb.wrap
+              "different number of types at the start of do-branch: " sb.copyPtr
                 0:i64 while ..dup doBranches [] .length < do =:: i
                   "\n  * " sb.appendS
                   doBranches [] i list.at .data =:: branchPoint
@@ -3244,7 +3244,7 @@ proc(
           currentBlock? optional.isEmpty or
               currentBlock? .data =:: currentBlock
               currentBlock [] .While ?? ! if
-            "unexpected " sb.wrap
+            "unexpected " sb.copyPtr
               BlockType .FINALLY sb.appendBlockType
               "-statement, '" sb.appendS
               BlockType .FINALLY sb.appendBlockType
@@ -3299,7 +3299,7 @@ proc(
                 MergeType .MERGE
               MergePoint new
             branchTree.merge .error ?? if
-              "different numbers of types at the end of continue branches: " sb.wrap
+              "different numbers of types at the end of continue branches: " sb.copyPtr
                 0:i64 while ..dup continueBranches .length < do =:: i
                   "\n  * " sb.appendS
                   continueBranches i list.at .data =:: branchPoint
@@ -3317,7 +3317,7 @@ proc(
               list.free
             branchPoints@ =
           else
-            "while-loop does not loop: " sb.wrap
+            "while-loop does not loop: " sb.copyPtr
             op .pos errors appendError
             return
           end
@@ -3400,7 +3400,7 @@ proc(
         TYPE_PROC_OUT
         TYPE_COMPOSITE
         INITIALIZER case ## XXX allow dynamic initializer blocks
-          "could not evaluate " sb.wrap
+          "could not evaluate " sb.copyPtr
             op .val .blockEnd .blockType sb.appendBlockType
             " block" sb.appendS
           op .pos errors appendError
@@ -3408,7 +3408,7 @@ proc(
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           op .pos state closeBlock =:: closed
           closed .Procedure ?? ! if
-            "unexpected end of " sb.wrap
+            "unexpected end of " sb.copyPtr
               closed sb.appendBlockInfoName
               " block expected Procedure block" sb.appendS
             op .pos errors appendError
@@ -3424,7 +3424,7 @@ proc(
         ELSE case
           op .pos state closeBlock =:: closed
           closed .If ?? ! if
-            "unexpected end of " sb.wrap
+            "unexpected end of " sb.copyPtr
               closed sb.appendBlockInfoName
               " block expected " sb.appendS
               IF_BLOCK_INFO_NAME sb.appendS
@@ -3433,7 +3433,7 @@ proc(
             return
           end
           closed .If .hasElse ! if
-            "unexpected end of " sb.wrap
+            "unexpected end of " sb.copyPtr
               closed sb.appendBlockInfoName
               " block, expected `else` before `end`" sb.appendS
             op .pos errors appendError
@@ -3467,7 +3467,7 @@ proc(
                 MergeType .MERGE
               MergePoint new
             branchTree.merge .error ?? if
-              "different numbers of types at the end of " sb.wrap
+              "different numbers of types at the end of " sb.copyPtr
                 closed sb.appendBlockInfoName
                 " block\n  * ifBranch: " sb.appendS
                 state [] .stack
@@ -3509,7 +3509,7 @@ proc(
           op .pos state endSwitchBranch
           op .pos state closeBlock =:: closed
           closed .Switch ?? ! if
-            "unexpected end of " sb.wrap
+            "unexpected end of " sb.copyPtr
               closed sb.appendBlockInfoName
               "-block expected " sb.appendS
               SWITCH_BLOCK_INFO_NAME sb.appendS
@@ -3538,7 +3538,7 @@ proc(
               types.compositeEltCount =:: eltCount
               switchData [] .labels =:: labels
               labels  .length eltCount < if
-                "switch statement does not cover all labels in enum " sb.wrap
+                "switch statement does not cover all labels in enum " sb.copyPtr
                   switchBlock [] .switchType
                     typeContext
                   sb.appendType
@@ -3608,7 +3608,7 @@ proc(
                 MergeType .MERGE
               MergePoint new
             branchTree.merge .error ?? if
-              "different numbers of types at the end of switch-branches: " sb.wrap
+              "different numbers of types at the end of switch-branches: " sb.copyPtr
                 0:i64 while ..dup caseBranches .length < do =:: i
                   "\n  * " sb.appendS
                   caseBranches i list.at .data =:: branchPoint
@@ -3658,7 +3658,7 @@ proc(
         FINALLY case
           op .pos state closeBlock =:: mut: closed
           closed .While ?? ! if
-            "unexpected end of " sb.wrap
+            "unexpected end of " sb.copyPtr
               closed sb.appendBlockInfoName
               "-block expected " sb.appendS
               WHILE_BLOCK_INFO_NAME sb.appendS
@@ -3693,7 +3693,7 @@ proc(
             MergePoint new
           branchTree.merge =:: depth
           depth .error ?? if
-            "different numbers of types at beginning and end of while-block: " sb.wrap
+            "different numbers of types at beginning and end of while-block: " sb.copyPtr
               "\n  * " sb.appendS
               state [] .stack
                  whileBlock [] .branchRoot .node
@@ -3740,7 +3740,7 @@ proc(
                 MergeType .MERGE_ROOT
               MergePoint new
             branchTree.merge .error ?? if
-              "different numbers of types at the end of while branches: " sb.wrap
+              "different numbers of types at the end of while branches: " sb.copyPtr
                 0:i64 while ..dup breakBranches .length < do =:: i
                   "\n  * " sb.appendS
                   breakBranches i list.at .data =:: branchPoint
@@ -3805,7 +3805,7 @@ proc(
         AND OR case
           op .pos state closeBlock =:: mut: closed
           closed .AndOr ?? ! if
-            "unexpected end of " sb.wrap
+            "unexpected end of " sb.copyPtr
               closed sb.appendBlockInfoName
               "-block expected " sb.appendS
               AND_OR_BLOCK_INFO_NAME sb.appendS
@@ -3814,7 +3814,7 @@ proc(
             return
           end
           state [] .reachable ! if
-            "the end of all branches of an and/or block should be reachable, use if-else for conditional exit" sb.wrap
+            "the end of all branches of an and/or block should be reachable, use if-else for conditional exit" sb.copyPtr
             op .pos errors appendError
           end
           closed .AndOr =:: andOrBlock
@@ -3865,7 +3865,7 @@ proc(
               MergeType .NO_CAST
             MergePoint new
           branchTree.merge .error ?? if
-            "different number of types at the end or and-or branch: " sb.wrap
+            "different number of types at the end or and-or branch: " sb.copyPtr
               0:i64 while ..dup branches .length < do =:: i
                 "\n  * " sb.appendS
                 branches i list.at .data =:: branchPoint
@@ -3951,7 +3951,7 @@ proc(
     length size case
       state .stack branchTree.peek =:: value?
       value? optional.isEmpty if
-        "missing argument for " sb.wrap
+        "missing argument for " sb.copyPtr
           op program sb.appendOp
           " expected pointer or array" sb.appendS
         op .pos errors appendError
@@ -4016,7 +4016,7 @@ proc(
               ## discard old operations for lower value
               lower .opIndex state tryCopyOp =:: isError =:: newIndex
               lower .opIndex state tryDeleteOp or isError if
-                "internal compiler error: could not move operation" sb.wrap
+                "internal compiler error: could not move operation" sb.copyPtr
                 op .pos errors appendError
               end
               newIndex lower@ .opIndex=
@@ -4040,7 +4040,7 @@ proc(
           valType
           op .val .typeInfo
         program interpreter.computeTypeInfo if ..drop
-          "could no compute size of type " sb.wrap
+          "could no compute size of type " sb.copyPtr
             valType typeContext sb.appendType
           op .pos errors appendError
           return
@@ -4054,7 +4054,7 @@ proc(
       op@ state interpretTypeModifier
       return
     autoCast copy ConstantReference NewReference NewEnumReference case
-      "unsupported operation: " sb.wrap
+      "unsupported operation: " sb.copyPtr
         op program sb.appendOp
       op .pos errors appendError
       return
@@ -4084,7 +4084,7 @@ proc(
       end
       break
   end
-  "type-checking for operation: " sb.wrap
+  "type-checking for operation: " sb.copyPtr
     op program sb.appendOp
     " has not been implemented" sb.appendS
   op .pos errors appendError
@@ -4121,7 +4121,7 @@ proc(
     TYPE_CHECKED case true return ## nothing to do
     PARSING case
       checkType .REQUIRE_DEFINED ?? and expandedAt optional.hasData if
-        "procedure " sb.wrap
+        "procedure " sb.copyPtr
           procName program .idContext .typeContext .labelContext sb.appendLabelPath
           " has not finished parsing" sb.appendS
         expandedAt .data program .errors appendError
@@ -4129,7 +4129,7 @@ proc(
       true return
     TYPE_CHECKING case
       checkType .REQUIRE_DEFINED ?? and expandedAt optional.hasData if
-        "procedure " sb.wrap
+        "procedure " sb.copyPtr
           procName program .idContext .typeContext .labelContext sb.appendLabelPath
           " has not finished type-checking" sb.appendS
         expandedAt .data program .errors appendError
@@ -4386,7 +4386,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
           implId list.at .data
         =:: implData
         depth MAX_STATIC_RECURSION >= if
-          "exceeded maximum static recursion depth (" sb.wrap
+          "exceeded maximum static recursion depth (" sb.copyPtr
             MAX_STATIC_RECURSION sb.appendI
             ')' sb.appendC
           implData [] .firstUse errors appendError

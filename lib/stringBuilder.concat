@@ -11,6 +11,9 @@ namespace: sb
   proc( char8 _ ptr.mut : buffer i32 : buffSize -> stringBuilder ) =>: export: fromBuffer
     buffer buffSize list.fromBuffer stringBuilder cast  return
   end
+  proc( i64 : auto: k char8 k ptr.mut : buffer -> stringBuilder ) =>: export: wrapBuffer
+    buffer list.wrapBuffer stringBuilder cast  return
+  end
   proc( stringBuilder -> stringBuilder ) =>: export: clear
     char8 list cast list.clear stringBuilder cast return
   end
@@ -20,7 +23,7 @@ namespace: sb
   proc( stringBuilder -> stringBuilder ) =>: export: free
     char8 list cast list.free stringBuilder cast return
   end
-  proc( i64 : auto: k  char8 k ptr : str -> stringBuilder ) =>: export: wrap
+  proc( i64 : auto: k  char8 k ptr : str -> stringBuilder ) =>: export: copyPtr
     k create
       str appendS
     return

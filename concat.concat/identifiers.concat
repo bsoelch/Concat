@@ -373,37 +373,37 @@ namespace: id
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: checkIdentifier
     id .length 0 == if
-      "identifier names have to be non-empty" sb.wrap pos errors appendError
+      "identifier names have to be non-empty" sb.copyPtr pos errors appendError
       true return
     end
     context .BUILT_IN ?? if
       false return
     end
     id 0 string.charAt '#' == if
-      "identifier names cannot start with '#'" sb.wrap pos errors appendError
+      "identifier names cannot start with '#'" sb.copyPtr pos errors appendError
       true return
     end
     id ':' string.contains if
-      "identifier names cannot contain ':'" sb.wrap pos errors appendError
+      "identifier names cannot contain ':'" sb.copyPtr pos errors appendError
       true return
     end
     context .NAMESPACE ?? if
       false return
     end
     context .LABEL ?? and id id .length 1 - string.charAt '=' == if
-      "label names cannot end with '='" sb.wrap pos errors appendError
+      "label names cannot end with '='" sb.copyPtr pos errors appendError
       true return
     end
     id '.' string.contains if
-      "identifier names cannot contain '.'" sb.wrap pos errors appendError
+      "identifier names cannot contain '.'" sb.copyPtr pos errors appendError
       true return
     end
     id id .length 1 - string.charAt '@' == if
-      "identifier names cannot end with '@'" sb.wrap pos errors appendError
+      "identifier names cannot end with '@'" sb.copyPtr pos errors appendError
       true return
     end
     id 0 string.charAt '$' == or id ">$":s string.startsWith if
-      "identifier names cannot start with `$` or `>$`" sb.wrap pos errors appendError
+      "identifier names cannot start with `$` or `>$`" sb.copyPtr pos errors appendError
       true return
     end
     false return
@@ -423,7 +423,7 @@ namespace: id
     context .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     label LABEL_ID_NONE == if
-      "invalid label id" sb.wrap declaredAt errors appendError
+      "invalid label id" sb.copyPtr declaredAt errors appendError
       LABEL_ID_NONE ID_NONE_DATA true return
     end
     label labelContext labelFlags =:: flags
@@ -440,17 +440,17 @@ namespace: id
     flags FLAG_MUTABLE & ? if
       idType .TYPE ?? if
         context [] .nameBuffer sb.clear context .nameBuffer=
-        "type definitions cannot be mutable" sb.wrap declaredAt errors appendError
+        "type definitions cannot be mutable" sb.copyPtr declaredAt errors appendError
         LABEL_ID_NONE ID_NONE_DATA true return
       end
       idType .PROCEDURE ?? if
         context [] .nameBuffer sb.clear context .nameBuffer=
-        "procedures cannot be mutable" sb.wrap declaredAt errors appendError
+        "procedures cannot be mutable" sb.copyPtr declaredAt errors appendError
         LABEL_ID_NONE ID_NONE_DATA true return
       end
       idType .ARGUMENT ??  if
         context [] .nameBuffer sb.clear context .nameBuffer=
-        "procedure arguments cannot be mutable" sb.wrap declaredAt errors appendError
+        "procedure arguments cannot be mutable" sb.copyPtr declaredAt errors appendError
         LABEL_ID_NONE ID_NONE_DATA true return
       end
     end
@@ -492,7 +492,7 @@ namespace: id
         valType typeContext types.asUnlabeledProc ..drop
             prevDec [] .valueType  typeContext types.asUnlabeledProc ..drop
             types.typeEquals ! if
-          "incompatible types for declaration and initialization of \"" sb.wrap
+          "incompatible types for declaration and initialization of \"" sb.copyPtr
             label labelContext sb.appendLabelPath
             "\":\n  * " sb.appendS
             prevDec [] .valueType typeContext sb.appendType
@@ -505,7 +505,7 @@ namespace: id
           LABEL_ID_NONE ID_NONE_DATA true return
         end
         prevDec [] .idType idType != if
-          "declaration and initialization of \"" sb.wrap
+          "declaration and initialization of \"" sb.copyPtr
             label labelContext sb.appendLabelPath
             "\" are not compatible expected: " sb.appendS
             prevDec [] .idType sb.appendIdType
@@ -519,7 +519,7 @@ namespace: id
           LABEL_ID_NONE ID_NONE_DATA true return
         end
         prevDec [] .labelId labelContext labelFlags flags != if
-          "flags for declaration and initialization of \"" sb.wrap
+          "flags for declaration and initialization of \"" sb.copyPtr
             label labelContext sb.appendLabelPath
             "\" differ: " sb.appendS
             ## TODO? print flags
@@ -538,11 +538,11 @@ namespace: id
         context [] .nameBuffer sb.clear context .nameBuffer=
         prevDec [] .labelId prevDec [] false return
       end
-      "re declaration of identifier \"" sb.wrap
+      "re declaration of identifier \"" sb.copyPtr
         label labelContext sb.appendLabelPath
         '\"' sb.appendC
       declaredAt errors appendWarning
-      "previous declaration " sb.wrap prevDec [] .declaredAt errors appendInfo
+      "previous declaration " sb.copyPtr prevDec [] .declaredAt errors appendInfo
       context [] .nameBuffer sb.clear context .nameBuffer=
       LABEL_ID_NONE ID_NONE_DATA true return
     end
@@ -551,11 +551,11 @@ namespace: id
         ## allow shaddoing for labels
         ## TODO? only allow shaddowed labels in initializers
         idType .LABEL ?? ! or shaddowed [] .idType .LABEL ?? ! if
-          "declaration of identifier \"" sb.wrap
+          "declaration of identifier \"" sb.copyPtr
             label labelContext sb.appendLabelPath
             '\"' sb.appendC
           declaredAt errors appendWarning
-          "shadows previous declaration " sb.wrap shaddowed [] .declaredAt errors appendInfo
+          "shadows previous declaration " sb.copyPtr shaddowed [] .declaredAt errors appendInfo
         end
       else ..drop end
     end

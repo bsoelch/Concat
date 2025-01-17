@@ -6,7 +6,7 @@ proc( char8 : a char8 : b i32 : C -> i32 ) =>: cmp
 end
 
 proc( -> ) =>: main
-  "Hello, World!" sb.wrap
+  "Hello, World!" sb.copyPtr
      ..dup char8 list cast cmp@ 0 list.sort
      '\n' sb.appendC
      io.stdOut ..over io.fputSb ..drop

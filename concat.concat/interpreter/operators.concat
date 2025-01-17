@@ -295,7 +295,7 @@ namespace: interpreter
           args 0 []
           true
           args 1 [] constAsInt if ..drop.3
-            "unexpected constant for pointer offset expected integer: " sb.wrap
+            "unexpected constant for pointer offset expected integer: " sb.copyPtr
               args 1 [] typeContext sb.appendConstant
             pos errors appendError
             ConstValue .None OperatorResult .argumentError return
@@ -319,7 +319,7 @@ namespace: interpreter
         argument .Array8 ?? "argument is string" assert
         argLength .Int ?? "length is int" assert
         argument .Array8 .length argLength .Int < if
-          "length exceeds size of memory section" sb.wrap
+          "length exceeds size of memory section" sb.copyPtr
           pos errors appendError
         end
         argument .Array8 string.fromBytes
@@ -374,7 +374,7 @@ namespace: interpreter
         argument .Array8 ?? "argument is string" assert
         argLength .Int ?? "length is int" assert
         argument .Array8 .length argLength .Int < if
-          "length exceeds size of memory section" sb.wrap
+          "length exceeds size of memory section" sb.copyPtr
           pos errors appendError
         end
         argument .Array8 string.fromBytes
@@ -486,7 +486,7 @@ namespace: interpreter
             arrayConst 0 slice.get i64 cast.u ConstValue .Int
           end OperatorResult .success return
       default
-        "unexpected constant for pointer value: " sb.wrap
+        "unexpected constant for pointer value: " sb.copyPtr
           ptrValue typeContext sb.appendConstant
         pos errors appendError
         ConstValue .None OperatorResult .argumentError return
@@ -518,7 +518,7 @@ namespace: interpreter
     CompilerError list ptr.mut : errors
   -> OperatorResult ) =>: setLocalArray
     srcArray .length targetArray .length != if
-      "invalid array length for assignment expected " sb.wrap
+      "invalid array length for assignment expected " sb.copyPtr
         targetArray .length sb.appendI
         " got:" sb.appendS
         srcArray .length sb.appendI
@@ -548,7 +548,7 @@ namespace: interpreter
         else newValue .LocalArray ?? _if
           newValue .LocalArray ConstValue slice.mut cast slice.freeze
         else
-          "unexpected source for assignment expected array got:" sb.wrap
+          "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
           OperatorResult .argumentError return
@@ -563,7 +563,7 @@ namespace: interpreter
         else newValue .LocalArray8 ?? _if
           newValue .LocalArray8 i8 slice.mut cast slice.freeze
         else
-          "unexpected source for assignment expected array got:" sb.wrap
+          "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
           OperatorResult .argumentError return
@@ -578,7 +578,7 @@ namespace: interpreter
         else newValue .LocalArray16 ?? _if
           newValue .LocalArray16 i16 slice.mut cast slice.freeze
         else
-          "unexpected source for assignment expected array got:" sb.wrap
+          "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
           OperatorResult .argumentError return
@@ -593,7 +593,7 @@ namespace: interpreter
         else newValue .LocalArray32 ?? _if
           newValue .LocalArray32 i32 slice.mut cast slice.freeze
         else
-          "unexpected source for assignment expected array got:" sb.wrap
+          "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
           OperatorResult .argumentError return
@@ -608,14 +608,14 @@ namespace: interpreter
         else newValue .LocalArray64 ?? _if
           newValue .LocalArray64 i64 slice.mut cast slice.freeze
         else
-          "unexpected source for assignment expected array got:" sb.wrap
+          "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
           OperatorResult .argumentError return
         end =:: srcArray
         targetValue .LocalArray64 srcArray pos errors setLocalArray return
       default
-        "unexpected target for setValue, expected writable memory location got: " sb.wrap
+        "unexpected target for setValue, expected writable memory location got: " sb.copyPtr
           targetValue typeContext sb.appendConstant
         pos errors appendError
         OperatorResult .argumentError return
@@ -824,13 +824,13 @@ namespace: interpreter
     program .errors =:: errors
     program .idContext .typeContext =:: typeContext
     src constantAsRawMemory if ..drop.3
-      "unsupported constant for memcopy source: " sb.wrap
+      "unsupported constant for memcopy source: " sb.copyPtr
         src typeContext sb.appendConstant
       pos errors appendError
       target true return
     end =:: srcStride =:: srcLength =:: srcData
     target constantAsRawMutableMemory if ..drop.3
-      "unsupported constant for memcopy target: " sb.wrap
+      "unsupported constant for memcopy target: " sb.copyPtr
         target typeContext sb.appendConstant
       pos errors appendError
       target true return
@@ -838,12 +838,12 @@ namespace: interpreter
     srcStride targetStride != or
         length srcStride u% 0 != or
         length targetStride u% 0 != if
-      "unaligned copy is not supported" sb.wrap
+      "unaligned copy is not supported" sb.copyPtr
       pos errors appendError
       target true return
     end
     srcStride srcLength * length < or targetStride targetLength * length < if
-      "out of bounds memory access" sb.wrap
+      "out of bounds memory access" sb.copyPtr
       pos errors appendError
       target true return
     end

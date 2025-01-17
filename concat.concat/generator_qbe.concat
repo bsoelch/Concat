@@ -247,7 +247,7 @@ proc(
   tmp .data ?? if
     tmp .data [] .varId return
   end
-  "stack underflow" sb.wrap
+  "stack underflow" sb.copyPtr
   pos context [] .program .errors appendError
   -1 return
 end
@@ -301,12 +301,12 @@ proc(
   size switch
     fixed case size .fixed return
     dynamicArray case
-      "dynamic arrays are not supported in this context: " sb.wrap
+      "dynamic arrays are not supported in this context: " sb.copyPtr
          t typeContext sb.appendType
       pos errors appendError
       0 return
     unknown case
-      "could not determine size of type: " sb.wrap
+      "could not determine size of type: " sb.copyPtr
          t typeContext sb.appendType
       pos errors appendError
       0 return
@@ -352,7 +352,7 @@ proc(
   eltOffset? optional.hasData if
     eltOffset? .data return
   end
-  "could not compute offset of element " sb.wrap
+  "could not compute offset of element " sb.copyPtr
     i sb.appendI
     " in tuple " sb.appendS
     t typeContext sb.appendType
@@ -371,7 +371,7 @@ proc(
   labelOffset? optional.hasData if
     labelType labelOffset? .data return
   end
-  "could not compute offset of label in enum " sb.wrap
+  "could not compute offset of label in enum " sb.copyPtr
     t typeContext sb.appendType
   pos errors appendError
   labelType 0 return
@@ -412,7 +412,7 @@ proc(
   end
   1:i64 while ..dup toMerge .length < do =:: i
     toMerge i slice.get [] .valType rootValue [] .valType != if
-      "branches of " sb.wrap
+      "branches of " sb.copyPtr
          mergePoint .blockName sb.appendStr
          "-statement are out of sync expected: " sb.appendS
          rootValue [] .valType sb.appendValType
@@ -535,7 +535,7 @@ proc(
     end
     i 1 -
   end ..drop
-  "could not find target of break/continue " sb.wrap
+  "could not find target of break/continue " sb.copyPtr
   pos errors appendError
   BlockInfo ptr.mut optional.empty return
 end
@@ -672,7 +672,7 @@ namespace: sb
       procIn procOut initializer align case
         break
     end
-    "unsupported type " sb.wrap
+    "unsupported type " sb.copyPtr
       t typeContext sb.appendType
     pos errors appendError
     sb return
@@ -723,7 +723,7 @@ namespace: sb
               false typeContext types.getAddressType
             arg@ =
           else arg typeContext types.isPointer ! _if
-            "unexpected generic argument: " sb.wrap
+            "unexpected generic argument: " sb.copyPtr
               arg typeContext sb.appendType
             pos errors appendError
           end
@@ -908,7 +908,7 @@ namespace: sb
               BOOL TYPE case break
             end
           end
-          "unexpected type for integer: " sb.wrap
+          "unexpected type for integer: " sb.copyPtr
             t typeContext sb.appendType
             " number-type: " sb.appendS
             numType typeContext sb.appendType
@@ -927,7 +927,7 @@ namespace: sb
           else numType types.primitive.F64 types.typeEquals _if
             value .Float f64.bits sb.appendI
           else
-            "unexpected type for float: " sb.wrap
+            "unexpected type for float: " sb.copyPtr
               t typeContext sb.appendType
               " number-type: " sb.appendS
               numType typeContext sb.appendType
@@ -1048,7 +1048,7 @@ namespace: sb
             end
             return
           else
-            "unsupported type for array constant: " sb.wrap
+            "unsupported type for array constant: " sb.copyPtr
               t typeContext sb.appendType
               " expected array or tuple" sb.appendS
             pos errors appendError
@@ -1060,7 +1060,7 @@ namespace: sb
             break ## XXX? support small unions as local constants
           end
           t typeContext types.isEnum ! and t typeContext types.isUnion ! if
-            "unsupported type for union constant: " sb.wrap
+            "unsupported type for union constant: " sb.copyPtr
               t typeContext sb.appendType
               " expected enum or union" sb.appendS
             pos errors appendError
@@ -1081,13 +1081,13 @@ namespace: sb
           false =:: mut: needComma
           eltType typeContext types.isEmpty ! if
             value .Union ?? ! if
-              "missing element value for union constant" sb.wrap
+              "missing element value for union constant" sb.copyPtr
               pos errors appendError
             else
               ## appendConstQBE
                 eltType
                 value eltIndex constUnionElement if
-                  "union element index out of sync: expected " sb.wrap
+                  "union element index out of sync: expected " sb.copyPtr
                     eltIndex sb.appendI
                     " got " sb.appendS
                     value .Union .eltIndex sb.appendI
@@ -1127,7 +1127,7 @@ namespace: sb
         break
       end
       isGlobal if
-        "unsupported constant: " sb.wrap
+        "unsupported constant: " sb.copyPtr
           value typeContext sb.appendConstant
         pos errors appendError
         return
@@ -1436,7 +1436,7 @@ proc(
       context
     sb.appendArgName return
   end
-  "cannot find generic argument: " sb.wrap
+  "cannot find generic argument: " sb.copyPtr
     labelId labelContext sb.appendLabelName
   pos errors appendError
 end
@@ -2021,7 +2021,7 @@ proc(
       valId sb.appendI
       '\n' sb.appendC
     else
-      "unsupported type in switch: " sb.wrap
+      "unsupported type in switch: " sb.copyPtr
         switchType typeContext sb.appendType
       pos errors appendError
       return
@@ -2465,7 +2465,7 @@ proc(
         '\n' sb.appendC
       return
     PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64 case
-      "unsupported built-in" sb.wrap
+      "unsupported built-in" sb.copyPtr
         builtIn sb.appendBuiltIn
       pos errors appendError
       sb return
@@ -2924,7 +2924,7 @@ proc(
   end
   castType .autoCast ?? if
     offset i64 cast.s context [] .stackInfo branchTree.depth >= if
-      "stack underflow" sb.wrap
+      "stack underflow" sb.copyPtr
       pos errors appendError
       sb return
     end
@@ -3030,7 +3030,7 @@ proc(
       pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
     return
   end
-  "casting from " sb.wrap
+  "casting from " sb.copyPtr
     src typeContext sb.appendType
     " to " sb.appendS
     target typeContext sb.appendType
@@ -3309,7 +3309,7 @@ proc(
         end
         "function " sb.appendS
         op [] .dataType typeContext types.getProcRet if ..drop
-          "wrong type for procedure initialization: " sb.wrap
+          "wrong type for procedure initialization: " sb.copyPtr
             op [] .dataType typeContext sb.appendType
             " expected procedure" sb.appendS
           op [] .pos errors appendError
@@ -3429,7 +3429,7 @@ proc(
           return
        ARGUMENT case
           isAddr and op [] .dataType context referenceOnly ! if
-            "cannot take the address of procedure argument" sb.wrap
+            "cannot take the address of procedure argument" sb.copyPtr
             op [] .pos errors appendError
             sb return
           end
@@ -3646,7 +3646,7 @@ proc(
           op [] .dataType op [] .pos context typeSizeInt sb.appendI
           ")\n" sb.appendS
         else
-          "unsupported type for new:" sb.wrap
+          "unsupported type for new:" sb.copyPtr
             op [] .dataType
               typeContext
             sb.appendType
@@ -3663,7 +3663,7 @@ proc(
     getEnumLabel case
       context .stackInfo branchTree.pop =:: srcVal?
       srcVal? optional.isEmpty if
-        "stack underflow" sb.wrap
+        "stack underflow" sb.copyPtr
         op [] .pos errors appendError
         sb return
       end
@@ -3687,7 +3687,7 @@ proc(
     checkEnumLabel case
       context .stackInfo branchTree.peek =:: srcVal?
       srcVal? optional.isEmpty if
-        "stack underflow" sb.wrap
+        "stack underflow" sb.copyPtr
         op [] .pos errors appendError
         sb return
       end
@@ -3704,7 +3704,7 @@ proc(
     setEnumLabel setEnumElement case
       context .stackInfo branchTree.peek =:: srcVal?
       srcVal? optional.isEmpty if
-        "stack underflow" sb.wrap
+        "stack underflow" sb.copyPtr
         op [] .pos errors appendError
         sb return
       end
@@ -4147,7 +4147,7 @@ proc(
                 newSb@
               MergePoint new
             branchTree.merge .error ?? if
-              "could not merge or-if branches" sb.wrap
+              "could not merge or-if branches" sb.copyPtr
               op [] .pos errors appendError
             end
           end
@@ -4253,7 +4253,7 @@ proc(
               newSb@
             MergePoint new
           branchTree.merge .error ?? if
-            "could not merge and-if branches" sb.wrap
+            "could not merge and-if branches" sb.copyPtr
             op [] .pos errors appendError
           end
           newSb return
@@ -4303,7 +4303,7 @@ proc(
             end
             breakBlock? .data =:: breakBlock
             breakBlock [] .Switch ?? ! if
-              "unexpected block for " sb.wrap
+              "unexpected block for " sb.copyPtr
                 BlockType .BREAK_SWITCH sb.appendBlockType
                 ": " sb.appendS
                 breakBlock [] sb.appendBlockInfo
@@ -4352,7 +4352,7 @@ proc(
             whileData [] .modifiedTypes =:: loopEltCount
             loopEltCount StackElement list.create =:: mut: loopElts
             context [] .stackInfo branchTree.depth loopEltCount < if
-              "stack underflow" sb.wrap
+              "stack underflow" sb.copyPtr
               op [] .pos errors appendError
               sb return
             end
@@ -4478,7 +4478,7 @@ proc(
                 newSb@
               MergePoint new
             branchTree.merge .error ?? if
-              "could not merge or-do branches" sb.wrap
+              "could not merge or-do branches" sb.copyPtr
               op [] .pos errors appendError
             end
           end
@@ -4499,7 +4499,7 @@ proc(
           end
           breakBlock? .data =:: breakBlock
           breakBlock [] .While ?? ! if
-            "unexpected block for " sb.wrap
+            "unexpected block for " sb.copyPtr
               blockType sb.appendBlockType
               ": " sb.appendS
               breakBlock [] sb.appendBlockInfo
@@ -4568,7 +4568,7 @@ proc(
                 newSb@
               MergePoint new
             branchTree.merge .error ?? if
-              "could not merge continue branches of while block" sb.wrap
+              "could not merge continue branches of while block" sb.copyPtr
               op [] .pos errors appendError
             end
           end
@@ -4673,7 +4673,7 @@ proc(
                 newSb@
               MergePoint new
             branchTree.merge .error ?? if
-              "could not merge branches of if-else block" sb.wrap
+              "could not merge branches of if-else block" sb.copyPtr
               op [] .pos errors appendError
             end
           end
@@ -4715,7 +4715,7 @@ proc(
                 newSb@
               MergePoint new
             branchTree.merge .error ?? if
-              "could not merge branches of switch-case block" sb.wrap
+              "could not merge branches of switch-case block" sb.copyPtr
               op [] .pos errors appendError
             end
           end
@@ -4729,7 +4729,7 @@ proc(
           context .openBlocks=
           prog [] .whileData whileBlock .blockId i32 cast list.at .data =:: whileData
           context [] .stackInfo branchTree.depth whileData [] .modifiedTypes < if
-            "stack underflow" sb.wrap
+            "stack underflow" sb.copyPtr
             op [] .pos errors appendError
             sb return
           end
@@ -4785,7 +4785,7 @@ proc(
                 newSb@
               MergePoint new
             branchTree.merge .error ?? if
-              "could not merge break branches of while block" sb.wrap
+              "could not merge break branches of while block" sb.copyPtr
               op [] .pos errors appendError
             end
           end
@@ -4830,7 +4830,7 @@ proc(
               newSb@
             MergePoint new
           branchTree.merge .error ?? if
-            "could not merge break branches of and/or block" sb.wrap
+            "could not merge break branches of and/or block" sb.copyPtr
             op [] .pos errors appendError
           end
           andOrBlock .branches list.free ..drop
@@ -4848,7 +4848,7 @@ proc(
       break
     Return case
       op [] .dataType typeContext types.isProcedure ! if
-        "unexpected type for return: " sb.wrap
+        "unexpected type for return: " sb.copyPtr
           op [] .dataType typeContext sb.appendType
           " expected procedure" sb.appendS
         op [] .pos errors appendError
@@ -4957,7 +4957,7 @@ proc(
         COPY case
           op [] .val .stackMod .n =:: offset
           context [] .stackInfo branchTree.depth offset i64 cast.u <= if
-            "stack underflow" sb.wrap
+            "stack underflow" sb.copyPtr
             op [] .pos errors appendError
             sb return
           end
@@ -4971,7 +4971,7 @@ proc(
           sb return
         SWAP case
           context [] .stackInfo branchTree.depth 2 < if
-            "stack underflow" sb.wrap
+            "stack underflow" sb.copyPtr
             op [] .pos errors appendError
             sb return
           end
@@ -4986,7 +4986,7 @@ proc(
     setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
-  "unable to compile operation " sb.wrap
+  "unable to compile operation " sb.copyPtr
     op [] prog sb.appendOp
   op [] .pos errors appendError
   sb return

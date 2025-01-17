@@ -338,7 +338,7 @@ proc(
     setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
-  "unsupported operation " sb.wrap
+  "unsupported operation " sb.copyPtr
     op program sb.appendOp
   op .pos errors appendError
   newOps return

@@ -659,7 +659,7 @@ namespace: constants
             i 1 + i@ =
             c 'x' == if 2:i64 else c 'u' == _if 4:i64 else 8:i64 end =:: nChars
             i nChars + str .length > if
-              "not enough characters for escape sequence \"\\" sb.wrap
+              "not enough characters for escape sequence \"\\" sb.copyPtr
                 c               sb.appendC
                 "\" need "      sb.appendS
                 nChars          sb.appendI
@@ -670,7 +670,7 @@ namespace: constants
             end
             str .data i + nChars string.create 16 number.tryParseInt .NONE ?? if
               $ 0 < if ..drop
-                "invalid hex-code for escape sequence: \"\\" sb.wrap
+                "invalid hex-code for escape sequence: \"\\" sb.copyPtr
                   c sb.appendC
                   str .data i + nChars string.create sb.appendStr
                   '\"' sb.appendC
@@ -682,7 +682,7 @@ namespace: constants
                   unicode.Codepoint cast sb.appendCodepoint
                 else c 'U' == _if
                   $ unicode.MAX_CODEPOINT i64 cast.u > if
-                    "code-point outside allowed range: \"\\U" sb.wrap
+                    "code-point outside allowed range: \"\\U" sb.copyPtr
                       str .data i + nChars string.create sb.appendStr
                       "\" (maximum: 0x" sb.appendS
                       unicode.MAX_CODEPOINT i64 cast.u sb.appendX
@@ -691,14 +691,14 @@ namespace: constants
                   end
                   unicode.Codepoint cast sb.appendCodepoint
                 else ..drop
-                  "unknown hex-escape sequence: \"\\" sb.wrap
+                  "unknown hex-escape sequence: \"\\" sb.copyPtr
                     c sb.appendC '\"'
                     sb.appendC
                   pos errors appendError
                 end
               end
             else ..drop
-              "invalid hex-code for escape sequence: \"\\" sb.wrap
+              "invalid hex-code for escape sequence: \"\\" sb.copyPtr
                 c sb.appendC
                 str .data i + nChars string.create sb.appendStr
                 '\"' sb.appendC
@@ -710,7 +710,7 @@ namespace: constants
             i nChars 1 - + i@ =
             continue
           default
-            "unknown escape sequence \"\\" sb.wrap
+            "unknown escape sequence \"\\" sb.copyPtr
               $1 sb.appendC
               '\"' sb.appendC
             pos errors appendError
@@ -745,7 +745,7 @@ namespace: constants
           i 1 + continue
         end
         i 1 + str .length >= if
-          "unexpected end of raw string" sb.wrap
+          "unexpected end of raw string" sb.copyPtr
           pos errors appendError
         end
         str i 1 + string.charAt
