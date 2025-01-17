@@ -3477,28 +3477,6 @@ proc(
         context sb.appendGlobalName
         "\n" sb.appendS
       return
-    setValue case
-      op [] .pos context popValue =:: targetId
-      op [] .pos context popValue =:: valId
-      op [] .dataType =:: valType
-      sb
-        op [] .pos sb.appendPosQBE
-        valType context referenceOnly if
-          "blit %s" sb.appendS
-        else
-          "store" sb.appendS
-          valType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-          " %s" sb.appendS
-        end
-        valId sb.appendI
-        ", %s" sb.appendS
-        targetId sb.appendI
-        valType context referenceOnly if
-          ',' sb.appendC
-          valType op [] .pos context typeSizeInt sb.appendI
-        end
-        '\n' sb.appendC
-      return
     getElement case
       op [] .val .getElement =:: index
       op [] .dataType =:: mut: containerType

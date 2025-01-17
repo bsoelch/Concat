@@ -2149,69 +2149,6 @@ proc(
         i 1 +
       end ..drop
       return
-    setValue case
-      1 op .pos state checkStackSize if
-        return
-      end
-      state .stack branchTree.peek .data =:: target
-      target [] .valueType typeContext types.isPointer ! if
-        "can only assign to pointers got: " sb.copyPtr
-          target [] .valueType typeContext sb.appendType
-        op .pos errors appendError
-        return
-      end
-      target [] .valueType typeContext types.isMutable ! if
-        target [] .valueId id.LABEL_ID_NONE != if
-          ## TODO? resolve reference path from operation
-          "cannot assign to immutable value of type " sb.copyPtr
-            target [] .valueType typeContext sb.appendType
-            " in \"" sb.appendS
-            target [] .valueId labelContext sb.appendLabelPath
-            '"' sb.appendC
-          op .pos errors appendError
-        else
-          "cannot assign to immutable type: " sb.copyPtr
-            target [] .valueType typeContext sb.appendType
-          op .pos errors appendError
-        end
-        return
-      end
-      target [] .readEnumCheckIndex 0 >= if
-        target [] .readEnumCheckIndex =:: index
-        index state currentBlockStart < if
-          "cannot write to enum pushed on different branch" sb.copyPtr
-          op .pos errors appendError
-          return
-        end
-        index state [] .compiledOps .length < and
-            state [] .compiledOps index list.at .data =:: enumCheck
-            enumCheck [] .val .checkEnumLabel ?? if
-          enumCheck [] .val .checkEnumLabel enumCheck .val .setEnumLabel=
-        else
-          "could not update enum index" sb.copyPtr
-          op .pos errors appendError
-          return
-        end
-      end
-      target [] .copyMutableIndex state removeCopy
-      target [] .valueType
-        typeContext types.getBaseType
-      =:: base
-      base op@ .dataType=
-      Type 2 array new =:: mut: argData
-      argData@ =:: args
-      base args 0 []=
-      target [] .valueType args 1 []=
-      ## requireTypes
-        args slice.wrap
-        "assignment":s
-        0
-        op .pos
-      state requireTypes if
-        return
-      end
-      op state appendOp ..drop
-      return
     getLabel setLabel hasLabel existsLabel case
       enum( CHECK CHECK_ENUM GET ) =:: LabelAccessType
       LabelAccessType .GET =:: mut: accessType

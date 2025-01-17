@@ -91,7 +91,6 @@ union(
                 i64 : mut: getElement
                 i64 : mut: setElement
                 i64 : mut: hasElement
-                  _ : setValue
                   _ : Return
                   _ : New
                   _ : NewReference
@@ -184,9 +183,6 @@ end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opDeclareId
   =:: pos
   OpValue .declareId ..swap pos Operation new return
-end
-proc( FilePosition : pos  -> Operation ) =>: export: opSetValue
-  OpValue .setValue Type .undefined pos Operation new return
 end
 proc( Type ProcedureImpl FilePosition  -> Operation ) =>: export: opImplementProc
   =:: pos
@@ -706,11 +702,6 @@ namespace: sb
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .hasElement sb.appendI
-          break
-        setValue case
-          "set value ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
           break
         Return case
           "Return( " sb.appendS

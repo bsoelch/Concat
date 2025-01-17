@@ -964,8 +964,10 @@ proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =
     ! "..itr.step" assert
   =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
-  varInfo .itrType varInfo .itrVar pos opAtId state appendOp
-  pos opSetValue state appendOp ## TODO replace setValue with ..builtIn.set.ptr
+  varInfo .itrType varInfo .itrVar pos opAtId state appendOp ## TODO? opSetId
+  "..builtIn.set.ptr":s
+    id.FLAG_NONE pos state [] .currentFile idContext .typeContext .labelContext id.newLabel
+  pos opGetName state appendOp
 end
 proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrEnd
   state [] .progContext .idContext =:: idContext
@@ -2023,9 +2025,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       idData .valueType idData@ id.asIdInfo fileState [] .wordStart opAutoTypedInitializeId state appendOp
-      return
-    else ..dup "=":s string.eq _if ..drop
-      fileState [] .wordStart opSetValue state appendOp
       return
     else ..dup "@":s string.eq _if =:: opName
       state peekOp ..dup optional.isEmpty if ..drop
