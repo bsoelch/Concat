@@ -185,6 +185,26 @@ namespace: list
   end
   proc(
     type : auto: T
+    T list : elts
+    i32 : index
+  -> T ptr.mut ) =>: export: atValue_32
+    elts index i64 cast.s atValue_64
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    i64 : index
+  -> T ptr.mut ) =>: export: atValue_64
+    index 0 < or index elts .length >= if
+      "list index outside range" ..panic
+    end
+    elts .data index + T ptr.mut cast! optional.wrap return
+  end
+  overload: export: atValue
+    atValue_32 atValue_64
+  end
+  proc(
+    type : auto: T
     T : elt
     T list : elts
     i32 : index
@@ -391,12 +411,14 @@ namespace: list
     array.reverse
   end
 end
-## XXX? change get to return optional, use [] `getValue` for throwing version
 overload: export: []
   list.get_32
   list.get_64
 end
-## XXX? support @[] ( `valueAt` )
+overload: export: @[]
+  list.atValue_32
+  list.atValue_64
+end
 overload: export: []=
   list.set_32
   list.set_64

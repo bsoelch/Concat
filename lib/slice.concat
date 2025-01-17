@@ -60,14 +60,14 @@ namespace: slice
     elts .data index [] return
   end
   proc( type : auto: T T slice : elts i32 : index -> T ) =>: export: get_32
-    elts index i64 cast.u get_64
+    elts index i64 cast.s get_64
   end
   proc( type : auto: T T slice.mut : elts i64 : index -> T ) =>: export: get_64mut
     index elts .length checkIndex
     elts .data index [] return
   end
   proc( type : auto: T T slice.mut : elts i32 : index -> T ) =>: export: get_32mut
-    elts index i64 cast.u get_64mut
+    elts index i64 cast.s get_64mut
   end
   overload: export: get
     get_32
@@ -90,7 +90,7 @@ namespace: slice
     T slice : elts
     i32 : index
   -> T ptr optional ) =>: export: at_32
-    elts index i64 cast.u at_64
+    elts index i64 cast.s at_64
   end
   proc(
     type : auto: T
@@ -107,17 +107,50 @@ namespace: slice
     T slice.mut : elts
     i32 : index
   -> T ptr.mut optional ) =>: export: at_32mut
-    elts index i64 cast.u at_64mut
+    elts index i64 cast.s at_64mut
   end
   overload: export: at
     at_32 at_64 at_32mut at_64mut
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    i64 : index
+  -> T ptr ) =>: export: atValue_64
+    index elts .length checkIndex
+    elts .data index + T ptr cast! return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    i32 : index
+  -> T ptr ) =>: export: atValue_32
+    elts i64 cast.s atValue_64
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+    i64 : index
+  -> T ptr.mut ) =>: export: atValue_64mut
+    index elts .length checkIndex
+    elts .data index + T ptr cast! return
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+    i32 : index
+  -> T ptr.mut ) =>: export: atValue_32mut
+    elts i64 cast.s atValue_32mut
+  end
+  overload: export: atValue
+    atValue_32 atValue_64 atValue_32mut atValue_64mut
   end
   proc( type : auto: T T : elt T slice.mut : elts i64 : index -> ) =>: export: set_64
     index elts .length checkIndex
     elt elts .data index []=
   end
   proc( type : auto: T T : elt T slice.mut : elts i32 : index -> ) =>: export: set_32
-    elt elts index i64 cast.u set_64
+    elt elts index i64 cast.s set_64
   end
   overload: export: set
     set_32 set_64
@@ -513,14 +546,18 @@ namespace: slice
     proc( type : auto: T T slice.getItr : itr -> ) =>: end end
   end
 end
-## XXX? change get to return optional, use [] `getValue` for throwing version
 overload: export: []
   slice.get_32
   slice.get_64
   slice.get_32mut
   slice.get_64mut
 end
-## XXX? support @[] ( `valueAt` )
+overload: export: @[]
+  slice.atValue_32
+  slice.atValue_64
+  slice.atValue_32mut
+  slice.atValue_64mut
+end
 overload: export: []=
   slice.set_32
   slice.set_64
