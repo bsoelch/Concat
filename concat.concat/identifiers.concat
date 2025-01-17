@@ -357,6 +357,7 @@ namespace: id
     FileId : fileId
     IdentifierContext ptr.mut : context
   -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByName
+    name .length 0 > "name is non-empty" assert
     ## searchIdentifier
       name
       fileId
@@ -365,7 +366,7 @@ namespace: id
     searchIdentifier =:: isError =:: label =:: idName
     label context getIdentifier isError | return
   end
-  enum( NAMESPACE DECLARATION LABEL PROCEDURE_BUNDLE BUILT_IN ) =:: export: NameContext
+  enum( BUILT_IN NAMESPACE PROCEDURE VARIABLE LABEL ) =:: export: NameContext
   proc(
     string : id
     NameContext : context
@@ -390,10 +391,6 @@ namespace: id
     context .NAMESPACE ?? if
       false return
     end
-    context .LABEL ?? and id id .length 1 - string.charAt '=' == if
-      "label names cannot end with '='" sb.copyPtr pos errors appendError
-      true return
-    end
     id '.' string.contains if
       "identifier names cannot contain '.'" sb.copyPtr pos errors appendError
       true return
@@ -404,6 +401,13 @@ namespace: id
     end
     id 0 string.charAt '$' == or id ">$":s string.startsWith if
       "identifier names cannot start with `$` or `>$`" sb.copyPtr pos errors appendError
+      true return
+    end
+    context .PROCEDURE ?? if
+      false return
+    end
+    id id .length 1 - string.charAt '=' == if
+      "variable names cannot end with '='" sb.copyPtr pos errors appendError
       true return
     end
     false return
@@ -458,12 +462,12 @@ namespace: id
     name
       flags FLAG_BUILT_IN & ? if
         NameContext .BUILT_IN
-      else idType .PROCEDURE_BUNDLE ?? _if
-        NameContext .PROCEDURE_BUNDLE
+      else idType .PROCEDURE ?? or idType .PROCEDURE_BUNDLE ?? _if
+        NameContext .PROCEDURE
       else idType .LABEL ?? _if
         NameContext .LABEL
       else
-        NameContext .DECLARATION
+        NameContext .VARIABLE
       end
     declaredAt errors checkIdentifier if
       context [] .nameBuffer sb.clear context .nameBuffer=
