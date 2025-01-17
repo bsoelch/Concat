@@ -417,19 +417,22 @@ namespace: slice
     splitIndex return
   end
 
-  ( type : T -> type ) =>: getItr
+  ( type : T -> type ) =>: export: getItr
     struct(
       T slice : data
       i64 : index
     )
   end
-  ( type : T -> type ) =>: mapItr
+  ( type : T -> type ) =>: export: reverseItr
+    T getItr
+  end
+  ( type : T -> type ) =>: export: mapItr
     struct(
       T slice.mut : data
       i64 : index
     )
   end
-  ( type : S type : T -> type ) =>: mapToItr
+  ( type : S type : T -> type ) =>: export: mapToItr
     struct(
       S slice : src
       T slice.mut : target
@@ -481,27 +484,27 @@ namespace: slice
     itrMapTo fMapTo itrMapMutTo fMapMutTo
   end
   namespace: mapItr
-    proc( type : auto: T T slice.mapItr -> T slice.mapItr ) =>: prepare end
+    proc( type : auto: T T slice.mapItr -> T slice.mapItr ) =>: export: prepare end
     proc( type : auto: S type : auto: T
       S T slice.mapToItr
     -> S T slice.mapToItr ) =>: prepareTo end
-    proc( type : auto: T T slice.mapItr : itr -> bool ) =>: check
+    proc( type : auto: T T slice.mapItr : itr -> bool ) =>: export: check
       itr .index itr .data .length <
     end
     proc( type : auto: S type : auto: T
       S T slice.mapToItr : itr
-    -> bool ) =>: checkTo
+    -> bool ) =>: export: checkTo
       itr .index itr .src .length <
     end
-    proc( type : auto: T T slice.mapItr : itr -> T ) =>: shaddow: get
+    proc( type : auto: T T slice.mapItr : itr -> T ) =>: export: shaddow: get
       itr .data itr .index slice.get
     end
     proc( type : auto: S type : auto: T
       S T slice.mapToItr : itr
-    -> S ) =>: getTo
+    -> S ) =>: export: getTo
       itr .src itr .index slice.get
     end
-    proc( type : auto: T T : newVal T slice.mapItr : itr -> T slice.mapItr ) =>: step
+    proc( type : auto: T T : newVal T slice.mapItr : itr -> T slice.mapItr ) =>: export: step
       newVal itr .data itr .index slice.set
       itr
         $ .index 1 + >$ .index=
@@ -510,40 +513,62 @@ namespace: slice
     proc( type : auto: S type : auto: T
       T : newVal
       S T slice.mapToItr : itr
-    -> S T slice.mapToItr ) =>: stepTo
+    -> S T slice.mapToItr ) =>: export: stepTo
       newVal itr .target itr .index slice.set
       itr
         $ .index 1 + >$ .index=
       return
     end
-    proc( type : auto: T T slice.mapItr : itr -> T slice.mut ) =>: end
+    proc( type : auto: T T slice.mapItr : itr -> T slice.mut ) =>: export: endItr
       itr .data
     end
     proc( type : auto: S type : auto: T
       S T slice.mapToItr : itr
-    -> T slice.mut ) =>: endTo
+    -> T slice.mut ) =>: export: endTo
       itr .target
     end
   end
+  proc( type : auto: T T slice : elts -> T slice.reverseItr ) =>: export: getReverseItr
+    elts elts .length 1 - T slice.reverseItr new
+  end
+  proc( type : auto: T T slice.mut : elts -> T slice.reverseItr ) =>: export: getReverseItrMut
+    elts freeze reverseItr
+  end
+  overload: export: reversed
+    getReverseItr getReverseItrMut
+  end
   namespace: itr
-    proc( type : auto: T T slice -> T slice.getItr ) =>: prepare
+    proc( type : auto: T T slice -> T slice.getItr ) =>: export: prepare
       0 T slice.getItr new
     end
-    proc( type : auto: T T slice.mut -> T slice.getItr ) =>: prepareMut
+    proc( type : auto: T T slice.mut -> T slice.getItr ) =>: export: prepareMut
       freeze 0 T slice.getItr new
     end
-    proc( type : auto: T T slice.getItr : itr -> bool ) =>: check
+    proc( type : auto: T T slice.reverseItr -> T slice.reverseItr ) =>: export: prepareReverse end
+    proc( type : auto: T T slice.getItr : itr -> bool ) =>: export: check
       itr .index itr .data .length <
     end
-    proc( type : auto: T T slice.getItr : itr -> T ) =>: shaddow: get
+    proc( type : auto: T T slice.reverseItr : itr -> bool ) =>: export: checkReverse
+      itr .index 0 >=
+    end
+    proc( type : auto: T T slice.getItr : itr -> T ) =>: shaddow: export: get
       itr .data itr .index slice.get
     end
-    proc( type : auto: T T slice.getItr : itr -> T slice.getItr ) =>: step
+    proc( type : auto: T T slice.reverseItr : itr -> T ) =>: export: getReverse
+      itr .data itr .index slice.get
+    end
+    proc( type : auto: T T slice.getItr : itr -> T slice.getItr ) =>: export: step
       itr
         $ .index 1 + >$ .index=
       return
     end
-    proc( type : auto: T T slice.getItr : itr -> ) =>: end end
+    proc( type : auto: T T slice.reverseItr : itr -> T slice.reverseItr ) =>: export: stepReverse
+      itr
+        $ .index 1 - >$ .index=
+      return
+    end
+    proc( type : auto: T T slice.getItr : itr -> ) =>: export: endItr end
+    proc( type : auto: T T slice.reverseItr : itr -> ) =>: export: endReverse end
   end
 end
 overload: export: []
@@ -567,24 +592,29 @@ overload: export: ..itr.prepare
   slice.mapItr.prepareTo
   slice.itr.prepare
   slice.itr.prepareMut
+  slice.itr.prepareReverse
 end
 overload: export: ..itr.check
   slice.mapItr.check
   slice.mapItr.checkTo
   slice.itr.check
+  slice.itr.checkReverse
 end
 overload: export: ..itr.get
   slice.mapItr.get
   slice.mapItr.getTo
   slice.itr.get
+  slice.itr.getReverse
 end
 overload: export: ..itr.step
   slice.mapItr.step
   slice.mapItr.stepTo
   slice.itr.step
+  slice.itr.stepReverse
 end
 overload: export: ..itr.end
-  slice.mapItr.end
+  slice.mapItr.endItr
   slice.mapItr.endTo
-  slice.itr.end
+  slice.itr.endItr
+  slice.itr.endReverse
 end

@@ -57,6 +57,13 @@ namespace: list
   end
   proc(
     type : auto: T
+    i64 : auto: k
+    T k ptr.mut : buffer
+  -> T list ) =>: export: wrapBuffer
+    buffer 0 k -_ listCap cast.u T list new return
+  end
+  proc(
+    type : auto: T
     T list : src
   -> T list ) =>: export: copy
     src .cap i64 cast.s
@@ -108,7 +115,7 @@ namespace: list
     elts .cap i64 cast.s
       $ 0 < if -_ end
     =:: prevCap
-    prevCap minCap > if
+    prevCap minCap >= if
       elts return
     end
     elts .cap i64 cast.s 0 >= "fixed buffer list is not reallocated" assert
@@ -410,6 +417,12 @@ namespace: list
       elts .length
     array.reverse
   end
+  proc( type : auto: T T list -> T slice.getItr ) =>: export: getItr
+    asSlice slice.itr.prepare
+  end
+  proc( type : auto: T T list -> T slice.reverseItr ) =>: export: reversed
+    asSlice slice.reversed
+  end
 end
 overload: export: []
   list.get_32
@@ -422,4 +435,7 @@ end
 overload: export: []=
   list.set_32
   list.set_64
+end
+overload: export: ..itr.prepare
+  list.getItr
 end
