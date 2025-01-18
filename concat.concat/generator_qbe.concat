@@ -1180,7 +1180,9 @@ namespace: sb
     sb
       "type " sb.appendS
       t StorageType .LOAD pos context appendTypeNameQBE
-      " = {" sb.appendS
+      " = align " sb.appendS
+      t pos context typeAlignmentInt sb.appendI
+      " {" sb.appendS
     return
   end
   proc(
@@ -1192,8 +1194,9 @@ namespace: sb
     sb
       "type " sb.appendS
       t StorageType .LOAD pos context appendTypeNameQBE
-      "_elt" sb.appendS
-      " = {" sb.appendS
+      "_elt = align " sb.appendS
+      t pos context typeAlignmentInt sb.appendI
+      " {" sb.appendS
     return
   end
   proc(
@@ -1214,26 +1217,17 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    Type : t
+    Type : t0
     FilePosition : pos
     CompilerContext ptr.mut : context
-  -> stringBuilder ) =>: appendTypeDeclarationQBE
+  -> stringBuilder ) =>: appendNestedTypeDeclarationQBE
     context [] .program =:: prog
     prog .errors =:: errors
     prog .idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     prog .idContext .constContext =:: constContext
-    t types.isNamedType t types.isGeneratedType | if
-      sb return ## ignore named types
-    end
-    t typeContext types.isEmpty if
-      sb return ## ignore empty types
-    end
-    t typeContext types.containsGeneric if
-      sb return ## ignore generic types
-    end
-    t typeContext types.isArray and
-        t typeContext types.isFixedSize if
+    t0 typeContext types.unwrapNamed =:: t
+    t typeContext types.isArray if
       t typeContext types.getArraySize =:: sizes
       1:i64 =:: mut: S
       0:i64 while ..dup sizes .length < do =:: i
@@ -1248,36 +1242,24 @@ namespace: sb
       baseType pos context typeSizeInt =:: baseSize
       baseType pos context typeStrideInt =:: baseStride
       sb
-        baseSize baseStride < if
-          t pos context startEltTypeDeclaration
-            ## appendTypeNameQBE
-              baseType
-              StorageType .STORE
-              pos
-            context sb.appendTypeNameQBE
-            ",b " sb.appendS
-            baseStride baseSize - sb.appendI
-          endTypeDeclaration
-        end
-        t pos context startTypeDeclaration
-        baseSize baseStride < if
-           t pos context eltTypeName
-        else
+        baseType types.isPrimitive or baseType typeContext types.isPointer if
           ## appendTypeNameQBE
             baseType
             StorageType .STORE
             pos
           context sb.appendTypeNameQBE
+        else
+          t pos context eltTypeName
         end
         ' ' sb.appendC
         S sb.appendI
-      endTypeDeclaration return
+      return
     end
     t typeContext types.isTuple if
       t typeContext types.compositeElts =:: elts
       0:i64 =:: mut: offset
       false =:: mut: hasElt
-      sb t pos context startTypeDeclaration
+      sb
         0:i64 while ..dup elts .length < do =:: i
           elts i types.compositeElts.get =:: elt
           elt typeContext types.isEmpty if
@@ -1295,11 +1277,10 @@ namespace: sb
             ',' sb.appendC
             eltOffset offset@ =
           end
-          ## appendTypeNameQBE
+          ## appendNestedTypeDeclarationQBE
             elt
-            StorageType .STORE
             pos
-          context sb.appendTypeNameQBE
+          context sb.appendNestedTypeDeclarationQBE
           offset
             elt pos context typeSizeInt +
           offset@ =
@@ -1310,58 +1291,102 @@ namespace: sb
           ",b " sb.appendS
           size offset - sb.appendI
         end
-      endTypeDeclaration return
+      return
     end
     t typeContext types.isUnion or t typeContext types.isEnum if
       t typeContext types.isTaggedUnion =:: isTagged
       t typeContext types.compositeElts =:: elts
       false =:: mut: hasElt
       0:i64 =:: mut: bodySize
+      t pos context enumLabelInfoInt =:: labelOffset =:: labelType
       sb
         t typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
-          isTagged if
-            t pos context startEltTypeDeclaration
-          else
-            t pos context startTypeDeclaration
-          end
-          0:i64 while ..dup elts .length < do =:: i
+          -1:i64 =:: mut: nonEmptyIndex
+          0:i64 =:: mut: nonEmptyCount
+          elts .length for =:: i
             elts i types.compositeElts.get =:: elt
-            elt typeContext types.isEmpty if
-              i 1 + continue
-            end
+            elt typeContext types.isEmpty if continue end
+            nonEmptyCount 1 + nonEmptyCount@ =
+            i nonEmptyIndex@ =
+          end
+          nonEmptyCount 0 > "non-empty union has non-empty element" assert
+          nonEmptyCount 1 == if
+            elts nonEmptyIndex types.compositeElts.get =:: elt
+            ## appendNestedTypeDeclarationQBE
+              elt
+              pos
+            context sb.appendNestedTypeDeclarationQBE
+            ',' sb.appendC
             elt pos context typeSizeInt =:: eltSize
-            eltSize bodySize > if
-              eltSize bodySize@ =
+            eltSize labelOffset < if
+              "b " sb.appendS
+              labelOffset eltSize - sb.appendI
+              ',' sb.appendC
             end
-            "{" sb.appendS
-              ## appendTypeNameQBE
-                elt
-                StorageType .STORE
-                pos
-              context sb.appendTypeNameQBE
-            "}" sb.appendS
-            true hasElt@ =
-            i 1 +
-          end ..drop
-          endTypeDeclaration
-        end
-      isTagged ! if return end
-      t pos context enumLabelInfoInt =:: labelOffset =:: labelType
-      t pos context startTypeDeclaration
-        t typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
-          t pos context eltTypeName
-          ',' sb.appendC
-        end
-        bodySize labelOffset < if
-          "b " sb.appendS
-          labelOffset bodySize - sb.appendI
-          ',' sb.appendC
+          else
+            "b " sb.appendS
+            labelOffset sb.appendI
+            ',' sb.appendC
+          end
         end
         ## appendTypeNameQBE
           labelType
           StorageType .STORE
           pos
         context sb.appendTypeNameQBE
+      return
+    end
+    sb
+      ## appendTypeNameQBE
+        t
+        StorageType .STORE
+        pos
+      context sb.appendTypeNameQBE
+    return
+  end
+  proc(
+    stringBuilder : sb
+    Type : t
+    FilePosition : pos
+    CompilerContext ptr.mut : context
+  -> stringBuilder ) =>: appendTypeDeclarationQBE
+    context [] .program =:: prog
+    prog .errors =:: errors
+    prog .idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
+    prog .idContext .constContext =:: constContext
+    t types.isNamedType or t types.isGeneratedType if
+      sb return ## ignore named types
+    end
+    t typeContext types.isEmpty if
+      sb return ## ignore empty types
+    end
+    t typeContext types.containsGeneric if
+      sb return ## ignore generic types
+    end
+    t typeContext types.isArray if
+      t typeContext types.getBaseType =:: baseType
+      baseType pos context typeSizeInt =:: baseSize
+      baseType pos context typeStrideInt =:: baseStride
+      sb
+        baseType types.isPrimitive ! and baseType typeContext types.isPointer ! if
+          t pos context startEltTypeDeclaration
+            ## appendNestedTypeDeclarationQBE
+              baseType
+              pos
+            context sb.appendNestedTypeDeclarationQBE
+            ",b " sb.appendS
+            baseStride baseSize - sb.appendI
+          endTypeDeclaration
+        end
+        t pos context startTypeDeclaration
+        t pos context sb.appendNestedTypeDeclarationQBE
+      endTypeDeclaration return
+    end
+    t typeContext types.isTuple or t typeContext types.isUnion or t typeContext types.isEnum if
+      sb
+        t pos context startTypeDeclaration
+        t pos context sb.appendNestedTypeDeclarationQBE
       endTypeDeclaration return
     end
     sb return
