@@ -115,7 +115,7 @@ namespace: list
     elts .cap i64 cast.s
       $ 0 < if -_ end
     =:: prevCap
-    prevCap minCap > if ## TODO why can > not be replaced with >=
+    prevCap minCap >= if
       elts return
     end
     elts .cap i64 cast.s 0 >= "fixed buffer list is not reallocated" assert

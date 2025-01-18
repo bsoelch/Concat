@@ -577,15 +577,16 @@ proc(
 end
 
 proc(
-  CallSignatureInfo ptr : src
+  i64 : index
   CallSignatureInfo list ptr.mut : elts
--> CallSignatureInfo ptr.mut ) =>: appendCopy
-  elts []
-    src list.appendP
+-> CallSignatureInfo ptr.mut ) =>: copyElement
+  elts [] ## TODO? add procedure for element copy to list
+    $ .length 1 + list.ensureCap
+    $ index list.at .data list.appendP
   elts []=
   elts [] list.peek .data =:: newVal
-    src [] .paramInfo list.copy newVal .paramInfo=
-    src [] .genericValues map.copy newVal .genericValues=
+    newVal [] .paramInfo list.copy newVal .paramInfo=
+    newVal [] .genericValues map.copy newVal .genericValues=
   newVal return
 end
 
@@ -839,7 +840,9 @@ proc(
             paramId
           map.at optional.isEmpty if
         ## add copy of signature with generic type set to empty
-        current currentSignatures@ appendCopy =:: copySig
+        i currentSignatures@ copyElement =:: copySig
+        ## update current pointer after changing list
+        currentSignatures i list.at .data current@ =
         copySig .genericValues
           paramId
           Type .empty ConstValue .TypeId GenericArg .fixed
@@ -852,8 +855,6 @@ proc(
           paramId
           GenericArg .nonEmpty
         map.put ..drop
-        ## update current pointer after changing list
-        currentSignatures i list.at .data current@ =
       end
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
         stackValues stackIndex slice.at .data [] .value =:: stackVal
