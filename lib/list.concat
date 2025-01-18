@@ -16,7 +16,7 @@ end
 
 namespace: list
   ( type : T -> T list ) =>: export: static: empty
-    { { } : data 0 : length 0:listCap : cap } T list cast
+    { { } : data 0 : length 0:listCap : cap }
   end
   proc( i32 : k type : T -> T list ) =>: export: create_32
     k i64 cast.s T create_64
