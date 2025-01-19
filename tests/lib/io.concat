@@ -12,10 +12,10 @@ proc( -> ) =>: main
   "!" puts io.FILE_ERROR_NONE == "puts works" assert
   stdOut buff@ 0 45 fwrite io.FILE_ERROR_NONE == "fwrite works" assert debug.print
   stdOut '\n' fputc io.FILE_ERROR_NONE == "fputc works" assert
-  "../lib" OPEN_WRITE fopenS io.FILE_ERR_FILE_IS_DIR == "open directory" assert =:: empty
+  "./lib" OPEN_WRITE fopenS io.FILE_ERR_FILE_IS_DIR == "open directory" assert =:: empty
   empty ( ) ptr cast! debug.print
   empty fclose io.FILE_ERR_INVALID_FILE == "fclose invalid" assert
-  "./.io.out" OPEN_READ OPEN_WRITE | fopenS io.FILE_ERROR_NONE == "fopenS works" assert =:: file
+  "./tests/lib/io.out2" OPEN_READ OPEN_WRITE | fopenS io.FILE_ERROR_NONE == "fopenS works" assert =:: file
   file "Written directly to file!\n" fputs io.FILE_ERROR_NONE == "fputs works" assert
   file fflush io.FILE_ERROR_NONE == "fflush works" assert
   file fclose io.FILE_ERROR_NONE == "fclose works" assert

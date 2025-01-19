@@ -1,6 +1,6 @@
-missing type parameter for type-modifier ptr at typeArgConsumesNamedTypeField.concat:1:22
-could not evaluate global operation: typeModifier "ptr" at typeArgConsumesNamedTypeField.concat:1:22
- at typeArgConsumesNamedTypeField.concat:1:22
-not enough arguments for field-declaration expected: 1 got: 0 at typeArgConsumesNamedTypeField.concat:1:28
-could not evaluate global operation: declare ( auto[352] ) : label "itr" at typeArgConsumesNamedTypeField.concat:1:28
- at typeArgConsumesNamedTypeField.concat:1:28
+missing type parameter for type-modifier ptr at ./tests/parser/typeArgConsumesNamedTypeField.concat:1:22
+could not evaluate global operation: typeModifier "ptr" at ./tests/parser/typeArgConsumesNamedTypeField.concat:1:22
+ at ./tests/parser/typeArgConsumesNamedTypeField.concat:1:22
+not enough arguments for field-declaration expected: 1 got: 0 at ./tests/parser/typeArgConsumesNamedTypeField.concat:1:28
+could not evaluate global operation: declare ( auto[352] ) : label "itr" at ./tests/parser/typeArgConsumesNamedTypeField.concat:1:28
+ at ./tests/parser/typeArgConsumesNamedTypeField.concat:1:28

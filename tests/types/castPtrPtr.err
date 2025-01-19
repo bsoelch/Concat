@@ -1,8 +1,8 @@
-wrong type for return statement expected i32 ptr.mut ptr got i32 ptr ptr at castPtrPtr.concat:5:61
-wrong type for return statement expected i32 ptr.mut ptr got i32 ptr ptr.mut at castPtrPtr.concat:7:61
-wrong type for return statement expected i32 ptr ptr.mut got i32 ptr ptr at castPtrPtr.concat:9:61
-wrong type for return statement expected i32 ptr ptr.mut got i32 ptr.mut ptr at castPtrPtr.concat:10:61
-wrong type for return statement expected i32 ptr ptr.mut got i32 ptr.mut ptr.mut at castPtrPtr.concat:12:61
-wrong type for return statement expected i32 ptr.mut ptr.mut got i32 ptr ptr at castPtrPtr.concat:13:61
-wrong type for return statement expected i32 ptr.mut ptr.mut got i32 ptr.mut ptr at castPtrPtr.concat:14:61
-wrong type for return statement expected i32 ptr.mut ptr.mut got i32 ptr ptr.mut at castPtrPtr.concat:15:61
+wrong type for return statement expected i32 ptr.mut ptr got i32 ptr ptr at ./tests/types/castPtrPtr.concat:5:61
+wrong type for return statement expected i32 ptr.mut ptr got i32 ptr ptr.mut at ./tests/types/castPtrPtr.concat:7:61
+wrong type for return statement expected i32 ptr ptr.mut got i32 ptr ptr at ./tests/types/castPtrPtr.concat:9:61
+wrong type for return statement expected i32 ptr ptr.mut got i32 ptr.mut ptr at ./tests/types/castPtrPtr.concat:10:61
+wrong type for return statement expected i32 ptr ptr.mut got i32 ptr.mut ptr.mut at ./tests/types/castPtrPtr.concat:12:61
+wrong type for return statement expected i32 ptr.mut ptr.mut got i32 ptr ptr at ./tests/types/castPtrPtr.concat:13:61
+wrong type for return statement expected i32 ptr.mut ptr.mut got i32 ptr.mut ptr at ./tests/types/castPtrPtr.concat:14:61
+wrong type for return statement expected i32 ptr.mut ptr.mut got i32 ptr ptr.mut at ./tests/types/castPtrPtr.concat:15:61

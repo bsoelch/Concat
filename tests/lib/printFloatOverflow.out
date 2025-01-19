@@ -1,4 +1,4 @@
 stack:
 -----------------
-f32 { 1000 } pushed at printFloatOverflow.concat:2:3
+f32 { 1000 } pushed at ./tests/lib/printFloatOverflow.concat:2:3
 -----------------

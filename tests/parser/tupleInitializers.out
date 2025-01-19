@@ -1,8 +1,8 @@
 stack:
 -----------------
-string.empty: named[2]( "string" ) { { "" 0 } } pushed at tupleInitializers.concat:20:3
+string.empty: named[2]( "string" ) { { "" 0 } } pushed at ./tests/parser/tupleInitializers.concat:20:3
 -----------------
 stack:
 -----------------
-i32 slice pushed at tupleInitializers.concat:21:7
+i32 slice pushed at ./tests/parser/tupleInitializers.concat:21:7
 -----------------

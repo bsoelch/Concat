@@ -1,1 +1,1 @@
-duplicate label 65535 in switch-case ( previous occurence at duplicateSwitchLabel.concat:3:5 ) at duplicateSwitchLabel.concat:4:5
+duplicate label 65535 in switch-case ( previous occurence at ./tests/parser/duplicateSwitchLabel.concat:3:5 ) at ./tests/parser/duplicateSwitchLabel.concat:4:5

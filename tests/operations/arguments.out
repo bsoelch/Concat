@@ -1,5 +1,6 @@
-./arguments
+./tests/operations/arguments
 Conant
 can
 read
 program arguments
+

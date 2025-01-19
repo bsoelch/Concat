@@ -1,1 +1,1 @@
-integer literal overflows size for type i32: 10_000_000_000_000_000 at fixedIntLiterals.concat:3:1
+integer literal overflows size for type i32: 10_000_000_000_000_000 at ./tests/parser/fixedIntLiterals.concat:3:1

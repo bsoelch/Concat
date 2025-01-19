@@ -1,10 +1,10 @@
 -----------------
 identifier "i":
- - global variable "D.i" ( i32 [ 4 ] ) declared at namespace.concat:43:9
- - global variable "i" ( i32 [ 0 ] ) declared at namespace.concat:38:7
- - global variable "C.i" ( i32 [ 3 ] ) declared at namespace.concat:36:9
- - global variable "B.i" ( i32 [ 2 ] ) declared at namespace.concat:33:9
- - global variable "A.i" ( i32 [ 1 ] ) declared at namespace.concat:30:9
+ - global variable "D.i" ( i32 [ 4 ] ) declared at ./tests/parser/namespace.concat:43:9
+ - global variable "i" ( i32 [ 0 ] ) declared at ./tests/parser/namespace.concat:38:7
+ - global variable "C.i" ( i32 [ 3 ] ) declared at ./tests/parser/namespace.concat:36:9
+ - global variable "B.i" ( i32 [ 2 ] ) declared at ./tests/parser/namespace.concat:33:9
+ - global variable "A.i" ( i32 [ 1 ] ) declared at ./tests/parser/namespace.concat:30:9
 -----------------
 0
 1
