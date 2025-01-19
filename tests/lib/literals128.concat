@@ -1,6 +1,6 @@
 import numbers/i128
 import numbers/f128
-using std.literals
+using std.literals.
 
 proc( -> ) =>: main
   "0":i128 0 i128.fromU64 i128.eq "0" assert

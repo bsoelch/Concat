@@ -580,7 +580,7 @@ namespace: f128
     return
   end
   proc( string : str i32 : base -> f128 number.ParserError ) =>: export: parse
-    using number
+    using number.
     false =:: mut: sign
     0:i64 =:: mut: c
     false bool =: mut: hasDot

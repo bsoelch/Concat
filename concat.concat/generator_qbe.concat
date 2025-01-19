@@ -1,6 +1,6 @@
 import string
 import stringIO
-using std.literals
+using std.literals.
 
 import "program.concat"
 import "measure.concat"

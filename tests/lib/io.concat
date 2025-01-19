@@ -1,5 +1,5 @@
 import io
-using io
+using io.
 import debug
 
 proc( -> ) =>: main

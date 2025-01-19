@@ -4,7 +4,7 @@ import slice
 import string
 import numbers
 import unicode
-using std.literals
+using std.literals.
 
 import "program.concat"
 import "files.concat"
@@ -141,7 +141,7 @@ proc(
   ConstantContext ptr.mut : constContext
   CompilerError list ptr.mut : errors
 -> Constant ) =>: newStringConstant
-  using types
+  using types.
   str .Array8 ?? "string has type Array8" assert
   stringType switch
     DEFAULT case str str .Array8 .length types.primitive.CHAR8 break
@@ -404,16 +404,15 @@ proc( BlockType : mergeWith FilePosition : pos ParserState ptr.mut : state -> ) 
   andOrPositions list.clear state .andOrPositions=
 end
 
-proc( string : code FileState ptr.mut : fileState  ParserState ptr.mut : state -> string string ) =>: nextWord
-  state [] .progContext =:: progContext
-  progContext .errors =:: errors
+proc( string : code FileState ptr.mut : fileState  CompilerError list ptr.mut : errors -> string string ) =>: nextIdentifier
   code
     fileState nextToken
-    ..dup .IDENTIFIER ?? ! if ..drop ## XXX? print type of actual token
-      "expected identifier" sb.copyPtr fileState [] .wordStart errors appendError
+    ..dup .IDENTIFIER ?? ! if =:: nameToken
+      "expected identifier got:" sb.copyPtr
+        nameToken sb.appendToken
+      fileState [] .wordStart errors appendError
       string.empty return
-    end
-    .IDENTIFIER
+    end .IDENTIFIER
   return
 end
 proc(
@@ -470,13 +469,7 @@ proc(
         break
       end
     isModifier do ..drop
-      fileState nextToken ## XXX? print type of actual token
-      ..dup .IDENTIFIER ?? ! if ..drop
-        "expected identifier" sb.copyPtr fileState [] .wordStart errors appendError
-        string.empty
-      else
-        .IDENTIFIER
-      end
+      fileState errors nextIdentifier
     end
   flags initFlags | fileState [] .wordStart state [] .currentFile state [] .progContext .idContext .typeContext .labelContext id.newLabel return
 end
@@ -1166,11 +1159,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "while":s string.eq or
         ..dup "while:":s string.eq _if =:: opName
       opName "while:":s string.eq if
-        fileState nextToken
-          ..dup .IDENTIFIER ?? ! if ## XXX? print type of actual token
-            "expected identifier" sb.copyPtr fileState [] .wordStart errors appendError
-          end
-          .IDENTIFIER
+        fileState errors nextIdentifier
           id.FLAG_NONE
           fileState [] .wordStart
           state [] .currentFile
@@ -1184,11 +1173,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "for":s string.eq or
         ..dup "for:":s string.eq _if =:: opName
       opName "for:":s string.eq if
-        fileState nextToken
-          ..dup .IDENTIFIER ?? ! if ## XXX? print type of actual token
-            "expected identifier" sb.copyPtr fileState [] .wordStart errors appendError
-          end
-          .IDENTIFIER
+        fileState errors nextIdentifier
           id.FLAG_NONE
           fileState [] .wordStart
           state [] .currentFile
@@ -1278,11 +1263,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "switch":s string.eq or
         ..dup "switch:":s string.eq _if =:: opName
       opName "switch:":s string.eq if
-        fileState nextToken
-          ..dup .IDENTIFIER ?? ! if ## XXX? print type of actual token
-            "expected identifier" sb.copyPtr fileState [] .wordStart errors appendError
-          end
-          .IDENTIFIER
+        fileState errors nextIdentifier
           id.FLAG_NONE
           fileState [] .wordStart
           state [] .currentFile
@@ -1317,7 +1298,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState state popTypeConstant ..drop =:: mut: procType
       ## TODO? ensure global stack is empty at start of procedure
       named if ## =>:
-        fileState state nextWord fileState state readLabel
+        fileState errors nextIdentifier fileState state readLabel
         $ labelContext id.labelFlags =:: flags
         flags id.FLAG_MUTABLE & ? if
           "procedures cannot be mutable" sb.copyPtr
@@ -1442,12 +1423,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       opReturn state appendOp
       return
     else ..dup "namespace:":s string.eq _if =:: opName
-      fileState nextToken
-      ..dup .IDENTIFIER ?? ! if ..drop ## XXX? print type of actual token
-        "namespace names have to be identifiers" sb.copyPtr fileState [] .wordStart errors appendError
-        return
-      end .IDENTIFIER
-      ..dup
+      fileState errors nextIdentifier
+      $
         id.NameContext .NAMESPACE
       fileState [] .wordStart progContext .errors id.checkIdentifier if
         "\"" sb.copyPtr
@@ -1461,12 +1438,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "overload:":s string.eq _if =:: opName
       skipBlock if ## skip to end of overload
-        while fileState state nextWord =:: procName
+        while fileState errors nextIdentifier =:: procName
           procName "end":s string.eq !
         end
         return
       end
-      fileState state nextWord fileState state readLabel =:: mut: labelId
+      fileState errors nextIdentifier fileState state readLabel =:: mut: labelId
       labelId labelContext id.labelFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
@@ -1509,7 +1486,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         idData [] .constValue .ProcedureBundle
       end =:: bundleId
       progContext [] .procBundles bundleId i64 cast list.at .data =:: bundleData
-      while fileState state nextWord =:: procName
+      while fileState errors nextIdentifier =:: procName
         procName "end":s string.eq !
       do
         procName state [] .currentFile idContext id.findIdentifierByName if ..drop
@@ -1807,7 +1784,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         IdentifierType .GLOBAL_VAR
         true allowImmutableDeclaration@ =
       end =:: idType
-      fileState state nextWord fileState state
+      fileState errors nextIdentifier fileState state
         ## make pre-declared variables mutable by default
         isInit or allowImmutableDeclaration if id.FLAG_NONE else id.FLAG_MUTABLE end
       readLabelAddFlags =:: mut: label
@@ -1880,13 +1857,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       idData .idType .PROCEDURE ?? if
         isAlias if
-          fileState nextToken
-          $ .IDENTIFIER ?? if
-            .IDENTIFIER
-          else ..drop
-            "expected identifier" sb.copyPtr fileState [] .wordStart errors appendError
-            return
-          end =:: baseIdentifier
+          fileState errors nextIdentifier =:: baseIdentifier
           baseIdentifier state [] .currentFile idContext id.findIdentifierByName if ..drop
             "cannot find identifer: " sb.copyPtr
               baseIdentifier sb.appendStr
@@ -1952,7 +1923,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state appendOp
       return
     else ..dup "=::":s string.eq _if ..drop
-      fileState state nextWord fileState state readLabel =:: mut: labelId
+      fileState errors nextIdentifier fileState state readLabel =:: mut: labelId
       labelId labelContext id.labelFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
@@ -2224,18 +2195,29 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         " expected identifier or string" sb.appendS
       fileState [] .wordStart errors appendError
       return
-    else ..dup "using":s string.eq _if =:: opName
-      fileState nextToken
-      ..dup .IDENTIFIER ?? ! if ..drop ## XXX? print type of actual token
-        "namespace names have to be identifiers" sb.copyPtr fileState [] .wordStart errors appendError
-        return
-      end .IDENTIFIER
-      ..dup id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
+    else $ "using":s string.eq or $ "using:":s string.eq _if =:: opName
+      opName "using:":s string.eq =:: isAlias
+      isAlias if
+        "created aliases is not supported" sb.copyPtr
+        fileState [] .wordStart errors appendWarning
+        fileState errors nextIdentifier
+      else string.empty end =:: aliasName
+      fileState errors nextIdentifier
+        $ ".":s string.endsWith =:: importNamespace
+        importNamespace if
+          $ .length 1 - string.head
+        end
+      =:: usedName
+      importNamespace ! if
+        "namespace imports without trailing dot are not supported" sb.copyPtr
+        fileState [] .wordStart errors appendError
+      end
+      usedName id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
       idContext id.importNamespace if
         "namespace \"" sb.copyPtr
-          ..swap sb.appendStr
-        "\" does not exist" sb.appendS fileState [] .wordStart errors appendError
-      else ..drop end
+          usedName sb.appendStr
+        "\" does not exist in the current scope" sb.appendS fileState [] .wordStart errors appendWarning
+      end
       return
     else $ "assert":s string.eq _if =:: opName
       ## opAssert
@@ -2456,7 +2438,7 @@ end
 proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr.mut : state -> ) =>: checkIOError
   state [] .progContext =:: progContext
   progContext .errors =:: errors
-  using io
+  using io.
   err switch
     FILE_ERROR_NONE case
       return

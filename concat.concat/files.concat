@@ -2,7 +2,7 @@ import stringIO
 import numbers
 import chars
 import string
-using std.literals
+using std.literals.
 
 import "common.concat"
 

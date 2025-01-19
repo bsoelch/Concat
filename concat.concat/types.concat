@@ -2496,7 +2496,7 @@ namespace: types
   end
 
   proc( Type : src Type : target bool : reshape TypeContext ptr : context -> bool ) =>: sizeCompatible
-    using types
+    using types.
     src context isFixedSize ! and target context isFixedSize if
       false return ## cannot cast non-fixed pointer to fixed poiner
     end

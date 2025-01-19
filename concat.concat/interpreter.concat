@@ -1,7 +1,7 @@
 import map
 import arenaAlloc
 import string
-using std.literals
+using std.literals.
 
 import "interpreter/operators.concat"
 import "identifiers.concat"
@@ -31,7 +31,7 @@ namespace: interpreter
 end
 enum( GLOBAL INTERPRET ) =:: export: InterpreterType
 struct(
-  using interpreter
+  using interpreter.
   ProgramContext ptr.mut : mut: program
   TypeCheckState ptr.mut optional : mut: typeChecker
   LabelId Constant hashMap : mut: globalVariables
@@ -1688,7 +1688,7 @@ proc(
 ->
   interpreter.EvalResult
 ) =>: export: evaluateOperation
-  using interpreter
+  using interpreter.
   context [] .program .errors =:: errors
   context [] .program =:: program
   context [] .program .idContext =:: idContext
@@ -3264,7 +3264,7 @@ proc(
 ->
   bool
 ) =>: evaluateOperations
-  using interpreter
+  using interpreter.
   0:i64 while $ ops .length < do =:: offset
     ops offset slice.at .data =:: op
       op context evaluateOperation =:: result
@@ -3337,7 +3337,7 @@ proc(
 ->
   bool
 ) =>: export: evaluateCall
-  using interpreter
+  using interpreter.
   context [] .program .errors =:: errors
   context [] .program =:: program
   context [] .program .idContext =:: idContext

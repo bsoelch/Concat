@@ -6,13 +6,13 @@ namespace: mut
   0 i32 =: spaceVar
 end
 namespace: i32
-  using mut
-  using mut.subspace
+  using mut.
+  using mut.subspace.
 end
 proc( -> ) =>: spaceTest
-  using mut
+  using mut.
   spaceVar debug.print
-  using mut.subspace
+  using mut.subspace.
   spaceVar debug.print
   subspace.subspaceVar debug.print
 end
@@ -37,9 +37,9 @@ namespace: C
 end
 0 =:: i
 namespace: D
-  using A 
-  using B
-  using C
+  using A.
+  using B.
+  using C.
   4 =:: i
   ..?parser.find.i
 end

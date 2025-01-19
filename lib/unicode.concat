@@ -75,7 +75,7 @@ namespace: sb
   end
 end
 namespace: utf8
-  using unicode
+  using unicode.
   proc( Codepoint : c -> bool ) =>: export: isValid
     c MIN_CODEPOINT >= and c MAX_CODEPOINT <= end return
   end
@@ -162,7 +162,7 @@ namespace: utf8
   end
 end
 namespace: utf16
-  using unicode
+  using unicode.
   0xD800:i32 =:: MIN_SURROGATE
   0xDFFF:i32 =:: MAX_SURROGATE
   0xFC00:i32 =:: SURROGATE_MASK

@@ -327,7 +327,7 @@ namespace: i128
     i32 : base
     bool : unsigned
   -> i128 number.ParserError ) =>: export: parse
-    using number
+    using number.
     false =:: mut: overflow
     false =:: mut: signedOverflow
     str

@@ -1,6 +1,6 @@
 import sys
 import string
-using std.literals
+using std.literals.
 
 import "parser.concat"
 import "typeCheck.concat"
