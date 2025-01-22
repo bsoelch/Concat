@@ -1,2 +1,2 @@
-declaration of identifier "D.i" at ./tests/parser/namespace.concat:43:9
-shadows previous declaration  at ./tests/parser/namespace.concat:38:7
+declaration of identifier "i" at ./tests/parser/namespace.concat:43:9
+shadows previous declaration at ./tests/parser/namespace.concat:38:7
