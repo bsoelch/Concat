@@ -125,35 +125,36 @@ def runTests(path):
       runTest(file,relPath)
 
 def main():
-    ## XXX? should test-script clear console
-    subprocess.run(["clear"])
-    ## TODO ignore `-X` / `-full` after `--`
-    if "-X" in sys.argv:## experimental mode
-      concatPath=CURRENT_DIR+"/concatX"
-      print("running tests in experimental mode")
-    full = "-full" in sys.argv
-    try:
-      dirIndex=sys.argv.index("--")
-      dirs=sys.argv[dirIndex+1:]
-      if full:
-        print("`-full` will be ignored when using explicit arguments")
-    except ValueError:
-      dirs=None
-    if dirs is not None:
-      for d in dirs:
-        runTests(d)
-    else:
-      runInEachSubdir(runTests)
-      if full:
-        runTests(CURRENT_DIR+"/examples/")
-    if nPassed==nTested:
-      print(f"\nSUCCESS: passed {nPassed} of {nTested} tests")
-      sys.exit(0)
-    else:
-      print(f"\nFAILED {nTested-nPassed} of {nTested} tests:")
-      for f in failed:
-         print("  ",f)
-      sys.exit(1)
+  global concatPath
+  ## XXX? should test-script clear console
+  subprocess.run(["clear"])
+  ## TODO ignore `-X` / `-full` after `--`
+  if "-X" in sys.argv:## experimental mode
+    concatPath=CURRENT_DIR+"/concatX"
+    print("running tests in experimental mode")
+  full = "-full" in sys.argv
+  try:
+    dirIndex=sys.argv.index("--")
+    dirs=sys.argv[dirIndex+1:]
+    if full:
+      print("`-full` will be ignored when using explicit arguments")
+  except ValueError:
+    dirs=None
+  if dirs is not None:
+    for d in dirs:
+      runTests(d)
+  else:
+    runInEachSubdir(runTests)
+    if full:
+      runTests(CURRENT_DIR+"/examples/")
+  if nPassed==nTested:
+    print(f"\nSUCCESS: passed {nPassed} of {nTested} tests")
+    sys.exit(0)
+  else:
+    print(f"\nFAILED {nTested-nPassed} of {nTested} tests:")
+    for f in failed:
+       print("  ",f)
+    sys.exit(1)
 
 main()
 
