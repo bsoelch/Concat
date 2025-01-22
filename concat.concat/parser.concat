@@ -2198,8 +2198,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "using":s string.eq or $ "using:":s string.eq _if =:: opName
       opName "using:":s string.eq =:: isAlias
       isAlias if
-        "creating aliases is not supported" sb.copyPtr
-        fileState [] .wordStart errors appendWarning
         fileState errors nextIdentifier
       else string.empty end =:: aliasName
       fileState errors nextIdentifier
@@ -2208,16 +2206,39 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           $ .length 1 - string.head
         end
       =:: usedName
-      importNamespace ! if
-        "namespace imports without trailing dot are not supported" sb.copyPtr
-        fileState [] .wordStart errors appendError
+      importNamespace if
+        aliasName .length 0 > if
+          "namespace aliases are not supported" sb.copyPtr
+          fileState [] .wordStart errors appendError
+        end
+        usedName id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
+        idContext id.importNamespace if
+          "namespace \"" sb.copyPtr
+            usedName sb.appendStr
+          "\" does not exist in the current scope" sb.appendS fileState [] .wordStart errors appendWarning
+        end
+        return
       end
-      usedName id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-      idContext id.importNamespace if
-        "namespace \"" sb.copyPtr
+      usedName state [] .currentFile idContext id.findIdentifierByName if ..drop
+        "identifier \"" sb.copyPtr
           usedName sb.appendStr
-        "\" does not exist in the current scope" sb.appendS fileState [] .wordStart errors appendWarning
-      end
+        "\" does not exist in the current scope" sb.appendS fileState [] .wordStart errors appendError
+        return
+      end =:: target
+        target [] .labelId
+        aliasName .length 0 > if
+          aliasName
+        else
+          target [] .labelId labelContext id.getLabelName
+            $ '.' string.lastIndexOf
+          string.tail
+        end
+        target [] .idType
+        fileState [] .wordStart
+        state [] .currentFile
+        idContext
+        errors
+      id.declareNameAlias ..drop
       return
     else $ "assert":s string.eq _if =:: opName
       ## opAssert
@@ -2363,16 +2384,23 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "..?parser.find.":s string.startsWith _if =:: mut: opName
         opName "..?parser.find." ..length string.tail =:: idName
-        16 IdentifierMatch list.create =:: mut: matches
+        16 id.IdentifierMatch list.create =:: mut: matches
         idName state [] .currentFile idContext matches@ optional.wrap id.searchIdentifier ..drop.3
         "-----------------\n" sb.copyPtr
           "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
           0:i64 while ..dup matches .length < do =:: i
             matches i list.at .data =:: match
-            match [] .labelId idContext id.getIdentifier
+            match [] .nameData .labelId =:: labelId
+            match [] .nameData .aliasId =:: aliasId
+            labelId idContext id.getIdentifier
               ! "matched identifier exists" assert
             =:: idData
             " - " sb.appendS
+            aliasId id.NO_ALIAS != if
+              "alias (declared at " sb.appendS
+              aliasId idContext id.getAliasPos sb.appendPos
+              ")  to" sb.appendS
+            end
             idData id.asIdInfo labelContext sb.appendIdInfo
             " ( " sb.appendS
             idData [] .valueType typeContext sb.appendType
@@ -2382,7 +2410,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               " ]" sb.appendS
             end
             " ) declared at " sb.appendS
-            match [] .labelId labelContext id.labelPos =:: pos?
+            labelId labelContext id.labelPos =:: pos?
             pos? optional.hasData if
               pos? .data sb.appendPos
             else

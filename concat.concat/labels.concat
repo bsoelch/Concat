@@ -91,6 +91,14 @@ namespace: id
     ## index check done by list.at
     context [] .labels id i64 cast list.at return
   end
+  proc( LabelId : id LabelContext ptr.mut : context -> string ) =>: export: getLabelName
+    id context getLabel =:: label?
+    label? optional.isEmpty if
+      string.empty return
+    end
+    ## the addresses of label names are stable for the lifetime of the context
+    label? .data [] .name return
+  end
   proc( LabelId : id LabelContext ptr.mut : context -> NamespaceId ) =>: export: getLabelNamespace
     id context getLabel =:: label?
     label? optional.isEmpty if

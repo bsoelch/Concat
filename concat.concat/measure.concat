@@ -115,7 +115,8 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
   prog .idContext =:: idContext
   idContext .globalScope .identifierNames map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## XXX find out which declarations are actually used
-    declaration .1 [] =:: labelId
+    declaration .1 [] .aliasId id.NO_ALIAS != if continue end
+    declaration .1 [] .labelId =:: labelId
     labelId idContext id.getIdentifier
       ! "identifier exists" assert
     =:: idData

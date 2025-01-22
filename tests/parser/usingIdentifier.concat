@@ -1,0 +1,16 @@
+namespace: A
+  0 =:: x
+  1 =:: y
+end
+namespace: B
+  2 =:: x
+  3 =:: y
+end
+using A.x
+using B.y
+proc( -> ) =>: main
+  x 0 == "x==0" assert
+  y 3 == "y==3" assert
+  using: y A.y
+  y 1 == "y==1" assert
+end
