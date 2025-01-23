@@ -571,10 +571,7 @@ proc(
         pos errors appendWarning
       end
     else
-      "unsupported literal type: " sb.copyPtr
-        literalType typeContext sb.appendType
-      pos errors appendError
-      true return
+      false return
     end
   end
   literal IntLiteralType .AUTO Type .undefined pos state tryParseIntConstant if
@@ -753,16 +750,28 @@ proc(
           state appendOp
           string.empty true return
         end
+        ## XXX? remove special case for number literals
         token .LITERAL literalType .LITERAL_TYPE literalStart state tryParseNumberLiteral if
           string.empty true return
         end
-        ## XXX add support for custom literal types
-        "could not resolve literal: " sb.copyPtr
-        token .LITERAL sb.appendStr
-        ':' sb.appendC
-        literalType .LITERAL_TYPE sb.appendStr
-        literalStart errors appendError
-        string.empty true return
+        ## literal not a primitive number type -> convert to string and call literal procedure
+        ## newStringConstant
+          token .LITERAL constContext newStringConst
+          StringLiteralType .UTF8
+          literalStart
+        typeContext constContext errors newStringConstant
+          $ .val =:: stringConst
+        state pushConst
+        types.primitive.I_SIZE
+          stringConst .Array8 .length ConstValue .Int
+          IdentifierInfo optional.empty
+        fileState [] .wordStart Constant new state pushConst
+        state [] .tmpString
+          sb.clear ## clear tmp string
+          ':' sb.appendC
+          literalType .LITERAL_TYPE sb.appendStr
+        state .tmpString=
+        state [] .tmpString sb.asStr false return
       LITERAL_CHAR LITERAL_STRING LITERAL_RAW_STRING case
         fileState [] .wordStart =:: literalStart
         token .LITERAL_STRING ?? if
@@ -787,7 +796,6 @@ proc(
           string.empty true return
         end
         ## XXX? more usefull error for missing parse procedure?
-        ## :<name> -> <name>.parse
         state [] .tmpString
           sb.clear ## clear tmp string
           ':' sb.appendC
