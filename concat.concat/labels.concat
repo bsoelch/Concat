@@ -10,7 +10,13 @@ import "common.concat"
 
 struct( NamespaceId : mut: current NamespaceImportId : mut: imports ) =:: export: NamespaceInfo
 
-struct( NamespaceId : imported NamespaceImportId : parent NamespaceImportId : mut: firstChild NamespaceImportId : mut: next ) =:: export: NamespaceImport
+struct(
+  NamespaceId : imported
+  NamespaceImportId : parent
+  string : nameAlias
+  NamespaceImportId : mut: firstChild
+  NamespaceImportId : mut: next
+) =:: export: NamespaceImport
 
 i32 =:: export: LabelFlag
 namespace: id
@@ -179,13 +185,25 @@ namespace: id
     end
     label? .data [] .pos optional.wrap return
   end
-  proc( string : str LabelFlag : flags FilePosition : pos FileId : srcFile LabelContext ptr.mut : context -> LabelId ) =>: export: newLabel
+  proc(
+    string : str
+    LabelContext ptr.mut : context
+  -> string ) =>: export: copyString
     context [] .nameBuffer
       str string.chars arenaAlloc.copySlice slice.freeze string.fromChars =:: nameData
     context .nameBuffer=
+    nameData return
+  end
+  proc(
+    string : str
+    LabelFlag : flags
+    FilePosition : pos
+    FileId : srcFile
+    LabelContext ptr.mut : context
+  -> LabelId ) =>: export: newLabel
     context [] .labels
       ## Label
-        nameData
+        str context copyString
         pos
         context [] .namespaceInfo
         srcFile
@@ -200,12 +218,9 @@ namespace: id
     intToStrBuffer@ $ ..length i32 cast.u sb.fromBuffer
       id sb.appendU
     sb.asStr =:: str
-    context [] .nameBuffer
-      str string.chars arenaAlloc.copySlice slice.freeze string.fromChars =:: nameData
-    context .nameBuffer=
     context [] .labels
       ## Label
-        nameData
+        str context copyString
         pos
         context [] .namespaceInfo
         srcFile
@@ -216,12 +231,9 @@ namespace: id
   end
 
   proc( NamespaceId : parent string : name  LabelContext ptr.mut : context -> NamespaceId ) =>: newNamespace
-    context [] .nameBuffer
-      name string.chars arenaAlloc.copySlice slice.freeze string.fromChars =:: nameData
-    context .nameBuffer=
     context [] .namespaces .length =:: id
     context [] .namespaces
-      nameData
+      name context copyString
       16 NamespaceId list.create
       parent
       Namespace new list.append
@@ -304,7 +316,12 @@ namespace: id
     end
     context [] .namespaces id i64 cast list.get .parent return
   end
-  proc( NamespaceImportId : parent NamespaceId : importId LabelContext ptr.mut : context -> NamespaceImportId ) =>: export: getNamespaceImportId
+  proc(
+    NamespaceImportId : parent
+    NamespaceId : importId
+    string : aliasName
+    LabelContext ptr.mut : context
+  -> NamespaceImportId ) =>: export: getNamespaceImportId
     context [] .namespaceImports .length 0 > if
       parent NAMESPACE_IMPORT_NONE == if
         0:NamespaceImportId
@@ -330,6 +347,7 @@ namespace: id
     context [] .namespaceImports
       importId
       parent
+      aliasName
       NAMESPACE_IMPORT_NONE
       NAMESPACE_IMPORT_NONE
       NamespaceImport new list.append

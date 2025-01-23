@@ -2207,11 +2207,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
       =:: usedName
       importNamespace if
-        aliasName .length 0 > if
-          "namespace aliases are not supported" sb.copyPtr
-          fileState [] .wordStart errors appendError
-        end
         usedName id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
+          aliasName labelContext id.copyString ## ensure string stays alive
         idContext id.importNamespace if
           "namespace \"" sb.copyPtr
             usedName sb.appendStr

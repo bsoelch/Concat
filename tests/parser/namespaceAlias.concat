@@ -1,0 +1,7 @@
+namespace: longName
+  374 =:: x
+end
+using: l longName.
+proc( -> ) =>: main
+  l.x 374 == "x==374" assert
+end

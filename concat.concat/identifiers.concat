@@ -231,90 +231,112 @@ namespace: id
       end ..drop
     end
     ## 2. search global variable in current&parent namespaces
-    name relSpace FILE_ID_NONE IdentifierName new =:: mut: globalName
+    name relSpace FILE_ID_NONE IdentifierName new =:: mut: publicName
     while mNamespace NAMESPACE_ID_NONE != do
       mNamespace path  context .typeContext .labelContext findNamespace relSpace@ =
       relSpace idName@ .namespace=
-      relSpace globalName@ .namespace=
-      relSpace NAMESPACE_ID_NONE != if
-        context .globalScope .identifierNames
-          idName
-        map.get idLabel?@ =
-        idLabel? optional.hasData if
-          idLabel? .data idLabel@ =
-          matches optional.isEmpty if
-            idName idLabel false return
-          end
-          matches .data []
-            idName idLabel IdentifierMatch new list.append
-          matches .data []=
-        end
-        context .globalScope .identifierNames
-           globalName
-        map.get idLabel?@ =
-        idLabel? optional.hasData if
-          idLabel? .data idLabel@ =
-          matches optional.isEmpty if
-            globalName idLabel false return
-          end
-          matches .data []
-            globalName idLabel IdentifierMatch new list.append
-          matches .data []=
-        end
+      relSpace publicName@ .namespace=
+      relSpace NAMESPACE_ID_NONE == if
+        continue
       end
+      ## file-local
+      context .globalScope .identifierNames
+        idName
+      map.get idLabel?@ =
+      idLabel? optional.hasData if
+        idLabel? .data idLabel@ =
+        matches optional.isEmpty if
+          idName idLabel false return
+        end
+        matches .data []
+          idName idLabel IdentifierMatch new list.append
+        matches .data []=
+      end
+      ## public
+      context .globalScope .identifierNames
+         publicName
+      map.get idLabel?@ =
+      idLabel? optional.hasData if
+        idLabel? .data idLabel@ =
+        matches optional.isEmpty if
+          publicName idLabel false return
+        end
+        matches .data []
+          publicName idLabel IdentifierMatch new list.append
+        matches .data []=
+      end
+    finally
       context [] .typeContext .labelContext .namespaces mNamespace i64 cast list.get .parent mNamespace@ =
     end
     ## 3. search imports
     false =:: mut: multiMatch
     NameId optional.empty =:: mut: match
-    false =:: mut: matchGlobal
-    context [] .typeContext .labelContext .namespaceInfo .imports while ..dup NAMESPACE_IMPORT_NONE != do
-      context [] .typeContext .labelContext .namespaceImports ..swap i64 cast list.get
-        ..dup .imported path  context .typeContext .labelContext findNamespace relSpace@ =
-        relSpace idName@ .namespace=
-        relSpace globalName@ .namespace=
-        relSpace NAMESPACE_ID_NONE != if
-          context .globalScope .identifierNames
-            idName
-          map.get idLabel?@ =
-          idLabel? optional.hasData if
-            idLabel? .data idLabel@ =
-            matches optional.hasData if
-              matches .data []
-                idName idLabel IdentifierMatch new list.append
-              matches .data []=
-            end
-            mNamespace NAMESPACE_ID_NONE == if
-              idLabel optional.wrap match@ =
-              false matchGlobal@ =
-              ..dup .imported mNamespace@ =
-            else
-              true multiMatch@ =
-            end
-          end
-          context .globalScope .identifierNames
-            globalName
-          map.get idLabel?@ =
-          idLabel? optional.hasData if
-            idLabel? .data idLabel@ =
-            matches optional.hasData if
-              matches .data []
-                globalName idLabel IdentifierMatch new list.append
-              matches .data []=
-            end
-            mNamespace NAMESPACE_ID_NONE == if
-              idLabel optional.wrap match@ =
-              true matchGlobal@ =
-              ..dup .imported mNamespace@ =
-            else
-              true multiMatch@ =
-            end
-          end
+    false =:: mut: matchPublic
+    context [] .typeContext .labelContext .namespaceInfo .imports while
+      $ NAMESPACE_IMPORT_NONE !=
+    do =:: importId
+      context [] .typeContext .labelContext .namespaceImports
+        importId i64 cast
+      list.at .data =:: importInfo
+      importInfo [] .nameAlias .length 0 == if
+        importInfo [] .imported path  context .typeContext .labelContext findNamespace relSpace@ =
+      else
+        importInfo [] .nameAlias =:: nameAlias
+        path nameAlias string.startsWith ! or path .length nameAlias .length > and
+            path nameAlias .length string.charAt '.' != if
+          ## top namespace is not <nameAlias>
+          continue
         end
-     .parent
-    end ..drop
+        importInfo [] .imported
+          path nameAlias .length 1 + string.tail
+        context .typeContext .labelContext findNamespace relSpace@ =
+      end
+      relSpace idName@ .namespace=
+      relSpace publicName@ .namespace=
+      relSpace NAMESPACE_ID_NONE == if
+        continue
+      end
+      ## file-local
+      context .globalScope .identifierNames
+        idName
+      map.get idLabel?@ =
+      idLabel? optional.hasData if
+        idLabel? .data idLabel@ =
+        matches optional.hasData if
+          matches .data []
+            idName idLabel IdentifierMatch new list.append
+          matches .data []=
+        end
+        mNamespace NAMESPACE_ID_NONE == if
+          idLabel optional.wrap match@ =
+          false matchPublic@ =
+          importInfo [] .imported mNamespace@ =
+        else
+          true multiMatch@ =
+        end
+      end
+      ## public
+      context .globalScope .identifierNames
+        publicName
+      map.get idLabel?@ =
+      idLabel? optional.hasData if
+        idLabel? .data idLabel@ =
+        matches optional.hasData if
+          matches .data []
+            publicName idLabel IdentifierMatch new list.append
+          matches .data []=
+        end
+        mNamespace NAMESPACE_ID_NONE == if
+          idLabel optional.wrap match@ =
+          true matchPublic@ =
+          importInfo [] .imported mNamespace@ =
+        else
+          true multiMatch@ =
+        end
+      end
+    finally importInfo [] .parent end ..drop
     matches optional.isEmpty match optional.hasData & if ## TODO return value indicating multi-match
-      matchGlobal if globalName else idName end match .data false return
+      matchPublic if publicName else idName end match .data false return
     end
     "could not find identifier":s NAMESPACE_ID_NONE fileId IdentifierName new
     id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
@@ -644,6 +666,9 @@ namespace: id
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: declareNameAlias
+    newName NameContext .VARIABLE declaredAt errors checkIdentifier if
+      true return
+    end
     srcId
       newName
       true
@@ -794,15 +819,20 @@ namespace: id
       context .typeContext  .labelContext childId
     context .typeContext  .labelContext .namespaceInfo .current=
   end
-  proc( LabelId : name IdentifierContext ptr.mut : context -> bool ) =>: export: importNamespace
+  proc(
+    LabelId : name
+    string : nameAlias
+    IdentifierContext ptr.mut : context
+  -> bool ) =>: export: importNamespace
     0 NamespaceId cast
       name context .typeContext  .labelContext id.getLabelName
     context .typeContext  .labelContext findNamespace
-    ..dup NAMESPACE_ID_NONE == if ..drop
-      true return
-    end
+      $ NAMESPACE_ID_NONE == if ..drop
+        true return
+      end
+    =:: importId
     context [] .typeContext  .labelContext .namespaceInfo .imports
-      ..swap context .typeContext  .labelContext getNamespaceImportId
+      importId nameAlias context .typeContext  .labelContext getNamespaceImportId
     context .typeContext  .labelContext .namespaceInfo .imports=
     false return
   end
