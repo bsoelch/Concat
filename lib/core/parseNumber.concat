@@ -1,18 +1,6 @@
-namespace: i8.static
-  proc( char8 _ ptr i64 -> i8 ) : export: static: alias: parse ..builtIn.parse.i8
-end
-namespace: i16.static
-  proc( char8 _ ptr i64 -> i16 ) : export: static: alias: parse ..builtIn.parse.i16
-end
-namespace: i32.static
-  proc( char8 _ ptr i64 -> i32 ) : export: static: alias: parse ..builtIn.parse.i32
-end
-namespace: i64.static
-  proc( char8 _ ptr i64 -> i64 ) : export: static: alias: parse ..builtIn.parse.i64
-end
-namespace: f32.static
-  proc( char8 _ ptr i64 -> f32 ) : export: static: alias: parse ..builtIn.parse.f32
-end
-namespace: f64.static
-  proc( char8 _ ptr i64 -> f64 ) : export: static: alias: parse ..builtIn.parse.f64
-end
+proc( char8 _ ptr i64 -> i8  ) : export: static: alias: :i8  ..builtIn.parse.i8
+proc( char8 _ ptr i64 -> i16 ) : export: static: alias: :i16 ..builtIn.parse.i16
+proc( char8 _ ptr i64 -> i32 ) : export: static: alias: :i32 ..builtIn.parse.i32
+proc( char8 _ ptr i64 -> i64 ) : export: static: alias: :i64 ..builtIn.parse.i64
+proc( char8 _ ptr i64 -> f32 ) : export: static: alias: :f32 ..builtIn.parse.f32
+proc( char8 _ ptr i64 -> f64 ) : export: static: alias: :f64 ..builtIn.parse.f64

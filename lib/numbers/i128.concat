@@ -394,8 +394,8 @@ namespace: i128
   end
 end
 ## TODO appendI128?? ## base, signed
-namespace: std.literals.i128.static
-  proc( char8 _ ptr : chars i64 : k -> i128 ) =>: static: export: shaddow: parse
+namespace: std.literals
+  proc( char8 _ ptr : chars i64 : k -> i128 ) =>: static: export: :i128
     char8 128 array : errMessageBuffer
     chars k string.create =:: str
     str 0 false i128.parse =:: err

@@ -1043,8 +1043,8 @@ namespace: f160
   end
   ## XXX div
 end
-namespace: std.literals.f128.static
-  proc( char8 _ ptr : chars i64 : k -> f128 ) =>: static: export: shaddow: parse
+namespace: std.literals
+  proc( char8 _ ptr : chars i64 : k -> f128 ) =>: static: export: :f128
     char8 128 array : errMessageBuffer
     chars k string.create =:: str
     str 0 f128.parse =:: err

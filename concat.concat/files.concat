@@ -232,12 +232,12 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       end return
     end
     ## : within identifer not followed by space or :
-    state .IDENTIFIER ?? and c ':' == and code i0 string.charAt '#' != and
-        i 1 + code .length < and code i 1 + string.charAt ':' != and
-        code i 1 + string.charAt char.isWhitespace ! if
-      isLiteralType ! if
-        i i0 > "identifier contains at least one character" assert
-      end
+    state .IDENTIFIER ?? and c ':' == and
+        i i0 > and code i 1 - string.charAt '.' != and ## don't split on : after .
+        code i0 string.charAt '#' != and ## don't split on : in ids starting with #
+        i 1 + code .length < and ## don't split at EOF
+        code i 1 - string.charAt ':' != and code i 1 + string.charAt ':' != and ## don't split on ::
+        code i 1 + string.charAt char.isWhitespace ! if ## not followed by space
       code i0 i i0 - string.getSlice =:: idName
       code i string.tail idName
       isLiteralType if

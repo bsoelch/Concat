@@ -396,6 +396,15 @@ namespace: id
     label context getIdentifier isError | return
   end
   enum( BUILT_IN NAMESPACE PROCEDURE VARIABLE LABEL ) =:: export: NameContext
+  proc( IdentifierType : idType -> NameContext ) =>: idTypeAsNameContext
+    idType .PROCEDURE ?? or idType .PROCEDURE_BUNDLE ?? if
+      NameContext .PROCEDURE
+    else idType .LABEL ?? _if
+      NameContext .LABEL
+    else
+      NameContext .VARIABLE
+    end
+  end
   proc(
     string : id
     NameContext : context
@@ -413,7 +422,7 @@ namespace: id
       "identifier names cannot start with '#'" sb.copyPtr pos errors appendError
       true return
     end
-    id ':' string.contains if
+    id ':' string.contains and context .PROCEDURE ?? ! or id 1 string.tail ':' string.contains if
       "identifier names cannot contain ':'" sb.copyPtr pos errors appendError
       true return
     end
@@ -558,12 +567,8 @@ namespace: id
     name
       flags FLAG_BUILT_IN & ? if
         NameContext .BUILT_IN
-      else idType .PROCEDURE ?? or idType .PROCEDURE_BUNDLE ?? _if
-        NameContext .PROCEDURE
-      else idType .LABEL ?? _if
-        NameContext .LABEL
       else
-        NameContext .VARIABLE
+        idType idTypeAsNameContext
       end
     declaredAt errors checkIdentifier if
       LABEL_ID_NONE ID_NONE_DATA true return
@@ -666,7 +671,7 @@ namespace: id
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: declareNameAlias
-    newName NameContext .VARIABLE declaredAt errors checkIdentifier if
+    newName idType idTypeAsNameContext declaredAt errors checkIdentifier if
       true return
     end
     srcId

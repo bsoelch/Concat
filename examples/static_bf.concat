@@ -65,14 +65,12 @@ proc(
   outStream@ tape code TAPE_CAP 2 / -1 runBf_rec ..drop.2
   outStream return
 end
-namespace: bf.static
-  proc( char8 _ ptr : chars i64 : len -> ) =>: static: parse  
-    i8 TAPE_CAP array : tape
-    char8 OUT_CAP array : outBuffer
-    outBuffer@
-      tape@ chars len string.create runBf
-    sb.asStr ..compiler.error
-  end
+proc( char8 _ ptr : chars i64 : len -> ) =>: static: :bf
+  i8 TAPE_CAP array : tape
+  char8 OUT_CAP array : outBuffer
+  outBuffer@
+    tape@ chars len string.create runBf
+  sb.asStr ..compiler.error
 end
 
 #+

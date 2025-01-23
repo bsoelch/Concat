@@ -790,8 +790,8 @@ proc(
         ## :<name> -> <name>.parse
         state [] .tmpString
           sb.clear ## clear tmp string
+          ':' sb.appendC
           literalType .LITERAL_TYPE sb.appendStr
-          ".static.parse" sb.appendS
         state .tmpString=
         state [] .tmpString sb.asStr false return
       LITERAL_TYPE case
