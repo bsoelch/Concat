@@ -2281,9 +2281,6 @@ proc(
         elementLabel state replaceLabel
         return
       end
-      elementLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
-        false mutable@ =
-      end
       OP_UNLINKED =:: mut: onRead
       isWrite ! and containerType typeContext types.isTaggedUnion if
         containerType elementIndex op .pos opCheckEnum state appendOp onRead@ =
