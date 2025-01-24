@@ -1516,7 +1516,41 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState [] .wordStart errors appendError
           continue
         end =:: idData
-        idData [] .idType .PROCEDURE ?? ! if
+        idData [] .idType .PROCEDURE ?? if
+          idData [] .constValue .Procedure ?? ! if
+            256 sb.create
+              idData [] .idType sb.appendIdType
+              "missing procedure data for \"" sb.appendS
+              idData [] .labelId labelContext sb.appendLabelPath
+              "\" ( declared at " sb.appendS
+              idData [] .declaredAt sb.appendPos
+              " ) expected ProcId got:" sb.appendS
+              idData [] .constValue typeContext sb.appendConstant
+            fileState [] .wordStart errors appendError
+            return
+          end
+          bundleData [] .procedures
+            idData [] .constValue .Procedure list.append
+          bundleData .procedures=
+        else idData [] .idType .PROCEDURE_BUNDLE ?? _if
+          idData [] .constValue .ProcedureBundle ?? ! if
+            256 sb.create
+              idData [] .idType sb.appendIdType
+              "missing procedure data for \"" sb.appendS
+              idData [] .labelId labelContext sb.appendLabelPath
+              "\" ( declared at " sb.appendS
+              idData [] .declaredAt sb.appendPos
+              " ) expected ProcBundleId got:" sb.appendS
+              idData [] .constValue typeContext sb.appendConstant
+            fileState [] .wordStart errors appendError
+            return
+          end
+          bundleData [] .procedures
+            progContext [] .procBundles
+              idData [] .constValue .ProcedureBundle i64 cast list.at .data
+            [] .procedures list.appendAll
+          bundleData .procedures=
+        else
           256 sb.create
             idData [] .idType sb.appendIdType
             " \"" sb.appendS
@@ -1526,21 +1560,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             " ) is not a procedure" sb.appendS
           fileState [] .wordStart errors appendError
           return
-        else idData [] .constValue .Procedure ?? ! _if
-          256 sb.create
-            idData [] .idType sb.appendIdType
-            "missing procedure data for \"" sb.appendS
-            idData [] .labelId labelContext sb.appendLabelPath
-            "\" ( declared at " sb.appendS
-            idData [] .declaredAt sb.appendPos
-            " ) expected ProcId got:" sb.appendS
-            idData [] .constValue typeContext sb.appendConstant
-          fileState [] .wordStart errors appendError
-          return
         end
-        bundleData [] .procedures
-          idData [] .constValue .Procedure list.append
-        bundleData .procedures=
       end
       return
     else ..dup "end":s string.eq _if ..drop

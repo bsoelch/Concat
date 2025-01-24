@@ -1,0 +1,12 @@
+namespace: inner
+  ( -> ) =>: f end
+  ( i32 -> i32 ) =>: g 2 * end
+  overload: bundle f g end
+end
+overload: bundle 
+  inner.bundle ## bundle in bundle
+end
+proc( -> ) =>: main
+  bundle
+  1:i32 bundle 2 == "g(1)==2" assert
+end

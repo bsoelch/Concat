@@ -25,7 +25,7 @@ namespace: Vector
     dot2
     dot3
   end
-  overload: export: -
+  overload: merge: export: -
     subt
   end
 end

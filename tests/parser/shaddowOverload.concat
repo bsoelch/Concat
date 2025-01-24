@@ -1,0 +1,9 @@
+overload: bundle end
+namespace: inner
+  ( -> ) =>: f end
+  ( i32 -> i32 ) =>: g end
+  overload: bundle f end ## this will fail
+end
+proc( -> ) =>: main
+  bundle
+end
