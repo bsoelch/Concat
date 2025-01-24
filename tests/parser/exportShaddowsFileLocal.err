@@ -1,0 +1,2 @@
+declaration of identifier "x" at ./tests/parser/exportShaddowsFileLocal.concat:2:15
+shadows previous declaration at ./tests/parser/exportShaddowsFileLocal.concat:1:7

@@ -470,8 +470,8 @@ namespace: id
     context .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     label labelContext labelFlags =:: flags
-    isAlias ! and context id.isTopLevel flags FLAG_EXPORT & ? & if
-      ## exported global -> ignore fileId
+    isAlias ! and context id.isTopLevel and flags FLAG_EXPORT & ? if
+      ## exported identifier -> ignore fileId
       FILE_ID_NONE
     else
       currentFile
@@ -489,7 +489,7 @@ namespace: id
       prevId? .data DeclareNameResult .REDECLARE return
     end
     flags FLAG_SHADDOW & ? ! if
-      name fileId context findIdByName ! if =:: shaddowedName
+      name currentFile context findIdByName ! if =:: shaddowedName
         shaddowedName .labelId context getIdentifier
           ! "shaddowedName exists" assert
         =:: shaddowed
@@ -851,4 +851,3 @@ namespace: id
     false
   end
 end
-
