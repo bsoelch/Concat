@@ -1,0 +1,7 @@
+namespace: inner
+  import debug
+  1 =:: x
+end
+proc( -> ) =>: main
+  inner.x debug.print ## should debug be visible here?
+end

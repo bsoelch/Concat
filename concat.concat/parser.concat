@@ -2599,6 +2599,7 @@ end
 proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError ) =>: parseFile
   fileName
     state [] .progContext =:: progContext
+    progContext .idContext .typeContext .labelContext =:: labelContext
     progContext .errors =:: errors
     ..dup ..over .length 1 - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
@@ -2641,6 +2642,8 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
       end
     end ..drop
     state [] .openBlocks .length =:: blockCount
+    labelContext id.currentNamespace =:: prevNamespace
+    labelContext id.clearNamespace
     _INCLUDE_CORE_ if
       "core":s fileState .currentPos state importLibraryFile
     end
@@ -2651,6 +2654,7 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
       do end ..drop
     ..drop
     fileBody sb.free ..drop
+    prevNamespace labelContext id.resetNamespace
     state [] .currentFile ..swap
   state .currentFile=
   state [] .openBlocks .length blockCount > if
