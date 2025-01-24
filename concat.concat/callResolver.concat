@@ -667,10 +667,6 @@ proc(
     ## prefer more array dimensions in parameters
     a .arraySizeArguments b .arraySizeArguments > if -1  else 1 end return
   end
-  a .signatureWeigth b .signatureWeigth != if
-    ## prefer lower weight
-    a .signatureWeigth b .signatureWeigth < if -1  else 1 end return
-  end
   a .nRenames b .nRenames != if
     ## prefer less renames
     a .nRenames b .nRenames < if -1  else 1 end return
@@ -678,6 +674,10 @@ proc(
   a .paramInfo .length b .paramInfo .length != if
     ## prefer more parameters
     a .paramInfo .length b .paramInfo .length > if -1  else 1 end return
+  end
+  a .signatureWeigth b .signatureWeigth != if
+    ## prefer lower weight
+    a .signatureWeigth b .signatureWeigth < if -1  else 1 end return
   end
   0 return
 end
