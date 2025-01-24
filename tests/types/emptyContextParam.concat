@@ -1,0 +1,9 @@
+proc( type : auto: A type : auto: B
+  A A ( A A B -> A ) ptr : f B : c -> A
+) =>: emptyTest
+  c f ()
+end
+
+proc( -> ) =>: main
+  1 2 i32.add@ emptyTest ..drop
+end

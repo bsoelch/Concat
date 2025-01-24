@@ -13,7 +13,7 @@ end
 proc( i32 i32 -> i32 ) =>: f1
   +
 end
-proc( i32 ( ) -> ( ) ) =>: f2 ..swap ..drop end
+proc( i32 -> ) =>: f2 ..drop end
 
 struct( ( ) : mut: empty i32 : nonEmpty ) =:: testStruct 
 

@@ -38,6 +38,17 @@ struct(
   bool : mut: needsParam
 ) =:: CallSignatureInfo
 
+proc( GenericArg : val -> bool ) =>: isEmptyConstant
+  val switch
+    nonEmpty case false return
+    value case val .value break
+    fixed case val .fixed break
+  end =:: constVal
+  constVal .None ?? or
+    constVal .TypeId ?? and constVal .TypeId .empty ??
+  end return
+end
+
 proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   size switch
     int case size .int ConstValue .Int return
@@ -55,12 +66,25 @@ proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
   end
 end
 
+i32 =:: ReplaceFlags
+namespace: ReplaceFlags
+  ( ReplaceFlags ReplaceFlags -> ReplaceFlags ) : alias: or i32.or
+  ( ReplaceFlags ReplaceFlags -> ReplaceFlags ) : alias: and i32.and
+  ( ReplaceFlags -> bool ) : alias: toBool i32.toBool
+  0:ReplaceFlags =:: REPLACE_NONE
+  1:ReplaceFlags =:: REPLACE_AUTO_ARGS
+  2:ReplaceFlags =:: IGNORE_EMPTY
+end
+overload: merge: & ReplaceFlags.and end
+overload: merge: | ReplaceFlags.or end
+overload: merge: ? ReplaceFlags.toBool end
+
 proc(
   Type : src
   Type list ptr.mut : typeBuffer
   LabelId list ptr.mut : labelBuffer
   LabelId GenericArg hashMap ptr.mut : genericValues
-  bool : replaceAutoArgs
+  ReplaceFlags : flags
   FilePosition : pos
   ProgramContext ptr.mut : progContext
 -> Type ) =>: replaceGenerics
@@ -95,7 +119,7 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
-          replaceAutoArgs
+          flags
           pos
           progContext
         replaceGenerics
@@ -116,7 +140,7 @@ proc(
             genericArg case
               size .genericArg =:: genericId
               genericId labelContext id.labelFlags id.FLAG_STATIC & ? ! if
-                replaceAutoArgs ! if
+                flags ReplaceFlags.REPLACE_AUTO_ARGS & ? ! if
                   size list.append break
                 end
                 true genericSize@ =
@@ -138,7 +162,7 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
-          replaceAutoArgs
+          flags ReplaceFlags.IGNORE_EMPTY |
           pos
           progContext
         replaceGenerics
@@ -170,10 +194,15 @@ proc(
           typeBuffer
           labelBuffer
           genericValues
-          replaceAutoArgs
+          flags
           pos
           progContext
         replaceGenerics =:: newElt
+        flags ReplaceFlags.IGNORE_EMPTY & ? and
+            src .procIn ?? or src .procOut ?? end and
+            newElt typeContext types.isEmpty if
+          continue
+        end
         ## ! replaceGenerics changes type-buffer
         typeBuffer []
           newElt list.append
@@ -181,8 +210,7 @@ proc(
         labelBuffer []
           src i typeContext types.compositeGetLabel list.append
         labelBuffer []=
-        i 1 +
-      end ..drop
+      finally i 1 + end ..drop
       ## newComposite
         typeBuffer [] list.asSlice typeOffset slice.tail
         labelBuffer [] list.asSlice labelOffset slice.tail optional.wrap
@@ -206,10 +234,10 @@ proc(
       src typeContext types.getProcOut ..drop =:: outTypes
       ## newProcedure
         inTypes
-          typeBuffer labelBuffer genericValues replaceAutoArgs pos progContext
+          typeBuffer labelBuffer genericValues flags pos progContext
         replaceGenerics
         outTypes
-          typeBuffer labelBuffer genericValues replaceAutoArgs pos progContext
+          typeBuffer labelBuffer genericValues flags pos progContext
         replaceGenerics
         src typeContext types.getCallConvention ..drop
         typeContext
@@ -227,7 +255,7 @@ proc(
           arg switch
             TypeId case
               arg .TypeId
-                typeBuffer labelBuffer genericValues replaceAutoArgs pos progContext
+                typeBuffer labelBuffer genericValues flags pos progContext
               replaceGenerics ConstValue .TypeId
               break
             GenericArg case
@@ -785,8 +813,14 @@ proc(
       inTypes paramIndex typeContext types.compositeGetLabel =:: mut: paramLabel
       ## XXX? allow passing arrays as individual elements
       while ## skip empty parameters if stack-value is non-empty
-        paramType typeContext types.isEmpty and
-            stackType typeContext types.isEmpty ! if
+        paramType typeContext types.isEmpty or
+              paramType typeContext types.isGeneric and
+              paramType
+                typeContext types.unwrapNamed
+              types.getTypeId LabelId cast =:: paramId
+              current .genericValues paramId map.at =:: typeVal?
+              typeVal? optional.hasData and typeVal? .data [] isEmptyConstant
+            end and stackType typeContext types.isEmpty ! if
           ## empty parameter, non-empty argument
           current [] .paramInfo
             ## ParameterInfo
@@ -1110,7 +1144,7 @@ proc(
             typeBuffer@
             labelBuffer@
             candidate .genericValues
-            false
+            ReplaceFlags.REPLACE_NONE
             pos
             progContext
           replaceGenerics
@@ -1154,7 +1188,7 @@ proc(
         typeBuffer@
         labelBuffer@
         candidate .genericValues
-        true
+        ReplaceFlags.REPLACE_AUTO_ARGS
         pos
         progContext
       replaceGenerics =:: newElt
@@ -1181,7 +1215,7 @@ proc(
     typeBuffer@
     labelBuffer@
     candidate .genericValues
-    true
+    ReplaceFlags.REPLACE_AUTO_ARGS ReplaceFlags.IGNORE_EMPTY |
     pos
     progContext
   replaceGenerics =:: newOut

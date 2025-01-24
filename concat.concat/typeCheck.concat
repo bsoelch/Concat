@@ -637,15 +637,17 @@ proc(
       pos errors appendError
       true return
     end
+    state .stack branchTree.peek .data =:: peekedInfo
+    peekedInfo [] .valueType .empty ?? and expectedType .empty ?? ! if
+      1 pos state discardValues ## discard unmatched empty stack values
+      i continue ## no not increment index
+    end
     ## append dummy value for argument offset
     argOffsets
       OP_UNLINKED list.append
     argOffsets@ =
-    expectedType .empty ?? if
-      state .stack branchTree.peek .data =:: typeInfo
-      typeInfo [] .valueType typeContext types.isEmpty ! if
-        i 1 + continue ## skip empty if stack value non-empty
-      end
+    expectedType .empty ?? and peekedInfo [] .valueType .empty ?? ! if
+      i 1 + continue ## skip empty if stack value not empty
     end
     state .stack branchTree.pop .data [] =:: typeInfo
     ## set argument offset to correct value
