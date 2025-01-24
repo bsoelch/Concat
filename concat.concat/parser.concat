@@ -415,6 +415,7 @@ proc( string : code FileState ptr.mut : fileState  CompilerError list ptr.mut : 
     end .IDENTIFIER
   return
 end
+## TODO? restict flag-types depending on id-type
 proc(
   string : code
   string : start
@@ -461,6 +462,9 @@ proc(
         true isModifier@ =
       else ..dup "alias:":s string.eq _if
         id.FLAG_ALIAS flags | flags@ =
+        true isModifier@ =
+      else ..dup "merge:":s string.eq _if
+        id.FLAG_MERGE flags | flags@ =
         true isModifier@ =
       else ..dup ":":s string.endsWith _if
         true isModifier@ =
@@ -1452,11 +1456,20 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       fileState errors nextIdentifier fileState state readLabel =:: mut: labelId
-      labelId labelContext id.labelFlags id.FLAG_ALIAS & ? if
+      labelId labelContext id.labelFlags =:: labelFlags
+      labelFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
       end
-      labelId state [] .currentFile idContext id.findIdentifierByLabel if ..drop
+      labelId state [] .currentFile idContext id.findIdentifierByLabel or
+          labelFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
+          $ [] .labelId labelContext id.getLabelNamespace labelContext id.currentNamespace .current != if ..drop
+        labelFlags id.FLAG_MERGE & ? if
+          "unable to merge namespace: \"" sb.copyPtr
+          labelId labelContext sb.appendLabelPath
+          '"' sb.appendC
+          fileState [] .wordStart errors appendError
+        end
         progContext [] .procBundles
           ..dup .length ProcBundleId cast =:: bundleId
           newProcBundle list.append
@@ -1490,7 +1503,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           return
         end
         ## XXX? warn for incompatible flags
-        ## XXX? warn if overloads in different name-spaces are merged
         idData [] .constValue .ProcedureBundle
       end =:: bundleId
       progContext [] .procBundles bundleId i64 cast list.at .data =:: bundleData

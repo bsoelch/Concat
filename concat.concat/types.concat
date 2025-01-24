@@ -1273,11 +1273,11 @@ namespace: types
     proc( CompositeFlags -> CompositeFlags ) : alias: flip i32.flip
     proc( CompositeFlags -> bool ) : alias: toBool i32.toBool
   end
-  overload: & CompositeFlags.and    end
-  overload: | CompositeFlags.or     end
-  overload: ^ CompositeFlags.xor    end
-  overload: ~ CompositeFlags.flip   end
-  overload: ? CompositeFlags.toBool end
+  overload: merge: & CompositeFlags.and    end
+  overload: merge: | CompositeFlags.or     end
+  overload: merge: ^ CompositeFlags.xor    end
+  overload: merge: ~ CompositeFlags.flip   end
+  overload: merge: ? CompositeFlags.toBool end
 
   struct(
     i64 : eltCount

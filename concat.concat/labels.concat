@@ -34,6 +34,7 @@ namespace: id
   0x0400:LabelFlag =:: export: FLAG_ITR_VAR
   0x0800:LabelFlag =:: export: FLAG_SHADDOW
   0x1000:LabelFlag =:: export: FLAG_ALIAS
+  0x2000:LabelFlag =:: export: FLAG_MERGE
 
   0x40000000:LabelFlag =:: export: FLAG_EXPERIMENTAL
 
@@ -42,11 +43,11 @@ namespace: id
   proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagXor i32.xor
   proc( LabelFlag -> LabelFlag ) : alias: flagFlip i32.flip
   proc( LabelFlag -> bool ) : alias: flagToBool i32.toBool
-  overload: &  flagAnd    end
-  overload: |  flagOr     end
-  overload: ^  flagXor    end
-  overload: ~  flagFlip   end
-  overload: ?  flagToBool end
+  overload: merge: &  flagAnd    end
+  overload: merge: |  flagOr     end
+  overload: merge: ^  flagXor    end
+  overload: merge: ~  flagFlip   end
+  overload: merge: ?  flagToBool end
 end
 
 struct( string : name NamespaceId list : mut: children NamespaceId : parent ) =:: Namespace

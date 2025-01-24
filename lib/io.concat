@@ -32,9 +32,9 @@ namespace: io
       i32 cast i32.toBool
     end
   end
-  overload: &  OpenMode.and    end
-  overload: |  OpenMode.or     end
-  overload: ?  OpenMode.toBool end
+  overload: merge: &  OpenMode.and    end
+  overload: merge: |  OpenMode.or     end
+  overload: merge: ?  OpenMode.toBool end
 
   ..ctype.struct ptr.mut =:: export: FILE ## XXX ? wrapper type
 end
