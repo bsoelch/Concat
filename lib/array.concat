@@ -88,19 +88,18 @@ namespace: array
   ## returns the index of the largest element in the list that is less than or equal to `value`
   ## if no value is smaller zero is returned
   ## assumes the list is sorted in increasing order
-  ## XXX? allow passing comparison context as additional parameter
-  proc(
-    type : auto: K  type : auto: T
+  proc( type : auto: K  type : auto: T  type : auto: C
     T _ ptr : data
     i64 : size
-    proc( K T ptr -> i32 ) ptr : cmp
+    proc( K T C -> i32 ) ptr : cmp
     K : value
+    C : context
   -> i64 ) =>: export: firstBelow ## TODO better name
     0:i64 =:: mut: shaddow: head
     size =:: mut: shaddow: tail
     size 2 / =:: mut: mid
     while mid head > do
-      value data mid @[] T ptr cast! cmp () =:: c
+      value data mid [] context cmp () =:: c
       c 0 == if
         mid return
       else c 0 > _if
@@ -110,7 +109,7 @@ namespace: array
       end
       head tail + 2 / mid@ =
     end
-    tail size < and value data head @[] T ptr cast! cmp () 0 > if
+    tail size < and value data head [] context cmp () 0 > if
       tail return
     end
     head return

@@ -370,8 +370,8 @@ namespace: allocator.linux
     ChunkType : chunkType
   ) =:: CellSizeInfo
 
-  proc( i64 : count CellSizeInfo ptr : cellInfo -> i32 ) =>: cellInfoCmp
-    count cellInfo [] .eltCount i64 cast.u <=>
+  proc( i64 : count CellSizeInfo : cellInfo -> i32 ) =>: cellInfoCmp
+    count cellInfo .eltCount i64 cast.u <=>
   end
   proc( MemoryValue ptr.mut : mem -> CellHeader ptr.mut ) =>: export: getCellHeader ## XXX exported only for debug purposes
     mem CellHeader _ ptr.mut cast!

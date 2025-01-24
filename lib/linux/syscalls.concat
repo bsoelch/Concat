@@ -46,9 +46,9 @@ namespace: linux
     proc( Flags Flags -> Flags ) : alias: or_flags i32.or
     proc( Flags Flags -> bool ) : alias: eq_flags i32.eq
     proc( Flags Flags -> bool ) : alias: ne_flags i32.ne
-    overload: |  or_prot or_flags end
-    overload: == eq_prot eq_flags end
-    overload: != ne_prot ne_flags end
+    overload: merge: |  or_prot or_flags end
+    overload: merge: == eq_prot eq_flags end
+    overload: merge: != ne_prot ne_flags end
   end
   namespace: mremap
     i32 =:: Flags
