@@ -616,7 +616,7 @@ proc(
   Type slice : types
   string : name
   ## number of values already popped by instruction
-  i32 : stackCastOffset
+  i32 : stackCastOffset0
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: requireTypes
@@ -626,6 +626,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   types .length i64 list.create =:: mut: argOffsets
+  stackCastOffset0 =:: mut: stackCastOffset
   1:i64 while ..dup types .length <= do =:: i
     types types .length i - slice.get =:: expectedType
     state [] .stack branchTree.depth 0 <= if
@@ -639,7 +640,7 @@ proc(
     end
     state .stack branchTree.peek .data =:: peekedInfo
     peekedInfo [] .valueType .empty ?? and expectedType .empty ?? ! if
-      1 pos state discardValues ## discard unmatched empty stack values
+      state .stack branchTree.pop ..drop ## discard empty value
       i continue ## no not increment index
     end
     ## append dummy value for argument offset
@@ -647,6 +648,7 @@ proc(
       OP_UNLINKED list.append
     argOffsets@ =
     expectedType .empty ?? and peekedInfo [] .valueType .empty ?? ! if
+      stackCastOffset 1 - stackCastOffset@ = ## update cast offset
       i 1 + continue ## skip empty if stack value not empty
     end
     state .stack branchTree.pop .data [] =:: typeInfo
@@ -1904,6 +1906,11 @@ proc(
                 op .pos errors appendError
               end
             else ## next argument at top of stack
+              elt .empty ?? and
+                  state .stack branchTree.peek =:: head?
+                  head? optional.hasData and head? .data .valueType .empty ?? ! if
+                continue ## skip empty arguments with non-empty value
+              end
               ## requireTypes
                 elt@ slice.wrap
                 "procedure argument":s
@@ -1915,8 +1922,7 @@ proc(
               end
               offset 1 + offset@ =
             end
-            i 1 -
-          end ..drop
+          finally i 1 - end ..drop
           op state appendOp ..drop
           calledType typeContext types.getProcOut ..drop
             typeContext types.compositeEltArray
