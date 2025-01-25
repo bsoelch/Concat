@@ -1,0 +1,17 @@
+struct(
+  i32 : x
+  i32 : y
+) =:: nested
+struct(
+  nested ptr : a
+  i64 : b
+  f32 : c
+) =:: S
+proc( S ptr -> i32 ) =>: test
+  .a [] .x []
+end
+proc( -> ) =>: main
+  { { 0 : x 1 : y } : a 2 : b 3 : c } S cast =:: s
+  { { 4 : x 5 : y } : a 6 : b 7 : c } S =: t
+  { { 4 : x 5 : y } : a 6 : b 7 : c } test =:: z
+end

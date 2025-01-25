@@ -1085,32 +1085,6 @@ namespace: types
       end
     ..drop false return
   end
-  proc( Type ptr.mut : t bool : mutable TypeContext ptr.mut : context -> bool ) =>: export: setMutability
-    t [] context isMutable  mutable == if
-      false return
-    end
-    t [] .rawPointer ?? =:: isRawPtr
-    isRawPtr or t [] .pointer ?? if
-      context [] .arrayTypes
-        isRawPtr if
-          t [] .rawPointer i64 cast
-        else
-          t [] .pointer i64 cast
-        end
-      list.get =:: arrayType
-      ## newArrayType
-        t [] context getBaseType
-        isRawPtr if ArrayType .RAW_POINTER else ArrayType .POINTER end
-        context [] .arraySizes arrayType .sizeOffset arrayType .dims list.getSlice
-        mutable
-      context newArrayType if
-        ..drop true return
-      end t []=
-      false return
-    end
-    ## XXX ? allow marking named pointer types as mutable
-    true return
-  end
   proc( ArraySize : a ArraySize : b -> bool ) =>: arraySizeEqual
     a ..label b ..label != if
       false return
@@ -2669,21 +2643,25 @@ namespace: types
   end
   proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canAutoCastInitializer
     target context unwrapNamed =:: targetBase
+    src context compositeEltCount =:: srcSize
+    srcSize 0 == =:: srcEmpty
+    srcEmpty and targetBase context types.isRawPointer and
+        targetBase context types.getArrayDims 1 == if
+      true return ## empty initializer to raw 1D pointer
+    end
+    ## XXX? allow cast from empty initializer to union with single empty entry
+    targetBase context types.isMutable if
+      false return ## cannot cast non-empty initializer to mutable pointer
+    end
     targetBase context types.isArray or targetBase context types.isArrayPointer if
       context [] .initializerTypes src .initializer i64 cast list.at .data =:: initInfo
       targetBase context getElementType =:: eltType
       initInfo .arrayType [] eltType context canAutoCast and
-        src context compositeEltCount =:: srcSize
         targetBase context getArraySize =:: targetSizes
         targetSizes $ .length 1 - slice.get =:: outerSize
         outerSize .int ?? and outerSize .int srcSize == if
           true return
       end
-    end
-    targetBase context types.isRawPointer and targetBase context types.getArrayDims 1 ==
-        and src context compositeEltCount 0 == if
-      ## TODO? allow cast from array initializer to var-size pointer?
-      true return ## empty initializer to var-size pointer
     end
     targetBase context types.isTuple if
       src targetBase context canCastTuple return
