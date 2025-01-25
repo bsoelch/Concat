@@ -1,2 +1,1 @@
-declaration of identifier "x" at ./tests/parser/exportShaddowsFileLocal.concat:2:15
-shadows previous declaration at ./tests/parser/exportShaddowsFileLocal.concat:1:7
+declaration of identifier "x" shadows previous declaration ( at./tests/parser/exportShaddowsFileLocal.concat:1:7 ) at ./tests/parser/exportShaddowsFileLocal.concat:2:15

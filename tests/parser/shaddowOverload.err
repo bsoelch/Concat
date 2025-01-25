@@ -1,3 +1,2 @@
-declaration of identifier "bundle" at ./tests/parser/shaddowOverload.concat:5:13
-shadows previous declaration at ./tests/parser/shaddowOverload.concat:1:11
+declaration of identifier "bundle" shadows previous declaration ( at./tests/parser/shaddowOverload.concat:1:11 ) at ./tests/parser/shaddowOverload.concat:5:13
 empty procedure bundle at ./tests/parser/shaddowOverload.concat:8:3

@@ -35,20 +35,20 @@ namespace: slice
   proc( type : auto: T T slice.mut : a -> T slice ) =>: export: freeze
     a .data a .length slice.create_64
   end
-  proc( type : auto: T T _ ptr.mut  i64 -> T slice.mut ) =>: export: shaddow: create_64mut
+  proc( type : auto: T T _ ptr.mut  i64 -> T slice.mut ) =>: export: shadow: create_64mut
     T slice.mut new return
   end
-  proc( type : auto: T T _ ptr.mut  i32 -> T slice.mut ) =>: export: shaddow: create_32mut
+  proc( type : auto: T T _ ptr.mut  i32 -> T slice.mut ) =>: export: shadow: create_32mut
     i64 cast.s create_64mut
   end
   proc(
     type : auto: T
     i64 : auto: k
     T k ptr.mut : elts
-  -> T slice.mut ) =>: export: shaddow: wrapMutable
+  -> T slice.mut ) =>: export: shadow: wrapMutable
     elts k create_64mut return
   end
-  overload: export: shaddow: createMutable create_32mut create_64mut end
+  overload: export: shadow: createMutable create_32mut create_64mut end
 
   proc( i64 : index i64 : length -> ) =>: checkIndex
     index 0 < or index length >= if
@@ -236,7 +236,7 @@ namespace: slice
     type : auto: T
     T slice : a
     T slice : b
-    proc( T ptr T ptr -> bool ) ptr : shaddow: eq
+    proc( T ptr T ptr -> bool ) ptr : shadow: eq
   -> i64 ) =>: export: indexOfSlice
     a .length b .length < if
       -1 return
@@ -268,7 +268,7 @@ namespace: slice
     type : auto: C
     T slice : a
     T slice : b
-    proc( T ptr T ptr C -> bool ) ptr : shaddow: eq
+    proc( T ptr T ptr C -> bool ) ptr : shadow: eq
     C : context
   -> i64 ) =>: export: indexOfSliceStart
     ## TODO? use faster algorithm
@@ -496,7 +496,7 @@ namespace: slice
     -> bool ) =>: export: checkTo
       itr .index itr .src .length <
     end
-    proc( type : auto: T T slice.mapItr : itr -> T ) =>: export: shaddow: get
+    proc( type : auto: T T slice.mapItr : itr -> T ) =>: export: shadow: get
       itr .data itr .index slice.get
     end
     proc( type : auto: S type : auto: T
@@ -551,7 +551,7 @@ namespace: slice
     proc( type : auto: T T slice.reverseItr : itr -> bool ) =>: export: checkReverse
       itr .index 0 >=
     end
-    proc( type : auto: T T slice.getItr : itr -> T ) =>: shaddow: export: get
+    proc( type : auto: T T slice.getItr : itr -> T ) =>: shadow: export: get
       itr .data itr .index slice.get
     end
     proc( type : auto: T T slice.reverseItr : itr -> T ) =>: export: getReverse

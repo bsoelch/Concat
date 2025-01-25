@@ -9,14 +9,14 @@ using std.literals.
 import "files.concat"
 import "common.concat"
 
-struct( NamespaceId : mut: current NamespaceImportId : mut: imports ) =:: export: NamespaceInfo
+struct( NamespaceId : current NamespaceImportId : imports ) =:: export: NamespaceInfo
 
 struct(
   NamespaceId : imported
   NamespaceImportId : parent
   string : nameAlias
-  NamespaceImportId : mut: firstChild
-  NamespaceImportId : mut: next
+  NamespaceImportId : firstChild
+  NamespaceImportId : next
 ) =:: export: NamespaceImport
 
 i32 =:: export: LabelFlag
@@ -33,7 +33,7 @@ namespace: id
   0x0100:LabelFlag =:: export: FLAG_BUILT_IN
   0x0200:LabelFlag =:: export: FLAG_DUMMY
   0x0400:LabelFlag =:: export: FLAG_ITR_VAR
-  0x0800:LabelFlag =:: export: FLAG_SHADDOW
+  0x0800:LabelFlag =:: export: FLAG_SHADOW
   0x1000:LabelFlag =:: export: FLAG_ALIAS
   0x2000:LabelFlag =:: export: FLAG_MERGE
 
@@ -51,15 +51,15 @@ namespace: id
   overload: merge: ?  flagToBool end
 end
 
-struct( string : name NamespaceId list : mut: children NamespaceId : parent ) =:: Namespace
-struct( string : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : mut: flags ) =:: Label
+struct( string : name NamespaceId list : children NamespaceId : parent ) =:: Namespace
+struct( string : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : flags ) =:: Label
 
 struct(
-  char8 ArenaAllocator : mut: nameBuffer
-  Label list : mut: labels ## XXX change to arenaAllocator ( i32 addresses )
-  Namespace list : mut: namespaces
-  NamespaceImport list : mut: namespaceImports
-  NamespaceInfo : mut: namespaceInfo
+  char8 ArenaAllocator : nameBuffer
+  Label list : labels ## XXX change to arenaAllocator ( i32 addresses )
+  Namespace list : namespaces
+  NamespaceImport list : namespaceImports
+  NamespaceInfo : namespaceInfo
 ) =:: export: LabelContext
 namespace: id
 

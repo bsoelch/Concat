@@ -23,13 +23,13 @@ enum(
 ) =:: export: IdentifierType
 
 struct(
-  Type : mut: valueType
-  ConstValue : mut: constValue
-  FilePosition : mut: declaredAt
+  Type : valueType
+  ConstValue : constValue
+  FilePosition : declaredAt
   LabelId : labelId
-  i32 : mut: index
+  i32 : index
   IdentifierType : idType
-  bool : mut: declarationOnly
+  bool : declarationOnly
 ) =:: IdentifierData
 struct(
   IdentifierType : idType
@@ -44,7 +44,7 @@ namespace: id
   ) =:: AliasInfo
   struct(
     string : name
-    NamespaceId : mut: namespace
+    NamespaceId : namespace
     FileId : fileId
   ) =:: IdentifierName
   struct(
@@ -94,7 +94,7 @@ namespace: id
 
   1 =:: export: SCOPE_FLAG_NO_CONST_FOLD
   struct(
-    IdentifierName NameId hashMap : mut: identifierNames
+    IdentifierName NameId hashMap : identifierNames
     NamespaceImportId : prevImports
     ProcId : currentProc
     bool : isProcScope
@@ -112,15 +112,15 @@ namespace: id
   end
 end
   struct(
-    TypeContext : mut: typeContext
-    ConstantContext : mut: constContext
-    id.Scope : mut: globalScope
-    id.Scope list : mut: openScopes
-    LabelId IdentifierData hashMap : mut: identifierData
-    ConstValue list : mut: argBuffer
-    types.ArraySize list : mut: arraySizeBuffer
-    NamespaceInfo list : mut: prevNamespaces
-    id.AliasInfo list : mut: aliasInfo
+    TypeContext : typeContext
+    ConstantContext : constContext
+    id.Scope : globalScope
+    id.Scope list : openScopes
+    LabelId IdentifierData hashMap : identifierData
+    ConstValue list : argBuffer
+    types.ArraySize list : arraySizeBuffer
+    NamespaceInfo list : prevNamespaces
+    id.AliasInfo list : aliasInfo
   ) =:: export: IdentifierContext
 namespace: id
 
@@ -192,7 +192,7 @@ namespace: id
 
   proc( string : id FileId : fileId IdentifierContext ptr.mut : context IdentifierMatch list ptr.mut optional : matches -> IdentifierName NameId bool ) =>: export: searchIdentifier
     context [] .typeContext .labelContext .namespaceInfo .current =:: mut: mNamespace
-    NamespaceId : mut: relSpace
+    NamespaceId : relSpace
     mNamespace NAMESPACE_ID_NONE == if
       "invalid current namespace id":s NAMESPACE_ID_NONE fileId IdentifierName new
       id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
@@ -488,33 +488,38 @@ namespace: id
     prevId? optional.hasData if
       prevId? .data DeclareNameResult .REDECLARE return
     end
-    flags FLAG_SHADDOW & ? ! if
-      name currentFile context findIdByName ! if =:: shaddowedName
-        shaddowedName .labelId context getIdentifier
-          ! "shaddowedName exists" assert
-        =:: shaddowed
+    name currentFile context findIdByName ! if =:: shadowedName
+      shadowedName .labelId labelContext id.labelFlags =:: shadowFlags
+      flags FLAG_SHADOW & ? ! or shadowFlags id.FLAG_BUILT_IN & ? if
+        shadowedName .labelId context getIdentifier
+          ! "shadowedName exists" assert
+        =:: shadowed
         ## allow shaddoing for labels
-        ## TODO? only allow shaddowed labels in initializers
-        isAlias or idType .LABEL ?? ! or shaddowed [] .idType .LABEL ?? ! if
+        ## TODO? only allow shadowed labels in initializers
+        isAlias or idType .LABEL ?? ! or shadowed [] .idType .LABEL ?? ! if
           isAlias if
             "declaration of alias \"" sb.copyPtr
           else
             "declaration of identifier \"" sb.copyPtr
           end
-            name sb.appendStr
-            '\"' sb.appendC
-          declaredAt errors appendWarning
-          shaddowedName .aliasId NO_ALIAS == if
-            "shadows previous declaration" sb.copyPtr
-            shaddowed [] .declaredAt
+              name sb.appendStr
+          shadowFlags id.FLAG_BUILT_IN & ? if
+              "\" shadows built-in identifier" sb.appendS
+            declaredAt errors appendError
+          else shadowedName .aliasId NO_ALIAS == _if
+              "\" shadows previous declaration ( at" sb.appendS
+              shadowed [] .declaredAt sb.appendPos
+              " )" sb.appendS
+            declaredAt errors appendWarning
           else
-            "shadows alias" sb.copyPtr
-            shaddowedName .aliasId context getAliasPos
+              "\" shadows alias ( at" sb.appendS
+              shadowedName .aliasId context getAliasPos sb.appendPos
+              " )" sb.appendS
+            declaredAt errors appendWarning
           end
-          errors appendInfo
         end
-      else ..drop end
-    end
+      end
+    else ..drop end
     isAlias if
       context .aliasInfo [] .length AliasId cast
       context .aliasInfo []

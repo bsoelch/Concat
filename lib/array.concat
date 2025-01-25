@@ -95,8 +95,8 @@ namespace: array
     K : value
     C : context
   -> i64 ) =>: export: firstBelow ## TODO better name
-    0:i64 =:: mut: shaddow: head
-    size =:: mut: shaddow: tail
+    0:i64 =:: mut: shadow: head
+    size =:: mut: shadow: tail
     size 2 / =:: mut: mid
     while mid head > do
       value data mid [] context cmp () =:: c

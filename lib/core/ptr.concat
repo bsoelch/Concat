@@ -173,27 +173,27 @@ namespace: ptr
   end
   ## XXX? prohibit arithmetic on array pointers
   namespace: mut
-    proc( type : auto: T T _ ptr.mut : p -> T ) =>: shaddow: export: get
+    proc( type : auto: T T _ ptr.mut : p -> T ) =>: shadow: export: get
       p ..builtIn.get.ptr.mut
     end
 
-    proc( type : auto: T T _ ptr.mut : p i32 : offset -> T _ ptr.mut ) =>: shaddow: export: at32
+    proc( type : auto: T T _ ptr.mut : p i32 : offset -> T _ ptr.mut ) =>: shadow: export: at32
       p offset ..builtIn.offset.ptr.mut.i32
     end
-    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: at64
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shadow: export: at64
       p offset ..builtIn.offset.ptr.mut.i64
     end
-    proc( type : auto: T T _ ptr.mut : p i32 : index -> T ) =>: shaddow: export: get32
+    proc( type : auto: T T _ ptr.mut : p i32 : index -> T ) =>: shadow: export: get32
       p index ..builtIn.offset.ptr.mut.i32 ..builtIn.get.ptr
     end
-    proc( type : auto: T T _ ptr.mut : p i64 : index -> T ) =>: shaddow: export: get64
+    proc( type : auto: T T _ ptr.mut : p i64 : index -> T ) =>: shadow: export: get64
       p index ..builtIn.offset.ptr.mut.i64 ..builtIn.get.ptr
     end
     proc(
       type : auto: T i64 : auto: k
       T k ptr.mut : p
       i32 : index
-    -> T ptr.mut ) =>: shaddow: export: at32checked
+    -> T ptr.mut ) =>: shadow: export: at32checked
       index i64 cast.s k checkIndex
       p index ..builtIn.offset.ptr.mut.i32 T ptr.mut cast!
     end
@@ -201,7 +201,7 @@ namespace: ptr
       type : auto: T i64 : auto: k
       T k ptr.mut : p
       i64 : index
-    -> T ptr.mut ) =>: shaddow: export: at64checked
+    -> T ptr.mut ) =>: shadow: export: at64checked
       index k checkIndex
       p index ..builtIn.offset.ptr.mut.i64 T ptr.mut cast!
     end
@@ -209,7 +209,7 @@ namespace: ptr
       type : auto: T i64 : auto: k
       T k ptr.mut : p
       i32 : index
-    -> T ) =>: shaddow: export: get32checked
+    -> T ) =>: shadow: export: get32checked
       index i64 cast.s k checkIndex
       p index ..builtIn.offset.ptr.mut.i32 ..builtIn.get.ptr
     end
@@ -217,22 +217,22 @@ namespace: ptr
       type : auto: T i64 : auto: k
       T k ptr.mut : p
       i64 : index
-    -> T ) =>: shaddow: export: get64checked
+    -> T ) =>: shadow: export: get64checked
       index k checkIndex
       p index ..builtIn.offset.ptr.mut.i64 ..builtIn.get.ptr
     end
 
-    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: add
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shadow: export: add
       p offset ..builtIn.offset.ptr.mut.i64
     end
-    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shaddow: export: sub
+    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shadow: export: sub
       p offset -_ ..builtIn.offset.ptr.mut.i64
     end
-    proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: add0D
+    proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shadow: add0D
       "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
       ..unreachable
     end
-    proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shaddow: sub0D
+    proc( type : auto: T T ptr.mut : p i64 : offset -> T ptr.mut ) =>: shadow: sub0D
       "pointer arithmetic on fixed-size pointers is not supported" ..compiler.error
       ..unreachable
     end

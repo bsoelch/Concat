@@ -457,8 +457,8 @@ proc(
       else ..dup "#:experimental:":s string.eq _if
         id.FLAG_EXPERIMENTAL flags | flags@ =
         true isModifier@ =
-      else ..dup "shaddow:":s string.eq _if
-        id.FLAG_SHADDOW flags | flags@ =
+      else ..dup "shadow:":s string.eq _if
+        id.FLAG_SHADOW flags | flags@ =
         true isModifier@ =
       else ..dup "alias:":s string.eq _if
         id.FLAG_ALIAS flags | flags@ =
@@ -814,114 +814,6 @@ proc(
     end
     ..dup "_":s string.eq if
       fileState [] .wordStart newWildcardConst  state pushConst
-      true return
-    else ..dup "true":s string.eq _if
-      true fileState [] .wordStart newBoolConstant  state pushConst
-      true return
-    else ..dup "false":s string.eq _if
-      false fileState [] .wordStart newBoolConstant  state pushConst
-      true return
-    else ..dup "bool":s string.eq _if
-      types.primitive.BOOL fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "i8":s string.eq _if
-      types.primitive.I8 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "i16":s string.eq _if
-      types.primitive.I16 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "i32":s string.eq _if
-      types.primitive.I32 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "i64":s string.eq _if
-      types.primitive.I64 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "char8":s string.eq _if
-      types.primitive.CHAR8  fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "char16":s string.eq _if
-      types.primitive.CHAR16 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "char32":s string.eq _if
-      types.primitive.CHAR32 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "f32":s string.eq _if
-      types.primitive.F32 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "f64":s string.eq _if
-      types.primitive.F64 fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "type":s string.eq _if
-      types.primitive.TYPE fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.void":s string.eq _if
-      types.ctype.VOID fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.bool":s string.eq _if
-      types.ctype.BOOL fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.char":s string.eq _if
-      types.ctype.CHAR fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.schar":s string.eq _if
-      types.ctype.S_CHAR fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.uchar":s string.eq _if
-      types.ctype.U_CHAR fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.short":s string.eq _if
-      types.ctype.SHORT fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.ushort":s string.eq _if
-      types.ctype.U_SHORT fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.int":s string.eq _if
-      types.ctype.INT fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.uint":s string.eq _if
-      types.ctype.U_INT fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.long":s string.eq _if
-      types.ctype.LONG fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.ulong":s string.eq _if
-      types.ctype.U_LONG fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.longlong":s string.eq _if
-      types.ctype.LONGLONG fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.ulonglong":s string.eq _if
-      types.ctype.U_LONGLONG fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.size":s string.eq _if
-      types.ctype.SIZE fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.float":s string.eq _if
-      types.ctype.FLOAT fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.double":s string.eq _if
-      types.ctype.DOUBLE fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.struct":s string.eq _if
-      types.ctype.STRUCT fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..ctype.union":s string.eq _if
-      types.ctype.UNION fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..type.align2":s string.eq _if
-      2 Type .align fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..type.align4":s string.eq _if
-      4 Type .align fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..type.align8":s string.eq _if
-      8 Type .align fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..type.align16":s string.eq _if
-      16 Type .align fileState [] .wordStart newTypeConst  state pushConst
-      true return
-    else ..dup "..type.align32":s string.eq _if
-      32 Type .align fileState [] .wordStart newTypeConst  state pushConst
       true return
     end
   false return
@@ -2637,6 +2529,10 @@ proc(
     0
     0
   FilePosition new =:: rootPos
+  ## initBuiltInConstants
+    rootPos
+    programContext@
+  initBuiltInConstants
   ## initBuiltInProcs
     rootPos
     programContext@

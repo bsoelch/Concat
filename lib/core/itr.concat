@@ -60,7 +60,7 @@ namespace: ptr
     proc( type : auto: T T ptrItr : itr -> bool ) =>: export: check
       itr .current itr .tail <
     end
-    proc( type : auto: T T ptrItr : itr -> T ) =>: export: shaddow: get
+    proc( type : auto: T T ptrItr : itr -> T ) =>: export: shadow: get
       itr .current []
     end
     proc( type : auto: T T ptrItr : itr -> T ptrItr ) =>: export: step

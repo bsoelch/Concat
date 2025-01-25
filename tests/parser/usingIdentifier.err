@@ -1,2 +1,1 @@
-declaration of alias "y" at ./tests/parser/usingIdentifier.concat:14:12
-shadows alias at ./tests/parser/usingIdentifier.concat:10:7
+declaration of alias "y" shadows alias ( at./tests/parser/usingIdentifier.concat:10:7 ) at ./tests/parser/usingIdentifier.concat:14:12
