@@ -14,7 +14,7 @@ struct(
 
 struct(
   i32 : argOffset
-  i32 : mut: argCount
+  i32 : argCount
   MatchType : matchType
 ) =:: ParameterInfo
 
@@ -26,16 +26,16 @@ union(
 
 struct(
   ProcId : procId
-  ParameterInfo list : mut: paramInfo
-  LabelId GenericArg hashMap : mut: genericValues
-  i32 : mut: nEmpty
-  i32 : mut: nRenames
-  i32 : mut: nCasts
-  i32 : mut: nGenerics
-  i32 : mut: arraySizeArguments
-  i32 : mut: signatureWeigth
-  bool : mut: argsMatch
-  bool : mut: needsParam
+  ParameterInfo list : paramInfo
+  LabelId GenericArg hashMap : genericValues
+  i32 : nEmpty
+  i32 : nRenames
+  i32 : nCasts
+  i32 : nGenerics
+  i32 : arraySizeArguments
+  i32 : signatureWeigth
+  bool : argsMatch
+  bool : needsParam
 ) =:: CallSignatureInfo
 
 proc( GenericArg : val -> bool ) =>: isEmptyConstant
@@ -293,7 +293,7 @@ proc(
           argOffset list.setLength
         argBuffer []=
       return
-    undefined empty primitiveType cType arrayIndex autoType intLiteral align case
+    undefined empty primitiveType cType arrayIndex autoType intLiteral align typeSet case
       ..unreachable ## type should not contain generics
   end
 end
@@ -599,7 +599,7 @@ proc(
         i 1 +
       end ..drop
       false return
-    undefined empty primitiveType cType arrayIndex autoType intLiteral align case
+    undefined empty primitiveType cType arrayIndex autoType intLiteral align typeSet case
       ..unreachable ## type should not contain generics
   end
 end
@@ -837,6 +837,10 @@ proc(
             value case autoValue .data .value break
             nonEmpty case ..unreachable
           end =:: value
+          paramType typeContext types.isTypeSet and
+              value [] paramType typeContext types.typeSetId pos progContext interpreter.checkTypeSet ! if
+            false current .argsMatch=
+          end
           ## convert literal types to corresponding base types
           value [] .TypeId ?? and value [] .TypeId types.isLiteral if
             current .genericValues
@@ -893,6 +897,10 @@ proc(
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
         stackValues stackIndex slice.at .data [] .value =:: stackVal
         stackVal .None ?? if
+          false current .argsMatch=
+        end
+        paramType typeContext types.isTypeSet and
+            stackVal paramType typeContext types.typeSetId pos progContext interpreter.checkTypeSet ! if
           false current .argsMatch=
         end
         current .genericValues
@@ -994,7 +1002,7 @@ proc(
   end ..drop
   currentSignatures cmpSignatures@ progContext list.sort
   currentSignatures 0 list.at .data =:: candidate
-  candidate [] .needsParam if
+  candidate [] .needsParam or candidate [] .argsMatch ! if
     ## no match
     errorMessage optional.hasData if
       errorMessage .data []
@@ -1040,7 +1048,7 @@ proc(
     ## multiple matches
     errorMessage optional.hasData if
       errorMessage .data []
-        "multiple matching signature for arguments ( " sb.appendS
+        "multiple matching signatures for arguments ( " sb.appendS
         stackValues .length maxArgs > if "... " sb.appendS end
         stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
           stackValues i slice.at .data =:: val

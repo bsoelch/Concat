@@ -19,10 +19,11 @@ namespace: types
   i32 =:: TupleId
   i32 =:: UnionId
   i32 =:: InitializerId
-  i32 =:: ProcId
+  i32 =:: ProcTypeId
   i32 =:: NamedTypeId
   i32 =:: GeneratedId
   i32 =:: SizeId
+  i32 =:: export: TypeSetId
   ## primitive C-types for C interoperability
   enum(
     VOID BOOL
@@ -43,6 +44,15 @@ namespace: types
     U63 S64 U64 ## -> i64
     ## XXX? support for 128Bit integer literals
   ) =:: IntLiteral
+  union(
+    ProcId : typeTrait
+    Type : typeId
+  ) =:: export: TypeSetEntry
+  struct(
+    LabelId : name
+    i32 : elementsOffset
+    i32 : elementCount
+  ) =:: export: TypeSet
 end
 
 union(
@@ -59,10 +69,11 @@ union(
         types.TupleId : procOut
         types.UnionId : enum
   types.InitializerId : initializer
-         types.ProcId : procedure
+     types.ProcTypeId : procedure
     types.NamedTypeId : namedType
                   i32 : autoType
               LabelId : genericType
+      types.TypeSetId : typeSet
     types.GeneratedId : generatedType
          types.SizeId : arrayIndex
           types.CType : cType
@@ -115,6 +126,8 @@ namespace: types
         a .cType b .cType == return
       align case
         a .align b .align == return
+      typeSet case
+        a .typeSet b .typeSet == return
     end
   end
   1011001 =:: bigPrime
@@ -219,6 +232,8 @@ namespace: types
         bigPrime 67 * a .rawPointer i32 cast + return
       align case
         bigPrime 71 * a .align + return
+      typeSet case
+        bigPrime 73 * a .typeSet i32 cast + return
     end
   end
 end
@@ -280,7 +295,7 @@ namespace: types
          t context getBaseType context isEmpty return
        undefined primitiveType procedure cType pointer rawPointer
          namedType autoType genericType intLiteral
-         generatedType arrayIndex enum case false return
+         generatedType arrayIndex enum typeSet case false return
        procIn procOut struct union initializer case
          t context compositeFlags COMP_FLAG_EMPTY & ? return
     end
@@ -426,7 +441,7 @@ namespace: types
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
            generatedType arrayIndex enum align
-           procIn procOut struct union case
+           procIn procOut struct union typeSet case
          false return
     end
   end
@@ -479,7 +494,7 @@ namespace: types
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
            generatedType arrayIndex enum align
-           procIn procOut struct union case
+           procIn procOut struct union typeSet case
          t return
     end
   end
@@ -822,14 +837,14 @@ namespace: types
         typeContext tryComputeTupleSize return
       undefined empty autoType genericType rawPointer
       primitiveType intLiteral cType arrayIndex arrayType
-      pointer procedure align
+      pointer procedure align typeSet
       namedType generatedType case ..unreachable ## XXX? use assertion
     end
   end
   ## alignment of type in bytes, will be a power of two
   proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: alignOf
     t switch
-      undefined autoType genericType case
+      undefined autoType genericType typeSet case
         TypeSize .unknown return
       empty case
         1 TypeSize .fixed return
@@ -872,7 +887,7 @@ namespace: types
     TypeContext ptr.mut : context
   -> TypeSize ) =>: computeSize
     t switch
-      undefined autoType genericType case
+      undefined autoType genericType typeSet case
         TypeSize .unknown return
       empty case
         0 TypeSize .fixed return
@@ -936,7 +951,7 @@ namespace: types
     Type : base
     i64 : sizeOffset
     i64 : dims
-    bool : mut: ptrOnly
+    bool : ptrOnly
     bool : mutable ## XXX? use enum for mutability
   ) =:: ArrayData
 
@@ -1257,21 +1272,21 @@ namespace: types
     i64 : eltCount
     i64 : eltsOffset
     LabelOffset : labelOffset
-    i64 : mut: alignment
-    i64 : mut: size
-    CompositeFlags : mut: flags
+    i64 : alignment
+    i64 : size
+    CompositeFlags : flags
   ) =:: export: CompositeInfo
   struct(
-    CompositeInfo : mut: compositeInfo
-    i64  : mut: offsetsStart
+    CompositeInfo : compositeInfo
+    i64  : offsetsStart
   ) =:: TupleInfo
   struct(
-    TupleId : mut: asTuple
-    Type : mut: arrayType
+    TupleId : asTuple
+    Type : arrayType
   ) =:: InitializerInfo
   struct(
-    CompositeInfo : mut: compositeInfo
-    i64 : mut: enumLabelOffset
+    CompositeInfo : compositeInfo
+    i64 : enumLabelOffset
     Type  : labelType
   ) =:: UnionInfo
 
@@ -1282,7 +1297,7 @@ namespace: types
         true return
       undefined empty primitiveType pointer arrayType procedure
         namedType autoType genericType generatedType intLiteral align
-        arrayIndex cType rawPointer case
+        arrayIndex cType rawPointer typeSet case
         false return
     end
   end
@@ -1301,7 +1316,7 @@ namespace: types
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer rawPointer
-       arrayIndex cType align case ..drop
+       arrayIndex cType align typeSet case ..drop
          false return
     end =:: unionId
     typeContext [] .unionTypes unionId i64 cast list.at .data =:: unionInfo
@@ -1351,7 +1366,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         arrayIndex cType rawPointer case
+         arrayIndex cType rawPointer typeSet case
           ..drop CompositeInfo ptr optional.empty return
       end
   end
@@ -1369,7 +1384,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         arrayIndex cType rawPointer case
+         arrayIndex cType rawPointer typeSet case
           ..drop id.LABEL_ID_NONE return
       end
     context compositeData
@@ -1398,7 +1413,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         arrayIndex cType rawPointer case
+         arrayIndex cType rawPointer typeSet case
           ..drop -1 return
       end
     context compositeData
@@ -1457,7 +1472,7 @@ namespace: types
         .procOut break
       enum union undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
-       arrayIndex cType rawPointer case ..drop
+       arrayIndex cType rawPointer typeSet case ..drop
          i64 optional.empty return
     end =:: tupleId
     tuple tupleId typeContext tryComputeTupleSize if
@@ -1482,7 +1497,7 @@ namespace: types
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
-       arrayIndex cType rawPointer case ..drop
+       arrayIndex cType rawPointer typeSet case ..drop
          Type .empty i64 optional.empty return
     end =:: enumId
     enum enumId typeContext tryComputeUnionSize =:: isError
@@ -1983,14 +1998,14 @@ namespace: types
       elt [] .callingConvention callConvention == and
       elt [] .in in typeEquals and
       elt [] .out out typeEquals if
-        i ProcId cast Type .procedure false return
+        i ProcTypeId cast Type .procedure false return
       end
       i 1 +
     end ..drop
     procs []
       in out callConvention ProcType new list.append
     procs []=
-    procs [] .length 1 - ProcId cast Type .procedure
+    procs [] .length 1 - ProcTypeId cast Type .procedure
     false return
   end
   proc(
@@ -2050,7 +2065,7 @@ namespace: types
   end
 
   ## named types
-  struct( Type : mut: data LabelId : name i32 : implId ) =:: NamedType
+  struct( Type : data LabelId : name i32 : implId ) =:: NamedType
   proc(
     LabelId : label
     i32 : implId
@@ -2218,7 +2233,7 @@ namespace: types
   struct(
     LabelId : generator
     ConstValue slice : arguments
-    Type : mut: generated
+    Type : generated
   ) =:: GeneratedType
 
 
@@ -2344,6 +2359,23 @@ namespace: types
     id Type .genericType return
   end
 
+  proc( TypeSetId : id -> Type ) =>: export: newTypeSet
+    id Type .typeSet return
+  end
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isTypeSet
+    context unwrapNamed .typeSet ?? return
+  end
+  proc( Type TypeContext ptr : context -> TypeSetId ) =>: export: typeSetId
+    context unwrapNamed .typeSet return
+  end
+  proc( TypeSetId : id TypeContext ptr : context -> TypeSetEntry slice ) =>: export: getTypeSetEntries
+    context [] .typeSets id i64 cast list.get =:: typeSet
+    context [] .typeSetEntries
+      typeSet .elementsOffset i64 cast
+      typeSet .elementCount i64 cast
+    list.getSlice return
+  end
+
   proc( Type -> i32 ) =>: export: getTypeId
     ..dup switch
       autoType case .autoType return
@@ -2362,6 +2394,7 @@ namespace: types
       namedType case .namedType i32 cast return
       arrayIndex case .arrayIndex i32 cast return
       align case .align return
+      typeSet case .typeSet i32 cast return
       undefined empty primitiveType intLiteral cType case ..drop -1 return
     end
   end
@@ -2386,7 +2419,7 @@ namespace: types
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
     t switch
-      undefined empty primitiveType autoType arrayIndex cType intLiteral align case
+      undefined empty primitiveType autoType arrayIndex cType intLiteral align typeSet case
         false return
       pointer rawPointer arrayType case
         context [] .arrayTypes
@@ -2845,18 +2878,20 @@ namespace: types
 end
 ## type context
 struct(
-  LabelContext               : mut: labelContext
-  types.ArrayData       list : mut: arrayTypes
-  types.ArraySize       list : mut: arraySizes
-  types.TupleInfo       list : mut: tupleTypes
-  types.UnionInfo       list : mut: unionTypes
-  types.InitializerInfo list : mut: initializerTypes
-  Type                  list : mut: compositeData
-  i64                   list : mut: tupleOffsets
-  types.ProcType        list : mut: procTypes
-  types.NamedType       list : mut: namedTypes
-  types.GeneratedType   list : mut: generatedTypes
-  LabelId               list : mut: elementLabels
+  LabelContext               : labelContext
+  types.ArrayData       list : arrayTypes
+  types.ArraySize       list : arraySizes
+  types.TupleInfo       list : tupleTypes
+  types.UnionInfo       list : unionTypes
+  types.InitializerInfo list : initializerTypes
+  Type                  list : compositeData
+  i64                   list : tupleOffsets
+  types.ProcType        list : procTypes
+  types.NamedType       list : namedTypes
+  types.GeneratedType   list : generatedTypes
+  LabelId               list : elementLabels
+  types.TypeSetEntry    list : typeSetEntries
+  types.TypeSet         list : typeSets
 ) =:: export: TypeContext
 namespace: types
   proc( -> TypeContext ) =>: export: newTypeContext
@@ -2873,6 +2908,8 @@ namespace: types
       128 NamedType       list.create ## namedTypes
       128 GeneratedType   list.create ## generatedTypes
       128 LabelId         list.create ## elementLabels
+      128 TypeSetEntry    list.create ## typeSetEntries
+      128 TypeSet         list.create ## typeSets
     TypeContext new return
   end
   proc( TypeContext : context -> TypeContext ) =>: export: freeTypeContent
@@ -2888,6 +2925,8 @@ namespace: types
       $ .procTypes        list.free >$ .procTypes=
       $ .namedTypes       list.free >$ .namedTypes=
       $ .elementLabels    list.free >$ .elementLabels=
+      $ .typeSetEntries   list.free >$ .typeSetEntries=
+      $ .typeSets         list.free >$ .typeSets=
     return
   end
 end
@@ -3133,6 +3172,12 @@ namespace: sb
         sb
           "..type.align" sb.appendS
           t .align sb.appendI
+        return
+      typeSet case
+        sb
+          "{" sb.appendS
+          context [] .typeSets t .typeSet i32 cast list.get .name labelContext appendLabelPath
+          "}" sb.appendS
         return
     end
   end

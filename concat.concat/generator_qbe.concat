@@ -32,13 +32,13 @@ struct( BranchType : branchType i64 : id ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
 
 struct(
-  i64 : mut: varId
-  ValType : mut: valType
+  i64 : varId
+  ValType : valType
 ) =:: StackElement
 
 struct(
-  Type : mut: valType
-  i64 : mut: valId
+  Type : valType
+  i64 : valId
 ) =:: TypedValId
 
 struct(
@@ -55,47 +55,47 @@ struct(
 ) =:: LocalConst
 
 struct(
-  branchTree.NodeId list : mut: andBranches
-  BranchId list : mut: andBranchIds
-  branchTree.NodeId list : mut: orBranches
-  BranchId list : mut: orBranchIds
-  BranchId : mut: ifBranchId
+  branchTree.NodeId list : andBranches
+  BranchId list : andBranchIds
+  branchTree.NodeId list : orBranches
+  BranchId list : orBranchIds
+  BranchId : ifBranchId
   branchTree.NodeId : branchRoot
-  branchTree.NodeId : mut: ifBranch
+  branchTree.NodeId : ifBranch
   BlockId : blockId
-  bool : mut: hasIf
-  bool : mut: ifBranchTerminates
+  bool : hasIf
+  bool : ifBranchTerminates
 ) =:: IfBlockInfo
 struct(
-  branchTree.NodeId list : mut: caseBranches
-  BranchId list : mut: caseBranchIds
+  branchTree.NodeId list : caseBranches
+  BranchId list : caseBranchIds
   branchTree.NodeId : branchRoot
   BlockId : blockId
   i64 : blockEnd
 ) =:: SwitchBlockInfo
 struct(
-  branchTree.NodeId list : mut: continueBranches
-  BranchId list : mut: continueBranchIds
-  branchTree.NodeId list : mut: breakBranches
-  BranchId list : mut: breakBranchIds
-  branchTree.NodeId list : mut: doBranches
-  BranchId list : mut: doBranchIds
+  branchTree.NodeId list : continueBranches
+  BranchId list : continueBranchIds
+  branchTree.NodeId list : breakBranches
+  BranchId list : breakBranchIds
+  branchTree.NodeId list : doBranches
+  BranchId list : doBranchIds
   i64 : loopValOffset
   branchTree.NodeId : branchRoot
   BlockId : blockId
   i64 : blockStart
 ) =:: WhileBlockInfo
 struct(
-  branchTree.NodeId list : mut: branches
-  BranchId list : mut: branchIds
+  branchTree.NodeId list : branches
+  BranchId list : branchIds
   BlockId : blockId
 ) =:: AndOrBlockInfo
 
 union(
-  IfBlockInfo : mut: If
-  SwitchBlockInfo : mut: Switch
-  WhileBlockInfo : mut: While
-  AndOrBlockInfo : mut: AndOr
+  IfBlockInfo : If
+  SwitchBlockInfo : Switch
+  WhileBlockInfo : While
+  AndOrBlockInfo : AndOr
 ) =:: BlockInfo
 
 namespace: sb
@@ -111,18 +111,18 @@ end
 
 struct(
   ProgramContext ptr.mut : program
-  StackElement BranchTree : mut: stackInfo
-  BranchId : mut: currentBranch
-  BlockInfo list : mut: openBlocks
-  LocalConst list : mut: localConstants
-  string list : mut: stringConstants
-  PtrConstant list : mut: ptrConstants
-  Type : mut: currentProc
-  i64 : mut: localConstCount
-  i64 : mut: stackCount
-  i64 : mut: tmpCount
-  i32 : mut: jumpLabelCount
-  bool : mut: reachable
+  StackElement BranchTree : stackInfo
+  BranchId : currentBranch
+  BlockInfo list : openBlocks
+  LocalConst list : localConstants
+  string list : stringConstants
+  PtrConstant list : ptrConstants
+  Type : currentProc
+  i64 : localConstCount
+  i64 : stackCount
+  i64 : tmpCount
+  i32 : jumpLabelCount
+  bool : reachable
 ) =:: CompilerContext
 
 namespace: sb
@@ -178,7 +178,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     procedure arrayType struct union enum initializer case
       ValType .REFERENCE return
     undefined empty genericType autoType
-    procIn procOut align case
+    procIn procOut align typeSet case
       ValType .EMPTY return
   end
 end
@@ -669,7 +669,7 @@ namespace: sb
         sb t "enum":s storeType .STACK ?? ! appendCompositeTypeQBE return
         break
       undefined empty genericType autoType
-      procIn procOut initializer align case
+      procIn procOut initializer align typeSet case
         break
     end
     "unsupported type " sb.copyPtr

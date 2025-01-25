@@ -13,7 +13,7 @@ enum( ## XXX more precise names
   QBE
 ) =:: export: BackEnd
 
-struct( string : mut: fileName i64 : mut: line i64 : mut: posInLine ) =:: export: FilePosition
+struct( string : fileName i64 : line i64 : posInLine ) =:: export: FilePosition
 enum( ERROR WARNING INFO ) =:: export: ErrorType
 struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: export: CompilerError
 proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : errors -> ) =>: export: appendError
@@ -33,6 +33,8 @@ proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : er
 end
 
 i32 =:: export: LabelId
+i64 =:: export: ProcId
+i64 =:: export: ProcBundleId
 
 proc( LabelId -> i32 ) =>: export: labelHash i32 cast end
 proc( LabelId LabelId -> bool ) =>: export: labelEq == end

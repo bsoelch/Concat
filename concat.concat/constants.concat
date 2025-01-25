@@ -6,11 +6,6 @@ import "files.concat"
 import "labels.concat"
 import "types.concat"
 
-import debug
-
-i64 =:: export: ProcId
-i64 =:: export: ProcBundleId
-
 type : export: ConstValue
 struct( ConstValue ptr : value i64 : eltIndex ) =:: export: UnionConstant
 
@@ -51,8 +46,8 @@ union(
 ) =:: export: ConstValue
 
 struct(
-  MixedArenaAllocator : mut: arrayValues
-  stringBuilder : mut: stringParseBuffer
+  MixedArenaAllocator : arrayValues
+  stringBuilder : stringParseBuffer
 ) =:: export: ConstantContext
 ## XXX? free const context
 proc( -> ConstantContext ) =>: export: newConstContext

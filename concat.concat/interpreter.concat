@@ -12,8 +12,8 @@ type : export: TypeCheckState
 
 namespace: interpreter
   struct(
-    Type : mut: valueType
-    FilePosition : mut: pushedAt
+    Type : valueType
+    FilePosition : pushedAt
   ) =:: export: ValueInfo
 
   struct(
@@ -32,21 +32,21 @@ end
 enum( GLOBAL INTERPRET ) =:: export: InterpreterType
 struct(
   using interpreter.
-  ProgramContext ptr.mut : mut: program
-  TypeCheckState ptr.mut optional : mut: typeChecker
-  LabelId Constant hashMap : mut: globalVariables
-  LabelId Constant hashMap ptr.mut optional : mut: localVariables
-  ConstValue list : mut: stack
-  ValueInfo  list : mut: stackInfo
-  BlockInfo  list : mut: openBlocks
-  MixedArenaAllocator : mut: localMemory
+  ProgramContext ptr.mut : program
+  TypeCheckState ptr.mut optional : typeChecker
+  LabelId Constant hashMap : globalVariables
+  LabelId Constant hashMap ptr.mut optional : localVariables
+  ConstValue list : stack
+  ValueInfo  list : stackInfo
+  BlockInfo  list : openBlocks
+  MixedArenaAllocator : localMemory
   ## XXX globalMemory (?heapMemory)
-  Type list : mut: typeBuffer
-  ConstValue list : mut: valueBuffer
-  LabelId list : mut: labelBuffer
-  FilePosition list : mut: callPositions
-  FileId : mut: currentFile
-  InterpreterType : mut: evalType
+  Type list : typeBuffer
+  ConstValue list : valueBuffer
+  LabelId list : labelBuffer
+  FilePosition list : callPositions
+  FileId : currentFile
+  InterpreterType : evalType
 ) =:: export: InterpreterContext
 
 namespace: interpreter
@@ -383,7 +383,8 @@ namespace: interpreter
       TYPE_STRUCT TYPE_UNION TYPE_PROC case break
       TYPE_ENUM case ..unreachable
     end
-    value .TypeId ?? ! or valueType types.primitive.TYPE types.typeEquals ! if
+    value .TypeId ?? ! or valueType types.primitive.TYPE types.typeEquals ! and
+        valueType typeContext types.isTypeSet ! if
       "unexpected argument for type-field declaration expected type got " sb.copyPtr
         valueType typeContext sb.appendType
         " [ " sb.appendS
@@ -400,6 +401,7 @@ namespace: interpreter
       typeValue
         typeContext types.unwrapNamed
       types.primitive.TYPE types.typeEquals =:: isType
+      typeValue typeContext types.isTypeSet =:: isTypeSet
       ## map.put
       context [] .localVariables optional.hasData if
         context [] .localVariables .data
@@ -408,7 +410,7 @@ namespace: interpreter
       end
         label
         ## Constant
-          isType if
+          isType or isTypeSet if
             label types.newGenericType ConstValue .TypeId
           else
             label ConstValue .GenericArg
@@ -1080,6 +1082,64 @@ namespace: interpreter
       typeContext
       constContext
     types.findGeneratedType return
+  end
+  proc(
+    ConstValue : value
+    types.TypeSetId : typeSetId
+    FilePosition : pos
+    ProgramContext ptr.mut : progContext
+  -> bool ) =>: export: checkTypeSet
+    progContext .idContext .typeContext =:: typeContext
+    value .TypeId ?? ! if
+      false return ## only types can be in type-set
+    end
+    value .TypeId
+      $ types.isLiteral if ## decompose literals to type
+        typeContext types.literalToType
+      end
+    =:: toCheck
+    typeSetId typeContext types.getTypeSetEntries =:: entries
+    progContext
+      TypeCheckState ptr.mut optional.empty
+      FILE_ID_NONE
+      InterpreterType .GLOBAL
+    wrapProgram =:: mut: context
+    entries for =:: e
+      e .typeId ?? if
+        e .typeId toCheck types.typeEquals if
+          context@ cleanupContext
+          true return
+        end
+        continue
+      end
+      progContext .procedures [] e .typeTrait i64 cast list.at .data =:: procData
+      procData [] .fileId context@ .currentFile=
+      ## pushValue
+        toCheck ConstValue .TypeId
+        types.primitive.TYPE
+        pos
+      context@ pushValue
+      ## evaluateCall
+        e .typeTrait
+        -1
+        procData [] .procType
+        ConstValue slice.empty
+        false
+        pos
+        context@
+      evaluateCall if
+        ## TODO? ignore errors produced by call
+        continue
+      end
+      pos context@ popCondition if ..drop
+        continue
+      end if
+        context@ cleanupContext
+        true return
+      end
+    end
+    context@ cleanupContext
+    false return
   end
   proc(
     Type : srcType
@@ -1967,6 +2027,20 @@ proc(
           blockType .IF ?? if EvalResult .Ok return end break
         ELSE_TRUE ELSE_FALSE case
           blockType .ELSE ?? if EvalResult .Ok return end break
+        OR_TRUE OR_FALSE case
+          blockType .OR ?? if
+            closedBlock .blockType .OR_TRUE ?? ConstValue .Bool
+              types.primitive.BOOL
+            op [] .pos context pushValue
+            EvalResult .Ok return
+          end break
+        AND_TRUE AND_FALSE case
+          blockType .AND ?? if
+            closedBlock .blockType .AND_TRUE ?? ConstValue .Bool
+              types.primitive.BOOL
+            op [] .pos context pushValue
+            EvalResult .Ok return
+          end break
         default break
       end
       closedBlock .blockType blockType != if

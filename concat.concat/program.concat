@@ -11,9 +11,9 @@ struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
 union( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export: CompilerInfo
 enum( PTR ARRAY PTR_MUT ) =:: export: TypeModifier
-struct( Type : src i32 : mut: offset ) =:: export: AutoCastInfo ## offset: zero-indexed from top of stack
+struct( Type : src i32 : offset ) =:: export: AutoCastInfo ## offset: zero-indexed from top of stack
 enum( SIGNED NONE UNSIGNED ) =:: export: SignType
-struct( Type : mut: src SignType : mut: signType ) =:: export: CastInfo
+struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
 
@@ -31,33 +31,33 @@ enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED ) =:: export: ProcCodeState
 struct(
   Type : procType
   ConstValue slice : staticArgs
-  VariableInfo list : mut: variables
+  VariableInfo list : variables
   FilePosition : firstUse
-  i64 : mut: codeStart
-  i64 : mut: codeLength
-  ProcCodeState : mut: codeState
+  i64 : codeStart
+  i64 : codeLength
+  ProcCodeState : codeState
 ) =:: export: ProcImplementation
 struct(
-  ProcImplementation list : mut: implementations
-  VariableInfo list : mut: variables ## for single implementation in no-generic case
-  i64 : mut: codeStart
-  i64 : mut: codeLength
-  ProcCodeState : mut: codeState
+  ProcImplementation list : implementations
+  VariableInfo list : variables ## for single implementation in no-generic case
+  i64 : codeStart
+  i64 : codeLength
+  ProcCodeState : codeState
 ) =:: export: CodeProcData
 struct(
   BuiltIn : builtIn
-  bool : mut: hasPtr
+  bool : hasPtr
 ) =:: export: BuiltInData
 union(
-  BuiltInData : mut: builtIn
-  CodeProcData : mut: code
+  BuiltInData : builtIn
+  CodeProcData : code
   ProcId : alias
 ) =:: export: ProcImplType
 struct(
   FileId : fileId
   Type : procType
   LabelId : labelId
-  ProcImplType : mut: implementation
+  ProcImplType : implementation
   bool : hasStaticArg
   bool : isStatic
 ) =:: export: ProcedureInfo
@@ -73,24 +73,24 @@ struct(
 
 union(
             NopType : NOP
-         ConstValue : mut: Constant
-   ConstReferenceId : mut: ConstantReference
-          BlockData : mut: block
-          BlockData : mut: blockEnd
-     IdentifierInfo : mut: getId
-     IdentifierInfo : mut: atId
-     IdentifierInfo : mut: initializeId
-     IdentifierInfo : mut: autoTypedInitializeId
-     IdentifierInfo : mut: declareId
-      ProcedureImpl : mut: implementProcedure
-      ProcedureImpl : mut: procPtr
+         ConstValue : Constant
+   ConstReferenceId : ConstantReference
+          BlockData : block
+          BlockData : blockEnd
+     IdentifierInfo : getId
+     IdentifierInfo : atId
+     IdentifierInfo : initializeId
+     IdentifierInfo : autoTypedInitializeId
+     IdentifierInfo : declareId
+      ProcedureImpl : implementProcedure
+      ProcedureImpl : procPtr
             LabelId : getLabel
             LabelId : setLabel
-            LabelId : mut: hasLabel
-            LabelId : mut: existsLabel
-                i64 : mut: getElement
-                i64 : mut: setElement
-                i64 : mut: hasElement
+            LabelId : hasLabel
+            LabelId : existsLabel
+                i64 : getElement
+                i64 : setElement
+                i64 : hasElement
                   _ : Return
                   _ : New
                   _ : NewReference
@@ -98,26 +98,26 @@ union(
                 i64 : NewEnumReference
   ProcedureCallInfo : call
             BuiltIn : builtIn
-                i64 : mut: callPtr
+                i64 : callPtr
                   _ : argc
                   _ : getArg
                   _ : length
                   _ : size
-       AutoCastInfo : mut: autoCast
-           CastInfo : mut: Cast
-               Type : mut: Cast!
-               Type : mut: bitCast
+       AutoCastInfo : autoCast
+           CastInfo : Cast
+               Type : Cast!
+               Type : bitCast
    EqualityOperator : equalityOperator
                   _ : getEnumLabel
                 i64 : checkEnumLabel
-                i64 : mut: setEnumElement
-                i64 : mut: setEnumLabel ## backwards compatibility
+                i64 : setEnumElement
+                i64 : setEnumLabel ## backwards compatibility
                   _ : copy
   StackModification : stackMod
             LabelId : getName
-            LabelId : mut: atName
-            LabelId : mut: existsName
-       TypeModifier : mut: typeModifier
+            LabelId : atName
+            LabelId : existsName
+       TypeModifier : typeModifier
                   _ : Assert
              string : RuntimeAssert
           ErrorType : Error
@@ -126,7 +126,7 @@ union(
              string : panicWithMessage
        CompilerInfo : compilerInfo
 ) =:: export: OpValue
-struct( OpValue : mut: val Type : mut: dataType FilePosition : mut: pos ) =:: export: Operation
+struct( OpValue : val Type : dataType FilePosition : pos ) =:: export: Operation
 proc( -> OpValue ) =>: export: opValNOP
   NopType .EMPTY OpValue .NOP return
 end
@@ -358,53 +358,53 @@ end
 struct( FileId : id FilePosition : includePos ) =:: export: IncludedFile
 
 struct(
-     Operation list : mut: globalOps
-     Operation list : mut: localOps
-     Operation list : mut: tmpOps
-  IncludedFile list : mut: includedFiles
+     Operation list : globalOps
+     Operation list : localOps
+     Operation list : tmpOps
+  IncludedFile list : includedFiles
 
-      stringBuilder : mut: fileName
+      stringBuilder : fileName
              FileId : id
 ) =:: export: ProgramFile
 
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export: LabelData
 struct(
-  LabelData list : mut: labels
+  LabelData list : labels
   Type : switchType
-  i32 : mut: caseCount
-  i32 : mut: breakCount
-  i64 : mut: switchPosition
-  JumpDistance : mut: defaultJumpDistance
-  JumpDistance slice.mut : mut: caseJumpDistances
-  i64 slice.mut : mut: breakPositions
+  i32 : caseCount
+  i32 : breakCount
+  i64 : switchPosition
+  JumpDistance : defaultJumpDistance
+  JumpDistance slice.mut : caseJumpDistances
+  i64 slice.mut : breakPositions
 ) =:: export: SwitchData
 struct(
-  i64 : mut: modifiedTypes
-  i64 : mut: loopStart
-  i64 slice.mut : mut: orPositions
-  i64 slice.mut : mut: continuePositions
-  i64 slice.mut : mut: breakPositions
-  i32 : mut: orCount
-  i32 : mut: continueCount
-  i32 : mut: breakCount
+  i64 : modifiedTypes
+  i64 : loopStart
+  i64 slice.mut : orPositions
+  i64 slice.mut : continuePositions
+  i64 slice.mut : breakPositions
+  i32 : orCount
+  i32 : continueCount
+  i32 : breakCount
 ) =:: export: WhileData
 struct(
-  i64 : mut: blockStart
-  i64 : mut: ifPosition
-  i64 : mut: elsePosition
-  i64 slice.mut : mut: andPositions
-  i64 slice.mut : mut: orPositions
-  i32 : mut: andCount
-  i32 : mut: orCount
+  i64 : blockStart
+  i64 : ifPosition
+  i64 : elsePosition
+  i64 slice.mut : andPositions
+  i64 slice.mut : orPositions
+  i32 : andCount
+  i32 : orCount
 ) =:: export: IfData
 struct(
-  i64 : mut: blockStart
-  i64 slice.mut : mut: andOrPositions
-  i32 : mut: andOrCount
+  i64 : blockStart
+  i64 slice.mut : andOrPositions
+  i32 : andOrCount
 ) =:: export: AndOrData
 
 struct(
-  ProcId list : mut: procedures
+  ProcId list : procedures
 ) =:: export: ProcedureBundle
 
 proc( -> ProcedureBundle ) =>: export: newProcBundle
@@ -421,23 +421,23 @@ struct(
 ) =:: export: TypedConstant
 
 struct(
-            IdentifierContext : mut: idContext
-             ProgramFile list : mut: progFiles
-           ProcedureInfo list : mut: procedures
-         ProcedureBundle list : mut: procBundles
-                    Type list : mut: autoTypes
-               Operation list : mut: tmpOps
-  JumpDistance ArenaAllocator : mut: switchJumps
-           i64 ArenaAllocator : mut: labelPositions
-              SwitchData list : mut: switchData
-               WhileData list : mut: whileData
-                  IfData list : mut: ifData
-               AndOrData list : mut: andOrData
-           TypedConstant list : mut: constantReferences
-           CompilerError list : mut: errors
-                         bool : mut: hasCheckIndex
-                         bool : mut: hasCheckEnum
-                         bool : mut: hasGetArgs
+            IdentifierContext : idContext
+             ProgramFile list : progFiles
+           ProcedureInfo list : procedures
+         ProcedureBundle list : procBundles
+                    Type list : autoTypes
+               Operation list : tmpOps
+  JumpDistance ArenaAllocator : switchJumps
+           i64 ArenaAllocator : labelPositions
+              SwitchData list : switchData
+               WhileData list : whileData
+                  IfData list : ifData
+               AndOrData list : andOrData
+           TypedConstant list : constantReferences
+           CompilerError list : errors
+                         bool : hasCheckIndex
+                         bool : hasCheckEnum
+                         bool : hasGetArgs
 ) =:: export: ProgramContext
 
 proc( -> ProgramContext ) =>: export: newProgramContext
