@@ -2464,6 +2464,10 @@ namespace: types
     end
   end
 
+  proc( Type : t0 TypeContext ptr : context -> bool ) =>: export: isInitializer
+    t0 context unwrapNamed .initializer ?? return
+  end
+
   proc( Type : src bool : mutable TypeContext ptr.mut : context -> Type ) =>: export: getAddressType
     src context isArray if
       src context unwrapNamed =:: unwraped

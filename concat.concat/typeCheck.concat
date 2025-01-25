@@ -571,7 +571,7 @@ proc(
   src .value .None ?? if
     true return
   end
-  src .opIndex 0 < if ## XXX? why is this reachable
+  src .opIndex 0 < if
     true return
   end
   state [] .compiledOps src .opIndex list.at .data =:: srcOp
@@ -2473,6 +2473,20 @@ proc(
       op .val .bitCast ?? if
         ConstValue .None
       else
+        ## tryCastConstant
+          value
+          op .dataType
+          op .pos
+          state
+        tryCastConstant ! if
+          state [] .compiledOps value .opIndex list.at .data =:: srcOp
+          state .stack
+            value
+              op .dataType >$ .valueType=
+              srcOp .val [] .Constant >$ .value= ## TODO avoid direct access to operation
+          branchTree.push ## update value
+          return ## can directly convert constant
+        end
         value .value
       end =:: newValue
       op .dataType newValue op state pushValue
