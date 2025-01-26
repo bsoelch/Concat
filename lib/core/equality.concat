@@ -1,4 +1,3 @@
-..compiler.version 146 < if ..compiler.return end
 import core/type
 namespace: std.default
   proc( type.enum : auto: E

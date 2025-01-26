@@ -768,7 +768,7 @@ namespace: interpreter
         a .Int b .Int == false return
       LocalValue case
         b .LocalValue ?? ! if false false return end
-        a .LocalValue b .LocalValue == false return
+        a .LocalValue ConstValue _ ptr cast b .LocalValue ConstValue _ ptr cast == false return
       Array8 case
         b .Array8 ?? ! if false false return end
         a .Array8 .data b .Array8 .data == and

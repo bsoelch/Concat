@@ -1,4 +1,3 @@
-..compiler.version 146 < if ..compiler.return end
 namespace: type
   typeSet: export: primitive ..types.isPrimitive  end
   typeSet: export: pointer ..types.isPointer  end
