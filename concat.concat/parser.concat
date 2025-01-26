@@ -1282,15 +1282,19 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       procId experimental idContext id.openProcScope
       state [] .currentProc =:: prevProc
       procId optional.wrap state .currentProc=
+      named and isNested if
+        "named procedures cannot be nested" sb.copyPtr
+        fileState [] .wordStart errors appendError
+        return
+      end
       isNested if
         procType idData@ id.asIdInfo fileState [] .wordStart opInitializeId
         state appendOp
         return
       end
       ## check for invalid procedure declaration
-      named and state [] .constantBlocks .length 0 > if
-        ## XXX? allow anonymous procs in initializers
-        "cannot declare procedure in type or initializer blocks" sb.copyPtr
+       named and state [] .constantBlocks .length 0 > if
+        "cannot declare named procedure in type or initializer blocks" sb.copyPtr
         fileState [] .wordStart errors appendError
         return
       else procType typeContext types.isProcedure ! _if
