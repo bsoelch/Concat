@@ -1,0 +1,15 @@
+proc( type : T -> bool ) =>: static: isPrimitive_default false end
+proc( type.primitive : T -> bool ) =>: static: isPrimitive_match true end
+overload: isPrimitive isPrimitive_match isPrimitive_default end
+
+proc( type : auto: T T : x -> bool ) =>: isPrimitiveValue_default false end
+proc( type.primitive : auto: T T : x -> bool ) =>: isPrimitiveValue_match true end
+overload: isPrimitiveValue isPrimitiveValue_match isPrimitiveValue_default end
+
+proc( -> ) =>: main
+  i32 isPrimitive "i32 is primitive" assert
+  char8 ptr isPrimitive ! "char8 ptr literal is not primitive" assert
+
+  0 isPrimitiveValue "0 is primitive" assert
+  "Hello" isPrimitiveValue ! "string literal is not primitive" assert
+end

@@ -923,8 +923,9 @@ proc( Type : composite TypeContext ptr : typeContext -> bool ) =>: hasStaticElem
       true return
     end
     composite i typeContext types.compositeGetElement
-        typeContext types.unwrapNamed
-        types.primitive.TYPE types.typeEquals if
+      typeContext types.unwrapNamed
+    =:: elt
+    elt types.primitive.TYPE types.typeEquals or elt typeContext types.isTypeSet if
       true return
     end
   end
@@ -1402,7 +1403,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         procName "end":s string.eq !
       do
         procName state [] .currentFile idContext id.findIdentifierByName if ..drop
-          "could not find procedure \"" sb.copyPtr
+          "could not find identifier \"" sb.copyPtr
             procName sb.appendStr
             '"' sb.appendC
           fileState [] .wordStart errors appendError
@@ -1475,7 +1476,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## declareIdentifier
         labelId
         types.primitive.TYPE
-        IdentifierType .TYPE ## TODO own identifier type for TYPE_SET
+        IdentifierType .TYPE
         -1
         typeSetId TypeSetId cast types.newTypeSet ConstValue .TypeId ## TODO! own constant type for TypeSet
         true
@@ -1491,23 +1492,38 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         procName "end":s string.eq !
       do
         procName state [] .currentFile idContext id.findIdentifierByName if ..drop
-          "could not find procedure \"" sb.copyPtr
+          "could not find identifier \"" sb.copyPtr
             procName sb.appendStr
             '"' sb.appendC
           fileState [] .wordStart errors appendError
           continue
         end =:: idData
         idData [] .idType .TYPE ?? if
-          idData [] .constValue .TypeId ?? if
+          idData [] .constValue .TypeId ?? ! if
+            "unexpected value for type: " sb.copyPtr
+              idData [] .constValue typeContext sb.appendConstant
+            fileState [] .wordStart errors appendError
+            continue
+          end
+          idData [] .constValue .TypeId typeContext types.isTypeSet if
+            idData [] .constValue .TypeId
+              typeContext types.typeSetId
+            =:: setId
+            ## changing list invalidates type-set entires
+            ##   -> ensure list is not reallocated while appending
             typeContext .typeSetEntries []
-              idData [] .constValue .TypeId TypeSetEntry .typeId list.append
+              setId
+                typeContext types.getTypeSetEntries .length
+              $1 .length + list.ensureCap
+              setId
+                typeContext types.getTypeSetEntries
+              list.appendSlice
             typeContext .typeSetEntries=
             continue
           end
-          ## TODO allow adding typeSet to typeSet ! do not edit list while active
-          "unexpected value for type: " sb.copyPtr
-            idData [] .constValue typeContext sb.appendConstant
-          fileState [] .wordStart errors appendError
+          typeContext .typeSetEntries []
+            idData [] .constValue .TypeId TypeSetEntry .typeId list.append
+          typeContext .typeSetEntries=
           continue
         else idData [] .idType .PROCEDURE ?? _if
           idData [] .constValue .Procedure ?? ! if

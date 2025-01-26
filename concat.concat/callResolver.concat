@@ -650,6 +650,9 @@ proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
   t typeContext types.isArray if
     20 return
   end
+  t typeContext types.isTypeSet if
+    types.primitive.TYPE typeContext computeTypeWeigth 1 - return
+  end
   32 return
 end
 proc(
@@ -855,6 +858,10 @@ proc(
             ParameterInfo new list.append
           current .paramInfo=
           paramIndex 1 - paramIndex@ =
+          ## include auto-args in signature weigth
+          current [] .signatureWeigth
+            paramType typeContext computeTypeWeigth +
+          current .signatureWeigth=
         else
           break
         end
@@ -974,9 +981,13 @@ proc(
             ## resizing int-literal counts as additional cast
             current [] .nCasts 1 + current .nCasts=
           end
-          fromType typeContext types.unwrapNamed
+          paramType typeContext types.isTypeSet and
+              fromType typeContext types.isTypeSet ! if
+            ## converting to type-set is no cast
+            ## XXX? remember number of conversions to type-set (more restricted is better)
+          else fromType typeContext types.unwrapNamed
               paramType typeContext types.unwrapNamed
-              types.typeEquals if
+              types.typeEquals _if
             ## same underlying type but different name
             current [] .nRenames 1 + current .nRenames=
           else

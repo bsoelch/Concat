@@ -505,10 +505,12 @@ namespace: interpreter
     context [] .labelBuffer .length labelOffset - =:: elementCount
     context [] .typeBuffer .length typeOffset - elementCount == "type count == label count" assert
     0:i64 while $ elementCount < do =:: i
-      context [] .typeBuffer typeOffset i + list.at .data [] =:: eltType
+      context [] .typeBuffer typeOffset i + list.at .data []
+        typeContext types.unwrapNamed
+      =:: eltType
       context [] .labelBuffer labelOffset i + list.at .data [] =:: eltLabel
       ## types are always static
-      eltType types.primitive.TYPE types.typeEquals if
+      eltType types.primitive.TYPE types.typeEquals or eltType typeContext types.isTypeSet if
         eltLabel id.FLAG_STATIC labelContext id.addLabelFlags
       end
     finally i 1 + end ..drop

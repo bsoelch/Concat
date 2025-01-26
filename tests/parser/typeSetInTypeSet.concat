@@ -1,0 +1,14 @@
+typeSet: unionLike
+  type.enum type.union
+end
+
+proc( unionLike : T -> bool ) =>: _match true end
+proc( type : T -> bool ) =>: _default false end
+overload: isUnionLike _match _default end
+
+proc( -> ) =>: main
+  i32 isUnionLike ! "i32 is not union like" assert
+  enum( A B C ) isUnionLike "enum is union like" assert
+  union( _ : A i32 : B ) isUnionLike "union is union like" assert
+  type.enum isUnionLike ! "type.enum is not union like" assert
+end

@@ -2771,7 +2771,8 @@ namespace: types
     src context types.isPointer and target context types.isPointer if
       src target false false context canCastPtr return
     end
-    src context types.isTypeSet and target types.primitive.TYPE typeEquals if
+    src context types.isTypeSet or src types.primitive.TYPE typeEquals end and
+       target types.primitive.TYPE typeEquals or target context types.isTypeSet if
       true return
     end
     false return
