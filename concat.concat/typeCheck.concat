@@ -1669,6 +1669,7 @@ proc(
 end
 proc(
   Operation : op0
+  i64 ptr.mut : skipOps
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckOp
   op0 =:: mut: op
@@ -2117,7 +2118,40 @@ proc(
           end
           op state appendOp ..drop
           return
-        PROCEDURE PROCEDURE_BUNDLE TYPE
+        PROCEDURE case
+          ## getIdentifier
+            idInfo .labelId
+            idContext
+          id.getIdentifier if ..drop
+            "could not find " sb.copyPtr
+              idInfo labelContext sb.appendIdInfo
+            op .pos errors appendError
+            return
+          end =:: idData
+          idData .constValue .Procedure ?? ! if
+            "could not find procedure id" sb.copyPtr
+            op .pos errors appendError
+            return
+          end
+          idData .constValue [] .Procedure =:: procId
+          program [] .procedures procId i64 cast list.at .data =:: procData
+          procData [] .procType .undefined ?? ! or
+              procData .implementation [] .code ?? ! or
+              procData .implementation .code [] .codeState .PARSING ?? ! if
+            "unexpected state for nested procedure" sb.copyPtr
+            op .pos errors appendError
+            return
+          end
+          ## TODO ensure of named arguments are accessible in procedure scope
+          op .pos state popType =:: procType
+          procType procData .procType=
+          ProcCodeState .PARSED procData .implementation .code .codeState=
+          procData .implementation .code [] .codeLength skipOps =
+          procId ConstValue .Procedure
+            procType false typeContext types.getAddressType
+          op .pos state pushConstant
+          return
+        PROCEDURE_BUNDLE TYPE
             LABEL ARGUMENT TMP_VAR case
           "unexpected initialization of identifier " sb.copyPtr
             idInfo labelContext sb.appendIdInfo
@@ -2126,12 +2160,21 @@ proc(
       end
       break
     implementProcedure case
+      op .dataType
+        $ .undefined ?? if ..drop
+          program [] .procedures
+            op .val .implementProcedure .procId i64 cast
+          list.at .data =:: procData
+          procData [] .procType
+          $ op@ .dataType=
+        end
+      =:: procType
       op state appendOp ..drop
-      op .dataType BlockInfo .Procedure state openBlock
+      procType BlockInfo .Procedure state openBlock
       true state .reachable=
-      op .dataType typeContext types.getProcIn if ..drop
+      procType typeContext types.getProcIn if ..drop
         "wrong type for procedure initialization: " sb.copyPtr
-          op .dataType typeContext sb.appendType
+          procType typeContext sb.appendType
           " expected procedure" sb.appendS
         op .pos errors appendError
         return
@@ -4204,11 +4247,14 @@ proc(
   else
     currentProc [] .procType state .currentProcType=
   end
+  0:i64 =:: mut: skipOps
   0:i64 while ..dup codeImpl [] .codeLength < do =:: i
+    0 skipOps@ =
     program [] .tmpOps
       i codeImpl [] .codeStart + list.get
+      skipOps@
     state typeCheckOp
-    i 1 +
+    i skipOps + 1 +
   end ..drop
   ## remember new code position
   implId -1 == if

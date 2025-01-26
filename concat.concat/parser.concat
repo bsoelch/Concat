@@ -1199,8 +1199,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "=>":s string.eq or $ "=>:":s string.eq _if =:: opName
       opName .length 3 == =:: named
-      ## pop type before reading name
-      fileState state popTypeConstant ..drop =:: mut: procType
+      state [] .currentProc optional.isEmpty ! =:: isNested
+      isNested if
+        Type .undefined
+      else
+        ## pop type before reading name
+        fileState state popTypeConstant ..drop
+      end =:: mut: procType
       ## TODO? ensure global stack is empty at start of procedure
       named if ## =>:
         fileState errors nextIdentifier fileState state readLabel
@@ -1248,7 +1253,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end =:: idData procName@ =
       idData .constValue =:: procConst
-      state [] .currentProc optional.isEmpty ! =:: isNested
       ## ensure procedure block is opened after declaring procedure,
       ##   but before early return due to error
       true experimental state openProcBlock
@@ -1276,13 +1280,16 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           .constValue=
       end =:: procId
       procId experimental idContext id.openProcScope
+      state [] .currentProc =:: prevProc
       procId optional.wrap state .currentProc=
-      ## check for invalid procedure declaration
       isNested if
-        "nested procedures are not supported" sb.copyPtr
-        fileState [] .wordStart errors appendError
+        procType idData@ id.asIdInfo fileState [] .wordStart opInitializeId
+        state appendOp
         return
-      else state [] .constantBlocks .length 0 > _if
+      end
+      ## check for invalid procedure declaration
+      named and state [] .constantBlocks .length 0 > if
+        ## XXX? allow anonymous procs in initializers
         "cannot declare procedure in type or initializer blocks" sb.copyPtr
         fileState [] .wordStart errors appendError
         return
@@ -1606,8 +1613,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             return
           end
           state [] .currentProc .data =:: mut: currentProcId
-          ## TODO? support nested procs
-          ProcId optional.empty state .currentProc=
+          idContext id.currentScopeProc ..drop =:: newProcId
+          newProcId -1:ProcId == if ## XXX avoid magic number
+            ProcId optional.empty state .currentProc=
+          else
+            newProcId optional.wrap state .currentProc=
+          end
           skipBlock ! if
             progContext [] .procedures
               currentProcId i64 cast list.at .data
@@ -1615,11 +1626,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             progContext [] .tmpOps .length
               currentProc [] .implementation .code .codeStart -
             currentProc .implementation .code .codeLength=
-            ProcCodeState .PARSED currentProc .implementation .code .codeState=
             currentProc [] .labelId labelContext id.labelFlags id.FLAG_LAMBDA & ? if
               currentProcId ConstValue .Procedure
                 currentProc [] .procType false typeContext types.getAddressType
               fileState [] .wordStart opConst state appendOp
+            end
+            currentProc [] .procType .undefined ?? ! if
+              ProcCodeState .PARSED currentProc .implementation .code .codeState=
             end
           end
         else closedType .AND ?? or closedType .OR ?? _if
