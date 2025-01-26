@@ -1,0 +1,20 @@
+..compiler.version 146 < if ..compiler.return end
+namespace: type
+  typeSet: export: primitive ..types.isPrimitive  end
+  typeSet: export: pointer ..types.isPointer  end
+  typeSet: export: array ..types.isArray  end
+  typeSet: export: enum  ..types.isEnum  end
+  typeSet: export: union ..types.isUnion end
+
+  typeSet: export: integer i8 i16 i32 i64 end
+  typeSet: export: float f32 f64 end
+  typeSet: export: number integer float end
+  typeSet: export: intLike integer char8 char16 char32 end
+
+  proc( type : T -> bool ) =>: export: static: isNamedPrimitive
+    T ..types.unwrapNamed ..types.isPrimitive
+  end
+  typeSet: export: namedPrimitive
+    isNamedPrimitive
+  end
+end

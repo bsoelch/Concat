@@ -227,14 +227,30 @@ namespace: interpreter
       EQ_I8  EQ_C8  case args k i8.eq@ cmpOperatorInt return
       EQ_I16 EQ_C16 case args k i16.eq@ cmpOperatorInt return
       EQ_I32 EQ_C32 case args k i32.eq@ cmpOperatorInt return
-      EQ_I64 case args k i64.eq@ cmpOperatorInt return
+      EQ_I64 case
+        args k i64.eq@ cmpOperatorInt
+          $ .argumentError ?? if ..drop.2
+            args 0 [] args 1 [] typeContext pointerEq if ..drop
+              ConstValue .None OperatorResult .argumentError return
+            end
+            ConstValue .Bool OperatorResult .success return
+          end
+        return
       EQ_F32 case args k f32.eq@ cmpOperatorFloat return
       EQ_F64 case args k f64.eq@ cmpOperatorFloat return
       NE_BOOL case args k bool.ne@ binaryOperatorBool return
       NE_I8  NE_C8  case args k i8.ne@ cmpOperatorInt return
       NE_I16 NE_C16 case args k i16.ne@ cmpOperatorInt return
       NE_I32 NE_C32 case args k i32.ne@ cmpOperatorInt return
-      NE_I64 case args k i64.ne@ cmpOperatorInt return
+      NE_I64 case
+        args k i64.ne@ cmpOperatorInt
+          $ .argumentError ?? if ..drop.2
+            args 0 [] args 1 [] typeContext pointerEq if ..drop
+              ConstValue .None OperatorResult .argumentError return
+            end
+            ! ConstValue .Bool OperatorResult .success return
+          end
+        return
       NE_F32 case args k f32.ne@ cmpOperatorFloat return
       NE_F64 case args k f64.ne@ cmpOperatorFloat return
       LT_I8 case args k i8.lt@ cmpOperatorInt return
@@ -743,6 +759,73 @@ namespace: interpreter
   proc(
     ConstValue : a
     ConstValue : b
+    TypeContext ptr : typeContext
+  -> bool bool ) =>: export: pointerEq
+    ConstValue ..length 23 == "no new constants" assert
+    a switch
+      Int case
+        b .Int ?? ! if false false return end
+        a .Int b .Int == false return
+      LocalValue case
+        b .LocalValue ?? ! if false false return end
+        a .LocalValue b .LocalValue == false return
+      Array8 case
+        b .Array8 ?? ! if false false return end
+        a .Array8 .data b .Array8 .data == and
+          a .Array8 .length b .Array8 .length ==
+        end false return
+      Array16 case
+        b .Array16 ?? ! if false false return end
+        a .Array16 .data b .Array16 .data == and
+          a .Array16 .length b .Array16 .length ==
+        end false return
+      Array32 case
+        b .Array32 ?? ! if false false return end
+        a .Array32 .data b .Array32 .data == and
+          a .Array32 .length b .Array32 .length ==
+        end false return
+      Array64 case
+        b .Array64 ?? ! if false false return end
+        a .Array64 .data b .Array64 .data == and
+          a .Array64 .length b .Array64 .length ==
+        end false return
+      Array case
+        b .Array ?? ! if false false return end
+        a .Array .data b .Array .data == and
+          a .Array .length b .Array .length ==
+        end false return
+      LocalArray case
+        b .LocalArray ?? ! if false false return end
+        a .LocalArray .data b .LocalArray .data == and
+          a .LocalArray .length b .LocalArray .length ==
+        end false return
+      LocalArray8 case
+        b .LocalArray8 ?? ! if false false return end
+        a .LocalArray8 .data b .LocalArray8 .data == and
+          a .LocalArray8 .length b .LocalArray8 .length ==
+        end false return
+      LocalArray16 case
+        b .LocalArray16 ?? ! if false false return end
+        a .LocalArray16 .data b .LocalArray16 .data == and
+          a .LocalArray16 .length b .LocalArray16 .length ==
+        end false return
+      LocalArray32 case
+        b .LocalArray32 ?? ! if false false return end
+        a .LocalArray32 .data b .LocalArray32 .data == and
+          a .LocalArray32 .length b .LocalArray32 .length ==
+        end false return
+      LocalArray64 case
+        b .LocalArray64 ?? ! if false false return end
+        a .LocalArray64 .data b .LocalArray64 .data == and
+          a .LocalArray64 .length b .LocalArray64 .length ==
+        end false return
+      default ## unexpected type for pointer
+        false true return
+    end
+  end
+  proc(
+    ConstValue : a
+    ConstValue : b
     Type : valType0
     TypeContext ptr : typeContext
   -> bool  bool ) =>: export: operatorEq
@@ -788,67 +871,7 @@ namespace: interpreter
         a .EnumLabel b .EnumLabel == false return
       end
     else valType typeContext types.isPointer _if
-      ConstValue ..length 23 == "no new constants" assert
-      a switch
-        Int case
-          b .Int ?? ! if false false return end
-          a .Int b .Int == false return
-        LocalValue case
-          b .LocalValue ?? ! if false false return end
-          a .LocalValue b .LocalValue == false return
-        Array8 case
-          b .Array8 ?? ! if false false return end
-          a .Array8 .data b .Array8 .data == and
-            a .Array8 .length b .Array8 .length ==
-          end false return
-        Array16 case
-          b .Array16 ?? ! if false false return end
-          a .Array16 .data b .Array16 .data == and
-            a .Array16 .length b .Array16 .length ==
-          end false return
-        Array32 case
-          b .Array32 ?? ! if false false return end
-          a .Array32 .data b .Array32 .data == and
-            a .Array32 .length b .Array32 .length ==
-          end false return
-        Array64 case
-          b .Array64 ?? ! if false false return end
-          a .Array64 .data b .Array64 .data == and
-            a .Array64 .length b .Array64 .length ==
-          end false return
-        Array case
-          b .Array ?? ! if false false return end
-          a .Array .data b .Array .data == and
-            a .Array .length b .Array .length ==
-          end false return
-        LocalArray case
-          b .LocalArray ?? ! if false false return end
-          a .LocalArray .data b .LocalArray .data == and
-            a .LocalArray .length b .LocalArray .length ==
-          end false return
-        LocalArray8 case
-          b .LocalArray8 ?? ! if false false return end
-          a .LocalArray8 .data b .LocalArray8 .data == and
-            a .LocalArray8 .length b .LocalArray8 .length ==
-          end false return
-        LocalArray16 case
-          b .LocalArray16 ?? ! if false false return end
-          a .LocalArray16 .data b .LocalArray16 .data == and
-            a .LocalArray16 .length b .LocalArray16 .length ==
-          end false return
-        LocalArray32 case
-          b .LocalArray32 ?? ! if false false return end
-          a .LocalArray32 .data b .LocalArray32 .data == and
-            a .LocalArray32 .length b .LocalArray32 .length ==
-          end false return
-        LocalArray64 case
-          b .LocalArray64 ?? ! if false false return end
-          a .LocalArray64 .data b .LocalArray64 .data == and
-            a .LocalArray64 .length b .LocalArray64 .length ==
-          end false return
-        default ## unexpected type for pointer
-          true false return
-      end
+      a b typeContext pointerEq return
     end
     false true return
   end

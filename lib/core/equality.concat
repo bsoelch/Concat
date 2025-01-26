@@ -1,0 +1,36 @@
+..compiler.version 146 < if ..compiler.return end
+import core/type
+namespace: std.default
+  proc( type.enum : auto: E
+    E : a
+    E : b
+  -> bool ) =>: eqEnum
+    a ..label b ..label ==
+  end
+  proc( type.enum : auto: E
+    E : a
+    E : b
+  -> bool ) =>: neEnum
+    a ..label b ..label !=
+  end
+  proc( type.namedPrimitive : auto: P
+    P : a
+    P : b
+  -> bool ) =>: eqNamedPrimitive
+    a P ..types.unwrapNamed cast b P ..types.unwrapNamed cast ==
+  end
+  proc( type.namedPrimitive : auto: P
+    P : a
+    P : b
+  -> bool ) =>: neNamedPrimitive
+    a P ..types.unwrapNamed cast b P ..types.unwrapNamed cast !=
+  end
+  ## XXX? equality for c-types
+end
+overload: export: ==
+  std.default.eqEnum std.default.eqNamedPrimitive
+end
+overload: export: !=
+  std.default.neEnum std.default.neNamedPrimitive
+end
+

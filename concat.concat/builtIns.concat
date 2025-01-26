@@ -756,11 +756,11 @@ proc(
   types.primitive.CHAR16 "char16":s pos context newBuiltInType
   types.primitive.CHAR32 "char32":s pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
-  2  Type .align "..types.align2":s  pos context newBuiltInType
-  4  Type .align "..types.align4":s  pos context newBuiltInType
-  8  Type .align "..types.align8":s  pos context newBuiltInType
-  16 Type .align "..types.align16":s pos context newBuiltInType
-  32 Type .align "..types.align32":s pos context newBuiltInType
+  2  Type .align "..type.align2":s  pos context newBuiltInType
+  4  Type .align "..type.align4":s  pos context newBuiltInType
+  8  Type .align "..type.align8":s  pos context newBuiltInType
+  16 Type .align "..type.align16":s pos context newBuiltInType
+  32 Type .align "..type.align32":s pos context newBuiltInType
   types.ctype.VOID    "..ctype.void":s   pos context newBuiltInType
   types.ctype.BOOL    "..ctype.bool":s   pos context newBuiltInType
   types.ctype.CHAR    "..ctype.char":s   pos context newBuiltInType

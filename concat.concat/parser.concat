@@ -2106,12 +2106,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart
       opCast state appendOp
       return
-    else ..dup "==":s string.eq _if ..drop
-      fileState [] .wordStart opEqual state appendOp
-      return
-    else ..dup "!=":s string.eq _if ..drop
-      fileState [] .wordStart opNotEqual state appendOp
-      return
     else ..dup "===":s string.eq _if ..drop
       fileState [] .wordStart opEqual state appendOp
       return

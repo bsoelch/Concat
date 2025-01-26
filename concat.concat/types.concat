@@ -1154,7 +1154,10 @@ namespace: types
     end
     ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
     base context isProcedure if
-      arrayType .POINTER ?? ! or sizes .length 0 > if
+      ## allow rawPointers and pointer of length 1 for generic matching
+      arrayType .ARRAY ?? or sizes .length 0 > and
+          sizes .length 1 > or sizes 0 slice.get =:: size
+          size .int ?? ! or size .int 1 != if
         Type .undefined true return
       end
       base
@@ -2767,6 +2770,9 @@ namespace: types
     end
     src context types.isPointer and target context types.isPointer if
       src target false false context canCastPtr return
+    end
+    src context types.isTypeSet and target types.primitive.TYPE typeEquals if
+      true return
     end
     false return
   end
