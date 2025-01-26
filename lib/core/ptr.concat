@@ -1,4 +1,5 @@
 import core/i64
+import core/type
 namespace: ptr
   proc( type : auto: T T _ ptr : p -> T ) =>: export: get
     p ..builtIn.get.ptr
@@ -110,10 +111,10 @@ namespace: ptr
   proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: le
     p i64 cast! q i64 cast! i64.ule
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: eq
+  proc( type.pointer : auto: P  P : p P : q -> bool ) =>: export: eq
     p i64 cast! q i64 cast! i64.eq
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: ne
+  proc( type.pointer : auto: P  P : p P : q -> bool ) =>: export: ne
     p i64 cast! q i64 cast! i64.ne
   end
   proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: ge
