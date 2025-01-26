@@ -151,8 +151,8 @@
           \.\.builtIn\.set\.ptr |
           \.\.builtIn\.offset\.ptr(\.mut)?\.(i32|i64) |
           \.\.types\.(alignment|size|stride|is(Primitive|Pointer|RawPointer|Array|Struct|
-            TypeSet|Union|Enum|Proc|Named|Ctype|Align|Mutable|Defined)|canAssign|canCast|
-            arrayElement|getElement|unwrapNamed) |
+            TypeSet|TaggedUnion|RawUnion|Enum|Proc|Named|Ctype|Align|Mutable|Defined)|
+            canAssign|canCast|arrayElement|getElement|unwrapNamed) |
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>

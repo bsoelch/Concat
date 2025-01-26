@@ -444,10 +444,18 @@ namespace: interpreter
         args 0 [] .TypeId typeContext types.isTypeSet
           ConstValue .Bool
         OperatorResult .success return
-     TYPE_IS_UNION case
+     TYPE_IS_TAGGED_UNION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isUnion
+          args 0 [] .TypeId typeContext types.isTaggedUnion &
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_RAW_UNION case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isUnion
+          args 0 [] .TypeId typeContext types.isTaggedUnion ! &
           ConstValue .Bool
         OperatorResult .success return
      TYPE_IS_ENUM case

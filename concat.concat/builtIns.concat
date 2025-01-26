@@ -43,9 +43,9 @@ enum(
  ## XXX? more built-in operations
  PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
  TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
- TYPE_IS_TYPESET TYPE_IS_UNION TYPE_IS_ENUM TYPE_IS_PROC TYPE_IS_NAMED TYPE_IS_CTYPE
- TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED TYPE_CAN_ASSIGN TYPE_CAN_CAST
- TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED
+ TYPE_IS_TYPESET TYPE_IS_TAGGED_UNION TYPE_IS_RAW_UNION TYPE_IS_ENUM TYPE_IS_PROC
+ TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED
+ TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED
 ) =:: export: BuiltIn
 
 proc(
@@ -1497,8 +1497,12 @@ proc(
     "..types.isTypeSet":s pos labelContext createLabel
     t_b
   pos context addStaticBuiltIn
-  BuiltIn .TYPE_IS_UNION
-    "..types.isUnion":s pos labelContext createLabel
+  BuiltIn .TYPE_IS_TAGGED_UNION
+    "..types.isTaggedUnion":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_RAW_UNION
+    "..types.isRawUnion":s pos labelContext createLabel
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_ENUM
@@ -1620,7 +1624,7 @@ end
   "..builtIn.parse.i8":s "..builtIn.parse.i16":s "..builtIn.parse.i32":s "..builtIn.parse.i64":s
     "..builtIn.parse.f32":s "..builtIn.parse.f64":s
   "..types.isPrimitive":s "..types.isPointer":s "..types.isRawPointer":s "..types.isArray":s
-    "..types.isStruct":s "..types.isTypeSet":s "..types.isUnion":s "..types.isEnum":s
+    "..types.isStruct":s "..types.isTypeSet":s "..types.isTaggedUnion":s "..types.isRawUnion":s "..types.isEnum":s
     "..types.isProc":s "..types.isNamed":s "..types.isCtype":s "..types.isAlign":s
     "..types.isMutable":s "..types.isDefined":s "..types.canAssign":s "..types.canCast":s
     "..types.arrayElement":s "..types.getElement":s "..types.unwrapNamed":s
