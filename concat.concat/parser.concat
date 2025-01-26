@@ -1213,8 +1213,17 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState [] .wordStart errors appendError
         end
       else
-        ## TODO generate name
-        id.LABEL_ID_NONE
+        char8 64 array : buffer
+          buffer@ sb.wrapBuffer
+            "lambda@" sb.appendS
+            fileState [] .wordStart .line sb.appendI
+            ":" sb.appendS
+            fileState [] .wordStart .posInLine sb.appendI
+          sb.asStr
+          id.FLAG_LAMBDA
+          fileState [] .wordStart
+          state [] .currentFile
+        labelContext id.newLabel
       end =:: mut: procName
       procName labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       ## declare procedure name outside procedure scope
@@ -1235,6 +1244,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         idContext
         progContext .errors
       id.declareIdentifier if ..drop.2
+        true experimental state openProcBlock
         return
       end =:: idData procName@ =
       idData .constValue =:: procConst
@@ -1311,8 +1321,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           end ..drop.2
         end
       end
-      ## TODO generate operation to push proc-ptr if unnamed
-      ## ? allow unnamed procedures in overload: ... end block?
       idData .valueType idData@ id.asIdInfo fileState [] .wordStart opInitializeId
       state appendOp
       return
@@ -1342,6 +1350,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .NAMESPACE state openBlock
       return
     else ..dup "overload:":s string.eq _if =:: opName
+      ## TODO? allow unnamed procedures in overload: ... end block?
       skipBlock if ## skip to end of overload
         while fileState errors nextIdentifier =:: procName
           procName "end":s string.eq !
@@ -1597,6 +1606,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             return
           end
           state [] .currentProc .data =:: mut: currentProcId
+          ## TODO? support nested procs
           ProcId optional.empty state .currentProc=
           skipBlock ! if
             progContext [] .procedures
@@ -1606,6 +1616,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               currentProc [] .implementation .code .codeStart -
             currentProc .implementation .code .codeLength=
             ProcCodeState .PARSED currentProc .implementation .code .codeState=
+            currentProc [] .labelId labelContext id.labelFlags id.FLAG_LAMBDA & ? if
+              currentProcId ConstValue .Procedure
+                currentProc [] .procType false typeContext types.getAddressType
+              fileState [] .wordStart opConst state appendOp
+            end
           end
         else closedType .AND ?? or closedType .OR ?? _if
           state [] .andOrPositions list.clear state .andOrPositions=

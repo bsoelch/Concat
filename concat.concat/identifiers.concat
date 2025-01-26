@@ -570,7 +570,7 @@ namespace: id
     label labelContext id.getLabelName =:: name
     ## don't check names of built-in identifiers
     name
-      flags FLAG_BUILT_IN & ? if
+      flags FLAG_BUILT_IN & ? or flags FLAG_LAMBDA & ? if
         NameContext .BUILT_IN
       else
         idType idTypeAsNameContext

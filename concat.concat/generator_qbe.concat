@@ -1121,9 +1121,17 @@ namespace: sb
             appendConstQBE
           end
           return
+        Procedure case
+          ## appendGlobalName
+            prog [] .procedures
+              value .Procedure i64 cast
+            list.at .data [] .labelId
+            -1
+          context appendGlobalName
+          return
         None WildCard TypeId LocalValue LocalArray
             LocalArray8 LocalArray16 LocalArray32 LocalArray64
-            Procedure ProcedureBundle case
+            ProcedureBundle case
         break
       end
       isGlobal if

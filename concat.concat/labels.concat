@@ -36,6 +36,7 @@ namespace: id
   0x0800:LabelFlag =:: export: FLAG_SHADOW
   0x1000:LabelFlag =:: export: FLAG_ALIAS
   0x2000:LabelFlag =:: export: FLAG_MERGE
+  0x4000:LabelFlag =:: export: FLAG_LAMBDA
 
   0x40000000:LabelFlag =:: export: FLAG_EXPERIMENTAL
 
