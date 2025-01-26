@@ -42,6 +42,10 @@ enum(
  GET_PTR GET_PTR_MUT SET_PTR OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64
  ## XXX? more built-in operations
  PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
+ TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
+ TYPE_IS_TYPESET TYPE_IS_UNION TYPE_IS_ENUM TYPE_IS_PROC TYPE_IS_NAMED TYPE_IS_CTYPE
+ TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED TYPE_CAN_ASSIGN TYPE_CAN_CAST
+ TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED
 ) =:: export: BuiltIn
 
 proc(
@@ -616,6 +620,77 @@ proc(
   =:: offsetMut64Proc
   offsetMut64Proc offsetMut32Proc offset64Proc offset32Proc setProc getMutProc getProc
 end
+proc(
+  ProgramContext ptr.mut : context
+-> Type Type Type Type ) =>: typeProcTypes ## ti32_t tt_bool t_t t_bool
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  LabelId slice optional.empty =:: argLabels
+  Type 2 array new =:: mut: args
+  types.primitive.TYPE args@ 0 []=
+  types.primitive.TYPE args@ 1 []=
+  ## newProcArgs
+    types.primitive.TYPE@ 1 slice.create
+    argLabels
+    false
+    typeContext
+  types.newProcArgs =:: mut: typeIn
+  ## newProcArgs
+    types.primitive.TYPE@ 1 slice.create
+    argLabels
+    true
+    typeContext
+  types.newProcArgs =:: mut: typeOut
+  ## newProcArgs
+    types.primitive.BOOL@ 1 slice.create
+    argLabels
+    true
+    typeContext
+  types.newProcArgs =:: mut: boolOut
+  ## newProcArgs
+    args@ 2 slice.create
+    argLabels
+    false
+    typeContext
+  types.newProcArgs =:: mut: type2In
+  types.primitive.I32 args@ 1 []=
+  ## newProcArgs
+    args@ 2 slice.create
+    argLabels
+    false
+    typeContext
+  types.newProcArgs =:: mut: typeIntIn
+  ## newProcedure
+    typeIn
+    boolOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! "can create procedure" assert
+  =:: t_b
+  ## newProcedure
+    typeIn
+    typeOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! "can create procedure" assert
+  =:: t_t
+  ## newProcedure
+    type2In
+    boolOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! "can create procedure" assert
+  =:: tt_b
+  ## newProcedure
+    typeIntIn
+    boolOut
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure
+    ! "can create procedure" assert
+  =:: ti32_b
+  ti32_b tt_b t_t t_b return
+end
 
 proc(
   Type : t
@@ -681,11 +756,11 @@ proc(
   types.primitive.CHAR16 "char16":s pos context newBuiltInType
   types.primitive.CHAR32 "char32":s pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
-  2  Type .align "..type.align2":s  pos context newBuiltInType
-  4  Type .align "..type.align4":s  pos context newBuiltInType
-  8  Type .align "..type.align8":s  pos context newBuiltInType
-  16 Type .align "..type.align16":s pos context newBuiltInType
-  32 Type .align "..type.align32":s pos context newBuiltInType
+  2  Type .align "..types.align2":s  pos context newBuiltInType
+  4  Type .align "..types.align4":s  pos context newBuiltInType
+  8  Type .align "..types.align8":s  pos context newBuiltInType
+  16 Type .align "..types.align16":s pos context newBuiltInType
+  32 Type .align "..types.align32":s pos context newBuiltInType
   types.ctype.VOID    "..ctype.void":s   pos context newBuiltInType
   types.ctype.BOOL    "..ctype.bool":s   pos context newBuiltInType
   types.ctype.CHAR    "..ctype.char":s   pos context newBuiltInType
@@ -1397,6 +1472,89 @@ proc(
     "..builtIn.parse.f64":s pos labelContext createLabel
     s_f64
   pos context addStaticBuiltIn
+  context typeProcTypes =:: t_b =:: t_t =:: tt_b =:: ti32_t
+  BuiltIn .TYPE_IS_PRIMITIVE
+    "..types.isPrimitive":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_POINTER
+    "..types.isPointer":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_RAW_POINTER
+    "..types.isRawPointer":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_ARRAY
+    "..types.isArray":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_STRUCT
+    "..types.isStruct":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_TYPESET
+    "..types.isTypeSet":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_UNION
+    "..types.isUnion":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_ENUM
+    "..types.isEnum":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_PROC
+    "..types.isProc":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_NAMED
+    "..types.isNamed":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_CTYPE
+    "..types.isCtype":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_ALIGN
+    "..types.isAlign":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_MUTABLE
+    "..types.isMutable":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_DEFINED
+    "..types.isDefined":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_ARRAY_ELEMENT
+    "..types.arrayElement":s pos labelContext createLabel
+    t_t
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_UNWRAP_NAMED
+    "..types.unwrapNamed":s pos labelContext createLabel
+    t_t
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_GET_ELEMENT
+    "..types.getElement":s pos labelContext createLabel
+    ti32_t
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_CAN_ASSIGN
+    "..types.canAssign":s pos labelContext createLabel
+    tt_b
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_CAN_CAST
+    "..types.canCast":s pos labelContext createLabel
+    tt_b
+  pos context addStaticBuiltIn
+  #+ TODO more type info procs
+    size alignemnt stride
+    elementCount ctypeAsType
+    getElementName getName
+    new...
+  +#
   ## declare bundles for for-loop iterators
   "..itr.prepare":s pos context newBuiltInBundle
   "..itr.check":s pos context newBuiltInBundle
@@ -1461,6 +1619,11 @@ end
     "..builtIn.offset.ptr.mut.i32":s "..builtIn.offset.ptr.mut.i64":s
   "..builtIn.parse.i8":s "..builtIn.parse.i16":s "..builtIn.parse.i32":s "..builtIn.parse.i64":s
     "..builtIn.parse.f32":s "..builtIn.parse.f64":s
+  "..types.isPrimitive":s "..types.isPointer":s "..types.isRawPointer":s "..types.isArray":s
+    "..types.isStruct":s "..types.isTypeSet":s "..types.isUnion":s "..types.isEnum":s
+    "..types.isProc":s "..types.isNamed":s "..types.isCtype":s "..types.isAlign":s
+    "..types.isMutable":s "..types.isDefined":s "..types.canAssign":s "..types.canCast":s
+    "..types.arrayElement":s "..types.getElement":s "..types.unwrapNamed":s
 } =:: builtInNames
 BuiltIn ..length builtInNames ..length == "correct number of names" assert
 namespace: sb

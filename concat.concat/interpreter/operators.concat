@@ -391,6 +391,124 @@ namespace: interpreter
             break
         end
         parsed ConstValue .Float OperatorResult .success return
+     TYPE_IS_PRIMITIVE case ##XXX? wrapper proc for Type -> bool
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        ## named primitives are not counted as primitive
+        args 0 [] .TypeId types.isPrimitive
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_POINTER case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isPointer
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_RAW_POINTER case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isRawPointer
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_ARRAY case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isArray
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_STRUCT case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isTuple
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_TYPESET case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isTypeSet
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_UNION case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isUnion
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_ENUM case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isEnum
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_PROC case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isProcedure
+          ConstValue .Bool
+        OperatorResult .success return
+    TYPE_IS_NAMED case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId types.isNamedType
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_CTYPE case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.unwrapNamed .cType ??
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_ALIGN case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.unwrapNamed .align ??
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_MUTABLE case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isMutable
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_IS_DEFINED case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.unwrapNamed
+          .undefined ?? ! ConstValue .Bool
+        OperatorResult .success return
+     TYPE_CAN_ASSIGN case
+        k 2 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument1 is type" assert
+        args 1 [] .TypeId ?? "argument2 is type" assert
+        args 0 [] .TypeId args 1 [] .TypeId typeContext types.canAutoCast
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_CAN_CAST case
+        k 2 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument1 is type" assert
+        args 1 [] .TypeId ?? "argument2 is type" assert
+        args 0 [] .TypeId args 1 [] .TypeId false typeContext types.canCast
+          ConstValue .Bool
+        OperatorResult .success return
+     TYPE_ARRAY_ELEMENT case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.getElementType
+          ConstValue .TypeId
+        OperatorResult .success return
+      TYPE_UNWRAP_NAMED case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.unwrapNamed
+          ConstValue .TypeId
+        OperatorResult .success return
+      TYPE_GET_ELEMENT case
+        k 2 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 1 [] .Int ?? "argument is int" assert
+        args 0 [] .TypeId args 1 [] .Int typeContext types.compositeGetElement
+          ConstValue .TypeId
+        OperatorResult .success return
     end
     ConstValue .None  OperatorResult .unimplemented return
   end

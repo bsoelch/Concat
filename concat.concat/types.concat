@@ -1512,7 +1512,7 @@ namespace: types
   end
   proc( Type : composite i64 : index TypeContext ptr : context -> Type ) =>: export: compositeGetElement
     composite context compositeData =:: compData?
-    compData? optional.isEmpty if
+    index 0 < or compData? optional.isEmpty or index compData? .data [] .eltCount >= if
       Type .undefined return
     end
     compData? .data =:: compData
