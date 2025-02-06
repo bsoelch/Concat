@@ -1,0 +1,5 @@
+proc( -> ) =>: main
+  ( i32 -> i32 ) => $ * end =:: square
+  ( i32 : x i32 : y -> i32 ) => x y + end =:: add
+  3 square () 4 square () add () 5 square () == "3²+4²=4²" assert  
+end
