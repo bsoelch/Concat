@@ -33,9 +33,10 @@ struct(
   i64 list : mut: andOrPositions
   i64 : mut: ifCastsOffset
   BlockId : blockId
-  bool : mut: hasIf ## XXX? do I need hasIf/hasElse
+  bool : mut: hasIf ## XXX? merge bool-vars into flags
   bool : mut: hasElse
   bool : mut: ifBranchTerminates
+  bool : mut: hasOrIf
 ) =:: IfBlockInfo
 struct(
   Type : switchType
@@ -88,6 +89,7 @@ proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos -> Blo
     16 i64 list.create
     -1
     blockId
+    false
     false
     false
     false
@@ -175,7 +177,7 @@ end
 
 ## XXX? merge all typed-value types
 struct( Type : valType ConstValue : value ) =:: TypedValue
-enum( PROC_CHILD LINEAR ) =:: TypeCheckMode
+enum( PROC_CHILD STATIC_PROC LINEAR ) =:: TypeCheckMode
 
 struct(
   i64 : openBlocksOffset
@@ -443,29 +445,30 @@ proc(
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
   state [] .program .errors =:: errors
-  InterpreterLoadMode .typeModifier state interpreterLoadContants if
-    "could not resolve arguments of type Modifier " sb.copyPtr
-      op [] .val .typeModifier sb.appendTypeModifier
-    op [] .pos errors appendError
-    return
-  end
-  state .interpreter [] .evalType
-    InterpreterType .INTERPRET state .interpreter .evalType=
+  state .interpreter interpreter.offsetContext
+    InterpreterLoadMode .typeModifier state interpreterLoadContants if
+      "could not resolve arguments of type Modifier " sb.copyPtr
+        op [] .val .typeModifier sb.appendTypeModifier
+      op [] .pos errors appendError
+      state .interpreter interpreter.resetContext
+      return
+    end
+    interpreter.InterpreterType .INTERPRET state .interpreter .evalType=
     ## TODO? directly evaluate type-modifer without evaluating operation?
     op state .interpreter evaluateOperation .Ok ?? ! if
       "could not evaluate type modifier " sb.copyPtr
         op [] .val .typeModifier sb.appendTypeModifier
       op [] .pos errors appendError
     end
-  state .interpreter .evalType=
-  1 op [] .pos state interpreterStoreConstants
+    1 op [] .pos state interpreterStoreConstants
+  state .interpreter interpreter.resetContext
 end
 
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpretTypeBlock
+  state .interpreter interpreter.offsetContext
   InterpreterLoadMode .typeBlock state interpreterLoadContants ! "interpreterFindContant" assert
   state [] .compiledOps .length state .blockStart=
-  state .interpreter [] .evalType .INTERPRET ?? "interpret outside type-blocks" assert
-  InterpreterType .GLOBAL state .interpreter .evalType=
+  interpreter.InterpreterType .GLOBAL state .interpreter .evalType=
   op state .interpreter evaluateOperation .Ok ?? ! if
     "could not evaluate " sb.copyPtr
       op [] .val .block .blockType sb.appendBlockType
@@ -481,12 +484,14 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretT
     "unexpected operation in Type/Initializer block: " sb.copyPtr
       op [] state [] .program sb.appendOp
     op [] .pos state [] .program .errors appendError
+    false state .inTypeBlock=
+    state .interpreter interpreter.resetContext
     false return
   end
   op .val .blockEnd ?? and state .interpreter interpreter.inTypeOrInitializer ! if
     1 op [] .pos state interpreterStoreConstants
     false state .inTypeBlock=
-    InterpreterType .INTERPRET state .interpreter .evalType=
+    state .interpreter interpreter.resetContext
     true return ## consume block end
   end
   true return
@@ -980,6 +985,12 @@ proc(
   switchBlock .breakPositions=
   breakOp state appendOp ..drop
   false state .reachable=
+  state [] .openBlocks list.peek .data [] .Switch ?? if
+    switchBlock [] .inLabel ! if
+      state [] .program .idContext id.closeScope ! "closing case-scope worked" assert
+    end
+    true switchBlock .inLabel=
+  end
 end
 ## terminate current switch branch
 proc( FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: endSwitchBranch
@@ -989,7 +1000,6 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: endSwitchBranch
       currentBlock [] .Switch ?? and
       currentBlock? .data .Switch =:: switchBlock
       switchBlock [] .inLabel ! if
-    true switchBlock .inLabel=
     switchBlock pos state breakSwitch
   end
 end
@@ -1397,7 +1407,7 @@ proc(
     end
     ## XXX? check for redefinition of auto-type
     valType autoTypes [] id list.set
-    end
+  end
 end
 
 proc(
@@ -1553,19 +1563,32 @@ proc(
         op [] .val .Constant
         op [] .pos
       state newSwitchLabel
-    else op [] .val .getId ?? _if
-      ## getIdentifier
-        op [] .val .getId .labelId
-        idContext
-      id.getIdentifier if ..drop
-        "could not find " sb.copyPtr
-          op [] .val .getId labelContext sb.appendIdInfo
-        op [] .pos errors appendError
-        true return
+    else op [] .val .getId ?? or op [] .val .getName ?? _if
+      LabelId : label
+      op [] .val .getName ?? if
+        ## findIdentifierByLabel
+          op [] .val .getName
+          idContext
+        id.findIdentifierByLabel if ..drop
+          "could not find " sb.copyPtr
+            op [] .val .getName labelContext sb.appendLabelName
+          op [] .pos errors appendError
+          true return
+        end
+      else ## XXX? is this branch reachable
+        ## getIdentifier
+          op [] .val .getId .labelId
+          idContext
+        id.getIdentifier if ..drop
+          "could not find " sb.copyPtr
+            op [] .val .getId labelContext sb.appendIdInfo
+          op [] .pos errors appendError
+          true return
+        end
       end =:: idData
       idData [] .constValue .None ?? if
         "expected constant got " sb.copyPtr
-          op [] .val .getId labelContext sb.appendIdInfo
+          idData id.asIdInfo labelContext sb.appendIdInfo
         op [] .pos errors appendError
         true return
       end
@@ -1660,8 +1683,7 @@ proc(
   state [] .program =:: program
   state [] .program .idContext =:: idContext
   idContext .typeContext .labelContext =:: labelContext
-  label labelContext id.inLabelNamespace
-  label state [] .currentFile idContext id.findIdentifierByLabel if
+  label idContext id.findIdentifierByLabel if
     ..drop IdentifierInfo optional.empty return
   end =:: idData
   idData [] .valueType op .dataType=
@@ -1691,6 +1713,7 @@ proc(
   state inSwitchLabel and op@ state typeCheckSwitchLabel if
     return
   end
+  ## resolve names
   op .val .getName ?? if
     op .val .getName
       op@ state resolveIdentifer
@@ -1712,12 +1735,46 @@ proc(
       false ConstValue .Bool op@ .val .Constant=
     end
     types.primitive.BOOL op@ .dataType=
-  else op .val .getId ?? and ## convert static arguments to constants
+  else op .val .declareName ?? or op .val .initializeName ?? _if
+    op .val .initializeName ?? =:: isInit
+    isInit if
+      op@ op .val .initializeName .initType .AUTO ?? state resolveAutoType
+      op .val .initializeName .label
+    else
+      op .val .declareName
+    end
+      op .dataType $ .undefined ?? if ..drop
+        op .pos state popType
+        $ op@ .dataType=
+      end
+      IdentifierType .LOCAL_VAR
+      -1 ## index
+      ConstValue .None
+      isInit
+      op .pos
+      state [] .currentFile
+      idContext
+      errors
+    id.declareIdentifier if ..drop.2
+      ## error message is created by declareIdentifier
+      return
+    end =:: idData ..drop
+    op .dataType idData@ id.asIdInfo op .pos
+    isInit ! if
+      opDeclareId
+    else op .val .initializeName .initType .AUTO ?? _if
+      opAutoTypedInitializeId
+    else
+      opInitializeId
+    end op@ =
+  end
+  ## convert static arguments to constants
+  op .val .getId ?? and
       op .val .getId .labelId =:: label
       label labelContext id.labelFlags id.FLAG_STATIC & ? and
       ConstValue .None =:: mut: argValue
       state .argData label map.at =:: argData?
-      argData? optional.hasData _if
+      argData? optional.hasData if
     argData? .data [] .valType op@ .dataType=
     argData? .data [] .value op@ .val .Constant=
   end
@@ -1738,6 +1795,37 @@ proc(
           op .val .atName
         end labelContext sb.appendLabelPath
       op .pos errors appendError
+      return
+    initializeName declareName case ..unreachable
+    usingNamespace case
+      op .val .usingNamespace .src =:: namespaceLabel
+      op .val .usingNamespace .alias
+        $ id.LABEL_ID_NONE == if ..drop
+          string.empty
+        else
+          labelContext id.getLabelName
+        end
+      =:: aliasName
+      namespaceLabel aliasName idContext id.importNamespace if
+        "namespace \"" sb.copyPtr
+          namespaceLabel labelContext sb.appendLabelName
+        "\" does not exist in the current scope" sb.appendS op .pos errors appendWarning
+      end
+      return
+    usingIdentifier case
+      op .val .usingIdentifier .src =:: srcLabel
+      op .val .usingIdentifier .alias
+        $ id.LABEL_ID_NONE == if ..drop
+          string.empty
+        else
+          labelContext id.getLabelName
+        end
+      =:: aliasName
+      srcLabel labelContext id.getLabelName
+        aliasName
+        idContext
+        op .pos
+      errors id.importIdentifier ..drop
       return
     getId case
       op .val .getId =:: idInfo
@@ -1828,7 +1916,7 @@ proc(
             stackValues list.asSlice
             message@ optional.wrap
             op .pos
-            program
+            state .interpreter
           resolveCall =:: calledType =:: calledProc?
           calledProc? optional.isEmpty if
             message op .pos errors appendError
@@ -1849,7 +1937,9 @@ proc(
           calledType typeContext types.getProcIn ..drop =:: inTypes
           inTypes typeContext types.compositeEltCount =:: argCount
           stackConstants argCount calledProc .autoArgs .length - >= and
-              calledProcData [] .isStatic if ## interpret static procedures
+              calledProcData [] .isStatic and state [] .mode .STATIC_PROC ?? ! or
+              calledProcData .implementation [] .code ?? and
+              calledProcData .implementation .code .codeState .TYPE_CHECKING ?? ! if
             calledType calledProc true op .pos state interpretCall ! if
               return
             end
@@ -2142,9 +2232,9 @@ proc(
             op .pos errors appendError
             return
           end
-          ## TODO ensure of named arguments are accessible in procedure scope
           op .pos state popType =:: procType
           procType procData .procType=
+          idContext id.currentScope procData .scopeId= ## remember host scope
           ProcCodeState .PARSED procData .implementation .code .codeState=
           procData .implementation .code [] .codeLength skipOps =
           procId ConstValue .Procedure
@@ -2170,6 +2260,7 @@ proc(
         end
       =:: procType
       op state appendOp ..drop
+      ## procedure scope is handled by typeCheckProcedure
       procType BlockInfo .Procedure state openBlock
       true state .reachable=
       procType typeContext types.getProcIn if ..drop
@@ -2179,15 +2270,15 @@ proc(
         op .pos errors appendError
         return
       end =:: inType
-      inType typeContext types.compositeElts =:: args
+      inType typeContext types.compositeElts =:: argTypes
       ## push unnamed arguments
-      0:i64 while ..dup args .length < do =:: i
+      0:i64 while ..dup argTypes .length < do =:: i
         inType i typeContext types.compositeGetLabel =:: label
+        argTypes i types.compositeElts.get =:: argType
         label id.LABEL_ID_NONE == if ## push argument
-          args i types.compositeElts.get =:: arg
           state .stack
             ## TypeInfo
-              arg
+              argType
               ConstValue .None
               id.LABEL_ID_NONE
               op .pos
@@ -2196,6 +2287,22 @@ proc(
               OP_UNLINKED
             TypeInfo new
           branchTree.push
+        else
+          label
+            argType
+            IdentifierType .ARGUMENT
+            i i32 cast ## index
+            ConstValue .None
+            true
+            op .pos
+            state [] .currentFile
+            idContext
+            errors
+          id.declareIdentifier if
+            "could not declare identifier for argument " sb.copyPtr
+              label labelContext sb.appendLabelName
+            op .pos errors appendError
+          end ..drop.2
         end
         i 1 +
       end ..drop
@@ -2634,11 +2741,13 @@ proc(
             state .stack branchTree.startBranch =:: ifRoot
             ifRoot blockId op .pos newIfBlock =:: mut: ifBlock
             ifBlock state openBlock
+            idContext id.openScope
           end
           state peekBlock .data .If =:: ifBlock
           blockType .AND_IF ?? if
             ifBlock .andBranches
           else
+            true ifBlock .hasOrIf=
             ifBlock .orBranches
           end =:: branches
           branches []
@@ -2671,8 +2780,15 @@ proc(
             state [] .compiledOps .length program createIfData =:: blockId
             ifBranch blockId op .pos newIfBlock =:: mut: ifBlock
             ifBlock state openBlock
+            idContext id.openScope
           end
           state peekBlock .data .If =:: ifBlock
+          ifBlock [] .hasOrIf if
+            ## reset scope if or apprears before if
+            ## XXX? if only or-if merge or-if-scope with else-branch
+            idContext id.closeScope ! "closing or-if scope worked" assert
+            idContext id.openScope
+          end
           true ifBlock .hasIf=
           ifBlock [] .blockId op@ .val .block .blockId=
           program [] .ifData
@@ -2774,6 +2890,8 @@ proc(
             op .pos errors appendError
             return
           end
+          idContext id.closeScope ! "closing if-scope worked" assert
+          idContext id.openScope ## else branch has different scope
           false 0 op .pos state clearReferences
           currentBlock [] .If .blockId op@ .val .block .blockId=
           state [] .stack branchTree.depth =:: ifTypes
@@ -2916,6 +3034,7 @@ proc(
             currentOpIndex
             op .pos
           newSwitchBlock state openBlock
+          idContext id.openScope
           op state appendOp ..drop
           false state .reachable=
           return
@@ -2939,6 +3058,7 @@ proc(
             "missing break statement at end of switch branch" sb.copyPtr
             op .pos errors appendError
           end
+          idContext id.openScope
           false switchBlock .inLabel=
           program [] .switchData
             switchBlock [] .blockId i64 cast list.at .data
@@ -3025,7 +3145,6 @@ proc(
                 currentBlock [] .Switch .blockId
                 switchBlock [] .blockId == if
               ## top-level break statement
-              true switchBlock .inLabel=
               false switchBlock .allowBreak=
             end
             switchBlock op .pos state breakSwitch
@@ -3100,6 +3219,7 @@ proc(
             currentOpIndex
             op .pos
           newWhileBlock state openBlock
+          idContext id.openScope
           op state appendOp ..drop
           return
         AND_DO OR_DO case
@@ -3387,6 +3507,7 @@ proc(
               state [] .compiledOps .length
             op .pos newAndOrBlock =:: mut: andOrBlock
             andOrBlock state openBlock
+            idContext id.openScope
             blockId
           end =:: blockId
           ## requireTypes
@@ -3439,6 +3560,7 @@ proc(
             tmp@ state typeCheckReturn
           end
           op state appendOp ..drop
+          ## procedure scope is handled by typeCheckProcedure
           return
         ELSE case
           op .pos state closeBlock =:: closed
@@ -3516,6 +3638,7 @@ proc(
             list.at .data
           .val .block .jumpDistance=
           op state appendOp ..drop
+          idContext id.closeScope ! "closing else-scope worked" assert
           ## cleanup closed block
           closed .If .andBranches list.free ..drop
           closed .If .orBranches list.free ..drop
@@ -3671,6 +3794,7 @@ proc(
             currentOpIndex - JumpDistance cast
           tmp@ .val .blockEnd .jumpDistance=
           tmp state appendOp ..drop
+          idContext id.closeScope ! "closing while-scope worked" assert
           return
         SWITCH case ## end-switch should not be created by parser
           break
@@ -3818,6 +3942,7 @@ proc(
             list.at .data
           .val .block .jumpDistance=
           tmp state appendOp ..drop
+          idContext id.closeScope ! "closing switch-scope worked" assert
           return
         WHILE DO case ## end-while/end-do should not be created by parser
           break
@@ -3898,6 +4023,7 @@ proc(
               '\n' sb.appendC
             op .pos errors appendError
           end
+          idContext id.closeScope ! "closing andOr-scope worked" assert
           branchPoints list.free ..drop
           branches list.free ..drop
           return
@@ -3942,6 +4068,15 @@ proc(
       op .pos state endSwitchBranch
       return
     Error case
+      1 op .pos state checkStackSize if
+        return
+      end
+      state [] .mode .STATIC_PROC ?? if
+        ## don't evaluate errors when type-checking static procs
+        state .stack branchTree.pop ..drop
+        op state appendOp ..drop
+        return
+      end
       ## appendError
         op .pos state popString sb.fromStr
         ## TODO? append initialization stack for all error messages
@@ -4165,7 +4300,8 @@ proc(
 -> ) =>: typeCheckProcedure
   ## XXX? is there a way to reset local auto-types without copying the whole list
   state [] .program =:: program
-  program .idContext .typeContext =:: typeContext
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   program [] .procedures procId i64 cast list.at .data =:: currentProc
   currentProc [] .implementation .code ?? ! if
@@ -4210,8 +4346,8 @@ proc(
       i 1 +
     end ..drop
   end
-  currentProc [] .isStatic if
-    return
+  currentProc [] .isStatic and state [] .mode .PROC_CHILD ?? if
+    TypeCheckMode .STATIC_PROC state .mode=
   end
   program [] .autoTypes list.copy =:: prevAutoTypes
   ## compile procedures to local code of given file
@@ -4231,9 +4367,9 @@ proc(
   program [] .tmpOps
      codeImpl [] .codeStart list.at .data
   =:: procStart
-  procStart [] .val .implementProcedure ??
-      procStart [] .val .initializeId ?? |
-      "procedure starts with correct operation" assert
+  procStart [] .val .implementProcedure ?? or
+      procStart [] .val .initializeId ??
+  end "procedure starts with correct operation" assert
   ## ProcedureImpl
     implId
     procId
@@ -4247,6 +4383,10 @@ proc(
   else
     currentProc [] .procType state .currentProcType=
   end
+  currentProc [] .labelId labelContext id.inLabelNamespace
+  idContext id.currentScope =:: prevScope
+  currentProc [] .scopeId idContext id.setScope
+  idContext id.openScope
   0:i64 =:: mut: skipOps
   0:i64 while ..dup codeImpl [] .codeLength < do =:: i
     0 skipOps@ =
@@ -4261,6 +4401,7 @@ proc(
     procFile [] .localOps .length codeImpl .codeStart=
     state [] .compiledOps .length codeOffset - codeImpl .codeLength=
     ProcCodeState .TYPE_CHECKED codeImpl .codeState=
+    idContext id.currentScope currentProc .scopeId=
   else
     codeImpl [] .implementations
       implId list.at .data
@@ -4288,6 +4429,10 @@ proc(
   else
     state .stack branchTree.clear
   end
+  prevScope idContext id.setScope
+  state [] .mode .STATIC_PROC ?? if
+    TypeCheckMode .PROC_CHILD state .mode=
+  end
 end
 proc(
   ProcId : procId
@@ -4296,6 +4441,7 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckChildProcedures
   state rememberState
+  false state .inTypeBlock=
   state [] .program .idContext .typeContext .labelContext =:: labelContext
   labelContext id.currentNamespace =:: prevNamespace
   TypeCheckMode .PROC_CHILD state .mode=
@@ -4333,7 +4479,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     program
       TypeCheckState ptr.mut optional.empty
       -1:FileId
-      InterpreterType .INTERPRET
+      interpreter.InterpreterType .INTERPRET
     interpreter.wrapProgram
     labelHash@ labelEq@ 64 TypedValue map.create
     Type .undefined

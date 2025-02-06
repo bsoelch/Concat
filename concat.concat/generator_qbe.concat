@@ -5002,8 +5002,8 @@ proc(
       break
     compilerInfo case
       sb return ## XXX? print compiler info
-    autoTypedInitializeId typeInfo copy
-    getName atName getLabel Error Assert panic
+    autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier
+    getName atName getLabel Error Assert panic declareName initializeName
     setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
@@ -5049,7 +5049,10 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   id.LABEL_ID_NONE =:: mut: mainId
-  MAIN_NAME string.wrap 0:FileId idContext id.findIdentifierByName ! if =:: data
+  program [] .progFiles 0 list.at .data [] .fileScope =:: rootFileScope
+  rootFileScope idContext id.setScope
+  labelContext id.clearNamespace
+  MAIN_NAME idContext id.findIdentifierByName ! if =:: data
     data [] .labelId labelContext id.getLabelNamespace 0:NamespaceId ==
         "main is in global namespace" assert
     data [] .labelId mainId@ =
@@ -5080,7 +5083,8 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     PANIC_FORMAT sb.appendS
     " = { b \"PANIC!: \\\"%.*s\\\"\\n\", b 0 }\n" sb.appendS
   =:: mut: sb
-  idContext .globalScope .identifierNames map.itr.start while map.itr.hasNext do map.itr.next
+  ## TODO find better way to iterate through all global variables
+  idContext .identifierNames map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 [] .aliasId id.NO_ALIAS != if continue end
     declaration .1 [] .labelId =:: labelId

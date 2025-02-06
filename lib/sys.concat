@@ -1,4 +1,5 @@
-namespace: c
+import mem ## for c.isNull
+namespace: c ## XXX? special file for general C procedures
   proc( ..ctype.int -> ) : extern: noReturn: exit
   proc( char8 _ ptr -> i64 ) : extern: strlen
 end

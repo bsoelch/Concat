@@ -86,8 +86,9 @@ proc(
   LabelId GenericArg hashMap ptr.mut : genericValues
   ReplaceFlags : flags
   FilePosition : pos
-  ProgramContext ptr.mut : progContext
+  InterpreterContext ptr.mut : interpreterContext
 -> Type ) =>: replaceGenerics
+  interpreterContext [] .program =:: progContext
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -121,7 +122,7 @@ proc(
           genericValues
           flags
           pos
-          progContext
+          interpreterContext
         replaceGenerics
         name
         typeContext
@@ -164,7 +165,7 @@ proc(
           genericValues
           flags ReplaceFlags.IGNORE_EMPTY |
           pos
-          progContext
+          interpreterContext
         replaceGenerics
         src .pointer ?? or src .arrayType ?? and genericSize if
           types.ArrayType .POINTER
@@ -196,7 +197,7 @@ proc(
           genericValues
           flags
           pos
-          progContext
+          interpreterContext
         replaceGenerics =:: newElt
         flags ReplaceFlags.IGNORE_EMPTY & ? and
             src .procIn ?? or src .procOut ?? end and
@@ -234,10 +235,10 @@ proc(
       src typeContext types.getProcOut ..drop =:: outTypes
       ## newProcedure
         inTypes
-          typeBuffer labelBuffer genericValues flags pos progContext
+          typeBuffer labelBuffer genericValues flags pos interpreterContext
         replaceGenerics
         outTypes
-          typeBuffer labelBuffer genericValues flags pos progContext
+          typeBuffer labelBuffer genericValues flags pos interpreterContext
         replaceGenerics
         src typeContext types.getCallConvention ..drop
         typeContext
@@ -255,7 +256,7 @@ proc(
           arg switch
             TypeId case
               arg .TypeId
-                typeBuffer labelBuffer genericValues flags pos progContext
+                typeBuffer labelBuffer genericValues flags pos interpreterContext
               replaceGenerics ConstValue .TypeId
               break
             GenericArg case
@@ -286,7 +287,7 @@ proc(
             generatorName
             generatorArgs
             pos
-            progContext
+            interpreterContext
           interpreter.initializeGeneratedType ..drop
         end
         argBuffer []
@@ -560,6 +561,7 @@ proc(
       end
       src typeContext types.getGeneratorArgs =:: srcArgs
       target typeContext types.getGeneratorArgs =:: targetArgs
+      srcArgs .length targetArgs .length == "all instances of generator have same number of arguments" assert
       0:i64 while ..dup targetArgs .length < do =:: i
         srcArgs i slice.get =:: srcArg
         targetArgs i slice.get =:: targetArg
@@ -753,8 +755,9 @@ proc(
   StackValue slice : stackValues
   stringBuilder ptr.mut optional : errorMessage
   FilePosition : pos
-  ProgramContext ptr.mut : progContext
+  InterpreterContext ptr.mut : interpreterContext
 -> ProcedureCallInfo optional Type ) =>: export: resolveCall
+  interpreterContext [] .program =:: progContext
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -841,7 +844,7 @@ proc(
             nonEmpty case ..unreachable
           end =:: value
           paramType typeContext types.isTypeSet and
-              value [] paramType typeContext types.typeSetId pos progContext interpreter.checkTypeSet ! if
+              value [] paramType typeContext types.typeSetId pos interpreterContext interpreter.checkTypeSet ! if
             false current .argsMatch=
           end
           ## convert literal types to corresponding base types
@@ -907,7 +910,7 @@ proc(
           false current .argsMatch=
         end
         paramType typeContext types.isTypeSet and
-            stackVal paramType typeContext types.typeSetId pos progContext interpreter.checkTypeSet ! if
+            stackVal paramType typeContext types.typeSetId pos interpreterContext interpreter.checkTypeSet ! if
           false current .argsMatch=
         end
         current .genericValues
@@ -1127,7 +1130,6 @@ proc(
       progContext [] .procedures
         baseProcId i64 cast list.at .data
       =:: baseProcInfo
-      baseProcInfo [] .isStatic ! and ## don't create implementations for static procedures
       baseProcInfo .implementation =:: implData
       ## TODO support alias for generic procedures
       implData [] .code ?? if
@@ -1165,7 +1167,7 @@ proc(
             candidate .genericValues
             ReplaceFlags.REPLACE_NONE
             pos
-            progContext
+            interpreterContext
           replaceGenerics
           constArgs list.asSlice constContext constArray
           0 VariableInfo list.create
@@ -1209,7 +1211,7 @@ proc(
         candidate .genericValues
         ReplaceFlags.REPLACE_AUTO_ARGS
         pos
-        progContext
+        interpreterContext
       replaceGenerics =:: newElt
       ## ! replaceGenerics changes typeBuffer
       typeBuffer
@@ -1236,7 +1238,7 @@ proc(
     candidate .genericValues
     ReplaceFlags.REPLACE_AUTO_ARGS ReplaceFlags.IGNORE_EMPTY |
     pos
-    progContext
+    interpreterContext
   replaceGenerics =:: newOut
   typeBuffer list.free typeBuffer@ =
   labelBuffer list.free labelBuffer@ =

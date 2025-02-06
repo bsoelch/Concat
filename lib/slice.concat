@@ -215,13 +215,13 @@ namespace: slice
     type : auto: C
     T slice : a
     T slice : b
-    ( T T C -> bool ) ptr : eq
+    ( T T C -> bool ) ptr : eqCheck
     C : context
   -> bool ) =>: export: checkedEq
     a .length b .length != if false return end
     a .data b .data == if true return end
     a .length for =:: i
-      a i slice.get b i slice.get context eq () if
+      a i slice.get b i slice.get context eqCheck () if
         false return
       end
     end

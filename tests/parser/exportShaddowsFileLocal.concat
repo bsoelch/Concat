@@ -1,6 +1,0 @@
-i32 : x
-i32 : export: x ## this should fail
-
-proc( -> ) =>: main
-
-end

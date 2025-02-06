@@ -19,8 +19,12 @@ struct(
   NamespaceImportId : next
 ) =:: export: NamespaceImport
 
-i32 =:: export: LabelFlag
 namespace: id
+  i32 =:: export: ScopeId
+  -1:ScopeId =:: export: NO_SCOPE
+   0:ScopeId =:: export: GLOBAL_SCOPE
+
+  i32 =:: export: LabelFlag
   0x0000:LabelFlag =:: export: FLAG_NONE
   0x0001:LabelFlag =:: export: FLAG_MUTABLE
   0x0002:LabelFlag =:: export: FLAG_AUTO
@@ -37,6 +41,7 @@ namespace: id
   0x1000:LabelFlag =:: export: FLAG_ALIAS
   0x2000:LabelFlag =:: export: FLAG_MERGE
   0x4000:LabelFlag =:: export: FLAG_LAMBDA
+  0x8000:LabelFlag =:: export: FLAG_MERGEABLE
 
   0x40000000:LabelFlag =:: export: FLAG_EXPERIMENTAL
 
@@ -53,7 +58,14 @@ namespace: id
 end
 
 struct( string : name NamespaceId list : children NamespaceId : parent ) =:: Namespace
-struct( string : name FilePosition : pos NamespaceInfo : namespaceInfo FileId : srcFile LabelFlag : flags ) =:: Label
+struct(
+  string : name
+  FilePosition : pos
+  NamespaceInfo : namespaceInfo
+  FileId : srcFile
+  id.ScopeId : scope
+  id.LabelFlag : flags
+) =:: Label
 
 struct(
   char8 ArenaAllocator : nameBuffer
@@ -97,6 +109,9 @@ namespace: id
   end
 
   proc( LabelId : id LabelContext ptr : context -> Label ptr.mut optional ) =>: getLabel
+    id LABEL_ID_NONE == if
+      Label ptr.mut optional.empty return
+    end
     ## index check done by list.at
     context [] .labels id i64 cast list.at return
   end
@@ -210,6 +225,7 @@ namespace: id
         pos
         context [] .namespaceInfo
         srcFile
+        NO_SCOPE
         flags
       Label new list.append
     context .labels=
@@ -227,6 +243,7 @@ namespace: id
         pos
         context [] .namespaceInfo
         srcFile
+        NO_SCOPE
         id.FLAG_DUMMY id.FLAG_MUTABLE |
       Label new list.append
     context .labels=

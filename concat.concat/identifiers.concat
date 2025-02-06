@@ -39,13 +39,14 @@ struct(
 namespace: id
   i32 =:: export: AliasId
   -1:AliasId =:: export: NO_ALIAS
-  struct(
-    FilePosition : declaredAt
-  ) =:: AliasInfo
+  struct( FilePosition : declaredAt ) =:: AliasInfo
+  i32 =:: ImportId
+  -1:ImportId =:: export: NO_IMPORTS
+  struct( FileId : fileId ImportId : prev ) =:: ImportInfo
   struct(
     string : name
     NamespaceId : namespace
-    FileId : fileId
+    ScopeId : scope
   ) =:: IdentifierName
   struct(
     LabelId : labelId
@@ -58,7 +59,7 @@ namespace: id
   ## IdentifierName
     "" 0 string new
     NAMESPACE_ID_NONE
-    FILE_ID_NONE
+    GLOBAL_SCOPE
   IdentifierName new =:: ID_NONE
   ## IdentifierData
     Type .undefined
@@ -83,57 +84,61 @@ namespace: id
   -2:LabelId =:: LABEL_ID_TMP
 
   proc( IdentifierName : a -> i32 ) =>: idHash
-    a .name string.hash 31 * a .namespace i32 cast + 31 * a .fileId i32 cast + return
+    a .name string.hash 31 * a .namespace i32 cast + 31 * a .scope i32 cast + return
   end
   proc( IdentifierName : a IdentifierName : b -> bool ) =>: idEq
-    a .fileId b .fileId != a .namespace b .namespace != | if
+    a .scope b .scope != a .namespace b .namespace != | if
       false return
     end
     a .name b .name string.eq return
   end
 
-  1 =:: export: SCOPE_FLAG_NO_CONST_FOLD
   struct(
-    IdentifierName NameId hashMap : identifierNames
-    NamespaceImportId : prevImports
+    ScopeId : parentScope
     ProcId : currentProc
-    bool : isProcScope
-    bool : experimental
+    NamespaceImportId : prevImports
+    ImportId : visibleFiles
   ) =:: Scope
 
-  proc( bool : isProc ProcId : procId bool : experimental NamespaceImportId : imports -> Scope ) =>: newScope
+  proc( ScopeId : parent ProcId : procId NamespaceImportId : imports ImportId : visibleFiles -> Scope ) =>: newScope
      ## Scope
-      idHash@ idEq@ 128 NameId map.create
-      imports
+      parent
       procId
-      isProc
-      experimental
+      imports
+      visibleFiles
     Scope new return
   end
 end
   struct(
+    using id.
     TypeContext : typeContext
     ConstantContext : constContext
-    id.Scope : globalScope
-    id.Scope list : openScopes
+    Scope list : scopes
+    IdentifierName  NameId hashMap : identifierNames
     LabelId IdentifierData hashMap : identifierData
     ConstValue list : argBuffer
     types.ArraySize list : arraySizeBuffer
     NamespaceInfo list : prevNamespaces
-    id.AliasInfo list : aliasInfo
+    AliasInfo list : aliasInfo
+    ImportInfo list : visibleFiles
+    ScopeId : currentScopeId
   ) =:: export: IdentifierContext
 namespace: id
 
   proc( -> IdentifierContext ) =>: export: newIdentifierContext
     types.newTypeContext
-    newConstContext
-    false -1:ProcId false NAMESPACE_IMPORT_NONE newScope
-    128 Scope list.create
-    labelHash@ labelEq@ 128 IdentifierData map.create
-    32  ConstValue      list.create
-    128 types.ArraySize list.create
-    32  NamespaceInfo   list.create
-    32  AliasInfo       list.create
+      newConstContext
+      128 Scope list.create
+        id.GLOBAL_SCOPE NO_PROC NAMESPACE_IMPORT_NONE NO_IMPORTS newScope
+      list.append
+      idHash@    idEq@    4096 NameId map.create
+      labelHash@ labelEq@ 4096 IdentifierData map.create
+      32  ConstValue      list.create
+      128 types.ArraySize list.create
+      128 NamespaceInfo   list.create
+      128 AliasInfo       list.create
+      128 ImportInfo      list.create
+      id.GLOBAL_SCOPE
     IdentifierContext new return
   end
   ## XXX? free IdentifierContext
@@ -144,64 +149,78 @@ namespace: id
     IdentifierInfo new return
   end
 
-  proc( IdentifierContext ptr.mut : context -> bool ) =>: isTopLevel
-    context [] .openScopes .length 0 == return
+  proc( Scope list ScopeId -> Scope ptr.mut ) =>: getScopeData
+    i64 cast.u list.at .data
   end
-  proc( ProcId : procId bool : experimental IdentifierContext ptr.mut : context -> ) =>: export: openProcScope
-    context [] .openScopes
-      ## newScope
-        true
-        procId
-        experimental
-        context [] .typeContext .labelContext .namespaceInfo .imports
-      newScope list.append
-    context .openScopes=
+  proc( IdentifierContext ptr : context -> ScopeId ) =>: export: currentScope
+    context [] .currentScopeId
+  end
+  proc( IdentifierContext ptr.mut : context -> ) =>: export: clearScope
+    GLOBAL_SCOPE context .currentScopeId=
+  end
+  proc( ScopeId : scopeId IdentifierContext ptr.mut : context -> ) =>: export: setScope
+    scopeId context .currentScopeId=
   end
   proc( IdentifierContext ptr.mut : context -> ) =>: export: openScope
-    context [] .openScopes .length 0 == if
-      -1:ProcId false
-    else
-      context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental
-    end =:: experimental =:: currentProc
-    context [] .openScopes
-       false currentProc experimental context [] .typeContext .labelContext .namespaceInfo .imports newScope
-       list.append
-    context .openScopes=
-  end
-  proc( IdentifierContext ptr.mut : context -> ProcId bool ) =>: export: currentScopeProc
-    context [] .openScopes .length 0 == if
-      -1:ProcId false return
-    end
-    context [] .openScopes list.peek .data ..dup [] .currentProc ..swap [] .experimental return
+    context [] .scopes context [] .currentScopeId getScopeData =:: parentScope
+    context [] .scopes
+      $ .length ScopeId cast =:: newScopeId
+        context [] .currentScopeId
+          parentScope [] .currentProc
+          context [] .typeContext .labelContext .namespaceInfo .imports
+          parentScope [] .visibleFiles
+        newScope
+      list.append
+    context .scopes=
+    newScopeId context .currentScopeId=
   end
   proc(
     IdentifierContext ptr.mut : context
   ->
     bool #+isError+#
   ) =>: export: closeScope
-    context [] .openScopes .length 0 == if
+    context [] .currentScopeId GLOBAL_SCOPE == if
       true return
     end
-    context [] .openScopes
-      list.pop =:: mut: closed
-    context .openScopes=
-    closed@ .identifierNames map.free
-    closed .prevImports context .typeContext .labelContext .namespaceInfo .imports=
+    context [] .scopes context [] .currentScopeId getScopeData =:: currentScopeData
+    currentScopeData [] .prevImports context .typeContext .labelContext .namespaceInfo .imports=
+    currentScopeData [] .parentScope context .currentScopeId=
     false return
   end
-
-  proc( string : id FileId : fileId IdentifierContext ptr.mut : context IdentifierMatch list ptr.mut optional : matches -> IdentifierName NameId bool ) =>: export: searchIdentifier
+  proc( LabelId : label IdentifierContext ptr.mut : context -> bool ) =>: isVisible
+    context .typeContext .labelContext =:: labelContext
+    label labelContext labelFlags id.FLAG_BUILT_IN id.FLAG_MERGEABLE | & ? if
+      true return ## built-ins and mergable identifiers are always visible
+    end
+    label labelContext getLabelFile =:: srcFile
+    context [] .scopes context [] .currentScopeId getScopeData =:: currentScopeData
+    currentScopeData [] .visibleFiles while $ NO_IMPORTS != do =:: id
+      context [] .visibleFiles id i64 cast list.get =:: importInfo
+      importInfo .fileId srcFile == if
+        true return
+      end
+      importInfo .prev
+    end ..drop
+    false return
+  end
+  proc(
+    string : id
+    bool : checkVisible
+    IdentifierContext ptr.mut : context
+    IdentifierMatch list ptr.mut optional : matches
+  -> IdentifierName NameId bool ) =>: export: searchIdentifier
+    context [] .currentScopeId =:: scopeId
     context [] .typeContext .labelContext .namespaceInfo .current =:: mut: mNamespace
     NamespaceId : relSpace
     mNamespace NAMESPACE_ID_NONE == if
-      "invalid current namespace id":s NAMESPACE_ID_NONE fileId IdentifierName new
+      "invalid current namespace id":s NAMESPACE_ID_NONE scopeId IdentifierName new
       id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
     end
     id 0 string.charAt '.' == if
       id .length 2 >= and id 1 string.charAt '.' == if
         id string.empty
       else
-        "identifiers cannot start with .":s NAMESPACE_ID_NONE fileId IdentifierName new
+        "identifiers cannot start with .":s NAMESPACE_ID_NONE scopeId IdentifierName new
         id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
       end
     else
@@ -209,17 +228,16 @@ namespace: id
     end =:: path =:: name
     NameId optional : idLabel?
     NameId : idLabel
-    ## 1. search in local scopes
+    ## 1. search in current scopes
     mNamespace path  context .typeContext .labelContext findNamespace relSpace@ =
-    name relSpace fileId IdentifierName new =:: mut: idName
+    name relSpace scopeId IdentifierName new =:: mut: idName
     relSpace NAMESPACE_ID_NONE != if
-      context [] .openScopes .length 1 -
-      while ..dup 0 >= do =:: i
-        context [] .openScopes
-          i list.at .data
-        .identifierNames idName map.get idLabel?@ =
-        idLabel? optional.hasData if
-          idLabel? .data idLabel@ =
+      while
+        context .identifierNames idName map.get idLabel?@ =
+        idLabel? optional.hasData and
+            idLabel? .data idLabel@ =
+            checkVisible ! or idName .scope GLOBAL_SCOPE != or
+            idLabel .labelId context isVisible if
           matches optional.isEmpty if
             idName idLabel false return
           end
@@ -227,51 +245,60 @@ namespace: id
             idName idLabel IdentifierMatch new list.append
           matches .data []=
         end
-        i 1 -
-      end ..drop
+        idName .scope GLOBAL_SCOPE !=
+      do
+        context [] .scopes
+          idName .scope getScopeData [] .parentScope
+        idName@ .scope=
+      end
     end
-    ## 2. search global variable in current&parent namespaces
-    name relSpace FILE_ID_NONE IdentifierName new =:: mut: publicName
-    while mNamespace NAMESPACE_ID_NONE != do
+    scopeId =:: mut: firstNonProcScope
+    scopeId GLOBAL_SCOPE != =:: mut: searchingNonProc
+    ## search first non-proc scope containing current scope
+    while
+      searchingNonProc
+    do
+      context [] .scopes firstNonProcScope getScopeData =:: scopeData
+      scopeData [] .currentProc NO_PROC == if
+        break
+      end
+      scopeData [] .parentScope firstNonProcScope@ =
+    end
+    ## 2. search global variable in parent namespaces
+    while
+      context [] .typeContext .labelContext .namespaces mNamespace i64 cast list.get .parent mNamespace@ =
+      mNamespace NAMESPACE_ID_NONE !=
+    do
       mNamespace path  context .typeContext .labelContext findNamespace relSpace@ =
       relSpace idName@ .namespace=
-      relSpace publicName@ .namespace=
       relSpace NAMESPACE_ID_NONE == if
         continue
       end
-      ## file-local
-      context .globalScope .identifierNames
-        idName
-      map.get idLabel?@ =
-      idLabel? optional.hasData if
-        idLabel? .data idLabel@ =
-        matches optional.isEmpty if
-          idName idLabel false return
+      ## search all scopes outside procedure
+      firstNonProcScope idName@ .scope=
+      while
+        context .identifierNames idName map.get idLabel?@ =
+        idLabel? optional.hasData and
+            idLabel? .data idLabel@ =
+            checkVisible ! or idName .scope GLOBAL_SCOPE != or
+            idLabel .labelId context isVisible if
+          matches optional.isEmpty if
+            idName idLabel false return
+          end
+          matches .data []
+            idName idLabel IdentifierMatch new list.append
+          matches .data []=
         end
-        matches .data []
-          idName idLabel IdentifierMatch new list.append
-        matches .data []=
+        idName .scope GLOBAL_SCOPE !=
+      do
+        context [] .scopes
+          idName .scope getScopeData [] .parentScope
+        idName@ .scope=
       end
-      ## public
-      context .globalScope .identifierNames
-         publicName
-      map.get idLabel?@ =
-      idLabel? optional.hasData if
-        idLabel? .data idLabel@ =
-        matches optional.isEmpty if
-          publicName idLabel false return
-        end
-        matches .data []
-          publicName idLabel IdentifierMatch new list.append
-        matches .data []=
-      end
-    finally
-      context [] .typeContext .labelContext .namespaces mNamespace i64 cast list.get .parent mNamespace@ =
     end
     ## 3. search imports
     false =:: mut: multiMatch
     NameId optional.empty =:: mut: match
-    false =:: mut: matchPublic
     context [] .typeContext .labelContext .namespaceInfo .imports while
       $ NAMESPACE_IMPORT_NONE !=
     do =:: importId
@@ -292,53 +319,41 @@ namespace: id
         context .typeContext .labelContext findNamespace relSpace@ =
       end
       relSpace idName@ .namespace=
-      relSpace publicName@ .namespace=
       relSpace NAMESPACE_ID_NONE == if
         continue
       end
-      ## file-local
-      context .globalScope .identifierNames
-        idName
-      map.get idLabel?@ =
-      idLabel? optional.hasData if
-        idLabel? .data idLabel@ =
-        matches optional.hasData if
-          matches .data []
-            idName idLabel IdentifierMatch new list.append
-          matches .data []=
+      ## search all scopes outside procedure
+      firstNonProcScope idName@ .scope=
+      while
+        context .identifierNames idName map.get idLabel?@ =
+        idLabel? optional.hasData and
+            idLabel? .data idLabel@ =
+            checkVisible ! or idName .scope GLOBAL_SCOPE != or
+            idLabel .labelId context isVisible if
+          matches optional.hasData if
+            matches .data []
+              idName idLabel IdentifierMatch new list.append
+            matches .data []=
+          end
+          mNamespace NAMESPACE_ID_NONE == if
+            idLabel optional.wrap match@ =
+            importInfo [] .imported mNamespace@ =
+          else
+            true multiMatch@ =
+          end
         end
-        mNamespace NAMESPACE_ID_NONE == if
-          idLabel optional.wrap match@ =
-          false matchPublic@ =
-          importInfo [] .imported mNamespace@ =
-        else
-          true multiMatch@ =
-        end
-      end
-      ## public
-      context .globalScope .identifierNames
-        publicName
-      map.get idLabel?@ =
-      idLabel? optional.hasData if
-        idLabel? .data idLabel@ =
-        matches optional.hasData if
-          matches .data []
-            publicName idLabel IdentifierMatch new list.append
-          matches .data []=
-        end
-        mNamespace NAMESPACE_ID_NONE == if
-          idLabel optional.wrap match@ =
-          true matchPublic@ =
-          importInfo [] .imported mNamespace@ =
-        else
-          true multiMatch@ =
-        end
+        idName .scope GLOBAL_SCOPE !=
+      do
+        context [] .scopes
+          idName .scope getScopeData [] .parentScope
+        idName@ .scope=
       end
     finally importInfo [] .parent end ..drop
-    matches optional.isEmpty match optional.hasData & if ## TODO return value indicating multi-match
-      matchPublic if publicName else idName end match .data false return
+    matches optional.isEmpty and match optional.hasData if
+      ## TODO return value indicating multi-match
+      idName match .data false return
     end
-    "could not find identifier":s NAMESPACE_ID_NONE fileId IdentifierName new
+    "could not find identifier":s NAMESPACE_ID_NONE scopeId IdentifierName new
     id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
   end
 
@@ -356,12 +371,24 @@ namespace: id
   end
   proc(
     LabelId : nameId
-    FileId : fileId
     IdentifierContext ptr.mut : context
   -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByLabel
     ## searchIdentifier
       nameId context .typeContext  .labelContext id.getLabelName
-      fileId
+      true
+      context
+      IdentifierMatch list ptr.mut optional.empty
+    searchIdentifier =:: isError .labelId =:: label ..drop
+    label context getIdentifier isError | return
+  end
+  ## unlike `findIdentifierByLabel` this procedure also find invisible identifiers
+  proc(
+    LabelId : nameId
+    IdentifierContext ptr.mut : context
+  -> IdentifierData ptr.mut bool ) =>: export: findDeclaredIdentifierByLabel
+    ## searchIdentifier
+      nameId context .typeContext  .labelContext id.getLabelName
+      false
       context
       IdentifierMatch list ptr.mut optional.empty
     searchIdentifier =:: isError .labelId =:: label ..drop
@@ -369,13 +396,12 @@ namespace: id
   end
   proc(
     string : name
-    FileId : fileId
     IdentifierContext ptr.mut : context
   -> NameId bool ) =>: findIdByName
     name .length 0 > "name is non-empty" assert
     ## searchIdentifier
       name
-      fileId
+      true
       context
       IdentifierMatch list ptr.mut optional.empty
     searchIdentifier =:: isError =:: nameData =:: idName
@@ -383,13 +409,12 @@ namespace: id
   end
   proc(
     string : name
-    FileId : fileId
     IdentifierContext ptr.mut : context
   -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByName ## TODO? change return value to optional
     name .length 0 > "name is non-empty" assert
     ## searchIdentifier
       name
-      fileId
+      true
       context
       IdentifierMatch list ptr.mut optional.empty
     searchIdentifier =:: isError .labelId =:: label =:: idName
@@ -463,38 +488,35 @@ namespace: id
     bool : isAlias
     IdentifierType : idType
     FilePosition : declaredAt
-    FileId : currentFile
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   -> DeclareNameResult ) =>: declareName
     context .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     label labelContext labelFlags =:: flags
-    isAlias ! and context id.isTopLevel and flags FLAG_EXPORT & ? if
-      ## exported identifier -> ignore fileId
-      FILE_ID_NONE
+    isAlias ! and flags FLAG_EXPORT & ? and
+        context [] .scopes
+          context [] .currentScopeId
+        getScopeData [] .currentProc NO_PROC == if
+      ## exported identifier outside procedure -> global scope
+      GLOBAL_SCOPE
     else
-      currentFile
-    end =:: fileId
-    context [] .openScopes .length 0 > if
-      context [] .openScopes ..dup .length 1 - list.at .data
-    else
-      context .globalScope
-    end =:: mScope
+      context [] .currentScopeId
+    end =:: scopeId
     name
       labelContext [] .namespaceInfo .current
-    fileId IdentifierName new =:: mut: idName
-    mScope .identifierNames idName map.get =:: prevId?
+    scopeId IdentifierName new =:: mut: idName
+    context .identifierNames idName map.get =:: prevId?
     prevId? optional.hasData if
       prevId? .data DeclareNameResult .REDECLARE return
     end
-    name currentFile context findIdByName ! if =:: shadowedName
+    name context findIdByName ! if =:: shadowedName
       shadowedName .labelId labelContext id.labelFlags =:: shadowFlags
       flags FLAG_SHADOW & ? ! or shadowFlags id.FLAG_BUILT_IN & ? if
         shadowedName .labelId context getIdentifier
           ! "shadowedName exists" assert
         =:: shadowed
-        ## allow shaddoing for labels
+        ## allow shadoing for labels
         ## TODO? only allow shadowed labels in initializers
         isAlias or idType .LABEL ?? ! or shadowed [] .idType .LABEL ?? ! if
           isAlias if
@@ -528,7 +550,7 @@ namespace: id
     else
       id.NO_ALIAS
     end =:: aliasId
-    mScope .identifierNames
+    context .identifierNames
       idName
       label aliasId NameId new
     map.put ..drop ## previous entry is always empty
@@ -583,7 +605,6 @@ namespace: id
       false
       idType
       declaredAt
-      currentFile
       context
       errors
     declareName $ .REDECLARE ?? if .REDECLARE =:: prevId
@@ -672,7 +693,6 @@ namespace: id
     string : newName
     IdentifierType : idType
     FilePosition : declaredAt
-    FileId : currentFile
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: declareNameAlias
@@ -684,7 +704,6 @@ namespace: id
       true
       idType
       declaredAt
-      currentFile
       context
       errors
     declareName $ .REDECLARE ?? if .REDECLARE =:: prevId
@@ -846,6 +865,34 @@ namespace: id
     context .typeContext  .labelContext .namespaceInfo .imports=
     false return
   end
+  proc(
+    string : usedName string : nameAlias
+    IdentifierContext ptr.mut : idContext
+    FilePosition : pos
+    CompilerError list ptr.mut : errors
+  -> bool ) =>: export: importIdentifier
+    idContext .typeContext .labelContext =:: labelContext
+    usedName idContext id.findIdentifierByName if ..drop
+     "identifier \"" sb.copyPtr
+        usedName sb.appendStr
+      "\" does not exist in the current scope" sb.appendS pos errors appendError
+     true return
+    end =:: target
+      target [] .labelId
+      nameAlias .length 0 > if
+        nameAlias
+      else
+        target [] .labelId labelContext id.getLabelName
+          $ '.' string.lastIndexOf
+        string.tail
+      end
+      target [] .idType
+      pos
+      idContext
+      errors
+    id.declareNameAlias ..drop
+    false return
+  end
   proc( IdentifierContext ptr.mut : context -> bool ) =>: export: endNamespace
     context [] .prevNamespaces .length 0 == if
       true return
@@ -854,5 +901,38 @@ namespace: id
       list.pop context .typeContext  .labelContext .namespaceInfo=
     context .prevNamespaces=
     false
+  end
+  proc(
+    FileId : fileId
+    ScopeId : fileScopeId
+    IdentifierContext ptr.mut : context
+  -> ) =>: export: importFile
+    fileId FILE_ID_NONE == or fileId FILE_ID_BUILT_IN == if
+      return
+    end
+    context [] .scopes context [] .currentScopeId getScopeData =:: currentScopeData
+    ## check if already imported
+    currentScopeData [] .visibleFiles while $ NO_IMPORTS != do =:: id
+      context [] .visibleFiles id i64 cast list.get =:: importInfo
+      importInfo .fileId fileId == if
+        return
+      end
+    finally importInfo .prev end ..drop
+    context [] .visibleFiles
+      $ .length =:: newId
+      ## ImportInfo
+        fileId
+        currentScopeData [] .visibleFiles
+      ImportInfo new list.append
+    context .visibleFiles=
+    newId ImportId cast currentScopeData .visibleFiles=
+    ## imports imports of import
+    fileScopeId NO_SCOPE != if
+      context [] .scopes fileScopeId getScopeData =:: fileScope
+      fileScope [] .visibleFiles while $ NO_IMPORTS != do =:: id
+        context [] .visibleFiles id i64 cast list.get =:: importInfo
+        importInfo .fileId NO_SCOPE context importFile
+      finally importInfo .prev end ..drop
+    end
   end
 end

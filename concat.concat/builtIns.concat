@@ -110,10 +110,11 @@ proc(
   context [] .procedures
     ..dup .length ProcId cast =:: procId
     ## ProcedureInfo
-      FILE_ID_BUILT_IN
+      buildIn false BuiltInData new ProcImplType .builtIn
       procType
       procLabel
-      buildIn false BuiltInData new ProcImplType .builtIn
+      FILE_ID_BUILT_IN
+      id.GLOBAL_SCOPE
       hasStaticArgs
       isStatic
     ProcedureInfo new list.append

@@ -2,16 +2,28 @@
 import list
 import stringBuilder
 import numbers
+using std.literals.:s
 
-"main" =:: export: MAIN_NAME ## name of main procedure
+"main":s =:: export: MAIN_NAME ## name of main procedure
 
 i32 =:: export: FileId
 -1:FileId =:: export: FILE_ID_NONE
 -2:FileId =:: export: FILE_ID_BUILT_IN
 
+## XXX? seperate file for compiler flags
 enum( ## XXX more precise names
   QBE
 ) =:: export: BackEnd
+## compiler flags
+..compiler.version
+  ..compiler.flag.incrementVersionNumber if 1 + end
+=:: export: _VERSION_ ## compiler version auto incremenets on each recompile
+false =:: mut: export: _W_ERROR_
+true =:: mut: export: _FOLD_CONSTANTS_ ## enable constant-folding
+false =:: mut: export: _EXPERIMENTAL_
+true =:: mut: export: _INCLUDE_CORE_
+true =:: mut: export: _INCREMENT_VERSION_
+BackEnd .QBE =:: mut: export: _BACKEND_
 
 struct( string : fileName i64 : line i64 : posInLine ) =:: export: FilePosition
 enum( ERROR WARNING INFO ) =:: export: ErrorType
@@ -34,6 +46,7 @@ end
 
 i32 =:: export: LabelId
 i64 =:: export: ProcId
+-1:ProcId =:: export: NO_PROC
 i64 =:: export: ProcBundleId
 
 proc( LabelId -> i32 ) =>: export: labelHash i32 cast end

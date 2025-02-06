@@ -1,0 +1,14 @@
+proc( i32 : n bool : c -> ) =>: inline.never: f
+  n switch
+    1 case
+      5 =:: y
+      c if break end
+      y n > "5 > 1" assert
+      break
+    2 case break
+  end
+end
+proc( -> ) =>: main
+  1 true f
+  2 false f
+end

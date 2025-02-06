@@ -1,0 +1,1 @@
+declaration of identifier "shadowTest" shadows previous declaration ( at./tests/parser/exportShadowsFileLocal.concat:1:7 ) at ./tests/parser/exportShadowsFileLocal.concat:2:15

@@ -1,0 +1,6 @@
+i32 : shadowTest
+i32 : export: shadowTest ## this should fail
+
+proc( -> ) =>: main
+
+end

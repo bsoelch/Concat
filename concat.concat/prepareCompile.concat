@@ -9,6 +9,7 @@ import stringIO
 import "program.concat"
 import "measure.concat"
 import "branchTree.concat"
+using id.LabelFlag
 
 struct(
   ProgramContext ptr.mut : program
@@ -333,8 +334,8 @@ proc(
     compilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
     autoTypedInitializeId ConstantReference NewReference
-    typeInfo NewEnumReference
-    getName atName getLabel Assert
+    typeInfo NewEnumReference usingNamespace usingIdentifier
+    getName atName getLabel Assert declareName initializeName
     setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end

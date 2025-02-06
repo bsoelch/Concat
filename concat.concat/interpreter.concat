@@ -6,9 +6,17 @@ using std.literals.
 import "interpreter/operators.concat"
 import "identifiers.concat"
 import "program.concat"
+type : export: InterpreterContext ## needed by call-resolver
 import "callResolver.concat"
 
+## declarations needed from typeChecker
 type : export: TypeCheckState
+proc(
+  ProcId : procId
+  i64 : implId
+  FilePosition : expandedAt
+  TypeCheckState ptr.mut : state
+-> ) : export: typeCheckChildProcedures
 
 namespace: interpreter
   struct(
@@ -28,8 +36,14 @@ namespace: interpreter
     i64 : valueOffset
     i64 : labelOffset
   ) =:: BlockInfo
+
+  enum( GLOBAL INTERPRET ) =:: export: InterpreterType
+  struct(
+    i64 : blockCount
+    i64 : stackSize
+    InterpreterType : evalType
+  ) =:: InterpreterState
 end
-enum( GLOBAL INTERPRET ) =:: export: InterpreterType
 struct(
   using interpreter.
   ProgramContext ptr.mut : program
@@ -45,9 +59,12 @@ struct(
   ConstValue list : valueBuffer
   LabelId list : labelBuffer
   FilePosition list : callPositions
+  InterpreterState list : stateStack
   FileId : currentFile
   InterpreterType : evalType
 ) =:: export: InterpreterContext
+## TODO! enforce block-boundries for nested compilation
+##   -> stack containing offset of root-block into block list
 
 namespace: interpreter
   proc(
@@ -72,6 +89,7 @@ namespace: interpreter
       64 ConstValue list.create
       64 LabelId    list.create
       64 FilePosition list.create
+      32 InterpreterState list.create
       fileId
       evalType
     InterpreterContext new
@@ -88,6 +106,50 @@ namespace: interpreter
     context [] .callPositions list.free context .callPositions=
     context [] .localMemory mixedArena.free context .localMemory=
     context [] .stack list.free context .stack=
+    context [] .stateStack list.free context .stateStack=
+  end
+  proc(
+    InterpreterContext ptr.mut : context
+  -> ) =>: export: offsetContext
+    context [] .stateStack
+      ## InterpreterState
+        context [] .openBlocks .length
+        context [] .stack .length
+        context [] .evalType
+      InterpreterState new list.append
+    context .stateStack=
+  end
+  proc(
+    InterpreterContext ptr.mut : context
+  -> ) =>: export: resetContext
+    context [] .stateStack .length 0 == if
+      ## TODO error
+      return
+    end
+    context [] .stateStack
+      list.pop =:: prevState
+    context .stateStack=
+    context [] .openBlocks
+      prevState .blockCount list.setLength
+    context .openBlocks=
+    prevState .stackSize context truncateStack
+    prevState .evalType context .evalType=
+  end
+  ## reset blocks while preserving stack (used when returning from calls)
+  proc(
+    InterpreterContext ptr.mut : context
+  -> ) =>: resetContextKeepStack
+    context [] .stateStack .length 0 == if
+      ## TODO error
+      return
+    end
+    context [] .stateStack
+      list.pop =:: prevState
+    context .stateStack=
+    context [] .openBlocks
+      prevState .blockCount list.setLength
+    context .openBlocks=
+    prevState .evalType context .evalType=
   end
 
   proc(
@@ -96,9 +158,7 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: checkStack
-    context [] .openBlocks .length 0 > if
-      context [] .openBlocks context [] .openBlocks .length 1 - list.at .data [] .stackOffset
-    else 0:i64 end =:: offset
+    context minStackOffset =:: offset
     offset 0 >= "offset is non-negative" assert
     context [] .stack .length offset - count < if
       "not enough arguments for " sb.copyPtr
@@ -113,23 +173,32 @@ namespace: interpreter
     false return
   end
   proc( InterpreterContext ptr.mut : context -> i64 ) =>: minStackOffset
-    context [] .openBlocks .length 0 > if
-      context [] .openBlocks
-        context [] .openBlocks .length 1 - list.at .data []
-      .stackOffset return
+    context [] .stateStack .length 0 > if
+      context [] .stateStack list.peek .data =:: rootState
+      rootState [] .stackSize rootState [] .blockCount
+    else 0 0 end =:: baseBlock =:: baseOffset
+    context [] .openBlocks .length baseBlock > if
+      context [] .openBlocks list.peek .data [] .stackOffset return
+    end
+    baseOffset return
+  end
+  proc( InterpreterContext ptr.mut : context -> i64 ) =>: minBlockOffset
+    context [] .stateStack .length 0 > if
+      context [] .stateStack list.peek .data [] .blockCount return
     end
     0 return
   end
 
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inEnum
     ## XXX cache number of open enum blocks
-    context [] .openBlocks .length 1 - while $ 0 >= do
-      context [] .openBlocks $1 list.at .data [] .blockType switch
+    context minBlockOffset =:: minBlock
+    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+      context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_ENUM case
-           ..drop true return
+          true return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
             TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION case
-          ..drop false return
+          false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
@@ -137,19 +206,19 @@ namespace: interpreter
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE case break
       end
-      1 -
-    end ..drop
+    finally i 1 - end ..drop
     false return
   end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inUnion
     ## XXX cache/precompute result
-    context [] .openBlocks .length 1 - while ..dup 0 >= do
-      context [] .openBlocks ..over list.at .data [] .blockType switch
+    context minBlockOffset =:: minBlock
+    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+      context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_UNION TYPE_UNTAGGED_UNION case
-           ..drop true return
+           true return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
             TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
-          ..drop false return
+          false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
             SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
             AND OR AND_IF OR_IF AND_DO OR_DO
@@ -157,19 +226,19 @@ namespace: interpreter
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
             NAMESPACE case break
       end
-      1 -
-    end ..drop
+    finally i 1 - end ..drop
     false return
   end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeOrInitializer
     ## XXX cache/precompute result
-    context [] .openBlocks .length 1 - while ..dup 0 >= do
-      context [] .openBlocks ..over list.at .data [] .blockType switch
+    context minBlockOffset =:: minBlock
+    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+      context [] .openBlocks i list.at .data [] .blockType switch
         INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
             TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-          ..drop true return
+          true return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
-          ..drop false return
+          false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
             SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
             AND OR AND_IF OR_IF AND_DO OR_DO
@@ -177,19 +246,19 @@ namespace: interpreter
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
             NAMESPACE case break
       end
-      1 -
-    end ..drop
+    finally i 1 - end ..drop
     false return
   end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeBlock
     ## XXX cache/precompute result
-    context [] .openBlocks .length 1 - while ..dup 0 >= do
-      context [] .openBlocks ..over list.at .data [] .blockType switch
+    context minBlockOffset =:: minBlock
+    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+      context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
             TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-          ..drop true return
+          true return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
-          ..drop false return
+          false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
             SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
             AND OR AND_IF OR_IF AND_DO OR_DO
@@ -197,19 +266,19 @@ namespace: interpreter
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
             NAMESPACE INITIALIZER case break
       end
-      1 -
-    end ..drop
+    finally i 1 - end ..drop
     false return
   end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inGlobalBlock
     ## XXX cache/precompute result
-    context [] .openBlocks .length 1 - while ..dup 0 >= do
-      context [] .openBlocks ..over list.at .data [] .blockType switch
+    context minBlockOffset =:: minBlock
+    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+      context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
             TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-          ..drop true return
+          true return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
-          ..drop false return
+          false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
             SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
             AND OR AND_IF OR_IF AND_DO OR_DO
@@ -217,16 +286,16 @@ namespace: interpreter
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
             NAMESPACE INITIALIZER case break
       end
-      1 -
-    end ..drop
+    finally i 1 - end ..drop
     true return
   end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBlock
     ## XXX cache/precompute result
-    context [] .openBlocks .length 1 - while $ 0 >= do
-      context [] .openBlocks $1 list.at .data [] .blockType switch
+    context minBlockOffset =:: minBlock
+    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+      context [] .openBlocks i list.at .data [] .blockType switch
         IF_FALSE AND_FALSE OR_TRUE ELSE_TRUE case
-           ..drop true return
+           true return
         IF_TRUE AND_TRUE OR_FALSE ELSE_FALSE
           PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
           TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION
@@ -235,17 +304,16 @@ namespace: interpreter
           AND OR AND_IF OR_IF AND_DO OR_DO
           NAMESPACE case break
       end
-      1 -
-    end ..drop
+    finally i 1 - end ..drop
     false return
   end
 
   proc(
     BlockType : blockType
-    bool : truncateStack
+    bool : offsetStack
     InterpreterContext ptr.mut : context
   -> ) =>: openBlock
-    truncateStack if
+    offsetStack if
       context [] .stack .length
     else
       context minStackOffset
@@ -260,9 +328,28 @@ namespace: interpreter
       BlockInfo new list.append
     context .openBlocks=
   end
+  proc(
+    InterpreterContext ptr.mut : context
+  -> BlockInfo ptr.mut optional ) =>: peekBlock
+    context [] .openBlocks .length context minBlockOffset <= if
+      BlockInfo ptr.mut optional.empty return
+    end
+    context [] .openBlocks list.peek return
+  end
+  proc(
+    InterpreterContext ptr.mut : context
+  -> BlockInfo optional ) =>: popBlock
+    context [] .openBlocks .length context minBlockOffset <= if
+      BlockInfo optional.empty return
+    end
+    context [] .openBlocks
+      list.pop =:: result
+    context .openBlocks=
+    result optional.wrap return
+  end
   BlockType ..length 38 == "number of block types" assert
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
-    context [] .openBlocks list.peek =:: current
+    context peekBlock =:: current
     current optional.isEmpty if false return end
     current .data [] .blockType switch
       AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
@@ -272,27 +359,26 @@ namespace: interpreter
     end
   end
   proc( InterpreterContext ptr.mut : context -> ) =>: closeAndOrBlock
-    context [] .openBlocks list.peek =:: current
+    context peekBlock =:: current
     current optional.isEmpty if return end
     current .data [] .blockType switch
       AND OR AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
-          context [] .openBlocks
-            list.pop ..drop
-          context .openBlocks=
+          context popBlock ..drop
         break
       default break
     end
   end
   ## current conditional value in the and-or block (or false if not inside and/or block)
   proc( InterpreterContext ptr.mut : context -> bool ) =>: andOrCondition
-    context [] .openBlocks list.peek =:: currentBlock?
+    context peekBlock =:: currentBlock?
     currentBlock? optional.hasData and currentBlock? .data [] .blockType .OR_TRUE ?? end
   end
 
   enum( TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
   proc( InterpreterContext ptr.mut : context -> i64 LabeledValueContext ) =>: getLabeledValueContext
     ## XXX cache/precompute result
-    context [] .openBlocks .length 1 - while $ 0 >= do =:: i
+    context minBlockOffset =:: minBlock
+    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
       context [] .openBlocks i list.at .data =:: block
       block [] .blockType switch
         INITIALIZER case
@@ -1023,8 +1109,9 @@ namespace: interpreter
     LabelId : generatorName
     ConstValue slice : args
     FilePosition : pos
-    ProgramContext ptr.mut : program
+    InterpreterContext ptr.mut : context
   -> Type bool ) =>: export: initializeGeneratedType
+    context [] .program =:: program
     program .errors =:: errors
     program .idContext =:: idContext
     idContext .constContext =:: constContext
@@ -1051,6 +1138,7 @@ namespace: interpreter
       ! "proc has in-types" assert
     =:: inType
     inType typeContext types.compositeEltCount =:: argCount
+    context offsetContext
     procType
       ## IdentifierInfo
         IdentifierType .PROCEDURE
@@ -1060,23 +1148,19 @@ namespace: interpreter
     opGetId =:: op ## create operation for call
     ## TODO? directly go to evaluation of call operation (for resolving auto-args),
     ##   instead of calling evaluateOperation
-    program
-      TypeCheckState ptr.mut optional.empty
-      procData [] .fileId
-      InterpreterType .GLOBAL
-    wrapProgram =:: mut: context
-      ## push arguments
-      0:i64 while $ argCount < do =:: i
-        inType i typeContext types.compositeGetLabel =:: argLabel
-        argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
-          continue
-        end
-        inType i typeContext types.compositeGetElement =:: argType
-        args i slice.get =:: argValue
-        argValue argType pos context@ pushValue
-      finally i 1 + end ..drop
-      op@ context@ evaluateOperation ..drop
-    context@ cleanupContext
+    ## push arguments
+    0:i64 while $ argCount < do =:: i
+      inType i typeContext types.compositeGetLabel =:: argLabel
+      argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
+        continue
+      end
+      inType i typeContext types.compositeGetElement =:: argType
+      args i slice.get =:: argValue
+      argValue argType pos context pushValue
+    finally i 1 + end ..drop
+    op@ context evaluateOperation ..drop
+    context resetContext
+    ## generated type has been initiliaized during evaluation
     ## findGeneratedType
       generatorName
       args
@@ -1089,8 +1173,9 @@ namespace: interpreter
     ConstValue : value
     types.TypeSetId : typeSetId
     FilePosition : pos
-    ProgramContext ptr.mut : progContext
+    InterpreterContext ptr.mut : context
   -> bool ) =>: export: checkTypeSet
+    context [] .program =:: progContext
     progContext .idContext .typeContext =:: typeContext
     value .TypeId ?? ! if
       false return ## only types can be in type-set
@@ -1101,46 +1186,56 @@ namespace: interpreter
       end
     =:: toCheck
     typeSetId typeContext types.getTypeSetEntries =:: entries
-    progContext
-      TypeCheckState ptr.mut optional.empty
-      FILE_ID_NONE
-      InterpreterType .GLOBAL
-    wrapProgram =:: mut: context
+    context [] .currentFile =:: prevFile
     entries for =:: e
       e .typeId ?? if
         e .typeId toCheck types.typeEquals if
-          context@ cleanupContext
+          prevFile context .currentFile=
           true return
         end
         continue
       end
       progContext .procedures [] e .typeTrait i64 cast list.at .data =:: procData
-      procData [] .fileId context@ .currentFile=
-      ## pushValue
-        toCheck ConstValue .TypeId
+      procData [] .fileId context .currentFile=
+      ## StackValue
         types.primitive.TYPE
+        toCheck ConstValue .TypeId
+      StackValue new =:: arg
+      ## resolveCall
+        e@ .typeTrait 1 slice.create
+        arg@ 1 slice.create
+        stringBuilder ptr.mut optional.empty
         pos
-      context@ pushValue
+        context
+      resolveCall
+        =:: calledType
+      .data =:: callInfo ## procedure should allways match
+      callInfo .procId e .typeTrait == "called proc is same as type-trait" assert
+      procData .implementation .builtIn ?? if
+        ## built-in needs argument on stack
+        ## pushValue
+          toCheck ConstValue .TypeId
+          types.primitive.TYPE
+        pos context pushValue
+      end
       ## evaluateCall
-        e .typeTrait
-        -1
-        procData [] .procType
-        ConstValue slice.empty
+        callInfo .procId
+        callInfo .implementationId
+        calledType
+        callInfo .autoArgs
         false
-        pos
-        context@
-      evaluateCall if
+      pos context evaluateCall if
         ## TODO? ignore errors produced by call
         continue
       end
-      pos context@ popCondition if ..drop
+      pos context popCondition if ..drop
         continue
       end if
-        context@ cleanupContext
+        prevFile context .currentFile=
         true return
       end
     end
-    context@ cleanupContext
+    prevFile context .currentFile=
     false return
   end
   proc(
@@ -1734,6 +1829,7 @@ namespace: interpreter
     sb.free ..drop
   end
 end
+false =:: _TRACE_INTERPRETER_OPS_
 proc(
   Operation ptr : op
   InterpreterContext ptr.mut : context
@@ -1750,6 +1846,14 @@ proc(
   context skipCurrentBlock =:: skipBlock
   skipBlock and op [] .val .block ?? ! and op [] .val .blockEnd ?? ! if
     EvalResult .Ok return ## skip operation
+  end
+  _TRACE_INTERPRETER_OPS_ if ## trace interpreter optations
+    256 sb.create
+      context [] .openBlocks .length context minBlockOffset - sb.appendI
+      ' ' sb.appendC
+      op [] program sb.appendOp
+      io.stdOut $1 io.fputSb ..drop
+    sb.free ..drop
   end
   op [] .val switch
     NOP case
@@ -1796,19 +1900,8 @@ proc(
       context pushValue
       EvalResult .Ok return
     Return case
-      context [] .openBlocks .length 1 - while ..dup 0 >= do
-        context [] .openBlocks ..over list.at .data [] .blockType
-         ..dup .PROCEDURE ?? ..swap .EXPERIMENTAL_PROCEDURE ?? | if
-          ## close procedure block
-          context [] .openBlocks
-            ..swap list.setLength
-          context .openBlocks=
-          EvalResult .Return return
-        end
-        1 -
-      end ..drop
-      "return outside procedure" sb.copyPtr op [] .pos errors appendError
-      EvalResult .Error return
+      ## XXX? check if in procedure
+      EvalResult .Return return
     block case
       op [] .val .block .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
@@ -1856,7 +1949,7 @@ proc(
             end
             op [] .val .block .jumpDistance EvalResult .Jump return
           end
-          context [] .openBlocks list.peek =:: currentBlock
+          context peekBlock =:: currentBlock
           currentBlock optional.isEmpty or currentBlock .data .blockType .IF ?? !
               and currentBlock .data .blockType .IF_TRUE ?? !
               and currentBlock .data .blockType .IF_FALSE ?? ! if
@@ -1864,9 +1957,7 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-          context [] .openBlocks
-            list.pop =:: closedBlock
-          context .openBlocks=
+          context popBlock .data =:: closedBlock
           closedBlock .blockType .IF_TRUE ?? if
             BlockType .ELSE_TRUE
           else closedBlock .blockType .IF_FALSE ?? _if
@@ -2014,16 +2105,15 @@ proc(
           default break
         end
       end
-      context [] .openBlocks .length 0 == if
+      context popBlock =:: closedBlock?
+      closedBlock? optional.isEmpty if
         "unexpected end of " sb.copyPtr
          blockType sb.appendBlockType
          "-block" sb.appendS
         op [] .pos errors appendError
         EvalResult .Error return
       end
-      context [] .openBlocks
-        list.pop =:: closedBlock ## XXX avoid copying blockInfo into local variable
-      context .openBlocks=
+      closedBlock? .data =:: closedBlock
       closedBlock .blockType switch
         IF_TRUE IF_FALSE case
           blockType .IF ?? if EvalResult .Ok return end break
@@ -2224,7 +2314,7 @@ proc(
             types.primitive.TYPE valInfo@ .valueType=
             Type .empty ConstValue .TypeId value@ =
           end
-          context [] .openBlocks list.peek .data [] .stackOffset =:: stackOffset
+          context minStackOffset =:: stackOffset
           stackOffset initialLabelOffset valueContext op [] .pos context finishLabledValues if
             ## unpopValue
               value
@@ -2319,7 +2409,7 @@ proc(
             stackValues list.asSlice
             message@ optional.wrap
             op [] .pos
-            program
+            context
           resolveCall =:: calledType =:: calledProc?
           message .length 0 > if
             calledProc? optional.isEmpty if
@@ -2505,13 +2595,12 @@ proc(
           offset 1 - offset@ =
         end
         0:i64 =:: mut: intArgs
-        offset while ..dup minOffset >= do
-          context [] .stackInfo ..over list.at .data [] .valueType typeContext types.isInt ! if
-            break
+        offset while $ minOffset >= do =:: i
+          context [] .stackInfo i list.at .data [] .valueType typeContext types.isInt ! if
+            i break
           end
           intArgs 1 + intArgs@ =
-          1 -
-        end offset@ =
+        finally i 1 - end offset@ =
         idContext [] .arraySizeBuffer
           list.clear
           intArgs list.ensureCap
@@ -2714,9 +2803,7 @@ proc(
       EvalResult .Ok return
     existsName case
       op [] .val .existsName =:: label
-      label
-        context [] .currentFile
-      idContext id.findIdentifierByLabel ! =:: exists
+      label idContext id.findIdentifierByLabel ! =:: exists
       ..drop
       ## pushValue
         exists ConstValue .Bool
@@ -2724,7 +2811,7 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    atName existsLabel case
+    atName existsLabel declareName initializeName usingNamespace usingIdentifier case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp
@@ -3458,9 +3545,16 @@ proc(
   procType typeContext types.getProcOut ..drop =:: outType
   outType typeContext types.compositeEltCount 1 == and
       outType 0 typeContext types.compositeGetElement types.primitive.TYPE types.typeEquals if
+    implId 0 >= if
+      procData .implementation .code [] .implementations
+        implId list.at .data
+      [] .staticArgs
+    else
+      context [] .stack list.asSlice argsOffset slice.tail
+    end =:: typeArgs
     ## findGeneratedType
       procName
-      context [] .stack list.asSlice argsOffset slice.tail
+      typeArgs
       true
       typeContext
       constContext
@@ -3481,11 +3575,12 @@ proc(
       procData [] .implementation .code .codeState .PARSING ?? if
     procName inType pos context evaluateExternCall return
   end
-  procData [] .isStatic ! and context [] .typeChecker optional.hasData if
+  context [] .typeChecker optional.hasData if
     procId implId pos context [] .typeChecker .data typeCheckChildProcedures
   end
+  context offsetContext
   context [] .stack .length =:: stackOffset
-  context [] .openBlocks .length =:: prevBlocks
+  ## XXX? use EXPERIMENTAL_PROCEDURE for experimental procs
   BlockType .PROCEDURE true context openBlock
   0:i64 =:: mut: autoArgOffset
   0:i64 =:: mut: staticArgOffset
@@ -3537,7 +3632,7 @@ proc(
       end
       continue
     end
-    consumeStaticArgs ! and procData [] .isStatic ! and labelFlags id.FLAG_STATIC & ? if
+    consumeStaticArgs ! and labelFlags id.FLAG_STATIC & ? if
       implId 0 >= "implId is not negative" assert
       procData .implementation .code [] .implementations
         implId list.at .data
@@ -3559,13 +3654,10 @@ proc(
       "not enough arguments for procedure " sb.copyPtr
         procName labelContext sb.appendLabelPath
       pos errors appendError
-      stackOffset context truncateStack
       context [] .localVariables .data map.free
       prevVariables context .localVariables=
       context [] .localMemory offset mixedArena.reset context .localMemory=
-      context [] .openBlocks
-        prevBlocks list.setLength
-      context .openBlocks=
+      context resetContext
       true return
     end
     context [] .stack argOffset list.at .data =:: value
@@ -3605,13 +3697,21 @@ proc(
   end ..drop
   ## don't evaluate type-generator for generic arguments
   isTypeGenerator and hasGenericArg if
+    implId 0 >= if
+      procData .implementation .code [] .implementations
+        implId list.at .data
+      [] .staticArgs
+    else
+      context [] .stack argsOffset nArgs list.getSlice
+    end =:: typeArgs
     ## initializeGeneratedType
       procName
-      context [] .stack argsOffset nArgs list.getSlice
+      typeArgs
       Type .undefined
       typeContext
       constContext
     types.initializeGeneratedType =:: generatorType
+    context resetContext
     argsOffset context truncateStack
     ## pushValue
       generatorType ConstValue .TypeId
@@ -3621,9 +3721,6 @@ proc(
     context [] .localVariables .data map.free
     prevVariables context .localVariables=
     context [] .localMemory offset mixedArena.reset context .localMemory=
-    context [] .openBlocks
-      prevBlocks list.setLength
-    context .openBlocks=
     false return
   end
   procData .implementation .code =:: codeImpl
@@ -3676,13 +3773,10 @@ proc(
     "no operations in procedure " sb.copyPtr
       procName labelContext sb.appendLabelPath
     pos errors appendError
-    stackOffset context truncateStack
+    context resetContext
     context [] .localVariables .data map.free
     prevVariables context .localVariables=
     context [] .localMemory offset mixedArena.reset context .localMemory=
-    context [] .openBlocks
-      prevBlocks list.setLength
-    context .openBlocks=
     true return ## not a call
   end
   code 0 slice.at .data =:: op
@@ -3692,13 +3786,10 @@ proc(
     "expected procedure initialization got " sb.copyPtr
       op [] program sb.appendOp
     op [] .pos errors appendError
-    stackOffset context truncateStack
+    context resetContext
     context [] .localVariables .data map.free
     prevVariables context .localVariables=
     context [] .localMemory offset mixedArena.reset context .localMemory=
-    context [] .openBlocks
-      prevBlocks list.setLength
-    context .openBlocks=
     true return ## not a call
   end
   context [] .currentFile =:: oldFile
@@ -3706,8 +3797,6 @@ proc(
   context [] .evalType =:: prevType
   ## change interpreter type when evaluating call
   procData [] .isStatic if
-    implId -1 == "static procedure has implId -1" assert
-    ## XXX? seperate interpreter type code in static procedure?
     InterpreterType .GLOBAL
   else
     InterpreterType .INTERPRET
@@ -3719,16 +3808,13 @@ proc(
     code 1 slice.tail ## first operation declares procedure
     context
   evaluateOperations if
-    stackOffset context truncateStack
     context [] .callPositions
       list.pop ..drop
     context .callPositions=
     context [] .localVariables .data map.free
     prevVariables context .localVariables=
     context [] .localMemory offset mixedArena.reset context .localMemory=
-    context [] .openBlocks
-      prevBlocks list.setLength
-    context .openBlocks=
+    context resetContext
     prevType context .evalType=
     true return
   end
@@ -3739,13 +3825,10 @@ proc(
     ! "proc has out" assert
   typeContext types.compositeEltArray =:: outTypes
   outTypes .length "return":s pos context checkStack if
-    stackOffset context truncateStack
     context [] .localVariables .data map.free
     prevVariables context .localVariables=
     context [] .localMemory offset mixedArena.reset context .localMemory=
-    context [] .openBlocks
-      prevBlocks list.setLength
-    context .openBlocks=
+    context resetContext
     prevType context .evalType=
     true return
   end
@@ -3814,9 +3897,16 @@ proc(
       end
       retValue .TypeId =:: generatedType
     context .stack=
+    implId 0 >= if
+      procData .implementation .code [] .implementations
+        implId list.at .data
+      [] .staticArgs
+    else
+      context [] .stack argsOffset nArgs list.getSlice
+    end =:: typeArgs
     ## initializeGeneratedType
       procName
-      context [] .stack argsOffset nArgs list.getSlice
+      typeArgs
       generatedType
       typeContext
       constContext
@@ -3838,6 +3928,7 @@ proc(
     context [] .stackInfo .data stackOffset +
     nReturn
   mem.copy ..drop
+  context resetContextKeepStack
   context [] .stack
     argsOffset nReturn + list.setLength
   context .stack=

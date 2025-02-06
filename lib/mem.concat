@@ -1,4 +1,5 @@
 namespace: c
+  ## XXX? move general C procedures to seperate file
   proc( -> ..ctype.void _ ptr.mut ) =>: export: nullPtr
     0 ..ctype.void _ ptr.mut cast! return
   end

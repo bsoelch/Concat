@@ -1,2 +1,6 @@
-*.out2
-*.err2
+*/*
+!*/*.in
+!*/*.args
+!*/*.out
+!*/*.err
+!*/*.concat

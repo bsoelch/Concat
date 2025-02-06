@@ -7,9 +7,6 @@ import "typeCheck.concat"
 import "prepareCompile.concat"
 import "generator_qbe.concat"
 
-..compiler.version
-  ..compiler.flag.incrementVersionNumber if 1 + end
-=:: export: _VERSION_ ## compiler version auto incremenets on each recompile
 stringBuilder : mut: srcFile
 stringBuilder : mut: outFile
 string : mut: basePath
@@ -17,13 +14,7 @@ string : mut: libPath
 string optional : mut: parserTokensFile
 string optional : mut: compilerTokensFile
 string optional : mut: errorFile
-false =:: mut: export: _W_ERROR_
-## enable constant-folding
-true =:: mut: export: _FOLD_CONSTANTS_
-false =:: mut: export: _EXPERIMENTAL_
-true =:: mut: export: _INCLUDE_CORE_
-true =:: mut: export: _INCREMENT_VERSION_
-BackEnd .QBE =:: mut: export: _BACKEND_
+
 ## make new compiler flags accessible in code through `..compiler.flag.<...>`
 
 proc( string : path -> ) =>: printUsage

@@ -1,9 +1,11 @@
 import stringBuilder
 
+import "common.concat"
 import "constants.concat"
 import "codeBlocks.concat"
 import "identifiers.concat"
-import "common.concat"
+type : export: ProgramContext
+import "builtIns.concat"
 
 enum( EQ NEQ ) =:: export: EqualityOperator
 enum( COPY SWAP DROP ) =:: export: StackModType
@@ -54,10 +56,11 @@ union(
   ProcId : alias
 ) =:: export: ProcImplType
 struct(
-  FileId : fileId
+  ProcImplType : implementation
   Type : procType
   LabelId : labelId
-  ProcImplType : implementation
+  FileId : fileId
+  id.ScopeId : scopeId ## host-scope if parsing, body-scope if type-checked
   bool : hasStaticArg
   bool : isStatic
 ) =:: export: ProcedureInfo
@@ -70,6 +73,11 @@ struct(
   i64 : implementationId
   ProcId : procId
 ) =:: export: ProcedureImpl
+
+enum( FIXED AUTO ) =:: InitType
+struct( LabelId : label InitType : initType ) =:: export: NameInitInfo
+
+struct( LabelId : src LabelId : alias ) =:: export: NameAliasInfo
 
 union(
             NopType : NOP
@@ -117,6 +125,10 @@ union(
             LabelId : getName
             LabelId : atName
             LabelId : existsName
+            LabelId : declareName
+       NameInitInfo : initializeName
+      NameAliasInfo : usingNamespace
+      NameAliasInfo : usingIdentifier
        TypeModifier : typeModifier
                   _ : Assert
              string : RuntimeAssert
@@ -297,13 +309,34 @@ proc( LabelId FilePosition  -> Operation ) =>: export: opGetName
   =:: pos
   OpValue .getName Type .undefined pos Operation new return
 end
-proc( LabelId FilePosition  -> Operation ) =>: export: opAtName
-  =:: pos
+proc( LabelId FilePosition : pos -> Operation ) =>: export: opAtName
   OpValue .atName Type .undefined pos Operation new return
 end
-proc( LabelId FilePosition  -> Operation ) =>: export: opExistsName
-  =:: pos
+proc( LabelId FilePosition : pos -> Operation ) =>: export: opExistsName
   OpValue .existsName Type .undefined pos Operation new return
+end
+proc( LabelId FilePosition : pos -> Operation ) =>: export: opDeclareName
+  OpValue .declareName Type .undefined pos Operation new return
+end
+proc( LabelId FilePosition : pos  -> Operation ) =>: export: opInitializeName
+  InitType .FIXED NameInitInfo new OpValue .initializeName
+    Type .undefined
+  pos Operation new return
+end
+proc( Type : valType LabelId FilePosition : pos  -> Operation ) =>: export: opAutoTypedInitializeName
+  InitType .AUTO NameInitInfo new OpValue .initializeName
+    valType
+  pos Operation new return
+end
+proc( LabelId : src LabelId : alias FilePosition : pos  -> Operation ) =>: export: opUsingNamespace
+  src alias NameAliasInfo new OpValue .usingNamespace
+    Type .undefined
+  pos Operation new return
+end
+proc( LabelId : src LabelId : alias FilePosition : pos  -> Operation ) =>: export: opUsingIdentifier
+  src alias NameAliasInfo new OpValue .usingIdentifier
+    Type .undefined
+  pos Operation new return
 end
 proc( TypeModifier FilePosition  -> Operation ) =>: export: opTypeModifier
   =:: pos
@@ -355,16 +388,14 @@ proc( LabelId : name FilePosition : pos -> Operation ) =>: export: opPrintIdenti
   name CompilerInfo .find OpValue .compilerInfo Type .undefined  pos Operation new return
 end
 
-struct( FileId : id FilePosition : includePos ) =:: export: IncludedFile
-
 struct(
      Operation list : globalOps
      Operation list : localOps
      Operation list : tmpOps
-  IncludedFile list : includedFiles
 
       stringBuilder : fileName
              FileId : id
+         id.ScopeId : fileScope
 ) =:: export: ProgramFile
 
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export: LabelData
@@ -467,9 +498,9 @@ proc( stringBuilder : fileName FileId : id IdentifierContext ptr.mut : idContext
   128 Operation list.create
   128 Operation list.create
   128 Operation list.create
-  16 IncludedFile list.create
   fileName
   id
+  id.NO_SCOPE
   ProgramFile new return
 end
 
@@ -845,6 +876,33 @@ namespace: sb
         existsName case
           "exists name: " sb.appendS
           ..over .val .existsName labelContext sb.appendLabelPath
+          break
+        declareName case
+          "declare name: " sb.appendS
+          $1 .val .declareName labelContext sb.appendLabelPath
+          break
+        initializeName case
+          $1 .val .initializeName .initType .AUTO ?? if
+            "auto-typed " sb.appendS
+          end
+          "initialize name: " sb.appendS
+          $1 .val .initializeName .label labelContext sb.appendLabelPath
+          break
+        usingNamespace case
+          "using namespace: " sb.appendS
+          $1 .val .usingNamespace .src labelContext sb.appendLabelPath
+          $1 .val .usingNamespace .alias id.LABEL_ID_NONE != if
+            " as " sb.appendS
+            $1 .val .usingNamespace .alias labelContext sb.appendLabelName
+          end
+          break
+        usingIdentifier case
+          "using idenfifier: " sb.appendS
+          $1 .val .usingIdentifier .src labelContext sb.appendLabelPath
+          $1 .val .usingIdentifier .alias id.LABEL_ID_NONE != if
+            " as " sb.appendS
+            $1 .val .usingIdentifier .alias labelContext sb.appendLabelName
+          end
           break
         Assert case
           "assert" sb.appendS

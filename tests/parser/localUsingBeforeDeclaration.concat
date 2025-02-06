@@ -1,0 +1,10 @@
+proc( -> ) =>: main
+  using mut.
+  using mut.subspace.subspaceVar
+  subspace.subspaceVar ..drop
+end
+namespace: mut
+  namespace: subspace
+    2 i64 =: subspaceVar
+  end
+end
