@@ -63,7 +63,6 @@ struct(
   FilePosition : pos
   NamespaceInfo : namespaceInfo
   FileId : srcFile
-  id.ScopeId : scope
   id.LabelFlag : flags
 ) =:: Label
 
@@ -225,7 +224,6 @@ namespace: id
         pos
         context [] .namespaceInfo
         srcFile
-        NO_SCOPE
         flags
       Label new list.append
     context .labels=
@@ -243,7 +241,6 @@ namespace: id
         pos
         context [] .namespaceInfo
         srcFile
-        NO_SCOPE
         id.FLAG_DUMMY id.FLAG_MUTABLE |
       Label new list.append
     context .labels=
