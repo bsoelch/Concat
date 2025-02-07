@@ -5,9 +5,13 @@ import slice
 
 char8 list =:: export: stringBuilder
 namespace: sb
-  proc( i64 : cap -> stringBuilder ) =>: export: create
+  proc( i32 : cap -> stringBuilder ) =>: export: create32
     cap char8 list.create stringBuilder cast return
   end
+  proc( i64 : cap -> stringBuilder ) =>: export: create64
+    cap char8 list.create stringBuilder cast return
+  end
+  overload: export: create create32 create64 end
   proc( char8 _ ptr.mut : buffer i32 : buffSize -> stringBuilder ) =>: export: fromBuffer
     buffer buffSize list.fromBuffer stringBuilder cast  return
   end
@@ -17,13 +21,17 @@ namespace: sb
   proc( stringBuilder -> stringBuilder ) =>: export: clear
     char8 list cast list.clear stringBuilder cast return
   end
-  proc( stringBuilder : sb i64 : newLen -> stringBuilder ) =>: export: setLength
-    sb char8 list cast newLen list.setLength stringBuilder cast return
+  proc( stringBuilder : sb i32 : newLen -> stringBuilder ) =>: export: setLength32
+    sb char8 list cast newLen list.setLength32 stringBuilder cast return
   end
+  proc( stringBuilder : sb i64 : newLen -> stringBuilder ) =>: export: setLength64
+    sb char8 list cast newLen list.setLength64 stringBuilder cast return
+  end
+  overload: export: setLength setLength32 setLength64 end
   proc( stringBuilder -> stringBuilder ) =>: export: free
     char8 list cast list.free stringBuilder cast return
   end
-  proc( i64 : auto: k  char8 k ptr : str -> stringBuilder ) =>: export: copyPtr
+  proc( i32 : auto: k  char8 k ptr : str -> stringBuilder ) =>: export: copyPtr
     k create
       str appendS
     return
@@ -33,12 +41,20 @@ namespace: sb
       str appendStr
     stringBuilder cast  return
   end
-  proc( stringBuilder : str i64 : index -> char8 ) =>: export: charAt
+  proc( stringBuilder : str i32 : index -> char8 ) =>: export: charAt32
     str char8 list cast index list.get return
   end
-  proc( stringBuilder : buffer i64 : minCap -> stringBuilder ) =>: export: ensureCap
+  proc( stringBuilder : str i64 : index -> char8 ) =>: export: charAt64
+    str char8 list cast index list.get return
+  end
+  overload: export: charAt charAt32 charAt64 end
+  proc( stringBuilder : buffer i32 : minCap -> stringBuilder ) =>: export: ensureCap32
     buffer char8 list cast minCap list.ensureCap stringBuilder cast return
   end
+  proc( stringBuilder : buffer i64 : minCap -> stringBuilder ) =>: export: ensureCap64
+    buffer char8 list cast minCap list.ensureCap stringBuilder cast return
+  end
+  overload: export: ensureCap ensureCap32 ensureCap64 end
   proc( stringBuilder : buffer char8 : chr -> stringBuilder ) =>: export: appendC
      buffer char8 list cast chr list.append stringBuilder cast return
   end

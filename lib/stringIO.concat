@@ -43,11 +43,11 @@ namespace: sb
     FILE_ERROR_NONE IOError =: mut: err
     sb
       while err FILE_ERROR_NONE == do
-        ..dup .length delta + ensureCap
-        file ..over .data ..over.2 .length delta fread
+        $ .length i64 cast.u delta + ensureCap
+        file $1 .data $2 .length i64 cast.u delta fread
           err@ =
         =:: count
-        ..dup .length count + sb.setLength
+        $ .length count i32 cast.u + sb.setLength
         count delta ==  delta 8192 <= & if
           delta 2 * delta@ =
         end

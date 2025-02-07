@@ -456,7 +456,7 @@ namespace: types
         tupleInfo .compositeInfo .eltCount [] =:: eltCount
         initInfo .arrayType .undefined ?? ! if
           initInfo [] .arrayType context literalToType =:: baseType
-          eltCount ArraySize .int =:: size
+          eltCount i64 cast.u ArraySize .int =:: size
           ## newArrayType
             baseType
             ArrayType .ARRAY
@@ -470,17 +470,17 @@ namespace: types
           eltCount Type list.create =:: mut: newElements ## XXX? reuse type-buffer
           context [] .compositeData tupleInfo .compositeInfo .eltsOffset [] eltCount list.getSlice =:: oldElts
           newElements
-            0:i64 while $ eltCount < do =:: i
+            0:i32 while $ eltCount < do =:: i
               oldElts i slice.get context literalToType list.append
             finally i 1 + end ..drop
           newElements@ =
           tupleInfo .compositeInfo .labelOffset [] =:: labelOffset
-          ## gohere
+          ## newTuple
             newElements list.asSlice
             labelOffset UNLABELED == if
               LabelId slice optional.empty
             else
-              context [] .elementLabels labelOffset i64 cast eltCount list.getSlice optional.wrap
+              context [] .elementLabels labelOffset i32 cast eltCount list.getSlice optional.wrap
             end
             context
           newTuple
@@ -730,7 +730,7 @@ namespace: types
     0:i64 =:: mut: size
     elts .length i64 list.create =:: mut: offsetBuffer ## XXX? store buffer in context
     0:i64 while ..dup elts .length < do =:: i
-      elts i compositeElts.get =:: elt
+      elts i slice.get =:: elt
       ## size and alignment
       elt typeContext alignOf =:: eltAlignData
       elt typeContext sizeOf =:: eltSizeData
@@ -778,7 +778,7 @@ namespace: types
     1:i64 =:: mut: alignment
     0:i64 =:: mut: size
     0:i64 while ..dup elts .length < do =:: i
-      elts i compositeElts.get =:: elt
+      elts i slice.get =:: elt
       ## size and alignment
       elt typeContext sizeOf =:: eltSizeData
       elt typeContext alignOf =:: eltAlignData
@@ -949,8 +949,8 @@ namespace: types
   union( i64 : int LabelId : genericArg ) =:: export: ArraySize
   struct(
     Type : base
-    i64 : sizeOffset
-    i64 : dims
+    i32 : sizeOffset
+    i32 : dims
     bool : ptrOnly
     bool : mutable ## XXX? use enum for mutability
   ) =:: ArrayData
@@ -1024,21 +1024,21 @@ namespace: types
       ! "can create array" assert
     return
   end
-  proc( Type : box TypeContext ptr : context -> i64 ) =>: export: getArrayDims
+  proc( Type : box TypeContext ptr : context -> i32 ) =>: export: getArrayDims
     box context unwrapNamed
       $ .pointer ?? if
         context [] .arrayTypes
-          ..swap .pointer i64 cast list.at
+          ..swap .pointer i32 cast list.at
         .data [] .dims return
       end
       $ .rawPointer ?? if
         context [] .arrayTypes
-          ..swap .rawPointer i64 cast list.at
+          ..swap .rawPointer i32 cast list.at
         .data [] .dims 1 + return
       end
       $ .arrayType ?? if
         context [] .arrayTypes
-          ..swap .arrayType i64 cast list.at
+          ..swap .arrayType i32 cast list.at
         .data [] .dims return
       end
     ..drop
@@ -1047,26 +1047,26 @@ namespace: types
   proc( Type : box TypeContext ptr : context -> ArraySize slice ) =>: export: getArraySize
     box context unwrapNamed
       $ .pointer ?? if
-        context [] .arrayTypes ..swap .pointer i64 cast list.get =:: arrayType
+        context [] .arrayTypes ..swap .pointer i32 cast list.get =:: arrayType
         context [] .arraySizes arrayType .sizeOffset arrayType .dims list.getSlice return
       end
       $ .rawPointer ?? if
-        context [] .arrayTypes ..swap .rawPointer i64 cast list.get =:: arrayType
+        context [] .arrayTypes ..swap .rawPointer i32 cast list.get =:: arrayType
         context [] .arraySizes arrayType .sizeOffset arrayType .dims list.getSlice return
       end
       $ .arrayType ?? if
-        context [] .arrayTypes ..swap .arrayType i64 cast list.get =:: arrayType
+        context [] .arrayTypes ..swap .arrayType i32 cast list.get =:: arrayType
         context [] .arraySizes arrayType .sizeOffset arrayType .dims list.getSlice return
       end
       $ .arrayIndex ?? if
-        context [] .arraySizes ..swap .arrayIndex i64 cast list.at .data slice.wrap return
+        context [] .arraySizes ..swap .arrayIndex i32 cast list.at .data slice.wrap return
       end
     ..drop
     ArraySize slice.empty return
   end
   ## type of the n-th array index (counted from left to right, zero indexed)
   ## the returned bool is true if no index has been found
-  proc( Type : box i64 : n TypeContext ptr : context -> Type bool ) =>: export: getIndexType
+  proc( Type : box i32 : n TypeContext ptr : context -> Type bool ) =>: export: getIndexType
     n 0 < if
       Type .undefined true return
     end
@@ -1167,12 +1167,12 @@ namespace: types
       base@ =
     end
     context .arrayTypes =:: arrays
-    0:i64 while ..dup arrays [] .length < do
+    0:i32 while ..dup arrays [] .length < do
       arrays [] ..over list.get
         $ .mutable mutable != if ..drop
           1 + continue
         end
-        $ .dims sizes .length != if ..drop
+        $ .dims i64 cast.u sizes .length != if ..drop
           1 + continue
         end
         $ .base base typeEquals ! if ..drop
@@ -1198,7 +1198,7 @@ namespace: types
       sizes list.appendSlice
     context .arraySizes=
     arrays []
-      base sizeOffset sizes .length arrayType .ARRAY ?? ! mutable ArrayData new list.append
+      base sizeOffset sizes .length i32 cast arrayType .ARRAY ?? ! mutable ArrayData new list.append
     arrays []=
     arrays [] .length 1 - ArrayId cast
       arrayType switch
@@ -1218,7 +1218,7 @@ namespace: types
     context [] .tupleTypes
       initInfo [] .asTuple i64 cast list.at .data =:: tupleInfo
     tupleInfo .compositeInfo .eltCount [] =:: eltCount
-    eltCount ArraySize .int =:: size
+    eltCount i64 cast.u ArraySize .int =:: size
     ## newArrayType
       initInfo [] .arrayType
       arrayType
@@ -1272,8 +1272,8 @@ namespace: types
   overload: merge: ? CompositeFlags.toBool end
 
   struct(
-    i64 : eltCount
-    i64 : eltsOffset
+    i32 : eltCount
+    i32 : eltsOffset
     LabelOffset : labelOffset
     i64 : alignment
     i64 : size
@@ -1281,7 +1281,7 @@ namespace: types
   ) =:: export: CompositeInfo
   struct(
     CompositeInfo : compositeInfo
-    i64  : offsetsStart
+    i32  : offsetsStart
   ) =:: TupleInfo
   struct(
     TupleId : asTuple
@@ -1373,14 +1373,14 @@ namespace: types
           ..drop CompositeInfo ptr optional.empty return
       end
   end
-  proc( Type : composite TypeContext ptr : context -> i64 ) =>: export: compositeEltCount
+  proc( Type : composite TypeContext ptr : context -> i32 ) =>: export: compositeEltCount
     composite context compositeData
       ..dup optional.isEmpty if ..drop
         0 return
       end
     .data [] .eltCount return
   end
-  proc( Type : composite i64 : index TypeContext ptr : context -> LabelId ) =>: export: compositeGetLabel
+  proc( Type : composite i32 : index TypeContext ptr : context -> LabelId ) =>: export: compositeGetLabel
     composite context unwrapNamed
       ..dup switch
         struct enum union procIn procOut initializer case
@@ -1399,16 +1399,16 @@ namespace: types
     offset UNLABELED == if
       id.LABEL_ID_NONE return
     end
-    index 0 < index i64 cast.s typeData [] .eltCount >= | if
+    index 0 < or index typeData [] .eltCount >= if
       id.LABEL_ID_NONE return
     end
-    context [] .elementLabels offset i64 cast index + list.get return
+    context [] .elementLabels offset i32 cast index + list.get return
   end
   proc(
     Type : composite
     LabelId : name
     TypeContext ptr : context
-  -> i64 ) =>: export: compositeFindLabel
+  -> i32 ) =>: export: compositeFindLabel
     context .labelContext =:: labelContext
     composite context unwrapNamed
       ..dup switch
@@ -1427,11 +1427,11 @@ namespace: types
     labels [] .labelOffset UNLABELED == if
       -1 return
     end
-    0:i64 while ..dup labels [] .eltCount < do =:: i
+    0:i32 while ..dup labels [] .eltCount < do =:: i
       ## labelNamesEq
         name
         context [] .elementLabels
-          labels [] .labelOffset i64 cast i +
+          labels [] .labelOffset i32 cast i +
         list.get
       labelContext id.labelNamesEq if
         i return
@@ -1444,18 +1444,18 @@ namespace: types
     Type : union
     Type : elt
     TypeContext ptr.mut : context
-  -> i64 bool ) =>: export: findUnionTypeIndex
+  -> i32 bool ) =>: export: findUnionTypeIndex
     context .labelContext =:: labelContext
     union context compositeElts =:: elts
     0:i64 while ..dup elts .length < do
-      elt elts ..over.2 compositeElts.get typeEquals if
-        false return
+      elt elts ..over.2 slice.get typeEquals if
+        i32 cast false return
       end
       1 +
     end ..drop
     0:i64 while ..dup elts .length < do
-      elt elts ..over.2 compositeElts.get context canAutoCast if
-        false return
+      elt elts ..over.2 slice.get context canAutoCast if
+        i32 cast false return
       end
       1 +
     end ..drop
@@ -1463,7 +1463,7 @@ namespace: types
   end
   proc(
     Type : tuple
-    i64 : index
+    i32 : index
     TypeContext ptr.mut : typeContext
   -> i64 optional ) =>: export: tupleElementOffset
     tuple typeContext unwrapNamed ..dup switch
@@ -1513,7 +1513,7 @@ namespace: types
       end
     return
   end
-  proc( Type : composite i64 : index TypeContext ptr : context -> Type ) =>: export: compositeGetElement
+  proc( Type : composite i32 : index TypeContext ptr : context -> Type ) =>: export: compositeGetElement
     composite context compositeData =:: compData?
     index 0 < or compData? optional.isEmpty or index compData? .data [] .eltCount >= if
       Type .undefined return
@@ -1522,37 +1522,10 @@ namespace: types
     compData [] .flags COMP_FLAG_ONLY_EMPTY & ? if
       Type .empty return
     end
-    compData [] .eltsOffset index + context [] .compositeData ..swap list.get return
-  end
-  struct( TypeContext ptr : context i64 : offset i64 : length bool : onlyEmpty ) =:: export: CompositeElts
-  proc( Type : composite TypeContext ptr : context -> CompositeElts ) =>: export: compositeElts
-    composite context compositeData =:: compData?
-    compData? optional.isEmpty if
-      context 0 0 false CompositeElts new return
-    end
-    compData? .data =:: compData
-    ## CompositeElts
-      context
-      compData [] .eltsOffset
-      compData [] .eltCount
-      compData [] .flags COMP_FLAG_ONLY_EMPTY & ?
-    CompositeElts new return
-  end
-  namespace: compositeElts
-    proc( CompositeElts : elts i32 : index -> Type ) =>: export: get_32
-      elts index i64 cast.s get_64
-    end
-    proc( CompositeElts : elts i64 : index -> Type ) =>: export: get_64
-      index 0 >= index elts .length < & "index in range" assert ## TODO error handling
-      elts .onlyEmpty if
-        Type .empty return
-      end
-      elts .context [] .compositeData index elts .offset + list.get return
-    end
-    overload: export: get get_32 get_64 end
+    context [] .compositeData compData [] .eltsOffset index + list.get return
   end
   Type list.empty =:: mut: emptyTypeBuffer
-  proc( Type : composite TypeContext ptr : context -> Type slice ) =>: export: compositeEltArray
+  proc( Type : composite TypeContext ptr : context -> Type slice ) =>: export: compositeElts
     composite context compositeData =:: compData?
     compData? optional.isEmpty if
       Type slice.empty return
@@ -1586,7 +1559,7 @@ namespace: types
   proc(
     Type slice : elts
     TypeContext ptr.mut : context
-  -> i64 CompositeFlags ) =>: computeEltsOffset
+  -> i32 CompositeFlags ) =>: computeEltsOffset
     true =:: mut: emptyData ## composite is empty
     true =:: mut: onlyEmpty ## composite only contains Type .empty
     COMP_FLAG_NONE =:: mut: flags
@@ -1616,15 +1589,15 @@ namespace: types
       typePtrEq@
       0
     slice.indexOfSliceStart =:: mut: offset
-    offset elts .length + context [] .compositeData .length < if
-      offset flags return
+    offset elts .length + context [] .compositeData .length i64 cast < if
+      offset i32 cast flags return
     end
     context [] .compositeData
       elts ## skip overlap
-        context [] .compositeData .length offset - slice.tail
+        context [] .compositeData .length i64 cast offset - slice.tail
       list.appendSlice
     context .compositeData=
-    offset flags return
+    offset i32 cast flags return
   end
   proc(
     LabelId ptr : a
@@ -1667,12 +1640,12 @@ namespace: types
       labelPtrEq@
       labelContext
     slice.indexOfSliceStart =:: mut: offset
-    offset labels .length + context [] .elementLabels .length < if
+    offset labels .length + context [] .elementLabels .length i64 cast < if
       offset LabelOffset cast return
     end
     context [] .elementLabels
       labels ## skip overlap
-        context [] .elementLabels .length offset - slice.tail
+        context [] .elementLabels .length i64 cast offset - slice.tail
       list.appendSlice
     context .elementLabels=
     offset LabelOffset cast return
@@ -1688,9 +1661,9 @@ namespace: types
     elts context computeEltsOffset flags0 | =:: flags =:: eltsOffset
     labels context computeLabelOffset =:: labelOffset
     context [] .tupleTypes =:: tuples
-    0:i64 while ..dup tuples .length < do
+    0:i32 while ..dup tuples .length < do
       tuples ..over list.at .data =:: t
-      t [] .compositeInfo .eltCount elts .length == and
+      t [] .compositeInfo .eltCount i64 cast.u elts .length == and
           t [] .compositeInfo .eltsOffset eltsOffset == and
           t [] .compositeInfo .labelOffset labelOffset == and
           t [] .compositeInfo .flags COMP_MASK_CONTENT_FLAGS &
@@ -1705,7 +1678,7 @@ namespace: types
     context [] .tupleTypes
       ## TupleInfo
         ## CompositeInfo
-          elts .length
+          elts .length i32 cast
           eltsOffset
           labelOffset
           -1
@@ -1747,7 +1720,7 @@ namespace: types
     findTupleInfo =:: tupleId
     ## check for existing initializer with same elements
     context [] .initializerTypes =:: initializers
-    0:i64 while $ initializers .length < do =:: i
+    0:i32 while $ initializers .length < do =:: i
       initializers i list.at .data =:: t
       t [] .asTuple tupleId == if
         i InitializerId cast Type .initializer return
@@ -1817,9 +1790,9 @@ namespace: types
     end =:: labelType
     0:i64 =:: mut: enumLabelOffset
     context [] .unionTypes =:: unions
-    0:i64 while ..dup unions .length < do
+    0:i32 while ..dup unions .length < do
       unions ..over list.at .data =:: t
-      t [] .compositeInfo .eltCount elts .length == and
+      t [] .compositeInfo .eltCount i64 cast.u elts .length == and
       t [] .compositeInfo .eltsOffset eltsOffset == and
       t [] .compositeInfo .labelOffset labelOffset == and
       t [] .labelType labelType typeEquals and
@@ -1832,7 +1805,7 @@ namespace: types
      context [] .unionTypes
        ## UnionInfo
         ## CompositeInfo
-          elts .length
+          elts .length i32 cast
           eltsOffset
           labelOffset
           -1
@@ -1890,9 +1863,9 @@ namespace: sb
     sb
       t context types.compositeData .data =:: comp
       comp [] .labelOffset types.UNLABELED == =:: unlabeled
-      0:i64 while ..dup comp [] .eltCount < do
+      0:i32 while ..dup comp [] .eltCount < do
         ..swap
-          t ..over.2 context types.compositeGetElement =:: eltType
+          t $2 context types.compositeGetElement =:: eltType
           unlabeled if
             eltType context depth 1 - appendTypeRecursive
             ' ' appendC
@@ -1975,7 +1948,7 @@ namespace: types
         elts .length 0 == if
           Type .empty false return
         end
-        elts elts .length 1 - compositeElts.get false return
+        elts elts .length 1 - slice.get false return
     end
   end
   proc( Type : proc TypeContext ptr : context -> Type slice bool ) =>: export: getProcOutArgs
@@ -1984,7 +1957,7 @@ namespace: types
     callConvention switch
       STRUCT case Type slice.empty false return
       POINTER case
-        outType context compositeEltArray =:: elts
+        outType context compositeElts =:: elts
         elts .length 0 == if
           Type slice.empty false return
         end
@@ -1996,7 +1969,7 @@ namespace: types
       Type .undefined true return
     end
     context .procTypes =:: procs
-    0:i64 while ..dup procs [] .length < do =:: i
+    0:i32 while ..dup procs [] .length < do =:: i
       procs [] i list.at .data =:: elt
       elt [] .callingConvention callConvention == and
       elt [] .in in typeEquals and
@@ -2074,7 +2047,7 @@ namespace: types
     i32 : implId
     TypeContext ptr.mut : context
   -> types.NamedTypeId ) =>: findNamedType
-    0:i64 while ..dup context [] .namedTypes .length < do =:: i
+    0:i32 while ..dup context [] .namedTypes .length < do =:: i
       context [] .namedTypes i list.at .data =:: elt
       elt [] .name label == and
           elt [] .implId implId == if
@@ -2254,7 +2227,7 @@ namespace: types
   -> Type bool ) =>: export: findGeneratedType
     typeContext .labelContext =:: labelContext
     typeContext [] .generatedTypes =:: genTypes
-    0:i64 while ..dup genTypes .length < do
+    0:i32 while ..dup genTypes .length < do
       genTypes ..over list.at .data =:: candidate
       candidate [] .generator generatorName != if
         1 + continue
@@ -2439,7 +2412,7 @@ namespace: types
         arrayType .base context containsGeneric if
           true return
         end
-        0:i64 while $ arrayType .dims < do =:: i
+        0:i32 while $ arrayType .dims < do =:: i
           context [] .arraySizes
              arrayType .sizeOffset i +
           list.get .genericArg ?? if
@@ -2668,8 +2641,8 @@ namespace: types
       end
       labeled and
           ## labelNamesEq
-            context [] .elementLabels srcLabels i64 cast i + list.get
-            context [] .elementLabels targetLabels i64 cast i + list.get
+            context [] .elementLabels srcLabels i32 cast i + list.get
+            context [] .elementLabels targetLabels i32 cast i + list.get
             labelContext
           id.labelNamesEq ! if
         false return
@@ -2695,7 +2668,7 @@ namespace: types
       initInfo .arrayType [] eltType context canAutoCast and
         targetBase context getArraySize =:: targetSizes
         targetSizes $ .length 1 - slice.get =:: outerSize
-        outerSize .int ?? and outerSize .int srcSize == if
+        outerSize .int ?? and outerSize .int srcSize i64 cast.u == if
           true return
       end
     end
@@ -2733,8 +2706,8 @@ namespace: types
     end
     src .procIn ?? and target .procIn ?? end or
         src .procOut ?? and target .procOut ?? if
-      src context compositeEltArray =:: srcElts
-      target context compositeEltArray =:: targetElts
+      src context compositeElts =:: srcElts
+      target context compositeElts =:: targetElts
       srcElts .length targetElts .length != if
         false return
       end

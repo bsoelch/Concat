@@ -61,7 +61,7 @@ proc(
       newOps return ## ignore no-ops
     builtIn equalityOperator argc getArg procPtr panic panicWithMessage
     checkEnumLabel hasElement getId atId getEnumLabel setEnumElement
-    setElement RuntimeAssert Error stackMod getElement setEnumLabel
+    setElement RuntimeAssert Error stackMod getElement
     autoCast Cast Cast! bitCast Return case
       newOps
         op list.append ## nothing to change
@@ -72,7 +72,7 @@ proc(
       =:: args
       args typeContext types.compositeEltCount =:: argCount
       context [] .variables
-        0:i64 while ..dup argCount < do =:: i
+        0:i32 while ..dup argCount < do =:: i
           args i typeContext types.compositeGetLabel =:: label
           label id.LABEL_ID_NONE == if
             i 1 + continue
@@ -349,8 +349,8 @@ proc(
   Operation slice : ops
   Operation list ptr.mut : newOps
   VariableInfo list ptr.mut : variables
-  i64 ptr.mut : codeStart
-  i64 ptr.mut : codeLength
+  i32 ptr.mut : codeStart
+  i32 ptr.mut : codeLength
   ConverterContext ptr.mut : context
 -> ) =>: convertProc
   context [] .program =:: program
@@ -380,15 +380,15 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     -1:FileId
   ConverterContext new =:: mut: contextData
   contextData@ =:: context
-  0:i64 while ..dup program [] .progFiles .length < do =:: i
+  0:i32 while $ program [] .progFiles .length < do =:: i
     program [] .progFiles i list.at .data =:: f
     f [] .tmpOps list.clear f .tmpOps=
-    i 1 +
-  end ..drop
-  0:i64 while ..dup program [] .procedures .length < do =:: i
+  finally i 1 + end ..drop
+  0:i32 while $ program [] .procedures .length < do =:: i
     program [] .procedures i list.at .data =:: currentProc
-    currentProc [] .implementation .code ?? ! or currentProc [] .isStatic if
-      i 1 + continue
+    currentProc [] .implementation .code ?? ! or
+        currentProc [] .isStatic if
+      continue
     end
     currentProc [] .fileId context .currentFile=
     program [] .progFiles
@@ -396,7 +396,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     list.at .data =:: f
     currentProc .implementation .code =:: impl
     currentProc [] .hasStaticArg if
-      0:i64 while ..dup impl [] .implementations .length < do =:: implId
+      0:i32 while ..dup impl [] .implementations .length < do =:: implId
         impl [] .implementations implId list.at .data =:: currentImpl
         ## convertProc
           f [] .localOps
@@ -421,18 +421,16 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
         context
       convertProc
     end
-    i 1 +
-  end ..drop
-  0:i64 while ..dup program [] .progFiles .length < do =:: i
-    program [] .progFiles i list.at .data =:: f
+  finally i 1 + end ..drop
+  0:i32 while $ program [] .progFiles .length < do =:: i
+   program [] .progFiles i list.at .data =:: f
     f [] .localOps list.clear
       f [] .tmpOps
       f .localOps=
     f .tmpOps=
-    i 1 +
-  end ..drop
+  finally i 1 + end ..drop
   ## create implementations for built-in procedure-pointers
-  0:i64 while ..dup program [] .procedures .length < do =:: procId
+  0:i32 while $ program [] .procedures .length < do =:: procId
     program [] .procedures procId list.at .data =:: currentProc
     currentProc [] .implementation .builtIn ?? ! if
       procId break ## built-ins at start of procedure list

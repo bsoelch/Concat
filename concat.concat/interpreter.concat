@@ -13,7 +13,7 @@ import "callResolver.concat"
 type : export: TypeCheckState
 proc(
   ProcId : procId
-  i64 : implId
+  i32 : implId
   FilePosition : expandedAt
   TypeCheckState ptr.mut : state
 -> ) : export: typeCheckChildProcedures
@@ -31,16 +31,16 @@ namespace: interpreter
 
   struct(
     BlockType : blockType
-    i64 : stackOffset
-    i64 : typeOffset
-    i64 : valueOffset
-    i64 : labelOffset
+    i32 : stackOffset
+    i32 : typeOffset
+    i32 : valueOffset
+    i32 : labelOffset
   ) =:: BlockInfo
 
   enum( GLOBAL INTERPRET ) =:: export: InterpreterType
   struct(
-    i64 : blockCount
-    i64 : stackSize
+    i32 : blockCount
+    i32 : stackSize
     InterpreterType : evalType
   ) =:: InterpreterState
 end
@@ -153,7 +153,7 @@ namespace: interpreter
   end
 
   proc(
-    i64 : count
+    i32 : count
     string : name
     FilePosition : pos
     InterpreterContext ptr.mut : context
@@ -172,7 +172,7 @@ namespace: interpreter
     end
     false return
   end
-  proc( InterpreterContext ptr.mut : context -> i64 ) =>: minStackOffset
+  proc( InterpreterContext ptr.mut : context -> i32 ) =>: minStackOffset
     context [] .stateStack .length 0 > if
       context [] .stateStack list.peek .data =:: rootState
       rootState [] .stackSize rootState [] .blockCount
@@ -182,7 +182,7 @@ namespace: interpreter
     end
     baseOffset return
   end
-  proc( InterpreterContext ptr.mut : context -> i64 ) =>: minBlockOffset
+  proc( InterpreterContext ptr.mut : context -> i32 ) =>: minBlockOffset
     context [] .stateStack .length 0 > if
       context [] .stateStack list.peek .data [] .blockCount return
     end
@@ -375,7 +375,7 @@ namespace: interpreter
   end
 
   enum( TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
-  proc( InterpreterContext ptr.mut : context -> i64 LabeledValueContext ) =>: getLabeledValueContext
+  proc( InterpreterContext ptr.mut : context -> i32 LabeledValueContext ) =>: getLabeledValueContext
     ## XXX cache/precompute result
     context minBlockOffset =:: minBlock
     context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
@@ -405,7 +405,7 @@ namespace: interpreter
   end
   proc(
     LabelId : label
-    i64 : initialLabelOffset
+    i32 : initialLabelOffset
     LabeledValueContext : valueContext
     FilePosition : pos
     InterpreterContext ptr.mut : context
@@ -443,7 +443,7 @@ namespace: interpreter
     LabelId : label
     ConstValue : value
     Type : valueType
-    i64 : initialLabelOffset
+    i32 : initialLabelOffset
     LabeledValueContext : valueContext
     FilePosition : pos
     InterpreterContext ptr.mut : context
@@ -512,8 +512,8 @@ namespace: interpreter
   end
 
   proc(
-    i64 : stackOffset
-    i64 : initialLabelOffset
+    i32 : stackOffset
+    i32 : initialLabelOffset
     LabeledValueContext : valueContext
     FilePosition : pos
     InterpreterContext  ptr.mut : context
@@ -590,7 +590,7 @@ namespace: interpreter
     closedBlock [] .typeOffset =:: typeOffset
     context [] .labelBuffer .length labelOffset - =:: elementCount
     context [] .typeBuffer .length typeOffset - elementCount == "type count == label count" assert
-    0:i64 while $ elementCount < do =:: i
+    0:i32 while $ elementCount < do =:: i
       context [] .typeBuffer typeOffset i + list.at .data []
         typeContext types.unwrapNamed
       =:: eltType
@@ -782,7 +782,7 @@ namespace: interpreter
     end ..drop
   end
   proc(
-    i64 : newLength
+    i32 : newLength
     InterpreterContext ptr.mut : context
   -> ) =>: truncateStack
     context [] .stack .length context [] .stackInfo .length == "len(stack)=len(stackInfo)" assert
@@ -1073,7 +1073,7 @@ namespace: interpreter
           typeContext types.newArrayType ..drop
           ## newArrayConst
             ## slice.create
-              idContext [] .argBuffer .data offset +
+              idContext [] .argBuffer .data offset i64 cast.u +
               idContext [] .argBuffer .length offset -
             slice.create
             idContext .constContext
@@ -1089,7 +1089,7 @@ namespace: interpreter
       ## return
         types.primitive.I_SIZE
         valType
-          typeContext types.compositeEltCount
+          typeContext types.compositeEltCount i64 cast.u
         ConstValue .Int
         false
       return
@@ -1149,7 +1149,7 @@ namespace: interpreter
     ## TODO? directly go to evaluation of call operation (for resolving auto-args),
     ##   instead of calling evaluateOperation
     ## push arguments
-    0:i64 while $ argCount < do =:: i
+    0:i32 while $ argCount < do =:: i
       inType i typeContext types.compositeGetLabel =:: argLabel
       argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
         continue
@@ -1320,7 +1320,7 @@ namespace: interpreter
   proc(
     ConstValue : value
     ValueInfo : valInfo
-    i64 : elementIndex
+    i32 : elementIndex
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: getElement
@@ -1385,7 +1385,7 @@ namespace: interpreter
   proc(
     ConstValue : value
     ValueInfo : valInfo
-    i64 : elementIndex
+    i32 : elementIndex
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: setElement
@@ -1534,7 +1534,7 @@ namespace: interpreter
       arrayBase .undefined ?? ! if
         arrayBase
       else
-        valType i typeContext types.compositeGetElement
+        valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
       ConstValue ..length 23 == "no new constants" assert
       elt switch
@@ -1636,7 +1636,7 @@ namespace: interpreter
       arrayBase .undefined ?? ! if
         arrayBase
       else
-        valType i typeContext types.compositeGetElement
+        valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
       elt [] .Array ?? if
         elt [] eltType false context localCopy elt []=
@@ -1800,8 +1800,8 @@ namespace: interpreter
     ## TODO? print only up to some stack offset
     maxCount 0 > if
       context [] .stack .length
-        maxCount i64 cast.u -
-      0 i64.max
+        maxCount -
+      0 i32.max
     else 0 end =:: minOffset
     context [] .stack .length 1 - while $ minOffset >= do =:: i
       context [] .stack i list.at .data =:: value
@@ -2594,7 +2594,7 @@ proc(
           false fixedSize@ =
           offset 1 - offset@ =
         end
-        0:i64 =:: mut: intArgs
+        0:i32 =:: mut: intArgs
         offset while $ minOffset >= do =:: i
           context [] .stackInfo i list.at .data [] .valueType typeContext types.isInt ! if
             i break
@@ -2605,7 +2605,7 @@ proc(
           list.clear
           intArgs list.ensureCap
         idContext .arraySizeBuffer=
-        1:i64 while ..dup intArgs <= do
+        1:i32 while ..dup intArgs <= do
           context [] .stack offset ..over.2 + list.get =:: intArg
           intArg .Int ?? if
             ## TODO ensure array sizes are positive
@@ -2695,7 +2695,7 @@ proc(
       ## enum/union element initializer
       containerType
         labelId
-      typeContext types.compositeFindLabel i64 cast =:: elementIndex
+      typeContext types.compositeFindLabel =:: elementIndex
       elementIndex 0 < if
         "type " sb.copyPtr
           containerType typeContext sb.appendType
@@ -2966,7 +2966,7 @@ proc(
       EvalResult .Ok return
     autoCast case
       op [] .val .autoCast =:: castInfo
-      castInfo .offset i64 cast.u 1 + =:: offset
+      castInfo .offset 1 + =:: offset
       offset
         "autoCast":s
       op [] .pos context checkStack if
@@ -3182,15 +3182,15 @@ proc(
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case
-          op [] .val .stackMod .n i64 cast.u
+          op [] .val .stackMod .n
             "drop":s
           op [] .pos context checkStack if
             EvalResult .Error return
           end
-          context [] .stack .length op [] .val .stackMod .n i64 cast.u - context truncateStack
+          context [] .stack .length op [] .val .stackMod .n - context truncateStack
           EvalResult .Ok return
         COPY case
-          op [] .val .stackMod .n i64 cast.u 1 + =:: offset
+          op [] .val .stackMod .n 1 + =:: offset
           offset
             "stack modification":s
           op [] .pos context checkStack if
@@ -3254,8 +3254,7 @@ proc(
     argc getArg implementProcedure procPtr
     bitCast
     ConstantReference NewReference
-    checkEnumLabel setEnumLabel
-    case
+    checkEnumLabel case
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp
       op [] .pos errors appendError
@@ -3285,9 +3284,8 @@ namespace: interpreter
     ValueInfo 3 array new =:: mut: valInfoData
     valInfoData@ =:: valInfos
     0:i64 =:: mut: nArgs
-    inTypes .length 1 - while ..dup 0 >= do =:: i
+    inTypes slice.reversed for =:: eltType
       nArgs 3 < "built-ins have at most three arguments" assert
-      inTypes i types.compositeElts.get =:: eltType
       pos context popValue if ..drop.2
         values valInfos nArgs context unpopValues
         true return
@@ -3304,8 +3302,7 @@ namespace: interpreter
         true return
       end
       nArgs 1 + nArgs@ =
-      i 1 -
-    end ..drop
+    end
     ## bring arguments in correct order
     values nArgs array.reverse
     valInfos nArgs array.reverse
@@ -3362,7 +3359,7 @@ namespace: interpreter
     program .idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     "memcpy":s procName labelContext id.labelNameEq if
-      procIn typeContext types.compositeEltArray =:: args
+      procIn typeContext types.compositeElts =:: args
       args .length 3 != or
           args 0 slice.get typeContext types.isPointer ! or
           args 0 slice.get typeContext types.isMutable ! or
@@ -3445,15 +3442,15 @@ namespace: interpreter
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     tupleType typeContext types.compositeElts =:: elts
-    elts .length "tuple-creation":s pos context checkStack if
+    elts .length i32 cast "tuple-creation":s pos context checkStack if
       true return
     end
-    context [] .stack .length elts .length - =:: offset
-    0:i64 while ..dup elts .length < do =:: i
+    context [] .stack .length elts .length i32 cast - =:: offset
+    0:i32 while ..dup elts .length i32 cast < do =:: i
       context [] .stackInfo offset i + list.at .data =:: stackInfo
-      stackInfo [] .valueType elts i types.compositeElts.get typeContext types.canAutoCast ! if
+      stackInfo [] .valueType elts i slice.get typeContext types.canAutoCast ! if
         "wrong argument for tuple creation expected: " sb.copyPtr
-          elts i types.compositeElts.get typeContext sb.appendType
+          elts i slice.get typeContext sb.appendType
           " got: " sb.appendS
           stackInfo [] .valueType typeContext sb.appendType
         pos errors appendError
@@ -3481,7 +3478,7 @@ end
 #+evaluate procedure body with the given arguments+#
 proc(
   ProcId : procId
-  i64 : implId
+  i32 : implId
   Type : calledType
   ConstValue slice : autoArgs
   bool : consumeStaticArgs
@@ -3500,8 +3497,8 @@ proc(
   program [] .procedures procId i64 cast list.at .data =:: procData
   procData [] .procType =:: procType
   procType typeContext types.getProcIn ..drop =:: inType
-  0:i64 ## XXX? is there a better way to get number of non-auto static args
-    implId -1:i64 != if
+  0:i32 ## XXX? is there a better way to get number of non-auto static args
+    implId -1:i32 != if
       inType typeContext types.compositeEltCount for =:: i
         inType i typeContext types.compositeGetLabel =:: label
         label labelContext id.labelFlags =:: flags
@@ -3512,11 +3509,11 @@ proc(
     end
   =:: nStaticArgs
   inType typeContext types.compositeElts =:: args
-  args .length autoArgs .length -
+  args .length autoArgs .length - i32 cast
     consumeStaticArgs ! if nStaticArgs - end
   =:: nArgs
   procData [] .implementation .builtIn ?? if
-    implId -1:i64 != if
+    implId -1:i32 != if
       "generic built-ins are not supported" sb.copyPtr
       pos errors appendError
     end
@@ -3596,7 +3593,7 @@ proc(
   ## process procedure arguments
   false =:: mut: hasGenericArg
   false =:: mut: hasNonStaticGenericArg
-  0:i64 while $ args .length < do =:: i
+  0:i32 while $ args .length i32 cast < do =:: i
     inType i typeContext types.compositeGetLabel =:: label
     label labelContext id.labelFlags =:: labelFlags
     labelFlags id.FLAG_AUTO & ? if
@@ -3621,7 +3618,7 @@ proc(
         ## Constant
           value
           ## ValueInfo
-            args i types.compositeElts.get
+            args i slice.get
             pos
           ValueInfo new
         Constant new
@@ -3642,7 +3639,7 @@ proc(
         ## Constant
           value
           ## ValueInfo
-            args i types.compositeElts.get
+            args i slice.get
             pos
           ValueInfo new
         Constant new
@@ -3823,8 +3820,8 @@ proc(
   context .callPositions=
   calledType typeContext types.getProcOut
     ! "proc has out" assert
-  typeContext types.compositeEltArray =:: outTypes
-  outTypes .length "return":s pos context checkStack if
+  typeContext types.compositeElts =:: outTypes
+  outTypes .length i32 cast "return":s pos context checkStack if
     context [] .localVariables .data map.free
     prevVariables context .localVariables=
     context [] .localMemory offset mixedArena.reset context .localMemory=
@@ -3832,7 +3829,7 @@ proc(
     prevType context .evalType=
     true return
   end
-  context [] .stack .length outTypes .length - =:: outOffset
+  context [] .stack .length i64 cast.u outTypes .length - =:: outOffset
   outTypes .length for =:: i
     outTypes i slice.get
       $ typeContext types.containsGeneric if
@@ -3919,14 +3916,14 @@ proc(
   oldFile context .currentFile=
   context [] .stack .length stackOffset - =:: nReturn
   ## mem.copy
-    context [] .stack .data argsOffset +
-    context [] .stack .data stackOffset +
-    nReturn
+    context [] .stack .data argsOffset @[]
+    context [] .stack .data stackOffset @[]
+    nReturn i64 cast.u
   mem.copy ..drop
   ## mem.copy
-    context [] .stackInfo .data argsOffset +
-    context [] .stackInfo .data stackOffset +
-    nReturn
+    context [] .stackInfo .data argsOffset @[]
+    context [] .stackInfo .data stackOffset @[]
+    nReturn i64 cast.u
   mem.copy ..drop
   context resetContextKeepStack
   context [] .stack

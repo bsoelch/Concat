@@ -133,7 +133,7 @@ namespace: arenaAlloc
     arena0 =:: mut: arena
     arena .strictOrder ! if
       ## search for gaps in previous chunks
-      arena .fullChunks i64 cast.u while $ arena .chunks .length < do =:: i
+      arena .fullChunks while $ arena .chunks .length < do =:: i
         arena .chunks i list.at .data =:: chunk
         chunk [] .eltCount chunkSize == if
           ## chunk full -> skip on next allocation
@@ -246,8 +246,8 @@ namespace: arenaAlloc
     T ArenaAllocator : arena
     T list : values
   -> T ArenaAllocator T slice.mut ) =>: export: copyList
-    arena values .length i32 cast.u alloc_internal
-      values .data values .length mem.copy values .length slice.createMutable
+    arena values .length alloc_internal
+      values .data values .length i64 cast.u mem.copy values .length slice.createMutable
     return
   end
 
@@ -255,7 +255,7 @@ namespace: arenaAlloc
   ## TODO versions of push returning index instead of pointer
 
   proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: offset
-    arena .chunks .length
+    arena .chunks .length i64 cast.u
       $ =:: chunkCount
       chunkCount 0 > if
         1 - arena .chunkSizeShift <<
@@ -275,12 +275,12 @@ namespace: arenaAlloc
       arena0 .chunkSizeShift >>>
       newEltCount 0 u> if 1 + end
     =:: newChunkCount
-    newChunkCount arena0 .chunks .length <= "reset point inside allocated chunk" assert
+    newChunkCount arena0 .chunks .length i64 cast.u <= "reset point inside allocated chunk" assert
     arena0 =:: mut: arena ## XXX? prevent copy of old chunk data
     arena .chunks =:: mut: chunks
     arena .freeElt =:: freeElt
     0 =:: mut: continueChunkCount ## continue chunks after last chunk
-    chunks .length 1 - while $ newChunkCount >= do =:: i
+    chunks .length i64 cast.u 1 - while $ newChunkCount >= do =:: i
       chunks i list.at .data =:: chunk
       freeElt optional.hasData if
         chunk [] .eltCount 1 - while $ 0 >= do =:: j

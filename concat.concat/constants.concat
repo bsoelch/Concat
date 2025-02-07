@@ -7,7 +7,7 @@ import "labels.concat"
 import "types.concat"
 
 type : export: ConstValue
-struct( ConstValue ptr : value i64 : eltIndex ) =:: export: UnionConstant
+struct( ConstValue ptr : value i32 : eltIndex ) =:: export: UnionConstant
 
 ## pointers to mutable constants in interpreter
 ConstValue ptr.mut =:: export: LocalAddress
@@ -30,7 +30,7 @@ union(
   i32 slice : Array32
   i64 slice : Array64
   ConstValue slice : Array
-  i64 : EnumLabel
+  i32 : EnumLabel
   Type : TypeId
   _ : WildCard
   LabelId : GenericArg
@@ -107,7 +107,7 @@ end
 
 proc(
   ConstValue : value
-  i64 : index
+  i32 : index
   ConstantContext ptr.mut : context
 -> ConstValue ) =>: export: newUnionConst
   context [] .arrayValues
@@ -117,7 +117,7 @@ proc(
 end
 proc(
   ConstValue : union
-  i64 : eltIndex
+  i32 : eltIndex
 -> ConstValue bool ) =>: export: constUnionElement
   union .Union .value [] union .Union .eltIndex eltIndex != return
 end
@@ -611,7 +611,7 @@ namespace: constants
     '"' pos@ updateFilePos ## string content starts after "
     context [] .stringParseBuffer .length =:: offset
     context [] .stringParseBuffer
-      $ .length str .length + sb.ensureCap
+      $ .length i64 cast.u str .length + sb.ensureCap
       0:i64 while ..dup str .length < do =:: mut: i
         str i string.charAt
           $ pos@ updateFilePos
@@ -731,7 +731,7 @@ namespace: constants
     '`' pos@ updateFilePos ## string content starts after `
     context [] .stringParseBuffer .length =:: offset
     context [] .stringParseBuffer
-      $ .length str .length + sb.ensureCap
+      $ .length i64 cast.u str .length + sb.ensureCap
       0:i64 while $ str .length < do =:: i
         str i string.charAt =:: c
         c pos@ updateFilePos

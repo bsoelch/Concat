@@ -44,10 +44,9 @@ proc(
       break
     struct union procIn procOut enum initializer case
       declared typeContext types.compositeElts =:: elts
-      0:i64 while ..dup elts .length < do
-        elts ..over types.compositeElts.get ptrLevel pos prog visited types declaredType
-        1 +
-      end ..drop
+      elts for
+        ptrLevel pos prog visited types declaredType
+      end
       declared .procIn ?? if
         break ## don't add proc-in to list of declared types
       end
@@ -126,21 +125,14 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     end
     idData [] .valueType 0 idData [] .declaredAt prog visited@ types@ declaredType
   end ..drop
-  0:i64 while ..dup prog [] .progFiles .length < do
-    prog [] .progFiles ..over list.at .data
-      0:i64 while ..dup ..over.2 [] .globalOps .length < do
-        ..swap
-          ..dup [] .globalOps ..over.2 list.at .data prog visited@ types@ addOpType
-        ..swap 1 +
-      end ..drop
-      0:i64 while ..dup ..over.2 [] .localOps .length < do
-        ..swap
-          ..dup [] .localOps ..over.2 list.at .data prog visited@ types@ addOpType
-        ..swap 1 +
-      end ..drop
-    ..drop
-    1 +
-  end ..drop
+  prog [] .progFiles for =:: f
+    f .globalOps for =:: op
+      op@ prog visited@ types@ addOpType
+    end
+    f .localOps for =:: op
+      op@ prog visited@ types@ addOpType
+    end
+  end
   visited@ map.free
   types return
 end

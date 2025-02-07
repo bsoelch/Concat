@@ -35,15 +35,15 @@ struct(
   ConstValue slice : staticArgs
   VariableInfo list : variables
   FilePosition : firstUse
-  i64 : codeStart
-  i64 : codeLength
+  i32 : codeStart
+  i32 : codeLength
   ProcCodeState : codeState
 ) =:: export: ProcImplementation
 struct(
   ProcImplementation list : implementations
   VariableInfo list : variables ## for single implementation in no-generic case
-  i64 : codeStart
-  i64 : codeLength
+  i32 : codeStart
+  i32 : codeLength
   ProcCodeState : codeState
 ) =:: export: CodeProcData
 struct(
@@ -66,11 +66,11 @@ struct(
 ) =:: export: ProcedureInfo
 struct(
   ProcId : procId
-  i64 : implementationId
+  i32 : implementationId
   ConstValue slice : autoArgs
 ) =:: export: ProcedureCallInfo
 struct(
-  i64 : implementationId
+  i32 : implementationId
   ProcId : procId
 ) =:: export: ProcedureImpl
 
@@ -96,14 +96,14 @@ union(
             LabelId : setLabel
             LabelId : hasLabel
             LabelId : existsLabel
-                i64 : getElement
-                i64 : setElement
-                i64 : hasElement
+                i32 : getElement
+                i32 : setElement
+                i32 : hasElement
                   _ : Return
                   _ : New
                   _ : NewReference
-                i64 : NewEnum
-                i64 : NewEnumReference
+                i32 : NewEnum
+                i32 : NewEnumReference
   ProcedureCallInfo : call
             BuiltIn : builtIn
                 i64 : callPtr
@@ -117,9 +117,8 @@ union(
                Type : bitCast
    EqualityOperator : equalityOperator
                   _ : getEnumLabel
-                i64 : checkEnumLabel
-                i64 : setEnumElement
-                i64 : setEnumLabel ## backwards compatibility
+                i32 : checkEnumLabel
+                i32 : setEnumElement
                   _ : copy
   StackModification : stackMod
             LabelId : getName
@@ -204,17 +203,13 @@ proc( Type BuiltIn FilePosition  -> Operation ) =>: export: opBuiltIn
   =:: pos
   OpValue .builtIn ..swap pos Operation new return
 end
-proc( i64 FilePosition  -> Operation ) =>: export: opTupleGet
-  =:: pos
-  OpValue .getElement Type .undefined pos Operation new return
-end
-proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opGetElement
+proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opGetElement
   index OpValue .getElement base pos Operation new return
 end
-proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opSetElement
+proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opSetElement
   index OpValue .setElement base pos Operation new return
 end
-proc( Type : base i64 : index FilePosition : pos -> Operation ) =>: export: opHasElement
+proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opHasElement
   index OpValue .hasElement base pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opGetLabel
@@ -249,11 +244,11 @@ proc( Type FilePosition -> Operation ) =>: export: opNewReference
   =:: pos
   OpValue .NewReference ..swap pos Operation new return
 end
-proc( Type i64 FilePosition -> Operation ) =>: export: opNewEnum
+proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnum
   =:: pos
   OpValue .NewEnum ..swap pos Operation new return
 end
-proc( Type i64 FilePosition -> Operation ) =>: export: opNewEnumReference
+proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnumReference
   =:: pos
   OpValue .NewEnumReference ..swap pos Operation new return
 end
@@ -294,11 +289,11 @@ end
 proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export: opTypeInfo
   infoType OpValue .typeInfo t pos Operation new return
 end
-proc( Type i64 FilePosition -> Operation ) =>: export: opCheckEnum
+proc( Type i32 FilePosition -> Operation ) =>: export: opCheckEnum
   =:: pos
   OpValue .checkEnumLabel ..swap pos Operation new return
 end
-proc( Type i64 FilePosition -> Operation ) =>: export: opSetEnumElement
+proc( Type i32 FilePosition -> Operation ) =>: export: opSetEnumElement
   =:: pos
   OpValue .setEnumElement ..swap pos Operation new return
 end
@@ -404,33 +399,33 @@ struct(
   Type : switchType
   i32 : caseCount
   i32 : breakCount
-  i64 : switchPosition
+  i32 : switchPosition
   JumpDistance : defaultJumpDistance
   JumpDistance slice.mut : caseJumpDistances
-  i64 slice.mut : breakPositions
+  i32 slice.mut : breakPositions
 ) =:: export: SwitchData
 struct(
-  i64 : modifiedTypes
-  i64 : loopStart
-  i64 slice.mut : orPositions
-  i64 slice.mut : continuePositions
-  i64 slice.mut : breakPositions
+  i32 : modifiedTypes
+  i32 : loopStart
+  i32 slice.mut : orPositions
+  i32 slice.mut : continuePositions
+  i32 slice.mut : breakPositions
   i32 : orCount
   i32 : continueCount
   i32 : breakCount
 ) =:: export: WhileData
 struct(
-  i64 : blockStart
-  i64 : ifPosition
-  i64 : elsePosition
-  i64 slice.mut : andPositions
-  i64 slice.mut : orPositions
+  i32 : blockStart
+  i32 : ifPosition
+  i32 : elsePosition
+  i32 slice.mut : andPositions
+  i32 slice.mut : orPositions
   i32 : andCount
   i32 : orCount
 ) =:: export: IfData
 struct(
-  i64 : blockStart
-  i64 slice.mut : andOrPositions
+  i32 : blockStart
+  i32 slice.mut : andOrPositions
   i32 : andOrCount
 ) =:: export: AndOrData
 
@@ -459,7 +454,7 @@ struct(
                     Type list : autoTypes
                Operation list : tmpOps
   JumpDistance ArenaAllocator : switchJumps
-           i64 ArenaAllocator : labelPositions
+           i32 ArenaAllocator : labelPositions
               SwitchData list : switchData
                WhileData list : whileData
                   IfData list : ifData
@@ -480,7 +475,7 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     32  Type            list.create
     128 Operation       list.create
     1024 JumpDistance   arenaAlloc.create
-    1024 i64            arenaAlloc.create
+    1024 i32            arenaAlloc.create
     128 SwitchData      list.create
     128 WhileData       list.create
     256 IfData          list.create
@@ -844,12 +839,6 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .checkEnumLabel sb.appendI
           break
-        setEnumLabel case
-          "set enum label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setEnumLabel sb.appendI
-          break
         setEnumElement case
           "set enum element ( " sb.appendS
           ..over .dataType typeContext sb.appendType
@@ -981,34 +970,34 @@ namespace: sb
   proc( stringBuilder ProgramContext ptr -> stringBuilder ) =>: export: appendProgram
     =:: prog
       "## errors:\n" sb.appendS
-      0:i64 while ..dup prog [] .errors .length < do
+      0:i32 while ..dup prog [] .errors .length < do
         ..swap
           prog [] .errors ..over.2 list.get sb.appendCompilerError
         ..swap
         1 +
       end ..drop
-      0:i64 while ..dup prog [] .progFiles .length < do
+      0:i32 while ..dup prog [] .progFiles .length < do
         ..swap
           prog [] .progFiles ..over.2 list.get =:: f
           "## "          sb.appendS
           f .fileName    sb.appendSb
           '\n'           sb.appendC
           "## global:\n" sb.appendS
-          0:i64 while ..dup f .globalOps .length < do
+          0:i32 while ..dup f .globalOps .length < do
             ..swap
               f .globalOps ..over.2 list.get prog sb.appendOp
             ..swap
             1 +
           end ..drop
           "## local:\n" sb.appendS
-          0:i64 while ..dup f .localOps .length < do
+          0:i32 while ..dup f .localOps .length < do
             ..swap
               f .localOps ..over.2 list.get prog sb.appendOp
             ..swap
             1 +
           end ..drop
           "## tmp:\n" sb.appendS
-          0:i64 while ..dup f .tmpOps .length < do
+          0:i32 while ..dup f .tmpOps .length < do
             ..swap
               f .tmpOps ..over.2 list.get prog sb.appendOp
             ..swap
@@ -1018,7 +1007,7 @@ namespace: sb
         1 +
       end ..drop
       "## temporary code:\n" sb.appendS
-      0:i64 while ..dup prog [] .tmpOps .length < do
+      0:i32 while ..dup prog [] .tmpOps .length < do
         ..swap
           prog [] .tmpOps ..over.2 list.get prog sb.appendOp
         ..swap
@@ -1030,11 +1019,11 @@ end
 namespace: program.jumps
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateAndIf
     program [] .ifData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
       newIndex ifData .blockStart=
@@ -1046,11 +1035,11 @@ namespace: program.jumps
   end
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateOrIf
     program [] .ifData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
       newIndex ifData .blockStart=
@@ -1066,17 +1055,17 @@ namespace: program.jumps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateIf
     program [] .ifData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
-      newOps .length ifData .blockStart=
+      newOps .length i32 cast ifData .blockStart=
     end
-    newOps .length ifData .ifPosition=
+    newOps .length i32 cast ifData .ifPosition=
     ifData [] .orCount for =:: i
       ifData [] .orPositions
         i
       slice.get =:: orPos
-      newOps .length
+      newOps .length i32 cast
         orPos - JumpDistance cast
       newOps
         orPos slice.at .data
@@ -1090,21 +1079,21 @@ namespace: program.jumps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateElse
     program [] .ifData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: ifData
-    newOps .length ifData .elsePosition=
+    newOps .length i32 cast ifData .elsePosition=
     ifData [] .andCount for =:: i
       ifData [] .andPositions
         i
       slice.get =:: andPos
-      newOps .length
+      newOps .length i32 cast
         andPos - JumpDistance cast
       newOps
         andPos slice.at .data
       .val .block .jumpDistance=
     end
     0 ifData .andCount=
-    newOps .length
+    newOps .length i32 cast
       ifData [] .ifPosition - JumpDistance cast
     newOps
       ifData [] .ifPosition slice.at .data
@@ -1116,34 +1105,34 @@ namespace: program.jumps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndIf
     program [] .ifData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: ifData
-    newOps .length
+    newOps .length i32 cast
       ifData [] .elsePosition - JumpDistance cast
     newOps
       ifData [] .elsePosition slice.at .data
     .val .block .jumpDistance=
     ifData [] .blockStart
-      newOps .length -
+      newOps .length i32 cast -
     JumpDistance cast
   end
 
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateSwitch
     newIndex
-      program [] .switchData blockId i64 cast list.at .data
+      program [] .switchData blockId i32 cast list.at .data
     .switchPosition=
   end
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateCase
     program [] .switchData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: switchData
     switchData [] .caseCount
       newIndex
@@ -1154,11 +1143,11 @@ namespace: program.jumps
   end
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateDefault
     program [] .switchData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: switchData
     newIndex
       switchData [] .switchPosition - JumpDistance cast
@@ -1166,11 +1155,11 @@ namespace: program.jumps
   end
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateBreakSwitch
     program [] .switchData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: switchData
     switchData [] .breakCount
       newIndex switchData [] .breakPositions $2 slice.set
@@ -1183,13 +1172,13 @@ namespace: program.jumps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndSwitch
     program [] .switchData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: switchData
     switchData [] .breakCount for =:: i
       switchData [] .breakPositions
         i
       slice.get =:: breakPos
-      newOps .length
+      newOps .length i32 cast
         breakPos - JumpDistance cast
       newOps
         breakPos slice.at .data
@@ -1197,27 +1186,27 @@ namespace: program.jumps
     end
     0 switchData .breakCount=
     switchData [] .switchPosition
-      newOps .length -
+      newOps .length i32 cast -
     JumpDistance cast
   end
 
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateWhile
     program [] .whileData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: whileData
     newIndex whileData .loopStart=
   end
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateOrDo
     program [] .whileData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: whileData
     whileData [] .orCount
       newIndex whileData [] .orPositions $2 slice.set
@@ -1226,11 +1215,11 @@ namespace: program.jumps
   end
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateBreak
     program [] .whileData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: whileData
     whileData [] .breakCount
       newIndex whileData [] .breakPositions $2 slice.set
@@ -1239,16 +1228,16 @@ namespace: program.jumps
   end
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) : export: alias: updateAndDo updateBreak
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateContinue
     program [] .whileData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: whileData
     whileData [] .continueCount
       newIndex whileData [] .continuePositions $2 slice.set
@@ -1260,13 +1249,13 @@ namespace: program.jumps
     Operation slice.mut : newOps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateDo
-    blockId newOps .length program updateBreak
+    blockId newOps .length i32 cast program updateBreak
     program [] .whileData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: whileData
     whileData [] .orCount for =:: i
       whileData [] .orPositions i slice.get =:: orPos
-      newOps .length
+      newOps .length i32 cast
         orPos - JumpDistance cast
       newOps
         orPos slice.at .data
@@ -1280,13 +1269,13 @@ namespace: program.jumps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateFinally
     program [] .whileData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: whileData
     whileData [] .continueCount for =:: i
       whileData [] .continuePositions
         i
       slice.get =:: continuePos
-      newOps .length
+      newOps .length i32 cast
         continuePos - JumpDistance cast
       newOps
         continuePos slice.at .data
@@ -1300,18 +1289,18 @@ namespace: program.jumps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndWhile
     program [] .whileData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: whileData
     whileData [] .breakCount for =:: i
       whileData [] .breakPositions i slice.get =:: breakPos
-      newOps .length
+      newOps .length i32 cast
         breakPos - JumpDistance cast
       newOps
         breakPos slice.at .data
       .val .block .jumpDistance=
     end
     0 whileData .breakCount=
-    newOps .length
+    newOps .length i32 cast
       whileData [] .loopStart -
     =:: loopLength
     loopLength JumpDistance cast
@@ -1323,11 +1312,11 @@ namespace: program.jumps
 
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) =>: export: updateAnd
     program [] .andOrData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: andOrData
     andOrData [] .andOrCount 0 == if
       newIndex andOrData .blockStart=
@@ -1339,7 +1328,7 @@ namespace: program.jumps
   end
   proc(
     BlockId : blockId
-    i64 : newIndex
+    i32 : newIndex
     ProgramContext ptr.mut : program
   -> ) : export: alias: updateOr updateAnd
   proc(
@@ -1348,13 +1337,13 @@ namespace: program.jumps
     ProgramContext ptr.mut : program
   -> JumpDistance ) =>: export: updateEndAndOr
     program [] .andOrData
-      blockId i64 cast
+      blockId i32 cast
     list.at .data =:: andOrData
     andOrData [] .andOrCount for =:: i
       andOrData [] .andOrPositions
         i
       slice.get =:: andOrPos
-      newOps .length
+      newOps .length i32 cast
         andOrPos - JumpDistance cast
       newOps
         andOrPos slice.at .data
@@ -1362,7 +1351,7 @@ namespace: program.jumps
     end
     0 andOrData .andOrCount=
     andOrData [] .blockStart
-      newOps .length -
+      newOps .length i32 cast -
     JumpDistance cast
   end
 end

@@ -20,7 +20,7 @@ import "interpreter/operators.concat"
 using id.LabelFlag
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
-struct( i64 : codeOffset ) =:: CompositeConstantOffset
+struct( i32 : codeOffset ) =:: CompositeConstantOffset
 struct( InterpreterContext : context i64 : offset ) =:: InterpreterInfo
 
 struct(
@@ -41,9 +41,9 @@ struct(
   ProgramContext ptr.mut : progContext
   TypeCheckState ptr.mut : typeChecker
   BlockInfo list : openBlocks
-  i64 list : andOrPositions
+  i32 list : andOrPositions
   Operation list : globalOpBuffer
-  i64 : constOffset
+  i32 : constOffset
   Type list : typeBuffer
   FileId : currentFile
   ProcId list : currentProcs
@@ -152,14 +152,14 @@ proc(
       0 char16 list.create str .Array8 string.fromBytes utf8.toUTF16 =:: str16
       str16
         list.asSlice string16.fromSlice
-      constContext newString16Const str16 .length types.primitive.CHAR16
+      constContext newString16Const str16 .length i64 cast.u types.primitive.CHAR16
         str16 list.free ..drop
       break
     UTF32 case
       0 char32 list.create str .Array8 string.fromBytes  utf8.toUTF32 =:: str32
       str32
         list.asSlice string32.fromSlice
-      constContext newString32Const str32 .length types.primitive.CHAR32
+      constContext newString32Const str32 .length i64 cast.u types.primitive.CHAR32
         str32 list.free ..drop
       break
     UNKNOWN INT_LITERAL case
@@ -191,7 +191,7 @@ proc( Constant : const -> Operation ) =>: constantToOp
   const .val const .valueType const .pos opConst return
 end
 
-proc( ParserState ptr.mut : state -> i64 ) =>: opCount
+proc( ParserState ptr.mut : state -> i32 ) =>: opCount
   state [] .progContext =:: progContext
   state [] .currentProcs .length 0 == if
     -1 return
@@ -367,7 +367,7 @@ proc( BlockType : mergeWith FilePosition : pos ParserState ptr.mut : state -> ) 
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   state [] .andOrPositions =:: andOrPositions
-  0:i64 while ..dup andOrPositions .length < do =:: i
+  0:i32 while ..dup andOrPositions .length < do =:: i
     andOrPositions i list.get =:: opPos
     opPos 0 < or opPos progContext [] .tmpOps .length >= if
       "operations and blocks are out of sync, could not determine position of and/or" sb.copyPtr
@@ -930,7 +930,7 @@ proc(
   Type : procType
   FileId : fileId
   ProcId : aliasId
-  i64 : codeStart
+  i32 : codeStart
   ProgramContext ptr.mut : progContext
 -> ProcId ) =>: newProcData
   progContext .idContext =:: idContext
@@ -954,7 +954,7 @@ proc(
           ProcCodeState .PARSING
         CodeProcData new ProcImplType .code
       else
-        codeStart -1:i64 == "no code in proc alias" assert
+        codeStart -1 == "no code in proc alias" assert
         aliasId ProcImplType .alias
       end
       procType
@@ -1511,7 +1511,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             typeContext .typeSetEntries []
               setId
                 typeContext types.getTypeSetEntries .length
-              $1 .length + list.ensureCap
+              $1 .length i64 cast.u + list.ensureCap
               setId
                 typeContext types.getTypeSetEntries
               list.appendSlice
@@ -1952,7 +1952,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end =:: aliasId
         idData .constValue =:: procData
         procData .Procedure ?? ! if
-          label valType state [] .currentFile aliasId -1:i64 progContext newProcData
+          label valType state [] .currentFile aliasId -1:i32 progContext newProcData
             ConstValue .Procedure
           label idContext id.getIdentifier
             ! "procName is identifier" assert
@@ -2447,7 +2447,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         idName true idContext matches@ optional.wrap id.searchIdentifier ..drop.3
         "-----------------\n" sb.copyPtr
           "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
-          0:i64 while ..dup matches .length < do =:: i
+          0:i32 while ..dup matches .length < do =:: i
             matches i list.at .data =:: match
             match [] .nameData .labelId =:: labelId
             match [] .nameData .aliasId =:: aliasId
@@ -2547,7 +2547,7 @@ end
 proc( stringBuilder : fileName FilePosition : pos ParserState ptr.mut : state -> ) =>: importFile
   state [] .progContext =:: progContext
   FILE_ID_NONE =:: mut: imported
-  0:i64 while ..dup progContext [] .progFiles .length < do
+  0:i32 while ..dup progContext [] .progFiles .length < do
     progContext [] .progFiles ..over list.get .fileName sb.asStr fileName sb.asStr string.eq if
       ..dup FileId cast imported@ =
       break
@@ -2599,7 +2599,7 @@ proc(
     programContext@
     typeChecker@
     64  BlockInfo               list.create
-    32  i64                     list.create
+    32  i32                     list.create
     128 Operation               list.create
     0
     128 Type                    list.create
@@ -2615,7 +2615,7 @@ proc(
   ## cleanup parser memory
   state .typeBuffer list.free ..drop
   state .constantBlocks list.free ..drop
-  0:i64 while ..dup state .globalInterpreters .length < do
+  0:i32 while ..dup state .globalInterpreters .length < do
     state .globalInterpreters
       ..over list.at .data .context
     interpreter.cleanupContext
@@ -2633,8 +2633,8 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
     progContext .errors =:: errors
     ..dup ..over .length 1 - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
-      ..dup .length 1 - sb.setLength ## ensure there is a zero-terminator after the last character
     end
+    ..dup .length 1 - sb.setLength ## do not include zero terminator in length
     ..dup sb.asStr 0 1 FilePosition new ..dup FileState new =:: mut: fileState
     progContext [] .progFiles .length FileId cast =:: fileId
     progContext [] .progFiles
@@ -2653,7 +2653,7 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
     state .globalInterpreters=
   state [] .currentFile =:: prevFile
   fileId state .currentFile=
-  $ .data ..swap .length 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
+  $ .data >$ .length i64 cast.u 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
     $ io.FILE_ERROR_NONE != if =:: openError
       ..drop ## discard code file
       prevFile state .currentFile= ## reset file id

@@ -28,17 +28,17 @@ enum(
   LABEL
   LABEL_PRE
 ) =:: BranchType
-struct( BranchType : branchType i64 : id ) =:: BranchId
+struct( BranchType : branchType i32 : id ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
 
 struct(
-  i64 : varId
+  i32 : varId
   ValType : valType
 ) =:: StackElement
 
 struct(
   Type : valType
-  i64 : valId
+  i32 : valId
 ) =:: TypedValId
 
 struct(
@@ -51,7 +51,7 @@ struct(
   Type       : valType
   ConstValue : value
   FilePosition : pos
-  i64 : id
+  i32 : id
 ) =:: LocalConst
 
 struct(
@@ -71,7 +71,7 @@ struct(
   BranchId list : caseBranchIds
   branchTree.NodeId : branchRoot
   BlockId : blockId
-  i64 : blockEnd
+  i32 : blockEnd
 ) =:: SwitchBlockInfo
 struct(
   branchTree.NodeId list : continueBranches
@@ -80,10 +80,10 @@ struct(
   BranchId list : breakBranchIds
   branchTree.NodeId list : doBranches
   BranchId list : doBranchIds
-  i64 : loopValOffset
+  i32 : loopValOffset
   branchTree.NodeId : branchRoot
   BlockId : blockId
-  i64 : blockStart
+  i32 : blockStart
 ) =:: WhileBlockInfo
 struct(
   branchTree.NodeId list : branches
@@ -118,9 +118,9 @@ struct(
   string list : stringConstants
   PtrConstant list : ptrConstants
   Type : currentProc
-  i64 : localConstCount
-  i64 : stackCount
-  i64 : tmpCount
+  i32 : localConstCount
+  i32 : stackCount
+  i32 : tmpCount
   i32 : jumpLabelCount
   bool : reachable
 ) =:: CompilerContext
@@ -213,7 +213,7 @@ proc(
     '\n' sb.appendC
   return
 end
-proc( ValType : valType CompilerContext ptr.mut : context -> i64 ) =>: pushValue
+proc( ValType : valType CompilerContext ptr.mut : context -> i32 ) =>: pushValue
   context [] .stackCount =:: oldCount
     context .stackInfo
       oldCount
@@ -224,13 +224,13 @@ proc( ValType : valType CompilerContext ptr.mut : context -> i64 ) =>: pushValue
     context .stackCount=
   oldCount return
 end
-proc( CompilerContext ptr.mut : context -> i64 ) =>: nextValueId
+proc( CompilerContext ptr.mut : context -> i32 ) =>: nextValueId
   context [] .stackCount =:: oldCount
     oldCount 1 +
   context .stackCount=
   oldCount return
 end
-proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> i64 ) =>: replaceValue
+proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> i32 ) =>: replaceValue
   context nextValueId =:: newId
   context .stackInfo
     offset
@@ -242,7 +242,7 @@ end
 proc(
   FilePosition : pos
   CompilerContext ptr.mut : context
--> i64 ) =>: popValue
+-> i32 ) =>: popValue
   context .stackInfo branchTree.pop =:: tmp
   tmp .data ?? if
     tmp .data [] .varId return
@@ -251,21 +251,21 @@ proc(
   pos context [] .program .errors appendError
   -1 return
 end
-proc( CompilerContext ptr.mut : context -> i64 ) =>: nextTmpId
+proc( CompilerContext ptr.mut : context -> i32 ) =>: nextTmpId
   context [] .tmpCount =:: oldCount
     oldCount
       1 +
     context .tmpCount=
   oldCount return
 end
-proc( CompilerContext ptr.mut : context -> i64 ) =>: nextJumpLabelId
+proc( CompilerContext ptr.mut : context -> i32 ) =>: nextJumpLabelId
   context [] .jumpLabelCount =:: oldCount
     oldCount
       1 +
     context .jumpLabelCount=
-  oldCount i64 cast.u return
+  oldCount return
 end
-proc( CompilerContext ptr.mut : context -> i64 ) =>: nextLocalConstId
+proc( CompilerContext ptr.mut : context -> i32 ) =>: nextLocalConstId
   context [] .localConstCount =:: oldCount
     oldCount
       1 +
@@ -341,7 +341,7 @@ proc(
 end
 proc(
   Type : t
-  i64 : i
+  i32 : i
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> i64 ) =>: tupleEltOffsetInt
@@ -387,7 +387,7 @@ struct(
 ) =:: MergePoint
 proc(
   StackElement ptr slice : toMerge
-  i64 : offset
+  i32 : offset
   MergePoint : mergePoint
 -> StackElement ) =>: mergeBranches
   mergePoint .context =:: context
@@ -471,7 +471,7 @@ proc(
 end
 proc(
   BlockId : blockId
-  i64 : blockEnd
+  i32 : blockEnd
   CompilerContext ptr.mut : context
 -> ) =>: openSwitchBlock
   ## SwitchBlockInfo
@@ -484,7 +484,7 @@ proc(
 end
 proc(
   BlockId : blockId
-  i64 : blockStart
+  i32 : blockStart
   CompilerContext ptr.mut : context
 -> ) =>: openWhileBlock
   ## WhileBlockInfo
@@ -544,7 +544,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     LabelId : label
-    i64 : implId
+    i32 : implId
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendGlobalName
     context [] .program =:: prog
@@ -679,7 +679,7 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    i64 : index
+    i32 : index
     LabelId : labelId
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendArgName
@@ -690,7 +690,7 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    i64 : index
+    i32 : index
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendOutArgName
     sb
@@ -715,8 +715,8 @@ namespace: sb
     false =:: mut: hasArgs
     sb
       "(" sb.appendS
-      0:i64 while ..dup args .length < do =:: i
-        args i types.compositeElts.get =:: mut: arg
+      0:i32 while $ i64 cast.u args .length < do =:: i
+        args i slice.get =:: mut: arg
         arg typeContext types.containsGeneric if
           arg typeContext types.isArray if
             arg
@@ -745,7 +745,7 @@ namespace: sb
         i inType i typeContext types.compositeGetLabel context appendArgName
         i 1 +
       end ..drop
-      0:i64 while ..dup outArgs .length < do =:: i
+      0:i32 while $ i64 cast.u outArgs .length < do =:: i
           outArgs i slice.get =:: arg
           arg typeContext types.isEmpty if
             ## skip empty arguments
@@ -1018,8 +1018,8 @@ namespace: sb
             containerType typeContext types.compositeElts =:: types
             value .Array =:: elts
             0:i64 =:: mut: offset
-            0:i64 while ..dup elts .length < do =:: i
-              types i types.compositeElts.get =:: elt
+            0:i32 while $ i64 cast.u elts .length < do =:: i
+              types i slice.get =:: elt
               containerType i pos context tupleEltOffsetInt =:: eltOffset
               i 0 > if
                 ',' sb.appendC
@@ -1114,7 +1114,7 @@ namespace: sb
             needComma if ',' sb.appendC end
             ## appendConstQBE
               labelType
-              eltIndex ConstValue .Int
+              eltIndex i64 cast.u ConstValue .Int
               isGlobal
               pos
               context
@@ -1161,7 +1161,7 @@ namespace: sb
   -> stringBuilder ) =>: appendLocalConstants
     context [] .program .idContext .typeContext =:: typeContext
     sb
-      0:i64 while ..dup context [] .localConstants .length < do =:: i
+      0:i32 while ..dup context [] .localConstants .length < do =:: i
         context [] .localConstants i list.at .data =:: constant
         "data $" sb.appendS
         LOCAL_CONST_NAME sb.appendS
@@ -1268,8 +1268,8 @@ namespace: sb
       0:i64 =:: mut: offset
       false =:: mut: hasElt
       sb
-        0:i64 while ..dup elts .length < do =:: i
-          elts i types.compositeElts.get =:: elt
+        0:i32 while $ i64 cast.u elts .length < do =:: i
+          elts i slice.get =:: elt
           elt typeContext types.isEmpty if
             i 1 + continue
           end
@@ -1312,14 +1312,14 @@ namespace: sb
           -1:i64 =:: mut: nonEmptyIndex
           0:i64 =:: mut: nonEmptyCount
           elts .length for =:: i
-            elts i types.compositeElts.get =:: elt
+            elts i slice.get =:: elt
             elt typeContext types.isEmpty if continue end
             nonEmptyCount 1 + nonEmptyCount@ =
             i nonEmptyIndex@ =
           end
           nonEmptyCount 0 > "non-empty union has non-empty element" assert
           nonEmptyCount 1 == if
-            elts nonEmptyIndex types.compositeElts.get =:: elt
+            elts nonEmptyIndex slice.get =:: elt
             ## appendNestedTypeDeclarationQBE
               elt
               pos
@@ -1416,7 +1416,7 @@ namespace: sb
 end
 
 proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
-  0:i64 while ..dup prog [] .progFiles .length < do =:: i
+  0:i32 while ..dup prog [] .progFiles .length < do =:: i
     prog [] .progFiles i list.at .data [] .fileName sb.asStr =:: currentName
     fileName currentName string.eq if
       i FileId cast return
@@ -1474,12 +1474,12 @@ proc(
   pos errors appendError
 end
 
-union( i64 : constant i64 : stackId LabelId : autoArg i64 : localId i64 : tmpId ) =:: IntValue
+union( i64 : constant i32 : stackId LabelId : autoArg i32 : localId i32 : tmpId ) =:: IntValue
 proc(
   stringBuilder : sb
   ValType : valType
   char8 : valStackType
-  i64 : valId
+  i32 : valId
   string : cmpType
   IntValue : value
   BranchId : ifBranch
@@ -1517,7 +1517,7 @@ end
 proc(
   stringBuilder : sb
   IntValue : size
-  i64 : valId
+  i32 : valId
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendIndexCheck
@@ -1584,10 +1584,10 @@ end
 proc(
   stringBuilder : sb
   Type : enumType
-  i64 : valId
+  i32 : valId
   FilePosition : pos
   CompilerContext ptr.mut : context
--> stringBuilder i64 ValType ) =>: loadEnumLabel
+-> stringBuilder i32 ValType ) =>: loadEnumLabel
   context [] .program =:: prog
   prog .errors =:: errors
   prog .idContext =:: idContext
@@ -1626,8 +1626,8 @@ proc(
   stringBuilder : sb
   Type : enumType
   char8  : stackType
-  i64 : valId
-  i64 : newLabel
+  i32 : valId
+  i32 : newLabel
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: storeEnumLabel
@@ -1658,11 +1658,11 @@ end
 proc(
   stringBuilder : sb
   Type : enumType
-  i64 : valId
-  i64 : expectedIndex
+  i32 : valId
+  i32 : expectedIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
--> stringBuilder i64 i64 ValType ) =>: checkEnumIndex
+-> stringBuilder i32 i32 ValType ) =>: checkEnumIndex
   context [] .program =:: prog
   prog .errors =:: errors
   prog .idContext =:: idContext
@@ -1691,8 +1691,8 @@ end
 proc(
   stringBuilder : sb
   Type : enumType
-  i64 : valId
-  i64 : expectedIndex
+  i32 : valId
+  i32 : expectedIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendEnumCheck
@@ -1739,7 +1739,7 @@ end
 proc(
   stringBuilder : sb
   Type : tupleType
-  i64 : tupleId
+  i32 : tupleId
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: flattenTupleQBE
@@ -1748,8 +1748,8 @@ proc(
   idContext .typeContext =:: typeContext
   tupleType typeContext types.compositeElts =:: elts
   sb
-    0:i64 while ..dup elts .length < do =:: i
-      elts i types.compositeElts.get =:: eltType
+    0:i32 while $ i64 cast.u elts .length < do =:: i
+      elts i slice.get =:: eltType
       eltType context toValType =:: eltValType
       tupleType i pos context tupleEltOffsetInt =:: eltOffset
       eltType typeContext types.isEmpty if
@@ -1793,7 +1793,7 @@ proc(
   stringBuilder : sb
   Type : tupleType
   char8 : dataPtrType
-  i64 : dataPtrId
+  i32 : dataPtrId
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: initializeTupleQBE
@@ -1802,8 +1802,8 @@ proc(
   idContext .typeContext =:: typeContext
   tupleType typeContext types.compositeElts =:: elts
   sb
-    elts .length 1 - while ..dup 0 >= do =:: i
-      elts i types.compositeElts.get =:: eltType
+    elts .length 1 - i32 cast while ..dup 0 >= do =:: i
+      elts i slice.get =:: eltType
       tupleType i pos context tupleEltOffsetInt =:: eltOffset
       eltType typeContext types.isEmpty if
         i 1 - continue
@@ -1843,11 +1843,11 @@ proc(
   FilePosition : pos
   CompilerContext ptr.mut : context
   bool : createId
--> stringBuilder i64 ) =>: appendAlloc
+-> stringBuilder i32 ) =>: appendAlloc
   context [] .program =:: prog
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  -1:i64 =:: mut: tmpId
+  -1:i32 =:: mut: tmpId
   sb
     createId if
       context nextTmpId tmpId@ =
@@ -1870,18 +1870,18 @@ proc( ConstValue : label -> i64 ) =>: labelAsInt
     label .Char i64 cast.u return
   end
   label .EnumLabel ?? if
-    label .EnumLabel return
+    label .EnumLabel i64 cast.u return
   end
   ..unreachable
 end
 proc(
   stringBuilder : sb
   ValType : valType
-  i64 : valId
+  i32 : valId
   JumpDistance : defaultJumpDistance
   LabelData slice : labels
   JumpDistance slice.mut : caseJumpDistances
-  i64 : opIndex
+  i32 : opIndex
   i64 optional : lower
   i64 optional : upper
   FilePosition : pos
@@ -1900,7 +1900,7 @@ proc(
         labels i slice.at .data [] .caseId =:: caseId
         ## BranchId
           BranchType .LABEL
-          opIndex caseJumpDistances caseId slice.get i64 cast +
+          opIndex caseJumpDistances caseId slice.get i32 cast +
         BranchId new =:: caseBranch
         ## BranchId
           BranchType .NEXT
@@ -1924,13 +1924,13 @@ proc(
         labels loopCount slice.at .data [] .caseId =:: caseId
         ## BranchId
           BranchType .LABEL
-          opIndex caseJumpDistances caseId slice.get i64 cast +
+          opIndex caseJumpDistances caseId slice.get i32 cast +
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       else
         ## BranchId
           BranchType .LABEL
-          opIndex defaultJumpDistance i64 cast +
+          opIndex defaultJumpDistance i32 cast +
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       end
@@ -2007,11 +2007,11 @@ end
 proc(
   stringBuilder : sb
   Type : switchType
-  i64 : valId
+  i32 : valId
   JumpDistance : defaultJumpDistance
   LabelData list : labels
   JumpDistance slice.mut : caseJumpDistances
-  i64 : opIndex
+  i32 : opIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendSwitchTable
@@ -2022,7 +2022,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   ValType : valType
-  i64 : tmpId
+  i32 : tmpId
   labels labelCmp@ context list.sort
   sb
     "## switch\n" sb.appendS
@@ -2181,7 +2181,7 @@ proc(
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: extendArguments
-  i64 2 array new =:: mut: args
+  i32 2 array new =:: mut: args
   context [] .program =:: prog
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -2241,9 +2241,9 @@ proc(
   inType typeContext types.compositeEltCount 0 > if
     inType 0 typeContext types.compositeGetLabel
         labelContext id.labelFlags id.FLAG_STATIC & ? if
-      1:i64
+      1:i32
     else
-      0:i64
+      0:i32
     end =:: firstArg
     inType firstArg typeContext types.compositeGetElement
   else
@@ -2578,10 +2578,10 @@ end
 proc(
   stringBuilder : sb
   types.PrimitiveType : srcVal
-  i64 : srcIndex
+  i32 : srcIndex
   Type : targetType
   types.PrimitiveType : targetVal
-  i64 : targetIndex
+  i32 : targetIndex
   bool : unsigned
   FilePosition : pos
   CompilerContext ptr.mut : context
@@ -2704,9 +2704,9 @@ end
 proc(
   stringBuilder : sb
   Type : src
-  i64 : srcIndex
+  i32 : srcIndex
   Type : target
-  i64 : targetIndex
+  i32 : targetIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
   SignType : signType
@@ -2811,7 +2811,7 @@ proc(
 end
 
 
-struct( char8 : varType i64 : varId ) =:: StackVal
+struct( char8 : varType i32 : varId ) =:: StackVal
 namespace: sb
   proc(
     stringBuilder : sb
@@ -2827,9 +2827,9 @@ end
 proc(
   stringBuilder : sb
   Type : src
-  i64 : srcIndex
+  i32 : srcIndex
   Type : target
-  i64 : targetIndex
+  i32 : targetIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: bitcastNumbers
@@ -2966,7 +2966,7 @@ proc(
     sb return ## nothing to do
   end
   castType .autoCast ?? if
-    offset i64 cast.s context [] .stackInfo branchTree.depth >= if
+    offset context [] .stackInfo branchTree.depth >= if
       "stack underflow" sb.copyPtr
       pos errors appendError
       sb return
@@ -3109,7 +3109,7 @@ proc(
       types.typeEquals ! needCast@ =
     end
   end
-  i64 : valId
+  i32 : valId
   sb
     pos sb.appendPosQBE
     "%s" sb.appendS
@@ -3142,7 +3142,7 @@ proc(
   stringBuilder : sb
   Type : calledType
   TypedValId list ptr.mut : argIndices
-  i64 : outArgsOffset
+  i32 : outArgsOffset
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: prepareCall
@@ -3185,7 +3185,7 @@ proc(
   stringBuilder : sb
   Type : calledType
   TypedValId list ptr.mut : argIndices
-  i64 : outArgsOffset
+  i32 : outArgsOffset
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: finishCall
@@ -3200,7 +3200,7 @@ proc(
   =:: retType
   sb
     " (" sb.appendS
-    0:i64 while ..dup argIndices [] .length < do =:: i
+    0:i32 while ..dup argIndices [] .length < do =:: i
       argIndices [] i list.at .data =:: arg
       i 0 > if
         ',' sb.appendC
@@ -3259,7 +3259,7 @@ end
 proc(
   stringBuilder : sb
   Operation ptr : op
-  i64 : opIndex
+  i32 : opIndex
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: compileOp
   context [] .program =:: prog
@@ -3372,9 +3372,9 @@ proc(
         ## push unnamed arguments
         op [] .dataType typeContext types.getProcIn ..drop =:: inType
         inType typeContext types.compositeElts =:: args
-        0:i64 while ..dup args .length < do =:: i
+        0:i32 while $ i64 cast.u args .length < do =:: i
           inType i typeContext types.compositeGetLabel =:: label
-          args i types.compositeElts.get =:: argType
+          args i slice.get =:: argType
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
@@ -3491,7 +3491,7 @@ proc(
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
-            idData [] .index i64 cast idInfo .labelId context sb.appendArgName
+            idData [] .index idInfo .labelId context sb.appendArgName
             '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case
@@ -3722,7 +3722,7 @@ proc(
           context
         appendEnumCheck
       return
-    setEnumLabel setEnumElement case
+    setEnumElement case
       context .stackInfo branchTree.peek =:: srcVal?
       srcVal? optional.isEmpty if
         "stack underflow" sb.copyPtr
@@ -3736,11 +3736,7 @@ proc(
           typeContext types.getBaseType
         end
       =:: enumType
-      op [] .val .setEnumLabel ?? if
-        op [] .val .setEnumLabel
-      else
-        op [] .val .setEnumElement
-      end =:: elementId
+      op [] .val .setEnumElement =:: elementId
       sb
         op [] .pos sb.appendPosQBE
         ## storeEnumLabel
@@ -3751,36 +3747,34 @@ proc(
           op [] .pos
           context
         storeEnumLabel
-        op [] .val .setEnumElement ?? if
-          enumType elementId typeContext types.compositeGetElement =:: eltType
-          eltType typeContext types.isEmpty if
-            return
-          end
-          op [] .pos context popValue =:: unionId
-          op [] .pos context popValue =:: valueId
-          eltType context referenceOnly if
-            "blit %s" sb.appendS
-          else
-            "store" sb.appendS
-            eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-            " %s" sb.appendS
-          end
-          valueId sb.appendI
-          ", %s" sb.appendS
+        enumType elementId typeContext types.compositeGetElement =:: eltType
+        eltType typeContext types.isEmpty if
+          return
+        end
+        op [] .pos context popValue =:: unionId
+        op [] .pos context popValue =:: valueId
+        eltType context referenceOnly if
+          "blit %s" sb.appendS
+        else
+          "store" sb.appendS
+          eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+          " %s" sb.appendS
+        end
+        valueId sb.appendI
+        ", %s" sb.appendS
+        unionId sb.appendI
+        eltType context referenceOnly if
+          ',' sb.appendC
+          eltType op [] .pos context typeSizeInt sb.appendI
+        end
+        '\n' sb.appendC
+        isPtr ! if
+          ## keep non-pointer value on stack
+          "%s" sb.appendS
+          ValType .REFERENCE context pushValue sb.appendI
+          " =l copy %s" sb.appendS
           unionId sb.appendI
-          eltType context referenceOnly if
-            ',' sb.appendC
-            eltType op [] .pos context typeSizeInt sb.appendI
-          end
           '\n' sb.appendC
-          isPtr ! if
-            ## keep non-pointer value on stack
-            "%s" sb.appendS
-            ValType .REFERENCE context pushValue sb.appendI
-            " =l copy %s" sb.appendS
-            unionId sb.appendI
-            '\n' sb.appendC
-          end
         end
       return
     hasElement case
@@ -3853,8 +3847,8 @@ proc(
         op [] .pos sb.appendPosQBE
       =:: mut: newSb
       ## index of current auto-argument
-      0:i64 =:: mut: autoArgIndex
-      0:i64 while ..dup argCount < do =:: i
+      0:i32 =:: mut: autoArgIndex
+      0:i32 while ..dup argCount < do =:: i
         inTypes i typeContext types.compositeGetElement =:: mut: arg
         inTypes i typeContext types.compositeGetLabel =:: argLabel
         arg typeContext types.isEmpty if
@@ -3890,17 +3884,15 @@ proc(
       end ..drop
       argIndices .length =:: outArgOffset
       ## reserve space for out-arguments
-      0:i64 while ..dup outArgs .length < do =:: i
-        outArgs i slice.get =:: arg
+      outArgs for =:: arg
         arg typeContext types.isEmpty if
           ## skip empty arguments
-          i 1 + continue
+          continue
         end
         argIndices
           arg -1 TypedValId new list.append
         argIndices@ =
-        i 1 +
-      end ..drop
+      end
       argIndices .length =:: mut: argIndex
       while argIndex 0 > do argIndex 1 - argIndex@ =
         argIndices argIndex list.at .data [] .valId 0 >= if
@@ -4127,7 +4119,7 @@ proc(
             ", " sb.appendS
             ## appendBranchId
               BranchType .LABEL
-              opIndex  op [] .val .block .jumpDistance i64 cast +
+              opIndex  op [] .val .block .jumpDistance i32 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
           =:: mut: newSb
@@ -4201,7 +4193,7 @@ proc(
             isOr if
               ## appendBranchId
                 BranchType .LABEL
-                opIndex  op [] .val .block .jumpDistance i64 cast +
+                opIndex  op [] .val .block .jumpDistance i32 cast +
               BranchId new sb.appendBranchId
               ", " sb.appendS
             end
@@ -4210,7 +4202,7 @@ proc(
               ", " sb.appendS
               ## appendBranchId
                 BranchType .LABEL
-                opIndex  op [] .val .block .jumpDistance i64 cast +
+                opIndex  op [] .val .block .jumpDistance i32 cast +
               BranchId new sb.appendBranchId
             end
             '\n' sb.appendC
@@ -4246,7 +4238,7 @@ proc(
               "jmp " sb.appendS
               ## appendBranchId
                 BranchType .LABEL
-                opIndex  op [] .val .block .jumpDistance i64 cast +
+                opIndex  op [] .val .block .jumpDistance i32 cast +
               BranchId new sb.appendBranchId
               '\n' sb.appendC
             end
@@ -4296,7 +4288,7 @@ proc(
               context
             appendSwitchTable
             switchId
-              opIndex op [] .val .block .jumpDistance i64 cast +
+              opIndex op [] .val .block .jumpDistance i32 cast +
             context openSwitchBlock
             false context .reachable=
           return
@@ -4350,7 +4342,7 @@ proc(
                 "jmp " sb.appendS
                 ## BlockId
                   BranchType .LABEL
-                  opIndex op [] .val .block .jumpDistance i64 cast +
+                  opIndex op [] .val .block .jumpDistance i32 cast +
                 BranchId new sb.appendBranchId
                 '\n' sb.appendC
               end
@@ -4377,7 +4369,7 @@ proc(
               op [] .pos errors appendError
               sb return
             end
-            0:i64 while ..dup loopEltCount < do 1 +
+            0:i32 while ..dup loopEltCount < do 1 +
               loopElts
                 context .stackInfo branchTree.pop .data list.appendP
               loopElts@ =
@@ -4400,7 +4392,7 @@ proc(
                 ',' sb.appendC
                 ## BranchId
                   BranchType .LABEL_PRE
-                  opIndex op [] .val .block .jumpDistance i64 cast +
+                  opIndex op [] .val .block .jumpDistance i32 cast +
                 BranchId new sb.appendBranchId
                 " %t" sb.appendS
                 whileBlock [] .loopValOffset i + sb.appendI
@@ -4424,7 +4416,7 @@ proc(
             isOr if
               ## appendBranchId
                 BranchType .LABEL
-                opIndex op [] .val .block .jumpDistance i64 cast +
+                opIndex op [] .val .block .jumpDistance i32 cast +
               BranchId new sb.appendBranchId
               ", " sb.appendS
             end
@@ -4433,7 +4425,7 @@ proc(
               ", " sb.appendS
               ## appendBranchId
                 BranchType .LABEL
-                opIndex op [] .val .block .jumpDistance i64 cast +
+                opIndex op [] .val .block .jumpDistance i32 cast +
               BranchId new sb.appendBranchId
             end
             '\n' sb.appendC
@@ -4469,7 +4461,7 @@ proc(
             ", " sb.appendS
             ## appendBranchId
               BranchType .LABEL
-              opIndex op [] .val .block .jumpDistance i64 cast +
+              opIndex op [] .val .block .jumpDistance i32 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
           =:: mut: newSb
@@ -4545,7 +4537,7 @@ proc(
             "jmp " sb.appendS
             ## BlockId
               BranchType .LABEL
-              opIndex op [] .val .block .jumpDistance i64 cast +
+              opIndex op [] .val .block .jumpDistance i32 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
             false context .reachable=
@@ -4626,7 +4618,7 @@ proc(
             end
             ## appendBranchId
               BranchType .LABEL
-              opIndex op [] .val .block .jumpDistance i64 cast +
+              opIndex op [] .val .block .jumpDistance i32 cast +
             BranchId new sb.appendBranchId
             isOr if
               ", " sb.appendS
@@ -4756,10 +4748,10 @@ proc(
           end
           sb
             ## copy values to loop vars
-            0:i64 while ..dup whileData [] .modifiedTypes < do =:: i
+            0:i32 while ..dup whileData [] .modifiedTypes < do =:: i
               context .stackInfo branchTree.pop .data =:: elt
               "%t" sb.appendS
-              whileBlock .loopValOffset i i64 cast.u + sb.appendI
+              whileBlock .loopValOffset i + sb.appendI
               " =" sb.appendS
               elt [] .valType sb.appendValTypeQBE
               " copy %s" sb.appendS
@@ -4775,7 +4767,7 @@ proc(
             "\njmp " sb.appendS
             ## BranchId
               BranchType .LABEL
-              opIndex op [] .val .blockEnd .jumpDistance i64 cast +
+              opIndex op [] .val .blockEnd .jumpDistance i32 cast +
             BranchId new sb.appendBranchId
             '\n' sb.appendC
           =:: mut: newSb
@@ -4879,7 +4871,7 @@ proc(
       op [] .dataType typeContext types.getProcOutArgs ..drop =:: outTypes
       retType typeContext types.isProcOut if
           retType typeContext types.compositeEltCount
-        else retType typeContext types.isEmpty _if 0:i64 else 1:i64 end =:: retCount
+        else retType typeContext types.isEmpty _if 0:i32 else 1:i32 end =:: retCount
       false context .reachable=
       sb
         op [] .pos sb.appendPosQBE
@@ -4892,9 +4884,9 @@ proc(
           tmpId
           "ret %t":s
         else
-          -1:i64  string.empty ## values will be ignored
+          -1:i32  string.empty ## values will be ignored
         end =:: retStr =:: retId
-        outTypes .length 1 - while ..dup 0 >= do =:: i
+        outTypes .length 1 - i32 cast while $ 0 >= do =:: i
           outTypes i slice.get =:: elt
           elt typeContext types.isEmpty if
             i 1 - continue
@@ -4977,7 +4969,7 @@ proc(
           sb return
         COPY case
           op [] .val .stackMod .n =:: offset
-          context [] .stackInfo branchTree.depth offset i64 cast.u <= if
+          context [] .stackInfo branchTree.depth offset <= if
             "stack underflow" sb.copyPtr
             op [] .pos errors appendError
             sb return
@@ -5059,7 +5051,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   else ..drop end
   1024 sb.create
     program getDeclaredTypes =:: types
-    0:i64 while ..dup types .length < do =:: i
+    0:i32 while ..dup types .length < do =:: i
       types i list.get
         ## TODO? use declaration position of type
         string.empty 0 0 FilePosition new
@@ -5130,7 +5122,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   end ..drop
   sb
     ## constant references
-    0:i64 while ..dup program [] .constantReferences .length < do =:: i
+    0:i32 while ..dup program [] .constantReferences .length < do =:: i
       program [] .constantReferences i list.at .data =:: constRef
       "data $" sb.appendS
       CONST_REFERENCE_NAME sb.appendS
@@ -5141,7 +5133,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       i 1 +
     end ..drop
     ## code
-    0:i64 while ..dup program [] .progFiles .length < do =:: i
+    0:i32 while ..dup program [] .progFiles .length < do =:: i
       program [] .progFiles i list.at .data =:: f
         "dbgfile \"" sb.appendS
         f [] .fileName sb.appendSb
@@ -5152,7 +5144,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         " = {" sb.appendS
           f [] .fileName sb.asStr string.bytes 'b' true sb.appendPrimitiveArrayConstQBE
         "} \n" sb.appendS
-        0:i64 while ..dup f [] .localOps .length < do =:: opIndex
+        0:i32 while ..dup f [] .localOps .length < do =:: opIndex
           f [] .localOps opIndex list.at .data opIndex context compileOp
         finally opIndex 1 + end ..drop
         target ..over io.fputSb ..drop
@@ -5161,7 +5153,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     end ..drop
     target ..over io.fputSb ..drop
     sb.clear
-    0:i64 while ..dup context [] .stringConstants .length < do =:: i
+    0:i32 while ..dup context [] .stringConstants .length < do =:: i
       context [] .stringConstants i list.get =:: str
       "data $" sb.appendS
       STRING_CONST_NAME sb.appendS
@@ -5173,7 +5165,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       "\"\n" sb.appendS
       i 1 +
     end ..drop
-    0:i64 while ..dup context [] .ptrConstants .length < do =:: i
+    0:i32 while ..dup context [] .ptrConstants .length < do =:: i
       context [] .ptrConstants i list.at .data =:: val
       "data $" sb.appendS
       PTR_CONST_NAME sb.appendS

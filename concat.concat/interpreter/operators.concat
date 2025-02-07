@@ -530,7 +530,7 @@ namespace: interpreter
         k 2 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 1 [] .Int ?? "argument is int" assert
-        args 0 [] .TypeId args 1 [] .Int typeContext types.compositeGetElement
+        args 0 [] .TypeId args 1 [] .Int i32 cast typeContext types.compositeGetElement
           ConstValue .TypeId
         OperatorResult .success return
     end

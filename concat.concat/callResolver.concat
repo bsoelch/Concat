@@ -189,7 +189,7 @@ proc(
       typeBuffer [] .length =:: typeOffset
       labelBuffer [] .length =:: labelOffset
       src typeContext types.compositeEltCount =:: eltCount
-      0:i64 while ..dup eltCount < do =:: i
+      0:i32 while ..dup eltCount < do =:: i
         ## replaceGenerics
           src i typeContext types.compositeGetElement
           typeBuffer
@@ -503,7 +503,7 @@ proc(
         true return ## all types in source have to be matched to type in target
       end
       ## resolve generics for all elements of composite type
-      0:i64 while ..dup targetCount < do =:: i
+      0:i32 while ..dup targetCount < do =:: i
         target i typeContext types.compositeGetElement =:: targetElt
         i srcCount < if
           src i typeContext types.compositeGetElement
@@ -607,7 +607,7 @@ proc(
 end
 
 proc(
-  i64 : index
+  i32 : index
   CallSignatureInfo list ptr.mut : elts
 -> CallSignatureInfo ptr.mut ) =>: copyElement
   elts [] ## TODO? add procedure for element copy to list
@@ -718,7 +718,7 @@ end
 proc(
   CallSignatureInfo list ptr.mut : signatures
 -> ) =>: cleanupSignatures
-  0:i64 while ..dup signatures [] .length < do =:: i
+  0:i32 while ..dup signatures [] .length < do =:: i
     signatures [] i list.at .data =:: elt
     elt [] .paramInfo
       list.free
@@ -748,7 +748,7 @@ proc(
 end
 
 5:i64 =:: MAX_DISPLAY_ARGS_DEFAULT
-5:i64 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
+5:i32 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
 
 proc(
   ProcId slice : procedureIds
@@ -778,12 +778,12 @@ proc(
     procInfo [] .procType
       typeContext types.getProcIn ..drop typeContext types.compositeEltCount
     =:: argCount
-    maxArgs argCount i64.max maxArgs@ =
+    maxArgs argCount i64 cast i64.max maxArgs@ =
     currentSignatures
       ## CallSignatureInfo
         procId
         argCount ParameterInfo list.create
-        labelHash@ labelEq@ argCount GenericArg map.create
+        labelHash@ labelEq@ argCount i64 cast GenericArg map.create
         0
         0
         0
@@ -803,7 +803,7 @@ proc(
       ## add dummy type below stack to ensure auto-arguments get matched
       Type .undefined
     end =:: stackType
-    0:i64 while ..dup currentSignatures .length < do =:: i
+    0:i32 while ..dup currentSignatures .length < do =:: i
       currentSignatures i list.at .data =:: mut: current
       current [] .argsMatch ! or current [] .needsParam ! if
         ## don't continue checking if first arguments were no match / all params matched
@@ -1034,8 +1034,8 @@ proc(
           i 1 -
         end ..drop
         ")\ncandidates:\n" sb.appendS
-        MAX_DISPLAY_SIGNATURES currentSignatures .length i64.min =:: maxSignatures
-        0:i64 while ..dup maxSignatures < do =:: i
+        MAX_DISPLAY_SIGNATURES currentSignatures .length i32.min =:: maxSignatures
+        0:i32 while ..dup maxSignatures < do =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId i64 cast list.at .data
@@ -1077,8 +1077,8 @@ proc(
         end ..drop
         ")\npossible matches: \n" sb.appendS
         true =:: mut: isEquivalent
-        MAX_DISPLAY_SIGNATURES currentSignatures .length i64.min =:: maxSignatures
-        0:i64 while ..dup maxSignatures < do =:: i
+        MAX_DISPLAY_SIGNATURES currentSignatures .length i32.min =:: maxSignatures
+        0:i32 while ..dup maxSignatures < do =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId i64 cast list.at .data
@@ -1102,7 +1102,7 @@ proc(
     ProcedureCallInfo optional.empty Type .undefined return
   end
   progContext [] .procedures
-    candidate [] .procId i64 cast list.at .data
+    candidate [] .procId i32 cast list.at .data
   =:: procInfo
   procInfo [] .implementation .alias ?? ! if
     candidate [] .procId
@@ -1114,7 +1114,7 @@ proc(
   procInfo [] .procType typeContext types.getProcOut ..drop =:: outType
   inType typeContext types.compositeEltCount =:: eltCount
   eltCount ConstValue list.create =:: mut: constArgs
-  0:i64 while ..dup eltCount < do =:: i
+  0:i32 while ..dup eltCount < do =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
       constArgs
@@ -1123,7 +1123,7 @@ proc(
     end
     i 1 +
   end ..drop
-  -1:i64 =:: mut: implId
+  -1:i32 =:: mut: implId
   eltCount Type list.create =:: mut: typeBuffer
   eltCount LabelId list.create =:: mut: labelBuffer
   constArgs .length 0 > and
@@ -1135,11 +1135,11 @@ proc(
       implData [] .code ?? if
     implData .code .implementations =:: impls
     false =:: mut: isMatch
-    0:i64 while ..dup impls [] .length < do =:: i
+    0:i32 while ..dup impls [] .length < do =:: i
       impls [] i list.at .data =:: impl
-      impl [] .staticArgs .length constArgs .length == "correct number of static arguments" assert
+      impl [] .staticArgs .length constArgs .length i64 cast == "correct number of static arguments" assert
       true isMatch@ =
-      0:i64 while ..dup constArgs .length < do =:: j
+      0:i32 while ..dup constArgs .length < do =:: j
         ## constEquals
           impl [] .staticArgs j slice.get
           constArgs j list.get
@@ -1182,7 +1182,7 @@ proc(
   constArgs
     list.clear
   constArgs@ =
-  0:i64 while ..dup eltCount < do =:: i
+  0:i32 while ..dup eltCount < do =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags =:: flags
     true =:: mut: needArg

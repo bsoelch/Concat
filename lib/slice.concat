@@ -300,6 +300,13 @@ namespace: slice
   proc(
     type : auto: T
     T slice : elts
+    i32 : n
+  -> T slice ) =>: export: head_32
+    elts n i64 cast head_64
+  end
+  proc(
+    type : auto: T
+    T slice : elts
     i64 : n
   -> T slice ) =>: export: head_64
     n 0 <= if
@@ -309,6 +316,13 @@ namespace: slice
       elts return
     end
     elts .data  n create return
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+    i32 : n
+  -> T slice ) =>: export: head_32mut
+    elts n i64 cast head_64mut
   end
   proc(
     type : auto: T
@@ -323,9 +337,16 @@ namespace: slice
     end
     elts .data  n createMutable return
   end
-  overload: export: head head_64 head_64mut end
+  overload: export: head head_32 head_64 head_32mut head_64mut end
 
   ## everything excluding the first n characters
+  proc(
+    type : auto: T
+    T slice : elts
+    i32 : n
+  -> T slice ) =>: export: tail_32
+    elts n i64 cast tail_64
+  end
   proc(
     type : auto: T
     T slice : elts
@@ -342,6 +363,13 @@ namespace: slice
   proc(
     type : auto: T
     T slice.mut : elts
+    i32 : n
+  -> T slice ) =>: export: tail_32mut
+    elts n i64 cast tail_64mut
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
     i64 : n
   -> T slice.mut ) =>: export: tail_64mut
     n 0 <= if
@@ -352,7 +380,7 @@ namespace: slice
     end
     elts .data n +  elts .length n -  createMutable return
   end
-  overload: export: tail tail_64 tail_64mut end
+  overload: export: tail tail_32 tail_64 tail_32mut tail_64mut end
   ## equivalent to:  <from> tail <len> head
   proc(
     type : auto: T
@@ -418,6 +446,12 @@ namespace: slice
   end
 
   ( type : T -> type ) =>: export: getItr
+    struct(
+      T slice : data
+      i64 : index
+    )
+  end
+  ( type : T -> type ) =>: export: ptrItr
     struct(
       T slice : data
       i64 : index

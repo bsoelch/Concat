@@ -154,13 +154,13 @@ namespace: map
     V : value
   -> V optional ) =>: export: put
     data key true find
-      ..dup i64 cast data [] .nodeBuffer .length > if ..drop
+      ..dup i32 cast data [] .nodeBuffer .length > if ..drop
         data [] .nodeBuffer
           key value 0:NodeId K V Node new list.append
         data .nodeBuffer=
         V optional.empty return
       end
-    data [] .nodeBuffer ..swap i64 cast 1 - list.at .data
+    data [] .nodeBuffer ..swap i32 cast 1 - list.at .data
       ..dup [] .value ..swap
       value ..swap .value=
     optional.wrap return
