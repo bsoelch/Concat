@@ -523,8 +523,7 @@ proc(
 -> BlockInfo ptr.mut optional ) =>: findBreakableBlock
   context [] .program =:: program
   program .errors =:: errors
-  context [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
-    context [] .openBlocks i list.at .data =:: block
+  context [] .openBlocks list.atReversed for =:: block
     breakType .WHILE ?? and block [] .While ?? and
         block [] .While .blockId blockId == if
       block optional.wrap return
@@ -533,8 +532,7 @@ proc(
         block [] .Switch .blockId blockId == if
       block optional.wrap return
     end
-    i 1 -
-  end ..drop
+  end
   "could not find target of break/continue " sb.copyPtr
   pos errors appendError
   BlockInfo ptr.mut optional.empty return
@@ -1161,18 +1159,16 @@ namespace: sb
   -> stringBuilder ) =>: appendLocalConstants
     context [] .program .idContext .typeContext =:: typeContext
     sb
-      0:i32 while ..dup context [] .localConstants .length < do =:: i
-        context [] .localConstants i list.at .data =:: constant
+      context [] .localConstants for =:: constant
         "data $" sb.appendS
         LOCAL_CONST_NAME sb.appendS
-        constant [] .id sb.appendI
+        constant .id sb.appendI
         " = align " sb.appendS
-        constant [] .valType pos context typeAlignmentInt sb.appendI
+        constant .valType pos context typeAlignmentInt sb.appendI
         " {" sb.appendS
-        constant [] .valType constant [] .value true constant [] .pos context appendConstQBE
+        constant .valType constant .value true constant .pos context appendConstQBE
         "}\n" sb.appendS
-        i 1 +
-      end ..drop
+      end
       context [] .localConstants
         list.clear
       context .localConstants=
@@ -1416,13 +1412,12 @@ namespace: sb
 end
 
 proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
-  0:i32 while ..dup prog [] .progFiles .length < do =:: i
+  prog [] .progFiles .length for =:: i
     prog [] .progFiles i list.at .data [] .fileName sb.asStr =:: currentName
     fileName currentName string.eq if
       i FileId cast return
     end
-    i 1 +
-  end ..drop
+  end
   FILE_ID_NONE return
 end
 
@@ -3200,7 +3195,7 @@ proc(
   =:: retType
   sb
     " (" sb.appendS
-    0:i32 while ..dup argIndices [] .length < do =:: i
+    argIndices [] .length for =:: i
       argIndices [] i list.at .data =:: arg
       i 0 > if
         ',' sb.appendC
@@ -3216,8 +3211,7 @@ proc(
       end
       " %s" sb.appendS
       arg [] .valId sb.appendI
-      i 1 +
-    end ..drop
+    end
     ")\n" sb.appendS
     retType typeContext types.isProcOut if
       ## flattenTupleQBE
@@ -3230,7 +3224,7 @@ proc(
     outArgsOffset while ..dup argIndices [] .length < do =:: i
       argIndices [] i list.at .data [] .valType =:: argType
       argType context referenceOnly if
-        i 1 + continue
+        continue
       end
       ## TODO? extract load operations to common procedure
       argIndices [] .length i - i32 cast =:: offset
@@ -3250,8 +3244,7 @@ proc(
       " %s" sb.appendS
       srcId sb.appendI
       '\n' sb.appendC
-      i 1 +
-    end ..drop
+    finally i 1 + end ..drop
     argIndices [] list.free argIndices []=
   return
 end
@@ -3402,15 +3395,14 @@ proc(
           else
             procInfo [] .implementation .code .variables
           end =:: variables
-          variables .length for =:: i
-            variables i list.at .data =:: varInfo
+          variables for =:: varInfo
             VariableType ..length 3 == "no new variable types" assert
             varInfo .variableType .ARGUMENT ?? if
               continue
             end
             "%l" sb.appendS
-            varInfo [] .label i64 cast.u sb.appendI
-            varInfo [] .valueType op [] .pos context false appendAlloc ..drop
+            varInfo .label i64 cast.u sb.appendI
+            varInfo .valueType op [] .pos context false appendAlloc ..drop
           end
         end
         true context .reachable=
@@ -5122,38 +5114,36 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   end ..drop
   sb
     ## constant references
-    0:i32 while ..dup program [] .constantReferences .length < do =:: i
-      program [] .constantReferences i list.at .data =:: constRef
+    program [] .constantReferences .length for =:: i
+      program [] .constantReferences i list.get =:: constRef
       "data $" sb.appendS
       CONST_REFERENCE_NAME sb.appendS
       i sb.appendI
       " = {" sb.appendS
-        constRef [] .constType constRef [] .value true constRef [] .pos context sb.appendConstQBE
+        constRef .constType constRef .value true constRef .pos context sb.appendConstQBE
       "} \n" sb.appendS
-      i 1 +
-    end ..drop
+    end
     ## code
-    0:i32 while ..dup program [] .progFiles .length < do =:: i
-      program [] .progFiles i list.at .data =:: f
-        "dbgfile \"" sb.appendS
-        f [] .fileName sb.appendSb
-        "\"\n"    sb.appendS
-        "data $" sb.appendS
-        FILE_NAME_NAME sb.appendS
-        i sb.appendI
-        " = {" sb.appendS
-          f [] .fileName sb.asStr string.bytes 'b' true sb.appendPrimitiveArrayConstQBE
-        "} \n" sb.appendS
-        0:i32 while ..dup f [] .localOps .length < do =:: opIndex
-          f [] .localOps opIndex list.at .data opIndex context compileOp
-        finally opIndex 1 + end ..drop
-        target ..over io.fputSb ..drop
-        sb.clear
-      i 1 +
-    end ..drop
+    program [] .progFiles .length for =:: i
+      program [] .progFiles i list.get =:: f
+      "dbgfile \"" sb.appendS
+      f .fileName sb.appendSb
+      "\"\n"    sb.appendS
+      "data $" sb.appendS
+      FILE_NAME_NAME sb.appendS
+      i sb.appendI
+      " = {" sb.appendS
+        f .fileName sb.asStr string.bytes 'b' true sb.appendPrimitiveArrayConstQBE
+      "} \n" sb.appendS
+      f .localOps .length for =:: opIndex
+        f .localOps opIndex list.at .data opIndex context compileOp
+      end
+      target ..over io.fputSb ..drop
+      sb.clear
+    end
     target ..over io.fputSb ..drop
     sb.clear
-    0:i32 while ..dup context [] .stringConstants .length < do =:: i
+    context [] .stringConstants .length for =:: i
       context [] .stringConstants i list.get =:: str
       "data $" sb.appendS
       STRING_CONST_NAME sb.appendS
@@ -5163,9 +5153,9 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       "} ## \"" sb.appendS
       str sb.appendEscapedStr
       "\"\n" sb.appendS
-      i 1 +
-    end ..drop
-    0:i32 while ..dup context [] .ptrConstants .length < do =:: i
+    end
+    ## cannot replace with for as loop-counter is changed during loop
+    0:i32 while $ context [] .ptrConstants .length < do =:: i
       context [] .ptrConstants i list.at .data =:: val
       "data $" sb.appendS
       PTR_CONST_NAME sb.appendS
@@ -5173,9 +5163,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       " = {" sb.appendS
         val context sb.appendPtrConstDataQBE
       "}\n" sb.appendS ## XXX? append string value of string16/string32 constants
-      ## XXX? check if nested pointer constants do work correctly
-      i 1 +
-    end ..drop
+    finally i 1 + end ..drop
     target ..over io.fputSb ..drop
     sb.clear
     mainId id.LABEL_ID_NONE == if ## no main

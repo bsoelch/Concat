@@ -132,8 +132,7 @@ proc(
       src typeContext types.getArraySize =:: sizes
       idContext [] .arraySizeBuffer .length =:: sizeOffset
       false =:: mut: genericSize
-      0:i64 while ..dup sizes .length < do =:: i
-        sizes i slice.get =:: size
+      sizes for =:: size
         idContext [] .arraySizeBuffer
           size switch
             int case
@@ -155,8 +154,7 @@ proc(
               break
           end
         idContext .arraySizeBuffer=
-        i 1 +
-      end ..drop
+      end
       ## newArrayType
         ## replaceGenerics
           base
@@ -189,7 +187,7 @@ proc(
       typeBuffer [] .length =:: typeOffset
       labelBuffer [] .length =:: labelOffset
       src typeContext types.compositeEltCount =:: eltCount
-      0:i32 while ..dup eltCount < do =:: i
+      eltCount for =:: i
         ## replaceGenerics
           src i typeContext types.compositeGetElement
           typeBuffer
@@ -211,7 +209,7 @@ proc(
         labelBuffer []
           src i typeContext types.compositeGetLabel list.append
         labelBuffer []=
-      finally i 1 + end ..drop
+      end
       ## newComposite
         typeBuffer [] list.asSlice typeOffset slice.tail
         labelBuffer [] list.asSlice labelOffset slice.tail optional.wrap
@@ -249,8 +247,7 @@ proc(
       src typeContext types.getGeneratorArgs =:: args
       idContext .argBuffer =:: argBuffer
       argBuffer [] .length =:: argOffset
-      0:i64 while ..dup args .length < do =:: i
-        args i slice.get =:: arg
+      args for =:: arg
         argBuffer []
           ConstValue ..length 23 == "no new constants" assert
           arg switch
@@ -272,8 +269,7 @@ proc(
             default arg break ## argument not generic
           end list.append
         argBuffer []=
-        i 1 +
-      end ..drop
+      end
       src typeContext types.getGeneratorLabel =:: generatorName
       argBuffer [] list.asSlice argOffset slice.tail =:: generatorArgs
       ##findGeneratedType
@@ -433,7 +429,7 @@ proc(
       srcSizes
         srcSizes .length targetSizes .length -
       slice.cutIndex =:: newSrcSizes =:: matchedSizes
-      0:i64 while ..dup targetSizes .length < do =:: i
+      targetSizes .length for =:: i
         matchedSizes i slice.get =:: srcSize
         targetSizes i slice.get =:: targetSize
         targetSize switch
@@ -471,8 +467,7 @@ proc(
             map.put ..drop
             break
         end
-        i 1 +
-      end ..drop
+      end
       newSrcSizes .length 0 > if
         ## newArrayType
           src typeContext types.getBaseType
@@ -503,7 +498,7 @@ proc(
         true return ## all types in source have to be matched to type in target
       end
       ## resolve generics for all elements of composite type
-      0:i32 while ..dup targetCount < do =:: i
+      targetCount for =:: i
         target i typeContext types.compositeGetElement =:: targetElt
         i srcCount < if
           src i typeContext types.compositeGetElement
@@ -520,8 +515,7 @@ proc(
         resolveGenerics if
           true return
         end
-        i 1 +
-      end ..drop
+      end
       false return
     procedure case
       src typeContext types.unwrapNamed src@ =
@@ -562,7 +556,7 @@ proc(
       src typeContext types.getGeneratorArgs =:: srcArgs
       target typeContext types.getGeneratorArgs =:: targetArgs
       srcArgs .length targetArgs .length == "all instances of generator have same number of arguments" assert
-      0:i64 while ..dup targetArgs .length < do =:: i
+      targetArgs .length for =:: i
         srcArgs i slice.get =:: srcArg
         targetArgs i slice.get =:: targetArg
         targetArg .TypeId ?? if
@@ -598,8 +592,7 @@ proc(
             srcArg GenericArg .fixed
           map.put ..drop
         end
-        i 1 +
-      end ..drop
+      end
       false return
     undefined empty primitiveType cType arrayIndex autoType intLiteral align typeSet case
       ..unreachable ## type should not contain generics
@@ -718,14 +711,12 @@ end
 proc(
   CallSignatureInfo list ptr.mut : signatures
 -> ) =>: cleanupSignatures
-  0:i32 while ..dup signatures [] .length < do =:: i
-    signatures [] i list.at .data =:: elt
+  signatures [] list.atItr for =:: elt
     elt [] .paramInfo
       list.free
     elt .paramInfo=
     elt .genericValues map.free
-    i 1 +
-  end ..drop
+  end
   signatures []
     list.free
   signatures []=
@@ -772,8 +763,7 @@ proc(
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
   MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
-  0:i64 while ..dup procedureIds .length < do =:: i
-    procedureIds i slice.get =:: procId
+  procedureIds for =:: procId
     progContext [] .procedures procId i64 cast list.at .data =:: procInfo
     procInfo [] .procType
       typeContext types.getProcIn ..drop typeContext types.compositeEltCount
@@ -794,8 +784,7 @@ proc(
         argCount 0 >
       CallSignatureInfo new list.append
     currentSignatures@ =
-    i 1 +
-  end ..drop
+  end
   0:i64 while ..dup stackValues .length <= do =:: stackIndex
     stackIndex stackValues .length < if
       stackValues stackIndex slice.at .data [] .valType
@@ -1035,7 +1024,7 @@ proc(
         end ..drop
         ")\ncandidates:\n" sb.appendS
         MAX_DISPLAY_SIGNATURES currentSignatures .length i32.min =:: maxSignatures
-        0:i32 while ..dup maxSignatures < do =:: i
+        maxSignatures for =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId i64 cast list.at .data
@@ -1045,8 +1034,7 @@ proc(
           ' ' sb.appendC
           procInfo [] .labelId labelContext sb.appendLabelPath
           '\n' sb.appendC
-          i 1 +
-        end ..drop
+        end
         currentSignatures .length maxSignatures > if "  ...\n" sb.appendS end
       errorMessage .data []=
     end
@@ -1078,7 +1066,7 @@ proc(
         ")\npossible matches: \n" sb.appendS
         true =:: mut: isEquivalent
         MAX_DISPLAY_SIGNATURES currentSignatures .length i32.min =:: maxSignatures
-        0:i32 while ..dup maxSignatures < do =:: i
+        maxSignatures for =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
             current [] .procId i64 cast list.at .data
@@ -1093,8 +1081,7 @@ proc(
           ' ' sb.appendC
           procInfo [] .labelId labelContext sb.appendLabelPath
           '\n' sb.appendC
-          i 1 +
-        end ..drop
+        end
         currentSignatures .length maxSignatures > if "  ...\n" sb.appendS end
       errorMessage .data []=
     end
@@ -1135,27 +1122,25 @@ proc(
       implData [] .code ?? if
     implData .code .implementations =:: impls
     false =:: mut: isMatch
-    0:i32 while ..dup impls [] .length < do =:: i
+    impls [] .length for =:: i
       impls [] i list.at .data =:: impl
       impl [] .staticArgs .length constArgs .length i64 cast == "correct number of static arguments" assert
       true isMatch@ =
-      0:i32 while ..dup constArgs .length < do =:: j
+      constArgs .length for =:: j
         ## constEquals
           impl [] .staticArgs j slice.get
           constArgs j list.get
           labelContext
         constantEquals ! if
           false isMatch@ =
-          j break
+          break
         end
-        j 1 +
-      end ..drop
+      end
       isMatch if
         i implId@ =
-        i break
+        break
       end
-      i 1 +
-    end ..drop
+    end
     isMatch ! if ## no matching implementation -> create new one
       impls []
         ..dup .length implId@ =
@@ -1182,7 +1167,7 @@ proc(
   constArgs
     list.clear
   constArgs@ =
-  0:i32 while ..dup eltCount < do =:: i
+  eltCount for =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags =:: flags
     true =:: mut: needArg
@@ -1221,8 +1206,7 @@ proc(
         eltLabel list.append
       labelBuffer@ =
     end
-    i 1 +
-  end ..drop
+  end
   ## newProcArgs
     typeBuffer list.asSlice
     labelBuffer list.asSlice optional.wrap

@@ -929,8 +929,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   program .errors =:: errors
-  state [] .openBlocks .length 1 - while ..dup 0 >= do =:: i
-    state [] .openBlocks i list.at .data =:: block
+  state [] .openBlocks list.atReversed for =:: block
     block [] .While ?? and blockLabel id.LABEL_ID_NONE == or
         block [] .While .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
@@ -940,8 +939,7 @@ proc(
         block [] .Switch .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
     end
-    i 1 -
-  end ..drop
+  end
   60 sb.create
     breakType sb.appendBlockType
     " can only appear in loops " sb.appendS
@@ -1339,7 +1337,7 @@ proc(
   0 true return
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
-  state [] .compiledOps .length 1 - while ..dup 0 >= do =:: i
+  state [] .compiledOps .length 1 - while $ 0 >= do =:: i
     state [] .compiledOps i list.at .data =:: op
     op [] .val .NOP ?? ! if
       i break
@@ -1489,8 +1487,7 @@ proc(
       .Int 1:i64 size 8 * << 1 - & ConstValue .Int
     end
   =:: label
-  0:i32 while ..dup switchData [] .labels .length < do =:: i
-    switchData [] .labels i list.at .data =:: labelData
+  switchData [] .labels list.atItr for =:: labelData
     ## constantEquals
       labelData [] .value
       label
@@ -1511,8 +1508,7 @@ proc(
         " )" sb.appendS
       pos errors appendError
     end
-    i 1 +
-  end ..drop
+  end
   switchData [] .labels
     ## LabelData
       label
@@ -2809,8 +2805,7 @@ proc(
               orBranches [] .length i32 cast arenaAlloc.allocSlice =:: orPositions
             program .labelPositions=
             0:i32 =:: mut: orCount
-            andOrPos .length for =:: i
-              andOrPos i list.get =:: andOrIndex
+            andOrPos for =:: andOrIndex
               state [] .compiledOps
                 andOrIndex
               list.at .data =:: andOrOp
@@ -2830,12 +2825,8 @@ proc(
               BranchPoint new list.append
             orBranches []=
             ## XXX? extract to procedure?
-            orBranches [] .length =:: nodeCount
-            nodeCount branchTree.NodeId list.create
-              0:i32 while ..dup nodeCount < do =:: i
-                orBranches [] i list.at .data [] .node list.append
-                i 1 +
-              end ..drop
+            orBranches [] .length branchTree.NodeId list.create
+              orBranches [] for .node list.append end
             =:: branchPoints
             ## mergeValues
               state .stack
@@ -2851,16 +2842,14 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different number of types at the start of if-branch: " sb.copyPtr
-                0:i32 while ..dup orBranches [] .length < do =:: i
+                orBranches [] for =:: branchPoint
                   "\n  * " sb.appendS
-                  orBranches [] i list.at .data =:: branchPoint
                   state [] .stack
-                     branchPoint [] .node
+                     branchPoint .node
                   branchTree.depthFrom sb.appendI
                   " in branch at " sb.appendS
-                    branchPoint [] .pos sb.appendPos
-                  i 1 +
-                end ..drop
+                  branchPoint .pos sb.appendPos
+                end
                 '\n' sb.appendC
               op .pos errors appendError
             end
@@ -2930,8 +2919,7 @@ proc(
             arenaAlloc.allocSlice =:: andPositions
           program .labelPositions=
           0:i32 =:: mut: andCount
-          currentBlock [] .If .andOrPositions .length for =:: i
-            currentBlock [] .If .andOrPositions i list.get =:: andOrPos
+          currentBlock [] .If .andOrPositions for =:: andOrPos
             state [] .compiledOps
               andOrPos
             list.at .data =:: andOrOp
@@ -2949,12 +2937,8 @@ proc(
           op state appendOp ..drop
           true state .reachable=
           currentBlock [] .If .andBranches .length 1 >= "if has if branch" assert
-          currentBlock [] .If .andBranches .length =:: nodeCount
-          nodeCount branchTree.NodeId list.create
-            0:i32 while ..dup nodeCount < do =:: i
-              currentBlock [] .If .andBranches i list.at .data [] .node list.append
-              i 1 +
-            end ..drop
+          currentBlock [] .If .andBranches .length branchTree.NodeId list.create
+            currentBlock [] .If .andBranches for .node list.append end
           =:: branchPoints
           ## mergeValues
             state .stack
@@ -2970,16 +2954,14 @@ proc(
             MergePoint new
           branchTree.merge .error ?? if
             "different number of types at the start of else-branch: " sb.copyPtr
-              0:i32 while ..dup currentBlock [] .If .andBranches .length < do =:: i
+              currentBlock [] .If .andBranches for =:: branchPoint
                 "\n  * " sb.appendS
-                currentBlock [] .If .andBranches i list.at .data =:: branchPoint
                 state [] .stack
-                   branchPoint [] .node
+                   branchPoint .node
                 branchTree.depthFrom sb.appendI
                 " in branch at " sb.appendS
-                  branchPoint [] .pos sb.appendPos
-                i 1 +
-              end ..drop
+                branchPoint .pos sb.appendPos
+              end
               '\n' sb.appendC
             op .pos errors appendError
           end
@@ -3317,12 +3299,8 @@ proc(
               BranchPoint new list.append
             doBranches []=
             ## XXX? extract to procedure?
-            doBranches [] .length =:: nodeCount
-            nodeCount branchTree.NodeId list.create
-              0:i32 while ..dup nodeCount < do =:: i
-                doBranches [] i list.at .data [] .node list.append
-                i 1 +
-              end ..drop
+            doBranches [] .length branchTree.NodeId list.create
+              doBranches [] for .node list.append end
             =:: branchPoints
             ## mergeValues
               state .stack
@@ -3338,16 +3316,14 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different number of types at the start of do-branch: " sb.copyPtr
-                0:i32 while ..dup doBranches [] .length < do =:: i
+                doBranches [] for =:: branchPoint
                   "\n  * " sb.appendS
-                  doBranches [] i list.at .data =:: branchPoint
                   state [] .stack
-                     branchPoint [] .node
+                    branchPoint .node
                   branchTree.depthFrom sb.appendI
                   " in branch at " sb.appendS
-                    branchPoint [] .pos sb.appendPos
-                  i 1 +
-                end ..drop
+                  branchPoint .pos sb.appendPos
+                end
                 '\n' sb.appendC
               op .pos errors appendError
             end
@@ -3357,8 +3333,7 @@ proc(
             whileBlock [] .orCount arenaAlloc.allocSlice =:: orPositions
           program .labelPositions=
           state [] .compiledOps .length =:: currentOpIndex
-          whileBlock [] .labelPositions .length for =:: i
-            whileBlock [] .labelPositions i list.get =:: orPos
+          whileBlock [] .labelPositions for =:: orPos
             state [] .compiledOps orPos list.at .data =:: orOp
             orOp .val .block [] .blockType .OR_DO ?? if
               currentOpIndex
@@ -3415,16 +3390,9 @@ proc(
           end
           ## merge continue branches
           continueBranches .length 1 >= if
-            continueBranches .length branchTree.NodeId list.create =:: mut: branchPoints
-            continueBranches .length =:: nodeCount
-            branchPoints
-              0:i32 while ..dup nodeCount < do =:: i
-                continueBranches
-                  i list.at .data
-                [] .node list.append
-                i 1 +
-              end ..drop
-            branchPoints@ =
+            continueBranches .length branchTree.NodeId list.create
+              continueBranches for .node list.append end            
+            =:: mut: branchPoints
             ## mergeValues
               state .stack
               branchPoints list.asSlice
@@ -3439,16 +3407,14 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different numbers of types at the end of continue branches: " sb.copyPtr
-                0:i32 while ..dup continueBranches .length < do =:: i
+                continueBranches for =:: branchPoint
                   "\n  * " sb.appendS
-                  continueBranches i list.at .data =:: branchPoint
                   state [] .stack
-                     branchPoint [] .node
+                     branchPoint .node
                   branchTree.depthFrom sb.appendI
                   " in branch at " sb.appendS
-                  branchPoint [] .pos sb.appendPos
-                  i 1 +
-                end ..drop
+                  branchPoint .pos sb.appendPos
+                end
                 '\n' sb.appendC
               op .pos errors appendError
             end
@@ -3464,8 +3430,7 @@ proc(
             whileBlock [] .continueCount arenaAlloc.allocSlice =:: continuePositions
           program .labelPositions=
           state [] .compiledOps .length =:: currentOpIndex
-          whileBlock [] .labelPositions .length for =:: i
-            whileBlock [] .labelPositions i list.get =:: continuePos
+          whileBlock [] .labelPositions for =:: continuePos
             state [] .compiledOps continuePos list.at .data =:: continueOp
             continueOp .val .block [] .blockType .CONTINUE ?? if
               currentOpIndex
@@ -3728,14 +3693,8 @@ proc(
           end
           ## set stack head to one of the accepting branches
           caseBranches .length 1 >= if
-            caseBranches .length =:: nodeCount
-            nodeCount branchTree.NodeId list.create
-              0:i32 while ..dup nodeCount < do =:: i
-                caseBranches
-                  i list.at .data
-                [] .node list.append
-                i 1 +
-              end ..drop
+            caseBranches .length branchTree.NodeId list.create
+              caseBranches for .node list.append end
             =:: branchPoints
             ## mergeValues
               state .stack
@@ -3751,16 +3710,14 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different numbers of types at the end of switch-branches: " sb.copyPtr
-                0:i32 while ..dup caseBranches .length < do =:: i
+                caseBranches for =:: branchPoint
                   "\n  * " sb.appendS
-                  caseBranches i list.at .data =:: branchPoint
                   state [] .stack
-                     branchPoint [] .node
+                    branchPoint .node
                   branchTree.depthFrom sb.appendI
                   " in branch at " sb.appendS
-                    branchPoint [] .pos sb.appendPos
-                  i 1 +
-                end ..drop
+                  branchPoint .pos sb.appendPos
+                end
                 '\n' sb.appendC
               op .pos errors appendError
             end
@@ -3770,8 +3727,7 @@ proc(
           BlockType .SWITCH op .pos opEndBlock =:: mut: tmp
           switchBlock [] .blockId tmp@ .val .blockEnd .blockId=
           state [] .compiledOps .length =:: currentOpIndex
-          breakPositions .length for =:: i
-            breakPositions i list.get =:: breakPos
+          breakPositions for =:: breakPos
             state [] .compiledOps breakPos list.at .data =:: breakOp
             currentOpIndex
               breakPos - JumpDistance cast
@@ -3860,15 +3816,9 @@ proc(
           list.at .data =:: whileData
           depth .success whileData .modifiedTypes=
           breakBranches .length 1 >= if
-            breakBranches .length =:: nodeCount
             branchPoints
               list.clear
-              0:i32 while ..dup nodeCount < do =:: i
-                breakBranches
-                  i list.at .data
-                [] .node list.append
-                i 1 +
-              end ..drop
+              breakBranches for .node list.append end
             branchPoints@ =
             ## mergeValues
               state .stack
@@ -3884,16 +3834,14 @@ proc(
               MergePoint new
             branchTree.merge .error ?? if
               "different numbers of types at the end of while branches: " sb.copyPtr
-                0:i32 while ..dup breakBranches .length < do =:: i
+                breakBranches for =:: branchPoint
                   "\n  * " sb.appendS
-                  breakBranches i list.at .data =:: branchPoint
                   state [] .stack
-                     branchPoint [] .node
+                    branchPoint .node
                   branchTree.depthFrom sb.appendI
                   " in branch at " sb.appendS
-                    branchPoint [] .pos sb.appendPos
-                  i 1 +
-                end ..drop
+                  branchPoint .pos sb.appendPos
+                end
                 '\n' sb.appendC
               op .pos errors appendError
             end
@@ -3914,8 +3862,7 @@ proc(
             arenaAlloc.allocSlice =:: breakPositions
           program .labelPositions=
           0:i32 =:: mut: breakCount
-          whileBlock [] .labelPositions .length for =:: i
-            whileBlock [] .labelPositions i list.get =:: labelPos
+          whileBlock [] .labelPositions for =:: labelPos
             state [] .compiledOps labelPos list.at .data =:: labelOp
             labelOp .val .block [] .blockType switch
               AND_DO BREAK DO case true break
@@ -3964,8 +3911,7 @@ proc(
           closed .AndOr =:: andOrBlock
           andOrBlock .blockId op@ .val .blockEnd .blockId=
           state [] .compiledOps .length =:: currentOpIndex
-          andOrBlock .andOrPositions .length for =:: i
-            andOrBlock .andOrPositions i list.get =:: andOrPos
+          andOrBlock .andOrPositions for =:: andOrPos
             state [] .compiledOps andOrPos list.at .data =:: andOrOp
             currentOpIndex
               andOrPos - JumpDistance cast
@@ -3989,12 +3935,8 @@ proc(
                 op .pos
               BranchPoint new list.append
           branches@ =
-          branches .length =:: nodeCount
-          nodeCount branchTree.NodeId list.create
-            0:i32 while ..dup nodeCount < do =:: i
-              branches i list.at .data [] .node list.append
-              i 1 +
-            end ..drop
+          branches .length branchTree.NodeId list.create
+            branches for .node list.append end
           =:: branchPoints
           ## mergeValues
             state .stack
@@ -4010,16 +3952,14 @@ proc(
             MergePoint new
           branchTree.merge .error ?? if
             "different number of types at the end or and-or branch: " sb.copyPtr
-              0:i32 while ..dup branches .length < do =:: i
+              branches for =:: branchPoint
                 "\n  * " sb.appendS
-                branches i list.at .data =:: branchPoint
                 state [] .stack
-                   branchPoint [] .node
+                  branchPoint .node
                 branchTree.depthFrom sb.appendI
                 " in branch at " sb.appendS
-                  branchPoint [] .pos sb.appendPos
-                i 1 +
-              end ..drop
+                branchPoint .pos sb.appendPos
+              end
               '\n' sb.appendC
             op .pos errors appendError
           end
