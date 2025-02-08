@@ -1,0 +1,176 @@
+import core/type
+import core/ptr
+import core/itr
+
+## collection of usefull iterators over continous memory section
+namespace: array
+  ( type : T -> type ) =>: export: ReverseItr
+    T ptr.Itr
+  end
+  ( type : T -> type ) =>: export: PtrItr
+    T ptr.Itr
+  end
+  ( type : T -> type ) =>: export: ReversePtrItr
+    T ptr.Itr
+  end
+  ( type : T -> type ) =>: export: MutItr
+    struct( T _ ptr.mut : head T _ ptr : tail )
+  end
+  ( type : T -> type ) =>: export: MutPtrItr
+    T MutItr
+  end
+  ( type : T -> type ) =>: export: ReverseMutPtrItr
+    T MutItr
+  end
+  ( type : T -> type ) =>: export: IndexItr32
+    struct( T _ ptr : base i32 : offset i32 : length )
+  end
+  ( type : T -> type ) =>: export: IndexItr32mut
+    struct( T _ ptr.mut : base i32 : offset i32 : length )
+  end
+  ( type : T -> type ) =>: export: IndexItr64
+    struct( T _ ptr : base i64 : offset i64 : length )
+  end
+  ( type : T -> type ) =>: export: IndexItr64mut
+    struct( T _ ptr.mut : base i64 : offset i64 : length )
+  end
+  ## TODO ReversedIndexItr
+  ## TODO? MapItr, ReversedMapItr ( make list.mapItr / slice.mapItr wrappers )
+
+  ## TODO implement IndexItr
+  proc( type : auto: T type.index : auto: I
+    T _ ptr : p I : len
+  -> T ptr.Itr ) =>: export: getItr
+    p  p len @[] T ptr.Itr new
+  end
+  proc( type : auto: T type.index : auto: I
+    T _ ptr : p I : len
+  -> T PtrItr ) =>: export: ptrItr
+    p  p len @[] T PtrItr new
+  end
+  proc( type : auto: T type.index : auto: I
+    T _ ptr.mut : p I : len
+  -> T MutPtrItr ) =>: export: mutPtrItr
+    p  p len @[] T MutPtrItr new
+  end
+  overload: export: @itr ptrItr mutPtrItr end
+  proc( type : auto: T type.index : auto: I
+    T _ ptr : p I : len
+  -> T ReverseItr ) =>: export: reversed
+    p len 1 - @[]  p T ReverseItr new
+  end
+  proc( type : auto: T type.index : auto: I
+    T _ ptr : p I : len
+  -> T ReversePtrItr ) =>: export: reversedPtrItr
+    p len 1 - @[]  p T ReversePtrItr new
+  end
+  proc( type : auto: T type.index : auto: I
+    T _ ptr.mut : p I : len
+  -> T ReverseMutPtrItr ) =>: export: reversedMutPtrItr
+    p len 1 - @[]  p T ReverseMutPtrItr new
+  end
+  overload: export: @reversed reversedPtrItr reversedMutPtrItr end
+
+  namespace: itr
+    ## TODO? is there a way to compress these functions
+    proc( type : auto: T  T PtrItr -> T PtrItr ) =>: export: preparePtr end
+    proc( type : auto: T  T MutPtrItr -> T MutPtrItr ) =>: export: prepareMutPtr end
+    proc( type : auto: T  T ReverseItr -> T ReverseItr ) =>: export: prepareReverse end
+    proc( type : auto: T  T ReversePtrItr -> T ReversePtrItr ) =>: export: prepareReversePtr end
+    proc( type : auto: T
+      T ReverseMutPtrItr
+    -> T ReverseMutPtrItr ) =>: export: prepareReverseMutPtr end
+
+    proc( type : auto: T  T PtrItr : i -> bool ) =>: export: checkPtr
+      i .head i .tail < return
+    end
+    proc( type : auto: T  T MutPtrItr : i -> bool ) =>: export: checkMutPtr
+      i .head i .tail < return
+    end
+    proc( type : auto: T  T ReverseItr : i -> bool ) =>: export: checkReverse
+      i .head i .tail >= return
+    end
+    proc( type : auto: T  T ReversePtrItr : i -> bool ) =>: export: checkReversePtr
+      i .head i .tail >= return
+    end
+    proc( type : auto: T  T ReverseMutPtrItr : i -> bool ) =>: export: checkReverseMutPtr
+      i .head i .tail >= return
+    end
+
+    proc( type : auto: T T PtrItr : itr -> T ptr ) =>: export: shadow: getPtr
+      itr .head T ptr cast!
+    end
+    proc( type : auto: T T MutPtrItr : itr -> T ptr.mut ) =>: export: shadow: getMutPtr
+      itr .head T ptr.mut cast!
+    end
+    proc( type : auto: T T ReverseItr : itr -> T ) =>: export: shadow: getReverse
+      itr .head []
+    end
+    proc( type : auto: T T ReversePtrItr : itr -> T ptr ) =>: export: shadow: getReversePtr
+      itr .head T ptr cast!
+    end
+    proc( type : auto: T T ReverseMutPtrItr : itr -> T ptr.mut ) =>: export: shadow: getReverseMutPtr
+      itr .head T ptr.mut cast!
+    end
+
+    proc( type : auto: T T PtrItr : itr -> T PtrItr ) =>: export: stepPtr
+      itr $ .head 1 @[] >$ .head=
+    end
+    proc( type : auto: T T MutPtrItr : itr -> T MutPtrItr ) =>: export: stepMutPtr
+      itr $ .head 1 @[] >$ .head=
+    end
+    proc( type : auto: T T ReverseItr : itr -> T ReverseItr ) =>: export: stepReverse
+      itr $ .head -1 @[] >$ .head=
+    end
+    proc( type : auto: T T ReversePtrItr : itr -> T ReversePtrItr ) =>: export: stepReversePtr
+      itr $ .head -1 @[] >$ .head=
+    end
+    proc( type : auto: T
+      T ReverseMutPtrItr : itr
+    -> T ReverseMutPtrItr ) =>: export: stepReverseMutPtr
+      itr $ .head -1 @[] >$ .head=
+    end
+
+    proc( type : auto: T T PtrItr : itr -> ) =>: export: endPtr end
+    proc( type : auto: T T MutPtrItr : itr -> ) =>: export: endMutPtr end
+    proc( type : auto: T T ReverseItr : itr -> ) =>: export: endReverse end
+    proc( type : auto: T T ReversePtrItr : itr -> ) =>: export: endReversePtr end
+    proc( type : auto: T T ReverseMutPtrItr : itr -> ) =>: export: endReverseMutPtr end
+  end
+end
+
+overload: export: ..itr.prepare
+  array.itr.preparePtr
+  array.itr.prepareMutPtr
+  array.itr.prepareReverse
+  array.itr.prepareReversePtr
+  array.itr.prepareReverseMutPtr
+end
+overload: export: ..itr.check
+  array.itr.checkPtr
+  array.itr.checkMutPtr
+  array.itr.checkReverse
+  array.itr.checkReversePtr
+  array.itr.checkReverseMutPtr
+end
+overload: export: ..itr.get
+  array.itr.getPtr
+  array.itr.getMutPtr
+  array.itr.getReverse
+  array.itr.getReversePtr
+  array.itr.getReverseMutPtr
+end
+overload: export: ..itr.step
+  array.itr.stepPtr
+  array.itr.stepMutPtr
+  array.itr.stepReverse
+  array.itr.stepReversePtr
+  array.itr.stepReverseMutPtr
+end
+overload: export: ..itr.end
+  array.itr.endPtr
+  array.itr.endMutPtr
+  array.itr.endReverse
+  array.itr.endReversePtr
+  array.itr.endReverseMutPtr
+end

@@ -3,6 +3,7 @@ import core/itr
 
 import mem
 import optional
+import itrs/array
 
 ( type : T -> type ) =>: export: slice
   struct( T _ ptr : data i64 : length )
@@ -445,166 +446,57 @@ namespace: slice
     splitIndex return
   end
 
-  ( type : T -> type ) =>: export: getItr
-    struct(
-      T slice : data
-      i64 : index
-    )
-  end
-  ( type : T -> type ) =>: export: ptrItr
-    struct(
-      T slice : data
-      i64 : index
-    )
-  end
-  ( type : T -> type ) =>: export: reverseItr
-    T getItr
-  end
-  ( type : T -> type ) =>: export: mapItr
-    struct(
-      T slice.mut : data
-      i64 : index
-    )
-  end
-  ( type : S type : T -> type ) =>: export: mapToItr
-    struct(
-      S slice : src
-      T slice.mut : target
-      i64 : index
-    )
-  end
-
   proc( type : auto: T
-    T slice.mut
-  -> T slice.mapItr ) =>: export: itrMap
-    0 T slice.mapItr new
+    T slice : elts
+  -> T ptr.Itr ) =>: export: getItr
+    elts .data elts .length array.getItr
   end
   proc( type : auto: T
-    T slice.mut : data
-    ( T -> T ) ptr : f
-  -> T slice.mut ) =>: export: fMap
-    data itrMap for f () end return
+    T slice.mut : elts
+  -> T ptr.Itr ) =>: export: getItrMut
+    elts .data elts .length array.getItr
   end
-  overload: export: map itrMap fMap end
-  proc( type : auto: S type : auto: T
-    S slice : src
-    T slice.mut : target
-  -> S T slice.mapToItr ) =>: export: itrMapTo
-    target .length src .length < if
-      "target list cannot hold all values in source" ..panic
-    end
-    src target 0 S T slice.mapToItr new
+  proc( type : auto: T
+    T slice : elts
+  -> T array.PtrItr ) =>: export: atItr
+    elts .data elts .length array.ptrItr
   end
-  proc( type : auto: S type : auto: T
-    S slice : src
-    T slice.mut : target
-    ( S -> T ) ptr : f
-  -> T slice.mut ) =>: export: fMapTo
-    src target itrMapTo for f () end return
+  proc( type : auto: T
+    T slice.mut : elts
+  -> T array.MutPtrItr ) =>: export: atItrMut
+    elts .data elts .length array.mutPtrItr
   end
-  proc( type : auto: S type : auto: T
-    S slice.mut : src
-    T slice.mut : target
-  -> S T slice.mapToItr ) =>: export: itrMapMutTo
-    src freeze target itrMapTo
+  overload: export: @itr
+    atItr atItrMut
   end
-  proc( type : auto: S type : auto: T
-    S slice.mut : src
-    T slice.mut : target
-  -> T slice.mut ) =>: export: fMapMutTo
-    src freeze target fMapTo
+  proc( type : auto: T
+    T slice : elts
+  -> T array.ReverseItr ) =>: export: getReverseItr
+    elts .data elts .length array.reversed
   end
-  overload: export: mapTo
-    itrMapTo fMapTo itrMapMutTo fMapMutTo
-  end
-  namespace: mapItr
-    proc( type : auto: T T slice.mapItr -> T slice.mapItr ) =>: export: prepare end
-    proc( type : auto: S type : auto: T
-      S T slice.mapToItr
-    -> S T slice.mapToItr ) =>: prepareTo end
-    proc( type : auto: T T slice.mapItr : itr -> bool ) =>: export: check
-      itr .index itr .data .length <
-    end
-    proc( type : auto: S type : auto: T
-      S T slice.mapToItr : itr
-    -> bool ) =>: export: checkTo
-      itr .index itr .src .length <
-    end
-    proc( type : auto: T T slice.mapItr : itr -> T ) =>: export: shadow: get
-      itr .data itr .index slice.get
-    end
-    proc( type : auto: S type : auto: T
-      S T slice.mapToItr : itr
-    -> S ) =>: export: getTo
-      itr .src itr .index slice.get
-    end
-    proc( type : auto: T T : newVal T slice.mapItr : itr -> T slice.mapItr ) =>: export: step
-      newVal itr .data itr .index slice.set
-      itr
-        $ .index 1 + >$ .index=
-      return
-    end
-    proc( type : auto: S type : auto: T
-      T : newVal
-      S T slice.mapToItr : itr
-    -> S T slice.mapToItr ) =>: export: stepTo
-      newVal itr .target itr .index slice.set
-      itr
-        $ .index 1 + >$ .index=
-      return
-    end
-    proc( type : auto: T T slice.mapItr : itr -> T slice.mut ) =>: export: endItr
-      itr .data
-    end
-    proc( type : auto: S type : auto: T
-      S T slice.mapToItr : itr
-    -> T slice.mut ) =>: export: endTo
-      itr .target
-    end
-  end
-  proc( type : auto: T T slice : elts -> T slice.reverseItr ) =>: export: getReverseItr
-    elts elts .length 1 - T slice.reverseItr new
-  end
-  proc( type : auto: T T slice.mut : elts -> T slice.reverseItr ) =>: export: getReverseItrMut
-    elts freeze reverseItr
+  proc( type : auto: T
+    T slice.mut : elts
+  -> T array.ReverseItr ) =>: export: getReverseItrMut
+    elts .data elts .length array.reversed
   end
   overload: export: reversed
     getReverseItr getReverseItrMut
   end
-  namespace: itr
-    proc( type : auto: T T slice -> T slice.getItr ) =>: export: prepare
-      0 T slice.getItr new
-    end
-    proc( type : auto: T T slice.mut -> T slice.getItr ) =>: export: prepareMut
-      freeze 0 T slice.getItr new
-    end
-    proc( type : auto: T T slice.reverseItr -> T slice.reverseItr ) =>: export: prepareReverse end
-    proc( type : auto: T T slice.getItr : itr -> bool ) =>: export: check
-      itr .index itr .data .length <
-    end
-    proc( type : auto: T T slice.reverseItr : itr -> bool ) =>: export: checkReverse
-      itr .index 0 >=
-    end
-    proc( type : auto: T T slice.getItr : itr -> T ) =>: shadow: export: get
-      itr .data itr .index slice.get
-    end
-    proc( type : auto: T T slice.reverseItr : itr -> T ) =>: export: getReverse
-      itr .data itr .index slice.get
-    end
-    proc( type : auto: T T slice.getItr : itr -> T slice.getItr ) =>: export: step
-      itr
-        $ .index 1 + >$ .index=
-      return
-    end
-    proc( type : auto: T T slice.reverseItr : itr -> T slice.reverseItr ) =>: export: stepReverse
-      itr
-        $ .index 1 - >$ .index=
-      return
-    end
-    proc( type : auto: T T slice.getItr : itr -> ) =>: export: endItr end
-    proc( type : auto: T T slice.reverseItr : itr -> ) =>: export: endReverse end
+  proc( type : auto: T
+    T slice : elts
+  -> T array.ReversePtrItr ) =>: export: atReversed
+    elts .data elts .length array.reversedPtrItr
+  end
+  proc( type : auto: T
+    T slice.mut : elts
+  -> T array.ReverseMutPtrItr ) =>: export: atReversedMut
+    elts .data elts .length array.reversedMutPtrItr
+  end
+  overload: export: @itr
+    atItr atItrMut
   end
 end
+import itrs/slice
 overload: export: []
   slice.get_32
   slice.get_64
@@ -622,33 +514,6 @@ overload: export: []=
   slice.set_64
 end
 overload: export: ..itr.prepare
-  slice.mapItr.prepare
-  slice.mapItr.prepareTo
-  slice.itr.prepare
-  slice.itr.prepareMut
-  slice.itr.prepareReverse
-end
-overload: export: ..itr.check
-  slice.mapItr.check
-  slice.mapItr.checkTo
-  slice.itr.check
-  slice.itr.checkReverse
-end
-overload: export: ..itr.get
-  slice.mapItr.get
-  slice.mapItr.getTo
-  slice.itr.get
-  slice.itr.getReverse
-end
-overload: export: ..itr.step
-  slice.mapItr.step
-  slice.mapItr.stepTo
-  slice.itr.step
-  slice.itr.stepReverse
-end
-overload: export: ..itr.end
-  slice.mapItr.endItr
-  slice.mapItr.endTo
-  slice.itr.endItr
-  slice.itr.endReverse
+  slice.getItr
+  slice.getItrMut
 end

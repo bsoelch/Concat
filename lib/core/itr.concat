@@ -7,6 +7,7 @@ namespace: i32
     proc( i32 : n -> i32Itr ) =>: export: prepare
       0 n i32Itr new return
     end
+    proc( i32Itr -> i32Itr ) =>: export: prepareItr end
     proc( i32Itr : itr -> bool ) =>: export: check
       itr .i itr .limit <
     end
@@ -26,6 +27,7 @@ namespace: i64
     proc( i64 : n -> i64Itr ) =>: export: prepare
       0 n i64Itr new return
     end
+    proc( i64Itr -> i64Itr ) =>: export: prepareItr end
     proc( i64Itr : itr -> bool ) =>: export: check
       itr .i itr .limit <
     end
@@ -40,40 +42,44 @@ namespace: i64
 end
 
 namespace: ptr
-  ( type : T -> type ) =>: export: ptrItr
-    struct( T _ ptr : current T _ ptr : tail )
+  ( type : T -> type ) =>: export: Itr
+    struct( T _ ptr : head T _ ptr : tail )
   end
   namespace: itr
-    proc( type : auto: T T ptr : p -> T ptrItr ) =>: prepare0D
+    proc( type : auto: T T ptr : p -> T Itr ) =>: prepare0D
       "iteration over pointer to single value" ..compiler.warning
-      ## ptrItr
+      ## Itr
         p
-        p T _ ptr cast 1 +
-      T ptrItr new return
+        p T _ ptr cast 1 @[]
+      T Itr new return
     end
-    proc( type : auto: T i64 : auto: k  T k ptr : p -> T ptrItr ) =>: export: prepare
-      ## ptrItr
+    proc( type : auto: T i64 : auto: k  T k ptr : p -> T Itr ) =>: export: prepare
+      ## Itr
         p
-        p T _ ptr cast k +
-      T ptrItr new return
+        p T _ ptr cast k @[]
+      T Itr new return
     end
-    proc( type : auto: T T ptrItr : itr -> bool ) =>: export: check
-      itr .current itr .tail <
+    proc( type : auto: T  T Itr -> T Itr ) =>: export: prepareItr end
+    proc( type : auto: T T Itr : itr -> bool ) =>: export: check
+      itr .head itr .tail <
     end
-    proc( type : auto: T T ptrItr : itr -> T ) =>: export: shadow: get
-      itr .current []
+    proc( type : auto: T T Itr : itr -> T ) =>: export: shadow: get
+      itr .head []
     end
-    proc( type : auto: T T ptrItr : itr -> T ptrItr ) =>: export: step
-      itr .current 1 + itr .tail T ptrItr new
+    proc( type : auto: T T Itr : itr -> T Itr ) =>: export: step
+      itr .head 1 @[] itr .tail T Itr new
     end
-    proc( type : auto: T T ptrItr : itr -> ) =>: export: endItr end
+    proc( type : auto: T T Itr : itr -> ) =>: export: endItr end
   end
 end
 overload: export: ..itr.prepare
   i32.itr.prepare
+  i32.itr.prepareItr
   i64.itr.prepare
-  ptr.itr.prepare
+  i64.itr.prepareItr
   ptr.itr.prepare0D
+  ptr.itr.prepare
+  ptr.itr.prepareItr
 end
 overload: export: ..itr.check
   i32.itr.check

@@ -8,6 +8,7 @@ namespace: type
   typeSet: export: integer i8 i16 i32 i64 end
   typeSet: export: float f32 f64 end
   typeSet: export: number integer float end
+  typeSet: export: index i32 i64 end
   typeSet: export: intLike integer char8 char16 char32 end
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive

@@ -2556,6 +2556,9 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr.mut : state ->
   end ..drop
   imported FILE_ID_NONE == if ## file has not yet been imported
     fileName state parseFile fileName pos state checkIOError imported@ =
+    imported FILE_ID_NONE == if
+      return
+    end
   end
   ## TODO correctly resolve sub-imports for cyclic imports
   imported

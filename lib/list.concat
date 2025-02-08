@@ -451,11 +451,17 @@ namespace: list
       elts .length i64 cast.u
     array.reverse
   end
-  proc( type : auto: T T list -> T slice.getItr ) =>: export: getItr
-    asSlice slice.itr.prepare
+  proc( type : auto: T T list -> T ptr.Itr ) =>: export: getItr
+    asSlice slice.getItr
   end
-  proc( type : auto: T T list -> T slice.reverseItr ) =>: export: reversed
+  proc( type : auto: T T list -> T array.MutPtrItr ) =>: export: atItr
+    asMutableSlice slice.atItrMut
+  end
+  proc( type : auto: T T list -> T array.ReverseItr ) =>: export: reversed
     asSlice slice.reversed
+  end
+  proc( type : auto: T T list -> T array.ReverseMutPtrItr ) =>: export: atReversed
+    asMutableSlice slice.atReversedMut
   end
 end
 overload: export: []

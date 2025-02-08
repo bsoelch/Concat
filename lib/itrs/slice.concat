@@ -1,0 +1,148 @@
+import slice
+namespace: slice
+  ( type : T -> type ) =>: export: MapItr
+    struct(
+      T _ ptr.mut : shadow: head
+      T _ ptr.mut : shadow: tail
+      T _ ptr.mut : root
+    )
+  end
+  ( type : S type : T -> type ) =>: export: MapToItr
+    struct(
+      S _ ptr : srcHead
+      S _ ptr : srcTail
+      T _ ptr.mut : targetHead
+      T _ ptr.mut : targetRoot
+    )
+  end
+  ## TODO ZipItr
+  ## TODO IndexMapItr
+
+  proc( type : auto: T
+    T slice.mut : elts
+  -> T MapItr ) =>: export: itrMap
+    ## MapItr
+      elts .data
+      elts .data elts .length @[]
+      elts .data
+    T MapItr new
+  end
+  proc( type : auto: T
+    T slice.mut : data
+    ( T -> T ) ptr : f
+  -> T slice.mut ) =>: export: fMap
+    data itrMap for f () end return
+  end
+  overload: export: map itrMap fMap end
+  proc( type : auto: S type : auto: T
+    S slice : src
+    T slice.mut : target
+  -> S T MapToItr ) =>: export: itrMapTo
+    target .length src .length < if
+      "target list cannot hold all values in source" ..panic
+    end
+    ## MapItr
+      src .data
+      src .data src .length @[]
+      target .data
+      target .data
+    S T MapToItr new
+  end
+  proc( type : auto: S type : auto: T
+    S slice : src
+    T slice.mut : target
+    ( S -> T ) ptr : f
+  -> T slice.mut ) =>: export: fMapTo
+    src target itrMapTo for f () end return
+  end
+  proc( type : auto: S type : auto: T
+    S slice.mut : src
+    T slice.mut : target
+  -> S T MapToItr ) =>: export: itrMapMutTo
+    src freeze target itrMapTo
+  end
+  proc( type : auto: S type : auto: T
+    S slice.mut : src
+    T slice.mut : target
+  -> T slice.mut ) =>: export: fMapMutTo
+    src freeze target fMapTo
+  end
+  overload: export: mapTo
+    itrMapTo fMapTo itrMapMutTo fMapMutTo
+  end
+  namespace: mapItr
+    proc( type : auto: T  T MapItr -> T MapItr ) =>: prepare end
+    proc( type : auto: S type : auto: T
+      S T MapToItr
+    -> S T MapToItr ) =>: prepareTo end
+    proc( type : auto: T
+      T MapItr : itr
+    -> bool ) =>: export: check
+      itr .head itr .tail <
+    end
+    proc( type : auto: S type : auto: T
+      S T MapToItr : itr
+    -> bool ) =>: export: checkTo
+      itr .srcHead itr .srcTail <
+    end
+    proc( type : auto: T
+      T MapItr : itr
+    -> T ) =>: export: shadow: get
+      itr .head []
+    end
+    proc( type : auto: S type : auto: T
+      S T MapToItr : itr
+    -> S ) =>: export: getTo
+      itr .srcHead []
+    end
+    proc( type : auto: T
+      T : newVal
+      T MapItr : itr
+    -> T MapItr ) =>: export: step
+      newVal itr .head []=
+      itr
+        $ .head 1 @[] >$ .head=
+      return
+    end
+    proc( type : auto: S type : auto: T
+      T : newVal
+      S T MapToItr : itr
+    -> S T MapToItr ) =>: export: stepTo
+      newVal itr .targetHead []=
+      itr
+        $ .srcHead 1 @[] >$ .srcHead=
+        $ .targetHead 1 @[] >$ .targetHead=
+      return
+    end
+    proc( type : auto: T
+      T MapItr : itr
+    -> T slice.mut ) =>: export: endMap
+      itr .root itr .head itr .root - slice.createMutable
+    end
+    proc( type : auto: S type : auto: T
+      S T MapToItr : itr
+    -> T slice.mut ) =>: export: endTo
+      itr .targetRoot itr .targetHead itr .targetRoot - slice.createMutable
+    end
+  end
+end
+overload: export: ..itr.prepare
+  slice.mapItr.prepare
+  slice.mapItr.prepareTo
+end
+overload: export: ..itr.check
+  slice.mapItr.check
+  slice.mapItr.checkTo
+end
+overload: export: ..itr.get
+  slice.mapItr.get
+  slice.mapItr.getTo
+end
+overload: export: ..itr.step
+  slice.mapItr.step
+  slice.mapItr.stepTo
+end
+overload: export: ..itr.end
+  slice.mapItr.endMap
+  slice.mapItr.endTo
+end
