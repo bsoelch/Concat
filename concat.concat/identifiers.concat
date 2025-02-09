@@ -139,7 +139,23 @@ namespace: id
       id.GLOBAL_SCOPE
     IdentifierContext new return
   end
-  ## XXX? free IdentifierContext
+  proc( IdentifierContext -> IdentifierContext ) =>: export: freeIdentifierContext
+    $ .typeContext types.freeTypeContext >$ .typeContext=
+    $ .constContext freeConstContext >$ .constContext=
+    $ .scopes list.free >$ .scopes=
+    $ .identifierNames =:: mut: idNames
+      idNames@ map.free
+    idNames >$ .identifierNames=
+    $ .identifierData =:: mut: idData
+      idData@ map.free
+    idData >$ .identifierData=
+    $ .argBuffer list.free >$ .argBuffer=
+    $ .arraySizeBuffer list.free >$ .arraySizeBuffer=
+    $ .prevNamespaces list.free >$ .prevNamespaces=
+    $ .aliasInfo list.free >$ .aliasInfo=
+    $ .visibleFiles list.free >$ .visibleFiles=
+    id.NO_SCOPE >$ .currentScopeId=
+  end
 
   proc( IdentifierData ptr : idData -> IdentifierInfo ) =>: export: asIdInfo
     idData [] .idType

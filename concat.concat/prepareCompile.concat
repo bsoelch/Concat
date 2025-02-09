@@ -59,7 +59,7 @@ proc(
   op .val switch
     NOP case
       newOps return ## ignore no-ops
-    builtIn equalityOperator argc getArg procPtr panic panicWithMessage
+    builtIn equalityOperator procPtr panic panicWithMessage
     checkEnumLabel hasElement getId atId getEnumLabel setEnumElement
     setElement RuntimeAssert Error stackMod getElement
     autoCast Cast Cast! bitCast Return case

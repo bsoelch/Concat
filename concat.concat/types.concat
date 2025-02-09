@@ -301,13 +301,6 @@ namespace: types
     end
   end
 
-  proc( Type TypeContext ptr -> bool ) =>: export: isBoolean
-    unwrapNamed
-      ..dup isPrimitive ! if ..drop
-        false return
-      end .primitiveType
-      .BOOL ?? return
-  end
   proc( PrimitiveType -> bool ) =>: isIntPrimitive
     switch
       BOOL F32 F64 TYPE CHAR8 CHAR16 CHAR32 case
@@ -516,71 +509,6 @@ namespace: types
 
   64 =:: export: MAX_INT_WIDTH
   i64.MAX =:: export: MAX_SIGNED_INT
-  #+largest integer k s.t. 1+2^-k > 1+#
-  proc( Type TypeContext ptr -> i32 ) =>: numberPrecision
-    unwrapNamed
-      ..dup .arrayIndex ?? if ..drop
-        primitive.I_SIZE
-      else ..dup isPrimitive ! _if ..drop
-        -1 return
-      end .primitiveType
-      switch
-        BOOL TYPE CHAR8 CHAR16 CHAR32 case
-          -1 return
-        I8 I16 I32 I64 case
-          0 return
-        F32 case
-          23 return ## IEEE binary-32
-        F64 case
-          52 return ## IEEE binary-64
-      end
-  end
-  #+number of bits used to represent the magnitude of a type+#
-  proc( Type TypeContext ptr -> i32 ) =>: numberSize
-    unwrapNamed
-      ..dup .arrayIndex ?? if ..drop
-        primitive.I_SIZE
-      else ..dup isPrimitive ! _if ..drop
-        -1 return
-      end .primitiveType
-      switch
-        BOOL TYPE CHAR8 CHAR16 CHAR32 case
-          -1 return
-        I8 case
-          8 return
-        I16 case
-          16 return
-        I32 case
-          32 return
-        I64 case
-          64 return
-        F32 case
-          23 return ## IEEE binary-32
-        F64 case
-          52 return ## IEEE binary-64
-      end
-  end
-  proc( i32 : size i32 : precission -> Type bool ) =>: findNumberType
-    size 8 <= precission 0 == & if
-      primitive.I8 false return
-    end
-    size 16 <= precission 0 == & if
-      primitive.I16 false return
-    end
-    size 32 <= precission 0 == & if
-      primitive.I32 false return
-    end
-    size 64 <= precission 0 == & if
-      primitive.I64 false return
-    end
-    size 23 <= precission 23 <= & if
-      primitive.F32 false return
-    end
-    size 52 <= precission 52 <= & if
-      primitive.F64 false return
-    end
-    Type .undefined true return
-  end
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: canAutoCastIntLiteral
     src .intLiteral ?? ! or target context types.isNumber ! if
       true return
@@ -1064,31 +992,6 @@ namespace: types
     ..drop
     ArraySize slice.empty return
   end
-  ## type of the n-th array index (counted from left to right, zero indexed)
-  ## the returned bool is true if no index has been found
-  proc( Type : box i32 : n TypeContext ptr : context -> Type bool ) =>: export: getIndexType
-    n 0 < if
-      Type .undefined true return
-    end
-    n 1 + =:: mut: offset ## offset from end (1-indexed)
-    box context unwrapNamed
-      $ .pointer ?? if
-        context [] .arrayTypes ..swap .pointer i64 cast list.get
-      else $ .rawPointer ?? _if
-        n 0 == if ..drop primitive.I_SIZE false return end
-        offset 1 - offset@ =
-        context [] .arrayTypes ..swap .rawPointer i64 cast list.get
-      else $ .arrayType ?? _if
-        context [] .arrayTypes ..swap .arrayType i64 cast list.get
-      else ..drop
-        Type .undefined true return
-      end
-    =:: arrayType
-    offset arrayType .dims > if
-       Type .undefined true return
-    end
-    arrayType .sizeOffset arrayType .dims + offset - types.SizeId cast Type .arrayIndex false return
-  end
 
   proc( Type TypeContext ptr -> bool ) =>: export: isMutable
     =:: context
@@ -1439,27 +1342,6 @@ namespace: types
       i 1 +
     end ..drop
     -1 return
-  end
-  proc(
-    Type : union
-    Type : elt
-    TypeContext ptr.mut : context
-  -> i32 bool ) =>: export: findUnionTypeIndex
-    context .labelContext =:: labelContext
-    union context compositeElts =:: elts
-    0:i64 while ..dup elts .length < do
-      elt elts ..over.2 slice.get typeEquals if
-        i32 cast false return
-      end
-      1 +
-    end ..drop
-    0:i64 while ..dup elts .length < do
-      elt elts ..over.2 slice.get context canAutoCast if
-        i32 cast false return
-      end
-      1 +
-    end ..drop
-    -1 true return
   end
   proc(
     Type : tuple
@@ -2018,39 +1900,16 @@ namespace: types
     end
     false return
   end
-  proc( Type : proc CallingConvention : callConvention TypeContext ptr.mut : context -> Type bool ) =>: export: withCallConvention
-    proc context unwrapNamed
-      ..dup context isCallable ! if ..drop
-        proc true return
-      end
-      false =:: mut: isPtr
-      ..dup context isPointer if
-        context getBaseType
-        true isPtr@ =
-      end
-    =:: mProc
-    context [] .procTypes mProc .procedure i64 cast list.get =:: procData
-    procData .callingConvention callConvention == if
-      proc false return
-    end
-    procData .in procData .out callConvention context newProcedure if ..drop proc true return end
-    isPtr if
-      ArrayType .POINTER ArraySize slice.empty false context newArrayType return
-    end
-    false return
-  end
 
   ## named types
-  struct( Type : data LabelId : name i32 : implId ) =:: NamedType
+  struct( Type : data LabelId : name ) =:: NamedType
   proc(
     LabelId : label
-    i32 : implId
     TypeContext ptr.mut : context
   -> types.NamedTypeId ) =>: findNamedType
     0:i32 while ..dup context [] .namedTypes .length < do =:: i
       context [] .namedTypes i list.at .data =:: elt
-      elt [] .name label == and
-          elt [] .implId implId == if
+      elt [] .name label == if
         i types.NamedTypeId cast return
       end
       i 1 +
@@ -2059,7 +1918,6 @@ namespace: types
       ## NamedType
         Type .undefined
         label
-        implId
       NamedType new list.append
     context .namedTypes=
     context [] .namedTypes .length 1 - NamedTypeId cast return
@@ -2068,21 +1926,15 @@ namespace: types
     LabelId : label
     TypeContext ptr.mut : context
   -> Type ) =>: export: declareNamedType
-    label -1 context findNamedType Type .namedType return
+    label context findNamedType Type .namedType return
   end
-  proc(
-    LabelId : label
-    i32 : implId
-    TypeContext ptr.mut : context
-  -> Type ) =>: export: declareNamedTypeImpl
-    label implId context findNamedType Type .namedType return
-  end
+
   proc(
     Type : value
     LabelId : label
     TypeContext ptr.mut : context
   -> Type bool ) =>: export: initializeNamedType
-    label -1 context findNamedType =:: id
+    label context findNamedType =:: id
     context [] .namedTypes id i64 cast list.at .data =:: named
     named [] .data Type .undefined typeEquals ! if
       id Type .namedType true return
@@ -2100,7 +1952,6 @@ namespace: types
       ## NamedType
         value
         label
-        -1
       NamedType new list.append
     context .namedTypes=
     context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType return
@@ -2158,23 +2009,6 @@ namespace: types
       context [] .namedTypes ..swap .namedType i64 cast list.get .name return
     end
     ..drop id.LABEL_ID_NONE return
-  end
-  proc( Type TypeContext ptr -> i32 ) =>: export: getImplId
-    =:: context
-    ..dup .namedType ?? if
-      context [] .namedTypes ..swap .namedType i64 cast list.get .implId return
-    end
-    ..drop -1 return
-  end
-  proc( Type : named Type : value TypeContext ptr.mut : context -> bool ) =>: export: setNamedType
-    named .namedType ?? if
-      context [] .namedTypes named .namedType i64 cast list.at .data =:: elt
-      elt [] .data Type .undefined typeEquals if
-        value elt .data=
-        false return
-      end
-    end
-    true return
   end
 end
 
@@ -2374,20 +2208,6 @@ namespace: types
       undefined empty primitiveType intLiteral cType case ..drop -1 return
     end
   end
-
-  proc( Type : src TypeContext ptr : context -> bool ) =>: export: isMultiValueType
-    src context unwrapNamed
-      ..dup context isComposite if ..drop
-        true return
-      end
-      ..dup context isArray if ..drop
-        true return
-      end
-      ## pointer is only a single value
-    ..drop
-    false return
-  end
-
 
   proc( Type : t0 TypeContext ptr : context -> bool ) =>: export: isGeneric
     t0 context unwrapNamed .genericType ?? return
@@ -2892,7 +2712,7 @@ namespace: types
       128 TypeSet         list.create ## typeSets
     TypeContext new return
   end
-  proc( TypeContext : context -> TypeContext ) =>: export: freeTypeContent
+  proc( TypeContext : context -> TypeContext ) =>: export: freeTypeContext
     context
       $ .labelContext id.freeLabelContext >$ .labelContext=
       $ .arrayTypes       list.free >$ .arrayTypes=

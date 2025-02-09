@@ -2582,37 +2582,6 @@ proc(
       return
     getElement setElement setEnumElement case
       break
-    argc case
-      true program .hasGetArgs=
-      ## pushValue
-        op .dataType
-        ConstValue .None
-        op
-      state pushValue
-      return
-    getArg case
-      true program .hasGetArgs=
-      ## requireTypes
-        types.primitive.I_SIZE@ slice.wrap
-        "program argument index":s
-        0
-        op .pos
-      state requireTypes if
-        return
-      end
-      op state appendOp ..drop ## ignore id
-      Type 2 array new =:: mut: typeData
-      typeData@ =:: outTypes
-      types.primitive.CHAR8
-        types.ArrayType .RAW_POINTER
-        types.ArraySize slice.empty
-        false
-      typeContext types.newArrayType
-        ! "successful array creation" assert
-      outTypes 0 []=
-      types.primitive.I_SIZE outTypes 1 []=
-      outTypes slice.wrap op .pos state pushTypes
-      return
     Cast Cast! bitCast case
       op .dataType .undefined ?? if
         ## resolve data type

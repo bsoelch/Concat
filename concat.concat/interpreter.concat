@@ -249,46 +249,6 @@ namespace: interpreter
     finally i 1 - end ..drop
     false return
   end
-  proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeBlock
-    ## XXX cache/precompute result
-    context minBlockOffset =:: minBlock
-    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
-      context [] .openBlocks i list.at .data [] .blockType switch
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-          true return
-        PROCEDURE EXPERIMENTAL_PROCEDURE case
-          false return
-        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-            SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-            AND OR AND_IF OR_IF AND_DO OR_DO
-            IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-            OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-            NAMESPACE INITIALIZER case break
-      end
-    finally i 1 - end ..drop
-    false return
-  end
-  proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inGlobalBlock
-    ## XXX cache/precompute result
-    context minBlockOffset =:: minBlock
-    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
-      context [] .openBlocks i list.at .data [] .blockType switch
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
-          true return
-        PROCEDURE EXPERIMENTAL_PROCEDURE case
-          false return
-        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-            SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
-            AND OR AND_IF OR_IF AND_DO OR_DO
-            IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-            OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-            NAMESPACE INITIALIZER case break
-      end
-    finally i 1 - end ..drop
-    true return
-  end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBlock
     ## XXX cache/precompute result
     context minBlockOffset =:: minBlock
@@ -852,36 +812,6 @@ namespace: interpreter
     false true return
   end
   proc(
-    FilePosition : pos
-    InterpreterContext ptr.mut : context
-  -> i64 bool ) =>: popIndex
-    context [] .program .errors =:: errors
-    context [] .program =:: program
-    context [] .program .idContext =:: idContext
-    idContext .constContext =:: constContext
-    idContext .typeContext =:: typeContext
-    pos context popValue =:: isError =:: value =:: valInfo
-    isError if
-      ## popValue already created error message
-      "missing value for index" sb.copyPtr
-      pos errors appendInfo
-      -1:i64 true return
-    end
-    value .Int ?? if
-      value .Int false return
-    end
-    ## TODO support generic arguments
-    "expected integer got: " sb.copyPtr
-      valInfo .valueType typeContext sb.appendType
-      " ( " sb.appendS
-      value typeContext sb.appendConstant
-      " )" sb.appendS
-    pos errors appendError
-    ## restore stack
-    value valInfo context unpopValue
-    -1:i64 true return
-  end
-  proc(
     bool : persistentCopy
     ConstValue : value
     bool : allowArray
@@ -1085,7 +1015,7 @@ namespace: interpreter
         return
       end
     else isLength and valType typeContext types.isComposite
-        and isType or valType .initializer ?? #+XXX? check if initializer is array+# _if
+        and isType or valType typeContext types.isArrayLiteral _if
       ## return
         types.primitive.I_SIZE
         valType
@@ -1300,22 +1230,6 @@ namespace: interpreter
     ## TODO? special handling for int <-> pointer
     ## TODO? convert primitive arrays to correct array type?
     oldValue return
-  end
-  proc(
-    i64 : index
-    i64 : length
-    FilePosition : pos
-    CompilerError list ptr.mut : errors
-  -> bool ) =>: checkIndex
-    index 0 < or index length >= if
-      "index out of range: " sb.copyPtr
-      index sb.appendI
-      " size: " sb.appendS
-      length sb.appendI
-      pos errors appendError
-      true return
-    end
-    false return
   end
   proc(
     ConstValue : value
@@ -3251,7 +3165,7 @@ proc(
       break
     getEnumLabel
     NewEnumReference callPtr
-    argc getArg implementProcedure procPtr
+    implementProcedure procPtr
     bitCast
     ConstantReference NewReference
     checkEnumLabel case

@@ -106,10 +106,6 @@ namespace: id
     context return
   end
 
-  proc( LabelContext ptr -> LabelId ) =>: export: labelOffset
-    [] .labels .length LabelId cast return
-  end
-
   proc( LabelId : id LabelContext ptr : context -> Label ptr.mut optional ) =>: getLabel
     id LABEL_ID_NONE == if
       Label ptr.mut optional.empty return
@@ -197,13 +193,6 @@ namespace: id
     flags []
       newFlags |
     flags []=
-  end
-  proc( LabelId : id LabelContext ptr : context -> bool ) =>: export: isLabelEmpty
-    id context getLabel =:: label?
-    label? optional.isEmpty if
-      true return
-    end
-    label? .data [] .flags FLAG_EMPTY & ? return
   end
   proc( LabelId : id LabelContext ptr : context -> FilePosition optional ) =>: export: labelPos
     id context getLabel =:: label?
@@ -323,13 +312,6 @@ namespace: id
     LabelContext ptr.mut : context
   -> NamespaceId ) =>: export: findNamespace
     base path context false findNamespace_internal
-  end
-  proc(
-    NamespaceId : base
-    string : path
-    LabelContext ptr.mut : context
-  -> NamespaceId ) =>: export: createNamespace
-    base path context true findNamespace_internal
   end
   proc( NamespaceId : id LabelContext ptr : context -> string ) =>: export: namespaceName
     id NAMESPACE_ID_NONE == if

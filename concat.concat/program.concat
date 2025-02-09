@@ -109,8 +109,6 @@ union(
   ProcedureCallInfo : call
             BuiltIn : builtIn
                 i64 : callPtr
-                  _ : argc
-                  _ : getArg
                   _ : length
                   _ : size
        AutoCastInfo : autoCast
@@ -143,9 +141,6 @@ struct( OpValue : val Type : dataType FilePosition : pos ) =:: export: Operation
 proc( -> OpValue ) =>: export: opValNOP
   NopType .EMPTY OpValue .NOP return
 end
-proc( FilePosition : pos -> Operation ) =>: export: opNOP
-  NopType .EMPTY OpValue .NOP Type .undefined pos Operation new return
-end
 proc( FilePosition : pos -> Operation ) =>: export: reserveOp
   NopType .RESERVED OpValue .NOP Type .undefined pos Operation new return
 end
@@ -167,12 +162,6 @@ proc( BlockType LabelId : label FilePosition : pos -> Operation ) =>: export: op
 end
 proc( BlockType FilePosition : pos -> Operation ) =>: export: opEndBlock
   id.LABEL_ID_NONE
-    -1:BlockId
-    0:JumpDistance
-  BlockData new OpValue .blockEnd Type .undefined pos Operation new return
-end
-proc( BlockType LabelId : label FilePosition : pos -> Operation ) =>: export: opEndLabeledBlock
-  label
     -1:BlockId
     0:JumpDistance
   BlockData new OpValue .blockEnd Type .undefined pos Operation new return
@@ -272,12 +261,6 @@ proc( i32 StackModType FilePosition -> Operation ) =>: export: opStackMod
 end
 proc( FilePosition : pos -> Operation ) =>: export: opCallPtr
   -1 OpValue .callPtr Type .undefined pos Operation new return
-end
-proc( FilePosition : pos -> Operation ) =>: export: opArgc
-  OpValue .argc types.primitive.I_SIZE pos Operation new return
-end
-proc( FilePosition : pos -> Operation ) =>: export: opGetArg
-  OpValue .getArg Type .undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opLength
   OpValue .length types.primitive.I_SIZE pos Operation new return
@@ -493,7 +476,27 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     false ## has getArgs
   ProgramContext new
 end
-## TODO free Program context
+proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
+  $ .idContext id.freeIdentifierContext >$ .idContext=
+  $ .progFiles list.free >$ .progFiles=
+  $ .procedures list.free >$ .procedures=
+  $ .procBundles list.free >$ .procBundles=
+  $ .autoTypes list.free >$ .autoTypes=
+  $ .tmpOps list.free >$ .tmpOps=
+  $ .switchJumps arenaAlloc.free >$ .switchJumps=
+  $ .labelPositions arenaAlloc.free >$ .labelPositions=
+  $ .switchData list.free >$ .switchData=
+  $ .whileData list.free >$ .whileData=
+  $ .ifData list.free >$ .ifData=
+  $ .andOrData list.free >$ .andOrData=
+  $ .constantReferences list.free >$ .constantReferences=
+  $ .errors list.free >$ .errors=
+  id.LABEL_ID_NONE >$ .mainLabelId=
+  NO_PROC >$ .mainProcId=
+  false >$ .hasCheckIndex=
+  false >$ .hasCheckEnum=
+  false >$ .hasGetArgs=
+end
 
 proc(
   stringBuilder : fileName
@@ -805,16 +808,6 @@ namespace: sb
           break
         callPtr case
           "call pointer ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        argc case
-          "get program argument count ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        getArg case
-          "get program argument ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break

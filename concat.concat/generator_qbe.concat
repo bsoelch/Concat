@@ -4037,64 +4037,6 @@ proc(
         return
       end
       break
-    argc case
-      sb
-        op [] .pos sb.appendPosQBE
-        "%s" sb.appendS
-        ValType .I64 context pushValue sb.appendI
-        " =l loadl $" sb.appendS
-        CONCAT_ARGC_NAME sb.appendS
-        '\n' sb.appendC
-      return
-    getArg case
-      op [] .pos context popValue =:: argIndexId
-      context nextTmpId =:: argcId
-      context nextTmpId =:: argvId
-      context nextTmpId =:: eltOffsetId
-      context nextTmpId =:: argvEltId
-      ValType .I64 context pushValue =:: argPtr
-      sb
-        op [] .pos sb.appendPosQBE
-        "%t" sb.appendS
-        argcId sb.appendI
-        " =l loadl $" sb.appendS
-        CONCAT_ARGC_NAME sb.appendS
-        '\n' sb.appendC
-        ## appendIndexCheck
-          argcId IntValue .tmpId
-          argIndexId
-          op [] .pos
-          context
-        appendIndexCheck
-        "%t" sb.appendS
-        argvId sb.appendI
-        " =l loadl $" sb.appendS
-        CONCAT_ARGV_NAME sb.appendS
-        '\n' sb.appendC
-        ## scale offset by size of pointer
-        "%t" sb.appendS
-        eltOffsetId sb.appendI
-        " =l mul %s" sb.appendS
-        argIndexId sb.appendI
-        ", 8\n%t" sb.appendS
-        argvEltId sb.appendI
-        " =l add %t" sb.appendS
-        argvId sb.appendI
-        ", %t" sb.appendS
-        eltOffsetId sb.appendI
-        '\n' sb.appendC
-        "%s" sb.appendS
-        argPtr sb.appendI
-        " =l loadl %t" sb.appendS
-        argvEltId sb.appendI
-        '\n' sb.appendC
-        ## push length of string
-        "%s" sb.appendS
-        ValType .I64 context pushValue sb.appendI
-        " =l call $strlen(l %s" sb.appendS
-        argPtr sb.appendI
-        ")\n" sb.appendS
-      return
     block case
       op [] .val .block .blockType switch
         IF IF_TRUE IF_FALSE case

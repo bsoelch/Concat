@@ -273,4 +273,5 @@ proc( -> ) =>: main ## TODO check return value of fopen
     end
   io.fclose ..drop
   prog@ .errors checkErrors
+  prog freeProgramContext ..drop
 end

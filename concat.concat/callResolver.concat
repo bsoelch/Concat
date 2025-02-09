@@ -311,7 +311,7 @@ proc(
     src0 target typeContext types.canAutoCast ! return
   end
   src0 =:: mut: src
-  src .initializer ?? if
+  src typeContext types.isInitializer if
     target typeContext types.isArray and src typeContext types.isArrayLiteral if
       src typeContext types.initializerAsArray src@ =
     else src typeContext types.isArrayLiteral and target typeContext types.isArrayPointer _if

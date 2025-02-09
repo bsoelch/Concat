@@ -56,6 +56,10 @@ proc( -> ConstantContext ) =>: export: newConstContext
    256  sb.create
  ConstantContext new return
 end
+proc( ConstantContext -> ConstantContext ) =>: export: freeConstContext
+  $ .arrayValues mixedArena.free >$ .arrayValues=
+  $ .stringParseBuffer sb.free >$ .stringParseBuffer=
+end
 
 proc(
  type : auto: T

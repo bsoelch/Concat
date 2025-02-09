@@ -58,10 +58,7 @@ struct(
 proc( FilePosition : pos -> Constant ) =>: newWildcardConst
   Type .undefined ConstValue .WildCard IdentifierInfo optional.empty pos Constant new return
 end
-proc( bool FilePosition -> Constant ) =>: newBoolConstant
-  =:: pos
-  types.primitive.BOOL ..swap ConstValue .Bool IdentifierInfo optional.empty pos Constant new return
-end
+
 proc(
   i64 : value
   i32 : preferedSize
@@ -268,20 +265,6 @@ proc(
   interpreter [] .stack list.peek interpreter [] .stackInfo list.peek return
 end
 
-proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> Type bool ) =>: peekTypeConstant
-  state [] .progContext =:: progContext
-  progContext .errors =:: errors
-  state peekConst =:: info? =:: value?
-  value? optional.isEmpty if
-    "missing type constant" sb.copyPtr fileState [] .wordStart errors appendError
-    Type .undefined true return
-  end
-  value? .data [] .TypeId ?? ! if
-    "wrong type for constant expected type" sb.copyPtr info? .data [] .pushedAt errors appendError
-    Type .undefined true return
-  end
-  value? .data [] .TypeId false return
-end
 proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> Type bool ) =>: popTypeConstant
   state [] .progContext =:: progContext
   progContext .errors =:: errors
