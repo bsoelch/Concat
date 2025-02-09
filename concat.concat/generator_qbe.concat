@@ -2960,12 +2960,12 @@ proc(
   src target types.typeEquals if
     sb return ## nothing to do
   end
+  offset context [] .stackInfo branchTree.depth >= if
+    "stack underflow" sb.copyPtr
+    pos errors appendError
+    sb return
+  end
   castType .autoCast ?? if
-    offset context [] .stackInfo branchTree.depth >= if
-      "stack underflow" sb.copyPtr
-      pos errors appendError
-      sb return
-    end
     context .stackInfo offset branchTree.at .data [] .valType
     context .stackInfo offset branchTree.at .data [] .varId
   else

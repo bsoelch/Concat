@@ -29,7 +29,7 @@ struct(
   VariableType : variableType
 ) =:: export: VariableInfo
 
-enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED ) =:: export: ProcCodeState
+enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED UNUSED ) =:: export: ProcCodeState
 struct(
   Type : procType
   ConstValue slice : staticArgs

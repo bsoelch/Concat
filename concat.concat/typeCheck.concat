@@ -194,30 +194,27 @@ struct(
   branchTree.NodeId : branchRoot
   Type : currentProcType
   FileId : currentFile
-  TypeCheckMode : mut: mode
+  TypeCheckMode : mode
   bool : inTypeBlock
   bool : reachable
 ) =:: TypeCheckStateState
 struct(
-  ProgramContext ptr.mut : mut: program
-  InterpreterContext : mut: interpreter
-  LabelId TypedValue hashMap : mut: argData
-  Type : mut: currentProcType
-  bool : mut: inTypeBlock
-  TypeInfo BranchTree : mut: stack
-  BlockInfo list : mut: openBlocks
-  Operation list : mut: compiledOps
-  i32 : mut: blockStart
-  MissingProc list : mut: missingProcs
-  FileId : mut: currentFile
-  FilePosition list : mut: initializationStack
-  TypeCheckStateState list : mut: stateStack
-  TypeCheckMode : mut: mode
-  bool : mut: reachable
-  ## TODO flags:
-  ## * disable reorganizing of operations (excluding types)
-  ## * is it allowed to optimize out reading from variables
-  ## * is folding (non-type) constants allowed
+  ProgramContext ptr.mut : program
+  InterpreterContext : interpreter
+  LabelId TypedValue hashMap : argData
+  Type : currentProcType
+  bool : inTypeBlock
+  TypeInfo BranchTree : stack
+  BlockInfo list : openBlocks
+  Operation list : compiledOps
+  i32 : blockStart
+  MissingProc list : missingProcs
+  FileId : currentFile
+  FilePosition list : initializationStack
+  TypeCheckStateState list : stateStack
+  TypeCheckMode :  mode
+  bool : reachable
+  bool : isUnusedProc ## will be set to true once all procs reachable from main are type-checked
 ) =:: export: TypeCheckState
 
 proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
@@ -4190,32 +4187,34 @@ proc(
     codeImpl [] .implementations
       implId list.at .data
     =:: implData
-    implData .codeState .TYPE_CHECKED ?? ! and implData .codeState .TYPE_CHECKING ?? ! if
-      implId return
+    implData [] .codeState switch
+      TYPE_CHECKED TYPE_CHECKING UNUSED case break
+      PARSED PARSING case implId return
     end
   finally implId 1 + end ..drop
   implLength return
 end
 
-enum( SKIP_UNDEFINED REQUIRE_DEFINED UNUSED ) =:: ProcCheckType
+enum( SKIP_UNDEFINED REQUIRE_DEFINED ) =:: ProcCheckType
 proc(
   ProcCodeState : codeState
   LabelId : procName
   ProcCheckType : checkType
+  bool : isUnused
   FilePosition : expandedAt
   ProgramContext ptr.mut : program
 -> bool ) =>: checkProcState
   program .idContext .typeContext .labelContext =:: labelContext
   codeState switch
     PARSED case
-      checkType .UNUSED ?? and procName labelContext id.labelFlags id.FLAG_IGNORE_UNUSED & ? ! if
+      isUnused and procName labelContext id.labelFlags id.FLAG_IGNORE_UNUSED & ? ! if
         "procedure " sb.copyPtr
           procName labelContext sb.appendLabelPath
           " is never used" sb.appendS
         expandedAt program .errors appendInfo
       end
       false return ## expected
-    TYPE_CHECKED case true return ## nothing to do
+    TYPE_CHECKED UNUSED case true return ## nothing to do
     PARSING case
       checkType .SKIP_UNDEFINED ?? ! if
         "procedure " sb.copyPtr
@@ -4260,7 +4259,7 @@ proc(
   currentProc .implementation .code =:: codeImpl
   codeImpl [] .expansionLevel =:: prevExpansionLevel
   implId -1 == if
-    codeImpl [] .codeState currentProc [] .labelId checkType initPos program checkProcState if
+    codeImpl [] .codeState currentProc [] .labelId checkType state [] .isUnusedProc initPos program checkProcState if
       return
     end
     ProcCodeState .TYPE_CHECKING codeImpl .codeState=
@@ -4268,7 +4267,7 @@ proc(
     codeImpl [] .implementations
       implId list.at .data
     =:: currentImpl
-    currentImpl [] .codeState currentProc [] .labelId checkType initPos program checkProcState if
+    currentImpl [] .codeState currentProc [] .labelId checkType state [] .isUnusedProc initPos program checkProcState if
       return
     end
     ProcCodeState .TYPE_CHECKING currentImpl .codeState=
@@ -4359,26 +4358,34 @@ proc(
     state typeCheckOp
     i skipOps + 1 +
   end ..drop
+  ## TODO? compile exported procedure normally
+  state [] .isUnusedProc ! and currentProc [] .isStatic ! if
+    procFile .localOps
+    ProcCodeState .TYPE_CHECKED
+  else
+    procFile .tmpOps
+    ProcCodeState .UNUSED
+  end =:: newProcState =:: fileOps
   ## remember new code position
   implId -1 == if
-    procFile [] .localOps .length codeImpl .codeStart=
+    fileOps [] .length codeImpl .codeStart=
     state [] .compiledOps .length codeOffset - codeImpl .codeLength=
-    ProcCodeState .TYPE_CHECKED codeImpl .codeState=
+    newProcState codeImpl .codeState=
     idContext id.currentScope currentProc .scopeId=
   else
     codeImpl [] .implementations
       implId list.at .data
     =:: currentImpl
-    procFile [] .localOps .length currentImpl .codeStart=
+    fileOps [] .length currentImpl .codeStart=
     state [] .compiledOps .length codeOffset - currentImpl .codeLength=
-    ProcCodeState .TYPE_CHECKED currentImpl .codeState=
+    newProcState currentImpl .codeState=
     prevExpansionLevel codeImpl .expansionLevel=
   end
-  procFile [] .localOps
+  fileOps []
     state [] .compiledOps
       list.asSlice codeOffset slice.tail
     list.appendSlice
-  procFile .localOps=
+  fileOps []=
   state clearOps
   state [] .program [] .autoTypes
     list.free ..drop
@@ -4459,6 +4466,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     8 TypeCheckStateState list.create
     TypeCheckMode .LINEAR
     true ## reachable
+    false ## isUnusedProc
   TypeCheckState new
 end
 64 =:: MAX_STATIC_RECURSION
@@ -4475,11 +4483,9 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     program [] .mainLabelId labelContext id.getLabelPos .data =:: mainProcPos
     program [] .mainProcId -1 mainProcPos state typeCheckChildProcedures
   end
-  hasMain if
-    ProcCheckType .UNUSED
-  else
-    ProcCheckType .REQUIRE_DEFINED
-  end =:: procCheckType
+  hasMain and optimizerFlags.REMOVE_UNUSED_PROCS if
+    true state .isUnusedProc=
+  end
   ## type-check unreachable procs
   TypeCheckMode .LINEAR state .mode=
   ## TODO reset state
@@ -4497,7 +4503,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
     end
-    procId ProcId cast -1 procCheckType FilePosition optional.empty state typeCheckProcedure
+    procId ProcId cast -1 ProcCheckType .REQUIRE_DEFINED FilePosition optional.empty state typeCheckProcedure
     procId 1 +
   end ..drop
   ## static procedures
@@ -4536,7 +4542,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
             ')' sb.appendC
           implData [] .firstUse errors appendError
         end
-        procId ProcId cast implId procCheckType implData [] .firstUse optional.wrap state typeCheckProcedure
+        procId ProcId cast implId ProcCheckType .REQUIRE_DEFINED implData [] .firstUse optional.wrap state typeCheckProcedure
         implId 1 +
       end ..drop
       procId 1 +

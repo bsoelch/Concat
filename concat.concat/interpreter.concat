@@ -3637,20 +3637,29 @@ proc(
   end
   procData .implementation .code =:: codeImpl
   implId 0 >= if
-    program [] .progFiles
-      procData [] .fileId i64 cast
-    list.at .data [] .localOps
-      codeImpl [] .implementations
-        implId list.at .data
-      =:: currentImpl
-      currentImpl .codeState .TYPE_CHECKED ?? ! if
-        "no implementaion for procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
-        pos errors appendError
-      end
-      currentImpl [] .codeStart
-      currentImpl [] .codeLength
-    list.getSlice
+    codeImpl [] .implementations
+      implId list.at .data
+    =:: currentImpl
+    currentImpl .codeState .TYPE_CHECKED ?? if
+      program [] .progFiles
+        procData [] .fileId i64 cast
+      list.at .data [] .localOps
+        currentImpl [] .codeStart
+        currentImpl [] .codeLength
+      list.getSlice
+    else currentImpl .codeState .UNUSED ?? _if
+      program [] .progFiles
+        procData [] .fileId i64 cast
+      list.at .data [] .tmpOps
+        currentImpl [] .codeStart
+        currentImpl [] .codeLength
+      list.getSlice
+    else
+      "no implementaion for procedure " sb.copyPtr
+        procName labelContext sb.appendLabelPath
+      pos errors appendError
+      Operation slice.empty
+    end
   else
     codeImpl [] .codeState switch
       PARSING case
@@ -3675,6 +3684,14 @@ proc(
         program [] .progFiles
           procData [] .fileId i64 cast
         list.at .data [] .localOps
+            codeImpl [] .codeStart
+            codeImpl [] .codeLength
+        list.getSlice
+        break
+      UNUSED case ## code for unused procs is stored in tmp ops
+        program [] .progFiles
+          procData [] .fileId i64 cast
+        list.at .data [] .tmpOps
             codeImpl [] .codeStart
             codeImpl [] .codeLength
         list.getSlice

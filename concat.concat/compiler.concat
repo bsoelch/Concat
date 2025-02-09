@@ -14,9 +14,10 @@ string : mut: libPath
 string optional : mut: parserTokensFile
 string optional : mut: compilerTokensFile
 string optional : mut: errorFile
+## XXX? more controll of compilation states after which tokens will be dumped
+false =:: mut: dumpTypeCheckerTokens
 
 ## make new compiler flags accessible in code through `..compiler.flag.<...>`
-
 proc( string : path -> ) =>: printUsage
   "usage: " sb.copyPtr
     path sb.appendStr
@@ -31,6 +32,7 @@ proc( string : path -> ) =>: printUsage
     "  -W: treat warnings as errors\n" sb.appendS
     "  -q: \"quiet mode\" (no effects, exists for comparability with old compiler)\n" sb.appendS
     "  --no-core: don't include libray core by default \n" sb.appendS
+    "  --dump-typeChecker: include type-checker output in compiled tokens printed to file given by `-t`\n" sb.appendS
     io.stdOut ..over io.fputSb ..drop
   sb.free ..drop
 end
@@ -91,6 +93,8 @@ proc( -> ) =>: parseArgs
             false _INCLUDE_CORE_@ = break
           else arg "--no-inc-version":s string.eq _if
             false _INCREMENT_VERSION_@ = break
+          else arg "--dump-typeChecker":s string.eq _if
+            true dumpTypeCheckerTokens@ = break
           end
           "unknown compiler option: \"" sb.copyPtr
             arg sb.appendStr
@@ -243,24 +247,26 @@ proc( -> ) =>: main ## TODO check return value of fopen
   parseArgs
   ## TODO cleanup program memory after compilation
   parseAndTypeCheck =:: mut: prog
-  compilerTokensFile optional.hasData if
+  io.OPEN_WRITE =:: mut: openMode
+  dumpTypeCheckerTokens and compilerTokensFile optional.hasData if
     1024 sb.create
       prog@ sb.appendProgram
     =:: parsedOps
-    compilerTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
+    compilerTokensFile .data openMode io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
+      ..dup "\n-----------------\n" io.fputs ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop
+    io.OPEN_APPEND openMode@ =
   end
   prog@ .errors checkErrors
   prog@ prepareCompile
-  ## TODO own flag&file for dumping tokens
+  ## TODO seperate file for each compilation step
   compilerTokensFile optional.hasData if
     1024 sb.create
       prog@ sb.appendProgram
     =:: parsedOps
-    compilerTokensFile .data io.OPEN_APPEND io.fopenStr ..drop
-      ..dup "\n-----------------\n" io.fputs ..drop
+    compilerTokensFile .data openMode io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop

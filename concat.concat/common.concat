@@ -22,27 +22,32 @@ true =:: mut: export: _INCLUDE_CORE_
 true =:: mut: export: _INCREMENT_VERSION_
 BackEnd .QBE =:: mut: export: _BACKEND_
 namespace: optimizerFlags
-  true =:: mut: FOLD_CONSTANTS
-  true =:: mut: REMOVE_UNUSED_PROCS
-  false =:: mut: ALLOW_INLINE
+  true =:: export: mut: FOLD_CONSTANTS
+  true =:: export: mut: REMOVE_UNUSED_PROCS ## don't include unused procedures in compiled code
+  true =:: export: mut: ALLOW_INLINE_SMALL
+  false =:: export: mut: ALLOW_INLINE
   ## XXX! determine good constants
-  ## XXX? make dependent on structure of code
-  16 =:: mut: WEAK_INLINE_MAX_OP_COUNT
-  32 =:: mut: INLINE_MAX_OP_COUNT
+  ## XXX? make dependent on structure of code ? #ops - #args
+  ## XXX? make dependent on level
+  16 =:: export: mut: WEAK_INLINE_MAX_OP_COUNT ## always inlined (unless marked as inline.never)
+  32 =:: export: mut: INLINE_MAX_OP_COUNT ## inlined if marked as inline
 
-  proc( -> ) =>: optLevel0
+  proc( -> ) =>: export: optLevel0
     false FOLD_CONSTANTS@ =
     false REMOVE_UNUSED_PROCS@ =
+    false ALLOW_INLINE_SMALL@ =
     false ALLOW_INLINE@ =
   end
-  proc( -> ) =>: optLevelDefault
+  proc( -> ) =>: export: optLevelDefault
     true FOLD_CONSTANTS@ =
     true REMOVE_UNUSED_PROCS@ =
+    true ALLOW_INLINE_SMALL@ =
     false ALLOW_INLINE@ =
   end
-  proc( -> ) =>: optLevel1
+  proc( -> ) =>: export: optLevel1
     true FOLD_CONSTANTS@ =
     true REMOVE_UNUSED_PROCS@ =
+    true ALLOW_INLINE_SMALL@ =
     true ALLOW_INLINE@ =
   end
   ## TODO? more opt-leves

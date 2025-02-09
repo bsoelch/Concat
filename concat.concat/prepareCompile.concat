@@ -382,6 +382,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   contextData@ =:: context
   program [] .progFiles list.atItr for =:: f
     f [] .tmpOps list.clear f .tmpOps=
+    f [] .globalOps list.clear f .globalOps= ## global ops are no longer needed
   end
   program [] .procedures list.atItr for =:: currentProc
     currentProc [] .implementation .code ?? ! or
@@ -395,6 +396,9 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc .implementation .code =:: impl
     currentProc [] .hasStaticArg if
       impl [] .implementations list.atItr for =:: currentImpl
+      currentImpl .codeState [] .UNUSED ?? if
+        continue
+      end
         ## convertProc
           f [] .localOps
             currentImpl [] .codeStart
@@ -408,6 +412,9 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
         convertProc
       end
     else
+      impl .codeState [] .UNUSED ?? if
+        continue
+      end
       ## convertProc
         f [] .localOps impl [] .codeStart impl [] .codeLength list.getSlice
         f .tmpOps
