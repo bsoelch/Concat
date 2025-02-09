@@ -38,7 +38,7 @@ namespace: array
         from offset i + + []
         from offset j + + []
         context
-      cmp () 0 < if
+      cmp () 0 <= if
         from offset i + [] to offset k + []=
         i 1 + i@ =
       else
