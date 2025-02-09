@@ -6,15 +6,12 @@ using std.literals.:s
 
 "main":s =:: export: MAIN_NAME ## name of main procedure
 
-i32 =:: export: FileId
--1:FileId =:: export: FILE_ID_NONE
--2:FileId =:: export: FILE_ID_BUILT_IN
-
 ## XXX? seperate file for compiler flags
 enum( ## XXX more precise names
   QBE
 ) =:: export: BackEnd
 ## compiler flags
+## XXX? wrap in namespace
 ..compiler.version
   ..compiler.flag.incrementVersionNumber if 1 + end
 =:: export: _VERSION_ ## compiler version auto incremenets on each recompile
@@ -24,8 +21,51 @@ false =:: mut: export: _EXPERIMENTAL_
 true =:: mut: export: _INCLUDE_CORE_
 true =:: mut: export: _INCREMENT_VERSION_
 BackEnd .QBE =:: mut: export: _BACKEND_
+namespace: optimizerFlags
+  true =:: mut: FOLD_CONSTANTS
+  true =:: mut: REMOVE_UNUSED_PROCS
+  false =:: mut: ALLOW_INLINE
+  ## XXX! determine good constants
+  ## XXX? make dependent on structure of code
+  16 =:: mut: WEAK_INLINE_MAX_OP_COUNT
+  32 =:: mut: INLINE_MAX_OP_COUNT
 
-struct( string : fileName i64 : line i64 : posInLine ) =:: export: FilePosition
+  proc( -> ) =>: optLevel0
+    false FOLD_CONSTANTS@ =
+    false REMOVE_UNUSED_PROCS@ =
+    false ALLOW_INLINE@ =
+  end
+  proc( -> ) =>: optLevelDefault
+    true FOLD_CONSTANTS@ =
+    true REMOVE_UNUSED_PROCS@ =
+    false ALLOW_INLINE@ =
+  end
+  proc( -> ) =>: optLevel1
+    true FOLD_CONSTANTS@ =
+    true REMOVE_UNUSED_PROCS@ =
+    true ALLOW_INLINE@ =
+  end
+  ## TODO? more opt-leves
+  ## ? optSave -> optimize but keep savety checks
+  ## ? -> optimize, remove savety checks
+end
+
+i32 =:: export: FileId
+-1:FileId =:: export: FILE_ID_NONE
+-2:FileId =:: export: FILE_ID_BUILT_IN
+struct( string : fileName FileId : fileId i32 : line i32 : posInLine ) =:: export: FilePosition
+string.empty FILE_ID_NONE 0 0 FilePosition new =:: export: FILE_POS_UNKNOWN
+proc( FilePosition : a FilePosition : b -> i32 ) =>: export: filePosCmp
+  ## high file ids first
+  a .fileId b .fileId != if
+    b .fileId i32 cast a .fileId i32 cast i32.cmp return
+  end
+  ## ordered by position in file
+  a .line b .line != if
+    a .line b .line i32.cmp return
+  end
+  a .posInLine b .posInLine i32.cmp return
+end
 enum( ERROR WARNING INFO ) =:: export: ErrorType
 struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: export: CompilerError
 proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : errors -> ) =>: export: appendError
@@ -42,6 +82,9 @@ proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : er
   errors []
     message ErrorType .INFO pos CompilerError new list.append
   errors =
+end
+proc( CompilerError : a CompilerError : b -> i32 ) =>: export: errorCmp
+  a .pos b .pos filePosCmp return
 end
 
 i32 =:: export: LabelId

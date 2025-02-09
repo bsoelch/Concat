@@ -118,21 +118,6 @@ namespace: sb
   end
 end
 
-proc( string -> ) =>: export: printTokens
-  "test" ..dup ..length string.create 0 1 FilePosition new ..dup FileState new =:: mut: state
-  while
-    state@ nextToken
-    128 sb.create
-      ..swap sb.appendToken
-      " at " sb.appendS
-      state .wordStart sb.appendPos
-      '\n' sb.appendC
-    io.stdOut ..swap io.fputSb ..drop
-    ..dup .length 0 >
-  do end ..drop
-end
-
-
 proc( char8 : chr  FilePosition ptr.mut : currentPos -> ) =>: export: updateFilePos
   chr '\n' == if
       currentPos [] .line 1 + currentPos .line=

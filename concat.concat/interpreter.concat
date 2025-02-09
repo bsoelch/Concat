@@ -3290,7 +3290,8 @@ namespace: interpreter
         values valInfos nArgs context unpopValues
         true return
       end values nArgs []= valInfos nArgs []=
-      valInfos nArgs [] .valueType eltType typeContext types.canAutoCast ! if
+      valInfos nArgs [] .valueType typeContext types.unwrapNamed
+          eltType typeContext types.unwrapNamed typeContext types.canAutoCast ! if
         "wrong argument type for built-in " sb.copyPtr
           builtIn sb.appendBuiltIn
           " expected: " sb.appendS

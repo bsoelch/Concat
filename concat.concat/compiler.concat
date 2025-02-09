@@ -195,6 +195,7 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
   errors [] .length 0 == if
     return
   end
+  errors [] errorCmp@ list.sort
   false =:: mut: hasError
   1024 sb.create
     0:i32 while ..dup errors [] .length < do

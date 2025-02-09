@@ -1159,6 +1159,7 @@ proc(
           pos
           -1
           -1
+          implData .code [] .expansionLevel 1:i16 +
           ProcCodeState .PARSED
         ProcImplementation new list.append
       impls []=

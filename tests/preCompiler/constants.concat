@@ -72,4 +72,15 @@ proc( -> union3 union2  ) =>: testUnion43
   1 1.5:f32 ( i32 f32 ) new union2 .A
 end
 
-proc( -> ) =>: main end
+proc( -> ) =>: main
+  arrayTest1 ..drop
+  arrayTest2 ..drop
+  stackStruct ..drop
+  nestedStruct ..drop
+  misalignedElement ..drop
+  refOnlyArray ..drop.2
+  refOnlyStruct ..drop
+  1:i32 2:f32 3:i64 4:f64 testRefOnlyNew ..drop.2
+  testEnum12 ..drop.2
+  testUnion43 ..drop.2
+end

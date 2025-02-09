@@ -5032,21 +5032,15 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     true
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
-  id.LABEL_ID_NONE =:: mut: mainId
-  program [] .progFiles 0 list.at .data [] .fileScope =:: rootFileScope
-  rootFileScope idContext id.setScope
+  program [] .mainLabelId =:: mainId
+  program [] .progFiles 0 list.at .data [] .fileScope idContext id.setScope
   labelContext id.clearNamespace
-  MAIN_NAME idContext id.findIdentifierByName ! if =:: data
-    data [] .labelId labelContext id.getLabelNamespace 0:NamespaceId ==
-        "main is in global namespace" assert
-    data [] .labelId mainId@ =
-  else ..drop end
   1024 sb.create
     program getDeclaredTypes =:: types
     0:i32 while ..dup types .length < do =:: i
       types i list.get
         ## TODO? use declaration position of type
-        string.empty 0 0 FilePosition new
+        FILE_POS_UNKNOWN
       context sb.appendTypeDeclarationQBE
       i 1 +
     end ..drop

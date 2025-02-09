@@ -1,5 +1,5 @@
 proc( -> ) =>: copyTest
-  { 1 2 3 } =:: mut: mutableArray
+  { 1 2 } =:: mut: mutableArray
   mutableArray
     5 mutableArray@ 1 []=
   =:: original
@@ -14,4 +14,7 @@ proc( -> ) =>: copyLargeTest
   original@ 1 [] 2 == "copy works" assert
 end
 
-proc( -> ) =>: main end
+proc( -> ) =>: main
+  copyTest
+  copyLargeTest
+end

@@ -18,7 +18,7 @@ namespace: Vector
   proc( Vector : u Vector : v -> i32 ) =>: dot2
     u .x v .x * u .y v .y * +
   end
-  proc( Vector3 : u Vector3 : v -> i32 ) =>: dot3
+  proc( Vector3 : u Vector3 : v -> i32 ) =>: ignoreUnused: dot3
     u .x v .x * u .y v .y * + u .z v .z * +
   end
   overload: dot

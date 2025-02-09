@@ -25,6 +25,17 @@ namespace: id
    0:ScopeId =:: export: GLOBAL_SCOPE
 
   i32 =:: export: LabelFlag
+  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagAnd i32.and
+  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagOr  i32.or
+  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagXor i32.xor
+  proc( LabelFlag -> LabelFlag ) : alias: flagFlip i32.flip
+  proc( LabelFlag -> bool ) : alias: flagToBool i32.toBool
+  overload: merge: &  flagAnd    end
+  overload: merge: |  flagOr     end
+  overload: merge: ^  flagXor    end
+  overload: merge: ~  flagFlip   end
+  overload: merge: ?  flagToBool end
+
   0x0000:LabelFlag =:: export: FLAG_NONE
   0x0001:LabelFlag =:: export: FLAG_MUTABLE
   0x0002:LabelFlag =:: export: FLAG_AUTO
@@ -42,19 +53,11 @@ namespace: id
   0x2000:LabelFlag =:: export: FLAG_MERGE
   0x4000:LabelFlag =:: export: FLAG_LAMBDA
   0x8000:LabelFlag =:: export: FLAG_MERGEABLE
+  0x10000:LabelFlag =:: export: FLAG_IGNORE_UNUSED
 
+ ## 0x20000000:LabelFlag FLAG_IGNORE_UNUSED | =:: export: FLAG_LIB_FILE ## in library file
+  0x20010000:LabelFlag =:: export: FLAG_LIB_FILE ## XXX temporary until renamed built-ins are supported
   0x40000000:LabelFlag =:: export: FLAG_EXPERIMENTAL
-
-  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagAnd i32.and
-  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagOr  i32.or
-  proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagXor i32.xor
-  proc( LabelFlag -> LabelFlag ) : alias: flagFlip i32.flip
-  proc( LabelFlag -> bool ) : alias: flagToBool i32.toBool
-  overload: merge: &  flagAnd    end
-  overload: merge: |  flagOr     end
-  overload: merge: ^  flagXor    end
-  overload: merge: ~  flagFlip   end
-  overload: merge: ?  flagToBool end
 end
 
 struct( string : name NamespaceId list : children NamespaceId : parent ) =:: Namespace
@@ -135,6 +138,13 @@ namespace: id
       FILE_ID_NONE return
     end
     label? .data [] .srcFile return
+  end
+  proc( LabelId : id LabelContext ptr.mut : context -> FilePosition optional ) =>: export: getLabelPos
+    id context getLabel =:: label?
+    label? optional.isEmpty if
+      FilePosition optional.empty return
+    end
+    label? .data [] .pos optional.wrap return
   end
   proc( LabelContext ptr.mut : context -> NamespaceInfo ) =>: export: currentNamespace
     context [] .namespaceInfo return

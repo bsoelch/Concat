@@ -64,8 +64,7 @@ namespace: id
   ## IdentifierData
     Type .undefined
     ConstValue .None
-    "" 0 string new
-    0 0 FilePosition new
+    FILE_POS_UNKNOWN
     LABEL_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
@@ -74,8 +73,7 @@ namespace: id
   ## IdentifierData
     Type .undefined
     ConstValue .None
-    "" 0 string new
-    0 0 FilePosition new
+    FILE_POS_UNKNOWN
     LABEL_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR

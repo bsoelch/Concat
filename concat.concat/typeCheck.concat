@@ -21,6 +21,8 @@ struct(
 -1:i32 =:: OP_UNLINKED
 -2:i32 =:: OP_EMPTY
 
+16:i16 =:: MAX_EXPANSION_DEPTH
+
 struct(
   branchTree.NodeId : node
   FilePosition : pos
@@ -180,6 +182,11 @@ struct( Type : valType ConstValue : value ) =:: TypedValue
 enum( PROC_CHILD STATIC_PROC LINEAR ) =:: TypeCheckMode
 
 struct(
+  ProcedureImpl : impl
+  FilePosition : expandedAt
+) =:: MissingProc
+
+struct(
   i32 : openBlocksOffset
   i32 : compiledOpsOffset
   i32 : initializationStackOffset
@@ -201,7 +208,7 @@ struct(
   BlockInfo list : mut: openBlocks
   Operation list : mut: compiledOps
   i32 : mut: blockStart
-  ProcedureImpl list : mut: missingProcs
+  MissingProc list : mut: missingProcs
   FileId : mut: currentFile
   FilePosition list : mut: initializationStack
   TypeCheckStateState list : mut: stateStack
@@ -1943,30 +1950,26 @@ proc(
           calledProcData [] .implementation switch
             code case
               state [] .mode .LINEAR ?? ! if
+                ## check if implementation exists if not add to list of missing imples
                 calledProcData  .implementation .code =:: codeImpl
                 calledProc .implementationId =:: implId
                 implId -1:i32 == if
-                  codeImpl [] .codeState .TYPE_CHECKED ?? ! if
-                    state [] .missingProcs
-                      ## ProcedureImpl
-                        implId
-                        calledProc .procId
-                      ProcedureImpl new list.append
-                    state .missingProcs=
-                  end
+                  codeImpl [] .codeState .TYPE_CHECKED ?? !
                 else
                   codeImpl [] .implementations
                     implId list.at .data
-                  [] .codeState .TYPE_CHECKED ?? ! if
-                    state [] .missingProcs
+                  [] .codeState .TYPE_CHECKED ?? !
+                end if
+                  state [] .missingProcs
+                    ## MissingProc
                       ## ProcedureImpl
                         implId
                         calledProc .procId
-                      ProcedureImpl new list.append
-                    state .missingProcs=
-                  end
+                      ProcedureImpl new
+                      op .pos
+                    MissingProc new list.append
+                  state .missingProcs=
                 end
-                ## check if implementation exists if not add to list of missing imples
               end
               calledProc OpValue .call op@ .val=
             break
@@ -2102,8 +2105,21 @@ proc(
               ##  -> generic proc ptr : ( procId, implId )
               break
             end
-            procData [] .implementation .builtIn ?? if
+            procData .implementation [] .builtIn ?? if
               true procData .implementation .builtIn .hasPtr=
+            else procData .implementation [] .code ?? _if
+              procData .implementation .code =:: codeImpl
+              codeImpl .codeState [] .TYPE_CHECKED ?? ! if
+                state [] .missingProcs
+                  ## MissingProc
+                    ## ProcedureImpl
+                      implId
+                      procId
+                    ProcedureImpl new
+                    op .pos
+                  MissingProc new list.append
+                state .missingProcs=
+              end
             end
             ## ProcedureImpl
               implId
@@ -2228,6 +2244,16 @@ proc(
             op .pos errors appendError
             return
           end
+          ## ensure lambda is type-checked
+          state [] .missingProcs
+            ## MissingProc
+              ## ProcedureImpl
+                -1
+                procId
+              ProcedureImpl new
+              op .pos
+            MissingProc new list.append
+          state .missingProcs=
           op .pos state popType =:: procType
           procType procData .procType=
           idContext id.currentScope procData .scopeId= ## remember host scope
@@ -3391,7 +3417,7 @@ proc(
           ## merge continue branches
           continueBranches .length 1 >= if
             continueBranches .length branchTree.NodeId list.create
-              continueBranches for .node list.append end            
+              continueBranches for .node list.append end
             =:: mut: branchPoints
             ## mergeValues
               state .stack
@@ -4195,38 +4221,46 @@ proc(
     codeImpl [] .implementations
       implId list.at .data
     =:: implData
-    implData .codeState .TYPE_CHECKED ?? ! if
+    implData .codeState .TYPE_CHECKED ?? ! and implData .codeState .TYPE_CHECKING ?? ! if
       implId return
     end
   finally implId 1 + end ..drop
   implLength return
 end
 
-enum( SKIP_UNDEFINED REQUIRE_DEFINED ) =:: ProcCheckType
+enum( SKIP_UNDEFINED REQUIRE_DEFINED UNUSED ) =:: ProcCheckType
 proc(
   ProcCodeState : codeState
   LabelId : procName
   ProcCheckType : checkType
-  FilePosition optional : expandedAt
+  FilePosition : expandedAt
   ProgramContext ptr.mut : program
 -> bool ) =>: checkProcState
+  program .idContext .typeContext .labelContext =:: labelContext
   codeState switch
-    PARSED case false return ## expected
+    PARSED case
+      checkType .UNUSED ?? and procName labelContext id.labelFlags id.FLAG_IGNORE_UNUSED & ? ! if
+        "procedure " sb.copyPtr
+          procName labelContext sb.appendLabelPath
+          " is never used" sb.appendS
+        expandedAt program .errors appendInfo
+      end
+      false return ## expected
     TYPE_CHECKED case true return ## nothing to do
     PARSING case
-      checkType .REQUIRE_DEFINED ?? and expandedAt optional.hasData if
+      checkType .SKIP_UNDEFINED ?? ! if
         "procedure " sb.copyPtr
-          procName program .idContext .typeContext .labelContext sb.appendLabelPath
+          procName labelContext sb.appendLabelPath
           " has not finished parsing" sb.appendS
-        expandedAt .data program .errors appendError
+        expandedAt program .errors appendError
       end
       true return
     TYPE_CHECKING case
-      checkType .REQUIRE_DEFINED ?? and expandedAt optional.hasData if
+      checkType .SKIP_UNDEFINED ?? ! if
         "procedure " sb.copyPtr
-          procName program .idContext .typeContext .labelContext sb.appendLabelPath
+          procName labelContext sb.appendLabelPath
           " has not finished type-checking" sb.appendS
-        expandedAt .data program .errors appendError
+        expandedAt program .errors appendError
       end
       true return
   end
@@ -4249,9 +4283,15 @@ proc(
     ##  skip built-ins
     return
   end
+  expandedAt optional.hasData if
+    expandedAt .data
+  else
+    currentProc [] .labelId labelContext id.getLabelPos .data
+  end =:: initPos
   currentProc .implementation .code =:: codeImpl
+  codeImpl [] .expansionLevel =:: prevExpansionLevel
   implId -1 == if
-    codeImpl [] .codeState currentProc [] .labelId checkType expandedAt program checkProcState if
+    codeImpl [] .codeState currentProc [] .labelId checkType initPos program checkProcState if
       return
     end
     ProcCodeState .TYPE_CHECKING codeImpl .codeState=
@@ -4259,10 +4299,24 @@ proc(
     codeImpl [] .implementations
       implId list.at .data
     =:: currentImpl
-    currentImpl [] .codeState currentProc [] .labelId checkType expandedAt program checkProcState if
+    currentImpl [] .codeState currentProc [] .labelId checkType initPos program checkProcState if
       return
     end
     ProcCodeState .TYPE_CHECKING currentImpl .codeState=
+    currentImpl [] .expansionLevel
+      $ MAX_EXPANSION_DEPTH > if ..drop
+        "exceeded maximum expansion depth (" sb.copyPtr
+          MAX_EXPANSION_DEPTH i32 cast.u sb.appendI
+          ')' sb.appendC
+          state [] .initializationStack list.reversed for =:: prevExpand
+            "  caused by initializing code at " sb.appendS
+            prevExpand sb.appendPos
+            '\n' sb.appendC
+          end
+        initPos program .errors appendError
+        return
+      end
+    codeImpl .expansionLevel=
     currentImpl [] .procType typeContext types.getProcIn ..drop =:: procIn
     procIn typeContext types.compositeElts =:: inTypes
     0:i32 =:: mut: staticArgCount
@@ -4349,6 +4403,7 @@ proc(
     procFile [] .localOps .length currentImpl .codeStart=
     state [] .compiledOps .length codeOffset - currentImpl .codeLength=
     ProcCodeState .TYPE_CHECKED currentImpl .codeState=
+    prevExpansionLevel codeImpl .expansionLevel=
   end
   procFile [] .localOps
     state [] .compiledOps
@@ -4390,11 +4445,12 @@ proc(
   ##  go through called procedures in breadth first order
   missingProcsOffset while $ state [] .missingProcs .length < do =:: i
     state [] .missingProcs i list.get =:: nextProc
+    ## XXX? remember/restore complete expansion stack
     ## typeCheckProcedure
-      nextProc .procId
-      nextProc .implementationId
+      nextProc .impl .procId
+      nextProc .impl .implementationId
       ProcCheckType .SKIP_UNDEFINED
-      expandedAt optional.wrap ## XXX better position?, remember complete call stack?
+      nextProc .expandedAt optional.wrap
     state typeCheckProcedure
   finally i 1 + end ..drop
   state [] .missingProcs
@@ -4428,7 +4484,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     32  BlockInfo list.create
     128 Operation list.create
     0:i32
-    128 ProcedureImpl list.create
+    128 MissingProc list.create
     FILE_ID_NONE
     16 FilePosition list.create
     8 TypeCheckStateState list.create
@@ -4444,6 +4500,18 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
+  program [] .mainProcId NO_PROC != =:: hasMain
+  hasMain if
+    ## check all procedures reachable from main proc
+    program [] .mainLabelId labelContext id.getLabelPos .data =:: mainProcPos
+    program [] .mainProcId -1 mainProcPos state typeCheckChildProcedures
+  end
+  hasMain if
+    ProcCheckType .UNUSED
+  else
+    ProcCheckType .REQUIRE_DEFINED
+  end =:: procCheckType
+  ## type-check unreachable procs
   TypeCheckMode .LINEAR state .mode=
   ## TODO reset state
   state .compiledOps =:: originalOps
@@ -4460,7 +4528,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
     end
-    procId ProcId cast -1 ProcCheckType .REQUIRE_DEFINED FilePosition optional.empty state typeCheckProcedure
+    procId ProcId cast -1 procCheckType FilePosition optional.empty state typeCheckProcedure
     procId 1 +
   end ..drop
   ## static procedures
@@ -4499,7 +4567,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
             ')' sb.appendC
           implData [] .firstUse errors appendError
         end
-        procId ProcId cast implId ProcCheckType .REQUIRE_DEFINED implData [] .firstUse optional.wrap state typeCheckProcedure
+        procId ProcId cast implId procCheckType implData [] .firstUse optional.wrap state typeCheckProcedure
         implId 1 +
       end ..drop
       procId 1 +

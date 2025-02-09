@@ -1,11 +1,6 @@
 import math
 import debug
 
-proc( f64 : x -> ) =>: testRound
-  x debug.print
-  x math.round debug.print
-end
-
 proc( -> ) =>: main
   -1e400 math.round debug.print
   -1e308 math.round debug.print

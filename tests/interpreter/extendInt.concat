@@ -11,6 +11,7 @@ proc( bool : c -> ) =>: checkSignMerge
 end
 
 proc( -> ) =>: main
-  -1 ..?types isSignExtened "..s32 is sign extended" assert
+  -1 ..?types isSignExtened "-1 is sign extended" assert
+  0xffff'ffff ..?types isZeroExtened "0xffff'ffff is zero extended" assert
   true checkSignMerge
 end

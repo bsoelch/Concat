@@ -37,13 +37,15 @@ struct(
   FilePosition : firstUse
   i32 : codeStart
   i32 : codeLength
+  i16 : expansionLevel ## nesting level of this imlementation
   ProcCodeState : codeState
 ) =:: export: ProcImplementation
 struct(
   ProcImplementation list : implementations
-  VariableInfo list : variables ## for single implementation in no-generic case
+  VariableInfo list : variables ## for single implementation in non-generic case
   i32 : codeStart
   i32 : codeLength
+  i16 : expansionLevel ## level of currently active expansion
   ProcCodeState : codeState
 ) =:: export: CodeProcData
 struct(
@@ -461,6 +463,8 @@ struct(
                AndOrData list : andOrData
            TypedConstant list : constantReferences
            CompilerError list : errors
+                      LabelId : mainLabelId
+                       ProcId : mainProcId
                          bool : hasCheckIndex
                          bool : hasCheckEnum
                          bool : hasGetArgs
@@ -482,6 +486,8 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     128 AndOrData       list.create
     32  TypedConstant   list.create
     32  CompilerError   list.create
+    id.LABEL_ID_NONE ## main LabelId
+    NO_PROC ## main ProcId
     false ## hasCheckIndex
     false ## hasCheckEnum
     false ## has getArgs
@@ -489,13 +495,17 @@ proc( -> ProgramContext ) =>: export: newProgramContext
 end
 ## TODO free Program context
 
-proc( stringBuilder : fileName FileId : id IdentifierContext ptr.mut : idContext -> ProgramFile ) =>: export: newProgFile
-  128 Operation list.create
-  128 Operation list.create
-  128 Operation list.create
-  fileName
-  id
-  id.NO_SCOPE
+proc(
+  stringBuilder : fileName
+  FileId : id
+-> ProgramFile ) =>: export: newProgFile
+  ## ProgramFile
+    128 Operation list.create
+    128 Operation list.create
+    128 Operation list.create
+    fileName
+    id
+    id.NO_SCOPE
   ProgramFile new return
 end
 
@@ -970,6 +980,7 @@ namespace: sb
   proc( stringBuilder ProgramContext ptr -> stringBuilder ) =>: export: appendProgram
     =:: prog
       "## errors:\n" sb.appendS
+      prog [] .errors errorCmp@ list.sort
       0:i32 while ..dup prog [] .errors .length < do
         ..swap
           prog [] .errors ..over.2 list.get sb.appendCompilerError

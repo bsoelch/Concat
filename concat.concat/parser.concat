@@ -51,6 +51,7 @@ struct(
   InterpreterInfo list : globalInterpreters
   LabelId list : labelBuffer
   stringBuilder : tmpString
+  bool : inLibFile
   bool : saveGlobalTokens
 ) =:: ParserState
 
@@ -419,7 +420,11 @@ proc(
 -> string LabelId ) =>: readLabelAddFlags
   state [] .progContext =:: progContext
   progContext .errors =:: errors
-  0:LabelFlag =:: mut: flags
+  state [] .inLibFile if
+    id.FLAG_LIB_FILE
+  else
+    0:LabelFlag
+  end =:: mut: flags
   false =:: mut: isModifier
   code start
     while
@@ -459,6 +464,9 @@ proc(
         true isModifier@ =
       else ..dup "merge:":s string.eq _if
         id.FLAG_MERGE flags | flags@ =
+        true isModifier@ =
+      else ..dup "ignoreUnused:":s string.eq _if
+        id.FLAG_IGNORE_UNUSED flags | flags@ =
         true isModifier@ =
       else ..dup ":":s string.endsWith _if
         true isModifier@ =
@@ -869,7 +877,7 @@ proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =
   itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
 end
 ## if current procedure is a valid main
-proc( LabelId : procName Type : procType FilePosition : pos ParserState ptr.mut : state -> ) =>: checkMain
+proc( LabelId : procName Type : procType ProcId : procId FilePosition : pos ParserState ptr.mut : state -> ) =>: checkMain
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   progContext .idContext =:: idContext
@@ -905,6 +913,10 @@ proc( LabelId : procName Type : procType FilePosition : pos ParserState ptr.mut 
   outTypes typeContext types.compositeEltCount 0 > if
     "the main procedure should not return a value" sb.copyPtr
      pos errors appendWarning
+  end
+  procName progContext .mainLabelId=
+  procId NO_PROC != if ## don't update proc-id for main without body
+    procId progContext .mainProcId=
   end
 end
 ## check if composite has any static elements, types are static by default
@@ -951,6 +963,7 @@ proc(
           0 VariableInfo list.create
           codeStart
           -1
+          0:i16
           ProcCodeState .PARSING
         CodeProcData new ProcImplType .code
       else
@@ -1298,7 +1311,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       ## check if current procedure is main
-      procName procType fileState [] .wordStart state checkMain
+      procName procType procId fileState [] .wordStart state checkMain
       idData .valueType idData@ id.asIdInfo fileState [] .wordStart opInitializeId
       state appendOp
       return
@@ -1910,7 +1923,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ! "label is identifier" assert
       .constValue=
       inConstBlock ! if ## main
-        label idData .valueType fileState [] .wordStart state checkMain
+        label idData .valueType NO_PROC fileState [] .wordStart state checkMain
       end
       idData .idType .TYPE ?? if
         return
@@ -2235,6 +2248,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state [] .basePath .length ..over .length + sb.create
           state [] .basePath sb.appendStr
           ..swap sb.appendStr
+          state [] .inLibFile
         fileState [] .wordStart state importFile
         return
       else ..dup .IDENTIFIER ?? _if .IDENTIFIER ## library file
@@ -2380,7 +2394,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState [] .wordStart opConst state appendOp
       return
     else $ "..line":s string.eq _if ..drop
-      fileState [] .wordStart .line ConstValue .Int
+      fileState [] .wordStart .line i64 cast.u ConstValue .Int
       types.primitive.I64
       fileState [] .wordStart opConst state appendOp
       return
@@ -2542,9 +2556,15 @@ proc( string FilePosition : pos ParserState ptr.mut : state -> ) =>: importLibra
   state [] .libPath .length $1 .length + ".concat" ..length + sb.create
     state [] .libPath sb.appendStr
     ..swap sb.appendStr ".concat" sb.appendS
+    true
   pos state importFile
 end
-proc( stringBuilder : fileName FilePosition : pos ParserState ptr.mut : state -> ) =>: importFile
+proc(
+  stringBuilder : fileName
+  bool : isLibImport
+  FilePosition : pos
+  ParserState ptr.mut : state
+-> ) =>: importFile
   state [] .progContext =:: progContext
   FILE_ID_NONE =:: mut: imported
   0:i32 while ..dup progContext [] .progFiles .length < do
@@ -2555,7 +2575,7 @@ proc( stringBuilder : fileName FilePosition : pos ParserState ptr.mut : state ->
     1 +
   end ..drop
   imported FILE_ID_NONE == if ## file has not yet been imported
-    fileName state parseFile fileName pos state checkIOError imported@ =
+    fileName isLibImport state parseFile fileName pos state checkIOError imported@ =
     imported FILE_ID_NONE == if
       return
     end
@@ -2581,6 +2601,7 @@ proc(
   newProgramContext =:: mut: programContext
   ## FilePosition
     rootFile sb.asStr
+    0:FileId
     0
     0
   FilePosition new =:: rootPos
@@ -2612,9 +2633,10 @@ proc(
     0   InterpreterInfo         list.create
     128 LabelId                 list.create
     128 sb.create
+    false
     saveGlobalTokens
   ParserState new =:: mut: state
-  rootFile state@ parseFile rootFile rootPos state@ checkIOError ..drop
+  rootFile false state@ parseFile rootFile rootPos state@ checkIOError ..drop
   ## cleanup parser memory
   state .typeBuffer list.free ..drop
   state .constantBlocks list.free ..drop
@@ -2628,7 +2650,11 @@ proc(
   state .tmpString sb.free ..drop
   programContext typeChecker return
 end
-proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError ) =>: parseFile
+proc(
+  stringBuilder : fileName
+  bool : isLibFile
+  ParserState ptr.mut : state
+-> FileId io.IOError ) =>: parseFile
   fileName
     state [] .progContext =:: progContext
     progContext .idContext =:: idContext
@@ -2638,10 +2664,10 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
       '\x00' sb.appendC ## ensure file-name is zero terminated
     end
     ..dup .length 1 - sb.setLength ## do not include zero terminator in length
-    ..dup sb.asStr 0 1 FilePosition new ..dup FileState new =:: mut: fileState
     progContext [] .progFiles .length FileId cast =:: fileId
+    ..dup sb.asStr fileId 0 1 FilePosition new ..dup FileState new =:: mut: fileState
     progContext [] .progFiles
-      ..over fileId progContext .idContext newProgFile list.append
+      ..over fileId newProgFile list.append
     progContext .progFiles=
     ## TODO? use same interpreter for all files
     state [] .globalInterpreters
@@ -2655,11 +2681,15 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
       InterpreterInfo new list.append
     state .globalInterpreters=
   state [] .currentFile =:: prevFile
+  state [] .inLibFile =:: wasLibFile
+  isLibFile state .inLibFile=
   fileId state .currentFile=
   $ .data >$ .length i64 cast.u 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
     $ io.FILE_ERROR_NONE != if =:: openError
       ..drop ## discard code file
       prevFile state .currentFile= ## reset file id
+      wasLibFile state .inLibFile=
+      isLibFile state .inLibFile=
       FILE_ID_NONE openError return
     end ..drop =:: f
     128 sb.create
@@ -2669,6 +2699,7 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
     =:: fileBody
   f io.fclose $ io.FILE_ERROR_NONE != or readError io.FILE_ERROR_NONE != if =:: closeError
       prevFile state .currentFile= ## reset file id
+      wasLibFile state .inLibFile=
       readError io.FILE_ERROR_NONE != if
         FILE_ID_NONE readError return
       else
@@ -2701,6 +2732,7 @@ proc( stringBuilder : fileName ParserState ptr.mut : state -> FileId io.IOError 
   state [] .currentFile =:: newFileId
   fileId newFileId == "fileId did not change" assert
   prevFile state .currentFile=
+  wasLibFile state .inLibFile=
   state [] .openBlocks .length blockCount > if
     ## XXX? print start of last block
     "unclosed block at end of file" sb.copyPtr
