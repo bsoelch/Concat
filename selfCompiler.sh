@@ -12,7 +12,7 @@ codeQBETarget3="./build/concat4.ssa"
 libPath="./lib/"
 externCFiles=( "./extern.c" )
 cArgs=( "-g" "-std=c17" "-lm" )
-concatArgs=( -W -q -l $libPath )
+concatArgs=( -W -l $libPath )
 bootstrapQBE="./bootstrap/latest.ssa"
 
 # clear console

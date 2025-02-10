@@ -21,6 +21,8 @@ false =:: mut: export: _EXPERIMENTAL_
 true =:: mut: export: _INCLUDE_CORE_
 true =:: mut: export: _INCREMENT_VERSION_
 BackEnd .QBE =:: mut: export: _BACKEND_
+## TODO make changable using compiler argument
+false =:: mut: export: EXPORT_GLOBALS ## include all (non-library) exported procedures in binary
 namespace: optimizerFlags
   true =:: export: mut: FOLD_CONSTANTS
   true =:: export: mut: REMOVE_UNUSED_PROCS ## don't include unused procedures in compiled code
@@ -32,12 +34,14 @@ namespace: optimizerFlags
   16 =:: export: mut: WEAK_INLINE_MAX_OP_COUNT ## always inlined (unless marked as inline.never)
   32 =:: export: mut: INLINE_MAX_OP_COUNT ## inlined if marked as inline
 
+  ## diable all optimizations
   proc( -> ) =>: export: optLevel0
     false FOLD_CONSTANTS@ =
     false REMOVE_UNUSED_PROCS@ =
     false ALLOW_INLINE_SMALL@ =
     false ALLOW_INLINE@ =
   end
+  ## minimal optimizations, for debug builds
   proc( -> ) =>: export: optLevelDefault
     true FOLD_CONSTANTS@ =
     true REMOVE_UNUSED_PROCS@ =
@@ -53,6 +57,7 @@ namespace: optimizerFlags
   ## TODO? more opt-leves
   ## ? optSave -> optimize but keep savety checks
   ## ? -> optimize, remove savety checks
+  ## ? optSize -> optimize for size
 end
 
 i32 =:: export: FileId

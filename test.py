@@ -51,8 +51,7 @@ def runTest(fileName,filePath):
     concatPath,
     filePath+fileName,
     "-o",ssaPath,
-    "-l","./lib/",
-    "-q"
+    "-l","./lib/"
   ],stdout=outFile,stderr=errFile).returncode==0 and
   subprocess.run([
       "qbe",

@@ -5,7 +5,7 @@ codeAsmTarget="./code.s"
 codeTarget="./code"
 libPath="./lib/"
 cArgs=( "-g" "-std=c17" "-lm" )
-concatArgs=( -W -q -l $libPath )
+concatArgs=( -W -l $libPath )
 
 if [[ "$@" == *"-R"* ]]; then
   "./selfCompiler.sh" -X || exit 1

@@ -4436,7 +4436,6 @@ proc(
   state resetState
 end
 
-
 proc(
   ProgramContext ptr.mut : program
   TypeCheckState ptr.mut : state
@@ -4483,7 +4482,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     program [] .mainLabelId labelContext id.getLabelPos .data =:: mainProcPos
     program [] .mainProcId -1 mainProcPos state typeCheckChildProcedures
   end
-  hasMain and optimizerFlags.REMOVE_UNUSED_PROCS if
+  hasMain and optimizerFlags.REMOVE_UNUSED_PROCS and EXPORT_GLOBALS ! if
     true state .isUnusedProc=
   end
   ## type-check unreachable procs

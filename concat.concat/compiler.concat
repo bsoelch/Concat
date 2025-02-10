@@ -1,5 +1,6 @@
 import sys
 import string
+import numbers
 using std.literals.
 
 import "parser.concat"
@@ -30,7 +31,6 @@ proc( string : path -> ) =>: printUsage
     "  -l \"fileName\": set path to standard library (default: \"./lib/\")\n" sb.appendS ## XXX allow more than one library path
     "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
     "  -W: treat warnings as errors\n" sb.appendS
-    "  -q: \"quiet mode\" (no effects, exists for comparability with old compiler)\n" sb.appendS
     "  --no-core: don't include libray core by default \n" sb.appendS
     "  --dump-typeChecker: include type-checker output in compiled tokens printed to file given by `-t`\n" sb.appendS
     io.stdOut ..over io.fputSb ..drop
@@ -61,55 +61,76 @@ proc( -> ) =>: parseArgs
       end
       arg 1 string.charAt switch
         'h' case
-          printedUsage if break end
+          printedUsage if continue end
           path printUsage
           true printedUsage@ =
-          break
+          continue
         'o' case
+          arg .length 2 > if break end
           ArgParserState .OUT state@ =
-          break
+          continue
         'p' case
+          arg .length 2 > if break end
           ArgParserState .TOKENS_PARSER state@ =
-          break
+          continue
         't' case
+          arg .length 2 > if break end
           ArgParserState .TOKENS_COMPILER state@ =
-          break
+          continue
         'l' case
+          arg .length 2 > if break end
           ArgParserState .LIB_PATH state@ =
-          break
+          continue
         'e' case
+          arg .length 2 > if break end
           ArgParserState .ERR_PATH state@ =
-          break
+          continue
         'W' case
+          arg .length 2 > if break end
           true _W_ERROR_@ =
-          break
+          continue
         'X' case ## experimental features
+          arg .length 2 > if break end
           true _EXPERIMENTAL_@ =
-          break
-        'q' case
+          continue
+        'O' case ## optimization level
+          arg .length 2 == if
+            1
+          else arg "-Odefault":s string.eq _if
+            optimizerFlags.optLevelDefault
+            continue
+          else
+            arg 2 string.tail 10 number.tryParseInt .NONE ?? ! if
+              ..drop 1 ## parsing as int failed
+            end
+          end =:: opLevel
+          opLevel 0 <= if
+            optimizerFlags.optLevel0
+            continue
+          else opLevel 1 >= _if
+            optimizerFlags.optLevel1
+            continue
+          end
           break
         '-' case
           arg "--no-core":s string.eq if
-            false _INCLUDE_CORE_@ = break
+            false _INCLUDE_CORE_@ = continue
+          else arg "--export-global":s string.eq _if
+            true EXPORT_GLOBALS@ = continue
           else arg "--no-inc-version":s string.eq _if
-            false _INCREMENT_VERSION_@ = break
+            false _INCREMENT_VERSION_@ = continue
           else arg "--dump-typeChecker":s string.eq _if
-            true dumpTypeCheckerTokens@ = break
+            true dumpTypeCheckerTokens@ = continue
           end
-          "unknown compiler option: \"" sb.copyPtr
-            arg sb.appendStr
-            "\"\n" sb.appendS
-            io.stdErr ..over io.fputSb ..drop
-          sb.free ..drop
           break
-        default
-          "unknown compiler option: \"" sb.copyPtr
-            arg sb.appendStr
-            "\"\n" sb.appendS
-            io.stdErr ..over io.fputSb ..drop
-          sb.free ..drop
+        default break
       end
-      1 + continue
+      "unknown compiler option: \"" sb.copyPtr
+        arg sb.appendStr
+        "\"\n" sb.appendS
+        io.stdErr ..over io.fputSb ..drop
+      sb.free ..drop
+      continue
     end
     state switch
       NONE case
@@ -147,8 +168,7 @@ proc( -> ) =>: parseArgs
         hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
         break
     end
-    1 +
-  end ..drop
+  finally 1 + end ..drop
   hasSrc ! if
     printedUsage if
       0 sys.exit
