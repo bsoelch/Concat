@@ -11,11 +11,8 @@ import "callResolver.concat"
 struct(
   Type         : mut: valueType
   ConstValue   : mut: value
-  LabelId      : mut: valueId
   FilePosition : mut: pushedAt
   i32          : mut: opIndex
-  i32          : mut: readEnumCheckIndex
-  i32          : mut: copyMutableIndex
 ) =:: TypeInfo
 
 -1:i32 =:: OP_UNLINKED
@@ -527,10 +524,6 @@ proc(
       break
     end
     sb
-      printValues and val [] .valueId id.LABEL_ID_NONE != if
-        val [] .valueId labelContext sb.appendLabelPath
-        ": " sb.appendS
-      end
       val [] .valueType
         typeContext
         depth
@@ -809,11 +802,8 @@ proc(
       ## TypeInfo
         valType
         value
-        id.LABEL_ID_NONE
         pos
         opIndex
-        OP_UNLINKED
-        OP_UNLINKED
       TypeInfo new
     branchTree.push
     opIndex 0 < if
@@ -842,11 +832,8 @@ proc(
       ## TypeInfo
         valType
         value
-        id.LABEL_ID_NONE
         op .pos
         opIndex
-        OP_UNLINKED
-        OP_UNLINKED
       TypeInfo new
     branchTree.push
     opIndex 0 < if
@@ -867,11 +854,8 @@ proc(
       ## TypeInfo
         types i slice.get
         ConstValue .None
-        id.LABEL_ID_NONE
         pos
         ## multiple types from one op -> cannot modify op to modify types
-        OP_UNLINKED
-        OP_UNLINKED
         OP_UNLINKED
       TypeInfo new
     branchTree.push
@@ -880,7 +864,6 @@ proc(
 end
 proc( LabelId : label TypeCheckState ptr.mut : state -> ) =>: replaceLabel
   state .stack branchTree.pop .data [] =:: mut: top
-  label top@ .valueId=
   state .stack top branchTree.push
 end
 
@@ -1029,7 +1012,6 @@ proc(
     stackElements@ =
     clearConst if
       ConstValue .None elt@ .value=
-      id.LABEL_ID_NONE elt@ .valueId=
       elt .valueType types.isLiteral if
         elt .valueType
           typeContext types.literalToType
@@ -1170,10 +1152,7 @@ proc(
   ## TypeInfo
     mergedType
     ConstValue .None ## XXX merge constants
-    id.LABEL_ID_NONE
     mergePoint .mergePoint
-    OP_UNLINKED
-    OP_UNLINKED
     OP_UNLINKED
   TypeInfo new return
 end
@@ -1263,17 +1242,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
     topValue .valueType topValue .pushedAt opCopy list.append
   state .compiledOps=
   index topValue@ .opIndex=
-  index topValue@ .copyMutableIndex=
   state .stack topValue branchTree.push
-end
-proc(
-  i32 : copyMutableIndex
-  TypeCheckState ptr.mut : state
--> ) =>: removeCopy
-  copyMutableIndex OP_UNLINKED != if
-    ## no copy when writing to value
-    opValNOP state [] .compiledOps copyMutableIndex list.at .data .val=
-  end
 end
 
 proc(
@@ -2299,10 +2268,7 @@ proc(
             ## TypeInfo
               argType
               ConstValue .None
-              id.LABEL_ID_NONE
               op .pos
-              OP_UNLINKED
-              OP_UNLINKED
               OP_UNLINKED
             TypeInfo new
           branchTree.push
@@ -2402,7 +2368,6 @@ proc(
           op .pos errors appendError
         end
         state .stack branchTree.pop ..drop ## remove container from stack
-        container .copyMutableIndex state removeCopy
         ## check enum label
         ## XXX? compute constant value
         ## pushValue
@@ -2516,9 +2481,15 @@ proc(
         ## remove container from stack
         state .stack branchTree.pop ..drop
       end
-      container .copyMutableIndex
-        state [] .compiledOps .length 1 - ==
-      =:: directCopy ## operation before get element is copy
+      state [] .compiledOps list.peek =:: prevOp?
+      prevOp? optional.hasData and
+          prevOp? .data .val .copy ??
+      end =:: directCopy ## operation before get element is copy
+      directCopy if
+        state [] .compiledOps
+          $ .length 1 - list.setLength
+        state .compiledOps=
+      end
       emptyValue and isPtr if
         ## pushConstant
           0 ConstValue .Int
@@ -2537,20 +2508,17 @@ proc(
       state pushValue
       elementLabel state replaceLabel
       state .stack branchTree.pop .data [] =:: mut: topValue
-      onRead topValue@ .readEnumCheckIndex=
       ## XXX? is pop then push neccessary
       state .stack topValue branchTree.push
       targetType typeContext types.isEmpty if
         return
       end
       directCopy if
-        ## copy is operation directly before get element
-        ## -> copy element instead of tuple
-        container .copyMutableIndex state removeCopy
+        ## removed copy is operation directly before get element
+        ## -> have to reinsert copy after getting element
         state wrapCopy
       else
         state .stack branchTree.pop .data [] topValue@ =
-        container .copyMutableIndex topValue@ .copyMutableIndex=
         state .stack topValue branchTree.push
       end
       return
