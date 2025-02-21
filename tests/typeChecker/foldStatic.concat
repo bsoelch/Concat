@@ -1,0 +1,19 @@
+x:? ! "x does not exist" assert
+proc( -> ) =>: main
+  5 =:: y
+  x:? and y:? if x y + else 0 end ..drop ## this should compile
+  x:? if
+    x 1 + x@ = ## this code will not be executed
+  end ## no else
+  y:? if
+    y y * =:: z
+    "y exists" ..compiler.info
+  else
+    "this code is skipped" ..compiler.info
+  end
+  x:? or y:? if
+    "x or y exists" ..compiler.info
+  else
+    "x and y do not exist" ..compiler.info
+  end
+end

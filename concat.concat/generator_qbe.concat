@@ -4928,7 +4928,7 @@ proc(
       break
     compilerInfo case
       sb return ## XXX? print compiler info
-    autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier
+    autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier StaticConstant
     getName atName getLabel Error Assert panic declareName initializeName
     setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message

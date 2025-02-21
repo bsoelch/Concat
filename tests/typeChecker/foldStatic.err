@@ -1,0 +1,6 @@
+y exists
+  caused by initializing code at ./tests/typeChecker/foldStatic.concat:10:16
+ at ./tests/typeChecker/foldStatic.concat:2:16
+x or y exists
+  caused by initializing code at ./tests/typeChecker/foldStatic.concat:15:21
+ at ./tests/typeChecker/foldStatic.concat:2:16

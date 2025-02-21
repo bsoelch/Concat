@@ -1772,9 +1772,13 @@ proc(
   op [] .val switch
     NOP case
       EvalResult .Ok return
-    Constant case
+    Constant StaticConstant case
+      op [] .val .Constant ?? if
+        op [] .val .Constant
+      else
+        op [] .val .StaticConstant
+      end =:: constVal
       context inEnum if
-        op [] .val .Constant  =:: constVal
         constVal .TypeId ?? ! or constVal .TypeId types.isNamedType ! if
           "unexpected constant in enum declaration expected identifier got " sb.copyPtr
             constVal typeContext sb.appendConstant
@@ -1791,8 +1795,8 @@ proc(
         context .labelBuffer=
         EvalResult .Ok return
       end
-      op [] .val .Constant .GenericArg ?? and context [] .localVariables ? if
-        op [] .val .Constant .GenericArg =:: label
+      constVal .GenericArg ?? and context [] .localVariables ? if
+        constVal .GenericArg =:: label
         context [] .localVariables .data label map.get =:: value?
         value? optional.isEmpty if
           "missing value for " sb.copyPtr
@@ -1808,7 +1812,7 @@ proc(
         EvalResult .Ok return
       end
       ## pushValue
-        op [] .val .Constant
+        constVal
         op [] .dataType
         op [] .pos
       context pushValue

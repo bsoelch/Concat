@@ -2344,12 +2344,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ConstValue .None
         Type .empty
       end
-      fileState [] .wordStart opConst state appendOp
+      fileState [] .wordStart opStaticConst state appendOp
       return
     else $ "..compiler.version":s string.eq _if ..drop
       _VERSION_ ConstValue .Int
       types.primitive.I64
-      fileState [] .wordStart opConst state appendOp
+      fileState [] .wordStart opStaticConst state appendOp
       return
     else $ "..compiler.return":s string.eq _if ..drop
       ..drop ## discard remainder of file

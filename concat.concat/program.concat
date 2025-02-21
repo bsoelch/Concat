@@ -84,6 +84,7 @@ struct( LabelId : src LabelId : alias ) =:: export: NameAliasInfo
 union(
             NopType : NOP
          ConstValue : Constant
+         ConstValue : StaticConstant
    ConstReferenceId : ConstantReference
           BlockData : block
           BlockData : blockEnd
@@ -146,6 +147,9 @@ proc( FilePosition : pos -> Operation ) =>: export: reserveOp
 end
 proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export: opConst
   constValue OpValue .Constant constType pos Operation new return
+end
+proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export: opStaticConst
+  constValue OpValue .StaticConstant constType pos Operation new return
 end
 
 proc( BlockType FilePosition : pos -> Operation ) =>: export: opBlock
@@ -581,6 +585,12 @@ namespace: sb
           ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .Constant typeContext sb.appendConstant
+          break
+        StaticConstant case
+          "static constant ( " sb.appendS
+          ..over .dataType  typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .StaticConstant typeContext sb.appendConstant
           break
         ConstantReference case
           ..over .val .ConstantReference =:: refId

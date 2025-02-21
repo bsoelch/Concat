@@ -335,7 +335,7 @@ proc(
       newOps return
     autoTypedInitializeId ConstantReference NewReference
     typeInfo NewEnumReference usingNamespace usingIdentifier
-    getName atName getLabel Assert declareName initializeName
+    getName atName getLabel Assert declareName initializeName StaticConstant
     setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
