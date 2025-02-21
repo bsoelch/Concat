@@ -1646,7 +1646,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state .constantBlocks=
       BlockType .TYPE_TUPLE fileState [] .wordStart opBlock state appendOp
       return
-    else ..dup "struct(":s string.eq _if ..drop
+    ## forward compatability: `struct.fixed` will be used for structure with fixed element order
+    ## forward compatability: `struct.c` will be used for structure with c-style padding
+    else ..dup "struct(":s string.eq or ..dup "struct.fixed(":s string.eq or ..dup "struct.c(":s string.eq _if ..drop
       BlockType .TYPE_STRUCT state openScopedBlock
       state [] .constantBlocks
         ## CompositeConstantOffset
@@ -1682,7 +1684,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state .constantBlocks=
       BlockType .TYPE_ENUM fileState [] .wordStart opBlock state appendOp
       return
-    else ..dup "proc(":s string.eq _if ..drop
+    ## forward compatability: `proc.c` will be used for proc with c-call convention
+    else ..dup "proc(":s string.eq or $ "proc.c(":s string.eq _if ..drop
       BlockType .TYPE_PROC_IN state openScopedBlock
       state [] .constantBlocks
         ## CompositeConstantOffset
