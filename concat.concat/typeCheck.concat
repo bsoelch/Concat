@@ -383,7 +383,7 @@ proc(
   state removeTrailingNOPs
   false return
 end
-proc( i32 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: interpreterStoreConstants
+proc( i32 : count bool : isStatic FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: interpreterStoreConstants
   state [] .program =:: progContext
   progContext .errors =:: errors
   progContext .idContext =:: idContext
@@ -409,13 +409,15 @@ proc( i32 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: int
       constInfo [] .valueType
       constInfo [] .pushedAt
     state pushConstant
+    isStatic state .stack branchTree.peek .data .isStatic=
   finally i 1 + end ..drop
 end
 
+enum( StaticProc StaticArg Interpret ) =:: CallType
 proc(
   Type : calledType
   ProcedureCallInfo : calledProc
-  bool : isStatic
+  CallType : callType
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: interpretCall
@@ -426,7 +428,7 @@ proc(
   procIn
     typeContext types.compositeEltCount InterpreterLoadMode .fixedCount
   state interpreterLoadContants if
-    isStatic if
+    callType .StaticProc ?? if
       "could not resolve arguments of static procedure " sb.copyPtr
         progContext [] .procedures
           calledProc .procId i64 cast list.at
@@ -444,7 +446,7 @@ proc(
     pos
     interpreter
   evaluateCall if
-    isStatic if
+    callType .StaticProc ?? if
       "could not evaluate call to static procedure " sb.copyPtr
         progContext [] .procedures
           calledProc .procId i64 cast list.at
@@ -452,7 +454,7 @@ proc(
       pos progContext .errors appendError
     end
     ## reset stack to previous state
-    procIn typeContext types.compositeEltCount pos state interpreterStoreConstants
+    procIn typeContext types.compositeEltCount callType .Interpret ?? ! pos state interpreterStoreConstants
     true return
   end
   ## store results
@@ -460,7 +462,7 @@ proc(
     calledProc .procId i64 cast list.at
   .data [] .procType
     typeContext types.getProcOut ..drop
-  typeContext types.compositeEltCount pos state interpreterStoreConstants
+  typeContext types.compositeEltCount callType .Interpret ?? ! pos state interpreterStoreConstants
   false return
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
@@ -480,7 +482,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeMo
         op [] .val .typeModifier sb.appendTypeModifier
       op [] .pos errors appendError
     end
-    1 op [] .pos state interpreterStoreConstants
+    1 true op [] .pos state interpreterStoreConstants
   state .interpreter interpreter.resetContext
 end
 
@@ -509,7 +511,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretT
     false return
   end
   op .val .blockEnd ?? and state .interpreter interpreter.inTypeOrInitializer ! if
-    1 op [] .pos state interpreterStoreConstants
+    1 true op [] .pos state interpreterStoreConstants
     false state .inTypeBlock=
     state .interpreter interpreter.resetContext
     true return ## consume block end
@@ -1894,9 +1896,11 @@ proc(
           end =:: procedures
           0:i32 =:: mut: stackConstants
           true =:: mut: headConstant
+          false =:: mut: hasStaticArg
           state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
           state .stack branchTree.itr.start while
             branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
+            hasStaticArg val [] .isStatic | hasStaticArg@ =
             headConstant and val [] .value .None ?? ! if
               stackConstants 1 + stackConstants@ =
             else
@@ -1939,7 +1943,7 @@ proc(
               calledProcData [] .isStatic and state [] .mode .STATIC_PROC ?? ! or
               calledProcData .implementation [] .code ?? and
               calledProcData .implementation .code .codeState .TYPE_CHECKING ?? ! if
-            calledType calledProc true op .pos state interpretCall ! if
+            calledType calledProc CallType .StaticProc op .pos state interpretCall ! if
               return
             end
           end
@@ -1973,6 +1977,11 @@ proc(
               calledProcData [] .implementation .builtIn .builtIn =:: builtInId
               builtInId .SYS_ARGC ?? or builtInId .SYS_ARGV ?? or builtInId .SYS_ENVP ?? if
                 true program .hasGetArgs=
+              end
+              hasStaticArg and headConstant if ## only constant arguments
+                calledType calledProc  CallType .StaticArg op .pos state interpretCall ! if
+                  return
+                end
               end
               builtInId OpValue .builtIn op@ .val=
             break
@@ -4076,7 +4085,24 @@ proc(
         op .pos state popString =:: message
         message op .pos opRuntimeAssert op@ =
       end
-      ## XXX try to evaluate at compile time
+      state .skippedBlocks [] .length 0 == and
+          state .stack branchTree.peek =:: condition?
+          condition? optional.hasData and condition? .data [] .isStatic if
+        condition? .data .value [] .Bool ?? ! if
+          "unexpected value for static condition expected boolean got " sb.copyPtr
+            condition? .data [] .value typeContext sb.appendConstant
+          op .pos errors appendError
+          return
+        end
+        condition? .data .value [] .Bool =:: condition
+          1 op .pos state discardValues
+        condition ! if
+          "assertion failed: " sb.copyPtr
+            op .val .RuntimeAssert sb.appendStr
+          op .pos errors appendError
+        end
+        return
+      end
       ## requireTypes
         types.primitive.BOOL@ slice.wrap
         "assertion":s

@@ -1,0 +1,7 @@
+proc.c( i32 -> ) : extern: exit
+
+enum( A B C D ) =:: anEnum
+proc( -> ) =>: main
+  0 exit ## this code is never run
+  anEnum ..length 3 == "this should fail at compile time" assert
+end
