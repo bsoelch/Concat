@@ -965,16 +965,17 @@ proc(
       else stackType paramType typeContext types.canAutoCast _if
         MatchType .CAST matchType@ =
         stackType =:: mut: fromType
-        ## TODO extra casts for move complicated literal conversion
+        ## TODO extra casts for more complicated literal conversion
         fromType paramType types.typeEquals ! if
-          fromType .intLiteral ?? and
-              fromType .intLiteral types.intLiteralAsInt
-              paramType typeContext types.unwrapNamed types.typeEquals ! if
-            ## resizing int-literal counts as additional cast
-            current [] .nCasts 1 + current .nCasts=
-          end
-          paramType typeContext types.isTypeSet and
-              fromType typeContext types.isTypeSet ! if
+          fromType types.isLiteral if
+            fromType typeContext types.literalToType =:: valType
+            valType paramType typeContext types.unwrapNamed types.typeEquals ! if
+              ## changing literal counts as rename
+              current [] .nRenames 1 + current .nRenames=
+            end
+            ## no cast for conversion literal -> value-type
+          else paramType typeContext types.isTypeSet and
+              fromType typeContext types.isTypeSet ! _if
             ## converting to type-set is no cast
             ## XXX? remember number of conversions to type-set (more restricted is better)
           else fromType typeContext types.unwrapNamed
