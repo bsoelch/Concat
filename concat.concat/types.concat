@@ -22,7 +22,6 @@ namespace: types
   i32 =:: ProcTypeId
   i32 =:: NamedTypeId
   i32 =:: GeneratedId
-  i32 =:: SizeId
   i32 =:: export: TypeSetId
   ## primitive C-types for C interoperability
   enum(
@@ -75,7 +74,6 @@ union(
               LabelId : genericType
       types.TypeSetId : typeSet
     types.GeneratedId : generatedType
-         types.SizeId : arrayIndex
           types.CType : cType
                   i32 : align
 ) =:: export: Type
@@ -120,8 +118,6 @@ namespace: types
         a .genericType b .genericType == return
       generatedType case
         a .generatedType b .generatedType == return
-      arrayIndex case
-        a .arrayIndex b .arrayIndex == return
       cType case
         a .cType b .cType == return
       align case
@@ -220,20 +216,18 @@ namespace: types
         bigPrime 37 * a .genericType i32 cast + return
       generatedType case
         bigPrime 43 * a .generatedType i32 cast + return
-      arrayIndex case
-        bigPrime 47 * a .arrayIndex i32 cast + return
       cType case
-        bigPrime 53 * a .cType cTypeId + return
+        bigPrime 47 * a .cType cTypeId + return
       intLiteral case
-        bigPrime 59 * a .intLiteral intLiteralId + return
+        bigPrime 53 * a .intLiteral intLiteralId + return
       initializer case
-        bigPrime 61 * a .initializer i32 cast + return
+        bigPrime 59 * a .initializer i32 cast + return
       rawPointer case
-        bigPrime 67 * a .rawPointer i32 cast + return
+        bigPrime 61 * a .rawPointer i32 cast + return
       align case
-        bigPrime 71 * a .align + return
+        bigPrime 67 * a .align + return
       typeSet case
-        bigPrime 73 * a .typeSet i32 cast + return
+        bigPrime 71 * a .typeSet i32 cast + return
     end
   end
 end
@@ -280,9 +274,6 @@ namespace: types
   end
   proc( Type : t TypeContext ptr : context -> PrimitiveType ) =>: export: primitiveValue
     t context unwrapNamed
-      ..dup .arrayIndex ?? if ..drop
-        primitive.I_SIZE .primitiveType return
-      end
       ## XXX? unwrap c-types
     .primitiveType return
   end
@@ -295,7 +286,7 @@ namespace: types
          t context getBaseType context isEmpty return
        undefined primitiveType procedure cType pointer rawPointer
          namedType autoType genericType intLiteral
-         generatedType arrayIndex enum typeSet case false return
+         generatedType enum typeSet case false return
        procIn procOut struct union initializer case
          t context compositeFlags COMP_FLAG_EMPTY & ? return
     end
@@ -311,9 +302,6 @@ namespace: types
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isInt
     unwrapNamed
-      ..dup .arrayIndex ?? if ..drop
-        true return
-      end
       ..dup .intLiteral ?? if ..drop
         true return
       end
@@ -336,9 +324,6 @@ namespace: types
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isSignedInt
     unwrapNamed
-      ..dup .arrayIndex ?? if ..drop
-        true return
-      end
       ..dup .cType ?? if
         .cType switch
           S_CHAR SHORT INT LONG LONGLONG case true return
@@ -356,9 +341,6 @@ namespace: types
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isUnsignedInt
     unwrapNamed
-      ..dup .arrayIndex ?? if ..drop
-        true return
-      end
       ..dup .cType ?? if
         .cType switch
           U_CHAR U_SHORT U_INT U_LONG U_LONGLONG SIZE case true return
@@ -388,9 +370,6 @@ namespace: types
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isNumber
     unwrapNamed
-      ..dup .arrayIndex ?? if ..drop
-        true return
-      end
       ..dup isPrimitive ! if ..drop
         false return
       end .primitiveType
@@ -433,7 +412,7 @@ namespace: types
        empty arrayType
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
-           generatedType arrayIndex enum align
+           generatedType enum align
            procIn procOut struct union typeSet case
          false return
     end
@@ -486,7 +465,7 @@ namespace: types
        empty arrayType
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
-           generatedType arrayIndex enum align
+           generatedType enum align
            procIn procOut struct union typeSet case
          t return
     end
@@ -554,9 +533,6 @@ namespace: types
     srcPrimitive isIntPrimitive and targetPrimitive isIntPrimitive if
       srcPrimitive sizeOfPrimitive =:: srcBytes
       targetPrimitive sizeOfPrimitive =:: targetBytes
-      target .arrayIndex ?? if ## can cast small integer types to array-index
-        srcBytes targetBytes <= return
-      end
       srcBytes targetBytes == return ## cast I... <-> U...
     end
     false return
@@ -764,7 +740,7 @@ namespace: types
           list.at .data [] .asTuple
         typeContext tryComputeTupleSize return
       undefined empty autoType genericType rawPointer
-      primitiveType intLiteral cType arrayIndex arrayType
+      primitiveType intLiteral cType arrayType
       pointer procedure align typeSet
       namedType generatedType case ..unreachable ## XXX? use assertion
     end
@@ -784,8 +760,6 @@ namespace: types
         t .intLiteral sizeOfIntLiteral TypeSize .fixed return
       cType case
         t .cType sizeOfCType TypeSize .fixed return
-      arrayIndex case
-        I_SIZE_SIZE TypeSize .fixed return
       pointer rawPointer procedure case
         PTR_SIZE TypeSize .fixed return
       arrayType case
@@ -827,8 +801,6 @@ namespace: types
         t .intLiteral sizeOfIntLiteral TypeSize .fixed return
       cType case
         t .cType sizeOfCType TypeSize .fixed return
-      arrayIndex case
-        I_SIZE_SIZE TypeSize .fixed return
       pointer rawPointer procedure case
         PTR_SIZE TypeSize .fixed return
       arrayType case
@@ -985,9 +957,6 @@ namespace: types
       $ .arrayType ?? if
         context [] .arrayTypes ..swap .arrayType i32 cast list.get =:: arrayType
         context [] .arraySizes arrayType .sizeOffset arrayType .dims list.getSlice return
-      end
-      $ .arrayIndex ?? if
-        context [] .arraySizes ..swap .arrayIndex i32 cast list.at .data slice.wrap return
       end
     ..drop
     ArraySize slice.empty return
@@ -1203,7 +1172,7 @@ namespace: types
         true return
       undefined empty primitiveType pointer arrayType procedure
         namedType autoType genericType generatedType intLiteral align
-        arrayIndex cType rawPointer typeSet case
+        cType rawPointer typeSet case
         false return
     end
   end
@@ -1222,7 +1191,7 @@ namespace: types
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer rawPointer
-       arrayIndex cType align typeSet case ..drop
+       cType align typeSet case ..drop
          false return
     end =:: unionId
     typeContext [] .unionTypes unionId i64 cast list.at .data =:: unionInfo
@@ -1272,7 +1241,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         arrayIndex cType rawPointer typeSet case
+         cType rawPointer typeSet case
           ..drop CompositeInfo ptr optional.empty return
       end
   end
@@ -1290,7 +1259,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         arrayIndex cType rawPointer typeSet case
+         cType rawPointer typeSet case
           ..drop id.LABEL_ID_NONE return
       end
     context compositeData
@@ -1319,7 +1288,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         arrayIndex cType rawPointer typeSet case
+         cType rawPointer typeSet case
           ..drop -1 return
       end
     context compositeData
@@ -1357,7 +1326,7 @@ namespace: types
         .procOut break
       enum union undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
-       arrayIndex cType rawPointer typeSet case ..drop
+       cType rawPointer typeSet case ..drop
          i64 optional.empty return
     end =:: tupleId
     tuple tupleId typeContext tryComputeTupleSize if
@@ -1382,7 +1351,7 @@ namespace: types
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
-       arrayIndex cType rawPointer typeSet case ..drop
+       cType rawPointer typeSet case ..drop
          Type .empty i64 optional.empty return
     end =:: enumId
     enum enumId typeContext tryComputeUnionSize =:: isError
@@ -2204,7 +2173,6 @@ namespace: types
       procOut case .procOut i32 cast return
       procedure case .procedure i32 cast return
       namedType case .namedType i32 cast return
-      arrayIndex case .arrayIndex i32 cast return
       align case .align return
       typeSet case .typeSet i32 cast return
       undefined empty primitiveType intLiteral cType case ..drop -1 return
@@ -2217,7 +2185,7 @@ namespace: types
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
     t switch
-      undefined empty primitiveType autoType arrayIndex cType intLiteral align typeSet case
+      undefined empty primitiveType autoType cType intLiteral align typeSet case
         false return
       pointer rawPointer arrayType case
         context [] .arrayTypes
@@ -2600,9 +2568,6 @@ namespace: types
     src context isInt and target context isChar if
       true return
     end
-    target .arrayIndex ?? and src context types.isInt ! if
-      false return ## can only cast integers to index
-    end
     src context types.isNumber or src .intLiteral ?? and target context types.isNumber if
       true return
     end
@@ -2860,13 +2825,6 @@ namespace: sb
         sb t .intLiteral appendIntLiteralType return
       cType case
         sb t .cType appendCType return
-      arrayIndex case
-        t .arrayIndex =:: sizeIndex
-        sb
-          "index(" appendS
-          context [] .arraySizes sizeIndex i64 cast list.get labelContext appendSliceSize
-          " )" appendS
-        return
       pointer rawPointer case
         sb
           ## appendTypeRecursive

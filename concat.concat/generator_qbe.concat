@@ -171,8 +171,6 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       t .cType
         types.cTypeAsType
       context toValType return
-    arrayIndex case
-      ValType .I64 return
     pointer rawPointer case
       ValType .PTR return
     procedure arrayType struct union enum initializer case
@@ -652,8 +650,8 @@ namespace: sb
           end
         storeType pos context appendTypeNameQBE
         return
-      arrayIndex pointer rawPointer procedure case
-        sb "l" sb.appendS return ## size or pointer
+      pointer rawPointer procedure case
+        sb "l" sb.appendS return
       arrayType case
         sb t "array":s storeType .STACK ?? ! appendCompositeTypeQBE return
         break
@@ -889,9 +887,6 @@ namespace: sb
             types.primitive.I_PTR
           else
             t typeContext types.unwrapNamed
-            ..dup .arrayIndex ?? if ..drop
-              types.primitive.I_SIZE
-            end
             ..dup .cType ?? if .cType types.cTypeAsType end
             ..dup .intLiteral ?? if .intLiteral types.intLiteralAsInt end
           end =:: numType
@@ -1507,72 +1502,6 @@ proc(
     ", " sb.appendS
     elseBranch sb.appendBranchId
     "\n" sb.appendS
-  return
-end
-proc(
-  stringBuilder : sb
-  IntValue : size
-  i32 : valId
-  FilePosition : pos
-  CompilerContext ptr.mut : context
--> stringBuilder ) =>: appendIndexCheck
-  context [] .program =:: prog
-  prog .errors =:: errors
-  prog .idContext =:: idContext
-  idContext .constContext =:: constContext
-  idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
-  ## BranchId
-    BranchType .NEXT
-    context nextJumpLabelId
-  BranchId new =:: check1Branch
-  ## BranchId
-    BranchType .ERROR
-    context nextJumpLabelId
-  BranchId new =:: errorBranch
-  ## BranchId
-    BranchType .NEXT
-    context nextJumpLabelId
-  BranchId new =:: okBranch
-  context nextTmpId =:: c1
-  context nextTmpId =:: c2
-  sb
-    "## check index\n" sb.appendS
-    ## cmp int
-      ValType .I64
-      's' valId
-      "slt":s
-      0 IntValue .constant
-      errorBranch
-      check1Branch
-    pos context appendCmpInt
-    check1Branch sb.appendBranchId
-    "\n" sb.appendS
-    ## cmp int
-      ValType .I64
-      's' valId
-      "sge":s
-      size
-      errorBranch
-      okBranch
-    pos context appendCmpInt
-    errorBranch sb.appendBranchId
-    "\ncall $printf (l $" sb.appendS
-    CHECK_INDEX_FORMAT sb.appendS
-    ", ...,l %s" sb.appendS
-    valId sb.appendI
-    ",l " sb.appendS
-    size switch
-      constant case size .constant sb.appendI break
-      stackId case "%s" sb.appendS size .stackId sb.appendI break
-      localId case "%l" sb.appendS size .localId sb.appendI break
-      tmpId case "%t" sb.appendS size .tmpId sb.appendI break
-      autoArg case size .autoArg pos context appendGenericArg break
-    end
-    pos prog appendPosPrintfArgs
-    ")\n" sb.appendS
-    "call $exit (w 1)\nhlt\n" sb.appendS ## use exit for flushing stdout
-    okBranch "checkIndex":s context startBranch
   return
 end
 
@@ -2978,47 +2907,6 @@ proc(
     target context toValType context pushValue
   end =:: targetId
   ## TODO? different behavior for bit-casts
-  src typeContext types.isNumber and target .arrayIndex ?? if
-    ## isNumber returns true for array index
-    ##   -> have to check for cast to array index before checking for cast to number
-    sb
-      ## castNumbers
-        src srcId
-        types.primitive.I_SIZE targetId
-      pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
-      target typeContext types.getArraySize 0 slice.get =:: size
-      ## appendIndexCheck
-        size switch
-          int case size .int IntValue .constant break
-          genericArg case
-            size .genericArg idContext id.getIdentifier
-              ! "genericId is identifier" assert
-            =:: genericIdData
-            genericIdData [] .valueType =:: sizeType
-            sizeType typeContext types.isInt "sizeType is integer" assert
-            sizeType context toValType .I64 ?? if
-              size .genericArg IntValue .autoArg
-            else ## extend size to 64-bits
-              context nextTmpId =:: tmpId
-              "%t" sb.appendS tmpId sb.appendI
-              sizeType typeContext types.sizeOf .fixed 4 == if
-                " =l extuw " sb.appendS
-              else
-                " =l ext" sb.appendS
-                sizeType StorageType .ULOAD pos context sb.appendTypeNameQBE
-                ' ' sb.appendC
-              end
-              size .genericArg pos context appendGenericArg
-              '\n' sb.appendC
-              tmpId IntValue .tmpId
-            end
-            break
-        end
-        targetId
-        pos
-      context appendIndexCheck
-    return
-  end
   src typeContext types.isNumber and target typeContext types.isNumber if
     sb
       src srcId
@@ -4986,11 +4874,6 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       context sb.appendTypeDeclarationQBE
       i 1 +
     end ..drop
-    program [] .hasCheckIndex if
-      "data $" sb.appendS
-      CHECK_INDEX_FORMAT sb.appendS
-      " = { b \"index out of range: %lli size: %llu at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
-    end
     program [] .hasCheckEnum if
       "data $" sb.appendS
       CHECK_ENUM_FORMAT sb.appendS

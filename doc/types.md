@@ -139,9 +139,7 @@ explicit casts allowed between any two named types with same source type
 ## type generators
 
 ## internal types:
-* reference
 * auto-type
-* arrayIndex
 
 ## Grammar
 

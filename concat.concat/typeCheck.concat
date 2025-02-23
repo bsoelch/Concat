@@ -605,25 +605,6 @@ proc(
   ##   completely merge with interpreter.castConstant
   ## casting between integer constants
   src .value .Int ?? and target typeContext types.isInt if
-    target .arrayIndex ?? if
-      src .value .Int 0 < if
-        "array indices cannot be less than 0 got: " sb.copyPtr
-        src .value .Int sb.appendI
-        pos errors appendError
-        false return
-      end
-      target typeContext types.getArraySize 0 slice.get =:: index
-      index .int ?? ! if
-        true return
-      end
-      src .value .Int 0 < src .value .Int index .int >= | if
-        "array index outside allowed range: " sb.copyPtr
-        src .value .Int sb.appendI
-        " size: " sb.appendS
-        index .int sb.appendI
-        pos errors appendError
-      end
-    end
     src .valueType SignType .NONE src .value target typeContext interpreter.castConstant srcOp .val .Constant=
     target srcOp .dataType=
     false return
@@ -686,9 +667,6 @@ proc(
     typeContext types.canAutoCast if
       typeInfo expectedType pos state tryCastConstant ! if
         i 1 + continue
-      end
-      expectedType .arrayIndex ?? if
-        true state [] .program .hasCheckIndex=
       end
       ## opAutoCast
         typeInfo .valueType

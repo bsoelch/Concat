@@ -290,7 +290,7 @@ proc(
           argOffset list.setLength
         argBuffer []=
       return
-    undefined empty primitiveType cType arrayIndex autoType intLiteral align typeSet case
+    undefined empty primitiveType cType autoType intLiteral align typeSet case
       ..unreachable ## type should not contain generics
   end
 end
@@ -594,7 +594,7 @@ proc(
         end
       end
       false return
-    undefined empty primitiveType cType arrayIndex autoType intLiteral align typeSet case
+    undefined empty primitiveType cType autoType intLiteral align typeSet case
       ..unreachable ## type should not contain generics
   end
 end

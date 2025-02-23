@@ -452,7 +452,6 @@ struct(
            CompilerError list : errors
                       LabelId : mainLabelId
                        ProcId : mainProcId
-                         bool : hasCheckIndex
                          bool : hasCheckEnum
                          bool : hasGetArgs
 ) =:: export: ProgramContext
@@ -475,7 +474,6 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     32  CompilerError   list.create
     id.LABEL_ID_NONE ## main LabelId
     NO_PROC ## main ProcId
-    false ## hasCheckIndex
     false ## hasCheckEnum
     false ## has getArgs
   ProgramContext new
@@ -497,7 +495,6 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .errors list.free >$ .errors=
   id.LABEL_ID_NONE >$ .mainLabelId=
   NO_PROC >$ .mainProcId=
-  false >$ .hasCheckIndex=
   false >$ .hasCheckEnum=
   false >$ .hasGetArgs=
 end
