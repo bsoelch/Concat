@@ -846,10 +846,7 @@ proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =
     ! "..itr.step" assert
   =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
-  varInfo .itrType varInfo .itrVar pos opAtId state appendOp ## TODO? opSetId
-  "..builtIn.set.ptr":s
-    id.FLAG_NONE pos state [] .currentFile idContext .typeContext .labelContext id.newLabel
-  pos opGetName state appendOp
+  varInfo .itrType varInfo .itrVar pos opSetId state appendOp
 end
 proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrEnd
   state [] .progContext .idContext =:: idContext
@@ -2503,25 +2500,26 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState [] .wordStart errors appendError
       return
     end
-    ..dup "@":s string.endsWith =:: isAddr
-    isAddr if
-      ..dup .length 1 - string.head
+    $ "@":s string.endsWith =:: isAddr
+    $ .length 1 > and $ "=":s string.endsWith and ## exclude = and ids ending with: == != >= <=
+      "=<>!":s $1 $ .length 2 - string.charAt string.contains !
+    end =:: isSetter
+    isAddr or isSetter if
+      $ .length 1 - string.head
     end
   =:: idName
   state [] .currentProcs .length 0 == if
     idName idContext id.findIdentifierByName ! if ## try parsing as identifier
-      isAddr ! and $ [] .idType .ARGUMENT ?? and
-          $ [] .labelId labelContext id.labelFlags =:: flags
-          flags id.FLAG_AUTO & ? and flags id.FLAG_STATIC & ? ! if
-        ## opConst
-          $ [] .labelId ConstValue .GenericArg
-          ..swap [] .valueType
-          fileState [] .wordStart
-        opConst state appendOp
-        return
-      end
+      ## $ [] .labelId labelContext id.labelFlags =:: flags
+      ## XXX? detect setters
       ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart
-        isAddr if opAtId else opGetId end
+        isAddr if
+          opAtId
+        else isSetter _if
+          opSetId
+        else
+          opGetId
+        end
       state appendOp
       return
     end ..drop
@@ -2530,7 +2528,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     id.FLAG_NONE fileState [] .wordStart state [] .currentFile
   labelContext id.newLabel =:: labelId
   labelId fileState [] .wordStart
-  isAddr if opAtName else opGetName end
+  isAddr if
+    opAtName
+  else isSetter _if
+    opSetName
+  else
+    opGetName
+  end
   state appendOp
   return
 end

@@ -1696,6 +1696,12 @@ proc(
     ..dup optional.hasData if
       .data op@ .val .getId=
     else ..drop end
+  else op .val .setName ?? _if
+    op .val .setName
+      op@ state resolveIdentifer
+    ..dup optional.hasData if
+      .data op@ .val .setId=
+    else ..drop end
   else op .val .atName ?? _if
     op .val .atName
       op@ state resolveIdentifer
@@ -1767,10 +1773,12 @@ proc(
       op .val .StaticConstant op .dataType op .pos state pushConstant
       true state .stack branchTree.peek .data .isStatic=
       return
-    getName atName case
+    getName setName atName case
       "could not find identifier: " sb.copyPtr
         op .val .getName ?? if
           op .val .getName
+        else op .val .setName ?? _if
+          op .val .setName
         else
           op .val .atName
         end labelContext sb.appendLabelPath
@@ -2154,6 +2162,26 @@ proc(
           return
       end
       break
+    setId case
+      op .val .setId =:: idInfo
+      idInfo .labelId =:: labelId
+      labelId
+        labelContext id.labelFlags
+      id.FLAG_MUTABLE & ? ! if
+        256 sb.create
+          idInfo labelContext sb.appendIdInfo
+          " is not mutable" sb.appendS
+        op .pos errors appendError
+      end
+      ## requireTypes
+        op@ .dataType slice.wrap
+        "set identifier":s
+        1
+        op .pos
+        state
+      requireTypes if return end
+      op state appendOp ..drop
+      return
     declareId case
       op@ false state resolveAutoType
       op .val .declareId .idType switch

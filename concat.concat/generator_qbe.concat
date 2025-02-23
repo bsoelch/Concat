@@ -3394,6 +3394,41 @@ proc(
         context sb.appendGlobalName
         "\n" sb.appendS
       return
+    setId case
+      op [] .val .setId =:: idInfo
+      op [] .dataType =:: valType
+      op [] .pos context popValue =:: valueId
+      sb
+        op [] .pos sb.appendPosQBE
+        valType context referenceOnly if
+          "blit %s" sb.appendS
+        else
+          "store" sb.appendS
+          valType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+          " %s" sb.appendS
+        end
+        valueId sb.appendI
+        ", " sb.appendS
+        idInfo .idType switch
+          GLOBAL_VAR case
+            idInfo .labelId -1 context sb.appendGlobalName
+            break
+          LOCAL_VAR TMP_VAR ITR_VAR case
+            " %l" sb.appendS
+            idInfo .labelId i64 cast sb.appendI
+            break
+         PROCEDURE ARGUMENT TYPE LABEL PROCEDURE_BUNDLE case
+            "unsupported identifier for setId " sb.copyPtr
+            idInfo labelContext sb.appendIdInfo
+            op [] .pos errors appendError
+            return
+        end
+        valType context referenceOnly if
+          ',' sb.appendC
+          valType op [] .pos context typeSizeInt sb.appendI
+        end
+        '\n' sb.appendC
+      return
     getElement case
       op [] .val .getElement =:: index
       op [] .dataType =:: mut: containerType
@@ -4817,7 +4852,7 @@ proc(
     compilerInfo case
       sb return ## XXX? print compiler info
     autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier StaticConstant
-    getName atName getLabel Error Assert panic declareName initializeName
+    getName atName setName getLabel Error Assert panic declareName initializeName
     setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end

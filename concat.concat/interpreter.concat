@@ -2460,6 +2460,61 @@ proc(
           EvalResult .Error return
       end
       break
+    setId case
+      op .val .setId =:: idInfo
+      idInfo [] .labelId =:: label
+      label
+        labelContext id.labelFlags id.FLAG_MUTABLE & ?
+      "setId only created for mutable identifiers" assert
+      op [] .pos context popValue if ..drop.2
+        "stack underflow while evaluating operation: " sb.copyPtr
+          op [] program sb.appendOp
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end =:: value =:: valInfo
+      valInfo .valueType op [] .dataType typeContext types.canAutoCast ! if
+        value valInfo context unpopValue
+        "cannot assign values of type " sb.copyPtr
+          valInfo .valueType typeContext sb.appendType
+          " to variable of type " sb.appendS
+          op [] .dataType typeContext sb.appendType
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end
+      ## TODO? is it neccessary to cast value
+      idInfo [] .idType switch
+        LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
+          context [] .localVariables optional.isEmpty if
+            value valInfo context unpopValue
+            "missing local variables " sb.copyPtr
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          context [] .localVariables .data
+            label
+            value valInfo Constant new
+          map.put ..drop
+          EvalResult .Ok return
+        TYPE GLOBAL_VAR case
+          label
+            idContext
+          id.getIdentifier if ..drop
+            value valInfo context unpopValue
+            "could not find identifier: " sb.copyPtr
+              label labelContext sb.appendLabelPath
+            op [] .pos errors appendError
+            EvalResult .Error return ## unknown identifier
+          end =:: idData
+          value idData .constValue=
+          EvalResult .Ok return
+        PROCEDURE PROCEDURE_BUNDLE LABEL case
+          value valInfo context unpopValue
+          "unsupported operation in constant evaluation: " sb.copyPtr
+            op [] program sb.appendOp
+          op [] .pos errors appendError
+          EvalResult .Error return
+      end
+      break
     call case
       op .val .call =:: callInfo
       callInfo [] .procId
@@ -2748,7 +2803,7 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    atName existsLabel declareName initializeName usingNamespace usingIdentifier case
+    atName setName existsLabel declareName initializeName usingNamespace usingIdentifier case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp

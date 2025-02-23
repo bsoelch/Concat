@@ -484,8 +484,14 @@ namespace: id
       false return
     end
     id id .length 1 - string.charAt '=' == if
-      "variable names cannot end with '='" sb.copyPtr pos errors appendError
-      true return
+      ## allow procedures named `=`
+      ##  and procedures with name ending in `==` `!=` `>=` `<=`
+      ## XXX? allow more operator-like names ending in `=`
+      context .PROCEDURE ?? ! or id .length 1 > and
+          "=<>!":s id $ .length 2 - string.charAt string.contains ! if
+        "identifier names cannot end with '='" sb.copyPtr pos errors appendError
+        true return
+      end
     end
     false return
   end

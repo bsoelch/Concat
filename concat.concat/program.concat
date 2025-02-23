@@ -89,6 +89,7 @@ union(
           BlockData : block
           BlockData : blockEnd
      IdentifierInfo : getId
+     IdentifierInfo : setId
      IdentifierInfo : atId
      IdentifierInfo : initializeId
      IdentifierInfo : autoTypedInitializeId
@@ -123,6 +124,7 @@ union(
                   _ : copy
   StackModification : stackMod
             LabelId : getName
+            LabelId : setName
             LabelId : atName
             LabelId : existsName
             LabelId : declareName
@@ -173,6 +175,10 @@ end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGetId
   =:: pos
   OpValue .getId ..swap pos Operation new return
+end
+proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opSetId
+  =:: pos
+  OpValue .setId ..swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opAtId
   =:: pos
@@ -295,6 +301,9 @@ proc( LabelId FilePosition  -> Operation ) =>: export: opGetName
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opAtName
   OpValue .atName Type .undefined pos Operation new return
+end
+proc( LabelId FilePosition : pos -> Operation ) =>: export: opSetName
+  OpValue .setName Type .undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opExistsName
   OpValue .existsName Type .undefined pos Operation new return
@@ -617,12 +626,6 @@ namespace: sb
             $1 .val .blockEnd .jumpDistance i64 cast sb.appendI
           ')' sb.appendC
           break
-        getId case
-          "get ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .getId labelContext sb.appendIdInfo
-          break
         call case ..over =:: op
           op@ .val .call =:: callInfo
           "call ( " sb.appendS
@@ -645,6 +648,18 @@ namespace: sb
           op .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           op .val .builtIn sb.appendBuiltIn
+          break
+        getId case
+          "get ( " sb.appendS
+          ..over .dataType  typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .getId labelContext sb.appendIdInfo
+          break
+        setId case
+          "set ( " sb.appendS
+          ..over .dataType  typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .setId labelContext sb.appendIdInfo
           break
         atId case
           "address ( " sb.appendS
@@ -871,6 +886,10 @@ namespace: sb
         atName case
           "address of: " sb.appendS
           ..over .val .atName labelContext sb.appendLabelPath
+          break
+        setName case
+          "set: " sb.appendS
+          ..over .val .setName labelContext sb.appendLabelPath
           break
         existsName case
           "exists name: " sb.appendS
