@@ -3,13 +3,13 @@ import arenaAlloc
 0 =:: mut: valCount
 0 =:: mut: valId
 proc( -> i32 ) =>: newInt
-  valCount 1 + valCount@ =
+  valCount 1 + valCount=
   valId
-    $ 1 + valId@ =
+    $ 1 + valId=
   return
 end
 proc( i32 ptr : ignore -> ) =>: freeVal
-  valCount 1 - valCount@ =
+  valCount 1 - valCount=
 end
 
 proc( -> ) =>: main

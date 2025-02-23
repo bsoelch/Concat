@@ -3,7 +3,7 @@ proc( -> ) =>: main
   5 =:: y
   x:? and y:? if x y + else 0 end ..drop ## this should compile
   x:? if
-    x 1 + x@ = ## this code will not be executed
+    x 1 + x= ## this code will not be executed
   end ## no else
   y:? if
     y y * =:: z

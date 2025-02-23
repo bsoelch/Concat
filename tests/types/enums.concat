@@ -16,7 +16,7 @@ proc( -> ) =>: main
   
   labelEnum .A =:: mut: l1
   l1 .B ?? if
-    labelEnum .C l1@ =
+    labelEnum .C l1=
   end
   241 'A' ( i32 char8 ) new e@ .D=
   e .D

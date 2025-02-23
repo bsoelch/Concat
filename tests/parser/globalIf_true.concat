@@ -18,9 +18,9 @@ _BIG_ENDIAN_ if
 else
   proc( i64 -> i64 ) =>: hton
     =:: mut: x
-      x 0xffff_ffff:i64 & 32 << x 32 >>> 0xffff_ffff:i64 & | x =
-      x 0xffff_0000_ffff:i64 & 16 << x 16 >>> 0xffff_0000_ffff:i64 & | x =
-      x 0x00ff_00ff_00ff_00ff:i64 & 8 << x 8 >>> 0x00ff_00ff_00ff_00ff:i64 & | x =
+      x 0xffff_ffff:i64 & 32 << x 32 >>> 0xffff_ffff:i64 & | x=
+      x 0xffff_0000_ffff:i64 & 16 << x 16 >>> 0xffff_0000_ffff:i64 & | x=
+      x 0x00ff_00ff_00ff_00ff:i64 & 8 << x 8 >>> 0x00ff_00ff_00ff_00ff:i64 & | x=
     x return
   end
   proc( i64 i64 -> i128 ) =>: createI128
