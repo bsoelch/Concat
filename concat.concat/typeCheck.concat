@@ -413,11 +413,11 @@ proc( i32 : count bool : isStatic FilePosition : pos TypeCheckState ptr.mut : st
   finally i 1 + end ..drop
 end
 
-enum( StaticProc StaticArg Interpret ) =:: CallType
 proc(
   Type : calledType
   ProcedureCallInfo : calledProc
-  CallType : callType
+  bool : staticProc
+  bool : staticArg
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: interpretCall
@@ -428,7 +428,7 @@ proc(
   procIn
     typeContext types.compositeEltCount InterpreterLoadMode .fixedCount
   state interpreterLoadContants if
-    callType .StaticProc ?? if
+    staticProc if
       "could not resolve arguments of static procedure " sb.copyPtr
         progContext [] .procedures
           calledProc .procId i64 cast list.at
@@ -446,7 +446,7 @@ proc(
     pos
     interpreter
   evaluateCall if
-    callType .StaticProc ?? if
+    staticProc if
       "could not evaluate call to static procedure " sb.copyPtr
         progContext [] .procedures
           calledProc .procId i64 cast list.at
@@ -454,15 +454,13 @@ proc(
       pos progContext .errors appendError
     end
     ## reset stack to previous state
-    procIn typeContext types.compositeEltCount callType .Interpret ?? ! pos state interpreterStoreConstants
+    procIn typeContext types.compositeEltCount staticArg pos state interpreterStoreConstants
     true return
   end
   ## store results
-  progContext [] .procedures
-    calledProc .procId i64 cast list.at
-  .data [] .procType
+  calledType
     typeContext types.getProcOut ..drop
-  typeContext types.compositeEltCount callType .Interpret ?? ! pos state interpreterStoreConstants
+  typeContext types.compositeEltCount staticArg pos state interpreterStoreConstants
   false return
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
@@ -551,6 +549,9 @@ proc(
       sb.appendTypeRecursive
       printValues if
         val [] .value .None ?? ! if
+          val [] .isStatic if
+            " static" sb.appendS
+          end
           " { " sb.appendS
           val [] .value typeContext sb.appendConstant
           " }" sb.appendS
@@ -1873,13 +1874,17 @@ proc(
             list.asSlice
           end =:: procedures
           0:i32 =:: mut: stackConstants
+          0:i32 =:: mut: staticArgIndex
           true =:: mut: headConstant
           false =:: mut: hasStaticArg
           state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
           state .stack branchTree.itr.start while
             branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
-            hasStaticArg val [] .isStatic | hasStaticArg@ =
             headConstant and val [] .value .None ?? ! if
+              hasStaticArg ! and val [] .isStatic if
+                stackConstants staticArgIndex@ =
+                true hasStaticArg@ =
+              end
               stackConstants 1 + stackConstants@ =
             else
               false headConstant@ =
@@ -1898,7 +1903,9 @@ proc(
             message@ optional.wrap
             op .pos
             state .interpreter
-          resolveCall =:: calledType =:: calledProc?
+          resolveCall =:: calledType
+            =:: calledProcId
+          =:: calledProc?
           calledProc? optional.isEmpty if
             message op .pos errors appendError
             return
@@ -1909,27 +1916,36 @@ proc(
               message sb.free ..drop
             end
           end
+          hasStaticArg if
+            staticArgIndex
+              calledType
+                typeContext types.getProcIn ..drop
+              typeContext types.compositeEltCount <
+            hasStaticArg@ =
+          end
           stackValues list.free ..drop
           calledProc? .data =:: calledProc
           program [] .procedures
             calledProc .procId i64 cast list.at .data
-          =:: calledProcData
+          =:: baseProcData
           calledType op@ .dataType=
           calledType typeContext types.getProcIn ..drop =:: inTypes
           inTypes typeContext types.compositeEltCount =:: argCount
           stackConstants argCount calledProc .autoArgs .length i32 cast - >= and
-              calledProcData [] .isStatic and state [] .mode .STATIC_PROC ?? ! or
-              calledProcData .implementation [] .code ?? and
-              calledProcData .implementation .code .codeState .TYPE_CHECKING ?? ! if
-            calledType calledProc CallType .StaticProc op .pos state interpretCall ! if
+              program [] .procedures
+                calledProcId i64 cast list.at .data
+              [] .isStatic and state [] .mode .STATIC_PROC ?? ! or
+              baseProcData .implementation [] .code ?? and
+              baseProcData .implementation .code .codeState .TYPE_CHECKING ?? ! if
+            calledType calledProc true hasStaticArg op .pos state interpretCall ! if
               return
             end
           end
-          calledProcData [] .implementation switch
+          baseProcData [] .implementation switch
             code case
               state [] .mode .LINEAR ?? ! if
                 ## check if implementation exists if not add to list of missing imples
-                calledProcData  .implementation .code =:: codeImpl
+                baseProcData  .implementation .code =:: codeImpl
                 calledProc .implementationId =:: implId
                 implId -1:i32 == if
                   codeImpl [] .codeState .TYPE_CHECKED ?? !
@@ -1952,12 +1968,12 @@ proc(
               calledProc OpValue .call op@ .val=
             break
             builtIn case
-              calledProcData [] .implementation .builtIn .builtIn =:: builtInId
+              baseProcData [] .implementation .builtIn .builtIn =:: builtInId
               builtInId .SYS_ARGC ?? or builtInId .SYS_ARGV ?? or builtInId .SYS_ENVP ?? if
                 true program .hasGetArgs=
               end
               hasStaticArg and headConstant if ## only constant arguments
-                calledType calledProc  CallType .StaticArg op .pos state interpretCall ! if
+                calledType calledProc false hasStaticArg op .pos state interpretCall ! if
                   return
                 end
               end

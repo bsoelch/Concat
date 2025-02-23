@@ -747,7 +747,7 @@ proc(
   stringBuilder ptr.mut optional : errorMessage
   FilePosition : pos
   InterpreterContext ptr.mut : interpreterContext
--> ProcedureCallInfo optional Type ) =>: export: resolveCall
+-> ProcedureCallInfo optional ProcId Type ) =>: export: resolveCall
   interpreterContext [] .program =:: progContext
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -759,7 +759,7 @@ proc(
         "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
       errorMessage .data []=
     end
-    ProcedureCallInfo optional.empty Type .undefined return
+    ProcedureCallInfo optional.empty NO_PROC Type .undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
   MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
@@ -1040,7 +1040,7 @@ proc(
       errorMessage .data []=
     end
     currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty Type .undefined return
+    ProcedureCallInfo optional.empty NO_PROC Type .undefined return
   end
   currentSignatures .length 1 > and
       ## cmpSignatures
@@ -1087,13 +1087,14 @@ proc(
       errorMessage .data []=
     end
     currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty Type .undefined return
+    ProcedureCallInfo optional.empty NO_PROC Type .undefined return
   end
   progContext [] .procedures
     candidate [] .procId i32 cast list.at .data
   =:: procInfo
+  candidate [] .procId =:: calledProcId
   procInfo [] .implementation .alias ?? ! if
-    candidate [] .procId
+    calledProcId
   else
     ## XXX? nested alias
     procInfo [] .implementation .alias
@@ -1243,5 +1244,5 @@ proc(
   ProcedureCallInfo new =:: result
   constArgs list.free constArgs@ =
   currentSignatures@ cleanupSignatures
-  result optional.wrap calledType return
+  result optional.wrap calledProcId calledType return
 end

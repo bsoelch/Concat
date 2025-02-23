@@ -1153,6 +1153,7 @@ namespace: interpreter
         context
       resolveCall
         =:: calledType
+        ..drop ## callProcId
       .data =:: callInfo ## procedure should allways match
       callInfo .procId e .typeTrait == "called proc is same as type-trait" assert
       procData .implementation .builtIn ?? if
@@ -2342,7 +2343,9 @@ proc(
             message@ optional.wrap
             op [] .pos
             context
-          resolveCall =:: calledType =:: calledProc?
+          resolveCall =:: calledType
+            ..drop ## callProcId
+          =:: calledProc?
           message .length 0 > if
             calledProc? optional.isEmpty if
               message op [] .pos errors appendError
@@ -3451,7 +3454,7 @@ proc(
       pos errors appendError
     end
     ## tryEvaluateBuiltIn
-      procType
+      calledType
       procData [] .implementation .builtIn .builtIn
     pos context tryEvaluateBuiltIn return
   else procData [] .implementation .code ?? ! _if

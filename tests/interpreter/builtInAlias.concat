@@ -1,0 +1,6 @@
+i32 =:: wrapped
+proc( wrapped wrapped -> wrapped ) : static: alias: wrapAdd ..builtIn.add.i32
+
+proc( -> ) =>: main
+  1:wrapped 2:wrapped wrapAdd 3:wrapped == "1+2==3" assert
+end
