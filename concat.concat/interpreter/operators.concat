@@ -682,7 +682,7 @@ namespace: interpreter
     ConstValue ..length 23 == "no new constants" assert
     targetValue switch
       LocalValue case
-        newValue targetValue .LocalValue ConstValue _ ptr.mut cast []=
+        newValue targetValue .LocalValue ConstValue _ ptr.mut cast =
         OperatorResult .success return
       LocalArray case
         newValue .Array ?? if

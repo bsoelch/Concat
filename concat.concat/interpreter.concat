@@ -1387,7 +1387,7 @@ namespace: interpreter
       true return
     end =:: newContainer
     wrapped if
-      newContainer value .LocalValue ConstValue ptr.mut cast []=
+      newContainer value .LocalValue ConstValue ptr.mut cast =
     end
     isPtr ! if
       ## pushValue
@@ -1421,7 +1421,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
-        allocator []=
+        allocator =
         tmpArray slice.freeze constContext newArray8Const return
       LocalArray16 case
         localArray .LocalArray16 i16 slice.mut cast =:: arrayData
@@ -1430,7 +1430,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
-        allocator []=
+        allocator =
         tmpArray slice.freeze constContext newArray16Const return
       LocalArray32 case
         localArray .LocalArray32 i32 slice.mut cast =:: arrayData
@@ -1439,7 +1439,7 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
-        allocator []=
+        allocator =
         tmpArray slice.freeze constContext newArray32Const return
       LocalArray64 case
         localArray .LocalArray64 i64 slice.mut cast =:: arrayData
@@ -1448,14 +1448,14 @@ namespace: interpreter
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
-        allocator []=
+        allocator =
         tmpArray slice.freeze constContext newArray64Const return
       default ..unreachable
     end
     localArray .LocalArray ConstValue slice.mut cast =:: dataArray
     allocator []
       dataArray mixedArena.copyMutableSlice =:: tmpArray
-    allocator []=
+    allocator =
     valType typeContext types.getElementType =:: arrayBase
     ## 1. copy elements
     dataArray .length for =:: i
@@ -1568,7 +1568,9 @@ namespace: interpreter
         valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
       elt [] .Array ?? if
-        elt [] eltType false context localCopy elt []=
+        elt []
+          eltType false context localCopy
+        elt =
       end
     end
     localSlice LocalSlice cast ConstValue .LocalArray
@@ -2930,13 +2932,13 @@ proc(
           LocalValue case
             value? .data []
               .LocalValue ConstValue ptr.mut cast []
-            value? .data []=
+            value? .data =
             break
           LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
             context [] .localMemory mixedArena.offset =:: localOffset
             value? .data []
               valType context .localMemory program copyLocalArray
-            value? .data []=
+            value? .data =
             ## clear memory used by copy
             context [] .localMemory
               localOffset mixedArena.reset
@@ -3082,7 +3084,7 @@ proc(
         op [] .pos context popValue if ..drop.3
           values valInfos nArgs context unpopValues
           EvalResult .Error return
-        end values nArgs []= valInfos nArgs []=
+        end values nArgs =[] valInfos nArgs =[]
         nArgs 1 + nArgs@ =
       end ..drop
       ## mergeTypes
@@ -3224,7 +3226,7 @@ namespace: interpreter
       pos context popValue if ..drop.2
         values valInfos nArgs context unpopValues
         true return
-      end values nArgs []= valInfos nArgs []=
+      end values nArgs =[] valInfos nArgs =[]
       valInfos nArgs [] .valueType typeContext types.unwrapNamed
           eltType typeContext types.unwrapNamed typeContext types.canAutoCast ! if
         "wrong argument type for built-in " sb.copyPtr
@@ -3524,7 +3526,7 @@ proc(
     LabelId Constant hashMap mixedArena.alloc =:: newVariables
   context .localMemory=
   ## XXX? allocate lookup table in localMemory
-  labelHash@ labelEq@ 256 Constant map.create newVariables []=
+  labelHash@ labelEq@ 256 Constant map.create newVariables =
   newVariables optional.wrap context .localVariables=
   ## process procedure arguments
   false =:: mut: hasGenericArg

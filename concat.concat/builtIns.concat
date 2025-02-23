@@ -175,8 +175,8 @@ proc(
   ## TODO? own calling convention for built-ins
   LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
-  t args@ 0 []=
-  t args@ 1 []=
+  t args@ 0 =[]
+  t args@ 1 =[]
   ## newProcArgs
     args@ 1 slice.create
     argLabels
@@ -219,7 +219,7 @@ proc(
   typeContext types.newProcedure
     ! "can create procedure" assert
   =:: binOpProc
-  types.primitive.BOOL args@ 0 []=
+  types.primitive.BOOL args@ 0 =[]
   ## newProcArgs
     args@ 1 slice.create
     argLabels
@@ -256,8 +256,8 @@ proc(
   typeContext .labelContext =:: labelContext
   LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
-  t1 args@ 0 []=
-  t2 args@ 1 []=
+  t1 args@ 0 =[]
+  t2 args@ 1 =[]
   ## newProcArgs
     args@ 2 slice.create
     argLabels
@@ -302,15 +302,15 @@ proc(
   typeContext .labelContext =:: labelContext
   LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
-  t1 args@ 0 []=
-  t1 args@ 1 []=
+  t1 args@ 0 =[]
+  t1 args@ 1 =[]
   ## newProcArgs
     args@ 2 slice.create
     argLabels
     false
     typeContext
   types.newProcArgs =:: mut: procIn
-  types.primitive.BOOL args@ 0 []=
+  types.primitive.BOOL args@ 0 =[]
   ## newProcArgs
     args@ 1 slice.create
     argLabels
@@ -323,7 +323,7 @@ proc(
   typeContext types.newProcedure
     ! "can create procedure" assert
   =:: cc_b
-  types.primitive.I32 args@ 0 []=
+  types.primitive.I32 args@ 0 =[]
   ## newProcArgs
     args@ 1 slice.create
     argLabels
@@ -389,8 +389,8 @@ proc(
   Type 2 array : typeData
   typeData@ =:: argTypes
   ## char8 _ ptr  i64   -> ...
-  types.primitive.CHAR8 false typeContext wrapPtr argTypes 0 []=
-  types.primitive.I64 argTypes 1 []=
+  types.primitive.CHAR8 false typeContext wrapPtr argTypes 0 =[]
+  types.primitive.I64 argTypes 1 =[]
   ## newProcArgs
     argTypes slice.wrap
     argLabels
@@ -487,50 +487,50 @@ proc(
     pos
     FILE_ID_BUILT_IN
     labelContext
-  id.newLabel labelData@ 0 []=
-  id.LABEL_ID_NONE labelData@ 1 []=
-  id.LABEL_ID_NONE labelData@ 2 []=
-  types.primitive.TYPE typeData@ 0 []=
+  id.newLabel labelData@ 0 =[]
+  id.LABEL_ID_NONE labelData@ 1 =[]
+  id.LABEL_ID_NONE labelData@ 2 =[]
+  types.primitive.TYPE typeData@ 0 =[]
   labelData 0 [] types.newGenericType =:: baseType
   baseType false typeContext wrapPtr =:: basePtr
   baseType true typeContext wrapPtr =:: basePtrMut
-  baseType typeData@ 1 []=
-  basePtrMut typeData@ 2 []=
+  baseType typeData@ 1 =[]
+  basePtrMut typeData@ 2 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
     false
     typeContext
   types.newProcArgs =:: setIn ##  T   T _ ptr.mut
-  basePtr typeData@ 1 []=
+  basePtr typeData@ 1 =[]
   ## newProcArgs
     typeData@ 2 slice.create
     labelData@ 2 slice.create optional.wrap
     false
     typeContext
   types.newProcArgs =:: ptrIn ##  T _ ptr
-  types.primitive.I32 typeData@ 2 []=
+  types.primitive.I32 typeData@ 2 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
     false
     typeContext
   types.newProcArgs =:: ptrIn32 ##  T _ ptr i32
-  types.primitive.I64 typeData@ 2 []=
+  types.primitive.I64 typeData@ 2 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
     false
     typeContext
   types.newProcArgs =:: ptrIn64 ##  T _ ptr i64
-  basePtrMut typeData@ 1 []=
+  basePtrMut typeData@ 1 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
     false
     typeContext
   types.newProcArgs =:: ptrMutIn64 ##  T _ ptr.mut i64
-  types.primitive.I32 typeData@ 2 []=
+  types.primitive.I32 typeData@ 2 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
@@ -549,21 +549,21 @@ proc(
     true
     typeContext
   types.newProcArgs =:: setOut
-  baseType typeData@ 0 []=
+  baseType typeData@ 0 =[]
   ## newProcArgs
     typeData@ 1 slice.create
     LabelId slice optional.empty
     true
     typeContext
   types.newProcArgs =:: baseOut
-  basePtr typeData@ 0 []=
+  basePtr typeData@ 0 =[]
   ## newProcArgs
     typeData@ 1 slice.create
     LabelId slice optional.empty
     true
     typeContext
   types.newProcArgs =:: ptrOut
-  basePtrMut typeData@ 0 []=
+  basePtrMut typeData@ 0 =[]
   ## newProcArgs
     typeData@ 1 slice.create
     LabelId slice optional.empty
@@ -629,8 +629,8 @@ proc(
   typeContext .labelContext =:: labelContext
   LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
-  types.primitive.TYPE args@ 0 []=
-  types.primitive.TYPE args@ 1 []=
+  types.primitive.TYPE args@ 0 =[]
+  types.primitive.TYPE args@ 1 =[]
   ## newProcArgs
     types.primitive.TYPE@ 1 slice.create
     argLabels
@@ -655,7 +655,7 @@ proc(
     false
     typeContext
   types.newProcArgs =:: mut: type2In
-  types.primitive.I32 args@ 1 []=
+  types.primitive.I32 args@ 1 =[]
   ## newProcArgs
     args@ 2 slice.create
     argLabels

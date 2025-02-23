@@ -205,10 +205,10 @@ proc(
         ## ! replaceGenerics changes type-buffer
         typeBuffer []
           newElt list.append
-        typeBuffer []=
+        typeBuffer =
         labelBuffer []
           src i typeContext types.compositeGetLabel list.append
-        labelBuffer []=
+        labelBuffer =
       end
       ## newComposite
         typeBuffer [] list.asSlice typeOffset slice.tail
@@ -224,8 +224,8 @@ proc(
           default ..unreachable
         end
         ## reset buffer
-        typeBuffer [] typeOffset list.setLength typeBuffer []=
-        labelBuffer [] labelOffset list.setLength labelBuffer []=
+        typeBuffer [] typeOffset list.setLength typeBuffer =
+        labelBuffer [] labelOffset list.setLength labelBuffer =
         ! "can create composite" assert
       return
     procedure case
@@ -268,7 +268,7 @@ proc(
               break
             default arg break ## argument not generic
           end list.append
-        argBuffer []=
+        argBuffer =
       end
       src typeContext types.getGeneratorLabel =:: generatorName
       argBuffer [] list.asSlice argOffset slice.tail =:: generatorArgs
@@ -288,7 +288,7 @@ proc(
         end
         argBuffer []
           argOffset list.setLength
-        argBuffer []=
+        argBuffer =
       return
     undefined empty primitiveType cType autoType intLiteral align typeSet case
       ..unreachable ## type should not contain generics
@@ -403,7 +403,7 @@ proc(
         true return ## cannot cast immutable to mutable
       end
       srcMutable and targetMutable ! if
-        true needCast []=
+        true needCast =
       end
       src typeContext types.isFixedSize =:: srcFixed
       target typeContext types.isFixedSize =:: targetFixed
@@ -606,7 +606,7 @@ proc(
   elts [] ## TODO? add procedure for element copy to list
     $ .length 1 + list.ensureCap
     $ index list.at .data list.appendP
-  elts []=
+  elts =
   elts [] list.peek .data =:: newVal
     newVal [] .paramInfo list.copy newVal .paramInfo=
     newVal [] .genericValues map.copy newVal .genericValues=
@@ -719,7 +719,7 @@ proc(
   end
   signatures []
     list.free
-  signatures []=
+  signatures =
 end
 
 proc(
@@ -757,7 +757,7 @@ proc(
     errorMessage optional.hasData if
       errorMessage .data []
         "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
-      errorMessage .data []=
+      errorMessage .data =
     end
     ProcedureCallInfo optional.empty NO_PROC Type .undefined return
   end
@@ -1037,7 +1037,7 @@ proc(
           '\n' sb.appendC
         end
         currentSignatures .length maxSignatures > if "  ...\n" sb.appendS end
-      errorMessage .data []=
+      errorMessage .data =
     end
     currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty NO_PROC Type .undefined return
@@ -1084,7 +1084,7 @@ proc(
           '\n' sb.appendC
         end
         currentSignatures .length maxSignatures > if "  ...\n" sb.appendS end
-      errorMessage .data []=
+      errorMessage .data =
     end
     currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty NO_PROC Type .undefined return
@@ -1164,7 +1164,7 @@ proc(
           implData .code [] .expansionLevel 1:i16 +
           ProcCodeState .PARSED
         ProcImplementation new list.append
-      impls []=
+      impls =
     end
   end
   constArgs

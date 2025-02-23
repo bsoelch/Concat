@@ -658,7 +658,7 @@ proc(
     end
     state .stack branchTree.pop .data [] =:: typeInfo
     ## set argument offset to correct value
-    typeInfo .opIndex argOffsets list.peek .data []=
+    typeInfo .opIndex argOffsets list.peek .data =
     typeInfo .valueType expectedType types.typeEquals if
       i 1 + continue
     end
@@ -679,7 +679,7 @@ proc(
         ## no index update necessary
         i 1 + continue
       end
-      opId argOffsets list.peek .data []=
+      opId argOffsets list.peek .data =
       i 1 + continue
     end
     "wrong type for " sb.copyPtr
@@ -1135,7 +1135,7 @@ proc(
                 offset i32 cast
                 mergedType
                 mergePoint .mergePoint
-              opAutoCast castPoint []=
+              opAutoCast castPoint =
               i 1 + continue
             end
             "operation is not a NO-OP: " sb.copyPtr
@@ -2477,8 +2477,8 @@ proc(
         end
         ## XXX? when writing empty value to union, elementIndex still needs to be changed
         Type 2 array : args
-        targetType args@ 0 []=
-        srcType args@ 1 []=
+        targetType args@ 0 =[]
+        srcType args@ 1 =[]
         ## requireTypes
           args@ slice.wrap
           "element write":s
@@ -2664,10 +2664,10 @@ proc(
       Type 2 array new =:: mut: params
       state .stack
          0 branchTree.at .data [] .valueType
-      params@ 0 []=
+      params@ 0 =[]
       state .stack
          1 branchTree.at .data [] .valueType
-      params@ 1 []=
+      params@ 1 =[]
       params@ 0 [] params@ 1 [] typeContext types.mergeTypes if
         ..drop
         "cannot check for equality between of values of types " sb.copyPtr
@@ -2682,8 +2682,8 @@ proc(
         "the old behaviour of enum equality is deprecared use `..label` for comparing the labels of enums" sb.copyPtr
         op .pos errors appendWarning
       end
-      argType params@ 0 []=
-      argType params@ 1 []=
+      argType params@ 0 =[]
+      argType params@ 1 =[]
       argType op@ .dataType=
       ## requireTypes
         params@ slice.wrap
@@ -2762,7 +2762,7 @@ proc(
               state .stack branchTree.startBranch
               op .pos
             BranchPoint new list.append
-          branches []=
+          branches =
           ifBlock [] .blockId op@ .val .block .blockId=
           state [] .skippedBlocks .length 0 > if
             return
@@ -2879,7 +2879,7 @@ proc(
                 state .stack branchTree.startBranch
                 op .pos
               BranchPoint new list.append
-            orBranches []=
+            orBranches =
             ## XXX? extract to procedure?
             orBranches [] .length branchTree.NodeId list.create
               orBranches [] for .node list.append end
@@ -3240,14 +3240,14 @@ proc(
                 state [] .stack branchTree.depth
                 op .pos
               state reserveOps list.append
-            castOffsets []=
+            castOffsets =
             ## remember while branch
             branches []
               ## BranchPoint
                 state .stack branchTree.startBranch
                 op .pos
               BranchPoint new list.append
-            branches []=
+            branches =
             false state .reachable=
             whileBlock [] .labelPositions
               state [] .compiledOps .length list.append
@@ -3324,7 +3324,7 @@ proc(
               state .stack branchTree.startBranch
               op .pos
             BranchPoint new list.append
-          branches []=
+          branches =
           whileBlock [] .blockId op@ .val .block .blockId=
           whileBlock [] .labelPositions
             state [] .compiledOps .length list.append
@@ -3377,7 +3377,7 @@ proc(
                 state .stack branchTree.startBranch
                 op .pos
               BranchPoint new list.append
-            doBranches []=
+            doBranches =
             ## XXX? extract to procedure?
             doBranches [] .length branchTree.NodeId list.create
               doBranches [] for .node list.append end
@@ -3538,7 +3538,7 @@ proc(
                 state .stack branchTree.startBranch
                 op .pos
               BranchPoint new list.append
-            branches []=
+            branches =
             currentBlock .AndOr [] .andOrPositions
               state [] .compiledOps .length list.append
             currentBlock .AndOr .andOrPositions=
@@ -3632,13 +3632,13 @@ proc(
           i32 2 array new =:: mut: castOffsets
           0 =:: mut: nBranches
           closed .If .flags IfBlockFlags.ifBranchTerminates & ? if
-            closed .If .ifBranch .node branches@ nBranches []=
-            closed .If .ifCastsOffset castOffsets@ nBranches []=
+            closed .If .ifBranch .node branches@ nBranches =[]
+            closed .If .ifCastsOffset castOffsets@ nBranches =[]
             nBranches 1 + nBranches@ =
           end
           state [] .reachable if
-            state .stack branchTree.startBranch branches@ nBranches []=
-            elseCastOffset castOffsets@ nBranches []=
+            state .stack branchTree.startBranch branches@ nBranches =[]
+            elseCastOffset castOffsets@ nBranches =[]
             nBranches 1 + nBranches@ =
           end
           nBranches 1 >= if
@@ -3855,11 +3855,11 @@ proc(
             state .stack branchTree.startBranch list.append
           =:: mut: branchPoints
           i32 2 array new =:: mut: castOffsets
-          OP_UNLINKED castOffsets@ 0 []=
+          OP_UNLINKED castOffsets@ 0 =[]
           ## reserveOps
             state [] .stack branchTree.depth
             op .pos
-          state reserveOps castOffsets@ 1 []=
+          state reserveOps castOffsets@ 1 =[]
           ## mergeValues
             state .stack
             branchPoints list.asSlice
@@ -4494,7 +4494,7 @@ proc(
     state [] .compiledOps
       list.asSlice codeOffset slice.tail
     list.appendSlice
-  fileOps []=
+  fileOps =
   state clearOps
   state [] .program [] .autoTypes
     list.free ..drop

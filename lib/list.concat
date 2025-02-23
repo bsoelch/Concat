@@ -97,7 +97,7 @@ namespace: list
     0 while ..dup newList .length < do =:: i
       src .data i []
         copyElt ()
-      newList .data i []=
+      newList .data i =[]
       i 1 +
     end ..drop
     newList return
@@ -240,7 +240,7 @@ namespace: list
     index 0 < or index elts .length >= if
       "list index outside range" ..panic
     end
-    elt elts .data index []=
+    elt elts .data index =[]
   end
   proc(
     type : auto: T
@@ -251,7 +251,7 @@ namespace: list
     index 0 < or index elts .length i64 cast.u >= if
       "list index outside range" ..panic
     end
-    elt elts .data index []=
+    elt elts .data index =[]
   end
   overload: export: set
     set_32 set_64
@@ -263,7 +263,7 @@ namespace: list
   -> T list ) =>: export: append
     elts
       $ .length 1 + ensureCap
-      elt $1 .data $2 .length []=
+      elt $1 .data $2 .length =[]
       $ .length 1 + >$ .length=
     return
   end
@@ -314,7 +314,7 @@ namespace: list
     a
       $ .length 1 + ensureCap
       $ .data index 1 + + $1 .data index + $2 .length index - mem.move ..drop
-      elt $1 .data index []=
+      elt $1 .data index =[]
       $ .length 1 + >$ .length=
     return
   end
@@ -472,7 +472,7 @@ overload: export: @[]
   list.atValue_32
   list.atValue_64
 end
-overload: export: []=
+overload: export: =[]
   list.set_32
   list.set_64
 end

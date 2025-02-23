@@ -192,7 +192,7 @@ namespace: id
     label? .data .flags =:: flags
     flags []
       newFlags |
-    flags []=
+    flags =
   end
   proc( LabelId : id LabelContext ptr : context -> FilePosition optional ) =>: export: labelPos
     id context getLabel =:: label?

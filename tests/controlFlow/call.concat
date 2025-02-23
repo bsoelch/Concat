@@ -6,17 +6,17 @@ end
 
 proc( i32 i32 -> i32 2 array ) =>: #:experimental: array2
   i32 2 array new =:: mut: data
-    data@ 1 []=
-    data@ 0 []=
+    data@ 1 =[]
+    data@ 0 =[]
   data return
 end
 
 proc( i64 i64 i64 i64 -> i64 4 array ) =>: #:experimental: array4
   i64 4 array new =:: mut: data
-    data@ 3 []=
-    data@ 2 []=
-    data@ 1 []=
-    data@ 0 []=
+    data@ 3 =[]
+    data@ 2 =[]
+    data@ 1 =[]
+    data@ 0 =[]
   data return
 end
 

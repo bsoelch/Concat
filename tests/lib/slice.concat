@@ -18,7 +18,7 @@ proc( -> ) =>: main
   str 'c' slice.contains debug.print
   i32 10 array new =:: mut: a
   0 while ..dup i64 cast.u a ..length < do
-    ..dup ..dup * a@ ..over.2 []=
+    ..dup ..dup * a@ ..over.2 =[]
     1 +
   end ..drop
   a@ 8 slice.create

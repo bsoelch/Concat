@@ -4,6 +4,6 @@ proc( -> ) =>: main
   buff@ slice.wrapMutable =:: s
   s 0 [] 1 == "s[0]==1" assert
   s 3 [] 4 == "s[3]==4" assert
-  42 s 2 []=
-  s 2 [] 42 == "[]= works" assert
+  42 s 2 =[]
+  s 2 [] 42 == "=[] works" assert
 end

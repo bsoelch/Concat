@@ -148,7 +148,7 @@ namespace: slice
   end
   proc( type : auto: T T : elt T slice.mut : elts i64 : index -> ) =>: export: set_64
     index elts .length checkIndex
-    elt elts .data index []=
+    elt elts .data index =[]
   end
   proc( type : auto: T T : elt T slice.mut : elts i32 : index -> ) =>: export: set_32
     elt elts index i64 cast.s set_64
@@ -509,7 +509,7 @@ overload: export: @[]
   slice.atValue_32mut
   slice.atValue_64mut
 end
-overload: export: []=
+overload: export: =[]
   slice.set_32
   slice.set_64
 end

@@ -256,8 +256,7 @@ end
 overload: export: =
   ptr.set
 end
-overload: export: []=
-  ptr.set
+overload: export: =[]
   ptr.set32
   ptr.set64
   ptr.set32checked

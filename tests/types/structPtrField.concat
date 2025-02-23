@@ -9,6 +9,6 @@ end
 
 proc( -> ) =>: main
  0 anUnion .x 0 aStruct new =:: mut: s
- 1 s@ test []=
+ 1 s@ test =
  s .a .x debug.print
 end

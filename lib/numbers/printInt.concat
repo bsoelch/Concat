@@ -21,7 +21,7 @@ namespace: sb
         while ..dup 0 != do
           ..swap ## <buffer> <i> <chrIndex>
             ..over base u% stringChars ..swap []
-            ..over chrBuff@ ..swap []=
+            ..over chrBuff@ ..swap =[]
             1 -
           ..swap
           base u/

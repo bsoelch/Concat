@@ -99,7 +99,7 @@ namespace: slice
       T : newVal
       T MapItr : itr
     -> T MapItr ) =>: export: step
-      newVal itr .head []=
+      newVal itr .head =
       itr
         $ .head 1 @[] >$ .head=
       return
@@ -108,7 +108,7 @@ namespace: slice
       T : newVal
       S T MapToItr : itr
     -> S T MapToItr ) =>: export: stepTo
-      newVal itr .targetHead []=
+      newVal itr .targetHead =
       itr
         $ .srcHead 1 @[] >$ .srcHead=
         $ .targetHead 1 @[] >$ .targetHead=

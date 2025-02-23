@@ -152,7 +152,7 @@ namespace: allocator.linux
     oldRoot isValidPtr if
       chunk .chunkStart oldRoot .prev=
     end
-    chunk .chunkStart rootChunks@ chunkType i32 cast.u []=
+    chunk .chunkStart rootChunks@ chunkType i32 cast.u =[]
     ## initialize cellInfo
     ## mmap returns zero initialized memory -> only need to set padding bits in last element to one
     chunkData .cellCount i32 cast.u 63 & =:: tailBits

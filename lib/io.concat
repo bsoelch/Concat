@@ -97,7 +97,7 @@ namespace: io
         fileName
         nameLength
       mem.copy ..drop
-      '\x00' fileNameBuffer@ nameLength []=
+      '\x00' fileNameBuffer@ nameLength =[]
       fileNameBuffer@ char8 _ ptr cast
     end =:: path
     "r+b\x00" char8 _ ptr =: mut: openMode

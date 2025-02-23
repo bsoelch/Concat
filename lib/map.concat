@@ -97,7 +97,7 @@ namespace: map
         ..dup 0:NodeId == if ..drop
           newNode if
             data [] .nodeBuffer .length 1 +
-              ..dup NodeId cast data [] .data ..over.3 []=
+              ..dup NodeId cast data [] .data ..over.3 =[]
             ..swap ..drop
             NodeId cast return
           end

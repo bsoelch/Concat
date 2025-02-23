@@ -28,16 +28,16 @@ proc( string : code i64 : tapeCap -> i8 ) =>: runBf_C
   0:i64 =:: mut: ip
   while ip code .length < do
     code ip string.charAt switch
-      '+' case tape mp [] 1 + tape mp []= break
-      '-' case tape mp [] 1 - tape mp []= break
+      '+' case tape mp [] 1 + tape mp =[] break
+      '-' case tape mp [] 1 - tape mp =[] break
       '>' case mp 1 + tapeCap %% mp@ = break
       '<' case mp 1 - tapeCap %% mp@ = break
       '.' case tape mp [] char8 cast io.putc ..drop break
       ',' case
           io.getChar io.FILE_ERROR_NONE == if
-            i8 cast tape mp []=
+            i8 cast tape mp =[]
           else ..drop
-            0:i8 tape mp []=
+            0:i8 tape mp =[]
           end
           break
       '[' case

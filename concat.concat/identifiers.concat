@@ -257,7 +257,7 @@ namespace: id
           end
           matches .data []
             idName idLabel IdentifierMatch new list.append
-          matches .data []=
+          matches .data =
         end
         idName .scope GLOBAL_SCOPE !=
       do
@@ -301,7 +301,7 @@ namespace: id
           end
           matches .data []
             idName idLabel IdentifierMatch new list.append
-          matches .data []=
+          matches .data =
         end
         idName .scope GLOBAL_SCOPE !=
       do
@@ -347,7 +347,7 @@ namespace: id
           matches optional.hasData if
             matches .data []
               idName idLabel IdentifierMatch new list.append
-            matches .data []=
+            matches .data =
           end
           mNamespace NAMESPACE_ID_NONE == if
             idLabel optional.wrap match@ =

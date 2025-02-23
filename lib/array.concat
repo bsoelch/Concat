@@ -21,7 +21,7 @@ namespace: array
       depth 1 & 0 == if
         return ## data in src & data to src
       end
-      src offset [] buff offset []=
+      src offset [] buff offset =[]
     end
     src buff offset mid cmp context depth 1 + mergeSortRec
     src buff offset mid + size mid - cmp context depth 1 + mergeSortRec
@@ -39,21 +39,21 @@ namespace: array
         from offset j + + []
         context
       cmp () 0 <= if
-        from offset i + [] to offset k + []=
+        from offset i + [] to offset k + =[]
         i 1 + i@ =
       else
-        from offset j + [] to offset k + []=
+        from offset j + [] to offset k + =[]
         j 1 + j@ =
       end
       k 1 + k@ =
     end
     while i mid < do
-      from offset i + [] to offset k + []=
+      from offset i + [] to offset k + =[]
       i 1 + i@ =
       k 1 + k@ =
     end
     while j size < do
-      from offset j + [] to offset k + []=
+      from offset j + [] to offset k + =[]
       j 1 + j@ =
       k 1 + k@ =
     end
@@ -80,8 +80,8 @@ namespace: array
     0:i64 while ..dup mid < do =:: i
       data i []
         data last i - []
-        data i []=
-      data last i - []=
+        data i =[]
+      data last i - =[]
       i 1 +
     end ..drop
   end

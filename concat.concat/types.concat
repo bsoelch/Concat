@@ -1071,7 +1071,7 @@ namespace: types
     context .arraySizes=
     arrays []
       base sizeOffset sizes .length i32 cast arrayType .ARRAY ?? ! mutable ArrayData new list.append
-    arrays []=
+    arrays =
     arrays [] .length 1 - ArrayId cast
       arrayType switch
         POINTER case Type .pointer break
@@ -1833,7 +1833,7 @@ namespace: types
     end ..drop
     procs []
       in out callConvention ProcType new list.append
-    procs []=
+    procs =
     procs [] .length 1 - ProcTypeId cast Type .procedure
     false return
   end

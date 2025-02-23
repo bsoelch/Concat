@@ -163,7 +163,7 @@ namespace: mem
     T : elt
   -> ) =>: export: fill
     0:i64 while ..dup count < do
-      elt data ..over.2 []=
+      elt data ..over.2 =[]
       1 +
     end ..drop
   end
