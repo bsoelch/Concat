@@ -78,23 +78,23 @@ namespace: i32
     0
       x 0xffff'0000:i32 & ? if
         16 +
-        x 16 >>> x@ =
+        x 16 >>> x=
       end
       x 0xff00:i32 & ? if
         8 +
-        x 8 >>> x@ =
+        x 8 >>> x=
       end
       x 0xf0:i32 & ? if
         4 +
-        x 4 >>> x@ =
+        x 4 >>> x=
       end
       x 0b1100:i32 & ? if
         2 +
-        x 2 >>> x@ =
+        x 2 >>> x=
       end
       x 0b10:i32 & ? if
         1 +
-        x 1 >>> x@ =
+        x 1 >>> x=
       end
     x 1 - i32 cast + return
   end

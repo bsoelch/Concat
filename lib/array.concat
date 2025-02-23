@@ -40,22 +40,22 @@ namespace: array
         context
       cmp () 0 <= if
         from offset i + [] to offset k + =[]
-        i 1 + i@ =
+        i 1 + i=
       else
         from offset j + [] to offset k + =[]
-        j 1 + j@ =
+        j 1 + j=
       end
-      k 1 + k@ =
+      k 1 + k=
     end
     while i mid < do
       from offset i + [] to offset k + =[]
-      i 1 + i@ =
-      k 1 + k@ =
+      i 1 + i=
+      k 1 + k=
     end
     while j size < do
       from offset j + [] to offset k + =[]
-      j 1 + j@ =
-      k 1 + k@ =
+      j 1 + j=
+      k 1 + k=
     end
   end
   proc(
@@ -104,11 +104,11 @@ namespace: array
       c 0 == if
         mid return
       else c 0 > _if
-        mid head@ =
+        mid head=
       else
-        mid tail@ =
+        mid tail=
       end
-      head tail + 2 / mid@ =
+      head tail + 2 / mid=
     end
     tail size < and value data head [] context cmp () 0 > if
       tail return

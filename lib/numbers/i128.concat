@@ -213,14 +213,14 @@ namespace: i128
     x11low =:: mut: res2
     x11hi  =:: mut: res3
     false
-      res1 x01low i64.addc res1@ =
-      res2 x01hi  i64.addc res2@ =
-      res3 0      i64.addc res3@ =
+      res1 x01low i64.addc res1=
+      res2 x01hi  i64.addc res2=
+      res3 0      i64.addc res3=
     ..drop
     false
-      res1 x10low i64.addc res1@ =
-      res2 x10hi  i64.addc res2@ =
-      res3 0      i64.addc res3@ =
+      res1 x10low i64.addc res1=
+      res2 x10hi  i64.addc res2=
+      res3 0      i64.addc res3=
     ..drop
     res3 res2 i128 new res1 res0 i128 new return
   end
@@ -262,11 +262,11 @@ namespace: i128
     end =:: mut: bit
     while bit .hi bit .low | ? do
       remainderA shiftedB ucmp 0 >= if
-        remainderA shiftedB - remainderA@ =
-        res bit | res@ =
+        remainderA shiftedB - remainderA=
+        res bit | res=
       end
-      shiftedB 1 >>> shiftedB@ =
-      bit 1 >>> bit@ =
+      shiftedB 1 >>> shiftedB=
+      bit 1 >>> bit=
     end
     remainderA res return
   end
@@ -292,13 +292,13 @@ namespace: i128
     false =:: mut: divSign
     a0 .hi 0 < =:: remSign
     a0 .hi 0 < if
-      true divSign@ =
+      true divSign=
       a0 -_
     else
       a0
     end =:: a
     b0 .hi 0 < if
-      divSign ! divSign@ =
+      divSign ! divSign=
       b0 -_
     else
       b0
@@ -370,19 +370,19 @@ namespace: i128
           else ..drop end
         i64 cast.u i128.fromU64 =:: delta
         res maxSafeUnsigned u> if
-          true overflow@ =
+          true overflow=
         else res maxSafe u> _if
-          true signedOverflow@ =
+          true signedOverflow=
         end
         res
           baseI128 * ## XXX mul i128 by i64  ## XXX add/sub i128 to/from i64
           res maxSafeUnsigned i128.eq and $ maxUnsigned delta - u> if
-            true overflow@ =
+            true overflow=
           else res maxSafe i128.eq and $ maxVal delta - u> _if
-            true signedOverflow@ =
+            true signedOverflow=
           end
           delta +
-        res@ =
+        res=
         i 1 +
       end ..drop
     ..drop

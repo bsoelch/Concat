@@ -250,7 +250,7 @@ namespace: slice
           a i j + slice.at .data
           b j slice.at .data
         eq () ! if
-          false match@ =
+          false match=
           j break
         end
         j 1 +
@@ -284,7 +284,7 @@ namespace: slice
           b j slice.at .data
           context
         eq () ! if
-          false match@ =
+          false match=
           j break
         end
         j 1 +

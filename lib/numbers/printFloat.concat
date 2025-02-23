@@ -38,24 +38,24 @@ namespace: sb
       end
       value 0 < if
         '-' sb.appendC
-        value -_ value@ =
+        value -_ value=
       end
       "0x" sb.appendS
       value math.log2 math.floor i64 cast =:: mut: e
       e MIN_POW < if
-        MIN_POW e@ =
+        MIN_POW e=
       else e MAX_POW > _if
-        MAX_POW e@ =
+        MAX_POW e=
       end
       2 e f64 cast math.pow =:: mut: p
-      value p / value@ =
+      value p / value=
       value math.floor =:: mut: d
       d i32 cast getDigit sb.appendC
       '.' sb.appendC
       0 while ..dup DIGIT_COUNT < do
         ..swap
-          value d - 16 * value@ =
-          value math.floor d@ =
+          value d - 16 * value=
+          value math.floor d=
           d i32 cast getDigit sb.appendC
         ..swap 1 +
       end ..drop
@@ -83,7 +83,7 @@ namespace: sb
       end
       value 0 < if
         '-' sb.appendC
-        value -_ value@ =
+        value -_ value=
       end
       base f64 cast =:: baseF
       value math.log baseF math.log / math.floor i32 cast =:: mut: e
@@ -93,31 +93,31 @@ namespace: sb
       0 =:: mut: n
       0b1e-110100 #+2^-52+# value * =:: mut: eps ##XXX? better implementation of eps
       eps 0 == if ## adjust size of small numbers
-        baseF e 1 + f64 cast math.pow p@ =
-        value p / baseF * value@ =
-        f64.MIN_POSITIVE p / eps@ =
-        1 p@ =
+        baseF e 1 + f64 cast math.pow p=
+        value p / baseF * value=
+        f64.MIN_POSITIVE p / eps=
+        1 p=
       end
       p f64.isInfinite if ## adjust size for big numbers
-        baseF e 1 - f64 cast math.pow p@ =
-        value baseF / value@ =
-        eps baseF / eps@ =
+        baseF e 1 - f64 cast math.pow p=
+        value baseF / value=
+        eps baseF / eps=
       end
       while p eps > do
         value p / math.floor =:: d
         d i32 cast buff@ n =[]
-        n 1 + n@ =
+        n 1 + n=
         ## XXX break loop if n large enough
-        value d p * - value@ =
-        p baseF / p@ =
-        e 1 + e@ =
+        value d p * - value=
+        p baseF / p=
+        e 1 + e=
       end
       precision 0 <= precision n >= | if
         n 1 -
       else
         precision
-      end n@ =
-      n 0 == if 1 n@ = end
+      end n=
+      n 0 == if 1 n= end
       buff@ n [] base 2 / >= if
         buff@ n 1 - []
           1 +
@@ -130,28 +130,28 @@ namespace: sb
           buff@ j []
             1 +
             $ base < if
-              false inc@ =
+              false inc=
             end
           buff@ j =[]
         end
         buff@ j [] base >= if
-          true inc@ =
+          true inc=
           buff@ j [] base - buff@ j =[]
         end
-        j 1 - j@ =
+        j 1 - j=
       end
       inc if
         buff@ i32 _ ptr.mut cast 1 + buff@ n i64 cast.u mem.move ..drop
         1 buff@ 0 =[]
-        n 1 + n@ =
-        e_max 1 + e_max@ =
+        n 1 + n=
+        e_max 1 + e_max=
       end
       while n 1 - e_max > and buff@ n 1 - [] 0 == do
-        n 1 - n@ =
+        n 1 - n=
       end
       sci or e_max n >= or e_max -5 < if
         while n 1 - 0 > and buff@ n 1 - [] 0 == do
-          n 1 - n@ =
+          n 1 - n=
         end
         buff@ 0 [] getDigit sb.appendC
         n 1 > if

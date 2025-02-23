@@ -15,8 +15,8 @@ namespace: io
             ..swap ..drop return
           end
         ..drop
-        count ..over - count@ =
-      off ..swap + off@ =
+        count ..over - count=
+      off ..swap + off=
     end
     FILE_ERROR_NONE return
   end
@@ -45,11 +45,11 @@ namespace: sb
       while err FILE_ERROR_NONE == do
         $ .length i64 cast.u delta + ensureCap
         file $1 .data $2 .length i64 cast.u delta fread
-          err@ =
+          err=
         =:: count
         $ .length count i32 cast.u + sb.setLength
         count delta ==  delta 8192 <= & if
-          delta 2 * delta@ =
+          delta 2 * delta=
         end
       end
       err FILE_ERR_END_OF_FILE == if

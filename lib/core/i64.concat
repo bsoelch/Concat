@@ -114,7 +114,7 @@ namespace: i64
       ..dup b u< =:: mut: resCarry
       carry if
         1 +
-        resCarry ..over 0 == | resCarry@ =
+        resCarry ..over 0 == | resCarry=
       end
     resCarry ..swap return
   end
@@ -124,7 +124,7 @@ namespace: i64
     a b -
       carry if
         1 -
-        resCarry ..over 0 == | resCarry@ =
+        resCarry ..over 0 == | resCarry=
       end
     resCarry ..swap return
   end

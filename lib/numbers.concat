@@ -21,7 +21,7 @@ namespace: number
         ..swap
         end
         1 >>
-        xPow xPow * xPow@ =
+        xPow xPow * xPow=
       end ..drop
     return
   end
@@ -156,19 +156,19 @@ namespace: number
           else ..drop end
         i64 cast.u =:: delta
         res maxSafeUnsigned u> if
-          true overflow@ =
+          true overflow=
         else res maxSafe u> _if
-          true signedOverflow@ =
+          true signedOverflow=
         end
         res
           mBase i64 cast.u *
           res maxSafeUnsigned == and $ maxUnsignedVal delta - u> if
-            true overflow@ =
+            true overflow=
           else res maxSafe == and $ maxVal delta - u> _if
-            true signedOverflow@ =
+            true signedOverflow=
           end
           delta +
-        res@ = ## add digit to number
+        res= ## add digit to number
         i 1 +
       end ..drop
     ..drop
@@ -223,21 +223,21 @@ namespace: number
           i 0 == or hasDot if ..drop ## . cannot be first character
             f64.NaN ParserError .INVALID_CHAR return
           end
-          true hasDot@ =
+          true hasDot=
         else ..dup i string.charAt mBase isExpChar _if
           i 0 == if ..drop ##-exp char cannot be first character
             f64.NaN ParserError .INVALID_CHAR return
           end
-          i 1 + e@ =
+          i 1 + e=
           i break
         else ..dup i string.charAt ..dup 'p' == ..swap 'P' == | mBase 16 == & _if
           i 0 == if ..drop ##-exp char cannot be first character
             f64.NaN ParserError .INVALID_CHAR return
           end
-          i 1 + e@ =
-          true cStyleHex@ =
-          10 mBase@ = ## exponent written in base 10
-          c 4 * c@ = ## scale c to power of 2
+          i 1 + e=
+          true cStyleHex=
+          10 mBase= ## exponent written in base 10
+          c 4 * c= ## scale c to power of 2
           i break
         else
           $ i string.charAt mBase parseDigit
@@ -248,12 +248,12 @@ namespace: number
             else ..drop end
           i64 cast.u =:: digit
           val maxVal < if
-            val mBase i64 cast.u * digit + val@ =
+            val mBase i64 cast.u * digit + val=
             hasDot if
-              c 1 - c@ =
+              c 1 - c=
             end
           else hasDot ! _if
-            c 1 - c@ =
+            c 1 - c=
           end
         end
         i 1 +
@@ -263,11 +263,11 @@ namespace: number
           ..dup .NONE ?? ! if =:: err
             ..drop.2 f64.NaN err return
           end ..drop
-        c + c@ =
+        c + c=
       end
     ..drop
     cStyleHex if ## calculate powers of 2 instead of powers of base
-      2 mBase@ =
+      2 mBase=
     end
     val f64 cast
       sign if -_ end

@@ -181,7 +181,7 @@ namespace: allocator.linux
       ## XXX? allocate new cells in a way that makes extending cells easier
       cellInfo i slice.get =:: current
       i firstAvailable == and current -1 == if
-        i 1 + firstAvailable@ =
+        i 1 + firstAvailable=
       end
       i 1 + cellInfo .length < if
         cellInfo i 1 + slice.get
@@ -200,7 +200,7 @@ namespace: allocator.linux
           current cellMask | =:: newVal
           newVal cellInfo i slice.set
           i firstAvailable == and newVal -1 == if
-            i 1 + firstAvailable@ =
+            i 1 + firstAvailable=
           end
         else
           1:i64 cellBitIndex << 1 - =:: hiCellMask
@@ -208,7 +208,7 @@ namespace: allocator.linux
           current hiCellMask | =:: newVal
           newVal cellInfo i slice.set
           i firstAvailable == and newVal -1 == if
-            i 1 + firstAvailable@ =
+            i 1 + firstAvailable=
           end
           -1:i64 64 count cellBitIndex - - << =:: lowCellMask
           next lowCellMask & 0 == "cells are not allocated" assert
@@ -277,8 +277,8 @@ namespace: allocator.linux
     while remaining 64 >= do
       cellInfo nextCellInfoOffset slice.get -1 == "freed cells have been allocated" assert
       0 cellInfo nextCellInfoOffset slice.set
-      remaining 64 - remaining@ =
-      nextCellInfoOffset 1 + nextCellInfoOffset@ =
+      remaining 64 - remaining=
+      nextCellInfoOffset 1 + nextCellInfoOffset=
     end
     remaining 0 == if return end
     -1:i64 64 remaining - << =:: cellsMaskLow
@@ -345,8 +345,8 @@ namespace: allocator.linux
         cellInfo nextIndex slice.get ? if
           CellHeader ptr.mut optional.empty return ## cells are blocked
         end
-        nextIndex 1 + nextIndex@ =
-        remaining 64 - remaining@ =
+        nextIndex 1 + nextIndex=
+        remaining 64 - remaining=
       end
       -1:i64 64 remaining - << =:: lowMask
       cellInfo nextIndex slice.get =:: prevCellsLow

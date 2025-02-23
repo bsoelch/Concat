@@ -46,7 +46,7 @@ namespace: arenaAlloc
     ## XXX? find better way to convert chunk size to power of 2
     8 =:: mut: sizeBits ## 2**8= 256
     chunkSize 8 >>> while $ 1 > do
-      sizeBits 1 + sizeBits@ =
+      sizeBits 1 + sizeBits=
       1 >>>
     end ..drop
     ## ArenaAllocator
@@ -169,8 +169,8 @@ namespace: arenaAlloc
           newOffset
           newCount chunkSize i32.umin
         ChunkType .CONTINUE T ArenaChunk new list.append
-        newOffset chunkSize i64 cast.u + newOffset@ =
-        newCount chunkSize - newCount@ =
+        newOffset chunkSize i64 cast.u + newOffset=
+        newCount chunkSize - newCount=
       end
     arena@ .chunks=
     arena chunkData return
@@ -289,16 +289,16 @@ namespace: arenaAlloc
       end
       chunk [] .chunkType switch
         ALLOC case
-          0 continueChunkCount@ =
+          0 continueChunkCount=
           chunk [] .data mem.free
           break
         CONTINUE case
-          continueChunkCount 1 + continueChunkCount@ = break
+          continueChunkCount 1 + continueChunkCount= break
       end
     finally i 1 - end ..drop
     chunks
       newChunkCount continueChunkCount i64 cast.u + list.setLength
-    chunks@ =
+    chunks=
     newEltCount 0 == if
       arena .fullChunks
         ## adjust number of full chunks

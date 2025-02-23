@@ -103,15 +103,15 @@ namespace: io
     "r+b\x00" char8 _ ptr =: mut: openMode
     mode OPEN_READ & ? if
       mode OPEN_APPEND & ? if
-        "a+b\x00" openMode@ =
+        "a+b\x00" openMode=
       else mode OPEN_WRITE & ? ! _if
-        "rb\x00" openMode@ =
+        "rb\x00" openMode=
       end
     else mode ? _if
       mode OPEN_APPEND & ? if
-        "ab\x00" openMode@ =
+        "ab\x00" openMode=
       else mode OPEN_WRITE & ? _if
-        "wb\x00" openMode@ =
+        "wb\x00" openMode=
       end
     end
     c.concatIOHelper_resetErrno
@@ -226,8 +226,8 @@ namespace: io
             ..swap ..drop return
           end
         ..drop
-        count ..over - count@ =
-      off ..swap + off@ =
+        count ..over - count=
+      off ..swap + off=
     end
     FILE_ERROR_NONE return
   end
