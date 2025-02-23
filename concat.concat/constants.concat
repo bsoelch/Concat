@@ -218,7 +218,7 @@ namespace: constant
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable@ =
+        nonPrintable 1 + nonPrintable=
       end
     end ..drop.2
     ## at most 1/8 non-printable chars
@@ -235,7 +235,7 @@ namespace: constant
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable@ =
+        nonPrintable 1 + nonPrintable=
       end
     end ..drop.2
     ## at most 1/8 non-printable chars
@@ -251,7 +251,7 @@ namespace: constant
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable@ =
+        nonPrintable 1 + nonPrintable=
       end
     end
     ## at most 1/8 non-printable chars
@@ -623,7 +623,7 @@ namespace: constants
           sb.appendC
           continue
         end ..drop
-        i 1 + i@ =
+        i 1 + i=
         str i string.charAt $ switch
           '\\' '\'' '"' case
             $ pos@ updateFilePos
@@ -655,7 +655,7 @@ namespace: constants
             break
           'x' 'u' 'U' case =:: c
             c pos@ updateFilePos
-            i 1 + i@ =
+            i 1 + i=
             c 'x' == if 2:i64 else c 'u' == _if 4:i64 else 8:i64 end =:: nChars
             i nChars + str .length > if
               "not enough characters for escape sequence \"\\" sb.copyPtr
@@ -706,7 +706,7 @@ namespace: constants
             0:i64 while $ nChars < do =:: j
               str i j + string.charAt pos@ updateFilePos
             finally j 1 + end ..drop
-            i nChars 1 - + i@ =
+            i nChars 1 - + i=
             continue
           default
             "unknown escape sequence \"\\" sb.copyPtr

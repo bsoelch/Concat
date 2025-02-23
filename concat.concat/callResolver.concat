@@ -143,7 +143,7 @@ proc(
                 flags ReplaceFlags.REPLACE_AUTO_ARGS & ? ! if
                   size list.append break
                 end
-                true genericSize@ =
+                true genericSize=
               end
               genericValues genericId map.at =:: newValue
               newValue optional.hasData if
@@ -313,11 +313,11 @@ proc(
   src0 =:: mut: src
   src typeContext types.isInitializer if
     target typeContext types.isArray and src typeContext types.isArrayLiteral if
-      src typeContext types.initializerAsArray src@ =
+      src typeContext types.initializerAsArray src=
     else src typeContext types.isArrayLiteral and target typeContext types.isArrayPointer _if
-      src typeContext types.initializerAsPointer src@ =
+      src typeContext types.initializerAsPointer src=
     else
-      src typeContext types.initializerAsTuple src@ =
+      src typeContext types.initializerAsTuple src=
     end
   end
   target switch
@@ -377,9 +377,9 @@ proc(
       target =:: mut: unwrapTarget
       while
         unwrapSrc types.isNamedType if
-          unwrapSrc typeContext types.flatUnwrapNamed unwrapSrc@ =
+          unwrapSrc typeContext types.flatUnwrapNamed unwrapSrc=
         end
-        unwrapTarget typeContext types.flatUnwrapNamed unwrapTarget@ =
+        unwrapTarget typeContext types.flatUnwrapNamed unwrapTarget=
       unwrapTarget .namedType ?? do end
       ## resolveGenerics
         unwrapSrc
@@ -415,13 +415,13 @@ proc(
       ## treat 0D fixed arrays as 1D array of length 1
       1:i64 types.ArraySize .int =:: one
       srcFixed and srcSizes .length 0 == if
-        one@ slice.wrap srcSizes@ =
+        one@ slice.wrap srcSizes=
       end
       targetFixed and targetSizes .length 0 == if
-        one@ slice.wrap targetSizes@ =
+        one@ slice.wrap targetSizes=
       end
       srcFixed and targetFixed ! if
-        srcSizes $ .length 1 - slice.head srcSizes@ =
+        srcSizes $ .length 1 - slice.head srcSizes=
       end
       srcSizes .length targetSizes .length < if
         true return ## target sizes have to be matched
@@ -488,7 +488,7 @@ proc(
         progContext
       resolveGenerics return
     struct union procIn procOut enum initializer case
-      src typeContext types.unwrapNamed src@ =
+      src typeContext types.unwrapNamed src=
       src ..label target ..label != if
         true return ## src and target have to be same type of composite
       end
@@ -518,7 +518,7 @@ proc(
       end
       false return
     procedure case
-      src typeContext types.unwrapNamed src@ =
+      src typeContext types.unwrapNamed src=
       src ..label target ..label != if
         true return
       end
@@ -545,7 +545,7 @@ proc(
       end
       false return
     generatedType case
-      src typeContext types.unwrapNamedKeepGenerated src@ =
+      src typeContext types.unwrapNamedKeepGenerated src=
       ## src has to be a compatible generated type
       src types.isGeneratedType ! if
         true return
@@ -768,7 +768,7 @@ proc(
     procInfo [] .procType
       typeContext types.getProcIn ..drop typeContext types.compositeEltCount
     =:: argCount
-    maxArgs argCount i64 cast i64.max maxArgs@ =
+    maxArgs argCount i64 cast i64.max maxArgs=
     currentSignatures
       ## CallSignatureInfo
         procId
@@ -783,7 +783,7 @@ proc(
         true
         argCount 0 >
       CallSignatureInfo new list.append
-    currentSignatures@ =
+    currentSignatures=
   end
   0:i64 while ..dup stackValues .length <= do =:: stackIndex
     stackIndex stackValues .length < if
@@ -823,7 +823,7 @@ proc(
               MatchType .EMPTY
             ParameterInfo new list.append
           current .paramInfo=
-          paramIndex 1 - paramIndex@ =
+          paramIndex 1 - paramIndex=
         else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? and
             current .genericValues paramLabel map.at =:: autoValue
             autoValue optional.isEmpty ! and autoValue .data [] .nonEmpty ?? ! _if
@@ -849,7 +849,7 @@ proc(
               MatchType .AUTO
             ParameterInfo new list.append
           current .paramInfo=
-          paramIndex 1 - paramIndex@ =
+          paramIndex 1 - paramIndex=
           ## include auto-args in signature weigth
           current [] .signatureWeigth
             paramType typeContext computeTypeWeigth +
@@ -858,8 +858,8 @@ proc(
           break
         end
       paramIndex 0 >= do
-        inTypes paramIndex typeContext types.compositeGetElement paramType@ =
-        inTypes paramIndex typeContext types.compositeGetLabel paramLabel@ =
+        inTypes paramIndex typeContext types.compositeGetElement paramType=
+        inTypes paramIndex typeContext types.compositeGetLabel paramLabel=
       end
       paramIndex 0 < if
         false current .needsParam=
@@ -879,7 +879,7 @@ proc(
         ## add copy of signature with generic type set to empty
         i currentSignatures@ copyElement =:: copySig
         ## update current pointer after changing list
-        currentSignatures i list.at .data current@ =
+        currentSignatures i list.at .data current=
         copySig .genericValues
           paramId
           Type .empty ConstValue .TypeId GenericArg .fixed
@@ -955,15 +955,15 @@ proc(
             current .genericValues
             progContext
           resolveGenerics ! if
-        MatchType .GENERIC matchType@ =
+        MatchType .GENERIC matchType=
         current [] .nGenerics 1 + current .nGenerics=
         needCast if ## ptr.mut -> ptr
           current [] .nCasts 1 + current .nCasts=
         end
       else stackType paramType types.typeEquals _if
-        MatchType .MATCH matchType@ =
+        MatchType .MATCH matchType=
       else stackType paramType typeContext types.canAutoCast _if
-        MatchType .CAST matchType@ =
+        MatchType .CAST matchType=
         stackType =:: mut: fromType
         ## TODO extra casts for more complicated literal conversion
         fromType paramType types.typeEquals ! if
@@ -1075,7 +1075,7 @@ proc(
           isEquivalent and
               candidate [] current [] progContext cmpSignatures 0 != if
             "other signatures: \n" sb.appendS
-            false isEquivalent@ =
+            false isEquivalent=
           end
           "  * " sb.appendS
           procInfo [] .procType typeContext sb.appendType
@@ -1108,7 +1108,7 @@ proc(
     eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
       constArgs
         candidate .genericValues eltLabel getValueOrNone list.append
-      constArgs@ =
+      constArgs=
     end
     i 1 +
   end ..drop
@@ -1127,25 +1127,25 @@ proc(
     impls [] .length for =:: i
       impls [] i list.at .data =:: impl
       impl [] .staticArgs .length constArgs .length i64 cast == "correct number of static arguments" assert
-      true isMatch@ =
+      true isMatch=
       constArgs .length for =:: j
         ## constEquals
           impl [] .staticArgs j slice.get
           constArgs j list.get
           labelContext
         constantEquals ! if
-          false isMatch@ =
+          false isMatch=
           break
         end
       end
       isMatch if
-        i implId@ =
+        i implId=
         break
       end
     end
     isMatch ! if ## no matching implementation -> create new one
       impls []
-        ..dup .length implId@ =
+        ..dup .length implId=
         ## ProcImplementation
           ## replaceGenerics
             baseProcInfo [] .procType
@@ -1169,7 +1169,7 @@ proc(
   end
   constArgs
     list.clear
-  constArgs@ =
+  constArgs=
   eltCount for =:: i
     inType i typeContext types.compositeGetLabel =:: eltLabel
     eltLabel labelContext id.labelFlags =:: flags
@@ -1177,7 +1177,7 @@ proc(
     flags id.FLAG_AUTO & ? if
       candidate .genericValues eltLabel getValueOrNone =:: value
       value .None ?? ! if
-        false needArg@ =
+        false needArg=
       end
       ## convert literal types to corresponding types
       value .TypeId ?? and value .TypeId types.isLiteral if
@@ -1188,7 +1188,7 @@ proc(
       end
       constArgs
         value list.append
-      constArgs@ =
+      constArgs=
     end
     needArg if ## need argument from stack
       inType i typeContext types.compositeGetElement =:: eltType
@@ -1204,10 +1204,10 @@ proc(
       ## ! replaceGenerics changes typeBuffer
       typeBuffer
          newElt list.append
-      typeBuffer@ =
+      typeBuffer=
       labelBuffer
         eltLabel list.append
-      labelBuffer@ =
+      labelBuffer=
     end
   end
   ## newProcArgs
@@ -1216,8 +1216,8 @@ proc(
     false
     typeContext
   types.newProcArgs =:: newIn
-  typeBuffer list.clear typeBuffer@ =
-  labelBuffer list.clear labelBuffer@ =
+  typeBuffer list.clear typeBuffer=
+  labelBuffer list.clear labelBuffer=
   ## replaceGenerics
     outType
     typeBuffer@
@@ -1227,8 +1227,8 @@ proc(
     pos
     interpreterContext
   replaceGenerics =:: newOut
-  typeBuffer list.free typeBuffer@ =
-  labelBuffer list.free labelBuffer@ =
+  typeBuffer list.free typeBuffer=
+  labelBuffer list.free labelBuffer=
   ## newProcedure
     newIn
     newOut
@@ -1242,7 +1242,7 @@ proc(
     implId
     constArgs list.asSlice constContext constArray
   ProcedureCallInfo new =:: result
-  constArgs list.free constArgs@ =
+  constArgs list.free constArgs=
   currentSignatures@ cleanupSignatures
   result optional.wrap calledProcId calledType return
 end

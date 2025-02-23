@@ -243,13 +243,13 @@ namespace: id
     NameId optional : idLabel?
     NameId : idLabel
     ## 1. search in current scopes
-    mNamespace path  context .typeContext .labelContext findNamespace relSpace@ =
+    mNamespace path  context .typeContext .labelContext findNamespace relSpace=
     name relSpace scopeId IdentifierName new =:: mut: idName
     relSpace NAMESPACE_ID_NONE != if
       while
-        context .identifierNames idName map.get idLabel?@ =
+        context .identifierNames idName map.get idLabel?=
         idLabel? optional.hasData and
-            idLabel? .data idLabel@ =
+            idLabel? .data idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
           matches optional.isEmpty if
@@ -276,14 +276,14 @@ namespace: id
       scopeData [] .currentProc NO_PROC == if
         break
       end
-      scopeData [] .parentScope firstNonProcScope@ =
+      scopeData [] .parentScope firstNonProcScope=
     end
     ## 2. search global variable in parent namespaces
     while
-      context [] .typeContext .labelContext .namespaces mNamespace i64 cast list.get .parent mNamespace@ =
+      context [] .typeContext .labelContext .namespaces mNamespace i64 cast list.get .parent mNamespace=
       mNamespace NAMESPACE_ID_NONE !=
     do
-      mNamespace path  context .typeContext .labelContext findNamespace relSpace@ =
+      mNamespace path  context .typeContext .labelContext findNamespace relSpace=
       relSpace idName@ .namespace=
       relSpace NAMESPACE_ID_NONE == if
         continue
@@ -291,9 +291,9 @@ namespace: id
       ## search all scopes outside procedure
       firstNonProcScope idName@ .scope=
       while
-        context .identifierNames idName map.get idLabel?@ =
+        context .identifierNames idName map.get idLabel?=
         idLabel? optional.hasData and
-            idLabel? .data idLabel@ =
+            idLabel? .data idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
           matches optional.isEmpty if
@@ -320,7 +320,7 @@ namespace: id
         importId i64 cast
       list.at .data =:: importInfo
       importInfo [] .nameAlias .length 0 == if
-        importInfo [] .imported path  context .typeContext .labelContext findNamespace relSpace@ =
+        importInfo [] .imported path  context .typeContext .labelContext findNamespace relSpace=
       else
         importInfo [] .nameAlias =:: nameAlias
         path nameAlias string.startsWith ! or path .length nameAlias .length > and
@@ -330,7 +330,7 @@ namespace: id
         end
         importInfo [] .imported
           path nameAlias .length 1 + string.tail
-        context .typeContext .labelContext findNamespace relSpace@ =
+        context .typeContext .labelContext findNamespace relSpace=
       end
       relSpace idName@ .namespace=
       relSpace NAMESPACE_ID_NONE == if
@@ -339,9 +339,9 @@ namespace: id
       ## search all scopes outside procedure
       firstNonProcScope idName@ .scope=
       while
-        context .identifierNames idName map.get idLabel?@ =
+        context .identifierNames idName map.get idLabel?=
         idLabel? optional.hasData and
-            idLabel? .data idLabel@ =
+            idLabel? .data idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
           matches optional.hasData if
@@ -350,10 +350,10 @@ namespace: id
             matches .data =
           end
           mNamespace NAMESPACE_ID_NONE == if
-            idLabel optional.wrap match@ =
-            importInfo [] .imported mNamespace@ =
+            idLabel optional.wrap match=
+            importInfo [] .imported mNamespace=
           else
-            true multiMatch@ =
+            true multiMatch=
           end
         end
         idName .scope GLOBAL_SCOPE !=

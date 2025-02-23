@@ -36,23 +36,23 @@ namespace: optimizerFlags
 
   ## diable all optimizations
   proc( -> ) =>: export: optLevel0
-    false FOLD_CONSTANTS@ =
-    false REMOVE_UNUSED_PROCS@ =
-    false ALLOW_INLINE_SMALL@ =
-    false ALLOW_INLINE@ =
+    false FOLD_CONSTANTS=
+    false REMOVE_UNUSED_PROCS=
+    false ALLOW_INLINE_SMALL=
+    false ALLOW_INLINE=
   end
   ## minimal optimizations, for debug builds
   proc( -> ) =>: export: optLevelDefault
-    true FOLD_CONSTANTS@ =
-    true REMOVE_UNUSED_PROCS@ =
-    true ALLOW_INLINE_SMALL@ =
-    false ALLOW_INLINE@ =
+    true FOLD_CONSTANTS=
+    true REMOVE_UNUSED_PROCS=
+    true ALLOW_INLINE_SMALL=
+    false ALLOW_INLINE=
   end
   proc( -> ) =>: export: optLevel1
-    true FOLD_CONSTANTS@ =
-    true REMOVE_UNUSED_PROCS@ =
-    true ALLOW_INLINE_SMALL@ =
-    true ALLOW_INLINE@ =
+    true FOLD_CONSTANTS=
+    true REMOVE_UNUSED_PROCS=
+    true ALLOW_INLINE_SMALL=
+    true ALLOW_INLINE=
   end
   ## TODO? more opt-leves
   ## ? optSave -> optimize but keep savety checks

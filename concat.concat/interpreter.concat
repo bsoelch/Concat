@@ -942,8 +942,8 @@ namespace: interpreter
         pos errors appendError
         Type .undefined ConstValue .None true return
       end
-      value .TypeId valType@ =
-      true isType@ =
+      value .TypeId valType=
+      true isType=
     end
     valType typeContext types.isPointer or valType typeContext types.isArray if
       valType typeContext types.isFixedSize ! if
@@ -1225,11 +1225,11 @@ namespace: interpreter
       srcType typeContext types.unwrapNamed types.isPrimitive if
         srcType typeContext types.primitiveValue switch
           I8  CHAR8  case intVal i8 cast
-            unsignedCast if i64 cast.u else i64 cast.s end intVal@ = break
+            unsignedCast if i64 cast.u else i64 cast.s end intVal= break
           I16 CHAR16 case intVal i16 cast
-            unsignedCast if i64 cast.u else i64 cast.s end intVal@ = break
+            unsignedCast if i64 cast.u else i64 cast.s end intVal= break
           I32 CHAR32 case intVal i32 cast
-            unsignedCast if i64 cast.u else i64 cast.s end intVal@ = break
+            unsignedCast if i64 cast.u else i64 cast.s end intVal= break
           F32 F64 case break ## XXX? handle precission loss due to representing int as float
           I64 case break ## no change neccessary
           BOOL TYPE case ..unreachable
@@ -1263,9 +1263,9 @@ namespace: interpreter
     true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
       $ typeContext types.isPointer if
-        $ typeContext types.isMutable eltMutable & eltMutable@ =
+        $ typeContext types.isMutable eltMutable & eltMutable=
         typeContext types.getBaseType
-        true isPtr@ =
+        true isPtr=
       end
       elementIndex typeContext types.compositeGetElement
       isPtr if eltMutable typeContext types.getAddressType end
@@ -1328,9 +1328,9 @@ namespace: interpreter
     true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
       $ typeContext types.isPointer if
-        $ typeContext types.isMutable eltMutable & eltMutable@ =
+        $ typeContext types.isMutable eltMutable & eltMutable=
         typeContext types.getBaseType
-        true isPtr@ =
+        true isPtr=
       end
       elementIndex typeContext types.compositeGetElement
     =:: eltType
@@ -1752,7 +1752,7 @@ namespace: interpreter
           valueInfo [] .pushedAt sb.appendPos
         end
         '\n' sb.appendC
-      sb@ =
+      sb=
     finally i 1 - end ..drop
     sb
       "-----------------\n" sb.appendS
@@ -2247,7 +2247,7 @@ proc(
           context .stack=
           value .WildCard ?? and context inUnion if
             types.primitive.TYPE valInfo@ .valueType=
-            Type .empty ConstValue .TypeId value@ =
+            Type .empty ConstValue .TypeId value=
           end
           context minStackOffset =:: stackOffset
           stackOffset initialLabelOffset valueContext op [] .pos context finishLabledValues if
@@ -2335,7 +2335,7 @@ proc(
                 context [] .stackInfo i list.at .data [] .valueType
                 context [] .stack i list.at .data []
               StackValue new list.append
-            stackValues@ =
+            stackValues=
           finally i 1 - end ..drop
           ## resolve correct call for given arguments
           0 sb.create =:: mut: message
@@ -2583,16 +2583,16 @@ proc(
         context minStackOffset =:: minOffset
         context [] .stack .length 1 - =:: mut: offset
         offset minOffset > and context [] .stack offset list.get .WildCard ?? if
-          false fixedSize@ =
-          offset 1 - offset@ =
+          false fixedSize=
+          offset 1 - offset=
         end
         0:i32 =:: mut: intArgs
         offset while $ minOffset >= do =:: i
           context [] .stackInfo i list.at .data [] .valueType typeContext types.isInt ! if
             i break
           end
-          intArgs 1 + intArgs@ =
-        finally i 1 - end offset@ =
+          intArgs 1 + intArgs=
+        finally i 1 - end offset=
         idContext [] .arraySizeBuffer
           list.clear
           intArgs list.ensureCap
@@ -2816,7 +2816,7 @@ proc(
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType@ = valInfo@ =
+        end poppedType= valInfo=
         poppedType typeContext types.containsGeneric if
           "creating generic tuples is not supported" sb.copyPtr
           op [] .pos errors appendError
@@ -2826,7 +2826,7 @@ proc(
           context unpopValue
           EvalResult .Error return
         end
-        true poppedValue@ =
+        true poppedValue=
         poppedType
       else
         op [] .dataType
@@ -2900,8 +2900,8 @@ proc(
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType@ = valInfo@ =
-        true isPoppedType@ =
+        end poppedType= valInfo=
+        true isPoppedType=
         poppedType typeContext types.containsGeneric if
           "generic casts are not supported" sb.copyPtr
           op [] .pos errors appendError
@@ -2924,7 +2924,7 @@ proc(
           context unpopValue
         end
         EvalResult .Error return
-      end =:: oldValue valInfo@ = ## can overwrite value info
+      end =:: oldValue valInfo= ## can overwrite value info
       ## canCast
         valInfo .valueType
         targetType
@@ -3089,8 +3089,8 @@ proc(
       op [] .dataType .undefined ?? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType@ = valInfo@ =
-        true poppedValue@ =
+        end poppedType= valInfo=
+        true poppedValue=
         poppedType typeContext types.containsGeneric if
           "generic types are not supported" sb.copyPtr
           op [] .pos errors appendError
@@ -3140,7 +3140,7 @@ proc(
           values valInfos nArgs context unpopValues
           EvalResult .Error return
         end values nArgs =[] valInfos nArgs =[]
-        nArgs 1 + nArgs@ =
+        nArgs 1 + nArgs=
       end ..drop
       ## mergeTypes
         valInfos 0 [] .valueType
@@ -3294,7 +3294,7 @@ namespace: interpreter
         values valInfos nArgs 1 + context unpopValues
         true return
       end
-      nArgs 1 + nArgs@ =
+      nArgs 1 + nArgs=
     end
     ## bring arguments in correct order
     values nArgs array.reverse
@@ -3616,9 +3616,9 @@ proc(
           ValueInfo new
         Constant new
       map.put ..drop
-      autoArgOffset 1 + autoArgOffset@ =
+      autoArgOffset 1 + autoArgOffset=
       labelFlags id.FLAG_STATIC & ? if
-        staticArgOffset 1 + staticArgOffset@ =
+        staticArgOffset 1 + staticArgOffset=
       end
       continue
     end
@@ -3637,7 +3637,7 @@ proc(
           ValueInfo new
         Constant new
       map.put ..drop
-      staticArgOffset 1 + staticArgOffset@ =
+      staticArgOffset 1 + staticArgOffset=
       continue
     end
     argOffset stackOffset >= if
@@ -3653,16 +3653,16 @@ proc(
     context [] .stack argOffset list.at .data =:: value
     context [] .stackInfo argOffset list.at .data =:: valueInfo
     value [] .GenericArg ?? if
-      true hasGenericArg@ =
+      true hasGenericArg=
       isTypeGenerator and
           value [] .GenericArg labelContext id.labelFlags id.FLAG_STATIC & ? ! if
         "Arguments for Type-generators should be static" sb.copyPtr
         valueInfo [] .pushedAt errors appendError
       end
     else value [] .TypeId ?? and value [] .TypeId typeContext types.isGeneric _if
-      true hasGenericArg@ =
+      true hasGenericArg=
     end
-    argOffset 1 + argOffset@ =
+    argOffset 1 + argOffset=
     label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
       context [] .stack
         value list.appendP

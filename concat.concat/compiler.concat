@@ -42,11 +42,11 @@ proc( -> ) =>: parseArgs
   false =:: mut: hasSrc
   false =:: mut: hasOut
   false =:: mut: hasLib
-  0 sb.create srcFile@ =
-  0 sb.create outFile@ =
-  string optional.empty parserTokensFile@ =
-  string optional.empty compilerTokensFile@ =
-  string optional.empty errorFile@ =
+  0 sb.create srcFile=
+  0 sb.create outFile=
+  string optional.empty parserTokensFile=
+  string optional.empty compilerTokensFile=
+  string optional.empty errorFile=
   0 sys.getArg string.create =:: path
   ArgParserState .IN =:: mut: state
   1:i64 while ..dup sys.argc < do
@@ -63,35 +63,35 @@ proc( -> ) =>: parseArgs
         'h' case
           printedUsage if continue end
           path printUsage
-          true printedUsage@ =
+          true printedUsage=
           continue
         'o' case
           arg .length 2 > if break end
-          ArgParserState .OUT state@ =
+          ArgParserState .OUT state=
           continue
         'p' case
           arg .length 2 > if break end
-          ArgParserState .TOKENS_PARSER state@ =
+          ArgParserState .TOKENS_PARSER state=
           continue
         't' case
           arg .length 2 > if break end
-          ArgParserState .TOKENS_COMPILER state@ =
+          ArgParserState .TOKENS_COMPILER state=
           continue
         'l' case
           arg .length 2 > if break end
-          ArgParserState .LIB_PATH state@ =
+          ArgParserState .LIB_PATH state=
           continue
         'e' case
           arg .length 2 > if break end
-          ArgParserState .ERR_PATH state@ =
+          ArgParserState .ERR_PATH state=
           continue
         'W' case
           arg .length 2 > if break end
-          true _W_ERROR_@ =
+          true _W_ERROR_=
           continue
         'X' case ## experimental features
           arg .length 2 > if break end
-          true _EXPERIMENTAL_@ =
+          true _EXPERIMENTAL_=
           continue
         'O' case ## optimization level
           arg .length 2 == if
@@ -114,13 +114,13 @@ proc( -> ) =>: parseArgs
           break
         '-' case
           arg "--no-core":s string.eq if
-            false _INCLUDE_CORE_@ = continue
+            false _INCLUDE_CORE_= continue
           else arg "--export-global":s string.eq _if
-            true EXPORT_GLOBALS@ = continue
+            true EXPORT_GLOBALS= continue
           else arg "--no-inc-version":s string.eq _if
-            false _INCREMENT_VERSION_@ = continue
+            false _INCREMENT_VERSION_= continue
           else arg "--dump-typeChecker":s string.eq _if
-            true dumpTypeCheckerTokens@ = continue
+            true dumpTypeCheckerTokens= continue
           end
           break
         default break
@@ -141,31 +141,31 @@ proc( -> ) =>: parseArgs
         sb.free ..drop
         break
       IN case
-        srcFile sb.clear arg sb.appendStr srcFile@ =
-        true hasSrc@ =
-        ArgParserState .NONE state@ =
+        srcFile sb.clear arg sb.appendStr srcFile=
+        true hasSrc=
+        ArgParserState .NONE state=
         break
       OUT case
-        outFile sb.clear arg sb.appendStr outFile@ =
-        true hasOut@ =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
+        outFile sb.clear arg sb.appendStr outFile=
+        true hasOut=
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
         break
       TOKENS_PARSER case
-        arg optional.wrap parserTokensFile@ =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
+        arg optional.wrap parserTokensFile=
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
         break
       TOKENS_COMPILER case
-        arg optional.wrap compilerTokensFile@ =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
+        arg optional.wrap compilerTokensFile=
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
         break
       ERR_PATH case
-        arg optional.wrap errorFile@ =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
+        arg optional.wrap errorFile=
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
         break
       LIB_PATH case
-        arg libPath@ =
-        true hasLib@ =
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state@ =
+        arg libPath=
+        true hasLib=
+        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
         break
     end
   finally 1 + end ..drop
@@ -184,27 +184,27 @@ proc( -> ) =>: parseArgs
   srcFile sb.asStr '.' string.lastIndexOf =:: mut: iDot
   srcFile sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
   iDot iSlash < if
-    -1 iDot@ =
+    -1 iDot=
   end
   hasOut ! if
     outFile
       sb.clear
       srcFile sb.appendSb
-    outFile@ =
+    outFile=
     iDot 0 > if
       outFile
         iDot sb.setLength
-      outFile@ =
+      outFile=
     end
     outFile
       _BACKEND_ switch
         QBE case ".ssa\x00" sb.appendS break
       end
-    outFile@ =
+    outFile=
   end
-  iSlash 0 < if "./":s else srcFile .data iSlash 1 + string.create end basePath@ =
+  iSlash 0 < if "./":s else srcFile .data iSlash 1 + string.create end basePath=
   hasLib ! if
-    "./lib/":s libPath@ =
+    "./lib/":s libPath=
   else libPath ..dup .length 1 - string.charAt ..dup '/' != ..swap '\\' != & _if
     io.stdErr "library path has to end with '/' or '\\'\n" io.fputs ..drop
     srcFile sb.free
@@ -227,9 +227,9 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
         errors [] ..over.2 list.at .data =:: err
         err [] sb.appendCompilerError
         err [] .errType .ERROR ?? if
-          true hasError@ =
+          true hasError=
         else _W_ERROR_ err [] .errType .WARNING ?? & _if
-          true hasError@ =
+          true hasError=
         end
       ..swap 1 +
     end ..drop
@@ -277,7 +277,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
       ..dup "\n-----------------\n" io.fputs ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop
-    io.OPEN_APPEND openMode@ =
+    io.OPEN_APPEND openMode=
   end
   prog@ .errors checkErrors
   prog@ prepareCompile

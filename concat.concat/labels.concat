@@ -298,7 +298,7 @@ namespace: id
     path
       while ..dup .length 0 > do
         '.' string.split
-        id ..swap create context childId id@ =
+        id ..swap create context childId id=
         id NAMESPACE_ID_NONE == if
           break
         end
@@ -383,7 +383,7 @@ namespace: sb
       label? .data [] .namespaceInfo .current =:: mut: mNamespace
       while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do
         mNamespace context id.namespaceName list.append
-        mNamespace context id.parentNamespace mNamespace@ =
+        mNamespace context id.parentNamespace mNamespace=
       end
     =:: namePath
     asciify if

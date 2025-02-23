@@ -411,48 +411,48 @@ proc(
   false =:: mut: isModifier
   code start
     while
-      false isModifier@ =
+      false isModifier=
       ..dup "mut:":s string.eq if
-        id.FLAG_MUTABLE flags | flags@ =
-        true isModifier@ =
+        id.FLAG_MUTABLE flags | flags=
+        true isModifier=
       else ..dup "auto:":s string.eq _if
-        id.FLAG_AUTO flags | flags@ =
-        id.FLAG_STATIC flags | flags@ =
+        id.FLAG_AUTO flags | flags=
+        id.FLAG_STATIC flags | flags=
         ## XXX? allow auto-args to be non-static
         ##  + error when generic-argument passed to sub-procedure
-        true isModifier@ =
+        true isModifier=
       else ..dup "static:":s string.eq _if
-        id.FLAG_STATIC flags | flags@ =
-        true isModifier@ =
+        id.FLAG_STATIC flags | flags=
+        true isModifier=
       else ..dup "extern:":s string.eq _if
-        id.FLAG_EXTERN flags | flags@ =
-        true isModifier@ =
+        id.FLAG_EXTERN flags | flags=
+        true isModifier=
       else ..dup "export:":s string.eq _if
-        id.FLAG_EXPORT flags | flags@ =
-        true isModifier@ =
+        id.FLAG_EXPORT flags | flags=
+        true isModifier=
       else ..dup "inline:":s string.eq _if
-        id.FLAG_INLINE flags | flags@ =
-        true isModifier@ =
+        id.FLAG_INLINE flags | flags=
+        true isModifier=
       else ..dup "no:inline:":s string.eq _if
-        id.FLAG_NO_INLINE flags | flags@ =
-        true isModifier@ =
+        id.FLAG_NO_INLINE flags | flags=
+        true isModifier=
       else ..dup "#:experimental:":s string.eq _if
-        id.FLAG_EXPERIMENTAL flags | flags@ =
-        true isModifier@ =
+        id.FLAG_EXPERIMENTAL flags | flags=
+        true isModifier=
       else ..dup "shadow:":s string.eq _if
-        id.FLAG_SHADOW flags | flags@ =
-        true isModifier@ =
+        id.FLAG_SHADOW flags | flags=
+        true isModifier=
       else ..dup "alias:":s string.eq _if
-        id.FLAG_ALIAS flags | flags@ =
-        true isModifier@ =
+        id.FLAG_ALIAS flags | flags=
+        true isModifier=
       else ..dup "merge:":s string.eq _if
-        id.FLAG_MERGE flags | flags@ =
-        true isModifier@ =
+        id.FLAG_MERGE flags | flags=
+        true isModifier=
       else ..dup "ignoreUnused:":s string.eq _if
-        id.FLAG_IGNORE_UNUSED flags | flags@ =
-        true isModifier@ =
+        id.FLAG_IGNORE_UNUSED flags | flags=
+        true isModifier=
       else ..dup ":":s string.endsWith _if
-        true isModifier@ =
+        true isModifier=
       end
       isModifier ! if
         break
@@ -724,7 +724,7 @@ proc(
           token .LITERAL
             $ 0 string.charAt '.' == if
               1 string.tail
-              true isElement@ =
+              true isElement=
             end
             $ "@":s string.endsWith if
               $ .length 1 - string.head
@@ -1244,7 +1244,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       id.declareIdentifier if ..drop.2
         experimental state openProcBlock
         return
-      end =:: idData procName@ =
+      end =:: idData procName=
       idData .constValue =:: procConst
       ## ensure procedure block is opened after declaring procedure,
       ##   but before early return due to error
@@ -1371,7 +1371,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           progContext .errors
         id.declareIdentifier if ..drop.2
           return
-        end ..drop labelId@ =
+        end ..drop labelId=
         bundleId
       else =:: idData
         idData [] .idType .PROCEDURE_BUNDLE ?? ! if
@@ -1481,7 +1481,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         progContext .errors
       id.declareIdentifier if ..drop.2
         return
-      end ..drop labelId@ =
+      end ..drop labelId=
       typeContext .typeSetEntries [] .length =:: offset
       while fileState errors nextIdentifier =:: procName
         procName "end":s string.eq !
@@ -1806,11 +1806,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           BlockType ..length 39 == "no new block types" assert
           b .blockType switch
             PROCEDURE EXPERIMENTAL_PROCEDURE case
-              false inConstBlock@ =
+              false inConstBlock=
               break.findContainer
             INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
                 TYPE_CPROC_IN TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE NAMESPACE case
-              false inProcedure@ =
+              false inProcedure=
               break.findContainer
             default break
           end
@@ -1827,20 +1827,20 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       false =:: mut: forceImmutable
       inConstBlock if
         IdentifierType .LABEL
-        true allowImmutableDeclaration@ =
+        true allowImmutableDeclaration=
       else inProcedure _if
         IdentifierType .LOCAL_VAR
       else isInit ! and valType typeContext types.isProcedure _if
         IdentifierType .PROCEDURE
-        true forceImmutable@ =
-        true allowImmutableDeclaration@ =
+        true forceImmutable=
+        true allowImmutableDeclaration=
       else valType types.primitive.TYPE types.typeEquals _if
         IdentifierType .TYPE
-        true forceImmutable@ =
-        true allowImmutableDeclaration@ =
+        true forceImmutable=
+        true allowImmutableDeclaration=
       else ## for comparability with old parser
         IdentifierType .GLOBAL_VAR
-        true allowImmutableDeclaration@ =
+        true allowImmutableDeclaration=
       end =:: idType
       fileState errors nextIdentifier fileState state
         ## make pre-declared variables mutable by default
@@ -1885,7 +1885,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         progContext .errors
       id.declareIdentifier if ..drop.2
         return
-      end =:: idData label@ =
+      end =:: idData label=
       idType .TYPE ?? if
         isInit if
           fileState state popTypeConstant ! "pop type" assert
@@ -1941,7 +1941,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           aliasData [] .constValue .Procedure =:: mut: aliasId
           progContext [] .procedures aliasId i64 cast list.at .data
             $ .implementation [] .alias ?? if
-              .implementation [] .alias aliasId@ =
+              .implementation [] .alias aliasId=
               progContext [] .procedures aliasId i64 cast list.at .data
               $ .implementation [] .alias ?? ! "no double alias" assert
             end
@@ -2030,7 +2030,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         progContext .errors
       id.declareIdentifier if ..drop.2
         return
-      end =:: idData labelId@ =
+      end =:: idData labelId=
       ## create constant value after creating declaration
       idType .TYPE ?? if
         constValue .TypeId =:: typeConst
@@ -2209,7 +2209,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..over":s string.eq or
          ..dup "..over.":s string.startsWith  _if =:: mut: opName
       opName "..over." ..length string.tail =:: params
-      "..over":s opName@ =
+      "..over":s opName=
       params opName fileState [] .wordStart state getCompilerOpParam ## :offset
       StackModType .COPY fileState [] .wordStart opStackMod state appendOp
       return
@@ -2219,7 +2219,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup 0 string.charAt '$' == and ..dup .length 1 >= and
         ..dup 1 string.charAt '0' >= and ..dup 1 string.charAt '9' <= _if =:: mut: opName
       opName 1 string.tail =:: params
-      "$":s opName@ =
+      "$":s opName=
       params opName fileState [] .wordStart state getCompilerOpParam ## :offset
       StackModType .COPY fileState [] .wordStart opStackMod state appendOp
       return
@@ -2232,7 +2232,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..drop":s string.eq or
          ..dup "..drop.":s string.startsWith _if =:: mut: opName
       opName "..drop." ..length string.tail =:: params
-      "..drop":s opName@ =
+      "..drop":s opName=
       params opName fileState [] .wordStart state getCompilerOpParam ## :count
       StackModType .DROP fileState [] .wordStart opStackMod state appendOp
       return
@@ -2396,7 +2396,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..?types":s string.eq or
         ..dup "..?types.":s string.startsWith _if =:: mut: opName
       opName "..?types." ..length string.tail =:: params
-      "..?types":s opName@ =
+      "..?types":s opName=
       -1 =:: mut: count
       0 =:: mut: depth
       params .length 0 > if
@@ -2405,13 +2405,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           head
             opName
             fileState [] .wordStart
-          state getCompilerOpParam count@ =
+          state getCompilerOpParam count=
         end
         tail .length 0 > if
           tail
             opName
             fileState [] .wordStart
-          state getCompilerOpParam depth@ =
+          state getCompilerOpParam depth=
         end
       end
       ## opTypesInfo
@@ -2423,7 +2423,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..?stack":s string.eq or
         ..dup "..?stack.":s string.startsWith _if =:: mut: opName
       opName "..?stack." ..length string.tail =:: params
-      "..?stack":s opName@ =
+      "..?stack":s opName=
       params .length 0 > if
         params opName fileState [] .wordStart state getCompilerOpParam
       else -1 end
@@ -2432,7 +2432,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..?ops":s string.eq or
         ..dup "..?ops.":s string.startsWith _if =:: mut: opName
       opName "..?ops." ..length string.tail =:: params
-      "..?ops":s opName@ =
+      "..?ops":s opName=
       params .length 0 > if
         params opName fileState [] .wordStart state getCompilerOpParam
       else -1 end
@@ -2571,13 +2571,13 @@ proc(
   FILE_ID_NONE =:: mut: imported
   0:i32 while ..dup progContext [] .progFiles .length < do
     progContext [] .progFiles ..over list.get .fileName sb.asStr fileName sb.asStr string.eq if
-      ..dup FileId cast imported@ =
+      ..dup FileId cast imported=
       break
     end
     1 +
   end ..drop
   imported FILE_ID_NONE == if ## file has not yet been imported
-    fileName isLibImport state parseFile fileName pos state checkIOError imported@ =
+    fileName isLibImport state parseFile fileName pos state checkIOError imported=
     imported FILE_ID_NONE == if
       return
     end
@@ -2714,9 +2714,9 @@ proc(
   idContext id.currentScope =:: prevScope
   idContext id.clearScope
   _INCLUDE_CORE_ if
-    false _INCLUDE_CORE_@ = ## don't include core in core
+    false _INCLUDE_CORE_= ## don't include core in core
     "core":s fileState .currentPos state importLibraryFile
-    true _INCLUDE_CORE_@ =
+    true _INCLUDE_CORE_=
   end
   idContext id.openScope
   fileId id.NO_SCOPE idContext id.importFile ## import file in its own scope

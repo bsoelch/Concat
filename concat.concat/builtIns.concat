@@ -199,7 +199,7 @@ proc(
     args@ 1 slice.create
     argLabels
     true
-  typeContext types.newProcArgs procOut@ =
+  typeContext types.newProcArgs procOut=
   ## newProcedure
     procIn
     procOut
@@ -211,7 +211,7 @@ proc(
     args@ slice.wrap
     argLabels
     false
-  typeContext types.newProcArgs procIn@ =
+  typeContext types.newProcArgs procIn=
   ## newProcedure
     procIn
     procOut
@@ -224,7 +224,7 @@ proc(
     args@ 1 slice.create
     argLabels
     true
-  typeContext types.newProcArgs procOut@ =
+  typeContext types.newProcArgs procOut=
   ## newProcedure
     procIn
     procOut
@@ -236,7 +236,7 @@ proc(
     args@ 1 @[] 1 slice.create
     argLabels
     false
-  typeContext types.newProcArgs procIn@ =
+  typeContext types.newProcArgs procIn=
   ## newProcedure
     procIn
     procOut
@@ -280,7 +280,7 @@ proc(
     args@ 1 @[] 1 slice.create
     argLabels
     true
-  typeContext types.newProcArgs procOut@ =
+  typeContext types.newProcArgs procOut=
   ## newProcedure
     procIn
     procOut
@@ -328,7 +328,7 @@ proc(
     args@ 1 slice.create
     argLabels
     true
-  typeContext types.newProcArgs procOut@ =
+  typeContext types.newProcArgs procOut=
   ## newProcedure
     procIn
     procOut

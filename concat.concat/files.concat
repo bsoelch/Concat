@@ -181,12 +181,12 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
           c2 fileState .currentPos updateFilePos
           c2 '+' == and code $1 1 + string.charAt '#' == if
             '#' fileState .currentPos updateFilePos
-            k 1 - k@ =
+            k 1 - k=
             k 0 == if 2 + break end
             2 + continue
           else c2 '#' == and code $1 1 + string.charAt '+' == _if
             '+' fileState .currentPos updateFilePos
-            k 1 + k@ =
+            k 1 + k=
             2 + continue
           end
           1 +
@@ -233,7 +233,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     end
     c fileState .currentPos updateFilePos
     state .STRING_ESCAPE ?? if
-      ParserState .STRING state@ =
+      ParserState .STRING state=
       i 1 + continue
     end
     state .RAW_STRING ?? if
@@ -263,16 +263,16 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
           stringStart '\'' == if Token .CHAR else Token .STRING end
         return
       else c '\\' == _if
-        ParserState .STRING_ESCAPE state@ =
+        ParserState .STRING_ESCAPE state=
       end
       i 1 + continue
     end
     c '\'' == or c '"' == or c '`' == if  ## char/string-literal
-      code i0 i i0 - string.getSlice checkStringPrefix stringType@ =
+      code i0 i i0 - string.getSlice checkStringPrefix stringType=
       stringType .INT_LITERAL ?? if i 1 + continue end
-      i 1 + i0@ =
-      c stringStart@ =
-      c '`' == if ParserState .RAW_STRING else ParserState .STRING end state@ =
+      i 1 + i0=
+      c stringStart=
+      c '`' == if ParserState .RAW_STRING else ParserState .STRING end state=
     end
     i 1 +
   end ..drop
