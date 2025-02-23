@@ -1,0 +1,7 @@
+proc( -> ) =>: main
+  0 while
+    $ 1 & ? if continue end
+  $ 5 < finally
+    1 +
+  end ..drop
+end

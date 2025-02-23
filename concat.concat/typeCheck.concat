@@ -2705,15 +2705,8 @@ proc(
       state [] .compiledOps .length state .blockStart=
       op .val .block .blockType =:: blockType
       blockType switch
-        TYPE_TUPLE
-        TYPE_STRUCT
-        TYPE_ENUM
-        TYPE_UNION
-        TYPE_UNTAGGED_UNION
-        TYPE_PROC_IN
-        TYPE_PROC_OUT
-        TYPE_COMPOSITE
-        INITIALIZER case
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE INITIALIZER case
           ## type-blocks and initializers are handled by the interpreter
           op@ state prepareInterpretTypeBlock
           return
@@ -3589,15 +3582,9 @@ proc(
     blockEnd case
       state [] .compiledOps .length state .blockStart=
       op .val .blockEnd .blockType switch
-        TYPE_TUPLE
-        TYPE_STRUCT
-        TYPE_ENUM
-        TYPE_UNION
-        TYPE_UNTAGGED_UNION
-        TYPE_PROC_IN
-        TYPE_PROC_OUT
-        TYPE_COMPOSITE
-        INITIALIZER case ## XXX allow dynamic initializer blocks
+        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
+        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE INITIALIZER case
+          ## XXX allow dynamic initializer blocks
           "could not evaluate " sb.copyPtr
             op .val .blockEnd .blockType sb.appendBlockType
             " block" sb.appendS

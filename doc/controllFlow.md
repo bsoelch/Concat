@@ -15,12 +15,12 @@ basic form:
 general form:
 
 ```
-  <condition> if
+  <condition> ((and|or) <condition>)* if
      <if-body>
-  else <condition> _if
-     <elif-body>
-  else
-     <else-body>
+  ( else <condition> ((and|or) <condition>)* _if
+     <elif-body> )*
+  ( else
+     <else-body> )?
   end
 ```
 
@@ -70,12 +70,12 @@ syntax:
 
 ```
   <value> switch
-     <label>+ case
+     ( <label>+ case
        <case-body>
-       break
-     default
+       break )+
+     ( default
        <default-body>
-       break
+       break )*
   end
 ```
 
@@ -134,34 +134,35 @@ end
 
 ## while-block
 
+basic forms:
+
+```
+  while <while-body> <condition> do
+     <do-body>
+  end
+```
+
 syntax:
 
 ```
-  while
-    <while-body>
-    <condition>
-  end
-
-  while <while-body> <condition> do
-     <do-body>
-  end
-
-  while <while-body> <condition> do
-     <do-body>
-  finally
-    <finally-body>
+  while <while-body> <condition> ( (and|or) <condition> )* ( do
+     <do-body> )?
+  ( finally
+    <finally-body> )?
   end
 ```
 
 A while loop first evaluates the code until `do` then pops a boolean from the stack, if the value is false the execution continues after `do`, otherwise the program jumps to the position after `end`.
-When reaching `end` the program jumps back to `while`.
-Within the loop `break` can be used to break out of the loop ( jump to the position after end ) and `continue` can be used to restart the loop ( jump to the end of the loop body ).
+Like for `if`-blocks `and` and `or` can be used to shot-circuit conditional statements.
+If a while block does not contain a `do` statement the condition is instead checked when reaching `finally` or `end`.
+
+When reaching the `end` of a loop the program jumps back to `while`.
+
+Within the loop `break` can be used to break out of the loop ( jump to the position after end ) and `continue` can be used to restart the loop ( jump to `finally` or the end of the loop if there is not explicit finally statement ).
 The types at the end of all `break` branches have to be equal ( implicitly convertible to ) the types on the stack when reaching `do` ( after popping the condition ).
 The types obtained by merging the `continue` branches have to be equal to the types at the start of the loop.
 
-
-Optionally a while loop can contain a `finally` statement, the code between `finally`  and `end` will be executed after each iteration of the loop.
-If a `finally` statement is present the `continue` branches will jump to `finally` instead of `end`, it is not possible to continue the loop after reaching `finally`.
+Optionally a while loop can contain a `finally` statement, the code between `finally`  and `end` will be executed after each iteration of the loop, it is not possible to use `continue` in the section between `finally` and `end`.
 
 ## for-loop
 
@@ -179,12 +180,8 @@ syntax:
   end
 ```
 
-For-loops are syntactic suggar for easily iterating over a range or collection.
+For-loops are syntactic suggar to simplify iterating over a range or collection.
 
-If the iterable is a fixed sized pointer the loop will iterate over the elements of the array at the pointer location, if the iterable is an integer the loop will iterate over the range from zero (inclusive) to the signed interpretation that integer (exclusive).
-Each iteration the current value will be pushed onto the stack.
-
-It is possible to iterate over user defined types by overriding the `..itr.{}` procedure.
 A `for` loop behaves identical to the following code
 ```
   <iterable> ..itr.prepare =:: mut: tmp while tmp ..itr.check do
@@ -195,23 +192,36 @@ A `for` loop behaves identical to the following code
   end tmp ..itr.end
 ```
 
+It is possible to iterate over user defined types by adding overloads to the `..itr.{}` procedure bundles,
+the given sigantures are for an iterator `I` over a container `X` containing values of type `T`.
+
+```
+( X -> I )    : ..itr.prepare ## create an iterator from the top stack value(s)
+( I -> bool ) : ..itr.check   ## check if the iterator has additional elements ( should return a bool )
+( I -> T )    : ..itr.get     ## get the current value of the iterator
+( I -> I )    : ..itr.step    ## advance the iterator by a single value
+( I -> )      : ..itr.end     ## cleanup the iterator
+```
+
+By default the core library implements procedures for iterating over an integer ( the range from `0` to the given number) and fixed sized pointers (all elements in the memory region targeted by that array ), the standard library additionally adds iterators over the elements of slices and lists.
+<!-- TODO? mention advanced iterators (slice.map) -->
+
+Examples:
+```
+5 for =:: i
+   ## i iterators from 0 to 4
+end
+```
+
 ## and / or
 
 syntax (examples, number and type of and/or can be chosen arbitrarily ):
 ```
-  <condition> and <condition> or <condition> or <condition> end
-
-  <condition> and <condition> or <condition> if
-     ...
-  end
-
-  while <condition> and <condition> or <condition> do
-    ...
-  end
+  <condition> ( (and|or) <condition> )+ end
 ```
 
 `and` and `or` can be used to short-circuit evaluate logical expressions.
-And/or blocks start with the first `and` or `or` statement, can contain any number of additional `and`/`or` statements and end with the matching `end` statement, for convenient use as part of conditional statements and/or blocks are automatically closed when hitting any of `if`, `_if`, `do` or `assert`.
+And/or blocks start with the first `and` or `or` statement, can contain any number of additional `and`/`or` statements and end with the matching `end` statement, for convenient use as part of conditional statements and/or blocks are automatically closed when hitting any of `if`, `_if` or `do`.
 
 When the execution reaches an `and` or `or` statement a boolean is popped from the stack, if the value is `false` ( in the case of `and` ) or `true` ( in the case of `or` ) the program jumps to the end of the and/or block otherwise the execution continues along the previous path.
 

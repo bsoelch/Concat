@@ -35,6 +35,7 @@ enum(
   TYPE_UNION
   TYPE_UNTAGGED_UNION
   TYPE_PROC_IN
+  TYPE_CPROC_IN
   TYPE_PROC_OUT
   TYPE_COMPOSITE
   NAMESPACE
@@ -48,8 +49,8 @@ overload: ? JumpDistance.toBool end
 struct(
   BlockType : blockType
   LabelId : blockLabel
-  BlockId : mut: blockId
-  JumpDistance : mut: jumpDistance
+  BlockId : blockId
+  JumpDistance : jumpDistance
 ) =:: export: BlockData
 namespace: sb
   proc( stringBuilder BlockType -> stringBuilder ) =>: export: appendBlockType
@@ -162,8 +163,11 @@ namespace: sb
       TYPE_PROC_IN case
         "proc( )" sb.appendS
         return
+      TYPE_CPROC_IN case
+        "proc.c( )" sb.appendS
+        return
       TYPE_PROC_OUT case
-        "proc( -> )" sb.appendS
+        "( -> )" sb.appendS
         return
       NAMESPACE case
         "namespace" sb.appendS

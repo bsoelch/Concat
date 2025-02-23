@@ -3213,7 +3213,7 @@ proc(
       arg [] .valId sb.appendI
     end
     ")\n" sb.appendS
-    retType typeContext types.isProcOut if
+    retType typeContext types.isProcOut and retType typeContext types.isEmpty ! if
       ## flattenTupleQBE
         retType
         pos context popValue
@@ -4563,7 +4563,7 @@ proc(
           return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
-        TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
+        TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
           break
       end
@@ -4788,7 +4788,7 @@ proc(
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
-        TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
+        TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
           break
       end

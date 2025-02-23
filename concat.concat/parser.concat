@@ -1115,9 +1115,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "finally":s string.eq _if =:: opName
       state [] .openBlocks list.peek =:: current?
-      current? optional.isEmpty if true else current? .data [] .blockType .DO ?? ! end if
-        "'finally' is only allowed after 'do' in while-blocks" sb.copyPtr fileState [] .wordStart errors appendError
+      current? optional.isEmpty or
+          current? .data [] .blockType .WHILE ?? ! and
+          current? .data [] .blockType .DO ?? ! if
+        "'finally' is only allowed in while-blocks" sb.copyPtr fileState [] .wordStart errors appendError
         return
+      end
+      current? .data [] .blockType .WHILE ?? if
+        BlockType .DO  fileState [] .wordStart opBlock  state appendOp
       end
       BlockType .FINALLY  current? .data .blockType=
       BlockType .FINALLY  fileState [] .wordStart opBlock  state appendOp
@@ -1565,7 +1570,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             currentBlock fileState [] .wordStart opEndBlock  state appendOp
             break
           TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION
-          TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN INITIALIZER case
+          TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN TYPE_CPROC_IN INITIALIZER case
             "unexpected 'end' statement in " sb.copyPtr
               currentBlock sb.appendBlockType
               "-block" sb.appendS
@@ -1685,18 +1690,24 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .TYPE_ENUM fileState [] .wordStart opBlock state appendOp
       return
     ## forward compatability: `proc.c` will be used for proc with c-call convention
-    else ..dup "proc(":s string.eq or $ "proc.c(":s string.eq _if ..drop
-      BlockType .TYPE_PROC_IN state openScopedBlock
+    else ..dup "proc(":s string.eq or $ "proc.c(":s string.eq _if =:: opName
+      opName .length "proc(":s .length == if
+        BlockType .TYPE_PROC_IN
+      else
+        BlockType .TYPE_CPROC_IN
+      end =:: procBlockType
+      procBlockType state openScopedBlock
       state [] .constantBlocks
         ## CompositeConstantOffset
           state opCount
         CompositeConstantOffset new list.append
       state .constantBlocks=
-      BlockType .TYPE_PROC_IN fileState [] .wordStart opBlock state appendOp
+      procBlockType fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "->":s string.eq _if =:: opName
       state currentBlockType =:: blockType
-      blockType .TYPE_COMPOSITE ?? ! blockType .TYPE_PROC_IN ?? ! & if
+      blockType .TYPE_PROC_IN ?? ! and blockType .TYPE_COMPOSITE ?? ! and
+          blockType .TYPE_CPROC_IN ?? ! if
         "unexpected " sb.copyPtr
           opName sb.appendStr
           " in " sb.appendS
@@ -1724,7 +1735,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           break
         TYPE_PROC_OUT case
           state closeBlock  =:: isError .blockType =:: outerType
-          isError ! and outerType .TYPE_PROC_IN ?? or outerType .TYPE_COMPOSITE ?? if
+          isError ! and outerType .TYPE_PROC_IN ?? or outerType .TYPE_COMPOSITE ?? or
+              outerType .TYPE_CPROC_IN ?? if
             outerType
               fileState [] .wordStart
             opEndBlock state appendOp
@@ -1736,7 +1748,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             outerType sb.appendBlockType
           fileState [] .wordStart errors appendError
           return
-        TYPE_PROC_IN case
+        TYPE_PROC_IN TYPE_CPROC_IN case
          "unexpected " sb.copyPtr
             opName sb.appendStr
             " in procedure block, expected -> followed by return types" sb.appendS
@@ -1794,13 +1806,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
         state [] .openBlocks list.reversed for: findContainer =:: b
-          BlockType ..length 38 == "no new block types" assert
+          BlockType ..length 39 == "no new block types" assert
           b .blockType switch
             PROCEDURE EXPERIMENTAL_PROCEDURE case
               false inConstBlock@ =
               break.findContainer
             INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-                TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE NAMESPACE case
+                TYPE_CPROC_IN TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE NAMESPACE case
               false inProcedure@ =
               break.findContainer
             default break
@@ -2358,7 +2370,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ..drop ## discard remainder of file
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek =:: next?
-          BlockType ..length 38 == "no new block types" assert
+          BlockType ..length 39 == "no new block types" assert
           next? optional.hasData and next? .data [] .blockType switch
             IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DEFAULT case true break
             default false break

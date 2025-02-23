@@ -219,9 +219,11 @@
           \(|\)                        |
           tuple\(                      |
           proc\(                       |
+          proc\.c\(                    |
           -&gt;                        |
           enum\(                       |
           struct\(                     |
+          struct\.c\(                  |
           union\(                      |
           union\.raw\(                 |
           array                        |

@@ -197,7 +197,8 @@ namespace: interpreter
         TYPE_ENUM case
           true return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION case
+            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION
+            TYPE_UNTAGGED_UNION case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
@@ -217,7 +218,7 @@ namespace: interpreter
         TYPE_UNION TYPE_UNTAGGED_UNION case
            true return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
+            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
             SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
@@ -235,7 +236,7 @@ namespace: interpreter
     context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
       context [] .openBlocks i list.at .data [] .blockType switch
         INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-            TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
           true return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           false return
@@ -258,8 +259,8 @@ namespace: interpreter
            true return
         IF_TRUE AND_TRUE OR_FALSE ELSE_FALSE
           PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-          TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION
-          UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
+          TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION
+          TYPE_UNTAGGED_UNION UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
           NAMESPACE case break
@@ -307,7 +308,7 @@ namespace: interpreter
     context .openBlocks=
     result optional.wrap return
   end
-  BlockType ..length 38 == "number of block types" assert
+  BlockType ..length 39 == "number of block types" assert
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
     context peekBlock =:: current
     current optional.isEmpty if false return end
@@ -349,7 +350,7 @@ namespace: interpreter
            block [] .labelOffset LabeledValueContext .TYPE_UNION return
         TYPE_ENUM case
            block [] .labelOffset LabeledValueContext .TYPE_ENUM return
-        TYPE_PROC_IN TYPE_PROC_OUT case
+        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT case
            block [] .labelOffset LabeledValueContext .TYPE_PROC return
         PROCEDURE EXPERIMENTAL_PROCEDURE
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
@@ -595,7 +596,11 @@ namespace: interpreter
     context pushValue
     false return
   end
-  proc( Operation ptr : op BlockInfo ptr : closedBlock InterpreterContext ptr.mut : context -> bool ) =>: closeProcTypeBlock
+  proc(
+    Operation ptr : op
+    BlockInfo ptr : closedBlock
+    InterpreterContext ptr.mut : context
+  -> bool ) =>: closeProcTypeBlock
     context [] .program .errors =:: errors
     context [] .program .idContext =:: idContext
     idContext .typeContext =:: typeContext
@@ -613,6 +618,15 @@ namespace: interpreter
     context [] .typeBuffer
       list.pop =:: procOut ## last value is return type
     context .typeBuffer=
+    closedBlock .blockType .TYPE_CPROC_IN ?? if
+      CallingConvention .CCALL
+      procOut typeContext types.compositeEltCount 1 > if
+        "C-procedures cannot have multiple return values" sb.copyPtr
+        op [] .pos errors appendError
+      end
+    else
+      CallingConvention.DEFAULT
+    end =:: callConvention
     op closedBlock
       LabeledValueContext .TYPE_PROC
       op [] .pos
@@ -622,7 +636,7 @@ namespace: interpreter
       context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
       false
     typeContext types.newProcArgs =:: procIn
-    procIn procOut CallingConvention.DEFAULT typeContext types.newProcedure if ..drop
+    procIn procOut callConvention typeContext types.newProcedure if ..drop
       "could not create procedure-type" sb.copyPtr op [] .pos errors appendError
       true return
     end =:: newType
@@ -1823,7 +1837,7 @@ proc(
     block case
       op [] .val .block .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-        TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
+        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
         INITIALIZER case
           op [] .val .block .blockType true context openBlock
           EvalResult .Ok return
@@ -2010,7 +2024,7 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .evalType .INTERPRET ?? if
-        BlockType ..length 38 == "no-new block-types" assert
+        BlockType ..length 39 == "no-new block-types" assert
         blockType switch
           ELSE SWITCH AND OR case EvalResult .Ok return
           WHILE case
@@ -2121,7 +2135,7 @@ proc(
             op [] .pos
           context pushValue
           EvalResult .Ok return
-        TYPE_PROC_IN case
+        TYPE_PROC_IN TYPE_CPROC_IN case
           op closedBlock@ context closeProcTypeBlock wrapResult return
         TYPE_PROC_OUT case
           op closedBlock@

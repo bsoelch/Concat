@@ -113,9 +113,9 @@ namespace: id
   -1:NamespaceImportId =:: export: NAMESPACE_IMPORT_NONE
 end
 
-enum( STRUCT POINTER ) =:: export: CallingConvention
+enum( CONCAT CCALL ) =:: export: CallingConvention
 namespace: CallingConvention
-  CallingConvention .POINTER =:: export: DEFAULT
+  CallingConvention .CONCAT =:: export: DEFAULT
 end
 
 type : export: BuiltIn

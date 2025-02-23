@@ -1824,8 +1824,7 @@ namespace: types
     proc context getProcOut if true return end =:: outType
     proc context getCallConvention if ..drop Type .undefined true return end =:: callConvention
     callConvention switch
-      STRUCT case outType false return
-      POINTER case
+      CCALL CONCAT case
         outType context compositeElts =:: elts
         elts .length 0 == if
           Type .empty false return
@@ -1837,8 +1836,8 @@ namespace: types
     proc context getProcOut if ..drop Type slice.empty true return end =:: outType
     proc context getCallConvention if ..drop Type slice.empty true return end =:: callConvention
     callConvention switch
-      STRUCT case Type slice.empty false return
-      POINTER case
+      CCALL case Type slice.empty false return
+      CONCAT case
         outType context compositeElts =:: elts
         elts .length 0 == if
           Type slice.empty false return
@@ -1849,6 +1848,9 @@ namespace: types
   proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr.mut : context -> Type bool ) =>: export: newProcedure
     in .undefined ?? or out .undefined ?? if
       Type .undefined true return
+    end
+    callConvention .CCALL ?? and out context compositeEltCount 1 > if
+      Type .undefined true return ## XXX? better error handling
     end
     context .procTypes =:: procs
     0:i32 while ..dup procs [] .length < do =:: i
@@ -2917,11 +2919,14 @@ namespace: sb
       procOut case
         sb t true depth context appendComposite return
       procedure case
+        context [] .procTypes t .procedure i64 cast list.get =:: procType
         sb
-          "proc["      appendS
+          procType .callingConvention switch
+            CONCAT case "proc["   appendS break
+            CCALL  case "proc.c[" appendS break
+          end
           t .procedure i64 cast appendI
           "]( "        appendS
-          context [] .procTypes t .procedure i64 cast list.get =:: procType
           procType .in context depth appendTypeRecursive
           "-> " appendS
           procType .out context depth appendTypeRecursive
