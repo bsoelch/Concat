@@ -2176,7 +2176,7 @@ proc(
       ## requireTypes
         op@ .dataType slice.wrap
         "set identifier":s
-        1
+        0
         op .pos
         state
       requireTypes if return end
