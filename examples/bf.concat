@@ -13,9 +13,9 @@ proc( i64 : ip string : code -> i64 ) =>: skipLoop
   1 =:: mut: n
   ip 1 + while $ code .length < do =:: i
     code i string.charAt '[' == if
-      n 1 + n@ =
+      n 1 + n=
     else code i string.charAt ']' == _if
-      n 1 - n@ =
+      n 1 - n=
       n 0 <= if i return end
     end
   finally i 1 + end return
@@ -30,8 +30,8 @@ proc( string : code i64 : tapeCap -> i8 ) =>: runBf_C
     code ip string.charAt switch
       '+' case tape mp [] 1 + tape mp =[] break
       '-' case tape mp [] 1 - tape mp =[] break
-      '>' case mp 1 + tapeCap %% mp@ = break
-      '<' case mp 1 - tapeCap %% mp@ = break
+      '>' case mp 1 + tapeCap %% mp= break
+      '<' case mp 1 - tapeCap %% mp= break
       '.' case tape mp [] char8 cast io.putc ..drop break
       ',' case
           io.getChar io.FILE_ERROR_NONE == if
@@ -42,22 +42,22 @@ proc( string : code i64 : tapeCap -> i8 ) =>: runBf_C
           break
       '[' case
         tape mp [] ? if
-          stack ip list.append stack@ =
+          stack ip list.append stack=
           continue
         end
-        ip code skipLoop ip@ =
+        ip code skipLoop ip=
         break
       ']' case
         stack list.peek .data [] =:: loopStart
         tape mp [] ? if
-          loopStart ip@ =
+          loopStart ip=
           continue
         else
-          stack list.pop ..drop stack@ =
+          stack list.pop ..drop stack=
         end       
         break
     end
-  finally ip 1 + ip@ = end
+  finally ip 1 + ip= end
   tape mp []
     tape mem.free
     stack list.free ..drop

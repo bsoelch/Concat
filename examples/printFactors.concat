@@ -12,7 +12,7 @@ proc( stringBuilder i64 -> stringBuilder ) =>: appendFactors
   2:i64 while $ $ * n <= do =:: p
     while n p u% 0 == do
       ' ' <+ p <+
-      n p / n@ =
+      n p / n=
     end
   finally p 1 + end ..drop
   n 1 > if ' ' <+ n <+ end

@@ -9,9 +9,9 @@ proc( i64 : ip string : code -> i64 ) =>: skipLoop
   1 =:: mut: n
   ip 1 + while $ code .length < do =:: i
     code i string.charAt '[' == if
-      n 1 + n@ =
+      n 1 + n=
     else code i string.charAt ']' == _if
-      n 1 - n@ =
+      n 1 - n=
       n 0 <= if i return end
     end
   finally i 1 + end return
@@ -32,28 +32,28 @@ proc(
     code ip string.charAt switch
       '+' case tape mp [] 1 + tape mp =[] break
       '-' case tape mp [] 1 - tape mp =[] break
-      '>' case mp 1 + TAPE_CAP %% mp@ = break
-      '<' case mp 1 - TAPE_CAP %% mp@ = break
+      '>' case mp 1 + TAPE_CAP %% mp= break
+      '<' case mp 1 - TAPE_CAP %% mp= break
       '.' case
         outBuffer [] tape mp [] char8 cast sb.appendC outBuffer = break
       ',' case 0:i8 tape mp =[] break
       '[' case
         tape mp [] ? if
-          outBuffer tape code mp ip runBf_rec ip@ = mp@ =
+          outBuffer tape code mp ip runBf_rec ip= mp=
           continue
         end
-        ip code skipLoop ip@ =
+        ip code skipLoop ip=
         break
       ']' case
         tape mp [] ? if
-          loopStart ip@ =
+          loopStart ip=
           continue
         else
           mp ip return
         end
         break
     end
-  finally ip 1 + ip@ = end
+  finally ip 1 + ip= end
   mp ip return
 end
 proc(
