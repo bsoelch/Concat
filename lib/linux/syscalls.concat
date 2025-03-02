@@ -41,7 +41,8 @@ namespace: linux
     0x100:Flags    =:: export: MAP_GROWSDOWN
     0x800:Flags    =:: export: MAP_DENYWRITE
     0x2000:Flags   =:: export: MAP_LOCKED
-    0x80000:Flags  =:: export: MAP_SYNC 
+    0x20000:Flags  =:: export: MAP_STACK
+    0x80000:Flags  =:: export: MAP_SYNC
     0x100000:Flags =:: export: MAP_FIXED_NOREPLACE
     proc( Flags Flags -> Flags ) : alias: or_flags i32.or
     proc( Flags Flags -> bool ) : alias: eq_flags i32.eq
@@ -68,7 +69,7 @@ namespace: linux
     ..ctype.void _ ptr.mut : addr
     i64 : length
     mmap.Protection : prot
-  -> ..ctype.void _ ptr.mut ) : extern: export: sys_protect
+  -> i64 ) : extern: export: sys_protect
   proc(
     ..ctype.void _ ptr.mut : addr
     i64 : length
@@ -81,6 +82,46 @@ namespace: linux
     ..ctype.void _ ptr.mut : newAddr
   -> ..ctype.void _ ptr.mut ) : extern: export: sys_mremap
 
+  namespace: clone
+    i64 =:: export: CloneFlags
+    proc( CloneFlags CloneFlags -> CloneFlags ) : alias: or_flags i64.or
+    proc( CloneFlags CloneFlags -> bool ) : alias: eq_flags i64.eq
+    proc( CloneFlags CloneFlags -> bool ) : alias: ne_flags i64.ne
+    overload: merge: |  or_flags end
+    overload: merge: == eq_flags end
+    overload: merge: != ne_flags end
+    ## copied from linux/sched.h, abreviated
+    0x00000100:CloneFlags =:: export: CLONE_VM      ## set if VM shared between processes
+    0x00000200:CloneFlags =:: export: CLONE_FS      ## set if fs info shared between processes
+    0x00000400:CloneFlags =:: export: CLONE_FILES   ## set if open files shared between processes
+    0x00000800:CloneFlags =:: export: CLONE_SIGHAND ## set if signal handlers and blocked signals shared
+    0x00001000:CloneFlags =:: export: CLONE_PIDFD   ## set if a pidfd should be placed in parent
+    0x00002000:CloneFlags =:: export: CLONE_PTRACE  ## set if we want to let tracing continue on the child too
+    0x00008000:CloneFlags =:: export: CLONE_PARENT  ## set if we want to have the same parent as the cloner
+    0x00010000:CloneFlags =:: export: CLONE_THREAD  ## Same thread group
+    0x00080000:CloneFlags =:: export: CLONE_SETTLS  ## create a new TLS for the child
+    0x00100000:CloneFlags =:: export: CLONE_PARENT_SETTID  ## set the TID in the parent
+    0x00200000:CloneFlags =:: export: CLONE_CHILD_CLEARTID ## clear the TID in the child
+    0x01000000:CloneFlags =:: export: CLONE_CHILD_SETTID   ## set the TID in the child
+    0x80000000:CloneFlags =:: export: CLONE_IO      ## Clone io context
+    struct.c( ## TODO? use more descriptive types
+       CloneFlags : flags ## Flags bit mask
+       i64 : pidfd ## Where to store PID file descriptor
+       i64 : childTid ## Where to store child TID in child's memory (pid_t *)
+       i64 : parentTid ## Where to store child TID in parent's memory (pid_t *)
+       i64 : exitSignal ## Signal to deliver to parent on child termination
+       i64 : stack ## Pointer to lowest byte of stack
+       i64 : stackSize ## Size of stack
+       i64 : tls ## Location of new TLS
+       i64 : setTid ## Pointer to a pid_t array
+       i64 : setTidSize ## Number of elements in set_tid
+       i64 : cgroup ## File descriptor for target cgroup of child
+    ) =:: export: CloneArgs
+  end
+  proc(
+    clone.CloneArgs ptr : args
+    i64 : size
+  -> i64 ) : export: extern: sys_clone3
   
   proc( i32 -> i32 ) : extern: export: sys_exit
 end

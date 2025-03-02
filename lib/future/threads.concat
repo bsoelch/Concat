@@ -1,0 +1,82 @@
+import mem
+import linux/syscalls
+
+namespace: sys
+  proc( -> ( -> ) ptr _ ptr ) : extern: getBasePointer
+  proc( -> ) : extern: cctThreadInit
+end
+namespace: threads
+  ( -> ) =>: threadExit
+    ## TODO? cleanup thread, notify parent, ...
+    0 linux.sys_exit
+    ..unreachable
+  end
+
+  proc( i64 : stackSize -> i64 i64 ) =>: createStack
+    0x1000:i64 =:: pageSize
+    ## sys_mmap
+      linux.nullPtr
+      stackSize pageSize +
+      linux.mmap.PROT_NONE
+      linux.mmap.MAP_PRIVATE linux.mmap.MAP_ANONYMOUS | linux.mmap.MAP_STACK |
+      linux.mmap.NO_FILE 0
+    linux.sys_mmap i64 cast! =:: stackMem
+    stackMem 0 > "stackMem is a valid pointer" assert
+    stackMem pageSize + =:: stackSpace
+    ## sys_protect
+      stackSpace ..ctype.void _ ptr.mut cast!
+      stackSize
+      linux.mmap.PROT_READ linux.mmap.PROT_WRITE |
+    linux.sys_protect ? ! "sys_protect succeeds" assert
+    stackMem stackSize + ( -> ) ptr _ ptr.mut cast! =:: stackHead
+    threadExit@ stackHead -1 =[]
+    stackMem stackSize ( -> ) ptr ..types.size -
+  end
+  proc( i64 : stackMem i64 : stackSize -> i64 ) =>: cloneProcess
+    using linux.clone.
+    CloneArgs : cloneArgs
+    cloneArgs@ 1 mem.clear ..drop
+    cloneArgs
+      CLONE_VM CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | >$ .flags=
+      stackMem >$ .stack=
+      stackSize >$ .stackSize=
+    cloneArgs=
+    cloneArgs@ CloneArgs ..types.size linux.sys_clone3
+    ## TODO error handling
+  end
+
+  proc( ( -> ) ptr : target -> i64 ) =>: export: create
+    0x10000:i64 createStack =:: stackSize =:: stackMem
+    stackMem stackSize + ( -> ) ptr _ ptr.mut cast! =:: stackHead
+    target stackHead -1 =[]
+    stackMem stackSize ( -> ) ptr ..types.size - cloneProcess
+  end
+
+  ## runs a new thread at the call location of this procedure
+  ## assumes stack-frame layout of System-V calling convention
+  ##   * rbp points to start of current stack-frame
+  ##   * directly below rbp is the return address
+  ##   * the value at address [rbp] points to start of previous stackframe
+  ##
+  ##   parentBase retAddr parentStack [parentBase] parentRet
+  ##   ^basePtr                       ^parentBase
+  proc( -> i64 ) =>: export: clone
+    sys.getBasePointer =:: basePtr
+    0x10000:i64 createStack =:: stackSize =:: stackMem
+    ## copy stack-frame of caller into thread stack
+    stackMem stackSize + ( -> ) ptr _ ptr.mut cast! =:: mut: stackHead
+    basePtr [] ( -> ) ptr _ ptr cast! =:: parentBase
+    basePtr parentBase - =:: parentFrameSize
+    stackHead -1 @[] ( -> ) ptr cast! =:: newBaseP
+    newBaseP stackHead -1 =[]
+    stackHead parentFrameSize 1 + -
+      basePtr 1 @[]
+      parentFrameSize
+    mem.copy stackHead@ =
+    ## setup thread initialisation
+    ## clone will return to cctThreadInit, which updates the base-pointer and returns to the caller
+    newBaseP stackHead -1 =[]
+    sys.cctThreadInit@ stackHead -2 =[]
+    stackMem stackSize ( -> ) ptr ..types.size parentFrameSize 3 + * - cloneProcess
+  end
+end

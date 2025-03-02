@@ -62,9 +62,25 @@ sys_mremap:
 	syscall
 	ret
 	
-	
+public sys_clone3
+sys_clone3:
+	mov	eax,435
+	syscall
+	ret
+
 public sys_exit
 sys_exit:
 	mov	eax,60
 	syscall
 	ret
+
+; helper function returns base pointer of caller
+public getBasePointer
+getBasePointer:
+  mov rax, rbp
+  ret
+; helper function returns base pointer of caller
+public cctThreadInit
+cctThreadInit:
+  pop rbp
+  ret
