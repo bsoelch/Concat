@@ -1,20 +1,18 @@
 namespace: type
-  typeSet: export: primitive ..types.isPrimitive  end
-  typeSet: export: pointer ..types.isPointer  end
-  typeSet: export: array ..types.isArray  end
-  typeSet: export: enum  ..types.isEnum  end
-  typeSet: export: union ..types.isTaggedUnion end
+  typeSet( ..types.isPrimitive@ ) =:: export: primitive
+  typeSet( ..types.isPointer@ ) =:: export: pointer
+  typeSet( ..types.isArray@ ) =:: export: array
+  typeSet( ..types.isEnum@ ) =:: export: enum
+  typeSet( ..types.isTaggedUnion@ ) =:: export: union
 
-  typeSet: export: integer i8 i16 i32 i64 end
-  typeSet: export: float f32 f64 end
-  typeSet: export: number integer float end
-  typeSet: export: index i32 i64 end
-  typeSet: export: intLike integer char8 char16 char32 end
+  typeSet( i8 i16 i32 i64 ) =:: export: integer
+  typeSet( f32 f64 ) =:: export: float
+  typeSet( integer float ) =:: export: number
+  typeSet( i32 i64 ) =:: export: index
+  typeSet( integer char8 char16 char32 ) =:: export: intLike
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive
     T ..types.unwrapNamed ..types.isPrimitive
   end
-  typeSet: export: namedPrimitive
-    isNamedPrimitive
-  end
+  typeSet( isNamedPrimitive@ ) =:: export: namedPrimitive
 end

@@ -1447,106 +1447,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
       end
       return
-    else ..dup "typeSet:":s string.eq _if =:: opName
-      using types.TypeSet
-      using types.TypeSetId
-      using types.TypeSetEntry
-      state [] .currentProcs .length 0 > if
-        "typeSet cannot be declared within procedure" sb.copyPtr
-        fileState [] .wordStart errors appendError
-      end
-      skipBlock if ## skip to end of overload
-        while fileState errors nextIdentifier =:: procName
-          procName "end":s string.eq !
-        end
-        return
-      end
-      fileState errors nextIdentifier fileState state readLabel =:: mut: labelId
-      labelId labelContext id.labelFlags =:: labelFlags
-      labelFlags id.FLAG_ALIAS & ? if
-        "alias is only supported for procedure declarations" sb.copyPtr
-        fileState [] .wordStart errors appendError
-      end
-      typeContext .typeSets [] .length =:: typeSetId
-      ## declareIdentifier
-        labelId
-        types.primitive.TYPE
-        IdentifierType .TYPE
-        -1
-        typeSetId TypeSetId cast types.newTypeSet ConstValue .TypeId ## TODO! own constant type for TypeSet
-        true
-        fileState [] .wordStart
-        state [] .currentFile
-        idContext
-        progContext .errors
-      id.declareIdentifier if ..drop.2
-        return
-      end ..drop labelId=
-      typeContext .typeSetEntries [] .length =:: offset
-      while fileState errors nextIdentifier =:: procName
-        procName "end":s string.eq !
-      do
-        procName idContext id.findIdentifierByName if ..drop
-          "could not find identifier \"" sb.copyPtr
-            procName sb.appendStr
-            '"' sb.appendC
-          fileState [] .wordStart errors appendError
-          continue
-        end =:: idData
-        idData [] .idType .TYPE ?? if
-          idData [] .constValue .TypeId ?? ! if
-            "unexpected value for type: " sb.copyPtr
-              idData [] .constValue typeContext sb.appendConstant
-            fileState [] .wordStart errors appendError
-            continue
-          end
-          idData [] .constValue .TypeId typeContext types.isTypeSet if
-            idData [] .constValue .TypeId
-              typeContext types.typeSetId
-            =:: setId
-            ## changing list invalidates type-set entires
-            ##   -> ensure list is not reallocated while appending
-            typeContext .typeSetEntries []
-              setId
-                typeContext types.getTypeSetEntries .length
-              $1 .length i64 cast.u + list.ensureCap
-              setId
-                typeContext types.getTypeSetEntries
-              list.appendSlice
-            typeContext .typeSetEntries=
-            continue
-          end
-          typeContext .typeSetEntries []
-            idData [] .constValue .TypeId TypeSetEntry .typeId list.append
-          typeContext .typeSetEntries=
-          continue
-        else idData [] .idType .PROCEDURE ?? _if
-          idData [] .constValue .Procedure ?? ! if
-            "unexpected value for procedure: " sb.copyPtr
-              idData [] .constValue typeContext sb.appendConstant
-            fileState [] .wordStart errors appendError
-            continue
-          end
-          ## TODO! check signature: in: type , out: bool
-          typeContext .typeSetEntries []
-            idData [] .constValue .Procedure TypeSetEntry .typeTrait list.append
-          typeContext .typeSetEntries=
-        else
-          "unexpected element for type set expected type or procedure got: " sb.copyPtr
-            idData [] .idType sb.appendIdType
-          fileState [] .wordStart errors appendError
-        end
-      end
-      typeContext .typeSetEntries [] .length offset - =:: count
-      typeContext .typeSets []
-        $ .length typeSetId == "typeSetId did not change" assert
-        ## TypeSet
-          labelId
-          offset i32 cast
-          count i32 cast
-        TypeSet new list.append
-      typeContext .typeSets=
-      return
     else ..dup "end":s string.eq _if ..drop
       ## TODO correctly handle top-level blocks
       while
@@ -1567,7 +1467,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             currentBlock fileState [] .wordStart opEndBlock  state appendOp
             break
           TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION
-          TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN TYPE_CPROC_IN INITIALIZER case
+          TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN TYPE_CPROC_IN INITIALIZER TYPE_TYPESET case
             "unexpected 'end' statement in " sb.copyPtr
               currentBlock sb.appendBlockType
               "-block" sb.appendS
@@ -1717,18 +1617,31 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## don't update constant blocks, procedure-type is a single constant
       BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
       return
+    else ..dup "typeSet(":s string.eq _if ..drop
+      ## TODO! own block-type
+      BlockType .TYPE_TYPESET state openScopedBlock
+      state [] .constantBlocks
+        ## CompositeConstantOffset
+          state opCount
+        CompositeConstantOffset new list.append
+      state .constantBlocks=
+      BlockType .TYPE_TYPESET fileState [] .wordStart opBlock state appendOp
+      return
     else ..dup ")":s string.eq _if =:: opName
       state closeBlock if ..drop
         "unexpected " sb.copyPtr opName sb.appendStr fileState [] .wordStart errors appendError
         return
       end =:: closed
       closed .blockType =:: blockType
-      state [] .constantBlocks
-        list.pop =:: offset
-      state .constantBlocks=
+      state [] .constantBlocks .length 0 > if
+        state [] .constantBlocks
+          list.pop ..drop
+        state .constantBlocks=
+      end
       blockType fileState [] .wordStart opEndBlock state appendOp
       blockType switch
-        TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION TYPE_ENUM case
+        TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION
+            TYPE_ENUM TYPE_TYPESET case
           break
         TYPE_PROC_OUT case
           state closeBlock  =:: isError .blockType =:: outerType
@@ -1803,7 +1716,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
         state [] .openBlocks list.reversed for: findContainer =:: b
-          BlockType ..length 39 == "no new block types" assert
+          BlockType ..length 40 == "no new block types" assert
           b .blockType switch
             PROCEDURE EXPERIMENTAL_PROCEDURE case
               false inConstBlock=
@@ -2367,7 +2280,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ..drop ## discard remainder of file
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek =:: next?
-          BlockType ..length 39 == "no new block types" assert
+          BlockType ..length 40 == "no new block types" assert
           next? optional.hasData and next? .data [] .blockType switch
             IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DEFAULT case true break
             default false break

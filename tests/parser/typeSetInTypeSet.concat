@@ -1,6 +1,6 @@
-typeSet: unionLike
+typeSet(
   type.enum type.union
-end
+) =:: unionLike
 
 proc( unionLike : T -> bool ) =>: _match true end
 proc( type : T -> bool ) =>: _default false end

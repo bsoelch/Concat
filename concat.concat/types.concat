@@ -48,7 +48,6 @@ namespace: types
     Type : typeId
   ) =:: export: TypeSetEntry
   struct(
-    LabelId : name
     i32 : elementsOffset
     i32 : elementCount
   ) =:: export: TypeSet
@@ -2140,16 +2139,35 @@ namespace: types
     id Type .genericType return
   end
 
-  proc( TypeSetId : id -> Type ) =>: export: newTypeSet
-    id Type .typeSet return
+  proc(
+    LabelId : name
+    TypeSetEntry slice : elements
+    TypeContext ptr : context
+  -> Type ) =>: export: newTypeSet
+    ## TODO check if type-set already exists
+    ##  ? check if type-set contains duplicate values
+    context [] .typeSetEntries
+      $ .length =:: offset
+      elements list.appendSlice
+    context .typeSetEntries=
+    context [] .typeSets
+      $ .length =:: setId
+      ## TypeSet
+        offset i32 cast
+        elements .length i32 cast
+      TypeSet new list.append
+    context .typeSets=
+    setId TypeSetId cast Type .typeSet return
   end
   proc( Type TypeContext ptr : context -> bool ) =>: export: isTypeSet
     context unwrapNamed .typeSet ?? return
   end
-  proc( Type TypeContext ptr : context -> TypeSetId ) =>: export: typeSetId
-    context unwrapNamed .typeSet return
-  end
-  proc( TypeSetId : id TypeContext ptr : context -> TypeSetEntry slice ) =>: export: getTypeSetEntries
+  proc( Type : t TypeContext ptr : context -> TypeSetEntry slice ) =>: export: getTypeSetEntries
+    t context unwrapNamed =:: t0
+    t0 .typeSet ?? ! if
+      TypeSetEntry slice.empty return
+    end
+    t0 .typeSet =:: id
     context [] .typeSets id i64 cast list.get =:: typeSet
     context [] .typeSetEntries
       typeSet .elementsOffset i64 cast
@@ -2515,6 +2533,10 @@ namespace: types
     src target types.typeEquals if
       true return
     end
+    src context types.isTypeSet or src types.primitive.TYPE typeEquals end and
+       target types.primitive.TYPE typeEquals or target context types.isTypeSet if
+      true return
+    end
     src .initializer ?? if
       src target context canAutoCastInitializer return
     end
@@ -2533,10 +2555,6 @@ namespace: types
     end
     src context types.isPointer and target context types.isPointer if
       src target false false context canCastPtr return
-    end
-    src context types.isTypeSet or src types.primitive.TYPE typeEquals end and
-       target types.primitive.TYPE typeEquals or target context types.isTypeSet if
-      true return
     end
     false return
   end
@@ -2938,9 +2956,25 @@ namespace: sb
         return
       typeSet case
         sb
-          "{" sb.appendS
-          context [] .typeSets t .typeSet i32 cast list.get .name labelContext appendLabelPath
-          "}" sb.appendS
+          "typeSet( " sb.appendS
+          depth 0 >= if
+            t context types.getTypeSetEntries for =:: e
+              e switch
+                typeId case
+                  e .typeId context depth 1 - appendTypeRecursive
+                  ' ' sb.appendC
+                  break
+                typeTrait case
+                  ## TODO? print procedure name
+                  e .typeTrait i64 cast sb.appendI
+                  ":ProcId " sb.appendS
+                  break
+              end
+            end
+          else t context types.getTypeSetEntries .length 0 > _if
+            "..." sb.appendS
+          end
+          " )" sb.appendS
         return
     end
   end

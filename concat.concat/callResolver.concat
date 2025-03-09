@@ -833,7 +833,7 @@ proc(
             nonEmpty case ..unreachable
           end =:: value
           paramType typeContext types.isTypeSet and
-              value [] paramType typeContext types.typeSetId pos interpreterContext interpreter.checkTypeSet ! if
+              value [] paramType pos interpreterContext interpreter.checkTypeSet ! if
             false current .argsMatch=
           end
           ## convert literal types to corresponding base types
@@ -899,7 +899,7 @@ proc(
           false current .argsMatch=
         end
         paramType typeContext types.isTypeSet and
-            stackVal paramType typeContext types.typeSetId pos interpreterContext interpreter.checkTypeSet ! if
+            stackVal paramType pos interpreterContext interpreter.checkTypeSet ! if
           false current .argsMatch=
         end
         current .genericValues

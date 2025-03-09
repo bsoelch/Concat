@@ -38,6 +38,7 @@ enum(
   TYPE_CPROC_IN
   TYPE_PROC_OUT
   TYPE_COMPOSITE
+  TYPE_TYPESET
   NAMESPACE
 ) =:: export: BlockType
 i32 =:: export: BlockId
@@ -168,6 +169,9 @@ namespace: sb
         return
       TYPE_PROC_OUT case
         "( -> )" sb.appendS
+        return
+      TYPE_TYPESET case
+        "typeSet( )" sb.appendS
         return
       NAMESPACE case
         "namespace" sb.appendS

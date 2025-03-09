@@ -198,7 +198,7 @@ namespace: interpreter
           true return
         PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION
-            TYPE_UNTAGGED_UNION case
+            TYPE_UNTAGGED_UNION TYPE_TYPESET case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
@@ -217,7 +217,7 @@ namespace: interpreter
       context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_UNION TYPE_UNTAGGED_UNION case
            true return
-        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
+        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_TYPESET
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
@@ -236,7 +236,7 @@ namespace: interpreter
     context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
       context [] .openBlocks i list.at .data [] .blockType switch
         INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case
+            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_TYPESET case
           true return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           false return
@@ -261,7 +261,7 @@ namespace: interpreter
           PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
           TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION
           TYPE_UNTAGGED_UNION UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
-          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY TYPE_TYPESET
           AND OR AND_IF OR_IF AND_DO OR_DO
           NAMESPACE case break
       end
@@ -308,7 +308,7 @@ namespace: interpreter
     context .openBlocks=
     result optional.wrap return
   end
-  BlockType ..length 39 == "number of block types" assert
+  BlockType ..length 40 == "number of block types" assert
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
     context peekBlock =:: current
     current optional.isEmpty if false return end
@@ -358,7 +358,7 @@ namespace: interpreter
           AND OR AND_IF OR_IF AND_DO OR_DO
           IF_TRUE IF_FALSE AND_TRUE AND_FALSE
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          NAMESPACE case break
+          NAMESPACE TYPE_TYPESET case break
       end
     finally i 1 - end ..drop
     ## TODO? better default value/error condition
@@ -1115,13 +1115,14 @@ namespace: interpreter
   end
   proc(
     ConstValue : value
-    types.TypeSetId : typeSetId
+    Type : typeSet
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: export: checkTypeSet
     context [] .program =:: progContext
     progContext .idContext .typeContext =:: typeContext
-    value .TypeId ?? ! if
+    value .TypeId ?? ! or
+        typeSet typeContext types.isTypeSet ! if
       false return ## only types can be in type-set
     end
     value .TypeId
@@ -1129,7 +1130,7 @@ namespace: interpreter
         typeContext types.literalToType
       end
     =:: toCheck
-    typeSetId typeContext types.getTypeSetEntries =:: entries
+    typeSet typeContext types.getTypeSetEntries =:: entries
     context [] .currentFile =:: prevFile
     entries for =:: e
       e .typeId ?? if
@@ -1840,7 +1841,7 @@ proc(
     block case
       op [] .val .block .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE
+        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_TYPESET
         INITIALIZER case
           op [] .val .block .blockType true context openBlock
           EvalResult .Ok return
@@ -2027,7 +2028,7 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .evalType .INTERPRET ?? if
-        BlockType ..length 39 == "no-new block-types" assert
+        BlockType ..length 40 == "no-new block-types" assert
         blockType switch
           ELSE SWITCH AND OR case EvalResult .Ok return
           WHILE case
@@ -2159,6 +2160,39 @@ proc(
           context [] .typeBuffer
             procOut list.append
           context .typeBuffer=
+          EvalResult .Ok return
+        TYPE_TYPESET case ## TODO evaluate type-set
+          context [] .stack .length =:: stackSize
+          stackSize closedBlock .stackOffset - =:: eltCount
+          ## TODO? create temp-allocator in context
+          eltCount types.TypeSetEntry list.create
+            closedBlock .stackOffset while $ stackSize < do =:: i
+              context [] .stack i list.get =:: value
+              value .TypeId ?? if
+                value .TypeId typeContext types.isTypeSet ! if
+                  value .TypeId types.TypeSetEntry .typeId list.append
+                  continue
+                end
+                ## unwrap nested type-sets
+                value .TypeId typeContext types.getTypeSetEntries list.appendSlice
+              else value .Procedure ?? _if
+                ## TODO! check signature in: type , out: bool
+                value .Procedure types.TypeSetEntry .typeTrait list.append
+              else
+                "unsupported value in type-set: " sb.copyPtr
+                  value typeContext sb.appendConstant
+                context [] .stackInfo i list.at .data [] .pushedAt errors appendError
+              end
+            finally i 1 + end ..drop
+          =:: typeSetElements
+          id.LABEL_ID_NONE typeSetElements list.asSlice typeContext types.newTypeSet =:: typeSet
+          typeSetElements list.free ..drop
+          stackSize context truncateStack
+          ## pushValue
+            typeSet ConstValue .TypeId
+            types.primitive.TYPE
+            op [] .pos
+          context pushValue
           EvalResult .Ok return
         PROCEDURE EXPERIMENTAL_PROCEDURE case
           ## end procedure
@@ -2452,7 +2486,28 @@ proc(
             value .info .valueType isMutable typeContext types.getAddressType
           op [] .pos context pushValue
           EvalResult .Ok return
-        PROCEDURE PROCEDURE_BUNDLE
+        PROCEDURE case
+          label idContext id.getIdentifier if ..drop
+            "could not find " sb.copyPtr
+              idInfo [] labelContext sb.appendIdInfo
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end =:: idData
+          idData [] .constValue .Procedure ?? ! if
+            "could not determine id of procedure" sb.copyPtr
+              label labelContext sb.appendLabelName
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          ## pushValue
+            idData .constValue []
+            program [] .procedures
+              idData .constValue [] .Procedure i64 cast list.at .data
+            [] .procType false typeContext types.getAddressType
+            op [] .pos
+          context pushValue
+          EvalResult .Ok return
+        PROCEDURE_BUNDLE
         TYPE GLOBAL_VAR LABEL case
           "unsupported operation in constant evaluation: " sb.copyPtr
             op [] program sb.appendOp

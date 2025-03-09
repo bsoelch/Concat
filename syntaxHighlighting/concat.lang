@@ -87,7 +87,7 @@
     <context id="declaration" style-ref="keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          ( : | =&gt;: | =: | =:: | overload\: | typeSet\: ) ([[:space:]]+[^#][^[:space:]]+:)*
+          ( : | =&gt;: | =: | =:: | overload\: ) ([[:space:]]+[^#][^[:space:]]+:)*
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -226,6 +226,7 @@
           struct\.c\(                  |
           union\(                      |
           union\.raw\(                 |
+          typeSet\(                     |
           array                        |
           ptr(\.mut)?
         )(\Z|(?=[[:space:]])) # end of file or white-space
