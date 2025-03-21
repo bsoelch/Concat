@@ -134,14 +134,14 @@ namespace: slice
     i64 : index
   -> T ptr.mut ) =>: export: atValue_64mut
     index elts .length checkIndex
-    elts .data index + T ptr cast! return
+    elts .data index + T ptr.mut cast! return
   end
   proc(
     type : auto: T
     T slice.mut : elts
     i32 : index
   -> T ptr.mut ) =>: export: atValue_32mut
-    elts i64 cast.s atValue_32mut
+    elts i64 cast.s atValue_64mut
   end
   overload: export: atValue
     atValue_32 atValue_64 atValue_32mut atValue_64mut

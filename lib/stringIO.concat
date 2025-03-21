@@ -60,3 +60,21 @@ namespace: sb
     return
   end
 end
+namespace: io
+  proc( char8 : c -> ) =>: export: printC
+    c io.putc ..drop
+  end
+  proc( string : s -> ) =>: export: printS
+    io.stdOut s io.fputStr ..drop
+  end
+  overload: export: print printC printS end
+  proc( char8 : c -> ) =>: export: printlnC
+    c printC
+    '\n' io.putc ..drop
+  end
+  proc( string : s -> ) =>: export: printlnS
+    s printS
+    '\n' io.putc ..drop
+  end
+  overload: export: println printlnC printlnS end
+end

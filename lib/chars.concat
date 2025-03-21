@@ -7,10 +7,33 @@ namespace: char
         false return
     end
   end
+  proc( char8 -> bool ) : alias: export: isSpace isWhitespace
   proc( char8 : d -> bool ) =>: export: isDigit
-    d '0' < if
-      false return
-    end
-    d '9' <= return
+    d '0' >=  d '9' <= &
+  end
+  proc( char8 : d -> bool ) =>: export: isBinDigit
+    d '0' >=  d '1' <= &
+  end
+  proc( char8 : d -> bool ) =>: export: isOctDigit
+    d '0' >=  d '7' <= &
+  end
+  proc( char8 : d -> bool ) =>: export: isHexDigit
+    d isDigit
+      d 'A' >= d 'F' <= & |
+      d 'a' >= d 'f' <= & |
+    return
+  end
+  proc( char8 : c -> bool ) =>: export: isUppercase
+    c 'A' >=  c 'Z' <= &
+  end
+  proc( char8 : c -> bool ) =>: export: isLowercase
+    c 'a' >=  c 'z' <= &
+  end
+  proc( char8 : c -> bool ) =>: export: isAlpha
+    c isUppercase c isLowercase |
+  end
+  proc( char8 -> bool ) : alias: export: isLetter isAlpha
+  proc( char8 : c -> bool ) =>: export: isAlphaNum
+    c isDigit c isAlpha | return
   end
 end
