@@ -364,19 +364,19 @@ namespace: interpreter
             pos errors appendWarning
           end
         else builtIn .PARSE_I32 ?? _if
-          overflow or parsed i32.MIN i64 cast.u < or parsed i32.UMAX i64 cast.u > if
+          overflow or parsed i32.MIN i64 cast.s < or parsed i32.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 32-bit integer" sb.appendS
             pos errors appendWarning
           end
         else builtIn .PARSE_I16 ?? _if
-          overflow or parsed i16.MIN i64 cast.u < or parsed i16.UMAX i64 cast.u > if
+          overflow or parsed i16.MIN i64 cast.s < or parsed i16.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 16-bit integer" sb.appendS
             pos errors appendWarning
           end
         else builtIn .PARSE_I8 ?? _if
-          overflow or parsed i8.MIN i64 cast.u < or parsed i8.UMAX i64 cast.u > if
+          overflow or parsed i8.MIN i64 cast.s < or parsed i8.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 8-bit integer" sb.appendS
             pos errors appendWarning
