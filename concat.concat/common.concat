@@ -9,6 +9,7 @@ using std.literals.:s
 ## XXX? seperate file for compiler flags
 enum( ## XXX more precise names
   QBE
+  ASM
 ) =:: export: BackEnd
 ## compiler flags
 ## XXX? wrap in namespace

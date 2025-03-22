@@ -7,6 +7,7 @@ import "parser.concat"
 import "typeCheck.concat"
 import "prepareCompile.concat"
 import "generator_qbe.concat"
+import "generator_asm.concat"
 
 stringBuilder : mut: srcFile
 stringBuilder : mut: outFile
@@ -121,6 +122,8 @@ proc( -> ) =>: parseArgs
             false _INCREMENT_VERSION_= continue
           else arg "--dump-typeChecker":s string.eq _if
             true dumpTypeCheckerTokens= continue
+          else arg "--asm":s string.eq _if
+            BackEnd .ASM _BACKEND_= continue
           end
           break
         default break
@@ -199,6 +202,7 @@ proc( -> ) =>: parseArgs
     outFile
       _BACKEND_ switch
         QBE case ".ssa\x00" sb.appendS break
+        ASM case ".s\x00" sb.appendS break
       end
     outFile=
   end
@@ -292,10 +296,10 @@ proc( -> ) =>: main ## TODO check return value of fopen
     parsedOps sb.free ..drop
   end
   prog@ .errors checkErrors
-  ## QBE backend
   outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
     _BACKEND_ switch
       QBE case ..dup prog@ compileToQBE break
+      ASM case ..dup prog@ compileToASM break
     end
   io.fclose ..drop
   prog@ .errors checkErrors

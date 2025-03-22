@@ -1,0 +1,1119 @@
+## Assembly backend
+## currently in experimental phase
+import string
+import stringIO
+using std.literals.
+
+import "program.concat"
+import "measure.concat"
+import "branchTree.concat"
+
+i8 =:: RegisterId
+
+16 =:: MAX_DATA_REGISTERS_INT
+
+proc( char8 _ ptr : str i64 : len -> RegisterId ) : alias: static: :reg ..builtIn.parse.i8
+
+struct(
+  i32 : lastUsed
+  ## TODO store chain of all currently cached variables
+  ## TODO? store if register holds constant value
+  RegisterId : register
+) =:: RegisterState
+
+0xff:reg =:: NO_REG
+
+## TODO? 32-bit mode, ARM64 support
+namespace: AMD64
+  ## XXX? use same order as internal id
+  0x00:reg =:: RSP
+  0x01:reg =:: RBP
+  0x02:reg =:: RAX ## r2
+  0x03:reg =:: RBX ## r3
+  0x04:reg =:: RCX ## r4
+  0x05:reg =:: RDX ## r5
+  0x06:reg =:: RDI ## r6
+  0x07:reg =:: RSI ## r7
+  RAX =:: INT_REG_MIN
+  0x0f:reg =:: INT_REG_MAX
+  0x40:reg =:: REG_MASK_FLOAT ## up 64 int/float regs
+
+  { RDI RSI RDX RCX 8:reg 9:reg } =:: INT_ARG_REGISTERS
+  { RAX RBX RCX RDX RDI RSI 8:reg 9:reg 10:reg 11:reg 12:reg 13:reg 14:reg 15:reg } =:: INT_DATA_REGISTERS
+  proc(
+    RegisterState MAX_DATA_REGISTERS_INT ptr.mut : buffer
+  -> RegisterState slice.mut ) =>: initIntDataRegisters
+    INT_DATA_REGISTERS ..length i32 cast MAX_DATA_REGISTERS_INT i32.min for =:: i
+      ## RegisterState
+        -1
+        INT_DATA_REGISTERS i []
+      RegisterState new buffer i =[]
+    end
+    buffer INT_DATA_REGISTERS ..length slice.createMutable
+  end
+  ## TODO make dependent on calling convention
+  proc( i32 : index -> RegisterId ) =>: getIntArgumentRegister
+    index 0 < or index INT_ARG_REGISTERS ..length i32 cast >= if
+      NO_REG return
+    end
+    INT_ARG_REGISTERS index [] return
+  end
+end
+namespace: sb
+  proc( stringBuilder RegisterId : reg -> stringBuilder ) =>: appendRegister
+    'r' sb.appendC
+    reg i64 cast.u sb.appendI
+  end
+end
+
+enum( EMPTY I8 I16 I32 I64 F32 F64 PTR REFERENCE BITS128 BITS128IF BITS128FI BITS128F ) =:: ValType
+proc( Type : dataType ProgramContext ptr.mut : program -> ValType ) =>: toValType
+  program .idContext .typeContext =:: typeContext
+  dataType switch
+    namedType case
+      dataType typeContext types.unwrapNamed program toValType return
+    generatedType case
+      dataType typeContext types.getGeneratedType program toValType return
+    primitiveType case
+      dataType .primitiveType switch
+        TYPE case ValType .EMPTY return
+        BOOL I8 CHAR8 case ValType .I8 return
+        I16 CHAR16 case ValType .I16 return
+        I32 CHAR32 case ValType .I32 return
+        I64 case ValType .I64 return
+        F32 case ValType .F32 return
+        F64 case ValType .F64 return
+      end
+      break
+    intLiteral case
+      dataType .intLiteral types.intLiteralAsInt program toValType return
+    cType case
+      dataType .cType
+        types.cTypeAsType
+      program toValType return
+    pointer rawPointer case
+      ValType .PTR return ## TODO? distinquish pointer and procedure pointer
+    arrayType struct union enum case
+      ## TODO! treat small structs/unions/enums as values
+      ValType .REFERENCE return
+    undefined empty genericType autoType procedure
+    procIn procOut align typeSet initializer case
+      ValType .EMPTY return
+  end
+end
+
+namespace: sb
+  proc( stringBuilder ValType -> stringBuilder ) =>: appendValType
+    switch
+      EMPTY case "empty":s break
+      I8  case "i8":s  break
+      I16 case "i16":s break
+      I32 case "i32":s break
+      I64 case "i64":s break
+      F32 case "f32":s break
+      F64 case "f64":s break
+      PTR case "ptr":s break
+      REFERENCE case "reference":s break
+      BITS128   case "bits128":s   break
+      BITS128F  case "bits128f":s  break
+      BITS128IF case "bits128if":s break
+      BITS128FI case "bits128fi":s break
+    end sb.appendStr return
+  end
+end
+
+namespace: asm
+  enum(
+    ## memory
+    MOVE PUSH POP
+    ## controll-flow
+    LABEL
+    JMP JMPIF CALL RET
+    ## arithmetic
+    NEG NOT ADD SUB MUL DIV MOD UDIV UMOD
+    AND OR XOR BITNOT SHL ASHL LSHL
+    ## comparision
+    CMP ## compare type if given as parameter
+    ## special arithmetic
+    ADC SBB MULH MUL2 DIVMOD UDIVMOD ## TODO? add float ops
+  ) =:: OpType
+  ## TODO? version to check for NaN?
+  enum( EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CompareType
+  union(
+    _ : empty
+    _ : unknown
+    CompareType : cmpType
+    RegisterId : register
+    i64 : constInt
+    f64 : constFloat
+    i32 : intStackData
+    i32 : intArgument
+    ## XXX ? memory+s*offset1+offset2 , s=1,2,4,8
+    LabelId : localMemory
+    LabelId : globalMemory
+    RegisterId : memory
+    ## TODO label
+  ) =:: Operand
+end
+struct(
+  asm.OpType : opType
+  ValType : valType
+  asm.Operand 4 array : operands ## are four operands enough  [jmpif  lt r1 r2 @targetLabel]
+  ## TODO? attach info to concat operation
+  ## FilePos, concat-type, variables, ...
+  ## ? attach (ptr to?) complete base operation
+) =:: AsmOp
+union(
+  _ : Unknown
+  AsmOp : Op
+  LabelId : StartProc
+  Operation : DebugStartOp
+) =:: Atomic
+proc( asm.OpType : opType ValType : valType -> Atomic ) =>: asmOp0
+  ## AsmOp
+    opType
+    valType
+    { asm.Operand .empty asm.Operand .empty asm.Operand .empty asm.Operand .empty }
+  AsmOp new Atomic .Op return
+end
+proc( asm.OpType : opType ValType : valType asm.Operand : arg1 -> Atomic ) =>: asmOp1
+  asm.Operand 4 array new =:: mut: args
+  arg1 args@ 0 =[]
+  ## AsmOp
+    opType
+    valType
+    args
+  AsmOp new Atomic .Op return
+end
+proc( asm.OpType : opType ValType : valType asm.Operand : arg1 asm.Operand : arg2 -> Atomic ) =>: asmOp2
+  asm.Operand 4 array new =:: mut: args
+  arg1 args@ 0 =[]
+  arg2 args@ 1 =[]
+  ## AsmOp
+    opType
+    valType
+    args
+  AsmOp new Atomic .Op return
+end
+proc(
+  asm.OpType : opType
+  ValType : valType
+  asm.Operand : arg1 asm.Operand : arg2 asm.Operand : arg3
+-> Atomic ) =>: asmOp3
+  asm.Operand 4 array new =:: mut: args
+  arg1 args@ 0 =[]
+  arg2 args@ 1 =[]
+  arg3 args@ 2 =[]
+  ## AsmOp
+    opType
+    valType
+    args
+  AsmOp new Atomic .Op return
+end
+proc(
+  asm.OpType : opType
+  ValType : valType
+  asm.Operand : arg1 asm.Operand : arg2 asm.Operand : arg3 asm.Operand : arg4
+-> Atomic ) =>: asmOp4
+  asm.Operand 4 array new =:: mut: args
+  arg1 args@ 0 =[]
+  arg2 args@ 1 =[]
+  arg3 args@ 2 =[]
+  arg4 args@ 3 =[]
+  ## AsmOp
+    opType
+    valType
+    args
+  AsmOp new Atomic .Op return
+end
+
+namespace: sb
+  proc( stringBuilder : sb asm.OpType : opType -> stringBuilder ) =>: appendOpType
+    sb
+      opType switch
+        MOVE case "move":s break
+        PUSH case "push":s break
+        POP case "pop":s break
+        LABEL case "label":s break
+        JMP case "jmp":s break
+        JMPIF case "jmpif":s break
+        CALL case "call":s break
+        RET case "ret":s break
+        NEG case "neg":s break
+        NOT case "not":s break
+        ADD case "add":s break
+        SUB case "sub":s break
+        MUL case "mul":s break
+        DIV case "div":s break
+        MOD case "mod":s break
+        UDIV case "udiv":s break
+        UMOD case "umod":s break
+        AND case "and":s break
+        OR case "or":s break
+        XOR case "xor":s break
+        BITNOT case "bitnot":s break
+        SHL case "shl":s break
+        ASHL case "ashl":s break
+        LSHL case "lshl":s break
+        CMP case "cmp":s break
+        ADC case "adc":s break
+        SBB case "sbb":s break
+        MULH case "mulh":s break
+        MUL2 case "mul2":s break
+        DIVMOD case "divmod":s break
+        UDIVMOD case "udivmod":s break
+      end
+    appendStr
+  end
+  proc( stringBuilder : sb asm.CompareType : cmpType -> stringBuilder ) =>: appendCmpType
+    sb
+      cmpType switch
+        EQ case "eq":s break
+        NE case "ne":s break
+        LT case "lt":s break
+        LE case "le":s break
+        GE case "ge":s break
+        GT case "gt":s break
+        ULT case "ult":s break
+        ULE case "ule":s break
+        UGE case "uge":s break
+        UGT case "ugt":s break
+      end
+    appendStr
+  end
+  proc( stringBuilder : sb asm.Operand : val -> stringBuilder ) =>: appendAsmOperand
+    sb
+      val switch
+        empty case break
+        unknown case "?" sb.appendS break
+        cmpType case
+          val .cmpType sb.appendCmpType
+          break
+        register case
+          val .register sb.appendRegister
+          break
+        constInt case
+          val .constInt sb.appendI
+          break
+        constFloat case
+          val .constFloat sb.appendF
+          break
+        intStackData case
+          "@memI" sb.appendS val .intStackData sb.appendI
+          break
+        intArgument case
+          "@argI" sb.appendS val .intArgument sb.appendI
+          break
+        localMemory case
+          "@mem" sb.appendS val .localMemory i64 cast.u sb.appendI
+          break
+        globalMemory case
+          "$global" sb.appendS val .globalMemory i64 cast.u sb.appendI
+          break
+        memory case
+          '[' sb.appendC val .memory sb.appendRegister ']' sb.appendC
+          break
+      end
+    return
+  end
+  proc( stringBuilder : sb AsmOp : op -> stringBuilder ) =>: appendAsmOp
+    sb
+      op .opType sb.appendOpType ' ' sb.appendC
+      op .valType sb.appendValType
+      op .operands ..length for =:: i
+        op .operands i [] =:: operand
+        operand .empty ?? if continue end
+        ' ' sb.appendC operand sb.appendAsmOperand
+      end
+    return
+  end
+  proc( stringBuilder : sb Atomic : atom ProgramContext ptr : program -> stringBuilder ) =>: appendAtomic
+    atom switch
+      Unknown case sb "  ?\n" appendS return
+      Op case sb "  " sb.appendS atom .Op appendAsmOp '\n' sb.appendC return
+      StartProc case
+        sb
+          '\n' sb.appendC
+          atom .StartProc program .idContext .typeContext .labelContext sb.appendLabelName
+          ":\n  push rbp\n  mov rbp, rsp\n" sb.appendS
+        return
+      DebugStartOp case
+        sb
+          "## " sb.appendS
+          atom .DebugStartOp program sb.appendOp
+        return
+    end
+  end
+end
+
+struct( RegisterId : hi RegisterId : low ) =:: RegisterPair
+union(
+  _ : memory ## procedure internal stack-memory
+  RegisterId : register
+  RegisterPair : registers
+  i32 : intArgument ## procedure argument location on call-stack
+  ## TODO? seperate state for register+memory (for 2-register values)
+) =:: StackValueLocation
+## TODO marker for values that appear multiple times in stack (delay copy until next loop start)
+struct(
+  StackValueLocation : location
+  ValType : valType
+) =:: StackValue
+union(
+  RegisterId : register
+  RegisterPair : registers
+  ## TODO pointer, pointer+offset
+  i32 : intArgument
+  i32 : floatArgument
+  LabelId : localMemory
+  LabelId : globalMemory
+  i64 : intConstant
+  ## TODO? float-constant, composite-constant, constant-location
+) =:: ValueLocation
+
+#+
+registers -> stackValues + "cache" of last variable accesses"
+  if variable is read/written value is kept in register until
+    a) register is needed
+    b) variable changes
+    c) merging with branch without value
+    d) first read in loop of different value:
+      - if first read is mutable variable discard all other values
+      - if first read is immutable variable discard all mutable values
+      -> ensure remaining values are in cache when reaching end of loop
+    e) a value is written to a pointer that might overlap with variable memory
+  if variable read again value from register is used
+-> write to (small) (sub-)variable adds moving value to register
+
+if register is known to hold a specific constant replace reads from register with that constant
+
+-> register needs list of currently cached variables (+ values need to remember which register holds newest value)
+-> register needs flag to remember if currently used by stack value
+
+before final output:
+  remove all writes to registers/local memory that are not read before next write
+  discard all memory blocks that are never read or converted to pointer
+TODO add target specific optimizations as finaly step before output
+  -> fuze/split operations
+  -> use target specific operations
++#
+
+struct(
+  ProgramContext ptr.mut : program
+  RegisterState slice.mut : intDataRegisters
+  StackValue BranchTree : mut: stack
+  LabelId ValueLocation hashMap : mut: variableLocations
+) =:: CompilerContext
+
+## TODO? do i need a mapping variableId -> memory-location
+##  -> is mem-varId always correct for arguments? (correctly map argument location to memory identifier)
+
+## TODO! easy way to get from register to register-state
+proc(
+  RegisterId : reg
+  CompilerContext ptr.mut : context
+-> RegisterState ptr.mut optional ) =>: findRegister
+  reg NO_REG == if
+    RegisterState ptr.mut optional.empty return
+  end
+  context .intDataRegisters [] .length for =:: i
+    context [] .intDataRegisters i @[] =:: intReg
+    intReg [] .register reg == if
+      intReg optional.wrap return
+    end
+  end
+  RegisterState ptr.mut optional.empty return
+end
+
+proc(
+  CompilerContext ptr.mut : context
+-> ) =>: resetRegisters
+  context .stack branchTree.clear
+  ## TODO? clear variable use map
+  ## context .variableLocations map.clear context .variableLocations=
+  context .intDataRegisters [] .length for =:: i
+    context [] .intDataRegisters i @[] -1 >$ .lastUsed=
+  end
+  ## TODO reset float registers
+end
+
+## TODO! update stack-values/variableLocations if register is reused
+proc(
+  Atomic list : ops
+  i32 : opIndex
+  CompilerContext ptr.mut : context
+-> Atomic list RegisterId ) =>: nextIntRegister
+  context [] .intDataRegisters 0 [] =::  mut: bestCandidate
+  0:i64 =:: mut: candiateIndex
+  1:i64 while $ context .intDataRegisters [] .length < and bestCandidate .lastUsed 0 >= do =:: i
+    context [] .intDataRegisters i [] .lastUsed bestCandidate .lastUsed < if
+      context [] .intDataRegisters i [] bestCandidate=
+      i candiateIndex=
+    end
+  finally i 1 + end ..drop
+  opIndex context [] .intDataRegisters candiateIndex @[] .lastUsed=
+  ops
+    bestCandidate .lastUsed 0 >= if
+      ## TODO move register value to correct memory location
+      asm.OpType .MOVE
+        ValType .I64 ## TODO use correct val-type
+        asm.Operand .unknown
+        bestCandidate .register asm.Operand .register
+      asmOp2 list.append
+    end
+  bestCandidate .register return
+end
+
+## TODO update current register states
+proc(
+  Atomic list : ops
+  ValType : valType
+  ValueLocation : location
+  i32 : opIndex
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: pushValue
+  ops =:: mut: newOps
+  ## TODO make dependent on valType
+  location switch
+    register case ## TODO? check for constant in register
+      location .register context findRegister =:: regState
+      regState optional.hasData if
+        opIndex regState .data .lastUsed=
+        context .stack location .register StackValueLocation .register valType StackValue new branchTree.push
+      else ## arg register is not a valid data register
+        newOps
+          opIndex context nextIntRegister =:: targetRegister
+          asm.OpType .MOVE
+            valType
+            targetRegister asm.Operand .register
+            location .register asm.Operand .register
+          asmOp2 list.append
+        newOps=
+        context .stack targetRegister StackValueLocation .register valType StackValue new branchTree.push
+      end
+      newOps return
+    registers case
+      break
+    intConstant case
+      newOps
+        opIndex context nextIntRegister =:: targetRegister
+        asm.OpType .MOVE
+          valType
+          targetRegister asm.Operand .register
+          location .intConstant asm.Operand .constInt
+        asmOp2 list.append
+      newOps=
+      context .stack targetRegister StackValueLocation .register valType StackValue new branchTree.push
+      newOps return
+    intArgument case
+      context .stack location .intArgument StackValueLocation .intArgument valType StackValue new branchTree.push
+      newOps return
+    floatArgument case
+      break
+    localMemory case
+      break
+    globalMemory case
+      break
+  end
+  newOps
+    Atomic .Unknown list.append
+  return
+end
+## TODO update current register states
+proc(
+  Atomic list : ops
+  ValType : argType
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> Atomic list StackValue optional ) =>: popValue
+  context [] .program .errors =:: errors
+  context [] .stack branchTree.depth 0 == if
+    ops StackValue optional.empty return
+  end
+  context .stack branchTree.pop .data [] =:: popped
+  popped .valType argType != if
+    "unexpected value type expected: " sb.copyPtr
+      argType sb.appendValType
+      " got: " sb.appendS
+      popped .valType sb.appendValType
+    pos errors appendError
+    ops StackValue optional.empty return
+  end
+  ops popped optional.wrap return
+end
+
+proc(
+  Atomic list : ops
+  asm.OpType : opType
+  ValType : argType
+  FilePosition : pos
+  i32 : opIndex
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: compileUnaryOperator
+  ops
+    argType pos context popValue =:: argValue?
+    argValue? optional.isEmpty if return end
+    argValue? .data =:: argValue
+  =:: mut: newOps
+  ## TODO check if argument caches any variables, if not reuse same register(s)
+  argType switch
+    EMPTY case break
+    I8 I16 I32 I64 PTR case
+      newOps
+        opIndex context nextIntRegister =:: targetRegister
+        asm.OpType .MOVE
+          argType
+          targetRegister asm.Operand .register
+          argValue .location switch ## TODO? extract for procedure
+            register case argValue .location .register asm.Operand .register break
+            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            intArgument case argValue .location .intArgument asm.Operand .intArgument break
+            registers case ..unreachable ## wrong data-format
+          end
+        asmOp2 list.append
+        opType
+          argType
+          targetRegister asm.Operand .register
+        asmOp1 list.append
+        ## pushValue
+          argType
+          targetRegister ValueLocation .register
+          opIndex
+          context
+        pushValue
+      return
+    F32 F64 case
+      break
+    REFERENCE case
+      break
+    BITS128 BITS128IF BITS128FI BITS128F case
+      break
+  end
+  newOps
+    Atomic .Unknown list.append
+  return
+end
+proc(
+  Atomic list : ops
+  asm.OpType : opType
+  ValType : argType
+  FilePosition : pos
+  i32 : opIndex
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: compileBinaryOperator
+  ops
+    argType pos context popValue =:: arg2?
+    arg2? optional.isEmpty if return end
+    arg2? .data =:: arg2
+    argType pos context popValue =:: arg1?
+    arg1? optional.isEmpty if return end
+    arg1? .data =:: arg1
+  =:: mut: newOps
+  ## TODO check if first argument caches any variables, if not reuse same register(s)
+  argType switch
+    EMPTY case break
+    I8 I16 I32 I64 PTR case
+      newOps
+        opIndex context nextIntRegister =:: targetRegister
+        asm.OpType .MOVE
+          argType
+          targetRegister asm.Operand .register
+          arg1 .location switch ## TODO? extract for procedure
+            register case arg1 .location .register asm.Operand .register break
+            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            intArgument case arg1 .location .intArgument asm.Operand .intArgument break
+            registers case ..unreachable ## wrong data-format
+          end
+        asmOp2 list.append
+        opType
+          argType
+          targetRegister asm.Operand .register
+          arg2 .location switch ## TODO? extract for procedure
+            register case arg2 .location .register asm.Operand .register break
+            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            intArgument case arg2 .location .intArgument asm.Operand .intArgument break
+            registers case ..unreachable ## wrong data-format
+          end
+        asmOp2 list.append
+        ## pushValue
+          argType
+          targetRegister ValueLocation .register
+          opIndex
+          context
+        pushValue
+      return
+    F32 F64 case
+      break
+    REFERENCE case
+      break
+    BITS128 BITS128IF BITS128FI BITS128F case
+      break
+  end
+  newOps
+    Atomic .Unknown list.append
+  return
+end
+proc(
+  Atomic list : ops
+  asm.CompareType : cmpType
+  ValType : argType
+  FilePosition : pos
+  i32 : opIndex
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: compileComparisonOperator
+  ops
+    argType pos context popValue =:: arg2?
+    arg2? optional.isEmpty if return end
+    arg2? .data =:: arg2
+    argType pos context popValue =:: arg1?
+    arg1? optional.isEmpty if return end
+    arg1? .data =:: arg1
+  =:: mut: newOps
+  ## TODO check if first argument caches any variables, if not reuse same register(s)
+  argType switch
+    EMPTY case break
+    I8 I16 I32 I64 PTR case
+      newOps
+        opIndex context nextIntRegister =:: targetRegister
+        asm.OpType .CMP
+          argType
+          cmpType asm.Operand .cmpType
+          targetRegister asm.Operand .register
+          arg1 .location switch ## TODO? extract for procedure
+            register case arg1 .location .register asm.Operand .register break
+            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            intArgument case arg1 .location .intArgument asm.Operand .intArgument break
+            registers case ..unreachable ## wrong data-format
+          end
+          arg2 .location switch ## TODO? extract for procedure
+            register case arg2 .location .register asm.Operand .register break
+            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            intArgument case arg2 .location .intArgument asm.Operand .intArgument break
+            registers case ..unreachable ## wrong data-format
+          end
+        asmOp4 list.append
+        ## pushValue
+          argType
+          targetRegister ValueLocation .register
+          opIndex
+          context
+        pushValue
+      return
+    F32 F64 case
+      break
+    REFERENCE case
+      break
+    BITS128 BITS128IF BITS128FI BITS128F case
+      break
+  end
+  newOps
+    Atomic .Unknown list.append
+  return
+end
+
+proc(
+  Atomic list : ops
+  BuiltIn : builtIn
+  Type : opType
+  FilePosition : pos
+  i32 : opIndex
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: compileBuiltIn
+  using: Op asm.OpType
+  using: Cmp asm.CompareType
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  opType typeContext types.getProcIn ..drop =:: inType
+  inType typeContext types.compositeEltCount 0 > if
+    inType 0 typeContext types.compositeGetLabel
+        labelContext id.labelFlags id.FLAG_STATIC & ? if
+      1:i32
+    else
+      0:i32
+    end =:: firstArg
+    inType firstArg typeContext types.compositeGetElement
+  else
+      opType typeContext types.getProcOut ..drop =:: outType
+      outType typeContext types.compositeEltCount 0 > _if
+    outType 0 typeContext types.compositeGetElement
+  else
+    Type .undefined
+  end =:: baseType
+  baseType program toValType =:: baseVal
+  builtIn switch
+    NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
+      ops Op .NEG baseVal pos opIndex context compileUnaryOperator
+      return
+    ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
+      ops Op .ADD baseVal pos opIndex context compileBinaryOperator
+      return
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 C8_DIFF C16_DIFF C32_DIFF case
+      ops Op .SUB baseVal pos opIndex context compileBinaryOperator
+      return ## TODO ensure char-diff arguments are zero extended
+    MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
+      ops Op .MUL baseVal pos opIndex context compileBinaryOperator
+      return
+    DIV_I32  DIV_I64 DIV_F32 DIV_F64 case ## TODO implement remaing operators
+      break ## ! div,mod requries speical register setup ( input: rax, rdx=0, output rax,rdx
+    DIV_I64I32 case
+      break
+    REM_I32 REM_I64 case
+      break
+    REM_I64I32 case
+      break
+    UDIV_I32 UDIV_I64 case
+      break
+    UDIV_I64I32 case
+      break
+    UMOD_I32 UMOD_I64 case
+      break
+    UMOD_I64I32 case
+      break
+    NOT_BOOL case
+      break
+    FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
+      break
+    AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
+      ops Op .AND baseVal pos opIndex context compileBinaryOperator
+      return
+    OR_BOOL  OR_I8 OR_I16 OR_I32 OR_I64 case
+      ops Op .OR baseVal pos opIndex context compileBinaryOperator
+      return
+    XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
+      ops Op .XOR baseVal pos opIndex context compileBinaryOperator
+      return
+    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
+      ops Cmp .EQ baseVal pos opIndex context compileComparisonOperator
+      return
+    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 case
+      ops Cmp .NE baseVal pos opIndex context compileComparisonOperator
+      return
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
+      ops Cmp .LT baseVal pos opIndex context compileComparisonOperator
+      return
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64 LT_C8 LT_C16 LT_C32 case
+      ops Cmp .ULT baseVal pos opIndex context compileComparisonOperator
+      return
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
+      ops Cmp .LE baseVal pos opIndex context compileComparisonOperator
+      return
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64 LE_C8 LE_C16 LE_C32 case
+      ops Cmp .ULE baseVal pos opIndex context compileComparisonOperator
+      return
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
+      ops Cmp .GT baseVal pos opIndex context compileComparisonOperator
+      return
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64 GT_C8 GT_C16 GT_C32 case
+      ops Cmp .UGT baseVal pos opIndex context compileComparisonOperator
+      return
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
+      ops Cmp .GE baseVal pos opIndex context compileComparisonOperator
+      return
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64 GE_C8 GE_C16 GE_C32 case
+      ops Cmp .UGE baseVal pos opIndex context compileComparisonOperator
+      return
+    default break
+  end
+  ops
+    Atomic .Unknown list.append
+  return
+end
+
+proc(
+  Atomic list : ops
+  Operation ptr : op
+  i32 : opIndex
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: compileOp
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  ops
+    op .val .implementProcedure ?? if
+      op .val [] .implementProcedure =:: implInfo
+      op [] .dataType =:: procType
+      program [] .procedures
+        implInfo .procId i64 cast list.at .data
+      =:: procInfo
+      context resetRegisters
+      procInfo [] .labelId Atomic .StartProc list.append
+      ## TODO setup procedure memory
+      ##   -> stackMemory int,float,v128
+      ##   -> localVariables
+      ##   -> memory for named arguments passed in registers
+      procType typeContext types.getProcIn ..drop =:: inType
+      inType typeContext types.compositeElts =:: args
+      0 =:: mut: intArgs
+      ## TODO ensure arument registers are marked as used (to prevent accidental overwrite)
+      0:i32 while $ i64 cast.u args .length < do =:: i
+        inType i typeContext types.compositeGetLabel =:: label
+        args i slice.get =:: argType
+        argType program toValType =:: valType
+        argType typeContext types.isEmpty if
+          i 1 + continue ## skip empty arguments
+        end
+        ## TODO different handling dependent on argument type
+        intArgs AMD64.getIntArgumentRegister =:: argRegister
+        label id.LABEL_ID_NONE == if ## push argument
+          argRegister NO_REG == if
+            valType intArgs ValueLocation .intArgument opIndex context pushValue
+          else
+            valType argRegister ValueLocation .register opIndex context pushValue
+          end
+        else
+          argRegister NO_REG != if
+            asm.OpType .MOVE
+              valType
+              label asm.Operand .localMemory
+              argRegister asm.Operand .register
+            asmOp2 list.append
+          end
+          context .variableLocations
+            label
+            argRegister NO_REG != and
+                argRegister context findRegister =:: regState
+                regState optional.hasData if
+              opIndex regState .data .lastUsed=
+              argRegister ValueLocation .register
+            else
+              intArgs ValueLocation .intArgument
+            end
+          map.put ..drop
+          ## TODO? update register state of previous target
+        end
+        intArgs 1 + intArgs=
+        i 1 +
+      end ..drop
+      procInfo [] .implementation .code ?? ! if
+        "unexpected procedure implementation" sb.copyPtr
+        op [] .pos errors appendError
+        return
+      end
+      ## allocate space for variables
+      implInfo .implementationId 0 >= if
+        procInfo [] .implementation .code .implementations
+          implInfo .implementationId list.at .data [] .variables
+      else
+        procInfo [] .implementation .code .variables
+      end =:: variables
+      variables for =:: varInfo
+        VariableType ..length 3 == "no new variable types" assert
+        varInfo .variableType .ARGUMENT ?? if
+          continue
+        end
+        context .variableLocations varInfo .label $ ValueLocation .localMemory map.put ..drop
+        ## TODO? update register state of previous target
+      end
+      return
+    end
+    op [] Atomic .DebugStartOp list.append
+    op [] .val switch
+      Constant case
+        op [] .dataType program toValType =:: valType
+        ## TODO make operation dependent on value type
+        ## TODO extract conversion constant -> location to procedure
+        op [] .val .Constant .Int ?? if
+          valType op [] .val .Constant .Int ValueLocation .intConstant opIndex context pushValue
+          return
+        end
+        break
+      declareId case return ## nothing to do (all decalarations handled at start of procedure)
+      getId case
+        op .val .getId =:: idData
+        idData [] .labelId =:: labelId
+        idData [] .idType switch
+          ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR GLOBAL_VAR case
+            context .variableLocations labelId map.get =:: variableLocation?
+            op [] .dataType program toValType
+              variableLocation? optional.isEmpty if
+                ## ValueLocation
+                  idData [] .idType .ARGUMENT ?? if ..drop
+                    "could not find location of argument: " sb.copyPtr
+                      labelId labelContext sb.appendLabelName
+                    op [] .pos errors appendError
+                    return
+                  else idData [] .idType .GLOBAL_VAR ?? _if
+                    labelId ValueLocation .globalMemory
+                  else ## LOCAL_VAR ITR_VAR TMP_VAR
+                    labelId ValueLocation .localMemory
+                  end
+                =:: newLocation
+                context .variableLocations labelId newLocation map.put ..drop
+                ## TODO? assert previous target was empty
+                newLocation
+              else
+                variableLocation? .data
+              end
+            opIndex context pushValue
+            return
+          PROCEDURE case break
+          TYPE LABEL PROCEDURE_BUNDLE case
+            "unexpected id-type" sb.copyPtr
+              ## TODO print id-type
+            op [] .pos errors appendError
+            break
+        end
+        break
+      setId initializeId case
+        op .val .setId ?? if
+          op .val .setId
+        else
+          op .val .initializeId
+        end =:: idData
+        idData [] .labelId =:: labelId
+        ## TODO invaidate previous cached values
+        idData [] .idType switch
+          ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR case
+            op [] .dataType program toValType =:: valType
+            valType op [] .pos context popValue =:: stackValue?
+            stackValue? optional.isEmpty if return end
+            stackValue? .data =:: stackValue
+            stackValue .location switch
+              register case ## TODO? check for constant in register
+                context .variableLocations
+                  labelId
+                  stackValue .location .register ValueLocation .register
+                map.put ..drop
+                asm.OpType .MOVE
+                  valType
+                  labelId asm.Operand .localMemory
+                  stackValue .location .register asm.Operand .register
+                asmOp2 list.append
+                return
+              registers case
+                context .variableLocations
+                  labelId
+                  stackValue .location .registers ValueLocation .registers
+                map.put ..drop
+                ## TODO copy registers to memory
+                break
+              memory intArgument case
+                ## TODO! make dependent on value type
+                opIndex context nextIntRegister =:: tmpRegister
+                asm.OpType .MOVE
+                  valType
+                  tmpRegister asm.Operand .register
+                  stackValue .location .memory ?? if
+                    ## TODO use correct memory location (? `context [] .stackIntCount`)
+                    context [] .stack branchTree.depth asm.Operand .intStackData
+                  else
+                    stackValue .location .intArgument asm.Operand .intArgument
+                  end
+                asmOp2 list.append
+                context .variableLocations
+                  labelId
+                  tmpRegister ValueLocation .register
+                map.put ..drop
+                asm.OpType .MOVE
+                  valType
+                  labelId asm.Operand .localMemory
+                  tmpRegister asm.Operand .register
+                asmOp2 list.append
+                return
+            end
+            break
+          PROCEDURE GLOBAL_VAR case break
+          TYPE LABEL PROCEDURE_BUNDLE case
+            "unexpected id-type" sb.copyPtr
+              ## TODO print id-type
+            op [] .pos errors appendError
+            break
+        end
+        break
+      builtIn case
+        ## compileBuiltIn
+          op [] .val .builtIn
+          op [] .dataType
+          op [] .pos
+          opIndex
+          context
+        compileBuiltIn
+        return
+      stackMod case
+      op [] .val .stackMod .modType switch
+        DROP case
+          op [] .val .stackMod .n =:: count
+          context [] .stack branchTree.depth count < if
+            context .stack branchTree.clear
+            "stack underflow" sb.copyPtr
+            op [] .pos errors appendError
+            return
+          end
+          count for ..drop
+            ## TODO! update register info
+             context .stack branchTree.pop ..drop
+          end
+          return
+        COPY case
+          op [] .val .stackMod .n =:: offset
+          context [] .stack branchTree.depth offset <= if
+            "stack underflow" sb.copyPtr
+            op [] .pos errors appendError
+            return
+          end
+          ## copy value on stack
+          context .stack
+            offset
+          branchTree.at .data =:: copied
+          context .stack
+            copied []
+          branchTree.push
+          return
+        SWAP case
+          context [] .stack branchTree.depth 2 < if
+            "stack underflow" sb.copyPtr
+            op [] .pos errors appendError
+            return
+          end
+          context .stack branchTree.swap
+          return
+      end
+      break
+      ## stack-modifer
+        ##  swap -> swap labels for stack value
+        ##  drop -> no-op
+        ## dup ? copy stack-label, copy value when reaching while (back-jump label)
+      default break
+    end
+    Atomic .Unknown list.append
+  return
+end
+proc( Atomic list : ops string : fileName ProgramContext ptr : program io.FILE : target -> Atomic list ) =>: printOps
+  1024 sb.create
+    "## " sb.appendS
+    fileName sb.appendStr
+    '\n' sb.appendC
+    ops for program sb.appendAtomic end
+    target $1 io.fputSb ..drop
+  sb.free ..drop
+  ops list.clear
+end
+proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compileToASM
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  RegisterState MAX_DATA_REGISTERS_INT array : intRegBuffer
+  ## CompilerContext
+    program
+    intRegBuffer@ AMD64.initIntDataRegisters
+    StackValue branchTree.create
+    labelHash@ labelEq@ 1024 ValueLocation map.create
+  CompilerContext new =:: mut: contextData
+  contextData@ =:: context
+  1024 Atomic list.create
+    ## code
+    program [] .progFiles .length for =:: i
+      program [] .progFiles i list.get =:: f
+      f .localOps .length for =:: opIndex
+        f .localOps opIndex list.at .data opIndex context compileOp
+      end
+      f .fileName sb.asStr program target printOps
+    end
+  list.free ..drop
+end

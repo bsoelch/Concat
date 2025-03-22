@@ -21,6 +21,13 @@ fi
 if [[ "$@" == *"--no-core"* ]]; then
   concatArgs+=( --no-core )
 fi
+if [[ "$@" == *"--asm"* ]]; then
+  concatArgs+=( --asm )
+  echo "compile code.concat"
+  echo "-----------------------------------------"
+  $baseCompiler "$codeSrc" -o "$codeAsmTarget" -p "./parser.out" -t "./typeCheck.out" ${concatArgs[@]}
+  exit 0
+fi
 
 externFiles=(  )
 if [[ "$@" == *"-L"* ]]; then
