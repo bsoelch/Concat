@@ -1468,6 +1468,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             break
           TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION
           TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN TYPE_CPROC_IN INITIALIZER TYPE_TYPESET case
+            state [] .constantBlocks .length 0 > if ## close matching constant block
+              state [] .constantBlocks
+                list.pop ..drop
+              state .constantBlocks=
+            end
             "unexpected 'end' statement in " sb.copyPtr
               currentBlock sb.appendBlockType
               "-block" sb.appendS
@@ -2380,7 +2385,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             aliasId id.NO_ALIAS != if
               "alias (declared at " sb.appendS
               aliasId idContext id.getAliasPos sb.appendPos
-              ")  to" sb.appendS
+              ")  to " sb.appendS
             end
             idData id.asIdInfo labelContext sb.appendIdInfo
             " ( " sb.appendS

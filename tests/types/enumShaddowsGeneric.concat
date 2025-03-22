@@ -1,0 +1,6 @@
+( type : T -> type ) =>: genericEnum
+  enum( A B C T )
+end
+proc( -> ) =>: main
+  i32 genericEnum ..drop
+end

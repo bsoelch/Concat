@@ -1,0 +1,8 @@
+import stringIO
+
+using std.literals.
+using: println io.println
+
+proc( -> ) =>: main
+  "Hello, World!":s println
+end

@@ -189,7 +189,7 @@ namespace: interpreter
     0 return
   end
 
-  proc( InterpreterContext ptr.mut : context -> bool ) =>: inEnum
+  proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inEnum
     ## XXX cache number of open enum blocks
     context minBlockOffset =:: minBlock
     context [] .openBlocks .length 1 - while $ minBlock >= do =:: i

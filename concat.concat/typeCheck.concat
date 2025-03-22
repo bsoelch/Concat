@@ -1751,10 +1751,9 @@ proc(
     end op=
   end
   ## convert static arguments to constants
-  op .val .getId ?? and
+  op .val .getId ?? and state .interpreter interpreter.inEnum ! and
       op .val .getId .labelId =:: label
       label labelContext id.labelFlags id.FLAG_STATIC & ? and
-      ConstValue .None =:: mut: argValue
       state .argData label map.at =:: argData?
       argData? optional.hasData if
     argData? .data [] .valType op@ .dataType=

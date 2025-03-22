@@ -370,7 +370,6 @@ namespace: id
     "could not find identifier":s NAMESPACE_ID_NONE scopeId IdentifierName new
     id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
   end
-
   proc( LabelId : nameId IdentifierContext ptr.mut : context -> IdentifierData ptr.mut bool ) =>: export: getIdentifier
     nameId LABEL_ID_TMP == if
       ID_TMP_DATA@ false return
@@ -900,7 +899,7 @@ namespace: id
     end =:: target
       target [] .labelId
       nameAlias .length 0 > if
-        nameAlias
+        nameAlias labelContext id.copyString ## create copy to ensure string stays alive
       else
         target [] .labelId labelContext id.getLabelName
           $ '.' string.lastIndexOf
