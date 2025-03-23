@@ -1,0 +1,18 @@
+import map
+
+proc( i32 -> i32 ) =>: i32Hash end
+proc( i32 i32 -> bool ) =>: i32Eq  == end
+
+proc( -> ) =>: main
+  i32Hash@ i32Eq@ 100 i32 map.create =:: mut: aMap
+  aMap@ 1 1 map.put ..drop
+  aMap@ 2 2 map.put ..drop
+  aMap@ 3 3 map.put ..drop
+  aMap@ 2 map.remove .data 2 == "removed 2" assert
+  aMap@ 2 4 map.put optional.isEmpty "2 was removed" assert
+  aMap@ map.clear
+  aMap@ 1 2 map.put optional.isEmpty "1 was removed" assert
+  aMap@ 2 4 map.put optional.isEmpty "2 was removed" assert
+  aMap@ 3 8 map.put optional.isEmpty "3 was removed" assert
+  aMap@ map.free
+end

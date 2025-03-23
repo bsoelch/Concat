@@ -3,19 +3,21 @@ import list
 import optional
 
 namespace: map
-  i64 =:: NodeId ## XXX? should NodeId be a sperate type
+  i32 =:: NodeId
+  0:NodeId =:: NO_NODE
   ( type : K type : V -> type ) =>: Node
-    struct( K : key V : mut: value  NodeId : mut: next )
+    struct( K : key V : mut: value NodeId : mut: next bool : isEmpty )
   end
 end
 
 ( type : K type : V -> type ) =>: export: hashMap
   struct(
     K V map.Node list : mut: nodeBuffer
-    map.NodeId _ ptr.mut : mut: data
-    i64 : mut: cap
+    map.NodeId _ ptr.mut : mut: data ## ids are zero for empty or one-based indices in the node buffer
     proc( K -> i32 ) ptr : hash
     proc( K K -> bool ) ptr : eq
+    i32 : hashMask ## capacity of data (assumed to be power of 2) -1
+    map.NodeId : freeNodes
   )
 end
 
@@ -24,14 +26,22 @@ namespace: map
     type : auto: K
     proc( K -> i32 ) ptr : hash
     proc( K K -> bool ) ptr : eq
-    i64 : initCap
+    i32 : initCap
     type : V
   -> K V hashMap ) =>: export: create
-    initCap K V Node list.create
-    initCap NodeId mem.calloc
-    initCap ## XXX find smallest power of 2 larger than cap, store shift distance
-    hash
-    eq
+    ## set all bits below highest bit to 1, ensure capacity is at least 64
+    initCap 1 - 0x3f |
+      $ 1 >>> | $ 2 >>> | $ 4 >>> |
+      $ 8 >>> | $ 16 >>> |
+    =:: hashMask
+    hashMask i64 cast 1 + =:: pow2cap
+    ## hashMap
+      pow2cap K V Node list.create
+      pow2cap NodeId mem.calloc
+      hash
+      eq
+      hashMask
+      NO_NODE
     K V hashMap new return
   end
   proc(
@@ -39,18 +49,32 @@ namespace: map
     type : auto: V
     K V hashMap : src
   -> K V hashMap ) =>: export: copy
+    src .hashMask i64 cast 1 + =:: capacity
     ## hashMap
       src .nodeBuffer list.copy
-      src .cap NodeId mem.alloc
+      capacity NodeId mem.alloc
         src .data
-        src .cap
+        capacity
       mem.copy
-      src .cap
       src .hash
       src .eq
+      src .hashMask
+      src .freeNodes
     K V hashMap new return
   end
 
+  proc(
+    type : auto: K
+    type : auto: V
+    K V hashMap ptr.mut : data
+  -> ) =>: export: clear
+    data [] .nodeBuffer
+      list.clear
+    data .nodeBuffer=
+    data [] .hashMask i64 cast 1 + =:: capacity
+    data [] .data capacity mem.clear ..drop
+    ## TODO version that allows calling cleanup procedure on all values still in map
+  end
   proc(
     type : auto: K
     type : auto: V
@@ -60,7 +84,7 @@ namespace: map
       list.free
     data .nodeBuffer=
     data [] .data mem.free
-    0 data .cap=
+    0 data .hashMask=
   end
   proc(
     type : auto: K
@@ -69,54 +93,78 @@ namespace: map
     proc( V -> ) ptr : freeValue
     K V hashMap ptr.mut : data
   -> ) =>: export: freeAll
+    data [] .nodeBuffer for =:: node
+      node .isEmpty ! if
+        node .key freeKey ()
+        node .value freeValue ()
+      end
+    end
     data [] .nodeBuffer
-      0 while ..dup ..over.2 .length < do
-        ..over ..over list.get
-          ..dup .key freeKey ()
-        .value freeValue ()
-        1 +
-      end ..drop
       list.free
     data .nodeBuffer=
     data [] .data mem.free
-    0 data .cap=
+    0 data .hashMask=
   end
 
   proc(
     type : auto: K
     type : auto: V
-    K V hashMap ptr.mut : data
+    NodeId ptr.mut : parent
+    K V hashMap ptr.mut : map
+  -> NodeId ) =>: nextNodeId
+    ## reuse free node if available
+    map [] .freeNodes NO_NODE != if
+      map [] .freeNodes =:: freeNode
+        map [] .nodeBuffer
+          freeNode i64 cast 1 -
+        list.at .data [] .next map .freeNodes=
+      freeNode
+    else
+      map [] .nodeBuffer .length 1 + NodeId cast
+    end =:: newId
+      newId parent =
+    newId return
+  end
+  enum( FIND CREATE DELETE ) =:: FindOperation
+  proc(
+    type : auto: K
+    type : auto: V
+    K V hashMap ptr.mut : map
     K : key
-    bool : newNode
+    FindOperation : operation
   -> NodeId ) =>: find
-    data [] .cap 0 == if ## TODO ensure cap/ error message
-       0:NodeId return
+    map [] .hashMask 0 == if ## TODO ensure cap/ error message
+       NO_NODE return
     end
-    key data [] .hash () i64 cast.u data [] .cap u% ## sync types in loop
-      data [] .data ..over []
-        ..dup 0:NodeId == if ..drop
-          newNode if
-            data [] .nodeBuffer .length 1 +
-              ..dup NodeId cast data [] .data ..over.3 =[]
-            ..swap ..drop
-            NodeId cast return
-          end
-          ..drop 0:NodeId return
-        end
-        i64 cast while ..dup 0 > do ..swap ..drop
-          data [] .nodeBuffer ..over i64 cast 1 - list.get
-            ..dup .key key data [] .eq () if ..drop
-              NodeId cast return
-            end
-          .next i64 cast
-        end ..drop
-      newNode if
-        data [] .nodeBuffer .length 1 +
-          ..dup NodeId cast data [] .nodeBuffer ..over.3 1 - list.at .data .next=
-        ..swap ..drop
-        NodeId cast return
+    key map [] .hash () map [] .hashMask & =:: keyHash
+    map [] .data keyHash @[] NodeId ptr.mut cast! =:: mut: nodeIdLoc
+    nodeIdLoc [] NO_NODE == if
+      operation .CREATE ?? if
+        nodeIdLoc map nextNodeId return
       end
-    ..drop 0:NodeId return
+      NO_NODE return
+    end
+    while
+      nodeIdLoc [] =:: nodeId
+      nodeId NO_NODE !=
+    do
+      map [] .nodeBuffer nodeId i64 cast 1 - list.at .data =:: node
+      node [] .key key map [] .eq () if
+        operation .DELETE ?? if
+          ## unlink node from map
+          node [] .next nodeIdLoc =
+          true node .isEmpty=
+          map [] .freeNodes node .next=
+          nodeId map .freeNodes=
+        end
+        nodeId return
+      end
+      node .next nodeIdLoc=
+    end
+    operation .CREATE ?? if
+      nodeIdLoc map nextNodeId return
+    end
+    NO_NODE return
   end
 
   proc(
@@ -125,11 +173,11 @@ namespace: map
     K V hashMap ptr.mut : data
     K : key
   -> V optional ) =>: export: get
-    data key false find
-      ..dup 0:NodeId == if ..drop
-        V optional.empty return
-      end
-    data [] .nodeBuffer ..swap i64 cast 1 - list.get .value optional.wrap return
+    data key FindOperation .FIND find =:: nodeId
+    nodeId NO_NODE == if
+      V optional.empty return
+    end
+    data [] .nodeBuffer nodeId i64 cast 1 - list.get .value optional.wrap return
   end
   proc(
     type : auto: K
@@ -137,14 +185,11 @@ namespace: map
     K V hashMap ptr.mut : data
     K : key
   -> V ptr.mut optional ) =>: export: at
-    data key false find
-      ..dup 0:NodeId == if ..drop
-        V ptr.mut optional.empty return
-      end
-    data [] .nodeBuffer ..swap i64 cast 1 - list.at ..dup optional.isEmpty if ..drop
+    data key FindOperation .FIND find =:: nodeId
+    nodeId NO_NODE == if
       V ptr.mut optional.empty return
     end
-    .data .value optional.wrap return
+    data [] .nodeBuffer nodeId i64 cast 1 - list.at .data .value optional.wrap return
   end
   proc(
     type : auto: K
@@ -153,21 +198,40 @@ namespace: map
     K : key
     V : value
   -> V optional ) =>: export: put
-    data key true find
-      ..dup i32 cast data [] .nodeBuffer .length > if ..drop
+    data key FindOperation .CREATE find =:: nodeId
+      nodeId i32 cast data [] .nodeBuffer .length > if
         data [] .nodeBuffer
-          key value 0:NodeId K V Node new list.append
+          key value NO_NODE false K V Node new list.append
         data .nodeBuffer=
         V optional.empty return
       end
-    data [] .nodeBuffer ..swap i32 cast 1 - list.at .data
-      ..dup [] .value ..swap
-      value ..swap .value=
-    optional.wrap return
+    data [] .nodeBuffer nodeId i32 cast 1 - list.at .data
+      $ [] .value =:: prevValue
+      value $1 .value=
+    =:: nodeData
+    nodeData [] .isEmpty if
+      false nodeData .isEmpty=
+      V optional.empty return
+    end
+    prevValue optional.wrap return
+  end
+  proc(
+    type : auto: K
+    type : auto: V
+    K V hashMap ptr.mut : data
+    K : key
+  -> V optional ) =>: export: remove
+    data key FindOperation .DELETE find =:: nodeId
+    nodeId NO_NODE == if
+      V optional.empty return
+    end
+    data [] .nodeBuffer
+      nodeId i32 cast 1 -
+    list.at .data [] .value optional.wrap return
   end
 
   ( type : K type : V -> type ) =>: Iterator
-    struct( K V hashMap ptr : map i64 : mut: index NodeId : mut: next )
+    struct( K V hashMap ptr : map i32 : mut: index NodeId : mut: next )
   end
   namespace: itr
     proc(
@@ -175,20 +239,20 @@ namespace: map
       type : auto: V
       K V hashMap ptr.mut : map
     -> K V Iterator ) =>: export: start
-      0:i64 while ..dup map [] .cap < do =:: i
-        map [] .data i [] 0:NodeId != if
+      0:i32 while ..dup map [] .hashMask <= do =:: i
+        map [] .data i [] NO_NODE != if
           map i 1 + map [] .data i [] K V Iterator new return
         end
         i 1 +
       end ..drop
-      map map [] .cap 0:NodeId K V Iterator new return
+      map map [] .hashMask 1 + NO_NODE K V Iterator new return
     end
     proc(
       type : auto: K
       type : auto: V
       K V Iterator
     -> K V Iterator bool ) =>: export: hasNext
-      ..dup .next 0:NodeId != return
+      ..dup .next NO_NODE != return
     end
     proc(
       type : auto: K
@@ -200,9 +264,9 @@ namespace: map
         itr .next i64 cast 1 -
       list.at .data =:: res
       res [] .next itr@ .next=
-      itr .next 0:NodeId == if
-        while itr .index itr .map [] .cap < do
-          itr .map [] .data itr .index [] 0:NodeId != if
+      itr .next NO_NODE == if
+        while itr .index itr .map [] .hashMask <= do
+          itr .map [] .data itr .index [] NO_NODE != if
             itr .map [] .data itr .index [] itr@ .next=
             itr .index 1 + itr@ .index=
             break

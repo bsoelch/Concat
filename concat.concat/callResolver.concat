@@ -773,7 +773,7 @@ proc(
       ## CallSignatureInfo
         procId
         argCount ParameterInfo list.create
-        labelHash@ labelEq@ argCount i64 cast GenericArg map.create
+        labelHash@ labelEq@ argCount GenericArg map.create
         0
         0
         0
