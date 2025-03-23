@@ -14,10 +14,13 @@ i8 =:: RegisterId
 
 proc( char8 _ ptr : str i64 : len -> RegisterId ) : alias: static: :reg ..builtIn.parse.i8
 
+i32 =:: CachedValId
+namespace: CachedValId
+  -1:CachedValId =:: NONE
+end
 struct(
   i32 : lastUsed
-  ## TODO store chain of all currently cached variables
-  ## TODO? store if register holds constant value
+  CachedValId : cachedVariables
   RegisterId : register
 ) =:: RegisterState
 
@@ -46,6 +49,7 @@ namespace: AMD64
     INT_DATA_REGISTERS ..length i32 cast MAX_DATA_REGISTERS_INT i32.min for =:: i
       ## RegisterState
         -1
+        CachedValId.NONE
         INT_DATA_REGISTERS i []
       RegisterState new buffer i =[]
     end
@@ -361,7 +365,7 @@ struct(
 ) =:: StackValue
 union(
   RegisterId : register
-  RegisterPair : registers
+  RegisterPair : registers ## TODO? handle partially cached value
   ## TODO pointer, pointer+offset
   i32 : intArgument
   i32 : floatArgument
@@ -398,12 +402,110 @@ TODO add target specific optimizations as finaly step before output
   -> use target specific operations
 +#
 
+## TODO? also cache memory locations (value pointed to by var/register) and constants
+struct(
+  LabelId : label
+  CachedValId : next
+) =:: CachedValueNode
 struct(
   ProgramContext ptr.mut : program
   RegisterState slice.mut : intDataRegisters
   StackValue BranchTree : mut: stack
   LabelId ValueLocation hashMap : mut: variableLocations
+  CachedValueNode list : cachedValues
 ) =:: CompilerContext
+
+## TODO? how similar is cache node structure to branch tree
+##  is it possible to use same structure for both
+proc( CompilerContext ptr.mut : context -> ) =>: tryShrinkCacheList
+  context .cachedValues [] .length 1 - =:: mut: maxIndex
+  while maxIndex 0 >= and
+    context [] .cachedValues maxIndex list.get .label id.LABEL_ID_NONE ==
+  do
+    maxIndex 1 - maxIndex=
+  end
+  context [] .cachedValues
+    maxIndex 1 + list.setLength
+  context .cachedValues=
+end
+proc( LabelId : valId RegisterId : register CompilerContext ptr.mut : context -> ) =>: cacheVariable
+  context .variableLocations
+    valId
+    register ValueLocation .register
+  map.put =:: prevLocation?
+  ## remove previous location from register data
+  prevLocation? optional.hasData and
+      prevLocation? .data =:: prevLocation
+      prevLocation .registers ?? ! "single register value not stored inregister pair" assert
+      prevLocation .register ?? and
+      prevLocation .register context findRegister =:: prevRegisterData?
+      prevRegisterData? optional.hasData if
+    prevRegisterData? .data =:: prevRegisterData
+    prevRegisterData .cachedVariables =:: mut: cachedValIdLoc
+    while cachedValIdLoc [] CachedValId.NONE != do
+      context [] .cachedValues cachedValIdLoc [] i32 cast list.at .data =:: valData
+      valData [] .label valId == if
+        id.LABEL_ID_NONE valData .label=
+        ## point previous pointer to next element in linked list
+        valData [] .next cachedValIdLoc =
+        ## cachedValIdLoc did not change
+        continue
+      end
+      valData .next cachedValIdLoc=
+    end
+    context tryShrinkCacheList
+  end
+  ## update register storage
+  register context findRegister
+    $ optional.isEmpty if ..drop return end
+  .data =:: registerData
+  context .cachedValues []
+    $ .length CachedValId cast =:: newNodeId
+    ## CachedValueNode
+      valId
+      registerData [] .cachedVariables
+    CachedValueNode new list.append
+  context .cachedValues=
+  newNodeId registerData .cachedVariables=
+end
+proc( LabelId : valId RegisterPair : register CompilerContext ptr : context -> ) =>: cacheVariable2
+  ## TODO cache double-register value
+end
+proc( RegisterId : register CompilerContext ptr.mut : context -> ) =>: resetRegister
+  register context findRegister
+    $ optional.isEmpty if ..drop return end
+  .data =:: registerData
+  registerData [] .cachedVariables
+    while $ CachedValId.NONE != do
+      context [] .cachedValues >$ i32 cast list.at .data =:: valData
+      ## FIXME remove register from label map
+      ## valData [] .label map.remove ## TODO check if correct value was removed
+      id.LABEL_ID_NONE valData .label=
+      valData [] .next
+    end
+  registerData .cachedVariables=
+  context tryShrinkCacheList
+end
+proc( LabelId : valId bool : isGlobal CompilerContext ptr.mut : context -> ValueLocation ) =>: getVarLocation
+  context .variableLocations
+    valId
+  map.get =:: location?
+  location? optional.hasData if
+    ## TODO? check if cached data is still valid,
+    ## TODO update dependent cache if mulit-value cache is accessed after back-jump
+    ##    * variable mutable -> removes all other cached values
+    ##    * variable immutable -> removes all mutable cached values
+    location? .data return
+  end
+  valId
+    isGlobal if
+      ValueLocation .globalMemory
+    else
+      ValueLocation .localMemory
+    end
+  return
+end
+## TODO startLoop ( ) -> mark cached values
 
 ## TODO? do i need a mapping variableId -> memory-location
 ##  -> is mem-varId always correct for arguments? (correctly map argument location to memory identifier)
@@ -432,6 +534,7 @@ proc(
   ## TODO? clear variable use map
   ## context .variableLocations map.clear context .variableLocations=
   context .intDataRegisters [] .length for =:: i
+    context [] .intDataRegisters i [] .register context resetRegister
     context [] .intDataRegisters i @[] -1 >$ .lastUsed=
   end
   ## TODO reset float registers
@@ -453,14 +556,9 @@ proc(
   finally i 1 + end ..drop
   opIndex context [] .intDataRegisters candiateIndex @[] .lastUsed=
   ops
-    bestCandidate .lastUsed 0 >= if
-      ## TODO move register value to correct memory location
-      asm.OpType .MOVE
-        ValType .I64 ## TODO use correct val-type
-        asm.Operand .unknown
-        bestCandidate .register asm.Operand .register
-      asmOp2 list.append
-    end
+    ## TODO move stack values to memory
+    ## clear values cached in register
+    bestCandidate .register context resetRegister
   bestCandidate .register return
 end
 
@@ -542,6 +640,7 @@ proc(
   ops popped optional.wrap return
 end
 
+## TODO! change syntax for operators to include result location as parameter ( "add r3, r1, r2" for "r3 <- add r1,r2" )
 proc(
   Atomic list : ops
   asm.OpType : opType
@@ -874,18 +973,12 @@ proc(
               argRegister asm.Operand .register
             asmOp2 list.append
           end
-          context .variableLocations
-            label
-            argRegister NO_REG != and
-                argRegister context findRegister =:: regState
-                regState optional.hasData if
-              opIndex regState .data .lastUsed=
-              argRegister ValueLocation .register
-            else
-              intArgs ValueLocation .intArgument
-            end
-          map.put ..drop
-          ## TODO? update register state of previous target
+          argRegister NO_REG != and
+              argRegister context findRegister =:: regState
+              regState optional.hasData if
+            opIndex regState .data .lastUsed=
+            label argRegister context cacheVariable
+          end
         end
         intArgs 1 + intArgs=
         i 1 +
@@ -907,8 +1000,6 @@ proc(
         varInfo .variableType .ARGUMENT ?? if
           continue
         end
-        context .variableLocations varInfo .label $ ValueLocation .localMemory map.put ..drop
-        ## TODO? update register state of previous target
       end
       return
     end
@@ -929,27 +1020,9 @@ proc(
         idData [] .labelId =:: labelId
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR GLOBAL_VAR case
-            context .variableLocations labelId map.get =:: variableLocation?
+            labelId idData [] .idType .GLOBAL_VAR ?? context getVarLocation =:: variableLocation
             op [] .dataType program toValType
-              variableLocation? optional.isEmpty if
-                ## ValueLocation
-                  idData [] .idType .ARGUMENT ?? if ..drop
-                    "could not find location of argument: " sb.copyPtr
-                      labelId labelContext sb.appendLabelName
-                    op [] .pos errors appendError
-                    return
-                  else idData [] .idType .GLOBAL_VAR ?? _if
-                    labelId ValueLocation .globalMemory
-                  else ## LOCAL_VAR ITR_VAR TMP_VAR
-                    labelId ValueLocation .localMemory
-                  end
-                =:: newLocation
-                context .variableLocations labelId newLocation map.put ..drop
-                ## TODO? assert previous target was empty
-                newLocation
-              else
-                variableLocation? .data
-              end
+              variableLocation
             opIndex context pushValue
             return
           PROCEDURE case break
@@ -975,23 +1048,17 @@ proc(
             stackValue? optional.isEmpty if return end
             stackValue? .data =:: stackValue
             stackValue .location switch
-              register case ## TODO? check for constant in register
-                context .variableLocations
-                  labelId
-                  stackValue .location .register ValueLocation .register
-                map.put ..drop
+              register case
                 asm.OpType .MOVE
                   valType
                   labelId asm.Operand .localMemory
                   stackValue .location .register asm.Operand .register
                 asmOp2 list.append
+                labelId stackValue .location .register context cacheVariable
                 return
               registers case
-                context .variableLocations
-                  labelId
-                  stackValue .location .registers ValueLocation .registers
-                map.put ..drop
-                ## TODO copy registers to memory
+                ## TODO store to memory
+                labelId stackValue .location .registers context cacheVariable2
                 break
               memory intArgument case
                 ## TODO! make dependent on value type
@@ -1006,15 +1073,12 @@ proc(
                     stackValue .location .intArgument asm.Operand .intArgument
                   end
                 asmOp2 list.append
-                context .variableLocations
-                  labelId
-                  tmpRegister ValueLocation .register
-                map.put ..drop
                 asm.OpType .MOVE
                   valType
                   labelId asm.Operand .localMemory
                   tmpRegister asm.Operand .register
                 asmOp2 list.append
+                labelId tmpRegister context cacheVariable
                 return
             end
             break
@@ -1104,6 +1168,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     intRegBuffer@ AMD64.initIntDataRegisters
     StackValue branchTree.create
     labelHash@ labelEq@ 1024 ValueLocation map.create
+    128 CachedValueNode list.create
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   1024 Atomic list.create
