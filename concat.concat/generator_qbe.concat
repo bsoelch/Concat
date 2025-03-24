@@ -3259,18 +3259,43 @@ proc(
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
+          label labelContext id.labelFlags id.FLAG_STATIC & ? if
+            i 1 + continue ## skip static arguments
+          end
+          argType context referenceOnly if
+            ValType .REFERENCE
+          else
+            argType context toValType
+          end =:: valType
           label id.LABEL_ID_NONE == if ## push argument
-            argType context referenceOnly if
-              ValType .REFERENCE
-            else
-              argType context toValType
-            end =:: valType
             "%s" sb.appendS
             valType context pushValue sb.appendI
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
             i id.LABEL_ID_NONE context sb.appendArgName
+            '\n' sb.appendC
+          else valType .REFERENCE ?? _if
+            "%l" sb.appendS
+            label i64 cast sb.appendI
+            " =" sb.appendS
+            valType sb.appendValTypeQBE
+            " copy " sb.appendS
+            i id.LABEL_ID_NONE context sb.appendArgName
+            '\n' sb.appendC
+          else
+            "%l" sb.appendS
+            label i64 cast sb.appendI
+            " =l alloc" sb.appendS
+            argType op [] .pos context typeAlignmentInt 4 i64.max sb.appendI
+            ' ' sb.appendC
+            argType op [] .pos context typeSizeInt  4 i64.max sb.appendI
+            "\nstore" sb.appendS
+            argType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+            ' ' sb.appendC
+            i id.LABEL_ID_NONE context sb.appendArgName
+            ", %l" sb.appendS
+            label i64 cast sb.appendI
             '\n' sb.appendC
           end
           i 1 +
@@ -3328,7 +3353,7 @@ proc(
             idInfo .labelId -1 context sb.appendGlobalName
             '\n' sb.appendC
           return
-        LOCAL_VAR TMP_VAR ITR_VAR case
+        LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
@@ -3348,30 +3373,6 @@ proc(
               " %l" sb.appendS
             end
             idInfo .labelId i64 cast sb.appendI
-            '\n' sb.appendC
-          return
-       ARGUMENT case
-          isAddr and op [] .dataType context referenceOnly ! if
-            "cannot take the address of procedure argument" sb.copyPtr
-            op [] .pos errors appendError
-            sb return
-          end
-          op [] .dataType context referenceOnly if
-            ValType .REFERENCE
-          else
-            op [] .dataType context toValType
-          end =:: valType
-          idInfo .labelId idContext id.getIdentifier
-            ! "labelId is identifier" assert
-          =:: idData
-          sb
-            op [] .pos sb.appendPosQBE
-            "%s" sb.appendS
-            valType context pushValue sb.appendI
-            " =" sb.appendS
-            valType sb.appendValTypeQBE
-            " copy " sb.appendS
-            idData [] .index idInfo .labelId context sb.appendArgName
             '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case
@@ -3413,11 +3414,11 @@ proc(
           GLOBAL_VAR case
             idInfo .labelId -1 context sb.appendGlobalName
             break
-          LOCAL_VAR TMP_VAR ITR_VAR case
+          LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
             " %l" sb.appendS
             idInfo .labelId i64 cast sb.appendI
             break
-         PROCEDURE ARGUMENT TYPE LABEL PROCEDURE_BUNDLE case
+         PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case
             "unsupported identifier for setId " sb.copyPtr
             idInfo labelContext sb.appendIdInfo
             op [] .pos errors appendError

@@ -603,10 +603,6 @@ namespace: id
         "procedures cannot be mutable" sb.copyPtr declaredAt errors appendError
         LABEL_ID_NONE ID_NONE_DATA true return
       end
-      idType .ARGUMENT ??  if
-        "procedure arguments cannot be mutable" sb.copyPtr declaredAt errors appendError
-        LABEL_ID_NONE ID_NONE_DATA true return
-      end
     end
     label labelContext id.getLabelName =:: name
     ## don't check names of built-in identifiers
