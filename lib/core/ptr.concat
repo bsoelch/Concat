@@ -253,10 +253,8 @@ overload: export: []
   ptr.mut.get32checked
   ptr.mut.get64checked
 end
-overload: export: =
-  ptr.set
-end
 overload: export: =[]
+  ptr.set
   ptr.set32
   ptr.set64
   ptr.set32checked

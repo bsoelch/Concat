@@ -14,7 +14,7 @@ proc( -> ) =>: main
   mutS@ .a
   mutS@ .b
   ..?types
-  ..drop 1 ..swap =
+  ..drop 1 ..swap =[]
   mutS .a debug.print
   mutS .b debug.print
 
@@ -30,7 +30,7 @@ proc( -> ) =>: main
   mutSP .a
   mutSP .b
   ..?types
-  ..drop 2 ..swap =
+  ..drop 2 ..swap =[]
   mutSP [] .a debug.print
   mutSP [] .b debug.print
 end

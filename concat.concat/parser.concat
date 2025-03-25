@@ -376,7 +376,7 @@ proc( BlockType : mergeWith FilePosition : pos ParserState ptr.mut : state -> ) 
         return
       end
       opData [] .pos
-    opBlock opData =
+    opBlock opData =[]
     i 1 +
   end ..drop
   andOrPositions list.clear state .andOrPositions=

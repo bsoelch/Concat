@@ -2,7 +2,7 @@
 
 import debug
 
-import numbers/floats
+import core/floats
 
 namespace: f64
   0x0.b17217f7d1cf79ac =:: export: LOG2
@@ -35,8 +35,8 @@ namespace: f64
     e 0 == if
       ## normalize subnormal numbers
       x 0x1.0XF * bits =:: i2 ## * 2^64
-      i2 MANTISSA_MASK & m =
-      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e =
+      i2 MANTISSA_MASK & m=
+      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e=
     end
     ## XXX? find more precise approach
     ## get estimate by dividing exponent by two
@@ -66,8 +66,8 @@ namespace: f64
     e 0 == if
       ## normalize subnormal numbers
       x 0x1.0XF * bits =:: i2 ## * 2^64
-      i2 MANTISSA_MASK & m =
-      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e =
+      i2 MANTISSA_MASK & m=
+      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e=
     end
     ## get estimate by dividing exponent by three
     e EXP_BIAS - 3 / EXP_BIAS + SHIFTED_EXP_MASK & =:: newE
@@ -76,13 +76,13 @@ namespace: f64
     ##  newton iteration for cube root ( x/y-y² = 0 )
     ## 4 steps should be enough
     x y y * / =:: mut: q
-    q y - y * y y + q + / y + y =
-    x y y * / q =
-    q y - y * y y + q + / y + y =
-    x y y * / q =
-    q y - y * y y + q + / y + y =
-    x y y * / q =
-    q y - y * y y + q + / y + y =
+    q y - y * y y + q + / y + y=
+    x y y * / q=
+    q y - y * y y + q + / y + y=
+    x y y * / q=
+    q y - y * y y + q + / y + y=
+    x y y * / q=
+    q y - y * y y + q + / y + y=
     y return
   end
 
@@ -156,8 +156,8 @@ namespace: f64
     e 0 == if
       ## normalize subnormal numbers
       x 0x1.0XF * bits =:: i2 ## * 2^64
-      i2 MANTISSA_MASK & m =
-      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e =
+      i2 MANTISSA_MASK & m=
+      i2 EXP_SHIFT >>> SHIFTED_EXP_MASK & 60 - e=
     end
     ## x = r* 2^k -> log x = k*log2 + log r , sqrt(2)/2 <= r <= sqrt(2)
     m EXP_BIAS EXP_SHIFT << | ## 1. set exponent to 0
@@ -165,7 +165,7 @@ namespace: f64
        ## 2. ensure number is in correct range
       ..dup SQRT2 > if ..drop ## sqrt(2)
         m EXP_BIAS 1 - EXP_SHIFT << | f64.fromBits
-        k 1 + k =
+        k 1 + k=
       end
     =:: r
     r 1 - =:: t ## r = 1+t
@@ -199,8 +199,8 @@ namespace: f64
     0.0 =:: mut: k
     x   =:: mut: r
     r 1.6 > or r -1.6 < if
-      x PI_INV * 0.5 + floor k =
-      x k PI_HI * - k PI_LOW * - r =
+      x PI_INV * 0.5 + floor k=
+      x k PI_HI * - k PI_LOW * - r=
       r PI > or r PI -_ < if
         ## reduction failed by more thanfactor of 2 -> no meaningfull result
         NaN return
@@ -234,8 +234,8 @@ namespace: f64
     0.0 =:: mut: k
     x   =:: mut: r
     r 1.6 > or r -1.6 < if
-      x PI_INV * 0.5 + floor k =
-      x k PI_HI * - k PI_LOW * - r =
+      x PI_INV * 0.5 + floor k=
+      x k PI_HI * - k PI_LOW * - r=
       r PI > or r PI -_ < if
         ## reduction failed by more thanfactor of 2 -> no meaningfull result
         NaN return

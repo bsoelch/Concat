@@ -35,7 +35,7 @@ proc(
       '>' case mp 1 + TAPE_CAP %% mp= break
       '<' case mp 1 - TAPE_CAP %% mp= break
       '.' case
-        outBuffer [] tape mp [] char8 cast sb.appendC outBuffer = break
+        outBuffer [] tape mp [] char8 cast sb.appendC outBuffer =[] break
       ',' case 0:i8 tape mp =[] break
       '[' case
         tape mp [] ? if

@@ -122,7 +122,7 @@ namespace: map
     else
       map [] .nodeBuffer .length 1 + NodeId cast
     end =:: newId
-      newId parent =
+      newId parent =[]
     newId return
   end
   enum( FIND CREATE DELETE ) =:: FindOperation
@@ -152,7 +152,7 @@ namespace: map
       node [] .key key map [] .eq () if
         operation .DELETE ?? if
           ## unlink node from map
-          node [] .next nodeIdLoc =
+          node [] .next nodeIdLoc =[]
           true node .isEmpty=
           map [] .freeNodes node .next=
           nodeId map .freeNodes=

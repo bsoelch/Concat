@@ -438,7 +438,7 @@ proc(
       i 1 +
     end ..drop
     '\n' sb.appendC
-  mergePoint .out =
+  mergePoint .out =[]
   ## StackElement
     newId
     rootValue [] .valType
@@ -3133,7 +3133,7 @@ proc(
       srcId sb.appendI
       '\n' sb.appendC
     finally i 1 + end ..drop
-    argIndices [] list.free argIndices =
+    argIndices [] list.free argIndices =[]
   return
 end
 
@@ -4386,10 +4386,10 @@ proc(
           end =:: branchIds =:: branches
           branches []
             context .stackInfo branchTree.startBranch list.append
-          branches =
+          branches =[]
           branchIds []
             context [] .currentBranch list.append
-          branchIds =
+          branchIds =[]
           sb
             op [] .pos sb.appendPosQBE
             "jmp " sb.appendS
@@ -4408,10 +4408,10 @@ proc(
           context [] .reachable if
             whileBlock .continueBranchIds []
               context [] .currentBranch list.append
-            whileBlock .continueBranchIds =
+            whileBlock .continueBranchIds =[]
             continueBranches []
               context .stackInfo branchTree.startBranch list.append
-            continueBranches =
+            continueBranches =[]
           end
           sb
             ## don't add position for labels

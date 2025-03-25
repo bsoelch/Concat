@@ -658,7 +658,7 @@ proc(
     end
     state .stack branchTree.pop .data [] =:: typeInfo
     ## set argument offset to correct value
-    typeInfo .opIndex argOffsets list.peek .data =
+    typeInfo .opIndex argOffsets list.peek .data =[]
     typeInfo .valueType expectedType types.typeEquals if
       i 1 + continue
     end
@@ -679,7 +679,7 @@ proc(
         ## no index update necessary
         i 1 + continue
       end
-      opId argOffsets list.peek .data =
+      opId argOffsets list.peek .data =[]
       i 1 + continue
     end
     "wrong type for " sb.copyPtr
@@ -1135,7 +1135,7 @@ proc(
                 offset i32 cast
                 mergedType
                 mergePoint .mergePoint
-              opAutoCast castPoint =
+              opAutoCast castPoint =[]
               i 1 + continue
             end
             "operation is not a NO-OP: " sb.copyPtr
@@ -2284,7 +2284,7 @@ proc(
           procType procData .procType=
           idContext id.currentScope procData .scopeId= ## remember host scope
           ProcCodeState .PARSED procData .implementation .code .codeState=
-          procData .implementation .code [] .codeLength skipOps =
+          procData .implementation .code [] .codeLength skipOps =[]
           procId ConstValue .Procedure
             procType false typeContext types.getAddressType
           op .pos state pushConstant
@@ -2789,7 +2789,7 @@ proc(
               state .stack branchTree.startBranch
               op .pos
             BranchPoint new list.append
-          branches =
+          branches =[]
           ifBlock [] .blockId op@ .val .block .blockId=
           state [] .skippedBlocks .length 0 > if
             return
@@ -2906,7 +2906,7 @@ proc(
                 state .stack branchTree.startBranch
                 op .pos
               BranchPoint new list.append
-            orBranches =
+            orBranches =[]
             ## XXX? extract to procedure?
             orBranches [] .length branchTree.NodeId list.create
               orBranches [] for .node list.append end
@@ -3267,14 +3267,14 @@ proc(
                 state [] .stack branchTree.depth
                 op .pos
               state reserveOps list.append
-            castOffsets =
+            castOffsets =[]
             ## remember while branch
             branches []
               ## BranchPoint
                 state .stack branchTree.startBranch
                 op .pos
               BranchPoint new list.append
-            branches =
+            branches =[]
             false state .reachable=
             whileBlock [] .labelPositions
               state [] .compiledOps .length list.append
@@ -3351,7 +3351,7 @@ proc(
               state .stack branchTree.startBranch
               op .pos
             BranchPoint new list.append
-          branches =
+          branches =[]
           whileBlock [] .blockId op@ .val .block .blockId=
           whileBlock [] .labelPositions
             state [] .compiledOps .length list.append
@@ -3404,7 +3404,7 @@ proc(
                 state .stack branchTree.startBranch
                 op .pos
               BranchPoint new list.append
-            doBranches =
+            doBranches =[]
             ## XXX? extract to procedure?
             doBranches [] .length branchTree.NodeId list.create
               doBranches [] for .node list.append end
@@ -3565,7 +3565,7 @@ proc(
                 state .stack branchTree.startBranch
                 op .pos
               BranchPoint new list.append
-            branches =
+            branches =[]
             currentBlock .AndOr [] .andOrPositions
               state [] .compiledOps .length list.append
             currentBlock .AndOr .andOrPositions=
@@ -4521,7 +4521,7 @@ proc(
     state [] .compiledOps
       list.asSlice codeOffset slice.tail
     list.appendSlice
-  fileOps =
+  fileOps =[]
   state clearOps
   state [] .program [] .autoTypes
     list.free ..drop

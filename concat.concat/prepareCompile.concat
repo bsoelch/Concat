@@ -359,14 +359,14 @@ proc(
   typeContext .labelContext =:: labelContext
   variables [] context .variables=
   newOps []
-    ..dup .length codeStart =
+    ..dup .length codeStart =[]
     0:i64 while ..dup ops .length < do =:: opIndex
       ops opIndex slice.at .data [] context compileOp
       opIndex 1 +
     end ..drop
-    ..dup .length codeStart [] - codeLength =
-  newOps =
-  context [] .variables variables =
+    ..dup .length codeStart [] - codeLength =[]
+  newOps =[]
+  context [] .variables variables =[]
 end
 
 ## TODO better name for file&procedure, find good description of compilation-step

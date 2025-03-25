@@ -4,16 +4,16 @@ proc( -> ) =>: main
   0 s new =:: mut: A
   A .x 0 == "A .x 0 ==" assert
   ## direct edit
-  1 A@ .x =
+  1 A@ .x =[]
   A .x 1 == "A .x 1 ==" assert
   ## edit value while tuple is on stack
   A
-    3 A@ .x =
+    3 A@ .x =[]
   .x 1 == "stack value unmodified" assert
   A .x 3 == "A .x 3 ==" assert
   ## edit value while value is on stack
   A .x
-    4 A@ .x =
+    4 A@ .x =[]
   3 == "stack value unmodified" assert
   A .x 4  == "A .x 4 ==" assert
 end

@@ -72,7 +72,7 @@ namespace: threads
     stackHead parentFrameSize 1 + -
       basePtr 1 @[]
       parentFrameSize
-    mem.copy stackHead@ =
+    mem.copy stackHead=
     ## setup thread initialisation
     ## clone will return to cctThreadInit, which updates the base-pointer and returns to the caller
     newBaseP stackHead -1 =[]
