@@ -447,7 +447,7 @@ proc( LabelId : valId RegisterId : register CompilerContext ptr.mut : context ->
       valData [] .label valId == if
         id.LABEL_ID_NONE valData .label=
         ## point previous pointer to next element in linked list
-        valData [] .next cachedValIdLoc =
+        valData [] .next cachedValIdLoc =[]
         ## cachedValIdLoc did not change
         continue
       end
