@@ -2456,19 +2456,22 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   state appendOp
   return
 end
-proc( io.IOError : err stringBuilder : fileName FilePosition : pos ParserState ptr.mut : state -> ) =>: checkIOError
+proc( FileId : includedId io.IOError : err FilePosition : pos ParserState ptr.mut : state -> FileId ) =>: checkIOError
+  using io.
+  err FILE_ERROR_NONE == if
+    includedId return ## exit early on normal path
+  end
   state [] .progContext =:: progContext
   progContext .errors =:: errors
-  using io.
+  progContext [] .progFiles includedId i64 cast list.at .data [] .fileName sb.asStr =:: fileName
   err switch
-    FILE_ERROR_NONE case
-      return
+    FILE_ERROR_NONE case ..unreachable ## already handled this case
     FILE_ERR_PATH_OVERFLOW FILE_ERR_OPEN_MODE FILE_ERR_FILE_NOT_FOUND FILE_ERR_FILE_IS_DIR FILE_ERR_ACCESS_DENIED FILE_ERR_INVALID_FILE case
-      "cannot include file \"" sb.copyPtr fileName sb.appendSb '"' sb.appendC pos errors appendError
-      return
+      "cannot include file \"" sb.copyPtr fileName sb.appendStr '"' sb.appendC pos errors appendError
+      FILE_ID_NONE return
     default
-      "error while reading file \"" sb.copyPtr fileName sb.appendSb '"' sb.appendC pos errors appendError
-      return
+      "error while reading file \"" sb.copyPtr fileName sb.appendStr '"' sb.appendC pos errors appendError
+      FILE_ID_NONE return
   end
 end
 
@@ -2495,7 +2498,7 @@ proc(
     1 +
   end ..drop
   imported FILE_ID_NONE == if ## file has not yet been imported
-    fileName isLibImport state parseFile fileName pos state checkIOError imported=
+    fileName isLibImport state parseFile pos state checkIOError imported=
     imported FILE_ID_NONE == if
       return
     end
@@ -2556,7 +2559,7 @@ proc(
     false
     saveGlobalTokens
   ParserState new =:: mut: state
-  rootFile false state@ parseFile rootFile rootPos state@ checkIOError ..drop
+  rootFile false state@ parseFile rootPos state@ checkIOError ..drop
   ## cleanup parser memory
   state .typeBuffer list.free ..drop
   state .constantBlocks list.free ..drop
@@ -2610,7 +2613,7 @@ proc(
       prevFile state .currentFile= ## reset file id
       wasLibFile state .inLibFile=
       isLibFile state .inLibFile=
-      FILE_ID_NONE openError return
+      fileId openError return
     end ..drop =:: f
     128 sb.create
       '\n' sb.appendC
@@ -2621,9 +2624,9 @@ proc(
       prevFile state .currentFile= ## reset file id
       wasLibFile state .inLibFile=
       readError io.FILE_ERROR_NONE != if
-        FILE_ID_NONE readError return
+        fileId readError return
       else
-        FILE_ID_NONE closeError return
+        fileId closeError return
       end
   end ..drop
   state [] .openBlocks .length =:: blockCount
