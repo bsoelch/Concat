@@ -35,57 +35,72 @@ namespace: debug
     end
   end
   proc( char8 : c -> ) =>: export: printC
-    8 sb.create
+    char8 16 array : buffer ##  length should be at most 11=1+3+4+3
+    buffer@ sb.wrapBuffer
       c i64 cast.u sb.appendI
       " ('" sb.appendS
       c sb.appendEscapedChar
       "')\n" sb.appendS
       io.stdOut ..over io.fputSb ..drop
-    sb.free ..drop
+    ..drop
   end
   proc( i64 : i -> ) =>: export: printI
-    8 sb.create
+    char8 24 array : buffer ##  -9223372036854775808
+    buffer@ sb.wrapBuffer
       i sb.appendI
       '\n' sb.appendC
       io.stdOut ..over io.fputSb ..drop
-    sb.free ..drop
+    ..drop
   end
   proc( i8  -> ) =>: export: printI8   i64 cast.s printI  end
   proc( i16 -> ) =>: export: printI16  i64 cast.s printI  end
   proc( i32 -> ) =>: export: printI32  i64 cast.s printI  end
   proc( i64 : i -> ) =>: export: printX
-    8 sb.create
+    char8 24 array : buffer ##  -0x8000000000000000
+    buffer@ sb.wrapBuffer
       i sb.appendX
       '\n' sb.appendC
       io.stdOut ..over io.fputSb ..drop
-    sb.free ..drop
+    ..drop
   end
   proc( i64 : i -> ) =>: export: printUX
-    8 sb.create
+    char8 24 array : buffer ##  0xffffffffffffffff
+    buffer@ sb.wrapBuffer
       i 16 sb.appendU?
       '\n' sb.appendC
       io.stdOut ..over io.fputSb ..drop
-    sb.free ..drop
+    ..drop
   end
   proc( i64 : i -> ) =>: export: printU
-    8 sb.create
+    char8 24 array : buffer ##  18446744073709551615
+    buffer@ sb.wrapBuffer
       i sb.appendU
       '\n' sb.appendC
       io.stdOut ..over io.fputSb ..drop
-    sb.free ..drop
+    ..drop
   end
   proc( f32 : x -> ) =>: export: printF32
     x f64 cast printF
   end
   proc( f64 : x -> ) =>: export: printF
-    8 sb.create
+    char8 32 array : buffer ##  18446744073709551615
+    buffer@ sb.wrapBuffer
       x sb.appendF
       '\n' sb.appendC
       io.stdOut ..over io.fputSb ..drop
-    sb.free ..drop
+    ..drop
+  end
+  proc( f64 : x -> ) =>: export: printXF
+    char8 32 array : buffer ##  18446744073709551615
+    buffer@ sb.wrapBuffer
+      x sb.appendXF
+      '\n' sb.appendC
+      io.stdOut ..over io.fputSb ..drop
+    ..drop
   end
   proc( type : auto: T T _ ptr : p -> ) =>: export: printP
-    8 sb.create
+    char8 24 array : buffer ##  0xffffffffffffffff
+    buffer@ sb.wrapBuffer
       p i64 cast! 0 == if
         "(nil)" sb.appendS
       else
@@ -94,10 +109,10 @@ namespace: debug
       end
       '\n' sb.appendC
       io.stdOut ..over io.fputSb ..drop
-    sb.free ..drop
+    ..drop
   end
   proc( i32 : auto: k  char8 k ptr : s -> ) =>: export: printS
-    8 sb.create
+    24 sb.create ## cannot use local buffer, upper bound of length not known at compile time
       '"' sb.appendC
       s sb.appendS
       "\" at 0x" sb.appendS
