@@ -307,7 +307,7 @@ namespace: f128
       exp 1 + exp=
     end
     ## rounding
-    nextBit and nz or x .low 1 & ? if
+    nextBit and nz or lowSum 1 & ? if
       ## round up if next bit is 1 and lower bits nonzero or number odd
       lowSum 1 + lowSum=
       lowSum 0 == if
@@ -394,7 +394,7 @@ namespace: f128
     =:: mut: hiDiff
     aLow bLow - =:: mut: lowDiff
     ## rounding
-    nextBit and nz or x .low 1 & ? if
+    nextBit and nz or lowDiff 1 & ? if
       ## round up/down if next bit is 1 and lower bits nonzero or number odd
       swapped if
         lowDiff 1 + lowDiff=
@@ -561,7 +561,6 @@ namespace: f128
     f160.mul f160.toF128 return
   end
   ## TODO rem,mod
-
   ## XXX replace with number.powI once cast i32 -> f128 is possible
   proc( f128 : x i64 : p -> f128 ) =>: export: powI
     p 0 == if
@@ -887,7 +886,7 @@ namespace: f160
       hi=
     end
     ## rounding
-    nextBit and nz or x .low 1 & ? if
+    nextBit and nz or low 1 & ? if
       low 1 + low=
       low 0 == if
         hi 1 + hi=
@@ -963,7 +962,7 @@ namespace: f160
       a .hi  bHi  i64.subb =:: mut: hi
     ..drop
     ## rounding
-    nextBit and nz or x .low 1 & ? if
+    nextBit and nz or low 1 & ? if
       ## round up/down if next bit is 1 and lower bits nonzero or number odd
       swapped if
         low 1 + low=
@@ -1018,6 +1017,12 @@ namespace: f160
     uses Newton-Raphson-Division (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
   +#
   proc( f160 : x  -> f160 ) =>: normalized_inv ## TODO check constants
+    x .hi 1 << x .low | ? ! if ## only non-zero bit is top bit of x.hi
+      ## x == 0.5 -> skip algorithm
+      x
+        1 >$ .exp=
+      return
+    end
     0xb4b4'b4b4'b4b4'b4b4:i64 0xb4b4'b4b4'b4b4'b4b5:i64 1 false f160 new =:: p ## 48/17
     0xf0f0'f0f0'f0f0'f0f0:i64 0xf0f0'f0f0'f0f0'f0f1:i64 0 false f160 new =:: q ## 32/17
     0x8000'0000'0000'0000:i64 0:i64                     1 false f160 new =:: two ## 2

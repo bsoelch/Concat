@@ -137,10 +137,13 @@ namespace: i64
     aLow bHi  * =:: x01
     aHi  bLow * =:: x10
     aHi  bHi  * =:: x11
-    x01 x10 + =:: mid
     false
-      x00 mid 32 << addc =:: low
-      x11 mid 32 >>> addc =:: hi
+      x00 x01 32 <<  i64.addc =:: mut: low
+      x11 x01 32 >>> i64.addc =:: mut: hi
+    ! "umul2 does not overflow" assert
+    false
+      low x10 32 <<  i64.addc low=
+      hi  x10 32 >>> i64.addc hi=
     ! "umul2 does not overflow" assert
     hi low return
   end
@@ -153,11 +156,14 @@ namespace: i64
     aLow bHi  * =:: x01
     aHi  bLow * =:: x10
     aHi  bHi  * =:: x11
-    x01 x10 + =:: mid
     false
-      x00 mid 32 << addc =:: low
-      x11 mid 32 >>> addc =:: hi
-    ! "umul2 does not overflow" assert
+      x00 x01 32 <<  i64.addc =:: mut: low
+      x11 x01 32 >>> i64.addc =:: mut: hi
+    ! "smul2 does not overflow" assert
+    false
+      low x10 32 <<  i64.addc low=
+      hi  x10 32 >>> i64.addc hi=
+    ! "smul2 does not overflow" assert
     hi low return
   end
 end
