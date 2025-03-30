@@ -4,6 +4,7 @@ import list
 
 namespace: branchTree
   i32 =:: export: NodeId
+  -1:NodeId =:: export: EMPTY
   ( type : T -> type ) =>: export: Node
     struct(
       T : mut: data
@@ -37,18 +38,18 @@ namespace: branchTree
 
   proc( type : T -> T BranchTree ) =>: export: create
     ## BranchTree
-      -1:NodeId
+      EMPTY
       32 T branchTree.Node list.create
     T BranchTree new
   end
   proc( type : auto: T T BranchTree ptr.mut : tree -> ) =>: export: clear
-    -1:NodeId tree .branchHead=
+    EMPTY tree .branchHead=
     tree [] .nodes
       list.clear
     tree .nodes=
   end
   proc( type : auto: T T BranchTree ptr.mut : tree -> ) =>: export: free
-    -1:NodeId tree .branchHead=
+    EMPTY tree .branchHead=
     tree [] .nodes
       list.free
     tree .nodes=
@@ -123,7 +124,7 @@ namespace: branchTree
     T BranchTree : tree
     NodeId : root
   -> i32 ) =>: export: depthFrom
-    root -1:NodeId == if
+    root EMPTY == if
       0 return
     end
     tree .nodes
@@ -135,7 +136,7 @@ namespace: branchTree
     T BranchTree ptr.mut : tree
   -> NodeId ) =>: export: startBranch
     tree check
-    tree [] .branchHead -1:NodeId != if
+    tree [] .branchHead EMPTY != if
       tree [] .nodes tree [] .branchHead i32 cast list.at .data =:: node
       node [] .childCount
         1 +
@@ -149,7 +150,7 @@ namespace: branchTree
     T BranchTree ptr.mut : tree
   -> ) =>: export: prune
     tree tree [] .branchHead endBranch
-    -1:NodeId tree .branchHead=
+    EMPTY tree .branchHead=
   end
   proc(
     type : auto: T
@@ -174,7 +175,7 @@ namespace: branchTree
     tree check
     tree [] .branchHead =:: oldHead
       branchPoint tree .branchHead=
-      branchPoint -1:NodeId != if
+      branchPoint EMPTY != if
         tree [] .nodes branchPoint i32 cast list.at .data =:: node
         node [] .childCount
           1 +
@@ -188,7 +189,7 @@ namespace: branchTree
     T BranchTree ptr.mut : tree
     T : value
   -> ) =>: export: push
-    tree [] .branchHead -1:NodeId == if
+    tree [] .branchHead EMPTY == if
       1:i32
     else
       tree [] .nodes
@@ -281,7 +282,7 @@ namespace: branchTree
       tree .nodes=
     end ..drop
     tree [] .nodes nodeId list.at .data currentNode=
-    currentNode [] .parent -1:NodeId != if
+    currentNode [] .parent EMPTY != if
       tree [] .nodes
         currentNode [] .parent i32 cast
       list.at .data =:: parentNode
@@ -306,7 +307,7 @@ namespace: branchTree
     tree [] .nodes nodeId list.at .data =:: popped
     popped [] .parent tree .branchHead=
     popped [] .childCount 1 > if ## popped node stays child
-      tree [] .branchHead -1:NodeId != if
+      tree [] .branchHead EMPTY != if
         tree [] .nodes tree [] .branchHead i32 cast list.at .data =:: newNode
         newNode [] .childCount
           1 +
@@ -351,7 +352,7 @@ namespace: branchTree
       0 MergeResult .success return ## nothing to merge
     end
     -1:i32 =:: mut: initDepth
-    -1:NodeId =:: mut: parentId
+    EMPTY =:: mut: parentId
     false =:: mut: needMerge
     0:i32 while $ i64 cast branchHeads .length < do
       branchHeads ..over slice.get i32 cast =:: nodeId
@@ -375,7 +376,7 @@ namespace: branchTree
         ## nodes on top level have different depths
         MergeResult .error return
       end
-      parentId -1:NodeId == if
+      parentId EMPTY == if
         nodeId NodeId cast parentId=
       else nodeId parentId i32 cast != _if
         ## not already merged
@@ -387,7 +388,7 @@ namespace: branchTree
       ## move head to first branch
       branchHeads 0 slice.get tree .branchHead=
       ## remember link to head in node
-      tree [] .branchHead -1:NodeId != if
+      tree [] .branchHead EMPTY != if
         tree [] .nodes
           tree [] .branchHead i32 cast
         list.at .data =:: newHead
@@ -418,7 +419,7 @@ namespace: branchTree
       root [] .parent parentId=
       root .data buffer 0 =[]
       ## store parent node before unlinking child
-      parentId -1:NodeId != if
+      parentId EMPTY != if
         tree [] .nodes parentId i32 cast list.get optional.wrap
       else
         T Node optional.empty

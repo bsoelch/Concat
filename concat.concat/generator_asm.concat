@@ -8,20 +8,32 @@ import "program.concat"
 import "measure.concat"
 import "branchTree.concat"
 
+## TODO? split into multiple files
+## * Assembly definitions
+## * Pseudo-assembly generator
+## * Pseudo-Assembly -> Assembly conversion
+
+#################
+## Assembly
+#################
 i8 =:: RegisterId
 
 16 =:: MAX_DATA_REGISTERS_INT
 
 proc( char8 _ ptr : str i64 : len -> RegisterId ) : alias: static: :reg ..builtIn.parse.i8
 
-i32 =:: CachedValId
-namespace: CachedValId
-  -1:CachedValId =:: NONE
-end
+union(
+  _ : empty
+  i64 : constInt
+  f32 : constFloat32
+  f64 : constFloat64
+  LabelId : variable
+  i32 : stackSlot ## 1-indexed from bottom of stack
+) =:: RegisterContent
 struct(
+  RegisterContent : currentValue
+  RegisterId : register ## store register in padding after value-union
   i32 : lastUsed
-  CachedValId : cachedVariables
-  RegisterId : register
 ) =:: RegisterState
 
 0xff:reg =:: NO_REG
@@ -48,9 +60,9 @@ namespace: AMD64
   -> RegisterState slice.mut ) =>: initIntDataRegisters
     INT_DATA_REGISTERS ..length i32 cast MAX_DATA_REGISTERS_INT i32.min for =:: i
       ## RegisterState
-        -1
-        CachedValId.NONE
+        RegisterContent .empty
         INT_DATA_REGISTERS i []
+        -1
       RegisterState new buffer i =[]
     end
     buffer INT_DATA_REGISTERS ..length slice.createMutable
@@ -105,6 +117,21 @@ proc( Type : dataType ProgramContext ptr.mut : program -> ValType ) =>: toValTyp
       ValType .EMPTY return
   end
 end
+## split val-type in hi and low half
+proc( ValType : valType -> ValType ) =>: getHiValType
+  valType switch
+    EMPTY I8 I16 I32 I64 F32 F64 PTR REFERENCE case ValType .EMPTY return
+    BITS128 BITS128IF case ValType .I64 return
+    BITS128FI BITS128F case ValType .F64 return
+  end
+end
+proc( ValType : valType -> ValType ) =>: getLowValType
+  valType switch
+    EMPTY I8 I16 I32 I64 F32 F64 PTR REFERENCE case ValType .EMPTY return
+    BITS128 BITS128FI case ValType .I64 return
+    BITS128IF BITS128F case ValType .F64 return
+  end
+end
 
 namespace: sb
   proc( stringBuilder ValType -> stringBuilder ) =>: appendValType
@@ -150,7 +177,10 @@ namespace: asm
     RegisterId : register
     i64 : constInt
     f64 : constFloat
-    i32 : intStackData
+    i32 : stackData ## stack memory location for single value (64bit / slot)
+    i32 : stackData128 ## stack memory location for 128bit value
+    i32 : stackData128Hi  ## stack memory location for high half of 128bit value
+    i32 : stackData128Low ## stack memory location for low  half of 128bit value
     i32 : intArgument
     ## XXX ? memory+s*offset1+offset2 , s=1,2,4,8
     LabelId : localMemory
@@ -302,8 +332,17 @@ namespace: sb
         constFloat case
           val .constFloat sb.appendF
           break
-        intStackData case
-          "@memI" sb.appendS val .intStackData sb.appendI
+        stackData case
+          "@stackMem" sb.appendS val .stackData sb.appendI
+          break
+        stackData128 case
+          "@stack128Mem" sb.appendS val .stackData128 sb.appendI
+          break
+        stackData128Hi case
+          "@stack128Mem" sb.appendS val .stackData128 sb.appendI 'h' sb.appendC
+          break
+        stackData128Low case
+          "@stack128Mem" sb.appendS val .stackData128 sb.appendI 'l' sb.appendC
           break
         intArgument case
           "@argI" sb.appendS val .intArgument sb.appendI
@@ -339,7 +378,7 @@ namespace: sb
         sb
           '\n' sb.appendC
           atom .StartProc program .idContext .typeContext .labelContext sb.appendLabelName
-          ":\n  push rbp\n  mov rbp, rsp\n" sb.appendS
+          ":\n  push rbp\n  mov rbp rsp\n" sb.appendS
         return
       DebugStartOp case
         sb
@@ -349,6 +388,10 @@ namespace: sb
     end
   end
 end
+
+#################
+## CodeGenerator
+#################
 
 struct( RegisterId : hi RegisterId : low ) =:: RegisterPair
 union(
@@ -365,7 +408,7 @@ struct(
 ) =:: StackValue
 union(
   RegisterId : register
-  RegisterPair : registers ## TODO? handle partially cached value
+  RegisterPair : registers ## TODO? allow values partially stored in registers
   ## TODO pointer, pointer+offset
   i32 : intArgument
   i32 : floatArgument
@@ -375,25 +418,17 @@ union(
   ## TODO? float-constant, composite-constant, constant-location
 ) =:: ValueLocation
 
+##? valuegroup -> bits64
+## TODO? keep track of all reads&writes to given variable
+##  * allows to better prioritive different values
+##  * allows to free variable register if value is no longer used
+
+## simplify register assignment:
+## TODO 0. find read/write locations of variables (allows to free registers for variables that are not read until next write)
+## 1. store all stack-slots / cached variables in different registers
+## 2. run copy elimination in parallel (mark register pairs holding same value, split values at loop start)
+## TODO! ensure each value has a unique register
 #+
-registers -> stackValues + "cache" of last variable accesses"
-  if variable is read/written value is kept in register until
-    a) register is needed
-    b) variable changes
-    c) merging with branch without value
-    d) first read in loop of different value:
-      - if first read is mutable variable discard all other values
-      - if first read is immutable variable discard all mutable values
-      -> ensure remaining values are in cache when reaching end of loop
-    e) a value is written to a pointer that might overlap with variable memory
-  if variable read again value from register is used
--> write to (small) (sub-)variable adds moving value to register
-
-if register is known to hold a specific constant replace reads from register with that constant
-
--> register needs list of currently cached variables (+ values need to remember which register holds newest value)
--> register needs flag to remember if currently used by stack value
-
 before final output:
   remove all writes to registers/local memory that are not read before next write
   discard all memory blocks that are never read or converted to pointer
@@ -402,32 +437,14 @@ TODO add target specific optimizations as finaly step before output
   -> use target specific operations
 +#
 
-## TODO? also cache memory locations (value pointed to by var/register) and constants
-struct(
-  LabelId : label
-  CachedValId : next
-) =:: CachedValueNode
+## TODO? keep track of registers holding constant values
 struct(
   ProgramContext ptr.mut : program
   RegisterState slice.mut : intDataRegisters
-  StackValue BranchTree : mut: stack
-  LabelId ValueLocation hashMap : mut: variableLocations
-  CachedValueNode list : cachedValues
+  StackValue BranchTree : stack
+  LabelId ValueLocation hashMap : variableLocations
 ) =:: CompilerContext
 
-## TODO? how similar is cache node structure to branch tree
-##  is it possible to use same structure for both
-proc( CompilerContext ptr.mut : context -> ) =>: tryShrinkCacheList
-  context .cachedValues [] .length 1 - =:: mut: maxIndex
-  while maxIndex 0 >= and
-    context [] .cachedValues maxIndex list.get .label id.LABEL_ID_NONE ==
-  do
-    maxIndex 1 - maxIndex=
-  end
-  context [] .cachedValues
-    maxIndex 1 + list.setLength
-  context .cachedValues=
-end
 proc( LabelId : valId RegisterId : register CompilerContext ptr.mut : context -> ) =>: cacheVariable
   context .variableLocations
     valId
@@ -436,63 +453,35 @@ proc( LabelId : valId RegisterId : register CompilerContext ptr.mut : context ->
   ## remove previous location from register data
   prevLocation? optional.hasData and
       prevLocation? .data =:: prevLocation
-      prevLocation .registers ?? ! "single register value not stored inregister pair" assert
+      prevLocation .registers ?? ! "CodeGen: single register value not stored inregister pair" assert
       prevLocation .register ?? and
       prevLocation .register context findRegister =:: prevRegisterData?
       prevRegisterData? optional.hasData if
     prevRegisterData? .data =:: prevRegisterData
-    prevRegisterData .cachedVariables =:: mut: cachedValIdLoc
-    while cachedValIdLoc [] CachedValId.NONE != do
-      context [] .cachedValues cachedValIdLoc [] i32 cast list.at .data =:: valData
-      valData [] .label valId == if
-        id.LABEL_ID_NONE valData .label=
-        ## point previous pointer to next element in linked list
-        valData [] .next cachedValIdLoc =[]
-        ## cachedValIdLoc did not change
-        continue
-      end
-      valData .next cachedValIdLoc=
-    end
-    context tryShrinkCacheList
+    RegisterContent .empty prevRegisterData .currentValue=
   end
   ## update register storage
   register context findRegister
     $ optional.isEmpty if ..drop return end
   .data =:: registerData
-  context .cachedValues []
-    $ .length CachedValId cast =:: newNodeId
-    ## CachedValueNode
-      valId
-      registerData [] .cachedVariables
-    CachedValueNode new list.append
-  context .cachedValues=
-  newNodeId registerData .cachedVariables=
+  valId RegisterContent .variable registerData .currentValue=
 end
 proc( LabelId : valId RegisterPair : register CompilerContext ptr : context -> ) =>: cacheVariable2
   ## TODO cache double-register value
+  "CodeGen: unimplemented" ..panic
 end
-proc( RegisterId : register CompilerContext ptr.mut : context -> ) =>: resetRegister
-  register context findRegister
-    $ optional.isEmpty if ..drop return end
-  .data =:: registerData
-  registerData [] .cachedVariables
-    while $ CachedValId.NONE != do
-      context [] .cachedValues >$ i32 cast list.at .data =:: valData
-      ## FIXME remove register from label map
-      ## valData [] .label map.remove ## TODO check if correct value was removed
-      id.LABEL_ID_NONE valData .label=
-      valData [] .next
-    end
-  registerData .cachedVariables=
-  context tryShrinkCacheList
+proc( RegisterState : state -> RegisterState ) =>: resetRegister
+  state
+    RegisterContent .empty >$ .currentValue=
+    -1 >$ .lastUsed=
+  return
 end
 proc( LabelId : valId bool : isGlobal CompilerContext ptr.mut : context -> ValueLocation ) =>: getVarLocation
   context .variableLocations
     valId
   map.get =:: location?
   location? optional.hasData if
-    ## TODO? check if cached data is still valid,
-    ## TODO update dependent cache if mulit-value cache is accessed after back-jump
+    ## TODO update dependent cache if multi-value cache is accessed after back-jump
     ##    * variable mutable -> removes all other cached values
     ##    * variable immutable -> removes all mutable cached values
     location? .data return
@@ -505,10 +494,6 @@ proc( LabelId : valId bool : isGlobal CompilerContext ptr.mut : context -> Value
     end
   return
 end
-## TODO startLoop ( ) -> mark cached values
-
-## TODO? do i need a mapping variableId -> memory-location
-##  -> is mem-varId always correct for arguments? (correctly map argument location to memory identifier)
 
 ## TODO! easy way to get from register to register-state
 proc(
@@ -534,8 +519,9 @@ proc(
   ## TODO? clear variable use map
   ## context .variableLocations map.clear context .variableLocations=
   context .intDataRegisters [] .length for =:: i
-    context [] .intDataRegisters i [] .register context resetRegister
-    context [] .intDataRegisters i @[] -1 >$ .lastUsed=
+    context [] .intDataRegisters i []
+      resetRegister
+    context [] .intDataRegisters i =[]
   end
   ## TODO reset float registers
 end
@@ -546,20 +532,62 @@ proc(
   i32 : opIndex
   CompilerContext ptr.mut : context
 -> Atomic list RegisterId ) =>: nextIntRegister
-  context [] .intDataRegisters 0 [] =::  mut: bestCandidate
+  context [] .intDataRegisters 0 @[] =::  mut: bestCandidate
   0:i64 =:: mut: candiateIndex
-  1:i64 while $ context .intDataRegisters [] .length < and bestCandidate .lastUsed 0 >= do =:: i
-    context [] .intDataRegisters i [] .lastUsed bestCandidate .lastUsed < if
-      context [] .intDataRegisters i [] bestCandidate=
+  1:i64 while $ context .intDataRegisters [] .length < and bestCandidate [] .lastUsed 0 >= do =:: i
+    context [] .intDataRegisters i [] .lastUsed bestCandidate [] .lastUsed < if
+      context [] .intDataRegisters i @[] bestCandidate=
       i candiateIndex=
     end
   finally i 1 + end ..drop
-  opIndex context [] .intDataRegisters candiateIndex @[] .lastUsed=
   ops
-    ## TODO move stack values to memory
-    ## clear values cached in register
-    bestCandidate .register context resetRegister
-  bestCandidate .register return
+    ## save stack values
+    bestCandidate [] .currentValue .stackSlot ?? if
+      bestCandidate [] .currentValue .stackSlot =:: stackSlot
+      context [] .stack branchTree.depth =:: stackSize
+      stackSize stackSlot - =:: stackIndex
+      stackIndex 0 < or stackIndex stackSize >= if
+        "CodeGen: stack-data and register-states are out of sync" ..panic
+      end
+      context .stack stackIndex branchTree.replaceAt .data =:: stackData
+      stackData [] .location switch
+        register case
+          stackData .location [] .register bestCandidate [] .register == "CodeGen: stack-data and register state match" assert
+          asm.OpType .MOVE
+            stackData [] .valType
+            stackSlot asm.Operand .stackData
+            stackData .location [] .register asm.Operand .register
+          asmOp2 list.append
+          break
+        registers case ## TODO? only move the half colliding with the allocated register
+          stackData .location [] .registers .hi bestCandidate [] .register == or
+            stackData .location [] .registers .low bestCandidate [] .register ==
+          end "CodeGen: stack-data and register state match" assert
+          asm.OpType .MOVE
+            stackData [] .valType getHiValType
+            stackSlot asm.Operand .stackData128Hi
+            stackData .location [] .registers .hi asm.Operand .register
+          asmOp2 list.append
+          asm.OpType .MOVE
+            stackData [] .valType getLowValType
+            stackSlot asm.Operand .stackData128Low
+            stackData .location [] .registers .low asm.Operand .register
+          asmOp2 list.append
+          ## reset both registers
+          stackData .location [] .registers .hi context findRegister =:: hiReg
+          stackData .location [] .registers .low context findRegister =:: lowReg
+          hiReg .data [] resetRegister hiReg .data =[]
+          lowReg .data [] resetRegister lowReg .data =[]
+          break
+        memory intArgument case
+          "CodeGen: stack-data and register-states are out of sync" ..panic
+      end
+      StackValueLocation .memory stackData .location=
+    end
+    ## clear values cache register
+    bestCandidate [] resetRegister bestCandidate =[]
+    opIndex bestCandidate .lastUsed=
+  bestCandidate [] .register return
 end
 
 ## TODO update current register states
@@ -640,7 +668,6 @@ proc(
   ops popped optional.wrap return
 end
 
-## TODO! change syntax for operators to include result location as parameter ( "add r3, r1, r2" for "r3 <- add r1,r2" )
 proc(
   Atomic list : ops
   asm.OpType : opType
@@ -660,20 +687,16 @@ proc(
     I8 I16 I32 I64 PTR case
       newOps
         opIndex context nextIntRegister =:: targetRegister
-        asm.OpType .MOVE
+        opType
           argType
           targetRegister asm.Operand .register
           argValue .location switch ## TODO? extract for procedure
             register case argValue .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            memory case context [] .stack branchTree.depth asm.Operand .stackData break
             intArgument case argValue .location .intArgument asm.Operand .intArgument break
             registers case ..unreachable ## wrong data-format
           end
         asmOp2 list.append
-        opType
-          argType
-          targetRegister asm.Operand .register
-        asmOp1 list.append
         ## pushValue
           argType
           targetRegister ValueLocation .register
@@ -714,26 +737,22 @@ proc(
     I8 I16 I32 I64 PTR case
       newOps
         opIndex context nextIntRegister =:: targetRegister
-        asm.OpType .MOVE
+        opType
           argType
           targetRegister asm.Operand .register
           arg1 .location switch ## TODO? extract for procedure
             register case arg1 .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            memory case context [] .stack branchTree.depth asm.Operand .stackData break
             intArgument case arg1 .location .intArgument asm.Operand .intArgument break
             registers case ..unreachable ## wrong data-format
           end
-        asmOp2 list.append
-        opType
-          argType
-          targetRegister asm.Operand .register
           arg2 .location switch ## TODO? extract for procedure
             register case arg2 .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            memory case context [] .stack branchTree.depth asm.Operand .stackData break
             intArgument case arg2 .location .intArgument asm.Operand .intArgument break
             registers case ..unreachable ## wrong data-format
           end
-        asmOp2 list.append
+        asmOp3 list.append
         ## pushValue
           argType
           targetRegister ValueLocation .register
@@ -780,13 +799,13 @@ proc(
           targetRegister asm.Operand .register
           arg1 .location switch ## TODO? extract for procedure
             register case arg1 .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            memory case context [] .stack branchTree.depth asm.Operand .stackData break
             intArgument case arg1 .location .intArgument asm.Operand .intArgument break
             registers case ..unreachable ## wrong data-format
           end
           arg2 .location switch ## TODO? extract for procedure
             register case arg2 .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .intStackData break
+            memory case context [] .stack branchTree.depth asm.Operand .stackData break
             intArgument case arg2 .location .intArgument asm.Operand .intArgument break
             registers case ..unreachable ## wrong data-format
           end
@@ -1068,7 +1087,7 @@ proc(
                   tmpRegister asm.Operand .register
                   stackValue .location .memory ?? if
                     ## TODO use correct memory location (? `context [] .stackIntCount`)
-                    context [] .stack branchTree.depth asm.Operand .intStackData
+                    context [] .stack branchTree.depth asm.Operand .stackData
                   else
                     stackValue .location .intArgument asm.Operand .intArgument
                   end
@@ -1124,9 +1143,19 @@ proc(
           ## copy value on stack
           context .stack
             offset
-          branchTree.at .data =:: copied
+          branchTree.at .data [] =:: copied
+          opIndex context nextIntRegister =:: targetRegister
+          ## TODO handle case where copied value is no register
+          asm.OpType .MOVE
+            copied .valType
+            targetRegister asm.Operand .register
+            copied .location .register asm.Operand .register
+          asmOp2 list.append
+          ## TODO remember that copied register holds value of old register, use old register to get value until:
+          ##  a) register changes
+          ##  b) start of next loop
           context .stack
-            copied []
+            targetRegister StackValueLocation .register copied .valType StackValue new
           branchTree.push
           return
         SWAP case
@@ -1139,10 +1168,6 @@ proc(
           return
       end
       break
-      ## stack-modifer
-        ##  swap -> swap labels for stack value
-        ##  drop -> no-op
-        ## dup ? copy stack-label, copy value when reaching while (back-jump label)
       default break
     end
     Atomic .Unknown list.append
@@ -1168,7 +1193,6 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     intRegBuffer@ AMD64.initIntDataRegisters
     StackValue branchTree.create
     labelHash@ labelEq@ 1024 ValueLocation map.create
-    128 CachedValueNode list.create
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   1024 Atomic list.create
