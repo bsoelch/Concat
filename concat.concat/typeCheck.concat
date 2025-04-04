@@ -4619,7 +4619,31 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     program [] .mainLabelId labelContext id.getLabelPos .data =:: mainProcPos
     program [] .mainProcId -1 mainProcPos state typeCheckChildProcedures
   end
-  hasMain and optimizerFlags.REMOVE_UNUSED_PROCS and EXPORT_GLOBALS ! if
+  ## TODO? create seperate list of all "root-procedures" to avoid iterating procedures twice
+  ## lambdas and exported (non-generic) procedures
+  ## TODO detect unused lambda in special cases (e.g. only accessible through unused variable)
+  0:i32 while ..dup program [] .procedures .length < do =:: procId
+    program [] .procedures procId i64 cast list.at .data =:: currentProc
+    currentProc [] .implementation .code ?? ! if
+      procId 1 + continue ## procedure implementation not in code
+    end
+    currentProc [] .procType typeContext types.getProcIn ..drop =:: procIn
+    currentProc [] .implementation .code .codeStart 0 < if
+      procId 1 + continue ## procedure not implemented
+    end
+    currentProc [] .hasStaticArg or currentProc [] .isStatic if
+      procId 1 + continue
+    end
+    currentProc [] .labelId labelContext id.labelFlags =:: flags
+    flags id.FLAG_LAMBDA & ? or EXPORT_GLOBALS hasMain ! | and flags id.FLAG_EXPORT & ? if
+      procId ProcId cast
+        -1
+        currentProc [] .labelId labelContext id.getLabelPos .data
+      state typeCheckChildProcedures
+    end
+    procId 1 +
+  end ..drop
+  optimizerFlags.REMOVE_UNUSED_PROCS if
     true state .isUnusedProc=
   end
   ## type-check unreachable procs

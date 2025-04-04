@@ -1,0 +1,10 @@
+proc( -> ) =>: inline.never: usedByLambda
+  ## usedByLambda is only used by indirectly accessed lambda
+  true "This code is linked correctly" assert
+end
+proc( -> ) =>
+  usedByLambda
+end =:: f
+proc( -> ) =>: main
+  f ()
+end
