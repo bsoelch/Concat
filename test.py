@@ -131,7 +131,7 @@ def main():
   if "-X" in sys.argv:## experimental mode
     concatPath=CURRENT_DIR+"/concatX"
     print("running tests in experimental mode")
-  full = "-full" in sys.argv
+  full = "-full" in sys.argv or "--full" in sys.argv
   try:
     dirIndex=sys.argv.index("--")
     dirs=sys.argv[dirIndex+1:]
