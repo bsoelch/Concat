@@ -141,7 +141,7 @@ namespace: slice
     T slice.mut : elts
     i32 : index
   -> T ptr.mut ) =>: export: atValue_32mut
-    elts i64 cast.s atValue_64mut
+    elts index i64 cast.s atValue_64mut
   end
   overload: export: atValue
     atValue_32 atValue_64 atValue_32mut atValue_64mut
@@ -322,7 +322,7 @@ namespace: slice
     type : auto: T
     T slice.mut : elts
     i32 : n
-  -> T slice ) =>: export: head_32mut
+  -> T slice.mut ) =>: export: head_32mut
     elts n i64 cast head_64mut
   end
   proc(
@@ -365,7 +365,7 @@ namespace: slice
     type : auto: T
     T slice.mut : elts
     i32 : n
-  -> T slice ) =>: export: tail_32mut
+  -> T slice.mut ) =>: export: tail_32mut
     elts n i64 cast tail_64mut
   end
   proc(
