@@ -911,7 +911,7 @@ proc( Type : composite TypeContext ptr : typeContext -> bool ) =>: hasStaticElem
     composite i typeContext types.compositeGetElement
       typeContext types.unwrapNamed
     =:: elt
-    elt types.primitive.TYPE types.typeEquals or elt typeContext types.isTypeSet if
+    elt typeContext types.isType if
       true return
     end
   end
@@ -1752,7 +1752,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         IdentifierType .PROCEDURE
         true forceImmutable=
         true allowImmutableDeclaration=
-      else valType types.primitive.TYPE types.typeEquals _if
+      else valType typeContext types.isType _if
         IdentifierType .TYPE
         true forceImmutable=
         true allowImmutableDeclaration=
@@ -1930,7 +1930,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       constType typeContext types.isProcedure if
         "unexpected procedure" sb.copyPtr fileState [] .wordStart errors appendError
         return
-      else constType types.primitive.TYPE types.typeEquals _if
+      else constType typeContext types.isType _if
         IdentifierType .TYPE
       else
         IdentifierType .GLOBAL_VAR

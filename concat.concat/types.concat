@@ -2162,6 +2162,11 @@ namespace: types
   proc( Type TypeContext ptr : context -> bool ) =>: export: isTypeSet
     context unwrapNamed .typeSet ?? return
   end
+  ## TODO? better name "is this type a type" sounds weird
+  proc( Type : t TypeContext ptr : context -> bool ) =>: export: isType
+    t context unwrapNamed =:: baseType
+    baseType .typeSet ?? or baseType primitive.TYPE typeEquals end return
+  end
   proc( Type : t TypeContext ptr : context -> TypeSetEntry slice ) =>: export: getTypeSetEntries
     t context unwrapNamed =:: t0
     t0 .typeSet ?? ! if
@@ -2533,9 +2538,8 @@ namespace: types
     src target types.typeEquals if
       true return
     end
-    src context types.isTypeSet or src types.primitive.TYPE typeEquals end and
-       target types.primitive.TYPE typeEquals or target context types.isTypeSet if
-      true return
+    src context types.isType and target context types.isType if
+      true return ## allow automatic conversions between different version of "type"-types
     end
     src .initializer ?? if
       src target context canAutoCastInitializer return

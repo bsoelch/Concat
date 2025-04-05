@@ -1,0 +1,160 @@
+( i64 : static: bitCount -> type ) =>: bitarray
+  bitCount 63:i64 + 63:i64 ~ & =:: blockCount ## round up to next multiple of 64
+  i64 bitCount array
+end
+i8  =:: bits8
+i16 =:: bits16
+i32 =:: bits32
+i64 =:: bits64
+## TODO? bits128
+
+namespace: bitarray._internal
+  typeSet( bits8 bits16 bits32 bits64 ) =:: bitsN
+  proc( bitsN : static: auto: bitsType
+    bitsType : data
+    i32 : index
+  -> bool ) =>: get
+    bitsType ..types.size 8 * =:: static: bitCount
+    bitCount 32 <= if i32 else bitsType ..types.unwrapNamed end =:: intType
+    1 intType cast.u index << =:: bitMask
+    data intType cast.u bitMask & ?
+  end
+  proc( bitsN : static: auto: bitsType
+    bool : value
+    bitsType : data
+    i32 : index
+  -> bitsType ) =>: set
+    bitsType ..types.size 8 * =:: static: bitCount
+    bitCount 32 <= if i32 else bitsType ..types.unwrapNamed end =:: intType
+    1 intType cast.u index << =:: bitMask
+    data intType cast.u
+      value if
+          bitMask |
+      else
+          bitMask ~ &
+      end
+    bitsType cast.u
+  end
+  proc( bitsN : static: auto: bitsType
+    bitsType : data
+  -> bool ) =>: any
+    bitsType ..types.unwrapNamed =:: intType
+    data intType cast ?
+  end
+  proc( bitsN : static: auto: bitsType
+    bitsType : data
+  -> bool ) =>: all
+    bitsType ..types.unwrapNamed =:: intType
+    data intType cast ~ ? !
+  end
+end
+
+## TODO check indices
+## TODO first,last (get index of .. set bit)
+## TODO clear, and,or,flip (at index, all bits)
+## TODO is there a way to merge the duplicate code?
+namespace: bits8
+  proc( -> bits8 ) =>: export: create
+    0:i8 bits8 cast
+  end
+  proc( bits8 : data i32 : index -> bool ) =>: export: get
+    data index bitarray._internal.get
+  end
+  proc( bool : value bits8 : data i32 : index -> bits8 ) =>: export: set
+    value data index bitarray._internal.set
+  end
+  proc( bits8 : data -> bool ) =>: export: any
+    data bitarray._internal.any
+  end
+  proc( bits8 : data -> bool ) =>: export: all
+    data bitarray._internal.all
+  end
+end
+namespace: bits16
+  proc( -> bits16 ) =>: export: create
+    0:i16 bits16 cast
+  end
+  proc( bits16 : data i32 : index -> bool ) =>: export: get
+    data index bitarray._internal.get
+  end
+  proc( bool : value bits16 : data i32 : index -> bits16 ) =>: export: set
+    value data index bitarray._internal.set
+  end
+  proc( bits16 : data -> bool ) =>: export: any
+    data bitarray._internal.any
+  end
+  proc( bits16 : data -> bool ) =>: export: all
+    data bitarray._internal.all
+  end
+end
+namespace: bits32
+  proc( -> bits32 ) =>: export: create
+    0:i32 bits32 cast
+  end
+  proc( bits32 : data i32 : index -> bool ) =>: export: get
+    data index bitarray._internal.get
+  end
+  proc( bool : value bits32 : data i32 : index -> bits32 ) =>: export: set
+    value data index bitarray._internal.set
+  end
+  proc( bits32 : data -> bool ) =>: export: any
+    data bitarray._internal.any
+  end
+  proc( bits32 : data -> bool ) =>: export: all
+    data bitarray._internal.all
+  end
+end
+namespace: bits64
+  proc( -> bits64 ) =>: export: create
+    0:i64 bits64 cast
+  end
+  proc( bits64 : data i32 : index -> bool ) =>: export: get
+    data index bitarray._internal.get
+  end
+  proc( bool : value bits64 : data i32 : index -> bits64 ) =>: export: set
+    value data index bitarray._internal.set
+  end
+  proc( bits64 : data -> bool ) =>: export: any
+    data bitarray._internal.any
+  end
+  proc( bits64 : data -> bool ) =>: export: all
+    data bitarray._internal.all
+  end
+end
+namespace: bitarray
+  proc( i64 : static: bitCount -> bitCount bitarray ) =>: export: create
+    bitCount bitarray new return ## create empty array
+  end
+  proc( i64 : static: auto: len
+    len bitarray : data
+    i64 : index
+  -> bool ) =>: export: get
+    len bitarray ..types.unwrapNamed =:: baseType
+    index 63 & =:: bitIndex
+    1:i64 bitIndex << =:: bitMask
+    index 64 / =:: blockIndex
+    data baseType cast blockIndex [] bitMask & ?
+  end
+  proc( i64 : static: auto: len
+    bool : value
+    len bitarray : data
+    i64 : index
+  -> len bitarray ) =>: export: set
+    len bitarray ..types.unwrapNamed =:: baseType
+    data baseType cast =:: mut: localData
+    index 63 & =:: bitIndex
+    1:i64 bitIndex << =:: bitMask
+    index 64 / =:: blockIndex
+    value if
+      localData blockIndex []
+        bitMask |
+      localData@ blockIndex =[]
+    else
+      localData blockIndex []
+        bitMask ~ &
+      localData@ blockIndex =[]
+    end
+    localData len bitarray cast return
+  end
+  ## TODO any, all
+end
