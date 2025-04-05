@@ -1,0 +1,38 @@
+import core/bitarray
+proc( -> ) =>: main
+  bits32.create =:: mut: a
+  a bits32.any ! "empty on creation" assert
+  true a 5 bits32.set a=
+  a bits32.any "non-empty after setting bit" assert
+  a bits32.all ! "all returns false unless there are set bits" assert
+  a 5 bits32.get "set-true makes bit true" assert
+  false a 5 bits32.set a=
+  a 5 bits32.get ! "set-false makes bit false" assert
+  bits64.create
+    true >$ 56 bits64.set
+  56 bits64.get "set sets bit" assert
+  128 bitarray.create =:: mut: b
+  b
+    true >$ 63 bitarray.set ## set bit 63
+    true >$ 64 bitarray.set ## set bit 64
+    true >$ 65 bitarray.set ## set bit 65
+  b=
+  b 32 bitarray.get !  "bit 32 is false" assert
+  b 63 bitarray.get "bit 63 is true" assert
+  b 64 bitarray.get "bit 64 is true" assert
+  b 65 bitarray.get "bit 65 is true" assert
+  bits8.create
+    true >$ 0 bits8.set
+    true >$ 1 bits8.set
+    true >$ 2 bits8.set
+    true >$ 3 bits8.set
+    true >$ 4 bits8.set
+    true >$ 5 bits8.set
+    true >$ 6 bits8.set
+    true >$ 7 bits8.set
+  =:: c
+  c bits8.all "all bits are set" assert
+  c
+    false >$ 5 bits8.set
+  bits8.all ! "not all bits are set" assert
+end
