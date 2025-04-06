@@ -382,6 +382,8 @@ namespace: id
     end
     data? .data false return
   end
+  ## finds an identifier with the same name as the given label
+  ## to get the identifier-data for a given labelId use `getIdentifier`
   proc(
     LabelId : nameId
     IdentifierContext ptr.mut : context
