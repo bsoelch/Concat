@@ -114,11 +114,13 @@ namespace: map
   -> NodeId ) =>: nextNodeId
     ## reuse free node if available
     map [] .freeNodes NO_NODE != if
-      map [] .freeNodes =:: freeNode
+      map [] .freeNodes =:: freeNodeId
         map [] .nodeBuffer
-          freeNode i64 cast 1 -
-        list.at .data [] .next map .freeNodes=
-      freeNode
+          freeNodeId i64 cast 1 -
+        list.at .data =:: freeNode
+        freeNode [] .next map .freeNodes=
+        NO_NODE freeNode .next= ## unlink returned node
+      freeNodeId
     else
       map [] .nodeBuffer .length 1 + NodeId cast
     end =:: newId
