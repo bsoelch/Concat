@@ -1,12 +1,12 @@
 ## Assembly backend
 ## currently in experimental phase
+import list
 import string
 import stringIO
 using std.literals.
 
 import "program.concat"
 import "measure.concat"
-import "branchTree.concat"
 
 ## TODO? split into multiple files
 ## * Assembly definitions
@@ -24,12 +24,25 @@ proc( char8 _ ptr : str i64 : len -> RegisterId ) : alias: static: :reg ..builtI
 
 union(
   _ : empty
-  i64 : constInt
-  f32 : constFloat32
-  f64 : constFloat64
-  LabelId : variable
-  i32 : stackSlot ## 1-indexed from bottom of stack
+  LabelId : variable ## TODO variableHi, variableLow
+  i32 : stackSlot ## index counted from bottom of stack
+  i32 : stackSlotHi   ## hi half of stack-slot
+  i32 : stackSlotLow  ## low half of stack-slot
 ) =:: RegisterContent
+namespace: RegisterContent
+  proc( RegisterContent : a RegisterContent : b -> bool ) =>: eq
+    a ..label b ..label != if
+      false return
+    end
+    a switch
+      empty case true return
+      variable case a .variable b .variable == return
+      stackSlot case a .stackSlot b .stackSlot == return
+      stackSlotHi case a .stackSlotHi b .stackSlotHi == return
+      stackSlotLow case a .stackSlotLow b .stackSlotLow == return
+    end
+  end
+end
 struct(
   RegisterContent : currentValue
   RegisterId : register ## store register in padding after value-union
@@ -186,7 +199,7 @@ namespace: asm
     LabelId : localMemory
     LabelId : globalMemory
     RegisterId : memory
-    ## TODO label
+    i32 : localLabel
   ) =:: Operand
 end
 struct(
@@ -203,6 +216,7 @@ union(
   LabelId : StartProc
   Operation : DebugStartOp
 ) =:: Atomic
+-1 =:: NO_LABEL
 proc( asm.OpType : opType ValType : valType -> Atomic ) =>: asmOp0
   ## AsmOp
     opType
@@ -356,13 +370,18 @@ namespace: sb
         memory case
           '[' sb.appendC val .memory sb.appendRegister ']' sb.appendC
           break
+        localLabel case
+          ".localLabel" sb.appendS val .localLabel i64 cast.u sb.appendI
+          break
       end
     return
   end
   proc( stringBuilder : sb AsmOp : op -> stringBuilder ) =>: appendAsmOp
     sb
-      op .opType sb.appendOpType ' ' sb.appendC
-      op .valType sb.appendValType
+      op .opType sb.appendOpType
+      op .valType .EMPTY ?? ! if
+        ' ' sb.appendC op .valType sb.appendValType
+      end
       op .operands ..length for =:: i
         op .operands i [] =:: operand
         operand .empty ?? if continue end
@@ -397,9 +416,9 @@ struct( RegisterId : hi RegisterId : low ) =:: RegisterPair
 union(
   _ : memory ## procedure internal stack-memory
   RegisterId : register
+  RegisterId : registerHi ## high part in register, low part in memory
+  RegisterId : registerLow ## low part in register, hi part in memory
   RegisterPair : registers
-  i32 : intArgument ## procedure argument location on call-stack
-  ## TODO? seperate state for register+memory (for 2-register values)
 ) =:: StackValueLocation
 ## TODO marker for values that appear multiple times in stack (delay copy until next loop start)
 struct(
@@ -408,6 +427,8 @@ struct(
 ) =:: StackValue
 union(
   RegisterId : register
+  RegisterId : registerHi ## high part in register, low part in memory
+  RegisterId : registerLow ## low part in register, hi part in memory
   RegisterPair : registers ## TODO? allow values partially stored in registers
   ## TODO pointer, pointer+offset
   i32 : intArgument
@@ -427,6 +448,7 @@ union(
 ## TODO 0. find read/write locations of variables (allows to free registers for variables that are not read until next write)
 ## 1. store all stack-slots / cached variables in different registers
 ## 2. run copy elimination in parallel (mark register pairs holding same value, split values at loop start)
+## ?? overcommit register ids if there are many registers sharing the same value, if copy elimination does not eliminate all versions move least used normal register to stack when value in overflow register is needed
 ## TODO! ensure each value has a unique register
 #+
 before final output:
@@ -437,15 +459,33 @@ TODO add target specific optimizations as finaly step before output
   -> use target specific operations
 +#
 
+struct(
+  i32 : startLabelId
+  i32 : doLabelId
+  i32 : finallyLabelId
+  i32 : endLabelId
+  ## TODO remember stack state
+  ## TODO remember which registers are read within loop (without beeing overwritten first)
+  RegisterState slice.mut : regData ## storage for register data (heap allocated)
+  i32 : doRegsOffset ## offset for reg-data in do-branch
+  i32 : continueRegsOffset ## offset for reg-data in continue-branches
+  i32 : breakRegsOffset ## offset for reg-data in break-branches
+) =:: WhileBlockInfo
+union(
+  WhileBlockInfo : While
+) =:: BlockInfo
+
 ## TODO? keep track of registers holding constant values
 struct(
   ProgramContext ptr.mut : program
-  RegisterState slice.mut : intDataRegisters
-  StackValue BranchTree : stack
+  RegisterState slice.mut : intDataRegisters ## ? store float register states in same array, remember offset
+  StackValue list : stack ## TODO use list instead of branch-tree, merging branches is handled using register state
   LabelId ValueLocation hashMap : variableLocations
+  BlockInfo list : openBlocks
+  i32 : labelCount
 ) =:: CompilerContext
 
-proc( LabelId : valId RegisterId : register CompilerContext ptr.mut : context -> ) =>: cacheVariable
+proc( LabelId : valId RegisterId : register i32 : opIndex CompilerContext ptr.mut : context -> ) =>: cacheVariable
   context .variableLocations
     valId
     register ValueLocation .register
@@ -464,9 +504,11 @@ proc( LabelId : valId RegisterId : register CompilerContext ptr.mut : context ->
   register context findRegister
     $ optional.isEmpty if ..drop return end
   .data =:: registerData
+  opIndex registerData .lastUsed=
+  registerData .currentValue .empty ?? "caching variable does not overwrite register" assert
   valId RegisterContent .variable registerData .currentValue=
 end
-proc( LabelId : valId RegisterPair : register CompilerContext ptr : context -> ) =>: cacheVariable2
+proc( LabelId : valId RegisterPair : register i32 : opIndex CompilerContext ptr : context -> ) =>: cacheVariable2
   ## TODO cache double-register value
   "CodeGen: unimplemented" ..panic
 end
@@ -475,6 +517,9 @@ proc( RegisterState : state -> RegisterState ) =>: resetRegister
     RegisterContent .empty >$ .currentValue=
     -1 >$ .lastUsed=
   return
+end
+proc( LabelId : valId CompilerContext ptr.mut : context -> ValueLocation ptr.mut optional ) =>: atCachedVarLocation
+  context .variableLocations valId map.at
 end
 proc( LabelId : valId bool : isGlobal CompilerContext ptr.mut : context -> ValueLocation ) =>: getVarLocation
   context .variableLocations
@@ -499,7 +544,7 @@ end
 proc(
   RegisterId : reg
   CompilerContext ptr.mut : context
--> RegisterState ptr.mut optional ) =>: findRegister
+-> RegisterState ptr.mut optional ) =>: findRegister ## TODO? better name
   reg NO_REG == if
     RegisterState ptr.mut optional.empty return
   end
@@ -515,9 +560,8 @@ end
 proc(
   CompilerContext ptr.mut : context
 -> ) =>: resetRegisters
-  context .stack branchTree.clear
-  ## TODO? clear variable use map
-  ## context .variableLocations map.clear context .variableLocations=
+  context [] .stack list.clear context .stack=
+  context .variableLocations map.clear
   context .intDataRegisters [] .length for =:: i
     context [] .intDataRegisters i []
       resetRegister
@@ -526,7 +570,102 @@ proc(
   ## TODO reset float registers
 end
 
-## TODO! update stack-values/variableLocations if register is reused
+proc( i32 : stackSlot CompilerContext ptr.mut : context -> StackValue ptr.mut ) =>: stackSlotData
+  stackSlot 0 < or stackSlot context [] .stack .length >= if
+    "CodeGen: stack-data and register-states are out of sync" ..panic
+  end
+  context [] .stack stackSlot list.at .data
+end
+proc(
+  Atomic list
+  RegisterState : regState
+  ## TODO option to allow moving value to empty register (if available) instead of memory
+  CompilerContext ptr.mut : context
+-> Atomic list RegisterState ) =>: clearRegister
+  ## save previous value
+  regState .currentValue switch
+    empty case break
+    stackSlot case
+      regState .currentValue .stackSlot =:: stackSlot
+      stackSlot context stackSlotData =:: stackData
+      stackData [] .location switch
+        register case
+          stackData .location [] .register =:: register
+          register regState .register == "CodeGen: stack-data and register state match" assert
+          asm.OpType .MOVE
+            stackData [] .valType
+            stackSlot asm.Operand .stackData
+            register asm.Operand .register
+          asmOp2 list.append
+          StackValueLocation .memory stackData .location=
+          break
+        memory registers registerHi registerLow case
+          "CodeGen: stack-data and register-states are out of sync" ..panic
+      end
+      StackValueLocation .memory stackData .location=
+      break
+    stackSlotHi case
+      regState .currentValue .stackSlotHi =:: stackSlot
+      stackSlot context stackSlotData =:: stackData
+      stackData [] .location switch
+        registerHi case
+          stackData .location [] .registerHi =:: register
+          register regState .register == "CodeGen: stack-data and register state match" assert
+          asm.OpType .MOVE
+            stackData [] .valType getHiValType
+            stackSlot asm.Operand .stackData128Hi
+            register asm.Operand .register
+          asmOp2 list.append
+          StackValueLocation .memory stackData .location=
+          break
+        registers case
+          stackData .location [] .registers .hi regState .register == "CodeGen: stack-data and register state match" assert
+          asm.OpType .MOVE
+            stackData [] .valType getHiValType
+            stackSlot asm.Operand .stackData128Hi
+            stackData .location [] .registers .hi asm.Operand .register
+          asmOp2 list.append
+          stackData .location [] .registers .low StackValueLocation .registerLow stackData .location=
+          break
+        memory register registerLow case
+          "CodeGen: stack-data and register-states are out of sync" ..panic
+      end
+      StackValueLocation .memory stackData .location=
+      break
+    stackSlotLow case
+      regState .currentValue .stackSlotLow =:: stackSlot
+      stackSlot context stackSlotData =:: stackData
+      stackData [] .location switch
+        registerLow case
+          stackData .location [] .registerLow =:: register
+          register regState .register == "CodeGen: stack-data and register state match" assert
+          asm.OpType .MOVE
+            stackData [] .valType getLowValType
+            stackSlot asm.Operand .stackData128Low
+            register asm.Operand .register
+          asmOp2 list.append
+          StackValueLocation .memory stackData .location=
+          break
+        registers case
+          stackData .location [] .registers .low regState .register == "CodeGen: stack-data and register state match" assert
+          asm.OpType .MOVE
+            stackData [] .valType getLowValType
+            stackSlot asm.Operand .stackData128Low
+            stackData .location [] .registers .low asm.Operand .register
+          asmOp2 list.append
+          stackData .location [] .registers .hi StackValueLocation .registerHi stackData .location=
+          break
+        memory register registerHi case
+          "CodeGen: stack-data and register-states are out of sync" ..panic
+      end
+      break
+    variable case
+      context .variableLocations regState .currentValue .variable map.remove ..drop ## TODO check if correct value was removed
+      break
+  end
+  regState resetRegister
+end
+
 proc(
   Atomic list : ops
   i32 : opIndex
@@ -541,56 +680,203 @@ proc(
     end
   finally i 1 + end ..drop
   ops
-    ## save stack values
-    bestCandidate [] .currentValue .stackSlot ?? if
-      bestCandidate [] .currentValue .stackSlot =:: stackSlot
-      context [] .stack branchTree.depth =:: stackSize
-      stackSize stackSlot - =:: stackIndex
-      stackIndex 0 < or stackIndex stackSize >= if
-        "CodeGen: stack-data and register-states are out of sync" ..panic
-      end
-      context .stack stackIndex branchTree.replaceAt .data =:: stackData
-      stackData [] .location switch
-        register case
-          stackData .location [] .register bestCandidate [] .register == "CodeGen: stack-data and register state match" assert
-          asm.OpType .MOVE
-            stackData [] .valType
-            stackSlot asm.Operand .stackData
-            stackData .location [] .register asm.Operand .register
-          asmOp2 list.append
-          break
-        registers case ## TODO? only move the half colliding with the allocated register
-          stackData .location [] .registers .hi bestCandidate [] .register == or
-            stackData .location [] .registers .low bestCandidate [] .register ==
-          end "CodeGen: stack-data and register state match" assert
-          asm.OpType .MOVE
-            stackData [] .valType getHiValType
-            stackSlot asm.Operand .stackData128Hi
-            stackData .location [] .registers .hi asm.Operand .register
-          asmOp2 list.append
-          asm.OpType .MOVE
-            stackData [] .valType getLowValType
-            stackSlot asm.Operand .stackData128Low
-            stackData .location [] .registers .low asm.Operand .register
-          asmOp2 list.append
-          ## reset both registers
-          stackData .location [] .registers .hi context findRegister =:: hiReg
-          stackData .location [] .registers .low context findRegister =:: lowReg
-          hiReg .data [] resetRegister hiReg .data =[]
-          lowReg .data [] resetRegister lowReg .data =[]
-          break
-        memory intArgument case
-          "CodeGen: stack-data and register-states are out of sync" ..panic
-      end
-      StackValueLocation .memory stackData .location=
-    end
     ## clear values cache register
-    bestCandidate [] resetRegister bestCandidate =[]
+    bestCandidate [] context clearRegister bestCandidate =[]
     opIndex bestCandidate .lastUsed=
   bestCandidate [] .register return
 end
 
-## TODO update current register states
+proc( RegisterState slice.mut : buffer CompilerContext ptr.mut : context -> ) =>: rememberRegisters
+  context [] .intDataRegisters =:: intRegs
+  buffer .length intRegs .length >= "CodeGen: buffer large enough to store registers" assert
+  buffer .data intRegs .data intRegs .length mem.copy ..drop ## copy register data
+end
+enum( MERGE MERGE_FALLTHROUGH RESET ) =:: RegisterRestoreMode
+proc(
+  Atomic list
+  RegisterState slice.mut : buffer
+  RegisterRestoreMode : mode
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: restoreRegisters
+  context [] .program =:: program
+  program .idContext =:: idContext
+  context [] .intDataRegisters =:: intRegs
+  false =:: mut: tmpMovedToLower
+  buffer .length intRegs .length >= "CodeGen: buffer large enough to store registers" assert
+  ## TODO? smarter algorithm (reduce number of moves)
+  ## 1. clear all registers holding value not appearing in new state
+  ## 2. move all values where source is register and target is currently free
+  intRegs .length for =:: i
+    intRegs i [] .currentValue =:: currentValue
+    buffer i [] .currentValue =:: expectedValue
+    expectedValue currentValue RegisterContent.eq if ## already correct value in register
+      buffer i [] .lastUsed intRegs i @[] .lastUsed= ## mark resister as used
+      continue
+    end
+    ## current value is wrong -> clear out register
+    mode .RESET ?? if
+      RegisterContent .empty intRegs i @[] .currentValue=
+    else
+      currentValue .empty ?? ! if
+        -1:i64 =:: mut: freeSlot
+        intRegs .length for =:: j
+          j i == if continue end
+          intRegs j [] .currentValue .empty ?? if
+            j freeSlot=
+            break
+          end
+        end
+        freeSlot 0 >= if
+          intRegs freeSlot [] .register =:: targetRegister
+          intRegs i [] .register =:: srcRegister
+          ## temporarily move value to free register
+          currentValue intRegs freeSlot @[] .currentValue=
+          currentValue switch
+            variable case
+              expectedValue .variable idContext id.getIdentifier
+                ! "CodeGen: identifier exists" assert
+              =:: idData
+              currentValue .variable context atCachedVarLocation .data =:: varLoc
+              varLoc [] .register srcRegister == "CodeGen: variable-cache and registers in sync" assert
+              targetRegister varLoc .register=
+              idData [] .valueType program toValType
+              break
+            stackSlot case
+              currentValue .stackSlot context stackSlotData =:: stackData
+              stackData .location [] .register srcRegister == "CodeGen: stack and registers in sync" assert
+              targetRegister stackData .location .register=
+              stackData [] .valType
+              break
+            stackSlotHi stackSlotLow case "unimplemented" ..panic
+            empty case ..unreachable
+          end =:: valType
+          asm.OpType .MOVE
+            valType
+            targetRegister asm.Operand .register
+            srcRegister asm.Operand .register
+          asmOp2 list.append
+          RegisterContent .empty intRegs i @[] .currentValue=
+          tmpMovedToLower freeSlot i < | tmpMovedToLower=
+        else
+          intRegs i [] context clearRegister intRegs i =[]
+        end
+      end
+    end
+    ## copy expected value into register
+    ## TODO? delay copying of memory values (to keep space of moved values)
+    buffer i [] .register =:: targetRegister
+    expectedValue switch
+      empty case
+        intRegs i [] .currentValue .empty ?? "register cleared before assign" assert
+        break
+      variable case
+        expectedValue .variable idContext id.getIdentifier
+          ! "CodeGen: identifier exists" assert
+        =:: idData
+        expectedValue .variable idData .idType [] .GLOBAL_VAR ?? context getVarLocation =:: varLoc
+        varLoc switch
+          register case
+            asm.OpType .MOVE
+              idData [] .valueType program toValType
+              targetRegister asm.Operand .register
+              varLoc .register asm.Operand .register
+            asmOp2 list.append
+            break
+          localMemory case
+            asm.OpType .MOVE
+              idData [] .valueType program toValType
+              targetRegister asm.Operand .register
+              varLoc .localMemory asm.Operand .localMemory
+            asmOp2 list.append
+            break
+          globalMemory case
+            asm.OpType .MOVE
+              idData [] .valueType program toValType
+              targetRegister asm.Operand .register
+              varLoc .globalMemory asm.Operand .globalMemory
+            asmOp2 list.append
+            break
+          registerHi registerLow registers case "unimplemented" ..panic
+          default "CodeGen: unsupported variable location" ..panic
+        end
+        expectedValue .variable targetRegister buffer i [] .lastUsed context cacheVariable ## update variable location
+        break
+      stackSlot case
+        expectedValue .stackSlot =:: stackSlot
+        stackSlot context stackSlotData =:: stackData
+        stackData [] .location switch
+          register case
+            stackData .location [] .register =:: register
+            asm.OpType .MOVE
+              stackData [] .valType
+              targetRegister asm.Operand .register
+              register asm.Operand .register
+            asmOp2 list.append
+            StackValueLocation .memory stackData .location=
+            register context findRegister .data =:: regState
+            regState [] resetRegister regState =[] ## clear previous location
+            break
+          memory case
+            asm.OpType .MOVE
+              stackData [] .valType
+              targetRegister asm.Operand .register
+              stackSlot asm.Operand .stackData
+            asmOp2 list.append
+            StackValueLocation .memory stackData .location=
+            break
+          registers registerHi registerLow case
+            "CodeGen: stack-data and register-states are out of sync" ..panic
+        end
+        targetRegister stackData .location .register=
+        break
+      stackSlotHi stackSlotLow case "unimplemented" ..panic
+    end
+    expectedValue intRegs i @[] .currentValue=
+  end
+  tmpMovedToLower if ## cleanup tmp-vars that were moved to previously cleared slots
+    intRegs .length for =:: i
+      buffer i [] .currentValue .empty ?? if
+        intRegs i [] context clearRegister intRegs i =[]
+      end
+    end
+  end
+end
+
+proc( CompilerContext ptr.mut : context -> i32 ) =>: nextLabelId
+  context [] .labelCount
+    $ 1 + context .labelCount=
+  return
+end
+proc(
+  i32 : startLabelId
+  CompilerContext ptr.mut : context
+-> WhileBlockInfo ptr.mut ) =>: openWhileBlock
+  context .intDataRegisters [] .length i32 cast =:: intRegCount
+  context [] .openBlocks
+    ## WhileBlockInfo
+      startLabelId
+      NO_LABEL NO_LABEL NO_LABEL
+      intRegCount 4 * i64 cast.u RegisterState mem.alloc intRegCount 4 * slice.createMutable
+      intRegCount
+      intRegCount 2 *
+      intRegCount 3 *
+    WhileBlockInfo new BlockInfo .While list.append
+  context .openBlocks=
+  context [] .openBlocks list.peek .data .While
+end
+
+proc(
+  RegisterId : regId
+  ValType : valType
+  CompilerContext ptr.mut : context
+-> ) =>: pushRegister
+  regId context findRegister .data =:: regState
+  regState .currentValue .empty ?? "CodeGen: pushed register is currently unassigned" assert
+  context .stack [] .length RegisterContent .stackSlot regState .currentValue=
+  context [] .stack
+    regId StackValueLocation .register valType StackValue new list.push
+  context .stack=
+end
 proc(
   Atomic list : ops
   ValType : valType
@@ -601,11 +887,11 @@ proc(
   ops =:: mut: newOps
   ## TODO make dependent on valType
   location switch
-    register case ## TODO? check for constant in register
+    register case
       location .register context findRegister =:: regState
-      regState optional.hasData if
+      regState optional.hasData and regState .data .currentValue [] .empty ?? if
         opIndex regState .data .lastUsed=
-        context .stack location .register StackValueLocation .register valType StackValue new branchTree.push
+        location .register valType context pushRegister
       else ## arg register is not a valid data register
         newOps
           opIndex context nextIntRegister =:: targetRegister
@@ -615,10 +901,10 @@ proc(
             location .register asm.Operand .register
           asmOp2 list.append
         newOps=
-        context .stack targetRegister StackValueLocation .register valType StackValue new branchTree.push
+        targetRegister valType context pushRegister
       end
       newOps return
-    registers case
+    registers registerHi registerLow case
       break
     intConstant case
       newOps
@@ -629,11 +915,10 @@ proc(
           location .intConstant asm.Operand .constInt
         asmOp2 list.append
       newOps=
-      context .stack targetRegister StackValueLocation .register valType StackValue new branchTree.push
+      targetRegister valType context pushRegister
       newOps return
     intArgument case
-      context .stack location .intArgument StackValueLocation .intArgument valType StackValue new branchTree.push
-      newOps return
+      break
     floatArgument case
       break
     localMemory case
@@ -645,7 +930,6 @@ proc(
     Atomic .Unknown list.append
   return
 end
-## TODO update current register states
 proc(
   Atomic list : ops
   ValType : argType
@@ -653,10 +937,12 @@ proc(
   CompilerContext ptr.mut : context
 -> Atomic list StackValue optional ) =>: popValue
   context [] .program .errors =:: errors
-  context [] .stack branchTree.depth 0 == if
+  context [] .stack .length 0 == if
     ops StackValue optional.empty return
   end
-  context .stack branchTree.pop .data [] =:: popped
+  context [] .stack
+    list.pop =:: popped
+  context .stack=
   popped .valType argType != if
     "unexpected value type expected: " sb.copyPtr
       argType sb.appendValType
@@ -664,6 +950,28 @@ proc(
       popped .valType sb.appendValType
     pos errors appendError
     ops StackValue optional.empty return
+  end
+  ## update status of popped registers
+  popped .location switch
+    register case
+      popped .location .register context findRegister =:: regState
+      regState .data [] resetRegister regState .data =[]
+      break
+    registerHi case
+      popped .location .registerHi context findRegister =:: regState
+      regState .data [] resetRegister regState .data =[]
+      break
+    registerLow case
+      popped .location .registerLow context findRegister =:: regState
+      regState .data [] resetRegister regState .data =[]
+      break
+    registers case
+      popped .location .registers .hi context findRegister =:: hiReg
+      popped .location .registers .low context findRegister =:: lowReg
+      hiReg .data [] resetRegister hiReg .data =[]
+      lowReg .data [] resetRegister lowReg .data =[]
+      break
+    memory case break ## nothing to do
   end
   ops popped optional.wrap return
 end
@@ -692,9 +1000,8 @@ proc(
           targetRegister asm.Operand .register
           argValue .location switch ## TODO? extract for procedure
             register case argValue .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .stackData break
-            intArgument case argValue .location .intArgument asm.Operand .intArgument break
-            registers case ..unreachable ## wrong data-format
+            memory case context [] .stack .length asm.Operand .stackData break
+            registers registerHi registerLow case ..unreachable ## wrong data-format
           end
         asmOp2 list.append
         ## pushValue
@@ -742,15 +1049,13 @@ proc(
           targetRegister asm.Operand .register
           arg1 .location switch ## TODO? extract for procedure
             register case arg1 .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .stackData break
-            intArgument case arg1 .location .intArgument asm.Operand .intArgument break
-            registers case ..unreachable ## wrong data-format
+            memory case context [] .stack .length asm.Operand .stackData break
+            registers registerHi registerLow case ..unreachable ## wrong data-format
           end
           arg2 .location switch ## TODO? extract for procedure
             register case arg2 .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .stackData break
-            intArgument case arg2 .location .intArgument asm.Operand .intArgument break
-            registers case ..unreachable ## wrong data-format
+            memory case context [] .stack .length asm.Operand .stackData break
+            registers registerHi registerLow case ..unreachable ## wrong data-format
           end
         asmOp3 list.append
         ## pushValue
@@ -799,19 +1104,17 @@ proc(
           targetRegister asm.Operand .register
           arg1 .location switch ## TODO? extract for procedure
             register case arg1 .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .stackData break
-            intArgument case arg1 .location .intArgument asm.Operand .intArgument break
-            registers case ..unreachable ## wrong data-format
+            memory case context [] .stack .length asm.Operand .stackData break
+            registers registerHi registerLow case ..unreachable ## wrong data-format
           end
           arg2 .location switch ## TODO? extract for procedure
             register case arg2 .location .register asm.Operand .register break
-            memory case context [] .stack branchTree.depth asm.Operand .stackData break
-            intArgument case arg2 .location .intArgument asm.Operand .intArgument break
-            registers case ..unreachable ## wrong data-format
+            memory case context [] .stack .length asm.Operand .stackData break
+            registers registerHi registerLow case ..unreachable ## wrong data-format
           end
         asmOp4 list.append
         ## pushValue
-          argType
+          ValType .I8
           targetRegister ValueLocation .register
           opIndex
           context
@@ -992,11 +1295,8 @@ proc(
               argRegister asm.Operand .register
             asmOp2 list.append
           end
-          argRegister NO_REG != and
-              argRegister context findRegister =:: regState
-              regState optional.hasData if
-            opIndex regState .data .lastUsed=
-            label argRegister context cacheVariable
+          argRegister NO_REG != if
+            label argRegister opIndex context cacheVariable
           end
         end
         intArgs 1 + intArgs=
@@ -1033,7 +1333,7 @@ proc(
           return
         end
         break
-      declareId case return ## nothing to do (all decalarations handled at start of procedure)
+      declareId case return ## nothing to do (all declarations handled at start of procedure)
       getId case
         op .val .getId =:: idData
         idData [] .labelId =:: labelId
@@ -1052,6 +1352,7 @@ proc(
             break
         end
         break
+      atId case break ## TODO atId
       setId initializeId case
         op .val .setId ?? if
           op .val .setId
@@ -1073,31 +1374,29 @@ proc(
                   labelId asm.Operand .localMemory
                   stackValue .location .register asm.Operand .register
                 asmOp2 list.append
-                labelId stackValue .location .register context cacheVariable
+                labelId stackValue .location .register opIndex context cacheVariable
                 return
               registers case
                 ## TODO store to memory
-                labelId stackValue .location .registers context cacheVariable2
+                labelId stackValue .location .registers opIndex context cacheVariable2
                 break
-              memory intArgument case
+              registerHi registerLow case
+                "unimplemented" ..panic
+              memory case
                 ## TODO! make dependent on value type
                 opIndex context nextIntRegister =:: tmpRegister
                 asm.OpType .MOVE
                   valType
                   tmpRegister asm.Operand .register
-                  stackValue .location .memory ?? if
-                    ## TODO use correct memory location (? `context [] .stackIntCount`)
-                    context [] .stack branchTree.depth asm.Operand .stackData
-                  else
-                    stackValue .location .intArgument asm.Operand .intArgument
-                  end
+                  ## TODO use correct memory location (? `context [] .stackIntCount`)
+                  context [] .stack .length asm.Operand .stackData
                 asmOp2 list.append
                 asm.OpType .MOVE
                   valType
                   labelId asm.Operand .localMemory
                   tmpRegister asm.Operand .register
                 asmOp2 list.append
-                labelId tmpRegister context cacheVariable
+                labelId tmpRegister opIndex context cacheVariable
                 return
             end
             break
@@ -1118,55 +1417,223 @@ proc(
           context
         compileBuiltIn
         return
+      block case
+        op [] .val .block .blockType switch
+          WHILE case
+            context nextLabelId =:: startLabelId
+            startLabelId context openWhileBlock =:: whileBlock
+            whileBlock [] .regData context rememberRegisters
+            asm.OpType .LABEL ValType .EMPTY
+              startLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            return
+          DO case
+            context [] .openBlocks list.peek =:: whileBlock?
+            whileBlock? optional.isEmpty or whileBlock? .data [] .While ?? ! if
+              "unexpected do-statement" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            whileBlock? .data .While =:: whileBlock
+            whileBlock [] .endLabelId NO_LABEL == if
+              context nextLabelId whileBlock .endLabelId=
+            end
+            ValType .I8 op [] .pos context popValue =:: srcValue?
+            srcValue? optional.isEmpty if
+              "stack underflow in do-condition" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            srcValue? .data =:: srcValue
+            srcValue .valType .I8 ?? ! if
+              "unexpected val type for condition: " sb.copyPtr
+                srcValue .valType sb.appendValType
+              op [] .pos errors appendError
+              return
+            end
+            whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
+            asm.OpType .JMPIF
+              srcValue .valType
+              srcValue .location switch
+                register case
+                    srcValue .location .register asm.Operand .register
+                  break
+                memory case ## TODO is this the right offset
+                    context [] .stack .length 1 + asm.Operand .stackData
+                  break
+                registers registerHi registerLow case "unexpected format for condition parameter" ..panic
+              end
+              whileBlock [] .endLabelId asm.Operand .localLabel
+            asmOp2 list.append
+            whileBlock [] .doLabelId NO_LABEL != if ## create finally label only if it is used
+              asm.OpType .LABEL ValType .EMPTY
+                whileBlock [] .doLabelId asm.Operand .localLabel
+              asmOp1 list.append
+            end
+            return
+          FINALLY case
+            context [] .openBlocks list.peek =:: whileBlock?
+            whileBlock? optional.isEmpty or whileBlock? .data [] .While ?? ! if
+              "unexpected finally-statement" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            whileBlock? .data .While =:: whileBlock
+            whileBlock [] .finallyLabelId NO_LABEL != if ## create finally label only if it is used
+              asm.OpType .LABEL ValType .EMPTY
+                whileBlock [] .finallyLabelId asm.Operand .localLabel
+              asmOp1 list.append
+            end
+            ## TODO merge continue branches
+            return
+          break
+          BREAK CONTINUE case break
+          default break
+        end
+        break
+      blockEnd case
+        op [] .val .blockEnd .blockType switch
+          WHILE case
+            context [] .openBlocks list.peek =:: whileBlock?
+            whileBlock? optional.isEmpty or whileBlock? .data [] .While ?? ! if
+              "unexpected end of while block" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            context [] .openBlocks
+              list.pop .While =:: whileBlock
+            context .openBlocks=
+            whileBlock .regData RegisterRestoreMode .MERGE context restoreRegisters
+            asm.OpType .JMP ValType .EMPTY
+              whileBlock .startLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            asm.OpType .LABEL ValType .EMPTY
+              whileBlock .endLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            ## restoreRegisters
+              whileBlock .regData whileBlock .breakRegsOffset slice.tail
+              RegisterRestoreMode .RESET
+            context restoreRegisters
+            whileBlock .regData .data mem.free
+          return
+          default break
+        end
+        break
       stackMod case
-      op [] .val .stackMod .modType switch
-        DROP case
-          op [] .val .stackMod .n =:: count
-          context [] .stack branchTree.depth count < if
-            context .stack branchTree.clear
-            "stack underflow" sb.copyPtr
-            op [] .pos errors appendError
+        op [] .val .stackMod .modType switch
+          DROP case
+            op [] .val .stackMod .n =:: count
+            context [] .stack .length count < if
+              "CodeGen: stack underflow in drop, stackSize: " sb.copyPtr
+                context [] .stack .length sb.appendI
+              op [] .pos errors appendError
+              context [] .stack list.clear context .stack=
+              return
+            end
+            context [] .stack
+              count for ..drop
+                list.pop =:: popped
+                popped .location switch
+                  memory case break ## nothing to do
+                  register case
+                    RegisterContent .empty popped .location .register context findRegister .data .currentValue=
+                    break
+                  registers registerHi registerLow case "unimplemented" ..panic
+                end
+              end
+            context .stack=
             return
-          end
-          count for ..drop
-            ## TODO! update register info
-             context .stack branchTree.pop ..drop
-          end
-          return
-        COPY case
-          op [] .val .stackMod .n =:: offset
-          context [] .stack branchTree.depth offset <= if
-            "stack underflow" sb.copyPtr
-            op [] .pos errors appendError
+          COPY case
+            op [] .val .stackMod .n =:: offset
+            context [] .stack .length offset <= if
+              "CodeGen: stack underflow in copy, stackSize: " sb.copyPtr
+                context [] .stack .length sb.appendI
+              op [] .pos errors appendError
+              return
+            end
+            ## copy value on stack
+            context [] .stack
+              offset
+            list.at .data [] =:: copied
+            opIndex context nextIntRegister =:: targetRegister
+            ## TODO handle case where copied value is no register
+            asm.OpType .MOVE
+              copied .valType
+              targetRegister asm.Operand .register
+              copied .location .register asm.Operand .register
+            asmOp2 list.append
+            ## TODO remember that copied register holds value of old register, use old register to get value until:
+            ##  a) register changes
+            ##  b) start of next loop
+            targetRegister copied .valType context pushRegister
             return
-          end
-          ## copy value on stack
-          context .stack
-            offset
-          branchTree.at .data [] =:: copied
-          opIndex context nextIntRegister =:: targetRegister
-          ## TODO handle case where copied value is no register
-          asm.OpType .MOVE
-            copied .valType
-            targetRegister asm.Operand .register
-            copied .location .register asm.Operand .register
-          asmOp2 list.append
-          ## TODO remember that copied register holds value of old register, use old register to get value until:
-          ##  a) register changes
-          ##  b) start of next loop
-          context .stack
-            targetRegister StackValueLocation .register copied .valType StackValue new
-          branchTree.push
-          return
-        SWAP case
-          context [] .stack branchTree.depth 2 < if
-            "stack underflow" sb.copyPtr
-            op [] .pos errors appendError
+          SWAP case
+            context [] .stack .length 2 < if
+              "CodeGen: stack underflow in swap, stackSize: " sb.copyPtr
+                context [] .stack .length sb.appendI
+              op [] .pos errors appendError
+              return
+            end
+            context [] .stack
+              list.pop =:: a
+              $ .length =:: hiSlot
+              list.pop =:: b
+              $ .length =:: lowSlot
+              a list.push
+              b list.push
+            context .stack=
+            ## update locations
+            ## TODO? reduce duplicate code
+            a .location switch
+              register case
+                a .location .register context findRegister .data =:: regData
+                hiSlot regData .currentValue [] .stackSlot == "CodeGen: stack and registers in sync" assert
+                lowSlot regData .currentValue .stackSlot=
+                break
+              registerHi case
+                a .location .registerHi context findRegister .data =:: regData
+                hiSlot regData .currentValue [] .stackSlotHi == "CodeGen: stack and registers in sync" assert
+                lowSlot regData .currentValue .stackSlotHi=
+                break
+              registerLow case
+                a .location .registerLow context findRegister .data =:: regData
+                hiSlot regData .currentValue [] .stackSlotLow == "CodeGen: stack and registers in sync" assert
+                lowSlot regData .currentValue .stackSlotLow=
+                break
+              registers case
+                a .location .registers .hi context findRegister .data =:: regDataHi
+                hiSlot regDataHi .currentValue [] .stackSlotHi == "CodeGen: stack and registers in sync" assert
+                lowSlot regDataHi .currentValue .stackSlotHi=
+                a .location .registers .low context findRegister .data =:: regDataLow
+                hiSlot regDataLow .currentValue [] .stackSlotLow == "CodeGen: stack and registers in sync" assert
+                lowSlot regDataLow .currentValue .stackSlotLow=
+                break
+              memory case break
+            end
+            b .location switch
+              register case
+                b .location .register context findRegister .data =:: regData
+                lowSlot regData .currentValue [] .stackSlot == "CodeGen: stack and registers in sync" assert
+                hiSlot regData .currentValue .stackSlot=
+                break
+              registerHi case
+                b .location .registerHi context findRegister  .data =:: regData
+                lowSlot regData .currentValue [] .stackSlotHi == "CodeGen: stack and registers in sync" assert
+                hiSlot regData .currentValue .stackSlotHi=
+                break
+              registerLow case
+                b .location .registerLow context findRegister .data =:: regData
+                lowSlot regData .currentValue [] .stackSlotLow == "CodeGen: stack and registers in sync" assert
+                hiSlot regData .currentValue .stackSlotLow=
+                break
+              registers case
+                b .location .registers .hi context findRegister .data =:: regDataHi
+                lowSlot regDataHi .currentValue [] .stackSlotHi == "CodeGen: stack and registers in sync" assert
+                hiSlot regDataHi .currentValue .stackSlotHi=
+                b .location .registers .low context findRegister .data =:: regDataLow
+                lowSlot regDataLow .currentValue [] .stackSlotLow == "CodeGen: stack and registers in sync" assert
+                hiSlot regDataLow .currentValue .stackSlotLow=
+                break
+              memory case break
+            end
             return
-          end
-          context .stack branchTree.swap
-          return
-      end
+        end
       break
       default break
     end
@@ -1191,8 +1658,10 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   ## CompilerContext
     program
     intRegBuffer@ AMD64.initIntDataRegisters
-    StackValue branchTree.create
+    64 StackValue list.create
     labelHash@ labelEq@ 1024 ValueLocation map.create
+    64 BlockInfo list.create
+    0
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   1024 Atomic list.create
@@ -1206,3 +1675,4 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     end
   list.free ..drop
 end
+import debug
