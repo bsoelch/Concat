@@ -67,6 +67,7 @@ namespace: AMD64
   0x40:reg =:: REG_MASK_FLOAT ## up 64 int/float regs
 
   { RDI RSI RDX RCX 8:reg 9:reg } =:: INT_ARG_REGISTERS
+  { RAX RDX } =:: INT_RET_REGISTERS
   { RAX RBX RCX RDX RDI RSI 8:reg 9:reg 10:reg 11:reg 12:reg 13:reg 14:reg 15:reg } =:: INT_DATA_REGISTERS
   proc(
     RegisterState MAX_DATA_REGISTERS_INT ptr.mut : buffer
@@ -80,12 +81,18 @@ namespace: AMD64
     end
     buffer INT_DATA_REGISTERS ..length slice.createMutable
   end
-  ## TODO make dependent on calling convention
+  ## TODO make dependent on procedure signature & calling convention
   proc( i32 : index -> RegisterId ) =>: getIntArgumentRegister
     index 0 < or index INT_ARG_REGISTERS ..length i32 cast >= if
       NO_REG return
     end
     INT_ARG_REGISTERS index [] return
+  end
+  proc( i32 : index -> RegisterId ) =>: getIntReturnRegister
+    index 0 < or index INT_RET_REGISTERS ..length i32 cast >= if
+      NO_REG return
+    end
+    INT_RET_REGISTERS index [] return
   end
 end
 namespace: sb
@@ -214,6 +221,7 @@ union(
   _ : Unknown
   AsmOp : Op
   LabelId : StartProc
+  _ : EndProc
   Operation : DebugStartOp
 ) =:: Atomic
 -1 =:: NO_LABEL
@@ -395,10 +403,10 @@ namespace: sb
       Op case sb "  " sb.appendS atom .Op appendAsmOp '\n' sb.appendC return
       StartProc case
         sb
-          '\n' sb.appendC
           atom .StartProc program .idContext .typeContext .labelContext sb.appendLabelName
-          ":\n  push rbp\n  mov rbp rsp\n" sb.appendS
+          ":\n" sb.appendS
         return
+      EndProc case sb "\n" sb.appendS return
       DebugStartOp case
         sb
           "## " sb.appendS
@@ -464,22 +472,33 @@ struct(
   i32 : doLabelId
   i32 : finallyLabelId
   i32 : endLabelId
-  ## TODO remember stack state
-  ## TODO remember which registers are read within loop (without beeing overwritten first)
+  ## TODO remember which registers are read within loop (without beeing overwritten first, do not need to be restored)
   RegisterState slice.mut : regData ## storage for register data (heap allocated)
+  ## regData: [WHILE][DO][CONTINUE][BREAK]
   i32 : doRegsOffset ## offset for reg-data in do-branch
   i32 : continueRegsOffset ## offset for reg-data in continue-branches
   i32 : breakRegsOffset ## offset for reg-data in break-branches
 ) =:: WhileBlockInfo
+struct(
+  i32 : ifLabelId
+  i32 : elseLabelId
+  i32 : endLabelId
+  RegisterState slice.mut : regData ## storage for register data (heap allocated)
+  ## regData: [ELSE-start][IF-start][Branch-end]
+  i32 : ifStartRegsOffset
+  i32 : elseRegsOffset ## offset for reg-data in else-branch
+  bool : hasIf
+) =:: IfBlockInfo
 union(
   WhileBlockInfo : While
+  IfBlockInfo : If
 ) =:: BlockInfo
 
 ## TODO? keep track of registers holding constant values
 struct(
   ProgramContext ptr.mut : program
   RegisterState slice.mut : intDataRegisters ## ? store float register states in same array, remember offset
-  StackValue list : stack ## TODO use list instead of branch-tree, merging branches is handled using register state
+  StackValue list : stack ## TODO? seperate stacks for ints, floats, and double-register values
   LabelId ValueLocation hashMap : variableLocations
   BlockInfo list : openBlocks
   i32 : labelCount
@@ -863,6 +882,23 @@ proc(
     WhileBlockInfo new BlockInfo .While list.append
   context .openBlocks=
   context [] .openBlocks list.peek .data .While
+end
+proc(
+  CompilerContext ptr.mut : context
+-> IfBlockInfo ptr.mut ) =>: openIfBlock
+  context .intDataRegisters [] .length i32 cast =:: intRegCount
+  context [] .openBlocks
+    ## WhileBlockInfo
+      NO_LABEL
+      NO_LABEL
+      NO_LABEL
+      intRegCount 3 * i64 cast.u RegisterState mem.alloc intRegCount 4 * slice.createMutable
+      intRegCount
+      intRegCount 2 *
+      false
+    IfBlockInfo new BlockInfo .If list.append
+  context .openBlocks=
+  context [] .openBlocks list.peek .data .If
 end
 
 proc(
@@ -1419,6 +1455,118 @@ proc(
         return
       block case
         op [] .val .block .blockType switch
+          AND_IF OR_IF case
+            op [] .val .block .blockType .OR_IF ?? =:: isOr
+            context [] .openBlocks list.peek =:: ifBlock?
+            ifBlock? optional.isEmpty or ifBlock? .data [] .If ?? ! or ifBlock? .data .If [] .hasIf if
+              context openIfBlock
+            else
+              ifBlock? .data .If
+            end =:: ifBlock
+            ValType .I8 op [] .pos context popValue =:: srcValue?
+            srcValue? optional.isEmpty if
+              "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            srcValue? .data =:: srcValue
+            isOr if
+              ifBlock [] .ifLabelId NO_LABEL == if
+                context nextLabelId ifBlock .ifLabelId=
+                ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail context rememberRegisters
+              else
+                ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail
+                  RegisterRestoreMode .MERGE_FALLTHROUGH
+                context restoreRegisters
+              end
+            else ifBlock [] .elseLabelId NO_LABEL == _if
+              context nextLabelId ifBlock .elseLabelId=
+              ifBlock [] .regData context rememberRegisters
+            else
+              ifBlock [] .regData
+                RegisterRestoreMode .MERGE_FALLTHROUGH
+              context restoreRegisters
+            end
+            asm.OpType .JMPIF
+              srcValue .valType
+              ## TODO! negate condition for and statement
+              srcValue .location switch
+                register case
+                    srcValue .location .register asm.Operand .register
+                  break
+                memory case ## TODO is this the right offset
+                    context [] .stack .length 1 + asm.Operand .stackData
+                  break
+                registers registerHi registerLow case "unexpected format for condition parameter" ..panic
+              end
+              isOr if
+                ifBlock [] .ifLabelId asm.Operand .localLabel
+              else
+                ifBlock [] .elseLabelId asm.Operand .localLabel
+              end
+            asmOp2 list.append
+            return
+          IF case
+            context [] .openBlocks list.peek =:: ifBlock?
+            ifBlock? optional.isEmpty or ifBlock? .data [] .If ?? ! or ifBlock? .data .If [] .hasIf if
+              context openIfBlock
+            else
+              ifBlock? .data .If
+            end =:: ifBlock
+            true ifBlock .hasIf=
+            ValType .I8 op [] .pos context popValue =:: srcValue?
+            srcValue? optional.isEmpty if
+              "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            srcValue? .data =:: srcValue
+            ifBlock [] .elseLabelId NO_LABEL == if
+              ifBlock [] .regData context rememberRegisters
+              context nextLabelId
+              $ ifBlock .elseLabelId=
+            else
+              ifBlock [] .elseLabelId
+            end =:: elseLabelId
+            asm.OpType .JMPIF
+              srcValue .valType
+              srcValue .location switch
+                register case
+                    srcValue .location .register asm.Operand .register
+                  break
+                memory case ## TODO is this the right offset
+                    context [] .stack .length 1 + asm.Operand .stackData
+                  break
+                registers registerHi registerLow case "unexpected format for condition parameter" ..panic
+              end
+              elseLabelId asm.Operand .localLabel
+            asmOp2 list.append
+            ifBlock [] .ifLabelId NO_LABEL != if
+              ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail
+                RegisterRestoreMode .RESET
+              context restoreRegisters
+              asm.OpType .LABEL ValType .EMPTY
+                ifBlock [] .ifLabelId asm.Operand .localLabel
+              asmOp1 list.append
+            end
+            return
+          ELSE case
+            context [] .openBlocks list.peek =:: ifBlock?
+            ifBlock? optional.isEmpty or ifBlock? .data [] .If ?? ! if
+              "unexpected else-statement" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            ifBlock? .data .If =:: ifBlock
+            context nextLabelId =:: endLabelId
+            endLabelId ifBlock .endLabelId=
+            ## TODO? merge registers instead of resetting to state at end of if branch
+            ifBlock [] .regData ifBlock [] .elseRegsOffset slice.tail context rememberRegisters
+            asm.OpType .JMP ValType .EMPTY
+              endLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            asm.OpType .LABEL ValType .EMPTY
+              ifBlock [] .elseLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            ifBlock [] .regData RegisterRestoreMode .RESET context restoreRegisters
+            return
           WHILE case
             context nextLabelId =:: startLabelId
             startLabelId context openWhileBlock =:: whileBlock
@@ -1443,12 +1591,6 @@ proc(
               return
             end
             srcValue? .data =:: srcValue
-            srcValue .valType .I8 ?? ! if
-              "unexpected val type for condition: " sb.copyPtr
-                srcValue .valType sb.appendValType
-              op [] .pos errors appendError
-              return
-            end
             whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
             asm.OpType .JMPIF
               srcValue .valType
@@ -1490,6 +1632,24 @@ proc(
         break
       blockEnd case
         op [] .val .blockEnd .blockType switch
+          ELSE case
+            context [] .openBlocks list.peek =:: ifBlock?
+            ifBlock? optional.isEmpty or ifBlock? .data [] .If ?? ! if
+              "unexpected end of if block" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            context [] .openBlocks
+              list.pop .If =:: ifBlock
+            context .openBlocks=
+            ## restoreRegisters
+              ifBlock .regData ifBlock .elseRegsOffset slice.tail
+              RegisterRestoreMode .MERGE
+            context restoreRegisters
+            asm.OpType .LABEL ValType .EMPTY
+              ifBlock .endLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            ifBlock .regData .data mem.free
+            return
           WHILE case
             context [] .openBlocks list.peek =:: whileBlock?
             whileBlock? optional.isEmpty or whileBlock? .data [] .While ?? ! if
@@ -1512,6 +1672,7 @@ proc(
             context restoreRegisters
             whileBlock .regData .data mem.free
           return
+          PROCEDURE case Atomic .EndProc list.append return
           default break
         end
         break
