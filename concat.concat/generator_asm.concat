@@ -189,7 +189,7 @@ namespace: asm
     ADC SBB MULH MUL2 DIVMOD UDIVMOD ## TODO? add float ops
   ) =:: OpType
   ## TODO? version to check for NaN?
-  enum( EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CompareType
+  enum( Z NZ EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CompareType
   union(
     _ : empty
     _ : unknown
@@ -324,6 +324,8 @@ namespace: sb
   proc( stringBuilder : sb asm.CompareType : cmpType -> stringBuilder ) =>: appendCmpType
     sb
       cmpType switch
+        NZ case "nz":s break
+        Z  case "z":s break
         EQ case "eq":s break
         NE case "ne":s break
         LT case "lt":s break
@@ -478,6 +480,9 @@ struct(
   i32 : doRegsOffset ## offset for reg-data in do-branch
   i32 : continueRegsOffset ## offset for reg-data in continue-branches
   i32 : breakRegsOffset ## offset for reg-data in break-branches
+  i32 : whileStackSize
+  i32 : endStackSize
+  i32 : continueStackSize
 ) =:: WhileBlockInfo
 struct(
   i32 : ifLabelId
@@ -487,6 +492,8 @@ struct(
   ## regData: [ELSE-start][IF-start][Branch-end]
   i32 : ifStartRegsOffset
   i32 : elseRegsOffset ## offset for reg-data in else-branch
+  i32 : ifStackSize
+  i32 : endStackSize
   bool : hasIf
 ) =:: IfBlockInfo
 union(
@@ -714,6 +721,7 @@ enum( MERGE MERGE_FALLTHROUGH RESET ) =:: RegisterRestoreMode
 proc(
   Atomic list
   RegisterState slice.mut : buffer
+  i32 : newStackSize
   RegisterRestoreMode : mode
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: restoreRegisters
@@ -721,6 +729,15 @@ proc(
   program .idContext =:: idContext
   context [] .intDataRegisters =:: intRegs
   false =:: mut: tmpMovedToLower
+  mode .RESET ?? if
+    ## set stack-size
+    ## TODO ensure procedure does not access valus in invalid state
+    context [] .stack
+      newStackSize list.setLength
+    context .stack=
+  else
+    newStackSize context [] .stack .length == "CodeGen: branches have same stack size" assert
+  end
   buffer .length intRegs .length >= "CodeGen: buffer large enough to store registers" assert
   ## TODO? smarter algorithm (reduce number of moves)
   ## 1. clear all registers holding value not appearing in new state
@@ -879,6 +896,9 @@ proc(
       intRegCount
       intRegCount 2 *
       intRegCount 3 *
+      -1
+      -1
+      -1
     WhileBlockInfo new BlockInfo .While list.append
   context .openBlocks=
   context [] .openBlocks list.peek .data .While
@@ -895,6 +915,8 @@ proc(
       intRegCount 3 * i64 cast.u RegisterState mem.alloc intRegCount 4 * slice.createMutable
       intRegCount
       intRegCount 2 *
+      -1
+      -1
       false
     IfBlockInfo new BlockInfo .If list.append
   context .openBlocks=
@@ -1473,22 +1495,38 @@ proc(
               ifBlock [] .ifLabelId NO_LABEL == if
                 context nextLabelId ifBlock .ifLabelId=
                 ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail context rememberRegisters
+                ifBlock [] .ifStackSize -1 == if
+                  context .stack [] .length ifBlock .ifStackSize=
+                else
+                  context .stack [] .length ifBlock [] .ifStackSize == "CodeGen: consistent stack size at if" assert
+                end
               else
                 ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail
+                  ifBlock [] .ifStackSize
                   RegisterRestoreMode .MERGE_FALLTHROUGH
                 context restoreRegisters
               end
             else ifBlock [] .elseLabelId NO_LABEL == _if
               context nextLabelId ifBlock .elseLabelId=
               ifBlock [] .regData context rememberRegisters
+              ifBlock [] .ifStackSize -1 == if
+                context .stack [] .length ifBlock .ifStackSize=
+              else
+                context .stack [] .length ifBlock [] .ifStackSize == "CodeGen: consistent stack size at if" assert
+              end
             else
               ifBlock [] .regData
+                ifBlock [] .ifStackSize
                 RegisterRestoreMode .MERGE_FALLTHROUGH
               context restoreRegisters
             end
             asm.OpType .JMPIF
               srcValue .valType
-              ## TODO! negate condition for and statement
+              isOr if
+                asm.CompareType .NZ
+              else
+                asm.CompareType .Z
+              end asm.Operand .cmpType
               srcValue .location switch
                 register case
                     srcValue .location .register asm.Operand .register
@@ -1503,7 +1541,7 @@ proc(
               else
                 ifBlock [] .elseLabelId asm.Operand .localLabel
               end
-            asmOp2 list.append
+            asmOp3 list.append
             return
           IF case
             context [] .openBlocks list.peek =:: ifBlock?
@@ -1521,13 +1559,23 @@ proc(
             srcValue? .data =:: srcValue
             ifBlock [] .elseLabelId NO_LABEL == if
               ifBlock [] .regData context rememberRegisters
+              ifBlock [] .ifStackSize -1 == if
+                context .stack [] .length ifBlock .ifStackSize=
+              else
+                context .stack [] .length ifBlock [] .ifStackSize == "CodeGen: consistent stack size at if" assert
+              end
               context nextLabelId
               $ ifBlock .elseLabelId=
             else
+              ifBlock [] .regData
+                ifBlock [] .ifStackSize
+                RegisterRestoreMode .MERGE_FALLTHROUGH
+              context restoreRegisters
               ifBlock [] .elseLabelId
             end =:: elseLabelId
             asm.OpType .JMPIF
               srcValue .valType
+              asm.CompareType .Z asm.Operand .cmpType
               srcValue .location switch
                 register case
                     srcValue .location .register asm.Operand .register
@@ -1538,9 +1586,10 @@ proc(
                 registers registerHi registerLow case "unexpected format for condition parameter" ..panic
               end
               elseLabelId asm.Operand .localLabel
-            asmOp2 list.append
+            asmOp3 list.append
             ifBlock [] .ifLabelId NO_LABEL != if
               ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail
+                ifBlock [] .ifStackSize
                 RegisterRestoreMode .RESET
               context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
@@ -1559,18 +1608,23 @@ proc(
             endLabelId ifBlock .endLabelId=
             ## TODO? merge registers instead of resetting to state at end of if branch
             ifBlock [] .regData ifBlock [] .elseRegsOffset slice.tail context rememberRegisters
+            context .stack [] .length ifBlock .endStackSize=
             asm.OpType .JMP ValType .EMPTY
               endLabelId asm.Operand .localLabel
             asmOp1 list.append
             asm.OpType .LABEL ValType .EMPTY
               ifBlock [] .elseLabelId asm.Operand .localLabel
             asmOp1 list.append
-            ifBlock [] .regData RegisterRestoreMode .RESET context restoreRegisters
+            ifBlock [] .regData
+              ifBlock [] .ifStackSize
+              RegisterRestoreMode .RESET
+            context restoreRegisters
             return
           WHILE case
             context nextLabelId =:: startLabelId
             startLabelId context openWhileBlock =:: whileBlock
             whileBlock [] .regData context rememberRegisters
+            context .stack [] .length whileBlock .whileStackSize=
             asm.OpType .LABEL ValType .EMPTY
               startLabelId asm.Operand .localLabel
             asmOp1 list.append
@@ -1592,8 +1646,10 @@ proc(
             end
             srcValue? .data =:: srcValue
             whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
+            context .stack [] .length whileBlock .endStackSize=
             asm.OpType .JMPIF
               srcValue .valType
+              asm.CompareType .Z asm.Operand .cmpType
               srcValue .location switch
                 register case
                     srcValue .location .register asm.Operand .register
@@ -1604,7 +1660,7 @@ proc(
                 registers registerHi registerLow case "unexpected format for condition parameter" ..panic
               end
               whileBlock [] .endLabelId asm.Operand .localLabel
-            asmOp2 list.append
+            asmOp3 list.append
             whileBlock [] .doLabelId NO_LABEL != if ## create finally label only if it is used
               asm.OpType .LABEL ValType .EMPTY
                 whileBlock [] .doLabelId asm.Operand .localLabel
@@ -1643,6 +1699,7 @@ proc(
             context .openBlocks=
             ## restoreRegisters
               ifBlock .regData ifBlock .elseRegsOffset slice.tail
+              ifBlock .endStackSize
               RegisterRestoreMode .MERGE
             context restoreRegisters
             asm.OpType .LABEL ValType .EMPTY
@@ -1659,7 +1716,10 @@ proc(
             context [] .openBlocks
               list.pop .While =:: whileBlock
             context .openBlocks=
-            whileBlock .regData RegisterRestoreMode .MERGE context restoreRegisters
+            whileBlock .regData
+              whileBlock .whileStackSize
+              RegisterRestoreMode .MERGE
+            context restoreRegisters
             asm.OpType .JMP ValType .EMPTY
               whileBlock .startLabelId asm.Operand .localLabel
             asmOp1 list.append
@@ -1668,6 +1728,7 @@ proc(
             asmOp1 list.append
             ## restoreRegisters
               whileBlock .regData whileBlock .breakRegsOffset slice.tail
+              whileBlock .endStackSize
               RegisterRestoreMode .RESET
             context restoreRegisters
             whileBlock .regData .data mem.free
