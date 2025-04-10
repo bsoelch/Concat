@@ -470,6 +470,7 @@ TODO add target specific optimizations as finaly step before output
 +#
 
 struct(
+  BlockId : blockId
   i32 : startLabelId
   i32 : doLabelId
   i32 : finallyLabelId
@@ -481,10 +482,12 @@ struct(
   i32 : continueRegsOffset ## offset for reg-data in continue-branches
   i32 : breakRegsOffset ## offset for reg-data in break-branches
   i32 : whileStackSize
+  i32 : doStackSize
   i32 : endStackSize
   i32 : continueStackSize
 ) =:: WhileBlockInfo
 struct(
+  BlockId : blockId
   i32 : ifLabelId
   i32 : elseLabelId
   i32 : endLabelId
@@ -884,31 +887,33 @@ proc( CompilerContext ptr.mut : context -> i32 ) =>: nextLabelId
   return
 end
 proc(
+  BlockId : blockId
   i32 : startLabelId
   CompilerContext ptr.mut : context
 -> WhileBlockInfo ptr.mut ) =>: openWhileBlock
   context .intDataRegisters [] .length i32 cast =:: intRegCount
   context [] .openBlocks
     ## WhileBlockInfo
+      blockId
       startLabelId
       NO_LABEL NO_LABEL NO_LABEL
       intRegCount 4 * i64 cast.u RegisterState mem.alloc intRegCount 4 * slice.createMutable
       intRegCount
       intRegCount 2 *
       intRegCount 3 *
-      -1
-      -1
-      -1
+      -1 -1 -1 -1
     WhileBlockInfo new BlockInfo .While list.append
   context .openBlocks=
   context [] .openBlocks list.peek .data .While
 end
 proc(
+  BlockId : blockId
   CompilerContext ptr.mut : context
 -> IfBlockInfo ptr.mut ) =>: openIfBlock
   context .intDataRegisters [] .length i32 cast =:: intRegCount
   context [] .openBlocks
-    ## WhileBlockInfo
+    ## IfBlockInfo
+      blockId
       NO_LABEL
       NO_LABEL
       NO_LABEL
@@ -921,6 +926,26 @@ proc(
     IfBlockInfo new BlockInfo .If list.append
   context .openBlocks=
   context [] .openBlocks list.peek .data .If
+end
+enum( WHILE SWITCH ) =:: BreakType
+proc(
+  BlockId : blockId
+  BreakType : breakType
+  CompilerContext ptr.mut : context
+-> BlockInfo ptr.mut optional ) =>: findBreakableBlock
+  context [] .program =:: program
+  program .errors =:: errors
+  context [] .openBlocks list.atReversed for =:: block
+    breakType .WHILE ?? and block [] .While ?? and
+        block [] .While .blockId blockId == if
+      block optional.wrap return
+    end
+    #+breakType .SWITCH ?? and block [] .Switch ?? and
+        block [] .Switch .blockId blockId == if
+      block optional.wrap return
+    end+#
+  end
+  BlockInfo ptr.mut optional.empty return
 end
 
 proc(
@@ -1481,7 +1506,7 @@ proc(
             op [] .val .block .blockType .OR_IF ?? =:: isOr
             context [] .openBlocks list.peek =:: ifBlock?
             ifBlock? optional.isEmpty or ifBlock? .data [] .If ?? ! or ifBlock? .data .If [] .hasIf if
-              context openIfBlock
+              op [] .val .block .blockId context openIfBlock
             else
               ifBlock? .data .If
             end =:: ifBlock
@@ -1546,7 +1571,7 @@ proc(
           IF case
             context [] .openBlocks list.peek =:: ifBlock?
             ifBlock? optional.isEmpty or ifBlock? .data [] .If ?? ! or ifBlock? .data .If [] .hasIf if
-              context openIfBlock
+              op [] .val .block .blockId context openIfBlock
             else
               ifBlock? .data .If
             end =:: ifBlock
@@ -1622,12 +1647,68 @@ proc(
             return
           WHILE case
             context nextLabelId =:: startLabelId
-            startLabelId context openWhileBlock =:: whileBlock
+            op [] .val .block .blockId startLabelId context openWhileBlock =:: whileBlock
             whileBlock [] .regData context rememberRegisters
             context .stack [] .length whileBlock .whileStackSize=
             asm.OpType .LABEL ValType .EMPTY
               startLabelId asm.Operand .localLabel
             asmOp1 list.append
+            return
+          AND_DO OR_DO case
+            op [] .val .block .blockType .OR_DO ?? =:: isOr
+            context [] .openBlocks list.peek =:: whileBlock?
+            whileBlock? optional.isEmpty or whileBlock? .data [] .While ?? ! if
+              "unexpected and/or-do-statement" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            whileBlock? .data .While =:: whileBlock
+            ValType .I8 op [] .pos context popValue =:: srcValue?
+            srcValue? optional.isEmpty if
+              "stack underflow in do-condition" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            srcValue? .data =:: srcValue
+            isOr if
+              whileBlock [] .doLabelId NO_LABEL == if
+                context nextLabelId whileBlock .doLabelId=
+                whileBlock [] .regData whileBlock [] .doRegsOffset slice.tail context rememberRegisters
+                context .stack [] .length whileBlock .doStackSize=
+              else
+                whileBlock [] .regData whileBlock [] .doRegsOffset slice.tail
+                  whileBlock [] .doStackSize
+                  RegisterRestoreMode .MERGE_FALLTHROUGH
+                context restoreRegisters
+              end
+            else
+              whileBlock [] .endLabelId NO_LABEL == if
+                context nextLabelId whileBlock .endLabelId=
+                whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
+                context .stack [] .length whileBlock .endStackSize=
+              else
+                whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail
+                  whileBlock [] .endStackSize
+                  RegisterRestoreMode .MERGE_FALLTHROUGH
+                context restoreRegisters
+              end
+            end
+            asm.OpType .JMPIF
+              srcValue .valType
+              isOr if asm.CompareType .NZ else asm.CompareType .Z end asm.Operand .cmpType
+              srcValue .location switch
+                register case
+                    srcValue .location .register asm.Operand .register
+                  break
+                memory case ## TODO is this the right offset
+                    context [] .stack .length 1 + asm.Operand .stackData
+                  break
+                registers registerHi registerLow case "unexpected format for condition parameter" ..panic
+              end
+              isOr if
+                whileBlock [] .doLabelId
+              else
+                whileBlock [] .endLabelId
+              end asm.Operand .localLabel
+            asmOp3 list.append
             return
           DO case
             context [] .openBlocks list.peek =:: whileBlock?
@@ -1636,17 +1717,22 @@ proc(
               return
             end
             whileBlock? .data .While =:: whileBlock
-            whileBlock [] .endLabelId NO_LABEL == if
-              context nextLabelId whileBlock .endLabelId=
-            end
             ValType .I8 op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
               "stack underflow in do-condition" sb.copyPtr op [] .pos errors appendError
               return
             end
             srcValue? .data =:: srcValue
-            whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
-            context .stack [] .length whileBlock .endStackSize=
+            whileBlock [] .endLabelId NO_LABEL == if
+              context nextLabelId whileBlock .endLabelId=
+              whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
+              context .stack [] .length whileBlock .endStackSize=
+            else
+              whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail
+                whileBlock [] .endStackSize
+                RegisterRestoreMode .MERGE_FALLTHROUGH
+              context restoreRegisters
+            end
             asm.OpType .JMPIF
               srcValue .valType
               asm.CompareType .Z asm.Operand .cmpType
@@ -1661,11 +1747,63 @@ proc(
               end
               whileBlock [] .endLabelId asm.Operand .localLabel
             asmOp3 list.append
-            whileBlock [] .doLabelId NO_LABEL != if ## create finally label only if it is used
+            whileBlock [] .doLabelId NO_LABEL != if ## create do label only if it is used
+              whileBlock [] .regData whileBlock [] .doRegsOffset slice.tail
+                whileBlock [] .doStackSize
+                RegisterRestoreMode .MERGE_FALLTHROUGH
+              context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 whileBlock [] .doLabelId asm.Operand .localLabel
               asmOp1 list.append
             end
+            return
+          BREAK case
+            op [] .val .block .blockId
+              BreakType .WHILE
+            context findBreakableBlock =:: whileBlock?
+            whileBlock? optional.isEmpty or whileBlock? .data [] .While ?? ! if
+              "unexpected break-statement" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            whileBlock? .data .While =:: whileBlock
+            whileBlock [] .endLabelId NO_LABEL == if
+              context nextLabelId whileBlock .endLabelId=
+              whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
+              context .stack [] .length whileBlock .endStackSize=
+            else
+              whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail
+                whileBlock [] .endStackSize
+                RegisterRestoreMode .MERGE
+              context restoreRegisters
+            end
+            asm.OpType .JMP ValType .EMPTY
+              whileBlock [] .endLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            ## TODO! mark current branch as unreachable
+            return
+          CONTINUE case
+            op [] .val .block .blockId
+              BreakType .WHILE
+            context findBreakableBlock =:: whileBlock?
+            whileBlock? optional.isEmpty or whileBlock? .data [] .While ?? ! if
+              "unexpected continue-statement" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            whileBlock? .data .While =:: whileBlock
+            whileBlock [] .finallyLabelId NO_LABEL == if
+              context nextLabelId whileBlock .finallyLabelId=
+              whileBlock [] .regData whileBlock [] .continueRegsOffset slice.tail context rememberRegisters
+              context .stack [] .length whileBlock .continueStackSize=
+            else
+              whileBlock [] .regData whileBlock [] .continueRegsOffset slice.tail
+                whileBlock [] .continueStackSize
+                RegisterRestoreMode .MERGE
+              context restoreRegisters
+            end
+            asm.OpType .JMP ValType .EMPTY
+              whileBlock [] .finallyLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            ## TODO! mark current branch as unreachable
             return
           FINALLY case
             context [] .openBlocks list.peek =:: whileBlock?
@@ -1675,14 +1813,17 @@ proc(
             end
             whileBlock? .data .While =:: whileBlock
             whileBlock [] .finallyLabelId NO_LABEL != if ## create finally label only if it is used
+              ## TODO? merge branches instead of resetting to first branch
+              whileBlock [] .regData whileBlock [] .continueRegsOffset slice.tail
+                whileBlock [] .continueStackSize
+                RegisterRestoreMode .MERGE
+              context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 whileBlock [] .finallyLabelId asm.Operand .localLabel
               asmOp1 list.append
             end
-            ## TODO merge continue branches
             return
           break
-          BREAK CONTINUE case break
           default break
         end
         break
