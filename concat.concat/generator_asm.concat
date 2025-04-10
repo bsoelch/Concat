@@ -512,6 +512,7 @@ struct(
   LabelId ValueLocation hashMap : variableLocations
   BlockInfo list : openBlocks
   i32 : labelCount
+  bool : reachable
 ) =:: CompilerContext
 
 proc( LabelId : valId RegisterId : register i32 : opIndex CompilerContext ptr.mut : context -> ) =>: cacheVariable
@@ -772,7 +773,7 @@ proc(
           currentValue intRegs freeSlot @[] .currentValue=
           currentValue switch
             variable case
-              expectedValue .variable idContext id.getIdentifier
+              currentValue .variable idContext id.getIdentifier
                 ! "CodeGen: identifier exists" assert
               =:: idData
               currentValue .variable context atCachedVarLocation .data =:: varLoc
@@ -1340,6 +1341,7 @@ proc(
   typeContext .labelContext =:: labelContext
   ops
     op .val .implementProcedure ?? if
+      true context .reachable=
       op .val [] .implementProcedure =:: implInfo
       op [] .dataType =:: procType
       program [] .procedures
@@ -1404,6 +1406,9 @@ proc(
         end
       end
       return
+    end
+    context [] .reachable ! and op [] .val .block ?? ! and op [] .val .blockEnd ?? ! if
+      return ## skip unreachable statements
     end
     op [] Atomic .DebugStartOp list.append
     op [] .val switch
@@ -1510,6 +1515,7 @@ proc(
             else
               ifBlock? .data .If
             end =:: ifBlock
+            context [] .reachable ! if return end
             ValType .I8 op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
               "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
@@ -1576,6 +1582,7 @@ proc(
               ifBlock? .data .If
             end =:: ifBlock
             true ifBlock .hasIf=
+            context [] .reachable ! if return end
             ValType .I8 op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
               "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
@@ -1629,25 +1636,33 @@ proc(
               return
             end
             ifBlock? .data .If =:: ifBlock
-            context nextLabelId =:: endLabelId
-            endLabelId ifBlock .endLabelId=
-            ## TODO? merge registers instead of resetting to state at end of if branch
-            ifBlock [] .regData ifBlock [] .elseRegsOffset slice.tail context rememberRegisters
-            context .stack [] .length ifBlock .endStackSize=
-            asm.OpType .JMP ValType .EMPTY
-              endLabelId asm.Operand .localLabel
-            asmOp1 list.append
-            asm.OpType .LABEL ValType .EMPTY
-              ifBlock [] .elseLabelId asm.Operand .localLabel
-            asmOp1 list.append
-            ifBlock [] .regData
-              ifBlock [] .ifStackSize
-              RegisterRestoreMode .RESET
-            context restoreRegisters
+            context [] .reachable if
+              context nextLabelId =:: endLabelId
+              endLabelId ifBlock .endLabelId=
+              ## TODO? merge registers instead of resetting to state at end of if branch
+              ifBlock [] .regData ifBlock [] .elseRegsOffset slice.tail context rememberRegisters
+              context .stack [] .length ifBlock .endStackSize=
+              asm.OpType .JMP ValType .EMPTY
+                endLabelId asm.Operand .localLabel
+              asmOp1 list.append
+            end
+            ifBlock [] .elseLabelId NO_LABEL != if
+              asm.OpType .LABEL ValType .EMPTY
+                ifBlock [] .elseLabelId asm.Operand .localLabel
+              asmOp1 list.append
+              ifBlock [] .regData
+                ifBlock [] .ifStackSize
+                RegisterRestoreMode .RESET
+              context restoreRegisters
+              true context .reachable=
+            else
+              false context .reachable=
+            end
             return
           WHILE case
             context nextLabelId =:: startLabelId
             op [] .val .block .blockId startLabelId context openWhileBlock =:: whileBlock
+            context [] .reachable ! if return end
             whileBlock [] .regData context rememberRegisters
             context .stack [] .length whileBlock .whileStackSize=
             asm.OpType .LABEL ValType .EMPTY
@@ -1661,6 +1676,7 @@ proc(
               "unexpected and/or-do-statement" sb.copyPtr op [] .pos errors appendError
               return
             end
+            context [] .reachable ! if return end
             whileBlock? .data .While =:: whileBlock
             ValType .I8 op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
@@ -1716,6 +1732,7 @@ proc(
               "unexpected do-statement" sb.copyPtr op [] .pos errors appendError
               return
             end
+            context [] .reachable ! if return end
             whileBlock? .data .While =:: whileBlock
             ValType .I8 op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
@@ -1765,6 +1782,7 @@ proc(
               "unexpected break-statement" sb.copyPtr op [] .pos errors appendError
               return
             end
+            context [] .reachable ! if return end
             whileBlock? .data .While =:: whileBlock
             whileBlock [] .endLabelId NO_LABEL == if
               context nextLabelId whileBlock .endLabelId=
@@ -1779,7 +1797,7 @@ proc(
             asm.OpType .JMP ValType .EMPTY
               whileBlock [] .endLabelId asm.Operand .localLabel
             asmOp1 list.append
-            ## TODO! mark current branch as unreachable
+            false context .reachable=
             return
           CONTINUE case
             op [] .val .block .blockId
@@ -1789,6 +1807,7 @@ proc(
               "unexpected continue-statement" sb.copyPtr op [] .pos errors appendError
               return
             end
+            context [] .reachable ! if return end
             whileBlock? .data .While =:: whileBlock
             whileBlock [] .finallyLabelId NO_LABEL == if
               context nextLabelId whileBlock .finallyLabelId=
@@ -1803,7 +1822,7 @@ proc(
             asm.OpType .JMP ValType .EMPTY
               whileBlock [] .finallyLabelId asm.Operand .localLabel
             asmOp1 list.append
-            ## TODO! mark current branch as unreachable
+            false context .reachable=
             return
           FINALLY case
             context [] .openBlocks list.peek =:: whileBlock?
@@ -1813,6 +1832,7 @@ proc(
             end
             whileBlock? .data .While =:: whileBlock
             whileBlock [] .finallyLabelId NO_LABEL != if ## create finally label only if it is used
+              true context .reachable= ## finally is reachable through continue
               ## TODO? merge branches instead of resetting to first branch
               whileBlock [] .regData whileBlock [] .continueRegsOffset slice.tail
                 whileBlock [] .continueStackSize
@@ -1838,14 +1858,17 @@ proc(
             context [] .openBlocks
               list.pop .If =:: ifBlock
             context .openBlocks=
-            ## restoreRegisters
-              ifBlock .regData ifBlock .elseRegsOffset slice.tail
-              ifBlock .endStackSize
-              RegisterRestoreMode .MERGE
-            context restoreRegisters
-            asm.OpType .LABEL ValType .EMPTY
-              ifBlock .endLabelId asm.Operand .localLabel
-            asmOp1 list.append
+            ifBlock .endLabelId NO_LABEL != if ## jump to end reachable
+              ## restoreRegisters
+                ifBlock .regData ifBlock .elseRegsOffset slice.tail
+                ifBlock .endStackSize
+                RegisterRestoreMode .MERGE
+              context restoreRegisters
+              asm.OpType .LABEL ValType .EMPTY
+                ifBlock .endLabelId asm.Operand .localLabel
+              asmOp1 list.append
+              true context .reachable=
+            end
             ifBlock .regData .data mem.free
             return
           WHILE case
@@ -1857,21 +1880,26 @@ proc(
             context [] .openBlocks
               list.pop .While =:: whileBlock
             context .openBlocks=
-            whileBlock .regData
-              whileBlock .whileStackSize
-              RegisterRestoreMode .MERGE
-            context restoreRegisters
-            asm.OpType .JMP ValType .EMPTY
-              whileBlock .startLabelId asm.Operand .localLabel
-            asmOp1 list.append
-            asm.OpType .LABEL ValType .EMPTY
-              whileBlock .endLabelId asm.Operand .localLabel
-            asmOp1 list.append
-            ## restoreRegisters
-              whileBlock .regData whileBlock .breakRegsOffset slice.tail
-              whileBlock .endStackSize
-              RegisterRestoreMode .RESET
-            context restoreRegisters
+            context [] .reachable if
+              whileBlock .regData
+                whileBlock .whileStackSize
+                RegisterRestoreMode .MERGE
+              context restoreRegisters
+              asm.OpType .JMP ValType .EMPTY
+                whileBlock .startLabelId asm.Operand .localLabel
+              asmOp1 list.append
+            end
+            whileBlock .endLabelId NO_LABEL != if ## end of loop reachable
+              asm.OpType .LABEL ValType .EMPTY
+                whileBlock .endLabelId asm.Operand .localLabel
+              asmOp1 list.append
+              ## restoreRegisters
+                whileBlock .regData whileBlock .breakRegsOffset slice.tail
+                whileBlock .endStackSize
+                RegisterRestoreMode .RESET
+              context restoreRegisters
+              true context .reachable=
+            end
             whileBlock .regData .data mem.free
           return
           PROCEDURE case Atomic .EndProc list.append return
@@ -2025,6 +2053,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     labelHash@ labelEq@ 1024 ValueLocation map.create
     64 BlockInfo list.create
     0
+    true
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   1024 Atomic list.create
