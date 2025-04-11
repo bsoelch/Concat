@@ -745,6 +745,7 @@ proc(
   buffer .length intRegs .length >= "CodeGen: buffer large enough to store registers" assert
   ## TODO? smarter algorithm (reduce number of moves)
   ## 1. clear all registers holding value not appearing in new state
+  ##   -> more free registers, less unneccessary moves
   ## 2. move all values where source is register and target is currently free
   intRegs .length for =:: i
     intRegs i [] .currentValue =:: currentValue
@@ -813,37 +814,43 @@ proc(
         expectedValue .variable idContext id.getIdentifier
           ! "CodeGen: identifier exists" assert
         =:: idData
-        expectedValue .variable idData .idType [] .GLOBAL_VAR ?? context getVarLocation =:: varLoc
-        varLoc switch
-          register case
-            asm.OpType .MOVE
-              idData [] .valueType program toValType
-              targetRegister asm.Operand .register
-              varLoc .register asm.Operand .register
-            asmOp2 list.append
-            break
-          localMemory case
-            asm.OpType .MOVE
-              idData [] .valueType program toValType
-              targetRegister asm.Operand .register
-              varLoc .localMemory asm.Operand .localMemory
-            asmOp2 list.append
-            break
-          globalMemory case
-            asm.OpType .MOVE
-              idData [] .valueType program toValType
-              targetRegister asm.Operand .register
-              varLoc .globalMemory asm.Operand .globalMemory
-            asmOp2 list.append
-            break
-          registerHi registerLow registers case "unimplemented" ..panic
-          default "CodeGen: unsupported variable location" ..panic
+        mode .RESET ?? ! if
+          expectedValue .variable idData .idType [] .GLOBAL_VAR ?? context getVarLocation =:: varLoc
+          varLoc switch
+            register case
+              asm.OpType .MOVE
+                idData [] .valueType program toValType
+                targetRegister asm.Operand .register
+                varLoc .register asm.Operand .register
+              asmOp2 list.append
+              break
+            localMemory case
+              asm.OpType .MOVE
+                idData [] .valueType program toValType
+                targetRegister asm.Operand .register
+                varLoc .localMemory asm.Operand .localMemory
+              asmOp2 list.append
+              break
+            globalMemory case
+              asm.OpType .MOVE
+                idData [] .valueType program toValType
+                targetRegister asm.Operand .register
+                varLoc .globalMemory asm.Operand .globalMemory
+              asmOp2 list.append
+              break
+            registerHi registerLow registers case "unimplemented" ..panic
+            default "CodeGen: unsupported variable location" ..panic
+          end
         end
         expectedValue .variable targetRegister buffer i [] .lastUsed context cacheVariable ## update variable location
         break
       stackSlot case
         expectedValue .stackSlot =:: stackSlot
         stackSlot context stackSlotData =:: stackData
+        mode .RESET ?? if
+          targetRegister stackData .location .register=
+          break
+        end
         stackData [] .location switch
           register case
             stackData .location [] .register =:: register
