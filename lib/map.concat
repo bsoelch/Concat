@@ -213,6 +213,7 @@ namespace: map
     =:: nodeData
     nodeData [] .isEmpty if
       false nodeData .isEmpty=
+      key nodeData .key=
       V optional.empty return
     end
     prevValue optional.wrap return
