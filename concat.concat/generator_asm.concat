@@ -499,9 +499,16 @@ struct(
   i32 : endStackSize
   bool : hasIf
 ) =:: IfBlockInfo
+struct(
+  BlockId : blockId
+  i32 : endLabelId
+  RegisterState slice.mut : regData ## storage for register data (heap allocated)
+  i32 : endStackSize
+  ) =:: AndOrBlockInfo
 union(
   WhileBlockInfo : While
   IfBlockInfo : If
+  AndOrBlockInfo : AndOr
 ) =:: BlockInfo
 
 ## TODO? keep track of registers holding constant values
@@ -880,7 +887,7 @@ proc(
     end
     expectedValue intRegs i @[] .currentValue=
   end
-  tmpMovedToLower if ## cleanup tmp-vars that were moved to previously cleared slots
+  mode .MERGE ?? and tmpMovedToLower if ## cleanup tmp-vars that were moved to previously cleared slots
     intRegs .length for =:: i
       buffer i [] .currentValue .empty ?? if
         intRegs i [] context clearRegister intRegs i =[]
@@ -934,6 +941,21 @@ proc(
     IfBlockInfo new BlockInfo .If list.append
   context .openBlocks=
   context [] .openBlocks list.peek .data .If
+end
+proc(
+  BlockId : blockId
+  CompilerContext ptr.mut : context
+-> AndOrBlockInfo ptr.mut ) =>: openAndOrBlock
+  context .intDataRegisters [] .length i32 cast =:: intRegCount
+  context [] .openBlocks
+    ## IfBlockInfo
+      blockId
+      NO_LABEL
+      intRegCount i64 cast.u RegisterState mem.alloc intRegCount 4 * slice.createMutable
+      -1
+    AndOrBlockInfo new BlockInfo .AndOr list.append
+  context .openBlocks=
+  context [] .openBlocks list.peek .data .AndOr
 end
 enum( WHILE SWITCH ) =:: BreakType
 proc(
@@ -1851,6 +1873,55 @@ proc(
             end
             return
           break
+          AND OR case
+            op [] .val .block .blockType .OR ?? =:: isOr
+            context [] .openBlocks list.peek =:: andOrBlock?
+            andOrBlock? optional.isEmpty or andOrBlock? .data [] .AndOr ?? ! if
+              op [] .val .block .blockId context openAndOrBlock
+            else
+              andOrBlock? .data .AndOr
+            end =:: andOrBlock
+            context [] .reachable ! if return end
+            ## remember state before popping condition to preverse bool on top of stack
+            andOrBlock [] .endLabelId NO_LABEL == if
+              context nextLabelId andOrBlock .endLabelId=
+              andOrBlock [] .regData context rememberRegisters
+              andOrBlock [] .endStackSize -1 == if
+                context .stack [] .length andOrBlock .endStackSize=
+              else
+                context .stack [] .length andOrBlock [] .endStackSize == "CodeGen: consistent stack size at and/or" assert
+              end
+            else
+              andOrBlock [] .regData
+                andOrBlock [] .endStackSize
+                RegisterRestoreMode .MERGE_FALLTHROUGH
+              context restoreRegisters
+            end
+            ValType .I8 op [] .pos context popValue =:: srcValue?
+            srcValue? optional.isEmpty if
+              "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            srcValue? .data =:: srcValue
+            asm.OpType .JMPIF
+              srcValue .valType
+              isOr if
+                asm.CompareType .NZ
+              else
+                asm.CompareType .Z
+              end asm.Operand .cmpType
+              srcValue .location switch
+                register case
+                    srcValue .location .register asm.Operand .register
+                  break
+                memory case ## TODO is this the right offset
+                    context [] .stack .length 1 + asm.Operand .stackData
+                  break
+                registers registerHi registerLow case "unexpected format for condition parameter" ..panic
+              end
+              andOrBlock [] .endLabelId asm.Operand .localLabel
+            asmOp3 list.append
+            return
           default break
         end
         break
@@ -1909,6 +1980,28 @@ proc(
             end
             whileBlock .regData .data mem.free
           return
+          AND OR case
+            context [] .openBlocks list.peek =:: andOrBlock?
+            andOrBlock? optional.isEmpty or andOrBlock? .data [] .AndOr ?? ! if
+              "unexpected end of and/or block" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            context [] .openBlocks
+              list.pop .AndOr =:: andOrBlock
+            context .openBlocks=
+            andOrBlock .endLabelId NO_LABEL != if ## end of loop reachable
+              ## restoreRegisters
+                andOrBlock .regData
+                andOrBlock .endStackSize
+                RegisterRestoreMode .MERGE
+              context restoreRegisters
+              asm.OpType .LABEL ValType .EMPTY
+                andOrBlock .endLabelId asm.Operand .localLabel
+              asmOp1 list.append
+              true context .reachable=
+            end
+            andOrBlock .regData .data mem.free
+            return
           PROCEDURE case Atomic .EndProc list.append return
           default break
         end
