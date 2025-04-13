@@ -492,8 +492,8 @@ namespace: slice
   -> T array.ReverseMutPtrItr ) =>: export: atReversedMut
     elts .data elts .length array.reversedMutPtrItr
   end
-  overload: export: @itr
-    atItr atItrMut
+  overload: export: @reversed
+    atReversed atReversedMut
   end
 end
 import itrs/slice
