@@ -1845,6 +1845,11 @@ proc(
       end =:: constValue
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
+          op .val .getId .labelId =:: labelId
+          mutable ! and constValue .None ?? ! and idInfo .idType .GLOBAL_VAR ?? if
+            ## replace access to immutable global variable with constant
+            constValue op .dataType op .pos opConst op=
+          end
           ## pushValue
             op .dataType
             constValue
@@ -1853,7 +1858,7 @@ proc(
           isStatic if
             true state .stack branchTree.peek .data .isStatic=
           end
-          op .val .getId .labelId state replaceLabel
+          labelId state replaceLabel
           mutable if ## insert copy for mutable values
             state wrapCopy
           end

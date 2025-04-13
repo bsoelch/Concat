@@ -182,7 +182,7 @@ namespace: sb
         end ..drop
         0 while ..dup n < do
           ..swap
-            buff @ ..over.2 [] getDigit sb.appendC
+            buff@ ..over.2 [] getDigit sb.appendC
           ..swap 1 +
         end ..drop
       end
