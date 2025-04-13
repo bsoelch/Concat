@@ -18,10 +18,9 @@ import "measure.concat"
 ## Assembly
 #################
 i8 =:: RegisterId
-
 16 =:: MAX_DATA_REGISTERS_INT
-
 proc( char8 _ ptr : str i64 : len -> RegisterId ) : alias: static: :reg ..builtIn.parse.i8
+0xff:reg =:: NO_REG
 
 union(
   _ : empty
@@ -50,7 +49,16 @@ struct(
   i32 : lastUsed
 ) =:: RegisterState
 
-0xff:reg =:: NO_REG
+( i16 : hi i16 : low ) =:: MixedArg
+union(
+  i32 : argInt
+  i32 : argFloat
+  i32 : arg128V
+  MixedArg : arg128II
+  MixedArg : arg128IF
+  MixedArg : arg128FI
+  MixedArg : arg128FF
+) =:: ArgumentLocation
 
 ## TODO? 32-bit mode, ARM64 support
 namespace: AMD64
@@ -95,6 +103,43 @@ namespace: AMD64
     end
     INT_RET_REGISTERS index [] return
   end
+  proc( RegisterId : regId -> i32 ) =>: intDataRegIndex
+    regId i32 cast INT_REG_MIN i32 cast - =:: regOffset
+    regOffset INT_REG_MAX i32 cast.u u> if
+      -1 return
+    end
+    regOffset return
+  end
+  ## TODO? can code be reused for arguments
+  proc(
+    Type slice : retTypes
+    ArgumentLocation slice.mut : mut: argBuffer
+    TypeContext ptr.mut : typeContext
+  -> ArgumentLocation slice.mut ) =>: computeReturnLocations ## TODO? return arg-counts
+    0 =:: mut: intArgCount ## ? reuse named return value
+    0 =:: mut: floatArgCount
+    0 =:: mut: b128ArgCount
+    retTypes .length 1 - while $ 0 >= do =:: index
+      retTypes index [] =:: retVal
+      retVal typeContext toValType =:: retValType
+      retValType switch
+        EMPTY case continue
+        I8 I16 I32 I64 PTR REFERENCE case ## int-like
+          intArgCount ArgumentLocation .argInt argBuffer index =[]
+          intArgCount 1 + intArgCount=
+          break
+        F32 F64 case ## float
+          floatArgCount ArgumentLocation .argFloat argBuffer index =[]
+          floatArgCount 1 + floatArgCount=
+          break
+        BITS128 BITS128IF BITS128FI BITS128F case ## composite
+          b128ArgCount 1 + b128ArgCount=
+          "unimplemented: composite return" ..panic
+          break
+      end
+    finally index 1 - end ..drop
+    argBuffer return
+  end
 end
 namespace: sb
   proc( stringBuilder RegisterId : reg -> stringBuilder ) =>: appendRegister
@@ -104,13 +149,12 @@ namespace: sb
 end
 
 enum( EMPTY I8 I16 I32 I64 F32 F64 PTR REFERENCE BITS128 BITS128IF BITS128FI BITS128F ) =:: ValType
-proc( Type : dataType ProgramContext ptr.mut : program -> ValType ) =>: toValType
-  program .idContext .typeContext =:: typeContext
+proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValType
   dataType switch
     namedType case
-      dataType typeContext types.unwrapNamed program toValType return
+      dataType typeContext types.unwrapNamed typeContext toValType return
     generatedType case
-      dataType typeContext types.getGeneratedType program toValType return
+      dataType typeContext types.getGeneratedType typeContext toValType return
     primitiveType case
       dataType .primitiveType switch
         TYPE case ValType .EMPTY return
@@ -123,16 +167,16 @@ proc( Type : dataType ProgramContext ptr.mut : program -> ValType ) =>: toValTyp
       end
       break
     intLiteral case
-      dataType .intLiteral types.intLiteralAsInt program toValType return
+      dataType .intLiteral types.intLiteralAsInt typeContext toValType return
     enum case
       dataType typeContext types.compositeFlags types.COMP_FLAG_ONLY_EMPTY & ? "enum only has empty elements" assert
       dataType typeContext types.enumLabelInfo ..drop =:: labelType
-      labelType program toValType return
+      labelType typeContext toValType return
       break
     cType case
       dataType .cType
         types.cTypeAsType
-      program toValType return
+      typeContext toValType return
     pointer rawPointer case
       ValType .PTR return ## TODO? distinquish pointer and procedure pointer
     arrayType struct union case
@@ -439,7 +483,6 @@ end
 #################
 ## CodeGenerator
 #################
-
 struct( RegisterId : hi RegisterId : low ) =:: RegisterPair
 union(
   _ : memory ## procedure internal stack-memory
@@ -552,6 +595,7 @@ struct(
   StackValue list : stack ## TODO? seperate stacks for ints, floats, and double-register values
   LabelId ValueLocation hashMap : variableLocations
   BlockInfo list : openBlocks
+  ArgumentLocation list : argBuffer
   i32 : labelCount
   bool : reachable
 ) =:: CompilerContext
@@ -789,6 +833,7 @@ proc(
 -> Atomic list ) =>: restoreRegisters
   context [] .program =:: program
   program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
   context [] .intDataRegisters =:: intRegs
   false =:: mut: tmpMovedToLower
   mode .RESET ?? if
@@ -840,7 +885,7 @@ proc(
               currentValue .variable context atCachedVarLocation .data =:: varLoc
               varLoc [] .register srcRegister == "CodeGen: variable-cache and registers in sync" assert
               targetRegister varLoc .register=
-              idData [] .valueType program toValType
+              idData [] .valueType typeContext toValType
               break
             stackSlot case
               currentValue .stackSlot context stackSlotData =:: stackData
@@ -879,21 +924,21 @@ proc(
           varLoc switch
             register case
               asm.OpType .MOVE
-                idData [] .valueType program toValType
+                idData [] .valueType typeContext toValType
                 targetRegister asm.Operand .register
                 varLoc .register asm.Operand .register
               asmOp2 list.append
               break
             localMemory case
               asm.OpType .MOVE
-                idData [] .valueType program toValType
+                idData [] .valueType typeContext toValType
                 targetRegister asm.Operand .register
                 varLoc .localMemory asm.Operand .localMemory
               asmOp2 list.append
               break
             globalMemory case
               asm.OpType .MOVE
-                idData [] .valueType program toValType
+                idData [] .valueType typeContext toValType
                 targetRegister asm.Operand .register
                 varLoc .globalMemory asm.Operand .globalMemory
               asmOp2 list.append
@@ -1498,7 +1543,7 @@ proc(
   else
     Type .undefined
   end =:: baseType
-  baseType program toValType =:: baseVal
+  baseType typeContext toValType =:: baseVal
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       ops Op .NEG baseVal pos opIndex context compileUnaryOperator
@@ -1610,7 +1655,7 @@ proc(
       0:i32 while $ i64 cast.u args .length < do =:: i
         inType i typeContext types.compositeGetLabel =:: label
         args i slice.get =:: argType
-        argType program toValType =:: valType
+        argType typeContext toValType =:: valType
         argType typeContext types.isEmpty if
           i 1 + continue ## skip empty arguments
         end
@@ -1663,7 +1708,7 @@ proc(
     op [] Atomic .DebugStartOp list.append
     op [] .val switch
       Constant case
-        op [] .dataType program toValType =:: valType
+        op [] .dataType typeContext toValType =:: valType
         ## TODO make operation dependent on value type
         ## TODO extract conversion constant -> location to procedure
         op [] .val .Constant .Int ?? if
@@ -1672,7 +1717,7 @@ proc(
         end
         break
       NewEnum case
-        op [] .dataType program toValType =:: valType
+        op [] .dataType typeContext toValType =:: valType
         op [] .dataType typeContext types.isEnum if
           valType op [] .val .NewEnum i64 cast.s ValueLocation .intConstant opIndex context pushValue
           return
@@ -1685,7 +1730,7 @@ proc(
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR GLOBAL_VAR case
             labelId idData [] .idType .GLOBAL_VAR ?? context getVarLocation =:: variableLocation
-            op [] .dataType program toValType
+            op [] .dataType typeContext toValType
               variableLocation
             opIndex context pushValue
             return
@@ -1708,7 +1753,7 @@ proc(
         ## TODO invaidate previous cached values
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR case
-            op [] .dataType program toValType =:: valType
+            op [] .dataType typeContext toValType =:: valType
             valType optional.wrap op [] .pos context popValue =:: stackValue?
             stackValue? optional.isEmpty if return end
             stackValue? .data =:: stackValue
@@ -2335,6 +2380,57 @@ proc(
           default break
         end
         break
+      Return case ## TODO adjust concat calling convention to allow multi-return values
+        ## TODO? procOut or procRet
+        op [] .dataType typeContext types.getProcOut ! "procedure has return type" assert =:: retType
+        ## computeReturnLocations
+          retType typeContext types.compositeElts
+          context [] .argBuffer $1 .length list.setLength context .argBuffer=
+          context [] .argBuffer list.asMutableSlice
+        typeContext AMD64.computeReturnLocations =:: retLocations
+        context .variableLocations map.clear ## var-locations do not matter after return
+        ## 1. go through registers, move memory return values from registers to memory
+        context [] .intDataRegisters slice.atItrMut for =:: intReg
+          intReg [] .currentValue switch
+            empty case continue
+            variable case RegisterContent .empty intReg .currentValue= break
+            stackSlot case
+              intReg [] .currentValue .stackSlot =:: stackPosition
+              stackPosition i64 cast.u retLocations .length >= if
+                "return: stack out of sync" sb.copyPtr
+                op [] .pos errors appendError
+                continue
+              end
+              retLocations stackPosition [] =:: targetLocation
+              ## TODO handle different location types
+              targetLocation .argInt AMD64.getIntReturnRegister NO_REG == if
+                ## TODO move value to return memory
+                "unimplemented" ..panic
+              end
+              break
+            stackSlotHi stackSlotLow case "unimplemented" ..panic
+          end
+        end
+        ## 2. copy remaining memory return values using free register (there should be at least one free register after previous step)
+        ## TODO copy memory return values (ensure only valid target retisters are soted in registers)
+        ## 3. move remaining registers to correct location
+        RegisterState MAX_DATA_REGISTERS_INT array : regBuffer
+        regBuffer@ AMD64.initIntDataRegisters =:: regData
+        ## TODO is this the correct order?
+        retLocations .length 1 - while $ 0 >= do =:: index
+          retLocations index [] =:: retLoc
+          retLoc .argInt AMD64.getIntReturnRegister =:: retReg
+          retReg NO_REG == if continue end
+          retReg AMD64.intDataRegIndex =:: regIndex
+          index i32 cast RegisterContent .stackSlot regData regIndex @[] .currentValue=
+        finally index 1 - end ..drop
+        ## TODO? own return mode
+        regData retLocations .length i32 cast RegisterRestoreMode .MERGE context restoreRegisters
+        false context .reachable=
+        return
+      panic panicWithMessage case
+        false context .reachable=
+        break
       stackMod case
         op [] .val .stackMod .modType switch
           DROP case
@@ -2482,6 +2578,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     64 StackValue list.create
     labelHash@ labelEq@ 1024 ValueLocation map.create
     64 BlockInfo list.create
+    16 ArgumentLocation list.create
     0
     true
   CompilerContext new =:: mut: contextData
