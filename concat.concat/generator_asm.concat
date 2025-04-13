@@ -1711,9 +1711,20 @@ proc(
         op [] .dataType typeContext toValType =:: valType
         ## TODO make operation dependent on value type
         ## TODO extract conversion constant -> location to procedure
-        op [] .val .Constant .Int ?? if
-          valType op [] .val .Constant .Int ValueLocation .intConstant opIndex context pushValue
-          return
+        op [] .val .Constant switch
+          Int case
+            valType op [] .val .Constant .Int ValueLocation .intConstant opIndex context pushValue
+            return
+          Char case
+            valType op [] .val .Constant .Char i64 cast.u ValueLocation .intConstant opIndex context pushValue
+            return
+          Bool case
+            valType op [] .val .Constant .Bool ?1 i64 cast.u ValueLocation .intConstant opIndex context pushValue
+            return
+          EnumLabel case
+            valType op [] .val .Constant .EnumLabel i64 cast.u ValueLocation .intConstant opIndex context pushValue
+            return
+          default break ## TODO support other constant types
         end
         break
       NewEnum case
