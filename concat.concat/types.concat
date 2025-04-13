@@ -1119,7 +1119,7 @@ namespace: types
   i32 =:: export: CompositeFlags
     0:CompositeFlags =:: COMP_FLAG_NONE
     1:CompositeFlags =:: export: COMP_FLAG_EMPTY ## TODO remove uses outside this file
-    2:CompositeFlags =:: COMP_FLAG_ONLY_EMPTY
+    2:CompositeFlags =:: export: COMP_FLAG_ONLY_EMPTY
     3:CompositeFlags =:: COMP_MASK_ONLY_EMPTY
     4:CompositeFlags =:: COMP_FLAG_STATIC_ARGS
    12:CompositeFlags =:: COMP_GENERIC_MASK

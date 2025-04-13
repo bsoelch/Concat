@@ -392,6 +392,30 @@ struct(
 ) =:: export: ProgramFile
 
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export: LabelData
+proc( ConstValue : label -> i64 ) =>: export: switchLabelAsInt
+  label .Int ?? if
+    label .Int return
+  end
+  label .Char ?? if
+    label .Char i64 cast.u return
+  end
+  label .EnumLabel ?? if
+    label .EnumLabel i64 cast.u return
+  end
+  ..unreachable
+end
+proc(
+  LabelData : a
+  LabelData : b
+  ProgramContext ptr : program ## forward compatability
+-> i32 ) =>: export: switchLabelCmp
+  a .value switchLabelAsInt =:: aInt
+  b .value switchLabelAsInt =:: bInt
+  aInt bInt == if
+    0 return
+  end
+  aInt bInt < if -1 else 1 end return
+end
 struct(
   LabelData list : labels
   Type : switchType

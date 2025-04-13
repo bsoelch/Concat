@@ -3769,6 +3769,8 @@ proc(
           program [] .switchData
             switchBlock [] .blockId i64 cast
           list.at .data =:: switchData
+          ## sort switch-labels
+          switchData [] .labels switchLabelCmp@ program list.sort
           op .val .blockEnd .blockType .CASE ?? if
             BlockType .DEFAULT op .pos opBlock =:: mut: tmp
             switchBlock [] .blockId tmp@ .val .block .blockId=

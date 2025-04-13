@@ -3,6 +3,7 @@
 import list
 import string
 import stringIO
+import numbers/printNumbers
 using std.literals.
 
 import "program.concat"
@@ -123,14 +124,19 @@ proc( Type : dataType ProgramContext ptr.mut : program -> ValType ) =>: toValTyp
       break
     intLiteral case
       dataType .intLiteral types.intLiteralAsInt program toValType return
+    enum case
+      dataType typeContext types.compositeFlags types.COMP_FLAG_ONLY_EMPTY & ? "enum only has empty elements" assert
+      dataType typeContext types.enumLabelInfo ..drop =:: labelType
+      labelType program toValType return
+      break
     cType case
       dataType .cType
         types.cTypeAsType
       program toValType return
     pointer rawPointer case
       ValType .PTR return ## TODO? distinquish pointer and procedure pointer
-    arrayType struct union enum case
-      ## TODO! treat small structs/unions/enums as values
+    arrayType struct union case
+      ## TODO! treat small arrays/structs/unions as values
       ValType .REFERENCE return
     undefined empty genericType autoType procedure
     procIn procOut align typeSet initializer case
@@ -180,6 +186,8 @@ namespace: asm
     ## controll-flow
     LABEL
     JMP JMPIF CALL RET
+    ## embedded information
+    DATA
     ## arithmetic
     NEG NOT ADD SUB MUL DIV MOD UDIV UMOD
     AND OR XOR BITNOT SHL ASHL LSHL
@@ -190,6 +198,7 @@ namespace: asm
   ) =:: OpType
   ## TODO? version to check for NaN?
   enum( Z NZ EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CompareType
+  struct( RegisterId : reg i32 : offset ) =:: RegAndOffset
   union(
     _ : empty
     _ : unknown
@@ -207,6 +216,7 @@ namespace: asm
     LabelId : globalMemory
     RegisterId : memory
     i32 : localLabel
+    RegAndOffset : jumpTableElement ## memory at localLabel<offset> + 8*<register> (used for jump-tables)
   ) =:: Operand
 end
 struct(
@@ -291,6 +301,7 @@ namespace: sb
         PUSH case "push":s break
         POP case "pop":s break
         LABEL case "label":s break
+        DATA case "data":s break
         JMP case "jmp":s break
         JMPIF case "jmpif":s break
         CALL case "call":s break
@@ -383,6 +394,13 @@ namespace: sb
         localLabel case
           ".localLabel" sb.appendS val .localLabel i64 cast.u sb.appendI
           break
+        jumpTableElement case
+          "[.localLabel" sb.appendS
+            val .jumpTableElement .offset i64 cast.u sb.appendI
+            "+8*" sb.appendS
+            val .jumpTableElement .reg sb.appendRegister
+          ']' sb.appendC
+          break
       end
     return
   end
@@ -469,6 +487,10 @@ TODO add target specific optimizations as finaly step before output
   -> use target specific operations
 +#
 
+## TODO? merge branches instead of resetting to first value
+## * in type-check phase: count else/continue/case branches
+## * one reg-state for eacha branch
+## * merge such that minimum total moves
 struct(
   BlockId : blockId
   i32 : startLabelId
@@ -504,11 +526,23 @@ struct(
   i32 : endLabelId
   RegisterState slice.mut : regData ## storage for register data (heap allocated)
   i32 : endStackSize
-  ) =:: AndOrBlockInfo
+) =:: AndOrBlockInfo
+struct(
+  BlockId : blockId
+  i32 : endLabelId
+  i32 slice.mut : caseLabelIds ## [case-labels] [default-label]
+  RegisterState slice.mut : regData ## storage for register data (heap allocated)
+  ## regData: [SWITCH-start][BRANCH-end] ## TODO? one state for each branch
+  i32 : endRegsOffset
+  i32 : switchStackSize
+  i32 : endStackSize
+  i32 : caseIndex ## current case-id
+) =:: SwitchBlockInfo
 union(
   WhileBlockInfo : While
   IfBlockInfo : If
   AndOrBlockInfo : AndOr
+  SwitchBlockInfo : Switch
 ) =:: BlockInfo
 
 ## TODO? keep track of registers holding constant values
@@ -535,7 +569,7 @@ proc( LabelId : valId RegisterId : register i32 : opIndex CompilerContext ptr.mu
       prevLocation .register context findRegister =:: prevRegisterData?
       prevRegisterData? optional.hasData if
     prevRegisterData? .data =:: prevRegisterData
-    RegisterContent .empty prevRegisterData .currentValue=
+    prevRegisterData [] resetRegister prevRegisterData =[]
   end
   ## update register storage
   register context findRegister
@@ -723,6 +757,23 @@ proc(
   bestCandidate [] .register return
 end
 
+
+proc( CompilerContext ptr.mut : context -> ) =>: printRegisters
+  context [] .program .idContext .typeContext .labelContext =:: labelContext
+  context [] .intDataRegisters for =:: intReg
+    intReg .currentValue .empty ?? if continue end
+    'r' io.print
+    intReg .register i32 cast.u io.print
+    intReg .currentValue switch
+      variable case " var: ":s io.print intReg .currentValue .variable labelContext id.getLabelName io.println break
+      stackSlot case " stack: ":s io.print intReg .currentValue .stackSlot io.println break
+      stackSlotHi case " stack.ho: ":s io.print intReg .currentValue .stackSlotHi io.println break
+      stackSlotLow case " stack.low: ":s io.print intReg .currentValue .stackSlotLow io.println break
+      empty case ..unreachable
+    end
+  end
+end
+
 proc( RegisterState slice.mut : buffer CompilerContext ptr.mut : context -> ) =>: rememberRegisters
   context [] .intDataRegisters =:: intRegs
   buffer .length intRegs .length >= "CodeGen: buffer large enough to store registers" assert
@@ -758,12 +809,14 @@ proc(
     intRegs i [] .currentValue =:: currentValue
     buffer i [] .currentValue =:: expectedValue
     expectedValue currentValue RegisterContent.eq if ## already correct value in register
-      buffer i [] .lastUsed intRegs i @[] .lastUsed= ## mark resister as used
+      expectedValue .empty ?? ! if
+        buffer i [] .lastUsed intRegs i @[] .lastUsed= ## mark resister as used
+      end
       continue
     end
     ## current value is wrong -> clear out register
     mode .RESET ?? if
-      RegisterContent .empty intRegs i @[] .currentValue=
+      intRegs i [] resetRegister intRegs i =[]
     else
       currentValue .empty ?? ! if
         -1:i64 =:: mut: freeSlot
@@ -803,7 +856,7 @@ proc(
             targetRegister asm.Operand .register
             srcRegister asm.Operand .register
           asmOp2 list.append
-          RegisterContent .empty intRegs i @[] .currentValue=
+          intRegs i [] resetRegister intRegs i =[]
           tmpMovedToLower freeSlot i < | tmpMovedToLower=
         else
           intRegs i [] context clearRegister intRegs i =[]
@@ -932,7 +985,7 @@ proc(
       NO_LABEL
       NO_LABEL
       NO_LABEL
-      intRegCount 3 * i64 cast.u RegisterState mem.alloc intRegCount 4 * slice.createMutable
+      intRegCount 3 * i64 cast.u RegisterState mem.alloc intRegCount 3 * slice.createMutable
       intRegCount
       intRegCount 2 *
       -1
@@ -951,12 +1004,34 @@ proc(
     ## IfBlockInfo
       blockId
       NO_LABEL
-      intRegCount i64 cast.u RegisterState mem.alloc intRegCount 4 * slice.createMutable
+      intRegCount i64 cast.u RegisterState mem.alloc intRegCount slice.createMutable
       -1
     AndOrBlockInfo new BlockInfo .AndOr list.append
   context .openBlocks=
   context [] .openBlocks list.peek .data .AndOr
 end
+proc(
+  BlockId : blockId
+  i32 : caseCount
+  CompilerContext ptr.mut : context
+-> SwitchBlockInfo ptr.mut ) =>: openSwitchBlock
+  context .intDataRegisters [] .length i32 cast =:: intRegCount
+  context [] .openBlocks
+    ## SwitchBlockInfo
+      blockId
+      NO_LABEL
+      caseCount 1 + i64 cast.u i32 mem.alloc
+        $ caseCount 1 + i64 cast.u NO_LABEL mem.fill
+      caseCount 1 + slice.createMutable
+      intRegCount 2 *  i64 cast.u RegisterState mem.alloc intRegCount 2 * slice.createMutable
+      intRegCount
+      -1 -1
+      0
+    SwitchBlockInfo new BlockInfo .Switch list.append
+  context .openBlocks=
+  context [] .openBlocks list.peek .data .Switch
+end
+
 enum( WHILE SWITCH ) =:: BreakType
 proc(
   BlockId : blockId
@@ -970,12 +1045,158 @@ proc(
         block [] .While .blockId blockId == if
       block optional.wrap return
     end
-    #+breakType .SWITCH ?? and block [] .Switch ?? and
+    breakType .SWITCH ?? and block [] .Switch ?? and
         block [] .Switch .blockId blockId == if
       block optional.wrap return
-    end+#
+    end
   end
   BlockInfo ptr.mut optional.empty return
+end
+
+proc(
+  Atomic list
+  ValType : valType
+  asm.Operand : switchValOperand
+  LabelData slice : labels
+  i32 slice : caseLabelIds
+  i64 : lower ## input is >= lower
+  i64 : upper ## input is <= upper
+  bool : signed ## use signed comparisson
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: generateDecisionTree
+  labels 0 [] .value switchLabelAsInt =:: minLabel
+  labels $ .length 1 - [] .value switchLabelAsInt =:: maxLabel
+  caseLabelIds .length 1 - i32 cast =:: defaultLabelId
+  ## TODO? compress contiguous ranges jumping to same label
+  labels .length 3 <= if
+    upper lower - labels .length 1 - == =:: contiguous ## all values between lower and upper are labels
+    labels contiguous if $ .length 1 - slice.head end for =:: l
+      asm.OpType .JMPIF
+        valType
+        asm.CompareType .EQ asm.Operand .cmpType
+        switchValOperand
+        l .value switchLabelAsInt asm.Operand .constInt
+        caseLabelIds l .caseId [] asm.Operand .localLabel
+      asmOp4 list.append
+    end
+    asm.OpType .JMP ValType .EMPTY
+      contiguous if
+        caseLabelIds labels $ .length 1 - [] .caseId []
+      else
+        defaultLabelId
+      end asm.Operand .localLabel
+    asmOp1 list.append
+    return
+  end
+  labels .length 2 / =:: centerId
+  labels centerId [] .value switchLabelAsInt =:: midValue
+  context nextLabelId =:: branchLabel
+  asm.OpType .JMPIF
+    valType
+    signed if asm.CompareType .GE else asm.CompareType .UGE end asm.Operand .cmpType
+    switchValOperand
+    midValue asm.Operand .constInt
+    branchLabel asm.Operand .localLabel
+  asmOp4 list.append
+  ## less than mid-value
+    valType
+    switchValOperand
+    labels centerId slice.head
+    caseLabelIds
+    lower
+    midValue 1 -
+    signed
+    context
+  generateDecisionTree
+  asm.OpType .LABEL ValType .EMPTY
+    branchLabel asm.Operand .localLabel
+  asmOp1 list.append
+  ## greater or equal to mid-value
+    valType
+    switchValOperand
+    labels centerId slice.tail
+    caseLabelIds
+    midValue
+    upper
+    signed
+    context
+  generateDecisionTree
+  return
+end
+proc(
+  Atomic list
+  StackValue : val
+  SwitchBlockInfo ptr : blockInfo
+  SwitchData ptr.mut : switchData
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: generateSwitchTable
+  switchData [] .labels =:: labels
+  labels 0 [] .value switchLabelAsInt =:: minLabel
+  labels $ .length 1 - [] .value switchLabelAsInt =:: maxLabel
+  blockInfo [] .caseLabelIds $ .length 1 - [] =:: defaultLabel
+  val .location switch
+    register case
+        val .location .register asm.Operand .register
+      break
+    memory case ## TODO is this the right offset
+        context [] .stack .length 1 + asm.Operand .stackData
+      break
+    registers registerHi registerLow case "unexpected format for condition parameter" ..panic
+  end =:: switchValOperand
+  switchValOperand .register =:: switchOpReg ## TODO ensure target value is register
+  ## 0-4 -> linear check
+  ## TODO find good way to decide which switch-type to use
+  ## TODO? mixed switch: tree for sparse values, table for long continues ranges of values
+  labels .length 3 > and maxLabel minLabel - labels .length i64 cast.u $ 4 / + <= if
+    context nextLabelId =:: jumpTableId
+    ## jump-table
+    minLabel 0 != if
+      asm.OpType .SUB
+        val .valType
+        switchValOperand
+        switchValOperand
+        minLabel asm.Operand .constInt
+      asmOp3 list.append
+    end
+    asm.OpType .JMPIF
+      val .valType
+      asm.CompareType .UGT asm.Operand .cmpType
+      switchValOperand
+      maxLabel minLabel - asm.Operand .constInt
+      defaultLabel asm.Operand .localLabel
+    asmOp4 list.append
+    asm.OpType .JMP
+      ValType .EMPTY
+      switchOpReg jumpTableId asm.RegAndOffset new asm.Operand .jumpTableElement
+    asmOp1 list.append
+    asm.OpType .LABEL
+      ValType .EMPTY
+      jumpTableId asm.Operand .localLabel
+    asmOp1 list.append
+    0 =:: mut: labelIndex
+    minLabel while $ maxLabel <= do =:: tableValue
+      labels labelIndex [] .value switchLabelAsInt =:: labelValue
+      asm.OpType .DATA
+        ValType .PTR
+        labelValue tableValue == if
+          blockInfo [] .caseLabelIds labels labelIndex [] .caseId []
+          labelIndex 1 + labelIndex=
+        else
+          defaultLabel
+        end asm.Operand .localLabel
+      asmOp1 list.append
+    finally tableValue 1 + end ..drop
+  else
+    val .valType
+      switchValOperand
+      labels list.asSlice
+      blockInfo [] .caseLabelIds slice.freeze
+      i64.MIN ## TODO pass correct bounds for input type & signdness
+      i64.MAX
+      val .valType .I64 ?? ## smaller values have been zero-extended before sorting
+      context
+    generateDecisionTree
+  end
 end
 
 proc(
@@ -1045,7 +1266,7 @@ proc(
 end
 proc(
   Atomic list : ops
-  ValType : argType
+  ValType optional : argType
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> Atomic list StackValue optional ) =>: popValue
@@ -1056,9 +1277,9 @@ proc(
   context [] .stack
     list.pop =:: popped
   context .stack=
-  popped .valType argType != if
+  argType optional.hasData and popped .valType argType .data != if
     "unexpected value type expected: " sb.copyPtr
-      argType sb.appendValType
+      argType .data sb.appendValType
       " got: " sb.appendS
       popped .valType sb.appendValType
     pos errors appendError
@@ -1098,7 +1319,7 @@ proc(
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: compileUnaryOperator
   ops
-    argType pos context popValue =:: argValue?
+    argType optional.wrap pos context popValue =:: argValue?
     argValue? optional.isEmpty if return end
     argValue? .data =:: argValue
   =:: mut: newOps
@@ -1144,10 +1365,10 @@ proc(
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: compileBinaryOperator
   ops
-    argType pos context popValue =:: arg2?
+    argType optional.wrap pos context popValue =:: arg2?
     arg2? optional.isEmpty if return end
     arg2? .data =:: arg2
-    argType pos context popValue =:: arg1?
+    argType optional.wrap pos context popValue =:: arg1?
     arg1? optional.isEmpty if return end
     arg1? .data =:: arg1
   =:: mut: newOps
@@ -1198,10 +1419,10 @@ proc(
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: compileComparisonOperator
   ops
-    argType pos context popValue =:: arg2?
+    argType optional.wrap pos context popValue =:: arg2?
     arg2? optional.isEmpty if return end
     arg2? .data =:: arg2
-    argType pos context popValue =:: arg1?
+    argType optional.wrap pos context popValue =:: arg1?
     arg1? optional.isEmpty if return end
     arg1? .data =:: arg1
   =:: mut: newOps
@@ -1450,6 +1671,13 @@ proc(
           return
         end
         break
+      NewEnum case
+        op [] .dataType program toValType =:: valType
+        op [] .dataType typeContext types.isEnum if
+          valType op [] .val .NewEnum i64 cast.s ValueLocation .intConstant opIndex context pushValue
+          return
+        end
+        break
       declareId case return ## nothing to do (all declarations handled at start of procedure)
       getId case
         op .val .getId =:: idData
@@ -1481,7 +1709,7 @@ proc(
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR case
             op [] .dataType program toValType =:: valType
-            valType op [] .pos context popValue =:: stackValue?
+            valType optional.wrap op [] .pos context popValue =:: stackValue?
             stackValue? optional.isEmpty if return end
             stackValue? .data =:: stackValue
             stackValue .location switch
@@ -1545,7 +1773,7 @@ proc(
               ifBlock? .data .If
             end =:: ifBlock
             context [] .reachable ! if return end
-            ValType .I8 op [] .pos context popValue =:: srcValue?
+            ValType .I8 optional.wrap op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
               "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
               return
@@ -1612,7 +1840,7 @@ proc(
             end =:: ifBlock
             true ifBlock .hasIf=
             context [] .reachable ! if return end
-            ValType .I8 op [] .pos context popValue =:: srcValue?
+            ValType .I8 optional.wrap op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
               "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
               return
@@ -1707,7 +1935,7 @@ proc(
             end
             context [] .reachable ! if return end
             whileBlock? .data .While =:: whileBlock
-            ValType .I8 op [] .pos context popValue =:: srcValue?
+            ValType .I8 optional.wrap op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
               "stack underflow in do-condition" sb.copyPtr op [] .pos errors appendError
               return
@@ -1763,7 +1991,7 @@ proc(
             end
             context [] .reachable ! if return end
             whileBlock? .data .While =:: whileBlock
-            ValType .I8 op [] .pos context popValue =:: srcValue?
+            ValType .I8 optional.wrap op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
               "stack underflow in do-condition" sb.copyPtr op [] .pos errors appendError
               return
@@ -1897,7 +2125,7 @@ proc(
                 RegisterRestoreMode .MERGE_FALLTHROUGH
               context restoreRegisters
             end
-            ValType .I8 op [] .pos context popValue =:: srcValue?
+            ValType .I8 optional.wrap op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
               "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
               return
@@ -1921,6 +2149,85 @@ proc(
               end
               andOrBlock [] .endLabelId asm.Operand .localLabel
             asmOp3 list.append
+            return
+          SWITCH case
+            program [] .switchData op [] .val .block .blockId i32 cast.u list.at .data =:: switchData
+            op [] .val .block .blockId switchData [] .caseCount context openSwitchBlock =:: switchBlock
+            context [] .reachable ! if return end
+            ValType optional.empty op [] .pos context popValue =:: srcValue?
+            srcValue? optional.isEmpty if
+              "stack underflow in switch" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            srcValue? .data =:: srcValue
+            srcValue .valType switch
+              I8 I16 I32 I64 case false break ## switchable
+              default true break
+            end if
+              "cannot switch values of type: " sb.copyPtr
+                srcValue .valType sb.appendValType
+              op [] .pos errors appendError
+              return
+            end
+            switchData [] .caseCount 1 + for =:: i
+              context nextLabelId switchBlock [] .caseLabelIds i =[]
+            end
+            switchBlock [] .regData context rememberRegisters
+            context .stack [] .length switchBlock .switchStackSize=
+            srcValue switchBlock switchData context generateSwitchTable
+            false context .reachable=
+            return
+          CASE DEFAULT case
+            context [] .reachable if
+              "case-label is reachable" sb.copyPtr op [] .pos errors appendError
+            end
+            context [] .openBlocks list.peek =:: switchBlock?
+            switchBlock? optional.isEmpty or switchBlock? .data [] .Switch ?? ! if
+              "unexpected case/default-statement" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            switchBlock? .data .Switch =:: switchBlock
+            op [] .val .block .blockType .CASE ?? if
+              switchBlock [] .caseIndex
+              switchBlock [] .caseIndex 1 + switchBlock .caseIndex=
+            else
+              switchBlock [] .caseLabelIds .length 1 - i32 cast
+            end =:: caseId
+            switchBlock [] .caseLabelIds caseId [] =:: caseLabel
+            caseLabel NO_LABEL == if return end
+            asm.OpType .LABEL ValType .EMPTY
+              caseLabel asm.Operand .localLabel
+            asmOp1 list.append
+            switchBlock [] .regData
+              switchBlock [] .switchStackSize
+              RegisterRestoreMode .RESET
+            context restoreRegisters
+            true context .reachable=
+            return
+          BREAK_SWITCH case
+            op [] .val .block .blockId
+              BreakType .SWITCH
+            context findBreakableBlock =:: switchBlock?
+            switchBlock? optional.isEmpty or switchBlock? .data [] .Switch ?? ! if
+              "unexpected break-statement" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            context [] .reachable ! if return end
+            switchBlock? .data .Switch =:: switchBlock
+            switchBlock [] .endLabelId NO_LABEL == if
+              context nextLabelId switchBlock .endLabelId=
+              switchBlock [] .regData switchBlock [] .endRegsOffset slice.tail context rememberRegisters
+              context .stack [] .length switchBlock .endStackSize=
+            else
+              switchBlock [] .regData switchBlock [] .endRegsOffset slice.tail
+                switchBlock [] .endStackSize
+                RegisterRestoreMode .MERGE
+              context restoreRegisters
+            end
+            asm.OpType .JMP ValType .EMPTY
+              switchBlock [] .endLabelId asm.Operand .localLabel
+            asmOp1 list.append
+            false context .reachable=
             return
           default break
         end
@@ -2002,6 +2309,28 @@ proc(
             end
             andOrBlock .regData .data mem.free
             return
+          SWITCH case
+            context [] .openBlocks list.peek =:: switchBlock?
+            switchBlock? optional.isEmpty or switchBlock? .data [] .Switch ?? ! if
+              "unexpected end of switch block" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            context [] .openBlocks
+              list.pop .Switch =:: switchBlock
+            context .openBlocks=
+            switchBlock .endLabelId NO_LABEL != if ## jump to end reachable
+              ## restoreRegisters
+                switchBlock .regData switchBlock .endRegsOffset slice.tail
+                switchBlock .endStackSize
+                RegisterRestoreMode .RESET
+              context restoreRegisters
+              asm.OpType .LABEL ValType .EMPTY
+                switchBlock .endLabelId asm.Operand .localLabel
+              asmOp1 list.append
+              true context .reachable=
+            end
+            switchBlock .regData .data mem.free
+            return
           PROCEDURE case Atomic .EndProc list.append return
           default break
         end
@@ -2023,7 +2352,8 @@ proc(
                 popped .location switch
                   memory case break ## nothing to do
                   register case
-                    RegisterContent .empty popped .location .register context findRegister .data .currentValue=
+                    popped .location .register context findRegister .data =:: poppedReg
+                    poppedReg [] resetRegister poppedReg =[]
                     break
                   registers registerHi registerLow case "unimplemented" ..panic
                 end

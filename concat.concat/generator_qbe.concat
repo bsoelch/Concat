@@ -1786,18 +1786,6 @@ proc(
   tmpId return
 end
 
-proc( ConstValue : label -> i64 ) =>: labelAsInt
-  label .Int ?? if
-    label .Int return
-  end
-  label .Char ?? if
-    label .Char i64 cast.u return
-  end
-  label .EnumLabel ?? if
-    label .EnumLabel i64 cast.u return
-  end
-  ..unreachable
-end
 proc(
   stringBuilder : sb
   ValType : valType
@@ -1830,7 +1818,7 @@ proc(
           BranchType .NEXT
           context nextJumpLabelId
         BranchId new =:: nextBranch
-        labels i slice.get .value labelAsInt =:: cmpVal
+        labels i slice.get .value switchLabelAsInt =:: cmpVal
         ## cmp int
           valType
           't' valId
@@ -1869,7 +1857,7 @@ proc(
     BranchType .NEXT
     context nextJumpLabelId
   BranchId new =:: geBranch
-  labels p slice.get .value labelAsInt =:: cmpVal
+  labels p slice.get .value switchLabelAsInt =:: cmpVal
   labels p slice.cutIndex =:: lElts =:: rElts
   sb
     ## cmp int
@@ -1917,23 +1905,11 @@ proc(
   return
 end
 proc(
-  LabelData : a
-  LabelData : b
-  CompilerContext ptr.mut : context
--> i32 ) =>: labelCmp
-  a .value labelAsInt =:: aInt
-  b .value labelAsInt =:: bInt
-  aInt bInt == if
-    0 return
-  end
-  aInt bInt < if -1 else 1 end return
-end
-proc(
   stringBuilder : sb
   Type : switchType
   i32 : valId
   JumpDistance : defaultJumpDistance
-  LabelData list : labels
+  LabelData list : labels ## switch labels (sorted by type-checker)
   JumpDistance slice.mut : caseJumpDistances
   i32 : opIndex
   FilePosition : pos
@@ -1947,7 +1923,6 @@ proc(
   typeContext .labelContext =:: labelContext
   ValType : valType
   i32 : tmpId
-  labels labelCmp@ context list.sort
   sb
     "## switch\n" sb.appendS
     switchType typeContext types.isTaggedUnion if
