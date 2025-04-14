@@ -1983,7 +1983,7 @@ proc(
                   state .missingProcs=
                 end
               end
-              calledProc OpValue .call op@ .val=
+              calledProc program callInfoToCall op@ .val .call=
             break
             builtIn case
               baseProcData [] .implementation .builtIn .builtIn =:: builtInId
@@ -2903,9 +2903,9 @@ proc(
           ifBlock .orBranches =:: orBranches
           orBranches [] .length 0 > if
             ifBlock [] .andOrPositions =:: andOrPos
-            program [] .labelPositions
-              orBranches [] .length i32 cast arenaAlloc.allocSlice =:: orPositions
-            program .labelPositions=
+            program [] .programMemory
+              orBranches [] .length i32 cast i32 mixedArena.allocSlice =:: orPositions
+            program .programMemory=
             0:i32 =:: mut: orCount
             andOrPos for =:: andOrIndex
               state [] .compiledOps
@@ -3040,11 +3040,11 @@ proc(
               ifData [] .ifPosition
             list.at .data
           .val .block .jumpDistance=
-          program [] .labelPositions
+          program [] .programMemory
             ifBlock [] .andOrPositions .length
               ifData [] .orPositions .length i32 cast -
-            arenaAlloc.allocSlice =:: andPositions
-          program .labelPositions=
+            i32 mixedArena.allocSlice =:: andPositions
+          program .programMemory=
           0:i32 =:: mut: andCount
           ifBlock [] .andOrPositions for =:: andOrPos
             state [] .compiledOps
@@ -3461,9 +3461,9 @@ proc(
             end
             branchPoints list.free ..drop
           end
-          program [] .labelPositions
-            whileBlock [] .orCount arenaAlloc.allocSlice =:: orPositions
-          program .labelPositions=
+          program [] .programMemory
+            whileBlock [] .orCount i32 mixedArena.allocSlice =:: orPositions
+          program .programMemory=
           state [] .compiledOps .length =:: currentOpIndex
           whileBlock [] .labelPositions for =:: orPos
             state [] .compiledOps orPos list.at .data =:: orOp
@@ -3558,9 +3558,9 @@ proc(
             op .pos errors appendError
             return
           end
-          program [] .labelPositions
-            whileBlock [] .continueCount arenaAlloc.allocSlice =:: continuePositions
-          program .labelPositions=
+          program [] .programMemory
+            whileBlock [] .continueCount i32 mixedArena.allocSlice =:: continuePositions
+          program .programMemory=
           state [] .compiledOps .length =:: currentOpIndex
           whileBlock [] .labelPositions for =:: continuePos
             state [] .compiledOps continuePos list.at .data =:: continueOp
@@ -3873,16 +3873,16 @@ proc(
               breakPos - JumpDistance cast
             breakOp .val .block .jumpDistance=
           end
-          program [] .labelPositions
+          program [] .programMemory
             breakPositions
-              arenaAlloc.copyList
+              mixedArena.copyList
             switchData .breakPositions=
-          program .labelPositions=
-          program [] .switchJumps
+          program .programMemory=
+          program [] .programMemory
             switchBlock [] .caseJumpDistances
-              arenaAlloc.copyList
+              mixedArena.copyList
             switchData .caseJumpDistances=
-          program .switchJumps=
+          program .programMemory=
           0 switchData .caseCount= ## reset case-count
           breakPositions list.free ..drop
           switchBlock [] .caseJumpDistances list.free ..drop
@@ -3995,12 +3995,12 @@ proc(
           whileBlock [] .continueCastOffsets list.free ..drop
           whileBlock [] .doBranches list.free ..drop
           state [] .compiledOps .length =:: currentOpIndex
-          program [] .labelPositions
+          program [] .programMemory
             whileBlock [] .labelPositions .length
               whileBlock [] .orCount -
               whileBlock [] .continueCount -
-            arenaAlloc.allocSlice =:: breakPositions
-          program .labelPositions=
+            i32 mixedArena.allocSlice =:: breakPositions
+          program .programMemory=
           0:i32 =:: mut: breakCount
           whileBlock [] .labelPositions for =:: labelPos
             state [] .compiledOps labelPos list.at .data =:: labelOp
@@ -4057,13 +4057,13 @@ proc(
               andOrPos - JumpDistance cast
             andOrOp .val .block .jumpDistance=
           end
-          program [] .labelPositions
-            andOrBlock .andOrPositions arenaAlloc.copyList
+          program [] .programMemory
+            andOrBlock .andOrPositions mixedArena.copyList
               program [] .andOrData
                 andOrBlock .blockId i64 cast
               list.at .data
             .andOrPositions=
-          program .labelPositions=
+          program .programMemory=
           closed .AndOr .andOrPositions 0 list.get
             currentOpIndex - JumpDistance cast
           op@ .val .blockEnd .jumpDistance=

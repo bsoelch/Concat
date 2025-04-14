@@ -5,6 +5,7 @@ common first step for all compiler back-ends:
 * explicitly create temporary variables for copy/output arguments
 +#
 import stringIO
+import arenaAlloc
 
 import "program.concat"
 import "measure.concat"
@@ -169,32 +170,71 @@ proc(
         ..dup typeContext types.isPointer if
           typeContext types.getBaseType
         end
-      typeContext types.getProcOutArgs
-        ! "calledType has arguments" assert
-      =:: outArgs
-      op .val .callPtr ?? if
-        ## remember number of out-args in call operation
-        outArgs .length op@ .val .callPtr=
+      =:: calledType
+      ## special handling for pointer-call procedures
+      _BACKEND_ .QBE ?? if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
+        calledType typeContext types.getProcOutArgs
+          ! "calledType has out-types" assert
+        =:: outArgs
+        op .val .callPtr ?? if
+          ## remember number of out-args in call operation
+          outArgs .length op@ .val .callPtr .outArgCount=
+        end
+        newOps
+          0:i64 while ..dup outArgs .length < do =:: i
+            outArgs i slice.get =:: arg
+            arg typeContext types.isEmpty if
+              i 1 + continue
+            end
+            arg true op .pos context newTmpVar =:: tmpId
+            ## opDeclareId
+              arg
+              tmpId
+              op .pos
+            opDeclareId list.append
+            ## opAtId
+              arg
+              tmpId
+              op .pos
+            opAtId list.append
+            i 1 +
+          end ..drop
+          op list.append
+        return
       end
+      op .val .callPtr ?? if
+        op .val .callPtr program getPtrCallData
+      else
+        op .val .call program getCallData
+      end =:: callData
+      calledType typeContext types.getCallConvention
+        ! "calledType has call convention" assert
+      .PTRCALL ?? =:: isPtrCall
+      calledType typeContext types.getProcOut
+        ! "calledType has out-types" assert
+        typeContext types.compositeElts
+      =:: outTypes
+      false =:: mut: hasLabel
+      program [] .labelBuffer
+        $ .length 0 == "label buffer is empty before use" assert
+        outTypes .length for =:: i
+          outTypes i slice.get =:: arg
+          arg typeContext types.isEmpty if continue end
+          arg typeContext types.referenceOnly or isPtrCall and i outTypes .length 1 - < if
+            true hasLabel=
+            arg true op .pos context newTmpVar .labelId
+          else
+            id.LABEL_ID_NONE
+          end list.append
+        end
+        hasLabel if
+          program [] .programMemory
+            $1 mixedArena.copyList callData .retValueLocations=
+          program .programMemory=
+        end
+        list.clear
+      program .labelBuffer=
       newOps
-        0:i64 while ..dup outArgs .length < do =:: i
-          outArgs i slice.get =:: arg
-          arg typeContext types.isEmpty if
-            i 1 + continue
-          end
-          arg true op .pos context newTmpVar =:: tmpId
-          ## opDeclareId
-            arg
-            tmpId
-            op .pos
-          opDeclareId list.append
-          ## opAtId
-            arg
-            tmpId
-            op .pos
-          opAtId list.append
-          i 1 +
-        end ..drop
         op list.append
       return
     ## XXX merge identical variables on independent branches

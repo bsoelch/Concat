@@ -67,10 +67,55 @@ struct(
   bool : isStatic
 ) =:: export: ProcedureInfo
 struct(
+  ConstValue slice : autoArgs
+  LabelId slice.mut : retValueLocations
+) =:: CallData
+i32 =:: CallDataId
+-1:CallDataId =:: NO_CALL_DATA
+struct(
+  ProcId : procId
+  i32 : implementationId
+  CallDataId : callDataId
+) =:: export: ProcedureCall
+struct(
+  i64 : outArgCount
+  CallDataId : callDataId
+) =:: export: PointerCall
+struct(
   ProcId : procId
   i32 : implementationId
   ConstValue slice : autoArgs
 ) =:: export: ProcedureCallInfo
+proc(
+  ProcedureCallInfo : callInfo
+  ProgramContext ptr.mut : context
+-> ProcedureCall ) =>: export: callInfoToCall
+  context [] .callData
+    $ .length =:: callDataId
+    ## CallData
+      callInfo .autoArgs
+      ## TODO? create labels for composite ret-values here and make slice immutable
+      LabelId slice.emptyMutable
+    CallData new list.append
+  context .callData=
+  ## ProcedureCall
+    callInfo .procId
+    callInfo .implementationId
+    callDataId CallDataId cast
+  ProcedureCall new
+end
+proc(
+  ProcedureCall : call
+  ProgramContext ptr.mut : context
+-> CallData ptr.mut ) =>: export: getCallData
+  context [] .callData call .callDataId i64 cast @[]
+end
+proc(
+  PointerCall : call
+  ProgramContext ptr.mut : context
+-> CallData ptr.mut ) =>: export: getPtrCallData
+  context [] .callData call .callDataId i64 cast @[]
+end
 struct(
   i32 : implementationId
   ProcId : procId
@@ -81,6 +126,7 @@ struct( LabelId : label InitType : initType ) =:: export: NameInitInfo
 
 struct( LabelId : src LabelId : alias ) =:: export: NameAliasInfo
 
+## TODO find& eliminate large entries, extract additional data to seperate storage
 union(
             NopType : NOP
          ConstValue : Constant
@@ -108,9 +154,9 @@ union(
                   _ : NewReference
                 i32 : NewEnum
                 i32 : NewEnumReference
-  ProcedureCallInfo : call
+      ProcedureCall : call
             BuiltIn : builtIn
-                i64 : callPtr
+        PointerCall : callPtr
                   _ : length
                   _ : size
        AutoCastInfo : autoCast
@@ -270,7 +316,7 @@ proc( i32 StackModType FilePosition -> Operation ) =>: export: opStackMod
   StackModification new OpValue .stackMod Type .undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opCallPtr
-  -1 OpValue .callPtr Type .undefined pos Operation new return
+  -1 NO_CALL_DATA PointerCall new OpValue .callPtr Type .undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opLength
   OpValue .length types.primitive.I_SIZE pos Operation new return
@@ -475,13 +521,14 @@ struct(
          ProcedureBundle list : procBundles
                     Type list : autoTypes
                Operation list : tmpOps
-  JumpDistance ArenaAllocator : switchJumps
-           i32 ArenaAllocator : labelPositions
+          MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
               SwitchData list : switchData
                WhileData list : whileData
                   IfData list : ifData
                AndOrData list : andOrData
            TypedConstant list : constantReferences
+                 LabelId list : labelBuffer
+                CallData list : callData
            CompilerError list : errors
                       LabelId : mainLabelId
                        ProcId : mainProcId
@@ -497,13 +544,14 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     64  ProcedureBundle list.create
     32  Type            list.create
     128 Operation       list.create
-    1024 JumpDistance   arenaAlloc.create
-    1024 i32            arenaAlloc.create
+    4096                mixedArena.create
     128 SwitchData      list.create
     128 WhileData       list.create
     256 IfData          list.create
     128 AndOrData       list.create
     32  TypedConstant   list.create
+    32  LabelId         list.create
+    1024 CallData       list.create
     32  CompilerError   list.create
     id.LABEL_ID_NONE ## main LabelId
     NO_PROC ## main ProcId
@@ -518,13 +566,14 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .procBundles list.free >$ .procBundles=
   $ .autoTypes list.free >$ .autoTypes=
   $ .tmpOps list.free >$ .tmpOps=
-  $ .switchJumps arenaAlloc.free >$ .switchJumps=
-  $ .labelPositions arenaAlloc.free >$ .labelPositions=
+  $ .programMemory mixedArena.free >$ .programMemory=
   $ .switchData list.free >$ .switchData=
   $ .whileData list.free >$ .whileData=
   $ .ifData list.free >$ .ifData=
   $ .andOrData list.free >$ .andOrData=
   $ .constantReferences list.free >$ .constantReferences=
+  $ .labelBuffer list.free >$ .labelBuffer=
+  $ .callData list.free >$ .callData=
   $ .errors list.free >$ .errors=
   id.LABEL_ID_NONE >$ .mainLabelId=
   NO_PROC >$ .mainProcId=

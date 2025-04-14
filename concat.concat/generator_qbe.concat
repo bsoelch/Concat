@@ -3753,7 +3753,7 @@ proc(
           i 1 + continue ## skip static arguments
         end
         argFlags id.FLAG_AUTO & ? if
-          callInfo [] .autoArgs autoArgIndex slice.get =:: argVal
+          callInfo [] prog getCallData [] .autoArgs autoArgIndex slice.get =:: argVal
           autoArgIndex 1 + autoArgIndex=
           argVal .None ?? ! if
             newSb
@@ -3809,8 +3809,8 @@ proc(
         context finishCall
       return
     callPtr case
-      op [] .val .callPtr TypedValId list.create =:: mut: argIndices
-      0:i64 while ..dup op [] .val .callPtr < do =:: i
+      op [] .val .callPtr .outArgCount TypedValId list.create =:: mut: argIndices
+      0:i64 while ..dup op [] .val .callPtr .outArgCount < do =:: i
         argIndices
           ## TypedValId
             Type .undefined
@@ -3843,7 +3843,7 @@ proc(
         outArgCount 1 + outArgCount=
         i 1 +
       end ..drop
-      outArgCount op [] .val .callPtr == "correct number of out arguments" assert
+      outArgCount op [] .val .callPtr .outArgCount == "correct number of out arguments" assert
       inTypes typeContext types.compositeEltCount =:: argCount
       argIndices
         ..dup .length argCount + list.ensureCap

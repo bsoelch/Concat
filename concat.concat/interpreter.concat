@@ -2571,7 +2571,7 @@ proc(
       callInfo [] .procId
         callInfo [] .implementationId
         op [] .dataType
-        callInfo [] .autoArgs
+        callInfo [] program getCallData [] .autoArgs
         false
       op [] .pos context evaluateCall wrapResult return
     initializeId autoTypedInitializeId case
