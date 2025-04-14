@@ -3366,6 +3366,9 @@ namespace: interpreter
             pos
             context
           pushValue
+        else retType typeContext types.isProcOut _if
+          "builtIns with multiple return values are not supported" sb.copyPtr
+          pos errors appendError
         end
         false return
       argumentError case

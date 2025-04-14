@@ -114,9 +114,15 @@ namespace: id
   -1:NamespaceImportId =:: export: NAMESPACE_IMPORT_NONE
 end
 
-enum( CONCAT CCALL ) =:: export: CallingConvention
+enum( CONCAT CCALL PTRCALL ) =:: export: CallingConvention
 namespace: CallingConvention
-  CallingConvention .CONCAT =:: export: DEFAULT
+  proc( -> CallingConvention ) =>: export: DEFAULT
+    _BACKEND_ .QBE ?? if
+      CallingConvention .PTRCALL
+    else
+      CallingConvention .CONCAT
+    end
+  end
 end
 
 type : export: BuiltIn

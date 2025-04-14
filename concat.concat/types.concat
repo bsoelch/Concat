@@ -1792,20 +1792,28 @@ namespace: types
     proc context getProcOut if true return end =:: outType
     proc context getCallConvention if ..drop Type .undefined true return end =:: callConvention
     callConvention switch
-      CCALL CONCAT case
+      CCALL PTRCALL case
         outType context compositeElts =:: elts
         elts .length 0 == if
           Type .empty false return
         end
         elts elts .length 1 - slice.get false return
+      CONCAT case
+        outType context compositeEltCount =:: eltCount
+        eltCount 0 == if
+          Type .empty false return
+        else eltCount 1 == _if
+          outType 0 context compositeGetElement false return
+        end
+        outType false return
     end
   end
   proc( Type : proc TypeContext ptr : context -> Type slice bool ) =>: export: getProcOutArgs
     proc context getProcOut if ..drop Type slice.empty true return end =:: outType
     proc context getCallConvention if ..drop Type slice.empty true return end =:: callConvention
     callConvention switch
-      CCALL case Type slice.empty false return
-      CONCAT case
+      CCALL CONCAT case Type slice.empty false return
+      PTRCALL case
         outType context compositeElts =:: elts
         elts .length 0 == if
           Type slice.empty false return
@@ -2902,7 +2910,7 @@ namespace: sb
         context [] .procTypes t .procedure i64 cast list.get =:: procType
         sb
           procType .callingConvention switch
-            CONCAT case "proc["   appendS break
+            CONCAT PTRCALL case "proc["   appendS break
             CCALL  case "proc.c[" appendS break
           end
           t .procedure i64 cast appendI
