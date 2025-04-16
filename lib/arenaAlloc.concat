@@ -341,7 +341,7 @@ end
 ## Arena Allocator for mixed types
 ## TODO? special type-constant for max-aligned type
 ## TODO? switch to i8-allocator& align elements seperately
-i64 =:: MaxAlign
+i64 =:: MaxAlign ## TODO? allow choosing alignment on creation
 MaxAlign ArenaAllocator =:: export: MixedArenaAllocator
 namespace: mixedArena
   proc( i64 -> i32 ) =>: alignSize
@@ -447,7 +447,7 @@ namespace: mixedArena
     T list : values
   -> MixedArenaAllocator T slice.mut ) =>: export: copyList
     arena values .length i32 cast.u T allocSlice .data
-      values .data values .length mem.copy values .length slice.createMutable
+      values .data values .length i64 cast.u mem.copy values .length slice.createMutable
     return
   end
 
