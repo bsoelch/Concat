@@ -43,6 +43,7 @@ namespace: sb
   proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendBin
     2  appendI?
   end
+  ## TODO? versions for i8/i16
   proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendI64
     10 appendI?
   end
@@ -89,5 +90,26 @@ namespace: sb
   overload: export: appendUHex
     appendUX32
     appendUX64
+  end
+end
+namespace: sb.operators
+  overload: <<+
+    sb.appendI
+  end
+  overload: <<U+
+    sb.appendU
+  end
+  overload: <<B+
+    sb.appendBin
+  end
+  overload: <<UB+
+    sb.appendUBin
+  end
+  ## TODO? seperate versions for upper/lower-case hex
+  overload: <<X+
+    sb.appendX
+  end
+  overload: <<UX+
+    sb.appendUX
   end
 end

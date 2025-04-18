@@ -74,4 +74,10 @@ namespace: sb
     asSlice string cast return
   end
 end
-
+namespace: sb.operators
+  overload: <<+
+    sb.appendS
+    sb.appendStr
+    sb.appendC
+  end
+end

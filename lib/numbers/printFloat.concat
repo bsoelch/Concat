@@ -225,3 +225,15 @@ namespace: sb
     2 true appendFloat???
   end
 end
+## TODO? f32 versions
+namespace: sb.operators
+  overload: <<+
+    sb.appendF
+  end
+  overload: <<E+
+    sb.appendE
+  end
+  overload: <<X+
+    sb.appendXF
+  end
+end
