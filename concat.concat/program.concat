@@ -448,7 +448,8 @@ proc( ConstValue : label -> i64 ) =>: export: switchLabelAsInt
   label .EnumLabel ?? if
     label .EnumLabel i64 cast.u return
   end
-  ..unreachable
+  ## TODO? more usefull error message?
+  "unexpected constant-type in switch statement" ..panic
 end
 proc(
   LabelData : a

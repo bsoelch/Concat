@@ -24,6 +24,8 @@ proc( char8 _ ptr : str i64 : len -> RegisterId ) : alias: static: :reg ..builtI
 
 union(
   _ : empty
+  _ : forceClear ## marker for registers than should be cleared when merging (for caller saved registers)
+  _ : preserveValue ## marker for registers that should be reserved when resetting state (for callee saved registers on return)
   LabelId : variable ## TODO variableHi, variableLow
   i32 : stackSlot ## index counted from bottom of stack
   i32 : stackSlotHi   ## hi half of stack-slot
@@ -35,7 +37,7 @@ namespace: RegisterContent
       false return
     end
     a switch
-      empty case true return
+      empty forceClear preserveValue case true return
       variable case a .variable b .variable == return
       stackSlot case a .stackSlot b .stackSlot == return
       stackSlotHi case a .stackSlotHi b .stackSlotHi == return
@@ -73,11 +75,20 @@ namespace: AMD64
   0x07:reg =:: RSI ## r7
   RAX =:: INT_REG_MIN
   0x0f:reg =:: INT_REG_MAX
-  0x40:reg =:: REG_MASK_FLOAT ## up 64 int/float regs
+  0x40:i8 =:: REG_MASK_FLOAT ## up 64 int/float regs
+  proc( char8 _ ptr : str i64 : len -> RegisterId ) =>: static: :xmm
+    str len ..builtIn.parse.i8 =:: vregId
+    vregId 15 u<= "xmm register in range" assert
+    vregId REG_MASK_FLOAT | RegisterId cast
+  end
 
   { RDI RSI RDX RCX 8:reg 9:reg } =:: INT_ARG_REGISTERS
   { RAX RDX } =:: INT_RET_REGISTERS
+  { 0:xmm 1:xmm 2:xmm 3:xmm 4:xmm 5:xmm 6:xmm 7:xmm } =:: FLOAT_ARG_REGISTERS
+  { 0:xmm 1:xmm } =:: FLOAT_RET_REGISTERS
   { RAX RBX RCX RDX RDI RSI 8:reg 9:reg 10:reg 11:reg 12:reg 13:reg 14:reg 15:reg } =:: INT_DATA_REGISTERS
+  { 0:xmm  1:xmm  2:xmm  3:xmm  4:xmm  5:xmm  6:xmm  7:xmm
+    8:xmm  9:xmm 10:xmm 11:xmm 12:xmm 13:xmm 14:xmm 15:xmm } =:: FLOAT_DATA_REGISTERS
   proc(
     RegisterState MAX_DATA_REGISTERS_INT ptr.mut : buffer
   -> RegisterState slice.mut ) =>: initIntDataRegisters
@@ -110,19 +121,29 @@ namespace: AMD64
     end
     regOffset return
   end
-  ## TODO? can code be reused for arguments
+  proc( RegisterId : regId -> bool ) =>: isCalleeSaved
+    regId switch ## TODO add :reg post-fix to r12-r15 once custom literals are supported in switch
+      RBX RSP RBP 12 13 14 15 case true return
+    end
+    false return
+  end
+
   proc(
-    Type slice : retTypes
+    Type slice : valTypes
     ArgumentLocation slice.mut : mut: argBuffer
     TypeContext ptr.mut : typeContext
-  -> ArgumentLocation slice.mut ) =>: computeReturnLocations ## TODO? return arg-counts
+  ->
+    ArgumentLocation slice.mut
+    i32 ## float arg count
+    i32 ## int arg count
+  ) =>: computeValueLocations
     0 =:: mut: intArgCount ## ? reuse named return value
     0 =:: mut: floatArgCount
     0 =:: mut: b128ArgCount
-    retTypes .length 1 - while $ 0 >= do =:: index
-      retTypes index [] =:: retVal
-      retVal typeContext toValType =:: retValType
-      retValType switch
+    valTypes .length 1 - while $ 0 >= do =:: index
+      valTypes index [] =:: val
+      val typeContext toValType =:: valType
+      valType switch
         EMPTY case continue
         I8 I16 I32 I64 PTR REFERENCE case ## int-like
           intArgCount ArgumentLocation .argInt argBuffer index =[]
@@ -134,11 +155,148 @@ namespace: AMD64
           break
         BITS128 BITS128IF BITS128FI BITS128F case ## composite
           b128ArgCount 1 + b128ArgCount=
+          ## TODO count number of used int/float slots
           "unimplemented: composite return" ..panic
           break
       end
     finally index 1 - end ..drop
-    argBuffer return
+    argBuffer floatArgCount intArgCount return
+  end
+  proc(
+    Type : retType
+    ArgumentLocation list ptr.mut : argBuffer
+    RegisterState MAX_DATA_REGISTERS_INT ptr.mut : regBuffer
+    TypeContext ptr.mut : typeContext
+  -> ArgumentLocation slice.mut RegisterState slice.mut ) =>: computeReturnLocations
+    retType typeContext types.compositeElts =:: retTypes
+    ## TODO? ensure buffer is unused
+    argBuffer [] retTypes .length list.setLength argBuffer =[]
+    retTypes argBuffer [] list.asMutableSlice typeContext computeValueLocations ..drop.2 =:: retLocs
+    regBuffer initIntDataRegisters =:: regData
+    ## TODO is this the correct iteration order?
+    retLocs .length 1 - while $ 0 >= do =:: index
+      retLocs index [] =:: retLoc
+      retLoc .argInt getIntReturnRegister =:: retReg
+      retReg NO_REG == if continue end ## TODO mark return location as memory
+      retReg AMD64.intDataRegIndex =:: regIndex
+      index i32 cast RegisterContent .stackSlot regData regIndex @[] .currentValue=
+    finally index 1 - end ..drop
+    retLocs regData
+  end
+  proc(
+    Type : procType
+    ArgumentLocation list ptr.mut : argBuffer
+    RegisterState MAX_DATA_REGISTERS_INT ptr.mut : argRegBuffer
+    RegisterState MAX_DATA_REGISTERS_INT ptr.mut : retRegBuffer
+    i32 : stackSize
+    TypeContext ptr.mut : typeContext
+  -> ArgumentLocation slice.mut RegisterState slice.mut RegisterState slice.mut ) =>: computeArgumentLocations
+    procType typeContext types.getProcIn ! "proc has in" assert =:: inType
+    procType typeContext types.getProcOut ! "proc has out" assert =:: outType
+    outType typeContext types.compositeElts =:: outTypes
+    ## TODO? ensure buffer is unused
+    argBuffer [] outTypes .length list.setLength argBuffer =[]
+    outTypes argBuffer [] list.asMutableSlice typeContext computeValueLocations
+      =:: intCount
+      =:: floatCount
+    =:: retLocs
+    0 =:: mut: intMemCount
+    0 =:: mut: floatMemCount
+    0 =:: mut: b128MemCount
+    INT_RET_REGISTERS ..length i32 cast =:: maxIntRegs
+    FLOAT_RET_REGISTERS ..length i32 cast =:: maxFloatRegs
+    intCount maxIntRegs > or floatCount maxFloatRegs > if
+      ## check which value types need memory region
+      0 =:: mut: intRegCount
+      0 =:: mut: floatRegCount
+      ## TODO is this the correct iteration order?
+      retLocs .length 1 - while $ 0 >= do =:: index
+        retLocs index [] =:: retLoc
+        retLoc switch
+          argInt case
+            intRegCount 1 + =:: newRegCount
+            newRegCount maxIntRegs <= if
+              newRegCount intRegCount=
+            else
+              intMemCount 1 + intMemCount=
+            end
+            break
+          argFloat arg128V case
+            floatRegCount 1 + =:: newRegCount
+            newRegCount maxFloatRegs <= if
+              newRegCount floatRegCount=
+            else
+              floatMemCount 1 + floatMemCount=
+            end
+            break
+          arg128II case
+            intRegCount 2 + =:: newRegCount
+            newRegCount maxIntRegs <= if
+              newRegCount intRegCount=
+            else
+              b128MemCount 1 + b128MemCount=
+            end
+            break
+          arg128FF case
+            floatRegCount 2 + =:: newRegCount
+            newRegCount maxFloatRegs <= if
+              newRegCount floatRegCount=
+            else
+              b128MemCount 1 + b128MemCount=
+            end
+            break
+          arg128IF arg128FI case
+            intRegCount 1 + =:: newIntRegCount
+            floatRegCount 1 + =:: newFloatRegCount
+            newIntRegCount maxIntRegs <= and newFloatRegCount maxFloatRegs <= if
+              newIntRegCount intRegCount=
+              newFloatRegCount floatRegCount=
+            else
+              b128MemCount 1 + b128MemCount=
+            end
+            break
+        end
+      finally index 1 - end ..drop
+    end
+    inType typeContext types.compositeElts =:: inTypes
+    stackSize inTypes .length i32 cast - =:: stackOffset
+    stackOffset 0 >= "enough values for call" assert
+    argBuffer [] inTypes .length list.setLength argBuffer =[]
+    inTypes argBuffer [] list.asMutableSlice typeContext computeValueLocations ..drop.2 =:: argLocs
+    ## TODO handle locations for additional arguments (retMemPointers, retValueLocations)
+    ## ? prioritize ret-locs over values when passing to registers, ? pass (first) retValueLocs in special registers
+    argRegBuffer initIntDataRegisters =:: argRegData
+    ## TODO is this the correct iteration order?
+    argLocs .length 1 - while $ 0 >= do =:: index
+      argLocs index [] =:: argLoc
+      argLoc .argInt getIntArgumentRegister =:: argReg
+      argReg NO_REG == if continue end ## TODO mark argument location as memory
+      argReg AMD64.intDataRegIndex =:: regIndex
+      stackOffset index i32 cast + RegisterContent .stackSlot argRegData regIndex @[] .currentValue=
+    finally index 1 - end ..drop
+    retRegBuffer initIntDataRegisters =:: retRegData
+    retLocs .length 1 - while $ 0 >= do =:: index
+      retLocs index [] =:: retLoc
+      retLoc .argInt getIntReturnRegister =:: retReg
+      retReg NO_REG == if continue end ## TODO mark return location as memory
+      retReg AMD64.intDataRegIndex =:: regIndex
+      stackOffset index i32 cast + RegisterContent .stackSlot retRegData regIndex @[] .currentValue=
+      argRegData regIndex @[] .currentValue .empty ?? if
+        ## reserve register slots for return values
+        RegisterContent .forceClear argRegData regIndex @[] .currentValue=
+      end
+    finally index 1 - end ..drop
+    argRegData .length for =:: index
+      argRegData index [] .register =:: regId
+      retRegData index [] .register regId == "arguments and return values use same registers" assert
+      regId isCalleeSaved if
+        retRegData index @[] .currentValue .empty ?? "callee-saved register is not used for return value" assert
+        RegisterContent .preserveValue argRegData index @[] .currentValue=
+      else argRegData index @[] .currentValue .empty ?? _if
+        RegisterContent .forceClear argRegData index @[] .currentValue=
+      end
+    end
+    argLocs retRegData argRegData
   end
 end
 namespace: sb
@@ -260,6 +418,7 @@ namespace: asm
     LabelId : globalMemory
     RegisterId : memory
     i32 : localLabel
+    LabelId : globalLabel
     RegAndOffset : jumpTableElement ## memory at localLabel<offset> + 8*<register> (used for jump-tables)
   ) =:: Operand
 end
@@ -275,6 +434,7 @@ union(
   _ : Unknown
   AsmOp : Op
   LabelId : StartProc
+  _ : LeaveProc
   _ : EndProc
   Operation : DebugStartOp
 ) =:: Atomic
@@ -394,7 +554,7 @@ namespace: sb
       end
     appendStr
   end
-  proc( stringBuilder : sb asm.Operand : val -> stringBuilder ) =>: appendAsmOperand
+  proc( stringBuilder : sb asm.Operand : val LabelContext ptr : labelContext -> stringBuilder ) =>: appendAsmOperand
     sb
       val switch
         empty case break
@@ -430,13 +590,16 @@ namespace: sb
           "@mem" sb.appendS val .localMemory i64 cast.u sb.appendI
           break
         globalMemory case
-          "$global" sb.appendS val .globalMemory i64 cast.u sb.appendI
+          '$' sb.appendC val .globalMemory labelContext sb.appendLabelName
           break
         memory case
           '[' sb.appendC val .memory sb.appendRegister ']' sb.appendC
           break
         localLabel case
           ".localLabel" sb.appendS val .localLabel i64 cast.u sb.appendI
+          break
+        globalLabel case
+          '$' sb.appendC val .globalLabel labelContext sb.appendLabelName
           break
         jumpTableElement case
           "[.localLabel" sb.appendS
@@ -448,7 +611,7 @@ namespace: sb
       end
     return
   end
-  proc( stringBuilder : sb AsmOp : op -> stringBuilder ) =>: appendAsmOp
+  proc( stringBuilder : sb AsmOp : op LabelContext ptr : labelContext -> stringBuilder ) =>: appendAsmOp
     sb
       op .opType sb.appendOpType
       op .valType .EMPTY ?? ! if
@@ -457,19 +620,17 @@ namespace: sb
       op .operands ..length for =:: i
         op .operands i [] =:: operand
         operand .empty ?? if continue end
-        ' ' sb.appendC operand sb.appendAsmOperand
+        ' ' sb.appendC operand labelContext sb.appendAsmOperand
       end
     return
   end
   proc( stringBuilder : sb Atomic : atom ProgramContext ptr : program -> stringBuilder ) =>: appendAtomic
+    program .idContext .typeContext .labelContext =:: labelContext
     atom switch
       Unknown case sb "  ?\n" appendS return
-      Op case sb "  " sb.appendS atom .Op appendAsmOp '\n' sb.appendC return
-      StartProc case
-        sb
-          atom .StartProc program .idContext .typeContext .labelContext sb.appendLabelName
-          ":\n" sb.appendS
-        return
+      Op case sb "  " sb.appendS atom .Op labelContext appendAsmOp '\n' sb.appendC return
+      StartProc case sb "  enter\n" sb.appendS return
+      LeaveProc case sb "  leave\n" sb.appendS return
       EndProc case sb "\n" sb.appendS return
       DebugStartOp case
         sb
@@ -699,7 +860,7 @@ proc(
 -> Atomic list RegisterState ) =>: clearRegister
   ## save previous value
   regState .currentValue switch
-    empty case break
+    empty forceClear preserveValue case break
     stackSlot case
       regState .currentValue .stackSlot =:: stackSlot
       stackSlot context stackSlotData =:: stackData
@@ -813,6 +974,8 @@ proc( CompilerContext ptr.mut : context -> ) =>: printRegisters
       stackSlot case " stack: ":s io.print intReg .currentValue .stackSlot io.println break
       stackSlotHi case " stack.ho: ":s io.print intReg .currentValue .stackSlotHi io.println break
       stackSlotLow case " stack.low: ":s io.print intReg .currentValue .stackSlotLow io.println break
+      forceClear case " force clear":s io.println break
+      preserveValue case " preserve value":s io.println break
       empty case ..unreachable
     end
   end
@@ -823,6 +986,7 @@ proc( RegisterState slice.mut : buffer CompilerContext ptr.mut : context -> ) =>
   buffer .length intRegs .length >= "CodeGen: buffer large enough to store registers" assert
   buffer .data intRegs .data intRegs .length mem.copy ..drop ## copy register data
 end
+## TODO? perocedure for updating single register
 enum( MERGE MERGE_FALLTHROUGH RESET ) =:: RegisterRestoreMode
 proc(
   Atomic list
@@ -835,7 +999,7 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   context [] .intDataRegisters =:: intRegs
-  false =:: mut: tmpMovedToLower
+  false =:: mut: usedEmptyReg
   mode .RESET ?? if
     ## set stack-size
     ## TODO ensure procedure does not access valus in invalid state
@@ -859,62 +1023,69 @@ proc(
       end
       continue
     end
+    expectedValue .preserveValue ?? if
+      continue
+    end
     ## current value is wrong -> clear out register
     mode .RESET ?? if
       intRegs i [] resetRegister intRegs i =[]
-    else
-      currentValue .empty ?? ! if
-        -1:i64 =:: mut: freeSlot
-        intRegs .length for =:: j
-          j i == if continue end
-          intRegs j [] .currentValue .empty ?? if
-            j freeSlot=
+    else expectedValue .empty ?? _if ## .forceClear is considered non-empty
+      ## keep values in empty registers to avoid unnecessary moves
+      currentValue .empty ?? ! usedEmptyReg=
+    else currentValue .empty ?? ! _if
+      -1:i64 =:: mut: freeSlot
+      intRegs .length for =:: j
+        j i == if continue end
+        ## TODO smarter algorithm
+        ##  * move to correct buffer slot if currently empty
+        ##  * prefer slots that empty in buffer
+        intRegs j [] .currentValue .empty ?? and buffer j [] .currentValue .forceClear ?? ! if
+          j freeSlot=
+          break
+        end
+      end
+      freeSlot 0 >= if
+        intRegs freeSlot [] .register =:: targetRegister
+        intRegs i [] .register =:: srcRegister
+        ## temporarily move value to free register
+        currentValue intRegs freeSlot @[] .currentValue=
+        currentValue switch
+          variable case
+            currentValue .variable idContext id.getIdentifier
+              ! "CodeGen: identifier exists" assert
+            =:: idData
+            currentValue .variable context atCachedVarLocation .data =:: varLoc
+            varLoc [] .register srcRegister == "CodeGen: variable-cache and registers in sync" assert
+            targetRegister varLoc .register=
+            idData [] .valueType typeContext toValType
             break
-          end
-        end
-        freeSlot 0 >= if
-          intRegs freeSlot [] .register =:: targetRegister
-          intRegs i [] .register =:: srcRegister
-          ## temporarily move value to free register
-          currentValue intRegs freeSlot @[] .currentValue=
-          currentValue switch
-            variable case
-              currentValue .variable idContext id.getIdentifier
-                ! "CodeGen: identifier exists" assert
-              =:: idData
-              currentValue .variable context atCachedVarLocation .data =:: varLoc
-              varLoc [] .register srcRegister == "CodeGen: variable-cache and registers in sync" assert
-              targetRegister varLoc .register=
-              idData [] .valueType typeContext toValType
-              break
-            stackSlot case
-              currentValue .stackSlot context stackSlotData =:: stackData
-              stackData .location [] .register srcRegister == "CodeGen: stack and registers in sync" assert
-              targetRegister stackData .location .register=
-              stackData [] .valType
-              break
-            stackSlotHi stackSlotLow case "unimplemented" ..panic
-            empty case ..unreachable
-          end =:: valType
-          asm.OpType .MOVE
-            valType
-            targetRegister asm.Operand .register
-            srcRegister asm.Operand .register
-          asmOp2 list.append
-          intRegs i [] resetRegister intRegs i =[]
-          tmpMovedToLower freeSlot i < | tmpMovedToLower=
-        else
-          intRegs i [] context clearRegister intRegs i =[]
-        end
+          stackSlot case
+            currentValue .stackSlot context stackSlotData =:: stackData
+            stackData .location [] .register srcRegister == "CodeGen: stack and registers in sync" assert
+            targetRegister stackData .location .register=
+            stackData [] .valType
+            break
+          stackSlotHi stackSlotLow case "unimplemented" ..panic
+          empty forceClear preserveValue case ..unreachable
+        end =:: valType
+        asm.OpType .MOVE
+          valType
+          targetRegister asm.Operand .register
+          srcRegister asm.Operand .register
+        asmOp2 list.append
+        intRegs i [] resetRegister intRegs i =[]
+        usedEmptyReg freeSlot i < | usedEmptyReg=
+      else
+        intRegs i [] context clearRegister intRegs i =[]
       end
     end
     ## copy expected value into register
     ## TODO? delay copying of memory values (to keep space of moved values)
     buffer i [] .register =:: targetRegister
     expectedValue switch
-      empty case
-        intRegs i [] .currentValue .empty ?? "register cleared before assign" assert
-        break
+      preserveValue case ..unreachable
+      forceClear case continue
+      empty case break
       variable case
         expectedValue .variable idContext id.getIdentifier
           ! "CodeGen: identifier exists" assert
@@ -985,7 +1156,7 @@ proc(
     end
     expectedValue intRegs i @[] .currentValue=
   end
-  mode .MERGE ?? and tmpMovedToLower if ## cleanup tmp-vars that were moved to previously cleared slots
+  mode .MERGE ?? and usedEmptyReg if ## cleanup tmp-vars that were moved to previously cleared slots
     intRegs .length for =:: i
       buffer i [] .currentValue .empty ?? if
         intRegs i [] context clearRegister intRegs i =[]
@@ -1643,6 +1814,10 @@ proc(
         implInfo .procId i64 cast list.at .data
       =:: procInfo
       context resetRegisters
+      op [] Atomic .DebugStartOp list.append
+      asm.OpType .LABEL ValType .EMPTY
+        procInfo [] .labelId asm.Operand .globalLabel
+      asmOp1 list.append
       procInfo [] .labelId Atomic .StartProc list.append
       ## TODO setup procedure memory
       ##   -> stackMemory int,float,v128
@@ -2391,19 +2566,45 @@ proc(
           default break
         end
         break
-      Return case ## TODO adjust concat calling convention to allow multi-return values
+      call callPtr case
+        op [] .val .callPtr ?? if
+          "unimplemented" ..panic ## TODO handle call by pointer
+          ## ? move proc-pointer to special register
+        end
+        RegisterState MAX_DATA_REGISTERS_INT array : argRegBuffer
+        RegisterState MAX_DATA_REGISTERS_INT array : retRegBuffer
+        ## computeReturnLocations
+          op [] .dataType
+          context .argBuffer
+          argRegBuffer@
+          retRegBuffer@
+          context .stack [] .length
+        typeContext AMD64.computeArgumentLocations =:: argData =:: retData =:: argLocations
+        ## TODO handle arguments passed in memory
+        argData context .stack [] .length i32 cast RegisterRestoreMode .MERGE_FALLTHROUGH context restoreRegisters
+        asm.OpType .CALL ValType .EMPTY
+          op [] .val .callPtr ?? if
+            "unimplemented" ..panic ## TODO use call pointer
+          else
+            program [] .procedures op [] .val .call .procId i64 cast @[] .labelId [] asm.Operand .globalLabel
+          end
+        asmOp1 list.append
+        retData context .stack [] .length i32 cast RegisterRestoreMode .RESET context restoreRegisters
+        return
+      Return case
         ## TODO? procOut or procRet
         op [] .dataType typeContext types.getProcOut ! "procedure has return type" assert =:: retType
+        RegisterState MAX_DATA_REGISTERS_INT array : regBuffer
         ## computeReturnLocations
-          retType typeContext types.compositeElts
-          context [] .argBuffer $1 .length list.setLength context .argBuffer=
-          context [] .argBuffer list.asMutableSlice
-        typeContext AMD64.computeReturnLocations =:: retLocations
+          retType
+          context .argBuffer
+          regBuffer@
+        typeContext AMD64.computeReturnLocations =:: regData =:: retLocations
         context .variableLocations map.clear ## var-locations do not matter after return
         ## 1. go through registers, move memory return values from registers to memory
         context [] .intDataRegisters slice.atItrMut for =:: intReg
           intReg [] .currentValue switch
-            empty case continue
+            empty forceClear preserveValue case continue
             variable case RegisterContent .empty intReg .currentValue= break
             stackSlot case
               intReg [] .currentValue .stackSlot =:: stackPosition
@@ -2423,24 +2624,25 @@ proc(
           end
         end
         ## 2. copy remaining memory return values using free register (there should be at least one free register after previous step)
-        ## TODO copy memory return values (ensure only valid target retisters are soted in registers)
+        ## TODO copy memory return values (ensure only valid target resisters are soted in registers)
         ## 3. move remaining registers to correct location
-        RegisterState MAX_DATA_REGISTERS_INT array : regBuffer
-        regBuffer@ AMD64.initIntDataRegisters =:: regData
-        ## TODO is this the correct order?
-        retLocations .length 1 - while $ 0 >= do =:: index
-          retLocations index [] =:: retLoc
-          retLoc .argInt AMD64.getIntReturnRegister =:: retReg
-          retReg NO_REG == if continue end
-          retReg AMD64.intDataRegIndex =:: regIndex
-          index i32 cast RegisterContent .stackSlot regData regIndex @[] .currentValue=
-        finally index 1 - end ..drop
         ## TODO? own return mode
         regData retLocations .length i32 cast RegisterRestoreMode .MERGE context restoreRegisters
+        Atomic .LeaveProc list.append
+        asm.OpType .RET ValType .EMPTY asmOp0 list.append
         false context .reachable=
         return
       panic panicWithMessage case
         false context .reachable=
+        ## TODO handle panic message
+        break
+      RuntimeAssert case
+        ValType .I8 optional.wrap op [] .pos context popValue =:: srcValue?
+        srcValue? optional.isEmpty if
+          "stack underflow in assert-condition" sb.copyPtr op [] .pos errors appendError
+          return
+        end
+        ## TODO handle assertion
         break
       stackMod case
         op [] .val .stackMod .modType switch
