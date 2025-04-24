@@ -218,7 +218,7 @@ namespace: list
     index 0 < or index elts .length >= if
       "list index outside range" ..panic
     end
-    elts .data index + T ptr.mut cast! return
+    elts .data index @[] T ptr.mut cast! return
   end
   proc(
     type : auto: T
@@ -228,7 +228,7 @@ namespace: list
     index 0 < or index elts .length i64 cast.u >= if
       "list index outside range" ..panic
     end
-    elts .data index + T ptr.mut cast! return
+    elts .data index @[] T ptr.mut cast! return
   end
   overload: export: atValue
     atValue_32 atValue_64
