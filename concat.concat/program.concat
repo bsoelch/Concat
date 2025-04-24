@@ -882,8 +882,8 @@ namespace: sb
         Cast case
           ..over .val .Cast .signType switch
             NONE case break
-            SIGNED case "signed" sb.appendS break
-            UNSIGNED case "unsigned" sb.appendS break
+            SIGNED case "signed " sb.appendS break
+            UNSIGNED case "unsigned " sb.appendS break
           end
           "cast ( " sb.appendS
           ..over .dataType typeContext sb.appendType

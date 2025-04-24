@@ -393,6 +393,10 @@ namespace: asm
     JMP JMPIF CALL RET
     ## embedded information
     DATA
+    ## conversions
+    EXT32S EXT32U EXT64S EXT64U ## TODO? ext16?
+    TRUNC32 TRUNC16 TRUNC8
+    ITOF FTOI
     ## arithmetic
     NEG NOT ADD SUB MUL DIV MOD UDIV UMOD
     AND OR XOR BITNOT SHL ASHL LSHL
@@ -434,7 +438,13 @@ struct(
   ## FilePos, concat-type, variables, ...
   ## ? attach (ptr to?) complete base operation
 ) =:: AsmOp
-enum( CODE DATA ) =:: SectionType
+enum( Code Data ) =:: SectionType
+enum( AssertFail Panic ) =:: RuntimeErrorType
+struct(
+  string : message
+  FilePosition : pos
+  RuntimeErrorType : errType
+) =:: RuntimeError
 union(
   _ : Unknown
   AsmOp : Op
@@ -444,6 +454,7 @@ union(
   _ : LeaveProc
   _ : EndProc
   Operation : DebugStartOp
+  RuntimeError : Error
 ) =:: Atomic
 -1 =:: NO_LABEL
 proc( asm.OpType : opType ValType : valType -> Atomic ) =>: asmOp0
@@ -518,6 +529,15 @@ namespace: sb
         JMPIF case "jmpif":s break
         CALL case "call":s break
         RET case "ret":s break
+        EXT32S case "ext32s":s break
+        EXT32U case "ext32u":s break
+        EXT64S case "ext64s":s break
+        EXT64U case "ext64u":s break
+        TRUNC8 case "trunc8":s break
+        TRUNC16 case "trunc16":s break
+        TRUNC32 case "trunc32":s break
+        ITOF case "iToF":s break
+        FTOI case "fToI":s break
         NEG case "neg":s break
         NOT case "not":s break
         ADD case "add":s break
@@ -647,8 +667,8 @@ namespace: sb
       StartProc case sb "  enter\n" sb.appendS return
       LeaveProc case sb "  leave\n" sb.appendS return
       Section case atom .Section switch
-          CODE case sb "section code\n" sb.appendS return
-          DATA case sb "section data\n" sb.appendS return
+          Code case sb "section code\n" sb.appendS return
+          Data case sb "section data\n" sb.appendS return
         end break
       EndProc case sb "\n" sb.appendS return
       DebugStartOp case
@@ -656,6 +676,10 @@ namespace: sb
           "## " sb.appendS
           atom .DebugStartOp program sb.appendOp
         return
+      Error case atom .Error .errType switch
+          AssertFail case sb "  assertFail: \"" sb.appendS atom .Error .message sb.appendStr "\"\n" sb.appendS return
+          Panic case sb "  panic: \"" sb.appendS atom .Error .message sb.appendStr "\"\n" sb.appendS return
+        end break
     end
   end
 end
@@ -688,13 +712,16 @@ namespace: AMD64
   proc( stringBuilder asm.OpType : opType -> stringBuilder ) =>: appendOpName
     opType switch
       MOVE case "mov":s break
-      COPY DATA LABEL NOT MULH case "?":s break ## not a valid x86-64 operation
+      COPY DATA LABEL NOT MULH TRUNC8 TRUNC16 TRUNC32 case "?":s break ## not a valid x86-64 operation
       PUSH case "push":s break
       POP case "pop":s break
       JMP case "jmp":s break
       JMPIF case "j":s break
       CALL case "call":s break
       RET case "ret":s break
+      EXT32S EXT64S case "movsx":s break
+      EXT32U EXT64U case "movzx":s break
+      ITOF FTOI case "?":s break ## TODO find ops for i<->f conversion
       NEG case "neg":s break
       ADD case "add":s break
       SUB case "sub":s break
@@ -820,9 +847,9 @@ namespace: AMD64
         return
       PUSH case ## TODO? extend pushed values to 64-bits
         ## TODO? handle push/pop for floats
-        "  push" sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
+        "  push " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
       POP case
-        "  pop" sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
+        "  pop " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
       DATA case
         op .valType switch
           I8 case "  .byte " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
@@ -830,6 +857,32 @@ namespace: AMD64
           default "/*unsupported data type*/" sb.appendS return
         end
         break
+      ## TODO? support 2 operand vecsion ext
+      EXT32S case
+        "  movsx " sb.appendS
+          op .operands 0 [] ValType .I32 context appendOperand ", " sb.appendS
+          op .operands 0 [] op .valType context appendOperand '\n' sb.appendC
+        return
+      EXT64S case
+        "  movsx " sb.appendS
+          op .operands 0 [] ValType .I64 context appendOperand ", " sb.appendS
+          op .operands 0 [] op .valType context appendOperand '\n' sb.appendC
+        return
+      EXT32U case
+        "  movzx " sb.appendS
+          op .operands 0 [] ValType .I32 context appendOperand ", " sb.appendS
+          op .operands 0 [] op .valType context appendOperand '\n' sb.appendC
+        return
+      EXT64U case
+        op .valType .I32 ?? if
+          "  mov " sb.appendS
+        else
+          "  movzx " sb.appendS
+        end
+          op .operands 0 [] ValType .I32 context appendOperand ", " sb.appendS
+          op .operands 0 [] op .valType context appendOperand '\n' sb.appendC
+        return
+      TRUNC8 TRUNC16 TRUNC32 case break ## noting to do
       NOT case ## special handling for not
         op .operands 0 [] =:: target
         op .operands 1 [] =:: src
@@ -921,6 +974,7 @@ namespace: AMD64
       CALL case
         "  call " sb.appendS op .operands 0 [] op .valType context appendOperand '\n' sb.appendC return
       RET case "  ret\n" sb.appendS return
+      ITOF FTOI
       COPY
       DIV MOD UDIV UMOD ## division&remainder
       SHL ASHL LSHL ## shifts
@@ -942,8 +996,8 @@ namespace: AMD64
           atom .DebugStartOp program sb.appendOp sb.pop ..drop
         " */\n" sb.appendS return
       Section case atom .Section switch
-          CODE case ".text\n" sb.appendS break
-          DATA case ".data\n" sb.appendS break
+          Code case ".text\n" sb.appendS return
+          Data case ".data\n" sb.appendS return
         end break
       StartProc case
         atom .StartProc =:: implInfo
@@ -987,6 +1041,11 @@ namespace: AMD64
         return
       LeaveProc case "  mov rsp, rbp\n  pop rbp\n" sb.appendS return
       EndProc case "\n" sb.appendS return
+      Error case
+        atom .Error .errType switch ## TODO handle error message: ? printf <messageWrapper:cstr> <errMessage:cstr> <fileName:cst> <line:i32>
+          AssertFail case "  mov rdi, 1\n  jmp exit\n" sb.appendS return
+          Panic case "  mov rdi, 1\n  jmp exit\n" sb.appendS return
+        end break
     end
   end
   ## TODO compute used variables & stack-memeory slots in pre-compilation phase
@@ -1000,6 +1059,7 @@ namespace: AMD64
       op context@ compileAtom
     end
     context@ .variableOffsets map.free
+    ## TODO add code for panic handlers in file tail
     ".section .note.GNU-stack,\"\",@progbits\n" sb.appendS
   end
 end
@@ -1127,6 +1187,7 @@ struct(
   BlockInfo list : openBlocks
   ArgumentLocation list : argBuffer
   PointerConstant list : pointerConstants
+  Atomic list : procTail
   i32 : labelCount
   bool : reachable
 ) =:: CompilerContext
@@ -1919,6 +1980,91 @@ proc(
   ops popped optional.wrap return
 end
 
+
+enum( autoCast Cast Cast! bitCast ) =:: CastType
+
+proc(
+  Atomic list
+  CastType : castType
+  SignType : mut: signType
+  Type : mut: src
+  i32 : offset
+  Type : mut: target
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: compileCast
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  src typeContext types.unwrapNamed
+    $ .cType ?? if .cType types.cTypeAsType end
+    $ .intLiteral ?? if .intLiteral types.intLiteralAsInt end
+  src=
+  target typeContext types.unwrapNamed
+    $ .cType ?? if .cType types.cTypeAsType end
+    $ .intLiteral ?? if .intLiteral types.intLiteralAsInt end
+  target=
+  ## TODO? distinquish code and data pointers / pointers with different alignment
+  src target types.typeEquals or src typeContext types.isPointer and target typeContext types.isPointer if
+    return ## nothing to do
+  end
+  signType .NONE ?? if
+    src typeContext types.isUnsignedInt or src typeContext types.isChar if
+        SignType .UNSIGNED signType=
+      else src typeContext types.isSignedInt _if
+        SignType .SIGNED signType=
+      else target typeContext types.isUnsignedInt or target typeContext types.isChar _if
+        SignType .UNSIGNED signType=
+      else target typeContext types.isSignedInt _if
+        SignType .SIGNED signType=
+      end
+  end
+  offset context .stack [] .length >= if
+    "CodeGen: stack underflow in cast" sb.copyPtr
+    pos errors appendError
+    return
+  end
+  context [] .stack $ .length 1 - offset - @[] =:: stackEntry
+  stackEntry .location .register ?? ! if
+    "CodeGen: unimplemented non-register cast-source" ..panic
+    ## TODO move source to register
+  end
+  src typeContext types.isIntOrChar and target typeContext types.isIntOrChar if
+    src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
+    target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
+    target typeContext toValType stackEntry .valType=
+    srcBytes targetBytes == if return end
+    srcBytes targetBytes < if
+      targetBytes 4 > if
+        signType .UNSIGNED ?? if asm.OpType .EXT64U else asm.OpType .EXT64S end
+      else
+        signType .UNSIGNED ?? if asm.OpType .EXT32U else asm.OpType .EXT32S end
+      end
+        src typeContext toValType
+        stackEntry .location [] .register asm.Operand .register
+      asmOp1 list.append
+      return
+    end
+    targetBytes switch
+      1 case asm.OpType .TRUNC8 break
+      2 case asm.OpType .TRUNC16 break
+      4 case asm.OpType .TRUNC32 break
+      default "unexpected size for interger truncate: " sb.copyPtr
+        targetBytes sb.appendI
+      pos errors appendError return
+    end
+      src typeContext toValType
+      stackEntry .location [] .register asm.Operand .register
+    asmOp1 list.append
+    return
+  end
+  ## TODO support different casts
+  Atomic .Unknown list.append
+end
+
 proc(
   Atomic list : ops
   asm.OpType : opType
@@ -2196,6 +2342,7 @@ proc(
   context [] .program =:: program
   program .errors =:: errors
   program .idContext =:: idContext
+  idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   ops
@@ -2368,6 +2515,37 @@ proc(
             op [] .pos errors appendError
             break
         end
+        break
+      autoCast case
+        ## compileCast
+          CastType .autoCast
+          SignType .NONE
+          op [] .val .autoCast .src
+          op [] .val .autoCast .offset
+          op [] .dataType
+          op [] .pos
+          context
+        compileCast return
+      Cast Cast! bitCast case
+        ## compileCast
+          op [] .val .Cast ?? if
+            CastType .Cast
+            op [] .val .Cast .signType
+            op [] .val .Cast .src
+          else op [] .val .bitCast ?? _if
+            CastType .bitCast
+            SignType .UNSIGNED
+            op [] .val .bitCast
+          else
+            CastType .Cast!
+            SignType .NONE ## XXX? use sign information for forced cast
+            op [] .val .Cast!
+          end
+          0 ## no offset
+          op [] .dataType
+          op [] .pos
+          context
+        compileCast return
         break
       builtIn case
         ## compileBuiltIn
@@ -2947,7 +3125,10 @@ proc(
             end
             switchBlock .regData .data mem.free
             return
-          PROCEDURE case Atomic .EndProc list.append return
+          PROCEDURE case
+            context [] .procTail list.appendAll
+            context [] .procTail list.clear context .procTail=
+            Atomic .EndProc list.append return
           default break
         end
         break
@@ -3022,9 +3203,19 @@ proc(
         asm.OpType .RET ValType .EMPTY asmOp0 list.append
         false context .reachable=
         return
-      panic panicWithMessage case
+      panicWithMessage case
+        context nextLabelId =:: targetLabelId
+        asm.OpType .JMP ValType .EMPTY
+          targetLabelId asm.Operand .localLabel
+        asmOp1 list.append
+        context [] .procTail
+          asm.OpType .LABEL ValType .EMPTY
+            targetLabelId asm.Operand .localLabel
+          asmOp1 list.append
+          op [] Atomic .DebugStartOp list.append
+          op [] .val .panicWithMessage op [] .pos RuntimeErrorType .Panic RuntimeError new Atomic .Error list.append
+        context .procTail=
         false context .reachable=
-        ## TODO handle panic message
         break
       RuntimeAssert case
         ValType .I8 optional.wrap op [] .pos context popValue =:: srcValue?
@@ -3032,8 +3223,30 @@ proc(
           "stack underflow in assert-condition" sb.copyPtr op [] .pos errors appendError
           return
         end
-        ## TODO handle assertion
-        break
+        context nextLabelId =:: targetLabelId
+        srcValue? .data =:: srcValue
+        asm.OpType .JMPIF
+          srcValue .valType
+          asm.CompareType .Z asm.Operand .cmpType
+          srcValue .location switch
+            register case
+                srcValue .location .register asm.Operand .register
+              break
+            memory case ## TODO is this the right offset
+                context [] .stack .length 1 + asm.Operand .stackData
+              break
+            registers registerHi registerLow case "unexpected format for condition parameter" ..panic
+          end
+          targetLabelId asm.Operand .localLabel
+        asmOp3 list.append
+        context [] .procTail
+          asm.OpType .LABEL ValType .EMPTY
+            targetLabelId asm.Operand .localLabel
+          asmOp1 list.append
+          op [] Atomic .DebugStartOp list.append
+          op [] .val .RuntimeAssert op [] .pos RuntimeErrorType .AssertFail RuntimeError new Atomic .Error list.append
+        context .procTail=
+        return
       stackMod case
         op [] .val .stackMod .modType switch
           DROP case
@@ -3179,6 +3392,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     64 BlockInfo list.create
     16 ArgumentLocation list.create
     256 PointerConstant list.create
+    128 Atomic list.create
     0
     true
   CompilerContext new =:: mut: contextData
@@ -3186,7 +3400,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   ## TODO? compile procedures seperately
   1024 Atomic list.create
     ## TODO generate global constants
-    SectionType .CODE Atomic .Section list.append
+    SectionType .Code Atomic .Section list.append
     ## code
     program [] .progFiles .length for =:: i
       i FileId cast Atomic .StartFile list.append
@@ -3195,7 +3409,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         f .localOps opIndex list.at .data opIndex context compileOp
       end
     end
-    SectionType .DATA Atomic .Section list.append ## TODO? seperate section for read-only data
+    SectionType .Data Atomic .Section list.append ## TODO? seperate section for read-only data
     context .pointerConstants [] .length for =:: i
       context [] .pointerConstants i [] =:: constInfo
       asm.OpType .LABEL ValType .EMPTY
