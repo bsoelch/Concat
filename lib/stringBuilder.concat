@@ -48,6 +48,10 @@ namespace: sb
     str char8 list cast index list.get return
   end
   overload: export: charAt charAt32 charAt64 end
+  proc( stringBuilder : str -> stringBuilder char8 ) =>: export: pop
+    str char8 list cast list.pop >$ stringBuilder cast >$ return
+  end
+
   proc( stringBuilder : buffer i32 : minCap -> stringBuilder ) =>: export: ensureCap32
     buffer char8 list cast minCap list.ensureCap stringBuilder cast return
   end
