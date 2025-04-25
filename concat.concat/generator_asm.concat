@@ -440,11 +440,6 @@ struct(
 ) =:: AsmOp
 enum( Code Data ) =:: SectionType
 enum( AssertFail Panic ) =:: RuntimeErrorType
-struct(
-  string : message
-  FilePosition : pos
-  RuntimeErrorType : errType
-) =:: RuntimeError
 union(
   _ : Unknown
   AsmOp : Op
@@ -454,7 +449,8 @@ union(
   _ : LeaveProc
   _ : EndProc
   Operation : DebugStartOp
-  RuntimeError : Error
+  RuntimeErrorType : Error
+  i32 : Align
 ) =:: Atomic
 -1 =:: NO_LABEL
 proc( asm.OpType : opType ValType : valType -> Atomic ) =>: asmOp0
@@ -635,7 +631,7 @@ namespace: sb
         jumpTableElement case
           "[.localLabel" sb.appendS
             val .jumpTableElement .offset i64 cast.u sb.appendI
-            "+8*" sb.appendS
+            "+8*" sb.appendS ## TODO? don't hardcode size
             val .jumpTableElement .reg sb.appendRegister
           ']' sb.appendC
           break
@@ -676,10 +672,11 @@ namespace: sb
           "## " sb.appendS
           atom .DebugStartOp program sb.appendOp
         return
-      Error case atom .Error .errType switch
-          AssertFail case sb "  assertFail: \"" sb.appendS atom .Error .message sb.appendStr "\"\n" sb.appendS return
-          Panic case sb "  panic: \"" sb.appendS atom .Error .message sb.appendStr "\"\n" sb.appendS return
+      Error case atom .Error switch
+          AssertFail case sb "  assertFail\n" sb.appendS return
+          Panic case sb "  panic\n" sb.appendS return
         end break
+      Align case sb "align " sb.appendS atom .Align sb.appendI '\n' sb.appendC return
     end
   end
 end
@@ -692,6 +689,8 @@ namespace: AMD64
     LabelId i64 hashMap : variableOffsets
     ## TODO map for used variables
   ) =:: AsmCompilerContext
+  "cct_error_assert":s =:: CCT_ERROR_ASSERT
+  "cct_error_panic":s =:: CCT_ERROR_PANIC
 
   proc( stringBuilder asm.CompareType : cmpType -> stringBuilder ) =>: appendCmpFlags
     cmpType switch
@@ -822,7 +821,9 @@ namespace: AMD64
       memory case break
       localLabel case ".l" sb.appendS val .localLabel i64 cast.u sb.appendI return
       globalLabel case val .globalLabel labelContext sb.appendLabelName return
-      jumpTableElement case break
+      jumpTableElement case "[.l" sb.appendS val .jumpTableElement .offset i64 cast.u sb.appendI
+            "+8*" sb.appendS val .jumpTableElement .reg ValType .PTR appendRegister ## TODO? don't hardcode size
+          ']' sb.appendC return
     end
     "??" sb.appendS
     return
@@ -851,9 +852,11 @@ namespace: AMD64
       POP case
         "  pop " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
       DATA case
-        op .valType switch
-          I8 case "  .byte " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
-          I32 case "  .int " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
+        op .valType switch ## TODO are these the correct (platform idependent) sizes
+          I8  case "  .byte " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
+          I16 case "  .2byte " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
+          I32 case "  .4byte " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
+          I64 PTR case "  .8byte " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
           default "/*unsupported data type*/" sb.appendS return
         end
         break
@@ -988,17 +991,23 @@ namespace: AMD64
     atom switch
       Unknown case "/* unkown operation */\n" sb.appendS return
       Op case atom .Op context compileAsmOp return
-      StartFile case return ## TODO? append neccessary debug information
+      StartFile case
+        ".file " sb.appendS atom .StartFile i64 cast sb.appendI " \"" sb.appendS
+          program [] .progFiles atom .StartFile i64 cast @[] .fileName [] sb.asStr sb.appendEscapedStrC
+        "\"\n" sb.appendS return
       DebugStartOp case
-        ## TODO add debug-directive for file-location
-        ## .loc <fileId> <line> <line_pos>
+        atom .DebugStartOp .pos =:: pos
         "/* " sb.appendS
           atom .DebugStartOp program sb.appendOp sb.pop ..drop
-        " */\n" sb.appendS return
+        " */\n  .loc " sb.appendS
+          pos .fileId i64 cast sb.appendI ' ' sb.appendC
+          pos .line sb.appendI ' ' sb.appendC pos .posInLine sb.appendI ' ' sb.appendC
+        '\n' sb.appendC return
       Section case atom .Section switch
           Code case ".text\n" sb.appendS return
           Data case ".data\n" sb.appendS return
         end break
+      Align case "  .balign " sb.appendS atom .Align sb.appendI '\n' sb.appendC return
       StartProc case
         atom .StartProc =:: implInfo
         program [] .procedures
@@ -1042,9 +1051,9 @@ namespace: AMD64
       LeaveProc case "  mov rsp, rbp\n  pop rbp\n" sb.appendS return
       EndProc case "\n" sb.appendS return
       Error case
-        atom .Error .errType switch ## TODO handle error message: ? printf <messageWrapper:cstr> <errMessage:cstr> <fileName:cst> <line:i32>
-          AssertFail case "  mov rdi, 1\n  jmp exit\n" sb.appendS return
-          Panic case "  mov rdi, 1\n  jmp exit\n" sb.appendS return
+        atom .Error switch ## use call to have error location in call-stack
+          AssertFail case "  call " sb.appendS CCT_ERROR_ASSERT sb.appendStr '\n' sb.appendC return
+          Panic case "  call " sb.appendS CCT_ERROR_PANIC sb.appendStr '\n' sb.appendC return
         end break
     end
   end
@@ -1059,7 +1068,28 @@ namespace: AMD64
       op context@ compileAtom
     end
     context@ .variableOffsets map.free
-    ## TODO add code for panic handlers in file tail
+    ## default error handlers (assume arguments first 3 arguments are <msg> <msg-len> <pos-ptr> )
+    ".text\ncct_shift_args:" sb.appendS
+    3 while $ 0 >= do =:: i
+      "\n  mov " sb.appendS
+      i 1 + AMD64.getIntArgumentRegister ValType .I64 appendRegister
+      ", " sb.appendS
+      i AMD64.getIntArgumentRegister ValType .I64 appendRegister
+    finally i 1 - end ..drop
+    "\n  ret\n" sb.appendS
+    ## TODO? support non SysV calling convention
+    ## TODO include position in print
+    CCT_ERROR_ASSERT sb.appendStr ":\n" sb.appendS
+    "  call cct_shift_args\n" sb.appendS
+    "  lea rdi, cct_err_assert_msg\n  xchg rsi, rdx\n  call printf\n" sb.appendS
+    "  mov rdi, 1\n  jmp exit\n" sb.appendS
+    CCT_ERROR_PANIC sb.appendStr ":\n" sb.appendS
+    "  call cct_shift_args\n" sb.appendS
+    "  lea rdi, cct_err_panic_msg\n  xchg rsi, rdx\n  call printf\n" sb.appendS
+    "  mov rdi, 1\n  jmp exit\n" sb.appendS
+    ".data\n" sb.appendS
+    "cct_err_assert_msg:\n.string	\"assertion failed \\\"%.*s\\\"\\n\"\n" sb.appendS
+    "cct_err_panic_msg:\n.string	\"panic \\\"%.*s\\\"\\n\"\n" sb.appendS
     ".section .note.GNU-stack,\"\",@progbits\n" sb.appendS
   end
 end
@@ -1828,6 +1858,8 @@ proc(
       ValType .EMPTY
       switchOpReg jumpTableId asm.RegAndOffset new asm.Operand .jumpTableElement
     asmOp1 list.append
+    ## TODO? do not use magic number of table alignment
+    8 Atomic .Align list.append ## align jump-table to element size
     asm.OpType .LABEL
       ValType .EMPTY
       jumpTableId asm.Operand .localLabel
@@ -3213,7 +3245,17 @@ proc(
             targetLabelId asm.Operand .localLabel
           asmOp1 list.append
           op [] Atomic .DebugStartOp list.append
-          op [] .val .panicWithMessage op [] .pos RuntimeErrorType .Panic RuntimeError new Atomic .Error list.append
+          Type .undefined op .val [] .panicWithMessage constContext newStringConst context newPtrConstant =:: strId
+          asm.OpType .MOVE ValType .PTR
+            0 AMD64.getIntArgumentRegister asm.Operand .register
+            strId asm.Operand .constPtr
+          asmOp2 list.append
+          asm.OpType .MOVE ValType .PTR
+            1 AMD64.getIntArgumentRegister asm.Operand .register
+            op .val [] .panicWithMessage .length asm.Operand .constInt
+          asmOp2 list.append
+          ## TODO? add argument for pointer to file position ( char8 _ ptr : nameData i64 : nameLen i32 : line i32 : linePos )
+          RuntimeErrorType .Panic Atomic .Error list.append
         context .procTail=
         false context .reachable=
         break
@@ -3244,7 +3286,17 @@ proc(
             targetLabelId asm.Operand .localLabel
           asmOp1 list.append
           op [] Atomic .DebugStartOp list.append
-          op [] .val .RuntimeAssert op [] .pos RuntimeErrorType .AssertFail RuntimeError new Atomic .Error list.append
+          Type .undefined op .val [] .RuntimeAssert constContext newStringConst context newPtrConstant =:: strId
+          asm.OpType .MOVE ValType .PTR
+            0 AMD64.getIntArgumentRegister asm.Operand .register
+            strId asm.Operand .constPtr
+          asmOp2 list.append
+          asm.OpType .MOVE ValType .PTR
+            1 AMD64.getIntArgumentRegister asm.Operand .register
+            op .val [] .RuntimeAssert .length asm.Operand .constInt
+          asmOp2 list.append
+          ## TODO? add argument for pointer to file position ( char8 _ ptr : nameData i64 : nameLen i32 : line i32 : linePos )
+          RuntimeErrorType .AssertFail Atomic .Error list.append
         context .procTail=
         return
       stackMod case
@@ -3403,8 +3455,9 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     SectionType .Code Atomic .Section list.append
     ## code
     program [] .progFiles .length for =:: i
-      i FileId cast Atomic .StartFile list.append
       program [] .progFiles i list.get =:: f
+      f .localOps .length 0 == if continue end ## no operations in file
+      i FileId cast Atomic .StartFile list.append
       f .localOps .length for =:: opIndex
         f .localOps opIndex list.at .data opIndex context compileOp
       end
@@ -3415,7 +3468,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       asm.OpType .LABEL ValType .EMPTY
         i asm.Operand .constPtr
       asmOp1 list.append
-      ## TODO make output dependent on type
+      ## TODO! ensure alignemnt
       constInfo .constValue .Array8 ?? if ## string?
         constInfo .constValue .Array8 for =:: byte
           asm.OpType .DATA ValType .I8
