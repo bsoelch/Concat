@@ -73,6 +73,7 @@ namespace: map
     data .nodeBuffer=
     data [] .hashMask i64 cast 1 + =:: capacity
     data [] .data capacity mem.clear ..drop
+    NO_NODE data .freeNodes=
     ## TODO version that allows calling cleanup procedure on all values still in map
   end
   proc(
@@ -85,6 +86,7 @@ namespace: map
     data .nodeBuffer=
     data [] .data mem.free
     0 data .hashMask=
+    NO_NODE data .freeNodes=
   end
   proc(
     type : auto: K
