@@ -101,6 +101,13 @@ namespace: AMD64
     end
     buffer INT_DATA_REGISTERS ..length slice.createMutable
   end
+  proc( RegisterId : regId -> i32 ) =>: intDataRegIndex
+    regId i32 cast INT_REG_MIN i32 cast - =:: regOffset
+    regOffset INT_REG_MAX i32 cast.u u> if
+      -1 return
+    end
+    regOffset return
+  end
   ## TODO make dependent on procedure signature & calling convention
   proc( i32 : index -> RegisterId ) =>: getIntArgumentRegister
     index 0 < or index INT_ARG_REGISTERS ..length i32 cast >= if
@@ -113,13 +120,6 @@ namespace: AMD64
       NO_REG return
     end
     INT_RET_REGISTERS index [] return
-  end
-  proc( RegisterId : regId -> i32 ) =>: intDataRegIndex
-    regId i32 cast INT_REG_MIN i32 cast - =:: regOffset
-    regOffset INT_REG_MAX i32 cast.u u> if
-      -1 return
-    end
-    regOffset return
   end
   proc( RegisterId : regId -> bool ) =>: isCalleeSaved
     regId switch ## TODO add :reg post-fix to r12-r15 once custom literals are supported in switch
@@ -399,7 +399,7 @@ namespace: asm
     ITOF FTOI
     ## arithmetic
     NEG NOT ADD SUB MUL DIV MOD UDIV UMOD
-    AND OR XOR BITNOT SHL ASHL LSHL
+    AND OR XOR BOOLNOT BITNOT SHL ASHR LSHR
     ## comparision
     CMP ## compare type if given as parameter
     ## special arithmetic
@@ -510,6 +510,36 @@ proc(
     args
   AsmOp new Atomic .Op return
 end
+namespace: AMD64
+  proc( asm.OpType : opType -> RegisterId optional ) =>: fixedTargetInt
+    opType switch
+      DIV UDIV case RAX optional.wrap return
+      MOD UMOD case RDX optional.wrap return
+      DIVMOD UDIVMOD case RAX optional.wrap return
+      MULH case RDX optional.wrap return
+      MUL2 case RAX optional.wrap return
+      default RegisterId optional.empty return
+    end
+  end
+  proc(
+    asm.OpType : opType
+    i32 : stackSize
+    RegisterState MAX_DATA_REGISTERS_INT ptr.mut : buffer
+  -> RegisterState slice.mut ) =>: fixedInputInt
+    opType switch
+      DIV UDIV MOD UMOD DIVMOD UDIVMOD MULH MUL2 case ## rdx empty, rax: left input
+        buffer initIntDataRegisters =:: regs
+          stackSize 2 - RegisterContent .stackSlot regs RAX intDataRegIndex @[] .currentValue=
+          RegisterContent .forceClear regs RDX intDataRegIndex @[] .currentValue=
+        regs return
+      SHL ASHR LSHR case ## rhs in rcx
+        buffer initIntDataRegisters =:: regs
+          stackSize 1 - RegisterContent .stackSlot regs RCX intDataRegIndex @[] .currentValue=
+        regs return
+      default RegisterState slice.emptyMutable return
+    end
+  end
+end
 
 namespace: sb
   proc( stringBuilder : sb asm.OpType : opType -> stringBuilder ) =>: appendOpType
@@ -546,10 +576,11 @@ namespace: sb
         AND case "and":s break
         OR case "or":s break
         XOR case "xor":s break
+        BOOLNOT case "boolnot":s break
         BITNOT case "bitnot":s break
         SHL case "shl":s break
-        ASHL case "ashl":s break
-        LSHL case "lshl":s break
+        ASHR case "ashr":s break
+        LSHR case "lshr":s break
         CMP case "cmp":s break
         ADC case "adc":s break
         SBB case "sbb":s break
@@ -711,7 +742,7 @@ namespace: AMD64
   proc( stringBuilder asm.OpType : opType -> stringBuilder ) =>: appendOpName
     opType switch
       MOVE case "mov":s break
-      COPY DATA LABEL NOT MULH TRUNC8 TRUNC16 TRUNC32 case "?":s break ## not a valid x86-64 operation
+      COPY DATA LABEL NOT TRUNC8 TRUNC16 TRUNC32 BOOLNOT case "?":s break ## not a valid x86-64 operation
       PUSH case "push":s break
       POP case "pop":s break
       JMP case "jmp":s break
@@ -724,7 +755,7 @@ namespace: AMD64
       NEG case "neg":s break
       ADD case "add":s break
       SUB case "sub":s break
-      MUL case "mul":s break
+      MUL MULH MUL2 case "imul":s break ## TODO? opCodes for unsigned mul2/mulh
       DIV case "idiv":s break
       MOD case "idiv":s break
       UDIV case "div":s break
@@ -734,12 +765,11 @@ namespace: AMD64
       XOR case "xor":s break
       BITNOT case "not":s break
       SHL case "shl":s break
-      ASHL case "sal":s break
-      LSHL case "shl":s break
+      ASHR case "sar":s break
+      LSHR case "shr":s break
       CMP case "cmp":s break
       ADC case "adc":s break
       SBB case "sbb":s break
-      MUL2 case "imul":s break
       DIVMOD case "idiv":s break
       UDIVMOD case "div":s break
     end sb.appendStr
@@ -919,6 +949,18 @@ namespace: AMD64
         "  " sb.appendS op .opType appendOpName ' ' sb.appendC
           target op .valType context appendOperand '\n' sb.appendC
         return
+      BOOLNOT case ## boolean not
+        op .operands 0 [] =:: target
+        op .operands 1 [] =:: src
+        target .register ?? "target is register" assert ## TODO? allow non-register target when op-code exists
+        op .valType .I8 ?? "bool has val-type i8" assert
+        src .register ?? ! or target .register src .register != if
+          "  movzx " sb.appendS
+            target ValType .I32 context appendOperand ", " sb.appendS
+          src ValType .I8 context appendOperand '\n' sb.appendC
+        end
+        "  xor " sb.appendS target ValType .I32 context appendOperand ", 1\n" sb.appendS
+        return
       AND OR XOR ADD MUL SUB case ## binary-operators
         ## TODO? use 3-operand version of operation (if existent for operands)
         op .operands 0 [] =:: target
@@ -944,6 +986,36 @@ namespace: AMD64
           arg1 op .valType context appendOperand ", " sb.appendS
           arg2 op .valType context appendOperand '\n' sb.appendC
         return
+      SHL ASHR LSHR case ## shifts ( rhs is assumed to be in rcx )
+        op .operands 0 [] =:: target
+        op .operands 1 [] =:: left
+        op .operands 2 [] =:: right
+        ## register locations should have been assigned correctly be register allocator
+        right .register RCX == "right argument is passed in rcx" assert
+        target .register ?? "target is register" assert ## TODO? allow non-register target when op-code exists
+        "  " sb.appendS op .opType appendOpName ' ' sb.appendC
+          left op .valType context appendOperand ", " sb.appendS
+          right ValType .I8 context appendOperand '\n' sb.appendC
+        return
+      DIV MOD UDIV UMOD MULH case ## division operators ( lhs assumed to be in rax, output in rax/rdx)
+        op .operands 0 [] =:: target
+        op .operands 1 [] =:: left
+        op .operands 2 [] =:: right
+        ## register locations should have been assigned correctly be register allocator
+        left .register RAX == "left argument is passed in rax" assert
+        target .register
+          op .opType .DIV ?? or op .opType .UDIV ?? if RAX else RDX end
+        == "target is register rax/rdx" assert
+        op .opType switch ## TODO? is operand size guaranteed to be i32 or i64
+          DIV MOD case op .valType .I64 ?? if "  cqo\n" sb.appendS else "  cdq\n" sb.appendS end break
+          UDIV UMOD case "  xor edx, edx\n" sb.appendS break
+          MULH case break
+          default ..unreachable
+        end
+        "  " sb.appendS op .opType appendOpName ' ' sb.appendC
+          right op .valType context appendOperand '\n' sb.appendC
+        return
+      ## DIVMOD UDIVMUD MUL2 UMUL2 use same regiter sheme with 2 inputs/outputs
       CMP case
         ## TODO! correct handling for floats ( difference cmp-instruction, differen op-names, nan handling)
         ## cmp type target left right
@@ -979,9 +1051,7 @@ namespace: AMD64
       RET case "  ret\n" sb.appendS return
       ITOF FTOI
       COPY
-      DIV MOD UDIV UMOD ## division&remainder
-      SHL ASHL LSHL ## shifts
-      ADC SBB MULH MUL2 DIVMOD UDIVMOD case "/* unimplemented operation */\n" sb.appendS return
+      ADC SBB MUL2 DIVMOD UDIVMOD case "/* unimplemented operation */\n" sb.appendS return
     end
   end
   proc( stringBuilder Atomic : atom AsmCompilerContext ptr.mut : context -> stringBuilder ) =>: compileAtom
@@ -1463,6 +1533,7 @@ proc(
   RegisterState slice.mut : buffer
   i32 : newStackSize
   RegisterRestoreMode : mode
+  FilePosition : pos
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: restoreRegisters
   context [] .program =:: program
@@ -1477,7 +1548,13 @@ proc(
       newStackSize list.setLength
     context .stack=
   else
-    newStackSize context [] .stack .length == "CodeGen: branches have same stack size" assert
+    newStackSize context [] .stack .length != if
+      "CodeGen: branches have same stack size" sb.copyPtr
+      pos program .errors appendError
+      context [] .stack
+        newStackSize list.setLength
+      context .stack=
+    end
   end
   buffer .length intRegs .length >= "CodeGen: buffer large enough to store registers" assert
   ## TODO? smarter algorithm (reduce number of moves)
@@ -1489,7 +1566,9 @@ proc(
     buffer i [] .currentValue =:: expectedValue
     expectedValue currentValue RegisterContent.eq if ## already correct value in register
       expectedValue .empty ?? ! if
-        buffer i [] .lastUsed intRegs i @[] .lastUsed= ## mark resister as used
+        buffer i [] .lastUsed
+          mode .RESET ?? ! if intRegs i [] .lastUsed i32.max end
+        intRegs i @[] .lastUsed= ## mark resister as used
       end
       continue
     end
@@ -1557,8 +1636,10 @@ proc(
     intRegs i @[] .lastUsed=
     expectedValue switch
       preserveValue case ..unreachable
-      forceClear case continue
-      empty case break
+      empty case continue ## do not change register
+      forceClear case
+        intRegs i [] .currentValue .empty ?? "register is cleared" assert
+        continue
       variable case
         expectedValue .variable idContext id.getIdentifier
           ! "CodeGen: identifier exists" assert
@@ -2151,7 +2232,18 @@ proc(
   i32 : opIndex
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: compileBinaryOperator
+  RegisterState MAX_DATA_REGISTERS_INT array : argRegBuffer
+  context .stack [] .length =:: stackSize
   ops
+    argType switch ## handle registers with fixed input locations
+      I8 I16 I32 I64 PTR case ## TODO? extact check for int-like register to procedure
+        opType stackSize argRegBuffer@ AMD64.fixedInputInt =:: inputLocs
+        inputLocs .length 0 > if
+          inputLocs stackSize RegisterRestoreMode .MERGE_FALLTHROUGH pos context restoreRegisters
+        end
+      break
+      default break
+    end
     argType optional.wrap pos context popValue =:: arg2?
     arg2? optional.isEmpty if return end
     arg2? .data =:: arg2
@@ -2164,7 +2256,12 @@ proc(
     EMPTY case break
     I8 I16 I32 I64 PTR case
       newOps
-        opIndex context nextIntRegister =:: targetRegister
+        opType AMD64.fixedTargetInt =:: target?
+        target? optional.hasData if
+          target? .data
+        else
+          opIndex context nextIntRegister
+        end =:: targetRegister
         opType
           argType
           targetRegister asm.Operand .register
@@ -2288,37 +2385,26 @@ proc(
   baseType typeContext toValType =:: baseVal
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
-      ops Op .NEG baseVal pos opIndex context compileUnaryOperator
-      return
+      ops Op .NEG baseVal pos opIndex context compileUnaryOperator return
     ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
-      ops Op .ADD baseVal pos opIndex context compileBinaryOperator
-      return
+      ops Op .ADD baseVal pos opIndex context compileBinaryOperator return
     SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 C8_DIFF C16_DIFF C32_DIFF case
-      ops Op .SUB baseVal pos opIndex context compileBinaryOperator
-      return ## TODO ensure char-diff arguments are zero extended
+     ## TODO? ensure char-diff arguments are zero extended
+      ops Op .SUB baseVal pos opIndex context compileBinaryOperator return
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
-      ops Op .MUL baseVal pos opIndex context compileBinaryOperator
-      return
-    DIV_I32  DIV_I64 DIV_F32 DIV_F64 case ## TODO implement remaing operators
-      break ## ! div,mod requries speical register setup ( input: rax, rdx=0, output rax,rdx
-    DIV_I64I32 case
-      break
+      ops Op .MUL baseVal pos opIndex context compileBinaryOperator return
+    DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
+      ops Op .DIV baseVal pos opIndex context compileBinaryOperator return
     REM_I32 REM_I64 case
-      break
-    REM_I64I32 case
-      break
+      ops Op .MOD baseVal pos opIndex context compileBinaryOperator return
     UDIV_I32 UDIV_I64 case
-      break
-    UDIV_I64I32 case
-      break
+      ops Op .UDIV baseVal pos opIndex context compileBinaryOperator return
     UMOD_I32 UMOD_I64 case
-      break
-    UMOD_I64I32 case
-      break
+      ops Op .UMOD baseVal pos opIndex context compileBinaryOperator return
     NOT_BOOL case
-      break
+      ops Op .BOOLNOT baseVal pos opIndex context compileUnaryOperator return
     FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
-      break
+      ops Op .BITNOT baseVal pos opIndex context compileUnaryOperator return
     AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
       ops Op .AND baseVal pos opIndex context compileBinaryOperator
       return
@@ -2327,6 +2413,15 @@ proc(
       return
     XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
       ops Op .XOR baseVal pos opIndex context compileBinaryOperator
+      return
+    SHL_I8 SHL_I16 SHL_I32 SHL_I64 case
+      ops Op .SHL baseVal pos opIndex context compileBinaryOperator
+      return
+    LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64 case
+      ops Op .LSHR baseVal pos opIndex context compileBinaryOperator
+      return
+    ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64 case
+      ops Op .ASHR baseVal pos opIndex context compileBinaryOperator
       return
     EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 case
       ops Cmp .EQ baseVal pos opIndex context compileComparisonOperator
@@ -2358,6 +2453,7 @@ proc(
     UGE_I8 UGE_I16 UGE_I32 UGE_I64 GE_C8 GE_C16 GE_C32 case
       ops Cmp .UGE baseVal pos opIndex context compileComparisonOperator
       return
+    DIV_I64I32 REM_I64I32 UDIV_I64I32 UMOD_I64I32 SHL_I64I32 LSHR_I64I32 ASHR_I64I32 case break ## TODO move to standard libray
     default break
   end
   ops
@@ -2398,15 +2494,28 @@ proc(
       procType typeContext types.getProcIn ..drop =:: inType
       inType typeContext types.compositeElts =:: args
       0 =:: mut: intArgs
-      ## TODO ensure arument registers are marked as used (to prevent accidental overwrite)
-      0:i32 while $ i64 cast.u args .length < do =:: i
+      ## TODO? is there a way to avoid having two loops (registers are counted right to left, arguments are pushed left ot right)
+      ## count argument types
+      args .length 1 - while $ 0 >= do =:: i
+        args i slice.get =:: argType
+        argType typeContext types.isEmpty if
+          continue ## skip empty arguments
+        end
+        argType typeContext toValType =:: valType
+        ## TODO different handling dependent on argument type
+        intArgs AMD64.getIntArgumentRegister =:: argRegister
+        intArgs 1 + intArgs=
+      finally i 1 - end ..drop
+      ## go through arguments from left to right (to have push statements in correct order)
+      0 while $ args .length i32 cast < do =:: i
         inType i typeContext types.compositeGetLabel =:: label
         args i slice.get =:: argType
         argType typeContext toValType =:: valType
         argType typeContext types.isEmpty if
-          i 1 + continue ## skip empty arguments
+          continue ## skip empty arguments
         end
         ## TODO different handling dependent on argument type
+        intArgs 1 - intArgs= ## registers are counted from left to right (-> decrement max-count when parsing left to right)
         intArgs AMD64.getIntArgumentRegister =:: argRegister
         label id.LABEL_ID_NONE == if ## push argument
           argRegister NO_REG == if
@@ -2421,14 +2530,11 @@ proc(
               label asm.Operand .localMemory
               argRegister asm.Operand .register
             asmOp2 list.append
-          end
-          argRegister NO_REG != if
             label argRegister opIndex context cacheVariable
           end
+          ## TODO? set variable memory location to argument memory
         end
-        intArgs 1 + intArgs=
-        i 1 +
-      end ..drop
+      finally i 1 + end ..drop
       procInfo [] .implementation .code ?? ! if
         "unexpected procedure implementation" sb.copyPtr
         op [] .pos errors appendError
@@ -2618,7 +2724,7 @@ proc(
                 ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail
                   ifBlock [] .ifStackSize
                   RegisterRestoreMode .MERGE_FALLTHROUGH
-                context restoreRegisters
+                op [] .pos context restoreRegisters
               end
             else ifBlock [] .elseLabelId NO_LABEL == _if
               context nextLabelId ifBlock .elseLabelId=
@@ -2632,7 +2738,7 @@ proc(
               ifBlock [] .regData
                 ifBlock [] .ifStackSize
                 RegisterRestoreMode .MERGE_FALLTHROUGH
-              context restoreRegisters
+              op [] .pos context restoreRegisters
             end
             asm.OpType .JMPIF
               srcValue .valType
@@ -2685,7 +2791,7 @@ proc(
               ifBlock [] .regData
                 ifBlock [] .ifStackSize
                 RegisterRestoreMode .MERGE_FALLTHROUGH
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               ifBlock [] .elseLabelId
             end =:: elseLabelId
             asm.OpType .JMPIF
@@ -2706,7 +2812,7 @@ proc(
               ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail
                 ifBlock [] .ifStackSize
                 RegisterRestoreMode .RESET
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 ifBlock [] .ifLabelId asm.Operand .localLabel
               asmOp1 list.append
@@ -2736,7 +2842,7 @@ proc(
               ifBlock [] .regData
                 ifBlock [] .ifStackSize
                 RegisterRestoreMode .RESET
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               true context .reachable=
             else
               false context .reachable=
@@ -2776,7 +2882,7 @@ proc(
                 whileBlock [] .regData whileBlock [] .doRegsOffset slice.tail
                   whileBlock [] .doStackSize
                   RegisterRestoreMode .MERGE_FALLTHROUGH
-                context restoreRegisters
+                op [] .pos context restoreRegisters
               end
             else
               whileBlock [] .endLabelId NO_LABEL == if
@@ -2787,7 +2893,7 @@ proc(
                 whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail
                   whileBlock [] .endStackSize
                   RegisterRestoreMode .MERGE_FALLTHROUGH
-                context restoreRegisters
+                op [] .pos context restoreRegisters
               end
             end
             asm.OpType .JMPIF
@@ -2831,7 +2937,7 @@ proc(
               whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail
                 whileBlock [] .endStackSize
                 RegisterRestoreMode .MERGE_FALLTHROUGH
-              context restoreRegisters
+              op [] .pos context restoreRegisters
             end
             asm.OpType .JMPIF
               srcValue .valType
@@ -2851,7 +2957,7 @@ proc(
               whileBlock [] .regData whileBlock [] .doRegsOffset slice.tail
                 whileBlock [] .doStackSize
                 RegisterRestoreMode .MERGE_FALLTHROUGH
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 whileBlock [] .doLabelId asm.Operand .localLabel
               asmOp1 list.append
@@ -2875,7 +2981,7 @@ proc(
               whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail
                 whileBlock [] .endStackSize
                 RegisterRestoreMode .MERGE
-              context restoreRegisters
+              op [] .pos context restoreRegisters
             end
             asm.OpType .JMP ValType .EMPTY
               whileBlock [] .endLabelId asm.Operand .localLabel
@@ -2900,7 +3006,7 @@ proc(
               whileBlock [] .regData whileBlock [] .continueRegsOffset slice.tail
                 whileBlock [] .continueStackSize
                 RegisterRestoreMode .MERGE
-              context restoreRegisters
+              op [] .pos context restoreRegisters
             end
             asm.OpType .JMP ValType .EMPTY
               whileBlock [] .finallyLabelId asm.Operand .localLabel
@@ -2920,7 +3026,7 @@ proc(
               whileBlock [] .regData whileBlock [] .continueRegsOffset slice.tail
                 whileBlock [] .continueStackSize
                 RegisterRestoreMode .MERGE
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 whileBlock [] .finallyLabelId asm.Operand .localLabel
               asmOp1 list.append
@@ -2949,7 +3055,7 @@ proc(
               andOrBlock [] .regData
                 andOrBlock [] .endStackSize
                 RegisterRestoreMode .MERGE_FALLTHROUGH
-              context restoreRegisters
+              op [] .pos context restoreRegisters
             end
             ValType .I8 optional.wrap op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
@@ -3027,7 +3133,7 @@ proc(
             switchBlock [] .regData
               switchBlock [] .switchStackSize
               RegisterRestoreMode .RESET
-            context restoreRegisters
+            op [] .pos context restoreRegisters
             true context .reachable=
             return
           BREAK_SWITCH case
@@ -3048,7 +3154,7 @@ proc(
               switchBlock [] .regData switchBlock [] .endRegsOffset slice.tail
                 switchBlock [] .endStackSize
                 RegisterRestoreMode .MERGE
-              context restoreRegisters
+              op [] .pos context restoreRegisters
             end
             asm.OpType .JMP ValType .EMPTY
               switchBlock [] .endLabelId asm.Operand .localLabel
@@ -3074,7 +3180,7 @@ proc(
                 ifBlock .regData ifBlock .elseRegsOffset slice.tail
                 ifBlock .endStackSize
                 RegisterRestoreMode .MERGE
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 ifBlock .endLabelId asm.Operand .localLabel
               asmOp1 list.append
@@ -3095,7 +3201,7 @@ proc(
               whileBlock .regData
                 whileBlock .whileStackSize
                 RegisterRestoreMode .MERGE
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               asm.OpType .JMP ValType .EMPTY
                 whileBlock .startLabelId asm.Operand .localLabel
               asmOp1 list.append
@@ -3108,7 +3214,7 @@ proc(
                 whileBlock .regData whileBlock .breakRegsOffset slice.tail
                 whileBlock .endStackSize
                 RegisterRestoreMode .RESET
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               true context .reachable=
             end
             whileBlock .regData .data mem.free
@@ -3127,7 +3233,7 @@ proc(
                 andOrBlock .regData
                 andOrBlock .endStackSize
                 RegisterRestoreMode .MERGE
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 andOrBlock .endLabelId asm.Operand .localLabel
               asmOp1 list.append
@@ -3149,7 +3255,7 @@ proc(
                 switchBlock .regData switchBlock .endRegsOffset slice.tail
                 switchBlock .endStackSize
                 RegisterRestoreMode .RESET
-              context restoreRegisters
+              op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 switchBlock .endLabelId asm.Operand .localLabel
               asmOp1 list.append
@@ -3181,7 +3287,7 @@ proc(
           context .stack [] .length
         typeContext AMD64.computeArgumentLocations =:: argData =:: retData =:: argLocations
         ## TODO handle arguments passed in memory
-        argData context .stack [] .length i32 cast RegisterRestoreMode .MERGE_FALLTHROUGH context restoreRegisters
+        argData context .stack [] .length i32 cast RegisterRestoreMode .MERGE_FALLTHROUGH op [] .pos context restoreRegisters
         asm.OpType .CALL ValType .EMPTY
           op [] .val .callPtr ?? if
             "unimplemented" ..panic ## TODO use call pointer
@@ -3192,7 +3298,7 @@ proc(
         ## TODO? compute new stack size in computeArgumentLocations
         procType typeContext types.getProcIn  ..drop typeContext types.compositeEltCount =:: inCount
         procType typeContext types.getProcOut ..drop typeContext types.compositeEltCount =:: outCount
-        retData context .stack [] .length i32 cast inCount - outCount + RegisterRestoreMode .RESET context restoreRegisters
+        retData context .stack [] .length i32 cast inCount - outCount + RegisterRestoreMode .RESET op [] .pos context restoreRegisters
         return
       Return case
         ## TODO? procOut or procRet
@@ -3230,7 +3336,7 @@ proc(
         ## TODO copy memory return values (ensure only valid target resisters are soted in registers)
         ## 3. move remaining registers to correct location
         ## TODO? own return mode
-        regData retLocations .length i32 cast RegisterRestoreMode .MERGE context restoreRegisters
+        regData retLocations .length i32 cast RegisterRestoreMode .MERGE op [] .pos context restoreRegisters
         Atomic .LeaveProc list.append
         asm.OpType .RET ValType .EMPTY asmOp0 list.append
         false context .reachable=
