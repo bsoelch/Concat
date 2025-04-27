@@ -476,7 +476,7 @@ namespace: asm
     ## comparision
     CMP ## compare type if given as parameter
     ## special arithmetic
-    ADC SBB MULH MUL2 DIVMOD UDIVMOD ## TODO? add float ops
+    ADC SBB MULH MUL2 DIVMOD UDIVMOD
   ) =:: OpType
   ## TODO? version to check for NaN?
   enum( Z NZ EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CompareType
@@ -805,6 +805,8 @@ namespace: AMD64
   ) =:: AsmCompilerContext
   "cct_error_assert":s =:: CCT_ERROR_ASSERT
   "cct_error_panic":s =:: CCT_ERROR_PANIC
+  "cct_f32_sign_mask":s =:: CCT_F32_SIGN_MASK
+  "cct_f64_sign_mask":s =:: CCT_F64_SIGN_MASK
 
   proc( stringBuilder asm.CompareType : cmpType -> stringBuilder ) =>: appendCmpFlags
     cmpType switch
@@ -822,7 +824,7 @@ namespace: AMD64
       UGT case "a":s break
     end sb.appendStr
   end
-  proc( stringBuilder asm.OpType : opType -> stringBuilder ) =>: appendOpName
+  proc( stringBuilder asm.OpType : opType -> stringBuilder ) =>: appendOpNameInt
     opType switch
       MOVE case "mov":s break
       COPY DATA LABEL NOT TRUNC8 TRUNC16 TRUNC32 BOOLNOT case "?":s break ## not a valid x86-64 operation
@@ -858,6 +860,22 @@ namespace: AMD64
       DIVMOD case "idiv":s break
       UDIVMOD case "div":s break
     end sb.appendStr
+  end
+  ## requires avx
+  proc( stringBuilder ValType : valType asm.OpType : opType -> stringBuilder ) =>: appendOpNameFloat
+    opType switch
+      MOVE case "movs":s break
+      EXT64F case "cvtss2s":s break
+      TRUCT32F case "cvtsd2s":s break
+      ## neg is handled using xorps / xorpd
+      ADD case "vadds":s break
+      SUB case "vsubs":s break
+      MUL case "vmuls":s break
+      DIV case "vdivs":s break ## TODO? is there a float mod instruction
+      CMP case "ucomiss":s break
+      default "unsupported operation for float arithmetic" ..panic
+    end sb.appendStr
+    valType .F32 ?? if 's' sb.appendC else 'd' sb.appendC end
   end
   proc( stringBuilder RegisterId : regId ValType : valType -> stringBuilder ) =>: appendRegister
     regId i32 cast.u REG_FLAG_FLOAT & ? if
@@ -1059,11 +1077,23 @@ namespace: AMD64
         op .operands 1 [] =:: src
         target .register ?? "target is register" assert ## TODO? allow non-register target when op-code exists
         src .register ?? ! or target .register src .register != if
-          "  mov " sb.appendS
+          op .valType isFloatValType if
+            op .valType .F32 ?? if "  movss " sb.appendS else "  movsd " sb.appendS end
+          else
+            "  mov " sb.appendS
+          end
             target op .valType context appendOperand ", " sb.appendS
             src op .valType context appendOperand '\n' sb.appendC
         end
-        "  " sb.appendS op .opType appendOpName ' ' sb.appendC
+        op .valType isFloatValType if
+          op .opType .NEG ?? "bitnot is not supported for floats" assert
+          op .valType .F32 ?? if "  xorps " sb.appendS else "  xorpd " sb.appendS end
+            target op .valType context appendOperand ", " sb.appendS
+            op .valType .F32 ?? if CCT_F32_SIGN_MASK else CCT_F64_SIGN_MASK end sb.appendStr
+          '\n' sb.appendC
+          return
+        end
+        "  " sb.appendS op .opType appendOpNameInt ' ' sb.appendC
           target op .valType context appendOperand '\n' sb.appendC
         return
       BOOLNOT case ## boolean not
@@ -1084,6 +1114,14 @@ namespace: AMD64
         op .operands 1 [] =:: left
         op .operands 2 [] =:: right
         target .register ?? "target is register" assert ## TODO? allow non-register target when op-code exists
+        op .valType isFloatValType if
+          left .register ?? "left operand is register" assert
+          "  " sb.appendS op .valType op .opType appendOpNameFloat ' ' sb.appendC
+            target op .valType context appendOperand ", " sb.appendS
+            left op .valType context appendOperand ", " sb.appendS
+            right op .valType context appendOperand '\n' sb.appendC
+          return
+        end
         left .register ?? and target .register left .register == if
           left right
         else right .register ?? and target .register right .register == _if
@@ -1099,7 +1137,7 @@ namespace: AMD64
             left op .valType context appendOperand '\n' sb.appendC
           target right
         end =:: arg2 =:: arg1
-        "  " sb.appendS op .opType appendOpName ' ' sb.appendC
+        "  " sb.appendS op .opType appendOpNameInt ' ' sb.appendC
           arg1 op .valType context appendOperand ", " sb.appendS
           arg2 op .valType context appendOperand '\n' sb.appendC
         return
@@ -1110,7 +1148,7 @@ namespace: AMD64
         ## register locations should have been assigned correctly be register allocator
         right .register RCX == "right argument is passed in rcx" assert
         target .register ?? "target is register" assert ## TODO? allow non-register target when op-code exists
-        "  " sb.appendS op .opType appendOpName ' ' sb.appendC
+        "  " sb.appendS op .opType appendOpNameInt ' ' sb.appendC
           left op .valType context appendOperand ", " sb.appendS
           right ValType .I8 context appendOperand '\n' sb.appendC
         return
@@ -1118,6 +1156,14 @@ namespace: AMD64
         op .operands 0 [] =:: target
         op .operands 1 [] =:: left
         op .operands 2 [] =:: right
+        op .valType isFloatValType if
+          left .register ?? "left operand is register" assert
+          "  " sb.appendS op .valType op .opType appendOpNameFloat ' ' sb.appendC
+            target op .valType context appendOperand ", " sb.appendS
+            left op .valType context appendOperand ", " sb.appendS
+            right op .valType context appendOperand '\n' sb.appendC
+          return
+        end
         ## register locations should have been assigned correctly be register allocator
         left .register RAX == "left argument is passed in rax" assert
         target .register
@@ -1129,7 +1175,7 @@ namespace: AMD64
           MULH case break
           default ..unreachable
         end
-        "  " sb.appendS op .opType appendOpName ' ' sb.appendC
+        "  " sb.appendS op .opType appendOpNameInt ' ' sb.appendC
           right op .valType context appendOperand '\n' sb.appendC
         return
       ## DIVMOD UDIVMUD MUL2 UMUL2 use same regiter sheme with 2 inputs/outputs
@@ -1304,6 +1350,9 @@ namespace: AMD64
       op context@ compileAtom
     end
     context@ .variableOffsets map.free
+    ".data\n  .balign 16\n" sb.appendS
+    CCT_F32_SIGN_MASK sb.appendStr ":\n  .4byte 0x80000000\n  .4byte 0\n  .4byte 0\n  .4byte 0\n" sb.appendS
+    CCT_F64_SIGN_MASK sb.appendStr ":\n  .8byte 0x8000000000000000\n  .8byte 0\n" sb.appendS
     ## default error handlers (assume arguments first 3 arguments are <msg> <msg-len> <pos-ptr> )
     ".text\ncct_shift_args:" sb.appendS
     3 while $ 0 >= do =:: i
@@ -2422,9 +2471,9 @@ proc(
   ## TODO check if argument caches any variables, if not reuse same register(s)
   argType switch
     EMPTY case break
-    I8 I16 I32 I64 PTR case
+    I8 I16 I32 I64 PTR F32 F64 case
       newOps
-        opIndex context nextIntRegister =:: targetRegister
+        argType opIndex context nextRegister =:: targetRegister
         opType
           argType
           targetRegister asm.Operand .register
@@ -2441,8 +2490,6 @@ proc(
           context
         pushValue
       return
-    F32 F64 case
-      break
     REFERENCE case
       break
     BITS128 BITS128IF BITS128FI BITS128F case
@@ -2479,13 +2526,14 @@ proc(
   ## TODO check if first argument caches any variables, if not reuse same register(s)
   argType switch
     EMPTY case break
-    I8 I16 I32 I64 PTR case
+    I8 I16 I32 I64 PTR F32 F64 case
       newOps
-        opType AMD64.fixedTargetInt =:: target?
-        target? optional.hasData if
+        argType isIntValType and
+            opType AMD64.fixedTargetInt =:: target?
+            target? optional.hasData if
           target? .data
         else
-          opIndex context nextIntRegister
+          argType opIndex context nextRegister
         end =:: targetRegister
         opType
           argType
@@ -2508,8 +2556,6 @@ proc(
           context
         pushValue
       return
-    F32 F64 case
-      break
     REFERENCE case
       break
     BITS128 BITS128IF BITS128FI BITS128F case
