@@ -309,8 +309,8 @@ namespace: AMD64
     inType typeContext types.compositeElts =:: inTypes
     stackSize inTypes .length i32 cast - =:: stackOffset
     stackOffset 0 >= "enough values for call" assert
-    argBuffer [] inTypes .length list.setLength argBuffer =[]
-    inTypes argBuffer [] list.asMutableSlice typeContext computeValueLocations ..drop.2 =:: argLocs
+    argBuffer [] retLocs .length inTypes .length + list.setLength argBuffer =[]
+    inTypes argBuffer [] list.asMutableSlice retLocs .length slice.tail typeContext computeValueLocations ..drop.2 =:: argLocs
     ## TODO handle locations for additional arguments (retMemPointers, retValueLocations)
     ## ? prioritize ret-locs over values when passing to registers, ? pass (first) retValueLocs in special registers
     argRegBuffer initDataRegisters =:: argRegData =:: intRegsOffset
@@ -1276,7 +1276,7 @@ namespace: AMD64
           atom .DebugStartOp program sb.appendOp sb.pop ..drop
         " */\n  .loc " sb.appendS
           pos .fileId i64 cast sb.appendI ' ' sb.appendC
-          pos .line sb.appendI ' ' sb.appendC pos .posInLine sb.appendI ' ' sb.appendC
+          pos .line sb.appendI ' ' sb.appendC pos .posInLine sb.appendI
         '\n' sb.appendC return
       Section case atom .Section switch
           Code case ".text\n" sb.appendS return
@@ -1748,6 +1748,7 @@ end
 
 proc( CompilerContext ptr.mut : context -> ) =>: printRegisters
   context [] .program .idContext .typeContext .labelContext =:: labelContext
+  "--------------------------":s io.println
   context [] .dataRegisters for =:: regData
     regData .currentValue .empty ?? if continue end
     regData .register i32 cast.u =:: regId
@@ -1767,6 +1768,7 @@ proc( CompilerContext ptr.mut : context -> ) =>: printRegisters
     end
     regData .lastUsed io.println
   end
+  "--------------------------":s io.println
 end
 
 proc( RegisterState slice.mut : buffer CompilerContext ptr.mut : context -> ) =>: rememberRegisters
@@ -1844,9 +1846,13 @@ proc(
         ## TODO smarter algorithm
         ##  * move to correct buffer slot if currently empty
         ##  * prefer slots that empty in buffer
-        regs j [] .currentValue .empty ?? and buffer j [] .currentValue .forceClear ?? ! if
-          j freeSlot=
-          j break
+        regs j [] .currentValue .empty ?? if
+          buffer j [] .currentValue .empty ?? if
+            j freeSlot=
+            j break
+          else freeSlot -1 == _if
+            j freeSlot=
+          end
         end
       finally j 1 + end ..drop
       freeSlot 0 >= if
@@ -3607,9 +3613,16 @@ proc(
               end
               retLocations stackPosition [] =:: targetLocation
               ## TODO handle different location types
-              targetLocation .argInt AMD64.getIntReturnRegister NO_REG == if
-                ## TODO move value to return memory
-                "unimplemented" ..panic
+              targetLocation switch
+                argInt case targetLocation .argInt AMD64.getIntReturnRegister NO_REG == if
+                  ## TODO move value to return memory
+                  "unimplemented" ..panic
+                end break
+                argFloat case targetLocation .argFloat AMD64.getFloatReturnRegister NO_REG == if
+                  ## TODO move value to return memory
+                  "unimplemented" ..panic
+                end break
+                default "unimplemented" ..panic
               end
               break
             stackSlotHi stackSlotLow case "unimplemented" ..panic
@@ -3846,7 +3859,7 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
     ## code
     program [] .progFiles .length for =:: i
       program [] .progFiles i list.get =:: f
-      f .localOps .length 0 == if continue end ## no operations in file
+      ## add file-marker even for empty files to ensure file-name is defined for every file-id
       i FileId cast Atomic .StartFile list.append
       f .localOps .length for =:: opIndex
         f .localOps opIndex list.at .data opIndex context compileOp
