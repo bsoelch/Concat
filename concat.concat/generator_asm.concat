@@ -468,6 +468,7 @@ namespace: asm
     ## conversions
     EXT32S EXT32U EXT64S EXT64U ## TODO? ext16?
     TRUNC32 TRUNC16 TRUNC8
+    EXT64F TRUCT32F
     ITOF FTOI
     ## arithmetic
     NEG NOT ADD SUB MUL DIV MOD UDIV UMOD
@@ -636,6 +637,8 @@ namespace: sb
         TRUNC8 case "trunc8":s break
         TRUNC16 case "trunc16":s break
         TRUNC32 case "trunc32":s break
+        EXT64F case "ext64f":s break
+        TRUCT32F case "trunc32f":s break
         ITOF case "iToF":s break
         FTOI case "fToI":s break
         NEG case "neg":s break
@@ -832,6 +835,8 @@ namespace: AMD64
       EXT32S EXT64S case "movsx":s break
       EXT32U EXT64U case "movzx":s break
       ITOF FTOI case "?":s break ## TODO find ops for i<->f conversion
+      EXT64F case "cvtss2sd":s break
+      TRUCT32F case "cvtsd2ss":s break
       NEG case "neg":s break
       ADD case "add":s break
       SUB case "sub":s break
@@ -1018,6 +1023,16 @@ namespace: AMD64
           op .operands 0 [] op .valType context appendOperand '\n' sb.appendC
         return
       TRUNC8 TRUNC16 TRUNC32 case break ## noting to do
+      EXT64F case
+        "  cvtss2sd " sb.appendS
+          op .operands 0 [] ValType .F64 context appendOperand ", " sb.appendS
+          op .operands 0 [] op .valType context appendOperand '\n' sb.appendC
+        return
+      TRUCT32F case
+        "  cvtsd2ss " sb.appendS
+          op .operands 0 [] ValType .F32 context appendOperand ", " sb.appendS
+          op .operands 0 [] op .valType context appendOperand '\n' sb.appendC
+        return
       NOT case ## special handling for not
         op .operands 0 [] =:: target
         op .operands 1 [] =:: src
@@ -1146,16 +1161,16 @@ namespace: AMD64
               tmpLabelId 1 + context .tmpLabelCount=
               "  jp .floatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
               "  sete " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC
-              ".floatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+              ".floatCmp" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
               return
             NE case
               ## TODO? special handling if lhs and rhs are the same (directly check for NaN)
               tmpLabelId 2 + context .tmpLabelCount=
               "  jp .floatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
               "  setne " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC
-              ".floatCmp" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
+              ".floatCmp" sb.appendS tmpLabelId 1 + sb.appendI ":\n" sb.appendS
               context [] .procedureTail ## mov nan-path to tail to ensure direct code-flow in standard path
-                ".floatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+                ".floatCmp" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
                 "  mov " sb.appendS target ValType .I32 context appendOperand ", 1\n" sb.appendS
                 "  jmp .floatCmp" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
               context .procedureTail=
@@ -2176,13 +2191,12 @@ proc(
   context .stack=
 end
 proc(
-  Atomic list : ops
+  Atomic list
   ValType : valType
   ValueLocation : location
   i32 : opIndex
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: pushValue
-  ops =:: mut: newOps
   ## TODO make dependent on valType
   location switch
     register case
@@ -2191,64 +2205,60 @@ proc(
         opIndex regState .data .lastUsed=
         location .register valType context pushRegister
       else ## arg register is not a valid data register
-        newOps
-          valType opIndex context nextRegister =:: targetRegister
-          asm.OpType .MOVE
-            valType
-            targetRegister asm.Operand .register
-            location .register asm.Operand .register
-          asmOp2 list.append
-        newOps=
+        valType opIndex context nextRegister =:: targetRegister
+        asm.OpType .MOVE
+          valType
+          targetRegister asm.Operand .register
+          location .register asm.Operand .register
+        asmOp2 list.append
         targetRegister valType context pushRegister
       end
-      newOps return
+      return
     registers registerHi registerLow case
       break
     intConstant case
-      newOps
-        opIndex context nextIntRegister =:: targetRegister
-        asm.OpType .MOVE
-          valType
-          targetRegister asm.Operand .register
-          location .intConstant asm.Operand .constInt
-        asmOp2 list.append
-      newOps=
+      opIndex context nextIntRegister =:: targetRegister
+      asm.OpType .MOVE
+        valType
+        targetRegister asm.Operand .register
+        location .intConstant asm.Operand .constInt
+      asmOp2 list.append
       targetRegister valType context pushRegister
-      newOps return
+      return
     floatConstant case
-      newOps
-        opIndex context nextFloatRegister =:: targetRegister
-        asm.OpType .MOVE
-          valType
-          targetRegister asm.Operand .register
-          location .floatConstant asm.Operand .constFloat
-        asmOp2 list.append
-      newOps=
+      opIndex context nextFloatRegister =:: targetRegister
+      asm.OpType .MOVE
+        valType
+        targetRegister asm.Operand .register
+        location .floatConstant asm.Operand .constFloat
+      asmOp2 list.append
       targetRegister valType context pushRegister
-      newOps return
+      return
     ptrConstant case
-      newOps
-        opIndex context nextIntRegister =:: targetRegister
-        asm.OpType .MOVE
-          valType
-          targetRegister asm.Operand .register
-          location .ptrConstant asm.Operand .constPtr
-        asmOp2 list.append
-      newOps=
+      opIndex context nextIntRegister =:: targetRegister
+      asm.OpType .MOVE
+        valType
+        targetRegister asm.Operand .register
+        location .ptrConstant asm.Operand .constPtr
+      asmOp2 list.append
       targetRegister valType context pushRegister
-      newOps return
+      return
     intArgument case
       break
     floatArgument case
       break
-    localMemory case
-      break
+    localMemory case ## TODO handle composite values
+      valType opIndex context nextRegister =:: targetRegister
+      asm.OpType .MOVE valType
+        targetRegister asm.Operand .register
+        location .localMemory asm.Operand .localMemory
+      asmOp2 list.append
+      targetRegister valType context pushRegister
+      return
     globalMemory case
       break
   end
-  newOps
-    Atomic .Unknown list.append
-  return
+  Atomic .Unknown list.append return
 end
 proc(
   Atomic list : ops
@@ -2371,6 +2381,21 @@ proc(
       default "unexpected size for interger truncate: " sb.copyPtr
         targetBytes sb.appendI
       pos errors appendError return
+    end
+      src typeContext toValType
+      stackEntry .location [] .register asm.Operand .register
+    asmOp1 list.append
+    return
+  end
+  src typeContext types.isFloat and target typeContext types.isFloat if
+    src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
+    target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
+    target typeContext toValType stackEntry .valType=
+    srcBytes targetBytes == if return end
+    srcBytes targetBytes < if
+      asm.OpType .EXT64F
+    else
+      asm.OpType .TRUCT32F
     end
       src typeContext toValType
       stackEntry .location [] .register asm.Operand .register
