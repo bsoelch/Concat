@@ -3820,7 +3820,7 @@ proc( Atomic list : ops ProgramContext ptr : program io.FILE : target -> ) =>: p
     target $1 io.fputSb ..drop
   sb.free ..drop
 end
-proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compileToASM
+proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr.mut : program -> ) =>: export: compileToASM
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -3872,9 +3872,10 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         Atomic .Unknown list.append
       end
     end
-    $ program target printOps
+    intermediateTarget? optional.hasData if
+      $ program intermediateTarget? .data printOps
+    end
     4096 sb.create
-      "\n\n______________________________________\n\n" sb.appendS
       $1 program AMD64.buildProgram
       target $1 io.fputSb ..drop
     sb.free ..drop

@@ -23,10 +23,20 @@ if [[ "$@" == *"--no-core"* ]]; then
 fi
 if [[ "$@" == *"--asm"* ]]; then
   concatArgs+=( --asm )
-  echo "compile code.concat"
-  echo "-----------------------------------------"
-  $baseCompiler "$codeSrc" -o "$codeAsmTarget" -p "./parser.out" -t "./typeCheck.out" ${concatArgs[@]}
-  exit 0
+  {
+    echo "compile code.concat"
+    echo "-----------------------------------------"
+    $baseCompiler "$codeSrc" -o "$codeAsmTarget" -p "./parser.out" -t "./typeCheck.out" ${concatArgs[@]}
+  } && {
+    echo "compile generated Assembly-code"
+    echo "-----------------------------------------"
+    gcc ${cArgs[@]} $codeAsmTarget ${externFiles[@]} -o $codeTarget
+  } && {
+    echo "run compiled code"
+    echo "-----------------------------------------"
+    $codeTarget
+  }
+  exit $?
 fi
 
 externFiles=(  )

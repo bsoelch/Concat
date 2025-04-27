@@ -4,6 +4,7 @@
 *.ll
 *.bc
 *.ssa
+*.asm
 tmp/*
 build/*
 *.out

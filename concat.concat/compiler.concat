@@ -11,6 +11,7 @@ import "generator_asm.concat"
 
 stringBuilder : mut: srcFile
 stringBuilder : mut: outFile
+string : mut: baseName
 string : mut: basePath
 string : mut: libPath
 string optional : mut: parserTokensFile
@@ -189,24 +190,26 @@ proc( -> ) =>: parseArgs
   iDot iSlash < if
     -1 iDot=
   end
+  srcFile sb.asStr
+    iDot 0 > if
+      iDot string.head
+    end
+  baseName=
   hasOut ! if
     outFile
       sb.clear
-      srcFile sb.appendSb
-    outFile=
-    iDot 0 > if
-      outFile
-        iDot sb.setLength
-      outFile=
-    end
-    outFile
+      baseName sb.appendStr
       _BACKEND_ switch
         QBE case ".ssa\x00" sb.appendS break
         ASM case ".s\x00" sb.appendS break
       end
     outFile=
   end
-  iSlash 0 < if "./":s else srcFile .data iSlash 1 + string.create end basePath=
+  iSlash 0 < if
+    "./":s
+  else
+    srcFile sb.asStr iSlash 1 + string.head
+  end basePath=
   hasLib ! if
     "./lib/":s libPath=
   else libPath ..dup .length 1 - string.charAt ..dup '/' != ..swap '\\' != & _if
@@ -296,12 +299,29 @@ proc( -> ) =>: main ## TODO check return value of fopen
     parsedOps sb.free ..drop
   end
   prog@ .errors checkErrors
-  outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop
+  outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop  =:: targetFile
     _BACKEND_ switch
-      QBE case ..dup prog@ compileToQBE break
-      ASM case ..dup prog@ compileToASM break
+      QBE case targetFile prog@ compileToQBE break
+      ASM case
+        ## TODO make intermediatePath compiler-argument like paths for dumping tokens
+        baseName .length 5 + sb.create
+          baseName sb.appendStr
+          ".asm\x00" sb.appendS
+        =:: intermediatePath
+        intermediatePath sb.asStr
+          io.OPEN_WRITE io.fopenStr ..drop
+        optional.wrap =:: intermediateFile?
+        ## TODO? split compileToASM in two steps
+        ## 1. compile to "pseudo-asm"
+        ## 2. compile "pseudo-asm" to "real" asm
+        targetFile intermediateFile? prog@ compileToASM
+        intermediateFile? optional.hasData if
+          intermediateFile? .data io.fclose ..drop
+        end
+        intermediatePath sb.free ..drop
+        break
     end
-  io.fclose ..drop
+  targetFile io.fclose ..drop
   prog@ .errors checkErrors
   prog freeProgramContext ..drop
 end
