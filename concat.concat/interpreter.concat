@@ -335,7 +335,7 @@ namespace: interpreter
     currentBlock? optional.hasData and currentBlock? .data [] .blockType .OR_TRUE ?? end
   end
 
-  enum( TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
+  enum( NONE TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
   proc( InterpreterContext ptr.mut : context -> i32 LabeledValueContext ) =>: getLabeledValueContext
     ## XXX cache/precompute result
     context minBlockOffset =:: minBlock
@@ -362,7 +362,7 @@ namespace: interpreter
       end
     finally i 1 - end ..drop
     ## TODO? better default value/error condition
-    ..unreachable
+    -1 LabeledValueContext .NONE return
   end
   proc(
     LabelId : label
@@ -389,6 +389,7 @@ namespace: interpreter
           TYPE_ENUM case "enum" sb.appendS break
           TYPE_PROC case "procedure" sb.appendS break
           INITIALIZER case "initializer" sb.appendS break
+          NONE case "unknwon block" sb.appendS break
         end
         prevLabel labelContext id.labelPos =:: prevPos
         prevPos optional.hasData if
@@ -427,7 +428,7 @@ namespace: interpreter
           value list.append
         context .valueBuffer=
         false return
-      TYPE_STRUCT TYPE_UNION TYPE_PROC case break
+      TYPE_STRUCT TYPE_UNION TYPE_PROC NONE case break
       TYPE_ENUM case ..unreachable
     end
     value .TypeId ?? ! or valueType typeContext types.isType ! if
@@ -496,7 +497,7 @@ namespace: interpreter
             errors appendError
             id.LABEL_ID_NONE
             break
-          TYPE_PROC INITIALIZER case
+          TYPE_PROC INITIALIZER NONE case
             id.LABEL_ID_NONE break
           TYPE_STRUCT case
             ## newDummyLabel
