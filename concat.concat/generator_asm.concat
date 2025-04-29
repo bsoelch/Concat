@@ -435,6 +435,51 @@ proc( ValType : valType -> bool ) =>: isFloatValType
     EMPTY I8 I16 I32 I64 PTR BITS128 BITS128FI BITS128IF REFERENCE case false return
   end
 end
+proc( ValType : valType -> i32 ) =>: valTypeBits
+  valType switch
+    EMPTY case 0 return
+    I8 case 8 return
+    I16 case 16 return
+    I32 F32 case 32 return
+    I64 F64 PTR REFERENCE case 64 return ## TODO? system dependent pointer size
+    BITS128 BITS128F BITS128FI BITS128IF case 128 return
+  end
+end
+
+enum( SIGNED_MIN SIGNED_MAX UNSIGNED_MIN UNSIGNED_MAX ) =:: BoundType
+proc( ValType : numType BoundType : bound -> i64 ) =>: getIntBound
+  bound switch
+    SIGNED_MIN case
+      numType switch
+        I8 case i8.MIN i64 cast.s return
+        I16 case i16.MIN i64 cast.s return
+        I32 case i32.MIN i64 cast.s return
+        I64 case i64.MIN return
+        default "invalid integer type" ..panic
+      end
+      break
+    SIGNED_MAX case
+      numType switch
+        I8 case i8.MAX i64 cast.s return
+        I16 case i16.MAX i64 cast.s return
+        I32 case i32.MAX i64 cast.s return
+        I64 case i64.MAX return
+        default "invalid integer type" ..panic
+      end
+      break
+    UNSIGNED_MIN case
+      0 return
+    UNSIGNED_MAX case
+      numType switch
+        I8 case i8.UMAX i64 cast.u return
+        I16 case i16.UMAX i64 cast.u return
+        I32 case i32.UMAX i64 cast.u return
+        I64 case i64.UMAX return
+        default "invalid integer type" ..panic
+      end
+      break
+  end
+end
 
 namespace: sb
   proc( stringBuilder ValType -> stringBuilder ) =>: appendValType
@@ -475,6 +520,7 @@ namespace: asm
     ## comparision
     CMP ## compare type if given as parameter
     ## special arithmetic
+    MIN MAX
     ADC SBB MULH MUL2 DIVMOD UDIVMOD
   ) =:: OpType
   ## TODO? version to check for NaN?
@@ -509,9 +555,7 @@ struct(
   asm.OpType : opType
   ValType : valType ## TODO? repace valType with general purpose operand
   asm.Operand 4 array : operands ## are four operands enough  [jmpif  lt r1 r2 @targetLabel]
-  ## TODO? attach info to concat operation
-  ## FilePos, concat-type, variables, ...
-  ## ? attach (ptr to?) complete base operation
+  ## ? store int/float tmp registers (2 each if-available) in operation
 ) =:: AsmOp
 enum( Code Data ) =:: SectionType
 enum( AssertFail Panic ) =:: RuntimeErrorType
@@ -657,6 +701,8 @@ namespace: sb
         ASHR case "ashr":s break
         LSHR case "lshr":s break
         CMP case "cmp":s break
+        MIN case "min":s break
+        MAX case "max":s break
         ADC case "adc":s break
         SBB case "sbb":s break
         MULH case "mulh":s break
@@ -800,9 +846,11 @@ namespace: AMD64
   struct(
     ProgramContext ptr.mut : program
     LabelId i64 hashMap : variableOffsets
+    f64 list : f64Consts
+    f32 list : f32Consts
     ## TODO map for used variables
     stringBuilder : procedureTail
-    i32 : tmpLabelCount
+    i32 : tmpLabelCount ## number of temporary labels ! when using gas tmp-labels are not local to function
   ) =:: AsmCompilerContext
   "cct_error_assert":s =:: CCT_ERROR_ASSERT
   "cct_error_panic":s =:: CCT_ERROR_PANIC
@@ -828,7 +876,7 @@ namespace: AMD64
   proc( stringBuilder asm.OpType : opType -> stringBuilder ) =>: appendOpNameInt
     opType switch
       MOVE case "mov":s break
-      COPY DATA LABEL NOT TRUNC BOOLNOT I2F U2F F2I F2U case "?":s break ## not a valid x86-64 operation on intergers
+      COPY DATA LABEL NOT TRUNC BOOLNOT I2F U2F F2I F2U MIN MAX case "?":s break ## not a valid x86-64 operation on intergers
       PUSH case "push":s break
       POP case "pop":s break
       JMP case "jmp":s break
@@ -873,6 +921,8 @@ namespace: AMD64
       MUL case "vmuls":s break
       DIV case "vdivs":s break ## TODO? is there a float mod instruction
       CMP case "ucomis":s break
+      MIN case "vmins":s break
+      MAX case "vmaxs":s break
       default "unsupported operation for float arithmetic" ..panic
     end sb.appendStr
     valType .F32 ?? if 's' sb.appendC else 'd' sb.appendC end
@@ -917,7 +967,6 @@ namespace: AMD64
       end
     end
   end
-  ## TODO take value size as parameter
   proc( stringBuilder asm.Operand : val ValType : valType AsmCompilerContext ptr.mut : context -> stringBuilder ) =>: appendOperand
     context [] .program =:: program
     program .idContext .typeContext =:: typeContext
@@ -930,8 +979,20 @@ namespace: AMD64
       constInt case val .constInt sb.appendI return
       constPtr case "cct_ptr" sb.appendS val .constPtr sb.appendI return
       constFloat case
-        "0x" sb.appendS val .constFloat valType .F32 ?? if f32 cast f32.bits i64 cast.u else f64.bits end sb.appendUX
-        " /*" sb.appendS val .constFloat sb.appendF "*/" sb.appendS
+        valType .PTR ?? if
+          "0x" sb.appendS val .constFloat valType .F32 ?? if f32 cast f32.bits i64 cast.u else f64.bits end sb.appendUX
+          " /*" sb.appendS val .constFloat sb.appendF "*/" sb.appendS
+        else valType .F32 ?? _if
+          "f32const" sb.appendS context .f32Consts [] .length sb.appendI
+          context [] .f32Consts
+            val .constFloat f32 cast list.append
+          context .f32Consts=
+        else
+          "f64const" sb.appendS context .f64Consts [] .length sb.appendI
+          context [] .f64Consts
+            val .constFloat list.append
+          context .f64Consts=
+        end
         return
       stackData case break
       stackData128 case break
@@ -963,6 +1024,15 @@ namespace: AMD64
     "??" sb.appendS
     return
   end
+  proc( stringBuilder RegisterId : reg -> stringBuilder ) =>: clearRegister
+    reg isFloatReg if
+      "  xorps " sb.appendS reg ValType .F64 appendRegister  ", " sb.appendS
+          reg ValType .F64 appendRegister '\n' sb.appendC
+    else
+      "  xor " sb.appendS reg ValType .I32 appendRegister  ", " sb.appendS
+          reg ValType .I32 appendRegister '\n' sb.appendC
+    end
+  end
 
   ## TODO cleanup code: create proc for appending instruction given op-type and operands
   proc( stringBuilder AsmOp : op AsmCompilerContext ptr.mut : context -> stringBuilder ) =>: compileAsmOp
@@ -978,17 +1048,8 @@ namespace: AMD64
           "  lea " sb.appendS
         else op .operands 1 [] .constFloat ?? _if ## movups for handling 128-bit values (float or double)
           op .valType .F32 ?? if "  movss " sb.appendS else "  movsd " sb.appendS end
-            context [] .tmpLabelCount $ =:: floatId ## TODO? merge identical constants
-              1 +
-            context .tmpLabelCount=
-            op .operands 0 [] op .valType context appendOperand ", .cct_floatConst" sb.appendS floatId sb.appendI '\n' sb.appendC
-            context [] .procedureTail ## TODO? sort constants by alignment
-              op .valType .F32 ?? if " .balign 4\n" sb.appendS else "  .balign 8\n" sb.appendS end
-              ".cct_floatConst" sb.appendS floatId sb.appendI ":\n" sb.appendS
-                op .valType .F32 ?? if "  .4byte " sb.appendS else "  .8byte " sb.appendS end
-                op .operands 1 [] op .valType context appendOperand
-              '\n' sb.appendC
-            context .procedureTail=
+            op .operands 0 [] op .valType context appendOperand ", " sb.appendS
+            op .operands 1 [] op .valType context appendOperand '\n' sb.appendC
           return
         else
           op .valType switch
@@ -1052,20 +1113,51 @@ namespace: AMD64
         =:: srcType
         op .operands 0 [] .valType =:: targetType
         ## break dependency chain
-        "  xorps " sb.appendS op .operands 1 [] targetType context appendOperand ", " sb.appendS
-          op .operands 1 [] targetType context appendOperand '\n' sb.appendC
+        op .operands 1 [] .register clearRegister
         targetType .F32 ?? if "  cvtsi2ss " sb.appendS else "  cvtsi2sd " sb.appendS end
           op .operands 1 [] targetType context appendOperand ", " sb.appendS
           op .operands 2 [] srcType context appendOperand '\n' sb.appendC
         return
       F2I case
         op .valType =:: srcType
-        op .operands 0 [] .valType
+        op .operands 0 [] .valType =:: targetType
+        targetType
           $ .I8 ?? or $ .I16 ?? if ..drop ValType .I32 end
-        =:: targetType
+        =:: targetRegType
+        context [] .tmpLabelCount
+          $ =:: tmpLabelId
+          1 +
+        context .tmpLabelCount=
+        targetType BoundType .SIGNED_MIN getIntBound =:: minVal
+        targetType BoundType .SIGNED_MAX getIntBound =:: maxVal
+        ## clear target
+        op .operands 1 [] .register clearRegister
+        ## check for NaN
+        srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+          op .operands 2 [] srcType context appendOperand ", " sb.appendS
+        op .operands 2 [] srcType context appendOperand '\n' sb.appendC
+        "  jp .Lf2i" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+        srcType valTypeBits targetType valTypeBits > if
+          srcType .F32 ?? if "  maxss " sb.appendS else "  maxsd " sb.appendS end
+            op .operands 2 [] targetRegType context appendOperand ", " sb.appendS
+          minVal f64 cast asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+          srcType .F32 ?? if "  minss " sb.appendS else "  minsd " sb.appendS end
+            op .operands 2 [] targetRegType context appendOperand ", " sb.appendS
+          maxVal f64 cast asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+        else
+          ## conversion will set result to min-value if it does not fit into int -> need only check for max-val
+          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+            op .operands 2 [] srcType context appendOperand ", " sb.appendS
+          maxVal f64 cast asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+          ## TODO use cmovae instead of mov + jump (needs additional register)
+          "  mov " sb.appendS op .operands 1 [] targetRegType context appendOperand ", " sb.appendS
+            maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
+          "  jae .Lf2i" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+        end
         srcType .F32 ?? if "  cvtss2si " sb.appendS else "  cvtsd2si " sb.appendS end
-          op .operands 1 [] targetType context appendOperand ", " sb.appendS
+          op .operands 1 [] targetRegType context appendOperand ", " sb.appendS
           op .operands 2 [] srcType context appendOperand '\n' sb.appendC
+        ".Lf2i" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
         return
       U2F F2U case "/*TODO! unsigned int <-> float conversion*/" sb.appendS return
       NOT case ## special handling for not
@@ -1074,9 +1166,7 @@ namespace: AMD64
         target .register ?? "target is register" assert ## TODO? allow memory location as target
         src .register ?? and target .register src .register == end =:: srcIsTarget
         srcIsTarget ! if ## clear target to break memory dependency
-          "  xor " sb.appendS
-            target ValType .I32 context appendOperand ", " sb.appendS
-            target ValType .I32 context appendOperand '\n' sb.appendC
+          target .register clearRegister
         end
         "  test " sb.appendS
           src op .valType context appendOperand ", " sb.appendS
@@ -1125,13 +1215,13 @@ namespace: AMD64
         end
         "  xor " sb.appendS target ValType .I32 context appendOperand ", 1\n" sb.appendS
         return
-      AND OR XOR ADD MUL SUB case ## binary-operators
+      AND OR XOR ADD MUL SUB MIN MAX case ## binary-operators
         ## TODO? use 3-operand version of operation (if existent for operands)
         op .operands 0 [] =:: target
         op .operands 1 [] =:: left
         op .operands 2 [] =:: right
         target .register ?? "target is register" assert ## TODO? allow non-register target when op-code exists
-        op .valType isFloatValType if
+        op .valType isFloatValType if ## TODO? use 2 operand version of left operand is equal to target
           left .register ?? "left operand is register" assert
           "  " sb.appendS op .valType op .opType appendOpNameFloat ' ' sb.appendC
             target op .valType context appendOperand ", " sb.appendS
@@ -1188,7 +1278,7 @@ namespace: AMD64
         == "target is register rax/rdx" assert
         op .opType switch ## TODO? is operand size guaranteed to be i32 or i64
           DIV MOD case op .valType .I64 ?? if "  cqo\n" sb.appendS else "  cdq\n" sb.appendS end break
-          UDIV UMOD case "  xor edx, edx\n" sb.appendS break
+          UDIV UMOD case RDX clearRegister break
           MULH case break
           default ..unreachable
         end
@@ -1201,10 +1291,7 @@ namespace: AMD64
         op .operands 1 [] =:: target
         context [] .tmpLabelCount =:: tmpLabelId
         op .valType isFloatValType if
-          "  xor "  sb.appendS ## TODO? is it better to clear register after setcc?
-            target ValType .I32 context appendOperand ", " sb.appendS
-            target ValType .I32 context appendOperand
-          '\n' sb.appendC
+          target .register clearRegister ## TODO? is it better to extend register after setcc?
           op .valType .F32 ?? if
             "  ucomiss " sb.appendS
           else
@@ -1222,20 +1309,20 @@ namespace: AMD64
             GE LE case "  setae " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC return
             EQ case ## TODO? use cmov instead of jump (needs extract temporary register)
               tmpLabelId 1 + context .tmpLabelCount=
-              "  jp .floatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+              "  jp .LfloatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
               "  sete " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC
-              ".floatCmp" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
+              ".LfloatCmp" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
               return
             NE case
               ## TODO? special handling if lhs and rhs are the same (directly check for NaN)
               tmpLabelId 2 + context .tmpLabelCount=
-              "  jp .floatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+              "  jp .LfloatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
               "  setne " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC
-              ".floatCmp" sb.appendS tmpLabelId 1 + sb.appendI ":\n" sb.appendS
+              ".LfloatCmp" sb.appendS tmpLabelId 1 + sb.appendI ":\n" sb.appendS
               context [] .procedureTail ## mov nan-path to tail to ensure direct code-flow in standard path
-                ".floatCmp" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
+                ".LfloatCmp" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
                 "  mov " sb.appendS target ValType .I32 context appendOperand ", 1\n" sb.appendS
-                "  jmp .floatCmp" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
+                "  jmp .LfloatCmp" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
               context .procedureTail=
               return
             default "unsupported comparison type for floats" ..panic
@@ -1309,7 +1396,6 @@ namespace: AMD64
           procInfo [] .labelId labelContext sb.appendLabelName
           '\n' sb.appendC
         end
-        0 context .tmpLabelCount= ## count per proc
         ## TODO if proc is exported add .globl <procLabel>
         "  push rbp\n  mov rbp, rsp\n" sb.appendS
         ## TODO create allocations for stack-memory
@@ -1358,6 +1444,8 @@ namespace: AMD64
     ## AsmCompilerContext
       program
       labelHash@ labelEq@ 1024 i64 map.create
+      64 f64 list.create
+      64 f32 list.create
       512 sb.create
       0
     AsmCompilerContext new =:: mut: context
@@ -1369,6 +1457,16 @@ namespace: AMD64
     ".data\n  .balign 16\n" sb.appendS
     CCT_F32_SIGN_MASK sb.appendStr ":\n  .4byte 0x80000000\n  .4byte 0\n  .4byte 0\n  .4byte 0\n" sb.appendS
     CCT_F64_SIGN_MASK sb.appendStr ":\n  .8byte 0x8000000000000000\n  .8byte 0\n" sb.appendS
+    context .f64Consts .length for =:: i
+      "f64const" sb.appendS i sb.appendI ":\n  .8byte 0x" sb.appendS
+        context .f64Consts i [] f64.bits sb.appendUX
+      " /* " sb.appendS context .f64Consts i [] sb.appendF " */\n" sb.appendS
+    end
+    context .f32Consts .length for =:: i
+      "f32const" sb.appendS i sb.appendI ":\n  .4byte 0x" sb.appendS
+        context .f32Consts i [] f32.bits sb.appendUX
+      " /* " sb.appendS context .f32Consts i [] f64 cast sb.appendF " */\n" sb.appendS
+    end
     ## default error handlers (assume arguments first 3 arguments are <msg> <msg-len> <pos-ptr> )
     ".text\ncct_shift_args:" sb.appendS
     3 while $ 0 >= do =:: i
@@ -2482,15 +2580,18 @@ proc(
   end
   src typeContext types.isFloat and target typeContext types.isInt if
     src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
-    target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
-    ## TODO! ensure float is within bounds of int-type
+    target typeContext types.primitiveValue =:: primitiveTarget
+    primitiveTarget types.sizeOfPrimitive =:: targetBytes
+    opIndex context nextFloatRegister =:: tmpReg
+    src typeContext toValType =:: srcVal
+    stackEntry .location [] .register asm.Operand .register =:: srcLoc
     opIndex context nextIntRegister =:: targetRegister
     target typeContext toValType =:: targetVal
     signType .UNSIGNED ?? if asm.OpType .F2U else asm.OpType .F2I end
-      src typeContext toValType
+      srcVal
       targetVal asm.Operand .valType
       targetRegister asm.Operand .register
-      stackEntry .location [] .register asm.Operand .register
+      srcLoc
     asmOp3 list.append
     ## TODO avoid manually updating register data
     stackEntry .location [] .register context findRegister .data =:: srcReg
@@ -3631,8 +3732,15 @@ proc(
         asmOp1 list.append
         ## TODO? compute new stack size in computeArgumentLocations
         procType typeContext types.getProcIn  ..drop typeContext types.compositeEltCount =:: inCount
-        procType typeContext types.getProcOut ..drop typeContext types.compositeEltCount =:: outCount
+        procType typeContext types.getProcOut ..drop =:: outType
+        outType typeContext types.compositeEltCount =:: outCount
         retData context .stack [] .length i32 cast inCount - outCount + RegisterRestoreMode .RESET op [] .pos context restoreRegisters
+        ## update stack-type of return values
+        context .stack [] .length outCount - =:: retOffset
+        outCount for =:: i
+          outType i typeContext types.compositeGetElement =:: elt
+          elt typeContext toValType context [] .stack retOffset i + @[] .valType=
+        end
         return
       Return case
         ## TODO? procOut or procRet
