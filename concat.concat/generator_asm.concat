@@ -348,7 +348,10 @@ namespace: AMD64
       retRegData index [] .register regId == "arguments and return values use same registers" assert
       regId isCalleeSaved if
         retRegData index @[] .currentValue .empty ?? "callee-saved register is not used for return value" assert
-        RegisterContent .preserveValue argRegData index @[] .currentValue=
+        argRegData index @[] .currentValue .empty ?? if ## allow arguments to be callee-saved registers
+          RegisterContent .preserveValue argRegData index @[] .currentValue=
+        end
+        RegisterContent .preserveValue retRegData index @[] .currentValue=
       else argRegData index @[] .currentValue .empty ?? _if
         RegisterContent .forceClear argRegData index @[] .currentValue=
       end
@@ -504,7 +507,7 @@ end
 namespace: asm
   enum(
     ## memory
-    MOVE COPY PUSH POP
+    MOVE LOAD STORE COPY PUSH POP
     ## controll-flow
     LABEL
     JMP JMPIF CALL RET
@@ -665,6 +668,8 @@ namespace: sb
     sb
       opType switch
         MOVE case "move":s break
+        LOAD case "load":s break
+        STORE case "store":s break
         COPY case "copy":s break
         PUSH case "push":s break
         POP case "pop":s break
@@ -876,7 +881,7 @@ namespace: AMD64
   proc( stringBuilder asm.OpType : opType -> stringBuilder ) =>: appendOpNameInt
     opType switch
       MOVE case "mov":s break
-      COPY DATA LABEL NOT TRUNC BOOLNOT I2F U2F F2I F2U MIN MAX case "?":s break ## not a valid x86-64 operation on intergers
+      COPY DATA LABEL NOT TRUNC BOOLNOT I2F U2F F2I F2U MIN MAX LOAD STORE case "?":s break ## not a valid x86-64 operation on intergers
       PUSH case "push":s break
       POP case "pop":s break
       JMP case "jmp":s break
@@ -1024,6 +1029,15 @@ namespace: AMD64
     "??" sb.appendS
     return
   end
+  proc( asm.Operand -> bool ) =>: isAddress
+    switch
+      empty unknown cmpType register constInt constFloat case false return
+      constPtr stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
+      localMemory globalMemory memory localLabel globalLabel jumpTableElement case true return
+      valType case "type operands are not supported" ..panic
+    end
+  end
+
   proc( stringBuilder RegisterId : reg -> stringBuilder ) =>: clearRegister
     reg isFloatReg if
       "  xorps " sb.appendS reg ValType .F64 appendRegister  ", " sb.appendS
@@ -1041,10 +1055,10 @@ namespace: AMD64
     typeContext .labelContext =:: labelContext
     op .opType switch
       LABEL case op .operands 0 [] op .valType context appendOperand ":\n" sb.appendS return
-      MOVE case ## TODO special handling for moves from/to vector register
+      MOVE LOAD STORE case ## TODO special handling for moves from/to vector register
         ## TODO? automatically extend small values to break dependency chains
         ## TODO? special handling for moving 0 to register
-        op .operands 1 [] .constPtr ?? if ## TODO? use lea for any label-like source
+        op .opType .MOVE ?? and op .operands 1 [] isAddress if
           "  lea " sb.appendS
         else op .operands 1 [] .constFloat ?? _if ## movups for handling 128-bit values (float or double)
           op .valType .F32 ?? if "  movss " sb.appendS else "  movsd " sb.appendS end
@@ -1056,12 +1070,21 @@ namespace: AMD64
             EMPTY I8 I16 I32 I64 PTR REFERENCE case "  mov " sb.appendS break
             F32 case "  movss " sb.appendS break
             F64 case "  movsd " sb.appendS break
-            BITS128F case "  movups" sb.appendS break ## float-like 128-bit value
-            BITS128 BITS128IF BITS128FI case "  movdqu" sb.appendS break ## int-like 128-bit value
+            BITS128F case "  movups " sb.appendS break ## float-like 128-bit value
+            BITS128 BITS128IF BITS128FI case "  movdqu " sb.appendS break ## int-like 128-bit value
           end
         end
-          op .operands 0 [] op .valType context appendOperand ", " sb.appendS
-          op .operands 1 [] op .valType context appendOperand '\n' sb.appendC
+           ## TODO? general method for getting operand as address
+          op .opType .STORE ?? and op .operands 0 [] isAddress ! if
+            '[' sb.appendC op .operands 0 [] op .valType context appendOperand "], " sb.appendS
+          else
+            op .operands 0 [] op .valType context appendOperand ", " sb.appendS
+          end
+          op .opType .LOAD ?? and op .operands 1 [] isAddress ! if
+            '[' sb.appendC op .operands 1 [] op .valType context appendOperand "]\n" sb.appendS
+          else
+            op .operands 1 [] op .valType context appendOperand '\n' sb.appendC
+          end
         return
       PUSH case ## TODO? extend pushed values to 64-bits
         ## TODO? handle push/pop for floats
@@ -1687,6 +1710,22 @@ proc( LabelId : valId bool : isGlobal CompilerContext ptr.mut : context -> Value
     end
   return
 end
+proc( LabelId : valId CompilerContext ptr.mut : context -> ) =>: removeCachedVar
+  context .variableLocations valId map.remove =:: removed?
+  removed? optional.hasData if
+    removed? .data switch
+      register case removed? .data .register context findRegister =:: prevRegisterData?
+        prevRegisterData? optional.hasData if
+          prevRegisterData? .data =:: prevRegisterData
+          prevRegisterData [] resetRegister prevRegisterData =[]
+        end
+        break
+      registerHi registerLow registers case "CodeGen: multi-register values are not implemented" ..panic
+      ## nothing to do
+      intArgument floatArgument localMemory globalMemory intConstant floatConstant ptrConstant case break
+    end
+  end
+end
 
 ## TODO! easy way to get from register to register-state
 proc(
@@ -1961,7 +2000,7 @@ proc(
         ##  * move to correct buffer slot if currently empty
         ##  * prefer slots that empty in buffer
         regs j [] .currentValue .empty ?? if
-          buffer j [] .currentValue .empty ?? if
+          buffer j [] .currentValue .empty ?? or buffer j [] .currentValue .preserveValue ?? if
             j freeSlot=
             j break
           else freeSlot -1 == _if
@@ -2031,7 +2070,7 @@ proc(
               asmOp2 list.append
               break
             localMemory case
-              asm.OpType .MOVE
+              asm.OpType .LOAD
                 idData [] .valueType typeContext toValType
                 targetRegister asm.Operand .register
                 varLoc .localMemory asm.Operand .localMemory
@@ -2418,7 +2457,11 @@ proc(
       break
     localMemory case ## TODO handle composite values
       valType opIndex context nextRegister =:: targetRegister
-      asm.OpType .MOVE valType
+      valType .PTR ?? if
+        asm.OpType .MOVE valType
+      else
+        asm.OpType .LOAD valType
+      end
         targetRegister asm.Operand .register
         location .localMemory asm.Operand .localMemory
       asmOp2 list.append
@@ -2873,6 +2916,46 @@ proc(
       ops Cmp .UGE baseVal pos opIndex context compileComparisonOperator
       return
     DIV_I64I32 REM_I64I32 UDIV_I64I32 UMOD_I64I32 SHL_I64I32 LSHR_I64I32 ASHR_I64I32 case break ## TODO move to standard libray
+    GET_PTR case
+      ops
+        ValType optional.empty pos context popValue =:: argValue?
+        argValue? optional.isEmpty if return end
+        argValue? .data =:: argValue
+        baseType typeContext types.getBaseType typeContext toValType =:: eltVal
+        eltVal opIndex context nextRegister =:: targetRegister
+        ## TODO handle non-primitive types
+        Op .LOAD eltVal
+          targetRegister asm.Operand .register
+          argValue .location switch ## TODO? extract for procedure
+            register case argValue .location .register asm.Operand .register break
+            memory case context [] .stack .length asm.Operand .stackData break
+            registers registerHi registerLow case ..unreachable ## wrong data-format
+          end
+        asmOp2 list.append
+        targetRegister eltVal context pushRegister
+      return
+    SET_PTR case
+      ops
+        ValType .PTR optional.wrap pos context popValue =:: arg2Value?
+        arg2Value? optional.isEmpty if return end
+        arg2Value? .data =:: arg2Value
+        baseVal optional.wrap pos context popValue =:: arg1Value?
+        arg1Value? optional.isEmpty if return end
+        arg1Value? .data =:: arg1Value
+        Op .STORE baseVal
+          ## TODO update/clear cache for values associated with pointer
+          arg2Value .location switch
+            register case arg2Value .location .register asm.Operand .register break
+            memory case context [] .stack .length asm.Operand .stackData break
+            registers registerHi registerLow case ..unreachable ## wrong data-format
+          end
+          arg1Value .location switch
+            register case arg1Value .location .register asm.Operand .register break
+            memory case context [] .stack .length asm.Operand .stackData break
+            registers registerHi registerLow case ..unreachable ## wrong data-format
+          end
+        asmOp2 list.append
+      return
     default break
   end
   ops
@@ -2916,9 +2999,10 @@ proc(
       0 =:: mut: floatArgs
       ## TODO? is there a way to avoid having two loops (registers are counted right to left, arguments are pushed left ot right)
       ## count argument types
-      args .length 1 - while $ 0 >= do =:: i
+      args .length 1 - i32 cast while $ 0 >= do =:: i
         args i slice.get =:: argType
-        argType typeContext types.isEmpty if
+        argType typeContext types.isEmpty or
+            inType i typeContext types.compositeGetLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
           continue ## skip empty arguments
         end
         argType typeContext toValType =:: valType
@@ -2932,7 +3016,7 @@ proc(
       0 while $ args .length i32 cast < do =:: i
         inType i typeContext types.compositeGetLabel =:: label
         args i slice.get =:: argType
-        argType typeContext types.isEmpty if
+        argType typeContext types.isEmpty or label labelContext id.labelFlags id.FLAG_STATIC & ? if
           continue ## skip empty arguments
         end
         argType typeContext toValType =:: valType
@@ -2956,7 +3040,7 @@ proc(
           end
         else
           argRegister NO_REG != if
-            asm.OpType .MOVE
+            asm.OpType .STORE
               valType
               label asm.Operand .localMemory
               argRegister asm.Operand .register
@@ -3032,7 +3116,25 @@ proc(
             break
         end
         break
-      atId case break ## TODO atId
+      atId case
+        op .val .atId =:: idData
+        idData [] .labelId =:: labelId
+        idData [] .idType switch
+          ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR GLOBAL_VAR case
+            ## TODO! link pointer to variable location, writes to pointer modify variable
+            labelId context removeCachedVar
+            ValType .PTR
+              labelId idData [] .idType .GLOBAL_VAR ?? if ValueLocation .globalMemory else ValueLocation .localMemory end
+            opIndex context pushValue
+            return
+          PROCEDURE case break
+          TYPE LABEL PROCEDURE_BUNDLE case
+            "unexpected id-type" sb.copyPtr
+              ## TODO print id-type
+            op [] .pos errors appendError
+            break
+        end
+        break
       setId initializeId case
         op .val .setId ?? if
           op .val .setId
@@ -3049,7 +3151,7 @@ proc(
             stackValue? .data =:: stackValue
             stackValue .location switch
               register case
-                asm.OpType .MOVE
+                asm.OpType .STORE
                   valType
                   labelId asm.Operand .localMemory
                   stackValue .location .register asm.Operand .register
@@ -3070,7 +3172,7 @@ proc(
                   ## TODO use correct memory location (? `context [] .stackIntCount`)
                   context [] .stack .length asm.Operand .stackData
                 asmOp2 list.append
-                asm.OpType .MOVE
+                asm.OpType .STORE
                   valType
                   labelId asm.Operand .localMemory
                   tmpRegister asm.Operand .register
@@ -3722,6 +3824,7 @@ proc(
           context .stack [] .length
         typeContext AMD64.computeArgumentLocations =:: argData =:: retData =:: argLocations
         ## TODO handle arguments passed in memory
+        ## TODO! clear cached values for mutable pointer arguments
         argData context .stack [] .length i32 cast RegisterRestoreMode .MERGE_FALLTHROUGH op [] .pos context restoreRegisters
         asm.OpType .CALL ValType .EMPTY
           op [] .val .callPtr ?? if
