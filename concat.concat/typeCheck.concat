@@ -588,6 +588,7 @@ end
 proc(
   TypeInfo : src
   Type : target
+  SignType : signType
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: tryCastConstant
@@ -607,12 +608,12 @@ proc(
   ##   completely merge with interpreter.castConstant
   ## casting between integer constants
   src .value .Int ?? and target typeContext types.isInt if
-    src .valueType SignType .NONE src .value target typeContext interpreter.castConstant srcOp .val .Constant=
+    src .valueType signType src .value target typeContext interpreter.castConstant srcOp .val .Constant=
     target srcOp .dataType=
     false return
   end
   src .valueType types.isLiteral if
-    src .valueType SignType .NONE src .value target typeContext interpreter.castConstant srcOp .val .Constant=
+    src .valueType signType src .value target typeContext interpreter.castConstant srcOp .val .Constant=
     target srcOp .dataType=
     false return
   end
@@ -667,7 +668,7 @@ proc(
       typeInfo .valueType
       expectedType
     typeContext types.canAutoCast if
-      typeInfo expectedType pos state tryCastConstant ! if
+      typeInfo expectedType SignType .NONE pos state tryCastConstant ! if
         i 1 + continue
       end
       ## opAutoCast
@@ -1126,7 +1127,7 @@ proc(
         current [] .valueType
           $ types.isLiteral if typeContext types.literalToType end
         =:: currentType
-        currentType mergedType types.typeEquals ! if
+        currentType mergedType types.typeEquals ! and current [] .valueType  mergedType types.typeEquals ! if
           mergePoint .castPointOffsets i slice.get =:: castRoot
           castRoot 0 >= if
             mergePoint .state [] .compiledOps castRoot offset + list.at .data =:: castPoint
@@ -2398,7 +2399,7 @@ proc(
         else $ types.isLiteral _if
           typeContext types.literalToType
             $ srcType=
-          container $1 op .pos state tryCastConstant if
+          container $1 SignType .NONE op .pos state tryCastConstant if
             "could not convert literal to type: " sb.copyPtr
               srcType typeContext sb.appendType
             op .pos errors appendError
@@ -2654,6 +2655,7 @@ proc(
         ## tryCastConstant
           value
           op .dataType
+          op .val .Cast ?? if op .val .Cast .signType else SignType .NONE end
           op .pos
           state
         tryCastConstant ! if
