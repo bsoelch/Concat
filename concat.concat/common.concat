@@ -95,6 +95,8 @@ proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : er
   errors =[]
 end
 proc( CompilerError : a CompilerError : b -> i32 ) =>: export: errorCmp
+  a .errType ..label i32 cast.u  b .errType ..label i32 cast.u - =:: errTypeCmp
+  errTypeCmp 0 != if errTypeCmp return end ## errors before warnings before info
   a .pos b .pos filePosCmp return
 end
 

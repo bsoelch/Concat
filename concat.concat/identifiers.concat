@@ -685,9 +685,10 @@ namespace: id
       end =:: prevPos
       "re declaration of identifier \"" sb.copyPtr
         label labelContext sb.appendLabelPath
-        '\"' sb.appendC
+        "\" ( previous declaration at " sb.appendS
+        prevPos sb.appendPos
+        " )" sb.appendS
       declaredAt errors appendWarning
-      "previous declaration " sb.copyPtr prevPos errors appendInfo
       LABEL_ID_NONE ID_NONE_DATA true return
     end ..drop
     ## IdentifierData
@@ -731,9 +732,10 @@ namespace: id
       end =:: prevPos
       "re declaration of identifier \"" sb.copyPtr
         newName sb.appendStr
-        '\"' sb.appendC
+        "\" ( previous declaration at " sb.appendS
+        prevPos sb.appendPos
+        " )" sb.appendS
       declaredAt errors appendWarning
-      "previous declaration " sb.copyPtr prevPos errors appendInfo
       true return
     end ..drop
     false return
