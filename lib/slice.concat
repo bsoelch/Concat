@@ -51,6 +51,21 @@ namespace: slice
   end
   overload: export: shadow: createMutable create_32mut create_64mut end
 
+  proc( type : auto: T T slice : src -> T slice.mut ) =>: copySlice
+    src .length T mem.alloc =:: newData
+    newData src .data src .length mem.copy src .length create_64mut
+  end
+  proc( type : auto: T T slice.mut : src -> T slice.mut ) =>: copyMut
+    src .length T mem.alloc =:: newData
+    newData src .data src .length mem.copy src .length create_64mut
+  end
+  overload: export: copy copySlice copyMut end
+
+  proc( type : auto: T T slice.mut : src -> T slice.mut ) =>: export: free
+    src .data mem.free
+    T slice.emptyMutable return
+  end
+
   proc( i64 : index i64 : length -> ) =>: checkIndex
     index 0 < or index length >= if
       "slice index outside range" ..panic
