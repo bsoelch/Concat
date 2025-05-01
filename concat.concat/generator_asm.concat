@@ -19,8 +19,13 @@ import "measure.concat"
 #################
 i8 =:: RegisterId
 32 =:: MAX_DATA_REGISTERS ## 16 int + 16 float
+## TODO? allow storing size in register
+##  [int-float:1bit][size:2bits][regId:5bits] (sizes: 0->i8,f16 1->i16,f32  2->i32,f64  3->i64,v128)
+## use smaller versions of sp register for special values
+## int:   64bit: r0-r30, r31 -> rsp ; 32bit: w0-w30, w31 -> wsp ; 16bit: w0s-w30s, [w31s -> ?] ; 8bit: w0b-w30b, [w31b -> NO_REG]
+## float: 128bit: v0-v31 ; 64bit: d0-d31 ; 32bit: s0-s31 ; 16bit: h0-h31
 proc( char8 _ ptr : str i64 : len -> RegisterId ) : alias: static: :reg ..builtIn.parse.i8
-0x7f:reg =:: NO_REG
+0x7f:reg =:: NO_REG ## TODO? should register-id 0 be a valid register
 0x80:i32 =:: REG_FLAG_FLOAT ## mark float registers by setting high bit
 proc( RegisterId -> bool ) =>: isFloatReg
   i32 cast.u REG_FLAG_FLOAT & ?
@@ -535,7 +540,7 @@ namespace: asm
     CompareType : cmpType
     RegisterId : register
     i64 : constInt
-    f64 : constFloat
+    f64 : constFloat ## TODO? replace 64-bit constants with index in constant list (keep size of operand small)
     i32 : constPtr ## label of k-th pointer constant
     i32 : stackData ## stack memory location for single value (64bit / slot)
     i32 : stackData128 ## stack memory location for 128bit value
@@ -554,11 +559,14 @@ namespace: asm
     ValType : valType
   ) =:: Operand
 end
+4 =:: MAX_TMP_REGS
+{ NO_REG NO_REG NO_REG NO_REG } RegisterId MAX_TMP_REGS array =: NO_TMP_REGS
 struct(
-  asm.OpType : opType
-  ValType : valType ## TODO? repace valType with general purpose operand
   asm.Operand 4 array : operands ## are four operands enough  [jmpif  lt r1 r2 @targetLabel]
-  ## ? store int/float tmp registers (2 each if-available) in operation
+  RegisterId MAX_TMP_REGS array : intTmpRegisters
+  RegisterId MAX_TMP_REGS array : floatTmpRegisters
+  ValType : valType ## TODO? repace valType with general purpose operand
+  asm.OpType : opType
 ) =:: AsmOp
 enum( Code Data ) =:: SectionType
 enum( AssertFail Panic ) =:: RuntimeErrorType
@@ -575,51 +583,80 @@ union(
   i32 : Align
 ) =:: Atomic
 -1 =:: NO_LABEL
-proc( asm.OpType : opType ValType : valType -> Atomic ) =>: asmOp0
+proc(
+  asm.OpType : opType
+  ValType : valType
+  RegisterId MAX_TMP_REGS array : tmpRegsInt
+  RegisterId MAX_TMP_REGS array : tmpRegsFloat
+-> Atomic ) =>: asmOp0
   ## AsmOp
-    opType
-    valType
     { asm.Operand .empty asm.Operand .empty asm.Operand .empty asm.Operand .empty }
+    tmpRegsInt
+    tmpRegsFloat
+    valType
+    opType
   AsmOp new Atomic .Op return
 end
-proc( asm.OpType : opType ValType : valType asm.Operand : arg1 -> Atomic ) =>: asmOp1
+proc(
+  asm.OpType : opType
+  ValType : valType
+  asm.Operand : arg1
+  RegisterId MAX_TMP_REGS array : tmpRegsInt
+  RegisterId MAX_TMP_REGS array : tmpRegsFloat
+-> Atomic ) =>: asmOp1
   asm.Operand 4 array new =:: mut: args
   arg1 args@ 0 =[]
   ## AsmOp
-    opType
-    valType
     args
+    tmpRegsInt
+    tmpRegsFloat
+    valType
+    opType
   AsmOp new Atomic .Op return
 end
-proc( asm.OpType : opType ValType : valType asm.Operand : arg1 asm.Operand : arg2 -> Atomic ) =>: asmOp2
+proc(
+  asm.OpType : opType
+  ValType : valType
+  asm.Operand : arg1 asm.Operand : arg2
+  RegisterId MAX_TMP_REGS array : tmpRegsInt
+  RegisterId MAX_TMP_REGS array : tmpRegsFloat
+-> Atomic ) =>: asmOp2
   asm.Operand 4 array new =:: mut: args
   arg1 args@ 0 =[]
   arg2 args@ 1 =[]
   ## AsmOp
-    opType
-    valType
     args
+    tmpRegsInt
+    tmpRegsFloat
+    valType
+    opType
   AsmOp new Atomic .Op return
 end
 proc(
   asm.OpType : opType
   ValType : valType
   asm.Operand : arg1 asm.Operand : arg2 asm.Operand : arg3
+  RegisterId MAX_TMP_REGS array : tmpRegsInt
+  RegisterId MAX_TMP_REGS array : tmpRegsFloat
 -> Atomic ) =>: asmOp3
   asm.Operand 4 array new =:: mut: args
   arg1 args@ 0 =[]
   arg2 args@ 1 =[]
   arg3 args@ 2 =[]
   ## AsmOp
-    opType
-    valType
     args
+    tmpRegsInt
+    tmpRegsFloat
+    valType
+    opType
   AsmOp new Atomic .Op return
 end
 proc(
   asm.OpType : opType
   ValType : valType
   asm.Operand : arg1 asm.Operand : arg2 asm.Operand : arg3 asm.Operand : arg4
+  RegisterId MAX_TMP_REGS array : tmpRegsInt
+  RegisterId MAX_TMP_REGS array : tmpRegsFloat
 -> Atomic ) =>: asmOp4
   asm.Operand 4 array new =:: mut: args
   arg1 args@ 0 =[]
@@ -627,9 +664,11 @@ proc(
   arg3 args@ 2 =[]
   arg4 args@ 3 =[]
   ## AsmOp
-    opType
-    valType
     args
+    tmpRegsInt
+    tmpRegsFloat
+    valType
+    opType
   AsmOp new Atomic .Op return
 end
 namespace: AMD64
@@ -660,6 +699,25 @@ namespace: AMD64
         regs return
       default RegisterState slice.emptyMutable return
     end
+  end
+  proc( asm.OpType : opType ValType : valType -> i32 i32 i32 i32 ) =>: requiredTmpRegs
+    0 =:: mut: fMin
+    0 =:: mut: fOpt
+    0 =:: mut: iMin
+    0 =:: mut: iOpt
+    opType switch
+      F2I case 1 iOpt= break
+      F2U case 1 fMin= 1 iMin= break
+      CMP case
+        valType isFloatValType if
+          1 fOpt=
+        end
+        break
+      default 0 0 0 0 return
+    end
+    fOpt fMin i32.max fOpt=
+    iOpt iMin i32.max iOpt=
+    fMin fOpt iMin iOpt
   end
 end
 
@@ -847,6 +905,7 @@ end
 ## Conversion to real assembly
 ################
 namespace: AMD64
+  ## TODO? compile to list of Atomics as intermediate step (expanding of macro-ops to "real" amd64 ops)
   ## TODO? seperate mode for binary output
   struct(
     ProgramContext ptr.mut : program
@@ -1110,7 +1169,12 @@ namespace: AMD64
         return
       EXTU case
         op .valType =:: srcType
-        op .operands 0 [] .valType =:: targetType
+        op .operands 0 [] .valType
+          $ .I64 ?? if ..drop
+            srcType .I32 ?? if return end
+            ValType .I32
+          end ## zero-extending to i64 is the same as extending to i32
+        =:: targetType
         "  movzx " sb.appendS
           op .operands 1 [] targetType context appendOperand ", " sb.appendS
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
@@ -1141,6 +1205,7 @@ namespace: AMD64
           op .operands 1 [] targetType context appendOperand ", " sb.appendS
           op .operands 2 [] srcType context appendOperand '\n' sb.appendC
         return
+      U2F case "/*TODO! unsigned int <-> float conversion*/" sb.appendS return
       F2I case
         op .valType =:: srcType
         op .operands 0 [] .valType =:: targetType
@@ -1163,15 +1228,15 @@ namespace: AMD64
         srcType valTypeBits targetType valTypeBits > if
           srcType .F32 ?? if "  maxss " sb.appendS else "  maxsd " sb.appendS end
             op .operands 2 [] targetRegType context appendOperand ", " sb.appendS
-          minVal f64 cast asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+          minVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
           srcType .F32 ?? if "  minss " sb.appendS else "  minsd " sb.appendS end
             op .operands 2 [] targetRegType context appendOperand ", " sb.appendS
-          maxVal f64 cast asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+          maxVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
         else
           ## conversion will set result to min-value if it does not fit into int -> need only check for max-val
           srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
             op .operands 2 [] srcType context appendOperand ", " sb.appendS
-          maxVal f64 cast asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+          maxVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
           ## TODO use cmovae instead of mov + jump (needs additional register)
           "  mov " sb.appendS op .operands 1 [] targetRegType context appendOperand ", " sb.appendS
             maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
@@ -1182,7 +1247,64 @@ namespace: AMD64
           op .operands 2 [] srcType context appendOperand '\n' sb.appendC
         ".Lf2i" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
         return
-      U2F F2U case "/*TODO! unsigned int <-> float conversion*/" sb.appendS return
+      F2U case
+        op .valType =:: srcType
+        op .operands 0 [] .valType =:: targetType
+        targetType
+          $ .I8 ?? or $ .I16 ?? if
+            ..drop ValType .I32
+          else $ .I32 ?? _if
+            ..drop ValType .I64
+          end
+        =:: targetRegType
+        context [] .tmpLabelCount
+          $ =:: tmpLabelId
+          2 +
+        context .tmpLabelCount=
+        targetType BoundType .UNSIGNED_MIN getIntBound =:: minVal
+        targetType BoundType .UNSIGNED_MAX getIntBound =:: maxVal
+        ## clear target
+        op .operands 1 [] .register clearRegister
+        ## check for NaN
+        ## TODO! check for values below zero (cmp with zero (Nan considered below?))
+        srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+          op .operands 2 [] srcType context appendOperand ", " sb.appendS
+       targetType .I64 ?? if
+        ## detect values not fitting into u63
+        targetType BoundType .SIGNED_MIN getIntBound f64 cast.u asm.Operand .constFloat =:: firstUnsigned
+        firstUnsigned srcType context appendOperand '\n' sb.appendC
+        "  jb .Lf2u" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
+        srcType .F32 ?? if "  subss " sb.appendS else "  subsd " sb.appendS end
+          op .operands 2 [] srcType context appendOperand ", " sb.appendS
+        firstUnsigned srcType context appendOperand '\n' sb.appendC
+        ## TODO! adjust result after conversion
+        ".Lf2u" sb.appendS tmpLabelId 1 + sb.appendI ":\n" sb.appendS
+       else
+         op .operands 2 [] srcType context appendOperand '\n' sb.appendC
+       end
+        "  jp .Lf2u" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+        srcType .F32 ?? if "  maxss " sb.appendS else "  maxsd " sb.appendS end
+          op .operands 2 [] targetRegType context appendOperand ", " sb.appendS
+        minVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+        srcType valTypeBits targetType valTypeBits > if
+          srcType .F32 ?? if "  minss " sb.appendS else "  minsd " sb.appendS end
+            op .operands 2 [] targetRegType context appendOperand ", " sb.appendS
+          maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+        else
+          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+            op .operands 2 [] srcType context appendOperand ", " sb.appendS
+          maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+          ## TODO use cmovae instead of mov + jump (needs additional register)
+          "  mov " sb.appendS op .operands 1 [] targetRegType context appendOperand ", " sb.appendS
+            maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
+          "  jae .Lf2u" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+        end
+        srcType .F32 ?? if "  cvtss2si " sb.appendS else "  cvtsd2si " sb.appendS end
+          op .operands 1 [] targetRegType context appendOperand ", " sb.appendS
+          op .operands 2 [] srcType context appendOperand '\n' sb.appendC
+          ## TODO! post-processing of i64-value
+        ".Lf2u" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
+        return
       NOT case ## special handling for not
         op .operands 0 [] =:: target
         op .operands 1 [] =:: src
@@ -1648,6 +1770,58 @@ struct(
   bool : reachable
 ) =:: CompilerContext
 
+## TODO? wrappers for appending operation
+proc(
+  asm.OpType : opType
+  ValType : valType
+  CompilerContext ptr.mut : context
+-> RegisterId MAX_TMP_REGS array  RegisterId MAX_TMP_REGS array ) =>: prepareTmpRegister
+  NO_TMP_REGS =:: mut: intTmpRegs
+  NO_TMP_REGS =:: mut: floatTmpRegs
+  opType valType AMD64.requiredTmpRegs =:: iOpt =:: iMin =:: fOpt =:: fMin
+  ## TODO! try finding registers
+  intTmpRegs floatTmpRegs
+end
+proc(
+  Atomic list
+  asm.OpType : opType ValType : valType
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: appendOp0
+  opType valType opType valType context prepareTmpRegister asmOp0 list.append
+end
+proc(
+  Atomic list
+  asm.OpType : opType ValType : valType
+  asm.Operand : arg1
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: appendOp1
+  opType valType arg1 opType valType context prepareTmpRegister asmOp1 list.append
+end
+proc(
+  Atomic list
+  asm.OpType : opType ValType : valType
+  asm.Operand : arg1 asm.Operand : arg2
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: appendOp2
+  opType valType arg1 arg2 opType valType context prepareTmpRegister asmOp2 list.append
+end
+proc(
+  Atomic list
+  asm.OpType : opType ValType : valType
+  asm.Operand : arg1 asm.Operand : arg2 asm.Operand : arg3
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: appendOp3
+  opType valType arg1 arg2 arg3 opType valType context prepareTmpRegister asmOp3 list.append
+end
+proc(
+  Atomic list
+  asm.OpType : opType ValType : valType
+  asm.Operand : arg1 asm.Operand : arg2 asm.Operand : arg3 asm.Operand : arg4
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: appendOp4
+  opType valType arg1 arg2 arg3 arg4 opType valType context prepareTmpRegister asmOp4 list.append
+end
+
 proc( Type : ptrType ConstValue : val CompilerContext ptr.mut : context -> i32 ) =>: newPtrConstant
   context [] .pointerConstants
     $ .length =:: constId
@@ -1780,7 +1954,7 @@ proc(
             stackData [] .valType
             stackSlot asm.Operand .stackData
             register asm.Operand .register
-          asmOp2 list.append
+          context appendOp2
           StackValueLocation .memory stackData .location=
           break
         memory registers registerHi registerLow case
@@ -1799,7 +1973,7 @@ proc(
             stackData [] .valType getHiValType
             stackSlot asm.Operand .stackData128Hi
             register asm.Operand .register
-          asmOp2 list.append
+          context appendOp2
           StackValueLocation .memory stackData .location=
           break
         registers case
@@ -1808,7 +1982,7 @@ proc(
             stackData [] .valType getHiValType
             stackSlot asm.Operand .stackData128Hi
             stackData .location [] .registers .hi asm.Operand .register
-          asmOp2 list.append
+          context appendOp2
           stackData .location [] .registers .low StackValueLocation .registerLow stackData .location=
           break
         memory register registerLow case
@@ -1827,7 +2001,7 @@ proc(
             stackData [] .valType getLowValType
             stackSlot asm.Operand .stackData128Low
             register asm.Operand .register
-          asmOp2 list.append
+          context appendOp2
           StackValueLocation .memory stackData .location=
           break
         registers case
@@ -1836,7 +2010,7 @@ proc(
             stackData [] .valType getLowValType
             stackSlot asm.Operand .stackData128Low
             stackData .location [] .registers .low asm.Operand .register
-          asmOp2 list.append
+          context appendOp2
           stackData .location [] .registers .hi StackValueLocation .registerHi stackData .location=
           break
         memory register registerHi case
@@ -2036,7 +2210,7 @@ proc(
           valType
           targetRegister asm.Operand .register
           srcRegister asm.Operand .register
-        asmOp2 list.append
+        context appendOp2
         regs i [] resetRegister regs i =[]
         usedEmptyReg freeSlot i < | usedEmptyReg=
       else
@@ -2067,21 +2241,21 @@ proc(
                 idData [] .valueType typeContext toValType
                 targetRegister asm.Operand .register
                 varLoc .register asm.Operand .register
-              asmOp2 list.append
+              context appendOp2
               break
             localMemory case
               asm.OpType .LOAD
                 idData [] .valueType typeContext toValType
                 targetRegister asm.Operand .register
                 varLoc .localMemory asm.Operand .localMemory
-              asmOp2 list.append
+              context appendOp2
               break
             globalMemory case
               asm.OpType .MOVE
                 idData [] .valueType typeContext toValType
                 targetRegister asm.Operand .register
                 varLoc .globalMemory asm.Operand .globalMemory
-              asmOp2 list.append
+              context appendOp2
               break
             registerHi registerLow registers case "unimplemented" ..panic
             default "CodeGen: unsupported variable location" ..panic
@@ -2103,7 +2277,7 @@ proc(
               stackData [] .valType
               targetRegister asm.Operand .register
               register asm.Operand .register
-            asmOp2 list.append
+            context appendOp2
             StackValueLocation .memory stackData .location=
             register context findRegister .data =:: regState
             regState [] resetRegister regState =[] ## clear previous location
@@ -2113,7 +2287,7 @@ proc(
               stackData [] .valType
               targetRegister asm.Operand .register
               stackSlot asm.Operand .stackData
-            asmOp2 list.append
+            context appendOp2
             StackValueLocation .memory stackData .location=
             break
           registers registerHi registerLow case
@@ -2262,7 +2436,7 @@ proc(
         switchValOperand
         l .value switchLabelAsInt asm.Operand .constInt
         caseLabelIds l .caseId [] asm.Operand .localLabel
-      asmOp4 list.append
+      context appendOp4
     end
     asm.OpType .JMP ValType .EMPTY
       contiguous if
@@ -2270,7 +2444,7 @@ proc(
       else
         defaultLabelId
       end asm.Operand .localLabel
-    asmOp1 list.append
+    context appendOp1
     return
   end
   labels .length 2 / =:: centerId
@@ -2282,7 +2456,7 @@ proc(
     switchValOperand
     midValue asm.Operand .constInt
     branchLabel asm.Operand .localLabel
-  asmOp4 list.append
+  context appendOp4
   ## less than mid-value
     valType
     switchValOperand
@@ -2295,7 +2469,7 @@ proc(
   generateDecisionTree
   asm.OpType .LABEL ValType .EMPTY
     branchLabel asm.Operand .localLabel
-  asmOp1 list.append
+  context appendOp1
   ## greater or equal to mid-value
     valType
     switchValOperand
@@ -2341,7 +2515,7 @@ proc(
         switchValOperand
         switchValOperand
         minLabel asm.Operand .constInt
-      asmOp3 list.append
+      context appendOp3
     end
     asm.OpType .JMPIF
       val .valType
@@ -2349,17 +2523,17 @@ proc(
       switchValOperand
       maxLabel minLabel - asm.Operand .constInt
       defaultLabel asm.Operand .localLabel
-    asmOp4 list.append
+    context appendOp4
     asm.OpType .JMP
       ValType .EMPTY
       switchOpReg jumpTableId asm.RegAndOffset new asm.Operand .jumpTableElement
-    asmOp1 list.append
+    context appendOp1
     ## TODO? do not use magic number of table alignment
     8 Atomic .Align list.append ## align jump-table to element size
     asm.OpType .LABEL
       ValType .EMPTY
       jumpTableId asm.Operand .localLabel
-    asmOp1 list.append
+    context appendOp1
     0 =:: mut: labelIndex
     minLabel while $ maxLabel <= do =:: tableValue
       labels labelIndex [] .value switchLabelAsInt =:: labelValue
@@ -2371,7 +2545,7 @@ proc(
         else
           defaultLabel
         end asm.Operand .localLabel
-      asmOp1 list.append
+      context appendOp1
     finally tableValue 1 + end ..drop
   else
     val .valType
@@ -2418,7 +2592,7 @@ proc(
           valType
           targetRegister asm.Operand .register
           location .register asm.Operand .register
-        asmOp2 list.append
+        context appendOp2
         targetRegister valType context pushRegister
       end
       return
@@ -2430,7 +2604,7 @@ proc(
         valType
         targetRegister asm.Operand .register
         location .intConstant asm.Operand .constInt
-      asmOp2 list.append
+      context appendOp2
       targetRegister valType context pushRegister
       return
     floatConstant case
@@ -2439,7 +2613,7 @@ proc(
         valType
         targetRegister asm.Operand .register
         location .floatConstant asm.Operand .constFloat
-      asmOp2 list.append
+      context appendOp2
       targetRegister valType context pushRegister
       return
     ptrConstant case
@@ -2448,7 +2622,7 @@ proc(
         valType
         targetRegister asm.Operand .register
         location .ptrConstant asm.Operand .constPtr
-      asmOp2 list.append
+      context appendOp2
       targetRegister valType context pushRegister
       return
     intArgument case
@@ -2464,7 +2638,7 @@ proc(
       end
         targetRegister asm.Operand .register
         location .localMemory asm.Operand .localMemory
-      asmOp2 list.append
+      context appendOp2
       targetRegister valType context pushRegister
       return
     globalMemory case
@@ -2581,14 +2755,14 @@ proc(
         src typeContext toValType
         target typeContext toValType asm.Operand .valType
         stackEntry .location [] .register asm.Operand .register
-      asmOp2 list.append
+      context appendOp2
       return
     end
     asm.OpType .TRUNC
       src typeContext toValType
       target typeContext toValType asm.Operand .valType
       stackEntry .location [] .register asm.Operand .register
-    asmOp2 list.append
+    context appendOp2
     return
   end
   src typeContext types.isFloat and target typeContext types.isFloat if
@@ -2599,7 +2773,7 @@ proc(
     srcBytes targetBytes < if asm.OpType .EXTF else asm.OpType .TRUNCF end
       src typeContext toValType
       stackEntry .location [] .register asm.Operand .register
-    asmOp1 list.append
+    context appendOp1
     return
   end
   src typeContext types.isInt and target typeContext types.isFloat if
@@ -2612,7 +2786,7 @@ proc(
       targetVal asm.Operand .valType
       targetRegister asm.Operand .register
       stackEntry .location [] .register asm.Operand .register
-    asmOp3 list.append
+    context appendOp3
     ## TODO avoid manually updating register data (? movStackValue regId, regId operation )
     stackEntry .location [] .register context findRegister .data =:: srcReg
     srcReg [] .currentValue targetRegister context findRegister .data .currentValue=
@@ -2635,7 +2809,7 @@ proc(
       targetVal asm.Operand .valType
       targetRegister asm.Operand .register
       srcLoc
-    asmOp3 list.append
+    context appendOp3
     ## TODO avoid manually updating register data
     stackEntry .location [] .register context findRegister .data =:: srcReg
     srcReg [] .currentValue targetRegister context findRegister .data .currentValue=
@@ -2675,7 +2849,7 @@ proc(
             memory case context [] .stack .length asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
-        asmOp2 list.append
+        context appendOp2
         ## pushValue
           argType
           targetRegister ValueLocation .register
@@ -2741,7 +2915,7 @@ proc(
             memory case context [] .stack .length asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
-        asmOp3 list.append
+        context appendOp3
         ## pushValue
           argType
           targetRegister ValueLocation .register
@@ -2794,7 +2968,7 @@ proc(
             memory case context [] .stack .length asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
-        asmOp4 list.append
+        context appendOp4
         ## pushValue
           ValType .I8
           targetRegister ValueLocation .register
@@ -2931,7 +3105,7 @@ proc(
             memory case context [] .stack .length asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
-        asmOp2 list.append
+        context appendOp2
         targetRegister eltVal context pushRegister
       return
     SET_PTR case
@@ -2954,7 +3128,7 @@ proc(
             memory case context [] .stack .length asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
-        asmOp2 list.append
+        context appendOp2
       return
     default break
   end
@@ -2987,7 +3161,7 @@ proc(
       op [] Atomic .DebugStartOp list.append
       asm.OpType .LABEL ValType .EMPTY
         procInfo [] .labelId asm.Operand .globalLabel
-      asmOp1 list.append
+      context appendOp1
       implInfo Atomic .StartProc list.append
       ## TODO setup procedure memory
       ##   -> stackMemory int,float,v128
@@ -3044,7 +3218,7 @@ proc(
               valType
               label asm.Operand .localMemory
               argRegister asm.Operand .register
-            asmOp2 list.append
+            context appendOp2
             label argRegister opIndex context cacheVariable
           end
           ## TODO? set variable memory location to argument memory
@@ -3155,7 +3329,7 @@ proc(
                   valType
                   labelId asm.Operand .localMemory
                   stackValue .location .register asm.Operand .register
-                asmOp2 list.append
+                context appendOp2
                 labelId stackValue .location .register opIndex context cacheVariable
                 return
               registers case
@@ -3171,12 +3345,12 @@ proc(
                   tmpRegister asm.Operand .register
                   ## TODO use correct memory location (? `context [] .stackIntCount`)
                   context [] .stack .length asm.Operand .stackData
-                asmOp2 list.append
+                context appendOp2
                 asm.OpType .STORE
                   valType
                   labelId asm.Operand .localMemory
                   tmpRegister asm.Operand .register
-                asmOp2 list.append
+                context appendOp2
                 labelId tmpRegister opIndex context cacheVariable
                 return
             end
@@ -3298,7 +3472,7 @@ proc(
               else
                 ifBlock [] .elseLabelId asm.Operand .localLabel
               end
-            asmOp3 list.append
+            context appendOp3
             return
           IF case
             context [] .openBlocks list.peek =:: ifBlock?
@@ -3344,7 +3518,7 @@ proc(
                 registers registerHi registerLow case "unexpected format for condition parameter" ..panic
               end
               elseLabelId asm.Operand .localLabel
-            asmOp3 list.append
+            context appendOp3
             ifBlock [] .ifLabelId NO_LABEL != if
               ifBlock [] .regData ifBlock [] .ifStartRegsOffset slice.tail
                 ifBlock [] .ifStackSize
@@ -3352,7 +3526,7 @@ proc(
               op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 ifBlock [] .ifLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
             end
             return
           ELSE case
@@ -3370,12 +3544,12 @@ proc(
               context .stack [] .length ifBlock .endStackSize=
               asm.OpType .JMP ValType .EMPTY
                 endLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
             end
             ifBlock [] .elseLabelId NO_LABEL != if
               asm.OpType .LABEL ValType .EMPTY
                 ifBlock [] .elseLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
               ifBlock [] .regData
                 ifBlock [] .ifStackSize
                 RegisterRestoreMode .RESET
@@ -3393,7 +3567,7 @@ proc(
             context .stack [] .length whileBlock .whileStackSize=
             asm.OpType .LABEL ValType .EMPTY
               startLabelId asm.Operand .localLabel
-            asmOp1 list.append
+            context appendOp1
             return
           AND_DO OR_DO case
             op [] .val .block .blockType .OR_DO ?? =:: isOr
@@ -3450,7 +3624,7 @@ proc(
               else
                 whileBlock [] .endLabelId
               end asm.Operand .localLabel
-            asmOp3 list.append
+            context appendOp3
             return
           DO case
             context [] .openBlocks list.peek =:: whileBlock?
@@ -3489,7 +3663,7 @@ proc(
                 registers registerHi registerLow case "unexpected format for condition parameter" ..panic
               end
               whileBlock [] .endLabelId asm.Operand .localLabel
-            asmOp3 list.append
+            context appendOp3
             whileBlock [] .doLabelId NO_LABEL != if ## create do label only if it is used
               whileBlock [] .regData whileBlock [] .doRegsOffset slice.tail
                 whileBlock [] .doStackSize
@@ -3497,7 +3671,7 @@ proc(
               op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 whileBlock [] .doLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
             end
             return
           BREAK case
@@ -3522,7 +3696,7 @@ proc(
             end
             asm.OpType .JMP ValType .EMPTY
               whileBlock [] .endLabelId asm.Operand .localLabel
-            asmOp1 list.append
+            context appendOp1
             false context .reachable=
             return
           CONTINUE case
@@ -3547,7 +3721,7 @@ proc(
             end
             asm.OpType .JMP ValType .EMPTY
               whileBlock [] .finallyLabelId asm.Operand .localLabel
-            asmOp1 list.append
+            context appendOp1
             false context .reachable=
             return
           FINALLY case
@@ -3566,7 +3740,7 @@ proc(
               op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 whileBlock [] .finallyLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
             end
             return
           break
@@ -3617,7 +3791,7 @@ proc(
                 registers registerHi registerLow case "unexpected format for condition parameter" ..panic
               end
               andOrBlock [] .endLabelId asm.Operand .localLabel
-            asmOp3 list.append
+            context appendOp3
             return
           SWITCH case
             program [] .switchData op [] .val .block .blockId i32 cast.u list.at .data =:: switchData
@@ -3666,7 +3840,7 @@ proc(
             caseLabel NO_LABEL == if return end
             asm.OpType .LABEL ValType .EMPTY
               caseLabel asm.Operand .localLabel
-            asmOp1 list.append
+            context appendOp1
             switchBlock [] .regData
               switchBlock [] .switchStackSize
               RegisterRestoreMode .RESET
@@ -3695,7 +3869,7 @@ proc(
             end
             asm.OpType .JMP ValType .EMPTY
               switchBlock [] .endLabelId asm.Operand .localLabel
-            asmOp1 list.append
+            context appendOp1
             false context .reachable=
             return
           default break
@@ -3720,7 +3894,7 @@ proc(
               op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 ifBlock .endLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
               true context .reachable=
             end
             ifBlock .regData .data mem.free
@@ -3741,12 +3915,12 @@ proc(
               op [] .pos context restoreRegisters
               asm.OpType .JMP ValType .EMPTY
                 whileBlock .startLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
             end
             whileBlock .endLabelId NO_LABEL != if ## end of loop reachable
               asm.OpType .LABEL ValType .EMPTY
                 whileBlock .endLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
               ## restoreRegisters
                 whileBlock .regData whileBlock .breakRegsOffset slice.tail
                 whileBlock .endStackSize
@@ -3773,7 +3947,7 @@ proc(
               op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 andOrBlock .endLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
               true context .reachable=
             end
             andOrBlock .regData .data mem.free
@@ -3795,7 +3969,7 @@ proc(
               op [] .pos context restoreRegisters
               asm.OpType .LABEL ValType .EMPTY
                 switchBlock .endLabelId asm.Operand .localLabel
-              asmOp1 list.append
+              context appendOp1
               true context .reachable=
             end
             switchBlock .regData .data mem.free
@@ -3832,7 +4006,7 @@ proc(
           else
             program [] .procedures op [] .val .call .procId i64 cast @[] .labelId [] asm.Operand .globalLabel
           end
-        asmOp1 list.append
+        context appendOp1
         ## TODO? compute new stack size in computeArgumentLocations
         procType typeContext types.getProcIn  ..drop typeContext types.compositeEltCount =:: inCount
         procType typeContext types.getProcOut ..drop =:: outType
@@ -3890,28 +4064,28 @@ proc(
         ## TODO? own return mode
         regData retLocations .length i32 cast RegisterRestoreMode .MERGE op [] .pos context restoreRegisters
         Atomic .LeaveProc list.append
-        asm.OpType .RET ValType .EMPTY asmOp0 list.append
+        asm.OpType .RET ValType .EMPTY context appendOp0
         false context .reachable=
         return
       panicWithMessage case
         context nextLabelId =:: targetLabelId
         asm.OpType .JMP ValType .EMPTY
           targetLabelId asm.Operand .localLabel
-        asmOp1 list.append
+        context appendOp1
         context [] .procTail
           asm.OpType .LABEL ValType .EMPTY
             targetLabelId asm.Operand .localLabel
-          asmOp1 list.append
+          context appendOp1
           op [] Atomic .DebugStartOp list.append
           Type .undefined op .val [] .panicWithMessage constContext newStringConst context newPtrConstant =:: strId
           asm.OpType .MOVE ValType .PTR
             0 AMD64.getIntArgumentRegister asm.Operand .register
             strId asm.Operand .constPtr
-          asmOp2 list.append
+          context appendOp2
           asm.OpType .MOVE ValType .PTR
             1 AMD64.getIntArgumentRegister asm.Operand .register
             op .val [] .panicWithMessage .length asm.Operand .constInt
-          asmOp2 list.append
+          context appendOp2
           ## TODO? add argument for pointer to file position ( char8 _ ptr : nameData i64 : nameLen i32 : line i32 : linePos )
           RuntimeErrorType .Panic Atomic .Error list.append
         context .procTail=
@@ -3938,21 +4112,21 @@ proc(
             registers registerHi registerLow case "unexpected format for condition parameter" ..panic
           end
           targetLabelId asm.Operand .localLabel
-        asmOp3 list.append
+        context appendOp3
         context [] .procTail
           asm.OpType .LABEL ValType .EMPTY
             targetLabelId asm.Operand .localLabel
-          asmOp1 list.append
+          context appendOp1
           op [] Atomic .DebugStartOp list.append
           Type .undefined op .val [] .RuntimeAssert constContext newStringConst context newPtrConstant =:: strId
           asm.OpType .MOVE ValType .PTR
             0 AMD64.getIntArgumentRegister asm.Operand .register
             strId asm.Operand .constPtr
-          asmOp2 list.append
+          context appendOp2
           asm.OpType .MOVE ValType .PTR
             1 AMD64.getIntArgumentRegister asm.Operand .register
             op .val [] .RuntimeAssert .length asm.Operand .constInt
-          asmOp2 list.append
+          context appendOp2
           ## TODO? add argument for pointer to file position ( char8 _ ptr : nameData i64 : nameLen i32 : line i32 : linePos )
           RuntimeErrorType .AssertFail Atomic .Error list.append
         context .procTail=
@@ -4000,7 +4174,7 @@ proc(
               copied .valType
               targetRegister asm.Operand .register
               copied .location .register asm.Operand .register
-            asmOp2 list.append
+            context appendOp2
             ## TODO remember that copied register holds value of old register, use old register to get value until:
             ##  a) register changes
             ##  b) start of next loop
@@ -4126,17 +4300,17 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
       context [] .pointerConstants i [] =:: constInfo
       asm.OpType .LABEL ValType .EMPTY
         i asm.Operand .constPtr
-      asmOp1 list.append
+      context appendOp1
       ## TODO! ensure alignemnt
       constInfo .constValue .Array8 ?? if ## string?
         constInfo .constValue .Array8 for =:: byte
           asm.OpType .DATA ValType .I8
             byte i64 cast.u asm.Operand .constInt
-          asmOp1 list.append
+          context appendOp1
         end
         asm.OpType .DATA ValType .I8
           0 asm.Operand .constInt
-        asmOp1 list.append
+        context appendOp1
       else
         Atomic .Unknown list.append
       end
