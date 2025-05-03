@@ -2090,7 +2090,7 @@ proc(
     atId case
       op .val .atId =:: idInfo
       idInfo .idType switch
-        GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ITR_VAR case
+        GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ITR_VAR ARGUMENT case
           idInfo .labelId =:: labelId
           labelId
             labelContext id.labelFlags
@@ -2165,7 +2165,7 @@ proc(
           end
           labelId state replaceLabel
           return
-        TYPE ARGUMENT LABEL PROCEDURE_BUNDLE case
+        TYPE LABEL PROCEDURE_BUNDLE case
           "taking the address of identifier " sb.copyPtr
             idInfo labelContext sb.appendIdInfo
             " is not supported" sb.appendS
