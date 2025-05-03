@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<language id="concatasm" name="ConcatAsm" version="2.0" _section="Source">
+  <metadata>
+    <property name="mimetypes">text/x-concat</property>
+    <property name="globs">*.asm</property>
+    <property name="line-comment-start">--</property>
+    <property name="suggested-suffix">.asm</property>
+  </metadata>
+
+  <styles>
+    <style id="comment"      name="Comment"      map-to="def:comment"/>
+    <style id="keyword"      name="Keyword"      map-to="def:preprocessor"/>
+    <style id="operator"     name="Operator"     map-to="def:keyword"/>
+    <style id="register"     name="Register"     map-to="def:builtin"/>
+    <style id="type"         name="Data Type"    map-to="def:type"/>
+    <style id="cmp-type"     name="Compare Type" map-to="def:type"/>
+    <style id="number"       name="Number"       map-to="def:decimal"/>
+  </styles>
+
+  <definitions>
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
+      <start>(\A|(?&lt;=[[:space:]]))\#\#</start>
+      <include>
+        <context ref="def:in-comment"/>
+      </include>
+    </context>
+
+    <context id="keywords" style-ref="keyword">
+      <keyword>section</keyword>
+      <keyword>enter</keyword>
+      <keyword>leave</keyword>
+      <keyword>assertFail</keyword>
+      <keyword>panic</keyword>
+      <keyword>align</keyword>
+    </context>
+
+    <context id="operator" style-ref="operator">
+      <prefix>^[[:space:]]*</prefix>
+      <keyword>move</keyword>
+      <keyword>load</keyword>
+      <keyword>store</keyword>
+      <keyword>copy</keyword>
+      <keyword>push</keyword>
+      <keyword>pop</keyword>
+      <keyword>label</keyword>
+      <keyword>data</keyword>
+      <keyword>jmp</keyword>
+      <keyword>jmpif</keyword>
+      <keyword>call</keyword>
+      <keyword>ret</keyword>
+      <keyword>exts</keyword>
+      <keyword>extu</keyword>
+      <keyword>trunc</keyword>
+      <keyword>extf</keyword>
+      <keyword>truncf</keyword>
+      <keyword>i2f</keyword>
+      <keyword>u2f</keyword>
+      <keyword>f2i</keyword>
+      <keyword>f2u</keyword>
+      <keyword>neg</keyword>
+      <keyword>not</keyword>
+      <keyword>add</keyword>
+      <keyword>sub</keyword>
+      <keyword>mul</keyword>
+      <keyword>div</keyword>
+      <keyword>mod</keyword>
+      <keyword>udiv</keyword>
+      <keyword>umod</keyword>
+      <keyword>and</keyword>
+      <keyword>or</keyword>
+      <keyword>xor</keyword>
+      <keyword>boolnot</keyword>
+      <keyword>bitnot</keyword>
+      <keyword>shl</keyword>
+      <keyword>ashr</keyword>
+      <keyword>lshr</keyword>
+      <keyword>cmp</keyword>
+      <keyword>min</keyword>
+      <keyword>max</keyword>
+      <keyword>adc</keyword>
+      <keyword>sbb</keyword>
+      <keyword>mulh</keyword>
+      <keyword>mul2</keyword>
+      <keyword>divmod</keyword>
+      <keyword>udivmod</keyword>
+    </context>
+
+    <context id="register" style-ref="register">
+      <match extended="true">
+        (?&lt;=[[:space:]])(
+          (r|d|s|h|v)(1|2|3)?[0-9] |
+          w(1|2|3)?[0-9](s|b)? |
+          rsp | wsp
+        )
+      </match>
+    </context>
+
+    <context id="type" style-ref="type">
+      <keyword>i8</keyword>
+      <keyword>i16</keyword>
+      <keyword>i32</keyword>
+      <keyword>i64</keyword>
+      <keyword>f32</keyword>
+      <keyword>f64</keyword>
+      <keyword>ptr</keyword>
+      <keyword>reference</keyword>
+      <keyword>bits128</keyword>
+      <keyword>bits128f</keyword>
+      <keyword>bits128if</keyword>
+      <keyword>bits128fi</keyword>
+    </context>
+
+    <context id="cmp-type" style-ref="type">
+      <keyword>nz</keyword>
+      <keyword>z</keyword>
+      <keyword>eq</keyword>
+      <keyword>ne</keyword>
+      <keyword>lt</keyword>
+      <keyword>le</keyword>
+      <keyword>ge</keyword>
+      <keyword>gt</keyword>
+      <keyword>ult</keyword>
+      <keyword>ule</keyword>
+      <keyword>uge</keyword>
+      <keyword>ugt</keyword>
+    </context>
+
+    <context id="number" style-ref="number">
+      <match extended="true">
+        (?&lt;=[[:space:]])(
+          [0-9]+ |
+          0x[0-9A-Fa-f]+
+        )
+      </match>
+    </context>
+
+    <context id="concatasm" class="no-spell-check">
+      <include>
+        <context ref="line-comment"/>
+        <context ref="keywords"/>
+        <context ref="operator"/>
+        <context ref="register"/>
+        <context ref="number"/>
+        <context ref="type"/>
+        <context ref="cmp-type"/>
+      </include>
+    </context>
+  </definitions>
+</language>
