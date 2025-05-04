@@ -11,6 +11,9 @@ proc( -> ) =>: main
   "-f.ffffffffffff8X+ff"  string.wrap 16 tryParseFloat .NONE ?? debug.print debug.print
   "0.00000000000004X-ff" string.wrap 16 tryParseFloat .NONE ?? debug.print debug.print
   "-0.00000000000004X-ff" string.wrap 16 tryParseFloat .NONE ?? debug.print debug.print
+  "1'000'000'000'000'000'000'000'000'000" string.wrap 0 tryParseFloat
+    .INT ?? "parse success" assert
+  1e27 == "large ints parse correctly" assert
 
   "0x1000p-10"  string.wrap 0 tryParseFloat .NONE ?? debug.print debug.print
 

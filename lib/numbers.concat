@@ -253,7 +253,7 @@ namespace: number
               c 1 - c=
             end
           else hasDot ! _if
-            c 1 - c=
+            c 1 + c=
           end
         end
         i 1 +
