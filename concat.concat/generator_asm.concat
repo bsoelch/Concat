@@ -1316,7 +1316,7 @@ namespace: AMD64
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
         return
       U2F case "/*TODO! unsigned int <-> float conversion*/" sb.appendS return
-      F2I case
+      F2I case ## TODO? should float -> int conversion truncate or round
         op .operands 1 [] asm.guessValType =:: srcType
         op .operands 0 [] asm.guessValType =:: targetType
         ## extend target register to correct size
@@ -1327,39 +1327,43 @@ namespace: AMD64
         context .tmpLabelCount=
         targetType BoundType .SIGNED_MIN getIntBound =:: minVal
         targetType BoundType .SIGNED_MAX getIntBound =:: maxVal
+        INT_TMP_REGISTERS 0 [] targetRegType setRegType =:: tmpI
+        FLOAT_TMP_REGISTERS 0 [] srcType setRegType =:: tmpF
         ## clear target
         op .operands 0 [] .register clearRegister
-        ## TODO try to avoid jumps (with help of tmp-registers and cmov)
-        ## check for NaN
-        srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
-          op .operands 1 [] srcType context appendOperand ", " sb.appendS
-        op .operands 1 [] srcType context appendOperand '\n' sb.appendC
-        "  jp .Lf2i" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
         srcType valTypeBits targetType valTypeBits > if
+          srcType .F32 ?? if "  movss " sb.appendS else "  movsd " sb.appendS end
+            tmpF appendRegister ", " sb.appendS
+          op .operands 1 [] srcType context appendOperand '\n' sb.appendC
           srcType .F32 ?? if "  maxss " sb.appendS else "  maxsd " sb.appendS end
-            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+            tmpF appendRegister ", " sb.appendS
           minVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
           srcType .F32 ?? if "  minss " sb.appendS else "  minsd " sb.appendS end
-            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+            tmpF appendRegister ", " sb.appendS
           maxVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
-        end
-        srcType .F32 ?? if "  cvtss2si " sb.appendS else "  cvtsd2si " sb.appendS end
-          op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+          srcType .F32 ?? if "  cvttss2si " sb.appendS else "  cvttsd2si " sb.appendS end
+            op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+          tmpF appendRegister '\n' sb.appendC
+        else
+          srcType .F32 ?? if "  cvttss2si " sb.appendS else "  cvttsd2si " sb.appendS end
+            op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
-        srcType valTypeBits targetType valTypeBits <= if
           srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
             op .operands 1 [] srcType context appendOperand ", " sb.appendS
           maxVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
-          INT_TMP_REGISTERS 0 [] targetRegType setRegType =:: tmpReg
-          "  mov " sb.appendS tmpReg appendRegister ", " sb.appendS
+          "  mov " sb.appendS tmpI appendRegister ", " sb.appendS
           maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
           "  cmovae " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
-          tmpReg appendRegister '\n' sb.appendC
+          tmpI appendRegister '\n' sb.appendC
         end
-        ".Lf2i" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
+        tmpI clearRegister
+        srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+          op .operands 1 [] srcType context appendOperand ", " sb.appendS
+        op .operands 1 [] srcType context appendOperand '\n' sb.appendC
+        "  cmovp " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+        tmpI appendRegister '\n' sb.appendC
         return
       F2U case
-        ## TODO extend target size if neccessary
         op .operands 1 [] asm.guessValType =:: srcType
         op .operands 0 [] asm.guessValType =:: targetType
         targetType ## use signed conversion to next larger int if possible
@@ -1373,60 +1377,68 @@ namespace: AMD64
           $ =:: tmpLabelId
           2 +
         context .tmpLabelCount=
-        targetType BoundType .UNSIGNED_MIN getIntBound =:: minVal
         targetType BoundType .UNSIGNED_MAX getIntBound =:: maxVal
-        ## clear target
-        op .operands 0 [] .register clearRegister
-        ## check for NaN
-        ## TODO! inprove NaN handling with help op temporary registers
-        ##   check for values below zero (cmp with zero (Nan considered below?))
-        targetType .I64 ?? if
-          INT_TMP_REGISTERS 1 [] clearRegister
-          ## detect values not fitting into u63
-          targetType BoundType .SIGNED_MIN getIntBound =:: firstUnsigned
-          firstUnsigned f64 cast.u asm.Operand .constFloat =:: firstUnsignedF
-          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
-            op .operands 1 [] srcType context appendOperand ", " sb.appendS
-            firstUnsignedF srcType context appendOperand '\n' sb.appendC
-          "  jb .Lf2u" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
-          srcType .F32 ?? if "  subss " sb.appendS else "  subsd " sb.appendS end
-            op .operands 1 [] srcType context appendOperand ", " sb.appendS
-          firstUnsignedF srcType context appendOperand '\n' sb.appendC
-          "  mov " sb.appendS INT_TMP_REGISTERS 1 [] appendRegister ", " sb.appendS
-          firstUnsigned asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
-          ".Lf2u" sb.appendS tmpLabelId 1 + sb.appendI ":\n" sb.appendS
-        else
-          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
-            op .operands 1 [] srcType context appendOperand ", " sb.appendS
-          op .operands 1 [] srcType context appendOperand '\n' sb.appendC
-        end
-        "  jp .Lf2u" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
-        srcType .F32 ?? if "  maxss " sb.appendS else "  maxsd " sb.appendS end
-          op .operands 1 [] srcType context appendOperand ", " sb.appendS
-        minVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+        INT_TMP_REGISTERS 0 [] targetRegType setRegType =:: tmpI
+        INT_TMP_REGISTERS 1 [] targetRegType setRegType =:: tmpI2
+        FLOAT_TMP_REGISTERS 0 [] srcType setRegType =:: tmpF
+        FLOAT_TMP_REGISTERS 1 [] srcType setRegType =:: tmpF2
         srcType valTypeBits targetType valTypeBits > if
+          tmpF clearRegister
+          srcType .F32 ?? if "  maxss " sb.appendS else "  maxsd " sb.appendS end
+            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+          tmpF appendRegister '\n' sb.appendC
           srcType .F32 ?? if "  minss " sb.appendS else "  minsd " sb.appendS end
             op .operands 1 [] srcType context appendOperand ", " sb.appendS
           maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
-        end
-        srcType .F32 ?? if "  cvtss2si " sb.appendS else "  cvtsd2si " sb.appendS end
-          op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+          srcType .F32 ?? if "  cvttss2si " sb.appendS else "  cvttsd2si " sb.appendS end
+            op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
-        srcType valTypeBits targetType valTypeBits <= if
+        else
+          i64.MIN =:: MIN_SIGNED
+          targetType .I64 ?? if ## direct conversion to unsigned only available with avx512
+            srcType .F32 ?? if "  vsubss " sb.appendS else "  vsubsd " sb.appendS end
+              tmpF2 appendRegister ", " sb.appendS
+            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+            MIN_SIGNED f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+            srcType .F32 ?? if "  cvttss2si " sb.appendS else "  cvttsd2si " sb.appendS end
+              tmpI2 appendRegister ", " sb.appendS
+            tmpF2 appendRegister '\n' sb.appendC
+            "  mov " sb.appendS tmpI appendRegister ", " sb.appendS
+            MIN_SIGNED asm.Operand .constInt srcType context appendOperand '\n' sb.appendC
+            "  or " sb.appendS tmpI2 appendRegister ", " sb.appendS
+            tmpI appendRegister '\n' sb.appendC
+            srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+              op .operands 1 [] srcType context appendOperand ", " sb.appendS
+            maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+            "  mov " sb.appendS tmpI appendRegister ", " sb.appendS
+            maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
+            "  cmovae " sb.appendS tmpI2 appendRegister ", " sb.appendS
+            tmpI appendRegister '\n' sb.appendC
+          end
+          srcType .F32 ?? if "  cvttss2si " sb.appendS else "  cvttsd2si " sb.appendS end
+            op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+          op .operands 1 [] srcType context appendOperand '\n' sb.appendC
+          tmpI clearRegister
+          tmpF clearRegister
           srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
             op .operands 1 [] srcType context appendOperand ", " sb.appendS
-          maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
-          INT_TMP_REGISTERS 0 [] targetRegType setRegType =:: tmpReg
-          "  mov " sb.appendS tmpReg appendRegister ", " sb.appendS
-          maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
-          "  cmovae " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
-          tmpReg appendRegister '\n' sb.appendC
+          tmpF appendRegister '\n' sb.appendC
+          "  cmovb " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+          tmpI appendRegister '\n' sb.appendC
+          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+          targetType .I64 ?? if
+            tmpF2 appendRegister ", " sb.appendS tmpF appendRegister '\n' sb.appendC
+            "  cmovae " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+            tmpI2 appendRegister '\n' sb.appendC
+          else
+            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+            maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+            "  mov " sb.appendS tmpI appendRegister ", " sb.appendS
+            maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
+            "  cmovae " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+            tmpI appendRegister '\n' sb.appendC
+          end
         end
-        targetType .I64 ?? if
-          "  or " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
-          INT_TMP_REGISTERS 1 [] appendRegister '\n' sb.appendC
-        end
-        ".Lf2u" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
         return
       NOT case ## special handling for not
         op .operands 0 [] =:: target
@@ -3345,6 +3357,7 @@ proc(
           return
         end
         op [] .dataType typeContext toValType =:: valType
+        ## FIXME use value-type to determine target type, truncate intergers to correct size
         ## TODO make operation dependent on value type
         ## TODO extract conversion constant -> location to procedure
         op [] .val .Constant switch
