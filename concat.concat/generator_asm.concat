@@ -1218,11 +1218,7 @@ namespace: AMD64
         op .operands 0 [] asm.guessValType =:: dstType
         op .operands 1 [] asm.guessValType =:: srcType
         op .opType .MOVE ?? if
-          dstType .EMPTY ?? ! if
-            dstType
-          else ## TODO handle souce beeing address
-            srcType
-          end
+          op@ .operands 2 slice.create commonValType
         else op .opType .LOAD ?? _if
           dstType
         else
@@ -1233,6 +1229,17 @@ namespace: AMD64
           "  lea " sb.appendS
         else
           opValType switch
+            EMPTY case
+              srcType .F32 ?? and dstType .I32 ?? if
+                "  movd " sb.appendS break
+              else srcType .I32 ?? and dstType .F32 ?? _if
+                "  movd " sb.appendS break
+              else srcType .I64 ?? and dstType .F64 ?? _if
+                "  movq " sb.appendS break
+              else srcType .F64 ?? and dstType .I64 ?? _if
+                "  movq " sb.appendS break
+              end
+              "unsupported value types for move" ..panic
             I8 I16 case
               op .operands 1 [] .constInt ?? if "  mov " sb.appendS else "  movzx " sb.appendS end break
             I32 I64 PTR case "  mov " sb.appendS break
@@ -2455,9 +2462,9 @@ proc(
     end
     expectedValue regs i @[] .currentValue=
   end
-  mode .MERGE ?? and usedEmptyReg if ## cleanup tmp-vars that were moved to previously cleared slots
+  usedEmptyReg if ## cleanup tmp-vars that were moved to previously cleared slots
     regs .length for =:: i
-      buffer i [] .currentValue .empty ?? if
+      buffer i [] .currentValue .forceClear ?? or mode .MERGE ?? and buffer i [] .currentValue .empty ?? if
         regs i [] context clearRegister regs i =[]
       end
     end
@@ -2909,6 +2916,78 @@ proc(
       stackEntry .location [] .register asm.Operand .register
     context appendOp2
     targetReg stackEntry .location .register=
+    return
+  end
+  castType .bitCast ?? and src typeContext types.isNumberOrChar and target typeContext types.isNumberOrChar if
+    src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
+    target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
+    stackEntry .location [] .register =:: mut: targetRegister
+    ## TODO? is there a need to keep track of system endianness for float <-> int bit-casts
+    ## TODO? should bitcast be defined to emulate a little endian system
+    ## 1. float -> int
+    src typeContext types.isFloat if
+      srcBytes switch
+        1 case ValType .I8  break
+        2 case ValType .I16 break
+        4 case ValType .I32 break
+        8 case ValType .I64 break
+        default "unexpected size for int" ..panic
+      end opIndex context nextRegister =:: intReg
+      asm.OpType .MOVE
+        intReg asm.Operand .register
+        targetRegister asm.Operand .register
+      context appendOp2
+      intReg targetRegister=
+    end
+    ## 2. zero-extend/truncate
+    srcBytes targetBytes != if
+      targetBytes switch
+        1 case ValType .I8  break
+        2 case ValType .I16 break
+        4 case ValType .I32 break
+        8 case ValType .I64 break
+        default "unexpected size for int" ..panic
+      end =:: targetIntVal
+      targetRegister targetIntVal setRegType =:: newRegSize
+      srcBytes targetBytes < if
+        asm.OpType .EXTU
+          newRegSize asm.Operand .register
+          targetRegister asm.Operand .register
+        context appendOp2
+      else srcBytes targetBytes > _if
+        asm.OpType .TRUNC
+          newRegSize asm.Operand .register
+          targetRegister asm.Operand .register
+        context appendOp2
+      end
+      newRegSize targetRegister=
+    end
+    ## 3. int -> float
+    target typeContext types.isFloat if
+      targetBytes switch
+        2 case "f16 is not supported" ..panic
+        4 case ValType .F32 break
+        8 case ValType .F64 break
+        default "unexpected size for float" ..panic
+      end =:: targetFloatVal
+      src typeContext types.isFloat if
+        stackEntry .location [] .register targetFloatVal setRegType
+      else
+        targetFloatVal opIndex context nextRegister
+      end =:: floatReg
+      asm.OpType .MOVE
+        floatReg asm.Operand .register
+        targetRegister asm.Operand .register
+      context appendOp2
+      floatReg targetRegister=
+    end
+    target typeContext toValType stackEntry .valType=
+    stackEntry .location [] .register targetRegister baseRegEq ! if
+      stackEntry .location [] .register context findRegister .data =:: srcReg
+      srcReg [] .currentValue targetRegister context findRegister .data .currentValue=
+      srcReg [] resetRegister srcReg =[]
+    end
+    targetRegister stackEntry .location .register=
     return
   end
   src typeContext types.isFloat and target typeContext types.isFloat if

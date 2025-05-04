@@ -405,6 +405,18 @@ namespace: types
       ..drop
     false return
   end
+  proc( Type TypeContext ptr -> bool ) =>: export: isNumberOrChar
+    unwrapNamed
+      ..dup isPrimitive ! if ..drop
+        false return
+      end .primitiveType
+      switch
+        BOOL TYPE case
+          false return
+        I8 I16 I32 I64 F32 F64 CHAR8 CHAR16 CHAR32 case
+          true return
+      end
+  end
   proc( Type -> bool ) =>: export: isLiteral
     switch
        intLiteral initializer case true return
