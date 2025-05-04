@@ -41,6 +41,7 @@
       <keyword>load</keyword>
       <keyword>store</keyword>
       <keyword>copy</keyword>
+      <keyword>offset</keyword>
       <keyword>push</keyword>
       <keyword>pop</keyword>
       <keyword>label</keyword>
