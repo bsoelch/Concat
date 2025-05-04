@@ -423,7 +423,6 @@ namespace: AMD64
       end =:: argReg
       argReg NO_REG == if continue end ## TODO mark argument location as memory
       argReg AMD64.dataRegIndex =:: regIndex
-      regIndex debug.print
       stackOffset index i32 cast + RegisterContent .stackSlot argRegData regIndex @[] .currentValue=
       argRegData regIndex [] .register inTypes index [] typeContext toValType setRegType argRegData regIndex @[] .register=
     finally index 1 - end ..drop
@@ -1234,7 +1233,8 @@ namespace: AMD64
           "  lea " sb.appendS
         else
           opValType switch
-            I8 I16 case "  movzx " sb.appendS break
+            I8 I16 case
+              op .operands 1 [] .constInt ?? if "  mov " sb.appendS else "  movzx " sb.appendS end break
             I32 I64 PTR case "  mov " sb.appendS break
             F32 case "  movss " sb.appendS break
             F64 case "  movsd " sb.appendS break
@@ -1281,11 +1281,10 @@ namespace: AMD64
         op .operands 1 [] asm.guessValType =:: srcType
         op .operands 0 [] asm.guessValType extendSmallInts
           $ .I64 ?? if ..drop
-            srcType .I32 ?? if return end
             ValType .I32
           end ## zero-extending to i64 is the same as extending to i32
         =:: targetType
-        "  movzx " sb.appendS
+        srcType targetType == if "  mov " sb.appendS else "  movzx " sb.appendS end
           op .operands 0 [] targetType context appendOperand ", " sb.appendS
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
         return
@@ -1315,7 +1314,35 @@ namespace: AMD64
           op .operands 0 [] targetType context appendOperand ", " sb.appendS
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
         return
-      U2F case "/*TODO! unsigned int <-> float conversion*/" sb.appendS return
+      U2F case
+        op .operands 1 [] asm.guessValType =:: srcType
+        srcType
+          $ .I8 ?? or $ .I16 ?? if =:: srcVal
+            "  movzx " sb.appendS op .operands 1 [] ValType .I32 context appendOperand ", " sb.appendS
+            op .operands 1 [] srcVal context appendOperand '\n' sb.appendC
+            ValType .I32
+          else $ .I32 ?? _if ..drop
+            "  mov " sb.appendS op .operands 1 [] ValType .I32 context appendOperand ", " sb.appendS
+            op .operands 1 [] ValType .I32 context appendOperand '\n' sb.appendC
+            ValType .I64
+          end
+        =:: srcRegType
+        op .operands 0 [] asm.guessValType =:: targetType
+        ## break dependency chain
+        op .operands 0 [] .register clearRegister
+        srcType .I64 ?? if
+          ## TODO? does always truncating last bit leat to rounding errors?
+          "  shr " sb.appendS op .operands 1 [] srcRegType context appendOperand ", 1\n" sb.appendS
+        end
+        targetType .F32 ?? if "  cvtsi2ss " sb.appendS else "  cvtsi2sd " sb.appendS end
+            op .operands 0 [] targetType context appendOperand ", " sb.appendS
+        op .operands 1 [] srcRegType context appendOperand '\n' sb.appendC
+        srcType .I64 ?? if
+          targetType .F32 ?? if "  addss " sb.appendS else "  addsd " sb.appendS end
+            op .operands 0 [] targetType context appendOperand ", " sb.appendS
+          op .operands 0 [] targetType context appendOperand '\n' sb.appendC
+        end
+        return
       F2I case ## TODO? should float -> int conversion truncate or round
         op .operands 1 [] asm.guessValType =:: srcType
         op .operands 0 [] asm.guessValType =:: targetType
