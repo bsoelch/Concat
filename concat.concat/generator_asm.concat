@@ -146,22 +146,22 @@ union(
 
 ## TODO? 32-bit mode, ARM64 support
 namespace: AMD64
-   1:reg64i =:: RBP
-  ## start from 2 to ensure that continous range of registers
-   2:reg64i =:: RAX ## r2
-   3:reg64i =:: RBX ## r3
-   4:reg64i =:: RCX ## r4
-   5:reg64i =:: RDX ## r5
-   6:reg64i =:: RDI ## r6
-   7:reg64i =:: RSI ## r7
-   8:reg64i =:: R8
-   9:reg64i =:: R9
-  10:reg64i =:: R10
-  11:reg64i =:: R11
-  12:reg64i =:: R12
-  13:reg64i =:: R13
-  14:reg64i =:: R14
-  15:reg64i =:: R15
+   ## ensure int-data regisers for continous range put rax:rdx to registers 0,1
+   0:reg64i =:: RAX
+   1:reg64i =:: RDX
+   2:reg64i =:: RDI
+   3:reg64i =:: RSI
+   4:reg64i =:: RCX
+   5:reg64i =:: R8
+   6:reg64i =:: R9
+   7:reg64i =:: R10
+   8:reg64i =:: R11
+   9:reg64i =:: RBX
+  10:reg64i =:: R12
+  11:reg64i =:: R13
+  12:reg64i =:: RBP
+  13:reg64i =:: R14
+  14:reg64i =:: R15
   RAX i32 cast.u REG_ID_MASK & =:: RAX_ID
   RBX i32 cast.u REG_ID_MASK & =:: RBX_ID
   RCX i32 cast.u REG_ID_MASK & =:: RCX_ID
@@ -169,18 +169,28 @@ namespace: AMD64
   RDI i32 cast.u REG_ID_MASK & =:: RDI_ID
   RSI i32 cast.u REG_ID_MASK & =:: RSI_ID
   RBP i32 cast.u REG_ID_MASK & =:: RBP_ID
+  R8  i32 cast.u REG_ID_MASK & =:: R8_ID
+  R9  i32 cast.u REG_ID_MASK & =:: R9_ID
+  R10 i32 cast.u REG_ID_MASK & =:: R10_ID
+  R11 i32 cast.u REG_ID_MASK & =:: R11_ID
+  R12 i32 cast.u REG_ID_MASK & =:: R12_ID
+  R13 i32 cast.u REG_ID_MASK & =:: R13_ID
+  R14 i32 cast.u REG_ID_MASK & =:: R14_ID
+  R15 i32 cast.u REG_ID_MASK & =:: R15_ID
 
   { RDI RSI RDX RCX R8 R9 } =:: INT_ARG_REGISTERS
   { RAX RDX } =:: INT_RET_REGISTERS
   { 0:reg128v 1:reg128v 2:reg128v 3:reg128v 4:reg128v 5:reg128v 6:reg128v 7:reg128v } =:: FLOAT_ARG_REGISTERS
   { 0:reg128v 1:reg128v } =:: FLOAT_RET_REGISTERS
-  { RAX RBX RCX RDX RDI RSI R8 R9 R10 R11 R12 R13 R14 R14 } =:: INT_DATA_REGISTERS
-  RAX i32 cast.u REG_ID_MASK & =:: INT_REG_MIN
-  15 =:: INT_REG_MAX
+  { RAX RDX RDI RSI RCX R8 R9 R10 R11 RBX R12 R13 } =:: INT_DATA_REGISTERS
+  RAX_ID =:: INT_REG_MIN
+  R13_ID =:: INT_REG_MAX
+  { R14 R15 } =:: INT_TMP_REGISTERS
   { 0:reg128v  1:reg128v  2:reg128v  3:reg128v  4:reg128v  5:reg128v  6:reg128v  7:reg128v
-    8:reg128v  9:reg128v 10:reg128v 11:reg128v 12:reg128v 13:reg128v 14:reg128v 15:reg128v } =:: FLOAT_DATA_REGISTERS
+    8:reg128v  9:reg128v 10:reg128v 11:reg128v 12:reg128v 13:reg128v } =:: FLOAT_DATA_REGISTERS
   0 =:: FLOAT_REG_MIN
-  15 =:: FLOAT_REG_MAX
+  13 =:: FLOAT_REG_MAX
+  { 14:reg128v 15:reg128v } =:: FLOAT_TMP_REGISTERS
   INT_DATA_REGISTERS ..length i32 cast =:: INT_REG_COUNT
   FLOAT_DATA_REGISTERS ..length i32 cast =:: FLOAT_REG_COUNT
   ## TODO use heap allocated buffers for data registers (buffer for main registers, tmp-buffers for args/ret)
@@ -413,6 +423,7 @@ namespace: AMD64
       end =:: argReg
       argReg NO_REG == if continue end ## TODO mark argument location as memory
       argReg AMD64.dataRegIndex =:: regIndex
+      regIndex debug.print
       stackOffset index i32 cast + RegisterContent .stackSlot argRegData regIndex @[] .currentValue=
       argRegData regIndex [] .register inTypes index [] typeContext toValType setRegType argRegData regIndex @[] .register=
     finally index 1 - end ..drop
@@ -672,13 +683,9 @@ namespace: asm
     end
   end
 end
-2 =:: MAX_TMP_REGS
-{ NO_REG NO_REG } RegisterId MAX_TMP_REGS array =: NO_TMP_REGS
 4 =:: MAX_ASM_OPERANDS
 struct(
   asm.Operand MAX_ASM_OPERANDS array : operands ## are four operands enough  [jmpif  lt r1 r2 @targetLabel]
-  RegisterId MAX_TMP_REGS array : intTmpRegisters
-  RegisterId MAX_TMP_REGS array : floatTmpRegisters
   ## TODO use register types to encode type of operation
   asm.OpType : opType
 ) =:: AsmOp
@@ -702,8 +709,6 @@ proc(
 -> AsmOp ) =>: asmOp0
   ## AsmOp
     { asm.Operand .empty asm.Operand .empty asm.Operand .empty asm.Operand .empty }
-    NO_TMP_REGS
-    NO_TMP_REGS
     opType
   AsmOp new return
 end
@@ -715,8 +720,6 @@ proc(
   arg1 args@ 0 =[]
   ## AsmOp
     args
-    NO_TMP_REGS
-    NO_TMP_REGS
     opType
   AsmOp new return
 end
@@ -729,8 +732,6 @@ proc(
   arg2 args@ 1 =[]
   ## AsmOp
     args
-    NO_TMP_REGS
-    NO_TMP_REGS
     opType
   AsmOp new return
 end
@@ -744,8 +745,6 @@ proc(
   arg3 args@ 2 =[]
   ## AsmOp
     args
-    NO_TMP_REGS
-    NO_TMP_REGS
     opType
   AsmOp new return
 end
@@ -760,8 +759,6 @@ proc(
   arg4 args@ 3 =[]
   ## AsmOp
     args
-    NO_TMP_REGS
-    NO_TMP_REGS
     opType
   AsmOp new return
 end
@@ -793,25 +790,6 @@ namespace: AMD64
         regs return
       default RegisterState slice.emptyMutable return
     end
-  end
-  proc( asm.OpType : opType ValType : valType -> i32 i32 i32 i32 ) =>: requiredTmpRegs
-    0 =:: mut: fMin
-    0 =:: mut: fOpt
-    0 =:: mut: iMin
-    0 =:: mut: iOpt
-    opType switch
-      F2I case 1 iOpt= break
-      F2U case 1 fMin= 1 iMin= break
-      CMP case
-        valType isFloatValType if
-          1 fOpt=
-        end
-        break
-      default 0 0 0 0 return
-    end
-    fOpt fMin i32.max fOpt=
-    iOpt iMin i32.max iOpt=
-    fMin fOpt iMin iOpt
   end
 end
 
@@ -1082,6 +1060,30 @@ namespace: AMD64
     end sb.appendStr
     valType .F32 ?? if 's' sb.appendC else 'd' sb.appendC end
   end
+
+  proc( stringBuilder string : baseName i32 : regSize -> stringBuilder ) =>: appendNamedIntRegister
+    regSize 16 > if
+      regSize 32 == if 'e' else 'r' end sb.appendC
+    end
+    baseName sb.appendStr
+    regSize 8 == if
+      'l' sb.appendC
+    else baseName .length 1 == _if
+      'x' sb.appendC
+    end
+  end
+  proc( stringBuilder string : baseName i32 : regSize -> stringBuilder ) =>: appendNumberedIntRegister
+    baseName sb.appendStr
+    regSize 64 < if
+      regSize 32 == if
+        'd' sb.appendC
+      else regSize 16 == _if
+        'w' sb.appendC
+      else
+        'b' sb.appendC
+      end
+    end
+  end
   proc( stringBuilder RegisterId : regId -> stringBuilder ) =>: appendRegister
     regId i32 cast.u REG_TYPE_MASK & switch
       REG_TYPE_F16 REG_TYPE_F32 REG_TYPE_F64 REG_TYPE_V128 case
@@ -1092,34 +1094,24 @@ namespace: AMD64
       REG_TYPE_I64 case 64 break
       default "invalid register type" ..panic
     end =:: regSize
-    regId i32 cast.u REG_ID_MASK & =:: regIndex
-    regIndex 8 < if
-      regSize 16 > if
-        regSize 32 == if 'e' else 'r' end sb.appendC
-      end
-      regIndex switch
-        RAX_ID case 'a' sb.appendC regSize 8 > if 'x' sb.appendC end break
-        RBX_ID case 'b' sb.appendC regSize 8 > if 'x' sb.appendC end break
-        RCX_ID case 'c' sb.appendC regSize 8 > if 'x' sb.appendC end break
-        RDX_ID case 'd' sb.appendC regSize 8 > if 'x' sb.appendC end break
-        RSP_ID case "sp" sb.appendS break
-        RBP_ID case "bp" sb.appendS break
-        RDI_ID case "di" sb.appendS break
-        RSI_ID case "si" sb.appendS break
-        default ..unreachable
-      end
-      regSize 8 == if 'l' sb.appendC end
-    else
-      "r" sb.appendS regIndex i32 cast.u sb.appendI
-      regSize 64 < if
-        regSize 32 == if
-          'd' sb.appendC
-        else regSize 16 == _if
-          'w' sb.appendC
-        else
-          'b' sb.appendC
-        end
-      end
+    regId i32 cast.u REG_ID_MASK & switch
+      RAX_ID case "a":s regSize appendNamedIntRegister return
+      RBX_ID case "b":s regSize appendNamedIntRegister return
+      RCX_ID case "c":s regSize appendNamedIntRegister return
+      RDX_ID case "d":s regSize appendNamedIntRegister return
+      RSP_ID case "sp":s regSize appendNamedIntRegister return
+      RBP_ID case "bp":s regSize appendNamedIntRegister return
+      RDI_ID case "di":s regSize appendNamedIntRegister return
+      RSI_ID case "si":s regSize appendNamedIntRegister return
+      R8_ID case "r8":s regSize appendNumberedIntRegister return
+      R9_ID case "r9":s regSize appendNumberedIntRegister return
+      R10_ID case "r10":s regSize appendNumberedIntRegister return
+      R11_ID case "r11":s regSize appendNumberedIntRegister return
+      R12_ID case "r12":s regSize appendNumberedIntRegister return
+      R13_ID case "r13":s regSize appendNumberedIntRegister return
+      R14_ID case "r14":s regSize appendNumberedIntRegister return
+      R15_ID case "r15":s regSize appendNumberedIntRegister return
+      default ..unreachable
     end
   end
   proc( stringBuilder asm.Operand : val ValType : valType AsmCompilerContext ptr.mut : context -> stringBuilder ) =>: appendOperand
@@ -1325,7 +1317,6 @@ namespace: AMD64
         return
       U2F case "/*TODO! unsigned int <-> float conversion*/" sb.appendS return
       F2I case
-        ## TODO procedure to guess val-type from operand
         op .operands 1 [] asm.guessValType =:: srcType
         op .operands 0 [] asm.guessValType =:: targetType
         ## extend target register to correct size
@@ -1338,6 +1329,7 @@ namespace: AMD64
         targetType BoundType .SIGNED_MAX getIntBound =:: maxVal
         ## clear target
         op .operands 0 [] .register clearRegister
+        ## TODO try to avoid jumps (with help of tmp-registers and cmov)
         ## check for NaN
         srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
           op .operands 1 [] srcType context appendOperand ", " sb.appendS
@@ -1350,19 +1342,20 @@ namespace: AMD64
           srcType .F32 ?? if "  minss " sb.appendS else "  minsd " sb.appendS end
             op .operands 1 [] srcType context appendOperand ", " sb.appendS
           maxVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
-        else
-          ## conversion will set result to min-value if it does not fit into int -> need only check for max-val
-          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
-            op .operands 1 [] srcType context appendOperand ", " sb.appendS
-          maxVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
-          ## TODO use cmovae instead of mov + jump (needs additional register)
-          "  mov " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
-            maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
-          "  jae .Lf2i" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
         end
         srcType .F32 ?? if "  cvtss2si " sb.appendS else "  cvtsd2si " sb.appendS end
           op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
+        srcType valTypeBits targetType valTypeBits <= if
+          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+          maxVal f64 cast.s asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+          INT_TMP_REGISTERS 0 [] targetRegType setRegType =:: tmpReg
+          "  mov " sb.appendS tmpReg appendRegister ", " sb.appendS
+          maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
+          "  cmovae " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+          tmpReg appendRegister '\n' sb.appendC
+        end
         ".Lf2i" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
         return
       F2U case
@@ -1385,22 +1378,28 @@ namespace: AMD64
         ## clear target
         op .operands 0 [] .register clearRegister
         ## check for NaN
-        ## TODO! check for values below zero (cmp with zero (Nan considered below?))
-        srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
-          op .operands 1 [] srcType context appendOperand ", " sb.appendS
-       targetType .I64 ?? if
-        ## detect values not fitting into u63
-        targetType BoundType .SIGNED_MIN getIntBound f64 cast.u asm.Operand .constFloat =:: firstUnsigned
-        firstUnsigned srcType context appendOperand '\n' sb.appendC
-        "  jb .Lf2u" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
-        srcType .F32 ?? if "  subss " sb.appendS else "  subsd " sb.appendS end
-          op .operands 1 [] srcType context appendOperand ", " sb.appendS
-        firstUnsigned srcType context appendOperand '\n' sb.appendC
-        ## TODO! adjust result after conversion
-        ".Lf2u" sb.appendS tmpLabelId 1 + sb.appendI ":\n" sb.appendS
-       else
-         op .operands 1 [] srcType context appendOperand '\n' sb.appendC
-       end
+        ## TODO! inprove NaN handling with help op temporary registers
+        ##   check for values below zero (cmp with zero (Nan considered below?))
+        targetType .I64 ?? if
+          INT_TMP_REGISTERS 1 [] clearRegister
+          ## detect values not fitting into u63
+          targetType BoundType .SIGNED_MIN getIntBound =:: firstUnsigned
+          firstUnsigned f64 cast.u asm.Operand .constFloat =:: firstUnsignedF
+          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+            firstUnsignedF srcType context appendOperand '\n' sb.appendC
+          "  jb .Lf2u" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
+          srcType .F32 ?? if "  subss " sb.appendS else "  subsd " sb.appendS end
+            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+          firstUnsignedF srcType context appendOperand '\n' sb.appendC
+          "  mov " sb.appendS INT_TMP_REGISTERS 1 [] appendRegister ", " sb.appendS
+          firstUnsigned asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
+          ".Lf2u" sb.appendS tmpLabelId 1 + sb.appendI ":\n" sb.appendS
+        else
+          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+          op .operands 1 [] srcType context appendOperand '\n' sb.appendC
+        end
         "  jp .Lf2u" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
         srcType .F32 ?? if "  maxss " sb.appendS else "  maxsd " sb.appendS end
           op .operands 1 [] srcType context appendOperand ", " sb.appendS
@@ -1409,19 +1408,24 @@ namespace: AMD64
           srcType .F32 ?? if "  minss " sb.appendS else "  minsd " sb.appendS end
             op .operands 1 [] srcType context appendOperand ", " sb.appendS
           maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
-        else
-          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
-            op .operands 1 [] srcType context appendOperand ", " sb.appendS
-          maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
-          ## TODO use cmovae instead of mov + jump (needs additional register)
-          "  mov " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
-            maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
-          "  jae .Lf2u" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
         end
         srcType .F32 ?? if "  cvtss2si " sb.appendS else "  cvtsd2si " sb.appendS end
           op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
-          ## TODO! post-processing of i64-value
+        srcType valTypeBits targetType valTypeBits <= if
+          srcType .F32 ?? if "  ucomiss " sb.appendS else "  ucomisd " sb.appendS end
+            op .operands 1 [] srcType context appendOperand ", " sb.appendS
+          maxVal f64 cast.u asm.Operand .constFloat srcType context appendOperand '\n' sb.appendC
+          INT_TMP_REGISTERS 0 [] targetRegType setRegType =:: tmpReg
+          "  mov " sb.appendS tmpReg appendRegister ", " sb.appendS
+          maxVal asm.Operand .constInt targetRegType context appendOperand '\n' sb.appendC
+          "  cmovae " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+          tmpReg appendRegister '\n' sb.appendC
+        end
+        targetType .I64 ?? if
+          "  or " sb.appendS op .operands 0 [] targetRegType context appendOperand ", " sb.appendS
+          INT_TMP_REGISTERS 1 [] appendRegister '\n' sb.appendC
+        end
         ".Lf2u" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
         return
       NOT case ## special handling for not
@@ -1500,22 +1504,22 @@ namespace: AMD64
             right opValType context appendOperand '\n' sb.appendC
           return
         end
-        false =:: mut: restoreLeftOperand
+        INT_TMP_REGISTERS 0 [] opValType setRegType =:: tmpReg
         left .register ?? and target .register left .register == if
           left right
         else right .register ?? and target .register right .register == _if
           op .opType .SUB ?? if ## operation not symmetric
-            #+ FIXME: use temporary register instead of stack if available
-              mov tmp, b
-              sub tmp, a
-              mov a, tmp
-            +#
-            "  push " sb.appendS left opValType context appendOperand '\n' sb.appendC
-            "  xchg " sb.appendS ## TODO! does this leave the value in the first register unchanged
+            ## sub r, l, r -> mov tmp, l ; sub tmp, r ; mov r, tmp
+            "  mov " sb.appendS
+              tmpReg appendRegister ", " sb.appendS
+              left opValType context appendOperand '\n' sb.appendC
+            tmpReg asm.Operand .register right
+          else ## symmetric operation
+            "  xchg " sb.appendS
               left opValType context appendOperand ", " sb.appendS
-              right opValType context appendOperand '\n' sb.appendC
+            right opValType context appendOperand '\n' sb.appendC
+            right left
           end
-          right left
         else
           "  mov " sb.appendS
             target opValType context appendOperand ", " sb.appendS
@@ -1525,8 +1529,10 @@ namespace: AMD64
         "  " sb.appendS op .opType appendOpNameInt ' ' sb.appendC
           arg1 opValType context appendOperand ", " sb.appendS
           arg2 opValType context appendOperand '\n' sb.appendC
-        restoreLeftOperand if
-          "  pop " sb.appendS left opValType context appendOperand '\n' sb.appendC
+        arg1 .register ?? and arg1 .register tmpReg == if
+          "  mov " sb.appendS
+            target opValType context appendOperand ", " sb.appendS
+          tmpReg appendRegister '\n' sb.appendC
         end
         return
       SHL ASHR LSHR case ## shifts ( rhs is assumed to be in rcx )
@@ -1588,9 +1594,13 @@ namespace: AMD64
         op .operands 0 [] .cmpType =:: cmpType
         op .operands 1 [] =:: target
         op@ .operands 2 @[] 2 slice.create commonValType =:: opValType
-        context [] .tmpLabelCount =:: tmpLabelId
         opValType isFloatValType if
+          INT_TMP_REGISTERS 0 [] ValType .I32 setRegType =:: tmpReg
           target .register clearRegister ## TODO? is it better to extend register after setcc?
+          cmpType .EQ ?? if
+            tmpReg clearRegister
+          end
+          ## TODO? special handling if lhs and rhs are the same in EQ or NE (directly check for NaN)
           opValType .F32 ?? if
             "  ucomiss " sb.appendS
           else
@@ -1606,23 +1616,16 @@ namespace: AMD64
           cmpType switch
             GT LT case "  seta " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC return
             GE LE case "  setae " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC return
-            EQ case ## TODO? use cmov instead of jump (needs extract temporary register)
-              tmpLabelId 1 + context .tmpLabelCount=
-              "  jp .LfloatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+            EQ case
               "  sete " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC
-              ".LfloatCmp" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
+              "  cmovp " sb.appendS target ValType .I32 context appendOperand
+              ", " sb.appendS tmpReg appendRegister '\n' sb.appendC
               return
             NE case
-              ## TODO? special handling if lhs and rhs are the same (directly check for NaN)
-              tmpLabelId 2 + context .tmpLabelCount=
-              "  jp .LfloatCmp" sb.appendS tmpLabelId sb.appendI '\n' sb.appendC
+              "  mov " sb.appendS tmpReg appendRegister ", 1\n" sb.appendS
               "  setne " sb.appendS target ValType .I8 context appendOperand '\n' sb.appendC
-              ".LfloatCmp" sb.appendS tmpLabelId 1 + sb.appendI ":\n" sb.appendS
-              context [] .procedureTail ## mov nan-path to tail to ensure direct code-flow in standard path
-                ".LfloatCmp" sb.appendS tmpLabelId sb.appendI ":\n" sb.appendS
-                "  mov " sb.appendS target ValType .I32 context appendOperand ", 1\n" sb.appendS
-                "  jmp .LfloatCmp" sb.appendS tmpLabelId 1 + sb.appendI '\n' sb.appendC
-              context .procedureTail=
+              "  cmovp " sb.appendS target ValType .I32 context appendOperand
+              ", " sb.appendS tmpReg appendRegister '\n' sb.appendC
               return
             default "unsupported comparison type for floats" ..panic
           end
@@ -1836,7 +1839,6 @@ union(
 ## 1. store all stack-slots / cached variables in different registers
 ## 2. run copy elimination in parallel (mark register pairs holding same value, split values at loop start)
 ## ?? overcommit register ids if there are many registers sharing the same value, if copy elimination does not eliminate all versions move least used normal register to stack when value in overflow register is needed
-## TODO! ensure each value has a unique register
 #+
 before final output:
   remove all writes to registers/local memory that are not read before next write
@@ -1925,20 +1927,13 @@ struct(
   bool : reachable
 ) =:: CompilerContext
 
-## TODO? wrappers for appending operation
-proc(
-  AsmOp : op
-  CompilerContext ptr.mut : context
--> Atomic ) =>: prepareTmpRegisters
-  ## FIXME check requiredTmpRegs and store in operation
-  op Atomic .Op
-end
+## TODO? directly convert to platform specific assembly when appending operation
 proc(
   Atomic list
   asm.OpType : opType
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: appendOp0
-  opType asmOp0 context prepareTmpRegisters list.append
+  opType asmOp0 Atomic .Op list.append
 end
 proc(
   Atomic list
@@ -1946,7 +1941,7 @@ proc(
   asm.Operand : arg1
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: appendOp1
-  opType arg1 asmOp1 context prepareTmpRegisters list.append
+  opType arg1 asmOp1 Atomic .Op list.append
 end
 proc(
   Atomic list
@@ -1954,7 +1949,7 @@ proc(
   asm.Operand : arg1 asm.Operand : arg2
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: appendOp2
-  opType arg1 arg2 asmOp2 context prepareTmpRegisters list.append
+  opType arg1 arg2 asmOp2 Atomic .Op list.append
 end
 proc(
   Atomic list
@@ -1962,7 +1957,7 @@ proc(
   asm.Operand : arg1 asm.Operand : arg2 asm.Operand : arg3
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: appendOp3
-  opType arg1 arg2 arg3 asmOp3 context prepareTmpRegisters list.append
+  opType arg1 arg2 arg3 asmOp3 Atomic .Op list.append
 end
 proc(
   Atomic list
@@ -1970,7 +1965,7 @@ proc(
   asm.Operand : arg1 asm.Operand : arg2 asm.Operand : arg3 asm.Operand : arg4
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: appendOp4
-  opType arg1 arg2 arg3 arg4 asmOp4 context prepareTmpRegisters list.append
+  opType arg1 arg2 arg3 arg4 asmOp4 Atomic .Op list.append
 end
 
 proc( Type : ptrType ConstValue : val CompilerContext ptr.mut : context -> i32 ) =>: newPtrConstant
@@ -2053,7 +2048,6 @@ proc( LabelId : valId CompilerContext ptr.mut : context -> ) =>: removeCachedVar
   end
 end
 
-## TODO! easy way to get from register to register-state
 proc(
   RegisterId : reg
   CompilerContext ptr.mut : context
@@ -2230,7 +2224,6 @@ end
 proc( RegisterState slice.mut : buffer CompilerContext ptr.mut : context -> ) =>: rememberRegisters
   context [] .dataRegisters =:: regs
   buffer .length regs .length >= "CodeGen: buffer large enough to store registers" assert
-  ## TODO! remember float registers
   buffer .data regs .data regs .length mem.copy ..drop ## copy register data
 end
 ## TODO? perocedure for updating single register
@@ -2246,7 +2239,6 @@ proc(
   context [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  ## TODO! restore float registers
   context [] .dataRegisters =:: regs
   false =:: mut: usedEmptyReg
   mode .RESET ?? if
