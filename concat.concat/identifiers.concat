@@ -741,20 +741,54 @@ namespace: id
     false return
   end
   proc(
+    Type : itrType
     FilePosition : pos
     FileId : currentFile
     IdentifierContext ptr.mut : context
   -> IdentifierInfo ) =>: export: newItrVar
+    ## newLabel
+      string.empty
+      id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
+      pos
+      currentFile
+    context .typeContext .labelContext newLabel =:: label
     ## IdentifierInfo
       IdentifierType .ITR_VAR
-      ## newLabel
-        string.empty
-        id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
-        pos
-        currentFile
-      context .typeContext .labelContext newLabel
+      label
     IdentifierInfo new =:: idInfo
+    context .identifierData
+      label
+      ## IdentifierData
+        itrType
+        ConstValue .None
+        pos
+        label
+        -1
+        IdentifierType .ITR_VAR
+        false
+      IdentifierData new
+    map.put .empty ?? "each itr-var has an unique id" assert
     idInfo return
+  end
+  ## label varType pos idContext
+  proc(
+    LabelId : label
+    Type : varType
+    FilePosition : pos
+    IdentifierContext ptr.mut : context
+  -> ) =>: export: declareTmpVar
+    context .identifierData
+      label
+      ## IdentifierData
+        varType
+        ConstValue .None
+        pos
+        label
+        -1
+        IdentifierType .TMP_VAR
+        false
+      IdentifierData new
+    map.put .empty ?? "each tmp-var has an unique id" assert
   end
 end
 namespace: sb

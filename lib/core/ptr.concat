@@ -86,7 +86,7 @@ namespace: ptr
   proc(
     type : auto: T i64 : auto: k
     T : newVal
-    T k ptr : p
+    T k ptr.mut : p
     i32 : index
   -> ) =>: export: set32checked
     index i64 cast.s k checkIndex
@@ -95,7 +95,7 @@ namespace: ptr
   proc(
     type : auto: T i64 : auto: k
     T : newVal
-    T k ptr : p
+    T k ptr.mut : p
     i64 : index
   -> ) =>: export: set64checked
     index k checkIndex

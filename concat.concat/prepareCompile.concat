@@ -36,6 +36,7 @@ proc(
     context [] .currentFile
     labelContext
   id.newLabel =:: label
+  label varType pos idContext id.declareTmpVar
   context [] .variables
     varType label VariableType .TMP_VAR VariableInfo new list.append
   context .variables=

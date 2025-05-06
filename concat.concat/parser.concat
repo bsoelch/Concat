@@ -1079,7 +1079,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo fileState [] .wordStart opGetId state appendOp
       progContext newAutoType =:: itrType
-      fileState [] .wordStart state [] .currentFile idContext id.newItrVar =:: itrVar
+      itrType fileState [] .wordStart state [] .currentFile idContext id.newItrVar =:: itrVar
       itrType itrVar fileState [] .wordStart opAutoTypedInitializeId state appendOp
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       itrType itrVar fileState [] .wordStart opGetId state appendOp

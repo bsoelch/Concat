@@ -27,12 +27,14 @@
     </context>
 
     <context id="keywords" style-ref="keyword">
+      <prefix>^[[:space:]]*!?</prefix>
       <keyword>section</keyword>
       <keyword>enter</keyword>
       <keyword>leave</keyword>
       <keyword>assertFail</keyword>
       <keyword>panic</keyword>
       <keyword>align</keyword>
+      <keyword>error</keyword>
     </context>
 
     <context id="operator" style-ref="operator">
