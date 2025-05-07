@@ -1200,10 +1200,10 @@ namespace: AMD64
   end
   proc( asm.Operand -> bool ) =>: isAddress
     switch
-      empty unknown cmpType register constInt constFloat case false return
+      register constInt constFloat case false return
       constPtr stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
       localMemory globalMemory memory localLabel globalLabel jumpTableElement case true return
-      valType case "type operands are not supported" ..panic
+      empty unknown cmpType valType case "unsupported operand for value" ..panic
     end
   end
 
@@ -1289,6 +1289,133 @@ namespace: AMD64
           else
             op .operands 1 [] opValType context appendOperand '\n' sb.appendC
           end
+        return
+      COPY case
+        op .operands 0 [] =:: mut: dst
+        op .operands 1 [] =:: mut: src
+        op .operands 2 [] =:: size
+        INT_TMP_REGISTERS 0 [] ValType .I64 setRegType =:: tmpI
+        FLOAT_TMP_REGISTERS 0 [] ValType .BITS128 setRegType =:: tmpV
+        size .constInt ?? "unimplemented: copy with dynamic size" assert
+        ## TODO? check if src and dst have right shape
+        0:i64 =:: mut: offset
+        ## unwrap local memory to get correct address
+        src .localMemory ?? if
+          context .variableOffsets src .localMemory map.get .data
+          RBP asm.Operand .register src=
+        else 0:i64 end =:: srcOffset
+        dst .localMemory ?? if
+          context .variableOffsets dst .localMemory map.get .data
+          RBP asm.Operand .register dst=
+        else 0:i64 end =:: dstOffset
+        size .constInt =:: total
+        size .constInt =:: mut: remaining
+        while remaining 16 >= do
+          "  movdqu " sb.appendS tmpV appendRegister ", XMMWORD PTR [" sb.appendS
+            src ValType .PTR context appendOperand
+            '+' sb.appendC offset srcOffset - sb.appendI
+          "]\n" sb.appendS
+          "  movups XMMWORD PTR [" sb.appendS ## TODO? is there a reason why gcc uses movdqu followed by movups
+            dst ValType .PTR context appendOperand
+            '+' sb.appendC offset dstOffset - sb.appendI
+          "], " sb.appendS tmpV appendRegister '\n' sb.appendC
+        finally remaining 16 - remaining= offset 16 + offset= end
+        remaining 0 == if
+          return
+        end
+        ## TODO reduce duplicate code
+        remaining 8 > if
+          total 16 >= if
+            "  movdqu " sb.appendS tmpV appendRegister ", XMMWORD PTR [" sb.appendS
+              src ValType .PTR context appendOperand
+              '+' sb.appendC total 16 - srcOffset - sb.appendI
+            "]\n" sb.appendS
+            "  movups XMMWORD PTR [" sb.appendS
+              dst ValType .PTR context appendOperand
+              '+' sb.appendC total 16 - dstOffset - sb.appendI
+            "], " sb.appendS tmpV appendRegister '\n' sb.appendC
+            return
+          else
+            "  mov " sb.appendS tmpI appendRegister ", QWORD PTR [" sb.appendS
+              src ValType .PTR context appendOperand
+              '+' sb.appendC offset srcOffset - sb.appendI
+            "]\n" sb.appendS
+            "  mov QWORD PTR [" sb.appendS
+              dst ValType .PTR context appendOperand
+              '+' sb.appendC offset dstOffset - sb.appendI
+            "], " sb.appendS tmpI appendRegister '\n' sb.appendC
+            remaining 8 - remaining=
+            offset 8 + offset=
+          end
+        end ## no else
+        remaining 4 > if
+          total 8 >= if
+            "  mov " sb.appendS tmpI appendRegister ", QWORD PTR [" sb.appendS
+              src ValType .PTR context appendOperand
+              '+' sb.appendC total 8 - srcOffset - sb.appendI
+            "]\n" sb.appendS
+            "  mov QWORD PTR [" sb.appendS
+              dst ValType .PTR context appendOperand
+              '+' sb.appendC total 8 - dstOffset - sb.appendI
+            "], " sb.appendS tmpI appendRegister '\n' sb.appendC
+            return
+          else
+            "  mov " sb.appendS tmpI ValType .I32 setRegType appendRegister ", DWORD PTR [" sb.appendS
+              src ValType .PTR context appendOperand
+              '+' sb.appendC offset srcOffset - sb.appendI
+            "]\n" sb.appendS
+            "  mov DWORD PTR [" sb.appendS
+              dst ValType .PTR context appendOperand
+              '+' sb.appendC offset dstOffset - sb.appendI
+            "], " sb.appendS tmpI ValType .I32 setRegType appendRegister '\n' sb.appendC
+            remaining 4 - remaining=
+            offset 4 + offset=
+          end
+        end ## no else
+        remaining 2 > if
+          total 4 >= if
+            "  mov " sb.appendS tmpI ValType .I32 setRegType appendRegister ", DWORD PTR [" sb.appendS
+              src ValType .PTR context appendOperand
+              '+' sb.appendC total 4 - srcOffset - sb.appendI
+            "]\n" sb.appendS
+            "  mov DWORD PTR [" sb.appendS
+              dst ValType .PTR context appendOperand
+              '+' sb.appendC total 4 - dstOffset - sb.appendI
+            "], " sb.appendS tmpI ValType .I32 setRegType appendRegister '\n' sb.appendC
+            return
+          else
+            "  movzx " sb.appendS tmpI ValType .I16 setRegType appendRegister ", WORD PTR [" sb.appendS
+              src ValType .PTR context appendOperand
+              '+' sb.appendC offset srcOffset - sb.appendI
+            "]\n" sb.appendS
+            "  mov WORD PTR [" sb.appendS
+              dst ValType .PTR context appendOperand
+              '+' sb.appendC offset dstOffset - sb.appendI
+            "], " sb.appendS tmpI ValType .I16 setRegType appendRegister '\n' sb.appendC
+            remaining 2 - remaining=
+            offset 2 + offset=
+          end
+        end ## no else
+        remaining 2 == if
+          "  movzx " sb.appendS tmpI ValType .I16 setRegType appendRegister ", WORD PTR [" sb.appendS
+            src ValType .PTR context appendOperand
+            '+' sb.appendC offset srcOffset - sb.appendI
+          "]\n" sb.appendS
+          "  mov WORD PTR [" sb.appendS
+            dst ValType .PTR context appendOperand
+            '+' sb.appendC offset dstOffset - sb.appendI
+          "], " sb.appendS tmpI ValType .I16 setRegType appendRegister '\n' sb.appendC
+          return
+        else remaining 0 > _if ## remaining == 1
+          "  movzx " sb.appendS tmpI ValType .I16 setRegType appendRegister ", BYTE PTR [" sb.appendS
+            src ValType .PTR context appendOperand
+            '+' sb.appendC offset srcOffset - sb.appendI
+          "]\n" sb.appendS
+          "  mov BYTE PTR [" sb.appendS
+            dst ValType .PTR context appendOperand
+            '+' sb.appendC offset dstOffset - sb.appendI
+          "], " sb.appendS tmpI ValType .I16 setRegType appendRegister '\n' sb.appendC
+        end
         return
       OFFSET case
         ## target, base, offset
@@ -1791,7 +1918,6 @@ namespace: AMD64
       CALL case ## TODO? distinguish pointer and FPTR
         "  call " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
       RET case "  ret\n" sb.appendS return
-      COPY
       ADC SBB MUL2 DIVMOD UDIVMOD case "/* unimplemented operation */\n" sb.appendS return
     end
   end
@@ -2525,6 +2651,7 @@ proc(
         expectedValue .variable idContext id.getIdentifier
           ! "CodeGen: identifier exists" assert
         =:: idData
+        idData [] .valueType typeContext toValType =:: valType
         mode .RESET ?? ! if
           expectedValue .variable idData .idType [] .GLOBAL_VAR ?? context getVarLocation =:: varLoc
           varLoc switch
@@ -2535,7 +2662,7 @@ proc(
               context appendOp2
               break
             localMemory case
-              asm.OpType .LOAD
+              valType .REFERENCE ?? if asm.OpType .MOVE else asm.OpType .LOAD end
                 targetRegister asm.Operand .register
                 varLoc .localMemory asm.Operand .localMemory
               context appendOp2
@@ -2547,7 +2674,7 @@ proc(
               context appendOp2
               break
             globalMemory case
-              asm.OpType .LOAD
+              valType .REFERENCE ?? if asm.OpType .MOVE else asm.OpType .LOAD end
                 targetRegister asm.Operand .register
                 varLoc .globalMemory asm.Operand .globalMemory
               context appendOp2
@@ -2874,7 +3001,7 @@ proc(
   i32 : opIndex
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: pushValue
-  ## TODO make dependent on valType
+  context .program [] .idContext .typeContext =:: typeContext
   location switch
     register case
       location .register context findRegister =:: regState
@@ -2930,7 +3057,11 @@ proc(
       return
     localMemory case ## TODO handle composite values
       valType opIndex context nextRegister =:: targetRegister
-      asm.OpType .LOAD
+      valType .REFERENCE ?? if
+        asm.OpType .MOVE
+      else
+        asm.OpType .LOAD
+      end
         targetRegister asm.Operand .register
         location .localMemory asm.Operand .localMemory
       context appendOp2
@@ -3618,16 +3749,19 @@ proc(
         end valType setRegType =:: argRegister
         label id.LABEL_ID_NONE == if ## push argument
           argRegister NO_REG == if
-            valType isFloatValType if
-              valType floatArgs ValueLocation .floatArgument
-            else
-              valType intArgs ValueLocation .intArgument
-            end opIndex context pushValue
+            ## pushValue
+              valType
+              valType isFloatValType if
+                floatArgs ValueLocation .floatArgument
+              else
+                intArgs ValueLocation .intArgument
+              end
+            opIndex context pushValue
           else
             valType argRegister ValueLocation .register opIndex context pushValue
           end
         else
-          argRegister NO_REG != if
+          argRegister NO_REG != if ## TODO! handle values passed by reference
             asm.OpType .STORE
               label asm.Operand .localMemory
               argRegister asm.Operand .register
@@ -3739,11 +3873,26 @@ proc(
             stackValue? .data =:: stackValue
             stackValue .location switch
               register case
-                asm.OpType .STORE
-                  labelId asm.Operand .localMemory
-                  stackValue .location .register asm.Operand .register
-                context appendOp2
-                labelId stackValue .location .register opIndex context cacheVariable
+                valType .REFERENCE ?? if
+                  asm.OpType .COPY
+                    labelId asm.Operand .localMemory
+                    stackValue .location .register asm.Operand .register
+                    op [] .dataType typeContext types.sizeOf .fixed asm.Operand .constInt
+                  context appendOp3
+                  stackValue .location .register ValType .REFERENCE setRegType =:: valReg
+                  ## stack-value no longer in use
+                  asm.OpType .MOVE
+                    valReg asm.Operand .register
+                    labelId asm.Operand .localMemory
+                  context appendOp2
+                  labelId valReg opIndex context cacheVariable
+                else
+                  asm.OpType .STORE
+                    labelId asm.Operand .localMemory
+                    stackValue .location .register asm.Operand .register
+                  context appendOp2
+                  labelId stackValue .location .register opIndex context cacheVariable
+                end
                 return
               registers case
                 ## TODO store to memory
@@ -3753,15 +3902,27 @@ proc(
                 "unimplemented" ..panic
               memory case
                 valType opIndex context nextRegister =:: tmpRegister
-                asm.OpType .LOAD
-                  tmpRegister asm.Operand .register
-                  ## TODO use correct memory location (? `context [] .stackIntCount`)
-                  context [] .stack .length asm.Operand .stackData
-                context appendOp2
-                asm.OpType .STORE
-                  labelId asm.Operand .localMemory
-                  tmpRegister asm.Operand .register
-                context appendOp2
+                valType .REFERENCE ?? if
+                  asm.OpType .MOVE
+                    tmpRegister asm.Operand .register
+                    labelId asm.Operand .localMemory
+                  context appendOp2
+                  asm.OpType .COPY
+                    tmpRegister asm.Operand .register
+                    context [] .stack .length asm.Operand .stackData
+                    op [] .dataType typeContext types.sizeOf .fixed asm.Operand .constInt
+                  context appendOp3
+                else
+                  asm.OpType .LOAD
+                    tmpRegister asm.Operand .register
+                    ## TODO use correct memory location (? `context [] .stackIntCount`)
+                    context [] .stack .length asm.Operand .stackData
+                  context appendOp2
+                  asm.OpType .STORE
+                    labelId asm.Operand .localMemory
+                    tmpRegister asm.Operand .register
+                  context appendOp2
+                end
                 labelId tmpRegister opIndex context cacheVariable
                 return
             end
