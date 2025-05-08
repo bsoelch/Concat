@@ -635,7 +635,7 @@ namespace: asm
     LABEL
     JMP JMPIF CALL RET
     ## embedded information
-    DATA
+    DATA PADDING_BYTES
     ## conversions
     EXTS EXTU TRUNC
     EXTF TRUNCF ## TODO? merge to 2 conersion operations ( `cvts` and `cvtu` )
@@ -826,6 +826,7 @@ namespace: sb
         POP case "pop":s break
         LABEL case "label":s break
         DATA case "data":s break
+        PADDING_BYTES case "pad_bytes":s break
         JMP case "jmp":s break
         JMPIF case "jmpif":s break
         CALL case "call":s break
@@ -1036,7 +1037,7 @@ namespace: AMD64
   proc( stringBuilder asm.OpType : opType -> stringBuilder ) =>: appendOpNameInt
     opType switch
       MOVE case "mov":s break
-      COPY DATA LABEL NOT TRUNC BOOLNOT I2F U2F F2I F2U MIN MAX LOAD STORE OFFSET case "?":s break ## not a valid x86-64 operation on intergers
+      COPY DATA PADDING_BYTES LABEL NOT TRUNC BOOLNOT I2F U2F F2I F2U MIN MAX LOAD STORE OFFSET case "?":s break ## not a valid x86-64 operation on intergers
       PUSH case "push":s break
       POP case "pop":s break
       JMP case "jmp":s break
@@ -1384,7 +1385,7 @@ namespace: AMD64
             "], " sb.appendS tmpI ValType .I32 setRegType appendRegister '\n' sb.appendC
             return
           else
-            "  movzx " sb.appendS tmpI ValType .I16 setRegType appendRegister ", WORD PTR [" sb.appendS
+            "  movzx " sb.appendS tmpI ValType .I32 setRegType appendRegister ", WORD PTR [" sb.appendS
               src ValType .PTR context appendOperand
               '+' sb.appendC offset srcOffset - sb.appendI
             "]\n" sb.appendS
@@ -1397,7 +1398,7 @@ namespace: AMD64
           end
         end ## no else
         remaining 2 == if
-          "  movzx " sb.appendS tmpI ValType .I16 setRegType appendRegister ", WORD PTR [" sb.appendS
+          "  movzx " sb.appendS tmpI ValType .I32 setRegType appendRegister ", WORD PTR [" sb.appendS
             src ValType .PTR context appendOperand
             '+' sb.appendC offset srcOffset - sb.appendI
           "]\n" sb.appendS
@@ -1407,14 +1408,14 @@ namespace: AMD64
           "], " sb.appendS tmpI ValType .I16 setRegType appendRegister '\n' sb.appendC
           return
         else remaining 0 > _if ## remaining == 1
-          "  movzx " sb.appendS tmpI ValType .I16 setRegType appendRegister ", BYTE PTR [" sb.appendS
+          "  movzx " sb.appendS tmpI ValType .I32 setRegType appendRegister ", BYTE PTR [" sb.appendS
             src ValType .PTR context appendOperand
             '+' sb.appendC offset srcOffset - sb.appendI
           "]\n" sb.appendS
           "  mov BYTE PTR [" sb.appendS
             dst ValType .PTR context appendOperand
             '+' sb.appendC offset dstOffset - sb.appendI
-          "], " sb.appendS tmpI ValType .I16 setRegType appendRegister '\n' sb.appendC
+          "], " sb.appendS tmpI ValType .I8 setRegType appendRegister '\n' sb.appendC
         end
         return
       OFFSET case
@@ -1478,7 +1479,7 @@ namespace: AMD64
         "  push " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
       POP case
         "  pop " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
-      DATA case
+      DATA case ## TODO? optional 3rd operand to specify repetition count
         op .operands 0 [] .valType switch ## TODO are these the correct (platform independent) sizes
           I8  case "  .byte " sb.appendS op .operands 1 [] ValType .PTR context appendOperand '\n' sb.appendC return
           I16 case "  .2byte " sb.appendS op .operands 1 [] ValType .PTR context appendOperand '\n' sb.appendC return
@@ -1487,6 +1488,12 @@ namespace: AMD64
           default "/*unsupported data type*/" sb.appendS return
         end
         break
+      PADDING_BYTES case
+        op .operands 0 [] .constInt =:: count
+        count 0 <= if return end
+        "  .byte 0" sb.appendS
+          count 1 - for ..drop ", 0" sb.appendS end
+        '\n' sb.appendC return
       EXTS case
         ## TODO use procedure to get val-type for operand
         op .operands 1 [] asm.guessValType =:: srcType
@@ -2245,10 +2252,10 @@ proc(
   opType arg1 arg2 arg3 arg4 arg5 asmOp5 Atomic .Op list.append
 end
 
-proc( Type : ptrType ConstValue : val CompilerContext ptr.mut : context -> i32 ) =>: newPtrConstant
+proc( Type : valueType ConstValue : val CompilerContext ptr.mut : context -> i32 ) =>: newPtrConstant
   context [] .pointerConstants
     $ .length =:: constId
-    val ptrType PointerConstant new list.append
+    val valueType PointerConstant new list.append
   context .pointerConstants=
   constId return
 end
@@ -3785,7 +3792,7 @@ proc(
     op [] .val switch
       Constant case
         op [] .dataType typeContext types.isPointer if
-          op [] .dataType op [] .val .Constant context newPtrConstant =:: ptrId
+          op [] .dataType typeContext types.ptrTarget op [] .val .Constant context newPtrConstant =:: ptrId
           ValType .PTR ptrId ValueLocation .ptrConstant opIndex context pushValue
           return
         end
@@ -3809,9 +3816,22 @@ proc(
           Float case
             valType op [] .val .Constant .Float ValueLocation .floatConstant opIndex context pushValue
             return
+          Array Array8 Array16 Array32 Array64 case
+            ## TODO? store array as value if it fits into a single register
+            op [] .dataType op [] .val .Constant context newPtrConstant =:: ptrId
+            ValType .REFERENCE ptrId ValueLocation .ptrConstant opIndex context pushValue
+            return
           default break ## TODO support other constant types
         end
         break
+      ConstantReference case
+        op [] .dataType
+          program [] .constantReferences ## TODO? store const-value in const-reference once asm is main back-end
+            op [] .val .ConstantReference i64 cast.u
+          [] .value
+        context newPtrConstant =:: ptrId
+        ValType .REFERENCE ptrId ValueLocation .ptrConstant opIndex context pushValue
+        return
       NewEnum case
         op [] .dataType typeContext toValType =:: valType
         op [] .dataType typeContext types.isEnum if
@@ -4842,6 +4862,88 @@ proc(
     Atomic .Unknown list.append
   return
 end
+
+proc( Atomic list type.intLike : auto: I
+  I slice : data
+  ValType : eltVal
+  CompilerContext ptr.mut : context
+-> Atomic list ) =>: appendPrimitiveArray
+  data for =:: elt
+    asm.OpType .DATA
+      eltVal asm.Operand .valType
+      elt i64 cast.u asm.Operand .constInt
+    context appendOp2
+  end
+end
+proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : context -> Atomic list ) =>: appendConstantData
+  context [] .program =:: program
+  program .idContext .typeContext =:: typeContext
+  value switch
+    Int case
+      asm.OpType .DATA ## TODO? create halper function for const-int-data
+        constType typeContext toValType asm.Operand .valType
+        value .Int asm.Operand .constInt
+      context appendOp2
+      return
+    Char case
+      asm.OpType .DATA
+        constType typeContext toValType asm.Operand .valType
+        value .Char i64 cast.u asm.Operand .constInt
+      context appendOp2
+      return
+    Bool case
+      asm.OpType .DATA
+        constType typeContext toValType asm.Operand .valType
+        value .Bool ?1 i64 cast.u asm.Operand .constInt
+      context appendOp2
+      return
+    Float case
+      asm.OpType .DATA
+        constType typeContext toValType asm.Operand .valType
+        value .Float asm.Operand .constFloat
+      context appendOp2
+      return
+    Array8 case
+      value .Array8 ValType .I8 context appendPrimitiveArray
+      asm.OpType .DATA ## zero-terminate strings for convenient interaction with C
+        ValType .I8 asm.Operand .valType
+        0 asm.Operand .constInt
+      context appendOp2
+    return
+    Array16 case value .Array16 ValType .I16 context appendPrimitiveArray return
+    Array32 case value .Array32 ValType .I32 context appendPrimitiveArray return
+    Array64 case value .Array64 ValType .I64 context appendPrimitiveArray return
+    Array case
+      constType typeContext types.isPointer if
+        ## TODO ensure that creating of new pointer-constants does not interferat with iterating over existing constants
+        "Codegen: pointer constants are currently not implemented" ..panic
+      end
+      constType typeContext types.isArray if
+        constType typeContext types.getElementType =:: eltType
+        eltType typeContext types.strideOf .fixed eltType typeContext types.sizeOf .fixed - =:: tailPadding
+        value .Array for =:: elt
+          eltType elt context appendConstantData
+          tailPadding 0 > if ## TODO? use align (? align with zeros) instruction instead of inserting bytes directly
+            asm.OpType .PADDING_BYTES
+              tailPadding asm.Operand .constInt
+            context appendOp1
+          end
+        end
+        return
+      end
+      "Codegen: structure constants are currently not implemented" ..panic
+    break
+    EnumLabel Union case
+      "Codegen: union constants are currently not implemented" ..panic
+    Procedure case
+      "Codegen: procedure constants are currently not implemented" ..panic
+    None WildCard TypeId ProcedureBundle LocalValue LocalArray
+    LocalArray8 LocalArray16 LocalArray32 LocalArray64 GenericArg case
+      ## TODO? include type of constant in error message
+      "unsupported constant type":s Atomic .DebugError list.append
+      return
+  end
+end
 proc( Atomic list : ops ProgramContext ptr : program io.FILE : target -> ) =>: printOps
   1024 sb.create
     ops for program sb.appendAtomic end
@@ -4883,24 +4985,15 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
     SectionType .Data Atomic .Section list.append ## TODO? seperate section for read-only data
     context .pointerConstants [] .length for =:: i
       context [] .pointerConstants i [] =:: constInfo
+      constInfo .constType typeContext types.alignOf =:: alignement
+      ## TODO use real type for error strings to remove need for allowing unknown alignment constants
+      alignement .unknown ?? ! and alignement .fixed 1 > if
+        alignement .fixed i32 cast Atomic .Align list.append
+      end
       asm.OpType .LABEL
         i asm.Operand .constPtr
       context appendOp1
-      ## TODO! ensure alignemnt
-      constInfo .constValue .Array8 ?? if ## string?
-        constInfo .constValue .Array8 for =:: byte
-          asm.OpType .DATA
-            ValType .I8 asm.Operand .valType
-            byte i64 cast.u asm.Operand .constInt
-          context appendOp2
-        end
-        asm.OpType .DATA
-          ValType .I8 asm.Operand .valType
-          0 asm.Operand .constInt
-        context appendOp2
-      else
-        Atomic .Unknown list.append
-      end
+      constInfo .constType constInfo .constValue context appendConstantData
     end
     intermediateTarget? optional.hasData if
       $ program intermediateTarget? .data printOps

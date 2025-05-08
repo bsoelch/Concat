@@ -107,6 +107,7 @@ proc(
         op list.append ## nothing to change
       return
     Constant case
+      ## TODO? smarter way to determine when to use const-reference?
       op .dataType typeContext types.referenceOnly ! if
         newOps
           op list.append

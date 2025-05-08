@@ -48,6 +48,7 @@
       <keyword>pop</keyword>
       <keyword>label</keyword>
       <keyword>data</keyword>
+      <keyword>pad_bytes</keyword>
       <keyword>jmp</keyword>
       <keyword>jmpif</keyword>
       <keyword>call</keyword>
