@@ -92,7 +92,7 @@
 
     <context id="register" style-ref="register">
       <match extended="true">
-        (?&lt;=[[:space:]])(
+        (?&lt;=[[:space:]+\-*(])(
           (r|d|s|h|v)(1|2|3)?[0-9] |
           w(1|2|3)?[0-9](s|b)? |
           rsp | wsp
@@ -132,7 +132,7 @@
 
     <context id="number" style-ref="number">
       <match extended="true">
-        (?&lt;=[[:space:]])(
+        (?&lt;=[[:space:]+\-*(])(
           [0-9]+ |
           0x[0-9A-Fa-f]+
         )

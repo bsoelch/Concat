@@ -669,9 +669,9 @@ namespace: asm
     i32 : intArgument
     i32 : floatArgument
     ## XXX ? memory+s*offset1+offset2 , s=1,2,4,8
-    LabelId : localMemory
+    RegAndOffset : regAndOffset
+    LabelId : localMemory ## TODO? label+offset
     LabelId : globalMemory
-    RegisterId : memory
     i32 : localLabel
     LabelId : globalLabel
     RegAndOffset : jumpTableElement ## memory at localLabel<offset> + 8*<register> (used for jump-tables)
@@ -685,7 +685,7 @@ namespace: asm
       constF64 case ValType .F64 return
       constInt case ValType .EMPTY return ## TODO? ensure int is not interpreted as float
       constPtr stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
-      localMemory globalMemory memory localLabel globalLabel jumpTableElement case ValType .PTR return
+      localMemory globalMemory regAndOffset localLabel globalLabel jumpTableElement case ValType .PTR return
       valType case op .valType return
     end
   end
@@ -937,8 +937,9 @@ namespace: sb
         globalMemory case
           '$' sb.appendC val .globalMemory labelContext sb.appendLabelName
           break
-        memory case
-          '[' sb.appendC val .memory sb.appendRegister ']' sb.appendC
+        regAndOffset case
+          '(' sb.appendC val .regAndOffset .reg sb.appendRegister
+            '+' sb.appendC val .regAndOffset .offset sb.appendI ')' sb.appendC
           break
         localLabel case
           ".localLabel" sb.appendS val .localLabel i64 cast.u sb.appendI
@@ -1200,7 +1201,10 @@ namespace: AMD64
         "[rbp-" sb.appendS context .variableOffsets val .localMemory map.get .data sb.appendI ']' sb.appendC
         return
       globalMemory case break
-      memory case break
+      regAndOffset case
+        '[' sb.appendC val .regAndOffset .reg appendRegister
+          '+' sb.appendC val .regAndOffset .offset sb.appendI
+        ']' sb.appendC return
       localLabel case ".L" sb.appendS val .localLabel i64 cast.u sb.appendI return
       globalLabel case val .globalLabel labelContext sb.appendLabelName return
       jumpTableElement case "[.L" sb.appendS val .jumpTableElement .offset i64 cast.u sb.appendI
@@ -1215,7 +1219,7 @@ namespace: AMD64
     switch
       register constInt constF32 constF64 case false return
       constPtr stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
-      localMemory globalMemory memory localLabel globalLabel jumpTableElement case true return
+      localMemory globalMemory regAndOffset localLabel globalLabel jumpTableElement case true return
       empty unknown cmpType valType case "unsupported operand for value" ..panic
     end
   end
@@ -1316,10 +1320,16 @@ namespace: AMD64
         src .localMemory ?? if
           context .variableOffsets src .localMemory map.get .data
           RBP asm.Operand .register src=
+        else  src .regAndOffset ?? _if
+          src .regAndOffset .offset i64 cast.s
+          src .regAndOffset .reg asm.Operand .register src=
         else 0:i64 end =:: srcOffset
         dst .localMemory ?? if
           context .variableOffsets dst .localMemory map.get .data
           RBP asm.Operand .register dst=
+        else  dst .regAndOffset ?? _if
+          dst .regAndOffset .offset i64 cast.s
+          dst .regAndOffset .reg asm.Operand .register src=
         else 0:i64 end =:: dstOffset
         size .constInt =:: total
         size .constInt =:: mut: remaining
@@ -2378,11 +2388,11 @@ proc(
   end
 end
 
-proc( i32 : stackSlot CompilerContext ptr.mut : context -> StackValue ptr.mut ) =>: stackSlotData
+proc( i32 : stackSlot CompilerContext ptr.mut : context -> StackValue ptr.mut optional ) =>: stackSlotData
   stackSlot 0 < or stackSlot context [] .stack .length >= if
-    "CodeGen: stack-data and register-states are out of sync" ..panic
+    StackValue ptr.mut optional.empty return
   end
-  context [] .stack stackSlot list.at .data
+  context [] .stack stackSlot list.at
 end
 proc(
   Atomic list
@@ -2395,7 +2405,12 @@ proc(
     empty forceClear preserveValue case break
     stackSlot case
       regState .currentValue .stackSlot =:: stackSlot
-      stackSlot context stackSlotData =:: stackData
+      stackSlot context stackSlotData =:: stackData?
+      stackData? optional.isEmpty if
+        "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
+        regState resetRegister return
+      end
+      stackData? .data =:: stackData
       stackData [] .location switch
         register case
           stackData .location [] .register =:: register
@@ -2415,7 +2430,12 @@ proc(
       break
     stackSlotHi case
       regState .currentValue .stackSlotHi =:: stackSlot
-      stackSlot context stackSlotData =:: stackData
+      stackSlot context stackSlotData =:: stackData?
+      stackData? optional.isEmpty if
+        "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
+        regState resetRegister return
+      end
+      stackData? .data =:: stackData
       stackData [] .location switch
         registerHi case
           stackData .location [] .registerHi =:: register
@@ -2445,7 +2465,12 @@ proc(
       break
     stackSlotLow case
       regState .currentValue .stackSlotLow =:: stackSlot
-      stackSlot context stackSlotData =:: stackData
+      stackSlot context stackSlotData =:: stackData?
+      stackData? optional.isEmpty if
+        "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
+        regState resetRegister return
+      end
+      stackData? .data =:: stackData
       stackData [] .location switch
         registerLow case
           stackData .location [] .registerLow =:: register
@@ -2640,7 +2665,12 @@ proc(
             targetRegister varLoc .register=
             break
           stackSlot case
-            currentValue .stackSlot context stackSlotData =:: stackData
+            currentValue .stackSlot context stackSlotData =:: stackData?
+            stackData? optional.isEmpty if
+              "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
+              ValType .EMPTY break
+            end
+            stackData? .data =:: stackData
             stackData .location [] .register srcRegister != if
               "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
             end
@@ -2719,7 +2749,12 @@ proc(
         break
       stackSlot case
         expectedValue .stackSlot =:: stackSlot
-        stackSlot context stackSlotData =:: stackData
+        stackSlot context stackSlotData =:: stackData?
+        stackData? optional.isEmpty if
+          "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
+          break
+        end
+        stackData? .data =:: stackData
         mode .RESET ?? if
           targetRegister stackData .location .register=
           break
@@ -3858,6 +3893,47 @@ proc(
           return
         end
         break
+      New case
+        ## TODO build tuple from elements
+        break
+      NewReference case
+        op [] .dataType typeContext types.isTuple ! if
+          "CodeGen: unsupported type for new-reference" ..panic
+        end
+        ValType .PTR optional.wrap op [] .pos context popValue =:: target?
+        target? optional.isEmpty if
+          "CodeGen: missing target for tuple-creation":s Atomic .DebugError list.append
+          return
+        end
+        target? .data =:: target
+        op [] .dataType typeContext types.compositeElts =:: eltTypes
+        eltTypes .length 1 - while $ 0 >= do =:: i
+          eltTypes i [] =:: eltType
+          eltType typeContext toValType =:: eltVal
+          eltVal optional.wrap op [] .pos context popValue =:: elt?
+          elt? optional.isEmpty if
+            "CodeGen: invalid type for tuple-element":s Atomic .DebugError list.append
+            continue
+          end
+          elt? .data =:: elt
+          op [] .dataType i i32 cast typeContext types.tupleElementOffset .data =:: eltOffset
+          ## TODO support non-register locations (! procedures for stackLoc <-> valLoc <-> operand
+          eltVal .REFERENCE ?? if
+            asm.OpType .COPY
+              target .location .register eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
+              elt .location .register asm.Operand .register
+              eltType typeContext types.sizeOf .fixed asm.Operand .constInt
+            context appendOp3
+          else
+            asm.OpType .STORE
+              target .location .register eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
+              elt .location .register asm.Operand .register
+            context appendOp2
+          end
+        finally i 1 - end ..drop
+        ## TODO support non-register localtions
+        ValType .REFERENCE target .location .register ValueLocation .register opIndex context pushValue
+        return
       declareId case return ## nothing to do (all declarations handled at start of procedure)
       getId case
         op .val .getId =:: idData
