@@ -42,8 +42,14 @@
       <keyword>move</keyword>
       <keyword>load</keyword>
       <keyword>store</keyword>
+      <keyword>clear</keyword>
       <keyword>copy</keyword>
       <keyword>offset</keyword>
+      <keyword>bitmove</keyword>
+      <keyword>bitmove11</keyword>
+      <keyword>bitmove12</keyword>
+      <keyword>bitmove21</keyword>
+      <keyword>bitmove22</keyword>
       <keyword>push</keyword>
       <keyword>pop</keyword>
       <keyword>label</keyword>
@@ -132,7 +138,7 @@
 
     <context id="number" style-ref="number">
       <match extended="true">
-        (?&lt;=[[:space:]+\-*(])(
+        (?&lt;=[[:space:]+\-*(:;])(
           [0-9]+ |
           0x[0-9A-Fa-f]+
         )
