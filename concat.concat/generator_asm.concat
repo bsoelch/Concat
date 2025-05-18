@@ -2686,11 +2686,8 @@ proc( LabelId : valId RegisterId : register i32 : opIndex CompilerContext ptr.mu
   prevLocation? optional.hasData and
       prevLocation? .data =:: prevLocation
       prevLocation .registers ?? ! "CodeGen: single register value not stored in register pair" assert
-      prevLocation .register ?? and
-      prevLocation .register context findRegister =:: prevRegisterData?
-      prevRegisterData? optional.hasData if
-    prevRegisterData? .data =:: prevRegisterData
-    prevRegisterData [] resetRegister prevRegisterData =[]
+      prevLocation .register ?? if
+    prevLocation .register context resetRegisterById
   end
   ## update register storage
   register context findRegister
@@ -2710,16 +2707,8 @@ proc( LabelId : valId RegisterPair : registers i32 : opIndex CompilerContext ptr
       prevLocation? .data =:: prevLocation
       prevLocation .register ?? ! "CodeGen: multi register value not stored in single register" assert
       prevLocation .registers ?? if
-    prevLocation .registers .low context findRegister =:: prevLowRegisterData?
-    prevLowRegisterData? optional.hasData if
-      prevLowRegisterData? .data =:: prevLowRegisterData
-      prevLowRegisterData [] resetRegister prevLowRegisterData =[]
-    end
-    prevLocation .registers .hi context findRegister =:: prevHiRegisterData?
-    prevHiRegisterData? optional.hasData if
-      prevHiRegisterData? .data =:: prevHiRegisterData
-      prevHiRegisterData [] resetRegister prevHiRegisterData =[]
-    end
+    prevLocation .registers .low context resetRegisterById
+    prevLocation .registers .hi context resetRegisterById
   end
   ## update register storage
   registers .low context findRegister $ optional.hasData if .data =:: lowRegisterData
@@ -2739,6 +2728,11 @@ proc( RegisterState : state -> RegisterState ) =>: resetRegister
     RegisterContent .empty >$ .currentValue=
     -1 >$ .lastUsed=
   return
+end
+proc( RegisterId : regId CompilerContext ptr.mut : context -> ) =>: resetRegisterById
+  regId context findRegister =:: regState?
+  regState? optional.isEmpty if return end
+  regState? .data [] resetRegister regState? .data =[]
 end
 proc( LabelId : valId CompilerContext ptr.mut : context -> ValueLocation ptr.mut optional ) =>: atCachedVarLocation
   context .variableLocations valId map.at
@@ -2765,13 +2759,14 @@ proc( LabelId : valId CompilerContext ptr.mut : context -> ) =>: removeCachedVar
   context .variableLocations valId map.remove =:: removed?
   removed? optional.hasData if
     removed? .data switch
-      register case removed? .data .register context findRegister =:: prevRegisterData?
-        prevRegisterData? optional.hasData if
-          prevRegisterData? .data =:: prevRegisterData
-          prevRegisterData [] resetRegister prevRegisterData =[]
-        end
+      register case
+        removed? .data .register context resetRegisterById
         break
-      registerHi registerLow registers case "CodeGen: multi-register values are not implemented" ..panic
+      registers case removed? .data .registers =:: regs
+        regs .low context resetRegisterById
+        regs .hi context resetRegisterById
+        break
+      registerLow registerHi case "CodeGen: clearing parital values is not implemented" ..panic
       ## nothing to do
       intArgument floatArgument localMemory localAddr globalMemory globalAddr intConstant floatConstant ptrConstant case break
     end
@@ -3190,8 +3185,7 @@ proc(
               register asm.Operand .register
             context appendOp2
             StackValueLocation .memory stackData .location=
-            register context findRegister .data =:: regState
-            regState [] resetRegister regState =[] ## clear previous location
+            register context resetRegisterById ## clear previous location
             break
           memory case
             asm.OpType .MOVE
@@ -3630,22 +3624,17 @@ proc(
   ## update status of popped registers
   popped .location switch
     register case
-      popped .location .register context findRegister =:: regState
-      regState .data [] resetRegister regState .data =[]
+      popped .location .register context resetRegisterById
       break
     registerHi case
-      popped .location .registerHi context findRegister =:: regState
-      regState .data [] resetRegister regState .data =[]
+      popped .location .registerHi context resetRegisterById
       break
     registerLow case
-      popped .location .registerLow context findRegister =:: regState
-      regState .data [] resetRegister regState .data =[]
+      popped .location .registerLow context resetRegisterById
       break
     registers case
-      popped .location .registers .hi context findRegister =:: hiReg
-      popped .location .registers .low context findRegister =:: lowReg
-      hiReg .data [] resetRegister hiReg .data =[]
-      lowReg .data [] resetRegister lowReg .data =[]
+      popped .location .registers .low context resetRegisterById
+      popped .location .registers .hi context resetRegisterById
       break
     memory case break ## nothing to do
   end
@@ -4557,7 +4546,10 @@ proc(
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR case
             op [] .dataType typeContext toValType =:: valType
             valType CheckValue .valueOrReference op [] .pos context popValue =:: stackValue?
-            stackValue? optional.isEmpty if return end
+            stackValue? optional.isEmpty if
+              "stack undeflow":s Atomic .DebugError list.append
+              return
+            end
             stackValue? .data =:: stackValue
             stackValue .location switch
               register case
@@ -4635,9 +4627,14 @@ proc(
         container? optional.isEmpty if return end
         container? .data =:: container
         container .valType valType=
-        op [] .dataType op [] .val .getElement typeContext types.compositeGetElement =:: eltType
+        op [] .dataType
+          $ typeContext types.isPointer if
+            typeContext types.getBaseType
+          end
+        =:: containerType
+        containerType op [] .val .getElement typeContext types.compositeGetElement =:: eltType
         eltType typeContext toValType =:: eltVal
-        op [] .dataType op [] .val .getElement typeContext types.tupleElementOffset .data =:: eltOffset
+        containerType op [] .val .getElement typeContext types.tupleElementOffset .data =:: eltOffset
         valType .PTR ?? or valType .REFERENCE ?? and eltVal isPrimitiveValType ! if ## ptr/reference -> ptr/reference
           valType opIndex context nextRegister =:: targetRegister ## ptr -> ptr / reference -> reference
           asm.OpType .OFFSET
@@ -4649,6 +4646,7 @@ proc(
             end
             eltOffset asm.Operand .constInt
           context appendOp3
+          ## result is ptr/ref iff source valType is ptr/ref
           valType targetRegister ValueLocation .register opIndex context pushValue
         else valType .REFERENCE ?? _if ## reference -> value
           eltVal opIndex context nextRegister =:: targetRegister
@@ -4680,6 +4678,7 @@ proc(
                 BitMove.DST_TYPE_OVERWRITE_REG BitMove.DST2_SHIFT << |
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp5
+            eltVal targetRegisterHi targetRegisterLow RegisterPair new ValueLocation .registers opIndex context pushValue
           else eltVal opIndex context nextRegister =:: targetRegister
               valType isMultiRegValType _if
             container .location .registers .low getRegSize =:: lowRegSize
@@ -4709,6 +4708,7 @@ proc(
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
               context appendOp4
             end
+            eltVal targetRegister ValueLocation .register opIndex context pushValue
           else
             asm.OpType .BITMOVE11
               targetRegister asm.Operand .register
@@ -4721,6 +4721,7 @@ proc(
                 BitMove.DST_TYPE_OVERWRITE_REG BitMove.DST1_SHIFT <<
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp3
+            eltVal targetRegister ValueLocation .register opIndex context pushValue
           end
         end
         return
@@ -5504,10 +5505,18 @@ proc(
                 popped .location switch
                   memory case break ## nothing to do
                   register case
-                    popped .location .register context findRegister .data =:: poppedReg
-                    poppedReg [] resetRegister poppedReg =[]
+                    popped .location .register context resetRegisterById
                     break
-                  registers registerHi registerLow case "unimplemented" ..panic
+                  registerLow case
+                    popped .location .registerLow context resetRegisterById
+                    break
+                  registerHi case
+                    popped .location .registerHi context resetRegisterById
+                    break
+                  registers case
+                    popped .location .registers .hi context resetRegisterById
+                    popped .location .registers .low context resetRegisterById
+                    break
                 end
               end
             context .stack=
