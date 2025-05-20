@@ -1584,7 +1584,11 @@ namespace: AMD64
               end
               "unsupported value types for move" ..panic
             I8 I16 case
-              op .operands 1 [] .constInt ?? if "  mov " sb.appendS else "  movzx " sb.appendS end break
+              op .opType .STORE ?? or op .operands 0 [] .register ?? ! or op .operands 1 [] .constInt ?? if
+                "  mov " sb.appendS
+              else
+                "  movzx " sb.appendS
+              end break
             I32 I64 PTR BITS32 BITS64 case "  mov " sb.appendS break
             F32 BITS32F case "  movss " sb.appendS break
             F64 BITS64F case "  movsd " sb.appendS break
@@ -1597,7 +1601,10 @@ namespace: AMD64
           op .opType .STORE ?? and op .operands 0 [] isAddress ! if
             '[' sb.appendC op .operands 0 [] ValType .PTR context appendOperand "], " sb.appendS
           else
-            op .operands 0 [] opValType extendSmallInts context appendOperand ", " sb.appendS
+            op .operands 0 []
+              opValType
+              $1 .register ?? and op .opType .STORE ?? ! if extendSmallInts end
+            context appendOperand ", " sb.appendS
           end
           op .opType .LOAD ?? and op .operands 1 [] isAddress ! if
             '[' sb.appendC op .operands 1 [] ValType .PTR  context appendOperand "]\n" sb.appendS
@@ -4632,9 +4639,14 @@ proc(
             typeContext types.getBaseType
           end
         =:: containerType
-        containerType op [] .val .getElement typeContext types.compositeGetElement =:: eltType
+        containerType typeContext types.isArray if
+          containerType typeContext types.getElementType
+          $ typeContext types.strideOf .fixed op [] .val .getElement i64 cast.u *
+        else
+          containerType op [] .val .getElement typeContext types.compositeGetElement
+          containerType op [] .val .getElement typeContext types.tupleElementOffset .data
+        end  =:: eltOffset =:: eltType
         eltType typeContext toValType =:: eltVal
-        containerType op [] .val .getElement typeContext types.tupleElementOffset .data =:: eltOffset
         valType .PTR ?? or valType .REFERENCE ?? and eltVal isPrimitiveValType ! if ## ptr/reference -> ptr/reference
           valType opIndex context nextRegister =:: targetRegister ## ptr -> ptr / reference -> reference
           asm.OpType .OFFSET
