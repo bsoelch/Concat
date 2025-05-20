@@ -208,7 +208,7 @@ namespace: branchTree
   proc(
     type : auto: T
     T BranchTree ptr.mut : tree
-  -> T ptr optional ) =>: export: peek
+  -> T ptr.mut optional ) =>: export: peek
     tree 0 at return
   end
   ## returns a pointer to the stack element at the given index (0-indexed from top)
@@ -216,18 +216,18 @@ namespace: branchTree
     type : auto: T
     T BranchTree ptr.mut : tree
     i32 : index
-  -> T ptr optional ) =>: export: at
+  -> T ptr.mut optional ) =>: export: at
     tree [] .branchHead i32 cast =:: mut: nodeId
     index while
       nodeId 0 < or nodeId tree [] .nodes .length >= if ..drop
-        T ptr optional.empty return
+        T ptr.mut optional.empty return
       end
     ..dup 0 > do
       tree [] .nodes nodeId list.at .data [] .parent i32 cast nodeId=
       1 -
     end ..drop
     tree [] .nodes nodeId list.at
-      .data .data T ptr cast
+      .data .data T ptr.mut cast
     optional.wrap return
   end
   ## returns a mutable pointer to the stack element at the given index (0-indexed from top), writing to the returned pointer will only modify the current branch

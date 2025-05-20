@@ -228,23 +228,6 @@ namespace: id
     context .labels=
     context [] .labels .length 1 - LabelId cast return
   end
-  proc( i32 : id FilePosition : pos FileId : srcFile LabelContext ptr.mut : context -> LabelId ) =>: export: newDummyLabel
-    ## create temporary string Builder backed by buffer
-    char8 20 array new =:: mut: intToStrBuffer
-    intToStrBuffer@ $ ..length i32 cast.u sb.fromBuffer
-      id sb.appendU
-    sb.asStr =:: str
-    context [] .labels
-      ## Label
-        str context copyString
-        pos
-        context [] .namespaceInfo
-        srcFile
-        id.FLAG_DUMMY id.FLAG_MUTABLE |
-      Label new list.append
-    context .labels=
-    context [] .labels .length 1 - LabelId cast return
-  end
 
   proc( NamespaceId : parent string : name  LabelContext ptr.mut : context -> NamespaceId ) =>: newNamespace
     context [] .namespaces .length =:: id

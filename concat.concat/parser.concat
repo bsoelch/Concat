@@ -2031,14 +2031,31 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           ..dup .length 1 - string.head
         end
       =:: label
-      label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-      fileState [] .wordStart
-        isWrite if
-          opSetLabel
-        else
-          opGetLabel
+      label 10 number.tryParseUInt .NONE ?? if
+        $ i64 cast.u i32.UMAX > if
+          "element index outside allowed range: " sb.copyPtr
+            $1 sb.appendI
+          fileState [] .wordStart errors appendError
         end
-      state appendOp
+        Type .undefined
+          >$ i32 cast.u ## index
+          fileState [] .wordStart
+          isWrite if
+            opSetElement
+          else
+            opGetElement
+          end
+        state appendOp
+      else ..drop
+        label id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
+        fileState [] .wordStart
+          isWrite if
+            opSetLabel
+          else
+            opGetLabel
+          end
+        state appendOp
+      end
       return
     else ..dup "()":s string.eq _if ..drop
       fileState [] .wordStart opCallPtr state appendOp

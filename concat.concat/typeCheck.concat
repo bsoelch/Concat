@@ -1439,6 +1439,127 @@ proc(
     op [] .pos errors appendError
   end
 end
+proc(
+  Type : srcType
+  Type : containerType
+  i32 : elementIndex
+  bool : isWrite
+  bool : isPtr
+  bool : mutable
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: typeCheckGetElement
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  state [] .program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  OP_UNLINKED =:: mut: onRead
+  isWrite ! and containerType typeContext types.isTaggedUnion if
+    containerType elementIndex pos opCheckEnum state appendOp onRead=
+    true program .hasCheckEnum=
+  end
+  containerType typeContext types.isArray if
+    containerType typeContext types.getElementType
+  else
+    containerType elementIndex typeContext types.compositeGetElement
+  end =:: eltType
+  ## can only take address of reference or pointer
+  isPtr and isWrite ! if
+    eltType mutable typeContext types.getAddressType
+  else
+    eltType
+  end =:: targetType
+  isWrite if
+    isPtr and mutable ! if ## TODO more detailed message (? print ptr-type & label name if existent)
+      "cannot write to element of immutable pointer" sb.copyPtr
+      pos errors appendError
+    end
+    targetType typeContext types.isEmpty and
+        containerType typeContext types.isTaggedUnion ! if
+      ## discard container and argument from stack
+      2 pos state discardValues
+      return
+    end
+    ## XXX? when writing empty value to union, elementIndex still needs to be changed
+    Type 2 array : args
+    targetType args@ 0 =[]
+    srcType args@ 1 =[]
+    ## requireTypes
+      args@ slice.wrap
+      "element write":s
+      0
+      pos
+    state requireTypes  if
+      return
+    end
+    ## opSetElement
+      srcType
+      elementIndex
+      pos
+    containerType typeContext types.isTaggedUnion if
+      opSetEnumElement
+    else
+      opSetElement
+    end =:: newOp
+    isPtr if
+      newOp state appendOp ..drop
+    else
+      ## pushValue
+        srcType
+        ConstValue .None ## XXX? update constant
+        newOp
+      state pushValue
+    end
+    return
+  end
+  eltType typeContext types.isEmpty =:: emptyValue
+  emptyValue if ## empty or pointer to empty
+    ## discard container from stack and operations
+    1 pos state discardValues
+  else
+    ## remove container from stack
+    state .stack branchTree.pop ..drop
+  end
+  state [] .compiledOps list.peek =:: prevOp?
+  prevOp? optional.hasData and
+      prevOp? .data .val .copy ??
+  end =:: directCopy ## operation before get element is copy
+  directCopy if
+    state [] .compiledOps
+      $ .length 1 - list.setLength
+    state .compiledOps=
+  end
+  emptyValue and isPtr if
+    ## pushConstant
+      0 ConstValue .Int
+      targetType
+      pos
+    state pushConstant
+    return
+  end
+  ## pushValue
+    targetType
+    ConstValue .None ## XXX compute constant value
+    srcType
+      elementIndex
+      pos
+    opGetElement
+  state pushValue
+  state .stack branchTree.pop .data [] =:: mut: topValue
+  ## XXX? is pop then push neccessary
+  state .stack topValue branchTree.push
+  targetType typeContext types.isEmpty if
+    return
+  end
+  directCopy if
+    ## removed copy is operation directly before get element
+    ## -> have to reinsert copy after getting element
+    state wrapCopy
+  else
+    state .stack branchTree.pop .data [] topValue=
+    state .stack topValue branchTree.push
+  end
+end
 
 proc(
   BlockId : switchId
@@ -2365,6 +2486,72 @@ proc(
         i 1 +
       end ..drop
       return
+    getElement setElement case
+      op .val .getElement ?? if
+        op .val .getElement false
+      else
+        op .val .setElement true
+      end =:: isWrite =:: index
+      isWrite if 2 else 1 end op .pos state checkStackSize if
+        return
+      end
+      false =:: mut: mutable
+      false =:: mut: isPtr
+      state .stack branchTree.peek .data [] =:: container
+      container .valueType =:: mut: srcType
+      srcType
+        $ typeContext types.isPointer if
+           $ srcType=
+           true isPtr=
+           $ typeContext types.isMutable mutable=
+           typeContext types.ptrTarget
+        else $ types.isLiteral _if
+          typeContext types.literalToType
+            $ srcType=
+          container $1 SignType .NONE op .pos state tryCastConstant if
+            "could not convert literal to type: " sb.copyPtr
+              srcType typeContext sb.appendType
+            op .pos errors appendError
+          end
+        end
+      =:: mut: containerType
+      containerType typeContext types.isTuple if
+        index containerType typeContext types.compositeEltCount >= if
+          "element index out of range: " sb.copyPtr
+            index sb.appendI
+            " size: " sb.appendS
+            containerType typeContext types.compositeEltCount sb.appendI
+          op .pos errors appendError
+          return
+        end
+        srcType containerType index isWrite isPtr mutable op .pos state typeCheckGetElement
+      else containerType typeContext types.isArray _if
+        containerType typeContext types.getArraySize =:: arraySizes
+        arraySizes .length 0 > if
+          arraySizes $ .length 1 - slice.get =:: arraySize
+          arraySize .int ?? if
+            arraySize .int
+          else
+            "generic arrays are not supported" sb.copyPtr
+            op .pos errors appendError
+            return
+          end
+        else 1 end =:: eltCount
+        index i64 cast.u eltCount >= if
+          "element index out of range: " sb.copyPtr
+            index sb.appendI
+            " size: " sb.appendS
+            containerType typeContext types.compositeEltCount sb.appendI
+          op .pos errors appendError
+          return
+        end
+        srcType containerType index isWrite isPtr mutable op .pos state typeCheckGetElement
+      else
+        "indexed element access is only supported on tuples, structs and arrays got: " sb.copyPtr
+          srcType typeContext sb.appendType
+        op .pos errors appendError
+      end
+      return
     getLabel setLabel hasLabel existsLabel case
       enum( CHECK CHECK_ENUM GET ) =:: LabelAccessType
       LabelAccessType .GET =:: mut: accessType
@@ -2392,7 +2579,6 @@ proc(
           true isType=
           container .value .TypeId
         else ..dup typeContext types.isPointer _if
-           ..dup srcType=
            true isPtr=
            ..dup typeContext types.isMutable mutable=
            typeContext types.getBaseType
@@ -2403,7 +2589,7 @@ proc(
             "could not convert literal to type: " sb.copyPtr
               srcType typeContext sb.appendType
             op .pos errors appendError
-          end ## ! "can convert literal to type" assert
+          end
         end
       =:: mut: containerType
       ## compositeFindLabel
@@ -2496,104 +2682,7 @@ proc(
         elementLabel state replaceLabel
         return
       end
-      OP_UNLINKED =:: mut: onRead
-      isWrite ! and containerType typeContext types.isTaggedUnion if
-        containerType elementIndex op .pos opCheckEnum state appendOp onRead=
-        true program .hasCheckEnum=
-      end
-      ## can only take address of reference or pointer
-      isPtr and isWrite ! if
-        eltType mutable typeContext types.getAddressType
-      else
-        eltType
-      end =:: targetType
-      isWrite if
-        targetType typeContext types.isEmpty and
-            containerType typeContext types.isTaggedUnion ! if
-          ## discard container and argument from stack
-          2 op .pos state discardValues
-          return
-        end
-        ## XXX? when writing empty value to union, elementIndex still needs to be changed
-        Type 2 array : args
-        targetType args@ 0 =[]
-        srcType args@ 1 =[]
-        ## requireTypes
-          args@ slice.wrap
-          "element write":s
-          0
-          op .pos
-        state requireTypes  if
-          return
-        end
-        ## opSetElement
-          srcType
-          elementIndex
-          op .pos
-        containerType typeContext types.isTaggedUnion if
-          opSetEnumElement
-        else
-          opSetElement
-        end =:: newOp
-        isPtr if
-          newOp state appendOp ..drop
-        else
-          ## pushValue
-            srcType
-            ConstValue .None ## XXX? update constant
-            newOp
-          state pushValue
-        end
-        return
-      end
-      eltType typeContext types.isEmpty =:: emptyValue
-      emptyValue if ## empty or pointer to empty
-        ## discard container from stack and operations
-        1 op .pos state discardValues
-      else
-        ## remove container from stack
-        state .stack branchTree.pop ..drop
-      end
-      state [] .compiledOps list.peek =:: prevOp?
-      prevOp? optional.hasData and
-          prevOp? .data .val .copy ??
-      end =:: directCopy ## operation before get element is copy
-      directCopy if
-        state [] .compiledOps
-          $ .length 1 - list.setLength
-        state .compiledOps=
-      end
-      emptyValue and isPtr if
-        ## pushConstant
-          0 ConstValue .Int
-          targetType
-          op .pos
-        state pushConstant
-        return
-      end
-      ## pushValue
-        targetType
-        ConstValue .None ## XXX compute constant value
-        srcType
-          elementIndex
-          op .pos
-        opGetElement
-      state pushValue
-      elementLabel state replaceLabel
-      state .stack branchTree.pop .data [] =:: mut: topValue
-      ## XXX? is pop then push neccessary
-      state .stack topValue branchTree.push
-      targetType typeContext types.isEmpty if
-        return
-      end
-      directCopy if
-        ## removed copy is operation directly before get element
-        ## -> have to reinsert copy after getting element
-        state wrapCopy
-      else
-        state .stack branchTree.pop .data [] topValue=
-        state .stack topValue branchTree.push
-      end
+      srcType containerType elementIndex isWrite isPtr mutable op .pos state typeCheckGetElement
       return
     getEnumLabel case
       state .stack branchTree.peek =:: label?
@@ -2618,7 +2707,7 @@ proc(
       enumType op@ .dataType=
       enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
       return
-    getElement setElement setEnumElement case
+    setEnumElement case
       break
     Cast Cast! bitCast case
       op .dataType .undefined ?? if

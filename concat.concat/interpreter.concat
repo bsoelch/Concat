@@ -497,16 +497,8 @@ namespace: interpreter
             errors appendError
             id.LABEL_ID_NONE
             break
-          TYPE_PROC INITIALIZER NONE case
+          TYPE_PROC INITIALIZER NONE TYPE_STRUCT case
             id.LABEL_ID_NONE break
-          TYPE_STRUCT case
-            ## newDummyLabel
-              context [] .labelBuffer .length initialLabelOffset -
-              pos
-              -1:FileId ## TODO determine file-id
-              labelContext
-            id.newDummyLabel
-            break
         end =:: eltLabel
         ## addLabeledValue
           eltLabel

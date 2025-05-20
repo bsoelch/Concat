@@ -2162,7 +2162,7 @@ namespace: types
   proc(
     LabelId : name
     TypeSetEntry slice : elements
-    TypeContext ptr : context
+    TypeContext ptr.mut : context
   -> Type ) =>: export: newTypeSet
     ## TODO check if type-set already exists
     ##  ? check if type-set contains duplicate values
