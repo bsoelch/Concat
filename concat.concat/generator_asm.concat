@@ -2510,11 +2510,14 @@ struct(
   StackValueLocation : location
   ValType : valType
 ) =:: StackValue
+struct( LabelId : label RegisterId : reg ) =:: LabelAndReg
 union(
   RegisterId : register
-  RegisterId : registerHi ## high part in register, low part in memory
-  RegisterId : registerLow ## low part in register, hi part in memory
-  RegisterPair : registers ## TODO? allow values partially stored in registers
+  RegisterPair : registers
+  LabelAndReg : localAndLowReg
+  LabelAndReg : localAndHiReg
+  LabelAndReg : globalAndLowReg
+  LabelAndReg : globalAndHiReg
   ## TODO pointer, pointer+offset
   i32 : intArgument
   i32 : floatArgument
@@ -2766,14 +2769,15 @@ proc( LabelId : valId CompilerContext ptr.mut : context -> ) =>: removeCachedVar
   context .variableLocations valId map.remove =:: removed?
   removed? optional.hasData if
     removed? .data switch
-      register case
-        removed? .data .register context resetRegisterById
-        break
+      register case removed? .data .register context resetRegisterById break
+      localAndLowReg case removed? .data .localAndLowReg .reg context resetRegisterById break
+      localAndHiReg case removed? .data .localAndHiReg .reg context resetRegisterById break
+      globalAndLowReg case removed? .data .globalAndLowReg .reg context resetRegisterById break
+      globalAndHiReg case removed? .data .globalAndHiReg .reg context resetRegisterById break
       registers case removed? .data .registers =:: regs
         regs .low context resetRegisterById
         regs .hi context resetRegisterById
         break
-      registerLow registerHi case "CodeGen: clearing parital values is not implemented" ..panic
       ## nothing to do
       intArgument floatArgument localMemory localAddr globalMemory globalAddr intConstant floatConstant ptrConstant case break
     end
@@ -2835,7 +2839,7 @@ proc(
         register case
           stackData .location [] .register =:: register
           register regState .register != if
-            "CodeGen: stack-data and register state match":s Atomic .DebugError list.append
+            "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
           asm.OpType .MOVE
             stackSlot asm.Operand .stackData
@@ -2860,7 +2864,7 @@ proc(
         registerHi case
           stackData .location [] .registerHi =:: register
           register regState .register != if
-            "CodeGen: stack-data and register state match":s Atomic .DebugError list.append
+            "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
           asm.OpType .MOVE
             stackSlot asm.Operand .stackData128Hi
@@ -2870,7 +2874,7 @@ proc(
           break
         registers case
           stackData .location [] .registers .hi regState .register != if
-            "CodeGen: stack-data and register state match":s Atomic .DebugError list.append
+            "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
           asm.OpType .MOVE
             stackSlot asm.Operand .stackData128Hi
@@ -2895,7 +2899,7 @@ proc(
         registerLow case
           stackData .location [] .registerLow =:: register
           register regState .register != if
-            "CodeGen: stack-data and register state match":s Atomic .DebugError list.append
+            "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
           asm.OpType .MOVE
             stackSlot asm.Operand .stackData128Low
@@ -2905,7 +2909,7 @@ proc(
           break
         registers case
           stackData .location [] .registers .low regState .register != if
-            "CodeGen: stack-data and register state match":s Atomic .DebugError list.append
+            "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
           asm.OpType .MOVE
             stackSlot asm.Operand .stackData128Low
@@ -2921,7 +2925,43 @@ proc(
       context .variableLocations regState .currentValue .variable map.remove ..drop ## TODO check if correct value was removed
       break
     variableHi variableLow case
-      "partially clearing variable is not implemented" ..panic
+      regState .currentValue .variableHi ?? if
+        regState .currentValue .variableHi
+      else
+        regState .currentValue .variableLow
+      end =:: varName
+      context .variableLocations varName map.remove =:: prevValue?
+      prevValue? optional.isEmpty if
+        "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
+        break
+      end
+      prevValue? .data =:: prevValue
+      prevValue switch
+        registers case
+          context .variableLocations varName
+            ## TODO distinguish local and global vars
+            regState .currentValue .variableHi ?? if
+              varName prevValue .registers .low LabelAndReg new ValueLocation .localAndLowReg
+            else
+              varName prevValue .registers .hi LabelAndReg new ValueLocation .localAndHiReg
+            end
+          map.put ..drop
+          break
+        localAndHiReg globalAndHiReg case
+          regState .currentValue .variableHi ?? ! if ## hi-part <-> low part
+            "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
+          end
+          break
+        localAndLowReg globalAndLowReg case
+          regState .currentValue .variableLow ?? ! if ## hi-part <-> low part
+            "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
+          end
+          break
+        default
+          "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
+          break
+      end
+      break
   end
   regState resetRegister
 end
@@ -2954,6 +2994,10 @@ proc(
   i32 : opIndex
   CompilerContext ptr.mut : context
 -> Atomic list RegisterId ) =>: nextRegister
+  valType isMultiRegValType if
+    "value does not fit into single register":s Atomic .DebugError list.append
+    NO_REG return ## not a register
+  end
   opIndex context [] .dataRegisters
     context [] .intDataRegCount valType isFloatValType if slice.tail else slice.head end
   context nextFreeRegister valType setRegType
@@ -3081,13 +3125,54 @@ proc(
               ! "CodeGen: identifier exists" assert
             =:: idData
             currentValue .variable context atCachedVarLocation .data =:: varLoc
-            varLoc [] .register srcRegister != if
-              "CodeGen: variable-cache and registers in sync":s Atomic .DebugError list.append
+            varLoc [] .register ?? and varLoc [] .register srcRegister != if
+              "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
             end
             idData [] .valueType typeContext toValType
+              ## TODO find a better way to determine if variable was reference
+              $ isMultiRegValType if ..drop ValType .REFERENCE end
               targetRegister $1 setRegType targetRegister=
             targetRegister varLoc .register=
             break
+          variableHi variableLow case
+            currentValue .variableHi ?? if
+              currentValue .variableHi
+            else
+              currentValue .variableLow
+            end =:: varName
+            varName idContext id.getIdentifier
+              ! "CodeGen: identifier exists" assert
+            =:: idData
+            idData [] .valueType typeContext toValType
+              currentValue .variableHi ?? if getHiValType else getLowValType end
+              targetRegister $1 setRegType targetRegister=
+             =:: valType
+            varName context atCachedVarLocation .data =:: varLoc
+            varLoc [] switch
+              registers case
+                currentValue .variableHi ?? if
+                  targetRegister varLoc .registers .hi=
+                else
+                  targetRegister varLoc .registers .low=
+                end
+                break
+              localAndHiReg case
+                currentValue .variableHi ?? ! if
+                  "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
+                end
+                targetRegister varLoc .localAndHiReg .reg=
+                break
+              localAndLowReg case
+                currentValue .variableLow ?? ! if
+                  "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
+                end
+                targetRegister varLoc .localAndLowReg .reg=
+                break
+              default
+                "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
+                break
+            end
+            valType break
           stackSlot case
             currentValue .stackSlot context stackSlotData =:: stackData?
             stackData? optional.isEmpty if
@@ -3096,13 +3181,12 @@ proc(
             end
             stackData? .data =:: stackData
             stackData .location [] .register srcRegister != if
-              "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+              "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
             end
             stackData [] .valType
             targetRegister $1 setRegType targetRegister=
             targetRegister stackData .location .register=
             break
-          variableHi variableLow case "partial variable is unimplemented" ..panic
           stackSlotHi stackSlotLow case "parital stack slot is unimplemented" ..panic
           empty forceClear preserveValue case ..unreachable
         end =:: valType
@@ -3166,7 +3250,7 @@ proc(
                 varLoc .globalAddr asm.Operand .globalMemory
               context appendOp2
               break
-            registerHi registerLow registers case "unimplemented" ..panic
+            localAndHiReg localAndLowReg registers case "unimplemented" ..panic
             default "CodeGen: unsupported variable location" ..panic
           end
         end
@@ -3495,7 +3579,7 @@ proc(
   hiState .currentValue .empty ?? "CodeGen: pushed register is currently unassigned" assert
   context .stack [] .length RegisterContent .stackSlotLow hiState .currentValue=
   context [] .stack
-    lowReg hiReg RegisterPair new StackValueLocation .registers valType StackValue new list.push
+    hiReg lowReg RegisterPair new StackValueLocation .registers valType StackValue new list.push
   context .stack=
 end
 proc(
@@ -3508,17 +3592,19 @@ proc(
   context .program [] .idContext .typeContext =:: typeContext
   location switch
     register case
+      ## TODO better way to detect when value is reference, ? own ValueLocation(s) for reference
+      valType $ isMultiRegValType if ..drop ValType .REFERENCE end =:: regValType
       location .register context findRegister =:: regState
       regState optional.hasData and regState .data .currentValue [] .empty ?? if
         opIndex regState .data .lastUsed=
-        location .register valType context pushRegister
+        location .register regValType context pushRegister
       else ## arg register is not a valid data register
-        valType opIndex context nextRegister =:: targetRegister
+        regValType opIndex context nextRegister =:: targetRegister
         asm.OpType .MOVE
           targetRegister asm.Operand .register
           location .register asm.Operand .register
         context appendOp2
-        targetRegister valType context pushRegister
+        targetRegister regValType context pushRegister
       end
       return
     registers case
@@ -3528,7 +3614,7 @@ proc(
       lowState optional.hasData and lowState .data .currentValue [] .empty ?? if
         opIndex lowState .data .lastUsed=
         regs .low
-      else
+      else ## TODO ensure that new nextRegister for low-state does not consume high state
         valType getLowValType opIndex context nextRegister =:: targetRegister
         asm.OpType .MOVE
           targetRegister asm.Operand .register
@@ -3549,7 +3635,7 @@ proc(
       end =:: hiReg
       lowReg hiReg valType context pushRegisters
       return
-    registerHi registerLow case
+    localAndLowReg localAndHiReg case
       break
     intConstant case
       valType opIndex context nextRegister =:: targetRegister
@@ -3588,6 +3674,22 @@ proc(
       targetRegister valType context pushRegister
       return
     localMemory case ## TODO handle composite values
+      valType isMultiRegValType if
+        valType getHiValType =:: hiVal
+        valType getLowValType =:: lowVal
+        lowVal opIndex context nextRegister =:: lowRegister
+        hiVal opIndex context nextRegister =:: hiRegister
+        asm.OpType .LOAD
+          lowRegister asm.Operand .register
+          location .localMemory asm.Operand .localMemory
+        context appendOp2
+        asm.OpType .LOAD
+          hiRegister asm.Operand .register
+          location .localMemory lowRegister getRegSize asm.LabelAndOffset new asm.Operand .localMemoryAndOffset
+        context appendOp2
+        lowRegister hiRegister valType context pushRegisters
+        return
+      end
       valType opIndex context nextRegister =:: targetRegister
       valType .REFERENCE ?? if
         asm.OpType .MOVE
@@ -3599,7 +3701,7 @@ proc(
       context appendOp2
       targetRegister valType context pushRegister
       return
-    globalMemory globalAddr case
+    globalMemory globalAddr globalAndLowReg globalAndHiReg case
       break
   end
   Atomic .Unknown list.append return
@@ -5577,33 +5679,33 @@ proc(
               register case
                 a .location .register context findRegister .data =:: regData
                 hiSlot regData .currentValue [] .stackSlot != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 lowSlot regData .currentValue .stackSlot=
                 break
               registerHi case
                 a .location .registerHi context findRegister .data =:: regData
                 hiSlot regData .currentValue [] .stackSlotHi != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 lowSlot regData .currentValue .stackSlotHi=
                 break
               registerLow case
                 a .location .registerLow context findRegister .data =:: regData
                 hiSlot regData .currentValue [] .stackSlotLow != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 lowSlot regData .currentValue .stackSlotLow=
                 break
               registers case
                 a .location .registers .hi context findRegister .data =:: regDataHi
                 hiSlot regDataHi .currentValue [] .stackSlotHi != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 lowSlot regDataHi .currentValue .stackSlotHi=
                 a .location .registers .low context findRegister .data =:: regDataLow
                 hiSlot regDataLow .currentValue [] .stackSlotLow != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 lowSlot regDataLow .currentValue .stackSlotLow=
                 break
@@ -5613,33 +5715,33 @@ proc(
               register case
                 b .location .register context findRegister .data =:: regData
                 lowSlot regData .currentValue [] .stackSlot != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 hiSlot regData .currentValue .stackSlot=
                 break
               registerHi case
                 b .location .registerHi context findRegister  .data =:: regData
                 lowSlot regData .currentValue [] .stackSlotHi != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 hiSlot regData .currentValue .stackSlotHi=
                 break
               registerLow case
                 b .location .registerLow context findRegister .data =:: regData
                 lowSlot regData .currentValue [] .stackSlotLow != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 hiSlot regData .currentValue .stackSlotLow=
                 break
               registers case
                 b .location .registers .hi context findRegister .data =:: regDataHi
                 lowSlot regDataHi .currentValue [] .stackSlotHi != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 hiSlot regDataHi .currentValue .stackSlotHi=
                 b .location .registers .low context findRegister .data =:: regDataLow
                 lowSlot regDataLow .currentValue [] .stackSlotLow != if
-                  "CodeGen: stack and registers in sync":s Atomic .DebugError list.append
+                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 hiSlot regDataLow .currentValue .stackSlotLow=
                 break
