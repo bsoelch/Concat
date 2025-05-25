@@ -300,8 +300,8 @@ namespace: AMD64
           end argBuffer index =[]
           break
         F32 F64 BITS32F BITS64F case ## float
-          floatArgCount intRegs .length < if
-            intRegs floatArgCount [] ArgumentLocation .argRegister
+          floatArgCount floatRegs .length < if
+            floatRegs floatArgCount [] ArgumentLocation .argRegister
             intArgCount 1 + intArgCount=
           else seperateMemoryByType _if
             floatMemCount ArgumentLocation .argStackFloat
@@ -818,6 +818,7 @@ namespace: asm
   enum( Z NZ EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CompareType
   struct( RegisterId : reg i32 : offset ) =:: RegAndOffset
   struct( LabelId : label i32 : offset ) =::  LabelAndOffset
+  struct( i32 : const i32 : offset ) =:: ConstAndOffset
   i8 =:: BitMoveFlags
   namespace: BitMove
     0b11:BitMoveFlags =:: DST_TYPE_MASK
@@ -857,6 +858,7 @@ namespace: asm
     f32 : constF32
     f64 : constF64
     i32 : constPtr ## label of k-th pointer constant
+    ConstAndOffset : constPtrAndOffset ## label of k-th pointer constant
     i32 : stackData ## stack memory location for single value (64bit / slot)
     i32 : stackData128 ## stack memory location for 128bit value
     i32 : stackData128Hi  ## stack memory location for high half of 128bit value
@@ -882,7 +884,7 @@ namespace: asm
       constF32 case ValType .F32 return
       constF64 case ValType .F64 return
       constInt case ValType .EMPTY return ## TODO? ensure int is not interpreted as float
-      constPtr stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
+      constPtr constPtrAndOffset stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
       localMemory localMemoryAndOffset globalMemory regAndOffset localLabel globalLabel jumpTableElement case ValType .PTR return
       valType case op .valType return
     end
@@ -1116,6 +1118,10 @@ namespace: sb
         constPtr case
           "@ptr" sb.appendS val .constPtr sb.appendI
           break
+        constPtrAndOffset case
+          "@ptr" sb.appendS val .constPtrAndOffset .const sb.appendI
+          ':' sb.appendC val .constPtrAndOffset .offset i64 cast.u sb.appendI
+          break
         stackData case
           "@stackMem" sb.appendS val .stackData sb.appendI
           break
@@ -1123,10 +1129,10 @@ namespace: sb
           "@stack128Mem" sb.appendS val .stackData128 sb.appendI
           break
         stackData128Hi case
-          "@stack128Mem" sb.appendS val .stackData128 sb.appendI 'h' sb.appendC
+          "@stack128Mem" sb.appendS val .stackData128Hi sb.appendI 'h' sb.appendC
           break
         stackData128Low case
-          "@stack128Mem" sb.appendS val .stackData128 sb.appendI 'l' sb.appendC
+          "@stack128Mem" sb.appendS val .stackData128Low sb.appendI 'l' sb.appendC
           break
         intArgument case
           "@argI" sb.appendS val .intArgument sb.appendI
@@ -1384,6 +1390,10 @@ namespace: AMD64
       register case val .register valType setRegType appendRegister return
       constInt case val .constInt sb.appendI return
       constPtr case "cct_ptr" sb.appendS val .constPtr sb.appendI return
+      constPtrAndOffset case
+        "(cct_ptr" sb.appendS val .constPtrAndOffset .const sb.appendI
+        "+" sb.appendS val .constPtrAndOffset .offset sb.appendI ')' sb.appendC
+        return
       constF32 case
         valType .PTR ?? if
           "0x" sb.appendS val .constF32 f32.bits sb.appendUX
@@ -1447,7 +1457,7 @@ namespace: AMD64
   proc( asm.Operand -> bool ) =>: isAddress
     switch
       register constInt constF32 constF64 case false return
-      constPtr stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
+      constPtr constPtrAndOffset stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
       localMemory localMemoryAndOffset globalMemory regAndOffset localLabel globalLabel jumpTableElement case true return
       empty unknown cmpType valType bitMoveInfo case "unsupported operand for value" ..panic
     end
@@ -1591,8 +1601,29 @@ namespace: AMD64
       return
     end
     moveType asm.BitMove.DST_TYPE_OVERWRITE & ? if
-      ## TODO ensure bits of dst are zeroed
-      "unimplemented: insert into non-empty register" ..panic
+      ## TODO? handle case where target reg is not 64-bit int reg
+      copiedBytes byteIndex + 8 == if ## cleared registers are at top of reg
+        byteIndex 4 > if
+          "  shl " sb.appendS dst appendRegister ", " sb.appendS copiedBytes 8 * sb.appendI " /*clear high bits*/\n" sb.appendS
+          "  shr " sb.appendS dst appendRegister ", " sb.appendS copiedBytes 8 * sb.appendI '\n' sb.appendC
+        else byteIndex 4 == _if
+          "  mov " sb.appendS dst ValType .I32 setRegType appendRegister ", " sb.appendS
+            dst ValType .I32 setRegType appendRegister '\n' sb.appendC
+        else
+          "  and " sb.appendS dst appendRegister ",  0x" sb.appendS 1 byteIndex 8 * << 1 - sb.appendUX '\n' sb.appendC
+        end
+      else byteIndex 0 == _if
+        "  shr " sb.appendS dst appendRegister ", " sb.appendS copiedBytes 8 * sb.appendI " /*clear low bits*/\n" sb.appendS
+        "  shl " sb.appendS dst appendRegister ", " sb.appendS copiedBytes 8 * sb.appendI '\n' sb.appendC
+      else
+        "  mov " sb.appendS
+          INT_TMP_REGISTERS 1 [] appendRegister
+          ", 0x" sb.appendS  1:i64 copiedBytes 8 * << 1 - byteIndex 8 * << ~ sb.appendUX
+        '\n' sb.appendC
+        "  and " sb.appendS dst appendRegister
+          INT_TMP_REGISTERS 1 [] appendRegister
+        '\n' sb.appendC
+      end
     end
     "  or " sb.appendS dst appendRegister ", " sb.appendS dataReg appendRegister '\n' sb.appendC
   end
@@ -1755,29 +1786,29 @@ namespace: AMD64
         0:i64 =:: mut: offset
         ## unwrap local memory to get correct address
         src .localMemory ?? if
-          context .variableOffsets src .localMemory map.get .data
+          context .variableOffsets src .localMemory map.get .data -_
           RBP asm.Operand .register src=
         else  src .regAndOffset ?? _if
           src .regAndOffset .offset i64 cast.s
           src .regAndOffset .reg asm.Operand .register src=
         else 0:i64 end =:: srcOffset
         dst .localMemory ?? if
-          context .variableOffsets dst .localMemory map.get .data
+          context .variableOffsets dst .localMemory map.get .data -_
           RBP asm.Operand .register dst=
         else  dst .regAndOffset ?? _if
           dst .regAndOffset .offset i64 cast.s
-          dst .regAndOffset .reg asm.Operand .register src=
+          dst .regAndOffset .reg asm.Operand .register dst=
         else 0:i64 end =:: dstOffset
         size .constInt =:: total
         size .constInt =:: mut: remaining
         while remaining 16 >= do
           "  movdqu " sb.appendS tmpV appendRegister ", XMMWORD PTR [" sb.appendS
             src ValType .PTR context appendOperand
-            '+' sb.appendC offset srcOffset - sb.appendI
+            '+' sb.appendC offset srcOffset + sb.appendI
           "]\n" sb.appendS
           "  movups XMMWORD PTR [" sb.appendS ## TODO? is there a reason why gcc uses movdqu followed by movups
             dst ValType .PTR context appendOperand
-            '+' sb.appendC offset dstOffset - sb.appendI
+            '+' sb.appendC offset dstOffset + sb.appendI
           "], " sb.appendS tmpV appendRegister '\n' sb.appendC
         finally remaining 16 - remaining= offset 16 + offset= end
         remaining 0 == if
@@ -1788,21 +1819,21 @@ namespace: AMD64
           total 16 >= if
             "  movdqu " sb.appendS tmpV appendRegister ", XMMWORD PTR [" sb.appendS
               src ValType .PTR context appendOperand
-              '+' sb.appendC total 16 - srcOffset - sb.appendI
+              '+' sb.appendC total 16 - srcOffset + sb.appendI
             "]\n" sb.appendS
             "  movups XMMWORD PTR [" sb.appendS
               dst ValType .PTR context appendOperand
-              '+' sb.appendC total 16 - dstOffset - sb.appendI
+              '+' sb.appendC total 16 - dstOffset + sb.appendI
             "], " sb.appendS tmpV appendRegister '\n' sb.appendC
             return
           else
             "  mov " sb.appendS tmpI appendRegister ", QWORD PTR [" sb.appendS
               src ValType .PTR context appendOperand
-              '+' sb.appendC offset srcOffset - sb.appendI
+              '+' sb.appendC offset srcOffset + sb.appendI
             "]\n" sb.appendS
             "  mov QWORD PTR [" sb.appendS
               dst ValType .PTR context appendOperand
-              '+' sb.appendC offset dstOffset - sb.appendI
+              '+' sb.appendC offset dstOffset + sb.appendI
             "], " sb.appendS tmpI appendRegister '\n' sb.appendC
             remaining 8 - remaining=
             offset 8 + offset=
@@ -1812,21 +1843,21 @@ namespace: AMD64
           total 8 >= if
             "  mov " sb.appendS tmpI appendRegister ", QWORD PTR [" sb.appendS
               src ValType .PTR context appendOperand
-              '+' sb.appendC total 8 - srcOffset - sb.appendI
+              '+' sb.appendC total 8 - srcOffset + sb.appendI
             "]\n" sb.appendS
             "  mov QWORD PTR [" sb.appendS
               dst ValType .PTR context appendOperand
-              '+' sb.appendC total 8 - dstOffset - sb.appendI
+              '+' sb.appendC total 8 - dstOffset + sb.appendI
             "], " sb.appendS tmpI appendRegister '\n' sb.appendC
             return
           else
             "  mov " sb.appendS tmpI ValType .I32 setRegType appendRegister ", DWORD PTR [" sb.appendS
               src ValType .PTR context appendOperand
-              '+' sb.appendC offset srcOffset - sb.appendI
+              '+' sb.appendC offset srcOffset + sb.appendI
             "]\n" sb.appendS
             "  mov DWORD PTR [" sb.appendS
               dst ValType .PTR context appendOperand
-              '+' sb.appendC offset dstOffset - sb.appendI
+              '+' sb.appendC offset dstOffset + sb.appendI
             "], " sb.appendS tmpI ValType .I32 setRegType appendRegister '\n' sb.appendC
             remaining 4 - remaining=
             offset 4 + offset=
@@ -1836,21 +1867,21 @@ namespace: AMD64
           total 4 >= if
             "  mov " sb.appendS tmpI ValType .I32 setRegType appendRegister ", DWORD PTR [" sb.appendS
               src ValType .PTR context appendOperand
-              '+' sb.appendC total 4 - srcOffset - sb.appendI
+              '+' sb.appendC total 4 - srcOffset + sb.appendI
             "]\n" sb.appendS
             "  mov DWORD PTR [" sb.appendS
               dst ValType .PTR context appendOperand
-              '+' sb.appendC total 4 - dstOffset - sb.appendI
+              '+' sb.appendC total 4 - dstOffset + sb.appendI
             "], " sb.appendS tmpI ValType .I32 setRegType appendRegister '\n' sb.appendC
             return
           else
             "  movzx " sb.appendS tmpI ValType .I32 setRegType appendRegister ", WORD PTR [" sb.appendS
               src ValType .PTR context appendOperand
-              '+' sb.appendC offset srcOffset - sb.appendI
+              '+' sb.appendC offset srcOffset + sb.appendI
             "]\n" sb.appendS
             "  mov WORD PTR [" sb.appendS
               dst ValType .PTR context appendOperand
-              '+' sb.appendC offset dstOffset - sb.appendI
+              '+' sb.appendC offset dstOffset + sb.appendI
             "], " sb.appendS tmpI ValType .I16 setRegType appendRegister '\n' sb.appendC
             remaining 2 - remaining=
             offset 2 + offset=
@@ -1859,21 +1890,21 @@ namespace: AMD64
         remaining 2 == if
           "  movzx " sb.appendS tmpI ValType .I32 setRegType appendRegister ", WORD PTR [" sb.appendS
             src ValType .PTR context appendOperand
-            '+' sb.appendC offset srcOffset - sb.appendI
+            '+' sb.appendC offset srcOffset + sb.appendI
           "]\n" sb.appendS
           "  mov WORD PTR [" sb.appendS
             dst ValType .PTR context appendOperand
-            '+' sb.appendC offset dstOffset - sb.appendI
+            '+' sb.appendC offset dstOffset + sb.appendI
           "], " sb.appendS tmpI ValType .I16 setRegType appendRegister '\n' sb.appendC
           return
         else remaining 0 > _if ## remaining == 1
           "  movzx " sb.appendS tmpI ValType .I32 setRegType appendRegister ", BYTE PTR [" sb.appendS
             src ValType .PTR context appendOperand
-            '+' sb.appendC offset srcOffset - sb.appendI
+            '+' sb.appendC offset srcOffset + sb.appendI
           "]\n" sb.appendS
           "  mov BYTE PTR [" sb.appendS
             dst ValType .PTR context appendOperand
-            '+' sb.appendC offset dstOffset - sb.appendI
+            '+' sb.appendC offset dstOffset + sb.appendI
           "], " sb.appendS tmpI ValType .I8 setRegType appendRegister '\n' sb.appendC
         end
         return
@@ -2566,7 +2597,7 @@ union(
   LabelAndReg : localAndHiReg
   LabelAndReg : globalAndLowReg
   LabelAndReg : globalAndHiReg
-  ## TODO pointer, pointer+offset
+  ## TODO atReg, atReg+offset
   i32 : intArgument
   i32 : floatArgument
   i32 : compositeArgument
@@ -2834,7 +2865,8 @@ proc( LabelId : valId CompilerContext ptr.mut : context -> ) =>: removeCachedVar
         regs .hi context resetRegisterById
         break
       ## nothing to do
-      intArgument floatArgument compositeArgument localMemory localAddr globalMemory globalAddr intConstant floatConstant ptrConstant case break
+      intArgument floatArgument compositeArgument localMemory localAddr globalMemory globalAddr
+      intConstant floatConstant ptrConstant case break
     end
   end
 end
@@ -3188,18 +3220,25 @@ proc(
               ! "CodeGen: identifier exists" assert
             =:: idData
             currentValue .variable context atCachedVarLocation .data =:: varLoc
-            varLoc [] .register ?? and varLoc [] .register srcRegister != if
+            varLoc [] .register ?? ! or varLoc [] .register srcRegister != if
               "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
             end
             idData [] .valueType typeContext toValType
-              ## TODO find a better way to determine if variable was reference
-              $ isMultiRegValType if ..drop ValType .REFERENCE end
               targetRegister $1 setRegType targetRegister=
             targetRegister varLoc .register=
             break
           variableReference case
-            "CodeGen: unimplemented restore variableReference":s Atomic .DebugError list.append
-            ValType .REFERENCE break
+            currentValue .variableReference idContext id.getIdentifier
+              ! "CodeGen: identifier exists" assert
+            =:: idData
+            currentValue .variableReference context atCachedVarLocation .data =:: varLoc
+            varLoc [] .register ?? ! or varLoc [] .register srcRegister != if
+              "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
+            end
+            ValType .REFERENCE
+              targetRegister $1 setRegType targetRegister=
+            targetRegister varLoc .register=
+            break
           variableHi variableLow case
             currentValue .variableHi ?? if
               currentValue .variableHi
@@ -4621,13 +4660,6 @@ proc(
         valType isMultiRegValType if
           valType getLowValType =:: lowVal
           valType getHiValType =:: hiVal
-          lowVal isFloatValType if
-            floatArgs 1 - floatArgs=
-            floatArgs AMD64.getFloatArgumentRegister
-          else
-            intArgs 1 - intArgs=
-            intArgs AMD64.getIntArgumentRegister
-          end lowVal setRegType =:: lowReg
           hiVal isFloatValType if
             floatArgs 1 - floatArgs=
             floatArgs AMD64.getFloatArgumentRegister
@@ -4635,6 +4667,13 @@ proc(
             intArgs 1 - intArgs=
             intArgs AMD64.getIntArgumentRegister
           end hiVal setRegType =:: hiReg
+          lowVal isFloatValType if
+            floatArgs 1 - floatArgs=
+            floatArgs AMD64.getFloatArgumentRegister
+          else
+            intArgs 1 - intArgs=
+            intArgs AMD64.getIntArgumentRegister
+          end lowVal setRegType =:: lowReg
           hiReg NO_REG == or lowReg NO_REG == if
             "memory multi-values are not implemented":s Atomic .DebugError list.append
             intArgs ValueLocation .compositeArgument ## TODO count composite arguments
@@ -4721,9 +4760,28 @@ proc(
             valType op [] .val .Constant .Float ValueLocation .floatConstant opIndex context pushValue
             return
           Array Array8 Array16 Array32 Array64 case
-            ## TODO support storing small composite constants in registers
             op [] .dataType op [] .val .Constant context newPtrConstant =:: ptrId
             ValType .REFERENCE ptrId ValueLocation .ptrConstant opIndex context pushValue
+            #+valType isMultiRegValType if ## TODO? load value default
+              valType getLowValType opIndex context nextRegister =:: lowReg
+              valType getHiValType opIndex context nextRegister =:: hiReg
+              asm.OpType .LOAD
+                lowReg asm.Operand .register
+                ptrId asm.Operand .constPtr
+              context appendOp2
+              asm.OpType .LOAD
+                hiReg asm.Operand .register
+                ptrId lowReg getRegSize asm.ConstAndOffset new asm.Operand .constPtrAndOffset
+              context appendOp2
+              valType lowReg hiReg RegisterPair new ValueLocation .registers opIndex context pushValue
+            else
+              valType opIndex context nextRegister =:: valReg
+              asm.OpType .LOAD
+                valReg asm.Operand .register
+                ptrId asm.Operand .constPtr
+              context appendOp2
+              valType valReg ValueLocation .register opIndex context pushValue
+            end+#
             return
           default break ## TODO support other constant types
         end
@@ -5112,6 +5170,149 @@ proc(
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp3
             eltVal targetRegister ValueLocation .register opIndex context pushValue
+          end
+        end
+        return
+      setElement case
+        op [] .dataType typeContext toValType =:: mut: valType
+        valType CheckValue .valueOrReference op [] .pos context popValue =:: container?
+        container? optional.isEmpty if return end
+        container? .data =:: container
+        container .valType valType=
+        op [] .dataType
+          $ typeContext types.isPointer if
+            typeContext types.getBaseType
+          end
+        =:: containerType
+        containerType typeContext types.isArray if
+          containerType typeContext types.getElementType
+          $ typeContext types.strideOf .fixed op [] .val .setElement i64 cast.u *
+        else
+          containerType op [] .val .setElement typeContext types.compositeGetElement
+          containerType op [] .val .setElement typeContext types.tupleElementOffset .data
+        end  =:: eltOffset =:: eltType
+        eltType typeContext toValType =:: eltVal
+        eltVal CheckValue .valueOrReference op [] .pos context popValue =:: element?
+        element? optional.isEmpty if return end
+        element? .data =:: element
+        op [] .dataType typeContext types.isPointer ! if
+          ## TODO! ensure element is not overwritten
+          valType
+            container .location switch
+              register case container .location .register ValueLocation .register break
+              registers case container .location .registers ValueLocation .registers break
+              memory registerHi registerLow case "setElement: unimplemented parital memory locations" ..panic
+            end
+          opIndex context pushValue
+        end
+        valType .PTR ?? or valType .REFERENCE ?? if ## ptr/reference, ...
+          container .location switch
+            register case
+              container .location .register eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
+              break
+            memory case
+              "setElement: unimplemented copy to stack memory" ..panic
+            registers registerHi registerLow case ..unreachable ## wrong data-format
+          end =:: targetLocation
+          element .valType .REFERENCE ?? if ## ptr / reference, reference
+            asm.OpType .COPY
+              targetLocation
+              element .location switch
+                register case element .location .register asm.Operand .register break
+                memory registers registerHi registerLow case
+                  "setElement: unimplemented store-memory / store multi-reg" ..panic
+              end
+              eltType typeContext types.sizeOf .fixed asm.Operand .constInt
+            context appendOp3
+          else ## ptr / reference, value
+            asm.OpType .STORE
+              targetLocation
+              element .location switch
+                register case element .location .register asm.Operand .register break
+                memory registers registerHi registerLow case
+                  "setElement: unimplemented store-memory / store multi-reg" ..panic
+              end
+            context appendOp2
+          end
+        else ## value, value
+          element .valType eltVal == "setElement: unimplemented store reference to value" assert
+          using: BitMove asm.BitMove.
+          eltType typeContext types.sizeOf .fixed =:: eltSize
+          eltVal isMultiRegValType if
+            ## TODO ensure dst hi-low are not a swapped version of source hi and low (prevent unneccessary moves)
+            asm.OpType .BITMOVE22
+              container .location .registers .low asm.Operand .register
+              container .location .registers .hi asm.Operand .register
+              element .location switch
+                registers case
+                  element .location .registers .low asm.Operand .register
+                  element .location .registers .hi asm.Operand .register
+                  break
+                memory registerHi registerLow case "setElement: unimplemented copy memory to value" ..panic
+                register case ..unreachable ## wrong data-format
+              end
+              0:i8 eltOffset i8 cast eltSize i8 cast
+                BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
+                BitMove.DST_TYPE_OVERWRITE BitMove.DST2_SHIFT << |
+              asm.BitMoveInfo new asm.Operand .bitMoveInfo
+            context appendOp5
+          else valType isMultiRegValType _if
+            container .location .registers .low getRegSize =:: lowRegSize
+            eltOffset lowRegSize i64 cast.u >= if
+              asm.OpType .BITMOVE11
+                container .location .registers .hi asm.Operand .register
+                element .location switch
+                  register case element .location .register asm.Operand .register break
+                  memory case "setElement: unimplemented copy memory to value" ..panic
+                  registers registerHi registerLow case ..unreachable ## wrong data-format
+                end
+                0:i8 eltOffset i32 cast.u lowRegSize - i8 cast eltSize i8 cast
+                  BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
+                asm.BitMoveInfo new asm.Operand .bitMoveInfo
+              context appendOp3
+            else eltOffset eltSize + lowRegSize i64 cast.u <= _if
+              asm.OpType .BITMOVE11
+                container .location .registers .low asm.Operand .register
+                element .location switch
+                  register case element .location .register asm.Operand .register break
+                  memory case "setElement: unimplemented copy memory to value" ..panic
+                  registers registerHi registerLow case ..unreachable ## wrong data-format
+                end
+                0:i8 eltOffset i8 cast eltSize i8 cast
+                  BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
+                asm.BitMoveInfo new asm.Operand .bitMoveInfo
+              context appendOp3
+            else
+              asm.OpType .BITMOVE21
+                container .location .registers .low asm.Operand .register
+                container .location .registers .hi asm.Operand .register
+                element .location switch
+                  register case element .location .register asm.Operand .register break
+                  memory case "setElement: unimplemented copy memory to value" ..panic
+                  registers registerHi registerLow case ..unreachable ## wrong data-format
+                end
+                0:i8 eltOffset i8 cast eltSize i8 cast
+                  BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
+                  BitMove.DST_TYPE_OVERWRITE BitMove.DST2_SHIFT << |
+                asm.BitMoveInfo new asm.Operand .bitMoveInfo
+              context appendOp4
+            end
+          else
+            asm.OpType .BITMOVE11
+              container .location switch
+                register case container .location .register asm.Operand .register break
+                memory case context [] .stack .length asm.Operand .stackData break
+                registers registerHi registerLow case ..unreachable ## wrong data-format
+              end
+              element .location switch
+                register case element .location .register asm.Operand .register break
+                memory case "setElement: unimplemented copy memory to value" ..panic
+                registers registerHi registerLow case ..unreachable ## wrong data-format
+              end
+              0:i8 eltOffset i8 cast eltSize i8 cast
+                BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
+              asm.BitMoveInfo new asm.Operand .bitMoveInfo
+            context appendOp3
           end
         end
         return
@@ -5953,7 +6154,9 @@ proc(
             a .location switch
               register case
                 a .location .register context findRegister .data =:: regData
-                hiSlot regData .currentValue [] .stackSlot != if
+                regData .currentValue [] .stackSlot ?? and hiSlot regData .currentValue [] .stackSlot != end or
+                    regData .currentValue [] .stackSlotReference ?? and
+                    hiSlot regData .currentValue [] .stackSlotReference != if
                   "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 lowSlot regData .currentValue .stackSlot=
@@ -5989,7 +6192,9 @@ proc(
             b .location switch
               register case
                 b .location .register context findRegister .data =:: regData
-                lowSlot regData .currentValue [] .stackSlot != if
+                regData .currentValue [] .stackSlot ?? and lowSlot regData .currentValue [] .stackSlot != end or
+                    regData .currentValue [] .stackSlotReference ?? and
+                    lowSlot regData .currentValue [] .stackSlotReference != if
                   "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 hiSlot regData .currentValue .stackSlot=
