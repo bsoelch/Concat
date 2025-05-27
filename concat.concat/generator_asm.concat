@@ -795,7 +795,7 @@ namespace: asm
     MOVE LOAD STORE COPY PUSH POP ## TODO? add alignment parameter to copy
     ## TODO? macro instuctions for loading/storing two registers at once
     OFFSET CLEAR
-    BITMOVE11 BITMOVE12 BITMOVE21 BITMOVE22
+    INSERT EXTRACT
     ## controll-flow
     LABEL
     JMP JMPIF CALL RET
@@ -825,6 +825,7 @@ namespace: asm
     0b00:BitMoveFlags =:: DST_TYPE_EMPTY
     0b01:BitMoveFlags =:: DST_TYPE_OVERWRITE
     0b10:BitMoveFlags =:: DST_TYPE_OVERWRITE_REG
+    0b11111111:BitMoveFlags =:: DST_TYPE_EXTRACT
     ## destinations are counted from low to high
     0 =:: DST1_SHIFT
     2 =:: DST2_SHIFT
@@ -844,8 +845,7 @@ namespace: asm
   overload: merge: | BitMove.or end
   overload: merge: ? BitMove.toBool end
   struct( ## offsets and size in bytes
-    i8 : srcOffset
-    i8 : dstOffset
+    i8 : offset
     i8 : count
     BitMoveFlags : flags
   ) =:: BitMoveInfo
@@ -1028,10 +1028,8 @@ namespace: sb
         OFFSET case "offset":s break
         PUSH case "push":s break
         POP case "pop":s break
-        BITMOVE11 case "bitmove11":s break
-        BITMOVE12 case "bitmove12":s break
-        BITMOVE21 case "bitmove21":s break
-        BITMOVE22 case "bitmove22":s break
+        INSERT case "insert":s break
+        EXTRACT case "extract":s break
         LABEL case "label":s break
         DATA case "data":s break
         PADDING_BYTES case "pad_bytes":s break
@@ -1171,21 +1169,23 @@ namespace: sb
           val .valType sb.appendValType
           break
         bitMoveInfo case
-          val .bitMoveInfo .srcOffset i32 cast.u sb.appendI ':' sb.appendC
-          val .bitMoveInfo .dstOffset i32 cast.u sb.appendI ':' sb.appendC
-          val .bitMoveInfo .count i32 cast.u sb.appendI ':' sb.appendC
-          ## TODO? better handling of flags (? is there a way to avoid printing type of 2nd des if there is only one dst)
-          val .bitMoveInfo .flags asm.BitMove.DST1_SHIFT >> asm.BitMove.DST_TYPE_MASK & switch
-            asm.BitMove.DST_TYPE_EMPTY case '0' sb.appendC break
-            asm.BitMove.DST_TYPE_OVERWRITE case 'X' sb.appendC break
-            asm.BitMove.DST_TYPE_OVERWRITE_REG case 'R' sb.appendC break
-            default '?' sb.appendC break
-          end
-          val .bitMoveInfo .flags asm.BitMove.DST2_SHIFT >> asm.BitMove.DST_TYPE_MASK & switch
-            asm.BitMove.DST_TYPE_EMPTY case '0' sb.appendC break
-            asm.BitMove.DST_TYPE_OVERWRITE case 'X' sb.appendC break
-            asm.BitMove.DST_TYPE_OVERWRITE_REG case 'R' sb.appendC break
-            default '?' sb.appendC break
+          val .bitMoveInfo .offset i32 cast.u sb.appendI ':' sb.appendC
+          val .bitMoveInfo .count i32 cast.u sb.appendI
+          val .bitMoveInfo .flags asm.BitMove.DST_TYPE_EXTRACT != if
+            ':' sb.appendC
+            ## TODO? better handling of flags (? is there a way to avoid printing type of 2nd des if there is only one dst)
+            val .bitMoveInfo .flags asm.BitMove.DST1_SHIFT >> asm.BitMove.DST_TYPE_MASK & switch
+              asm.BitMove.DST_TYPE_EMPTY case '0' sb.appendC break
+              asm.BitMove.DST_TYPE_OVERWRITE case 'X' sb.appendC break
+              asm.BitMove.DST_TYPE_OVERWRITE_REG case 'R' sb.appendC break
+              default '?' sb.appendC break
+            end
+            val .bitMoveInfo .flags asm.BitMove.DST2_SHIFT >> asm.BitMove.DST_TYPE_MASK & switch
+              asm.BitMove.DST_TYPE_EMPTY case '0' sb.appendC break
+              asm.BitMove.DST_TYPE_OVERWRITE case 'X' sb.appendC break
+              asm.BitMove.DST_TYPE_OVERWRITE_REG case 'R' sb.appendC break
+              default '?' sb.appendC break
+            end
           end
           break
       end
@@ -1493,8 +1493,8 @@ namespace: AMD64
   proc( stringBuilder
     RegisterId : dst
     asm.BitMoveFlags : moveType
-    asm.Operand : srcLow
-    asm.Operand : srcHi
+    RegisterId : srcLow
+    RegisterId : srcHi
     i32 : srcOffset
     i32 : byteIndex
     i32 : copiedBytes
@@ -1507,7 +1507,7 @@ namespace: AMD64
       ## TODO! support move simd <-> int reg
       "  mov " sb.appendS
         dst appendRegister ", " sb.appendS
-      srcLow dst getRegType regTypeAsValType  context appendOperand '\n' sb.appendC
+      srcLow dst getRegType regTypeAsValType setRegType appendRegister '\n' sb.appendC
       return
     end
     moveType asm.BitMove.DST_TYPE_OVERWRITE_REG & ? if
@@ -1519,40 +1519,38 @@ namespace: AMD64
     srcOffset 0 == if
       copiedBytes 4 > if ValType .I64 else ValType .I32 end =:: targetValType
       dataReg targetValType setRegType dataReg=
-      srcHi .empty ?? "copied value fits into one register" assert
+      srcHi NO_REG == "copied value fits into one register" assert
       copiedBytes 2 <= if "  movzx " sb.appendS else "  mov " sb.appendS end
         dataReg appendRegister ", " sb.appendS
-      srcLow targetValType context appendOperand '\n' sb.appendC
+      srcLow targetValType setRegType appendRegister '\n' sb.appendC
       copiedBytes copiedBytes -_ & copiedBytes ==
-    else srcHi .empty ?? _if
+    else srcHi NO_REG == _if
       copiedBytes srcOffset + =:: movedBytes
       movedBytes 4 > if ValType .I64 else ValType .I32 end =:: shiftedValType
       dataReg shiftedValType setRegType dataReg=
-      srcHi .empty ?? "copied value fits into one register" assert
       movedBytes 2 <= if "  movzx " sb.appendS else "  mov " sb.appendS end
         dataReg appendRegister ", " sb.appendS
-      srcLow shiftedValType context appendOperand '\n' sb.appendC
+      srcLow shiftedValType setRegType appendRegister '\n' sb.appendC
       "  shr " sb.appendS dataReg appendRegister ", " sb.appendS
         srcOffset 8 * sb.appendI
       '\n' sb.appendC
       movedBytes movedBytes -_ & movedBytes ==
     else
-      srcLow .register ?? srcHi .register ?? & "both sources are registers" assert
-      srcLow .register getRegSize =:: lowSize
+      srcLow getRegSize =:: lowSize
       srcOffset lowSize < and srcOffset copiedBytes + lowSize > end "multi-reg source uses both regs" assert
-      srcHi .register dst baseRegEq if ## destination overlaps with high register
+      srcHi dst baseRegEq if ## destination overlaps with high register
         dataReg dst == "dst-reg = srcReg -> dataReg = dst-reg" assert
         copiedBytes 4 > if ValType .I64 else ValType .I32 end =:: targetValType
         dataReg targetValType setRegType dataReg=
         "  shld " sb.appendS dataReg appendRegister ", " sb.appendS
-          srcLow .register targetValType setRegType appendRegister ", " sb.appendS
+          srcLow targetValType setRegType appendRegister ", " sb.appendS
           lowSize srcOffset - 8 * sb.appendI
         '\n' sb.appendC
       else
         dataReg lowSize 4 > if ValType .I64 else ValType .I32 end setRegType dataReg=
-        "  mov " sb.appendS dataReg appendRegister ", " sb.appendS srcLow .register appendRegister '\n' sb.appendC
+        "  mov " sb.appendS dataReg appendRegister ", " sb.appendS srcLow appendRegister '\n' sb.appendC
         " shrd " sb.appendS dataReg appendRegister ", " sb.appendS
-          srcHi .register appendRegister ", " sb.appendS
+          srcHi appendRegister ", " sb.appendS
           srcOffset 8 * sb.appendI
         '\n' sb.appendC
       end
@@ -1700,51 +1698,54 @@ namespace: AMD64
         "clearing non-register values is not supported" ..panic
         break
       ## extract/insert bits from/to register or register-pair
-      ## there are 4 forms for bitmove
-      ## dst, src, [index:count]
-      ## dst, src1, src2, [index:count] /  dst1, dst2, src, [index:count]
-      ## dst1, dst2, src1, src2, [index:count]
-      BITMOVE11 BITMOVE12 BITMOVE21 BITMOVE22 case
-        NO_REG =:: mut: dstLow
-        NO_REG =:: mut: dstHi
-        asm.Operand .empty =:: mut: srcLow
-        asm.Operand .empty =:: mut: srcHi
+      ## there are 3 forms each of insert/extract
+      ## insert dst, src, [index:count:flags]               / extract dst, src, [index:count]
+      ## insert dst1, dst2, src, [index:count:flags]        / extract dst, src1, src2, [index:count]
+      ## insert dst1, dst2, src1, src2, [index:count:flags] / extract dst1, dst2, src1, src2, [index:count]
+      INSERT EXTRACT case
+        NO_REG =:: mut: srcLow
+        NO_REG =:: mut: srcHi
         ## TODO? don't crash on invalid input types
-        op .opType switch
-          BITMOVE11 case
-            op .operands 0 [] .register dstLow=
-            op .operands 1 [] srcLow=
-            op .operands 2 [] .bitMoveInfo
-            break
-          BITMOVE12 case
-            op .operands 0 [] .register dstLow=
-            op .operands 1 [] srcLow=
-            op .operands 2 [] srcHi=
-            op .operands 3 [] .bitMoveInfo
-            break
-          BITMOVE21 case
-            op .operands 0 [] .register dstLow=
+        op .operands 0 [] .register =:: mut: dstLow
+        NO_REG =:: mut: dstHi
+        op .operands 2 [] .bitMoveInfo ?? if ## 2-operand form
+          op .operands 1 [] .register srcLow=
+          op .operands 2 [] .bitMoveInfo
+        else op .operands 3 [] .bitMoveInfo ?? _if ## 3-operand form
+          op .opType .INSERT ?? if
             op .operands 1 [] .register dstHi=
-            op .operands 2 [] srcLow=
-            op .operands 3 [] .bitMoveInfo
-            break
-          BITMOVE22 case
-            op .operands 0 [] .register dstLow=
-            op .operands 1 [] .register dstHi=
-            op .operands 2 [] srcLow=
-            op .operands 3 [] srcHi=
-            op .operands 4 [] .bitMoveInfo
-            "bitmove22 is not implemented" ..panic ## ! ensure first write does not destroy source for second write
-            break
-          default ..unreachable
+            op .operands 2 [] .register srcLow=
+          else
+            op .operands 1 [] .register srcLow=
+            op .operands 2 [] .register srcHi=
+          end
+          op .operands 3 [] .bitMoveInfo
+        else op .operands 4 [] .bitMoveInfo ?? _if ## 4-operand form
+          op .operands 1 [] .register dstHi=
+          op .operands 2 [] .register srcLow=
+          op .operands 3 [] .register srcLow=
+          op .operands 4 [] .bitMoveInfo
+        else
+          "!error: expected at least one operand of insert/extract to be bitMoveInfo\n" sb.appendS
+          return
         end =:: bitMoveInfo
-        bitMoveInfo .srcOffset i32 cast.u =:: srcOffset
-        bitMoveInfo .dstOffset i32 cast.u =:: byteIndex
+        op .opType .INSERT ?? if
+          bitMoveInfo .offset i32 cast.u
+          0
+        else
+          0
+          bitMoveInfo .offset i32 cast.u
+        end =:: srcOffset =:: byteIndex
         bitMoveInfo .count i32 cast.u =:: byteCount
         dstLow getRegSize =:: lowBytes
         lowBytes dstHi getRegSize + =:: totalBytes
         byteCount 0 > byteCount totalBytes <= & "count inside allowed range" assert
         byteIndex 0 >= byteIndex byteCount + totalBytes <= & "index inside allowed range" assert
+        ## TODO different operations dependng on operand types
+        ## seperate float operations depending on granularity: 8 byte values, 4 byte values, 2 byte values
+        ## f64 values: use MOVHLPS to extract high part of 128-bit register
+        ## extract a single f32: vshufps, reorganite f32: multiple vshufps ops
+        ## f16 values: ?? PSHUFLW + pshufhw / PINSRW PEXTRW
         ## TODO handle same register beeing used as source and target
         byteIndex lowBytes < if ## insert data into low-register
           byteCount lowBytes byteIndex - i32.min =:: copiedBytes
@@ -4852,10 +4853,10 @@ proc(
           using: BitMove asm.BitMove.
           ## TODO support non-register values
           eltOffset eltSize + lowRegSize <= if ## single register value
-            asm.OpType .BITMOVE11
+            asm.OpType .INSERT
               lowReg  asm.Operand .register
               elt .location .register asm.Operand .register
-              0:i8 eltOffset i8 cast eltSize i8 cast
+              eltOffset i8 cast eltSize i8 cast
                 usedLow if
                   BitMove.DST_TYPE_EMPTY
                 else true usedLow=
@@ -4864,10 +4865,10 @@ proc(
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp3
           else eltOffset lowRegSize >= _if
-            asm.OpType .BITMOVE11
+            asm.OpType .INSERT
               hiReg  asm.Operand .register
               elt .location .register asm.Operand .register
-              0:i8 eltOffset lowRegSize - i8 cast eltSize i8 cast
+              eltOffset lowRegSize - i8 cast eltSize i8 cast
                 usedHi if
                   BitMove.DST_TYPE_EMPTY
                 else true usedHi=
@@ -4876,11 +4877,11 @@ proc(
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp3
           else
-            asm.OpType .BITMOVE21
+            asm.OpType .INSERT
               lowReg asm.Operand .register
               hiReg  asm.Operand .register
               elt .location .register asm.Operand .register
-              0:i8 eltOffset i8 cast eltSize i8 cast
+              eltOffset i8 cast eltSize i8 cast
                 usedLow if
                   BitMove.DST_TYPE_EMPTY
                 else true usedLow=
@@ -5116,14 +5117,13 @@ proc(
             eltVal getLowValType opIndex context nextRegister =:: targetRegisterLow
             eltVal getHiValType opIndex context nextRegister =:: targetRegisterHi
             ## TODO ensure dst hi-low are not a swapped version of source hi and low (prevent unneccessary moves)
-            asm.OpType .BITMOVE22
+            asm.OpType .EXTRACT
               targetRegisterLow asm.Operand .register
               targetRegisterHi asm.Operand .register
               container .location .registers .low asm.Operand .register
               container .location .registers .hi asm.Operand .register
-              eltOffset i8 cast 0:i8 eltSize i8 cast
-                BitMove.DST_TYPE_OVERWRITE_REG BitMove.DST1_SHIFT <<
-                BitMove.DST_TYPE_OVERWRITE_REG BitMove.DST2_SHIFT << |
+              eltOffset i8 cast eltSize i8 cast
+                BitMove.DST_TYPE_EXTRACT
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp5
             eltVal targetRegisterLow targetRegisterHi RegisterPair new ValueLocation .registers opIndex context pushValue
@@ -5131,42 +5131,42 @@ proc(
               valType isMultiRegValType _if
             container .location .registers .low getRegSize =:: lowRegSize
             eltOffset lowRegSize i64 cast.u >= if
-              asm.OpType .BITMOVE11
+              asm.OpType .EXTRACT
                 targetRegister asm.Operand .register
                 container .location .registers .hi asm.Operand .register
-                eltOffset i32 cast.u lowRegSize - i8 cast 0:i8 eltSize i8 cast
-                  BitMove.DST_TYPE_OVERWRITE_REG BitMove.DST1_SHIFT <<
+                eltOffset i32 cast.u lowRegSize - i8 cast eltSize i8 cast
+                  BitMove.DST_TYPE_EXTRACT
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
               context appendOp3
             else eltOffset eltSize + lowRegSize i64 cast.u <= _if
-              asm.OpType .BITMOVE11
+              asm.OpType .EXTRACT
                 targetRegister asm.Operand .register
                 container .location .registers .low asm.Operand .register
-                eltOffset i8 cast 0:i8 eltSize i8 cast
-                  BitMove.DST_TYPE_OVERWRITE_REG BitMove.DST1_SHIFT <<
+                eltOffset i8 cast eltSize i8 cast
+                  BitMove.DST_TYPE_EXTRACT
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
               context appendOp3
             else
-              asm.OpType .BITMOVE12
+              asm.OpType .EXTRACT
                 targetRegister asm.Operand .register
                 container .location .registers .low asm.Operand .register
                 container .location .registers .hi asm.Operand .register
-                eltOffset i8 cast 0:i8 eltSize i8 cast
-                  BitMove.DST_TYPE_OVERWRITE_REG BitMove.DST1_SHIFT <<
+                eltOffset i8 cast eltSize i8 cast
+                  BitMove.DST_TYPE_EXTRACT
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
               context appendOp4
             end
             eltVal targetRegister ValueLocation .register opIndex context pushValue
           else
-            asm.OpType .BITMOVE11
+            asm.OpType .EXTRACT
               targetRegister asm.Operand .register
               container .location switch
                 register case container .location .register asm.Operand .register break
                 memory case context [] .stack .length asm.Operand .stackData break
                 registers registerHi registerLow case ..unreachable ## wrong data-format
               end
-              eltOffset i8 cast 0:i8 eltSize i8 cast
-                BitMove.DST_TYPE_OVERWRITE_REG BitMove.DST1_SHIFT <<
+              eltOffset i8 cast eltSize i8 cast
+                BitMove.DST_TYPE_EXTRACT
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp3
             eltVal targetRegister ValueLocation .register opIndex context pushValue
@@ -5240,7 +5240,7 @@ proc(
           eltType typeContext types.sizeOf .fixed =:: eltSize
           eltVal isMultiRegValType if
             ## TODO ensure dst hi-low are not a swapped version of source hi and low (prevent unneccessary moves)
-            asm.OpType .BITMOVE22
+            asm.OpType .INSERT
               container .location .registers .low asm.Operand .register
               container .location .registers .hi asm.Operand .register
               element .location switch
@@ -5251,7 +5251,7 @@ proc(
                 memory registerHi registerLow case "setElement: unimplemented copy memory to value" ..panic
                 register case ..unreachable ## wrong data-format
               end
-              0:i8 eltOffset i8 cast eltSize i8 cast
+              eltOffset i8 cast eltSize i8 cast
                 BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
                 BitMove.DST_TYPE_OVERWRITE BitMove.DST2_SHIFT << |
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
@@ -5259,31 +5259,31 @@ proc(
           else valType isMultiRegValType _if
             container .location .registers .low getRegSize =:: lowRegSize
             eltOffset lowRegSize i64 cast.u >= if
-              asm.OpType .BITMOVE11
+              asm.OpType .INSERT
                 container .location .registers .hi asm.Operand .register
                 element .location switch
                   register case element .location .register asm.Operand .register break
                   memory case "setElement: unimplemented copy memory to value" ..panic
                   registers registerHi registerLow case ..unreachable ## wrong data-format
                 end
-                0:i8 eltOffset i32 cast.u lowRegSize - i8 cast eltSize i8 cast
+                eltOffset i32 cast.u lowRegSize - i8 cast eltSize i8 cast
                   BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
               context appendOp3
             else eltOffset eltSize + lowRegSize i64 cast.u <= _if
-              asm.OpType .BITMOVE11
+              asm.OpType .INSERT
                 container .location .registers .low asm.Operand .register
                 element .location switch
                   register case element .location .register asm.Operand .register break
                   memory case "setElement: unimplemented copy memory to value" ..panic
                   registers registerHi registerLow case ..unreachable ## wrong data-format
                 end
-                0:i8 eltOffset i8 cast eltSize i8 cast
+                eltOffset i8 cast eltSize i8 cast
                   BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
               context appendOp3
             else
-              asm.OpType .BITMOVE21
+              asm.OpType .INSERT
                 container .location .registers .low asm.Operand .register
                 container .location .registers .hi asm.Operand .register
                 element .location switch
@@ -5291,14 +5291,14 @@ proc(
                   memory case "setElement: unimplemented copy memory to value" ..panic
                   registers registerHi registerLow case ..unreachable ## wrong data-format
                 end
-                0:i8 eltOffset i8 cast eltSize i8 cast
+                eltOffset i8 cast eltSize i8 cast
                   BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
                   BitMove.DST_TYPE_OVERWRITE BitMove.DST2_SHIFT << |
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
               context appendOp4
             end
           else
-            asm.OpType .BITMOVE11
+            asm.OpType .INSERT
               container .location switch
                 register case container .location .register asm.Operand .register break
                 memory case context [] .stack .length asm.Operand .stackData break
@@ -5309,7 +5309,7 @@ proc(
                 memory case "setElement: unimplemented copy memory to value" ..panic
                 registers registerHi registerLow case ..unreachable ## wrong data-format
               end
-              0:i8 eltOffset i8 cast eltSize i8 cast
+              eltOffset i8 cast eltSize i8 cast
                 BitMove.DST_TYPE_OVERWRITE BitMove.DST1_SHIFT <<
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp3

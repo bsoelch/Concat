@@ -45,11 +45,8 @@
       <keyword>clear</keyword>
       <keyword>copy</keyword>
       <keyword>offset</keyword>
-      <keyword>bitmove</keyword>
-      <keyword>bitmove11</keyword>
-      <keyword>bitmove12</keyword>
-      <keyword>bitmove21</keyword>
-      <keyword>bitmove22</keyword>
+      <keyword>insert</keyword>
+      <keyword>extract</keyword>
       <keyword>push</keyword>
       <keyword>pop</keyword>
       <keyword>label</keyword>
