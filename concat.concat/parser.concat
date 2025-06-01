@@ -102,16 +102,16 @@ proc(
       intType break
     AUTO case
       value f64.MIN_INT <  if types.intLiteral.S64 break end
-      value i32.MIN i64 cast.s <  if types.intLiteral.S54_ break end
+      value i32.MIN i64 cast.s <  if types.intLiteral.S54 break end
       value f32.MIN_INT i64 cast.s < if types.intLiteral.S32 break end
-      value i16.MIN i64 cast.s <  if types.intLiteral.S25_ break end
+      value i16.MIN i64 cast.s <  if types.intLiteral.S25 break end
       value  i8.MIN i64 cast.s <  if types.intLiteral.S16 break end
       value       0 <  if types.intLiteral.S8  break end
       value  i8.MAX i64 cast.u <= if types.intLiteral.U7  break end
       value i16.MAX i64 cast.u <= if types.intLiteral.U15 break end
-      value f32.MAX_INT i64 cast.u <= if types.intLiteral.U24_ break end
+      value f32.MAX_INT i64 cast.u <= if types.intLiteral.U24 break end
       value i32.MAX i64 cast.u <= if types.intLiteral.U31 break end
-      value f64.MAX_INT <= if types.intLiteral.U53_ break end
+      value f64.MAX_INT <= if types.intLiteral.U53 break end
       types.intLiteral.U63
       break
   end =:: constType

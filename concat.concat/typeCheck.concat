@@ -2725,17 +2725,29 @@ proc(
       else
         value .valueType op@ .val .Cast!=
       end
-      ## XXX? different cast-check for bit-casts
-      ## canCast
-        value .valueType
-        op .dataType
-        op .val .Cast ?? !
-      typeContext types.canCast ! if
-        "cannot cast " sb.copyPtr
-          value .valueType typeContext sb.appendType
-          " to " sb.appendS
-          op .dataType typeContext sb.appendType
-        op .pos errors appendError
+      op .val .bitCast ?? if
+        ## canBitCast
+          value .valueType
+          op .dataType
+        typeContext types.canBitCast ! if
+          "cannot reinterpret " sb.copyPtr
+            value .valueType typeContext sb.appendType
+            " as " sb.appendS
+            op .dataType typeContext sb.appendType
+          op .pos errors appendError
+        end
+      else
+        ## canCast
+          value .valueType
+          op .dataType
+          op .val .Cast ?? !
+        typeContext types.canCast ! if
+          "cannot cast " sb.copyPtr
+            value .valueType typeContext sb.appendType
+            " to " sb.appendS
+            op .dataType typeContext sb.appendType
+          op .pos errors appendError
+        end
       end
       ## XXX try cast constant on stack
       op .val .bitCast ?? if

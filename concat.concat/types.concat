@@ -37,9 +37,9 @@ namespace: types
   enum(
     U7  S8  U8  ## largest numbers castable to i8;  -> i32 by default
     U15 S16 U16 ## largest numbers castable to i16; -> i32 by default
-    U24_ S25_   ## largest numbers castable to f32 ( -2^24 <= k <= 2^24 ); -> i32 by default
+    U24 S25   ## largest numbers castable to f32 ( -2^24 <= k <= 2^24 ); -> i32 by default
     U31 S32 U32 ## -> i32
-    U53_ S54_   ## largest numbers castable to f64 ( -2^53 <= k <= 2^53 ); -> i64 by default
+    U53 S54   ## largest numbers castable to f64 ( -2^53 <= k <= 2^53 ); -> i64 by default
     U63 S64 U64 ## -> i64
     ## XXX? support for 128Bit integer literals
   ) =:: IntLiteral
@@ -143,22 +143,22 @@ namespace: types
   end
   proc( IntLiteral -> i32 ) =>: intLiteralId
     switch
-      U7   case  1 return
-      S8   case  2 return
-      U8   case  3 return
-      U15  case  4 return
-      S16  case  5 return
-      U16  case  6 return
-      U24_ case  7 return
-      S25_ case  8 return
-      U31  case  9 return
-      S32  case 10 return
-      U32  case 11 return
-      U53_ case 12 return
-      S54_ case 13 return
-      U63  case 14 return
-      S64  case 15 return
-      U64  case 16 return
+      U7  case  1 return
+      S8  case  2 return
+      U8  case  3 return
+      U15 case  4 return
+      S16 case  5 return
+      U16 case  6 return
+      U24 case  7 return
+      S25 case  8 return
+      U31 case  9 return
+      S32 case 10 return
+      U32 case 11 return
+      U53 case 12 return
+      S54 case 13 return
+      U63 case 14 return
+      S64 case 15 return
+      U64 case 16 return
     end
   end
   proc( CType -> i32 ) =>: cTypeId
@@ -249,24 +249,25 @@ namespace: types
     ## compiler internal type-aliases for special purpose types
     PrimitiveType .I64  Type .primitiveType Type =: export: I_SIZE ## size-off memory-sections
     PrimitiveType .I64  Type .primitiveType Type =: export: I_PTR  ## integer that can hold a pointer
+    PrimitiveType .I64  Type .primitiveType Type =: export: I_MAX  ## largest native integer type
   end
   namespace: intLiteral
-    IntLiteral .U7   Type .intLiteral Type =: export: U7
-    IntLiteral .S8   Type .intLiteral Type =: export: S8
-    IntLiteral .U8   Type .intLiteral Type =: export: U8
-    IntLiteral .U15  Type .intLiteral Type =: export: U15
-    IntLiteral .S16  Type .intLiteral Type =: export: S16
-    IntLiteral .U16  Type .intLiteral Type =: export: U16
-    IntLiteral .U24_ Type .intLiteral Type =: export: U24_
-    IntLiteral .S25_ Type .intLiteral Type =: export: S25_
-    IntLiteral .U31  Type .intLiteral Type =: export: U31
-    IntLiteral .S32  Type .intLiteral Type =: export: S32
-    IntLiteral .U32  Type .intLiteral Type =: export: U32
-    IntLiteral .U53_ Type .intLiteral Type =: export: U53_
-    IntLiteral .S54_ Type .intLiteral Type =: export: S54_
-    IntLiteral .U63  Type .intLiteral Type =: export: U63
-    IntLiteral .S64  Type .intLiteral Type =: export: S64
-    IntLiteral .U64  Type .intLiteral Type =: export: U64
+    IntLiteral .U7  Type .intLiteral Type =: export: U7
+    IntLiteral .S8  Type .intLiteral Type =: export: S8
+    IntLiteral .U8  Type .intLiteral Type =: export: U8
+    IntLiteral .U15 Type .intLiteral Type =: export: U15
+    IntLiteral .S16 Type .intLiteral Type =: export: S16
+    IntLiteral .U16 Type .intLiteral Type =: export: U16
+    IntLiteral .U24 Type .intLiteral Type =: export: U24
+    IntLiteral .S25 Type .intLiteral Type =: export: S25
+    IntLiteral .U31 Type .intLiteral Type =: export: U31
+    IntLiteral .S32 Type .intLiteral Type =: export: S32
+    IntLiteral .U32 Type .intLiteral Type =: export: U32
+    IntLiteral .U53 Type .intLiteral Type =: export: U53
+    IntLiteral .S54 Type .intLiteral Type =: export: S54
+    IntLiteral .U63 Type .intLiteral Type =: export: U63
+    IntLiteral .S64 Type .intLiteral Type =: export: S64
+    IntLiteral .U64 Type .intLiteral Type =: export: U64
   end
   proc( Type -> bool ) =>: export: isPrimitive
     .primitiveType ?? return
@@ -332,7 +333,7 @@ namespace: types
       end
       ..dup .intLiteral ?? if
         .intLiteral switch
-          U7 U15 U24_ U31 U53_ U63 S8 S16 S25_ S32 S54_ S64 case true return
+          U7 U15 U24 U31 U53 U63 S8 S16 S25 S32 S54 S64 case true return
           U8 U16 U32 U64 case false return
         end
       end
@@ -349,8 +350,8 @@ namespace: types
       end
       ..dup .intLiteral ?? if
         .intLiteral switch
-          U7 U8 U15 U16 U24_ U31 U32 U53_ U63 U64 case true return
-          S8 S16 S25_ S32 S54_ S64 case false return
+          U7 U8 U15 U16 U24 U31 U32 U53 U63 U64 case true return
+          S8 S16 S25 S32 S54 S64 case false return
         end
       end
       ..drop false return
@@ -504,22 +505,22 @@ namespace: types
       true return
     end
     src .intLiteral switch
-      U7   case false  7:i64 break
-      S8   case true   8:i64 break
-      U8   case false  8:i64 break
-      U15  case false 15:i64 break
-      S16  case true  16:i64 break
-      U16  case false 16:i64 break
-      U24_ case false 24:i64 break
-      S25_ case true  24:i64 break
-      U31  case false 31:i64 break
-      S32  case true  32:i64 break
-      U32  case false 32:i64 break
-      U53_ case false 53:i64 break
-      S54_ case true  53:i64 break
-      U63  case false 63:i64 break
-      S64  case true  64:i64 break
-      U64  case false 64:i64 break
+      U7  case false  7:i64 break
+      S8  case true   8:i64 break
+      U8  case false  8:i64 break
+      U15 case false 15:i64 break
+      S16 case true  16:i64 break
+      U16 case false 16:i64 break
+      U24 case false 24:i64 break
+      S25 case true  24:i64 break
+      U31 case false 31:i64 break
+      S32 case true  32:i64 break
+      U32 case false 32:i64 break
+      U53 case false 53:i64 break
+      S54 case true  53:i64 break
+      U63 case false 63:i64 break
+      S64 case true  64:i64 break
+      U64 case false 64:i64 break
     end =:: srcBits =:: srcSigned
     target context primitiveValue =:: targetPrimitive
     targetPrimitive isIntPrimitive if
@@ -583,9 +584,9 @@ namespace: types
   end
   proc( types.IntLiteral -> Type ) =>: export: intLiteralAsInt
     switch
-      U7 S8 U8  U15 S16 U16 case primitive.I32 return
-      U24_ S25_ U31 S32 U32 case primitive.I32 return
-      U53_ S54_ U63 S64 U64 case primitive.I64 return
+      U7 S8 U8 U15 S16 U16 case primitive.I32 return
+      U24 S25 U31 S32 U32  case primitive.I32 return
+      U53 S54 U63 S64 U64  case primitive.I64 return
     end
   end
 
@@ -609,11 +610,19 @@ namespace: types
         8 return
     end
   end
+  proc( IntLiteral -> i64 ) =>: intLiteralBytes
+    switch
+      U7 S8 U8            case 1 return
+      U15 S16 U16         case 2 return
+      U24 S25 U31 S32 U32 case 4 return
+      U53 S54 U63 S64 U64 case 8 return
+    end
+  end
   proc( IntLiteral -> i64 ) =>: export: sizeOfIntLiteral
     switch
-      U7 S8 U8  U15 S16 U16 case 4 return
-      U24_ S25_ U31 S32 U32 case 4 return
-      U53_ S54_ U63 S64 U64 case 8 return
+      U7 S8 U8 U15 S16 U16 case 4 return
+      U24 S25 U31 S32 U32  case 4 return
+      U53 S54 U63 S64 U64  case 8 return
     end
   end
   proc( CType -> i64 ) =>: sizeOfCType
@@ -2429,7 +2438,7 @@ namespace: types
     context canCastPtr return
   end
   ## XXX? allow reordering fields
-  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canCastTuple
+  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: canCastTupleInitializer
     context .labelContext =:: labelContext
     src context unwrapNamed =:: srcBase
     target context unwrapNamed =:: targetBase
@@ -2506,12 +2515,12 @@ namespace: types
       end
     end
     targetBase context types.isTuple if
-      src targetBase context canCastTuple return
+      src targetBase context canCastTupleInitializer return
     else targetBase context types.isPointer
         and targetBase context getArrayDims 0 ==
         and targetBase context getBaseType context unwrapNamed =:: baseType
         baseType context types.isTuple _if
-      src baseType context canCastTuple return
+      src baseType context canCastTupleInitializer return
     end
     false return
   end
@@ -2630,6 +2639,16 @@ namespace: types
       true return
     end
     false return
+  end
+  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canBitCast
+    src context sizeOf $ .fixed ?? if .fixed else ..drop false return end =:: srcSize
+    target context sizeOf $ .fixed ?? if .fixed else ..drop false return end =:: targetSize
+    ## TODO? should there by any other restrictions on bit-casts
+    srcSize targetSize == or
+      ## allow int-literals to be smaller than target-type
+      src .intLiteral ?? and src .intLiteral intLiteralBytes targetSize <= and
+        primitive.I_MAX .primitiveType sizeOfPrimitive targetSize >= end
+    return
   end
   proc( Type : a Type : b TypeContext ptr.mut : context -> Type bool ) =>: export: mergeTypes
     a b types.typeEquals if
@@ -2757,22 +2776,22 @@ namespace: sb
   end
   proc( stringBuilder types.IntLiteral -> stringBuilder ) =>: appendIntLiteralType
     switch
-      U7   case "..intLiteral.u7"   appendS return
-      S8   case "..intLiteral.s8"   appendS return
-      U8   case "..intLiteral.u8"   appendS return
-      U15  case "..intLiteral.u15"  appendS return
-      S16  case "..intLiteral.s16"  appendS return
-      U16  case "..intLiteral.u16"  appendS return
-      U24_ case "..intLiteral.u24"  appendS return
-      S25_ case "..intLiteral.s25"  appendS return
-      U31  case "..intLiteral.u31"  appendS return
-      S32  case "..intLiteral.s32"  appendS return
-      U32  case "..intLiteral.u32"  appendS return
-      U53_ case "..intLiteral.u53"  appendS return
-      S54_ case "..intLiteral.s54"  appendS return
-      U63  case "..intLiteral.u63"  appendS return
-      S64  case "..intLiteral.s64"  appendS return
-      U64  case "..intLiteral.u64"  appendS return
+      U7  case "..intLiteral.u7"   appendS return
+      S8  case "..intLiteral.s8"   appendS return
+      U8  case "..intLiteral.u8"   appendS return
+      U15 case "..intLiteral.u15"  appendS return
+      S16 case "..intLiteral.s16"  appendS return
+      U16 case "..intLiteral.u16"  appendS return
+      U24 case "..intLiteral.u24"  appendS return
+      S25 case "..intLiteral.s25"  appendS return
+      U31 case "..intLiteral.u31"  appendS return
+      S32 case "..intLiteral.s32"  appendS return
+      U32 case "..intLiteral.u32"  appendS return
+      U53 case "..intLiteral.u53"  appendS return
+      S54 case "..intLiteral.s54"  appendS return
+      U63 case "..intLiteral.u63"  appendS return
+      S64 case "..intLiteral.s64"  appendS return
+      U64 case "..intLiteral.u64"  appendS return
     end
   end
   proc( stringBuilder types.CType -> stringBuilder ) =>: appendCType
