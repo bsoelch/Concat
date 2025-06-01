@@ -1,0 +1,123 @@
+namespace: random
+  struct( i32 4 array : state ) =:: Random
+  proc( i64 : seed -> Random ) =>: export: create
+    0 seed create128
+    ## discard first sixteen random values
+    ##  the frist few values are all relatively similar to the given seed
+    16 for ..drop
+      nextI32 ..drop
+    end
+  end
+  proc( i64 : seedHi i64 : seedLow -> Random ) =>: export: create128
+    ## TODO? use bit-cast for direct initialization
+    ## seedHi seedLow ( i64 i64 ) new Random ..bitcast
+    i32 4 array new
+      seedHi 32 >>> i32 cast >$ .3=
+      seedHi i32 cast >$ .2=
+      seedLow 32 >>> i32 cast >$ .1=
+      seedLow i32 cast >$ .0=
+      seedHi seedLow | ? ! if ## seed cannot be completely zero
+        1 >$ .0=
+      end
+    Random new return
+  end
+  ## Xorshift 128, algorithm from wikipedia: https://en.wikipedia.org/wiki/Xorshift#Example_implementation
+  ## `Algorithm "xor128" from p. 5 of Marsaglia, "Xorshift RNGs"`
+  proc( Random : rand -> Random i32 ) =>: export: nextI32
+    rand .state
+      $ .3 =:: mut: t
+      ## shit by 32-bits
+      $ .0 =:: s
+      $ .2 >$ .3=
+      $ .1 >$ .2=
+      s >$ .1=
+      t
+        $ 11 << ^
+        $ 8 >>> ^
+	      s $ 19 >>> ^ ^
+	    t=
+	    t >$ .0=
+	  Random new
+	  t return
+  end
+  proc( Random -> Random i8 ) =>: export: nextI8
+    ## TODO? only using 8 of the 32-created bytes seems wastefull
+    nextI32 0xff & i8 cast.u
+  end
+  proc( Random -> Random i16 ) =>: export: nextI16
+    nextI32 0xffff & i16 cast.u
+  end
+  proc( Random -> Random i64 ) =>: export: nextI64
+    nextI32 =:: hi
+    nextI32 =:: low
+    hi i64 cast.u 32 << low i64 cast.u | return
+  end
+  proc( Random -> Random i32 ) : export: alias: nextInt nextI32
+  proc( Random -> Random i8 ) : export: alias: nextByte nextI8
+  ## random finite f32
+  proc( Random -> Random f32 ) =>: export: nextF32
+    nextI32 =:: rawBits
+    f32.MAX f32.bits i64 cast.u 1 + =:: posRange
+    rawBits i64 cast.u posRange * 32 >>> i32 cast f32.fromBits
+      rawBits 1 & ? if -_ end
+    return
+  end
+  ## random finite f64
+  proc( Random -> Random f64 ) =>: export: nextF64
+    nextI64 =:: rawBits
+    f64.MAX f64.bits i64 cast.u 1 + =:: posRange
+    rawBits posRange i64.umulh f64.fromBits
+      rawBits 1 & ? if -_ end
+    return
+  end
+
+  ## TODO? does rounding mess with uniform distribution
+  ## uniformly distributed f32 value in [0,1]
+  proc( Random -> Random f32 ) =>: export: uniform32
+    nextI32 f64 cast.u 0x1'0000'0000.0 / f32 cast
+  end
+  ## uniformly distributed f64 value in [0,1]
+  proc( Random -> Random f64 ) =>: export: uniform
+    nextI64 f64 cast.u 0x1'0000'0000'0000'0000.0 /
+  end
+  ## uniformly distributed f32 in the range [from,to)
+  proc( Random f32 : from f32 : to -> Random f32 ) =>: export: rangeF32
+    uniform32 to from - * from +
+  end
+  ## uniformly distributed f64 in the range [from,to)
+  proc( Random f64 : from f64 : to -> Random f64 ) =>: export: rangeF64
+    uniform to from - * from +
+  end
+  ## uniformly distributed i32 in the range [from,to)
+  proc( Random i32 : from i32 : to -> Random i32 ) =>: export: rangeI32
+    to from - i64 cast.u 1 + =:: size
+    nextI32 i64 cast.u size * 32 >>> i32 cast from +
+  end
+  proc( Random i64 : from i64 : to -> Random i64 ) =>: export: rangeI64
+    to from - 1 + =:: size
+    size ? ! if ## range includes all possible i64 values
+      nextI64 return
+    end
+    nextI64 size i64.umulh from + return
+  end
+  proc( Random i8 : from i8 : to -> Random i8 ) =>: export: rangeI8
+    from i32 cast.u to i32 cast.u rangeI32 i8 cast return
+  end
+  proc( Random i16 : from i16 : to -> Random i16 ) =>: export: rangeI16
+    from i32 cast.u to i32 cast.u rangeI32 i16 cast return
+  end
+  proc( Random char8 : from char8 : to -> Random char8 ) =>: export: rangeC8
+    from i32 cast.u to i32 cast.u rangeI32 char8 cast return
+  end
+  proc( Random char16 : from char16 : to -> Random char16 ) =>: export: rangeC16
+    from i32 cast.u to i32 cast.u rangeI32 char16 cast return
+  end
+  proc( Random char32 : from char32 : to -> Random char32 ) =>: export: rangeC32
+    from i32 cast.u to i32 cast.u rangeI32 char32 cast return
+  end
+  overload: export: range
+    rangeF32 rangeF64
+    rangeI8 rangeI16 rangeI32 rangeI64
+    rangeC8 rangeC16 rangeC32
+  end
+end

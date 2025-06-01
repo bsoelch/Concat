@@ -166,6 +166,12 @@ namespace: i64
     ! "smul2 does not overflow" assert
     hi low return
   end
+  proc( i64 i64 -> i64 ) =>: export: umulh
+    umul2 ..drop
+  end
+  proc( i64 i64 -> i64 ) =>: export: smulh
+    smul2 ..drop
+  end
 end
 
 overload: export: -_ i64.neg  end
