@@ -1,0 +1,77 @@
+import list
+import stringBuilder
+import mem
+import exec
+
+## interface to gnu-libc version of exec
+namespace: c
+  i32 =:: pid_t
+  0:pid_t =:: FORK_CHILD
+  -1:pid_t =:: FORK_FAILURE
+  proc( pid_t : id ..ctype.int ptr.mut : status ..ctype.int : options -> pid_t ) : extern: waitpid
+  proc( -> pid_t ) : extern: fork
+  ## allow inner pointers to be mutable for compatability with libc
+  proc(
+    ..ctype.char _ ptr : path ## execute file at given path
+    ..ctype.char _ ptr.mut _ ptr : args
+  -> ..ctype.int ) : extern: execv
+  proc(
+    ..ctype.char _ ptr : file ## search file in PATH folders
+    ..ctype.char _ ptr.mut _ ptr : args
+  -> ..ctype.int ) : extern: execvp
+  proc(
+    ..ctype.char _ ptr : file
+    ..ctype.char _ ptr.mut _ ptr : args
+    ..ctype.char _ ptr.mut _ ptr : env
+  -> ..ctype.int ) : extern: execvpe
+  ## should work on most platforms, but is not guaranteed by the C/POSIX standard 
+  proc( i32 : status -> i32 ) =>: WIFEXITED
+    status 0x7f & ? if 0 else 1 end
+  end
+  proc( i32 : status -> i32 ) =>: WEXITSTATUS
+    status 8 >> 0xff &
+  end
+end
+namespace: exec
+  proc( ExecContext : context -> i32 RunState ) =>: export: run
+    c.fork =:: childId
+    childId c.FORK_FAILURE == if
+      -1 RunState .FORK_FAILURE return
+    end
+    childId c.FORK_CHILD == if
+      ## child process
+      context .argOffsets .length 1 + i64 cast.u
+        ..ctype.char _ ptr.mut
+      mem.alloc =:: argsPtr
+      context .argOffsets .length for =:: i
+        context .argBuffer .data
+          context .argOffsets i list.get @[]
+          ..ctype.char _ ptr.mut cast!
+        argsPtr i =[]
+      end
+      c.nullPtr ..ctype.char _ ptr.mut cast! argsPtr context .argOffsets .length =[]
+      ## execvp
+        context .argBuffer .data ..ctype.char _ ptr cast!
+        argsPtr
+      c.execvp ..drop ## call only exits on failure
+      -1 RunState .EXEC_FAILURE return
+    end
+    ## parent process
+    ..ctype.int : status
+    ## waitpid
+      childId
+      status @
+      0 ..ctype.int cast
+    c.waitpid i32 cast -1 == if
+      -1 RunState .WAIT_FAILURE return
+    end
+    ## TODO? check for other exit statuses
+    status i32 cast c.WIFEXITED ? ! if
+      status i32 cast RunState .PROCESS_FAILURE return
+    end
+    ## return
+      status i32 cast c.WEXITSTATUS 0xff &
+      RunState .SUCCESS
+    return
+  end
+end

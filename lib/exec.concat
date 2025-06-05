@@ -1,0 +1,38 @@
+import list
+import stringBuilder
+import mem
+
+namespace: exec
+  struct(
+    i32 list : mut: argOffsets
+    stringBuilder : mut: argBuffer
+  ) =:: export: ExecContext
+  proc( string : command -> ExecContext ) =>: export: build
+    ## ExecContext
+      16 i32 list.create
+        0 list.append
+      command sb.fromStr
+        '\x00' sb.appendC
+    ExecContext new return
+  end
+  proc( ExecContext : context string : argument -> ExecContext ) =>: export: add
+    context
+      $ .argOffsets
+        $1 .argBuffer .length list.append
+      >$ .argOffsets=
+      $ .argBuffer
+        argument sb.appendStr
+        '\x00' sb.appendC
+      >$ .argBuffer=
+    return
+  end
+  proc( ExecContext : context string : argument -> ExecContext ) : alias: export: append add
+  enum( SUCCESS FORK_FAILURE EXEC_FAILURE WAIT_FAILURE PROCESS_FAILURE ) =:: export: RunState
+  proc( ExecContext : context -> i32 RunState ) : export: run
+  proc( i32 : retCode RunState : state -> bool ) =>: export: check
+    state .SUCCESS ?? and retCode 0 == end
+  end
+end
+## TODO conditional compilation depending on target
+import sys/glibc/exec
+## TODO versions for different targets
