@@ -1,5 +1,5 @@
 namespace: random
-  struct( i32 4 array : state ) =:: Random
+  struct( i32 4 array : state ) =:: export: Random
   proc( i64 : seed -> Random ) =>: export: create
     0 seed create128
     ## discard first sixteen random values
