@@ -2,6 +2,7 @@ import list
 import stringBuilder
 import mem
 import exec
+import sys
 
 ## interface to gnu-libc version of exec
 namespace: c
@@ -54,7 +55,7 @@ namespace: exec
         context .argBuffer .data ..ctype.char _ ptr cast!
         argsPtr
       c.execvp ..drop ## call only exits on failure
-      -1 RunState .EXEC_FAILURE return
+      -1 sys.exit ## do not continue child if exec fails
     end
     ## parent process
     ..ctype.int : status

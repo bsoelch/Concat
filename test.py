@@ -44,27 +44,13 @@ def runTest(fileName,filePath):
   except FileNotFoundError:pass
   outFile=open(outPath,mode="a+")
   errFile=open(errPath,mode="a+")
-  ssaPath=basePath+".ssa"
-  asmPath=basePath+".s"
   codePath=basePath
   retCode=(subprocess.run([
     concatPath,
     filePath+fileName,
-    "-o",ssaPath,
+    "-o",codePath,
     "-l","./lib/"
   ],stdout=outFile,stderr=errFile).returncode==0 and
-  subprocess.run([
-      "qbe",
-      ssaPath,
-      "-o",asmPath
-    ],stdout=outFile,stderr=errFile).returncode==0 and
-  subprocess.run([
-      "cc",
-      *C_ARGS,
-      asmPath,
-      "./extern.c",
-      "-o",codePath
-    ],stdout=outFile,stderr=errFile).returncode==0 and
   subprocess.run([
       codePath,
       *args
@@ -98,8 +84,8 @@ def runTest(fileName,filePath):
     print("PASSED")
     nPassed+=1
     try:
-      os.remove(ssaPath)
-      os.remove(asmPath)
+      os.remove(codePath+".ssa")
+      os.remove(codePath+".s")
       os.remove(codePath)
     except FileNotFoundError:
       pass

@@ -5,6 +5,7 @@
 *.bc
 *.ssa
 *.asm
+*.tokens.*
 tmp/*
 build/*
 *.out

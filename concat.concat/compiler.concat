@@ -1,6 +1,8 @@
 import sys
 import string
 import numbers
+import exec
+
 using std.literals.
 
 import "parser.concat"
@@ -9,16 +11,20 @@ import "prepareCompile.concat"
 import "generator_qbe.concat"
 import "generator_asm.concat"
 
-stringBuilder : mut: srcFile
-stringBuilder : mut: outFile
+stringBuilder : mut: srcPath
+stringBuilder : mut: targetPath
+stringBuilder : mut: outPath
+stringBuilder : mut: tmpPath
 string : mut: baseName
 string : mut: basePath
 string : mut: libPath
-string optional : mut: parserTokensFile
-string optional : mut: compilerTokensFile
 string optional : mut: errorFile
 ## XXX? more controll of compilation states after which tokens will be dumped
-false =:: mut: dumpTypeCheckerTokens
+false =:: mut: dumpTokens
+false =:: mut: verbose
+true =:: mut: compileGeneratedCode
+## TODO? flag for cleaning up intermediate files
+false =:: mut: runCompiledProgram
 
 ## make new compiler flags accessible in code through `..compiler.flag.<...>`
 proc( string : path -> ) =>: printUsage
@@ -28,26 +34,27 @@ proc( string : path -> ) =>: printUsage
     "options:\n" sb.appendS
     "  -h: print help text\n" sb.appendS
     "  -o \"fileName\": set output file  (default: \"./out.c\")\n" sb.appendS
-    "  -p \"fileName\": dump the parsed tokens to the given file\n" sb.appendS
-    "  -t \"fileName\": dump the compiled tokens to the given file\n" sb.appendS
+    "  -T: dump tokens in intermediate steps to file\n" sb.appendS
     "  -l \"fileName\": set path to standard library (default: \"./lib/\")\n" sb.appendS ## XXX allow more than one library path
     "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
     "  -W: treat warnings as errors\n" sb.appendS
+    "  -v: vebose mode\n" sb.appendS
+    "  -S: compile generated code\n" sb.appendS
+    "  -R: run compiled code\n" sb.appendS
     "  --no-core: don't include libray core by default \n" sb.appendS
-    "  --dump-typeChecker: include type-checker output in compiled tokens printed to file given by `-t`\n" sb.appendS
     io.stdOut ..over io.fputSb ..drop
   sb.free ..drop
 end
-enum( NONE IN OUT TOKENS_PARSER TOKENS_COMPILER LIB_PATH ERR_PATH ) =:: ArgParserState
+enum( NONE IN OUT LIB_PATH ERR_PATH ) =:: ArgParserState
 proc( -> ) =>: parseArgs
   false =:: mut: printedUsage
   false =:: mut: hasSrc
   false =:: mut: hasOut
   false =:: mut: hasLib
-  0 sb.create srcFile=
-  0 sb.create outFile=
-  string optional.empty parserTokensFile=
-  string optional.empty compilerTokensFile=
+  0 sb.create srcPath=
+  0 sb.create targetPath=
+  0 sb.create outPath=
+  0 sb.create tmpPath=
   string optional.empty errorFile=
   0 sys.getArg string.create =:: path
   ArgParserState .IN =:: mut: state
@@ -71,13 +78,8 @@ proc( -> ) =>: parseArgs
           arg .length 2 > if break end
           ArgParserState .OUT state=
           continue
-        'p' case
-          arg .length 2 > if break end
-          ArgParserState .TOKENS_PARSER state=
-          continue
-        't' case
-          arg .length 2 > if break end
-          ArgParserState .TOKENS_COMPILER state=
+        'T' case
+          true dumpTokens=
           continue
         'l' case
           arg .length 2 > if break end
@@ -90,6 +92,15 @@ proc( -> ) =>: parseArgs
         'W' case
           arg .length 2 > if break end
           true _W_ERROR_=
+          continue
+        'v' case
+          true verbose=
+          continue
+        'S' case
+          false compileGeneratedCode=
+          continue
+        'R' case ## run code
+          true runCompiledProgram=
           continue
         'X' case ## experimental features
           arg .length 2 > if break end
@@ -121,8 +132,6 @@ proc( -> ) =>: parseArgs
             true EXPORT_GLOBALS= continue
           else arg "--no-inc-version":s string.eq _if
             false _INCREMENT_VERSION_= continue
-          else arg "--dump-typeChecker":s string.eq _if
-            true dumpTypeCheckerTokens= continue
           else arg "--asm":s string.eq _if
             BackEnd .ASM _BACKEND_= continue
           end
@@ -145,21 +154,13 @@ proc( -> ) =>: parseArgs
         sb.free ..drop
         break
       IN case
-        srcFile sb.clear arg sb.appendStr srcFile=
+        srcPath sb.clear arg sb.appendStr srcPath=
         true hasSrc=
         ArgParserState .NONE state=
         break
       OUT case
-        outFile sb.clear arg sb.appendStr outFile=
+        targetPath sb.clear arg sb.appendStr targetPath=
         true hasOut=
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
-        break
-      TOKENS_PARSER case
-        arg optional.wrap parserTokensFile=
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
-        break
-      TOKENS_COMPILER case
-        arg optional.wrap compilerTokensFile=
         hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
         break
       ERR_PATH case
@@ -180,42 +181,47 @@ proc( -> ) =>: parseArgs
     end
     io.stdErr "no input file specified\n" io.fputs ..drop
     path printUsage
-    srcFile sb.free
-    outFile sb.free
+    srcPath sb.free
+    outPath sb.free
     1 sys.exit
     ..unreachable
   end
-  srcFile sb.asStr '.' string.lastIndexOf =:: mut: iDot
-  srcFile sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
+  srcPath sb.asStr '.' string.lastIndexOf =:: mut: iDot
+  srcPath sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
   iDot iSlash < if
     -1 iDot=
   end
-  srcFile sb.asStr
-    iDot 0 > if
-      iDot string.head
-    end
-  baseName=
   hasOut ! if
-    outFile
-      sb.clear
+    targetPath
+      srcPath sb.asStr
+        iDot 0 > if
+          iDot string.head
+        end sb.appendStr
+    targetPath=
+  end
+  targetPath sb.asStr baseName=
+  outPath sb.clear
+    hasOut and compileGeneratedCode ! if
+      targetPath sb.appendSb
+    else
       baseName sb.appendStr
       _BACKEND_ switch
         QBE case ".ssa\x00" sb.appendS break
         ASM case ".s\x00" sb.appendS break
       end
-    outFile=
-  end
+    end
+  outPath=
   iSlash 0 < if
     "./":s
   else
-    srcFile sb.asStr iSlash 1 + string.head
+    srcPath sb.asStr iSlash 1 + string.head
   end basePath=
   hasLib ! if
     "./lib/":s libPath=
   else libPath ..dup .length 1 - string.charAt ..dup '/' != ..swap '\\' != & _if
     io.stdErr "library path has to end with '/' or '\\'\n" io.fputs ..drop
-    srcFile sb.free
-    outFile sb.free
+    srcPath sb.free
+    outPath sb.free
     1 sys.exit
     ..unreachable
   end
@@ -252,15 +258,19 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
 end
 
 proc( -> ProgramContext ) =>: parseAndTypeCheck
-  srcFile libPath basePath parserTokensFile optional.hasData parseProgram
+  srcPath libPath basePath dumpTokens parseProgram
     =:: mut: typeCheckState
   =:: mut: prog
   prog@ typeCheckState@ updateTypeCheckerPointers
-  parserTokensFile optional.hasData if
+  dumpTokens if
+    tmpPath sb.free
+      baseName sb.appendStr
+      ".tokens.parser":s sb.appendStr
+    tmpPath=
     1024 sb.create
       prog@ sb.appendProgram
     =:: parsedOps
-    parserTokensFile .data io.OPEN_WRITE io.fopenStr ..drop
+    tmpPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop
@@ -271,15 +281,24 @@ proc( -> ProgramContext ) =>: parseAndTypeCheck
   prog return
 end
 proc( -> ) =>: main ## TODO check return value of fopen
+  verbose if
+    "compiling ":s io.print
+    srcPath sb.asStr io.println
+    "-----------------------------------------":s io.println
+  end
   parseArgs
   ## TODO cleanup program memory after compilation
   parseAndTypeCheck =:: mut: prog
   io.OPEN_WRITE =:: mut: openMode
-  dumpTypeCheckerTokens and compilerTokensFile optional.hasData if
+  dumpTokens if
     1024 sb.create
       prog@ sb.appendProgram
     =:: parsedOps
-    compilerTokensFile .data openMode io.fopenStr ..drop
+    tmpPath sb.free
+      baseName sb.appendStr
+      ".tokens.typeChecker":s sb.appendStr
+    tmpPath=
+    tmpPath sb.asStr openMode io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
       ..dup "\n-----------------\n" io.fputs ..drop
     io.fclose ..drop
@@ -289,17 +308,21 @@ proc( -> ) =>: main ## TODO check return value of fopen
   prog@ .errors checkErrors
   prog@ prepareCompile
   ## TODO seperate file for each compilation step
-  compilerTokensFile optional.hasData if
+  dumpTokens if
     1024 sb.create
       prog@ sb.appendProgram
     =:: parsedOps
-    compilerTokensFile .data openMode io.fopenStr ..drop
+    tmpPath sb.free
+      baseName sb.appendStr
+      ".tokens.preCompile":s sb.appendStr
+    tmpPath=
+    tmpPath sb.asStr openMode io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop
   end
   prog@ .errors checkErrors
-  outFile sb.asStr io.OPEN_WRITE io.fopenStr ..drop  =:: targetFile
+  outPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop  =:: targetFile
     _BACKEND_ switch
       QBE case targetFile prog@ compileToQBE break
       ASM case
@@ -324,4 +347,85 @@ proc( -> ) =>: main ## TODO check return value of fopen
   targetFile io.fclose ..drop
   prog@ .errors checkErrors
   prog freeProgramContext ..drop
+  0 =:: mut: retCode
+  compileGeneratedCode if
+    ## call compiler on generated code in sub-process
+    _BACKEND_ switch
+      QBE case
+        tmpPath sb.clear
+          baseName sb.appendStr
+          ".s":s sb.appendStr
+        tmpPath=
+        verbose if
+          "compile generated QBE-code:":s io.println
+          "-----------------------------------------":s io.println
+        end
+        "qbe":s exec.build
+          outPath sb.asStr exec.add
+          "-o":s exec.add tmpPath sb.asStr exec.add
+        exec.run exec.check ! if
+          false runCompiledProgram=
+          ## TODO? print errors to stderr
+          "Error: compilation of QBE-code failed":s io.println
+          1 retCode=
+          break
+        end
+        verbose if
+          "compile generated Assembly-code:":s io.println
+          "-----------------------------------------":s io.println
+        end
+        "gcc":s exec.build
+          "-g":s exec.add "-lm":s exec.add
+          tmpPath sb.asStr exec.add "extern.c":s exec.add
+          "-o":s exec.add targetPath sb.asStr exec.add
+        exec.run exec.check ! if
+          false runCompiledProgram=
+          "Error: compilation of Assembly failed":s io.println
+          1 retCode=
+          break
+        end
+        break
+      ASM case
+        verbose if
+          "compile generated Assembly-code:":s io.println
+          "-----------------------------------------":s io.println
+        end
+        "gcc":s exec.build
+          "-g":s exec.add "-lm":s exec.add
+          outPath sb.asStr exec.add "extern.c":s exec.add
+          "-o":s exec.add targetPath sb.asStr exec.add
+        exec.run exec.check ! if
+          false runCompiledProgram=
+          "Error: compilation of Assembly failed":s io.println
+          1 retCode=
+          break
+        end
+        break
+    end
+    runCompiledProgram if
+      tmpPath sb.clear
+        targetPath sb.asStr '/' string.contains ! if
+          "./":s sb.appendStr
+        end
+        targetPath sb.appendSb
+      tmpPath=
+      verbose if
+        "run compiled code:":s io.println
+        "-----------------------------------------":s io.println
+      end
+      tmpPath sb.asStr exec.build exec.run .SUCCESS ?? if
+        retCode=
+      else ..drop
+        verbose if
+          "could not run program ":s io.print
+          baseName io.println
+        end
+      end
+    end
+  end
+  outPath sb.free ..drop
+  tmpPath sb.free ..drop
+  srcPath sb.free ..drop
+  targetPath sb.free ..drop
+  retCode sys.exit
 end
