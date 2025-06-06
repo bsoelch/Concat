@@ -71,11 +71,11 @@ namespace: allocator.linux
 
   proc( i64 : size -> MemoryValue _ ptr.mut ) =>: mapMemory
     ## sys_mmap
-      linux.nullPtr
-      size
-      linux.mmap.PROT_READ linux.mmap.PROT_WRITE |
+      0 linux.mmap.NO_FILE
       linux.mmap.MAP_PRIVATE linux.mmap.MAP_ANONYMOUS |
-      linux.mmap.NO_FILE 0
+      linux.mmap.PROT_READ linux.mmap.PROT_WRITE |
+      size
+      linux.nullPtr
     linux.sys_mmap
       $ isValidPtr "mmap successfull" assert
     MemoryValue _ ptr.mut cast!
@@ -84,19 +84,19 @@ namespace: allocator.linux
     MemoryValue _ ptr.mut : addr i64 : oldSize i64 : newSize
   -> MemoryValue _ ptr.mut ) =>: remapMemory
     ## sys_mmap
-      addr ..ctype.void _ ptr.mut cast!
-      oldSize
-      newSize
-      linux.mremap.MAY_MOVE
       linux.nullPtr
+      linux.mremap.MAY_MOVE
+      newSize
+      oldSize
+      addr ..ctype.void _ ptr.mut cast!
     linux.sys_mremap
       $ isValidPtr "mremap successfull" assert
     MemoryValue _ ptr.mut cast! return
   end
   proc( MemoryValue _ ptr.mut : addr i64 : size -> ) =>: unmapMemory
     ## sys_mmap
-      addr ..ctype.void _ ptr.mut cast!
       size
+      addr ..ctype.void _ ptr.mut cast!
     linux.sys_munmap 0 == "munmap successfull" assert
   end
 

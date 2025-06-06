@@ -2,8 +2,8 @@ import mem
 import linux/syscalls
 
 namespace: sys
-  proc( -> ( -> ) ptr _ ptr ) : extern: getBasePointer
-  proc( -> ) : extern: cctThreadInit
+  proc.c( -> ( -> ) ptr _ ptr ) : extern: getBasePointer
+  proc.c( -> ) : extern: cctThreadInit
 end
 namespace: threads
   ( -> ) =>: threadExit
@@ -15,18 +15,18 @@ namespace: threads
   proc( i64 : stackSize -> i64 i64 ) =>: createStack
     0x1000:i64 =:: pageSize
     ## sys_mmap
-      linux.nullPtr
-      stackSize pageSize +
-      linux.mmap.PROT_NONE
+      0 linux.mmap.NO_FILE
       linux.mmap.MAP_PRIVATE linux.mmap.MAP_ANONYMOUS | linux.mmap.MAP_STACK |
-      linux.mmap.NO_FILE 0
+      linux.mmap.PROT_NONE
+      stackSize pageSize +
+      linux.nullPtr
     linux.sys_mmap i64 cast! =:: stackMem
     stackMem 0 > "stackMem is a valid pointer" assert
     stackMem pageSize + =:: stackSpace
     ## sys_protect
-      stackSpace ..ctype.void _ ptr.mut cast!
-      stackSize
       linux.mmap.PROT_READ linux.mmap.PROT_WRITE |
+      stackSize
+      stackSpace ..ctype.void _ ptr.mut cast!
     linux.sys_protect ? ! "sys_protect succeeds" assert
     stackMem stackSize + ( -> ) ptr _ ptr.mut cast! =:: stackHead
     threadExit@ stackHead -1 =[]
@@ -41,7 +41,7 @@ namespace: threads
       stackMem >$ .stack=
       stackSize >$ .stackSize=
     cloneArgs=
-    cloneArgs@ CloneArgs ..types.size linux.sys_clone3
+    CloneArgs ..types.size cloneArgs@ linux.sys_clone3
     ## TODO error handling
   end
 

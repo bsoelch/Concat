@@ -1,7 +1,7 @@
 import mem ## for c.isNull
 namespace: c ## XXX? special file for general C procedures
-  proc( ..ctype.int -> ) : extern: noReturn: exit
-  proc( char8 _ ptr -> i64 ) : extern: strlen
+  proc.c( ..ctype.int -> ) : extern: noReturn: exit
+  proc.c( char8 _ ptr -> i64 ) : extern: strlen
 end
 namespace: sys
   proc( i64 : i -> char8 _ ptr i64 ) =>: export: getArg

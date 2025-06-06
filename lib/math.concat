@@ -1,50 +1,50 @@
 import core/floats
 
 namespace: c
-  proc( ..ctype.double -> ..ctype.double ) : extern: floor
-  proc( ..ctype.double -> ..ctype.double ) : extern: ceil
-  proc(
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: floor
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: ceil
+  proc.c(
     ..ctype.double
     ..ctype.double
   -> ..ctype.double ) : extern: remainder
-  proc( ..ctype.double -> ..ctype.double ) : extern: fabs
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: fabs
 
-  proc(
+  proc.c(
     ..ctype.double
     ..ctype.double
   -> ..ctype.double ) : extern: fmin
-  proc(
+  proc.c(
     ..ctype.double
     ..ctype.double
   -> ..ctype.double ) : extern: fmax
 
-  proc( ..ctype.double -> ..ctype.double ) : extern: log2
-  proc( ..ctype.double -> ..ctype.double ) : extern: log
-  proc( ..ctype.double -> ..ctype.double ) : extern: exp
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: log2
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: log
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: exp
 
-  proc( ..ctype.double -> ..ctype.double ) : extern: sqrt
-  proc( ..ctype.double -> ..ctype.double ) : extern: cbrt
-  proc(
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: sqrt
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: cbrt
+  proc.c(
     ..ctype.double
     ..ctype.double
   -> ..ctype.double ) : extern: pow
   ## XXX gamma function
 
-  proc( ..ctype.double -> ..ctype.double ) : extern: sin
-  proc( ..ctype.double -> ..ctype.double ) : extern: cos
-  proc( ..ctype.double -> ..ctype.double ) : extern: tan
-  proc( ..ctype.double -> ..ctype.double ) : extern: asin
-  proc( ..ctype.double -> ..ctype.double ) : extern: acos
-  proc( ..ctype.double -> ..ctype.double ) : extern: atan
-  proc( ..ctype.double -> ..ctype.double ) : extern: sinh
-  proc( ..ctype.double -> ..ctype.double ) : extern: cosh
-  proc( ..ctype.double -> ..ctype.double ) : extern: tanh
-  proc( ..ctype.double -> ..ctype.double ) : extern: asinh
-  proc( ..ctype.double -> ..ctype.double ) : extern: acosh
-  proc( ..ctype.double -> ..ctype.double ) : extern: atanh
-  proc(
-    ..ctype.double : y
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: sin
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: cos
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: tan
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: asin
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: acos
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: atan
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: sinh
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: cosh
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: tanh
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: asinh
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: acosh
+  proc.c( ..ctype.double -> ..ctype.double ) : extern: atanh
+  proc.c(
     ..ctype.double : x
+    ..ctype.double : y
   -> ..ctype.double ) : extern: atan2
 end
 namespace: math
@@ -59,17 +59,17 @@ namespace: math
       return ## no change for non-finite number
     end
     ## remainder(x,1) = x - roundeven(x)
-    ..dup ..ctype.double cast 1.0 ..ctype.double cast c.remainder f64 cast -
+    1.0 ..ctype.double cast $1 ..ctype.double cast c.remainder f64 cast -
   end
   proc( f64 -> f64 ) =>: export: abs
     ..ctype.double cast c.fabs f64 cast
   end
 
   proc( f64 : a f64 : b -> f64 ) =>: export: min
-    a ..ctype.double cast b ..ctype.double cast c.fmin f64 cast
+    b ..ctype.double cast a ..ctype.double cast c.fmin f64 cast
   end
   proc( f64 : a f64 : b -> f64 ) =>: export: max
-    a ..ctype.double cast b ..ctype.double cast c.fmax f64 cast
+    b ..ctype.double cast a ..ctype.double cast c.fmax f64 cast
   end
 
   proc( f64 -> f64 ) =>: export: log2
@@ -89,7 +89,7 @@ namespace: math
     ..ctype.double cast c.cbrt f64 cast
   end
   proc( f64 : base f64 : power -> f64 ) =>: export: pow
-    base ..ctype.double cast power ..ctype.double cast c.pow f64 cast
+    power ..ctype.double cast base ..ctype.double cast c.pow f64 cast
   end
   ## XXX gamma function
 
@@ -130,6 +130,6 @@ namespace: math
     ..ctype.double cast c.atanh f64 cast
   end
   proc( f64 : y f64 : x -> f64 ) =>: export: atan2
-    y ..ctype.double cast  x ..ctype.double cast c.atan2 f64 cast
+    x ..ctype.double cast y ..ctype.double cast c.atan2 f64 cast
   end
 end

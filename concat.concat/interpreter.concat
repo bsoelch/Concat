@@ -3401,12 +3401,12 @@ namespace: interpreter
     "memcpy":s procName labelContext id.labelNameEq if
       procIn typeContext types.compositeElts =:: args
       args .length 3 != or
-          args 0 slice.get typeContext types.isPointer ! or
-          args 0 slice.get typeContext types.isMutable ! or
+          args 2 slice.get typeContext types.isPointer ! or
+          args 2 slice.get typeContext types.isMutable ! or
           args 1 slice.get typeContext types.isPointer ! or
-          args 2 slice.get typeContext types.isIntLike ! if
+          args 0 slice.get typeContext types.isIntLike ! if
         "unexpected arguments for `memcpy` expected: " sb.copyPtr
-          "( <ptr.mut> <ptr> <int-primitive> -> ... ) got: ( " sb.appendS
+          "( <int-primitive> <ptr> <ptr.mut> -> ... ) got: ( " sb.appendS
           procIn typeContext sb.appendType
           " -> ... )" sb.appendS
         pos errors appendError
@@ -3415,28 +3415,28 @@ namespace: interpreter
       3 "memcpy":s pos context checkStack if
         true return
       end
-      pos context popValue ! "hasValue" assert =:: lenValue =:: lenInfo
-      pos context popValue ! "hasValue" assert =:: srcValue =:: srcInfo
       pos context popValue ! "hasValue" assert =:: targetValue =:: targetInfo
+      pos context popValue ! "hasValue" assert =:: srcValue =:: srcInfo
+      pos context popValue ! "hasValue" assert =:: lenValue =:: lenInfo
       lenValue .Int ?? if
         lenValue .Int
       else ## XXX? support GenericArg as length
         "unexpected argument for memcpy, expected Integer got: " sb.copyPtr
           lenValue typeContext sb.appendConstant
         pos errors appendError
-        targetValue targetInfo context unpopValue
-        srcValue srcInfo context unpopValue
         lenValue lenInfo context unpopValue
+        srcValue srcInfo context unpopValue
+        targetValue targetInfo context unpopValue
         true return
       end =:: length
       targetValue srcValue length pos program opMemcopy if ..drop
-        targetValue targetInfo context unpopValue
-        srcValue srcInfo context unpopValue
         lenValue lenInfo context unpopValue
+        srcValue srcInfo context unpopValue
+        targetValue targetInfo context unpopValue
         true return
       end =:: resPtr
       resPtr
-        args 0 slice.get
+        args 2 slice.get
         pos
       context pushValue
       false return

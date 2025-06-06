@@ -7,17 +7,17 @@ namespace: linux
   1:FileId =:: export: stdOut
   2:FileId =:: export: stdErr
   ## XXX open
-  proc(
-    FileId : file
+  proc.c(
+    i64 : count
     char8 _ ptr.mut : buffer
-    i64 : count
-  -> i64 ) : extern: export: sys_read
-  proc(
     FileId : file
-    char8 _ ptr : buffer
+  -> i64 ) : extern: export: sys_read
+  proc.c(
     i64 : count
+    char8 _ ptr : buffer
+    FileId : file
   -> i64 ) : extern: export: sys_write
-  proc(
+  proc.c(
     FileId : file
   -> i64 ) : extern: export: sys_close
 
@@ -57,29 +57,29 @@ namespace: linux
     0x2:Flags      =:: export: FIXED
     0x4:Flags      =:: export: DONT_UNMAP
   end
-  proc(
-    ..ctype.void _ ptr.mut : addr
-    i64 : length
-    mmap.Protection : prot
-    mmap.Flags : flags
-    FileId : fd
+  proc.c(
     i64 : offset
-  -> ..ctype.void _ ptr.mut ) : extern: export: sys_mmap
-  proc(
-    ..ctype.void _ ptr.mut : addr
-    i64 : length
+    FileId : fd
+    mmap.Flags : flags
     mmap.Protection : prot
+    i64 : length
+    ..ctype.void _ ptr.mut : addr
+  -> ..ctype.void _ ptr.mut ) : extern: export: sys_mmap
+  proc.c(
+    mmap.Protection : prot
+    i64 : length
+    ..ctype.void _ ptr.mut : addr
   -> i64 ) : extern: export: sys_protect
-  proc(
-    ..ctype.void _ ptr.mut : addr
+  proc.c(
     i64 : length
+    ..ctype.void _ ptr.mut : addr
   -> i64 ) : extern: export: sys_munmap
-  proc(
-    ..ctype.void _ ptr.mut : addr
-    i64 : length
-    i64 : newLength
-    mremap.Flags : flags
+  proc.c(
     ..ctype.void _ ptr.mut : newAddr
+    mremap.Flags : flags
+    i64 : newLength
+    i64 : length
+    ..ctype.void _ ptr.mut : addr
   -> ..ctype.void _ ptr.mut ) : extern: export: sys_mremap
 
   namespace: clone
@@ -118,10 +118,10 @@ namespace: linux
        i64 : cgroup ## File descriptor for target cgroup of child
     ) =:: export: CloneArgs
   end
-  proc(
-    clone.CloneArgs ptr : args
+  proc.c(
     i64 : size
+    clone.CloneArgs ptr : args
   -> i64 ) : export: extern: sys_clone3
   
-  proc( i32 -> i32 ) : extern: export: sys_exit
+  proc.c( i32 -> i32 ) : extern: export: sys_exit
 end

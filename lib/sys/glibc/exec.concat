@@ -9,21 +9,21 @@ namespace: c
   i32 =:: pid_t
   0:pid_t =:: FORK_CHILD
   -1:pid_t =:: FORK_FAILURE
-  proc( pid_t : id ..ctype.int ptr.mut : status ..ctype.int : options -> pid_t ) : extern: waitpid
-  proc( -> pid_t ) : extern: fork
+  proc.c( ..ctype.int : options ..ctype.int ptr.mut : status pid_t : id  -> pid_t ) : extern: waitpid
+  proc.c( -> pid_t ) : extern: fork
   ## allow inner pointers to be mutable for compatability with libc
-  proc(
+  proc.c(
+    ..ctype.char _ ptr.mut _ ptr : args
     ..ctype.char _ ptr : path ## execute file at given path
-    ..ctype.char _ ptr.mut _ ptr : args
   -> ..ctype.int ) : extern: execv
-  proc(
+  proc.c(
+    ..ctype.char _ ptr.mut _ ptr : args
     ..ctype.char _ ptr : file ## search file in PATH folders
-    ..ctype.char _ ptr.mut _ ptr : args
   -> ..ctype.int ) : extern: execvp
-  proc(
-    ..ctype.char _ ptr : file
-    ..ctype.char _ ptr.mut _ ptr : args
+  proc.c(
     ..ctype.char _ ptr.mut _ ptr : env
+    ..ctype.char _ ptr.mut _ ptr : args
+    ..ctype.char _ ptr : file
   -> ..ctype.int ) : extern: execvpe
   ## should work on most platforms, but is not guaranteed by the C/POSIX standard 
   proc( i32 : status -> i32 ) =>: WIFEXITED
@@ -52,17 +52,17 @@ namespace: exec
       end
       c.nullPtr ..ctype.char _ ptr.mut cast! argsPtr context .argOffsets .length =[]
       ## execvp
-        context .argBuffer .data ..ctype.char _ ptr cast!
         argsPtr
+        context .argBuffer .data ..ctype.char _ ptr cast!
       c.execvp ..drop ## call only exits on failure
       -1 sys.exit ## do not continue child if exec fails
     end
     ## parent process
     ..ctype.int : status
     ## waitpid
-      childId
-      status @
       0 ..ctype.int cast
+      status @
+      childId
     c.waitpid i32 cast -1 == if
       -1 RunState .WAIT_FAILURE return
     end

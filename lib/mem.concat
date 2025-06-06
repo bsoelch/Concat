@@ -9,37 +9,37 @@ namespace: c
     nullPtr ..ctype.void _ ptr cast!
     == return
   end
-  proc(
+  proc.c(
     ..ctype.size : size
   -> ..ctype.void _ ptr.mut ) : extern: malloc
-  proc(
-    ..ctype.size : count
+  proc.c(
     ..ctype.size : size
+    ..ctype.size : count
   -> ..ctype.void _ ptr.mut ) : extern: calloc
-  proc(
-    ..ctype.void _ ptr.mut : prev
+  proc.c(
     ..ctype.size : size
+    ..ctype.void _ ptr.mut : prev
   -> ..ctype.void _ ptr.mut ) : extern: realloc
-  proc( ..ctype.void _ ptr.mut : src -> ) : extern: free
-  proc(
-    ..ctype.void _ ptr.mut : target
-    ..ctype.void _ ptr : src
+  proc.c( ..ctype.void _ ptr.mut : src -> ) : extern: free
+  proc.c(
     ..ctype.size : count
+    ..ctype.void _ ptr : src
+    ..ctype.void _ ptr.mut : target
   -> ..ctype.void _ ptr.mut ) : extern: memcpy
-  proc(
-    ..ctype.void _ ptr.mut : target
+  proc.c(
+    ..ctype.size : count
     ..ctype.void _ ptr : src
-    ..ctype.size : count
-  -> ..ctype.void _ ptr.mut ) : extern: memmove
-  proc(
     ..ctype.void _ ptr.mut : target
+  -> ..ctype.void _ ptr.mut ) : extern: memmove
+  proc.c(
+    ..ctype.size : count
     ..ctype.int  : value
-    ..ctype.size : count
+    ..ctype.void _ ptr.mut : target
   -> ..ctype.void _ ptr.mut ) : extern: memset
-  proc(
-    ..ctype.void _ ptr : a
-    ..ctype.void _ ptr : b
+  proc.c(
     ..ctype.size : count
+    ..ctype.void _ ptr : b
+    ..ctype.void _ ptr : a
   -> ..ctype.int ) : extern: memcmp
 end
 namespace: mem
@@ -67,8 +67,8 @@ namespace: mem
       c.nullPtr T _ ptr.mut cast! return
     end
     ## calloc
-      n ..ctype.size cast
       T ..types.stride ..ctype.size cast
+      n ..ctype.size cast
     c.calloc checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -81,8 +81,8 @@ namespace: mem
       c.nullPtr T _ ptr.mut cast! return
     end
     ## realloc
-      prev ..ctype.void _ ptr.mut cast!
       T ..types.stride n *  ..ctype.size cast
+      prev ..ctype.void _ ptr.mut cast!
     c.realloc checkPtr T _ ptr.mut cast! return
   end
   proc( type : auto: T T _ ptr.mut : p -> ) =>: export: free
@@ -98,9 +98,9 @@ namespace: mem
       src return
     end
     ## memset
-      src ..ctype.void _ ptr.mut cast!
-      0 ..ctype.int cast
       n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
+      0 ..ctype.int cast
+      src ..ctype.void _ ptr.mut cast!
     c.memset checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -117,9 +117,9 @@ namespace: mem
       target return
     end
     ## memcpy
-      target ..ctype.void _ ptr.mut cast!
-      src ..ctype.void _ ptr cast!
       n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
+      src ..ctype.void _ ptr cast!
+      target ..ctype.void _ ptr.mut cast!
     c.memcpy checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -136,9 +136,9 @@ namespace: mem
       target return
     end
     ## memmove
-      target ..ctype.void _ ptr.mut cast!
-      src ..ctype.void _ ptr cast!
       n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
+      src ..ctype.void _ ptr cast!
+      target ..ctype.void _ ptr.mut cast!
     c.memmove checkPtr T _ ptr.mut cast! return
   end
   proc(
@@ -151,9 +151,9 @@ namespace: mem
       0 return
     end
     ## memcmp
-      a ..ctype.void _ ptr cast!
-      b ..ctype.void _ ptr cast!
       n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
+      b ..ctype.void _ ptr cast!
+      a ..ctype.void _ ptr cast!
     c.memcmp i32 cast return
   end
   proc(

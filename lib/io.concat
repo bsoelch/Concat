@@ -41,32 +41,32 @@ end
 
 namespace: c
   ## wrapper functions to allow interoperability with lib-c code
-  proc( -> io.FILE ) : extern: concatIOHelper_stdin
-  proc( -> io.FILE ) : extern: concatIOHelper_stdout
-  proc( -> io.FILE ) : extern: concatIOHelper_stderr
-  proc( -> ) : extern: concatIOHelper_resetErrno
-  proc( -> io.IOError ) : extern: concatIOHelper_checkErrno
-  proc(
-    ..ctype.char _ ptr : path
+  proc.c( -> io.FILE ) : extern: concatIOHelper_stdin
+  proc.c( -> io.FILE ) : extern: concatIOHelper_stdout
+  proc.c( -> io.FILE ) : extern: concatIOHelper_stderr
+  proc.c( -> ) : extern: concatIOHelper_resetErrno
+  proc.c( -> io.IOError ) : extern: concatIOHelper_checkErrno
+  proc.c(
     ..ctype.char _ ptr : mode
+    ..ctype.char _ ptr : path
   -> io.FILE ) : extern: fopen
-  proc( io.FILE -> ) : extern: clearerr
-  proc( io.FILE -> ..ctype.int ) : extern: feof
-  proc( io.FILE -> ..ctype.int ) : extern: ferror
-  proc(
+  proc.c( io.FILE -> ) : extern: clearerr
+  proc.c( io.FILE -> ..ctype.int ) : extern: feof
+  proc.c( io.FILE -> ..ctype.int ) : extern: ferror
+  proc.c(
+    io.FILE : file
+    ..ctype.size : eltCount
+    ..ctype.size : eltSize
     ..ctype.void _ ptr.mut : buffer
-    ..ctype.size : eltSize
-    ..ctype.size : eltCount
-    io.FILE : file
   -> ..ctype.size ) : extern: fread
-  proc(
-    ..ctype.void _ ptr : buffer
-    ..ctype.size : eltSize
-    ..ctype.size : eltCount
+  proc.c(
     io.FILE : file
+    ..ctype.size : eltCount
+    ..ctype.size : eltSize
+    ..ctype.void _ ptr : buffer
   -> ..ctype.size ) : extern: fwrite
-  proc( io.FILE : file -> ..ctype.int ) : extern: fflush
-  proc( io.FILE : file -> ..ctype.int ) : extern: fclose
+  proc.c( io.FILE : file -> ..ctype.int ) : extern: fflush
+  proc.c( io.FILE : file -> ..ctype.int ) : extern: fclose
 end
 
 namespace: io
@@ -116,8 +116,8 @@ namespace: io
     end
     c.concatIOHelper_resetErrno
     ##fopen
-      path ..ctype.char ptr cast!
       openMode ..ctype.char ptr cast!
+      path ..ctype.char ptr cast!
     c.fopen
     ..dup ( ) ptr cast! c.isNull if
       c.concatIOHelper_checkErrno
@@ -145,10 +145,10 @@ namespace: io
     file c.clearerr
     c.concatIOHelper_resetErrno
     ## fread
-      buffer off + ..ctype.void ptr.mut cast!
-      count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
-      count  ..ctype.size cast
       file
+      count  ..ctype.size cast
+      count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
+      buffer off + ..ctype.void ptr.mut cast!
     c.fread i64 cast
       ## XXX remove explicit cast of return value
       file c.feof i32 cast ? if
@@ -172,10 +172,10 @@ namespace: io
     file c.clearerr
     c.concatIOHelper_resetErrno
     ## fread
-      buffer off + ..ctype.void ptr cast!
-      count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
-      count ..ctype.size cast
       file
+      count ..ctype.size cast
+      count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
+      buffer off + ..ctype.void ptr cast!
     c.fwrite i64 cast
       ## XXX remove explicit cast of return value
       file c.feof i32 cast ? if

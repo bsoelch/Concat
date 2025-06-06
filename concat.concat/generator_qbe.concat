@@ -711,7 +711,20 @@ namespace: sb
     false =:: mut: hasArgs
     sb
       "(" sb.appendS
-      0:i32 while $ i64 cast.u args .length < do =:: i
+      outArgs .length 1 - i32 cast.u while $ 0 >= do =:: i
+          outArgs i slice.get =:: arg
+          arg typeContext types.isEmpty if
+            ## skip empty arguments
+            continue
+          end
+          hasArgs if
+            ',' sb.appendC
+          end
+          true hasArgs=
+          "l " sb.appendS ## all out arguments are pointers
+          i context appendOutArgName
+      finally i 1 - end ..drop
+      args .length 1 - i32 cast.u while $ 0 >= do =:: i
         args i slice.get =:: mut: arg
         arg typeContext types.containsGeneric if
           arg typeContext types.isArray if
@@ -727,10 +740,10 @@ namespace: sb
         inType i typeContext types.compositeGetLabel =:: label
         arg typeContext types.isEmpty if
           ## skip empty arguments
-          i 1 + continue
+          continue
         end
         label labelContext id.labelFlags id.FLAG_STATIC & ? if
-          i 1 + continue
+          continue
         end
         hasArgs if
           ',' sb.appendC
@@ -739,22 +752,7 @@ namespace: sb
         arg StorageType .LOAD pos context appendTypeNameQBE
         ' ' sb.appendC
         i inType i typeContext types.compositeGetLabel context appendArgName
-        i 1 +
-      end ..drop
-      0:i32 while $ i64 cast.u outArgs .length < do =:: i
-          outArgs i slice.get =:: arg
-          arg typeContext types.isEmpty if
-            ## skip empty arguments
-            i 1 + continue
-          end
-          hasArgs if
-            ',' sb.appendC
-          end
-          true hasArgs=
-          "l " sb.appendS ## all out arguments are pointers
-          i context appendOutArgName
-        i 1 +
-      end ..drop
+      finally i 1 - end ..drop
       ")" sb.appendS
     return
   end
@@ -3058,11 +3056,13 @@ proc(
   =:: retType
   sb
     " (" sb.appendS
-    argIndices [] .length for =:: i
+    false =:: mut: hasArgs
+    argIndices [] .length 1 - while $ 0 >= do =:: i
       argIndices [] i list.at .data =:: arg
-      i 0 > if
+      hasArgs if
         ',' sb.appendC
       end
+      true hasArgs=
       i outArgsOffset < if
         arg [] .valType
           StorageType .LOAD
@@ -3074,7 +3074,7 @@ proc(
       end
       " %s" sb.appendS
       arg [] .valId sb.appendI
-    end
+    finally i 1 - end ..drop
     ")\n" sb.appendS
     retType typeContext types.isProcOut and retType typeContext types.isEmpty ! if
       ## flattenTupleQBE
