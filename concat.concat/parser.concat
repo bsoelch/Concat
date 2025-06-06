@@ -2161,7 +2161,24 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..swap":s string.eq _if =:: opName
       1 StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
       return
-    else ..dup ">$":s string.eq _if =:: opName
+    else $ $ .length 1 - string.charAt '$' == and $ 0 string.charAt =:: c0 c0 '>' == or c0 '<' == _if =:: opName
+      opName 0 string.charAt =:: c0
+      1 =:: mut: rotCount
+      1 =:: mut: i
+      while opName i string.charAt c0 == do
+        rotCount 1 + rotCount=
+      finally i 1 + i= end
+      opName i string.charAt '$' != if ## TODO? allow >N$ and <N$ (? stack rotation by more than 3 elements should be painful)
+        64 sb.create
+          "invalid stack-rotation, expected N occurences of eigher '>' or '<' followed by '$' got '" sb.appendS
+            opName sb.appendStr
+            "'" sb.appendS
+          fileState [] .wordStart errors appendError
+        return
+      end
+      rotCount 1 > if
+        "stack-rotation is not implemented" ..panic
+      end
       1 StackModType .SWAP fileState [] .wordStart opStackMod state appendOp
       return
     else ..dup "..drop":s string.eq or

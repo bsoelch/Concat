@@ -477,8 +477,8 @@ namespace: id
       "identifier names cannot end with '@'" sb.copyPtr pos errors appendError
       true return
     end
-    id 0 string.charAt '$' == or id ">$":s string.startsWith if
-      "identifier names cannot start with `$` or `>$`" sb.copyPtr pos errors appendError
+    id 0 string.charAt '$' == or id $ .length 1 - string.charAt '$' == if
+      "identifier names cannot start or end with `$`" sb.copyPtr pos errors appendError
       true return
     end
     context .PROCEDURE ?? if
