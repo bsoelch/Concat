@@ -289,7 +289,6 @@ proc( -> ) =>: main ## TODO check return value of fopen
   parseArgs
   ## TODO cleanup program memory after compilation
   parseAndTypeCheck =:: mut: prog
-  io.OPEN_WRITE =:: mut: openMode
   dumpTokens if
     1024 sb.create
       prog@ sb.appendProgram
@@ -298,12 +297,11 @@ proc( -> ) =>: main ## TODO check return value of fopen
       baseName sb.appendStr
       ".tokens.typeChecker":s sb.appendStr
     tmpPath=
-    tmpPath sb.asStr openMode io.fopenStr ..drop
+    tmpPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
       ..dup "\n-----------------\n" io.fputs ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop
-    io.OPEN_APPEND openMode=
   end
   prog@ .errors checkErrors
   prog@ prepareCompile
@@ -316,7 +314,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
       baseName sb.appendStr
       ".tokens.preCompile":s sb.appendStr
     tmpPath=
-    tmpPath sb.asStr openMode io.fopenStr ..drop
+    tmpPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop
       ..dup parsedOps io.fputSb ..drop
     io.fclose ..drop
     parsedOps sb.free ..drop
