@@ -321,12 +321,33 @@ namespace: branchTree
   proc(
     type : auto: T
     T BranchTree ptr.mut : tree
-  -> ) =>: export: swap
+    i32 : eltCount
+    bool : rotateLeft
+  -> ) =>: export: rotate
     tree check
-    tree pop .data [] =:: upper
-    tree pop .data [] =:: lower
-    tree upper push
-    tree lower push
+    eltCount tree [] depth <= "stack is large enough" assert
+    eltCount 3 <= if
+      T 3 array : buffer
+      buffer@ list.wrapBuffer
+    else
+      eltCount T list.create
+    end
+      eltCount for ..drop
+          tree branchTree.pop .data [] list.append
+      end
+      rotateLeft if
+        list.pop =:: lowValue
+        $ .length for ..drop
+          list.pop tree >$ branchTree.push
+        end
+        tree lowValue branchTree.push
+      else
+        tree $1 0 [] branchTree.push
+        $ .length 1 - for ..drop
+          list.pop tree >$ branchTree.push
+        end
+      end
+    list.free ..drop
     tree check
   end
 

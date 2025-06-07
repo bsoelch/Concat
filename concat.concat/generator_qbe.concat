@@ -4842,13 +4842,15 @@ proc(
             copied []
           branchTree.push
           sb return
-        SWAP case
-          context [] .stackInfo branchTree.depth 2 < if
+        ROTATE case
+          op [] .val .stackMod .n =:: offset
+          offset i32.abs 1 + =:: eltCount
+          context [] .stackInfo branchTree.depth eltCount < if
             "stack underflow" sb.copyPtr
             op [] .pos errors appendError
             sb return
           end
-          context .stackInfo branchTree.swap
+          context .stackInfo eltCount offset 0 > branchTree.rotate
           sb return
       end
       break

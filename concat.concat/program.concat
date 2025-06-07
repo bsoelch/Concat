@@ -8,7 +8,7 @@ type : export: ProgramContext
 import "builtIns.concat"
 
 enum( EQ NEQ ) =:: export: EqualityOperator
-enum( COPY SWAP DROP ) =:: export: StackModType
+enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
 union( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export: CompilerInfo
@@ -627,8 +627,12 @@ namespace: sb
             mod .n sb.appendI
           end
           break
-        SWAP case
-          "SWAP " sb.appendS
+        ROTATE case
+          mod .n 1 == if
+            "SWAP " sb.appendS
+          else
+            "ROTATE " sb.appendS
+          end
           break
         DROP case
           "DROP " sb.appendS

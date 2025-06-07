@@ -1266,6 +1266,7 @@ namespace: interpreter
         .LocalValue ConstValue ptr.mut cast []
       end
     =:: containerValue
+    ## FIXME out of bounds access should not crash compiler
     containerValue .Array ?? if
       containerValue .Array elementIndex slice.get
     else containerValue .LocalArray ?? _if
@@ -3239,7 +3240,9 @@ proc(
             $ $1 .length offset - list.get list.append
           context .stackInfo=
           EvalResult .Ok return
-        SWAP case
+        ROTATE case
+          op [] .val .stackMod .n =:: offset
+          offset 1 == "! rotation is only implemented for two elements" assert
           2
             "swap":s
           op [] .pos context checkStack if

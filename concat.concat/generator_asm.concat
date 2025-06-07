@@ -3816,6 +3816,47 @@ proc(
 end
 
 proc(
+  StackValue : val
+  CompilerContext ptr.mut : context
+-> bool ) =>: pushStackValue
+  false =:: mut: regOutOfSync
+  val .location switch
+    register case
+      val .location .register context findRegister .data =:: regData
+      regData .currentValue [] .stackSlotReference ?? if
+        context [] .stack .length regData .currentValue .stackSlotReference=
+        break
+      else
+        regData .currentValue [] .stackSlot ?? ! regOutOfSync=
+      end
+      context [] .stack .length regData .currentValue .stackSlot=
+      break
+    registerHi case
+      val .location .registerHi context findRegister .data =:: regData
+      regData .currentValue [] .stackSlotHi ?? ! regOutOfSync=
+      context [] .stack .length regData .currentValue .stackSlotHi=
+      break
+    registerLow case
+      val .location .registerLow context findRegister .data =:: regData
+      regData .currentValue [] .stackSlotLow ?? ! regOutOfSync=
+      context [] .stack .length regData .currentValue .stackSlotLow=
+      break
+    registers case
+      val .location .registerHi context findRegister .data =:: regDataHi
+      regDataHi .currentValue [] .stackSlotHi ?? ! regOutOfSync=
+      context [] .stack .length regDataHi .currentValue .stackSlotHi=
+      val .location .registerLow context findRegister .data =:: regDataLow
+      regDataLow .currentValue [] .stackSlotLow ?? ! regOutOfSync=
+      context [] .stack .length regDataLow .currentValue .stackSlotLow=
+      break
+    memory case break
+  end
+  context [] .stack
+    val list.push
+  context .stack=
+  regOutOfSync return
+end
+proc(
   RegisterId : mut: regId
   ValType : valType
   CompilerContext ptr.mut : context
@@ -6134,98 +6175,41 @@ proc(
             ##  b) start of next loop
             targetRegister copied .valType context pushRegister
             return
-          SWAP case
-            context [] .stack .length 2 < if
+          ROTATE case
+            op [] .val .stackMod .n =:: offset
+            offset i32.abs 1 + =:: eltCount
+            context [] .stack .length eltCount < if
               "CodeGen: stack underflow in swap, stackSize: " sb.copyPtr
                 context [] .stack .length sb.appendI
               op [] .pos errors appendError
               return
             end
-            context [] .stack
-              list.pop =:: a
-              $ .length =:: hiSlot
-              list.pop =:: b
-              $ .length =:: lowSlot
-              a list.push
-              b list.push
-            context .stack=
-            ## update locations
-            ## TODO? reduce duplicate code
-            a .location switch
-              register case
-                a .location .register context findRegister .data =:: regData
-                regData .currentValue [] .stackSlot ?? and hiSlot regData .currentValue [] .stackSlot != end or
-                    regData .currentValue [] .stackSlotReference ?? and
-                    hiSlot regData .currentValue [] .stackSlotReference != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
-                end
-                lowSlot regData .currentValue .stackSlot=
-                break
-              registerHi case
-                a .location .registerHi context findRegister .data =:: regData
-                hiSlot regData .currentValue [] .stackSlotHi != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
-                end
-                lowSlot regData .currentValue .stackSlotHi=
-                break
-              registerLow case
-                a .location .registerLow context findRegister .data =:: regData
-                hiSlot regData .currentValue [] .stackSlotLow != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
-                end
-                lowSlot regData .currentValue .stackSlotLow=
-                break
-              registers case
-                a .location .registers .hi context findRegister .data =:: regDataHi
-                hiSlot regDataHi .currentValue [] .stackSlotHi != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
-                end
-                lowSlot regDataHi .currentValue .stackSlotHi=
-                a .location .registers .low context findRegister .data =:: regDataLow
-                hiSlot regDataLow .currentValue [] .stackSlotLow != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
-                end
-                lowSlot regDataLow .currentValue .stackSlotLow=
-                break
-              memory case break
+            false =:: mut: regOutOfSync
+            eltCount 3 <= if
+              StackValue 3 array : buffer
+              buffer@ list.wrapBuffer
+            else
+              eltCount StackValue list.create
             end
-            b .location switch
-              register case
-                b .location .register context findRegister .data =:: regData
-                regData .currentValue [] .stackSlot ?? and lowSlot regData .currentValue [] .stackSlot != end or
-                    regData .currentValue [] .stackSlotReference ?? and
-                    lowSlot regData .currentValue [] .stackSlotReference != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
+              eltCount for ..drop
+                context [] .stack list.pop >$ context .stack=
+                list.append
+              end
+              offset 0 > if
+                list.pop =:: lowValue
+                $ .length for ..drop
+                  list.pop context pushStackValue regOutOfSync | regOutOfSync=
                 end
-                hiSlot regData .currentValue .stackSlot=
-                break
-              registerHi case
-                b .location .registerHi context findRegister  .data =:: regData
-                lowSlot regData .currentValue [] .stackSlotHi != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
+                lowValue context pushStackValue regOutOfSync | regOutOfSync=
+              else
+                $ 0 [] context pushStackValue regOutOfSync | regOutOfSync=
+                $ .length 1 - for ..drop
+                  list.pop context pushStackValue regOutOfSync | regOutOfSync=
                 end
-                hiSlot regData .currentValue .stackSlotHi=
-                break
-              registerLow case
-                b .location .registerLow context findRegister .data =:: regData
-                lowSlot regData .currentValue [] .stackSlotLow != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
-                end
-                hiSlot regData .currentValue .stackSlotLow=
-                break
-              registers case
-                b .location .registers .hi context findRegister .data =:: regDataHi
-                lowSlot regDataHi .currentValue [] .stackSlotHi != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
-                end
-                hiSlot regDataHi .currentValue .stackSlotHi=
-                b .location .registers .low context findRegister .data =:: regDataLow
-                lowSlot regDataLow .currentValue [] .stackSlotLow != if
-                  "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
-                end
-                hiSlot regDataLow .currentValue .stackSlotLow=
-                break
-              memory case break
+              end
+            list.free ..drop
+            regOutOfSync if
+              "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
             end
             return
         end

@@ -4356,32 +4356,14 @@ proc(
           end
           state .stack copied branchTree.push
           return
-        SWAP case
-          2 op .pos state checkStackSize if
+        ROTATE case
+          op .val .stackMod .n =:: offset
+          offset i32.abs 1 + =:: eltCount
+          eltCount op .pos state checkStackSize if
             return
           end
-          state .stack branchTree.pop .data [] =:: upper
-          state .stack branchTree.pop .data [] =:: mut: lower
-          lower .valueType typeContext types.isEmpty ! and
-              upper .valueType typeContext types.isEmpty ! if
-            ## swap values in code
-            lower .opIndex state canCopyOp and
-                lower .opIndex state canDeleteOp if
-              ## copy lower value above upper
-              ## discard old operations for lower value
-              lower .opIndex state tryCopyOp =:: isError =:: newIndex
-              lower .opIndex state tryDeleteOp or isError if
-                "internal compiler error: could not move operation" sb.copyPtr
-                op .pos errors appendError
-              end
-              newIndex lower@ .opIndex=
-            else
-              op state appendOp ..drop
-            end
-          end
-          ## swap values on stack
-          state .stack upper branchTree.push
-          state .stack lower branchTree.push
+          state .stack eltCount offset 0 > branchTree.rotate
+          op state appendOp ..drop
           return
       end
       break
