@@ -4487,7 +4487,8 @@ proc(
             '\n' sb.appendC
             nextBranch "and/or":s context startBranch
           return
-        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER NAMESPACE TYPE_TYPESET
+        INLINE_PROCEDURE case sb return
+        PROCEDURE INITIALIZER NAMESPACE TYPE_TYPESET
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN
         TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE UNKNOWN case
           ## XXX error message
@@ -4496,13 +4497,20 @@ proc(
       break
     blockEnd case
       op [] .val .blockEnd .blockType switch
-        PROCEDURE EXPERIMENTAL_PROCEDURE case
+        PROCEDURE case
           Type .undefined context .currentProc=
           sb
             ## end of procedure block always unreachable
             ## ( type-checker ensures there is a return before end )
             "@end\nhlt\n}\n" sb.appendS
             op [] .pos context sb.appendLocalConstants
+          return
+        INLINE_PROCEDURE case
+          sb
+            "@endInline" sb.appendS
+            op [] .val .blockEnd .blockId i64 cast.u sb.appendI
+            '\n' sb.appendC
+            ## TODO merge branches if neccessary
           return
         ELSE case
           context [] .openBlocks
@@ -4775,6 +4783,13 @@ proc(
         retStr sb.appendStr
         retId sb.appendI
         '\n' sb.appendC
+      return
+    InlineReturn case
+      sb
+        "jmp @endInline" sb.appendS
+        op [] .val .InlineReturn i64 cast.u sb.appendI
+        '\n' sb.appendC
+        ## TODO! keep track of branches
       return
     RuntimeAssert case
       ## BranchId

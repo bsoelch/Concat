@@ -3721,7 +3721,7 @@ proc(
           blockId op@ .val .block .blockId=
           op state appendOp ..drop
           return
-        PROCEDURE EXPERIMENTAL_PROCEDURE BREAK_SWITCH
+        PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         UNKNOWN NAMESPACE case
@@ -3740,7 +3740,7 @@ proc(
             " block" sb.appendS
           op .pos errors appendError
           return
-        PROCEDURE EXPERIMENTAL_PROCEDURE case
+        PROCEDURE case
           op .pos state closeBlock =:: closed
           closed .Procedure ?? ! if
             "unexpected end of " sb.copyPtr
@@ -4210,7 +4210,7 @@ proc(
           branchPoints list.free ..drop
           branches list.free ..drop
           return
-        AND_IF OR_IF AND_DO OR_DO
+        AND_IF OR_IF AND_DO OR_DO INLINE_PROCEDURE
         BREAK CONTINUE BREAK_SWITCH
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
@@ -4222,6 +4222,7 @@ proc(
       op@ state typeCheckReturn
       op .pos state endSwitchBranch
       return
+    InlineReturn case break
     Assert RuntimeAssert case
       op .val .Assert ?? if
         op .pos state popString =:: message

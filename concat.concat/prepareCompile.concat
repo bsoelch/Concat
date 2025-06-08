@@ -46,12 +46,107 @@ proc(
   IdentifierInfo new return
 end
 
+
+## TODO? move inlining to seperate optimization pass
+proc(
+  ProcedureCall : callInfo
+  ProgramContext ptr.mut : program
+-> Operation slice ) =>: calledProcOps
+  program [] .procedures callInfo .procId i64 cast.u @[] =:: procInfo
+  program [] .progFiles
+    procInfo [] .fileId i64 cast.u
+  list.at .data =:: procFile
+  procInfo .implementation .code =:: impl
+  ## FIXME comilation overwrites procedure positions, leading to wrong code if accessing already compiled procedure
+  callInfo .implementationId -1 == if
+    procFile [] .localOps
+      impl [] .codeStart
+      impl [] .codeLength
+    list.getSlice
+  else
+    impl [] .implementations callInfo .implementationId @[] =:: callImpl
+    procFile [] .localOps
+      callImpl [] .codeStart
+      callImpl [] .codeLength
+    list.getSlice
+  end
+end
+import debug
+proc(
+  ProcedureCall : callInfo
+  ProgramContext ptr.mut : program
+-> bool ) =>: shouldInlineCall
+  optimizerFlags.ALLOW_INLINE ! if false return end
+  ## TODO allow inlining of small procedures when ALLOW_INLINE_SMALL is set
+  program [] .procedures callInfo .procId i64 cast.u @[] .implementation [] .code ?? ! if
+    false return
+  end
+  callInfo program calledProcOps =:: procOps
+  ## TODO compute inline weight depending on operations in procedure, cache weight in procedure(-impl) info
+  procOps .length 8 <
+end
+proc(
+  Operation list
+  ProcedureCall : callInfo
+  FilePosition : pos
+  ConverterContext ptr.mut : context
+-> Operation list ) =>: inlineCall
+  context [] .program =:: program
+  program .idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  program [] .procedures
+    callInfo .procId i64 cast.u @[] .implementation []
+  .code ?? "only code-procs are inlined" assert
+  callInfo program calledProcOps =:: procOps
+  "Inlining procedures is currently unstable" sb.copyPtr pos program .errors appendWarning
+  0:BlockId =:: inlineId ## TODO seperate block-id for each inlined procedure
+  labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapLabels ## TODO store in context
+  BlockType .INLINE_PROCEDURE pos opBlock list.append
+  inlineId $1 list.peek .data .val .block .blockId=
+  procOps 0 [] .dataType =:: procType
+  procType typeContext types.getProcIn ..drop =:: inType
+  0 =:: mut: offset
+  ## create tmp-variables for named arguments
+  inType typeContext types.compositeEltCount 1 - while $ 0 >= do =:: i
+    inType i typeContext types.compositeGetLabel =:: argLabel
+    argLabel id.LABEL_ID_NONE == if
+      offset 1 + offset=
+    else
+      ## TODO 1. rotate labeled argument to top
+      inType i typeContext types.compositeGetElement =:: eltType
+      eltType argLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
+      eltType tmpId pos opInitializeId list.append
+      remapLabels@ argLabel tmpId map.put optional.isEmpty "label-value only reassigned once" assert
+    end
+  finally i 1 - end ..drop
+  procOps 1 $1 .length 2 - slice.getSlice for =:: mut: op
+    ## TODO? move remapping to compileOp ( flag to check if within inlined proc )
+    op .val .Return ?? if
+      inlineId op@ .val .InlineReturn=
+      op list.append
+      continue
+    else op .val .getId ?? _if
+      remapLabels@ op .val .getId .labelId map.get =:: newName?
+      newName? optional.hasData if newName? .data op@ .val .getId= end
+    else op .val .setId ?? _if
+      remapLabels@ op .val .setId .labelId map.get =:: newName?
+      newName? optional.hasData if newName? .data op@ .val .setId= end
+    else op .val .atId ?? _if
+      remapLabels@ op .val .atId .labelId map.get =:: newName?
+      newName? optional.hasData if newName? .data op@ .val .atId= end
+    end
+    op context compileOp
+  end
+  BlockType .INLINE_PROCEDURE pos opEndBlock list.append
+  inlineId $1 list.peek .data .val .blockEnd .blockId=
+  remapLabels@ map.free
+end
+
 proc(
   Operation list : newOps
-  Operation : op0
+  Operation : mut: op
   ConverterContext ptr.mut : context
 -> Operation list ) =>: compileOp
-  op0 =:: mut: op
   context [] .program =:: program
   program .errors =:: errors
   program .idContext =:: idContext
@@ -168,6 +263,9 @@ proc(
         end
       return
     call callPtr case
+      op .val .call ?? and op .val .call program shouldInlineCall if
+        newOps op .val .call op .pos context inlineCall return
+      end
       op .dataType
         ..dup typeContext types.isPointer if
           typeContext types.getBaseType
@@ -330,7 +428,7 @@ proc(
           newOps op list.append return
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        UNKNOWN INITIALIZER NAMESPACE PROCEDURE EXPERIMENTAL_PROCEDURE
+        UNKNOWN INITIALIZER NAMESPACE PROCEDURE INLINE_PROCEDURE
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_TYPESET
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE case break
       end
@@ -338,7 +436,7 @@ proc(
     blockEnd case
       op .val .blockEnd .blockId =:: blockId
       op .val .blockEnd .blockType switch
-        PROCEDURE EXPERIMENTAL_PROCEDURE case
+        PROCEDURE case
           newOps op list.append return
         ELSE case
           blockId
@@ -364,7 +462,7 @@ proc(
           program program.jumps.updateEndAndOr
           op@ .val .blockEnd .jumpDistance=
           newOps op list.append return
-        AND_IF OR_IF AND_DO OR_DO FINALLY
+        AND_IF OR_IF AND_DO OR_DO FINALLY INLINE_PROCEDURE
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
         UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK
@@ -376,7 +474,7 @@ proc(
     compilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
     autoTypedInitializeId ConstantReference NewReference
-    typeInfo NewEnumReference usingNamespace usingIdentifier
+    typeInfo NewEnumReference usingNamespace usingIdentifier InlineReturn
     getName atName setName getLabel Assert declareName initializeName StaticConstant
     setLabel length size typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
@@ -438,9 +536,9 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc .implementation .code =:: impl
     currentProc [] .hasStaticArg if
       impl [] .implementations list.atItr for =:: currentImpl
-      currentImpl .codeState [] .UNUSED ?? if
-        continue
-      end
+        currentImpl .codeState [] .UNUSED ?? if
+          continue
+        end
         ## convertProc
           f [] .localOps
             currentImpl [] .codeStart

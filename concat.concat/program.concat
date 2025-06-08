@@ -150,6 +150,7 @@ union(
                 i32 : setElement
                 i32 : hasElement
                   _ : Return
+            BlockId : InlineReturn ## TODO? remember jump distance
                   _ : New
                   _ : NewReference
                 i32 : NewEnum
@@ -846,6 +847,13 @@ namespace: sb
           "Return( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " ) " sb.appendS
+          break
+        InlineReturn case
+          "InlineReturn " sb.appendS
+            $1 .val .InlineReturn i64 cast sb.appendI
+          " ( " sb.appendS
+          $1 .dataType typeContext sb.appendType
+          " )" sb.appendS
           break
         equalityOperator case
           ..over .val .equalityOperator switch

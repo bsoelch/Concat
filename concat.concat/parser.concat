@@ -296,15 +296,11 @@ proc( ItrVarInfo : itrVarInfo ParserState ptr.mut : state -> ) =>: openForBlock
     itrVarInfo optional.wrap BlockType .DO -1 false false BlockInfo new list.append
   state .openBlocks=
 end
-proc( bool : experimental ParserState ptr.mut : state -> ) =>: openProcBlock
+proc( ParserState ptr.mut : state -> ) =>: openProcBlock
   state [] .openBlocks
     ## BlockInfo
       ItrVarInfo optional.empty
-      experimental if
-        BlockType .EXPERIMENTAL_PROCEDURE
-      else
-        BlockType .PROCEDURE
-      end
+      BlockType .PROCEDURE
       -1
       false
       false
@@ -1227,7 +1223,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## declare procedure name outside procedure
       skipBlock if ## don't declare identifier in skipped block
         state [] .currentProcs NO_PROC list.append state .currentProcs=
-        experimental state openProcBlock
+        state openProcBlock
         return
       end
       ## declare procedure
@@ -1242,13 +1238,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         idContext
         progContext .errors
       id.declareIdentifier if ..drop.2
-        experimental state openProcBlock
+        state openProcBlock
         return
       end =:: idData procName=
       idData .constValue =:: procConst
       ## ensure procedure block is opened after declaring procedure,
       ##   but before early return due to error
-      experimental state openProcBlock
+      state openProcBlock
       progContext [] .tmpOps .length =:: codeStart
       procConst .Procedure ?? if
         codeStart progContext [] .procedures
@@ -1463,10 +1459,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             break
           DO case break ## code for closing of DO blocks is handled after closing the block
           NAMESPACE case break ## nothing to do
-          PROCEDURE EXPERIMENTAL_PROCEDURE ELSE AND OR SWITCH CASE DEFAULT FINALLY case
+          PROCEDURE ELSE AND OR SWITCH CASE DEFAULT FINALLY case
             currentBlock fileState [] .wordStart opEndBlock  state appendOp
             break
-          TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION
+          TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION INLINE_PROCEDURE
           TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN TYPE_CPROC_IN INITIALIZER TYPE_TYPESET case
             state [] .constantBlocks .length 0 > if ## close matching constant block
               state [] .constantBlocks
@@ -1491,7 +1487,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           return
         end =:: closedBlock
         closedBlock .blockType =:: closedType
-        closedType .PROCEDURE ?? or closedType .EXPERIMENTAL_PROCEDURE ?? if
+        closedType .PROCEDURE ?? if
           state [] .currentProcs .length 0 == if
             "unexpected end of procedure" sb.copyPtr fileState [] .wordStart errors appendError
             return
@@ -1669,7 +1665,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             " in procedure block, expected -> followed by return types" sb.appendS
           fileState [] .wordStart errors appendError
           return
-        UNKNOWN PROCEDURE EXPERIMENTAL_PROCEDURE
+        UNKNOWN PROCEDURE INLINE_PROCEDURE
         IF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
         AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
@@ -1723,7 +1719,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state [] .openBlocks list.reversed for: findContainer =:: b
           BlockType ..length 40 == "no new block types" assert
           b .blockType switch
-            PROCEDURE EXPERIMENTAL_PROCEDURE case
+            PROCEDURE INLINE_PROCEDURE case
               false inConstBlock=
               break.findContainer
             INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION

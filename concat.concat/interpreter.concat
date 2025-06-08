@@ -196,7 +196,7 @@ namespace: interpreter
       context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_ENUM case
           true return
-        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
+        PROCEDURE INLINE_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION
             TYPE_UNTAGGED_UNION TYPE_TYPESET case
           false return
@@ -217,7 +217,7 @@ namespace: interpreter
       context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_UNION TYPE_UNTAGGED_UNION case
            true return
-        PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_TYPESET
+        PROCEDURE INLINE_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_TYPESET
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
@@ -238,7 +238,7 @@ namespace: interpreter
         INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_TYPESET case
           true return
-        PROCEDURE EXPERIMENTAL_PROCEDURE case
+        PROCEDURE INLINE_PROCEDURE case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
             SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
@@ -258,7 +258,7 @@ namespace: interpreter
         IF_FALSE AND_FALSE OR_TRUE ELSE_TRUE case
            true return
         IF_TRUE AND_TRUE OR_FALSE ELSE_FALSE
-          PROCEDURE EXPERIMENTAL_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
+          PROCEDURE INLINE_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
           TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION
           TYPE_UNTAGGED_UNION UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY TYPE_TYPESET
@@ -352,7 +352,7 @@ namespace: interpreter
            block [] .labelOffset LabeledValueContext .TYPE_ENUM return
         TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT case
            block [] .labelOffset LabeledValueContext .TYPE_PROC return
-        PROCEDURE EXPERIMENTAL_PROCEDURE
+        PROCEDURE INLINE_PROCEDURE
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
@@ -1828,6 +1828,8 @@ proc(
     Return case
       ## XXX? check if in procedure
       EvalResult .Return return
+    InlineReturn case
+      "unimplemented" ..panic
     block case
       op [] .val .block .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
@@ -1835,7 +1837,7 @@ proc(
         INITIALIZER case
           op [] .val .block .blockType true context openBlock
           EvalResult .Ok return
-        PROCEDURE EXPERIMENTAL_PROCEDURE NAMESPACE case
+        PROCEDURE INLINE_PROCEDURE NAMESPACE case
           "unsupported block-type in constant evaluation: " sb.copyPtr
             op [] .val .block .blockType sb.appendBlockType
           op [] .pos errors appendError
@@ -2184,7 +2186,7 @@ proc(
             op [] .pos
           context pushValue
           EvalResult .Ok return
-        PROCEDURE EXPERIMENTAL_PROCEDURE case
+        PROCEDURE INLINE_PROCEDURE case
           ## end procedure
           EvalResult .Ok return
         INITIALIZER case
@@ -3620,7 +3622,6 @@ proc(
   end
   context offsetContext
   context [] .stack .length =:: stackOffset
-  ## XXX? use EXPERIMENTAL_PROCEDURE for experimental procs
   BlockType .PROCEDURE true context openBlock
   0:i64 =:: mut: autoArgOffset
   0:i64 =:: mut: staticArgOffset
