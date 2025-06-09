@@ -41,6 +41,7 @@ struct(
   ProcCodeState : codeState
 ) =:: export: ProcImplementation
 struct(
+  ## TODO? create seperate procedures for proc-implementations, only link to ids of implementation procs
   ProcImplementation list : implementations
   VariableInfo list : variables ## for single implementation in non-generic case
   i32 : codeStart

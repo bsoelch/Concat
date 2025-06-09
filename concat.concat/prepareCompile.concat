@@ -13,9 +13,16 @@ import "branchTree.concat"
 using id.LabelFlag
 
 struct(
+  i32 : codeStart
+  i32 : codeLength
+) =:: ProcPosition
+
+struct(
   ProgramContext ptr.mut : program
   VariableInfo list : mut: variables
+  ProcPosition list : mut: newProcPositions
   FileId : mut: currentFile
+  i32 : mut: inlineCount
 ) =:: ConverterContext
 
 proc(
@@ -46,7 +53,7 @@ proc(
   IdentifierInfo new return
 end
 
-
+import debug
 ## TODO? move inlining to seperate optimization pass
 proc(
   ProcedureCall : callInfo
@@ -57,18 +64,17 @@ proc(
     procInfo [] .fileId i64 cast.u
   list.at .data =:: procFile
   procInfo .implementation .code =:: impl
-  ## FIXME comilation overwrites procedure positions, leading to wrong code if accessing already compiled procedure
   callInfo .implementationId -1 == if
     procFile [] .localOps
       impl [] .codeStart
       impl [] .codeLength
-    list.getSlice
+    list.getSlice $ .length i32 cast impl [] .codeLength == "correct length" assert
   else
     impl [] .implementations callInfo .implementationId @[] =:: callImpl
     procFile [] .localOps
       callImpl [] .codeStart
       callImpl [] .codeLength
-    list.getSlice
+    list.getSlice $ .length i32 cast callImpl [] .codeLength == "correct length" assert
   end
 end
 import debug
@@ -76,14 +82,17 @@ proc(
   ProcedureCall : callInfo
   ProgramContext ptr.mut : program
 -> bool ) =>: shouldInlineCall
+  program .idContext .typeContext .labelContext =:: labelContext
   optimizerFlags.ALLOW_INLINE ! if false return end
   ## TODO allow inlining of small procedures when ALLOW_INLINE_SMALL is set
-  program [] .procedures callInfo .procId i64 cast.u @[] .implementation [] .code ?? ! if
+  program [] .procedures callInfo .procId i64 cast.u @[] =:: procData
+  procData [] .isStatic or procData .implementation [] .code ?? ! or
+      procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? if
     false return
   end
   callInfo program calledProcOps =:: procOps
   ## TODO compute inline weight depending on operations in procedure, cache weight in procedure(-impl) info
-  procOps .length 8 <
+  procOps .length 16 <
 end
 proc(
   Operation list
@@ -98,8 +107,10 @@ proc(
     callInfo .procId i64 cast.u @[] .implementation []
   .code ?? "only code-procs are inlined" assert
   callInfo program calledProcOps =:: procOps
-  "Inlining procedures is currently unstable" sb.copyPtr pos program .errors appendWarning
-  0:BlockId =:: inlineId ## TODO seperate block-id for each inlined procedure
+  "Inlining procedures is currently experimental" sb.copyPtr pos program .errors appendWarning
+  context [] .inlineCount
+    $ 1 + context .inlineCount=
+  BlockId cast =:: inlineId
   labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapLabels ## TODO store in context
   BlockType .INLINE_PROCEDURE pos opBlock list.append
   inlineId $1 list.peek .data .val .block .blockId=
@@ -111,7 +122,7 @@ proc(
     inType i typeContext types.compositeGetLabel =:: argLabel
     argLabel id.LABEL_ID_NONE == if
       offset 1 + offset=
-    else
+    else argLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! _if
       ## TODO 1. rotate labeled argument to top
       inType i typeContext types.compositeGetElement =:: eltType
       eltType argLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
@@ -488,9 +499,8 @@ end
 proc(
   Operation slice : ops
   Operation list ptr.mut : newOps
+  ProcPosition ptr.mut : codePosition
   VariableInfo list ptr.mut : variables
-  i32 ptr.mut : codeStart
-  i32 ptr.mut : codeLength
   ConverterContext ptr.mut : context
 -> ) =>: convertProc
   context [] .program =:: program
@@ -499,12 +509,12 @@ proc(
   typeContext .labelContext =:: labelContext
   variables [] context .variables=
   newOps []
-    ..dup .length codeStart =[]
+    ..dup .length codePosition .codeStart =[]
     0:i64 while ..dup ops .length < do =:: opIndex
       ops opIndex slice.at .data [] context compileOp
       opIndex 1 +
     end ..drop
-    ..dup .length codeStart [] - codeLength =[]
+    ..dup .length codePosition .codeStart [] - codePosition .codeLength =[]
   newOps =[]
   context [] .variables variables =[]
 end
@@ -517,7 +527,9 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   ## ConverterContext
     program
     0 VariableInfo list.create
+    program .procedures [] .length ProcPosition list.create
     -1:FileId
+    0
   ConverterContext new =:: mut: contextData
   contextData@ =:: context
   program [] .progFiles list.atItr for =:: f
@@ -539,15 +551,17 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
         currentImpl .codeState [] .UNUSED ?? if
           continue
         end
+        context .newProcPositions []
+          -1 -1 ProcPosition new list.append
+        context .newProcPositions=
         ## convertProc
           f [] .localOps
             currentImpl [] .codeStart
             currentImpl [] .codeLength
           list.getSlice
           f .tmpOps
+          context .newProcPositions [] list.peek .data
           currentImpl .variables
-          currentImpl .codeStart
-          currentImpl .codeLength
           context
         convertProc
       end
@@ -555,21 +569,53 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       impl .codeState [] .UNUSED ?? if
         continue
       end
+      context .newProcPositions []
+        -1 -1 ProcPosition new list.append
+      context .newProcPositions=
       ## convertProc
         f [] .localOps impl [] .codeStart impl [] .codeLength list.getSlice
         f .tmpOps
+        context .newProcPositions [] list.peek .data
         impl .variables
-        impl .codeStart
-        impl .codeLength
         context
       convertProc
     end
   end
+  ## update operation list
   program [] .progFiles list.atItr for =:: f
     f [] .localOps list.clear
       f [] .tmpOps
       f .localOps=
     f .tmpOps=
+  end
+  ## update procedure positions
+  0 =:: mut: subProcIndex ## TODO is there a better way to ensure that the new ranges are matched up with the current procedues
+  ## ? remember new range in procedure data
+  program [] .procedures list.atItr for =:: currentProc
+    currentProc [] .implementation .code ?? ! or
+        currentProc [] .isStatic if
+      continue
+    end
+    currentProc .implementation .code =:: impl
+    currentProc [] .hasStaticArg if
+      impl [] .implementations list.atItr for =:: currentImpl
+        currentImpl .codeState [] .UNUSED ?? if
+          continue
+        end
+        context [] .newProcPositions subProcIndex [] =:: procPos
+        procPos .codeStart currentImpl .codeStart=
+        procPos .codeLength currentImpl .codeLength=
+        subProcIndex 1 + subProcIndex=
+      end
+    else
+      impl .codeState [] .UNUSED ?? if
+        continue
+      end
+      context [] .newProcPositions subProcIndex [] =:: procPos
+      procPos .codeStart impl .codeStart=
+      procPos .codeLength impl .codeLength=
+      subProcIndex 1 + subProcIndex=
+    end
   end
   ## create implementations for built-in procedure-pointers
   program [] .procedures .length for =:: procId
