@@ -53,6 +53,12 @@ namespace: optimizerFlags
     true FOLD_CONSTANTS=
     true REMOVE_UNUSED_PROCS=
     true ALLOW_INLINE_SMALL=
+    false ALLOW_INLINE= ## TODO endable inlining for opt-level 1 once inlining is stable
+    ## true ALLOW_INLINE=
+  end
+  ## enable experimental optimizations
+  proc( -> ) =>: export: optLevelExperimental
+    optLevel1
     true ALLOW_INLINE=
   end
   ## TODO? more opt-leves

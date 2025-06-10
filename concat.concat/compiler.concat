@@ -112,6 +112,9 @@ proc( -> ) =>: parseArgs
           else arg "-Odefault":s string.eq _if
             optimizerFlags.optLevelDefault
             continue
+          else arg "-Ox":s string.eq _if
+            optimizerFlags.optLevelExperimental
+            continue
           else
             arg 2 string.tail 10 number.tryParseInt .NONE ?? ! if
               ..drop 1 ## parsing as int failed
