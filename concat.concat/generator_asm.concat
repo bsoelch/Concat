@@ -901,7 +901,8 @@ enum( AssertFail Panic ) =:: RuntimeErrorType
 union(
   _ : Unknown
   AsmOp : Op
-  FileId : StartFile
+  FileId : DebugStartFile
+  FileId : DebugUsesFile
   ProcedureImpl : StartProc
   SectionType : Section
   _ : LeaveProc
@@ -1206,9 +1207,10 @@ namespace: sb
     atom switch
       Unknown case sb "  ?\n" appendS return
       Op case sb "  " sb.appendS atom .Op labelContext appendAsmOp '\n' sb.appendC return
-      StartFile case
+      DebugUsesFile case sb return
+      DebugStartFile case
         sb "## " sb.appendS
-          program [] .progFiles atom .StartFile i64 cast [] .fileName sb.appendSb
+          program [] .progFiles atom .DebugStartFile i64 cast [] .fileName sb.appendSb
         '\n' sb.appendC return
       StartProc case sb "  enter\n" sb.appendS return
       LeaveProc case sb "  leave\n" sb.appendS return
@@ -2436,10 +2438,14 @@ namespace: AMD64
     atom switch
       Unknown case "!error unkown operation\n" sb.appendS return
       Op case atom .Op context compileAsmOp return
-      StartFile case
-        ".file " sb.appendS atom .StartFile i64 cast sb.appendI " \"" sb.appendS
-          program [] .progFiles atom .StartFile i64 cast @[] .fileName [] sb.asStr sb.appendEscapedStrC
+      DebugUsesFile case
+        ".file " sb.appendS atom .DebugUsesFile i64 cast sb.appendI " \"" sb.appendS
+          program [] .progFiles atom .DebugUsesFile i64 cast @[] .fileName [] sb.asStr sb.appendEscapedStrC
         "\"\n" sb.appendS return
+      DebugStartFile case
+        "\n/* " sb.appendS
+          program [] .progFiles atom .DebugStartFile i64 cast [] .fileName sb.appendSb
+        "*/\n" sb.appendS return
       DebugStartOp case
         atom .DebugStartOp .pos =:: pos
         "/* " sb.appendS
@@ -2674,6 +2680,11 @@ struct(
 struct(
   BlockId : blockId
   i32 : endLabelId
+  ## TODO? support multiple branches in inlined proc
+) =:: InlineProcBlockInfo
+struct(
+  BlockId : blockId
+  i32 : endLabelId
   i32 slice.mut : caseLabelIds ## [case-labels] [default-label]
   RegisterState slice.mut : regData ## storage for register data (heap allocated)
   ## regData: [SWITCH-start][BRANCH-end] ## TODO? one state for each branch
@@ -2687,6 +2698,7 @@ union(
   IfBlockInfo : If
   AndOrBlockInfo : AndOr
   SwitchBlockInfo : Switch
+  InlineProcBlockInfo : InlineProc
 ) =:: BlockInfo
 
 struct(
@@ -3632,6 +3644,19 @@ proc(
 end
 proc(
   BlockId : blockId
+  CompilerContext ptr.mut : context
+-> InlineProcBlockInfo ptr.mut ) =>: openInlineProcBlock
+  context .dataRegisters [] .length i32 cast =:: regCount
+  context [] .openBlocks
+    ## IfBlockInfo
+      blockId
+      NO_LABEL
+    InlineProcBlockInfo new BlockInfo .InlineProc list.append
+  context .openBlocks=
+  context [] .openBlocks list.peek .data .InlineProc
+end
+proc(
+  BlockId : blockId
   i32 : caseCount
   CompilerContext ptr.mut : context
 -> SwitchBlockInfo ptr.mut ) =>: openSwitchBlock
@@ -3652,7 +3677,7 @@ proc(
   context [] .openBlocks list.peek .data .Switch
 end
 
-enum( WHILE SWITCH ) =:: BreakType
+enum( WHILE SWITCH INLINE ) =:: BreakType
 proc(
   BlockId : blockId
   BreakType : breakType
@@ -3667,6 +3692,10 @@ proc(
     end
     breakType .SWITCH ?? and block [] .Switch ?? and
         block [] .Switch .blockId blockId == if
+      block optional.wrap return
+    end
+    breakType .INLINE ?? and block [] .InlineProc ?? and
+        block [] .InlineProc .blockId blockId == if
       block optional.wrap return
     end
   end
@@ -5861,6 +5890,9 @@ proc(
             context appendOp1
             false context .reachable=
             return
+          INLINE_PROCEDURE case
+            op [] .val .block .blockId context openInlineProcBlock =:: procBlock
+            return
           default break
         end
         break
@@ -5967,6 +5999,23 @@ proc(
             context [] .procTail list.appendAll
             context [] .procTail list.clear context .procTail=
             Atomic .EndProc list.append return
+          INLINE_PROCEDURE case
+            context [] .openBlocks list.peek =:: procBlock?
+            procBlock? optional.isEmpty or procBlock? .data [] .InlineProc ?? ! if
+              "unexpected end of inline procedure block" sb.copyPtr op [] .pos errors appendError
+              return
+            end
+            context [] .openBlocks
+              list.pop .InlineProc =:: procBlock
+            context .openBlocks=
+            procBlock .endLabelId NO_LABEL != if ## jump to end reachable
+              ## TODO? merge branches if neccessary
+              asm.OpType .LABEL
+                procBlock .endLabelId asm.Operand .localLabel
+              context appendOp1
+              true context .reachable=
+            end
+            return
           default break
         end
         break
@@ -6057,7 +6106,30 @@ proc(
         false context .reachable=
         return
       InlineReturn case
-        "unimplemented" ..panic
+        op [] .val .InlineReturn
+          BreakType .INLINE
+        context findBreakableBlock =:: procBlock?
+        procBlock? optional.isEmpty or procBlock? .data [] .InlineProc ?? ! if
+          "unexpected inline return-statement" sb.copyPtr op [] .pos errors appendError
+          return
+        end
+        context [] .reachable ! if return end
+        procBlock? .data .InlineProc =:: procBlock
+        procBlock [] .endLabelId NO_LABEL == if
+          context nextLabelId procBlock .endLabelId=
+          ## procBlock [] .regData procBlock [] .endRegsOffset slice.tail context rememberRegisters
+          ## context .stack [] .length procBlock .endStackSize=
+        else
+          "multi-branch inline procedures are not supported" ..panic
+          #+procBlock [] .regData procBlock [] .endRegsOffset slice.tail
+            procBlock [] .endStackSize
+            RegisterRestoreMode .MERGE
+          op [] .pos context restoreRegisters+#
+        end
+        asm.OpType .JMP
+          procBlock [] .endLabelId asm.Operand .localLabel
+        context appendOp1
+        return
       panicWithMessage case
         context nextLabelId =:: targetLabelId
         asm.OpType .JMP
@@ -6355,9 +6427,12 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
     SectionType .Code Atomic .Section list.append
     ## code
     program [] .progFiles .length for =:: i
+      i FileId cast Atomic .DebugUsesFile list.append
+    end
+    program [] .progFiles .length for =:: i
       program [] .progFiles i list.get =:: f
-      ## add file-marker even for empty files to ensure file-name is defined for every file-id
-      i FileId cast Atomic .StartFile list.append
+      f .localOps .length 0 == if continue end
+      i FileId cast Atomic .DebugStartFile list.append
       f .localOps .length for =:: opIndex
         f .localOps opIndex list.at .data opIndex context compileOp
       end

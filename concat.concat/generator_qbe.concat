@@ -27,6 +27,7 @@ enum(
   ERROR
   LABEL
   LABEL_PRE
+  END_INLINE
 ) =:: BranchType
 struct( BranchType : branchType i32 : id ) =:: BranchId
 enum( EMPTY I32 I64 FLOAT DOUBLE PTR REFERENCE ) =:: ValType
@@ -191,6 +192,7 @@ namespace: sb
         ERROR case "@error" sb.appendS branch .id sb.appendI break
         LABEL case "@label_" sb.appendS branch .id sb.appendI break
         LABEL_PRE case "@label_pre" sb.appendS branch .id sb.appendI break
+        END_INLINE case "@endInline" sb.appendS branch .id sb.appendI break
       end
     return
   end
@@ -4507,9 +4509,10 @@ proc(
           return
         INLINE_PROCEDURE case
           sb
-            "@endInline" sb.appendS
-            op [] .val .blockEnd .blockId i64 cast.u sb.appendI
-            '\n' sb.appendC
+            ## BranchId
+              BranchType .END_INLINE
+              op [] .val .blockEnd .blockId i32 cast
+            BranchId new "inline proc":s context startBranch
             ## TODO merge branches if neccessary
           return
         ELSE case
@@ -4786,8 +4789,11 @@ proc(
       return
     InlineReturn case
       sb
-        "jmp @endInline" sb.appendS
-        op [] .val .InlineReturn i64 cast.u sb.appendI
+        "jmp " sb.appendS
+        ## BranchId
+          BranchType .END_INLINE
+          op [] .val .InlineReturn i32 cast
+        BranchId new sb.appendBranchId
         '\n' sb.appendC
         ## TODO! keep track of branches
       return
