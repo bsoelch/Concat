@@ -302,7 +302,7 @@ namespace: AMD64
         F32 F64 BITS32F BITS64F case ## float
           floatArgCount floatRegs .length < if
             floatRegs floatArgCount [] ArgumentLocation .argRegister
-            intArgCount 1 + intArgCount=
+            floatArgCount 1 + floatArgCount=
           else seperateMemoryByType _if
             floatMemCount ArgumentLocation .argStackFloat
             floatMemCount 1 + floatMemCount=
@@ -1743,12 +1743,96 @@ namespace: AMD64
         lowBytes dstHi getRegSize + =:: totalBytes
         byteCount 0 > byteCount totalBytes <= & "count inside allowed range" assert
         byteIndex 0 >= byteIndex byteCount + totalBytes <= & "index inside allowed range" assert
-        ## TODO different operations dependng on operand types
-        ## seperate float operations depending on granularity: 8 byte values, 4 byte values, 2 byte values
-        ## f64 values: use MOVHLPS to extract high part of 128-bit register
-        ## extract a single f32: vshufps, reorganite f32: multiple vshufps ops
-        ## f16 values: ?? PSHUFLW + pshufhw / PINSRW PEXTRW
-        ## TODO handle same register beeing used as source and target
+        srcLow isFloatReg and dstLow isFloatReg if ## float/vector -> float/vector
+          bitMoveInfo .flags asm.BitMove.DST1_SHIFT >> asm.BitMove.DST_TYPE_MASK & =:: dstType
+          srcHi NO_REG == and dstHi NO_REG == end "insert/extract: multi-register float values are not supported" assert
+          srcOffset byteIndex | byteCount | 0x7 & switch ## seperate value by minimum alignement
+            0 case ## 8-byte aligned
+              byteIndex 0 == and srcOffset 0 == and byteCount 8 == and lowBytes 8 == or
+                  dstType asm.BitMove.DST_TYPE_OVERWRITE_REG == if ## overwrite dst
+                "  movsd " sb.appendS
+                  dstLow appendRegister ", " sb.appendS
+                srcLow appendRegister '\n' sb.appendC
+                return
+              end
+              ## f64 values: use MOVHLPS to extract high part of 128-bit register
+              op .opType .INSERT ?? if
+                "unimplemented: insert f64" ..panic
+              else
+                "unimplemented: extract f64" ..panic
+              end
+              break
+            4 case ## 4-byte aligned
+              byteIndex 0 == and srcOffset 0 == and byteCount lowBytes == or
+                  dstType asm.BitMove.DST_TYPE_OVERWRITE_REG == and byteCount 4 == or byteCount 8 == if ## overwrite dst
+                byteCount 4 == if "  movss " sb.appendS else "  movsd " sb.appendS end
+                  dstLow appendRegister ", " sb.appendS
+                srcLow appendRegister '\n' sb.appendC
+                return
+              end
+              ## extract a single f32: vshufps, reorganize f32: multiple vshufps ops
+              op .opType .INSERT ?? if
+                byteCount 4 == "unimplemented: inserting multiple f32 values" assert
+                FLOAT_TMP_REGISTERS 0 [] =:: tmpReg
+                ## TODO! check if seclection bits are correct
+                "  vshufps " sb.appendS
+                  tmpReg appendRegister ", " sb.appendS
+                  srcLow appendRegister ", " sb.appendS
+                  dstLow appendRegister ", " sb.appendS
+                byteIndex 8 < if ## [S1:S2:D1:D2]
+                  "0b01000100\n" sb.appendS
+                else ## [S1:S2:D3:D4]
+                  "0b11100100\n" sb.appendS
+                end
+                "  vshufps " sb.appendS
+                  dstLow appendRegister ", " sb.appendS
+                byteIndex switch
+                    0 case
+                      tmpReg appendRegister ", " sb.appendS
+                      dstLow appendRegister ", " sb.appendS
+                      "0b11101100\n" sb.appendS
+                      break
+                    4 case
+                      tmpReg appendRegister ", " sb.appendS
+                      dstLow appendRegister ", " sb.appendS
+                      "0b11100010\n" sb.appendS
+                      break
+                    8 case
+                      dstLow appendRegister ", " sb.appendS
+                      tmpReg appendRegister ", " sb.appendS
+                      "0b11000100\n" sb.appendS
+                      break
+                    12 case
+                      dstLow appendRegister ", " sb.appendS
+                      tmpReg appendRegister ", " sb.appendS
+                      "0b00100100\n" sb.appendS
+                      break
+                    default "unexpected offset for f32" ..panic
+                  end
+                return
+              else
+                byteCount 4 == "unimplemented: extracting multiple f32 values" assert
+                "  vshufps " sb.appendS
+                  dstLow appendRegister ", " sb.appendS
+                  srcLow appendRegister ", " sb.appendS
+                  srcLow appendRegister ", " sb.appendS
+                  srcOffset switch
+                    0 case "0b00\n" sb.appendS break
+                    4 case "0b01\n" sb.appendS break
+                    8 case "0b10\n" sb.appendS break
+                    12 case "0b11\n" sb.appendS break
+                    default "unexpected offset for f32" ..panic
+                  end
+                return
+              end
+              break
+            6 2 case "f16 values are not supported" ..panic ## 2-byte aligned
+            default "unaligned float value" ..panic ## 1-byte aligned
+          end
+        end
+        ## TODO different operations depending on operand types
+        ## float/vector -> int / int -> float
+        ## TODO handle same register(s) being used as source and target
         byteIndex lowBytes < if ## insert data into low-register
           byteCount lowBytes byteIndex - i32.min =:: copiedBytes
           dstLow
@@ -3227,6 +3311,7 @@ proc(
         regs i [] .register =:: srcRegister
         ## temporarily move value to free register
         currentValue regs freeSlot @[] .currentValue=
+        regs i [] .lastUsed regs freeSlot @[] .lastUsed=
         currentValue switch
           variable case
             currentValue .variable idContext id.getIdentifier
@@ -3443,13 +3528,17 @@ proc(
         stackData [] .location switch
           register case
             stackData .location [] .register =:: register
-            register context findRegister .data .currentValue =:: sourceValue
-            sourceValue .stackSlot ?? if
+            register context findRegister .data =:: srcRegister
+            srcRegister .currentValue =:: sourceValue
+            srcRegister [] .lastUsed
+              mode .RESET ?? ! if regs i [] .lastUsed i32.max end
+            regs i @[] .lastUsed=
+            sourceValue [] .stackSlot ?? if
               asm.OpType .MOVE
                 targetRegister asm.Operand .register
                 register asm.Operand .register
               context appendOp2
-            else sourceValue .stackSlotReference ?? _if
+            else sourceValue [] .stackSlotReference ?? _if
               asm.OpType .LOAD
                 targetRegister asm.Operand .register
                 register asm.Operand .register
@@ -3541,9 +3630,6 @@ proc(
                 register asm.Operand .register
               context appendOp2
             else
-              context printRegisters
-              register i64 cast.u debug.printX
-              isHi debug.print
               "stack and registers are out of sync":s Atomic .DebugError list.append
             end
             StackValueLocation .memory stackData .location=
@@ -3871,10 +3957,10 @@ proc(
       context [] .stack .length regData .currentValue .stackSlotLow=
       break
     registers case
-      val .location .registerHi context findRegister .data =:: regDataHi
+      val .location .registers .hi context findRegister .data =:: regDataHi
       regDataHi .currentValue [] .stackSlotHi ?? ! regOutOfSync=
       context [] .stack .length regDataHi .currentValue .stackSlotHi=
-      val .location .registerLow context findRegister .data =:: regDataLow
+      val .location .registers .low context findRegister .data =:: regDataLow
       regDataLow .currentValue [] .stackSlotLow ?? ! regOutOfSync=
       context [] .stack .length regDataLow .currentValue .stackSlotLow=
       break
@@ -6299,6 +6385,7 @@ proc( Atomic list type.intLike : auto: I
   ValType : eltVal
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: appendPrimitiveArray
+  eltVal isIntValType "unimplemented primitive arrays of non-integer type" assert
   data for =:: elt
     asm.OpType .DATA
       eltVal asm.Operand .valType
@@ -6311,9 +6398,16 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
   program .idContext .typeContext =:: typeContext
   value switch
     Int case
-      asm.OpType .DATA ## TODO? create halper function for const-int-data
-        constType typeContext toValType asm.Operand .valType
-        value .Int asm.Operand .constInt
+      asm.OpType .DATA ## TODO? create helper function for const-int-data
+        constType typeContext toValType =:: eltVal
+        eltVal asm.Operand .valType
+        value .Int eltVal .F32 ?? if
+          f32 cast asm.Operand .constF32
+        else eltVal .F64 ?? _if
+          f64 cast asm.Operand .constF64
+        else
+          asm.Operand .constInt
+        end
       context appendOp2
       return
     Char case
