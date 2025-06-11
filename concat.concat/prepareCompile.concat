@@ -182,16 +182,17 @@ proc(
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
           args i typeContext types.compositeGetLabel =:: label
-          label id.LABEL_ID_NONE == if
-            i 1 + continue
+          label id.LABEL_ID_NONE == or label labelContext id.labelFlags id.FLAG_STATIC & ? if
+            continue
           end
+          args i typeContext types.compositeGetElement =:: argType
+          argType typeContext types.isEmpty if continue end
           ## VariableInfo
-            args i typeContext types.compositeGetElement
+            argType
             label
             VariableType .ARGUMENT
           VariableInfo new list.append
-          i 1 +
-        end ..drop
+        finally i 1 + end ..drop
       context .variables=
       newOps
         op list.append ## nothing to change
