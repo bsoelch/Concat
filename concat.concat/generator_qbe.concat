@@ -4838,6 +4838,7 @@ proc(
         op [] .val .panicWithMessage .length sb.appendI
         ",l " sb.appendS
         op [] .val .panicWithMessage context sb.appendStringPtrConstQBE
+        op [] .pos prog appendPosPrintfArgs
         ")\ncall $exit(w 1)\nhlt\n" sb.appendS
       return
     stackMod case
@@ -4945,7 +4946,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     " = { b \"assertion failed: \\\"%.*s\\\" at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
     "data $" sb.appendS
     PANIC_FORMAT sb.appendS
-    " = { b \"PANIC!: \\\"%.*s\\\"\\n\", b 0 }\n" sb.appendS
+    " = { b \"PANIC!: \\\"%.*s\\\" at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
   =:: mut: sb
   ## TODO find better way to iterate through all global variables
   idContext .identifierNames map.itr.start while map.itr.hasNext do map.itr.next
