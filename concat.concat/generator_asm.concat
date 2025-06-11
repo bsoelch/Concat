@@ -2929,7 +2929,13 @@ end
 proc( LabelId : valId RegisterPair : registers i32 : opIndex CompilerContext ptr.mut : context -> ) =>: cacheVariable2
   context .variableLocations
     valId
-    registers ValueLocation .registers
+    registers .hi NO_REG == if
+      valId registers .low LabelAndReg new ValueLocation .localAndLowReg
+    else registers .low NO_REG == _if
+      valId registers .hi LabelAndReg new ValueLocation .localAndHiReg
+    else
+      registers ValueLocation .registers
+    end
   map.put =:: prevLocation?
   ## remove previous location from register data
   prevLocation? optional.hasData and
@@ -2940,17 +2946,25 @@ proc( LabelId : valId RegisterPair : registers i32 : opIndex CompilerContext ptr
     prevLocation .registers .hi context resetRegisterById
   end
   ## update register storage
-  registers .low context findRegister $ optional.hasData if .data =:: lowRegisterData
-    opIndex lowRegisterData .lastUsed=
-    lowRegisterData .currentValue .empty ?? "caching variable does not overwrite register" assert
-    valId RegisterContent .variableLow lowRegisterData .currentValue=
-  else ..drop end
-  registers .hi context findRegister
-    $ optional.isEmpty if ..drop return end
-  .data =:: hiRegisterData
-  opIndex hiRegisterData .lastUsed=
-  hiRegisterData .currentValue .empty ?? "caching variable does not overwrite register" assert
-  valId RegisterContent .variableHi hiRegisterData .currentValue=
+  registers .low NO_REG != if
+    registers .low context findRegister $ optional.hasData if .data =:: lowRegisterData
+      opIndex lowRegisterData .lastUsed=
+      lowRegisterData .currentValue [] .variableLow ?? ! or lowRegisterData .currentValue [] .variableLow valId != if
+        lowRegisterData .currentValue [] .empty ?? "caching variable does not overwrite register" assert
+        valId RegisterContent .variableLow lowRegisterData .currentValue=
+      end
+    else ..drop end
+  end
+  registers .hi NO_REG != if
+    registers .hi context findRegister
+      $ optional.isEmpty if ..drop return end
+    .data =:: hiRegisterData
+    opIndex hiRegisterData .lastUsed=
+    hiRegisterData .currentValue [] .variableHi ?? ! or hiRegisterData .currentValue [] .variableHi valId != if
+      hiRegisterData .currentValue [] .empty ?? "caching variable does not overwrite register" assert
+      valId RegisterContent .variableHi hiRegisterData .currentValue=
+    end
+  end
 end
 proc( RegisterState : state -> RegisterState ) =>: resetRegister
   state
@@ -3540,11 +3554,70 @@ proc(
                 varLoc .globalAddr asm.Operand .globalMemory
               context appendOp2
               break
-            localAndHiReg localAndLowReg registers case "unimplemented" ..panic
+            localAndHiReg localAndLowReg registers case "unexpected cached location for single register variable" ..panic
             default "CodeGen: unsupported variable location" ..panic
           end
         end
         expectedValue .variable targetRegister valType .REFERENCE ?? buffer i [] .lastUsed context cacheVariable ## update variable location
+        break
+      variableHi variableLow case
+        expectedValue .variableHi ?? if
+          expectedValue .variableHi
+        else
+          expectedValue .variableLow
+        end =:: labelId
+        labelId idContext id.getIdentifier
+          ! "CodeGen: identifier exists" assert
+        =:: idData
+        idData [] .valueType typeContext toValType =:: valType
+        valType
+          expectedValue .variableHi ?? if getHiValType else getLowValType end
+        =:: eltValType
+        labelId idData .idType [] .GLOBAL_VAR ?? context getVarLocation =:: varLoc
+        varLoc switch
+          localMemory localAndHiReg localAndLowReg registers case
+            varLoc .registers ?? if
+              varLoc .registers
+              labelId
+            else varLoc .localAndLowReg ?? _if
+              varLoc .localAndLowReg .reg NO_REG RegisterPair new
+              varLoc .localAndLowReg .label
+            else varLoc .localAndHiReg ?? _if
+              NO_REG varLoc .localAndHiReg .reg RegisterPair new
+              varLoc .localAndHiReg .label
+            else
+              NO_REG NO_REG RegisterPair new
+              varLoc .localMemory
+            end =:: varLabel =:: prevRegs
+            mode .RESET ?? ! if
+              asm.OpType .LOAD
+                targetRegister asm.Operand .register
+                expectedValue .variableHi ?? if
+                  prevRegs .hi NO_REG != if
+                    prevRegs .hi asm.Operand .register
+                  else
+                    ## TODO? find better way to get size of low part
+                    varLabel 8 asm.LabelAndOffset new asm.Operand .localMemoryAndOffset
+                  end
+                else
+                  prevRegs .low NO_REG != if
+                    prevRegs .low asm.Operand .register
+                  else
+                    varLabel asm.Operand .localMemory
+                  end
+                end
+              context appendOp2
+            else
+              ## TODO? cleanup previous value
+            end
+            labelId
+              prevRegs targetRegister  expectedValue .variableHi ?? if >$ .hi= else >$ .low= end
+            buffer i [] .lastUsed context cacheVariable2 ## update variable location
+            break
+          globalMemory globalAndLowReg globalAndHiReg case "unimplemented" ..panic
+          register globalAddr localAddr case "unexpected cached location for partial variable" ..panic
+          default "CodeGen: unsupported variable location" ..panic
+        end
         break
       variableReference case
         "CodeGen: unimplemented restore variableReference":s Atomic .DebugError list.append
@@ -3689,7 +3762,6 @@ proc(
           regPair stackData .location .registers=
         end
         break
-      variableHi variableLow case "partial variable is unimplemented" ..panic
     end
     expectedValue regs i @[] .currentValue=
     targetRegister regs i @[] .register=
