@@ -1689,8 +1689,12 @@ namespace: AMD64
                 "  movq " sb.appendS break
               else srcType .F64 ?? and dstType .I64 ?? _if
                 "  movq " sb.appendS break
+              else srcType .I64 ?? and dstType .PTR ?? _if
+                "  mov " sb.appendS break
+              else srcType .PTR ?? and dstType .I64 ?? _if
+                "  mov " sb.appendS break
               end
-              "unsupported value types for move" ..panic
+              "!error unknown/incompatiable value-type for move\n" sb.appendS break
             I8 I16 case
               op .opType .STORE ?? or op .operands 0 [] .register ?? ! or op .operands 1 [] .constInt ?? if
                 "  mov " sb.appendS
@@ -1702,7 +1706,8 @@ namespace: AMD64
             F64 BITS64F case "  movsd " sb.appendS break
             BITS128F case "  movups " sb.appendS break ## packed floats
             BITS128 BITS128IF BITS128FI case "  movdqu " sb.appendS break ## packed ints
-            default "unsupported value type for move" ..panic
+            default
+              "!error unsupported value types for move\n" sb.appendS break
           end
         end
            ## TODO? general method for getting operand as address
@@ -3242,6 +3247,39 @@ proc(
   context nextFreeRegister valType setRegType
 end
 
+proc( CompilerContext ptr.mut : context -> ) =>: printStack
+  context [] .program .idContext .typeContext .labelContext =:: labelContext
+  "--------------------------":s io.println
+  char8 16 array : nameBuffer
+  context [] .stack for =:: elt
+    ## TODO? print val-type
+    elt .location switch
+      memory case "memory":s io.println break
+      register case
+        "register ":s io.print
+        nameBuffer@ sb.wrapBuffer
+          elt .location .register sb.appendRegister
+        sb.asStr io.println break
+      registerHi case
+        "registers _:":s io.print
+        nameBuffer@ sb.wrapBuffer
+          elt .location .registerHi sb.appendRegister
+        sb.asStr io.println break
+      registerLow case
+        "registers ":s io.print
+        nameBuffer@ sb.wrapBuffer
+          elt .location .registerLow sb.appendRegister
+        sb.asStr io.print ":_":s io.println break
+      registers case
+        "registers ":s io.print
+        nameBuffer@ sb.wrapBuffer
+          elt .location .registers .low sb.appendRegister ':' sb.appendC
+          elt .location .registers .hi sb.appendRegister
+        sb.asStr io.println break
+    end
+  end
+  "--------------------------":s io.println
+end
 proc( CompilerContext ptr.mut : context -> ) =>: printRegisters
   context [] .program .idContext .typeContext .labelContext =:: labelContext
   "--------------------------":s io.println
@@ -4048,9 +4086,11 @@ proc(
       val .location .register context findRegister .data =:: regData
       regData .currentValue [] .stackSlotReference ?? if
         context [] .stack .length regData .currentValue .stackSlotReference=
+        val .location .register ValType .PTR setRegType regData .register=
         break
       else
         regData .currentValue [] .stackSlot ?? ! regOutOfSync=
+        val .location .register val .valType setRegType regData .register=
       end
       context [] .stack .length regData .currentValue .stackSlot=
       break
@@ -4058,19 +4098,23 @@ proc(
       val .location .registerHi context findRegister .data =:: regData
       regData .currentValue [] .stackSlotHi ?? ! regOutOfSync=
       context [] .stack .length regData .currentValue .stackSlotHi=
+      val .location .registerHi val .valType getHiValType setRegType regData .register=
       break
     registerLow case
       val .location .registerLow context findRegister .data =:: regData
       regData .currentValue [] .stackSlotLow ?? ! regOutOfSync=
       context [] .stack .length regData .currentValue .stackSlotLow=
+      val .location .registerLow val .valType getLowValType setRegType regData .register=
       break
     registers case
       val .location .registers .hi context findRegister .data =:: regDataHi
       regDataHi .currentValue [] .stackSlotHi ?? ! regOutOfSync=
       context [] .stack .length regDataHi .currentValue .stackSlotHi=
+      val .location .registers .hi val .valType getHiValType setRegType regDataHi .register=
       val .location .registers .low context findRegister .data =:: regDataLow
       regDataLow .currentValue [] .stackSlotLow ?? ! regOutOfSync=
       context [] .stack .length regDataLow .currentValue .stackSlotLow=
+      val .location .registers .low val .valType getLowValType setRegType regDataLow .register=
       break
     memory case break
   end
@@ -4484,6 +4528,47 @@ proc(
     srcReg [] resetRegister srcReg =[]
     targetRegister stackEntry .location .register=
     targetVal stackEntry .valType=
+    return
+  end
+  ## ptr <-> int
+  src typeContext types.isPointer and target typeContext types.isInt if
+    types.primitive.I_PTR .primitiveType types.sizeOfPrimitive =:: srcBytes
+    target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
+    target typeContext toValType stackEntry .valType=
+    srcBytes targetBytes == if return end
+    target typeContext toValType =:: targetType
+    targetType stackEntry .valType=
+    stackEntry .location [] .register targetType setRegType =:: targetReg
+    srcBytes targetBytes < if
+      signType .UNSIGNED ?? if asm.OpType .EXTU else asm.OpType .EXTS end
+    else
+      asm.OpType .TRUNC
+    end
+      targetReg asm.Operand .register
+      stackEntry .location [] .register asm.Operand .register
+    context appendOp2
+    targetReg stackEntry .location .register=
+    targetReg context findRegister ..drop ## update register type
+    return
+  end
+  src typeContext types.isInt and target typeContext types.isPointer if
+    src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
+    types.primitive.I_PTR .primitiveType types.sizeOfPrimitive =:: targetBytes
+    target typeContext toValType stackEntry .valType=
+    srcBytes targetBytes == if return end
+    target typeContext toValType =:: targetType
+    targetType stackEntry .valType=
+    stackEntry .location [] .register targetType setRegType =:: targetReg
+    srcBytes targetBytes < if
+      signType .UNSIGNED ?? if asm.OpType .EXTU else asm.OpType .EXTS end
+    else
+      asm.OpType .TRUNC
+    end
+      targetReg asm.Operand .register
+      stackEntry .location [] .register asm.Operand .register
+    context appendOp2
+    targetReg stackEntry .location .register=
+    targetReg context findRegister ..drop ## update register type
     return
   end
   ## TODO support different casts
@@ -6325,6 +6410,7 @@ proc(
         asm.OpType .JMP
           procBlock [] .endLabelId asm.Operand .localLabel
         context appendOp1
+        false context .reachable=
         return
       panicWithMessage case
         context nextLabelId =:: targetLabelId
