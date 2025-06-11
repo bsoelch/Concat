@@ -849,6 +849,7 @@ namespace: asm
     i8 : count
     BitMoveFlags : flags
   ) =:: BitMoveInfo
+  ( LabelId : labelId i32 : implId ) =:: GlobalLabel
   union(
     _ : empty
     _ : unknown
@@ -872,7 +873,7 @@ namespace: asm
     LabelAndOffset : localMemoryAndOffset
     LabelId : globalMemory
     i32 : localLabel
-    LabelId : globalLabel
+    GlobalLabel : globalLabel
     RegAndOffset : jumpTableElement ## memory at localLabel<offset> + 8*<register> (used for jump-tables)
     ValType : valType
     BitMoveInfo : bitMoveInfo
@@ -900,6 +901,8 @@ enum( Code Data ) =:: SectionType
 enum( AssertFail Panic ) =:: RuntimeErrorType
 union(
   _ : Unknown
+  _ : Entry
+  _ : ExitEntry
   AsmOp : Op
   FileId : DebugStartFile
   FileId : DebugUsesFile
@@ -1157,7 +1160,10 @@ namespace: sb
           ".localLabel" sb.appendS val .localLabel i64 cast.u sb.appendI
           break
         globalLabel case
-          '$' sb.appendC val .globalLabel labelContext sb.appendLabelName
+          '$' sb.appendC val .globalLabel .labelId labelContext sb.appendLabelName
+          val .globalLabel .implId -1 != if
+            ':' sb.appendC val .globalLabel .implId sb.appendI
+          end
           break
         jumpTableElement case
           "[.localLabel" sb.appendS
@@ -1214,6 +1220,8 @@ namespace: sb
         '\n' sb.appendC return
       StartProc case sb "  enter\n" sb.appendS return
       LeaveProc case sb "  leave\n" sb.appendS return
+      Entry case sb "  _entry:\n" sb.appendS return
+      ExitEntry case sb " _exit:\n" sb.appendS return
       Section case atom .Section switch
           Code case sb "section code\n" sb.appendS return
           Data case sb "section data\n" sb.appendS return
@@ -1253,10 +1261,11 @@ namespace: AMD64
     stringBuilder : procedureTail
     i32 : tmpLabelCount ## number of temporary labels ! when using gas tmp-labels are not local to function
   ) =:: AsmCompilerContext
-  "cct_error_assert":s =:: CCT_ERROR_ASSERT
-  "cct_error_panic":s =:: CCT_ERROR_PANIC
-  "cct_f32_sign_mask":s =:: CCT_F32_SIGN_MASK
-  "cct_f64_sign_mask":s =:: CCT_F64_SIGN_MASK
+  "cct_":s =:: CONCAT_PREFIX
+  "ccti_error_assert":s =:: CCT_ERROR_ASSERT
+  "ccti_error_panic":s =:: CCT_ERROR_PANIC
+  "ccti_f32_sign_mask":s =:: CCT_F32_SIGN_MASK
+  "ccti_f64_sign_mask":s =:: CCT_F64_SIGN_MASK
 
   proc( stringBuilder asm.CompareType : cmpType -> stringBuilder ) =>: appendCmpFlags
     cmpType switch
@@ -1382,6 +1391,25 @@ namespace: AMD64
       default ..unreachable
     end
   end
+  proc( stringBuilder asm.GlobalLabel : globalLabel LabelContext ptr.mut : labelContext -> stringBuilder ) =>: appendGlobalName
+    globalLabel .labelId =:: label
+    label labelContext id.labelFlags id.FLAG_EXTERN & ? if
+      ## use unmodified name for extern values
+      label labelContext sb.appendLabelName
+      return
+    end
+    CONCAT_PREFIX sb.appendStr
+    label labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
+      label labelContext id.getLabelFile i64 cast sb.appendI
+      "_F" sb.appendS
+    end
+    label labelContext sb.appendAsciifiedLabelPath
+    globalLabel .implId 0 >= if
+      ## TODO? generate signature from static arguments instead of using implementationId
+      "_I" sb.appendS
+      globalLabel .implId sb.appendI
+    end
+  end
   proc( stringBuilder asm.Operand : val ValType : valType AsmCompilerContext ptr.mut : context -> stringBuilder ) =>: appendOperand
     context [] .program =:: program
     program .idContext .typeContext =:: typeContext
@@ -1391,9 +1419,9 @@ namespace: AMD64
       unknown cmpType bitMoveInfo case break
       register case val .register valType setRegType appendRegister return
       constInt case val .constInt sb.appendI return
-      constPtr case "cct_ptr" sb.appendS val .constPtr sb.appendI return
+      constPtr case "ccti_ptr" sb.appendS val .constPtr sb.appendI return
       constPtrAndOffset case
-        "(cct_ptr" sb.appendS val .constPtrAndOffset .const sb.appendI
+        "(ccti_ptr" sb.appendS val .constPtrAndOffset .const sb.appendI
         "+" sb.appendS val .constPtrAndOffset .offset sb.appendI ')' sb.appendC
         return
       constF32 case
@@ -1447,7 +1475,7 @@ namespace: AMD64
           '+' sb.appendC val .regAndOffset .offset sb.appendI
         ']' sb.appendC return
       localLabel case ".L" sb.appendS val .localLabel i64 cast.u sb.appendI return
-      globalLabel case val .globalLabel labelContext sb.appendLabelName return
+      globalLabel case val .globalLabel labelContext appendGlobalName return
       jumpTableElement case "[.L" sb.appendS val .jumpTableElement .offset i64 cast.u sb.appendI
             "+8*" sb.appendS val .jumpTableElement .reg appendRegister ## TODO? don't hardcode size
           ']' sb.appendC return
@@ -2553,7 +2581,7 @@ namespace: AMD64
         program [] .procedures
           implInfo .procId i64 cast list.at .data
         =:: procInfo
-        procInfo [] .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? if
+        procInfo [] .labelId labelContext id.labelFlags id.FLAG_EXPORT id.FLAG_EXTERN | & ? if
           "  .globl " sb.appendS
           procInfo [] .labelId labelContext sb.appendLabelName
           '\n' sb.appendC
@@ -2603,6 +2631,14 @@ namespace: AMD64
         context [] .procedureTail sb.clear context .procedureTail=
         "\n" sb.appendS
       return
+      Entry case
+        ## TODO? option to have entry without lib-c wrapper
+          "  .globl main\nmain:\n" sb.appendS
+          ## TODO initialize arguments if neccessary
+        return
+      ExitEntry case
+          "  xor eax,eax\n  ret\n\n" sb.appendS
+        return
       Error case
         atom .Error switch ## use call to have error location in call-stack
           AssertFail case "  call " sb.appendS CCT_ERROR_ASSERT sb.appendStr '\n' sb.appendC return
@@ -2639,7 +2675,7 @@ namespace: AMD64
       " /* " sb.appendS context .f32Consts i [] f64 cast sb.appendF " */\n" sb.appendS
     end
     ## default error handlers (assume arguments first 3 arguments are <msg> <msg-len> <pos-ptr> )
-    ".text\ncct_shift_args:" sb.appendS
+    ".text\nccti_shift_args:" sb.appendS
     3 while $ 0 >= do =:: i
       "\n  mov " sb.appendS
       i 1 + AMD64.getIntArgumentRegister appendRegister
@@ -2651,16 +2687,16 @@ namespace: AMD64
     ## TODO include position in print
     ## TODO? ommit unused handlers
     CCT_ERROR_ASSERT sb.appendStr ":\n" sb.appendS
-    "  call cct_shift_args\n" sb.appendS
-    "  lea rdi, cct_err_assert_msg\n  xchg rsi, rdx\n  call printf\n" sb.appendS
+    "  call ccti_shift_args\n" sb.appendS
+    "  lea rdi, ccti_err_assert_msg\n  xchg rsi, rdx\n  call printf\n" sb.appendS
     "  mov rdi, 1\n  jmp exit\n" sb.appendS
     CCT_ERROR_PANIC sb.appendStr ":\n" sb.appendS
-    "  call cct_shift_args\n" sb.appendS
-    "  lea rdi, cct_err_panic_msg\n  xchg rsi, rdx\n  call printf\n" sb.appendS
+    "  call ccti_shift_args\n" sb.appendS
+    "  lea rdi, ccti_err_panic_msg\n  xchg rsi, rdx\n  call printf\n" sb.appendS
     "  mov rdi, 1\n  jmp exit\n" sb.appendS
     ".data\n" sb.appendS
-    "cct_err_assert_msg:\n.string	\"assertion failed \\\"%.*s\\\"\\n\"\n" sb.appendS
-    "cct_err_panic_msg:\n.string	\"panic \\\"%.*s\\\"\\n\"\n" sb.appendS
+    "ccti_err_assert_msg:\n.string	\"assertion failed \\\"%.*s\\\"\\n\"\n" sb.appendS
+    "ccti_err_panic_msg:\n.string	\"panic \\\"%.*s\\\"\\n\"\n" sb.appendS
     ".section .note.GNU-stack,\"\",@progbits\n" sb.appendS
     ## TODO! cleanup context
   end
@@ -4768,7 +4804,7 @@ proc(
       context resetRegisters
       op [] Atomic .DebugStartOp list.append
       asm.OpType .LABEL
-        procInfo [] .labelId asm.Operand .globalLabel
+        procInfo [] .labelId implInfo .implementationId asm.GlobalLabel new asm.Operand .globalLabel
       context appendOp1
       implInfo Atomic .StartProc list.append
       ## TODO setup procedure memory
@@ -6128,7 +6164,9 @@ proc(
           op [] .val .callPtr ?? if
             "unimplemented" ..panic ## TODO use call pointer
           else
-            program [] .procedures op [] .val .call .procId i64 cast @[] .labelId [] asm.Operand .globalLabel
+            program [] .procedures op [] .val .call .procId i64 cast @[] .labelId []
+              op [] .val .call .implementationId
+            asm.GlobalLabel new asm.Operand .globalLabel
           end
         context appendOp1
         ## TODO? compute new stack size in computeArgumentLocations
@@ -6530,6 +6568,15 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
       f .localOps .length for =:: opIndex
         f .localOps opIndex list.at .data opIndex context compileOp
       end
+    end
+    program [] .mainLabelId =:: mainId
+    mainId id.LABEL_ID_NONE != if ## code has main procedure
+      ## TODO check if user-code defines C-main
+      Atomic .Entry list.append
+      asm.OpType .CALL
+        mainId -1 asm.GlobalLabel new asm.Operand .globalLabel
+      context appendOp1
+      Atomic .ExitEntry list.append
     end
     SectionType .Data Atomic .Section list.append ## TODO? seperate section for read-only data
     context .pointerConstants [] .length for =:: i
