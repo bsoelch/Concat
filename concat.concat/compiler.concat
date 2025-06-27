@@ -377,7 +377,12 @@ proc( -> ) =>: main ## TODO check return value of fopen
         end
         "gcc":s exec.build
           "-g":s exec.add "-lm":s exec.add
-          tmpPath sb.asStr exec.add "extern.c":s exec.add
+          tmpPath sb.asStr exec.add
+          tmpPath sb.clear
+            libPath sb.appendStr
+            "extern.c":s sb.appendStr
+          tmpPath=
+          tmpPath sb.asStr exec.add
           "-o":s exec.add targetPath sb.asStr exec.add
         exec.run exec.check ! if
           false runCompiledProgram=

@@ -3313,7 +3313,6 @@ proc( RegisterState slice.mut : buffer CompilerContext ptr.mut : context -> ) =>
   buffer .length regs .length >= "CodeGen: buffer large enough to store registers" assert
   buffer .data regs .data regs .length mem.copy ..drop ## copy register data
 end
-## TODO? perocedure for updating single register
 enum( MERGE MERGE_FALLTHROUGH RESET ) =:: RegisterRestoreMode
 proc(
   Atomic list
