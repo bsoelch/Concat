@@ -141,7 +141,7 @@ namespace: slice
     T slice : elts
     i32 : index
   -> T ptr ) =>: export: atValue_32
-    elts i64 cast.s atValue_64
+    elts index i64 cast.s atValue_64
   end
   proc(
     type : auto: T
