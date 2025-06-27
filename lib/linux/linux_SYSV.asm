@@ -84,3 +84,31 @@ public cctThreadInit
 cctThreadInit:
   pop rbp
   ret
+; try acquiring lock, return zero on success and non-zero on failure
+public cctLockTryAcquire
+cctLockTryAcquire:
+  mov eax, 1
+  xchg [rdi], eax
+  ret
+; lock acquire 
+public cctLockAcquire
+cctLockAcquire:
+  mov eax, 1
+  xchg [rdi], eax
+  test eax, eax
+  jnz .spin
+  ret
+.spin:
+  mov eax, [rdi]
+  test eax, eax
+  jz cctLockAcquire
+  pause ; notify processor that thread is within spinlock
+  jmp .spin
+; release lock
+public cctLockRelease
+cctLockRelease:
+  xor eax, eax
+  xchg [rdi], eax
+  xor eax, 1
+  ret
+

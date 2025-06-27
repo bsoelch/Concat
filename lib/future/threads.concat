@@ -4,8 +4,34 @@ import linux/syscalls
 namespace: sys
   proc.c( -> ( -> ) ptr _ ptr ) : extern: getBasePointer
   proc.c( -> ) : extern: cctThreadInit
+  proc.c( i32 ptr.mut -> ) : extern: cctLockAcquire
+  proc.c( i32 ptr.mut -> bool ) : extern: cctLockTryAcquire
+  proc.c( i32 ptr.mut -> bool ) : extern: cctLockRelease
 end
 namespace: threads
+  i32 ptr.mut =:: Lock
+  proc.c( i32 ptr.mut -> Lock ) =>: export: createLock
+    Lock cast
+  end
+  proc.c( Lock -> ) =>: export: acquireLock
+    i32 ptr.mut cast sys.cctLockAcquire
+  end
+  #+ returns false is successfull and true if lock already active
+    example usage:
+    while lock tryAcquireLock do
+      ## suspend thread
+    end
+    ... locked
+  +#
+  proc.c( Lock -> bool ) =>: export: tryAcquireLock
+    i32 ptr.mut cast sys.cctLockTryAcquire
+  end
+  proc.c( Lock -> ) =>: export: releaseLock
+    i32 ptr.mut cast sys.cctLockRelease if
+      "released lock was not held" ..panic
+    end
+  end
+
   ( -> ) =>: threadExit
     ## TODO? cleanup thread, notify parent, ...
     0 linux.sys_exit
@@ -76,7 +102,7 @@ namespace: threads
     ## setup thread initialisation
     ## clone will return to cctThreadInit, which updates the base-pointer and returns to the caller
     newBaseP stackHead -1 =[]
-    sys.cctThreadInit@ stackHead -2 =[]
+    sys.cctThreadInit@ stackHead proc.c( -> ) ptr _ ptr.mut cast! -2 =[]
     stackMem stackSize ( -> ) ptr ..types.size parentFrameSize 3 + * - cloneProcess
   end
 end
