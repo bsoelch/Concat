@@ -1,11 +1,11 @@
-( i64 : static: bitCount -> type ) =>: bitarray
+( i64 : static: bitCount -> type ) =>: export: bitarray
   bitCount 63:i64 + 63:i64 ~ & =:: blockCount ## round up to next multiple of 64
   i64 bitCount array
 end
-i8  =:: bits8
-i16 =:: bits16
-i32 =:: bits32
-i64 =:: bits64
+i8  =:: export: bits8
+i16 =:: export: bits16
+i32 =:: export: bits32
+i64 =:: export: bits64
 ## TODO? bits128
 
 namespace: bitarray._internal
@@ -69,6 +69,10 @@ namespace: bits8
   proc( bits8 : data -> bool ) =>: export: all
     data bitarray._internal.all
   end
+  proc( bits8 -> bits8 ) : export: alias: not i8.flip
+  proc( bits8 bits8 -> bits8 ) : export: alias: and i8.and
+  proc( bits8 bits8 -> bits8 ) : export: alias: or  i8.or
+  proc( bits8 bits8 -> bits8 ) : export: alias: xor i8.xor
 end
 namespace: bits16
   proc( -> bits16 ) =>: export: create
@@ -86,6 +90,10 @@ namespace: bits16
   proc( bits16 : data -> bool ) =>: export: all
     data bitarray._internal.all
   end
+  proc( bits16 -> bits16 ) : export: alias: not i16.flip
+  proc( bits16 bits16 -> bits16 ) : export: alias: and i16.and
+  proc( bits16 bits16 -> bits16 ) : export: alias: or  i16.or
+  proc( bits16 bits16 -> bits16 ) : export: alias: xor i16.xor
 end
 namespace: bits32
   proc( -> bits32 ) =>: export: create
@@ -103,6 +111,10 @@ namespace: bits32
   proc( bits32 : data -> bool ) =>: export: all
     data bitarray._internal.all
   end
+  proc( bits32 -> bits32 ) : export: alias: not i32.flip
+  proc( bits32 bits32 -> bits32 ) : export: alias: and i32.and
+  proc( bits32 bits32 -> bits32 ) : export: alias: or  i32.or
+  proc( bits32 bits32 -> bits32 ) : export: alias: xor i32.xor
 end
 namespace: bits64
   proc( -> bits64 ) =>: export: create
@@ -120,6 +132,10 @@ namespace: bits64
   proc( bits64 : data -> bool ) =>: export: all
     data bitarray._internal.all
   end
+  proc( bits64 -> bits64 ) : export: alias: not i64.flip
+  proc( bits64 bits64 -> bits64 ) : export: alias: and i64.and
+  proc( bits64 bits64 -> bits64 ) : export: alias: or  i64.or
+  proc( bits64 bits64 -> bits64 ) : export: alias: xor i64.xor
 end
 namespace: bitarray
   proc( i64 : static: bitCount -> bitCount bitarray ) =>: export: create
@@ -157,4 +173,9 @@ namespace: bitarray
     localData len bitarray cast return
   end
   ## TODO any, all
+  ## TODO not, and, or, xor
 end
+overload: ~ bits8.not bits16.not bits32.not bits64.not end
+overload: & bits8.and bits16.and bits32.and bits64.and end
+overload: | bits8.or  bits16.or  bits32.or  bits64.or  end
+overload: ^ bits8.xor bits16.xor bits32.xor bits64.xor end
