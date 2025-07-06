@@ -1,0 +1,335 @@
+import core/parseNumber
+import core/bool
+import core/i16
+
+f16:? ! if ## no native definition for f16 
+  i16 =:: f16
+end
+
+true #+ ..builtIn.parse.f16:? ! +# if
+  import core/f64
+  import core/i64
+  proc( char8 _ ptr i64 -> f16 ) =>: export: static: :f16
+    ..builtIn.parse.f64 f16.fromF64 return
+  end
+end
+## S EEEEE MMMMMMMMMM
+namespace: f16
+  proc( f16 -> i16 ) =>: export: bits
+    i16 ..bitcast
+  end
+  proc( i16 -> f16 ) =>: export: fromBits
+    f16 ..bitcast
+  end
+  0x8000:i16 =:: export: SIGN_FLAG
+  0x7c00:i16 =:: export: EXP_MASK
+  0x03ff:i16 =:: export: MANTISSA_MASK
+  0x0400:i16 =:: export: HIDDEN_BIT
+  10:i16 =:: export: MANTISSA_BITS
+  10:i16 =:: export: EXP_SHIFT
+  0x1f:i16 =:: export: SHIFTED_EXP_MASK
+  15:i16 =:: export: EXP_BIAS
+
+  -0x800:i16 =:: export: MIN_INT
+  0x800:i16 =:: export: MAX_INT
+  ## -0xf.feX3:f16 =:: export: MIN
+  ## 0xf.feX3:f16 =:: export: MAX
+  proc( -> f16 ) =>: export: NaN
+    EXP_MASK MANTISSA_MASK | fromBits
+  end
+  proc( -> f16 ) =>: export: Infinity
+    EXP_MASK fromBits
+  end
+  proc( -> f16 ) =>: export: -Infinity
+    SIGN_FLAG EXP_MASK | fromBits
+  end
+  proc( f16 : x -> bool ) =>: export: isNaN
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 !=
+  end
+  proc( f16 : x -> bool ) =>: export: isInfinite
+    x isFinite if false return end
+    x bits MANTISSA_MASK & 0 ==
+  end
+  proc( f16 : x -> bool ) =>: export: isFinite
+    x bits EXP_MASK & EXP_MASK !=
+  end
+
+  proc( f16 : x -> f16 ) =>: export: truncate
+    x bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e 0 < if ## absolute value < 1
+      i SIGN_FLAG & fromBits return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    i MANTISSA_MASK ~ &
+      m MANTISSA_MASK MANTISSA_BITS e - << & |
+    fromBits return
+  end
+  proc( f16 : x -> f16 ) =>: export: floor
+    x truncate =:: y
+    x 0:f16 < and x y != if
+      y 1:f16 - return
+    end
+    y return
+  end
+  proc( f16 : x -> f16 ) =>: export: ceil
+    x truncate =:: y
+    x 0:f16 > and x y != if
+      y 1:f16 + return
+    end
+    y return
+  end
+  ## half-even rounding
+  proc( f16 : x -> f16 ) =>: export: round
+    x bits =:: i
+    i MANTISSA_MASK & =:: m
+    i EXP_SHIFT >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e -1 < if ## absolute value < 0.5
+      i SIGN_FLAG & fromBits return
+    else e -1 == _if ## 1 < |x| <= 0.5
+      m 0 == if ## |x|=0.5
+        i SIGN_FLAG & fromBits return
+      end
+      x 0:f16 < if -1:f16 else 1:f16 end return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    m -1:i16 16 MANTISSA_BITS - e + >>> & =:: fract
+    1:i16 MANTISSA_BITS 1 - e - << =:: half
+    i MANTISSA_MASK ~ &
+      m MANTISSA_MASK MANTISSA_BITS e - << & |
+    fromBits =:: trunc
+    fract 0 == if
+      trunc return ## already an integer
+    end
+    x 0:f16 < if -1:f16 else 1:f16 end =:: delta
+    fract half < if
+      trunc return
+    end
+    fract half > if
+      trunc delta + return
+    end
+    m HIDDEN_BIT | half 1 << & 0 != if ## half and odd
+      trunc delta + return
+    end
+    trunc return
+  end
+
+  ## TODO alias to built-in coversion if available
+  ## TODO test conversion functions
+  import core/f32
+  import core/f64
+  proc( f16 -> f32 ) =>: export: asF32
+    bits =:: f16bits
+    f16bits f16.SIGN_FLAG & ? =:: hasSign
+    f16bits f16.EXP_SHIFT >>> f16.SHIFTED_EXP_MASK & i32 cast.u =:: exp
+    f16bits f16.MANTISSA_MASK & f16.HIDDEN_BIT | i32 cast.u =:: mantissa
+    f32.MANTISSA_BITS f16.MANTISSA_BITS i32 cast.u - =:: additionalBits
+    hasSign if f32.SIGN_FLAG else 0:i32 end
+      exp f16.SHIFTED_EXP_MASK i32 cast.u == if ## nan/infinity
+        f32.EXP_MASK |
+        mantissa additionalBits << f32.MANTISSA_MASK & |
+      else exp 0 == _if ## subnormal
+        mantissa ? if ## non-zero
+          mantissa i32.highestSetBit =:: hiBit
+          mantissa f32.MANTISSA_BITS hiBit - << f32.MANTISSA_MASK & |
+          f32.EXP_BIAS f16.EXP_BIAS i32 cast.u -
+            f16.MANTISSA_BITS i32 cast.u + hiBit -
+          f32.EXP_SHIFT << |
+        end
+      else ## normal
+        exp f32.EXP_BIAS f16.EXP_BIAS i32 cast.u - + f32.EXP_SHIFT << |
+        mantissa additionalBits << f32.MANTISSA_MASK & |
+      end
+    f32.fromBits return
+  end
+  proc( f16 -> f64 ) =>: export: asF64
+    asF32 f64 cast
+  end
+  proc( f32 -> f16 ) =>: export: fromF32
+    f64 cast fromF64
+  end
+  proc( f64 -> f16 ) =>: export: fromF64
+    f64.bits =:: floatBits
+    floatBits f64.SIGN_FLAG & ? =:: hasSign
+    floatBits f64.EXP_SHIFT >>> f64.SHIFTED_EXP_MASK & =:: mut: exp
+    ## don't need to handle subnormal numbers, they are all mapped to zero due to low exponent
+    floatBits f64.MANTISSA_MASK & f64.HIDDEN_BIT | =:: mantissa
+    exp f64.SHIFTED_EXP_MASK == if ## non-finite
+      hasSign if f16.SIGN_FLAG f16.EXP_MASK | else f16.EXP_MASK end
+        mantissa ? if ## NaN
+          f16.MANTISSA_MASK |
+        end
+      f16.fromBits return
+    end
+    exp f64.EXP_BIAS - exp=
+    f64.MANTISSA_BITS f16.MANTISSA_BITS i64 cast.u - =:: additionalBits
+    1:i64 additionalBits 1 - << =:: nextBitMask
+    mantissa nextBitMask & ? =:: nextBit
+    mantissa nextBitMask 1 - & ? =:: lowBits
+    false =:: mut: overflow
+    mantissa additionalBits >>>
+      nextBit and lowBits or $ 1 & ? if ## round to even
+        1 +
+        $ f16.MANTISSA_BITS i64 cast.u >>> 1 > if ## overflow
+          true overflow=
+          1 >>>
+          exp 1 + exp=
+        end
+      end
+    i16 cast.u =:: mantissa16
+    exp i16 cast.u f16.EXP_BIAS + =:: exp16
+    hasSign if f16.SIGN_FLAG else 0:i16 end
+      exp16 f16.SHIFTED_EXP_MASK >= if ## infinity
+        f16.EXP_MASK |
+      else exp16 0 > _if ## normal number
+        exp16 f16.EXP_SHIFT << | mantissa16 f16.MANTISSA_MASK & |
+      else exp16 f16.MANTISSA_BITS -_ >= _if ## subnormal number
+        ## base bits on original mantiassa to avoid double roudning
+        additionalBits exp16 i64 cast.u - overflow if 1 + end =:: shift
+        1:i64 shift 1 - << =:: nextBitMask2
+        mantissa shift & ? =:: nextBit2
+        mantissa shift 1 - & ? =:: lowBits2
+        mantissa shift >>>
+          nextBit and lowBits or $ 1 & ? if ## round to even
+            1 +
+          end
+        i16 cast.u |
+      else end ## zero
+    f16.fromBits return
+  end
+
+  false #+..builtIn.neg.f16:? +# if
+    proc( f16 -> f16 ) : export: alias: neg ..builtIn.neg.f16
+  else
+    proc( f16 : a -> f16 ) =>: export: neg
+      a bits SIGN_FLAG ~ ^ fromBits return
+    end
+  end
+  false #+..builtIn.add.f16:? +# if
+    proc( f16 f16 -> f16 ) : export: alias: add ..builtIn.add.f16
+    proc( f16 f16 -> f16 ) : export: alias: sub ..builtIn.sub.f16
+  else
+    proc( f16 : a f16 : b -> f16 ) =>: export: add
+      a asF32 b asF32 f32.add fromF32
+    end
+    proc( f16 : a f16 : b -> f16 ) =>: export: sub
+      a asF32 b asF32 f32.sub fromF32
+    end
+  end
+  false #+..builtIn.mul.f16:? +# if
+    proc( f16 f16 -> f16 ) : export: alias: mul ..builtIn.mul.f16
+  else
+    proc( f16 : a f16 : b -> f16 ) =>: export: mul
+      a asF32 b asF32 f32.mul fromF32
+    end
+  end
+  false #+..builtIn.div.f16:? +# if
+    proc( f16 f16 -> f16 ) : export: alias: div ..builtIn.div.f16
+  else
+    proc( f16 : a f16 : b -> f16 ) =>: export: div
+      a asF32 b asF32 f32.div fromF32
+    end
+  end
+  false #+ ..builtIn.eq.f16:? +# if
+    proc( f16 f16 -> bool ) : export: alias: eq ..builtIn.eq.f16
+    proc( f16 f16 -> bool ) : export: alias: ne ..builtIn.ne.f16
+  else
+    import core/i32
+    proc( f16 : a f16 : b -> bool ) =>: export: eq
+      a isNaN or b isNaN if false return end
+      a b cmp 0 ==
+    end
+    proc( f16 : a f16 : b -> bool ) =>: export: ne
+      a isNaN or b isNaN if false return end
+      a b cmp 0 !=
+    end
+  end
+  false #+ ..builtIn.lt.f16:? +# if
+    proc( f16 f16 -> bool ) : export: alias: lt ..builtIn.lt.f16
+    proc( f16 f16 -> bool ) : export: alias: le ..builtIn.le.f16
+    proc( f16 f16 -> bool ) : export: alias: ge ..builtIn.ge.f16
+    proc( f16 f16 -> bool ) : export: alias: gt ..builtIn.gt.f16
+  else
+    import core/i32
+    proc( f16 : a f16 : b -> bool ) =>: export: lt
+      a isNaN or b isNaN if false return end
+      a b cmp 0 <
+    end
+    proc( f16 : a f16 : b -> bool ) =>: export: le
+      a isNaN or b isNaN if false return end
+      a b cmp 0 <=
+    end
+    proc( f16 : a f16 : b -> bool ) =>: export: ge
+      a isNaN or b isNaN if false return end
+      a b cmp 0 >=
+    end
+    proc( f16 : a f16 : b -> bool ) =>: export: gt
+      a isNaN or b isNaN if false return end
+      a b cmp 0 >
+    end
+  end
+
+  proc( f16 : a -> f16 ) =>: export: abs
+    a bits SIGN_FLAG ~ & fromBits return
+  end
+  proc( f16 -> bool ) =>: export: toBool
+    0:f16 !=
+  end
+  proc( f16 : a f16 : b -> f16 ) =>: export: min
+    a b < if a else b end
+  end
+  proc( f16 : a f16 : b -> f16 ) =>: export: max
+    a b > if a else b end
+  end
+  #+ strict comparison of floats
+    -NaN < -Infinity < ... < -0 < 0 < ... < Infinity < NaN +#
+  proc( f16 : a f16 : b -> i32 ) =>: export: cmp
+    a bits SIGN_FLAG & b bits SIGN_FLAG & i16.cmp =:: c0
+    c0 ? if c0 return end
+    a isNaN if
+      b isNaN if 0 return end
+      a bits 0 i16.cmp return
+    else b isNaN _if
+      0 b bits i16.cmp return
+    end
+    b a lt ?1 a b lt ?1 -
+  end
+
+  proc( f16 : a f16 : b -> f16 ) =>: export: rem
+    a b / truncate =:: d
+    a d b * - return
+  end
+  proc( f16 : a f16 : b -> f16 ) =>: export: floorDiv
+    a b / floor return
+  end
+  proc( f16 : a f16 : b -> f16 ) =>: export: mod
+    a b / floor =:: d
+    a d b * - return
+  end
+end
+
+overload: export: -_     f16.neg  end
+overload: export: +      f16.add  end
+overload: export: -      f16.sub  end
+overload: export: *      f16.mul  end
+overload: export: /      f16.div  end
+overload: export: %      f16.rem  end
+overload: export: //     f16.floorDiv end
+overload: export: %%     f16.mod  end
+overload: export: ?      f16.toBool end
+overload: export: ==     f16.eq   end
+overload: export: !=     f16.ne   end
+overload: export: <      f16.lt   end
+overload: export: <=     f16.le   end
+overload: export: >=     f16.ge   end
+overload: export: >      f16.gt   end
+overload: export: <=>    f16.cmp  end
+

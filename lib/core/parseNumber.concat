@@ -2,5 +2,8 @@ proc( char8 _ ptr i64 -> i8  ) : export: static: alias: :i8  ..builtIn.parse.i8
 proc( char8 _ ptr i64 -> i16 ) : export: static: alias: :i16 ..builtIn.parse.i16
 proc( char8 _ ptr i64 -> i32 ) : export: static: alias: :i32 ..builtIn.parse.i32
 proc( char8 _ ptr i64 -> i64 ) : export: static: alias: :i64 ..builtIn.parse.i64
+false #+..builtIn.parse.f16 ??+# if
+  proc( char8 _ ptr i64 -> f16 ) : export: static: alias: :f16 ..builtIn.parse.f16
+end
 proc( char8 _ ptr i64 -> f32 ) : export: static: alias: :f32 ..builtIn.parse.f32
 proc( char8 _ ptr i64 -> f64 ) : export: static: alias: :f64 ..builtIn.parse.f64
