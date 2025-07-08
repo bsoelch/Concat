@@ -3023,6 +3023,76 @@ proc(
         op [] .pos
       ValueInfo new context [] .stackInfo $ .length offset - list.set
       EvalResult .Ok return
+    bitCast case
+      1 "bitCast":s op [] .pos context checkStack if
+        EvalResult .Error return
+      end
+      op [] .val .bitCast =:: src
+      op [] .dataType =:: dst
+      src typeContext types.unwrapNamed =:: rawSrc
+      dst typeContext types.unwrapNamed =:: rawDst
+      rawSrc rawDst types.typeEquals if
+        ## simply rename type
+        dst context [] .stackInfo $ .length 1 - @[] .valueType=
+        EvalResult .Ok return
+      else rawSrc types.isPrimitive and rawDst types.isPrimitive _if
+        rawSrc typeContext types.primitiveValue =:: srcPrimitive
+        rawDst typeContext types.primitiveValue =:: dstPrimitive
+        context [] .stack $ .length 1 - @[] =:: stackVal
+        srcPrimitive .F32 ?? and dstPrimitive .I32 ?? if
+          stackVal []
+            constAsFloat if ..drop
+              "unexpected value for float: " sb.copyPtr
+                stackVal [] typeContext sb.appendConstant
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end f32 cast i32 ..bitcast i64 cast ConstValue .Int
+          stackVal =[]
+          dst context [] .stackInfo $ .length 1 - @[] .valueType=
+          EvalResult .Ok return
+        else srcPrimitive .F64 ?? and dstPrimitive .I64 ?? _if
+          stackVal []
+            constAsFloat if ..drop
+              "unexpected value for float: " sb.copyPtr
+                stackVal [] typeContext sb.appendConstant
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end f64 cast i64 ..bitcast ConstValue .Int
+          stackVal =[]
+          dst context [] .stackInfo $ .length 1 - @[] .valueType=
+          EvalResult .Ok return
+        else srcPrimitive .I32 ?? and dstPrimitive .F32 ?? _if
+          stackVal []
+            constAsInt if ..drop
+              "unexpected value for int: " sb.copyPtr
+                stackVal [] typeContext sb.appendConstant
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end i32 cast f32 ..bitcast f64 cast ConstValue .Float
+          stackVal =[]
+          dst context [] .stackInfo $ .length 1 - @[] .valueType=
+          EvalResult .Ok return
+        else srcPrimitive .I64 ?? and dstPrimitive .F64 ?? _if
+          stackVal []
+            constAsInt if ..drop
+              "unexpected value for int: " sb.copyPtr
+                stackVal [] typeContext sb.appendConstant
+              op [] .pos errors appendError
+              EvalResult .Error return
+            end i64 cast f64 ..bitcast ConstValue .Float
+          stackVal =[]
+          dst context [] .stackInfo $ .length 1 - @[] .valueType=
+          EvalResult .Ok return
+        end
+      end
+      ## TODO allow bitcast between types with same "shape" (layout of primitive values)
+      "bitcast from " sb.copyPtr
+        src typeContext sb.appendType
+        " to " sb.appendS
+        dst typeContext sb.appendType
+        " is not supported at compile-time" sb.appendS
+      op [] .pos errors appendError
+      EvalResult .Error return
     copy case
       context [] .stack list.peek =:: value?
       value? optional.hasData if
@@ -3293,7 +3363,6 @@ proc(
     getEnumLabel
     NewEnumReference callPtr
     implementProcedure procPtr
-    bitCast
     ConstantReference NewReference
     checkEnumLabel case
       "unsupported operation in constant evaluation: " sb.copyPtr

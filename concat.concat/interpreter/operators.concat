@@ -2,14 +2,14 @@ import "constants.concat"
 import "builtIns.concat"
 
 namespace: interpreter
-  proc( ConstValue : a -> bool bool ) =>: constAsBool
+  proc( ConstValue : a -> bool bool ) =>: export: constAsBool
     ConstValue ..length 23 == "no new constants" assert
     a switch
       Bool case a .Bool false return
       default false true return
     end
   end
-  proc( ConstValue : a -> i64 bool ) =>: constAsInt ## all integer calculations are done in 64 bits
+  proc( ConstValue : a -> i64 bool ) =>: export: constAsInt ## all integer calculations are done in 64 bits
     ConstValue ..length 23 == "no new constants" assert
     a switch
       Char case a .Char i64 cast.u false return
@@ -17,7 +17,7 @@ namespace: interpreter
       default 0:i64 true return
     end
   end
-  proc( ConstValue : a -> f64 bool ) =>: constAsFloat
+  proc( ConstValue : a -> f64 bool ) =>: export: constAsFloat
     ConstValue ..length 23 == "no new constants" assert
     a switch
       Char case a .Char i32 cast.u f64 cast false return
@@ -26,7 +26,7 @@ namespace: interpreter
       default 0 f64 cast true return
     end
   end
-  proc( ConstValue : a -> Type bool ) =>: constAsType
+  proc( ConstValue : a -> Type bool ) =>: export: constAsType
     ConstValue ..length 23 == "no new constants" assert
     a switch
       TypeId case a .TypeId false return
