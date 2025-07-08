@@ -9,6 +9,7 @@ import core/i64
 import core/char8
 import core/char16
 import core/char32
+import core/f16
 import core/f32
 import core/f64
 import core/ptr
