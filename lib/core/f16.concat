@@ -3,7 +3,10 @@ import core/bool
 import core/i16
 
 f16:? ! if ## no native definition for f16 
-  i16 =:: f16
+  ( i16 ) =:: f16 ## wrap in struct to prevent direct cast from/to i16
+  false =:: NATIVE_F16
+else
+  true =:: NATIVE_F16
 end
 
 ..builtIn.parse.f16:? ! if
@@ -101,11 +104,20 @@ else
 end
 ## S EEEEE MMMMMMMMMM
 namespace: f16
-  proc( f16 -> i16 ) =>: export: bits
-    i16 ..bitcast
-  end
-  proc( i16 -> f16 ) =>: export: fromBits
-    f16 ..bitcast
+  NATIVE_F16 if
+    proc( f16 -> i16 ) =>: export: bits
+      i16 ..bitcast
+    end
+    proc( i16 -> f16 ) =>: export: fromBits
+      f16 ..bitcast
+    end
+  else
+    proc( f16 -> i16 ) =>: export: bits
+      .0
+    end
+    proc( i16 -> f16 ) =>: export: fromBits
+      f16 new
+    end
   end
   0x8000:i16 =:: export: SIGN_FLAG
   0x7c00:i16 =:: export: EXP_MASK
@@ -118,9 +130,8 @@ namespace: f16
 
   -0x800:i16 =:: export: MIN_INT
   0x800:i16 =:: export: MAX_INT
-  ## TODO switch no number literal once implicit parsing of number aliases is removed
-  "-0xf.feX3":f16 =:: export: MIN
-  "0xf.feX3":f16 =:: export: MAX
+  -0xf.feX3:f16 =:: export: MIN
+  0xf.feX3:f16 =:: export: MAX
   proc( -> f16 ) =>: export: NaN
     EXP_MASK MANTISSA_MASK | fromBits
   end
