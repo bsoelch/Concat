@@ -718,7 +718,7 @@ proc(
         literalType .LITERAL_TYPE "?":s string.eq if
           false =:: mut: isElement
           token .LITERAL
-            $ 0 string.charAt '.' == if
+            $ .length 2 >= and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != if
               1 string.tail
               true isElement=
             end
