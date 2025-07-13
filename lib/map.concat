@@ -243,7 +243,7 @@ namespace: map
       type : auto: K
       type : auto: V
       K V hashMap ptr.mut : map
-    -> K V Iterator ) =>: export: start
+    -> K V Iterator ) =>: export: prepare
       0:i32 while ..dup map [] .hashMask <= do =:: i
         map [] .data i [] NO_NODE != if
           map i 1 + map [] .data i [] K V Iterator new return
@@ -256,19 +256,34 @@ namespace: map
       type : auto: K
       type : auto: V
       K V Iterator
-    -> K V Iterator bool ) =>: export: hasNext
-      ..dup .next NO_NODE != return
+    -> bool ) =>: export: check
+      .next NO_NODE != return
     end
     proc(
       type : auto: K
       type : auto: V
-      K V Iterator
-    -> K V Iterator ( K ptr V ptr.mut ) ) =>: export: next
-      =:: mut: itr
+      K V Iterator : itr
+    -> V ptr.mut K ptr ) =>: export: getAddr
       itr .map [] .nodeBuffer
         itr .next i64 cast 1 -
       list.at .data =:: res
-      res [] .next itr@ .next=
+      res .value res .key return
+    end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V Iterator : itr
+    -> V K ) =>: export: getEntry
+      itr getAddr >$ [] >$ []
+    end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V Iterator : mut: itr
+    -> K V Iterator ) =>: export: step
+      itr .map [] .nodeBuffer
+        itr .next i64 cast 1 -
+      list.at .data [] .next itr@ .next=
       itr .next NO_NODE == if
         while itr .index itr .map [] .hashMask <= do
           itr .map [] .data itr .index [] NO_NODE != if
@@ -279,7 +294,51 @@ namespace: map
           itr .index 1 + itr@ .index=
         end
       end
-      itr res .key res .value ( K ptr V ptr.mut ) new return
+      itr return
+    end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V Iterator : itr
+    -> ) =>: export: endItr end
+    ## backward-compatability with old iterator
+    proc(
+      type : auto: K
+      type : auto: V
+      K V hashMap ptr.mut : map
+    -> K V Iterator ) =>: export: start
+      map prepare
+    end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V Iterator
+    -> K V Iterator bool ) =>: export: hasNext
+      $ check return
+    end
+    proc(
+        type : auto: K
+        type : auto: V
+        K V Iterator
+      -> K V Iterator ( K ptr V ptr.mut ) ) =>: export: next
+        $ getAddr >$ ( K ptr V ptr.mut ) new =:: val
+          step
+        val return
     end
   end
+end
+overload: export: ..itr.prepare
+  map.itr.prepare
+end
+overload: export: ..itr.check
+  map.itr.check
+end
+overload: export: ..itr.get
+  map.itr.getEntry
+end
+overload: export: ..itr.step
+  map.itr.step
+end
+overload: export: ..itr.end
+  map.itr.endItr
 end
