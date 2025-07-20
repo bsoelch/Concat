@@ -140,7 +140,7 @@ namespace: arenaAlloc
           arena .fullChunks 1 + arena@ .fullChunks=
         end
         chunk [] .eltCount count + chunkSize u<= if
-          arena chunk [] .data chunk [] .eltCount i64 cast.u +
+          arena chunk [] .data chunk [] .eltCount @[]
             chunk [] .eltCount count + chunk .eltCount=
           return
         end
@@ -151,7 +151,7 @@ namespace: arenaAlloc
         lastChunk [] .eltCount count + chunkSize u<= if
       ## return
         arena
-        lastChunk [] .data lastChunk [] .eltCount i64 cast.u +
+        lastChunk [] .data lastChunk [] .eltCount @[]
           lastChunk [] .eltCount count + lastChunk .eltCount=
       return
     end
@@ -162,14 +162,14 @@ namespace: arenaAlloc
     arena .chunks
       chunkData count chunkSize i32.umin ChunkType .ALLOC T ArenaChunk new list.append
       count chunkSize - =:: mut: newCount
-      chunkData chunkSize i64 cast.u + =:: mut: newOffset
+      chunkData chunkSize @[] =:: mut: newOffset
       newChunks 1 - for ..drop
         newCount 0 > "remaining count >0" assert
         ## ArenaChunk
           newOffset
           newCount chunkSize i32.umin
         ChunkType .CONTINUE T ArenaChunk new list.append
-        newOffset chunkSize i64 cast.u + newOffset=
+        newOffset chunkSize @[] newOffset=
         newCount chunkSize - newCount=
       end
     arena@ .chunks=
@@ -284,7 +284,7 @@ namespace: arenaAlloc
       chunks i list.at .data =:: chunk
       freeElt optional.hasData if
         chunk [] .eltCount 1 - while $ 0 >= do =:: j
-          chunk [] .data j i64 cast.u + T ptr cast! freeElt .data ()
+          chunk [] .data j @[] T ptr cast! freeElt .data ()
         finally j 1 - end ..drop
       end
       chunk [] .chunkType switch
@@ -317,7 +317,7 @@ namespace: arenaAlloc
     lastChunk [] .eltCount newEltCount >= "reset point inside allocated memory" assert
     freeElt optional.hasData if
       lastChunk [] .eltCount 1 - while $ newEltCount >= do =:: j
-        lastChunk [] .data j i64 cast.u + T ptr cast! freeElt .data ()
+        lastChunk [] .data j @[] T ptr cast! freeElt .data ()
       finally j 1 - end ..drop
     end
     lastChunk [] .eltCount newEltCount > if

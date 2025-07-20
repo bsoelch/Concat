@@ -667,11 +667,11 @@ namespace: constants
               pos errors appendError
               continue
             end
-            str .data i + nChars string.create 16 number.tryParseInt .NONE ?? if
+            str .data i @[] nChars string.create 16 number.tryParseInt .NONE ?? if
               $ 0 < if ..drop
                 "invalid hex-code for escape sequence: \"\\" sb.copyPtr
                   c sb.appendC
-                  str .data i + nChars string.create sb.appendStr
+                  str .data i @[] nChars string.create sb.appendStr
                   '\"' sb.appendC
                 pos errors appendError
               else
@@ -682,7 +682,7 @@ namespace: constants
                 else c 'U' == _if
                   $ unicode.MAX_CODEPOINT i64 cast.u > if
                     "code-point outside allowed range: \"\\U" sb.copyPtr
-                      str .data i + nChars string.create sb.appendStr
+                      str .data i @[] nChars string.create sb.appendStr
                       "\" (maximum: 0x" sb.appendS
                       unicode.MAX_CODEPOINT i64 cast.u sb.appendX
                       ")" sb.appendS
@@ -699,7 +699,7 @@ namespace: constants
             else ..drop
               "invalid hex-code for escape sequence: \"\\" sb.copyPtr
                 c sb.appendC
-                str .data i + nChars string.create sb.appendStr
+                str .data i @[] nChars string.create sb.appendStr
                 '\"' sb.appendC
               pos errors appendError
             end

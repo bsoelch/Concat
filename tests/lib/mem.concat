@@ -16,9 +16,9 @@ proc( -> ) =>: main
   dynamicArray mem.free
   dynamicArray2 0 [] debug.print
   dynamicArray2 1 [] debug.print
-  dynamicArray2 2 + dynamicArray2 16 mem.move ..drop
-  dynamicArray2 2 + dynamicArray2 16 mem.move ..drop
-  dynamicArray2 dynamicArray2 1 + 16 mem.move ..drop
+  dynamicArray2 2 @[] dynamicArray2 16 mem.move ..drop
+  dynamicArray2 2 @[]  dynamicArray2 16 mem.move ..drop
+  dynamicArray2 dynamicArray2 1 @[] 16 mem.move ..drop
   dynamicArray2 0 [] debug.print
   dynamicArray2 1 [] debug.print
   dynamicArray2 2 [] debug.print

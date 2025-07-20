@@ -117,12 +117,12 @@ namespace: slice
     proc( type : auto: T
       T MapItr : itr
     -> T slice.mut ) =>: export: endMap
-      itr .root itr .head itr .root - slice.createMutable
+      itr .root itr .head itr .root ptr.diff slice.createMutable
     end
     proc( type : auto: S type : auto: T
       S T MapToItr : itr
     -> T slice.mut ) =>: export: endTo
-      itr .targetRoot itr .targetHead itr .targetRoot - slice.createMutable
+      itr .targetRoot itr .targetHead itr .targetRoot ptr.diff slice.createMutable
     end
   end
 end

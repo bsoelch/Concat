@@ -78,13 +78,12 @@ namespace: string
       -1 return
     end
     base .length subStr .length - =:: maxOffset
-    0:i64 while ..dup maxOffset <= do
-      base .data ..over + subStr .length create  subStr compare 0 == if
+    0:i64 while $ maxOffset <= do
+      base .data $1 @[] subStr .length create  subStr compare 0 == if
         return
       end
       1 +
-    end
-    ..drop
+    end ..drop
     -1 return
   end
   proc( string : base string : subStr -> i64 ) =>: export: lastIndexOfStr
@@ -92,8 +91,8 @@ namespace: string
       -1 return
     end
     base .length subStr .length -
-      while ..dup 0 >= do
-        base .data ..over + subStr .length create  subStr compare 0 == if
+      while $ 0 >= do
+        base .data $1 @[] subStr .length create  subStr compare 0 == if
           return
         end
         1 -
@@ -110,7 +109,7 @@ namespace: string
     subStr .length base .length > if
       false return
     end
-    base .data base .length subStr .length - + subStr .length create subStr compare 0 == return
+    base .data base .length subStr .length - @[] subStr .length create subStr compare 0 == return
   end
 
   proc( string : str char8 : chr -> bool ) =>: export: contains

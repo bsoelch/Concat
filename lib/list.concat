@@ -205,7 +205,7 @@ namespace: list
     index 0 < or index elts .length i64 cast.u >= if
       T ptr.mut optional.empty return
     end
-    elts .data index + T ptr.mut cast! optional.wrap return
+    elts .data index @[] T ptr.mut cast! optional.wrap return
   end
   overload: export: at
     at_32 at_64

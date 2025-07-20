@@ -1006,7 +1006,7 @@ namespace: interpreter
           typeContext types.newArrayType ..drop
           ## newArrayConst
             ## slice.create
-              idContext [] .argBuffer .data offset i64 cast.u +
+              idContext [] .argBuffer .data offset @[]
               idContext [] .argBuffer .length offset -
             slice.create
             idContext .constContext

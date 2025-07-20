@@ -35,8 +35,8 @@ namespace: array
     0:i64 =:: mut: k
     while i mid < j size < & do
       ## cmp
-        from offset i + + []
-        from offset j + + []
+        from offset i + []
+        from offset j + []
         context
       cmp () 0 <= if
         from offset i + [] to offset k + =[]

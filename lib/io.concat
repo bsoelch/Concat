@@ -148,7 +148,7 @@ namespace: io
       file
       count  ..ctype.size cast
       count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
-      buffer off + ..ctype.void ptr.mut cast!
+      buffer off @[] ..ctype.void ptr.mut cast!
     c.fread i64 cast
       ## XXX remove explicit cast of return value
       file c.feof i32 cast ? if
@@ -175,7 +175,7 @@ namespace: io
       file
       count ..ctype.size cast
       count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
-      buffer off + ..ctype.void ptr cast!
+      buffer off @[] ..ctype.void ptr cast!
     c.fwrite i64 cast
       ## XXX remove explicit cast of return value
       file c.feof i32 cast ? if

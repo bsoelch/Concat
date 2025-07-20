@@ -99,7 +99,7 @@ namespace: slice
     index 0 < or index elts .length >= if
       T ptr optional.empty return
     end
-    elts .data index + T ptr cast! optional.wrap return
+    elts .data index @[] T ptr cast! optional.wrap return
   end
   proc(
     type : auto: T
@@ -116,7 +116,7 @@ namespace: slice
     index 0 < or index elts .length >= if
       T ptr.mut optional.empty return
     end
-    elts .data index + T ptr.mut cast! optional.wrap return
+    elts .data index @[] T ptr.mut cast! optional.wrap return
   end
   proc(
     type : auto: T
@@ -149,7 +149,7 @@ namespace: slice
     i64 : index
   -> T ptr.mut ) =>: export: atValue_64mut
     index elts .length checkIndex
-    elts .data index + T ptr.mut cast! return
+    elts .data index @[] T ptr.mut cast! return
   end
   proc(
     type : auto: T
@@ -374,7 +374,7 @@ namespace: slice
     n elts .length >= if
       T empty return
     end
-    elts .data n +  elts .length n -  create return
+    elts .data n @[] elts .length n -  create return
   end
   proc(
     type : auto: T
@@ -394,7 +394,7 @@ namespace: slice
     n elts .length >= if
       T emptyMutable return
     end
-    elts .data n +  elts .length n -  createMutable return
+    elts .data n @[]  elts .length n -  createMutable return
   end
   overload: export: tail tail_32 tail_64 tail_32mut tail_64mut end
   ## equivalent to:  <from> tail <len> head
@@ -414,9 +414,9 @@ namespace: slice
       elts  len head return
     end
     from len + elts .length >= if
-      elts .data from +  elts .length from -  create return
+      elts .data from @[]  elts .length from -  create return
     end
-    elts .data from +  len  create return
+    elts .data from @[]  len  create return
   end
   proc(
     type : auto: T
