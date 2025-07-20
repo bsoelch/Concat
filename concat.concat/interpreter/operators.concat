@@ -305,7 +305,7 @@ namespace: interpreter
           pos
           typeContext
         errors getOrOffset return
-      OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 case
+      OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT case
         k 2 == "correct number of arguments" assert
         ## getOrOffset
           args 0 []

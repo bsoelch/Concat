@@ -4882,7 +4882,7 @@ proc(
           end
         context appendOp2
       return
-    OFFSET_PTR_I32 OFFSET_PTR_MUT_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I64 case
+    OFFSET_PTR_I32 OFFSET_PTR_MUT_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I64 OFFSET_PTR OFFSET_PTR_MUT case
       builtIn .OFFSET_PTR_I32 ?? or builtIn .OFFSET_PTR_MUT_I32 ?? if
         ValType .I32
       else

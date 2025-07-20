@@ -1,5 +1,7 @@
 import core/i64
 import core/type
+..type.iPtr =:: export: iPtr
+..type.iSize =:: export: iSize
 namespace: ptr
   proc( type : auto: T T _ ptr : p -> T ) =>: export: get
     p ..builtIn.get.ptr
@@ -8,17 +10,26 @@ namespace: ptr
     newVal p ..builtIn.set.ptr
   end
 
+  proc( type : auto: T T _ ptr : p iSize : index -> T _ ptr ) =>: export: at
+    p index ..type.iSize cast ..builtIn.offset.ptr
+  end
   proc( type : auto: T T _ ptr : p i32 : index -> T _ ptr ) =>: export: at32
     p index ..builtIn.offset.ptr.i32
   end
   proc( type : auto: T T _ ptr : p i64 : index -> T _ ptr ) =>: export: at64
     p index ..builtIn.offset.ptr.i64
   end
+  proc( type : auto: T T _ ptr : p iSize : index -> T ) =>: export: getOffset
+    p index ..type.iSize cast ..builtIn.offset.ptr ..builtIn.get.ptr
+  end
   proc( type : auto: T T _ ptr : p i32 : index -> T ) =>: export: get32
     p index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
   end
   proc( type : auto: T T _ ptr : p i64 : index -> T ) =>: export: get64
     p index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
+  end
+  proc( type : auto: T T : newVal T _ ptr.mut : p iSize : index -> ) =>: export: setOffset
+    newVal p index ..type.iSize cast ..builtIn.offset.ptr.mut ..builtIn.set.ptr
   end
   proc( type : auto: T T : newVal T _ ptr.mut : p i32 : index -> ) =>: export: set32
     newVal p index ..builtIn.offset.ptr.mut.i32 ..builtIn.set.ptr
@@ -27,101 +38,133 @@ namespace: ptr
     newVal p index ..builtIn.offset.ptr.mut.i64 ..builtIn.set.ptr
   end
 
-  proc( i64 : index i64 : size -> ) =>: checkIndex
-    index 0 < if "pointer index is negative" ..panic end
-    index size >= if "pointer index larger than size" ..panic end
+  proc( iSize : index iSize : size -> ) =>: checkIndex
+    index size >= if "pointer index outside allowed range" ..panic end
     ## TODO better error message (print actual index)
     ## TODO? is it possible print message at call-position of pointer access
   end
   proc(
-    type : auto: T i64 : auto: k
+    type : auto: T iSize : auto: k
+    T k ptr : p
+    iSize : index
+  -> T ptr ) =>: export: atChecked
+    index k checkIndex
+    p index ..type.iSize cast ..builtIn.offset.ptr T ptr cast!
+  end
+  proc(
+    type : auto: T iSize : auto: k
     T k ptr : p
     i32 : index
   -> T ptr ) =>: export: at32checked
-    index i64 cast.s k checkIndex
+    index iSize cast.u k checkIndex
     p index ..builtIn.offset.ptr.i32 T ptr cast!
   end
   proc(
-    type : auto: T i64 : auto: k
+    type : auto: T iSize : auto: k
     T k ptr : p
     i64 : index
   -> T ptr ) =>: export: at64checked
-    index k checkIndex
+    index iSize cast.u k checkIndex
     p index ..builtIn.offset.ptr.i64 T ptr cast!
   end
   proc(
-    type : auto: T i64 : auto: k
+    type : auto: T iSize : auto: k
+    T k ptr : p
+    iSize : index
+  -> T ) =>: export: getChecked
+    index iSize cast.u k checkIndex
+    p index ..type.iSize cast ..builtIn.offset.ptr ..builtIn.get.ptr
+  end
+  proc(
+    type : auto: T iSize : auto: k
     T k ptr : p
     i32 : index
   -> T ) =>: export: get32checked
-    index i64 cast.s k checkIndex
+    index iSize cast.u k checkIndex
     p index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
   end
   proc(
-    type : auto: T i64 : auto: k
+    type : auto: T iSize : auto: k
     T k ptr : p
     i64 : index
   -> T ) =>: export: get64checked
-    index k checkIndex
+    index iSize cast.u k checkIndex
     p index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
   end
   proc(
-    type : auto: T i64 : auto: k
+    type : auto: T iSize : auto: k
+    T k array : p
+    iSize : index
+  -> T ) =>: export: getArray
+    index k checkIndex
+    p@ index ..type.iSize cast ..builtIn.offset.ptr ..builtIn.get.ptr
+  end
+  proc(
+    type : auto: T iSize : auto: k
     T k array : p
     i32 : index
   -> T ) =>: export: getArray32
-    index i64 cast.s k checkIndex
+    index iSize cast.u k checkIndex
     p =:: t ## TODO use address of p once taking address to generic ptr-arg is supported
     t@ index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
   end
   proc(
-    type : auto: T i64 : auto: k
+    type : auto: T iSize : auto: k
     T k array : p
     i64 : index
   -> T ) =>: export: getArray64
-    index k checkIndex
+    index iSize cast.u k checkIndex
     p =:: t
     t@ index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
   end
   proc(
-    type : auto: T i64 : auto: k
+    type : auto: T iSize : auto: k
+    T : newVal
+    T k ptr.mut : p
+    iSize : index
+  -> ) =>: export: setChecked
+    index k checkIndex
+    newVal p index ..type.iSize cast ..builtIn.offset.ptr.mut ..builtIn.set.ptr
+  end
+  proc(
+    type : auto: T iSize : auto: k
     T : newVal
     T k ptr.mut : p
     i32 : index
   -> ) =>: export: set32checked
-    index i64 cast.s k checkIndex
+    index iSize cast.u k checkIndex
     newVal p index ..builtIn.offset.ptr.mut.i32 ..builtIn.set.ptr
   end
   proc(
-    type : auto: T i64 : auto: k
+    type : auto: T iSize : auto: k
     T : newVal
     T k ptr.mut : p
     i64 : index
   -> ) =>: export: set64checked
-    index k checkIndex
+    index iSize cast.u k checkIndex
     newVal p index ..builtIn.offset.ptr.mut.i64 ..builtIn.set.ptr
   end
 
   proc( type : auto: T T _ ptr : p T _ ptr : q -> i32 ) =>: export: cmp
-    p i64 cast! q i64 cast! i64.ucmp
+    p iPtr cast! q iPtr cast! iPtr.cmp
   end
   proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: lt
-    p i64 cast! q i64 cast! i64.ult
+    p iPtr cast! q iPtr cast! iPtr.lt
   end
   proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: le
-    p i64 cast! q i64 cast! i64.ule
+    p iPtr cast! q iPtr cast! iPtr.le
   end
   proc( type.pointer : auto: P  P : p P : q -> bool ) =>: export: eq
-    p i64 cast! q i64 cast! i64.eq
+    p iPtr cast! q iPtr cast! iPtr.eq
   end
   proc( type.pointer : auto: P  P : p P : q -> bool ) =>: export: ne
-    p i64 cast! q i64 cast! i64.ne
+    p iPtr cast! q iPtr cast! iPtr.ne
   end
   proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: ge
-    p i64 cast! q i64 cast! i64.uge
+    p iPtr cast! q iPtr cast! iPtr.ge
   end
   proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: gt
-    p i64 cast! q i64 cast! i64.ugt
+    p iPtr cast! q iPtr cast! iPtr.gt
   end
 
   proc( type : auto: T T _ ptr : p i64 : offset -> T _ ptr ) =>: export: add
@@ -178,49 +221,38 @@ namespace: ptr
       p ..builtIn.get.ptr.mut
     end
 
+    proc( type : auto: T T _ ptr.mut : p iSize : offset -> T _ ptr.mut ) =>: shadow: export: at
+      p offset ..type.iSize cast ..builtIn.offset.ptr.mut
+    end
     proc( type : auto: T T _ ptr.mut : p i32 : offset -> T _ ptr.mut ) =>: shadow: export: at32
       p offset ..builtIn.offset.ptr.mut.i32
     end
     proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shadow: export: at64
       p offset ..builtIn.offset.ptr.mut.i64
     end
-    proc( type : auto: T T _ ptr.mut : p i32 : index -> T ) =>: shadow: export: get32
-      p index ..builtIn.offset.ptr.mut.i32 ..builtIn.get.ptr
-    end
-    proc( type : auto: T T _ ptr.mut : p i64 : index -> T ) =>: shadow: export: get64
-      p index ..builtIn.offset.ptr.mut.i64 ..builtIn.get.ptr
+    proc(
+      type : auto: T iSize : auto: k
+      T k ptr.mut : p
+      iSize : index
+    -> T ptr.mut ) =>: shadow: export: atChecked
+      index k checkIndex
+      p index ..type.iSize cast ..builtIn.offset.ptr.mut T ptr.mut cast!
     end
     proc(
-      type : auto: T i64 : auto: k
+      type : auto: T iSize : auto: k
       T k ptr.mut : p
       i32 : index
     -> T ptr.mut ) =>: shadow: export: at32checked
-      index i64 cast.s k checkIndex
+      index iSize cast.u k checkIndex
       p index ..builtIn.offset.ptr.mut.i32 T ptr.mut cast!
     end
     proc(
-      type : auto: T i64 : auto: k
+      type : auto: T iSize : auto: k
       T k ptr.mut : p
       i64 : index
     -> T ptr.mut ) =>: shadow: export: at64checked
-      index k checkIndex
+      index iSize cast.u k checkIndex
       p index ..builtIn.offset.ptr.mut.i64 T ptr.mut cast!
-    end
-    proc(
-      type : auto: T i64 : auto: k
-      T k ptr.mut : p
-      i32 : index
-    -> T ) =>: shadow: export: get32checked
-      index i64 cast.s k checkIndex
-      p index ..builtIn.offset.ptr.mut.i32 ..builtIn.get.ptr
-    end
-    proc(
-      type : auto: T i64 : auto: k
-      T k ptr.mut : p
-      i64 : index
-    -> T ) =>: shadow: export: get64checked
-      index k checkIndex
-      p index ..builtIn.offset.ptr.mut.i64 ..builtIn.get.ptr
     end
 
     proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shadow: export: add
@@ -239,34 +271,99 @@ namespace: ptr
     end
   end
 end
+namespace: iPtr
+  ( iPtr : a iPtr : b -> iPtr ) =>: export: add
+    a ..type.iPtr cast b ..type.iPtr cast + iPtr cast
+  end
+  ( iPtr : a iPtr : b -> iPtr ) =>: export: sub
+    a ..type.iPtr cast b ..type.iPtr cast - iPtr cast
+  end
+  ( iPtr : a iPtr : b -> bool ) =>: export: lt
+    a ..type.iPtr cast b ..type.iPtr cast u<
+  end
+  ( iPtr : a iPtr : b -> bool ) =>: export: le
+    a ..type.iPtr cast b ..type.iPtr cast u<=
+  end
+  ( iPtr : a iPtr : b -> bool ) =>: export: eq
+    a ..type.iPtr cast b ..type.iPtr cast ==
+  end
+  ( iPtr : a iPtr : b -> bool ) =>: export: ne
+    a ..type.iPtr cast b ..type.iPtr cast !=
+  end
+  ( iPtr : a iPtr : b -> bool ) =>: export: ge
+    a ..type.iPtr cast b ..type.iPtr cast u>=
+  end
+  ( iPtr : a iPtr : b -> bool ) =>: export: gt
+    a ..type.iPtr cast b ..type.iPtr cast u>
+  end
+  ( iPtr : a iPtr : b -> i32 ) =>: export: cmp
+    a ..type.iPtr cast b ..type.iPtr cast u> ?1
+    a ..type.iPtr cast b ..type.iPtr cast u< ?1 -
+  end
+end
+namespace: iSize
+  ( iSize : a iSize : b -> iSize ) =>: export: add
+    a ..type.iSize cast b ..type.iSize cast + iSize cast
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: sub
+    a ..type.iSize cast b ..type.iSize cast - iSize cast
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: lt
+    a ..type.iSize cast b ..type.iSize cast u<
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: le
+    a ..type.iSize cast b ..type.iSize cast u<=
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: eq
+    a ..type.iSize cast b ..type.iSize cast ==
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: ne
+    a ..type.iSize cast b ..type.iSize cast !=
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: ge
+    a ..type.iSize cast b ..type.iSize cast u>=
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: gt
+    a ..type.iSize cast b ..type.iSize cast u>
+  end
+  ( iSize : a iSize : b -> i32 ) =>: export: cmp
+    a ..type.iSize cast b ..type.iSize cast u> ?1
+    a ..type.iSize cast b ..type.iSize cast u< ?1 -
+  end
+end
 
 overload: export: []
   ptr.get
+  ptr.getOffset
   ptr.get32
   ptr.get64
+  ptr.getArray
   ptr.getArray32
   ptr.getArray64
-  ptr.mut.get32
-  ptr.mut.get64
+  ptr.getChecked
   ptr.get32checked
   ptr.get64checked
-  ptr.mut.get32checked
-  ptr.mut.get64checked
 end
 overload: export: =[]
   ptr.set
+  ptr.setOffset
   ptr.set32
   ptr.set64
+  ptr.setChecked
   ptr.set32checked
   ptr.set64checked
 end
 overload: export: @[]
+  ptr.at
   ptr.at32
   ptr.at64
+  ptr.mut.at
   ptr.mut.at32
   ptr.mut.at64
+  ptr.atChecked
   ptr.at32checked
   ptr.at64checked
+  ptr.mut.atChecked
   ptr.mut.at32checked
   ptr.mut.at64checked
 end
@@ -276,6 +373,8 @@ overload: export: +
   ptr.add0D
   ptr.mut.add
   ptr.mut.add0D
+  iPtr.add
+  iSize.add
 end
 overload: export: -
   ptr.sub
@@ -284,30 +383,46 @@ overload: export: -
   ptr.mut.sub0D
   ptr.diff
   ptr.diff0D
+  iPtr.sub
+  iSize.sub
 end
 overload: export: <
   ptr.lt
   ptr.lt0D
+  iPtr.lt
+  iSize.lt
 end
 overload: export: <=
   ptr.le
   ptr.le0D
+  iPtr.le
+  iSize.le
 end
 overload: export: ==
   ptr.eq
+  iPtr.eq
+  iSize.eq
 end
 overload: export: !=
   ptr.ne
+  iPtr.ne
+  iSize.ne
 end
 overload: export: >=
   ptr.ge
   ptr.ge0D
+  iPtr.ge
+  iSize.ge
 end
 overload: export: >
   ptr.gt
   ptr.gt0D
+  iPtr.gt
+  iSize.gt
 end
 overload: export: <=>
   ptr.cmp
   ptr.cmp0D
+  iPtr.cmp
+  iSize.cmp
 end

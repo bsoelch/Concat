@@ -2342,7 +2342,7 @@ proc(
         end
         '\n' sb.appendC
       return
-    OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 case
+    OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT case
       ## baseType is pointer type
       baseType typeContext types.getElementType =:: eltType
       sb

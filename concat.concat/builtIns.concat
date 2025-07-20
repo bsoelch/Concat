@@ -39,7 +39,7 @@ enum(
  UGT_I8 UGT_I16 UGT_I32 UGT_I64                  ## u>
  SYS_ARGC SYS_ARGV SYS_ENVP
  ## pointer access
- GET_PTR GET_PTR_MUT SET_PTR OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64
+ GET_PTR GET_PTR_MUT SET_PTR OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT
  ## XXX? more built-in operations
  PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
  TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
@@ -757,6 +757,9 @@ proc(
   types.primitive.CHAR16 "char16":s pos context newBuiltInType
   types.primitive.CHAR32 "char32":s pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
+  types.primitive.I_SIZE "..type.iSize":s pos context newBuiltInType
+  types.primitive.I_PTR  "..type.iPtr":s  pos context newBuiltInType
+  ## TODO? should I_MAX be visible to user-code
   2  Type .align "..type.align2":s  pos context newBuiltInType
   4  Type .align "..type.align4":s  pos context newBuiltInType
   8  Type .align "..type.align8":s  pos context newBuiltInType
@@ -1427,12 +1430,20 @@ proc(
     "..builtIn.offset.ptr.i64":s pos labelContext createLabel
     offset64_proc
   pos context addBuiltIn
+  BuiltIn .OFFSET_PTR
+    "..builtIn.offset.ptr":s pos labelContext createLabel
+    offset64_proc
+  pos context addBuiltIn
   BuiltIn .OFFSET_PTR_MUT_I32
     "..builtIn.offset.ptr.mut.i32":s pos labelContext createLabel
     offsetMut32_proc
   pos context addBuiltIn
   BuiltIn .OFFSET_PTR_MUT_I64
     "..builtIn.offset.ptr.mut.i64":s pos labelContext createLabel
+    offsetMut64_proc
+  pos context addBuiltIn
+  BuiltIn .OFFSET_PTR_MUT
+    "..builtIn.offset.ptr.mut":s pos labelContext createLabel
     offsetMut64_proc
   pos context addBuiltIn
   context sysProcTypes =:: v_i64 =:: v_c8pp
@@ -1620,8 +1631,8 @@ end
   "..builtIn.ugt.i8":s "..builtIn.ugt.i16":s "..builtIn.ugt.i32":s "..builtIn.ugt.i64":s
   "..builtIn.sys.argc":s "..builtIn.sys.argv":s "..builtIn.sys.envp":s
   "..builtIn.get.ptr":s "..builtIn.get.ptr.mut":s "..builtIn.set.ptr":s
-    "..builtIn.offset.ptr.i32":s "..builtIn.offset.ptr.i64":s
-    "..builtIn.offset.ptr.mut.i32":s "..builtIn.offset.ptr.mut.i64":s
+    "..builtIn.offset.ptr.i32":s "..builtIn.offset.ptr.i64":s "..builtIn.offset.ptr":s
+    "..builtIn.offset.ptr.mut.i32":s "..builtIn.offset.ptr.mut.i64":s "..builtIn.offset.ptr.mut":s
   "..builtIn.parse.i8":s "..builtIn.parse.i16":s "..builtIn.parse.i32":s "..builtIn.parse.i64":s
     "..builtIn.parse.f32":s "..builtIn.parse.f64":s
   "..types.isPrimitive":s "..types.isPointer":s "..types.isRawPointer":s "..types.isArray":s
