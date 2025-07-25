@@ -321,7 +321,7 @@ proc( FilePosition : pos -> Operation ) =>: export: opCallPtr
   -1 NO_CALL_DATA PointerCall new OpValue .callPtr Type .undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opLength
-  OpValue .length types.primitive.I_SIZE pos Operation new return
+  OpValue .length types.I_SIZE pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opSize
   OpValue .size Type .undefined pos Operation new return

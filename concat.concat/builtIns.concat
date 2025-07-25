@@ -388,9 +388,9 @@ proc(
   LabelId slice optional.empty =:: argLabels
   Type 2 array : typeData
   typeData@ =:: argTypes
-  ## char8 _ ptr  i64   -> ...
+  ## char8 _ ptr  iSize   -> ...
   types.primitive.CHAR8 false typeContext wrapPtr argTypes 0 =[]
-  types.primitive.I64 argTypes 1 =[]
+  types.I_SIZE argTypes 1 =[]
   ## newProcArgs
     argTypes slice.wrap
     argLabels

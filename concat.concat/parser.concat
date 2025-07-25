@@ -747,7 +747,7 @@ proc(
         typeContext constContext errors newStringConstant
           $ .val =:: stringConst
         state pushConst
-        types.primitive.I_SIZE
+        types.I_SIZE
           stringConst .Array8 .length ConstValue .Int
           IdentifierInfo optional.empty
         fileState [] .wordStart Constant new state pushConst
@@ -766,7 +766,7 @@ proc(
         else
           token .LITERAL_RAW_STRING true
         end literalStart state parseStringConstant =:: stringConst
-        types.primitive.I_SIZE
+        types.I_SIZE
           stringConst .Array8 ?? if
             stringConst .Array8 .length
           else stringConst .Array32 ?? _if

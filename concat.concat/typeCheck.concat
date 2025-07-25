@@ -4383,7 +4383,7 @@ proc(
           op .pos errors appendError
           return
         end
-        types.primitive.I_SIZE
+        types.I_SIZE
         op .pos
       state pushConstant
       true state .stack branchTree.peek .data .isStatic=

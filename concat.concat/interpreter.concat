@@ -951,7 +951,7 @@ namespace: interpreter
       isLength if
         sizes .length 0 == if
           ## return
-            types.primitive.I_SIZE
+            types.I_SIZE
             1 ConstValue .Int
             false
           return
@@ -961,13 +961,13 @@ namespace: interpreter
         slice.get =:: outerSize
         outerSize .int ?? if
           ## return
-            types.primitive.I_SIZE
+            types.I_SIZE
             outerSize .int ConstValue .Int
             false
           return
         else outerSize .genericArg ?? _if
           ## return
-            types.primitive.I_SIZE
+            types.I_SIZE
             outerSize .genericArg ConstValue .GenericArg
             false
           return
@@ -998,7 +998,7 @@ namespace: interpreter
         sizes .length types.ArraySize .int =:: sizeLength
         ## return
           ## newArrayType
-            types.primitive.I_SIZE
+            types.I_SIZE
             types.ArrayType .ARRAY
             sizeLength@
             slice.wrap
@@ -1020,7 +1020,7 @@ namespace: interpreter
     else isLength and valType typeContext types.isComposite
         and isType or valType typeContext types.isArrayLiteral _if
       ## return
-        types.primitive.I_SIZE
+        types.I_SIZE
         valType
           typeContext types.compositeEltCount i64 cast.u
         ConstValue .Int
@@ -3239,7 +3239,7 @@ proc(
           end
           EvalResult .Error return
         end
-        types.primitive.I_SIZE
+        types.I_SIZE
         op [] .pos
         context
       pushValue
