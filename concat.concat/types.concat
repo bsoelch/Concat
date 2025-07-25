@@ -251,6 +251,8 @@ namespace: types
     PrimitiveType .I64  Type .primitiveType Type =: export: I_PTR  ## integer that can hold a pointer
     PrimitiveType .I64  Type .primitiveType Type =: export: I_MAX  ## largest native integer type
   end
+  primitive.I_SIZE =:: mut: export: I_SIZE
+  primitive.I_PTR =:: mut: export: I_PTR
   namespace: intLiteral
     IntLiteral .U7  Type .intLiteral Type =: export: U7
     IntLiteral .S8  Type .intLiteral Type =: export: S8

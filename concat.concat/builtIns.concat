@@ -695,14 +695,13 @@ end
 
 proc(
   Type : t
-  string : name
+  LabelId : label
   FilePosition : pos
   ProgramContext ptr.mut : context
--> ) =>: newBuiltInType
+-> ) =>: newBuiltInTypeLabel
   context .idContext =:: idContext
-  idContext .typeContext .labelContext =:: labelContext
   ## declareIdentifier
-    name pos labelContext createLabel
+    label
     types.primitive.TYPE
     IdentifierType .TYPE
     -1
@@ -713,6 +712,19 @@ proc(
     idContext
     context .errors
   id.declareIdentifier =:: isError ..drop.2
+end
+proc(
+  Type : t
+  string : name
+  FilePosition : pos
+  ProgramContext ptr.mut : context
+-> ) =>: newBuiltInType
+  context .idContext =:: idContext
+  idContext .typeContext .labelContext =:: labelContext
+  t
+    name pos labelContext createLabel
+    pos
+  context newBuiltInTypeLabel
 end
 proc(
   Type : valType
@@ -740,6 +752,8 @@ proc(
   FilePosition : pos
   ProgramContext ptr.mut : context
 -> ) =>: export: initBuiltInConstants
+  context .idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
   types.primitive.BOOL   "bool":s   pos context newBuiltInType
   types.primitive.BOOL
     true  ConstValue .Bool "true":s
@@ -757,6 +771,12 @@ proc(
   types.primitive.CHAR16 "char16":s pos context newBuiltInType
   types.primitive.CHAR32 "char32":s pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
+  "iSize":s pos labelContext createLabel =:: iSizeLabel
+  types.primitive.I_SIZE iSizeLabel typeContext types.newNamedType $ types.I_SIZE=
+  iSizeLabel pos context newBuiltInTypeLabel
+  "iPtr":s pos labelContext createLabel =:: iPtrLabel
+  types.primitive.I_PTR iPtrLabel typeContext types.newNamedType  $ types.I_PTR=
+  iPtrLabel pos context newBuiltInTypeLabel
   types.primitive.I_SIZE "..type.iSize":s pos context newBuiltInType
   types.primitive.I_PTR  "..type.iPtr":s  pos context newBuiltInType
   ## TODO? should I_MAX be visible to user-code
