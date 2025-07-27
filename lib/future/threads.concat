@@ -8,7 +8,7 @@ namespace: sys
   proc.c( i32 ptr.mut -> bool ) : extern: cctLockTryAcquire
   proc.c( i32 ptr.mut -> bool ) : extern: cctLockRelease
 end
-namespace: threads
+namespace: thread
   i32 ptr.mut =:: Lock
   proc.c( i32 ptr.mut -> Lock ) =>: export: createLock
     Lock cast
@@ -56,18 +56,18 @@ namespace: threads
     linux.sys_protect ? ! "sys_protect succeeds" assert
     stackMem stackSize + ( -> ) ptr _ ptr.mut cast! =:: stackHead
     threadExit@ stackHead -1 =[]
-    stackMem stackSize ( -> ) ptr ..types.size -
+    stackMem stackSize ( -> ) ptr ..types.size i64 cast.u -
   end
   proc( i64 : stackMem i64 : stackSize -> i64 ) =>: cloneProcess
     using linux.clone.
     CloneArgs : cloneArgs
-    cloneArgs@ 1 mem.clear ..drop
+    cloneArgs@ 1:iSize mem.clear ..drop
     cloneArgs
       CLONE_VM CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | >$ .flags=
       stackMem >$ .stack=
       stackSize >$ .stackSize=
     cloneArgs=
-    CloneArgs ..types.size cloneArgs@ linux.sys_clone3
+    CloneArgs ..types.size i64 cast.u cloneArgs@ linux.sys_clone3
     ## TODO error handling
   end
 
@@ -75,7 +75,7 @@ namespace: threads
     0x10000:i64 createStack =:: stackSize =:: stackMem
     stackMem stackSize + ( -> ) ptr _ ptr.mut cast! =:: stackHead
     target stackHead -1 =[]
-    stackMem stackSize ( -> ) ptr ..types.size - cloneProcess
+    stackMem stackSize ( -> ) ptr ..types.size i64 cast.u - cloneProcess
   end
 
   ## runs a new thread at the call location of this procedure
@@ -92,17 +92,17 @@ namespace: threads
     ## copy stack-frame of caller into thread stack
     stackMem stackSize + ( -> ) ptr _ ptr.mut cast! =:: mut: stackHead
     basePtr [] ( -> ) ptr _ ptr cast! =:: parentBase
-    basePtr parentBase ptr.diff iSize cast =:: parentFrameSize
+    basePtr parentBase ptr.diff i64 cast =:: parentFrameSize
     stackHead -1 @[] ( -> ) ptr cast! =:: newBaseP
     newBaseP stackHead -1 =[]
-    stackHead parentFrameSize 1 + -
+    stackHead parentFrameSize 1 + -_ @[]
       basePtr 1 @[]
-      parentFrameSize
+      parentFrameSize iSize cast.u
     mem.copy stackHead=
     ## setup thread initialisation
     ## clone will return to cctThreadInit, which updates the base-pointer and returns to the caller
     newBaseP stackHead -1 =[]
     sys.cctThreadInit@ stackHead proc.c( -> ) ptr _ ptr.mut cast! -2 =[]
-    stackMem stackSize ( -> ) ptr ..types.size parentFrameSize 3 + * - cloneProcess
+    stackMem stackSize ( -> ) ptr ..types.size i64 cast.u parentFrameSize 3 + * - cloneProcess
   end
 end
