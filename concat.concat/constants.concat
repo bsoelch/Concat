@@ -209,41 +209,41 @@ end
 namespace: constant
   ## Detect if a given i8 array is a string constant
   proc( i8 slice : bytes -> bool ) =>: isString
-    0:i64 =:: mut: nonPrintable
+    0:iSize =:: mut: nonPrintable
     bytes string.fromBytes
-    0:i64 while $1 .length $1 > do
+    0:iSize while $1 .length $1 u> do
       utf8.nextCodepoint =:: cp
       cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
         ..drop.2 false return ## definitely no string
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable=
+        nonPrintable 1:iSize + nonPrintable=
       end
     end ..drop.2
     ## at most 1/8 non-printable chars
-    nonPrintable bytes .length 4 + 8 / <= return
+    nonPrintable bytes .length 4:iSize + 8:iSize / u<= return
   end
   ## Detect if a given i8 array is a string constant
   proc( i16 slice : ints -> bool ) =>: isString16
-    0:i64 =:: mut: nonPrintable
+    0:iSize =:: mut: nonPrintable
     ints string16.fromIntSlice
-    0:i64 while $1 .length $1 > do
+    0:iSize while $1 .length $1 u> do
       utf16.nextCodepoint =:: cp
       cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
         ..drop.2 false return ## definitely no string
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable=
+        nonPrintable 1:iSize + nonPrintable=
       end
     end ..drop.2
     ## at most 1/8 non-printable chars
-    nonPrintable ints .length 4 + 8 / <= return
+    nonPrintable ints .length 4:iSize + 8:iSize / u<= return
   end
   ## Detect if a given i8 array is a string constant
   proc( i32 slice : ints -> bool ) =>: isString32
-    0:i64 =:: mut: nonPrintable
+    0:iSize =:: mut: nonPrintable
     ints .length for =:: i
       ints i slice.get unicode.Codepoint cast =:: cp
       cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
@@ -251,11 +251,11 @@ namespace: constant
       end
       cp i32 cast =:: intValue
       intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1 + nonPrintable=
+        nonPrintable 1:iSize + nonPrintable=
       end
     end
     ## at most 1/8 non-printable chars
-    nonPrintable ints .length 4 + 8 / <= return
+    nonPrintable ints .length 4:iSize + 8:iSize / u<= return
   end
 end
 namespace: sb
@@ -277,10 +277,7 @@ namespace: sb
   end
   proc( stringBuilder : sb string : str -> stringBuilder ) =>: export: appendEscapedStr
     sb
-      0:i64 while ..dup str .length < do =:: i
-          str i string.charAt appendEscapedChr
-        i 1 +
-      end ..drop
+      str string.chars for appendEscapedChr end
     return
   end
   ## C-style string escaping, use octal sequences as hex-sequences may consume following characters
@@ -307,16 +304,12 @@ namespace: sb
   end
   proc( stringBuilder : sb string : str -> stringBuilder ) =>: export: appendEscapedStrC
     sb
-      0:i64 while ..dup str .length < do =:: i
-        str i string.charAt appendEscapedChrC
-        i 1 +
-      end ..drop
+      str string.chars for appendEscapedChrC end
     return
   end
   proc( stringBuilder : sb string16 : str -> stringBuilder ) =>: export: appendEscapedStr16
     sb
-      0:i64 while ..dup str .length < do =:: i
-        str i string16.get i32 cast.u =:: c
+      str string16.toSlice for i32 cast.u =:: c
         c 0x80 u< if
           c char8 cast appendEscapedChr
         else
@@ -326,14 +319,12 @@ namespace: sb
           end
           c sb.appendUX
         end
-        i 1 +
-      end ..drop
+      end
     return
   end
   proc( stringBuilder : sb string32 : str -> stringBuilder ) =>: export: appendEscapedStr32
     sb
-      0:i64 while ..dup str .length < do =:: i
-        str i string32.get i32 cast.u =:: c
+      str string32.toSlice for i32 cast.u =:: c
         c 0x80 u< if
           c char8 cast appendEscapedChr
         else
@@ -347,15 +338,14 @@ namespace: sb
           end
           c sb.appendUX
         end
-        i 1 +
-      end ..drop
+      end
     return
   end
-  8:i64 =:: MAX_ARRAY_ELEMENTS
-  12:i64 =:: MAX_PRIMITIVE_ARRAY_ELEMENTS
-  36:i64 =:: MAX_STRING_CHARS
-  24:i64 =:: MAX_STRING_CHARS_HEAD
-  8:i64 =:: MAX_STRING_CHARS_TAIL
+  8:iSize =:: MAX_ARRAY_ELEMENTS
+  12:iSize =:: MAX_PRIMITIVE_ARRAY_ELEMENTS
+  36:iSize =:: MAX_STRING_CHARS
+  24:iSize =:: MAX_STRING_CHARS_HEAD
+  8:iSize =:: MAX_STRING_CHARS_TAIL
   ## XXX? limit call depth (to prevent infinite recursion)
   proc(
     stringBuilder : sb
@@ -396,17 +386,17 @@ namespace: sb
         Array case ## XXX? labeled array?
           val .Array =:: mArray
           mArray .length
-            MAX_ARRAY_ELEMENTS 1 - i64.min
+            MAX_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements
           "{ " sb.appendS
-          0:i64 while ..dup maxElements < do =:: i
+          0:iSize while ..dup maxElements u< do =:: i
             mArray i slice.get typeContext appendConstant
             ' ' sb.appendC
-            i 1 +
+            i 1:iSize +
           end ..drop
-          mArray .length MAX_ARRAY_ELEMENTS >= if
-            mArray .length MAX_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - slice.get typeContext appendConstant
+          mArray .length MAX_ARRAY_ELEMENTS u>= if
+            mArray .length MAX_ARRAY_ELEMENTS u> if "... " sb.appendS end
+            mArray $ .length 1:iSize - slice.get typeContext appendConstant
             ' ' sb.appendC
           end
           "}" sb.appendS
@@ -414,7 +404,7 @@ namespace: sb
         Array8 case
           val .Array8 =:: mArray
           mArray constant.isString if ## array is string constant
-            mArray .length MAX_STRING_CHARS <= if
+            mArray .length MAX_STRING_CHARS u<= if
               '\"'  sb.appendC
               mArray string.fromBytes sb.appendEscapedStr
               '\"'  sb.appendC
@@ -432,17 +422,17 @@ namespace: sb
             return
           end
           mArray .length
-            MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
+            MAX_PRIMITIVE_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements
           "{ " sb.appendS
-          0:i64 while ..dup maxElements < do =:: i
+          0:iSize while ..dup maxElements u< do =:: i
             mArray i slice.get i64 cast.s appendI
             ":i8 " sb.appendS
-            i 1 +
+            i 1:iSize +
           end ..drop
-          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
-            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - slice.get i64 cast.s appendI
+          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u>= if
+            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u> if "... " sb.appendS end
+            mArray $ .length 1:iSize - slice.get i64 cast.s appendI
             ":i8 " sb.appendS
           end
           "}" sb.appendS
@@ -450,7 +440,7 @@ namespace: sb
         Array16 case
           val .Array16 =:: mArray
           mArray constant.isString16 if ## array is string constant
-            mArray .length MAX_STRING_CHARS <= if
+            mArray .length MAX_STRING_CHARS u<= if
               "utf16\""  sb.appendS
               mArray string16.fromIntSlice sb.appendEscapedStr16
               '\"'  sb.appendC
@@ -468,17 +458,17 @@ namespace: sb
             return
           end
           mArray .length
-            MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
+            MAX_PRIMITIVE_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements
           "{ " sb.appendS
-          0:i64 while ..dup maxElements < do =:: i
+          0:iSize while ..dup maxElements u< do =:: i
             mArray i slice.get i64 cast.s appendI
             ":i16 " sb.appendS
-            i 1 +
+            i 1:iSize +
           end ..drop
-          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
-            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - slice.get i64 cast.s appendI
+          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u>= if
+            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u> if "... " sb.appendS end
+            mArray $ .length 1:iSize - slice.get i64 cast.s appendI
             ":i16 " sb.appendS
           end
           "}" sb.appendS
@@ -486,7 +476,7 @@ namespace: sb
         Array32 case
           val .Array32 =:: mArray
           mArray constant.isString32 if ## array is string constant
-            mArray .length MAX_STRING_CHARS <= if
+            mArray .length MAX_STRING_CHARS u<= if
               "utf32\""  sb.appendS
               mArray string32.fromIntSlice sb.appendEscapedStr32
               '\"'  sb.appendC
@@ -504,17 +494,17 @@ namespace: sb
             return
           end
           mArray .length
-            MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
+            MAX_PRIMITIVE_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements
           "{ " sb.appendS
-          0:i64 while ..dup maxElements < do =:: i
+          0:iSize while $ maxElements u< do =:: i
             mArray i slice.get i64 cast.s appendI
             ":i32 " sb.appendS
-            i 1 +
+            i 1:iSize +
           end ..drop
-          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
-            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - slice.get i64 cast.s appendI
+          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u>= if
+            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u> if "... " sb.appendS end
+            mArray $ .length 1:iSize - slice.get i64 cast.s appendI
             ":i32 " sb.appendS
           end
           "}" sb.appendS
@@ -523,16 +513,16 @@ namespace: sb
           val .Array64 =:: mArray
           "{ " sb.appendS
           mArray .length
-            MAX_PRIMITIVE_ARRAY_ELEMENTS 1 - i64.min
+            MAX_PRIMITIVE_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements
-          0:i64 while ..dup maxElements < do =:: i
+          0:iSize while ..dup maxElements u< do =:: i
             mArray i slice.get appendI
             ":i64 " sb.appendS
-            i 1 +
+            i 1:iSize +
           end ..drop
-          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS >= if
-            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS > if "... " sb.appendS end
-            mArray $ .length 1 - slice.get i64 cast.s appendI
+          mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u>= if
+            mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u> if "... " sb.appendS end
+            mArray $ .length 1:iSize - slice.get i64 cast.s appendI
             ":i64 " sb.appendS
           end
           "}" sb.appendS
@@ -615,15 +605,15 @@ namespace: constants
     '"' pos@ updateFilePos ## string content starts after "
     context [] .stringParseBuffer .length =:: offset
     context [] .stringParseBuffer
-      $ .length i64 cast.u str .length + sb.ensureCap
-      0:i64 while ..dup str .length < do =:: mut: i
+      $ .length str .length + sb.ensureCap
+      0:iSize while ..dup str .length u< do =:: mut: i
         str i string.charAt
           $ pos@ updateFilePos
         $ '\\' != if
           sb.appendC
           continue
         end ..drop
-        i 1 + i=
+        i 1:iSize + i=
         str i string.charAt $ switch
           '\\' '\'' '"' case
             $ pos@ updateFilePos
@@ -655,9 +645,9 @@ namespace: constants
             break
           'x' 'u' 'U' case =:: c
             c pos@ updateFilePos
-            i 1 + i=
-            c 'x' == if 2:i64 else c 'u' == _if 4:i64 else 8:i64 end =:: nChars
-            i nChars + str .length > if
+            i 1:iSize + i=
+            c 'x' == if 2:iSize else c 'u' == _if 4:iSize else 8:iSize end =:: nChars
+            i nChars + str .length u> if
               "not enough characters for escape sequence \"\\" sb.copyPtr
                 c               sb.appendC
                 "\" need "      sb.appendS
@@ -703,10 +693,10 @@ namespace: constants
                 '\"' sb.appendC
               pos errors appendError
             end
-            0:i64 while $ nChars < do =:: j
+            0:iSize while $ nChars u< do =:: j
               str i j + string.charAt pos@ updateFilePos
-            finally j 1 + end ..drop
-            i nChars 1 - + i=
+            finally j 1:iSize + end ..drop
+            i nChars 1:iSize - + i=
             continue
           default
             "unknown escape sequence \"\\" sb.copyPtr
@@ -715,7 +705,7 @@ namespace: constants
             pos errors appendError
             pos@ updateFilePos
         end
-      finally i 1 + end ..drop
+      finally i 1:iSize + end ..drop
     context .stringParseBuffer=
     context [] .stringParseBuffer
       sb.asStr offset string.tail
@@ -735,22 +725,22 @@ namespace: constants
     '`' pos@ updateFilePos ## string content starts after `
     context [] .stringParseBuffer .length =:: offset
     context [] .stringParseBuffer
-      $ .length i64 cast.u str .length + sb.ensureCap
-      0:i64 while $ str .length < do =:: i
+      $ .length str .length + sb.ensureCap
+      0:iSize while $ str .length u< do =:: i
         str i string.charAt =:: c
         c pos@ updateFilePos
         c '`' != if
           c sb.appendC
-          i 1 + continue
+          i 1:iSize + continue
         end
-        i 1 + str .length >= if
+        i 1:iSize + str .length u>= if
           "unexpected end of raw string" sb.copyPtr
           pos errors appendError
         end
-        str i 1 + string.charAt
+        str i 1:iSize + string.charAt
           $ pos@ updateFilePos
         sb.appendC
-        i 2 +
+        i 2:iSize +
       end ..drop
     context .stringParseBuffer=
     context [] .stringParseBuffer

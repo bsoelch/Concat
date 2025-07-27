@@ -7,40 +7,38 @@ import array
 
 ## negative capacity indictes fixed buffer
 namespace: list
-  i32 =:: listCap
+  iSize =:: listCap
 end
 
 ( type : T -> type ) =>: export: list
-  struct( T _ ptr.mut : data i32 : length list.listCap : cap )
+  struct( T _ ptr.mut : data iSize : length list.listCap : cap )
 end
 
 namespace: list
   ( type : T -> T list ) =>: export: static: empty
-    { { } : data 0 : length 0:listCap : cap }
+    { { } : data 0:iSize : length 0:listCap : cap }
   end
   proc( i32 : k type : T -> T list ) =>: export: create_32
-    k i64 cast.s T create_64
+    k iSize cast.s T create_Z
   end
   proc( i64 : k type : T -> T list ) =>: export: create_64
-    k 0 >= "list has non-negative capacity" assert
-    k i32.MAX i64 cast.u < "list capacity fits into i32" assert
-    k T mem.alloc  0 k listCap cast.u T list new return
+    k iSize cast.s T create_Z
   end
-  overload: export: create create_32 create_64 end
+  proc( iSize : k type : T -> T list ) =>: export: create_Z
+    k T mem.alloc 0:iSize k listCap cast.u T list new return
+  end
+  overload: export: create create_32 create_64 create_Z end
 
   ## creates zero-initialized list of the given length
-  proc( i64 : k type : T -> T list ) =>: export: createZeroInit
-    k 0 >= "list has non-negative capacity" assert
-    k i32.MAX i64 cast.u < "list capacity fits into i32" assert
+  proc( iSize : k type : T -> T list ) =>: export: createZeroInit
     k T mem.calloc  k k listCap cast.u T list new return
   end
   proc(
     type : auto: T
     T slice : data
   -> T list ) =>: export: fromSlice
-    data .length i32.MAX i64 cast.u < "slice length fits into i32" assert
-    data .length ..dup 8 / + i32.MAX i64 cast.u i64.min =:: C
-    C 0 >= "list has non-negative capacity" assert
+    data .length $ 8 / + =:: C
+    C 0 iSize.sge "list has non-negative capacity" assert
     ## list
       C T mem.alloc
         data .data
@@ -54,28 +52,28 @@ namespace: list
   proc(
     type : auto: T
     T _ ptr.mut : buffer
-    i32 : buffSize
+    iSize : buffSize
   -> T list ) =>: export: fromBuffer
-    buffer 0 buffSize -_ listCap cast.u T list new return
+    buffer 0:iSize buffSize -_ listCap cast.u T list new return
   end
   proc(
     type : auto: T
-    i32 : auto: k
+    iSize : auto: k
     T k ptr.mut : buffer
   -> T list ) =>: export: wrapBuffer
-    buffer 0 k -_ listCap cast.u T list new return
+    buffer 0:iSize k -_ listCap cast.u T list new return
   end
   proc(
     type : auto: T
     T list : src
   -> T list ) =>: export: copy
-    src .cap i64 cast.s
-      $ 0 < if -_ end
+    src .cap iSize cast.s
+      $ 0:iSize iSize.slt if -_ end
     =:: srcCap
     ## list
       srcCap T mem.alloc
         src .data
-        src .length i64 cast.u
+        src .length
       mem.copy
       src .length
       srcCap listCap cast.s
@@ -86,7 +84,7 @@ namespace: list
     T list : src
     ( T -> T ) ptr : copyElt
   -> T list ) =>: export: deepCopy
-    src .cap i64 cast.s
+    src .cap iSize cast.s
       $ 0 < if -_ end
     =:: srcCap
     ## list
@@ -108,48 +106,51 @@ namespace: list
     T list : elts
     i32 : minCap
   -> T list ) =>: export: ensureCap_32
-    elts minCap i64 cast.s ensureCap_64
+    elts minCap iSize cast.u ensureCap_Z
   end
   proc(
     type : auto: T
     T list : elts
     i64 : minCap
   -> T list ) =>: export: ensureCap_64
-    elts .cap i64 cast.s
-      $ 0 < if -_ end
+    elts minCap iSize cast.u ensureCap_Z
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : minCap
+  -> T list ) =>: export: ensureCap_Z
+    elts .cap iSize cast.s
+      $ 0:iSize iSize.slt if -_ end
     =:: prevCap
-    prevCap minCap >= if
+    prevCap minCap u>= if
       elts return
     end
-    minCap i32.MAX i64 cast.u < "new capacity fits into i32" assert
-    elts .cap i64 cast.s 0 >= "fixed buffer list is not reallocated" assert
+    elts .cap iSize cast.s 0:iSize iSize.sge "fixed buffer list is not reallocated" assert
     elts
-      minCap $ 2 / + 8 + i32.MAX i64 cast.u i64.min =:: newCap
-      newCap 0 >= "list has non-negative capacity" assert
+      minCap $ 2:iSize / + 8:iSize + =:: newCap
+      newCap 0:iSize iSize.sge "list has non-negative capacity" assert
       $ .data  newCap mem.realloc  >$ .data=
       newCap listCap cast.u >$ .cap=
     return
   end
-  overload: export: ensureCap ensureCap_32 ensureCap_64 end
+  overload: export: ensureCap ensureCap_Z ensureCap_32 ensureCap_64 end
   proc( type : auto: T T list : elts -> T list ) =>: export: free
-    elts .cap i64 cast.s 0 > if ## cap <= 0 -> no allocated memory
+    elts .cap iSize cast.s 0:iSize iSize.sgt if ## cap <= 0 -> no allocated memory
       elts .data mem.free
     end
-    T mem.nullPtr 0 0:listCap T list new return
+    T mem.nullPtr 0:iSize 0:listCap T list new return
   end
   proc( type : auto: T T list : elts -> T list ) =>: export: clear
     elts
-      0 >$ .length=
+      0:iSize >$ .length=
     return
   end
   proc(
     type : auto: T
     T list : src
-    i32 : newLength
-  -> T list ) =>: export: setLength32
-    newLength 0 < if
-      "negative new length" ..panic
-    end
+    iSize : newLength
+  -> T list ) =>: export: setLengthZ
     src
       newLength ensureCap
       newLength >$ .length=
@@ -158,80 +159,104 @@ namespace: list
   proc(
     type : auto: T
     T list : src
+    i32 : newLength
+  -> T list ) =>: export: setLength32
+    src newLength iSize cast.u setLengthZ
+  end
+  proc(
+    type : auto: T
+    T list : src
     i64 : newLength
   -> T list ) =>: export: setLength64
-    newLength i32.MAX i64 cast.u > if
-      "new length does not fit in an i32" ..panic
-    end
-    src newLength i32 cast setLength32
+    src newLength iSize cast.u setLengthZ
   end
-  overload: export: setLength setLength32 setLength64 end
+  overload: export: setLength setLengthZ setLength32 setLength64 end
 
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : index
+  -> ) =>: checkIndex
+    index elts .length u>= if
+      "list index outside range" ..panic
+    end
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : index
+  -> T ) =>: export: get_Z
+    elts index checkIndex
+    elts .data index [] return
+  end
   proc(
     type : auto: T
     T list : elts
     i32 : index
   -> T ) =>: export: get_32
-    index 0 < or index elts .length >= if
-      "list index outside range" ..panic
-    end
-    elts .data index [] return
+    elts index iSize cast.u get_Z
   end
   proc(
     type : auto: T
     T list : elts
     i64 : index
   -> T ) =>: export: get_64
-    index 0 < or index elts .length i64 cast.u >= if
-      "list index outside range" ..panic
-    end
-    elts .data index [] return
+    elts index iSize cast.u get_Z
   end
   overload: export: get
-    get_32 get_64
+    get_Z get_32 get_64
   end
   proc(
     type : auto: T
     T list : elts
     i32 : index
   -> T ptr.mut optional ) =>: export: at_32
-    elts index i64 cast.s at_64 return
+    elts index iSize cast.u at_Z return
   end
   proc(
     type : auto: T
     T list : elts
     i64 : index
   -> T ptr.mut optional ) =>: export: at_64
-    index 0 < or index elts .length i64 cast.u >= if
+    elts index iSize cast.u at_Z return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : index
+  -> T ptr.mut optional ) =>: export: at_Z
+    index elts .length u>= if
       T ptr.mut optional.empty return
     end
     elts .data index @[] T ptr.mut cast! optional.wrap return
   end
   overload: export: at
-    at_32 at_64
+    at_Z at_32 at_64
   end
   proc(
     type : auto: T
     T list : elts
     i32 : index
   -> T ptr.mut ) =>: export: atValue_32
-    index 0 < or index elts .length >= if
-      "list index outside range" ..panic
-    end
-    elts .data index @[] T ptr.mut cast! return
+    elts index iSize cast.u atValue_Z
   end
   proc(
     type : auto: T
     T list : elts
     i64 : index
   -> T ptr.mut ) =>: export: atValue_64
-    index 0 < or index elts .length i64 cast.u >= if
-      "list index outside range" ..panic
-    end
+    elts index iSize cast.u atValue_Z
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : index
+  -> T ptr.mut ) =>: export: atValue_Z
+    elts index checkIndex
     elts .data index @[] T ptr.mut cast! return
   end
   overload: export: atValue
-    atValue_32 atValue_64
+    atValue_Z atValue_32 atValue_64
   end
   proc(
     type : auto: T
@@ -239,10 +264,7 @@ namespace: list
     T list : elts
     i32 : index
   -> ) =>: export: set_32
-    index 0 < or index elts .length >= if
-      "list index outside range" ..panic
-    end
-    elt elts .data index =[]
+    elt elts index iSize cast.u set_Z
   end
   proc(
     type : auto: T
@@ -250,13 +272,19 @@ namespace: list
     T list : elts
     i64 : index
   -> ) =>: export: set_64
-    index 0 < or index elts .length i64 cast.u >= if
-      "list index outside range" ..panic
-    end
+    elt elts index iSize cast.u set_Z
+  end
+  proc(
+    type : auto: T
+    T : elt
+    T list : elts
+    iSize : index
+  -> ) =>: export: set_Z
+    elts index checkIndex
     elt elts .data index =[]
   end
   overload: export: set
-    set_32 set_64
+    set_Z set_32 set_64
   end
   proc(
     type : auto: T
@@ -264,21 +292,21 @@ namespace: list
     T : elt
   -> T list ) =>: export: append
     elts
-      $ .length 1 + ensureCap
+      $ .length 1:iSize + ensureCap
       elt $1 .data $2 .length =[]
-      $ .length 1 + >$ .length=
+      $ .length 1:iSize + >$ .length=
     return
   end
   proc(
     type : auto: T
     T list : elts
-    i64 : auto: k
+    iSize : auto: k
     T k ptr : p
   -> T list ) =>: export: appendP
     elts
-      $ .length i64 cast.u k + ensureCap
+      $ .length iSize cast.u k + ensureCap
       $ .data $1 .length @[] p T _ ptr cast k mem.copy ..drop
-      $ .length k i32 cast.u + >$ .length=
+      $ .length k + >$ .length=
     return
   end
   proc(
@@ -287,9 +315,9 @@ namespace: list
     T slice : b
   -> T list ) =>: export: appendSlice
     a
-      $ .length i64 cast.u b .length + ensureCap
+      $ .length b .length + ensureCap
       $ .data $1 .length @[] b .data b .length mem.copy ..drop
-      $ .length b .length i32 cast + >$ .length=
+      $ .length b .length + >$ .length=
     return
   end
   proc(
@@ -299,7 +327,7 @@ namespace: list
   -> T list ) =>: export: appendAll
     a
       $ .length b .length + ensureCap
-      $ .data $1 .length @[] b .data b .length i64 cast.u mem.copy ..drop
+      $ .data $1 .length @[] b .data b .length mem.copy ..drop
       $ .length b .length + >$ .length=
     return
   end
@@ -308,28 +336,24 @@ namespace: list
     type : auto: T
     T list : a
     T : elt
-    i32 : index
+    iSize : index
   -> T list ) =>: export: insert
-    index 0 < or index elts .length > if
-      "list index outside range" ..panic
-    end
+    a index checkIndex
     a
-      $ .length 1 + ensureCap
-      $ .data index 1 + + $1 .data index + $2 .length index - mem.move ..drop
+      $ .length 1:iSize + ensureCap
+      $ .data index 1:iSize + + $1 .data index + $2 .length index - mem.move ..drop
       elt $1 .data index =[]
-      $ .length 1 + >$ .length=
+      $ .length 1:iSize + >$ .length=
     return
   end
   proc(
     type : auto: T
     T list : a
-    i64 : auto: k
+    iSize : auto: k
     T k ptr : b
-    i32 : index
+    iSize : index
   -> T list ) =>: export: insertP
-    index 0 < or index elts .length > if
-      "list index outside range" ..panic
-    end
+    a index checkIndex
     a
       $ .length k + ensureCap
       $ .data index k + +  $1 .data index +  $2 .length index -  mem.move ..drop
@@ -341,11 +365,9 @@ namespace: list
     type : auto: T
     T list : a
     T slice : b
-    i32 : index
+    iSize : index
   -> T list ) =>: export: insertSlice
-    index 0 < or index elts .length > if
-      "list index outside range" ..panic
-    end
+    a index checkIndex
     a
       $ .length b .length + ensureCap
       $ .data index b .length + +  $1 .data index +  $2 .length index -  mem.move ..drop
@@ -357,11 +379,9 @@ namespace: list
     type : auto: T
     T list : a
     T list : b
-    i32 : index
+    iSize : index
   -> T list ) =>: export: insertAll
-    index 0 < or index elts .length > if
-      "list index outside range" ..panic
-    end
+    a index checkIndex
     a
       $ .length b .length + ensureCap
       $ .data index b .length + +  $1 .data index +  $2 .length index -  mem.move ..drop
@@ -375,10 +395,10 @@ namespace: list
     type : auto: T
     T list : elts
   -> T ptr.mut optional ) =>: export: peek
-    elts .length 0 <= if
+    elts .length 0:iSize == if
       T ptr.mut optional.empty return
     end
-    elts .data elts .length 1 - @[] T ptr.mut cast! optional.wrap return
+    elts .data elts .length 1:iSize - @[] T ptr.mut cast! optional.wrap return
   end
   proc(
     type : auto: T
@@ -391,11 +411,11 @@ namespace: list
     type : auto: T
     T list : elts
   -> T list T ) =>: export: pop
-    elts .length 0 <= if
+    elts .length 0:iSize == if
       "pop from empty list" ..panic
     end
     elts
-      $ .length 1 - >$ .length=
+      $ .length 1:iSize - >$ .length=
       $ .data $1 .length []
     return
   end
@@ -418,7 +438,7 @@ namespace: list
     i32 : from
     i32 : len
   -> T slice ) =>: export: getSlice32
-    elts asSlice from i64 cast.s len i64 cast.s slice.getSlice return
+    elts asSlice from iSize cast.u len iSize cast.u slice.getSlice return
   end
   proc(
     type : auto: T
@@ -426,9 +446,17 @@ namespace: list
     i64 : from
     i64 : len
   -> T slice ) =>: export: getSlice64
+    elts asSlice from iSize cast.u len iSize cast.u slice.getSlice return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : from
+    iSize : len
+  -> T slice ) =>: export: getSliceZ
     elts asSlice from len slice.getSlice return
   end
-  overload: export: getSlice getSlice32 getSlice64 end
+  overload: export: getSlice getSlice32 getSlice64 getSliceZ end
 
   proc(
     type : auto: T
@@ -439,7 +467,7 @@ namespace: list
   -> ) =>: export: sort
     ## sort
       elts .data
-      elts .length i64 cast.u
+      elts .length
       cmp
       context
     array.sort
@@ -450,7 +478,7 @@ namespace: list
   -> ) =>: export: reverse
     ## reverse
       elts .data
-      elts .length i64 cast.u
+      elts .length
     array.reverse
   end
   proc( type : auto: T T list -> T ptr.Itr ) =>: export: getItr
@@ -467,14 +495,17 @@ namespace: list
   end
 end
 overload: export: []
+  list.get_Z
   list.get_32
   list.get_64
 end
 overload: export: @[]
+  list.atValue_Z
   list.atValue_32
   list.atValue_64
 end
 overload: export: =[]
+  list.set_Z
   list.set_32
   list.set_64
 end

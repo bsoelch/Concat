@@ -103,7 +103,9 @@ namespace: allocator.linux
   proc( i64 : size i32 : alignment -> CellHeader ptr.mut ) =>: allocLargeChunk
     size PAGE_SIZE 1 - + PAGE_SIZE 1 - ~ & =:: pageAlignedSize
     pageAlignedSize mapMemory CellHeader ptr.mut cast! =:: cellRoot
-    cellRoot i64 cast! alignment i64 cast.u 1 - | 1 + CellHeader ..types.stride - CellHeader ptr.mut cast! =:: cellData
+    cellRoot iPtr cast! alignment iPtr cast.u 1 - | 1 +
+      CellHeader ..types.stride iPtr cast.u -
+    CellHeader ptr.mut cast! =:: cellData
       cellRoot MemoryValue ptr.mut cast! cellData .chunkStart=
       ChunkType.noChunk cellData .chunkType=
       alignment i32.lowestSetBit i8 cast cellData .alignmentBits=
@@ -122,7 +124,7 @@ namespace: allocator.linux
       alignedNewSize
     remapMemory CellHeader ptr.mut cast! =:: mut: newCellRoot
     newCellRoot
-      i64 cast! alignment i64 cast.u 1 - | 1 + CellHeader ..types.stride -
+      iPtr cast! alignment iPtr cast.u 1 - | 1 + CellHeader ..types.stride iPtr cast.u -
     CellHeader ptr.mut cast! =:: newCellData
     newCellData i64 cast! newCellRoot i64 cast! - cell i64 cast! cell [] .chunkStart i64 cast! - != if
       ## TODO handle misaligned memory
@@ -222,7 +224,9 @@ namespace: allocator.linux
            chunkData .dataOffset i64 cast.u +
            cellIndex chunkData .cellSize i64 cast.u * +
         CellHeader ptr.mut cast! =:: cellRoot
-        cellRoot i64 cast! alignment i64 cast.u 1 - | 1 + CellHeader ..types.stride - CellHeader ptr.mut cast! =:: cellPtr
+        cellRoot iPtr cast! alignment iPtr cast.u 1 - | 1 +
+          CellHeader ..types.stride iPtr cast.u -
+        CellHeader ptr.mut cast! =:: cellPtr
         cellPtr i64 cast! cellRoot i64 cast! - chunkData .cellSize i64 cast.u >= if
           cellPtr i64 cast! cellRoot i64 cast! - chunkData .cellSize i64 cast.u u/ =:: nEmpty
           cellInfo i 64 cellBitIndex - nEmpty i32 cast freeCells ## XXX! consitent order for cellBits
@@ -235,7 +239,7 @@ namespace: allocator.linux
         cellIndex i32 cast nEmpty + i16 cast.u cellPtr .cellIndex=
         count nEmpty - cellPtr .size=
         clearMemory if
-          cellPtr i8 _ ptr.mut cast! CellHeader ..types.stride + =:: headPtr
+          cellPtr i8 _ ptr.mut cast! CellHeader ..types.stride @[] =:: headPtr
           chunk .chunkStart i8 _ ptr.mut cast!
              chunkData .dataOffset i64 cast.u +
              cellIndex count i64 cast.u + chunkData .cellSize i64 cast.u * +
@@ -420,32 +424,32 @@ namespace: allocator.linux
     cellSize .chunkType createChunk =:: newChunk
     newChunk cellSize .cellCount i32 cast.u alignment clearMemory allocateBlock .data return
   end
-  proc( i64 : size -> MemoryValue ptr.mut ) =>: export: allocate
+  proc( iSize : size -> MemoryValue ptr.mut ) =>: export: allocate
     size 0 == if ## empty alloc -> nullPtr
       0 MemoryValue ptr.mut cast! return
     end
     size CellHeader ..types.stride + minAlignment false allocateCell getCellMemory
   end
-  proc( i64 : size i32 : alignment -> MemoryValue ptr.mut ) =>: export: aligned_allocate
+  proc( iSize : size i32 : alignment -> MemoryValue ptr.mut ) =>: export: aligned_allocate
     alignment alignment -_ & alignment == "alignment is power of two" assert
     size 0 == if ## empty alloc -> nullPtr
       0 MemoryValue ptr.mut cast! return
     end
-    CellHeader ..types.stride alignment i64 cast.u i64.max =:: cellAlignment
+    CellHeader ..types.stride alignment iSize cast.u iSize.max =:: cellAlignment
     size cellAlignment + cellAlignment i32 cast false allocateCell getCellMemory
   end
-  proc( i64 : size -> MemoryValue ptr.mut ) =>: export: clearedAllocate
+  proc( iSize : size -> MemoryValue ptr.mut ) =>: export: clearedAllocate
     size 0 == if ## empty alloc -> nullPtr
       0 MemoryValue ptr.mut cast! return
     end
     size CellHeader ..types.stride + minAlignment true allocateCell getCellMemory
   end
-  proc( i64 : size i32 : alignment -> MemoryValue ptr.mut ) =>: export: aligned_clearedAllocate
+  proc( iSize : size i32 : alignment -> MemoryValue ptr.mut ) =>: export: aligned_clearedAllocate
     alignment alignment -_ & alignment == "alignment is power of two" assert
     size 0 == if ## empty alloc -> nullPtr
       0 MemoryValue ptr.mut cast! return
     end
-    CellHeader ..types.stride alignment i64 cast.u i64.max =:: cellAlignment
+    CellHeader ..types.stride alignment iSize cast.u iSize.max =:: cellAlignment
     size cellAlignment + alignment minAlignment i32.max true allocateCell getCellMemory
   end
   proc( CellHeader ptr.mut : cell -> ) =>: freeCell

@@ -133,7 +133,7 @@ namespace: arenaAlloc
     arena0 =:: mut: arena
     arena .strictOrder ! if
       ## search for gaps in previous chunks
-      arena .fullChunks while $ arena .chunks .length < do =:: i
+      arena .fullChunks while $ iSize cast.u arena .chunks .length u< do =:: i
         arena .chunks i list.at .data =:: chunk
         chunk [] .eltCount chunkSize == if
           ## chunk full -> skip on next allocation
@@ -146,8 +146,8 @@ namespace: arenaAlloc
         end
       finally i 1 + end ..drop
     end
-    arena .chunks .length 0 > and
-        arena .chunks $ .length 1 - list.at .data =:: lastChunk
+    arena .chunks .length 0:iSize != and
+        arena .chunks $ .length 1:iSize - list.at .data =:: lastChunk
         lastChunk [] .eltCount count + chunkSize u<= if
       ## return
         arena
@@ -156,14 +156,14 @@ namespace: arenaAlloc
       return
     end
     ## new data does not fit into last chunk
-    count i64 cast.u chunkSize i64 cast.u 1 - + arena0 .chunkSizeShift >>> =:: newChunks
-    newChunks 1 >= "at least one new chunk" assert
+    count iSize cast.u chunkSize iSize cast.u 1:iSize - + arena0 .chunkSizeShift >>> =:: newChunks
+    newChunks 1:iSize u>= "at least one new chunk" assert
     newChunks arena0 .chunkSizeShift << T mem.alloc =:: chunkData
     arena .chunks
       chunkData count chunkSize i32.umin ChunkType .ALLOC T ArenaChunk new list.append
       count chunkSize - =:: mut: newCount
       chunkData chunkSize @[] =:: mut: newOffset
-      newChunks 1 - for ..drop
+      newChunks 1:iSize - for ..drop
         newCount 0 > "remaining count >0" assert
         ## ArenaChunk
           newOffset
@@ -201,7 +201,7 @@ namespace: arenaAlloc
   -> T ArenaAllocator T ptr.mut ) =>: export: copyValue
     value =:: valData ##XXX remove intermediate step once address of arguments are fully supported
     arena 1 alloc_internal
-      valData@ 1 mem.copy T ptr.mut cast!
+      valData@ 1:iSize mem.copy T ptr.mut cast!
     return
   end
   proc(
@@ -210,7 +210,7 @@ namespace: arenaAlloc
     T ptr : value
   -> T ArenaAllocator T ptr.mut ) =>: export: copyPtr
     arena 1 alloc_internal
-      value 1 mem.copy T ptr.mut cast!
+      value 1:iSize mem.copy T ptr.mut cast!
     return
   end
   proc(
@@ -220,7 +220,7 @@ namespace: arenaAlloc
     T k ptr : values
   -> T ArenaAllocator T k ptr.mut ) =>: export: copyPtrs
     arena k alloc_internal
-      values k i64 cast.u mem.copy T k ptr.mut cast!
+      values k iSize cast.u mem.copy T k ptr.mut cast!
     return
   end
   proc(
@@ -247,7 +247,7 @@ namespace: arenaAlloc
     T list : values
   -> T ArenaAllocator T slice.mut ) =>: export: copyList
     arena values .length alloc_internal
-      values .data values .length i64 cast.u mem.copy values .length slice.createMutable
+      values .data values .length mem.copy values .length slice.createMutable
     return
   end
 
@@ -344,8 +344,8 @@ end
 i64 =:: MaxAlign ## TODO? allow choosing alignment on creation
 MaxAlign ArenaAllocator =:: export: MixedArenaAllocator
 namespace: mixedArena
-  proc( i64 -> i32 ) =>: alignSize
-    MaxAlign ..types.stride 1 - + MaxAlign ..types.stride u/ i32 cast
+  proc( iSize -> i32 ) =>: alignSize
+    MaxAlign ..types.stride 1:iSize - + MaxAlign ..types.stride u/ i32 cast
   end
   proc(
     ## size of a given memory chunk, will be rounded to the nearest power of two
@@ -354,7 +354,7 @@ namespace: mixedArena
     bool : strictOrder
   -> MixedArenaAllocator ) =>: export: create_S
     ## create_internal
-      chunkSize i64 cast.u MaxAlign ..types.stride u/ i32 cast
+      chunkSize iSize cast.u MaxAlign ..types.stride u/ i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       strictOrder
     arenaAlloc.create_internal MixedArenaAllocator cast
@@ -364,7 +364,7 @@ namespace: mixedArena
     i32 : chunkSize
   -> MixedArenaAllocator ) =>: export: create_0
     ## create_internal
-      chunkSize i64 cast.u MaxAlign ..types.stride u/ i32 cast
+      chunkSize iSize cast.u MaxAlign ..types.stride u/ i32 cast
       ( MaxAlign ptr -> ) ptr optional.empty
       false
     arenaAlloc.create_internal MixedArenaAllocator cast
@@ -389,7 +389,7 @@ namespace: mixedArena
       arena T slice.emptyMutable return
     end
     arena MaxAlign ArenaAllocator cast
-      T ..types.stride size i64 cast.u * alignSize arenaAlloc.alloc_internal =:: res
+      T ..types.stride size iSize cast.u * alignSize arenaAlloc.alloc_internal =:: res
     MixedArenaAllocator cast
     res T _ ptr.mut cast! size slice.createMutable
   end
@@ -401,7 +401,7 @@ namespace: mixedArena
   -> MixedArenaAllocator T ptr.mut ) =>: export: copyValue
     value =:: valData ##XXX remove intermediate step once address of arguments are fully supported
     arena T alloc
-      valData@ 1 mem.copy T ptr.mut cast!
+      valData@ 1:iSize mem.copy T ptr.mut cast!
     return
   end
   proc(
@@ -410,7 +410,7 @@ namespace: mixedArena
     T ptr : value
   -> MixedArenaAllocator T ptr.mut ) =>: export: copyPtr
     arena T alloc
-      value 1 mem.copy T ptr.mut cast!
+      value 1:iSize mem.copy T ptr.mut cast!
     return
   end
   proc(
@@ -420,7 +420,7 @@ namespace: mixedArena
     T k ptr : values
   -> MixedArenaAllocator T k ptr.mut ) =>: export: copyPtrs
     arena k T allocSlice .data
-      values k i64 cast.u mem.copy T k ptr.mut cast!
+      values k iSize cast.u mem.copy T k ptr.mut cast!
     return
   end
   proc(
@@ -447,7 +447,7 @@ namespace: mixedArena
     T list : values
   -> MixedArenaAllocator T slice.mut ) =>: export: copyList
     arena values .length i32 cast.u T allocSlice .data
-      values .data values .length i64 cast.u mem.copy values .length slice.createMutable
+      values .data values .length mem.copy values .length slice.createMutable
     return
   end
 

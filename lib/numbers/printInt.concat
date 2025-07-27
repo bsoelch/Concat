@@ -50,6 +50,9 @@ namespace: sb
   proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendI32
     i64 cast.s 10 appendI?
   end
+  proc( stringBuilder iSize #+value+# -> stringBuilder ) =>: export: appendZ
+    i64 cast.u 10 appendI?
+  end
   proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendX32
     i64 cast.u 16 appendI?
   end
@@ -74,6 +77,7 @@ namespace: sb
   overload: export: appendI
     appendI32
     appendI64
+    appendZ
   end
   overload: export: appendU
     appendU32

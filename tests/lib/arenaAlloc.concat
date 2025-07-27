@@ -32,7 +32,7 @@ proc( -> ) =>: main
     valCount 6 == "values at end of arena freed" assert
     newInt arenaAlloc.copyValue ..drop
     b [] 9 == "9 stored in b" assert
-    3000 i32 mem.alloc i32 3000 ptr.mut cast! =:: largeArray
+    3000:iSize i32 mem.alloc i32 3000 ptr.mut cast! =:: largeArray
     3000:i64 for =:: i
       newInt largeArray i =[]
     end

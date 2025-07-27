@@ -1,6 +1,9 @@
 import core/i64
 import core/type
 namespace: ptr
+  proc( type : auto: T iSize : auto: k T k ptr : _ -> iSize ) =>: export: length
+    k
+  end
   proc( type : auto: T T _ ptr : p -> T ) =>: export: get
     p ..builtIn.get.ptr
   end
@@ -37,7 +40,7 @@ namespace: ptr
   end
 
   proc( iSize : index iSize : size -> ) =>: checkIndex
-    index size >= if "pointer index outside allowed range" ..panic end
+    index size u>= if "pointer index outside allowed range" ..panic end
     ## TODO better error message (print actual index)
     ## TODO? is it possible print message at call-position of pointer access
   end
@@ -165,8 +168,8 @@ namespace: ptr
     p iPtr cast! q iPtr cast! iPtr.gt
   end
 
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> i64 ) =>: export: diff
-    p i64 cast! q i64 cast! - T ..types.stride u/
+  proc( type : auto: T T _ ptr : p T _ ptr : q -> iSize ) =>: export: diff
+    p iPtr cast! q iPtr cast! - iSize cast.u T ..types.stride u/
   end
 
   proc( type : auto: T T ptr T ptr -> i32 ) =>: cmp0D
@@ -273,6 +276,30 @@ namespace: iSize
   ( iSize : a iSize : b -> iSize ) =>: export: sub
     a ..type.iSize cast b ..type.iSize cast - iSize cast
   end
+  ( iSize : a -> iSize ) =>: export: neg
+    a ..type.iSize cast -_ iSize cast
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: mul
+    a ..type.iSize cast b ..type.iSize cast * iSize cast
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: div
+    a ..type.iSize cast b ..type.iSize cast u/ iSize cast
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: shr
+    a ..type.iSize cast b ..type.iSize cast >>> iSize cast
+  end
+  ( iSize : a i32 : shift -> iSize ) =>: export: shrI32
+    a ..type.iSize cast shift >>> iSize cast
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: shl
+    a ..type.iSize cast b ..type.iSize cast << iSize cast
+  end
+  ( iSize : a i32 : shift -> iSize ) =>: export: shlI32
+    a ..type.iSize cast shift << iSize cast
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: mod
+    a ..type.iSize cast b ..type.iSize cast u% iSize cast
+  end
   ( iSize : a iSize : b -> bool ) =>: export: lt
     a ..type.iSize cast b ..type.iSize cast u<
   end
@@ -291,9 +318,27 @@ namespace: iSize
   ( iSize : a iSize : b -> bool ) =>: export: gt
     a ..type.iSize cast b ..type.iSize cast u>
   end
+  ( iSize : a iSize : b -> bool ) =>: export: slt
+    a ..type.iSize cast b ..type.iSize cast <
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: sle
+    a ..type.iSize cast b ..type.iSize cast <=
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: sge
+    a ..type.iSize cast b ..type.iSize cast >=
+  end
+  ( iSize : a iSize : b -> bool ) =>: export: sgt
+    a ..type.iSize cast b ..type.iSize cast >
+  end
   ( iSize : a iSize : b -> i32 ) =>: export: cmp
     a ..type.iSize cast b ..type.iSize cast u> ?1
     a ..type.iSize cast b ..type.iSize cast u< ?1 -
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: min
+    a b u< if a else b end
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: max
+    a b u> if a else b end
   end
 end
 
@@ -341,17 +386,41 @@ overload: export: -
   iPtr.sub
   iSize.sub
 end
+overload: export: -_
+  iSize.neg
+end
+overload: export: *
+  iSize.mul
+end
+overload: export: /
+  iSize.div
+end
+overload: export: u/
+  iSize.div
+end
+overload: export: %
+  iSize.mod
+end
+overload: export: u%
+  iSize.mod
+end
+overload: export: >>>
+  iSize.shr
+  iSize.shrI32
+end
+overload: export: <<
+  iSize.shl
+  iSize.shlI32
+end
 overload: export: <
   ptr.lt
   ptr.lt0D
   iPtr.lt
-  iSize.lt
 end
 overload: export: <=
   ptr.le
   ptr.le0D
   iPtr.le
-  iSize.le
 end
 overload: export: ==
   ptr.eq
@@ -367,17 +436,38 @@ overload: export: >=
   ptr.ge
   ptr.ge0D
   iPtr.ge
-  iSize.ge
 end
 overload: export: >
   ptr.gt
   ptr.gt0D
   iPtr.gt
-  iSize.gt
 end
 overload: export: <=>
   ptr.cmp
   ptr.cmp0D
   iPtr.cmp
-  iSize.cmp
+end
+overload: export: u<
+  ptr.lt
+  ptr.lt0D
+  iPtr.lt
+  iSize.lt
+end
+overload: export: u<=
+  ptr.le
+  ptr.le0D
+  iPtr.le
+  iSize.le
+end
+overload: export: u>=
+  ptr.ge
+  ptr.ge0D
+  iSize.ge
+  iPtr.ge
+end
+overload: export: u>
+  ptr.gt
+  ptr.gt0D
+  iSize.gt
+  iPtr.gt
 end

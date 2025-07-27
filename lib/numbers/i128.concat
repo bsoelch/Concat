@@ -332,7 +332,7 @@ namespace: i128
     false =:: mut: signedOverflow
     str
       parseSign =:: sign
-      ..dup .length 0 == if ..drop
+      ..dup .length 0:iSize == if ..drop
         0 0 i128 new ParserError .EMPTY return
       end
       base 0 == if
@@ -357,14 +357,14 @@ namespace: i128
       0 mBase i64 cast.u i128 new =:: baseI128
       maxUnsigned baseI128 u/ =:: maxSafeUnsigned
       maxVal baseI128 u/ =:: maxSafe ## XXX? udiv i128 by i64
-      0:i64 while ..dup ..over.2 .length < do =:: i
+      0:iSize while ..dup ..over.2 .length u< do =:: i
         ..dup i string.charAt =:: c
-        i 0 > and c '_' == or c '\'' == if
-          i 1 + continue ## ignore _ and ' in numbers
+        i 0:iSize iSize.sgt and c '_' == or c '\'' == if
+          i 1:iSize + continue ## ignore _ and ' in numbers
         end
         c mBase parseDigit
           $ .DIGIT ?? ! if
-            .IGNORED ?? and i 0 > if ..drop i 1 + continue end
+            .IGNORED ?? and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
             ..drop.2
             0 0 i128 new ParserError .INVALID_CHAR return
           else ..drop end
@@ -383,7 +383,7 @@ namespace: i128
           end
           delta +
         res=
-        i 1 +
+        i 1:iSize +
       end ..drop
     ..drop
     res
@@ -395,21 +395,21 @@ namespace: i128
 end
 ## TODO appendI128?? ## base, signed
 namespace: std.literals
-  proc( char8 _ ptr : chars i64 : k -> i128 ) =>: static: export: :i128
+  proc( char8 _ ptr : chars iSize : k -> i128 ) =>: static: export: :i128
     char8 128 array : errMessageBuffer
     chars k string.create =:: str
     str 0 false i128.parse =:: err
     err .NONE ?? or err .UNSIGNED ?? if
       return
     else err .OVERFLOW ?? _if
-      errMessageBuffer@ $ ..length i32 cast sb.fromBuffer
+      errMessageBuffer@ sb.wrapBuffer
         "integer literal overflows size for type i128: `" sb.appendS
         str sb.appendStr
         '`' sb.appendC
       sb.asStr ..compiler.warning
       return
     end
-    errMessageBuffer@ $ ..length i32 cast sb.fromBuffer
+    errMessageBuffer@ sb.wrapBuffer
       "invalid integer constant: `" sb.appendS
       str sb.appendStr
       '`' sb.appendC

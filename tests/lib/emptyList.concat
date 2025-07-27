@@ -1,5 +1,5 @@
 import list
 proc( -> ) =>: main
   i32 list.empty =:: l
-  l .length 0 == "empty list" assert
+  l .length 0:iSize == "empty list" assert
 end

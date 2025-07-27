@@ -5,6 +5,6 @@ proc( -> ) =>: main
   1 later cast 2 later cast point new =:: p
   p@ =:: pointPointer
   pointPointer [] .y 2 later cast == "pointPointer [] .y  2 ==" assert
-  point ..types.size 8 == "sizeof(point) = 8" assert
+  point ..types.size 8:iSize == "sizeof(point) = 8" assert
 end
 i32 =:: later

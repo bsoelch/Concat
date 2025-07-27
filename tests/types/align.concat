@@ -5,7 +5,7 @@ struct(
 ) =:: i128
 
 proc( -> ) =>: main
-  i128 ..types.size 16 == "size 16" assert
-  i128 ..types.alignment 16 == "alignment 16" assert
-  i128 ..types.stride 16 == "stride 16" assert
+  i128 ..types.size 16:iSize == "size 16" assert
+  i128 ..types.alignment 16:iSize == "alignment 16" assert
+  i128 ..types.stride 16:iSize == "stride 16" assert
 end

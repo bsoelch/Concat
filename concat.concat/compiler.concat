@@ -58,13 +58,13 @@ proc( -> ) =>: parseArgs
   string optional.empty errorFile=
   0 sys.getArg string.create =:: path
   ArgParserState .IN =:: mut: state
-  1:i64 while ..dup sys.argc < do
-    ..dup sys.getArg string.create =:: arg
-    arg .length 0 == if
+  1:i64 while $ sys.argc < do
+    $ sys.getArg string.create =:: arg
+    arg .length 0:iSize == if
       1 + continue
     end
     arg 0 string.charAt '-' == if
-      arg .length 2 < if
+      arg .length 2:iSize u< if
         io.stdErr "invalid argument \"-\"" io.fputs ..drop
         1 + continue
       end
@@ -75,22 +75,22 @@ proc( -> ) =>: parseArgs
           true printedUsage=
           continue
         'o' case
-          arg .length 2 > if break end
+          arg .length 2:iSize u> if break end
           ArgParserState .OUT state=
           continue
         'T' case
           true dumpTokens=
           continue
         'l' case
-          arg .length 2 > if break end
+          arg .length 2:iSize u> if break end
           ArgParserState .LIB_PATH state=
           continue
         'e' case
-          arg .length 2 > if break end
+          arg .length 2:iSize u> if break end
           ArgParserState .ERR_PATH state=
           continue
         'W' case
-          arg .length 2 > if break end
+          arg .length 2:iSize u> if break end
           true _W_ERROR_=
           continue
         'v' case
@@ -103,11 +103,11 @@ proc( -> ) =>: parseArgs
           true runCompiledProgram=
           continue
         'X' case ## experimental features
-          arg .length 2 > if break end
+          arg .length 2:iSize u> if break end
           true _EXPERIMENTAL_=
           continue
         'O' case ## optimization level
-          arg .length 2 == if
+          arg .length 2:iSize == if
             1
           else arg "-Odefault":s string.eq _if
             optimizerFlags.optLevelDefault
@@ -191,14 +191,14 @@ proc( -> ) =>: parseArgs
   end
   srcPath sb.asStr '.' string.lastIndexOf =:: mut: iDot
   srcPath sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
-  iDot iSlash < if
-    -1 iDot=
+  iDot optional.hasData and iSlash optional.hasData and iDot .data iSlash .data u< if
+    iSize optional.empty iDot=
   end
   hasOut ! if
     targetPath
       srcPath sb.asStr
-        iDot 0 > if
-          iDot string.head
+        iDot optional.hasData if
+          iDot .data string.head
         end sb.appendStr
     targetPath=
   end
@@ -214,14 +214,14 @@ proc( -> ) =>: parseArgs
       end
     end
   outPath=
-  iSlash 0 < if
+  iSlash optional.isEmpty if
     "./":s
   else
-    srcPath sb.asStr iSlash 1 + string.head
+    srcPath sb.asStr iSlash .data 1:iSize + string.head
   end basePath=
   hasLib ! if
     "./lib/":s libPath=
-  else libPath ..dup .length 1 - string.charAt ..dup '/' != ..swap '\\' != & _if
+  else libPath $ .length 1:iSize - string.charAt ..dup '/' != ..swap '\\' != & _if
     io.stdErr "library path has to end with '/' or '\\'\n" io.fputs ..drop
     srcPath sb.free
     outPath sb.free
@@ -232,23 +232,20 @@ proc( -> ) =>: parseArgs
 end
 
 proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
-  errors [] .length 0 == if
+  errors [] .length 0:iSize == if
     return
   end
   errors [] errorCmp@ list.sort
   false =:: mut: hasError
   1024 sb.create
-    0:i32 while ..dup errors [] .length < do
-      ..swap
-        errors [] ..over.2 list.at .data =:: err
-        err [] sb.appendCompilerError
-        err [] .errType .ERROR ?? if
-          true hasError=
-        else _W_ERROR_ err [] .errType .WARNING ?? & _if
-          true hasError=
-        end
-      ..swap 1 +
-    end ..drop
+    errors [] for =:: err
+      err sb.appendCompilerError
+      err .errType .ERROR ?? if
+        true hasError=
+      else _W_ERROR_ err .errType .WARNING ?? & _if
+        true hasError=
+      end
+    end
     errorFile optional.hasData if errorFile .data io.OPEN_WRITE io.fopenStr ..drop else io.stdErr end
       ..dup ..over.2 io.fputSb ..drop
     errorFile optional.hasData if io.fclose ..drop else ..drop end ## don't close stdErr
@@ -328,7 +325,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
       QBE case targetFile prog@ compileToQBE break
       ASM case
         ## TODO make intermediatePath compiler-argument like paths for dumping tokens
-        baseName .length 5 + sb.create
+        baseName .length 5:iSize + sb.create
           baseName sb.appendStr
           ".asm\x00" sb.appendS
         =:: intermediatePath

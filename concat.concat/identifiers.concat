@@ -57,7 +57,7 @@ namespace: id
     NameId : nameData
   ) =:: export: IdentifierMatch
   ## IdentifierName
-    "" 0 string new
+    string.empty
     NAMESPACE_ID_NONE
     GLOBAL_SCOPE
   IdentifierName new =:: ID_NONE
@@ -231,7 +231,7 @@ namespace: id
       id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
     end
     id 0 string.charAt '.' == if
-      id .length 2 >= and id 1 string.charAt '.' == if
+      id .length 2:iSize u>= and id 1 string.charAt '.' == if
         id string.empty
       else
         "identifiers cannot start with .":s NAMESPACE_ID_NONE scopeId IdentifierName new
@@ -319,17 +319,17 @@ namespace: id
       context [] .typeContext .labelContext .namespaceImports
         importId i64 cast
       list.at .data =:: importInfo
-      importInfo [] .nameAlias .length 0 == if
+      importInfo [] .nameAlias .length 0:iSize == if
         importInfo [] .imported path  context .typeContext .labelContext findNamespace relSpace=
       else
         importInfo [] .nameAlias =:: nameAlias
-        path nameAlias string.startsWith ! or path .length nameAlias .length > and
+        path nameAlias string.startsWith ! or path .length nameAlias .length u> and
             path nameAlias .length string.charAt '.' != if
           ## top namespace is not <nameAlias>
           continue
         end
         importInfo [] .imported
-          path nameAlias .length 1 + string.tail
+          path nameAlias .length 1:iSize + string.tail
         context .typeContext .labelContext findNamespace relSpace=
       end
       relSpace idName@ .namespace=
@@ -413,7 +413,7 @@ namespace: id
     string : name
     IdentifierContext ptr.mut : context
   -> NameId bool ) =>: findIdByName
-    name .length 0 > "name is non-empty" assert
+    name .length 0:iSize != "name is non-empty" assert
     ## searchIdentifier
       name
       true
@@ -426,7 +426,7 @@ namespace: id
     string : name
     IdentifierContext ptr.mut : context
   -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByName ## TODO? change return value to optional
-    name .length 0 > "name is non-empty" assert
+    name .length 0:iSize != "name is non-empty" assert
     ## searchIdentifier
       name
       true
@@ -451,7 +451,7 @@ namespace: id
     FilePosition : pos
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: checkIdentifier
-    id .length 0 == if
+    id .length 0:iSize == if
       "identifier names have to be non-empty" sb.copyPtr pos errors appendError
       true return
     end
@@ -473,23 +473,23 @@ namespace: id
       "identifier names cannot contain '.'" sb.copyPtr pos errors appendError
       true return
     end
-    id id .length 1 - string.charAt '@' == if
+    id id .length 1:iSize - string.charAt '@' == if
       "identifier names cannot end with '@'" sb.copyPtr pos errors appendError
       true return
     end
-    id 0 string.charAt '$' == or id $ .length 1 - string.charAt '$' == if
+    id 0 string.charAt '$' == or id $ .length 1:iSize - string.charAt '$' == if
       "identifier names cannot start or end with `$`" sb.copyPtr pos errors appendError
       true return
     end
     context .PROCEDURE ?? if
       false return
     end
-    id id .length 1 - string.charAt '=' == if
+    id id .length 1:iSize - string.charAt '=' == if
       ## allow procedures named `=`
       ##  and procedures with name ending in `==` `!=` `>=` `<=`
       ## XXX? allow more operator-like names ending in `=`
-      context .PROCEDURE ?? ! or id .length 1 > and
-          "=<>!":s id $ .length 2 - string.charAt string.contains ! if
+      context .PROCEDURE ?? ! or id .length 1:iSize u> and
+          "=<>!":s id $ .length 2:iSize - string.charAt string.contains ! if
         "identifier names cannot end with '='" sb.copyPtr pos errors appendError
         true return
       end
@@ -932,7 +932,7 @@ namespace: id
      true return
     end =:: target
       target [] .labelId
-      nameAlias .length 0 > if
+      nameAlias .length 0:iSize != if
         nameAlias labelContext id.copyString ## create copy to ensure string stays alive
       else
         target [] .labelId labelContext id.getLabelName
@@ -947,7 +947,7 @@ namespace: id
     false return
   end
   proc( IdentifierContext ptr.mut : context -> bool ) =>: export: endNamespace
-    context [] .prevNamespaces .length 0 == if
+    context [] .prevNamespaces .length 0:iSize == if
       true return
     end
     context [] .prevNamespaces

@@ -40,6 +40,25 @@ namespace: i64
     proc( i64Itr : itr -> ) =>: export: endItr end
   end
 end
+namespace: iSize
+  struct( iSize : i iSize : limit ) =:: export: iSizeItr
+  namespace: itr
+    proc( iSize : n -> iSizeItr ) =>: export: prepare
+      0:iSize n iSizeItr new return
+    end
+    proc( iSizeItr -> iSizeItr ) =>: export: prepareItr end
+    proc( iSizeItr : itr -> bool ) =>: export: check
+      itr .i itr .limit u<
+    end
+    proc( iSizeItr : itr -> iSize ) =>: export: get
+      itr .i
+    end
+    proc( iSizeItr : itr -> iSizeItr ) =>: export: step
+      itr .i 1:iSize + itr .limit iSizeItr new
+    end
+    proc( iSizeItr : itr -> ) =>: export: endItr end
+  end
+end
 
 namespace: ptr
   ( type : T -> type ) =>: export: Itr
@@ -77,6 +96,8 @@ overload: export: ..itr.prepare
   i32.itr.prepareItr
   i64.itr.prepare
   i64.itr.prepareItr
+  iSize.itr.prepare
+  iSize.itr.prepareItr
   ptr.itr.prepare0D
   ptr.itr.prepare
   ptr.itr.prepareItr
@@ -84,20 +105,24 @@ end
 overload: export: ..itr.check
   i32.itr.check
   i64.itr.check
+  iSize.itr.check
   ptr.itr.check
 end
 overload: export: ..itr.get
   i32.itr.get
   i64.itr.get
+  iSize.itr.get
   ptr.itr.get
 end
 overload: export: ..itr.step
   i32.itr.step
   i64.itr.step
+  iSize.itr.step
   ptr.itr.step
 end
 overload: export: ..itr.end
   i32.itr.endItr
   i64.itr.endItr
+  iSize.itr.endItr
   ptr.itr.endItr
 end

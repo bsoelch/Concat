@@ -7,7 +7,7 @@ import io
 
 proc( i64 : ip string : code -> i64 ) =>: skipLoop
   1 =:: mut: n
-  ip 1 + while $ code .length < do =:: i
+  ip 1 + while $ code .length i64 cast.u < do =:: i
     code i string.charAt '[' == if
       n 1 + n=
     else code i string.charAt ']' == _if
@@ -28,7 +28,7 @@ proc(
 -> i64 i64 ) =>: runBf_rec
   mp0 =:: mut: mp
   loopStart 1 + =:: mut: ip
-  while ip code .length < do
+  while ip code .length i64 cast.u < do
     code ip string.charAt switch
       '+' case tape mp [] 1 + tape mp =[] break
       '-' case tape mp [] 1 - tape mp =[] break
@@ -61,11 +61,11 @@ proc(
   i8 TAPE_CAP ptr.mut : tape
   string : code
 -> stringBuilder ) =>: runBf
-  outBuffer $ ..length i32 cast sb.fromBuffer =:: mut: outStream
+  outBuffer $ ..length sb.fromBuffer =:: mut: outStream
   outStream@ tape code TAPE_CAP 2 / -1 runBf_rec ..drop.2
   outStream return
 end
-proc( char8 _ ptr : chars i64 : len -> ) =>: static: :bf
+proc( char8 _ ptr : chars iSize : len -> ) =>: static: :bf
   i8 TAPE_CAP array : tape
   char8 OUT_CAP array : outBuffer
   outBuffer@

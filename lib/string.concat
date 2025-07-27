@@ -8,11 +8,18 @@ char16 slice =:: export: string16
 char32 slice =:: export: string32
 
 namespace: string
-  { "" : data 0 : length } string =: export: empty
+  { "" : data 0:iSize : length } string =: export: empty
 
-  proc( char8 _ ptr  i64 -> string ) =>: export: create
+  proc( char8 _ ptr iSize -> string ) =>: export: createZ
     string new return
   end
+  proc( char8 _ ptr i32 -> string ) =>: export: create32
+    iSize cast.u createZ
+  end
+  proc( char8 _ ptr i64 -> string ) =>: export: create64
+    iSize cast.u createZ
+  end
+  overload: export: create createZ create32 create64 end
   proc( i64 : auto: k  char8 k ptr : str -> string ) =>: export: wrap
     str k create return
   end
@@ -30,15 +37,14 @@ namespace: string
   end
 
   proc( string : a string : b -> i32 ) =>: export: compare
-    a .length b .length < if a .length else b .length end =:: l
+    a .length b .length u< if a .length else b .length end =:: l
     a .data b .data l mem.compare
     ..dup 0 != if
       return
     else ..drop end
-    a .length b .length -
-    ..dup 0 > if ..drop
+    a .length b .length u> if
        1 return
-    else 0 < _if
+    else a .length b .length u< _if
       -1 return
     else
        0 return
@@ -49,13 +55,16 @@ namespace: string
   end
   proc( string : str -> i32 ) =>: export: hash
     0 ## hash
-      0:i64 while ..dup str .length < do =:: i
+      0:iSize while ..dup str .length u< do =:: i
         #+hash+# 31 * str .data i [] i32 cast.u +
-        i 1 +
+        i 1:iSize +
       end ..drop
     return
   end
 
+  proc( string : str iSize : index -> char8 ) =>: export: charAt_Z
+    str char8 slice cast index slice.get return
+  end
   proc( string : str i32 : index -> char8 ) =>: export: charAt_32
     str char8 slice cast index slice.get return
   end
@@ -63,86 +72,79 @@ namespace: string
     str char8 slice cast index slice.get return
   end
   overload: export: charAt
+    charAt_Z
     charAt_32
     charAt_64
   end
 
-  proc( string : str char8 : chr -> i64 ) =>: export: indexOf
+  proc( string : str char8 : chr -> iSize optional ) =>: export: indexOf
     str char8 slice cast chr slice.indexOf return
   end
-  proc( string : str char8 : chr -> i64 ) =>: export: lastIndexOf
+  proc( string : str char8 : chr -> iSize optional ) =>: export: lastIndexOf
     str char8 slice cast chr slice.lastIndexOf return
   end
-  proc( string : base string : subStr -> i64 ) =>: export: indexOfStr ## XXX move to slice
-    subStr .length base .length > if
-      -1 return
-    end
-    base .length subStr .length - =:: maxOffset
-    0:i64 while $ maxOffset <= do
-      base .data $1 @[] subStr .length create  subStr compare 0 == if
-        return
-      end
-      1 +
-    end ..drop
-    -1 return
+  proc( string : base string : subStr -> iSize optional ) =>: export: indexOfStr
+    base chars subStr chars char8.eq@ slice.indexOfSlice return
   end
-  proc( string : base string : subStr -> i64 ) =>: export: lastIndexOfStr
-    subStr .length base .length > if
-      -1 return
-    end
-    base .length subStr .length -
-      while $ 0 >= do
-        base .data $1 @[] subStr .length create  subStr compare 0 == if
-          return
-        end
-        1 -
-      end
-    return
+  proc( string : base string : subStr -> iSize optional ) =>: export: lastIndexOfStr
+    base chars subStr chars char8.eq@ slice.lastIndexOfSlice return
   end
   proc( string : base string : subStr -> bool ) =>: export: startsWith
-    subStr .length base .length > if
+    subStr .length base .length u> if
       false return
     end
     base .data subStr .length create subStr compare 0 == return
   end
   proc( string : base string : subStr -> bool ) =>: export: endsWith
-    subStr .length base .length > if
+    subStr .length base .length u> if
       false return
     end
     base .data base .length subStr .length - @[] subStr .length create subStr compare 0 == return
   end
 
   proc( string : str char8 : chr -> bool ) =>: export: contains
-    str char8 slice cast chr slice.indexOf -1 != return
+    str char8 slice cast chr slice.indexOf .data ?? return
   end
   proc( string : base string : subStr -> bool ) =>: export: isSubstring
-    base subStr indexOfStr -1 != return
+    base subStr indexOfStr .data ?? return
   end
 
   ## first n characters
+  proc( string : str iSize : n -> string ) =>: export: headZ
+    str char8 slice cast n slice.head string cast return
+  end
+  proc( string : str iSize optional : n -> string ) =>: export: headO
+    str char8 slice cast n slice.head string cast return
+  end
   proc( string : str i32 : n -> string ) =>: export: head32
     str n i64 cast.s head64
   end
   proc( string : str i64 : n -> string ) =>: export: head64
     str char8 slice cast n slice.head string cast return
   end
-  overload: export: head head32 head64 end
+  overload: export: head headZ headO head32 head64 end
   ## everything excluding the first n characters
+  proc( string : str iSize : n -> string ) =>: export: tailZ
+    str char8 slice cast n slice.tail string cast return
+  end
+  proc( string : str iSize optional : n -> string ) =>: export: tailO
+    str char8 slice cast n slice.tail string cast return
+  end
   proc( string : str i32 : n -> string ) =>: export: tail32
     str n i64 cast.s tail64
   end
   proc( string : str i64 : n -> string ) =>: export: tail64
     str char8 slice cast n slice.tail string cast return
   end
-  overload: export: tail tail32 tail64 end
+  overload: export: tail tailO tailZ tail32 tail64 end
   ## equivalent to:  <from> tail <len> head
-  proc( string : str i64 : from i64 : len -> string ) =>: export: getSlice
+  proc( string : str iSize : from iSize : len -> string ) =>: export: getSlice
     str char8 slice cast from len slice.getSlice string cast return
   end
-  proc( string : str i64 : index -> string string ) =>: export: cutIndex
+  proc( string : str iSize : index -> string string ) =>: export: cutIndex
     str char8 slice cast index slice.cutIndex ..swap string cast ..swap string cast return
   end
-  proc( string : str i64 : index -> string string ) =>: export: splitIndex
+  proc( string : str iSize : index -> string string ) =>: export: splitIndex
     str char8 slice cast index slice.splitIndex ..swap string cast ..swap string cast return
   end
   proc( string : str char8 : chr -> string string ) =>: export: split
@@ -155,9 +157,9 @@ end
 
 ## XXX? implement procedures for string16, string32
 namespace: string16
-  { utf16"" : data 0 : length } string16 =: export: empty
+  { utf16"" : data 0:iSize : length } string16 =: export: empty
 
-  proc( char16 _ ptr  i64 -> string16 ) =>: export: create
+  proc( char16 _ ptr  iSize -> string16 ) =>: export: create
     string16 new return
   end
 
@@ -174,6 +176,9 @@ namespace: string16
     str .data i16 _ ptr cast str .length slice.create
   end
 
+  proc( string16 : str iSize : index -> char16 ) =>: export: get_Z
+    str char16 slice cast index slice.get return
+  end
   proc( string16 : str i32 : index -> char16 ) =>: export: get_32
     str char16 slice cast index slice.get return
   end
@@ -181,6 +186,7 @@ namespace: string16
     str char16 slice cast index slice.get return
   end
   overload: export: get
+    get_Z
     get_32
     get_64
   end
@@ -189,9 +195,9 @@ namespace: string16
   end
 end
 namespace: string32
-  { utf32"" : data 0 : length } string32 =: export: empty
+  { utf32"" : data 0:iSize : length } string32 =: export: empty
 
-  proc( char32 _ ptr  i64 -> string32 ) =>: export: create
+  proc( char32 _ ptr  iSize -> string32 ) =>: export: create
     string32 new return
   end
 
@@ -208,6 +214,9 @@ namespace: string32
     str .data i32 _ ptr cast str .length slice.create
   end
 
+  proc( string32 : str iSize : index -> char32 ) =>: export: get_Z
+    str char32 slice cast index slice.get return
+  end
   proc( string32 : str i32 : index -> char32 ) =>: export: get_32
     str char32 slice cast index slice.get return
   end
@@ -215,6 +224,7 @@ namespace: string32
     str char32 slice cast index slice.get return
   end
   overload: export: get
+    get_Z
     get_32
     get_64
   end
@@ -224,13 +234,13 @@ namespace: string32
 end
 
 namespace: std.literals
-  proc( char8 _ ptr : p i64 : k -> string ) =>: static: export: :string
+  proc( char8 _ ptr : p iSize : k -> string ) =>: static: export: :string
     p k string new
   end
-  proc( char16 _ ptr : p i64 : k -> string16 ) =>: static: export: :string16
+  proc( char16 _ ptr : p iSize : k -> string16 ) =>: static: export: :string16
     p k string16 new
   end
-  proc( char32 _ ptr : p i64 : k -> string32 ) =>: static: export: :string32
+  proc( char32 _ ptr : p iSize : k -> string32 ) =>: static: export: :string32
     p k string32 new
   end
   overload: export: :s

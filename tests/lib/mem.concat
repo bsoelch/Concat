@@ -2,36 +2,36 @@ import mem
 import debug
 
 proc( -> ) =>: main
-  1024 i32 mem.alloc i32 _ ptr.mut =: mut: dynamicArray
+  1024:iSize i32 mem.alloc i32 _ ptr.mut =: mut: dynamicArray
   1 dynamicArray 0 =[]
   2 dynamicArray 1023 =[]
   dynamicArray 0 [] debug.print
-  dynamicArray 2048 mem.realloc dynamicArray=
+  dynamicArray 2048:iSize mem.realloc dynamicArray=
   dynamicArray 1023 [] debug.print
   3 dynamicArray 2047 =[]
-  128 i32 mem.calloc i32 _ ptr.mut =: mut: dynamicArray2
-  dynamicArray2 dynamicArray 128 mem.copy dynamicArray2= 
-  dynamicArray 16 mem.clear dynamicArray=
+  128:iSize i32 mem.calloc i32 _ ptr.mut =: mut: dynamicArray2
+  dynamicArray2 dynamicArray 128:iSize mem.copy dynamicArray2= 
+  dynamicArray 16:iSize mem.clear dynamicArray=
   dynamicArray 0 [] debug.print
   dynamicArray mem.free
   dynamicArray2 0 [] debug.print
   dynamicArray2 1 [] debug.print
-  dynamicArray2 2 @[] dynamicArray2 16 mem.move ..drop
-  dynamicArray2 2 @[]  dynamicArray2 16 mem.move ..drop
-  dynamicArray2 dynamicArray2 1 @[] 16 mem.move ..drop
+  dynamicArray2 2 @[] dynamicArray2 16:iSize mem.move ..drop
+  dynamicArray2 2 @[]  dynamicArray2 16:iSize mem.move ..drop
+  dynamicArray2 dynamicArray2 1 @[] 16:iSize mem.move ..drop
   dynamicArray2 0 [] debug.print
   dynamicArray2 1 [] debug.print
   dynamicArray2 2 [] debug.print
   dynamicArray2 3 [] debug.print
   dynamicArray2 4 [] debug.print
-  "Hello" "World" 5 mem.compare 0 <  debug.print
-  "hello" "World" 5 mem.compare 0 >  debug.print
-  "World" "World" 5 mem.compare 0 == debug.print
+  "Hello" "World" 5:iSize mem.compare 0 <  debug.print
+  "hello" "World" 5:iSize mem.compare 0 >  debug.print
+  "World" "World" 5:iSize mem.compare 0 == debug.print
   
   i32 16 array new =:: mut: a
-  a@ 10 42 mem.fill
-  0:i64 while ..dup a ..length < do
+  a@ 10:iSize 42 mem.fill
+  0:iSize while ..dup a ..length u< do
     a@ ..over [] debug.print
-    1 +
+    1:iSize +
   end ..drop
 end

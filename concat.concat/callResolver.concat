@@ -56,7 +56,7 @@ proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   end
 end
 proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
-  ConstValue ..length 23 == "no new constants" assert
+  ConstValue ..length 23:iSize == "no new constants" assert
   val switch
     Int case
       val .Int types.ArraySize .int return
@@ -249,7 +249,7 @@ proc(
       argBuffer [] .length =:: argOffset
       args for =:: arg
         argBuffer []
-          ConstValue ..length 23 == "no new constants" assert
+          ConstValue ..length 23:iSize == "no new constants" assert
           arg switch
             TypeId case
               arg .TypeId
@@ -414,16 +414,16 @@ proc(
       target typeContext types.getArraySize =:: mut: targetSizes
       ## treat 0D fixed arrays as 1D array of length 1
       1:i64 types.ArraySize .int =:: one
-      srcFixed and srcSizes .length 0 == if
+      srcFixed and srcSizes .length 0:iSize == if
         one@ slice.wrap srcSizes=
       end
-      targetFixed and targetSizes .length 0 == if
+      targetFixed and targetSizes .length 0:iSize == if
         one@ slice.wrap targetSizes=
       end
       srcFixed and targetFixed ! if
-        srcSizes $ .length 1 - slice.head srcSizes=
+        srcSizes $ .length 1:iSize - slice.head srcSizes=
       end
-      srcSizes .length targetSizes .length < if
+      srcSizes .length targetSizes .length u< if
         true return ## target sizes have to be matched
       end
       srcSizes
@@ -468,7 +468,7 @@ proc(
             break
         end
       end
-      newSrcSizes .length 0 > if
+      newSrcSizes .length 0:iSize != if
         ## newArrayType
           src typeContext types.getBaseType
           types.ArrayType .ARRAY
@@ -600,11 +600,11 @@ proc(
 end
 
 proc(
-  i32 : index
+  iSize : index
   CallSignatureInfo list ptr.mut : elts
 -> CallSignatureInfo ptr.mut ) =>: copyElement
   elts [] ## TODO? add procedure for element copy to list
-    $ .length 1 + list.ensureCap
+    $ .length 1:iSize + list.ensureCap
     $ index list.at .data list.appendP
   elts =[]
   elts [] list.peek .data =:: newVal
@@ -670,7 +670,7 @@ proc(
       ## sort non-matching signatures by declaration order
       a .procId i64 cast b .procId i64 cast < if -1 else a .procId b .procId == _if 0 else 1 end return
     end
-    a .paramInfo .length b .paramInfo .length > if
+    a .paramInfo .length b .paramInfo .length u> if
       -1
     else
       1
@@ -699,7 +699,7 @@ proc(
   end
   a .paramInfo .length b .paramInfo .length != if
     ## prefer more parameters
-    a .paramInfo .length b .paramInfo .length > if -1  else 1 end return
+    a .paramInfo .length b .paramInfo .length u> if -1  else 1 end return
   end
   a .signatureWeigth b .signatureWeigth != if
     ## prefer lower weight
@@ -738,7 +738,7 @@ proc(
   end
 end
 
-5:i64 =:: MAX_DISPLAY_ARGS_DEFAULT
+5:iSize =:: MAX_DISPLAY_ARGS_DEFAULT
 5:i32 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
 
 proc(
@@ -753,7 +753,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   idContext .constContext =:: constContext
-  procedureIds .length 0 == if
+  procedureIds .length 0:iSize == if
     errorMessage optional.hasData if
       errorMessage .data []
         "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
@@ -768,7 +768,8 @@ proc(
     procInfo [] .procType
       typeContext types.getProcIn ..drop typeContext types.compositeEltCount
     =:: argCount
-    maxArgs argCount i64 cast i64.max maxArgs=
+    maxArgs argCount iSize cast.u iSize.max maxArgs=
+    ## TODO! do not create a map for every single procedure
     currentSignatures
       ## CallSignatureInfo
         procId
@@ -785,24 +786,24 @@ proc(
       CallSignatureInfo new list.append
     currentSignatures=
   end
-  0:i64 while ..dup stackValues .length <= do =:: stackIndex
-    stackIndex stackValues .length < if
+  0:iSize while $ stackValues .length u<= do =:: stackIndex
+    stackIndex stackValues .length u< if
       stackValues stackIndex slice.at .data [] .valType
     else
       ## add dummy type below stack to ensure auto-arguments get matched
       Type .undefined
     end =:: stackType
-    0:i32 while ..dup currentSignatures .length < do =:: i
+    0:iSize while $ currentSignatures .length u< do =:: i
       currentSignatures i list.at .data =:: mut: current
       current [] .argsMatch ! or current [] .needsParam ! if
         ## don't continue checking if first arguments were no match / all params matched
-        i 1 + continue
+        i 1:iSize + continue
       end
       progContext [] .procedures
         current [] .procId i64 cast list.at .data
       [] .procType typeContext types.getProcIn ..drop =:: inTypes
       inTypes typeContext types.compositeEltCount 1 -
-        current [] .paramInfo .length -
+        current [] .paramInfo .length i32 cast.u -
       =:: mut: paramIndex
       inTypes paramIndex typeContext types.compositeGetElement =:: mut: paramType
       inTypes paramIndex typeContext types.compositeGetLabel =:: mut: paramLabel
@@ -863,10 +864,10 @@ proc(
       end
       paramIndex 0 < if
         false current .needsParam=
-        i 1 + continue
+        i 1:iSize + continue
       end
-      stackIndex stackValues .length >= if
-        i 1 + continue ## no value present
+      stackIndex stackValues .length u>= if
+        i 1:iSize + continue ## no value present
       end
       MatchType .NONE =:: mut: matchType
       paramType typeContext types.isGeneric and
@@ -1000,9 +1001,9 @@ proc(
       paramIndex 0 == and current [] .argsMatch if
         false current .needsParam=
       end
-      i 1 +
+      i 1:iSize +
     end ..drop
-    stackIndex 1 +
+    stackIndex 1:iSize +
   end ..drop
   currentSignatures cmpSignatures@ progContext list.sort
   currentSignatures 0 list.at .data =:: candidate
@@ -1011,8 +1012,8 @@ proc(
     errorMessage optional.hasData if
       errorMessage .data []
         "no matching signature for arguments ( " sb.appendS
-        stackValues .length maxArgs > if "... " sb.appendS end
-        stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
+        stackValues .length maxArgs u> if "... " sb.appendS end
+        stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
           stackValues i slice.at .data =:: val
           val [] .valType typeContext sb.appendType
           val [] .value .None ?? ! if
@@ -1021,10 +1022,10 @@ proc(
             " }" sb.appendS
           end
           "  " sb.appendS
-          i 1 -
+          i 1:iSize -
         end ..drop
         ")\ncandidates:\n" sb.appendS
-        MAX_DISPLAY_SIGNATURES currentSignatures .length i32.min =:: maxSignatures
+        MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
         maxSignatures for =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
@@ -1036,13 +1037,13 @@ proc(
           procInfo [] .labelId labelContext sb.appendLabelPath
           '\n' sb.appendC
         end
-        currentSignatures .length maxSignatures > if "  ...\n" sb.appendS end
+        currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
       errorMessage .data =[]
     end
     currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty NO_PROC Type .undefined return
   end
-  currentSignatures .length 1 > and
+  currentSignatures .length 1:iSize != and
       ## cmpSignatures
         candidate []
         currentSignatures 1 list.at .data []
@@ -1052,8 +1053,8 @@ proc(
     errorMessage optional.hasData if
       errorMessage .data []
         "multiple matching signatures for arguments ( " sb.appendS
-        stackValues .length maxArgs > if "... " sb.appendS end
-        stackValues .length maxArgs i64.min 1 - while ..dup 0 >= do =:: i
+        stackValues .length maxArgs u> if "... " sb.appendS end
+        stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
           stackValues i slice.at .data =:: val
           val [] .valType typeContext sb.appendType
           val [] .value .None ?? ! if
@@ -1062,11 +1063,11 @@ proc(
             " }" sb.appendS
           end
           "  " sb.appendS
-          i 1 -
+          i 1:iSize -
         end ..drop
         ")\npossible matches: \n" sb.appendS
         true =:: mut: isEquivalent
-        MAX_DISPLAY_SIGNATURES currentSignatures .length i32.min =:: maxSignatures
+        MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
         maxSignatures for =:: i
           currentSignatures i list.at .data =:: mut: current
           progContext [] .procedures
@@ -1083,7 +1084,7 @@ proc(
           procInfo [] .labelId labelContext sb.appendLabelPath
           '\n' sb.appendC
         end
-        currentSignatures .length maxSignatures > if "  ...\n" sb.appendS end
+        currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
       errorMessage .data =[]
     end
     currentSignatures@ cleanupSignatures
@@ -1115,7 +1116,7 @@ proc(
   -1:i32 =:: mut: implId
   eltCount Type list.create =:: mut: typeBuffer
   eltCount LabelId list.create =:: mut: labelBuffer
-  constArgs .length 0 > and
+  constArgs .length 0:iSize != and
       progContext [] .procedures
         baseProcId i64 cast list.at .data
       =:: baseProcInfo
@@ -1126,7 +1127,7 @@ proc(
     false =:: mut: isMatch
     impls [] .length for =:: i
       impls [] i list.at .data =:: impl
-      impl [] .staticArgs .length constArgs .length i64 cast == "correct number of static arguments" assert
+      impl [] .staticArgs .length constArgs .length == "correct number of static arguments" assert
       true isMatch=
       constArgs .length for =:: j
         ## constEquals
@@ -1139,13 +1140,13 @@ proc(
         end
       end
       isMatch if
-        i implId=
+        i i32 cast.u implId=
         break
       end
     end
     isMatch ! if ## no matching implementation -> create new one
       impls []
-        ..dup .length implId=
+        $ .length i32 cast.u implId=
         ## ProcImplementation
           ## replaceGenerics
             baseProcInfo [] .procType

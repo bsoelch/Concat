@@ -64,7 +64,7 @@ namespace: number
     return
   end
   proc( string -> string i32 ) =>: export: resolveBase
-    $ .length 2 < if
+    $ .length 2:iSize u< if
       10 return
     end
     $ 0 string.charAt '0' == if
@@ -86,7 +86,7 @@ namespace: number
       end
       2 string.tail b return
     end
-    $ .length 3 > and $ 2 string.charAt 'b' == if ## two digits before b
+    $ .length 3:iSize u> and $ 2 string.charAt 'b' == if ## two digits before b
       $ 0 string.charAt '0' - i32 cast.u =:: mut: b1
       $ 1 string.charAt '0' - i32 cast.u =:: mut: b2
       b1 0 < or b1 9 > or b2 0 < or b2 9 > if
@@ -112,7 +112,7 @@ namespace: number
   end
   proc( string : str -> string bool ) =>: export: parseSign
     str
-      $ .length 0 == if
+      $ .length 0:iSize == if
         false
       else $ 0 string.charAt '-' == _if
         1 string.tail true
@@ -129,7 +129,7 @@ namespace: number
     false =:: mut: signedOverflow
     str
       parseSign =:: sign
-      ..dup .length 0 == if
+      ..dup .length 0:iSize == if
         ..drop 0 ParserError .EMPTY return
       end
       base 0 == if
@@ -147,10 +147,10 @@ namespace: number
       unsigned if maxUnsignedVal else maxSignedVal end =:: maxVal
       maxVal mBase u/ =:: maxSafe
       maxUnsignedVal mBase u/ =:: maxSafeUnsigned
-      0:i64 while $ $2 .length < do =:: i
+      0:iSize while $ $2 .length u< do =:: i
         $ i string.charAt mBase parseDigit
           $ .DIGIT ?? ! if
-            .IGNORED ?? and i 0 > if ..drop i 1 + continue end
+            .IGNORED ?? and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
             ..drop.2
             0 ParserError .INVALID_CHAR return
           else ..drop end
@@ -169,7 +169,7 @@ namespace: number
           end
           delta +
         res= ## add digit to number
-        i 1 +
+        i 1:iSize +
       end ..drop
     ..drop
     res
@@ -199,13 +199,13 @@ namespace: number
   proc( string : str i32 : base -> f64 ParserError ) =>: export: tryParseFloat
     0:i64 =:: mut: c
     false bool =: mut: hasDot
-    0:i64 =:: mut: e
+    0:iSize =:: mut: e
     0:i64 =:: mut: val
     1:i64 59 << =:: mut: maxVal ## higher precision than f64, no overflow in base 62
     false =:: mut: cStyleHex
     str
       parseSign =:: sign
-      ..dup .length 0 == if
+      ..dup .length 0:iSize == if
         ..drop 0 f64 cast ParserError .EMPTY return
       end
       base 0 == if
@@ -218,23 +218,23 @@ namespace: number
       else mBase 2 < or mBase 62 > _if ..drop
         f64.NaN ParserError .INVALID_BASE return
       end
-      0:i64 while ..dup ..over.2 .length < do =:: i
+      0:iSize while ..dup ..over.2 .length u< do =:: i
         ..dup i string.charAt '.' == if
-          i 0 == or hasDot if ..drop ## . cannot be first character
+          i 0:iSize == or hasDot if ..drop ## . cannot be first character
             f64.NaN ParserError .INVALID_CHAR return
           end
           true hasDot=
         else ..dup i string.charAt mBase isExpChar _if
-          i 0 == if ..drop ##-exp char cannot be first character
+          i 0:iSize == if ..drop ##-exp char cannot be first character
             f64.NaN ParserError .INVALID_CHAR return
           end
-          i 1 + e=
+          i 1:iSize + e=
           i break
         else ..dup i string.charAt ..dup 'p' == ..swap 'P' == | mBase 16 == & _if
-          i 0 == if ..drop ##-exp char cannot be first character
+          i 0:iSize == if ..drop ##-exp char cannot be first character
             f64.NaN ParserError .INVALID_CHAR return
           end
-          i 1 + e=
+          i 1:iSize + e=
           true cStyleHex=
           10 mBase= ## exponent written in base 10
           c 4 * c= ## scale c to power of 2
@@ -242,7 +242,7 @@ namespace: number
         else
           $ i string.charAt mBase parseDigit
             $ .DIGIT ?? ! if
-              .IGNORED ?? and i 0 > if ..drop i 1 + continue end
+              .IGNORED ?? and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
               ..drop.2
               f64.NaN ParserError .INVALID_CHAR return
             else ..drop end
@@ -256,9 +256,9 @@ namespace: number
             c 1 + c=
           end
         end
-        i 1 +
+        i 1:iSize +
       end ..drop
-      e 0 > if
+      e 0:iSize iSize.sgt if
         ..dup e string.tail mBase tryParseInt
           ..dup .NONE ?? ! if =:: err
             ..drop.2 f64.NaN err return
@@ -278,6 +278,6 @@ namespace: number
     else
        mBase f64 cast c powI *
     end
-    hasDot or e 0 > if ParserError .NONE return else ParserError .INT return end
+    hasDot or e 0:iSize iSize.sgt if ParserError .NONE return else ParserError .INT return end
   end
 end

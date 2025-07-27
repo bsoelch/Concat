@@ -1,19 +1,19 @@
 import string
 import debug
 
-proc( i64 : auto: k char8 k ptr : str -> string i64 ) =>: startItr
-  str string.wrap 0
+proc( iSize : auto: k char8 k ptr : str -> string iSize ) =>: startItr
+  str string.wrap 0:iSize
 end
-proc( string i64 -> string i64 char8 bool ) =>: nextChar
+proc( string iSize -> string iSize char8 bool ) =>: nextChar
   =:: i
   =:: s
   s
-    i s .length >= if
+    i s .length u>= if
       i '\x00'  false return
     end
-    i 1 +  s i string.charAt true return
+    i 1:iSize +  s i string.charAt true return
 end
-proc( string i64 char8 -> ) =>: endItr
+proc( string iSize char8 -> ) =>: endItr
   ..drop ..drop ..drop
 end
 

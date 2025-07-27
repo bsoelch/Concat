@@ -4,8 +4,8 @@ import debug
 
 proc( -> ) =>: main
   "Hello World!" io.puts io.FILE_ERROR_NONE == "puts works" assert
-  "Hello World!" string.wrap "World" string.wrap  string.indexOfStr debug.print
-  "Hello World!" string.wrap "substring" string.wrap string.indexOfStr debug.print
+  "Hello World!" string.wrap "World" string.wrap  string.indexOfStr .data debug.print
+  "Hello World!" string.wrap "substring" string.wrap string.indexOfStr .data ?? debug.print
   "Hello World!" string.wrap 'o' string.contains debug.print
   "This sentence will be split into Worlds!" string.wrap ' ' printSplit
 end
@@ -15,12 +15,12 @@ proc( string : str char8 : chr -> ) =>: printSplit
   str 
   while
     chr string.split printStr
-    ..dup .length 0 >
+    $ .length 0:iSize u>
   do end ..drop
 end
 
 proc( string : str -> ) =>: printStr
-  io.stdOut str .data 0 str .length io.fwrite ..drop.2
+  io.stdOut str .data 0:iSize str .length io.fwrite ..drop.2
   io.stdOut  '\n' io.fputc ..drop
 end
 

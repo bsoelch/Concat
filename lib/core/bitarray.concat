@@ -14,7 +14,7 @@ namespace: bitarray._internal
     bitsType : data
     i32 : index
   -> bool ) =>: get
-    bitsType ..types.size 8 * =:: static: bitCount
+    bitsType ..types.size i32 cast.u 8 * =:: static: bitCount
     bitCount 32 <= if i32 else bitsType ..types.unwrapNamed end =:: intType
     1 intType cast.u index << =:: bitMask
     data intType cast.u bitMask & ?
@@ -24,7 +24,7 @@ namespace: bitarray._internal
     bitsType : data
     i32 : index
   -> bitsType ) =>: set
-    bitsType ..types.size 8 * =:: static: bitCount
+    bitsType ..types.size i32 cast.u 8  * =:: static: bitCount
     bitCount 32 <= if i32 else bitsType ..types.unwrapNamed end =:: intType
     1 intType cast.u index << =:: bitMask
     data intType cast.u

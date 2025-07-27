@@ -54,16 +54,16 @@ namespace: mem
   proc( type : T -> T _ ptr.mut ) =>: export: nullPtr
     c.nullPtr T _ ptr.mut cast! return
   end
-  proc( i64 : n type : T -> T _ ptr.mut ) =>: export: alloc
-    n 0 == if
+  proc( iSize : n type : T -> T _ ptr.mut ) =>: export: alloc
+    n 0:iSize == if
       c.nullPtr T _ ptr.mut cast! return
     end
     ## malloc
       n T ..types.stride * ..ctype.size cast
     c.malloc checkPtr T _ ptr.mut cast! return
   end
-  proc( i64 : n type : T -> T _ ptr.mut ) =>: export: calloc
-    n 0 == if
+  proc( iSize : n type : T -> T _ ptr.mut ) =>: export: calloc
+    n 0:iSize == if
       c.nullPtr T _ ptr.mut cast! return
     end
     ## calloc
@@ -74,9 +74,9 @@ namespace: mem
   proc(
     type : auto: T
     T _ ptr.mut : prev
-    i64 : n
+    iSize : n
   -> T _ ptr.mut ) =>: export: realloc
-    n 0 == if
+    n 0:iSize == if
       prev free
       c.nullPtr T _ ptr.mut cast! return
     end
@@ -92,13 +92,13 @@ namespace: mem
   proc(
     type : auto: T
     T _ ptr.mut : src
-    i64 : n
+    iSize : n
   -> T _ ptr.mut ) =>: export: clear
-    n 0 <= if
+    n 0:iSize == if
       src return
     end
     ## memset
-      n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
+      n 1:iSize == if T ..types.size else T ..types.stride n * end ..ctype.size cast
       0 ..ctype.int cast
       src ..ctype.void _ ptr.mut cast!
     c.memset checkPtr T _ ptr.mut cast! return
@@ -107,9 +107,9 @@ namespace: mem
     type : auto: T
     T _ ptr.mut : target
     T _ ptr : src
-    i64 : n
+    iSize : n
   -> T _ ptr.mut ) =>: export: copy
-    n 0 <= if
+    n 0:iSize == if
       target return
     end
     src target == if
@@ -117,7 +117,7 @@ namespace: mem
       target return
     end
     ## memcpy
-      n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
+      n 1:iSize == if T ..types.size else T ..types.stride n * end ..ctype.size cast
       src ..ctype.void _ ptr cast!
       target ..ctype.void _ ptr.mut cast!
     c.memcpy checkPtr T _ ptr.mut cast! return
@@ -126,9 +126,9 @@ namespace: mem
     type : auto: T
     T _ ptr.mut : target
     T _ ptr : src
-    i64 : n
+    iSize : n
   -> T _ ptr.mut ) =>: export: move
-    n 0 <= if
+    n 0:iSize == if
       target return
     end
     src target == if
@@ -136,7 +136,7 @@ namespace: mem
       target return
     end
     ## memmove
-      n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
+      n 1:iSize == if T ..types.size else T ..types.stride n * end ..ctype.size cast
       src ..ctype.void _ ptr cast!
       target ..ctype.void _ ptr.mut cast!
     c.memmove checkPtr T _ ptr.mut cast! return
@@ -145,13 +145,13 @@ namespace: mem
     type : auto: T
     T _ ptr : a
     T _ ptr : b
-    i64 : n
+    iSize : n
   -> i32 ) =>: export: compare
-    n 0 <= if
+    n 0:iSize == if
       0 return
     end
     ## memcmp
-      n 1 == if T ..types.size else T ..types.stride n * end ..ctype.size cast
+      n 1:iSize == if T ..types.size else T ..types.stride n * end ..ctype.size cast
       b ..ctype.void _ ptr cast!
       a ..ctype.void _ ptr cast!
     c.memcmp i32 cast return
@@ -159,12 +159,12 @@ namespace: mem
   proc(
     type : auto: T
     T _ ptr.mut : data
-    i64 : count
+    iSize : count
     T : elt
   -> ) =>: export: fill
-    0:i64 while ..dup count < do
+    0:iSize while ..dup count u< do
       elt data ..over.2 =[]
-      1 +
+      1:iSize +
     end ..drop
   end
 end

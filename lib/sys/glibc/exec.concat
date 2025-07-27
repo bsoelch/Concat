@@ -41,7 +41,7 @@ namespace: exec
     end
     childId c.FORK_CHILD == if
       ## child process
-      context .argOffsets .length 1 + i64 cast.u
+      context .argOffsets .length 1:iSize +
         ..ctype.char _ ptr.mut
       mem.alloc =:: argsPtr
       context .argOffsets .length for =:: i

@@ -31,16 +31,16 @@ namespace: interpreter
 
   struct(
     BlockType : blockType
-    i32 : stackOffset
-    i32 : typeOffset
-    i32 : valueOffset
-    i32 : labelOffset
+    iSize : stackOffset
+    iSize : typeOffset
+    iSize : valueOffset
+    iSize : labelOffset
   ) =:: BlockInfo
 
   enum( GLOBAL INTERPRET ) =:: export: InterpreterType
   struct(
-    i32 : blockCount
-    i32 : stackSize
+    iSize : blockCount
+    iSize : stackSize
     InterpreterType : evalType
   ) =:: InterpreterState
 end
@@ -122,7 +122,7 @@ namespace: interpreter
   proc(
     InterpreterContext ptr.mut : context
   -> ) =>: export: resetContext
-    context [] .stateStack .length 0 == if
+    context [] .stateStack .length 0:iSize == if
       ## TODO error
       return
     end
@@ -139,7 +139,7 @@ namespace: interpreter
   proc(
     InterpreterContext ptr.mut : context
   -> ) =>: resetContextKeepStack
-    context [] .stateStack .length 0 == if
+    context [] .stateStack .length 0:iSize == if
       ## TODO error
       return
     end
@@ -153,14 +153,13 @@ namespace: interpreter
   end
 
   proc(
-    i32 : count
+    iSize : count
     string : name
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: checkStack
     context minStackOffset =:: offset
-    offset 0 >= "offset is non-negative" assert
-    context [] .stack .length offset - count < if
+    context [] .stack .length offset - count iSize.slt if
       "not enough arguments for " sb.copyPtr
         name sb.appendStr
         " expected: " sb.appendS
@@ -172,27 +171,27 @@ namespace: interpreter
     end
     false return
   end
-  proc( InterpreterContext ptr.mut : context -> i32 ) =>: minStackOffset
-    context [] .stateStack .length 0 > if
+  proc( InterpreterContext ptr.mut : context -> iSize ) =>: minStackOffset
+    context [] .stateStack .length 0:iSize != if
       context [] .stateStack list.peek .data =:: rootState
       rootState [] .stackSize rootState [] .blockCount
-    else 0 0 end =:: baseBlock =:: baseOffset
-    context [] .openBlocks .length baseBlock > if
+    else 0:iSize 0:iSize end =:: baseBlock =:: baseOffset
+    context [] .openBlocks .length baseBlock u> if
       context [] .openBlocks list.peek .data [] .stackOffset return
     end
     baseOffset return
   end
-  proc( InterpreterContext ptr.mut : context -> i32 ) =>: minBlockOffset
-    context [] .stateStack .length 0 > if
+  proc( InterpreterContext ptr.mut : context -> iSize ) =>: minBlockOffset
+    context [] .stateStack .length 0:iSize != if
       context [] .stateStack list.peek .data [] .blockCount return
     end
-    0 return
+    0:iSize return
   end
 
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inEnum
     ## XXX cache number of open enum blocks
     context minBlockOffset =:: minBlock
-    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+    context [] .openBlocks .length 1:iSize - while $ minBlock iSize.sge do =:: i
       context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_ENUM case
           true return
@@ -207,13 +206,13 @@ namespace: interpreter
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE case break
       end
-    finally i 1 - end ..drop
+    finally i 1:iSize - end ..drop
     false return
   end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inUnion
     ## XXX cache/precompute result
     context minBlockOffset =:: minBlock
-    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+    context [] .openBlocks .length 1:iSize - while $ minBlock iSize.sge do =:: i
       context [] .openBlocks i list.at .data [] .blockType switch
         TYPE_UNION TYPE_UNTAGGED_UNION case
            true return
@@ -227,13 +226,13 @@ namespace: interpreter
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
             NAMESPACE case break
       end
-    finally i 1 - end ..drop
+    finally i 1:iSize - end ..drop
     false return
   end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeOrInitializer
     ## XXX cache/precompute result
     context minBlockOffset =:: minBlock
-    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+    context [] .openBlocks .length 1:iSize - while $ minBlock iSize.sge do =:: i
       context [] .openBlocks i list.at .data [] .blockType switch
         INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_TYPESET case
@@ -247,13 +246,13 @@ namespace: interpreter
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
             NAMESPACE case break
       end
-    finally i 1 - end ..drop
+    finally i 1:iSize - end ..drop
     false return
   end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBlock
     ## XXX cache/precompute result
     context minBlockOffset =:: minBlock
-    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+    context [] .openBlocks .length 1:iSize - while $ minBlock iSize.sge do =:: i
       context [] .openBlocks i list.at .data [] .blockType switch
         IF_FALSE AND_FALSE OR_TRUE ELSE_TRUE case
            true return
@@ -265,7 +264,7 @@ namespace: interpreter
           AND OR AND_IF OR_IF AND_DO OR_DO
           NAMESPACE case break
       end
-    finally i 1 - end ..drop
+    finally i 1:iSize - end ..drop
     false return
   end
 
@@ -292,7 +291,7 @@ namespace: interpreter
   proc(
     InterpreterContext ptr.mut : context
   -> BlockInfo ptr.mut optional ) =>: peekBlock
-    context [] .openBlocks .length context minBlockOffset <= if
+    context [] .openBlocks .length context minBlockOffset u<= if
       BlockInfo ptr.mut optional.empty return
     end
     context [] .openBlocks list.peek return
@@ -300,7 +299,7 @@ namespace: interpreter
   proc(
     InterpreterContext ptr.mut : context
   -> BlockInfo optional ) =>: popBlock
-    context [] .openBlocks .length context minBlockOffset <= if
+    context [] .openBlocks .length context minBlockOffset u<= if
       BlockInfo optional.empty return
     end
     context [] .openBlocks
@@ -308,7 +307,7 @@ namespace: interpreter
     context .openBlocks=
     result optional.wrap return
   end
-  BlockType ..length 40 == "number of block types" assert
+  BlockType ..length 40:iSize == "number of block types" assert
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
     context peekBlock =:: current
     current optional.isEmpty if false return end
@@ -336,10 +335,10 @@ namespace: interpreter
   end
 
   enum( NONE TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
-  proc( InterpreterContext ptr.mut : context -> i32 LabeledValueContext ) =>: getLabeledValueContext
+  proc( InterpreterContext ptr.mut : context -> iSize LabeledValueContext ) =>: getLabeledValueContext
     ## XXX cache/precompute result
     context minBlockOffset =:: minBlock
-    context [] .openBlocks .length 1 - while $ minBlock >= do =:: i
+    context [] .openBlocks .length 1:iSize - while $ minBlock iSize.sge do =:: i
       context [] .openBlocks i list.at .data =:: block
       block [] .blockType switch
         INITIALIZER case
@@ -360,13 +359,13 @@ namespace: interpreter
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           NAMESPACE TYPE_TYPESET case break
       end
-    finally i 1 - end ..drop
+    finally i 1:iSize - end ..drop
     ## TODO? better default value/error condition
-    -1 LabeledValueContext .NONE return
+    -1:iSize LabeledValueContext .NONE return
   end
   proc(
     LabelId : label
-    i32 : initialLabelOffset
+    iSize : initialLabelOffset
     LabeledValueContext : valueContext
     FilePosition : pos
     InterpreterContext ptr.mut : context
@@ -377,7 +376,7 @@ namespace: interpreter
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     context .labelBuffer =:: labels
-    initialLabelOffset while $ labels [] .length < do =:: i
+    initialLabelOffset while $ labels [] .length u< do =:: i
       labels [] i list.get =:: prevLabel
       prevLabel label labelContext id.labelNamesEq if
         "duplicate label \"" sb.copyPtr
@@ -399,13 +398,13 @@ namespace: interpreter
         end
         pos errors appendError
       end
-    finally i 1 + end ..drop
+    finally i 1:iSize + end ..drop
   end
   proc(
     LabelId : label
     ConstValue : value
     Type : valueType
-    i32 : initialLabelOffset
+    iSize : initialLabelOffset
     LabeledValueContext : valueContext
     FilePosition : pos
     InterpreterContext ptr.mut : context
@@ -470,8 +469,8 @@ namespace: interpreter
   end
 
   proc(
-    i32 : stackOffset
-    i32 : initialLabelOffset
+    iSize : stackOffset
+    iSize : initialLabelOffset
     LabeledValueContext : valueContext
     FilePosition : pos
     InterpreterContext  ptr.mut : context
@@ -480,8 +479,8 @@ namespace: interpreter
     context [] .program .idContext =:: idContext
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
-    context [] .stack .length stackOffset > if
-      stackOffset while $ context [] .stack .length < do =:: i
+    context [] .stack .length stackOffset u> if
+      stackOffset while $ context [] .stack .length u< do =:: i
         context [] .stack i list.at .data =:: eltVal
         context [] .stackInfo i list.at .data =:: eltInfo
         valueContext switch
@@ -510,7 +509,7 @@ namespace: interpreter
         context addLabeledValue if
           true return
         end
-      finally i 1 + end ..drop
+      finally i 1:iSize + end ..drop
       ## truncate stack
       stackOffset context truncateStack
     end
@@ -540,7 +539,7 @@ namespace: interpreter
     closedBlock [] .typeOffset =:: typeOffset
     context [] .labelBuffer .length labelOffset - =:: elementCount
     context [] .typeBuffer .length typeOffset - elementCount == "type count == label count" assert
-    0:i32 while $ elementCount < do =:: i
+    0:iSize while $ elementCount u< do =:: i
       context [] .typeBuffer typeOffset i + list.at .data []
         typeContext types.unwrapNamed
       =:: eltType
@@ -549,7 +548,7 @@ namespace: interpreter
       eltType typeContext types.isType if
         eltLabel id.FLAG_STATIC labelContext id.addLabelFlags
       end
-    finally i 1 + end ..drop
+    finally i 1:iSize + end ..drop
     false return
   end
 
@@ -596,10 +595,10 @@ namespace: interpreter
     closedBlock [] .labelOffset =:: labelOffset
     closedBlock [] .valueOffset =:: valueOffset
     closedBlock [] .typeOffset =:: typeOffset
-    context [] .typeBuffer .length typeOffset - 1 < or
+    context [] .typeBuffer .length typeOffset - 1:iSize iSize.slt or
         ## last argument is procedure output
         context [] .typeBuffer
-          $ .length 1 -
+          $ .length 1:iSize -
         list.get .procOut ?? ! if
       "missing return type for procedure" sb.copyPtr op [] .pos errors appendError
       true return
@@ -698,7 +697,7 @@ namespace: interpreter
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> ValueInfo ConstValue bool ) =>: popValue
-    context [] .stack .length 0 == if
+    context [] .stack .length 0:iSize == if
       "stack underflow " sb.copyPtr
       pos context [] .program .errors appendError
       ## return
@@ -745,11 +744,11 @@ namespace: interpreter
     end ..drop
   end
   proc(
-    i32 : newLength
+    iSize : newLength
     InterpreterContext ptr.mut : context
   -> ) =>: truncateStack
     context [] .stack .length context [] .stackInfo .length == "len(stack)=len(stackInfo)" assert
-    context [] .stack .length newLength >= "newLength<length" assert
+    context [] .stack .length newLength u>= "newLength<length" assert
     context [] .stack
       newLength list.setLength
     context .stack=
@@ -832,17 +831,17 @@ namespace: interpreter
     else allowArray ! _if
       string.empty true return
     end
-    value .Array ?? and value .Array .length 2 == if
+    value .Array ?? and value .Array .length 2:iSize == if
       value .Array
-    else value .LocalArray ?? and value .LocalArray .length 2 == _if
+    else value .LocalArray ?? and value .LocalArray .length 2:iSize == _if
       value .LocalArray ConstValue slice.mut cast slice.freeze
     else
       string.empty true return
     end =:: str
     str 1 slice.get .Int ?? ! if string.empty true return end
-    str 1 slice.get .Int =:: length
+    str 1 slice.get .Int iSize cast.u =:: length
     persistentCopy str 0 slice.get false constContext constValueAsString =:: isErr
-      $ .length length < if true return end
+      $ .length length u< if true return end
       length string.head
     isErr return
   end
@@ -949,7 +948,7 @@ namespace: interpreter
       end
       valType typeContext types.getArraySize =:: sizes
       isLength if
-        sizes .length 0 == if
+        sizes .length 0:iSize == if
           ## return
             types.I_SIZE
             1 ConstValue .Int
@@ -957,7 +956,7 @@ namespace: interpreter
           return
         end
         sizes
-          ..dup .length 1 -
+          $ .length 1:iSize -
         slice.get =:: outerSize
         outerSize .int ?? if
           ## return
@@ -979,8 +978,7 @@ namespace: interpreter
         end
       else
         idContext [] .argBuffer .length =:: offset
-        0:i64 while ..dup sizes .length < do =:: i
-          sizes i slice.get =:: current
+        sizes for =:: current
           idContext [] .argBuffer
             current .int ?? if
               current .int ConstValue .Int list.append
@@ -993,9 +991,8 @@ namespace: interpreter
               Type .undefined ConstValue .None true return
             end
           idContext .argBuffer=
-          i 1 +
-        end ..drop
-        sizes .length types.ArraySize .int =:: sizeLength
+        end
+        sizes .length i64 cast.u types.ArraySize .int =:: sizeLength
         ## return
           ## newArrayType
             types.I_SIZE
@@ -1402,12 +1399,12 @@ namespace: interpreter
       ## don't copy pointers
       localArray return
     end
-    ConstValue ..length 23 == "no new constants" assert
+    ConstValue ..length 23:iSize == "no new constants" assert
     localArray switch
       LocalArray case break
       LocalArray8 case
         localArray .LocalArray8 i8 slice.mut cast =:: arrayData
-        localArray .LocalArray8 .length 1 == and valType typeContext types.isIntLike if
+        localArray .LocalArray8 .length 1:iSize == and valType typeContext types.isIntLike if
           arrayData 0 slice.get i64 cast.u ConstValue .Int return
         end
         allocator []
@@ -1416,7 +1413,7 @@ namespace: interpreter
         tmpArray slice.freeze constContext newArray8Const return
       LocalArray16 case
         localArray .LocalArray16 i16 slice.mut cast =:: arrayData
-        arrayData .length 1 == and valType typeContext types.isIntLike if
+        arrayData .length 1:iSize == and valType typeContext types.isIntLike if
           arrayData 0 slice.get i64 cast.u ConstValue .Int return
         end
         allocator []
@@ -1425,7 +1422,7 @@ namespace: interpreter
         tmpArray slice.freeze constContext newArray16Const return
       LocalArray32 case
         localArray .LocalArray32 i32 slice.mut cast =:: arrayData
-        arrayData .length 1 == and valType typeContext types.isIntLike if
+        arrayData .length 1:iSize == and valType typeContext types.isIntLike if
           arrayData 0 slice.get i64 cast.u ConstValue .Int return
         end
         allocator []
@@ -1434,7 +1431,7 @@ namespace: interpreter
         tmpArray slice.freeze constContext newArray32Const return
       LocalArray64 case
         localArray .LocalArray64 i64 slice.mut cast =:: arrayData
-        arrayData .length 1 == and valType typeContext types.isIntLike if
+        arrayData .length 1:iSize == and valType typeContext types.isIntLike if
           arrayData 0 slice.get ConstValue .Int return
         end
         allocator []
@@ -1456,7 +1453,7 @@ namespace: interpreter
       else
         valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
-      ConstValue ..length 23 == "no new constants" assert
+      ConstValue ..length 23:iSize == "no new constants" assert
       elt switch
         LocalValue case elt .LocalValue ConstValue ptr.mut cast [] break
         LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
@@ -1483,7 +1480,7 @@ namespace: interpreter
       context .localMemory=
       localAddress LocalAddress cast ConstValue .LocalValue return
     end
-    ConstValue ..length 23 == "no new constants" assert
+    ConstValue ..length 23:iSize == "no new constants" assert
     value switch
       Array LocalArray case break
       Array8 case
@@ -1592,8 +1589,8 @@ namespace: interpreter
     else dataType typeContext types.isArray _if
       ## XXX? merge with previous case
       dataType typeContext types.getArraySize =:: arraySizes
-      arraySizes .length 0 > if
-        arraySizes $ .length 1 - slice.get =:: arraySize
+      arraySizes .length 0:iSize != if
+        arraySizes $ .length 1:iSize - slice.get =:: arraySize
         arraySize .int ?? if
           arraySize .int
         else
@@ -1722,10 +1719,10 @@ namespace: interpreter
     ## TODO? print only up to some stack offset
     maxCount 0 > if
       context [] .stack .length
-        maxCount -
-      0 i32.max
-    else 0 end =:: minOffset
-    context [] .stack .length 1 - while $ minOffset >= do =:: i
+        maxCount iSize cast.u -
+      0:iSize iSize.max
+    else 0:iSize end =:: minOffset
+    context [] .stack .length 1:iSize - while $ minOffset iSize.sge do =:: i
       context [] .stack i list.at .data =:: value
       context [] .stackInfo i list.at .data =:: valueInfo
       sb
@@ -1744,7 +1741,7 @@ namespace: interpreter
         end
         '\n' sb.appendC
       sb=
-    finally i 1 - end ..drop
+    finally i 1:iSize - end ..drop
     sb
       "-----------------\n" sb.appendS
       io.stdOut $1 io.fputSb ..drop
@@ -2020,7 +2017,7 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .evalType .INTERPRET ?? if
-        BlockType ..length 40 == "no-new block-types" assert
+        BlockType ..length 40:iSize == "no-new block-types" assert
         blockType switch
           ELSE SWITCH AND OR case EvalResult .Ok return
           WHILE case
@@ -2158,7 +2155,7 @@ proc(
           stackSize closedBlock .stackOffset - =:: eltCount
           ## TODO? create temp-allocator in context
           eltCount types.TypeSetEntry list.create
-            closedBlock .stackOffset while $ stackSize < do =:: i
+            closedBlock .stackOffset while $ stackSize u< do =:: i
               context [] .stack i list.get =:: value
               value .TypeId ?? if
                 value .TypeId typeContext types.isTypeSet ! if
@@ -2175,7 +2172,7 @@ proc(
                   value typeContext sb.appendConstant
                 context [] .stackInfo i list.at .data [] .pushedAt errors appendError
               end
-            finally i 1 + end ..drop
+            finally i 1:iSize + end ..drop
           =:: typeSetElements
           id.LABEL_ID_NONE typeSetElements list.asSlice typeContext types.newTypeSet =:: typeSet
           typeSetElements list.free ..drop
@@ -2262,7 +2259,7 @@ proc(
             op [] .pos errors appendError
           end
           context getLabeledValueContext =:: valueContext =:: initialLabelOffset
-          1 "field-declaration":s op [] .pos context checkStack if
+          1:iSize "field-declaration":s op [] .pos context checkStack if
             EvalResult .Error return
           end
           context [] .stackInfo
@@ -2355,14 +2352,14 @@ proc(
             EvalResult .Error return
           end =:: procedures
           context [] .stack .length StackValue list.create =:: mut: stackValues
-          context [] .stack .length 1 - while $ 0 >= do =:: i
+          context [] .stack .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
             stackValues
               ## StackValue
                 context [] .stackInfo i list.at .data [] .valueType
                 context [] .stack i list.at .data []
               StackValue new list.append
             stackValues=
-          finally i 1 - end ..drop
+          finally i 1:iSize - end ..drop
           ## resolve correct call for given arguments
           0 sb.create =:: mut: message
           ## resolveCall
@@ -2374,7 +2371,7 @@ proc(
           resolveCall =:: calledType
             ..drop ## callProcId
           =:: calledProc?
-          message .length 0 > if
+          message .length 0:iSize != if
             calledProc? optional.isEmpty if
               message op [] .pos errors appendError
             else
@@ -2628,24 +2625,30 @@ proc(
     typeModifier case
         true =:: mut: fixedSize
         context minStackOffset =:: minOffset
-        context [] .stack .length 1 - =:: mut: offset
-        offset minOffset > and context [] .stack offset list.get .WildCard ?? if
+        context [] .stack .length 0:iSize == if
+          "missing type parameter for type-modifier " sb.copyPtr
+            op [] .val .typeModifier sb.appendTypeModifier
+          op [] .pos errors appendError
+          EvalResult .Error return
+        end
+        context [] .stack .length 1:iSize - =:: mut: offset
+        offset minOffset u> and context [] .stack offset list.get .WildCard ?? if
           false fixedSize=
-          offset 1 - offset=
+          offset 1:iSize - offset=
         end
         0:i32 =:: mut: intArgs
-        offset while $ minOffset >= do =:: i
+        offset while $ minOffset iSize.sge do =:: i
           context [] .stackInfo i list.at .data [] .valueType typeContext types.isInt ! if
             i break
           end
           intArgs 1 + intArgs=
-        finally i 1 - end offset=
+        finally i 1:iSize - end offset=
         idContext [] .arraySizeBuffer
           list.clear
           intArgs list.ensureCap
         idContext .arraySizeBuffer=
-        1:i32 while ..dup intArgs <= do
-          context [] .stack offset ..over.2 + list.get =:: intArg
+        1:iSize while $ intArgs iSize cast.u u<= do
+          context [] .stack offset $2 + list.get =:: intArg
           intArg .Int ?? if
             ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
@@ -2658,11 +2661,11 @@ proc(
           else
             "unexpected constant for array size: " sb.copyPtr
               intArg typeContext sb.appendConstant
-            context [] .stackInfo ..over.2 list.at .data [] .pushedAt errors appendError
+            context [] .stackInfo $2 list.at .data [] .pushedAt errors appendError
           end
-          1 +
+          1:iSize +
         end ..drop
-        offset minOffset < if
+        offset minOffset u< if
           "missing type parameter for type-modifier " sb.copyPtr
             op [] .val .typeModifier sb.appendTypeModifier
           op [] .pos errors appendError
@@ -3005,7 +3008,7 @@ proc(
       EvalResult .Ok return
     autoCast case
       op [] .val .autoCast =:: castInfo
-      castInfo .offset 1 + =:: offset
+      castInfo .offset 1 + iSize cast.u =:: offset
       offset
         "autoCast":s
       op [] .pos context checkStack if
@@ -3024,7 +3027,7 @@ proc(
       ValueInfo new context [] .stackInfo $ .length offset - list.set
       EvalResult .Ok return
     bitCast case
-      1 "bitCast":s op [] .pos context checkStack if
+      1:iSize "bitCast":s op [] .pos context checkStack if
         EvalResult .Error return
       end
       op [] .val .bitCast =:: src
@@ -3033,12 +3036,12 @@ proc(
       dst typeContext types.unwrapNamed =:: rawDst
       rawSrc rawDst types.typeEquals if
         ## simply rename type
-        dst context [] .stackInfo $ .length 1 - @[] .valueType=
+        dst context [] .stackInfo $ .length 1:iSize - @[] .valueType=
         EvalResult .Ok return
       else rawSrc types.isPrimitive and rawDst types.isPrimitive _if
         rawSrc typeContext types.primitiveValue =:: srcPrimitive
         rawDst typeContext types.primitiveValue =:: dstPrimitive
-        context [] .stack $ .length 1 - @[] =:: stackVal
+        context [] .stack $ .length 1:iSize - @[] =:: stackVal
         srcPrimitive .F32 ?? and dstPrimitive .I32 ?? if
           stackVal []
             constAsFloat if ..drop
@@ -3048,7 +3051,7 @@ proc(
               EvalResult .Error return
             end f32 cast i32 ..bitcast i64 cast ConstValue .Int
           stackVal =[]
-          dst context [] .stackInfo $ .length 1 - @[] .valueType=
+          dst context [] .stackInfo $ .length 1:iSize - @[] .valueType=
           EvalResult .Ok return
         else srcPrimitive .F64 ?? and dstPrimitive .I64 ?? _if
           stackVal []
@@ -3059,7 +3062,7 @@ proc(
               EvalResult .Error return
             end f64 cast i64 ..bitcast ConstValue .Int
           stackVal =[]
-          dst context [] .stackInfo $ .length 1 - @[] .valueType=
+          dst context [] .stackInfo $ .length 1:iSize - @[] .valueType=
           EvalResult .Ok return
         else srcPrimitive .I32 ?? and dstPrimitive .F32 ?? _if
           stackVal []
@@ -3070,7 +3073,7 @@ proc(
               EvalResult .Error return
             end i32 cast f32 ..bitcast f64 cast ConstValue .Float
           stackVal =[]
-          dst context [] .stackInfo $ .length 1 - @[] .valueType=
+          dst context [] .stackInfo $ .length 1:iSize - @[] .valueType=
           EvalResult .Ok return
         else srcPrimitive .I64 ?? and dstPrimitive .F64 ?? _if
           stackVal []
@@ -3081,7 +3084,7 @@ proc(
               EvalResult .Error return
             end i64 cast f64 ..bitcast ConstValue .Float
           stackVal =[]
-          dst context [] .stackInfo $ .length 1 - @[] .valueType=
+          dst context [] .stackInfo $ .length 1:iSize - @[] .valueType=
           EvalResult .Ok return
         end
       end
@@ -3099,7 +3102,7 @@ proc(
         context [] .stackInfo
           list.peek .data [] .valueType
         =:: valType
-        ConstValue ..length 23 == "no new constants" assert
+        ConstValue ..length 23:iSize == "no new constants" assert
         value? .data [] switch
           LocalValue case
             value? .data []
@@ -3163,7 +3166,7 @@ proc(
         EvalResult .Error return
       end =:: msg ..drop
       msg sb.fromStr
-        context [] .callPositions .length 0 > if
+        context [] .callPositions .length 0:iSize != if
           context [] .callPositions list.peek .data []
         else
           op [] .pos
@@ -3291,15 +3294,15 @@ proc(
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case
-          op [] .val .stackMod .n
+          op [] .val .stackMod .n iSize cast.u
             "drop":s
           op [] .pos context checkStack if
             EvalResult .Error return
           end
-          context [] .stack .length op [] .val .stackMod .n - context truncateStack
+          context [] .stack .length op [] .val .stackMod .n iSize cast.u - context truncateStack
           EvalResult .Ok return
         COPY case
-          op [] .val .stackMod .n 1 + =:: offset
+          op [] .val .stackMod .n 1 + iSize cast.u =:: offset
           offset
             "stack modification":s
           op [] .pos context checkStack if
@@ -3315,7 +3318,7 @@ proc(
         ROTATE case
           op [] .val .stackMod .n =:: offset
           offset 1 == "! rotation is only implemented for two elements" assert
-          2
+          2:iSize
             "swap":s
           op [] .pos context checkStack if
             EvalResult .Error return
@@ -3415,8 +3418,8 @@ namespace: interpreter
       nArgs 1 + nArgs=
     end
     ## bring arguments in correct order
-    values nArgs array.reverse
-    valInfos nArgs array.reverse
+    values nArgs iSize cast.u array.reverse
+    valInfos nArgs iSize cast.u array.reverse
     builtIn
       inType
       values
@@ -3448,16 +3451,16 @@ namespace: interpreter
             i 1 +
           end ..drop
         pos errors appendError
-        values nArgs array.reverse
-        valInfos nArgs array.reverse
+        values nArgs iSize cast.u array.reverse
+        valInfos nArgs iSize cast.u array.reverse
         values valInfos nArgs context unpopValues
         true return
       unimplemented case
         "unsupported built-in in constant evaluation: " sb.copyPtr
           builtIn sb.appendBuiltIn
         pos errors appendError
-        values nArgs array.reverse
-        valInfos nArgs array.reverse
+        values nArgs iSize cast.u array.reverse
+        valInfos nArgs iSize cast.u array.reverse
         values valInfos nArgs context unpopValues
         true return
     end
@@ -3474,7 +3477,7 @@ namespace: interpreter
     typeContext .labelContext =:: labelContext
     "memcpy":s procName labelContext id.labelNameEq if
       procIn typeContext types.compositeElts =:: args
-      args .length 3 != or
+      args .length 3:iSize != or
           args 2 slice.get typeContext types.isPointer ! or
           args 2 slice.get typeContext types.isMutable ! or
           args 1 slice.get typeContext types.isPointer ! or
@@ -3486,7 +3489,7 @@ namespace: interpreter
         pos errors appendError
         true return
       end
-      3 "memcpy":s pos context checkStack if
+      3:iSize "memcpy":s pos context checkStack if
         true return
       end
       pos context popValue ! "hasValue" assert =:: targetValue =:: targetInfo
@@ -3503,7 +3506,7 @@ namespace: interpreter
         targetValue targetInfo context unpopValue
         true return
       end =:: length
-      targetValue srcValue length pos program opMemcopy if ..drop
+      targetValue srcValue length iSize cast.u pos program opMemcopy if ..drop
         lenValue lenInfo context unpopValue
         srcValue srcInfo context unpopValue
         targetValue targetInfo context unpopValue
@@ -3529,16 +3532,16 @@ proc(
   bool
 ) =>: evaluateOperations
   using interpreter.
-  0:i64 while $ ops .length < do =:: offset
+  0:iSize while $ ops .length u< do =:: offset
     ops offset slice.at .data =:: op
       op context evaluateOperation =:: result
       result switch
         Error case true return
         Return case false return
         Ok case offset break
-        Jump case offset result .Jump i64 cast.s + break
+        Jump case offset result .Jump iSize cast.s + break
       end
-  finally 1 + end ..drop
+  finally 1:iSize + end ..drop
   ## XXX? error if unwanted open blocks
   false return
 end
@@ -3556,11 +3559,11 @@ namespace: interpreter
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     tupleType typeContext types.compositeElts =:: elts
-    elts .length i32 cast "tuple-creation":s pos context checkStack if
+    elts .length "tuple-creation":s pos context checkStack if
       true return
     end
-    context [] .stack .length elts .length i32 cast - =:: offset
-    0:i32 while ..dup elts .length i32 cast < do =:: i
+    context [] .stack .length elts .length - =:: offset
+    0:iSize while $ elts .length u< do =:: i
       context [] .stackInfo offset i + list.at .data =:: stackInfo
       stackInfo [] .valueType elts i slice.get typeContext types.canAutoCast ! if
         "wrong argument for tuple creation expected: " sb.copyPtr
@@ -3570,7 +3573,7 @@ namespace: interpreter
         pos errors appendError
         true return
       end
-      i 1 +
+      i 1:iSize +
     end ..drop
     context [] .stack list.asSlice
       offset slice.tail
@@ -3611,19 +3614,19 @@ proc(
   program [] .procedures procId i64 cast list.at .data =:: procData
   procData [] .procType =:: procType
   procType typeContext types.getProcIn ..drop =:: inType
-  0:i32 ## XXX? is there a better way to get number of non-auto static args
+  0:iSize ## XXX? is there a better way to get number of non-auto static args
     implId -1:i32 != if
       inType typeContext types.compositeEltCount for =:: i
         inType i typeContext types.compositeGetLabel =:: label
         label labelContext id.labelFlags =:: flags
         flags id.FLAG_STATIC & ? and flags id.FLAG_AUTO & ? ! if
-          1 +
+          1:iSize +
         end
       end
     end
   =:: nStaticArgs
   inType typeContext types.compositeElts =:: args
-  args .length autoArgs .length - i32 cast
+  args .length autoArgs .length -
     consumeStaticArgs ! if nStaticArgs - end
   =:: nArgs
   procData [] .implementation .builtIn ?? if
@@ -3760,7 +3763,7 @@ proc(
       staticArgOffset 1 + staticArgOffset=
       continue
     end
-    argOffset stackOffset >= if
+    argOffset stackOffset u>= if
       "not enough arguments for procedure " sb.copyPtr
         procName labelContext sb.appendLabelPath
       pos errors appendError
@@ -3782,7 +3785,7 @@ proc(
     else value [] .TypeId ?? and value [] .TypeId typeContext types.isGeneric _if
       true hasGenericArg=
     end
-    argOffset 1 + argOffset=
+    argOffset 1:iSize + argOffset=
     label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
       context [] .stack
         value list.appendP
@@ -3896,7 +3899,7 @@ proc(
         break
     end
   end =:: code
-  code .length 0 == if
+  code .length 0:iSize == if
     "no operations in procedure " sb.copyPtr
       procName labelContext sb.appendLabelPath
     pos errors appendError
@@ -3951,7 +3954,7 @@ proc(
   calledType typeContext types.getProcOut
     ! "proc has out" assert
   typeContext types.compositeElts =:: outTypes
-  outTypes .length i32 cast "return":s pos context checkStack if
+  outTypes .length "return":s pos context checkStack if
     context [] .localVariables .data map.free
     prevVariables context .localVariables=
     context [] .localMemory offset mixedArena.reset context .localMemory=
@@ -3959,7 +3962,7 @@ proc(
     prevType context .evalType=
     true return
   end
-  context [] .stack .length i64 cast.u outTypes .length - =:: outOffset
+  context [] .stack .length outTypes .length - =:: outOffset
   outTypes .length for =:: i
     outTypes i slice.get
       $ typeContext types.containsGeneric if
@@ -4006,7 +4009,7 @@ proc(
     offset mixedArena.reset
   context .localMemory=
   isTypeGenerator if
-    context [] .stack .length 1 < if
+    context [] .stack .length 1:iSize u< if
       "could not initalized type generator " sb.copyPtr
         procName labelContext sb.appendLabelPath
       pos errors appendError
@@ -4048,12 +4051,12 @@ proc(
   ## mem.copy
     context [] .stack .data argsOffset @[]
     context [] .stack .data stackOffset @[]
-    nReturn i64 cast.u
+    nReturn iSize cast.u
   mem.copy ..drop
   ## mem.copy
     context [] .stackInfo .data argsOffset @[]
     context [] .stackInfo .data stackOffset @[]
-    nReturn i64 cast.u
+    nReturn iSize cast.u
   mem.copy ..drop
   context resetContextKeepStack
   context [] .stack
@@ -4062,10 +4065,10 @@ proc(
   context [] .stackInfo
     argsOffset nReturn + list.setLength
   context .stackInfo=
-  argsOffset while ..dup context [] .stackInfo .length < do
+  argsOffset while $ context [] .stackInfo .length u< do
     ## update push position of return values
-    pos context [] .stackInfo ..over.2 list.at .data .pushedAt=
-    1 +
+    pos context [] .stackInfo $2 list.at .data .pushedAt=
+    1:iSize +
   end ..drop
   false return
 end

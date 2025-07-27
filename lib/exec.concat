@@ -18,7 +18,7 @@ namespace: exec
   proc( ExecContext : context string : argument -> ExecContext ) =>: export: add
     context
       $ .argOffsets
-        $1 .argBuffer .length list.append
+        $1 .argBuffer .length i32 cast.u list.append
       >$ .argOffsets=
       $ .argBuffer
         argument sb.appendStr

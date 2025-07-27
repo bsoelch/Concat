@@ -8,7 +8,7 @@ proc( -> ) =>: main
   str .data:? "str has data" assert
   str16 .data:? "str16 has data" assert
   str32 .data:? "str32 has data" assert
-  str .length 24 == "str.length == 24" assert
-  str16 .length 24 == "str16.length == 24" assert
-  str32 .length 23 == "str32.length == 23" assert
+  str .length 24:iSize == "str.length == 24" assert
+  str16 .length 24:iSize == "str16.length == 24" assert
+  str32 .length 23:iSize == "str32.length == 23" assert
 end

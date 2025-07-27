@@ -79,17 +79,17 @@ namespace: utf8
   proc( Codepoint : c -> bool ) =>: export: isValid
     c MIN_CODEPOINT >= and c MAX_CODEPOINT <= end return
   end
-  proc( string  : str i64 : index -> string i64 Codepoint ) =>: export: nextCodepoint ## XXX? strict UTF8 version than only reads valid codepoints
-    index str .length >= if
+  proc( string  : str iSize : index -> string iSize Codepoint ) =>: export: nextCodepoint ## XXX? strict UTF8 version than only reads valid codepoints
+    index str .length u>= if
       str str .length UNKNOWN_CODEPOINT return
     end
     index =:: mut: i
     str i string.charAt i32 cast.u 0xff & =:: mut: c
     c 0xc0 & 0x80 == or c 0xfe >= if ## invalid starting character
-      str index 1 + c -_ Codepoint cast return
+      str index 1:iSize + c -_ Codepoint cast return
     end
     c 0x80 < if ## 0x00 - 0x7f
-      str index 1 + c Codepoint cast return
+      str index 1:iSize + c Codepoint cast return
     end
     0x80 =:: mut: mask
     0 =:: mut: count
@@ -100,35 +100,35 @@ namespace: utf8
     c mask 1 - & =:: mut: cp
     c =:: c0
     i =:: i0
-    i count i64 cast.u + str .length > if ## not enough characters
-      str i0 1 + c0 -_ Codepoint cast return
+    i count iSize cast.u + str .length u> if ## not enough characters
+      str i0 1:iSize + c0 -_ Codepoint cast return
     end
     while count 1 > do
       cp 6 << cp=
-      i 1 + i=
+      i 1:iSize + i=
       str i string.charAt i32 cast.u 0xff & c=
       c 0xc0 & 0x80 != if ## invalid character in sequence
-        str i0 1 + c0 -_ Codepoint cast return
+        str i0 1:iSize + c0 -_ Codepoint cast return
       end
       cp c 0x3f & | cp=
       count 1 - count=
     end
     cp 0x80 < if ## overlong single char
-      str i0 1 + c0 -_ Codepoint cast return
+      str i0 1:iSize + c0 -_ Codepoint cast return
     end
     count 2 > cp 0x800 < & if ## overlong character
-      str i0 1 + c0 -_ Codepoint cast return
+      str i0 1:iSize + c0 -_ Codepoint cast return
     end
     count 3 > cp 0x10000 < & if ## overlong character
-      str i0 1 + c0 -_ Codepoint cast return
+      str i0 1:iSize + c0 -_ Codepoint cast return
     end
     count 4 > cp 0x200000 < & if ## overlong character
-      str i0 1 + c0 -_ Codepoint cast return
+      str i0 1:iSize + c0 -_ Codepoint cast return
     end
     count 5 > cp 0x4000000 < & if ## overlong character
-      str i0 1 + c0 -_ Codepoint cast return
+      str i0 1:iSize + c0 -_ Codepoint cast return
     end
-    str i 1 + cp Codepoint cast return
+    str i 1:iSize + cp Codepoint cast return
   end
 
   proc(
@@ -138,7 +138,7 @@ namespace: utf8
     buffer
       $1 .length list.ensureCap
     =:: mut: utf32chars
-    0:i64 while $1 .length $1 > do
+    0:iSize while $1 .length $1 u> do
       nextCodepoint =:: cp
       ## XXX? check codepoint for correct encoding?
       utf32chars cp char32 cast list.append utf32chars=
@@ -152,7 +152,7 @@ namespace: utf8
     buffer
       $1 .length list.ensureCap
     =:: mut: utf16chars
-    0:i64 while $1 .length $1 > do
+    0:iSize while $1 .length $1 u> do
       nextCodepoint =:: cp
       utf16chars
         cp utf16.appendCodepoint
@@ -171,26 +171,26 @@ namespace: utf16
   0x03FF:i32 =:: SURROGATE_DATA_MASK
   10:i32 =:: SURROGATE_SHIFT
   0x10000:i32 =:: SURROGATE_BIAS
-  proc( string16  : str i64 : index -> string16 i64 unicode.Codepoint ) =>: export: nextCodepoint
-    index str .length >= if
+  proc( string16  : str iSize : index -> string16 iSize unicode.Codepoint ) =>: export: nextCodepoint
+    index str .length u>= if
       str str .length UNKNOWN_CODEPOINT return
     end
     str index string16.get i32 cast.u =:: mut: c
     c MIN_SURROGATE < or c MAX_SURROGATE > if ## normal character
-      str index 1 + c Codepoint cast return
+      str index 1:iSize + c Codepoint cast return
     end
     c SURROGATE_MASK & LOW_SURROGATE_FLAG == if ## unpaired low surrogate
-      str index 1 + c -_ Codepoint cast return
+      str index 1:iSize + c -_ Codepoint cast return
     end
-    index 1 + str .length >= if ## not enough characters
-      str index 1 + c -_ Codepoint cast return
+    index 1:iSize + str .length u>= if ## not enough characters
+      str index 1:iSize + c -_ Codepoint cast return
     end
-    str index 1 + string16.get i32 cast.u =:: lower
+    str index 1:iSize + string16.get i32 cast.u =:: lower
     lower SURROGATE_MASK & LOW_SURROGATE_FLAG != if ## invalid low surrogate
-      str index 1 + c -_ Codepoint cast return
+      str index 1:iSize + c -_ Codepoint cast return
     end
     str
-      index 2 +
+      index 2:iSize +
     c SURROGATE_DATA_MASK & SURROGATE_SHIFT <<
       lower SURROGATE_DATA_MASK & |
     SURROGATE_BIAS + Codepoint cast return
@@ -219,7 +219,7 @@ namespace: utf16
     buffer
       $1 .length sb.ensureCap
     =:: mut: utf8chars
-    0:i64 while $1 .length $1 > do
+    0:iSize while $1 .length $1 u> do
       nextCodepoint =:: cp
       utf8chars cp sb.appendCodepoint utf8chars=
     end ..drop.2

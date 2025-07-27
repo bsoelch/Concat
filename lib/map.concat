@@ -22,19 +22,21 @@ end
 end
 
 namespace: map
+  proc( i64 char8 _ ptr -> ) : extern: printf
   proc(
     type : auto: K
     proc( K -> i32 ) ptr : hash
     proc( K K -> bool ) ptr : eq
-    i32 : initCap
+    i32 : mut: initCap
     type : V
   -> K V hashMap ) =>: export: create
+    initCap 64 i32.max initCap=
     ## set all bits below highest bit to 1, ensure capacity is at least 64
-    initCap 1 - 0x3f |
+    initCap 1 -
       $ 1 >>> | $ 2 >>> | $ 4 >>> |
       $ 8 >>> | $ 16 >>> |
     =:: hashMask
-    hashMask i64 cast 1 + =:: pow2cap
+    hashMask iSize cast.u 1:iSize + =:: pow2cap
     ## hashMap
       pow2cap K V Node list.create
       pow2cap NodeId mem.calloc
@@ -49,7 +51,7 @@ namespace: map
     type : auto: V
     K V hashMap : src
   -> K V hashMap ) =>: export: copy
-    src .hashMask i64 cast 1 + =:: capacity
+    src .hashMask iSize cast 1:iSize + =:: capacity
     ## hashMap
       src .nodeBuffer list.copy
       capacity NodeId mem.alloc
@@ -71,7 +73,7 @@ namespace: map
     data [] .nodeBuffer
       list.clear
     data .nodeBuffer=
-    data [] .hashMask i64 cast 1 + =:: capacity
+    data [] .hashMask iSize cast.u 1:iSize + =:: capacity
     data [] .data capacity mem.clear ..drop
     NO_NODE data .freeNodes=
     ## TODO version that allows calling cleanup procedure on all values still in map
@@ -124,7 +126,7 @@ namespace: map
         NO_NODE freeNode .next= ## unlink returned node
       freeNodeId
     else
-      map [] .nodeBuffer .length 1 + NodeId cast
+      map [] .nodeBuffer .length 1:iSize + NodeId cast
     end =:: newId
       newId parent =[]
     newId return
@@ -203,7 +205,7 @@ namespace: map
     V : value
   -> V optional ) =>: export: put
     data key FindOperation .CREATE find =:: nodeId
-      nodeId i32 cast data [] .nodeBuffer .length > if
+      nodeId iSize cast.u data [] .nodeBuffer .length u> if
         data [] .nodeBuffer
           key value NO_NODE false K V Node new list.append
         data .nodeBuffer=

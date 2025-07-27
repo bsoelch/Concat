@@ -8,7 +8,7 @@ namespace: type
   typeSet( i8 i16 i32 i64 ) =:: export: integer
   typeSet( f32 f64 ) =:: export: float
   typeSet( integer float ) =:: export: number
-  typeSet( i32 i64 ) =:: export: index
+  typeSet( iSize i32 i64 ) =:: export: index
   typeSet( integer char8 char16 char32 ) =:: export: intLike
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive

@@ -83,13 +83,13 @@ namespace: io
   char8 4096 array : mut: fileNameBuffer ## XXX make buffer thread safe
   proc(
     char8 _ ptr : fileName
-    i64 : nameLength
+    iSize : nameLength
     OpenMode : mode
   -> FILE IOError ) =>: export: fopen
-    fileName nameLength 1 - [] '\x00' == if ## name not null-terminated
+    nameLength 0:iSize != and fileName nameLength 1:iSize - [] '\x00' == if ## name not null-terminated
       fileName
     else
-      nameLength fileNameBuffer@ ..length >= if
+      nameLength fileNameBuffer@ ptr.length u>= if
         c.nullPtr FILE cast! FILE_ERR_PATH_OVERFLOW return
       end
       ## mem.copy
@@ -126,7 +126,7 @@ namespace: io
     end
   end
   proc(
-    i64 : auto: k
+    iSize : auto: k
     char8 k ptr : fileName
     OpenMode : mode
   -> FILE IOError ) =>: export: fopenS
@@ -136,20 +136,20 @@ namespace: io
     type : auto: T
     FILE : file
     T _ ptr.mut : buffer
-    i64 : off
-    i64 : count
-  -> i64 IOError ) =>: export: fread
+    iSize : off
+    iSize : count
+  -> iSize IOError ) =>: export: fread
     file ( ) ptr cast! c.isNull if
-      0 FILE_ERR_INVALID_FILE return
+      0:iSize FILE_ERR_INVALID_FILE return
     end
     file c.clearerr
     c.concatIOHelper_resetErrno
     ## fread
       file
       count  ..ctype.size cast
-      count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
+      count 1:iSize == if T ..types.size else T ..types.stride end ..ctype.size cast
       buffer off @[] ..ctype.void ptr.mut cast!
-    c.fread i64 cast
+    c.fread iSize cast
       ## XXX remove explicit cast of return value
       file c.feof i32 cast ? if
         FILE_ERR_END_OF_FILE return
@@ -163,20 +163,20 @@ namespace: io
     type : auto: T
     FILE : file
     T _ ptr : buffer
-    i64 : off
-    i64 : count
-  -> i64 IOError ) =>: export: fwrite
+    iSize : off
+    iSize : count
+  -> iSize IOError ) =>: export: fwrite
     file ( ) ptr cast! c.isNull if
-      0 FILE_ERR_INVALID_FILE return
+      0:iSize FILE_ERR_INVALID_FILE return
     end
     file c.clearerr
     c.concatIOHelper_resetErrno
     ## fread
       file
       count ..ctype.size cast
-      count 1 == if T ..types.size else T ..types.stride end  ..ctype.size cast
+      count 1:iSize == if T ..types.size else T ..types.stride end  ..ctype.size cast
       buffer off @[] ..ctype.void ptr cast!
-    c.fwrite i64 cast
+    c.fwrite iSize cast
       ## XXX remove explicit cast of return value
       file c.feof i32 cast ? if
         FILE_ERR_END_OF_FILE return
@@ -214,43 +214,44 @@ namespace: io
   proc( FILE : file char8 : chr -> IOError ) =>: export: fputc
     ## TODO? add support for pointers to stack values
     chr =:: tmp
-    file tmp@ 0 1 fwrite ..swap ..drop return
+    file tmp@ 0:iSize 1:iSize fwrite ..swap ..drop return
   end
-  proc( FILE : file  i64 : k  char8 _ ptr : str -> IOError ) =>: export: fputArray
-    0 i64 =: mut: off
-    k =:: mut: count
+  proc( FILE : file  iSize : k  char8 _ ptr : str -> IOError ) =>: export: fputArray
+    0:iSize =:: mut: off
+    k =:: mut: remaining
     str char8 _ ptr cast =:: data
-    while count 0 > do
-      file data off count fwrite
-        ..dup FILE_ERROR_NONE != if ## error
-            ..swap ..drop return
+    while remaining 0:iSize != do
+      file data off remaining fwrite
+        $ FILE_ERROR_NONE != if ## error
+            >$ ..drop return
           end
         ..drop
-        count ..over - count=
-      off ..swap + off=
+        $ remaining u<= "remaining does not undeflow" assert
+        remaining $1 - remaining=
+      off >$ + off=
     end
     FILE_ERROR_NONE return
   end
-  proc( FILE : file  i64 : auto: k  char8 k ptr : str -> IOError ) =>: export: fputs
+  proc( FILE : file  iSize : auto: k  char8 k ptr : str -> IOError ) =>: export: fputs
     file k str fputArray
   end
 
   proc( char8 : c -> IOError ) =>: export: putc
     stdOut c fputc
   end
-  proc( i64 : auto: k  char8 k ptr : str -> IOError ) =>: export: puts
-    k 1 + sb.create
+  proc( iSize : auto: k  char8 k ptr : str -> IOError ) =>: export: puts
+    k 1:iSize + sb.create
       str sb.appendS
       '\n' sb.appendC
     =:: chars
-      stdOut chars .length i64 cast.u chars .data fputArray =:: errId
+      stdOut chars .length chars .data fputArray =:: errId
     chars sb.free ..drop
     errId return
   end
   proc( -> char8 IOError ) =>: export: getChar
     char8 : res
-    io.stdIn res@ 0 1 fread =:: err =:: count
-    count 0 == and err FILE_ERROR_NONE == if
+    io.stdIn res@ 0:iSize 1:iSize fread =:: err =:: count
+    count 0:iSize == and err FILE_ERROR_NONE == if
       res FILE_ERR_IO return ## could not read byte
     end
     res err

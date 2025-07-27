@@ -655,8 +655,7 @@ namespace: types
     1:i64 =:: mut: alignment
     0:i64 =:: mut: size
     elts .length i64 list.create =:: mut: offsetBuffer ## XXX? store buffer in context
-    0:i64 while ..dup elts .length < do =:: i
-      elts i slice.get =:: elt
+    elts for =:: elt
       ## size and alignment
       elt typeContext alignOf =:: eltAlignData
       elt typeContext sizeOf =:: eltSizeData
@@ -674,11 +673,10 @@ namespace: types
       offsetBuffer
         eltOffset list.append
       offsetBuffer=
-      i 1 +
-    end ..drop
+    end
     ## XXX? compress tupleOffsets list ( search for previous occurrence of current elements )
     typeContext [] .tupleOffsets
-      ..dup .length tupleInfo .offsetsStart=
+      ..dup .length i32 cast.u tupleInfo .offsetsStart=
       offsetBuffer list.appendAll
     typeContext .tupleOffsets=
     offsetBuffer list.free ..drop
@@ -703,8 +701,7 @@ namespace: types
     t typeContext compositeElts =:: elts
     1:i64 =:: mut: alignment
     0:i64 =:: mut: size
-    0:i64 while ..dup elts .length < do =:: i
-      elts i slice.get =:: elt
+    elts for =:: elt
       ## size and alignment
       elt typeContext sizeOf =:: eltSizeData
       elt typeContext alignOf =:: eltAlignData
@@ -719,8 +716,7 @@ namespace: types
       eltSize size > if
         eltSize size=
       end
-      i 1 +
-    end ..drop
+    end
     unionInfo [] .labelType typeContext isEmpty ! if
       unionInfo [] .labelType typeContext alignOf .fixed =:: labelAlign
       labelAlign alignment > if
@@ -832,15 +828,13 @@ namespace: types
           TypeSize .unknown return
         end
         baseSize .fixed =:: mut: size
-        0:i64 while ..dup dims .length < do =:: i
-          dims i slice.get =:: dim
+        dims for =:: dim
           dim .int ?? if
             size dim .int * size=
           else
             baseSize .fixed TypeSize .dynamicArray return
           end
-          i 1 +
-        end ..drop
+        end
         size TypeSize .fixed return
       struct enum union procIn procOut initializer case
         t context tryComputeSize if
@@ -939,7 +933,7 @@ namespace: types
     ## newArrayType
       base
       ArrayType .ARRAY
-      size rawPointer ! if $ .length 1 - slice.head end
+      size rawPointer ! if $ .length 1:iSize - slice.head end
       mutable
       context
     newArrayType
@@ -1007,13 +1001,13 @@ namespace: types
     a .length b .length != if
       false return
     end
-    0:i64 while $ a .length < do =:: i
+    0:iSize while $ a .length u< do =:: i
       a i slice.get
         b i slice.get
       arraySizeEqual ! if
         false return
       end
-    finally i 1 + end ..drop
+    finally i 1:iSize + end ..drop
     true return
   end
   enum( POINTER RAW_POINTER ARRAY ) =:: export: ArrayType
@@ -1049,8 +1043,8 @@ namespace: types
     ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
     base context isProcedure if
       ## allow rawPointers and pointer of length 1 for generic matching
-      arrayType .ARRAY ?? or sizes .length 0 > and
-          sizes .length 1 > or sizes 0 slice.get =:: size
+      arrayType .ARRAY ?? or sizes .length 0:iSize != and
+          sizes .length 1:iSize u> or sizes 0 slice.get =:: size
           size .int ?? ! or size .int 1 != if
         Type .undefined true return
       end
@@ -1061,23 +1055,23 @@ namespace: types
       base=
     end
     context .arrayTypes =:: arrays
-    0:i32 while ..dup arrays [] .length < do
-      arrays [] ..over list.get
+    0:iSize while $ arrays [] .length u< do
+      arrays [] $1 list.get
         $ .mutable mutable != if ..drop
-          1 + continue
+          1:iSize + continue
         end
-        $ .dims i64 cast.u sizes .length != if ..drop
-          1 + continue
+        $ .dims iSize cast.u sizes .length != if ..drop
+          1:iSize + continue
         end
         $ .base base typeEquals ! if ..drop
-          1 + continue
+          1:iSize + continue
         end
-        context [] .arraySizes ..over .sizeOffset ..over.2 .dims list.getSlice sizes arraySizesEqual ! if ..drop
-          1 + continue
+        context [] .arraySizes $1 .sizeOffset $2 .dims list.getSlice sizes arraySizesEqual ! if ..drop
+          1:iSize + continue
         end
       .ptrOnly
         arrayType .ARRAY ?? ! &
-      arrays [] ..over.2 list.at .data .ptrOnly= ## update ptrOnly flag
+      arrays [] $2 list.at .data .ptrOnly= ## update ptrOnly flag
       ## found match
       ArrayId cast
         arrayType switch
@@ -1088,13 +1082,13 @@ namespace: types
       false return
     end ..drop
     context [] .arraySizes
-      ..dup .length =:: sizeOffset
+      $ .length i32 cast.u =:: sizeOffset
       sizes list.appendSlice
     context .arraySizes=
     arrays []
       base sizeOffset sizes .length i32 cast arrayType .ARRAY ?? ! mutable ArrayData new list.append
     arrays =[]
-    arrays [] .length 1 - ArrayId cast
+    arrays [] .length 1:iSize - ArrayId cast
       arrayType switch
         POINTER case Type .pointer break
         RAW_POINTER case Type .rawPointer break
@@ -1408,7 +1402,7 @@ namespace: types
       emptyTypeBuffer
         compData [] .eltCount list.ensureCap
       emptyTypeBuffer=
-      while emptyTypeBuffer .length compData [] .eltCount < do
+      while emptyTypeBuffer .length compData [] .eltCount iSize cast.u u< do
         emptyTypeBuffer
           Type .empty list.append
         emptyTypeBuffer=
@@ -1436,8 +1430,7 @@ namespace: types
     true =:: mut: emptyData ## composite is empty
     true =:: mut: onlyEmpty ## composite only contains Type .empty
     COMP_FLAG_NONE =:: mut: flags
-    0:i64 while ..dup elts .length < do
-      elts ..over slice.get =:: elt
+    elts for =:: elt
       elt .empty ?? ! if
         false onlyEmpty=
       end
@@ -1450,8 +1443,7 @@ namespace: types
       elt isLiteral if
         flags COMP_FLAG_CONTAINS_LITERAL | flags=
       end
-      1 +
-    end ..drop
+    end
     onlyEmpty if
       0 COMP_MASK_ONLY_EMPTY flags | return
     else emptyData _if
@@ -1461,13 +1453,13 @@ namespace: types
       elts
       typePtrEq@
       0
-    slice.indexOfSliceStart =:: mut: offset
-    offset elts .length + context [] .compositeData .length i64 cast < if
+    slice.indexOfSlicePrefix =:: mut: offset
+    offset elts .length + context [] .compositeData .length u< if
       offset i32 cast flags return
     end
     context [] .compositeData
       elts ## skip overlap
-        context [] .compositeData .length i64 cast offset - slice.tail
+        context [] .compositeData .length offset - slice.tail
       list.appendSlice
     context .compositeData=
     offset i32 cast flags return
@@ -1498,13 +1490,12 @@ namespace: types
     end
     labels? .data =:: labels
     true =:: mut: unlabled
-    0:i64 while ..dup labels .length < do
-      labels ..over slice.get id.LABEL_ID_NONE != if
+    labels for
+      id.LABEL_ID_NONE != if
         false unlabled=
         break
       end
-      1 +
-    end ..drop
+    end
     unlabled if
       UNLABELED return
     end
@@ -1512,13 +1503,13 @@ namespace: types
       labels
       labelPtrEq@
       labelContext
-    slice.indexOfSliceStart =:: mut: offset
-    offset labels .length + context [] .elementLabels .length i64 cast < if
+    slice.indexOfSlicePrefix =:: mut: offset
+    offset labels .length + context [] .elementLabels .length u< if
       offset LabelOffset cast return
     end
     context [] .elementLabels
       labels ## skip overlap
-        context [] .elementLabels .length i64 cast offset - slice.tail
+        context [] .elementLabels .length offset - slice.tail
       list.appendSlice
     context .elementLabels=
     offset LabelOffset cast return
@@ -1534,19 +1525,18 @@ namespace: types
     elts context computeEltsOffset flags0 | =:: flags =:: eltsOffset
     labels context computeLabelOffset =:: labelOffset
     context [] .tupleTypes =:: tuples
-    0:i32 while ..dup tuples .length < do
-      tuples ..over list.at .data =:: t
-      t [] .compositeInfo .eltCount i64 cast.u elts .length == and
+    tuples .length for =:: tupleIndex
+      tuples tupleIndex list.at .data =:: t
+      t [] .compositeInfo .eltCount iSize cast.u elts .length == and
           t [] .compositeInfo .eltsOffset eltsOffset == and
           t [] .compositeInfo .labelOffset labelOffset == and
           t [] .compositeInfo .flags COMP_MASK_CONTENT_FLAGS &
             flags COMP_MASK_CONTENT_FLAGS &
           == if
         t [] .compositeInfo .flags flags | t .compositeInfo .flags=
-        TupleId cast return
+        tupleIndex TupleId cast return
       end
-      1 +
-    end ..drop
+    end
     tuples .length TupleId cast =:: newId
     context [] .tupleTypes
       ## TupleInfo
@@ -1569,7 +1559,7 @@ namespace: types
     LabelId slice optional : labels
     TypeContext ptr.mut : context
   -> Type bool ) =>: export: newTuple
-    elts .length 0 == if
+    elts .length 0:iSize == if
       ## empty tuple -> empty type handled by parser
       Type .undefined true return
     end
@@ -1593,19 +1583,19 @@ namespace: types
     findTupleInfo =:: tupleId
     ## check for existing initializer with same elements
     context [] .initializerTypes =:: initializers
-    0:i32 while $ initializers .length < do =:: i
+    0:iSize while $ initializers .length u< do =:: i
       initializers i list.at .data =:: t
       t [] .asTuple tupleId == if
         i InitializerId cast Type .initializer return
       end
-    finally i 1 + end ..drop
+    finally i 1:iSize + end ..drop
     ##  check if initializer can be array
-    elts .length 0 > if
+    elts .length 0:iSize != if
       elts 0 slice.get
     else ## TODO? special type for empty array?
       primitive.I32 ## TODO? better default type for empty array
     end =:: mut: arrayType
-    0:i64 while $ elts .length < do =:: i
+    0:iSize while $ elts .length u< do =:: i
       elts i slice.get =:: eltType
       labels optional.hasData and
         labels .data i slice.get id.LABEL_ID_NONE != if
@@ -1619,7 +1609,7 @@ namespace: types
         Type .undefined arrayType=
         i break
       end
-    finally i 1 + end ..drop
+    finally i 1:iSize + end ..drop
     context [] .initializerTypes
       $ .length =:: initializerId
       ## InitializerInfo
@@ -1654,25 +1644,25 @@ namespace: types
     labels context computeLabelOffset =:: labelOffset
     isTagged ! if
       Type .empty
-    else elts .length 0x80 < _if
+    else elts .length 0x80:iSize u< _if
       primitive.I8
-    else elts .length 0x8000 < _if
+    else elts .length 0x8000:iSize u< _if
       primitive.I16
     else
       primitive.I32
     end =:: labelType
     0:i64 =:: mut: enumLabelOffset
     context [] .unionTypes =:: unions
-    0:i32 while ..dup unions .length < do
-      unions ..over list.at .data =:: t
-      t [] .compositeInfo .eltCount i64 cast.u elts .length == and
+    0:iSize while $ unions .length u< do
+      unions $1 list.at .data =:: t
+      t [] .compositeInfo .eltCount iSize cast.u elts .length == and
       t [] .compositeInfo .eltsOffset eltsOffset == and
       t [] .compositeInfo .labelOffset labelOffset == and
       t [] .labelType labelType typeEquals and
       t [] .compositeInfo .flags flags == if
         break
       end
-      1 +
+      1:iSize +
     end =:: unionId
     unionId unions .length == if
      context [] .unionTypes
@@ -1697,7 +1687,7 @@ namespace: types
     LabelId slice optional : labels
     TypeContext ptr.mut : context
   -> Type bool ) =>: export: newEnum
-    elts .length 0 ==  labels optional.isEmpty | if
+    elts .length 0:iSize ==  labels optional.isEmpty | if
       Type .undefined true return
     end
     ## findEnumOrUnion
@@ -1713,7 +1703,7 @@ namespace: types
     bool : isTagged
     TypeContext ptr.mut : context
   -> Type bool ) =>: export: newUnion
-    elts .length 0 == labels optional.isEmpty | if
+    elts .length 0:iSize == labels optional.isEmpty | if
       Type .undefined true return
     end
     ## findEnumOrUnion
@@ -1817,10 +1807,10 @@ namespace: types
     callConvention switch
       CCALL PTRCALL case
         outType context compositeElts =:: elts
-        elts .length 0 == if
+        elts .length 0:iSize == if
           Type .empty false return
         end
-        elts elts .length 1 - slice.get false return
+        elts elts .length 1:iSize - slice.get false return
       CONCAT case
         outType context compositeEltCount =:: eltCount
         eltCount 0 == if
@@ -1838,10 +1828,10 @@ namespace: types
       CCALL CONCAT case Type slice.empty false return
       PTRCALL case
         outType context compositeElts =:: elts
-        elts .length 0 == if
+        elts .length 0:iSize == if
           Type slice.empty false return
         end
-        elts elts .length 1 - slice.head false return
+        elts elts .length 1:iSize - slice.head false return
     end
   end
   proc( Type : in Type : out CallingConvention : callConvention TypeContext ptr.mut : context -> Type bool ) =>: export: newProcedure
@@ -1852,19 +1842,19 @@ namespace: types
       Type .undefined true return ## XXX? better error handling
     end
     context .procTypes =:: procs
-    0:i32 while ..dup procs [] .length < do =:: i
+    0:iSize while $ procs [] .length u< do =:: i
       procs [] i list.at .data =:: elt
       elt [] .callingConvention callConvention == and
       elt [] .in in typeEquals and
       elt [] .out out typeEquals if
         i ProcTypeId cast Type .procedure false return
       end
-      i 1 +
+      i 1:iSize +
     end ..drop
     procs []
       in out callConvention ProcType new list.append
     procs =[]
-    procs [] .length 1 - ProcTypeId cast Type .procedure
+    procs [] .length 1:iSize - ProcTypeId cast Type .procedure
     false return
   end
   proc(
@@ -1908,12 +1898,12 @@ namespace: types
     LabelId : label
     TypeContext ptr.mut : context
   -> types.NamedTypeId ) =>: findNamedType
-    0:i32 while ..dup context [] .namedTypes .length < do =:: i
+    0:iSize while $ context [] .namedTypes .length u< do =:: i
       context [] .namedTypes i list.at .data =:: elt
       elt [] .name label == if
         i types.NamedTypeId cast return
       end
-      i 1 +
+      i 1:iSize +
     end ..drop
     context [] .namedTypes
       ## NamedType
@@ -1921,7 +1911,7 @@ namespace: types
         label
       NamedType new list.append
     context .namedTypes=
-    context [] .namedTypes .length 1 - NamedTypeId cast return
+    context [] .namedTypes .length 1:iSize - NamedTypeId cast return
   end
   proc(
     LabelId : label
@@ -1955,7 +1945,7 @@ namespace: types
         label
       NamedType new list.append
     context .namedTypes=
-    context [] .namedTypes .length 1 - NamedTypeId cast Type .namedType return
+    context [] .namedTypes .length 1:iSize - NamedTypeId cast Type .namedType return
   end
   proc( Type -> bool ) =>: export: isNamedType
     .namedType ?? return
@@ -2062,31 +2052,31 @@ namespace: types
   -> Type bool ) =>: export: findGeneratedType
     typeContext .labelContext =:: labelContext
     typeContext [] .generatedTypes =:: genTypes
-    0:i32 while ..dup genTypes .length < do
-      genTypes ..over list.at .data =:: candidate
+    0:iSize while $ genTypes .length u< do
+      genTypes $1 list.at .data =:: candidate
       candidate [] .generator generatorName != if
-        1 + continue
+        1:iSize + continue
       end
       candidate [] .arguments =:: candidateArgs
       candidateArgs .length arguments .length != if
-        1 + continue
+        1:iSize + continue
       end
       true =:: mut: match
-      0:i64 while ..dup arguments .length < do
+      0:iSize while $ arguments .length u< do
         ## constantEquals
-          candidateArgs ..over slice.get
-          arguments ..over.2 slice.get
+          candidateArgs $1 slice.get
+          arguments $2 slice.get
           labelContext
         constantEquals ! if
           false match=
           break
         end
-        1 +
+        1:iSize +
       end ..drop
       match if
         #+index+# GeneratedId cast Type .generatedType false return
       end
-      1 +
+      1:iSize +
     end ..drop
     create if
       typeContext [] .generatedTypes
@@ -2271,7 +2261,7 @@ namespace: types
         ## a generatedType is generic if one of its arguments is generic
         genType .arguments [] .length for =:: i
           genType [] .arguments i slice.get =:: arg
-          ConstValue ..length 23 == "no new constants" assert
+          ConstValue ..length 23:iSize == "no new constants" assert
           arg .GenericArg ?? or arg .TypeId ?? and arg .TypeId context containsGeneric if
             true return
           end
@@ -2336,10 +2326,10 @@ namespace: types
     end
     src context getArraySize =:: srcSize
     target context getArraySize =:: targetSize
-    srcSize .length targetSize .length < if srcSize .length else targetSize .length end =:: commonPart
-    1 i64 =: mut: srcTotal
-    1 i64 =: mut: targetTotal
-    0:i64 while $ commonPart < do =:: i
+    srcSize .length targetSize .length u< if srcSize .length else targetSize .length end =:: commonPart
+    1:i64 =:: mut: srcTotal
+    1:i64 =:: mut: targetTotal
+    0:iSize while $ commonPart u< do =:: i
       srcSize i slice.get =:: srcSizeElt
       targetSize i slice.get =:: targetSizeElt
       reshape if
@@ -2357,31 +2347,31 @@ namespace: types
       srcSizeElt targetSizeElt arraySizeEqual ! if
         false return
       end
-    finally i 1 + end ..drop
+    finally i 1:iSize + end ..drop
     reshape if
-      srcSize .length while $ targetSize .length < do =:: i
+      srcSize .length while $ targetSize .length u< do =:: i
         targetSize i slice.get .int ?? ! if false return end
         targetTotal targetSize i slice.get .int * targetTotal=
-      finally i 1 + end ..drop
-      targetSize .length while $ srcSize .length < do =:: i
+      finally i 1:iSize + end ..drop
+      targetSize .length while $ srcSize .length u< do =:: i
         srcSize i slice.get .int ?? ! if false return end
         srcTotal srcSize i slice.get .int * srcTotal=
-      finally i 1 + end ..drop
+      finally i 1:iSize + end ..drop
       srcTotal targetTotal == return
     end
-    srcSize .length while $ targetSize .length < do =:: i
+    srcSize .length while $ targetSize .length u< do =:: i
       targetSize i slice.get .int ?? ! or targetSize i slice.get .int 1 != if
         false return
       end
-    finally i 1 + end ..drop
+    finally i 1:iSize + end ..drop
     target context isFixedSize ! if
       true return
     end
-    targetSize .length while $ srcSize .length < do =:: i
+    targetSize .length while $ srcSize .length u< do =:: i
       srcSize i slice.get .int ?? ! or srcSize i slice.get .int 1 != if
         false return
       end
-    finally i 1 + end ..drop
+    finally i 1:iSize + end ..drop
     true return
   end
 
@@ -2511,7 +2501,7 @@ namespace: types
       targetBase context getElementType =:: eltType
       initInfo .arrayType [] eltType context canAutoCast and
         targetBase context getArraySize =:: targetSizes
-        targetSizes $ .length 1 - slice.get =:: outerSize
+        targetSizes $ .length 1:iSize - slice.get =:: outerSize
         outerSize .int ?? and outerSize .int srcSize i64 cast.u == if
           true return
       end
@@ -2668,16 +2658,16 @@ namespace: types
       a context types.isFixedSize b context types.isFixedSize &
         aSizes .length bSizes .length == &
       =:: mut: fixedSize
-      aSizes .length bSizes .length < if aSizes .length else bSizes .length end =:: s
-      0:i64 =:: mut: commonPrefix
-      while commonPrefix s < do
+      aSizes .length bSizes .length u< if aSizes .length else bSizes .length end =:: s
+      0:iSize =:: mut: commonPrefix
+      while commonPrefix s u< do
         aSizes commonPrefix slice.get
           bSizes commonPrefix slice.get
         arraySizeEqual if
           false fixedSize=
           break
         end
-        commonPrefix 1 + commonPrefix=
+        commonPrefix 1:iSize + commonPrefix=
       end
       ## newArrayType
         a context types.getBaseType
@@ -2863,11 +2853,9 @@ namespace: sb
     LabelContext ptr : labelContext
   -> stringBuilder  ) =>: export: appendSliceSizes
     sb
-      0:i64 while ..dup sizes .length < do
-        ..swap
-          sizes ..over.2 slice.get labelContext appendSliceSize
-        ..swap 1 +
-      end ..drop
+      sizes for =:: size
+        size labelContext appendSliceSize
+      end
     return
   end
   proc(
@@ -3016,7 +3004,7 @@ namespace: sb
                   break
               end
             end
-          else t context types.getTypeSetEntries .length 0 > _if
+          else t context types.getTypeSetEntries .length 0:iSize != _if
             "..." sb.appendS
           end
           " )" sb.appendS

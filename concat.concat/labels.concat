@@ -96,10 +96,10 @@ namespace: id
     =:: mut: context
     context .nameBuffer arenaAlloc.free context@ .nameBuffer=
     context .labels           list.free context@ .labels=
-    0:i32 while ..dup context .namespaces .length < do =:: i
+    0:iSize while $ context .namespaces .length u< do =:: i
       context .namespaces i list.at .data =:: namespace
       namespace [] .children list.free namespace .children=
-      i 1 +
+      i 1:iSize +
     end ..drop
     context .namespaces       list.free context@ .namespaces=
     context .namespaceImports list.free context@ .namespaceImports=
@@ -226,7 +226,7 @@ namespace: id
         flags
       Label new list.append
     context .labels=
-    context [] .labels .length 1 - LabelId cast return
+    context [] .labels .length 1:iSize - LabelId cast return
   end
 
   proc( NamespaceId : parent string : name  LabelContext ptr.mut : context -> NamespaceId ) =>: newNamespace
@@ -240,26 +240,26 @@ namespace: id
     id NamespaceId cast return
   end
   proc( NamespaceId : base string : childName bool : create  LabelContext ptr.mut : context  -> NamespaceId ) =>: export: childId
-    base NAMESPACE_ID_NONE == childName .length 0 == | if
+    base NAMESPACE_ID_NONE == or childName .length 0:iSize == if
       NAMESPACE_ID_NONE return
     end
     childName '.' string.indexOf =:: dotIndex
-    dotIndex 0 >= if ## name contains dot -> search for nested namespace
-      childName dotIndex string.splitIndex =:: head =:: tail
+    dotIndex optional.hasData if ## name contains dot -> search for nested namespace
+      childName dotIndex .data string.splitIndex =:: head =:: tail
       base head create context childId
         tail create context childId
       return
     end
-    base i32 cast 0 < or base i32 cast context [] .namespaces .length >= if
+    base iSize cast.u context [] .namespaces .length u>= if
       NAMESPACE_ID_NONE return ## id out of range
     end
     context [] .namespaces base i32 cast list.at .data =:: baseSpace
-    0:i32 while ..dup baseSpace [] .children .length < do =:: i
+    0:iSize while $ baseSpace [] .children .length u< do =:: i
       baseSpace [] .children i list.get i32 cast =:: child
       childName context [] .namespaces child list.get .name string.eq if
         child NamespaceId cast return
       end
-      i 1 +
+      i 1:iSize +
     end ..drop
     create ! if
       NAMESPACE_ID_NONE return
@@ -279,9 +279,9 @@ namespace: id
   -> NamespaceId ) =>: export: findNamespace_internal
     base NamespaceId =: mut: id
     path
-      while ..dup .length 0 > do
+      while $ .length 0:iSize != do
         '.' string.split
-        id ..swap create context childId id=
+        id >$ create context childId id=
         id NAMESPACE_ID_NONE == if
           break
         end
@@ -314,7 +314,7 @@ namespace: id
     string : aliasName
     LabelContext ptr.mut : context
   -> NamespaceImportId ) =>: export: getNamespaceImportId
-    context [] .namespaceImports .length 0 > if
+    context [] .namespaceImports .length 0:iSize != if
       parent NAMESPACE_IMPORT_NONE == if
         0:NamespaceImportId
       else
@@ -344,7 +344,7 @@ namespace: id
       NAMESPACE_IMPORT_NONE
       NamespaceImport new list.append
     context .namespaceImports=
-    context [] .namespaceImports .length 1 - NamespaceImportId cast return
+    context [] .namespaceImports .length 1:iSize - NamespaceImportId cast return
   end
 end
 
@@ -362,7 +362,7 @@ namespace: sb
       sb return
     end
     string 64 array : pathBuffer
-    pathBuffer@ 64 list.fromBuffer
+    pathBuffer@ list.wrapBuffer
       label? .data [] .namespaceInfo .current =:: mut: mNamespace
       while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do
         mNamespace context id.namespaceName list.append
@@ -371,18 +371,18 @@ namespace: sb
     =:: namePath
     asciify if
       sb
-        namePath .length 1 - while $ 0 >= do =:: i
+        namePath .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
           namePath i list.get sb.appendAsciified
           ".":s sb.appendAsciified
-        finally i 1 - end ..drop
+        finally i 1:iSize - end ..drop
         label? .data [] .name sb.appendAsciified
       return
     else
       sb
-        namePath .length 1 - while $ 0 >= do =:: i
+        namePath .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
           namePath i list.get sb.appendStr
           '.' sb.appendC
-        finally i 1 - end ..drop
+        finally i 1:iSize - end ..drop
         label? .data [] .name sb.appendStr
       return
     end

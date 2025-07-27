@@ -92,7 +92,7 @@ namespace: threads
     ## copy stack-frame of caller into thread stack
     stackMem stackSize + ( -> ) ptr _ ptr.mut cast! =:: mut: stackHead
     basePtr [] ( -> ) ptr _ ptr cast! =:: parentBase
-    basePtr parentBase - =:: parentFrameSize
+    basePtr parentBase ptr.diff iSize cast =:: parentFrameSize
     stackHead -1 @[] ( -> ) ptr cast! =:: newBaseP
     newBaseP stackHead -1 =[]
     stackHead parentFrameSize 1 + -

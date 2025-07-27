@@ -55,6 +55,7 @@ namespace: debug
   proc( i8  -> ) =>: export: printI8   i64 cast.s printI  end
   proc( i16 -> ) =>: export: printI16  i64 cast.s printI  end
   proc( i32 -> ) =>: export: printI32  i64 cast.s printI  end
+  proc( iSize -> ) =>: export: printZ  i64 cast.u printU  end
   proc( i64 : i -> ) =>: export: printX
     char8 24 array : buffer ##  -0x8000000000000000
     buffer@ sb.wrapBuffer
@@ -129,6 +130,7 @@ namespace: debug
     printI16
     printI32
     printI
+    printZ
     printF
     printF32
     printS

@@ -6,50 +6,56 @@ import optional
 import itrs/array
 
 ( type : T -> type ) =>: export: slice
-  struct( T _ ptr : data i64 : length )
+  struct( T _ ptr : data iSize : length )
 end
 namespace: slice
   ( type : T -> type ) =>: export: mut
-    struct( T _ ptr.mut : data i64 : length )
+    struct( T _ ptr.mut : data iSize : length )
   end
 
   proc( type : T -> T slice ) =>: export: empty
-    { { } : data 0 : length } return
+    { { } : data 0:iSize : length } return
   end
   proc( type : T -> T slice.mut ) =>: export: emptyMutable
-    { { } : data 0 : length } return
+    { { } : data 0:iSize : length } return
   end
   proc( type : auto: T T _ ptr  i32 -> T slice ) =>: export: create_32
-    i64 cast.s create_64
+    iSize cast.s create_Z
   end
   proc( type : auto: T T _ ptr  i64 -> T slice ) =>: export: create_64
+    iSize cast.s create_Z
+  end
+  proc( type : auto: T T _ ptr  iSize -> T slice ) =>: export: create_Z
     T slice new return
   end
-  overload: export: create create_32 create_64 end
+  overload: export: create create_32 create_64 create_Z end
   proc(
     type : auto: T
-    i64 : auto: k
+    iSize : auto: k
     T k ptr : elts
   -> T slice ) =>: export: wrap
     elts k create return
   end
   proc( type : auto: T T slice.mut : a -> T slice ) =>: export: freeze
-    a .data a .length slice.create_64
+    a .data a .length slice.create_Z
   end
-  proc( type : auto: T T _ ptr.mut  i64 -> T slice.mut ) =>: export: shadow: create_64mut
+  proc( type : auto: T T _ ptr.mut  iSize -> T slice.mut ) =>: export: shadow: create_mut
     T slice.mut new return
   end
   proc( type : auto: T T _ ptr.mut  i32 -> T slice.mut ) =>: export: shadow: create_32mut
-    i64 cast.s create_64mut
+    iSize cast.s create_mut
+  end
+  proc( type : auto: T T _ ptr.mut  i64 -> T slice.mut ) =>: export: shadow: create_64mut
+    iSize cast.s create_mut
   end
   proc(
     type : auto: T
-    i64 : auto: k
+    iSize : auto: k
     T k ptr.mut : elts
   -> T slice.mut ) =>: export: shadow: wrapMutable
-    elts k create_64mut return
+    elts k create_mut return
   end
-  overload: export: shadow: createMutable create_32mut create_64mut end
+  overload: export: shadow: createMutable create_mut create_32mut create_64mut end
 
   proc( type : auto: T T slice : src -> T slice.mut ) =>: copySlice
     src .length T mem.alloc =:: newData
@@ -66,26 +72,34 @@ namespace: slice
     T slice.emptyMutable return
   end
 
-  proc( i64 : index i64 : length -> ) =>: checkIndex
-    index 0 < or index length >= if
+  proc( iSize : index iSize : length -> ) =>: checkIndex
+    index length u>= if
       "slice index outside range" ..panic
     end
   end
-  proc( type : auto: T T slice : elts i64 : index -> T ) =>: export: get_64
+  proc( type : auto: T T slice : elts iSize : index -> T ) =>: export: get_Z
+    index elts .length checkIndex
+    elts .data index [] return
+  end
+  proc( type : auto: T T slice.mut : elts iSize : index -> T ) =>: export: get_mut
     index elts .length checkIndex
     elts .data index [] return
   end
   proc( type : auto: T T slice : elts i32 : index -> T ) =>: export: get_32
-    elts index i64 cast.s get_64
+    elts index iSize cast.u get_Z
   end
-  proc( type : auto: T T slice.mut : elts i64 : index -> T ) =>: export: get_64mut
-    index elts .length checkIndex
-    elts .data index [] return
+  proc( type : auto: T T slice : elts i64 : index -> T ) =>: export: get_64
+    elts index iSize cast.u get_Z
   end
   proc( type : auto: T T slice.mut : elts i32 : index -> T ) =>: export: get_32mut
-    elts index i64 cast.s get_64mut
+    elts index iSize cast.u get_mut
+  end
+  proc( type : auto: T T slice.mut : elts i64 : index -> T ) =>: export: get_64mut
+    elts index iSize cast.u get_mut
   end
   overload: export: get
+    get_Z
+    get_mut
     get_32
     get_64
     get_32mut
@@ -94,9 +108,9 @@ namespace: slice
   proc(
     type : auto: T
     T slice : elts
-    i64 : index
-  -> T ptr optional ) =>: export: at_64
-    index 0 < or index elts .length >= if
+    iSize : index
+  -> T ptr optional ) =>: export: at_Z
+    index elts .length u>= if
       T ptr optional.empty return
     end
     elts .data index @[] T ptr cast! optional.wrap return
@@ -106,14 +120,21 @@ namespace: slice
     T slice : elts
     i32 : index
   -> T ptr optional ) =>: export: at_32
-    elts index i64 cast.s at_64
+    elts index iSize cast.u at_Z
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    i64 : index
+  -> T ptr optional ) =>: export: at_64
+    elts index iSize cast.u at_Z
   end
   proc(
     type : auto: T
     T slice.mut : elts
-    i64 : index
-  -> T ptr.mut optional ) =>: export: at_64mut
-    index 0 < or index elts .length >= if
+    iSize : index
+  -> T ptr.mut optional ) =>: export: at_mut
+    index elts .length u>= if
       T ptr.mut optional.empty return
     end
     elts .data index @[] T ptr.mut cast! optional.wrap return
@@ -123,53 +144,77 @@ namespace: slice
     T slice.mut : elts
     i32 : index
   -> T ptr.mut optional ) =>: export: at_32mut
-    elts index i64 cast.s at_64mut
+    elts index iSize cast.u at_mut
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+    i64 : index
+  -> T ptr.mut optional ) =>: export: at_64mut
+    elts index iSize cast.u at_mut
   end
   overload: export: at
-    at_32 at_64 at_32mut at_64mut
+    at_Z at_mut at_32 at_64 at_32mut at_64mut
   end
   proc(
     type : auto: T
     T slice : elts
-    i64 : index
-  -> T ptr ) =>: export: atValue_64
+    iSize : index
+  -> T ptr ) =>: export: atValue_Z
     index elts .length checkIndex
-    elts .data index + T ptr cast! return
+    elts .data index @[] T ptr cast! return
   end
   proc(
     type : auto: T
     T slice : elts
     i32 : index
   -> T ptr ) =>: export: atValue_32
-    elts index i64 cast.s atValue_64
+    elts index iSize cast.u atValue_Z
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    i64 : index
+  -> T ptr ) =>: export: atValue_64
+    elts index iSize cast.u atValue_Z
   end
   proc(
     type : auto: T
     T slice.mut : elts
-    i64 : index
-  -> T ptr.mut ) =>: export: atValue_64mut
+    iSize : index
+  -> T ptr.mut ) =>: export: atValue_mut
     index elts .length checkIndex
     elts .data index @[] T ptr.mut cast! return
   end
   proc(
     type : auto: T
     T slice.mut : elts
+    i64 : index
+  -> T ptr.mut ) =>: export: atValue_64mut
+    elts index iSize cast.s atValue_mut
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
     i32 : index
   -> T ptr.mut ) =>: export: atValue_32mut
-    elts index i64 cast.s atValue_64mut
+    elts index iSize cast.s atValue_mut
   end
   overload: export: atValue
-    atValue_32 atValue_64 atValue_32mut atValue_64mut
+    atValue_Z atValue_mut atValue_32 atValue_64 atValue_32mut atValue_64mut
   end
-  proc( type : auto: T T : elt T slice.mut : elts i64 : index -> ) =>: export: set_64
+  proc( type : auto: T T : elt T slice.mut : elts iSize : index -> ) =>: export: set_Z
     index elts .length checkIndex
     elt elts .data index =[]
   end
+  proc( type : auto: T T : elt T slice.mut : elts i64 : index -> ) =>: export: set_64
+    elt elts index iSize cast.u set_Z
+  end
   proc( type : auto: T T : elt T slice.mut : elts i32 : index -> ) =>: export: set_32
-    elt elts index i64 cast.s set_64
+    elt elts index iSize cast.u set_Z
   end
   overload: export: set
-    set_32 set_64
+    set_Z set_32 set_64
   end
   proc( type : auto: T T : elt T slice.mut : elts -> ) =>: export: fill
     elts .data elts .length elt mem.fill
@@ -180,36 +225,36 @@ namespace: slice
     type : auto: T
     T slice : elts
     T : elt
-  -> i64 ) =>: export: indexOf
-    0:i64 while ..dup elts .length < do
+  -> iSize optional ) =>: export: indexOf
+    0:iSize while ..dup elts .length u< do
       elts .data ..over [] elt == if
-        return
+        optional.wrap return
       end
-      1 +
+      1:iSize +
     end
     ..drop
-    -1 return
+    iSize optional.empty return
   end
   proc(
     type : auto: T
     T slice : elts
     T : elt
-  -> i64 ) =>: export: lastIndexOf
-    elts .length 1 - ## index
-    while ..dup 0 >= do
+  -> iSize optional ) =>: export: lastIndexOf
+    elts .length 1:iSize - ## index
+    while $ -1:iSize != do ## decrement until reaching zero (inclusive)
       elts .data ..over [] elt == if
-        return
+        optional.wrap return
       end
-      1 -
-    end
-    return
+      1:iSize -
+    end ..drop
+    iSize optional.empty return
   end
   proc(
     type : auto: T
     T slice : elts
     T : elt
   -> bool ) =>: export: contains
-    elts elt indexOf -1 != return
+    elts elt indexOf .data ?? return
   end
 
   proc(
@@ -252,30 +297,59 @@ namespace: slice
     type : auto: T
     T slice : a
     T slice : b
-    proc( T ptr T ptr -> bool ) ptr : shadow: eq
-  -> i64 ) =>: export: indexOfSlice
-    a .length b .length < if
-      -1 return
+    proc( T T -> bool ) ptr : shadow: eq
+  -> iSize optional ) =>: export: indexOfSlice
+    a .length b .length u< if
+      iSize optional.empty return
     end
     ## TODO? use faster algorithm
-    0 while ..dup a .length b .length - <= do =:: i
+    0:iSize while ..dup a .length b .length - u<= do =:: i
       true =:: mut: match
-      0 while ..dup b .length < do =:: j
+      0:iSize while ..dup b .length u< do =:: j
         ## eq
-          a i j + slice.at .data
-          b j slice.at .data
+          a i j + slice.get
+          b j slice.get
         eq () ! if
           false match=
           j break
         end
-        j 1 +
+        j 1:iSize +
       end ..drop
       match if
-        i return
+        i optional.wrap return
       end
-      i 1 +
+      i 1:iSize +
     end ..drop
-    -1 return
+    iSize optional.empty return
+  end
+  proc(
+    type : auto: T
+    T slice : a
+    T slice : b
+    proc( T T -> bool ) ptr : shadow: eq
+  -> iSize optional ) =>: export: lastIndexOfSlice
+    a .length b .length u< if
+      iSize optional.empty return
+    end
+    ## TODO? use faster algorithm
+    a .length b .length - while $ -1:iSize != do =:: i
+      true =:: mut: match
+      0:iSize while ..dup b .length u< do =:: j
+        ## eq
+          a i j + slice.get
+          b j slice.get
+        eq () ! if
+          false match=
+          j break
+        end
+        j 1:iSize +
+      end ..drop
+      match if
+        i optional.wrap return
+      end
+      i 1:iSize -
+    end ..drop
+    iSize optional.empty return
   end
   ## find lowest index of slice,
   ## if the slice is not a sub-sequence contain the smallest possible start index
@@ -286,12 +360,12 @@ namespace: slice
     T slice : b
     proc( T ptr T ptr C -> bool ) ptr : shadow: eq
     C : context
-  -> i64 ) =>: export: indexOfSliceStart
+  -> iSize ) =>: export: indexOfSlicePrefix
     ## TODO? use faster algorithm
-    0:i64 while ..dup a .length <= do =:: i
+    0:iSize while ..dup a .length u<= do =:: i
       true =:: mut: match
-      0:i64 while ..dup b .length < do =:: j
-        i j + a .length >= if
+      0:iSize while ..dup b .length u< do =:: j
+        i j + a .length u>= if
           j break
         end
         ## eq
@@ -302,12 +376,12 @@ namespace: slice
           false match=
           j break
         end
-        j 1 +
+        j 1:iSize +
       end ..drop
       match if
         i return
       end
-      i 1 +
+      i 1:iSize +
     end ..drop
     ..unreachable ## TODO! is this realy unreachable
   end
@@ -318,17 +392,31 @@ namespace: slice
     T slice : elts
     i32 : n
   -> T slice ) =>: export: head_32
-    elts n i64 cast head_64
+    elts n iSize cast.u head_Z
   end
   proc(
     type : auto: T
     T slice : elts
     i64 : n
   -> T slice ) =>: export: head_64
-    n 0 <= if
+    elts n iSize cast.u head_Z
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    iSize optional : n
+  -> T slice ) =>: export: head_O
+    n .empty ?? if
       T empty return
     end
-    n elts .length >= if
+    elts  n .data head_Z return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    iSize : n
+  -> T slice ) =>: export: head_Z
+    n elts .length u>= if
       elts return
     end
     elts .data  n create return
@@ -338,22 +426,36 @@ namespace: slice
     T slice.mut : elts
     i32 : n
   -> T slice.mut ) =>: export: head_32mut
-    elts n i64 cast head_64mut
+    elts n iSize cast.u head_mut
   end
   proc(
     type : auto: T
     T slice.mut : elts
     i64 : n
   -> T slice.mut ) =>: export: head_64mut
-    n 0 <= if
+    elts n iSize cast.u head_mut
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+    iSize optional : n
+  -> T slice.mut ) =>: export: head_Omut
+    n .empty ?? if
       T emptyMutable return
     end
-    n elts .length >= if
+    elts  n .data head_mut return
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+    iSize : n
+  -> T slice.mut ) =>: export: head_mut
+    n elts .length u>= if
       elts return
     end
     elts .data  n createMutable return
   end
-  overload: export: head head_32 head_64 head_32mut head_64mut end
+  overload: export: head head_Z head_mut head_O head_Omut head_32 head_64 head_32mut head_64mut end
 
   ## everything excluding the first n characters
   proc(
@@ -361,17 +463,31 @@ namespace: slice
     T slice : elts
     i32 : n
   -> T slice ) =>: export: tail_32
-    elts n i64 cast tail_64
+    elts n iSize cast.u tail_Z
   end
   proc(
     type : auto: T
     T slice : elts
     i64 : n
   -> T slice ) =>: export: tail_64
-    n 0 <= if
+    elts n iSize cast.u tail_Z
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    iSize optional : n
+  -> T slice ) =>: export: tail_O
+    n .empty ?? if
       elts return
     end
-    n elts .length >= if
+    elts  n .data  tail_Z return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    iSize : n
+  -> T slice ) =>: export: tail_Z
+    n elts .length u>= if
       T empty return
     end
     elts .data n @[] elts .length n -  create return
@@ -381,39 +497,53 @@ namespace: slice
     T slice.mut : elts
     i32 : n
   -> T slice.mut ) =>: export: tail_32mut
-    elts n i64 cast tail_64mut
+    elts n iSize cast.u tail_mut
   end
   proc(
     type : auto: T
     T slice.mut : elts
     i64 : n
   -> T slice.mut ) =>: export: tail_64mut
-    n 0 <= if
+    elts n iSize cast.u tail_mut
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+    iSize optional : n
+  -> T slice ) =>: export: tail_Omut
+    n .empty ?? if
       elts return
     end
-    n elts .length >= if
+    elts  n .data  tail_mut return
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+    iSize : n
+  -> T slice.mut ) =>: export: tail_mut
+    n elts .length u>= if
       T emptyMutable return
     end
     elts .data n @[]  elts .length n -  createMutable return
   end
-  overload: export: tail tail_32 tail_64 tail_32mut tail_64mut end
+  overload: export: tail tail_Z tail_mut tail_O tail_Omut tail_32 tail_64 tail_32mut tail_64mut end
   ## equivalent to:  <from> tail <len> head
   proc(
     type : auto: T
     T slice : elts
-    i64 : from
-    i64 : len
+    iSize : from
+    iSize : len
   -> T slice ) =>: export: getSlice
-    len 0 <= if
+    len 0:iSize == if
       T empty return
     end
-    from elts .length >= if
+    from elts .length u>= if
       T empty return
     end
-    from 0 <= if
+    from 0:iSize == if
       elts  len head return
     end
-    from len + elts .length >= if
+    from len + elts .length u>= if
       elts .data from @[]  elts .length from -  create return
     end
     elts .data from @[]  len  create return
@@ -421,7 +551,7 @@ namespace: slice
   proc(
     type : auto: T
     T slice : elts
-    i64 : index
+    iSize : index
   -> T slice T slice ) =>: export: cutIndex
     elts index tail
     elts index head
@@ -430,15 +560,23 @@ namespace: slice
   proc(
     type : auto: T
     T slice : elts
-    i64 : index
-  -> T slice T slice ) =>: export: splitIndex
-    index 0 < if
+    iSize optional : index
+  -> T slice T slice ) =>: export: splitIndex_O
+    index .empty ?? if
       T empty elts return
     end
-    elts index 1 + tail
+    elts index .data splitIndex_Z
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    iSize : index
+  -> T slice T slice ) =>: export: splitIndex_Z
+    elts index 1:iSize + tail
     elts index head
     return
   end
+  overload: export: splitIndex splitIndex_O splitIndex_Z end
   proc(
     type : auto: T
     T slice : elts
@@ -455,9 +593,9 @@ namespace: slice
   -> T slice T slice ) =>: export: splitLast
     elts
       elts elt lastIndexOf
-      ..dup -1 == if ..drop.2
+      $ .empty ?? if ..drop.2
         elts T empty return
-      end
+      end .data
     splitIndex return
   end
 
@@ -513,18 +651,23 @@ namespace: slice
 end
 import itrs/slice
 overload: export: []
+  slice.get_Z
+  slice.get_mut
   slice.get_32
   slice.get_64
   slice.get_32mut
   slice.get_64mut
 end
 overload: export: @[]
+  slice.atValue_Z
+  slice.atValue_mut
   slice.atValue_32
   slice.atValue_64
   slice.atValue_32mut
   slice.atValue_64mut
 end
 overload: export: =[]
+  slice.set_Z
   slice.set_32
   slice.set_64
 end

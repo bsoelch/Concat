@@ -57,17 +57,18 @@ namespace: array
   proc( type : auto: T type.index : auto: I
     T _ ptr : p I : len
   -> T ReverseItr ) =>: export: reversed
-    p len 1 - @[]  p T ReverseItr new
+    ## TODO? remove casts and make iSize compatible with literals
+    p len I ..types.unwrapNamed cast 1 - @[]  p T ReverseItr new
   end
   proc( type : auto: T type.index : auto: I
     T _ ptr : p I : len
   -> T ReversePtrItr ) =>: export: reversedPtrItr
-    p len 1 - @[]  p T ReversePtrItr new
+    p len I ..types.unwrapNamed cast 1 - @[]  p T ReversePtrItr new
   end
   proc( type : auto: T type.index : auto: I
     T _ ptr.mut : p I : len
   -> T ReverseMutPtrItr ) =>: export: reversedMutPtrItr
-    p len 1 - @[]  p T ReverseMutPtrItr new
+    p len I ..types.unwrapNamed cast 1 - @[]  p T ReverseMutPtrItr new
   end
   overload: export: @reversed reversedPtrItr reversedMutPtrItr end
 

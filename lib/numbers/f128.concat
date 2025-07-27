@@ -583,12 +583,12 @@ namespace: f128
     false =:: mut: sign
     0:i64 =:: mut: c
     false bool =: mut: hasDot
-    0:i64 =:: mut: e
+    0:iSize =:: mut: e
     0 0 i128 new =:: mut: val
     1:i64 56 << 0 i128 new =:: mut: maxVal ## higher precision than f128, no overflow in base 62
     false =:: mut: cStyleHex
     str
-      ..dup .length 0 == if
+      ..dup .length 0:iSize == if
         ..drop 0 0 f128 new ParserError .EMPTY return
       end
       ..dup 0 string.charAt '-' == if
@@ -597,7 +597,7 @@ namespace: f128
       else ..dup 0 string.charAt '+' == _if
         1 string.tail
       end
-      ..dup .length 0 == if
+      ..dup .length 0:iSize == if
         ..drop 0 0 f128 new ParserError .EMPTY return
       end
       base 0 == if
@@ -611,23 +611,23 @@ namespace: f128
         f128.NaN ParserError .INVALID_BASE return
       end
       0 mBase i64 cast.u i128 new =:: baseI128
-      0:i64 while ..dup ..over.2 .length < do =:: i
+      0:iSize while ..dup ..over.2 .length u< do =:: i
         ..dup i string.charAt '.' == if
-          i 0 == or hasDot if ..drop ## . cannot be first character
+          i 0:iSize == or hasDot if ..drop ## . cannot be first character
             f128.NaN ParserError .INVALID_CHAR return
           end
           true hasDot=
         else ..dup i string.charAt mBase isExpChar _if
-          i 0 == if ..drop ##-exp char cannot be first character
+          i 0:iSize == if ..drop ##-exp char cannot be first character
             f128.NaN ParserError .INVALID_CHAR return
           end
-          i 1 + e=
+          i 1:iSize + e=
           i break
         else ..dup i string.charAt ..dup 'p' == ..swap 'P' == | mBase 16 == & _if
-          i 0 == if ..drop ##-exp char cannot be first character
+          i 0:iSize == if ..drop ##-exp char cannot be first character
             f128.NaN ParserError .INVALID_CHAR return
           end
-          i 1 + e=
+          i 1:iSize + e=
           true cStyleHex=
           10 mBase= ## exponent written in base 10
           c 4 * c= ## scale c to power of 2
@@ -635,7 +635,7 @@ namespace: f128
         else
           $ i string.charAt mBase parseDigit
             $ .DIGIT ?? ! if
-              .IGNORED ?? and i 0 > if ..drop i 1 + continue end
+              .IGNORED ?? and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
               ..drop.2
             f128.NaN ParserError .INVALID_CHAR return
             else ..drop end
@@ -649,9 +649,9 @@ namespace: f128
             c 1 - c=
           end
         end
-        i 1 +
+        i 1:iSize +
       end ..drop
-      e 0 > if
+      e 0:iSize iSize.sgt if
         ..dup e string.tail mBase tryParseInt
           ..dup .NONE ?? ! if =:: err
             ..drop.2 f128.NaN err return
@@ -673,7 +673,7 @@ namespace: f128
        mBase f128.fromI32 c 1024 + -_ powI /
        mBase f128.fromI32 1024 powI /
     end
-    hasDot or e 0 > if ParserError .NONE return else ParserError .INT return end
+    hasDot or e 0:iSize iSize.sgt if ParserError .NONE return else ParserError .INT return end
   end
 end
 
@@ -1049,21 +1049,21 @@ namespace: f160
   ## XXX div
 end
 namespace: std.literals
-  proc( char8 _ ptr : chars i64 : k -> f128 ) =>: static: export: :f128
+  proc( char8 _ ptr : chars iSize : k -> f128 ) =>: static: export: :f128
     char8 128 array : errMessageBuffer
     chars k string.create =:: str
     str 0 f128.parse =:: err
     err .NONE ?? or err .INT ?? if
       return
     else err .OVERFLOW ?? _if
-      errMessageBuffer@ $ ..length i32 cast sb.fromBuffer
+      errMessageBuffer@ sb.wrapBuffer
         "float literal overflows size for type f128: `" sb.appendS
         str sb.appendStr
         '`' sb.appendC
       sb.asStr ..compiler.warning
       return
     end
-    errMessageBuffer@ $ ..length i32 cast sb.fromBuffer
+    errMessageBuffer@ sb.wrapBuffer
       "invalid float constant: `" sb.appendS
       str sb.appendStr
       '`' sb.appendC

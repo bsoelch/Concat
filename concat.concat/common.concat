@@ -142,36 +142,27 @@ type : export: ConstantContext
 
 namespace: sb
   proc( stringBuilder string -> stringBuilder ) =>: export: appendAsciified
-    =:: str
-    0:i64 while ..dup str .length < do
-      ..swap
-        str ..over.2 string.charAt =:: c
+    string.chars for =:: c
         c '0' >= c '9' <= & if
-          c sb.appendC
-          ..swap 1 + continue
+          c sb.appendC continue
         end
         c 'A' >= c 'Z' <= & if
-          c sb.appendC
-          ..swap 1 + continue
+          c sb.appendC continue
         end
         c 'a' >= c 'z' <= & if
-          c sb.appendC
-          ..swap 1 + continue
+          c sb.appendC continue
         end
         c '_' == if
-          "__" sb.appendS
-          ..swap 1 + continue
+          "__" sb.appendS continue
         end
         c '.' == if
-          "_d" sb.appendS
-          ..swap 1 + continue
+          "_d" sb.appendS continue
         end
         "_X" sb.appendS
         c i32 cast.u 0xff & 0x10 < if
           '0' sb.appendC
         end
         c i32 cast.u 0xff & sb.appendI
-      ..swap 1 +
-    end ..drop
+    end
   end
 end

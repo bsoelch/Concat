@@ -79,7 +79,7 @@ struct(
   CallDataId : callDataId
 ) =:: export: ProcedureCall
 struct(
-  i64 : outArgCount
+  iSize : outArgCount
   CallDataId : callDataId
 ) =:: export: PointerCall
 struct(
@@ -318,7 +318,7 @@ proc( i32 StackModType FilePosition -> Operation ) =>: export: opStackMod
   StackModification new OpValue .stackMod Type .undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opCallPtr
-  -1 NO_CALL_DATA PointerCall new OpValue .callPtr Type .undefined pos Operation new return
+  -1:iSize NO_CALL_DATA PointerCall new OpValue .callPtr Type .undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opLength
   OpValue .length types.I_SIZE pos Operation new return
@@ -1083,53 +1083,23 @@ namespace: sb
         break
     end
   end
-  proc( stringBuilder ProgramContext ptr -> stringBuilder ) =>: export: appendProgram
-    =:: prog
-      "## errors:\n" sb.appendS
-      prog [] .errors errorCmp@ list.sort
-      0:i32 while ..dup prog [] .errors .length < do
-        ..swap
-          prog [] .errors ..over.2 list.get sb.appendCompilerError
-        ..swap
-        1 +
-      end ..drop
-      0:i32 while ..dup prog [] .progFiles .length < do
-        ..swap
-          prog [] .progFiles ..over.2 list.get =:: f
-          "## "          sb.appendS
-          f .fileName    sb.appendSb
-          '\n'           sb.appendC
-          "## global:\n" sb.appendS
-          0:i32 while ..dup f .globalOps .length < do
-            ..swap
-              f .globalOps ..over.2 list.get prog sb.appendOp
-            ..swap
-            1 +
-          end ..drop
-          "## local:\n" sb.appendS
-          0:i32 while ..dup f .localOps .length < do
-            ..swap
-              f .localOps ..over.2 list.get prog sb.appendOp
-            ..swap
-            1 +
-          end ..drop
-          "## tmp:\n" sb.appendS
-          0:i32 while ..dup f .tmpOps .length < do
-            ..swap
-              f .tmpOps ..over.2 list.get prog sb.appendOp
-            ..swap
-            1 +
-          end ..drop
-        ..swap
-        1 +
-      end ..drop
-      "## temporary code:\n" sb.appendS
-      0:i32 while ..dup prog [] .tmpOps .length < do
-        ..swap
-          prog [] .tmpOps ..over.2 list.get prog sb.appendOp
-        ..swap
-        1 +
-      end ..drop
+  proc( stringBuilder ProgramContext ptr : prog -> stringBuilder ) =>: export: appendProgram
+    "## errors:\n" sb.appendS
+    prog [] .errors errorCmp@ list.sort
+    prog [] .errors for sb.appendCompilerError end
+    prog [] .progFiles for =:: f
+      "## "          sb.appendS
+      f .fileName    sb.appendSb
+      '\n'           sb.appendC
+      "## global:\n" sb.appendS
+      f .globalOps for prog sb.appendOp end
+      "## local:\n" sb.appendS
+      f .localOps for prog sb.appendOp end
+      "## tmp:\n" sb.appendS
+      f .tmpOps for prog sb.appendOp end
+    end
+    "## temporary code:\n" sb.appendS
+    prog [] .tmpOps for prog sb.appendOp end
   end
 end
 

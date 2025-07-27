@@ -38,7 +38,7 @@ namespace: slice
     S slice : src
     T slice.mut : target
   -> S T MapToItr ) =>: export: itrMapTo
-    target .length src .length < if
+    target .length src .length u< if
       "target list cannot hold all values in source" ..panic
     end
     ## MapItr

@@ -11,7 +11,7 @@ proc( string -> i8 ) =>: runBf_0
 end
 proc( i64 : ip string : code -> i64 ) =>: skipLoop
   1 =:: mut: n
-  ip 1 + while $ code .length < do =:: i
+  ip 1 + while $ code .length i64 cast.u < do =:: i
     code i string.charAt '[' == if
       n 1 + n=
     else code i string.charAt ']' == _if
@@ -22,11 +22,11 @@ proc( i64 : ip string : code -> i64 ) =>: skipLoop
 end
 proc( string : code i64 : tapeCap -> i8 ) =>: runBf_C
   tapeCap 0 > "tape is non-empty" assert
-  tapeCap i8 mem.calloc =:: tape
+  tapeCap iSize cast.u i8 mem.calloc =:: tape
   64 i64 list.create =:: mut: stack
   tapeCap 2 / =:: mut: mp
   0:i64 =:: mut: ip
-  while ip code .length < do
+  while ip code .length i64 cast.u < do
     code ip string.charAt switch
       '+' case tape mp [] 1 + tape mp =[] break
       '-' case tape mp [] 1 - tape mp =[] break

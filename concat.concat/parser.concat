@@ -150,21 +150,21 @@ proc(
       0 char16 list.create str .Array8 string.fromBytes utf8.toUTF16 =:: str16
       str16
         list.asSlice string16.fromSlice
-      constContext newString16Const str16 .length i64 cast.u types.primitive.CHAR16
+      constContext newString16Const str16 .length types.primitive.CHAR16
         str16 list.free ..drop
       break
     UTF32 case
       0 char32 list.create str .Array8 string.fromBytes  utf8.toUTF32 =:: str32
       str32
         list.asSlice string32.fromSlice
-      constContext newString32Const str32 .length i64 cast.u types.primitive.CHAR32
+      constContext newString32Const str32 .length types.primitive.CHAR32
         str32 list.free ..drop
       break
     UNKNOWN INT_LITERAL case
       "unsupported string literal type" sb.copyPtr pos errors appendError
-      ConstValue .None 0 Type .undefined break
+      ConstValue .None 0:iSize Type .undefined break
   end =:: charType =:: strLength =:: strValue
-  strLength ArraySize .int =:: size
+  strLength i64 cast.u ArraySize .int =:: size
   ## Constant
     charType types.ArrayType .POINTER size@ 1 slice.create false context newArrayType ..drop
     strValue
@@ -191,10 +191,10 @@ end
 
 proc( ParserState ptr.mut : state -> i32 ) =>: opCount
   state [] .progContext =:: progContext
-  state [] .currentProcs .length 0 == if
+  state [] .currentProcs .length 0:iSize == if
     -1 return
   else
-    progContext [] .tmpOps .length return
+    progContext [] .tmpOps .length i32 cast.u return
   end
 end
 proc( ParserState ptr.mut : state -> InterpreterInfo ptr.mut ) =>: getInterpreter
@@ -203,7 +203,7 @@ end
 proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
   state [] .progContext =:: progContext
   progContext .errors =:: errors
-  state [] .currentProcs .length 0 == if
+  state [] .currentProcs .length 0:iSize == if
     state [] .saveGlobalTokens if
       progContext [] .progFiles
         state [] .currentFile i64 cast
@@ -228,7 +228,7 @@ end
 
 proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
   state [] .progContext =:: progContext
-  state [] .currentProcs .length 0 == if
+  state [] .currentProcs .length 0:iSize == if
     state [] .globalOpBuffer
   else
     progContext [] .tmpOps
@@ -250,11 +250,11 @@ proc( ParserState ptr.mut : state -> ConstValue interpreter.ValueInfo ) =>: popC
   value info return
 end
 proc( ParserState ptr.mut : state -> bool ) =>: hasConst
-  state [] .currentProcs .length 0 > if
+  state [] .currentProcs .length 0:iSize != if
     false return ## constants only exists at global level
   end
   state getInterpreter .context =:: interpreter
-  interpreter [] .stack .length 0 > return
+  interpreter [] .stack .length 0:iSize != return
 end
 proc(
   ParserState ptr.mut : state
@@ -315,7 +315,7 @@ proc(
 ->
   BlockType #+type+#
 ) =>: currentBlockType
-  state [] .openBlocks .length 0 == if
+  state [] .openBlocks .length 0:iSize == if
     BlockType .UNKNOWN return
   end
   state [] .openBlocks list.peek .data [] .blockType return
@@ -326,7 +326,7 @@ proc(
   BlockInfo
   bool #+isError+#
 ) =>: closeBlock
-  state [] .openBlocks .length 0 == if
+  state [] .openBlocks .length 0:iSize == if
     ItrVarInfo optional.empty BlockType .UNKNOWN -1 false false BlockInfo new true return
   end
   state [] .openBlocks
@@ -341,15 +341,14 @@ proc(
 end
 
 proc( BlockType : mergeWith FilePosition : pos ParserState ptr.mut : state -> ) =>: convertAndOrBlock
-  state [] .currentProcs .length 0 == if
+  state [] .currentProcs .length 0:iSize == if
     return ## cannot modify and/or in global block
   end
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   state [] .andOrPositions =:: andOrPositions
-  0:i32 while ..dup andOrPositions .length < do =:: i
-    andOrPositions i list.get =:: opPos
-    opPos 0 < or opPos progContext [] .tmpOps .length >= if
+  andOrPositions for =:: opPos
+    opPos iSize cast.u progContext [] .tmpOps .length u>= if
       "operations and blocks are out of sync, could not determine position of and/or" sb.copyPtr
       pos errors appendError
       return
@@ -373,8 +372,7 @@ proc( BlockType : mergeWith FilePosition : pos ParserState ptr.mut : state -> ) 
       end
       opData [] .pos
     opBlock opData =[]
-    i 1 +
-  end ..drop
+  end
   andOrPositions list.clear state .andOrPositions=
 end
 
@@ -516,13 +514,13 @@ proc(
   progContext .errors =:: errors
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  literal .length 0 == if
+  literal .length 0:iSize == if
     false return
   end
   literal 0 string.charAt '#' == if
     false return ## annotations
   end
-  literalTypeName .length 0 > if
+  literalTypeName .length 0:iSize != if
     literalTypeName "i8":s string.eq if types.primitive.I8
     else literalTypeName "i16":s string.eq _if types.primitive.I16
     else literalTypeName "i32":s string.eq _if types.primitive.I32
@@ -622,8 +620,8 @@ proc(
   token .value
     pos progContext .errors constContext constants.parseStringConstant ## escape character
       .Array8 string.fromBytes
-      0 utf8.nextCodepoint =:: cp
-    #+nextIndex+# ..swap .length < if
+      0:iSize utf8.nextCodepoint =:: cp
+    #+nextIndex+# >$ .length u< if
       "A character literal has to contain exactly one character" sb.copyPtr pos errors appendError
     end
     token .stringType switch
@@ -668,7 +666,7 @@ proc(
     pos errors appendError
     true return
   end
-  literalType .LITERAL_TYPE .length 0 == if
+  literalType .LITERAL_TYPE .length 0:iSize == if
     "literal type should be non-empty" sb.copyPtr
     pos errors appendError
     true return
@@ -718,12 +716,12 @@ proc(
         literalType .LITERAL_TYPE "?":s string.eq if
           false =:: mut: isElement
           token .LITERAL
-            $ .length 2 >= and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != if
+            $ .length 2:iSize u>= and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != if
               1 string.tail
               true isElement=
             end
             $ "@":s string.endsWith if
-              $ .length 1 - string.head
+              $ .length 1:iSize - string.head
             end
           =:: idName
           idName
@@ -748,7 +746,7 @@ proc(
           $ .val =:: stringConst
         state pushConst
         types.I_SIZE
-          stringConst .Array8 .length ConstValue .Int
+          stringConst .Array8 .length i64 cast.u ConstValue .Int
           IdentifierInfo optional.empty
         fileState [] .wordStart Constant new state pushConst
         state [] .tmpString
@@ -773,7 +771,7 @@ proc(
             stringConst .Array32 .length
           else stringConst .Array16 ?? _if
             stringConst .Array16 .length
-          else ..unreachable end ConstValue .Int
+          else ..unreachable end i64 cast.u ConstValue .Int
           IdentifierInfo optional.empty
         fileState [] .wordStart Constant new state pushConst
         fileState nextToken =:: literalType
@@ -808,7 +806,7 @@ proc(
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   ..dup 10 number.tryParseInt .NONE ?? ! if ..drop
-    ..dup .length 0 > if
+    ..dup .length 0:iSize != if
       64 sb.create
         "unexpected argument for " sb.appendS
         opName sb.appendStr
@@ -969,7 +967,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     token fileState state tryParseConstant if
       ..drop return
     end
-    ..dup .length 0 == if ..drop
+    ..dup .length 0:iSize == if ..drop
       return ## skip empty tokens
     end
     ## 1. parse blocks
@@ -1127,7 +1125,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "break":s string.eq or
         ..dup "break.":s string.startsWith _if =:: opName
       opName '.' string.split ..drop =:: breakLabel
-      breakLabel .length 0 > if
+      breakLabel .length 0:iSize != if
         ## newLabel
           breakLabel
           id.FLAG_NONE
@@ -1142,7 +1140,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "continue":s string.eq or
         ..dup "continue.":s string.startsWith _if =:: opName
       opName '.' string.split ..drop =:: continueLabel
-      continueLabel .length 0 > if
+      continueLabel .length 0:iSize != if
         ## newLabel
           continueLabel
           id.FLAG_NONE
@@ -1187,8 +1185,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .DEFAULT state openBlock
       return
     else $ "=>":s string.eq or $ "=>:":s string.eq _if =:: opName
-      opName .length 3 == =:: named
-      state [] .currentProcs .length 0 > =:: isNested
+      opName .length 3:iSize == =:: named
+      state [] .currentProcs .length 0:iSize != =:: isNested
       isNested if
         Type .undefined
       else
@@ -1245,9 +1243,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## ensure procedure block is opened after declaring procedure,
       ##   but before early return due to error
       state openProcBlock
-      progContext [] .tmpOps .length =:: codeStart
+      progContext [] .tmpOps .length i32 cast.u =:: codeStart
       procConst .Procedure ?? if
-        codeStart progContext [] .procedures
+        progContext [] .procedures
           procConst .Procedure i64 cast list.at .data
         =:: procData
         procData .implementation [] .code ?? ! if
@@ -1258,9 +1256,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               code case ..unreachable
             end
           fileState [] .wordStart errors appendError
-          ..drop return
+          return
         end
-        procData .implementation .code .codeStart=
+        codeStart procData .implementation .code .codeStart=
         procConst .Procedure
       else
         procName procType state [] .currentFile NO_PROC codeStart progContext newProcData
@@ -1280,7 +1278,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       ## check for invalid procedure declaration
-       named and state [] .constantBlocks .length 0 > if
+       named and state [] .constantBlocks .length 0:iSize != if
         "cannot declare named procedure in type or initializer blocks" sb.copyPtr
         fileState [] .wordStart errors appendError
         return
@@ -1298,7 +1296,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "return":s string.eq _if ..drop
       skipBlock if return end
-      state [] .currentProcs .length 0 == if
+      state [] .currentProcs .length 0:iSize == if
         "return outside procedure" sb.copyPtr fileState [] .wordStart errors appendError
       end
       ## opReturn
@@ -1321,7 +1319,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .NAMESPACE state openBlock
       return
     else ..dup "overload:":s string.eq _if =:: opName
-      state [] .currentProcs .length 0 > if
+      state [] .currentProcs .length 0:iSize != if
         "overload cannot be declared within procedure" sb.copyPtr
         fileState [] .wordStart errors appendError
       end
@@ -1464,7 +1462,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             break
           TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION INLINE_PROCEDURE
           TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN TYPE_CPROC_IN INITIALIZER TYPE_TYPESET case
-            state [] .constantBlocks .length 0 > if ## close matching constant block
+            state [] .constantBlocks .length 0:iSize != if ## close matching constant block
               state [] .constantBlocks
                 list.pop ..drop
               state .constantBlocks=
@@ -1488,7 +1486,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end =:: closedBlock
         closedBlock .blockType =:: closedType
         closedType .PROCEDURE ?? if
-          state [] .currentProcs .length 0 == if
+          state [] .currentProcs .length 0:iSize == if
             "unexpected end of procedure" sb.copyPtr fileState [] .wordStart errors appendError
             return
           end
@@ -1499,7 +1497,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             progContext [] .procedures
               currentProcId i64 cast list.at .data
             =:: currentProc
-            progContext [] .tmpOps .length
+            progContext [] .tmpOps .length i32 cast.u
               currentProc [] .implementation .code .codeStart -
             currentProc .implementation .code .codeLength=
             currentProc [] .labelId labelContext id.labelFlags id.FLAG_LAMBDA & ? if
@@ -1634,7 +1632,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end =:: closed
       closed .blockType =:: blockType
-      state [] .constantBlocks .length 0 > if
+      state [] .constantBlocks .length 0:iSize != if
         state [] .constantBlocks
           list.pop ..drop
         state .constantBlocks=
@@ -1696,7 +1694,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       isError if true else closed .blockType .INITIALIZER ?? ! end if
         "unexpected " sb.copyPtr opName sb.appendStr fileState [] .wordStart errors appendError
       end
-      state [] .constantBlocks .length 0 == if
+      state [] .constantBlocks .length 0:iSize == if
         return
       end
       state [] .constantBlocks
@@ -1712,12 +1710,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     $ ":":s string.eq or $ "=:":s string.eq if =:: opName
       ## TODO extract declaration parser into procedure?
       opName ":":s string.eq ! =:: isInit
-      state [] .currentProcs .length 0 > =:: mut: inProcedure
-      state [] .constantBlocks .length 0 > =:: mut: inConstBlock
+      state [] .currentProcs .length 0:iSize != =:: mut: inProcedure
+      state [] .constantBlocks .length 0:iSize != =:: mut: inConstBlock
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
         state [] .openBlocks list.reversed for: findContainer =:: b
-          BlockType ..length 40 == "no new block types" assert
+          BlockType ..length 40:iSize == "no new block types" assert
           b .blockType switch
             PROCEDURE INLINE_PROCEDURE case
               false inConstBlock=
@@ -1906,7 +1904,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
       end
-      state [] .currentProcs .length 0 > if
+      state [] .currentProcs .length 0:iSize != if
         progContext newAutoType
           labelId fileState [] .wordStart
         opAutoTypedInitializeName state appendOp
@@ -2020,11 +2018,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError
         return
       end
-    else ..dup .length 1 > and ..dup 0 string.charAt '.' == and ..dup 1 string.charAt '.' != _if
+    else $ .length 1:iSize u> and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != _if
       1 string.tail
         ..dup "=":s string.endsWith =:: isWrite
         isWrite if
-          ..dup .length 1 - string.head
+          $ .length 1:iSize - string.head
         end
       =:: label
       label 10 number.tryParseUInt .NONE ?? if
@@ -2147,17 +2145,17 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "$":s string.eq or ..dup "$0":s string.eq _if =:: opName
       0 StackModType .COPY fileState [] .wordStart opStackMod state appendOp
       return
-    else ..dup 0 string.charAt '$' == and ..dup .length 1 >= and
-        ..dup 1 string.charAt '0' >= and ..dup 1 string.charAt '9' <= _if =:: mut: opName
+    else $ 0 string.charAt '$' == and $ .length 1:iSize u>= and
+        $ 1 string.charAt '0' >= and $ 1 string.charAt '9' <= _if =:: mut: opName
       opName 1 string.tail =:: params
       "$":s opName=
       params opName fileState [] .wordStart state getCompilerOpParam ## :offset
       StackModType .COPY fileState [] .wordStart opStackMod state appendOp
       return
-    else ..dup "..swap":s string.eq _if =:: opName
+    else $ "..swap":s string.eq _if =:: opName
       1 StackModType .ROTATE fileState [] .wordStart opStackMod state appendOp
       return
-    else $ $ .length 1 - string.charAt '$' == and $ 0 string.charAt =:: c0 c0 '>' == or c0 '<' == _if =:: opName
+    else $ $ .length 1:iSize - string.charAt '$' == and $ 0 string.charAt =:: c0 c0 '>' == or c0 '<' == _if =:: opName
       opName 0 string.charAt =:: c0
       1 =:: mut: rotCount
       1 =:: mut: i
@@ -2212,15 +2210,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState errors nextIdentifier
         $ ".":s string.endsWith =:: importNamespace
         importNamespace if
-          $ .length 1 - string.head
+          $ .length 1:iSize - string.head
         end
       =:: usedName
       importNamespace if
         usedName id.FLAG_NONE
           fileState [] .wordStart state [] .currentFile
         labelContext id.newLabel =:: namespaceLabel
-        state [] .currentProcs .length 0 > if
-          aliasName .length 0 > if
+        state [] .currentProcs .length 0:iSize != if
+          aliasName .length 0:iSize != if
             aliasName id.FLAG_NONE
               fileState [] .wordStart state [] .currentFile
             labelContext id.newLabel
@@ -2237,11 +2235,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         return
       end
-      state [] .currentProcs .length 0 > if
+      state [] .currentProcs .length 0:iSize != if
         usedName id.FLAG_NONE
           fileState [] .wordStart state [] .currentFile
         labelContext id.newLabel =:: usedLabel
-        aliasName .length 0 > if
+        aliasName .length 0:iSize != if
           aliasName id.FLAG_NONE
             fileState [] .wordStart state [] .currentFile
           labelContext id.newLabel
@@ -2314,7 +2312,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ..drop ## discard remainder of file
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek =:: next?
-          BlockType ..length 40 == "no new block types" assert
+          BlockType ..length 40:iSize == "no new block types" assert
           next? optional.hasData and next? .data [] .blockType switch
             IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DEFAULT case true break
             default false break
@@ -2329,7 +2327,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       name constContext newStringConst
       types.primitive.CHAR8
         types.ArrayType .POINTER
-        name .length types.ArraySize .int =:: size
+        name .length i64 cast.u types.ArraySize .int =:: size
         size@ 1 slice.create
         false
       typeContext types.newArrayType ..drop
@@ -2346,15 +2344,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       "..?types":s opName=
       -1 =:: mut: count
       0 =:: mut: depth
-      params .length 0 > if
+      params .length 0:iSize != if
         params '.' string.split =:: head =:: tail
-        head .length 0 > if
+        head .length 0:iSize != if
           head
             opName
             fileState [] .wordStart
           state getCompilerOpParam count=
         end
-        tail .length 0 > if
+        tail .length 0:iSize != if
           tail
             opName
             fileState [] .wordStart
@@ -2371,7 +2369,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ..dup "..?stack.":s string.startsWith _if =:: mut: opName
       opName "..?stack." ..length string.tail =:: params
       "..?stack":s opName=
-      params .length 0 > if
+      params .length 0:iSize != if
         params opName fileState [] .wordStart state getCompilerOpParam
       else -1 end
       fileState [] .wordStart opStackInfo state appendOp
@@ -2380,7 +2378,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ..dup "..?ops.":s string.startsWith _if =:: mut: opName
       opName "..?ops." ..length string.tail =:: params
       "..?ops":s opName=
-      params .length 0 > if
+      params .length 0:iSize != if
         params opName fileState [] .wordStart state getCompilerOpParam
       else -1 end
       fileState [] .wordStart opPrintCompiledOps state appendOp
@@ -2403,7 +2401,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         idName true idContext matches@ optional.wrap id.searchIdentifier ..drop.3
         "-----------------\n" sb.copyPtr
           "identifier \"" sb.appendS idName sb.appendStr "\":\n" sb.appendS
-          0:i32 while ..dup matches .length < do =:: i
+          0:iSize while $ matches .length u< do =:: i
             matches i list.at .data =:: match
             match [] .nameData .labelId =:: labelId
             match [] .nameData .aliasId =:: aliasId
@@ -2432,7 +2430,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               "?" sb.appendS
             end
             '\n' sb.appendC
-            i 1 +
+            i 1:iSize +
           end ..drop
           "-----------------\n" sb.appendS
           io.stdOut ..over io.fputSb ..drop
@@ -2448,14 +2446,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     end
     $ "@":s string.endsWith =:: isAddr
-    $ .length 1 > and $ "=":s string.endsWith and ## exclude = and ids ending with: == != >= <=
-      "=<>!":s $1 $ .length 2 - string.charAt string.contains !
+    $ .length 1:iSize u> and $ "=":s string.endsWith and ## exclude = and ids ending with: == != >= <=
+      "=<>!":s $1 $ .length 2:iSize - string.charAt string.contains !
     end =:: isSetter
     isAddr or isSetter if
-      $ .length 1 - string.head
+      $ .length 1:iSize - string.head
     end
   =:: idName
-  state [] .currentProcs .length 0 == if
+  state [] .currentProcs .length 0:iSize == if
     idName idContext id.findIdentifierByName ! if ## try parsing as identifier
       ## $ [] .labelId labelContext id.labelFlags =:: flags
       ## XXX? detect setters
@@ -2519,12 +2517,12 @@ proc(
 -> ) =>: importFile
   state [] .progContext =:: progContext
   FILE_ID_NONE =:: mut: imported
-  0:i32 while ..dup progContext [] .progFiles .length < do
-    progContext [] .progFiles ..over list.get .fileName sb.asStr fileName sb.asStr string.eq if
-      ..dup FileId cast imported=
+  0:iSize while $ progContext [] .progFiles .length u< do
+    progContext [] .progFiles $1 list.get .fileName sb.asStr fileName sb.asStr string.eq if
+      $ FileId cast imported=
       break
     end
-    1 +
+    1:iSize +
   end ..drop
   imported FILE_ID_NONE == if ## file has not yet been imported
     fileName isLibImport state parseFile pos state checkIOError imported=
@@ -2592,11 +2590,11 @@ proc(
   ## cleanup parser memory
   state .typeBuffer list.free ..drop
   state .constantBlocks list.free ..drop
-  0:i32 while ..dup state .globalInterpreters .length < do
+  0:iSize while $ state .globalInterpreters .length u< do
     state .globalInterpreters
       ..over list.at .data .context
     interpreter.cleanupContext
-    1 +
+    1:iSize +
   end ..drop
   state .globalInterpreters list.free ..drop
   state .tmpString sb.free ..drop
@@ -2612,10 +2610,10 @@ proc(
     progContext .idContext =:: idContext
     idContext .typeContext .labelContext =:: labelContext
     progContext .errors =:: errors
-    ..dup ..over .length 1 - sb.charAt '\x00' != if
+    ..dup ..over .length 1:iSize - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
     end
-    ..dup .length 1 - sb.setLength ## do not include zero terminator in length
+    ..dup .length 1:iSize - sb.setLength ## do not include zero terminator in length
     progContext [] .progFiles .length FileId cast =:: fileId
     ..dup sb.asStr fileId 0 1 FilePosition new ..dup FileState new =:: mut: fileState
     progContext [] .progFiles
@@ -2636,7 +2634,7 @@ proc(
   state [] .inLibFile =:: wasLibFile
   isLibFile state .inLibFile=
   fileId state .currentFile=
-  $ .data >$ .length i64 cast.u 1 + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
+  $ .data >$ .length 1:iSize + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
     $ io.FILE_ERROR_NONE != if =:: openError
       ..drop ## discard code file
       prevFile state .currentFile= ## reset file id
@@ -2674,7 +2672,7 @@ proc(
   fileState@
     fileBody sb.asStr while
       $1 nextToken $2 state parseOperation
-      $ .length 0 >
+      $ .length 0:iSize !=
     do end ..drop
   ..drop
   fileBody sb.free ..drop
@@ -2685,12 +2683,12 @@ proc(
   fileId newFileId == "fileId did not change" assert
   prevFile state .currentFile=
   wasLibFile state .inLibFile=
-  state [] .openBlocks .length blockCount > if
+  state [] .openBlocks .length blockCount u> if
     ## XXX? print start of last block
     "unclosed block at end of file" sb.copyPtr
       fileState .currentPos
     errors appendError
-  else state [] .openBlocks .length blockCount < _if
+  else state [] .openBlocks .length blockCount u< _if
     "file closed additional code block" sb.copyPtr
       fileState .currentPos
     errors appendError
