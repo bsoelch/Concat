@@ -1,0 +1,47 @@
+import mem
+( type : T -> type ) =>: rcSliceHeader
+  struct(
+    iSize : length
+    i32 : RC
+    T 0 array : elts ## ensure correct alignment
+  )
+end
+( type : T -> type ) =>: export: rcSlice
+  T rcSliceHeader ptr.mut
+end
+namespace: rcSlice
+  proc( iSize : length type : T -> T rcSlice ) =>: export: create
+     T rcSliceHeader ..types.size
+      T ..types.stride length * + i8 mem.alloc ## TODO ensure alignment
+     T rcSlice cast! =:: mut: data
+     length data .length=
+     1 data .RC=
+     data return
+  end
+  proc( type : auto: T T rcSlice : data -> T rcSlice ) =>: export: use
+    data [] .RC 1 + data .RC=
+    data
+  end
+  proc( type : auto: T T rcSlice : data -> ) =>: export: free
+    data [] .RC 1 - data .RC=
+    data [] .RC 0 <= if
+      data [] .RC 0 == "ref count does not underflow" assert
+      data mem.free
+    end
+  end
+  proc( iSize : index iSize : length -> ) =>: checkIndex
+    index length u>= if
+      "slice index outside range" ..panic
+    end
+  end
+  ## TODO range checks
+  proc( type : auto: T T rcSlice : data iSize : index -> T ) =>: export: get
+    data .elts T _ ptr cast! index []
+  end
+  proc( type : auto: T T rcSlice : data iSize : index -> T ptr.mut ) =>: export: at
+    data .elts T _ ptr.mut cast! index @[]
+  end
+  proc( type : auto: T  T : value T rcSlice : data iSize : index -> ) =>: export: set
+    value data .elts T _ ptr.mut cast! index =[]
+  end
+end
