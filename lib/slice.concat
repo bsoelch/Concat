@@ -531,9 +531,25 @@ namespace: slice
   proc(
     type : auto: T
     T slice : elts
+    i32 : from
+    i32 : len
+  -> T slice ) =>: export: getSlice32
+    elts from iSize cast.u len iSize cast.u getSliceZ return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    i64 : from
+    i64 : len
+  -> T slice ) =>: export: getSlice64
+    elts from iSize cast.u len iSize cast.u getSliceZ return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
     iSize : from
     iSize : len
-  -> T slice ) =>: export: getSlice
+  -> T slice ) =>: export: getSliceZ
     len 0:iSize == if
       T empty return
     end
@@ -548,6 +564,7 @@ namespace: slice
     end
     elts .data from @[]  len  create return
   end
+  overload: export: getSlice getSliceZ getSlice32 getSlice64 end
   proc(
     type : auto: T
     T slice : elts
