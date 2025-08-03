@@ -21,6 +21,9 @@ end
 Print prime factors:
 
 ```
+#+
+Prints all prime factors of a given number
++#
 import stringBuilder
 import stringIO
 import numbers/printInt
@@ -30,9 +33,9 @@ overload: <+ sb.appendC sb.appendS sb.appendI64 end
 proc( stringBuilder i64 -> stringBuilder ) =>: appendFactors
   $ 0 < if -_ end =:: mut: n ## ensure number is non-negative
   2:i64 while $ $ * n <= do =:: p
-    while n p ..umod 0 == do
+    while n p u% 0 == do
       ' ' <+ p <+
-      n p / n =
+      n p / n=
     end
   finally p 1 + end ..drop
   n 1 > if ' ' <+ n <+ end
@@ -52,31 +55,23 @@ proc( -> ) =>: main
   1001 printFactors
   2381 printFactors
 end
-#+ prints:
-the factors of 2 are: 2
-the factors of 42 are: 2 3 7
-the factors of 64 are: 2 2 2 2 2 2
-the factors of 1001 are: 7 11 13
-the factors of 2381 are: 2381
-+#
 ```
 
-more examples can be found in the `expamples` folder
+more examples can be found in the `examples` folder
 
 ## Usage
-Currently Concat used QBE <!--TODO link to QBE --> as its only back-end.
-To use Concant you will need QBE and some Assembler for your target architecture.
+Currently Concat used [QBE](https://c9x.me/compile/) as its back-end.
+To use Concant you will need QBE and GCC (as assembler) for your target architecture.
 
 Bootstrapping (using QBE and GCC):
+*Due to a bug in the QBE register-allocator bootstraping currently does not work on ARM targets*
 ```sh
 qbe ./bootstrap/latest.ssa -o concat.s # compile QBE to Assembly
-gcc concat.s extern.c -lm -o concat # create binary from Assembly code
+gcc concat.s lib/extern.c -lm -o concat # create binary from Assembly code
 ./selfCompiler.sh # recompile the compiler from source files
 ```
 
 Compiling a File:
 ```sh
-./concat <srcFile> -o <target.ssa> ## concat to QBE
-qbe <target.ssa> <target.s> ## QBE to Assembly
-gcc -g <target.s> extern.c -lm -o <target> ## Assembly to binary, keep debug symbols
+./concat <srcFile> -o <target>
 ```
