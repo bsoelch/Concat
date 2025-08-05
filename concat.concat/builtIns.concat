@@ -1475,7 +1475,7 @@ proc(
     "..builtIn.sys.argv":s pos labelContext createLabel
     v_c8pp
   pos context addBuiltIn
-  BuiltIn .SYS_ARGC
+  BuiltIn .SYS_ENVP
     "..builtIn.sys.envp":s pos labelContext createLabel
     v_c8pp
   pos context addBuiltIn
