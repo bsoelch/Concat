@@ -3,6 +3,12 @@ import numbers/printFloat
 import stringIO
 
 namespace: io
+  proc( i32 : i -> ) =>: export: printX32
+    char8 12 array : buffer ## -80000000
+    buffer@ sb.wrapBuffer
+      i sb.appendX
+    io.stdOut >$ sb.asStr io.fputStr ..drop
+  end
   proc( i32 : i -> ) =>: export: printI32
     char8 12 array : buffer ## -4294967296\n
     buffer@ sb.wrapBuffer
@@ -14,6 +20,12 @@ namespace: io
     buffer@ sb.wrapBuffer
       i sb.appendI
       '\n' sb.appendC
+    io.stdOut >$ sb.asStr io.fputStr ..drop
+  end
+  proc( i64 : i -> ) =>: export: printX64
+    char8 24 array : buffer ## -8000000000000000
+    buffer@ sb.wrapBuffer
+      i sb.appendX
     io.stdOut >$ sb.asStr io.fputStr ..drop
   end
   proc( i64 : i -> ) =>: export: printI64
@@ -60,5 +72,6 @@ namespace: io
     io.stdOut >$ sb.asStr io.fputStr ..drop
   end
   overload: export: print printI8 printI16 printI32 printI64 printF32 printF64 end
+  overload: export: printX printX32 printX64 end ## TODO? support printX for other types
   overload: export: println printlnI8 printlnI16 printlnI32 printlnI64 printlnF32 printlnF64 end
 end
