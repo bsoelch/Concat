@@ -21,6 +21,11 @@ namespace: sb
   proc( iSize : auto: k char8 k ptr.mut : buffer -> stringBuilder ) =>: export: wrapBuffer
     buffer list.wrapBuffer stringBuilder cast  return
   end
+  proc( char8 slice.mut : source -> stringBuilder ) =>: export: wrapSlice
+    source .data source .length list.fromBuffer
+      source .length list.setLength
+    stringBuilder cast  return
+  end
   proc( stringBuilder -> stringBuilder ) =>: export: clear
     char8 list cast list.clear stringBuilder cast return
   end
@@ -88,6 +93,9 @@ namespace: sb
   end
   proc( stringBuilder -> string ) =>: export: asStr
     asSlice string cast return
+  end
+  proc( stringBuilder : sb -> char8 slice.mut ) =>: export: chars
+    sb .data sb .length slice.createMutable
   end
 end
 namespace: sb.operators
