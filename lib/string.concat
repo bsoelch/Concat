@@ -61,6 +61,14 @@ namespace: string
       end ..drop
     return
   end
+  ## O(1) hash function computed from length and first 4 characters
+  proc( string : str -> i32 ) =>: export: fastHash
+    str .length i32 cast.u
+      str 4 head chars for =:: c
+        31 * c i32 cast.u +
+      end
+    return
+  end
 
   proc( string : str iSize : index -> char8 ) =>: export: charAt_Z
     str char8 slice cast index slice.get return
