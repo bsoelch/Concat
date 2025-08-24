@@ -3694,9 +3694,6 @@ proc(
                 op .pos
               BranchPoint new list.append
             branches =[]
-            currentBlock .AndOr [] .andOrPositions
-              state [] .compiledOps .length i32 cast.u list.append
-            currentBlock .AndOr .andOrPositions=
             currentBlock .AndOr [] .blockId
           else
             state [] .compiledOps .length i32 cast.u program createAndOrData =:: blockId
@@ -3705,7 +3702,7 @@ proc(
             rootBranch
               blockId
               state [] .compiledOps .length i32 cast.u
-            op .pos newAndOrBlock =:: mut: andOrBlock
+            op .pos newAndOrBlock =:: andOrBlock
             andOrBlock state openBlock
             idContext id.openScope
             blockId
@@ -3719,6 +3716,10 @@ proc(
             return
           end
           blockId op@ .val .block .blockId=
+          state peekBlock .data .AndOr =:: currentBlock
+          currentBlock [] .andOrPositions
+            state [] .compiledOps .length i32 cast.u list.append
+          currentBlock .andOrPositions=
           op state appendOp ..drop
           return
         PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
@@ -4154,6 +4155,9 @@ proc(
           andOrBlock .blockId op@ .val .blockEnd .blockId=
           state [] .compiledOps .length i32 cast.u =:: currentOpIndex
           andOrBlock .andOrPositions for =:: andOrPos
+            ## FIXME why can andOrPos point outside operations array?
+            ## this bug seems to get triggered when the code before then end contains errors
+            andOrPos iSize cast.u state [] .compiledOps .length u>= if break end
             state [] .compiledOps andOrPos list.at .data =:: andOrOp
             currentOpIndex
               andOrPos - JumpDistance cast
