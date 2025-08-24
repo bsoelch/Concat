@@ -4155,9 +4155,6 @@ proc(
           andOrBlock .blockId op@ .val .blockEnd .blockId=
           state [] .compiledOps .length i32 cast.u =:: currentOpIndex
           andOrBlock .andOrPositions for =:: andOrPos
-            ## FIXME why can andOrPos point outside operations array?
-            ## this bug seems to get triggered when the code before then end contains errors
-            andOrPos iSize cast.u state [] .compiledOps .length u>= if break end
             state [] .compiledOps andOrPos list.at .data =:: andOrOp
             currentOpIndex
               andOrPos - JumpDistance cast
