@@ -50,6 +50,10 @@
       <keyword>push</keyword>
       <keyword>pop</keyword>
       <keyword>label</keyword>
+      <keyword>block</keyword>
+      <keyword>end-block</keyword>
+      <keyword>loop</keyword>
+      <keyword>end-loop</keyword>
       <keyword>data</keyword>
       <keyword>pad_bytes</keyword>
       <keyword>jmp</keyword>
