@@ -1458,7 +1458,7 @@ proc(
     true program .hasCheckEnum=
   end
   containerType typeContext types.isArray if
-    containerType typeContext types.getElementType
+    containerType typeContext types.getBaseType
   else
     containerType elementIndex typeContext types.compositeGetElement
   end =:: eltType
@@ -2526,17 +2526,13 @@ proc(
         end
         srcType containerType index isWrite isPtr mutable op .pos state typeCheckGetElement
       else containerType typeContext types.isArray _if
-        containerType typeContext types.getArraySize =:: arraySizes
-        arraySizes .length 0:iSize u> if
-          arraySizes $ .length 1:iSize - slice.get =:: arraySize
-          arraySize .int ?? if
-            arraySize .int
-          else
-            "generic arrays are not supported" sb.copyPtr
-            op .pos errors appendError
-            return
-          end
-        else 1 end =:: eltCount
+        containerType typeContext types.getArraySize $ .Int ?? if
+          .Int
+        else ..drop
+          "generic arrays are not supported" sb.copyPtr
+          op .pos errors appendError
+          return
+        end =:: eltCount
         index i64 cast.u eltCount >= if
           "element index out of range: " sb.copyPtr
             index sb.appendI
@@ -2581,7 +2577,7 @@ proc(
         else ..dup typeContext types.isPointer _if
            true isPtr=
            ..dup typeContext types.isMutable mutable=
-           typeContext types.getBaseType
+           typeContext types.ptrTarget
         else $ types.isLiteral _if
           typeContext types.literalToType
             $ srcType=
@@ -4303,7 +4299,7 @@ proc(
         INFO case appendInfo break
       end
       return
-    length size case
+    length case
       state .stack branchTree.peek =:: value?
       value? optional.isEmpty if
         "missing argument for " sb.copyPtr
@@ -4314,7 +4310,6 @@ proc(
       end
         value? .data [] .valueType
         value? .data [] .value
-        op .val .length ??
         op .pos
         program
       interpreter.sizeOfValue if ..drop.2

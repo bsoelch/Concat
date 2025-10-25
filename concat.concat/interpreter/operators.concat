@@ -295,7 +295,7 @@ namespace: interpreter
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
       GET_PTR GET_PTR_MUT case
         k 1 == "correct number of arguments" assert
-        inType 0 typeContext types.compositeGetElement typeContext types.getElementType =:: baseType
+        inType 0 typeContext types.compositeGetElement typeContext types.getBaseType =:: baseType
         baseType typeContext types.isComposite or baseType typeContext types.isArray if
           args 0 [] OperatorResult .success return
         end
@@ -517,7 +517,7 @@ namespace: interpreter
      TYPE_ARRAY_ELEMENT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
-        args 0 [] .TypeId typeContext types.getElementType
+        args 0 [] .TypeId typeContext types.getBaseType
           ConstValue .TypeId
         OperatorResult .success return
       TYPE_UNWRAP_NAMED case

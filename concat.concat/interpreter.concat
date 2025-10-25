@@ -912,7 +912,6 @@ namespace: interpreter
   proc(
     Type : t
     ConstValue : value
-    bool : isLength
     FilePosition : pos
     ProgramContext ptr.mut : program
   -> Type ConstValue bool ) =>: export: sizeOfValue
@@ -935,86 +934,31 @@ namespace: interpreter
     end
     valType typeContext types.isPointer or valType typeContext types.isArray if
       valType typeContext types.isFixedSize ! if
-        "cannot get the " sb.copyPtr
-          isLength if
-            "length" sb.appendS
-          else
-            "size" sb.appendS
-          end
-          " of : " sb.appendS
+        "cannot get the length  of : " sb.copyPtr
           valType typeContext sb.appendType
         pos errors appendError
         Type .undefined ConstValue .None true return
       end
-      valType typeContext types.getArraySize =:: sizes
-      isLength if
-        sizes .length 0:iSize == if
-          ## return
-            types.I_SIZE
-            1 ConstValue .Int
-            false
-          return
-        end
-        sizes
-          $ .length 1:iSize -
-        slice.get =:: outerSize
-        outerSize .int ?? if
-          ## return
-            types.I_SIZE
-            outerSize .int ConstValue .Int
-            false
-          return
-        else outerSize .genericArg ?? _if
-          ## return
-            types.I_SIZE
-            outerSize .genericArg ConstValue .GenericArg
-            false
-          return
-        else
-          "unsupported array-size type: " sb.copyPtr
-            ## XXX? print array-size type name
-          pos errors appendError
-          Type .undefined ConstValue .None true return
-        end
-      else
-        idContext [] .argBuffer .length =:: offset
-        sizes for =:: current
-          idContext [] .argBuffer
-            current .int ?? if
-              current .int ConstValue .Int list.append
-            else current .genericArg ?? _if
-              current .genericArg ConstValue .GenericArg list.append
-            else ..drop
-              "unsupported array-size type: " sb.copyPtr
-                ## XXX? print array-size type name
-              pos errors appendError
-              Type .undefined ConstValue .None true return
-            end
-          idContext .argBuffer=
-        end
-        sizes .length i64 cast.u types.ArraySize .int =:: sizeLength
+      valType typeContext types.getArraySize =:: size
+      size .Int ?? if
         ## return
-          ## newArrayType
-            types.I_SIZE
-            types.ArrayType .ARRAY
-            sizeLength@
-            slice.wrap
-            false
-          typeContext types.newArrayType ..drop
-          ## newArrayConst
-            ## slice.create
-              idContext [] .argBuffer .data offset @[]
-              idContext [] .argBuffer .length offset -
-            slice.create
-            idContext .constContext
-          newArrayConst
-          idContext [] .argBuffer
-            offset list.setLength
-          idContext .argBuffer=
+          types.I_SIZE
+          size .Int ConstValue .Int
           false
         return
+      else size .GenericArg ?? _if
+        ## return
+          types.I_SIZE
+          size .GenericArg ConstValue .GenericArg
+          false
+        return
+      else
+        "unsupported array-size type: " sb.copyPtr
+          ## XXX? print array-size type name
+        pos errors appendError
+        Type .undefined ConstValue .None true return
       end
-    else isLength and valType typeContext types.isComposite
+    else valType typeContext types.isComposite
         and isType or valType typeContext types.isArrayLiteral _if
       ## return
         types.I_SIZE
@@ -1024,13 +968,7 @@ namespace: interpreter
         false
       return
     end
-    "unsupported argument type for " sb.copyPtr
-      isLength if
-        "length" sb.appendS
-      else
-        "size" sb.appendS
-      end
-      "-computation: " sb.appendS
+    "unsupported argument type for length-computation: " sb.copyPtr
       valType typeContext sb.appendType
     pos errors appendError
     Type .undefined ConstValue .None true return
@@ -1444,7 +1382,7 @@ namespace: interpreter
     allocator []
       dataArray mixedArena.copyMutableSlice =:: tmpArray
     allocator =[]
-    valType typeContext types.getElementType =:: arrayBase
+    valType typeContext types.getBaseType =:: arrayBase
     ## 1. copy elements
     dataArray .length for =:: i
       dataArray i slice.get =:: elt
@@ -1546,7 +1484,7 @@ namespace: interpreter
         value .LocalArray ConstValue slice.mut cast slice.freeze
       end mixedArena.copySlice =:: localSlice
     context .localMemory=
-    valType typeContext types.getElementType =:: arrayBase
+    valType typeContext types.getBaseType =:: arrayBase
     ## copy sub-arrays
     localSlice .length for =:: i
       localSlice i slice.at .data =:: elt
@@ -1588,18 +1526,14 @@ namespace: interpreter
       localSlice LocalSlice cast ConstValue .LocalArray return
     else dataType typeContext types.isArray _if
       ## XXX? merge with previous case
-      dataType typeContext types.getArraySize =:: arraySizes
-      arraySizes .length 0:iSize != if
-        arraySizes $ .length 1:iSize - slice.get =:: arraySize
-        arraySize .int ?? if
-          arraySize .int
-        else
-          "generic arrays are not supported" sb.copyPtr
-          pos errors appendError
-          0
-        end
-      else 1 end =:: eltCount
-      dataType typeContext types.getElementType =:: eltType
+      dataType typeContext types.getArraySize $ .Int ?? if
+        .Int
+      else ..drop
+        "generic arrays are not supported" sb.copyPtr
+        pos errors appendError
+        0
+      end =:: eltCount
+      dataType typeContext types.getBaseType =:: eltType
       eltType typeContext types.unwrapNamed =:: eltBase
       eltBase types.isPrimitive if
         eltBase typeContext types.primitiveValue switch
@@ -2632,8 +2566,17 @@ proc(
           EvalResult .Error return
         end
         context [] .stack .length 1:iSize - =:: mut: offset
+        idContext [] .arraySizeBuffer
+          list.clear
+        idContext .arraySizeBuffer=
+        ## TODO merge check for dynamic size with size computation loop
         offset minOffset u> and context [] .stack offset list.get .WildCard ?? if
           false fixedSize=
+          ## FIXME! change _ ptr syntax to dynamic pointers (after removing from standard library)
+          ## "using _ ptr for raw pointers is deprecated" sb.copyPtr op [] .pos errors appendWarning
+          idContext [] .arraySizeBuffer
+            types.ArraySize .None list.append
+          idContext .arraySizeBuffer=
           offset 1:iSize - offset=
         end
         0:i32 =:: mut: intArgs
@@ -2643,20 +2586,16 @@ proc(
           end
           intArgs 1 + intArgs=
         finally i 1:iSize - end offset=
-        idContext [] .arraySizeBuffer
-          list.clear
-          intArgs list.ensureCap
-        idContext .arraySizeBuffer=
         1:iSize while $ intArgs iSize cast.u u<= do
           context [] .stack offset $2 + list.get =:: intArg
           intArg .Int ?? if
             ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
-              intArg .Int types.ArraySize .int list.append
+              intArg .Int types.ArraySize .Int list.append
             idContext .arraySizeBuffer=
           else intArg .GenericArg ?? _if
             idContext [] .arraySizeBuffer
-              intArg .GenericArg types.ArraySize .genericArg list.append
+              intArg .GenericArg types.ArraySize .GenericArg list.append
             idContext .arraySizeBuffer=
           else
             "unexpected constant for array size: " sb.copyPtr
@@ -2684,19 +2623,43 @@ proc(
         fixedSize ! isPtr ! & if
           "array types must have a fixed size" sb.copyPtr op [] .pos errors appendError
         end
+        typeConstant .TypeId
+          idContext [] .arraySizeBuffer .length 0:iSize == if
+            idContext [] .arraySizeBuffer
+              types.ArraySize .None list.append
+            idContext .arraySizeBuffer=
+          end
+          idContext [] .arraySizeBuffer list.asSlice
+            $ .length 1:iSize - slice.head
+          for =:: size
+            ## newArrayType
+              types.ArrayType .ARRAY
+              size
+              typeContext
+            types.newArrayType if ..drop
+              "could not create array type" sb.copyPtr op [] .pos errors appendError
+              EvalResult .Error return
+            end
+          end
         ## newArrayType
-          typeConstant .TypeId
           isPtr if
             fixedSize if
-              types.ArrayType .POINTER
+              op [] .val .typeModifier .PTR_MUT ?? if
+                types.ArrayType .MUTABLE_POINTER
+              else
+                types.ArrayType .POINTER
+              end
             else
-              types.ArrayType .RAW_POINTER
+              op [] .val .typeModifier .PTR_MUT ?? if
+                types.ArrayType .MUTABLE_RAW_POINTER
+              else
+                types.ArrayType .RAW_POINTER
+              end
             end
           else
             types.ArrayType .ARRAY
           end
-          idContext [] .arraySizeBuffer list.asSlice
-          op [] .val .typeModifier .PTR_MUT ??
+          idContext [] .arraySizeBuffer $ .length 1:iSize - []
           typeContext
         types.newArrayType if ..drop
           isPtr if
@@ -3178,14 +3141,13 @@ proc(
         INFO case appendInfo break
       end
       EvalResult .Ok return
-    length size case
+    length case
       op [] .pos context popValue if ..drop.2
         EvalResult .Error return
       end =:: value =:: valInfo
       ## sizeOfValue
         valInfo .valueType
         value
-        op [] .val .length ??
         op [] .pos
         program
       interpreter.sizeOfValue if ..drop.2

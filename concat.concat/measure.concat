@@ -30,7 +30,7 @@ proc(
   declared switch
     undefined empty primitiveType autoType genericType cType intLiteral align typeSet case
       break
-    pointer rawPointer case
+    pointer mutablePointer rawPointer mutableRawPointer case
       declared typeContext types.getBaseType ptrLevel 1 + pos prog visited types declaredType
       types []
         declared list.append

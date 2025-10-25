@@ -4,8 +4,7 @@ proc( i32 3 ptr : in  i64 2 3 array : multi -> ) =>: arrayTest
   i64 2 4 6 8 10 array : b
   i32 ptr 2 ptr.mut : c
   in ..length debug.print
-  multi ..size =:: arraySize
-  arraySize@ 0 [] debug.print
+  multi ..length debug.print
   in in 0 [] [] debug.print 
 end
   

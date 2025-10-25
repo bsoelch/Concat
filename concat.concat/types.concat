@@ -58,8 +58,10 @@ union(
                     _ : empty
   types.PrimitiveType : primitiveType
      types.IntLiteral : intLiteral
-        types.ArrayId : rawPointer
         types.ArrayId : pointer
+        types.ArrayId : mutablePointer
+        types.ArrayId : rawPointer
+        types.ArrayId : mutableRawPointer
         types.ArrayId : arrayType
         types.TupleId : struct
         types.UnionId : union
@@ -91,8 +93,12 @@ namespace: types
         a .intLiteral b .intLiteral == return
       pointer case
         a .pointer b .pointer == return
+      mutablePointer case
+        a .mutablePointer b .mutablePointer == return
       rawPointer case
         a .rawPointer b .rawPointer == return
+      mutableRawPointer case
+        a .mutableRawPointer b .mutableRawPointer == return
       arrayType case
         a .arrayType b .arrayType == return
       struct case
@@ -227,6 +233,10 @@ namespace: types
         bigPrime 67 * a .align + return
       typeSet case
         bigPrime 71 * a .typeSet i32 cast + return
+      mutablePointer case
+        bigPrime 73 * a .mutablePointer i32 cast + return
+      mutableRawPointer case
+        bigPrime 79 * a .mutableRawPointer i32 cast + return
     end
   end
 end
@@ -286,7 +296,7 @@ namespace: types
        arrayType case
          ## arrays of empty values are empty
          t context getBaseType context isEmpty return
-       undefined primitiveType procedure cType pointer rawPointer
+       undefined primitiveType procedure cType pointer mutablePointer mutableRawPointer rawPointer
          namedType autoType genericType intLiteral
          generatedType enum typeSet case false return
        procIn procOut struct union initializer case
@@ -426,7 +436,7 @@ namespace: types
        empty arrayType
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
-           generatedType enum align
+           generatedType enum align mutablePointer mutableRawPointer
            procIn procOut struct union typeSet case
          false return
     end
@@ -442,12 +452,11 @@ namespace: types
         tupleInfo .compositeInfo .eltCount [] =:: eltCount
         initInfo .arrayType .undefined ?? ! if
           initInfo [] .arrayType context literalToType =:: baseType
-          eltCount i64 cast.u ArraySize .int =:: size
+          eltCount i64 cast.u ArraySize .Int =:: size
           ## newArrayType
             baseType
             ArrayType .ARRAY
-            size@ slice.wrap ## size
-            false ## mutable
+            size
           context newArrayType
             ! "can create array" assert
           return
@@ -479,7 +488,7 @@ namespace: types
        empty arrayType
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
-           generatedType enum align
+           generatedType enum align mutablePointer mutableRawPointer
            procIn procOut struct union typeSet case
          t return
     end
@@ -757,9 +766,9 @@ namespace: types
             composite .initializer i64 cast
           list.at .data [] .asTuple
         typeContext tryComputeTupleSize return
-      undefined empty autoType genericType rawPointer
+      undefined empty autoType genericType rawPointer mutableRawPointer
       primitiveType intLiteral cType arrayType
-      pointer procedure align typeSet
+      pointer mutablePointer procedure align typeSet
       namedType generatedType case ..unreachable ## XXX? use assertion
     end
   end
@@ -778,7 +787,7 @@ namespace: types
         t .intLiteral sizeOfIntLiteral TypeSize .fixed return
       cType case
         t .cType sizeOfCType TypeSize .fixed return
-      pointer rawPointer procedure case
+      pointer mutablePointer rawPointer mutableRawPointer procedure case
         PTR_SIZE TypeSize .fixed return
       arrayType case
         t context getBaseType context alignOf return
@@ -819,23 +828,22 @@ namespace: types
         t .intLiteral sizeOfIntLiteral TypeSize .fixed return
       cType case
         t .cType sizeOfCType TypeSize .fixed return
-      pointer rawPointer procedure case
+      pointer mutablePointer rawPointer mutableRawPointer procedure case
         PTR_SIZE TypeSize .fixed return
       arrayType case
-        t context getArraySize =:: dims
+        t context getArraySize =:: arraySize
         t context getBaseType context strideOf =:: baseSize
         baseSize .fixed ?? ! if
           TypeSize .unknown return
         end
-        baseSize .fixed =:: mut: size
-        dims for =:: dim
-          dim .int ?? if
-            size dim .int * size=
-          else
-            baseSize .fixed TypeSize .dynamicArray return
-          end
+        arraySize switch
+          None case baseSize return
+          Int case baseSize .fixed arraySize .Int *  TypeSize .fixed return
+          ## TODO! distinguish generic-size and runtimke dynamic size
+          Dynamic case baseSize .fixed TypeSize .dynamicArray return
+          GenericArg case baseSize .fixed TypeSize .dynamicArray return
         end
-        size TypeSize .fixed return
+        break
       struct enum union procIn procOut initializer case
         t context tryComputeSize if
           TypeSize .unknown return
@@ -862,18 +870,15 @@ namespace: types
   end
 
   ## array & pointer types
-  union( i64 : int LabelId : genericArg ) =:: export: ArraySize
+  union( _ : None _ : Dynamic i64 : Int LabelId : GenericArg ) =:: export: ArraySize
   struct(
     Type : base
-    i32 : sizeOffset
-    i32 : dims
-    bool : ptrOnly
-    bool : mutable ## XXX? use enum for mutability
+    ArraySize : size
   ) =:: ArrayData
 
   proc( Type TypeContext ptr -> bool ) =>: export: isPointer
     unwrapNamed =:: t
-    t .pointer ?? or t .rawPointer ?? end return
+    t .pointer ?? or t .mutablePointer ?? or t .rawPointer ?? or t .mutableRawPointer ?? end return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isArray
     unwrapNamed .arrayType ?? return
@@ -881,11 +886,18 @@ namespace: types
   ## pointer to array-type ( fixed size and not 0D )
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isArrayPointer
     t context unwrapNamed =:: base
-    base .pointer ?? ! if false return end ## raw-pointer cannot be array-pointer
-    context [] .arrayTypes base .pointer i64 cast list.at .data [] .dims 0 > if
-      true return
+    base .pointer ?? if
+      base .pointer
+    else base .mutablePointer ?? _if
+      base .mutablePointer
+    else ## raw-pointer cannot be array-pointer
+      false return
+    end =:: arrayId
+    context [] .arrayTypes arrayId iSize cast list.at .data [] .size =:: ptrSize
+    ptrSize .None ?? if
+      false return
     end
-    false return
+    true return
   end
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isArrayLiteral
     t context unwrapNamed =:: base
@@ -898,154 +910,83 @@ namespace: types
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isFixedSize
      unwrapNamed =:: t
-     t .pointer ?? or t .arrayType ?? end return
+     t .pointer ?? or t .mutablePointer ?? or t .arrayType ?? end return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isFixedSizePtr
-     unwrapNamed .pointer ?? return
+     unwrapNamed =:: t
+     t .pointer ?? or t .mutablePointer ?? end return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isRawPointer
-     unwrapNamed .rawPointer ?? return
+     unwrapNamed =:: t
+     t .rawPointer ?? or t .mutableRawPointer ?? end return
   end
   proc( Type : box TypeContext ptr : context -> Type ) =>: export: getBaseType
     box context unwrapNamed
-      $ .pointer ?? if
-        context [] .arrayTypes ..swap .pointer i64 cast list.get .base return
+      $ .pointer ?? if .pointer
+      else $ .mutablePointer ?? _if .mutablePointer
+      else $ .rawPointer ?? _if .rawPointer
+      else $ .mutableRawPointer ?? _if .mutableRawPointer
+      else $ .arrayType ?? _if .arrayType
+      else
+        ..drop  Type .undefined return
       end
-      $ .rawPointer ?? if
-        context [] .arrayTypes ..swap .rawPointer i64 cast list.get .base return
-      end
-      $ .arrayType ?? if
-        context [] .arrayTypes ..swap .arrayType i64 cast list.get .base return
-      end
-    ..drop
-    Type .undefined return
+    context [] .arrayTypes >$ i64 cast list.get .base return
   end
-  ## unwrap a single array level
-  proc( Type : box TypeContext ptr.mut : context -> Type ) =>: export: getElementType
+  proc( Type : box TypeContext ptr : context -> ArraySize ) =>: export: getArraySize
     box context unwrapNamed
-      $ context getArrayDims 1 <= if
-        context getBaseType return
+      $ .pointer ?? if .pointer
+      else $ .mutablePointer ?? _if .mutablePointer
+      else $ .rawPointer ?? _if .rawPointer
+      else $ .mutableRawPointer ?? _if .mutableRawPointer
+      else $ .arrayType ?? _if .arrayType
+      else ..drop
+        ArraySize .None return
       end
-      $ context getArraySize =:: size
-      $ context isMutable =:: mutable
-      $ context getBaseType =:: base
-    .rawPointer ?? =:: rawPointer
-    ## newArrayType
-      base
-      ArrayType .ARRAY
-      size rawPointer ! if $ .length 1:iSize - slice.head end
-      mutable
-      context
-    newArrayType
-      ! "can create array" assert
-    return
-  end
-  proc( Type : box TypeContext ptr : context -> i32 ) =>: export: getArrayDims
-    box context unwrapNamed
-      $ .pointer ?? if
-        context [] .arrayTypes
-          ..swap .pointer i32 cast list.at
-        .data [] .dims return
-      end
-      $ .rawPointer ?? if
-        context [] .arrayTypes
-          ..swap .rawPointer i32 cast list.at
-        .data [] .dims 1 + return
-      end
-      $ .arrayType ?? if
-        context [] .arrayTypes
-          ..swap .arrayType i32 cast list.at
-        .data [] .dims return
-      end
-    ..drop
-    0 return
-  end
-  proc( Type : box TypeContext ptr : context -> ArraySize slice ) =>: export: getArraySize
-    box context unwrapNamed
-      $ .pointer ?? if
-        context [] .arrayTypes ..swap .pointer i32 cast list.get =:: arrayType
-        context [] .arraySizes arrayType .sizeOffset arrayType .dims list.getSlice return
-      end
-      $ .rawPointer ?? if
-        context [] .arrayTypes ..swap .rawPointer i32 cast list.get =:: arrayType
-        context [] .arraySizes arrayType .sizeOffset arrayType .dims list.getSlice return
-      end
-      $ .arrayType ?? if
-        context [] .arrayTypes ..swap .arrayType i32 cast list.get =:: arrayType
-        context [] .arraySizes arrayType .sizeOffset arrayType .dims list.getSlice return
-      end
-    ..drop
-    ArraySize slice.empty return
+    context [] .arrayTypes >$ i32 cast list.get .size return
   end
 
   proc( Type TypeContext ptr -> bool ) =>: export: isMutable
     =:: context
     context unwrapNamed
-      $ .pointer ?? if
-        context [] .arrayTypes ..swap .pointer i64 cast list.get .mutable return
-      else $ .rawPointer ?? _if
-        context [] .arrayTypes ..swap .rawPointer i64 cast list.get .mutable return
-      end
-    ..drop false return
+      $ .mutablePointer ?? or $ .mutableRawPointer ?? end
+    >$ ..drop
+    return
   end
   proc( ArraySize : a ArraySize : b -> bool ) =>: arraySizeEqual
     a ..label b ..label != if
       false return
     end
     a switch
-      int case a .int b .int == return
-      genericArg case a .genericArg b .genericArg == return
+      None Dynamic case true return
+      Int case a .Int b .Int == return
+      GenericArg case a .GenericArg b .GenericArg == return
     end
   end
-  proc( ArraySize slice : a ArraySize slice : b -> bool ) =>: arraySizesEqual
-    a .length b .length != if
-      false return
-    end
-    0:iSize while $ a .length u< do =:: i
-      a i slice.get
-        b i slice.get
-      arraySizeEqual ! if
-        false return
-      end
-    finally i 1:iSize + end ..drop
-    true return
-  end
-  enum( POINTER RAW_POINTER ARRAY ) =:: export: ArrayType
+  enum( POINTER MUTABLE_POINTER RAW_POINTER MUTABLE_RAW_POINTER ARRAY ) =:: export: ArrayType
   proc(
     Type : target
     ArrayType : arrayType
-    ArraySize slice : sizes
-    bool : makeMutable
+    ArraySize : size
     TypeContext ptr.mut : context
   -> Type bool ) =>: export: newArrayType
     context .labelContext =:: labelContext
-    arrayType .ARRAY ?? if false else makeMutable end =:: mutable
-    target .arrayType ?? if ## merge array/pointer of arrays to single pointer/array
-      target context getArraySize =:: targetSize
-      sizes .length targetSize .length + ArraySize list.create
-        targetSize list.appendSlice
-        sizes list.appendSlice
-      =:: newSizes
-      target context getBaseType
-        arrayType
-        newSizes list.asSlice
-        makeMutable
-        context
-      newArrayType
-        newSizes list.free ..drop
-      return
-    end
     ## XXX? error on var-size array
     target =:: mut: base
     base .undefined ?? if
       Type .undefined true return
     end
+    size .None ?? and base .arrayType ?? if
+      arrayType .POINTER ?? if
+        base .arrayType Type .pointer false return
+      else arrayType .MUTABLE_POINTER ?? _if
+        base .arrayType Type .mutablePointer false return
+      end
+    end
+    ## TODO! prevent dynamic-size array & fixed size raw_pointer
     ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
     base context isProcedure if
       ## allow rawPointers and pointer of length 1 for generic matching
-      arrayType .ARRAY ?? or sizes .length 0:iSize != and
-          sizes .length 1:iSize u> or sizes 0 slice.get =:: size
-          size .int ?? ! or size .int 1 != if
+      arrayType .ARRAY ?? or size .None ?? ! if
         Type .undefined true return
       end
       base
@@ -1057,41 +998,33 @@ namespace: types
     context .arrayTypes =:: arrays
     0:iSize while $ arrays [] .length u< do
       arrays [] $1 list.get
-        $ .mutable mutable != if ..drop
-          1:iSize + continue
-        end
-        $ .dims iSize cast.u sizes .length != if ..drop
+        $ .size size arraySizeEqual ! if ..drop
           1:iSize + continue
         end
         $ .base base typeEquals ! if ..drop
           1:iSize + continue
         end
-        context [] .arraySizes $1 .sizeOffset $2 .dims list.getSlice sizes arraySizesEqual ! if ..drop
-          1:iSize + continue
-        end
-      .ptrOnly
-        arrayType .ARRAY ?? ! &
-      arrays [] $2 list.at .data .ptrOnly= ## update ptrOnly flag
+      ..drop
       ## found match
       ArrayId cast
         arrayType switch
           POINTER case Type .pointer break
+          MUTABLE_POINTER case Type .mutablePointer break
           RAW_POINTER case Type .rawPointer break
+          MUTABLE_RAW_POINTER case Type .mutableRawPointer break
           ARRAY case Type .arrayType break
         end
       false return
     end ..drop
-    context [] .arraySizes
-      $ .length i32 cast.u =:: sizeOffset
-      sizes list.appendSlice
-    context .arraySizes=
     arrays []
-      base sizeOffset sizes .length i32 cast arrayType .ARRAY ?? ! mutable ArrayData new list.append
+      base size ArrayData new list.append
     arrays =[]
     arrays [] .length 1:iSize - ArrayId cast
       arrayType switch
         POINTER case Type .pointer break
+        MUTABLE_POINTER case Type .mutablePointer break
         RAW_POINTER case Type .rawPointer break
+        MUTABLE_RAW_POINTER case Type .mutableRawPointer break
         ARRAY case Type .arrayType break
       end
     false return
@@ -1106,12 +1039,11 @@ namespace: types
     context [] .tupleTypes
       initInfo [] .asTuple i64 cast list.at .data =:: tupleInfo
     tupleInfo .compositeInfo .eltCount [] =:: eltCount
-    eltCount i64 cast.u ArraySize .int =:: size
+    eltCount i64 cast.u ArraySize .Int =:: size
     ## newArrayType
       initInfo [] .arrayType
       arrayType
-      size@ slice.wrap ## size
-      false ## mutable
+      size
     context newArrayType
       ! "can create array" assert
     return
@@ -1186,9 +1118,9 @@ namespace: types
     switch
       struct enum union procIn procOut initializer case
         true return
-      undefined empty primitiveType pointer arrayType procedure
+      undefined empty primitiveType pointer mutablePointer arrayType procedure
         namedType autoType genericType generatedType intLiteral align
-        cType rawPointer typeSet case
+        cType rawPointer mutableRawPointer typeSet case
         false return
     end
   end
@@ -1207,7 +1139,7 @@ namespace: types
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer rawPointer
-       cType align typeSet case ..drop
+       cType align typeSet mutablePointer mutableRawPointer case ..drop
          false return
     end =:: unionId
     typeContext [] .unionTypes unionId i64 cast list.at .data =:: unionInfo
@@ -1257,7 +1189,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         cType rawPointer typeSet case
+         cType rawPointer typeSet mutablePointer mutableRawPointer case
           ..drop CompositeInfo ptr optional.empty return
       end
   end
@@ -1275,7 +1207,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         cType rawPointer typeSet case
+         cType rawPointer typeSet mutablePointer mutableRawPointer case
           ..drop id.LABEL_ID_NONE return
       end
     context compositeData
@@ -1304,7 +1236,7 @@ namespace: types
           break
         undefined empty primitiveType pointer arrayType procedure
          namedType autoType genericType generatedType intLiteral align
-         cType rawPointer typeSet case
+         cType rawPointer mutablePointer mutableRawPointer typeSet case
           ..drop -1 return
       end
     context compositeData
@@ -1342,7 +1274,7 @@ namespace: types
         .procOut break
       enum union undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
-       cType rawPointer typeSet case ..drop
+       cType rawPointer mutablePointer mutableRawPointer typeSet case ..drop
          i64 optional.empty return
     end =:: tupleId
     tuple tupleId typeContext tryComputeTupleSize if
@@ -1367,7 +1299,7 @@ namespace: types
         .union break
       struct procIn procOut undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
-       cType rawPointer typeSet case ..drop
+       cType rawPointer mutablePointer mutableRawPointer typeSet case ..drop
          Type .empty i64 optional.empty return
     end =:: enumId
     enum enumId typeContext tryComputeUnionSize =:: isError
@@ -1887,7 +1819,7 @@ namespace: types
     newProcArgs
     procData .out procData .callingConvention context newProcedure if ..drop proc true return end
     isPtr if
-      ArrayType .POINTER ArraySize slice.empty false context newArrayType return
+      ArrayType .POINTER ArraySize .None context newArrayType return
     end
     false return
   end
@@ -2207,7 +2139,9 @@ namespace: types
       genericType case .genericType i32 cast return
       generatedType case .generatedType i32 cast return
       pointer case .pointer i32 cast return
+      mutablePointer case .mutablePointer i32 cast return
       rawPointer case .rawPointer i32 cast return
+      mutableRawPointer case .mutableRawPointer i32 cast return
       arrayType case .arrayType i32 cast return
       struct case .struct i32 cast return
       union case .union i32 cast return
@@ -2231,28 +2165,28 @@ namespace: types
     t switch
       undefined empty primitiveType autoType cType intLiteral align typeSet case
         false return
-      pointer rawPointer arrayType case
+      pointer mutablePointer rawPointer mutableRawPointer arrayType case
         context [] .arrayTypes
           t
             $ .pointer ?? if
               .pointer
+            else $ .mutablePointer ?? _if
+              .mutablePointer
             else $ .rawPointer ?? _if
               .rawPointer
+            else $ .mutableRawPointer ?? _if
+              .mutableRawPointer
             else
               .arrayType
             end
           i64 cast
         list.get =:: arrayType
+        arrayType .size .GenericArg ?? if
+          true return
+        end
         arrayType .base context containsGeneric if
           true return
         end
-        0:i32 while $ arrayType .dims < do =:: i
-          context [] .arraySizes
-             arrayType .sizeOffset i +
-          list.get .genericArg ?? if
-            true return
-          end
-        finally i 1 + end ..drop
         false return
       struct enum union procIn procOut initializer case
         t context compositeData .data [] .flags COMP_FLAG_STATIC_ARGS & ? return
@@ -2289,9 +2223,8 @@ namespace: types
     src context isArray if
       src context unwrapNamed =:: unwraped
       unwraped context getBaseType
-        ArrayType .POINTER
+        mutable if ArrayType .MUTABLE_POINTER else ArrayType .POINTER end
         unwraped context getArraySize
-        mutable
       context newArrayType ..drop return
     end
     src context isProcedure if
@@ -2299,7 +2232,9 @@ namespace: types
     else
       src
     end
-    ArrayType .POINTER ArraySize slice.empty mutable context newArrayType ..drop return
+      mutable if ArrayType .MUTABLE_POINTER else ArrayType .POINTER end
+      ArraySize .None
+    context newArrayType ..drop return
   end
   proc( Type : src TypeContext ptr.mut : context -> Type ) =>: export: ptrTarget
     src context isPointer ! if
@@ -2310,69 +2245,29 @@ namespace: types
       unwraped context getBaseType
         ArrayType .ARRAY
         unwraped context getArraySize
-        false ## mutable
       context newArrayType ..drop return
     end
     src context getBaseType return
   end
 
-  proc( Type : src Type : target bool : reshape TypeContext ptr : context -> bool ) =>: sizeCompatible
+  proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: sizeCompatible
     using types.
     src context isFixedSize ! and target context isFixedSize if
       false return ## cannot cast non-fixed pointer to fixed poiner
     end
-    reshape and target context isFixedSize ! if
+    target context isFixedSize ! if
       true return
     end
     src context getArraySize =:: srcSize
     target context getArraySize =:: targetSize
-    srcSize .length targetSize .length u< if srcSize .length else targetSize .length end =:: commonPart
-    1:i64 =:: mut: srcTotal
-    1:i64 =:: mut: targetTotal
-    0:iSize while $ commonPart u< do =:: i
-      srcSize i slice.get =:: srcSizeElt
-      targetSize i slice.get =:: targetSizeElt
-      reshape if
-        srcSizeElt ..label targetSizeElt ..label != if
-          false return
-        end
-        srcSizeElt .int ?? if
-          srcTotal srcSizeElt .int * srcTotal=
-          targetTotal targetSizeElt .int * targetTotal=
-        else srcTotal targetTotal != _if
-          false return
-        end
-        continue
-      end
-      srcSizeElt targetSizeElt arraySizeEqual ! if
-        false return
-      end
-    finally i 1:iSize + end ..drop
-    reshape if
-      srcSize .length while $ targetSize .length u< do =:: i
-        targetSize i slice.get .int ?? ! if false return end
-        targetTotal targetSize i slice.get .int * targetTotal=
-      finally i 1:iSize + end ..drop
-      targetSize .length while $ srcSize .length u< do =:: i
-        srcSize i slice.get .int ?? ! if false return end
-        srcTotal srcSize i slice.get .int * srcTotal=
-      finally i 1:iSize + end ..drop
-      srcTotal targetTotal == return
-    end
-    srcSize .length while $ targetSize .length u< do =:: i
-      targetSize i slice.get .int ?? ! or targetSize i slice.get .int 1 != if
-        false return
-      end
-    finally i 1:iSize + end ..drop
-    target context isFixedSize ! if
+    srcSize targetSize arraySizeEqual if
       true return
     end
-    targetSize .length while $ srcSize .length u< do =:: i
-      srcSize i slice.get .int ?? ! or srcSize i slice.get .int 1 != if
-        false return
-      end
-    finally i 1:iSize + end ..drop
-    true return
+    ## allow cast  T ptr -> T 1 ptr
+    srcSize .None ?? and targetSize .Int ?? and targetSize .Int 1 == if
+      true return
+    end
+    false return
   end
 
   proc(
@@ -2391,14 +2286,12 @@ namespace: types
     end
   end
   proc(
-    Type : src0
-    Type : target0
+    Type : mut: src
+    Type : mut: target
     bool : allowRename
     bool : mutableParent
     TypeContext ptr : context
   -> bool ) =>: canCastPtr
-    src0 =:: mut: src
-    target0 =:: mut: target
     allowRename if
       src context unwrapNamed src=
       target context unwrapNamed target=
@@ -2410,6 +2303,7 @@ namespace: types
       src .primitiveType target .primitiveType canCastPrimitivePtrArg if
       true return
     end
+    ## TODO! allow cast  T k array l ptr -> T  k l *  ptr
     src context types.isPointer ! or target context types.isPointer ! if
       false return
     end
@@ -2419,7 +2313,7 @@ namespace: types
       mutableSrc mutableTarget !=
     else
       mutableSrc ! mutableTarget &
-    end or src target allowRename context sizeCompatible ! if
+    end or src target context sizeCompatible ! if
       false return
     end
     ## canCastPtr
@@ -2488,8 +2382,7 @@ namespace: types
     target context unwrapNamed =:: targetBase
     src context compositeEltCount =:: srcSize
     srcSize 0 == =:: srcEmpty
-    srcEmpty and targetBase context types.isRawPointer and
-        targetBase context types.getArrayDims 1 == if
+    srcEmpty and targetBase context types.isRawPointer if
       true return ## empty initializer to raw 1D pointer
     end
     ## XXX? allow cast from empty initializer to union with single empty entry
@@ -2498,18 +2391,17 @@ namespace: types
     end
     targetBase context types.isArray or targetBase context types.isArrayPointer if
       context [] .initializerTypes src .initializer i64 cast list.at .data =:: initInfo
-      targetBase context getElementType =:: eltType
+      targetBase context getBaseType =:: eltType
       initInfo .arrayType [] eltType context canAutoCast and
-        targetBase context getArraySize =:: targetSizes
-        targetSizes $ .length 1:iSize - slice.get =:: outerSize
-        outerSize .int ?? and outerSize .int srcSize i64 cast.u == if
+        targetBase context getArraySize =:: targetSize
+        targetSize .Int ?? and targetSize .Int srcSize i64 cast.u == if
           true return
       end
     end
     targetBase context types.isTuple if
       src targetBase context canCastTupleInitializer return
     else targetBase context types.isPointer
-        and targetBase context getArrayDims 0 ==
+        and targetBase context getArraySize .None ??
         and targetBase context getBaseType context unwrapNamed =:: baseType
         baseType context types.isTuple _if
       src baseType context canCastTupleInitializer return
@@ -2653,27 +2545,17 @@ namespace: types
     a context types.isPointer and b context types.isPointer and
         a context types.getBaseType b context types.getBaseType types.typeEquals if
       a context types.isMutable b context types.isMutable & =:: mutable
-      a context types.getArraySize =:: aSizes
-      b context types.getArraySize =:: bSizes
-      a context types.isFixedSize b context types.isFixedSize &
-        aSizes .length bSizes .length == &
-      =:: mut: fixedSize
-      aSizes .length bSizes .length u< if aSizes .length else bSizes .length end =:: s
-      0:iSize =:: mut: commonPrefix
-      while commonPrefix s u< do
-        aSizes commonPrefix slice.get
-          bSizes commonPrefix slice.get
-        arraySizeEqual if
-          false fixedSize=
-          break
-        end
-        commonPrefix 1:iSize + commonPrefix=
-      end
+      a context types.getArraySize =:: aSize
+      b context types.getArraySize =:: bSize
+      a context types.isFixedSize b context types.isFixedSize & =:: mut: fixedSize
       ## newArrayType
         a context types.getBaseType
-        fixedSize if ArrayType .POINTER else ArrayType .RAW_POINTER end
-        aSizes commonPrefix slice.head
-        mutable
+        mutable if
+          fixedSize if ArrayType .MUTABLE_POINTER else ArrayType .MUTABLE_RAW_POINTER end
+        else
+          fixedSize if ArrayType .POINTER else ArrayType .RAW_POINTER end
+        end
+        aSize bSize arraySizeEqual if aSize else ArraySize .Dynamic end
         context
       newArrayType return
     end
@@ -2833,28 +2715,19 @@ namespace: sb
   -> stringBuilder  ) =>: export: appendSliceSize
     sb
       size switch
-        int case
+        None case break
+        Dynamic case " _" sb.appendS break
+        Int case
           ' ' sb.appendC
-          size .int sb.appendI
+          size .Int sb.appendI
           break
-        genericArg case
+        GenericArg case
           ' ' sb.appendC
-          size .genericArg labelContext appendLabelName
+          size .GenericArg labelContext appendLabelName
           "[ " sb.appendS
-          size .genericArg i64 cast.s sb.appendI
+          size .GenericArg i64 cast.s sb.appendI
           ":LabelId ]" sb.appendS
           break
-      end
-    return
-  end
-  proc(
-    stringBuilder : sb
-    types.ArraySize slice : sizes
-    LabelContext ptr : labelContext
-  -> stringBuilder  ) =>: export: appendSliceSizes
-    sb
-      sizes for =:: size
-        size labelContext appendSliceSize
       end
     return
   end
@@ -2876,21 +2749,22 @@ namespace: sb
         sb t .intLiteral appendIntLiteralType return
       cType case
         sb t .cType appendCType return
-      pointer rawPointer case
+      pointer mutablePointer rawPointer mutableRawPointer case
         sb
           ## appendTypeRecursive
             t context types.getBaseType
             context
             depth
           appendTypeRecursive
-          t context types.getArraySize labelContext appendSliceSizes
+          t context types.getArraySize labelContext appendSliceSize
           t .pointer ?? if
             " ptr" appendS
+          else t .mutablePointer ?? _if
+            " ptr.mut" appendS
+          else t .rawPointer ?? _if
+            " ptr.raw" appendS
           else
-            " _ ptr" appendS
-          end
-          t context types.isMutable if
-            ".mut" appendS
+            " ptr.raw.mut" appendS
           end
         return
       arrayType case
@@ -2900,7 +2774,7 @@ namespace: sb
             context
             depth
           appendTypeRecursive
-          t context types.getArraySize labelContext appendSliceSizes
+          t context types.getArraySize labelContext appendSliceSize
           " array" appendS
         return
       struct enum union initializer case ## TODO? seperate printing for enum

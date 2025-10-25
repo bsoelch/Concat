@@ -54,9 +54,8 @@ proc(
   TypeContext ptr.mut : typeContext
 -> Type ) =>: wrapPtr
   base
-    types.ArrayType .RAW_POINTER
-    types.ArraySize slice.empty
-    mutable
+    mutable if types.ArrayType .MUTABLE_RAW_POINTER else types.ArrayType .RAW_POINTER end
+    types.ArraySize .None
     typeContext
   types.newArrayType
     ! "can wrap pointer" assert

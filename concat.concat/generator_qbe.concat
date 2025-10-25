@@ -172,7 +172,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       t .cType
         types.cTypeAsType
       context toValType return
-    pointer rawPointer case
+    pointer mutablePointer rawPointer mutableRawPointer case
       ValType .PTR return
     procedure arrayType struct union enum initializer case
       ValType .REFERENCE return
@@ -652,7 +652,7 @@ namespace: sb
           end
         storeType pos context appendTypeNameQBE
         return
-      pointer rawPointer procedure case
+      pointer mutablePointer rawPointer mutableRawPointer procedure case
         sb "l" sb.appendS return
       arrayType case
         sb t "array":s storeType .STACK ?? ! appendCompositeTypeQBE return
@@ -840,12 +840,11 @@ namespace: sb
           Array   case value .Array   .length 0:iSize == break
           default false break
         end if ## zero length array as primitive type
-      0 types.ArraySize .int =:: size
+      0 types.ArraySize .Int =:: size
       ## newArrayType
         constant [] .valType
         types.ArrayType .ARRAY
-        size@ slice.wrap ## size
-        false ## mutable
+        size
       typeContext types.newArrayType ! "can create array" assert
     else
       constant [] .valType
@@ -990,7 +989,7 @@ namespace: sb
           isGlobal ! if break end
           t =:: containerType
           containerType typeContext types.isArray if
-            containerType typeContext types.getElementType =:: eltType
+            containerType typeContext types.getBaseType =:: eltType
             eltType pos context typeSizeInt =:: eltSize
             eltType pos context typeStrideInt =:: eltStride
             value .Array =:: elts
@@ -1227,16 +1226,10 @@ namespace: sb
     prog .idContext .constContext =:: constContext
     t0 typeContext types.unwrapNamed =:: t
     t typeContext types.isArray if
-      t typeContext types.getArraySize =:: sizes
-      1:i64 =:: mut: S
-      0:iSize while $ sizes .length u< do =:: i
-        sizes i slice.get =:: size
-        size .int ?? ! if
-          sb return ## no declaration for var-size array
-        end
-        S size .int * S=
-        i 1:iSize +
-      end ..drop
+      t typeContext types.getArraySize =:: size
+      size .Int ?? ! if
+        sb return ## no declaration for var-size array
+      end
       t typeContext types.getBaseType =:: baseType
       baseType pos context typeSizeInt =:: baseSize
       baseType pos context typeStrideInt =:: baseStride
@@ -1251,7 +1244,7 @@ namespace: sb
           t pos context eltTypeName
         end
         ' ' sb.appendC
-        S sb.appendI
+        size .Int sb.appendI
       return
     end
     t typeContext types.isTuple if
@@ -2344,7 +2337,7 @@ proc(
       return
     OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT case
       ## baseType is pointer type
-      baseType typeContext types.getElementType =:: eltType
+      baseType typeContext types.getBaseType =:: eltType
       sb
         builtIn .OFFSET_PTR_I32 ?? or builtIn .OFFSET_PTR_MUT_I32 ?? if
           pos context popValue =:: offset32
@@ -3417,7 +3410,7 @@ proc(
       end
       containerType typeContext types.isArray =:: isArray
       isArray if
-        containerType typeContext types.getElementType
+        containerType typeContext types.getBaseType
       else
         containerType
           index
@@ -3485,7 +3478,7 @@ proc(
       =:: containerType
       containerType typeContext types.isArray =:: isArray
       isArray if
-        containerType typeContext types.getElementType
+        containerType typeContext types.getBaseType
       else
         containerType
           index
@@ -4880,7 +4873,7 @@ proc(
       sb return ## XXX? print compiler info
     autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier StaticConstant
     getName atName setName getLabel Error Assert panic declareName initializeName
-    setLabel length size typeModifier hasLabel existsLabel existsName case
+    setLabel length typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
   "unable to compile operation " sb.copyPtr

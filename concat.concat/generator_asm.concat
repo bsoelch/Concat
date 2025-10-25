@@ -536,7 +536,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       dataType .cType
         types.cTypeAsType
       typeContext toValType return
-    pointer rawPointer case
+    pointer mutablePointer rawPointer mutableRawPointer case
       ValType .PTR return ## TODO? distinquish pointer and procedure pointer
     arrayType case
       dataType typeContext types.referenceOnly if
@@ -5412,7 +5412,7 @@ proc(
           end
         =:: containerType
         containerType typeContext types.isArray if
-          containerType typeContext types.getElementType
+          containerType typeContext types.getBaseType
           $ typeContext types.strideOf .fixed op [] .val .getElement i64 cast.u *
         else
           containerType op [] .val .getElement typeContext types.compositeGetElement
@@ -5520,7 +5520,7 @@ proc(
           end
         =:: containerType
         containerType typeContext types.isArray if
-          containerType typeContext types.getElementType
+          containerType typeContext types.getBaseType
           $ typeContext types.strideOf .fixed op [] .val .setElement i64 cast.u *
         else
           containerType op [] .val .setElement typeContext types.compositeGetElement
@@ -6627,7 +6627,7 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
         "Codegen: pointer constants are currently not implemented" ..panic
       end
       constType typeContext types.isArray if
-        constType typeContext types.getElementType =:: eltType
+        constType typeContext types.getBaseType =:: eltType
         eltType typeContext types.strideOf .fixed eltType typeContext types.sizeOf .fixed - =:: tailPadding
         value .Array for =:: elt
           eltType elt context appendConstantData

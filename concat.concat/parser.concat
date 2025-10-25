@@ -164,9 +164,9 @@ proc(
       "unsupported string literal type" sb.copyPtr pos errors appendError
       ConstValue .None 0:iSize Type .undefined break
   end =:: charType =:: strLength =:: strValue
-  strLength i64 cast.u ArraySize .int =:: size
+  strLength i64 cast.u ArraySize .Int =:: size
   ## Constant
-    charType types.ArrayType .POINTER size@ 1 slice.create false context newArrayType ..drop
+    charType types.ArrayType .POINTER size context newArrayType ..drop
     strValue
     IdentifierInfo optional.empty
   pos Constant new return
@@ -2098,9 +2098,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..length":s string.eq _if ..drop
       fileState [] .wordStart opLength state appendOp
       return
-    else ..dup "..size":s string.eq _if ..drop
-      fileState [] .wordStart opSize state appendOp
-      return
     else ..dup "..label":s string.eq _if ..drop
       fileState [] .wordStart opGetEnumLabel state appendOp
       return
@@ -2327,9 +2324,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       name constContext newStringConst
       types.primitive.CHAR8
         types.ArrayType .POINTER
-        name .length i64 cast.u types.ArraySize .int =:: size
-        size@ 1 slice.create
-        false
+        name .length i64 cast.u types.ArraySize .Int =:: size
+        size
       typeContext types.newArrayType ..drop
       fileState [] .wordStart opConst state appendOp
       return

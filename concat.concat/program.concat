@@ -160,7 +160,6 @@ union(
             BuiltIn : builtIn
         PointerCall : callPtr
                   _ : length
-                  _ : size
        AutoCastInfo : autoCast
            CastInfo : Cast
                Type : Cast!
@@ -322,9 +321,6 @@ proc( FilePosition : pos -> Operation ) =>: export: opCallPtr
 end
 proc( FilePosition : pos -> Operation ) =>: export: opLength
   OpValue .length types.I_SIZE pos Operation new return
-end
-proc( FilePosition : pos -> Operation ) =>: export: opSize
-  OpValue .size Type .undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opGetEnumLabel
   OpValue .getEnumLabel Type .undefined pos Operation new return
@@ -922,11 +918,6 @@ namespace: sb
           break
         length case
           "length ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        size case
-          "size ( " sb.appendS
           ..over .dataType typeContext sb.appendType
           " )" sb.appendS
           break

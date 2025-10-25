@@ -32,7 +32,6 @@ struct(
   i32 : nRenames
   i32 : nCasts
   i32 : nGenerics
-  i32 : arraySizeArguments
   i32 : signatureWeigth
   bool : argsMatch
   bool : needsParam
@@ -51,17 +50,19 @@ end
 
 proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   size switch
-    int case size .int ConstValue .Int return
-    genericArg case size .genericArg ConstValue .GenericArg return
+    Dynamic case ConstValue .None return
+    None case 1 ConstValue .Int return
+    Int case size .Int ConstValue .Int return
+    GenericArg case size .GenericArg ConstValue .GenericArg return
   end
 end
 proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
   ConstValue ..length 23:iSize == "no new constants" assert
   val switch
     Int case
-      val .Int types.ArraySize .int return
+      val .Int types.ArraySize .Int return
     GenericArg case
-      val .GenericArg types.ArraySize .genericArg return
+      val .GenericArg types.ArraySize .GenericArg return
     default ..unreachable
   end
 end
@@ -127,34 +128,30 @@ proc(
         name
         typeContext
       types.newNamedType return
-    pointer rawPointer arrayType case
+    pointer mutablePointer rawPointer mutableRawPointer arrayType case
       src typeContext types.getBaseType =:: base
-      src typeContext types.getArraySize =:: sizes
+      src typeContext types.getArraySize =:: size
       idContext [] .arraySizeBuffer .length =:: sizeOffset
       false =:: mut: genericSize
-      sizes for =:: size
-        idContext [] .arraySizeBuffer
-          size switch
-            int case
-              size list.append break
-            genericArg case
-              size .genericArg =:: genericId
-              genericId labelContext id.labelFlags id.FLAG_STATIC & ? ! if
-                flags ReplaceFlags.REPLACE_AUTO_ARGS & ? ! if
-                  size list.append break
-                end
-                true genericSize=
-              end
-              genericValues genericId map.at =:: newValue
-              newValue optional.hasData if
-                newValue .data [] .fixed constAsSize list.append
-              else
-                size list.append
-              end
-              break
+      size switch
+        None Int Dynamic case
+          size break
+        GenericArg case
+          size .GenericArg =:: genericId
+          genericId labelContext id.labelFlags id.FLAG_STATIC & ? ! if
+            flags ReplaceFlags.REPLACE_AUTO_ARGS & ? ! if
+              size break
+            end
+            true genericSize=
           end
-        idContext .arraySizeBuffer=
-      end
+          genericValues genericId map.at =:: newValue
+          newValue optional.hasData if
+            newValue .data [] .fixed constAsSize
+          else
+            size
+          end
+          break
+      end =:: newSize
       ## newArrayType
         ## replaceGenerics
           base
@@ -167,15 +164,16 @@ proc(
         replaceGenerics
         src .pointer ?? or src .arrayType ?? and genericSize if
           types.ArrayType .POINTER
+        else src .mutablePointer ?? _if
+          types.ArrayType .MUTABLE_POINTER
         else src .rawPointer ?? _if
           types.ArrayType .RAW_POINTER
+        else src .mutableRawPointer ?? _if
+          types.ArrayType .MUTABLE_RAW_POINTER
         else
           types.ArrayType .ARRAY
         end
-        idContext [] .arraySizeBuffer list.asSlice
-          sizeOffset
-        slice.tail
-        src typeContext types.isMutable
+        newSize
         typeContext
       types.newArrayType
         idContext [] .arraySizeBuffer
@@ -389,7 +387,7 @@ proc(
         genericValues
         progContext
       resolveGenerics return
-    pointer arrayType rawPointer case
+    pointer mutablePointer arrayType rawPointer mutableRawPointer case
       src typeContext types.isPointer ! and
           src typeContext types.isArray ! if
         true return
@@ -410,38 +408,27 @@ proc(
       targetFixed and srcFixed ! if
         true return ## cannot assign unknown-size to fixed-size
       end
-      src typeContext types.getArraySize =:: mut: srcSizes
-      target typeContext types.getArraySize =:: mut: targetSizes
-      ## treat 0D fixed arrays as 1D array of length 1
-      1:i64 types.ArraySize .int =:: one
-      srcFixed and srcSizes .length 0:iSize == if
-        one@ slice.wrap srcSizes=
-      end
-      targetFixed and targetSizes .length 0:iSize == if
-        one@ slice.wrap targetSizes=
-      end
-      srcFixed and targetFixed ! if
-        srcSizes $ .length 1:iSize - slice.head srcSizes=
-      end
-      srcSizes .length targetSizes .length u< if
-        true return ## target sizes have to be matched
-      end
-      srcSizes
-        srcSizes .length targetSizes .length -
-      slice.cutIndex =:: newSrcSizes =:: matchedSizes
-      targetSizes .length for =:: i
-        matchedSizes i slice.get =:: srcSize
-        targetSizes i slice.get =:: targetSize
+      src typeContext types.getArraySize =:: srcSize
+      target typeContext types.getArraySize =:: targetSize
+      targetFixed and srcFixed if
         targetSize switch
-          int case
-            srcSize .int ?? ! if
+          Dynamic case break
+          None case
+            srcSize .None ?? ! if
               true return
-            else srcSize .int targetSize .int != _if
+            end
+            break
+          Int case
+            srcSize .Int ?? ! if
+              srcSize .None ?? ! or targetSize .Int 1 != if
+                true return
+              end
+            else srcSize .Int targetSize .Int != _if
               true return
             end
           break
-          genericArg case
-            targetSize .genericArg =:: genericId
+          GenericArg case
+            targetSize .GenericArg =:: genericId
             srcSize sizeAsConst =:: newValue
             genericValues genericId map.at =:: oldValue?
             oldValue? optional.hasData if
@@ -468,19 +455,8 @@ proc(
             break
         end
       end
-      newSrcSizes .length 0:iSize != if
-        ## newArrayType
-          src typeContext types.getBaseType
-          types.ArrayType .ARRAY
-          newSrcSizes
-          srcMutable
-          typeContext
-        types.newArrayType ! "can create array" assert
-      else
-        src typeContext types.getBaseType
-      end =:: srcBase
       ## resolveGenerics
-        srcBase
+        src typeContext types.getBaseType
         target typeContext types.getBaseType
         true
         needCast
@@ -689,10 +665,6 @@ proc(
     ## prefer less generics
     a .nGenerics b .nGenerics < if -1  else 1 end return
   end
-  a .arraySizeArguments b .arraySizeArguments != if
-    ## prefer more array dimensions in parameters
-    a .arraySizeArguments b .arraySizeArguments > if -1  else 1 end return
-  end
   a .nRenames b .nRenames != if
     ## prefer less renames
     a .nRenames b .nRenames < if -1  else 1 end return
@@ -775,7 +747,6 @@ proc(
         procId
         argCount ParameterInfo list.create
         labelHash@ labelEq@ argCount GenericArg map.create
-        0
         0
         0
         0
@@ -931,12 +902,7 @@ proc(
           map.put ..drop
         end
       end
-      paramType typeContext types.isPointer or paramType typeContext types.isArray if
-        current [] .arraySizeArguments
-          paramType typeContext types.getArrayDims i32 cast +
-        current .arraySizeArguments=
-      end
-      stackType typeContext types.getArrayDims 0 == and paramType typeContext types.getArrayDims 0 > if
+      stackType typeContext types.getArraySize .None ?? and paramType typeContext types.getArraySize .None ?? ! if
         ## count conversion from 0D ptr to 1D ptr as cast
         current [] .nCasts
           1 +

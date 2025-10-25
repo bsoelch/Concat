@@ -486,7 +486,7 @@ proc(
     autoTypedInitializeId ConstantReference NewReference
     typeInfo NewEnumReference usingNamespace usingIdentifier InlineReturn
     getName atName setName getLabel Assert declareName initializeName StaticConstant
-    setLabel length size typeModifier hasLabel existsLabel existsName case
+    setLabel length typeModifier hasLabel existsLabel existsName case
       break ## XXX error message
   end
   "unsupported operation " sb.copyPtr
