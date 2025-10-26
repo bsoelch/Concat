@@ -4358,7 +4358,10 @@ proc(
           eltCount op .pos state checkStackSize if
             return
           end
+          ## TODO? if rotated value is constant replace with move of value to top of stack
           state .stack eltCount offset 0 > branchTree.rotate
+          ## clear stack references after rotation (removing stack values after rotation messes up stack)
+          false eltCount op .pos state clearReferences
           op state appendOp ..drop
           return
       end
