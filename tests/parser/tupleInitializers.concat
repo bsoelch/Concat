@@ -1,6 +1,6 @@
 ( type : T -> type ) =>: slice
   struct(
-    T _ ptr : data
+    T ptr.raw : data
     i64 : length
   )
 end

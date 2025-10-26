@@ -178,7 +178,7 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
         b .Union .value []
       labelContext constantEquals return
     LocalValue case
-      a .LocalValue ConstValue _ ptr cast b .LocalValue ConstValue _ ptr cast == return
+      a .LocalValue ConstValue ptr.raw cast b .LocalValue ConstValue ptr.raw cast == return
     LocalArray case
       ## local arrays are only equal if memory ranges coincide
       a .LocalArray .data b .LocalArray .data == and

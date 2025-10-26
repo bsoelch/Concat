@@ -62,25 +62,25 @@ end
 
 namespace: ptr
   ( type : T -> type ) =>: export: Itr
-    struct( T _ ptr : head T _ ptr : tail )
+    struct( T ptr.raw : head T ptr.raw : tail )
   end
   namespace: itr
     proc( type : auto: T T ptr : p -> T Itr ) =>: prepare0D
       "iteration over pointer to single value" ..compiler.warning
       ## Itr
         p
-        p T _ ptr cast 1 @[]
+        p T ptr.raw cast 1 @[]
       T Itr new return
     end
     proc( type : auto: T i64 : auto: k  T k ptr : p -> T Itr ) =>: export: prepare
       ## Itr
         p
-        p T _ ptr cast k @[]
+        p T ptr.raw cast k @[]
       T Itr new return
     end
     proc( type : auto: T  T Itr -> T Itr ) =>: export: prepareItr end
     proc( type : auto: T T Itr : itr -> bool ) =>: export: check
-      itr .head itr .tail <
+      itr .head itr .tail !=
     end
     proc( type : auto: T T Itr : itr -> T ) =>: export: shadow: get
       itr .head []

@@ -18,7 +18,7 @@ namespace: arenaAlloc ## XXX? rename to `arena`
   enum( CONTINUE ALLOC ) =:: ChunkType
   ( type : T -> type ) =>: ArenaChunk
     struct(
-      T _ ptr.mut : data
+      T ptr.raw.mut : data
       i32 : mut: eltCount
       ChunkType : chunkType
     )
@@ -126,9 +126,9 @@ namespace: arenaAlloc
     type : auto: T
     T ArenaAllocator : arena0
     i32 : count
-  -> T ArenaAllocator T _ ptr.mut ) =>: alloc_internal
+  -> T ArenaAllocator T ptr.raw.mut ) =>: alloc_internal
     count 0 >= "count is non-negative" assert
-    count 0 == if arena0 0 T _ ptr.mut cast! return end
+    count 0 == if arena0 0 T ptr.raw.mut cast! return end
     1 arena0 .chunkSizeShift << =:: chunkSize
     arena0 =:: mut: arena
     arena .strictOrder ! if
@@ -391,7 +391,7 @@ namespace: mixedArena
     arena MaxAlign ArenaAllocator cast
       T ..types.stride size iSize cast.u * alignSize arenaAlloc.alloc_internal =:: res
     MixedArenaAllocator cast
-    res T _ ptr.mut cast! size slice.createMutable
+    res T ptr.raw.mut cast! size slice.createMutable
   end
 
   proc(

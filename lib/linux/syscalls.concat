@@ -1,6 +1,6 @@
 ## TODO? are the flags stable accross different systems
 namespace: linux
-  0 ..ctype.void _ ptr.mut cast! =:: export: nullPtr
+  0 ..ctype.void ptr.raw.mut cast! =:: export: nullPtr
 
   i32 =:: export: FileId
   0:FileId =:: export: stdIn
@@ -9,12 +9,12 @@ namespace: linux
   ## XXX open
   proc.c(
     i64 : count
-    char8 _ ptr.mut : buffer
+    char8 ptr.raw.mut : buffer
     FileId : file
   -> i64 ) : extern: export: sys_read
   proc.c(
     i64 : count
-    char8 _ ptr : buffer
+    char8 ptr.raw : buffer
     FileId : file
   -> i64 ) : extern: export: sys_write
   proc.c(
@@ -63,24 +63,24 @@ namespace: linux
     mmap.Flags : flags
     mmap.Protection : prot
     i64 : length
-    ..ctype.void _ ptr.mut : addr
-  -> ..ctype.void _ ptr.mut ) : extern: export: sys_mmap
+    ..ctype.void ptr.raw.mut : addr
+  -> ..ctype.void ptr.raw.mut ) : extern: export: sys_mmap
   proc.c(
     mmap.Protection : prot
     i64 : length
-    ..ctype.void _ ptr.mut : addr
+    ..ctype.void ptr.raw.mut : addr
   -> i64 ) : extern: export: sys_protect
   proc.c(
     i64 : length
-    ..ctype.void _ ptr.mut : addr
+    ..ctype.void ptr.raw.mut : addr
   -> i64 ) : extern: export: sys_munmap
   proc.c(
-    ..ctype.void _ ptr.mut : newAddr
+    ..ctype.void ptr.raw.mut : newAddr
     mremap.Flags : flags
     i64 : newLength
     i64 : length
-    ..ctype.void _ ptr.mut : addr
-  -> ..ctype.void _ ptr.mut ) : extern: export: sys_mremap
+    ..ctype.void ptr.raw.mut : addr
+  -> ..ctype.void ptr.raw.mut ) : extern: export: sys_mremap
 
   namespace: clone
     i64 =:: export: CloneFlags

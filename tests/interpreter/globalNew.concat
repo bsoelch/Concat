@@ -3,7 +3,7 @@ struct( i32 : x i32 : y ) =:: Point
 
 1 2 Point new =:: p
 
-42 Point _ ptr cast! 5 ( Point _ ptr : data i64 : length ) new =:: sizedPointer
+42 Point ptr.raw cast! 5 ( Point ptr.raw : data i64 : length ) new =:: sizedPointer
 
 proc( -> ) =>: main
   p .x debug.print

@@ -12,7 +12,7 @@ end
 ..builtIn.parse.f16:? ! if
   import core/f64
   import core/i64
-  proc( char8 _ ptr iSize -> f16 ) =>: export: static: :f16
+  proc( char8 ptr.raw iSize -> f16 ) =>: export: static: :f16
     ..builtIn.parse.f64 f16.fromF64 return
   end
   namespace: f16

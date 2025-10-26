@@ -1,4 +1,4 @@
-proc( char8 _ ptr -> i64 ) =>: consume
+proc( char8 ptr.raw -> i64 ) =>: consume
   i64 cast!
 end
 

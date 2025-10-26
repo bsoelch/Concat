@@ -60,7 +60,7 @@ end
 
 enum( A B C D E ) =:: enum1
 union( i32 : A f32 : B i64 : C f64 : D ) =:: union1
-union( ( i32 f32 ) : A ( i32 i32 ) : B ( f32 f32 ) : C ( i8 _ ptr i64 ) : D ) =:: union2
+union( ( i32 f32 ) : A ( i32 i32 ) : B ( f32 f32 ) : C ( i8 ptr.raw i64 ) : D ) =:: union2
 union( i64 5 array : A i8 32 array : B i64 : C ) =:: union3
 
 proc( -> enum1 union1 ) =>: testEnum12

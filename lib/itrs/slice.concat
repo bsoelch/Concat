@@ -2,17 +2,17 @@ import slice
 namespace: slice
   ( type : T -> type ) =>: export: MapItr
     struct(
-      T _ ptr.mut : shadow: head
-      T _ ptr.mut : shadow: tail
-      T _ ptr.mut : root
+      T ptr.raw.mut : shadow: head
+      T ptr.raw.mut : shadow: tail
+      T ptr.raw.mut : root
     )
   end
   ( type : S type : T -> type ) =>: export: MapToItr
     struct(
-      S _ ptr : srcHead
-      S _ ptr : srcTail
-      T _ ptr.mut : targetHead
-      T _ ptr.mut : targetRoot
+      S ptr.raw : srcHead
+      S ptr.raw : srcTail
+      T ptr.raw.mut : targetHead
+      T ptr.raw.mut : targetRoot
     )
   end
   ## TODO ZipItr

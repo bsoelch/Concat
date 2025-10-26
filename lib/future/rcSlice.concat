@@ -44,16 +44,16 @@ namespace: rcSlice
     end
   end
   proc( type : auto: T T rcSlice : data -> ) =>: export: clear
-    data .elts T _ ptr.mut cast! data [] .length mem.clear ..drop
+    data .elts T ptr.raw.mut cast! data [] .length mem.clear ..drop
   end
   ## TODO range checks
   proc( type : auto: T T rcSlice : data iSize : index -> T ) =>: export: get
-    data .elts T _ ptr cast! index []
+    data .elts T ptr.raw cast! index []
   end
   proc( type : auto: T T rcSlice : data iSize : index -> T ptr.mut ) =>: export: at
-    data .elts T _ ptr.mut cast! index @[]
+    data .elts T ptr.raw.mut cast! index @[]
   end
   proc( type : auto: T  T : value T rcSlice : data iSize : index -> ) =>: export: set
-    value data .elts T _ ptr.mut cast! index =[]
+    value data .elts T ptr.raw.mut cast! index =[]
   end
 end

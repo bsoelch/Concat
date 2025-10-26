@@ -1049,7 +1049,7 @@ namespace: f160
   ## XXX div
 end
 namespace: std.literals
-  proc( char8 _ ptr : chars iSize : k -> f128 ) =>: static: export: :f128
+  proc( char8 ptr.raw : chars iSize : k -> f128 ) =>: static: export: :f128
     char8 128 array : errMessageBuffer
     chars k string.create =:: str
     str 0 f128.parse =:: err

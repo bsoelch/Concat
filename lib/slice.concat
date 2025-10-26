@@ -6,11 +6,11 @@ import optional
 import itrs/array
 
 ( type : T -> type ) =>: export: slice
-  struct( T _ ptr : data iSize : length )
+  struct( T ptr.raw : data iSize : length )
 end
 namespace: slice
   ( type : T -> type ) =>: export: mut
-    struct( T _ ptr.mut : data iSize : length )
+    struct( T ptr.raw.mut : data iSize : length )
   end
 
   proc( type : T -> T slice ) =>: export: empty
@@ -19,13 +19,13 @@ namespace: slice
   proc( type : T -> T slice.mut ) =>: export: emptyMutable
     { { } : data 0:iSize : length } return
   end
-  proc( type : auto: T T _ ptr  i32 -> T slice ) =>: export: create_32
+  proc( type : auto: T T ptr.raw  i32 -> T slice ) =>: export: create_32
     iSize cast.s create_Z
   end
-  proc( type : auto: T T _ ptr  i64 -> T slice ) =>: export: create_64
+  proc( type : auto: T T ptr.raw  i64 -> T slice ) =>: export: create_64
     iSize cast.s create_Z
   end
-  proc( type : auto: T T _ ptr  iSize -> T slice ) =>: export: create_Z
+  proc( type : auto: T T ptr.raw  iSize -> T slice ) =>: export: create_Z
     T slice new return
   end
   overload: export: create create_32 create_64 create_Z end
@@ -39,13 +39,13 @@ namespace: slice
   proc( type : auto: T T slice.mut : a -> T slice ) =>: export: freeze
     a .data a .length slice.create_Z
   end
-  proc( type : auto: T T _ ptr.mut  iSize -> T slice.mut ) =>: export: shadow: create_mut
+  proc( type : auto: T T ptr.raw.mut  iSize -> T slice.mut ) =>: export: shadow: create_mut
     T slice.mut new return
   end
-  proc( type : auto: T T _ ptr.mut  i32 -> T slice.mut ) =>: export: shadow: create_32mut
+  proc( type : auto: T T ptr.raw.mut  i32 -> T slice.mut ) =>: export: shadow: create_32mut
     iSize cast.s create_mut
   end
-  proc( type : auto: T T _ ptr.mut  i64 -> T slice.mut ) =>: export: shadow: create_64mut
+  proc( type : auto: T T ptr.raw.mut  i64 -> T slice.mut ) =>: export: shadow: create_64mut
     iSize cast.s create_mut
   end
   proc(

@@ -395,7 +395,7 @@ namespace: i128
 end
 ## TODO appendI128?? ## base, signed
 namespace: std.literals
-  proc( char8 _ ptr : chars iSize : k -> i128 ) =>: static: export: :i128
+  proc( char8 ptr.raw : chars iSize : k -> i128 ) =>: static: export: :i128
     char8 128 array : errMessageBuffer
     chars k string.create =:: str
     str 0 false i128.parse =:: err

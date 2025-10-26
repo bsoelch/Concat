@@ -15,7 +15,7 @@ namespace: sb
     cap char8 list.create stringBuilder cast return
   end
   overload: export: create createZ create32 create64 end
-  proc( char8 _ ptr.mut : buffer iSize : buffSize -> stringBuilder ) =>: export: fromBuffer
+  proc( char8 ptr.raw.mut : buffer iSize : buffSize -> stringBuilder ) =>: export: fromBuffer
     buffer buffSize list.fromBuffer stringBuilder cast  return
   end
   proc( iSize : auto: k char8 k ptr.mut : buffer -> stringBuilder ) =>: export: wrapBuffer

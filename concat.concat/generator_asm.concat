@@ -42,19 +42,19 @@ REG_TYPE_I64 REG_ID_MASK | =:: RSP
 REG_TYPE_I32 REG_ID_MASK | =:: WSP
 REG_TYPE_I8 REG_ID_MASK | RegisterId =: NO_REG ## TODO? should register-id 0 be a valid register
 
-proc( char8 _ ptr : str iSize : len -> RegisterId ) =>: static: :reg64i
+proc( char8 ptr.raw : str iSize : len -> RegisterId ) =>: static: :reg64i
   str len ..builtIn.parse.i32 REG_ID_MASK & REG_TYPE_I64 | RegisterId cast
 end
-proc( char8 _ ptr : str iSize : len -> RegisterId ) =>: static: :reg32i
+proc( char8 ptr.raw : str iSize : len -> RegisterId ) =>: static: :reg32i
   str len ..builtIn.parse.i32 REG_ID_MASK & REG_TYPE_I32 | RegisterId cast
 end
-proc( char8 _ ptr : str iSize : len -> RegisterId ) =>: static: :reg128v
+proc( char8 ptr.raw : str iSize : len -> RegisterId ) =>: static: :reg128v
   str len ..builtIn.parse.i32 REG_ID_MASK & REG_TYPE_V128 | RegisterId cast
 end
-proc( char8 _ ptr : str iSize : len -> RegisterId ) =>: static: :reg64f
+proc( char8 ptr.raw : str iSize : len -> RegisterId ) =>: static: :reg64f
   str len ..builtIn.parse.i32 REG_ID_MASK & REG_TYPE_F64 | RegisterId cast
 end
-proc( char8 _ ptr : str iSize : len -> RegisterId ) =>: static: :reg32f
+proc( char8 ptr.raw : str iSize : len -> RegisterId ) =>: static: :reg32f
   str len ..builtIn.parse.i32 REG_ID_MASK & REG_TYPE_F32 | RegisterId cast
 end
 
@@ -4960,7 +4960,7 @@ proc(
       0 =:: mut: floatArgs
       ## TODO? is there a way to avoid having two loops (registers are counted right to left, arguments are pushed left ot right)
       ## count argument types
-      args .length i32 cast 1 - while $ 0 <= do =:: i
+      args .length i32 cast 1 - while $ 0 >= do =:: i
         args i slice.get =:: argType
         argType typeContext types.isEmpty or
             inType i typeContext types.compositeGetLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -6417,7 +6417,7 @@ proc(
             1 AMD64.getIntArgumentRegister asm.Operand .register
             op .val [] .panicWithMessage .length i64 cast.u asm.Operand .constInt
           context appendOp2
-          ## TODO? add argument for pointer to file position ( char8 _ ptr : nameData i64 : nameLen i32 : line i32 : linePos )
+          ## TODO? add argument for pointer to file position ( char8 ptr.raw : nameData i64 : nameLen i32 : line i32 : linePos )
           RuntimeErrorType .Panic Atomic .Error list.append
         context .procTail=
         false context .reachable=
@@ -6457,7 +6457,7 @@ proc(
             1 AMD64.getIntArgumentRegister asm.Operand .register
             op .val [] .RuntimeAssert .length i64 cast.u asm.Operand .constInt
           context appendOp2
-          ## TODO? add argument for pointer to file position ( char8 _ ptr : nameData i64 : nameLen i32 : line i32 : linePos )
+          ## TODO? add argument for pointer to file position ( char8 ptr.raw : nameData i64 : nameLen i32 : line i32 : linePos )
           RuntimeErrorType .AssertFail Atomic .Error list.append
         context .procTail=
         return

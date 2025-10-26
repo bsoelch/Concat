@@ -10,13 +10,13 @@ char32 slice =:: export: string32
 namespace: string
   { "" : data 0:iSize : length } string =: export: empty
 
-  proc( char8 _ ptr iSize -> string ) =>: export: createZ
+  proc( char8 ptr.raw iSize -> string ) =>: export: createZ
     string new return
   end
-  proc( char8 _ ptr i32 -> string ) =>: export: create32
+  proc( char8 ptr.raw i32 -> string ) =>: export: create32
     iSize cast.u createZ
   end
-  proc( char8 _ ptr i64 -> string ) =>: export: create64
+  proc( char8 ptr.raw i64 -> string ) =>: export: create64
     iSize cast.u createZ
   end
   overload: export: create createZ create32 create64 end
@@ -30,10 +30,10 @@ namespace: string
     char8 slice cast
   end
   proc( i8 slice : arr -> string ) =>: export: fromBytes
-    arr .data char8 _ ptr cast arr .length create
+    arr .data char8 ptr.raw cast arr .length create
   end
   proc( string : str -> i8 slice ) =>: export: bytes
-    str .data i8 _ ptr cast str .length slice.create
+    str .data i8 ptr.raw cast str .length slice.create
   end
 
   proc( string : a string : b -> i32 ) =>: export: compare
@@ -167,7 +167,7 @@ end
 namespace: string16
   { utf16"" : data 0:iSize : length } string16 =: export: empty
 
-  proc( char16 _ ptr  iSize -> string16 ) =>: export: create
+  proc( char16 ptr.raw  iSize -> string16 ) =>: export: create
     string16 new return
   end
 
@@ -178,10 +178,10 @@ namespace: string16
     char16 slice cast
   end
   proc( i16 slice : arr -> string16 ) =>: export: fromIntSlice
-    arr .data char16 _ ptr cast arr .length create
+    arr .data char16 ptr.raw cast arr .length create
   end
   proc( string16 : str -> i16 slice ) =>: export: toIntSlice
-    str .data i16 _ ptr cast str .length slice.create
+    str .data i16 ptr.raw cast str .length slice.create
   end
 
   proc( string16 : str iSize : index -> char16 ) =>: export: get_Z
@@ -205,7 +205,7 @@ end
 namespace: string32
   { utf32"" : data 0:iSize : length } string32 =: export: empty
 
-  proc( char32 _ ptr  iSize -> string32 ) =>: export: create
+  proc( char32 ptr.raw  iSize -> string32 ) =>: export: create
     string32 new return
   end
 
@@ -216,10 +216,10 @@ namespace: string32
     char32 slice cast
   end
   proc( i32 slice : arr -> string32 ) =>: export: fromIntSlice
-    arr .data char32 _ ptr cast arr .length create
+    arr .data char32 ptr.raw cast arr .length create
   end
   proc( string32 : str -> i32 slice ) =>: export: toIntSlice
-    str .data i32 _ ptr cast str .length slice.create
+    str .data i32 ptr.raw cast str .length slice.create
   end
 
   proc( string32 : str iSize : index -> char32 ) =>: export: get_Z
@@ -242,13 +242,13 @@ namespace: string32
 end
 
 namespace: std.literals
-  proc( char8 _ ptr : p iSize : k -> string ) =>: static: export: :string
+  proc( char8 ptr.raw : p iSize : k -> string ) =>: static: export: :string
     p k string new
   end
-  proc( char16 _ ptr : p iSize : k -> string16 ) =>: static: export: :string16
+  proc( char16 ptr.raw : p iSize : k -> string16 ) =>: static: export: :string16
     p k string16 new
   end
-  proc( char32 _ ptr : p iSize : k -> string32 ) =>: static: export: :string32
+  proc( char32 ptr.raw : p iSize : k -> string32 ) =>: static: export: :string32
     p k string32 new
   end
   overload: export: :s

@@ -99,7 +99,7 @@ namespace: debug
       io.stdOut ..over io.fputSb ..drop
     ..drop
   end
-  proc( type : auto: T T _ ptr : p -> ) =>: export: printP
+  proc( type : auto: T T ptr.raw : p -> ) =>: export: printP
     char8 24 array : buffer ##  0xffffffffffffffff
     buffer@ sb.wrapBuffer
       p i64 cast! 0 == if

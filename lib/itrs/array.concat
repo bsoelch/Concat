@@ -14,7 +14,7 @@ namespace: array
     T ptr.Itr
   end
   ( type : T -> type ) =>: export: MutItr
-    struct( T _ ptr.mut : head T _ ptr : tail )
+    struct( T ptr.raw.mut : head T ptr.raw : tail )
   end
   ( type : T -> type ) =>: export: MutPtrItr
     T MutItr
@@ -23,50 +23,50 @@ namespace: array
     T MutItr
   end
   ( type : T -> type ) =>: export: IndexItr32
-    struct( T _ ptr : base i32 : offset i32 : length )
+    struct( T ptr.raw : base i32 : offset i32 : length )
   end
   ( type : T -> type ) =>: export: IndexItr32mut
-    struct( T _ ptr.mut : base i32 : offset i32 : length )
+    struct( T ptr.raw.mut : base i32 : offset i32 : length )
   end
   ( type : T -> type ) =>: export: IndexItr64
-    struct( T _ ptr : base i64 : offset i64 : length )
+    struct( T ptr.raw : base i64 : offset i64 : length )
   end
   ( type : T -> type ) =>: export: IndexItr64mut
-    struct( T _ ptr.mut : base i64 : offset i64 : length )
+    struct( T ptr.raw.mut : base i64 : offset i64 : length )
   end
   ## TODO ReversedIndexItr
   ## TODO? MapItr, ReversedMapItr ( make list.mapItr / slice.mapItr wrappers )
 
   ## TODO implement IndexItr
   proc( type : auto: T type.index : auto: I
-    T _ ptr : p I : len
+    T ptr.raw : p I : len
   -> T ptr.Itr ) =>: export: getItr
     p  p len @[] T ptr.Itr new
   end
   proc( type : auto: T type.index : auto: I
-    T _ ptr : p I : len
+    T ptr.raw : p I : len
   -> T PtrItr ) =>: export: ptrItr
     p  p len @[] T PtrItr new
   end
   proc( type : auto: T type.index : auto: I
-    T _ ptr.mut : p I : len
+    T ptr.raw.mut : p I : len
   -> T MutPtrItr ) =>: export: mutPtrItr
     p  p len @[] T MutPtrItr new
   end
   overload: export: @itr ptrItr mutPtrItr end
   proc( type : auto: T type.index : auto: I
-    T _ ptr : p I : len
+    T ptr.raw : p I : len
   -> T ReverseItr ) =>: export: reversed
     ## TODO? remove casts and make iSize compatible with literals
     p len I ..types.unwrapNamed cast 1 - @[]  p T ReverseItr new
   end
   proc( type : auto: T type.index : auto: I
-    T _ ptr : p I : len
+    T ptr.raw : p I : len
   -> T ReversePtrItr ) =>: export: reversedPtrItr
     p len I ..types.unwrapNamed cast 1 - @[]  p T ReversePtrItr new
   end
   proc( type : auto: T type.index : auto: I
-    T _ ptr.mut : p I : len
+    T ptr.raw.mut : p I : len
   -> T ReverseMutPtrItr ) =>: export: reversedMutPtrItr
     p len I ..types.unwrapNamed cast 1 - @[]  p T ReverseMutPtrItr new
   end

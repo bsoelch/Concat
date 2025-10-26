@@ -5,8 +5,8 @@ namespace: array
   proc(
     type : auto: T
     type : auto: C
-    T _ ptr.mut : src
-    T _ ptr.mut : buff
+    T ptr.raw.mut : src
+    T ptr.raw.mut : buff
     iSize : offset
     iSize : size
     proc( T T C -> i32 ) ptr : cmp
@@ -61,7 +61,7 @@ namespace: array
   proc(
     type : auto: T
     type : auto: C
-    T _ ptr.mut : data
+    T ptr.raw.mut : data
     iSize : size
     proc( T T C -> i32 ) ptr : cmp
     C : context
@@ -72,7 +72,7 @@ namespace: array
   end
   proc(
     type : auto: T
-    T _ ptr.mut : data
+    T ptr.raw.mut : data
     iSize : size
   -> ) =>: export: reverse
     size 1:iSize - =:: last
@@ -90,7 +90,7 @@ namespace: array
   ## if no value is smaller zero is returned
   ## assumes the list is sorted in increasing order
   proc( type : auto: K  type : auto: T  type : auto: C
-    T _ ptr : data
+    T ptr.raw : data
     iSize : size
     proc( K T C -> i32 ) ptr : cmp
     K : value

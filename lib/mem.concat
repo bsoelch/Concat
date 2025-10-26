@@ -1,114 +1,114 @@
 namespace: c
   ## XXX? move general C procedures to seperate file
-  proc( -> ..ctype.void _ ptr.mut ) =>: export: nullPtr
-    0 ..ctype.void _ ptr.mut cast! return
+  proc( -> ..ctype.void ptr.raw.mut ) =>: export: nullPtr
+    0 ..ctype.void ptr.raw.mut cast! return
   end
-  proc( type : auto: T T _ ptr : p -> bool ) =>: export: isNull
+  proc( type : auto: T T ptr.raw : p -> bool ) =>: export: isNull
     ## ==
-    p ..ctype.void _ ptr cast!
-    nullPtr ..ctype.void _ ptr cast!
+    p ..ctype.void ptr.raw cast!
+    nullPtr ..ctype.void ptr.raw cast!
     == return
   end
   proc.c(
     ..ctype.size : size
-  -> ..ctype.void _ ptr.mut ) : extern: malloc
+  -> ..ctype.void ptr.raw.mut ) : extern: malloc
   proc.c(
     ..ctype.size : size
     ..ctype.size : count
-  -> ..ctype.void _ ptr.mut ) : extern: calloc
+  -> ..ctype.void ptr.raw.mut ) : extern: calloc
   proc.c(
     ..ctype.size : size
-    ..ctype.void _ ptr.mut : prev
-  -> ..ctype.void _ ptr.mut ) : extern: realloc
-  proc.c( ..ctype.void _ ptr.mut : src -> ) : extern: free
+    ..ctype.void ptr.raw.mut : prev
+  -> ..ctype.void ptr.raw.mut ) : extern: realloc
+  proc.c( ..ctype.void ptr.raw.mut : src -> ) : extern: free
   proc.c(
     ..ctype.size : count
-    ..ctype.void _ ptr : src
-    ..ctype.void _ ptr.mut : target
-  -> ..ctype.void _ ptr.mut ) : extern: memcpy
+    ..ctype.void ptr.raw : src
+    ..ctype.void ptr.raw.mut : target
+  -> ..ctype.void ptr.raw.mut ) : extern: memcpy
   proc.c(
     ..ctype.size : count
-    ..ctype.void _ ptr : src
-    ..ctype.void _ ptr.mut : target
-  -> ..ctype.void _ ptr.mut ) : extern: memmove
+    ..ctype.void ptr.raw : src
+    ..ctype.void ptr.raw.mut : target
+  -> ..ctype.void ptr.raw.mut ) : extern: memmove
   proc.c(
     ..ctype.size : count
     ..ctype.int  : value
-    ..ctype.void _ ptr.mut : target
-  -> ..ctype.void _ ptr.mut ) : extern: memset
+    ..ctype.void ptr.raw.mut : target
+  -> ..ctype.void ptr.raw.mut ) : extern: memset
   proc.c(
     ..ctype.size : count
-    ..ctype.void _ ptr : b
-    ..ctype.void _ ptr : a
+    ..ctype.void ptr.raw : b
+    ..ctype.void ptr.raw : a
   -> ..ctype.int ) : extern: memcmp
 end
 namespace: mem
   proc(
-    ..ctype.void _ ptr.mut : p
-  -> ..ctype.void _ ptr.mut ) =>: checkPtr
+    ..ctype.void ptr.raw.mut : p
+  -> ..ctype.void ptr.raw.mut ) =>: checkPtr
     p c.nullPtr == if ## check for null-ptr
       "unexpected null-pointer" ..panic
     end
     p return
   end
-  proc( type : T -> T _ ptr.mut ) =>: export: nullPtr
-    c.nullPtr T _ ptr.mut cast! return
+  proc( type : T -> T ptr.raw.mut ) =>: export: nullPtr
+    c.nullPtr T ptr.raw.mut cast! return
   end
-  proc( iSize : n type : T -> T _ ptr.mut ) =>: export: alloc
+  proc( iSize : n type : T -> T ptr.raw.mut ) =>: export: alloc
     n 0:iSize == if
-      c.nullPtr T _ ptr.mut cast! return
+      c.nullPtr T ptr.raw.mut cast! return
     end
     ## malloc
       n T ..types.stride * ..ctype.size cast
-    c.malloc checkPtr T _ ptr.mut cast! return
+    c.malloc checkPtr T ptr.raw.mut cast! return
   end
-  proc( iSize : n type : T -> T _ ptr.mut ) =>: export: calloc
+  proc( iSize : n type : T -> T ptr.raw.mut ) =>: export: calloc
     n 0:iSize == if
-      c.nullPtr T _ ptr.mut cast! return
+      c.nullPtr T ptr.raw.mut cast! return
     end
     ## calloc
       T ..types.stride ..ctype.size cast
       n ..ctype.size cast
-    c.calloc checkPtr T _ ptr.mut cast! return
+    c.calloc checkPtr T ptr.raw.mut cast! return
   end
   proc(
     type : auto: T
-    T _ ptr.mut : prev
+    T ptr.raw.mut : prev
     iSize : n
-  -> T _ ptr.mut ) =>: export: realloc
+  -> T ptr.raw.mut ) =>: export: realloc
     n 0:iSize == if
       prev free
-      c.nullPtr T _ ptr.mut cast! return
+      c.nullPtr T ptr.raw.mut cast! return
     end
     ## realloc
       T ..types.stride n *  ..ctype.size cast
-      prev ..ctype.void _ ptr.mut cast!
-    c.realloc checkPtr T _ ptr.mut cast! return
+      prev ..ctype.void ptr.raw.mut cast!
+    c.realloc checkPtr T ptr.raw.mut cast! return
   end
-  proc( type : auto: T T _ ptr.mut : p -> ) =>: export: free
+  proc( type : auto: T T ptr.raw.mut : p -> ) =>: export: free
     p ..ctype.void ptr.mut cast! c.free
   end
   ## set memory to zero
   proc(
     type : auto: T
-    T _ ptr.mut : src
+    T ptr.raw.mut : src
     iSize : n
-  -> T _ ptr.mut ) =>: export: clear
+  -> T ptr.raw.mut ) =>: export: clear
     n 0:iSize == if
       src return
     end
     ## memset
       n 1:iSize == if T ..types.size else T ..types.stride n * end ..ctype.size cast
       0 ..ctype.int cast
-      src ..ctype.void _ ptr.mut cast!
-    c.memset checkPtr T _ ptr.mut cast! return
+      src ..ctype.void ptr.raw.mut cast!
+    c.memset checkPtr T ptr.raw.mut cast! return
   end
   proc(
     type : auto: T
-    T _ ptr.mut : target
-    T _ ptr : src
+    T ptr.raw.mut : target
+    T ptr.raw : src
     iSize : n
-  -> T _ ptr.mut ) =>: export: copy
+  -> T ptr.raw.mut ) =>: export: copy
     n 0:iSize == if
       target return
     end
@@ -118,16 +118,16 @@ namespace: mem
     end
     ## memcpy
       n 1:iSize == if T ..types.size else T ..types.stride n * end ..ctype.size cast
-      src ..ctype.void _ ptr cast!
-      target ..ctype.void _ ptr.mut cast!
-    c.memcpy checkPtr T _ ptr.mut cast! return
+      src ..ctype.void ptr.raw cast!
+      target ..ctype.void ptr.raw.mut cast!
+    c.memcpy checkPtr T ptr.raw.mut cast! return
   end
   proc(
     type : auto: T
-    T _ ptr.mut : target
-    T _ ptr : src
+    T ptr.raw.mut : target
+    T ptr.raw : src
     iSize : n
-  -> T _ ptr.mut ) =>: export: move
+  -> T ptr.raw.mut ) =>: export: move
     n 0:iSize == if
       target return
     end
@@ -137,14 +137,14 @@ namespace: mem
     end
     ## memmove
       n 1:iSize == if T ..types.size else T ..types.stride n * end ..ctype.size cast
-      src ..ctype.void _ ptr cast!
-      target ..ctype.void _ ptr.mut cast!
-    c.memmove checkPtr T _ ptr.mut cast! return
+      src ..ctype.void ptr.raw cast!
+      target ..ctype.void ptr.raw.mut cast!
+    c.memmove checkPtr T ptr.raw.mut cast! return
   end
   proc(
     type : auto: T
-    T _ ptr : a
-    T _ ptr : b
+    T ptr.raw : a
+    T ptr.raw : b
     iSize : n
   -> i32 ) =>: export: compare
     n 0:iSize == if
@@ -152,13 +152,13 @@ namespace: mem
     end
     ## memcmp
       n 1:iSize == if T ..types.size else T ..types.stride n * end ..ctype.size cast
-      b ..ctype.void _ ptr cast!
-      a ..ctype.void _ ptr cast!
+      b ..ctype.void ptr.raw cast!
+      a ..ctype.void ptr.raw cast!
     c.memcmp i32 cast return
   end
   proc(
     type : auto: T
-    T _ ptr.mut : data
+    T ptr.raw.mut : data
     iSize : count
     T : elt
   -> ) =>: export: fill

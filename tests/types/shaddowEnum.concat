@@ -1,5 +1,5 @@
 i32 =:: int
-struct( char8 _ ptr : chars i64 : len ) =:: string
+struct( char8 ptr.raw : chars i64 : len ) =:: string
 5:int =:: x
 
 enum( string char int x ) =:: anEnum

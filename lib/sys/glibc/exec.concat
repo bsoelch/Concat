@@ -13,17 +13,17 @@ namespace: c
   proc.c( -> pid_t ) : extern: fork
   ## allow inner pointers to be mutable for compatability with libc
   proc.c(
-    ..ctype.char _ ptr.mut _ ptr : args
-    ..ctype.char _ ptr : path ## execute file at given path
+    ..ctype.char ptr.raw.mut ptr.raw : args
+    ..ctype.char ptr.raw : path ## execute file at given path
   -> ..ctype.int ) : extern: execv
   proc.c(
-    ..ctype.char _ ptr.mut _ ptr : args
-    ..ctype.char _ ptr : file ## search file in PATH folders
+    ..ctype.char ptr.raw.mut ptr.raw : args
+    ..ctype.char ptr.raw : file ## search file in PATH folders
   -> ..ctype.int ) : extern: execvp
   proc.c(
-    ..ctype.char _ ptr.mut _ ptr : env
-    ..ctype.char _ ptr.mut _ ptr : args
-    ..ctype.char _ ptr : file
+    ..ctype.char ptr.raw.mut ptr.raw : env
+    ..ctype.char ptr.raw.mut ptr.raw : args
+    ..ctype.char ptr.raw : file
   -> ..ctype.int ) : extern: execvpe
   ## should work on most platforms, but is not guaranteed by the C/POSIX standard 
   proc( i32 : status -> i32 ) =>: WIFEXITED
@@ -42,18 +42,18 @@ namespace: exec
     childId c.FORK_CHILD == if
       ## child process
       context .argOffsets .length 1:iSize +
-        ..ctype.char _ ptr.mut
+        ..ctype.char ptr.raw.mut
       mem.alloc =:: argsPtr
       context .argOffsets .length for =:: i
         context .argBuffer .data
           context .argOffsets i list.get @[]
-          ..ctype.char _ ptr.mut cast!
+          ..ctype.char ptr.raw.mut cast!
         argsPtr i =[]
       end
-      c.nullPtr ..ctype.char _ ptr.mut cast! argsPtr context .argOffsets .length =[]
+      c.nullPtr ..ctype.char ptr.raw.mut cast! argsPtr context .argOffsets .length =[]
       ## execvp
         argsPtr
-        context .argBuffer .data ..ctype.char _ ptr cast!
+        context .argBuffer .data ..ctype.char ptr.raw cast!
       c.execvp ..drop ## call only exits on failure
       -1 sys.exit ## do not continue child if exec fails
     end

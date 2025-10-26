@@ -4,38 +4,38 @@ namespace: ptr
   proc( type : auto: T iSize : auto: k T k ptr : _ -> iSize ) =>: export: length
     k
   end
-  proc( type : auto: T T _ ptr : p -> T ) =>: export: get
+  proc( type : auto: T T ptr.raw : p -> T ) =>: export: get
     p ..builtIn.get.ptr
   end
-  proc( type : auto: T T : newVal T _ ptr.mut : p -> ) =>: export: set
+  proc( type : auto: T T : newVal T ptr.raw.mut : p -> ) =>: export: set
     newVal p ..builtIn.set.ptr
   end
 
-  proc( type : auto: T T _ ptr : p iSize : index -> T _ ptr ) =>: export: at
+  proc( type : auto: T T ptr.raw : p iSize : index -> T ptr.raw ) =>: export: at
     p index ..type.iSize cast ..builtIn.offset.ptr
   end
-  proc( type : auto: T T _ ptr : p i32 : index -> T _ ptr ) =>: export: at32
+  proc( type : auto: T T ptr.raw : p i32 : index -> T ptr.raw ) =>: export: at32
     p index ..builtIn.offset.ptr.i32
   end
-  proc( type : auto: T T _ ptr : p i64 : index -> T _ ptr ) =>: export: at64
+  proc( type : auto: T T ptr.raw : p i64 : index -> T ptr.raw ) =>: export: at64
     p index ..builtIn.offset.ptr.i64
   end
-  proc( type : auto: T T _ ptr : p iSize : index -> T ) =>: export: getOffset
+  proc( type : auto: T T ptr.raw : p iSize : index -> T ) =>: export: getOffset
     p index ..type.iSize cast ..builtIn.offset.ptr ..builtIn.get.ptr
   end
-  proc( type : auto: T T _ ptr : p i32 : index -> T ) =>: export: get32
+  proc( type : auto: T T ptr.raw : p i32 : index -> T ) =>: export: get32
     p index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
   end
-  proc( type : auto: T T _ ptr : p i64 : index -> T ) =>: export: get64
+  proc( type : auto: T T ptr.raw : p i64 : index -> T ) =>: export: get64
     p index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
   end
-  proc( type : auto: T T : newVal T _ ptr.mut : p iSize : index -> ) =>: export: setOffset
+  proc( type : auto: T T : newVal T ptr.raw.mut : p iSize : index -> ) =>: export: setOffset
     newVal p index ..type.iSize cast ..builtIn.offset.ptr.mut ..builtIn.set.ptr
   end
-  proc( type : auto: T T : newVal T _ ptr.mut : p i32 : index -> ) =>: export: set32
+  proc( type : auto: T T : newVal T ptr.raw.mut : p i32 : index -> ) =>: export: set32
     newVal p index ..builtIn.offset.ptr.mut.i32 ..builtIn.set.ptr
   end
-  proc( type : auto: T T : newVal T _ ptr.mut : p i64 : index -> ) =>: export: set64
+  proc( type : auto: T T : newVal T ptr.raw.mut : p i64 : index -> ) =>: export: set64
     newVal p index ..builtIn.offset.ptr.mut.i64 ..builtIn.set.ptr
   end
 
@@ -146,13 +146,13 @@ namespace: ptr
     newVal p index ..builtIn.offset.ptr.mut.i64 ..builtIn.set.ptr
   end
 
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> i32 ) =>: export: cmp
+  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> i32 ) =>: export: cmp
     p iPtr cast! q iPtr cast! iPtr.cmp
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: lt
+  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: export: lt
     p iPtr cast! q iPtr cast! iPtr.lt
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: le
+  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: export: le
     p iPtr cast! q iPtr cast! iPtr.le
   end
   proc( type.pointer : auto: P  P : p P : q -> bool ) =>: export: eq
@@ -161,14 +161,14 @@ namespace: ptr
   proc( type.pointer : auto: P  P : p P : q -> bool ) =>: export: ne
     p iPtr cast! q iPtr cast! iPtr.ne
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: ge
+  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: export: ge
     p iPtr cast! q iPtr cast! iPtr.ge
   end
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> bool ) =>: export: gt
+  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: export: gt
     p iPtr cast! q iPtr cast! iPtr.gt
   end
 
-  proc( type : auto: T T _ ptr : p T _ ptr : q -> iSize ) =>: export: diff
+  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> iSize ) =>: export: diff
     p iPtr cast! q iPtr cast! - iSize cast.u T ..types.stride u/
   end
 
@@ -200,17 +200,17 @@ namespace: ptr
 
   ## XXX? prohibit arithmetic on array pointers
   namespace: mut
-    proc( type : auto: T T _ ptr.mut : p -> T ) =>: shadow: export: get
+    proc( type : auto: T T ptr.raw.mut : p -> T ) =>: shadow: export: get
       p ..builtIn.get.ptr.mut
     end
 
-    proc( type : auto: T T _ ptr.mut : p iSize : offset -> T _ ptr.mut ) =>: shadow: export: at
+    proc( type : auto: T T ptr.raw.mut : p iSize : offset -> T ptr.raw.mut ) =>: shadow: export: at
       p offset ..type.iSize cast ..builtIn.offset.ptr.mut
     end
-    proc( type : auto: T T _ ptr.mut : p i32 : offset -> T _ ptr.mut ) =>: shadow: export: at32
+    proc( type : auto: T T ptr.raw.mut : p i32 : offset -> T ptr.raw.mut ) =>: shadow: export: at32
       p offset ..builtIn.offset.ptr.mut.i32
     end
-    proc( type : auto: T T _ ptr.mut : p i64 : offset -> T _ ptr.mut ) =>: shadow: export: at64
+    proc( type : auto: T T ptr.raw.mut : p i64 : offset -> T ptr.raw.mut ) =>: shadow: export: at64
       p offset ..builtIn.offset.ptr.mut.i64
     end
     proc(

@@ -729,8 +729,8 @@ namespace: interpreter
     context .stackInfo=
   end
   proc(
-    ConstValue _ ptr : values
-    ValueInfo _ ptr : valInfos
+    ConstValue ptr.raw : values
+    ValueInfo ptr.raw : valInfos
     i64 : count
     InterpreterContext ptr.mut : context
   ->  ) =>: unpopValues
@@ -2573,7 +2573,7 @@ proc(
         offset minOffset u> and context [] .stack offset list.get .WildCard ?? if
           false fixedSize=
           ## TODO change _ ptr syntax to dynamic pointers (after removing from standard library)
-          ## "using _ ptr for raw pointers is deprecated" sb.copyPtr op [] .pos errors appendWarning
+          "using _ ptr for raw pointers is deprecated" sb.copyPtr op [] .pos errors appendWarning
           idContext [] .arraySizeBuffer
             types.ArraySize .None list.append
           idContext .arraySizeBuffer=

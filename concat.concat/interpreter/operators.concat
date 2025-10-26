@@ -36,7 +36,7 @@ namespace: interpreter
 
   enum( success argumentError unimplemented ) =:: export: OperatorResult
   proc(
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     ( bool -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorBool
@@ -47,7 +47,7 @@ namespace: interpreter
     a op () ConstValue .Bool OperatorResult .success return
   end
   proc(
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     type : T
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
@@ -65,7 +65,7 @@ namespace: interpreter
   end
   proc(
     type : auto: T
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     ( T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorInt
@@ -77,7 +77,7 @@ namespace: interpreter
   end
   proc(
     type : auto: T
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     ( T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorFloat
@@ -89,7 +89,7 @@ namespace: interpreter
   end
 
   proc(
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     ( bool bool -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorBool
@@ -105,7 +105,7 @@ namespace: interpreter
 
   proc(
     type : auto: T
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     ( T T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorInt
@@ -120,7 +120,7 @@ namespace: interpreter
   end
   proc(
     type : auto: T
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     ( T T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorFloat
@@ -135,7 +135,7 @@ namespace: interpreter
   end
   proc(
     type : auto: T
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     ( T T -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: cmpOperatorInt
@@ -150,7 +150,7 @@ namespace: interpreter
   end
   proc(
     type : auto: T
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     ( T T -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: cmpOperatorFloat
@@ -168,7 +168,7 @@ namespace: interpreter
   proc(
     BuiltIn : builtIn
     Type : inType
-    ConstValue _ ptr : args
+    ConstValue ptr.raw : args
     i32 : k
     FilePosition : pos
     TypeContext ptr.mut : typeContext
@@ -682,7 +682,7 @@ namespace: interpreter
     ConstValue ..length 23:iSize == "no new constants" assert
     targetValue switch
       LocalValue case
-        newValue targetValue .LocalValue ConstValue _ ptr.mut cast =[]
+        newValue targetValue .LocalValue ConstValue ptr.raw.mut cast =[]
         OperatorResult .success return
       LocalArray case
         newValue .Array ?? if
@@ -776,7 +776,7 @@ namespace: interpreter
         a .Int b .Int == false return
       LocalValue case
         b .LocalValue ?? ! if false false return end
-        a .LocalValue ConstValue _ ptr cast b .LocalValue ConstValue _ ptr cast == false return
+        a .LocalValue ConstValue ptr.raw cast b .LocalValue ConstValue ptr.raw cast == false return
       Array8 case
         b .Array8 ?? ! if false false return end
         a .Array8 .data b .Array8 .data == and
@@ -886,78 +886,78 @@ namespace: interpreter
 
   proc(
     ConstValue : src
-  -> i8 _ ptr iSize iSize bool ) =>: constantAsRawMemory
+  -> i8 ptr.raw iSize iSize bool ) =>: constantAsRawMemory
     ConstValue ..length 23:iSize == "no new constants" assert
     src switch
       Array8 case
-        src .Array8 .data i8 _ ptr cast!
+        src .Array8 .data i8 ptr.raw cast!
         src .Array8 .length
         i8 ..types.stride
         false return
       Array16 case
-        src .Array16 .data i8 _ ptr cast!
+        src .Array16 .data i8 ptr.raw cast!
         src .Array16 .length
         i16 ..types.stride
         false return
       Array32 case
-        src .Array32 .data i8 _ ptr cast!
+        src .Array32 .data i8 ptr.raw cast!
         src .Array32 .length
         i32 ..types.stride
         false return
       Array64 case
-        src .Array64 .data i8 _ ptr cast!
+        src .Array64 .data i8 ptr.raw cast!
         src .Array64 .length
         i64 ..types.stride
         false return
       LocalArray8 case
-        src .LocalArray8 .data i8 _ ptr cast!
+        src .LocalArray8 .data i8 ptr.raw cast!
         src .LocalArray8 .length
         i8 ..types.stride
         false return
       LocalArray16 case
-        src .LocalArray16 .data i8 _ ptr cast!
+        src .LocalArray16 .data i8 ptr.raw cast!
         src .LocalArray16 .length
         i16 ..types.stride
         false return
       LocalArray32 case
-        src .LocalArray32 .data i8 _ ptr cast!
+        src .LocalArray32 .data i8 ptr.raw cast!
         src .LocalArray32 .length
         i32 ..types.stride
         false return
       LocalArray64 case
-        src .LocalArray64 .data i8 _ ptr cast!
+        src .LocalArray64 .data i8 ptr.raw cast!
         src .LocalArray64 .length
         i64 ..types.stride
         false return
-      default 0 i8 _ ptr cast! 0:iSize 0:iSize true return
+      default 0 i8 ptr.raw cast! 0:iSize 0:iSize true return
     end
   end
   proc(
     ConstValue : src
-  -> i8 _ ptr.mut iSize iSize bool ) =>: constantAsRawMutableMemory
+  -> i8 ptr.raw.mut iSize iSize bool ) =>: constantAsRawMutableMemory
     ConstValue ..length 23:iSize == "no new constants" assert
     src switch
       LocalArray8 case
-        src .LocalArray8 .data i8 _ ptr.mut cast!
+        src .LocalArray8 .data i8 ptr.raw.mut cast!
         src .LocalArray8 .length
         i8 ..types.stride
         false return
       LocalArray16 case
-        src .LocalArray16 .data i8 _ ptr.mut cast!
+        src .LocalArray16 .data i8 ptr.raw.mut cast!
         src .LocalArray16 .length
         i16 ..types.stride
         false return
       LocalArray32 case
-        src .LocalArray32 .data i8 _ ptr.mut cast!
+        src .LocalArray32 .data i8 ptr.raw.mut cast!
         src .LocalArray32 .length
         i32 ..types.stride
         false return
       LocalArray64 case
-        src .LocalArray64 .data i8 _ ptr.mut cast!
+        src .LocalArray64 .data i8 ptr.raw.mut cast!
         src .LocalArray64 .length
         i64 ..types.stride
         false return
-      default 0 i8 _ ptr.mut cast! 0:iSize 0:iSize true return
+      default 0 i8 ptr.raw.mut cast! 0:iSize 0:iSize true return
     end
   end
   proc(

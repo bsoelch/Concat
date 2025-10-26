@@ -1,10 +1,10 @@
 import mem ## for c.isNull
 namespace: c ## XXX? special file for general C procedures
   proc.c( ..ctype.int -> ) : extern: noReturn: exit
-  proc.c( char8 _ ptr -> i64 ) : extern: strlen
+  proc.c( char8 ptr.raw -> i64 ) : extern: strlen
 end
 namespace: sys
-  proc( i64 : i -> char8 _ ptr i64 ) =>: export: getArg
+  proc( i64 : i -> char8 ptr.raw i64 ) =>: export: getArg
     ## XXX? check index
     sys.argv i [] =:: arg
     arg c.isNull if arg 0 return end

@@ -27,7 +27,7 @@ end
 proc( i32 : ignore -> ) =>: #:experimental: consume end
 
 
-struct( i64 : length char8 _ ptr : data ) =:: String
+struct( i64 : length char8 ptr.raw : data ) =:: String
 proc( i64 : auto: k char8 k ptr : str -> String i64 ) =>: #:experimental: startItr
   k str String new 0
 end

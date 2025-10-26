@@ -387,7 +387,7 @@ proc(
   LabelId slice optional.empty =:: argLabels
   Type 2 array : typeData
   typeData@ =:: argTypes
-  ## char8 _ ptr  iSize   -> ...
+  ## char8 ptr.raw  iSize   -> ...
   types.primitive.CHAR8 false typeContext wrapPtr argTypes 0 =[]
   types.I_SIZE argTypes 1 =[]
   ## newProcArgs
@@ -500,48 +500,48 @@ proc(
     labelData@ slice.wrap optional.wrap
     false
     typeContext
-  types.newProcArgs =:: setIn ##  T   T _ ptr.mut
+  types.newProcArgs =:: setIn ##  T   T ptr.raw.mut
   basePtr typeData@ 1 =[]
   ## newProcArgs
     typeData@ 2 slice.create
     labelData@ 2 slice.create optional.wrap
     false
     typeContext
-  types.newProcArgs =:: ptrIn ##  T _ ptr
+  types.newProcArgs =:: ptrIn ##  T ptr.raw
   types.primitive.I32 typeData@ 2 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
     false
     typeContext
-  types.newProcArgs =:: ptrIn32 ##  T _ ptr i32
+  types.newProcArgs =:: ptrIn32 ##  T ptr.raw i32
   types.primitive.I64 typeData@ 2 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
     false
     typeContext
-  types.newProcArgs =:: ptrIn64 ##  T _ ptr i64
+  types.newProcArgs =:: ptrIn64 ##  T ptr.raw i64
   basePtrMut typeData@ 1 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
     false
     typeContext
-  types.newProcArgs =:: ptrMutIn64 ##  T _ ptr.mut i64
+  types.newProcArgs =:: ptrMutIn64 ##  T ptr.raw.mut i64
   types.primitive.I32 typeData@ 2 =[]
   ## newProcArgs
     typeData@ slice.wrap
     labelData@ slice.wrap optional.wrap
     false
     typeContext
-  types.newProcArgs =:: ptrMutIn32 ##  T _ ptr.mut i32
+  types.newProcArgs =:: ptrMutIn32 ##  T ptr.raw.mut i32
   ## newProcArgs
     typeData@ 2 slice.create
     labelData@ 2 slice.create optional.wrap
     false
     typeContext
-  types.newProcArgs =:: ptrMutIn ##  T _ ptr.mut
+  types.newProcArgs =:: ptrMutIn ##  T ptr.raw.mut
   ## newProcArgs
     Type slice.empty
     LabelId slice optional.empty

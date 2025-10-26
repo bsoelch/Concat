@@ -11,7 +11,7 @@ namespace: list
 end
 
 ( type : T -> type ) =>: export: list
-  struct( T _ ptr.mut : data iSize : length list.listCap : cap )
+  struct( T ptr.raw.mut : data iSize : length list.listCap : cap )
 end
 
 namespace: list
@@ -51,7 +51,7 @@ namespace: list
   ## creates a fixed size list backed by the buffer
   proc(
     type : auto: T
-    T _ ptr.mut : buffer
+    T ptr.raw.mut : buffer
     iSize : buffSize
   -> T list ) =>: export: fromBuffer
     buffer 0:iSize buffSize -_ listCap cast.u T list new return
@@ -305,7 +305,7 @@ namespace: list
   -> T list ) =>: export: appendP
     elts
       $ .length iSize cast.u k + ensureCap
-      $ .data $1 .length @[] p T _ ptr cast k mem.copy ..drop
+      $ .data $1 .length @[] p T ptr.raw cast k mem.copy ..drop
       $ .length k + >$ .length=
     return
   end
@@ -357,7 +357,7 @@ namespace: list
     a
       $ .length k + ensureCap
       $ .data index k + +  $1 .data index +  $2 .length index -  mem.move ..drop
-      $ .data index +  b T _ ptr cast  k  mem.copy ..drop
+      $ .data index +  b T ptr.raw cast  k  mem.copy ..drop
       $ .length k + >$ .length=
     return
   end

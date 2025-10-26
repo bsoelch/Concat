@@ -13,7 +13,7 @@ end
 ( type : K type : V -> type ) =>: export: hashMap
   struct(
     K V map.Node list : mut: nodeBuffer
-    map.NodeId _ ptr.mut : mut: data ## ids are zero for empty or one-based indices in the node buffer
+    map.NodeId ptr.raw.mut : mut: data ## ids are zero for empty or one-based indices in the node buffer
     proc( K -> i32 ) ptr : hash
     proc( K K -> bool ) ptr : eq
     i32 : hashMask ## capacity of data (assumed to be power of 2) -1
@@ -22,7 +22,6 @@ end
 end
 
 namespace: map
-  proc( i64 char8 _ ptr -> ) : extern: printf
   proc(
     type : auto: K
     proc( K -> i32 ) ptr : hash

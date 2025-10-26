@@ -65,7 +65,7 @@ proc(
   outStream@ tape code TAPE_CAP 2 / -1 runBf_rec ..drop.2
   outStream return
 end
-proc( char8 _ ptr : chars iSize : len -> ) =>: static: :bf
+proc( char8 ptr.raw : chars iSize : len -> ) =>: static: :bf
   i8 TAPE_CAP array : tape
   char8 OUT_CAP array : outBuffer
   outBuffer@

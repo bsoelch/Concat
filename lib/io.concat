@@ -47,8 +47,8 @@ namespace: c
   proc.c( -> ) : extern: concatIOHelper_resetErrno
   proc.c( -> io.IOError ) : extern: concatIOHelper_checkErrno
   proc.c(
-    ..ctype.char _ ptr : mode
-    ..ctype.char _ ptr : path
+    ..ctype.char ptr.raw : mode
+    ..ctype.char ptr.raw : path
   -> io.FILE ) : extern: fopen
   proc.c( io.FILE -> ) : extern: clearerr
   proc.c( io.FILE -> ..ctype.int ) : extern: feof
@@ -57,13 +57,13 @@ namespace: c
     io.FILE : file
     ..ctype.size : eltCount
     ..ctype.size : eltSize
-    ..ctype.void _ ptr.mut : buffer
+    ..ctype.void ptr.raw.mut : buffer
   -> ..ctype.size ) : extern: fread
   proc.c(
     io.FILE : file
     ..ctype.size : eltCount
     ..ctype.size : eltSize
-    ..ctype.void _ ptr : buffer
+    ..ctype.void ptr.raw : buffer
   -> ..ctype.size ) : extern: fwrite
   proc.c( io.FILE : file -> ..ctype.int ) : extern: fflush
   proc.c( io.FILE : file -> ..ctype.int ) : extern: fclose
@@ -82,7 +82,7 @@ namespace: io
 
   char8 4096 array : mut: fileNameBuffer ## XXX make buffer thread safe
   proc(
-    char8 _ ptr : fileName
+    char8 ptr.raw : fileName
     iSize : nameLength
     OpenMode : mode
   -> FILE IOError ) =>: export: fopen
@@ -98,9 +98,9 @@ namespace: io
         nameLength
       mem.copy ..drop
       '\x00' fileNameBuffer@ nameLength =[]
-      fileNameBuffer@ char8 _ ptr cast
+      fileNameBuffer@ char8 ptr.raw cast
     end =:: path
-    "r+b\x00" char8 _ ptr =: mut: openMode
+    "r+b\x00" char8 ptr.raw =: mut: openMode
     mode OPEN_READ & ? if
       mode OPEN_APPEND & ? if
         "a+b\x00" openMode=
@@ -135,7 +135,7 @@ namespace: io
   proc(
     type : auto: T
     FILE : file
-    T _ ptr.mut : buffer
+    T ptr.raw.mut : buffer
     iSize : off
     iSize : count
   -> iSize IOError ) =>: export: fread
@@ -162,7 +162,7 @@ namespace: io
   proc(
     type : auto: T
     FILE : file
-    T _ ptr : buffer
+    T ptr.raw : buffer
     iSize : off
     iSize : count
   -> iSize IOError ) =>: export: fwrite
@@ -216,10 +216,10 @@ namespace: io
     chr =:: tmp
     file tmp@ 0:iSize 1:iSize fwrite ..swap ..drop return
   end
-  proc( FILE : file  iSize : k  char8 _ ptr : str -> IOError ) =>: export: fputArray
+  proc( FILE : file  iSize : k  char8 ptr.raw : str -> IOError ) =>: export: fputArray
     0:iSize =:: mut: off
     k =:: mut: remaining
-    str char8 _ ptr cast =:: data
+    str char8 ptr.raw cast =:: data
     while remaining 0:iSize != do
       file data off remaining fwrite
         $ FILE_ERROR_NONE != if ## error

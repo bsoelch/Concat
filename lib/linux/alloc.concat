@@ -65,11 +65,11 @@ namespace: allocator.linux
   ) =:: ChunkInfo
   4096:i64 =:: PAGE_SIZE ## TODO find good way to determine page size
 
-  proc( type : auto: T T _ ptr -> bool ) =>: isValidPtr
+  proc( type : auto: T T ptr.raw -> bool ) =>: isValidPtr
     i64 cast! 0 >
   end
 
-  proc( i64 : size -> MemoryValue _ ptr.mut ) =>: mapMemory
+  proc( i64 : size -> MemoryValue ptr.raw.mut ) =>: mapMemory
     ## sys_mmap
       0 linux.mmap.NO_FILE
       linux.mmap.MAP_PRIVATE linux.mmap.MAP_ANONYMOUS |
@@ -78,25 +78,25 @@ namespace: allocator.linux
       linux.nullPtr
     linux.sys_mmap
       $ isValidPtr "mmap successfull" assert
-    MemoryValue _ ptr.mut cast!
+    MemoryValue ptr.raw.mut cast!
   end
   proc(
-    MemoryValue _ ptr.mut : addr i64 : oldSize i64 : newSize
-  -> MemoryValue _ ptr.mut ) =>: remapMemory
+    MemoryValue ptr.raw.mut : addr i64 : oldSize i64 : newSize
+  -> MemoryValue ptr.raw.mut ) =>: remapMemory
     ## sys_mmap
       linux.nullPtr
       linux.mremap.MAY_MOVE
       newSize
       oldSize
-      addr ..ctype.void _ ptr.mut cast!
+      addr ..ctype.void ptr.raw.mut cast!
     linux.sys_mremap
       $ isValidPtr "mremap successfull" assert
-    MemoryValue _ ptr.mut cast! return
+    MemoryValue ptr.raw.mut cast! return
   end
-  proc( MemoryValue _ ptr.mut : addr i64 : size -> ) =>: unmapMemory
+  proc( MemoryValue ptr.raw.mut : addr i64 : size -> ) =>: unmapMemory
     ## sys_mmap
       size
-      addr ..ctype.void _ ptr.mut cast!
+      addr ..ctype.void ptr.raw.mut cast!
     linux.sys_munmap 0 == "munmap successfull" assert
   end
 
@@ -113,7 +113,7 @@ namespace: allocator.linux
     cellData return
   end
   proc( CellHeader ptr.mut : cell i64 : newSize -> CellHeader ptr.mut ) =>: reallocateLargeChunk
-    cell [] .chunkStart cell MemoryValue _ ptr.mut cast! <= "cell comes after start of memory region" assert
+    cell [] .chunkStart cell MemoryValue ptr.raw.mut cast! <= "cell comes after start of memory region" assert
     cell [] .chunkStart i64 cast! cell [] .size i64 cast.u + cell i64 cast! > "cell within page" assert
     1:i32 cell [] .alignmentBits i32 cast.u << =:: alignment
     newSize PAGE_SIZE 1 - + PAGE_SIZE 1 - ~ & =:: alignedNewSize
@@ -136,7 +136,7 @@ namespace: allocator.linux
     newCellData return
   end
   proc( CellHeader ptr.mut : cell -> ) =>: freeLargeChunk
-    cell [] .chunkStart cell MemoryValue _ ptr.mut cast! <= "cell comes after start of memory region" assert
+    cell [] .chunkStart cell MemoryValue ptr.raw.mut cast! <= "cell comes after start of memory region" assert
     ## TODO? handle more than page aligned value
     cell [] .chunkStart i64 cast! PAGE_SIZE + cell i64 cast! > "cell with page" assert
     cell [] .chunkStart cell [] .size i64 cast.u PAGE_SIZE * unmapMemory
@@ -165,7 +165,7 @@ namespace: allocator.linux
     chunk return
   end
   proc( ChunkInfo : chunk -> i64 slice.mut ) =>: getCellInfo
-    chunk .chunkStart ChunkHeader _ ptr.mut cast 1 @[] i64 _ ptr.mut cast! ## end of chunk header
+    chunk .chunkStart ChunkHeader ptr.raw.mut cast 1 @[] i64 ptr.raw.mut cast! ## end of chunk header
       chunkInfo chunk .chunkType i32 cast.u [] .cellCount i64 cast.u 63:i64 + 64 u/
     slice.createMutable
   end
@@ -220,7 +220,7 @@ namespace: allocator.linux
         i 64 * 64 cellBitIndex - i64 cast.u + =:: cellIndex
         chunkInfo chunk .chunkType i32 cast.u [] =:: chunkData
         cellIndex 0 >= and cellIndex chunkData .cellCount i64 cast.u < end "cellIndex in range" assert
-        chunk .chunkStart i8 _ ptr.mut cast!
+        chunk .chunkStart i8 ptr.raw.mut cast!
            chunkData .dataOffset i64 cast.u +
            cellIndex chunkData .cellSize i64 cast.u * +
         CellHeader ptr.mut cast! =:: cellRoot
@@ -239,8 +239,8 @@ namespace: allocator.linux
         cellIndex i32 cast nEmpty + i16 cast.u cellPtr .cellIndex=
         count nEmpty - cellPtr .size=
         clearMemory if
-          cellPtr i8 _ ptr.mut cast! CellHeader ..types.stride @[] =:: headPtr
-          chunk .chunkStart i8 _ ptr.mut cast!
+          cellPtr i8 ptr.raw.mut cast! CellHeader ..types.stride @[] =:: headPtr
+          chunk .chunkStart i8 ptr.raw.mut cast!
              chunkData .dataOffset i64 cast.u +
              cellIndex count i64 cast.u + chunkData .cellSize i64 cast.u * +
           =:: tailPtr
@@ -378,7 +378,7 @@ namespace: allocator.linux
     count cellInfo .eltCount i64 cast.u <=>
   end
   proc( MemoryValue ptr.mut : mem -> CellHeader ptr.mut ) =>: export: getCellHeader ## XXX exported only for debug purposes
-    mem CellHeader _ ptr.mut cast!
+    mem CellHeader ptr.raw.mut cast!
       -1 @[]
     CellHeader ptr.mut cast!
   end
@@ -393,7 +393,7 @@ namespace: allocator.linux
     MemoryValue ptr.mut cast!
   end
   proc( CellHeader ptr.mut : head -> MemoryValue ptr.mut ) =>: getCellMemory
-    head CellHeader _ ptr.mut cast!
+    head CellHeader ptr.raw.mut cast!
       1 @[]
     MemoryValue ptr.mut cast!
   end
@@ -503,7 +503,7 @@ namespace: allocator.linux
     end
     oldCellSize oldHeader [] .size i64 cast.u * p i64 cast! oldHeader i64 cast! - - =:: oldSize
     newSize 1:i32 oldHeader [] .alignmentBits i32 cast << aligned_allocate =:: newP
-    newP i8 _ ptr.mut cast! p i8 _ ptr.mut cast! oldSize newSize i64.min mem.copy ..drop
+    newP i8 ptr.raw.mut cast! p i8 ptr.raw.mut cast! oldSize newSize i64.min mem.copy ..drop
     p free
     newP return
   end

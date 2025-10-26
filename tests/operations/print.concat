@@ -4,5 +4,5 @@ proc( -> ) =>: main
   'A' debug.print
   0x123456789abcdef debug.print
   true debug.print
-  0x12345678 i8 _ ptr cast! debug.print
+  0x12345678 i8 ptr.raw cast! debug.print
 end
