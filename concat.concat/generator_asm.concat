@@ -4518,7 +4518,7 @@ proc(
   end
   ## ptr <-> int
   src typeContext types.isPointer and target typeContext types.isInt if
-    types.primitive.I_PTR .primitiveType types.sizeOfPrimitive =:: srcBytes
+    types.primitive.I_SIZE .primitiveType types.sizeOfPrimitive =:: srcBytes
     target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
     target typeContext toValType stackEntry .valType=
     srcBytes targetBytes == if return end
@@ -4539,7 +4539,7 @@ proc(
   end
   src typeContext types.isInt and target typeContext types.isPointer if
     src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
-    types.primitive.I_PTR .primitiveType types.sizeOfPrimitive =:: targetBytes
+    types.primitive.I_SIZE .primitiveType types.sizeOfPrimitive =:: targetBytes
     target typeContext toValType stackEntry .valType=
     srcBytes targetBytes == if return end
     target typeContext toValType =:: targetType

@@ -20,7 +20,7 @@ namespace: rcSlice
       T ..types.stride length * + i8 mem.alloc ## TODO ensure alignment
      T rcSlice cast! =:: mut: data
       "rcSliceCreate: ":s io.print
-      data iPtr cast! i64 cast.u io.println
+      data iSize cast! i64 cast.u io.println
      length data .length=
      1 data .RC=
      data return
@@ -33,7 +33,7 @@ namespace: rcSlice
     data [] .RC 1 - data .RC=
     data [] .RC 0 <= if
       "rcSliceFree: ":s io.print
-      data iPtr cast! i64 cast.u io.println
+      data iSize cast! i64 cast.u io.println
       data [] .RC 0 == "ref count does not underflow" assert
       data mem.free
     end

@@ -103,8 +103,8 @@ namespace: allocator.linux
   proc( i64 : size i32 : alignment -> CellHeader ptr.mut ) =>: allocLargeChunk
     size PAGE_SIZE 1 - + PAGE_SIZE 1 - ~ & =:: pageAlignedSize
     pageAlignedSize mapMemory CellHeader ptr.mut cast! =:: cellRoot
-    cellRoot iPtr cast! alignment iPtr cast.u 1 - | 1 +
-      CellHeader ..types.stride iPtr cast.u -
+    cellRoot iSize cast! alignment iSize cast.u 1 - | 1 +
+      CellHeader ..types.stride iSize cast.u -
     CellHeader ptr.mut cast! =:: cellData
       cellRoot MemoryValue ptr.mut cast! cellData .chunkStart=
       ChunkType.noChunk cellData .chunkType=
@@ -124,7 +124,7 @@ namespace: allocator.linux
       alignedNewSize
     remapMemory CellHeader ptr.mut cast! =:: mut: newCellRoot
     newCellRoot
-      iPtr cast! alignment iPtr cast.u 1 - | 1 + CellHeader ..types.stride iPtr cast.u -
+      iSize cast! alignment iSize cast.u 1 - | 1 + CellHeader ..types.stride iSize cast.u -
     CellHeader ptr.mut cast! =:: newCellData
     newCellData i64 cast! newCellRoot i64 cast! - cell i64 cast! cell [] .chunkStart i64 cast! - != if
       ## TODO handle misaligned memory
@@ -224,8 +224,8 @@ namespace: allocator.linux
            chunkData .dataOffset i64 cast.u +
            cellIndex chunkData .cellSize i64 cast.u * +
         CellHeader ptr.mut cast! =:: cellRoot
-        cellRoot iPtr cast! alignment iPtr cast.u 1 - | 1 +
-          CellHeader ..types.stride iPtr cast.u -
+        cellRoot iSize cast! alignment iSize cast.u 1 - | 1 +
+          CellHeader ..types.stride iSize cast.u -
         CellHeader ptr.mut cast! =:: cellPtr
         cellPtr i64 cast! cellRoot i64 cast! - chunkData .cellSize i64 cast.u >= if
           cellPtr i64 cast! cellRoot i64 cast! - chunkData .cellSize i64 cast.u u/ =:: nEmpty

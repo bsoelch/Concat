@@ -882,8 +882,8 @@ namespace: sb
           value .Bool if '1' else '0' end sb.appendC return
         Int case
           t typeContext types.isPointer if
-            ## treat pointer constants as integers of type iPtr
-            types.primitive.I_PTR
+            ## treat pointer constants as integers of type iSize
+            types.primitive.I_SIZE
           else
             t typeContext types.unwrapNamed
             ..dup .cType ?? if .cType types.cTypeAsType end
@@ -2907,19 +2907,19 @@ proc(
   end
   ## XXX? sign type for cast int <-> ptr
   src typeContext types.isInt target typeContext types.isPointer & if
-    ## src -> I_PTR ~ ptr
+    ## src -> I_SIZE ~ ptr
     sb
       ## castNumbers
         src srcId
-        types.primitive.I_PTR targetId
+        types.primitive.I_SIZE targetId
       pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
     return
   end
   src typeContext types.isPointer target typeContext types.isInt & if
-    ## ptr ~ I_PTR -> target
+    ## ptr ~ I_SIZE -> target
     sb
       ## castNumbers
-        types.primitive.I_PTR srcId
+        types.primitive.I_SIZE srcId
         target targetId
       pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
     return

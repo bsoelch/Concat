@@ -773,11 +773,7 @@ proc(
   "iSize":s pos labelContext createLabel =:: iSizeLabel
   types.primitive.I_SIZE iSizeLabel typeContext types.newNamedType $ types.I_SIZE=
   iSizeLabel pos context newBuiltInTypeLabel
-  "iPtr":s pos labelContext createLabel =:: iPtrLabel
-  types.primitive.I_PTR iPtrLabel typeContext types.newNamedType  $ types.I_PTR=
-  iPtrLabel pos context newBuiltInTypeLabel
   types.primitive.I_SIZE "..type.iSize":s pos context newBuiltInType
-  types.primitive.I_PTR  "..type.iPtr":s  pos context newBuiltInType
   ## TODO? should I_MAX be visible to user-code
   2  Type .align "..type.align2":s  pos context newBuiltInType
   4  Type .align "..type.align4":s  pos context newBuiltInType
