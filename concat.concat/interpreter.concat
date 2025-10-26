@@ -2572,7 +2572,7 @@ proc(
         ## TODO merge check for dynamic size with size computation loop
         offset minOffset u> and context [] .stack offset list.get .WildCard ?? if
           false fixedSize=
-          ## FIXME! change _ ptr syntax to dynamic pointers (after removing from standard library)
+          ## TODO change _ ptr syntax to dynamic pointers (after removing from standard library)
           ## "using _ ptr for raw pointers is deprecated" sb.copyPtr op [] .pos errors appendWarning
           idContext [] .arraySizeBuffer
             types.ArraySize .None list.append
@@ -2619,8 +2619,7 @@ proc(
           op [] .pos errors appendError
           EvalResult .Error return
         end
-        op [] .val .typeModifier .ARRAY ?? ! =:: isPtr
-        fixedSize ! isPtr ! & if
+        op [] .val .typeModifier .ARRAY ?? and fixedSize ! if
           "array types must have a fixed size" sb.copyPtr op [] .pos errors appendError
         end
         typeConstant .TypeId
@@ -2628,6 +2627,10 @@ proc(
             idContext [] .arraySizeBuffer
               types.ArraySize .None list.append
             idContext .arraySizeBuffer=
+          else
+            op [] .val .typeModifier .RAW_PTR ?? or op [] .val .typeModifier .RAW_PTR_MUT ?? if
+              "raw pointers cannot be sized" sb.copyPtr op [] .pos errors appendError
+            end
           end
           idContext [] .arraySizeBuffer list.asSlice
             $ .length 1:iSize - slice.head
@@ -2642,30 +2645,20 @@ proc(
             end
           end
         ## newArrayType
-          isPtr if
-            fixedSize if
-              op [] .val .typeModifier .PTR_MUT ?? if
-                types.ArrayType .MUTABLE_POINTER
-              else
-                types.ArrayType .POINTER
-              end
-            else
-              op [] .val .typeModifier .PTR_MUT ?? if
-                types.ArrayType .MUTABLE_RAW_POINTER
-              else
-                types.ArrayType .RAW_POINTER
-              end
-            end
-          else
-            types.ArrayType .ARRAY
+          op [] .val .typeModifier switch
+            PTR case fixedSize ! if types.ArrayType .RAW_POINTER else types.ArrayType .POINTER end break
+            PTR_MUT case fixedSize ! if types.ArrayType .MUTABLE_RAW_POINTER else types.ArrayType .MUTABLE_POINTER end break
+            RAW_PTR case types.ArrayType .RAW_POINTER break
+            RAW_PTR_MUT case types.ArrayType .MUTABLE_RAW_POINTER break
+            ARRAY case types.ArrayType .ARRAY break
           end
           idContext [] .arraySizeBuffer $ .length 1:iSize - []
           typeContext
         types.newArrayType if ..drop
-          isPtr if
-            "could not create pointer type" sb.copyPtr op [] .pos errors appendError
-          else
+          op [] .val .typeModifier .ARRAY ?? if
             "could not create array type" sb.copyPtr op [] .pos errors appendError
+          else
+            "could not create pointer type" sb.copyPtr op [] .pos errors appendError
           end
           EvalResult .Error return
         end =:: ptrType

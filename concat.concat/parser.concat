@@ -2129,6 +2129,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "array":s string.eq _if ..drop
       TypeModifier .ARRAY fileState [] .wordStart opTypeModifier state appendOp
       return
+    else ..dup "ptr.raw":s string.eq _if ..drop
+      TypeModifier .RAW_PTR fileState [] .wordStart opTypeModifier state appendOp
+      return
+    else ..dup "ptr.raw.mut":s string.eq _if ..drop
+      TypeModifier .RAW_PTR_MUT fileState [] .wordStart opTypeModifier state appendOp
+      return
     else ..dup "..dup":s string.eq _if =:: opName ## XXX? completely repalce ..dup by $ ?
       0 StackModType .COPY fileState [] .wordStart opStackMod state appendOp
       return
