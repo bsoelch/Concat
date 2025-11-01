@@ -292,6 +292,19 @@ namespace: slice
     simpleEq
     checkedEq
   end
+  proc(
+    type : auto: T
+    type : auto: C
+    T slice : a
+    ( T C -> i32 ) ptr : eltHash
+    C : context
+  -> i32 ) =>: export: hash
+    0:i32
+      a for =:: elt
+       31 * elt context eltHash () +
+      end
+    return
+  end
 
   proc(
     type : auto: T

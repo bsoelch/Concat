@@ -632,8 +632,8 @@ namespace: id
           idType .GLOBAL_VAR ?? or idType .TYPE ?? or
           idType .PROCEDURE ?? or idType .PROCEDURE_BUNDLE ?? if
         ## remove procedure labels before comparing types
-        valType typeContext types.asUnlabeledProc ..drop
-            prevDec [] .valueType  typeContext types.asUnlabeledProc ..drop
+        valType typeContext types.asUnlabeledProc
+            prevDec [] .valueType  typeContext types.asUnlabeledProc
             types.typeEquals ! if
           "incompatible types for declaration and initialization of \"" sb.copyPtr
             label labelContext sb.appendLabelPath

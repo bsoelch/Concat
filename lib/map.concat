@@ -171,14 +171,38 @@ namespace: map
     end
     NO_NODE return
   end
+  ## TODO! partially merge with find to reduce code duplication
+  proc(
+    type : auto: K
+    type : auto: V
+    K V hashMap ptr : map
+    K : key
+  -> NodeId ) =>: findImmutable
+    key map [] .hash () map [] .hashMask & =:: keyHash
+    map [] .data keyHash @[] NodeId ptr.mut cast! =:: mut: nodeIdLoc
+    nodeIdLoc [] NO_NODE == if
+      NO_NODE return
+    end
+    while
+      nodeIdLoc [] =:: nodeId
+      nodeId NO_NODE !=
+    do
+      map [] .nodeBuffer nodeId i64 cast 1 - list.at .data =:: node
+      node [] .key key map [] .eq () if
+        nodeId return
+      end
+      node .next nodeIdLoc=
+    end
+    NO_NODE return
+  end
 
   proc(
     type : auto: K
     type : auto: V
-    K V hashMap ptr.mut : data
+    K V hashMap ptr : data
     K : key
   -> V optional ) =>: export: get
-    data key FindOperation .FIND find =:: nodeId
+    data key findImmutable =:: nodeId
     nodeId NO_NODE == if
       V optional.empty return
     end

@@ -79,6 +79,14 @@ namespace: i64
     end
   end
 
+  proc( i64 -> i64 ) =>: export: bitrev
+    $ 0xffffffff00000000:i64 & 32 >>> >$ 0x00000000ffffffff:i64 & 32 << |
+    $ 0xffff0000ffff0000:i64 & 16 >>> >$ 0x0000ffff0000ffff:i64 & 16 << |
+    $ 0xff00ff00ff00ff00:i64 &  8 >>> >$ 0x00ff00ff00ff00ff:i64 &  8 << |
+    $ 0xf0f0f0f0f0f0f0f0:i64 &  4 >>> >$ 0x0f0f0f0f0f0f0f0f:i64 &  4 << |
+    $ 0xCCCCCCCCCCCCCCCC:i64 &  2 >>> >$ 0x3333333333333333:i64 &  2 << | ## C: 1100 3:0011
+    $ 0xAAAAAAAAAAAAAAAA:i64 &  1 >>> >$ 0x5555555555555555:i64 &  1 << | ## A: 1010 5:0101
+  end
   ## position of the highest nonzero-bit (zero-indexed), returns -1 if the input is zero
   proc( i64 -> i32 ) =>: export: highestSetBit
     0

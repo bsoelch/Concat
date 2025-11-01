@@ -166,7 +166,7 @@ proc(
   end =:: charType =:: strLength =:: strValue
   strLength i64 cast.u ArraySize .Int =:: size
   ## Constant
-    charType types.ArrayType .POINTER size context newArrayType ..drop
+    charType types.ArrayType .POINTER size context newArrayType .data
     strValue
     IdentifierInfo optional.empty
   pos Constant new return
@@ -878,13 +878,13 @@ proc( LabelId : procName Type : procType ProcId : procId FilePosition : pos Pars
     pos errors appendWarning
     return
   end
-  procType typeContext types.getProcIn ! "main procIn" assert =:: inTypes
-  procType typeContext types.getProcOut ! "main procOut" assert =:: outTypes
-  inTypes typeContext types.compositeEltCount 0 > if
+  procType typeContext types.getProcIn .data =:: inTypes
+  procType typeContext types.getProcOut .data =:: outTypes
+  inTypes .length 0:iSize != if
     "the main procedure should not take arguments" sb.copyPtr
      pos errors appendError
   end
-  outTypes typeContext types.compositeEltCount 0 > if
+  outTypes .length 0:iSize != if
     "the main procedure should not return a value" sb.copyPtr
      pos errors appendWarning
   end
@@ -894,18 +894,14 @@ proc( LabelId : procName Type : procType ProcId : procId FilePosition : pos Pars
   end
 end
 ## check if composite has any static elements, types are static by default
-proc( Type : composite TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
+proc( Type slice : elements LabelId slice : labels TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
   typeContext .labelContext =:: labelContext
-  composite typeContext types.compositeEltCount =:: eltCount
-  eltCount for =:: i
-    composite i typeContext types.compositeGetLabel
+  elements .length for =:: i
+    i labels .length u< and labels i []
         labelContext id.labelFlags id.FLAG_STATIC & ? if
       true return
     end
-    composite i typeContext types.compositeGetElement
-      typeContext types.unwrapNamed
-    =:: elt
-    elt typeContext types.isType if
+    elements i [] typeContext types.isType if
       true return
     end
   end
@@ -917,15 +913,16 @@ proc(
   FileId : fileId
   ProcId : aliasId
   i32 : codeStart
+  FilePosition : pos
   ProgramContext ptr.mut : progContext
 -> ProcId ) =>: newProcData
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  procType typeContext types.getProcIn ..drop =:: procIn
-  procType typeContext types.getProcOut ..drop =:: procOut
-  procIn typeContext hasStaticElement =:: hasStaticArg
-  procOut typeContext hasStaticElement
+  procType typeContext types.getProcIn .data =:: inTypes
+  procType typeContext types.getProcOut .data =:: outTypes
+  inTypes procType typeContext types.getProcArgLabels typeContext hasStaticElement =:: hasStaticArg
+  outTypes procType typeContext types.getProcRetLabels typeContext hasStaticElement
     procName labelContext id.labelFlags id.FLAG_STATIC & ? |
   =:: isStatic
   progContext [] .procedures
@@ -1261,7 +1258,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         codeStart procData .implementation .code .codeStart=
         procConst .Procedure
       else
-        procName procType state [] .currentFile NO_PROC codeStart progContext newProcData
+        procName procType state [] .currentFile NO_PROC codeStart fileState [] .wordStart progContext newProcData
           $ ConstValue .Procedure procName idContext id.getIdentifier
               ! "procName is identifier" assert
           .constValue=
@@ -1637,7 +1634,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           list.pop ..drop
         state .constantBlocks=
       end
-      blockType fileState [] .wordStart opEndBlock state appendOp
+      blockType .TYPE_PROC_OUT ?? ! if
+        ## TODO! this is a hack to avoid double-closing type-block in intermediate representation
+        ##  update parsing to not create seperate block for out-types
+        blockType fileState [] .wordStart opEndBlock state appendOp
+      end
       blockType switch
         TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION
             TYPE_ENUM TYPE_TYPESET case
@@ -1802,9 +1803,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         isInit if
           fileState state popTypeConstant ! "pop type" assert
           label
-          typeContext types.initializeNamedType if
+          typeContext types.initializeNamedType $ ? if .data else ..drop
             "re-initialization of named type" sb.copyPtr
             fileState [] .wordStart errors appendError
+            return
           end
         else
           label
@@ -1872,7 +1874,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end =:: aliasId
         idData .constValue =:: procData
         procData .Procedure ?? ! if
-          label valType state [] .currentFile aliasId -1:i32 progContext newProcData
+          label valType state [] .currentFile aliasId -1:i32 fileState [] .wordStart progContext newProcData
             ConstValue .Procedure
           label idContext id.getIdentifier
             ! "procName is identifier" assert
@@ -1956,9 +1958,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           typeConst
           labelId
           typeContext
-        types.initializeNamedType if
+        types.initializeNamedType $ ? if .data else ..drop
           "re-initialization of named type" sb.copyPtr
           fileState [] .wordStart errors appendError
+          return
         end ConstValue .TypeId
       else
         constValue
@@ -2332,7 +2335,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         types.ArrayType .POINTER
         name .length i64 cast.u types.ArraySize .Int =:: size
         size
-      typeContext types.newArrayType ..drop
+      typeContext types.newArrayType .data
       fileState [] .wordStart opConst state appendOp
       return
     else $ "..line":s string.eq _if ..drop

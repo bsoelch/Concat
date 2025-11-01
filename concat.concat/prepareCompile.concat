@@ -115,16 +115,16 @@ proc(
   BlockType .INLINE_PROCEDURE pos opBlock list.append
   inlineId $1 list.peek .data .val .block .blockId=
   procOps 0 [] .dataType =:: procType
-  procType typeContext types.getProcIn ..drop =:: inType
+  procType typeContext types.getProcIn .data =:: inTypes
   0 =:: mut: offset
   ## create tmp-variables for named arguments
-  inType typeContext types.compositeEltCount 1 - while $ 0 >= do =:: i
-    inType i typeContext types.compositeGetLabel =:: argLabel
+  inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
+    procType i typeContext types.getProcArgLabel =:: argLabel
     argLabel id.LABEL_ID_NONE == if
       offset 1 + offset=
     else argLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! _if
       ## TODO 1. rotate labeled argument to top
-      inType i typeContext types.compositeGetElement =:: eltType
+      inTypes i [] =:: eltType
       eltType argLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
       eltType tmpId pos opInitializeId list.append
       remapLabels@ argLabel tmpId map.put optional.isEmpty "label-value only reassigned once" assert
@@ -175,17 +175,15 @@ proc(
         op list.append ## nothing to change
       return
     implementProcedure case
-      op .dataType typeContext types.getProcIn
-        ! "procedure has arguments" assert
-      =:: args
-      args typeContext types.compositeEltCount =:: argCount
+      op .dataType typeContext types.getProcIn .data =:: args
+      args .length i32 cast.u =:: argCount
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
-          args i typeContext types.compositeGetLabel =:: label
+          op .dataType i typeContext types.getProcArgLabel =:: label
           label id.LABEL_ID_NONE == or label labelContext id.labelFlags id.FLAG_STATIC & ? if
             continue
           end
-          args i typeContext types.compositeGetElement =:: argType
+          args i [] =:: argType
           argType typeContext types.isEmpty if continue end
           ## VariableInfo
             argType
@@ -285,9 +283,7 @@ proc(
       =:: calledType
       ## special handling for pointer-call procedures
       _BACKEND_ .QBE ?? if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
-        calledType typeContext types.getProcOutArgs
-          ! "calledType has out-types" assert
-        =:: outArgs
+        calledType typeContext types.getProcOutArgs =:: outArgs
         op .val .callPtr ?? if
           ## remember number of out-args in call operation
           outArgs .length op@ .val .callPtr .outArgCount=
@@ -317,13 +313,8 @@ proc(
       else
         op .val .call program getCallData
       end =:: callData
-      calledType typeContext types.getCallConvention
-        ! "calledType has call convention" assert
-      .PTRCALL ?? =:: isPtrCall
-      calledType typeContext types.getProcOut
-        ! "calledType has out-types" assert
-        typeContext types.compositeElts
-      =:: outTypes
+      calledType typeContext types.getCallConvention .PTRCALL ?? =:: isPtrCall
+      calledType typeContext types.getProcOut .data =:: outTypes
       false =:: mut: hasLabel
       program [] .labelBuffer
         $ .length 0:iSize == "label buffer is empty before use" assert

@@ -30,11 +30,12 @@ namespace: interpreter
   ) =:: Constant
 
   struct(
-    BlockType : blockType
     iSize : stackOffset
     iSize : typeOffset
     iSize : valueOffset
     iSize : labelOffset
+    i32 optional : argCount
+    BlockType : blockType
   ) =:: BlockInfo
 
   enum( GLOBAL INTERPRET ) =:: export: InterpreterType
@@ -280,11 +281,12 @@ namespace: interpreter
     end =:: stackOffset
     context [] .openBlocks
       ## BlockInfo
-        blockType
         stackOffset
         context [] .typeBuffer .length
         context [] .valueBuffer .length
         context [] .labelBuffer .length
+        i32 optional.empty
+        blockType
       BlockInfo new list.append
     context .openBlocks=
   end
@@ -569,7 +571,7 @@ namespace: interpreter
       ## newTuple
         context [] .typeBuffer list.asSlice typeOffset slice.tail
         context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
-      typeContext types.newTuple if ..drop
+      typeContext types.newTuple $ ? if .data else ..drop
         "could not create structure-type" sb.copyPtr op [] .pos errors appendError
         true return
       end
@@ -595,20 +597,17 @@ namespace: interpreter
     closedBlock [] .labelOffset =:: labelOffset
     closedBlock [] .valueOffset =:: valueOffset
     closedBlock [] .typeOffset =:: typeOffset
-    context [] .typeBuffer .length typeOffset - 1:iSize iSize.slt or
-        ## last argument is procedure output
-        context [] .typeBuffer
-          $ .length 1:iSize -
-        list.get .procOut ?? ! if
-      "missing return type for procedure" sb.copyPtr op [] .pos errors appendError
-      true return
-    end
-    context [] .typeBuffer
-      list.pop =:: procOut ## last value is return type
-    context .typeBuffer=
+    closedBlock [] .argCount
+      $ ? if .data else ..drop
+        "procedure without return values" sb.copyPtr
+        op [] .pos errors appendError
+        true return
+      end
+    =:: argCount
+    context [] .typeBuffer .length argCount iSize cast.u - =:: retCount
     closedBlock .blockType .TYPE_CPROC_IN ?? if
       CallingConvention .CCALL
-      procOut typeContext types.compositeEltCount 1 > if
+      retCount 1:iSize u> if
         "C-procedures cannot have multiple return values" sb.copyPtr
         op [] .pos errors appendError
       end
@@ -619,12 +618,13 @@ namespace: interpreter
       LabeledValueContext .TYPE_PROC
       op [] .pos
     context closedTypeBlock if true return end
-    ## newProcArgs
-      context [] .typeBuffer list.asSlice typeOffset slice.tail
-      context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
-      false
-    typeContext types.newProcArgs =:: procIn
-    procIn procOut callConvention typeContext types.newProcedure if ..drop
+    context [] .typeBuffer list.asSlice typeOffset slice.tail =:: types
+    ## newProcedure
+      types argCount slice.head
+      types argCount slice.tail
+      context [] .labelBuffer list.asSlice labelOffset slice.tail
+      callConvention
+    typeContext types.newProcedure $ ? if .data else ..drop
       "could not create procedure-type" sb.copyPtr op [] .pos errors appendError
       true return
     end =:: newType
@@ -958,8 +958,7 @@ namespace: interpreter
         pos errors appendError
         Type .undefined ConstValue .None true return
       end
-    else valType typeContext types.isComposite
-        and isType or valType typeContext types.isArrayLiteral _if
+    else valType typeContext types.isArrayLiteral or isType and valType typeContext types.isComposite _if
       ## return
         types.I_SIZE
         valType
@@ -978,7 +977,7 @@ namespace: interpreter
     ConstValue slice : args
     FilePosition : pos
     InterpreterContext ptr.mut : context
-  -> Type bool ) =>: export: initializeGeneratedType
+  -> Type optional ) =>: export: initializeGeneratedType
     context [] .program =:: program
     program .errors =:: errors
     program .idContext =:: idContext
@@ -989,23 +988,21 @@ namespace: interpreter
       "could not find procedure " sb.copyPtr
         generatorName labelContext sb.appendLabelPath
       pos errors appendError
-      Type .undefined true return
+      Type optional.empty return
     end =:: idData
     idData [] .idType .PROCEDURE ?? ! if
       "expected procedure got: " sb.copyPtr
         idData id.asIdInfo labelContext sb.appendIdInfo
       pos errors appendError
-      Type .undefined true return
+      Type optional.empty return
     end
     idData [] .constValue .Procedure =:: procId
     program [] .procedures
       procId i64 cast list.at .data
     =:: procData
     procData [] .procType =:: procType
-    procType typeContext types.getProcIn
-      ! "proc has in-types" assert
-    =:: inType
-    inType typeContext types.compositeEltCount =:: argCount
+    procType typeContext types.getProcIn .data =:: inTypes
+    inTypes .length i32 cast.u =:: argCount
     context offsetContext
     procType
       ## IdentifierInfo
@@ -1018,11 +1015,11 @@ namespace: interpreter
     ##   instead of calling evaluateOperation
     ## push arguments
     0:i32 while $ argCount < do =:: i
-      inType i typeContext types.compositeGetLabel =:: argLabel
+      procType i typeContext types.getProcArgLabel =:: argLabel
       argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
         continue
       end
-      inType i typeContext types.compositeGetElement =:: argType
+      inTypes i [] =:: argType
       args i slice.get =:: argValue
       argValue argType pos context pushValue
     finally i 1 + end ..drop
@@ -1764,9 +1761,31 @@ proc(
     block case
       op [] .val .block .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_TYPESET
+        TYPE_PROC_IN TYPE_CPROC_IN TYPE_COMPOSITE TYPE_TYPESET
         INITIALIZER case
           op [] .val .block .blockType true context openBlock
+          EvalResult .Ok return
+        TYPE_PROC_OUT case
+          context peekBlock =:: currentBlock?
+          currentBlock? optional.isEmpty or
+              currentBlock? .data [] .blockType .TYPE_PROC_IN ?? ! and
+              currentBlock? .data [] .blockType .TYPE_CPROC_IN ?? ! if
+            "unsupported proc-out block " sb.copyPtr
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          currentBlock? .data [] .argCount optional.hasData if
+            "unsupported procedure can only contain one output type " sb.copyPtr
+            op [] .pos errors appendError
+            EvalResult .Error return
+          end
+          context [] .typeBuffer .length
+            currentBlock? .data [] .typeOffset - i32 cast.u optional.wrap
+          currentBlock? .data .argCount=
+          op currentBlock? .data
+            LabeledValueContext .TYPE_PROC
+            op [] .pos
+          context closedTypeBlock if EvalResult .Error return end
           EvalResult .Ok return
         PROCEDURE INLINE_PROCEDURE NAMESPACE case
           "unsupported block-type in constant evaluation: " sb.copyPtr
@@ -2005,7 +2024,7 @@ proc(
       blockType switch
         TYPE_COMPOSITE case
           context [] .typeBuffer list.peek =:: outType?
-          outType? optional.hasData and outType? .data [] .procOut ?? if
+          closedBlock .argCount optional.hasData if
             op closedBlock@ context closeProcTypeBlock wrapResult return
           else
             op closedBlock@ context closeStructBlock wrapResult return
@@ -2022,9 +2041,9 @@ proc(
           closedBlock .valueOffset =:: valueOffset
           closedBlock .typeOffset =:: typeOffset
           ## newEnum
-            context [] .typeBuffer list.asSlice typeOffset slice.tail
-            context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
-          typeContext types.newEnum if ..drop
+            Type optional.empty
+            context [] .labelBuffer list.asSlice labelOffset slice.tail
+          typeContext types.newEnum $ ? if .data else ..drop
             "could not create enum" sb.copyPtr op [] .pos errors appendError
             EvalResult .Error return
           end =:: enumType
@@ -2047,9 +2066,9 @@ proc(
           closedBlock .typeOffset =:: typeOffset
           ## newUnion
             context [] .typeBuffer list.asSlice typeOffset slice.tail
-            context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
+            context [] .labelBuffer list.asSlice labelOffset slice.tail
             blockType .TYPE_UNION ??
-          typeContext types.newUnion if ..drop
+          typeContext types.newUnion $ ? if .data else ..drop
             "could not create union-type" sb.copyPtr op [] .pos errors appendError
             EvalResult .Error return
           end =:: unionType
@@ -2064,26 +2083,7 @@ proc(
           EvalResult .Ok return
         TYPE_PROC_IN TYPE_CPROC_IN case
           op closedBlock@ context closeProcTypeBlock wrapResult return
-        TYPE_PROC_OUT case
-          op closedBlock@
-            LabeledValueContext .TYPE_PROC
-            op [] .pos
-          context closedTypeBlock if EvalResult .Error return end
-          closedBlock .labelOffset =:: labelOffset
-          closedBlock .valueOffset =:: valueOffset
-          closedBlock .typeOffset =:: typeOffset
-          ## newProcArgs
-            context [] .typeBuffer list.asSlice typeOffset slice.tail
-            context [] .labelBuffer list.asSlice labelOffset slice.tail optional.wrap
-            true
-          typeContext types.newProcArgs =:: procOut
-          context [] .typeBuffer typeOffset list.setLength context .typeBuffer=
-          context [] .valueBuffer valueOffset list.setLength context .valueBuffer=
-          context [] .labelBuffer labelOffset list.setLength context .labelBuffer=
-          context [] .typeBuffer
-            procOut list.append
-          context .typeBuffer=
-          EvalResult .Ok return
+        TYPE_PROC_OUT case EvalResult .Ok return ## closing block handlied by TYPE_PROC
         TYPE_TYPESET case ## TODO evaluate type-set
           context [] .stack .length =:: stackSize
           stackSize closedBlock .stackOffset - =:: eltCount
@@ -2165,7 +2165,7 @@ proc(
               EvalResult .Error return
             end =:: dataType ..drop
             dataType program [] .autoTypes
-              op [] .dataType types.getTypeId
+              op [] .dataType types.getAutoTypeId
             list.set
             dataType
           else
@@ -2639,7 +2639,7 @@ proc(
               types.ArrayType .ARRAY
               size
               typeContext
-            types.newArrayType if ..drop
+            types.newArrayType $ ? if .data else ..drop
               "could not create array type" sb.copyPtr op [] .pos errors appendError
               EvalResult .Error return
             end
@@ -2654,7 +2654,7 @@ proc(
           end
           idContext [] .arraySizeBuffer $ .length 1:iSize - []
           typeContext
-        types.newArrayType if ..drop
+        types.newArrayType $ ? if .data else ..drop
           op [] .val .typeModifier .ARRAY ?? if
             "could not create array type" sb.copyPtr op [] .pos errors appendError
           else
@@ -2693,15 +2693,15 @@ proc(
       ## enum/union element initializer
       containerType
         labelId
-      typeContext types.compositeFindLabel =:: elementIndex
-      elementIndex 0 < if
+      typeContext types.compositeFindLabel $ ? if .data else ..drop
         "type " sb.copyPtr
           containerType typeContext sb.appendType
           " does not have a label \"" sb.appendS
           labelId labelContext sb.appendLabelName
           '"' sb.appendC
         op [] .pos errors appendError
-      end
+        EvalResult .Error return
+      end =:: elementIndex
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
       isType if
         eltType .empty ?? if
@@ -2783,6 +2783,7 @@ proc(
           EvalResult .Error return
         end
         valInfo .valueType labelId typeContext types.compositeFindLabel
+        $ ? if .data else ..drop -1 end
       end =:: expectedIndex
       value .EnumLabel ?? if
         value .EnumLabel expectedIndex == ConstValue .Bool
@@ -3220,7 +3221,7 @@ proc(
       ## mergeTypes
         valInfos 0 [] .valueType
         valInfos 1 [] .valueType
-      typeContext types.mergeTypes if ..drop
+      typeContext types.mergeTypes $ ? if .data else ..drop
         "incompatible types for equality check: " sb.copyPtr
           valInfos 0 [] .valueType typeContext sb.appendType
           " and " sb.appendS
@@ -3343,10 +3344,7 @@ namespace: interpreter
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
-    calledType typeContext types.getProcIn
-      ! "has procedure in" assert
-    =:: inType
-    inType typeContext types.compositeElts =:: inTypes
+    calledType typeContext types.getProcIn .data =:: inTypes
     ConstValue 3 array new =:: mut: valueData
     valueData@ =:: values
     ValueInfo 3 array new =:: mut: valInfoData
@@ -3376,24 +3374,26 @@ namespace: interpreter
     values nArgs iSize cast.u array.reverse
     valInfos nArgs iSize cast.u array.reverse
     builtIn
-      inType
+      inTypes
       values
       nArgs i32 cast
     pos typeContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
     resultType switch
       success case
-        calledType typeContext types.getProcRet
-          ! "has return type" assert
-        =:: retType
-        retType .empty ?? ! if
-          value
-            retType
-            pos
-            context
-          pushValue
-        else retType typeContext types.isProcOut _if
-          "builtIns with multiple return values are not supported" sb.copyPtr
-          pos errors appendError
+        calledType typeContext types.getProcRet =:: retType
+        retType switch
+          Empty case break
+          Value case
+            value
+              retType .Value
+              pos
+              context
+            pushValue
+          break
+          Tuple case
+            "builtIns with multiple return values are not supported" sb.copyPtr
+            pos errors appendError
+          break
         end
         false return
       argumentError case
@@ -3422,7 +3422,7 @@ namespace: interpreter
   end
   proc(
     LabelId : procName
-    Type : procIn
+    Type slice : args
     FilePosition : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: evaluateExternCall
@@ -3431,7 +3431,6 @@ namespace: interpreter
     program .idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     "memcpy":s procName labelContext id.labelNameEq if
-      procIn typeContext types.compositeElts =:: args
       args .length 3:iSize != or
           args 2 slice.get typeContext types.isPointer ! or
           args 2 slice.get typeContext types.isMutable ! or
@@ -3439,8 +3438,8 @@ namespace: interpreter
           args 0 slice.get typeContext types.isIntLike ! if
         "unexpected arguments for `memcpy` expected: " sb.copyPtr
           "( <int-primitive> <ptr> <ptr.mut> -> ... ) got: ( " sb.appendS
-          procIn typeContext sb.appendType
-          " -> ... )" sb.appendS
+          args for typeContext sb.appendType ' ' sb.appendC end
+          "-> ... )" sb.appendS
         pos errors appendError
         true return
       end
@@ -3568,11 +3567,11 @@ proc(
   typeContext .labelContext =:: labelContext
   program [] .procedures procId i64 cast list.at .data =:: procData
   procData [] .procType =:: procType
-  procType typeContext types.getProcIn ..drop =:: inType
+  procType typeContext types.getProcIn .data =:: args
   0:iSize ## XXX? is there a better way to get number of non-auto static args
     implId -1:i32 != if
-      inType typeContext types.compositeEltCount for =:: i
-        inType i typeContext types.compositeGetLabel =:: label
+      args .length i32 cast.u for =:: i
+        procType i typeContext types.getProcArgLabel =:: label
         label labelContext id.labelFlags =:: flags
         flags id.FLAG_STATIC & ? and flags id.FLAG_AUTO & ? ! if
           1:iSize +
@@ -3580,7 +3579,6 @@ proc(
       end
     end
   =:: nStaticArgs
-  inType typeContext types.compositeElts =:: args
   args .length autoArgs .length -
     consumeStaticArgs ! if nStaticArgs - end
   =:: nArgs
@@ -3600,8 +3598,8 @@ proc(
   end
   nArgs "procedure call":s pos context checkStack if
     128 sb.create
-      "inType: (" sb.appendS
-      inType typeContext sb.appendType
+      "inTypes: (" sb.appendS
+      args for typeContext sb.appendType ' ' sb.appendC end
       "-> ... ) arguments: " sb.appendS
       args .length sb.appendI
       " auto-args: " sb.appendS
@@ -3611,9 +3609,8 @@ proc(
   end
   context [] .stack .length nArgs - =:: argsOffset
   procData [] .labelId =:: procName
-  procType typeContext types.getProcOut ..drop =:: outType
-  outType typeContext types.compositeEltCount 1 == and
-      outType 0 typeContext types.compositeGetElement typeContext types.isType if
+  procType typeContext types.getProcOut .data =:: procOutTypes
+  procOutTypes .length 1:iSize == and procOutTypes 0 [] typeContext types.isType if
     implId 0 >= if
       procData .implementation .code [] .implementations
         implId list.at .data
@@ -3627,7 +3624,7 @@ proc(
       true
       typeContext
       constContext
-    types.findGeneratedType ! if =:: genType
+    types.findGeneratedType $ ? if .data =:: genType
       argsOffset context truncateStack
       ## pushValue
         genType ConstValue .TypeId
@@ -3636,13 +3633,13 @@ proc(
       context pushValue
       false return
       ## TODO reuse value of type-generator
-    end ..drop
+    else ..drop end
     true
   else false end =:: isTypeGenerator
   procName labelContext id.labelFlags id.FLAG_EXTERN & ? and
       procData [] .implementation .code ?? and
       procData [] .implementation .code .codeState .PARSING ?? if
-    procName inType pos context evaluateExternCall return
+    procName args pos context evaluateExternCall return
   end
   context [] .typeChecker optional.hasData if
     procId implId pos context [] .typeChecker .data typeCheckChildProcedures
@@ -3665,7 +3662,7 @@ proc(
   false =:: mut: hasGenericArg
   false =:: mut: hasNonStaticGenericArg
   0:i32 while $ args .length i32 cast < do =:: i
-    inType i typeContext types.compositeGetLabel =:: label
+    procType i typeContext types.getProcArgLabel =:: label
     label labelContext id.labelFlags =:: labelFlags
     labelFlags id.FLAG_AUTO & ? if
       autoArgs autoArgOffset slice.get
@@ -3906,9 +3903,7 @@ proc(
   context [] .callPositions
     list.pop ..drop
   context .callPositions=
-  calledType typeContext types.getProcOut
-    ! "proc has out" assert
-  typeContext types.compositeElts =:: outTypes
+  calledType typeContext types.getProcOut .data =:: outTypes
   outTypes .length "return":s pos context checkStack if
     context [] .localVariables .data map.free
     prevVariables context .localVariables=

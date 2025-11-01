@@ -167,7 +167,7 @@ namespace: interpreter
   ## XXX? do I need differnet handling for i64i32 operations
   proc(
     BuiltIn : builtIn
-    Type : inType
+    Type slice : inTypes
     ConstValue ptr.raw : args
     i32 : k
     FilePosition : pos
@@ -295,7 +295,7 @@ namespace: interpreter
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
       GET_PTR GET_PTR_MUT case
         k 1 == "correct number of arguments" assert
-        inType 0 typeContext types.compositeGetElement typeContext types.getBaseType =:: baseType
+        inTypes 0 [] typeContext types.getBaseType =:: baseType
         baseType typeContext types.isComposite or baseType typeContext types.isArray if
           args 0 [] OperatorResult .success return
         end

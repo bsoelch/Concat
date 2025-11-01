@@ -72,6 +72,13 @@ namespace: i32
     end
   end
 
+  proc( i32 -> i32 ) =>: export: bitrev
+    $ 0xffff0000:i32 & 16 >>> >$ 0x0000ffff:i32 & 16 << |
+    $ 0xff00ff00:i32 &  8 >>> >$ 0x00ff00ff:i32 &  8 << |
+    $ 0xf0f0f0f0:i32 &  4 >>> >$ 0x0f0f0f0f:i32 &  4 << |
+    $ 0xCCCCCCCC:i32 &  2 >>> >$ 0x33333333:i32 &  2 << | ## C: 1100 3:0011
+    $ 0xAAAAAAAA:i32 &  1 >>> >$ 0x55555555:i32 &  1 << | ## A: 1010 5:0101
+  end
   ## position of the highest nonzero-bit (zero-indexed), returns -1 if the input is zero
   proc( i32 -> i32 ) =>: export: highestSetBit
     =:: mut: x

@@ -131,7 +131,7 @@ proc(
   union .Union .eltIndex ConstValue .EnumLabel return
 end
 
-proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>: export: constantEquals
+proc( ConstValue : a ConstValue : b -> bool ) =>: export: constantEquals
   a ..label b ..label != if ##different constant types
     false return
   end
@@ -157,7 +157,7 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
     Array64 case
       a .Array64 b .Array64 slice.eq return
     Array case
-      a .Array b .Array constantEquals@ labelContext slice.eq return
+      a .Array b .Array constantEquals@ slice.eq return
     TypeId case
       a .TypeId b .TypeId types.typeEquals return
     Procedure case
@@ -170,13 +170,13 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
       a .Union .eltIndex b .Union .eltIndex != if
         false return
       end
-      ## TODO check equality of value
       a .Union .value b .Union .value == if
         true return
       end
       a .Union .value []
         b .Union .value []
-      labelContext constantEquals return
+      constantEquals return
+    ## local values are compared with pointer identity ! update hash function when this changes
     LocalValue case
       a .LocalValue ConstValue ptr.raw cast b .LocalValue ConstValue ptr.raw cast == return
     LocalArray case
@@ -204,6 +204,71 @@ proc( ConstValue : a ConstValue : b LabelContext ptr : labelContext -> bool ) =>
       a .LocalArray64 .data b .LocalArray64 .data == and
         a .LocalArray64 .length b .LocalArray64 .length ==
       end return
+  end
+end
+## TODO tweak scale factors (would larger primes be better?)
+proc( ConstValue : a -> i32 ) =>: export: constantHash
+  a switch
+    None case
+      0 return
+    WildCard case
+      1 return
+    Bool case
+      a .Bool if 2 else 3 end return
+    EnumLabel case
+      a .EnumLabel i32 cast.u 1 + 5 * return
+    Int case
+      a .Int $ 32 >>> ^ i32 cast.u 715415 + 7 * return
+    Float case ## most floats will only differ on the higher 32 bits ( sign+exponent+start of magnitude )
+      a .Float f64.bits 32 >>> i32 cast.u i32.bitrev 61414 + 11 * return
+    Char case
+      a .Char i32 cast.u 1 + 13 * return
+    Array8 case
+      a .Array8 ( i8 -> i32 ) => i32 cast.u end slice.hash 17 * return
+    Array16 case
+      a .Array16 ( i16 -> i32 ) => i32 cast.u end slice.hash 19 * return
+    Array32 case
+      a .Array32 ( i32 -> i32 ) => end slice.hash 23 * return
+    Array64 case
+      a .Array64 ( i64 -> i32 ) => $ 32 >> >$ + i32 cast.u end slice.hash 29 * return
+    Array case
+      a .Array constantHash@ slice.hash 31 * return
+    TypeId case
+      a .TypeId types.typeHash 37 * return
+    Procedure case
+      a .Procedure i32 cast.u 1 + 41 * return
+    ProcedureBundle case
+      a .ProcedureBundle i32 cast.u 1 + 43 * return
+    GenericArg case
+      a .GenericArg i32 cast.u 1 + 47 * return
+    Union case
+      a .Union .eltIndex
+        31 * a .Union .value [] constantHash +
+      53 * return
+    LocalValue case
+      ## identity hash for identity comparisson
+      a .LocalValue ConstValue ptr.raw cast iSize cast! i64 cast.u $ 32 >>> >$ + i32 cast.u 57 * return
+    ## local arrays are only equal if memory ranges coincide
+    LocalArray case
+      a .LocalArray .data iSize cast! 31:iSize *
+        a .LocalArray .length +
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 59 * return
+    LocalArray8 case
+      a .LocalArray8 .data iSize cast! 31:iSize *
+        a .LocalArray8 .length +
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 61 * return
+    LocalArray16 case
+      a .LocalArray16 .data iSize cast! 31:iSize *
+        a .LocalArray16 .length +
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 67 * return
+    LocalArray32 case
+      a .LocalArray32 .data iSize cast! 31:iSize *
+        a .LocalArray32 .length +
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 71 * return
+    LocalArray64 case
+      a .LocalArray64 .data iSize cast! 31:iSize *
+        a .LocalArray64 .length +
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 73 * return
   end
 end
 namespace: constant

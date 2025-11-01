@@ -425,9 +425,9 @@ proc(
   state [] .program =:: progContext
   state .interpreter =:: interpreter
   progContext .idContext .typeContext =:: typeContext
-  calledType typeContext types.getProcIn ..drop =:: procIn
-  procIn
-    typeContext types.compositeEltCount InterpreterLoadMode .fixedCount
+  calledType typeContext types.getProcIn .data .length i32 cast.u =:: argCount
+  argCount 
+    InterpreterLoadMode .fixedCount
   state interpreterLoadContants if
     staticProc if
       "could not resolve arguments of static procedure " sb.copyPtr
@@ -455,13 +455,13 @@ proc(
       pos progContext .errors appendError
     end
     ## reset stack to previous state
-    procIn typeContext types.compositeEltCount staticArg pos state interpreterStoreConstants
+    argCount staticArg pos state interpreterStoreConstants
     true return
   end
   ## store results
   calledType
-    typeContext types.getProcOut ..drop
-  typeContext types.compositeEltCount staticArg pos state interpreterStoreConstants
+    typeContext types.getProcOut .data .length i32 cast.u
+  staticArg pos state interpreterStoreConstants
   false return
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
@@ -1076,7 +1076,9 @@ proc(
     =:: currentType
     mergePoint .mergeType switch
       MERGE case
-        currentType mergedType typeContext types.mergeTypes if ..drop
+        currentType mergedType typeContext types.mergeTypes $ ? if
+          .data mergedType=
+        else ..drop
           "cannot merge the branches of " sb.copyPtr
             mergePoint .blockName sb.appendStr
             "\n cannot merge types " sb.appendS
@@ -1090,8 +1092,6 @@ proc(
             " )\n" sb.appendS
           mergePoint .mergePoint errors appendError
           false noError=
-        else
-          mergedType=
         end
         break
       MERGE_ROOT NO_CAST case
@@ -1358,7 +1358,7 @@ proc(
   state [] .program .autoTypes =:: autoTypes
   state [] .program .idContext .typeContext =:: typeContext
   op [] .dataType .autoType ?? if
-    op [] .dataType types.getTypeId =:: id
+    op [] .dataType types.getAutoTypeId =:: id
     autoTyped if
       state .stack branchTree.peek =:: value?
       value? optional.hasData if
@@ -1404,11 +1404,11 @@ proc(
     op [] .pos errors appendError
     return
   end
-  procType typeContext types.getProcOut if ..drop
+  procType typeContext types.getProcOut $ optional.hasData if .data else ..drop
     "could not resolve procedure return value" sb.copyPtr op [] .pos errors appendError
     return
-  end =:: procOut
-  procOut typeContext types.compositeEltCount =:: valCount
+  end =:: outTypes
+  outTypes .length i32 cast.u =:: valCount
   valCount state [] .stack branchTree.depth < if
     "wrong number of return values at the end of procedure expected: " sb.copyPtr
       valCount      sb.appendI
@@ -1419,7 +1419,7 @@ proc(
     return
   end
   ## requireTypes
-    procOut typeContext types.compositeElts
+    outTypes
     "return statement":s
     0
     op [] .pos
@@ -1590,7 +1590,6 @@ proc(
     ## constantEquals
       labelData [] .value
       label
-      labelContext
     constantEquals if
       "duplicate label " sb.copyPtr
         switchData [] .switchType typeContext types.isTaggedUnion if
@@ -1723,15 +1722,14 @@ proc(
   ## compositeFindLabel
     switchType
     labelId
-  typeContext types.compositeFindLabel =:: labelIndex
-  labelIndex 0 < if
+  typeContext types.compositeFindLabel $ optional.hasData if .data else ..drop
     "enum " sb.copyPtr
       switchType typeContext sb.appendType
       " does not have a label " sb.appendS
       labelId labelContext sb.appendLabelName
     op [] .pos errors appendError
     true return
-  end
+  end =:: labelIndex
   ## newSwitchLabel
     switchId
     switchPosition
@@ -1797,7 +1795,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   op .dataType .autoType ?? if ## try resolving auto-types
-    op .dataType types.getTypeId =:: id
+    op .dataType types.getAutoTypeId =:: id
     id iSize cast.u program [] .autoTypes .length u< if
       program [] .autoTypes id list.get =:: autoType
       autoType .undefined ?? ! if
@@ -2059,8 +2057,8 @@ proc(
           hasStaticArg if
             staticArgIndex
               calledType
-                typeContext types.getProcIn ..drop
-              typeContext types.compositeEltCount <
+                typeContext types.getProcIn .data
+              .length i32 cast.u <
             hasStaticArg=
           end
           stackValues list.free ..drop
@@ -2069,8 +2067,8 @@ proc(
             calledProc .procId i64 cast list.at .data
           =:: baseProcData
           calledType op@ .dataType=
-          calledType typeContext types.getProcIn ..drop =:: inTypes
-          inTypes typeContext types.compositeEltCount =:: argCount
+          calledType typeContext types.getProcIn .data =:: inTypes
+          inTypes .length i32 cast.u =:: argCount
           stackConstants argCount calledProc .autoArgs .length i32 cast - >= and
               program [] .procedures
                 calledProcId i64 cast list.at .data
@@ -2123,8 +2121,8 @@ proc(
           end
           0 =:: mut: offset
           argCount 1 - while ..dup 0 >= do =:: i
-            inTypes i typeContext types.compositeGetLabel =:: eltLabel
-            inTypes i typeContext types.compositeGetElement =:: elt
+            calledType i typeContext types.getProcArgLabel =:: eltLabel
+            inTypes i [] =:: elt
             eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
               ## remove static arguments from stack
               state .stack branchTree.pop .data =:: opData
@@ -2153,8 +2151,7 @@ proc(
             end
           finally i 1 - end ..drop
           op state appendOp ..drop
-          calledType typeContext types.getProcOut ..drop
-            typeContext types.compositeElts
+          calledType typeContext types.getProcOut .data
             op .pos
             state
           pushTypes
@@ -2191,19 +2188,16 @@ proc(
       else
         calledType
       end =:: procType
-      procType typeContext types.getProcIn
-        ! "procType has arguments" assert
-      =:: inTypes
+      procType typeContext types.getProcIn .data =:: inTypes
       ## requireTypes
-        inTypes typeContext types.compositeElts
+        inTypes
         "procedure argument":s
         1
         op .pos
         state
       requireTypes if return end
       op state appendOp ..drop
-      procType typeContext types.getProcOut ..drop
-        typeContext types.compositeElts
+      procType typeContext types.getProcOut .data
         op .pos
         state
       pushTypes
@@ -2444,17 +2438,17 @@ proc(
       ## procedure scope is handled by typeCheckProcedure
       procType BlockInfo .Procedure state openBlock
       true state .reachable=
-      procType typeContext types.getProcIn if ..drop
+      procType typeContext types.getProcIn $ optional.hasData if .data
+      else ..drop
         "wrong type for procedure initialization: " sb.copyPtr
           procType typeContext sb.appendType
           " expected procedure" sb.appendS
         op .pos errors appendError
         return
-      end =:: inType
-      inType typeContext types.compositeElts =:: argTypes
+      end =:: argTypes
       ## push unnamed arguments
       0:i32 while $ iSize cast.u argTypes .length u< do =:: i
-        inType i typeContext types.compositeGetLabel =:: label
+        procType i typeContext types.getProcArgLabel =:: label
         argTypes i slice.get =:: argType
         label id.LABEL_ID_NONE == if ## push argument
           state .stack
@@ -2592,8 +2586,7 @@ proc(
         containerType
         labelId
         typeContext
-      types.compositeFindLabel =:: elementIndex
-      elementIndex 0 < if
+      types.compositeFindLabel $ optional.hasData if .data else ..drop
         accessType .CHECK ?? if
           ## label does not exists
           1 op .pos state discardValues ## remove container
@@ -2607,7 +2600,7 @@ proc(
           '"' sb.appendC
         op .pos errors appendError
         return
-      end
+      end =:: elementIndex
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
       accessType .CHECK ?? if
@@ -2805,8 +2798,7 @@ proc(
       state .stack
          1 branchTree.at .data [] .valueType
       params@ 1 =[]
-      params@ 0 [] params@ 1 [] typeContext types.mergeTypes if
-        ..drop
+      params@ 0 [] params@ 1 [] typeContext types.mergeTypes $ ? if .data else ..drop
         "cannot check for equality between of values of types " sb.copyPtr
           params@ 0 [] typeContext sb.appendType
           " and " sb.appendS
@@ -2814,11 +2806,6 @@ proc(
         op .pos errors appendError
         return
       end =:: argType
-      argType typeContext types.isTaggedUnion and
-          argType typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? ! if
-        "the old behaviour of enum equality is deprecared use `..label` for comparing the labels of enums" sb.copyPtr
-        op .pos errors appendWarning
-      end
       argType params@ 0 =[]
       argType params@ 1 =[]
       argType op@ .dataType=
@@ -4536,12 +4523,11 @@ proc(
         return
       end
     codeImpl .expansionLevel=
-    currentImpl [] .procType typeContext types.getProcIn ..drop =:: procIn
-    procIn typeContext types.compositeElts =:: inTypes
+    currentImpl [] .procType typeContext types.getProcIn .data =:: inTypes
     0:i32 =:: mut: staticArgCount
     ## XXX? clear/reset argument map
     0:i32 while $ iSize cast.u inTypes .length u< do =:: i
-      procIn i typeContext types.compositeGetLabel =:: labelId
+      currentImpl [] .procType i typeContext types.getProcArgLabel =:: labelId
       inTypes i slice.get =:: argType
       labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
         currentImpl [] .staticArgs
@@ -4742,7 +4728,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .implementation .code ?? ! if
       procId 1 + continue ## procedure implementation not in code
     end
-    currentProc [] .procType typeContext types.getProcIn ..drop =:: procIn
     currentProc [] .implementation .code .codeStart 0 < if
       procId 1 + continue ## procedure not implemented
     end
@@ -4771,7 +4756,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .implementation .code ?? ! if
       procId 1 + continue ## procedure implementation not in code
     end
-    currentProc [] .procType typeContext types.getProcIn ..drop =:: procIn
     currentProc [] .implementation .code .codeStart 0 < if
       procId 1 + continue ## procedure not implemented
     end

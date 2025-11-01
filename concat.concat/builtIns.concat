@@ -57,9 +57,7 @@ proc(
     mutable if types.ArrayType .MUTABLE_RAW_POINTER else types.ArrayType .RAW_POINTER end
     types.ArraySize .None
     typeContext
-  types.newArrayType
-    ! "can wrap pointer" assert
-  return
+  types.newArrayType .data return
 end
 
 proc(
@@ -176,73 +174,36 @@ proc(
   Type 2 array new =:: mut: args
   t args@ 0 =[]
   t args@ 1 =[]
-  ## newProcArgs
+  ## newProcedure
     args@ 1 slice.create
-    argLabels
-    false
-    typeContext
-  types.newProcArgs =:: mut: procIn
-  ## newProcArgs
     Type slice.empty
-    argLabels
-    true
-  typeContext types.newProcArgs =:: mut: procOut
-  ## newProcedure
-    procIn
-    procOut
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: consumeVal
-  ## newProcArgs
+  typeContext types.newProcedure .data =:: consumeVal
+  ## newProcedure
     args@ 1 slice.create
-    argLabels
-    true
-  typeContext types.newProcArgs procOut=
-  ## newProcedure
-    procIn
-    procOut
+    args@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: unOpProc
-  ## newProcArgs
+  typeContext types.newProcedure .data =:: unOpProc
+  ## newProcedure
     args@ slice.wrap
-    argLabels
-    false
-  typeContext types.newProcArgs procIn=
-  ## newProcedure
-    procIn
-    procOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: binOpProc
-  types.primitive.BOOL args@ 0 =[]
-  ## newProcArgs
     args@ 1 slice.create
-    argLabels
-    true
-  typeContext types.newProcArgs procOut=
-  ## newProcedure
-    procIn
-    procOut
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: cmpOpProc
-  ## newProcArgs
-    args@ 1 @[] 1 slice.create
-    argLabels
-    false
-  typeContext types.newProcArgs procIn=
+  typeContext types.newProcedure .data =:: binOpProc
   ## newProcedure
-    procIn
-    procOut
+    args@ slice.wrap
+    types.primitive.BOOL@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: toBoolOpProc
+  typeContext types.newProcedure .data =:: cmpOpProc
+  ## newProcedure
+    args@ 1 slice.create
+    types.primitive.BOOL@ 1 slice.create
+    LabelId slice.empty
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure .data =:: toBoolOpProc
   binOpProc unOpProc cmpOpProc toBoolOpProc consumeVal return
 end
 proc(
@@ -253,40 +214,21 @@ proc(
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
   t1 args@ 0 =[]
   t2 args@ 1 =[]
-  ## newProcArgs
+  ## newProcedure
     args@ 2 slice.create
-    argLabels
-    false
-    typeContext
-  types.newProcArgs =:: mut: procIn
-  ## newProcArgs
     args@ 1 slice.create
-    argLabels
-    true
-  typeContext types.newProcArgs =:: mut: procOut
-  ## newProcedure
-    procIn
-    procOut
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: aba
-  ## newProcArgs
+  typeContext types.newProcedure .data =:: aba
+  ## newProcedure
+    args@ 2 slice.create
     args@ 1 @[] 1 slice.create
-    argLabels
-    true
-  typeContext types.newProcArgs procOut=
-  ## newProcedure
-    procIn
-    procOut
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: abb
+  typeContext types.newProcedure .data =:: abb
   aba abb return
 end
 ## i64 i32 -> i32 mod/rem/and
@@ -299,42 +241,21 @@ proc(
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
   t1 args@ 0 =[]
   t1 args@ 1 =[]
-  ## newProcArgs
-    args@ 2 slice.create
-    argLabels
-    false
-    typeContext
-  types.newProcArgs =:: mut: procIn
-  types.primitive.BOOL args@ 0 =[]
-  ## newProcArgs
-    args@ 1 slice.create
-    argLabels
-    true
-  typeContext types.newProcArgs =:: mut: procOut
   ## newProcedure
-    procIn
-    procOut
+    args@ slice.wrap
+    types.primitive.BOOL@ slice.wrap
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: cc_b
-  types.primitive.I32 args@ 0 =[]
-  ## newProcArgs
-    args@ 1 slice.create
-    argLabels
-    true
-  typeContext types.newProcArgs procOut=
+  typeContext types.newProcedure .data =:: cc_b
   ## newProcedure
-    procIn
-    procOut
+    args@ slice.wrap
+    types.primitive.I32@ slice.wrap
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: cc_i
+  typeContext types.newProcedure .data =:: cc_i
   cc_b cc_i return
 end
 proc(
@@ -344,37 +265,19 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   LabelId slice optional.empty =:: argLabels
-  ## newProcArgs
-    Type slice.empty
-    argLabels
-    false
-    typeContext
-  types.newProcArgs =:: mut: procIn
-  ## newProcArgs
-    types.primitive.I64@ 1 slice.create
-    argLabels
-    true
-  typeContext types.newProcArgs =:: mut: toI64
   types.primitive.CHAR8 false typeContext wrapPtr false typeContext wrapPtr =:: c8pp
-  ## newProcArgs
+  ## newProcedure
+    Type slice.empty
+    types.primitive.I64@ 1 slice.create
+    LabelId slice.empty
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure .data =:: v_i64
+  ## newProcedure
+    Type slice.empty
     c8pp@ 1 slice.create
-    argLabels
-    true
-  typeContext types.newProcArgs =:: mut: toC8PP
-  ## newProcedure
-    procIn
-    toI64
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: v_i64
-  ## newProcedure
-    procIn
-    toC8PP
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: v_c8pp
+  typeContext types.newProcedure .data =:: v_c8pp
   v_c8pp v_i64 return
 end
 proc(
@@ -384,90 +287,47 @@ proc(
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  LabelId slice optional.empty =:: argLabels
   Type 2 array : typeData
   typeData@ =:: argTypes
   ## char8 ptr.raw  iSize   -> ...
   types.primitive.CHAR8 false typeContext wrapPtr argTypes 0 =[]
   types.I_SIZE argTypes 1 =[]
-  ## newProcArgs
+  ## newProcedure
     argTypes slice.wrap
-    argLabels
-    false
-    typeContext
-  types.newProcArgs =:: mut: procIn
-  ## newProcedure
-    procIn
-    ## newProcArgs
-      types.primitive.I8@ 1 slice.create
-      LabelId slice optional.empty
-      true
-      typeContext
-    types.newProcArgs
+    types.primitive.I8@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: s_i8
+  typeContext types.newProcedure .data =:: s_i8
   ## newProcedure
-    procIn
-    ## newProcArgs
-      types.primitive.I16@ 1 slice.create
-      LabelId slice optional.empty
-      true
-      typeContext
-    types.newProcArgs
+    argTypes slice.wrap
+    types.primitive.I16@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: s_i16
+  typeContext types.newProcedure .data =:: s_i16
   ## newProcedure
-    procIn
-    ## newProcArgs
-      types.primitive.I32@ 1 slice.create
-      LabelId slice optional.empty
-      true
-      typeContext
-    types.newProcArgs
+    argTypes slice.wrap
+    types.primitive.I32@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: s_i32
+  typeContext types.newProcedure .data =:: s_i32
   ## newProcedure
-    procIn
-    ## newProcArgs
-      types.primitive.I64@ 1 slice.create
-      LabelId slice optional.empty
-      true
-      typeContext
-    types.newProcArgs
+    argTypes slice.wrap
+    types.primitive.I64@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: s_i64
+  typeContext types.newProcedure .data =:: s_i64
   ## newProcedure
-    procIn
-    ## newProcArgs
-      types.primitive.F32@ 1 slice.create
-      LabelId slice optional.empty
-      true
-      typeContext
-    types.newProcArgs
+    argTypes slice.wrap
+    types.primitive.F32@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: s_f32
+  typeContext types.newProcedure .data =:: s_f32
   ## newProcedure
-    procIn
-    ## newProcArgs
-      types.primitive.F64@ 1 slice.create
-      LabelId slice optional.empty
-      true
-      typeContext
-    types.newProcArgs
+    argTypes slice.wrap
+    types.primitive.F64@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: s_f64
+  typeContext types.newProcedure .data =:: s_f64
   s_f64 s_f32 s_i64 s_i32 s_i16 s_i8 return
 end
 proc(
@@ -495,129 +355,53 @@ proc(
   baseType true typeContext wrapPtr =:: basePtrMut
   baseType typeData@ 1 =[]
   basePtrMut typeData@ 2 =[]
-  ## newProcArgs
+  ## newProcedure
     typeData@ slice.wrap
-    labelData@ slice.wrap optional.wrap
-    false
-    typeContext
-  types.newProcArgs =:: setIn ##  T   T ptr.raw.mut
-  basePtr typeData@ 1 =[]
-  ## newProcArgs
-    typeData@ 2 slice.create
-    labelData@ 2 slice.create optional.wrap
-    false
-    typeContext
-  types.newProcArgs =:: ptrIn ##  T ptr.raw
-  types.primitive.I32 typeData@ 2 =[]
-  ## newProcArgs
-    typeData@ slice.wrap
-    labelData@ slice.wrap optional.wrap
-    false
-    typeContext
-  types.newProcArgs =:: ptrIn32 ##  T ptr.raw i32
-  types.primitive.I64 typeData@ 2 =[]
-  ## newProcArgs
-    typeData@ slice.wrap
-    labelData@ slice.wrap optional.wrap
-    false
-    typeContext
-  types.newProcArgs =:: ptrIn64 ##  T ptr.raw i64
-  basePtrMut typeData@ 1 =[]
-  ## newProcArgs
-    typeData@ slice.wrap
-    labelData@ slice.wrap optional.wrap
-    false
-    typeContext
-  types.newProcArgs =:: ptrMutIn64 ##  T ptr.raw.mut i64
-  types.primitive.I32 typeData@ 2 =[]
-  ## newProcArgs
-    typeData@ slice.wrap
-    labelData@ slice.wrap optional.wrap
-    false
-    typeContext
-  types.newProcArgs =:: ptrMutIn32 ##  T ptr.raw.mut i32
-  ## newProcArgs
-    typeData@ 2 slice.create
-    labelData@ 2 slice.create optional.wrap
-    false
-    typeContext
-  types.newProcArgs =:: ptrMutIn ##  T ptr.raw.mut
-  ## newProcArgs
     Type slice.empty
-    LabelId slice optional.empty
-    true
-    typeContext
-  types.newProcArgs =:: setOut
-  baseType typeData@ 0 =[]
-  ## newProcArgs
-    typeData@ 1 slice.create
-    LabelId slice optional.empty
-    true
-    typeContext
-  types.newProcArgs =:: baseOut
-  basePtr typeData@ 0 =[]
-  ## newProcArgs
-    typeData@ 1 slice.create
-    LabelId slice optional.empty
-    true
-    typeContext
-  types.newProcArgs =:: ptrOut
-  basePtrMut typeData@ 0 =[]
-  ## newProcArgs
-    typeData@ 1 slice.create
-    LabelId slice optional.empty
-    true
-    typeContext
-  types.newProcArgs =:: ptrMutOut
-  ## newProcedure
-    setIn
-    setOut
+    labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: setProc
+  typeContext types.newProcedure .data =:: setProc
+  basePtr typeData@ 1 =[]
   ## newProcedure
-    ptrIn
-    baseOut
+    typeData@ 2 slice.create
+    baseType@ slice.wrap
+    labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: getProc
+  typeContext types.newProcedure .data =:: getProc
+  types.primitive.I32 typeData@ 2 =[]
   ## newProcedure
-    ptrMutIn
-    baseOut
+    typeData@ slice.wrap
+    typeData@ 1 @[] 1 slice.create
+    labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: getMutProc
+  typeContext types.newProcedure .data =:: offset32Proc
+  types.primitive.I64 typeData@ 2 =[]
   ## newProcedure
-    ptrIn32
-    ptrOut
+    typeData@ slice.wrap
+    typeData@ 1 @[] 1 slice.create
+    labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: offset32Proc
+  typeContext types.newProcedure .data =:: offset64Proc
+  basePtrMut typeData@ 1 =[] ## auto: T T ptr.raw.mut i64
   ## newProcedure
-    ptrIn64
-    ptrOut
+    typeData@ 2 slice.create
+    baseType@ slice.wrap
+    labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: offset64Proc
+  typeContext types.newProcedure .data =:: getMutProc
   ## newProcedure
-    ptrMutIn32
-    ptrMutOut
+    typeData@ slice.wrap
+    typeData@ 1 @[] 1 slice.create
+    labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: offsetMut32Proc
+  typeContext types.newProcedure .data =:: offsetMut64Proc
+  types.primitive.I32 typeData@ 2 =[]
   ## newProcedure
-    ptrMutIn64
-    ptrMutOut
+    typeData@ slice.wrap
+    typeData@ 1 @[] 1 slice.create
+    labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: offsetMut64Proc
+  typeContext types.newProcedure .data =:: offsetMut32Proc
   offsetMut64Proc offsetMut32Proc offset64Proc offset32Proc setProc getMutProc getProc
 end
 proc(
@@ -626,69 +410,34 @@ proc(
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
   types.primitive.TYPE args@ 0 =[]
   types.primitive.TYPE args@ 1 =[]
-  ## newProcArgs
+  ## newProcedure
     types.primitive.TYPE@ 1 slice.create
-    argLabels
-    false
-    typeContext
-  types.newProcArgs =:: mut: typeIn
-  ## newProcArgs
-    types.primitive.TYPE@ 1 slice.create
-    argLabels
-    true
-    typeContext
-  types.newProcArgs =:: mut: typeOut
-  ## newProcArgs
     types.primitive.BOOL@ 1 slice.create
-    argLabels
-    true
-    typeContext
-  types.newProcArgs =:: mut: boolOut
-  ## newProcArgs
+    LabelId slice.empty
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure .data =:: t_b
+  ## newProcedure
+    types.primitive.TYPE@ 1 slice.create
+    types.primitive.TYPE@ 1 slice.create
+    LabelId slice.empty
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure .data =:: t_t
+  ## newProcedure
     args@ 2 slice.create
-    argLabels
-    false
-    typeContext
-  types.newProcArgs =:: mut: type2In
+    types.primitive.BOOL@ 1 slice.create
+    LabelId slice.empty
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure .data =:: tt_b
   types.primitive.I32 args@ 1 =[]
-  ## newProcArgs
+  ## newProcedure
     args@ 2 slice.create
-    argLabels
-    false
-    typeContext
-  types.newProcArgs =:: mut: typeIntIn
-  ## newProcedure
-    typeIn
-    boolOut
+    types.primitive.BOOL@ 1 slice.create
+    LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: t_b
-  ## newProcedure
-    typeIn
-    typeOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: t_t
-  ## newProcedure
-    type2In
-    boolOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: tt_b
-  ## newProcedure
-    typeIntIn
-    boolOut
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure
-    ! "can create procedure" assert
-  =:: ti32_b
+  typeContext types.newProcedure .data =:: ti32_b
   ti32_b tt_b t_t t_b return
 end
 
@@ -771,7 +520,7 @@ proc(
   types.primitive.CHAR32 "char32":s pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
   "iSize":s pos labelContext createLabel =:: iSizeLabel
-  types.primitive.I_SIZE iSizeLabel typeContext types.newNamedType $ types.I_SIZE=
+  types.primitive.I_SIZE iSizeLabel typeContext types.initializeNamedType .data $ types.I_SIZE=
   iSizeLabel pos context newBuiltInTypeLabel
   types.primitive.I_SIZE "..type.iSize":s pos context newBuiltInType
   ## TODO? should I_MAX be visible to user-code

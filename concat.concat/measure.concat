@@ -42,29 +42,27 @@ proc(
         declared list.append
       types =[]
       break
-    struct union procIn procOut enum initializer case
+    enum case
+      types []
+        declared list.append
+      types =[]
+      break
+    struct union initializer case
       declared typeContext types.compositeElts =:: elts
       elts for
         ptrLevel pos prog visited types declaredType
-      end
-      declared .procIn ?? if
-        break ## don't add proc-in to list of declared types
-      end
-      declared .procOut ?? elts .length 2:iSize u< & if ## TODO is this up to date
-        break ## don't add single element proc-out to list of declared types
-      end
-      declared .enum  ?? ! if
-        declared typeContext types.compositeFlags types.COMP_FLAG_EMPTY & ? if
-          break ## don't add tuple/union/procedure-IO types containing only empty types
-        end
       end
       types []
         declared list.append
       types =[]
       break
     procedure case
-      declared typeContext types.getProcIn ..drop ptrLevel pos prog visited types declaredType
-      declared typeContext types.getProcOut ..drop ptrLevel pos prog visited types declaredType
+      declared typeContext types.getProcIn .data for
+        ptrLevel pos prog visited types declaredType
+      end
+      declared typeContext types.getProcOut .data for
+        ptrLevel pos prog visited types declaredType
+      end
       ## don't add procedure type to list of declared types
       ## type declaration of proc-pointer will be covered by surrounding pointer type
       break

@@ -354,12 +354,11 @@ namespace: AMD64
     argBuffer compositeMemCount floatMemCount intMemCount return
   end
   proc(
-    Type : retType
+    Type slice : retTypes
     ArgumentLocation list ptr.mut : argBuffer
     RegisterState MAX_DATA_REGISTERS ptr.mut : regBuffer
     TypeContext ptr.mut : typeContext
   -> ArgumentLocation slice.mut RegisterState slice.mut ) =>: computeReturnLocations
-    retType typeContext types.compositeElts =:: retTypes
     ## TODO? ensure buffer is unused
     argBuffer [] retTypes .length list.setLength argBuffer =[]
     retTypes
@@ -399,9 +398,8 @@ namespace: AMD64
     i32 : stackSize
     TypeContext ptr.mut : typeContext
   -> ArgumentLocation slice.mut RegisterState slice.mut RegisterState slice.mut ) =>: computeArgumentLocations
-    procType typeContext types.getProcIn ! "proc has in" assert =:: inType
-    procType typeContext types.getProcOut ! "proc has out" assert =:: outType
-    outType typeContext types.compositeElts =:: outTypes
+    procType typeContext types.getProcIn .data =:: inTypes
+    procType typeContext types.getProcOut .data =:: outTypes
     ## TODO? ensure buffer is unused
     argBuffer [] outTypes .length list.setLength argBuffer =[]
     outTypes
@@ -414,7 +412,6 @@ namespace: AMD64
       =:: floatMemCount
       =:: compositeMemCount
     =:: retLocs
-    inType typeContext types.compositeElts =:: inTypes
     stackSize inTypes .length i32 cast - =:: stackOffset
     stackOffset 0 >= "enough values for call" assert
     argBuffer [] retLocs .length inTypes .length + list.setLength argBuffer =[]
@@ -528,9 +525,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
     intLiteral case
       dataType .intLiteral types.intLiteralAsInt typeContext toValType return
     enum case
-      dataType typeContext types.compositeFlags types.COMP_FLAG_ONLY_EMPTY & ? "enum only has empty elements" assert
-      dataType typeContext types.enumLabelInfo ..drop =:: labelType
-      labelType typeContext toValType return
+      dataType typeContext types.enumLabelInfo ..drop typeContext toValType return
       break
     cType case
       dataType .cType
@@ -630,7 +625,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       ## TODO! treat small unions as values
       ValType .REFERENCE return
     undefined empty genericType autoType procedure
-    procIn procOut align typeSet initializer case
+    align typeSet initializer case
       ValType .EMPTY return
   end
 end
@@ -4738,19 +4733,19 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  opType typeContext types.getProcIn ..drop =:: inType
-  inType typeContext types.compositeEltCount 0 > if
-    inType 0 typeContext types.compositeGetLabel
+  opType typeContext types.getProcIn .data =:: inTypes
+  inTypes .length 0:iSize != if
+    opType 0 typeContext types.getProcArgLabel
         labelContext id.labelFlags id.FLAG_STATIC & ? if
       1:i32
     else
       0:i32
     end =:: firstArg
-    inType firstArg typeContext types.compositeGetElement
+    inTypes firstArg []
   else
-      opType typeContext types.getProcOut ..drop =:: outType
-      outType typeContext types.compositeEltCount 0 > _if
-    outType 0 typeContext types.compositeGetElement
+      opType typeContext types.getProcOut .data =:: outTypes
+      outTypes .length 0:iSize != _if
+    outTypes 0 []
   else
     Type .undefined
   end =:: baseType
@@ -4954,8 +4949,7 @@ proc(
       ##   -> stackMemory int,float,v128
       ##   -> localVariables
       ##   -> memory for named arguments passed in registers
-      procType typeContext types.getProcIn ..drop =:: inType
-      inType typeContext types.compositeElts =:: args
+      procType typeContext types.getProcIn .data =:: args
       0 =:: mut: intArgs
       0 =:: mut: floatArgs
       ## TODO? is there a way to avoid having two loops (registers are counted right to left, arguments are pushed left ot right)
@@ -4963,7 +4957,7 @@ proc(
       args .length i32 cast 1 - while $ 0 >= do =:: i
         args i slice.get =:: argType
         argType typeContext types.isEmpty or
-            inType i typeContext types.compositeGetLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+            procType i typeContext types.getProcArgLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
           continue ## skip empty arguments
         end
         argType typeContext toValType =:: valType
@@ -4986,7 +4980,7 @@ proc(
       finally i 1 - end ..drop
       ## go through arguments from left to right (to have push statements in correct order)
       0 while $ args .length i32 cast < do =:: i
-        inType i typeContext types.compositeGetLabel =:: label
+        procType i typeContext types.getProcArgLabel =:: label
         args i slice.get =:: argType
         argType typeContext types.isEmpty or label labelContext id.labelFlags id.FLAG_STATIC & ? if
           continue ## skip empty arguments
@@ -6292,7 +6286,7 @@ proc(
         end
         RegisterState MAX_DATA_REGISTERS array : argRegBuffer
         RegisterState MAX_DATA_REGISTERS array : retRegBuffer
-        ## computeReturnLocations
+        ## computeArgumentLocations
           procType
           context .argBuffer
           argRegBuffer@
@@ -6313,23 +6307,23 @@ proc(
           end
         context appendOp1
         ## TODO? compute new stack size in computeArgumentLocations
-        procType typeContext types.getProcIn  ..drop typeContext types.compositeEltCount =:: inCount
-        procType typeContext types.getProcOut ..drop =:: outType
-        outType typeContext types.compositeEltCount =:: outCount
-        retData context .stack [] .length i32 cast.u inCount - outCount + iSize cast.u RegisterRestoreMode .RESET op [] .pos context restoreRegisters
+        procType typeContext types.getProcIn .data .length =:: inCount
+        procType typeContext types.getProcOut .data =:: outTypes
+        outTypes .length =:: outCount
+        retData context .stack [] .length inCount - outCount + RegisterRestoreMode .RESET op [] .pos context restoreRegisters
         ## update stack-type of return values
-        context .stack [] .length i32 cast.u outCount - =:: retOffset
+        context .stack [] .length outCount - =:: retOffset
         outCount for =:: i
-          outType i typeContext types.compositeGetElement =:: elt
+          outTypes i [] =:: elt
           elt typeContext toValType context [] .stack retOffset i + @[] .valType=
         end
         return
       Return case
         ## TODO? procOut or procRet
-        op [] .dataType typeContext types.getProcOut ! "procedure has return type" assert =:: retType
+        op [] .dataType typeContext types.getProcOut .data =:: retTypes
         RegisterState MAX_DATA_REGISTERS array : regBuffer
         ## computeReturnLocations
-          retType
+          retTypes
           context .argBuffer
           regBuffer@
         typeContext AMD64.computeReturnLocations =:: regData =:: retLocations
