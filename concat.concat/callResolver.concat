@@ -186,9 +186,6 @@ proc(
           pos
           interpreterContext
         replaceGenerics =:: newElt
-        flags ReplaceFlags.IGNORE_EMPTY & ? and newElt typeContext types.isEmpty if
-          continue
-        end
         ## ! replaceGenerics changes type-buffer
         typeBuffer []
           newElt list.append
@@ -230,29 +227,51 @@ proc(
     procedure case
       src typeContext types.getProcIn .data =:: inTypes
       src typeContext types.getProcOut .data =:: outTypes
+      src typeContext types.getProcLabels =:: oldLabels
+      0:iSize =:: mut: labelIndex
       typeBuffer [] .length =:: typeOffset
+      labelBuffer [] .length =:: labelOffset
       inTypes for =:: inType
         inType typeBuffer labelBuffer genericValues flags pos interpreterContext replaceGenerics =:: newArg
+        flags ReplaceFlags.IGNORE_EMPTY & ? and newArg typeContext types.isEmpty if
+          continue
+        end
         ## ! cannot use buffer on stack when pointer to buffer is pssed to child
+        labelIndex oldLabels .length u< if
+          labelBuffer []
+            oldLabels labelIndex [] list.append
+          labelBuffer =[]
+        end
         typeBuffer []
           newArg list.append
         typeBuffer =[]
-      end
+      finally labelIndex 1:iSize + labelIndex= end
       typeBuffer [] .length =:: outTypesOffset
       outTypes for =:: outType
         outType typeBuffer labelBuffer genericValues flags pos interpreterContext replaceGenerics =:: newRes
+        flags ReplaceFlags.IGNORE_EMPTY & ? and newRes typeContext types.isEmpty if
+          continue
+        end
+        labelIndex oldLabels .length u< if
+          labelBuffer []
+            oldLabels labelIndex [] list.append
+          labelBuffer =[]
+        end
         typeBuffer []
           newRes list.append
         typeBuffer =[]
-      end
+      finally labelIndex 1:iSize + labelIndex= end
       ## newProcedure
-        typeBuffer [] typeOffset inTypes .length list.getSlice
+        typeBuffer [] typeOffset outTypesOffset $1 - list.getSlice
         typeBuffer [] list.asSlice outTypesOffset slice.tail
-        src typeContext types.getProcLabels
+        ## TODO? reuse old labels if there was no change
+        labelBuffer [] list.asSlice labelOffset slice.tail
         src typeContext types.getCallConvention
         typeContext
       types.newProcedure .data
+        ## reset buffers
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
+        labelBuffer [] labelOffset list.setLength labelBuffer =[]
       return
     generatedType case
       src typeContext types.getGeneratorArgs =:: args
@@ -513,13 +532,18 @@ proc(
       src ..label target ..label != if
         true return
       end
-      ## FIXME handle empty types, ? create helper funtion for matching type-array
+      ## TODO? create helper funtion for matching type-array
       ## separately run for in and out arguments
       src typeContext types.getProcIn .data =:: srcIn
       target typeContext types.getProcIn .data =:: targetIn
-      srcIn .length for =:: i
-        ## resolveGenerics
+      targetIn .length for =:: i
+        i srcIn .length u< if
           srcIn i []
+        else
+          Type .empty ## extend source with empty if necessary
+        end =:: srcElt
+        ## resolveGenerics
+          srcElt
           targetIn i []
           true
           needCast
@@ -531,9 +555,14 @@ proc(
       end
       src typeContext types.getProcOut .data =:: srcOut
       target typeContext types.getProcOut .data =:: targetOut
-      srcOut .length for =:: i
-        ## resolveGenerics
+      targetOut .length for =:: i
+        i srcOut .length u< if
           srcOut i []
+        else
+          Type .empty ## extend source with empty if necessary
+        end =:: srcElt
+        ## resolveGenerics
+          srcElt
           targetOut i []
           true
           needCast
