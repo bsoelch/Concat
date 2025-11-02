@@ -2438,8 +2438,7 @@ proc(
       ## procedure scope is handled by typeCheckProcedure
       procType BlockInfo .Procedure state openBlock
       true state .reachable=
-      procType typeContext types.getProcIn $ optional.hasData if .data
-      else ..drop
+      procType typeContext types.getProcIn $ ? if .data else ..drop
         "wrong type for procedure initialization: " sb.copyPtr
           procType typeContext sb.appendType
           " expected procedure" sb.appendS
@@ -2449,7 +2448,7 @@ proc(
       ## push unnamed arguments
       0:i32 while $ iSize cast.u argTypes .length u< do =:: i
         procType i typeContext types.getProcArgLabel =:: label
-        argTypes i slice.get =:: argType
+        argTypes i [] =:: argType
         label id.LABEL_ID_NONE == if ## push argument
           state .stack
             ## TypeInfo
@@ -4528,7 +4527,7 @@ proc(
     ## XXX? clear/reset argument map
     0:i32 while $ iSize cast.u inTypes .length u< do =:: i
       currentImpl [] .procType i typeContext types.getProcArgLabel =:: labelId
-      inTypes i slice.get =:: argType
+      inTypes i [] =:: argType
       labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
         currentImpl [] .staticArgs
           staticArgCount slice.get
@@ -4537,7 +4536,7 @@ proc(
           argType argValue TypedValue new
         map.put ..drop
         staticArgCount 1 + staticArgCount=
-      else
+      else labelId id.LABEL_ID_NONE != _if
         state .argData labelId
           argType ConstValue .None TypedValue new
         map.put ..drop

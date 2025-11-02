@@ -1603,20 +1603,43 @@ namespace: types
       Type slice optional.empty return
     end
   end
-  ## FIXME! implement access to procedure labels
   proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcLabels
-    LabelId slice.empty return
+    proc context getProcData $ optional.hasData if
+      .data [] .labels
+    else ..drop
+      LabelId slice.empty return
+    end
   end
   proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcArgLabels
-    LabelId slice.empty return
+    proc context getProcData $ optional.hasData if .data else ..drop
+      LabelId slice.empty return
+    end =:: procData
+    procData [] .labels procData [] .inTypes .length slice.head
   end
   proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcRetLabels
-    LabelId slice.empty return
+    proc context getProcData $ optional.hasData if .data else ..drop
+      LabelId slice.empty return
+    end =:: procData
+    procData [] .labels procData [] .inTypes .length slice.tail
   end
   proc( Type : proc i32 : argIndex TypeContext ptr : context -> LabelId ) =>: export: getProcArgLabel
-    id.LABEL_ID_NONE return
+    proc context getProcArgLabels =:: labels
+    argIndex 0 < or argIndex iSize cast.u labels .length u>= if
+      id.LABEL_ID_NONE return
+    end
+    labels argIndex []
   end
-  proc( Type : proc LabelId : argIndex TypeContext ptr : context -> i32 optional ) =>: export: findProcArgLabel
+  proc( Type : proc LabelId : argName TypeContext ptr : context -> i32 optional ) =>: export: findProcArgLabel
+    proc context getProcArgLabels =:: labels
+    0:i32 while $ iSize cast.u labels .length u< do =:: i
+      ## labelNamesEq
+        argName
+        labels i []
+      context .labelContext id.labelNamesEq if
+        i optional.wrap return
+      end
+      i 1 +
+    end ..drop
     i32 optional.empty return
   end
   proc( Type : proc TypeContext ptr : context -> Type slice optional ) =>: export: getProcOut
@@ -1685,7 +1708,8 @@ namespace: types
     context [] .memory
       in mixedArena.copySlice slice.freeze =:: inCopy
       out mixedArena.copySlice slice.freeze =:: outCopy
-      inCopy outCopy labels callConvention ProcType new mixedArena.copyValue =:: procId
+      labels mixedArena.copySlice slice.freeze =:: labelsCopy
+      inCopy outCopy labelsCopy callConvention ProcType new mixedArena.copyValue =:: procId
     context .memory=
     procId ProcTypeId cast Type .procedure optional.wrap return
   end
@@ -2625,9 +2649,6 @@ namespace: sb
         return
       generatedType case
         t .generatedType types.GeneratedTypeName ptr cast =:: genTypeName
-        context .generatedTypes
-          genTypeName []
-        map.get .data =:: typeData
         sb
           genTypeName .arguments [] .length for =:: i
             genTypeName [] .arguments i slice.get context sb.appendConstant
@@ -2636,10 +2657,16 @@ namespace: sb
           genTypeName [] .generator labelContext sb.appendLabelPath
           depth 0 > if
             " [ "     appendS
-              typeData .value $ ? if
-                .data context depth 1 - appendTypeRecursive
+              context .generatedTypes
+                genTypeName []
+              map.get $ ? if .data
+                .value $ ? if .data
+                  context depth 1 - appendTypeRecursive
+                else ..drop
+                  '?' sb.appendC
+                end
               else ..drop
-                '?' sb.appendC
+                "??" sb.appendS
               end
             " ]"     appendS
           end
