@@ -282,7 +282,7 @@ namespace: slice
     a .length b .length != if false return end
     a .data b .data == if true return end
     a .length for =:: i
-      a i slice.get b i slice.get context eqCheck () if
+      a i slice.get b i slice.get context eqCheck () ! if
         false return
       end
     end

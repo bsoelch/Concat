@@ -1336,7 +1336,8 @@ namespace: types
   end
   proc( Type : composite i32 : index TypeContext ptr : context -> Type ) =>: export: compositeGetElement
     composite context compositeData $ switch
-      None Enum case ..drop Type .undefined return
+      None case ..drop Type .undefined return
+      Enum case ..drop Type .empty return
       Composite case .Composite break
     end =:: compData
     index 0 < or index iSize cast.u compData [] .elements .length u>= if
@@ -1850,9 +1851,9 @@ namespace: types
     Type optional : value
   ) =:: GeneratedTypeValue
 
+  ## FIXME: double-check hash calculation for generated types
   proc( GeneratedTypeName : a GeneratedTypeName : b -> bool ) =>: genNameEq
     a .generator b .generator != if false return end
-    a .arguments .length b .arguments .length != if false return end
     a .arguments b .arguments constantEquals@ slice.eq
   end
   proc( GeneratedTypeName : a -> i32 ) =>: genNameHash
@@ -1865,6 +1866,11 @@ namespace: types
     .generatedType ?? return
   end
 
+  union(
+    _ : None
+    Type : Created
+    Type : Stored
+  ) =:: export: GeneratedTypeState
   #+ finds the generated type for the given type generator and arguments
      returns the type and a boolean that is true if a new GeneratedType was created +#
   proc(
@@ -1873,12 +1879,12 @@ namespace: types
     bool : create
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
-  -> Type optional ) =>: export: findGeneratedType
+  -> GeneratedTypeState ) =>: export: findGeneratedType
     typeContext .labelContext =:: labelContext
     generatorName arguments GeneratedTypeName new =:: genName
     typeContext .generatedTypes genName map.get =:: prevValue
     prevValue optional.hasData if
-      prevValue .data .key Type .generatedType optional.wrap return
+      prevValue .data .key Type .generatedType GeneratedTypeState .Stored return
     end
     create if
       typeContext [] .memory
@@ -1892,9 +1898,9 @@ namespace: types
           Type optional.empty
         GeneratedTypeValue new
       map.put ..drop
-      newKey Type .generatedType optional.wrap return
+      newKey Type .generatedType GeneratedTypeState .Created return
     end
-    Type optional.empty return
+    GeneratedTypeState .None return
   end
 
   proc(
@@ -1910,7 +1916,11 @@ namespace: types
       true
       typeContext
       constContext
-    findGeneratedType .data =:: prevType
+    findGeneratedType $ switch
+      Stored case .Stored break
+      Created case .Created break
+      None case ..unreachable
+    end =:: prevType
     value optional.wrap
       typeContext .generatedTypes
         prevType .generatedType GeneratedTypeName ptr cast []

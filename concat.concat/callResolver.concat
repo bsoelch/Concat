@@ -231,15 +231,20 @@ proc(
       src typeContext types.getProcIn .data =:: inTypes
       src typeContext types.getProcOut .data =:: outTypes
       typeBuffer [] .length =:: typeOffset
-      typeBuffer []
-        inTypes for =:: inType
-          inType typeBuffer labelBuffer genericValues flags pos interpreterContext replaceGenerics list.append
-        end
-        $ .length =:: outTypesOffset
-        outTypes for =:: outType
-          outType typeBuffer labelBuffer genericValues flags pos interpreterContext replaceGenerics list.append
-        end
-      typeBuffer =[]
+      inTypes for =:: inType
+        inType typeBuffer labelBuffer genericValues flags pos interpreterContext replaceGenerics =:: newArg
+        ## ! cannot use buffer on stack when pointer to buffer is pssed to child
+        typeBuffer []
+          newArg list.append
+        typeBuffer =[]
+      end
+      typeBuffer [] .length =:: outTypesOffset
+      outTypes for =:: outType
+        outType typeBuffer labelBuffer genericValues flags pos interpreterContext replaceGenerics =:: newRes
+        typeBuffer []
+          newRes list.append
+        typeBuffer =[]
+      end
       ## newProcedure
         typeBuffer [] typeOffset inTypes .length list.getSlice
         typeBuffer [] list.asSlice outTypesOffset slice.tail
@@ -284,14 +289,18 @@ proc(
         false
         typeContext
         constContext
-      types.findGeneratedType $ optional.isEmpty if ..drop ## new generated type
+      types.findGeneratedType $ switch
+        None case ..drop ## new generated type
           ## initializeGeneratedType
             generatorName
             generatorArgs
             pos
             interpreterContext
           interpreter.initializeGeneratedType .data
-        else .data end
+        break
+        Stored case .Stored break
+        Created case .Created break
+      end
         argBuffer []
           argOffset list.setLength
         argBuffer =[]

@@ -1032,7 +1032,10 @@ namespace: interpreter
       false
       typeContext
       constContext
-    types.findGeneratedType return
+    types.findGeneratedType $ switch
+      None Created case "initializing generated type failed" ..panic
+      Stored case .Stored optional.wrap break
+    end return
   end
   proc(
     ConstValue : value
@@ -3632,7 +3635,7 @@ proc(
       true
       typeContext
       constContext
-    types.findGeneratedType $ ? if .data =:: genType
+    types.findGeneratedType $ .Stored ?? if .Stored =:: genType
       argsOffset context truncateStack
       ## pushValue
         genType ConstValue .TypeId

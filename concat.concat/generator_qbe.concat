@@ -118,6 +118,8 @@ struct(
   LocalConst list : localConstants
   string list : stringConstants
   PtrConstant list : ptrConstants
+  Type i64 hashMap : typeIds
+  i64 : typeIdCount
   Type : currentProc
   i32 : localConstCount
   i32 : stackCount
@@ -568,17 +570,30 @@ namespace: sb
   end
 
   proc(
+    Type : t
+    CompilerContext ptr.mut : context
+  -> i64 ) =>: getTypeId
+    context .typeIds t map.get $ ? if
+      .data return
+    else ..drop
+      context [] .typeIdCount
+        context .typeIds t $2 map.put ..drop
+        $ 1 + context .typeIdCount=
+      return
+    end
+  end
+  proc(
     stringBuilder : sb
     Type : t
     string : name
     bool : isStored
+    CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendCompositeTypeQBE
     isStored if
       sb
         ":" sb.appendS
         name sb.appendStr
-        ## FIXME! create unique identifier for each type
-        "type-ids are not implemented" ..panic
+        t context getTypeId sb.appendI
       ## return
     else
       sb "l" sb.appendS return
@@ -656,16 +671,16 @@ namespace: sb
       pointer mutablePointer rawPointer mutableRawPointer procedure case
         sb "l" sb.appendS return
       arrayType case
-        sb t "array":s storeType .STACK ?? ! appendCompositeTypeQBE return
+        sb t "array":s storeType .STACK ?? ! context appendCompositeTypeQBE return
         break
       struct case
-        sb t "struct":s storeType .STACK ?? ! appendCompositeTypeQBE return
+        sb t "struct":s storeType .STACK ?? ! context appendCompositeTypeQBE return
         break
       union case
-        sb t "union":s storeType .STACK ?? ! appendCompositeTypeQBE return
+        sb t "union":s storeType .STACK ?? ! context appendCompositeTypeQBE return
         break
       enum case
-        sb t "enum":s storeType .STACK ?? ! appendCompositeTypeQBE return
+        sb t "enum":s storeType .STACK ?? ! context appendCompositeTypeQBE return
         break
       undefined empty genericType autoType
       initializer align typeSet case
@@ -4895,6 +4910,8 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     32 LocalConst list.create
     32 string list.create
     32 PtrConstant list.create
+    types.typeHash@ types.typeEquals@ 1024 i64 map.create
+    0
     Type .undefined
     0
     0
