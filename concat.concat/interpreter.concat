@@ -197,7 +197,7 @@ namespace: interpreter
         TYPE_ENUM case
           true return
         PROCEDURE INLINE_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION
+            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE TYPE_UNION
             TYPE_UNTAGGED_UNION TYPE_TYPESET case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
@@ -218,7 +218,7 @@ namespace: interpreter
         TYPE_UNION TYPE_UNTAGGED_UNION case
            true return
         PROCEDURE INLINE_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_TYPESET
-            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_ENUM case
+            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE TYPE_ENUM case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
             SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
@@ -236,7 +236,7 @@ namespace: interpreter
     context [] .openBlocks .length 1:iSize - while $ minBlock iSize.sge do =:: i
       context [] .openBlocks i list.at .data [] .blockType switch
         INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_TYPESET case
+            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE TYPE_TYPESET case
           true return
         PROCEDURE INLINE_PROCEDURE case
           false return
@@ -259,7 +259,7 @@ namespace: interpreter
            true return
         IF_TRUE AND_TRUE OR_FALSE ELSE_FALSE
           PROCEDURE INLINE_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
-          TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT TYPE_COMPOSITE TYPE_UNION
+          TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE TYPE_UNION
           TYPE_UNTAGGED_UNION UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
           SWITCH BREAK_SWITCH CASE DEFAULT FINALLY TYPE_TYPESET
           AND OR AND_IF OR_IF AND_DO OR_DO
@@ -351,7 +351,7 @@ namespace: interpreter
            block [] .labelOffset LabeledValueContext .TYPE_UNION return
         TYPE_ENUM case
            block [] .labelOffset LabeledValueContext .TYPE_ENUM return
-        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_OUT case
+        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW case
            block [] .labelOffset LabeledValueContext .TYPE_PROC return
         PROCEDURE INLINE_PROCEDURE
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
@@ -1765,27 +1765,36 @@ proc(
         INITIALIZER case
           op [] .val .block .blockType true context openBlock
           EvalResult .Ok return
-        TYPE_PROC_OUT case
-          context peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty or
-              currentBlock? .data [] .blockType .TYPE_PROC_IN ?? ! and
-              currentBlock? .data [] .blockType .TYPE_CPROC_IN ?? ! if
-            "unsupported proc-out block " sb.copyPtr
+        TYPE_PROC_ARROW case
+          context peekBlock $ ? if .data else ..drop
+            "unexpected end of procedure type" sb.copyPtr
             op [] .pos errors appendError
             EvalResult .Error return
+          end =:: currentBlock
+          currentBlock [] .blockType =:: blockType
+          blockType switch
+            TYPE_PROC_IN TYPE_CPROC_IN case break
+            TYPE_COMPOSITE case
+              BlockType .TYPE_PROC_IN currentBlock .blockType=
+            break
+            default
+              "unsupported proc-out block " sb.copyPtr
+              op [] .pos errors appendError
+              EvalResult .Error
+            return
           end
-          currentBlock? .data [] .argCount optional.hasData if
+          currentBlock [] .argCount optional.hasData if
             "unsupported procedure can only contain one output type " sb.copyPtr
             op [] .pos errors appendError
             EvalResult .Error return
           end
-          context [] .typeBuffer .length
-            currentBlock? .data [] .typeOffset - i32 cast.u optional.wrap
-          currentBlock? .data .argCount=
-          op currentBlock? .data
+          op currentBlock
             LabeledValueContext .TYPE_PROC
             op [] .pos
           context closedTypeBlock if EvalResult .Error return end
+          context [] .typeBuffer .length
+            currentBlock [] .typeOffset - i32 cast.u optional.wrap
+          currentBlock .argCount=
           EvalResult .Ok return
         PROCEDURE INLINE_PROCEDURE NAMESPACE case
           "unsupported block-type in constant evaluation: " sb.copyPtr
@@ -2083,7 +2092,6 @@ proc(
           EvalResult .Ok return
         TYPE_PROC_IN TYPE_CPROC_IN case
           op closedBlock@ context closeProcTypeBlock wrapResult return
-        TYPE_PROC_OUT case EvalResult .Ok return ## closing block handlied by TYPE_PROC
         TYPE_TYPESET case ## TODO evaluate type-set
           context [] .stack .length =:: stackSize
           stackSize closedBlock .stackOffset - =:: eltCount
@@ -2146,7 +2154,7 @@ proc(
         AND OR AND_IF OR_IF AND_DO OR_DO
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        UNKNOWN NAMESPACE FINALLY case
+        UNKNOWN NAMESPACE FINALLY TYPE_PROC_ARROW case
           "unsupported block-end in constant evaluation: " sb.copyPtr
             op [] .val .blockEnd .blockType sb.appendBlockType
           op [] .pos errors appendError

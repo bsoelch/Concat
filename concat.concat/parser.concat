@@ -1458,7 +1458,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             currentBlock fileState [] .wordStart opEndBlock  state appendOp
             break
           TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION INLINE_PROCEDURE
-          TYPE_ENUM TYPE_PROC_OUT TYPE_PROC_IN TYPE_CPROC_IN INITIALIZER TYPE_TYPESET case
+          TYPE_ENUM TYPE_PROC_ARROW TYPE_PROC_IN TYPE_CPROC_IN INITIALIZER TYPE_TYPESET case
             state [] .constantBlocks .length 0:iSize != if ## close matching constant block
               state [] .constantBlocks
                 list.pop ..drop
@@ -1598,20 +1598,31 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       procBlockType fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "->":s string.eq _if =:: opName
-      state currentBlockType =:: blockType
-      blockType .TYPE_PROC_IN ?? ! and blockType .TYPE_COMPOSITE ?? ! and
-          blockType .TYPE_CPROC_IN ?? ! if
-        "unexpected " sb.copyPtr
+      state [] .openBlocks list.peek $ ? if .data else ..drop
+        "unexpected `" sb.copyPtr
           opName sb.appendStr
-          " in " sb.appendS
-          blockType sb.appendBlockType
-          "-block" sb.appendS
+          "` statement" sb.appendS
         fileState [] .wordStart errors appendError
         return
+      end =:: currentBlock
+      currentBlock [] .blockType =:: blockType
+      blockType switch
+        TYPE_PROC_IN TYPE_CPROC_IN case break
+        TYPE_COMPOSITE case
+          ## TODO! update token at procedure start
+          BlockType .TYPE_PROC_IN currentBlock .blockType=
+        break
+        default
+          "unexpected " sb.copyPtr
+            opName sb.appendStr
+            " in " sb.appendS
+            blockType sb.appendBlockType
+            "-block" sb.appendS
+          fileState [] .wordStart errors appendError
+        return
       end
-      BlockType .TYPE_PROC_OUT state openScopedBlock
       ## don't update constant blocks, procedure-type is a single constant
-      BlockType .TYPE_PROC_OUT fileState [] .wordStart opBlock state appendOp
+      BlockType .TYPE_PROC_ARROW fileState [] .wordStart opBlock state appendOp
       return
     else ..dup "typeSet(":s string.eq _if ..drop
       ## TODO! own block-type
@@ -1634,41 +1645,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           list.pop ..drop
         state .constantBlocks=
       end
-      blockType .TYPE_PROC_OUT ?? ! if
-        ## TODO! this is a hack to avoid double-closing type-block in intermediate representation
-        ##  update parsing to not create seperate block for out-types
-        blockType fileState [] .wordStart opEndBlock state appendOp
-      end
+      blockType fileState [] .wordStart opEndBlock state appendOp
       blockType switch
         TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION
-            TYPE_ENUM TYPE_TYPESET case
-          break
-        TYPE_PROC_OUT case
-          state closeBlock  =:: isError .blockType =:: outerType
-          isError ! and outerType .TYPE_PROC_IN ?? or outerType .TYPE_COMPOSITE ?? or
-              outerType .TYPE_CPROC_IN ?? if
-            outerType
-              fileState [] .wordStart
-            opEndBlock state appendOp
-            break
-          end
-          "expected " sb.copyPtr
-            BlockType .TYPE_PROC_IN sb.appendBlockType
-            " block got " sb.appendS
-            outerType sb.appendBlockType
-          fileState [] .wordStart errors appendError
-          return
-        TYPE_PROC_IN TYPE_CPROC_IN case
-         "unexpected " sb.copyPtr
-            opName sb.appendStr
-            " in procedure block, expected -> followed by return types" sb.appendS
-          fileState [] .wordStart errors appendError
-          return
+            TYPE_ENUM TYPE_TYPESET TYPE_PROC_IN TYPE_CPROC_IN case return
         UNKNOWN PROCEDURE INLINE_PROCEDURE
         IF ELSE WHILE DO BREAK BREAK_SWITCH CONTINUE
         AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
+        OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE TYPE_PROC_ARROW
         SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.copyPtr
             opName sb.appendStr
@@ -1678,7 +1663,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState [] .wordStart errors appendError
           return
       end
-      return
     else ..dup "{":s string.eq _if ..drop
       BlockType .INITIALIZER state openScopedBlock
       ##  remember start position, constant offset
@@ -1722,7 +1706,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               false inConstBlock=
               break.findContainer
             INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-                TYPE_CPROC_IN TYPE_PROC_IN TYPE_PROC_OUT TYPE_COMPOSITE NAMESPACE case
+                TYPE_CPROC_IN TYPE_PROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE NAMESPACE case
               false inProcedure=
               break.findContainer
             default break

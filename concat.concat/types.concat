@@ -1753,7 +1753,10 @@ namespace: types
         context .namedTypes >$ .namedType map.get .data
         continue
       else $ .generatedType ?? _if
-        context .generatedTypes >$ .generatedType GeneratedTypeName ptr cast [] map.get .data .value .data
+        context .generatedTypes >$ .generatedType GeneratedTypeName ptr cast [] map.get
+          ## TODO! figgure out where an empty generator type is unwrapped
+          $ ? if .data .value else ..drop Type .undefined return end
+          $ ? if .data else ..drop Type .undefined return end
         continue
       end
     false do end
@@ -1855,7 +1858,8 @@ namespace: types
     end
     create if
       typeContext [] .memory
-        genName mixedArena.copyValue GeneratedTypeId cast =:: newKey
+        arguments mixedArena.copySlice slice.freeze =:: newArgs
+        generatorName newArgs GeneratedTypeName new mixedArena.copyValue GeneratedTypeId cast =:: newKey
       typeContext .memory=
       typeContext .generatedTypes
         genName

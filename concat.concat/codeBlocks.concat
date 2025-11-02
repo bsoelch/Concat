@@ -36,7 +36,7 @@ enum(
   TYPE_UNTAGGED_UNION
   TYPE_PROC_IN
   TYPE_CPROC_IN
-  TYPE_PROC_OUT
+  TYPE_PROC_ARROW
   TYPE_COMPOSITE
   TYPE_TYPESET
   NAMESPACE
@@ -167,8 +167,8 @@ namespace: sb
       TYPE_CPROC_IN case
         "proc.c( )" sb.appendS
         return
-      TYPE_PROC_OUT case
-        "( -> )" sb.appendS
+      TYPE_PROC_ARROW case
+        "->" sb.appendS
         return
       TYPE_TYPESET case
         "typeSet( )" sb.appendS
