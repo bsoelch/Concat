@@ -122,11 +122,12 @@ namespace: types
     a ArrayData ptr cast =:: aData
     aData [] .size arraySizeHash 31 * aData [] .base typeHash +
   end
+  ## TODO? should flags be required to be equal
+  ##  * figure out why identical types can have different flags
   proc( CompositeInfo ptr : a CompositeInfo ptr : b -> bool ) =>: compositeTypeEqual
     a b == if true return end
     a .elements [] .length b .elements [] .length != if false return end
     a [] .labels ? b [] .labels ? != if false return end
-    a [] .flags b [] .flags != if false return end
     a [] .elements b [] .elements typeEquals@ slice.eq ! if false return end
     a [] .labels ? ! if
       a .labels [] .data b .labels [] .data labelEq@ slice.eq return
@@ -134,7 +135,7 @@ namespace: types
     true return
   end
   proc( CompositeInfo ptr : a -> i32 ) =>: compositeTypeHash
-    a [] .flags i32 cast.u
+    0:i32
       a [] .labels ? if
         31 * a [] .labels .data labelHash@ slice.hash +
       end
@@ -1673,7 +1674,11 @@ namespace: types
         outTypes .length 0:iSize == if
           ProcRet .Empty return
         end
-        outTypes $ .length 1:iSize - [] ProcRet .Value return
+        outTypes $ .length 1:iSize - [] =:: retVal
+        retVal context isEmpty if
+          ProcRet .Empty return
+        end
+        retVal ProcRet .Value return
       CONCAT case
         outTypes .length 0:iSize == if
           ProcRet .Empty return
@@ -1681,6 +1686,7 @@ namespace: types
         outTypes .length 1:iSize == if
           outTypes 0 [] ProcRet .Value return
         end
+        ## TODO! filter out empty elements
         ## TODO reuse slice memory if possible
         outTypes
           LabelId slice optional.empty
