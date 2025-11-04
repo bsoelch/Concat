@@ -1786,13 +1786,14 @@ namespace: types
   end
   ## completely unwrap named type
   proc( Type TypeContext ptr : context -> Type ) =>: export: unwrapNamed
+    ## TODO figgure out where an empty named/generator types are unwrapped
     while
       $ .namedType ?? if
-        context .namedTypes >$ .namedType map.get .data
+        context .namedTypes >$ .namedType map.get
+          $ ? if .data else ..drop Type .undefined return end
         continue
       else $ .generatedType ?? _if
         context .generatedTypes >$ .generatedType GeneratedTypeName ptr cast [] map.get
-          ## TODO! figgure out where an empty generator type is unwrapped
           $ ? if .data .value else ..drop Type .undefined return end
           $ ? if .data else ..drop Type .undefined return end
         continue
@@ -1814,7 +1815,8 @@ namespace: types
   -> Type ) =>: export: unwrapNamedKeepGenerated
     while
       $ .namedType ?? if
-        context .namedTypes >$ .namedType map.get .data
+        context .namedTypes >$ .namedType map.get
+          $ ? if .data else ..drop Type .undefined return end
         continue
       end
     false do end

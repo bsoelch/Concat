@@ -1,6 +1,6 @@
 types:
 -----------------
-proc[15]( i32 i32 -> i32 ) ptr
+proc( i32 i32 -> i32 ) ptr
 ..intLiteral.u7
 ..intLiteral.u7
 -----------------
