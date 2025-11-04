@@ -129,7 +129,7 @@ namespace: types
     a .elements [] .length b .elements [] .length != if false return end
     a [] .labels ? b [] .labels ? != if false return end
     a [] .elements b [] .elements typeEquals@ slice.eq ! if false return end
-    a [] .labels ? ! if
+    a [] .labels ? if
       a .labels [] .data b .labels [] .data labelEq@ slice.eq return
     end
     true return
