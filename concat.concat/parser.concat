@@ -919,8 +919,12 @@ proc(
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  procType typeContext types.getProcIn .data =:: inTypes
-  procType typeContext types.getProcOut .data =:: outTypes
+  procType typeContext types.getProcIn $ ? if .data else ..drop
+    Type slice.empty
+  end =:: inTypes
+  procType typeContext types.getProcOut $ ? if .data else ..drop
+    Type slice.empty
+  end =:: outTypes
   inTypes procType typeContext types.getProcArgLabels typeContext hasStaticElement =:: hasStaticArg
   outTypes procType typeContext types.getProcRetLabels typeContext hasStaticElement
     procName labelContext id.labelFlags id.FLAG_STATIC & ? |
@@ -1185,6 +1189,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       opName .length 3:iSize == =:: named
       state [] .currentProcs .length 0:iSize != =:: isNested
       isNested if
+        ## TODO! find better way to handle creation of proc-data for nested procs (with type unknown at parse-time)
         Type .undefined
       else
         ## pop type before reading name

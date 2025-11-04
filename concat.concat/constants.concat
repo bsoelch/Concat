@@ -218,7 +218,7 @@ proc( ConstValue : a -> i32 ) =>: export: constantHash
     EnumLabel case
       a .EnumLabel i32 cast.u 1 + 5 * return
     Int case
-      a .Int $ 32 >>> ^ i32 cast.u 715415 + 7 * return
+      a .Int $ 32 >>> + i32 cast.u 715415 + 7 * return
     Float case ## most floats will only differ on the higher 32 bits ( sign+exponent+start of magnitude )
       a .Float f64.bits 32 >>> i32 cast.u i32.bitrev 61414 + 11 * return
     Char case

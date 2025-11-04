@@ -1033,8 +1033,9 @@ namespace: interpreter
       typeContext
       constContext
     types.findGeneratedType $ switch
-      None Created case "initializing generated type failed" ..panic
+      None case "initializing generated type failed" ..panic
       Stored case .Stored optional.wrap break
+      Created case ..unreachable
     end return
   end
   proc(

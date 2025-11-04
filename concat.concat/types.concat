@@ -1523,6 +1523,7 @@ namespace: sb
     LabelId : label
     LabelContext ptr : labelContext
   -> stringBuilder ) =>: appendTypeElementLabel
+    label id.LABEL_ID_NONE == if return end
     " : " appendS
     label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
       "mut: " appendS
@@ -1904,10 +1905,11 @@ namespace: types
     create if
       typeContext [] .memory
         arguments mixedArena.copySlice slice.freeze =:: newArgs
-        generatorName newArgs GeneratedTypeName new mixedArena.copyValue GeneratedTypeId cast =:: newKey
+        generatorName newArgs GeneratedTypeName new =:: newName
+        newName mixedArena.copyValue GeneratedTypeId cast =:: newKey
       typeContext .memory=
       typeContext .generatedTypes
-        genName
+        newName
         ## GeneratedTypeValue
           newKey
           Type optional.empty
@@ -2102,6 +2104,9 @@ namespace: types
         mutable if ArrayType .MUTABLE_POINTER else ArrayType .POINTER end
         unwraped context getArraySize
       context newArrayType .data return
+    end
+    src .undefined ?? if
+      src return
     end
     src context isProcedure if
       src context asUnlabeledProc
