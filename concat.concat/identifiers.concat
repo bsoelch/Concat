@@ -209,7 +209,7 @@ namespace: id
     label labelContext getLabelFile =:: srcFile
     context [] .scopes context [] .currentScopeId getScopeData =:: currentScopeData
     currentScopeData [] .visibleFiles while $ NO_IMPORTS != do =:: id
-      context [] .visibleFiles id i64 cast list.get =:: importInfo
+      context [] .visibleFiles id i64 cast [] =:: importInfo
       importInfo .fileId srcFile == if
         true return
       end
@@ -280,7 +280,7 @@ namespace: id
     end
     ## 2. search global variable in parent namespaces
     while
-      context [] .typeContext .labelContext .namespaces mNamespace i64 cast list.get .parent mNamespace=
+      context [] .typeContext .labelContext .namespaces mNamespace i64 cast [] .parent mNamespace=
       mNamespace NAMESPACE_ID_NONE !=
     do
       mNamespace path  context .typeContext .labelContext findNamespace relSpace=
@@ -966,7 +966,7 @@ namespace: id
     context [] .scopes context [] .currentScopeId getScopeData =:: currentScopeData
     ## check if already imported
     currentScopeData [] .visibleFiles while $ NO_IMPORTS != do =:: id
-      context [] .visibleFiles id i64 cast list.get =:: importInfo
+      context [] .visibleFiles id i64 cast [] =:: importInfo
       importInfo .fileId fileId == if
         return
       end
@@ -983,7 +983,7 @@ namespace: id
     fileScopeId NO_SCOPE != if
       context [] .scopes fileScopeId getScopeData =:: fileScope
       fileScope [] .visibleFiles while $ NO_IMPORTS != do =:: id
-        context [] .visibleFiles id i64 cast list.get =:: importInfo
+        context [] .visibleFiles id i64 cast [] =:: importInfo
         importInfo .fileId NO_SCOPE context importFile
       finally importInfo .prev end ..drop
     end

@@ -552,7 +552,7 @@ namespace: interpreter
           isOffset if
             arrayConst offset slice.tail ConstValue .Array8
           else
-            arrayConst 0 slice.get i64 cast.u ConstValue .Int
+            arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       Array16 case
@@ -560,7 +560,7 @@ namespace: interpreter
           isOffset if
             arrayConst offset slice.tail ConstValue .Array16
           else
-            arrayConst 0 slice.get i64 cast.u ConstValue .Int
+            arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       Array32 case
@@ -568,7 +568,7 @@ namespace: interpreter
           isOffset if
             arrayConst offset slice.tail ConstValue .Array32
           else
-            arrayConst 0 slice.get i64 cast.u ConstValue .Int
+            arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       Array64 case
@@ -576,7 +576,7 @@ namespace: interpreter
           isOffset if
             arrayConst offset slice.tail ConstValue .Array64
           else
-            arrayConst 0 slice.get i64 cast.u ConstValue .Int
+            arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       Array case
@@ -584,7 +584,7 @@ namespace: interpreter
           isOffset if
             arrayConst offset slice.tail ConstValue .Array
           else
-            arrayConst 0 slice.get
+            arrayConst 0 []
           end
         OperatorResult .success return
       LocalValue case
@@ -603,7 +603,7 @@ namespace: interpreter
           isOffset if
             arrayConst offset slice.tail LocalSlice8 cast ConstValue .LocalArray8
           else
-            arrayConst 0 slice.get i64 cast.u ConstValue .Int
+            arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .success return
       LocalArray16 case
@@ -611,21 +611,21 @@ namespace: interpreter
           isOffset if
             arrayConst offset slice.tail LocalSlice16 cast ConstValue .LocalArray16
           else
-            arrayConst 0 slice.get i64 cast.u ConstValue .Int
+            arrayConst 0 [] i64 cast.u ConstValue .Int
           end OperatorResult .success return
       LocalArray32 case
         ptrValue .LocalArray32 i32 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice32 cast ConstValue .LocalArray32
           else
-            arrayConst 0 slice.get i64 cast.u ConstValue .Int
+            arrayConst 0 [] i64 cast.u ConstValue .Int
           end OperatorResult .success return
       LocalArray64 case
         ptrValue .LocalArray64 i64 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice64 cast ConstValue .LocalArray64
           else
-            arrayConst 0 slice.get i64 cast.u ConstValue .Int
+            arrayConst 0 [] i64 cast.u ConstValue .Int
           end OperatorResult .success return
       default
         "unexpected constant for pointer value: " sb.copyPtr

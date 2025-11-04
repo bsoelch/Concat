@@ -255,8 +255,8 @@ namespace: id
     end
     context [] .namespaces base i32 cast list.at .data =:: baseSpace
     0:iSize while $ baseSpace [] .children .length u< do =:: i
-      baseSpace [] .children i list.get i32 cast =:: child
-      childName context [] .namespaces child list.get .name string.eq if
+      baseSpace [] .children i [] i32 cast =:: child
+      childName context [] .namespaces child [] .name string.eq if
         child NamespaceId cast return
       end
       i 1:iSize +
@@ -300,13 +300,13 @@ namespace: id
     id NAMESPACE_ID_NONE == if
       string.empty return
     end
-    context [] .namespaces id i64 cast list.get .name return
+    context [] .namespaces id i64 cast [] .name return
   end
   proc( NamespaceId : id LabelContext ptr : context -> NamespaceId ) =>: export: parentNamespace
     id NAMESPACE_ID_NONE == if
       NAMESPACE_ID_NONE return
     end
-    context [] .namespaces id i64 cast list.get .parent return
+    context [] .namespaces id i64 cast [] .parent return
   end
   proc(
     NamespaceImportId : parent
@@ -318,7 +318,7 @@ namespace: id
       parent NAMESPACE_IMPORT_NONE == if
         0:NamespaceImportId
       else
-        context [] .namespaceImports parent i64 cast list.get .firstChild
+        context [] .namespaceImports parent i64 cast [] .firstChild
       end
       ..dup NAMESPACE_IMPORT_NONE == if
         context [] .namespaceImports .length NamespaceImportId cast
@@ -326,10 +326,10 @@ namespace: id
       end
       NAMESPACE_IMPORT_NONE ..swap
         while ..dup NAMESPACE_IMPORT_NONE != do ..swap ..drop
-          context [] .namespaceImports ..over i64 cast list.get .imported importId == if
+          context [] .namespaceImports ..over i64 cast [] .imported importId == if
             return
           end
-          context [] .namespaceImports ..over i64 cast list.get .next
+          context [] .namespaceImports ..over i64 cast [] .next
         end ..drop
       ..dup NAMESPACE_IMPORT_NONE != if
         context [] .namespaceImports .length NamespaceImportId cast
@@ -372,7 +372,7 @@ namespace: sb
     asciify if
       sb
         namePath .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
-          namePath i list.get sb.appendAsciified
+          namePath i [] sb.appendAsciified
           ".":s sb.appendAsciified
         finally i 1:iSize - end ..drop
         label? .data [] .name sb.appendAsciified
@@ -380,7 +380,7 @@ namespace: sb
     else
       sb
         namePath .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
-          namePath i list.get sb.appendStr
+          namePath i [] sb.appendStr
           '.' sb.appendC
         finally i 1:iSize - end ..drop
         label? .data [] .name sb.appendStr

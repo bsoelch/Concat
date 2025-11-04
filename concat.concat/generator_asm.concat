@@ -4955,7 +4955,7 @@ proc(
       ## TODO? is there a way to avoid having two loops (registers are counted right to left, arguments are pushed left ot right)
       ## count argument types
       args .length i32 cast 1 - while $ 0 >= do =:: i
-        args i slice.get =:: argType
+        args i [] =:: argType
         argType typeContext types.isEmpty or
             procType i typeContext types.getProcArgLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
           continue ## skip empty arguments
@@ -4981,7 +4981,7 @@ proc(
       ## go through arguments from left to right (to have push statements in correct order)
       0 while $ args .length i32 cast < do =:: i
         procType i typeContext types.getProcArgLabel =:: label
-        args i slice.get =:: argType
+        args i [] =:: argType
         argType typeContext types.isEmpty or label labelContext id.labelFlags id.FLAG_STATIC & ? if
           continue ## skip empty arguments
         end
@@ -6637,7 +6637,7 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
         value .Array =:: elts
         0:i64 =:: mut: offset
         0:i32 while $ iSize cast.u elts .length u< do =:: i
-          eltTypes i slice.get =:: eltType
+          eltTypes i [] =:: eltType
           constType i typeContext types.tupleElementOffset .data =:: eltOffset
           offset eltOffset <= "offset <= eltOffset" assert
           offset eltOffset < if
@@ -6700,7 +6700,7 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
       i FileId cast Atomic .DebugUsesFile list.append
     end
     program [] .progFiles .length for =:: i
-      program [] .progFiles i list.get =:: f
+      program [] .progFiles i [] =:: f
       f .localOps .length 0:iSize == if continue end
       i FileId cast Atomic .DebugStartFile list.append
       f .localOps .length for i32 cast.u =:: opIndex

@@ -206,7 +206,7 @@ namespace: map
     nodeId NO_NODE == if
       V optional.empty return
     end
-    data [] .nodeBuffer nodeId i64 cast 1 - list.get .value optional.wrap return
+    data [] .nodeBuffer nodeId i64 cast 1 - [] .value optional.wrap return
   end
   proc(
     type : auto: K

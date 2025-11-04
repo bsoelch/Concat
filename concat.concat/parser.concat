@@ -2512,7 +2512,7 @@ proc(
   state [] .progContext =:: progContext
   FILE_ID_NONE =:: mut: imported
   0:iSize while $ progContext [] .progFiles .length u< do
-    progContext [] .progFiles $1 list.get .fileName sb.asStr fileName sb.asStr string.eq if
+    progContext [] .progFiles $1 [] .fileName sb.asStr fileName sb.asStr string.eq if
       $ FileId cast imported=
       break
     end

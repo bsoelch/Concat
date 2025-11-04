@@ -319,7 +319,7 @@ proc(
       program [] .labelBuffer
         $ .length 0:iSize == "label buffer is empty before use" assert
         outTypes .length for =:: i
-          outTypes i slice.get =:: arg
+          outTypes i [] =:: arg
           arg typeContext types.isEmpty if continue end
           arg typeContext types.referenceOnly or isPtrCall and i outTypes .length 1:iSize - u< if
             true hasLabel=

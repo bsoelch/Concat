@@ -182,6 +182,31 @@ namespace: list
     type : auto: T
     T list : elts
     iSize : index
+  -> T optional ) =>: export: get_Z
+    index elts .length u>= if T optional.empty return end
+    elts .data index [] optional.wrap return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    i32 : index
+  -> T optional ) =>: export: get_32
+    elts index iSize cast.u get_Z
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    i64 : index
+  -> T optional ) =>: export: get_64
+    elts index iSize cast.u get_Z
+  end
+  overload: export: get
+    get_Z get_32 get_64
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : index
   -> ) =>: checkIndex
     index elts .length u>= if
       "list index outside range" ..panic
@@ -191,7 +216,7 @@ namespace: list
     type : auto: T
     T list : elts
     iSize : index
-  -> T ) =>: export: get_Z
+  -> T ) =>: export: getValue_Z
     elts index checkIndex
     elts .data index [] return
   end
@@ -199,18 +224,18 @@ namespace: list
     type : auto: T
     T list : elts
     i32 : index
-  -> T ) =>: export: get_32
-    elts index iSize cast.u get_Z
+  -> T ) =>: export: getValue_32
+    elts index iSize cast.u getValue_Z
   end
   proc(
     type : auto: T
     T list : elts
     i64 : index
-  -> T ) =>: export: get_64
-    elts index iSize cast.u get_Z
+  -> T ) =>: export: getValue_64
+    elts index iSize cast.u getValue_Z
   end
-  overload: export: get
-    get_Z get_32 get_64
+  overload: export: getValue
+    getValue_Z getValue_32 getValue_64
   end
   proc(
     type : auto: T
@@ -501,9 +526,9 @@ namespace: list
   end
 end
 overload: export: []
-  list.get_Z
-  list.get_32
-  list.get_64
+  list.getValue_Z
+  list.getValue_32
+  list.getValue_64
 end
 overload: export: @[]
   list.atValue_Z

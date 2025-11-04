@@ -53,13 +53,13 @@ namespace: sb
     stringBuilder cast  return
   end
   proc( stringBuilder : str iSize : index -> char8 ) =>: export: charAtZ
-    str char8 list cast index list.get return
+    str char8 list cast index list.getValue return
   end
   proc( stringBuilder : str i32 : index -> char8 ) =>: export: charAt32
-    str char8 list cast index list.get return
+    str char8 list cast index list.getValue return
   end
   proc( stringBuilder : str i64 : index -> char8 ) =>: export: charAt64
-    str char8 list cast index list.get return
+    str char8 list cast index list.getValue return
   end
   overload: export: charAt charAtZ charAt32 charAt64 end
   proc( stringBuilder : str -> stringBuilder char8 ) =>: export: pop

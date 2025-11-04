@@ -5,7 +5,7 @@ proc( -> ) =>: main
   anArray@ $ ..length slice.createMutable =:: view
   5 view 3 slice.at .data =[]
   42 view 9 slice.set
-  view 3 slice.get 5 == "view[3]==5" assert
-  view 9 slice.get 42 == "view[9]==42" assert
-  view 16 slice.get 0 == "view[16]==0" assert
+  view 3 [] 5 == "view[3]==5" assert
+  view 9 [] 42 == "view[9]==42" assert
+  view 16 [] 0 == "view[16]==0" assert
 end

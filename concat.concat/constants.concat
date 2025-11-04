@@ -310,7 +310,7 @@ namespace: constant
   proc( i32 slice : ints -> bool ) =>: isString32
     0:iSize =:: mut: nonPrintable
     ints .length for =:: i
-      ints i slice.get unicode.Codepoint cast =:: cp
+      ints i [] unicode.Codepoint cast =:: cp
       cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
         false return ## definitely no string
       end
@@ -455,13 +455,13 @@ namespace: sb
           =:: maxElements
           "{ " sb.appendS
           0:iSize while ..dup maxElements u< do =:: i
-            mArray i slice.get typeContext appendConstant
+            mArray i [] typeContext appendConstant
             ' ' sb.appendC
             i 1:iSize +
           end ..drop
           mArray .length MAX_ARRAY_ELEMENTS u>= if
             mArray .length MAX_ARRAY_ELEMENTS u> if "... " sb.appendS end
-            mArray $ .length 1:iSize - slice.get typeContext appendConstant
+            mArray $ .length 1:iSize - [] typeContext appendConstant
             ' ' sb.appendC
           end
           "}" sb.appendS
@@ -491,13 +491,13 @@ namespace: sb
           =:: maxElements
           "{ " sb.appendS
           0:iSize while ..dup maxElements u< do =:: i
-            mArray i slice.get i64 cast.s appendI
+            mArray i [] i64 cast.s appendI
             ":i8 " sb.appendS
             i 1:iSize +
           end ..drop
           mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u>= if
             mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u> if "... " sb.appendS end
-            mArray $ .length 1:iSize - slice.get i64 cast.s appendI
+            mArray $ .length 1:iSize - [] i64 cast.s appendI
             ":i8 " sb.appendS
           end
           "}" sb.appendS
@@ -527,13 +527,13 @@ namespace: sb
           =:: maxElements
           "{ " sb.appendS
           0:iSize while ..dup maxElements u< do =:: i
-            mArray i slice.get i64 cast.s appendI
+            mArray i [] i64 cast.s appendI
             ":i16 " sb.appendS
             i 1:iSize +
           end ..drop
           mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u>= if
             mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u> if "... " sb.appendS end
-            mArray $ .length 1:iSize - slice.get i64 cast.s appendI
+            mArray $ .length 1:iSize - [] i64 cast.s appendI
             ":i16 " sb.appendS
           end
           "}" sb.appendS
@@ -563,13 +563,13 @@ namespace: sb
           =:: maxElements
           "{ " sb.appendS
           0:iSize while $ maxElements u< do =:: i
-            mArray i slice.get i64 cast.s appendI
+            mArray i [] i64 cast.s appendI
             ":i32 " sb.appendS
             i 1:iSize +
           end ..drop
           mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u>= if
             mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u> if "... " sb.appendS end
-            mArray $ .length 1:iSize - slice.get i64 cast.s appendI
+            mArray $ .length 1:iSize - [] i64 cast.s appendI
             ":i32 " sb.appendS
           end
           "}" sb.appendS
@@ -581,13 +581,13 @@ namespace: sb
             MAX_PRIMITIVE_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements
           0:iSize while ..dup maxElements u< do =:: i
-            mArray i slice.get appendI
+            mArray i [] appendI
             ":i64 " sb.appendS
             i 1:iSize +
           end ..drop
           mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u>= if
             mArray .length MAX_PRIMITIVE_ARRAY_ELEMENTS u> if "... " sb.appendS end
-            mArray $ .length 1:iSize - slice.get i64 cast.s appendI
+            mArray $ .length 1:iSize - [] i64 cast.s appendI
             ":i64 " sb.appendS
           end
           "}" sb.appendS

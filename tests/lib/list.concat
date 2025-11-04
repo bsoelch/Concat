@@ -25,7 +25,7 @@ proc( -> ) =>: main
     l       list.appendAll
   printList
  
-  l 0 list.get debug.print
+  l 0 [] debug.print
   '\x2a' l 3 list.set
-  l 3 list.get debug.print
+  l 3 [] debug.print
 end

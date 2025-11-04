@@ -368,7 +368,7 @@ namespace: branchTree
     ## no update of child count necessary (loose link to branch, gain link to head)
     branchHeads .length 1:iSize == if
       ## move head to first branch
-      branchHeads 0 slice.get tree .branchHead=
+      branchHeads 0 [] tree .branchHead=
       tree check
       0 MergeResult .success return ## nothing to merge
     end
@@ -376,7 +376,7 @@ namespace: branchTree
     EMPTY =:: mut: parentId
     false =:: mut: needMerge
     0:i32 while $ iSize cast.u branchHeads .length u< do
-      branchHeads ..over slice.get i32 cast =:: nodeId
+      branchHeads ..over [] i32 cast =:: nodeId
       nodeId -1 < or nodeId tree [] .nodes .length i32 cast.u >= if ## id=-1 or 0 <= id < length
         ..drop
         MergeResult .error return ## nodeId invalid
@@ -407,7 +407,7 @@ namespace: branchTree
     end ..drop
     needMerge ! if
       ## move head to first branch
-      branchHeads 0 slice.get tree .branchHead=
+      branchHeads 0 [] tree .branchHead=
       ## remember link to head in node
       tree [] .branchHead EMPTY != if
         tree [] .nodes
@@ -424,8 +424,8 @@ namespace: branchTree
     tree [] .nodes .length NodeId cast tree .branchHead=
     tree [] .nodes
        tree [] .nodes
-         branchHeads 0 slice.get i32 cast
-       list.get list.append
+         branchHeads 0 [] i32 cast
+       [] list.append
     tree .nodes=
     tree [] .nodes list.peek .data =:: mut: currentNode
     1 currentNode .childCount=
@@ -441,7 +441,7 @@ namespace: branchTree
       root .data buffer 0 =[]
       ## store parent node before unlinking child
       parentId EMPTY != if
-        tree [] .nodes parentId i32 cast list.get optional.wrap
+        tree [] .nodes parentId i32 cast [] optional.wrap
       else
         T Node optional.empty
       end =:: parentNode

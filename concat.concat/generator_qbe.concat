@@ -399,11 +399,11 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  toMerge 0 slice.get =:: rootValue
+  toMerge 0 [] =:: rootValue
   rootValue [] .varId =:: rootId
   true =:: mut: isMerged
   1:iSize while $ toMerge .length u< do =:: i
-    toMerge i slice.get [] .varId rootId != if
+    toMerge i [] [] .varId rootId != if
       false isMerged=
       i break
     end
@@ -413,13 +413,13 @@ proc(
     rootValue [] return
   end
   1:iSize while ..dup toMerge .length u< do =:: i
-    toMerge i slice.get [] .valType rootValue [] .valType != if
+    toMerge i [] [] .valType rootValue [] .valType != if
       "branches of " sb.copyPtr
          mergePoint .blockName sb.appendStr
          "-statement are out of sync expected: " sb.appendS
          rootValue [] .valType sb.appendValType
          " got: " sb.appendS
-         toMerge i slice.get [] .valType sb.appendValType
+         toMerge i [] [] .valType sb.appendValType
       mergePoint .pos errors appendError
       i break
     end
@@ -436,9 +436,9 @@ proc(
       i 0:iSize iSize.sgt if
         ", " sb.appendS
       end
-      mergePoint .branchIds i slice.get sb.appendBranchId
+      mergePoint .branchIds i [] sb.appendBranchId
       " %s" sb.appendS
-      toMerge i slice.get [] .varId sb.appendI
+      toMerge i [] [] .varId sb.appendI
       i 1:iSize +
     end ..drop
     '\n' sb.appendC
@@ -729,7 +729,7 @@ namespace: sb
     sb
       "(" sb.appendS
       outArgs .length 1:iSize - i32 cast.u while $ 0 >= do =:: i
-          outArgs i slice.get =:: arg
+          outArgs i [] =:: arg
           arg typeContext types.isEmpty if
             ## skip empty arguments
             continue
@@ -742,7 +742,7 @@ namespace: sb
           i context appendOutArgName
       finally i 1 - end ..drop
       args .length 1:iSize - i32 cast.u while $ 0 >= do =:: i
-        args i slice.get =:: mut: arg
+        args i [] =:: mut: arg
         arg typeContext types.containsGeneric if
           arg typeContext types.isArray if
             arg
@@ -785,7 +785,7 @@ namespace: sb
       0:iSize while $ value .length u< do =:: i
         valueChar sb.appendC
         ' ' sb.appendC
-        value i slice.get i64 cast.u 0xff & sb.appendI
+        value i [] i64 cast.u 0xff & sb.appendI
         ',' sb.appendC
         i 1:iSize +
       end ..drop
@@ -1012,7 +1012,7 @@ namespace: sb
               i 0:iSize != if
                 ',' sb.appendC
               end
-              eltType elts i slice.get true pos context appendConstQBE
+              eltType elts i [] true pos context appendConstQBE
               eltSize eltStride < if
                 ",z " sb.appendS
                 eltStride eltSize - sb.appendI
@@ -1026,7 +1026,7 @@ namespace: sb
             value .Array =:: elts
             0:i64 =:: mut: offset
             0:i32 while $ iSize cast.u elts .length u< do =:: i
-              types i slice.get =:: elt
+              types i [] =:: elt
               containerType i pos context tupleEltOffsetInt =:: eltOffset
               i 0 > if
                 ',' sb.appendC
@@ -1039,7 +1039,7 @@ namespace: sb
               end
               ## appendConstQBE
                 elt
-                elts i slice.get
+                elts i []
                 true
                 pos
               context appendConstQBE
@@ -1268,7 +1268,7 @@ namespace: sb
       false =:: mut: hasElt
       sb
         0:i32 while $ iSize cast.u elts .length u< do =:: i
-          elts i slice.get =:: elt
+          elts i [] =:: elt
           elt typeContext types.isEmpty if
             i 1 + continue
           end
@@ -1319,14 +1319,14 @@ namespace: sb
         -1:iSize =:: mut: nonEmptyIndex
         0:iSize =:: mut: nonEmptyCount
         elts .length for =:: i
-          elts i slice.get =:: elt
+          elts i [] =:: elt
           elt typeContext types.isEmpty if continue end
           nonEmptyCount 1:iSize + nonEmptyCount=
           i nonEmptyIndex=
         end
         nonEmptyCount 0:iSize != "non-empty union has non-empty element" assert
         nonEmptyCount 1:iSize == if
-          elts nonEmptyIndex slice.get =:: elt
+          elts nonEmptyIndex [] =:: elt
           ## appendNestedTypeDeclarationQBE
             elt
             pos
@@ -1684,7 +1684,7 @@ proc(
   tupleType typeContext types.compositeElts =:: elts
   sb
     0:i32 while $ iSize cast.u elts .length u< do =:: i
-      elts i slice.get =:: eltType
+      elts i [] =:: eltType
       eltType context toValType =:: eltValType
       tupleType i pos context tupleEltOffsetInt =:: eltOffset
       eltType typeContext types.isEmpty if
@@ -1738,7 +1738,7 @@ proc(
   tupleType typeContext types.compositeElts =:: elts
   sb
     elts .length 1:iSize - i32 cast while ..dup 0 >= do =:: i
-      elts i slice.get =:: eltType
+      elts i [] =:: eltType
       tupleType i pos context tupleEltOffsetInt =:: eltOffset
       eltType typeContext types.isEmpty if
         i 1 - continue
@@ -1823,13 +1823,13 @@ proc(
         labels i slice.at .data [] .caseId =:: caseId
         ## BranchId
           BranchType .LABEL
-          opIndex caseJumpDistances caseId slice.get i32 cast +
+          opIndex caseJumpDistances caseId [] i32 cast +
         BranchId new =:: caseBranch
         ## BranchId
           BranchType .NEXT
           context nextJumpLabelId
         BranchId new =:: nextBranch
-        labels i slice.get .value switchLabelAsInt =:: cmpVal
+        labels i [] .value switchLabelAsInt =:: cmpVal
         ## cmp int
           valType
           't' valId
@@ -1847,7 +1847,7 @@ proc(
         labels loopCount slice.at .data [] .caseId =:: caseId
         ## BranchId
           BranchType .LABEL
-          opIndex caseJumpDistances caseId slice.get i32 cast +
+          opIndex caseJumpDistances caseId [] i32 cast +
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       else
@@ -1868,7 +1868,7 @@ proc(
     BranchType .NEXT
     context nextJumpLabelId
   BranchId new =:: geBranch
-  labels p slice.get .value switchLabelAsInt =:: cmpVal
+  labels p [] .value switchLabelAsInt =:: cmpVal
   labels p slice.cutIndex =:: lElts =:: rElts
   sb
     ## cmp int
@@ -3018,7 +3018,7 @@ proc(
   sb =:: mut: newSb
   ## push out arguments on stack
   outArgsOffset while $ argIndices [] .length u< do =:: i
-    argIndices [] i list.get =:: outArg
+    argIndices [] i [] =:: outArg
     ValType .REFERENCE context pushValue =:: argId
     newSb
       "%s" sb.appendS
@@ -3229,7 +3229,7 @@ proc(
         op [] .dataType typeContext types.getProcIn .data =:: args
         0:i32 while $ iSize cast.u args .length u< do =:: i
           op [] .dataType i typeContext types.getProcArgLabel =:: label
-          args i slice.get =:: argType
+          args i [] =:: argType
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
@@ -3778,7 +3778,7 @@ proc(
           i 1 + continue ## skip static arguments
         end
         argFlags id.FLAG_AUTO & ? if
-          callInfo [] prog getCallData [] .autoArgs autoArgIndex slice.get =:: argVal
+          callInfo [] prog getCallData [] .autoArgs autoArgIndex [] =:: argVal
           autoArgIndex 1 + autoArgIndex=
           argVal .None ?? ! if
             newSb
@@ -3856,7 +3856,7 @@ proc(
       calledType typeContext types.getProcOutArgs =:: outArgs
       0:iSize =:: mut: outArgCount
       0:iSize while ..dup outArgs .length u< do =:: i
-        outArgs i slice.get =:: arg
+        outArgs i [] =:: arg
         arg typeContext types.isEmpty if
           ## skip empty arguments
           i 1:iSize + continue
@@ -4752,7 +4752,7 @@ proc(
           -1:i32  string.empty ## values will be ignored
         end =:: retStr =:: retId
         outTypes .length 1:iSize - i32 cast while $ 0 >= do =:: i
-          outTypes i slice.get =:: elt
+          outTypes i [] =:: elt
           elt typeContext types.isEmpty if
             i 1 - continue
           end
@@ -4991,7 +4991,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   sb
     ## constant references
     program [] .constantReferences .length for =:: i
-      program [] .constantReferences i list.get =:: constRef
+      program [] .constantReferences i [] =:: constRef
       "data $" sb.appendS
       CONST_REFERENCE_NAME sb.appendS
       i sb.appendI
@@ -5001,7 +5001,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     end
     ## code
     program [] .progFiles .length for =:: i
-      program [] .progFiles i list.get =:: f
+      program [] .progFiles i [] =:: f
       "dbgfile \"" sb.appendS
       f .fileName sb.appendSb
       "\"\n"    sb.appendS
@@ -5020,7 +5020,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     target ..over io.fputSb ..drop
     sb.clear
     context [] .stringConstants .length for =:: i
-      context [] .stringConstants i list.get =:: str
+      context [] .stringConstants i [] =:: str
       "data $" sb.appendS
       STRING_CONST_NAME sb.appendS
       i sb.appendI

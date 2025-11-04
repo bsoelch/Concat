@@ -71,13 +71,13 @@ namespace: string
   end
 
   proc( string : str iSize : index -> char8 ) =>: export: charAt_Z
-    str char8 slice cast index slice.get return
+    str char8 slice cast index slice.getValue return
   end
   proc( string : str i32 : index -> char8 ) =>: export: charAt_32
-    str char8 slice cast index slice.get return
+    str char8 slice cast index slice.getValue return
   end
   proc( string : str i64 : index -> char8 ) =>: export: charAt_64
-    str char8 slice cast index slice.get return
+    str char8 slice cast index slice.getValue return
   end
   overload: export: charAt
     charAt_Z
@@ -185,13 +185,13 @@ namespace: string16
   end
 
   proc( string16 : str iSize : index -> char16 ) =>: export: get_Z
-    str char16 slice cast index slice.get return
+    str char16 slice cast index [] return
   end
   proc( string16 : str i32 : index -> char16 ) =>: export: get_32
-    str char16 slice cast index slice.get return
+    str char16 slice cast index [] return
   end
   proc( string16 : str i64 : index -> char16 ) =>: export: get_64
-    str char16 slice cast index slice.get return
+    str char16 slice cast index [] return
   end
   overload: export: get
     get_Z
@@ -223,13 +223,13 @@ namespace: string32
   end
 
   proc( string32 : str iSize : index -> char32 ) =>: export: get_Z
-    str char32 slice cast index slice.get return
+    str char32 slice cast index [] return
   end
   proc( string32 : str i32 : index -> char32 ) =>: export: get_32
-    str char32 slice cast index slice.get return
+    str char32 slice cast index [] return
   end
   proc( string32 : str i64 : index -> char32 ) =>: export: get_64
-    str char32 slice cast index slice.get return
+    str char32 slice cast index [] return
   end
   overload: export: get
     get_Z

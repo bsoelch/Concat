@@ -1148,7 +1148,7 @@ namespace: program.jumps
     ifData [] .orCount for =:: i
       ifData [] .orPositions
         i
-      slice.get =:: orPos
+      [] =:: orPos
       newOps .length i32 cast
         orPos - JumpDistance cast
       newOps
@@ -1169,7 +1169,7 @@ namespace: program.jumps
     ifData [] .andCount for =:: i
       ifData [] .andPositions
         i
-      slice.get =:: andPos
+      [] =:: andPos
       newOps .length i32 cast
         andPos - JumpDistance cast
       newOps
@@ -1261,7 +1261,7 @@ namespace: program.jumps
     switchData [] .breakCount for =:: i
       switchData [] .breakPositions
         i
-      slice.get =:: breakPos
+      [] =:: breakPos
       newOps .length i32 cast
         breakPos - JumpDistance cast
       newOps
@@ -1338,7 +1338,7 @@ namespace: program.jumps
       blockId i32 cast
     list.at .data =:: whileData
     whileData [] .orCount for =:: i
-      whileData [] .orPositions i slice.get =:: orPos
+      whileData [] .orPositions i [] =:: orPos
       newOps .length i32 cast
         orPos - JumpDistance cast
       newOps
@@ -1358,7 +1358,7 @@ namespace: program.jumps
     whileData [] .continueCount for =:: i
       whileData [] .continuePositions
         i
-      slice.get =:: continuePos
+      [] =:: continuePos
       newOps .length i32 cast
         continuePos - JumpDistance cast
       newOps
@@ -1376,7 +1376,7 @@ namespace: program.jumps
       blockId i32 cast
     list.at .data =:: whileData
     whileData [] .breakCount for =:: i
-      whileData [] .breakPositions i slice.get =:: breakPos
+      whileData [] .breakPositions i [] =:: breakPos
       newOps .length i32 cast
         breakPos - JumpDistance cast
       newOps
@@ -1426,7 +1426,7 @@ namespace: program.jumps
     andOrData [] .andOrCount for =:: i
       andOrData [] .andOrPositions
         i
-      slice.get =:: andOrPos
+      [] =:: andOrPos
       newOps .length i32 cast
         andOrPos - JumpDistance cast
       newOps

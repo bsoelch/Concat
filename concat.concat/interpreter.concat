@@ -379,7 +379,7 @@ namespace: interpreter
     typeContext .labelContext =:: labelContext
     context .labelBuffer =:: labels
     initialLabelOffset while $ labels [] .length u< do =:: i
-      labels [] i list.get =:: prevLabel
+      labels [] i [] =:: prevLabel
       prevLabel label labelContext id.labelNamesEq if
         "duplicate label \"" sb.copyPtr
         label labelContext sb.appendLabelName
@@ -838,9 +838,9 @@ namespace: interpreter
     else
       string.empty true return
     end =:: str
-    str 1 slice.get .Int ?? ! if string.empty true return end
-    str 1 slice.get .Int iSize cast.u =:: length
-    persistentCopy str 0 slice.get false constContext constValueAsString =:: isErr
+    str 1 [] .Int ?? ! if string.empty true return end
+    str 1 [] .Int iSize cast.u =:: length
+    persistentCopy str 0 [] false constContext constValueAsString =:: isErr
       $ .length length u< if true return end
       length string.head
     isErr return
@@ -1020,7 +1020,7 @@ namespace: interpreter
         continue
       end
       inTypes i [] =:: argType
-      args i slice.get =:: argValue
+      args i [] =:: argValue
       argValue argType pos context pushValue
     finally i 1 + end ..drop
     op@ context evaluateOperation ..drop
@@ -1204,7 +1204,7 @@ namespace: interpreter
     =:: containerValue
     ## FIXME out of bounds access should not crash compiler
     containerValue .Array ?? if
-      containerValue .Array elementIndex slice.get
+      containerValue .Array elementIndex []
     else containerValue .LocalArray ?? _if
       containerValue .LocalArray ConstValue slice.mut cast
         elementIndex slice.at .data
@@ -1344,7 +1344,7 @@ namespace: interpreter
       LocalArray8 case
         localArray .LocalArray8 i8 slice.mut cast =:: arrayData
         localArray .LocalArray8 .length 1:iSize == and valType typeContext types.isIntLike if
-          arrayData 0 slice.get i64 cast.u ConstValue .Int return
+          arrayData 0 [] i64 cast.u ConstValue .Int return
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
@@ -1353,7 +1353,7 @@ namespace: interpreter
       LocalArray16 case
         localArray .LocalArray16 i16 slice.mut cast =:: arrayData
         arrayData .length 1:iSize == and valType typeContext types.isIntLike if
-          arrayData 0 slice.get i64 cast.u ConstValue .Int return
+          arrayData 0 [] i64 cast.u ConstValue .Int return
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
@@ -1362,7 +1362,7 @@ namespace: interpreter
       LocalArray32 case
         localArray .LocalArray32 i32 slice.mut cast =:: arrayData
         arrayData .length 1:iSize == and valType typeContext types.isIntLike if
-          arrayData 0 slice.get i64 cast.u ConstValue .Int return
+          arrayData 0 [] i64 cast.u ConstValue .Int return
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
@@ -1371,7 +1371,7 @@ namespace: interpreter
       LocalArray64 case
         localArray .LocalArray64 i64 slice.mut cast =:: arrayData
         arrayData .length 1:iSize == and valType typeContext types.isIntLike if
-          arrayData 0 slice.get ConstValue .Int return
+          arrayData 0 [] ConstValue .Int return
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
@@ -1386,7 +1386,7 @@ namespace: interpreter
     valType typeContext types.getBaseType =:: arrayBase
     ## 1. copy elements
     dataArray .length for =:: i
-      dataArray i slice.get =:: elt
+      dataArray i [] =:: elt
       arrayBase .undefined ?? ! if
         arrayBase
       else
@@ -1965,7 +1965,7 @@ proc(
                 op [] .pos errors appendError
               end if
                 switchData [] .caseJumpDistances
-                  label [] .caseId slice.get
+                  label [] .caseId []
                 EvalResult .Jump return
               end
             end
@@ -2102,7 +2102,7 @@ proc(
           ## TODO? create temp-allocator in context
           eltCount types.TypeSetEntry list.create
             closedBlock .stackOffset while $ stackSize u< do =:: i
-              context [] .stack i list.get =:: value
+              context [] .stack i [] =:: value
               value .TypeId ?? if
                 value .TypeId typeContext types.isTypeSet ! if
                   value .TypeId types.TypeSetEntry .typeId list.append
@@ -2582,7 +2582,7 @@ proc(
           list.clear
         idContext .arraySizeBuffer=
         ## TODO merge check for dynamic size with size computation loop
-        offset minOffset u> and context [] .stack offset list.get .WildCard ?? if
+        offset minOffset u> and context [] .stack offset [] .WildCard ?? if
           false fixedSize=
           ## TODO change _ ptr syntax to dynamic pointers (after removing from standard library)
           "using _ ptr for raw pointers is deprecated" sb.copyPtr op [] .pos errors appendWarning
@@ -2599,7 +2599,7 @@ proc(
           intArgs 1 + intArgs=
         finally i 1:iSize - end offset=
         1:iSize while $ intArgs iSize cast.u u<= do
-          context [] .stack offset $2 + list.get =:: intArg
+          context [] .stack offset $2 + [] =:: intArg
           intArg .Int ?? if
             ## TODO ensure array sizes are positive
             idContext [] .arraySizeBuffer
@@ -2622,7 +2622,7 @@ proc(
           op [] .pos errors appendError
           EvalResult .Error return
         end
-        context [] .stack offset list.get =:: typeConstant
+        context [] .stack offset [] =:: typeConstant
         typeConstant .TypeId ?? ! if
           "unexpected constant parameter for type-modifier " sb.copyPtr
             op [] .val .typeModifier sb.appendTypeModifier
@@ -2983,7 +2983,7 @@ proc(
       op [] .pos context checkStack if
         EvalResult .Error return
       end
-      context [] .stack $ .length offset - list.get =:: value
+      context [] .stack $ .length offset - [] =:: value
       castInfo .src
         SignType .NONE
         value
@@ -3277,10 +3277,10 @@ proc(
             EvalResult .Error return
           end
           context [] .stack
-            $ $1 .length offset - list.get list.append
+            $ $1 .length offset - [] list.append
           context .stack=
           context [] .stackInfo
-            $ $1 .length offset - list.get list.append
+            $ $1 .length offset - [] list.append
           context .stackInfo=
           EvalResult .Ok return
         ROTATE case
@@ -3444,10 +3444,10 @@ namespace: interpreter
     typeContext .labelContext =:: labelContext
     "memcpy":s procName labelContext id.labelNameEq if
       args .length 3:iSize != or
-          args 2 slice.get typeContext types.isPointer ! or
-          args 2 slice.get typeContext types.isMutable ! or
-          args 1 slice.get typeContext types.isPointer ! or
-          args 0 slice.get typeContext types.isIntLike ! if
+          args 2 [] typeContext types.isPointer ! or
+          args 2 [] typeContext types.isMutable ! or
+          args 1 [] typeContext types.isPointer ! or
+          args 0 [] typeContext types.isIntLike ! if
         "unexpected arguments for `memcpy` expected: " sb.copyPtr
           "( <int-primitive> <ptr> <ptr.mut> -> ... ) got: ( " sb.appendS
           args for typeContext sb.appendType ' ' sb.appendC end
@@ -3479,7 +3479,7 @@ namespace: interpreter
         true return
       end =:: resPtr
       resPtr
-        args 2 slice.get
+        args 2 []
         pos
       context pushValue
       false return
@@ -3531,9 +3531,9 @@ namespace: interpreter
     context [] .stack .length elts .length - =:: offset
     0:iSize while $ elts .length u< do =:: i
       context [] .stackInfo offset i + list.at .data =:: stackInfo
-      stackInfo [] .valueType elts i slice.get typeContext types.canAutoCast ! if
+      stackInfo [] .valueType elts i [] typeContext types.canAutoCast ! if
         "wrong argument for tuple creation expected: " sb.copyPtr
-          elts i slice.get typeContext sb.appendType
+          elts i [] typeContext sb.appendType
           " got: " sb.appendS
           stackInfo [] .valueType typeContext sb.appendType
         pos errors appendError
@@ -3677,7 +3677,7 @@ proc(
     procType i typeContext types.getProcArgLabel =:: label
     label labelContext id.labelFlags =:: labelFlags
     labelFlags id.FLAG_AUTO & ? if
-      autoArgs autoArgOffset slice.get
+      autoArgs autoArgOffset []
         $ .GenericArg ?? if
           .GenericArg =:: varId
           prevVariables optional.hasData and
@@ -3698,7 +3698,7 @@ proc(
         ## Constant
           value
           ## ValueInfo
-            args i slice.get
+            args i []
             pos
           ValueInfo new
         Constant new
@@ -3713,13 +3713,13 @@ proc(
       implId 0 >= "implId is not negative" assert
       procData .implementation .code [] .implementations
         implId list.at .data
-      [] .staticArgs staticArgOffset slice.get =:: value
+      [] .staticArgs staticArgOffset [] =:: value
       context [] .localVariables .data
         label
         ## Constant
           value
           ## ValueInfo
-            args i slice.get
+            args i []
             pos
           ValueInfo new
         Constant new
@@ -3926,7 +3926,7 @@ proc(
   end
   context [] .stack .length outTypes .length - =:: outOffset
   outTypes .length for =:: i
-    outTypes i slice.get
+    outTypes i []
       $ typeContext types.containsGeneric if
         ## TODO update generics
       end
@@ -3940,7 +3940,7 @@ proc(
       pos errors appendError
     end
     ## TODO why is return value of list.empty not cast correctly (struct(...) instead of `T list`)
-    context [] .stack outOffset i + list.get
+    context [] .stack outOffset i + []
       ## TODO ensure returned values do not point to deleted local memory
       valType typeContext types.isPointer ! if
         ## unwrap local values

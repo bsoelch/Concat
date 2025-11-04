@@ -1418,14 +1418,14 @@ namespace: types
   -> Type ) =>: export: newInitializerType
     ##  check if initializer can be array
     elts .length 0:iSize != if
-      elts 0 slice.get
+      elts 0 []
     else ## TODO? special type for empty array?
       primitive.I32 ## TODO? better default type for empty array
     end =:: mut: arrayType
     0:iSize while $ elts .length u< do =:: i
-      elts i slice.get =:: eltType
+      elts i [] =:: eltType
       labels optional.hasData and
-        labels .data i slice.get id.LABEL_ID_NONE != if
+        labels .data i [] id.LABEL_ID_NONE != if
         ## if there is a labeled element the initializer is not an array
         Type .undefined arrayType=
         i break
@@ -2064,7 +2064,7 @@ namespace: types
         t .generatedType GeneratedTypeName ptr cast =:: genType
         ## a generatedType is generic if one of its arguments is generic
         genType .arguments [] .length for =:: i
-          genType [] .arguments i slice.get =:: arg
+          genType [] .arguments i [] =:: arg
           ConstValue ..length 23:iSize == "no new constants" assert
           arg .GenericArg ?? or arg .TypeId ?? and arg .TypeId context containsGeneric if
             true return
@@ -2689,7 +2689,7 @@ namespace: sb
         t .generatedType types.GeneratedTypeName ptr cast =:: genTypeName
         sb
           genTypeName .arguments [] .length for =:: i
-            genTypeName [] .arguments i slice.get context sb.appendConstant
+            genTypeName [] .arguments i [] context sb.appendConstant
             ' ' sb.appendC
           end
           genTypeName [] .generator labelContext sb.appendLabelPath

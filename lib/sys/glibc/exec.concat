@@ -46,7 +46,8 @@ namespace: exec
       mem.alloc =:: argsPtr
       context .argOffsets .length for =:: i
         context .argBuffer .data
-          context .argOffsets i list.get @[]
+          context .argOffsets i []
+        @[]
           ..ctype.char ptr.raw.mut cast!
         argsPtr i =[]
       end

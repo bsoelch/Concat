@@ -72,29 +72,24 @@ namespace: slice
     T slice.emptyMutable return
   end
 
-  proc( iSize : index iSize : length -> ) =>: checkIndex
-    index length u>= if
-      "slice index outside range" ..panic
-    end
+  proc( type : auto: T T slice : elts iSize : index -> T optional ) =>: export: get_Z
+    index elts .length u>= if T optional.empty return end
+    elts .data index [] optional.wrap return
   end
-  proc( type : auto: T T slice : elts iSize : index -> T ) =>: export: get_Z
-    index elts .length checkIndex
-    elts .data index [] return
+  proc( type : auto: T T slice.mut : elts iSize : index -> T optional ) =>: export: get_mut
+    index elts .length u>= if T optional.empty return end
+    elts .data index [] optional.wrap return
   end
-  proc( type : auto: T T slice.mut : elts iSize : index -> T ) =>: export: get_mut
-    index elts .length checkIndex
-    elts .data index [] return
-  end
-  proc( type : auto: T T slice : elts i32 : index -> T ) =>: export: get_32
+  proc( type : auto: T T slice : elts i32 : index -> T optional ) =>: export: get_32
     elts index iSize cast.u get_Z
   end
-  proc( type : auto: T T slice : elts i64 : index -> T ) =>: export: get_64
+  proc( type : auto: T T slice : elts i64 : index -> T optional ) =>: export: get_64
     elts index iSize cast.u get_Z
   end
-  proc( type : auto: T T slice.mut : elts i32 : index -> T ) =>: export: get_32mut
+  proc( type : auto: T T slice.mut : elts i32 : index -> T optional ) =>: export: get_32mut
     elts index iSize cast.u get_mut
   end
-  proc( type : auto: T T slice.mut : elts i64 : index -> T ) =>: export: get_64mut
+  proc( type : auto: T T slice.mut : elts i64 : index -> T optional ) =>: export: get_64mut
     elts index iSize cast.u get_mut
   end
   overload: export: get
@@ -104,6 +99,39 @@ namespace: slice
     get_64
     get_32mut
     get_64mut
+  end
+  proc( iSize : index iSize : length -> ) =>: checkIndex
+    index length u>= if
+      "slice index outside range" ..panic
+    end
+  end
+  proc( type : auto: T T slice : elts iSize : index -> T ) =>: export: getValue_Z
+    index elts .length checkIndex
+    elts .data index [] return
+  end
+  proc( type : auto: T T slice.mut : elts iSize : index -> T ) =>: export: getValue_mut
+    index elts .length checkIndex
+    elts .data index [] return
+  end
+  proc( type : auto: T T slice : elts i32 : index -> T ) =>: export: getValue_32
+    elts index iSize cast.u getValue_Z
+  end
+  proc( type : auto: T T slice : elts i64 : index -> T ) =>: export: getValue_64
+    elts index iSize cast.u getValue_Z
+  end
+  proc( type : auto: T T slice.mut : elts i32 : index -> T ) =>: export: getValue_32mut
+    elts index iSize cast.u getValue_mut
+  end
+  proc( type : auto: T T slice.mut : elts i64 : index -> T ) =>: export: getValue_64mut
+    elts index iSize cast.u getValue_mut
+  end
+  overload: export: getValue
+    getValue_Z
+    getValue_mut
+    getValue_32
+    getValue_64
+    getValue_32mut
+    getValue_64mut
   end
   proc(
     type : auto: T
@@ -265,7 +293,7 @@ namespace: slice
     a .length b .length != if false return end
     a .data b .data == if true return end
     a .length for =:: i
-      a i slice.get b i slice.get != if
+      a i [] b i [] != if
         false return
       end
     end
@@ -282,7 +310,7 @@ namespace: slice
     a .length b .length != if false return end
     a .data b .data == if true return end
     a .length for =:: i
-      a i slice.get b i slice.get context eqCheck () ! if
+      a i [] b i [] context eqCheck () ! if
         false return
       end
     end
@@ -320,8 +348,8 @@ namespace: slice
       true =:: mut: match
       0:iSize while ..dup b .length u< do =:: j
         ## eq
-          a i j + slice.get
-          b j slice.get
+          a i j + []
+          b j []
         eq () ! if
           false match=
           j break
@@ -349,8 +377,8 @@ namespace: slice
       true =:: mut: match
       0:iSize while ..dup b .length u< do =:: j
         ## eq
-          a i j + slice.get
-          b j slice.get
+          a i j + []
+          b j []
         eq () ! if
           false match=
           j break
@@ -681,12 +709,12 @@ namespace: slice
 end
 import itrs/slice
 overload: export: []
-  slice.get_Z
-  slice.get_mut
-  slice.get_32
-  slice.get_64
-  slice.get_32mut
-  slice.get_64mut
+  slice.getValue_Z
+  slice.getValue_mut
+  slice.getValue_32
+  slice.getValue_64
+  slice.getValue_32mut
+  slice.getValue_64mut
 end
 overload: export: @[]
   slice.atValue_Z

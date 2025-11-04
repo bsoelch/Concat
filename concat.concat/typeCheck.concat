@@ -635,7 +635,7 @@ proc(
   types .length i32 list.create =:: mut: argOffsets
   stackCastOffset0 =:: mut: stackCastOffset
   1:iSize while $ types .length u<= do =:: i
-    types types .length i - slice.get =:: expectedType
+    types types .length i - [] =:: expectedType
     state [] .stack branchTree.depth 0 <= if
       expectedType .empty ?? if
         i 1:iSize + continue ## skip empty arguments if no values on stack
@@ -1051,9 +1051,9 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   toMerge .length 1:iSize == if
-    toMerge 0 slice.get [] return
+    toMerge 0 [] [] return
   end
-  toMerge mergePoint .rootBranch slice.get =:: root
+  toMerge mergePoint .rootBranch [] =:: root
   root [] .valueType =:: mut: mergedType
   mergedType types.isLiteral if
     mergePoint .mergeType switch
@@ -1068,7 +1068,7 @@ proc(
     i mergePoint .rootBranch == if
       i 1 + continue
     end
-    toMerge i slice.get =:: current
+    toMerge i [] =:: current
     current [] .valueType
       $ types.isLiteral and mergePoint .mergeType .NO_CAST ?? if
         typeContext types.literalToType
@@ -1122,12 +1122,12 @@ proc(
   end ..drop
   noError if ## don't try casting values if merging types failed
     0:i32 while $ iSize cast.u toMerge .length u< do =:: i
-      toMerge i slice.get =:: current
+      toMerge i [] =:: current
         current [] .valueType
           $ types.isLiteral if typeContext types.literalToType end
         =:: currentType
         currentType mergedType types.typeEquals ! and current [] .valueType  mergedType types.typeEquals ! if
-          mergePoint .castPointOffsets i slice.get =:: castRoot
+          mergePoint .castPointOffsets i [] =:: castRoot
           castRoot 0 >= if
             mergePoint .state [] .compiledOps castRoot offset + list.at .data =:: castPoint
             castPoint [] .val .NOP ?? and castPoint [] .val .NOP .RESERVED ?? if
@@ -1301,7 +1301,7 @@ end
 proc( i32 : index TypeCheckState ptr.mut : state -> i32 ) =>: copyOp
   state [] .compiledOps .length i32 cast.u =:: copyIndex
   state [] .compiledOps
-    $ index list.get list.append
+    $ index [] list.append
   state .compiledOps=
   copyIndex return
 end
@@ -1797,7 +1797,7 @@ proc(
   op .dataType .autoType ?? if ## try resolving auto-types
     op .dataType types.getAutoTypeId =:: id
     id iSize cast.u program [] .autoTypes .length u< if
-      program [] .autoTypes id list.get =:: autoType
+      program [] .autoTypes id [] =:: autoType
       autoType .undefined ?? ! if
         autoType op@ .dataType=
       end
@@ -4149,7 +4149,7 @@ proc(
               list.at .data
             .andOrPositions=
           program .programMemory=
-          closed .AndOr .andOrPositions 0 list.get
+          closed .AndOr .andOrPositions 0 []
             currentOpIndex - JumpDistance cast
           op@ .val .blockEnd .jumpDistance=
           andOrBlock .andOrPositions list.free ..drop
@@ -4530,7 +4530,7 @@ proc(
       inTypes i [] =:: argType
       labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
         currentImpl [] .staticArgs
-          staticArgCount slice.get
+          staticArgCount []
         =:: argValue
         state .argData labelId
           argType argValue TypedValue new
@@ -4589,7 +4589,7 @@ proc(
   0:i32 while ..dup codeImpl [] .codeLength < do =:: i
     0 skipOps=
     program [] .tmpOps
-      i codeImpl [] .codeStart + list.get
+      i codeImpl [] .codeStart + []
       skipOps@
     state typeCheckOp
     i skipOps + 1 +
@@ -4656,7 +4656,7 @@ proc(
   procId implId ProcCheckType .REQUIRE_DEFINED expandedAt optional.wrap state typeCheckProcedure
   ##  go through called procedures in breadth first order
   missingProcsOffset while $ state [] .missingProcs .length u< do =:: i
-    state [] .missingProcs i list.get =:: nextProc
+    state [] .missingProcs i [] =:: nextProc
     ## XXX? remember/restore complete expansion stack
     ## typeCheckProcedure
       nextProc .impl .procId

@@ -10,7 +10,7 @@ end
 
 proc( -> ) =>: main
   "Hello World" slice.wrap =:: str
-  str 5 slice.get debug.print
+  str 5 [] debug.print
   str 'A' slice.indexOf .data ?? debug.print
   str 'o' slice.indexOf .data debug.print
   str 'A' slice.lastIndexOf .data ?? debug.print
