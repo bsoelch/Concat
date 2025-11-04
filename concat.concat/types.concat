@@ -1519,6 +1519,23 @@ namespace: types
 end
 namespace: sb
   proc(
+    stringBuilder
+    LabelId : label
+    LabelContext ptr : labelContext
+  -> stringBuilder ) =>: appendTypeElementLabel
+    " : " appendS
+    label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+      "mut: " appendS
+    end
+    label labelContext id.labelFlags id.FLAG_AUTO & ? if
+      "auto: " appendS
+    end
+    label labelContext id.labelFlags id.FLAG_STATIC & ? if
+      "static: " appendS
+    end
+    label labelContext appendLabelName
+  end
+  proc(
     stringBuilder : sb
     Type : t
     i32 : depth
@@ -1546,17 +1563,7 @@ namespace: sb
             eltType context depth 1 - appendTypeRecursive
           end
           printLabel if
-            " : " appendS
-            label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
-              "mut: " appendS
-            end
-            label labelContext id.labelFlags id.FLAG_AUTO & ? if
-              "auto: " appendS
-            end
-            label labelContext id.labelFlags id.FLAG_STATIC & ? if
-              "static: " appendS
-            end
-            label labelContext appendLabelName
+            label labelContext appendTypeElementLabel
           end
           ' ' appendC
         <$
@@ -2625,14 +2632,22 @@ namespace: sb
             CONCAT PTRCALL case "proc( "   appendS break
             CCALL  case "proc.c( " appendS break
           end
+          0:iSize =:: mut: labelIndex
           procType .inTypes for
             context depth appendTypeRecursive
-            ## TODO! labels
+            labelIndex procType .labels .length u< if
+              procType .labels labelIndex []  labelContext appendTypeElementLabel
+              labelIndex 1:iSize + labelIndex=
+            end
             ' ' sb.appendC
           end
           "-> " appendS
           procType .outTypes for
             context depth appendTypeRecursive
+            labelIndex procType .labels .length u< if
+              procType .labels labelIndex []  labelContext appendTypeElementLabel
+              labelIndex 1:iSize + labelIndex=
+            end
             ' ' sb.appendC
           end
           ")" appendS
