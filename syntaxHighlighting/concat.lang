@@ -54,8 +54,8 @@
     <context id="block-keyword" style-ref="keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))(( # start of file or white-space
-          if              |
-          else            |
+          \.?if           |
+          \.?else         |
           _if             |
           end             |
           while           |

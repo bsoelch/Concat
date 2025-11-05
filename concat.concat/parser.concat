@@ -24,13 +24,12 @@ struct( i32 : codeOffset ) =:: CompositeConstantOffset
 struct( InterpreterContext : context i64 : offset ) =:: InterpreterInfo
 
 struct(
-  IdentifierInfo : itrVar
-  Type : itrType
-) =:: ItrVarInfo
+  IdentifierInfo : var
+  Type : varType
+) =:: TmpVarInfo
 struct(
-  ItrVarInfo optional : itrVarInfo
+  TmpVarInfo optional : tmpVarInfo
   BlockType : blockType
-  i64  : blockStart
   bool : autoClose
   bool : hasScope
 ) =:: BlockInfo
@@ -282,26 +281,35 @@ end
 
 proc( BlockType : blockType ParserState ptr.mut : state -> ) =>: openBlock
   state [] .openBlocks
-    ItrVarInfo optional.empty blockType -1 false false BlockInfo new list.append
+    TmpVarInfo optional.empty blockType false false BlockInfo new list.append
   state .openBlocks=
 end
 proc( BlockType : blockType ParserState ptr.mut : state -> ) =>: openScopedBlock
   state [] .progContext .idContext id.openScope
   state [] .openBlocks
-    ItrVarInfo optional.empty blockType -1 false true BlockInfo new list.append
+    TmpVarInfo optional.empty blockType false true BlockInfo new list.append
   state .openBlocks=
  end
-proc( ItrVarInfo : itrVarInfo ParserState ptr.mut : state -> ) =>: openForBlock
+proc( TmpVarInfo : itrVarInfo ParserState ptr.mut : state -> ) =>: openForBlock
   state [] .openBlocks
-    itrVarInfo optional.wrap BlockType .DO -1 false false BlockInfo new list.append
+    itrVarInfo optional.wrap BlockType .DO false false BlockInfo new list.append
+  state .openBlocks=
+end
+proc( TmpVarInfo : ifVarInfo bool : hasElse ParserState ptr.mut : state -> ) =>: openDotIfBlock
+  state [] .openBlocks
+    ## BlockInfo
+      ifVarInfo optional.wrap
+      hasElse if BlockType .ELSE else BlockType .IF end
+      false
+      false
+    BlockInfo new list.append
   state .openBlocks=
 end
 proc( ParserState ptr.mut : state -> ) =>: openProcBlock
   state [] .openBlocks
     ## BlockInfo
-      ItrVarInfo optional.empty
+      TmpVarInfo optional.empty
       BlockType .PROCEDURE
-      -1
       false
       false
     BlockInfo new list.append
@@ -327,7 +335,7 @@ proc(
   bool #+isError+#
 ) =>: closeBlock
   state [] .openBlocks .length 0:iSize == if
-    ItrVarInfo optional.empty BlockType .UNKNOWN -1 false false BlockInfo new true return
+    TmpVarInfo optional.empty BlockType .UNKNOWN false false BlockInfo new true return
   end
   state [] .openBlocks
     list.pop =:: closed
@@ -833,22 +841,30 @@ proc( ProgramContext ptr.mut : progContext -> Type ) =>: newAutoType
     Type .undefined list.append
   progContext .autoTypes=
 end
-proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrStep
+proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrStep
   state [] .progContext .idContext =:: idContext
-  varInfo .itrType varInfo .itrVar pos opGetId state appendOp
+  varInfo .varType varInfo .var pos opGetId state appendOp
   "..itr.step":s idContext id.findIdentifierByName
     ! "..itr.step" assert
   =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
-  varInfo .itrType varInfo .itrVar pos opSetId state appendOp
+  varInfo .varType varInfo .var pos opSetId state appendOp
 end
-proc( ItrVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrEnd
+proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrEnd
   state [] .progContext .idContext =:: idContext
-  varInfo .itrType varInfo .itrVar pos opGetId state appendOp
+  varInfo .varType varInfo .var pos opGetId state appendOp
   "..itr.end":s idContext id.findIdentifierByName
     ! "..itr.end" assert
   =:: itrEnd
   itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
+end
+proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendElseVal
+  state [] .progContext .idContext =:: idContext
+  varInfo .varType varInfo .var pos opGetId state appendOp
+  "..if.elseVal":s idContext id.findIdentifierByName
+    ! "..if.elseVal" assert
+  =:: elseVal
+  elseVal [] .valueType elseVal id.asIdInfo pos opGetId state appendOp
 end
 ## if current procedure is a valid main
 proc( LabelId : procName Type : procType ProcId : procId FilePosition : pos ParserState ptr.mut : state -> ) =>: checkMain
@@ -1039,10 +1055,40 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
+      closed .tmpVarInfo $ ? if
+        .data state fileState [] .wordStart appendElseVal
+      else ..drop end
       BlockType .ELSE state openBlock
       closed .autoClose if
         state autoCloseCurrentBlock
       end
+      return
+    else $ ".if":s string.eq or $ ".else":s string.eq _if =:: opName
+      opName ".else":s string.eq =:: hasElse
+      "..if.prepare":s idContext id.findIdentifierByName
+        ! "..if.prepare" assert
+      =:: ifPrepare
+      ifPrepare [] .valueType ifPrepare id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      progContext newAutoType =:: varType
+      varType fileState [] .wordStart state [] .currentFile idContext id.newItrVar =:: ifVar
+      varType ifVar fileState [] .wordStart opAutoTypedInitializeId state appendOp
+      varType ifVar fileState [] .wordStart opGetId state appendOp
+      "..if.check":s idContext id.findIdentifierByName
+        ! "..if.check" assert
+      =:: ifCheck
+      ifCheck [] .valueType ifCheck id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      BlockType .IF fileState [] .wordStart opBlock state appendOp
+      varType ifVar fileState [] .wordStart opGetId state appendOp
+      "..if.ifVal":s idContext id.findIdentifierByName
+        ! "..if.ifVal" assert
+      =:: ifGet
+      ifGet [] .valueType ifGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      ifVar varType TmpVarInfo new =:: varInfo
+      hasElse if
+        BlockType .ELSE fileState [] .wordStart opBlock state appendOp
+        varInfo state fileState [] .wordStart appendElseVal
+      end
+      varInfo hasElse state openDotIfBlock
       return
     else ..dup "while":s string.eq or
         ..dup "while:":s string.eq _if =:: opName
@@ -1088,7 +1134,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ! "..itr.get" assert
       =:: itrGet
       itrGet [] .valueType itrGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
-      itrVar itrType ItrVarInfo new state openForBlock
+      itrVar itrType TmpVarInfo new state openForBlock
       return
     else ..dup "do":s string.eq _if ..drop
       state currentBlockType =:: currentBlock
@@ -1118,8 +1164,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       BlockType .FINALLY  current? .data .blockType=
       BlockType .FINALLY  fileState [] .wordStart opBlock  state appendOp
-      current? .data .itrVarInfo [] optional.hasData if ## update iterator in for-loop
-        current? .data .itrVarInfo [] .data =:: varInfo
+      current? .data .tmpVarInfo [] optional.hasData if ## update iterator in for-loop
+        current? .data .tmpVarInfo [] .data =:: varInfo
         varInfo state fileState [] .wordStart appendItrStep
       end
       return
@@ -1450,6 +1496,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         currentBlock switch
           IF case
             BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
+            ## TODO extract
+            state [] .openBlocks list.peek .data [] .tmpVarInfo $ ? if
+              .data state fileState [] .wordStart appendElseVal
+            else ..drop end
             BlockType .ELSE fileState [] .wordStart opEndBlock  state appendOp
             break
           WHILE case
@@ -1515,15 +1565,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state [] .andOrPositions list.clear state .andOrPositions=
         else closedType .DO ?? _if
           BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
-          closedBlock .itrVarInfo optional.hasData if
-            closedBlock .itrVarInfo .data state fileState [] .wordStart appendItrStep
+          closedBlock .tmpVarInfo optional.hasData if
+            closedBlock .tmpVarInfo .data state fileState [] .wordStart appendItrStep
           end
           BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
-          closedBlock .itrVarInfo optional.hasData if
-            closedBlock .itrVarInfo .data state fileState [] .wordStart appendItrEnd
+          closedBlock .tmpVarInfo optional.hasData if
+            closedBlock .tmpVarInfo .data state fileState [] .wordStart appendItrEnd
           end
-        else closedType .FINALLY ?? and closedBlock .itrVarInfo optional.hasData _if ## end iterator in for-loop
-          closedBlock .itrVarInfo .data state fileState [] .wordStart appendItrEnd
+        else closedType .FINALLY ?? and closedBlock .tmpVarInfo optional.hasData _if ## end iterator in for-loop
+          closedBlock .tmpVarInfo .data state fileState [] .wordStart appendItrEnd
         end
         closedType .NAMESPACE ?? and idContext id.endNamespace if
           "unexpected end of namespace" sb.copyPtr fileState [] .wordStart errors appendError

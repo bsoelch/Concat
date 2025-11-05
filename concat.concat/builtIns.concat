@@ -1341,6 +1341,11 @@ proc(
   "..itr.get":s pos context newBuiltInBundle
   "..itr.step":s pos context newBuiltInBundle
   "..itr.end":s pos context newBuiltInBundle
+  ## declare bundles for dot-if blocks
+  "..if.prepare":s pos context newBuiltInBundle
+  "..if.check":s pos context newBuiltInBundle
+  "..if.ifVal":s pos context newBuiltInBundle
+  "..if.elseVal":s pos context newBuiltInBundle
   labelContext id.clearNamespace
   false return
 end
