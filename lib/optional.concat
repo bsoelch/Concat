@@ -14,10 +14,11 @@ namespace: optional
   proc( type : auto: V  V -> V optional ) =>: export: wrap
     V optional .data return
   end
-  
+
   proc( type : auto: T  T optional -> T ) =>: export: get
     .data
   end
+
   proc( type : auto: T  T optional -> T optional ) =>: prepareIf end
   proc( type : auto: T  T optional : ignore -> ) =>: elseVal end
 end
