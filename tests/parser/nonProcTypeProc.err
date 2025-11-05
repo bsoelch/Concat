@@ -1,0 +1,1 @@
+unexpected type for procedure declaration: i32 at ./tests/parser/nonProcTypeProc.concat:1:9
