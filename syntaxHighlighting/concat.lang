@@ -240,7 +240,7 @@
           char(8|16|32)  |
           f(32|64)       |
           type           |
-          \.\.type\.(iPtr|iSize) |
+          \.\.type\.(iSize) |
           \.\.type\.align(2|4|8|16|32)
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
@@ -261,7 +261,7 @@
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
           f16 | i128 | f128           |
-          iPtr | iSize                |
+          iSize                       |
           string                      |
           string16                    |
           string32                    |
