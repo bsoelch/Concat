@@ -994,6 +994,10 @@ proc(
               ## changing literal counts as rename
               current [] .nRenames 1 + current .nRenames=
             end
+            paramType types.isNamedType if
+              ## changing literal to named type counts as 2 renames
+              current [] .nRenames 1 + current .nRenames=
+            end
             ## no cast for conversion literal -> value-type
           else paramType typeContext types.isTypeSet and
               fromType typeContext types.isTypeSet ! _if

@@ -2326,6 +2326,9 @@ namespace: types
     src .initializer ?? if
       src target context canAutoCastInitializer return
     end
+    src .intLiteral ?? and target I_SIZE typeEquals if
+      src target context types.canAutoCastIntLiteral return
+    end
     src .namedType ?? or target .namedType ?? if
       false return
     end
