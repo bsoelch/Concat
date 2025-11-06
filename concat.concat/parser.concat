@@ -858,6 +858,23 @@ proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =
   =:: itrEnd
   itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
 end
+proc( ParserState ptr.mut : state FilePosition : pos -> TmpVarInfo ) =>: appendDotIfCheck
+  state [] .progContext =:: progContext
+  progContext .idContext =:: idContext
+  "..if.prepare":s idContext id.findIdentifierByName
+    ! "..if.prepare" assert
+  =:: ifPrepare
+  ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
+  progContext newAutoType =:: varType
+  varType pos state [] .currentFile idContext id.newItrVar =:: ifVar
+  varType ifVar pos opAutoTypedInitializeId state appendOp
+  varType ifVar pos opGetId state appendOp
+  "..if.check":s idContext id.findIdentifierByName
+    ! "..if.check" assert
+  =:: ifCheck
+  ifCheck [] .valueType ifCheck id.asIdInfo pos opGetId state appendOp
+  ifVar varType TmpVarInfo new
+end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendElseVal
   state [] .progContext .idContext =:: idContext
   varInfo .varType varInfo .var pos opGetId state appendOp
@@ -1004,8 +1021,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         BlockType .IF state openBlock
       end
       return
-    else $ "and":s string.eq or $ "or":s string.eq _if =:: opName
-      opName "or":s string.eq =:: isOr
+    else $ "and":s string.eq or $ "or":s string.eq or
+        $ ".and":s string.eq or $ ".or":s string.eq _if =:: opName
+      opName "or":s string.endsWith =:: isOr
+      opName 0 string.charAt '.' == if
+        state fileState [] .wordStart appendDotIfCheck optional.wrap
+      else TmpVarInfo optional.empty end =:: varInfo?
       isOr if BlockType .OR else BlockType .AND end =:: blockType
       state currentBlockType =:: outerBlock
       outerBlock .AND ?? ! and outerBlock .OR ?? ! if
@@ -1020,6 +1041,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state opCount list.append
       state .andOrPositions=
       blockType  fileState [] .wordStart opBlock  state appendOp
+      varInfo? .if =:: varInfo
+        varInfo .varType varInfo .var fileState [] .wordStart opGetId state appendOp
+        isOr if "..if.elseVal":s else "..if.ifVal":s end idContext id.findIdentifierByName
+          ! "and/or val" assert
+        =:: ifGet
+        ifGet [] .valueType ifGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      end
       return
     else ..dup "_if":s string.eq _if ..drop
       state currentBlockType
@@ -1065,25 +1093,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ ".if":s string.eq or $ ".else":s string.eq _if =:: opName
       opName ".else":s string.eq =:: hasElse
-      "..if.prepare":s idContext id.findIdentifierByName
-        ! "..if.prepare" assert
-      =:: ifPrepare
-      ifPrepare [] .valueType ifPrepare id.asIdInfo fileState [] .wordStart opGetId state appendOp
-      progContext newAutoType =:: varType
-      varType fileState [] .wordStart state [] .currentFile idContext id.newItrVar =:: ifVar
-      varType ifVar fileState [] .wordStart opAutoTypedInitializeId state appendOp
-      varType ifVar fileState [] .wordStart opGetId state appendOp
-      "..if.check":s idContext id.findIdentifierByName
-        ! "..if.check" assert
-      =:: ifCheck
-      ifCheck [] .valueType ifCheck id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      state fileState [] .wordStart appendDotIfCheck =:: varInfo
       BlockType .IF fileState [] .wordStart opBlock state appendOp
-      varType ifVar fileState [] .wordStart opGetId state appendOp
+      varInfo .varType varInfo .var fileState [] .wordStart opGetId state appendOp
       "..if.ifVal":s idContext id.findIdentifierByName
         ! "..if.ifVal" assert
       =:: ifGet
       ifGet [] .valueType ifGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
-      ifVar varType TmpVarInfo new =:: varInfo
       hasElse if
         BlockType .ELSE fileState [] .wordStart opBlock state appendOp
         varInfo state fileState [] .wordStart appendElseVal

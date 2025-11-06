@@ -70,8 +70,8 @@
           switch\:        |
           case            |
           default         |
-          and             |
-          or              |
+          \.?and          |
+          \.?or           |
           =&gt;           |
           return          |
           namespace\:     |

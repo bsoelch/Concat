@@ -1,0 +1,38 @@
+import optional
+
+proc( i32 optional : val? -> bool ) =>: positive
+  val? .and 0 > if
+    true
+  else
+    false
+  end
+end
+
+proc( i32 -> i32 ) =>: id end
+proc( i32 -> bool ) =>: pos 0 > end
+overload: ..if.prepare
+  id
+end
+overload: ..if.check
+  pos
+end
+overload: ..if.ifVal
+  id
+end
+overload: ..if.elseVal
+  id
+end
+
+proc( i32 : val -> bool ) =>: positiveOrOdd
+  val .or 1 & ? end
+end
+
+proc( -> ) =>: main
+  1 optional.wrap positive "1 > 0" assert
+  0 optional.wrap positive ! "not(0 > 0)" assert
+  i32 optional.empty positive ! "not(empty > 0)" assert
+  1 positiveOrOdd "1 > 0" assert
+  0 positiveOrOdd ! "not(0 > 0)" assert
+  -1 positiveOrOdd "-1 odd" assert
+  -2 positiveOrOdd ! "not(-2 > 0)" assert
+end
