@@ -4999,23 +4999,42 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         constRef .constType constRef .value true constRef .pos context sb.appendConstQBE
       "} \n" sb.appendS
     end
-    ## code
-    program [] .progFiles .length for =:: i
-      program [] .progFiles i [] =:: f
-      "dbgfile \"" sb.appendS
-      f .fileName sb.appendSb
-      "\"\n"    sb.appendS
+    program [] .progFiles .length for =:: fileId
       "data $" sb.appendS
       FILE_NAME_NAME sb.appendS
-      i sb.appendI
+      fileId sb.appendI
       " = {" sb.appendS
-        f .fileName sb.asStr string.bytes 'b' true sb.appendPrimitiveArrayConstQBE
+        program [] .progFiles fileId [] .fileName sb.asStr string.bytes 'b' true sb.appendPrimitiveArrayConstQBE
       "} \n" sb.appendS
-      f .localOps .length for i32 cast.u =:: opIndex
-        f .localOps opIndex list.at .data opIndex context compileOp
+    end
+    ## code
+    program [] .procedures for =:: proc
+      proc .implementation .code ?? ! if continue end
+      proc .implementation .code =:: impl
+      impl .codeState .UNUSED ?? if continue end
+      program [] .progFiles proc .fileId iSize cast.u list.get .if =:: f
+        "dbgfile \"" sb.appendS
+        f .fileName sb.appendSb
+        "\"\n"    sb.appendS
+      else
+        "dbgfile \"..internal\"\n"    sb.appendS
       end
-      target ..over io.fputSb ..drop
-      sb.clear
+      impl .codeState .COMPILED ?? if
+        impl .code .length for i32 cast.u =:: opIndex
+          impl .code opIndex @[] opIndex context compileOp
+        end
+        target ..over io.fputSb ..drop
+        sb.clear
+      end
+      impl .implementations for =:: genericImpl
+        genericImpl .codeState .COMPILED ?? if
+          genericImpl .code .length for i32 cast.u =:: opIndex
+            genericImpl .code opIndex @[] opIndex context compileOp
+          end
+          target ..over io.fputSb ..drop
+          sb.clear
+        end
+      end
     end
     target ..over io.fputSb ..drop
     sb.clear

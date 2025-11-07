@@ -59,11 +59,11 @@ namespace: slice
 
   proc( type : auto: T T slice : src -> T slice.mut ) =>: copySlice
     src .length T mem.alloc =:: newData
-    newData src .data src .length mem.copy src .length create_64mut
+    newData src .data src .length mem.copy src .length create_mut
   end
   proc( type : auto: T T slice.mut : src -> T slice.mut ) =>: copyMut
     src .length T mem.alloc =:: newData
-    newData src .data src .length mem.copy src .length create_64mut
+    newData src .data src .length mem.copy src .length create_mut
   end
   overload: export: copy copySlice copyMut end
 

@@ -1172,6 +1172,11 @@ proc(
       impls []
         $ .length i32 cast.u implId=
         ## ProcImplementation
+          constArgs list.asSlice constContext constArray
+          0 VariableInfo list.create
+          Operation slice.emptyMutable
+          pos
+          implData .code [] .expansionLevel 1:i16 +
           ## replaceGenerics
             baseProcInfo [] .procType
             typeBuffer@
@@ -1181,12 +1186,6 @@ proc(
             pos
             interpreterContext
           replaceGenerics
-          constArgs list.asSlice constContext constArray
-          0 VariableInfo list.create
-          pos
-          -1
-          -1
-          implData .code [] .expansionLevel 1:i16 +
           ProcCodeState .PARSED
         ProcImplementation new list.append
       impls =[]

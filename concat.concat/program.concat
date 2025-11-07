@@ -29,23 +29,22 @@ struct(
   VariableType : variableType
 ) =:: export: VariableInfo
 
-enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED UNUSED ) =:: export: ProcCodeState
+type : export: Operation
+enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED UNUSED COMPILED ) =:: export: ProcCodeState
 struct(
-  Type : procType
   ConstValue slice : staticArgs
   VariableInfo list : variables
+  Operation slice.mut : code
   FilePosition : firstUse
-  i32 : codeStart
-  i32 : codeLength
   i16 : expansionLevel ## nesting level of this imlementation
+  Type : procType
   ProcCodeState : codeState
 ) =:: export: ProcImplementation
 struct(
   ## TODO? create seperate procedures for proc-implementations, only link to ids of implementation procs
   ProcImplementation list : implementations
   VariableInfo list : variables ## for single implementation in non-generic case
-  i32 : codeStart
-  i32 : codeLength
+  Operation slice.mut : code
   i16 : expansionLevel ## level of currently active expansion
   ProcCodeState : codeState
 ) =:: export: CodeProcData
@@ -67,6 +66,15 @@ struct(
   bool : hasStaticArg
   bool : isStatic
 ) =:: export: ProcedureInfo
+proc( ProcedureInfo : p -> ) =>: freeProcedure
+  p .implementation .code ?? if
+    p .implementation .code =:: impl
+    impl .code slice.free ..drop
+    impl .implementations for
+      .code slice.free ..drop
+    end
+  end
+end
 struct(
   ConstValue slice : autoArgs
   LabelId slice.mut : retValueLocations
@@ -426,10 +434,6 @@ proc( LabelId : name FilePosition : pos -> Operation ) =>: export: opPrintIdenti
 end
 
 struct(
-     Operation list : globalOps
-     Operation list : localOps
-     Operation list : tmpOps
-
       stringBuilder : fileName
              FileId : id
          id.ScopeId : fileScope
@@ -520,6 +524,7 @@ struct(
          ProcedureBundle list : procBundles
                     Type list : autoTypes
                Operation list : tmpOps
+               Operation list : globalOps
           MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
               SwitchData list : switchData
                WhileData list : whileData
@@ -542,7 +547,8 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     64  ProcedureInfo   list.create
     64  ProcedureBundle list.create
     32  Type            list.create
-    128 Operation       list.create
+    1024 Operation      list.create
+    1024 Operation      list.create
     4096                mixedArena.create
     128 SwitchData      list.create
     128 WhileData       list.create
@@ -561,10 +567,12 @@ end
 proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .idContext id.freeIdentifierContext >$ .idContext=
   $ .progFiles list.free >$ .progFiles=
+  $ .procedures for freeProcedure end
   $ .procedures list.free >$ .procedures=
   $ .procBundles list.free >$ .procBundles=
   $ .autoTypes list.free >$ .autoTypes=
   $ .tmpOps list.free >$ .tmpOps=
+  $ .globalOps list.free >$ .globalOps=
   $ .programMemory mixedArena.free >$ .programMemory=
   $ .switchData list.free >$ .switchData=
   $ .whileData list.free >$ .whileData=
@@ -585,15 +593,11 @@ proc(
   FileId : id
 -> ProgramFile ) =>: export: newProgFile
   ## ProgramFile
-    128 Operation list.create
-    128 Operation list.create
-    128 Operation list.create
     fileName
     id
     id.NO_SCOPE
   ProgramFile new return
 end
-
 
 proc(
   ConstValue : constValue
@@ -1081,19 +1085,25 @@ namespace: sb
     end
   end
   proc( stringBuilder ProgramContext ptr : prog -> stringBuilder ) =>: export: appendProgram
+    prog .idContext .typeContext .labelContext =:: labelContext
     "## errors:\n" sb.appendS
     prog [] .errors errorCmp@ list.sort
     prog [] .errors for sb.appendCompilerError end
-    prog [] .progFiles for =:: f
+    "## global:\n" sb.appendS
+    prog [] .globalOps for prog sb.appendOp end
+    prog [] .procedures for =:: proc
+      proc .implementation .code ?? ! if continue end
       "## "          sb.appendS
-      f .fileName    sb.appendSb
+      proc .labelId labelContext sb.appendLabelPath
       '\n'           sb.appendC
-      "## global:\n" sb.appendS
-      f .globalOps for prog sb.appendOp end
-      "## local:\n" sb.appendS
-      f .localOps for prog sb.appendOp end
-      "## tmp:\n" sb.appendS
-      f .tmpOps for prog sb.appendOp end
+      proc .implementation .code =:: impl
+      impl .codeState .UNUSED ?? if continue end ## ignore unused procs
+      impl .code for prog sb.appendOp end
+      '\n' sb.appendC
+      impl .implementations for =:: genericImpl
+        genericImpl .code for prog sb.appendOp end
+        '\n' sb.appendC
+      end
     end
     "## temporary code:\n" sb.appendS
     prog [] .tmpOps for prog sb.appendOp end

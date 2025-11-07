@@ -6699,12 +6699,22 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
     program [] .progFiles .length for =:: i
       i FileId cast Atomic .DebugUsesFile list.append
     end
-    program [] .progFiles .length for =:: i
-      program [] .progFiles i [] =:: f
-      f .localOps .length 0:iSize == if continue end
-      i FileId cast Atomic .DebugStartFile list.append
-      f .localOps .length for i32 cast.u =:: opIndex
-        f .localOps opIndex list.at .data opIndex context compileOp
+    program [] .procedures for =:: proc
+      proc .implementation .code ?? ! if continue end
+      proc .implementation .code =:: impl
+      impl .codeState .UNUSED ?? if continue end
+      proc .fileId Atomic .DebugStartFile list.append
+      impl .codeState .COMPILED ?? if
+        impl .code .length for i32 cast.u =:: opIndex
+          impl .code opIndex @[] opIndex context compileOp
+        end
+      end
+      impl .implementations for =:: genericImpl
+        genericImpl .codeState .COMPILED ?? if
+          genericImpl .code .length for i32 cast.u =:: opIndex
+            genericImpl .code opIndex @[] opIndex context compileOp
+          end
+        end
       end
     end
     program [] .mainLabelId =:: mainId

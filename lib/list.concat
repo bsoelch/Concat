@@ -65,7 +65,7 @@ namespace: list
   end
   proc(
     type : auto: T
-    T slice : buffer
+    T slice.mut : buffer
   -> T list ) =>: export: wrapSlice
     buffer .data 0:iSize buffer .length -_ listCap cast.u T list new return
   end

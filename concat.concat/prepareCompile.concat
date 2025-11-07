@@ -13,14 +13,8 @@ import "branchTree.concat"
 using id.LabelFlag
 
 struct(
-  i32 : codeStart
-  i32 : codeLength
-) =:: ProcPosition
-
-struct(
   ProgramContext ptr.mut : program
   VariableInfo list : mut: variables
-  ProcPosition list : mut: newProcPositions
   FileId : mut: currentFile
   i32 : mut: inlineCount
 ) =:: ConverterContext
@@ -65,16 +59,10 @@ proc(
   list.at .data =:: procFile
   procInfo .implementation .code =:: impl
   callInfo .implementationId -1 == if
-    procFile [] .localOps
-      impl [] .codeStart
-      impl [] .codeLength
-    list.getSlice $ .length i32 cast impl [] .codeLength == "correct length" assert
+    impl [] .code slice.freeze
   else
     impl [] .implementations callInfo .implementationId @[] =:: callImpl
-    procFile [] .localOps
-      callImpl [] .codeStart
-      callImpl [] .codeLength
-    list.getSlice $ .length i32 cast callImpl [] .codeLength == "correct length" assert
+    callImpl [] .code slice.freeze
   end
 end
 import debug
@@ -487,25 +475,26 @@ proc(
 end
 
 proc(
-  Operation slice : ops
-  Operation list ptr.mut : newOps
-  ProcPosition ptr.mut : codePosition
+  Operation slice.mut : mut: oldOps
+  Operation list ptr.mut : tmpOps
   VariableInfo list ptr.mut : variables
   ConverterContext ptr.mut : context
--> ) =>: convertProc
+-> Operation slice.mut ) =>: convertProc
   context [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   variables [] context .variables=
-  newOps []
-    $ .length i32 cast.u codePosition .codeStart =[]
-    ops for
+  tmpOps []
+    $ .length =:: codeStart
+    oldOps for
       context compileOp
     end
-    $ .length i32 cast.u codePosition .codeStart [] - codePosition .codeLength =[]
-  newOps =[]
+    $ list.asSlice codeStart slice.tail slice.copy =:: newCode
+    oldOps slice.free oldOps=
+  tmpOps =[]
   context [] .variables variables =[]
+  newCode
 end
 
 ## TODO better name for file&procedure, find good description of compilation-step
@@ -516,15 +505,14 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   ## ConverterContext
     program
     0 VariableInfo list.create
-    program .procedures [] .length ProcPosition list.create
     -1:FileId
     0
   ConverterContext new =:: mut: contextData
   contextData@ =:: context
-  program [] .progFiles list.atItr for =:: f
-    f [] .tmpOps list.clear f .tmpOps=
-    f [] .globalOps list.clear f .globalOps= ## global ops are no longer needed
-  end
+  program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
+  program [] .tmpOps
+    list.clear
+  program .tmpOps=
   program [] .procedures list.atItr for =:: currentProc
     currentProc [] .implementation .code ?? ! or
         currentProc [] .isStatic if
@@ -540,70 +528,25 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
         currentImpl .codeState [] .UNUSED ?? if
           continue
         end
-        context .newProcPositions []
-          -1 -1 ProcPosition new list.append
-        context .newProcPositions=
         ## convertProc
-          f [] .localOps
-            currentImpl [] .codeStart
-            currentImpl [] .codeLength
-          list.getSlice
-          f .tmpOps
-          context .newProcPositions [] list.peek .data
+          currentImpl [] .code
+          program .tmpOps
           currentImpl .variables
           context
-        convertProc
+        convertProc currentImpl .code=
+        ProcCodeState .COMPILED currentImpl .codeState=
       end
     else
       impl .codeState [] .UNUSED ?? if
         continue
       end
-      context .newProcPositions []
-        -1 -1 ProcPosition new list.append
-      context .newProcPositions=
       ## convertProc
-        f [] .localOps impl [] .codeStart impl [] .codeLength list.getSlice
-        f .tmpOps
-        context .newProcPositions [] list.peek .data
+        impl [] .code
+        program .tmpOps
         impl .variables
         context
-      convertProc
-    end
-  end
-  ## update operation list
-  program [] .progFiles list.atItr for =:: f
-    f [] .localOps list.clear
-      f [] .tmpOps
-      f .localOps=
-    f .tmpOps=
-  end
-  ## update procedure positions
-  0 =:: mut: subProcIndex ## TODO is there a better way to ensure that the new ranges are matched up with the current procedues
-  ## ? remember new range in procedure data
-  program [] .procedures list.atItr for =:: currentProc
-    currentProc [] .implementation .code ?? ! or
-        currentProc [] .isStatic if
-      continue
-    end
-    currentProc .implementation .code =:: impl
-    currentProc [] .hasStaticArg if
-      impl [] .implementations list.atItr for =:: currentImpl
-        currentImpl .codeState [] .UNUSED ?? if
-          continue
-        end
-        context [] .newProcPositions subProcIndex [] =:: procPos
-        procPos .codeStart currentImpl .codeStart=
-        procPos .codeLength currentImpl .codeLength=
-        subProcIndex 1 + subProcIndex=
-      end
-    else
-      impl .codeState [] .UNUSED ?? if
-        continue
-      end
-      context [] .newProcPositions subProcIndex [] =:: procPos
-      procPos .codeStart impl .codeStart=
-      procPos .codeLength impl .codeLength=
-      subProcIndex 1 + subProcIndex=
+      convertProc impl .code=
+      ProcCodeState .COMPILED impl .codeState=
     end
   end
   ## create implementations for built-in procedure-pointers
@@ -615,9 +558,9 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc [] .implementation .builtIn .hasPtr ! if
       continue
     end
-    program [] .progFiles 0 list.at .data =:: procFile ## XXX? use separate "file" for built-ins
     currentProc [] .labelId labelContext id.labelPos .data =:: pos
-    procFile [] .localOps
+    4 Operation mem.alloc 4 slice.createMutable =:: opBuffer
+    opBuffer list.wrapSlice
       ## opImplementProc
         currentProc [] .procType
         ## ProcedureImpl
@@ -628,11 +571,18 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       opImplementProc list.append
       ## opBuiltIn
         currentProc [] .procType
-        currentProc [] .implementation .builtIn .builtIn
+        currentProc .implementation .builtIn [] .builtIn
         pos
       opBuiltIn list.append
       currentProc [] .procType pos opReturn list.append
       BlockType .PROCEDURE pos opEndBlock list.append
-    procFile .localOps=
+    ..drop
+    ## CodeProcData
+      0 ProcImplementation list.create
+      0 VariableInfo list.create
+      opBuffer
+      0:i16
+      ProcCodeState .COMPILED
+    CodeProcData new currentProc .implementation .code=
   end
 end

@@ -1784,7 +1784,6 @@ proc(
 end
 proc(
   Operation : op0
-  i32 ptr.mut : skipOps
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckOp
   op0 =:: mut: op
@@ -2411,7 +2410,6 @@ proc(
           procType procData .procType=
           idContext id.currentScope procData .scopeId= ## remember host scope
           ProcCodeState .PARSED procData .implementation .code .codeState=
-          procData .implementation .code [] .codeLength skipOps =[]
           procId ConstValue .Procedure
             procType false typeContext types.getAddressType
           op .pos state pushConstant
@@ -4425,7 +4423,7 @@ proc(
       implId list.at .data
     =:: implData
     implData [] .codeState switch
-      TYPE_CHECKED TYPE_CHECKING UNUSED case break
+      TYPE_CHECKED TYPE_CHECKING UNUSED COMPILED case break
       PARSED PARSING case implId return
     end
   finally implId 1 + end ..drop
@@ -4451,7 +4449,7 @@ proc(
         expandedAt program .errors appendInfo
       end
       false return ## expected
-    TYPE_CHECKED UNUSED case true return ## nothing to do
+    TYPE_CHECKED UNUSED COMPILED case true return ## nothing to do
     PARSING case
       checkType .SKIP_UNDEFINED ?? ! if
         "procedure " sb.copyPtr
@@ -4561,10 +4559,9 @@ proc(
     currentProc [] .fileId i64 cast
   list.at .data =:: procFile
   state clearOps
+  ## TODO? compile code to new list (prevents need to copy result after type-checking)
   state [] .compiledOps .length i32 cast.u =:: codeOffset
-  program [] .tmpOps
-     codeImpl [] .codeStart list.at .data
-  =:: procStart
+  codeImpl [] .code 0 @[] =:: procStart
   procStart [] .val .implementProcedure ?? or
       procStart [] .val .initializeId ??
   end "procedure starts with correct operation" assert
@@ -4585,44 +4582,28 @@ proc(
   idContext id.currentScope =:: prevScope
   currentProc [] .scopeId idContext id.setScope
   idContext id.openScope
-  0:i32 =:: mut: skipOps
-  0:i32 while ..dup codeImpl [] .codeLength < do =:: i
-    0 skipOps=
-    program [] .tmpOps
-      i codeImpl [] .codeStart + []
-      skipOps@
-    state typeCheckOp
-    i skipOps + 1 +
-  end ..drop
+  codeImpl [] .code for state typeCheckOp end
   ## TODO? compile exported procedure normally
   state [] .isUnusedProc ! and currentProc [] .isStatic ! if
-    procFile .localOps
     ProcCodeState .TYPE_CHECKED
   else
-    procFile .tmpOps
     ProcCodeState .UNUSED
-  end =:: newProcState =:: fileOps
+  end =:: newProcState
+  state [] .compiledOps list.asSlice codeOffset slice.tail slice.copy =:: newOps
+  state clearOps
   ## remember new code position
   implId -1 == if
-    fileOps [] .length i32 cast.u codeImpl .codeStart=
-    state [] .compiledOps .length i32 cast.u codeOffset - codeImpl .codeLength=
+    newOps codeImpl .code=
     newProcState codeImpl .codeState=
     idContext id.currentScope currentProc .scopeId=
   else
     codeImpl [] .implementations
       implId list.at .data
     =:: currentImpl
-    fileOps [] .length i32 cast.u currentImpl .codeStart=
-    state [] .compiledOps .length i32 cast.u codeOffset - currentImpl .codeLength=
+    newOps currentImpl .code=
     newProcState currentImpl .codeState=
     prevExpansionLevel codeImpl .expansionLevel=
   end
-  fileOps []
-    state [] .compiledOps
-      list.asSlice codeOffset slice.tail
-    list.appendSlice
-  fileOps =[]
-  state clearOps
   state [] .program [] .autoTypes
     list.free ..drop
     prevAutoTypes ## reset local auto-types
@@ -4727,7 +4708,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .implementation .code ?? ! if
       procId 1 + continue ## procedure implementation not in code
     end
-    currentProc [] .implementation .code .codeStart 0 < if
+    currentProc [] .implementation .code .code .length 0 == if
       procId 1 + continue ## procedure not implemented
     end
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
@@ -4755,7 +4736,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .implementation .code ?? ! if
       procId 1 + continue ## procedure implementation not in code
     end
-    currentProc [] .implementation .code .codeStart 0 < if
+    currentProc [] .implementation .code .code .length 0 == if
       procId 1 + continue ## procedure not implemented
     end
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
@@ -4775,7 +4756,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
         procId 1 + continue ## procedure implementation not in code
       end
       currentProc .implementation .code =:: codeImpl
-      codeImpl [] .codeStart 0 < if
+      codeImpl [] .code .length 0 == if
         procId 1 + continue ## procedure not implemented
       end
       currentProc [] .hasStaticArg ! if

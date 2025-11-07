@@ -3805,20 +3805,8 @@ proc(
     codeImpl [] .implementations
       implId list.at .data
     =:: currentImpl
-    currentImpl .codeState .TYPE_CHECKED ?? if
-      program [] .progFiles
-        procData [] .fileId i64 cast
-      list.at .data [] .localOps
-        currentImpl [] .codeStart
-        currentImpl [] .codeLength
-      list.getSlice
-    else currentImpl .codeState .UNUSED ?? _if
-      program [] .progFiles
-        procData [] .fileId i64 cast
-      list.at .data [] .tmpOps
-        currentImpl [] .codeStart
-        currentImpl [] .codeLength
-      list.getSlice
+    currentImpl .codeState .TYPE_CHECKED ?? or currentImpl .codeState .UNUSED ?? or currentImpl .codeState .COMPILED ?? if
+      currentImpl [] .code slice.freeze
     else
       "no implementaion for procedure " sb.copyPtr
         procName labelContext sb.appendLabelPath
@@ -3839,27 +3827,8 @@ proc(
           " has not finished type-checking" sb.appendS
         pos errors appendError
         Operation slice.empty break
-      PARSED case
-        program [] .tmpOps
-          codeImpl [] .codeStart
-          codeImpl [] .codeLength
-        list.getSlice
-        break
-      TYPE_CHECKED case
-        program [] .progFiles
-          procData [] .fileId i64 cast
-        list.at .data [] .localOps
-            codeImpl [] .codeStart
-            codeImpl [] .codeLength
-        list.getSlice
-        break
-      UNUSED case ## code for unused procs is stored in tmp ops
-        program [] .progFiles
-          procData [] .fileId i64 cast
-        list.at .data [] .tmpOps
-            codeImpl [] .codeStart
-            codeImpl [] .codeLength
-        list.getSlice
+      PARSED TYPE_CHECKED UNUSED COMPILED case
+        codeImpl [] .code slice.freeze
         break
     end
   end =:: code
