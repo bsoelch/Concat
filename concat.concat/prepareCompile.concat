@@ -355,7 +355,7 @@ proc(
             newOps .length i32 cast.u
           program program.jumps.updateSwitch
           newOps op list.append return
-        CASE case
+        CASE DOT_CASE case
           blockId
             newOps .length i32 cast.u
           program program.jumps.updateCase
@@ -454,7 +454,7 @@ proc(
         AND_IF OR_IF AND_DO OR_DO FINALLY INLINE_PROCEDURE
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        UNKNOWN CASE DEFAULT BREAK_SWITCH DO BREAK
+        UNKNOWN CASE DOT_CASE DEFAULT BREAK_SWITCH DO BREAK
         CONTINUE INITIALIZER IF NAMESPACE TYPE_TYPESET
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
         TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE case break

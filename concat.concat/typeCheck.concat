@@ -1172,7 +1172,7 @@ proc(
   op [] .val switch
     block case
       op [] .val .block .blockType switch
-        ELSE CASE DEFAULT FINALLY case
+        ELSE CASE DOT_CASE DEFAULT FINALLY case
           return
         BREAK BREAK_SWITCH case
           state [] .openBlocks .length 0:iSize u> and
@@ -1632,7 +1632,7 @@ proc(
   switchBlock [] .switchPosition =:: switchPosition
   op [] .val .block ?? if
     op [] .val .block .blockType switch
-      CASE DEFAULT case
+      CASE DOT_CASE DEFAULT case
         false return
       BREAK case
         switchBlock [] .allowBreak if
@@ -3224,7 +3224,7 @@ proc(
           op state appendOp ..drop
           false state .reachable=
           return
-        CASE DEFAULT case
+        CASE DOT_CASE DEFAULT case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty if true else
             currentBlock? .data [] .Switch ?? !
@@ -3265,23 +3265,8 @@ proc(
             return
           end
           switchData [] .labels list.peek =:: prev?
-          blockType .CASE ?? if
-            prev? optional.isEmpty if
-              true
-            else
-              prev? .data [] .caseId switchData [] .caseCount <
-            end if
-              64 sb.create
-                BlockType .CASE sb.appendBlockType
-                " has to be preceded by at least one label" sb.appendS
-              op .pos errors appendError
-            end
-            switchBlock [] .caseJumpDistances
-              state [] .compiledOps .length
-                switchBlock [] .switchPosition iSize cast.u -
-              JumpDistance cast list.append
-            switchBlock .caseJumpDistances=
-          else
+          switchBlock [] .switchType =:: switchType
+          blockType .DEFAULT ?? if
             prev? optional.isEmpty if
               "unexpected " sb.copyPtr
                 BlockType .DEFAULT sb.appendBlockType
@@ -3302,13 +3287,58 @@ proc(
               switchBlock [] .switchPosition iSize cast.u -
               JumpDistance cast
             switchData .defaultJumpDistance=
+          else ## case or .case
+            prev? optional.isEmpty or prev? .data [] .caseId switchData [] .caseCount < if
+              64 sb.create
+                BlockType .CASE sb.appendBlockType
+                " has to be preceded by at least one label" sb.appendS
+              op .pos errors appendError
+            end
+            blockType .DOT_CASE ?? if
+              switchType typeContext types.isUnion if
+                switchType prev? .data [] .value .EnumLabel typeContext types.compositeGetElement =:: labelType
+                switchData [] .labels list.reversed for  =:: label
+                  ## labels in current case are al at end of label list
+                  label .caseId switchData [] .caseCount < if break end
+                  switchType label .value .EnumLabel typeContext types.compositeGetElement =:: newType
+                  newType labelType types.typeEquals if continue end
+                  "incompatible types for case-values: " sb.copyPtr
+                    labelType typeContext sb.appendType
+                    " and " sb.appendS
+                    newType typeContext sb.appendType
+                    op .pos errors
+                  newType typeContext types.unwrapNamed labelType typeContext types.unwrapNamed types.typeEquals if
+                    appendWarning
+                  else
+                    appendError
+                  end
+                end
+                labelType@ slice.wrap op .pos state pushTypes
+                ## TODO replace DOT_CASE  with  CASE + getElement on tmp-var
+                ## * create tmp-var (holding switched value) for union-switch containing .case
+                ## * generate: CASE , get(tmpVar) , uncheckedGetElement(index) for DOT_CASE
+                "unimplemented: .case" ..panic
+              else
+                128 sb.create
+                  BlockType .DOT_CASE sb.appendBlockType
+                  " is only supported for unions got: " sb.appendS
+                  switchType typeContext sb.appendType
+                op .pos errors appendError
+                BlockType .CASE op@ .val .block .blockType=
+              end
+            end
+            switchBlock [] .caseJumpDistances
+              state [] .compiledOps .length
+                switchBlock [] .switchPosition iSize cast.u -
+              JumpDistance cast list.append
+            switchBlock .caseJumpDistances=
           end
           switchBlock [] .blockId op@ .val .block .blockId=
           switchData [] .caseCount
             1 +
           switchData .caseCount=
           true state .reachable=
-          switchBlock [] .switchType op@ .dataType=
+          switchType op@ .dataType=
           op state appendOp ..drop
           true switchBlock .allowBreak=
           return
@@ -3964,7 +3994,7 @@ proc(
           tmp state appendOp ..drop
           idContext id.closeScope ! "closing while-scope worked" assert
           return
-        SWITCH case ## end-switch should not be created by parser
+        SWITCH DOT_CASE case ## end-switch should not be created by parser
           break
         FINALLY case
           op .pos state closeBlock =:: mut: closed

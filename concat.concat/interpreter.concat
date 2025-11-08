@@ -201,7 +201,7 @@ namespace: interpreter
             TYPE_UNTAGGED_UNION TYPE_TYPESET case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+          SWITCH BREAK_SWITCH CASE DOT_CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
           IF_TRUE IF_FALSE AND_TRUE AND_FALSE
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
@@ -221,7 +221,7 @@ namespace: interpreter
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE TYPE_ENUM case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-            SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+            SWITCH BREAK_SWITCH CASE DOT_CASE DEFAULT FINALLY
             AND OR AND_IF OR_IF AND_DO OR_DO
             IF_TRUE IF_FALSE AND_TRUE AND_FALSE
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
@@ -241,7 +241,7 @@ namespace: interpreter
         PROCEDURE INLINE_PROCEDURE case
           false return
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-            SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+            SWITCH BREAK_SWITCH CASE DOT_CASE DEFAULT FINALLY
             AND OR AND_IF OR_IF AND_DO OR_DO
             IF_TRUE IF_FALSE AND_TRUE AND_FALSE
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
@@ -261,7 +261,7 @@ namespace: interpreter
           PROCEDURE INLINE_PROCEDURE INITIALIZER TYPE_TUPLE TYPE_STRUCT
           TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE TYPE_UNION
           TYPE_UNTAGGED_UNION UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
-          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY TYPE_TYPESET
+          SWITCH BREAK_SWITCH CASE DOT_CASE DEFAULT FINALLY TYPE_TYPESET
           AND OR AND_IF OR_IF AND_DO OR_DO
           NAMESPACE case break
       end
@@ -309,7 +309,7 @@ namespace: interpreter
     context .openBlocks=
     result optional.wrap return
   end
-  BlockType ..length 40:iSize == "number of block types" assert
+  BlockType ..length 41:iSize == "number of block types" assert
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
     context peekBlock =:: current
     current optional.isEmpty if false return end
@@ -355,7 +355,7 @@ namespace: interpreter
            block [] .labelOffset LabeledValueContext .TYPE_PROC return
         PROCEDURE INLINE_PROCEDURE
         UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-          SWITCH BREAK_SWITCH CASE DEFAULT FINALLY
+          SWITCH BREAK_SWITCH CASE DOT_CASE DEFAULT FINALLY
           AND OR AND_IF OR_IF AND_DO OR_DO
           IF_TRUE IF_FALSE AND_TRUE AND_FALSE
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
@@ -1974,7 +1974,7 @@ proc(
           break
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        CASE DEFAULT UNKNOWN case break
+        CASE DOT_CASE DEFAULT UNKNOWN case break
       end
       "unsupported block-type in constant evaluation: " sb.copyPtr
         op [] .val .block .blockType sb.appendBlockType
@@ -1983,7 +1983,7 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .evalType .INTERPRET ?? if
-        BlockType ..length 40:iSize == "no-new block-types" assert
+        BlockType ..length 41:iSize == "no-new block-types" assert
         blockType switch
           ELSE SWITCH AND OR case EvalResult .Ok return
           WHILE case
@@ -2154,7 +2154,7 @@ proc(
           context pushValue
           EvalResult .Ok return
         IF ELSE WHILE DO BREAK CONTINUE
-        SWITCH CASE BREAK_SWITCH DEFAULT
+        SWITCH CASE DOT_CASE BREAK_SWITCH DEFAULT
         AND OR AND_IF OR_IF AND_DO OR_DO
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE

@@ -68,7 +68,7 @@
           finally         |
           switch          |
           switch\:        |
-          case            |
+          \.?case         |
           default         |
           \.?and          |
           \.?or           |

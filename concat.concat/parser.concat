@@ -1234,10 +1234,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .SWITCH blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       BlockType .SWITCH state openBlock
       return
-    else $ "case":s string.eq _if ..drop
+    else $ "case":s string.eq or $ ".case":s string.eq _if =:: opName
       state closeBlock .and .blockType =:: closedBlock
           closedBlock .SWITCH ?? or closedBlock .CASE ?? if
-        BlockType .CASE fileState [] .wordStart opBlock  state appendOp
+        opName 0 string.charAt '.' == if
+          BlockType .DOT_CASE
+        else
+          BlockType .CASE
+        end fileState [] .wordStart opBlock  state appendOp
         BlockType .CASE state openBlock
         return
       else
@@ -1529,7 +1533,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               currentBlock fileState [] .wordStart opEndBlock  state appendOp
             end
             break
-          ELSE AND OR SWITCH CASE DEFAULT FINALLY case
+          ELSE AND OR SWITCH CASE DOT_CASE DEFAULT FINALLY case
             currentBlock fileState [] .wordStart opEndBlock  state appendOp
             break
           TYPE_COMPOSITE TYPE_TUPLE TYPE_STRUCT TYPE_UNION TYPE_UNTAGGED_UNION INLINE_PROCEDURE
@@ -1741,7 +1745,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         AND OR AND_IF OR_IF AND_DO OR_DO FINALLY
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE TYPE_PROC_ARROW
-        SWITCH CASE DEFAULT INITIALIZER NAMESPACE case
+        SWITCH CASE DOT_CASE DEFAULT INITIALIZER NAMESPACE case
           "unexpected " sb.copyPtr
             opName sb.appendStr
             " in " sb.appendS
@@ -1790,7 +1794,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
         state [] .openBlocks list.reversed for: findContainer =:: b
-          BlockType ..length 40:iSize == "no new block types" assert
+          BlockType ..length 41:iSize == "no new block types" assert
           b .blockType switch
             PROCEDURE INLINE_PROCEDURE case
               false inConstBlock=
@@ -2392,9 +2396,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ..drop ## discard remainder of file
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek =:: next?
-          BlockType ..length 40:iSize == "no new block types" assert
+          BlockType ..length 41:iSize == "no new block types" assert
           next? optional.hasData and next? .data [] .blockType switch
-            IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DEFAULT case true break
+            IF IF_TRUE IF_FALSE ELSE ELSE_TRUE ELSE_FALSE CASE DOT_CASE DEFAULT case true break
             default false break
           end do
         state [] .openBlocks
