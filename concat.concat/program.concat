@@ -140,6 +140,7 @@ union(
             NopType : NOP
          ConstValue : Constant
          ConstValue : StaticConstant
+             ProcId : NestedProc
    ConstReferenceId : ConstantReference
           BlockData : block
           BlockData : blockEnd
@@ -207,6 +208,9 @@ proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation )
 end
 proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export: opStaticConst
   constValue OpValue .StaticConstant constType pos Operation new return
+end
+proc( ProcId : id FilePosition : pos -> Operation ) =>: export: opNestedProc
+  id OpValue .NestedProc Type .undefined pos Operation new return
 end
 
 proc( BlockType FilePosition : pos -> Operation ) =>: export: opBlock
@@ -683,6 +687,13 @@ namespace: sb
           ..over .dataType  typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .StaticConstant typeContext sb.appendConstant
+          break
+        NestedProc case
+          "nested proc ( " sb.appendS
+          ..over .dataType  typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .NestedProc i64 cast.u sb.appendI
+          ":ProcId" sb.appendS
           break
         ConstantReference case
           ..over .val .ConstantReference =:: refId

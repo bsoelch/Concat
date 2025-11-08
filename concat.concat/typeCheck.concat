@@ -1892,6 +1892,34 @@ proc(
       op .val .StaticConstant op .dataType op .pos state pushConstant
       true state .stack branchTree.peek .data .isStatic=
       return
+    NestedProc case
+      op .val .NestedProc =:: procId
+      program [] .procedures procId i64 cast list.at .data =:: procData
+      procData [] .procType .undefined ?? ! or
+          procData .implementation [] .code ?? ! or
+          procData .implementation .code [] .codeState .PARSING ?? ! if
+        "unexpected state for nested procedure" sb.copyPtr
+        op .pos errors appendError
+        return
+      end
+       ## ensure lambda is type-checked
+      state [] .missingProcs
+        ## MissingProc
+          ## ProcedureImpl
+            -1
+            procId
+          ProcedureImpl new
+          op .pos
+        MissingProc new list.append
+      state .missingProcs=
+      op .pos state popType =:: procType
+      procType procData .procType=
+      idContext id.currentScope procData .scopeId= ## remember host scope
+      ProcCodeState .PARSED procData .implementation .code .codeState=
+      procId ConstValue .Procedure
+        procType false typeContext types.getAddressType
+      op .pos state pushConstant
+      return
     getName setName atName case
       "could not find identifier: " sb.copyPtr
         op .val .getName ?? if
@@ -2373,47 +2401,8 @@ proc(
           op state appendOp ..drop
           return
         PROCEDURE case
-          ## getIdentifier
-            idInfo .labelId
-            idContext
-          id.getIdentifier if ..drop
-            "could not find " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
-            op .pos errors appendError
-            return
-          end =:: idData
-          idData .constValue .Procedure ?? ! if
-            "could not find procedure id" sb.copyPtr
-            op .pos errors appendError
-            return
-          end
-          idData .constValue [] .Procedure =:: procId
-          program [] .procedures procId i64 cast list.at .data =:: procData
-          procData [] .procType .undefined ?? ! or
-              procData .implementation [] .code ?? ! or
-              procData .implementation .code [] .codeState .PARSING ?? ! if
-            "unexpected state for nested procedure" sb.copyPtr
-            op .pos errors appendError
-            return
-          end
-          ## ensure lambda is type-checked
-          state [] .missingProcs
-            ## MissingProc
-              ## ProcedureImpl
-                -1
-                procId
-              ProcedureImpl new
-              op .pos
-            MissingProc new list.append
-          state .missingProcs=
-          op .pos state popType =:: procType
-          procType procData .procType=
-          idContext id.currentScope procData .scopeId= ## remember host scope
-          ProcCodeState .PARSED procData .implementation .code .codeState=
-          procId ConstValue .Procedure
-            procType false typeContext types.getAddressType
-          op .pos state pushConstant
-          return
+          "is this reachable" ..panic
+          ##return
         PROCEDURE_BUNDLE TYPE
             LABEL ARGUMENT TMP_VAR case
           "unexpected initialization of identifier " sb.copyPtr

@@ -234,6 +234,9 @@ proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
 end
 
 proc( Constant : const ParserState ptr.mut : state -> ) =>: pushConst
+  state getInterpreter .context interpreter.skipCurrentBlock if
+    return
+  end
   const constantToOp state appendOp
 end
 
@@ -1332,12 +1335,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           .constValue=
       end =:: procId
       state [] .currentProcs procId list.append state .currentProcs=
-      named and isNested if
-        "named procedures cannot be nested" sb.copyPtr
-        fileState [] .wordStart errors appendError
-        return
-      end
       isNested if
+        named if
+          "named procedures cannot be nested" sb.copyPtr
+          fileState [] .wordStart errors appendError
+        end
         procType idData@ id.asIdInfo fileState [] .wordStart opInitializeId state appendOp
         return
       end
@@ -1345,13 +1347,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
        named and state [] .constantBlocks .length 0:iSize != if
         "cannot declare named procedure in type or initializer blocks" sb.copyPtr
         fileState [] .wordStart errors appendError
-        return
       else procType typeContext types.isProcedure ! _if
-        ## XXX? wrap non-procedure types in procedure: i32 =>: ... <-> ( -> i32 ) =>: ...
+        ## TODO? wrap non-procedure types in procedure: i32 =>: ... <-> ( -> i32 ) =>: ...
         "unexpected type for procedure declaration: " sb.copyPtr
           procType typeContext sb.appendType
         fileState [] .wordStart errors appendError
-        return
       end
       ## check if current procedure is main
       procName procType procId fileState [] .wordStart state checkMain
@@ -1575,15 +1575,19 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               procStart [] .val .implementProcedure ?? or
                   procStart [] .val .initializeId ??
               end "procedure starts with correct operation" assert
-              slice.copy ## TODO? use arena-allocator for proc-code
+              slice.copy
             currentProc .implementation .code .code=
             progContext [] .tmpOps
               closedBlock .blockStart list.setLength
             progContext .tmpOps=
             currentProc [] .labelId labelContext id.labelFlags id.FLAG_LAMBDA & ? if
-              currentProcId ConstValue .Procedure
-                currentProc [] .procType false typeContext types.getAddressType
-              fileState [] .wordStart opConst state appendOp
+              currentProc [] .procType .undefined ?? if
+                currentProcId fileState [] .wordStart opNestedProc state appendOp
+              else
+                currentProcId ConstValue .Procedure
+                  currentProc [] .procType false typeContext types.getAddressType
+                fileState [] .wordStart opConst state appendOp
+              end
             end
             currentProc [] .procType .undefined ?? ! if
               ProcCodeState .PARSED currentProc .implementation .code .codeState=
