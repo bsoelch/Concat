@@ -302,11 +302,13 @@ namespace: interpreter
         ## getOrOffset
           args 0 []
           false -1
+          baseType
           pos
           typeContext
         errors getOrOffset return
       OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT case
         k 2 == "correct number of arguments" assert
+        inTypes 0 [] typeContext types.getBaseType =:: baseType
         ## getOrOffset
           args 0 []
           true
@@ -316,6 +318,7 @@ namespace: interpreter
             pos errors appendError
             ConstValue .None OperatorResult .argumentError return
           end
+          baseType
           pos
           typeContext
         errors getOrOffset return
@@ -541,12 +544,31 @@ namespace: interpreter
     ConstValue : ptrValue
     bool : isOffset
     i64 : offset
+    Type : valueType
     FilePosition : pos
     TypeContext ptr.mut : typeContext
     CompilerError list ptr.mut : errors
   -> ConstValue OperatorResult ) =>: getOrOffset
     ConstValue ..length 23:iSize == "no new constants" assert
     ptrValue switch
+      Int case
+        ptrValue .Int =:: intConst
+          isOffset if
+            valueType typeContext types.strideOf switch
+              fixed .case
+                intConst + ConstValue .Int OperatorResult .success return
+              default
+                "cannot determine size of type: " sb.copyPtr
+                  intConst sb.appendI
+                pos errors appendError
+              break
+            end
+          else
+            "cannot dereference integer: " sb.copyPtr
+              intConst sb.appendI
+            pos errors appendError
+          end
+          ConstValue .None OperatorResult .argumentError return
       Array8 case
         ptrValue .Array8 =:: arrayConst
           isOffset if
