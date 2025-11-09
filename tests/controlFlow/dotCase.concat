@@ -1,0 +1,24 @@
+import debug
+
+i32 =:: u32
+union(
+  i32 : Int
+  u32 : UInt
+  f32 : Float
+) =:: aUnion
+
+proc( aUnion -> ) =>: test
+  switch
+    UInt Int .case =:: intVal
+      intVal debug.print
+    break
+    Float .case =:: floatVal
+      floatVal debug.print
+    break
+  end
+end
+proc( -> ) =>: main
+  2 aUnion .Int test
+  3.14:f32 aUnion .Float test
+  32:u32 aUnion .UInt test
+end
