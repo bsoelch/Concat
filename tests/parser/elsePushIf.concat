@@ -3,6 +3,10 @@ proc( -> i32 ) =>: getInt
   1 return
 end
 
+proc( bool : t bool : f -> ) =>: test
+  f if 0 else getInt t _if end 1 == "f if val ... end" assert
+  t if else f _if else end
+end
 proc( -> ) =>: main
   false if 0 else getInt true _if end debug.print
   true if else false _if else end

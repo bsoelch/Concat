@@ -3737,26 +3737,26 @@ proc(
       context resetContext
       true return
     end
-    context [] .stack argOffset list.at .data =:: value
-    context [] .stackInfo argOffset list.at .data =:: valueInfo
-    value [] .GenericArg ?? if
+    context [] .stack argOffset [] =:: value
+    context [] .stackInfo argOffset [] =:: valueInfo
+    value .GenericArg ?? if
       true hasGenericArg=
       isTypeGenerator and
-          value [] .GenericArg labelContext id.labelFlags id.FLAG_STATIC & ? ! if
+          value .GenericArg labelContext id.labelFlags id.FLAG_STATIC & ? ! if
         "Arguments for Type-generators should be static" sb.copyPtr
-        valueInfo [] .pushedAt errors appendError
+        valueInfo .pushedAt errors appendError
       end
-    else value [] .TypeId ?? and value [] .TypeId typeContext types.isGeneric _if
+    else value .TypeId ?? and value .TypeId typeContext types.isGeneric _if
       true hasGenericArg=
     end
     argOffset 1:iSize + argOffset=
     label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
       context [] .stack
-        value list.appendP
+        value list.append
       context .stack=
       context [] .stackInfo
         ## ValueInfo
-          valueInfo [] .valueType
+          valueInfo .valueType
           pos
         ValueInfo new list.append
       context .stackInfo=
@@ -3764,8 +3764,8 @@ proc(
       context [] .localVariables .data
         label
         ## Constant
-          value []
-          valueInfo []
+          value
+          valueInfo
         Constant new
       map.put ..drop
     end

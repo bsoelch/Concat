@@ -13,7 +13,6 @@ struct(
   ConstValue   : mut: value
   FilePosition : mut: pushedAt
   i32          : mut: opIndex
-  bool         : mut: isStatic ## XXX? 3 types: static, constant, expression
 ) =:: TypeInfo
 
 -1:i32 =:: OP_UNLINKED
@@ -387,7 +386,7 @@ proc(
   state removeTrailingNOPs
   false return
 end
-proc( i32 : count bool : isStatic FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: interpreterStoreConstants
+proc( i32 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: interpreterStoreConstants
   state [] .program =:: progContext
   progContext .errors =:: errors
   progContext .idContext =:: idContext
@@ -413,7 +412,6 @@ proc( i32 : count bool : isStatic FilePosition : pos TypeCheckState ptr.mut : st
       constInfo [] .valueType
       constInfo [] .pushedAt
     state pushConstant
-    isStatic state .stack branchTree.peek .data .isStatic=
   finally i 1:iSize + end ..drop
 end
 
@@ -421,7 +419,6 @@ proc(
   Type : calledType
   ProcedureCallInfo : calledProc
   bool : staticProc
-  bool : staticArg
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: interpretCall
@@ -458,13 +455,13 @@ proc(
       pos progContext .errors appendError
     end
     ## reset stack to previous state
-    argCount staticArg pos state interpreterStoreConstants
+    argCount pos state interpreterStoreConstants
     true return
   end
   ## store results
   calledType
     typeContext types.getProcOut .data .length i32 cast.u
-  staticArg pos state interpreterStoreConstants
+  pos state interpreterStoreConstants
   false return
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
@@ -484,7 +481,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeMo
         op [] .val .typeModifier sb.appendTypeModifier
       op [] .pos errors appendError
     end
-    1 true op [] .pos state interpreterStoreConstants
+    1 op [] .pos state interpreterStoreConstants
   state .interpreter interpreter.resetContext
 end
 
@@ -513,7 +510,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretT
     false return
   end
   op .val .blockEnd ?? and state .interpreter interpreter.inTypeOrInitializer ! if
-    1 true op [] .pos state interpreterStoreConstants
+    1 op [] .pos state interpreterStoreConstants
     false state .inTypeBlock=
     state .interpreter interpreter.resetContext
     true return ## consume block end
@@ -553,9 +550,6 @@ proc(
       sb.appendTypeRecursive
       printValues if
         val [] .value .None ?? ! if
-          val [] .isStatic if
-            " static" sb.appendS
-          end
           " { " sb.appendS
           val [] .value typeContext sb.appendConstant
           " }" sb.appendS
@@ -607,10 +601,9 @@ proc(
   srcOp [] .val .Constant ?? ! if
     true return
   end
-  ## XXX? casting between non-interger numbers
-  ##   completely merge with interpreter.castConstant
+  ## TODO? completely merge with interpreter.castConstant
   ## casting between integer constants
-  src .value .Int ?? and target typeContext types.isInt if
+  target typeContext types.isNumber and src .value .Int ?? or src .value .Float ??  if
     src .valueType signType src .value target typeContext interpreter.castConstant srcOp .val .Constant=
     target srcOp .dataType=
     false return
@@ -809,7 +802,6 @@ proc(
         value
         pos
         opIndex
-        false
       TypeInfo new
     branchTree.push
     opIndex 0 < if
@@ -840,7 +832,6 @@ proc(
         value
         op .pos
         opIndex
-        false
       TypeInfo new
     branchTree.push
     opIndex 0 < if
@@ -864,7 +855,6 @@ proc(
         pos
         ## multiple types from one op -> cannot modify op to modify types
         OP_UNLINKED
-        false
       TypeInfo new
     branchTree.push
   end
@@ -1161,46 +1151,8 @@ proc(
     ConstValue .None ## XXX merge constants
     mergePoint .mergePoint
     OP_UNLINKED
-    false
   TypeInfo new return
 end
-proc(
-  Operation ptr : op
-  TypeCheckState ptr.mut : state
--> ) =>: checkReachable
-  state [] .reachable if
-    return
-  end
-  ## check if op can appear in unreachable context
-  op [] .val switch
-    block case
-      op [] .val .block .blockType switch
-        ELSE CASE DOT_CASE DEFAULT FINALLY case
-          return
-        BREAK BREAK_SWITCH case
-          state [] .openBlocks .length 0:iSize u> and
-              state [] .openBlocks list.peek .data [] .Switch ?? if
-            return ## allow break in switch
-          end
-          break
-        default break
-      end
-      break
-    implementProcedure blockEnd NOP compilerInfo panic panicWithMessage case
-      return
-    default break
-  end
-  state [] .program =:: program
-  program .errors =:: errors
-  program .idContext =:: idContext
-  idContext .constContext =:: constContext
-  idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
-  "unreachable operation: " sb.copyPtr
-    op [] program sb.appendOp
-  op [] .pos errors appendError
-end
-
 
 proc(
   Operation : op
@@ -1885,15 +1837,13 @@ proc(
   state [] .inTypeBlock and op@ state interpretTypeBlock if
     return ## evaluate constants
   end
-  op@ state checkReachable
   op .val switch
     NOP case return
     Constant case
       op .val .Constant op .dataType op .pos state pushConstant
       return
-    StaticConstant case
+    StaticConstant case ## TODO? remove static constants
       op .val .StaticConstant op .dataType op .pos state pushConstant
-      true state .stack branchTree.peek .data .isStatic=
       return
     NestedProc case
       op .val .NestedProc =:: procId
@@ -2005,9 +1955,6 @@ proc(
             constValue
             op
           state pushValue
-          isStatic if
-            true state .stack branchTree.peek .data .isStatic=
-          end
           labelId state replaceLabel
           mutable if ## insert copy for mutable values
             state wrapCopy
@@ -2042,17 +1989,13 @@ proc(
             list.asSlice
           end =:: procedures
           0:i32 =:: mut: stackConstants
-          0:i32 =:: mut: staticArgIndex
           true =:: mut: headConstant
-          false =:: mut: hasStaticArg
+          ## TODO do not recreate list for each call
           state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
           state .stack branchTree.itr.start while
             branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
-            headConstant and val [] .value .None ?? ! if
-              hasStaticArg ! and val [] .isStatic if
-                stackConstants staticArgIndex=
-                true hasStaticArg=
-              end
+            ## TODO? don't treat genericArg as constant
+            headConstant and val [] .value .None ?? ! and val [] .value .GenericArg ?? !  if
               stackConstants 1 + stackConstants=
             else
               false headConstant=
@@ -2084,13 +2027,6 @@ proc(
               message sb.free ..drop
             end
           end
-          hasStaticArg if
-            staticArgIndex
-              calledType
-                typeContext types.getProcIn .data
-              .length i32 cast.u <
-            hasStaticArg=
-          end
           stackValues list.free ..drop
           calledProc? .data =:: calledProc
           program [] .procedures
@@ -2105,7 +2041,7 @@ proc(
               [] .isStatic and state [] .mode .STATIC_PROC ?? ! or
               baseProcData .implementation [] .code ?? and
               baseProcData .implementation .code .codeState .TYPE_CHECKING ?? ! if
-            calledType calledProc true hasStaticArg op .pos state interpretCall ! if
+            calledType calledProc true op .pos state interpretCall ! if
               return
             end
           end
@@ -2139,9 +2075,8 @@ proc(
               baseProcData [] .implementation .builtIn .builtIn =:: builtInId
               builtInId .SYS_ARGC ?? or builtInId .SYS_ARGV ?? or builtInId .SYS_ENVP ?? if
                 true program .hasGetArgs=
-              end
-              hasStaticArg and headConstant if ## only constant arguments
-                calledType calledProc false hasStaticArg op .pos state interpretCall ! if
+              else headConstant _if ## only constant arguments
+                calledType calledProc false op .pos state interpretCall ! if
                   return
                 end
               end
@@ -2446,7 +2381,6 @@ proc(
               ConstValue .None
               op .pos
               OP_UNLINKED
-              false
             TypeInfo new
           branchTree.push
         else
@@ -2822,10 +2756,10 @@ proc(
           false =:: mut: staticCondition
           state .skippedBlocks [] .length 0:iSize == if
             state .stack branchTree.peek =:: condition?
-            condition? optional.hasData and condition? .data [] .isStatic if
+            condition? optional.hasData and condition? .data .value [] .None ?? ! if
               true staticCondition=
               condition? .data .value [] .Bool ?? ! if
-                "unexpected value for static condition expected boolean got " sb.copyPtr
+                "unexpected value for condition expected boolean got " sb.copyPtr
                   condition? .data [] .value typeContext sb.appendConstant
                 op .pos errors appendError
                 return
@@ -2906,9 +2840,9 @@ proc(
           state peekBlock .data .If =:: ifBlock
           state .skippedBlocks [] .length 0:iSize == if
             state .stack branchTree.peek =:: condition?
-            condition? optional.hasData and condition? .data [] .isStatic if
+            condition? optional.hasData and condition? .data .value [] .None ?? ! if
               condition? .data .value [] .Bool ?? ! if
-                "unexpected value for static condition expected boolean got " sb.copyPtr
+                "unexpected value for condition expected boolean got " sb.copyPtr
                   condition? .data [] .value typeContext sb.appendConstant
                 op .pos errors appendError
                 return
@@ -4251,9 +4185,9 @@ proc(
       end
       state .skippedBlocks [] .length 0:iSize == and
           state .stack branchTree.peek =:: condition?
-          condition? optional.hasData and condition? .data [] .isStatic if
+          condition? optional.hasData and condition? .data .value [] .None ?? ! if
         condition? .data .value [] .Bool ?? ! if
-          "unexpected value for static condition expected boolean got " sb.copyPtr
+          "unexpected value for condition expected boolean got " sb.copyPtr
             condition? .data [] .value typeContext sb.appendConstant
           op .pos errors appendError
           return
@@ -4346,7 +4280,6 @@ proc(
         constType
         op .pos
       state pushConstant
-      true state .stack branchTree.peek .data .isStatic=
       return
     procPtr builtIn
     NewEnum call checkEnumLabel
@@ -4409,7 +4342,6 @@ proc(
         types.I_SIZE
         op .pos
       state pushConstant
-      true state .stack branchTree.peek .data .isStatic=
       return
     typeModifier case
       ## type-modifiers are handled by the interpreter

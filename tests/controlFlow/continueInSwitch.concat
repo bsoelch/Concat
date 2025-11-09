@@ -1,16 +1,16 @@
 import debug
-proc( char8 : x -> char8 ) =>: f
-  5 while ..dup 0 >= do
-    x ..dup switch
+proc( i32 : n char8 : x -> char8 ) =>: f
+  n while $ 0 >= do
+    x $ switch
       'x' case ..drop 1 - continue
-      default ..swap ..drop return break
+      default >$ ..drop return break
     end
   end ..drop
   'X' return
 end
 
 proc( -> ) =>: main
-  'a' f debug.print
-  'x' f debug.print
-  'z' f debug.print
+  5 'a' f debug.print
+  5 'x' f debug.print
+  5 'z' f debug.print
 end

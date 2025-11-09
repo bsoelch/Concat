@@ -1,6 +1,13 @@
+proc( bool : cond -> ) =>: test
+  cond if
+     1
+  else
+  end
+end
 proc( -> ) =>: main
   true if
      1
   else
   end
+  0 != test
 end

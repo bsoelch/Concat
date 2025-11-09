@@ -1,3 +1,13 @@
+proc( i16 : src -> ) =>: test
+  src switch
+    -1 case break
+    default ..unreachable
+  end
+  src switch
+    0xffff:i16 case break
+    default ..unreachable
+  end
+end
 proc( -> ) =>: main
   -1:i16 switch
     -1 case break
@@ -11,4 +21,5 @@ proc( -> ) =>: main
     -1 case break
     default ..unreachable
   end
+  -1 test
 end

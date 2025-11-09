@@ -1,10 +1,12 @@
 enum( A B C ) =:: anEnum
 
-proc( -> ) =>: main
-  false if
+proc( bool : c -> anEnum ) =>: test
+  c if
     anEnum .A
   else
     anEnum .B
-  end =:: e
-  e ..?types..2 ..drop
+  end
+end
+proc( -> ) =>: main
+  false test ..?types..2 ..drop
 end
