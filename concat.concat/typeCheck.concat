@@ -64,6 +64,7 @@ struct(
   LabelId : blockLabel
   BlockId : blockId
   i32 : switchPosition
+  IdentifierInfo optional : srcVar
   bool : mut: inLabel
   bool : mut: allowBreak
 ) =:: SwitchBlockInfo
@@ -111,6 +112,7 @@ end
 proc(
   Type : switchType
   branchTree.NodeId : branchRoot
+  IdentifierInfo optional : srcVar
   LabelId : blockLabel
   BlockId : blockId
   i32 : switchPosition
@@ -126,6 +128,7 @@ proc(
     blockLabel
     blockId
     switchPosition
+    srcVar
     true
     false
   SwitchBlockInfo new BlockInfo .Switch return
@@ -426,7 +429,7 @@ proc(
   state .interpreter =:: interpreter
   progContext .idContext .typeContext =:: typeContext
   calledType typeContext types.getProcIn .data .length i32 cast.u =:: argCount
-  argCount 
+  argCount
     InterpreterLoadMode .fixedCount
   state interpreterLoadContants if
     staticProc if
@@ -3179,8 +3182,7 @@ proc(
             return
           end
           value? .data [] .valueType =:: switchType
-          switchType typeContext types.isInt ! and
-          switchType typeContext types.isChar ! and
+          switchType typeContext types.isIntOrChar ! and
               switchType typeContext types.isTaggedUnion ! if
             "cannot switch values of type " sb.copyPtr
               switchType typeContext sb.appendType
@@ -3194,6 +3196,13 @@ proc(
           state requireTypes if
             return
           end
+          switchType typeContext types.isUnion if
+            ## TODO? only create tmp-var if switch uses `.case`
+            0 StackModType .COPY op .pos opStackMod state appendOp ..drop
+            switchType op .pos state [] .currentFile idContext id.newItrVar =:: tmpVar
+            switchType tmpVar op .pos opInitializeId state appendOp ..drop
+            tmpVar optional.wrap
+          else IdentifierInfo optional.empty end =:: srcVar
           program [] .switchData .length BlockId cast =:: switchId
           switchId op@ .val .block .blockId=
           switchType op@ .dataType=
@@ -3215,6 +3224,7 @@ proc(
           ## newSwitchBlock
             switchType
             switchBranch
+            srcVar
             op .val .block .blockLabel
             switchId
             currentOpIndex
@@ -3294,39 +3304,6 @@ proc(
                 " has to be preceded by at least one label" sb.appendS
               op .pos errors appendError
             end
-            blockType .DOT_CASE ?? if
-              switchType typeContext types.isUnion if
-                switchType prev? .data [] .value .EnumLabel typeContext types.compositeGetElement =:: labelType
-                switchData [] .labels list.reversed for  =:: label
-                  ## labels in current case are al at end of label list
-                  label .caseId switchData [] .caseCount < if break end
-                  switchType label .value .EnumLabel typeContext types.compositeGetElement =:: newType
-                  newType labelType types.typeEquals if continue end
-                  "incompatible types for case-values: " sb.copyPtr
-                    labelType typeContext sb.appendType
-                    " and " sb.appendS
-                    newType typeContext sb.appendType
-                    op .pos errors
-                  newType typeContext types.unwrapNamed labelType typeContext types.unwrapNamed types.typeEquals if
-                    appendWarning
-                  else
-                    appendError
-                  end
-                end
-                labelType@ slice.wrap op .pos state pushTypes
-                ## TODO replace DOT_CASE  with  CASE + getElement on tmp-var
-                ## * create tmp-var (holding switched value) for union-switch containing .case
-                ## * generate: CASE , get(tmpVar) , uncheckedGetElement(index) for DOT_CASE
-                "unimplemented: .case" ..panic
-              else
-                128 sb.create
-                  BlockType .DOT_CASE sb.appendBlockType
-                  " is only supported for unions got: " sb.appendS
-                  switchType typeContext sb.appendType
-                op .pos errors appendError
-                BlockType .CASE op@ .val .block .blockType=
-              end
-            end
             switchBlock [] .caseJumpDistances
               state [] .compiledOps .length
                 switchBlock [] .switchPosition iSize cast.u -
@@ -3334,12 +3311,57 @@ proc(
             switchBlock .caseJumpDistances=
           end
           switchBlock [] .blockId op@ .val .block .blockId=
+          true state .reachable=
+          switchType op@ .dataType=
+          blockType .DOT_CASE ?? if
+            BlockType .CASE op@ .val .block .blockType=
+          end
+          op state appendOp ..drop
+          blockType .DOT_CASE ?? if
+            switchType typeContext types.isUnion if
+              prev? .data [] .value .EnumLabel =:: eltIndex
+              switchType eltIndex typeContext types.compositeGetElement =:: labelType
+              switchData [] .labels list.reversed for  =:: label
+                ## labels in current case are al at end of label list
+                label .caseId switchData [] .caseCount < if break end
+                switchType label .value .EnumLabel typeContext types.compositeGetElement =:: newType
+                newType labelType types.typeEquals if continue end
+                "incompatible types for case-values: " sb.copyPtr
+                  labelType typeContext sb.appendType
+                  " and " sb.appendS
+                  newType typeContext sb.appendType
+                  op .pos errors
+                newType typeContext types.unwrapNamed labelType typeContext types.unwrapNamed types.typeEquals if
+                  appendWarning
+                else
+                  appendError
+                end
+              end
+              switchBlock [] .srcVar .if =:: srcVar
+                switchType srcVar op .pos opGetId state appendOp ..drop
+                ## pushValue
+                  labelType
+                  ConstValue .None
+                  switchType
+                    eltIndex
+                    op .pos
+                  opGetElement
+                state pushValue
+              else
+                labelType@ slice.wrap op .pos state pushTypes
+                "cannot access elements of switched type" sb.copyPtr op .pos errors appendError
+              end
+            else
+              128 sb.create
+                BlockType .DOT_CASE sb.appendBlockType
+                " is only supported for unions got: " sb.appendS
+                switchType typeContext sb.appendType
+              op .pos errors appendError
+            end
+          end
           switchData [] .caseCount
             1 +
           switchData .caseCount=
-          true state .reachable=
-          switchType op@ .dataType=
-          op state appendOp ..drop
           true switchBlock .allowBreak=
           return
         BREAK CONTINUE case
