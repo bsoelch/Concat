@@ -12,6 +12,8 @@ namespace: type
   typeSet( integer char8 char16 char32 ) =:: export: intLike
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive
+    ## FIXME: this procedure should return false for unnamed primitives
+    ##  in the current version of the interpreter chacking for named-types leads to weird behavior when comparing iSize values
     T ..types.unwrapNamed ..types.isPrimitive
   end
   typeSet( isNamedPrimitive@ ) =:: export: namedPrimitive

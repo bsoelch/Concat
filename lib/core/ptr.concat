@@ -240,69 +240,53 @@ namespace: ptr
   end
 end
 namespace: iSize
-  ( iSize : a iSize : b -> iSize ) =>: export: add
-    a ..type.iSize cast b ..type.iSize cast + iSize cast
-  end
-  ( iSize : a iSize : b -> iSize ) =>: export: sub
-    a ..type.iSize cast b ..type.iSize cast - iSize cast
-  end
-  ( iSize : a -> iSize ) =>: export: neg
-    a ..type.iSize cast -_ iSize cast
-  end
-  ( iSize : a iSize : b -> iSize ) =>: export: mul
-    a ..type.iSize cast b ..type.iSize cast * iSize cast
-  end
-  ( iSize : a iSize : b -> iSize ) =>: export: div
-    a ..type.iSize cast b ..type.iSize cast u/ iSize cast
-  end
-  ( iSize : a iSize : b -> iSize ) =>: export: shr
-    a ..type.iSize cast b ..type.iSize cast >>> iSize cast
-  end
-  ( iSize : a i32 : shift -> iSize ) =>: export: shrI32
-    a ..type.iSize cast shift >>> iSize cast
-  end
-  ( iSize : a iSize : b -> iSize ) =>: export: shl
-    a ..type.iSize cast b ..type.iSize cast << iSize cast
-  end
-  ( iSize : a i32 : shift -> iSize ) =>: export: shlI32
-    a ..type.iSize cast shift << iSize cast
-  end
-  ( iSize : a iSize : b -> iSize ) =>: export: mod
-    a ..type.iSize cast b ..type.iSize cast u% iSize cast
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: lt
-    a ..type.iSize cast b ..type.iSize cast u<
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: le
-    a ..type.iSize cast b ..type.iSize cast u<=
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: eq
-    a ..type.iSize cast b ..type.iSize cast ==
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: ne
-    a ..type.iSize cast b ..type.iSize cast !=
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: ge
-    a ..type.iSize cast b ..type.iSize cast u>=
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: gt
-    a ..type.iSize cast b ..type.iSize cast u>
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: slt
-    a ..type.iSize cast b ..type.iSize cast <
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: sle
-    a ..type.iSize cast b ..type.iSize cast <=
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: sge
-    a ..type.iSize cast b ..type.iSize cast >=
-  end
-  ( iSize : a iSize : b -> bool ) =>: export: sgt
-    a ..type.iSize cast b ..type.iSize cast >
+  iSize ..types.unwrapNamed i64 === if
+    ( iSize : a iSize : b -> iSize ) : export: alias: add ..builtIn.add.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: sub ..builtIn.sub.i64
+    ( iSize : a -> iSize ) : export: alias: neg ..builtIn.neg.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: mul ..builtIn.mul.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: div ..builtIn.udiv.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: shr ..builtIn.lshr.i64
+    ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i64i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: shl ..builtIn.shl.i64
+    ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i64i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: eq ..builtIn.eq.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: ne ..builtIn.ne.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: lt ..builtIn.ult.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: le ..builtIn.ule.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: ge ..builtIn.uge.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: gt ..builtIn.ugt.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: slt ..builtIn.lt.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: sle ..builtIn.le.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: sge ..builtIn.ge.i64
+    ( iSize : a iSize : b -> bool ) : export: alias: sgt ..builtIn.gt.i64
+  else iSize ..types.unwrapNamed i32 === _if
+    ( iSize : a iSize : b -> iSize ) : export: alias: add ..builtIn.add.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: sub ..builtIn.sub.i32
+    ( iSize : a -> iSize ) : export: alias: neg ..builtIn.neg.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: mul ..builtIn.mul.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: div ..builtIn.udiv.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: shr ..builtIn.lshr.i32
+    ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: shl ..builtIn.shl.i32
+    ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: eq ..builtIn.eq.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: ne ..builtIn.ne.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: lt ..builtIn.ult.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: le ..builtIn.ule.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: ge ..builtIn.uge.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: gt ..builtIn.ugt.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: slt ..builtIn.lt.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: sle ..builtIn.le.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: sge ..builtIn.ge.i32
+    ( iSize : a iSize : b -> bool ) : export: alias: sgt ..builtIn.gt.i32
+  else
+    "iSize should be i64 or i32" ..panic
   end
   ( iSize : a iSize : b -> i32 ) =>: export: cmp
-    a ..type.iSize cast b ..type.iSize cast u> ?1
-    a ..type.iSize cast b ..type.iSize cast u< ?1 -
+    a b u> ?1 a b u< ?1 -
   end
   ( iSize : a iSize : b -> iSize ) =>: export: min
     a b u< if a else b end

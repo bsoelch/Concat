@@ -2714,13 +2714,16 @@ proc(
       2 op .pos state checkStackSize if
         return
       end
-      Type 2 array new =:: mut: params
+      Type 2 array : params
+      ConstValue 2 array : values
       state .stack
-         0 branchTree.at .data [] .valueType
-      params@ 0 =[]
+         0 branchTree.at .data
+         $ [] .value values@ 0 =[]
+      [] .valueType params@ 0 =[]
       state .stack
-         1 branchTree.at .data [] .valueType
-      params@ 1 =[]
+         1 branchTree.at .data
+         $ [] .value values@ 1 =[]
+      [] .valueType params@ 1 =[]
       params@ 0 [] params@ 1 [] typeContext types.mergeTypes $ ? if .data else ..drop
         "cannot check for equality between of values of types " sb.copyPtr
           params@ 0 [] typeContext sb.appendType
@@ -2729,6 +2732,23 @@ proc(
         op .pos errors appendError
         return
       end =:: argType
+      values 0 [] .None ?? ! and values 1 [] .None ?? ! if
+        2 op .pos state discardValues
+        values 1 [] values 0 [] argType typeContext interpreter.operatorEq if ..drop
+          "unsupported values for equality check: " sb.copyPtr
+            values 0 [] typeContext sb.appendConstant
+            " and " sb.appendS
+            values 1 [] typeContext sb.appendConstant
+          op .pos errors appendError
+          return
+        end
+          op .val .equalityOperator .NEQ ?? ^ ## invert result for NEQ
+        ConstValue .Bool
+          types.primitive.BOOL
+          op .pos
+        state pushConstant
+        return
+      end
       argType params@ 0 =[]
       argType params@ 1 =[]
       argType op@ .dataType=
