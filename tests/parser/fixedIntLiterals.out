@@ -24,9 +24,9 @@ identifier "f":
 -----------------
 -----------------
 identifier "g":
- - global variable "g" ( named[3402]( "char" ) [ -2 ] ) declared at ./tests/parser/fixedIntLiterals.concat:9:13
+ - global variable "g" ( named[3292]( "char" ) [ -2 ] ) declared at ./tests/parser/fixedIntLiterals.concat:9:13
 -----------------
 -----------------
 identifier "h":
- - global variable "h" ( named[3403]( "byte" ) [ 3 ] ) declared at ./tests/parser/fixedIntLiterals.concat:10:12
+ - global variable "h" ( named[3293]( "byte" ) [ 3 ] ) declared at ./tests/parser/fixedIntLiterals.concat:10:12
 -----------------

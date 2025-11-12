@@ -13,7 +13,7 @@ namespace: type
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive
     ## FIXME: this procedure should return false for unnamed primitives
-    ##  in the current version of the interpreter chacking for named-types leads to weird behavior when comparing iSize values
+    ##  due to an interpreter bug using and-or statements in the interpreter is currently not possible
     T ..types.unwrapNamed ..types.isPrimitive
   end
   typeSet( isNamedPrimitive@ ) =:: export: namedPrimitive

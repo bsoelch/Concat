@@ -1875,7 +1875,8 @@ proc(
             op [] .val .block .blockType =:: blockType
             blockType .OR_IF ?? or blockType .OR ?? end =:: isOr
             val isOr == if
-              blockType .AND ?? or blockType .OR ?? if
+              ## TODO? does this value get lost when poping the and-or block
+              skipBlock ! and blockType .AND ?? or blockType .OR ?? if
                 val ConstValue .Bool types.primitive.BOOL op [] .pos context pushValue
               end
               op [] .val .block .jumpDistance EvalResult .Jump return
@@ -2012,16 +2013,20 @@ proc(
           blockType .ELSE ?? if EvalResult .Ok return end break
         OR_TRUE OR_FALSE case
           blockType .OR ?? if
-            closedBlock .blockType .OR_TRUE ?? ConstValue .Bool
-              types.primitive.BOOL
-            op [] .pos context pushValue
+            closedBlock .blockType .OR_TRUE ?? if
+              true ConstValue .Bool
+                types.primitive.BOOL
+              op [] .pos context pushValue
+            end
             EvalResult .Ok return
           end break
         AND_TRUE AND_FALSE case
           blockType .AND ?? if
-            closedBlock .blockType .AND_TRUE ?? ConstValue .Bool
-              types.primitive.BOOL
-            op [] .pos context pushValue
+            closedBlock .blockType .AND_FALSE ?? if
+              false ConstValue .Bool
+                types.primitive.BOOL
+              op [] .pos context pushValue
+            end
             EvalResult .Ok return
           end break
         default break

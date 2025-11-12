@@ -1757,9 +1757,14 @@ proc(
       end
     end
   end
-  state .skippedBlocks [] .length 0:iSize u> and
-      op .val .block ?? ! and op .val .blockEnd ?? ! if
-    return ## ignore non-block ops in skipped block
+  state .skippedBlocks [] .length 0:iSize u> if
+    op .val switch
+      block blockEnd .case .blockType break
+      default return ## ignore non-block ops in skipped block
+    end switch
+      AND OR IF AND_IF OR_IF ELSE case break
+      default return ## ignore block-types not involved in skip
+    end
   end
   state inSwitchLabel and op@ state typeCheckSwitchLabel if
     return
