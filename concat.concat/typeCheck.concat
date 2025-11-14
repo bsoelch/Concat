@@ -3278,7 +3278,9 @@ proc(
           op state appendOp ..drop
           blockType .DOT_CASE ?? if
             switchType typeContext types.isUnion if
-              prev? .data [] .value .EnumLabel =:: eltIndex
+              prev? .if [] .value .EnumLabel else
+                return
+              end  =:: eltIndex
               switchType eltIndex typeContext types.compositeGetElement =:: labelType
               switchData [] .labels list.reversed for  =:: label
                 ## labels in current case are al at end of label list
