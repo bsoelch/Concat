@@ -1208,6 +1208,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state peekBlock .data =:: current
       hasDot if
         state fileState [] .wordStart appendDotIfCheck optional.wrap current .tmpVarInfo=
+        ## patch if-position after inserting dot-if operations
+        state opCount current .blockData .If .ifPosition=
       end
       BlockType .IF  fileState [] .wordStart opBlock  state appendOp
       hasDot if
@@ -1344,7 +1346,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         closed .blockData .AndOr ?? "closed block matches current block" assert
         closed .blockData .AndOr BlockType .DO fileState [] .wordStart state convertAndOrBlock
       else iSize slice.emptyMutable end =:: andPositions
-      state [] .openBlocks list.peek .and =:: whileBlock
+      state peekBlock .and =:: whileBlock
           whileBlock .blockData .While ?? if
         whileBlock .blockData .While
       else
@@ -1355,6 +1357,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "while-block can only contain a single 'do' statement" sb.copyPtr fileState [] .wordStart errors appendError
         return
       end
+      WhileBlockState .DO whileData .state=
       whileData [] .breakPositions
         andPositions slice.freeze list.appendSlice
         andPositions slice.free ..drop
@@ -1389,7 +1392,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "break":s string.eq or $ "break.":s string.startsWith or
       $ "continue":s string.eq or $ "continue.":s string.startsWith _if =:: opName
-      opName .length 8 u>= =:: isContinue
+      opName 0 string.charAt 'c' == =:: isContinue ## ! checking length is not correct
       opName '.' string.split ..drop =:: breakLabel
       breakLabel .length 0:iSize != if
         ## newLabel
@@ -1403,7 +1406,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: blockLabel
       isContinue if BlockType .CONTINUE else BlockType .BREAK end =:: blockType
       blockType blockLabel fileState [] .wordStart state findBreakableBlock .else
-        return ## error message handled by findBReakableBlock
+        return ## error message handled by findBreakableBlock
       end =:: breakBlock
       breakBlock .blockData .While ?? if
         breakBlock .blockData .While =:: whileData
@@ -1422,6 +1425,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
       else breakBlock .blockData .Switch ?? _if
         breakBlock .blockData .Switch =:: switchData
+        ## FIXME: do not clear implicit break is broken block is not innermost switch
         switchData fileState [] .wordStart state clearImplicitBreak
         isContinue if
           "unimplemented: continue switch" ..panic
@@ -1432,7 +1436,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       else
         "unsupported block for break" ..panic
       end
-      BlockType .BREAK blockLabel fileState [] .wordStart opLabeledBlock state appendOp
+      blockType blockLabel fileState [] .wordStart opLabeledBlock state appendOp
+      ## broken block is not the same as innermost block
+      state peekBlock .and .blockLabel breakBlock .blockLabel != if
+        fileState [] .wordStart state implicitBreakSwitch
+      end
       return
     else $ "switch":s string.eq or $ "switch:":s string.eq _if =:: opName
       opName "switch:":s string.eq if
@@ -1768,10 +1776,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               ifData .ifPosition fileState [] .wordStart state setBlockJump
               ifData .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
               BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
-              1:JumpDistance state peekOp .data .val .block .jumpDistance=
-            end
-            closedBlock .tmpVarInfo .if
-              state fileState [] .wordStart appendElseVal
+              1:JumpDistance state peekOp .if .val .block .jumpDistance= else ..drop end
+              closedBlock .tmpVarInfo .if
+                state fileState [] .wordStart appendElseVal
+              end
             end
             BlockType .ELSE fileState [] .wordStart opEndBlock  state appendOp
             ifData .andPositions slice.free ..drop
@@ -1816,7 +1824,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                   BlockType .PROCEDURE fileState [] .wordStart opEndBlock  state appendOp
                 end
               else
-                state .currentProcs=
+                list.pop ..drop state .currentProcs=
                 "unexpected end of procedure" sb.copyPtr fileState [] .wordStart errors appendError
                 return
               end
