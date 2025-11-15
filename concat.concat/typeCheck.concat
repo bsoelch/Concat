@@ -32,8 +32,6 @@ namespace: IfBlockFlags
   0x0004:IfBlockFlags =:: ifBranchTerminates
   0x0008:IfBlockFlags =:: hasAndIf
   0x0010:IfBlockFlags =:: hasOrIf
-  0x0020:IfBlockFlags =:: skipElse
-  0x0040:IfBlockFlags =:: skippedIf
   ( IfBlockFlags IfBlockFlags -> IfBlockFlags ) : alias: or i32.or
   ( IfBlockFlags IfBlockFlags -> IfBlockFlags ) : alias: and i32.and
   ( IfBlockFlags -> IfBlockFlags ) : alias: flip i32.flip
@@ -91,10 +89,11 @@ struct(
 union(
   _ : Unknown
   Type : Procedure
-  IfBlockInfo : mut: If
-  SwitchBlockInfo : mut: Switch
-  WhileBlockInfo : mut: While
-  AndOrBlockInfo : mut: AndOr
+  IfBlockInfo : If
+  _ : ConstIf
+  SwitchBlockInfo : Switch
+  WhileBlockInfo : While
+  AndOrBlockInfo : AndOr
 ) =:: BlockInfo
 proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
@@ -182,6 +181,7 @@ namespace: sb
     switch
       Unknown case "unknown" sb.appendS return
       Procedure case "procedure" sb.appendS return
+      ConstIf case "constant if" sb.appendS return
       If case IF_BLOCK_INFO_NAME sb.appendS return
       Switch case SWITCH_BLOCK_INFO_NAME sb.appendS return
       While case WHILE_BLOCK_INFO_NAME sb.appendS return
@@ -203,7 +203,6 @@ struct(
   iSize : openBlocksOffset
   iSize : compiledOpsOffset
   iSize : initializationStackOffset
-  iSize : skippedBlocksOffset
   i32 : blockStart
   branchTree.NodeId : branchRoot
   Type : currentProcType
@@ -221,7 +220,6 @@ struct(
   TypeInfo BranchTree : stack
   BlockInfo list : openBlocks
   Operation list : compiledOps
-  BlockType list : skippedBlocks
   i32 : blockStart
   MissingProc list : missingProcs
   FileId : currentFile
@@ -240,7 +238,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
       state [] .openBlocks .length
       state [] .compiledOps .length
       state [] .initializationStack .length
-      state [] .skippedBlocks .length
       state [] .blockStart
       state .stack -1:branchTree.NodeId branchTree.reset
       state [] .currentProcType
@@ -270,9 +267,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   state [] .initializationStack
     prevState .initializationStackOffset list.setLength
   state .initializationStack=
-  state [] .skippedBlocks
-    prevState .skippedBlocksOffset list.setLength
-  state .skippedBlocks=
   prevState .blockStart state .blockStart=
   state .stack prevState .branchRoot branchTree.reset =:: oldRoot
   oldRoot -1:branchTree.NodeId != if
@@ -874,7 +868,7 @@ proc(
 end
 
 proc(
-  TypeCheckState ptr.mut : state
+  TypeCheckState ptr : state
 -> BlockInfo ptr.mut optional ) =>: peekBlock
   state [] .openBlocks list.peek
 end
@@ -892,6 +886,12 @@ proc(
     newLength list.setLength
   state .openBlocks=
   closed return
+end
+proc( TypeCheckState ptr.mut : state -> bool ) =>: inIfCondition
+  state peekBlock .and =:: currentBlock
+    currentBlock [] .If ?? and
+    currentBlock .If [] .flags IfBlockFlags.hasIf & ? !
+  end
 end
 proc( TypeCheckState ptr : state -> bool ) =>: inSwitchLabel
   state [] .openBlocks .length 0:iSize == if
@@ -1740,7 +1740,7 @@ end
 proc(
   Operation : op0
   TypeCheckState ptr.mut : state
--> ) =>: typeCheckOp
+-> iSize ) =>: typeCheckOp
   op0 =:: mut: op
   state [] .program =:: program
   state [] .program .errors =:: errors
@@ -1757,17 +1757,8 @@ proc(
       end
     end
   end
-  state .skippedBlocks [] .length 0:iSize u> if
-    op .val switch
-      block blockEnd .case .blockType break
-      default return ## ignore non-block ops in skipped block
-    end switch
-      AND OR IF AND_IF OR_IF ELSE case break
-      default return ## ignore block-types not involved in skip
-    end
-  end
   state inSwitchLabel and op@ state typeCheckSwitchLabel if
-    return
+    0 return
   end
   ## resolve names
   op .val .getName ?? if
@@ -1819,7 +1810,7 @@ proc(
       errors
     id.declareIdentifier if ..drop.2
       ## error message is created by declareIdentifier
-      return
+      0 return
     end =:: idData ..drop
     op .dataType idData@ id.asIdInfo op .pos
     isInit ! if
@@ -1840,16 +1831,16 @@ proc(
     argData? .data [] .value op@ .val .Constant=
   end
   state [] .inTypeBlock and op@ state interpretTypeBlock if
-    return ## evaluate constants
+    0 return ## evaluate constants
   end
   op .val switch
-    NOP case return
+    NOP case 0 return
     Constant case
       op .val .Constant op .dataType op .pos state pushConstant
-      return
+      0 return
     StaticConstant case ## TODO? remove static constants
       op .val .StaticConstant op .dataType op .pos state pushConstant
-      return
+      0 return
     NestedProc case
       op .val .NestedProc =:: procId
       program [] .procedures procId i64 cast list.at .data =:: procData
@@ -1858,7 +1849,7 @@ proc(
           procData .implementation .code [] .codeState .PARSING ?? ! if
         "unexpected state for nested procedure" sb.copyPtr
         op .pos errors appendError
-        return
+        0 return
       end
        ## ensure lambda is type-checked
       state [] .missingProcs
@@ -1877,7 +1868,7 @@ proc(
       procId ConstValue .Procedure
         procType false typeContext types.getAddressType
       op .pos state pushConstant
-      return
+      0 return
     getName setName atName case
       "could not find identifier: " sb.copyPtr
         op .val .getName ?? if
@@ -1888,7 +1879,7 @@ proc(
           op .val .atName
         end labelContext sb.appendLabelPath
       op .pos errors appendError
-      return
+      0 return
     initializeName declareName case ..unreachable
     usingNamespace case
       op .val .usingNamespace .src =:: namespaceLabel
@@ -1904,7 +1895,7 @@ proc(
           namespaceLabel labelContext sb.appendLabelName
         "\" does not exist in the current scope" sb.appendS op .pos errors appendWarning
       end
-      return
+      0 return
     usingIdentifier case
       op .val .usingIdentifier .src =:: srcLabel
       op .val .usingIdentifier .alias
@@ -1919,7 +1910,7 @@ proc(
         idContext
         op .pos
       errors id.importIdentifier ..drop
-      return
+      0 return
     getId case
       op .val .getId =:: idInfo
       idInfo .labelId labelContext id.labelFlags =:: flags
@@ -1941,7 +1932,7 @@ proc(
             "could not find " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op .pos errors appendError
-            return
+            0 return
           end =:: idData
           idData [] .constValue
         else
@@ -1964,11 +1955,11 @@ proc(
           mutable if ## insert copy for mutable values
             state wrapCopy
           end
-          return
+          0 return
         TYPE case
           op .dataType constValue op state pushValue
           op .val .getId .labelId state replaceLabel
-          return
+          0 return
         ARGUMENT case
           op .val .getId .labelId =:: label
           ConstValue .None =:: mut: argValue
@@ -1979,7 +1970,7 @@ proc(
           end
           op .dataType argValue op state pushValue
           label state replaceLabel
-          return
+          0 return
         PROCEDURE PROCEDURE_BUNDLE case
           idInfo .idType .PROCEDURE ?? if
             constValue@ .Procedure =:: procId
@@ -2024,7 +2015,7 @@ proc(
           =:: calledProc?
           calledProc? optional.isEmpty if
             message op .pos errors appendError
-            return
+            0 return
           else
             message .length 0:iSize u> if
               message op .pos errors appendInfo
@@ -2047,7 +2038,7 @@ proc(
               baseProcData .implementation [] .code ?? and
               baseProcData .implementation .code .codeState .TYPE_CHECKING ?? ! if
             calledType calledProc true op .pos state interpretCall ! if
-              return
+              0 return
             end
           end
           baseProcData [] .implementation switch
@@ -2082,7 +2073,7 @@ proc(
                 true program .hasGetArgs=
               else headConstant _if ## only constant arguments
                 calledType calledProc false op .pos state interpretCall ! if
-                  return
+                  0 return
                 end
               end
               builtInId OpValue .builtIn op@ .val=
@@ -2115,7 +2106,7 @@ proc(
                 op .pos
                 state
               requireTypes if
-                return
+                0 return
               end
               offset 1 + offset=
             end
@@ -2125,7 +2116,7 @@ proc(
             op .pos
             state
           pushTypes
-          return
+          0 return
         LABEL case
           break
       end
@@ -2136,14 +2127,14 @@ proc(
         ## TODO? print instruction name instead of 'call'
         "missing argument for call, expected procedure pointer" sb.copyPtr
         op .pos errors appendError
-        return
+        0 return
       end
       value? .data [] .valueType =:: calledType
       calledType typeContext types.isCallable ! if
         "cannot call values of type " sb.copyPtr
           calledType typeContext sb.appendType
         op .pos errors appendError
-        return
+        0 return
       end
       ## requireTypes
         calledType@ slice.wrap
@@ -2151,7 +2142,7 @@ proc(
         0
         op .pos
         state
-      requireTypes if return end
+      requireTypes if 0 return end
       calledType op@ .dataType=
       calledType typeContext types.isPointer if
         calledType typeContext types.getBaseType
@@ -2165,13 +2156,13 @@ proc(
         1
         op .pos
         state
-      requireTypes if return end
+      requireTypes if 0 return end
       op state appendOp ..drop
       procType typeContext types.getProcOut .data
         op .pos
         state
       pushTypes
-      return
+      0 return
     atId case
       op .val .atId =:: idInfo
       idInfo .idType switch
@@ -2188,7 +2179,7 @@ proc(
               "could not find " sb.copyPtr
                 idInfo labelContext sb.appendIdInfo
               op .pos errors appendError
-              return
+              0 return
             end =:: idData
             idData [] .constValue .Procedure =:: mut: procId
             program [] .procedures
@@ -2249,13 +2240,13 @@ proc(
             state pushValue
           end
           labelId state replaceLabel
-          return
+          0 return
         TYPE LABEL PROCEDURE_BUNDLE case
           "taking the address of identifier " sb.copyPtr
             idInfo labelContext sb.appendIdInfo
             " is not supported" sb.appendS
           op .pos errors appendError
-          return
+          0 return
       end
       break
     setId case
@@ -2275,25 +2266,25 @@ proc(
         0
         op .pos
         state
-      requireTypes if return end
+      requireTypes if 0 return end
       op state appendOp ..drop
-      return
+      0 return
     declareId case
       op@ false state resolveAutoType
       op .val .declareId .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
           op state appendOp ..drop
-          return
+          0 return
         PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
           "unexpected declaration of identifier " sb.copyPtr
             op .val .declareId labelContext sb.appendIdInfo
           op .pos errors appendError
-          return
+          0 return
         ARGUMENT case
           "cannot declare identifier " sb.copyPtr
             op .val .declareId labelContext sb.appendIdInfo
           op .pos errors appendError
-          return
+          0 return
       end
       break
     initializeId autoTypedInitializeId case
@@ -2320,7 +2311,7 @@ proc(
               0
               op .pos
             state requireTypes if ## TODO? can requireTypes change constVal
-              return
+              0 return
             end
           end
           ## update constant value in identifier if stack-value is constant
@@ -2339,19 +2330,19 @@ proc(
               constVal idData .constValue=
             end
             ## don't create code for declaration of type-constant
-            constVal .TypeId ?? if return end
+            constVal .TypeId ?? if 0 return end
           end
           op state appendOp ..drop
-          return
+          0 return
         PROCEDURE case
           "is this reachable" ..panic
-          ##return
+          ## 0 return
         PROCEDURE_BUNDLE TYPE
             LABEL ARGUMENT TMP_VAR case
           "unexpected initialization of identifier " sb.copyPtr
             idInfo labelContext sb.appendIdInfo
           op .pos errors appendError
-          return
+          0 return
       end
       break
     implementProcedure case
@@ -2373,7 +2364,7 @@ proc(
           procType typeContext sb.appendType
           " expected procedure" sb.appendS
         op .pos errors appendError
-        return
+        0 return
       end =:: argTypes
       ## push unnamed arguments
       0:i32 while $ iSize cast.u argTypes .length u< do =:: i
@@ -2407,7 +2398,7 @@ proc(
         end
         i 1 +
       end ..drop
-      return
+      0 return
     getElement setElement case
       op .val .getElement ?? if
         op .val .getElement false
@@ -2415,7 +2406,7 @@ proc(
         op .val .setElement true
       end =:: isWrite =:: index
       isWrite if 2 else 1 end op .pos state checkStackSize if
-        return
+        0 return
       end
       false =:: mut: mutable
       false =:: mut: isPtr
@@ -2444,7 +2435,7 @@ proc(
             " size: " sb.appendS
             containerType typeContext types.compositeEltCount sb.appendI
           op .pos errors appendError
-          return
+          0 return
         end
         srcType containerType index isWrite isPtr mutable op .pos state typeCheckGetElement
       else containerType typeContext types.isArray _if
@@ -2453,7 +2444,7 @@ proc(
         else ..drop
           "generic arrays are not supported" sb.copyPtr
           op .pos errors appendError
-          return
+          0 return
         end =:: eltCount
         index i64 cast.u eltCount >= if
           "element index out of range: " sb.copyPtr
@@ -2461,7 +2452,7 @@ proc(
             " size: " sb.appendS
             containerType typeContext types.compositeEltCount sb.appendI
           op .pos errors appendError
-          return
+          0 return
         end
         srcType containerType index isWrite isPtr mutable op .pos state typeCheckGetElement
       else
@@ -2469,7 +2460,7 @@ proc(
           srcType typeContext sb.appendType
         op .pos errors appendError
       end
-      return
+      0 return
     getLabel setLabel hasLabel existsLabel case
       enum( CHECK CHECK_ENUM GET ) =:: LabelAccessType
       LabelAccessType .GET =:: mut: accessType
@@ -2485,7 +2476,7 @@ proc(
         op .val .setLabel true
       end =:: isWrite =:: labelId
       1:i32 isWrite if 1 + end op .pos state checkStackSize if
-        return
+        0 return
       end
       state .stack branchTree.peek .data [] =:: container
       false =:: mut: mutable
@@ -2519,7 +2510,7 @@ proc(
           ## label does not exists
           1 op .pos state discardValues ## remove container
           false ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
-          return
+          0 return
         end
         "type " sb.copyPtr
           containerType typeContext sb.appendType
@@ -2527,7 +2518,7 @@ proc(
           labelId labelContext sb.appendLabelName
           '"' sb.appendC
         op .pos errors appendError
-        return
+        0 return
       end =:: elementIndex
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
@@ -2535,7 +2526,7 @@ proc(
         ## label exists
         1 op .pos state discardValues ## remove container
         true ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
-        return
+        0 return
       else accessType .CHECK_ENUM ?? _if
         isType or containerType typeContext types.isTaggedUnion ! if
           "type " sb.copyPtr
@@ -2552,7 +2543,7 @@ proc(
           containerType elementIndex op .pos opHasElement
         state pushValue
         elementLabel state replaceLabel
-        return
+        0 return
       end
       isType if
         1 op .pos state discardValues ## remove container
@@ -2562,7 +2553,7 @@ proc(
             containerType typeContext sb.appendType
             " is not an enum or union " sb.appendS
           op .pos errors appendError
-          return
+          0 return
         else isWrite _if
           "cannot write to enum/union-generator" sb.copyPtr
           op .pos errors appendError
@@ -2588,7 +2579,7 @@ proc(
           0
           op .pos
         state requireTypes _if
-          return
+          0 return
         end
         ## XXX discard operation and push constant if there is a constant value
         ## pushValue
@@ -2597,10 +2588,10 @@ proc(
           containerType elementIndex op .pos opNewEnum
         state pushValue
         elementLabel state replaceLabel
-        return
+        0 return
       end
       srcType containerType elementIndex isWrite isPtr mutable op .pos state typeCheckGetElement
-      return
+      0 return
     getEnumLabel case
       state .stack branchTree.peek =:: label?
       label? optional.isEmpty if
@@ -2608,7 +2599,7 @@ proc(
           op program sb.appendOp
           " expected enum" sb.appendS
         op .pos errors appendError
-        return
+        0 return
       end
       label? .data =:: label
       label [] .valueType =:: enumType
@@ -2619,11 +2610,11 @@ proc(
       end
       ## XXX compile-time evaluation
       enumType@ slice.wrap "getEnumLabel":s 0 op .pos state requireTypes if
-        return
+        0 return
       end
       enumType op@ .dataType=
       enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
-      return
+      0 return
     setEnumElement case
       break
     Cast Cast! bitCast case
@@ -2632,7 +2623,7 @@ proc(
         op .pos state popType op@ .dataType=
       end
       1 op .pos state checkStackSize if
-        return
+        0 return
       end
       state .stack branchTree.pop .data [] =:: value
       op .val .Cast ?? if
@@ -2683,12 +2674,12 @@ proc(
               op .dataType >$ .valueType=
               srcOp .val [] .Constant >$ .value= ## TODO avoid direct access to operation
           branchTree.push ## update value
-          return ## can directly convert constant
+          0 return ## can directly convert constant
         end
         value .value
       end =:: newValue
       op .dataType newValue op state pushValue
-      return
+      0 return
     New case
       op .dataType .undefined ?? if
         ## resolve data type
@@ -2699,7 +2690,7 @@ proc(
           "variable size arrays are not supported" sb.copyPtr op .pos errors appendError
         end
         op .dataType ConstValue .None op state pushValue
-        return
+        0 return
       end
       op .dataType typeContext types.isTuple if
         op .dataType typeContext types.compositeEltCount =:: count
@@ -2709,15 +2700,15 @@ proc(
           0
           op .pos
         state requireTypes if
-          return
+          0 return
         end
         op .dataType ConstValue .None op state pushValue
-        return
+        0 return
       end
       break
     equalityOperator case
       2 op .pos state checkStackSize if
-        return
+        0 return
       end
       Type 2 array : params
       ConstValue 2 array : values
@@ -2735,7 +2726,7 @@ proc(
           " and " sb.appendS
           params@ 1 [] typeContext sb.appendType
         op .pos errors appendError
-        return
+        0 return
       end =:: argType
       values 0 [] .None ?? ! and values 1 [] .None ?? ! if
         2 op .pos state discardValues
@@ -2745,14 +2736,14 @@ proc(
             " and " sb.appendS
             values 1 [] typeContext sb.appendConstant
           op .pos errors appendError
-          return
+          0 return
         end
           op .val .equalityOperator .NEQ ?? ^ ## invert result for NEQ
         ConstValue .Bool
           types.primitive.BOOL
           op .pos
         state pushConstant
-        return
+        0 return
       end
       argType params@ 0 =[]
       argType params@ 1 =[]
@@ -2763,10 +2754,10 @@ proc(
         0
         op .pos
       state requireTypes if
-        return
+        0 return
       end
       types.primitive.BOOL ConstValue .None op state pushValue
-      return
+      0 return
     block case
       state [] .blockStart =:: oldBlockStart
       state [] .compiledOps .length i32 cast.u state .blockStart=
@@ -2776,47 +2767,40 @@ proc(
         TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE INITIALIZER case
           ## type-blocks and initializers are handled by the interpreter
           op@ state prepareInterpretTypeBlock
-          return
+          0 return
+        ## TODO remove checks for well-formed blocks, they are now handled by parser
         AND_IF OR_IF case
-          false =:: mut: staticCondition
-          state .skippedBlocks [] .length 0:iSize == if
-            state .stack branchTree.peek =:: condition?
-            condition? optional.hasData and condition? .data .value [] .None ?? ! if
-              true staticCondition=
-              condition? .data .value [] .Bool ?? ! if
-                "unexpected value for condition expected boolean got " sb.copyPtr
-                  condition? .data [] .value typeContext sb.appendConstant
-                op .pos errors appendError
-                return
-              end
-              condition? .data .value [] .Bool blockType .AND_IF ?? == if
-                oldBlockStart state .blockStart= ## keep previous block start
-                1 op .pos state discardValues
-                return ## `true and` / `false or` are no-ops
-              else
-                oldBlockStart state .blockStart= ## keep previous block start
-                state [] .skippedBlocks
-                  blockType list.append
-                state .skippedBlocks=
-              end
+          state .stack branchTree.peek .and =:: condition
+              condition .value [] .None ?? ! if
+            condition .value [] .Bool ?? ! if
+              "unexpected value for condition expected boolean got " sb.copyPtr
+                condition [] .value typeContext sb.appendConstant
+              op .pos errors appendError
+              0 return
             end
-            ## requireTypes
-              types.primitive.BOOL@ slice.wrap
-              "and/or-condition":s
-              0
-              op .pos
-            state requireTypes if
-              return
+            condition .value [] .Bool blockType .AND_IF ?? == if
+              oldBlockStart state .blockStart= ## keep previous block start
+              1 op .pos state discardValues
+              0 return ## `true and` / `false or` are no-ops
+            ## don't constant fold `true or` / `false and` if there are open and-if / or-if branches
+            else state inIfCondition ! _if
+              oldBlockStart state .blockStart= ## keep previous block start
+              1 op .pos state discardValues
+              BlockInfo .ConstIf state openBlock
+              idContext id.openScope
+              op .val .block .jumpDistance iSize cast.u return
             end
           end
-          staticCondition ! if
-            false 1 op .pos state clearReferences
+          ## requireTypes
+            types.primitive.BOOL@ slice.wrap
+            "and/or-condition":s
+            0
+            op .pos
+          state requireTypes if
+            0 return
           end
-          state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty or
-              currentBlock? .data =:: currentBlock
-              currentBlock [] .If ?? ! or
-              currentBlock [] .If .flags IfBlockFlags.hasIf & ? if
+          false 1 op .pos state clearReferences
+          state inIfCondition ! if
             state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
             blockId op@ .val .block .blockId=
             state .stack branchTree.startBranch =:: ifRoot
@@ -2825,15 +2809,12 @@ proc(
             idContext id.openScope
           end
           state peekBlock .data .If =:: ifBlock
+          ifBlock [] .blockId op@ .val .block .blockId=
           blockType .AND_IF ?? if
-            state [] .skippedBlocks .length 0:iSize == if
-              ifBlock [] .flags IfBlockFlags.hasAndIf | ifBlock .flags=
-            end
+            ifBlock [] .flags IfBlockFlags.hasAndIf | ifBlock .flags=
             ifBlock .andBranches
           else
-            state [] .skippedBlocks .length 0:iSize == if
-              ifBlock [] .flags IfBlockFlags.hasOrIf | ifBlock .flags=
-            end
+            ifBlock [] .flags IfBlockFlags.hasOrIf | ifBlock .flags=
             ifBlock .orBranches
           end =:: branches
           branches []
@@ -2841,21 +2822,32 @@ proc(
               op .pos
             BranchPoint new list.append
           branches =[]
-          ifBlock [] .blockId op@ .val .block .blockId=
-          state [] .skippedBlocks .length 0:iSize != if
-            return
-          end
           ifBlock [] .andOrPositions
             state [] .compiledOps .length i32 cast.u list.append
           ifBlock .andOrPositions=
           op state appendOp ..drop
-          return
+          0 return
         IF case
-          state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty or
-              currentBlock? .data =:: currentBlock
-              currentBlock [] .If ?? ! or
-              currentBlock [] .If .flags IfBlockFlags.hasIf & ? if
+          state inIfCondition ! if
+            ## don't constant fold `if` if there are open and-if / or-if branches
+            state .stack branchTree.peek .and =:: condition
+                condition .value [] .None ?? ! if
+              condition .value [] .Bool ?? ! if
+                "unexpected value for condition expected boolean got " sb.copyPtr
+                  condition [] .value typeContext sb.appendConstant
+                op .pos errors appendError
+                0 return
+              end
+              oldBlockStart state .blockStart= ## keep previous block start
+              1 op .pos state discardValues
+              BlockInfo .ConstIf state openBlock
+              idContext id.openScope
+              condition .value [] .Bool if
+                0:iSize
+              else
+                op .val .block .jumpDistance iSize cast.u
+              end return
+            end
             state .stack branchTree.startBranch =:: ifBranch
             state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
             ifBranch blockId op .pos newIfBlock =:: mut: ifBlock
@@ -2863,52 +2855,15 @@ proc(
             idContext id.openScope
           end
           state peekBlock .data .If =:: ifBlock
-          state .skippedBlocks [] .length 0:iSize == if
-            state .stack branchTree.peek =:: condition?
-            condition? optional.hasData and condition? .data .value [] .None ?? ! if
-              condition? .data .value [] .Bool ?? ! if
-                "unexpected value for condition expected boolean got " sb.copyPtr
-                  condition? .data [] .value typeContext sb.appendConstant
-                op .pos errors appendError
-                return
-              end
-              oldBlockStart state .blockStart= ## keep previous block start
-              condition? .data .value [] .Bool if
-                ifBlock [] .flags IfBlockFlags.skipElse | ifBlock .flags=
-              else
-                state [] .skippedBlocks
-                  blockType list.append
-                state .skippedBlocks=
-              end
-            end
-            ## requireTypes
-              types.primitive.BOOL@ slice.wrap
-              "if-condition":s
-              0
-              op .pos
-            state requireTypes if
-              return
-            end
-            false 1 op .pos state clearReferences
-          else
-            oldBlockStart state .blockStart= ## keep previous block start
-            state [] .skippedBlocks list.peek .data [] =:: skipped
-            state [] .skippedBlocks
-              skipped .AND_IF ?? if
-                list.pop ..drop
-                ifBlock [] .flags IfBlockFlags.hasOrIf & ? ! if
-                  blockType list.append
-                end
-              else skipped .OR_IF ?? _if
-                list.pop ..drop
-                ifBlock [] .flags IfBlockFlags.hasAndIf & ? ! if
-                  ifBlock [] .flags IfBlockFlags.skipElse | ifBlock .flags=
-                end
-              else
-                blockType list.append
-              end
-            state .skippedBlocks=
+          ## requireTypes
+            types.primitive.BOOL@ slice.wrap
+            "if-condition":s
+            0
+            op .pos
+          state requireTypes if
+            0 return
           end
+          false 1 op .pos state clearReferences
           ifBlock [] .flags IfBlockFlags.hasOrIf & ? if
             ## reset scope if or apprears before if
             ## XXX? if only or-if merge or-if-scope with else-branch
@@ -2930,10 +2885,6 @@ proc(
               op .pos
             BranchPoint new list.append
           ifBlock .andBranches=
-          state .skippedBlocks [] .length 0:iSize != if
-            "code reached skipped block":s op .pos opPanicWithMessage state appendOp ..drop
-            false state .reachable=
-          end
           ifBlock .orBranches =:: orBranches
           orBranches [] .length 0:iSize != if
             ifBlock [] .andOrPositions =:: andOrPos
@@ -2991,52 +2942,36 @@ proc(
             end
             branchPoints list.free ..drop
           end
-          return
+          0 return
         ELSE case
-          state peekBlock =:: currentBlock?
-          currentBlock? optional.isEmpty if
+          state peekBlock .else
             "unexpected else-statement, else can only appear in if-blocks" sb.copyPtr
             op .pos errors appendError
-            return
+            0 return
+          end =:: currentBlock
+          currentBlock .ConstIf ?? if ## reachaed `else` in ConstIf -> can skip else branch
+            op .pos state closeBlock ..drop
+            idContext id.closeScope ! "closing if-scope worked" assert
+            oldBlockStart state .blockStart= ## keep previous block start
+            op .val .block .jumpDistance iSize cast.u return
           end
-          currentBlock? .data =:: currentBlock
-          currentBlock [] .If ?? ! if
+          currentBlock .If ?? ! if
             "unexpected else-statement, else can only appear in if-blocks" sb.copyPtr
             op .pos errors appendError
-            return
+            0 return
           end
           currentBlock .If =:: ifBlock
           ifBlock [] .flags IfBlockFlags.hasElse & ? if
             "unexpected else-statement, if-else block can only contain one else statement" sb.copyPtr
             op .pos errors appendError
-            return
+            0 return
           end
           ifBlock [] .flags IfBlockFlags.hasIf & ? ! if
             "unexpected else-statement, else has to appear after if" sb.copyPtr
             op .pos errors appendError
-            return
+            0 return
           end
-          state .skippedBlocks [] .length 0:iSize != if
-            oldBlockStart state .blockStart= ## keep previous block start
-            state [] .skippedBlocks list.peek .data [] =:: skipped
-            skipped .IF ?? if
-               state [] .skippedBlocks
-                 list.pop ..drop
-               state .skippedBlocks=
-              ifBlock [] .flags
-                IfBlockFlags.skippedIf |
-              ifBlock .flags=
-            end
-          else
-            ifBlock [] .flags IfBlockFlags.skipElse & ? if
-              oldBlockStart state .blockStart= ## keep previous block start
-              state [] .skippedBlocks
-                blockType list.append
-              state .skippedBlocks=
-            else
-              false 0 op .pos state clearReferences
-            end
-          end
+          false 0 op .pos state clearReferences
           idContext id.closeScope ! "closing if-scope worked" assert
           idContext id.openScope ## else branch has different scope
           ifBlock [] .blockId op@ .val .block .blockId=
@@ -3096,49 +3031,45 @@ proc(
           andPositions ifData .andPositions=
           currentOpIndex ifData .elsePosition=
           op state appendOp ..drop
-          state .skippedBlocks [] .length 0:iSize != if
-            "code reached skipped block":s op .pos opPanicWithMessage state appendOp ..drop
-            false state .reachable=
-          else
-            true state .reachable=
+          true state .reachable=
+          ifBlock [] .andBranches .length 0:iSize != if
+            ifBlock [] .andBranches .length branchTree.NodeId list.create
+              ifBlock [] .andBranches for .node list.append end
+            =:: branchPoints
+            ## mergeValues
+              state .stack
+              branchPoints list.asSlice
+              mergeBranches@
+              ## MergePoint
+                "and if block":s
+                op .pos
+                i32 slice.empty
+                state
+                0
+                MergeType .NO_CAST
+              MergePoint new
+            branchTree.merge .error ?? if
+              "different number of types at the start of else-branch: " sb.copyPtr
+                ifBlock [] .andBranches for =:: branchPoint
+                  "\n  * " sb.appendS
+                  state [] .stack
+                     branchPoint .node
+                  branchTree.depthFrom sb.appendI
+                  " in branch at " sb.appendS
+                  branchPoint .pos sb.appendPos
+                end
+                '\n' sb.appendC
+              op .pos errors appendError
+            end
+            branchPoints list.free ..drop
           end
-          ifBlock [] .andBranches .length 1:iSize u>= "if has if branch" assert
-          ifBlock [] .andBranches .length branchTree.NodeId list.create
-            ifBlock [] .andBranches for .node list.append end
-          =:: branchPoints
-          ## mergeValues
-            state .stack
-            branchPoints list.asSlice
-            mergeBranches@
-            ## MergePoint
-              "and if block":s
-              op .pos
-              i32 slice.empty
-              state
-              0
-              MergeType .NO_CAST
-            MergePoint new
-          branchTree.merge .error ?? if
-            "different number of types at the start of else-branch: " sb.copyPtr
-              ifBlock [] .andBranches for =:: branchPoint
-                "\n  * " sb.appendS
-                state [] .stack
-                   branchPoint .node
-                branchTree.depthFrom sb.appendI
-                " in branch at " sb.appendS
-                branchPoint .pos sb.appendPos
-              end
-              '\n' sb.appendC
-            op .pos errors appendError
-          end
-          branchPoints list.free ..drop
-          return
+          0 return
         SWITCH case
           state .stack branchTree.peek =:: value?
           value? optional.isEmpty if
             "missing argument for switch-statement" sb.copyPtr
             op .pos errors appendError
-            return
+            0 return
           end
           value? .data [] .valueType =:: switchType
           switchType typeContext types.isIntOrChar ! and
@@ -3153,7 +3084,7 @@ proc(
             0
             op .pos
           state requireTypes if
-            return
+            0 return
           end
           switchType typeContext types.isUnion if
             ## TODO? only create tmp-var if switch uses `.case`
@@ -3192,7 +3123,7 @@ proc(
           idContext id.openScope
           op state appendOp ..drop
           false state .reachable=
-          return
+          0 return
         CASE DOT_CASE DEFAULT case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty if true else
@@ -3206,7 +3137,7 @@ proc(
               BlockType .SWITCH sb.appendBlockType
               "-blocks" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           currentBlock? .data .Switch =:: switchBlock
           switchBlock [] .inLabel ! if
@@ -3231,7 +3162,7 @@ proc(
               BlockType .SWITCH sb.appendBlockType
               "-block" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           switchData [] .labels list.peek =:: prev?
           switchBlock [] .switchType =:: switchType
@@ -3244,7 +3175,7 @@ proc(
                 "-block can only at least one " sb.appendS
                 BlockType .CASE sb.appendBlockType
               op .pos errors appendError
-              return
+              0 return
             end
             prev? .data [] .caseId switchData [] .caseCount == if
               64 sb.create
@@ -3279,7 +3210,7 @@ proc(
           blockType .DOT_CASE ?? if
             switchType typeContext types.isUnion if
               prev? .if [] .value .EnumLabel else
-                return
+                0 return
               end  =:: eltIndex
               switchType eltIndex typeContext types.compositeGetElement =:: labelType
               switchData [] .labels list.reversed for  =:: label
@@ -3324,7 +3255,7 @@ proc(
             1 +
           switchData .caseCount=
           true switchBlock .allowBreak=
-          return
+          0 return
         BREAK CONTINUE case
           ## findBreakableBlock
             blockType
@@ -3333,7 +3264,7 @@ proc(
             state
           findBreakableBlock =:: breakBlock?
           breakBlock? optional.isEmpty if
-            return ## error message handled by findBreakableBlock
+            0 return ## error message handled by findBreakableBlock
           end
           false 0 op .pos state clearReferences
           breakBlock? .data =:: breakBlock
@@ -3347,7 +3278,7 @@ proc(
               false switchBlock .allowBreak=
             end
             switchBlock op .pos state breakSwitch
-            return
+            0 return
           else breakBlock [] .While ?? _if
             breakBlock .While =:: whileBlock
             blockType .CONTINUE ?? if
@@ -3359,7 +3290,7 @@ proc(
                   " can not appear after " sb.appendS
                   BlockType .FINALLY sb.appendBlockType
                 op .pos errors appendError
-                return
+                0 return
               end
               whileBlock [] .continueCount
                 1 +
@@ -3390,9 +3321,7 @@ proc(
               state [] .compiledOps .length i32 cast.u list.append
             whileBlock .labelPositions=
             op state appendOp ..drop
-            ## end of switch branch not reachable
-            op .pos state endSwitchBranch
-            return
+            0 return
           end
           break
         WHILE case
@@ -3420,7 +3349,7 @@ proc(
           newWhileBlock state openBlock
           idContext id.openScope
           op state appendOp ..drop
-          return
+          0 return
         AND_DO OR_DO case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty or
@@ -3434,7 +3363,7 @@ proc(
               WHILE_BLOCK_INFO_NAME sb.appendS
               "-blocks" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           ## requireTypes
             types.primitive.BOOL@ slice.wrap
@@ -3442,7 +3371,7 @@ proc(
             0
             op .pos
           state requireTypes if
-            return
+            0 return
           end
           false 1 op .pos state clearReferences
           currentBlock? .data .While =:: whileBlock
@@ -3467,7 +3396,7 @@ proc(
             state [] .compiledOps .length i32 cast.u list.append
           whileBlock .labelPositions=
           op state appendOp ..drop
-          return
+          0 return
         DO case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty or
@@ -3481,7 +3410,7 @@ proc(
               WHILE_BLOCK_INFO_NAME sb.appendS
               "-blocks" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           currentBlock? .data =:: currentBlock
           ## requireTypes
@@ -3490,7 +3419,7 @@ proc(
             0
             op .pos
           state requireTypes if
-            return
+            0 return
           end
           ## passing an offset of 1 ensures that cast-offsets consider do-condition
           false 1 op .pos state clearReferences
@@ -3569,7 +3498,7 @@ proc(
             currentOpIndex list.append
           whileBlock .labelPositions=
           op state appendOp ..drop
-          return
+          0 return
         FINALLY case
           state peekBlock =:: currentBlock?
           currentBlock? optional.isEmpty or
@@ -3583,7 +3512,7 @@ proc(
               WHILE_BLOCK_INFO_NAME sb.appendS
               "-blocks" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           currentBlock? .data =:: currentBlock
           false 0 op .pos state clearReferences
@@ -3641,7 +3570,7 @@ proc(
           else
             "while-loop does not loop: " sb.copyPtr
             op .pos errors appendError
-            return
+            0 return
           end
           program [] .programMemory
             whileBlock [] .continueCount i32 mixedArena.allocSlice =:: continuePositions
@@ -3663,7 +3592,7 @@ proc(
             whileBlock [] .blockId i64 cast.u
           list.at .data .continuePositions=
           op state appendOp ..drop
-          return
+          0 return
         AND OR case
           false 1 op .pos state clearReferences
           state peekBlock =:: currentBlock?
@@ -3695,7 +3624,7 @@ proc(
             0
             op .pos
           state requireTypes if
-            return
+            0 return
           end
           blockId op@ .val .block .blockId=
           state peekBlock .data .AndOr =:: currentBlock
@@ -3703,7 +3632,7 @@ proc(
             state [] .compiledOps .length i32 cast.u list.append
           currentBlock .andOrPositions=
           op state appendOp ..drop
-          return
+          0 return
         PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
@@ -3722,7 +3651,7 @@ proc(
             op .val .blockEnd .blockType sb.appendBlockType
             " block" sb.appendS
           op .pos errors appendError
-          return
+          0 return
         PROCEDURE case
           op .pos state closeBlock =:: closed
           closed .Procedure ?? ! if
@@ -3730,44 +3659,37 @@ proc(
               closed sb.appendBlockInfoName
               " block expected Procedure block" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           state [] .reachable if
-            ## create explicit return operation if end of procedure reachable
+            ## create explicit  return operation if end of procedure reachable
             closed .Procedure op .pos opReturn =:: mut: tmp
             tmp@ state typeCheckReturn
           end
           op state appendOp ..drop
           ## procedure scope is handled by typeCheckProcedure
-          return
+          0 return
         ELSE case
           op .pos state closeBlock =:: closed
-          closed .If ?? ! if
+          closed .ConstIf ?? if
+            oldBlockStart state .blockStart= ## keep previous block start
+            idContext id.closeScope ! "closing if-scope worked" assert
+            0 return
+          else closed .If ?? ! _if
             "unexpected end of " sb.copyPtr
               closed sb.appendBlockInfoName
               " block expected " sb.appendS
               IF_BLOCK_INFO_NAME sb.appendS
               " block" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           closed .If .flags IfBlockFlags.hasElse & ? ! if
             "unexpected end of " sb.copyPtr
               closed sb.appendBlockInfoName
               " block, expected `else` before `end`" sb.appendS
             op .pos errors appendError
-            return
-          end
-          state [] .skippedBlocks .length 0:iSize != if
-            oldBlockStart state .blockStart= ## keep previous block start
-            state [] .skippedBlocks list.peek .data [] =:: skippedBlock
-            skippedBlock .IF ?? or skippedBlock .ELSE ?? if
-              state [] .skippedBlocks
-                list.pop ..drop
-              state .skippedBlocks=
-            end
-          else closed .If .flags IfBlockFlags.skippedIf & ? _if
-            oldBlockStart state .blockStart= ## keep previous block start
+            0 return
           end
           state [] .stack branchTree.depth op .pos state reserveOps =:: elseCastOffset
           branchTree.NodeId 2 array new =:: mut: branches
@@ -3833,9 +3755,9 @@ proc(
           closed .If .orBranches list.free ..drop
           closed .If .andOrPositions list.free ..drop
           nBranches 0 > state .reachable=
-          return
+          0 return
         IF case break ## end-if should not be created by parser
-        CASE DEFAULT case
+        SWITCH case
           ## break current branch
           op .pos state endSwitchBranch
           op .pos state closeBlock =:: closed
@@ -3846,7 +3768,7 @@ proc(
               SWITCH_BLOCK_INFO_NAME sb.appendS
               "-block" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           ## XXX? check for stray labels
           closed@ .Switch =:: switchBlock
@@ -3857,7 +3779,7 @@ proc(
           list.at .data =:: switchData
           ## sort switch-labels
           switchData [] .labels switchLabelCmp@ program list.sort
-          op .val .blockEnd .blockType .CASE ?? if
+          switchData [] .defaultJumpDistance ? ! if
             BlockType .DEFAULT op .pos opBlock =:: mut: tmp
             switchBlock [] .blockId tmp@ .val .block .blockId=
             state [] .compiledOps .length
@@ -3976,8 +3898,8 @@ proc(
           tmp@ .val .blockEnd .jumpDistance=
           tmp state appendOp ..drop
           idContext id.closeScope ! "closing while-scope worked" assert
-          return
-        SWITCH DOT_CASE case ## end-switch should not be created by parser
+          0 return
+        CASE DEFAULT DOT_CASE case ## end-case should not be created by parser
           break
         FINALLY case
           op .pos state closeBlock =:: mut: closed
@@ -3988,7 +3910,7 @@ proc(
               WHILE_BLOCK_INFO_NAME sb.appendS
               "-block" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           closed@ .While =:: whileBlock
           whileBlock [] .breakBranches =:: breakBranches
@@ -4032,7 +3954,7 @@ proc(
               op .pos sb.appendPos
               '\n' sb.appendC
             op .pos errors appendError
-            return
+            0 return
           end
           whileBlock [] .blockId =:: whileId
           ## remember number of changed stack values ( necessary for merging values in compiled code )
@@ -4115,7 +4037,7 @@ proc(
           .val .block .jumpDistance=
           tmp state appendOp ..drop
           idContext id.closeScope ! "closing switch-scope worked" assert
-          return
+          0 return
         WHILE DO case ## end-while/end-do should not be created by parser
           break
         AND OR case
@@ -4127,7 +4049,7 @@ proc(
               AND_OR_BLOCK_INFO_NAME sb.appendS
               "-block" sb.appendS
             op .pos errors appendError
-            return
+            0 return
           end
           state [] .reachable ! if
             "the end of all branches of an and/or block should be reachable, use if-else for conditional exit" sb.copyPtr
@@ -4191,7 +4113,7 @@ proc(
           idContext id.closeScope ! "closing andOr-scope worked" assert
           branchPoints list.free ..drop
           branches list.free ..drop
-          return
+          0 return
         AND_IF OR_IF AND_DO OR_DO INLINE_PROCEDURE
         BREAK CONTINUE BREAK_SWITCH
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
@@ -4202,31 +4124,28 @@ proc(
       break
     Return case
       op@ state typeCheckReturn
-      op .pos state endSwitchBranch
-      return
+      0 return
     InlineReturn case break
     Assert RuntimeAssert case
       op .val .Assert ?? if
         op .pos state popString =:: message
         message op .pos opRuntimeAssert op=
       end
-      state .skippedBlocks [] .length 0:iSize == and
-          state .stack branchTree.peek =:: condition?
-          condition? optional.hasData and condition? .data .value [] .None ?? ! if
-        condition? .data .value [] .Bool ?? ! if
+      state .stack branchTree.peek .and =:: condition condition .value [] .None ?? ! if
+        condition .value [] .Bool ?? ! if
           "unexpected value for condition expected boolean got " sb.copyPtr
-            condition? .data [] .value typeContext sb.appendConstant
+            condition [] .value typeContext sb.appendConstant
           op .pos errors appendError
-          return
+          0 return
         end
-        condition? .data .value [] .Bool =:: condition
+        condition .value [] .Bool
           1 op .pos state discardValues
-        condition ! if
+        ! if
           "assertion failed: " sb.copyPtr
             op .val .RuntimeAssert sb.appendStr
           op .pos errors appendError
         end
-        return
+        0 return
       end
       ## requireTypes
         types.primitive.BOOL@ slice.wrap
@@ -4234,31 +4153,29 @@ proc(
         0
         op .pos
       state requireTypes if
-        return
+        0 return
       end
       op state appendOp ..drop
-      return
+      0 return
     panic case
       op .pos state popString =:: message
       message op .pos opPanicWithMessage op=
       false state .reachable=
       op state appendOp ..drop
-      op .pos state endSwitchBranch
-      return
+      0 return
     panicWithMessage case
       false state .reachable=
       op state appendOp ..drop
-      op .pos state endSwitchBranch
-      return
+      0 return
     Error case
       1 op .pos state checkStackSize if
-        return
+        0 return
       end
       state [] .mode .STATIC_PROC ?? if
         ## don't evaluate errors when type-checking static procs
         state .stack branchTree.pop ..drop
         op state appendOp ..drop
-        return
+        0 return
       end
       ## appendError
         op .pos state popString sb.fromStr
@@ -4284,7 +4201,7 @@ proc(
         WARNING case appendWarning break
         INFO case appendInfo break
       end
-      return
+      0 return
     length case
       state .stack branchTree.peek =:: value?
       value? optional.isEmpty if
@@ -4292,14 +4209,14 @@ proc(
           op program sb.appendOp
           " expected pointer or array" sb.appendS
         op .pos errors appendError
-        return
+        0 return
       end
         value? .data [] .valueType
         value? .data [] .value
         op .pos
         program
       interpreter.sizeOfValue if ..drop.2
-        return
+        0 return
       end =:: constVal =:: constType
       1 op .pos state discardValues ## remove value from stack
       ## pushConstant
@@ -4307,7 +4224,7 @@ proc(
         constType
         op .pos
       state pushConstant
-      return
+      0 return
     procPtr builtIn
     NewEnum call checkEnumLabel
     existsName hasElement case
@@ -4316,11 +4233,11 @@ proc(
       op .val .stackMod .modType switch
         DROP case
           op .val .stackMod .n op .pos state discardValues
-          return
+          0 return
         COPY case
           op .val .stackMod .n =:: offset
           offset 1 + op .pos state checkStackSize if
-            return
+            0 return
           end
           ## copy value on stack
           state .stack
@@ -4336,19 +4253,19 @@ proc(
             end copied@ .opIndex=
           end
           state .stack copied branchTree.push
-          return
+          0 return
         ROTATE case
           op .val .stackMod .n =:: offset
           offset i32.abs 1 + =:: eltCount
           eltCount op .pos state checkStackSize if
-            return
+            0 return
           end
           ## TODO? if rotated value is constant replace with move of value to top of stack
           state .stack eltCount offset 0 > branchTree.rotate
           ## clear stack references after rotation (removing stack values after rotation messes up stack)
           false eltCount op .pos state clearReferences
           op state appendOp ..drop
-          return
+          0 return
       end
       break
     typeInfo case
@@ -4364,21 +4281,21 @@ proc(
           "could no compute size of type " sb.copyPtr
             valType typeContext sb.appendType
           op .pos errors appendError
-          return
+          0 return
         end
         types.I_SIZE
         op .pos
       state pushConstant
-      return
+      0 return
     typeModifier case
       ## type-modifiers are handled by the interpreter
       op@ state interpretTypeModifier
-      return
+      0 return
     autoCast copy ConstantReference NewReference NewEnumReference case
       "unsupported operation: " sb.copyPtr
         op program sb.appendOp
       op .pos errors appendError
-      return
+      0 return
     compilerInfo case
       ## remeber operation for interpreter
       op state appendOp ..drop
@@ -4390,18 +4307,18 @@ proc(
             info .count
             info .depth
           state printTypes
-          return
+          0 return
         stackInfo case
           ## printTypes
             true
             op .val .compilerInfo .stackInfo
             0
           state printTypes
-          return
+          0 return
         compiledOps case
-          return ## TODO print ops
+          0 return ## TODO print ops
         find case
-          return ## TODO find
+          0 return ## TODO find
       end
       break
   end
@@ -4409,6 +4326,7 @@ proc(
     op program sb.appendOp
     " has not been implemented" sb.appendS
   op .pos errors appendError
+  0 return
 end
 
 proc(
@@ -4582,7 +4500,10 @@ proc(
   idContext id.currentScope =:: prevScope
   currentProc [] .scopeId idContext id.setScope
   idContext id.openScope
-  codeImpl [] .code for state typeCheckOp end
+  codeImpl [] .code =:: code
+  0:iSize while $ code .length u< do
+    code $1 [] state typeCheckOp +
+  finally 1 + end ..drop
   ## TODO? compile exported procedure normally
   state [] .isUnusedProc ! and currentProc [] .isStatic ! if
     ProcCodeState .TYPE_CHECKED
@@ -4675,7 +4596,6 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     TypeInfo branchTree.create
     32  BlockInfo list.create
     128 Operation list.create
-    128 BlockType list.create
     0:i32
     128 MissingProc list.create
     FILE_ID_NONE
@@ -4806,5 +4726,4 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   state .argData map.free
   state [] .initializationStack list.free ..drop
   state [] .stateStack list.free ..drop
-  state [] .skippedBlocks list.free ..drop
 end
