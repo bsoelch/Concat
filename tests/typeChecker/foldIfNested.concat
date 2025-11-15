@@ -1,0 +1,8 @@
+proc( -> ) =>: main
+  false if
+    0 while $ sys.argc < do 1 +
+    end ..drop
+  end
+  true if else false _if else end
+  true if else false or true _if else end
+end

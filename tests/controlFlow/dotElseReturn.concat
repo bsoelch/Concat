@@ -1,0 +1,7 @@
+import optional
+proc( -> i32 optional ) =>: getOptional
+  i32 optional.empty
+end
+proc( -> ) =>: main
+  getOptional .else return end ..drop
+end

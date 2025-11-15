@@ -1,0 +1,11 @@
+proc( -> i32 ) =>: getVal
+  5
+end
+proc( -> ) =>: main
+  while: loop true do
+    getVal switch
+      5 case break.loop
+    default
+    end
+  end
+end
