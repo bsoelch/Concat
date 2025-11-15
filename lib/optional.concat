@@ -2,12 +2,6 @@
   union( _ : empty V : data )
 end
 namespace: optional
-  proc( type : auto: V V optional -> bool ) =>: export: isEmpty
-    .empty ?? return
-  end
-  proc( type : auto: V  V optional -> bool ) =>: export: hasData
-    .data ?? return
-  end
   proc( type : V -> V optional ) =>: export: empty
     V optional .empty return
   end
@@ -15,26 +9,55 @@ namespace: optional
     V optional .data return
   end
 
+  proc( type : auto: V V optional -> bool ) =>: export: isEmpty
+    .empty ?? return
+  end
+  proc( type : auto: V  V optional -> bool ) =>: export: hasData
+    .data ?? return
+  end
   proc( type : auto: T  T optional -> T ) =>: export: get
     .data
   end
 
   proc( type : auto: T  T optional -> T optional ) =>: prepareIf end
   proc( type : auto: T  T optional : ignore -> ) =>: elseVal end
+
+  ## optional with inverted boolean conversion
+  ( type : V -> type ) =>: export: inv
+    V optional
+  end
+  proc( type : auto: T  T optional -> T optional.inv ) =>: export: invert T optional.inv cast end
+  namespace: inv
+    proc( type : auto: T  T optional.inv -> T optional ) =>: export: shadow: invert T optional cast end
+    proc( type : auto: T  T optional.inv -> T ) =>: export: shadow: get optional.get end
+    proc( type : auto: T  T optional.inv -> bool ) =>: export: shadow: hasData optional.hasData end
+    proc( type : auto: T  T optional.inv -> bool ) =>: export: shadow: isEmpty optional.isEmpty end
+    proc( type : auto: T  T optional.inv -> T optional.inv ) =>: shadow: prepareIf optional.prepareIf end
+    proc( type : auto: T  T optional.inv -> ) =>: shadow: ifVal optional.elseVal end
+  end
 end
 
+overload: export: !
+  optional.invert
+  optional.inv.invert
+end
 overload: export: ?
   optional.hasData
+  optional.inv.isEmpty
 end
 overload: export: ..if.prepare
   optional.prepareIf
+  optional.inv.prepareIf
 end
 overload: export: ..if.check
   optional.hasData
+  optional.inv.isEmpty
 end
 overload: export: ..if.ifVal
   optional.get
+  optional.inv.ifVal
 end
 overload: export: ..if.elseVal
   optional.elseVal
+  optional.inv.get
 end
