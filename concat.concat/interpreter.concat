@@ -333,7 +333,7 @@ namespace: interpreter
   ## current conditional value in the and-or block (or false if not inside and/or block)
   proc( InterpreterContext ptr.mut : context -> bool ) =>: andOrCondition
     context peekBlock =:: currentBlock?
-    currentBlock? optional.hasData and currentBlock? .data [] .blockType .OR_TRUE ?? end
+    currentBlock? optional.hasData and currentBlock? .data [] .blockType .OR_TRUE end
   end
 
   enum( NONE TYPE_STRUCT TYPE_UNION TYPE_ENUM TYPE_PROC INITIALIZER ) =:: LabeledValueContext
@@ -565,7 +565,7 @@ namespace: interpreter
     closedBlock [] .labelOffset =:: labelOffset
     closedBlock [] .valueOffset =:: valueOffset
     closedBlock [] .typeOffset =:: typeOffset
-    closedBlock [] .blockType .TYPE_COMPOSITE ?? and context [] .typeBuffer .length typeOffset == if
+    closedBlock [] .blockType .TYPE_COMPOSITE and context [] .typeBuffer .length typeOffset == if
       Type .empty
     else
       ## newTuple
@@ -605,7 +605,7 @@ namespace: interpreter
       end
     =:: argCount
     context [] .typeBuffer .length argCount iSize cast.u - =:: retCount
-    closedBlock .blockType .TYPE_CPROC_IN ?? if
+    closedBlock .blockType .TYPE_CPROC_IN if
       CallingConvention .CCALL
       retCount 1:iSize u> if
         "C-procedures cannot have multiple return values" sb.copyPtr
@@ -990,7 +990,7 @@ namespace: interpreter
       pos errors appendError
       Type optional.empty return
     end =:: idData
-    idData [] .idType .PROCEDURE ?? ! if
+    idData [] .idType .PROCEDURE ! if
       "expected procedure got: " sb.copyPtr
         idData id.asIdInfo labelContext sb.appendIdInfo
       pos errors appendError
@@ -1116,7 +1116,7 @@ namespace: interpreter
     Type : targetType
     TypeContext ptr : typeContext
   -> ConstValue ) =>: export: castConstant
-    signType .UNSIGNED ?? or signType .NONE ?? and
+    signType .UNSIGNED or signType .NONE and
       srcType typeContext types.isUnsignedInt or srcType typeContext types.isChar or
       srcType typeContext types.isSignedInt ! and
       targetType typeContext types.isUnsignedInt or targetType typeContext types.isChar
@@ -1162,7 +1162,7 @@ namespace: interpreter
         end
       end
       ## uint -> float
-      targetType typeContext types.isFloat and signType .UNSIGNED ?? or srcType typeContext types.isUnsignedInt if
+      targetType typeContext types.isFloat and signType .UNSIGNED or srcType typeContext types.isUnsignedInt if
         intVal f64 cast.u ConstValue .Float return
       else
         intVal ConstValue .Int return
@@ -1813,7 +1813,7 @@ proc(
           else op [] .pos context popCondition _if ..drop
             EvalResult .Error return
           end =:: val
-          context [] .evalType .INTERPRET ?? if
+          context [] .evalType .INTERPRET if
             op [] .val .block .jumpDistance 0:JumpDistance == if
               "jump distance should be non-zero" sb.copyPtr
               op [] .pos errors appendError
@@ -1832,7 +1832,7 @@ proc(
           context openBlock
           EvalResult .Ok return
         ELSE case
-          context [] .evalType .INTERPRET ?? if
+          context [] .evalType .INTERPRET if
             op [] .val .block .jumpDistance 0:JumpDistance == if
               "jump distance should be non-zero" sb.copyPtr
               op [] .pos errors appendError
@@ -1841,17 +1841,17 @@ proc(
             op [] .val .block .jumpDistance EvalResult .Jump return
           end
           context peekBlock =:: currentBlock
-          currentBlock optional.isEmpty or currentBlock .data .blockType .IF ?? !
-              and currentBlock .data .blockType .IF_TRUE ?? !
-              and currentBlock .data .blockType .IF_FALSE ?? ! if
+          currentBlock optional.isEmpty or currentBlock .data .blockType .IF !
+              and currentBlock .data .blockType .IF_TRUE !
+              and currentBlock .data .blockType .IF_FALSE ! if
             "unexpected else statement, else can only appear in if-blocks" sb.copyPtr
             op [] .pos errors appendError
             EvalResult .Error return
           end
           context popBlock .data =:: closedBlock
-          closedBlock .blockType .IF_TRUE ?? if
+          closedBlock .blockType .IF_TRUE if
             BlockType .ELSE_TRUE
-          else closedBlock .blockType .IF_FALSE ?? _if
+          else closedBlock .blockType .IF_FALSE _if
             BlockType .ELSE_FALSE
           else
             BlockType .ELSE
@@ -1860,23 +1860,23 @@ proc(
         AND OR AND_IF OR_IF case
           skipBlock if
             context inAndOrBlock if EvalResult .Ok return end
-            op [] .val .block .blockType .OR ?? or
-              op [] .val .block .blockType .OR_IF ??
+            op [] .val .block .blockType .OR or
+              op [] .val .block .blockType .OR_IF
             end
           else op [] .pos context popCondition _if ..drop
             EvalResult .Error return
           end =:: val
-          context [] .evalType .INTERPRET ?? if
+          context [] .evalType .INTERPRET if
             op [] .val .block .jumpDistance 0:JumpDistance == if
               "jump distance should be non-zero" sb.copyPtr
               op [] .pos errors appendError
               EvalResult .Error return
             end
             op [] .val .block .blockType =:: blockType
-            blockType .OR_IF ?? or blockType .OR ?? end =:: isOr
+            blockType .OR_IF or blockType .OR end =:: isOr
             val isOr == if
               ## TODO? does this value get lost when poping the and-or block
-              skipBlock ! and blockType .AND ?? or blockType .OR ?? if
+              skipBlock ! and blockType .AND or blockType .OR if
                 val ConstValue .Bool types.primitive.BOOL op [] .pos context pushValue
               end
               op [] .val .block .jumpDistance EvalResult .Jump return
@@ -1886,8 +1886,8 @@ proc(
           end
           context closeAndOrBlock
           val
-            op [] .val .block .blockType .AND ?? or
-                op [] .val .block .blockType .AND_IF ?? if
+            op [] .val .block .blockType .AND or
+                op [] .val .block .blockType .AND_IF if
               if BlockType .AND_TRUE else BlockType .AND_FALSE end
             else
               if BlockType .OR_TRUE else BlockType .OR_FALSE end
@@ -1896,12 +1896,12 @@ proc(
           context openBlock
           EvalResult .Ok return
         WHILE FINALLY case
-          context [] .evalType .INTERPRET ?? if
+          context [] .evalType .INTERPRET if
               EvalResult .Ok return
           end
           break
         DO AND_DO case
-          context [] .evalType .INTERPRET ?? if
+          context [] .evalType .INTERPRET if
             op [] .val .block .jumpDistance 0:JumpDistance == if
               "jump distance should be non-zero" sb.copyPtr
               op [] .pos errors appendError
@@ -1917,7 +1917,7 @@ proc(
           end
           break
         OR_DO case
-          context [] .evalType .INTERPRET ?? if
+          context [] .evalType .INTERPRET if
             op [] .val .block .jumpDistance 0:JumpDistance == if
               "jump distance should be non-zero" sb.copyPtr
               op [] .pos errors appendError
@@ -1933,7 +1933,7 @@ proc(
           end
           break
         BREAK CONTINUE BREAK_SWITCH case
-          context [] .evalType .INTERPRET ?? if
+          context [] .evalType .INTERPRET if
             op [] .val .block .jumpDistance 0:JumpDistance == if
               "jump distance should be non-zero" sb.copyPtr
               op [] .pos errors appendError
@@ -1943,7 +1943,7 @@ proc(
           end
           break
         SWITCH case
-          context [] .evalType .INTERPRET ?? if
+          context [] .evalType .INTERPRET if
             op [] .pos context popValue if ..drop.2
               "stack underflow while evaluating operation: " sb.copyPtr
                 op [] program sb.appendOp
@@ -1983,7 +1983,7 @@ proc(
       EvalResult .Error return
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
-      context [] .evalType .INTERPRET ?? if
+      context [] .evalType .INTERPRET if
         BlockType ..length 41:iSize == "no-new block-types" assert
         blockType switch
           ELSE SWITCH AND OR case EvalResult .Ok return
@@ -2008,12 +2008,12 @@ proc(
       closedBlock? .data =:: closedBlock
       closedBlock .blockType switch
         IF_TRUE IF_FALSE case
-          blockType .IF ?? if EvalResult .Ok return end break
+          blockType .IF if EvalResult .Ok return end break
         ELSE_TRUE ELSE_FALSE case
-          blockType .ELSE ?? if EvalResult .Ok return end break
+          blockType .ELSE if EvalResult .Ok return end break
         OR_TRUE OR_FALSE case
-          blockType .OR ?? if
-            closedBlock .blockType .OR_TRUE ?? if
+          blockType .OR if
+            closedBlock .blockType .OR_TRUE if
               true ConstValue .Bool
                 types.primitive.BOOL
               op [] .pos context pushValue
@@ -2021,8 +2021,8 @@ proc(
             EvalResult .Ok return
           end break
         AND_TRUE AND_FALSE case
-          blockType .AND ?? if
-            closedBlock .blockType .AND_FALSE ?? if
+          blockType .AND if
+            closedBlock .blockType .AND_FALSE if
               false ConstValue .Bool
                 types.primitive.BOOL
               op [] .pos context pushValue
@@ -2085,7 +2085,7 @@ proc(
           ## newUnion
             context [] .typeBuffer list.asSlice typeOffset slice.tail
             context [] .labelBuffer list.asSlice labelOffset slice.tail
-            blockType .TYPE_UNION ??
+            blockType .TYPE_UNION
           typeContext types.newUnion $ ? if .data else ..drop
             "could not create union-type" sb.copyPtr op [] .pos errors appendError
             EvalResult .Error return
@@ -2636,7 +2636,7 @@ proc(
           op [] .pos errors appendError
           EvalResult .Error return
         end
-        op [] .val .typeModifier .ARRAY ?? and fixedSize ! if
+        op [] .val .typeModifier .ARRAY and fixedSize ! if
           "array types must have a fixed size" sb.copyPtr op [] .pos errors appendError
         end
         typeConstant .TypeId
@@ -2645,7 +2645,7 @@ proc(
               types.ArraySize .None list.append
             idContext .arraySizeBuffer=
           else
-            op [] .val .typeModifier .RAW_PTR ?? or op [] .val .typeModifier .RAW_PTR_MUT ?? if
+            op [] .val .typeModifier .RAW_PTR or op [] .val .typeModifier .RAW_PTR_MUT if
               "raw pointers cannot be sized" sb.copyPtr op [] .pos errors appendError
             end
           end
@@ -2672,7 +2672,7 @@ proc(
           idContext [] .arraySizeBuffer $ .length 1:iSize - []
           typeContext
         types.newArrayType $ ? if .data else ..drop
-          op [] .val .typeModifier .ARRAY ?? if
+          op [] .val .typeModifier .ARRAY if
             "could not create array type" sb.copyPtr op [] .pos errors appendError
           else
             "could not create pointer type" sb.copyPtr op [] .pos errors appendError
@@ -3016,7 +3016,7 @@ proc(
         rawSrc typeContext types.primitiveValue =:: srcPrimitive
         rawDst typeContext types.primitiveValue =:: dstPrimitive
         context [] .stack $ .length 1:iSize - @[] =:: stackVal
-        srcPrimitive .F32 ?? and dstPrimitive .I32 ?? if
+        srcPrimitive .F32 and dstPrimitive .I32 if
           stackVal []
             constAsFloat if ..drop
               "unexpected value for float: " sb.copyPtr
@@ -3027,7 +3027,7 @@ proc(
           stackVal =[]
           dst context [] .stackInfo $ .length 1:iSize - @[] .valueType=
           EvalResult .Ok return
-        else srcPrimitive .F64 ?? and dstPrimitive .I64 ?? _if
+        else srcPrimitive .F64 and dstPrimitive .I64 _if
           stackVal []
             constAsFloat if ..drop
               "unexpected value for float: " sb.copyPtr
@@ -3038,7 +3038,7 @@ proc(
           stackVal =[]
           dst context [] .stackInfo $ .length 1:iSize - @[] .valueType=
           EvalResult .Ok return
-        else srcPrimitive .I32 ?? and dstPrimitive .F32 ?? _if
+        else srcPrimitive .I32 and dstPrimitive .F32 _if
           stackVal []
             constAsInt if ..drop
               "unexpected value for int: " sb.copyPtr
@@ -3049,7 +3049,7 @@ proc(
           stackVal =[]
           dst context [] .stackInfo $ .length 1:iSize - @[] .valueType=
           EvalResult .Ok return
-        else srcPrimitive .I64 ?? and dstPrimitive .F64 ?? _if
+        else srcPrimitive .I64 and dstPrimitive .F64 _if
           stackVal []
             constAsInt if ..drop
               "unexpected value for int: " sb.copyPtr
@@ -3257,7 +3257,7 @@ proc(
           values valInfos nArgs context unpopValues
           EvalResult .Error return
         end
-          op [] .val .equalityOperator .NEQ ?? ^ ## invert result for NEQ
+          op [] .val .equalityOperator .NEQ ^ ## invert result for NEQ
         ConstValue .Bool
         types.primitive.BOOL
         op [] .pos
@@ -3396,7 +3396,7 @@ namespace: interpreter
       nArgs i32 cast
     pos typeContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
     resultType switch
-      success case
+      SUCCESS case
         calledType typeContext types.getProcRet =:: retType
         retType switch
           Empty case break
@@ -3413,7 +3413,7 @@ namespace: interpreter
           break
         end
         false return
-      argumentError case
+      ARGUMENT_ERROR case
         "invalid arguments for built-in " sb.copyPtr
           builtIn sb.appendBuiltIn
           ": " sb.appendS
@@ -3427,7 +3427,7 @@ namespace: interpreter
         valInfos nArgs iSize cast.u array.reverse
         values valInfos nArgs context unpopValues
         true return
-      unimplemented case
+      UNIMPLEMENTED case
         "unsupported built-in in constant evaluation: " sb.copyPtr
           builtIn sb.appendBuiltIn
         pos errors appendError
@@ -3655,7 +3655,7 @@ proc(
   else false end =:: isTypeGenerator
   procName labelContext id.labelFlags id.FLAG_EXTERN & ? and
       procData [] .implementation .code ?? and
-      procData [] .implementation .code .codeState .PARSING ?? if
+      procData [] .implementation .code .codeState .PARSING if
     procName args pos context evaluateExternCall return
   end
   context [] .typeChecker optional.hasData if
@@ -3810,7 +3810,7 @@ proc(
     codeImpl [] .implementations
       implId list.at .data
     =:: currentImpl
-    currentImpl .codeState .TYPE_CHECKED ?? or currentImpl .codeState .UNUSED ?? or currentImpl .codeState .COMPILED ?? if
+    currentImpl .codeState .TYPE_CHECKED or currentImpl .codeState .UNUSED or currentImpl .codeState .COMPILED if
       currentImpl [] .code slice.freeze
     else
       "no implementaion for procedure " sb.copyPtr
@@ -3850,7 +3850,7 @@ proc(
   code 0 slice.at .data =:: op
   op [] .val .implementProcedure ?? ! and
       op [] .val .initializeId ?? ! or
-      op [] .val .initializeId .idType .PROCEDURE ?? ! if
+      op [] .val .initializeId .idType .PROCEDURE ! if
     "expected procedure initialization got " sb.copyPtr
       op [] program sb.appendOp
     op [] .pos errors appendError

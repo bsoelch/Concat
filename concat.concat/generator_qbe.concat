@@ -526,11 +526,11 @@ proc(
   context [] .program =:: program
   program .errors =:: errors
   context [] .openBlocks list.atReversed for =:: block
-    breakType .WHILE ?? and block [] .While ?? and
+    breakType .WHILE and block [] .While ?? and
         block [] .While .blockId blockId == if
       block optional.wrap return
     end
-    breakType .SWITCH ?? and block [] .Switch ?? and
+    breakType .SWITCH and block [] .Switch ?? and
         block [] .Switch .blockId blockId == if
       block optional.wrap return
     end
@@ -637,7 +637,7 @@ namespace: sb
           I8 CHAR8 case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb t .primitiveType .I8 ?? if "sb" else "ub" end sb.appendS return
+              LOAD case sb t .primitiveType .I8 if "sb" else "ub" end sb.appendS return
               ULOAD case sb "ub" sb.appendS return
               STORE case sb "b" sb.appendS return
             end
@@ -645,7 +645,7 @@ namespace: sb
           I16 CHAR16 case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb t .primitiveType .I16 ?? if "sh" else "uh" end sb.appendS return
+              LOAD case sb t .primitiveType .I16 if "sh" else "uh" end sb.appendS return
               ULOAD case sb "uh" sb.appendS return
               STORE case sb "h" sb.appendS return
             end
@@ -671,16 +671,16 @@ namespace: sb
       pointer mutablePointer rawPointer mutableRawPointer procedure case
         sb "l" sb.appendS return
       arrayType case
-        sb t "array":s storeType .STACK ?? ! context appendCompositeTypeQBE return
+        sb t "array":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       struct case
-        sb t "struct":s storeType .STACK ?? ! context appendCompositeTypeQBE return
+        sb t "struct":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       union case
-        sb t "union":s storeType .STACK ?? ! context appendCompositeTypeQBE return
+        sb t "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       enum case
-        sb t "enum":s storeType .STACK ?? ! context appendCompositeTypeQBE return
+        sb t "enum":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       undefined empty genericType autoType
       initializer align typeSet case
@@ -2357,7 +2357,7 @@ proc(
       ## baseType is pointer type
       baseType typeContext types.getBaseType =:: eltType
       sb
-        builtIn .OFFSET_PTR_I32 ?? or builtIn .OFFSET_PTR_MUT_I32 ?? if
+        builtIn .OFFSET_PTR_I32 or builtIn .OFFSET_PTR_MUT_I32 if
           pos context popValue =:: offset32
           "%s" sb.appendS
           ValType .I64 context pushValue sb.appendI
@@ -2436,30 +2436,30 @@ proc(
   sb
     srcType switch
       I8  CHAR8  case
-        unsigned if boundType .MIN ?? if 0 else i8.UMAX i64 cast.u end
-          else boundType .MIN ?? _if i8.MIN i64 cast.s else i8.MAX i64 cast.s end
+        unsigned if boundType .MIN if 0 else i8.UMAX i64 cast.u end
+          else boundType .MIN _if i8.MIN i64 cast.s else i8.MAX i64 cast.s end
         break
       I16 CHAR16 case
-        unsigned if boundType .MIN ?? if 0 else i16.UMAX i64 cast.u end
-          else boundType .MIN ?? _if i16.MIN i64 cast.s else i16.MAX i64 cast.s end
+        unsigned if boundType .MIN if 0 else i16.UMAX i64 cast.u end
+          else boundType .MIN _if i16.MIN i64 cast.s else i16.MAX i64 cast.s end
         break
       I32 CHAR32 case
-        unsigned if boundType .MIN ?? if 0 else i32.UMAX i64 cast.u end
-          else boundType .MIN ?? _if i32.MIN i64 cast.s else i32.MAX i64 cast.s end
+        unsigned if boundType .MIN if 0 else i32.UMAX i64 cast.u end
+          else boundType .MIN _if i32.MIN i64 cast.s else i32.MAX i64 cast.s end
         break
       I64 case
-        unsigned if boundType .MIN ?? if 0 else i64.UMAX end
-          else boundType .MIN ?? _if i64.MIN else i64.MAX end
+        unsigned if boundType .MIN if 0 else i64.UMAX end
+          else boundType .MIN _if i64.MIN else i64.MAX end
         break
-      BOOL case boundType .MIN ?? if 0 else 1 end break
+      BOOL case boundType .MIN if 0 else 1 end break
       F32 case
         asType switch
           I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
             asType unsigned boundType asType appendNumberBound return
           F32 case
-            boundType .MIN ?? if f32.MIN else f32.MAX end f32.bits sb.appendI return
+            boundType .MIN if f32.MIN else f32.MAX end f32.bits sb.appendI return
           F64 case
-            boundType .MIN ?? if f64.MIN else f64.MAX end f64.bits sb.appendI return
+            boundType .MIN if f64.MIN else f64.MAX end f64.bits sb.appendI return
           BOOL TYPE case ..unreachable
         end
         break
@@ -2468,9 +2468,9 @@ proc(
           I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
             asType unsigned boundType asType appendNumberBound return
           F32 case
-            boundType .MIN ?? if f32.Infinity else f32.-Infinity end f32.bits sb.appendI return
+            boundType .MIN if f32.Infinity else f32.-Infinity end f32.bits sb.appendI return
           F64 case
-            boundType .MIN ?? if f64.MIN else f64.MAX end f64.bits sb.appendI return
+            boundType .MIN if f64.MIN else f64.MAX end f64.bits sb.appendI return
           BOOL TYPE case ..unreachable
         end
         break
@@ -2511,8 +2511,8 @@ proc(
   context nextTmpId =:: tNaN
   context nextTmpId =:: tMin
   context nextTmpId =:: tMax
-  srcVal .F32 ?? if 's'
-  else srcVal .F64 ?? _if 'd'
+  srcVal .F32 if 's'
+  else srcVal .F64 _if 'd'
   else ..unreachable end =:: srcTypeName
   sb
     ## isNaN?
@@ -2657,7 +2657,7 @@ proc(
         " =" sb.appendS
         target StorageType .STACK pos context sb.appendTypeNameQBE
         " ext" sb.appendS
-        signType .UNSIGNED ?? if
+        signType .UNSIGNED if
           'u' sb.appendC
         else
           's' sb.appendC
@@ -2675,7 +2675,7 @@ proc(
       '\n' sb.appendC
     return
   ## case 2: float -> float/int
-  else fromVal .F32 ?? or fromVal .F64 ?? _if
+  else fromVal .F32 or fromVal .F64 _if
       toVal switch
         F32 case
           sb
@@ -2696,7 +2696,7 @@ proc(
         I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
           sb
             fromVal srcIndex target toVal targetIndex
-            signType .UNSIGNED ??
+            signType .UNSIGNED
           pos context castFloatToInt return
         BOOL TYPE case ..unreachable
       end
@@ -2707,7 +2707,7 @@ proc(
       targetIndex sb.appendI
       " =" sb.appendS
       target StorageType .STACK pos context sb.appendTypeNameQBE
-      signType .UNSIGNED ?? if " u" sb.appendS else " s" sb.appendS end
+      signType .UNSIGNED if " u" sb.appendS else " s" sb.appendS end
       fromVal switch
         I64 case "ltof" sb.appendS break
         I8 I16 I32 CHAR8 CHAR16 CHAR32 case "wtof" sb.appendS break
@@ -2829,7 +2829,7 @@ proc(
   return
 end
 
-enum( autoCast Cast Cast! bitCast ) =:: CastType
+enum( AUTO_CAST CAST CAST! BIT_CAST ) =:: CastType
 
 proc(
   stringBuilder : sb
@@ -2848,7 +2848,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   signType0
-    $ .NONE ?? if ..drop
+    $ .NONE if ..drop
       src0 typeContext types.isUnsignedInt or src0 typeContext types.isChar if
         SignType .UNSIGNED
       else src0 typeContext types.isSignedInt _if
@@ -2880,14 +2880,14 @@ proc(
     pos errors appendError
     sb return
   end
-  castType .autoCast ?? if
+  castType .AUTO_CAST if
     context .stackInfo offset branchTree.at .data [] .valType
     context .stackInfo offset branchTree.at .data [] .varId
   else
     context .stackInfo offset branchTree.at .data [] .valType
     pos context popValue
   end =:: srcId =:: valType
-  castType .autoCast ?? if
+  castType .AUTO_CAST if
     target context toValType offset context replaceValue
   else
     target context toValType context pushValue
@@ -2897,21 +2897,21 @@ proc(
     sb
       src srcId
       target targetId
-    pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
+    pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
     return
   end
   src typeContext types.isChar and target typeContext types.isInt if
     sb
       src srcId
       target targetId
-    pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
+    pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
     return
   end
   src typeContext types.isInt and target typeContext types.isChar if
     sb
       src srcId
       target targetId
-    pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
+    pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
     return
   end
   src typeContext types.isPointer target typeContext types.isPointer & if
@@ -2930,7 +2930,7 @@ proc(
       ## castNumbers
         src srcId
         types.primitive.I_SIZE targetId
-      pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
+      pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
     return
   end
   src typeContext types.isPointer target typeContext types.isInt & if
@@ -2939,7 +2939,7 @@ proc(
       ## castNumbers
         types.primitive.I_SIZE srcId
         target targetId
-      pos context  castType .bitCast ?? if bitcastNumbers else signType castNumbers end
+      pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
     return
   end
   "casting from " sb.copyPtr
@@ -2990,7 +2990,7 @@ proc(
     '\n' sb.appendC
     needCast if
       ## compileCast
-        CastType .autoCast
+        CastType .AUTO_CAST
         SignType .NONE
         srcType
         0
@@ -3103,7 +3103,7 @@ proc(
       targetId sb.appendI
       " =" sb.appendS
       argType StorageType .STACK pos context sb.appendTypeNameQBE
-      valType .REFERENCE ?? if ## unwrap reference
+      valType .REFERENCE if ## unwrap reference
         " load" sb.appendS
         argType StorageType .LOAD pos context sb.appendTypeNameQBE
       else
@@ -3249,7 +3249,7 @@ proc(
             " copy " sb.appendS
             i id.LABEL_ID_NONE context sb.appendArgName
             '\n' sb.appendC
-          else valType .REFERENCE ?? _if
+          else valType .REFERENCE _if
             "%l" sb.appendS
             label i64 cast sb.appendI
             " =" sb.appendS
@@ -3284,7 +3284,7 @@ proc(
           end =:: variables
           variables for =:: varInfo
             VariableType ..length 3:iSize == "no new variable types" assert
-            varInfo .variableType .ARGUMENT ?? if
+            varInfo .variableType .ARGUMENT if
               continue
             end
             "%l" sb.appendS
@@ -3712,7 +3712,7 @@ proc(
     autoCast case
       sb
         op [] .pos sb.appendPosQBE
-        CastType .autoCast
+        CastType .AUTO_CAST
         SignType .NONE
         op [] .val .autoCast .src
         op [] .val .autoCast .offset
@@ -3725,15 +3725,15 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         op [] .val .Cast ?? if
-          CastType .Cast
+          CastType .CAST
           op [] .val .Cast .signType
           op [] .val .Cast .src
         else op [] .val .bitCast ?? _if
-          CastType .bitCast
+          CastType .BIT_CAST
           SignType .UNSIGNED
           op [] .val .bitCast
         else
-          CastType .Cast!
+          CastType .CAST!
           SignType .NONE ## XXX? use sign information for forced cast
           op [] .val .Cast!
         end
@@ -3914,7 +3914,7 @@ proc(
         appendBuiltInQBE
       return
     equalityOperator case
-      op [] .val .equalityOperator .EQ ?? if
+      op [] .val .equalityOperator .EQ if
         "eq":s
       else
         "ne":s
@@ -4031,9 +4031,9 @@ proc(
             op [] .val .block .blockId context openIfBlock
             context [] .openBlocks list.peek .data .If
           end =:: ifBlock
-          op [] .val .block .blockType .OR_IF ?? or
-            op [] .val .block .blockType .OR_TRUE ?? or
-            op [] .val .block .blockType .OR_FALSE ?? end =:: isOr
+          op [] .val .block .blockType .OR_IF or
+            op [] .val .block .blockType .OR_TRUE or
+            op [] .val .block .blockType .OR_FALSE end =:: isOr
           ## appendBranchId
             BranchType .NEXT
             context nextJumpLabelId
@@ -4256,7 +4256,7 @@ proc(
             return
         AND_DO OR_DO case
           context [] .openBlocks list.peek .data .While =:: whileBlock
-          op [] .val .block .blockType .OR_DO ?? =:: isOr
+          op [] .val .block .blockType .OR_DO =:: isOr
           ## BranchId
             BranchType .NEXT
             context nextJumpLabelId
@@ -4372,7 +4372,7 @@ proc(
             op [] .pos errors appendError
             sb return
           end
-          blockType .CONTINUE ?? if
+          blockType .CONTINUE if
             breakBlock .While .continueBranches
             breakBlock .While .continueBranchIds
           else
@@ -4440,7 +4440,7 @@ proc(
           end
           newSb return
         AND OR case
-          op [] .val .block .blockType .OR ?? =:: isOr
+          op [] .val .block .blockType .OR =:: isOr
           context [] .openBlocks list.peek =:: currentBlock?
           currentBlock? optional.hasData and
               currentBlock? .data =:: andOrBlock
@@ -4951,7 +4951,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     labelId idContext id.getIdentifier
       ! "labelId is identifier" assert
     =:: idData
-    idData [] .idType .GLOBAL_VAR ?? ! if
+    idData [] .idType .GLOBAL_VAR ! if
       continue
     end
     idData [] .valueType =:: mut: valType
@@ -5011,7 +5011,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     program [] .procedures for =:: proc
       proc .implementation .code ?? ! if continue end
       proc .implementation .code =:: impl
-      impl .codeState .UNUSED ?? if continue end
+      impl .codeState .UNUSED if continue end
       program [] .progFiles proc .fileId iSize cast.u list.get .if =:: f
         "dbgfile \"" sb.appendS
         f .fileName sb.appendSb
@@ -5019,7 +5019,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       else
         "dbgfile \"..internal\"\n"    sb.appendS
       end
-      impl .codeState .COMPILED ?? if
+      impl .codeState .COMPILED if
         impl .code .length for i32 cast.u =:: opIndex
           impl .code opIndex @[] opIndex context compileOp
         end
@@ -5027,7 +5027,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         sb.clear
       end
       impl .implementations for =:: genericImpl
-        genericImpl .codeState .COMPILED ?? if
+        genericImpl .codeState .COMPILED if
           genericImpl .code .length for i32 cast.u =:: opIndex
             genericImpl .code opIndex @[] opIndex context compileOp
           end

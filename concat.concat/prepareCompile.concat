@@ -270,7 +270,7 @@ proc(
         end
       =:: calledType
       ## special handling for pointer-call procedures
-      _BACKEND_ .QBE ?? if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
+      _BACKEND_ .QBE if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
         calledType typeContext types.getProcOutArgs =:: outArgs
         op .val .callPtr ?? if
           ## remember number of out-args in call operation
@@ -301,7 +301,7 @@ proc(
       else
         op .val .call program getCallData
       end =:: callData
-      calledType typeContext types.getCallConvention .PTRCALL ?? =:: isPtrCall
+      calledType typeContext types.getCallConvention .PTRCALL =:: isPtrCall
       calledType typeContext types.getProcOut .data =:: outTypes
       false =:: mut: hasLabel
       program [] .labelBuffer
@@ -525,7 +525,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc .implementation .code =:: impl
     currentProc [] .hasStaticArg if
       impl [] .implementations list.atItr for =:: currentImpl
-        currentImpl .codeState [] .UNUSED ?? if
+        currentImpl .codeState [] .UNUSED if
           continue
         end
         ## convertProc
@@ -537,7 +537,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
         ProcCodeState .COMPILED currentImpl .codeState=
       end
     else
-      impl .codeState [] .UNUSED ?? if
+      impl .codeState [] .UNUSED if
         continue
       end
       ## convertProc

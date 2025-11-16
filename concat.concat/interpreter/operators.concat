@@ -34,33 +34,33 @@ namespace: interpreter
     end
   end
 
-  enum( success argumentError unimplemented ) =:: export: OperatorResult
+  enum( SUCCESS ARGUMENT_ERROR UNIMPLEMENTED ) =:: export: OperatorResult
   proc(
     ConstValue ptr.raw : args
     i32 : k
     ( bool -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorBool
-    k 1 != if ConstValue .None OperatorResult .argumentError return end
+    k 1 != if ConstValue .None OperatorResult .ARGUMENT_ERROR return end
     args 0 [] constAsBool if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end =:: a
-    a op () ConstValue .Bool OperatorResult .success return
+    a op () ConstValue .Bool OperatorResult .SUCCESS return
   end
   proc(
     ConstValue ptr.raw : args
     i32 : k
     type : T
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
-    k 1 != if ConstValue .None OperatorResult .argumentError return end
+    k 1 != if ConstValue .None OperatorResult .ARGUMENT_ERROR return end
     args 0 [] =:: a
     ConstValue ..length 23:iSize == "no new constants" assert
     a switch
-      Bool case a OperatorResult .success return
-      Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .success return
-      Int case a .Int T cast ? ConstValue .Bool OperatorResult .success return
-      Float case a .Float T cast ? ConstValue .Bool OperatorResult .success return
+      Bool case a OperatorResult .SUCCESS return
+      Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .SUCCESS return
+      Int case a .Int T cast ? ConstValue .Bool OperatorResult .SUCCESS return
+      Float case a .Float T cast ? ConstValue .Bool OperatorResult .SUCCESS return
       default
-        ConstValue .None OperatorResult .argumentError return
+        ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end
   end
   proc(
@@ -69,11 +69,11 @@ namespace: interpreter
     i32 : k
     ( T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorInt
-    k 1 != if ConstValue .None OperatorResult .argumentError return end
+    k 1 != if ConstValue .None OperatorResult .ARGUMENT_ERROR return end
     args 0 [] constAsInt if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: n
-    n op () i64 cast ConstValue .Int OperatorResult .success return
+    n op () i64 cast ConstValue .Int OperatorResult .SUCCESS return
   end
   proc(
     type : auto: T
@@ -81,11 +81,11 @@ namespace: interpreter
     i32 : k
     ( T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: unaryOperatorFloat
-    k 1 != if ConstValue .None OperatorResult .argumentError return end
+    k 1 != if ConstValue .None OperatorResult .ARGUMENT_ERROR return end
     args 0 [] constAsFloat if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: n
-    n op () f64 cast ConstValue .Float OperatorResult .success return
+    n op () f64 cast ConstValue .Float OperatorResult .SUCCESS return
   end
 
   proc(
@@ -93,14 +93,14 @@ namespace: interpreter
     i32 : k
     ( bool bool -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorBool
-    k 2 != if ConstValue .None  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .ARGUMENT_ERROR return end
     args 0 [] constAsBool  if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end =:: a
     args 1 [] constAsBool  if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end =:: b
-    a b op () ConstValue .Bool OperatorResult .success return
+    a b op () ConstValue .Bool OperatorResult .SUCCESS return
   end
 
   proc(
@@ -109,14 +109,14 @@ namespace: interpreter
     i32 : k
     ( T T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorInt
-    k 2 != if ConstValue .None  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .ARGUMENT_ERROR return end
     args 0 [] constAsInt if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: n
     args 1 [] constAsInt if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: m
-    n m op () i64 cast ConstValue .Int OperatorResult .success return
+    n m op () i64 cast ConstValue .Int OperatorResult .SUCCESS return
   end
   proc(
     type : auto: T
@@ -124,14 +124,14 @@ namespace: interpreter
     i32 : k
     ( T T -> T ) ptr : op
   -> ConstValue OperatorResult ) =>: binaryOperatorFloat
-    k 2 != if ConstValue .None  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .ARGUMENT_ERROR return end
     args 0 [] constAsFloat if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: x
     args 1 [] constAsFloat if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: y
-    x y op () f64 cast ConstValue .Float OperatorResult .success return
+    x y op () f64 cast ConstValue .Float OperatorResult .SUCCESS return
   end
   proc(
     type : auto: T
@@ -139,14 +139,14 @@ namespace: interpreter
     i32 : k
     ( T T -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: cmpOperatorInt
-    k 2 != if ConstValue .None  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .ARGUMENT_ERROR return end
     args 0 [] constAsInt if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: n
     args 1 [] constAsInt if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: m
-    n m op () ConstValue .Bool OperatorResult .success return
+    n m op () ConstValue .Bool OperatorResult .SUCCESS return
   end
   proc(
     type : auto: T
@@ -154,14 +154,14 @@ namespace: interpreter
     i32 : k
     ( T T -> bool ) ptr : op
   -> ConstValue OperatorResult ) =>: cmpOperatorFloat
-    k 2 != if ConstValue .None  OperatorResult .argumentError return end
+    k 2 != if ConstValue .None  OperatorResult .ARGUMENT_ERROR return end
     args 0 [] constAsFloat if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: x
     args 1 [] constAsFloat if ..drop
-      ConstValue .None OperatorResult .argumentError return
+      ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end T cast =:: y
-    x y op () ConstValue .Bool OperatorResult .success return
+    x y op () ConstValue .Bool OperatorResult .SUCCESS return
   end
 
   ## XXX? do I need differnet handling for i64i32 operations
@@ -229,11 +229,11 @@ namespace: interpreter
       EQ_I32 EQ_C32 case args k i32.eq@ cmpOperatorInt return
       EQ_I64 case
         args k i64.eq@ cmpOperatorInt
-          $ .argumentError ?? if ..drop.2
+          $ .ARGUMENT_ERROR if ..drop.2
             args 0 [] args 1 [] typeContext pointerEq if ..drop
-              ConstValue .None OperatorResult .argumentError return
+              ConstValue .None OperatorResult .ARGUMENT_ERROR return
             end
-            ConstValue .Bool OperatorResult .success return
+            ConstValue .Bool OperatorResult .SUCCESS return
           end
         return
       EQ_F32 case args k f32.eq@ cmpOperatorFloat return
@@ -244,11 +244,11 @@ namespace: interpreter
       NE_I32 NE_C32 case args k i32.ne@ cmpOperatorInt return
       NE_I64 case
         args k i64.ne@ cmpOperatorInt
-          $ .argumentError ?? if ..drop.2
+          $ .ARGUMENT_ERROR if ..drop.2
             args 0 [] args 1 [] typeContext pointerEq if ..drop
-              ConstValue .None OperatorResult .argumentError return
+              ConstValue .None OperatorResult .ARGUMENT_ERROR return
             end
-            ! ConstValue .Bool OperatorResult .success return
+            ! ConstValue .Bool OperatorResult .SUCCESS return
           end
         return
       NE_F32 case args k f32.ne@ cmpOperatorFloat return
@@ -297,7 +297,7 @@ namespace: interpreter
         k 1 == "correct number of arguments" assert
         inTypes 0 [] typeContext types.getBaseType =:: baseType
         baseType typeContext types.isComposite or baseType typeContext types.isArray if
-          args 0 [] OperatorResult .success return
+          args 0 [] OperatorResult .SUCCESS return
         end
         ## getOrOffset
           args 0 []
@@ -316,7 +316,7 @@ namespace: interpreter
             "unexpected constant for pointer offset expected integer: " sb.copyPtr
               args 1 [] typeContext sb.appendConstant
             pos errors appendError
-            ConstValue .None OperatorResult .argumentError return
+            ConstValue .None OperatorResult .ARGUMENT_ERROR return
           end
           baseType
           pos
@@ -350,7 +350,7 @@ namespace: interpreter
         parserError switch
           NONE case break
           UNSIGNED OVERFLOW case
-            parserError .UNSIGNED ?? and builtIn .PARSE_I64 ?? if break end
+            parserError .UNSIGNED and builtIn .PARSE_I64 if break end
             true overflow=
             break
           SIGN INT EMPTY INVALID_BASE INVALID_CHAR case
@@ -360,32 +360,32 @@ namespace: interpreter
             pos errors appendError
             break
         end
-        builtIn .PARSE_I64 ?? if
+        builtIn .PARSE_I64 if
           overflow if
             chars sb.fromStr
               " does not fit into a 64-bit integer" sb.appendS
             pos errors appendWarning
           end
-        else builtIn .PARSE_I32 ?? _if
+        else builtIn .PARSE_I32 _if
           overflow or parsed i32.MIN i64 cast.s < or parsed i32.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 32-bit integer" sb.appendS
             pos errors appendWarning
           end
-        else builtIn .PARSE_I16 ?? _if
+        else builtIn .PARSE_I16 _if
           overflow or parsed i16.MIN i64 cast.s < or parsed i16.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 16-bit integer" sb.appendS
             pos errors appendWarning
           end
-        else builtIn .PARSE_I8 ?? _if
+        else builtIn .PARSE_I8 _if
           overflow or parsed i8.MIN i64 cast.s < or parsed i8.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 8-bit integer" sb.appendS
             pos errors appendWarning
           end
         end
-        parsed ConstValue .Int OperatorResult .success return
+        parsed ConstValue .Int OperatorResult .SUCCESS return
       PARSE_F32 PARSE_F64 case
         k 2 == "correct number of arguments" assert
         args 0 [] =:: argument
@@ -409,135 +409,135 @@ namespace: interpreter
             pos errors appendError
             break
         end
-        parsed ConstValue .Float OperatorResult .success return
+        parsed ConstValue .Float OperatorResult .SUCCESS return
      TYPE_IS_PRIMITIVE case ##XXX? wrapper proc for Type -> bool
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         ## named primitives are not counted as primitive
         args 0 [] .TypeId types.isPrimitive
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_POINTER case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isPointer
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_RAW_POINTER case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isRawPointer
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_ARRAY case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isArray
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_STRUCT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isTuple
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_TYPESET case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isTypeSet
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_TAGGED_UNION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isUnion
           args 0 [] .TypeId typeContext types.isTaggedUnion &
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_RAW_UNION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isUnion
           args 0 [] .TypeId typeContext types.isTaggedUnion ! &
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_ENUM case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isEnum
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_PROC case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isProcedure
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
     TYPE_IS_NAMED case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId types.isNamedType
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_CTYPE case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.unwrapNamed .cType ??
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_ALIGN case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.unwrapNamed .align ??
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_MUTABLE case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.isMutable
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_IS_DEFINED case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.unwrapNamed
           .undefined ?? ! ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_CAN_ASSIGN case
         k 2 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument1 is type" assert
         args 1 [] .TypeId ?? "argument2 is type" assert
         args 0 [] .TypeId args 1 [] .TypeId typeContext types.canAutoCast
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_CAN_CAST case
         k 2 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument1 is type" assert
         args 1 [] .TypeId ?? "argument2 is type" assert
         args 0 [] .TypeId args 1 [] .TypeId false typeContext types.canCast
           ConstValue .Bool
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
      TYPE_ARRAY_ELEMENT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.getBaseType
           ConstValue .TypeId
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       TYPE_UNWRAP_NAMED case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.unwrapNamed
           ConstValue .TypeId
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       TYPE_GET_ELEMENT case
         k 2 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 1 [] .Int ?? "argument is int" assert
         args 0 [] .TypeId args 1 [] .Int i32 cast typeContext types.compositeGetElement
           ConstValue .TypeId
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
     end
-    ConstValue .None  OperatorResult .unimplemented return
+    ConstValue .None  OperatorResult .UNIMPLEMENTED return
   end
 
   proc(
@@ -556,7 +556,7 @@ namespace: interpreter
           isOffset if
             valueType typeContext types.strideOf switch
               fixed .case
-                intConst + ConstValue .Int OperatorResult .success return
+                intConst + ConstValue .Int OperatorResult .SUCCESS return
               default
                 "cannot determine size of type: " sb.copyPtr
                   intConst sb.appendI
@@ -568,7 +568,7 @@ namespace: interpreter
               intConst sb.appendI
             pos errors appendError
           end
-          ConstValue .None OperatorResult .argumentError return
+          ConstValue .None OperatorResult .ARGUMENT_ERROR return
       Array8 case
         ptrValue .Array8 =:: arrayConst
           isOffset if
@@ -576,7 +576,7 @@ namespace: interpreter
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       Array16 case
         ptrValue .Array16 =:: arrayConst
           isOffset if
@@ -584,7 +584,7 @@ namespace: interpreter
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       Array32 case
         ptrValue .Array32 =:: arrayConst
           isOffset if
@@ -592,7 +592,7 @@ namespace: interpreter
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       Array64 case
         ptrValue .Array64 =:: arrayConst
           isOffset if
@@ -600,7 +600,7 @@ namespace: interpreter
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       Array case
         ptrValue .Array =:: arrayConst
           isOffset if
@@ -608,10 +608,10 @@ namespace: interpreter
           else
             arrayConst 0 []
           end
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       LocalValue case
         ## XXX? correctly handle local value ( local array ( ... ) )
-        ptrValue .LocalValue ConstValue ptr.mut cast [] OperatorResult .success return
+        ptrValue .LocalValue ConstValue ptr.mut cast [] OperatorResult .SUCCESS return
       LocalArray case
         ptrValue .LocalArray ConstValue slice.mut cast =:: arrayConst
           isOffset if
@@ -619,7 +619,7 @@ namespace: interpreter
           else
             arrayConst 0 slice.at .data LocalAddress cast ConstValue .LocalValue
           end
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       LocalArray8 case
         ptrValue .LocalArray8 i8 slice.mut cast =:: arrayConst
           isOffset if
@@ -627,33 +627,33 @@ namespace: interpreter
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       LocalArray16 case
         ptrValue .LocalArray16 i16 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice16 cast ConstValue .LocalArray16
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
-          end OperatorResult .success return
+          end OperatorResult .SUCCESS return
       LocalArray32 case
         ptrValue .LocalArray32 i32 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice32 cast ConstValue .LocalArray32
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
-          end OperatorResult .success return
+          end OperatorResult .SUCCESS return
       LocalArray64 case
         ptrValue .LocalArray64 i64 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice64 cast ConstValue .LocalArray64
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
-          end OperatorResult .success return
+          end OperatorResult .SUCCESS return
       default
         "unexpected constant for pointer value: " sb.copyPtr
           ptrValue typeContext sb.appendConstant
         pos errors appendError
-        ConstValue .None OperatorResult .argumentError return
+        ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end
   end
 
@@ -687,12 +687,12 @@ namespace: interpreter
         " got:" sb.appendS
         srcArray .length sb.appendI
       pos errors appendError
-      OperatorResult .argumentError return
+      OperatorResult .ARGUMENT_ERROR return
     end
     targetArray .data srcArray .data != if
       targetArray .data srcArray .data srcArray .length mem.copy ..drop
     end
-    OperatorResult .success return
+    OperatorResult .SUCCESS return
   end
   proc(
     ConstValue : newValue
@@ -705,7 +705,7 @@ namespace: interpreter
     targetValue switch
       LocalValue case
         newValue targetValue .LocalValue ConstValue ptr.raw.mut cast =[]
-        OperatorResult .success return
+        OperatorResult .SUCCESS return
       LocalArray case
         newValue .Array ?? if
           newValue .Array
@@ -715,12 +715,12 @@ namespace: interpreter
           "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
-          OperatorResult .argumentError return
+          OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
         targetValue .LocalArray srcArray pos errors setLocalArray return
       LocalArray8 case
         newValue targetValue .LocalArray8 i8 primitiveArrayTrySetElement if
-          OperatorResult .success return
+          OperatorResult .SUCCESS return
         end
         newValue .Array8 ?? if
           newValue .Array8
@@ -730,12 +730,12 @@ namespace: interpreter
           "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
-          OperatorResult .argumentError return
+          OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
         targetValue .LocalArray8 srcArray pos errors setLocalArray return
       LocalArray16 case
         newValue targetValue .LocalArray16 i16 primitiveArrayTrySetElement if
-          OperatorResult .success return
+          OperatorResult .SUCCESS return
         end
         newValue .Array16 ?? if
           newValue .Array16
@@ -745,12 +745,12 @@ namespace: interpreter
           "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
-          OperatorResult .argumentError return
+          OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
         targetValue .LocalArray16 srcArray pos errors setLocalArray return
       LocalArray32 case
         newValue targetValue .LocalArray32 i32 primitiveArrayTrySetElement if
-          OperatorResult .success return
+          OperatorResult .SUCCESS return
         end
         newValue .Array32 ?? if
           newValue .Array32
@@ -760,12 +760,12 @@ namespace: interpreter
           "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
-          OperatorResult .argumentError return
+          OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
         targetValue .LocalArray32 srcArray pos errors setLocalArray return
       LocalArray64 case
         newValue targetValue .LocalArray64 i64 primitiveArrayTrySetElement if
-          OperatorResult .success return
+          OperatorResult .SUCCESS return
         end
         newValue .Array64 ?? if
           newValue .Array64
@@ -775,14 +775,14 @@ namespace: interpreter
           "unexpected source for assignment expected array got:" sb.copyPtr
             newValue typeContext sb.appendConstant
           pos errors appendError
-          OperatorResult .argumentError return
+          OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
         targetValue .LocalArray64 srcArray pos errors setLocalArray return
       default
         "unexpected target for setValue, expected writable memory location got: " sb.copyPtr
           targetValue typeContext sb.appendConstant
         pos errors appendError
-        OperatorResult .argumentError return
+        OperatorResult .ARGUMENT_ERROR return
     end
   end
 

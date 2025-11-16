@@ -494,7 +494,7 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpre
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretTypeBlock
   state [] .inTypeBlock "in Type-block" assert
-  state .interpreter [] .evalType .GLOBAL ?? "global interpreter" assert
+  state .interpreter [] .evalType .GLOBAL "global interpreter" assert
   op state .interpreter evaluateOperation .Ok ?? ! if
     "unexpected operation in Type/Initializer block: " sb.copyPtr
       op [] state [] .program sb.appendOp
@@ -918,7 +918,7 @@ proc(
         block [] .While .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
     end
-    breakType .BREAK ?? and block [] .Switch ?? and
+    breakType .BREAK and block [] .Switch ?? and
         blockLabel id.LABEL_ID_NONE == or
         block [] .Switch .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
@@ -927,7 +927,7 @@ proc(
   60 sb.create
     breakType sb.appendBlockType
     " can only appear in loops " sb.appendS
-    breakType .BREAK ?? if
+    breakType .BREAK if
       "and switch-case statements" sb.appendS
     end
   pos errors appendError
@@ -1063,7 +1063,7 @@ proc(
     end
     toMerge i [] =:: current
     current [] .valueType
-      $ types.isLiteral and mergePoint .mergeType .NO_CAST ?? if
+      $ types.isLiteral and mergePoint .mergeType .NO_CAST if
         typeContext types.literalToType
       end
     =:: currentType
@@ -1089,7 +1089,7 @@ proc(
         break
       MERGE_ROOT NO_CAST case
         currentType mergedType
-          mergePoint .mergeType .NO_CAST ?? if
+          mergePoint .mergeType .NO_CAST if
             types.typeEquals !
           else
             typeContext types.canAutoCast !
@@ -1123,7 +1123,7 @@ proc(
           mergePoint .castPointOffsets i [] =:: castRoot
           castRoot 0 >= if
             mergePoint .state [] .compiledOps castRoot offset + list.at .data =:: castPoint
-            castPoint [] .val .NOP ?? and castPoint [] .val .NOP .RESERVED ?? if
+            castPoint [] .val .NOP ?? and castPoint [] .val .NOP .RESERVED if
               ## opAutoCast
                 currentType
                 offset i32 cast
@@ -1275,7 +1275,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
     op [] .val .NOP ?? ! if
       i break
     end
-    op [] .val .NOP .EMPTY ?? ! if
+    op [] .val .NOP .EMPTY ! if
       i break
     end
     i 1:iSize -
@@ -1810,7 +1810,7 @@ proc(
   else op .val .declareName ?? or op .val .initializeName ?? _if
     op .val .initializeName ?? =:: isInit
     isInit if
-      op@ op .val .initializeName .initType .AUTO ?? state resolveAutoType
+      op@ op .val .initializeName .initType .AUTO state resolveAutoType
       op .val .initializeName .label
     else
       op .val .declareName
@@ -1834,7 +1834,7 @@ proc(
     op .dataType idData@ id.asIdInfo op .pos
     isInit ! if
       opDeclareId
-    else op .val .initializeName .initType .AUTO ?? _if
+    else op .val .initializeName .initType .AUTO _if
       opAutoTypedInitializeId
     else
       opInitializeId
@@ -1865,7 +1865,7 @@ proc(
       program [] .procedures procId i64 cast list.at .data =:: procData
       procData [] .procType .undefined ?? ! or
           procData .implementation [] .code ?? ! or
-          procData .implementation .code [] .codeState .PARSING ?? ! if
+          procData .implementation .code [] .codeState .PARSING ! if
         "unexpected state for nested procedure" sb.copyPtr
         op .pos errors appendError
         0 return
@@ -1961,7 +1961,7 @@ proc(
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
           op .val .getId .labelId =:: labelId
-          mutable ! and constValue .None ?? ! and idInfo .idType .GLOBAL_VAR ?? if
+          mutable ! and constValue .None ?? ! and idInfo .idType .GLOBAL_VAR if
             ## replace access to immutable global variable with constant
             constValue op .dataType op .pos opConst op=
           end
@@ -1991,7 +1991,7 @@ proc(
           label state replaceLabel
           0 return
         PROCEDURE PROCEDURE_BUNDLE case
-          idInfo .idType .PROCEDURE ?? if
+          idInfo .idType .PROCEDURE if
             constValue@ .Procedure =:: procId
             program [] .procedures
               procId [] i64 cast list.at .data
@@ -2053,25 +2053,25 @@ proc(
           stackConstants argCount calledProc .autoArgs .length i32 cast - >= and
               program [] .procedures
                 calledProcId i64 cast list.at .data
-              [] .isStatic and state [] .mode .STATIC_PROC ?? ! or
+              [] .isStatic and state [] .mode .STATIC_PROC ! or
               baseProcData .implementation [] .code ?? and
-              baseProcData .implementation .code .codeState .TYPE_CHECKING ?? ! if
+              baseProcData .implementation .code .codeState .TYPE_CHECKING ! if
             calledType calledProc true op .pos state interpretCall ! if
               0 return
             end
           end
           baseProcData [] .implementation switch
             code case
-              state [] .mode .LINEAR ?? ! if
+              state [] .mode .LINEAR ! if
                 ## check if implementation exists if not add to list of missing imples
                 baseProcData  .implementation .code =:: codeImpl
                 calledProc .implementationId =:: implId
                 implId -1:i32 == if
-                  codeImpl [] .codeState .TYPE_CHECKED ?? !
+                  codeImpl [] .codeState .TYPE_CHECKED !
                 else
                   codeImpl [] .implementations
                     implId list.at .data
-                  [] .codeState .TYPE_CHECKED ?? !
+                  [] .codeState .TYPE_CHECKED !
                 end if
                   state [] .missingProcs
                     ## MissingProc
@@ -2088,7 +2088,7 @@ proc(
             break
             builtIn case
               baseProcData [] .implementation .builtIn .builtIn =:: builtInId
-              builtInId .SYS_ARGC ?? or builtInId .SYS_ARGV ?? or builtInId .SYS_ENVP ?? if
+              builtInId .SYS_ARGC or builtInId .SYS_ARGV or builtInId .SYS_ENVP if
                 true program .hasGetArgs=
               else headConstant _if ## only constant arguments
                 calledType calledProc false op .pos state interpretCall ! if
@@ -2190,7 +2190,7 @@ proc(
           labelId
             labelContext id.labelFlags
           id.FLAG_MUTABLE & ? =:: mutable
-          idInfo .idType .PROCEDURE ?? if
+          idInfo .idType .PROCEDURE if
             ## getIdentifierByLabel
               idInfo .labelId
               idContext
@@ -2222,7 +2222,7 @@ proc(
               true procData .implementation .builtIn .hasPtr=
             else procData .implementation [] .code ?? _if
               procData .implementation .code =:: codeImpl
-              codeImpl .codeState [] .TYPE_CHECKED ?? ! if
+              codeImpl .codeState [] .TYPE_CHECKED ! if
                 state [] .missingProcs
                   ## MissingProc
                     ## ProcedureImpl
@@ -2336,7 +2336,7 @@ proc(
           ## update constant value in identifier if stack-value is constant
           ##   don't update mutable local variables
           constVal .TypeId ?? or
-              constVal .None ?? ! and idInfo .idType .GLOBAL_VAR ?? or
+              constVal .None ?? ! and idInfo .idType .GLOBAL_VAR or
               idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
             ## getIdentifier
               idInfo .labelId
@@ -2525,7 +2525,7 @@ proc(
         labelId
         typeContext
       types.compositeFindLabel $ optional.hasData if .data else ..drop
-        accessType .CHECK ?? if
+        accessType .CHECK if
           ## label does not exists
           1 op .pos state discardValues ## remove container
           false ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
@@ -2541,19 +2541,19 @@ proc(
       end =:: elementIndex
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
-      accessType .CHECK_ENUM ?? and containerType typeContext types.isEnum if
+      accessType .CHECK_ENUM and containerType typeContext types.isEnum if
         "using `??` on enum-elements is depecated, use direct label access to check for a specific variant" sb.copyPtr
         op .pos errors appendWarning
       end
-      isWrite ! and isType ! and accessType .GET ?? and containerType typeContext types.isEnum if
+      isWrite ! and isType ! and accessType .GET and containerType typeContext types.isEnum if
         LabelAccessType .CHECK_ENUM accessType=
       end
-      accessType .CHECK ?? if
+      accessType .CHECK if
         ## label exists
         1 op .pos state discardValues ## remove container
         true ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
         0 return
-      else accessType .CHECK_ENUM ?? _if
+      else accessType .CHECK_ENUM _if
         isType or containerType typeContext types.isTaggedUnion ! if
           "type " sb.copyPtr
             isType ! if
@@ -2766,7 +2766,7 @@ proc(
           op .pos errors appendError
           0 return
         end
-          op .val .equalityOperator .NEQ ?? ^ ## invert result for NEQ
+          op .val .equalityOperator .NEQ ^ ## invert result for NEQ
         ConstValue .Bool
           types.primitive.BOOL
           op .pos
@@ -2800,7 +2800,7 @@ proc(
         AND_IF OR_IF case
           state .stack branchTree.peek .and =:: condition
               condition .value [] .Bool ?? if
-            condition .value [] .Bool blockType .AND_IF ?? == if
+            condition .value [] .Bool blockType .AND_IF == if
               oldBlockStart state .blockStart= ## keep previous block start
               1 op .pos state discardValues
               0 return ## `true and` / `false or` are no-ops
@@ -2832,7 +2832,7 @@ proc(
           end
           state peekBlock .data .If =:: ifBlock
           ifBlock [] .blockId op@ .val .block .blockId=
-          blockType .AND_IF ?? if
+          blockType .AND_IF if
             ifBlock [] .flags IfBlockFlags.hasAndIf | ifBlock .flags=
             ifBlock .andBranches
           else
@@ -2918,7 +2918,7 @@ proc(
               state [] .compiledOps
                 andOrIndex
               list.at .data =:: andOrOp
-              andOrOp .val .block .blockType .OR_IF ?? if
+              andOrOp .val .block .blockType .OR_IF if
                 andOrIndex orPositions orCount slice.set
                 orCount 1 + orCount=
                 currentOpIndex
@@ -3041,7 +3041,7 @@ proc(
             state [] .compiledOps
               andOrPos
             list.at .data =:: andOrOp
-            andOrOp .val .block [] .blockType .AND_IF ?? if
+            andOrOp .val .block [] .blockType .AND_IF if
               andOrPos andPositions andCount slice.set
               andCount 1 + andCount=
               currentOpIndex
@@ -3180,7 +3180,7 @@ proc(
               blockType sb.appendBlockType
               ", " sb.appendS
               BlockType .DEFAULT sb.appendBlockType
-              blockType .DEFAULT ?? if
+              blockType .DEFAULT if
                 " can only appear once in " sb.appendS
               else
                 " has to be last case in " sb.appendS
@@ -3192,7 +3192,7 @@ proc(
           end
           switchData [] .labels list.peek =:: prev?
           switchBlock [] .switchType =:: switchType
-          blockType .DEFAULT ?? if
+          blockType .DEFAULT if
             prev? optional.isEmpty if
               "unexpected " sb.copyPtr
                 BlockType .DEFAULT sb.appendBlockType
@@ -3229,11 +3229,11 @@ proc(
           switchBlock [] .blockId op@ .val .block .blockId=
           true state .reachable=
           switchType op@ .dataType=
-          blockType .DOT_CASE ?? if
+          blockType .DOT_CASE if
             BlockType .CASE op@ .val .block .blockType=
           end
           op state appendOp ..drop
-          blockType .DOT_CASE ?? if
+          blockType .DOT_CASE if
             switchType typeContext types.isUnion if
               prev? .if [] .value .EnumLabel else
                 0 return
@@ -3307,7 +3307,7 @@ proc(
             0 return
           else breakBlock [] .While ?? _if
             breakBlock .While =:: whileBlock
-            blockType .CONTINUE ?? if
+            blockType .CONTINUE if
               whileBlock .hasFinally [] if
                 "unexpected " sb.copyPtr
                   blockType sb.appendBlockType
@@ -3405,7 +3405,7 @@ proc(
           end
           false 1 op .pos state clearReferences
           currentBlock? .data .While =:: whileBlock
-          blockType .AND_DO ?? if
+          blockType .AND_DO if
             whileBlock [] .breakCastOffsets
               OP_UNLINKED list.append ## merge should not change operations at and
             whileBlock .breakCastOffsets=
@@ -3511,7 +3511,7 @@ proc(
           state [] .compiledOps .length i32 cast.u =:: currentOpIndex
           whileBlock [] .labelPositions for =:: orPos
             state [] .compiledOps orPos list.at .data =:: orOp
-            orOp .val .block [] .blockType .OR_DO ?? if
+            orOp .val .block [] .blockType .OR_DO if
               currentOpIndex
                 orPos - JumpDistance cast
               orOp .val .block .jumpDistance=
@@ -3608,7 +3608,7 @@ proc(
           state [] .compiledOps .length i32 cast.u =:: currentOpIndex
           whileBlock [] .labelPositions for =:: continuePos
             state [] .compiledOps continuePos list.at .data =:: continueOp
-            continueOp .val .block [] .blockType .CONTINUE ?? if
+            continueOp .val .block [] .blockType .CONTINUE if
               currentOpIndex
                 continuePos - JumpDistance cast
               continueOp .val .block .jumpDistance=
@@ -4195,7 +4195,7 @@ proc(
       1 op .pos state checkStackSize if
         0 return
       end
-      state [] .mode .STATIC_PROC ?? if
+      state [] .mode .STATIC_PROC if
         ## don't evaluate errors when type-checking static procs
         state .stack branchTree.pop ..drop
         op state appendOp ..drop
@@ -4393,7 +4393,7 @@ proc(
       false return ## expected
     TYPE_CHECKED UNUSED COMPILED case true return ## nothing to do
     PARSING case
-      checkType .SKIP_UNDEFINED ?? ! if
+      checkType .SKIP_UNDEFINED ! if
         "procedure " sb.copyPtr
           procName labelContext sb.appendLabelPath
           " has not finished parsing" sb.appendS
@@ -4401,7 +4401,7 @@ proc(
       end
       true return
     TYPE_CHECKING case
-      checkType .SKIP_UNDEFINED ?? ! if
+      checkType .SKIP_UNDEFINED ! if
         "procedure " sb.copyPtr
           procName labelContext sb.appendLabelPath
           " has not finished type-checking" sb.appendS
@@ -4484,7 +4484,7 @@ proc(
       i 1 +
     end ..drop
   end
-  currentProc [] .isStatic and state [] .mode .PROC_CHILD ?? if
+  currentProc [] .isStatic and state [] .mode .PROC_CHILD if
     TypeCheckMode .STATIC_PROC state .mode=
   end
   program [] .autoTypes list.copy =:: prevAutoTypes
@@ -4563,7 +4563,7 @@ proc(
     state .stack branchTree.clear
   end
   prevScope idContext id.setScope
-  state [] .mode .STATIC_PROC ?? if
+  state [] .mode .STATIC_PROC if
     TypeCheckMode .PROC_CHILD state .mode=
   end
 end

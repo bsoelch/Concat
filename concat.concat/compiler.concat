@@ -116,7 +116,7 @@ proc( -> ) =>: parseArgs
             optimizerFlags.optLevelExperimental
             continue
           else
-            arg 2 string.tail 10 number.tryParseInt .NONE ?? ! if
+            arg 2 string.tail 10 number.tryParseInt .NONE ! if
               ..drop 1 ## parsing as int failed
             end
           end =:: opLevel
@@ -240,9 +240,9 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
   1024 sb.create
     errors [] for =:: err
       err sb.appendCompilerError
-      err .errType .ERROR ?? if
+      err .errType .ERROR if
         true hasError=
-      else _W_ERROR_ err .errType .WARNING ?? & _if
+      else _W_ERROR_ err .errType .WARNING & _if
         true hasError=
       end
     end
@@ -416,7 +416,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
         "run compiled code:":s io.println
         "-----------------------------------------":s io.println
       end
-      tmpPath sb.asStr exec.build exec.run .SUCCESS ?? if
+      tmpPath sb.asStr exec.build exec.run .SUCCESS if
         retCode=
       else ..drop
         verbose if

@@ -118,7 +118,7 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     labelId idContext id.getIdentifier
       ! "identifier exists" assert
     =:: idData
-    idData [] .idType .GLOBAL_VAR ?? ! if
+    idData [] .idType .GLOBAL_VAR ! if
       continue
     end
     idData [] .valueType 0 idData [] .declaredAt prog visited@ types@ declaredType
@@ -129,14 +129,14 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
   prog [] .procedures for =:: proc
     proc .implementation .code ?? ! if continue end
     proc .implementation .code =:: impl
-    impl .codeState .UNUSED ?? if continue end
-    impl .codeState .COMPILED ?? if
+    impl .codeState .UNUSED if continue end
+    impl .codeState .COMPILED if
       impl .code for =:: op
         op@ prog visited@ types@ addOpType
       end
     end
     impl .implementations for =:: genericImpl
-      genericImpl .codeState .COMPILED ?? if
+      genericImpl .codeState .COMPILED if
         genericImpl .code for =:: op
           op@ prog visited@ types@ addOpType
         end

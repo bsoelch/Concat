@@ -999,7 +999,7 @@ namespace: sb
           $1 .val .declareName labelContext sb.appendLabelPath
           break
         initializeName case
-          $1 .val .initializeName .initType .AUTO ?? if
+          $1 .val .initializeName .initType .AUTO if
             "auto-typed " sb.appendS
           end
           "initialize name: " sb.appendS
@@ -1108,7 +1108,7 @@ namespace: sb
       proc .labelId labelContext sb.appendLabelPath
       '\n'           sb.appendC
       proc .implementation .code =:: impl
-      impl .codeState .UNUSED ?? if continue end ## ignore unused procs
+      impl .codeState .UNUSED if continue end ## ignore unused procs
       impl .code for prog sb.appendOp end
       '\n' sb.appendC
       impl .implementations for =:: genericImpl

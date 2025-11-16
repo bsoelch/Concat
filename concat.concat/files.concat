@@ -12,18 +12,18 @@ struct( FilePosition : mut: currentPos FilePosition : mut: wordStart ) =:: expor
 enum( DEFAULT UTF8 UTF16 UTF32 INT_LITERAL UNKNOWN ) =:: export: StringLiteralType
 struct( string : value StringLiteralType : stringType ) =:: export: StringToken
 union(
-  _ : EMPTY
-  _ : EOF
-  string : IDENTIFIER
-  StringToken : STRING
-  StringToken : RAW_STRING
-  StringToken : CHAR
+  _ : Empty
+  _ : Eof
+  string : Identifier
+  StringToken : String
+  StringToken : RawString
+  StringToken : Char
   ## tokens for literals <literal>:<literalType>
-  string : LITERAL_TYPE
-  string : LITERAL
-  StringToken : LITERAL_STRING
-  StringToken : LITERAL_RAW_STRING
-  StringToken : LITERAL_CHAR
+  string : LiteralType
+  string : Literal
+  StringToken : LiteralString
+  StringToken : LiteralRawString
+  StringToken : LiteralChar
 ) =:: export: Token
 
 enum( RAW_STRING STRING STRING_ESCAPE IDENTIFIER ) =:: ParserState
@@ -31,68 +31,68 @@ enum( RAW_STRING STRING STRING_ESCAPE IDENTIFIER ) =:: ParserState
 namespace: sb
   proc( stringBuilder : sb Token : token -> stringBuilder ) =>: export: appendToken
     token switch
-      EMPTY case
+      Empty case
         sb "empty" sb.appendS return
-      EOF case
+      Eof case
         sb "unexpected end of file" sb.appendS return
-      IDENTIFIER case
+      Identifier .case =:: id
         sb
           "identifier \"" sb.appendS
-          token .IDENTIFIER sb.appendStr
+          id sb.appendStr
           '\"' sb.appendC
         return
-      LITERAL_TYPE case
+      LiteralType .case =:: val
         sb
           "literal type :\"" sb.appendS
-          token .LITERAL_TYPE sb.appendStr
+          val sb.appendStr
           '\"' sb.appendC
         return
-      LITERAL case
+      Literal .case =:: val
         sb
           "literal \"" sb.appendS
-          token .LITERAL sb.appendStr
+          val sb.appendStr
           '\"' sb.appendC
         return
-      STRING case ## XXX print string literal types
+      String .case =:: val
         sb
-          token .STRING .stringType sb.appendStringType
+          val .stringType sb.appendStringType
           "string \"" sb.appendS
-          token .STRING .value sb.appendStr
+          val .value sb.appendStr
           '\"' sb.appendC
         return
-      RAW_STRING case
+      RawString .case =:: val
         sb
-          token .RAW_STRING .stringType sb.appendStringType
+          val .stringType sb.appendStringType
           "raw string `" sb.appendS
-          token .RAW_STRING .value sb.appendStr
+          val .value sb.appendStr
           '`' sb.appendC
         return
-      CHAR case
+      Char .case =:: val
         sb
-          token .CHAR .stringType sb.appendStringType
+          val .stringType sb.appendStringType
           "char \"" sb.appendS
-          token .CHAR .value sb.appendStr
+          val .value sb.appendStr
           '\"' sb.appendC
         return
-      LITERAL_STRING case
+      LiteralString .case =:: val
         sb
-          token .LITERAL_STRING .stringType sb.appendStringType
+          val .stringType sb.appendStringType
           "literal string \"" sb.appendS
-          token .LITERAL_STRING .value sb.appendStr
+          val .value sb.appendStr
           "\":" sb.appendS
         return
-      LITERAL_RAW_STRING case
+      LiteralRawString .case =:: val
         sb
-          token .LITERAL_RAW_STRING .stringType sb.appendStringType
+          val .stringType sb.appendStringType
           "raw string `" sb.appendS
-          token .LITERAL_RAW_STRING .value sb.appendStr
+          val .value sb.appendStr
           "`:" sb.appendS
         return
-      LITERAL_CHAR case
+      LiteralChar .case =:: val
         sb
-          token .LITERAL_CHAR .stringType sb.appendStringType
+          val .stringType sb.appendStringType
           "literal char \"" sb.appendS
-          token .LITERAL_CHAR .value sb.appendStr
+          val .value sb.appendStr
           "\":" sb.appendS
         return
     end
@@ -146,7 +146,7 @@ proc( string -> StringLiteralType ) =>: checkStringPrefix
 end
 proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: nextToken
   code .length 0:iSize == if
-    string.empty Token .EMPTY return
+    string.empty Token .Empty return
   end
   code 0 string.charAt ':' == =:: isLiteralType
   ParserState .IDENTIFIER =:: mut: state
@@ -203,7 +203,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     fileState [] .currentPos fileState .wordStart=
   while $ code .length u< do =:: i
     code i string.charAt =:: c
-    state .IDENTIFIER ?? and c char.isWhitespace or
+    state .IDENTIFIER and c char.isWhitespace or
         c '#' == and i 1:iSize + code .length u< and "#+":s code i 1:iSize + string.charAt string.contains if
       isLiteralType ! if
         i i0 u> "identifier contains at least one character" assert
@@ -211,13 +211,13 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       code i0 i i0 - string.getSlice =:: idName
       code i string.tail idName
       isLiteralType if
-        Token .LITERAL_TYPE
+        Token .LiteralType
       else
-        Token .IDENTIFIER
+        Token .Identifier
       end return
     end
     ## : within identifer not followed by space or :
-    state .IDENTIFIER ?? and c ':' == and
+    state .IDENTIFIER and c ':' == and
         i i0 u> and code i 1:iSize - string.charAt '.' != and ## don't split on : after .
         code i0 string.charAt '#' != and ## don't split on : in ids starting with #
         i 1:iSize + code .length u< and ## don't split at EOF
@@ -226,17 +226,17 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       code i0 i i0 - string.getSlice =:: idName
       code i string.tail idName
       isLiteralType if
-        Token .LITERAL_TYPE
+        Token .LiteralType
       else
-        Token .LITERAL
+        Token .Literal
       end return
     end
     c fileState .currentPos updateFilePos
-    state .STRING_ESCAPE ?? if
+    state .STRING_ESCAPE if
       ParserState .STRING state=
       i 1:iSize + continue
     end
-    state .RAW_STRING ?? if
+    state .RAW_STRING if
       c '`' == if
         i 1:iSize + code .length u< and code i 1:iSize + string.charAt '`' == if
           '`' fileState .currentPos updateFilePos
@@ -245,22 +245,22 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
         code i0 i i0 - string.getSlice =:: body
         code i 1:iSize + string.tail body stringType StringToken new
           i 1:iSize + code .length u< and code i 1:iSize + string.charAt ':' == if
-            Token .LITERAL_RAW_STRING return
+            Token .LiteralRawString return
           end
-        Token .RAW_STRING return
+        Token .RawString return
       end
       i 1:iSize + continue
     end
-    state .STRING ?? if
+    state .STRING if
       c stringStart == if
         code i0 i i0 - string.getSlice =:: body
         code i 1:iSize + string.tail
         body stringType StringToken new
           i 1:iSize + code .length u< and code i 1:iSize + string.charAt ':' == if
-            stringStart '\'' == if Token .LITERAL_CHAR else Token .LITERAL_STRING end
+            stringStart '\'' == if Token .LiteralChar else Token .LiteralString end
             return
           end
-          stringStart '\'' == if Token .CHAR else Token .STRING end
+          stringStart '\'' == if Token .Char else Token .String end
         return
       else c '\\' == _if
         ParserState .STRING_ESCAPE state=
@@ -269,18 +269,18 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     end
     c '\'' == or c '"' == or c '`' == if  ## char/string-literal
       code i0 i i0 - string.getSlice checkStringPrefix stringType=
-      stringType .INT_LITERAL ?? if i 1:iSize + continue end
+      stringType .INT_LITERAL if i 1:iSize + continue end
       i 1:iSize + i0=
       c stringStart=
       c '`' == if ParserState .RAW_STRING else ParserState .STRING end state=
     end
     i 1:iSize +
   end ..drop
-  state .IDENTIFIER ?? and i0 code .length u< if
-    string.empty code i0 string.tail Token .IDENTIFIER return
+  state .IDENTIFIER and i0 code .length u< if
+    string.empty code i0 string.tail Token .Identifier return
   end
   i0 code .length u< if ## unexpected end of file
-    string.empty Token .EOF return
+    string.empty Token .Eof return
   end
-  string.empty Token .EMPTY return
+  string.empty Token .Empty return
 end

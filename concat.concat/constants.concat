@@ -722,7 +722,7 @@ namespace: constants
               pos errors appendError
               continue
             end
-            str .data i @[] nChars string.create 16 number.tryParseInt .NONE ?? if
+            str .data i @[] nChars string.create 16 number.tryParseInt .NONE if
               $ 0 < if ..drop
                 "invalid hex-code for escape sequence: \"\\" sb.copyPtr
                   c sb.appendC

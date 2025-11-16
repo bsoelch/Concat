@@ -125,7 +125,7 @@ end
 enum( CONCAT CCALL PTRCALL ) =:: export: CallingConvention
 namespace: CallingConvention
   proc( -> CallingConvention ) =>: export: DEFAULT
-    _BACKEND_ .QBE ?? if
+    _BACKEND_ .QBE if
       CallingConvention .PTRCALL
     else
       CallingConvention .CONCAT

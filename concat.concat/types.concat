@@ -654,9 +654,9 @@ namespace: types
     targetPrimitive isIntPrimitive if
       targetPrimitive sizeOfPrimitive 8 * =:: targetBits
       srcBits targetBits <= return
-    else targetPrimitive .F32 ?? _if
+    else targetPrimitive .F32 _if
       srcBits 24 <= return
-    else targetPrimitive .F64 ?? _if
+    else targetPrimitive .F64 _if
       srcBits 53 <= return
     end
     ..unreachable
@@ -1090,9 +1090,9 @@ namespace: types
       Type optional.empty return
     end
     size .None ?? and base .arrayType ?? if
-      arrayType .POINTER ?? if
+      arrayType .POINTER if
         base .arrayType Type .pointer optional.wrap return
-      else arrayType .MUTABLE_POINTER ?? _if
+      else arrayType .MUTABLE_POINTER _if
         base .arrayType Type .mutablePointer optional.wrap return
       end
     end
@@ -1100,7 +1100,7 @@ namespace: types
     ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
     base context isProcedure if
       ## TODO? allow pointer of length 1 for generic matching
-      arrayType .ARRAY ?? or size .None ?? ! if
+      arrayType .ARRAY or size .None ?? ! if
         Type optional.empty return
       end
       base
@@ -1713,7 +1713,7 @@ namespace: types
     end
   end
   proc( Type slice : in Type slice : out LabelId slice : labels CallingConvention : callConvention TypeContext ptr.mut : context -> Type optional ) =>: export: newProcedure
-    callConvention .CCALL ?? and out .length 1:iSize u> if
+    callConvention .CCALL and out .length 1:iSize u> if
       Type optional.empty return ## XXX? better error handling
     end
     context [] .memory
@@ -2154,12 +2154,12 @@ namespace: types
   -> bool ) =>: canCastPrimitivePtrArg
     a ..label b ..label == if true return end
     a switch
-      I8  case b .CHAR8  ?? return
-      I16 case b .CHAR16 ?? return
-      I32 case b .CHAR32 ?? return
-      CHAR8  case b .I8  ?? return
-      CHAR16 case b .I16 ?? return
-      CHAR32 case b .I32 ?? return
+      I8  case b .CHAR8  return
+      I16 case b .CHAR16 return
+      I32 case b .CHAR32 return
+      CHAR8  case b .I8  return
+      CHAR16 case b .I16 return
+      CHAR32 case b .I32 return
       BOOL I64 F32 F64 TYPE case false return
     end
   end
@@ -2352,15 +2352,15 @@ namespace: types
     ## converting c-types to types
     target .cType ?? if
       forceCast ! if
-        target .cType .STRUCT ?? if false return end
-        target .cType .UNION  ?? if false return end
+        target .cType .STRUCT if false return end
+        target .cType .UNION  if false return end
       end
       src target .cType cTypeAsType forceCast context canCast return
     end
     src .cType ?? if
       forceCast ! if
-        src .cType .STRUCT ?? if false return end
-        src .cType .UNION  ?? if false return end
+        src .cType .STRUCT if false return end
+        src .cType .UNION  if false return end
       end
       src .cType cTypeAsType target forceCast context canCast return
     end
