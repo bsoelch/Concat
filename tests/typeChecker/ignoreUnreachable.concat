@@ -1,0 +1,21 @@
+proc( -> i32 ) : export: getInt
+proc( i32 -> ) : export: test
+proc( -> ) =>: main
+  return
+  getInt =:: x
+  x 2 > and x 4 < end =:: y
+  x 2 > and x 4 < if
+    x test
+  else
+    0 test
+  end
+  0 while: loop $ x < do =:: i
+    i switch
+      0 1 case continue.loop
+      2 3 4 case break
+      5 case break.loop
+      default return
+    end
+  finally i 1 + end ..drop
+  x f
+end

@@ -1757,8 +1757,27 @@ proc(
       end
     end
   end
+  ## TODO? run code in switch-labels through normal type-checker (after processing enum/union labels)
   state inSwitchLabel and op@ state typeCheckSwitchLabel if
     0 return
+  end
+  state [] .reachable ! if
+    ## ignore unreachable non-block ops
+    op .val switch
+      block .case .blockType switch
+        AND AND_IF AND_DO OR OR_IF OR_DO case 0 return
+        default break
+      end break
+      blockEnd .case .blockType switch
+        AND OR case ## only close and-or if top-block is and-or
+          state peekBlock .and .AndOr ?? if break else 0 return end
+        break
+        default break
+      end break
+      ## implementProcedure resets reachability at proc-start
+      implementProcedure case break
+      default 0 return
+    end
   end
   ## resolve names
   op .val .getName ?? if
@@ -2771,13 +2790,7 @@ proc(
         ## TODO remove checks for well-formed blocks, they are now handled by parser
         AND_IF OR_IF case
           state .stack branchTree.peek .and =:: condition
-              condition .value [] .None ?? ! if
-            condition .value [] .Bool ?? ! if
-              "unexpected value for condition expected boolean got " sb.copyPtr
-                condition [] .value typeContext sb.appendConstant
-              op .pos errors appendError
-              0 return
-            end
+              condition .value [] .Bool ?? if
             condition .value [] .Bool blockType .AND_IF ?? == if
               oldBlockStart state .blockStart= ## keep previous block start
               1 op .pos state discardValues
@@ -2828,16 +2841,16 @@ proc(
           op state appendOp ..drop
           0 return
         IF case
+          state [] .reachable ! if
+            BlockInfo .ConstIf state openBlock
+            idContext id.openScope
+            ## open constant if and jump directly before else to also skip else-branch
+            op .val .block .jumpDistance iSize cast.u 1 - return
+          end
           state inIfCondition ! if
             ## don't constant fold `if` if there are open and-if / or-if branches
             state .stack branchTree.peek .and =:: condition
-                condition .value [] .None ?? ! if
-              condition .value [] .Bool ?? ! if
-                "unexpected value for condition expected boolean got " sb.copyPtr
-                  condition [] .value typeContext sb.appendConstant
-                op .pos errors appendError
-                0 return
-              end
+                condition .value [] .Bool ?? if
               oldBlockStart state .blockStart= ## keep previous block start
               1 op .pos state discardValues
               BlockInfo .ConstIf state openBlock
@@ -3065,6 +3078,10 @@ proc(
           end
           0 return
         SWITCH case
+          state [] .reachable ! if
+            ## skip block if start is unreachable
+            op .val .block .jumpDistance iSize cast.u return
+          end
           state .stack branchTree.peek =:: value?
           value? optional.isEmpty if
             "missing argument for switch-statement" sb.copyPtr
@@ -3325,6 +3342,10 @@ proc(
           end
           break
         WHILE case
+          state [] .reachable ! if
+            ## skip block if start is unreachable
+            op .val .block .jumpDistance iSize cast.u return
+          end
           true 0 op .pos state clearReferences
           state .stack branchTree.startBranch =:: whileBranch
           state [] .compiledOps .length i32 cast.u =:: currentOpIndex
@@ -4131,13 +4152,7 @@ proc(
         op .pos state popString =:: message
         message op .pos opRuntimeAssert op=
       end
-      state .stack branchTree.peek .and =:: condition condition .value [] .None ?? ! if
-        condition .value [] .Bool ?? ! if
-          "unexpected value for condition expected boolean got " sb.copyPtr
-            condition [] .value typeContext sb.appendConstant
-          op .pos errors appendError
-          0 return
-        end
+      state .stack branchTree.peek .and =:: condition condition .value [] .Bool ?? if
         condition .value [] .Bool
           1 op .pos state discardValues
         ! if

@@ -49,6 +49,7 @@ struct(
 enum( CASE_LABEL CASE_BODY IMPLICIT_BREAK DEFAULT ) =:: SwitchBlockState
 struct(
   iSize list : breakPositions
+  iSize : switchPosition
   iSize : prevCasePosition
   iSize optional : implicitBreak
   SwitchBlockState : state
@@ -1375,6 +1376,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: whileData
       whileData [] .state switch
         WHILE case
+          whileData [] .breakPositions state opCount list.append whileData .breakPositions=
           BlockType .DO  fileState [] .wordStart opBlock  state appendOp
         break
         DO case break
@@ -1454,6 +1456,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: blockLabel
       ## SwitchBlockData
         16 iSize list.create
+        state opCount
         state opCount
         iSize optional.empty
         SwitchBlockState .CASE_LABEL
@@ -1790,7 +1793,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             BlockType .AND fileState [] .wordStart opEndBlock  state appendOp
           break
           While .case =:: whileData
+            whileData .breakPositions =:: mut: breakPositions
             whileData .state .WHILE ?? if
+              breakPositions state opCount list.append breakPositions=
               BlockType .DO fileState [] .wordStart opBlock  state appendOp
               BlockType .FINALLY fileState [] .wordStart opBlock  state appendOp
             else whileData .state .DO ?? _if
@@ -1799,20 +1804,24 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                 state fileState [] .wordStart appendItrStep
               end
             end
-            whileData .breakPositions list.asSlice fileState [] .wordStart state setBlockJumps
+            breakPositions list.asSlice fileState [] .wordStart state setBlockJumps
+            whileData .whilePosition fileState [] .wordStart state setBlockJump
             BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
             whileData .whilePosition
               state opCount - JumpDistance cast
-            state peekOp .data .val .blockEnd .jumpDistance=
+            state peekOp .if
+              .val .blockEnd .jumpDistance=
+            else ..drop end
             closedBlock .tmpVarInfo .if
               state fileState [] .wordStart appendItrEnd
             end
-            whileData .breakPositions list.free ..drop
+            breakPositions list.free ..drop
             whileData .continuePositions list.free ..drop
           break
           Switch .case =:: switchData
             switchData .breakPositions list.asSlice fileState [] .wordStart state setBlockJumps
             switchData .prevCasePosition fileState [] .wordStart state setBlockJump
+            switchData .switchPosition fileState [] .wordStart state setBlockJump
             ## allow switch without default (behavior depends on switched type)
             BlockType .SWITCH fileState [] .wordStart opEndBlock  state appendOp
             switchData .breakPositions list.free ..drop
