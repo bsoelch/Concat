@@ -1,0 +1,6 @@
+proc( i32 -> bool ) =>: f
+  3 < and false return or ..unreachable end
+end
+proc( -> ) =>: main
+  0 f "0<3" assert
+end

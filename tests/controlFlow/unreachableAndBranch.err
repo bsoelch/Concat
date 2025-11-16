@@ -1,0 +1,5 @@
+the end of all branches of an and/or block should be reachable, use if-else for conditional exit at ./tests/controlFlow/unreachableAndBranch.concat:2:41
+different number of types at the end or and-or branch: 
+  * 1 in branch at ./tests/controlFlow/unreachableAndBranch.concat:2:7
+  * 0 in branch at ./tests/controlFlow/unreachableAndBranch.concat:2:41
+ at ./tests/controlFlow/unreachableAndBranch.concat:2:41

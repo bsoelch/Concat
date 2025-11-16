@@ -12,9 +12,7 @@ namespace: type
   typeSet( integer char8 char16 char32 ) =:: export: intLike
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive
-    ## FIXME: this procedure should return false for unnamed primitives
-    ##  due to an interpreter bug using and-or statements in the interpreter is currently not possible
-    T ..types.unwrapNamed ..types.isPrimitive
+    T ..types.isNamed and T ..types.unwrapNamed ..types.isPrimitive end
   end
   typeSet( isNamedPrimitive@ ) =:: export: namedPrimitive
 end

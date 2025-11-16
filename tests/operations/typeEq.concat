@@ -1,0 +1,4 @@
+i32 i32 == "this should not crash the compiler" assert
+proc( -> ) =>: main
+
+end
