@@ -11,9 +11,9 @@ end
 proc( -> ) =>: main
   "Hello World" slice.wrap =:: str
   str 5 [] debug.print
-  str 'A' slice.indexOf .data ?? debug.print
+  str 'A' slice.indexOf ? debug.print
   str 'o' slice.indexOf .data debug.print
-  str 'A' slice.lastIndexOf .data ?? debug.print
+  str 'A' slice.lastIndexOf ? debug.print
   str 'o' slice.lastIndexOf .data debug.print
   str 'c' slice.contains debug.print
   i32 10 array new =:: mut: a

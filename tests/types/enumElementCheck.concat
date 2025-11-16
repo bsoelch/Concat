@@ -1,0 +1,17 @@
+enum( A B C ) =:: anEnum
+proc( anEnum : x -> i32 ) =>: test
+  x .A if
+    1
+  else x .B _if
+    2
+  else x .C _if
+    3
+  else
+    ..unreachable
+  end
+end
+proc( -> ) =>: main
+  anEnum .A test 1 == "A" assert
+  anEnum .B test 2 == "B" assert
+  anEnum .C test 3 == "C" assert
+end

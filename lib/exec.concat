@@ -30,7 +30,7 @@ namespace: exec
   enum( SUCCESS FORK_FAILURE EXEC_FAILURE WAIT_FAILURE PROCESS_FAILURE ) =:: export: RunState
   proc( ExecContext : context -> i32 RunState ) : export: run
   proc( i32 : retCode RunState : state -> bool ) =>: export: check
-    state .SUCCESS ?? and retCode 0 == end
+    state .SUCCESS and retCode 0 == end
   end
 end
 ## TODO conditional compilation depending on target

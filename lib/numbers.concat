@@ -149,8 +149,8 @@ namespace: number
       maxUnsignedVal mBase u/ =:: maxSafeUnsigned
       0:iSize while $ $2 .length u< do =:: i
         $ i string.charAt mBase parseDigit
-          $ .DIGIT ?? ! if
-            .IGNORED ?? and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
+          $ .DIGIT ! if
+            .IGNORED and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
             ..drop.2
             0 ParserError .INVALID_CHAR return
           else ..drop end
@@ -241,8 +241,8 @@ namespace: number
           i break
         else
           $ i string.charAt mBase parseDigit
-            $ .DIGIT ?? ! if
-              .IGNORED ?? and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
+            $ .DIGIT ! if
+              .IGNORED and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
               ..drop.2
               f64.NaN ParserError .INVALID_CHAR return
             else ..drop end
@@ -260,7 +260,7 @@ namespace: number
       end ..drop
       e 0:iSize iSize.sgt if
         ..dup e string.tail mBase tryParseInt
-          ..dup .NONE ?? ! if =:: err
+          ..dup .NONE ! if =:: err
             ..drop.2 f64.NaN err return
           end ..drop
         c + c=

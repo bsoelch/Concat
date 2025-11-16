@@ -1,6 +1,6 @@
 enum( A B C ) =:: e
 
 proc( -> ) =>: main
-  e .A .A ?? "e .A .A ??" assert
-  e .A .D ?? ! "e does not have D" assert
+  e .A .A "e .A .A" assert
+  e .A .D ! "e does not have D" assert
 end

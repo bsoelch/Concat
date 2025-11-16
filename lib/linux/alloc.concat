@@ -460,7 +460,7 @@ namespace: allocator.linux
       "invalid chunk type" ..panic
     end
     cell 0:i32  resizeBlock
-      .empty ?? "freeing block returns empty optional" assert
+      optional.isEmpty "freeing block returns empty optional" assert
     return
   end
   proc( MemoryValue ptr.mut : p -> ) =>: export: free

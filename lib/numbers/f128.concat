@@ -634,13 +634,13 @@ namespace: f128
           i break
         else
           $ i string.charAt mBase parseDigit
-            $ .DIGIT ?? ! if
-              .IGNORED ?? and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
+            $ .DIGIT ! if
+              .IGNORED and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
               ..drop.2
             f128.NaN ParserError .INVALID_CHAR return
             else ..drop end
           i64 cast.u i128.fromU64 =:: digit
-          val maxVal < if ## XXX? i128 * i64
+          val maxVal < if ## TODO? i128 * i64
             val baseI128 * digit + val=
             hasDot if
               c 1 - c=
@@ -653,7 +653,7 @@ namespace: f128
       end ..drop
       e 0:iSize iSize.sgt if
         ..dup e string.tail mBase tryParseInt
-          ..dup .NONE ?? ! if =:: err
+          ..dup .NONE ! if =:: err
             ..drop.2 f128.NaN err return
           end ..drop
         c + c=
@@ -1046,16 +1046,16 @@ namespace: f160
     ## 1 / x = 2^( -1 - xExp) / ( x * 2^( -1 - xExp) ) = 2^( -1 - xExp) * y
     y .hi y .low y .exp x .exp - 1 - x .sign f160 new return
   end
-  ## XXX div
+  ## TODO? div
 end
 namespace: std.literals
   proc( char8 ptr.raw : chars iSize : k -> f128 ) =>: static: export: :f128
     char8 128 array : errMessageBuffer
     chars k string.create =:: str
     str 0 f128.parse =:: err
-    err .NONE ?? or err .INT ?? if
+    err .NONE or err .INT if
       return
-    else err .OVERFLOW ?? _if
+    else err .OVERFLOW _if
       errMessageBuffer@ sb.wrapBuffer
         "float literal overflows size for type f128: `" sb.appendS
         str sb.appendStr

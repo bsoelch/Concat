@@ -144,7 +144,7 @@ namespace: map
     key map [] .hash () map [] .hashMask & =:: keyHash
     map [] .data keyHash @[] NodeId ptr.mut cast! =:: mut: nodeIdLoc
     nodeIdLoc [] NO_NODE == if
-      operation .CREATE ?? if
+      operation .CREATE if
         nodeIdLoc map nextNodeId return
       end
       NO_NODE return
@@ -155,7 +155,7 @@ namespace: map
     do
       map [] .nodeBuffer nodeId i64 cast 1 - list.at .data =:: node
       node [] .key key map [] .eq () if
-        operation .DELETE ?? if
+        operation .DELETE if
           ## unlink node from map
           node [] .next nodeIdLoc =[]
           true node .isEmpty=
@@ -166,7 +166,7 @@ namespace: map
       end
       node .next nodeIdLoc=
     end
-    operation .CREATE ?? if
+    operation .CREATE if
       nodeIdLoc map nextNodeId return
     end
     NO_NODE return

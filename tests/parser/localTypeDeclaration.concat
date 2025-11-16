@@ -1,5 +1,5 @@
 proc( -> ) =>: main
   enum( A B C ) =:: localEnum
   localEnum .A =:: e
-  e .A ?? "correctly created local enum constant" assert
+  e .A "correctly created local enum constant" assert
 end

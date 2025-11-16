@@ -363,8 +363,8 @@ namespace: i128
           i 1:iSize + continue ## ignore _ and ' in numbers
         end
         c mBase parseDigit
-          $ .DIGIT ?? ! if
-            .IGNORED ?? and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
+          $ .DIGIT ! if
+            .IGNORED and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
             ..drop.2
             0 0 i128 new ParserError .INVALID_CHAR return
           else ..drop end
@@ -399,9 +399,9 @@ namespace: std.literals
     char8 128 array : errMessageBuffer
     chars k string.create =:: str
     str 0 false i128.parse =:: err
-    err .NONE ?? or err .UNSIGNED ?? if
+    err .NONE or err .UNSIGNED if
       return
-    else err .OVERFLOW ?? _if
+    else err .OVERFLOW _if
       errMessageBuffer@ sb.wrapBuffer
         "integer literal overflows size for type i128: `" sb.appendS
         str sb.appendStr

@@ -111,10 +111,10 @@ namespace: string
   end
 
   proc( string : str char8 : chr -> bool ) =>: export: contains
-    str char8 slice cast chr slice.indexOf .data ?? return
+    str char8 slice cast chr slice.indexOf ? return
   end
   proc( string : base string : subStr -> bool ) =>: export: isSubstring
-    base subStr indexOfStr .data ?? return
+    base subStr indexOfStr ? return
   end
 
   ## first n characters
