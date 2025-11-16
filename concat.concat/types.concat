@@ -2406,6 +2406,12 @@ namespace: types
     a b types.typeEquals if
       a optional.wrap return
     end
+    a .intLiteral ?? and b I_SIZE typeEquals and a b context types.canAutoCastIntLiteral if
+      I_SIZE optional.wrap return
+    end
+    a I_SIZE typeEquals and b .intLiteral ?? and b a context types.canAutoCastIntLiteral if
+      I_SIZE optional.wrap return
+    end
     ## don't merge different named types
     a .namedType ?? or b .namedType ?? if
       Type optional.empty return

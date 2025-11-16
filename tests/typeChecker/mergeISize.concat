@@ -1,0 +1,7 @@
+proc( iSize : s -> iSize ) =>: posValue
+  s 0 iSize.sgt if s else 0 end
+end
+proc( -> ) =>: main
+  2 posValue 2 == "2==2" assert
+  -3 posValue 0 == "-3 < 0" assert
+end
