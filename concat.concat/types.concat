@@ -1388,10 +1388,6 @@ namespace: types
     LabelId slice optional : labels
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: newTuple
-    elts .length 0:iSize == if
-      ## empty tuple -> empty type handled by parser
-      Type optional.empty return
-    end
     elts context computeCompositeFlags =:: flags
     context [] .memory
       elts mixedArena.copySlice slice.freeze =:: eltCopy

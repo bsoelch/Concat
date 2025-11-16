@@ -1,0 +1,3 @@
+proc( -> ) =>: main
+  struct( ) new ..?types..2 ..drop
+end
