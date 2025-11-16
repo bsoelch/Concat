@@ -224,6 +224,8 @@ proc(
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
         labelBuffer [] labelOffset list.setLength labelBuffer =[]
       return
+    ## FIXME: implement replace-generic for union-elements
+    unionElement case "unimplemented: generic union-element check" ..panic
     procedure case
       src typeContext types.getProcIn .data =:: inTypes
       src typeContext types.getProcOut .data =:: outTypes
@@ -527,6 +529,9 @@ proc(
         end
       end
       false return
+    unionElement case
+      ## FIXME implement call-resolving for union-elements
+      "unimplemented: call-resolving union elements" ..panic
     procedure case
       src typeContext types.unwrapNamed src=
       src ..label target ..label != if

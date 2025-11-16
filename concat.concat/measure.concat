@@ -56,6 +56,12 @@ proc(
         declared list.append
       types =[]
       break
+    unionElement case
+      declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
+      types []
+        declared list.append
+      types =[]
+      break
     procedure case
       declared typeContext types.getProcIn .data for
         ptrLevel pos prog visited types declaredType
