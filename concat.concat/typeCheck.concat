@@ -2503,12 +2503,12 @@ proc(
       false =:: mut: isPtr
       false =:: mut: isType
       srcType
-        ..dup typeContext types.isType and container .value .TypeId ?? if ..drop
+        $ typeContext types.isType and container .value .TypeId ?? if ..drop
           true isType=
           container .value .TypeId
-        else ..dup typeContext types.isPointer _if
+        else $ typeContext types.isPointer _if
            true isPtr=
-           ..dup typeContext types.isMutable mutable=
+           $ typeContext types.isMutable mutable=
            typeContext types.ptrTarget
         else $ types.isLiteral _if
           typeContext types.literalToType
@@ -2541,6 +2541,13 @@ proc(
       end =:: elementIndex
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
+      accessType .CHECK_ENUM ?? and containerType typeContext types.isEnum if
+        "using `??` on enum-elements is depecated, use direct label access to check for a specific variant" sb.copyPtr
+        op .pos errors appendWarning
+      end
+      isWrite ! and isType ! and accessType .GET ?? and containerType typeContext types.isEnum if
+        LabelAccessType .CHECK_ENUM accessType=
+      end
       accessType .CHECK ?? if
         ## label exists
         1 op .pos state discardValues ## remove container
@@ -2549,7 +2556,9 @@ proc(
       else accessType .CHECK_ENUM ?? _if
         isType or containerType typeContext types.isTaggedUnion ! if
           "type " sb.copyPtr
-            containerType typeContext sb.appendType
+            isType ! if
+              containerType typeContext sb.appendType
+            end
             " is not an enum or union" sb.appendS
           op .pos errors appendError
         end
