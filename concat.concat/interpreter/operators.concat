@@ -330,6 +330,10 @@ namespace: interpreter
           pos
           typeContext
         errors setPointer return
+      CHECK_UNION_ELEMENT case
+        k 1 == "correct number of arguments" assert
+        ## FIXME: support compile-time union-checks
+        "unimplemented: union check" ..panic
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
         k 2 == "correct number of arguments" assert
@@ -454,6 +458,12 @@ namespace: interpreter
           args 0 [] .TypeId typeContext types.isTaggedUnion &
           ConstValue .Bool
         OperatorResult .SUCCESS return
+     TYPE_IS_UNION_ELEMENT case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.isUnionElement
+          ConstValue .Bool
+        OperatorResult .SUCCESS return
      TYPE_IS_RAW_UNION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
@@ -521,6 +531,12 @@ namespace: interpreter
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert
         args 0 [] .TypeId typeContext types.getBaseType
+          ConstValue .TypeId
+        OperatorResult .SUCCESS return
+      TYPE_GET_UNION_ELEMENT case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.getUnionElementType
           ConstValue .TypeId
         OperatorResult .SUCCESS return
       TYPE_UNWRAP_NAMED case

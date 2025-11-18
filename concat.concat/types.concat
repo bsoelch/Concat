@@ -63,7 +63,7 @@ namespace: types
   struct(
     TypeSetEntry slice : elements
   ) =:: export: TypeSet
-  
+
   proc( TypeSetEntry : a TypeSetEntry : b -> bool ) =>: export: typeSetEntryEqual
     a ..label b ..label != if false return end
     a switch
@@ -121,7 +121,7 @@ namespace: types
     end return
   end
   ## TODO ensure type-hash function returns distinct values for common small types
-  ## TODO? cache results of hash-computation 
+  ## TODO? cache results of hash-computation
   proc( ArrayId : a -> i32 ) =>: arrayTypeHash
     a ArrayData ptr cast =:: aData
     aData [] .size arraySizeHash 31 * aData [] .base typeHash +
@@ -1251,6 +1251,9 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isUnion
     unwrapNamed .union ?? return
   end
+  proc( Type TypeContext ptr -> bool ) =>: export: isUnionElement
+    unwrapNamed .unionElement ?? return
+  end
   union(
     _ : None
     CompositeInfo ptr : Composite
@@ -1409,6 +1412,28 @@ namespace: types
     context .memory=
     elementId UnionElementId cast Type .unionElement optional.wrap return
   end
+  proc( Type TypeContext ptr -> Type optional ) =>: export: getUnionElementUnion
+    unwrapNamed $ .unionElement ?? if
+      .unionElement UnionElementInfo ptr cast [] .base Type .union optional.wrap
+    else ..drop
+      Type optional.empty
+    end
+  end
+  proc( Type TypeContext ptr : context -> Type ) =>: export: getUnionElementType
+    context unwrapNamed $ .unionElement ?? if
+      .unionElement UnionElementInfo ptr cast =:: element
+      element [] .base Type .union element [] .labelIndex context compositeGetElement
+    else ..drop
+      Type .undefined
+    end
+  end
+  proc( Type TypeContext ptr -> i32 ) =>: export: getUnionElementIndex
+    unwrapNamed $ .unionElement ?? if
+      .unionElement UnionElementInfo ptr cast [] .labelIndex
+    else ..drop
+      0
+    end
+  end
 
   proc(
     Type slice : elts
@@ -1552,7 +1577,7 @@ namespace: types
         labels mixedArena.copySlice slice.freeze optional.wrap =:: labelCopy
         ## CompositeInfo
           eltCopy
-          labelCopy 
+          labelCopy
           elts context computeCompositeFlags
           -1
           -1
@@ -1631,7 +1656,7 @@ namespace: types
   ## procedure types
   struct(
     Type slice : inTypes
-    Type slice : outTypes 
+    Type slice : outTypes
     LabelId slice : labels
     CallingConvention : callingConvention
   ) =:: ProcType
@@ -2043,7 +2068,7 @@ namespace: types
   end
 
   proc(
-    LabelId : name
+    LabelId : name ## TODO! is name used?
     TypeSetEntry slice : elements
     TypeContext ptr.mut : context
   -> Type ) =>: export: newTypeSet

@@ -2322,6 +2322,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         $ "?":s string.startsWith =:: isTryGet ## temporary syntax for new union element access
         isTryGet if
+          "the `.?name` syntax for union elements is temporary" sb.copyPtr
+          fileState [] .wordStart errors appendWarning
           1 string.tail
         end
       =:: label

@@ -40,13 +40,16 @@ enum(
  SYS_ARGC SYS_ARGV SYS_ENVP
  ## pointer access
  GET_PTR GET_PTR_MUT SET_PTR OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT
+ ## union-elements
+ CHECK_UNION_ELEMENT
  ## XXX? more built-in operations
  PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
  TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
- TYPE_IS_TYPESET TYPE_IS_TAGGED_UNION TYPE_IS_RAW_UNION TYPE_IS_ENUM TYPE_IS_PROC
+ TYPE_IS_TYPESET TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_RAW_UNION TYPE_IS_ENUM TYPE_IS_PROC
  TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED
- TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED
+ TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_UNION_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED
 ) =:: export: BuiltIn
+## TODO? rename type_array_element to type_get_base_type
 
 proc(
   Type : base
@@ -100,7 +103,7 @@ proc(
   ProgramContext ptr.mut : context
   bool : hasStaticArgs
   bool : isStatic
--> ) =>: addBuiltIn_internal
+-> ProcId ) =>: addBuiltIn_internal
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -129,6 +132,7 @@ proc(
     idContext
     context .errors
   id.declareIdentifier =:: isError ..drop.2
+  procId return
 end
 proc(
   BuiltIn : buildIn
@@ -137,7 +141,7 @@ proc(
   FilePosition : pos
   ProgramContext ptr.mut : context
 -> ) =>: addBuiltIn
-  buildIn procLabel procType pos context false false addBuiltIn_internal
+  buildIn procLabel procType pos context false false addBuiltIn_internal ..drop
 end
 proc(
   BuiltIn : buildIn
@@ -146,6 +150,15 @@ proc(
   FilePosition : pos
   ProgramContext ptr.mut : context
 -> ) =>: addStaticBuiltIn
+  buildIn procLabel procType pos context false true addBuiltIn_internal ..drop
+end
+proc(
+  BuiltIn : buildIn
+  LabelId : procLabel
+  Type : procType
+  FilePosition : pos
+  ProgramContext ptr.mut : context
+-> ProcId ) =>: addStaticBuiltInGetId
   buildIn procLabel procType pos context false true addBuiltIn_internal
 end
 
@@ -439,6 +452,41 @@ proc(
     CallingConvention.DEFAULT
   typeContext types.newProcedure .data =:: ti32_b
   ti32_b tt_b t_t t_b return
+end
+proc(
+  ProcId : isUnionElementId
+  FilePosition : pos
+  ProgramContext ptr.mut : context
+-> Type ) =>: checkUnion_proc
+  context .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  ## type : auto: T
+  LabelId 2 array : labelData
+  Type 2 array : typeData
+  ## newLabel
+    "U":s
+    id.FLAG_STATIC id.FLAG_BUILT_IN | id.FLAG_AUTO |
+    pos
+    FILE_ID_BUILT_IN
+    labelContext
+  id.newLabel labelData@ 0 =[]
+  id.LABEL_ID_NONE labelData@ 1 =[]
+  ## TypeSetEntry
+    isUnionElementId
+  types.TypeSetEntry .typeTrait =:: entry
+  ## newTypeSet
+    id.LABEL_ID_NONE
+    entry@ slice.wrap
+    typeContext
+  types.newTypeSet typeData@ 0 =[]
+  labelData 0 [] types.newGenericType typeData@ 1 =[]
+  ## newProcedure
+    typeData@ slice.wrap
+    types.primitive.BOOL@ slice.wrap
+    labelData@ slice.wrap
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure .data
 end
 
 proc(
@@ -1277,6 +1325,14 @@ proc(
     "..types.isTaggedUnion":s pos labelContext createLabel
     t_b
   pos context addStaticBuiltIn
+  BuiltIn .TYPE_IS_UNION_ELEMENT
+    "..types.isUnionElement":s pos labelContext createLabel
+    t_b
+  pos context addStaticBuiltInGetId =:: getUnionId
+  BuiltIn .CHECK_UNION_ELEMENT
+    "..builtIn.check.unionElement":s pos labelContext createLabel
+    getUnionId pos context checkUnion_proc
+  pos context addBuiltIn
   BuiltIn .TYPE_IS_RAW_UNION
     "..types.isRawUnion":s pos labelContext createLabel
     t_b
@@ -1320,6 +1376,10 @@ proc(
   BuiltIn .TYPE_GET_ELEMENT
     "..types.getElement":s pos labelContext createLabel
     ti32_t
+  pos context addStaticBuiltIn
+  BuiltIn .TYPE_GET_UNION_ELEMENT
+    "..types.getUnionElement":s pos labelContext createLabel
+    t_t
   pos context addStaticBuiltIn
   BuiltIn .TYPE_CAN_ASSIGN
     "..types.canAssign":s pos labelContext createLabel
@@ -1402,13 +1462,14 @@ end
   "..builtIn.get.ptr":s "..builtIn.get.ptr.mut":s "..builtIn.set.ptr":s
     "..builtIn.offset.ptr.i32":s "..builtIn.offset.ptr.i64":s "..builtIn.offset.ptr":s
     "..builtIn.offset.ptr.mut.i32":s "..builtIn.offset.ptr.mut.i64":s "..builtIn.offset.ptr.mut":s
+    "..builtIn.check.unionElement":s
   "..builtIn.parse.i8":s "..builtIn.parse.i16":s "..builtIn.parse.i32":s "..builtIn.parse.i64":s
     "..builtIn.parse.f32":s "..builtIn.parse.f64":s
   "..types.isPrimitive":s "..types.isPointer":s "..types.isRawPointer":s "..types.isArray":s
-    "..types.isStruct":s "..types.isTypeSet":s "..types.isTaggedUnion":s "..types.isRawUnion":s "..types.isEnum":s
+    "..types.isStruct":s "..types.isTypeSet":s "..types.isTaggedUnion":s "..types.isUnionElement":s "..types.isRawUnion":s "..types.isEnum":s
     "..types.isProc":s "..types.isNamed":s "..types.isCtype":s "..types.isAlign":s
     "..types.isMutable":s "..types.isDefined":s "..types.canAssign":s "..types.canCast":s
-    "..types.arrayElement":s "..types.getElement":s "..types.unwrapNamed":s
+    "..types.arrayElement":s "..types.getUnionElement":s "..types.getElement":s "..types.unwrapNamed":s
 } =:: builtInNames
 BuiltIn ..length builtInNames ..length == "correct number of names" assert
 namespace: sb

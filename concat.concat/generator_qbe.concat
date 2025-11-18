@@ -2386,6 +2386,18 @@ proc(
         offset sb.appendI
         '\n' sb.appendC
       return
+    CHECK_UNION_ELEMENT case
+      sb
+        baseType typeContext types.getUnionElementUnion .data
+          pos context popValue
+          baseType typeContext types.getUnionElementIndex
+        pos context checkEnumIndex ..drop.2 =:: c
+        "%s" sb.appendS
+        ValType .I32 context pushValue sb.appendI
+        " =w copy %t" sb.appendS
+        c sb.appendI
+        '\n' sb.appendC
+      return
     SYS_ARGC case
       sb
         "%s" sb.appendS
@@ -2418,8 +2430,8 @@ proc(
       return
     PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
         TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
-        TYPE_IS_TYPESET TYPE_IS_RAW_UNION TYPE_IS_TAGGED_UNION TYPE_IS_ENUM TYPE_IS_PROC
-        TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED
+        TYPE_IS_TYPESET TYPE_IS_RAW_UNION TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_ENUM TYPE_IS_PROC
+        TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED TYPE_GET_UNION_ELEMENT
         TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED case
       "unsupported built-in" sb.copyPtr
         builtIn sb.appendBuiltIn
