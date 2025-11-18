@@ -157,7 +157,7 @@ proc(
       newOps return ## ignore no-ops
     builtIn equalityOperator procPtr panic panicWithMessage
     checkEnumLabel hasElement getId setId atId getEnumLabel setEnumElement
-    setElement RuntimeAssert Error stackMod getElement
+    setElement RuntimeAssert Error stackMod getElement getUnionElement
     autoCast Cast Cast! bitCast Return case
       newOps
         op list.append ## nothing to change
@@ -464,7 +464,7 @@ proc(
       newOps return
     autoTypedInitializeId ConstantReference NewReference
     typeInfo NewEnumReference usingNamespace usingIdentifier InlineReturn
-    getName atName setName getLabel Assert declareName initializeName StaticConstant
+    getName atName setName getLabel getUnionLabel Assert declareName initializeName StaticConstant
     setLabel length typeModifier hasLabel existsLabel existsName NestedProc case
       break ## XXX error message
   end

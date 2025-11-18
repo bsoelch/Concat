@@ -2687,13 +2687,9 @@ proc(
           context
         pushValue
         EvalResult .Ok return
-    getLabel setLabel case
+    getUnionLabel case "unimplemented" ..panic
+    getLabel setLabel .case =:: labelId
       op [] .val .setLabel ?? =:: isWrite
-      isWrite if
-        op [] .val .setLabel
-      else
-        op [] .val .getLabel
-      end =:: labelId
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
@@ -2762,7 +2758,8 @@ proc(
         value valInfo elementIndex op [] .pos context setElement wrapResult return
       end
       value valInfo elementIndex op [] .pos context getElement wrapResult return
-    getElement setElement setEnumElement case
+    getUnionElement case "unimplemented" ..panic
+    getElement setElement setEnumElement .case =:: eltIndex
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
@@ -2770,13 +2767,6 @@ proc(
         EvalResult .Error return
       end =:: value =:: valInfo
       op [] .val .getElement ?? ! =:: isWrite
-      op [] .val .setEnumElement ?? if
-        op [] .val .setEnumElement
-      else isWrite _if
-        op [] .val .setElement
-      else
-        op [] .val .getElement
-      end =:: eltIndex
       isWrite if
         value valInfo eltIndex op [] .pos context setElement wrapResult return
       end

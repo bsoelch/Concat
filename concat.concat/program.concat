@@ -153,10 +153,12 @@ union(
       ProcedureImpl : implementProcedure
       ProcedureImpl : procPtr
             LabelId : getLabel
+            LabelId : getUnionLabel
             LabelId : setLabel
             LabelId : hasLabel
             LabelId : existsLabel
                 i32 : getElement
+                i32 : getUnionElement
                 i32 : setElement
                 i32 : hasElement
                   _ : Return
@@ -266,15 +268,20 @@ end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opGetElement
   index OpValue .getElement base pos Operation new return
 end
+proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opGetUnionElement
+  index OpValue .getUnionElement base pos Operation new return
+end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opSetElement
   index OpValue .setElement base pos Operation new return
 end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opHasElement
   index OpValue .hasElement base pos Operation new return
 end
-proc( LabelId FilePosition  -> Operation ) =>: export: opGetLabel
-  =:: pos
+proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetLabel
   OpValue .getLabel Type .undefined pos Operation new return
+end
+proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetUnionLabel
+  OpValue .getUnionLabel Type .undefined pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opSetLabel
   =:: pos
@@ -820,6 +827,12 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .getLabel labelContext sb.appendLabelName
           break
+        getUnionLabel case
+          "get union label ( " sb.appendS
+          ..over .dataType typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .getUnionLabel labelContext sb.appendLabelName
+          break
         setLabel case
           "set label ( " sb.appendS
           ..over .dataType typeContext sb.appendType
@@ -848,6 +861,12 @@ namespace: sb
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .getElement sb.appendI
+          break
+        getUnionElement case
+          "get union element ( " sb.appendS
+          ..over .dataType typeContext sb.appendType
+          " ) : " sb.appendS
+          ..over .val .getUnionElement sb.appendI
           break
         setElement case
           "set element ( " sb.appendS

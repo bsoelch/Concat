@@ -3407,6 +3407,9 @@ proc(
         end
         '\n' sb.appendC
       return
+    getUnionElement case
+      ## try-get element only changes type of top stack value
+      sb return
     getElement case
       op [] .val .getElement =:: index
       op [] .dataType =:: mut: containerType
@@ -4876,7 +4879,7 @@ proc(
     compilerInfo case
       sb return ## XXX? print compiler info
     autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier StaticConstant
-    getName atName setName getLabel Error Assert panic declareName initializeName
+    getName atName setName getLabel getUnionLabel Error Assert panic declareName initializeName
     setLabel length typeModifier hasLabel existsLabel existsName NestedProc case
       break ## XXX error message
   end

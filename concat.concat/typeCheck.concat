@@ -1397,8 +1397,9 @@ proc(
   Type : srcType
   Type : containerType
   i32 : elementIndex
-  bool : isWrite
-  bool : isPtr
+  bool : isWrite ## TODO pass enum( GET TRY_GET SET ) instead if two booleans
+  bool : isUnionGet
+  bool : isPtr ## TODO? pass enum( VALUE PTR PTR_MUT ) instead if two booleans
   bool : mutable
   FilePosition : pos
   TypeCheckState ptr.mut : state
@@ -1408,12 +1409,19 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   OP_UNLINKED =:: mut: onRead
-  isWrite ! and containerType typeContext types.isTaggedUnion if
+  isWrite ! and isUnionGet ! and containerType typeContext types.isTaggedUnion if
     containerType elementIndex pos opCheckEnum state appendOp onRead=
     true program .hasCheckEnum=
   end
   containerType typeContext types.isArray if
     containerType typeContext types.getBaseType
+  else isUnionGet and containerType typeContext types.isUnion _if
+    ## TODO! do not allow union-get for non-union types
+    containerType elementIndex typeContext types.newUnionElement .else
+      "cannot create union element" sb.copyPtr
+      pos errors appendError
+      containerType elementIndex typeContext types.compositeGetElement
+    end
   else
     containerType elementIndex typeContext types.compositeGetElement
   end =:: eltType
@@ -1497,7 +1505,11 @@ proc(
     srcType
       elementIndex
       pos
-    opGetElement
+    isUnionGet if
+      opGetUnionElement
+    else
+      opGetElement
+    end
   state pushValue
   state .stack branchTree.pop .data [] =:: mut: topValue
   ## XXX? is pop then push neccessary
@@ -2418,12 +2430,9 @@ proc(
         i 1 +
       end ..drop
       0 return
-    getElement setElement case
-      op .val .getElement ?? if
-        op .val .getElement false
-      else
-        op .val .setElement true
-      end =:: isWrite =:: index
+    getElement getUnionElement setElement .case =:: index
+      op .val .setElement ?? =:: isWrite
+      op .val .getUnionElement ?? =:: isUnionGet
       isWrite if 2 else 1 end op .pos state checkStackSize if
         0 return
       end
@@ -2456,7 +2465,7 @@ proc(
           op .pos errors appendError
           0 return
         end
-        srcType containerType index isWrite isPtr mutable op .pos state typeCheckGetElement
+        srcType containerType index isWrite isUnionGet isPtr mutable op .pos state typeCheckGetElement
       else containerType typeContext types.isArray _if
         containerType typeContext types.getArraySize $ .Int ?? if
           .Int
@@ -2473,27 +2482,24 @@ proc(
           op .pos errors appendError
           0 return
         end
-        srcType containerType index isWrite isPtr mutable op .pos state typeCheckGetElement
+        srcType containerType index isWrite isUnionGet isPtr mutable op .pos state typeCheckGetElement
       else
         "indexed element access is only supported on tuples, structs and arrays got: " sb.copyPtr
           srcType typeContext sb.appendType
         op .pos errors appendError
       end
       0 return
-    getLabel setLabel hasLabel existsLabel case
-      enum( CHECK CHECK_ENUM GET ) =:: LabelAccessType
+    getLabel getUnionLabel setLabel hasLabel existsLabel .case =:: labelId
+      enum( CHECK CHECK_ENUM GET UNION_GET ) =:: LabelAccessType
       LabelAccessType .GET =:: mut: accessType
+      op .val .setLabel ?? =:: isWrite
       op .val .hasLabel ?? if
         LabelAccessType .CHECK_ENUM accessType=
-        op .val .hasLabel false
       else op .val .existsLabel ?? _if
         LabelAccessType .CHECK accessType=
-        op .val .existsLabel false
-      else op .val .getLabel ?? _if
-        op .val .getLabel false
-      else
-        op .val .setLabel true
-      end =:: isWrite =:: labelId
+      else op .val .getUnionLabel ?? _if
+        LabelAccessType .UNION_GET accessType=
+      end
       1:i32 isWrite if 1 + end op .pos state checkStackSize if
         0 return
       end
@@ -2618,7 +2624,7 @@ proc(
         elementLabel state replaceLabel
         0 return
       end
-      srcType containerType elementIndex isWrite isPtr mutable op .pos state typeCheckGetElement
+      srcType containerType elementIndex isWrite accessType .UNION_GET isPtr mutable op .pos state typeCheckGetElement
       0 return
     getEnumLabel case
       state .stack branchTree.peek =:: label?
