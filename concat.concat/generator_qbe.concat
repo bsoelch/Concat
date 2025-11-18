@@ -3547,6 +3547,9 @@ proc(
           '\n' sb.appendC
         end
       return
+    rawValue case
+      ## FIXME implement ..raw
+      "unimplemented" ..panic
     New NewEnum NewReference NewEnumReference case
       op [] .val .NewReference ?? op [] .val .NewEnumReference ?? | =:: hasReference
       op [] .val .NewEnum ?? op [] .val .NewEnumReference ?? | =:: isEnum

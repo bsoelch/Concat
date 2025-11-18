@@ -3165,6 +3165,9 @@ proc(
         context
       pushValue
       EvalResult .Ok return
+    rawValue case
+      ## FIXME: implement ..raw
+      "unimplemented" ..panic
     typeInfo case
       Type : poppedType
       ValueInfo : valInfo

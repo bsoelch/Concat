@@ -158,7 +158,7 @@ proc(
     builtIn equalityOperator procPtr panic panicWithMessage
     checkEnumLabel hasElement getId setId atId getEnumLabel setEnumElement
     setElement RuntimeAssert Error stackMod getElement getUnionElement
-    autoCast Cast Cast! bitCast Return case
+    autoCast Cast Cast! bitCast Return rawValue case
       newOps
         op list.append ## nothing to change
       return

@@ -4255,6 +4255,12 @@ proc(
         op .pos
       state pushConstant
       0 return
+    rawValue case
+      ## FIXME: implement ..raw
+      ## * union element -> value
+      ## * union -> union.raw
+      ## * dynamic pointer -> raw pointer
+      "unimplemented" ..panic
     procPtr builtIn
     NewEnum call checkEnumLabel
     existsName hasElement case

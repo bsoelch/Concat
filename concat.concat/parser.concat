@@ -2404,6 +2404,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..length":s string.eq _if ..drop
       fileState [] .wordStart opLength state appendOp
       return
+    else ..dup "..raw":s string.eq _if ..drop
+      fileState [] .wordStart opRawValue state appendOp
+      return
     else ..dup "..label":s string.eq _if ..drop
       fileState [] .wordStart opGetEnumLabel state appendOp
       return
