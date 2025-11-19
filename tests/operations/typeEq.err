@@ -1,10 +1,10 @@
 no matching signature for arguments ( type { i32 }  type { i32 }  )
 candidates:
-  * proc( named[2533]( "type.pointer" ) : auto: static: P P[ 2846:LabelId ] : p P[ 2846:LabelId ] : q -> bool ) ptr.eq
-  * proc( named[2533]( "type.pointer" ) : auto: static: P P[ 2846:LabelId ] : p P[ 2846:LabelId ] : q -> bool ) ptr.eq
-  * proc( named[2535]( "type.enum" ) : auto: static: E E[ 3091:LabelId ] : a E[ 3091:LabelId ] : b -> bool ) std.default.eqEnum
-  * proc( named[2535]( "type.enum" ) : auto: static: E E[ 3091:LabelId ] : a E[ 3091:LabelId ] : b -> bool ) std.default.eqEnum
-  * proc( named[2549]( "type.namedPrimitive" ) : auto: static: P P[ 3105:LabelId ] : a P[ 3105:LabelId ] : b -> bool ) std.default.eqNamedPrimitive
+  * proc( named[2537]( "type.pointer" ) : auto: static: P P[ 2855:LabelId ] : p P[ 2855:LabelId ] : q -> bool ) ptr.eq
+  * proc( named[2537]( "type.pointer" ) : auto: static: P P[ 2855:LabelId ] : p P[ 2855:LabelId ] : q -> bool ) ptr.eq
+  * proc( named[2539]( "type.enum" ) : auto: static: E E[ 3100:LabelId ] : a E[ 3100:LabelId ] : b -> bool ) std.default.eqEnum
+  * proc( named[2539]( "type.enum" ) : auto: static: E E[ 3100:LabelId ] : a E[ 3100:LabelId ] : b -> bool ) std.default.eqEnum
+  * proc( named[2553]( "type.namedPrimitive" ) : auto: static: P P[ 3114:LabelId ] : a P[ 3114:LabelId ] : b -> bool ) std.default.eqNamedPrimitive
   ...
  at ./tests/operations/typeEq.concat:1:9
 could not evaluate global operation: get ( undefined ) : export: procedure bundle  "==" at ./tests/operations/typeEq.concat:1:9

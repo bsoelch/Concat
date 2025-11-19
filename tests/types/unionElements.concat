@@ -1,0 +1,25 @@
+import stringIO
+import numbers/printNumbers
+using std.literals.
+
+union(
+  i32 : Int
+  f32 : Float
+  char8 : Char
+) =:: aUnion
+proc( aUnion : u -> ) =>: printU
+  u .?Int .if
+    "int: ":s io.print
+    io.println
+  else u .?Float ._if
+    "float: ":s io.print
+    io.println
+  else
+    "other":s io.println
+  end
+end
+proc( -> ) =>: main
+  1 aUnion .Int printU
+  0.5:f32 aUnion .Float printU
+  'A' aUnion .Char printU
+end

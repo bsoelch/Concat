@@ -15,4 +15,12 @@ namespace: type
     T ..types.isNamed and T ..types.unwrapNamed ..types.isPrimitive end
   end
   typeSet( isNamedPrimitive@ ) =:: export: namedPrimitive
+
+  ..compiler.version 314 >= if
+    typeSet( ..types.isUnionElement@ ) =:: export: unionElement
+    ## wrapper to delay generic resolving
+    ( type : U -> type ) =>: export: nowrap: unionElementType
+      U ..types.getUnionElement
+    end
+  end
 end

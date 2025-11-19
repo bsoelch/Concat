@@ -2021,7 +2021,7 @@ namespace: types
         prevType .generatedType GeneratedTypeName ptr cast []
       map.at .data
     .value=
-    generatorName typeContext .labelContext id.labelFlags id.FLAG_INLINE & ? if
+    generatorName typeContext .labelContext id.labelFlags id.FLAG_NO_WRAP & ? if
       value return
     end
     prevType return

@@ -1,6 +1,6 @@
-type named[3291]( "e" ) does not have a label "D" at ./tests/operations/missingEnumElement.concat:5:8
-no matching signature for arguments ( named[3291]( "e" ) { union element (0):none }  )
+type named[3316]( "e" ) does not have a label "D" at ./tests/operations/missingEnumElement.concat:5:8
+no matching signature for arguments ( named[3316]( "e" ) { union element (0):none }  )
 candidates:
   * proc( bool -> bool ) bool.not
  at ./tests/operations/missingEnumElement.concat:5:11
-wrong type for assertion expected bool got named[3291]( "e" ) at ./tests/operations/missingEnumElement.concat:5:33
+wrong type for assertion expected bool got named[3316]( "e" ) at ./tests/operations/missingEnumElement.concat:5:33

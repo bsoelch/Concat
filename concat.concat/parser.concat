@@ -624,6 +624,9 @@ proc(
       else ..dup "ignoreUnused:":s string.eq _if
         id.FLAG_IGNORE_UNUSED flags | flags=
         true isModifier=
+      else ..dup "nowrap:":s string.eq _if
+        id.FLAG_NO_WRAP flags | flags=
+        true isModifier=
       else ..dup ":":s string.endsWith _if
         true isModifier=
       end
@@ -2322,8 +2325,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         $ "?":s string.startsWith =:: isTryGet ## temporary syntax for new union element access
         isTryGet if
-          "the `.?name` syntax for union elements is temporary" sb.copyPtr
-          fileState [] .wordStart errors appendWarning
           1 string.tail
         end
       =:: label
