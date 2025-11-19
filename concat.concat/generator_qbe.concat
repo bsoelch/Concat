@@ -3548,8 +3548,36 @@ proc(
         end
       return
     rawValue case
+      ## TODO? allow ..raw on pointer to union/union-element
+      op [] .dataType typeContext types.isUnion if
+        sb return
+      else op [] .dataType typeContext types.isUnionElement _if
+        op [] .dataType typeContext types.getUnionElementType =:: eltType
+        sb
+          eltType context referenceOnly if
+            return
+          end
+          ## TODO: extract unwrapping of references to procedure
+          eltType context toValType =:: valType
+          op [] .pos context popValue =:: srcId
+          op [] .pos sb.appendPosQBE
+          "%s" sb.appendS
+          valType context pushValue sb.appendI
+          " =" sb.appendS
+          valType sb.appendValTypeQBE
+          " load" sb.appendS
+          eltType
+            StorageType .LOAD
+            op [] .pos
+            context
+          sb.appendTypeNameQBE
+          " %s" sb.appendS
+          srcId sb.appendI
+          '\n' sb.appendC
+        return
+      end
       ## FIXME implement ..raw
-      "unimplemented" ..panic
+      "unsupported type in ..raw" ..panic
     New NewEnum NewReference NewEnumReference case
       op [] .val .NewReference ?? op [] .val .NewEnumReference ?? | =:: hasReference
       op [] .val .NewEnum ?? op [] .val .NewEnumReference ?? | =:: isEnum

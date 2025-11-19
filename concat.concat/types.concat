@@ -1972,6 +1972,9 @@ namespace: types
     generatorName arguments GeneratedTypeName new =:: genName
     typeContext .generatedTypes genName map.get =:: prevValue
     prevValue optional.hasData if
+      generatorName labelContext id.labelFlags id.FLAG_INLINE & ? and prevValue .data .value .if
+        GeneratedTypeState .Stored return
+      end
       prevValue .data .key Type .generatedType GeneratedTypeState .Stored return
     end
     create if
@@ -2010,11 +2013,17 @@ namespace: types
       Created case .Created break
       None case ..unreachable
     end =:: prevType
+    value .undefined ?? if
+      prevType return
+    end
     value optional.wrap
       typeContext .generatedTypes
         prevType .generatedType GeneratedTypeName ptr cast []
       map.at .data
     .value=
+    generatorName typeContext .labelContext id.labelFlags id.FLAG_INLINE & ? if
+      value return
+    end
     prevType return
   end
 

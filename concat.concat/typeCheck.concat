@@ -4256,11 +4256,35 @@ proc(
       state pushConstant
       0 return
     rawValue case
-      ## FIXME: implement ..raw
-      ## * union element -> value
-      ## * union -> union.raw
-      ## * dynamic pointer -> raw pointer
-      "unimplemented" ..panic
+      state .stack branchTree.peek .else
+        "missing argument for " sb.copyPtr
+          op program sb.appendOp
+          " expected pointer or union" sb.appendS
+        op .pos errors appendError
+        0 return
+      end [] .valueType =:: valType
+      valType op@ .dataType=
+      valType typeContext types.isUnionElement if
+        state .stack branchTree.pop ..drop
+        valType typeContext types.getUnionElementUnion .data
+          valType typeContext types.getUnionElementIndex
+        op .pos opCheckEnum state appendOp ..drop
+        true program .hasCheckEnum=
+        valType typeContext types.getUnionElementType
+      else valType typeContext types.isUnion _if
+        state .stack branchTree.pop ..drop
+        "unimplemented: union ..raw" ..panic
+      else
+        "unexpected argument for " sb.copyPtr
+          valType typeContext sb.appendType
+          " expected union" sb.appendS
+        op .pos errors appendError
+        0 return
+      end
+        ConstValue .None
+        op
+      state pushValue
+      0 return
     procPtr builtIn
     NewEnum call checkEnumLabel
     existsName hasElement case
