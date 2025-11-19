@@ -56,7 +56,8 @@
         (\A|(?&lt;=[[:space:]]))(( # start of file or white-space
           \.?if           |
           \.?else         |
-          _if             |
+          \.?_if          |
+          \._else         |
           end             |
           while           |
           while\:         |
@@ -135,25 +136,25 @@
           cast!               |
           \.\.bitcast         |
           \.\.length          |
-          \.\.size            |
+          \.\.raw             |
           \.\.label           |
           \.\.unreachable     |
           \.\.panic           |
-          \.\.builtIn\.(neg|add|sub|eq|ne|lt|le|ge|gt|parse)\.(i8|i16|i32|i64|f32|f64) |
-          \.\.builtIn\.(fill|eq|ne|lt|le|ge|gt)\.char(8|16|32) |
-          \.\.builtIn\.(mul|div)\.(i32|i64|f32|f64) |
-          \.\.builtIn\.(div|shl|ashr|lshr)\.i64i32 |
-          \.\.builtIn\.(rem|udiv|umod)\.(i32|i64|i64i32) |
-          \.\.builtIn\.(not|and|or|xor|eq|ne)\.bool |
-          \.\.builtIn\.(flip|and|or|xor|shl|ashr|lshr|ult|ule|uge|ugt)\.(i8|i16|i32|i64) |
-          \.\.builtIn\.sys\.(argc|argv|envp) |
-          \.\.builtIn\.get\.ptr(\.mut)? |
-          \.\.builtIn\.set\.ptr |
-          \.\.builtIn\.offset\.ptr(\.mut)?(\.(i32|i64))? |
-          \.\.builtIn\.check\.unionElement |
+          \.\.builtIn\.(neg|add|sub|eq|ne|lt|le|ge|gt|parse)\.(i8|i16|i32|i64|f32|f64)@? |
+          \.\.builtIn\.(fill|eq|ne|lt|le|ge|gt)\.char(8|16|32)@? |
+          \.\.builtIn\.(mul|div)\.(i32|i64|f32|f64)@? |
+          \.\.builtIn\.(div|shl|ashr|lshr)\.i64i32@? |
+          \.\.builtIn\.(rem|udiv|umod)\.(i32|i64|i64i32)@? |
+          \.\.builtIn\.(not|and|or|xor|eq|ne)\.bool@? |
+          \.\.builtIn\.(flip|and|or|xor|shl|ashr|lshr|ult|ule|uge|ugt)\.(i8|i16|i32|i64)@? |
+          \.\.builtIn\.sys\.(argc|argv|envp)@? |
+          \.\.builtIn\.get\.ptr(\.mut)?@? |
+          \.\.builtIn\.set\.ptr@? |
+          \.\.builtIn\.offset\.ptr(\.mut)?(\.(i32|i64))?@? |
+          \.\.builtIn\.check\.unionElement@? |
           \.\.types\.(alignment|size|stride|is(Primitive|Pointer|RawPointer|Array|Struct|
             TypeSet|TaggedUnion|UnionElement|RawUnion|Enum|Proc|Named|Ctype|Align|Mutable|Defined)|
-            canAssign|canCast|arrayElement|getElement|getUnionElement|unwrapNamed) |
+            canAssign|canCast|arrayElement|getElement|getUnionElement|unwrapNamed)@? |
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
