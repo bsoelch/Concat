@@ -25,6 +25,7 @@ namespace: unionElement
 end
 overload: merge: export: ?
   ..builtIn.check.unionElement
+  unionElement.checkPtr
 end
 overload: merge: export: ..if.prepare
   unionElement.prepareIf
