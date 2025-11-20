@@ -688,7 +688,7 @@ namespace: id
         "\" ( previous declaration at " sb.appendS
         prevPos sb.appendPos
         " )" sb.appendS
-      declaredAt errors appendWarning
+      declaredAt errors appendError
       LABEL_ID_NONE ID_NONE_DATA true return
     end ..drop
     ## IdentifierData
