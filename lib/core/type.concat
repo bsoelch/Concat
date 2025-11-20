@@ -16,11 +16,42 @@ namespace: type
   end
   typeSet( isNamedPrimitive@ ) =:: export: namedPrimitive
 
-  ..compiler.version 314 >= if
-    typeSet( ..types.isUnionElement@ ) =:: export: unionElement
-    ## wrapper to delay generic resolving
-    ( type : U -> type ) =>: export: nowrap: unionElementType
-      U ..types.getUnionElement
+  typeSet( ..types.isUnionElement@ ) =:: export: unionElement
+  ## wrapper to delay generic resolving
+  ( type : U -> type ) =>: export: nowrap: unionElementType
+    U ..types.getUnionElement
+  end
+  ( type : U -> type ) =>: export: nowrap: unionElementUnion
+    U ..types.getUnionElementUnion
+  end
+  proc( type : T -> bool ) =>: export: static: isUnionElementPointer
+    T ..types.isPointer and
+      T ..types.arrayElement ..types.isUnionElement
     end
+  end
+  typeSet( isUnionElementPointer@ ) =:: export: unionElementPointer
+  ( type : U -> type ) =>: export: nowrap: unionElementPtrType
+    U ..types.arrayElement
+      $ ..types.isUnionElement if ## array-element can return type.undefined which leads to error when creating pointer
+        ..types.getUnionElement
+        U ..types.isMutable if
+          ptr.mut
+        else
+          ptr
+        end
+      end
+    return
+  end
+  ( type : U -> type ) =>: export: nowrap: unionElementUnionPtr
+    U ..types.arrayElement
+      $ ..types.isUnionElement if ## array-element can return type.undefined which leads to error when creating pointer
+        ..types.getUnionElementUnion
+        U ..types.isMutable if
+          ptr.mut
+        else
+          ptr
+        end
+      end
+    return
   end
 end

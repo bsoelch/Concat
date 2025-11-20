@@ -1972,7 +1972,7 @@ namespace: types
     generatorName arguments GeneratedTypeName new =:: genName
     typeContext .generatedTypes genName map.get =:: prevValue
     prevValue optional.hasData if
-      generatorName labelContext id.labelFlags id.FLAG_INLINE & ? and prevValue .data .value .if
+      generatorName labelContext id.labelFlags id.FLAG_NO_WRAP & ? and prevValue .data .value .if
         GeneratedTypeState .Stored return
       end
       prevValue .data .key Type .generatedType GeneratedTypeState .Stored return
@@ -2013,7 +2013,7 @@ namespace: types
       Created case .Created break
       None case ..unreachable
     end =:: prevType
-    value .undefined ?? if
+    value .undefined ?? or prevType .generatedType ?? ! if
       prevType return
     end
     value optional.wrap
@@ -2265,6 +2265,10 @@ namespace: types
       src .primitiveType target .primitiveType canCastPrimitivePtrArg if
       true return
     end
+    ## allow casting union-element pointer to union pointer
+    allowRename and src context types.getUnionElementUnion .and target typeEquals if
+      true return
+    end
     ## TODO! allow cast  T k array l ptr -> T  k l *  ptr
     src context types.isPointer ! or target context types.isPointer ! if
       false return
@@ -2460,6 +2464,10 @@ namespace: types
     end
     src context types.isPointer and target context types.isPointer and
         src target true false context canCastPtr if
+      true return
+    end
+    ## allow cast union-element -> union
+    src context types.isUnionElement and src context types.getUnionElementUnion .and target typeEquals if
       true return
     end
     forceCast ! if

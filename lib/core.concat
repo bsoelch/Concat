@@ -21,6 +21,4 @@ import core/parseNumber
 import core/system
 
 import core/itr
-..compiler.version 314 >= if
-  import core/unionElement
-end
+import core/unionElement

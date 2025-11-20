@@ -539,6 +539,14 @@ namespace: interpreter
         args 0 [] .TypeId typeContext types.getUnionElementType
           ConstValue .TypeId
         OperatorResult .SUCCESS return
+      TYPE_GET_UNION_ELEMENT_UNION case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId ?? "argument is type" assert
+        args 0 [] .TypeId typeContext types.getUnionElementUnion .else
+          args 0 [] .TypeId
+        end
+          ConstValue .TypeId
+        OperatorResult .SUCCESS return
       TYPE_UNWRAP_NAMED case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId ?? "argument is type" assert

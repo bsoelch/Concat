@@ -1,4 +1,5 @@
 import core/type
+
 namespace: unionElement
   proc( type.unionElement : auto: U  U -> U ) =>: export: prepareIf end
   proc( type.unionElement : auto: U  U -> bool ) =>: export: check
@@ -7,20 +8,37 @@ namespace: unionElement
   proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export:  get
     ..raw
   end
-  proc( type.unionElement : auto: U  U : ignore -> ) =>: export: elseVal end
+  proc( type.unionElement : auto: U  U -> U type.unionElementUnion ) =>: export: elseVal
+    U type.unionElementUnion cast
+  end
+
+  proc( type.unionElementPointer : auto: U  U -> U ) =>: prepareIfPtr end
+  proc( type.unionElementPointer : auto: U  U -> bool ) =>: checkPtr
+    [] ..builtIn.check.unionElement
+  end
+  proc( type.unionElementPointer : auto: U  U -> U type.unionElementPtrType ) =>: getPtr
+    U type.unionElementPtrType cast! ## elements are all stored at same address as union
+  end
+  proc( type.unionElementPointer : auto: U  U -> U type.unionElementUnionPtr ) =>: export: elseValPtr
+    U type.unionElementUnionPtr cast
+  end
 end
 overload: merge: export: ?
   ..builtIn.check.unionElement
 end
 overload: merge: export: ..if.prepare
   unionElement.prepareIf
+  unionElement.prepareIfPtr
 end
 overload: merge: export: ..if.check
   ..builtIn.check.unionElement
+  unionElement.checkPtr
 end
 overload: merge: export: ..if.ifVal
   unionElement.get
+  unionElement.getPtr
 end
 overload: merge: export: ..if.elseVal
   unionElement.elseVal
+  unionElement.elseValPtr
 end

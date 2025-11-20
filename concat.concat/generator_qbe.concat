@@ -2428,7 +2428,7 @@ proc(
         CONCAT_ENVP_NAME sb.appendS
         '\n' sb.appendC
       return
-    PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
+    PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64 TYPE_GET_UNION_ELEMENT_UNION
         TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
         TYPE_IS_TYPESET TYPE_IS_RAW_UNION TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_ENUM TYPE_IS_PROC
         TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED TYPE_GET_UNION_ELEMENT
@@ -2929,14 +2929,15 @@ proc(
     pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
     return
   end
-  src typeContext types.isPointer target typeContext types.isPointer & if
+  src typeContext types.isPointer and target typeContext types.isPointer end or
+      src typeContext types.isUnionElement and target typeContext types.isUnion if
     sb
       "%s" sb.appendS
       targetId sb.appendI
       " =l copy %s" sb.appendS
       srcId sb.appendI
       '\n' sb.appendC
-    return ## both are pointer types
+    return ## same internal representation -> cast is no-op
   end
   ## XXX? sign type for cast int <-> ptr
   src typeContext types.isInt target typeContext types.isPointer & if

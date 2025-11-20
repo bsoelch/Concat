@@ -11,10 +11,10 @@ proc( aUnion : u -> ) =>: printU
   u .?Int .if
     "int: ":s io.print
     io.println
-  else u .?Float ._if
+  else .?Float ._if
     "float: ":s io.print
     io.println
-  else
+  else ..drop
     "other":s io.println
   end
 end
