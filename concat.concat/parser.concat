@@ -189,20 +189,22 @@ proc(
   CompilerError list ptr.mut : errors
 -> Constant ) =>: newStringConstant
   using types.
-  str .Array8 ?? "string has type Array8" assert
+  str .?Array8 .else
+    "expected string to have type Array8" ..panic
+  end =:: strArray
   stringType switch
-    DEFAULT case str str .Array8 .length types.primitive.CHAR8 break
-    UTF8    case str str .Array8 .length types.primitive.CHAR8 break
+    DEFAULT case str strArray .length types.primitive.CHAR8 break
+    UTF8    case str strArray .length types.primitive.CHAR8 break
     UTF16 case
       ## TODO? reuse the same buffer for all string conversion
-      0 char16 list.create str .Array8 string.fromBytes utf8.toUTF16 =:: str16
+      0 char16 list.create strArray string.fromBytes utf8.toUTF16 =:: str16
       str16
         list.asSlice string16.fromSlice
       constContext newString16Const str16 .length types.primitive.CHAR16
         str16 list.free ..drop
       break
     UTF32 case
-      0 char32 list.create str .Array8 string.fromBytes  utf8.toUTF32 =:: str32
+      0 char32 list.create strArray string.fromBytes  utf8.toUTF32 =:: str32
       str32
         list.asSlice string32.fromSlice
       constContext newString32Const str32 .length types.primitive.CHAR32
@@ -259,7 +261,7 @@ proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
     end
     state getInterpreter =:: interpreter
     op =:: op1
-    op1@ interpreter .context evaluateOperation .Ok ?? ! if
+    op1@ interpreter .context evaluateOperation .?Ok ? ! if
       "could not evaluate global operation: " sb.copyPtr
         op progContext sb.appendOp
       op .pos errors appendError
@@ -313,19 +315,24 @@ proc(
   interpreter [] .stack list.peek interpreter [] .stackInfo list.peek return
 end
 
-proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> Type bool ) =>: popTypeConstant
+proc( FileState ptr.mut : fileState ParserState ptr.mut : state -> Type optional ) =>: popTypeConstant
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   state peekConst =:: info? =:: value?
-  value? optional.isEmpty if
+  value? .else
     "missing type constant" sb.copyPtr fileState [] .wordStart errors appendError
-    Type .undefined true return
+    Type optional.empty return
+  end [] .?TypeId ? ! if
+    "wrong type for constant expected type" sb.copyPtr info? .if
+      [] .pushedAt
+    else
+      fileState [] .wordStart
+    end errors appendError
+    Type optional.empty return
   end
-  value? .data [] .TypeId ?? ! if
-    "wrong type for constant expected type" sb.copyPtr info? .data [] .pushedAt errors appendError
-    Type .undefined true return
-  end
-  state popConst ..drop .TypeId false return
+  state popConst ..drop .?TypeId .else
+    "stack changed between peek and pop" ..panic
+  end optional.wrap return
 end
 
 proc( BlockInfoData : blockData ParserState ptr.mut : state -> BlockInfoData ptr.mut ) =>: openBlock
@@ -421,11 +428,11 @@ proc( iSize : blockPosition FilePosition : pos ParserState ptr.mut : state -> ) 
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   progContext [] .tmpOps blockPosition list.at .and =:: opData
-      opData .val [] .block ?? if
+      opData .val .?block .if =:: block
     state opCount
       blockPosition - JumpDistance cast
-    opData .val .block .jumpDistance=
-  else
+    block .jumpDistance=
+  else ..drop
     "operations and blocks are out of sync" sb.copyPtr
     pos errors appendError
     return
@@ -439,11 +446,11 @@ proc( iSize slice : blockPositions FilePosition : pos ParserState ptr.mut : stat
   progContext .errors =:: errors
   blockPositions for =:: opPos
     progContext [] .tmpOps opPos list.at .and =:: opData
-        opData .val [] .block ?? if
+        opData .val .?block .if =:: block
       state opCount
         opPos - JumpDistance cast
-      opData .val .block .jumpDistance=
-    else
+      block .jumpDistance=
+    else ..drop
       "operations and blocks are out of sync, expected and got " sb.copyPtr
       pos errors appendError
       return
@@ -463,13 +470,13 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos Parse
       iSize slice.emptyMutable return
     end
     progContext [] .tmpOps opPos list.at .data =:: opData
-    opData [] .val .block ?? ! if
+    opData .val .?block .else ..drop
       "operations and blocks are out of sync, expected and/or got " sb.copyPtr
         opData [] progContext sb.appendOp
       pos errors appendError
       iSize slice.emptyMutable return
-    end
-    opData .val .block [] .blockType switch
+    end =:: blockData
+    blockData [] .blockType switch
       AND case
         true
         mergeWith .DO if BlockType .AND_DO else BlockType .AND_IF end
@@ -477,7 +484,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos Parse
       OR case
         state opCount
           opPos - JumpDistance cast
-        opData .val .block .jumpDistance=
+        blockData .jumpDistance=
         false
         mergeWith .DO if BlockType .OR_DO else BlockType .OR_IF end
       break
@@ -486,7 +493,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos Parse
           opData [] .val .block .blockType sb.appendBlockType
         pos errors appendError
       iSize slice.emptyMutable return
-    end opData .val .block .blockType=
+    end blockData .blockType=
   end list.asMutableSlice
 end
 proc(
@@ -501,11 +508,11 @@ proc(
   typeContext .labelContext =:: labelContext
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
-    block [] .blockData .While ?? and blockLabel id.LABEL_ID_NONE == or
+    block [] .blockData .?While ? and blockLabel id.LABEL_ID_NONE == or
         block [] .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
     end
-    breakType .BREAK and block [] .blockData .Switch ?? and
+    breakType .BREAK and block [] .blockData .?Switch ? and
         blockLabel id.LABEL_ID_NONE == or
         block [] .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
@@ -530,7 +537,7 @@ proc(
   progContext .errors =:: errors
   switchData [] .implicitBreak .if =:: prevBreak
     progContext [] .tmpOps prevBreak list.at .and =:: opData
-    opData .val [] .block ?? and opData .val [] .block .blockType .BREAK if
+    opData .val .?block .and .blockType [] .BREAK if
       opValNOP opData .val=
     else
       "operations and blocks are out of sync" sb.copyPtr
@@ -547,23 +554,21 @@ proc(
     return ## cannot modify and/or in global block
   end
   state peekBlock .and =:: currentBlock
-      currentBlock .blockData [] .Switch ?? if
-    currentBlock .blockData .Switch =:: switchData
+      currentBlock .blockData .?Switch .if =:: switchData
     switchData pos state clearImplicitBreak
     state opCount optional.wrap switchData .implicitBreak=
     BlockType .BREAK currentBlock [] .blockLabel pos opLabeledBlock state appendOp
-  end
+  else ..drop end
 end
 
 proc( string : code FileState ptr.mut : fileState  CompilerError list ptr.mut : errors -> string string ) =>: nextIdentifier
   code
-    fileState nextToken
-    $ .Identifier ?? ! if =:: nameToken
+    fileState nextToken .?Identifier .else =:: nameToken
       "expected identifier got:" sb.copyPtr
         nameToken sb.appendToken
       fileState [] .wordStart errors appendError
       string.empty return
-    end .Identifier
+    end
   return
 end
 ## TODO? restict flag-types depending on id-type
@@ -1511,7 +1516,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         Type .undefined
       else
         ## pop type before reading name
-        fileState state popTypeConstant ..drop
+        fileState state popTypeConstant .else
+          Type .undefined
+        end
       end =:: mut: procType
       ## TODO? ensure global stack is empty at start of procedure
       named if ## =>:
@@ -2030,7 +2037,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ## correct type will be resolved in type-check phase
         progContext newAutoType
       else
-        fileState state popTypeConstant ..drop
+        fileState state popTypeConstant .else
+          Type .undefined
+        end
       end =:: mut: valType
       false =:: mut: allowImmutableDeclaration
       false =:: mut: forceImmutable
@@ -2097,7 +2106,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: idData label=
       idType .TYPE if
         isInit if
-          fileState state popTypeConstant ! "pop type" assert
+          fileState state popTypeConstant .else
+            "could not pop type" ..panic
+          end
           label
           typeContext types.initializeNamedType $ ? if .data else ..drop
             "re-initialization of named type" sb.copyPtr
