@@ -694,7 +694,7 @@ data $cct_50_Ftypes_dPTR__ALIGN = align 8 {l 8}
 export data $cct_io_dFILE__ERR__FILE__ALREADY__EXISTS = align 4 {w 6}
 data $cct_42_Futf16_dSURROGATE__MASK = align 4 {w 64512}
 export data $cct_f32_dSIGN__FLAG = align 4 {w -2147483648}
-export data $cct___VERSION__ = align 8 {l 323}
+export data $cct___VERSION__ = align 8 {l 325}
 data $cct_64_FAMD64_dRDI = align 1 {b 98}
 data $cct_64_FREG__SIZE__SHIFT = align 4 {w 5}
 data $cct_53_Fid_dID__NONE = align 8 {l $cctI_ptr14,l 0,w -1,w 0}
@@ -150417,7 +150417,7 @@ dbgloc 691,7 ## ./concat.concat/identifiers.concat
 dbgloc 691,18 ## ./concat.concat/identifiers.concat
 %s265 =l loadl %l20800
 dbgloc 691,25 ## ./concat.concat/identifiers.concat
-call $cct_appendWarning (l %s265,:struct35 %s264,:struct38 %s263)
+call $cct_appendError (l %s265,:struct35 %s264,:struct38 %s263)
 dbgloc 692,7 ## ./concat.concat/identifiers.concat
 %s266 =w copy -1
 %s267 =l  copy $cctI_constRef6
@@ -250238,7 +250238,7 @@ dbgloc 2621,45 ## ./concat.concat/parser.concat
 jnz %s4287, @label_6066, @label_6081
 @label_6066 ## if
 dbgloc 2622,7 ## ./concat.concat/parser.concat
-%s4288 =l copy 323
+%s4288 =l copy 325
 dbgloc 2622,28 ## ./concat.concat/parser.concat
 dbgloc 2622,28 ## ./concat.concat/parser.concat
 %s4289 =l copy %l92469
