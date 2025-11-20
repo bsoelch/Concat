@@ -178,12 +178,12 @@ namespace: types
     aData [] .labelIndex bData [] .labelIndex != if
       false return
     end
-    aData [] .base bData [] .base unionTypeEqual
+    aData [] .base bData [] .base typeEquals
   end
   proc( UnionElementId : a -> i32 ) =>: export: unionElementHash
     a UnionElementInfo ptr cast =:: aData
     aData [] .labelIndex
-      31 * aData [] .base Type .union typeHash +
+      31 * aData [] .base typeHash +
     return
   end
   proc( EnumId : a EnumId : b -> bool ) =>: export: enumTypeEqual
@@ -885,21 +885,15 @@ namespace: types
     TypeContext ptr.mut : typeContext
   -> bool ) =>: tryComputeSize
     composite switch
-      struct case
-        composite composite .struct typeContext tryComputeTupleSize return
-      union case
-        composite composite .union typeContext tryComputeUnionSize return
-      unionElement case
-        composite composite .unionElement
-          UnionElementInfo ptr cast [] .base
-        typeContext tryComputeUnionSize return
+      struct .case composite >$ typeContext tryComputeTupleSize return
+      union .case composite >$ typeContext tryComputeUnionSize return
       initializer case
         ## tryComputeUnionSize
           composite
           composite .initializer InitializerInfo ptr.mut cast .asTuple TupleId cast
         typeContext tryComputeTupleSize return
       undefined empty autoType genericType rawPointer mutableRawPointer
-      primitiveType intLiteral cType arrayType enum
+      primitiveType intLiteral cType arrayType enum unionElement
       pointer mutablePointer procedure align typeSet
       namedType generatedType case ..unreachable ## XXX? use assertion
     end
@@ -923,14 +917,14 @@ namespace: types
         PTR_SIZE TypeSize .fixed return
       arrayType case
         t context getBaseType context alignOf return
-      struct union initializer unionElement case
+      struct union initializer case
         t context tryComputeSize if
           TypeSize .unknown return
         end
         t context compositeData .Composite =:: compData
         compData [] .alignment TypeSize .fixed return
-      enum case
-        t .enum EnumInfo ptr cast [] .labelType context alignOf return
+      unionElement .case UnionElementInfo ptr cast [] .base context alignOf return
+      enum .case EnumInfo ptr cast [] .labelType context alignOf return
       namedType case
         t context unwrapNamed context alignOf return
       generatedType case
@@ -978,7 +972,7 @@ namespace: types
           GenericArg case baseSize .fixed TypeSize .dynamicArray return
         end
         break
-      struct union initializer unionElement case
+      struct union initializer case
         t context tryComputeSize if
           TypeSize .unknown return
         end
@@ -988,8 +982,8 @@ namespace: types
             compData [] .alignment alignSize
           end
         TypeSize .fixed return
-      enum case
-        t .enum EnumInfo ptr cast .labelType [] aligned context computeSize return
+      unionElement .case UnionElementInfo ptr cast [] .base aligned context computeSize return
+      enum .case EnumInfo ptr cast .labelType [] aligned context computeSize return
       namedType case
         t context unwrapNamed aligned context computeSize return
       generatedType case
@@ -1058,7 +1052,7 @@ namespace: types
     box context unwrapNamed switch
       pointer mutablePointer rawPointer mutableRawPointer arrayType .case
         ArrayData ptr cast [] .base return
-      unionElement .case UnionElementInfo ptr cast [] .base Type .union return
+      unionElement .case UnionElementInfo ptr cast [] .base return
       default Type .undefined return
     end
   end
@@ -1216,7 +1210,7 @@ namespace: types
     Type  : labelType
   ) =:: EnumInfo
   struct(
-    UnionId : base
+    Type : base
     i32  : labelIndex
   ) =:: UnionElementInfo
   proc( Type TypeContext ptr -> bool ) =>: export: isComposite
@@ -1264,8 +1258,7 @@ namespace: types
       switch
         struct .case TupleInfo ptr cast .compositeInfo CompositeData .Composite return
         union .case UnionInfo ptr cast .compositeInfo CompositeData .Composite return
-        unionElement .case UnionElementInfo ptr cast [] .base
-          UnionInfo ptr cast .compositeInfo CompositeData .Composite return
+        unionElement .case UnionElementInfo ptr cast [] .base context compositeData return
         initializer .case
           InitializerInfo ptr cast .asTuple .compositeInfo CompositeData .Composite return
         enum .case EnumInfo ptr cast CompositeData .Enum return
@@ -1406,7 +1399,7 @@ namespace: types
     =:: unionType
     context [] .memory
       ## UnionElementInfo
-        unionType
+        composite
         index
       UnionElementInfo new mixedArena.copyValue =:: elementId
     context .memory=
@@ -1414,7 +1407,7 @@ namespace: types
   end
   proc( Type TypeContext ptr -> Type optional ) =>: export: getUnionElementUnion
     unwrapNamed $ .unionElement ?? if
-      .unionElement UnionElementInfo ptr cast [] .base Type .union optional.wrap
+      .unionElement UnionElementInfo ptr cast [] .base optional.wrap
     else ..drop
       Type optional.empty
     end
@@ -1422,7 +1415,7 @@ namespace: types
   proc( Type TypeContext ptr : context -> Type ) =>: export: getUnionElementType
     context unwrapNamed $ .unionElement ?? if
       .unionElement UnionElementInfo ptr cast =:: element
-      element [] .base Type .union element [] .labelIndex context compositeGetElement
+      element [] .base element [] .labelIndex context compositeGetElement
     else ..drop
       Type .undefined
     end
@@ -2266,7 +2259,7 @@ namespace: types
       true return
     end
     ## allow casting union-element pointer to union pointer
-    allowRename and src context types.getUnionElementUnion .and target typeEquals if
+    allowRename and src context types.getUnionElementUnion .and context unwrapNamed target typeEquals if
       true return
     end
     ## TODO! allow cast  T k array l ptr -> T  k l *  ptr
@@ -2467,7 +2460,7 @@ namespace: types
       true return
     end
     ## allow cast union-element -> union
-    src context types.isUnionElement and src context types.getUnionElementUnion .and target typeEquals if
+    src context types.getUnionElementUnion .and context types.unwrapNamed target typeEquals if
       true return
     end
     forceCast ! if
@@ -2730,7 +2723,7 @@ namespace: sb
           ")" appendS
         return
       unionElement .case types.UnionElementInfo ptr cast =:: element
-        element [] .base Type .union =:: baseType
+        element [] .base =:: baseType
         sb
           baseType context depth appendTypeRecursive
           '.' sb.appendC

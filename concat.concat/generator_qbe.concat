@@ -680,7 +680,9 @@ namespace: sb
         sb t "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       unionElement case
-        sb t typeContext types.getBaseType "union":s storeType .STACK ! context appendCompositeTypeQBE return
+        sb t typeContext types.getUnionElementUnion .data
+          typeContext types.unwrapNamed
+        "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       enum case
         sb t "enum":s storeType .STACK ! context appendCompositeTypeQBE return
