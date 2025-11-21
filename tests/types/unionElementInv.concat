@@ -1,0 +1,19 @@
+union(
+  i32 : i
+  f32 : f
+) =:: aUnion
+proc( aUnion -> bool ) =>: isInt
+  .?f ! .or $ i64 cast f32 cast == end
+end
+proc( aUnion ptr -> bool ) =>: isIntPtr
+  .?f ! .or [] $ i64 cast f32 cast == end
+end
+proc( -> ) =>: main
+  3.0:f32 aUnion .f isInt "3 is int" assert
+  3.14:f32 aUnion .f isInt ! "3.14 is no int" assert
+  2 aUnion .i isInt "int is int" assert
+  2.71:f32 aUnion .f =:: x
+  x@ isIntPtr ! "2.71 is no int" assert
+  5:f32 aUnion .f =:: y
+  y@ isIntPtr "5 is int" assert
+end

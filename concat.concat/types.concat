@@ -1245,8 +1245,8 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isUnion
     unwrapNamed .union ?? return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isUnionElement
-    unwrapNamed .unionElement ?? return
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isUnionElement
+    .unionElement ?? return
   end
   union(
     _ : None

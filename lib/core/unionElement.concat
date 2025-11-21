@@ -1,14 +1,28 @@
 import core/type
 
 namespace: unionElement
-  proc( type.unionElement : auto: U  U -> U ) =>: export: prepareIf end
+  proc( type.unionElement : auto: U  U -> U ) =>: prepareIf end
   proc( type.unionElement : auto: U  U -> bool ) =>: export: check
     ..builtIn.check.unionElement
   end
-  proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export:  get
+  proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: get
     ..raw
   end
-  proc( type.unionElement : auto: U  U -> U type.unionElementUnion ) =>: export: elseVal
+  proc( type.unionElement : auto: U  U -> U type.unionElementUnion ) =>: elseVal
+    U type.unionElementUnion cast
+  end
+
+  ( type.unionElement -> type ) =>: inv end
+  proc( type.unionElement : auto: U  U -> U inv ) =>: invert U inv cast end
+  proc( type.unionElement : auto: U  U inv -> U ) =>: invert2 U cast end
+  proc( type.unionElement : auto: U  U inv -> U inv ) =>: prepareIfInv end
+  proc( type.unionElement : auto: U  U inv -> bool ) =>: checkInv
+    U cast ..builtIn.check.unionElement !
+  end
+  proc( type.unionElement : auto: U  U inv -> U type.unionElementType ) =>: getInv
+    U cast ..raw
+  end
+  proc( type.unionElement : auto: U  U inv -> U type.unionElementUnion ) =>: ifValInv
     U type.unionElementUnion cast
   end
 
@@ -19,9 +33,27 @@ namespace: unionElement
   proc( type.unionElementPointer : auto: U  U -> U type.unionElementPtrType ) =>: getPtr
     U type.unionElementPtrType cast! ## elements are all stored at same address as union
   end
-  proc( type.unionElementPointer : auto: U  U -> U type.unionElementUnionPtr ) =>: export: elseValPtr
+  proc( type.unionElementPointer : auto: U  U -> U type.unionElementUnionPtr ) =>: elseValPtr
     U type.unionElementUnionPtr cast
   end
+
+  ( type : P -> type ) =>: invPtr ( P : val ) end
+  proc( type.unionElementPointer : auto: U  U -> U invPtr ) =>: invertPtr U invPtr new end
+  proc( type.unionElementPointer : auto: U  U invPtr -> U ) =>: invertPtr2 .val end
+  proc( type.unionElementPointer : auto: U  U invPtr -> U invPtr ) =>: prepareIfPtrInv end
+  proc( type.unionElementPointer : auto: U  U invPtr -> bool ) =>: checkPtrInv
+    .val [] ..builtIn.check.unionElement !
+  end
+  proc( type.unionElementPointer : auto: U  U invPtr -> U type.unionElementPtrType ) =>: getPtrInv
+    .val U type.unionElementPtrType cast! ## elements are all stored at same address as union
+  end
+  proc( type.unionElementPointer : auto: U  U invPtr -> U type.unionElementUnionPtr ) =>: ifValPtrInv
+    .val U type.unionElementUnionPtr cast
+  end
+end
+overload: merge: export: !
+  unionElement.invertPtr
+  unionElement.invert
 end
 overload: merge: export: ?
   ..builtIn.check.unionElement
@@ -29,17 +61,25 @@ overload: merge: export: ?
 end
 overload: merge: export: ..if.prepare
   unionElement.prepareIf
+  unionElement.prepareIfInv
   unionElement.prepareIfPtr
+  unionElement.prepareIfPtrInv
 end
 overload: merge: export: ..if.check
   ..builtIn.check.unionElement
+  unionElement.checkInv
   unionElement.checkPtr
+  unionElement.checkPtrInv
 end
 overload: merge: export: ..if.ifVal
   unionElement.get
   unionElement.getPtr
+  unionElement.ifValInv
+  unionElement.ifValPtrInv
 end
 overload: merge: export: ..if.elseVal
   unionElement.elseVal
   unionElement.elseValPtr
+  unionElement.getInv
+  unionElement.getPtrInv
 end
