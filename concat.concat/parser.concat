@@ -1814,8 +1814,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                 [] NO_PROC != if ## append op before poping procedure
                   BlockType .PROCEDURE fileState [] .wordStart opEndBlock  state appendOp
                 end
-              else
-                list.pop ..drop state .currentProcs=
+              else ..drop ## current-procs are empty -> no pop possible
                 "unexpected end of procedure" sb.copyPtr fileState [] .wordStart errors appendError
                 return
               end
