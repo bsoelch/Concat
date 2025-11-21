@@ -624,7 +624,7 @@ namespace: id
       declaredAt
       context
       errors
-    declareName $ .Redeclare ?? if .Redeclare =:: prevId
+    declareName .?Redeclare .if =:: prevId
       context .identifierData prevId .labelId map.at .data =:: prevDec
       prevId .aliasId NO_ALIAS == and
           ## initialization for declaration / declaration for initialized identifier
@@ -690,7 +690,7 @@ namespace: id
         " )" sb.appendS
       declaredAt errors appendError
       LABEL_ID_NONE ID_NONE_DATA true return
-    end ..drop
+    else ..drop end
     ## IdentifierData
       valType
       constVal
@@ -724,7 +724,7 @@ namespace: id
       declaredAt
       context
       errors
-    declareName $ .Redeclare ?? if .Redeclare =:: prevId
+    declareName .?Redeclare .if =:: prevId
       prevId .aliasId NO_ALIAS == if
         context .identifierData prevId .labelId map.at .data [] .declaredAt
       else
@@ -737,7 +737,7 @@ namespace: id
         " )" sb.appendS
       declaredAt errors appendWarning
       true return
-    end ..drop
+    else ..drop end
     false return
   end
   proc(
@@ -767,7 +767,7 @@ namespace: id
         IdentifierType .ITR_VAR
         false
       IdentifierData new
-    map.put .empty ?? "each itr-var has an unique id" assert
+    map.put .?empty ? "each itr-var has an unique id" assert
     idInfo return
   end
   ## label varType pos idContext
@@ -788,7 +788,7 @@ namespace: id
         IdentifierType .TMP_VAR
         false
       IdentifierData new
-    map.put .empty ?? "each tmp-var has an unique id" assert
+    map.put .?empty ? "each tmp-var has an unique id" assert
   end
 end
 namespace: sb
@@ -826,20 +826,20 @@ namespace: sb
   end
   proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext -> stringBuilder ) =>: export: appendIdInfo
     sb
-      id .labelId labelContext id.labelFlags ..swap
-        ..over id.FLAG_EXPORT & ? if
+      id .labelId labelContext id.labelFlags >$
+        $1 id.FLAG_EXPORT & ? if
           "export: " sb.appendS
         end
-        ..over id.FLAG_EXTERN & ? if
+        $1 id.FLAG_EXTERN & ? if
           "extern: " sb.appendS
         end
-        ..over id.FLAG_MUTABLE & ? if
+        $1 id.FLAG_MUTABLE & ? if
           "mutable: " sb.appendS
         end
-        ..over id.FLAG_STATIC & ? if
+        $1 id.FLAG_STATIC & ? if
           "static: " sb.appendS
         end
-      ..swap ..drop
+      >$ ..drop
       ## TODO print namespace
       id .idType switch
         TYPE case
