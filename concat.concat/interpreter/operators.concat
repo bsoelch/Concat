@@ -965,7 +965,7 @@ namespace: interpreter
     else #+valType+# typeContext types.isEnum or valType typeContext types.isUnion _if
       a .?EnumLabel .and =:: aLabel b .?EnumLabel .if =:: bLabel
         aLabel bLabel == false return
-      else ..drop end
+      end
     else valType typeContext types.isPointer _if
       a b typeContext pointerEq return
     end

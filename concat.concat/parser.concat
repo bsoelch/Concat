@@ -432,7 +432,7 @@ proc( iSize : blockPosition FilePosition : pos ParserState ptr.mut : state -> ) 
     state opCount
       blockPosition - JumpDistance cast
     block .jumpDistance=
-  else ..drop
+  else
     "operations and blocks are out of sync" sb.copyPtr
     pos errors appendError
     return
@@ -450,7 +450,7 @@ proc( iSize slice : blockPositions FilePosition : pos ParserState ptr.mut : stat
       state opCount
         opPos - JumpDistance cast
       block .jumpDistance=
-    else ..drop
+    else
       "operations and blocks are out of sync, expected and got " sb.copyPtr
       pos errors appendError
       return
@@ -558,7 +558,7 @@ proc(
     switchData pos state clearImplicitBreak
     state opCount optional.wrap switchData .implicitBreak=
     BlockType .BREAK currentBlock [] .blockLabel pos opLabeledBlock state appendOp
-  else ..drop end
+  end
 end
 
 proc( string : code FileState ptr.mut : fileState  CompilerError list ptr.mut : errors -> string string ) =>: nextIdentifier
@@ -718,7 +718,7 @@ proc(
         ..swap =:: idData ! and
         idData .idType .TYPE and idData .constValue .?TypeId ._if
       []
-    else ..drop
+    else
       false return
     end =:: literalType
     literalType typeContext types.isInt if
@@ -1174,7 +1174,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       opName .length 4 u> =:: hasElse
       opName 0 string.charAt '_' == or opName 1 string.charAt '_' == end =:: autoClose
       state peekBlock .and =:: currentBlock
-        currentBlock .blockData [] .?AndOr .if ## sequence of ands -> allow access to local variables from if-branch
+          currentBlock .blockData [] .?AndOr .if $ .hasOr =:: hasOr
+        ## sequence of ands -> allow access to local variables from if-branch
           BlockType .IF
           fileState [] .wordStart
         state convertAndOrBlock =:: andPositions
@@ -1183,39 +1184,57 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state opCount
           iSize optional.empty
         IfBlockData new currentBlock .blockData .If=
-      else ..drop
+        hasOr
+      else
         ## IfBlockData
           iSize slice.emptyMutable
           state opCount
           iSize optional.empty
         IfBlockData new BlockInfoData .If state openBlock ..drop
-      end
+        false
+      end =:: hasOrIf
+      state peekBlock .else
+        "expected block" ..panic
+      end =:: current
+      current .blockData .?If .else
+        "expected top block to be if" ..panic
+      end =:: ifData
       autoClose if
         state [] .openBlocks $ .length 2 - list.get .and .blockData .?If .and .elsePosition ? if
-          true state peekBlock .data .autoClose=
+          true current .autoClose=
         else
           "'_if' is only allowed in if-else-blocks" sb.copyPtr fileState [] .wordStart errors appendError
         end
       end
-      state peekBlock .data =:: current
       hasDot if
         state fileState [] .wordStart appendDotIfCheck optional.wrap current .tmpVarInfo=
         ## patch if-position after inserting dot-if operations
-        state opCount current .blockData .If .ifPosition=
+        state opCount ifData .ifPosition=
       end
       BlockType .IF  fileState [] .wordStart opBlock  state appendOp
       hasDot if
-        current .tmpVarInfo [] .data =:: varInfo
-        varInfo .varType varInfo .var fileState [] .wordStart opGetId state appendOp
-        "..if.ifVal":s idContext id.findIdentifierByName
-          ! "..if.ifVal" assert
-        =:: ifGet
-        ifGet [] .valueType ifGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
+        current .tmpVarInfo [] .else
+          "expected if-block to have tmp-var" ..panic
+        end =:: varInfo
+        hasOrIf ! if
+          varInfo .varType varInfo .var fileState [] .wordStart opGetId state appendOp
+          "..if.ifVal":s idContext id.findIdentifierByName
+            ! "..if.ifVal" assert
+          =:: ifGet
+          ifGet [] .valueType ifGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
+        else ifData [] .andPositions .length 0 != _if
+          ".if has no effect on if-statements with both `and` and `or` statements" sb.copyPtr
+          fileState [] .wordStart errors appendWarning
+        end
         hasElse if
-          state opCount optional.wrap current .blockData .If .elsePosition=
-          current .blockData .If [] .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
+          state opCount optional.wrap ifData .elsePosition=
+          ifData [] .ifPosition fileState [] .wordStart state setBlockJump
+          ifData [] .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
+          state peekBlock .data current == "top pointer does not change" assert
           BlockType .ELSE fileState [] .wordStart opBlock state appendOp
-          varInfo state fileState [] .wordStart appendElseVal
+          ifData [] .andPositions .length 0 == if
+            varInfo state fileState [] .wordStart appendElseVal
+          end
         end
       end
       return
@@ -1231,7 +1250,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           true andOrData .hasOr=
         end
         andOrData
-      else ..drop ## not already within an and-or chain
+      else ## not already within an and-or chain
         ## AndOrBlockData
           8 iSize list.create ## TODO? pool of short lists for and-or blocks
           isOr
@@ -1253,22 +1272,25 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       return
     else $ "else":s string.eq _if ..drop
-      state peekBlock .and =:: currentBlock
-          currentBlock .blockData .?If .if
-        [] .elsePosition ? if
+      state peekBlock .else
+        "'else' is only allowed in if-blocks" sb.copyPtr fileState [] .wordStart errors appendError
+        return
+      end =:: currentBlock
+      currentBlock .blockData .?If .if
+        $ [] .elsePosition ? if ..drop
           "if block can only contain one 'else' statement" sb.copyPtr fileState [] .wordStart errors appendError
           return
         end
-        currentBlock
       else ..drop
         "'else' is only allowed in if-blocks" sb.copyPtr fileState [] .wordStart errors appendError
         return
-      end =:: blockInfo
-      state opCount optional.wrap blockInfo .blockData .If .elsePosition=
-      blockInfo .blockData .If [] .ifPosition fileState [] .wordStart state setBlockJump
-      blockInfo .blockData .If [] .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
+      end =:: ifBlockData
+      state opCount optional.wrap ifBlockData .elsePosition=
+      ifBlockData [] .ifPosition fileState [] .wordStart state setBlockJump
+      ifBlockData [] .andPositions .length 0 != =:: hasAnd
+      ifBlockData [] .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
       BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
-      blockInfo [] .tmpVarInfo .if
+      hasAnd ! and currentBlock [] .tmpVarInfo .if
         state fileState [] .wordStart appendElseVal
       end
       return
@@ -1339,7 +1361,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           "closed block does not match current block" ..panic
         end BlockType .DO fileState [] .wordStart state convertAndOrBlock
       else iSize slice.emptyMutable end =:: andPositions
-      state peekBlock .and .blockData .?While .else ..drop
+      state peekBlock .and .blockData .?While .else
         "'do' is only allowed in while-blocks" sb.copyPtr fileState [] .wordStart errors appendError
         return
       end =:: whileData
@@ -1356,7 +1378,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .DO  fileState [] .wordStart opBlock  state appendOp
       return
     else $ "finally":s string.eq _if =:: opName
-      state peekBlock .and .blockData .?While .else ..drop
+      state peekBlock .and .blockData .?While .else
         "'finally' is only allowed in while-blocks" sb.copyPtr fileState [] .wordStart errors appendError
         return
       end =:: whileData
@@ -1467,7 +1489,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           BlockType .CASE
         end fileState [] .wordStart opBlock  state appendOp
         return
-      else ..drop
+      else
         "'case' is only allowed in switch-blocks" sb.copyPtr fileState [] .wordStart errors appendError
         return
       end
@@ -1487,7 +1509,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state opCount switchData .prevCasePosition=
         BlockType .DEFAULT fileState [] .wordStart opBlock  state appendOp
         return
-      else ..drop
+      else
         "'default' is only allowed in switch-case-blocks" sb.copyPtr fileState [] .wordStart errors appendError
         return
       end
@@ -1759,10 +1781,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               fileState [] .wordStart state setBlockJump
             else
               ifData .ifPosition fileState [] .wordStart state setBlockJump
+              ifData .andPositions .length 0 != =:: hasAnd
               ifData .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
               BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
               1:JumpDistance state peekOp .if .val .block .jumpDistance= else ..drop end
-              closedBlock .tmpVarInfo .if
+              hasAnd ! and closedBlock .tmpVarInfo .if
                 state fileState [] .wordStart appendElseVal
               end
             end
@@ -1915,7 +1938,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state opCount optional.wrap typeData .arrowPosition=
         end
         typeData
-      else ..drop
+      else
         "unexpected `" sb.copyPtr
           opName sb.appendStr
           "` statement" sb.appendS

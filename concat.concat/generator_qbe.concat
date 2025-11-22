@@ -4460,7 +4460,7 @@ proc(
           newSb return
         AND OR case
           blockVal .blockType .OR =:: isOr
-          context [] .openBlocks list.peek .and .?AndOr .else ..drop
+          context [] .openBlocks list.peek .and .?AndOr .else
             ## start if block if not already open
             blockVal .blockId context openAndOrBlock
             context [] .openBlocks list.peek .data .AndOr

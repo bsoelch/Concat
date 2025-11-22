@@ -2480,7 +2480,7 @@ proc(
         $ typeContext types.isType and container .value .?TypeId .if =:: typeId ..drop
           true isType=
           typeId
-        else ..drop $ typeContext types.isPointer _if
+        else $ typeContext types.isPointer _if
            true isPtr=
            $ typeContext types.isMutable mutable=
            typeContext types.ptrTarget
@@ -2785,7 +2785,7 @@ proc(
               idContext id.openScope
               op .val .block .jumpDistance iSize cast.u return
             end
-          else ..drop end
+          end
           ## requireTypes
             types.primitive.BOOL@ slice.wrap
             "and/or-condition":s
@@ -2841,7 +2841,7 @@ proc(
               else
                 op .val .block .jumpDistance iSize cast.u
               end return
-            else ..drop end
+            end
             state .stack branchTree.startBranch =:: ifBranch
             state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
             ifBranch blockId op .pos newIfBlock =:: mut: ifBlock
@@ -3122,7 +3122,7 @@ proc(
           false state .reachable=
           0 return
         CASE DOT_CASE DEFAULT case
-          state peekBlock .and .?Switch .else ..drop
+          state peekBlock .and .?Switch .else
             "unexpected " sb.copyPtr
               blockType sb.appendBlockType
               ", " sb.appendS
@@ -3344,7 +3344,7 @@ proc(
           op state appendOp ..drop
           0 return
         AND_DO OR_DO case
-          state peekBlock .and .?While .else ..drop
+          state peekBlock .and .?While .else
             "unexpected " sb.copyPtr
               blockType sb.appendBlockType
               "-statement, " sb.appendS
@@ -3388,7 +3388,7 @@ proc(
           0 return
         DO case
           state peekBlock =:: currentBlock?
-          currentBlock? .and .?While .else ..drop
+          currentBlock? .and .?While .else
             "unexpected " sb.copyPtr
               BlockType .DO sb.appendBlockType
               "-statement, " sb.appendS
@@ -3485,7 +3485,7 @@ proc(
           op state appendOp ..drop
           0 return
         FINALLY case
-          state peekBlock .and .?While .else ..drop
+          state peekBlock .and .?While .else
             "unexpected " sb.copyPtr
               BlockType .FINALLY sb.appendBlockType
               "-statement, '" sb.appendS
@@ -3583,7 +3583,7 @@ proc(
               BranchPoint new list.append
             branches =[]
             andOrBlock [] .blockId
-          else ..drop
+          else
             state [] .compiledOps .length i32 cast.u program createAndOrData =:: blockId
             blockId op@ .val .block .blockId=
             state .stack branchTree.startBranch =:: rootBranch
@@ -4109,7 +4109,7 @@ proc(
           op .pos errors appendError
         end
         0 return
-      else ..drop end
+      end
       ## requireTypes
         types.primitive.BOOL@ slice.wrap
         "assertion":s
@@ -4496,7 +4496,14 @@ proc(
   idContext id.openScope
   codeImpl [] .code =:: code
   0:iSize while $ code .length u< do
-    code $1 [] state typeCheckOp +
+    code $1 [] state typeCheckOp
+      $ 0x8000'0000 u>= if ..drop
+        64 sb.create
+          code $2 [] program sb.appendOp
+        io.stdOut >$ io.fputSb
+        "negative jump distance" ..panic
+      end
+    +
   finally 1 + end ..drop
   ## TODO? compile exported procedure normally
   state [] .isUnusedProc ! and currentProc [] .isStatic ! if
