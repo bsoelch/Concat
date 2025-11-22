@@ -1230,9 +1230,16 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isEnum
     unwrapNamed .enum ?? return
   end
-  ## TODO change name: enum can no longer hold values (? isEnumOrUnion)
-  ## * check usage: should enum be matched by this function
+  proc( Type TypeContext ptr -> bool ) =>: export: isUnion
+    unwrapNamed .union ?? return
+  end
+  ## temporary name from isTaggedUnion while transitioning from old implementation
   proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isTaggedUnion
+    typeContext unwrapNamed .?union .if
+      UnionInfo ptr cast [] .labelType .?empty ? ! return
+    else ..drop false return end
+  end
+  proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isEnumOrTaggedUnion
     typeContext unwrapNamed switch
       enum case true return
       union .case UnionInfo ptr cast [] .labelType .empty ?? ! return
@@ -1242,8 +1249,10 @@ namespace: types
          false return
     end
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isUnion
-    unwrapNamed .union ?? return
+  proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isRawUnion
+    typeContext unwrapNamed .?union .if
+      UnionInfo ptr cast [] .labelType .?empty ? return
+    else ..drop false return end
   end
   proc( Type TypeContext ptr : context -> bool ) =>: export: isUnionElement
     .unionElement ?? return

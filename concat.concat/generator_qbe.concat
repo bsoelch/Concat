@@ -1932,7 +1932,7 @@ proc(
   i32 : tmpId
   sb
     "## switch\n" sb.appendS
-    switchType typeContext types.isTaggedUnion if
+    switchType typeContext types.isEnumOrTaggedUnion if
       ## loadEnumLabel
         switchType
         valId
@@ -3725,7 +3725,7 @@ proc(
       return
     hasElement case
       op [] .dataType =:: containerType
-      containerType typeContext types.isTaggedUnion ! if
+      containerType typeContext types.isEnumOrTaggedUnion ! if
         break
       end
       op [] .pos context popValue =:: srcId

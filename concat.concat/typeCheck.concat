@@ -1409,7 +1409,7 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   OP_UNLINKED =:: mut: onRead
-  isWrite ! and isUnionGet ! and containerType typeContext types.isTaggedUnion if
+  isWrite ! and isUnionGet ! and containerType typeContext types.isEnumOrTaggedUnion if
     containerType elementIndex pos opCheckEnum state appendOp onRead=
     true program .hasCheckEnum=
   end
@@ -1437,7 +1437,7 @@ proc(
       pos errors appendError
     end
     targetType typeContext types.isEmpty and
-        containerType typeContext types.isTaggedUnion ! if
+        containerType typeContext types.isEnumOrTaggedUnion ! if
       ## discard container and argument from stack
       2 pos state discardValues
       return
@@ -1458,8 +1458,8 @@ proc(
       srcType
       elementIndex
       pos
-    containerType typeContext types.isTaggedUnion if
-      opSetEnumElement
+    containerType typeContext types.isEnumOrTaggedUnion if
+      opSetEnumElement ## TODO? rename to set union element, make set-element on enum an error
     else
       opSetElement
     end =:: newOp
@@ -1559,7 +1559,7 @@ proc(
       label
     constantEquals if
       "duplicate label " sb.copyPtr
-        switchData [] .switchType typeContext types.isTaggedUnion if
+        switchData [] .switchType typeContext types.isEnumOrTaggedUnion if
           ## appendLabelName
             switchData [] .switchType
             label .EnumLabel typeContext types.compositeGetLabel
@@ -1615,7 +1615,7 @@ proc(
   end
   ## operation after switch -> don't allow break statement
   false switchBlock .allowBreak=
-  switchType typeContext types.isTaggedUnion ! if
+  switchType typeContext types.isEnumOrTaggedUnion ! if
     ## TODO? allow use of Interpreter in switch labels
     op [] .val .Constant ?? if
       ## newSwitchLabel
@@ -2560,7 +2560,7 @@ proc(
         true ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
         0 return
       else accessType .CHECK_ENUM _if
-        isType or containerType typeContext types.isTaggedUnion ! if
+        isType or containerType typeContext types.isEnumOrTaggedUnion ! if
           "type " sb.copyPtr
             isType ! if
               containerType typeContext sb.appendType
@@ -2637,7 +2637,7 @@ proc(
       end
       label? .data =:: label
       label [] .valueType =:: enumType
-      enumType typeContext types.isTaggedUnion ! if
+      enumType typeContext types.isEnumOrTaggedUnion ! if
         "wrong argument type for getEnumLabel expected enum got " sb.copyPtr
           enumType typeContext sb.appendType
         op .pos errors appendError
@@ -3105,7 +3105,7 @@ proc(
           end
           value? .data [] .valueType =:: switchType
           switchType typeContext types.isIntOrChar ! and
-              switchType typeContext types.isTaggedUnion ! if
+              switchType typeContext types.isEnumOrTaggedUnion ! if
             "cannot switch values of type " sb.copyPtr
               switchType typeContext sb.appendType
             op .pos errors appendError
@@ -3823,7 +3823,7 @@ proc(
               JumpDistance cast
             switchData .defaultJumpDistance=
             tmp state appendOp ..drop
-            switchBlock [] .switchType typeContext types.isTaggedUnion if
+            switchBlock [] .switchType typeContext types.isEnumOrTaggedUnion if
               switchBlock [] .switchType
                 typeContext
               types.compositeEltCount =:: eltCount

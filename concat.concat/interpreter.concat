@@ -2696,10 +2696,9 @@ proc(
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      value .TypeId ??
-          and value .TypeId typeContext types.isEnum
-          or value .TypeId typeContext types.isTaggedUnion if
-        value .TypeId true
+      value .?TypeId .and =:: typeId
+          typeId typeContext types.isEnumOrTaggedUnion if
+        typeId true
       else
         valInfo .valueType false
       end  =:: isType =:: containerType
@@ -2782,7 +2781,7 @@ proc(
         op [] .val .hasElement
       else
         op [] .val .hasLabel =:: labelId
-        valInfo .valueType typeContext types.isTaggedUnion ! if
+        valInfo .valueType typeContext types.isEnumOrTaggedUnion ! if
           value valInfo context unpopValue
           "unexpected type for hasLabel: " sb.copyPtr
             valInfo .valueType typeContext sb.appendType
