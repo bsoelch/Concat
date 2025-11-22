@@ -67,13 +67,12 @@ struct(
   bool : isStatic
 ) =:: export: ProcedureInfo
 proc( ProcedureInfo : p -> ) =>: freeProcedure
-  p .implementation .code ?? if
-    p .implementation .code =:: impl
+  p .implementation .?code .if =:: impl
     impl .code slice.free ..drop
     impl .implementations for
       .code slice.free ..drop
     end
-  end
+  else ..drop end
 end
 struct(
   ConstValue slice : autoArgs
@@ -456,15 +455,13 @@ struct(
 
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export: LabelData
 proc( ConstValue : label -> i64 ) =>: export: switchLabelAsInt
-  label .Int ?? if
-    label .Int return
-  end
-  label .Char ?? if
-    label .Char i64 cast.u return
-  end
-  label .EnumLabel ?? if
-    label .EnumLabel i64 cast.u return
-  end
+  label .?Int .if
+    return
+  else .?Char ._if
+    i64 cast.u return
+  else .?EnumLabel ._if
+    i64 cast.u return
+  else ..drop end
   ## TODO? more usefull error message?
   "unexpected constant-type in switch statement" ..panic
 end
@@ -1131,11 +1128,12 @@ namespace: sb
     "## global:\n" sb.appendS
     prog [] .globalOps for prog sb.appendOp end
     prog [] .procedures for =:: proc
-      proc .implementation .code ?? ! if continue end
+      proc .implementation .?code .else
+        ..drop continue
+      end =:: impl
       "## "          sb.appendS
       proc .labelId labelContext sb.appendLabelPath
       '\n'           sb.appendC
-      proc .implementation .code =:: impl
       impl .codeState .UNUSED if continue end ## ignore unused procs
       impl .code for prog sb.appendOp end
       '\n' sb.appendC

@@ -74,7 +74,7 @@ proc(
   optimizerFlags.ALLOW_INLINE ! if false return end
   ## TODO allow inlining of small procedures when ALLOW_INLINE_SMALL is set
   program [] .procedures callInfo .procId i64 cast.u @[] =:: procData
-  procData [] .isStatic or procData .implementation [] .code ?? ! or
+  procData [] .isStatic or procData .implementation [] .?code ? ! or
       procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? if
     false return
   end
@@ -93,7 +93,7 @@ proc(
   typeContext .labelContext =:: labelContext
   program [] .procedures
     callInfo .procId i64 cast.u @[] .implementation []
-  .code ?? "only code-procs are inlined" assert
+  .?code ? "only code-procs are inlined" assert
   callInfo program calledProcOps =:: procOps
   "Inlining procedures is currently experimental" sb.copyPtr pos program .errors appendWarning
   context [] .inlineCount
@@ -120,20 +120,20 @@ proc(
   finally i 1 - end ..drop
   procOps 1:iSize $1 .length 2:iSize - slice.getSlice for =:: mut: op
     ## TODO? move remapping to compileOp ( flag to check if within inlined proc )
-    op .val .Return ?? if
+    op .val .?Return ? if
       inlineId op@ .val .InlineReturn=
       op list.append
       continue
-    else op .val .getId ?? _if
-      remapLabels@ op .val .getId .labelId map.get =:: newName?
+    else op .val .?getId ._if .labelId =:: label
+      remapLabels@ label map.get =:: newName?
       newName? optional.hasData if newName? .data op@ .val .getId= end
-    else op .val .setId ?? _if
-      remapLabels@ op .val .setId .labelId map.get =:: newName?
+    else .?setId ._if .labelId =:: label
+      remapLabels@ label map.get =:: newName?
       newName? optional.hasData if newName? .data op@ .val .setId= end
-    else op .val .atId ?? _if
-      remapLabels@ op .val .atId .labelId map.get =:: newName?
+    else .?atId ._if .labelId =:: label
+      remapLabels@ label map.get =:: newName?
       newName? optional.hasData if newName? .data op@ .val .atId= end
-    end
+    else ..drop end
     op context compileOp
   end
   BlockType .INLINE_PROCEDURE pos opEndBlock list.append
@@ -183,12 +183,7 @@ proc(
       newOps
         op list.append ## nothing to change
       return
-    declareId initializeId case
-      op .val .declareId ?? if
-        op .val .declareId
-      else
-        op .val .initializeId
-      end =:: idInfo
+    declareId initializeId .case =:: idInfo
       context [] .variables
         ## VariableInfo
           op .dataType
@@ -254,28 +249,29 @@ proc(
           tmpId
           op .pos
         opAtId list.append
-        op .val .NewEnum ?? if
-          op .dataType op .val .NewEnum op .pos opNewEnumReference list.append
-        else
+        op .val .?NewEnum .if
+          op .dataType >$ op .pos opNewEnumReference list.append
+        else ..drop
           op .dataType op .pos opNewReference list.append
         end
       return
     call callPtr case
-      op .val .call ?? and op .val .call program shouldInlineCall if
-        newOps op .val .call op .pos context inlineCall return
+      op .val .?call .and =:: callVal
+          callVal program shouldInlineCall if
+        newOps callVal op .pos context inlineCall return
       end
       op .dataType
-        ..dup typeContext types.isPointer if
+        $ typeContext types.isPointer if
           typeContext types.getBaseType
         end
       =:: calledType
       ## special handling for pointer-call procedures
       _BACKEND_ .QBE if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
         calledType typeContext types.getProcOutArgs =:: outArgs
-        op .val .callPtr ?? if
+        op@ .val .?callPtr .if
           ## remember number of out-args in call operation
-          outArgs .length op@ .val .callPtr .outArgCount=
-        end
+          outArgs .length >$ .outArgCount=
+        else ..drop end
         newOps
           outArgs for =:: arg
             arg typeContext types.isEmpty if
@@ -296,11 +292,11 @@ proc(
           op list.append
         return
       end
-      op .val .callPtr ?? if
-        op .val .callPtr program getPtrCallData
-      else
-        op .val .call program getCallData
-      end =:: callData
+      op .val .?callPtr .if
+        program getPtrCallData
+      else .?call ._if
+        program getCallData
+      else ..unreachable end =:: callData
       calledType typeContext types.getCallConvention .PTRCALL =:: isPtrCall
       calledType typeContext types.getProcOut .data =:: outTypes
       false =:: mut: hasLabel
@@ -514,15 +510,14 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     list.clear
   program .tmpOps=
   program [] .procedures list.atItr for =:: currentProc
-    currentProc [] .implementation .code ?? ! or
-        currentProc [] .isStatic if
+    currentProc [] .isStatic if continue end
+    currentProc .implementation .?code .else ..drop
       continue
-    end
+    end =:: impl
     currentProc [] .fileId context .currentFile=
     program [] .progFiles
       currentProc [] .fileId i64 cast
     list.at .data =:: f
-    currentProc .implementation .code =:: impl
     currentProc [] .hasStaticArg if
       impl [] .implementations list.atItr for =:: currentImpl
         currentImpl .codeState [] .UNUSED if
@@ -552,10 +547,10 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   ## create implementations for built-in procedure-pointers
   program [] .procedures .length for =:: procId
     program [] .procedures procId list.at .data =:: currentProc
-    currentProc [] .implementation .builtIn ?? ! if
+    currentProc .implementation .?builtIn .else ..drop
       break ## built-ins at start of procedure list
-    end
-    currentProc [] .implementation .builtIn .hasPtr ! if
+    end =:: builtInImpl
+    builtInImpl [] .hasPtr ! if
       continue
     end
     currentProc [] .labelId labelContext id.labelPos .data =:: pos
@@ -571,7 +566,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       opImplementProc list.append
       ## opBuiltIn
         currentProc [] .procType
-        currentProc .implementation .builtIn [] .builtIn
+        builtInImpl [] .builtIn
         pos
       opBuiltIn list.append
       currentProc [] .procType pos opReturn list.append

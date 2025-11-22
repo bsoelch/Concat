@@ -89,26 +89,12 @@ proc(
 end
 
 proc( Operation ptr : op ProgramContext ptr.mut : prog Type i32 hashMap ptr.mut : visited Type list ptr.mut : types -> ) =>: addOpType
-  op [] .val .initializeId ?? op [] .val .declareId ?? | if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .implementProcedure ?? _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .Cast ?? op [] .val .Cast! ?? | _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .New ?? _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .typeInfo ?? _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .Constant ?? _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .NewEnum ?? _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .NewReference ?? _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .NewEnumReference ?? _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
-  else op [] .val .ConstantReference ?? _if
-    op [] .dataType 0 op [] .pos prog visited types declaredType
+  op [] .val switch
+    initializeId declareId implementProcedure Cast Cast! New typeInfo Constant
+    NewEnum NewReference NewEnumReference ConstantReference case
+      op [] .dataType 0 op [] .pos prog visited types declaredType
+    break
+    default break
   end
 end
 
@@ -133,8 +119,9 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     op@ prog visited@ types@ addOpType
   end
   prog [] .procedures for =:: proc
-    proc .implementation .code ?? ! if continue end
-    proc .implementation .code =:: impl
+    proc .implementation .?code .else
+      ..drop continue
+    end =:: impl
     impl .codeState .UNUSED if continue end
     impl .codeState .COMPILED if
       impl .code for =:: op
