@@ -39,7 +39,7 @@ proc( string : path -> ) =>: printUsage
     "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
     "  -W: treat warnings as errors\n" sb.appendS
     "  -v: vebose mode\n" sb.appendS
-    "  -S: compile generated code\n" sb.appendS
+    "  -S: only emmit assembly (QBE-IR for QBE backend)\n" sb.appendS
     "  -R: run compiled code\n" sb.appendS
     "  --no-core: don't include libray core by default \n" sb.appendS
     io.stdOut ..over io.fputSb ..drop
