@@ -2496,7 +2496,7 @@ proc(
         containerType
         labelId
         typeContext
-      types.compositeFindLabel $ optional.hasData if .data else ..drop
+      types.compositeFindLabel .else
         accessType .CHECK if
           ## label does not exists
           1 op .pos state discardValues ## remove container
@@ -2515,6 +2515,15 @@ proc(
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
       isWrite ! and isType ! and accessType .GET and containerType typeContext types.isEnum if
         LabelAccessType .CHECK_ENUM accessType=
+      end
+      accessType .UNION_GET and isType or containerType typeContext types.isTaggedUnion ! if
+        "unsupported type for union-get expected tagged union got: " sb.copyPtr
+          srcType typeContext sb.appendType
+        op .pos errors appendError
+      #+else accessType .GET and isType ! and containerType typeContext types.isTaggedUnion _if
+        "raw access to elements of tagged unions is deprecated use `.?Name` instead of `.Name` " sb.copyPtr
+          srcType typeContext sb.appendType
+        op .pos errors appendWarning+#
       end
       accessType .CHECK if
         ## label exists
