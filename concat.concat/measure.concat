@@ -28,26 +28,26 @@ proc(
   else ..drop end
   visited declared ptrLevel map.put ..drop
   declared switch
-    undefined empty primitiveType autoType genericType cType intLiteral align typeSet case
+    Undefined Empty PrimitiveType AutoType GenericType CType IntLiteral Align TypeSet case
       break
-    pointer mutablePointer rawPointer mutableRawPointer case
+    Pointer MutablePointer RawPointer MutableRawPointer case
       declared typeContext types.getBaseType ptrLevel 1 + pos prog visited types declaredType
       types []
         declared list.append
       types =[]
       break
-    arrayType case
+    ArrayType case
       declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
       types []
         declared list.append
       types =[]
       break
-    enum case
+    Enum case
       types []
         declared list.append
       types =[]
       break
-    struct union RawUnion initializer case
+    Struct Union RawUnion Initializer case
       declared typeContext types.compositeElts =:: elts
       elts for
         ptrLevel pos prog visited types declaredType
@@ -56,13 +56,13 @@ proc(
         declared list.append
       types =[]
       break
-    unionElement case
+    UnionElement case
       declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
       types []
         declared list.append
       types =[]
       break
-    procedure case
+    Procedure case
       declared typeContext types.getProcIn .data for
         ptrLevel pos prog visited types declaredType
       end
@@ -72,13 +72,13 @@ proc(
       ## don't add procedure type to list of declared types
       ## type declaration of proc-pointer will be covered by surrounding pointer type
       break
-    namedType case
+    NamedType case
       declared typeContext types.unwrapNamed ptrLevel pos prog visited types declaredType
       types []
         declared list.append
       types =[]
       break
-    generatedType case
+    GeneratedType case
       declared typeContext types.getGeneratedType ptrLevel pos prog visited types declaredType
       types []
         declared list.append

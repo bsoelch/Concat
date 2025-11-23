@@ -202,7 +202,7 @@ proc( -> OpValue ) =>: export: opValNOP
   NopType .EMPTY OpValue .NOP return
 end
 proc( FilePosition : pos -> Operation ) =>: export: reserveOp
-  NopType .RESERVED OpValue .NOP Type .undefined pos Operation new return
+  NopType .RESERVED OpValue .NOP Type .Undefined pos Operation new return
 end
 proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export: opConst
   constValue OpValue .Constant constType pos Operation new return
@@ -211,26 +211,26 @@ proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation )
   constValue OpValue .StaticConstant constType pos Operation new return
 end
 proc( ProcId : id FilePosition : pos -> Operation ) =>: export: opNestedProc
-  id OpValue .NestedProc Type .undefined pos Operation new return
+  id OpValue .NestedProc Type .Undefined pos Operation new return
 end
 
 proc( BlockType FilePosition : pos -> Operation ) =>: export: opBlock
   id.LABEL_ID_NONE
     -1:BlockId
     0:JumpDistance
-  BlockData new OpValue .block Type .undefined pos Operation new return
+  BlockData new OpValue .block Type .Undefined pos Operation new return
 end
 proc( BlockType LabelId : label FilePosition : pos -> Operation ) =>: export: opLabeledBlock
   label
     -1:BlockId
     0:JumpDistance
-  BlockData new OpValue .block Type .undefined pos Operation new return
+  BlockData new OpValue .block Type .Undefined pos Operation new return
 end
 proc( BlockType FilePosition : pos -> Operation ) =>: export: opEndBlock
   id.LABEL_ID_NONE
     -1:BlockId
     0:JumpDistance
-  BlockData new OpValue .blockEnd Type .undefined pos Operation new return
+  BlockData new OpValue .blockEnd Type .Undefined pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGetId
   =:: pos
@@ -277,18 +277,18 @@ proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opHa
   index OpValue .hasElement base pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetLabel
-  OpValue .getLabel Type .undefined pos Operation new return
+  OpValue .getLabel Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetUnionLabel
-  OpValue .getUnionLabel Type .undefined pos Operation new return
+  OpValue .getUnionLabel Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opSetLabel
   =:: pos
-  OpValue .setLabel Type .undefined pos Operation new return
+  OpValue .setLabel Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opExistsLabel
   =:: pos
-  OpValue .existsLabel Type .undefined pos Operation new return
+  OpValue .existsLabel Type .Undefined pos Operation new return
 end
 proc( Type FilePosition -> Operation ) =>: export: opReturn
   =:: pos
@@ -296,11 +296,11 @@ proc( Type FilePosition -> Operation ) =>: export: opReturn
 end
 proc( FilePosition -> Operation ) =>: export: opEqual
   =:: pos
-  EqualityOperator .EQ OpValue .equalityOperator Type .undefined pos Operation new return
+  EqualityOperator .EQ OpValue .equalityOperator Type .Undefined pos Operation new return
 end
 proc( FilePosition -> Operation ) =>: export: opNotEqual
   =:: pos
-  EqualityOperator .NEQ OpValue .equalityOperator Type .undefined pos Operation new return
+  EqualityOperator .NEQ OpValue .equalityOperator Type .Undefined pos Operation new return
 end
 proc( Type FilePosition -> Operation ) =>: export: opNew
   =:: pos
@@ -319,32 +319,32 @@ proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnumReference
   OpValue .NewEnumReference ..swap pos Operation new return
 end
 proc( Type : target SignType : sign FilePosition : pos -> Operation ) =>: export: opCast
-   Type .undefined sign CastInfo new OpValue .Cast target pos Operation new return
+   Type .Undefined sign CastInfo new OpValue .Cast target pos Operation new return
 end
 proc( Type : target FilePosition : pos -> Operation ) =>: export: opCast!
-   Type .undefined OpValue .Cast! target pos Operation new return
+   Type .Undefined OpValue .Cast! target pos Operation new return
 end
 proc( Type : target FilePosition : pos -> Operation ) =>: export: opBitCast
-   Type .undefined OpValue .bitCast target pos Operation new return
+   Type .Undefined OpValue .bitCast target pos Operation new return
 end
 proc( Type : src i32 : offset Type : target FilePosition : pos -> Operation ) =>: export: opAutoCast
    src offset AutoCastInfo new OpValue .autoCast target pos Operation new return
 end
 proc( i32 StackModType FilePosition -> Operation ) =>: export: opStackMod
   =:: pos
-  StackModification new OpValue .stackMod Type .undefined pos Operation new return
+  StackModification new OpValue .stackMod Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opCallPtr
-  -1:iSize NO_CALL_DATA PointerCall new OpValue .callPtr Type .undefined pos Operation new return
+  -1:iSize NO_CALL_DATA PointerCall new OpValue .callPtr Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opLength
   OpValue .length types.I_SIZE pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opRawValue
-  OpValue .rawValue Type .undefined pos Operation new return
+  OpValue .rawValue Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opGetEnumLabel
-  OpValue .getEnumLabel Type .undefined pos Operation new return
+  OpValue .getEnumLabel Type .Undefined pos Operation new return
 end
 proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export: opTypeInfo
   infoType OpValue .typeInfo t pos Operation new return
@@ -362,23 +362,23 @@ proc( Type : t FilePosition : pos -> Operation ) =>: export: opCopy
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opGetName
   =:: pos
-  OpValue .getName Type .undefined pos Operation new return
+  OpValue .getName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opAtName
-  OpValue .atName Type .undefined pos Operation new return
+  OpValue .atName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opSetName
-  OpValue .setName Type .undefined pos Operation new return
+  OpValue .setName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opExistsName
-  OpValue .existsName Type .undefined pos Operation new return
+  OpValue .existsName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opDeclareName
-  OpValue .declareName Type .undefined pos Operation new return
+  OpValue .declareName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos  -> Operation ) =>: export: opInitializeName
   InitType .FIXED NameInitInfo new OpValue .initializeName
-    Type .undefined
+    Type .Undefined
   pos Operation new return
 end
 proc( Type : valType LabelId FilePosition : pos  -> Operation ) =>: export: opAutoTypedInitializeName
@@ -388,40 +388,40 @@ proc( Type : valType LabelId FilePosition : pos  -> Operation ) =>: export: opAu
 end
 proc( LabelId : src LabelId : alias FilePosition : pos  -> Operation ) =>: export: opUsingNamespace
   src alias NameAliasInfo new OpValue .usingNamespace
-    Type .undefined
+    Type .Undefined
   pos Operation new return
 end
 proc( LabelId : src LabelId : alias FilePosition : pos  -> Operation ) =>: export: opUsingIdentifier
   src alias NameAliasInfo new OpValue .usingIdentifier
-    Type .undefined
+    Type .Undefined
   pos Operation new return
 end
 proc( TypeModifier FilePosition  -> Operation ) =>: export: opTypeModifier
   =:: pos
-  OpValue .typeModifier Type .undefined pos Operation new return
+  OpValue .typeModifier Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opPanic
-  OpValue .panic Type .undefined pos Operation new return
+  OpValue .panic Type .Undefined pos Operation new return
 end
 proc( string : message FilePosition : pos -> Operation ) =>: export: opPanicWithMessage
-  message OpValue .panicWithMessage Type .undefined pos Operation new return
+  message OpValue .panicWithMessage Type .Undefined pos Operation new return
 end
 proc(
   FilePosition : pos
 -> Operation ) =>: export: opAssert
-  OpValue .Assert Type .undefined pos Operation new return
+  OpValue .Assert Type .Undefined pos Operation new return
 end
 proc(
   string : message
   FilePosition : pos
 -> Operation ) =>: export: opRuntimeAssert
-  message OpValue .RuntimeAssert Type .undefined pos Operation new return
+  message OpValue .RuntimeAssert Type .Undefined pos Operation new return
 end
 proc(
   ErrorType : errorType
   FilePosition : pos
 -> Operation ) =>: export: opError
-  errorType OpValue .Error Type .undefined pos Operation new return
+  errorType OpValue .Error Type .Undefined pos Operation new return
 end
 proc(
   i32 : count
@@ -432,18 +432,18 @@ proc(
     count depth StackTypesInfo new
       CompilerInfo .typeInfo
     OpValue .compilerInfo
-    Type .undefined
+    Type .Undefined
     pos
   Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export: opStackInfo
-  count CompilerInfo .stackInfo OpValue .compilerInfo Type .undefined  pos Operation new return
+  count CompilerInfo .stackInfo OpValue .compilerInfo Type .Undefined  pos Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export: opPrintCompiledOps
-  count CompilerInfo .compiledOps OpValue .compilerInfo Type .undefined  pos Operation new return
+  count CompilerInfo .compiledOps OpValue .compilerInfo Type .Undefined  pos Operation new return
 end
 proc( LabelId : name FilePosition : pos -> Operation ) =>: export: opPrintIdentifierMatches
-  name CompilerInfo .find OpValue .compilerInfo Type .undefined  pos Operation new return
+  name CompilerInfo .find OpValue .compilerInfo Type .Undefined  pos Operation new return
 end
 
 struct(

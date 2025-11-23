@@ -30,7 +30,7 @@ namespace: interpreter
     ConstValue ..length 23:iSize == "no new constants" assert
     a switch
       TypeId case a .TypeId false return
-      default Type .undefined true return
+      default Type .Undefined true return
     end
   end
 
@@ -510,14 +510,14 @@ namespace: interpreter
         k 1 == "correct number of arguments" assert
         args 0 [] .?TypeId .else
           "argument is no type" ..panic
-        end typeContext types.unwrapNamed .?cType ?
+        end typeContext types.unwrapNamed .?CType ?
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_ALIGN case
         k 1 == "correct number of arguments" assert
         args 0 [] .?TypeId .else
           "argument is no type" ..panic
-        end  typeContext types.unwrapNamed .?align ?
+        end  typeContext types.unwrapNamed .?Align ?
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_MUTABLE case
@@ -532,7 +532,7 @@ namespace: interpreter
         args 0 [] .?TypeId .else
           "argument is no type" ..panic
         end typeContext types.unwrapNamed
-          .?undefined ? ! ConstValue .Bool
+          .?Undefined ? ! ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_CAN_ASSIGN case
         k 2 == "correct number of arguments" assert
@@ -929,7 +929,7 @@ namespace: interpreter
     TypeContext ptr : typeContext
   -> bool  bool ) =>: export: operatorEq
     valType0 typeContext types.unwrapNamed =:: valType
-    valType .?primitiveType .if
+    valType .?PrimitiveType .if
       switch
         BOOL case
           a constAsBool if ..drop false true return end =:: x

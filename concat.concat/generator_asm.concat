@@ -504,12 +504,12 @@ enum(
 ) =:: ValType
 proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValType
   dataType switch
-    namedType case
+    NamedType case
       dataType typeContext types.unwrapNamed typeContext toValType return
-    generatedType case
+    GeneratedType case
       dataType typeContext types.getGeneratedType typeContext toValType return
-    primitiveType case
-      dataType .primitiveType switch
+    PrimitiveType .case
+      switch
         TYPE case ValType .EMPTY return
         BOOL I8 CHAR8 case ValType .I8 return
         I16 CHAR16 case ValType .I16 return
@@ -519,18 +519,14 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
         F64 case ValType .F64 return
       end
       break
-    intLiteral case
-      dataType .intLiteral types.intLiteralAsInt typeContext toValType return
-    enum case
+    IntLiteral .case types.intLiteralAsInt typeContext toValType return
+    Enum case
       dataType typeContext types.enumLabelInfo ..drop typeContext toValType return
       break
-    cType case
-      dataType .cType
-        types.cTypeAsType
-      typeContext toValType return
-    pointer mutablePointer rawPointer mutableRawPointer case
+    CType .case types.cTypeAsType typeContext toValType return
+    Pointer MutablePointer RawPointer MutableRawPointer case
       ValType .PTR return ## TODO? distinquish pointer and procedure pointer
-    arrayType case
+    ArrayType case
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
@@ -559,7 +555,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
           end break
       end
       break
-    struct case
+    Struct case
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
@@ -613,7 +609,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
         end
       end
       break
-    union RawUnion unionElement case
+    Union RawUnion UnionElement case
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
@@ -621,8 +617,8 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       size 16 <= "values larger than 128 bits are pased by reference" assert
       ## TODO! treat small unions as values
       ValType .REFERENCE return
-    undefined empty genericType autoType procedure
-    align typeSet initializer case
+    Undefined Empty GenericType AutoType Procedure
+    Align TypeSet Initializer case
       ValType .EMPTY return
   end
 end
@@ -4297,12 +4293,12 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   src typeContext types.unwrapNamed
-    .?cType .if types.cTypeAsType else
-    .?intLiteral ._if types.intLiteralAsInt end
+    .?CType .if types.cTypeAsType else
+    .?IntLiteral ._if types.intLiteralAsInt end
   src=
   target typeContext types.unwrapNamed
-    .?cType .if types.cTypeAsType else
-    .?intLiteral ._if types.intLiteralAsInt end
+    .?CType .if types.cTypeAsType else
+    .?IntLiteral ._if types.intLiteralAsInt end
   target=
   ## TODO? distinquish code and data pointers / pointers with different alignment
   src target types.typeEquals or src typeContext types.isPointer and target typeContext types.isPointer if
@@ -4478,7 +4474,7 @@ proc(
   end
   ## ptr <-> int
   src typeContext types.isPointer and target typeContext types.isInt if
-    types.primitive.I_SIZE .primitiveType types.sizeOfPrimitive =:: srcBytes
+    types.primitive.I_SIZE .PrimitiveType types.sizeOfPrimitive =:: srcBytes
     target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
     target typeContext toValType stackEntry .valType=
     srcBytes targetBytes == if return end
@@ -4499,7 +4495,7 @@ proc(
   end
   src typeContext types.isInt and target typeContext types.isPointer if
     src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
-    types.primitive.I_SIZE .primitiveType types.sizeOfPrimitive =:: targetBytes
+    types.primitive.I_SIZE .PrimitiveType types.sizeOfPrimitive =:: targetBytes
     target typeContext toValType stackEntry .valType=
     srcBytes targetBytes == if return end
     target typeContext toValType =:: targetType
@@ -4712,7 +4708,7 @@ proc(
       outTypes .length 0:iSize != _if
     outTypes 0 []
   else
-    Type .undefined
+    Type .Undefined
   end =:: baseType
   baseType typeContext toValType =:: baseVal
   builtIn switch
@@ -6357,7 +6353,7 @@ proc(
             targetLabelId asm.Operand .localLabel
           context appendOp1
           op [] Atomic .DebugStartOp list.append
-          Type .undefined op .val [] .panicWithMessage constContext newStringConst context newPtrConstant =:: strId
+          Type .Undefined op .val [] .panicWithMessage constContext newStringConst context newPtrConstant =:: strId
           asm.OpType .MOVE
             0 AMD64.getIntArgumentRegister ValType .PTR setRegType asm.Operand .register
             strId asm.Operand .constPtr
@@ -6397,7 +6393,7 @@ proc(
             targetLabelId asm.Operand .localLabel
           context appendOp1
           op [] Atomic .DebugStartOp list.append
-          Type .undefined op .val [] .RuntimeAssert constContext newStringConst context newPtrConstant =:: strId
+          Type .Undefined op .val [] .RuntimeAssert constContext newStringConst context newPtrConstant =:: strId
           asm.OpType .MOVE
             0 AMD64.getIntArgumentRegister ValType .PTR setRegType asm.Operand .register
             strId asm.Operand .constPtr

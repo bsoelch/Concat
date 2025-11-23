@@ -104,7 +104,7 @@ struct(
 ) =:: ParserState
 
 proc( FilePosition : pos -> Constant ) =>: newWildcardConst
-  Type .undefined ConstValue .WildCard IdentifierInfo optional.empty pos Constant new return
+  Type .Undefined ConstValue .WildCard IdentifierInfo optional.empty pos Constant new return
 end
 
 proc(
@@ -212,7 +212,7 @@ proc(
       break
     UNKNOWN INT_LITERAL case
       "unsupported string literal type" sb.copyPtr pos errors appendError
-      ConstValue .None 0:iSize Type .undefined break
+      ConstValue .None 0:iSize Type .Undefined break
   end =:: charType =:: strLength =:: strValue
   strLength i64 cast.u ArraySize .Int =:: size
   ## Constant
@@ -744,7 +744,7 @@ proc(
       false return
     end
   end
-  literal IntLiteralType .AUTO Type .undefined pos state tryParseIntConstant if
+  literal IntLiteralType .AUTO Type .Undefined pos state tryParseIntConstant if
     true return
   end
   literal 0 number.tryParseFloat
@@ -1003,7 +1003,7 @@ end
 proc( ProgramContext ptr.mut : progContext -> Type ) =>: newAutoType
   progContext [] .autoTypes .length i32 cast types.newAutoType
   progContext [] .autoTypes
-    Type .undefined list.append
+    Type .Undefined list.append
   progContext .autoTypes=
 end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrStep
@@ -1518,11 +1518,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state [] .currentProcs .length 0:iSize != =:: isNested
       isNested if
         ## TODO! find better way to handle creation of proc-data for nested procs (with type unknown at parse-time)
-        Type .undefined
+        Type .Undefined
       else
         ## pop type before reading name
         fileState state popTypeConstant .else
-          Type .undefined
+          Type .Undefined
         end
       end =:: mut: procType
       ## TODO? ensure global stack is empty at start of procedure
@@ -1626,7 +1626,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "return outside procedure" sb.copyPtr fileState [] .wordStart errors appendError
       end
       ## opReturn
-        Type .undefined
+        Type .Undefined
         fileState [] .wordStart
       opReturn state appendOp
       fileState [] .wordStart state implicitBreakSwitch
@@ -1681,7 +1681,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         progContext .procBundles=
         ## declareIdentifier
           labelId
-          Type .undefined
+          Type .Undefined
           IdentifierType .PROCEDURE_BUNDLE
           -1
           bundleId ConstValue .ProcedureBundle
@@ -1860,7 +1860,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                 procBlockData .blockStart list.setLength
               progContext .tmpOps=
               currentProc [] .labelId labelContext id.labelFlags id.FLAG_LAMBDA & ? if
-                currentProc [] .procType .?undefined ? if
+                currentProc [] .procType .?Undefined ? if
                   currentProcId fileState [] .wordStart opNestedProc state appendOp
                 else
                   currentProcId ConstValue .Procedure
@@ -1868,7 +1868,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                   fileState [] .wordStart opConst state appendOp
                 end
               end
-              currentProc [] .procType .?undefined ? ! if
+              currentProc [] .procType .?Undefined ? ! if
                 ProcCodeState .PARSED currentProc .implementation .code .codeState=
               end
             end
@@ -2042,7 +2042,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         progContext newAutoType
       else
         fileState state popTypeConstant .else
-          Type .undefined
+          Type .Undefined
         end
       end =:: mut: valType
       false =:: mut: allowImmutableDeclaration
@@ -2198,7 +2198,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         label idContext id.getIdentifier
           ! "label is identifier" assert
-        [] .constValue .?None ? ! and valType .?undefined ? ! if
+        [] .constValue .?None ? ! and valType .?Undefined ? ! if
           ## don't create global operation if declaration already is complete
           state popConst ..drop.2
           return
@@ -2283,7 +2283,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       idData .idType .TYPE if
         return
       end
-      constValue .?None ? ! and constType .?undefined ? ! if
+      constValue .?None ? ! and constType .?Undefined ? ! if
         ## don't create global operation if declaration already is complete
         state popConst ..drop.2
         return
@@ -2329,7 +2329,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             $1 sb.appendI
           fileState [] .wordStart errors appendError
         end
-        Type .undefined
+        Type .Undefined
           >$ i32 cast.u ## index
           fileState [] .wordStart
           isWrite if
@@ -2358,12 +2358,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "new":s string.eq _if =:: opName
       ## new in procedure -> determine type in type-check phase
-      Type .undefined fileState [] .wordStart opNew state appendOp
+      Type .Undefined fileState [] .wordStart opNew state appendOp
       return
     #+ TODO improve cast system +#
     else ..dup "cast":s string.eq or ..dup "cast!":s string.eq _if =:: opName
       opName "cast!":s string.eq =:: forceCast
-      Type .undefined
+      Type .Undefined
         forceCast if
           fileState [] .wordStart
           opCast!
@@ -2375,18 +2375,18 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state appendOp
       return
     else ..dup "..bitcast":s string.eq _if =:: opName
-      Type .undefined
+      Type .Undefined
         fileState [] .wordStart
       opBitCast state appendOp
       return
     else ..dup "cast.s":s string.eq _if =:: opName
-      Type .undefined
+      Type .Undefined
         SignType .SIGNED
         fileState [] .wordStart
       opCast state appendOp
       return
     else ..dup "cast.u":s string.eq _if =:: opName
-      Type .undefined
+      Type .Undefined
         SignType .UNSIGNED
         fileState [] .wordStart
       opCast state appendOp
@@ -2416,7 +2416,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
      else
        TypeMemoryInfo .STRIDE
      end =:: infoType
-      Type .undefined
+      Type .Undefined
       infoType fileState [] .wordStart opTypeInfo state appendOp
       return
     else ..dup "..unreachable":s string.eq _if ..drop
@@ -2609,7 +2609,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         types.primitive.BOOL
       else
         ConstValue .None
-        Type .empty
+        Type .Empty
       end
       fileState [] .wordStart opStaticConst state appendOp
       return

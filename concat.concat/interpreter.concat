@@ -566,7 +566,7 @@ namespace: interpreter
     closedBlock [] .valueOffset =:: valueOffset
     closedBlock [] .typeOffset =:: typeOffset
     closedBlock [] .blockType .TYPE_COMPOSITE and context [] .typeBuffer .length typeOffset == if
-      Type .empty
+      Type .Empty
     else
       ## newTuple
         context [] .typeBuffer list.asSlice typeOffset slice.tail
@@ -653,7 +653,7 @@ namespace: interpreter
       closedBlock [] .labelOffset
       LabeledValueContext .INITIALIZER
     pos context finishLabledValues if
-      Type .undefined true return
+      Type .Undefined true return
     end
     context [] .program .errors =:: errors
     context [] .program .idContext =:: idContext
@@ -702,7 +702,7 @@ namespace: interpreter
       pos context [] .program .errors appendError
       ## return
         ## ValueInfo
-          Type .undefined
+          Type .Undefined
           pos
         ValueInfo new
         ConstValue .None
@@ -769,7 +769,7 @@ namespace: interpreter
     typeContext .labelContext =:: labelContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
-      valInfo Type .undefined true return
+      valInfo Type .Undefined true return
     end
     value .?TypeId .if
       valInfo >$ false return
@@ -782,7 +782,7 @@ namespace: interpreter
     pos errors appendError
     ## restore stack
     value valInfo context unpopValue
-    valInfo Type .undefined true return
+    valInfo Type .Undefined true return
   end
   proc(
     FilePosition : pos
@@ -930,7 +930,7 @@ namespace: interpreter
         "unexpected constant value for type type: " sb.copyPtr
           value typeContext sb.appendConstant
         pos errors appendError
-        Type .undefined ConstValue .None true return
+        Type .Undefined ConstValue .None true return
       end valType=
       true isType=
     end
@@ -939,7 +939,7 @@ namespace: interpreter
         "cannot get the length  of : " sb.copyPtr
           valType typeContext sb.appendType
         pos errors appendError
-        Type .undefined ConstValue .None true return
+        Type .Undefined ConstValue .None true return
       end
       valType typeContext types.getArraySize =:: size
       size .?Int .if =:: intVal
@@ -958,7 +958,7 @@ namespace: interpreter
         "unsupported array-size type: " sb.copyPtr
           ## XXX? print array-size type name
         pos errors appendError
-        Type .undefined ConstValue .None true return
+        Type .Undefined ConstValue .None true return
       end
     else valType typeContext types.isArrayLiteral or isType and valType typeContext types.isComposite _if
       ## return
@@ -972,7 +972,7 @@ namespace: interpreter
     "unsupported argument type for length-computation: " sb.copyPtr
       valType typeContext sb.appendType
     pos errors appendError
-    Type .undefined ConstValue .None true return
+    Type .Undefined ConstValue .None true return
   end
   proc(
     LabelId : generatorName
@@ -1391,7 +1391,7 @@ namespace: interpreter
     ## 1. copy elements
     dataArray .length for =:: i
       dataArray i [] =:: elt
-      arrayBase .?undefined ? ! if
+      arrayBase .?Undefined ? ! if
         arrayBase
       else
         valType i i32 cast typeContext types.compositeGetElement
@@ -1491,7 +1491,7 @@ namespace: interpreter
     ## copy sub-arrays
     localSlice .length for =:: i
       localSlice i slice.at .data =:: elt
-      arrayBase .?undefined ? ! if
+      arrayBase .?Undefined ? ! if
         arrayBase
       else
         valType i i32 cast typeContext types.compositeGetElement
@@ -1725,7 +1725,7 @@ proc(
         end typeContext types.namedTypeName =:: eltLabel
         eltLabel context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
-          Type .empty list.append
+          Type .Empty list.append
         context .typeBuffer=
         context [] .labelBuffer
           eltLabel list.append
@@ -2218,7 +2218,7 @@ proc(
           context .stack=
           value .?WildCard ? and context inUnion if
             types.primitive.TYPE valInfo@ .valueType=
-            Type .empty ConstValue .TypeId value=
+            Type .Empty ConstValue .TypeId value=
           end
           context minStackOffset =:: stackOffset
           stackOffset initialLabelOffset valueContext op [] .pos context finishLabledValues if
@@ -2253,7 +2253,7 @@ proc(
         op [] .val .getName =:: eltLabel
         eltLabel context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
-          Type .empty list.append
+          Type .Empty list.append
         context .typeBuffer=
         context [] .labelBuffer
           eltLabel list.append
@@ -2270,7 +2270,7 @@ proc(
       context inEnum if
         label context getLabeledValueContext op [] .pos context checkDuplicateLabel
         context [] .typeBuffer
-          Type .empty list.append
+          Type .Empty list.append
         context .typeBuffer=
         context [] .labelBuffer
           label list.append
@@ -2708,7 +2708,7 @@ proc(
       end =:: elementIndex
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
       isType if
-        eltType .?empty ? if
+        eltType .?Empty ? if
           ## pushValue
             containerType typeContext types.isEnum if
               elementIndex ConstValue .EnumLabel
@@ -2804,7 +2804,7 @@ proc(
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: poppedValue
-      op [] .dataType .?undefined ? if
+      op [] .dataType .?Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
         end poppedType= valInfo=
@@ -2853,7 +2853,7 @@ proc(
         unionType
           elementIndex
         typeContext types.compositeGetElement =:: eltType
-        eltType .?empty ? ! if
+        eltType .?Empty ? ! if
           op [] .pos context popValue if ..drop.2
             "missing argument for union element expected" sb.copyPtr
               eltType typeContext sb.appendType
@@ -2888,7 +2888,7 @@ proc(
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: isPoppedType
-      op [] .dataType .?undefined ? if
+      op [] .dataType .?Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
         end poppedType= valInfo=
@@ -3161,7 +3161,7 @@ proc(
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: poppedValue
-      op [] .dataType .?undefined ? if
+      op [] .dataType .?Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
         end poppedType= valInfo=
@@ -3767,7 +3767,7 @@ proc(
     ## initializeGeneratedType
       procName
       typeArgs
-      Type .undefined
+      Type .Undefined
       typeContext
       constContext
     types.initializeGeneratedType =:: generatorType

@@ -155,12 +155,12 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
   t switch
-    namedType case
+    NamedType case
       t typeContext types.unwrapNamed context toValType return
-    generatedType case
+    GeneratedType case
       t typeContext types.getGeneratedType context toValType return
-    primitiveType case
-      t .primitiveType switch
+    PrimitiveType .case
+      switch
         TYPE case ValType .EMPTY return
         BOOL I8 I16 I32 CHAR8 CHAR16 CHAR32 case ValType .I32 return
         I64 case ValType .I64 return
@@ -168,18 +168,14 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
         F64 case ValType .DOUBLE return
       end
       break
-    intLiteral case
-      t .intLiteral types.intLiteralAsInt context toValType return
-    cType case
-      t .cType
-        types.cTypeAsType
-      context toValType return
-    pointer mutablePointer rawPointer mutableRawPointer case
+    IntLiteral .case types.intLiteralAsInt context toValType return
+    CType .case types.cTypeAsType context toValType return
+    Pointer MutablePointer RawPointer MutableRawPointer case
       ValType .PTR return
-    procedure arrayType struct union RawUnion unionElement enum initializer case
+    Procedure ArrayType Struct Union RawUnion UnionElement Enum Initializer case
       ValType .REFERENCE return
-    undefined empty genericType autoType
-    align typeSet case
+    Undefined Empty GenericType AutoType
+    Align TypeSet case
       ValType .EMPTY return
   end
 end
@@ -278,8 +274,8 @@ proc( Type : t CompilerContext ptr.mut : context -> bool ) =>: referenceOnly
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
   t typeContext types.unwrapNamed
-    .?cType .if types.cTypeAsType else
-    .?intLiteral ._if types.intLiteralAsInt end
+    .?CType .if types.cTypeAsType else
+    .?IntLiteral ._if types.intLiteralAsInt end
   =:: baseType
   baseType types.isPrimitive if
     false return
@@ -611,18 +607,18 @@ namespace: sb
     prog .idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     t switch
-      namedType case
+      NamedType case
         sb
           t typeContext types.unwrapNamed storeType pos context
         appendTypeNameQBE
         return
-      generatedType case
+      GeneratedType case
         sb
           t typeContext types.getGeneratedType storeType pos context
         appendTypeNameQBE
         return
-      primitiveType case
-        t .primitiveType switch
+      PrimitiveType .case =:: primtive
+        primtive switch
           TYPE case sb ":type" sb.appendS return break
           BOOL case
             storeType switch
@@ -634,7 +630,7 @@ namespace: sb
           I8 CHAR8 case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb t .primitiveType .I8 if "sb" else "ub" end sb.appendS return
+              LOAD case sb primtive .I8 if "sb" else "ub" end sb.appendS return
               ULOAD case sb "ub" sb.appendS return
               STORE case sb "b" sb.appendS return
             end
@@ -642,7 +638,7 @@ namespace: sb
           I16 CHAR16 case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb t .primitiveType .I16 if "sh" else "uh" end sb.appendS return
+              LOAD case sb primtive .I16 if "sh" else "uh" end sb.appendS return
               ULOAD case sb "uh" sb.appendS return
               STORE case sb "h" sb.appendS return
             end
@@ -653,39 +649,37 @@ namespace: sb
           F64 case sb "d" sb.appendS return
         end
         break
-      intLiteral case
+      IntLiteral .case
         sb
-          t .intLiteral types.intLiteralAsInt storeType pos context
+          >$ types.intLiteralAsInt storeType pos context
         appendTypeNameQBE return
-      cType case
+      CType .case
         sb
-          t .cType types.cTypeAsType
-          $ .?undefined ? if
-            ..drop.2 break
-          end
+          >$ types.cTypeAsType
+          $ .?Undefined ? if ..drop.2 break end
         storeType pos context appendTypeNameQBE
         return
-      pointer mutablePointer rawPointer mutableRawPointer procedure case
+      Pointer MutablePointer RawPointer MutableRawPointer Procedure case
         sb "l" sb.appendS return
-      arrayType case
+      ArrayType case
         sb t "array":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      struct case
+      Struct case
         sb t "struct":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      union RawUnion case
+      Union RawUnion case
         sb t "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      unionElement case
+      UnionElement case
         sb t typeContext types.getUnionElementUnion .data
           typeContext types.unwrapNamed
         "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      enum case
+      Enum case
         sb t "enum":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      undefined empty genericType autoType
-      initializer align typeSet case
+      Undefined Empty GenericType AutoType
+      Initializer Align TypeSet case
         break
     end
     "unsupported type " sb.copyPtr
@@ -847,7 +841,7 @@ namespace: sb
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     constant [] .value =:: value
-    constant [] .valType types.isPrimitive or constant [] .valType .?intLiteral ? and
+    constant [] .valType types.isPrimitive or constant [] .valType .?IntLiteral ? and
         ConstValue ..length 23:iSize == "no new constants" assert
         value switch
           Array8  .case .length 0:iSize == break
@@ -889,7 +883,7 @@ namespace: sb
     sb
       isGlobal and t typeContext types.isPointer or
           t typeContext types.unwrapNamed types.isPrimitive or
-          t .?intLiteral ? if
+          t .?IntLiteral ? if
         ## add name prefix for global constants, skip prefix for zero-length array constants
         t StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
@@ -902,8 +896,8 @@ namespace: sb
             types.primitive.I_SIZE
           else
             t typeContext types.unwrapNamed
-            .?cType .if types.cTypeAsType else
-            .?intLiteral ._if types.intLiteralAsInt end
+            .?CType .if types.cTypeAsType else
+            .?IntLiteral ._if types.intLiteralAsInt end
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
@@ -927,8 +921,8 @@ namespace: sb
         break
         Float .case =:: floatValue
           t typeContext types.unwrapNamed
-            .?cType .if types.cTypeAsType else
-            .?intLiteral ._if types.intLiteralAsInt end
+            .?CType .if types.cTypeAsType else
+            .?IntLiteral ._if types.intLiteralAsInt end
           =:: numType
           numType types.primitive.F32 types.typeEquals if
             floatValue f32 cast f32.bits sb.appendI
@@ -1567,7 +1561,7 @@ proc(
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
   enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
-  labelType .?empty ? if sb return end
+  labelType .?Empty ? if sb return end
   context nextTmpId =:: labelPtr
   sb
     "%t" sb.appendS
@@ -2091,14 +2085,14 @@ proc(
   context [] .program =:: prog
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  src typeContext types.unwrapNamed .?cType .if =:: cType
+  src typeContext types.unwrapNamed .?CType .if =:: cType
     sb
       cType types.cTypeAsType
       signed
       pos
       context
     extendArguments return
-  else .?intLiteral ._if =:: intLiteral
+  else .?IntLiteral ._if =:: intLiteral
     sb
       intLiteral types.intLiteralAsInt
       signed
@@ -2156,7 +2150,7 @@ proc(
       outTypes .length 0:iSize != _if
     outTypes 0 []
   else
-    Type .undefined
+    Type .Undefined
   end =:: baseType
   baseType context toValType =:: baseVal
   builtIn switch
@@ -2872,12 +2866,12 @@ proc(
   ## XXX? better cType <-> type conversion
   ## TODO update sign type when casting from/to  cType/intLiteral
   src0 typeContext types.unwrapNamed
-    .?cType .if types.cTypeAsType else
-    .?intLiteral ._if types.intLiteralAsInt end
+    .?CType .if types.cTypeAsType else
+    .?IntLiteral ._if types.intLiteralAsInt end
   =:: src
   target0 typeContext types.unwrapNamed
-    .?cType .if types.cTypeAsType else
-    .?intLiteral ._if types.intLiteralAsInt end
+    .?CType .if types.cTypeAsType else
+    .?IntLiteral ._if types.intLiteralAsInt end
   =:: target
   src target types.typeEquals if
     sb return ## nothing to do
@@ -3872,7 +3866,7 @@ proc(
       0:iSize while $ op [] .val .callPtr .outArgCount u< do =:: i
         argIndices
           ## TypedValId
-            Type .undefined
+            Type .Undefined
             op [] .pos context popValue
           TypedValId new list.append
         argIndices=
@@ -4510,7 +4504,7 @@ proc(
     blockEnd .case =:: blockEnd
       blockEnd .blockType switch
         PROCEDURE case
-          Type .undefined context .currentProc=
+          Type .Undefined context .currentProc=
           sb
             ## end of procedure block always unreachable
             ## ( type-checker ensures there is a return before end )
@@ -4934,7 +4928,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     32 PtrConstant list.create
     types.typeHash@ types.typeEquals@ 1024 i64 map.create
     0
-    Type .undefined
+    Type .Undefined
     0
     0
     0

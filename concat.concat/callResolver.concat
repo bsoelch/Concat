@@ -44,7 +44,7 @@ proc( GenericArg : val -> bool ) =>: isEmptyConstant
     fixed case val .fixed break
   end =:: constVal
   constVal .?None ? or
-    constVal .?TypeId .and .?empty ?
+    constVal .?TypeId .and .?Empty ?
   end return
 end
 
@@ -98,7 +98,7 @@ proc(
     src return
   end
   src switch
-    genericType case
+    GenericType case
       src types.getGenericTypeId LabelId cast =:: genericId
       genericValues genericId map.at =:: value?
       value? optional.hasData if
@@ -112,7 +112,7 @@ proc(
         end
       end
       src return ## generic not found XXX? error
-    namedType case
+    NamedType case
       src typeContext types.namedTypeName =:: name
       src typeContext types.flatUnwrapNamed =:: base
       base typeContext types.containsGeneric if
@@ -120,7 +120,7 @@ proc(
         ## TODO? support generic named types: create copy with different contents
       end
       src return
-    pointer mutablePointer rawPointer mutableRawPointer arrayType case
+    Pointer MutablePointer RawPointer MutableRawPointer ArrayType case
       src typeContext types.getBaseType =:: base
       src typeContext types.getArraySize =:: size
       idContext [] .arraySizeBuffer .length =:: sizeOffset
@@ -154,13 +154,13 @@ proc(
           pos
           interpreterContext
         replaceGenerics
-        src .?pointer ? or src .?arrayType ? and genericSize if
+        src .?Pointer ? or src .?ArrayType ? and genericSize if
           types.ArrayType .POINTER
-        else src .?mutablePointer ? _if
+        else src .?MutablePointer ? _if
           types.ArrayType .MUTABLE_POINTER
-        else src .?rawPointer ? _if
+        else src .?RawPointer ? _if
           types.ArrayType .RAW_POINTER
-        else src .?mutableRawPointer ? _if
+        else src .?MutableRawPointer ? _if
           types.ArrayType .MUTABLE_RAW_POINTER
         else
           types.ArrayType .ARRAY
@@ -172,7 +172,7 @@ proc(
           sizeOffset list.setLength
         idContext .arraySizeBuffer=
       return
-    struct union RawUnion enum initializer case
+    Struct Union RawUnion Enum Initializer case
       typeBuffer [] .length =:: typeOffset
       labelBuffer [] .length =:: labelOffset
       src typeContext types.compositeEltCount =:: eltCount
@@ -196,27 +196,27 @@ proc(
         labelBuffer =[]
       end
       src switch
-        struct case
+        Struct case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
             labelBuffer [] list.asSlice labelOffset slice.tail optional.wrap
             typeContext
           types.newTuple break
-        union RawUnion case
+        Union RawUnion case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
             labelBuffer [] list.asSlice labelOffset slice.tail
-            src .?union ?
+            src .?Union ?
             typeContext
           types.newUnion break
-        enum case
+        Enum case
           ## newEnum
             Type optional.empty ## TODO preserve base-type
             labelBuffer [] list.asSlice labelOffset slice.tail
             typeContext
           types.newEnum break
         ## TODO update initializer type
-        initializer case
+        Initializer case
           "generic initializers are not supported" ..panic
         default ..unreachable
       end .data
@@ -225,8 +225,8 @@ proc(
         labelBuffer [] labelOffset list.setLength labelBuffer =[]
       return
     ## FIXME: implement replace-generic for union-elements
-    unionElement case "unimplemented: generic union-element check" ..panic
-    procedure case
+    UnionElement case "unimplemented: generic union-element check" ..panic
+    Procedure case
       src typeContext types.getProcIn .data =:: inTypes
       src typeContext types.getProcOut .data =:: outTypes
       src typeContext types.getProcLabels =:: oldLabels
@@ -275,7 +275,7 @@ proc(
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
         labelBuffer [] labelOffset list.setLength labelBuffer =[]
       return
-    generatedType case
+    GeneratedType case
       src typeContext types.getGeneratorArgs =:: args
       idContext .argBuffer =:: argBuffer
       argBuffer [] .length =:: argOffset
@@ -326,7 +326,7 @@ proc(
           argOffset list.setLength
         argBuffer =[]
       return
-    undefined empty primitiveType cType autoType intLiteral align typeSet case
+    Undefined Empty PrimitiveType CType AutoType IntLiteral Align TypeSet case
       ..unreachable ## type should not contain generics
   end
 end
@@ -357,14 +357,14 @@ proc(
     end
   end
   target switch
-    genericType case
+    GenericType case
       target types.getGenericTypeId LabelId cast =:: genericId
       genericValues genericId map.at =:: oldValue?
       oldValue? optional.hasData if
         oldValue? .data [] =:: oldValue
         oldValue switch
           nonEmpty case
-            src .?empty ? if
+            src .?Empty ? if
               true return
             end
             src break
@@ -406,7 +406,7 @@ proc(
         end
       map.put ..drop
       false return
-    namedType case
+    NamedType case
       src =:: mut: unwrapSrc
       target =:: mut: unwrapTarget
       while
@@ -414,7 +414,7 @@ proc(
           unwrapSrc typeContext types.flatUnwrapNamed unwrapSrc=
         end
         unwrapTarget typeContext types.flatUnwrapNamed unwrapTarget=
-      unwrapTarget .?namedType ? do end
+      unwrapTarget .?NamedType ? do end
       ## resolveGenerics
         unwrapSrc
         unwrapTarget
@@ -423,7 +423,7 @@ proc(
         genericValues
         progContext
       resolveGenerics return
-    pointer mutablePointer arrayType rawPointer mutableRawPointer case
+    Pointer MutablePointer ArrayType RawPointer MutableRawPointer case
       src typeContext types.isPointer ! and
           src typeContext types.isArray ! if
         true return
@@ -496,7 +496,7 @@ proc(
         genericValues
         progContext
       resolveGenerics return
-    struct union RawUnion enum initializer case
+    Struct Union RawUnion Enum Initializer case
       src typeContext types.unwrapNamed src=
       src ..label target ..label != if
         true return ## src and target have to be same type of composite
@@ -512,7 +512,7 @@ proc(
         i srcCount < if
           src i typeContext types.compositeGetElement
         else
-          Type .empty ## extend source with empty if necessary
+          Type .Empty ## extend source with empty if necessary
         end =:: srcElt
         ## resolveGenerics
           srcElt
@@ -526,10 +526,10 @@ proc(
         end
       end
       false return
-    unionElement case
+    UnionElement case
       ## FIXME implement call-resolving for union-elements
       "unimplemented: call-resolving union elements" ..panic
-    procedure case
+    Procedure case
       src typeContext types.unwrapNamed src=
       src ..label target ..label != if
         true return
@@ -542,7 +542,7 @@ proc(
         i srcIn .length u< if
           srcIn i []
         else
-          Type .empty ## extend source with empty if necessary
+          Type .Empty ## extend source with empty if necessary
         end =:: srcElt
         ## resolveGenerics
           srcElt
@@ -561,7 +561,7 @@ proc(
         i srcOut .length u< if
           srcOut i []
         else
-          Type .empty ## extend source with empty if necessary
+          Type .Empty ## extend source with empty if necessary
         end =:: srcElt
         ## resolveGenerics
           srcElt
@@ -575,7 +575,7 @@ proc(
         end
       end
       false return
-    generatedType case
+    GeneratedType case
       src typeContext types.unwrapNamedKeepGenerated src=
       ## src has to be a compatible generated type
       src types.isGeneratedType ! if
@@ -623,7 +623,7 @@ proc(
         else ..drop end
       end
       false return
-    undefined empty primitiveType cType autoType intLiteral align typeSet case
+    Undefined Empty PrimitiveType CType AutoType IntLiteral Align TypeSet case
       ..unreachable ## type should not contain generics
   end
 end
@@ -647,7 +647,7 @@ in case of a draw signatures with lower total weight will be prioritized.
 This is mainly to prioritize functions acting on smaller number types over larger number types.
 +#
 proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
-  t .?empty ? if
+  t .?Empty ? if
     0 return
   end
   t typeContext types.unwrapNamed types.isPrimitive if
@@ -784,7 +784,7 @@ proc(
         "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
       errorMessage .data =[]
     end
-    ProcedureCallInfo optional.empty NO_PROC Type .undefined return
+    ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
   MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
@@ -815,7 +815,7 @@ proc(
       stackValues stackIndex slice.at .data [] .valType
     else
       ## add dummy type below stack to ensure auto-arguments get matched
-      Type .undefined
+      Type .Undefined
     end =:: stackType
     0:iSize while $ currentSignatures .length u< do =:: i
       currentSignatures i list.at .data =:: mut: current
@@ -908,7 +908,7 @@ proc(
         currentSignatures i list.at .data current=
         copySig .genericValues
           paramId
-          Type .empty ConstValue .TypeId GenericArg .fixed
+          Type .Empty ConstValue .TypeId GenericArg .fixed
         map.put ..drop
         copySig [] .nEmpty
           1 +
@@ -935,7 +935,7 @@ proc(
             prevVal? .data =:: prevVal
             prevVal [] switch
               nonEmpty case
-                stackVal .?TypeId .and .?empty ? end
+                stackVal .?TypeId .and .?Empty ? end
                 break
               value case
                 prevVal [] .value stackVal constantEquals !
@@ -1061,7 +1061,7 @@ proc(
       errorMessage .data =[]
     end
     currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty NO_PROC Type .undefined return
+    ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
   end
   currentSignatures .length 1:iSize != and
       ## cmpSignatures
@@ -1108,7 +1108,7 @@ proc(
       errorMessage .data =[]
     end
     currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty NO_PROC Type .undefined return
+    ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
   end
   progContext [] .procedures
     candidate [] .procId i32 cast list.at .data

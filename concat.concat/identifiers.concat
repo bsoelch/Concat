@@ -62,7 +62,7 @@ namespace: id
     GLOBAL_SCOPE
   IdentifierName new =:: ID_NONE
   ## IdentifierData
-    Type .undefined
+    Type .Undefined
     ConstValue .None
     FILE_POS_UNKNOWN
     LABEL_ID_NONE
@@ -71,7 +71,7 @@ namespace: id
     false
   IdentifierData new =:: ID_NONE_DATA
   ## IdentifierData
-    Type .undefined
+    Type .Undefined
     ConstValue .None
     FILE_POS_UNKNOWN
     LABEL_ID_NONE

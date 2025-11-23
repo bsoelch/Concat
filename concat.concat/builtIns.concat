@@ -83,7 +83,7 @@ proc(
   labelContext id.newLabel =:: label
   ## declareIdentifier
     label
-    Type .undefined
+    Type .Undefined
     IdentifierType .PROCEDURE_BUNDLE
     -1
     bundleId ConstValue .ProcedureBundle
@@ -122,7 +122,7 @@ proc(
   procLabel labelContext id.inLabelNamespace
   ## declareIdentifier
     procLabel
-    Type .undefined
+    Type .Undefined
     IdentifierType .PROCEDURE
     -1
     procId ConstValue .Procedure
@@ -572,11 +572,11 @@ proc(
   iSizeLabel pos context newBuiltInTypeLabel
   types.primitive.I_SIZE "..type.iSize":s pos context newBuiltInType
   ## TODO? should I_MAX be visible to user-code
-  2  Type .align "..type.align2":s  pos context newBuiltInType
-  4  Type .align "..type.align4":s  pos context newBuiltInType
-  8  Type .align "..type.align8":s  pos context newBuiltInType
-  16 Type .align "..type.align16":s pos context newBuiltInType
-  32 Type .align "..type.align32":s pos context newBuiltInType
+  2  Type .Align "..type.align2":s  pos context newBuiltInType
+  4  Type .Align "..type.align4":s  pos context newBuiltInType
+  8  Type .Align "..type.align8":s  pos context newBuiltInType
+  16 Type .Align "..type.align16":s pos context newBuiltInType
+  32 Type .Align "..type.align32":s pos context newBuiltInType
   types.ctype.VOID    "..ctype.void":s   pos context newBuiltInType
   types.ctype.BOOL    "..ctype.bool":s   pos context newBuiltInType
   types.ctype.CHAR    "..ctype.char":s   pos context newBuiltInType

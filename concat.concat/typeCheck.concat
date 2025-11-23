@@ -627,7 +627,7 @@ proc(
   1:iSize while $ types .length u<= do =:: i
     types types .length i - [] =:: expectedType
     state [] .stack branchTree.depth 0 <= if
-      expectedType .?empty ? if
+      expectedType .?Empty ? if
         i 1:iSize + continue ## skip empty arguments if no values on stack
       end
       "not enough types for " sb.copyPtr
@@ -636,7 +636,7 @@ proc(
       true return
     end
     state .stack branchTree.peek .data =:: peekedInfo
-    peekedInfo [] .valueType .?empty ? and expectedType .?empty ? ! if
+    peekedInfo [] .valueType .?Empty ? and expectedType .?Empty ? ! if
       state .stack branchTree.pop ..drop ## discard empty value
       i continue ## no not increment index
     end
@@ -644,7 +644,7 @@ proc(
     argOffsets
       OP_UNLINKED list.append
     argOffsets=
-    expectedType .?empty ? and peekedInfo [] .valueType .?empty ? ! if
+    expectedType .?Empty ? and peekedInfo [] .valueType .?Empty ? ! if
       stackCastOffset 1 - stackCastOffset= ## update cast offset
       i 1:iSize + continue ## skip empty if stack value not empty
     end
@@ -715,20 +715,20 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  1 pos state checkStackSize if Type .undefined return end
+  1 pos state checkStackSize if Type .Undefined return end
   state .stack branchTree.peek .data =:: typeInfo
   typeInfo [] .valueType =:: valType
   valType typeContext types.isType ! if
     "expected type got " sb.copyPtr
       valType typeContext sb.appendType
     pos errors appendError
-    Type .undefined return
+    Type .Undefined return
   end
   typeInfo [] .value .?TypeId .else
     "expected type-constant got " sb.copyPtr
       >$ typeContext sb.appendConstant
     pos errors appendError
-    Type .undefined return
+    Type .Undefined return
   end
     typeInfo [] .opIndex state currentBlockStart < if ..drop
       "type-constant " sb.copyPtr
@@ -737,7 +737,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
         typeInfo [] .pushedAt sb.appendPos
         " was declared outside current block" sb.appendS
       pos errors appendError
-      Type .undefined return
+      Type .Undefined return
     end
     state .stack branchTree.pop ..drop ## drop value
     typeInfo [] .opIndex state deleteOp ## remove stored operation
@@ -1295,7 +1295,7 @@ proc(
   state [] .program .errors =:: errors
   state [] .program .autoTypes =:: autoTypes
   state [] .program .idContext .typeContext =:: typeContext
-  op [] .dataType .?autoType ? if 
+  op [] .dataType .?AutoType ? if
     op [] .dataType types.getAutoTypeId =:: id
     autoTyped if
       state .stack branchTree.peek =:: value?
@@ -1745,11 +1745,11 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  op .dataType .?autoType ? if ## try resolving auto-types
+  op .dataType .?AutoType ? if ## try resolving auto-types
     op .dataType types.getAutoTypeId =:: id
     id iSize cast.u program [] .autoTypes .length u< if
       program [] .autoTypes id [] =:: autoType
-      autoType .?undefined ? ! if
+      autoType .?Undefined ? ! if
         autoType op@ .dataType=
       end
     end
@@ -1806,7 +1806,7 @@ proc(
       op@ initName .initType .AUTO state resolveAutoType
       initName .label
     else .?declareName ._else ..unreachable end
-      op .dataType $ .?undefined ? if ..drop
+      op .dataType $ .?Undefined ? if ..drop
         op .pos state popType
         $ op@ .dataType=
       end
@@ -1854,7 +1854,7 @@ proc(
     NestedProc case
       op .val .NestedProc =:: procId
       program [] .procedures procId i64 cast list.at .data =:: procData
-      procData [] .procType .?undefined ? ! or
+      procData [] .procType .?Undefined ? ! or
           procData .implementation .?code ! .or [] .codeState .PARSING ! if
         "unexpected state for nested procedure" sb.copyPtr
         op .pos errors appendError
@@ -2096,9 +2096,9 @@ proc(
                 op .pos errors appendError
               end
             else ## next argument at top of stack
-              elt .?empty ? and
+              elt .?Empty ? and
                   state .stack branchTree.peek =:: head?
-                  head? optional.hasData and head? .data .valueType .?empty ? ! if
+                  head? optional.hasData and head? .data .valueType .?Empty ? ! if
                 continue ## skip empty arguments with non-empty value
               end
               ## requireTypes
@@ -2348,7 +2348,7 @@ proc(
       break
     implementProcedure case
       op .dataType
-        $ .?undefined ? if ..drop
+        $ .?Undefined ? if ..drop
           program [] .procedures
             op .val .implementProcedure .procId i64 cast
           list.at .data =:: procData
@@ -2564,7 +2564,7 @@ proc(
           op .pos errors appendError
         end
         ConstValue .None =:: mut: constValue
-        eltType .?empty ? if
+        eltType .?Empty ? if
           ## newUnionConst
             ConstValue .None
             elementIndex
@@ -2623,7 +2623,7 @@ proc(
     setEnumElement case
       break
     Cast Cast! bitCast case
-      op .dataType .?undefined ? if
+      op .dataType .?Undefined ? if
         ## resolve data type
         op .pos state popType op@ .dataType=
       end
@@ -2686,7 +2686,7 @@ proc(
       op .dataType newValue op state pushValue
       0 return
     New case
-      op .dataType .?undefined ? if
+      op .dataType .?Undefined ? if
         ## resolve data type
         op .pos state popType op@ .dataType=
       end
@@ -4595,7 +4595,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
       interpreter.InterpreterType .INTERPRET
     interpreter.wrapProgram
     labelHash@ labelEq@ 64 TypedValue map.create
-    Type .undefined
+    Type .Undefined
     false ## inTypeBlock
     TypeInfo branchTree.create
     32  BlockInfo list.create
