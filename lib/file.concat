@@ -34,9 +34,9 @@ namespace: file
       sb
         $ .length 2 * sb.ensureCap
       sb=
-      f .file sb .data sb .length i64 cast sb .cap i64 cast sb .length i64 cast - io.fread f@ .error= =:: nRead
+      f .file sb .data sb .length sb .cap iSize cast sb .length - io.fread f@ .error= =:: nRead
       sb .length
-        nRead i32 cast +
+        nRead +
       sb@ .length=
       f isOk
     end
