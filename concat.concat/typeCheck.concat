@@ -4577,6 +4577,31 @@ proc(
   prevNamespace labelContext id.resetNamespace
   state resetState
 end
+proc(
+  TypeCheckState ptr.mut : state
+-> ) =>: export: typeCheckGlobalCode
+  ## TODO? ensure there are no open states
+  ## TODO reconfigure type-checker to global mode
+  state [] .compiledOps .length =:: codeOffset
+  0:iSize while $ state .program .tmpOps [] .length u< do =:: i
+    state .program [] .tmpOps i [] state typeCheckOp
+      $ 0x8000'0000 u>= if ..drop
+        64 sb.create
+          state .program [] .tmpOps i [] program sb.appendOp
+        io.stdOut >$ io.fputSb
+        "negative jump distance" ..panic
+      end
+    i +
+  finally 1 + end ..drop
+  state [] .compiledOps .length codeOffset u> if
+    ## TODO print first few operations
+    "unable to fold constants in global code" ..panic
+  end
+  ## TODO ensure no compiled operations have been generated
+  state .program .tmpOps []
+    list.clear
+  state .program .tmpOps=
+end
 
 proc(
   ProgramContext ptr.mut : program
