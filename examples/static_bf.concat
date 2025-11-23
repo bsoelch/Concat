@@ -74,8 +74,8 @@ proc( char8 ptr.raw : chars iSize : len -> ) =>: static: :bf
 end
 
 #+
-appending :bf at the end of a string literal runs bf.static.parse
+appending :bf at the end of a string literal runs the `:bf` procedure
 on the string.
-Evaluating the string as brainfuck code and printing the program output as error message
+Evaluating the string as brainfuck code and printing the program output as an error message
 +#
 "+[-->-[>>+>-----<<]<--<---]>-.>>>+.>>..+++[.>]<<<<.+++.------.<<-.>>>>+.":bf
