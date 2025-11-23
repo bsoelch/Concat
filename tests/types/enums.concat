@@ -10,8 +10,8 @@ anUnion .B =:: e2
 proc( -> ) =>: main
   -32141 anUnion .C =:: mut: u
   anUnion .A anUnion =: f
-  u .A ?? debug.print
-  u .C ?? debug.print
+  u .?A ? debug.print
+  u .?C ? debug.print
   u .C debug.print
 
   labelEnum .A =:: mut: l1

@@ -10,13 +10,13 @@ namespace: optional
   end
 
   proc( type : auto: V V optional -> bool ) =>: export: isEmpty
-    .empty ?? return
+    .?empty ? return
   end
   proc( type : auto: V  V optional -> bool ) =>: export: hasData
-    .data ?? return
+    .?data ? return
   end
   proc( type : auto: T  T optional -> T ) =>: export: get
-    .data
+    .?data ..raw
   end
 
   proc( type : auto: T  T optional -> T optional ) =>: prepareIf end
