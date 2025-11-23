@@ -3558,8 +3558,12 @@ proc(
           '\n' sb.appendC
         return
       end
-      ## FIXME implement ..raw
-      "unsupported type in ..raw" ..panic
+      "unsupported type for ..raw:" sb.copyPtr
+        op [] .dataType
+          typeContext
+        sb.appendType
+      op [] .pos errors appendError
+      sb return
     New NewEnum NewReference NewEnumReference case
       op [] .val .?NewReference ? or op [] .val .?NewEnumReference ? end =:: hasReference
       op [] .val .?NewEnum ? or op [] .val .?NewEnumReference ? end =:: isEnum

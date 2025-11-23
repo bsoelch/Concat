@@ -1198,16 +1198,21 @@ namespace: interpreter
       elementIndex typeContext types.compositeGetElement
       isPtr if eltMutable typeContext types.getAddressType end
     =:: eltType
-    ## XXX? support (Local)Array8 ... Array64
+    ## TODO? support (Local)Array8 ... Array64
     value
       .?LocalValue .if ConstValue ptr.mut cast [] end
     =:: containerValue
-    ## FIXME out of bounds access should not crash compiler
     containerValue .?Array .if
-      elementIndex []
+      elementIndex slice.get .else
+        "pointer read out of bounds" sb.copyPtr pos errors appendError
+        true return
+      end
     else .?LocalArray ._if
       ConstValue slice.mut cast
-        elementIndex slice.at .data
+        elementIndex slice.at .else
+          "pointer read out of bounds" sb.copyPtr pos errors appendError
+          true return
+        end
       ## TODO proc for checking if value is Local
       isPtr and $ [] .?LocalValue ? ! and $ [] .?LocalArray ? ! and $ [] .?LocalArray8 ? ! and
           $ [] .?LocalArray16 ? ! and $ [] .?LocalArray32 ? ! and $ [] .?LocalArray64 ? ! if
@@ -3133,8 +3138,25 @@ proc(
       pushValue
       EvalResult .Ok return
     rawValue case
-      ## FIXME: implement ..raw
-      "unimplemented" ..panic
+      op [] .pos context popValue if ..drop.2
+        EvalResult .Error return
+      end =:: value =:: valInfo
+      valInfo .valueType typeContext types.isUnionElement if
+        valInfo .valueType typeContext types.getUnionElementType
+      else valInfo .valueType typeContext types.isTaggedUnion _if
+        ## TODO: implement ..raw for unions
+        "unimplemented: ..raw for unions" ..panic
+      else
+        value valInfo context unpopValue
+        EvalResult .Error return
+      end =:: newType
+      ## pushValue
+        value
+        newType
+        op [] .pos
+        context
+      pushValue
+      EvalResult .Ok return
     typeInfo case
       Type : poppedType
       ValueInfo : valInfo

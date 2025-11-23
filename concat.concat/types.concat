@@ -1935,7 +1935,6 @@ namespace: types
     Type optional : value
   ) =:: GeneratedTypeValue
 
-  ## FIXME: double-check hash calculation for generated types
   proc( GeneratedTypeName : a GeneratedTypeName : b -> bool ) =>: genNameEq
     a .generator b .generator != if false return end
     a .arguments b .arguments constantEquals@ slice.eq

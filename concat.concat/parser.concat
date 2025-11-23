@@ -1396,9 +1396,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       WhileBlockState .FINALLY whileData .state=
       BlockType .FINALLY  fileState [] .wordStart opBlock  state appendOp
       ## update for-loop iterator
-      state peekBlock .if .tmpVarInfo [] .if ## FIXME! why does .and not work here?
+      state peekBlock .and .tmpVarInfo [] .if
         state fileState [] .wordStart appendItrStep
-      end end
+      end
       return
     else $ "break":s string.eq or $ "break.":s string.startsWith or
       $ "continue":s string.eq or $ "continue.":s string.startsWith _if =:: opName
@@ -1850,8 +1850,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               progContext [] .tmpOps list.asSlice
                 procBlockData .blockStart slice.tail
                 $ 0 @[] =:: procStart
-                ## FIXME: compiler crash on invalid block-layout (additional else in proc)
-                ##  ? does this also hit the new version, create test-case for error before next bootstrap
+                ## FIXME:in some edge cases this assertion is hit
                 procStart [] .val .?implementProcedure ? or
                     procStart [] .val .?initializeId ?
                 end "procedure starts with correct operation" assert
