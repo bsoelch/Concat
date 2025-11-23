@@ -47,7 +47,7 @@ proc(
         declared list.append
       types =[]
       break
-    struct union initializer case
+    struct union RawUnion initializer case
       declared typeContext types.compositeElts =:: elts
       elts for
         ptrLevel pos prog visited types declaredType

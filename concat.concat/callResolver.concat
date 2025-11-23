@@ -172,7 +172,7 @@ proc(
           sizeOffset list.setLength
         idContext .arraySizeBuffer=
       return
-    struct union enum initializer case
+    struct union RawUnion enum initializer case
       typeBuffer [] .length =:: typeOffset
       labelBuffer [] .length =:: labelOffset
       src typeContext types.compositeEltCount =:: eltCount
@@ -202,11 +202,11 @@ proc(
             labelBuffer [] list.asSlice labelOffset slice.tail optional.wrap
             typeContext
           types.newTuple break
-        union case
+        union RawUnion case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
             labelBuffer [] list.asSlice labelOffset slice.tail
-            true ## TODO! preserve untagged unions when replacing generics
+            src .?union ?
             typeContext
           types.newUnion break
         enum case
@@ -496,7 +496,7 @@ proc(
         genericValues
         progContext
       resolveGenerics return
-    struct union enum initializer case
+    struct union RawUnion enum initializer case
       src typeContext types.unwrapNamed src=
       src ..label target ..label != if
         true return ## src and target have to be same type of composite

@@ -100,6 +100,7 @@ union(
           types.ArrayId : arrayType
           types.TupleId : struct
           types.UnionId : union
+          types.UnionId : RawUnion
    types.UnionElementId : unionElement
            types.EnumId : enum
     types.InitializerId : initializer
@@ -274,6 +275,8 @@ namespace: types
         a .enum b .enum enumTypeEqual return
       union case
         a .union b .union unionTypeEqual return
+      RawUnion case
+        a .RawUnion b .RawUnion unionTypeEqual return
       unionElement case
         a .unionElement b .unionElement unionElementEqual return
       initializer case
@@ -392,6 +395,8 @@ namespace: types
         67 a .typeSet TypeSet ptr cast [] typeSetHash * return
       unionElement case
         71 a .unionElement unionElementHash * return
+      RawUnion case
+        73 a .RawUnion unionTypeHash * return
     end
   end
 end
@@ -454,7 +459,7 @@ namespace: types
        undefined primitiveType procedure cType pointer mutablePointer mutableRawPointer rawPointer
          namedType autoType genericType intLiteral unionElement
          generatedType enum typeSet case false return
-       struct union initializer case
+       struct union initializer RawUnion case ## TODO can labeled union be empty?
          t context compositeFlags COMP_FLAG_EMPTY & ? return
     end
   end
@@ -584,7 +589,7 @@ namespace: types
   proc( Type -> bool ) =>: export: isLiteral
     switch
        intLiteral initializer case true return
-       empty arrayType unionElement
+       empty arrayType unionElement RawUnion
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
            generatedType enum align mutablePointer mutableRawPointer
@@ -624,7 +629,7 @@ namespace: types
           newTuple .data return
         end
         initInfo .asTuple TupleId cast Type .struct return
-       empty arrayType unionElement
+       empty arrayType unionElement RawUnion
            undefined primitiveType procedure cType pointer
            namedType autoType genericType rawPointer
            generatedType enum align mutablePointer mutableRawPointer
@@ -881,7 +886,7 @@ namespace: types
   -> bool ) =>: tryComputeSize
     composite switch
       struct .case composite >$ typeContext tryComputeTupleSize return
-      union .case composite >$ typeContext tryComputeUnionSize return
+      union RawUnion .case composite >$ typeContext tryComputeUnionSize return
       initializer case
         ## tryComputeUnionSize
           composite
@@ -912,7 +917,7 @@ namespace: types
         PTR_SIZE TypeSize .fixed return
       arrayType case
         t context getBaseType context alignOf return
-      struct union initializer case
+      struct union RawUnion initializer case
         t context tryComputeSize if
           TypeSize .unknown return
         end
@@ -967,7 +972,7 @@ namespace: types
           GenericArg case baseSizeVal TypeSize .dynamicArray return
         end
         break
-      struct union initializer case
+      struct union RawUnion initializer case
         t context tryComputeSize if
           TypeSize .unknown return
         end
@@ -1048,7 +1053,6 @@ namespace: types
     box context unwrapNamed switch
       pointer mutablePointer rawPointer mutableRawPointer arrayType .case
         ArrayData ptr cast [] .base return
-      unionElement .case UnionElementInfo ptr cast [] .base return
       default Type .undefined return
     end
   end
@@ -1210,7 +1214,7 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isComposite
     unwrapNamed
     switch
-      enum struct union initializer unionElement case
+      enum struct union RawUnion initializer unionElement case
         true return
       undefined empty primitiveType pointer mutablePointer arrayType procedure
         namedType autoType genericType generatedType intLiteral align
@@ -1226,28 +1230,24 @@ namespace: types
     unwrapNamed .?enum ? return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isUnion
-    unwrapNamed .?union ? return
+    unwrapNamed =:: t
+    t .?union ? or t .?RawUnion ? end return
   end
   ## temporary name from isTaggedUnion while transitioning from old implementation
-  proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isTaggedUnion
-    typeContext unwrapNamed .?union .if
-      UnionInfo ptr cast [] .labelType .?empty ? ! return
-    else ..drop false return end
+  proc( Type TypeContext ptr -> bool ) =>: export: isTaggedUnion
+    unwrapNamed .?union ?
   end
   proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isEnumOrTaggedUnion
     typeContext unwrapNamed switch
-      enum case true return
-      union .case UnionInfo ptr cast [] .labelType .?empty ? ! return
-      struct undefined empty primitiveType pointer arrayType procedure
+      enum union case true return
+      struct undefined empty primitiveType pointer arrayType procedure RawUnion
        namedType autoType genericType generatedType intLiteral initializer rawPointer
        cType align typeSet mutablePointer mutableRawPointer unionElement case
          false return
     end
   end
   proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isRawUnion
-    typeContext unwrapNamed .?union .if
-      UnionInfo ptr cast [] .labelType .?empty ? return
-    else ..drop false return end
+    typeContext unwrapNamed .?RawUnion ?
   end
   proc( Type TypeContext ptr : context -> bool ) =>: export: isUnionElement
     .?unionElement ? return
@@ -1261,7 +1261,7 @@ namespace: types
     composite context unwrapNamed
       switch
         struct .case TupleInfo ptr cast .compositeInfo CompositeData .Composite return
-        union .case UnionInfo ptr cast .compositeInfo CompositeData .Composite return
+        union RawUnion .case UnionInfo ptr cast .compositeInfo CompositeData .Composite return
         unionElement .case UnionElementInfo ptr cast [] .base context compositeData return
         initializer .case
           InitializerInfo ptr cast .asTuple .compositeInfo CompositeData .Composite return
@@ -1328,7 +1328,7 @@ namespace: types
   -> i64 optional ) =>: export: tupleElementOffset
     tuple typeContext unwrapNamed ..dup switch
       struct case .struct break
-      enum union unionElement undefined empty primitiveType pointer arrayType procedure
+      enum union RawUnion unionElement undefined empty primitiveType pointer arrayType procedure
        namedType autoType genericType generatedType intLiteral initializer align
        cType rawPointer mutablePointer mutableRawPointer typeSet case ..drop
          i64 optional.empty return
@@ -1349,6 +1349,7 @@ namespace: types
     enum typeContext unwrapNamed switch
       enum .case EnumInfo ptr cast [] .labelType 0:i64  optional.wrap return
       union .case break
+      RawUnion case Type .empty i64 optional.empty return
       struct undefined empty primitiveType pointer arrayType procedure unionElement
        namedType autoType genericType generatedType intLiteral initializer align
        cType rawPointer mutablePointer mutableRawPointer typeSet case
@@ -1580,10 +1581,12 @@ namespace: types
           -1
         CompositeInfo new
         0
-        labels .length true computeEnumLabelType
+        labels .length isTagged computeEnumLabelType
       UnionInfo new mixedArena.copyValue =:: unionId
     context .memory=
-    unionId UnionId cast Type .union optional.wrap return
+    unionId UnionId cast
+      isTagged if Type .union else Type .RawUnion end
+    optional.wrap return
   end
 end
 namespace: sb
@@ -2117,7 +2120,7 @@ namespace: types
           true return
         end
         false return
-      struct enum union initializer unionElement case
+      struct enum union RawUnion initializer unionElement case
         t context compositeFlags COMP_FLAG_STATIC_ARGS & ? return
       generatedType case
         t .generatedType GeneratedTypeName ptr cast =:: genType
@@ -2687,12 +2690,14 @@ namespace: sb
             " ptr.raw.mut" appendS
           end
         return
-      struct union initializer case
+      struct union RawUnion initializer case
         sb
           t .?struct ? if
             "struct( " appendS
           else t .?union ? _if
             "union( " appendS
+          else t .?RawUnion ? _if
+            "union.raw( " appendS
           else
             "initializer( " appendS
           end

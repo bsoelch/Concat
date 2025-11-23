@@ -176,7 +176,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       context toValType return
     pointer mutablePointer rawPointer mutableRawPointer case
       ValType .PTR return
-    procedure arrayType struct union unionElement enum initializer case
+    procedure arrayType struct union RawUnion unionElement enum initializer case
       ValType .REFERENCE return
     undefined empty genericType autoType
     align typeSet case
@@ -673,7 +673,7 @@ namespace: sb
       struct case
         sb t "struct":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      union case
+      union RawUnion case
         sb t "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       unionElement case
