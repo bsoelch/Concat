@@ -2757,24 +2757,13 @@ proc(
         value valInfo eltIndex op [] .pos context setElement wrapResult return
       end
       value valInfo eltIndex op [] .pos context getElement wrapResult return
-    hasElement hasLabel case
+    hasElement .case =:: expectedIndex
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      op [] .val .?hasElement .else .?hasLabel ._if =:: labelId
-        valInfo .valueType typeContext types.isEnumOrTaggedUnion ! if
-          value valInfo context unpopValue
-          "unexpected type for hasLabel: " sb.copyPtr
-            valInfo .valueType typeContext sb.appendType
-          op [] .pos errors appendError
-          EvalResult .Error return
-        end
-        valInfo .valueType labelId typeContext types.compositeFindLabel
-        $ ? if .data else ..drop -1 end
-      else ..unreachable end =:: expectedIndex
       value .?EnumLabel .if
         expectedIndex == ConstValue .Bool
       else .?Union ? _if

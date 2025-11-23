@@ -461,7 +461,7 @@ proc(
     autoTypedInitializeId ConstantReference NewReference
     typeInfo NewEnumReference usingNamespace usingIdentifier InlineReturn
     getName atName setName getLabel getUnionLabel Assert declareName initializeName StaticConstant
-    setLabel length typeModifier hasLabel existsLabel existsName NestedProc case
+    setLabel length typeModifier existsLabel existsName NestedProc case
       break ## XXX error message
   end
   "unsupported operation " sb.copyPtr

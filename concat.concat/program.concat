@@ -154,7 +154,6 @@ union(
             LabelId : getLabel
             LabelId : getUnionLabel
             LabelId : setLabel
-            LabelId : hasLabel
             LabelId : existsLabel
                 i32 : getElement
                 i32 : getUnionElement
@@ -839,12 +838,6 @@ namespace: sb
           ..over .dataType typeContext sb.appendType
           " ) : " sb.appendS
           ..over .val .setLabel labelContext sb.appendLabelName
-          break
-        hasLabel case
-          "has label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .hasLabel labelContext sb.appendLabelName
           break
         existsLabel case
           "exists label ( " sb.appendS

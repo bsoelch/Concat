@@ -2313,24 +2313,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError
         return
       end
-    else $ "??":s string.eq _if =:: opName
-      state peekOp .else
-        "unexpected \"" sb.copyPtr
-          opName sb.appendStr
-        '"' sb.appendC fileState [] .wordStart errors appendError
-        return
-      end =:: prevOp
-      prevOp [] .val .?getLabel .if prevOp .val .hasLabel=
-        fileState [] .wordStart prevOp .pos=
-        return
-      else ..drop
-        "unexpected operation for \"" sb.copyPtr
-        opName sb.appendStr
-        "\"\n" sb.appendS
-        prevOp [] progContext sb.appendOp
-        fileState [] .wordStart errors appendError
-        return
-      end
     else $ .length 1:iSize u> and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != _if
       1 string.tail
         $ "=":s string.endsWith =:: isWrite

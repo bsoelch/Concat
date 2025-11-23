@@ -4892,7 +4892,7 @@ proc(
       sb return ## XXX? print compiler info
     autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier StaticConstant
     getName atName setName getLabel getUnionLabel Error Assert panic declareName initializeName
-    setLabel length typeModifier hasLabel existsLabel existsName NestedProc case
+    setLabel length typeModifier existsLabel existsName NestedProc case
       break ## XXX error message
   end
   "unable to compile operation " sb.copyPtr

@@ -2457,13 +2457,11 @@ proc(
         op .pos errors appendError
       end
       0 return
-    getLabel getUnionLabel setLabel hasLabel existsLabel .case =:: labelId
+    getLabel getUnionLabel setLabel existsLabel .case =:: labelId
       enum( CHECK CHECK_ENUM GET UNION_GET ) =:: LabelAccessType
       LabelAccessType .GET =:: mut: accessType
       op .val .?setLabel ? =:: isWrite
-      op .val .?hasLabel ? if
-        LabelAccessType .CHECK_ENUM accessType=
-      else op .val .?existsLabel ? _if
+      op .val .?existsLabel ? if
         LabelAccessType .CHECK accessType=
       else op .val .?getUnionLabel ? _if
         LabelAccessType .UNION_GET accessType=
@@ -2515,10 +2513,6 @@ proc(
       end =:: elementIndex
       containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
-      accessType .CHECK_ENUM and containerType typeContext types.isEnum if
-        "using `??` on enum-elements is depecated, use direct label access to check for a specific variant" sb.copyPtr
-        op .pos errors appendWarning
-      end
       isWrite ! and isType ! and accessType .GET and containerType typeContext types.isEnum if
         LabelAccessType .CHECK_ENUM accessType=
       end
