@@ -1899,6 +1899,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             end
           break
           Overload case
+            ## TODO! set jump-distance in starting op to skip to end
             BlockType .OVERLOAD fileState [] .wordStart opEndBlock state appendOp
           break
           TypeBlock Initializer case
@@ -2931,6 +2932,8 @@ proc(
   state .tmpString sb.free ..drop
   programContext typeChecker return
 end
+## TODO why is a pre-declaration neccessary here
+proc( Operation slice : ops TypeCheckState ptr.mut : state -> ) : export: typeCheckGlobalCode
 proc(
   stringBuilder : fileName
   bool : isLibFile
@@ -2938,6 +2941,7 @@ proc(
 -> FileId io.IOError ) =>: parseFile
   fileName
     state [] .progContext =:: progContext
+    progContext .tmpOps [] .length =:: codeOffset
     progContext .idContext =:: idContext
     idContext .typeContext .labelContext =:: labelContext
     progContext .errors =:: errors
@@ -3024,5 +3028,9 @@ proc(
       fileState .currentPos
     errors appendError
   end
+  progContext [] .tmpOps list.asSlice codeOffset slice.tail state [] .typeChecker typeCheckGlobalCode
+  progContext [] .tmpOps
+    codeOffset list.setLength
+  progContext .tmpOps=
   newFileId io.FILE_ERROR_NONE return
 end

@@ -281,6 +281,9 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   prevState .reachable state .reachable=
 end
 
+proc( TypeCheckState ptr : state -> bool ) =>: isGlobal
+  state [] .currentProcType ? ! return
+end
 proc( TypeCheckState ptr : state -> i32 ) =>: currentBlockStart
   state [] .blockStart return
 end
@@ -1269,9 +1272,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: clearOps
   0 state .blockStart=
-  state [] .stateStack list.peek =:: prevState?
-  prevState? optional.hasData if
-    prevState? .data =:: prevState
+  state [] .stateStack list.peek .if =:: prevState
     state [] .compiledOps
       prevState [] .compiledOpsOffset list.setLength
     state .compiledOps=
@@ -1814,12 +1815,12 @@ proc(
         op .pos state popType
         $ op@ .dataType=
       end
-      state .currentProcType [] ? if
-        IdentifierType .LOCAL_VAR
-      else
+      state isGlobal if
         ## TODO detect special identifiers
         ## type -> type, proc -> proc
         IdentifierType .GLOBAL_VAR
+      else
+        IdentifierType .LOCAL_VAR
       end
       -1 ## index
       ConstValue .None
@@ -1855,14 +1856,10 @@ proc(
   end
   op .val switch
     NOP case 0 return
-    Constant case
-      op .val .Constant op .dataType op .pos state pushConstant
-      0 return
-    StaticConstant case ## TODO? remove static constants
-      op .val .StaticConstant op .dataType op .pos state pushConstant
-      0 return
-    NestedProc case
-      op .val .NestedProc =:: procId
+    Constant .case op .dataType op .pos state pushConstant 0 return
+  ## TODO? remove static constants
+    StaticConstant .case op .dataType op .pos state pushConstant 0 return
+    NestedProc .case =:: procId
       program [] .procedures procId i64 cast list.at .data =:: procData
       procData [] .procType .?Undefined ? ! or
           procData .implementation .?code ! .or [] .codeState .PARSING ! if
@@ -1885,7 +1882,10 @@ proc(
       idContext id.currentScope procData .scopeId= ## remember host scope
       ProcCodeState .PARSED procData .implementation .code .codeState=
       procId ConstValue .Procedure
-        procType false typeContext types.getAddressType
+        procType ## TODO? special type for procedure literal
+        _EXPERIMENTAL_ ! if
+          false typeContext types.getAddressType
+        end
       op .pos state pushConstant
       0 return
     getName setName atName .case =:: labelId
@@ -2285,7 +2285,9 @@ proc(
       op@ false state resolveAutoType
       op .val .declareId .idType switch
         GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
-          op state appendOp ..drop
+          state isGlobal ! if ## ignore declarations outside procedure
+            op state appendOp ..drop
+          end
           0 return
         PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
           "unexpected declaration of identifier " sb.copyPtr
@@ -2308,11 +2310,10 @@ proc(
       idInfo op@ .val .initializeId= ## auto-typed initializations have been resolved
       idInfo .idType switch
         GLOBAL_VAR LOCAL_VAR ITR_VAR case
-          state .stack branchTree.peek =:: constVal?
-          constVal? optional.hasData if
-            constVal? .data [] .value
+          state .stack branchTree.peek .if
+            [] .value
           else ConstValue .None end =:: constVal
-          constVal .?TypeId ? if
+          constVal .?TypeId ? or state isGlobal and constVal .?None ? ! if
             ## remove type-constant from code
             1 op .pos state discardValues
           else
@@ -2327,9 +2328,10 @@ proc(
           end
           ## update constant value in identifier if stack-value is constant
           ##   don't update mutable local variables
-          constVal .?TypeId ? or
-              constVal .?None ? ! and idInfo .idType .GLOBAL_VAR or
+          constVal .?TypeId ? or constVal .?None ? ! and
+              state isGlobal or idInfo .idType .GLOBAL_VAR or
               idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
+            ## TODO special handling for procedure constants
             ## getIdentifier
               idInfo .labelId
               idContext
@@ -2341,7 +2343,7 @@ proc(
               constVal idData .constValue=
             end
             ## don't create code for declaration of type-constant
-            constVal .?TypeId ? if 0 return end
+            constVal .?TypeId ? or state isGlobal if 0 return end
           end
           op state appendOp ..drop
           0 return
@@ -4588,30 +4590,35 @@ proc(
   state resetState
 end
 proc(
+  Operation slice : ops
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckGlobalCode
   state [] .program =:: program
   ## TODO? ensure there are no open states
   ## TODO reconfigure type-checker to global mode
   state [] .compiledOps .length =:: codeOffset
-  0:iSize while $ program .tmpOps [] .length u< do =:: i
-     program .tmpOps [] i [] state typeCheckOp
+  0:iSize while $ ops .length u< do =:: i
+     ops i [] state typeCheckOp
       $ 0x8000'0000 u>= if ..drop
         64 sb.create
-          program .tmpOps [] i [] program sb.appendOp
+          ops i [] program sb.appendOp
         io.stdOut >$ io.fputSb
         "negative jump distance" ..panic
       end
     i +
   finally 1 + end ..drop
+  state removeTrailingNOPs
   state [] .compiledOps .length codeOffset u> if
-    ## TODO print first few operations
+    256 sb.create
+      state [] .compiledOps for
+        program sb.appendOp
+        io.stdOut $1 io.fputSb ..drop
+        sb.clear
+      end
+    sb.free ..drop
     "unable to fold constants in global code" ..panic
   end
-  ## TODO ensure no compiled operations have been generated
-  program [] .tmpOps
-    list.clear
-  program .tmpOps=
+  state clearOps
 end
 
 proc(
