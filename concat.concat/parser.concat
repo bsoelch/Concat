@@ -74,6 +74,7 @@ union(
   TypeBlockData : TypeBlock
   InitializerBlockData : Initializer
   _ : Namespace
+  _ : Overload
 ) =:: BlockInfoData
 ## TODO? assign block-ids in parser
 struct(
@@ -1679,6 +1680,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
       end
+      _EXPERIMENTAL_ if
+        BlockInfoData .Overload state openBlock ..drop
+        BlockType .OVERLOAD labelId fileState [] .wordStart opLabeledBlock state appendOp
+        return
+      end
       labelId idContext id.findDeclaredIdentifierByLabel or
           labelFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
           $ [] .labelId labelContext id.getLabelNamespace labelContext id.currentNamespace .current != if ..drop
@@ -1892,6 +1898,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               "unexpected end of namespace" sb.copyPtr fileState [] .wordStart errors appendError
             end
           break
+          Overload case
+            BlockType .OVERLOAD fileState [] .wordStart opEndBlock state appendOp
+          break
           TypeBlock Initializer case
             state closedConstBlock
             ## TODO print block name
@@ -1997,7 +2006,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           typedBlock .blockType fileState [] .wordStart opEndBlock state appendOp
           state closedConstBlock
         return
-        If AndOr While Switch Namespace Procedure Initializer case
+        If AndOr While Switch Namespace Procedure Initializer Overload case
           "unexpected `" sb.copyPtr
             opName sb.appendStr
             "` statement " sb.appendS
@@ -2038,7 +2047,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
         state [] .openBlocks list.reversed for: findContainer =:: b
-          BlockType ..length 41:iSize == "no new block types" assert
+          BlockType ..length 42:iSize == "no new block types" assert
           b .blockData switch
             Procedure case
               false inConstBlock=
@@ -2637,7 +2646,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ..drop ## discard remainder of file
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek =:: next?
-          BlockType ..length 41:iSize == "no new block types" assert
+          BlockType ..length 42:iSize == "no new block types" assert
           next? optional.hasData and next? .data [] .blockData switch
             If Switch case true break
             default false break

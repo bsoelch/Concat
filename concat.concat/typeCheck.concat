@@ -3626,7 +3626,7 @@ proc(
         PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        UNKNOWN NAMESPACE case
+        UNKNOWN NAMESPACE OVERLOAD case
           break
       end
       break
@@ -4101,7 +4101,7 @@ proc(
         BREAK CONTINUE BREAK_SWITCH
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        UNKNOWN NAMESPACE case
+        UNKNOWN NAMESPACE OVERLOAD case
           break
       end
       break

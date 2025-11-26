@@ -205,7 +205,7 @@ namespace: interpreter
           AND OR AND_IF OR_IF AND_DO OR_DO
           IF_TRUE IF_FALSE AND_TRUE AND_FALSE
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          NAMESPACE case break
+          NAMESPACE OVERLOAD case break
       end
     finally i 1:iSize - end ..drop
     false return
@@ -225,7 +225,7 @@ namespace: interpreter
             AND OR AND_IF OR_IF AND_DO OR_DO
             IF_TRUE IF_FALSE AND_TRUE AND_FALSE
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-            NAMESPACE case break
+            NAMESPACE OVERLOAD case break
       end
     finally i 1:iSize - end ..drop
     false return
@@ -245,7 +245,7 @@ namespace: interpreter
             AND OR AND_IF OR_IF AND_DO OR_DO
             IF_TRUE IF_FALSE AND_TRUE AND_FALSE
             OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-            NAMESPACE case break
+            NAMESPACE OVERLOAD case break
       end
     finally i 1:iSize - end ..drop
     false return
@@ -263,7 +263,7 @@ namespace: interpreter
           TYPE_UNTAGGED_UNION UNKNOWN IF ELSE WHILE DO BREAK CONTINUE TYPE_ENUM
           SWITCH BREAK_SWITCH CASE DOT_CASE DEFAULT FINALLY TYPE_TYPESET
           AND OR AND_IF OR_IF AND_DO OR_DO
-          NAMESPACE case break
+          NAMESPACE OVERLOAD case break
       end
     finally i 1:iSize - end ..drop
     false return
@@ -309,7 +309,7 @@ namespace: interpreter
     context .openBlocks=
     result optional.wrap return
   end
-  BlockType ..length 41:iSize == "number of block types" assert
+  BlockType ..length 42:iSize == "number of block types" assert
   proc( InterpreterContext ptr.mut : context -> bool ) =>: inAndOrBlock
     context peekBlock =:: current
     current optional.isEmpty if false return end
@@ -359,7 +359,7 @@ namespace: interpreter
           AND OR AND_IF OR_IF AND_DO OR_DO
           IF_TRUE IF_FALSE AND_TRUE AND_FALSE
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          NAMESPACE TYPE_TYPESET case break
+          NAMESPACE TYPE_TYPESET OVERLOAD case break
       end
     finally i 1:iSize - end ..drop
     ## TODO? better default value/error condition
@@ -1797,7 +1797,7 @@ proc(
             currentBlock [] .typeOffset - i32 cast.u optional.wrap
           currentBlock .argCount=
           EvalResult .Ok return
-        PROCEDURE INLINE_PROCEDURE NAMESPACE case
+        PROCEDURE INLINE_PROCEDURE NAMESPACE OVERLOAD case
           "unsupported block-type in constant evaluation: " sb.copyPtr
             op [] .val .block .blockType sb.appendBlockType
           op [] .pos errors appendError
@@ -1981,7 +1981,7 @@ proc(
     blockEnd case
       op [] .val .blockEnd .blockType =:: blockType
       context [] .evalType .INTERPRET if
-        BlockType ..length 41:iSize == "no-new block-types" assert
+        BlockType ..length 42:iSize == "no-new block-types" assert
         blockType switch
           ELSE SWITCH AND OR case EvalResult .Ok return
           WHILE case
@@ -2160,7 +2160,7 @@ proc(
         AND OR AND_IF OR_IF AND_DO OR_DO
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        UNKNOWN NAMESPACE FINALLY TYPE_PROC_ARROW case
+        UNKNOWN NAMESPACE FINALLY TYPE_PROC_ARROW OVERLOAD case
           "unsupported block-end in constant evaluation: " sb.copyPtr
             op [] .val .blockEnd .blockType sb.appendBlockType
           op [] .pos errors appendError

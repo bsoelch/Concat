@@ -39,7 +39,7 @@ enum(
   TYPE_PROC_ARROW
   TYPE_COMPOSITE
   TYPE_TYPESET
-  NAMESPACE
+  NAMESPACE OVERLOAD
 ) =:: export: BlockType
 i32 =:: export: BlockId
 i32 =:: export: JumpDistance
@@ -178,6 +178,9 @@ namespace: sb
         return
       NAMESPACE case
         "namespace" sb.appendS
+        return
+      OVERLOAD case
+        "overload" sb.appendS
         return
     end
   end
