@@ -205,7 +205,7 @@ struct(
   iSize : initializationStackOffset
   i32 : blockStart
   branchTree.NodeId : branchRoot
-  Type : currentProcType
+  Type optional : currentProcType
   FileId : currentFile
   TypeCheckMode : mode
   bool : inTypeBlock
@@ -215,7 +215,7 @@ struct(
   ProgramContext ptr.mut : program
   InterpreterContext : interpreter
   LabelId TypedValue hashMap : argData
-  Type : currentProcType
+  Type optional : currentProcType
   bool : inTypeBlock
   TypeInfo BranchTree : stack
   BlockInfo list : openBlocks
@@ -1333,7 +1333,11 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  state [] .currentProcType =:: procType
+  state [] .currentProcType .else
+    "return is only supported within procedures" sb.copyPtr
+    op [] .pos errors appendError
+    return
+  end =:: procType
   procType op .dataType=
   procType typeContext types.isProcedure ! if
     "unexpected type for return: " sb.copyPtr
@@ -1810,7 +1814,13 @@ proc(
         op .pos state popType
         $ op@ .dataType=
       end
-      IdentifierType .LOCAL_VAR
+      state .currentProcType [] ? if
+        IdentifierType .LOCAL_VAR
+      else
+        ## TODO detect special identifiers
+        ## type -> type, proc -> proc
+        IdentifierType .GLOBAL_VAR
+      end
       -1 ## index
       ConstValue .None
       isInit
@@ -4489,9 +4499,9 @@ proc(
       implId list.at .data
     [] .procType =:: procType
     procType procStart .dataType=
-    procType state .currentProcType=
+    procType optional.wrap state .currentProcType=
   else
-    currentProc [] .procType state .currentProcType=
+    currentProc [] .procType optional.wrap state .currentProcType=
   end
   currentProc [] .labelId labelContext id.inLabelNamespace
   idContext id.currentScope =:: prevScope
@@ -4580,14 +4590,15 @@ end
 proc(
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckGlobalCode
+  state [] .program =:: program
   ## TODO? ensure there are no open states
   ## TODO reconfigure type-checker to global mode
   state [] .compiledOps .length =:: codeOffset
-  0:iSize while $ state .program .tmpOps [] .length u< do =:: i
-    state .program [] .tmpOps i [] state typeCheckOp
+  0:iSize while $ program .tmpOps [] .length u< do =:: i
+     program .tmpOps [] i [] state typeCheckOp
       $ 0x8000'0000 u>= if ..drop
         64 sb.create
-          state .program [] .tmpOps i [] program sb.appendOp
+          program .tmpOps [] i [] program sb.appendOp
         io.stdOut >$ io.fputSb
         "negative jump distance" ..panic
       end
@@ -4598,9 +4609,9 @@ proc(
     "unable to fold constants in global code" ..panic
   end
   ## TODO ensure no compiled operations have been generated
-  state .program .tmpOps []
+  program [] .tmpOps
     list.clear
-  state .program .tmpOps=
+  program .tmpOps=
 end
 
 proc(
@@ -4620,7 +4631,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
       interpreter.InterpreterType .INTERPRET
     interpreter.wrapProgram
     labelHash@ labelEq@ 64 TypedValue map.create
-    Type .Undefined
+    Type optional.empty
     false ## inTypeBlock
     TypeInfo branchTree.create
     32  BlockInfo list.create

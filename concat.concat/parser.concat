@@ -83,7 +83,6 @@ struct(
   bool : autoClose
   bool : hasScope
 ) =:: BlockInfo
-
 struct(
   string : basePath
   string : libPath
@@ -106,7 +105,6 @@ struct(
 proc( FilePosition : pos -> Constant ) =>: newWildcardConst
   Type .Undefined ConstValue .WildCard IdentifierInfo optional.empty pos Constant new return
 end
-
 proc(
   i64 : value
   i32 : preferedSize
@@ -241,7 +239,7 @@ end
 
 proc( ParserState ptr.mut : state -> iSize ) =>: opCount
   state [] .progContext =:: progContext
-  state [] .currentProcs .length 0 == if
+  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0 == if
     0 return
   else
     progContext [] .tmpOps .length return
@@ -253,7 +251,7 @@ end
 proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
   state [] .progContext =:: progContext
   progContext .errors =:: errors
-  state [] .currentProcs .length 0:iSize == if
+  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
     state [] .saveGlobalTokens if
       progContext [] .globalOps
         op list.append
@@ -1516,7 +1514,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "=>":s string.eq or $ "=>:":s string.eq _if =:: opName
       opName .length 3:iSize == =:: named
       state [] .currentProcs .length 0:iSize != =:: isNested
-      isNested if
+      _EXPERIMENTAL_ or isNested if
         ## TODO! find better way to handle creation of proc-data for nested procs (with type unknown at parse-time)
         Type .Undefined
       else
@@ -1549,12 +1547,27 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state [] .currentFile
         labelContext id.newLabel
       end =:: mut: procName
-      ## TODO? make `proc( ... ) =>: name ... end` act as syntax suggar for `proc( ... ) => ... end =:: name`
+      ## TODO make `proc( ... ) =>: name ... end` act as syntax suggar for `proc( ... ) => ... end =:: name`
+      ## -> update procedure name if assigned to variable
       procName labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       ## declare procedure name outside procedure
       skipBlock if ## don't declare identifier in skipped block
         state [] .currentProcs NO_PROC list.append state .currentProcs=
         state openProcBlock
+        return
+      end
+      _EXPERIMENTAL_ if
+        ## TODO simplify newProcData
+        procName procType state [] .currentFile NO_PROC fileState [] .wordStart progContext newProcData =:: procId
+        state [] .currentProcs procId list.append state .currentProcs=
+        procId fileState [] .wordStart opNestedProc state appendOp
+        named if
+          progContext newAutoType
+            procName fileState [] .wordStart
+          opAutoTypedInitializeName state appendOp
+        end
+        state openProcBlock
+        ## TODO? special op for proc-start
         return
       end
       ## declare procedure
@@ -1710,6 +1723,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ## XXX? warn for incompatible flags
         idData [] .constValue .ProcedureBundle
       end =:: bundleId
+      ## TODO: delay overload creation to type-check phase
       progContext [] .procBundles bundleId i64 cast list.at .data =:: bundleData
       while fileState errors nextIdentifier =:: procName
         procName "end":s string.eq !
@@ -1851,7 +1865,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                 procBlockData .blockStart slice.tail
                 $ 0 @[] =:: procStart
                 ## FIXME:in some edge cases this assertion is hit
-                procStart [] .val .?implementProcedure ? or
+                _EXPERIMENTAL_ or procStart [] .val .?implementProcedure ? or
                     procStart [] .val .?initializeId ?
                 end "procedure starts with correct operation" assert
                 slice.copy
@@ -1859,7 +1873,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               progContext [] .tmpOps
                 procBlockData .blockStart list.setLength
               progContext .tmpOps=
-              currentProc [] .labelId labelContext id.labelFlags id.FLAG_LAMBDA & ? if
+              _EXPERIMENTAL_ ! and currentProc [] .labelId labelContext id.labelFlags id.FLAG_LAMBDA & ? if
                 currentProc [] .procType .?Undefined ? if
                   currentProcId fileState [] .wordStart opNestedProc state appendOp
                 else
@@ -2037,7 +2051,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         ## correct type will be resolved in type-check phase
         progContext newAutoType
-      else inProcedure or inConstBlock _if
+      else _EXPERIMENTAL_ or inProcedure or inConstBlock _if
         ## correct type will be resolved in type-check phase
         progContext newAutoType
       else
@@ -2079,12 +2093,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         isInit if
           "alias cannot have an implementation" sb.copyPtr
           fileState [] .wordStart errors appendError
-        else idType .PROCEDURE ! _if
+        else _EXPERIMENTAL_ ! and idType .PROCEDURE ! _if
           "alias is only supported for procedure declarations" sb.copyPtr
           fileState [] .wordStart errors appendError
         end
       end
-      inProcedure if
+      _EXPERIMENTAL_ or inProcedure if
         label fileState [] .wordStart
           isInit if
             opInitializeName
@@ -2217,7 +2231,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
       end
-      state [] .currentProcs .length 0:iSize != if
+      ## TODO? are the auto-types needed (declaration is in type-check phase where actual type is known)
+      _EXPERIMENTAL_ or state [] .currentProcs .length 0:iSize != if
         progContext newAutoType
           labelId fileState [] .wordStart
         opAutoTypedInitializeName state appendOp
