@@ -74,7 +74,7 @@ union(
   TypeBlockData : TypeBlock
   InitializerBlockData : Initializer
   _ : Namespace
-  _ : Overload
+  iSize : Overload
 ) =:: BlockInfoData
 ## TODO? assign block-ids in parser
 struct(
@@ -266,6 +266,11 @@ proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
       op .pos errors appendError
     end
   else
+    state [] .currentProcs .length 0:iSize == and state [] .saveGlobalTokens if
+      progContext [] .globalOps
+        op list.append
+      progContext .globalOps=
+    end
     progContext [] .tmpOps
       op list.append
     progContext .tmpOps=
@@ -274,7 +279,7 @@ end
 
 proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
   state [] .progContext =:: progContext
-  state [] .currentProcs .length 0:iSize == if
+  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
     state [] .globalOpBuffer
   else
     progContext [] .tmpOps
@@ -415,13 +420,13 @@ proc(
 end
 
 proc( iSize : opPosition ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: findOp
-  state [] .currentProcs .length 0:iSize == if
+  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
     Operation ptr.mut optional.empty return ## cannot jumps in global block
   end
   state [] .progContext [] .tmpOps opPosition list.at
 end
 proc( iSize : blockPosition FilePosition : pos ParserState ptr.mut : state -> ) =>: setBlockJump
-  state [] .currentProcs .length 0:iSize == if
+  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
     return ## cannot jumps in global block
   end
   state [] .progContext =:: progContext
@@ -438,7 +443,7 @@ proc( iSize : blockPosition FilePosition : pos ParserState ptr.mut : state -> ) 
   end
 end
 proc( iSize slice : blockPositions FilePosition : pos ParserState ptr.mut : state -> ) =>: setBlockJumps
-  state [] .currentProcs .length 0:iSize == if
+  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
     return ## cannot jumps in global block
   end
   state [] .progContext =:: progContext
@@ -457,7 +462,7 @@ proc( iSize slice : blockPositions FilePosition : pos ParserState ptr.mut : stat
   end
 end
 proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos ParserState ptr.mut : state -> iSize slice.mut ) =>: convertAndOrBlock
-  state [] .currentProcs .length 0:iSize == if
+  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
     iSize slice.emptyMutable return ## cannot modify and/or in global block
   end
   state [] .progContext =:: progContext
@@ -549,7 +554,7 @@ proc(
   FilePosition : pos
   ParserState ptr.mut : state
 -> ) =>: implicitBreakSwitch
-  state [] .currentProcs .length 0:iSize == if
+  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
     return ## cannot modify and/or in global block
   end
   state peekBlock .and =:: currentBlock
@@ -1558,15 +1563,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       _EXPERIMENTAL_ if
-        ## TODO simplify newProcData
         procName procType state [] .currentFile NO_PROC fileState [] .wordStart progContext newProcData =:: procId
-        state [] .currentProcs procId list.append state .currentProcs=
         procId fileState [] .wordStart opNestedProc state appendOp
         named if
           progContext newAutoType
             procName fileState [] .wordStart
           opAutoTypedInitializeName state appendOp
         end
+        state [] .currentProcs procId list.append state .currentProcs=
         state openProcBlock
         ## TODO? special op for proc-start
         return
@@ -1656,7 +1660,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError return
       end
       id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
-        idContext id.beginNamespace
+        _EXPERIMENTAL_ if
+          BlockType .NAMESPACE >$ fileState [] .wordStart opLabeledBlock state appendOp
+        else
+          idContext id.beginNamespace
+        end
       BlockInfoData .Namespace state openBlock ..drop
       return
     else $ "overload:":s string.eq _if =:: opName
@@ -1681,7 +1689,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart errors appendError
       end
       _EXPERIMENTAL_ if
-        BlockInfoData .Overload state openBlock ..drop
+        state opCount BlockInfoData .Overload state openBlock ..drop
         BlockType .OVERLOAD labelId fileState [] .wordStart opLabeledBlock state appendOp
         return
       end
@@ -1894,12 +1902,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             end
           break
           Namespace case
-            idContext id.endNamespace if
+            _EXPERIMENTAL_ if
+              BlockType .NAMESPACE fileState [] .wordStart opEndBlock state appendOp
+            else idContext id.endNamespace _if
               "unexpected end of namespace" sb.copyPtr fileState [] .wordStart errors appendError
             end
           break
-          Overload case
-            ## TODO! set jump-distance in starting op to skip to end
+          Overload .case =:: blockStart
+            blockStart fileState [] .wordStart state setBlockJump
             BlockType .OVERLOAD fileState [] .wordStart opEndBlock state appendOp
           break
           TypeBlock Initializer case

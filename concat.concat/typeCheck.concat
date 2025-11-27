@@ -1202,7 +1202,9 @@ proc(
   index state currentBlockStart < if
     false return
   end
-  state [] .compiledOps index list.at .data =:: op
+  state [] .compiledOps index list.at .else
+    false return
+  end =:: op
   op [] .val .?Constant ? if
     true return
   end
@@ -3625,10 +3627,16 @@ proc(
           currentBlock .andOrPositions=
           op state appendOp ..drop
           0 return
+        NAMESPACE case
+          op .val .block .blockLabel idContext id.beginNamespace
+          0 return
+        OVERLOAD case
+          ## TODO! type-check overload
+          op .val .block .jumpDistance iSize cast.u return
         PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        UNKNOWN NAMESPACE OVERLOAD case
+        UNKNOWN case
           break
       end
       break
@@ -4099,11 +4107,16 @@ proc(
           branchPoints list.free ..drop
           branches list.free ..drop
           0 return
+        NAMESPACE case
+          idContext id.endNamespace if
+            "unexpected end of namespace" sb.copyPtr op .pos errors appendError
+          end
+        0 return
         AND_IF OR_IF AND_DO OR_DO INLINE_PROCEDURE
         BREAK CONTINUE BREAK_SWITCH
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        UNKNOWN NAMESPACE OVERLOAD case
+        UNKNOWN OVERLOAD case
           break
       end
       break
@@ -4596,6 +4609,7 @@ proc(
   state [] .program =:: program
   ## TODO? ensure there are no open states
   ## TODO reconfigure type-checker to global mode
+  ## TODO handle namespaces
   state [] .compiledOps .length =:: codeOffset
   0:iSize while $ ops .length u< do =:: i
      ops i [] state typeCheckOp
@@ -4609,14 +4623,19 @@ proc(
   finally 1 + end ..drop
   state removeTrailingNOPs
   state [] .compiledOps .length codeOffset u> if
-    256 sb.create
+    "unable to fold constants in global code:\n" sb.copyPtr
       state [] .compiledOps for
+        $ .val .?NOP .and .EMPTY if ..drop continue end
         program sb.appendOp
-        io.stdOut $1 io.fputSb ..drop
-        sb.clear
       end
-    sb.free ..drop
-    "unable to fold constants in global code" ..panic
+    state [] .compiledOps list.peek .else "peek empty" ..panic end
+    [] .pos program .errors appendError
+  end
+  state [] .stack branchTree.depth 0 != if
+    "non empty stack at end of file :\n" sb.copyPtr
+      state .stack branchTree.peek .else "peek empty" ..panic end =:: stackVal
+      stackVal [] .valueType program .idContext .typeContext sb.appendType
+    stackVal [] .pushedAt program .errors appendWarning
   end
   state clearOps
 end
