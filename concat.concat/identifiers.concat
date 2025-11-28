@@ -240,16 +240,13 @@ namespace: id
     else
       id '.' string.splitLast
     end =:: path =:: name
-    NameId optional : idLabel?
     NameId : idLabel
     ## 1. search in current scopes
     mNamespace path  context .typeContext .labelContext findNamespace relSpace=
     name relSpace scopeId IdentifierName new =:: mut: idName
     relSpace NAMESPACE_ID_NONE != if
       while
-        context .identifierNames idName map.get idLabel?=
-        idLabel? optional.hasData and
-            idLabel? .data idLabel=
+        context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
           matches optional.isEmpty if
@@ -291,9 +288,7 @@ namespace: id
       ## search all scopes outside procedure
       firstNonProcScope idName@ .scope=
       while
-        context .identifierNames idName map.get idLabel?=
-        idLabel? optional.hasData and
-            idLabel? .data idLabel=
+        context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
           matches optional.isEmpty if
@@ -339,9 +334,7 @@ namespace: id
       ## search all scopes outside procedure
       firstNonProcScope idName@ .scope=
       while
-        context .identifierNames idName map.get idLabel?=
-        idLabel? optional.hasData and
-            idLabel? .data idLabel=
+        context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
           matches optional.hasData if

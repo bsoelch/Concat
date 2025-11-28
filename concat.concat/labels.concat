@@ -143,15 +143,18 @@ namespace: id
     end
     label? .data [] .pos optional.wrap return
   end
+  proc( LabelId : id NamespaceInfo : newVal LabelContext ptr.mut : context -> ) =>: export: setLabelNamespace
+    id context getLabel .if
+      newVal >$ .namespaceInfo=
+    end
+  end
   proc( LabelContext ptr.mut : context -> NamespaceInfo ) =>: export: currentNamespace
     context [] .namespaceInfo return
   end
   proc( LabelId : id LabelContext ptr.mut : context -> ) =>: export: inLabelNamespace
-    id context getLabel =:: label?
-    label? optional.isEmpty if
-       return
+    id context getLabel .if
+       [] .namespaceInfo context .namespaceInfo=
     end
-    label? .data [] .namespaceInfo context .namespaceInfo=
   end
   proc( NamespaceInfo LabelContext ptr.mut : context -> ) =>: export: resetNamespace
     context .namespaceInfo=

@@ -1734,7 +1734,6 @@ proc(
 -> IdentifierInfo optional ) =>: resolveIdentifer
   state [] .program =:: program
   state [] .program .idContext =:: idContext
-  idContext .typeContext .labelContext =:: labelContext
   label idContext id.findIdentifierByLabel if
     ..drop IdentifierInfo optional.empty return
   end =:: idData
@@ -1784,28 +1783,14 @@ proc(
     end
   end
   ## resolve names
-  op .val .?getName .if
-      op@ state resolveIdentifer
-    $ optional.hasData if
-      .data op@ .val .getId=
-    else ..drop end
-  else .?setName ._if
-      op@ state resolveIdentifer
-    $ optional.hasData if
-      .data op@ .val .setId=
-    else ..drop end
-  else .?atName ._if
-      op@ state resolveIdentifer
-    $ optional.hasData if
-      .data op@ .val .atId=
-    else ..drop end
-  else .?existsName ._if
-      op@ state resolveIdentifer
-    optional.hasData if
-      true ConstValue .Bool op@ .val .StaticConstant=
-    else
-      false ConstValue .Bool op@ .val .StaticConstant=
-    end
+  op .val .?getName .and op@ state resolveIdentifer .if
+    op@ .val .getId=
+  else op .val .?setName .and op@ state resolveIdentifer ._if
+    op@ .val .setId=
+  else op .val .?atName .and op@ state resolveIdentifer ._if
+    op@ .val .atId=
+  else op .val .?existsName ._if
+    op@ state resolveIdentifer ? ConstValue .Bool op@ .val .StaticConstant=
     types.primitive.BOOL op@ .dataType=
   else .?declareName ? or op .val .?initializeName ? _if
     op .val .?initializeName ? =:: isInit
@@ -1818,7 +1803,8 @@ proc(
         $ op@ .dataType=
       end
       state isGlobal if
-        ## TODO detect special identifiers
+        $1 labelContext id.currentNamespace labelContext id.setLabelNamespace
+        ## TODO! detect special identifiers
         ## type -> type, proc -> proc
         IdentifierType .GLOBAL_VAR
       else
@@ -4607,9 +4593,13 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckGlobalCode
   state [] .program =:: program
-  ## TODO? ensure there are no open states
-  ## TODO reconfigure type-checker to global mode
-  ## TODO handle namespaces
+  program .idContext .typeContext .labelContext =:: labelContext
+  labelContext id.currentNamespace =:: prevNamespace
+  ## TODO ensure code is run in correct scope
+  ## TODO? make target namespace an optional parameter
+  0:NamespaceId
+    id.NAMESPACE_IMPORT_NONE
+  NamespaceInfo new labelContext id.resetNamespace
   state [] .compiledOps .length =:: codeOffset
   0:iSize while $ ops .length u< do =:: i
      ops i [] state typeCheckOp
@@ -4638,6 +4628,7 @@ proc(
     stackVal [] .pushedAt program .errors appendWarning
   end
   state clearOps
+  prevNamespace labelContext id.resetNamespace
 end
 
 proc(

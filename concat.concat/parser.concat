@@ -3021,6 +3021,7 @@ proc(
     do end ..drop
   ..drop
   fileBody sb.free ..drop
+  progContext [] .tmpOps list.asSlice codeOffset slice.tail state [] .typeChecker typeCheckGlobalCode
   idContext id.closeScope ! "file scope closed correctly" assert
   prevScope idContext id.setScope
   prevNamespace labelContext id.resetNamespace
@@ -3038,7 +3039,6 @@ proc(
       fileState .currentPos
     errors appendError
   end
-  progContext [] .tmpOps list.asSlice codeOffset slice.tail state [] .typeChecker typeCheckGlobalCode
   progContext [] .tmpOps
     codeOffset list.setLength
   progContext .tmpOps=
