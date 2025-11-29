@@ -2081,12 +2081,12 @@ namespace: types
     typeSet TypeSetId cast Type .TypeSet  return
   end
   proc( Type TypeContext ptr : context -> bool ) =>: export: isTypeSet
-    context unwrapNamed .?TypeSet  ? return
+    context unwrapNamed .?TypeSet ? return
   end
   ## TODO? better name "is this type a type" sounds weird
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isType
     t context unwrapNamed =:: baseType
-    baseType .?TypeSet  ? or baseType primitive.TYPE typeEquals end return
+    baseType .?TypeSet ? or baseType primitive.TYPE typeEquals end return
   end
   proc( Type : t TypeContext ptr : context -> TypeSetEntry slice ) =>: export: getTypeSetEntries
     t context unwrapNamed

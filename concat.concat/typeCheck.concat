@@ -1811,15 +1811,21 @@ proc(
         op@ initName .initType .AUTO state resolveAutoType
         initName .label
       else .?declareName ._else ..unreachable end
-        op .dataType $ .?Undefined ? if ..drop
-          op .pos state popType
-          $ op@ .dataType=
-        end
-        state isGlobal if
+        state .inTypeBlock [] if
+          Type .Undefined
+          IdentifierType .LABEL
+        else
+          op .dataType $ .?Undefined ? if ..drop
+            op .pos state popType
+            $ op@ .dataType=
+          end
+        state isGlobal _if
           $1 labelContext id.currentNamespace labelContext id.setLabelNamespace
-          ## TODO! detect special identifiers
-          ## type -> type, proc -> proc
-          IdentifierType .GLOBAL_VAR
+          $ typeContext types.isProcedure if
+            IdentifierType .PROCEDURE
+          else
+            IdentifierType .GLOBAL_VAR
+          end
         else
           IdentifierType .LOCAL_VAR
         end
@@ -2311,7 +2317,7 @@ proc(
         op@ autoTyped state resolveAutoType
         idInfo op@ .val .initializeId= ## auto-typed initializations have been resolved
         idInfo .idType switch
-          GLOBAL_VAR LOCAL_VAR ITR_VAR case
+          GLOBAL_VAR LOCAL_VAR ITR_VAR PROCEDURE case
             state .stack branchTree.peek .if
               [] .value
             else ConstValue .None end =:: constVal
@@ -2331,7 +2337,7 @@ proc(
             ## update constant value in identifier if stack-value is constant
             ##   don't update mutable local variables
             constVal .?TypeId ? or constVal .?None ? ! and
-                state isGlobal or idInfo .idType .GLOBAL_VAR or
+                state isGlobal or idInfo .idType .GLOBAL_VAR or idInfo .idType .PROCEDURE or
                 idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
               ## TODO special handling for procedure constants
               ## getIdentifier
@@ -2344,14 +2350,25 @@ proc(
               else =:: idData
                 constVal idData .constValue=
               end
+              idInfo .idType .PROCEDURE if
+                constVal .?Procedure .if =:: procId
+                  program [] .procedures procId iSize cast.u @[] =:: procInfo
+                  procInfo .labelId [] labelContext id.labelFlags id.FLAG_LAMBDA & ? if
+                    idInfo .labelId procInfo .labelId=
+                  end
+                else ..drop
+                  "expected Procedure got " sb.copyPtr
+                    constVal typeContext sb.appendConstant
+                  op .pos errors appendError
+                end
+              end
               ## don't create code for declaration of type-constant
-              constVal .?TypeId ? or state isGlobal if continue.opLoop end
+              constVal .?TypeId ? or state isGlobal if
+                continue.opLoop
+              end
             end
             op state appendOp ..drop
             continue.opLoop
-          PROCEDURE case
-            "is this reachable" ..panic
-            ## continue.opLoop
           PROCEDURE_BUNDLE TYPE
               LABEL ARGUMENT TMP_VAR case
             "unexpected initialization of identifier " sb.copyPtr
@@ -3647,6 +3664,119 @@ proc(
             op .val .block .blockLabel idContext id.beginNamespace
             continue.opLoop
           OVERLOAD case
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
+            op .val .block .blockLabel =:: mut: labelId
+            labelId labelContext id.currentNamespace labelContext id.setLabelNamespace
+            labelId idContext id.findDeclaredIdentifierByLabel or
+                labelId labelContext id.labelFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
+                $ [] .labelId labelContext id.getLabelNamespace labelContext id.currentNamespace .current != if ..drop
+              labelId labelContext id.labelFlags id.FLAG_MERGE & ? if
+                "unable to merge namespace: \"" sb.copyPtr
+                labelId labelContext sb.appendLabelPath
+                '"' sb.appendC
+                op .pos errors appendError
+              end
+              program [] .procBundles
+                $ .length ProcBundleId cast =:: bundleId
+                newProcBundle list.append
+              program .procBundles=
+              ## declareIdentifier
+                labelId
+                Type .Undefined
+                IdentifierType .PROCEDURE_BUNDLE
+                -1
+                bundleId ConstValue .ProcedureBundle
+                true
+                op .pos
+                state [] .currentFile
+                idContext
+                errors
+              id.declareIdentifier if ..drop.2
+                continue.opLoop
+              end ..drop labelId=
+              bundleId
+            else =:: idData
+              idData [] .idType .PROCEDURE_BUNDLE ! if
+                "cannot overload \"" sb.copyPtr
+                  labelId labelContext sb.appendLabelPath
+                  "\", incompatible id-type for previous declaration: " sb.appendS
+                  idData [] .idType sb.appendIdType
+                  " ( declared at " sb.appendS
+                  idData [] .declaredAt sb.appendPos
+                  " ) expected: " sb.appendS
+                  IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
+                op .pos errors appendError
+                continue.opLoop
+              end
+              ## XXX? warn for incompatible flags
+              idData [] .constValue .ProcedureBundle
+            end =:: bundleId
+            program [] .procBundles bundleId i64 cast @[] =:: bundleData
+            elts for =:: elt
+              elt .val switch
+                getName .case =:: eltLabel
+                  eltLabel idContext id.findIdentifierByLabel if ..drop
+                    "could not find identifier \"" sb.copyPtr
+                      eltLabel labelContext sb.appendLabelPath
+                      '"' sb.appendC
+                    op .pos errors appendError
+                    continue
+                  end =:: idData
+                  idData [] .idType .PROCEDURE if
+                    idData [] .constValue .?Procedure .else ..drop
+                      256 sb.create
+                        idData [] .idType sb.appendIdType
+                        "missing procedure data for \"" sb.appendS
+                        idData [] .labelId labelContext sb.appendLabelPath
+                        "\" ( declared at " sb.appendS
+                        idData [] .declaredAt sb.appendPos
+                        " ) expected ProcId got:" sb.appendS
+                        idData [] .constValue typeContext sb.appendConstant
+                      op .pos errors appendError
+                      return
+                    end
+                    bundleData [] .procedures
+                      >$ list.append
+                    bundleData .procedures=
+                  else idData [] .idType .PROCEDURE_BUNDLE _if
+                    idData [] .constValue .?ProcedureBundle .else ..drop
+                      256 sb.create
+                        idData [] .idType sb.appendIdType
+                        "missing procedure data for \"" sb.appendS
+                        idData [] .labelId labelContext sb.appendLabelPath
+                        "\" ( declared at " sb.appendS
+                        idData [] .declaredAt sb.appendPos
+                        " ) expected ProcBundleId got:" sb.appendS
+                        idData [] .constValue typeContext sb.appendConstant
+                      op .pos errors appendError
+                      return
+                    end =:: constBundleId
+                    bundleData [] .procedures
+                      program [] .procBundles
+                        constBundleId i64 cast list.at .data
+                      [] .procedures list.appendAll
+                    bundleData .procedures=
+                  else
+                    256 sb.create
+                      idData [] .idType sb.appendIdType
+                      " \"" sb.appendS
+                      idData [] .labelId labelContext sb.appendLabelPath
+                      "\" ( declared at " sb.appendS
+                      idData [] .declaredAt sb.appendPos
+                      " ) is not a procedure" sb.appendS
+                    op .pos errors appendError
+                    return
+                  end
+                break
+                ## getId .case =:: eltId break
+                ## NestedProc .case =:: procId break
+                default
+                  "unsupported operation in overload block: " sb.copyPtr
+                    elt program sb.appendOp
+                  op .pos errors appendError
+                continue.opLoop
+              end
+            end
             ## TODO! type-check overload
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
