@@ -488,6 +488,50 @@ namespace: list
     elts asSlice from len slice.getSlice return
   end
   overload: export: getSlice getSlice32 getSlice64 getSliceZ end
+  proc(
+    type : auto: T
+    T list : elts
+    i32 : from
+  -> T slice ) =>: export: tail32
+    elts asSlice from iSize cast.u slice.tail return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    i64 : from
+  -> T slice ) =>: export: tail64
+    elts asSlice from iSize cast.u slice.tail return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : from
+  -> T slice ) =>: export: tailZ
+    elts asSlice from slice.tail return
+  end
+  overload: export: tail tail32 tail64 tailZ end
+  proc(
+    type : auto: T
+    T list : elts
+    i32 : count
+  -> T slice ) =>: export: head32
+    elts asSlice count iSize cast.u slice.head return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    i64 : count
+  -> T slice ) =>: export: head64
+    elts asSlice count iSize cast.u slice.head return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : count
+  -> T slice ) =>: export: headZ
+    elts asSlice count slice.head return
+  end
+  overload: export: head head32 head64 headZ end
 
   proc(
     type : auto: T

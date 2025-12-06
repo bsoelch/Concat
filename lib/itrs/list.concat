@@ -3,8 +3,8 @@ import list
 namespace: list
   ( type : T -> type ) =>: ListFilterItr
     (
-      T ptr.raw.mut : head
-      T ptr.raw : tail
+      T ptr.raw.mut : shadow: head
+      T ptr.raw : shadow: tail
       listCap : cap
       T ptr.raw.mut : srcPos
       T ptr.raw.mut : dstPos
