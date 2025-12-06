@@ -230,26 +230,6 @@ namespace: interpreter
     finally i 1:iSize - end ..drop
     false return
   end
-  proc( InterpreterContext ptr.mut : context -> bool ) =>: export: inTypeOrInitializer
-    ## XXX cache/precompute result
-    context minBlockOffset =:: minBlock
-    context [] .openBlocks .length 1:iSize - while $ minBlock iSize.sge do =:: i
-      context [] .openBlocks i list.at .data [] .blockType switch
-        INITIALIZER TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE TYPE_TYPESET case
-          true return
-        PROCEDURE INLINE_PROCEDURE case
-          false return
-        UNKNOWN IF ELSE WHILE DO BREAK CONTINUE
-            SWITCH BREAK_SWITCH CASE DOT_CASE DEFAULT FINALLY
-            AND OR AND_IF OR_IF AND_DO OR_DO
-            IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-            OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-            NAMESPACE OVERLOAD case break
-      end
-    finally i 1:iSize - end ..drop
-    false return
-  end
   proc( InterpreterContext ptr.mut : context -> bool ) =>: export: skipCurrentBlock
     ## XXX cache/precompute result
     context minBlockOffset =:: minBlock

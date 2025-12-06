@@ -1745,6 +1745,10 @@ proc( FilePosition : pos JumpDistance -> iSize ) =>: asForwardJump
     end
   return
 end
+
+## TODO: directly parse elements of type-blocks without going through interpreter
+##  ? type-mode to change handling of labels
+##  ? stack of parsed type-elements
 proc(
   Operation slice : ops
   FilePosition : pos
@@ -1811,14 +1815,26 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckEnumType
   state [] .program =:: program
-  state [] .program .errors =:: errors
-  state [] .program .idContext =:: idContext
-  idContext id.openScope
-  ops state typeCheckOps
-  idContext id.closeScope ! "closing or-if scope worked" assert
-  1 pos state interpreterStoreConstants
-  false state .inTypeBlock=
-  state .interpreter interpreter.resetContext
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  program .labelBuffer [] .length =:: labelOffset
+  program [] .labelBuffer
+    ops for =:: op
+      op .val .?getName .if
+        list.append
+      else ..drop
+        "unexpected operation in Enum block: " sb.copyPtr
+          op program sb.appendOp
+        op .pos errors appendError
+      end
+    end
+  program .labelBuffer=
+  Type optional.empty program [] .labelBuffer labelOffset list.tail typeContext types.newEnum .else
+    "failed to create enum-type: " sb.copyPtr
+    pos errors appendError
+    return
+  end ConstValue .TypeId types.primitive.TYPE pos state pushConstant
 end
 proc(
   Operation slice : ops
@@ -2917,8 +2933,7 @@ proc(
             opIndex=
           continue.opLoop
           TYPE_ENUM case
-            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             elts op .pos state typeCheckEnumType
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
