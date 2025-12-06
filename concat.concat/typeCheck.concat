@@ -98,7 +98,7 @@ union(
 proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
     branchRoot
-    -1:branchTree.NodeId pos BranchPoint new ## dummy value
+    branchTree.EMPTY pos BranchPoint new ## dummy value
     8 BranchPoint list.create
     8 BranchPoint list.create
     16 i32 list.create
@@ -205,6 +205,7 @@ struct(
   iSize : initializationStackOffset
   i32 : blockStart
   branchTree.NodeId : branchRoot
+  branchTree.NodeId : arrowStack
   Type optional : currentProcType
   FileId : currentFile
   TypeCheckMode : mode
@@ -221,6 +222,7 @@ struct(
   BlockInfo list : openBlocks
   Operation list : compiledOps
   i32 : blockStart
+  branchTree.NodeId : arrowStack
   MissingProc list : missingProcs
   FileId : currentFile
   FilePosition list : initializationStack
@@ -239,7 +241,8 @@ proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
       state [] .compiledOps .length
       state [] .initializationStack .length
       state [] .blockStart
-      state .stack -1:branchTree.NodeId branchTree.reset
+      state .stack branchTree.EMPTY branchTree.reset
+      state [] .arrowStack
       state [] .currentProcType
       state [] .currentFile
       state [] .mode
@@ -269,10 +272,11 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   state .initializationStack=
   prevState .blockStart state .blockStart=
   state .stack prevState .branchRoot branchTree.reset =:: oldRoot
-  oldRoot -1:branchTree.NodeId != if
+  oldRoot branchTree.EMPTY != if
     ## TODO error message for unfinished branch
     state .stack oldRoot branchTree.endBranch
   end
+  prevState .arrowStack state .arrowStack=
   prevState .currentProcType state .currentProcType=
   prevState .currentFile state .currentFile=
   prevState .mode state .mode=
@@ -712,8 +716,9 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  1 pos state checkStackSize if Type .Undefined return end
-  state .stack branchTree.peek .data =:: typeInfo
+  state .stack branchTree.pop .else
+    Type .Undefined return
+  end =:: typeInfo
   typeInfo [] .valueType =:: valType
   valType typeContext types.isType ! if
     "expected type got " sb.copyPtr
@@ -736,7 +741,6 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
       pos errors appendError
       Type .Undefined return
     end
-    state .stack branchTree.pop ..drop ## drop value
     typeInfo [] .opIndex state deleteOp ## remove stored operation
   return
 end
@@ -1746,53 +1750,92 @@ proc( FilePosition : pos JumpDistance -> iSize ) =>: asForwardJump
   return
 end
 
+enum( TUPLE UNION RAW_UNION PROC C_PROC ) =:: CompositeType
 ## TODO: directly parse elements of type-blocks without going through interpreter
-##  ? type-mode to change handling of labels
-##  ? stack of parsed type-elements
+##  ? (top-level) declaration -> push type(s) to typeBuffer, push label (+dummy labels) to labelBuffer
 proc(
   Operation slice : ops
+  CompositeType : compType
   FilePosition : pos
   TypeCheckState ptr.mut : state
--> ) =>: typeCheckTupleType
+-> ) =>: typeCheckCompositeType
   state [] .program =:: program
-  state [] .program .errors =:: errors
-  state [] .program .idContext =:: idContext
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  _EXPERIMENTAL_ if
+    true state .inTypeBlock=
+  end
+  program .labelBuffer [] .length =:: labelOffset
+  state [] .arrowStack =:: oldArrowStack
+  branchTree.EMPTY state .arrowStack=
+  state .stack
+    branchTree.EMPTY
+  branchTree.reset =:: oldBranch
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
-  1 pos state interpreterStoreConstants
   false state .inTypeBlock=
-  state .interpreter interpreter.resetContext
-end
-proc(
-  Operation slice : ops
-  FilePosition : pos
-  TypeCheckState ptr.mut : state
--> ) =>: typeCheckUnionType
-  state [] .program =:: program
-  state [] .program .errors =:: errors
-  state [] .program .idContext =:: idContext
-  idContext id.openScope
-  ops state typeCheckOps
-  idContext id.closeScope ! "closing or-if scope worked" assert
-  1 pos state interpreterStoreConstants
-  false state .inTypeBlock=
-  state .interpreter interpreter.resetContext
-end
-proc(
-  Operation slice : ops
-  FilePosition : pos
-  TypeCheckState ptr.mut : state
--> ) =>: typeCheckProcType
-  state [] .program =:: program
-  state [] .program .errors =:: errors
-  state [] .program .idContext =:: idContext
-  idContext id.openScope
-  ops state typeCheckOps
-  idContext id.closeScope ! "closing or-if scope worked" assert
-  1 pos state interpreterStoreConstants
-  false state .inTypeBlock=
-  state .interpreter interpreter.resetContext
+  _EXPERIMENTAL_ if
+    state [] .stack branchTree.depth iSize cast.u =:: mut: count
+    count Type list.create =:: mut: typeBuffer ## TODO move type-buffer to ProgramContext
+    typeBuffer
+      $ .length =:: typeOffset
+      typeOffset count + list.setLength
+    typeBuffer=
+    ## TODO less unsafe way to insert elements in reverse order
+    while count 0 != do
+      count 1 - count=
+      pos state popType typeBuffer count typeOffset + =[]
+    end
+    state [] .arrowStack branchTree.EMPTY != if
+      state [] .stack branchTree.depth 0 == "stack is empty after popping out-types" assert
+      state .stack state [] .arrowStack branchTree.reset ..drop
+      state [] .stack branchTree.depth iSize cast.u =:: mut: inCount
+      typeBuffer
+        $ .length =:: inTypeOffset
+        inTypeOffset inCount + list.setLength
+      typeBuffer=
+      while inCount 0 != do
+        inCount 1 - inCount=
+        pos state popType typeBuffer inCount inTypeOffset + =[]
+      end
+      typeBuffer typeOffset inTypeOffset $1 - list.getSlice
+      typeBuffer inTypeOffset list.tail
+    else
+      Type slice.empty
+      typeBuffer typeOffset list.tail
+    end =:: inTypes =:: types
+    program [] .labelBuffer labelOffset list.tail =:: labels
+    compType switch
+      TUPLE case types labels optional.wrap typeContext types.newTuple break
+      UNION case types labels false typeContext types.newUnion break
+      RAW_UNION case types labels true typeContext types.newUnion break
+      PROC case inTypes types labels CallingConvention.DEFAULT typeContext types.newProcedure break
+      C_PROC case inTypes types labels CallingConvention .CCALL typeContext types.newProcedure break
+    end .else
+      "failed to create composite-type" sb.copyPtr
+      pos errors appendError
+      return
+    end =:: newType
+    state [] .stack branchTree.depth 0 == "stack is empty after popping types" assert
+    state .stack
+      oldBranch
+    branchTree.reset ..drop
+    newType ConstValue .TypeId types.primitive.TYPE pos state pushConstant
+    program [] .labelBuffer
+      labelOffset list.setLength
+    program .labelBuffer=
+    typeBuffer list.free ..drop ## TODO replace with reset of shared type-buffer
+  else
+    1 pos state interpreterStoreConstants
+    state .interpreter interpreter.resetContext
+    state .stack branchTree.prune
+    state .stack
+      oldBranch
+    branchTree.reset ..drop
+  end
+  oldArrowStack state .arrowStack=
 end
 proc(
   Operation slice : ops
@@ -1831,7 +1874,7 @@ proc(
     end
   program .labelBuffer=
   Type optional.empty program [] .labelBuffer labelOffset list.tail typeContext types.newEnum .else
-    "failed to create enum-type: " sb.copyPtr
+    "failed to create enum-type" sb.copyPtr
     pos errors appendError
     return
   end ConstValue .TypeId types.primitive.TYPE pos state pushConstant
@@ -1960,7 +2003,7 @@ proc(
       argData? .data [] .value op@ .val .Constant=
     end
     ## TODO! use jump-distance in block-data to interate type-block in seperate loop, then skip operations in main loop
-    state [] .inTypeBlock and op@ state interpretTypeBlock if
+    _EXPERIMENTAL_ ! and state [] .inTypeBlock and op@ state interpretTypeBlock if
       continue.opLoop ## evaluate constants
     end
     op .val switch
@@ -2392,6 +2435,9 @@ proc(
         continue.opLoop
       declareId case
         op@ false state resolveAutoType
+        state [] .inTypeBlock if
+          "unimplemented" ..panic
+        end
         op .val .declareId .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
             state isGlobal ! if ## ignore declarations outside procedure
@@ -2900,29 +2946,33 @@ proc(
         state [] .compiledOps .length i32 cast.u state .blockStart=
         op .val .block .blockType =:: blockType
         blockType switch
-          TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case ## TODO: remove check for composite when switching to new type-checker
+          ## TODO: remove check for TYPE_COMPOSITE when switching to new type-checker
+          TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN TYPE_CPROC_IN case
             _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
             ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
-            elts op .pos state typeCheckTupleType
+            elts
+              blockType switch
+                TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case CompositeType .TUPLE break
+                TYPE_UNION case CompositeType .UNION break
+                TYPE_UNTAGGED_UNION case CompositeType .RAW_UNION break
+                TYPE_PROC_IN case CompositeType .PROC break
+                TYPE_CPROC_IN case CompositeType .C_PROC break
+                default ..unreachable
+              end
+            op .pos state typeCheckCompositeType
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
             opIndex=
+            oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
-          TYPE_UNION TYPE_UNTAGGED_UNION case
-            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
-            elts op .pos state typeCheckUnionType
-            opIndex
-              op .pos op .val .block .jumpDistance asForwardJump +
-            opIndex=
-          continue.opLoop
-          TYPE_PROC_IN TYPE_CPROC_IN case
-            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
-            elts op .pos state typeCheckProcType
-            opIndex
-              op .pos op .val .block .jumpDistance asForwardJump +
-            opIndex=
+          TYPE_PROC_ARROW case
+            oldBlockStart state .blockStart= ## do not change block start
+            state [] .arrowStack branchTree.EMPTY != if
+              "unexpected arrow-statement" sb.copyPtr
+              op .pos errors appendError
+              continue.opLoop
+            end
+            state .stack branchTree.EMPTY branchTree.reset state .arrowStack=
           continue.opLoop
           TYPE_TYPESET case
             _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
@@ -2931,6 +2981,7 @@ proc(
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
             opIndex=
+            oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
           TYPE_ENUM case
             ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
@@ -2938,6 +2989,7 @@ proc(
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
             opIndex=
+            oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
           INITIALIZER case
             _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
@@ -2946,6 +2998,7 @@ proc(
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
             opIndex=
+            oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
           ## TODO remove checks for well-formed blocks, they are now handled by parser
           AND_IF OR_IF case
@@ -3927,7 +3980,7 @@ proc(
           PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
           IF_TRUE IF_FALSE AND_TRUE AND_FALSE
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          UNKNOWN TYPE_PROC_ARROW case
+          UNKNOWN case
             break
         end
         break
@@ -4940,6 +4993,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     32  BlockInfo list.create
     128 Operation list.create
     0:i32
+    branchTree.EMPTY
     128 MissingProc list.create
     FILE_ID_NONE
     16 FilePosition list.create
