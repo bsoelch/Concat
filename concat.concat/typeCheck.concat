@@ -506,12 +506,6 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretT
     state .interpreter interpreter.resetContext
     false return
   end
-  op .val .?blockEnd ? and state .interpreter interpreter.inTypeOrInitializer ! if
-    1 op [] .pos state interpreterStoreConstants
-    false state .inTypeBlock=
-    state .interpreter interpreter.resetContext
-    true return ## consume block end
-  end
   true return
 end
 
@@ -1753,6 +1747,97 @@ proc( FilePosition : pos JumpDistance -> iSize ) =>: asForwardJump
 end
 proc(
   Operation slice : ops
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: typeCheckTupleType
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  state [] .program .idContext =:: idContext
+  idContext id.openScope
+  ops state typeCheckOps
+  idContext id.closeScope ! "closing or-if scope worked" assert
+  1 pos state interpreterStoreConstants
+  false state .inTypeBlock=
+  state .interpreter interpreter.resetContext
+end
+proc(
+  Operation slice : ops
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: typeCheckUnionType
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  state [] .program .idContext =:: idContext
+  idContext id.openScope
+  ops state typeCheckOps
+  idContext id.closeScope ! "closing or-if scope worked" assert
+  1 pos state interpreterStoreConstants
+  false state .inTypeBlock=
+  state .interpreter interpreter.resetContext
+end
+proc(
+  Operation slice : ops
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: typeCheckProcType
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  state [] .program .idContext =:: idContext
+  idContext id.openScope
+  ops state typeCheckOps
+  idContext id.closeScope ! "closing or-if scope worked" assert
+  1 pos state interpreterStoreConstants
+  false state .inTypeBlock=
+  state .interpreter interpreter.resetContext
+end
+proc(
+  Operation slice : ops
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: typeCheckTypeSet
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  state [] .program .idContext =:: idContext
+  idContext id.openScope
+  ops state typeCheckOps
+  idContext id.closeScope ! "closing or-if scope worked" assert
+  1 pos state interpreterStoreConstants
+  false state .inTypeBlock=
+  state .interpreter interpreter.resetContext
+end
+proc(
+  Operation slice : ops
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: typeCheckEnumType
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  state [] .program .idContext =:: idContext
+  idContext id.openScope
+  ops state typeCheckOps
+  idContext id.closeScope ! "closing or-if scope worked" assert
+  1 pos state interpreterStoreConstants
+  false state .inTypeBlock=
+  state .interpreter interpreter.resetContext
+end
+proc(
+  Operation slice : ops
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: typeCheckInitializer
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  state [] .program .idContext =:: idContext
+  idContext id.openScope
+  ops state typeCheckOps
+  idContext id.closeScope ! "closing or-if scope worked" assert
+  1 pos state interpreterStoreConstants
+  false state .inTypeBlock=
+  state .interpreter interpreter.resetContext
+end
+
+proc(
+  Operation slice : ops
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckOps
   state [] .program =:: program
@@ -2799,11 +2884,54 @@ proc(
         state [] .compiledOps .length i32 cast.u state .blockStart=
         op .val .block .blockType =:: blockType
         blockType switch
-          TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_TYPESET
-          TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE INITIALIZER case
-            ## type-blocks and initializers are handled by the interpreter
-            op@ state prepareInterpretTypeBlock
-            continue.opLoop
+          TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case ## TODO: remove check for composite when switching to new type-checker
+            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            elts op .pos state typeCheckTupleType
+            opIndex
+              op .pos op .val .block .jumpDistance asForwardJump +
+            opIndex=
+          continue.opLoop
+          TYPE_UNION TYPE_UNTAGGED_UNION case
+            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            elts op .pos state typeCheckUnionType
+            opIndex
+              op .pos op .val .block .jumpDistance asForwardJump +
+            opIndex=
+          continue.opLoop
+          TYPE_PROC_IN TYPE_CPROC_IN case
+            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            elts op .pos state typeCheckProcType
+            opIndex
+              op .pos op .val .block .jumpDistance asForwardJump +
+            opIndex=
+          continue.opLoop
+          TYPE_TYPESET case
+            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            elts op .pos state typeCheckTypeSet
+            opIndex
+              op .pos op .val .block .jumpDistance asForwardJump +
+            opIndex=
+          continue.opLoop
+          TYPE_ENUM case
+            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            elts op .pos state typeCheckEnumType
+            opIndex
+              op .pos op .val .block .jumpDistance asForwardJump +
+            opIndex=
+          continue.opLoop
+          INITIALIZER case
+            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            elts op .pos state typeCheckInitializer
+            opIndex
+              op .pos op .val .block .jumpDistance asForwardJump +
+            opIndex=
+          continue.opLoop
           ## TODO remove checks for well-formed blocks, they are now handled by parser
           AND_IF OR_IF case
             state .stack branchTree.peek .and .value [] .?Bool .if =:: boolVal
@@ -3777,7 +3905,6 @@ proc(
                 continue.opLoop
               end
             end
-            ## TODO! type-check overload
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
             opIndex=
@@ -3785,7 +3912,7 @@ proc(
           PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
           IF_TRUE IF_FALSE AND_TRUE AND_FALSE
           OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-          UNKNOWN case
+          UNKNOWN TYPE_PROC_ARROW case
             break
         end
         break
