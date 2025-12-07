@@ -2190,9 +2190,10 @@ proc(
             calledType typeContext types.getProcIn .data =:: inTypes
             inTypes .length i32 cast.u =:: argCount
             stackConstants argCount calledProc .autoArgs .length i32 cast - >= and
+                state isGlobal
                 program [] .procedures
                   calledProcId i64 cast list.at .data
-                [] .isStatic and state [] .mode .STATIC_PROC ! or
+                [] .isStatic | and state [] .mode .STATIC_PROC ! or
                 baseProcData .implementation .?code .and .codeState .TYPE_CHECKING ! if
               calledType calledProc true op .pos state interpretCall ! if
                 continue.opLoop
@@ -2515,6 +2516,11 @@ proc(
                 constVal .?Procedure .if =:: procId
                   program [] .procedures procId iSize cast.u @[] =:: procInfo
                   procInfo .labelId [] labelContext id.labelFlags id.FLAG_LAMBDA & ? if
+                    MAIN_NAME idInfo .labelId labelContext id.labelNameEq if
+                      ## TODO! check if main has correct signature
+                      idInfo .labelId program .mainLabelId=
+                      procId program .mainProcId=
+                    end
                     idInfo .labelId procInfo .labelId=
                   end
                 else ..drop
@@ -4797,11 +4803,8 @@ proc(
     ##  skip built-ins
     return
   end =:: codeImpl
-  expandedAt optional.hasData if
-    expandedAt .data
-  else
-    currentProc [] .labelId labelContext id.getLabelPos .data
-  end =:: initPos
+  currentProc [] .labelId labelContext id.getLabelPos .else "proc label has pos" ..panic end =:: procPos
+  expandedAt .else procPos end =:: initPos
   codeImpl [] .expansionLevel =:: prevExpansionLevel
   implId -1 == if
     codeImpl [] .codeState currentProc [] .labelId checkType state [] .isUnusedProc initPos program checkProcState if
@@ -4871,22 +4874,83 @@ proc(
   state clearOps
   ## TODO? compile code to new list (prevents need to copy result after type-checking)
   state [] .compiledOps .length i32 cast.u =:: codeOffset
-  codeImpl [] .code 0 @[] =:: procStart
-  procStart [] .val .?implementProcedure ? or
-      procStart [] .val .?initializeId ?
-  end "procedure starts with correct operation" assert
-  ## ProcedureImpl
-    implId
-    procId
-  ProcedureImpl new OpValue .implementProcedure procStart .val=
-  implId 0 >= if ## update procedure type
-    codeImpl [] .implementations
-      implId list.at .data
-    [] .procType =:: procType
-    procType procStart .dataType=
+  _EXPERIMENTAL_ if
+    implId 0 >= if ## update procedure type
+      codeImpl [] .implementations
+        implId list.at .data
+      [] .procType
+    else
+      currentProc [] .procType
+    end =:: procType
     procType optional.wrap state .currentProcType=
+    ## opImplementProc
+      procType
+      ## ProcedureImpl
+        implId
+        procId
+      ProcedureImpl new
+      procPos
+    opImplementProc state appendOp ..drop
+    ## procedure scope is handled by typeCheckProcedure
+    procType BlockInfo .Procedure state openBlock
+    true state .reachable=
+    procType typeContext types.getProcIn .else
+      "wrong type for procedure initialization: " sb.copyPtr
+        procType typeContext sb.appendType
+        " expected procedure" sb.appendS
+      procPos program .errors appendError
+      return
+    end =:: argTypes
+    ## push unnamed arguments
+    0:i32 while $ iSize cast.u argTypes .length u< do =:: i
+      procType i typeContext types.getProcArgLabel =:: label
+      argTypes i [] =:: argType
+      label id.LABEL_ID_NONE == if ## push argument
+        state .stack
+          ## TypeInfo
+            argType
+            ConstValue .None
+            procPos
+            OP_UNLINKED
+          TypeInfo new
+        branchTree.push
+      else
+        label
+          argType
+          IdentifierType .ARGUMENT
+          i i32 cast ## index
+          ConstValue .None
+          true
+          procPos
+          state [] .currentFile
+          idContext
+          program .errors
+        id.declareIdentifier if
+          "could not declare identifier for argument " sb.copyPtr
+            label labelContext sb.appendLabelName
+          procPos program .errors appendError
+        end ..drop.2
+      end
+      i 1 +
+    end ..drop
   else
-    currentProc [] .procType optional.wrap state .currentProcType=
+    codeImpl [] .code 0 @[] =:: procStart
+    procStart [] .val .?implementProcedure ? or
+        procStart [] .val .?initializeId ?
+    end "procedure starts with correct operation" assert
+    ## ProcedureImpl
+      implId
+      procId
+    ProcedureImpl new OpValue .implementProcedure procStart .val=
+    implId 0 >= if ## update procedure type
+      codeImpl [] .implementations
+        implId list.at .data
+      [] .procType =:: procType
+      procType procStart .dataType=
+      procType optional.wrap state .currentProcType=
+    else
+      currentProc [] .procType optional.wrap state .currentProcType=
+    end
   end
   currentProc [] .labelId labelContext id.inLabelNamespace
   idContext id.currentScope =:: prevScope

@@ -1553,7 +1553,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state [] .currentFile
         labelContext id.newLabel
       end =:: mut: procName
-      ## TODO make `proc( ... ) =>: name ... end` act as syntax suggar for `proc( ... ) => ... end =:: name`
+      ## FIXME: for named procedure: differentiate between declaration name and procedure name
       ## -> update procedure name if assigned to variable
       procName labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       ## declare procedure name outside procedure
