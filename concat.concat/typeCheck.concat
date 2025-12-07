@@ -198,6 +198,10 @@ struct(
   ProcedureImpl : impl
   FilePosition : expandedAt
 ) =:: MissingProc
+struct(
+  iSize : typeOffset
+  iSize : labelOffset
+) =:: TypeBlockState
 
 struct(
   iSize : openBlocksOffset
@@ -205,7 +209,7 @@ struct(
   iSize : initializationStackOffset
   i32 : blockStart
   branchTree.NodeId : branchRoot
-  branchTree.NodeId : arrowStack
+  TypeBlockState optional : arrowState
   Type optional : currentProcType
   FileId : currentFile
   TypeCheckMode : mode
@@ -221,8 +225,9 @@ struct(
   TypeInfo BranchTree : stack
   BlockInfo list : openBlocks
   Operation list : compiledOps
+  Type list : typeBuffer
   i32 : blockStart
-  branchTree.NodeId : arrowStack
+  TypeBlockState optional : arrowState
   MissingProc list : missingProcs
   FileId : currentFile
   FilePosition list : initializationStack
@@ -242,7 +247,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
       state [] .initializationStack .length
       state [] .blockStart
       state .stack branchTree.EMPTY branchTree.reset
-      state [] .arrowStack
+      state [] .arrowState
       state [] .currentProcType
       state [] .currentFile
       state [] .mode
@@ -276,7 +281,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
     ## TODO error message for unfinished branch
     state .stack oldRoot branchTree.endBranch
   end
-  prevState .arrowStack state .arrowStack=
+  prevState .arrowState state .arrowState=
   prevState .currentProcType state .currentProcType=
   prevState .currentFile state .currentFile=
   prevState .mode state .mode=
@@ -1751,8 +1756,6 @@ proc( FilePosition : pos JumpDistance -> iSize ) =>: asForwardJump
 end
 
 enum( TUPLE UNION RAW_UNION PROC C_PROC ) =:: CompositeType
-## TODO: directly parse elements of type-blocks without going through interpreter
-##  ? (top-level) declaration -> push type(s) to typeBuffer, push label (+dummy labels) to labelBuffer
 proc(
   Operation slice : ops
   CompositeType : compType
@@ -1767,44 +1770,33 @@ proc(
     true state .inTypeBlock=
   end
   program .labelBuffer [] .length =:: labelOffset
-  state [] .arrowStack =:: oldArrowStack
-  branchTree.EMPTY state .arrowStack=
+  state [] .arrowState =:: oldArrowState
+  TypeBlockState optional.empty state .arrowState=
   state .stack
     branchTree.EMPTY
   branchTree.reset =:: oldBranch
+  state [] .typeBuffer .length =:: typeOffset
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
   false state .inTypeBlock=
   _EXPERIMENTAL_ if
     state [] .stack branchTree.depth iSize cast.u =:: mut: count
-    count Type list.create =:: mut: typeBuffer ## TODO move type-buffer to ProgramContext
-    typeBuffer
-      $ .length =:: typeOffset
-      typeOffset count + list.setLength
-    typeBuffer=
+    state [] .typeBuffer
+      $ .length typeOffset u>= "type-checking did not consume types" assert
+      $ .length count + list.setLength
+    state .typeBuffer=
     ## TODO less unsafe way to insert elements in reverse order
     while count 0 != do
       count 1 - count=
-      pos state popType typeBuffer count typeOffset + =[]
+      pos state popType state [] .typeBuffer count typeOffset + =[]
     end
-    state [] .arrowStack branchTree.EMPTY != if
-      state [] .stack branchTree.depth 0 == "stack is empty after popping out-types" assert
-      state .stack state [] .arrowStack branchTree.reset ..drop
-      state [] .stack branchTree.depth iSize cast.u =:: mut: inCount
-      typeBuffer
-        $ .length =:: inTypeOffset
-        inTypeOffset inCount + list.setLength
-      typeBuffer=
-      while inCount 0 != do
-        inCount 1 - inCount=
-        pos state popType typeBuffer inCount inTypeOffset + =[]
-      end
-      typeBuffer typeOffset inTypeOffset $1 - list.getSlice
-      typeBuffer inTypeOffset list.tail
+    state [] .arrowState .if =:: arrowState
+      state [] .typeBuffer arrowState .typeOffset list.tail
+      state [] .typeBuffer typeOffset arrowState .typeOffset $1 - list.getSlice
     else
+      state [] .typeBuffer typeOffset list.tail
       Type slice.empty
-      typeBuffer typeOffset list.tail
     end =:: inTypes =:: types
     program [] .labelBuffer labelOffset list.tail =:: labels
     compType switch
@@ -1826,13 +1818,17 @@ proc(
     program [] .labelBuffer
       labelOffset list.setLength
     program .labelBuffer=
-    typeBuffer list.free ..drop ## TODO replace with reset of shared type-buffer
+    state [] .typeBuffer
+      typeOffset list.setLength
+    state .typeBuffer=
   else
+    state .stack oldBranch branchTree.reset ..drop
     1 pos state interpreterStoreConstants
     state .interpreter interpreter.resetContext
   end
-  oldArrowStack state .arrowStack=
+  oldArrowState state .arrowState=
 end
+## TODO: directly parse elements of type-sets without going through interpreter
 proc(
   Operation slice : ops
   FilePosition : pos
@@ -2433,11 +2429,26 @@ proc(
         op@ false state resolveAutoType
         _EXPERIMENTAL_ and state [] .inTypeBlock if ## TODO distingish composite-type, type-set and initializer
           op .val .declareId .idType .LABEL "composite-element has type label" assert
-          ## TODO move current stack-elements to type-buffer/constant-buffer (to ensure that value is not popped by subsequent operation), padd labelBuffer with LABEL_ID_NONE
+          state [] .arrowState ? if
+            continue.opLoop ## ignore labels after arrow
+          end
           ## op .pos state popType =:: elt
+          state [] .stack branchTree.depth iSize cast.u =:: mut: count
           program [] .labelBuffer
+            count 1 - for ..drop ## pad to correct number of labels
+              id.LABEL_ID_NONE list.append
+            end
             op .val .declareId .labelId list.append
           program .labelBuffer=
+          ## TODO pop const-values instead of types when in initializer
+          state [] .typeBuffer
+            $ .length =:: typeOffset
+            typeOffset count + list.setLength
+          state .typeBuffer=
+          while count 0 != do
+            count 1 - count=
+            op .pos state popType state [] .typeBuffer count typeOffset + =[]
+          end
           continue.opLoop
         end
         op .val .declareId .idType switch
@@ -2969,12 +2980,24 @@ proc(
           continue.opLoop
           TYPE_PROC_ARROW case
             oldBlockStart state .blockStart= ## do not change block start
-            state [] .arrowStack branchTree.EMPTY != if
+            state [] .arrowState ? if
               "unexpected arrow-statement" sb.copyPtr
               op .pos errors appendError
               continue.opLoop
             end
-            state .stack branchTree.EMPTY branchTree.reset state .arrowStack=
+            state [] .stack branchTree.depth iSize cast.u =:: mut: count
+            state [] .typeBuffer
+              $ .length =:: typeOffset
+              typeOffset count + list.setLength
+            state .typeBuffer=
+            while count 0 != do
+              count 1 - count=
+              op .pos state popType state [] .typeBuffer count typeOffset + =[]
+            end
+            ## TypeBlockState
+              state .typeBuffer [] .length
+              program .labelBuffer [] .length
+            TypeBlockState new optional.wrap state .arrowState=
           continue.opLoop
           TYPE_TYPESET case
             _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
@@ -4994,8 +5017,9 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     TypeInfo branchTree.create
     32  BlockInfo list.create
     128 Operation list.create
+    64 Type list.create
     0:i32
-    branchTree.EMPTY
+    TypeBlockState optional.empty
     128 MissingProc list.create
     FILE_ID_NONE
     16 FilePosition list.create
