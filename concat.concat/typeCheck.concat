@@ -1830,10 +1830,6 @@ proc(
   else
     1 pos state interpreterStoreConstants
     state .interpreter interpreter.resetContext
-    state .stack branchTree.prune
-    state .stack
-      oldBranch
-    branchTree.reset ..drop
   end
   oldArrowStack state .arrowStack=
 end
@@ -2435,8 +2431,14 @@ proc(
         continue.opLoop
       declareId case
         op@ false state resolveAutoType
-        state [] .inTypeBlock if
-          "unimplemented" ..panic
+        _EXPERIMENTAL_ and state [] .inTypeBlock if ## TODO distingish composite-type, type-set and initializer
+          op .val .declareId .idType .LABEL "composite-element has type label" assert
+          ## TODO move current stack-elements to type-buffer/constant-buffer (to ensure that value is not popped by subsequent operation), padd labelBuffer with LABEL_ID_NONE
+          ## op .pos state popType =:: elt
+          program [] .labelBuffer
+            op .val .declareId .labelId list.append
+          program .labelBuffer=
+          continue.opLoop
         end
         op .val .declareId .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
