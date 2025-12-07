@@ -1783,13 +1783,14 @@ proc(
   _EXPERIMENTAL_ if
     state [] .stack branchTree.depth iSize cast.u =:: mut: count
     state [] .typeBuffer
-      $ .length typeOffset u>= "type-checking did not consume types" assert
-      $ .length count + list.setLength
+      $ .length =:: tailOffset
+      tailOffset count + list.setLength
     state .typeBuffer=
-    ## TODO less unsafe way to insert elements in reverse order
+    ## TODO less unsafe way to insert list of elements in reverse order
+    ##  e.g.  <list> <count> list.appendReverse for elt end
     while count 0 != do
       count 1 - count=
-      pos state popType state [] .typeBuffer count typeOffset + =[]
+      pos state popType state [] .typeBuffer count tailOffset + =[]
     end
     state [] .arrowState .if =:: arrowState
       state [] .typeBuffer arrowState .typeOffset list.tail
@@ -2430,7 +2431,7 @@ proc(
         _EXPERIMENTAL_ and state [] .inTypeBlock if ## TODO distingish composite-type, type-set and initializer
           op .val .declareId .idType .LABEL "composite-element has type label" assert
           state [] .arrowState ? if
-            continue.opLoop ## ignore labels after arrow
+            continue.opLoop ## ignore element labels after arrow
           end
           ## op .pos state popType =:: elt
           state [] .stack branchTree.depth iSize cast.u =:: mut: count
