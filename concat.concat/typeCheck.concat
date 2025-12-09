@@ -2430,11 +2430,13 @@ proc(
       declareId case
         op@ false state resolveAutoType
         _EXPERIMENTAL_ and state [] .inTypeBlock if ## TODO distingish composite-type, type-set and initializer
+          1 op .pos state checkStackSize if
+            continue.opLoop ## stack underflow
+          end
           op .val .declareId .idType .LABEL "composite-element has type label" assert
           state [] .arrowState ? if
             continue.opLoop ## ignore element labels after arrow
           end
-          ## op .pos state popType =:: elt
           state [] .stack branchTree.depth iSize cast.u =:: mut: count
           program [] .labelBuffer
             count 1 - for ..drop ## pad to correct number of labels

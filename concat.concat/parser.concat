@@ -1530,17 +1530,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
       end =:: mut: procType
       ## TODO? ensure global stack is empty at start of procedure
-      named if ## =>:
-        fileState errors nextIdentifier fileState state readLabel
-        $ labelContext id.labelFlags =:: flags
-        flags id.FLAG_MUTABLE & ? if
-          "procedures cannot be mutable" sb.copyPtr
-          fileState [] .wordStart errors appendError
-        else flags id.FLAG_ALIAS & ? _if
-          "procedure alias cannot have an implementation" sb.copyPtr
-          fileState [] .wordStart errors appendError
-        end
-      else
+      named ! or _EXPERIMENTAL_ if
         char8 64 array : buffer
           buffer@ sb.wrapBuffer
             "lambda@" sb.appendS
@@ -1552,10 +1542,22 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState [] .wordStart
           state [] .currentFile
         labelContext id.newLabel
+      else
+        id.LABEL_ID_NONE
+      end =:: procImplName
+      named if ## =>:
+        fileState errors nextIdentifier fileState state readLabel
+        $ labelContext id.labelFlags =:: flags
+        flags id.FLAG_MUTABLE & ? if
+          "procedures cannot be mutable" sb.copyPtr
+          fileState [] .wordStart errors appendError
+        else flags id.FLAG_ALIAS & ? _if
+          "procedure alias cannot have an implementation" sb.copyPtr
+          fileState [] .wordStart errors appendError
+        end
+      else
+        procImplName
       end =:: mut: procName
-      ## FIXME: for named procedure: differentiate between declaration name and procedure name
-      ## -> update procedure name if assigned to variable
-      procName labelContext id.labelFlags id.FLAG_EXPERIMENTAL & ? =:: experimental
       ## declare procedure name outside procedure
       skipBlock if ## don't declare identifier in skipped block
         state [] .currentProcs NO_PROC list.append state .currentProcs=
@@ -1563,7 +1565,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       _EXPERIMENTAL_ if
-        procName procType state [] .currentFile NO_PROC fileState [] .wordStart progContext newProcData =:: procId
+        procImplName procType state [] .currentFile NO_PROC fileState [] .wordStart progContext newProcData =:: procId
         procId fileState [] .wordStart opNestedProc state appendOp
         named if
           progContext newAutoType
