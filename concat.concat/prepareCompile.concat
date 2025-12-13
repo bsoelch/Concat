@@ -460,7 +460,7 @@ proc(
       newOps return
     autoTypedInitializeId ConstantReference NewReference
     typeInfo NewEnumReference usingNamespace usingIdentifier InlineReturn
-    getName atName setName getLabel getUnionLabel Assert declareName initializeName StaticConstant
+    getName atName setName getLabel getUnionLabel Assert declareName aliasName initializeName StaticConstant
     setLabel length typeModifier existsLabel existsName NestedProc case
       break ## XXX error message
   end

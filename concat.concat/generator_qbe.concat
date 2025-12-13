@@ -4888,7 +4888,7 @@ proc(
     compilerInfo case
       sb return ## XXX? print compiler info
     autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier StaticConstant
-    getName atName setName getLabel getUnionLabel Error Assert panic declareName initializeName
+    getName atName setName getLabel getUnionLabel Error Assert panic declareName aliasName initializeName
     setLabel length typeModifier existsLabel existsName NestedProc case
       break ## XXX error message
   end

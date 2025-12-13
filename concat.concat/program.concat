@@ -132,7 +132,7 @@ struct(
 enum( FIXED AUTO ) =:: InitType
 struct( LabelId : label InitType : initType ) =:: export: NameInitInfo
 
-struct( LabelId : src LabelId : alias ) =:: export: NameAliasInfo
+struct( LabelId : baseName LabelId : alias ) =:: export: NameAliasInfo
 
 ## TODO find& eliminate large entries, extract additional data to seperate storage
 union(
@@ -184,6 +184,7 @@ union(
             LabelId : setName
             LabelId : atName
             LabelId : existsName
+      NameAliasInfo : aliasName
             LabelId : declareName
        NameInitInfo : initializeName
       NameAliasInfo : usingNamespace
@@ -375,6 +376,9 @@ proc( LabelId FilePosition : pos -> Operation ) =>: export: opExistsName
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opDeclareName
   OpValue .declareName Type .Undefined pos Operation new return
+end
+proc( LabelId : nameAlias LabelId : baseName FilePosition : pos -> Operation ) =>: export: opAliasName
+  nameAlias baseName NameAliasInfo new OpValue .aliasName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos  -> Operation ) =>: export: opInitializeName
   InitType .FIXED NameInitInfo new OpValue .initializeName
@@ -1016,6 +1020,11 @@ namespace: sb
           "declare name: " sb.appendS
           $1 .val .declareName labelContext sb.appendLabelPath
           break
+        aliasName case
+          "alias name: " sb.appendS
+          $1 .val .aliasName .alias labelContext sb.appendLabelPath
+          $1 .val .aliasName .baseName labelContext sb.appendLabelPath
+          break
         initializeName case
           $1 .val .initializeName .initType .AUTO if
             "auto-typed " sb.appendS
@@ -1025,7 +1034,7 @@ namespace: sb
           break
         usingNamespace case
           "using namespace: " sb.appendS
-          $1 .val .usingNamespace .src labelContext sb.appendLabelPath
+          $1 .val .usingNamespace .baseName labelContext sb.appendLabelPath
           $1 .val .usingNamespace .alias id.LABEL_ID_NONE != if
             " as " sb.appendS
             $1 .val .usingNamespace .alias labelContext sb.appendLabelName
@@ -1033,7 +1042,7 @@ namespace: sb
           break
         usingIdentifier case
           "using idenfifier: " sb.appendS
-          $1 .val .usingIdentifier .src labelContext sb.appendLabelPath
+          $1 .val .usingIdentifier .baseName labelContext sb.appendLabelPath
           $1 .val .usingIdentifier .alias id.LABEL_ID_NONE != if
             " as " sb.appendS
             $1 .val .usingIdentifier .alias labelContext sb.appendLabelName

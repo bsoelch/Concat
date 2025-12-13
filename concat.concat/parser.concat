@@ -2141,6 +2141,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         label fileState [] .wordStart
           isInit if
             opInitializeName
+          else isAlias _if
+            >>$
+              fileState errors nextIdentifier
+                id.FLAG_NONE
+                fileState [] .wordStart
+                state [] .currentFile
+              labelContext id.newLabel <<$
+            <<<$ opAliasName
           else
             opDeclareName
           end

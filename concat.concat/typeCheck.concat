@@ -714,6 +714,13 @@ proc( i32 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: dis
   end
 end
 
+proc( TypeCheckState ptr.mut : state -> ConstValue optional ) =>: popValue
+  state .stack branchTree.pop .else
+    ConstValue optional.empty return
+  end =:: typeInfo
+    typeInfo [] .opIndex state deleteOp ## remove stored operation
+  typeInfo [] .value optional.wrap return
+end
 proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
   state [] .program =:: program
   state [] .program .errors =:: errors
@@ -1942,6 +1949,8 @@ proc(
     else op .val .?existsName ._if
       op@ state resolveIdentifer ? ConstValue .Bool op@ .val .StaticConstant=
       types.primitive.BOOL op@ .dataType=
+    else .?aliasName ._if =:: nameAlias
+      "unimplemented: name-aliases" ..panic
     else .?declareName ? or op .val .?initializeName ? _if
       op .val .?initializeName ? =:: isInit
       op .val .?initializeName .if =:: initName
@@ -2038,9 +2047,9 @@ proc(
           labelId labelContext sb.appendLabelPath
         op .pos errors appendError
         continue.opLoop
-      initializeName declareName case ..unreachable
+      initializeName declareName aliasName case ..unreachable
       usingNamespace case
-        op .val .usingNamespace .src =:: namespaceLabel
+        op .val .usingNamespace .baseName =:: namespaceLabel
         op .val .usingNamespace .alias
           $ id.LABEL_ID_NONE == if ..drop
             string.empty
@@ -2055,7 +2064,7 @@ proc(
         end
         continue.opLoop
       usingIdentifier case
-        op .val .usingIdentifier .src =:: srcLabel
+        op .val .usingIdentifier .baseName =:: srcLabel
         op .val .usingIdentifier .alias
           $ id.LABEL_ID_NONE == if ..drop
             string.empty
@@ -2131,7 +2140,12 @@ proc(
             continue.opLoop
           PROCEDURE PROCEDURE_BUNDLE case
             idInfo .idType .PROCEDURE if
-              constValue@ .Procedure =:: procId
+              constValue@ .?Procedure .else ..drop
+                "missing implementation for " sb.copyPtr
+                  idInfo labelContext sb.appendIdInfo
+                op .pos errors appendError
+                continue.opLoop
+              end =:: procId
               program [] .procedures
                 procId [] i64 cast list.at .data
               =:: procData
@@ -2456,21 +2470,39 @@ proc(
           continue.opLoop
         end
         op .val .declareId .idType switch
+          PROCEDURE case
+            op .val .declareId .labelId idContext id.getIdentifier if ..drop
+              "could not find " sb.copyPtr
+                op .val .declareId .labelId labelContext sb.appendLabelPath
+              op .pos errors appendError
+              continue.opLoop
+            end [] .constValue .?None .if ..drop
+            else .?Procedure ._if ..drop
+              continue.opLoop ## skip if value already exits
+            else
+              "unexpected constant for procedure: " sb.copyPtr
+                >$ typeContext sb.appendConstant
+              op .pos errors appendError
+              continue.opLoop
+            end
+            ## TODO! create procedure-data (! ensure data is overwritten on initialisation)
+            "unimplemented: procedure-declarations" ..panic
+          continue.opLoop
           GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
             state isGlobal ! if ## ignore declarations outside procedure
               op state appendOp ..drop
             end
-            continue.opLoop
-          PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
+          continue.opLoop
+          TYPE LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
             "unexpected declaration of identifier " sb.copyPtr
               op .val .declareId labelContext sb.appendIdInfo
             op .pos errors appendError
-            continue.opLoop
+          continue.opLoop
           ARGUMENT case
             "cannot declare identifier " sb.copyPtr
               op .val .declareId labelContext sb.appendIdInfo
             op .pos errors appendError
-            continue.opLoop
+          continue.opLoop
         end
         break
       initializeId autoTypedInitializeId .case =:: idInfo
@@ -4686,7 +4718,81 @@ proc(
           op .pos
         state pushConstant
         continue.opLoop
-      typeModifier case
+      typeModifier .case =:: typeMod
+        _EXPERIMENTAL_ if
+          idContext [] .arraySizeBuffer
+            list.clear
+          idContext .arraySizeBuffer=
+          Type optional.empty =:: mut: baseType0
+          while baseType0 ? ! do
+            1 op .pos state checkStackSize if
+              continue.opLoop
+            end
+            idContext [] .arraySizeBuffer
+              state popValue .else
+                "stack underflow" ..panic
+              end =:: constVal
+              constVal switch
+                TypeId .case optional.wrap baseType0= break
+                Int .case types.ArraySize .Int list.append break
+                GenericArg .case types.ArraySize .GenericArg list.append break
+                WildCard .case "unimplemented: dynamic pointers" ..panic
+                default ## TODO? .default to access switched value
+                  "unexpected constant parameter for type-modifier " sb.copyPtr
+                    typeMod sb.appendTypeModifier
+                    " expected type or size got " sb.appendS
+                    constVal typeContext sb.appendConstant
+                  op .pos errors appendError
+                break
+              end
+            idContext .arraySizeBuffer=
+          end
+          idContext [] .arraySizeBuffer .length 0:iSize == if
+            idContext [] .arraySizeBuffer
+              types.ArraySize .None list.append
+            idContext .arraySizeBuffer=
+          else
+            typeMod .RAW_PTR or typeMod .RAW_PTR_MUT if
+              "raw pointers cannot be sized" sb.copyPtr op .pos errors appendError
+            end
+          end
+          baseType0 .else ..unreachable end
+            idContext [] .arraySizeBuffer list.asSlice
+              $ .length 1:iSize - slice.head
+            for =:: size
+              ## newArrayType
+                types.ArrayType .ARRAY
+                size
+                typeContext
+              types.newArrayType .else
+                "could not create array type" sb.copyPtr op .pos errors appendError
+                continue.opLoop
+              end
+            end
+          ## newArrayType
+            typeMod switch
+              PTR case types.ArrayType .POINTER break
+              PTR_MUT case types.ArrayType .MUTABLE_POINTER break
+              RAW_PTR case types.ArrayType .RAW_POINTER break
+              RAW_PTR_MUT case types.ArrayType .MUTABLE_RAW_POINTER break
+              ARRAY case types.ArrayType .ARRAY break
+            end
+            idContext [] .arraySizeBuffer $ .length 1:iSize - []
+            typeContext
+          types.newArrayType .else
+            typeMod .ARRAY if
+              "could not create array type" sb.copyPtr
+            else
+              "could not create pointer type" sb.copyPtr
+            end op .pos errors appendError
+            continue.opLoop
+          end
+            ConstValue .TypeId
+            types.primitive.TYPE
+            op .pos
+          state pushConstant
+          continue.opLoop
+        end
         ## type-modifiers are handled by the interpreter
         op@ state interpretTypeModifier
         continue.opLoop
