@@ -4403,7 +4403,6 @@ proc(
             context [] .currentBranch list.append
           branchIds =[]
           sb
-            op [] .pos sb.appendPosQBE
             "jmp " sb.appendS
             ## BlockId
               BranchType .LABEL
