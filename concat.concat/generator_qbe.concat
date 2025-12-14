@@ -4403,12 +4403,14 @@ proc(
             context [] .currentBranch list.append
           branchIds =[]
           sb
-            "jmp " sb.appendS
-            ## BlockId
-              BranchType .LABEL
-              opIndex blockVal .jumpDistance i32 cast +
-            BranchId new sb.appendBranchId
-            '\n' sb.appendC
+            context [] .reachable if
+              "jmp " sb.appendS
+              ## BlockId
+                BranchType .LABEL
+                opIndex blockVal .jumpDistance i32 cast +
+              BranchId new sb.appendBranchId
+              '\n' sb.appendC
+            end
             false context .reachable=
           return
         FINALLY case
