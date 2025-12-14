@@ -1095,65 +1095,6 @@ proc( LabelId : procName Type : procType ProcId : procId FilePosition : pos Pars
     procId progContext .mainProcId=
   end
 end
-## check if composite has any static elements, types are static by default
-proc( Type slice : elements LabelId slice : labels TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
-  typeContext .labelContext =:: labelContext
-  elements .length for =:: i
-    i labels .length u< and labels i []
-        labelContext id.labelFlags id.FLAG_STATIC & ? if
-      true return
-    end
-    elements i [] typeContext types.isType if
-      true return
-    end
-  end
-  false return
-end
-proc(
-  LabelId : procName
-  Type : procType
-  FileId : fileId
-  ProcId : aliasId
-  FilePosition : pos
-  ProgramContext ptr.mut : progContext
--> ProcId ) =>: newProcData
-  progContext .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
-  procType typeContext types.getProcIn $ ? if .data else ..drop
-    Type slice.empty
-  end =:: inTypes
-  procType typeContext types.getProcOut $ ? if .data else ..drop
-    Type slice.empty
-  end =:: outTypes
-  inTypes procType typeContext types.getProcArgLabels typeContext hasStaticElement =:: hasStaticArg
-  outTypes procType typeContext types.getProcRetLabels typeContext hasStaticElement
-    procName labelContext id.labelFlags id.FLAG_STATIC & ? |
-  =:: isStatic
-  progContext [] .procedures
-    $ .length ProcId cast =:: procId
-    ## ProcedureInfo
-      aliasId NO_PROC == if
-        ## CodeProcData
-          0 ProcImplementation list.create
-          0 VariableInfo list.create
-          Operation slice.emptyMutable
-          0:i16
-          ProcCodeState .PARSING
-        CodeProcData new ProcImplType .code
-      else
-        aliasId ProcImplType .alias
-      end
-      procType
-      procName
-      fileId
-      idContext id.currentScope
-      hasStaticArg
-      isStatic
-    ProcedureInfo new list.append
-  progContext .procedures=
-  procId return
-end
 
 proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr.mut : state -> string ) =>: parseOperation
   state [] .progContext =:: progContext
@@ -1565,7 +1506,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       _EXPERIMENTAL_ if
-        procImplName procType state [] .currentFile NO_PROC fileState [] .wordStart progContext newProcData =:: procId
+        procImplName procType state [] .currentFile NO_PROC true fileState [] .wordStart progContext newProcData =:: procId
         procId fileState [] .wordStart opNestedProc state appendOp
         named if
           progContext newAutoType
@@ -1600,19 +1541,20 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         progContext [] .procedures
           constProcId i64 cast list.at .data
         =:: procData
-        procData .implementation .?code ? ! if
+        procData .implementation .?Code ? ! if
           "unexpected implementation for " sb.copyPtr
             procData [] .implementation switch
-              builtIn case " built-in procedure" sb.appendS break
-              alias case " procedure alias" sb.appendS break
-              code case ..unreachable
+              BuiltIn case " built-in procedure" sb.appendS break
+              Alias case " procedure alias" sb.appendS break
+              Extern case " extern procedure" sb.appendS break
+              Code case ..unreachable
             end
           fileState [] .wordStart errors appendError
           return
         end
         constProcId
       else ..drop
-        procName procType state [] .currentFile NO_PROC fileState [] .wordStart progContext newProcData
+        procName procType state [] .currentFile NO_PROC true fileState [] .wordStart progContext newProcData
           $ ConstValue .Procedure procName idContext id.getIdentifier
               ! "procName is identifier" assert
           .constValue=
@@ -1885,7 +1827,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                     procStart [] .val .?initializeId ?
                 end "procedure starts with correct operation" assert
                 slice.copy
-              currentProc .implementation .code .code=
+              currentProc .implementation .Code .code=
               progContext [] .tmpOps
                 procBlockData .blockStart list.setLength
               progContext .tmpOps=
@@ -1899,7 +1841,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                 end
               end
               currentProc [] .procType .?Undefined ? ! if
-                ProcCodeState .PARSED currentProc .implementation .code .codeState=
+                ProcCodeState .PARSED currentProc .implementation .Code .codeState=
               end
             end
           break
@@ -2227,9 +2169,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             "alias procedure does not have const value" ..panic
           end =:: mut: aliasId
           progContext [] .procedures aliasId i64 cast list.at .data
-            $ .implementation [] .?alias .if aliasId= ..drop
+            $ .implementation [] .?Alias .if aliasId= ..drop
               progContext [] .procedures aliasId i64 cast list.at .data
-              $ .implementation [] .?alias ? ! "no double alias" assert
+              $ .implementation [] .?Alias ? ! "no double alias" assert
             else ..drop end
           =:: aliasProc
           valType aliasProc [] .procType typeContext types.canAlias ! if
@@ -2246,7 +2188,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end =:: aliasId
         idData .constValue =:: procData
         procData .?Procedure ? ! if
-          label valType state [] .currentFile aliasId fileState [] .wordStart progContext newProcData
+          label valType state [] .currentFile aliasId false fileState [] .wordStart progContext newProcData
             ConstValue .Procedure
           label idContext id.getIdentifier
             ! "procName is identifier" assert

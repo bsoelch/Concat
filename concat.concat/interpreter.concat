@@ -1065,7 +1065,7 @@ namespace: interpreter
         ..drop ## callProcId
       .data =:: callInfo ## procedure should allways match
       callInfo .procId typeTrait == "called proc is same as type-trait" assert
-      procData .implementation .?builtIn ? if
+      procData .implementation .?BuiltIn ? if
         ## built-in needs argument on stack
         ## pushValue
           toCheck ConstValue .TypeId
@@ -3559,7 +3559,7 @@ proc(
   args .length autoArgs .length -
     consumeStaticArgs ! if nStaticArgs - end
   =:: nArgs
-  procData .implementation .?builtIn .if =:: builtInImpl
+  procData .implementation .?BuiltIn .if =:: builtInImpl
     implId -1:i32 != if
       "generic built-ins are not supported" sb.copyPtr
       pos errors appendError
@@ -3568,7 +3568,7 @@ proc(
       calledType
       builtInImpl [] .builtIn
     pos context tryEvaluateBuiltIn return
-  else .?code ._else ..drop
+  else .?Code ._else ..drop
     "unexpected implementation type" sb.copyPtr
     pos errors appendError
     true return
@@ -3918,7 +3918,7 @@ proc(
       end =:: generatedType
     context .stack=
     implId 0 >= if
-      procData .implementation .code [] .implementations
+      procData .implementation .Code [] .implementations
         implId list.at .data
       [] .staticArgs
     else

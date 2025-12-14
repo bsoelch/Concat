@@ -119,7 +119,7 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     op@ prog visited@ types@ addOpType
   end
   prog [] .procedures for =:: proc
-    proc .implementation .?code .else
+    proc .implementation .?Code .else
       ..drop continue
     end =:: impl
     impl .codeState .UNUSED if continue end

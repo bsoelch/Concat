@@ -3270,7 +3270,7 @@ proc(
           end
           i 1 +
         end ..drop
-        procInfo [] .implementation .?code .if =:: codeImpl
+        procInfo [] .implementation .?Code .if =:: codeImpl
           ## allocate space for variables
           implInfo .implementationId 0 >= if
             codeImpl .implementations
@@ -3776,7 +3776,7 @@ proc(
         callInfo [] .procId i64 cast list.at .data
       =:: procData
       callInfo [] .implementationId 0 >= if
-        procData [] .implementation .code .implementations
+        procData [] .implementation .Code .implementations
           callInfo [] .implementationId list.at .data
         [] .procType
       else
@@ -5026,7 +5026,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     end
     ## code
     program [] .procedures for =:: proc
-      proc .implementation .?code .else
+      proc .implementation .?Code .else
         ..drop continue
       end =:: impl
       impl .codeState .UNUSED if continue end

@@ -57,7 +57,7 @@ proc(
   program [] .progFiles
     procInfo [] .fileId i64 cast.u
   list.at .data =:: procFile
-  procInfo .implementation .code =:: impl
+  procInfo .implementation .Code =:: impl
   callInfo .implementationId -1 == if
     impl [] .code slice.freeze
   else
@@ -74,7 +74,7 @@ proc(
   optimizerFlags.ALLOW_INLINE ! if false return end
   ## TODO allow inlining of small procedures when ALLOW_INLINE_SMALL is set
   program [] .procedures callInfo .procId i64 cast.u @[] =:: procData
-  procData [] .isStatic or procData .implementation [] .?code ? ! or
+  procData [] .isStatic or procData .implementation [] .?Code ? ! or
       procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? if
     false return
   end
@@ -93,7 +93,7 @@ proc(
   typeContext .labelContext =:: labelContext
   program [] .procedures
     callInfo .procId i64 cast.u @[] .implementation []
-  .?code ? "only code-procs are inlined" assert
+  .?Code ? "only code-procs are inlined" assert
   callInfo program calledProcOps =:: procOps
   "Inlining procedures is currently experimental" sb.copyPtr pos program .errors appendWarning
   context [] .inlineCount
@@ -511,7 +511,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   program .tmpOps=
   program [] .procedures list.atItr for =:: currentProc
     currentProc [] .isStatic if continue end
-    currentProc .implementation .?code .else ..drop
+    currentProc .implementation .?Code .else ..drop
       continue
     end =:: impl
     currentProc [] .fileId context .currentFile=
@@ -547,7 +547,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   ## create implementations for built-in procedure-pointers
   program [] .procedures .length for =:: procId
     program [] .procedures procId list.at .data =:: currentProc
-    currentProc .implementation .?builtIn .else ..drop
+    currentProc .implementation .?BuiltIn .else ..drop
       break ## built-ins at start of procedure list
     end =:: builtInImpl
     builtInImpl [] .hasPtr ! if
@@ -578,6 +578,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       opBuffer
       0:i16
       ProcCodeState .COMPILED
-    CodeProcData new currentProc .implementation .code=
+    CodeProcData new currentProc .implementation .Code=
   end
 end

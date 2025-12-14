@@ -2016,7 +2016,7 @@ proc(
       NestedProc .case =:: procId
         program [] .procedures procId i64 cast list.at .data =:: procData
         procData [] .procType .?Undefined ? ! or
-            procData .implementation .?code ! .or [] .codeState .PARSING ! if
+            procData .implementation .?Code ! .or [] .codeState .PARSING ! if
           "unexpected state for nested procedure" sb.copyPtr
           op .pos errors appendError
           continue.opLoop
@@ -2034,7 +2034,7 @@ proc(
         op .pos state popType =:: procType
         procType procData .procType=
         idContext id.currentScope procData .scopeId= ## remember host scope
-        ProcCodeState .PARSED procData .implementation .code .codeState=
+        ProcCodeState .PARSED procData .implementation .Code .codeState=
         procId ConstValue .Procedure
           procType ## TODO? special type for procedure literal
           _EXPERIMENTAL_ ! if
@@ -2208,16 +2208,16 @@ proc(
                 program [] .procedures
                   calledProcId i64 cast list.at .data
                 [] .isStatic | and state [] .mode .STATIC_PROC ! or
-                baseProcData .implementation .?code .and .codeState .TYPE_CHECKING ! if
+                baseProcData .implementation .?Code .and .codeState .TYPE_CHECKING ! if
               calledType calledProc true op .pos state interpretCall ! if
                 continue.opLoop
               end
             end
             baseProcData [] .implementation switch
-              code case
+              Code case
                 state [] .mode .LINEAR ! if
                   ## check if implementation exists if not add to list of missing imples
-                  baseProcData  .implementation .code =:: codeImpl
+                  baseProcData  .implementation .Code =:: codeImpl
                   calledProc .implementationId =:: implId
                   implId -1:i32 == if
                     codeImpl [] .codeState .TYPE_CHECKED !
@@ -2239,8 +2239,11 @@ proc(
                 end
                 calledProc program callInfoToCall op@ .val .call=
               break
-              builtIn case
-                baseProcData [] .implementation .builtIn .builtIn =:: builtInId
+              Extern case
+                calledProc program callInfoToCall op@ .val .call=
+              break
+              BuiltIn case
+                baseProcData [] .implementation .BuiltIn .builtIn =:: builtInId
                 builtInId .SYS_ARGC or builtInId .SYS_ARGV or builtInId .SYS_ENVP if
                   true program .hasGetArgs=
                 else headConstant _if ## only constant arguments
@@ -2250,7 +2253,7 @@ proc(
                 end
                 builtInId OpValue .builtIn op@ .val=
               break
-              alias case ..unreachable ## resolveCall unwraps alias
+              Alias case ..unreachable ## resolveCall unwraps alias
             end
             0 =:: mut: offset
             argCount 1 - while ..dup 0 >= do =:: i
@@ -2356,11 +2359,11 @@ proc(
               idData [] .constValue .Procedure =:: mut: procId
               program [] .procedures
                 procId i64 cast list.at .data
-                $ .implementation .?alias .if [] procId= ..drop
+                $ .implementation .?Alias .if [] procId= ..drop
                   program [] .procedures procId i64 cast list.at .else
                     "could not find procedure alias" ..panic
                   end
-                  $ .implementation [] .?alias ? ! "no double alias" assert
+                  $ .implementation [] .?Alias ? ! "no double alias" assert
                 else ..drop end
               =:: procData
               -1:i32 =:: mut: implId
@@ -2372,9 +2375,9 @@ proc(
                 ##  -> generic proc ptr : ( procId, implId )
                 break
               end
-              procData .implementation .?builtIn .if
+              procData .implementation .?BuiltIn .if
                 true >$ .hasPtr=
-              else .?code ._if =:: codeImpl
+              else .?Code ._if =:: codeImpl
                 codeImpl .codeState [] .TYPE_CHECKED ! if
                   state [] .missingProcs
                     ## MissingProc
@@ -2441,13 +2444,13 @@ proc(
         requireTypes if continue.opLoop end
         op state appendOp ..drop
         continue.opLoop
-      declareId case
+      declareId .case =:: idInfo
         op@ false state resolveAutoType
         _EXPERIMENTAL_ and state [] .inTypeBlock if ## TODO distingish composite-type, type-set and initializer
           1 op .pos state checkStackSize if
             continue.opLoop ## stack underflow
           end
-          op .val .declareId .idType .LABEL "composite-element has type label" assert
+          idInfo .idType .LABEL "composite-element has type label" assert
           state [] .arrowState ? if
             continue.opLoop ## ignore element labels after arrow
           end
@@ -2456,7 +2459,7 @@ proc(
             count 1 - for ..drop ## pad to correct number of labels
               id.LABEL_ID_NONE list.append
             end
-            op .val .declareId .labelId list.append
+            idInfo .labelId list.append
           program .labelBuffer=
           ## TODO pop const-values instead of types when in initializer
           state [] .typeBuffer
@@ -2469,14 +2472,15 @@ proc(
           end
           continue.opLoop
         end
-        op .val .declareId .idType switch
+        idInfo .idType switch
           PROCEDURE case
-            op .val .declareId .labelId idContext id.getIdentifier if ..drop
+            idInfo .labelId idContext id.getIdentifier if ..drop
               "could not find " sb.copyPtr
-                op .val .declareId .labelId labelContext sb.appendLabelPath
+                idInfo .labelId labelContext sb.appendLabelPath
               op .pos errors appendError
               continue.opLoop
-            end [] .constValue .?None .if ..drop
+            end .constValue =:: constVal
+            constVal [] .?None .if ..drop
             else .?Procedure ._if ..drop
               continue.opLoop ## skip if value already exits
             else
@@ -2485,8 +2489,15 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end
-            ## TODO! create procedure-data (! ensure data is overwritten on initialisation)
-            "unimplemented: procedure-declarations" ..panic
+            ## newProcData
+              idInfo .labelId
+              op .dataType
+              state [] .currentFile
+              NO_PROC
+              false
+              op .pos
+              program
+            newProcData ConstValue .Procedure constVal =[]
           continue.opLoop
           GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
             state isGlobal ! if ## ignore declarations outside procedure
@@ -2495,12 +2506,12 @@ proc(
           continue.opLoop
           TYPE LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
             "unexpected declaration of identifier " sb.copyPtr
-              op .val .declareId labelContext sb.appendIdInfo
+              idInfo labelContext sb.appendIdInfo
             op .pos errors appendError
           continue.opLoop
           ARGUMENT case
             "cannot declare identifier " sb.copyPtr
-              op .val .declareId labelContext sb.appendIdInfo
+              idInfo labelContext sb.appendIdInfo
             op .pos errors appendError
           continue.opLoop
         end
@@ -4839,7 +4850,7 @@ proc(
   ProgramContext ptr.mut : program
 -> i32 ) =>: nextImpl
   ## TODO remember index up to which all operations have been checked
-  procInfo .implementation .code =:: codeImpl
+  procInfo .implementation .Code =:: codeImpl
   codeImpl [] .implementations .length i32 cast.u =:: implLength
   0:i32 while $ implLength < do =:: implId
     codeImpl [] .implementations
@@ -4906,7 +4917,7 @@ proc(
   program [] .procedures procId i64 cast list.at .else
     "missing procedure" ..panic
   end =:: currentProc
-  currentProc .implementation .?code .else ..drop
+  currentProc .implementation .?Code .else ..drop
     ## TODO replace alias with underlying proc
     ##  skip built-ins
     return
@@ -5221,7 +5232,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   ## TODO detect unused lambda in special cases (e.g. only accessible through unused variable)
   0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
     program [] .procedures procId iSize cast.u list.at .data =:: currentProc
-    currentProc [] .implementation .?code .else ..drop
+    currentProc [] .implementation .?Code .else ..drop
       procId 1 + continue ## procedure implementation not in code
     end .code .length 0 == if
       procId 1 + continue ## procedure not implemented
@@ -5248,7 +5259,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   ## procedures
   0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
     program [] .procedures procId iSize cast.u list.at .data =:: currentProc
-    currentProc [] .implementation .?code .else ..drop
+    currentProc [] .implementation .?Code .else ..drop
       procId 1 + continue ## procedure implementation not in code
     end .code .length 0 == if
       procId 1 + continue ## procedure not implemented
@@ -5266,7 +5277,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     false compiledImplementation=
     0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
       program [] .procedures procId list.at .data =:: currentProc
-      currentProc .implementation .?code .else ..drop
+      currentProc .implementation .?Code .else ..drop
         procId 1 + continue ## procedure implementation not in code
       end =:: codeImpl
       codeImpl [] .code .length 0 == if

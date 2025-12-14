@@ -53,9 +53,10 @@ struct(
   bool : hasPtr
 ) =:: export: BuiltInData
 union(
-  BuiltInData : builtIn
-  CodeProcData : code
-  ProcId : alias
+  BuiltInData : shadow: BuiltIn
+  CodeProcData : Code
+  LabelId : Extern
+  ProcId : Alias
 ) =:: export: ProcImplType
 struct(
   ProcImplType : implementation
@@ -67,7 +68,7 @@ struct(
   bool : isStatic
 ) =:: export: ProcedureInfo
 proc( ProcedureInfo : p -> ) =>: freeProcedure
-  p .implementation .?code .if =:: impl
+  p .implementation .?Code .if =:: impl
     impl .code slice.free ..drop
     impl .implementations for
       .code slice.free ..drop
@@ -519,6 +520,68 @@ struct(
   ProcId list : procedures
 ) =:: export: ProcedureBundle
 
+## check if composite has any static elements, types are static by default
+proc( Type slice : elements LabelId slice : labels TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
+  typeContext .labelContext =:: labelContext
+  elements .length for =:: i
+    i labels .length u< and labels i []
+        labelContext id.labelFlags id.FLAG_STATIC & ? if
+      true return
+    end
+    elements i [] typeContext types.isType if
+      true return
+    end
+  end
+  false return
+end
+proc(
+  LabelId : procName
+  Type : procType
+  FileId : fileId
+  ProcId : aliasId
+  bool : hasImpl
+  FilePosition : pos
+  ProgramContext ptr.mut : progContext
+-> ProcId ) =>: export: newProcData
+  progContext .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  procType typeContext types.getProcIn $ ? if .data else ..drop
+    Type slice.empty
+  end =:: inTypes
+  procType typeContext types.getProcOut $ ? if .data else ..drop
+    Type slice.empty
+  end =:: outTypes
+  inTypes procType typeContext types.getProcArgLabels typeContext hasStaticElement =:: hasStaticArg
+  outTypes procType typeContext types.getProcRetLabels typeContext hasStaticElement
+    procName labelContext id.labelFlags id.FLAG_STATIC & ? |
+  =:: isStatic
+  progContext [] .procedures
+    $ .length ProcId cast =:: procId
+    ## ProcedureInfo
+      _EXPERIMENTAL_ and hasImpl ! if
+        procName ProcImplType .Extern
+      else aliasId NO_PROC == _if
+        ## CodeProcData
+          0 ProcImplementation list.create
+          0 VariableInfo list.create
+          Operation slice.emptyMutable
+          0:i16
+          ProcCodeState .PARSING
+        CodeProcData new ProcImplType .Code
+      else
+        aliasId ProcImplType .Alias
+      end
+      procType
+      procName
+      fileId
+      idContext id.currentScope
+      hasStaticArg
+      isStatic
+    ProcedureInfo new list.append
+  progContext .procedures=
+  procId return
+end
 proc( -> ProcedureBundle ) =>: export: newProcBundle
   ## ProcedureBundle
     8 ProcId list.create
@@ -1130,7 +1193,7 @@ namespace: sb
     "## global:\n" sb.appendS
     prog [] .globalOps for prog sb.appendOp end
     prog [] .procedures for =:: proc
-      proc .implementation .?code .else
+      proc .implementation .?Code .else
         ..drop continue
       end =:: impl
       "## "          sb.appendS

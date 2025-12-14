@@ -1115,7 +1115,7 @@ proc(
   =:: procInfo
   candidate [] .procId =:: calledProcId
   ## TODO? nested alias
-  procInfo [] .implementation .?alias .else ..drop
+  procInfo [] .implementation .?Alias .else ..drop
     calledProcId
   end =:: baseProcId
   procInfo [] .procType =:: procType
@@ -1141,7 +1141,7 @@ proc(
       =:: baseProcInfo
       baseProcInfo .implementation =:: implData
       ## TODO support alias for generic procedures
-      implData .?code .if .implementations =:: impls
+      implData .?Code .if .implementations =:: impls
     false =:: mut: isMatch
     impls [] .length for =:: i
       impls [] i list.at .data =:: impl
@@ -1169,7 +1169,7 @@ proc(
           0 VariableInfo list.create
           Operation slice.emptyMutable
           pos
-          implData .code [] .expansionLevel 1:i16 +
+          implData .Code [] .expansionLevel 1:i16 +
           ## replaceGenerics
             baseProcInfo [] .procType
             typeBuffer@

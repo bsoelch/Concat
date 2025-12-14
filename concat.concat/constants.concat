@@ -136,36 +136,21 @@ proc( ConstValue : a ConstValue : b -> bool ) =>: export: constantEquals
     false return
   end
   a switch
-    None WildCard case
-      true return
-    Bool case
-      a .Bool b .Bool == return
-    EnumLabel case
-      a .EnumLabel b .EnumLabel == return
-    Int case
-      a .Int b .Int == return
-    Float case
-      a .Float b .Float == return
-    Char case
-      a .Char b .Char == return
-    Array8 case
-      a .Array8 b .Array8 slice.eq return
-    Array16 case
-      a .Array16 b .Array16 slice.eq return
-    Array32 case
-      a .Array32 b .Array32 slice.eq return
-    Array64 case
-      a .Array64 b .Array64 slice.eq return
-    Array case
-      a .Array b .Array constantEquals@ slice.eq return
-    TypeId case
-      a .TypeId b .TypeId types.typeEquals return
-    Procedure case
-      a .Procedure b .Procedure == return
-    ProcedureBundle case
-      a .ProcedureBundle b .ProcedureBundle == return
-    GenericArg case
-      a .GenericArg b .GenericArg == return
+    None WildCard case true return
+    Bool .case b .Bool == return
+    EnumLabel .case b .EnumLabel == return
+    Int .case b .Int == return
+    Float .case b .Float == return
+    Char .case b .Char == return
+    Array8 .case b .Array8 slice.eq return
+    Array16 .case b .Array16 slice.eq return
+    Array32 .case b .Array32 slice.eq return
+    Array64 .case b .Array64 slice.eq return
+    Array .case b .Array constantEquals@ slice.eq return
+    TypeId .case b .TypeId types.typeEquals return
+    Procedure .case b .Procedure == return
+    ProcedureBundle .case b .ProcedureBundle == return
+    GenericArg .case b .GenericArg == return
     Union case
       a .Union .eltIndex b .Union .eltIndex != if
         false return
@@ -177,8 +162,7 @@ proc( ConstValue : a ConstValue : b -> bool ) =>: export: constantEquals
         b .Union .value []
       constantEquals return
     ## local values are compared with pointer identity ! update hash function when this changes
-    LocalValue case
-      a .LocalValue ConstValue ptr.raw cast b .LocalValue ConstValue ptr.raw cast == return
+    LocalValue .case ConstValue ptr.raw cast b .LocalValue ConstValue ptr.raw cast == return
     LocalArray case
       ## local arrays are only equal if memory ranges coincide
       a .LocalArray .data b .LocalArray .data == and
@@ -209,65 +193,49 @@ end
 ## TODO tweak scale factors (would larger primes be better?)
 proc( ConstValue : a -> i32 ) =>: export: constantHash
   a switch
-    None case
-      0 return
-    WildCard case
-      1 return
-    Bool case
-      a .Bool if 2 else 3 end return
-    EnumLabel case
-      a .EnumLabel i32 cast.u 1 + 5 * return
-    Int case
-      a .Int $ 32 >>> + i32 cast.u 715415 + 7 * return
-    Float case ## most floats will only differ on the higher 32 bits ( sign+exponent+start of magnitude )
-      a .Float f64.bits 32 >>> i32 cast.u i32.bitrev 61414 + 11 * return
-    Char case
-      a .Char i32 cast.u 1 + 13 * return
-    Array8 case
-      a .Array8 ( i8 -> i32 ) => i32 cast.u end slice.hash 17 * return
-    Array16 case
-      a .Array16 ( i16 -> i32 ) => i32 cast.u end slice.hash 19 * return
-    Array32 case
-      a .Array32 ( i32 -> i32 ) => end slice.hash 23 * return
-    Array64 case
-      a .Array64 ( i64 -> i32 ) => $ 32 >> >$ + i32 cast.u end slice.hash 29 * return
-    Array case
-      a .Array constantHash@ slice.hash 31 * return
-    TypeId case
-      a .TypeId types.typeHash 37 * return
-    Procedure case
-      a .Procedure i32 cast.u 1 + 41 * return
-    ProcedureBundle case
-      a .ProcedureBundle i32 cast.u 1 + 43 * return
-    GenericArg case
-      a .GenericArg i32 cast.u 1 + 47 * return
-    Union case
-      a .Union .eltIndex
-        31 * a .Union .value [] constantHash +
+    None case 0 return
+    WildCard case 1 return
+    Bool .case if 2 else 3 end return
+    EnumLabel .case i32 cast.u 1 + 5 * return
+    Int .case $ 32 >>> + i32 cast.u 715415 + 7 * return
+    Float .case ## most floats will only differ on the higher 32 bits ( sign+exponent+start of magnitude )
+      f64.bits 32 >>> i32 cast.u i32.bitrev 61414 + 11 * return
+    Char .case i32 cast.u 1 + 13 * return
+    Array8 .case ( i8 -> i32 ) => i32 cast.u end slice.hash 17 * return
+    Array16 .case ( i16 -> i32 ) => i32 cast.u end slice.hash 19 * return
+    Array32 .case ( i32 -> i32 ) => end slice.hash 23 * return
+    Array64 .case ( i64 -> i32 ) => $ 32 >> >$ + i32 cast.u end slice.hash 29 * return
+    Array .case constantHash@ slice.hash 31 * return
+    TypeId .case types.typeHash 37 * return
+    Procedure .case i32 cast.u 1 + 41 * return
+    ProcedureBundle .case i32 cast.u 1 + 43 * return
+    GenericArg .case i32 cast.u 1 + 47 * return
+    Union .case =:: unionVal
+      unionVal .eltIndex
+        31 * unionVal .value [] constantHash +
       53 * return
-    LocalValue case
-      ## identity hash for identity comparisson
-      a .LocalValue ConstValue ptr.raw cast iSize cast! i64 cast.u $ 32 >>> >$ + i32 cast.u 57 * return
+    LocalValue .case ## identity hash for identity comparisson
+      ConstValue ptr.raw cast iSize cast! i64 cast.u $ 32 >>> >$ + i32 cast.u 57 * return
     ## local arrays are only equal if memory ranges coincide
-    LocalArray case
-      a .LocalArray .data iSize cast! 31:iSize *
-        a .LocalArray .length +
+    LocalArray .case =:: arrayData
+      arrayData .data iSize cast! 31:iSize *
+        arrayData .length +
       i64 cast.u $ 32 >>> >$ + i32 cast.u 59 * return
-    LocalArray8 case
-      a .LocalArray8 .data iSize cast! 31:iSize *
-        a .LocalArray8 .length +
+    LocalArray8 .case =:: arrayData
+      arrayData .data iSize cast! 31:iSize *
+        arrayData .length +
       i64 cast.u $ 32 >>> >$ + i32 cast.u 61 * return
-    LocalArray16 case
-      a .LocalArray16 .data iSize cast! 31:iSize *
-        a .LocalArray16 .length +
+    LocalArray16 .case =:: arrayData
+      arrayData .data iSize cast! 31:iSize *
+        arrayData .length +
       i64 cast.u $ 32 >>> >$ + i32 cast.u 67 * return
-    LocalArray32 case
-      a .LocalArray32 .data iSize cast! 31:iSize *
-        a .LocalArray32 .length +
+    LocalArray32 .case =:: arrayData
+      arrayData .data iSize cast! 31:iSize *
+        arrayData .length +
       i64 cast.u $ 32 >>> >$ + i32 cast.u 71 * return
-    LocalArray64 case
-      a .LocalArray64 .data iSize cast! 31:iSize *
-        a .LocalArray64 .length +
+    LocalArray64 .case =:: arrayData
+      arrayData .data iSize cast! 31:iSize *
+        arrayData .length +
       i64 cast.u $ 32 >>> >$ + i32 cast.u 73 * return
   end
 end

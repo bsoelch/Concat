@@ -2579,10 +2579,10 @@ namespace: AMD64
         context .variableOffsets map.clear ## clear variables from previous procedure
          ## allocate space for variables
         implInfo .implementationId 0 >= if
-          procInfo [] .implementation .code .implementations
+          procInfo [] .implementation .Code .implementations
             implInfo .implementationId list.at .data [] .variables
         else
-          procInfo [] .implementation .code .variables
+          procInfo [] .implementation .Code .variables
         end =:: variables
         ## TODO sort variables by alignment?
         0:i64 =:: mut: stackOffset
@@ -5011,7 +5011,7 @@ proc(
           end
         end
       finally i 1 + end ..drop
-      procInfo [] .implementation .?code ? ! if
+      procInfo [] .implementation .?Code ? ! if
         "unexpected procedure implementation" sb.copyPtr
         op [] .pos errors appendError
         return
@@ -6651,7 +6651,7 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
       i FileId cast Atomic .DebugUsesFile list.append
     end
     program [] .procedures for =:: proc
-      proc .implementation .?code .else
+      proc .implementation .?Code .else
         ..drop continue
       end =:: impl
       impl .codeState .UNUSED if continue end
