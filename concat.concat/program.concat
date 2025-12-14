@@ -378,8 +378,8 @@ end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opDeclareName
   OpValue .declareName Type .Undefined pos Operation new return
 end
-proc( LabelId : nameAlias LabelId : baseName FilePosition : pos -> Operation ) =>: export: opAliasName
-  nameAlias baseName NameAliasInfo new OpValue .aliasName Type .Undefined pos Operation new return
+proc( LabelId : baseName LabelId : nameAlias FilePosition : pos -> Operation ) =>: export: opAliasName
+  baseName nameAlias NameAliasInfo new OpValue .aliasName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos  -> Operation ) =>: export: opInitializeName
   InitType .FIXED NameInitInfo new OpValue .initializeName

@@ -2089,7 +2089,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                 id.FLAG_NONE
                 fileState [] .wordStart
                 state [] .currentFile
-              labelContext id.newLabel <<$
+              labelContext id.newLabel <<<$
             <<<$ opAliasName
           else
             opDeclareName

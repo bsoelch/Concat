@@ -1950,7 +1950,63 @@ proc(
       op@ state resolveIdentifer ? ConstValue .Bool op@ .val .StaticConstant=
       types.primitive.BOOL op@ .dataType=
     else .?aliasName ._if =:: nameAlias
-      "unimplemented: name-aliases" ..panic
+      op .pos state popType =:: aliasType
+      aliasType typeContext types.isProcedure ! if
+        "alias is only supported for procedure types" sb.copyPtr op .pos errors appendError
+        continue.opLoop
+      end
+      nameAlias .baseName idContext id.findIdentifierByLabel if ..drop
+        "cannot find identifer: " sb.copyPtr
+          nameAlias .baseName labelContext sb.appendLabelPath
+        op .pos errors appendError
+        continue.opLoop
+      end =:: aliasData
+      aliasData .idType [] .PROCEDURE ! if
+        "expected procedure name got: " sb.copyPtr
+          aliasData [] .idType sb.appendIdType
+        op .pos errors appendError
+      end
+      aliasData [] .constValue .?Procedure .else
+        "unexpected constant for procedure alias: " sb.copyPtr
+          >$ typeContext sb.appendConstant
+        op .pos errors appendError
+        continue.opLoop
+      end =:: mut: aliasId
+      program [] .procedures aliasId i64 cast list.at .data
+        $ .implementation [] .?Alias .if aliasId= ..drop
+          program [] .procedures aliasId i64 cast list.at .data
+          $ .implementation [] .?Alias ? ! "no double alias" assert
+        else ..drop end
+      =:: aliasProc
+      aliasType aliasProc [] .procType typeContext types.canAlias ! if
+        "incompatible signatures for procedure alias: " sb.copyPtr
+          aliasType typeContext sb.appendType
+          " cannot be renamed to " sb.appendS
+          aliasProc [] .procType typeContext sb.appendType
+        op .pos errors appendError
+        continue.opLoop
+      end
+      nameAlias .alias
+        aliasType
+        IdentifierType .PROCEDURE
+        -1 ## index
+        aliasData [] .constValue
+        false
+        op .pos
+        state [] .currentFile
+        idContext
+        errors
+      id.declareIdentifier if ..drop.2
+        ## error message is created by declareIdentifier
+        continue.opLoop
+      end >$ ..drop .constValue .?Procedure ? ! if
+        nameAlias .alias aliasType state [] .currentFile aliasId false op .pos program newProcData
+          ConstValue .Procedure
+        nameAlias .alias idContext id.getIdentifier
+          ! "procName is identifier" assert
+        .constValue=
+      end
+      continue.opLoop
     else .?declareName ? or op .val .?initializeName ? _if
       op .val .?initializeName ? =:: isInit
       op .val .?initializeName .if =:: initName
