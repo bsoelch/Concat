@@ -57,8 +57,8 @@ namespace: types
     ## XXX? support for 128Bit integer literals
   ) =:: IntLiteral
   union(
-    ProcId : typeTrait
-    Type : typeId
+    ProcId : TypeTrait
+    Type : TypeId
   ) =:: export: TypeSetEntry
   struct(
     TypeSetEntry slice : elements
@@ -67,14 +67,14 @@ namespace: types
   proc( TypeSetEntry : a TypeSetEntry : b -> bool ) =>: export: typeSetEntryEqual
     a ..label b ..label != if false return end
     a switch
-      typeTrait case a .typeTrait b .typeTrait == return
-      typeId case a .typeId b .typeId typeEquals return
+      TypeTrait .case b .TypeTrait == return
+      TypeId .case b .TypeId typeEquals return
     end
   end
   proc( TypeSetEntry : a -> i32 ) =>: export: typeSetEntryHash
     a switch
-      typeTrait case a .typeTrait i32 cast.u 1 + 2 * return
-      typeId case a .typeId typeHash 1 + 3 * return
+      TypeTrait .case i32 cast.u 1 + 2 * return
+      TypeId .case typeHash 1 + 3 * return
     end
   end
   proc( TypeSet : a TypeSet : b -> bool ) =>: export: typeSetEqual
@@ -2805,14 +2805,12 @@ namespace: sb
           depth 0 >= if
             t context types.getTypeSetEntries for =:: e
               e switch
-                typeId case
-                  e .typeId context depth 1 - appendTypeRecursive
+                TypeId .case context depth 1 - appendTypeRecursive
                   ' ' sb.appendC
                   break
-                typeTrait case
-                  ## TODO? print procedure name
-                  e .typeTrait i64 cast sb.appendI
+                TypeTrait .case i64 cast sb.appendI
                   ":ProcId " sb.appendS
+                  ## TODO? print procedure name
                   break
               end
             end

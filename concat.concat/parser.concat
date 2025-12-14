@@ -1948,10 +1948,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       BlockType .TYPE_PROC_ARROW fileState [] .wordStart opBlock state appendOp
       return
-    else $ "typeSet(":s string.eq _if ..drop
+    else $ "typeSet(":s string.eq or $ "oneOf(":s string.eq _if ..drop
       BlockType .TYPE_TYPESET state openTypeBlock
       BlockType .TYPE_TYPESET fileState [] .wordStart opBlock state appendOp
       return
+    else $ ".with(":s string.eq _if ..drop
+      "unimplemented: type-refinement" ..panic
     else $ ")":s string.eq _if =:: opName
       state closeBlock .else
         "unexpected " sb.copyPtr opName sb.appendStr fileState [] .wordStart errors appendError

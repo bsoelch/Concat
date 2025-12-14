@@ -1040,13 +1040,13 @@ namespace: interpreter
     context [] .currentFile =:: prevFile
     entries for =:: e
       e switch
-        typeId .case
+        TypeId .case
           toCheck types.typeEquals if
             prevFile context .currentFile=
             true return
           end
         continue
-        typeTrait .case break
+        TypeTrait .case break
       end =:: typeTrait
       progContext .procedures [] typeTrait i64 cast list.at .data =:: procData
       procData [] .fileId context .currentFile=
@@ -1055,7 +1055,7 @@ namespace: interpreter
         toCheck ConstValue .TypeId
       StackValue new =:: arg
       ## resolveCall
-        e@ .typeTrait 1 slice.create
+        e@ .TypeTrait 1 slice.create
         arg@ 1 slice.create
         stringBuilder ptr.mut optional.empty
         pos
@@ -2087,14 +2087,14 @@ proc(
               context [] .stack i [] =:: value
               value .?TypeId .if =:: typeId
                 typeId typeContext types.isTypeSet ! if
-                  typeId types.TypeSetEntry .typeId list.append
+                  typeId types.TypeSetEntry .TypeId list.append
                   continue
                 end
                 ## unwrap nested type-sets
                 value .TypeId typeContext types.getTypeSetEntries list.appendSlice
               else .?Procedure ._if
                 ## TODO! check signature in: type , out: bool
-                types.TypeSetEntry .typeTrait list.append
+                types.TypeSetEntry .TypeTrait list.append
               else
                 "unsupported value in type-set: " sb.copyPtr
                   >$ typeContext sb.appendConstant

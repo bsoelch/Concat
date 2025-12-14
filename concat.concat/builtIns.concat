@@ -474,7 +474,7 @@ proc(
   id.LABEL_ID_NONE labelData@ 1 =[]
   ## TypeSetEntry
     isUnionElementId
-  types.TypeSetEntry .typeTrait =:: entry
+  types.TypeSetEntry .TypeTrait =:: entry
   ## newTypeSet
     id.LABEL_ID_NONE
     entry@ slice.wrap

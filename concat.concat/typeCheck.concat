@@ -226,6 +226,7 @@ struct(
   BlockInfo list : openBlocks
   Operation list : compiledOps
   Type list : typeBuffer
+  ConstValue list : constBuffer
   i32 : blockStart
   TypeBlockState optional : arrowState
   MissingProc list : missingProcs
@@ -714,6 +715,13 @@ proc( i32 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: dis
   end
 end
 
+proc( TypeCheckState ptr.mut : state -> TypedValue optional ) =>: popTypedValue
+  state .stack branchTree.pop .else
+    TypedValue optional.empty return
+  end =:: typeInfo
+    typeInfo [] .opIndex state deleteOp ## remove stored operation
+  typeInfo [] .valueType typeInfo [] .value TypedValue new optional.wrap return
+end
 proc( TypeCheckState ptr.mut : state -> ConstValue optional ) =>: popValue
   state .stack branchTree.pop .else
     ConstValue optional.empty return
@@ -1836,7 +1844,6 @@ proc(
   end
   oldArrowState state .arrowState=
 end
-## TODO: directly parse elements of type-sets without going through interpreter
 proc(
   Operation slice : ops
   FilePosition : pos
@@ -1844,13 +1851,63 @@ proc(
 -> ) =>: typeCheckTypeSet
   state [] .program =:: program
   state [] .program .errors =:: errors
-  state [] .program .idContext =:: idContext
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  state .stack
+    branchTree.EMPTY
+  branchTree.reset =:: oldBranch
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
+  _EXPERIMENTAL_ if
+    Type optional.empty =:: mut: commonType
+    state [] .constBuffer .length =:: constOffset
+    while state popTypedValue .and =:: nextVal true do ## TODO! add/use `.do` syntax suggar
+      commonType .if
+        nextVal .valType typeContext types.mergeTypes
+        $ ? ! if ..drop
+          "incompatible types in set-type: " sb.copyPtr
+            nextVal .valType typeContext sb.appendType
+            " cannot be assigned to " sb.appendS
+            commonType optional.get typeContext sb.appendType
+          pos errors appendError
+          break
+        end
+      else
+        nextVal .valType optional.wrap
+      end commonType=
+      state [] .constBuffer
+        nextVal .value list.append
+      state .constBuffer=
+    end
+    state .stack oldBranch branchTree.reset ..drop
+    commonType .and types.primitive.TYPE typeContext types.canAutoCast if
+      state [] .constBuffer constOffset list.tail =:: elements
+      elements .length types.TypeSetEntry list.create
+        elements for
+          .?TypeId .else ..drop.2
+            "(currently) only types are allowed within set-types" sb.copyPtr
+            pos errors appendError
+            return
+          end types.TypeSetEntry .TypeId list.append
+        end
+        id.LABEL_ID_NONE
+          $1 list.asSlice
+        typeContext types.newTypeSet <$
+      list.free ..drop
+    else
+      "(currently) only types are allowed within set-types" sb.copyPtr pos errors appendError
+      Type .Undefined
+    end ConstValue .TypeId types.primitive.TYPE pos state pushConstant
+    state [] .constBuffer
+      constOffset list.setLength
+    state .constBuffer=
+    return
+  end
   1 pos state interpreterStoreConstants
   false state .inTypeBlock=
   state .interpreter interpreter.resetContext
+  state .stack oldBranch branchTree.reset ..drop
 end
 proc(
   Operation slice : ops
@@ -5258,6 +5315,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     32  BlockInfo list.create
     128 Operation list.create
     64 Type list.create
+    64 ConstValue list.create
     0:i32
     TypeBlockState optional.empty
     128 MissingProc list.create
@@ -5386,4 +5444,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   state .argData map.free
   state [] .initializationStack list.free ..drop
   state [] .stateStack list.free ..drop
+  state [] .typeBuffer list.free ..drop
+  state [] .constBuffer list.free ..drop
 end
