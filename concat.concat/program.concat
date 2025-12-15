@@ -535,6 +535,19 @@ proc( Type slice : elements LabelId slice : labels TypeContext ptr : typeContext
   false return
 end
 proc(
+  Type : newProcType
+  ProcedureInfo ptr.mut : procInfo
+  TypeContext ptr : typeContext
+-> ) =>: export: setProcType
+  newProcType procInfo .procType=
+  newProcType typeContext types.getProcIn .else Type slice.empty end =:: inTypes
+  newProcType typeContext types.getProcOut .else Type slice.empty end =:: outTypes
+  inTypes newProcType typeContext types.getProcArgLabels typeContext hasStaticElement procInfo .hasStaticArg=
+  outTypes newProcType typeContext types.getProcRetLabels typeContext hasStaticElement
+    procInfo [] .labelId typeContext .labelContext id.labelFlags id.FLAG_STATIC & ? |
+  procInfo .isStatic=
+end
+proc(
   LabelId : procName
   Type : procType
   FileId : fileId

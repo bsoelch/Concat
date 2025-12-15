@@ -2145,7 +2145,7 @@ proc(
           MissingProc new list.append
         state .missingProcs=
         op .pos state popType =:: procType
-        procType procData .procType=
+        procType procData typeContext setProcType
         idContext id.currentScope procData .scopeId= ## remember host scope
         ProcCodeState .PARSED procData .implementation .Code .codeState=
         procId ConstValue .Procedure
@@ -2191,8 +2191,7 @@ proc(
           op .pos
         errors id.importIdentifier ..drop
         continue.opLoop
-      getId case
-        op .val .getId =:: idInfo
+      getId .case =:: idInfo
         idInfo .labelId labelContext id.labelFlags =:: flags
         flags id.FLAG_MUTABLE & ? =:: mutable
         flags id.FLAG_STATIC & ? =:: isStatic
@@ -2221,7 +2220,7 @@ proc(
         end =:: constValue
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
-            op .val .getId .labelId =:: labelId
+            idInfo .labelId =:: labelId
             mutable ! and constValue .?None ? ! and idInfo .idType .GLOBAL_VAR if
               ## replace access to immutable global variable with constant
               constValue op .dataType op .pos opConst op=
@@ -2238,10 +2237,10 @@ proc(
             continue.opLoop
           TYPE case
             op .dataType constValue op state pushValue
-            op .val .getId .labelId state replaceLabel
+            idInfo .labelId state replaceLabel
             continue.opLoop
           ARGUMENT case
-            op .val .getId .labelId =:: label
+            idInfo .labelId =:: label
             ConstValue .None =:: mut: argValue
             state .argData label map.at =:: argData?
             argData? optional.hasData if
@@ -2406,7 +2405,17 @@ proc(
             pushTypes
             continue.opLoop
           LABEL case
-            break
+            ## pushValue
+              idInfo .labelId
+                op .dataType types.primitive.TYPE typeContext types.canAutoCast if
+                  types.newGenericType ConstValue .TypeId
+                else
+                  ConstValue .GenericArg
+                end
+              op .dataType
+              op .pos
+            state pushConstant
+            continue.opLoop
         end
         break
       callPtr case
@@ -2564,6 +2573,20 @@ proc(
             continue.opLoop ## stack underflow
           end
           idInfo .idType .LABEL "composite-element has type label" assert
+          ## assign constant value to label
+          state .stack branchTree.peek .if =:: stackVal
+            ## getIdentifierByLabel
+              idInfo .labelId
+              idContext
+            id.getIdentifier if ..drop
+              "could not find " sb.copyPtr
+                idInfo labelContext sb.appendIdInfo
+              op .pos errors appendError
+              continue.opLoop
+            end =:: idData
+            stackVal [] .valueType idData .valueType=
+            stackVal [] .value idData .constValue=
+          end
           state [] .arrowState ? if
             continue.opLoop ## ignore element labels after arrow
           end
@@ -5106,6 +5129,10 @@ proc(
   state clearOps
   ## TODO? compile code to new list (prevents need to copy result after type-checking)
   state [] .compiledOps .length i32 cast.u =:: codeOffset
+  currentProc [] .labelId labelContext id.inLabelNamespace
+  idContext id.currentScope =:: prevScope
+  currentProc [] .scopeId idContext id.setScope
+  idContext id.openScope
   _EXPERIMENTAL_ if
     implId 0 >= if ## update procedure type
       codeImpl [] .implementations
@@ -5184,10 +5211,6 @@ proc(
       currentProc [] .procType optional.wrap state .currentProcType=
     end
   end
-  currentProc [] .labelId labelContext id.inLabelNamespace
-  idContext id.currentScope =:: prevScope
-  currentProc [] .scopeId idContext id.setScope
-  idContext id.openScope
   codeImpl [] .code slice.freeze state typeCheckOps
   ## TODO? compile exported procedure normally
   state [] .isUnusedProc ! and currentProc [] .isStatic ! if
