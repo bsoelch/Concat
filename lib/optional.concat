@@ -29,11 +29,13 @@ namespace: optional
   proc( type : auto: T  T optional -> T optional.inv ) =>: export: invert T optional.inv cast end
   namespace: inv
     proc( type : auto: T  T optional.inv -> T optional ) =>: export: shadow: invert T optional cast end
-    proc( type : auto: T  T optional.inv -> T ) =>: export: shadow: get optional.get end
-    proc( type : auto: T  T optional.inv -> bool ) =>: export: shadow: hasData optional.hasData end
-    proc( type : auto: T  T optional.inv -> bool ) =>: export: shadow: isEmpty optional.isEmpty end
-    proc( type : auto: T  T optional.inv -> T optional.inv ) =>: shadow: prepareIf optional.prepareIf end
-    proc( type : auto: T  T optional.inv -> ) =>: shadow: ifVal optional.elseVal end
+    proc( type : auto: T  T optional.inv -> T ) =>: export: shadow: get T optional cast optional.get end
+    proc( type : auto: T  T optional.inv -> bool ) =>: export: shadow: hasData T optional cast optional.hasData end
+    proc( type : auto: T  T optional.inv -> bool ) =>: export: shadow: isEmpty T optional cast optional.isEmpty end
+    proc( type : auto: T  T optional.inv -> T optional.inv ) =>: shadow: prepareIf
+      T optional cast optional.prepareIf T optional.inv cast
+    end
+    proc( type : auto: T  T optional.inv -> ) =>: shadow: ifVal T optional cast optional.elseVal end
   end
 end
 
