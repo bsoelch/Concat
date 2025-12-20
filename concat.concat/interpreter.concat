@@ -1065,7 +1065,7 @@ namespace: interpreter
         ..drop ## callProcId
       .data =:: callInfo ## procedure should allways match
       callInfo .procId typeTrait == "called proc is same as type-trait" assert
-      procData .implementation .?BuiltIn ? if
+      procData .implementation .?BuiltIn ? or callInfo .implementationId -1 == if
         ## built-in needs argument on stack
         ## pushValue
           toCheck ConstValue .TypeId

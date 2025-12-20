@@ -75,6 +75,7 @@ union(
   InitializerBlockData : Initializer
   _ : Namespace
   iSize : Overload
+  iSize : With
 ) =:: BlockInfoData
 ## TODO? assign block-ids in parser
 struct(
@@ -1856,7 +1857,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             blockStart fileState [] .wordStart state setBlockJump
             BlockType .OVERLOAD fileState [] .wordStart opEndBlock state appendOp
           break
-          TypeBlock Initializer case
+          TypeBlock Initializer With case
             state closedConstBlock
             ## TODO print block name
             "unexpected 'end' statement in type- or initializer-block" sb.copyPtr
@@ -1953,7 +1954,32 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .TYPE_TYPESET fileState [] .wordStart opBlock state appendOp
       return
     else $ ".with(":s string.eq _if ..drop
-      "unimplemented: type-refinement" ..panic
+      state opCount BlockInfoData .With state openBlock ..drop
+      char8 64 array : buffer
+        buffer@ sb.wrapBuffer
+          "with@" sb.appendS
+          fileState [] .wordStart .line sb.appendI
+          ":" sb.appendS
+          fileState [] .wordStart .posInLine sb.appendI
+        sb.asStr
+        id.FLAG_LAMBDA
+        fileState [] .wordStart
+        state [] .currentFile
+      labelContext id.newLabel
+        Type .Undefined
+        state [] .currentFile
+        NO_PROC true
+      fileState [] .wordStart progContext newProcData =:: procId
+      state [] .currentProcs procId list.append state .currentProcs=
+      _EXPERIMENTAL_ ! if
+        Type .Undefined
+          ## ProcedureImpl
+            -1
+            procId
+          ProcedureImpl new
+        fileState [] .wordStart opImplementProc state appendOp
+      end
+      return
     else $ ")":s string.eq _if =:: opName
       state closeBlock .else
         "unexpected " sb.copyPtr opName sb.appendStr fileState [] .wordStart errors appendError
@@ -1978,6 +2004,55 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             end
           fileState [] .wordStart opEndBlock state appendOp
           state closedConstBlock
+        return
+        With .case =:: offset
+          state [] .currentProcs
+            $ list.peek .if
+              [] NO_PROC != if ## append op before poping procedure
+                BlockType .PROCEDURE fileState [] .wordStart opEndBlock  state appendOp
+              end
+            else ..drop ## current-procs are empty -> no pop possible
+              "unexpected end of procedure" sb.copyPtr fileState [] .wordStart errors appendError
+              return
+            end
+            list.pop =:: withProcId
+          state .currentProcs=
+          progContext [] .procedures
+            withProcId i64 cast list.at .data
+          =:: withProc
+          progContext [] .tmpOps
+            offset list.tail
+            slice.copy
+          withProc .implementation .Code .code=
+          progContext [] .tmpOps
+            offset list.setLength
+          progContext .tmpOps=
+          ## TODO should with-proc be marked as parsed
+          ProcCodeState .PARSED withProc .implementation .Code .codeState=
+          _EXPERIMENTAL_ if
+            "unimplemented: with-blocks" ..panic
+          else
+            fileState state popTypeConstant ! .or types.primitive.TYPE types.typeEquals ! if
+              "expected `type` before .with( ... )" sb.copyPtr fileState [] .wordStart errors appendError
+              return
+            end
+            ## newProcedure
+              types.primitive.TYPE@ slice.wrap
+              types.primitive.BOOL@ slice.wrap
+              LabelId slice.empty
+              CallingConvention.DEFAULT
+            typeContext types.newProcedure .else
+              "failed to create procedure" ..panic
+            end withProc typeContext setProcType
+            withProcId types.TypeSetEntry .TypeTrait =:: entry
+            types.primitive.TYPE
+              ## typeSet
+                id.LABEL_ID_NONE
+                entry@ slice.wrap
+              typeContext types.newTypeSet ConstValue .TypeId
+              IdentifierInfo optional.empty
+            fileState [] .wordStart Constant new state pushConst
+          end
         return
         If AndOr While Switch Namespace Procedure Initializer Overload case
           "unexpected `" sb.copyPtr
