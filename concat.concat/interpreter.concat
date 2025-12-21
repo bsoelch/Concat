@@ -2774,7 +2774,7 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    atName setName existsLabel declareName aliasName initializeName usingNamespace usingIdentifier case
+    atName setName existsLabel declareName aliasName initializeName usingNamespace usingIdentifier typeWith case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp

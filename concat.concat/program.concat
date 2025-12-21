@@ -190,6 +190,7 @@ union(
        NameInitInfo : initializeName
       NameAliasInfo : usingNamespace
       NameAliasInfo : usingIdentifier
+             ProcId : typeWith
        TypeModifier : typeModifier
                   _ : Assert
              string : RuntimeAssert
@@ -401,9 +402,11 @@ proc( LabelId : src LabelId : alias FilePosition : pos  -> Operation ) =>: expor
     Type .Undefined
   pos Operation new return
 end
-proc( TypeModifier FilePosition  -> Operation ) =>: export: opTypeModifier
-  =:: pos
+proc( TypeModifier FilePosition : pos -> Operation ) =>: export: opTypeModifier
   OpValue .typeModifier Type .Undefined pos Operation new return
+end
+proc( ProcId FilePosition : pos -> Operation ) =>: export: opTypeWith
+  OpValue .typeWith Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opPanic
   OpValue .panic Type .Undefined pos Operation new return
@@ -925,9 +928,14 @@ namespace: sb
           " ) : " sb.appendS
           ..over .val .existsLabel labelContext sb.appendLabelName
           break
+        typeWith case
+          "type with( " sb.appendS
+            $1 .val .typeWith i64 cast.u sb.appendI
+          ":ProcId )" sb.appendS
+          break
         typeModifier case
           "typeModifier \"" sb.appendS
-          ..over .val .typeModifier sb.appendTypeModifier
+            $1 .val .typeModifier sb.appendTypeModifier
           "\"" sb.appendS
           break
         getElement case

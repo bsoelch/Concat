@@ -2027,32 +2027,31 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           progContext [] .tmpOps
             offset list.setLength
           progContext .tmpOps=
-          ## TODO should with-proc be marked as parsed
-          ProcCodeState .PARSED withProc .implementation .Code .codeState=
           _EXPERIMENTAL_ if
-            "unimplemented: with-blocks" ..panic
-          else
-            fileState state popTypeConstant ! .or types.primitive.TYPE types.typeEquals ! if
-              "expected `type` before .with( ... )" sb.copyPtr fileState [] .wordStart errors appendError
-              return
-            end
-            ## newProcedure
-              types.primitive.TYPE@ slice.wrap
-              types.primitive.BOOL@ slice.wrap
-              LabelId slice.empty
-              CallingConvention.DEFAULT
-            typeContext types.newProcedure .else
-              "failed to create procedure" ..panic
-            end withProc typeContext setProcType
-            withProcId types.TypeSetEntry .TypeTrait =:: entry
-            types.primitive.TYPE
-              ## typeSet
-                id.LABEL_ID_NONE
-                entry@ slice.wrap
-              typeContext types.newTypeSet ConstValue .TypeId
-              IdentifierInfo optional.empty
-            fileState [] .wordStart Constant new state pushConst
+            withProcId fileState [] .wordStart opTypeWith state appendOp
+            return
           end
+          ProcCodeState .PARSED withProc .implementation .Code .codeState=
+          fileState state popTypeConstant ! .or types.primitive.TYPE types.typeEquals ! if
+            "expected `type` before .with( ... )" sb.copyPtr fileState [] .wordStart errors appendError
+            return
+          end
+          ## newProcedure
+            types.primitive.TYPE@ slice.wrap
+            types.primitive.BOOL@ slice.wrap
+            LabelId slice.empty
+            CallingConvention.DEFAULT
+          typeContext types.newProcedure .else
+            "failed to create procedure" ..panic
+          end withProc typeContext setProcType
+          withProcId types.TypeSetEntry .TypeTrait =:: entry
+          types.primitive.TYPE
+            ## typeSet
+              id.LABEL_ID_NONE
+              entry@ slice.wrap
+            typeContext types.newTypeSet ConstValue .TypeId
+            IdentifierInfo optional.empty
+          fileState [] .wordStart Constant new state pushConst
         return
         If AndOr While Switch Namespace Procedure Initializer Overload case
           "unexpected `" sb.copyPtr
