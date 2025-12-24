@@ -17,6 +17,7 @@ struct(
 
 -1:i32 =:: OP_UNLINKED
 -2:i32 =:: OP_EMPTY
+-3:i32 =:: OP_ARGUMENT
 
 16:i16 =:: MAX_EXPANSION_DEPTH
 
@@ -1881,7 +1882,7 @@ proc(
       state .constBuffer=
     end
     state .stack oldBranch branchTree.reset ..drop
-    commonType .and types.primitive.TYPE typeContext types.canAutoCast if
+    commonType .and typeContext types.isType if
       state [] .constBuffer constOffset list.tail =:: elements
       elements .length types.TypeSetEntry list.create
         elements for
@@ -2374,7 +2375,7 @@ proc(
               eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
                 ## remove static arguments from stack
                 state .stack branchTree.pop .data =:: opData
-                opData [] .opIndex state tryDeleteOp if
+                opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
                   "could not remove static argument ( pushed at " sb.copyPtr
                     opData [] .pushedAt sb.appendPos
                     " )" sb.appendS
@@ -2382,8 +2383,7 @@ proc(
                 end
               else ## next argument at top of stack
                 elt .?Empty ? and
-                    state .stack branchTree.peek =:: head?
-                    head? optional.hasData and head? .data .valueType .?Empty ? ! if
+                    state .stack branchTree.peek .and .valueType .?Empty ? ! if
                   continue ## skip empty arguments with non-empty value
                 end
                 ## requireTypes
@@ -2407,7 +2407,7 @@ proc(
           LABEL case
             ## pushValue
               idInfo .labelId
-                op .dataType types.primitive.TYPE typeContext types.canAutoCast if
+                op .dataType typeContext types.isType if
                   types.newGenericType ConstValue .TypeId
                 else
                   ConstValue .GenericArg
@@ -2754,9 +2754,14 @@ proc(
             state .stack
               ## TypeInfo
                 argType
-                ConstValue .None
+                $ typeContext types.isType and
+                    state .argData -2 i - LabelId cast map.get .if
+                  .value
+                else
+                  ConstValue .None
+                end
                 op .pos
-                OP_UNLINKED
+                OP_ARGUMENT
               TypeInfo new
             branchTree.push
           else
@@ -5124,11 +5129,15 @@ proc(
     0:i32 while $ iSize cast.u inTypes .length u< do =:: i
       currentImpl [] .procType i typeContext types.getProcArgLabel =:: labelId
       inTypes i [] =:: argType
-      labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
+      labelId labelContext id.labelFlags id.FLAG_STATIC & ? or
+          inTypes i [] typeContext types.isType if
         currentImpl [] .staticArgs
           staticArgCount []
         =:: argValue
         state .argData labelId
+          $ id.LABEL_ID_NONE == if ..drop
+            -2 i - LabelId cast.s ## dummy labels for static generic arguments
+          end
           argType argValue TypedValue new
         map.put ..drop
         staticArgCount 1 + staticArgCount=
@@ -5198,9 +5207,14 @@ proc(
         state .stack
           ## TypeInfo
             argType
-            ConstValue .None
+            $ typeContext types.isType and
+                state .argData -2 i - LabelId cast map.get .if
+              .value
+            else
+              ConstValue .None
+            end
             procPos
-            OP_UNLINKED
+            OP_ARGUMENT
           TypeInfo new
         branchTree.push
       else

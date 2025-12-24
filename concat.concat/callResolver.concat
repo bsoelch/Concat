@@ -920,7 +920,7 @@ proc(
         map.put ..drop
       end
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
-        stackValues stackIndex slice.at .data [] .value =:: stackVal
+        stackValues stackIndex @[] .value [] =:: stackVal
         stackVal .?None ? if
           false current .argsMatch=
         end
@@ -951,6 +951,12 @@ proc(
             stackVal GenericArg .fixed
           map.put ..drop
         end
+      else paramType types.primitive.TYPE typeContext types.canAutoCast _if
+        ## remember generic values for type-arguments
+        current .genericValues
+          -2 paramIndex - LabelId cast.s
+          stackValues stackIndex @[] .value [] GenericArg .fixed
+        map.put ..drop
       end
       stackType typeContext types.getArraySize .?None ? and paramType typeContext types.getArraySize .?None ? ! if
         ## count conversion from 0D ptr to 1D ptr as cast
@@ -1128,6 +1134,10 @@ proc(
     eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
       constArgs
         candidate .genericValues eltLabel getValueOrNone list.append
+      constArgs=
+    else inTypes i [] types.primitive.TYPE typeContext types.canAutoCast _if
+      constArgs
+        candidate .genericValues -2 i - LabelId cast.s getValueOrNone list.append
       constArgs=
     end
     i 1 +

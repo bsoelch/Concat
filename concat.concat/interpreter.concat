@@ -3550,7 +3550,8 @@ proc(
       args .length i32 cast.u for =:: i
         procType i typeContext types.getProcArgLabel =:: label
         label labelContext id.labelFlags =:: flags
-        flags id.FLAG_STATIC & ? and flags id.FLAG_AUTO & ? ! if
+        flags id.FLAG_AUTO & ? ! and flags id.FLAG_STATIC & ? or
+            args i [] typeContext types.isType if
           1:iSize +
         end
       end
@@ -3672,21 +3673,32 @@ proc(
       end
       continue
     end
-    consumeStaticArgs ! and labelFlags id.FLAG_STATIC & ? if
+    consumeStaticArgs ! and labelFlags id.FLAG_STATIC & ? or
+        args i [] typeContext types.isType if
       implId 0 >= "implId is not negative" assert
       codeImpl [] .implementations
         implId list.at .data
       [] .staticArgs staticArgOffset [] =:: value
-      context [] .localVariables .data
-        label
-        ## Constant
-          value
-          ## ValueInfo
-            args i []
-            pos
-          ValueInfo new
-        Constant new
-      map.put ..drop
+      ## ValueInfo
+        args i []
+        pos
+      ValueInfo new =:: valInfo
+      label id.LABEL_ID_NONE != if
+        context [] .localVariables .data
+          label
+          ## Constant
+            value
+            valInfo
+          Constant new
+        map.put ..drop
+      else
+        context [] .stack
+          value list.append
+        context .stack=
+        context [] .stackInfo
+          valInfo list.append
+        context .stackInfo=
+      end
       staticArgOffset 1 + staticArgOffset=
       continue
     end

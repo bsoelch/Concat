@@ -755,7 +755,7 @@ namespace: sb
           ## skip empty arguments
           continue
         end
-        label labelContext id.labelFlags id.FLAG_STATIC & ? if
+        label labelContext id.labelFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
           continue
         end
         hasArgs if
@@ -3229,7 +3229,7 @@ proc(
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
-          label labelContext id.labelFlags id.FLAG_STATIC & ? if
+          label labelContext id.labelFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
             i 1 + continue ## skip static arguments
           end
           argType context referenceOnly if
@@ -3798,7 +3798,7 @@ proc(
           i 1 + continue ## skip empty arguments
         end
         argLabel labelContext id.labelFlags =:: argFlags
-        argFlags id.FLAG_STATIC & ? if
+        argFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
           argFlags id.FLAG_AUTO & ? if
             autoArgIndex 1 + autoArgIndex=
           end
