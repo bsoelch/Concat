@@ -672,6 +672,9 @@ proc(
     typeContext types.canAutoCast if
       typeInfo expectedType SignType .NONE pos state tryCastConstant ! if
         i 1:iSize + continue
+      else typeInfo .valueType typeContext types.isType and expectedType typeContext types.isType _if
+        ## TODO! check type-sets
+        i 1:iSize + continue
       end
       ## opAutoCast
         typeInfo .valueType
@@ -2392,6 +2395,15 @@ proc(
                 elt .?Empty ? and
                     state .stack branchTree.peek .and .valueType .?Empty ? ! if
                   continue ## skip empty arguments with non-empty value
+                end
+                elt typeContext types.isType and state .stack branchTree.peek .if =:: opData
+                  ## remove push operations for type-arguments
+                  opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
+                    "could not remove type argument ( pushed at " sb.copyPtr
+                      opData [] .pushedAt sb.appendPos
+                      " )" sb.appendS
+                    op .pos errors appendError
+                  end
                 end
                 ## requireTypes
                   elt@ slice.wrap
