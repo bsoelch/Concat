@@ -306,7 +306,7 @@ union(
   _ : typeBlock ## no arguments
 ) =:: InterpreterLoadMode
 proc( TypeInfo ptr : typeInfo TypeCheckState ptr.mut : state -> bool ) =>: isPopableConstant
-  typeInfo [] .value .?None ? or
+  typeInfo [] .value .?None ? or typeInfo [] .opIndex OP_ARGUMENT != and
       typeInfo [] .opIndex 0 < or
       typeInfo [] .opIndex state currentBlockStart < if
     false return
@@ -613,6 +613,10 @@ proc(
   src .valueType types.isLiteral if
     src .valueType signType src .value target typeContext interpreter.castConstant srcOp .val .Constant=
     target srcOp .dataType=
+    false return
+  end
+  src .valueType typeContext types.isType and target typeContext types.isType if
+    ## TODO! check refinement-types
     false return
   end
   true return
@@ -1247,6 +1251,7 @@ proc(
   i32 : opIndex
   TypeCheckState ptr.mut : state
 -> bool ) =>: canCopyOp
+  opIndex OP_ARGUMENT == if false return end
   opIndex state canDeleteOp return
 end
 proc(
@@ -1261,6 +1266,7 @@ proc(
   end
 end
 proc( i32 : index TypeCheckState ptr.mut : state -> ) =>: deleteOp
+  index OP_ARGUMENT == if return end
   opValNOP state [] .compiledOps index list.at .data .val=
 end
 proc( i32 : index TypeCheckState ptr.mut : state -> i32 ) =>: copyOp
@@ -2196,7 +2202,7 @@ proc(
         idInfo .labelId labelContext id.labelFlags =:: flags
         flags id.FLAG_MUTABLE & ? =:: mutable
         flags id.FLAG_STATIC & ? =:: isStatic
-        mutable and isStatic ! if
+        mutable and isStatic ! and state isGlobal ! if
           ConstValue .None
         else
           idInfo .idType switch
@@ -2237,6 +2243,7 @@ proc(
             end
             continue.opLoop
           TYPE case
+            constValue op .dataType op .pos opConst op=
             op .dataType constValue op state pushValue
             idInfo .labelId state replaceLabel
             continue.opLoop
