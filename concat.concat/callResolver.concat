@@ -919,7 +919,8 @@ proc(
           GenericArg .nonEmpty
         map.put ..drop
       end
-      paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+      paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? or
+          paramType typeContext types.isType if
         stackValues stackIndex @[] .value [] =:: stackVal
         stackVal .?None ? if
           false current .argsMatch=
@@ -928,35 +929,28 @@ proc(
             stackVal paramType pos interpreterContext interpreter.checkTypeSet ! if
           false current .argsMatch=
         end
-        current .genericValues
-          paramLabel
-        map.at =:: prevVal?
-        prevVal? optional.hasData and
-            prevVal? .data =:: prevVal
-            prevVal [] switch
-              nonEmpty case
-                stackVal .?TypeId .and .?Empty ? end
-                break
-              value case
-                prevVal [] .value stackVal constantEquals !
-                break
-              fixed case
-                prevVal [] .fixed stackVal constantEquals !
-                break
-            end if
+        paramLabel id.LABEL_ID_NONE != and
+            current .genericValues paramLabel map.at .and =:: prevVal
+          prevVal [] switch
+            nonEmpty case
+              stackVal .?TypeId .and .?Empty ? end
+              break
+            value case
+              prevVal [] .value stackVal constantEquals !
+              break
+            fixed case
+              prevVal [] .fixed stackVal constantEquals !
+              break
+        end if
           false current .argsMatch=
         else
           current .genericValues
-            paramLabel
+            paramLabel $ id.LABEL_ID_NONE == if ..drop
+              -2 paramIndex - LabelId cast.s
+            end
             stackVal GenericArg .fixed
           map.put ..drop
         end
-      else paramType types.primitive.TYPE typeContext types.canAutoCast _if
-        ## remember generic values for type-arguments
-        current .genericValues
-          -2 paramIndex - LabelId cast.s
-          stackValues stackIndex @[] .value [] GenericArg .fixed
-        map.put ..drop
       end
       stackType typeContext types.getArraySize .?None ? and paramType typeContext types.getArraySize .?None ? ! if
         ## count conversion from 0D ptr to 1D ptr as cast
