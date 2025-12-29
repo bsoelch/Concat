@@ -38,7 +38,7 @@ enum(
   TYPE_CPROC_IN
   TYPE_PROC_ARROW
   TYPE_COMPOSITE
-  TYPE_TYPESET
+  TYPE_SETTYPE
   NAMESPACE OVERLOAD
 ) =:: export: BlockType
 i32 =:: export: BlockId
@@ -173,8 +173,8 @@ namespace: sb
       TYPE_PROC_ARROW case
         "->" sb.appendS
         return
-      TYPE_TYPESET case
-        "typeSet( )" sb.appendS
+      TYPE_SETTYPE case
+        "oneOf( )" sb.appendS
         return
       NAMESPACE case
         "namespace" sb.appendS

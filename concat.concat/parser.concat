@@ -1949,9 +1949,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       BlockType .TYPE_PROC_ARROW fileState [] .wordStart opBlock state appendOp
       return
-    else $ "typeSet(":s string.eq or $ "oneOf(":s string.eq _if ..drop
-      BlockType .TYPE_TYPESET state openTypeBlock
-      BlockType .TYPE_TYPESET fileState [] .wordStart opBlock state appendOp
+    else $ "oneOf(":s string.eq _if ..drop
+      BlockType .TYPE_SETTYPE state openTypeBlock
+      BlockType .TYPE_SETTYPE fileState [] .wordStart opBlock state appendOp
       return
     else $ ".with(":s string.eq _if ..drop
       state opCount BlockInfoData .With state openBlock ..drop

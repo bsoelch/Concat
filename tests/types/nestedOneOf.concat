@@ -1,0 +1,8 @@
+oneOf( i8 i16 i32 i64 ) =:: int
+oneOf( f32 f64 ) =:: float
+oneOf( int ... float ... ) =:: number
+proc( number : auto: N N -> bool ) =>: isZero 0 == end
+proc( -> ) =>: main
+  1.0 isZero ! "one is not zero" assert
+  0 isZero "zero is zero" assert
+end

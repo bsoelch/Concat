@@ -229,7 +229,6 @@
           struct\.c\(                  |
           union\(                      |
           union\.raw\(                 |
-          typeSet\(                    |
           oneOf\(                      |
           \.with\(                     |
           array                        |

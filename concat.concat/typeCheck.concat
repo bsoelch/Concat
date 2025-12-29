@@ -3242,7 +3242,7 @@ proc(
               program .labelBuffer [] .length
             TypeBlockState new optional.wrap state .arrowState=
           continue.opLoop
-          TYPE_TYPESET case
+          TYPE_SETTYPE case
             _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
             ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
             elts op .pos state typeCheckTypeSet
@@ -4256,7 +4256,7 @@ proc(
         state [] .blockStart =:: oldBlockStart
         state [] .compiledOps .length i32 cast.u state .blockStart=
         op .val .blockEnd .blockType switch
-          TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_TYPESET
+          TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_SETTYPE
           TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE INITIALIZER case
             ## XXX allow dynamic initializer blocks
             "could not evaluate " sb.copyPtr
