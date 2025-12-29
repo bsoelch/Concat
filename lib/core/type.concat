@@ -1,22 +1,22 @@
 namespace: type
-  typeSet( ..types.isPrimitive@ ) =:: export: primitive
-  typeSet( ..types.isPointer@ ) =:: export: pointer
-  typeSet( ..types.isArray@ ) =:: export: array
-  typeSet( ..types.isEnum@ ) =:: export: enum
-  typeSet( ..types.isTaggedUnion@ ) =:: export: union
+  type .with( ..types.isPrimitive ) =:: export: primitive
+  type .with( ..types.isPointer ) =:: export: pointer
+  type .with( ..types.isArray ) =:: export: array
+  type .with( ..types.isEnum ) =:: export: enum
+  type .with( ..types.isTaggedUnion ) =:: export: union
 
-  typeSet( i8 i16 i32 i64 ) =:: export: integer
-  typeSet( f32 f64 ) =:: export: float
+  oneOf( i8 i16 i32 i64 ) =:: export: integer
+  oneOf( f32 f64 ) =:: export: float
   typeSet( integer float ) =:: export: number
-  typeSet( iSize i32 i64 ) =:: export: index
+  oneOf( iSize i32 i64 ) =:: export: index
   typeSet( integer char8 char16 char32 ) =:: export: intLike
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive
     T ..types.isNamed and T ..types.unwrapNamed ..types.isPrimitive end
   end
-  typeSet( isNamedPrimitive@ ) =:: export: namedPrimitive
+  type .with( isNamedPrimitive ) =:: export: namedPrimitive
 
-  typeSet( ..types.isUnionElement@ ) =:: export: unionElement
+  type .with( ..types.isUnionElement ) =:: export: unionElement
   ## wrapper to delay generic resolving
   ( type : U -> type ) =>: export: nowrap: unionElementType
     U ..types.getUnionElement
@@ -29,7 +29,7 @@ namespace: type
       T ..types.arrayElement ..types.isUnionElement
     end
   end
-  typeSet( isUnionElementPointer@ ) =:: export: unionElementPointer
+  type .with( isUnionElementPointer ) =:: export: unionElementPointer
   ( type : U -> type ) =>: export: nowrap: unionElementPtrType
     U ..types.arrayElement
       $ ..types.isUnionElement if ## array-element can return type.undefined which leads to error when creating pointer

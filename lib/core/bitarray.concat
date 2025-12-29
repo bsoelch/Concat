@@ -9,7 +9,7 @@ i64 =:: export: bits64
 ## TODO? bits128
 
 namespace: bitarray._internal
-  typeSet( bits8 bits16 bits32 bits64 ) =:: bitsN
+  oneOf( bits8 bits16 bits32 bits64 ) =:: bitsN
   proc( bitsN : static: auto: bitsType
     bitsType : data
     i32 : index
