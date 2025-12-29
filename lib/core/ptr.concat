@@ -294,6 +294,12 @@ namespace: iSize
   ( iSize : a iSize : b -> iSize ) =>: export: max
     a b u> if a else b end
   end
+  ( iSize : a iSize : b -> iSize ) =>: export: smin
+    a b slt if a else b end
+  end
+  ( iSize : a iSize : b -> iSize ) =>: export: smax
+    a b sgt if a else b end
+  end
 end
 
 overload: export: []

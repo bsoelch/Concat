@@ -1,10 +1,10 @@
-type named[3412]( "e" ) does not have a label "D" at ./tests/operations/missingEnumElement.concat:5:8
-no matching signature for arguments ( named[3412]( "e" ) { union element (0):none }  )
+type named[3428]( "e" ) does not have a label "D" at ./tests/operations/missingEnumElement.concat:5:8
+no matching signature for arguments ( named[3428]( "e" ) { union element (0):none }  )
 candidates:
-  * proc( named[2555]( "type.unionElement" ) : auto: static: U U[ 3339:LabelId ] -> U[ 3339:LabelId ] unionElement.inv ) unionElement.invert
-  * proc( named[2555]( "type.unionElement" ) : auto: static: U U[ 3339:LabelId ] -> U[ 3339:LabelId ] unionElement.inv ) unionElement.invert
-  * proc( named[2571]( "type.unionElementPointer" ) : auto: static: U U[ 3378:LabelId ] -> U[ 3378:LabelId ] unionElement.invPtr ) unionElement.invertPtr
-  * proc( named[2571]( "type.unionElementPointer" ) : auto: static: U U[ 3378:LabelId ] -> U[ 3378:LabelId ] unionElement.invPtr ) unionElement.invertPtr
+  * proc( named[2555]( "type.unionElement" ) : auto: static: U U[ 3355:LabelId ] -> U[ 3355:LabelId ] unionElement.inv ) unionElement.invert
+  * proc( named[2555]( "type.unionElement" ) : auto: static: U U[ 3355:LabelId ] -> U[ 3355:LabelId ] unionElement.inv ) unionElement.invert
+  * proc( named[2571]( "type.unionElementPointer" ) : auto: static: U U[ 3394:LabelId ] -> U[ 3394:LabelId ] unionElement.invPtr ) unionElement.invertPtr
+  * proc( named[2571]( "type.unionElementPointer" ) : auto: static: U U[ 3394:LabelId ] -> U[ 3394:LabelId ] unionElement.invPtr ) unionElement.invertPtr
   * proc( bool -> bool ) bool.not
  at ./tests/operations/missingEnumElement.concat:5:11
-wrong type for assertion expected bool got named[3412]( "e" ) at ./tests/operations/missingEnumElement.concat:5:33
+wrong type for assertion expected bool got named[3428]( "e" ) at ./tests/operations/missingEnumElement.concat:5:33

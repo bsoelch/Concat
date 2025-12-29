@@ -2,9 +2,9 @@ no matching signature for arguments ( type { i32 }  type { i32 }  )
 candidates:
   * proc( named[2538]( "type.pointer" ) : auto: static: P P[ 2884:LabelId ] : p P[ 2884:LabelId ] : q -> bool ) ptr.eq
   * proc( named[2538]( "type.pointer" ) : auto: static: P P[ 2884:LabelId ] : p P[ 2884:LabelId ] : q -> bool ) ptr.eq
-  * proc( named[2540]( "type.enum" ) : auto: static: E E[ 3129:LabelId ] : a E[ 3129:LabelId ] : b -> bool ) std.default.eqEnum
-  * proc( named[2540]( "type.enum" ) : auto: static: E E[ 3129:LabelId ] : a E[ 3129:LabelId ] : b -> bool ) std.default.eqEnum
-  * proc( named[2554]( "type.namedPrimitive" ) : auto: static: P P[ 3143:LabelId ] : a P[ 3143:LabelId ] : b -> bool ) std.default.eqNamedPrimitive
+  * proc( named[2540]( "type.enum" ) : auto: static: E E[ 3145:LabelId ] : a E[ 3145:LabelId ] : b -> bool ) std.default.eqEnum
+  * proc( named[2540]( "type.enum" ) : auto: static: E E[ 3145:LabelId ] : a E[ 3145:LabelId ] : b -> bool ) std.default.eqEnum
+  * proc( named[2554]( "type.namedPrimitive" ) : auto: static: P P[ 3159:LabelId ] : a P[ 3159:LabelId ] : b -> bool ) std.default.eqNamedPrimitive
   ...
  at ./tests/operations/typeEq.concat:1:9
 could not evaluate global operation: get ( undefined ) : export: procedure bundle  "==" at ./tests/operations/typeEq.concat:1:9
