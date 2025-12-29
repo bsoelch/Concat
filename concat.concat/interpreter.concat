@@ -1638,7 +1638,7 @@ namespace: interpreter
     maxCount 0 > if
       context [] .stack .length
         maxCount iSize cast.u -
-      0:iSize iSize.max
+      0:iSize iSize.smax
     else 0:iSize end =:: minOffset
     context [] .stack .length 1:iSize - while $ minOffset iSize.sge do =:: i
       context [] .stack i list.at .data =:: value
@@ -3694,13 +3694,6 @@ proc(
             valInfo
           Constant new
         map.put ..drop
-      else
-        context [] .stack
-          value list.append
-        context .stack=
-        context [] .stackInfo
-          valInfo list.append
-        context .stackInfo=
       end
       staticArgOffset 1 + staticArgOffset=
       continue
