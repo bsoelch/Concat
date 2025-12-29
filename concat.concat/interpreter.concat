@@ -1036,6 +1036,9 @@ namespace: interpreter
         typeContext types.literalToType
       end
     =:: toCheck
+    toCheck typeContext types.isGeneric if
+      true return ## TODO! temporary fix, allow generics to match type-set checks
+    end
     typeSet typeContext types.getTypeSetEntries =:: entries
     context [] .currentFile =:: prevFile
     entries for =:: e
