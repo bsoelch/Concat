@@ -2122,10 +2122,9 @@ proc(
     op .val .?getId .and .labelId =:: label
         state .interpreter interpreter.inEnum ! and
         label labelContext id.labelFlags id.FLAG_STATIC & ? and
-        state .argData label map.at =:: argData?
-        argData? optional.hasData if
-      argData? .data [] .valType op@ .dataType=
-      argData? .data [] .value op@ .val .Constant=
+        state .argData label map.at .if =:: argData
+      argData [] .valType op@ .dataType=
+      argData [] .value op@ .val .Constant=
     end
     ## TODO! use jump-distance in block-data to interate type-block in seperate loop, then skip operations in main loop
     _EXPERIMENTAL_ ! and state [] .inTypeBlock and op@ state interpretTypeBlock if
@@ -2252,12 +2251,12 @@ proc(
             continue.opLoop
           ARGUMENT case
             idInfo .labelId =:: label
-            ConstValue .None =:: mut: argValue
-            state .argData label map.at =:: argData?
-            argData? optional.hasData if
-              argData? .data [] .valType op@ .dataType=
-              argData? .data [] .value argValue=
-            end
+            state .argData label map.at .if =:: argData
+              argData [] .valType op@ .dataType=
+              argData [] .value
+            else
+              ConstValue .None
+            end =:: argValue
             op .dataType argValue op state pushValue
             label state replaceLabel
             continue.opLoop
@@ -2605,6 +2604,10 @@ proc(
             end =:: idData
             stackVal [] .valueType idData .valueType=
             stackVal [] .value idData .constValue=
+            stackVal [] .valueType typeContext types.isType if
+              ## type-arguments are always static
+              idInfo .labelId id.FLAG_STATIC labelContext id.addLabelFlags
+            end
           end
           state [] .arrowState ? if
             continue.opLoop ## ignore element labels after arrow
@@ -5149,7 +5152,7 @@ proc(
       currentImpl [] .procType i typeContext types.getProcArgLabel =:: labelId
       inTypes i [] =:: argType
       labelId labelContext id.labelFlags id.FLAG_STATIC & ? or
-          inTypes i [] typeContext types.isType if
+          argType typeContext types.isType if
         currentImpl [] .staticArgs
           staticArgCount []
         =:: argValue
