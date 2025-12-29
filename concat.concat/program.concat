@@ -176,6 +176,7 @@ union(
                Type : Cast!
                Type : bitCast
    EqualityOperator : equalityOperator
+                  _ : Splat
                   _ : getEnumLabel
                 i32 : checkEnumLabel
                 i32 : setEnumElement
@@ -293,24 +294,22 @@ proc( LabelId FilePosition  -> Operation ) =>: export: opExistsLabel
   =:: pos
   OpValue .existsLabel Type .Undefined pos Operation new return
 end
-proc( Type FilePosition -> Operation ) =>: export: opReturn
-  =:: pos
-  OpValue .Return ..swap pos Operation new return
+proc( Type FilePosition : pos -> Operation ) =>: export: opReturn
+  OpValue .Return >$ pos Operation new return
 end
-proc( FilePosition -> Operation ) =>: export: opEqual
-  =:: pos
+proc( FilePosition : pos -> Operation ) =>: export: opEqual
   EqualityOperator .EQ OpValue .equalityOperator Type .Undefined pos Operation new return
 end
-proc( FilePosition -> Operation ) =>: export: opNotEqual
-  =:: pos
+proc( FilePosition : pos -> Operation ) =>: export: opNotEqual
   EqualityOperator .NEQ OpValue .equalityOperator Type .Undefined pos Operation new return
 end
-proc( Type FilePosition -> Operation ) =>: export: opNew
-  =:: pos
+proc( FilePosition : pos -> Operation ) =>: export: opSplat
+  OpValue .Splat Type .Undefined pos Operation new return
+end
+proc( Type FilePosition : pos -> Operation ) =>: export: opNew
   OpValue .New ..swap pos Operation new return
 end
-proc( Type FilePosition -> Operation ) =>: export: opNewReference
-  =:: pos
+proc( Type FilePosition : pos -> Operation ) =>: export: opNewReference
   OpValue .NewReference ..swap pos Operation new return
 end
 proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnum
@@ -981,6 +980,10 @@ namespace: sb
           end
           ..over .dataType typeContext sb.appendType
           " )" sb.appendS
+          break
+        Splat case
+          "splat: " sb.appendS
+          ..over .dataType typeContext sb.appendType
           break
         New case
           "new: " sb.appendS

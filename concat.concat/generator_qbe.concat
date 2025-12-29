@@ -3983,6 +3983,8 @@ proc(
         return
       end
       break
+    Splat case
+      break
     block .case =:: blockVal
       blockVal .blockType switch
         IF IF_TRUE IF_FALSE case

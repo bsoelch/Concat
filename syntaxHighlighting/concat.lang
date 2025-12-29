@@ -155,6 +155,7 @@
           \.\.types\.(alignment|size|stride|is(Primitive|Pointer|RawPointer|Array|Struct|
             TypeSet|TaggedUnion|UnionElement|RawUnion|Enum|Proc|Named|Ctype|Align|Mutable|Defined)|
             canAssign|canCast|arrayElement|getElement|getUnionElement|getUnionElementUnion|unwrapNamed)@? |
+          \.\.\.
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>

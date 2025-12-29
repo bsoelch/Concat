@@ -3229,6 +3229,31 @@ proc(
         context
       pushValue
       EvalResult .Ok return
+    Splat case
+      op [] .pos context popValue if ..drop.2
+        "stack underflow while evaluating operation: " sb.copyPtr
+          op [] program sb.appendOp
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end =:: value =:: valInfo
+      value .?TypeId .and =:: typeVal
+          typeVal typeContext types.isTypeSet if
+        typeVal typeContext types.getTypeSetEntries for
+          .?TypeId .else ..drop continue end
+          ## pushValue
+            ConstValue .TypeId
+            types.primitive.TYPE
+            op [] .pos
+            context
+          pushValue
+        end
+        EvalResult .Ok return
+      end
+      "cannot splat: " sb.copyPtr
+       value typeContext sb.appendConstant
+      op [] .pos errors appendError
+      value valInfo context unpopValue
+      EvalResult .Error return
     stackMod case
       op [] .val .stackMod .modType switch
         DROP case

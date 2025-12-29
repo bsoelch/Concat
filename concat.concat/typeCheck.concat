@@ -3169,6 +3169,34 @@ proc(
         end
         types.primitive.BOOL ConstValue .None op state pushValue
         continue.opLoop
+      Splat case
+        1 op .pos state checkStackSize if
+          continue.opLoop
+        end
+        state popTypedValue .else
+          "stack underflow" ..panic
+        end =:: constVal
+        constVal .value .?TypeId .and =:: typeVal
+            typeVal typeContext types.isTypeSet if
+          typeVal typeContext types.getTypeSetEntries for
+            .?TypeId .else ..drop
+              "cannot splat type:" sb.copyPtr
+                typeVal typeContext sb.appendType
+              op .pos errors appendError
+              continue
+            end
+            ## pushConstant
+              ConstValue .TypeId
+              types.primitive.TYPE
+              op .pos
+            state pushConstant
+          end
+          continue.opLoop
+        end
+        "unsupported value for splat:" sb.copyPtr
+          constVal .value typeContext sb.appendConstant
+        op .pos errors appendError
+        continue.opLoop
       block case
         state [] .blockStart =:: oldBlockStart
         state [] .compiledOps .length i32 cast.u state .blockStart=
