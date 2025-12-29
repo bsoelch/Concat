@@ -1962,7 +1962,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           ":" sb.appendS
           fileState [] .wordStart .posInLine sb.appendI
         sb.asStr
-        id.FLAG_LAMBDA
+        id.FLAG_LAMBDA id.FLAG_IGNORE_UNUSED |
         fileState [] .wordStart
         state [] .currentFile
       labelContext id.newLabel
