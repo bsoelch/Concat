@@ -574,9 +574,11 @@ proc(
   progContext [] .procedures
     $ .length ProcId cast =:: procId
     ## ProcedureInfo
-      _EXPERIMENTAL_ and hasImpl ! if
+      aliasId NO_PROC != if
+        aliasId ProcImplType .Alias
+      else _EXPERIMENTAL_ and hasImpl ! _if
         procName ProcImplType .Extern
-      else aliasId NO_PROC == _if
+      else
         ## CodeProcData
           0 ProcImplementation list.create
           0 VariableInfo list.create
@@ -584,8 +586,6 @@ proc(
           0:i16
           ProcCodeState .PARSING
         CodeProcData new ProcImplType .Code
-      else
-        aliasId ProcImplType .Alias
       end
       procType
       procName

@@ -2057,7 +2057,7 @@ proc(
         aliasType
         IdentifierType .PROCEDURE
         -1 ## index
-        aliasData [] .constValue
+        ConstValue .None
         false
         op .pos
         state [] .currentFile
@@ -2500,7 +2500,8 @@ proc(
               end =:: idData
               idData [] .constValue .Procedure =:: mut: procId
               program [] .procedures
-                procId i64 cast list.at .data
+                procId i64 cast @[]
+                $ [] .procType op@ .dataType=
                 $ .implementation .?Alias .if [] procId= ..drop
                   program [] .procedures procId i64 cast list.at .else
                     "could not find procedure alias" ..panic
@@ -2509,7 +2510,6 @@ proc(
                 else ..drop end
               =:: procData
               -1:i32 =:: mut: implId
-              procData [] .procType op@ .dataType=
               procData [] .hasStaticArg if
                 ## TODO resolve implementation id
                 ##  -> get static args from stack
