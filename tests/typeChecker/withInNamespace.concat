@@ -1,0 +1,8 @@
+namespace: A
+  ( type -> bool ) =>: check ..types.isPrimitive end
+  type .with( check ) =:: primitive
+end
+proc( A.primitive : auto: P P -> P ) =>: test end
+proc( -> ) =>: main
+  true test "ok" assert
+end
