@@ -204,6 +204,8 @@ struct(
   iSize : labelOffset
 ) =:: TypeBlockState
 
+enum( NONE TYPE INITIALIZER ) =:: BlockMode
+
 struct(
   iSize : openBlocksOffset
   iSize : compiledOpsOffset
@@ -214,7 +216,7 @@ struct(
   Type optional : currentProcType
   FileId : currentFile
   TypeCheckMode : mode
-  bool : inTypeBlock
+  BlockMode : blockMode
   bool : reachable
 ) =:: TypeCheckStateState
 struct(
@@ -222,7 +224,7 @@ struct(
   InterpreterContext : interpreter
   LabelId TypedValue hashMap : argData
   Type optional : currentProcType
-  bool : inTypeBlock
+  BlockMode : blockMode
   TypeInfo BranchTree : stack
   BlockInfo list : openBlocks
   Operation list : compiledOps
@@ -253,7 +255,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
       state [] .currentProcType
       state [] .currentFile
       state [] .mode
-      state [] .inTypeBlock
+      state [] .blockMode
       state [] .reachable
     TypeCheckStateState new list.append
   state .stateStack=
@@ -287,7 +289,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   prevState .currentProcType state .currentProcType=
   prevState .currentFile state .currentFile=
   prevState .mode state .mode=
-  prevState .inTypeBlock state .inTypeBlock=
+  prevState .blockMode state .blockMode=
   ## TODO reset Interpreter state
   prevState .reachable state .reachable=
 end
@@ -504,16 +506,16 @@ proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpre
       " block" sb.appendS
     op [] .pos state [] .program .errors appendError
   end
-  true state .inTypeBlock=
+  BlockMode .TYPE state .blockMode=
 end
 proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretTypeBlock
-  state [] .inTypeBlock "in Type-block" assert
+  state [] .blockMode .TYPE "in Type-block" assert
   state .interpreter [] .evalType .GLOBAL "global interpreter" assert
   op state .interpreter evaluateOperation .?Ok ? ! if
     "unexpected operation in Type/Initializer block: " sb.copyPtr
       op [] state [] .program sb.appendOp
     op [] .pos state [] .program .errors appendError
-    false state .inTypeBlock=
+    BlockMode .NONE state .blockMode=
     state .interpreter interpreter.resetContext
     false return
   end
@@ -1791,8 +1793,9 @@ proc(
   program .errors =:: errors
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
+  state [] .blockMode =:: prevMode
   _EXPERIMENTAL_ if
-    true state .inTypeBlock=
+    BlockMode .TYPE state .blockMode=
   end
   program .labelBuffer [] .length =:: labelOffset
   state [] .arrowState =:: oldArrowState
@@ -1804,8 +1807,8 @@ proc(
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
-  false state .inTypeBlock=
   _EXPERIMENTAL_ if
+    prevMode state .blockMode=
     state [] .stack branchTree.depth iSize cast.u =:: mut: count
     state [] .typeBuffer
       $ .length =:: tailOffset
@@ -1849,6 +1852,7 @@ proc(
       typeOffset list.setLength
     state .typeBuffer=
   else
+    BlockMode .NONE state .blockMode=
     state .stack oldBranch branchTree.reset ..drop
     1 pos state interpreterStoreConstants
     state .interpreter interpreter.resetContext
@@ -1917,7 +1921,7 @@ proc(
     return
   end
   1 pos state interpreterStoreConstants
-  false state .inTypeBlock=
+  BlockMode .NONE state .blockMode=
   state .interpreter interpreter.resetContext
   state .stack oldBranch branchTree.reset ..drop
 end
@@ -1958,20 +1962,21 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   idContext .constContext =:: constContext
+  state [] .blockMode =:: prevMode
   _EXPERIMENTAL_ if
-    ## TODO? use enum instead of bool: Default TypeBlock SwitchCase Initializer
-    true state .inTypeBlock=
+    BlockMode .INITIALIZER state .blockMode=
   end
   state .stack
     branchTree.EMPTY
   branchTree.reset =:: oldBranch
+  program .labelBuffer [] .length =:: labelOffset
   state [] .constBuffer .length =:: valOffset
   state [] .typeBuffer .length =:: typesOffset
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
-  false state .inTypeBlock=
   _EXPERIMENTAL_ if
+    prevMode state .blockMode=
     state [] .stack branchTree.depth iSize cast.u =:: mut: count
     state [] .constBuffer
       $ .length =:: valsTail
@@ -1989,23 +1994,24 @@ proc(
         $ .valType state [] .typeBuffer count typesTail + =[]
       .value state [] .constBuffer count valsTail + =[]
     end
-    ## TODO! handle labels
     state removeTrailingNOPs
     state .stack oldBranch branchTree.reset ..drop
     ## pushConstant
       state [] .constBuffer valOffset list.tail constContext newArrayConst
       state [] .typeBuffer typesOffset list.tail
-        LabelId slice optional.empty
+        program [] .labelBuffer labelOffset list.tail $ .length 0 != if
+          optional.wrap
+        else ..drop
+          LabelId slice optional.empty
+        end
       typeContext types.newInitializerType
       pos
     state pushConstant
-    state [] .constBuffer
-      valOffset list.setLength
-    state .constBuffer=
-    state [] .typeBuffer
-      typesOffset list.setLength
-    state .typeBuffer=
+    program [] .labelBuffer labelOffset list.setLength program .labelBuffer=
+    state [] .constBuffer valOffset list.setLength state .constBuffer=
+    state [] .typeBuffer typesOffset list.setLength state .typeBuffer=
   else
+    BlockMode .NONE state .blockMode=
     state .stack oldBranch branchTree.reset ..drop
     1 pos state interpreterStoreConstants
     state .interpreter interpreter.resetContext
@@ -2130,7 +2136,7 @@ proc(
         op@ initName .initType .AUTO state resolveAutoType
         initName .label
       else .?declareName ._else ..unreachable end
-        state .inTypeBlock [] if
+        state [] .blockMode .NONE ! if
           Type .Undefined
           IdentifierType .LABEL
         else
@@ -2179,7 +2185,7 @@ proc(
       argData [] .value op@ .val .Constant=
     end
     ## TODO! use jump-distance in block-data to interate type-block in seperate loop, then skip operations in main loop
-    _EXPERIMENTAL_ ! and state [] .inTypeBlock and op@ state interpretTypeBlock if
+    _EXPERIMENTAL_ ! and state .blockMode [] .NONE ! and op@ state interpretTypeBlock if
       continue.opLoop ## evaluate constants
     end
     op .val switch
@@ -2638,7 +2644,7 @@ proc(
         continue.opLoop
       declareId .case =:: idInfo
         op@ false state resolveAutoType
-        _EXPERIMENTAL_ and state [] .inTypeBlock if ## TODO distingish composite-type, type-set and initializer
+        _EXPERIMENTAL_ and state .blockMode [] .NONE ! if
           1 op .pos state checkStackSize if
             continue.opLoop ## stack underflow
           end
@@ -2656,7 +2662,7 @@ proc(
             end =:: idData
             stackVal [] .valueType idData .valueType=
             stackVal [] .value idData .constValue=
-            stackVal [] .valueType typeContext types.isType if
+            stackVal [] .value .?TypeId .and typeContext types.isType if
               ## type-arguments are always static
               idInfo .labelId id.FLAG_STATIC labelContext id.addLabelFlags
             end
@@ -2671,16 +2677,37 @@ proc(
             end
             idInfo .labelId list.append
           program .labelBuffer=
-          ## TODO pop const-values instead of types when in initializer
-          state [] .typeBuffer
-            $ .length =:: typeOffset
-            typeOffset count + list.setLength
-          state .typeBuffer=
-          while count 0 != do
-            count 1 - count=
-            op .pos state popType state [] .typeBuffer count typeOffset + =[]
+          state [] .blockMode switch
+            TYPE case
+              state [] .typeBuffer
+                $ .length =:: typeOffset
+                typeOffset count + list.setLength
+              state .typeBuffer=
+              while count 0 != do
+                count 1 - count=
+                op .pos state popType state [] .typeBuffer count typeOffset + =[]
+              end
+            continue.opLoop
+            INITIALIZER case
+              state [] .typeBuffer
+                $ .length =:: typeOffset
+                typeOffset count + list.setLength
+              state .typeBuffer=
+              state [] .constBuffer
+                $ .length =:: valOffset
+                valOffset count + list.setLength
+              state .constBuffer=
+              while count 0 != do
+                count 1 - count=
+                state popTypedValue .else
+                  "stack underflow" ..panic
+                end
+                  $ .value state [] .constBuffer count valOffset + =[]
+                .valType state [] .typeBuffer count typeOffset + =[]
+              end
+            continue.opLoop
+            NONE case ..unreachable
           end
-          continue.opLoop
         end
         idInfo .idType switch
           PROCEDURE case
@@ -5431,7 +5458,7 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckChildProcedures
   state rememberState
-  false state .inTypeBlock=
+  BlockMode .NONE state .blockMode=
   state [] .program .idContext .typeContext .labelContext =:: labelContext
   labelContext id.currentNamespace =:: prevNamespace
   TypeCheckMode .PROC_CHILD state .mode=
@@ -5506,7 +5533,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     interpreter.wrapProgram
     labelHash@ labelEq@ 64 TypedValue map.create
     Type optional.empty
-    false ## inTypeBlock
+    BlockMode .NONE
     TypeInfo branchTree.create
     32  BlockInfo list.create
     128 Operation list.create

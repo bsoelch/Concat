@@ -1493,15 +1493,14 @@ namespace: types
     end =:: mut: arrayType
     0:iSize while $ elts .length u< do =:: i
       elts i [] =:: eltType
-      labels optional.hasData and
-        labels .data i [] id.LABEL_ID_NONE != if
+      labels .and i slice.get .and id.LABEL_ID_NONE != if
         ## if there is a labeled element the initializer is not an array
         Type .Undefined  arrayType=
         i break
       end
-      arrayType eltType context mergeTypes $ ? if
-        #+mergedType+# .data arrayType=
-      else ..drop
+      arrayType eltType context mergeTypes .if
+        #+mergedType+# arrayType=
+      else
         Type .Undefined  arrayType=
         i break
       end
@@ -2270,7 +2269,7 @@ namespace: types
       mutableParent mutableTarget |
     context canCastPtr return
   end
-  ## XXX? allow reordering fields
+  ## TODO? allow reordering fields
   proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: canCastTupleInitializer
     context .labelContext =:: labelContext
     src context unwrapNamed =:: srcBase
@@ -2298,19 +2297,18 @@ namespace: types
     srcLabels? optional.isEmpty targetLabels? optional.isEmpty != if
       false return ## eigther both labeled or both unlabled
     end
-    ## XXX? wrapper function for getting tuple elements/labels from id
     srcLabels? optional.hasData =:: labeled
     srcElts .length for =:: i
       srcElts i [] targetElts i [] context canAutoCast ! if
         false return
       end
-      labeled and
-          ## labelNamesEq
-            srcLabels? .data i []
-            targetLabels? .data i []
-            labelContext
-          id.labelNamesEq ! if
-        false return
+      labeled if
+        ## labelNamesEq
+          srcLabels? .and i slice.get .else id.LABEL_ID_NONE end
+          targetLabels? .and i slice.get .else id.LABEL_ID_NONE end
+        labelContext id.labelNamesEq ! if
+          false return
+        end
       end
     end
     true return

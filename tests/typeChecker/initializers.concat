@@ -1,0 +1,7 @@
+struct( f32 : x f32 : y ) =:: vec2
+proc( -> ) =>: main
+  { 1 2 3 4 } =:: anArray
+  { "A" { 1 2 } 3 } =:: aTuple
+  { 1 : x 2 : y } vec2 =: aStruct
+  anArray aTuple aStruct ..?types..3 ..drop.3
+end
