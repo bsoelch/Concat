@@ -1840,6 +1840,7 @@ proc(
     state .stack
       oldBranch
     branchTree.reset ..drop
+    state removeTrailingNOPs
     newType ConstValue .TypeId types.primitive.TYPE pos state pushConstant
     program [] .labelBuffer
       labelOffset list.setLength
@@ -1891,6 +1892,7 @@ proc(
       state .constBuffer=
     end
     state .stack oldBranch branchTree.reset ..drop
+    state removeTrailingNOPs
     commonType .and typeContext types.isType if
       state [] .constBuffer constOffset list.tail =:: elements
       elements .length types.TypeSetEntry list.create
@@ -1952,14 +1954,62 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckInitializer
   state [] .program =:: program
-  state [] .program .errors =:: errors
-  state [] .program .idContext =:: idContext
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  idContext .constContext =:: constContext
+  _EXPERIMENTAL_ if
+    ## TODO? use enum instead of bool: Default TypeBlock SwitchCase Initializer
+    true state .inTypeBlock=
+  end
+  state .stack
+    branchTree.EMPTY
+  branchTree.reset =:: oldBranch
+  state [] .constBuffer .length =:: valOffset
+  state [] .typeBuffer .length =:: typesOffset
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
-  1 pos state interpreterStoreConstants
   false state .inTypeBlock=
-  state .interpreter interpreter.resetContext
+  _EXPERIMENTAL_ if
+    state [] .stack branchTree.depth iSize cast.u =:: mut: count
+    state [] .constBuffer
+      $ .length =:: valsTail
+      valsTail count + list.setLength
+    state .constBuffer=
+    state [] .typeBuffer
+      $ .length =:: typesTail
+      typesTail count + list.setLength
+    state .typeBuffer=
+    while count 0 != do
+      count 1 - count=
+      state popTypedValue .else
+        "stack underflow" ..panic
+      end
+        $ .valType state [] .typeBuffer count typesTail + =[]
+      .value state [] .constBuffer count valsTail + =[]
+    end
+    ## TODO! handle labels
+    state removeTrailingNOPs
+    state .stack oldBranch branchTree.reset ..drop
+    ## pushConstant
+      state [] .constBuffer valOffset list.tail constContext newArrayConst
+      state [] .typeBuffer typesOffset list.tail
+        LabelId slice optional.empty
+      typeContext types.newInitializerType
+      pos
+    state pushConstant
+    state [] .constBuffer
+      valOffset list.setLength
+    state .constBuffer=
+    state [] .typeBuffer
+      typesOffset list.setLength
+    state .typeBuffer=
+  else
+    state .stack oldBranch branchTree.reset ..drop
+    1 pos state interpreterStoreConstants
+    state .interpreter interpreter.resetContext
+  end
 end
 
 proc(
