@@ -1,0 +1,14 @@
+type : named
+proc( i32 -> named ) =>: wrap
+  named cast
+end
+i32 =:: named
+( char8 ptr.raw iSize -> named ) : alias: :named ..builtIn.parse.i32
+( named named -> bool ) : alias: eq ..builtIn.eq.i32
+overload: == eq end
+proc( -> ) =>: main
+  117 wrap =:: x
+  117:named =:: y
+  x y == "creation path for named types are equivalent" assert
+  x y eq@ () "calling alias through pointer" assert
+end
