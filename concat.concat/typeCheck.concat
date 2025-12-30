@@ -2092,6 +2092,8 @@ proc(
           $1 labelContext id.currentNamespace labelContext id.setLabelNamespace
           $ typeContext types.isProcedure if
             IdentifierType .PROCEDURE
+          else $ typeContext types.isType _if
+            IdentifierType .TYPE
           else
             IdentifierType .GLOBAL_VAR
           end
@@ -2662,7 +2664,21 @@ proc(
               op state appendOp ..drop
             end
           continue.opLoop
-          TYPE LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
+          TYPE case ## set const-value to named type
+            ## getIdentifier
+              idInfo .labelId
+              idContext
+            id.getIdentifier if ..drop
+              "could not find " sb.copyPtr
+                idInfo labelContext sb.appendIdInfo
+              op .pos errors appendError
+            else =:: idData
+              idInfo .labelId
+                typeContext types.declareNamedType
+              ConstValue .TypeId idData .constValue=
+            end
+          continue.opLoop
+          LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
             "unexpected declaration of identifier " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op .pos errors appendError
@@ -2682,9 +2698,22 @@ proc(
         op@ autoTyped state resolveAutoType
         idInfo op@ .val .initializeId= ## auto-typed initializations have been resolved
         idInfo .idType switch
-          GLOBAL_VAR LOCAL_VAR ITR_VAR PROCEDURE case
+          GLOBAL_VAR LOCAL_VAR ITR_VAR PROCEDURE TYPE case
             state .stack branchTree.peek .if
               [] .value
+              idInfo .idType .TYPE if
+                .?TypeId .else
+                  "unexpected constant for type declaration" sb.copyPtr
+                    >$ typeContext sb.appendConstant
+                  op .pos errors appendError
+                  continue.opLoop
+                end idInfo .labelId typeContext types.initializeNamedType .else
+                  "re-initialization of named type" sb.copyPtr
+                    idInfo .labelId labelContext sb.appendLabelPath
+                  op .pos errors appendError
+                  continue.opLoop
+                end ConstValue .TypeId
+              end
             else ConstValue .None end =:: constVal
             constVal .?TypeId ? or state isGlobal and constVal .?None ? ! if
               ## remove type-constant from code
@@ -2739,8 +2768,7 @@ proc(
             end
             op state appendOp ..drop
             continue.opLoop
-          PROCEDURE_BUNDLE TYPE
-              LABEL ARGUMENT TMP_VAR case
+          PROCEDURE_BUNDLE LABEL ARGUMENT TMP_VAR case
             "unexpected initialization of identifier " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op .pos errors appendError
