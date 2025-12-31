@@ -3707,6 +3707,9 @@ proc(
       codeImpl [] .implementations
         implId list.at .data
       [] .staticArgs staticArgOffset [] =:: value
+      value .?GenericArg ? or value .?TypeId .and typeContext types.isGeneric if
+        true hasGenericArg=
+      end
       ## ValueInfo
         args i []
         pos

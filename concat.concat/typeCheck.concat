@@ -2660,8 +2660,20 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end =:: idData
+            ## TODO! is this the correct choice of value/valType for label
+            ##  ? should label be assigned using value as type
             stackVal [] .valueType idData .valueType=
-            stackVal [] .value idData .constValue=
+            stackVal [] .value .?None .if ..drop
+              idInfo .labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
+                stackVal [] .valueType typeContext types.isType if
+                  idInfo .labelId types.newGenericType ConstValue .TypeId
+                else
+                  idInfo .labelId ConstValue .GenericArg
+                end
+              else
+                ConstValue .None
+              end
+            end idData .constValue=
             stackVal [] .value .?TypeId .and typeContext types.isType if
               ## type-arguments are always static
               idInfo .labelId id.FLAG_STATIC labelContext id.addLabelFlags

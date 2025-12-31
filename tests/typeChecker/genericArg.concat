@@ -1,0 +1,5 @@
+proc( type -> type ) =>: wrap end
+proc( type : auto: T  T -> T wrap ) =>: wrapped T wrap cast end
+proc( -> ) =>: main
+  true wrapped bool cast "ok" assert
+end
