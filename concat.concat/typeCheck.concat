@@ -4295,67 +4295,66 @@ proc(
             program [] .procBundles bundleId i64 cast @[] =:: bundleData
             elts for =:: elt
               elt .val switch
-                getName .case =:: eltLabel
-                  eltLabel idContext id.findIdentifierByLabel if ..drop
-                    "could not find identifier \"" sb.copyPtr
-                      eltLabel labelContext sb.appendLabelPath
-                      '"' sb.appendC
-                    op .pos errors appendError
-                    continue
-                  end =:: idData
-                  idData [] .idType .PROCEDURE if
-                    idData [] .constValue .?Procedure .else ..drop
-                      256 sb.create
-                        idData [] .idType sb.appendIdType
-                        "missing procedure data for \"" sb.appendS
-                        idData [] .labelId labelContext sb.appendLabelPath
-                        "\" ( declared at " sb.appendS
-                        idData [] .declaredAt sb.appendPos
-                        " ) expected ProcId got:" sb.appendS
-                        idData [] .constValue typeContext sb.appendConstant
-                      op .pos errors appendError
-                      return
-                    end
-                    bundleData [] .procedures
-                      >$ list.append
-                    bundleData .procedures=
-                  else idData [] .idType .PROCEDURE_BUNDLE _if
-                    idData [] .constValue .?ProcedureBundle .else ..drop
-                      256 sb.create
-                        idData [] .idType sb.appendIdType
-                        "missing procedure data for \"" sb.appendS
-                        idData [] .labelId labelContext sb.appendLabelPath
-                        "\" ( declared at " sb.appendS
-                        idData [] .declaredAt sb.appendPos
-                        " ) expected ProcBundleId got:" sb.appendS
-                        idData [] .constValue typeContext sb.appendConstant
-                      op .pos errors appendError
-                      return
-                    end =:: constBundleId
-                    bundleData [] .procedures
-                      program [] .procBundles
-                        constBundleId i64 cast list.at .data
-                      [] .procedures list.appendAll
-                    bundleData .procedures=
-                  else
-                    256 sb.create
-                      idData [] .idType sb.appendIdType
-                      " \"" sb.appendS
-                      idData [] .labelId labelContext sb.appendLabelPath
-                      "\" ( declared at " sb.appendS
-                      idData [] .declaredAt sb.appendPos
-                      " ) is not a procedure" sb.appendS
-                    op .pos errors appendError
-                    return
-                  end
-                break
-                ## getId .case =:: eltId break
+                getName .case break
+                getId .case .labelId break
                 ## NestedProc .case =:: procId break
                 default
                   "unsupported operation in overload block: " sb.copyPtr
                     elt program sb.appendOp
                   op .pos errors appendError
-                continue.opLoop
+                continue
+              end =:: eltLabel
+              eltLabel idContext id.findIdentifierByLabel if ..drop
+                "could not find identifier \"" sb.copyPtr
+                  eltLabel labelContext sb.appendLabelPath
+                  '"' sb.appendC
+                op .pos errors appendError
+                continue
+              end =:: idData
+              idData [] .idType .PROCEDURE if
+                idData [] .constValue .?Procedure .else ..drop
+                  256 sb.create
+                    idData [] .idType sb.appendIdType
+                    "missing procedure data for \"" sb.appendS
+                    idData [] .labelId labelContext sb.appendLabelPath
+                    "\" ( declared at " sb.appendS
+                    idData [] .declaredAt sb.appendPos
+                    " ) expected ProcId got:" sb.appendS
+                    idData [] .constValue typeContext sb.appendConstant
+                  op .pos errors appendError
+                  return
+                end
+                bundleData [] .procedures
+                  >$ list.append
+                bundleData .procedures=
+              else idData [] .idType .PROCEDURE_BUNDLE _if
+                idData [] .constValue .?ProcedureBundle .else ..drop
+                  256 sb.create
+                    idData [] .idType sb.appendIdType
+                    "missing procedure data for \"" sb.appendS
+                    idData [] .labelId labelContext sb.appendLabelPath
+                    "\" ( declared at " sb.appendS
+                    idData [] .declaredAt sb.appendPos
+                    " ) expected ProcBundleId got:" sb.appendS
+                    idData [] .constValue typeContext sb.appendConstant
+                  op .pos errors appendError
+                  return
+                end =:: constBundleId
+                bundleData [] .procedures
+                  program [] .procBundles
+                    constBundleId i64 cast list.at .data
+                  [] .procedures list.appendAll
+                bundleData .procedures=
+              else
+                256 sb.create
+                  idData [] .idType sb.appendIdType
+                  " \"" sb.appendS
+                  idData [] .labelId labelContext sb.appendLabelPath
+                  "\" ( declared at " sb.appendS
+                  idData [] .declaredAt sb.appendPos
+                  " ) is not a procedure" sb.appendS
+                op .pos errors appendError
+                return
               end
             end
             opIndex
