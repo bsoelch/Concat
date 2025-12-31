@@ -3,11 +3,11 @@ import core/bool
 import core/i16
 
 f16:? ! if ## no native definition for f16 
-  ( i16 ) =:: f16 ## wrap in struct to prevent direct cast from/to i16
-  false =:: NATIVE_F16
+  ( i16 ) =:: export: f16 ## wrap in struct to prevent direct cast from/to i16
+  false
 else
-  true =:: NATIVE_F16
-end
+  true
+end =:: NATIVE_F16
 
 ..builtIn.parse.f16:? ! if
   import core/f64
