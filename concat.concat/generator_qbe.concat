@@ -2419,7 +2419,7 @@ proc(
         TYPE_IS_TYPESET TYPE_IS_RAW_UNION TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_ENUM TYPE_IS_PROC
         TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED TYPE_GET_UNION_ELEMENT
         TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED case
-      "unsupported built-in" sb.copyPtr
+      "unsupported built-in: " sb.copyPtr
         builtIn sb.appendBuiltIn
       pos errors appendError
       sb return

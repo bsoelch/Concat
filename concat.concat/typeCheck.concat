@@ -5580,13 +5580,19 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   ## TODO detect unused lambda in special cases (e.g. only accessible through unused variable)
   0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
     program [] .procedures procId iSize cast.u list.at .data =:: currentProc
-    currentProc [] .implementation .?Code .else ..drop
-      procId 1 + continue ## procedure implementation not in code
-    end .code .length 0 == if
-      procId 1 + continue ## procedure not implemented
-    end
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
+    end
+    currentProc .implementation .?Code .else ..drop
+      procId 1 + continue ## procedure implementation not in code
+    end =:: codeImpl
+    codeImpl .code [] .length 0 == if
+      procId 1 + continue ## procedure not implemented
+    end
+    _EXPERIMENTAL_ and codeImpl .codeState [] .PARSING if
+      ## TODO? handle use in currenty unchecked procedure
+      ProcCodeState .UNUSED codeImpl .codeState=
+      procId 1 + continue ## ignore parsing procedures
     end
     currentProc [] .labelId labelContext id.labelFlags =:: flags
     flags id.FLAG_LAMBDA & ? or EXPORT_GLOBALS hasMain ! | and flags id.FLAG_EXPORT & ? if
@@ -5607,13 +5613,18 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   ## procedures
   0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
     program [] .procedures procId iSize cast.u list.at .data =:: currentProc
-    currentProc [] .implementation .?Code .else ..drop
-      procId 1 + continue ## procedure implementation not in code
-    end .code .length 0 == if
-      procId 1 + continue ## procedure not implemented
-    end
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
+    end
+    currentProc  .implementation .?Code .else ..drop
+      procId 1 + continue ## procedure implementation not in code
+    end =:: codeImpl
+    codeImpl .code [] .length 0 == if
+      procId 1 + continue ## procedure not implemented
+    end
+    _EXPERIMENTAL_ and codeImpl .codeState [] .PARSING if
+      ProcCodeState .UNUSED codeImpl .codeState=
+      procId 1 + continue ## ignore parsing procedures
     end
     procId ProcId cast -1 ProcCheckType .REQUIRE_DEFINED FilePosition optional.empty state typeCheckProcedure
     procId 1 +
@@ -5625,17 +5636,20 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     false compiledImplementation=
     0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
       program [] .procedures procId list.at .data =:: currentProc
+      currentProc [] .hasStaticArg ! if
+        procId 1 + continue ## handled by previous loop
+      end
+      currentProc [] .isStatic if
+        procId 1 + continue ## don't type-check static procedures
+      end
       currentProc .implementation .?Code .else ..drop
         procId 1 + continue ## procedure implementation not in code
       end =:: codeImpl
       codeImpl [] .code .length 0 == if
         procId 1 + continue ## procedure not implemented
       end
-      currentProc [] .hasStaticArg ! if
-        procId 1 + continue ## handled by previous loop
-      end
-      currentProc [] .isStatic if
-        procId 1 + continue ## don't type-check static procedures
+      _EXPERIMENTAL_ and codeImpl [] .codeState .PARSING if
+        procId 1 + continue ## ignore parsing procedures
       end
       currentProc program nextImpl =:: nextId
       codeImpl [] .implementations .length i32 cast.u =:: implLength
