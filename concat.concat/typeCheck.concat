@@ -2336,16 +2336,13 @@ proc(
                 bundleId i64 cast list.at .data [] .procedures
               list.asSlice
             end =:: procedures
-            0:i32 =:: mut: stackConstants
             true =:: mut: headConstant
             ## TODO do not recreate list for each call
             state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
             state .stack branchTree.itr.start while
               branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
               ## TODO? don't treat genericArg as constant
-              headConstant and val [] .value .?None ? ! and val [] .value .?GenericArg ? !  if
-                stackConstants 1 + stackConstants=
-              else
+              val [] .value .?None ? or val [] .value .?GenericArg ? if
                 false headConstant=
               end
               stackValues
@@ -2383,8 +2380,7 @@ proc(
             calledType op@ .dataType=
             calledType typeContext types.getProcIn .data =:: inTypes
             inTypes .length i32 cast.u =:: argCount
-            stackConstants argCount calledProc .autoArgs .length i32 cast - >= and
-                state isGlobal
+            state isGlobal
                 program [] .procedures
                   calledProcId i64 cast list.at .data
                 [] .isStatic | and state [] .mode .STATIC_PROC ! or
