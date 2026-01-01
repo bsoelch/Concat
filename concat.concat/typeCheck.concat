@@ -2843,6 +2843,9 @@ proc(
                       procId program .mainProcId=
                     end
                     idInfo .labelId procInfo .labelId=
+                    idInfo .labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
+                      true procInfo .isStatic=
+                    end
                   end
                 else ..drop
                   "expected Procedure got " sb.copyPtr
