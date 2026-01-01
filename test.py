@@ -121,6 +121,7 @@ def main():
     print("running tests on developement version of compiler")
   cctFlags = []
   if "-XX" in sys.argv:## doubly experimental mode ( add -X flag to each test )
+    concatPath=CURRENT_DIR+"/concatX"
     cctFlags.append("-X")
     print("running tests in experimental mode")
   full = "-full" in sys.argv or "--full" in sys.argv
