@@ -1,0 +1,9 @@
+proc( i32 : static: n -> type ) =>: bits
+  i64 n array
+end
+proc( i32 : static: n -> n bits ) =>: create
+  n bits new
+end
+proc( -> ) =>: main
+  32 create =:: bitArray
+end

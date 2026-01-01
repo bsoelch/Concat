@@ -5642,7 +5642,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   false =:: mut: compiledImplementation
   while
     false compiledImplementation=
-    0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
+    0:i32 while: procLoop $ iSize cast.u program [] .procedures .length u< do =:: procId
       program [] .procedures procId list.at .data =:: currentProc
       currentProc [] .hasStaticArg ! if
         procId 1 + continue ## handled by previous loop
@@ -5674,6 +5674,14 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
             MAX_STATIC_RECURSION sb.appendI
             ')' sb.appendC
           implData [] .firstUse errors appendError
+        end
+        ## ignore procedures with generic signature
+        implData [] .staticArgs for
+          .?GenericArg .if ..drop
+            procId 1 + continue.procLoop
+          else .?TypeId .and typeContext types.isGeneric _if
+            procId 1 + continue.procLoop
+          end
         end
         procId ProcId cast implId ProcCheckType .REQUIRE_DEFINED implData [] .firstUse optional.wrap state typeCheckProcedure
         implId 1 +
