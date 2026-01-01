@@ -3319,6 +3319,7 @@ proc(
         continue.opLoop
       block case
         state [] .blockStart =:: oldBlockStart
+        state removeTrailingNOPs ## TODO! removing NOPs can underflow below block-start
         state [] .compiledOps .length i32 cast.u state .blockStart=
         op .val .block .blockType =:: blockType
         blockType switch
@@ -4373,6 +4374,7 @@ proc(
         break
       blockEnd case
         state [] .blockStart =:: oldBlockStart
+        state removeTrailingNOPs
         state [] .compiledOps .length i32 cast.u state .blockStart=
         op .val .blockEnd .blockType switch
           TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_SETTYPE
