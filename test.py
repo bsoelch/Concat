@@ -17,13 +17,14 @@ def runInEachSubdir(f,path=TESTS_PATH):
   for file in os.listdir(os.fsencode(path)):
     file=os.fsdecode(file)
     if os.path.isdir(path+file):
-      f(path=(path+file+"/"))
+      f(path+file+"/")
 
-def runTest(fileName,filePath):
+def runTest(fileName,filePath,*,cctFlags=None):
   global nTested
   global nPassed
   print(fileName+": ",end="")
   basePath=filePath+fileName[:-len(".concat")]
+  cctFlags = cctFlags if cctFlags is not None else []
   try:
     with open(basePath+".args") as f:
       args=f.read().split("\n")
@@ -49,7 +50,8 @@ def runTest(fileName,filePath):
     concatPath,
     filePath+fileName,
     "-o",codePath,
-    "-l","./lib/"
+    "-l","./lib/",
+    *cctFlags
   ],stdout=outFile,stderr=errFile).returncode==0 and
   subprocess.run([
       codePath,
@@ -92,12 +94,12 @@ def runTest(fileName,filePath):
     os.remove(outPath)
     os.remove(errPath)
 
-def runTests(path):
+def runTests(path,*,cctFlags=None):
   if not os.path.isdir(path):
     if os.path.isfile(path) and path.endswith(".concat"):
-      runTest(path,"")
+      runTest(path,"",cctFlags=cctFlags)
     elif os.path.isfile(path+".concat"):
-      runTest(path+".concat","")
+      runTest(path+".concat","",cctFlags=cctFlags)
     return
   if path[-1]!='/':
     path+='/'
@@ -107,7 +109,7 @@ def runTests(path):
   for file in os.listdir(os.fsencode(path)):
     file=os.fsdecode(file)
     if file.endswith(".concat"):
-      runTest(file,relPath)
+      runTest(file,relPath,cctFlags=cctFlags)
 
 def main():
   global concatPath
@@ -116,6 +118,10 @@ def main():
   ## TODO ignore `-X` / `-full` after `--`
   if "-X" in sys.argv:## experimental mode
     concatPath=CURRENT_DIR+"/concatX"
+    print("running tests on developement version of compiler")
+  cctFlags = []
+  if "-XX" in sys.argv:## doubly experimental mode ( add -X flag to each test )
+    cctFlags.append("-X")
     print("running tests in experimental mode")
   full = "-full" in sys.argv or "--full" in sys.argv
   try:
@@ -127,11 +133,11 @@ def main():
     dirs=None
   if dirs is not None:
     for d in dirs:
-      runTests(d)
+      runTests(d,cctFlags=cctFlags)
   else:
-    runInEachSubdir(runTests)
+    runInEachSubdir(lambda p:runTests(p,cctFlags=cctFlags))
     if full:
-      runTests(CURRENT_DIR+"/examples/")
+      runTests(CURRENT_DIR+"/examples/",cctFlags=cctFlags)
   if nPassed==nTested:
     print(f"\nSUCCESS: passed {nPassed} of {nTested} tests")
     sys.exit(0)
