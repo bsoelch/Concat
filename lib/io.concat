@@ -5,6 +5,7 @@ import stringBuilder
 
 namespace: io
   i32 type =: export: IOError
+  ( char8 ptr.raw iSize -> IOError ) : static: alias: export: :IOError ..builtIn.parse.i32
   0:IOError  =:: export: FILE_ERROR_NONE
   -1:IOError =:: export: FILE_ERR_END_OF_FILE
   1:IOError  =:: export: FILE_ERR_IO
@@ -17,6 +18,7 @@ namespace: io
   8:IOError  =:: export: FILE_ERR_INVALID_FILE
 
   i32 type =: export: OpenMode
+  ( char8 ptr.raw iSize -> IOError ) : static: alias: export: :OpenMode ..builtIn.parse.i32
   1:OpenMode =:: export: OPEN_READ
   2:OpenMode =:: export: OPEN_WRITE
   4:OpenMode =:: export: OPEN_APPEND
