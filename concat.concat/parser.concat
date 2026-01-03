@@ -91,7 +91,7 @@ struct(
   ProgramContext ptr.mut : progContext
   TypeCheckState ptr.mut : typeChecker
   BlockInfo list : openBlocks
-  Operation list : globalOpBuffer
+  Operation list : parsedOps
   i32 : constOffset
   i32 : constBlockCount
   Type list : typeBuffer
@@ -244,7 +244,7 @@ proc( ParserState ptr.mut : state -> iSize ) =>: opCount
   _EXPERIMENTAL_ ! and state [] .currentProcs .length 0 == if
     0 return
   else
-    progContext [] .tmpOps .length return
+    state [] .parsedOps .length return
   end
 end
 proc( ParserState ptr.mut : state -> InterpreterInfo ptr.mut ) =>: getInterpreter
@@ -272,19 +272,15 @@ proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
         op list.append
       progContext .globalOps=
     end
-    progContext [] .tmpOps
+    state [] .parsedOps
       op list.append
-    progContext .tmpOps=
+    state .parsedOps=
   end
 end
 
 proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
   state [] .progContext =:: progContext
-  _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
-    state [] .globalOpBuffer
-  else
-    progContext [] .tmpOps
-  end list.peek
+  state [] .parsedOps list.peek
 end
 
 proc( Constant : const ParserState ptr.mut : state -> ) =>: pushConst
@@ -424,7 +420,7 @@ proc( iSize : opPosition ParserState ptr.mut : state -> Operation ptr.mut option
   _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
     Operation ptr.mut optional.empty return ## cannot jumps in global block
   end
-  state [] .progContext [] .tmpOps opPosition list.at
+  state [] .parsedOps opPosition list.at
 end
 proc( iSize : blockPosition FilePosition : pos ParserState ptr.mut : state -> ) =>: setBlockJump
   _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
@@ -432,7 +428,7 @@ proc( iSize : blockPosition FilePosition : pos ParserState ptr.mut : state -> ) 
   end
   state [] .progContext =:: progContext
   progContext .errors =:: errors
-  progContext [] .tmpOps blockPosition list.at .and =:: opData
+  state [] .parsedOps blockPosition list.at .and =:: opData
       opData .val .?block .if =:: block
     state opCount
       blockPosition - JumpDistance cast
@@ -450,7 +446,7 @@ proc( iSize slice : blockPositions FilePosition : pos ParserState ptr.mut : stat
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   blockPositions for =:: opPos
-    progContext [] .tmpOps opPos list.at .and =:: opData
+    state [] .parsedOps opPos list.at .and =:: opData
         opData .val .?block .if =:: block
       state opCount
         opPos - JumpDistance cast
@@ -469,12 +465,12 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos Parse
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   andOrBlock .andOrPositions list.filter for =:: opPos
-    opPos iSize cast.u progContext [] .tmpOps .length u>= if
+    opPos iSize cast.u state [] .parsedOps .length u>= if
       "operations and blocks are out of sync, could not determine position of and/or" sb.copyPtr
       pos errors appendError
       iSize slice.emptyMutable return
     end
-    progContext [] .tmpOps opPos list.at .data =:: opData
+    state [] .parsedOps opPos list.at .data =:: opData
     opData .val .?block .else ..drop
       "operations and blocks are out of sync, expected and/or got " sb.copyPtr
         opData [] progContext sb.appendOp
@@ -541,7 +537,7 @@ proc(
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   switchData [] .implicitBreak .if =:: prevBreak
-    progContext [] .tmpOps prevBreak list.at .and =:: opData
+    state [] .parsedOps prevBreak list.at .and =:: opData
     opData .val .?block .and .blockType [] .BREAK if
       opValNOP opData .val=
     else
@@ -1820,7 +1816,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               progContext [] .procedures
                 currentProcId i64 cast list.at .data
               =:: currentProc
-              progContext [] .tmpOps list.asSlice
+              state [] .parsedOps list.asSlice
                 procBlockData .blockStart slice.tail
                 $ 0 @[] =:: procStart
                 ## FIXME:in some edge cases this assertion is hit
@@ -1829,9 +1825,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                 end "procedure starts with correct operation" assert
                 slice.copy
               currentProc .implementation .Code .code=
-              progContext [] .tmpOps
+              state [] .parsedOps
                 procBlockData .blockStart list.setLength
-              progContext .tmpOps=
+              state .parsedOps=
               _EXPERIMENTAL_ ! and currentProc [] .labelId labelContext id.labelFlags id.FLAG_LAMBDA & ? if
                 currentProc [] .procType .?Undefined ? if
                   currentProcId fileState [] .wordStart opNestedProc state appendOp
@@ -2020,13 +2016,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           progContext [] .procedures
             withProcId i64 cast list.at .data
           =:: withProc
-          progContext [] .tmpOps
+          state [] .parsedOps
             offset list.tail
             slice.copy
           withProc .implementation .Code .code=
-          progContext [] .tmpOps
+          state [] .parsedOps
             offset list.setLength
-          progContext .tmpOps=
+          state .parsedOps=
           _EXPERIMENTAL_ if
             withProcId fileState [] .wordStart opTypeWith state appendOp
             return
@@ -2965,7 +2961,7 @@ proc(
     programContext@
     typeChecker@
     64  BlockInfo               list.create
-    128 Operation               list.create
+    Operation list.empty
     0:i32
     0:i32
     128 Type                    list.create
@@ -2999,7 +2995,8 @@ proc(
 -> FileId io.IOError ) =>: parseFile
   fileName
     state [] .progContext =:: progContext
-    progContext .tmpOps [] .length =:: codeOffset
+    state [] .parsedOps =:: oldOps
+    Operation list.empty state .parsedOps=
     progContext .idContext =:: idContext
     idContext .typeContext .labelContext =:: labelContext
     progContext .errors =:: errors
@@ -3062,6 +3059,10 @@ proc(
   idContext id.openScope
   fileId id.NO_SCOPE idContext id.importFile ## import file in its own scope
   idContext id.currentScope progContext [] .progFiles fileId i64 cast list.at .data .fileScope=
+  ## TODO? find good heuristic for token count based on character to reduce number of buffer reallocations
+  state [] .parsedOps
+    fileBody .length 8 / list.ensureCap
+  state .parsedOps=
   fileState@
     fileBody sb.asStr while
       $1 nextToken $2 state parseOperation
@@ -3069,7 +3070,7 @@ proc(
     do end ..drop
   ..drop
   fileBody sb.free ..drop
-  progContext [] .tmpOps list.asSlice codeOffset slice.tail state [] .typeChecker typeCheckGlobalCode
+  state [] .parsedOps list.asSlice state [] .typeChecker typeCheckGlobalCode
   idContext id.closeScope ! "file scope closed correctly" assert
   prevScope idContext id.setScope
   prevNamespace labelContext id.resetNamespace
@@ -3087,8 +3088,7 @@ proc(
       fileState .currentPos
     errors appendError
   end
-  progContext [] .tmpOps
-    codeOffset list.setLength
-  progContext .tmpOps=
+  state [] .parsedOps list.free ..drop
+  oldOps state .parsedOps=
   newFileId io.FILE_ERROR_NONE return
 end

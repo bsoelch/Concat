@@ -5698,9 +5698,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     end
     false ## break loop while reaching condition
   do end
-  program [] .tmpOps
-    list.clear ## operations have been compiled
-  program .tmpOps=
   ## TODO? put state cleanup into procedure
   state freeOps
   state .stack branchTree.free

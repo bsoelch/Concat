@@ -616,7 +616,6 @@ struct(
            ProcedureInfo list : procedures
          ProcedureBundle list : procBundles
                     Type list : autoTypes
-               Operation list : tmpOps
                Operation list : globalOps
           MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
               SwitchData list : switchData
@@ -641,7 +640,6 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     64  ProcedureBundle list.create
     32  Type            list.create
     1024 Operation      list.create
-    1024 Operation      list.create
     4096                mixedArena.create
     128 SwitchData      list.create
     128 WhileData       list.create
@@ -664,7 +662,6 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .procedures list.free >$ .procedures=
   $ .procBundles list.free >$ .procBundles=
   $ .autoTypes list.free >$ .autoTypes=
-  $ .tmpOps list.free >$ .tmpOps=
   $ .globalOps list.free >$ .globalOps=
   $ .programMemory mixedArena.free >$ .programMemory=
   $ .switchData list.free >$ .switchData=
@@ -1231,8 +1228,6 @@ namespace: sb
         '\n' sb.appendC
       end
     end
-    "## temporary code:\n" sb.appendS
-    prog [] .tmpOps for prog sb.appendOp end
   end
 end
 

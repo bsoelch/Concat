@@ -506,14 +506,13 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   ConverterContext new =:: mut: contextData
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
-  program [] .tmpOps
-    list.clear
-  program .tmpOps=
+  Operation list.empty =:: mut: tmpOps
   program [] .procedures list.atItr for =:: currentProc
     currentProc [] .isStatic if continue end
     currentProc .implementation .?Code .else ..drop
       continue
     end =:: impl
+    tmpOps list.clear tmpOps=
     currentProc [] .fileId context .currentFile=
     program [] .progFiles
       currentProc [] .fileId i64 cast
@@ -525,7 +524,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
         end
         ## convertProc
           currentImpl [] .code
-          program .tmpOps
+          tmpOps@
           currentImpl .variables
           context
         convertProc currentImpl .code=
@@ -537,7 +536,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       end
       ## convertProc
         impl [] .code
-        program .tmpOps
+        tmpOps@
         impl .variables
         context
       convertProc impl .code=
@@ -580,4 +579,5 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       ProcCodeState .COMPILED
     CodeProcData new currentProc .implementation .Code=
   end
+  tmpOps list.free ..drop
 end
