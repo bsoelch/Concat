@@ -199,6 +199,8 @@ union(
      TypeMemoryInfo : typeInfo
                   _ : panic
              string : panicWithMessage
+             string : Import
+             string : LibImport
        CompilerInfo : compilerInfo
 ) =:: export: OpValue
 struct( OpValue : val Type : dataType FilePosition : pos ) =:: export: Operation
@@ -412,6 +414,15 @@ proc( FilePosition : pos -> Operation ) =>: export: opPanic
 end
 proc( string : message FilePosition : pos -> Operation ) =>: export: opPanicWithMessage
   message OpValue .panicWithMessage Type .Undefined pos Operation new return
+end
+proc( string : path bool : isLibFile FilePosition : pos -> Operation ) =>: export: opImportFile
+  path
+    isLibFile if
+      OpValue .LibImport
+    else
+      OpValue .Import
+    end
+  Type .Undefined pos Operation new return
 end
 proc(
   FilePosition : pos
@@ -1135,13 +1146,12 @@ namespace: sb
         Assert case
           "assert" sb.appendS
           break
-        RuntimeAssert case
+        RuntimeAssert .case =:: msg
           '"' sb.appendC
-          ..over .val .RuntimeAssert sb.appendStr
+          msg sb.appendStr
           "\" assert" sb.appendS
           break
-        Error case
-          ..over .val .Error switch
+        Error .case switch
             ERROR case "..compiler.error" sb.appendS break
             WARNING case "..compiler.warning" sb.appendS break
             INFO case "..compiler.info" sb.appendS break
@@ -1150,14 +1160,22 @@ namespace: sb
         panic case
           "..panic" sb.appendS
           break
-        panicWithMessage case
+        panicWithMessage .case =:: msg
           '"' sb.appendC
-          ..over .val .panicWithMessage sb.appendEscapedStr
+          msg sb.appendEscapedStr
           "\" ..panic" sb.appendS
           break
-        compilerInfo case
-          ..over .val .compilerInfo labelContext sb.appendCompilerInfo
+        Import .case =:: path
+          "import \"" sb.appendS
+          path sb.appendEscapedStr
+          '"' sb.appendC
           break
+        LibImport .case =:: path
+          "lib-import \"" sb.appendS
+          path sb.appendEscapedStr
+          '"' sb.appendC
+          break
+        compilerInfo .case labelContext sb.appendCompilerInfo break
       end
       " at " sb.appendS
       ..swap .pos sb.appendPos

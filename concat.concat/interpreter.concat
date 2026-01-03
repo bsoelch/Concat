@@ -3326,7 +3326,7 @@ proc(
           EvalResult .Ok return ## TODO find
       end
       break
-    getEnumLabel
+    getEnumLabel Import LibImport
     NewEnumReference callPtr
     implementProcedure procPtr
     ConstantReference NewReference

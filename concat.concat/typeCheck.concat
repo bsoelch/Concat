@@ -5153,6 +5153,8 @@ proc(
         ## type-modifiers are handled by the interpreter
         op@ state interpretTypeModifier
         continue.opLoop
+      Import LibImport case
+        "unimplemented: imports" ..panic
       autoCast copy ConstantReference NewReference NewEnumReference case
         "unsupported operation: " sb.copyPtr
           op program sb.appendOp

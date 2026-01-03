@@ -2573,15 +2573,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "import":s string.eq _if =:: opName
       fileState nextToken ## XXX? distinquish string types
       .?String .if .value ## local file
-        ## TODO? allow ignoring name of current folder (search base-path, then current folder)
-        state [] .basePath .length $1 .length + sb.create
-          state [] .basePath sb.appendStr
-          >$ sb.appendStr
-          state [] .inLibFile
-        fileState [] .wordStart state importFile
+        false fileState [] .wordStart state prepareImport
         return
       else .?Identifier ._if ## library file
-        fileState [] .wordStart state importLibraryFile return
+        true fileState [] .wordStart state prepareImport return
       end
       64 sb.create
         "invalid parameter for " sb.appendS
@@ -2890,12 +2885,36 @@ proc( FileId : includedId io.IOError : err FilePosition : pos ParserState ptr.mu
   end
 end
 
-proc( string FilePosition : pos ParserState ptr.mut : state -> ) =>: importLibraryFile
-  state [] .libPath .length $1 .length + ".concat" ..length + sb.create
+proc(
+  string : fileName
+  FilePosition : pos
+  ParserState ptr.mut : state
+-> ) =>: importLibraryFile
+  state [] .libPath .length fileName .length + ".concat" ..length + sb.create
     state [] .libPath sb.appendStr
-    ..swap sb.appendStr ".concat" sb.appendS
-    true
-  pos state importFile
+    fileName sb.appendStr
+    ".concat" sb.appendS
+  true pos state importFile
+end
+proc(
+  string : fileName
+  bool : isLibImport
+  FilePosition : pos
+  ParserState ptr.mut : state
+-> ) =>: prepareImport
+  _EXPERIMENTAL_ if
+    fileName isLibImport pos opImportFile state appendOp
+    return
+  end
+  isLibImport if
+    fileName pos state importLibraryFile
+  else
+    ## TODO? allow ignoring name of current folder (search base-path, then current folder)
+    state [] .basePath .length fileName .length + sb.create
+      state [] .basePath sb.appendStr
+      fileName sb.appendStr
+    state [] .inLibFile pos state importFile
+  end
 end
 proc(
   stringBuilder : fileName
