@@ -18,7 +18,7 @@ namespace: io
   8:IOError  =:: export: FILE_ERR_INVALID_FILE
 
   i32 type =: export: OpenMode
-  ( char8 ptr.raw iSize -> IOError ) : static: alias: export: :OpenMode ..builtIn.parse.i32
+  ( char8 ptr.raw iSize -> OpenMode ) : static: alias: export: :OpenMode ..builtIn.parse.i32
   1:OpenMode =:: export: OPEN_READ
   2:OpenMode =:: export: OPEN_WRITE
   4:OpenMode =:: export: OPEN_APPEND
