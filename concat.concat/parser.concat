@@ -2603,7 +2603,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         usedName id.FLAG_NONE
           fileState [] .wordStart state [] .currentFile
         labelContext id.newLabel =:: namespaceLabel
-        state [] .currentProcs .length 0:iSize != if
+        _EXPERIMENTAL_ or state [] .currentProcs .length 0:iSize != if
           aliasName .length 0:iSize != if
             aliasName id.FLAG_NONE
               fileState [] .wordStart state [] .currentFile
@@ -2621,7 +2621,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
         return
       end
-      state [] .currentProcs .length 0:iSize != if
+      _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize != if
         usedName id.FLAG_NONE
           fileState [] .wordStart state [] .currentFile
         labelContext id.newLabel =:: usedLabel
