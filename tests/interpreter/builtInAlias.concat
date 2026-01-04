@@ -1,4 +1,5 @@
 i32 =:: wrapped
+( char8 ptr.raw iSize -> wrapped ) : static: alias: :wrapped ..builtIn.parse.i32
 proc( wrapped wrapped -> wrapped ) : static: alias: wrapAdd ..builtIn.add.i32
 
 proc( -> ) =>: main

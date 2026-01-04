@@ -20,5 +20,5 @@ end
 proc( -> ) =>: main
   2 aUnion .Int test
   3.14:f32 aUnion .Float test
-  32:u32 aUnion .UInt test
+  32 u32 cast aUnion .UInt test
 end
