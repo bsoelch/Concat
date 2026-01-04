@@ -303,7 +303,7 @@ namespace: iSize
     a b sgt if a else b end
   end
 end
-( char8 ptr.raw iSize -> iSize ) : alias: export: :iSize iSize.parse
+( char8 ptr.raw iSize -> iSize ) : static: alias: export: :iSize iSize.parse
 
 overload: export: []
   ptr.get

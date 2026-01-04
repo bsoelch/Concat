@@ -2,6 +2,7 @@ import stringBuilder
 
 namespace: unicode
   i32 =:: export: Codepoint
+  ( char8 ptr.raw iSize -> Codepoint ) : static: export: alias: :Codepoint ..builtIn.parse.i32
   -0x1000:Codepoint =:: export: UNKNOWN_CODEPOINT
   0:Codepoint =:: export: MIN_CODEPOINT
   0x10FFFF:Codepoint =:: export: MAX_CODEPOINT

@@ -8,7 +8,7 @@ import array
 ## negative capacity indictes fixed buffer
 namespace: list
   iSize =:: export: listCap
-  ( char8 ptr.raw iSize -> listCap ) : alias: export: :listCap :iSize
+  ( char8 ptr.raw iSize -> listCap ) : static: alias: export: :listCap :iSize
 end
 
 ( type : T -> type ) =>: export: list

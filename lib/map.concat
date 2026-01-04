@@ -4,6 +4,7 @@ import optional
 
 namespace: map
   i32 =:: NodeId
+  ( char8 ptr.raw iSize -> NodeId ) : static: export: alias: :NodeId ..builtIn.parse.i32
   0:NodeId =:: NO_NODE
   ( type : K type : V -> type ) =>: Node
     struct( K : key V : mut: value NodeId : mut: next bool : isEmpty )
