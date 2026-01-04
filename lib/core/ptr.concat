@@ -241,6 +241,7 @@ namespace: ptr
 end
 namespace: iSize
   iSize ..types.unwrapNamed i64 === if
+    ( char8 ptr.raw iSize -> iSize ) : static: export: alias: parse ..builtIn.parse.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: add ..builtIn.add.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: sub ..builtIn.sub.i64
     ( iSize : a -> iSize ) : export: alias: neg ..builtIn.neg.i64
@@ -262,6 +263,7 @@ namespace: iSize
     ( iSize : a iSize : b -> bool ) : export: alias: sge ..builtIn.ge.i64
     ( iSize : a iSize : b -> bool ) : export: alias: sgt ..builtIn.gt.i64
   else iSize ..types.unwrapNamed i32 === _if
+    ( char8 ptr.raw iSize -> iSize ) : static: export: alias: parse ..builtIn.parse.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: add ..builtIn.add.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: sub ..builtIn.sub.i32
     ( iSize : a -> iSize ) : export: alias: neg ..builtIn.neg.i32
@@ -301,6 +303,7 @@ namespace: iSize
     a b sgt if a else b end
   end
 end
+( char8 ptr.raw iSize -> iSize ) : alias: export: :iSize iSize.parse
 
 overload: export: []
   ptr.get
