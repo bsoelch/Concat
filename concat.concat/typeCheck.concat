@@ -7,6 +7,7 @@ import "identifiers.concat"
 import "interpreter.concat"
 import "branchTree.concat"
 import "callResolver.concat"
+import "parser.concat"
 
 struct(
   Type         : mut: valueType
@@ -5153,8 +5154,14 @@ proc(
         ## type-modifiers are handled by the interpreter
         op@ state interpretTypeModifier
         continue.opLoop
-      Import LibImport case
-        "unimplemented: imports" ..panic
+      Import LibImport .case
+          op .val .?LibImport ?
+          state [] .currentFile
+          op .pos
+          program
+          state
+        parseImportFile
+      continue.opLoop
       autoCast copy ConstantReference NewReference NewEnumReference case
         "unsupported operation: " sb.copyPtr
           op program sb.appendOp

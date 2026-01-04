@@ -86,23 +86,24 @@ struct(
   bool : hasScope
 ) =:: BlockInfo
 struct(
-  string : basePath
-  string : libPath
   ProgramContext ptr.mut : progContext
-  TypeCheckState ptr.mut : typeChecker
+  TypeCheckState ptr.mut : typeChecker ## -> ? recreate for each file
   BlockInfo list : openBlocks
   Operation list : parsedOps
-  i32 : constOffset
   i32 : constBlockCount
-  Type list : typeBuffer
   FileId : currentFile
   ProcId list : currentProcs
-  InterpreterInfo list : globalInterpreters
-  LabelId list : labelBuffer
-  stringBuilder : tmpString
-  bool : inLibFile
-  bool : saveGlobalTokens
+  InterpreterInfo list : globalInterpreters ## -> remove in new front-end
 ) =:: ParserState
+proc( ParserState : state -> ) =>: cleanupParserState
+  state .globalInterpreters list.atItr for
+    .context interpreter.cleanupContext
+  end
+  state .globalInterpreters list.free ..drop
+  state .currentProcs list.free ..drop
+  state .openBlocks list.free ..drop
+  state .parsedOps list.free ..drop
+end
 
 proc( FilePosition : pos -> Constant ) =>: newWildcardConst
   Type .Undefined ConstValue .WildCard IdentifierInfo optional.empty pos Constant new return
@@ -248,13 +249,14 @@ proc( ParserState ptr.mut : state -> iSize ) =>: opCount
   end
 end
 proc( ParserState ptr.mut : state -> InterpreterInfo ptr.mut ) =>: getInterpreter
+  _EXPERIMENTAL_ ! "do not need interpreter in experimental mode" assert
   state [] .globalInterpreters state [] .currentFile i64 cast list.at .data
 end
 proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   _EXPERIMENTAL_ ! and state [] .currentProcs .length 0:iSize == if
-    state [] .saveGlobalTokens if
+    progContext [] .saveGlobalTokens if
       progContext [] .globalOps
         op list.append
       progContext .globalOps=
@@ -267,7 +269,7 @@ proc( Operation : op ParserState ptr.mut : state -> ) =>: appendOp
       op .pos errors appendError
     end
   else
-    state [] .currentProcs .length 0:iSize == and state [] .saveGlobalTokens if
+    state [] .currentProcs .length 0:iSize == and progContext [] .saveGlobalTokens if
       progContext [] .globalOps
         op list.append
       progContext .globalOps=
@@ -284,7 +286,7 @@ proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
 end
 
 proc( Constant : const ParserState ptr.mut : state -> ) =>: pushConst
-  state getInterpreter .context interpreter.skipCurrentBlock if
+  _EXPERIMENTAL_ ! and state getInterpreter .context interpreter.skipCurrentBlock if
     return
   end
   const constantToOp state appendOp
@@ -582,7 +584,7 @@ proc(
 -> string LabelId ) =>: readLabelAddFlags
   state [] .progContext =:: progContext
   progContext .errors =:: errors
-  state [] .inLibFile if
+  progContext [] .inLibFile if
     id.FLAG_LIB_FILE
   else
     0:LabelFlag
@@ -932,12 +934,12 @@ proc(
           stringConst .Array8 .length i64 cast.u ConstValue .Int
           IdentifierInfo optional.empty
         fileState [] .wordStart Constant new state pushConst
-        state [] .tmpString
+        progContext [] .tmpString
           sb.clear ## clear tmp string
           ':' sb.appendC
           literalType .LiteralType sb.appendStr
-        state .tmpString=
-        state [] .tmpString sb.asStr false return
+        progContext .tmpString=
+        progContext [] .tmpString sb.asStr false return
       LiteralChar LiteralString LiteralRawString .case
         token .?LiteralRawString ? fileState [] .wordStart state parseStringConstant =:: stringConst
         types.I_SIZE
@@ -953,12 +955,12 @@ proc(
           string.empty true return
         end
         ## XXX? more usefull error for missing parse procedure?
-        state [] .tmpString
+        progContext [] .tmpString
           sb.clear ## clear tmp string
           ':' sb.appendC
           literalType .LiteralType sb.appendStr
-        state .tmpString=
-        state [] .tmpString sb.asStr false return
+        progContext .tmpString=
+        progContext [] .tmpString sb.asStr false return
       LiteralType case
         "unexpected token: " sb.copyPtr
         token sb.appendToken
@@ -1100,7 +1102,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   idContext .typeContext =:: typeContext
   idContext .constContext =:: constContext
   typeContext .labelContext =:: labelContext
-  state getInterpreter .context interpreter.skipCurrentBlock =:: skipBlock
+  _EXPERIMENTAL_ ! and state getInterpreter .context interpreter.skipCurrentBlock end =:: skipBlock
   code
     token fileState state tryParseConstant if
       ..drop return
@@ -2890,8 +2892,8 @@ proc(
   FilePosition : pos
   ParserState ptr.mut : state
 -> ) =>: importLibraryFile
-  state [] .libPath .length fileName .length + ".concat" ..length + sb.create
-    state [] .libPath sb.appendStr
+  state [] .progContext [] .libPath .length fileName .length + ".concat" ..length + sb.create
+    state [] .progContext [] .libPath sb.appendStr
     fileName sb.appendStr
     ".concat" sb.appendS
   true pos state importFile
@@ -2903,18 +2905,47 @@ proc(
   ParserState ptr.mut : state
 -> ) =>: prepareImport
   _EXPERIMENTAL_ if
-    fileName isLibImport pos opImportFile state appendOp
+    state [] .progContext .idContext .typeContext .labelContext =:: labelContext
+    fileName labelContext id.copyString isLibImport pos opImportFile state appendOp
     return
   end
   isLibImport if
     fileName pos state importLibraryFile
   else
     ## TODO? allow ignoring name of current folder (search base-path, then current folder)
-    state [] .basePath .length fileName .length + sb.create
-      state [] .basePath sb.appendStr
+    state [] .progContext [] .basePath .length fileName .length + sb.create
+      state [] .progContext [] .basePath sb.appendStr
       fileName sb.appendStr
-    state [] .inLibFile pos state importFile
+    state [] .progContext [] .inLibFile pos state importFile
   end
+end
+proc(
+  string : fileName
+  bool : isLibImport
+  FileId : hostFile
+  FilePosition : pos
+  ProgramContext ptr.mut : program
+  TypeCheckState ptr.mut : typeChecker
+-> ) =>: export: parseImportFile
+  ## ParserState
+    program
+    typeChecker
+    64  BlockInfo               list.create
+    Operation list.empty
+    0:i32
+    hostFile
+    32  ProcId                  list.create
+    InterpreterInfo list.empty
+  ParserState new =:: mut: parserState
+    isLibImport if
+      fileName pos parserState@ importLibraryFile
+    else
+      program [] .basePath .length fileName .length + sb.create
+        program [] .basePath sb.appendStr
+        fileName sb.appendStr
+      program [] .inLibFile pos parserState@ importFile
+    end
+  parserState cleanupParserState
 end
 proc(
   stringBuilder : fileName
@@ -2955,7 +2986,7 @@ proc(
   string : basePath
   bool : saveGlobalTokens
 -> ProgramContext TypeCheckState ) =>: export: parseProgram
-  newProgramContext =:: mut: programContext
+  basePath libPath saveGlobalTokens newProgramContext =:: mut: programContext
   ## FilePosition
     rootFile sb.asStr
     0:FileId
@@ -2975,34 +3006,17 @@ proc(
   programContext@ newTypeCheckState =:: mut: typeChecker
   programContext@ typeChecker@ updateTypeCheckerPointers
   ## ParserState
-    basePath
-    libPath
     programContext@
     typeChecker@
     64  BlockInfo               list.create
     Operation list.empty
     0:i32
-    0:i32
-    128 Type                    list.create
     FILE_ID_NONE
     32  ProcId                  list.create
     0   InterpreterInfo         list.create
-    128 LabelId                 list.create
-    128 sb.create
-    false
-    saveGlobalTokens
   ParserState new =:: mut: state
   rootFile false state@ parseFile rootPos state@ checkIOError ..drop
-  ## cleanup parser memory
-  state .typeBuffer list.free ..drop
-  0:iSize while $ state .globalInterpreters .length u< do
-    state .globalInterpreters
-      ..over list.at .data .context
-    interpreter.cleanupContext
-    1:iSize +
-  end ..drop
-  state .globalInterpreters list.free ..drop
-  state .tmpString sb.free ..drop
+  state cleanupParserState
   programContext typeChecker return
 end
 ## TODO why is a pre-declaration neccessary here
@@ -3040,15 +3054,14 @@ proc(
       InterpreterInfo new list.append
     state .globalInterpreters=
   state [] .currentFile =:: prevFile
-  state [] .inLibFile =:: wasLibFile
-  isLibFile state .inLibFile=
+  progContext [] .inLibFile =:: wasLibFile
+  isLibFile progContext .inLibFile=
   fileId state .currentFile=
   $ .data >$ .length 1:iSize + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
     $ io.FILE_ERROR_NONE != if =:: openError
       ..drop ## discard code file
       prevFile state .currentFile= ## reset file id
-      wasLibFile state .inLibFile=
-      isLibFile state .inLibFile=
+      wasLibFile progContext .inLibFile=
       fileId openError return
     end ..drop =:: f
     128 sb.create
@@ -3058,7 +3071,7 @@ proc(
     =:: fileBody
   f io.fclose $ io.FILE_ERROR_NONE != or readError io.FILE_ERROR_NONE != if =:: closeError
       prevFile state .currentFile= ## reset file id
-      wasLibFile state .inLibFile=
+      wasLibFile progContext .inLibFile=
       readError io.FILE_ERROR_NONE != if
         fileId readError return
       else
@@ -3096,7 +3109,7 @@ proc(
   state [] .currentFile =:: newFileId
   fileId newFileId == "fileId did not change" assert
   prevFile state .currentFile=
-  wasLibFile state .inLibFile=
+  wasLibFile progContext .inLibFile=
   state [] .openBlocks .length blockCount u> if
     ## XXX? print start of last block
     "unclosed block at end of file" sb.copyPtr

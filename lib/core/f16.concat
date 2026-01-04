@@ -12,13 +12,12 @@ end =:: NATIVE_F16
 ..builtIn.parse.f16:? ! if
   import core/f64
   import core/i64
+  import core/f32
   proc( char8 ptr.raw iSize -> f16 ) =>: export: static: :f16
     ..builtIn.parse.f64 f16.fromF64 return
   end
   namespace: f16
     ## TODO test conversion functions
-    import core/f32
-    import core/f64
     proc( f16 -> f32 ) =>: export: asF32
       bits =:: f16bits
       f16bits f16.SIGN_FLAG & ? =:: hasSign
@@ -231,6 +230,7 @@ namespace: f16
     proc( f16 f16 -> f16 ) : export: alias: add ..builtIn.add.f16
     proc( f16 f16 -> f16 ) : export: alias: sub ..builtIn.sub.f16
   else
+    import core/f32
     proc( f16 : a f16 : b -> f16 ) =>: export: add
       a asF32 b asF32 f32.add fromF32
     end
@@ -241,6 +241,7 @@ namespace: f16
   ..builtIn.mul.f16:? if
     proc( f16 f16 -> f16 ) : export: alias: mul ..builtIn.mul.f16
   else
+    import core/f32
     proc( f16 : a f16 : b -> f16 ) =>: export: mul
       a asF32 b asF32 f32.mul fromF32
     end
@@ -248,6 +249,7 @@ namespace: f16
   ..builtIn.div.f16:? if
     proc( f16 f16 -> f16 ) : export: alias: div ..builtIn.div.f16
   else
+    import core/f32
     proc( f16 : a f16 : b -> f16 ) =>: export: div
       a asF32 b asF32 f32.div fromF32
     end

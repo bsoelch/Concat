@@ -635,15 +635,24 @@ struct(
                AndOrData list : andOrData
            TypedConstant list : constantReferences
                  LabelId list : labelBuffer
+                stringBuilder : tmpString
                 CallData list : callData
            CompilerError list : errors
+                        string : basePath
+                        string : libPath
                       LabelId : mainLabelId
                        ProcId : mainProcId
+                         bool : saveGlobalTokens
+                         bool : inLibFile
                          bool : hasCheckEnum
                          bool : hasGetArgs
 ) =:: export: ProgramContext
 
-proc( -> ProgramContext ) =>: export: newProgramContext
+proc(
+  string : basePath
+  string : libPath
+  bool : saveGlobalTokens
+-> ProgramContext ) =>: export: newProgramContext
   ## ProgramContext
     id.newIdentifierContext
     16  ProgramFile     list.create
@@ -658,10 +667,15 @@ proc( -> ProgramContext ) =>: export: newProgramContext
     128 AndOrData       list.create
     32  TypedConstant   list.create
     32  LabelId         list.create
+    256 sb.create
     1024 CallData       list.create
     32  CompilerError   list.create
+    basePath
+    libPath
     id.LABEL_ID_NONE ## main LabelId
     NO_PROC ## main ProcId
+    saveGlobalTokens
+    false ## inLibFile
     false ## hasCheckEnum
     false ## has getArgs
   ProgramContext new
@@ -681,6 +695,7 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .andOrData list.free >$ .andOrData=
   $ .constantReferences list.free >$ .constantReferences=
   $ .labelBuffer list.free >$ .labelBuffer=
+  $ .tmpString sb.free >$ .tmpString=
   $ .callData list.free >$ .callData=
   $ .errors list.free >$ .errors=
   id.LABEL_ID_NONE >$ .mainLabelId=
