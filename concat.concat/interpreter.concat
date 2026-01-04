@@ -2065,8 +2065,8 @@ proc(
           ## newUnion
             context [] .typeBuffer list.asSlice typeOffset slice.tail
             context [] .labelBuffer list.asSlice labelOffset slice.tail
-            blockType .TYPE_UNION
-          typeContext types.newUnion $ ? if .data else ..drop
+            blockType .TYPE_UNION if types.UnionType .TAGGED else types.UnionType .RAW end
+          typeContext types.newUnion .else
             "could not create union-type" sb.copyPtr op [] .pos errors appendError
             EvalResult .Error return
           end =:: unionType

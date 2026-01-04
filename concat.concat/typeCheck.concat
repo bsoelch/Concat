@@ -1272,8 +1272,8 @@ proc(
   end
 end
 proc( i32 : index TypeCheckState ptr.mut : state -> ) =>: deleteOp
-  index OP_ARGUMENT == if return end
-  opValNOP state [] .compiledOps index list.at .data .val=
+  index OP_ARGUMENT == or index OP_EMPTY == if return end
+  opValNOP state [] .compiledOps index @[] .val=
 end
 proc( i32 : index TypeCheckState ptr.mut : state -> i32 ) =>: copyOp
   state [] .compiledOps .length i32 cast.u =:: copyIndex
@@ -1831,8 +1831,8 @@ proc(
     program [] .labelBuffer labelOffset list.tail =:: labels
     compType switch
       TUPLE case types labels optional.wrap typeContext types.newTuple break
-      UNION case types labels false typeContext types.newUnion break
-      RAW_UNION case types labels true typeContext types.newUnion break
+      UNION case types labels types.UnionType .TAGGED typeContext types.newUnion break
+      RAW_UNION case types labels types.UnionType .RAW typeContext types.newUnion break
       PROC case inTypes types labels CallingConvention.DEFAULT typeContext types.newProcedure break
       C_PROC case inTypes types labels CallingConvention .CCALL typeContext types.newProcedure break
     end .else
@@ -2659,7 +2659,13 @@ proc(
             end =:: idData
             state [] .blockMode switch
               TYPE case
-                stackVal [] .value .?TypeId .else ..drop
+                stackVal [] .value .?WildCard .if ..drop
+                  ## TODO make behaviour of _ dependent on container type
+                  ##  Union -> empty element, Proc -> anonymous generic, Struct -> compiler error
+                  types.primitive.TYPE stackVal .valueType=
+                  Type .Empty ConstValue .TypeId stackVal .value=
+                  Type .Empty
+                else .?TypeId ._else ..drop
                   stackVal [] .valueType
                 end idData .valueType=
                 idInfo .labelId labelContext id.labelFlags id.FLAG_STATIC & ? if

@@ -206,7 +206,7 @@ proc(
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
             labelBuffer [] list.asSlice labelOffset slice.tail
-            src .?Union ?
+            src .?Union ? if types.UnionType .TAGGED else types.UnionType .RAW end
             typeContext
           types.newUnion break
         Enum case

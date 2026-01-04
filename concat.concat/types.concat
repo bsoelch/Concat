@@ -1527,11 +1527,12 @@ namespace: types
     context .memory=
     initializerId InitializerId cast Type .Initializer return
   end
+  enum( TAGGED RAW ) =:: export: UnionType
   proc(
     iSize : eltCount
-    bool : isTagged
+    UnionType : unionType
   -> Type ) =>: export: computeEnumLabelType
-    isTagged ! if
+    unionType .RAW if
       Type .Empty
     else eltCount 0x80:iSize u< _if
       primitive.I8
@@ -1552,7 +1553,7 @@ namespace: types
     context [] .memory
       labels mixedArena.copySlice slice.freeze
         baseType $ ? if .data else ..drop
-          labels .length true computeEnumLabelType
+          labels .length UnionType .TAGGED computeEnumLabelType
         end
       EnumInfo new mixedArena.copyValue =:: enumId
     context .memory=
@@ -1561,7 +1562,7 @@ namespace: types
   proc(
     Type slice : elts
     LabelId slice : labels
-    bool : isTagged
+    UnionType : unionType
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: newUnion
     elts .length 0:iSize == or elts .length labels .length != if
@@ -1579,11 +1580,11 @@ namespace: types
           -1
         CompositeInfo new
         0
-        labels .length isTagged computeEnumLabelType
+        labels .length unionType computeEnumLabelType
       UnionInfo new mixedArena.copyValue =:: unionId
     context .memory=
     unionId UnionId cast
-      isTagged if Type .Union else Type .RawUnion end
+      unionType .TAGGED if Type .Union else Type .RawUnion end
     optional.wrap return
   end
 end
