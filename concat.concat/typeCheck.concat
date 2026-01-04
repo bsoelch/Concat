@@ -5122,8 +5122,8 @@ proc(
           end
           baseType0 .else ..unreachable end
             idContext [] .arraySizeBuffer list.asSlice
-              $ .length 1:iSize - slice.head
-            for =:: size
+              1 slice.tail
+            slice.reversed for =:: size
               ## newArrayType
                 types.ArrayType .ARRAY
                 size
@@ -5141,7 +5141,7 @@ proc(
               RAW_PTR_MUT case types.ArrayType .MUTABLE_RAW_POINTER break
               ARRAY case types.ArrayType .ARRAY break
             end
-            idContext [] .arraySizeBuffer $ .length 1:iSize - []
+            idContext [] .arraySizeBuffer 0 []
             typeContext
           types.newArrayType .else
             typeMod .ARRAY if
