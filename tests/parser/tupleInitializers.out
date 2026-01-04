@@ -1,6 +1,6 @@
 stack:
 -----------------
-named[3452]( "string" ) { { "" 0 } } pushed at ./tests/parser/tupleInitializers.concat:20:3
+named[3454]( "string" ) { { "" 0 } } pushed at ./tests/parser/tupleInitializers.concat:20:3
 -----------------
 stack:
 -----------------

@@ -1,4 +1,4 @@
 types:
 -----------------
-named[3444]( "anEnum" [ enum( A B C ) ] )
+named[3446]( "anEnum" [ enum( A B C ) ] )
 -----------------
