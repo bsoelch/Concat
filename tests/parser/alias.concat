@@ -1,5 +1,6 @@
 i32 =:: Label
 
+( char8 ptr.raw iSize -> Label ) : static: alias: :Label ..builtIn.parse.i32
 namespace: Label
   proc( Label Label -> Label ) : alias: and  i32.and
   proc( Label Label -> Label ) : alias: or   i32.or
