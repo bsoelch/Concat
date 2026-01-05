@@ -16,6 +16,9 @@ bootstrapQBE="./bootstrap/latest.ssa"
 # clear console
 ulimit -S -s 16384 ## increase stack size
 clear
+if [[ "$@" == *"-XX"* ]]; then
+  concatArgs=(${concatArgs[@]} -X)
+fi
 echo "-----------------------------------------" && {
   echo "recompile compiler"
   echo "-----------------------------------------"
