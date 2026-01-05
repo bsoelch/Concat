@@ -1670,35 +1670,39 @@ namespace: types
       end
     .?Procedure  ? return
   end
+  proc( Type : procType TypeContext ptr.mut : typeContext -> bool ) =>: export: isTypeGeneratorProc
+    procType typeContext types.getProcOut .else
+      false return
+    end =:: procOutTypes
+    procOutTypes .length 1:iSize == and procOutTypes 0 [] typeContext types.isType end
+  end
   proc( Type : proc TypeContext ptr : context -> ProcType ptr optional ) =>: getProcData
     proc context unwrapNamed
-      .?Procedure  .else ..drop
+      .?Procedure .else ..drop
         ProcType ptr optional.empty return
       end
     ProcType ptr cast optional.wrap return
   end
   proc( Type : proc TypeContext ptr : context -> Type slice optional ) =>: export: getProcIn
-    proc context getProcData $ optional.hasData if .data
+    proc context getProcData .if
       [] .inTypes optional.wrap return
-    else ..drop
+    else
       Type slice optional.empty return
     end
   end
   proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcLabels
-    proc context getProcData $ optional.hasData if
-      .data [] .labels
-    else ..drop
+    proc context getProcData .else
       LabelId slice.empty return
-    end
+    end [] .labels
   end
   proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcArgLabels
-    proc context getProcData $ optional.hasData if .data else ..drop
+    proc context getProcData .else
       LabelId slice.empty return
     end =:: procData
     procData [] .labels procData [] .inTypes .length slice.head
   end
   proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcRetLabels
-    proc context getProcData $ optional.hasData if .data else ..drop
+    proc context getProcData .else
       LabelId slice.empty return
     end =:: procData
     procData [] .labels procData [] .inTypes .length slice.tail
@@ -1724,16 +1728,16 @@ namespace: types
     i32 optional.empty return
   end
   proc( Type : proc TypeContext ptr : context -> Type slice optional ) =>: export: getProcOut
-    proc context getProcData $ optional.hasData if .data
+    proc context getProcData .if
       [] .outTypes optional.wrap return
-    else ..drop
+    else
       Type slice optional.empty return
     end
   end
   proc( Type : proc TypeContext ptr : context -> CallingConvention ) =>: export: getCallConvention
-    proc context getProcData $ optional.hasData if .data
+    proc context getProcData .if
       [] .callingConvention return
-    else ..drop
+    else
       CallingConvention.DEFAULT return
     end
   end
@@ -1743,7 +1747,7 @@ namespace: types
     Type : Tuple
   ) =:: export: ProcRet
   proc( Type : proc TypeContext ptr.mut : context -> ProcRet ) =>: export: getProcRet
-    proc context getProcData $ ? if .data else ..drop
+    proc context getProcData .else
       ProcRet .Empty return
     end
       $ [] .callingConvention =:: callConvention
@@ -1773,7 +1777,7 @@ namespace: types
     end
   end
   proc( Type : proc TypeContext ptr : context -> Type slice ) =>: export: getProcOutArgs
-    proc context getProcData $ ? if .data else ..drop
+    proc context getProcData .else
       Type slice.empty return
     end
       $ [] .callingConvention =:: callConvention

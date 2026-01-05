@@ -2423,6 +2423,7 @@ proc(
                 program [] .procedures
                   calledProcId i64 cast list.at .data
                 [] .isStatic | and state [] .mode .STATIC_PROC ! or
+                calledType typeContext types.isTypeGeneratorProc or
                 baseProcData .implementation .?Code .and .codeState .TYPE_CHECKING ! if
               calledType calledProc true op .pos state interpretCall ! if
                 continue.opLoop

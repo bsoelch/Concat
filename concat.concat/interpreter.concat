@@ -3615,8 +3615,7 @@ proc(
   end
   context [] .stack .length nArgs - =:: argsOffset
   procData [] .labelId =:: procName
-  procType typeContext types.getProcOut .data =:: procOutTypes
-  procOutTypes .length 1:iSize == and procOutTypes 0 [] typeContext types.isType if
+  procType typeContext types.isTypeGeneratorProc if
     implId 0 >= if
       codeImpl [] .implementations
         implId list.at .data
