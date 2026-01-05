@@ -514,6 +514,28 @@ namespace: list
   proc(
     type : auto: T
     T list : elts
+    i32 : from
+  -> T slice.mut ) =>: export: tail32mut
+    elts asMutableSlice from iSize cast.u slice.tail return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    i64 : from
+  -> T slice.mut ) =>: export: tail64mut
+    elts asMutableSlice from iSize cast.u slice.tail return
+  end
+  proc(
+    type : auto: T
+    T list : elts
+    iSize : from
+  -> T slice.mut ) =>: export: tailZmut
+    elts asMutableSlice from slice.tail return
+  end
+  overload: export: tailMut tail32mut tail64mut tailZmut end
+  proc(
+    type : auto: T
+    T list : elts
     i32 : count
   -> T slice ) =>: export: head32
     elts asSlice count iSize cast.u slice.head return
