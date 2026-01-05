@@ -1,1 +1,1 @@
-incompatible types for case-values: i32 and named[8859]( "u32" ) at ./tests/controlFlow/dotCase.concat:12:14
+incompatible types for case-values: i32 and named[4606]( "u32" ) at ./tests/controlFlow/dotCase.concat:12:14

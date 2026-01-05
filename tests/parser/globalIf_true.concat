@@ -10,20 +10,20 @@ struct(
 ) =:: i128
 
 _BIG_ENDIAN_ if
-  proc( i64 -> i64 ) =>: hton
+  proc( i64 -> i64 ) =>: export: hton
   end
-  proc( i64 i64 -> i128 ) =>: createI128
+  proc( i64 i64 -> i128 ) =>: export: createI128
     ..swap i128 new
   end
 else
-  proc( i64 -> i64 ) =>: hton
+  proc( i64 -> i64 ) =>: export: hton
     =:: mut: x
       x 0xffff_ffff:i64 & 32 << x 32 >>> 0xffff_ffff:i64 & | x=
       x 0xffff_0000_ffff:i64 & 16 << x 16 >>> 0xffff_0000_ffff:i64 & | x=
       x 0x00ff_00ff_00ff_00ff:i64 & 8 << x 8 >>> 0x00ff_00ff_00ff_00ff:i64 & | x=
     x return
   end
-  proc( i64 i64 -> i128 ) =>: createI128
+  proc( i64 i64 -> i128 ) =>: export: createI128
     i128 new
   end
 end

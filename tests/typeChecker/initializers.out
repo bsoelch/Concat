@@ -1,6 +1,6 @@
 types:
 -----------------
-named[3445]( "vec2" [ struct( f32 : x f32 : y ) ] )
+named[4608]( "vec2" [ struct( f32 : x f32 : y ) ] )
 struct( char8 1 ptr i32 2 array i32 )
 i32 4 array
 -----------------

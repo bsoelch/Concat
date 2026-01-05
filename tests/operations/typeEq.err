@@ -1,12 +1,17 @@
 no matching signature for arguments ( type { i32 }  type { i32 }  )
 candidates:
-  * proc( named[2542]( "type.pointer" ) : auto: static: P P[ 2900:LabelId ] : p P[ 2900:LabelId ] : q -> bool ) ptr.eq
-  * proc( named[2542]( "type.pointer" ) : auto: static: P P[ 2900:LabelId ] : p P[ 2900:LabelId ] : q -> bool ) ptr.eq
-  * proc( named[2548]( "type.enum" ) : auto: static: E E[ 3163:LabelId ] : a E[ 3163:LabelId ] : b -> bool ) std.default.eqEnum
-  * proc( named[2548]( "type.enum" ) : auto: static: E E[ 3163:LabelId ] : a E[ 3163:LabelId ] : b -> bool ) std.default.eqEnum
-  * proc( named[2566]( "type.namedPrimitive" ) : auto: static: P P[ 3177:LabelId ] : a P[ 3177:LabelId ] : b -> bool ) std.default.eqNamedPrimitive
+  * proc( named[4015]( "type.pointer" ) : auto: static: P P[ 3517:LabelId ] : p P[ 3517:LabelId ] : q -> bool ) ptr.eq
+  * proc( named[4015]( "type.pointer" ) : auto: static: P P[ 3517:LabelId ] : p P[ 3517:LabelId ] : q -> bool ) ptr.eq
+  * proc( named[4021]( "type.enum" ) : auto: static: E E[ 4088:LabelId ] : a E[ 4088:LabelId ] : b -> bool ) std.default.eqEnum
+  * proc( named[4021]( "type.enum" ) : auto: static: E E[ 4088:LabelId ] : a E[ 4088:LabelId ] : b -> bool ) std.default.eqEnum
+  * proc( named[4043]( "type.namedPrimitive" ) : auto: static: P P[ 4110:LabelId ] : a P[ 4110:LabelId ] : b -> bool ) std.default.eqNamedPrimitive
   ...
  at ./tests/operations/typeEq.concat:1:9
-could not evaluate global operation: get ( undefined ) : export: procedure bundle  "==" at ./tests/operations/typeEq.concat:1:9
- at ./tests/operations/typeEq.concat:1:9
-wrong constant value for assert, expected boolean got: i32 at ./tests/operations/typeEq.concat:1:49
+wrong type for assertion expected bool got type at ./tests/operations/typeEq.concat:1:49
+unable to fold constants in global code:
+constant ( type ) : i32 at ./tests/operations/typeEq.concat:1:1
+constant ( type ) : i32 at ./tests/operations/typeEq.concat:1:5
+"this should not crash the compiler" assert at ./tests/operations/typeEq.concat:1:49
+ at ./tests/operations/typeEq.concat:1:49
+non empty stack at end of file :
+type at ./tests/operations/typeEq.concat:1:1

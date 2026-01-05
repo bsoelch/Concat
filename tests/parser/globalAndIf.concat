@@ -4,28 +4,28 @@ true =:: _C_
 false =:: _D_
 
 _A_ and _B_ if
-  true =:: A_and_B
+  true
 else
-  false =:: A_and_B
-end
+  false
+end =:: A_and_B
 
 _A_ ! and _B_ ! if
-  true =:: not_A_and_not_B
+  true
 else
-  false =:: not_A_and_not_B
-end
+  false
+end =:: not_A_and_not_B
 
 _A_ or _B_ if
-  true =:: A_or_B
+  true
 else
-  false =:: A_or_B
-end
+  false
+end =:: A_or_B
 
 _A_ ! or _B_ ! if
-  true =:: not_A_or_not_B
+  true
 else
-  false =:: not_A_or_not_B
-end
+  false
+end =:: not_A_or_not_B
 
 _A_ or _B_ and _C_ if else
   "unreachable" ..compiler.error

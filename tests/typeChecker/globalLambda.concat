@@ -6,5 +6,5 @@ proc( -> ) =>
   usedByLambda
 end =:: f
 proc( -> ) =>: main
-  f ()
+  f@ ()
 end
