@@ -3597,6 +3597,8 @@ proc(
       calledType
       builtInImpl [] .builtIn
     pos context tryEvaluateBuiltIn return
+  else .?Extern ._if []
+    args pos context evaluateExternCall return
   else .?Code ._else ..drop
     "unexpected implementation type" sb.copyPtr
     pos errors appendError
