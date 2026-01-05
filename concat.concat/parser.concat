@@ -2782,6 +2782,18 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "..?parser.find.":s string.startsWith _if =:: mut: opName
         opName "..?parser.find." ..length string.tail =:: idName
+        _EXPERIMENTAL_ if ## TODO remove parser.find after switching to new front-end
+          ## redirect to ..?find for compatability with old front-end
+          ## opPrintIdentifierMatches
+            idName
+              id.FLAG_NONE
+              fileState [] .wordStart
+              state [] .currentFile
+            labelContext id.newLabel
+            fileState [] .wordStart
+          opPrintIdentifierMatches state appendOp
+          return
+        end
         16 id.IdentifierMatch list.create =:: mut: matches
         idName true idContext matches@ optional.wrap id.searchIdentifier ..drop.3
         "-----------------\n" sb.copyPtr

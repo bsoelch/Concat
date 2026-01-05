@@ -5237,27 +5237,71 @@ proc(
         op .pos errors appendError
         continue.opLoop
       compilerInfo case
-        ## remeber operation for interpreter
-        op state appendOp ..drop
+        state isGlobal ! if
+          ## remeber operation for interpreter
+          op state appendOp ..drop
+        end
         op .val .compilerInfo switch
-          typeInfo case
-            op .val .compilerInfo .typeInfo =:: info
+          typeInfo .case =:: info
             ## printTypes
               false
               info .count
               info .depth
             state printTypes
             continue.opLoop
-          stackInfo case
+          stackInfo .case =:: info
             ## printTypes
               true
-              op .val .compilerInfo .stackInfo
+              info
               0
             state printTypes
             continue.opLoop
           compiledOps case
             continue.opLoop ## TODO print ops
-          find case
+          find .case =:: idLabel
+            16 id.IdentifierMatch list.create =:: mut: matches
+            ## TODO? directly search by label
+            idLabel labelContext id.getLabelName true idContext matches@ optional.wrap id.searchIdentifier ..drop.3
+            program [] .tmpString
+              sb.clear
+              "-----------------\n" sb.appendS
+              "identifier \"" sb.appendS idLabel labelContext sb.appendLabelName "\":\n" sb.appendS
+              0:iSize while $ matches .length u< do =:: i
+                matches i list.at .data =:: match
+                match [] .nameData .labelId =:: labelId
+                match [] .nameData .aliasId =:: aliasId
+                labelId idContext id.getIdentifier
+                  ! "matched identifier exists" assert
+                =:: idData
+                " - " sb.appendS
+                aliasId id.NO_ALIAS != if
+                  "alias (declared at " sb.appendS
+                  aliasId idContext id.getAliasPos sb.appendPos
+                  ")  to " sb.appendS
+                end
+                idData id.asIdInfo labelContext sb.appendIdInfo
+                " ( " sb.appendS
+                idData [] .valueType typeContext sb.appendType
+                idData [] .constValue .?None ? ! if
+                  " [ " sb.appendS
+                  idData [] .constValue typeContext sb.appendConstant
+                  " ]" sb.appendS
+                end
+                " ) declared at " sb.appendS
+                labelId labelContext id.labelPos =:: pos?
+                pos? optional.hasData if
+                  pos? .data sb.appendPos
+                else
+                  "?" sb.appendS
+                end
+                '\n' sb.appendC
+                i 1:iSize +
+              end ..drop
+              "-----------------\n" sb.appendS
+              io.stdOut $1 io.fputSb ..drop
+              sb.clear
+            program .tmpString=
+            matches list.free ..drop
             continue.opLoop ## TODO find
         end
         break
