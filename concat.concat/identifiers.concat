@@ -588,6 +588,9 @@ namespace: id
       "invalid label id" sb.copyPtr declaredAt errors appendError
       LABEL_ID_NONE ID_NONE_DATA true return
     end
+    _EXPERIMENTAL_ if
+      label labelContext id.currentNamespace labelContext id.setLabelNamespace
+    end
     label labelContext labelFlags =:: flags
     flags FLAG_MUTABLE & ? if
       idType .TYPE if
