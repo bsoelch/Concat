@@ -725,10 +725,14 @@ proc(
   end ..drop
   popConstants if
     isConstant if
+      0 =:: mut: dropCount
       constOffsets for $ =:: i
         state tryDeleteOp if ## TODO error handling
-          "failed to delete constant operation" ..panic
+          dropCount 1 + dropCount=
         end
+      end
+      dropCount 0 != if
+        dropCount StackModType .DROP pos opStackMod state appendOp ..drop
       end
     end
     constOffsets list.free ..drop
