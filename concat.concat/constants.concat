@@ -290,6 +290,31 @@ namespace: constant
     ## at most 1/8 non-printable chars
     nonPrintable ints .length 4:iSize + 8:iSize / u<= return
   end
+
+  proc( Type : mut: valType TypeContext ptr.mut : typeContext -> ConstValue ) =>: export: defaultVal
+    valType
+      typeContext types.unwrapNamed
+      .?CType .if types.cTypeAsType typeContext types.unwrapNamed end
+    valType=
+    valType switch
+      Undefined Empty Align case ConstValue .None return
+      PrimitiveType .case switch
+        BOOL case false ConstValue .Bool return
+        CHAR8 case '\x00' ConstValue .Char return
+        I8 I16 I32 I64  CHAR16 CHAR32 case 0 ConstValue .Int return
+        F32 F64 case 0 ConstValue .Float return
+        TYPE case Type .Undefined ConstValue .TypeId return
+      end break
+      Pointer MutablePointer RawPointer MutableRawPointer Procedure case
+        0 ConstValue .Int return
+      ArrayType Struct Union RawUnion UnionElement Enum case
+        "unimplemented: composite default values" ..panic
+      CType NamedType case ..unreachable
+      TypeSet AutoType GenericType GeneratedType
+          IntLiteral Initializer case
+        "unsupported type for zero-initialized constant" ..panic
+    end
+  end
 end
 namespace: sb
   proc( stringBuilder char8 : c -> stringBuilder ) =>: export: appendEscapedChr

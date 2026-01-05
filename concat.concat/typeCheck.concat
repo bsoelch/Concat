@@ -624,48 +624,62 @@ proc(
   end
   true return
 end
+union( _ : Err _ : Match ConstValue slice : Constant ) =:: TypeMatch
 proc(
   Type slice : types
   string : name
   ## number of values already popped by instruction
-  i32 : stackCastOffset0
+  i32 : mut: stackCastOffset
+  bool : popConstants ## TODO? make argument static to reduce runtime const of if-checks
   FilePosition : pos
   TypeCheckState ptr.mut : state
--> bool ) =>: requireTypes
+-> TypeMatch ) =>: requireTypes
   state [] .program .errors =:: errors
   state [] .program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  types .length i32 list.create =:: mut: argOffsets
-  stackCastOffset0 =:: mut: stackCastOffset
+  state [] .constBuffer .length =:: constOffset
+  i32 list.empty =:: mut: constOffsets
+  true =:: mut: isConstant
   1:iSize while $ types .length u<= do =:: i
     types types .length i - [] =:: expectedType
-    state [] .stack branchTree.depth 0 <= if
+    state .stack branchTree.peek .else
       expectedType .?Empty ? if
+        popConstants and isConstant if
+          state [] .constBuffer ConstValue .None list.append state .constBuffer=
+          constOffsets OP_EMPTY list.append constOffsets=
+        end
         i 1:iSize + continue ## skip empty arguments if no values on stack
       end
       "not enough types for " sb.copyPtr
         name sb.appendStr
       pos errors appendError
-      true return
-    end
-    state .stack branchTree.peek .data =:: peekedInfo
+      TypeMatch .Err return
+    end =:: peekedInfo
     peekedInfo [] .valueType .?Empty ? and expectedType .?Empty ? ! if
       state .stack branchTree.pop ..drop ## discard empty value
       i continue ## no not increment index
     end
-    ## append dummy value for argument offset
-    argOffsets
-      OP_UNLINKED list.append
-    argOffsets=
     expectedType .?Empty ? and peekedInfo [] .valueType .?Empty ? ! if
       stackCastOffset 1 - stackCastOffset= ## update cast offset
+      popConstants and isConstant if
+        state [] .constBuffer ConstValue .None list.append state .constBuffer=
+        constOffsets OP_EMPTY list.append constOffsets=
+      end
       i 1:iSize + continue ## skip empty if stack value not empty
     end
-    state .stack branchTree.pop .data [] =:: typeInfo
-    ## set argument offset to correct value
-    typeInfo .opIndex argOffsets list.peek .data =[]
+    state .stack branchTree.pop .else
+      "stack underflow" ..panic
+    end [] =:: typeInfo
+    popConstants and isConstant if
+      typeInfo .value .?None ? if
+        false isConstant=
+      else
+        state [] .constBuffer typeInfo .value list.append state .constBuffer=
+        constOffsets typeInfo .opIndex list.append constOffsets=
+      end
+    end
     typeInfo .valueType expectedType types.typeEquals if
       i 1:iSize + continue
     end
@@ -674,6 +688,11 @@ proc(
       expectedType
     typeContext types.canAutoCast if
       typeInfo expectedType SignType .NONE pos state tryCastConstant ! if
+        ## update constant value
+        popConstants and isConstant and state [] .compiledOps typeInfo .opIndex list.at .and
+            .val [] .?Constant .if
+          state [] .constBuffer list.peek .else "missing constant" ..panic end  =[]
+        end
         i 1:iSize + continue
       else typeInfo .valueType typeContext types.isType and expectedType typeContext types.isType _if
         ## TODO! check type-sets
@@ -684,12 +703,11 @@ proc(
         i 1:iSize - i32 cast stackCastOffset +
         expectedType
         pos
-      opAutoCast state appendOp =:: opId
+      opAutoCast state appendOp ..drop
       typeInfo .opIndex 0 < if
         ## no index update necessary
         i 1:iSize + continue
       end
-      opId argOffsets list.peek .data =[]
       i 1:iSize + continue
     end
     "wrong type for " sb.copyPtr
@@ -701,8 +719,25 @@ proc(
     pos errors appendError
     i 1:iSize +
   end ..drop
-  argOffsets list.free ..drop
-  false return
+  popConstants if
+    isConstant if
+      constOffsets for $ =:: i
+        state tryDeleteOp if ## TODO error handling
+          "failed to delete constant operation" ..panic
+        end
+      end
+    end
+    constOffsets list.free ..drop
+    state [] .constBuffer
+      $ constOffset list.tailMut =:: constValues
+      constOffset list.setLength
+    state .constBuffer=
+    isConstant if
+      constValues slice.reverse ## TODO? push values in reverse order
+      constValues slice.freeze TypeMatch .Constant return
+    end
+  end
+  TypeMatch .Match return
 end
 proc( i32 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: discardValues
   state [] .program =:: program
@@ -1228,6 +1263,9 @@ proc(
   i32 : index
   TypeCheckState ptr.mut : state
 -> bool ) =>: canDeleteOp
+  index OP_ARGUMENT == or index OP_EMPTY == if
+    true return
+  end
   index state currentBlockStart < if
     false return
   end
@@ -1397,9 +1435,9 @@ proc(
   ## requireTypes
     outTypes
     "return statement":s
-    0
+    0 false
     op [] .pos
-  state requireTypes if
+  state requireTypes .?Err ? if
     return
   end
   op [] state appendOp ..drop
@@ -1470,9 +1508,9 @@ proc(
     ## requireTypes
       args@ slice.wrap
       "element write":s
-      0
+      0 false
       pos
-    state requireTypes  if
+    state requireTypes .?Err ? if
       return
     end
     ## opSetElement
@@ -2462,10 +2500,10 @@ proc(
                 ## requireTypes
                   elt@ slice.wrap
                   "procedure argument":s
-                  offset
+                  offset false
                   op .pos
                   state
-                requireTypes if
+                requireTypes .?Err ? if
                   continue.opLoop
                 end
                 offset 1 + offset=
@@ -2509,10 +2547,10 @@ proc(
         ## requireTypes
           calledType@ slice.wrap
           "procedure pointer":s
-          0
+          0 false
           op .pos
           state
-        requireTypes if continue.opLoop end
+        requireTypes .?Err ? if continue.opLoop end
         calledType op@ .dataType=
         calledType typeContext types.isPointer if
           calledType typeContext types.getBaseType
@@ -2523,10 +2561,10 @@ proc(
         ## requireTypes
           inTypes
           "procedure argument":s
-          1
+          1 false
           op .pos
           state
-        requireTypes if continue.opLoop end
+        requireTypes .?Err ? if continue.opLoop end
         op state appendOp ..drop
         procType typeContext types.getProcOut .data
           op .pos
@@ -2633,10 +2671,10 @@ proc(
         ## requireTypes
           op@ .dataType slice.wrap
           "set identifier":s
-          0
+          0 false
           op .pos
           state
-        requireTypes if continue.opLoop end
+        requireTypes .?Err ? if continue.opLoop end
         op state appendOp ..drop
         continue.opLoop
       declareId .case =:: idInfo
@@ -2821,9 +2859,9 @@ proc(
               ## requireTypes
                 op@ .dataType slice.wrap
                 "initialization":s
-                0
+                0 false
                 op .pos
-              state requireTypes if ## TODO? can requireTypes change constVal
+              state requireTypes .?Err ? if ## TODO? can requireTypes change constVal
                 continue.opLoop
               end
             end
@@ -3106,28 +3144,37 @@ proc(
               elementIndex
             constContext newUnionConst constValue=
           else
-            state .stack branchTree.peek =:: value?
-            value? optional.hasData and
-                value? .data [] .value .?None ? ! if
-              ## newUnionConst
-                value? .data [] .value
-                elementIndex
-              constContext newUnionConst constValue=
+            ## requireTypes
+              eltType@ slice.wrap
+              "enum-creation":s
+              0 true
+              op .pos
+            state requireTypes switch
+              Err case continue.opLoop
+              Match case break
+              Constant .case =:: elts
+                elts .length 1 == "exactly one argument for union" assert
+                ## newUnionConst
+                  elts 0 []
+                  elementIndex
+                constContext newUnionConst constValue=
+              break
             end
-          ## requireTypes
-            eltType@ slice.wrap
-            "enum-creation":s
-            0
-            op .pos
-          state requireTypes _if
-            continue.opLoop
           end
           ## XXX discard operation and push constant if there is a constant value
-          ## pushValue
-            containerType
-            constValue
-            containerType elementIndex op .pos opNewEnum
-          state pushValue
+          constValue .?None ? if
+            ## pushValue
+              containerType
+              constValue
+              containerType elementIndex op .pos opNewEnum
+            state pushValue
+          else
+            ## pushConstant
+              constValue
+              containerType
+              op .pos
+            state pushConstant
+          end
           elementLabel state replaceLabel
           continue.opLoop
         end
@@ -3150,7 +3197,7 @@ proc(
           op .pos errors appendError
         end
         ## XXX compile-time evaluation
-        enumType@ slice.wrap "getEnumLabel":s 0 op .pos state requireTypes if
+        enumType@ slice.wrap "getEnumLabel":s 0 false op .pos state requireTypes .?Err ? if
           continue.opLoop
         end
         enumType op@ .dataType=
@@ -3230,7 +3277,14 @@ proc(
           op .dataType typeContext types.isFixedSize ! if
             "variable size arrays are not supported" sb.copyPtr op .pos errors appendError
           end
-          op .dataType ConstValue .None op state pushValue
+          op .dataType typeContext types.getArraySize .Int =:: count
+          op .dataType
+            state isGlobal if ## TODO? always create constant if count is small
+              op .dataType typeContext constant.defaultVal
+            else
+              ConstValue .None
+            end
+          op state pushValue
           continue.opLoop
         end
         op .dataType typeContext types.isTuple if
@@ -3238,13 +3292,21 @@ proc(
           ## requireTypes
             op .dataType typeContext types.compositeElts
             "tuple element":s
-            0
+            0 true
             op .pos
-          state requireTypes if
+          state requireTypes switch
+            Err case continue.opLoop
+            Match case
+              op .dataType ConstValue .None op state pushValue
+            continue.opLoop
+            Constant .case
+              constContext newArrayConst
+                op .dataType
+                op .pos
+              state pushConstant
             continue.opLoop
           end
-          op .dataType ConstValue .None op state pushValue
-          continue.opLoop
+          ..unreachable
         end
         break
       equalityOperator case
@@ -3292,9 +3354,9 @@ proc(
         ## requireTypes
           params@ slice.wrap
           "equality-check":s
-          0
+          0 false
           op .pos
-        state requireTypes if
+        state requireTypes .?Err ? if
           continue.opLoop
         end
         types.primitive.BOOL ConstValue .None op state pushValue
@@ -3421,9 +3483,9 @@ proc(
             ## requireTypes
               types.primitive.BOOL@ slice.wrap
               "and/or-condition":s
-              0
+              0 false
               op .pos
-            state requireTypes if
+            state requireTypes .?Err ? if
               continue.opLoop
             end
             false 1 op .pos state clearReferences
@@ -3488,9 +3550,9 @@ proc(
             ## requireTypes
               types.primitive.BOOL@ slice.wrap
               "if-condition":s
-              0
+              0 false
               op .pos
-            state requireTypes if
+            state requireTypes .?Err ? if
               continue.opLoop
             end
             false 1 op .pos state clearReferences
@@ -3720,9 +3782,9 @@ proc(
             ## requireTypes
               switchType@ slice.wrap
               "switch value":s
-              0
+              0 false
               op .pos
-            state requireTypes if
+            state requireTypes .?Err ? if
               continue.opLoop
             end
             switchType typeContext types.isUnion if
@@ -4003,9 +4065,9 @@ proc(
             ## requireTypes
               types.primitive.BOOL@ slice.wrap
               "and/or-condition":s
-              0
+              0 false
               op .pos
-            state requireTypes if
+            state requireTypes .?Err ? if
               continue.opLoop
             end
             false 1 op .pos state clearReferences
@@ -4047,9 +4109,9 @@ proc(
             ## requireTypes
               types.primitive.BOOL@ slice.wrap
               "while-condition":s
-              0
+              0 false
               op .pos
-            state requireTypes if
+            state requireTypes .?Err ? if
               continue.opLoop
             end
             ## passing an offset of 1 ensures that cast-offsets consider do-condition
@@ -4243,9 +4305,9 @@ proc(
             ## requireTypes
               types.primitive.BOOL@ slice.wrap
               "and/or-condition":s
-              0
+              0 false
               op .pos
-            state requireTypes if
+            state requireTypes .?Err ? if
               continue.opLoop
             end
             blockId op@ .val .block .blockId=
@@ -4884,9 +4946,9 @@ proc(
         ## requireTypes
           types.primitive.BOOL@ slice.wrap
           "assertion":s
-          0
+          0 false
           op .pos
-        state requireTypes if
+        state requireTypes .?Err ? if
           continue.opLoop
         end
         op state appendOp ..drop
