@@ -779,14 +779,14 @@ namespace: sb
   -> stringBuilder ) =>: appendPrimitiveArrayConstQBE
     sb
       0:iSize while $ value .length u< do =:: i
+        i 0 != if ',' sb.appendC end
         valueChar sb.appendC
         ' ' sb.appendC
         value i [] i64 cast.u 0xff & sb.appendI
-        ',' sb.appendC
         i 1:iSize +
       end ..drop
       nullTerminate if
-        "b 0" sb.appendS
+        ",b 0" sb.appendS
       end
     return
   end
