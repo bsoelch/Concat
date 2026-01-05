@@ -1,6 +1,7 @@
 import core/ptr
 import core/itr
 
+import array
 import mem
 import optional
 import itrs/array
@@ -692,6 +693,15 @@ namespace: slice
   end
   overload: export: reversed
     getReverseItr getReverseItrMut
+  end
+  proc(
+    type : auto: T
+    T slice.mut : elts
+  -> ) =>: export: reverse
+    ## reverse
+      elts .data
+      elts .length
+    array.reverse
   end
   proc( type : auto: T
     T slice : elts
