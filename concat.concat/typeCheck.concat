@@ -645,7 +645,7 @@ proc(
   1:iSize while $ types .length u<= do =:: i
     types types .length i - [] =:: expectedType
     state .stack branchTree.peek .else
-      expectedType .?Empty ? if
+      expectedType typeContext types.isEmpty if
         popConstants and isConstant if
           state [] .constBuffer ConstValue .None list.append state .constBuffer=
           constOffsets OP_EMPTY list.append constOffsets=
@@ -657,11 +657,11 @@ proc(
       pos errors appendError
       TypeMatch .Err return
     end =:: peekedInfo
-    peekedInfo [] .valueType .?Empty ? and expectedType .?Empty ? ! if
+    peekedInfo [] .valueType typeContext types.isEmpty and expectedType typeContext types.isEmpty ! if
       state .stack branchTree.pop ..drop ## discard empty value
       i continue ## no not increment index
     end
-    expectedType .?Empty ? and peekedInfo [] .valueType .?Empty ? ! if
+    expectedType typeContext types.isEmpty and peekedInfo [] .valueType typeContext types.isEmpty ! if
       stackCastOffset 1 - stackCastOffset= ## update cast offset
       popConstants and isConstant if
         state [] .constBuffer ConstValue .None list.append state .constBuffer=
@@ -681,6 +681,10 @@ proc(
       end
     end
     typeInfo .valueType expectedType types.typeEquals if
+      i 1:iSize + continue
+    end
+    ## treat all empty types as equal
+    typeInfo .valueType typeContext types.isEmpty and expectedType typeContext types.isEmpty if
       i 1:iSize + continue
     end
     ## canAutoCast
@@ -2485,8 +2489,8 @@ proc(
                   op .pos errors appendError
                 end
               else ## next argument at top of stack
-                elt .?Empty ? and
-                    state .stack branchTree.peek .and .valueType .?Empty ? ! if
+                elt typeContext types.isEmpty and
+                    state .stack branchTree.peek .and .valueType [] typeContext types.isEmpty ! if
                   continue ## skip empty arguments with non-empty value
                 end
                 elt typeContext types.isType and state .stack branchTree.peek .if =:: opData

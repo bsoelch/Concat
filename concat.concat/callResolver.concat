@@ -37,14 +37,14 @@ struct(
   bool : needsParam
 ) =:: CallSignatureInfo
 
-proc( GenericArg : val -> bool ) =>: isEmptyConstant
+proc( GenericArg : val TypeContext ptr.mut : typeContext -> bool ) =>: isEmptyConstant
   val switch
     nonEmpty case false return
     value case val .value break
     fixed case val .fixed break
   end =:: constVal
   constVal .?None ? or
-    constVal .?TypeId .and .?Empty ?
+    constVal .?TypeId .and typeContext types.isEmpty
   end return
 end
 
@@ -364,13 +364,16 @@ proc(
         oldValue? .data [] =:: oldValue
         oldValue switch
           nonEmpty case
-            src .?Empty ? if
+            src typeContext types.isEmpty if
               true return
             end
             src break
           fixed .case .?TypeId .else ..drop
               false return
             end =:: oldTypeId
+            src typeContext types.isEmpty and oldTypeId typeContext types.isEmpty if
+              src break
+            end
             exactMatch if ## XXX? allow unwrapping named types for exact match
               src oldTypeId types.typeEquals ! if
                 true return
@@ -383,6 +386,9 @@ proc(
           value .case .?TypeId .else ..drop
               false return
             end =:: oldIdType
+            src typeContext types.isEmpty and oldIdType typeContext types.isEmpty if
+              src break
+            end
             exactMatch if
               oldIdType src typeContext types.canAutoCast ! if
                 true return
@@ -647,7 +653,7 @@ in case of a draw signatures with lower total weight will be prioritized.
 This is mainly to prioritize functions acting on smaller number types over larger number types.
 +#
 proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
-  t .?Empty ? if
+  t typeContext types.isEmpty if
     0 return
   end
   t typeContext types.unwrapNamed types.isPrimitive if
@@ -840,7 +846,7 @@ proc(
                 typeContext types.unwrapNamed
               types.getGenericTypeId LabelId cast =:: paramId
               current .genericValues paramId map.at =:: typeVal?
-              typeVal? optional.hasData and typeVal? .data [] isEmptyConstant
+              typeVal? optional.hasData and typeVal? .data [] typeContext isEmptyConstant
             end and stackType typeContext types.isEmpty ! if
           ## empty parameter, non-empty argument
           current [] .paramInfo
@@ -933,7 +939,7 @@ proc(
             current .genericValues paramLabel map.at .and =:: prevVal
           prevVal [] switch
             nonEmpty case
-              stackVal .?TypeId .and .?Empty ? end
+              stackVal .?TypeId .and typeContext types.isEmpty end
               break
             value case
               prevVal [] .value stackVal constantEquals !
