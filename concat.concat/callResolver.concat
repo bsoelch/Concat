@@ -68,6 +68,7 @@ proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
 end
 
 i32 =:: ReplaceFlags
+( char8 ptr.raw iSize -> ReplaceFlags ) : static: alias: :ReplaceFlags ..builtIn.parse.i32
 namespace: ReplaceFlags
   ( ReplaceFlags ReplaceFlags -> ReplaceFlags ) : alias: or i32.or
   ( ReplaceFlags ReplaceFlags -> ReplaceFlags ) : alias: and i32.and

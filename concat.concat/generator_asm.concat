@@ -795,6 +795,7 @@ namespace: asm
   struct( LabelId : label i32 : offset ) =::  LabelAndOffset
   struct( i32 : const i32 : offset ) =:: ConstAndOffset
   i8 =:: BitMoveFlags
+  ( char8 ptr.raw iSize -> BitMoveFlags ) : static: alias: :BitMoveFlags ..builtIn.parse.i8
   namespace: BitMove
     0b11:BitMoveFlags =:: DST_TYPE_MASK
     0b00:BitMoveFlags =:: DST_TYPE_EMPTY

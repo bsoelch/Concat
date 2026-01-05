@@ -453,6 +453,7 @@ proc(
   BlockId : blockId
   CompilerContext ptr.mut : context
 -> ) =>: openIfBlock
+  using branchTree.:NodeId
   ## IfBlockInfo
     8 branchTree.NodeId list.create
     8 BranchId list.create
@@ -460,7 +461,7 @@ proc(
     8 BranchId list.create
     context [] .currentBranch
     context .stackInfo branchTree.startBranch
-    -1:branchTree.NodeId
+    -1:NodeId
     blockId
     false
     false

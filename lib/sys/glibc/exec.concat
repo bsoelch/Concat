@@ -7,6 +7,7 @@ import sys
 ## interface to gnu-libc version of exec
 namespace: c
   i32 =:: pid_t
+  ( char8 ptr.raw iSize -> pid_t ) : static: alias: :pid_t ..builtIn.parse.i32
   0:pid_t =:: FORK_CHILD
   -1:pid_t =:: FORK_FAILURE
   proc.c( ..ctype.int : options ..ctype.int ptr.mut : status pid_t : id  -> pid_t ) : extern: waitpid

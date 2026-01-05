@@ -38,9 +38,11 @@ struct(
 
 namespace: id
   i32 =:: export: AliasId
+  ( char8 ptr.raw iSize -> AliasId ) : static: export: alias: :AliasId ..builtIn.parse.i32
   -1:AliasId =:: export: NO_ALIAS
   struct( FilePosition : declaredAt ) =:: AliasInfo
   i32 =:: ImportId
+  ( char8 ptr.raw iSize -> ImportId ) : static: alias: :ImportId ..builtIn.parse.i32
   -1:ImportId =:: export: NO_IMPORTS
   struct( FileId : fileId ImportId : prev ) =:: ImportInfo
   struct(

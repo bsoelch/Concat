@@ -1162,6 +1162,7 @@ namespace: types
 
   ## composite types
   i32 =:: CompositeFlags
+  ( char8 ptr.raw iSize -> CompositeFlags ) : static: alias: :CompositeFlags ..builtIn.parse.i32
   ## TODO update flags
     0:CompositeFlags =:: COMP_FLAG_NONE
     2:CompositeFlags =:: COMP_FLAG_EMPTY

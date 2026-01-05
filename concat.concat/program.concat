@@ -80,6 +80,7 @@ struct(
   LabelId slice.mut : retValueLocations
 ) =:: CallData
 i32 =:: CallDataId
+( char8 ptr.raw iSize -> CallDataId ) : static: alias: :CallDataId ..builtIn.parse.i32
 -1:CallDataId =:: NO_CALL_DATA
 struct(
   ProcId : procId

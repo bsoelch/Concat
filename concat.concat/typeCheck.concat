@@ -27,6 +27,7 @@ struct(
   FilePosition : pos
 ) =:: BranchPoint
 i32 =:: IfBlockFlags
+( char8 ptr.raw iSize -> IfBlockFlags ) : static: alias: :IfBlockFlags ..builtIn.parse.i32
 namespace: IfBlockFlags
   0:IfBlockFlags =:: none
   0x0001:IfBlockFlags =:: hasIf

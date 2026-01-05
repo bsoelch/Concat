@@ -68,6 +68,7 @@ namespace: optimizerFlags
 end
 
 i32 =:: export: FileId
+( char8 ptr.raw iSize -> FileId ) : static: export: alias: :FileId ..builtIn.parse.i32
 -1:FileId =:: export: FILE_ID_NONE
 -2:FileId =:: export: FILE_ID_BUILT_IN
 struct( string : fileName FileId : fileId i32 : line i32 : posInLine ) =:: export: FilePosition
@@ -107,15 +108,20 @@ proc( CompilerError : a CompilerError : b -> i32 ) =>: export: errorCmp
 end
 
 i32 =:: export: LabelId
+( char8 ptr.raw iSize -> LabelId ) : static: export: alias: :LabelId ..builtIn.parse.i32
 i64 =:: export: ProcId
+( char8 ptr.raw iSize -> ProcId ) : static: export: alias: :ProcId ..builtIn.parse.i64
 -1:ProcId =:: export: NO_PROC
 i64 =:: export: ProcBundleId
+( char8 ptr.raw iSize -> ProcBundleId ) : static: export: alias: :ProcBundleId ..builtIn.parse.i64
 
 proc( LabelId -> i32 ) =>: export: labelHash i32 cast end
 proc( LabelId LabelId -> bool ) =>: export: labelEq == end
 
 i32 =:: export: NamespaceId
+( char8 ptr.raw iSize -> NamespaceId ) : static: export: alias: :NamespaceId ..builtIn.parse.i32
 i32 =:: export: NamespaceImportId
+( char8 ptr.raw iSize -> NamespaceImportId ) : static: export: alias: :NamespaceImportId ..builtIn.parse.i32
 namespace: id
   -1:LabelId =:: export: LABEL_ID_NONE
   -1:NamespaceId =:: export: NAMESPACE_ID_NONE

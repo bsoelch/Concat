@@ -4,6 +4,7 @@ import list
 
 namespace: branchTree
   i32 =:: export: NodeId
+  ( char8 ptr.raw iSize -> NodeId ) : static: export: alias: :NodeId ..builtIn.parse.i32
   -1:NodeId =:: export: EMPTY
   ( type : T -> type ) =>: export: Node
     struct(
