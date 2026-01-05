@@ -3278,13 +3278,14 @@ proc(
             "variable size arrays are not supported" sb.copyPtr op .pos errors appendError
           end
           op .dataType typeContext types.getArraySize .Int =:: count
-          op .dataType
-            state isGlobal if ## TODO? always create constant if count is small
-              op .dataType typeContext constant.defaultVal
-            else
-              ConstValue .None
-            end
-          op state pushValue
+          state isGlobal if ## TODO? always create constant if count is small
+            op .dataType typeContext constContext constant.defaultVal
+              op .dataType
+              op .pos
+            state pushConstant
+          else
+            op .dataType ConstValue .None op state pushValue
+          end
           continue.opLoop
         end
         op .dataType typeContext types.isTuple if

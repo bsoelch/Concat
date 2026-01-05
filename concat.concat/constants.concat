@@ -291,7 +291,11 @@ namespace: constant
     nonPrintable ints .length 4:iSize + 8:iSize / u<= return
   end
 
-  proc( Type : mut: valType TypeContext ptr.mut : typeContext -> ConstValue ) =>: export: defaultVal
+  proc(
+    Type : mut: valType
+    TypeContext ptr.mut : typeContext
+    ConstantContext ptr.mut : context
+  -> ConstValue ) =>: export: defaultVal
     valType
       typeContext types.unwrapNamed
       .?CType .if types.cTypeAsType typeContext types.unwrapNamed end
@@ -307,8 +311,60 @@ namespace: constant
       end break
       Pointer MutablePointer RawPointer MutableRawPointer Procedure case
         0 ConstValue .Int return
-      ArrayType Struct Union RawUnion UnionElement Enum case
-        "unimplemented: composite default values" ..panic
+      ArrayType case
+        valType typeContext types.getArraySize .?Int .else
+          "unsupported size for constant array" ..panic
+        end i32 cast.u =:: count
+        valType typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
+        baseType types.isPrimitive and baseType types.primitive.TYPE types.typeEquals ! if
+          baseType typeContext types.strideOf .?fixed .else "dynamic size primitive" ..panic end switch
+            1 case
+              context [] .arrayValues count i8 mixedArena.allocSlice =:: elts context .arrayValues=
+              elts .data elts .length mem.clear ..drop
+              elts slice.freeze ConstValue .Array8
+            return
+            2 case
+              context [] .arrayValues count i16 mixedArena.allocSlice =:: elts context .arrayValues=
+              elts .data elts .length mem.clear ..drop
+              elts slice.freeze ConstValue .Array16
+            return
+            4 case
+              context [] .arrayValues count i32 mixedArena.allocSlice =:: elts context .arrayValues=
+              elts .data elts .length mem.clear ..drop
+              elts slice.freeze ConstValue .Array32
+            return
+            8 case
+              context [] .arrayValues count i64 mixedArena.allocSlice =:: elts context .arrayValues=
+              elts .data elts .length mem.clear ..drop
+              elts slice.freeze ConstValue .Array64
+            return
+            default "unexpected size for primitive" ..panic
+          end
+        else
+          count 0 == if
+            ConstValue slice.empty context newArrayConst
+          else
+            context [] .arrayValues count ConstValue mixedArena.allocSlice =:: elts context .arrayValues=
+            baseType typeContext context defaultVal =:: eltVal
+            count for =:: i
+              eltVal elts i =[]
+            end
+            elts slice.freeze ConstValue .Array return
+          end
+        end
+      break
+      Struct case
+        valType typeContext types.compositeElts =:: eltTypes
+        context [] .arrayValues
+          eltTypes .length i32 cast.u ConstValue mixedArena.allocSlice =:: elts
+        context .arrayValues=
+        eltTypes .length for =:: i
+          eltTypes i [] typeContext context defaultVal elts i =[]
+        end
+        elts slice.freeze ConstValue .Array return
+      break
+      Union RawUnion UnionElement Enum case
+        "unimplemented: union default values" ..panic
       CType NamedType case ..unreachable
       TypeSet AutoType GenericType GeneratedType
           IntLiteral Initializer case
