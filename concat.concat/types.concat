@@ -131,6 +131,7 @@ namespace: types
   proc( CompositeInfo ptr : a CompositeInfo ptr : b -> bool ) =>: compositeTypeEqual
     a b == if true return end
     a .elements [] .length b .elements [] .length != if false return end
+    ## TODO? should types that only differ by missing labels (id.NONE vs no label) be treated differently
     a [] .labels ? b [] .labels ? != if false return end
     a [] .elements b [] .elements typeEquals@ slice.eq ! if false return end
     a [] .labels ? if
@@ -1284,7 +1285,7 @@ namespace: types
       None case ..drop id.LABEL_ID_NONE return
       Enum case .Enum [] .labels break
       Composite case .Composite
-        [] .labels $ ? if .data else ..drop
+        [] .labels .else
           id.LABEL_ID_NONE return
         end
       break
@@ -1456,6 +1457,22 @@ namespace: types
     return
   end
 
+  proc(
+    MixedArenaAllocator
+    LabelId slice optional : labels
+  -> MixedArenaAllocator LabelId slice optional ) =>: copyLabels
+    labels .if
+      ## truncate labels
+      $ .length =:: mut: N
+      while N 0 != and $ N 1 - [] id.LABEL_ID_NONE == do
+        N 1 - N=
+      end
+      N 0 == if ..drop ## no named label
+        LabelId slice optional.empty return
+      end
+      N slice.head mixedArena.copySlice slice.freeze optional.wrap
+    else labels end
+  end
   ## creates struct
   proc(
     Type slice : elts
@@ -1465,9 +1482,7 @@ namespace: types
     elts context computeCompositeFlags =:: flags
     context [] .memory
       elts mixedArena.copySlice slice.freeze =:: eltCopy
-      labels .if
-        mixedArena.copySlice slice.freeze optional.wrap
-      else labels end =:: labelCopy
+      labels copyLabels =:: labelCopy
       ## TupleInfo
         ## CompositeInfo
           eltCopy
@@ -1510,9 +1525,7 @@ namespace: types
     context [] .memory
       ## InitializerInfo
       elts mixedArena.copySlice slice.freeze =:: eltCopy
-      labels $ ? if
-        .data mixedArena.copySlice slice.freeze optional.wrap
-      end =:: labelCopy
+      labels copyLabels =:: labelCopy
         ## TupleInfo
           ## CompositeInfo
             eltCopy
@@ -2839,6 +2852,6 @@ namespace: sb
     end
   end
   proc( stringBuilder Type TypeContext ptr -> stringBuilder ) =>: export: appendType
-    0 appendTypeRecursive return ## XXX? change default value to 1
+    0 appendTypeRecursive return ## TODO? change default value to 1
   end
 end
