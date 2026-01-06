@@ -15,9 +15,8 @@ import "constants.concat"
 import "codeBlocks.concat"
 import "identifiers.concat"
 import "builtIns.concat"
-import "interpreter.concat"
 
-import "interpreter/operators.concat"
+## import "interpreter/operators.concat"
 using id.LabelFlag
 using id.:LabelFlag
 
@@ -85,6 +84,7 @@ struct(
   bool : autoClose
   bool : hasScope
 ) =:: BlockInfo
+
 struct(
   ProgramContext ptr.mut : progContext
   TypeCheckState ptr.mut : typeChecker ## -> ? recreate for each file
@@ -2321,13 +2321,7 @@ proc(
   progContext .idContext id.importFile
 end
 
-## procedures needed from type-checker
-proc( ProgramContext ptr.mut : program -> TypeCheckState ) : export: newTypeCheckState
-proc(
-  ProgramContext ptr.mut : program
-  TypeCheckState ptr.mut : state
-->  ) : export: updateTypeCheckerPointers
-proc( Operation slice : ops TypeCheckState ptr.mut : state -> ) : export: typeCheckGlobalCode
+import "typeCheck.concat"
 proc(
   stringBuilder : rootFile
   string : libPath

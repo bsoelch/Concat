@@ -145,6 +145,7 @@ type : export: BuiltIn
 type : export: Type
 type : export: ConstValue
 type : export: ConstantContext
+type : export: TypeCheckState
 
 namespace: sb
   proc( stringBuilder string -> stringBuilder ) =>: export: appendAsciified
