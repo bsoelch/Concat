@@ -1135,8 +1135,17 @@ proc(
     calledProcId
   end =:: baseProcId
   procInfo [] .procType =:: procType
-  procType typeContext types.getProcIn .data =:: inTypes
-  procType typeContext types.getProcOut .data =:: outTypes
+  procType typeContext types.isProcedure ! if
+    errorMessage .if
+      $ []
+        "non-procedure type procedure" sb.appendS
+      >$ =[]
+    end
+    currentSignatures@ cleanupSignatures
+    ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
+  end
+  procType typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
+  procType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
   inTypes .length i32 cast.u =:: eltCount
   eltCount ConstValue list.create =:: mut: constArgs
   0:i32 while ..dup eltCount < do =:: i
