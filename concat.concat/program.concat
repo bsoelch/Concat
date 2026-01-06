@@ -588,7 +588,7 @@ proc(
     ## ProcedureInfo
       aliasId NO_PROC != if
         aliasId ProcImplType .Alias
-      else _EXPERIMENTAL_ and hasImpl ! _if
+      else hasImpl ! _if
         procName ProcImplType .Extern
       else
         ## CodeProcData

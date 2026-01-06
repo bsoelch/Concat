@@ -476,53 +476,6 @@ proc(
   pos state interpreterStoreConstants
   false return
 end
-proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: interpretTypeModifier
-  state [] .program .errors =:: errors
-  state .interpreter interpreter.offsetContext
-    InterpreterLoadMode .typeModifier state interpreterLoadContants if
-      "could not resolve arguments of type Modifier " sb.copyPtr
-        op [] .val .typeModifier sb.appendTypeModifier
-      op [] .pos errors appendError
-      state .interpreter interpreter.resetContext
-      return
-    end
-    interpreter.InterpreterType .INTERPRET state .interpreter .evalType=
-    ## TODO? directly evaluate type-modifer without evaluating operation?
-    op state .interpreter evaluateOperation .?Ok ? ! if
-      "could not evaluate type modifier " sb.copyPtr
-        op [] .val .typeModifier sb.appendTypeModifier
-      op [] .pos errors appendError
-    end
-    1 op [] .pos state interpreterStoreConstants
-  state .interpreter interpreter.resetContext
-end
-
-proc( Operation ptr : op TypeCheckState ptr.mut : state -> ) =>: prepareInterpretTypeBlock
-  state .interpreter interpreter.offsetContext
-  InterpreterLoadMode .typeBlock state interpreterLoadContants ! "interpreterFindContant" assert
-  state [] .compiledOps .length i32 cast.u state .blockStart=
-  interpreter.InterpreterType .GLOBAL state .interpreter .evalType=
-  op state .interpreter evaluateOperation .?Ok ? ! if
-    "could not evaluate " sb.copyPtr
-      op [] .val .block .blockType sb.appendBlockType
-      " block" sb.appendS
-    op [] .pos state [] .program .errors appendError
-  end
-  BlockMode .TYPE state .blockMode=
-end
-proc( Operation ptr : op TypeCheckState ptr.mut : state -> bool ) =>: interpretTypeBlock
-  state [] .blockMode .TYPE "in Type-block" assert
-  state .interpreter [] .evalType .GLOBAL "global interpreter" assert
-  op state .interpreter evaluateOperation .?Ok ? ! if
-    "unexpected operation in Type/Initializer block: " sb.copyPtr
-      op [] state [] .program sb.appendOp
-    op [] .pos state [] .program .errors appendError
-    BlockMode .NONE state .blockMode=
-    state .interpreter interpreter.resetContext
-    false return
-  end
-  true return
-end
 
 proc(
   bool : printValues
@@ -1842,9 +1795,7 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   state [] .blockMode =:: prevMode
-  _EXPERIMENTAL_ if
-    BlockMode .TYPE state .blockMode=
-  end
+  BlockMode .TYPE state .blockMode=
   program .labelBuffer [] .length =:: labelOffset
   state [] .arrowState =:: oldArrowState
   TypeBlockState optional.empty state .arrowState=
@@ -1855,56 +1806,49 @@ proc(
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
-  _EXPERIMENTAL_ if
-    prevMode state .blockMode=
-    state [] .stack branchTree.depth iSize cast.u =:: mut: count
-    state [] .typeBuffer
-      $ .length =:: tailOffset
-      tailOffset count + list.setLength
-    state .typeBuffer=
-    ## TODO less unsafe way to insert list of elements in reverse order
-    ##  e.g.  <list> <count> list.appendReverse for elt end
-    while count 0 != do
-      count 1 - count=
-      pos state popType state [] .typeBuffer count tailOffset + =[]
-    end
-    state [] .arrowState .if =:: arrowState
-      state [] .typeBuffer arrowState .typeOffset list.tail
-      state [] .typeBuffer typeOffset arrowState .typeOffset $1 - list.getSlice
-    else
-      state [] .typeBuffer typeOffset list.tail
-      Type slice.empty
-    end =:: inTypes =:: types
-    program [] .labelBuffer labelOffset list.tail =:: labels
-    compType switch
-      TUPLE case types labels optional.wrap typeContext types.newTuple break
-      UNION case types labels types.UnionType .TAGGED typeContext types.newUnion break
-      RAW_UNION case types labels types.UnionType .RAW typeContext types.newUnion break
-      PROC case inTypes types labels CallingConvention.DEFAULT typeContext types.newProcedure break
-      C_PROC case inTypes types labels CallingConvention .CCALL typeContext types.newProcedure break
-    end .else
-      "failed to create composite-type" sb.copyPtr
-      pos errors appendError
-      return
-    end =:: newType
-    state [] .stack branchTree.depth 0 == "stack is empty after popping types" assert
-    state .stack
-      oldBranch
-    branchTree.reset ..drop
-    state removeTrailingNOPs
-    newType ConstValue .TypeId types.primitive.TYPE pos state pushConstant
-    program [] .labelBuffer
-      labelOffset list.setLength
-    program .labelBuffer=
-    state [] .typeBuffer
-      typeOffset list.setLength
-    state .typeBuffer=
-  else
-    BlockMode .NONE state .blockMode=
-    state .stack oldBranch branchTree.reset ..drop
-    1 pos state interpreterStoreConstants
-    state .interpreter interpreter.resetContext
+  prevMode state .blockMode=
+  state [] .stack branchTree.depth iSize cast.u =:: mut: count
+  state [] .typeBuffer
+    $ .length =:: tailOffset
+    tailOffset count + list.setLength
+  state .typeBuffer=
+  ## TODO less unsafe way to insert list of elements in reverse order
+  ##  e.g.  <list> <count> list.appendReverse for elt end
+  while count 0 != do
+    count 1 - count=
+    pos state popType state [] .typeBuffer count tailOffset + =[]
   end
+  state [] .arrowState .if =:: arrowState
+    state [] .typeBuffer arrowState .typeOffset list.tail
+    state [] .typeBuffer typeOffset arrowState .typeOffset $1 - list.getSlice
+  else
+    state [] .typeBuffer typeOffset list.tail
+    Type slice.empty
+  end =:: inTypes =:: types
+  program [] .labelBuffer labelOffset list.tail =:: labels
+  compType switch
+    TUPLE case types labels optional.wrap typeContext types.newTuple break
+    UNION case types labels types.UnionType .TAGGED typeContext types.newUnion break
+    RAW_UNION case types labels types.UnionType .RAW typeContext types.newUnion break
+    PROC case inTypes types labels CallingConvention.DEFAULT typeContext types.newProcedure break
+    C_PROC case inTypes types labels CallingConvention .CCALL typeContext types.newProcedure break
+  end .else
+    "failed to create composite-type" sb.copyPtr
+    pos errors appendError
+    return
+  end =:: newType
+  state [] .stack branchTree.depth 0 == "stack is empty after popping types" assert
+  state .stack
+    oldBranch
+  branchTree.reset ..drop
+  state removeTrailingNOPs
+  newType ConstValue .TypeId types.primitive.TYPE pos state pushConstant
+  program [] .labelBuffer
+    labelOffset list.setLength
+  program .labelBuffer=
+  state [] .typeBuffer
+    typeOffset list.setLength
+  state .typeBuffer=
   oldArrowState state .arrowState=
 end
 proc(
@@ -1922,56 +1866,49 @@ proc(
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
-  _EXPERIMENTAL_ if
-    Type optional.empty =:: mut: commonType
-    state [] .constBuffer .length =:: constOffset
-    while state popTypedValue .and =:: nextVal true do ## TODO! add/use `.do` syntax suggar
-      commonType .if
-        nextVal .valType typeContext types.mergeTypes
-        $ ? ! if ..drop
-          "incompatible types in set-type: " sb.copyPtr
-            nextVal .valType typeContext sb.appendType
-            " cannot be assigned to " sb.appendS
-            commonType optional.get typeContext sb.appendType
-          pos errors appendError
-          break
-        end
-      else
-        nextVal .valType optional.wrap
-      end commonType=
-      state [] .constBuffer
-        nextVal .value list.append
-      state .constBuffer=
-    end
-    state .stack oldBranch branchTree.reset ..drop
-    state removeTrailingNOPs
-    commonType .and typeContext types.isType if
-      state [] .constBuffer constOffset list.tail =:: elements
-      elements .length types.TypeSetEntry list.create
-        elements for
-          .?TypeId .else ..drop.2
-            "(currently) only types are allowed within set-types" sb.copyPtr
-            pos errors appendError
-            return
-          end types.TypeSetEntry .TypeId list.append
-        end
-        id.LABEL_ID_NONE
-          $1 list.asSlice
-        typeContext types.newTypeSet <$
-      list.free ..drop
+  Type optional.empty =:: mut: commonType
+  state [] .constBuffer .length =:: constOffset
+  while state popTypedValue .and =:: nextVal true do ## TODO! add/use `.do` syntax suggar
+    commonType .if
+      nextVal .valType typeContext types.mergeTypes
+      $ ? ! if ..drop
+        "incompatible types in set-type: " sb.copyPtr
+          nextVal .valType typeContext sb.appendType
+          " cannot be assigned to " sb.appendS
+          commonType optional.get typeContext sb.appendType
+        pos errors appendError
+        break
+      end
     else
-      "(currently) only types are allowed within set-types" sb.copyPtr pos errors appendError
-      Type .Undefined
-    end ConstValue .TypeId types.primitive.TYPE pos state pushConstant
+      nextVal .valType optional.wrap
+    end commonType=
     state [] .constBuffer
-      constOffset list.setLength
+      nextVal .value list.append
     state .constBuffer=
-    return
   end
-  1 pos state interpreterStoreConstants
-  BlockMode .NONE state .blockMode=
-  state .interpreter interpreter.resetContext
   state .stack oldBranch branchTree.reset ..drop
+  state removeTrailingNOPs
+  commonType .and typeContext types.isType if
+    state [] .constBuffer constOffset list.tail =:: elements
+    elements .length types.TypeSetEntry list.create
+      elements for
+        .?TypeId .else ..drop.2
+          "(currently) only types are allowed within set-types" sb.copyPtr
+          pos errors appendError
+          return
+        end types.TypeSetEntry .TypeId list.append
+      end
+      id.LABEL_ID_NONE
+        $1 list.asSlice
+      typeContext types.newTypeSet <$
+    list.free ..drop
+  else
+    "(currently) only types are allowed within set-types" sb.copyPtr pos errors appendError
+    Type .Undefined
+  end ConstValue .TypeId types.primitive.TYPE pos state pushConstant
+  state [] .constBuffer
+    constOffset list.setLength
+  state .constBuffer=
 end
 proc(
   Operation slice : ops
@@ -2011,9 +1948,7 @@ proc(
   idContext .typeContext =:: typeContext
   idContext .constContext =:: constContext
   state [] .blockMode =:: prevMode
-  _EXPERIMENTAL_ if
-    BlockMode .INITIALIZER state .blockMode=
-  end
+  BlockMode .INITIALIZER state .blockMode=
   state .stack
     branchTree.EMPTY
   branchTree.reset =:: oldBranch
@@ -2023,47 +1958,40 @@ proc(
   idContext id.openScope
   ops state typeCheckOps
   idContext id.closeScope ! "closing or-if scope worked" assert
-  _EXPERIMENTAL_ if
-    prevMode state .blockMode=
-    state [] .stack branchTree.depth iSize cast.u =:: mut: count
-    state [] .constBuffer
-      $ .length =:: valsTail
-      valsTail count + list.setLength
-    state .constBuffer=
-    state [] .typeBuffer
-      $ .length =:: typesTail
-      typesTail count + list.setLength
-    state .typeBuffer=
-    while count 0 != do
-      count 1 - count=
-      state popTypedValue .else
-        "stack underflow" ..panic
-      end
-        $ .valType state [] .typeBuffer count typesTail + =[]
-      .value state [] .constBuffer count valsTail + =[]
+  prevMode state .blockMode=
+  state [] .stack branchTree.depth iSize cast.u =:: mut: count
+  state [] .constBuffer
+    $ .length =:: valsTail
+    valsTail count + list.setLength
+  state .constBuffer=
+  state [] .typeBuffer
+    $ .length =:: typesTail
+    typesTail count + list.setLength
+  state .typeBuffer=
+  while count 0 != do
+    count 1 - count=
+    state popTypedValue .else
+      "stack underflow" ..panic
     end
-    state removeTrailingNOPs
-    state .stack oldBranch branchTree.reset ..drop
-    ## pushConstant
-      state [] .constBuffer valOffset list.tail constContext newArrayConst
-      state [] .typeBuffer typesOffset list.tail
-        program [] .labelBuffer labelOffset list.tail $ .length 0 != if
-          optional.wrap
-        else ..drop
-          LabelId slice optional.empty
-        end
-      typeContext types.newInitializerType
-      pos
-    state pushConstant
-    program [] .labelBuffer labelOffset list.setLength program .labelBuffer=
-    state [] .constBuffer valOffset list.setLength state .constBuffer=
-    state [] .typeBuffer typesOffset list.setLength state .typeBuffer=
-  else
-    BlockMode .NONE state .blockMode=
-    state .stack oldBranch branchTree.reset ..drop
-    1 pos state interpreterStoreConstants
-    state .interpreter interpreter.resetContext
+      $ .valType state [] .typeBuffer count typesTail + =[]
+    .value state [] .constBuffer count valsTail + =[]
   end
+  state removeTrailingNOPs
+  state .stack oldBranch branchTree.reset ..drop
+  ## pushConstant
+    state [] .constBuffer valOffset list.tail constContext newArrayConst
+    state [] .typeBuffer typesOffset list.tail
+      program [] .labelBuffer labelOffset list.tail $ .length 0 != if
+        optional.wrap
+      else ..drop
+        LabelId slice optional.empty
+      end
+    typeContext types.newInitializerType
+    pos
+  state pushConstant
+  program [] .labelBuffer labelOffset list.setLength program .labelBuffer=
+  state [] .constBuffer valOffset list.setLength state .constBuffer=
+  state [] .typeBuffer typesOffset list.setLength state .typeBuffer=
 end
 
 proc(
@@ -2232,10 +2160,6 @@ proc(
       argData [] .valType op@ .dataType=
       argData [] .value op@ .val .Constant=
     end
-    ## TODO! use jump-distance in block-data to interate type-block in seperate loop, then skip operations in main loop
-    _EXPERIMENTAL_ ! and state .blockMode [] .NONE ! and op@ state interpretTypeBlock if
-      continue.opLoop ## evaluate constants
-    end
     op .val switch
       NOP case continue.opLoop
       Constant .case op .dataType op .pos state pushConstant continue.opLoop
@@ -2265,9 +2189,6 @@ proc(
         ProcCodeState .PARSED procData .implementation .Code .codeState=
         procId ConstValue .Procedure
           procType ## TODO? special type for procedure literal
-          _EXPERIMENTAL_ ! if
-            false typeContext types.getAddressType
-          end
         op .pos state pushConstant
         continue.opLoop
       getName setName atName .case =:: labelId
@@ -2689,7 +2610,7 @@ proc(
         continue.opLoop
       declareId .case =:: idInfo
         op@ false state resolveAutoType
-        _EXPERIMENTAL_ and state .blockMode [] .NONE ! if
+        state .blockMode [] .NONE ! if
           1 op .pos state checkStackSize if
             continue.opLoop ## stack underflow
           end
@@ -3408,8 +3329,7 @@ proc(
         blockType switch
           ## TODO: remove check for TYPE_COMPOSITE when switching to new type-checker
           TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN TYPE_CPROC_IN case
-            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             elts
               blockType switch
                 TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case CompositeType .TUPLE break
@@ -3447,8 +3367,7 @@ proc(
             TypeBlockState new optional.wrap state .arrowState=
           continue.opLoop
           TYPE_SETTYPE case
-            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             elts op .pos state typeCheckTypeSet
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
@@ -3464,8 +3383,7 @@ proc(
             oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
           INITIALIZER case
-            _EXPERIMENTAL_ ! if op@ state prepareInterpretTypeBlock end
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u _EXPERIMENTAL_ if 1 - end slice.getSlice =:: elts
+            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             elts op .pos state typeCheckInitializer
             opIndex
               op .pos op .val .block .jumpDistance asForwardJump +
@@ -5156,82 +5074,77 @@ proc(
         state pushConstant
       continue.opLoop
       typeModifier .case =:: typeMod
-        _EXPERIMENTAL_ if
-          idContext [] .arraySizeBuffer
-            list.clear
-          idContext .arraySizeBuffer=
-          Type optional.empty =:: mut: baseType0
-          while baseType0 ? ! do
-            1 op .pos state checkStackSize if
-              continue.opLoop
-            end
-            idContext [] .arraySizeBuffer
-              state popValue .else
-                "stack underflow" ..panic
-              end =:: constVal
-              constVal switch
-                TypeId .case optional.wrap baseType0= break
-                Int .case types.ArraySize .Int list.append break
-                GenericArg .case types.ArraySize .GenericArg list.append break
-                WildCard .case "unimplemented: dynamic pointers" ..panic
-                default ## TODO? .default to access switched value
-                  "unexpected constant parameter for type-modifier " sb.copyPtr
-                    typeMod sb.appendTypeModifier
-                    " expected type or size got " sb.appendS
-                    constVal typeContext sb.appendConstant
-                  op .pos errors appendError
-                break
-              end
-            idContext .arraySizeBuffer=
-          end
-          idContext [] .arraySizeBuffer .length 0:iSize == if
-            idContext [] .arraySizeBuffer
-              types.ArraySize .None list.append
-            idContext .arraySizeBuffer=
-          else
-            typeMod .RAW_PTR or typeMod .RAW_PTR_MUT if
-              "raw pointers cannot be sized" sb.copyPtr op .pos errors appendError
-            end
-          end
-          baseType0 .else ..unreachable end
-            idContext [] .arraySizeBuffer list.asSlice
-              1 slice.tail
-            slice.reversed for =:: size
-              ## newArrayType
-                types.ArrayType .ARRAY
-                size
-                typeContext
-              types.newArrayType .else
-                "could not create array type" sb.copyPtr op .pos errors appendError
-                continue.opLoop
-              end
-            end
-          ## newArrayType
-            typeMod switch
-              PTR case types.ArrayType .POINTER break
-              PTR_MUT case types.ArrayType .MUTABLE_POINTER break
-              RAW_PTR case types.ArrayType .RAW_POINTER break
-              RAW_PTR_MUT case types.ArrayType .MUTABLE_RAW_POINTER break
-              ARRAY case types.ArrayType .ARRAY break
-            end
-            idContext [] .arraySizeBuffer 0 []
-            typeContext
-          types.newArrayType .else
-            typeMod .ARRAY if
-              "could not create array type" sb.copyPtr
-            else
-              "could not create pointer type" sb.copyPtr
-            end op .pos errors appendError
+        idContext [] .arraySizeBuffer
+          list.clear
+        idContext .arraySizeBuffer=
+        Type optional.empty =:: mut: baseType0
+        while baseType0 ? ! do
+          1 op .pos state checkStackSize if
             continue.opLoop
           end
-            ConstValue .TypeId
-            types.primitive.TYPE
-            op .pos
-          state pushConstant
+          idContext [] .arraySizeBuffer
+            state popValue .else
+              "stack underflow" ..panic
+            end =:: constVal
+            constVal switch
+              TypeId .case optional.wrap baseType0= break
+              Int .case types.ArraySize .Int list.append break
+              GenericArg .case types.ArraySize .GenericArg list.append break
+              WildCard .case "unimplemented: dynamic pointers" ..panic
+              default ## TODO? .default to access switched value
+                "unexpected constant parameter for type-modifier " sb.copyPtr
+                  typeMod sb.appendTypeModifier
+                  " expected type or size got " sb.appendS
+                  constVal typeContext sb.appendConstant
+                op .pos errors appendError
+              break
+            end
+          idContext .arraySizeBuffer=
+        end
+        idContext [] .arraySizeBuffer .length 0:iSize == if
+          idContext [] .arraySizeBuffer
+            types.ArraySize .None list.append
+          idContext .arraySizeBuffer=
+        else
+          typeMod .RAW_PTR or typeMod .RAW_PTR_MUT if
+            "raw pointers cannot be sized" sb.copyPtr op .pos errors appendError
+          end
+        end
+        baseType0 .else ..unreachable end
+          idContext [] .arraySizeBuffer list.asSlice
+            1 slice.tail
+          slice.reversed for =:: size
+            ## newArrayType
+              types.ArrayType .ARRAY
+              size
+              typeContext
+            types.newArrayType .else
+              "could not create array type" sb.copyPtr op .pos errors appendError
+              continue.opLoop
+            end
+          end
+        ## newArrayType
+          typeMod switch
+            PTR case types.ArrayType .POINTER break
+            PTR_MUT case types.ArrayType .MUTABLE_POINTER break
+            RAW_PTR case types.ArrayType .RAW_POINTER break
+            RAW_PTR_MUT case types.ArrayType .MUTABLE_RAW_POINTER break
+            ARRAY case types.ArrayType .ARRAY break
+          end
+          idContext [] .arraySizeBuffer 0 []
+          typeContext
+        types.newArrayType .else
+          typeMod .ARRAY if
+            "could not create array type" sb.copyPtr
+          else
+            "could not create pointer type" sb.copyPtr
+          end op .pos errors appendError
           continue.opLoop
         end
-        ## type-modifiers are handled by the interpreter
-        op@ state interpretTypeModifier
+          ConstValue .TypeId
+          types.primitive.TYPE
+          op .pos
+        state pushConstant
         continue.opLoop
       Import LibImport .case
           op .val .?LibImport ?
@@ -5479,89 +5392,69 @@ proc(
   idContext id.currentScope =:: prevScope
   currentProc [] .scopeId idContext id.setScope
   idContext id.openScope
-  _EXPERIMENTAL_ if
-    implId 0 >= if ## update procedure type
-      codeImpl [] .implementations
-        implId list.at .data
-      [] .procType
-    else
-      currentProc [] .procType
-    end =:: procType
-    procType optional.wrap state .currentProcType=
-    ## opImplementProc
-      procType
-      ## ProcedureImpl
-        implId
-        procId
-      ProcedureImpl new
-      procPos
-    opImplementProc state appendOp ..drop
-    ## procedure scope is handled by typeCheckProcedure
-    procType BlockInfo .Procedure state openBlock
-    true state .reachable=
-    procType typeContext types.getProcIn .else
-      "wrong type for procedure initialization: " sb.copyPtr
-        procType typeContext sb.appendType
-        " expected procedure" sb.appendS
-      procPos program .errors appendError
-      return
-    end =:: argTypes
-    ## push unnamed arguments
-    0:i32 while $ iSize cast.u argTypes .length u< do =:: i
-      procType i typeContext types.getProcArgLabel =:: label
-      argTypes i [] =:: argType
-      label id.LABEL_ID_NONE == if ## push argument
-        state .stack
-          ## TypeInfo
-            argType
-            $ typeContext types.isType and
-                state .argData -2 i - LabelId cast map.get .if
-              .value
-            else
-              ConstValue .None
-            end
-            procPos
-            OP_ARGUMENT
-          TypeInfo new
-        branchTree.push
-      else
-        label
-          argType
-          IdentifierType .ARGUMENT
-          i i32 cast ## index
-          ConstValue .None
-          true
-          procPos
-          state [] .currentFile
-          idContext
-          program .errors
-        id.declareIdentifier if
-          "could not declare identifier for argument " sb.copyPtr
-            label labelContext sb.appendLabelName
-          procPos program .errors appendError
-        end ..drop.2
-      end
-      i 1 +
-    end ..drop
+  implId 0 >= if ## update procedure type
+    codeImpl [] .implementations
+      implId list.at .data
+    [] .procType
   else
-    codeImpl [] .code 0 @[] =:: procStart
-    procStart [] .val .?implementProcedure ? or
-        procStart [] .val .?initializeId ?
-    end "procedure starts with correct operation" assert
+    currentProc [] .procType
+  end =:: procType
+  procType optional.wrap state .currentProcType=
+  ## opImplementProc
+    procType
     ## ProcedureImpl
       implId
       procId
-    ProcedureImpl new OpValue .implementProcedure procStart .val=
-    implId 0 >= if ## update procedure type
-      codeImpl [] .implementations
-        implId list.at .data
-      [] .procType =:: procType
-      procType procStart .dataType=
-      procType optional.wrap state .currentProcType=
+    ProcedureImpl new
+    procPos
+  opImplementProc state appendOp ..drop
+  ## procedure scope is handled by typeCheckProcedure
+  procType BlockInfo .Procedure state openBlock
+  true state .reachable=
+  procType typeContext types.getProcIn .else
+    "wrong type for procedure initialization: " sb.copyPtr
+      procType typeContext sb.appendType
+      " expected procedure" sb.appendS
+    procPos program .errors appendError
+    return
+  end =:: argTypes
+  ## push unnamed arguments
+  0:i32 while $ iSize cast.u argTypes .length u< do =:: i
+    procType i typeContext types.getProcArgLabel =:: label
+    argTypes i [] =:: argType
+    label id.LABEL_ID_NONE == if ## push argument
+      state .stack
+        ## TypeInfo
+          argType
+          $ typeContext types.isType and
+              state .argData -2 i - LabelId cast map.get .if
+            .value
+          else
+            ConstValue .None
+          end
+          procPos
+          OP_ARGUMENT
+        TypeInfo new
+      branchTree.push
     else
-      currentProc [] .procType optional.wrap state .currentProcType=
+      label
+        argType
+        IdentifierType .ARGUMENT
+        i i32 cast ## index
+        ConstValue .None
+        true
+        procPos
+        state [] .currentFile
+        idContext
+        program .errors
+      id.declareIdentifier if
+        "could not declare identifier for argument " sb.copyPtr
+          label labelContext sb.appendLabelName
+        procPos program .errors appendError
+      end ..drop.2
     end
-  end
+    i 1 +
+  end ..drop
   codeImpl [] .code slice.freeze state typeCheckOps
   ## TODO? compile exported procedure normally
   state [] .isUnusedProc ! and currentProc [] .isStatic ! if
@@ -5729,7 +5622,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     codeImpl .code [] .length 0 == if
       procId 1 + continue ## procedure not implemented
     end
-    _EXPERIMENTAL_ and codeImpl .codeState [] .PARSING if
+    codeImpl .codeState [] .PARSING if
       ## TODO? handle use in currenty unchecked procedure
       ProcCodeState .UNUSED codeImpl .codeState=
       procId 1 + continue ## ignore parsing procedures
@@ -5762,7 +5655,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     codeImpl .code [] .length 0 == if
       procId 1 + continue ## procedure not implemented
     end
-    _EXPERIMENTAL_ and codeImpl .codeState [] .PARSING if
+    codeImpl .codeState [] .PARSING if
       ProcCodeState .UNUSED codeImpl .codeState=
       procId 1 + continue ## ignore parsing procedures
     end
@@ -5788,7 +5681,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
       codeImpl [] .code .length 0 == if
         procId 1 + continue ## procedure not implemented
       end
-      _EXPERIMENTAL_ and codeImpl [] .codeState .PARSING if
+      codeImpl [] .codeState .PARSING if
         procId 1 + continue ## ignore parsing procedures
       end
       currentProc program nextImpl =:: nextId
