@@ -23,7 +23,7 @@ using id.:LabelFlag
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 
 struct(
-  IdentifierInfo : var
+  LabelId : varId
   Type : varType
 ) =:: TmpVarInfo
 struct(
@@ -916,20 +916,38 @@ proc( ProgramContext ptr.mut : progContext -> Type ) =>: newAutoType
 end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrStep
   state [] .progContext .idContext =:: idContext
-  varInfo .varType varInfo .var pos opGetId state appendOp
+  varInfo .varId pos opGetName state appendOp
   "..itr.step":s idContext id.findIdentifierByName
     ! "..itr.step" assert
   =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
-  varInfo .varType varInfo .var pos opSetId state appendOp
+  varInfo .varId pos opSetName state appendOp
 end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrEnd
   state [] .progContext .idContext =:: idContext
-  varInfo .varType varInfo .var pos opGetId state appendOp
+  varInfo .varId pos opGetName state appendOp
   "..itr.end":s idContext id.findIdentifierByName
     ! "..itr.end" assert
   =:: itrEnd
   itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
+end
+proc(
+  FilePosition : pos
+  FileId : currentFile
+  LabelContext ptr.mut : labelContext
+-> LabelId ) =>: newItrId
+  char8 32 array : buffer
+  ## newLabel
+    buffer@ sb.wrapBuffer
+      "itr@" sb.appendS
+      pos .line sb.appendI
+      ":" sb.appendS
+      pos .posInLine sb.appendI
+    sb.asStr
+    id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
+    pos
+    currentFile
+  labelContext id.newLabel
 end
 proc( ParserState ptr.mut : state FilePosition : pos -> TmpVarInfo ) =>: appendDotIfCheck
   state [] .progContext =:: progContext
@@ -939,18 +957,18 @@ proc( ParserState ptr.mut : state FilePosition : pos -> TmpVarInfo ) =>: appendD
   =:: ifPrepare
   ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
   progContext newAutoType =:: varType
-  varType pos state [] .currentFile idContext id.newItrVar =:: ifVar
-  varType ifVar pos opAutoTypedInitializeId state appendOp
-  varType ifVar pos opGetId state appendOp
+  pos state [] .currentFile idContext .typeContext .labelContext newItrId =:: ifName
+  varType ifName pos opAutoTypedInitializeName state appendOp
+  ifName pos opGetName state appendOp
   "..if.check":s idContext id.findIdentifierByName
     ! "..if.check" assert
   =:: ifCheck
   ifCheck [] .valueType ifCheck id.asIdInfo pos opGetId state appendOp
-  ifVar varType TmpVarInfo new
+  ifName varType TmpVarInfo new
 end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendElseVal
   state [] .progContext .idContext =:: idContext
-  varInfo .varType varInfo .var pos opGetId state appendOp
+  varInfo .varId pos opGetName state appendOp
   "..if.elseVal":s idContext id.findIdentifierByName
     ! "..if.elseVal" assert
   =:: elseVal
@@ -1022,7 +1040,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           "expected if-block to have tmp-var" ..panic
         end =:: varInfo
         hasOrIf ! if
-          varInfo .varType varInfo .var fileState [] .wordStart opGetId state appendOp
+          varInfo .varId fileState [] .wordStart opGetName state appendOp
           "..if.ifVal":s idContext id.findIdentifierByName
             ! "..if.ifVal" assert
           =:: ifGet
@@ -1069,7 +1087,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       andOrBlock .andOrPositions=
       blockType  fileState [] .wordStart opBlock  state appendOp
       varInfo? .if =:: varInfo
-        varInfo .varType varInfo .var fileState [] .wordStart opGetId state appendOp
+        varInfo .varId fileState [] .wordStart opGetName state appendOp
         isOr if "..if.elseVal":s else "..if.ifVal":s end idContext id.findIdentifierByName
           ! "and/or val" assert
         =:: ifGet
@@ -1133,18 +1151,18 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo fileState [] .wordStart opGetId state appendOp
       progContext newAutoType =:: itrType
-      itrType fileState [] .wordStart state [] .currentFile idContext id.newItrVar =:: itrVar
-      itrType itrVar fileState [] .wordStart opAutoTypedInitializeId state appendOp
+      fileState [] .wordStart state [] .currentFile idContext .typeContext .labelContext newItrId =:: itrId
+      itrType itrId fileState [] .wordStart opAutoTypedInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
-      itrType itrVar fileState [] .wordStart opGetId state appendOp
+      itrId fileState [] .wordStart opGetName state appendOp
       "..itr.check":s idContext id.findIdentifierByName
         ! "..itr.check" assert
       =:: itrCheck
       itrCheck [] .valueType itrCheck id.asIdInfo fileState [] .wordStart opGetId state appendOp
       state opCount =::  doPos
       BlockType .DO fileState [] .wordStart opBlock  state appendOp
-      itrType itrVar fileState [] .wordStart opGetId state appendOp
+      itrId fileState [] .wordStart opGetName state appendOp
       "..itr.get":s idContext id.findIdentifierByName
         ! "..itr.get" assert
       =:: itrGet
@@ -1157,7 +1175,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         WhileBlockState .DO
       WhileBlockData new BlockInfoData .While state openBlock ..drop
       blockLabel state peekBlock .data .blockLabel=
-      itrVar itrType TmpVarInfo new optional.wrap state peekBlock .data .tmpVarInfo=
+      itrId itrType TmpVarInfo new optional.wrap state peekBlock .data .tmpVarInfo=
       return
     else $ "do":s string.eq _if ..drop ## TODO? `.do` statement similar to `.and`
       state peekBlock .and =:: currentBlock
@@ -1322,7 +1340,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       opName .length 3:iSize == =:: named
       state [] .currentProcs .length 0:iSize != =:: isNested
       ## TODO? ensure global stack is empty at start of procedure
-      char8 64 array : buffer
+      char8 32 array : buffer
         buffer@ sb.wrapBuffer
           "lambda@" sb.appendS
           fileState [] .wordStart .line sb.appendI
@@ -1594,7 +1612,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ ".with(":s string.eq _if ..drop
       state opCount BlockInfoData .With state openBlock ..drop
-      char8 64 array : buffer
+      char8 32 array : buffer
         buffer@ sb.wrapBuffer
           "with@" sb.appendS
           fileState [] .wordStart .line sb.appendI

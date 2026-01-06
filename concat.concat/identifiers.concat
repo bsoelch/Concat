@@ -741,7 +741,7 @@ namespace: id
     FilePosition : pos
     FileId : currentFile
     IdentifierContext ptr.mut : context
-  -> IdentifierInfo ) =>: export: newItrVar
+  -> IdentifierInfo ) =>: export: newTmpVar
     ## newLabel
       string.empty
       id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
