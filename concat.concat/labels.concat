@@ -26,7 +26,7 @@ namespace: id
    0:ScopeId =:: export: GLOBAL_SCOPE
 
   i32 =:: export: LabelFlag
-( char8 ptr.raw iSize -> LabelFlag ) : static: export: alias: :LabelFlag ..builtIn.parse.i32
+  ( char8 ptr.raw iSize -> LabelFlag ) : static: export: alias: :LabelFlag ..builtIn.parse.i32
   proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagAnd i32.and
   proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagOr  i32.or
   proc( LabelFlag LabelFlag -> LabelFlag ) : alias: flagXor i32.xor

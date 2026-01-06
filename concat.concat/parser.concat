@@ -19,6 +19,7 @@ import "interpreter.concat"
 
 import "interpreter/operators.concat"
 using id.LabelFlag
+using id.:LabelFlag
 
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 struct( InterpreterContext : context i64 : offset ) =:: InterpreterInfo
