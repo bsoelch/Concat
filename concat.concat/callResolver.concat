@@ -433,6 +433,15 @@ proc(
     Pointer MutablePointer ArrayType RawPointer MutableRawPointer case
       src typeContext types.isPointer ! and
           src typeContext types.isArray ! if
+        ## special case for conversion procedure -> proc-pointer
+        src typeContext types.isProcedure and target typeContext types.isCallable if
+          src target typeContext types.getBaseType
+            true
+            needCast
+            genericValues
+            progContext
+          resolveGenerics return
+        end
         true return
       end
       target typeContext types.isPointer src typeContext types.isPointer != if

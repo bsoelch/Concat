@@ -2921,7 +2921,8 @@ proc(
     return
   end
   src typeContext types.isPointer and target typeContext types.isPointer end or
-      src typeContext types.isUnionElement and target typeContext types.isUnion if
+      src typeContext types.isUnionElement and target typeContext types.isUnion end or
+      src typeContext types.isCallable and target typeContext types.isCallable if
     sb
       "%s" sb.appendS
       targetId sb.appendI

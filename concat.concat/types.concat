@@ -2412,8 +2412,21 @@ namespace: types
     src context types.isNumber and target context types.isNumber if
       src target context types.canAutoCastNumber return
     end
+    ## TODO? allow proc-pointer assignment when arg-names differ
     src context types.isPointer and target context types.isPointer if
       src target false false context canCastPtr return
+    end
+    src context types.isProcedure and target context types.isProcedure if
+      src context types.getProcIn .else "proc has in" ..panic end =:: srcIn
+      target context types.getProcIn .else "proc has in" ..panic end =:: targetIn
+      src context types.getProcOut .else "proc has out" ..panic end =:: srcOut
+      target context types.getProcOut .else "proc has out" ..panic end =:: targetOut
+      srcIn targetIn typeEquals@ slice.eq and srcOut targetOut typeEquals@ slice.eq end return
+    end
+    src context types.isProcedure and target context types.isPointer and
+        target context types.getBaseType =:: targetBase
+        targetBase context types.isProcedure if
+      src targetBase context canAutoCast return
     end
     false return
   end
