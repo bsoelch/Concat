@@ -976,7 +976,7 @@ proc(
     switchBlock .caseBranches=
   end
   BlockType .BREAK_SWITCH pos opBlock =:: mut: breakOp
-  switchBlock [] .blockId breakOp@ .val .block .blockId=
+  switchBlock [] .blockId breakOp@ .val .Block .blockId=
   switchBlock [] .breakPositions
     state [] .compiledOps .length i32 cast.u list.append
   switchBlock .breakPositions=
@@ -1233,7 +1233,7 @@ proc(
   op [] .val .?Constant ? if
     true return
   end
-  op [] .val .?getId .if .labelId =:: labelId
+  op [] .val .?GetId .if .labelId =:: labelId
       state [] .program .idContext =:: idContext
       labelId
         idContext .typeContext .labelContext id.labelFlags
@@ -1488,7 +1488,7 @@ proc(
   end
   state [] .compiledOps list.peek =:: prevOp?
   prevOp? optional.hasData and
-      prevOp? .data .val .?copy ?
+      prevOp? .data .val .?Copy ?
   end =:: directCopy ## operation before get element is copy
   directCopy if
     state [] .compiledOps
@@ -1601,7 +1601,7 @@ proc(
   switchBlock [] .switchType =:: switchType
   switchBlock [] .blockId =:: switchId
   switchBlock [] .switchPosition =:: switchPosition
-  op [] .val .?block .if
+  op [] .val .?Block .if
     .blockType switch
       CASE DOT_CASE DEFAULT case
         false return
@@ -1614,7 +1614,7 @@ proc(
       default
         break
     end
-  else .?blockEnd ? _if
+  else .?BlockEnd ? _if
     false return
   end
   ## operation after switch -> don't allow break statement
@@ -1628,11 +1628,11 @@ proc(
         constVal
         op [] .pos
       state newSwitchLabel
-    else .?getId ._if .labelId
+    else .?GetId ._if .labelId
         idContext
       id.getIdentifier if ..drop
         "could not find " sb.copyPtr
-          op [] .val .getId labelContext sb.appendIdInfo
+          op [] .val .GetId labelContext sb.appendIdInfo
         op [] .pos errors appendError
         true return
       end =:: idData
@@ -1648,11 +1648,11 @@ proc(
         idData [] .constValue
         op [] .pos
       state newSwitchLabel
-    else .?getName ._if
+    else .?GetName ._if
         idContext
       id.findIdentifierByLabel if ..drop
         "could not find " sb.copyPtr
-          op [] .val .getName labelContext sb.appendLabelName
+          op [] .val .GetName labelContext sb.appendLabelName
         op [] .pos errors appendError
         true return
       end =:: idData
@@ -1677,9 +1677,9 @@ proc(
     true return
   end
   ## enum-switch -> try read label
-  op [] .val .?getId .if
+  op [] .val .?GetId .if
     .labelId
-  else .?getName
+  else .?GetName
   ._else .?Constant .and .?TypeId .and =:: constType
       constType types.isNamedType _if
     constType typeContext types.namedTypeName
@@ -1901,7 +1901,7 @@ proc(
   program .labelBuffer [] .length =:: labelOffset
   program [] .labelBuffer
     ops for =:: op
-      op .val .?getName .if
+      op .val .?GetName .if
         list.append
       else ..drop
         "unexpected operation in Enum block: " sb.copyPtr
@@ -1993,32 +1993,32 @@ proc(
     state [] .reachable ! if
       ## ignore unreachable non-block ops
       op .val switch
-        block .case .blockType switch
+        Block .case .blockType switch
           AND AND_IF AND_DO OR OR_IF OR_DO case continue.opLoop
           default break
         end break
-        blockEnd .case .blockType switch
+        BlockEnd .case .blockType switch
           AND OR case ## only close and-or if top-block is and-or
             state peekBlock .and .?AndOr ? if break else continue.opLoop end
           break
           default break
         end break
         ## implementProcedure resets reachability at proc-start
-        implementProcedure case break
+        ImplementProcedure case break
         default continue.opLoop
       end
     end
     ## resolve names
-    op .val .?getName .and op@ state resolveIdentifer .if
-      op@ .val .getId=
-    else op .val .?setName .and op@ state resolveIdentifer ._if
-      op@ .val .setId=
-    else op .val .?atName .and op@ state resolveIdentifer ._if
-      op@ .val .atId=
-    else op .val .?existsName ._if
-      op@ state resolveIdentifer ? ConstValue .Bool op@ .val .StaticConstant=
+    op .val .?GetName .and op@ state resolveIdentifer .if
+      op@ .val .GetId=
+    else op .val .?SetName .and op@ state resolveIdentifer ._if
+      op@ .val .SetId=
+    else op .val .?AtName .and op@ state resolveIdentifer ._if
+      op@ .val .AtId=
+    else op .val .?ExistsName ._if
+      op@ state resolveIdentifer ? ConstValue .Bool op@ .val .Constant=
       types.primitive.BOOL op@ .dataType=
-    else .?aliasName ._if =:: nameAlias
+    else .?AliasName ._if =:: nameAlias
       op .pos state popType =:: aliasType
       aliasType typeContext types.isProcedure ! if
         "alias is only supported for procedure types" sb.copyPtr op .pos errors appendError
@@ -2076,12 +2076,12 @@ proc(
         .constValue=
       end
       continue.opLoop
-    else .?declareName ? or op .val .?initializeName ? _if
-      op .val .?initializeName ? =:: isInit
-      op .val .?initializeName .if =:: initName
+    else .?DeclareName ? or op .val .?InitializeName ? _if
+      op .val .?InitializeName ? =:: isInit
+      op .val .?InitializeName .if =:: initName
         op@ initName .initType .AUTO state resolveDeclarationType
         initName .label
-      else .?declareName ._else ..unreachable end
+      else .?DeclareName ._else ..unreachable end
         state [] .blockMode .NONE ! if
           Type .Undefined
           IdentifierType .LABEL
@@ -2116,14 +2116,14 @@ proc(
       op .dataType idData@ id.asIdInfo op .pos
       isInit ! if
         opDeclareId
-      else op .val .initializeName .initType .AUTO _if
+      else op .val .InitializeName .initType .AUTO _if
         opAutoTypedInitializeId
       else
         opInitializeId
       end op=
     end
     ## convert static arguments to constants
-    op .val .?getId .and .labelId =:: label
+    op .val .?GetId .and .labelId =:: label
         label labelContext id.labelFlags id.FLAG_STATIC & ? and
         state .argData label map.at .if =:: argData
       argData [] .valType op@ .dataType=
@@ -2132,8 +2132,6 @@ proc(
     op .val switch
       NOP case continue.opLoop
       Constant .case op .dataType op .pos state pushConstant continue.opLoop
-    ## TODO? remove static constants
-      StaticConstant .case op .dataType op .pos state pushConstant continue.opLoop
       NestedProc .case =:: procId
         program [] .procedures procId i64 cast list.at .data =:: procData
         procData [] .procType .?Undefined ? ! or
@@ -2160,15 +2158,15 @@ proc(
           procType ## TODO? special type for procedure literal
         op .pos state pushConstant
         continue.opLoop
-      getName setName atName .case =:: labelId
+      GetName SetName AtName .case =:: labelId
         "could not find identifier: " sb.copyPtr
           labelId labelContext sb.appendLabelPath
         op .pos errors appendError
         continue.opLoop
-      initializeName declareName aliasName case ..unreachable
-      usingNamespace case
-        op .val .usingNamespace .baseName =:: namespaceLabel
-        op .val .usingNamespace .alias
+      InitializeName DeclareName AliasName case ..unreachable
+      UsingNamespace .case =:: usingNamespace
+        usingNamespace .baseName =:: namespaceLabel
+        usingNamespace .alias
           $ id.LABEL_ID_NONE == if ..drop
             string.empty
           else
@@ -2181,9 +2179,9 @@ proc(
           "\" does not exist in the current scope" sb.appendS op .pos errors appendWarning
         end
         continue.opLoop
-      usingIdentifier case
-        op .val .usingIdentifier .baseName =:: srcLabel
-        op .val .usingIdentifier .alias
+      UsingIdentifier .case =:: usingIdentifier
+        usingIdentifier .baseName =:: srcLabel
+        usingIdentifier .alias
           $ id.LABEL_ID_NONE == if ..drop
             string.empty
           else
@@ -2196,7 +2194,7 @@ proc(
           op .pos
         errors id.importIdentifier ..drop
         continue.opLoop
-      getId .case =:: idInfo
+      GetId .case =:: idInfo
         idInfo .labelId labelContext id.labelFlags =:: flags
         flags id.FLAG_MUTABLE & ? =:: mutable
         flags id.FLAG_STATIC & ? =:: isStatic
@@ -2352,10 +2350,10 @@ proc(
                     state .missingProcs=
                   end
                 end
-                calledProc program callInfoToCall op@ .val .call=
+                calledProc program callInfoToCall op@ .val .Call=
               break
               Extern case
-                calledProc program callInfoToCall op@ .val .call=
+                calledProc program callInfoToCall op@ .val .Call=
               break
               BuiltIn case
                 baseProcData [] .implementation .BuiltIn .builtIn =:: builtInId
@@ -2366,7 +2364,7 @@ proc(
                     continue.opLoop
                   end
                 end
-                builtInId OpValue .builtIn op@ .val=
+                builtInId OpValue .BuiltIn op@ .val=
               break
               Alias case ..unreachable ## resolveCall unwraps alias
             end
@@ -2429,7 +2427,7 @@ proc(
             continue.opLoop
         end
         break
-      callPtr case
+      CallPtr case
         state .stack branchTree.peek =:: value?
         value? optional.isEmpty if
           ## TODO? print instruction name instead of 'call'
@@ -2471,8 +2469,7 @@ proc(
           state
         pushTypes
         continue.opLoop
-      atId case
-        op .val .atId =:: idInfo
+      AtId .case =:: idInfo
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ITR_VAR ARGUMENT case
             idInfo .labelId =:: labelId
@@ -2529,7 +2526,7 @@ proc(
                 implId
                 procId
               ProcedureImpl new
-                OpValue .procPtr
+                OpValue .ProcPtr
               op@ .val=
             end
             op .dataType typeContext types.isEmpty if
@@ -2559,8 +2556,7 @@ proc(
             continue.opLoop
         end
         break
-      setId case
-        op .val .setId =:: idInfo
+      SetId .case =:: idInfo
         idInfo .labelId =:: labelId
         labelId
           labelContext id.labelFlags
@@ -2579,7 +2575,7 @@ proc(
         requireTypes .?Err ? if continue.opLoop end
         op state appendOp ..drop
         continue.opLoop
-      declareId .case =:: idInfo
+      DeclareId .case =:: idInfo
         state .blockMode [] .NONE ! if
           1 op .pos state checkStackSize if
             continue.opLoop ## stack underflow
@@ -2731,15 +2727,12 @@ proc(
           continue.opLoop
         end
         break
-      initializeId autoTypedInitializeId .case =:: idInfo
-        op .val .?autoTypedInitializeId ? =:: autoTyped
-        autoTyped if
-          idInfo op@ .val .initializeId=
-        end
+      InitializeId AutoTypedInitializeId .case =:: idInfo
+        op .val .?AutoTypedInitializeId ? =:: autoTyped
         op .dataType .?Undefined ? if
           op@ autoTyped state resolveDeclarationType
         end
-        idInfo op@ .val .initializeId= ## auto-typed initializations have been resolved
+        idInfo op@ .val .InitializeId= ## auto-typed initializations have been resolved
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR ITR_VAR PROCEDURE TYPE case
             state .stack branchTree.peek .if
@@ -2824,11 +2817,11 @@ proc(
             continue.opLoop
         end
         break
-      implementProcedure case
+      ImplementProcedure .case =:: implementProcedure
         op .dataType
           $ .?Undefined ? if ..drop
             program [] .procedures
-              op .val .implementProcedure .procId i64 cast
+              implementProcedure .procId i64 cast
             list.at .data =:: procData
             procData [] .procType
             $ op@ .dataType=
@@ -2883,9 +2876,9 @@ proc(
           i 1 +
         end ..drop
         continue.opLoop
-      getElement getUnionElement setElement .case =:: index
-        op .val .?setElement ? =:: isWrite
-        op .val .?getUnionElement ? =:: isUnionGet
+      GetElement GetUnionElement SetElement .case =:: index
+        op .val .?SetElement ? =:: isWrite
+        op .val .?GetUnionElement ? =:: isUnionGet
         isWrite if 2 else 1 end op .pos state checkStackSize if
           continue.opLoop
         end
@@ -2940,13 +2933,13 @@ proc(
           op .pos errors appendError
         end
         continue.opLoop
-      getLabel getUnionLabel setLabel existsLabel .case =:: labelId
+      GetLabel GetUnionLabel SetLabel ExistsLabel .case =:: labelId
         enum( CHECK CHECK_ENUM GET UNION_GET ) =:: LabelAccessType
         LabelAccessType .GET =:: mut: accessType
-        op .val .?setLabel ? =:: isWrite
-        op .val .?existsLabel ? if
+        op .val .?SetLabel ? =:: isWrite
+        op .val .?ExistsLabel ? if
           LabelAccessType .CHECK accessType=
-        else op .val .?getUnionLabel ? _if
+        else op .val .?GetUnionLabel ? _if
           LabelAccessType .UNION_GET accessType=
         end
         1:i32 isWrite if 1 + end op .pos state checkStackSize if
@@ -3089,7 +3082,7 @@ proc(
         end
         srcType containerType elementIndex isWrite accessType .UNION_GET isPtr mutable op .pos state typeCheckGetElement
         continue.opLoop
-      getEnumLabel case
+      GetEnumLabel case
         state .stack branchTree.peek =:: label?
         label? optional.isEmpty if
           "missing argument for operation " sb.copyPtr
@@ -3112,9 +3105,9 @@ proc(
         enumType op@ .dataType=
         enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
         continue.opLoop
-      setEnumElement case
+      SetEnumElement case
         break
-      Cast Cast! bitCast case
+      Cast Cast! BitCast case
         op .dataType .?Undefined ? if
           ## resolve data type
           op .pos state popType op@ .dataType=
@@ -3125,12 +3118,12 @@ proc(
         state .stack branchTree.pop .data [] =:: value
         op .val .?Cast ? if
           value .valueType op@ .val .Cast .src=
-        else op .val .?bitCast ? _if
-          value .valueType op@ .val .bitCast=
+        else op .val .?BitCast ? _if
+          value .valueType op@ .val .BitCast=
         else
           value .valueType op@ .val .Cast!=
         end
-        op .val .?bitCast ? if
+        op .val .?BitCast ? if
           ## canBitCast
             value .valueType
             op .dataType
@@ -3155,7 +3148,7 @@ proc(
           end
         end
         ## XXX try cast constant on stack
-        op .val .?bitCast ? if
+        op .val .?BitCast ? if
           ConstValue .None
         else
           ## tryCastConstant
@@ -3219,7 +3212,7 @@ proc(
           ..unreachable
         end
         break
-      equalityOperator case
+      EqualityOperator .case =:: equalityOperator
         2 op .pos state checkStackSize if
           continue.opLoop
         end
@@ -3251,7 +3244,7 @@ proc(
             op .pos errors appendError
             continue.opLoop
           end
-            op .val .equalityOperator .NEQ ^ ## invert result for NEQ
+            equalityOperator .NEQ ^ ## invert result for NEQ
           ConstValue .Bool
             types.primitive.BOOL
             op .pos
@@ -3299,15 +3292,15 @@ proc(
           constVal .value typeContext sb.appendConstant
         op .pos errors appendError
         continue.opLoop
-      block case
+      Block .case =:: blockInfo
         state [] .blockStart =:: oldBlockStart
         state removeTrailingNOPs ## TODO! removing NOPs can underflow below block-start
         state [] .compiledOps .length i32 cast.u state .blockStart=
-        op .val .block .blockType =:: blockType
+        blockInfo .blockType =:: blockType
         blockType switch
           ## TODO: remove check for TYPE_COMPOSITE when switching to new type-checker
           TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE TYPE_UNION TYPE_UNTAGGED_UNION TYPE_PROC_IN TYPE_CPROC_IN case
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
+            ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             elts
               blockType switch
                 TYPE_TUPLE TYPE_STRUCT TYPE_COMPOSITE case CompositeType .TUPLE break
@@ -3319,7 +3312,7 @@ proc(
               end
             op .pos state typeCheckCompositeType
             opIndex
-              op .pos op .val .block .jumpDistance asForwardJump +
+              op .pos blockInfo .jumpDistance asForwardJump +
             opIndex=
             oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
@@ -3345,26 +3338,26 @@ proc(
             TypeBlockState new optional.wrap state .arrowState=
           continue.opLoop
           TYPE_SETTYPE case
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
+            ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             elts op .pos state typeCheckTypeSet
             opIndex
-              op .pos op .val .block .jumpDistance asForwardJump +
+              op .pos blockInfo .jumpDistance asForwardJump +
             opIndex=
             oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
           TYPE_ENUM case
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
+            ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             elts op .pos state typeCheckEnumType
             opIndex
-              op .pos op .val .block .jumpDistance asForwardJump +
+              op .pos blockInfo .jumpDistance asForwardJump +
             opIndex=
             oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
           INITIALIZER case
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
+            ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             elts op .pos state typeCheckInitializer
             opIndex
-              op .pos op .val .block .jumpDistance asForwardJump +
+              op .pos blockInfo .jumpDistance asForwardJump +
             opIndex=
             oldBlockStart state .blockStart= ## reset block start
           continue.opLoop
@@ -3382,7 +3375,7 @@ proc(
                 BlockInfo .ConstIf state openBlock
                 idContext id.openScope
                 opIndex
-                  op .pos op .val .block .jumpDistance asForwardJump +
+                  op .pos blockInfo .jumpDistance asForwardJump +
                 opIndex=
                 continue.opLoop
               end
@@ -3398,14 +3391,14 @@ proc(
             false 1 op .pos state clearReferences
             state inIfCondition ! if
               state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
-              blockId op@ .val .block .blockId=
+              blockId op@ .val .Block .blockId=
               state .stack branchTree.startBranch =:: ifRoot
               ifRoot blockId op .pos newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
               idContext id.openScope
             end
             state peekBlock .data .If =:: ifBlock
-            ifBlock [] .blockId op@ .val .block .blockId=
+            ifBlock [] .blockId op@ .val .Block .blockId=
             blockType .AND_IF if
               ifBlock [] .flags IfBlockFlags.hasAndIf | ifBlock .flags=
               ifBlock .andBranches
@@ -3429,7 +3422,7 @@ proc(
               idContext id.openScope
               ## open constant if and jump directly before else to also skip else-branch
               opIndex
-                op .pos op .val .block .jumpDistance asForwardJump 1 - + $ -1:iSize != "no underflow" assert
+                op .pos blockInfo .jumpDistance asForwardJump 1 - + $ -1:iSize != "no underflow" assert
               opIndex=
               continue.opLoop
             end
@@ -3442,7 +3435,7 @@ proc(
                 idContext id.openScope
                 boolVal ! if
                   opIndex
-                    op .pos op .val .block .jumpDistance asForwardJump +
+                    op .pos blockInfo .jumpDistance asForwardJump +
                   opIndex=
                 end
                 continue.opLoop
@@ -3475,7 +3468,7 @@ proc(
             ifBlock [] .flags
               IfBlockFlags.hasIf |
             ifBlock .flags=
-            ifBlock [] .blockId op@ .val .block .blockId=
+            ifBlock [] .blockId op@ .val .Block .blockId=
             program [] .ifData
               ifBlock [] .blockId i64 cast
             list.at .data =:: ifData
@@ -3498,12 +3491,12 @@ proc(
                 state [] .compiledOps
                   andOrIndex
                 list.at .data =:: andOrOp
-                andOrOp .val .block .blockType .OR_IF if
+                andOrOp .val .Block .blockType .OR_IF if
                   andOrIndex orPositions orCount slice.set
                   orCount 1 + orCount=
                   currentOpIndex
                     andOrIndex - JumpDistance cast
-                  andOrOp .val .block .jumpDistance=
+                  andOrOp .val .Block .jumpDistance=
                 end
               end
               orCount iSize cast.u orPositions .length == "or-counts match" assert
@@ -3556,7 +3549,7 @@ proc(
               idContext id.closeScope ! "closing if-scope worked" assert
               oldBlockStart state .blockStart= ## keep previous block start
               opIndex
-                op .pos op .val .block .jumpDistance asForwardJump +
+                op .pos blockInfo .jumpDistance asForwardJump +
               opIndex=
               continue.opLoop
             end
@@ -3583,7 +3576,7 @@ proc(
             else
               idContext id.openScope
             end
-            ifBlock [] .blockId op@ .val .block .blockId=
+            ifBlock [] .blockId op@ .val .Block .blockId=
             state [] .stack branchTree.depth =:: ifTypes
             state .stack
               ifBlock [] .branchRoot
@@ -3617,7 +3610,7 @@ proc(
               state [] .compiledOps
                 ifData [] .ifPosition
               list.at .data
-            .val .block .jumpDistance=
+            .val .Block .jumpDistance=
             program [] .programMemory
               ifBlock [] .andOrPositions .length
                 ifData [] .orPositions .length - i32 cast
@@ -3628,12 +3621,12 @@ proc(
               state [] .compiledOps
                 andOrPos
               list.at .data =:: andOrOp
-              andOrOp .val .block [] .blockType .AND_IF if
+              andOrOp .val .Block [] .blockType .AND_IF if
                 andOrPos andPositions andCount slice.set
                 andCount 1 + andCount=
                 currentOpIndex
                   andOrPos - JumpDistance cast
-                andOrOp .val .block .jumpDistance=
+                andOrOp .val .Block .jumpDistance=
               end
             end
             andCount iSize cast.u andPositions .length == "and-counts match" assert
@@ -3677,7 +3670,7 @@ proc(
             state [] .reachable ! if
               ## skip block if start is unreachable
               opIndex
-                op .pos op .val .block .jumpDistance asForwardJump +
+                op .pos blockInfo .jumpDistance asForwardJump +
               opIndex=
               continue.opLoop
             end
@@ -3711,7 +3704,7 @@ proc(
               tmpVar optional.wrap
             else IdentifierInfo optional.empty end =:: srcVar
             program [] .switchData .length BlockId cast =:: switchId
-            switchId op@ .val .block .blockId=
+            switchId op@ .val .Block .blockId=
             switchType op@ .dataType=
             false 1 op .pos state clearReferences
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
@@ -3732,7 +3725,7 @@ proc(
               switchType
               switchBranch
               srcVar
-              op .val .block .blockLabel
+              blockInfo .blockLabel
               switchId
               currentOpIndex
               op .pos
@@ -3813,11 +3806,11 @@ proc(
                 JumpDistance cast list.append
               switchBlock .caseJumpDistances=
             end
-            switchBlock [] .blockId op@ .val .block .blockId=
+            switchBlock [] .blockId op@ .val .Block .blockId=
             true state .reachable=
             switchType op@ .dataType=
             blockType .DOT_CASE if
-              BlockType .CASE op@ .val .block .blockType=
+              BlockType .CASE op@ .val .Block .blockType=
             end
             op state appendOp ..drop
             blockType .DOT_CASE if
@@ -3872,7 +3865,7 @@ proc(
           BREAK CONTINUE case
             ## findBreakableBlock
               blockType
-              op .val .block .blockLabel
+              blockInfo .blockLabel
               op .pos
               state
             findBreakableBlock =:: breakBlock?
@@ -3910,7 +3903,7 @@ proc(
                 whileBlock .breakCastOffsets
                 whileBlock .breakBranches
               end =:: branches =:: castOffsets
-              whileBlock [] .blockId op@ .val .block .blockId=
+              whileBlock [] .blockId op@ .val .Block .blockId=
               ## add space for casts of values on stack
               castOffsets []
                 ## reserveOps
@@ -3937,7 +3930,7 @@ proc(
             state [] .reachable ! if
               ## skip block if start is unreachable
               opIndex
-                op .pos op .val .block .jumpDistance asForwardJump +
+                op .pos blockInfo .jumpDistance asForwardJump +
               opIndex=
               continue.opLoop
             end
@@ -3945,7 +3938,7 @@ proc(
             state .stack branchTree.startBranch =:: whileBranch
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             program [] .whileData .length BlockId cast =:: whileId
-            whileId op@ .val .block .blockId=
+            whileId op@ .val .Block .blockId=
             program [] .whileData
               ## WhileData
                 -1
@@ -3958,7 +3951,7 @@ proc(
             program .whileData=
             ## newWhileBlock
               whileBranch
-              op .val .block .blockLabel
+              blockInfo .blockLabel
               whileId
               currentOpIndex
               op .pos
@@ -4003,7 +3996,7 @@ proc(
                 op .pos
               BranchPoint new list.append
             branches =[]
-            whileBlock [] .blockId op@ .val .block .blockId=
+            whileBlock [] .blockId op@ .val .Block .blockId=
             whileBlock [] .labelPositions
               state [] .compiledOps .length i32 cast.u list.append
             whileBlock .labelPositions=
@@ -4032,7 +4025,7 @@ proc(
             end
             ## passing an offset of 1 ensures that cast-offsets consider do-condition
             false 1 op .pos state clearReferences
-            whileBlock [] .blockId op@ .val .block .blockId=
+            whileBlock [] .blockId op@ .val .Block .blockId=
             whileBlock []
               .breakCastOffsets .length i32 cast.u
             whileBlock .doBranchIndex=
@@ -4089,10 +4082,10 @@ proc(
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             whileBlock [] .labelPositions for =:: orPos
               state [] .compiledOps orPos list.at .data =:: orOp
-              orOp .val .block [] .blockType .OR_DO if
+              orOp .val .Block [] .blockType .OR_DO if
                 currentOpIndex
                   orPos - JumpDistance cast
-                orOp .val .block .jumpDistance=
+                orOp .val .Block .jumpDistance=
                 whileBlock [] .orCount 1 -
                   orPos orPositions $2 slice.set
                 whileBlock .orCount=
@@ -4121,7 +4114,7 @@ proc(
             end =:: whileBlock
             false 0 op .pos state clearReferences
             true whileBlock .hasFinally=
-            whileBlock [] .blockId op@ .val .block .blockId=
+            whileBlock [] .blockId op@ .val .Block .blockId=
             whileBlock [] .continueBranches =:: mut: continueBranches
             state [] .reachable if
               whileBlock [] .continueCastOffsets
@@ -4181,10 +4174,10 @@ proc(
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             whileBlock [] .labelPositions for =:: continuePos
               state [] .compiledOps continuePos list.at .data =:: continueOp
-              continueOp .val .block [] .blockType .CONTINUE if
+              continueOp .val .Block [] .blockType .CONTINUE if
                 currentOpIndex
                   continuePos - JumpDistance cast
-                continueOp .val .block .jumpDistance=
+                continueOp .val .Block .jumpDistance=
                 whileBlock [] .continueCount 1 -
                   continuePos continuePositions $2 slice.set
                 whileBlock .continueCount=
@@ -4208,7 +4201,7 @@ proc(
               andOrBlock [] .blockId
             else
               state [] .compiledOps .length i32 cast.u program createAndOrData =:: blockId
-              blockId op@ .val .block .blockId=
+              blockId op@ .val .Block .blockId=
               state .stack branchTree.startBranch =:: rootBranch
               rootBranch
                 blockId
@@ -4226,7 +4219,7 @@ proc(
             state requireTypes .?Err ? if
               continue.opLoop
             end
-            blockId op@ .val .block .blockId=
+            blockId op@ .val .Block .blockId=
             state peekBlock .data .AndOr =:: currentBlock
             currentBlock [] .andOrPositions
               state [] .compiledOps .length i32 cast.u list.append
@@ -4234,11 +4227,11 @@ proc(
             op state appendOp ..drop
             continue.opLoop
           NAMESPACE case
-            op .val .block .blockLabel idContext id.beginNamespace
+            blockInfo .blockLabel idContext id.beginNamespace
             continue.opLoop
           OVERLOAD case
-            ops opIndex 1 + op .val .block .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
-            op .val .block .blockLabel =:: mut: labelId
+            ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
+            blockInfo .blockLabel =:: mut: labelId
             labelId labelContext id.currentNamespace labelContext id.setLabelNamespace
             labelId idContext id.findDeclaredIdentifierByLabel or
                 labelId labelContext id.labelFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
@@ -4287,8 +4280,8 @@ proc(
             program [] .procBundles bundleId i64 cast @[] =:: bundleData
             elts for =:: elt
               elt .val switch
-                getName .case break
-                getId .case .labelId break
+                GetName .case break
+                GetId .case .labelId break
                 ## NestedProc .case =:: procId break
                 default
                   "unsupported operation in overload block: " sb.copyPtr
@@ -4350,7 +4343,7 @@ proc(
               end
             end
             opIndex
-              op .pos op .val .block .jumpDistance asForwardJump +
+              op .pos blockInfo .jumpDistance asForwardJump +
             opIndex=
             continue.opLoop
           PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
@@ -4360,16 +4353,16 @@ proc(
             break
         end
         break
-      blockEnd case
+      BlockEnd .case =:: blockInfo
         state [] .blockStart =:: oldBlockStart
         state removeTrailingNOPs
         state [] .compiledOps .length i32 cast.u state .blockStart=
-        op .val .blockEnd .blockType switch
+        blockInfo .blockType switch
           TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_SETTYPE
           TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE INITIALIZER case
             ## XXX allow dynamic initializer blocks
             "could not evaluate " sb.copyPtr
-              op .val .blockEnd .blockType sb.appendBlockType
+              blockInfo .blockType sb.appendBlockType
               " block" sb.appendS
             op .pos errors appendError
             continue.opLoop
@@ -4454,20 +4447,20 @@ proc(
                 op .pos errors appendError
               end
             end
-            closedIf .blockId op@ .val .blockEnd .blockId=
+            closedIf .blockId op@ .val .BlockEnd .blockId=
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             program [] .ifData
               closedIf .blockId i64 cast
             list.at .data =:: ifData
             ifData [] .ifPosition
               currentOpIndex - JumpDistance cast
-            op@ .val .blockEnd .jumpDistance=
+            op@ .val .BlockEnd .jumpDistance=
             currentOpIndex
               ifData [] .elsePosition - JumpDistance cast
               state [] .compiledOps
                 ifData [] .elsePosition
               list.at .data
-            .val .block .jumpDistance=
+            .val .Block .jumpDistance=
             op state appendOp ..drop
             idContext id.closeScope ! "closing else-scope worked" assert
             ## cleanup closed block
@@ -4499,7 +4492,7 @@ proc(
             switchData [] .labels switchLabelCmp@ program list.sort
             switchData [] .defaultJumpDistance ? ! if
               BlockType .DEFAULT op .pos opBlock =:: mut: tmp
-              switchBlock .blockId tmp@ .val .block .blockId=
+              switchBlock .blockId tmp@ .val .Block .blockId=
               state [] .compiledOps .length
                 switchBlock .switchPosition iSize cast.u -
                 JumpDistance cast
@@ -4550,7 +4543,7 @@ proc(
                 caseBranches=
               end
               BlockType .BREAK_SWITCH op .pos opBlock tmp=
-              switchBlock .blockId tmp@ .val .block .blockId=
+              switchBlock .blockId tmp@ .val .Block .blockId=
               breakPositions
                 state [] .compiledOps .length i32 cast.u list.append
               breakPositions=
@@ -4590,7 +4583,7 @@ proc(
             end
             caseBranches .length 0:iSize != state .reachable=
             BlockType .SWITCH op .pos opEndBlock =:: mut: tmp
-            switchBlock .blockId tmp@ .val .blockEnd .blockId=
+            switchBlock .blockId tmp@ .val .BlockEnd .blockId=
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             breakPositions for =:: breakPos
               state [] .compiledOps breakPos list.at .else
@@ -4598,7 +4591,7 @@ proc(
               end =:: breakOp
               currentOpIndex
                 breakPos - JumpDistance cast
-              breakOp .val .block .jumpDistance=
+              breakOp .val .Block .jumpDistance=
             end
             program [] .programMemory
               breakPositions
@@ -4615,7 +4608,7 @@ proc(
             switchBlock .caseJumpDistances list.free ..drop
             switchBlock .switchPosition
               currentOpIndex - JumpDistance cast
-            tmp@ .val .blockEnd .jumpDistance=
+            tmp@ .val .BlockEnd .jumpDistance=
             tmp state appendOp ..drop
             idContext id.closeScope ! "closing while-scope worked" assert
             continue.opLoop
@@ -4712,7 +4705,7 @@ proc(
             end
             branchPoints list.free ..drop
             whileBlock .breakBranches .length 0:iSize != state .reachable=
-            whileId op@ .val .blockEnd .blockId=
+            whileId op@ .val .BlockEnd .blockId=
             whileBlock .breakBranches list.free ..drop
             whileBlock .breakCastOffsets list.free ..drop
             whileBlock .continueBranches list.free ..drop
@@ -4728,30 +4721,30 @@ proc(
             0:i32 =:: mut: breakCount
             whileBlock .labelPositions for =:: labelPos
               state [] .compiledOps labelPos list.at .data =:: labelOp
-              labelOp .val .block [] .blockType switch
+              labelOp .val .Block [] .blockType switch
                 AND_DO BREAK DO case true break
                 OR_DO CONTINUE case false break
                 default ..unreachable
               end if
                 currentOpIndex
                   labelPos - JumpDistance cast
-                labelOp .val .block .jumpDistance=
+                labelOp .val .Block .jumpDistance=
                 labelPos breakPositions breakCount slice.set
               end
             end
             breakPositions whileData .breakPositions=
             whileBlock .labelPositions list.free ..drop
             BlockType .WHILE op .pos opEndBlock =:: mut: tmp
-            whileBlock .blockId tmp@ .val .blockEnd .blockId=
+            whileBlock .blockId tmp@ .val .BlockEnd .blockId=
             whileBlock .whilePosition
               currentOpIndex - JumpDistance cast
-            tmp@ .val .blockEnd .jumpDistance=
+            tmp@ .val .BlockEnd .jumpDistance=
             currentOpIndex
               whileBlock .whilePosition - JumpDistance cast
               state [] .compiledOps
                 whileBlock .whilePosition
               list.at .data
-            .val .block .jumpDistance=
+            .val .Block .jumpDistance=
             tmp state appendOp ..drop
             idContext id.closeScope ! "closing switch-scope worked" assert
             continue.opLoop
@@ -4771,7 +4764,7 @@ proc(
               "the end of all branches of an and/or block should be reachable, use if-else for conditional exit" sb.copyPtr
               op .pos errors appendError
             end
-            andOrBlock .blockId op@ .val .blockEnd .blockId=
+            andOrBlock .blockId op@ .val .BlockEnd .blockId=
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             andOrBlock .andOrPositions for =:: andOrPos
               state [] .compiledOps andOrPos list.at .else
@@ -4779,7 +4772,7 @@ proc(
               end =:: andOrOp
               currentOpIndex
                 andOrPos - JumpDistance cast
-              andOrOp .val .block .jumpDistance=
+              andOrOp .val .Block .jumpDistance=
             end
             program [] .programMemory
               andOrBlock .andOrPositions mixedArena.copyList
@@ -4790,7 +4783,7 @@ proc(
             program .programMemory=
             andOrBlock .andOrPositions 0 []
               currentOpIndex - JumpDistance cast
-            op@ .val .blockEnd .jumpDistance=
+            op@ .val .BlockEnd .jumpDistance=
             andOrBlock .andOrPositions list.free ..drop
             op state appendOp ..drop
             andOrBlock .branches =:: mut: branches
@@ -4872,13 +4865,13 @@ proc(
         end
         op state appendOp ..drop
         continue.opLoop
-      panic case
+      Panic case
         op .pos state popString =:: message
         message op .pos opPanicWithMessage op=
         false state .reachable=
         op state appendOp ..drop
         continue.opLoop
-      panicWithMessage case
+      PanicWithMessage case
         false state .reachable=
         op state appendOp ..drop
         continue.opLoop
@@ -4917,7 +4910,7 @@ proc(
           INFO case appendInfo break
         end
         continue.opLoop
-      length case
+      Length case
         state .stack branchTree.peek =:: value?
         value? optional.isEmpty if
           "missing argument for " sb.copyPtr
@@ -4940,7 +4933,7 @@ proc(
           op .pos
         state pushConstant
         continue.opLoop
-      rawValue case
+      RawValue case
         state .stack branchTree.peek .else
           "missing argument for " sb.copyPtr
             op program sb.appendOp
@@ -4970,17 +4963,17 @@ proc(
           op
         state pushValue
         continue.opLoop
-      procPtr builtIn
-      NewEnum call checkEnumLabel
-      existsName hasElement case
+      ProcPtr BuiltIn
+      NewEnum Call CheckEnumLabel
+      ExistsName HasElement case
         break
-      stackMod case
-        op .val .stackMod .modType switch
+      StackMod .case =:: stackMod
+        stackMod .modType switch
           DROP case
-            op .val .stackMod .n op .pos state discardValues
+            stackMod .n op .pos state discardValues
             continue.opLoop
           COPY case
-            op .val .stackMod .n =:: offset
+            stackMod .n =:: offset
             offset 1 + op .pos state checkStackSize if
               continue.opLoop
             end
@@ -5000,7 +4993,7 @@ proc(
             state .stack copied branchTree.push
             continue.opLoop
           ROTATE case
-            op .val .stackMod .n =:: offset
+            stackMod .n =:: offset
             offset i32.abs 1 + =:: eltCount
             eltCount op .pos state checkStackSize if
               continue.opLoop
@@ -5013,7 +5006,7 @@ proc(
             continue.opLoop
         end
         break
-      typeInfo case
+      TypeInfo .case =:: typeInfo
         op .pos state popType =:: valType
         valType typeContext types.containsGeneric if
           break ## XXX? support var-size arrays
@@ -5021,7 +5014,7 @@ proc(
         ## pushConstant
           ## computeTypeInfo
             valType
-            op .val .typeInfo
+            typeInfo
           program interpreter.computeTypeInfo if ..drop
             "could no compute size of type " sb.copyPtr
               valType typeContext sb.appendType
@@ -5032,7 +5025,7 @@ proc(
           op .pos
         state pushConstant
       continue.opLoop
-      typeWith .case =:: withProcId
+      TypeWith .case =:: withProcId
         program [] .procedures withProcId i64 cast @[] =:: withProc
         withProc [] .labelId labelContext id.currentNamespace labelContext id.setLabelNamespace
         op .pos state popType =:: baseType
@@ -5063,7 +5056,7 @@ proc(
           op .pos
         state pushConstant
       continue.opLoop
-      typeModifier .case =:: typeMod
+      TypeModifier .case =:: typeMod
         idContext [] .arraySizeBuffer
           list.clear
         idContext .arraySizeBuffer=
@@ -5145,17 +5138,17 @@ proc(
           state
         parseImportFile
       continue.opLoop
-      autoCast copy ConstantReference NewReference NewEnumReference case
+      AutoCast Copy ConstantReference NewReference NewEnumReference case
         "unsupported operation: " sb.copyPtr
           op program sb.appendOp
         op .pos errors appendError
         continue.opLoop
-      compilerInfo case
+      CompilerInfo .case =:: compilerInfo
         state isGlobal ! if
           ## remeber operation for interpreter
           op state appendOp ..drop
         end
-        op .val .compilerInfo switch
+        compilerInfo switch
           TypeInfo .case =:: info
             ## printTypes
               false

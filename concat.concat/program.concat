@@ -140,69 +140,68 @@ struct( LabelId : baseName LabelId : alias ) =:: export: NameAliasInfo
 union(
             NopType : NOP
          ConstValue : Constant
-         ConstValue : StaticConstant
              ProcId : NestedProc
    ConstReferenceId : ConstantReference
-          BlockData : block
-          BlockData : blockEnd
-     IdentifierInfo : getId
-     IdentifierInfo : setId
-     IdentifierInfo : atId
-     IdentifierInfo : initializeId
-     IdentifierInfo : autoTypedInitializeId
-     IdentifierInfo : declareId
-      ProcedureImpl : implementProcedure
-      ProcedureImpl : procPtr
-            LabelId : getLabel
-            LabelId : getUnionLabel
-            LabelId : setLabel
-            LabelId : existsLabel
-                i32 : getElement
-                i32 : getUnionElement
-                i32 : setElement
-                i32 : hasElement
+          BlockData : Block
+          BlockData : BlockEnd
+     IdentifierInfo : GetId
+     IdentifierInfo : SetId
+     IdentifierInfo : AtId
+     IdentifierInfo : InitializeId
+     IdentifierInfo : AutoTypedInitializeId
+     IdentifierInfo : DeclareId
+      ProcedureImpl : ImplementProcedure
+      ProcedureImpl : ProcPtr
+            LabelId : GetLabel
+            LabelId : GetUnionLabel
+            LabelId : SetLabel
+            LabelId : ExistsLabel
+                i32 : GetElement
+                i32 : GetUnionElement
+                i32 : SetElement
+                i32 : HasElement
                   _ : Return
             BlockId : InlineReturn ## TODO? remember jump distance
                   _ : New
                   _ : NewReference
                 i32 : NewEnum
                 i32 : NewEnumReference
-      ProcedureCall : call
-            BuiltIn : builtIn
-        PointerCall : callPtr
-                  _ : length
-                  _ : rawValue
-       AutoCastInfo : autoCast
+      ProcedureCall : Call
+            BuiltIn : shadow: BuiltIn
+        PointerCall : CallPtr
+                  _ : Length
+                  _ : RawValue
+       AutoCastInfo : AutoCast
            CastInfo : Cast
                Type : Cast!
-               Type : bitCast
-   EqualityOperator : equalityOperator
+               Type : BitCast
+   EqualityOperator : shadow: EqualityOperator
                   _ : Splat
-                  _ : getEnumLabel
-                i32 : checkEnumLabel
-                i32 : setEnumElement
-                  _ : copy
-  StackModification : stackMod
-            LabelId : getName
-            LabelId : setName
-            LabelId : atName
-            LabelId : existsName
-      NameAliasInfo : aliasName
-            LabelId : declareName
-       NameInitInfo : initializeName
-      NameAliasInfo : usingNamespace
-      NameAliasInfo : usingIdentifier
-             ProcId : typeWith
-       TypeModifier : typeModifier
+                  _ : GetEnumLabel
+                i32 : CheckEnumLabel
+                i32 : SetEnumElement
+                  _ : Copy
+  StackModification : StackMod
+            LabelId : GetName
+            LabelId : SetName
+            LabelId : AtName
+            LabelId : ExistsName
+      NameAliasInfo : AliasName
+            LabelId : DeclareName
+       NameInitInfo : InitializeName
+      NameAliasInfo : UsingNamespace
+      NameAliasInfo : UsingIdentifier
+             ProcId : TypeWith
+       TypeModifier : shadow: TypeModifier
                   _ : Assert
              string : RuntimeAssert
           ErrorType : Error
-     TypeMemoryInfo : typeInfo
-                  _ : panic
-             string : panicWithMessage
+     TypeMemoryInfo : TypeInfo
+                  _ : Panic
+             string : PanicWithMessage
              string : Import
              string : LibImport
-       CompilerInfo : compilerInfo
+       CompilerInfo : shadow: CompilerInfo
 ) =:: export: OpValue
 struct( OpValue : val Type : dataType FilePosition : pos ) =:: export: Operation
 proc( -> OpValue ) =>: export: opValNOP
@@ -214,9 +213,6 @@ end
 proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export: opConst
   constValue OpValue .Constant constType pos Operation new return
 end
-proc( ConstValue : constValue Type : constType FilePosition : pos -> Operation ) =>: export: opStaticConst
-  constValue OpValue .StaticConstant constType pos Operation new return
-end
 proc( ProcId : id FilePosition : pos -> Operation ) =>: export: opNestedProc
   id OpValue .NestedProc Type .Undefined pos Operation new return
 end
@@ -225,86 +221,86 @@ proc( BlockType FilePosition : pos -> Operation ) =>: export: opBlock
   id.LABEL_ID_NONE
     -1:BlockId
     0:JumpDistance
-  BlockData new OpValue .block Type .Undefined pos Operation new return
+  BlockData new OpValue .Block Type .Undefined pos Operation new return
 end
 proc( BlockType LabelId : label FilePosition : pos -> Operation ) =>: export: opLabeledBlock
   label
     -1:BlockId
     0:JumpDistance
-  BlockData new OpValue .block Type .Undefined pos Operation new return
+  BlockData new OpValue .Block Type .Undefined pos Operation new return
 end
 proc( BlockType FilePosition : pos -> Operation ) =>: export: opEndBlock
   id.LABEL_ID_NONE
     -1:BlockId
     0:JumpDistance
-  BlockData new OpValue .blockEnd Type .Undefined pos Operation new return
+  BlockData new OpValue .BlockEnd Type .Undefined pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGetId
   =:: pos
-  OpValue .getId ..swap pos Operation new return
+  OpValue .GetId ..swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opSetId
   =:: pos
-  OpValue .setId ..swap pos Operation new return
+  OpValue .SetId ..swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opAtId
   =:: pos
-  OpValue .atId ..swap pos Operation new return
+  OpValue .AtId ..swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opInitializeId
   =:: pos
-  OpValue .initializeId ..swap pos Operation new return
+  OpValue .InitializeId ..swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opAutoTypedInitializeId
   =:: pos
-  OpValue .autoTypedInitializeId ..swap pos Operation new return
+  OpValue .AutoTypedInitializeId ..swap pos Operation new return
 end
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opDeclareId
   =:: pos
-  OpValue .declareId ..swap pos Operation new return
+  OpValue .DeclareId ..swap pos Operation new return
 end
 proc( Type ProcedureImpl FilePosition  -> Operation ) =>: export: opImplementProc
   =:: pos
-  OpValue .implementProcedure ..swap pos Operation new return
+  OpValue .ImplementProcedure ..swap pos Operation new return
 end
 proc( Type BuiltIn FilePosition  -> Operation ) =>: export: opBuiltIn
   =:: pos
-  OpValue .builtIn ..swap pos Operation new return
+  OpValue .BuiltIn ..swap pos Operation new return
 end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opGetElement
-  index OpValue .getElement base pos Operation new return
+  index OpValue .GetElement base pos Operation new return
 end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opGetUnionElement
-  index OpValue .getUnionElement base pos Operation new return
+  index OpValue .GetUnionElement base pos Operation new return
 end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opSetElement
-  index OpValue .setElement base pos Operation new return
+  index OpValue .SetElement base pos Operation new return
 end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opHasElement
-  index OpValue .hasElement base pos Operation new return
+  index OpValue .HasElement base pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetLabel
-  OpValue .getLabel Type .Undefined pos Operation new return
+  OpValue .GetLabel Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetUnionLabel
-  OpValue .getUnionLabel Type .Undefined pos Operation new return
+  OpValue .GetUnionLabel Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opSetLabel
   =:: pos
-  OpValue .setLabel Type .Undefined pos Operation new return
+  OpValue .SetLabel Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opExistsLabel
   =:: pos
-  OpValue .existsLabel Type .Undefined pos Operation new return
+  OpValue .ExistsLabel Type .Undefined pos Operation new return
 end
 proc( Type FilePosition : pos -> Operation ) =>: export: opReturn
   OpValue .Return >$ pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opEqual
-  EqualityOperator .EQ OpValue .equalityOperator Type .Undefined pos Operation new return
+  EqualityOperator .EQ OpValue .EqualityOperator Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opNotEqual
-  EqualityOperator .NEQ OpValue .equalityOperator Type .Undefined pos Operation new return
+  EqualityOperator .NEQ OpValue .EqualityOperator Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opSplat
   OpValue .Splat Type .Undefined pos Operation new return
@@ -330,91 +326,91 @@ proc( Type : target FilePosition : pos -> Operation ) =>: export: opCast!
    Type .Undefined OpValue .Cast! target pos Operation new return
 end
 proc( Type : target FilePosition : pos -> Operation ) =>: export: opBitCast
-   Type .Undefined OpValue .bitCast target pos Operation new return
+   Type .Undefined OpValue .BitCast target pos Operation new return
 end
 proc( Type : src i32 : offset Type : target FilePosition : pos -> Operation ) =>: export: opAutoCast
-   src offset AutoCastInfo new OpValue .autoCast target pos Operation new return
+   src offset AutoCastInfo new OpValue .AutoCast target pos Operation new return
 end
 proc( i32 StackModType FilePosition -> Operation ) =>: export: opStackMod
   =:: pos
-  StackModification new OpValue .stackMod Type .Undefined pos Operation new return
+  StackModification new OpValue .StackMod Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opCallPtr
-  -1:iSize NO_CALL_DATA PointerCall new OpValue .callPtr Type .Undefined pos Operation new return
+  -1:iSize NO_CALL_DATA PointerCall new OpValue .CallPtr Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opLength
-  OpValue .length types.I_SIZE pos Operation new return
+  OpValue .Length types.I_SIZE pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opRawValue
-  OpValue .rawValue Type .Undefined pos Operation new return
+  OpValue .RawValue Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opGetEnumLabel
-  OpValue .getEnumLabel Type .Undefined pos Operation new return
+  OpValue .GetEnumLabel Type .Undefined pos Operation new return
 end
 proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export: opTypeInfo
-  infoType OpValue .typeInfo t pos Operation new return
+  infoType OpValue .TypeInfo t pos Operation new return
 end
 proc( Type i32 FilePosition -> Operation ) =>: export: opCheckEnum
   =:: pos
-  OpValue .checkEnumLabel ..swap pos Operation new return
+  OpValue .CheckEnumLabel ..swap pos Operation new return
 end
 proc( Type i32 FilePosition -> Operation ) =>: export: opSetEnumElement
   =:: pos
-  OpValue .setEnumElement ..swap pos Operation new return
+  OpValue .SetEnumElement ..swap pos Operation new return
 end
 proc( Type : t FilePosition : pos -> Operation ) =>: export: opCopy
-  OpValue .copy t pos Operation new return
+  OpValue .Copy t pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opGetName
   =:: pos
-  OpValue .getName Type .Undefined pos Operation new return
+  OpValue .GetName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opAtName
-  OpValue .atName Type .Undefined pos Operation new return
+  OpValue .AtName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opSetName
-  OpValue .setName Type .Undefined pos Operation new return
+  OpValue .SetName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opExistsName
-  OpValue .existsName Type .Undefined pos Operation new return
+  OpValue .ExistsName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opDeclareName
-  OpValue .declareName Type .Undefined pos Operation new return
+  OpValue .DeclareName Type .Undefined pos Operation new return
 end
 proc( LabelId : baseName LabelId : nameAlias FilePosition : pos -> Operation ) =>: export: opAliasName
-  baseName nameAlias NameAliasInfo new OpValue .aliasName Type .Undefined pos Operation new return
+  baseName nameAlias NameAliasInfo new OpValue .AliasName Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition : pos  -> Operation ) =>: export: opInitializeName
-  InitType .FIXED NameInitInfo new OpValue .initializeName
+  InitType .FIXED NameInitInfo new OpValue .InitializeName
     Type .Undefined
   pos Operation new return
 end
 proc( LabelId FilePosition : pos  -> Operation ) =>: export: opAutoTypedInitializeName
-  InitType .AUTO NameInitInfo new OpValue .initializeName
+  InitType .AUTO NameInitInfo new OpValue .InitializeName
     Type .Undefined
   pos Operation new return
 end
 proc( LabelId : src LabelId : alias FilePosition : pos  -> Operation ) =>: export: opUsingNamespace
-  src alias NameAliasInfo new OpValue .usingNamespace
+  src alias NameAliasInfo new OpValue .UsingNamespace
     Type .Undefined
   pos Operation new return
 end
 proc( LabelId : src LabelId : alias FilePosition : pos  -> Operation ) =>: export: opUsingIdentifier
-  src alias NameAliasInfo new OpValue .usingIdentifier
+  src alias NameAliasInfo new OpValue .UsingIdentifier
     Type .Undefined
   pos Operation new return
 end
 proc( TypeModifier FilePosition : pos -> Operation ) =>: export: opTypeModifier
-  OpValue .typeModifier Type .Undefined pos Operation new return
+  OpValue .TypeModifier Type .Undefined pos Operation new return
 end
 proc( ProcId FilePosition : pos -> Operation ) =>: export: opTypeWith
-  OpValue .typeWith Type .Undefined pos Operation new return
+  OpValue .TypeWith Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opPanic
-  OpValue .panic Type .Undefined pos Operation new return
+  OpValue .Panic Type .Undefined pos Operation new return
 end
 proc( string : message FilePosition : pos -> Operation ) =>: export: opPanicWithMessage
-  message OpValue .panicWithMessage Type .Undefined pos Operation new return
+  message OpValue .PanicWithMessage Type .Undefined pos Operation new return
 end
 proc( string : path bool : isLibFile FilePosition : pos -> Operation ) =>: export: opImportFile
   path
@@ -450,19 +446,19 @@ proc(
   ## Operation
     count depth StackTypesInfo new
       CompilerInfo .TypeInfo
-    OpValue .compilerInfo
+    OpValue .CompilerInfo
     Type .Undefined
     pos
   Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export: opStackInfo
-  count CompilerInfo .StackInfo OpValue .compilerInfo Type .Undefined  pos Operation new return
+  count CompilerInfo .StackInfo OpValue .CompilerInfo Type .Undefined  pos Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export: opPrintCompiledOps
-  count CompilerInfo .CompiledOps OpValue .compilerInfo Type .Undefined  pos Operation new return
+  count CompilerInfo .CompiledOps OpValue .CompilerInfo Type .Undefined  pos Operation new return
 end
 proc( LabelId : name FilePosition : pos -> Operation ) =>: export: opPrintIdentifierMatches
-  name CompilerInfo .Find OpValue .compilerInfo Type .Undefined  pos Operation new return
+  name CompilerInfo .Find OpValue .CompilerInfo Type .Undefined  pos Operation new return
 end
 
 struct(
@@ -779,435 +775,420 @@ namespace: sb
         break
     end
   end
-  proc( stringBuilder Operation ProgramContext ptr -> stringBuilder ) =>: export: appendOp
-    =:: progContext
+  proc( stringBuilder Operation : op ProgramContext ptr : progContext -> stringBuilder ) =>: export: appendOp
     progContext .idContext .typeContext =:: typeContext
     progContext .idContext .typeContext .labelContext =:: labelContext
     progContext .idContext .constContext =:: constContext
-    ..swap
-      ..over .val switch
-        NOP case
-          "NOP" sb.appendS
-          break
-        Constant case
-          "constant ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .Constant typeContext sb.appendConstant
-          break
-        StaticConstant case
-          "static constant ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .StaticConstant typeContext sb.appendConstant
-          break
-        NestedProc case
-          "nested proc ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .NestedProc i64 cast.u sb.appendI
-          ":ProcId" sb.appendS
-          break
-        ConstantReference case
-          ..over .val .ConstantReference =:: refId
-          progContext [] .constantReferences refId i64 cast list.at .data =:: constData
-          "constant reference ( " sb.appendS
-          constData [] .constType typeContext sb.appendType
-          " )[" sb.appendS
-          refId i64 cast sb.appendI
-          "] : " sb.appendS
-          constData [] .value typeContext sb.appendConstant
-          break
-        block case
-          "Block: " sb.appendS
-          $1 .val .block .blockType sb.appendBlockType
+    op .val switch
+      NOP case
+        "NOP" sb.appendS
+        break
+      Constant .case =:: constVal
+        "constant ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        constVal typeContext sb.appendConstant
+      break
+      NestedProc .case =:: procId
+        "nested proc ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        procId i64 cast.u sb.appendI
+        ":ProcId" sb.appendS
+      break
+      ConstantReference .case =:: refId
+        progContext [] .constantReferences refId i64 cast list.at .data =:: constData
+        "constant reference ( " sb.appendS
+        constData [] .constType typeContext sb.appendType
+        " )[" sb.appendS
+        refId i64 cast sb.appendI
+        "] : " sb.appendS
+        constData [] .value typeContext sb.appendConstant
+      break
+      Block .case =:: blockData
+        "Block: " sb.appendS
+        blockData .blockType sb.appendBlockType
+        " (" sb.appendS
+          blockData .blockId i64 cast sb.appendI
+          " ->" sb.appendS
+          blockData .jumpDistance i64 cast sb.appendI
+        ')' sb.appendC
+      break
+      BlockEnd .case =:: blockData
+        "End: " sb.appendS
+        blockData .blockType sb.appendBlockType
+        " (" sb.appendS
+          blockData .blockId i64 cast sb.appendI
+          " ->" sb.appendS
+          blockData .jumpDistance i64 cast sb.appendI
+        ')' sb.appendC
+      break
+      Call .case =:: callInfo
+        "call ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        progContext [] .procedures
+          callInfo .procId i64 cast list.at .data
+        =:: procInfo
+        procInfo [] .labelId labelContext sb.appendLabelPath
+        callInfo .implementationId 0 >= if
+          ## XXX append static args instead of impl id
           " (" sb.appendS
-            $1 .val .block .blockId i64 cast sb.appendI
-            " ->" sb.appendS
-            $1 .val .block .jumpDistance i64 cast sb.appendI
+          callInfo .implementationId sb.appendI
           ')' sb.appendC
-          break
-        blockEnd case
-          "End: " sb.appendS
-          $1 .val .blockEnd .blockType sb.appendBlockType
+        end
+        ## XXX? print auto args
+      break
+      BuiltIn .case =:: builtInId
+        "built-in ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        builtInId sb.appendBuiltIn
+      break
+      GetId .case =:: id
+        "get ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        id labelContext sb.appendIdInfo
+      break
+      SetId .case =:: id
+        "set ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        id labelContext sb.appendIdInfo
+      break
+      AtId .case =:: id
+        "address ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        id labelContext sb.appendIdInfo
+      break
+      InitializeId .case =:: id
+        "initialize ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        id labelContext sb.appendIdInfo
+      break
+      ImplementProcedure .case =:: implInfo
+        "implement ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        progContext [] .procedures
+          implInfo .procId i64 cast list.at .data
+        =:: procInfo
+        procInfo [] .labelId labelContext sb.appendLabelPath
+        implInfo .implementationId 0 >= if
+          ## XXX append static args instead of impl id
           " (" sb.appendS
-            $1 .val .blockEnd .blockId i64 cast sb.appendI
-            " ->" sb.appendS
-            $1 .val .blockEnd .jumpDistance i64 cast sb.appendI
+          implInfo .implementationId sb.appendI
           ')' sb.appendC
-          break
-        call case ..over =:: op
-          op@ .val .call =:: callInfo
-          "call ( " sb.appendS
-          op .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          progContext [] .procedures
-            callInfo [] .procId i64 cast list.at .data
-          =:: procInfo
-          procInfo [] .labelId labelContext sb.appendLabelPath
-          callInfo [] .implementationId 0 >= if
-            ## XXX append static args instead of impl id
-            " (" sb.appendS
-            callInfo [] .implementationId sb.appendI
-            ')' sb.appendC
-          end
-          ## XXX? print auto args
-          break
-        builtIn case ..over =:: op
-          "built-in ( " sb.appendS
-          op .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          op .val .builtIn sb.appendBuiltIn
-          break
-        getId case
-          "get ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .getId labelContext sb.appendIdInfo
-          break
-        setId case
-          "set ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setId labelContext sb.appendIdInfo
-          break
-        atId case
-          "address ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .atId labelContext sb.appendIdInfo
-          break
-        initializeId case
-          "initialize ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .initializeId labelContext sb.appendIdInfo
-          break
-        implementProcedure case ..over =:: op
-          op@ .val .implementProcedure =:: implInfo
-          "implement ( " sb.appendS
-          op .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          progContext [] .procedures
-            implInfo [] .procId i64 cast list.at .data
-          =:: procInfo
-          procInfo [] .labelId labelContext sb.appendLabelPath
-          implInfo [] .implementationId 0 >= if
-            ## XXX append static args instead of impl id
-            " (" sb.appendS
-            implInfo [] .implementationId sb.appendI
-            ')' sb.appendC
-          end
-          break
-        procPtr case ..over =:: op
-          op@ .val .procPtr =:: implInfo
-          "procedure pointer ( " sb.appendS
-          op .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          progContext [] .procedures
-            implInfo [] .procId i64 cast list.at .data
-          =:: procInfo
-          procInfo [] .labelId labelContext sb.appendLabelPath
-          implInfo [] .implementationId 0 >= if
-            ## XXX append static args instead of impl id
-            " (" sb.appendS
-            implInfo [] .implementationId sb.appendI
-            ')' sb.appendC
-          end
-          break
-        autoTypedInitializeId case
-          "auto-typed initialize ( " sb.appendS
-          ..over .dataType  typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .autoTypedInitializeId labelContext sb.appendIdInfo
-          break
-        declareId case
-          "declare ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .declareId labelContext sb.appendIdInfo
-          break
-        getLabel case
-          "get label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .getLabel labelContext sb.appendLabelName
-          break
-        getUnionLabel case
-          "get union label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .getUnionLabel labelContext sb.appendLabelName
-          break
-        setLabel case
-          "set label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setLabel labelContext sb.appendLabelName
-          break
-        existsLabel case
-          "exists label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .existsLabel labelContext sb.appendLabelName
-          break
-        typeWith case
-          "type with( " sb.appendS
-            $1 .val .typeWith i64 cast.u sb.appendI
-          ":ProcId )" sb.appendS
-          break
-        typeModifier case
-          "typeModifier \"" sb.appendS
-            $1 .val .typeModifier sb.appendTypeModifier
-          "\"" sb.appendS
-          break
-        getElement case
-          "get element ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .getElement sb.appendI
-          break
-        getUnionElement case
-          "get union element ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .getUnionElement sb.appendI
-          break
-        setElement case
-          "set element ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setElement sb.appendI
-          break
-        hasElement case
-          "has element ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .hasElement sb.appendI
-          break
-        Return case
-          "Return( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) " sb.appendS
-          break
-        InlineReturn case
-          "InlineReturn " sb.appendS
-            $1 .val .InlineReturn i64 cast sb.appendI
-          " ( " sb.appendS
-          $1 .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        equalityOperator case
-          ..over .val .equalityOperator switch
-            EQ case "Equal ( " sb.appendS break
-            NEQ case "Not Equal ( " sb.appendS break
-          end
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        Splat case
-          "splat: " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          break
-        New case
-          "new: " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          break
-        NewReference case
-          "new reference: " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          break
-        NewEnum case
-          "new enum ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .NewEnum sb.appendI
-          break
-        NewEnumReference case
-          "new enum reference ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .NewEnumReference sb.appendI
-          break
-        autoCast case
-          "autoCast ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) src: " sb.appendS
-          ..over .val .autoCast .src typeContext sb.appendType
-          " at " sb.appendS
-          ..over .val .autoCast .offset sb.appendI
-          break
-        Cast case
-          ..over .val .Cast .signType switch
-            NONE case break
-            SIGNED case "signed " sb.appendS break
-            UNSIGNED case "unsigned " sb.appendS break
-          end
-          "cast ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) src: " sb.appendS
-          ..over .val .Cast .src typeContext sb.appendType
-          break
-        Cast! case
-          "cast! ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) src: " sb.appendS
-          ..over .val .Cast! typeContext sb.appendType
-          break
-        bitCast case
-          "bitCast ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) src: " sb.appendS
-          ..over .val .bitCast typeContext sb.appendType
-          break
-        callPtr case
-          "call pointer ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        length case
-          "length ( " sb.appendS
-          $1 .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        rawValue case
-          "raw ( " sb.appendS
-          $1 .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        typeInfo case
-          "typeInfo ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ): " sb.appendS
-          ..over .val .typeInfo switch
-            ALIGNMENT case "alignment" sb.appendS break
-            SIZE case "size" sb.appendS break
-            STRIDE case "stride" sb.appendS break
-          end
-          break
-        getEnumLabel case
-          "get enum label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        checkEnumLabel case
-          "check enum label ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .checkEnumLabel sb.appendI
-          break
-        setEnumElement case
-          "set enum element ( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " ) : " sb.appendS
-          ..over .val .setEnumElement sb.appendI
-          break
-        stackMod case
-          "stack modification: " sb.appendS
-          ..over .val .stackMod sb.appendStackMod
-          break
-        copy case
-          "copy( " sb.appendS
-          ..over .dataType typeContext sb.appendType
-          " )" sb.appendS
-          break
-        getName case
-          "get: " sb.appendS
-          ..over .val .getName labelContext sb.appendLabelPath
-          break
-        atName case
-          "address of: " sb.appendS
-          ..over .val .atName labelContext sb.appendLabelPath
-          break
-        setName case
-          "set: " sb.appendS
-          ..over .val .setName labelContext sb.appendLabelPath
-          break
-        existsName case
-          "exists name: " sb.appendS
-          ..over .val .existsName labelContext sb.appendLabelPath
-          break
-        declareName case
-          "declare name: " sb.appendS
-          $1 .val .declareName labelContext sb.appendLabelPath
-          break
-        aliasName case
-          "alias name: " sb.appendS
-          $1 .val .aliasName .alias labelContext sb.appendLabelPath
-          $1 .val .aliasName .baseName labelContext sb.appendLabelPath
-          break
-        initializeName case
-          $1 .val .initializeName .initType .AUTO if
-            "auto-typed " sb.appendS
-          end
-          "initialize name: " sb.appendS
-          $1 .val .initializeName .label labelContext sb.appendLabelPath
-          break
-        usingNamespace case
-          "using namespace: " sb.appendS
-          $1 .val .usingNamespace .baseName labelContext sb.appendLabelPath
-          $1 .val .usingNamespace .alias id.LABEL_ID_NONE != if
-            " as " sb.appendS
-            $1 .val .usingNamespace .alias labelContext sb.appendLabelName
-          end
-          break
-        usingIdentifier case
-          "using idenfifier: " sb.appendS
-          $1 .val .usingIdentifier .baseName labelContext sb.appendLabelPath
-          $1 .val .usingIdentifier .alias id.LABEL_ID_NONE != if
-            " as " sb.appendS
-            $1 .val .usingIdentifier .alias labelContext sb.appendLabelName
-          end
-          break
-        Assert case
-          "assert" sb.appendS
-          break
-        RuntimeAssert .case =:: msg
-          '"' sb.appendC
-          msg sb.appendStr
-          "\" assert" sb.appendS
-          break
-        Error .case switch
-            ERROR case "..compiler.error" sb.appendS break
-            WARNING case "..compiler.warning" sb.appendS break
-            INFO case "..compiler.info" sb.appendS break
-          end
-          break
-        panic case
-          "..panic" sb.appendS
-          break
-        panicWithMessage .case =:: msg
-          '"' sb.appendC
-          msg sb.appendEscapedStr
-          "\" ..panic" sb.appendS
-          break
-        Import .case =:: path
-          "import \"" sb.appendS
-          path sb.appendEscapedStr
-          '"' sb.appendC
-          break
-        LibImport .case =:: path
-          "lib-import \"" sb.appendS
-          path sb.appendEscapedStr
-          '"' sb.appendC
-          break
-        compilerInfo .case labelContext sb.appendCompilerInfo break
-      end
+        end
+      break
+      ProcPtr .case =:: implInfo
+        "procedure pointer ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        progContext [] .procedures
+          implInfo .procId i64 cast list.at .data
+        =:: procInfo
+        procInfo [] .labelId labelContext sb.appendLabelPath
+        implInfo .implementationId 0 >= if
+          ## XXX append static args instead of impl id
+          " (" sb.appendS
+          implInfo .implementationId sb.appendI
+          ')' sb.appendC
+        end
+      break
+      AutoTypedInitializeId .case =:: id
+        "auto-typed initialize ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        id labelContext sb.appendIdInfo
+      break
+      DeclareId .case =:: id
+        "declare ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        id labelContext sb.appendIdInfo
+      break
+      GetLabel .case =:: name
+        "get label ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name labelContext sb.appendLabelName
+      break
+      GetUnionLabel .case =:: name
+        "get union label ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name labelContext sb.appendLabelName
+      break
+      SetLabel .case =:: name
+        "set label ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name labelContext sb.appendLabelName
+      break
+      ExistsLabel .case =:: name
+        "exists label ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name labelContext sb.appendLabelName
+      break
+      TypeWith .case =:: procId
+        "type with( " sb.appendS
+          procId i64 cast.u sb.appendI
+        ":ProcId )" sb.appendS
+      break
+      TypeModifier .case =:: typeModifier
+        "typeModifier \"" sb.appendS
+          typeModifier sb.appendTypeModifier
+        "\"" sb.appendS
+      break
+      GetElement .case =:: index
+        "get element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        index sb.appendI
+      break
+      GetUnionElement .case =:: index
+        "get union element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        index sb.appendI
+      break
+      SetElement .case =:: index
+        "set element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        index sb.appendI
+      break
+      HasElement .case =:: index
+        "has element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        index sb.appendI
+      break
+      Return case
+        "Return( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) " sb.appendS
+      break
+      InlineReturn .case =:: blockId
+        "InlineReturn " sb.appendS
+          blockId i64 cast sb.appendI
+        " ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      EqualityOperator .case
+        switch
+          EQ case "Equal ( " sb.appendS break
+          NEQ case "Not Equal ( " sb.appendS break
+        end
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      Splat case
+        "splat: " sb.appendS
+        op .dataType typeContext sb.appendType
+      break
+      New case
+        "new: " sb.appendS
+        op .dataType typeContext sb.appendType
+      break
+      NewReference case
+        "new reference: " sb.appendS
+        op .dataType typeContext sb.appendType
+      break
+      NewEnum .case =:: eltIndex
+        "new enum ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        eltIndex sb.appendI
+      break
+      NewEnumReference .case =:: eltIndex
+        "new enum reference ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        eltIndex sb.appendI
+      break
+      AutoCast .case =:: autoCast
+        "autoCast ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) src: " sb.appendS
+        autoCast .src typeContext sb.appendType
+        " at " sb.appendS
+        autoCast .offset sb.appendI
+      break
+      Cast .case =:: castInfo
+        castInfo .signType switch
+          NONE case break
+          SIGNED case "signed " sb.appendS break
+          UNSIGNED case "unsigned " sb.appendS break
+        end
+        "cast ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) src: " sb.appendS
+        castInfo .src typeContext sb.appendType
+      break
+      Cast! .case =:: src
+        "cast! ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) src: " sb.appendS
+        src typeContext sb.appendType
+      break
+      BitCast .case =:: src
+        "bitCast ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) src: " sb.appendS
+        src typeContext sb.appendType
+      break
+      CallPtr case
+        "call pointer ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      Length case
+        "length ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      RawValue case
+        "raw ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      TypeInfo .case =:: typeInfo
+        "typeInfo ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ): " sb.appendS
+        typeInfo switch
+          ALIGNMENT case "alignment" sb.appendS break
+          SIZE case "size" sb.appendS break
+          STRIDE case "stride" sb.appendS break
+        end
+      break
+      GetEnumLabel case
+        "get enum label ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      CheckEnumLabel .case =:: index
+        "check enum label ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        index sb.appendI
+      break
+      SetEnumElement .case =:: index
+        "set enum element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        index sb.appendI
+      break
+      StackMod .case =:: stackMod
+        "stack modification: " sb.appendS
+        stackMod sb.appendStackMod
+      break
+      Copy case
+        "copy( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      GetName .case =:: name
+        "get: " sb.appendS
+        name labelContext sb.appendLabelPath
+      break
+      AtName .case =:: name
+        "address of: " sb.appendS
+        name labelContext sb.appendLabelPath
+      break
+      SetName .case =:: name
+        "set: " sb.appendS
+        name labelContext sb.appendLabelPath
+      break
+      ExistsName .case =:: name
+        "exists name: " sb.appendS
+        name labelContext sb.appendLabelPath
+      break
+      DeclareName .case =:: name
+        "declare name: " sb.appendS
+        name labelContext sb.appendLabelPath
+      break
+      AliasName .case =:: aliasData
+        "alias name: " sb.appendS
+        aliasData .alias labelContext sb.appendLabelPath
+        aliasData .baseName labelContext sb.appendLabelPath
+      break
+      InitializeName .case =:: initInfo
+        initInfo .initType .AUTO if
+          "auto-typed " sb.appendS
+        end
+        "initialize name: " sb.appendS
+        initInfo .label labelContext sb.appendLabelPath
+      break
+      UsingNamespace .case =:: usingNamespace
+        "using namespace: " sb.appendS
+        usingNamespace .baseName labelContext sb.appendLabelPath
+        usingNamespace .alias id.LABEL_ID_NONE != if
+          " as " sb.appendS
+          usingNamespace .alias labelContext sb.appendLabelName
+        end
+      break
+      UsingIdentifier .case =:: usingIdentifier
+        "using idenfifier: " sb.appendS
+        usingIdentifier .baseName labelContext sb.appendLabelPath
+        usingIdentifier .alias id.LABEL_ID_NONE != if
+          " as " sb.appendS
+          usingIdentifier .alias labelContext sb.appendLabelName
+        end
+      break
+      Assert case
+      "assert" sb.appendS
+      break
+      RuntimeAssert .case =:: msg
+        '"' sb.appendC
+        msg sb.appendStr
+        "\" assert" sb.appendS
+      break
+      Error .case switch
+          ERROR case "..compiler.error" sb.appendS break
+          WARNING case "..compiler.warning" sb.appendS break
+          INFO case "..compiler.info" sb.appendS break
+        end
+      break
+      Panic case
+        "..panic" sb.appendS
+      break
+      PanicWithMessage .case =:: msg
+        '"' sb.appendC
+        msg sb.appendEscapedStr
+        "\" ..panic" sb.appendS
+      break
+      Import .case =:: path
+        "import \"" sb.appendS
+        path sb.appendEscapedStr
+        '"' sb.appendC
+      break
+      LibImport .case =:: path
+        "lib-import \"" sb.appendS
+        path sb.appendEscapedStr
+        '"' sb.appendC
+      break
+      CompilerInfo .case labelContext sb.appendCompilerInfo break
+    end
       " at " sb.appendS
-      ..swap .pos sb.appendPos
+      op .pos sb.appendPos
       '\n' sb.appendC
     return
   end
-  proc( stringBuilder CompilerError -> stringBuilder ) =>: export: appendCompilerError
-    =:: err
+  proc( stringBuilder CompilerError : err -> stringBuilder ) =>: export: appendCompilerError
     err .message sb.appendSb
     " at "       sb.appendS
     err .pos     sb.appendPos
     '\n'         sb.appendC
   end
-  proc( stringBuilder CompilerInfo LabelContext ptr -> stringBuilder ) =>: export: appendCompilerInfo
-    =:: labelContext
-    =:: info
+  proc( stringBuilder CompilerInfo : info LabelContext ptr : labelContext -> stringBuilder ) =>: export: appendCompilerInfo
     info switch
       TypeInfo .case =:: typeInfo
         "..?types" sb.appendS
@@ -1318,7 +1299,7 @@ namespace: program.jumps
         orPos - JumpDistance cast
       newOps
         orPos slice.at .data
-      .val .block .jumpDistance=
+      .val .Block .jumpDistance=
     end
     0 ifData .orCount=
   end
@@ -1339,14 +1320,14 @@ namespace: program.jumps
         andPos - JumpDistance cast
       newOps
         andPos slice.at .data
-      .val .block .jumpDistance=
+      .val .Block .jumpDistance=
     end
     0 ifData .andCount=
     newOps .length i32 cast
       ifData [] .ifPosition - JumpDistance cast
     newOps
       ifData [] .ifPosition slice.at .data
-    .val .block .jumpDistance=
+    .val .Block .jumpDistance=
   end
   proc(
     BlockId : blockId
@@ -1360,7 +1341,7 @@ namespace: program.jumps
       ifData [] .elsePosition - JumpDistance cast
     newOps
       ifData [] .elsePosition slice.at .data
-    .val .block .jumpDistance=
+    .val .Block .jumpDistance=
     ifData [] .blockStart
       newOps .length i32 cast -
     JumpDistance cast
@@ -1431,7 +1412,7 @@ namespace: program.jumps
         breakPos - JumpDistance cast
       newOps
         breakPos slice.at .data
-      .val .block .jumpDistance=
+      .val .Block .jumpDistance=
     end
     0 switchData .breakCount=
     switchData [] .switchPosition
@@ -1508,7 +1489,7 @@ namespace: program.jumps
         orPos - JumpDistance cast
       newOps
         orPos slice.at .data
-      .val .block .jumpDistance=
+      .val .Block .jumpDistance=
     end
     0 whileData .orCount=
   end
@@ -1528,7 +1509,7 @@ namespace: program.jumps
         continuePos - JumpDistance cast
       newOps
         continuePos slice.at .data
-      .val .block .jumpDistance=
+      .val .Block .jumpDistance=
     end
     0 whileData .continueCount=
   end
@@ -1546,7 +1527,7 @@ namespace: program.jumps
         breakPos - JumpDistance cast
       newOps
         breakPos slice.at .data
-      .val .block .jumpDistance=
+      .val .Block .jumpDistance=
     end
     0 whileData .breakCount=
     newOps .length i32 cast
@@ -1555,7 +1536,7 @@ namespace: program.jumps
     loopLength JumpDistance cast
     newOps whileData [] .loopStart
       slice.at .data
-    .val .block .jumpDistance=
+    .val .Block .jumpDistance=
     loopLength -_ JumpDistance cast
   end
 
@@ -1596,7 +1577,7 @@ namespace: program.jumps
         andOrPos - JumpDistance cast
       newOps
         andOrPos slice.at .data
-      .val .block .jumpDistance=
+      .val .Block .jumpDistance=
     end
     0 andOrData .andOrCount=
     andOrData [] .blockStart

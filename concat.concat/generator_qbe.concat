@@ -3153,8 +3153,8 @@ proc(
         op [] .val .ConstantReference i64 cast sb.appendI
         '\n' sb.appendC
       return
-    declareId initializeId .case =:: idInfo
-      op [] .val .?initializeId ? =:: assignValue
+    DeclareId InitializeId .case =:: idInfo
+      op [] .val .?InitializeId ? =:: assignValue
       idInfo .labelId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & ? =:: mutable
       idInfo .idType switch
@@ -3192,8 +3192,7 @@ proc(
           break ## XXX error message
       end
       break
-    implementProcedure case
-      op [] .val .implementProcedure =:: implInfo
+    ImplementProcedure .case =:: implInfo
       prog [] .procedures
         implInfo .procId i64 cast list.at .data
       =:: procInfo
@@ -3294,8 +3293,8 @@ proc(
         else ..drop end
         true context .reachable=
       return
-    getId atId .case =:: idInfo
-      op [] .val .?atId ? =:: isAddr
+    GetId AtId .case =:: idInfo
+      op [] .val .?AtId ? =:: isAddr
       idInfo .idType switch
         PROCEDURE  case
           ## procedures are handled by call & procPtr instructions
@@ -3348,8 +3347,7 @@ proc(
           break ## XXX error message
       end
       break
-    procPtr case
-      op [] .val .procPtr =:: procImpl
+    ProcPtr .case =:: procImpl
       prog [] .procedures
         procImpl .procId i64 cast
       list.at .data =:: procData
@@ -3364,8 +3362,7 @@ proc(
         context sb.appendGlobalName
         "\n" sb.appendS
       return
-    setId case
-      op [] .val .setId =:: idInfo
+    SetId .case =:: idInfo
       op [] .dataType =:: valType
       op [] .pos context popValue =:: valueId
       sb
@@ -3399,11 +3396,10 @@ proc(
         end
         '\n' sb.appendC
       return
-    getUnionElement case
+    GetUnionElement case
       ## try-get element only changes type of top stack value
       sb return
-    getElement case
-      op [] .val .getElement =:: index
+    GetElement .case =:: index
       op [] .dataType =:: mut: containerType
       false =:: mut: ptrSrc
       containerType typeContext types.isPointer if
@@ -3469,8 +3465,7 @@ proc(
         srcId sb.appendI
         '\n' sb.appendC
       return
-    setElement case
-      op [] .val .setElement =:: index
+    SetElement .case =:: index
       ## TODO? special handling for access through pointer?
       op [] .dataType
         $ typeContext types.isPointer =:: isPtr
@@ -3527,7 +3522,7 @@ proc(
           '\n' sb.appendC
         end
       return
-    rawValue case
+    RawValue case
       ## TODO? allow ..raw on pointer to union/union-element
       op [] .dataType typeContext types.isUnion if
         sb return
@@ -3629,7 +3624,7 @@ proc(
         dataPtrId sb.appendI
         '\n' sb.appendC
       return
-    getEnumLabel case
+    GetEnumLabel case
       context .stackInfo branchTree.pop =:: srcVal?
       srcVal? optional.isEmpty if
         "stack underflow" sb.copyPtr
@@ -3653,7 +3648,7 @@ proc(
         labelId sb.appendI
         '\n' sb.appendC
       return
-    checkEnumLabel case
+    CheckEnumLabel .case =:: index
       context .stackInfo branchTree.peek =:: srcVal?
       srcVal? optional.isEmpty if
         "stack underflow" sb.copyPtr
@@ -3665,12 +3660,12 @@ proc(
         ## appendEnumCheck
           op [] .dataType
           srcVal? .data [] .varId
-          op [] .val .checkEnumLabel
+          index
           op [] .pos
           context
         appendEnumCheck
       return
-    setEnumElement case
+    SetEnumElement .case =:: elementId
       context .stackInfo branchTree.peek =:: srcVal?
       srcVal? optional.isEmpty if
         "stack underflow" sb.copyPtr
@@ -3684,7 +3679,6 @@ proc(
           typeContext types.getBaseType
         end
       =:: enumType
-      op [] .val .setEnumElement =:: elementId
       sb
         op [] .pos sb.appendPosQBE
         ## storeEnumLabel
@@ -3725,7 +3719,7 @@ proc(
           '\n' sb.appendC
         end
       return
-    hasElement case
+    HasElement .case =:: index
       op [] .dataType =:: containerType
       containerType typeContext types.isEnumOrTaggedUnion ! if
         break
@@ -3733,33 +3727,33 @@ proc(
       op [] .pos context popValue =:: srcId
       sb
         op [] .pos sb.appendPosQBE
-        containerType srcId op [] .val .hasElement op [] .pos context checkEnumIndex ..drop.2 =:: c
+        containerType srcId index op [] .pos context checkEnumIndex ..drop.2 =:: c
         "%s" sb.appendS
         ValType .I32 context pushValue sb.appendI
         " =w copy %t" sb.appendS
         c sb.appendI
         '\n' sb.appendC
       return
-    autoCast case
+    AutoCast .case =:: castInfo
       sb
         op [] .pos sb.appendPosQBE
         CastType .AUTO_CAST
         SignType .NONE
-        op [] .val .autoCast .src
-        op [] .val .autoCast .offset
+        castInfo .src
+        castInfo .offset
         op [] .dataType
         op [] .pos
         context
       compileCast return
       break
-    Cast Cast! bitCast case
+    Cast Cast! BitCast case
       sb
         op [] .pos sb.appendPosQBE
         op [] .val .?Cast .if =:: castVal
           CastType .CAST
           castVal .signType
           castVal .src
-        else .?bitCast ._if =:: castVal
+        else .?BitCast ._if =:: castVal
           CastType .BIT_CAST
           SignType .UNSIGNED
           castVal
@@ -3774,14 +3768,13 @@ proc(
         context
       compileCast return
       break
-    call case
-      op .val .call =:: callInfo
+    Call .case =:: callInfo
       prog [] .procedures
-        callInfo [] .procId i64 cast list.at .data
+        callInfo .procId i64 cast list.at .data
       =:: procData
-      callInfo [] .implementationId 0 >= if
+      callInfo .implementationId 0 >= if
         procData [] .implementation .Code .implementations
-          callInfo [] .implementationId list.at .data
+          callInfo .implementationId list.at .data
         [] .procType
       else
         procData [] .procType
@@ -3809,7 +3802,7 @@ proc(
           i 1 + continue ## skip static arguments
         end
         argFlags id.FLAG_AUTO & ? if
-          callInfo [] prog getCallData [] .autoArgs autoArgIndex [] =:: argVal
+          callInfo prog getCallData [] .autoArgs autoArgIndex [] =:: argVal
           autoArgIndex 1 + autoArgIndex=
           argVal .?None ? ! if
             newSb
@@ -3857,7 +3850,7 @@ proc(
           op [] .pos
         context prepareCall
         procData [] .labelId
-          callInfo [] .implementationId
+          callInfo .implementationId
         context sb.appendGlobalName
         calledType
           argIndices@
@@ -3865,9 +3858,9 @@ proc(
           op [] .pos
         context finishCall
       return
-    callPtr case
-      op [] .val .callPtr .outArgCount TypedValId list.create =:: mut: argIndices
-      0:iSize while $ op [] .val .callPtr .outArgCount u< do =:: i
+    CallPtr .case =:: callInfo
+      callInfo .outArgCount TypedValId list.create =:: mut: argIndices
+      0:iSize while $ callInfo .outArgCount u< do =:: i
         argIndices
           ## TypedValId
             Type .Undefined
@@ -3896,7 +3889,7 @@ proc(
         outArgCount 1:iSize + outArgCount=
         i 1:iSize +
       end ..drop
-      outArgCount op [] .val .callPtr .outArgCount == "correct number of out arguments" assert
+      outArgCount callInfo .outArgCount == "correct number of out arguments" assert
       inTypes .length =:: argCount
       argIndices
         $ .length argCount + list.ensureCap
@@ -3934,18 +3927,18 @@ proc(
           op [] .pos
         context finishCall
       return
-    builtIn case
+    BuiltIn .case =:: builtIn
       sb
         op [] .pos sb.appendPosQBE
         ## appendBuiltInQBE
-          op [] .val .builtIn
+          builtIn
           op [] .dataType
           op [] .pos
           context
         appendBuiltInQBE
       return
-    equalityOperator case
-      op [] .val .equalityOperator .EQ if
+    EqualityOperator .case
+      .EQ if
         "eq":s
       else
         "ne":s
@@ -3989,7 +3982,7 @@ proc(
       break
     Splat case
       break
-    block .case =:: blockVal
+    Block .case =:: blockVal
       blockVal .blockType switch
         IF IF_TRUE IF_FALSE case
           ## BranchId
@@ -4508,7 +4501,7 @@ proc(
           break
       end
       break
-    blockEnd .case =:: blockEnd
+    BlockEnd .case =:: blockEnd
       blockEnd .blockType switch
         PROCEDURE case
           Type .Undefined context .currentProc=
@@ -4845,29 +4838,29 @@ proc(
         ")\ncall $exit(w 1)\nhlt\n" sb.appendS
         successBranch "end assert":s context startBranch
       return
-    panicWithMessage case
+    PanicWithMessage .case =:: message
       false context .reachable=
       sb
         op [] .pos sb.appendPosQBE
         "call $printf(l $" sb.appendS ## TODO? print to stderr
         PANIC_FORMAT sb.appendS
         ",l " sb.appendS
-        op [] .val .panicWithMessage .length sb.appendI
+        message .length sb.appendI
         ",l " sb.appendS
-        op [] .val .panicWithMessage context sb.appendStringPtrConstQBE
+        message context sb.appendStringPtrConstQBE
         op [] .pos prog appendPosPrintfArgs
         ")\ncall $exit(w 1)\nhlt\n" sb.appendS
       return
-    stackMod case
-      op [] .val .stackMod .modType switch
+    StackMod .case =:: stackMod
+      stackMod .modType switch
         DROP case
-          op [] .val .stackMod .n =:: count
+          stackMod .n =:: count
           count while $ 0 > do 1 -
              context .stackInfo branchTree.pop ..drop
           end ..drop
           sb return
         COPY case
-          op [] .val .stackMod .n =:: offset
+          stackMod .n =:: offset
           context [] .stackInfo branchTree.depth offset <= if
             "stack underflow" sb.copyPtr
             op [] .pos errors appendError
@@ -4882,7 +4875,7 @@ proc(
           branchTree.push
           sb return
         ROTATE case
-          op [] .val .stackMod .n =:: offset
+          stackMod .n =:: offset
           offset i32.abs 1 + =:: eltCount
           context [] .stackInfo branchTree.depth eltCount < if
             "stack underflow" sb.copyPtr
@@ -4893,11 +4886,11 @@ proc(
           sb return
       end
       break
-    compilerInfo case
+    CompilerInfo case
       sb return ## XXX? print compiler info
-    autoTypedInitializeId typeInfo copy usingNamespace usingIdentifier StaticConstant
-    getName atName setName getLabel getUnionLabel Error Assert panic declareName aliasName initializeName Import LibImport
-    setLabel length typeModifier typeWith existsLabel existsName NestedProc case
+    AutoTypedInitializeId TypeInfo Copy UsingNamespace UsingIdentifier
+    GetName AtName SetName GetLabel GetUnionLabel Error Assert Panic DeclareName AliasName InitializeName Import LibImport
+    SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc case
       break ## XXX error message
   end
   "unable to compile operation " sb.copyPtr

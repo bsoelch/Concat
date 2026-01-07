@@ -90,7 +90,7 @@ end
 
 proc( Operation ptr : op ProgramContext ptr.mut : prog Type i32 hashMap ptr.mut : visited Type list ptr.mut : types -> ) =>: addOpType
   op [] .val switch
-    initializeId declareId implementProcedure Cast Cast! New typeInfo Constant
+    InitializeId DeclareId ImplementProcedure Cast Cast! New TypeInfo Constant
     NewEnum NewReference NewEnumReference ConstantReference case
       op [] .dataType 0 op [] .pos prog visited types declaredType
     break

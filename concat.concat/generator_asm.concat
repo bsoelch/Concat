@@ -4895,7 +4895,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   ops
-    op .val .?implementProcedure .if =:: implInfo
+    op .val .?ImplementProcedure .if =:: implInfo
       true context .reachable=
       op [] .dataType =:: procType
       program [] .procedures
@@ -5020,7 +5020,7 @@ proc(
       end
       return
     else ..drop end
-    context [] .reachable ! and op [] .val .?block ? ! and op [] .val .?blockEnd ? ! if
+    context [] .reachable ! and op [] .val .?Block ? ! and op [] .val .?BlockEnd ? ! if
       return ## skip unreachable statements
     end
     op [] Atomic .DebugStartOp list.append
@@ -5231,9 +5231,9 @@ proc(
         ## TODO support non-register localtions
         ValType .REFERENCE target .location .register ValueLocation .register opIndex context pushValue
         return
-      declareId case return ## nothing to do (all declarations handled at start of procedure)
-      getId case
-        op .val .getId =:: idData
+      DeclareId case return ## nothing to do (all declarations handled at start of procedure)
+      GetId case
+        op .val .GetId =:: idData
         idData [] .labelId =:: labelId
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR GLOBAL_VAR case
@@ -5250,8 +5250,8 @@ proc(
             break
         end
         break
-      atId case
-        op .val .atId =:: idData
+      AtId case
+        op .val .AtId =:: idData
         idData [] .labelId =:: labelId
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR GLOBAL_VAR case
@@ -5269,9 +5269,9 @@ proc(
             break
         end
         break
-      setId initializeId case ## TODO! need switch of union pointer to use .case here
-        op .val .?setId .else
-           .?initializeId ._else ..unreachable
+      SetId InitializeId case ## TODO! need switch of union pointer to use .case here
+        op .val .?SetId .else
+           .?InitializeId ._else ..unreachable
         end  =:: idData
         idData [] .labelId =:: labelId
         ## TODO invaidate previous cached values
@@ -5354,7 +5354,7 @@ proc(
             break
         end
         break
-      getElement case
+      GetElement .case =:: eltIndex
         op [] .dataType typeContext toValType =:: mut: valType
         valType CheckValue .valueOrReference op [] .pos context popValue =:: container?
         container? optional.isEmpty if return end
@@ -5367,10 +5367,10 @@ proc(
         =:: containerType
         containerType typeContext types.isArray if
           containerType typeContext types.getBaseType
-          $ typeContext types.strideOf .Fixed op [] .val .getElement i64 cast.u *
+          $ typeContext types.strideOf .Fixed eltIndex i64 cast.u *
         else
-          containerType op [] .val .getElement typeContext types.compositeGetElement
-          containerType op [] .val .getElement typeContext types.tupleElementOffset .data
+          containerType eltIndex typeContext types.compositeGetElement
+          containerType eltIndex typeContext types.tupleElementOffset .data
         end  =:: eltOffset =:: eltType
         eltType typeContext toValType =:: eltVal
         valType .PTR or valType .REFERENCE and eltVal isPrimitiveValType ! if ## ptr/reference -> ptr/reference
@@ -5462,7 +5462,7 @@ proc(
           end
         end
         return
-      setElement case
+      SetElement .case =:: eltIndex
         op [] .dataType typeContext toValType =:: mut: valType
         valType CheckValue .valueOrReference op [] .pos context popValue =:: container?
         container? optional.isEmpty if return end
@@ -5475,10 +5475,10 @@ proc(
         =:: containerType
         containerType typeContext types.isArray if
           containerType typeContext types.getBaseType
-          $ typeContext types.strideOf .Fixed op [] .val .setElement i64 cast.u *
+          $ typeContext types.strideOf .Fixed eltIndex i64 cast.u *
         else
-          containerType op [] .val .setElement typeContext types.compositeGetElement
-          containerType op [] .val .setElement typeContext types.tupleElementOffset .data
+          containerType eltIndex typeContext types.compositeGetElement
+          containerType eltIndex typeContext types.tupleElementOffset .data
         end  =:: eltOffset =:: eltType
         eltType typeContext toValType =:: eltVal
         eltVal CheckValue .valueOrReference op [] .pos context popValue =:: element?
@@ -5605,24 +5605,24 @@ proc(
           end
         end
         return
-      autoCast case
+      AutoCast .case =:: castInfo
         ## compileCast
           CastType .AUTO_CAST
           SignType .NONE
-          op [] .val .autoCast .src
-          op [] .val .autoCast .offset
+          castInfo .src
+          castInfo .offset
           op [] .dataType
           opIndex
           op [] .pos
           context
         compileCast return
-      Cast Cast! bitCast case
+      Cast Cast! BitCast case
         ## compileCast
           op .val [] .?Cast .if =:: castOp
             CastType .CAST
             castOp .signType
             castOp .src
-          else .?bitCast ._if =:: castOp
+          else .?BitCast ._if =:: castOp
             CastType .BIT_CAST
             SignType .UNSIGNED
             castOp
@@ -5638,22 +5638,20 @@ proc(
           context
         compileCast return
         break
-      builtIn case
-        ## compileBuiltIn
-          op [] .val .builtIn
+      BuiltIn .case
           op [] .dataType
           op [] .pos
           opIndex
           context
         compileBuiltIn
         return
-      block case
-        op [] .val .block .blockType switch
+      Block .case =:: blockInfo
+        blockInfo .blockType switch
           AND_IF OR_IF case
-            op [] .val .block .blockType .OR_IF =:: isOr
+            blockInfo .blockType .OR_IF =:: isOr
             context [] .openBlocks list.peek =:: ifBlock?
             ifBlock? optional.isEmpty or ifBlock? .data [] .?If ? ! or ifBlock? .data .If [] .hasIf if
-              op [] .val .block .blockId context openIfBlock
+              blockInfo .blockId context openIfBlock
             else
               ifBlock? .data .If
             end =:: ifBlock
@@ -5718,7 +5716,7 @@ proc(
           IF case
             context [] .openBlocks list.peek =:: ifBlock?
             ifBlock? optional.isEmpty or ifBlock? .data [] .?If ? ! or ifBlock? .data .If [] .hasIf if
-              op [] .val .block .blockId context openIfBlock
+              blockInfo .blockId context openIfBlock
             else
               ifBlock? .data .If
             end =:: ifBlock
@@ -5801,7 +5799,7 @@ proc(
             return
           WHILE case
             context nextLabelId =:: startLabelId
-            op [] .val .block .blockId startLabelId context openWhileBlock =:: whileBlock
+            blockInfo .blockId startLabelId context openWhileBlock =:: whileBlock
             context [] .reachable ! if return end
             whileBlock [] .regData context rememberRegisters
             context .stack [] .length whileBlock .whileStackSize=
@@ -5810,7 +5808,7 @@ proc(
             context appendOp1
             return
           AND_DO OR_DO case
-            op [] .val .block .blockType .OR_DO =:: isOr
+            blockInfo .blockType .OR_DO =:: isOr
             context [] .openBlocks list.peek =:: whileBlock?
             whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
               "unexpected and/or-do-statement" sb.copyPtr op [] .pos errors appendError
@@ -5913,7 +5911,7 @@ proc(
             end
             return
           BREAK case
-            op [] .val .block .blockId
+            blockInfo .blockId
               BreakType .WHILE
             context findBreakableBlock =:: whileBlock?
             whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
@@ -5938,7 +5936,7 @@ proc(
             false context .reachable=
             return
           CONTINUE case
-            op [] .val .block .blockId
+            blockInfo .blockId
               BreakType .WHILE
             context findBreakableBlock =:: whileBlock?
             whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
@@ -5983,10 +5981,10 @@ proc(
             return
           break
           AND OR case
-            op [] .val .block .blockType .OR =:: isOr
+            blockInfo .blockType .OR =:: isOr
             context [] .openBlocks list.peek =:: andOrBlock?
             andOrBlock? optional.isEmpty or andOrBlock? .data [] .?AndOr ? ! if
-              op [] .val .block .blockId context openAndOrBlock
+              blockInfo .blockId context openAndOrBlock
             else
               andOrBlock? .data .AndOr
             end =:: andOrBlock
@@ -6031,8 +6029,8 @@ proc(
             context appendOp3
             return
           SWITCH case
-            program [] .switchData op [] .val .block .blockId i32 cast.u list.at .data =:: switchData
-            op [] .val .block .blockId switchData [] .caseCount context openSwitchBlock =:: switchBlock
+            program [] .switchData blockInfo .blockId i32 cast.u list.at .data =:: switchData
+            blockInfo .blockId switchData [] .caseCount context openSwitchBlock =:: switchBlock
             context [] .reachable ! if return end
             CheckValue .none op [] .pos context popValue =:: srcValue?
             srcValue? optional.isEmpty if
@@ -6067,7 +6065,7 @@ proc(
               return
             end
             switchBlock? .data .Switch =:: switchBlock
-            op [] .val .block .blockType .CASE if
+            blockInfo .blockType .CASE if
               switchBlock [] .caseIndex
               switchBlock [] .caseIndex 1 + switchBlock .caseIndex=
             else
@@ -6085,7 +6083,7 @@ proc(
             true context .reachable=
             return
           BREAK_SWITCH case
-            op [] .val .block .blockId
+            blockInfo .blockId
               BreakType .SWITCH
             context findBreakableBlock =:: switchBlock?
             switchBlock? optional.isEmpty or switchBlock? .data [] .?Switch ? ! if
@@ -6110,13 +6108,13 @@ proc(
             false context .reachable=
             return
           INLINE_PROCEDURE case
-            op [] .val .block .blockId context openInlineProcBlock =:: procBlock
+            blockInfo .blockId context openInlineProcBlock =:: procBlock
             return
           default break
         end
         break
-      blockEnd case
-        op [] .val .blockEnd .blockType switch
+      BlockEnd .case
+        .blockType switch
           ELSE case
             context [] .openBlocks list.peek =:: ifBlock?
             ifBlock? optional.isEmpty or ifBlock? .data [] .?If ? ! if
@@ -6238,9 +6236,9 @@ proc(
           default break
         end
         break
-      call callPtr case
+      Call CallPtr case
         op [] .dataType =:: procType
-        op [] .val .?callPtr ? if
+        op [] .val .?CallPtr ? if
           "unimplemented" ..panic ## TODO handle call by pointer
           ## ? move proc-pointer to special register
         end
@@ -6258,11 +6256,11 @@ proc(
         ## TODO! clear cached values for mutable pointer arguments
         argData context .stack [] .length RegisterRestoreMode .MERGE_FALLTHROUGH op [] .pos context restoreRegisters
         asm.OpType .CALL
-          op [] .val .?callPtr ? if
+          op [] .val .?CallPtr ? if
             "unimplemented" ..panic ## TODO use call pointer
           else
-            program [] .procedures op [] .val .call .procId i64 cast @[] .labelId []
-              op [] .val .call .implementationId
+            program [] .procedures op [] .val .Call .procId i64 cast @[] .labelId []
+              op [] .val .Call .implementationId
             asm.GlobalLabel new asm.Operand .globalLabel
           end
         context appendOp1
@@ -6345,7 +6343,7 @@ proc(
         context appendOp1
         false context .reachable=
         return
-      panicWithMessage case
+      PanicWithMessage .case =:: message
         context nextLabelId =:: targetLabelId
         asm.OpType .JMP
           targetLabelId asm.Operand .localLabel
@@ -6355,14 +6353,14 @@ proc(
             targetLabelId asm.Operand .localLabel
           context appendOp1
           op [] Atomic .DebugStartOp list.append
-          Type .Undefined op .val [] .panicWithMessage constContext newStringConst context newPtrConstant =:: strId
+          Type .Undefined message constContext newStringConst context newPtrConstant =:: strId
           asm.OpType .MOVE
             0 AMD64.getIntArgumentRegister ValType .PTR setRegType asm.Operand .register
             strId asm.Operand .constPtr
           context appendOp2
           asm.OpType .MOVE
             1 AMD64.getIntArgumentRegister asm.Operand .register
-            op .val [] .panicWithMessage .length i64 cast.u asm.Operand .constInt
+            message .length i64 cast.u asm.Operand .constInt
           context appendOp2
           ## TODO? add argument for pointer to file position ( char8 ptr.raw : nameData i64 : nameLen i32 : line i32 : linePos )
           RuntimeErrorType .Panic Atomic .Error list.append
@@ -6408,10 +6406,10 @@ proc(
           RuntimeErrorType .AssertFail Atomic .Error list.append
         context .procTail=
         return
-      stackMod case
-        op [] .val .stackMod .modType switch
+      StackMod .case =:: stackMod
+        stackMod .modType switch
           DROP case
-            op [] .val .stackMod .n =:: count
+            stackMod .n =:: count
             context [] .stack .length count iSize cast.u u< if
               "CodeGen: stack underflow in drop, stackSize: " sb.copyPtr
                 context [] .stack .length sb.appendI
@@ -6442,7 +6440,7 @@ proc(
             context .stack=
             return
           COPY case
-            op [] .val .stackMod .n =:: offset
+            stackMod .n =:: offset
             context [] .stack .length offset iSize cast.u u<= if
               "CodeGen: stack underflow in copy, stackSize: " sb.copyPtr
                 context [] .stack .length sb.appendI
@@ -6465,7 +6463,7 @@ proc(
             targetRegister copied .valType context pushRegister
             return
           ROTATE case
-            op [] .val .stackMod .n =:: offset
+            stackMod .n =:: offset
             offset i32.abs 1 + =:: eltCount
             context [] .stack .length eltCount iSize cast.u u< if
               "CodeGen: stack underflow in swap, stackSize: " sb.copyPtr

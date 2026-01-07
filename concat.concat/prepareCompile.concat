@@ -101,7 +101,7 @@ proc(
   BlockId cast =:: inlineId
   labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapLabels ## TODO store in context
   BlockType .INLINE_PROCEDURE pos opBlock list.append
-  inlineId $1 list.peek .data .val .block .blockId=
+  inlineId $1 list.peek .data .val .Block .blockId=
   procOps 0 [] .dataType =:: procType
   procType typeContext types.getProcIn .data =:: inTypes
   0 =:: mut: offset
@@ -124,20 +124,20 @@ proc(
       inlineId op@ .val .InlineReturn=
       op list.append
       continue
-    else op .val .?getId ._if .labelId =:: label
+    else op .val .?GetId ._if .labelId =:: label
       remapLabels@ label map.get =:: newName?
-      newName? optional.hasData if newName? .data op@ .val .getId= end
-    else .?setId ._if .labelId =:: label
+      newName? optional.hasData if newName? .data op@ .val .GetId= end
+    else .?SetId ._if .labelId =:: label
       remapLabels@ label map.get =:: newName?
-      newName? optional.hasData if newName? .data op@ .val .setId= end
-    else .?atId ._if .labelId =:: label
+      newName? optional.hasData if newName? .data op@ .val .SetId= end
+    else .?AtId ._if .labelId =:: label
       remapLabels@ label map.get =:: newName?
-      newName? optional.hasData if newName? .data op@ .val .atId= end
+      newName? optional.hasData if newName? .data op@ .val .AtId= end
     else ..drop end
     op context compileOp
   end
   BlockType .INLINE_PROCEDURE pos opEndBlock list.append
-  inlineId $1 list.peek .data .val .blockEnd .blockId=
+  inlineId $1 list.peek .data .val .BlockEnd .blockId=
   remapLabels@ map.free
 end
 
@@ -155,14 +155,14 @@ proc(
   op .val switch
     NOP case
       newOps return ## ignore no-ops
-    builtIn equalityOperator Splat procPtr panic panicWithMessage
-    checkEnumLabel hasElement getId setId atId getEnumLabel setEnumElement
-    setElement RuntimeAssert Error stackMod getElement getUnionElement
-    autoCast Cast Cast! bitCast Return rawValue case
+    BuiltIn EqualityOperator Splat ProcPtr Panic PanicWithMessage
+    CheckEnumLabel HasElement GetId SetId AtId GetEnumLabel SetEnumElement
+    SetElement RuntimeAssert Error StackMod GetElement GetUnionElement
+    AutoCast Cast Cast! BitCast Return RawValue case
       newOps
         op list.append ## nothing to change
       return
-    implementProcedure case
+    ImplementProcedure case
       op .dataType typeContext types.getProcIn .data =:: args
       args .length i32 cast.u =:: argCount
       context [] .variables
@@ -183,7 +183,7 @@ proc(
       newOps
         op list.append ## nothing to change
       return
-    declareId initializeId .case =:: idInfo
+    DeclareId InitializeId .case =:: idInfo
       context [] .variables
         ## VariableInfo
           op .dataType
@@ -204,7 +204,7 @@ proc(
       newOps
         op .val .Constant op .dataType op .pos program opConstReference list.append
       return
-    copy case
+    Copy case
       op .dataType =:: baseType
       ## TODO change to check for reference-only once composite stack values are supported by QBE back-end
       ## baseType typeContext types.referenceOnly ! if
@@ -255,8 +255,8 @@ proc(
           op .dataType op .pos opNewReference list.append
         end
       return
-    call callPtr case
-      op .val .?call .and =:: callVal
+    Call CallPtr case
+      op .val .?Call .and =:: callVal
           callVal program shouldInlineCall if
         newOps callVal op .pos context inlineCall return
       end
@@ -268,7 +268,7 @@ proc(
       ## special handling for pointer-call procedures
       _BACKEND_ .QBE if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
         calledType typeContext types.getProcOutArgs =:: outArgs
-        op@ .val .?callPtr .if
+        op@ .val .?CallPtr .if
           ## remember number of out-args in call operation
           outArgs .length >$ .outArgCount=
         else ..drop end
@@ -292,9 +292,9 @@ proc(
           op list.append
         return
       end
-      op .val .?callPtr .if
+      op .val .?CallPtr .if
         program getPtrCallData
-      else .?call ._if
+      else .?Call ._if
         program getCallData
       else ..unreachable end =:: callData
       calledType typeContext types.getCallConvention .PTRCALL =:: isPtrCall
@@ -323,9 +323,9 @@ proc(
         op list.append
       return
     ## XXX merge identical variables on independent branches
-    block case
-      op .val .block .blockId =:: blockId
-      op .val .block .blockType switch
+    Block .case =:: blockInfo
+      blockInfo .blockId =:: blockId
+      blockInfo .blockType switch
         AND_IF case
           blockId
             newOps .length i32 cast.u
@@ -418,34 +418,34 @@ proc(
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE case break
       end
       break
-    blockEnd case
-      op .val .blockEnd .blockId =:: blockId
-      op .val .blockEnd .blockType switch
+    BlockEnd .case =:: blockInfo
+      blockInfo .blockId =:: blockId
+      blockInfo .blockType switch
         PROCEDURE case
           newOps op list.append return
         ELSE case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndIf
-          op@ .val .blockEnd .jumpDistance=
+          op@ .val .BlockEnd .jumpDistance=
           newOps op list.append return
         SWITCH case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndSwitch
-          op@ .val .blockEnd .jumpDistance=
+          op@ .val .BlockEnd .jumpDistance=
           newOps op list.append return
         WHILE case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndWhile
-          op@ .val .blockEnd .jumpDistance=
+          op@ .val .BlockEnd .jumpDistance=
           newOps op list.append return
         AND OR case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndAndOr
-          op@ .val .blockEnd .jumpDistance=
+          op@ .val .BlockEnd .jumpDistance=
           newOps op list.append return
         AND_IF OR_IF AND_DO OR_DO FINALLY INLINE_PROCEDURE
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
@@ -456,12 +456,12 @@ proc(
         TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE case break
       end
       break
-    compilerInfo case ## XXX? preserve compilerInfo ops
+    CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
-    autoTypedInitializeId ConstantReference NewReference
-    typeInfo NewEnumReference usingNamespace usingIdentifier InlineReturn
-    getName atName setName getLabel getUnionLabel Assert declareName aliasName initializeName StaticConstant
-    setLabel length typeModifier typeWith existsLabel existsName NestedProc Import LibImport case
+    AutoTypedInitializeId ConstantReference NewReference
+    TypeInfo NewEnumReference UsingNamespace UsingIdentifier InlineReturn
+    GetName AtName SetName GetLabel GetUnionLabel Assert DeclareName AliasName InitializeName
+    SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc Import LibImport case
       break ## XXX error message
   end
   "unsupported operation " sb.copyPtr

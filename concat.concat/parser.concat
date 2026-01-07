@@ -20,6 +20,7 @@ import "builtIns.concat"
 using id.LabelFlag
 using id.:LabelFlag
 
+## TODO? is this needed or can opConst be created directly
 struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
 
 struct(
@@ -344,7 +345,7 @@ proc( iSize : blockPosition FilePosition : pos ParserState ptr.mut : state -> ) 
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   state [] .parsedOps blockPosition list.at .and =:: opData
-      opData .val .?block .if =:: block
+      opData .val .?Block .if =:: block
     state opCount
       blockPosition - JumpDistance cast
     block .jumpDistance=
@@ -359,7 +360,7 @@ proc( iSize slice : blockPositions FilePosition : pos ParserState ptr.mut : stat
   progContext .errors =:: errors
   blockPositions for =:: opPos
     state [] .parsedOps opPos list.at .and =:: opData
-        opData .val .?block .if =:: block
+        opData .val .?Block .if =:: block
       state opCount
         opPos - JumpDistance cast
       block .jumpDistance=
@@ -380,7 +381,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos Parse
       iSize slice.emptyMutable return
     end
     state [] .parsedOps opPos list.at .data =:: opData
-    opData .val .?block .else ..drop
+    opData .val .?Block .else ..drop
       "operations and blocks are out of sync, expected and/or got " sb.copyPtr
         opData [] progContext sb.appendOp
       pos errors appendError
@@ -400,7 +401,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos Parse
       break
       default
         "operations and blocks are out of sync, expected and/or got " sb.copyPtr
-          opData [] .val .block .blockType sb.appendBlockType
+          opData [] .val .Block .blockType sb.appendBlockType
         pos errors appendError
       iSize slice.emptyMutable return
     end blockData .blockType=
@@ -447,7 +448,7 @@ proc(
   progContext .errors =:: errors
   switchData [] .implicitBreak .if =:: prevBreak
     state [] .parsedOps prevBreak list.at .and =:: opData
-    opData .val .?block .and .blockType [] .BREAK if
+    opData .val .?Block .and .blockType [] .BREAK if
       opValNOP opData .val=
     else
       "operations and blocks are out of sync" sb.copyPtr
@@ -1422,7 +1423,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               ifData .andPositions .length 0 != =:: hasAnd
               ifData .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
               BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
-              1:JumpDistance state peekOp .if .val .block .jumpDistance= else ..drop end
+              1:JumpDistance state peekOp .if .val .Block .jumpDistance= else ..drop end
               hasAnd ! and closedBlock .tmpVarInfo .if
                 state fileState [] .wordStart appendElseVal
               end
@@ -1453,7 +1454,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             whileData .whilePosition
               state opCount - JumpDistance cast
             state peekOp .if
-              .val .blockEnd .jumpDistance=
+              .val .BlockEnd .jumpDistance=
             else ..drop end
             closedBlock .tmpVarInfo .if
               state fileState [] .wordStart appendItrEnd
@@ -1573,7 +1574,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         TYPE_PROC_IN TYPE_CPROC_IN case break
         TYPE_COMPOSITE case
           typeBlock [] .blockStart state findOp .if =:: oldOp
-            oldOp .val .?block .and .blockType =:: blockType
+            oldOp .val .?Block .and .blockType =:: blockType
                 blockType [] .TYPE_COMPOSITE if
               BlockType .TYPE_PROC_IN blockType =[]
             else
@@ -1629,7 +1630,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             $ .TYPE_COMPOSITE if ..drop
               BlockType .TYPE_STRUCT
               typeBlock .blockStart state findOp .if =:: oldOp
-                oldOp .val .?block .and .blockType =:: blockType
+                oldOp .val .?Block .and .blockType =:: blockType
                     blockType [] .TYPE_COMPOSITE if
                   $ blockType =[]
                 else ..drop
@@ -1757,12 +1758,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           opName sb.appendStr
         '"' sb.appendC fileState [] .wordStart errors appendError
         return
-      end $ [] .val .?getId .if
-        $1 .val .atId=
+      end $ [] .val .?GetId .if
+        $1 .val .AtId=
         fileState [] .wordStart >$ .pos=
         return
-      else .?getName ._if
-        $1 .val .atName=
+      else .?GetName ._if
+        $1 .val .AtName=
         fileState [] .wordStart >$ .pos=
         return
       else ..drop
@@ -2052,12 +2053,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ConstValue .None
         Type .Empty
       end
-      fileState [] .wordStart opStaticConst state appendOp
+      fileState [] .wordStart opConst state appendOp
       return
     else $ "..compiler.version":s string.eq _if ..drop
       _VERSION_ ConstValue .Int
       types.primitive.I64
-      fileState [] .wordStart opStaticConst state appendOp
+      fileState [] .wordStart opConst state appendOp
       return
     else $ "..compiler.return":s string.eq _if ..drop
       ..drop ## discard remainder of file
