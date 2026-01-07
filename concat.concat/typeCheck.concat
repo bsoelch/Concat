@@ -2134,7 +2134,6 @@ proc(
     end
     ## convert static arguments to constants
     op .val .?getId .and .labelId =:: label
-        state .interpreter interpreter.inEnum ! and
         label labelContext id.labelFlags id.FLAG_STATIC & ? and
         state .argData label map.at .if =:: argData
       argData [] .valType op@ .dataType=
@@ -5564,7 +5563,6 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     program
       TypeCheckState ptr.mut optional.empty
       -1:FileId
-      interpreter.InterpreterType .INTERPRET
     interpreter.wrapProgram
     labelHash@ labelEq@ 64 TypedValue map.create
     Type optional.empty
