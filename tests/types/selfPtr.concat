@@ -3,7 +3,7 @@ type : selfPtr
 ( i32 selfPtr ptr ) =:: selfPtr
 
 proc( -> ) =>: main
-  ..?parser.find.selfPtr
+  ..?find.selfPtr
   selfPtr : mut: X
   1 X@ selfPtr new X=
   X ..?types..4 .1  X .1 [] .1 == debug.print

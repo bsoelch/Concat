@@ -5,7 +5,7 @@ proc( -> ) =>: main
   c0 debug.print
   'B' c0=  
   c0 debug.print
-  ..?parser.find.y
+  ..?find.y
 end
 
 'A' char8 =: mut: c0

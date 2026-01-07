@@ -8,13 +8,13 @@ i8 =:: char
 i8 =:: byte
 -2 char =: g
 3 byte =: h
-..?parser.find.a
-..?parser.find.b
-..?parser.find.c
-..?parser.find.d
-..?parser.find.e
-..?parser.find.f
-..?parser.find.g
-..?parser.find.h
+..?find.a
+..?find.b
+..?find.c
+..?find.d
+..?find.e
+..?find.f
+..?find.g
+..?find.h
 
 proc( -> ) =>: main end

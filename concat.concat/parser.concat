@@ -2088,8 +2088,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       types.primitive.I64
       fileState [] .wordStart opConst state appendOp
       return
-    else ..dup "..?types":s string.eq or
-        ..dup "..?types.":s string.startsWith _if =:: mut: opName
+    else $ "..?types":s string.eq or $ "..?types.":s string.startsWith _if =:: mut: opName
       opName "..?types." ..length string.tail =:: params
       "..?types":s opName=
       -1 =:: mut: count
@@ -2115,8 +2114,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart
       opTypesInfo state appendOp
       return
-    else ..dup "..?stack":s string.eq or
-        ..dup "..?stack.":s string.startsWith _if =:: mut: opName
+    else $ "..?stack":s string.eq or $ "..?stack.":s string.startsWith _if =:: mut: opName
       opName "..?stack." ..length string.tail =:: params
       "..?stack":s opName=
       params .length 0:iSize != if
@@ -2124,8 +2122,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       else -1 end
       fileState [] .wordStart opStackInfo state appendOp
       return
-    else ..dup "..?ops":s string.eq or
-        ..dup "..?ops.":s string.startsWith _if =:: mut: opName
+    else $ "..?ops":s string.eq or $ "..?ops.":s string.startsWith _if =:: mut: opName
       opName "..?ops." ..length string.tail =:: params
       "..?ops":s opName=
       params .length 0:iSize != if
@@ -2133,8 +2130,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       else -1 end
       fileState [] .wordStart opPrintCompiledOps state appendOp
       return
-    ## XXX ..?parser.ops
-    else ..dup "..?find.":s string.startsWith _if =:: mut: opName
+    else $ "..?find.":s string.startsWith _if =:: mut: opName
       opName "..?find." ..length string.tail =:: idName
       ## opPrintIdentifierMatches
         idName
@@ -2145,21 +2141,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart
       opPrintIdentifierMatches state appendOp
       return
-    else ..dup "..?parser.find.":s string.startsWith _if =:: mut: opName
-        opName "..?parser.find." ..length string.tail =:: idName
-        ## TODO remove parser.find after switching to new front-end (no longer usefull)
-        ## redirect to ..?find for compatability with old front-end
-        ## opPrintIdentifierMatches
-          idName
-            id.FLAG_NONE
-            fileState [] .wordStart
-            state [] .currentFile
-          labelContext id.newLabel
-          fileState [] .wordStart
-        opPrintIdentifierMatches state appendOp
-        return
-    else ..dup "begin":s string.eq or
-         ..dup "defer":s string.eq _if =:: opName
+    else $ "begin":s string.eq or $ "defer":s string.eq _if =:: opName
       "`" sb.copyPtr
         opName sb.appendStr
         "` is a reserved keyword for a future language version" sb.appendS
@@ -2176,8 +2158,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   =:: idName
   state [] .currentProcs .length 0:iSize == if
     idName idContext id.findIdentifierByName ! if ## try parsing as identifier
-      ## $ [] .labelId labelContext id.labelFlags =:: flags
-      ## XXX? detect setters
       ..dup [] .valueType ..swap id.asIdInfo fileState [] .wordStart
         isAddr if
           opAtId

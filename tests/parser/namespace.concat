@@ -41,5 +41,5 @@ namespace: D
   using B.
   using C.
   4 =:: i
-  ..?parser.find.i
+  ..?find.i
 end
