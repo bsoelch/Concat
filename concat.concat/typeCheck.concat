@@ -53,6 +53,7 @@ struct(
   i32 : ifCastsOffset
   BlockId : blockId
   IfBlockFlags : flags
+  id.ScopeId optional : orIfScope
 ) =:: IfBlockInfo
 struct(
   Type : switchType
@@ -108,6 +109,7 @@ proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos -> Blo
     -1
     blockId
     IfBlockFlags.none
+    id.ScopeId optional.empty
   IfBlockInfo new BlockInfo .If return
 end
 proc(
@@ -1325,37 +1327,25 @@ proc(
   Operation ptr.mut : op
   bool : autoTyped
   TypeCheckState ptr.mut : state
--> ) =>: resolveAutoType
+-> ) =>: resolveDeclarationType
   state [] .program .errors =:: errors
   state [] .program .autoTypes =:: autoTypes
   state [] .program .idContext .typeContext =:: typeContext
-  op [] .dataType .?AutoType ? if
-    op [] .dataType types.getAutoTypeId =:: id
-    autoTyped if
-      state .stack branchTree.peek =:: value?
-      value? optional.hasData if
-        value? .data [] .valueType
-        $ types.isLiteral if
-          typeContext types.literalToType
-        end
-      else
-        "missing type for declaration" sb.copyPtr op [] .pos errors appendError
-        return
+  autoTyped if
+    state .stack branchTree.peek =:: value?
+    value? optional.hasData if
+      value? .data [] .valueType
+      $ types.isLiteral if
+        typeContext types.literalToType
       end
     else
-      op [] .pos state popType
-    end =:: valType
-    valType op .dataType=
-    id iSize cast.u autoTypes [] .length u>= if
-      "auto-type id outside allowed range:" sb.copyPtr
-        id sb.appendI
-        " maximum:" sb.appendS
-        autoTypes [] .length 1:iSize - sb.appendI
-      op [] .pos errors appendError
+      "missing type for declaration" sb.copyPtr op [] .pos errors appendError
+      return
     end
-    ## XXX? check for redefinition of auto-type
-    valType autoTypes [] id list.set
-  end
+  else
+    op [] .pos state popType
+  end =:: valType
+  valType op .dataType=
 end
 
 proc(
@@ -2109,7 +2099,7 @@ proc(
     else .?declareName ? or op .val .?initializeName ? _if
       op .val .?initializeName ? =:: isInit
       op .val .?initializeName .if =:: initName
-        op@ initName .initType .AUTO state resolveAutoType
+        op@ initName .initType .AUTO state resolveDeclarationType
         initName .label
       else .?declareName ._else ..unreachable end
         state [] .blockMode .NONE ! if
@@ -2609,7 +2599,6 @@ proc(
         op state appendOp ..drop
         continue.opLoop
       declareId .case =:: idInfo
-        op@ false state resolveAutoType
         state .blockMode [] .NONE ! if
           1 op .pos state checkStackSize if
             continue.opLoop ## stack underflow
@@ -2700,6 +2689,9 @@ proc(
             NONE case ..unreachable
           end
         end
+        op .dataType .?Undefined ? if
+          op@ false state resolveDeclarationType
+        end
         idInfo .idType switch
           PROCEDURE case
             idInfo .labelId idContext id.getIdentifier if ..drop
@@ -2709,7 +2701,7 @@ proc(
               continue.opLoop
             end .constValue =:: constVal
             constVal [] .?None .if ..drop
-            else .?Procedure ._if ..drop
+            else .?Procedure ._if =:: procId
               continue.opLoop ## skip if value already exits
             else
               "unexpected constant for procedure: " sb.copyPtr
@@ -2763,7 +2755,9 @@ proc(
         autoTyped if
           idInfo op@ .val .initializeId=
         end
-        op@ autoTyped state resolveAutoType
+        op .dataType .?Undefined ? if
+          op@ autoTyped state resolveDeclarationType
+        end
         idInfo op@ .val .initializeId= ## auto-typed initializations have been resolved
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR ITR_VAR PROCEDURE TYPE case
@@ -2815,6 +2809,9 @@ proc(
               idInfo .idType .PROCEDURE if
                 constVal .?Procedure .if =:: procId
                   program [] .procedures procId iSize cast.u @[] =:: procInfo
+                  procInfo .procType .?Undefined ? if
+                    op .dataType procInfo .procType=
+                  end
                   procInfo .labelId [] labelContext id.labelFlags id.FLAG_LAMBDA & ? if
                     MAIN_NAME idInfo .labelId labelContext id.labelNameEq if
                       ## TODO! check if main has correct signature
@@ -3485,9 +3482,12 @@ proc(
               continue.opLoop
             end
             false 1 op .pos state clearReferences
+            ## reset scope if or apprears before if
             ifBlock [] .flags IfBlockFlags.hasOrIf & ? if
-              ## reset scope if or apprears before if
-              ## XXX? if only or-if merge or-if-scope with else-branch
+              ifBlock [] .flags IfBlockFlags.hasAndIf & ? ! if
+                ## remember or-scope for else-branch
+                idContext id.currentScope optional.wrap ifBlock .orIfScope=
+              end
               idContext id.closeScope ! "closing or-if scope worked" assert
               idContext id.openScope
             end
@@ -3596,7 +3596,12 @@ proc(
             end
             false 0 op .pos state clearReferences
             idContext id.closeScope ! "closing if-scope worked" assert
-            idContext id.openScope ## else branch has different scope
+            ## switch to else-scope
+            ifBlock [] .orIfScope .if
+              idContext id.setScope
+            else
+              idContext id.openScope
+            end
             ifBlock [] .blockId op@ .val .block .blockId=
             state [] .stack branchTree.depth =:: ifTypes
             state .stack

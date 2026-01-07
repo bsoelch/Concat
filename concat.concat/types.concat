@@ -2074,10 +2074,6 @@ namespace: types
     end GeneratedTypeName ptr cast [] .arguments return
   end
 
-  ## generic & auto-types
-  proc( i32 : id -> Type ) =>: export: newAutoType
-    id Type .AutoType return
-  end
   proc( Type -> bool ) =>: export: isAutoType
     .?AutoType ? return
   end

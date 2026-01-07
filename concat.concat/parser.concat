@@ -24,7 +24,6 @@ struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FileP
 
 struct(
   LabelId : varId
-  Type : varType
 ) =:: TmpVarInfo
 struct(
   iSize list : andOrPositions
@@ -908,12 +907,6 @@ proc(
   end
   return
 end
-proc( ProgramContext ptr.mut : progContext -> Type ) =>: newAutoType
-  progContext [] .autoTypes .length i32 cast types.newAutoType
-  progContext [] .autoTypes
-    Type .Undefined list.append
-  progContext .autoTypes=
-end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendItrStep
   state [] .progContext .idContext =:: idContext
   varInfo .varId pos opGetName state appendOp
@@ -956,15 +949,14 @@ proc( ParserState ptr.mut : state FilePosition : pos -> TmpVarInfo ) =>: appendD
     ! "..if.prepare" assert
   =:: ifPrepare
   ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
-  progContext newAutoType =:: varType
   pos state [] .currentFile idContext .typeContext .labelContext newItrId =:: ifName
-  varType ifName pos opAutoTypedInitializeName state appendOp
+  Type .Undefined ifName pos opAutoTypedInitializeName state appendOp
   ifName pos opGetName state appendOp
   "..if.check":s idContext id.findIdentifierByName
     ! "..if.check" assert
   =:: ifCheck
   ifCheck [] .valueType ifCheck id.asIdInfo pos opGetId state appendOp
-  ifName varType TmpVarInfo new
+  ifName TmpVarInfo new
 end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition : pos -> ) =>: appendElseVal
   state [] .progContext .idContext =:: idContext
@@ -1150,9 +1142,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ! "..itr.prepare" assert
       =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo fileState [] .wordStart opGetId state appendOp
-      progContext newAutoType =:: itrType
       fileState [] .wordStart state [] .currentFile idContext .typeContext .labelContext newItrId =:: itrId
-      itrType itrId fileState [] .wordStart opAutoTypedInitializeName state appendOp
+      Type .Undefined itrId fileState [] .wordStart opAutoTypedInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       itrId fileState [] .wordStart opGetName state appendOp
@@ -1175,7 +1166,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         WhileBlockState .DO
       WhileBlockData new BlockInfoData .While state openBlock ..drop
       blockLabel state peekBlock .data .blockLabel=
-      itrId itrType TmpVarInfo new optional.wrap state peekBlock .data .tmpVarInfo=
+      itrId TmpVarInfo new optional.wrap state peekBlock .data .tmpVarInfo=
       return
     else $ "do":s string.eq _if ..drop ## TODO? `.do` statement similar to `.and`
       state peekBlock .and =:: currentBlock
@@ -1368,7 +1359,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       procImplName Type .Undefined state [] .currentFile NO_PROC true fileState [] .wordStart progContext newProcData =:: procId
       procId fileState [] .wordStart opNestedProc state appendOp
       named if
-        progContext newAutoType
+        Type .Undefined
           procName fileState [] .wordStart
         opAutoTypedInitializeName state appendOp
       end
@@ -1728,43 +1719,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           end
         end
       end
-      ## correct type will be resolved in type-check phase
-      progContext newAutoType =:: mut: valType
-      false =:: mut: allowImmutableDeclaration
-      false =:: mut: forceImmutable
-      inConstBlock if
-        IdentifierType .LABEL
-        true allowImmutableDeclaration=
-      else inProcedure _if
-        IdentifierType .LOCAL_VAR
-      else isInit ! and valType typeContext types.isProcedure _if
-        IdentifierType .PROCEDURE
-        true forceImmutable=
-        true allowImmutableDeclaration=
-      else valType typeContext types.isType _if
-        IdentifierType .TYPE
-        true forceImmutable=
-        true allowImmutableDeclaration=
-      else ## for comparability with old parser
-        IdentifierType .GLOBAL_VAR
-        true allowImmutableDeclaration=
-      end =:: idType
       fileState errors nextIdentifier fileState state
         ## make pre-declared variables mutable by default
-        isInit or allowImmutableDeclaration if id.FLAG_NONE else id.FLAG_MUTABLE end
+        isInit ! and inProcedure if id.FLAG_MUTABLE else id.FLAG_NONE end
       readLabelAddFlags =:: mut: label
       label labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_ALIAS & ? =:: isAlias
-      forceImmutable and labelFlags id.FLAG_MUTABLE & ? if
-        "identifiers of type " sb.copyPtr
-          idType sb.appendIdType
-         " cannot be mutable" sb.appendS
+      isAlias and isInit if
+        "alias cannot have an implementation" sb.copyPtr
         fileState [] .wordStart errors appendError
-      else isAlias _if
-        isInit if
-          "alias cannot have an implementation" sb.copyPtr
-          fileState [] .wordStart errors appendError
-        end
       end
       label fileState [] .wordStart
         isInit if
@@ -1788,8 +1751,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
       end
-      ## TODO? are the auto-types needed (declaration is in type-check phase where actual type is known)
-      progContext newAutoType
+      Type .Undefined
         labelId fileState [] .wordStart
       opAutoTypedInitializeName state appendOp
       return

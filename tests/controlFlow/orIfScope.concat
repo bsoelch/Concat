@@ -1,0 +1,11 @@
+proc( bool : c1 bool : c2 -> i32 ) =>: f
+  c1 or 0 =:: a c2 if
+    1
+  else
+    a
+  end
+end
+proc( -> ) =>: main
+  false false f 0 == "ok" assert
+  false true f 1 == "ok" assert
+end

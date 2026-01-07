@@ -1138,7 +1138,8 @@ proc(
   procType typeContext types.isProcedure ! if
     errorMessage .if
       $ []
-        "non-procedure type procedure" sb.appendS
+        "non-procedure type procedure: " sb.appendS
+        procType typeContext sb.appendType
       >$ =[]
     end
     currentSignatures@ cleanupSignatures
