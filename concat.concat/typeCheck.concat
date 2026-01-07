@@ -1329,7 +1329,6 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: resolveDeclarationType
   state [] .program .errors =:: errors
-  state [] .program .autoTypes =:: autoTypes
   state [] .program .idContext .typeContext =:: typeContext
   autoTyped if
     state .stack branchTree.peek =:: value?
@@ -1997,15 +1996,6 @@ proc(
   ## TODO extract parts of type-checking code into procedures
   0:iSize while: opLoop $ ops .length u< do =:: mut: opIndex
     ops opIndex [] =:: mut: op
-    op .dataType .?AutoType ? if ## try resolving auto-types
-      op .dataType types.getAutoTypeId =:: id
-      id iSize cast.u program [] .autoTypes .length u< if
-        program [] .autoTypes id [] =:: autoType
-        autoType .?Undefined ? ! if
-          autoType op@ .dataType=
-        end
-      end
-    end
     ## TODO? run code in switch-labels through normal type-checker (after processing enum/union labels)
     state inSwitchLabel and op@ state typeCheckSwitchLabel if
       continue.opLoop
@@ -5378,7 +5368,6 @@ proc(
   currentProc [] .isStatic and state [] .mode .PROC_CHILD if
     TypeCheckMode .STATIC_PROC state .mode=
   end
-  program [] .autoTypes list.copy =:: prevAutoTypes
   ## compile procedures to local code of given file
   currentProc [] .fileId state .currentFile=
   state [] .initializationStack .length =:: offset
@@ -5483,10 +5472,6 @@ proc(
     newProcState currentImpl .codeState=
     prevExpansionLevel codeImpl .expansionLevel=
   end
-  state [] .program [] .autoTypes
-    list.free ..drop
-    prevAutoTypes ## reset local auto-types
-  state [] .program .autoTypes=
   state [] .initializationStack
     offset list.setLength
   state .initializationStack=

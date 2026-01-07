@@ -389,9 +389,9 @@ proc( LabelId FilePosition : pos  -> Operation ) =>: export: opInitializeName
     Type .Undefined
   pos Operation new return
 end
-proc( Type : valType LabelId FilePosition : pos  -> Operation ) =>: export: opAutoTypedInitializeName
+proc( LabelId FilePosition : pos  -> Operation ) =>: export: opAutoTypedInitializeName
   InitType .AUTO NameInitInfo new OpValue .initializeName
-    valType
+    Type .Undefined
   pos Operation new return
 end
 proc( LabelId : src LabelId : alias FilePosition : pos  -> Operation ) =>: export: opUsingNamespace

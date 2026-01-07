@@ -174,8 +174,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       ValType .PTR return
     Procedure ArrayType Struct Union RawUnion UnionElement Enum Initializer case
       ValType .REFERENCE return
-    Undefined Empty GenericType AutoType
-    Align TypeSet case
+    Undefined Empty GenericType Align TypeSet case
       ValType .EMPTY return
   end
 end
@@ -679,8 +678,7 @@ namespace: sb
       Enum case
         sb t "enum":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      Undefined Empty GenericType AutoType
-      Initializer Align TypeSet case
+      Undefined Empty GenericType Initializer Align TypeSet case
         break
     end
     "unsupported type " sb.copyPtr
@@ -4981,12 +4979,6 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     end
     idData [] .valueType =:: mut: valType
     labelId labelContext id.labelFlags =:: labelFlags
-    valType types.isAutoType if
-      program [] .autoTypes
-        valType types.getAutoTypeId
-      list.at .data []
-      valType=
-    end
     valType types.primitive.TYPE types.typeEquals or
         valType typeContext types.isEmpty or
         valType typeContext types.isProcedure or

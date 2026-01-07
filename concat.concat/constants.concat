@@ -366,7 +366,7 @@ namespace: constant
       Union RawUnion UnionElement Enum case
         "unimplemented: union default values" ..panic
       CType NamedType case ..unreachable
-      TypeSet AutoType GenericType GeneratedType
+      TypeSet GenericType GeneratedType
           IntLiteral Initializer case
         "unsupported type for zero-initialized constant" ..panic
     end

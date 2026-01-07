@@ -105,7 +105,6 @@ union(
     types.InitializerId : Initializer
        types.ProcTypeId : Procedure
         types.TypeSetId : TypeSet
-                    i32 : AutoType
                 LabelId : GenericType
                 LabelId : NamedType
   types.GeneratedTypeId : GeneratedType
@@ -253,8 +252,6 @@ namespace: types
         a .CType b .CType == return
       Align case
         a .Align b .Align == return
-      AutoType case
-        a .AutoType b .AutoType == return
       NamedType case
         a .NamedType b .NamedType == return
       GenericType case
@@ -363,40 +360,38 @@ namespace: types
         5 a .CType cTypeId 1 + * return
       Align case
         7 a .Align 1 + * return
-      AutoType case
-        11 a .AutoType i32 cast 1 + * return
       NamedType case
-        13 a .NamedType i32 cast 1 + * return
+        11 a .NamedType i32 cast 1 + * return
       GenericType case
-        17 a .GenericType i32 cast 1 + * return
+        13 a .GenericType i32 cast 1 + * return
       ArrayType case
-        19 a .ArrayType arrayTypeHash * return
+        17 a .ArrayType arrayTypeHash * return
       Pointer case
-        23 a .Pointer arrayTypeHash * return
+        19 a .Pointer arrayTypeHash * return
       RawPointer case
-        29 a .RawPointer arrayTypeHash * return
+        23 a .RawPointer arrayTypeHash * return
       MutablePointer case
-        31 a .MutablePointer arrayTypeHash * return
+        29 a .MutablePointer arrayTypeHash * return
       MutableRawPointer case
-        37 a .MutableRawPointer arrayTypeHash * return
+        31 a .MutableRawPointer arrayTypeHash * return
       Struct case
-        41 a .Struct tupleTypeHash * return
+        37 a .Struct tupleTypeHash * return
       Enum case
-        43 a .Enum enumTypeHash * return
+        41 a .Enum enumTypeHash * return
       Union case
-        47 a .Union unionTypeHash * return
+        43 a .Union unionTypeHash * return
       Procedure  case
-        53 a .Procedure  procTypeHash * return
+        47 a .Procedure  procTypeHash * return
       GeneratedType case
-        59 a .GeneratedType generatedTypeHash * return
+        53 a .GeneratedType generatedTypeHash * return
       Initializer case
-        61 a .Initializer initializerTypeHash * return
+        59 a .Initializer initializerTypeHash * return
       TypeSet  case
-        67 a .TypeSet  TypeSet ptr cast [] typeSetHash * return
+        61 a .TypeSet  TypeSet ptr cast [] typeSetHash * return
       UnionElement case
-        71 a .UnionElement unionElementHash * return
+        67 a .UnionElement unionElementHash * return
       RawUnion case
-        73 a .RawUnion unionTypeHash * return
+        71 a .RawUnion unionTypeHash * return
     end
   end
 end
@@ -456,8 +451,8 @@ namespace: types
        ArrayType case
          ## arrays of empty values are empty
          t context getBaseType context isEmpty return
-       Undefined  PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer
-         NamedType AutoType GenericType IntLiteral UnionElement
+       Undefined PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer
+         NamedType GenericType IntLiteral UnionElement
          GeneratedType Enum TypeSet  case false return
        Struct Union Initializer RawUnion case ## TODO can labeled union be empty?
          t context compositeFlags COMP_FLAG_EMPTY & ? return
@@ -590,8 +585,8 @@ namespace: types
     switch
        IntLiteral Initializer case true return
        Empty ArrayType UnionElement RawUnion
-           Undefined  PrimitiveType Procedure  CType Pointer
-           NamedType AutoType GenericType RawPointer
+           Undefined PrimitiveType Procedure  CType Pointer
+           NamedType GenericType RawPointer
            GeneratedType Enum Align MutablePointer MutableRawPointer
            Struct Union TypeSet  case
          false return
@@ -631,7 +626,7 @@ namespace: types
         initInfo .asTuple TupleId cast Type .Struct return
        Empty  ArrayType UnionElement RawUnion
            Undefined  PrimitiveType Procedure CType Pointer
-           NamedType AutoType GenericType RawPointer
+           NamedType GenericType RawPointer
            GeneratedType Enum Align MutablePointer MutableRawPointer
            Struct Union TypeSet  case
          t return
@@ -892,7 +887,7 @@ namespace: types
           composite
           composite .Initializer InitializerInfo ptr.mut cast .asTuple TupleId cast
         typeContext tryComputeTupleSize return
-      Undefined Empty AutoType GenericType RawPointer MutableRawPointer
+      Undefined Empty GenericType RawPointer MutableRawPointer
       PrimitiveType IntLiteral CType ArrayType Enum UnionElement
       Pointer MutablePointer Procedure Align TypeSet
       NamedType GeneratedType case ..unreachable ## XXX? use assertion
@@ -901,7 +896,7 @@ namespace: types
   ## alignment of type in bytes, will be a power of two
   proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: alignOf
     t switch
-      Undefined  AutoType GenericType TypeSet  case
+      Undefined GenericType TypeSet  case
         TypeSize .unknown return
       Empty  case
         1 TypeSize .fixed return
@@ -944,7 +939,7 @@ namespace: types
     TypeContext ptr.mut : context
   -> TypeSize ) =>: computeSize
     t switch
-      Undefined  AutoType GenericType TypeSet  case
+      Undefined GenericType TypeSet case
         TypeSize .unknown return
       Empty  case
         0 TypeSize .fixed return
@@ -1218,7 +1213,7 @@ namespace: types
       Enum Struct Union RawUnion Initializer UnionElement case
         true return
       Undefined Empty PrimitiveType Pointer MutablePointer ArrayType Procedure
-        NamedType AutoType GenericType GeneratedType IntLiteral Align
+        NamedType GenericType GeneratedType IntLiteral Align
         CType RawPointer MutableRawPointer TypeSet  case
         false return
     end
@@ -1242,7 +1237,7 @@ namespace: types
     typeContext unwrapNamed switch
       Enum Union case true return
       Struct Undefined Empty PrimitiveType Pointer ArrayType Procedure RawUnion
-       NamedType AutoType GenericType GeneratedType IntLiteral Initializer RawPointer
+       NamedType GenericType GeneratedType IntLiteral Initializer RawPointer
        CType Align TypeSet MutablePointer MutableRawPointer UnionElement case
          false return
     end
@@ -1268,7 +1263,7 @@ namespace: types
           InitializerInfo ptr cast .asTuple .compositeInfo CompositeData .Composite return
         Enum .case EnumInfo ptr cast CompositeData .Enum return
         Undefined Empty PrimitiveType Pointer ArrayType Procedure
-         NamedType AutoType GenericType GeneratedType IntLiteral Align
+         NamedType GenericType GeneratedType IntLiteral Align
          CType RawPointer TypeSet  MutablePointer MutableRawPointer case
           CompositeData .None return
       end
@@ -1330,7 +1325,7 @@ namespace: types
     tuple typeContext unwrapNamed ..dup switch
       Struct case .Struct break
       Enum Union RawUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
-       NamedType AutoType GenericType GeneratedType IntLiteral Initializer Align
+       NamedType GenericType GeneratedType IntLiteral Initializer Align
        CType RawPointer MutablePointer MutableRawPointer TypeSet  case ..drop
          i64 optional.empty return
     end =:: tupleId
@@ -1352,7 +1347,7 @@ namespace: types
       Union .case break
       RawUnion case Type .Empty i64 optional.empty return
       Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure UnionElement
-       NamedType AutoType GenericType GeneratedType IntLiteral Initializer Align
+       NamedType GenericType GeneratedType IntLiteral Initializer Align
        CType RawPointer MutablePointer MutableRawPointer TypeSet  case
          Type .Empty i64 optional.empty return
     end =:: unionId
@@ -2074,13 +2069,6 @@ namespace: types
     end GeneratedTypeName ptr cast [] .arguments return
   end
 
-  proc( Type -> bool ) =>: export: isAutoType
-    .?AutoType ? return
-  end
-  proc( Type : t -> i32 ) =>: export: getAutoTypeId
-    t .?AutoType .else ..drop -1 end return
-  end
-
   proc(
     LabelId : name ## TODO! is name used?
     TypeSetEntry slice : elements
@@ -2122,7 +2110,7 @@ namespace: types
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
     t switch
-      Undefined Empty PrimitiveType AutoType CType IntLiteral Align TypeSet  case
+      Undefined Empty PrimitiveType CType IntLiteral Align TypeSet  case
         false return
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
         ArrayData ptr cast [] =:: arrayType
@@ -2783,12 +2771,6 @@ namespace: sb
             depth
           appendNamedType
         " )" appendS
-        return
-      AutoType case
-        sb
-          "auto["     appendS
-          t .AutoType appendI
-          "]"         appendS
         return
       GenericType .case =:: labelId
         sb

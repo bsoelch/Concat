@@ -2157,17 +2157,7 @@ proc(
           break
         LOCAL_VAR TMP_VAR ITR_VAR case
           ## XXX? common procedure for resolving of auto-types
-          op [] .dataType types.isAutoType if
-            op [] .pos context popType if ..drop.2
-              EvalResult .Error return
-            end =:: dataType ..drop
-            dataType program [] .autoTypes
-              op [] .dataType types.getAutoTypeId
-            list.set
-            dataType
-          else
-            op [] .dataType
-          end =:: dataType
+          op [] .dataType =:: dataType
           context [] .localVariables optional.isEmpty if
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError

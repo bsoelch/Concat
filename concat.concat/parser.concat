@@ -950,7 +950,7 @@ proc( ParserState ptr.mut : state FilePosition : pos -> TmpVarInfo ) =>: appendD
   =:: ifPrepare
   ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
   pos state [] .currentFile idContext .typeContext .labelContext newItrId =:: ifName
-  Type .Undefined ifName pos opAutoTypedInitializeName state appendOp
+  ifName pos opAutoTypedInitializeName state appendOp
   ifName pos opGetName state appendOp
   "..if.check":s idContext id.findIdentifierByName
     ! "..if.check" assert
@@ -1143,7 +1143,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo fileState [] .wordStart opGetId state appendOp
       fileState [] .wordStart state [] .currentFile idContext .typeContext .labelContext newItrId =:: itrId
-      Type .Undefined itrId fileState [] .wordStart opAutoTypedInitializeName state appendOp
+      itrId fileState [] .wordStart opAutoTypedInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       itrId fileState [] .wordStart opGetName state appendOp
@@ -1359,9 +1359,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       procImplName Type .Undefined state [] .currentFile NO_PROC true fileState [] .wordStart progContext newProcData =:: procId
       procId fileState [] .wordStart opNestedProc state appendOp
       named if
-        Type .Undefined
-          procName fileState [] .wordStart
-        opAutoTypedInitializeName state appendOp
+        procName fileState [] .wordStart opAutoTypedInitializeName state appendOp
       end
       state [] .currentProcs procId list.append state .currentProcs=
       state openProcBlock
@@ -1751,9 +1749,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
       end
-      Type .Undefined
-        labelId fileState [] .wordStart
-      opAutoTypedInitializeName state appendOp
+      labelId fileState [] .wordStart opAutoTypedInitializeName state appendOp
       return
     else $ "@":s string.eq _if =:: opName
       state peekOp .else

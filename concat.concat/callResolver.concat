@@ -327,7 +327,7 @@ proc(
           argOffset list.setLength
         argBuffer =[]
       return
-    Undefined Empty PrimitiveType CType AutoType IntLiteral Align TypeSet case
+    Undefined Empty PrimitiveType CType IntLiteral Align TypeSet case
       ..unreachable ## type should not contain generics
   end
 end
@@ -639,7 +639,7 @@ proc(
         else ..drop end
       end
       false return
-    Undefined Empty PrimitiveType CType AutoType IntLiteral Align TypeSet case
+    Undefined Empty PrimitiveType CType IntLiteral Align TypeSet case
       ..unreachable ## type should not contain generics
   end
 end
