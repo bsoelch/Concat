@@ -1,4 +1,5 @@
 import string
+import sys
 using std.literals.
 
 import "program.concat"
@@ -495,6 +496,29 @@ proc(
   sb.free ..drop
 end
 
+proc( string : msg Operation : op i64 : errLine TypeCheckState ptr.mut : state -> ) =>: internalError
+  "internal compiler error " sb.copyPtr
+    msg sb.appendStr
+    " at " sb.appendS
+    ..file sb.appendS ':' sb.appendC errLine sb.appendI
+    " while type-checking operation " sb.appendS
+    op state [] .program sb.appendOp
+  io.stdOut >$ io.fputSb
+  1 sys.exit
+  ..unreachable
+end
+proc( string : msg FilePosition : codePos i64 : errLine -> ) =>: internalErrorNoOp
+  "internal compiler error " sb.copyPtr
+    msg sb.appendStr
+    " at " sb.appendS
+    ..file sb.appendS ':' sb.appendC errLine sb.appendI
+    " while type-checking operation at " sb.appendS
+    codePos sb.appendPos
+  io.stdOut >$ io.fputSb
+  1 sys.exit
+  ..unreachable
+end
+
 proc(
   i32 : count
   FilePosition : pos
@@ -594,7 +618,7 @@ proc(
       i 1:iSize + continue ## skip empty if stack value not empty
     end
     state .stack branchTree.pop .else
-      "stack underflow" ..panic
+      "stack underflow":s pos ..line internalErrorNoOp ..unreachable
     end [] =:: typeInfo
     popConstants and isConstant if
       typeInfo .value .?None ? if
@@ -619,7 +643,9 @@ proc(
         ## update constant value
         popConstants and isConstant and state [] .compiledOps typeInfo .opIndex list.at .and
             .val [] .?Constant .if
-          state [] .constBuffer list.peek .else "missing constant" ..panic end  =[]
+          state [] .constBuffer list.peek .else
+            "missing constant":s pos ..line internalErrorNoOp ..unreachable
+          end  =[]
         end
         i 1:iSize + continue
       else typeInfo .valueType typeContext types.isType and expectedType typeContext types.isType _if
@@ -1731,11 +1757,7 @@ end
 proc( FilePosition : pos JumpDistance -> iSize ) =>: asForwardJump
   iSize cast.u
     $ 0x8000'0000 u>= if
-      64 sb.create
-        pos sb.appendPos
-      io.stdOut >$ io.fputSb
-      ## TODO? print current op
-      "negative jump distance" ..panic
+      "negative jump distance":s pos ..line internalErrorNoOp ..unreachable
     end
   return
 end
@@ -1928,7 +1950,7 @@ proc(
   while count 0 != do
     count 1 - count=
     state popTypedValue .else
-      "stack underflow" ..panic
+      "stack underflow":s pos ..line internalErrorNoOp ..unreachable
     end
       $ .valType state [] .typeBuffer count typesTail + =[]
     .value state [] .constBuffer count valsTail + =[]
@@ -2473,7 +2495,7 @@ proc(
                 $ [] .procType op@ .dataType=
                 $ .implementation .?Alias .if [] procId= ..drop
                   program [] .procedures procId i64 cast list.at .else
-                    "could not find procedure alias" ..panic
+                    "could not find procedure alias":s op ..line state internalError ..unreachable
                   end
                   $ .implementation [] .?Alias ? ! "no double alias" assert
                 else ..drop end
@@ -2500,7 +2522,9 @@ proc(
                     MissingProc new list.append
                   state .missingProcs=
                 end
-              else "unexpected proc implementation" ..panic end
+              else
+                "unexpected proc implementation":s op ..line state internalError ..unreachable
+              end
               ## ProcedureImpl
                 implId
                 procId
@@ -2637,7 +2661,7 @@ proc(
               while count 0 != do
                 count 1 - count=
                 state popTypedValue .else
-                  "stack underflow" ..panic
+                  "stack underflow":s op ..line state internalError ..unreachable
                 end
                   $ .value state [] .constBuffer count valOffset + =[]
                 .valType state [] .typeBuffer count typeOffset + =[]
@@ -3252,7 +3276,7 @@ proc(
           continue.opLoop
         end
         state popTypedValue .else
-          "stack underflow" ..panic
+          "stack underflow":s op ..line state internalError ..unreachable
         end =:: constVal
         constVal .value .?TypeId .and =:: typeVal
             typeVal typeContext types.isTypeSet if
@@ -4569,7 +4593,9 @@ proc(
             switchBlock .blockId tmp@ .val .blockEnd .blockId=
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             breakPositions for =:: breakPos
-              state [] .compiledOps breakPos list.at .data =:: breakOp
+              state [] .compiledOps breakPos list.at .else
+                "invalid break position":s op ..line state internalError ..unreachable
+              end =:: breakOp
               currentOpIndex
                 breakPos - JumpDistance cast
               breakOp .val .block .jumpDistance=
@@ -4748,7 +4774,9 @@ proc(
             andOrBlock .blockId op@ .val .blockEnd .blockId=
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             andOrBlock .andOrPositions for =:: andOrPos
-              state [] .compiledOps andOrPos list.at .data =:: andOrOp
+              state [] .compiledOps andOrPos list.at .else
+                "invalid break position":s op ..line state internalError ..unreachable
+              end =:: andOrOp
               currentOpIndex
                 andOrPos - JumpDistance cast
               andOrOp .val .block .jumpDistance=
@@ -4930,7 +4958,7 @@ proc(
           valType typeContext types.getUnionElementType
         else valType typeContext types.isUnion _if
           state .stack branchTree.pop ..drop
-          "unimplemented: union ..raw" ..panic
+          "unimplemented: union ..raw":s op ..line state internalError ..unreachable
         else
           "unexpected argument for " sb.copyPtr
             valType typeContext sb.appendType
@@ -5009,7 +5037,7 @@ proc(
         withProc [] .labelId labelContext id.currentNamespace labelContext id.setLabelNamespace
         op .pos state popType =:: baseType
         baseType types.primitive.TYPE types.typeEquals ! if
-          "unimplemented: refinement of non-type types" ..panic
+          "unimplemented: refinement of non-type types":s op ..line state internalError ..unreachable
         end
         ## newProcedure
           baseType@ slice.wrap
@@ -5017,7 +5045,7 @@ proc(
           LabelId slice.empty
           CallingConvention.DEFAULT
         typeContext types.newProcedure .else
-          "failed to create procedure" ..panic
+          "failed to create procedure":s op ..line state internalError ..unreachable
         end withProc typeContext setProcType
         withProc .implementation .Code [] .codeState .PARSING ! if
           "unexpected state for `.with( ... )` procedure" sb.copyPtr
@@ -5046,13 +5074,14 @@ proc(
           end
           idContext [] .arraySizeBuffer
             state popValue .else
-              "stack underflow" ..panic
+              "stack underflow":s op ..line state internalError ..unreachable
             end =:: constVal
             constVal switch
               TypeId .case optional.wrap baseType0= break
               Int .case types.ArraySize .Int list.append break
               GenericArg .case types.ArraySize .GenericArg list.append break
-              WildCard .case "unimplemented: dynamic pointers" ..panic
+              WildCard .case
+                "unimplemented: dynamic pointers":s op ..line state internalError ..unreachable
               default ## TODO? .default to access switched value
                 "unexpected constant parameter for type-modifier " sb.copyPtr
                   typeMod sb.appendTypeModifier
@@ -5268,14 +5297,16 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   program [] .procedures procId i64 cast list.at .else
-    "missing procedure" ..panic
+    "missing procedure":s expandedAt .else FILE_POS_UNKNOWN end ..line internalErrorNoOp ..unreachable
   end =:: currentProc
   currentProc .implementation .?Code .else ..drop
     ## TODO replace alias with underlying proc
     ##  skip built-ins
     return
   end =:: codeImpl
-  currentProc [] .labelId labelContext id.getLabelPos .else "proc label has pos" ..panic end =:: procPos
+  currentProc [] .labelId labelContext id.getLabelPos .else
+    "proc label has no pos":s expandedAt .else FILE_POS_UNKNOWN end ..line internalErrorNoOp ..unreachable
+  end =:: procPos
   expandedAt .else procPos end =:: initPos
   codeImpl [] .expansionLevel =:: prevExpansionLevel
   implId -1 == if

@@ -2085,7 +2085,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "..line":s string.eq _if ..drop
       fileState [] .wordStart .line i64 cast.u ConstValue .Int
-      types.primitive.I64
+      types.primitive.I64 ## TODO? change to iSize
       fileState [] .wordStart opConst state appendOp
       return
     else $ "..?types":s string.eq or $ "..?types.":s string.startsWith _if =:: mut: opName
