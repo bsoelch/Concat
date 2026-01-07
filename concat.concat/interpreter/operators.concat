@@ -616,7 +616,7 @@ namespace: interpreter
         ptrValue .Int =:: intConst
           isOffset if
             valueType typeContext types.strideOf switch
-              fixed .case
+              Fixed .case
                 intConst + ConstValue .Int OperatorResult .SUCCESS return
               default
                 "cannot determine size of type: " sb.copyPtr

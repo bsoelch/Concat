@@ -317,7 +317,7 @@ namespace: constant
         end i32 cast.u =:: count
         valType typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
         baseType types.isPrimitive and baseType types.primitive.TYPE types.typeEquals ! if
-          baseType typeContext types.strideOf .?fixed .else "dynamic size primitive" ..panic end switch
+          baseType typeContext types.strideOf .?Fixed .else "dynamic size primitive" ..panic end switch
             1 case
               context [] .arrayValues count i8 mixedArena.allocSlice =:: elts context .arrayValues=
               elts .data elts .length mem.clear ..drop

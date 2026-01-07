@@ -129,7 +129,7 @@ proc(
   progContext .idContext .typeContext =:: typeContext
   literalType switch
     FIXED case
-      intType typeContext types.sizeOf .fixed i32 cast 8 * =:: bitCount
+      intType typeContext types.sizeOf .Fixed i32 cast 8 * =:: bitCount
       value bitCount checkIntSize if
         "integer literal overflows size for type " sb.copyPtr
           intType typeContext sb.appendType
@@ -571,7 +571,7 @@ proc(
     UNSIGNED case
       literalType switch
         FIXED case
-          intType typeContext types.sizeOf .fixed 8 * i32 cast types.MAX_INT_WIDTH < if
+          intType typeContext types.sizeOf .Fixed 8 * i32 cast types.MAX_INT_WIDTH < if
             ..drop types.MAX_SIGNED_INT ## replace with maximum signed value to trigger overflow check
           end
           break

@@ -19,9 +19,9 @@ struct(
 ) =:: ParameterInfo
 
 union(
-  ConstValue : value
-  ConstValue : fixed  ## value of generic cannot be changed
-           _ : nonEmpty
+  ConstValue : Value
+  ConstValue : Fixed  ## value of generic cannot be changed
+           _ : NonEmpty
 ) =:: GenericArg
 
 struct(
@@ -39,9 +39,8 @@ struct(
 
 proc( GenericArg : val TypeContext ptr.mut : typeContext -> bool ) =>: isEmptyConstant
   val switch
-    nonEmpty case false return
-    value case val .value break
-    fixed case val .fixed break
+    NonEmpty case false return
+    Value Fixed .case break
   end =:: constVal
   constVal .?None ? or
     constVal .?TypeId .and typeContext types.isEmpty
@@ -101,15 +100,10 @@ proc(
   src switch
     GenericType case
       src types.getGenericTypeId LabelId cast =:: genericId
-      genericValues genericId map.at =:: value?
-      value? optional.hasData if
-        value? .data [] =:: value
-        value switch
-          fixed case
-            value .fixed .TypeId return
-          value case
-            value .value .TypeId return
-          nonEmpty case break
+      genericValues genericId map.at .if
+        [] switch
+          Fixed Value .case .TypeId return
+          NonEmpty case break
         end
       end
       src return ## generic not found XXX? error
@@ -129,17 +123,15 @@ proc(
       size switch
         None Int Dynamic case
           size break
-        GenericArg case
-          size .GenericArg =:: genericId
+        GenericArg .case =:: genericId
           genericId labelContext id.labelFlags id.FLAG_STATIC & ? ! if
             flags ReplaceFlags.REPLACE_AUTO_ARGS & ? ! if
               size break
             end
             true genericSize=
           end
-          genericValues genericId map.at =:: newValue
-          newValue optional.hasData if
-            newValue .data [] .fixed constAsSize
+          genericValues genericId map.at .if
+            [] .Fixed constAsSize
           else
             size
           end
@@ -289,14 +281,12 @@ proc(
                 typeBuffer labelBuffer genericValues flags pos interpreterContext
               replaceGenerics ConstValue .TypeId
               break
-            GenericArg case
-              arg .GenericArg =:: argId
-              genericValues argId map.at =:: val?
-              val? optional.isEmpty if arg break end
-              val? .data [] switch
-                value case val? .data [] .value break
-                fixed case val? .data [] .fixed break
-                nonEmpty case arg break
+            GenericArg .case =:: argId
+              genericValues argId map.at .else
+                arg break
+              end [] switch
+                Value Fixed .case break
+                NonEmpty case arg break
               end
               break
             default arg break ## argument not generic
@@ -364,12 +354,12 @@ proc(
       oldValue? optional.hasData if
         oldValue? .data [] =:: oldValue
         oldValue switch
-          nonEmpty case
+          NonEmpty case
             src typeContext types.isEmpty if
               true return
             end
             src break
-          fixed .case .?TypeId .else ..drop
+          Fixed .case .?TypeId .else ..drop
               false return
             end =:: oldTypeId
             src typeContext types.isEmpty and oldTypeId typeContext types.isEmpty if
@@ -384,7 +374,7 @@ proc(
               true return
             end
             oldTypeId break
-          value .case .?TypeId .else ..drop
+          Value .case .?TypeId .else ..drop
               false return
             end =:: oldIdType
             src typeContext types.isEmpty and oldIdType typeContext types.isEmpty if
@@ -396,7 +386,7 @@ proc(
               end
               src break
             end
-            src oldIdType typeContext types.mergeTypes $ ? if .data else ..drop
+            src oldIdType typeContext types.mergeTypes .else
               true return
             end
             break
@@ -407,9 +397,9 @@ proc(
       genericValues
         genericId
         genericValue ConstValue .TypeId exactMatch if
-          GenericArg .fixed
+          GenericArg .Fixed
         else
-          GenericArg .value
+          GenericArg .Value
         end
       map.put ..drop
       false return
@@ -481,17 +471,14 @@ proc(
           break
           GenericArg .case =:: genericId
             srcSize sizeAsConst =:: newValue
-            genericValues genericId map.at =:: oldValue?
-            oldValue? optional.hasData if
-              oldValue? .data [] switch
-                nonEmpty case break
-                value case
-                    oldValue? .data [] .value
+            genericValues genericId map.at .if
+              [] switch
+                NonEmpty case break
+                Value .case
                     newValue
                   constantEquals ! if true return end
                   break
-                fixed case
-                    oldValue? .data [] .fixed
+                Fixed .case
                     newValue
                   constantEquals ! if true return end
                   break
@@ -499,7 +486,7 @@ proc(
             end
             genericValues
               genericId
-              newValue GenericArg .fixed
+              newValue GenericArg .Fixed
             map.put ..drop
             break
         end
@@ -622,19 +609,19 @@ proc(
             argId
           map.at .if
             [] switch
-              value .case
+              Value .case
                 ## XXX? allow auto-casts type-casts
                 srcArg >$ constantEquals if break end
                 true return
-              fixed .case
+              Fixed .case
                 srcArg >$ constantEquals if break end
                 true return
-              nonEmpty case break
+              NonEmpty case break
             end
           end
           genericValues
             argId
-            srcArg GenericArg .fixed
+            srcArg GenericArg .Fixed
           map.put ..drop
         else ..drop end
       end
@@ -767,12 +754,10 @@ proc(
   LabelId GenericArg hashMap ptr.mut : genericValues
   LabelId : key
 -> ConstValue ) =>: getValueOrNone
-  genericValues key map.at =:: eltValue?
-  eltValue? optional.hasData if
-    eltValue? .data [] switch
-      nonEmpty case ConstValue .None return
-      value case eltValue? .data [] .value return
-      fixed case eltValue? .data [] .fixed return
+  genericValues key map.at .if
+    [] switch
+      NonEmpty case ConstValue .None return
+      Value Fixed .case return
     end
   else
     ConstValue .None return
@@ -868,11 +853,11 @@ proc(
           paramIndex 1 - paramIndex=
         else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? and
             current .genericValues paramLabel map.at .and =:: autoValue
-            autoValue [] .?nonEmpty ? ! _if
+            autoValue [] .?NonEmpty ? ! _if
           autoValue [] switch
-            fixed case autoValue .fixed break
-            value case autoValue .value break
-            nonEmpty case ..unreachable
+            Fixed case autoValue .Fixed break
+            Value case autoValue .Value break
+            NonEmpty case ..unreachable
           end =:: value
           paramType typeContext types.isTypeSet and
               value [] paramType pos interpreterContext interpreter.checkTypeSet ! if
@@ -882,7 +867,7 @@ proc(
           value [] .?TypeId .and types.isLiteral if
             current .genericValues
               paramLabel
-              value [] .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .fixed
+              value [] .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .Fixed
             map.put ..drop
           end
           current [] .paramInfo
@@ -924,7 +909,7 @@ proc(
         currentSignatures i list.at .data current=
         copySig .genericValues
           paramId
-          Type .Empty ConstValue .TypeId GenericArg .fixed
+          Type .Empty ConstValue .TypeId GenericArg .Fixed
         map.put ..drop
         copySig [] .nEmpty
           1 +
@@ -932,7 +917,7 @@ proc(
         ## mark generic as non-empty
         current .genericValues
           paramId
-          GenericArg .nonEmpty
+          GenericArg .NonEmpty
         map.put ..drop
       end
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? or
@@ -948,15 +933,10 @@ proc(
         paramLabel id.LABEL_ID_NONE != and
             current .genericValues paramLabel map.at .and =:: prevVal
           prevVal [] switch
-            nonEmpty case
+            NonEmpty case
               stackVal .?TypeId .and typeContext types.isEmpty end
               break
-            value case
-              prevVal [] .value stackVal constantEquals !
-              break
-            fixed case
-              prevVal [] .fixed stackVal constantEquals !
-              break
+            Value Fixed .case stackVal constantEquals ! break
         end if
           false current .argsMatch=
         else
@@ -964,7 +944,7 @@ proc(
             paramLabel $ id.LABEL_ID_NONE == if ..drop
               -2 paramIndex - LabelId cast.s
             end
-            stackVal GenericArg .fixed
+            stackVal GenericArg .Fixed
           map.put ..drop
         end
       end
@@ -1230,7 +1210,7 @@ proc(
       value .?TypeId .and types.isLiteral if
         candidate .genericValues
           eltLabel
-          value .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .fixed
+          value .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .Fixed
         map.put ..drop
       end
       constArgs

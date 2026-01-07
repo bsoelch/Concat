@@ -104,6 +104,7 @@ namespace: sb
   end
 end
 
+## TODO! make union element names upper-case
 union(
   _ : empty
   _ : forceClear ## marker for registers than should be cleared when merging (for caller saved registers)
@@ -530,7 +531,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
-      dataType typeContext types.sizeOf .fixed =:: byteSize
+      dataType typeContext types.sizeOf .Fixed =:: byteSize
       byteSize 16 <= "values larger than 128 bits are pased by reference" assert
       dataType typeContext types.getBaseType =:: eltType
       eltType typeContext toValType =:: eltVal
@@ -559,7 +560,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
-      dataType typeContext types.sizeOf .fixed =:: byteSize
+      dataType typeContext types.sizeOf .Fixed =:: byteSize
       byteSize 16 <= "values larger than 128 bits are pased by reference" assert
       true =:: mut: floatOnlyLow
       true =:: mut: floatOnlyHi
@@ -575,7 +576,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
           eltOffset 8 < if
             false floatOnlyLow=
           end
-          eltOffset 8 >= or eltOffset eltType typeContext types.sizeOf .fixed + 8 > if
+          eltOffset 8 >= or eltOffset eltType typeContext types.sizeOf .Fixed + 8 > if
             false floatOnlyHi=
             break
           end
@@ -613,7 +614,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
-      dataType typeContext types.sizeOf .fixed =:: size
+      dataType typeContext types.sizeOf .Fixed =:: size
       size 16 <= "values larger than 128 bits are pased by reference" assert
       ## TODO! treat small unions as values
       ValType .REFERENCE return
@@ -2590,8 +2591,8 @@ namespace: AMD64
         variables for =:: varInfo
           ## TODO skip arguments passed though memory address
           varInfo .valueType =:: valType
-          valType typeContext types.alignOf .fixed =:: alignment
-          valType typeContext types.sizeOf .fixed
+          valType typeContext types.alignOf .Fixed =:: alignment
+          valType typeContext types.sizeOf .Fixed
             ## round up sizes of multi-register values to 16-bytes to allow direct load/store of two registers
             $ 8 > and $ 16 < if ..drop 16 end ## TODO? is this neccessary
           =:: size
@@ -4870,7 +4871,7 @@ proc(
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
           offsetRegister asm.Operand .register
-          eltType typeContext types.strideOf .fixed asm.Operand .constInt
+          eltType typeContext types.strideOf .Fixed asm.Operand .constInt
         context appendOp4
         addressRegister ValType .PTR context pushRegister
       return
@@ -5129,7 +5130,7 @@ proc(
           eltTypes i [] =:: eltType
           eltType typeContext toValType =:: eltVal
           op [] .dataType i i32 cast typeContext types.tupleElementOffset .data =:: eltOffset
-          eltType typeContext types.sizeOf .fixed =:: eltSize
+          eltType typeContext types.sizeOf .Fixed =:: eltSize
           eltVal .REFERENCE ! "no reference type in value tuple" assert
           eltVal CheckValue .valueOrReference op [] .pos context popValue =:: elt?
           elt? optional.isEmpty if
@@ -5218,7 +5219,7 @@ proc(
             asm.OpType .COPY
               target .location .register eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
               elt .location .register asm.Operand .register
-              eltType typeContext types.sizeOf .fixed asm.Operand .constInt
+              eltType typeContext types.sizeOf .Fixed asm.Operand .constInt
             context appendOp3
           else
             asm.OpType .STORE
@@ -5289,7 +5290,7 @@ proc(
                   asm.OpType .COPY
                     labelId asm.Operand .localMemory
                     stackValue .location .register asm.Operand .register
-                    op [] .dataType typeContext types.sizeOf .fixed asm.Operand .constInt
+                    op [] .dataType typeContext types.sizeOf .Fixed asm.Operand .constInt
                   context appendOp3
                 else
                   asm.OpType .STORE
@@ -5328,7 +5329,7 @@ proc(
                   asm.OpType .COPY
                     tmpRegister asm.Operand .register
                     context [] .stack .length i32 cast.u asm.Operand .stackData
-                    op [] .dataType typeContext types.sizeOf .fixed asm.Operand .constInt
+                    op [] .dataType typeContext types.sizeOf .Fixed asm.Operand .constInt
                   context appendOp3
                 else
                   asm.OpType .LOAD
@@ -5366,7 +5367,7 @@ proc(
         =:: containerType
         containerType typeContext types.isArray if
           containerType typeContext types.getBaseType
-          $ typeContext types.strideOf .fixed op [] .val .getElement i64 cast.u *
+          $ typeContext types.strideOf .Fixed op [] .val .getElement i64 cast.u *
         else
           containerType op [] .val .getElement typeContext types.compositeGetElement
           containerType op [] .val .getElement typeContext types.tupleElementOffset .data
@@ -5400,7 +5401,7 @@ proc(
           eltVal targetRegister ValueLocation .register opIndex context pushValue
         else ## value -> value
           using: BitMove asm.BitMove.
-          eltType typeContext types.sizeOf .fixed =:: eltSize
+          eltType typeContext types.sizeOf .Fixed =:: eltSize
           eltVal isMultiRegValType if
             eltVal getLowValType opIndex context nextRegister =:: targetRegisterLow
             eltVal getHiValType opIndex context nextRegister =:: targetRegisterHi
@@ -5474,7 +5475,7 @@ proc(
         =:: containerType
         containerType typeContext types.isArray if
           containerType typeContext types.getBaseType
-          $ typeContext types.strideOf .fixed op [] .val .setElement i64 cast.u *
+          $ typeContext types.strideOf .Fixed op [] .val .setElement i64 cast.u *
         else
           containerType op [] .val .setElement typeContext types.compositeGetElement
           containerType op [] .val .setElement typeContext types.tupleElementOffset .data
@@ -5510,7 +5511,7 @@ proc(
                 memory registers registerHi registerLow case
                   "setElement: unimplemented store-memory / store multi-reg" ..panic
               end
-              eltType typeContext types.sizeOf .fixed asm.Operand .constInt
+              eltType typeContext types.sizeOf .Fixed asm.Operand .constInt
             context appendOp3
           else ## ptr / reference, value
             asm.OpType .STORE
@@ -5525,7 +5526,7 @@ proc(
         else ## value, value
           element .valType eltVal == "setElement: unimplemented store reference to value" assert
           using: BitMove asm.BitMove.
-          eltType typeContext types.sizeOf .fixed =:: eltSize
+          eltType typeContext types.sizeOf .Fixed =:: eltSize
           eltVal isMultiRegValType if
             ## TODO ensure dst hi-low are not a swapped version of source hi and low (prevent unneccessary moves)
             asm.OpType .INSERT
@@ -6574,7 +6575,7 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
       end
       constType typeContext types.isArray if
         constType typeContext types.getBaseType =:: eltType
-        eltType typeContext types.strideOf .fixed eltType typeContext types.sizeOf .fixed - =:: tailPadding
+        eltType typeContext types.strideOf .Fixed eltType typeContext types.sizeOf .Fixed - =:: tailPadding
         value .Array for =:: elt
           eltType elt context appendConstantData
           tailPadding 0 > if ## TODO? use align (? align with zeros) instruction instead of inserting bytes directly
@@ -6600,7 +6601,7 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
           end
           eltType elts i [] context appendConstantData
           offset
-            eltType typeContext types.sizeOf .fixed +
+            eltType typeContext types.sizeOf .Fixed +
           offset=
         finally i 1 + end ..drop
         return
@@ -6684,7 +6685,7 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
       context [] .pointerConstants i [] =:: constInfo
       constInfo .constType typeContext types.alignOf =:: alignement
       ## TODO use real type for error strings to remove need for allowing unknown alignment constants
-      alignement .?fixed .and $ =:: alignVal 1 > if
+      alignement .?Fixed .and $ =:: alignVal 1 > if
         alignVal i32 cast Atomic .Align list.append
       end
       asm.OpType .LABEL

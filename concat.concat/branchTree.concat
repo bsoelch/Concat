@@ -352,7 +352,7 @@ namespace: branchTree
     tree check
   end
 
-  union( _ : error i32 : success ) =:: MergeResult
+  union( _ : Error i32 : Success ) =:: MergeResult
   proc(
     type : auto: T
     type : auto: C
@@ -363,7 +363,7 @@ namespace: branchTree
   -> MergeResult ) =>: export: merge
     tree check
     branchHeads .length 0:iSize == if
-      MergeResult .error return
+      MergeResult .Error return
     end
     tree prune ## discard current branch
     ## no update of child count necessary (loose link to branch, gain link to head)
@@ -371,7 +371,7 @@ namespace: branchTree
       ## move head to first branch
       branchHeads 0 [] tree .branchHead=
       tree check
-      0 MergeResult .success return ## nothing to merge
+      0 MergeResult .Success return ## nothing to merge
     end
     -1:i32 =:: mut: initDepth
     EMPTY =:: mut: parentId
@@ -380,7 +380,7 @@ namespace: branchTree
       branchHeads ..over [] i32 cast =:: nodeId
       nodeId -1 < or nodeId tree [] .nodes .length i32 cast.u >= if ## id=-1 or 0 <= id < length
         ..drop
-        MergeResult .error return ## nodeId invalid
+        MergeResult .Error return ## nodeId invalid
       end
       nodeId -1 == if
         0:i32
@@ -396,7 +396,7 @@ namespace: branchTree
       else nodeDepth initDepth != _if
         ..drop
         ## nodes on top level have different depths
-        MergeResult .error return
+        MergeResult .Error return
       end
       parentId EMPTY == if
         nodeId NodeId cast parentId=
@@ -420,7 +420,7 @@ namespace: branchTree
       end
       tree check
       ## heads identical -> no merge necessary
-      0 MergeResult .success return
+      0 MergeResult .Success return
     end
     tree [] .nodes .length NodeId cast tree .branchHead=
     tree [] .nodes
@@ -482,6 +482,6 @@ namespace: branchTree
     buffer mem.free
     heads mem.free
     tree check
-    offset MergeResult .success return
+    offset MergeResult .Success return
   end
 end

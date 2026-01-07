@@ -11,7 +11,7 @@ enum( EQ NEQ ) =:: export: EqualityOperator
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
-union( StackTypesInfo : typeInfo i32 : stackInfo i32 : compiledOps LabelId : find ) =:: export: CompilerInfo
+union( StackTypesInfo : TypeInfo i32 : StackInfo i32 : CompiledOps LabelId : Find ) =:: export: CompilerInfo
 enum( PTR ARRAY PTR_MUT RAW_PTR RAW_PTR_MUT ) =:: export: TypeModifier
 struct( Type : src i32 : offset ) =:: export: AutoCastInfo ## offset: zero-indexed from top of stack
 enum( SIGNED NONE UNSIGNED ) =:: export: SignType
@@ -449,20 +449,20 @@ proc(
 -> Operation ) =>: export: opTypesInfo
   ## Operation
     count depth StackTypesInfo new
-      CompilerInfo .typeInfo
+      CompilerInfo .TypeInfo
     OpValue .compilerInfo
     Type .Undefined
     pos
   Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export: opStackInfo
-  count CompilerInfo .stackInfo OpValue .compilerInfo Type .Undefined  pos Operation new return
+  count CompilerInfo .StackInfo OpValue .compilerInfo Type .Undefined  pos Operation new return
 end
 proc( i32 : count FilePosition : pos -> Operation ) =>: export: opPrintCompiledOps
-  count CompilerInfo .compiledOps OpValue .compilerInfo Type .Undefined  pos Operation new return
+  count CompilerInfo .CompiledOps OpValue .compilerInfo Type .Undefined  pos Operation new return
 end
 proc( LabelId : name FilePosition : pos -> Operation ) =>: export: opPrintIdentifierMatches
-  name CompilerInfo .find OpValue .compilerInfo Type .Undefined  pos Operation new return
+  name CompilerInfo .Find OpValue .compilerInfo Type .Undefined  pos Operation new return
 end
 
 struct(
@@ -1209,34 +1209,34 @@ namespace: sb
     =:: labelContext
     =:: info
     info switch
-      typeInfo case
+      TypeInfo .case =:: typeInfo
         "..?types" sb.appendS
-        info .typeInfo .count 0 > if
+        typeInfo .count 0 > if
           '.' sb.appendC
-          info .typeInfo .count sb.appendI
+          typeInfo .count sb.appendI
         end
-        info .typeInfo .depth 0 > if
+        typeInfo .depth 0 > if
           '.' sb.appendC
-          info .typeInfo .depth sb.appendI
+          typeInfo .depth sb.appendI
         end
         break
-      stackInfo case
+      StackInfo .case =:: count
         "..?stack" sb.appendS
-        info .stackInfo 0 > if
+        count 0 > if
           '.' sb.appendC
-          info .stackInfo sb.appendI
+          count sb.appendI
         end
         break
-      compiledOps case
+      CompiledOps .case =:: count
         "..?ops" sb.appendS
-        info .compiledOps 0 > if
+        count 0 > if
           '.' sb.appendC
-          info .compiledOps sb.appendI
+          count sb.appendI
         end
         break
-      find case
+      Find .case =:: id
         "..?find." sb.appendS
-        info .find labelContext sb.appendLabelPath
+        id labelContext sb.appendLabelPath
         break
     end
   end

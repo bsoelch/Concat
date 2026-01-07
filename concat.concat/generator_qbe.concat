@@ -295,13 +295,13 @@ proc(
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
   size switch
-    fixed case size .fixed return
-    dynamicArray case
+    Fixed .case return
+    DynamicArray case
       "dynamic arrays are not supported in this context: " sb.copyPtr
          t typeContext sb.appendType
       pos errors appendError
       0 return
-    unknown case
+    Unknown case
       "could not determine size of type: " sb.copyPtr
          t typeContext sb.appendType
       pos errors appendError
@@ -1468,7 +1468,7 @@ proc(
   pos errors appendError
 end
 
-union( i64 : constant i32 : stackId LabelId : autoArg i32 : localId i32 : tmpId ) =:: IntValue
+union( i64 : Constant i32 : StackId LabelId : AutoArg i32 : LocalId i32 : TmpId ) =:: IntValue
 proc(
   stringBuilder : sb
   ValType : valType
@@ -1493,11 +1493,11 @@ proc(
     valId sb.appendI
     ", " sb.appendS
     value switch
-      constant case value .constant sb.appendI break
-      stackId case "%s" sb.appendS value .stackId sb.appendI break
-      localId case "%l" sb.appendS value .localId sb.appendI break
-      tmpId case "%t" sb.appendS value .tmpId sb.appendI break
-      autoArg case value .autoArg pos context appendGenericArg break
+      Constant .case sb.appendI break
+      StackId .case =:: id "%s" sb.appendS id sb.appendI break
+      LocalId .case =:: id "%l" sb.appendS id sb.appendI break
+      TmpId .case =:: id "%t" sb.appendS id sb.appendI break
+      AutoArg .case pos context appendGenericArg break
     end
     "\njnz %t" sb.appendS
     tmpId sb.appendI
@@ -1827,7 +1827,7 @@ proc(
           valType
           't' valId
           "eq":s
-          cmpVal IntValue .constant
+          cmpVal IntValue .Constant
           caseBranch
           nextBranch
         pos context appendCmpInt
@@ -1868,7 +1868,7 @@ proc(
       valType
       't' valId
       "slt":s
-      cmpVal IntValue .constant
+      cmpVal IntValue .Constant
       ltBranch
       geBranch
     pos context appendCmpInt
@@ -4042,7 +4042,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?error ? if
+            branchTree.merge .?Error ? if
               "could not merge or-if branches" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4145,7 +4145,7 @@ proc(
               context
               newSb@
             MergePoint new
-          branchTree.merge .?error ? if
+          branchTree.merge .?Error ? if
             "could not merge and-if branches" sb.copyPtr
             op [] .pos errors appendError
           end
@@ -4368,7 +4368,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?error ? if
+            branchTree.merge .?Error ? if
               "could not merge or-do branches" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4457,7 +4457,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?error ? if
+            branchTree.merge .?Error ? if
               "could not merge continue branches of while block" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4567,7 +4567,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?error ? if
+            branchTree.merge .?Error ? if
               "could not merge branches of if-else block" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4609,7 +4609,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?error ? if
+            branchTree.merge .?Error ? if
               "could not merge branches of switch-case block" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4679,7 +4679,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?error ? if
+            branchTree.merge .?Error ? if
               "could not merge break branches of while block" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4724,7 +4724,7 @@ proc(
               context
               newSb@
             MergePoint new
-          branchTree.merge .?error ? if
+          branchTree.merge .?Error ? if
             "could not merge break branches of and/or block" sb.copyPtr
             op [] .pos errors appendError
           end

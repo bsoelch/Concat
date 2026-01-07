@@ -637,10 +637,9 @@ namespace: types
   proc( Type TypeContext ptr.mut -> bool ) =>: export: isSmallType
     sizeOf =:: size
     size switch
-      fixed case
-        size .fixed 16 <= return ## more than 2*i64
-      dynamicArray case false return
-      unknown case ..unreachable ## TODO? error message
+      Fixed .case 16 <= return ## more than 2*i64
+      DynamicArray case false return
+      Unknown case ..unreachable ## TODO? error message
     end
   end
   ## can value be pushed onto stack
@@ -740,7 +739,7 @@ namespace: types
   end
 
   ## size and alignment
-  union( _ : unknown i64 : fixed i64 : dynamicArray ) =:: export: TypeSize
+  union( _ : Unknown i64 : Fixed i64 : DynamicArray ) =:: export: TypeSize
   8:i64 =:: PTR_SIZE
   8:i64 =:: PTR_ALIGN
   8:i64 =:: I_SIZE_SIZE
@@ -805,11 +804,11 @@ namespace: types
     0:iSize =:: mut: offsetCount
     elts for =:: elt
       ## size and alignment
-      elt typeContext alignOf .?fixed .else ..drop
+      elt typeContext alignOf .?Fixed .else ..drop
         typeContext [] .memory memOffset mixedArena.reset typeContext .memory=
         true return ## elements are not fixed size
       end =:: eltAlign
-      elt typeContext sizeOf .?fixed .else ..drop
+      elt typeContext sizeOf .?Fixed .else ..drop
         typeContext [] .memory memOffset mixedArena.reset typeContext .memory=
         true return ## elements are not fixed size
       end =:: eltSize
@@ -844,10 +843,10 @@ namespace: types
     0:i64 =:: mut: size
     elts for =:: elt
       ## size and alignment
-      elt typeContext sizeOf .?fixed .else ..drop
+      elt typeContext sizeOf .?Fixed .else ..drop
         false return
       end =:: eltSize
-      elt typeContext alignOf .?fixed .else ..drop
+      elt typeContext alignOf .?Fixed .else ..drop
         false return
       end =:: eltAlign
       eltAlign alignment > if
@@ -858,14 +857,14 @@ namespace: types
       end
     end
     unionInfo [] .labelType typeContext isEmpty ! if
-      unionInfo [] .labelType typeContext alignOf .fixed =:: labelAlign
+      unionInfo [] .labelType typeContext alignOf .Fixed =:: labelAlign
       labelAlign alignment > if
         labelAlign alignment=
       end
       size
         labelAlign alignSize
         ..dup unionInfo .enumLabelOffset=
-        unionInfo [] .labelType typeContext sizeOf .fixed +
+        unionInfo [] .labelType typeContext sizeOf .Fixed +
       size=
     end
     alignment unionInfo .compositeInfo .alignment=
@@ -897,27 +896,27 @@ namespace: types
   proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: alignOf
     t switch
       Undefined GenericType TypeSet  case
-        TypeSize .unknown return
+        TypeSize .Unknown return
       Empty  case
-        1 TypeSize .fixed return
+        1 TypeSize .Fixed return
       Align case
-        t .Align i64 cast.u TypeSize .fixed return
+        t .Align i64 cast.u TypeSize .Fixed return
       PrimitiveType case
-        t .PrimitiveType sizeOfPrimitive TypeSize .fixed return
+        t .PrimitiveType sizeOfPrimitive TypeSize .Fixed return
       IntLiteral case
-        t .IntLiteral sizeOfIntLiteral TypeSize .fixed return
+        t .IntLiteral sizeOfIntLiteral TypeSize .Fixed return
       CType case
-        t .CType sizeOfCType TypeSize .fixed return
+        t .CType sizeOfCType TypeSize .Fixed return
       Pointer MutablePointer RawPointer MutableRawPointer Procedure  case
-        PTR_SIZE TypeSize .fixed return
+        PTR_SIZE TypeSize .Fixed return
       ArrayType case
         t context getBaseType context alignOf return
       Struct Union RawUnion Initializer case
         t context tryComputeSize if
-          TypeSize .unknown return
+          TypeSize .Unknown return
         end
         t context compositeData .Composite =:: compData
-        compData [] .alignment TypeSize .fixed return
+        compData [] .alignment TypeSize .Fixed return
       UnionElement .case UnionElementInfo ptr cast [] .base context alignOf return
       Enum .case EnumInfo ptr cast [] .labelType context alignOf return
       NamedType case
@@ -940,43 +939,43 @@ namespace: types
   -> TypeSize ) =>: computeSize
     t switch
       Undefined GenericType TypeSet case
-        TypeSize .unknown return
+        TypeSize .Unknown return
       Empty  case
-        0 TypeSize .fixed return
+        0 TypeSize .Fixed return
       Align case
-        aligned if t .Align i64 cast.u else 0:i64 end TypeSize .fixed return
+        aligned if t .Align i64 cast.u else 0:i64 end TypeSize .Fixed return
       PrimitiveType case
-        t .PrimitiveType sizeOfPrimitive TypeSize .fixed return
+        t .PrimitiveType sizeOfPrimitive TypeSize .Fixed return
       IntLiteral case ## XXX? don't use fixed size for int literals
-        t .IntLiteral sizeOfIntLiteral TypeSize .fixed return
+        t .IntLiteral sizeOfIntLiteral TypeSize .Fixed return
       CType case
-        t .CType sizeOfCType TypeSize .fixed return
+        t .CType sizeOfCType TypeSize .Fixed return
       Pointer MutablePointer RawPointer MutableRawPointer Procedure  case
-        PTR_SIZE TypeSize .fixed return
+        PTR_SIZE TypeSize .Fixed return
       ArrayType case
         t context getArraySize =:: arraySize
         t context getBaseType context strideOf =:: baseSize
-        baseSize .?fixed .else ..drop
-          TypeSize .unknown return
+        baseSize .?Fixed .else ..drop
+          TypeSize .Unknown return
         end =:: baseSizeVal
         arraySize switch
           None case baseSize return
-          Int .case baseSizeVal *  TypeSize .fixed return
+          Int .case baseSizeVal *  TypeSize .Fixed return
           ## TODO! distinguish generic-size and runtime dynamic size
-          Dynamic case baseSizeVal TypeSize .dynamicArray return
-          GenericArg case baseSizeVal TypeSize .dynamicArray return
+          Dynamic case baseSizeVal TypeSize .DynamicArray return
+          GenericArg case baseSizeVal TypeSize .DynamicArray return
         end
         break
       Struct Union RawUnion Initializer case
         t context tryComputeSize if
-          TypeSize .unknown return
+          TypeSize .Unknown return
         end
         t context compositeData .Composite =:: compData
         compData [] .size
           aligned if
             compData [] .alignment alignSize
           end
-        TypeSize .fixed return
+        TypeSize .Fixed return
       UnionElement .case UnionElementInfo ptr cast [] .base aligned context computeSize return
       Enum .case EnumInfo ptr cast .labelType [] aligned context computeSize return
       NamedType case
@@ -2481,8 +2480,8 @@ namespace: types
     false return
   end
   proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canBitCast
-    src context sizeOf .?fixed .else ..drop false return end =:: srcSize
-    target context sizeOf .?fixed .else ..drop false return end =:: targetSize
+    src context sizeOf .?Fixed .else ..drop false return end =:: srcSize
+    target context sizeOf .?Fixed .else ..drop false return end =:: targetSize
     ## TODO? should there by any other restrictions on bit-casts
     srcSize targetSize == or
       ## allow int-literals to be smaller than target-type

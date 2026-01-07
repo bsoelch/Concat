@@ -399,11 +399,10 @@ namespace: interpreter
         break
     end =:: sizeValue
     sizeValue switch
-      fixed case
-        sizeValue .fixed ConstValue .Int false return
-      dynamicArray case
+      Fixed .case ConstValue .Int false return
+      DynamicArray case
         ConstValue .None true return ## XXX? support generic array size
-      unknown case ## XXX? error message for unknown size
+      Unknown case ## XXX? error message for unknown size
         ConstValue .None true return
     end
   end
@@ -2452,24 +2451,23 @@ proc(
       break
     compilerInfo case
       op [] .val .compilerInfo switch
-        typeInfo case
-          op [] .val .compilerInfo .typeInfo =:: info
+        TypeInfo .case =:: info
           ## printTypes
             false
             info .count
             info .depth
           context printTypes
           EvalResult .Ok return
-        stackInfo case
+        StackInfo .case
           ## printTypes
             true
-            op [] .val .compilerInfo .stackInfo
+            >$
             0
           context printTypes
           EvalResult .Ok return
-        compiledOps case
+        CompiledOps case
           EvalResult .Ok return ## TODO print ops
-        find case
+        Find case
           EvalResult .Ok return ## TODO find
       end
       break
