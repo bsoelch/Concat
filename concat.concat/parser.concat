@@ -20,9 +20,6 @@ import "builtIns.concat"
 using id.LabelFlag
 using id.:LabelFlag
 
-## TODO? is this needed or can opConst be created directly
-struct( Type : valueType ConstValue : val IdentifierInfo optional : idInfo FilePosition : pos ) =:: Constant
-
 struct(
   LabelId : varId
 ) =:: TmpVarInfo
@@ -100,9 +97,18 @@ proc( ParserState : state -> ) =>: cleanupParserState
   state .parsedOps list.free ..drop
 end
 
-proc( FilePosition : pos -> Constant ) =>: newWildcardConst
-  Type .Undefined ConstValue .WildCard IdentifierInfo optional.empty pos Constant new return
+proc( FilePosition : pos ParserState ptr.mut : state -> ) =>: appendWildcardConst
+  ConstValue .WildCard Type .Undefined pos opConst state appendOp
 end
+proc( f64 : value Type : constType FilePosition : pos ParserState ptr.mut : state -> ) =>: appendFloatConst
+  ## Constant
+    value ConstValue .Float
+    constType
+    pos
+  opConst state appendOp
+end
+
+
 proc(
   i64 : value
   i32 : preferedSize
@@ -124,7 +130,7 @@ proc(
   string : literal
   FilePosition : pos
   ParserState ptr.mut : state
--> Constant ) =>: newIntConstant
+-> ) =>: appendIntConstant
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   progContext .idContext .typeContext =:: typeContext
@@ -159,31 +165,39 @@ proc(
       types.intLiteral.U63
       break
   end =:: constType
-  constType value ConstValue .Int IdentifierInfo optional.empty pos Constant new return
+  ## opConst
+    value ConstValue .Int
+    constType
+    pos
+  opConst state appendOp
 end
 proc(
   unicode.Codepoint : char
   StringLiteralType : stringType
   FilePosition : pos
--> Constant ) =>: newCharConstant
+  ParserState ptr.mut : state
+-> ) =>: appendCharConstant
   ## newConstant
     stringType switch
-      DEFAULT case types.primitive.CHAR8  char char8 cast ConstValue .Char break
-      UTF8    case types.primitive.CHAR8  char i64 cast.u 0xff & ConstValue .Int break
-      UTF16   case types.primitive.CHAR16 char i64 cast.u 0xffff & ConstValue .Int break
-      UTF32   case types.primitive.CHAR32 char i64 cast.u ConstValue .Int break
+      DEFAULT case char char8 cast ConstValue .Char         types.primitive.CHAR8 break
+      UTF8    case char i64 cast.u   0xff & ConstValue .Int types.primitive.CHAR8 break
+      UTF16   case char i64 cast.u 0xffff & ConstValue .Int types.primitive.CHAR16 break
+      UTF32   case char i64 cast.u          ConstValue .Int types.primitive.CHAR32 break
       UNKNOWN INT_LITERAL case ..unreachable
     end
-  IdentifierInfo optional.empty pos Constant new return
+  pos opConst state appendOp
 end
 proc(
   ConstValue : str
   StringLiteralType : stringType
   FilePosition : pos
-  TypeContext ptr.mut : context
-  ConstantContext ptr.mut : constContext
-  CompilerError list ptr.mut : errors
--> Constant ) =>: newStringConstant
+  ParserState ptr.mut : state
+-> iSize ) =>: appendStringConstant
+  state [] .progContext =:: progContext
+  progContext .errors =:: errors
+  state [] .progContext .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  idContext .constContext =:: constContext
   using types.
   str .?Array8 .else
     "expected string to have type Array8" ..panic
@@ -211,25 +225,14 @@ proc(
       ConstValue .None 0:iSize Type .Undefined break
   end =:: charType =:: strLength =:: strValue
   strLength i64 cast.u ArraySize .Int =:: size
-  ## Constant
-    charType types.ArrayType .POINTER size context newArrayType .data
+  ## opConst
     strValue
-    IdentifierInfo optional.empty
-  pos Constant new return
-end
-
-proc( f64 : value Type : constType FilePosition : pos -> Constant ) =>: newFloatConst
-  ## Constant
-    constType
-    value ConstValue .Float
-    IdentifierInfo optional.empty
+    charType types.ArrayType .POINTER size typeContext newArrayType .data
     pos
-  Constant new return
+  opConst state appendOp
+  strLength
 end
 
-proc( Constant : const -> Operation ) =>: constantToOp
-  const .val const .valueType const .pos opConst return
-end
 
 proc( ParserState ptr.mut : state -> iSize ) =>: opCount
   state [] .progContext =:: progContext
@@ -254,9 +257,6 @@ proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
   state [] .parsedOps list.peek
 end
 
-proc( Constant : const ParserState ptr.mut : state -> ) =>: pushConst
-  const constantToOp state appendOp
-end
 
 proc( BlockInfoData : blockData ParserState ptr.mut : state -> BlockInfoData ptr.mut ) =>: openBlock
   state [] .openBlocks
@@ -567,7 +567,7 @@ proc(
   progContext .idContext .typeContext =:: typeContext
   literal 0 number.tryParseInt switch
     NONE case
-      literalType intType literal pos state newIntConstant  state pushConst
+      literalType intType literal pos state appendIntConstant
       true return
     UNSIGNED case
       literalType switch
@@ -582,7 +582,7 @@ proc(
           pos errors appendWarning
           break
       end
-      literalType intType literal pos state newIntConstant  state pushConst
+      literalType intType literal pos state appendIntConstant
       true return
     SIGN case ..drop
       "unsigned value is marked as negative: " sb.copyPtr
@@ -640,7 +640,7 @@ proc(
     else literalType typeContext types.isFloat _if
       literal 0 number.tryParseFloat =:: errCode
       errCode .NONE or errCode .INT if
-        literalType pos newFloatConst state pushConst
+        literalType pos state appendFloatConst
         true return
       else ..drop
         "invalid float constant: `" sb.copyPtr
@@ -657,7 +657,7 @@ proc(
   end
   literal 0 number.tryParseFloat
     ..dup .NONE if ..drop
-      types.primitive.F64 pos newFloatConst state pushConst
+      types.primitive.F64 pos state appendFloatConst
       true return
     else ..dup .INT _if ..drop.2
       "integer value outside allowed range: " sb.copyPtr
@@ -673,14 +673,10 @@ proc(
   bool : isRawString
   FilePosition : pos
   ParserState ptr.mut : state
--> ConstValue ) =>: parseStringConstant
+-> iSize ) =>: parseStringConstant
   state [] .progContext =:: progContext
-  progContext .errors =:: errors
-  state [] .progContext .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  idContext .constContext =:: constContext
-  idContext .typeContext .labelContext =:: labelContext
-  ## newStringConstant
+  progContext .idContext .constContext =:: constContext
+  ## appendStringConstant
     ## parseStringConstant
       token .value
       pos
@@ -693,13 +689,8 @@ proc(
     end
     token .stringType
     pos
-    typeContext
-    constContext
-    progContext .errors
-  newStringConstant
-    $ .val =:: stringConst
-  state pushConst
-  stringConst return
+    state
+  appendStringConstant return
 end
 proc(
   StringToken : token
@@ -745,10 +736,10 @@ proc(
        charTypeName sb.appendStr
       pos errors appendError
     end
-  ## newCharConstant
+  ## appendCharConstant
     cp $ i32 cast 0 < if i32 cast -_ unicode.Codepoint cast end
     token .stringType
-  pos newCharConstant state pushConst
+  pos state appendCharConstant
 end
 proc(
   Token : literalType
@@ -828,17 +819,14 @@ proc(
           string.empty true return
         end
         ## literal not a primitive number type -> convert to string and call literal procedure
-        ## newStringConstant
+        ## appendStringConstant
           token .Literal constContext newStringConst
           StringLiteralType .UTF8
           literalStart
-        typeContext constContext errors newStringConstant
-          $ .val =:: stringConst
-        state pushConst
-        types.I_SIZE
-          stringConst .Array8 .length i64 cast.u ConstValue .Int
-          IdentifierInfo optional.empty
-        fileState [] .wordStart Constant new state pushConst
+        state appendStringConstant =:: charCount
+        charCount i64 cast.u ConstValue .Int
+          types.I_SIZE
+        fileState [] .wordStart opConst state appendOp
         progContext [] .tmpString
           sb.clear ## clear tmp string
           ':' sb.appendC
@@ -846,15 +834,10 @@ proc(
         progContext .tmpString=
         progContext [] .tmpString sb.asStr false return
       LiteralChar LiteralString LiteralRawString .case
-        token .?LiteralRawString ? fileState [] .wordStart state parseStringConstant =:: stringConst
-        types.I_SIZE
-          stringConst
-            .?Array8 .if .length
-            else .?Array32 ._if .length
-            else .?Array16 ._if .length
-          else ..unreachable end i64 cast.u ConstValue .Int
-          IdentifierInfo optional.empty
-        fileState [] .wordStart Constant new state pushConst
+        token .?LiteralRawString ? fileState [] .wordStart state parseStringConstant =:: charCount
+        charCount i64 cast.u ConstValue .Int
+          types.I_SIZE
+        fileState [] .wordStart opConst state appendOp
         fileState nextToken =:: literalType
         literalType fileState [] .wordStart errors checkLiteralType  if
           string.empty true return
@@ -873,7 +856,7 @@ proc(
         string.empty true return
     end
     ..dup "_":s string.eq if
-      fileState [] .wordStart newWildcardConst  state pushConst
+      fileState [] .wordStart state appendWildcardConst
       true return
     end
   false return
