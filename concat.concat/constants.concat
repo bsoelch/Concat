@@ -90,14 +90,8 @@ end
 proc( i16 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray16Const
   elts context constPrimitiveArray ConstValue .Array16 return
 end
-proc( string16 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString16Const
-  elts string16.toIntSlice context newArray16Const return
-end
 proc( i32 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray32Const
   elts context constPrimitiveArray ConstValue .Array32 return
-end
-proc( string32 : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newString32Const
-  elts string32.toIntSlice context newArray32Const return
 end
 proc( i64 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray64Const
   elts context constPrimitiveArray ConstValue .Array64 return
@@ -257,39 +251,6 @@ namespace: constant
     ## at most 1/8 non-printable chars
     nonPrintable bytes .length 4:iSize + 8:iSize / u<= return
   end
-  ## Detect if a given i8 array is a string constant
-  proc( i16 slice : ints -> bool ) =>: isString16
-    0:iSize =:: mut: nonPrintable
-    ints string16.fromIntSlice
-    0:iSize while $1 .length $1 u> do
-      utf16.nextCodepoint =:: cp
-      cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
-        ..drop.2 false return ## definitely no string
-      end
-      cp i32 cast =:: intValue
-      intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1:iSize + nonPrintable=
-      end
-    end ..drop.2
-    ## at most 1/8 non-printable chars
-    nonPrintable ints .length 4:iSize + 8:iSize / u<= return
-  end
-  ## Detect if a given i8 array is a string constant
-  proc( i32 slice : ints -> bool ) =>: isString32
-    0:iSize =:: mut: nonPrintable
-    ints .length for =:: i
-      ints i [] unicode.Codepoint cast =:: cp
-      cp unicode.MIN_CODEPOINT < or cp unicode.MAX_CODEPOINT > if
-        false return ## definitely no string
-      end
-      cp i32 cast =:: intValue
-      intValue #+newLine+# 0x0a != and intValue 0x20 < or intValue 0x7f == if ## non-printable ascii
-        nonPrintable 1:iSize + nonPrintable=
-      end
-    end
-    ## at most 1/8 non-printable chars
-    nonPrintable ints .length 4:iSize + 8:iSize / u<= return
-  end
 
   proc(
     Type : mut: valType
@@ -421,40 +382,6 @@ namespace: sb
       str string.chars for appendEscapedChrC end
     return
   end
-  proc( stringBuilder : sb string16 : str -> stringBuilder ) =>: export: appendEscapedStr16
-    sb
-      str string16.toSlice for i32 cast.u =:: c
-        c 0x80 u< if
-          c char8 cast appendEscapedChr
-        else
-          "\\u" sb.appendS
-               c 0x100 u< if  "00" sb.appendS
-          else c 0x1000 u< _if "0" sb.appendS
-          end
-          c sb.appendUX
-        end
-      end
-    return
-  end
-  proc( stringBuilder : sb string32 : str -> stringBuilder ) =>: export: appendEscapedStr32
-    sb
-      str string32.toSlice for i32 cast.u =:: c
-        c 0x80 u< if
-          c char8 cast appendEscapedChr
-        else
-          "\\U" sb.appendS
-               c 0x100 u<  if "000000" sb.appendS
-          else c 0x1000 u< _if "00000" sb.appendS
-          else c 0x10000 u< _if "0000" sb.appendS
-          else c 0x100000 u< _if "000" sb.appendS
-          else c 0x1000000 u< _if "00" sb.appendS
-          else c 0x10000000 u< _if "0" sb.appendS
-          end
-          c sb.appendUX
-        end
-      end
-    return
-  end
   8:iSize =:: MAX_ARRAY_ELEMENTS
   12:iSize =:: MAX_PRIMITIVE_ARRAY_ELEMENTS
   36:iSize =:: MAX_STRING_CHARS
@@ -497,8 +424,7 @@ namespace: sb
             val .EnumLabel  sb.appendI
           ')'    sb.appendC
           break
-        Array case ## XXX? labeled array?
-          val .Array =:: mArray
+        Array .case =:: mArray ## TODO? labeled array?
           mArray .length
             MAX_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements
@@ -515,8 +441,7 @@ namespace: sb
           end
           "}" sb.appendS
           break
-        Array8 case
-          val .Array8 =:: mArray
+        Array8 .case =:: mArray
           mArray constant.isString if ## array is string constant
             mArray .length MAX_STRING_CHARS u<= if
               '\"'  sb.appendC
@@ -551,26 +476,7 @@ namespace: sb
           end
           "}" sb.appendS
           break
-        Array16 case
-          val .Array16 =:: mArray
-          mArray constant.isString16 if ## array is string constant
-            mArray .length MAX_STRING_CHARS u<= if
-              "utf16\""  sb.appendS
-              mArray string16.fromIntSlice sb.appendEscapedStr16
-              '\"'  sb.appendC
-            else
-              "utf16\""  sb.appendS
-              mArray
-                MAX_STRING_CHARS_HEAD slice.head
-              string16.fromIntSlice sb.appendEscapedStr16
-              "\"...\""  sb.appendS
-              mArray
-                $ .length MAX_STRING_CHARS_TAIL - slice.tail
-              string16.fromIntSlice sb.appendEscapedStr16
-              '\"'  sb.appendC
-            end
-            return
-          end
+        Array16 .case =:: mArray
           mArray .length
             MAX_PRIMITIVE_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements
@@ -587,26 +493,7 @@ namespace: sb
           end
           "}" sb.appendS
           break
-        Array32 case
-          val .Array32 =:: mArray
-          mArray constant.isString32 if ## array is string constant
-            mArray .length MAX_STRING_CHARS u<= if
-              "utf32\""  sb.appendS
-              mArray string32.fromIntSlice sb.appendEscapedStr32
-              '\"'  sb.appendC
-            else
-              "utf32\""  sb.appendS
-              mArray
-                MAX_STRING_CHARS_HEAD slice.head
-              string32.fromIntSlice sb.appendEscapedStr32
-              "\"...\""  sb.appendS
-              mArray
-                $ .length MAX_STRING_CHARS_TAIL - slice.tail
-              string32.fromIntSlice sb.appendEscapedStr32
-              '\"'  sb.appendC
-            end
-            return
-          end
+        Array32 .case =:: mArray
           mArray .length
             MAX_PRIMITIVE_ARRAY_ELEMENTS 1:iSize - iSize.min
           =:: maxElements

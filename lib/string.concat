@@ -4,8 +4,6 @@ import slice
 import mem
 
 char8 slice =:: export: string
-char16 slice =:: export: string16
-char32 slice =:: export: string32
 
 namespace: string
   { "" : data 0:iSize : length } string =: export: empty
@@ -163,97 +161,9 @@ namespace: string
   end
 end
 
-## XXX? implement procedures for string16, string32
-namespace: string16
-  { utf16"" : data 0:iSize : length } string16 =: export: empty
-
-  proc( char16 ptr.raw  iSize -> string16 ) =>: export: create
-    string16 new return
-  end
-
-  proc( char16 slice -> string16 ) =>: export: fromSlice
-    string16 cast
-  end
-  proc( string16 -> char16 slice ) =>: export: toSlice
-    char16 slice cast
-  end
-  proc( i16 slice : arr -> string16 ) =>: export: fromIntSlice
-    arr .data char16 ptr.raw cast arr .length create
-  end
-  proc( string16 : str -> i16 slice ) =>: export: toIntSlice
-    str .data i16 ptr.raw cast str .length slice.create
-  end
-
-  proc( string16 : str iSize : index -> char16 ) =>: export: get_Z
-    str char16 slice cast index [] return
-  end
-  proc( string16 : str i32 : index -> char16 ) =>: export: get_32
-    str char16 slice cast index [] return
-  end
-  proc( string16 : str i64 : index -> char16 ) =>: export: get_64
-    str char16 slice cast index [] return
-  end
-  overload: export: get
-    get_Z
-    get_32
-    get_64
-  end
-  proc( string16 : a string16 : b -> bool ) =>: export: eq
-    a toSlice b toSlice slice.eq return
-  end
-end
-namespace: string32
-  { utf32"" : data 0:iSize : length } string32 =: export: empty
-
-  proc( char32 ptr.raw  iSize -> string32 ) =>: export: create
-    string32 new return
-  end
-
-  proc( char32 slice -> string32 ) =>: export: fromSlice
-    string32 cast
-  end
-  proc( string32 -> char32 slice ) =>: export: toSlice
-    char32 slice cast
-  end
-  proc( i32 slice : arr -> string32 ) =>: export: fromIntSlice
-    arr .data char32 ptr.raw cast arr .length create
-  end
-  proc( string32 : str -> i32 slice ) =>: export: toIntSlice
-    str .data i32 ptr.raw cast str .length slice.create
-  end
-
-  proc( string32 : str iSize : index -> char32 ) =>: export: get_Z
-    str char32 slice cast index [] return
-  end
-  proc( string32 : str i32 : index -> char32 ) =>: export: get_32
-    str char32 slice cast index [] return
-  end
-  proc( string32 : str i64 : index -> char32 ) =>: export: get_64
-    str char32 slice cast index [] return
-  end
-  overload: export: get
-    get_Z
-    get_32
-    get_64
-  end
-  proc( string32 : a string32 : b -> bool ) =>: export: eq
-    a toSlice b toSlice slice.eq return
-  end
-end
-
 namespace: std.literals
   proc( char8 ptr.raw : p iSize : k -> string ) =>: static: export: :string
     p k string new
   end
-  proc( char16 ptr.raw : p iSize : k -> string16 ) =>: static: export: :string16
-    p k string16 new
-  end
-  proc( char32 ptr.raw : p iSize : k -> string32 ) =>: static: export: :string32
-    p k string32 new
-  end
-  overload: export: :s
-    :string
-    :string16
-    :string32
-  end
+  ( char8 ptr.raw iSize -> string ) : static: export: alias: :s :string
 end

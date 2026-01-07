@@ -267,8 +267,7 @@
           f16 | i128 | f128           |
           iSize                       |
           string                      |
-          string16                    |
-          string32                    |
+          string(8|16|32)             |
           stringBuilder               |
           MixedArenaAllocator         |
           (io\.)?FILE                 |
@@ -301,7 +300,7 @@
     </define-regex>
 
     <context id="string" style-ref="string" end-at-line-end="false" class="string" class-disabled="no-spell-check">
-      <start>(\A|(?&lt;=[[:space:]]))(utf(8|16|32))?"</start>
+      <start>(\A|(?&lt;=[[:space:]]))"</start>
       <end>"</end>
       <include>
         <context ref="def:line-continue"/>
@@ -312,7 +311,7 @@
     </context>
 
     <context id="raw-string" style-ref="raw-string" end-at-line-end="false" class="string" class-disabled="no-spell-check">
-      <start>(\A|(?&lt;=[[:space:]]))(utf(8|16|32))?`</start>
+      <start>(\A|(?&lt;=[[:space:]]))`</start>
       <end>`</end>
       <include>
         <context ref="def:line-continue"/>
@@ -323,7 +322,7 @@
     </context>
 
     <context id="char" style-ref="character" end-at-line-end="false">
-      <start>(\A|(?&lt;=[[:space:]]))(utf(8|16|32))?'</start>
+      <start>(\A|(?&lt;=[[:space:]]))'</start>
       <end>'</end>
       <include>
         <context style-ref="char-escape" once-only="true">

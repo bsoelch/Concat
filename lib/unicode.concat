@@ -1,5 +1,159 @@
 import stringBuilder
 
+## TODO! rewrite unicode library
+char8  slice =:: export: string8
+char16 slice =:: export: string16
+char32 slice =:: export: string32
+## XXX? implement procedures for string16, string32
+namespace: string16
+  { { } : data 0:iSize : length } string16 =: export: empty
+
+  proc( char16 ptr.raw  iSize -> string16 ) =>: export: create
+    string16 new return
+  end
+
+  proc( char16 slice -> string16 ) =>: export: fromSlice
+    string16 cast
+  end
+  proc( string16 -> char16 slice ) =>: export: toSlice
+    char16 slice cast
+  end
+  proc( i16 slice : arr -> string16 ) =>: export: fromIntSlice
+    arr .data char16 ptr.raw cast arr .length create
+  end
+  proc( string16 : str -> i16 slice ) =>: export: toIntSlice
+    str .data i16 ptr.raw cast str .length slice.create
+  end
+
+  proc( string16 : str iSize : index -> char16 ) =>: export: get_Z
+    str char16 slice cast index [] return
+  end
+  proc( string16 : str i32 : index -> char16 ) =>: export: get_32
+    str char16 slice cast index [] return
+  end
+  proc( string16 : str i64 : index -> char16 ) =>: export: get_64
+    str char16 slice cast index [] return
+  end
+  overload: export: get
+    get_Z
+    get_32
+    get_64
+  end
+  proc( string16 : a string16 : b -> bool ) =>: export: eq
+    a toSlice b toSlice slice.eq return
+  end
+end
+namespace: string32
+  { { } : data 0:iSize : length } string32 =: export: empty
+
+  proc( char32 ptr.raw  iSize -> string32 ) =>: export: create
+    string32 new return
+  end
+
+  proc( char32 slice -> string32 ) =>: export: fromSlice
+    string32 cast
+  end
+  proc( string32 -> char32 slice ) =>: export: toSlice
+    char32 slice cast
+  end
+  proc( i32 slice : arr -> string32 ) =>: export: fromIntSlice
+    arr .data char32 ptr.raw cast arr .length create
+  end
+  proc( string32 : str -> i32 slice ) =>: export: toIntSlice
+    str .data i32 ptr.raw cast str .length slice.create
+  end
+
+  proc( string32 : str iSize : index -> char32 ) =>: export: get_Z
+    str char32 slice cast index [] return
+  end
+  proc( string32 : str i32 : index -> char32 ) =>: export: get_32
+    str char32 slice cast index [] return
+  end
+  proc( string32 : str i64 : index -> char32 ) =>: export: get_64
+    str char32 slice cast index [] return
+  end
+  overload: export: get
+    get_Z
+    get_32
+    get_64
+  end
+  proc( string32 : a string32 : b -> bool ) =>: export: eq
+    a toSlice b toSlice slice.eq return
+  end
+end
+
+namespace: std.literals
+  proc( char8 ptr.raw : p iSize : k -> char8 ) =>: static: export: :char8
+    k 1 != or p [] 0x7f u> if
+      "string is not representable as a single utf8-character" ..compiler.error
+    end
+    p []
+  end
+  proc( char8 ptr.raw : p iSize : k -> char16 ) =>: static: export: :char16
+    p k string new 0 utf8.nextCodepoint =:: codepoint
+    >$ .length == and codepoint isValid && codepoint 0x10000:Codepoint < if
+      codepoint char16 cast return
+    end
+    "string is not representable as a single utf16-character" ..compiler.error
+  end
+  proc( char8 ptr.raw : p iSize : k -> char32 ) =>: static: export: :char32
+    p k string new 0 utf8.nextCodepoint =:: codepoint
+    >$ .length == and codepoint isValid if
+      codepoint char16 cast return
+    end
+    "string is not representable as a single unicode-codepoint" ..compiler.error
+  end
+  proc( char8 ptr.raw : p iSize : k -> string8 ) =>: static: export: :string8
+    p k string new
+      0:iSize while $1 .length $1 u> do
+        nextCodepoint isValid ! if ..drop.2
+          "string is not valid utf8" ..compiler.error
+        end
+      end
+    ..drop
+    p k string8 new return
+  end
+  ## TODO? add optional conversion to valid unicode to main libray
+  proc( char8 ptr.raw : p iSize : k -> string16 ) =>: static: export: :string16
+    "unimplemented" ..panic ## current implementation cannot run at compile time
+    char16 k array : buffer
+    buffer@ list.wrap =:: mut: str16
+    p k string new
+      0:iSize while $1 .length $1 u> do
+        nextCodepoint =:: cp
+        cp isValid ! if ..drop.2
+          "source string is not valid utf8" ..compiler.error
+        end
+        str16 utf16.appendCodepoint str16=
+      end
+    ..drop
+    ## TODO! copy data to static memory
+    str16 .data str16 .length string16 new
+  end
+  proc( char8 ptr.raw : p iSize : k -> string32 ) =>: static: export: :string32
+    "unimplemented" ..panic ## current implementation cannot run at compile time
+    char32 k array : buffer
+    buffer@ list.wrap =:: mut: str32
+    p k string new
+      0:iSize while $1 .length $1 u> do
+        nextCodepoint =:: cp
+        cp isValid ! if ..drop.2
+          "source string is not valid utf8" ..compiler.error
+        end
+        str32 cp list.append str32=
+      end
+    ..drop
+    ## TODO! copy data to static memory
+    str32 .data str32 .length string16 new
+  end
+  ( char8 ptr.raw iSize -> char8 ) : static: export: alias: :c8 :char8
+  ( char8 ptr.raw iSize -> char16 ) : static: export: alias: :c16 :char16
+  ( char8 ptr.raw iSize -> char32 ) : static: export: alias: :c32 :char32
+  ( char8 ptr.raw iSize -> string8 ) : static: export: alias: :s8 :string8
+  ( char8 ptr.raw iSize -> string16 ) : static: export: alias: :s16 :string16
+  ( char8 ptr.raw iSize -> string32 ) : static: export: alias: :s32 :string32
+end
+
 namespace: unicode
   i32 =:: export: Codepoint
   ( char8 ptr.raw iSize -> Codepoint ) : static: export: alias: :Codepoint ..builtIn.parse.i32

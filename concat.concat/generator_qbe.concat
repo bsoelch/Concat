@@ -5068,7 +5068,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       i sb.appendI
       " = {" sb.appendS
         val context sb.appendPtrConstDataQBE
-      "}\n" sb.appendS ## XXX? append string value of string16/string32 constants
+      "}\n" sb.appendS
     finally i 1:iSize + end ..drop
     target $1 io.fputSb ..drop
     sb.clear

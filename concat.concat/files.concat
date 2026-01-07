@@ -8,22 +8,20 @@ import "common.concat"
 
 struct( FilePosition : mut: currentPos FilePosition : mut: wordStart ) =:: export: FileState
 
-## XXX? special tokens for keywords
-enum( DEFAULT UTF8 UTF16 UTF32 INT_LITERAL UNKNOWN ) =:: export: StringLiteralType
-struct( string : value StringLiteralType : stringType ) =:: export: StringToken
+## TODO? special tokens for keywords
 union(
   _ : Empty
   _ : Eof
   string : Identifier
-  StringToken : String
-  StringToken : RawString
-  StringToken : Char
+  string : String
+  string : RawString
+  string : Char
   ## tokens for literals <literal>:<literalType>
   string : LiteralType
   string : Literal
-  StringToken : LiteralString
-  StringToken : LiteralRawString
-  StringToken : LiteralChar
+  string : LiteralString
+  string : LiteralRawString
+  string : LiteralChar
 ) =:: export: Token
 
 enum( RAW_STRING STRING STRING_ESCAPE IDENTIFIER ) =:: ParserState
@@ -55,44 +53,38 @@ namespace: sb
         return
       String .case =:: val
         sb
-          val .stringType sb.appendStringType
           "string \"" sb.appendS
-          val .value sb.appendStr
+          val sb.appendStr
           '\"' sb.appendC
         return
       RawString .case =:: val
         sb
-          val .stringType sb.appendStringType
           "raw string `" sb.appendS
-          val .value sb.appendStr
+          val sb.appendStr
           '`' sb.appendC
         return
       Char .case =:: val
         sb
-          val .stringType sb.appendStringType
           "char \"" sb.appendS
-          val .value sb.appendStr
+          val sb.appendStr
           '\"' sb.appendC
         return
       LiteralString .case =:: val
         sb
-          val .stringType sb.appendStringType
           "literal string \"" sb.appendS
-          val .value sb.appendStr
+          val sb.appendStr
           "\":" sb.appendS
         return
       LiteralRawString .case =:: val
         sb
-          val .stringType sb.appendStringType
           "raw string `" sb.appendS
-          val .value sb.appendStr
+          val sb.appendStr
           "`:" sb.appendS
         return
       LiteralChar .case =:: val
         sb
-          val .stringType sb.appendStringType
           "literal char \"" sb.appendS
-          val .value sb.appendStr
+          val sb.appendStr
           "\":" sb.appendS
         return
     end
@@ -106,16 +98,6 @@ namespace: sb
       pos .posInLine sb.appendI
     return
   end
-  proc( stringBuilder : sb StringLiteralType : stringType -> stringBuilder ) =>: export: appendStringType
-    stringType switch
-      DEFAULT case sb return
-      UTF8  case sb "utf8 "  sb.appendS return
-      UTF16 case sb "utf16 " sb.appendS return
-      UTF32 case sb "utf32 " sb.appendS return
-      UNKNOWN case sb "unknown " sb.appendS return
-      INT_LITERAL case sb "int-literal " sb.appendS return
-    end
-  end
 end
 
 proc( char8 : chr  FilePosition ptr.mut : currentPos -> ) =>: export: updateFilePos
@@ -126,23 +108,16 @@ proc( char8 : chr  FilePosition ptr.mut : currentPos -> ) =>: export: updateFile
     currentPos [] .posInLine 1 + currentPos .posInLine=
   end
 end
-proc( string -> StringLiteralType ) =>: checkStringPrefix
-  $ .length 0:iSize == if ..drop
-    StringLiteralType .DEFAULT return
-  else $ "utf8":s string.eq _if ..drop
-    StringLiteralType .UTF8  return
-  else $ "utf16":s string.eq _if ..drop
-    StringLiteralType .UTF16 return
-  else $ "utf32":s string.eq _if ..drop
-    StringLiteralType .UTF32 return
-  else $ 0 string.charAt '0' >= and $ 0 string.charAt '9' <= _if ..drop
-    StringLiteralType .INT_LITERAL return ## first char of prefix is digit -> int-literal
-  else $ 0 string.charAt '-' == and $ .length 1:iSize u> and
-      $ 1 string.charAt '0' >= and $ 1 string.charAt '9' <= _if ..drop
-    StringLiteralType .INT_LITERAL return ## prefix starts with - followed by digit -> int-literal
-  else ..drop
-    StringLiteralType .UNKNOWN return
+proc( string : str -> bool ) =>: isIntLiteral
+  str .length 0:iSize == if
+    false return
+  else str 0 string.charAt '0' >= and str 0 string.charAt '9' <= _if
+    true return ## first char of prefix is digit -> int-literal
+  else str 0 string.charAt '-' == and str .length 1:iSize u> and
+      str 1 string.charAt '0' >= and str 1 string.charAt '9' <= _if
+    true return ## prefix starts with - followed by digit -> int-literal
   end
+  false return
 end
 proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: nextToken
   code .length 0:iSize == if
@@ -151,7 +126,6 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
   code 0 string.charAt ':' == =:: isLiteralType
   ParserState .IDENTIFIER =:: mut: state
   '"' =:: mut: stringStart
-  StringLiteralType .DEFAULT =:: mut: stringType
   0:iSize while $ code .length u< do =:: i ## skip comments and whitespaces
     code i string.charAt =:: c
     ## only update position if char is skipped
@@ -243,7 +217,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
           i 2:iSize + continue ## escaped `
         end
         code i0 i i0 - string.getSlice =:: body
-        code i 1:iSize + string.tail body stringType StringToken new
+        code i 1:iSize + string.tail body
           i 1:iSize + code .length u< and code i 1:iSize + string.charAt ':' == if
             Token .LiteralRawString return
           end
@@ -255,7 +229,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       c stringStart == if
         code i0 i i0 - string.getSlice =:: body
         code i 1:iSize + string.tail
-        body stringType StringToken new
+        body
           i 1:iSize + code .length u< and code i 1:iSize + string.charAt ':' == if
             stringStart '\'' == if Token .LiteralChar else Token .LiteralString end
             return
@@ -268,8 +242,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
       i 1:iSize + continue
     end
     c '\'' == or c '"' == or c '`' == if  ## char/string-literal
-      code i0 i i0 - string.getSlice checkStringPrefix stringType=
-      stringType .INT_LITERAL if i 1:iSize + continue end
+      code i0 i i0 - string.getSlice isIntLiteral if i 1:iSize + continue end
       i 1:iSize + i0=
       c stringStart=
       c '`' == if ParserState .RAW_STRING else ParserState .STRING end state=

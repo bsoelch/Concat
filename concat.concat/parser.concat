@@ -173,23 +173,16 @@ proc(
 end
 proc(
   unicode.Codepoint : char
-  StringLiteralType : stringType
   FilePosition : pos
   ParserState ptr.mut : state
 -> ) =>: appendCharConstant
   ## newConstant
-    stringType switch
-      DEFAULT case char char8 cast ConstValue .Char         types.primitive.CHAR8 break
-      UTF8    case char i64 cast.u   0xff & ConstValue .Int types.primitive.CHAR8 break
-      UTF16   case char i64 cast.u 0xffff & ConstValue .Int types.primitive.CHAR16 break
-      UTF32   case char i64 cast.u          ConstValue .Int types.primitive.CHAR32 break
-      UNKNOWN INT_LITERAL case ..unreachable
-    end
+    char char8 cast ConstValue .Char
+    types.primitive.CHAR8
   pos opConst state appendOp
 end
 proc(
   ConstValue : str
-  StringLiteralType : stringType
   FilePosition : pos
   ParserState ptr.mut : state
 -> iSize ) =>: appendStringConstant
@@ -202,35 +195,13 @@ proc(
   str .?Array8 .else
     "expected string to have type Array8" ..panic
   end =:: strArray
-  stringType switch
-    DEFAULT case str strArray .length types.primitive.CHAR8 break
-    UTF8    case str strArray .length types.primitive.CHAR8 break
-    UTF16 case
-      ## TODO? reuse the same buffer for all string conversion
-      0 char16 list.create strArray string.fromBytes utf8.toUTF16 =:: str16
-      str16
-        list.asSlice string16.fromSlice
-      constContext newString16Const str16 .length types.primitive.CHAR16
-        str16 list.free ..drop
-      break
-    UTF32 case
-      0 char32 list.create strArray string.fromBytes  utf8.toUTF32 =:: str32
-      str32
-        list.asSlice string32.fromSlice
-      constContext newString32Const str32 .length types.primitive.CHAR32
-        str32 list.free ..drop
-      break
-    UNKNOWN INT_LITERAL case
-      "unsupported string literal type" sb.copyPtr pos errors appendError
-      ConstValue .None 0:iSize Type .Undefined break
-  end =:: charType =:: strLength =:: strValue
-  strLength i64 cast.u ArraySize .Int =:: size
+  strArray .length i64 cast.u ArraySize .Int =:: size
   ## opConst
-    strValue
-    charType types.ArrayType .POINTER size typeContext newArrayType .data
+    str
+    types.primitive.CHAR8 types.ArrayType .POINTER size typeContext newArrayType .data
     pos
   opConst state appendOp
-  strLength
+  strArray .length
 end
 
 
@@ -669,7 +640,7 @@ proc(
   false return
 end
 proc(
-  StringToken : token
+  string : token
   bool : isRawString
   FilePosition : pos
   ParserState ptr.mut : state
@@ -678,7 +649,7 @@ proc(
   progContext .idContext .constContext =:: constContext
   ## appendStringConstant
     ## parseStringConstant
-      token .value
+      token
       pos
       progContext .errors
       constContext
@@ -687,13 +658,12 @@ proc(
     else
       constants.parseStringConstant
     end
-    token .stringType
     pos
     state
   appendStringConstant return
 end
 proc(
-  StringToken : token
+  string : token
   FilePosition : pos
   ParserState ptr.mut : state
 -> ) =>: parseCharConstant
@@ -703,42 +673,26 @@ proc(
   idContext .typeContext =:: typeContext
   idContext .constContext =:: constContext
   idContext .typeContext .labelContext =:: labelContext
-  token .value
+  token
     pos progContext .errors constContext constants.parseStringConstant ## escape character
+    ## TODO is check for unicode needed?, source is already utf8 would checking for length 1 be enough
+    ## TODO? allow multi-char character literals (push char8 ... array)
       .Array8 string.fromBytes
       0:iSize utf8.nextCodepoint =:: cp
     #+nextIndex+# >$ .length u< if
       "A character literal has to contain exactly one character" sb.copyPtr pos errors appendError
     end
-    token .stringType switch
-      DEFAULT case "byte":s 0x7F break
-      UTF8  case "utf8-character":s  0x7F   break
-      UTF16 case "utf16-character":s 0xFFFF break
-      UTF32 case "utf32-character":s unicode.MAX_CODEPOINT i32 cast.u break
-      INT_LITERAL UNKNOWN case
-        "invalid string literal type" sb.copyPtr pos errors appendError
-        return
-    end
-    =:: maxCodepoint =:: charTypeName
-    token .stringType .DEFAULT ! and cp i32 cast 0 < if
-      "unmatched byte in " sb.copyPtr
-        charTypeName sb.appendStr
-        ": 0x" sb.appendS
-        cp i32 cast -_ sb.appendX
-      pos errors appendError
-    end
+    0x7F =:: maxCodepoint
     cp i32 cast maxCodepoint > if
       "codepoint 0x"  sb.copyPtr
         cp i32 cast sb.appendX
         " ('" sb.appendS
         cp sb.appendCodepoint
-       "') cannot be encoded as a single " sb.appendS
-       charTypeName sb.appendStr
+       "') cannot be encoded as a single character" sb.appendS
       pos errors appendError
     end
   ## appendCharConstant
     cp $ i32 cast 0 < if i32 cast -_ unicode.Codepoint cast end
-    token .stringType
   pos state appendCharConstant
 end
 proc(
@@ -821,7 +775,6 @@ proc(
         ## literal not a primitive number type -> convert to string and call literal procedure
         ## appendStringConstant
           token .Literal constContext newStringConst
-          StringLiteralType .UTF8
           literalStart
         state appendStringConstant =:: charCount
         charCount i64 cast.u ConstValue .Int
@@ -1941,7 +1894,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "import":s string.eq _if =:: opName
       fileState nextToken ## XXX? distinquish string types
-      .?String .if .value ## local file
+      .?String .if ## local file
         false fileState [] .wordStart state prepareImport
         return
       else .?Identifier ._if ## library file
