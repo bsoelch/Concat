@@ -217,7 +217,7 @@ proc( -> ) =>: parseArgs
   iSlash optional.isEmpty if
     "./":s
   else
-    srcPath sb.asStr iSlash .data 1:iSize + string.head
+    srcPath sb.asStr iSlash .data 1:iSize + string.head string.copy
   end basePath=
   hasLib ! if
     "./lib/":s libPath=
