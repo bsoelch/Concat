@@ -497,7 +497,7 @@ proc(
 end
 
 proc( string : msg Operation : op i64 : errLine TypeCheckState ptr.mut : state -> ) =>: internalError
-  "internal compiler error " sb.copyPtr
+  "internal compiler error: " sb.copyPtr
     msg sb.appendStr
     " at " sb.appendS
     ..file sb.appendS ':' sb.appendC errLine sb.appendI
@@ -508,12 +508,13 @@ proc( string : msg Operation : op i64 : errLine TypeCheckState ptr.mut : state -
   ..unreachable
 end
 proc( string : msg FilePosition : codePos i64 : errLine -> ) =>: internalErrorNoOp
-  "internal compiler error " sb.copyPtr
+  "internal compiler error: " sb.copyPtr
     msg sb.appendStr
     " at " sb.appendS
     ..file sb.appendS ':' sb.appendC errLine sb.appendI
     " while type-checking operation at " sb.appendS
     codePos sb.appendPos
+    '\n' sb.appendC
   io.stdOut >$ io.fputSb
   1 sys.exit
   ..unreachable
@@ -5340,7 +5341,9 @@ proc(
       labelId labelContext id.labelFlags id.FLAG_STATIC & ? or
           argType typeContext types.isType if
         currentImpl [] .staticArgs
-          staticArgCount []
+          staticArgCount slice.get .else
+            "missing static argument":s initPos ..line internalErrorNoOp ..unreachable
+          end
         =:: argValue
         state .argData labelId
           $ id.LABEL_ID_NONE == if ..drop
