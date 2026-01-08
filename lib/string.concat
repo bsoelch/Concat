@@ -24,6 +24,10 @@ namespace: string
   proc( char8 slice -> string ) =>: export: fromChars
     string cast
   end
+  ## TODO? sperate type for owned/mutable fixed-size string
+  proc( string -> string ) =>: export: copy
+    char8 slice cast slice.copy slice.freeze string cast
+  end
   proc( string -> char8 slice ) =>: export: chars
     char8 slice cast
   end
