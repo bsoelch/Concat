@@ -198,7 +198,7 @@ namespace: ptr
     ..unreachable
   end
 
-  ## XXX? prohibit arithmetic on array pointers
+  ## TODO? prohibit arithmetic on array pointers
   namespace: mut
     proc( type : auto: T T ptr.raw.mut : p -> T ) =>: shadow: export: get
       p ..builtIn.get.ptr.mut
@@ -247,11 +247,13 @@ namespace: iSize
     ( iSize : a -> iSize ) : export: alias: neg ..builtIn.neg.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: mul ..builtIn.mul.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: div ..builtIn.udiv.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: shr ..builtIn.lshr.i64
     ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i64i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shl ..builtIn.shl.i64
     ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i64i32
-    ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: and ..builtIn.and.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: or ..builtIn.or.i64
     ( iSize : a iSize : b -> bool ) : export: alias: eq ..builtIn.eq.i64
     ( iSize : a iSize : b -> bool ) : export: alias: ne ..builtIn.ne.i64
     ( iSize : a iSize : b -> bool ) : export: alias: lt ..builtIn.ult.i64
@@ -269,11 +271,13 @@ namespace: iSize
     ( iSize : a -> iSize ) : export: alias: neg ..builtIn.neg.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: mul ..builtIn.mul.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: div ..builtIn.udiv.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shr ..builtIn.lshr.i32
     ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shl ..builtIn.shl.i32
     ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i32
-    ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: and ..builtIn.and.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: or ..builtIn.or.i32
     ( iSize : a iSize : b -> bool ) : export: alias: eq ..builtIn.eq.i32
     ( iSize : a iSize : b -> bool ) : export: alias: ne ..builtIn.ne.i32
     ( iSize : a iSize : b -> bool ) : export: alias: lt ..builtIn.ult.i32
@@ -286,6 +290,9 @@ namespace: iSize
     ( iSize : a iSize : b -> bool ) : export: alias: sgt ..builtIn.gt.i32
   else
     "iSize should be i64 or i32" ..panic
+  end
+  ( iSize -> bool ) =>: export: toBool
+    0 !=
   end
   ( iSize : a iSize : b -> i32 ) =>: export: cmp
     a b u> ?1 a b u< ?1 -
@@ -372,6 +379,15 @@ end
 overload: export: <<
   iSize.shl
   iSize.shlI32
+end
+overload: export: &
+  iSize.and
+end
+overload: export: |
+  iSize.or
+end
+overload: export: ?
+  iSize.toBool
 end
 overload: export: <
   ptr.lt

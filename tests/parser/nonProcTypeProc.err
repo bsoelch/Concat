@@ -1,2 +1,2 @@
-unexpected type for procedure declaration: i32 at ./tests/parser/nonProcTypeProc.concat:1:9
+wrong type for procedure initialization: i32 expected procedure at ./tests/parser/nonProcTypeProc.concat:1:5
 procedure lambda@1:5 has not finished type-checking at ./tests/parser/nonProcTypeProc.concat:1:5

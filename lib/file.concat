@@ -34,7 +34,7 @@ namespace: file
       sb
         $ .length 2 * sb.ensureCap
       sb=
-      f .file sb .data sb .length sb .cap iSize cast sb .length - io.fread f@ .error= =:: nRead
+      f .file sb .data sb .length sb sb.getCapacity sb .length - io.fread f@ .error= =:: nRead
       sb .length
         nRead +
       sb@ .length=

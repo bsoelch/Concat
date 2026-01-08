@@ -5,7 +5,7 @@ namespace: list
     (
       T ptr.raw.mut : shadow: head
       T ptr.raw : shadow: tail
-      listCap : cap
+      Capacity : oldCap
       T ptr.raw.mut : srcPos
       T ptr.raw.mut : dstPos
     )
@@ -16,7 +16,7 @@ namespace: list
     ## MapItr
       elts .data
       elts .data elts .length @[]
-      elts .cap
+      elts .capacity
       elts .data
       elts .data
     T ListFilterItr new
@@ -56,7 +56,7 @@ namespace: list
     proc( type : auto: T
       T ListFilterItr : itr
     -> T list ) =>: export: endFilter
-      itr .head itr .dstPos itr .head ptr.diff itr .cap T list new
+      itr .head itr .dstPos itr .head ptr.diff itr .oldCap T list new
     end
   end
 end

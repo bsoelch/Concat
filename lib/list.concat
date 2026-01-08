@@ -3,21 +3,43 @@ import slice
 import optional
 import array
 
-## XXX allow auto-cast from list -> slice
+## TODO? allow implicity conversion from list -> slice
 
-## negative capacity indictes fixed buffer
 namespace: list
-  iSize =:: export: listCap
-  ( char8 ptr.raw iSize -> listCap ) : static: alias: export: :listCap :iSize
+  iSize =:: export: Capacity
+  0 Capacity =: EMPTY_CAPACITY
+  enum( DYNAMIC STATIC ) =:: ListCapType
+  proc( iSize : cap ListCapType : capType -> Capacity ) =>: asCapacity
+    cap 0 iSize.slt if ## TODO? find more reliable way to check if top bit is set
+      "exceeded maximum allowed list capacitly" ..panic
+    end
+    cap
+      1 <<
+      capType switch
+        DYNAMIC case break
+        STATIC case 1 | break
+      end
+    Capacity cast.u
+  end
+  proc( Capacity -> iSize ) =>: capAsSize
+    iSize cast.u 1 >>>
+  end
+  proc( Capacity -> ListCapType ) =>: getCapType
+    iSize cast.u 1 & ? if
+      ListCapType .STATIC
+    else
+      ListCapType .DYNAMIC
+    end
+  end
 end
 
 ( type : T -> type ) =>: export: list
-  struct( T ptr.raw.mut : data iSize : length list.listCap : cap )
+  struct( T ptr.raw.mut : data iSize : length list.Capacity : capacity )
 end
 
 namespace: list
   ( type : T -> T list ) =>: export: static: empty
-    { { } : data 0:iSize : length 0:listCap : cap }
+    { { } : data 0:iSize : length EMPTY_CAPACITY : capacity }
   end
   proc( i32 : k type : T -> T list ) =>: export: create_32
     k iSize cast.s T create_Z
@@ -26,27 +48,26 @@ namespace: list
     k iSize cast.s T create_Z
   end
   proc( iSize : k type : T -> T list ) =>: export: create_Z
-    k T mem.alloc 0:iSize k listCap cast.u T list new return
+    k T mem.alloc 0:iSize k ListCapType .DYNAMIC asCapacity T list new return
   end
   overload: export: create create_32 create_64 create_Z end
 
   ## creates zero-initialized list of the given length
   proc( iSize : k type : T -> T list ) =>: export: createZeroInit
-    k T mem.calloc  k k listCap cast.u T list new return
+    k T mem.calloc  k k ListCapType .DYNAMIC asCapacity T list new return
   end
   proc(
     type : auto: T
     T slice : data
   -> T list ) =>: export: fromSlice
     data .length $ 8 / + =:: C
-    C 0 iSize.sge "list has non-negative capacity" assert
     ## list
       C T mem.alloc
         data .data
         data .length
       mem.copy
       data .length
-      C listCap cast.u
+      C ListCapType .DYNAMIC asCapacity
     T list new return
   end
   ## creates a fixed size list backed by the buffer
@@ -55,35 +76,33 @@ namespace: list
     T ptr.raw.mut : buffer
     iSize : buffSize
   -> T list ) =>: export: fromBuffer
-    buffer 0:iSize buffSize -_ listCap cast.u T list new return
+    buffer 0:iSize buffSize ListCapType .STATIC asCapacity T list new return
   end
   proc(
     type : auto: T
     iSize : auto: k
     T k ptr.mut : buffer
   -> T list ) =>: export: wrapBuffer
-    buffer 0:iSize k -_ listCap cast.u T list new return
+    buffer 0:iSize k ListCapType .STATIC asCapacity T list new return
   end
   proc(
     type : auto: T
     T slice.mut : buffer
   -> T list ) =>: export: wrapSlice
-    buffer .data 0:iSize buffer .length -_ listCap cast.u T list new return
+    buffer .data 0:iSize buffer .length ListCapType .STATIC asCapacity T list new return
   end
   proc(
     type : auto: T
     T list : src
   -> T list ) =>: export: copy
-    src .cap iSize cast.s
-      $ 0:iSize iSize.slt if -_ end
-    =:: srcCap
+    src .capacity capAsSize =:: srcCap
     ## list
       srcCap T mem.alloc
         src .data
         src .length
       mem.copy
       src .length
-      srcCap listCap cast.s
+      srcCap ListCapType .DYNAMIC asCapacity
     T list new return
   end
   proc(
@@ -91,13 +110,11 @@ namespace: list
     T list : src
     ( T -> T ) ptr : copyElt
   -> T list ) =>: export: deepCopy
-    src .cap iSize cast.s
-      $ 0 < if -_ end
-    =:: srcCap
+    src .capacity capAsSize =:: srcCap
     ## list
       srcCap T mem.alloc
       src .length
-      srcCap listCap cast.s
+      srcCap ListCapType .DYNAMIC asCapacity
     T list new =:: newList
     0 while ..dup newList .length < do =:: i
       src .data i []
@@ -127,26 +144,25 @@ namespace: list
     T list : elts
     iSize : minCap
   -> T list ) =>: export: ensureCap_Z
-    elts .cap iSize cast.s
-      $ 0:iSize iSize.slt if -_ end
-    =:: prevCap
+    elts .capacity capAsSize =:: prevCap
     prevCap minCap u>= if
       elts return
     end
-    elts .cap iSize cast.s 0:iSize iSize.sge "fixed buffer list is not reallocated" assert
+    elts .capacity getCapType .DYNAMIC ! if
+      "exceeded maximum capacity of fixed buffer list" ..panic
+    end
     elts
-      minCap $ 2:iSize / + 8:iSize + =:: newCap
-      newCap 0:iSize iSize.sge "list has non-negative capacity" assert
+      prevCap $ 2:iSize / + 8:iSize + minCap iSize.max =:: newCap
       $ .data  newCap mem.realloc  >$ .data=
-      newCap listCap cast.u >$ .cap=
+      newCap ListCapType .DYNAMIC asCapacity >$ .capacity=
     return
   end
   overload: export: ensureCap ensureCap_Z ensureCap_32 ensureCap_64 end
   proc( type : auto: T T list : elts -> T list ) =>: export: free
-    elts .cap iSize cast.s 0:iSize iSize.sgt if ## cap <= 0 -> no allocated memory
+    elts .capacity getCapType .DYNAMIC if ## only free buffer if capacity is dynamic
       elts .data mem.free
     end
-    T mem.nullPtr 0:iSize 0:listCap T list new return
+    T mem.nullPtr 0:iSize EMPTY_CAPACITY T list new return
   end
   proc( type : auto: T T list : elts -> T list ) =>: export: clear
     elts
@@ -178,6 +194,9 @@ namespace: list
     src newLength iSize cast.u setLengthZ
   end
   overload: export: setLength setLengthZ setLength32 setLength64 end
+  proc( type : auto: T  T list -> iSize ) =>: export: getCapacity
+    .capacity capAsSize return
+  end
 
   proc(
     type : auto: T

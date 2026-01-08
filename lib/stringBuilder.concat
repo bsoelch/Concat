@@ -39,6 +39,9 @@ namespace: sb
     sb char8 list cast newLen list.setLength64 stringBuilder cast return
   end
   overload: export: setLength setLengthZ setLength32 setLength64 end
+  proc( stringBuilder -> iSize ) =>: export: getCapacity
+    char8 list cast list.getCapacity return
+  end
   proc( stringBuilder -> stringBuilder ) =>: export: free
     char8 list cast list.free stringBuilder cast return
   end
