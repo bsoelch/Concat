@@ -1,0 +1,8 @@
+union(
+  _ : None
+  i32 : Some
+) =:: OptionalI32
+proc( -> ) =>: main
+  OptionalI32 .None =:: a
+  0 OptionalI32 .Some =:: b
+end

@@ -1,0 +1,14 @@
+namespace: A
+  0 =:: x
+end
+namespace: B
+  using A.
+  x =:: y
+end
+namespace: C
+  using A.x
+  x =:: z
+end
+proc( -> ) =>: main
+  B.y C.z == "ok" assert
+end
