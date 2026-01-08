@@ -174,7 +174,7 @@ proc(
       branchRoot
       pos
     BranchPoint new list.append
-    16 i32 list.create blockStart list.append
+    16 i32 list.create
     blockId
   AndOrBlockInfo new BlockInfo .AndOr return
 end
@@ -4768,6 +4768,7 @@ proc(
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             andOrBlock .andOrPositions for =:: andOrPos
               state [] .compiledOps andOrPos list.at .else
+                andOrPos debug.print
                 "invalid break position":s op ..line state internalError ..unreachable
               end =:: andOrOp
               currentOpIndex
@@ -4781,9 +4782,10 @@ proc(
                 list.at .data
               .andOrPositions=
             program .programMemory=
-            andOrBlock .andOrPositions 0 []
-              currentOpIndex - JumpDistance cast
-            op@ .val .BlockEnd .jumpDistance=
+            andOrBlock .andOrPositions 0 list.get .if
+                currentOpIndex - JumpDistance cast
+              op@ .val .BlockEnd .jumpDistance=
+            end
             andOrBlock .andOrPositions list.free ..drop
             op state appendOp ..drop
             andOrBlock .branches =:: mut: branches

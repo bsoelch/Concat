@@ -1,0 +1,4 @@
+proc( -> ) =>: main
+  ## this should not crash the compiler
+  a or b or c end =:: x
+end

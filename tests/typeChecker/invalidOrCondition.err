@@ -1,0 +1,8 @@
+could not find identifier: a at ./tests/typeChecker/invalidOrCondition.concat:3:3
+not enough types for and/or-condition at ./tests/typeChecker/invalidOrCondition.concat:3:5
+could not find identifier: b at ./tests/typeChecker/invalidOrCondition.concat:3:8
+not enough types for and/or-condition at ./tests/typeChecker/invalidOrCondition.concat:3:10
+could not find identifier: c at ./tests/typeChecker/invalidOrCondition.concat:3:13
+missing type for declaration at ./tests/typeChecker/invalidOrCondition.concat:3:23
+missing type for declaration at ./tests/typeChecker/invalidOrCondition.concat:3:23
+not enough types for initialization at ./tests/typeChecker/invalidOrCondition.concat:3:23
