@@ -1,0 +1,3 @@
+proc( -> ) =>: main
+  utf16"This should not be accepted" =:: str16
+end
