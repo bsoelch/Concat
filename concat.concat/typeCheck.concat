@@ -1343,6 +1343,157 @@ proc(
 end
 
 proc(
+  ProcId slice : procedures
+  Operation ptr.mut : op
+  TypeCheckState ptr.mut : state
+-> ) =>: typeCheckCall
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  true =:: mut: headConstant
+  ## TODO do not recreate list for each call
+  state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
+  state .stack branchTree.itr.start while
+    branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
+    ## TODO? don't treat genericArg as constant
+    val [] .value .?None ? or val [] .value .?GenericArg ? if
+      false headConstant=
+    end
+    stackValues
+      ## StackValue
+        val [] .valueType
+        val [] .value
+      StackValue new list.append
+    stackValues=
+  end ..drop
+  0 sb.create =:: mut: message
+  ## resolveCall
+    procedures
+    stackValues list.asSlice
+    message@ optional.wrap
+    op [] .pos
+    state .interpreter
+  resolveCall =:: calledType
+    =:: calledProcId
+  =:: calledProc?
+  calledProc? optional.isEmpty if
+    message op [] .pos errors appendError
+    return
+  else
+    message .length 0:iSize u> if
+      message op [] .pos errors appendInfo
+    else
+      message sb.free ..drop
+    end
+  end
+  stackValues list.free ..drop
+  calledProc? .data =:: calledProc
+  program [] .procedures
+    calledProc .procId i64 cast list.at .data
+  =:: baseProcData
+  calledType op .dataType=
+  calledType typeContext types.getProcIn .data =:: inTypes
+  inTypes .length i32 cast.u =:: argCount
+  state isGlobal
+      program [] .procedures
+        calledProcId i64 cast list.at .data
+      [] .isStatic | and state [] .mode .STATIC_PROC ! or
+      calledType typeContext types.isTypeGeneratorProc or
+      baseProcData .implementation .?Code .and .codeState .TYPE_CHECKING ! if
+    calledType calledProc true op [] .pos state interpretCall ! if
+      return
+    end
+  end
+  baseProcData [] .implementation switch
+    Code case
+      state [] .mode .LINEAR ! if
+        ## check if implementation exists if not add to list of missing imples
+        baseProcData  .implementation .Code =:: codeImpl
+        calledProc .implementationId =:: implId
+        implId -1:i32 == if
+          codeImpl [] .codeState .TYPE_CHECKED !
+        else
+          codeImpl [] .implementations
+            implId list.at .data
+          [] .codeState .TYPE_CHECKED !
+        end if
+          state [] .missingProcs
+            ## MissingProc
+              ## ProcedureImpl
+                implId
+                calledProc .procId
+              ProcedureImpl new
+              op [] .pos
+            MissingProc new list.append
+          state .missingProcs=
+        end
+      end
+      calledProc program callInfoToCall op .val .Call=
+    break
+    Extern case
+      calledProc program callInfoToCall op .val .Call=
+    break
+    BuiltIn case
+      baseProcData [] .implementation .BuiltIn .builtIn =:: builtInId
+      builtInId .SYS_ARGC or builtInId .SYS_ARGV or builtInId .SYS_ENVP if
+        true program .hasGetArgs=
+      else headConstant _if ## only constant arguments
+        calledType calledProc false op [] .pos state interpretCall ! if
+          return
+        end
+      end
+      builtInId OpValue .BuiltIn op .val=
+    break
+    Alias case ..unreachable ## resolveCall unwraps alias
+  end
+  0 =:: mut: offset
+  argCount 1 - while ..dup 0 >= do =:: i
+    calledType i typeContext types.getProcArgLabel =:: eltLabel
+    inTypes i [] =:: elt
+    eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+      ## remove static arguments from stack
+      state .stack branchTree.pop .data =:: opData
+      opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
+        "could not remove static argument ( pushed at " sb.copyPtr
+          opData [] .pushedAt sb.appendPos
+          " )" sb.appendS
+        op [] .pos errors appendError
+      end
+    else ## next argument at top of stack
+      elt typeContext types.isEmpty and
+          state .stack branchTree.peek .and .valueType [] typeContext types.isEmpty ! if
+        continue ## skip empty arguments with non-empty value
+      end
+      elt typeContext types.isType and state .stack branchTree.peek .if =:: opData
+        ## remove push operations for type-arguments
+        opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
+          "could not remove type argument ( pushed at " sb.copyPtr
+            opData [] .pushedAt sb.appendPos
+            " )" sb.appendS
+          op [] .pos errors appendError
+        end
+      end
+      ## requireTypes
+        elt@ slice.wrap
+        "procedure argument":s
+        offset false
+        op [] .pos
+        state
+      requireTypes .?Err ? if
+        return
+      end
+      offset 1 + offset=
+    end
+  finally i 1 - end ..drop
+  op [] state appendOp ..drop
+  calledType typeContext types.getProcOut .data
+    op [] .pos
+    state
+  pushTypes
+end
+proc(
   Operation ptr.mut : op
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckReturn
@@ -2272,147 +2423,7 @@ proc(
               program [] .procBundles
                 bundleId i64 cast list.at .data [] .procedures
               list.asSlice
-            end =:: procedures
-            true =:: mut: headConstant
-            ## TODO do not recreate list for each call
-            state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
-            state .stack branchTree.itr.start while
-              branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
-              ## TODO? don't treat genericArg as constant
-              val [] .value .?None ? or val [] .value .?GenericArg ? if
-                false headConstant=
-              end
-              stackValues
-                ## StackValue
-                  val [] .valueType
-                  val [] .value
-                StackValue new list.append
-              stackValues=
-            end ..drop
-            0 sb.create =:: mut: message
-            ## resolveCall
-              procedures
-              stackValues list.asSlice
-              message@ optional.wrap
-              op .pos
-              state .interpreter
-            resolveCall =:: calledType
-              =:: calledProcId
-            =:: calledProc?
-            calledProc? optional.isEmpty if
-              message op .pos errors appendError
-              continue.opLoop
-            else
-              message .length 0:iSize u> if
-                message op .pos errors appendInfo
-              else
-                message sb.free ..drop
-              end
-            end
-            stackValues list.free ..drop
-            calledProc? .data =:: calledProc
-            program [] .procedures
-              calledProc .procId i64 cast list.at .data
-            =:: baseProcData
-            calledType op@ .dataType=
-            calledType typeContext types.getProcIn .data =:: inTypes
-            inTypes .length i32 cast.u =:: argCount
-            state isGlobal
-                program [] .procedures
-                  calledProcId i64 cast list.at .data
-                [] .isStatic | and state [] .mode .STATIC_PROC ! or
-                calledType typeContext types.isTypeGeneratorProc or
-                baseProcData .implementation .?Code .and .codeState .TYPE_CHECKING ! if
-              calledType calledProc true op .pos state interpretCall ! if
-                continue.opLoop
-              end
-            end
-            baseProcData [] .implementation switch
-              Code case
-                state [] .mode .LINEAR ! if
-                  ## check if implementation exists if not add to list of missing imples
-                  baseProcData  .implementation .Code =:: codeImpl
-                  calledProc .implementationId =:: implId
-                  implId -1:i32 == if
-                    codeImpl [] .codeState .TYPE_CHECKED !
-                  else
-                    codeImpl [] .implementations
-                      implId list.at .data
-                    [] .codeState .TYPE_CHECKED !
-                  end if
-                    state [] .missingProcs
-                      ## MissingProc
-                        ## ProcedureImpl
-                          implId
-                          calledProc .procId
-                        ProcedureImpl new
-                        op .pos
-                      MissingProc new list.append
-                    state .missingProcs=
-                  end
-                end
-                calledProc program callInfoToCall op@ .val .Call=
-              break
-              Extern case
-                calledProc program callInfoToCall op@ .val .Call=
-              break
-              BuiltIn case
-                baseProcData [] .implementation .BuiltIn .builtIn =:: builtInId
-                builtInId .SYS_ARGC or builtInId .SYS_ARGV or builtInId .SYS_ENVP if
-                  true program .hasGetArgs=
-                else headConstant _if ## only constant arguments
-                  calledType calledProc false op .pos state interpretCall ! if
-                    continue.opLoop
-                  end
-                end
-                builtInId OpValue .BuiltIn op@ .val=
-              break
-              Alias case ..unreachable ## resolveCall unwraps alias
-            end
-            0 =:: mut: offset
-            argCount 1 - while ..dup 0 >= do =:: i
-              calledType i typeContext types.getProcArgLabel =:: eltLabel
-              inTypes i [] =:: elt
-              eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
-                ## remove static arguments from stack
-                state .stack branchTree.pop .data =:: opData
-                opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
-                  "could not remove static argument ( pushed at " sb.copyPtr
-                    opData [] .pushedAt sb.appendPos
-                    " )" sb.appendS
-                  op .pos errors appendError
-                end
-              else ## next argument at top of stack
-                elt typeContext types.isEmpty and
-                    state .stack branchTree.peek .and .valueType [] typeContext types.isEmpty ! if
-                  continue ## skip empty arguments with non-empty value
-                end
-                elt typeContext types.isType and state .stack branchTree.peek .if =:: opData
-                  ## remove push operations for type-arguments
-                  opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
-                    "could not remove type argument ( pushed at " sb.copyPtr
-                      opData [] .pushedAt sb.appendPos
-                      " )" sb.appendS
-                    op .pos errors appendError
-                  end
-                end
-                ## requireTypes
-                  elt@ slice.wrap
-                  "procedure argument":s
-                  offset false
-                  op .pos
-                  state
-                requireTypes .?Err ? if
-                  continue.opLoop
-                end
-                offset 1 + offset=
-              end
-            finally i 1 - end ..drop
-            op state appendOp ..drop
-            calledType typeContext types.getProcOut .data
-              op .pos
-              state
-            pushTypes
+            end op@ state typeCheckCall
             continue.opLoop
           LABEL case
             ## pushValue
