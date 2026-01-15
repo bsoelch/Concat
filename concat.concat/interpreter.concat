@@ -139,7 +139,7 @@ namespace: interpreter
     string : name
     FilePosition : pos
     InterpreterContext ptr.mut : context
-  -> bool ) =>: checkStack
+  -> bool ) =>: export: checkStack
     context minStackOffset =:: offset
     context [] .stack .length offset - count iSize.slt if
       "not enough arguments for " sb.copyPtr
@@ -1465,7 +1465,7 @@ proc(
             calledType
             calledProc .autoArgs
             true
-          op [] .pos context evaluateCall wrapResult return
+          op [] .pos context interpreter.evaluateCall wrapResult return
         LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
           context [] .localVariables optional.isEmpty if
             "missing local variables " sb.copyPtr
@@ -1637,7 +1637,7 @@ proc(
         op [] .dataType
         callInfo program getCallData [] .autoArgs
         false
-      op [] .pos context evaluateCall wrapResult return
+      op [] .pos context interpreter.evaluateCall wrapResult return
     InitializeId AutoTypedInitializeId .case =:: idInfo
       idInfo .labelId =:: label
       op [] .pos context popValue if ..drop.2
@@ -2572,441 +2572,443 @@ namespace: interpreter
     false return
   end
 end
-#+evaluate procedure body with the given arguments+#
-proc(
-  ProcId : procId
-  i32 : implId
-  Type : calledType
-  ConstValue slice : autoArgs
-  bool : consumeStaticArgs
-  FilePosition : pos
-  InterpreterContext ptr.mut : context
-->
-  bool
-) =>: export: evaluateCall
-  using interpreter.
-  context [] .program .errors =:: errors
-  context [] .program =:: program
-  context [] .program .idContext =:: idContext
-  idContext .constContext =:: constContext
-  idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
-  program [] .procedures procId i64 cast list.at .data =:: procData
-  procData [] .procType =:: procType
-  procType typeContext types.getProcIn .data =:: args
-  0:iSize ## XXX? is there a better way to get number of non-auto static args
-    implId -1:i32 != if
-      args .length i32 cast.u for =:: i
-        procType i typeContext types.getProcArgLabel =:: label
-        label labelContext id.labelFlags =:: flags
-        flags id.FLAG_AUTO & ? ! and flags id.FLAG_STATIC & ? or
-            args i [] typeContext types.isType if
-          1:iSize +
-        end
-      end
-    end
-  =:: nStaticArgs
-  args .length autoArgs .length -
-    consumeStaticArgs ! if nStaticArgs - end
-  =:: nArgs
-  procData .implementation .?BuiltIn .if =:: builtInImpl
-    implId -1:i32 != if
-      "generic built-ins are not supported" sb.copyPtr
-      pos errors appendError
-    end
-    ## tryEvaluateBuiltIn
-      calledType
-      builtInImpl [] .builtIn
-    pos context tryEvaluateBuiltIn return
-  else .?Extern ._if []
-    args pos context evaluateExternCall return
-  else .?Code ._else ..drop
-    "unexpected implementation type" sb.copyPtr
-    pos errors appendError
-    true return
-  end =:: codeImpl
-  nArgs "procedure call":s pos context checkStack if
-    128 sb.create
-      "inTypes: (" sb.appendS
-      args for typeContext sb.appendType ' ' sb.appendC end
-      "-> ... ) arguments: " sb.appendS
-      args .length sb.appendI
-      " auto-args: " sb.appendS
-      autoArgs .length sb.appendI
-    pos errors appendInfo
-    true return
-  end
-  context [] .stack .length nArgs - =:: argsOffset
-  procData [] .labelId =:: procName
-  procType typeContext types.isTypeGeneratorProc if
-    implId 0 >= if
-      codeImpl [] .implementations
-        implId list.at .data
-      [] .staticArgs
-    else
-      context [] .stack list.asSlice argsOffset slice.tail
-    end =:: typeArgs
-    ## findGeneratedType
-      procName
-      typeArgs
-      true
-      typeContext
-      constContext
-    types.findGeneratedType .?Stored .if =:: genType
-      argsOffset context truncateStack
-      ## pushValue
-        genType ConstValue .TypeId
-        types.primitive.TYPE
-        pos
-      context pushValue
-      false return
-      ## TODO reuse value of type-generator
-    else ..drop end
-    true
-  else false end =:: isTypeGenerator
-  procName labelContext id.labelFlags id.FLAG_EXTERN & ? and
-      codeImpl [] .codeState .PARSING if
-    procName args pos context evaluateExternCall return
-  end
-  context [] .typeChecker optional.hasData if
-    procId implId pos context [] .typeChecker .data typeCheckChildProcedures
-  end
-  context offsetContext
-  context [] .stack .length =:: stackOffset
-  context offsetStack
-  0:i64 =:: mut: autoArgOffset
-  0:i64 =:: mut: staticArgOffset
-  argsOffset =:: mut: argOffset
-  context [] .localVariables =:: prevVariables
-  context [] .localMemory mixedArena.offset =:: offset
-  context [] .localMemory
-    LabelId Constant hashMap mixedArena.alloc =:: newVariables
-  context .localMemory=
-  ## XXX? allocate lookup table in localMemory
-  labelHash@ labelEq@ 256 Constant map.create newVariables =[]
-  newVariables optional.wrap context .localVariables=
-  ## process procedure arguments
-  false =:: mut: hasGenericArg
-  false =:: mut: hasNonStaticGenericArg
-  0:i32 while $ args .length i32 cast < do =:: i
-    procType i typeContext types.getProcArgLabel =:: label
-    label labelContext id.labelFlags =:: labelFlags
-    labelFlags id.FLAG_AUTO & ? if
-      autoArgs autoArgOffset []
-        .?GenericArg .if =:: varId
-          prevVariables optional.hasData and
-              prevVariables .data varId map.get =:: labelValue?
-            labelValue? ? if
-            labelValue? .data .value
-          else
-            "missing generic value " sb.copyPtr
-              varId i64 cast sb.appendI
-              ":LabelId" sb.appendS
-            pos errors appendError
-            varId ConstValue .GenericArg
+namespace: interpreter
+  #+evaluate procedure body with the given arguments+#
+  proc(
+    ProcId : procId
+    i32 : implId
+    Type : calledType
+    ConstValue slice : autoArgs
+    bool : consumeStaticArgs
+    FilePosition : pos
+    InterpreterContext ptr.mut : context
+  ->
+    bool
+  ) =>: export: evaluateCall
+    using interpreter.
+    context [] .program .errors =:: errors
+    context [] .program =:: program
+    context [] .program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
+    program [] .procedures procId i64 cast list.at .data =:: procData
+    procData [] .procType =:: procType
+    procType typeContext types.getProcIn .data =:: args
+    0:iSize ## XXX? is there a better way to get number of non-auto static args
+      implId -1:i32 != if
+        args .length i32 cast.u for =:: i
+          procType i typeContext types.getProcArgLabel =:: label
+          label labelContext id.labelFlags =:: flags
+          flags id.FLAG_AUTO & ? ! and flags id.FLAG_STATIC & ? or
+              args i [] typeContext types.isType if
+            1:iSize +
           end
         end
-      =:: value
-      context [] .localVariables .data
-        label
-        ## Constant
-          value
-          ## ValueInfo
-            args i []
-            pos
-          ValueInfo new
-        Constant new
-      map.put ..drop
-      autoArgOffset 1 + autoArgOffset=
-      labelFlags id.FLAG_STATIC & ? if
-        staticArgOffset 1 + staticArgOffset=
       end
-      continue
+    =:: nStaticArgs
+    args .length autoArgs .length -
+      consumeStaticArgs ! if nStaticArgs - end
+    =:: nArgs
+    procData .implementation .?BuiltIn .if =:: builtInImpl
+      implId -1:i32 != if
+        "generic built-ins are not supported" sb.copyPtr
+        pos errors appendError
+      end
+      ## tryEvaluateBuiltIn
+        calledType
+        builtInImpl [] .builtIn
+      pos context tryEvaluateBuiltIn return
+    else .?Extern ._if []
+      args pos context evaluateExternCall return
+    else .?Code ._else ..drop
+      "unexpected implementation type" sb.copyPtr
+      pos errors appendError
+      true return
+    end =:: codeImpl
+    nArgs "procedure call":s pos context checkStack if
+      128 sb.create
+        "inTypes: (" sb.appendS
+        args for typeContext sb.appendType ' ' sb.appendC end
+        "-> ... ) arguments: " sb.appendS
+        args .length sb.appendI
+        " auto-args: " sb.appendS
+        autoArgs .length sb.appendI
+      pos errors appendInfo
+      true return
     end
-    consumeStaticArgs ! and labelFlags id.FLAG_STATIC & ? or
-        args i [] typeContext types.isType if
-      implId 0 >= "implId is not negative" assert
-      codeImpl [] .implementations
-        implId list.at .data
-      [] .staticArgs staticArgOffset [] =:: value
-      value .?GenericArg ? or value .?TypeId .and typeContext types.isGeneric if
-        true hasGenericArg=
-      end
-      ## ValueInfo
-        args i []
-        pos
-      ValueInfo new =:: valInfo
-      label id.LABEL_ID_NONE != if
+    context [] .stack .length nArgs - =:: argsOffset
+    procData [] .labelId =:: procName
+    procType typeContext types.isTypeGeneratorProc if
+      implId 0 >= if
+        codeImpl [] .implementations
+          implId list.at .data
+        [] .staticArgs
+      else
+        context [] .stack list.asSlice argsOffset slice.tail
+      end =:: typeArgs
+      ## findGeneratedType
+        procName
+        typeArgs
+        true
+        typeContext
+        constContext
+      types.findGeneratedType .?Stored .if =:: genType
+        argsOffset context truncateStack
+        ## pushValue
+          genType ConstValue .TypeId
+          types.primitive.TYPE
+          pos
+        context pushValue
+        false return
+        ## TODO reuse value of type-generator
+      else ..drop end
+      true
+    else false end =:: isTypeGenerator
+    procName labelContext id.labelFlags id.FLAG_EXTERN & ? and
+        codeImpl [] .codeState .PARSING if
+      procName args pos context evaluateExternCall return
+    end
+    context [] .typeChecker optional.hasData if
+      procId implId pos context [] .typeChecker .data typeCheckChildProcedures
+    end
+    context offsetContext
+    context [] .stack .length =:: stackOffset
+    context offsetStack
+    0:i64 =:: mut: autoArgOffset
+    0:i64 =:: mut: staticArgOffset
+    argsOffset =:: mut: argOffset
+    context [] .localVariables =:: prevVariables
+    context [] .localMemory mixedArena.offset =:: offset
+    context [] .localMemory
+      LabelId Constant hashMap mixedArena.alloc =:: newVariables
+    context .localMemory=
+    ## XXX? allocate lookup table in localMemory
+    labelHash@ labelEq@ 256 Constant map.create newVariables =[]
+    newVariables optional.wrap context .localVariables=
+    ## process procedure arguments
+    false =:: mut: hasGenericArg
+    false =:: mut: hasNonStaticGenericArg
+    0:i32 while $ args .length i32 cast < do =:: i
+      procType i typeContext types.getProcArgLabel =:: label
+      label labelContext id.labelFlags =:: labelFlags
+      labelFlags id.FLAG_AUTO & ? if
+        autoArgs autoArgOffset []
+          .?GenericArg .if =:: varId
+            prevVariables optional.hasData and
+                prevVariables .data varId map.get =:: labelValue?
+              labelValue? ? if
+              labelValue? .data .value
+            else
+              "missing generic value " sb.copyPtr
+                varId i64 cast sb.appendI
+                ":LabelId" sb.appendS
+              pos errors appendError
+              varId ConstValue .GenericArg
+            end
+          end
+        =:: value
         context [] .localVariables .data
           label
           ## Constant
             value
-            valInfo
+            ## ValueInfo
+              args i []
+              pos
+            ValueInfo new
+          Constant new
+        map.put ..drop
+        autoArgOffset 1 + autoArgOffset=
+        labelFlags id.FLAG_STATIC & ? if
+          staticArgOffset 1 + staticArgOffset=
+        end
+        continue
+      end
+      consumeStaticArgs ! and labelFlags id.FLAG_STATIC & ? or
+          args i [] typeContext types.isType if
+        implId 0 >= "implId is not negative" assert
+        codeImpl [] .implementations
+          implId list.at .data
+        [] .staticArgs staticArgOffset [] =:: value
+        value .?GenericArg ? or value .?TypeId .and typeContext types.isGeneric if
+          true hasGenericArg=
+        end
+        ## ValueInfo
+          args i []
+          pos
+        ValueInfo new =:: valInfo
+        label id.LABEL_ID_NONE != if
+          context [] .localVariables .data
+            label
+            ## Constant
+              value
+              valInfo
+            Constant new
+          map.put ..drop
+        end
+        staticArgOffset 1 + staticArgOffset=
+        continue
+      end
+      argOffset stackOffset u>= if
+        "not enough arguments for procedure " sb.copyPtr
+          procName labelContext sb.appendLabelPath
+        pos errors appendError
+        context [] .localVariables .data map.free
+        prevVariables context .localVariables=
+        context [] .localMemory offset mixedArena.reset context .localMemory=
+        context resetContext
+        true return
+      end
+      context [] .stack argOffset [] =:: value
+      context [] .stackInfo argOffset [] =:: valueInfo
+      value .?GenericArg .if =:: genericValue
+        true hasGenericArg=
+        isTypeGenerator and
+            genericValue labelContext id.labelFlags id.FLAG_STATIC & ? ! if
+          "Arguments for Type-generators should be static" sb.copyPtr
+          valueInfo .pushedAt errors appendError
+        end
+      else .?TypeId .and typeContext types.isGeneric _if
+        true hasGenericArg=
+      end
+      argOffset 1:iSize + argOffset=
+      label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
+        context [] .stack
+          value list.append
+        context .stack=
+        context [] .stackInfo
+          ## ValueInfo
+            valueInfo .valueType
+            pos
+          ValueInfo new list.append
+        context .stackInfo=
+      else ## store argument as value
+        context [] .localVariables .data
+          label
+          ## Constant
+            value
+            valueInfo
           Constant new
         map.put ..drop
       end
-      staticArgOffset 1 + staticArgOffset=
-      continue
+    finally
+      i 1 +
+    end ..drop
+    ## don't evaluate type-generator for generic arguments
+    isTypeGenerator and hasGenericArg if
+      implId 0 >= if
+        codeImpl [] .implementations
+          implId list.at .data
+        [] .staticArgs
+      else
+        context [] .stack argsOffset nArgs list.getSlice
+      end =:: typeArgs
+      ## initializeGeneratedType
+        procName
+        typeArgs
+        Type .Undefined
+        typeContext
+        constContext
+      types.initializeGeneratedType =:: generatorType
+      context resetContext
+      argsOffset context truncateStack
+      ## pushValue
+        generatorType ConstValue .TypeId
+        types.primitive.TYPE
+        pos
+      context pushValue
+      context [] .localVariables .data map.free
+      prevVariables context .localVariables=
+      context [] .localMemory offset mixedArena.reset context .localMemory=
+      false return
     end
-    argOffset stackOffset u>= if
-      "not enough arguments for procedure " sb.copyPtr
+    implId 0 >= if
+      codeImpl [] .implementations
+        implId list.at .data
+      =:: currentImpl
+      currentImpl .codeState .TYPE_CHECKED or currentImpl .codeState .UNUSED or currentImpl .codeState .COMPILED if
+        currentImpl [] .code slice.freeze
+      else
+        "no implementaion for procedure " sb.copyPtr
+          procName labelContext sb.appendLabelPath
+        pos errors appendError
+        Operation slice.empty
+      end
+    else
+      codeImpl [] .codeState switch
+        PARSING case
+          "procedure " sb.copyPtr
+            procName labelContext sb.appendLabelPath
+            " has not finished parsing" sb.appendS
+          pos errors appendError
+          Operation slice.empty break
+        TYPE_CHECKING case
+          "procedure " sb.copyPtr
+            procName labelContext sb.appendLabelPath
+            " has not finished type-checking" sb.appendS
+          pos errors appendError
+          Operation slice.empty break
+        PARSED TYPE_CHECKED UNUSED COMPILED case
+          codeImpl [] .code slice.freeze
+          break
+      end
+    end =:: code
+    code .length 0:iSize == if
+      "no operations in procedure " sb.copyPtr
         procName labelContext sb.appendLabelPath
       pos errors appendError
+      context resetContext
+      context [] .localVariables .data map.free
+      prevVariables context .localVariables=
+      context [] .localMemory offset mixedArena.reset context .localMemory=
+      true return ## not a call
+    end
+    code 0 slice.at .data =:: op
+    op [] .val .?ImplementProcedure ? ! and
+        op [] .val .?InitializeId ! .or .idType .PROCEDURE ! if
+      "expected procedure initialization got " sb.copyPtr
+        op [] program sb.appendOp
+      op [] .pos errors appendError
+      context resetContext
+      context [] .localVariables .data map.free
+      prevVariables context .localVariables=
+      context [] .localMemory offset mixedArena.reset context .localMemory=
+      true return ## not a call
+    end
+    context [] .currentFile =:: oldFile
+    procData [] .fileId context .currentFile=
+    context [] .callPositions
+      pos list.append
+    context .callPositions=
+    ## evaluateOperations
+      code 1 slice.tail ## first operation declares procedure
+      context
+    evaluateOperations if
+      context [] .callPositions
+        list.pop ..drop
+      context .callPositions=
       context [] .localVariables .data map.free
       prevVariables context .localVariables=
       context [] .localMemory offset mixedArena.reset context .localMemory=
       context resetContext
       true return
     end
-    context [] .stack argOffset [] =:: value
-    context [] .stackInfo argOffset [] =:: valueInfo
-    value .?GenericArg .if =:: genericValue
-      true hasGenericArg=
-      isTypeGenerator and
-          genericValue labelContext id.labelFlags id.FLAG_STATIC & ? ! if
-        "Arguments for Type-generators should be static" sb.copyPtr
-        valueInfo .pushedAt errors appendError
-      end
-    else .?TypeId .and typeContext types.isGeneric _if
-      true hasGenericArg=
-    end
-    argOffset 1:iSize + argOffset=
-    label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
-      context [] .stack
-        value list.append
-      context .stack=
-      context [] .stackInfo
-        ## ValueInfo
-          valueInfo .valueType
-          pos
-        ValueInfo new list.append
-      context .stackInfo=
-    else ## store argument as value
-      context [] .localVariables .data
-        label
-        ## Constant
-          value
-          valueInfo
-        Constant new
-      map.put ..drop
-    end
-  finally
-    i 1 +
-  end ..drop
-  ## don't evaluate type-generator for generic arguments
-  isTypeGenerator and hasGenericArg if
-    implId 0 >= if
-      codeImpl [] .implementations
-        implId list.at .data
-      [] .staticArgs
-    else
-      context [] .stack argsOffset nArgs list.getSlice
-    end =:: typeArgs
-    ## initializeGeneratedType
-      procName
-      typeArgs
-      Type .Undefined
-      typeContext
-      constContext
-    types.initializeGeneratedType =:: generatorType
-    context resetContext
-    argsOffset context truncateStack
-    ## pushValue
-      generatorType ConstValue .TypeId
-      types.primitive.TYPE
-      pos
-    context pushValue
-    context [] .localVariables .data map.free
-    prevVariables context .localVariables=
-    context [] .localMemory offset mixedArena.reset context .localMemory=
-    false return
-  end
-  implId 0 >= if
-    codeImpl [] .implementations
-      implId list.at .data
-    =:: currentImpl
-    currentImpl .codeState .TYPE_CHECKED or currentImpl .codeState .UNUSED or currentImpl .codeState .COMPILED if
-      currentImpl [] .code slice.freeze
-    else
-      "no implementaion for procedure " sb.copyPtr
-        procName labelContext sb.appendLabelPath
-      pos errors appendError
-      Operation slice.empty
-    end
-  else
-    codeImpl [] .codeState switch
-      PARSING case
-        "procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
-          " has not finished parsing" sb.appendS
-        pos errors appendError
-        Operation slice.empty break
-      TYPE_CHECKING case
-        "procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
-          " has not finished type-checking" sb.appendS
-        pos errors appendError
-        Operation slice.empty break
-      PARSED TYPE_CHECKED UNUSED COMPILED case
-        codeImpl [] .code slice.freeze
-        break
-    end
-  end =:: code
-  code .length 0:iSize == if
-    "no operations in procedure " sb.copyPtr
-      procName labelContext sb.appendLabelPath
-    pos errors appendError
-    context resetContext
-    context [] .localVariables .data map.free
-    prevVariables context .localVariables=
-    context [] .localMemory offset mixedArena.reset context .localMemory=
-    true return ## not a call
-  end
-  code 0 slice.at .data =:: op
-  op [] .val .?ImplementProcedure ? ! and
-      op [] .val .?InitializeId ! .or .idType .PROCEDURE ! if
-    "expected procedure initialization got " sb.copyPtr
-      op [] program sb.appendOp
-    op [] .pos errors appendError
-    context resetContext
-    context [] .localVariables .data map.free
-    prevVariables context .localVariables=
-    context [] .localMemory offset mixedArena.reset context .localMemory=
-    true return ## not a call
-  end
-  context [] .currentFile =:: oldFile
-  procData [] .fileId context .currentFile=
-  context [] .callPositions
-    pos list.append
-  context .callPositions=
-  ## evaluateOperations
-    code 1 slice.tail ## first operation declares procedure
-    context
-  evaluateOperations if
     context [] .callPositions
       list.pop ..drop
     context .callPositions=
-    context [] .localVariables .data map.free
-    prevVariables context .localVariables=
-    context [] .localMemory offset mixedArena.reset context .localMemory=
-    context resetContext
-    true return
-  end
-  context [] .callPositions
-    list.pop ..drop
-  context .callPositions=
-  calledType typeContext types.getProcOut .data =:: outTypes
-  outTypes .length "return":s pos context checkStack if
-    context [] .localVariables .data map.free
-    prevVariables context .localVariables=
-    context [] .localMemory offset mixedArena.reset context .localMemory=
-    context resetContext
-    true return
-  end
-  context [] .stack .length outTypes .length - =:: outOffset
-  outTypes .length for =:: i
-    outTypes i []
-      $ typeContext types.containsGeneric if
-        ## TODO update generics
-      end
-    =:: valType
-    context [] .stackInfo outOffset i + list.at .data =:: outValInfo
-    outValInfo [] .valueType valType typeContext types.canAutoCast ! if
-      "cannot cast " sb.copyPtr
-        outValInfo [] .valueType typeContext sb.appendType
-        " to " sb.appendS
-        valType typeContext sb.appendType
-      pos errors appendError
-    end
-    ## TODO why is return value of list.empty not cast correctly (struct(...) instead of `T list`)
-    context [] .stack outOffset i + []
-      ## TODO ensure returned values do not point to deleted local memory
-      valType typeContext types.isPointer ! if
-        ## unwrap local values
-        $ switch ## XXX? handle nested local values
-          LocalValue case .LocalValue ConstValue ptr.mut cast [] break
-          LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
-            valType context .localMemory program copyLocalArray
-            break
-          default break
-        end
-      end
-      outValInfo [] .valueType valType types.typeEquals ! if
-        =:: oldValue
-        ## castConstant
-          outValInfo [] .valueType
-          SignType .NONE
-          oldValue
-          valType
-          typeContext
-        castConstant
-        valType outValInfo .valueType=
-      end
-    context [] .stack outOffset i + list.set
-  end
-  context [] .localVariables .data map.free
-  prevVariables context .localVariables=
-  context [] .localMemory
-    offset mixedArena.reset
-  context .localMemory=
-  isTypeGenerator if
-    context [] .stack .length 1:iSize u< if
-      "could not initalized type generator " sb.copyPtr
-        procName labelContext sb.appendLabelPath
-      pos errors appendError
+    calledType typeContext types.getProcOut .data =:: outTypes
+    outTypes .length "return":s pos context checkStack if
+      context [] .localVariables .data map.free
+      prevVariables context .localVariables=
+      context [] .localMemory offset mixedArena.reset context .localMemory=
+      context resetContext
       true return
     end
-    context [] .stack
-      list.pop .?TypeId .else =:: retValue ..drop
+    context [] .stack .length outTypes .length - =:: outOffset
+    outTypes .length for =:: i
+      outTypes i []
+        $ typeContext types.containsGeneric if
+          ## TODO update generics
+        end
+      =:: valType
+      context [] .stackInfo outOffset i + list.at .data =:: outValInfo
+      outValInfo [] .valueType valType typeContext types.canAutoCast ! if
+        "cannot cast " sb.copyPtr
+          outValInfo [] .valueType typeContext sb.appendType
+          " to " sb.appendS
+          valType typeContext sb.appendType
+        pos errors appendError
+      end
+      ## TODO why is return value of list.empty not cast correctly (struct(...) instead of `T list`)
+      context [] .stack outOffset i + []
+        ## TODO ensure returned values do not point to deleted local memory
+        valType typeContext types.isPointer ! if
+          ## unwrap local values
+          $ switch ## XXX? handle nested local values
+            LocalValue case .LocalValue ConstValue ptr.mut cast [] break
+            LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
+              valType context .localMemory program copyLocalArray
+              break
+            default break
+          end
+        end
+        outValInfo [] .valueType valType types.typeEquals ! if
+          =:: oldValue
+          ## castConstant
+            outValInfo [] .valueType
+            SignType .NONE
+            oldValue
+            valType
+            typeContext
+          castConstant
+          valType outValInfo .valueType=
+        end
+      context [] .stack outOffset i + list.set
+    end
+    context [] .localVariables .data map.free
+    prevVariables context .localVariables=
+    context [] .localMemory
+      offset mixedArena.reset
+    context .localMemory=
+    isTypeGenerator if
+      context [] .stack .length 1:iSize u< if
         "could not initalized type generator " sb.copyPtr
           procName labelContext sb.appendLabelPath
-          " expected type got " sb.appendS
-          retValue typeContext sb.appendConstant
         pos errors appendError
         true return
-      end =:: generatedType
-    context .stack=
-    implId 0 >= if
-      procData .implementation .Code [] .implementations
-        implId list.at .data
-      [] .staticArgs
-    else
-      context [] .stack argsOffset nArgs list.getSlice
-    end =:: typeArgs
-    ## initializeGeneratedType
-      procName
-      typeArgs
-      generatedType
-      typeContext
-      constContext
-    types.initializeGeneratedType =:: generatorType
+      end
+      context [] .stack
+        list.pop .?TypeId .else =:: retValue ..drop
+          "could not initalized type generator " sb.copyPtr
+            procName labelContext sb.appendLabelPath
+            " expected type got " sb.appendS
+            retValue typeContext sb.appendConstant
+          pos errors appendError
+          true return
+        end =:: generatedType
+      context .stack=
+      implId 0 >= if
+        procData .implementation .Code [] .implementations
+          implId list.at .data
+        [] .staticArgs
+      else
+        context [] .stack argsOffset nArgs list.getSlice
+      end =:: typeArgs
+      ## initializeGeneratedType
+        procName
+        typeArgs
+        generatedType
+        typeContext
+        constContext
+      types.initializeGeneratedType =:: generatorType
+      context [] .stack
+        generatorType ConstValue .TypeId list.append
+      context .stack=
+    end
+    oldFile context .currentFile=
+    context [] .stack .length stackOffset - =:: nReturn
+    ## mem.copy
+      context [] .stack .data argsOffset @[]
+      context [] .stack .data stackOffset @[]
+      nReturn iSize cast.u
+    mem.copy ..drop
+    ## mem.copy
+      context [] .stackInfo .data argsOffset @[]
+      context [] .stackInfo .data stackOffset @[]
+      nReturn iSize cast.u
+    mem.copy ..drop
+    context resetContextKeepStack
     context [] .stack
-      generatorType ConstValue .TypeId list.append
+      argsOffset nReturn + list.setLength
     context .stack=
+    context [] .stackInfo
+      argsOffset nReturn + list.setLength
+    context .stackInfo=
+    argsOffset while $ context [] .stackInfo .length u< do
+      ## update push position of return values
+      pos context [] .stackInfo $2 list.at .data .pushedAt=
+      1:iSize +
+    end ..drop
+    false return
   end
-  oldFile context .currentFile=
-  context [] .stack .length stackOffset - =:: nReturn
-  ## mem.copy
-    context [] .stack .data argsOffset @[]
-    context [] .stack .data stackOffset @[]
-    nReturn iSize cast.u
-  mem.copy ..drop
-  ## mem.copy
-    context [] .stackInfo .data argsOffset @[]
-    context [] .stackInfo .data stackOffset @[]
-    nReturn iSize cast.u
-  mem.copy ..drop
-  context resetContextKeepStack
-  context [] .stack
-    argsOffset nReturn + list.setLength
-  context .stack=
-  context [] .stackInfo
-    argsOffset nReturn + list.setLength
-  context .stackInfo=
-  argsOffset while $ context [] .stackInfo .length u< do
-    ## update push position of return values
-    pos context [] .stackInfo $2 list.at .data .pushedAt=
-    1:iSize +
-  end ..drop
-  false return
 end

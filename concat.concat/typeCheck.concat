@@ -306,148 +306,6 @@ proc( TypeCheckState ptr : state -> i32 ) =>: currentBlockStart
   state [] .blockStart return
 end
 
-proc( TypeInfo ptr : typeInfo TypeCheckState ptr.mut : state -> bool ) =>: isPopableConstant
-  typeInfo [] .value .?None ? or typeInfo [] .opIndex OP_ARGUMENT != and
-      typeInfo [] .opIndex 0 < or
-      typeInfo [] .opIndex state currentBlockStart < if
-    false return
-  end
-  true return
-end
-
-proc( iSize : argCount TypeCheckState ptr.mut : state -> bool ) =>: interpreterLoadCheckArgs
-  argCount 0 == if
-    false return
-  end
-  state [] .stack branchTree.depth iSize cast.u argCount u< if
-    true return
-  end
-  0:iSize =:: mut: count
-  ## QBE crashes if itr is kept on stack
-  state .stack branchTree.itr.start  =:: mut: itr
-  while
-    itr branchTree.itr.hasNext
-  do branchTree.itr.next =:: val itr=
-    count 1 + count=
-    val state isPopableConstant ! if
-      true return
-    end
-    count argCount == if
-      false return
-    end
-  end ..drop
-  true return
-end
-proc(
-  iSize : argCount
-  TypeCheckState ptr.mut : state
--> bool ) =>: interpreterLoadContants
-  argCount state interpreterLoadCheckArgs if
-    true return
-  end
-  state [] .program =:: progContext
-  state .interpreter =:: interpreter
-  ## XXX? make code less relient on internal behaviour of list
-  interpreter [] .stack
-    $ .length argCount + list.setLength
-    $ .length 1:iSize - =:: stackTail
-  interpreter .stack=
-  interpreter [] .stackInfo
-    $ .length argCount + list.setLength
-    $ .length 1:iSize - =:: stackInfoTail
-  interpreter .stackInfo=
-  argCount for =:: i
-    state .stack branchTree.pop .data =:: val
-    val [] .value interpreter [] .stack stackTail i - list.set
-    ## ValueInfo
-      val [] .valueType
-      val [] .pushedAt
-    interpreter.ValueInfo new
-      interpreter [] .stackInfo
-      stackInfoTail i -
-    list.set
-    val [] .opIndex state deleteOp ## clear previous location of operation
-  end
-  state removeTrailingNOPs
-  false return
-end
-proc( iSize : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: interpreterStoreConstants
-  state [] .program =:: progContext
-  progContext .errors =:: errors
-  progContext .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
-  state .interpreter =:: interpreter
-  count interpreter [] .stack .length u> if
-    "stack undeflow: expected " sb.copyPtr
-      count sb.appendI
-      " got " sb.appendS
-      interpreter [] .stack .length sb.appendI
-    pos errors appendError
-    0:iSize
-  else
-    interpreter [] .stack .length count -
-  end =:: offset
-  ##  -> store computed constants
-  offset while $ interpreter [] .stack .length u< do =:: i
-    interpreter [] .stack i list.at .data =:: constant
-    interpreter [] .stackInfo i list.at .data =:: constInfo
-    ## pushConstant
-      constant  []
-      constInfo [] .valueType
-      constInfo [] .pushedAt
-    state pushConstant
-  finally i 1:iSize + end ..drop
-end
-
-proc(
-  Type : calledType
-  ProcedureCallInfo : calledProc
-  bool : staticProc
-  FilePosition : pos
-  TypeCheckState ptr.mut : state
--> bool ) =>: interpretCall
-  state [] .program =:: progContext
-  state .interpreter =:: interpreter
-  progContext .idContext .typeContext =:: typeContext
-  calledType typeContext types.getProcIn .data .length =:: argCount
-  argCount state interpreterLoadContants if
-    staticProc if
-      "could not resolve arguments of static procedure " sb.copyPtr
-        progContext [] .procedures
-          calledProc .procId i64 cast list.at
-        .data [] .labelId typeContext .labelContext sb.appendLabelPath
-      pos progContext .errors appendError
-    end
-    true return
-  end
-  ## evaluateCall
-    calledProc .procId
-    calledProc .implementationId
-    calledType
-    calledProc .autoArgs
-    false
-    pos
-    interpreter
-  evaluateCall if
-    staticProc if
-      "could not evaluate call to static procedure " sb.copyPtr
-        progContext [] .procedures
-          calledProc .procId i64 cast list.at
-        .data [] .labelId typeContext .labelContext sb.appendLabelPath
-      pos progContext .errors appendError
-    end
-    ## reset stack to previous state
-    argCount pos state interpreterStoreConstants
-    true return
-  end
-  ## store results
-  calledType
-    typeContext types.getProcOut .data .length
-  pos state interpreterStoreConstants
-  false return
-end
-
 proc(
   bool : printValues
   i32 : maxCount
@@ -731,7 +589,10 @@ proc( TypeCheckState ptr.mut : state -> ConstValue optional ) =>: popValue
   state .stack branchTree.pop .else
     ConstValue optional.empty return
   end =:: typeInfo
-    typeInfo [] .opIndex state deleteOp ## remove stored operation
+    typeInfo [] .opIndex state tryDeleteOp if ## remove stored operation
+      state .stack typeInfo [] branchTree.push ## put value back
+      ConstValue optional.empty return
+    end
   typeInfo [] .value optional.wrap return
 end
 proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
@@ -1342,6 +1203,266 @@ proc(
   valType op .dataType=
 end
 
+union(
+  Operation ptr.mut : Op
+  StackValue list ptr.mut : Values
+) =:: export: CallSource
+enum( FAILURE SUCCESS ) =:: EvalResult
+proc(
+  CallSource : source
+  StackValue slice.mut : mut: args
+  Type : calledType
+  ProcedureCallInfo : calledProc
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> EvalResult ) =>: evaluateCall
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  state .interpreter =:: interpreter
+  calledType typeContext types.getProcIn .else
+    "proc has no in":s pos ..line internalErrorNoOp ..unreachable
+  end =:: inTypes
+  ## 1. remove static arguments and apply argument conversions
+  0:iSize =:: mut: argCount
+  0 =:: mut: procArgIndex
+  args .length for =:: argIndex
+    procArgIndex iSize cast.u inTypes .length u>= if
+      "const-args out of sync with proc-signature":s pos ..line internalErrorNoOp ..unreachable
+    end
+    calledType procArgIndex typeContext types.getProcArgLabel =:: mut: eltLabel
+    inTypes procArgIndex [] =:: mut: argType
+    ## skip auto-args
+    while
+      eltLabel labelContext id.labelFlags id.FLAG_AUTO & ? or
+      argType typeContext types.isEmpty
+    do
+      procArgIndex 1 + procArgIndex=
+      calledType procArgIndex typeContext types.getProcArgLabel eltLabel=
+      inTypes procArgIndex [] argType=
+    end
+    eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? or
+        argType typeContext types.isType or argType typeContext types.isEmpty if
+      continue
+    end
+    argCount argIndex != if
+      args argIndex [] args argCount =[]
+    end
+    args argCount @[] =:: arg
+    argCount 1 + argCount=
+    arg [] .valType typeContext types.isType or arg [] .valType typeContext types.isEmpty if
+    end
+    arg [] .valType argType types.typeEquals if
+      continue
+    end
+    ## handle conversions
+    arg [] .valType
+      SignType .NONE
+      arg [] .value
+      argType
+      typeContext interpreter.castConstant
+    arg .value=
+  finally
+    procArgIndex 1 + procArgIndex=
+  end
+  procArgIndex iSize cast.u inTypes .length != if
+    "const-args out of sync with proc-signature":s pos ..line internalErrorNoOp ..unreachable
+  end
+  ## 2. load arguments into interperter
+  interpreter interpreter.offsetContext
+  interpreter [] .stack
+    $ .length argCount + list.ensureCap
+  interpreter .stack=
+  interpreter [] .stackInfo
+    $ .length argCount + list.ensureCap
+  interpreter .stackInfo=
+  args argCount slice.head for =:: arg
+    interpreter [] .stack
+      arg .value list.append
+    interpreter .stack=
+    interpreter [] .stackInfo
+      ## ValueInfo
+        arg .valType
+        pos
+      interpreter.ValueInfo new list.append
+    interpreter .stackInfo=
+  end
+  ## 3. ensure procedure has been type-checked (may invalidate args!)
+  ## FIXME! detect type-generators
+  program [] .procedures calledProc .procId i64 cast @[] =:: procData
+  procData .implementation .?Code .if
+    calledProc .implementationId -1:i32 != if ## TODO! avoid magic number
+      [] .implementations calledProc .implementationId [] .codeState
+    else
+      [] .codeState
+    end  .TYPE_CHECKED ! if
+      ## typeCheckChildProcedures
+        calledProc .procId
+        calledProc .implementationId
+        pos
+        state
+      typeCheckChildProcedures
+    end
+  else ..drop end
+  ## 4. evalute-call in interpreter
+  ## evaluateCall
+    calledProc .procId
+    calledProc .implementationId
+    calledType
+    calledProc .autoArgs
+    false
+    pos
+    interpreter
+  interpreter.evaluateCall if
+    interpreter interpreter.resetContext
+    EvalResult .FAILURE return
+  end
+  ## 5. load arguments from interpreter, reset interpreter state
+  source .?Op ? if
+    args .length i32 cast.u pos state discardValues
+  end
+  calledType typeContext types.getProcOut .if .length else 0 end =:: resCount
+  resCount "procedure return":s pos interpreter interpreter.checkStack if
+    interpreter interpreter.resetContext
+    EvalResult .FAILURE return
+  end
+  interpreter [] .stack .length resCount - =:: offset
+  ##  -> store computed constants
+  offset while $ interpreter [] .stack .length u< do =:: i
+    interpreter [] .stack i list.at .data =:: constant
+    interpreter [] .stackInfo i list.at .data =:: constInfo
+    source switch
+      Op case
+        ## pushConstant
+          constant  []
+          constInfo [] .valueType
+          constInfo [] .pushedAt
+        state pushConstant
+      break
+      Values .case =:: target
+        target []
+          ## StackValue
+            constInfo [] .valueType
+            constant  []
+          StackValue new list.append
+        target =[]
+      break
+    end
+  finally i 1:iSize + end ..drop
+  interpreter interpreter.resetContext
+  EvalResult .SUCCESS return
+end
+union(
+  Type : Generate
+  _ : ConstEval
+  _ : Error
+) =:: TypeCheckCallResult
+proc(
+  ProcId slice : procedures
+  StackValue slice.mut : mut: stackValues
+  bool : headConstant
+  CallSource : source
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> TypeCheckCallResult ) =>: export: typeCheckCallStackless
+  state [] .program =:: program
+  state [] .program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  0 sb.create =:: mut: message
+  ## resolveCall
+    procedures
+    stackValues slice.freeze
+    message@ optional.wrap
+    pos
+    state .interpreter
+  resolveCall =:: calledType
+    =:: calledProcId
+  .if
+    message .length 0:iSize u> if
+      message pos errors appendInfo
+    else
+      message sb.free ..drop
+    end
+  else
+    message pos errors appendError
+    TypeCheckCallResult .Error return
+  end =:: calledProc
+  program [] .procedures
+    calledProc .procId i64 cast list.at .data
+  =:: baseProcData
+  source .?Op .if
+    calledType >$ .dataType=
+  else ..drop end
+  calledType typeContext types.getProcIn .data =:: inTypes
+  inTypes .length i32 cast.u =:: argCount
+  ## restrict stackValues to acually consumed stack arguments
+  stackValues .length
+    argCount iSize cast.u calledProc .autoArgs .length - iSize.min
+  stackValues@ .length=
+  source .?Values ? or state isGlobal
+      program [] .procedures
+        calledProcId i64 cast list.at .data
+      [] .isStatic | and state [] .mode .STATIC_PROC ! or
+      calledType typeContext types.isTypeGeneratorProc or
+      baseProcData .implementation .?Code .and .codeState .TYPE_CHECKING ! if
+    source stackValues calledType calledProc pos state evaluateCall .SUCCESS if
+      TypeCheckCallResult .ConstEval return
+    end
+  end
+  baseProcData [] .implementation switch
+    Code case
+      state [] .mode .LINEAR ! if
+        ## check if implementation exists if not add to list of missing imples
+        baseProcData  .implementation .Code =:: codeImpl
+        calledProc .implementationId =:: implId
+        implId -1:i32 == if
+          codeImpl [] .codeState .TYPE_CHECKED !
+        else
+          codeImpl [] .implementations
+            implId list.at .data
+          [] .codeState .TYPE_CHECKED !
+        end if
+          state [] .missingProcs
+            ## MissingProc
+              ## ProcedureImpl
+                implId
+                calledProc .procId
+              ProcedureImpl new
+              pos
+            MissingProc new list.append
+          state .missingProcs=
+        end
+      end
+      source .?Op .if
+        calledProc program callInfoToCall >$ .val .Call=
+      else ..drop end
+    break
+    Extern case
+      source .?Op .if
+        calledProc program callInfoToCall >$ .val .Call=
+      else ..drop end
+    break
+    BuiltIn case
+      baseProcData [] .implementation .BuiltIn .builtIn =:: builtInId
+      builtInId .SYS_ARGC or builtInId .SYS_ARGV or builtInId .SYS_ENVP if
+        true program .hasGetArgs=
+      else headConstant _if ## only constant arguments
+        source stackValues calledType calledProc pos state evaluateCall .SUCCESS if
+          TypeCheckCallResult .ConstEval return
+        end
+      end
+      source .?Op .if
+        builtInId OpValue .BuiltIn >$ .val=
+      else ..drop end
+    break
+    Alias case ..unreachable ## resolveCall unwraps alias
+  end
+  calledType TypeCheckCallResult .Generate return
+end
 proc(
   ProcId slice : procedures
   Operation ptr.mut : op
@@ -1368,89 +1489,25 @@ proc(
       StackValue new list.append
     stackValues=
   end ..drop
-  0 sb.create =:: mut: message
-  ## resolveCall
+  ## typeCheckCallStackless
     procedures
-    stackValues list.asSlice
-    message@ optional.wrap
+    stackValues list.asMutableSlice
+    headConstant
+    op CallSource .Op
     op [] .pos
-    state .interpreter
-  resolveCall =:: calledType
-    =:: calledProcId
-  =:: calledProc?
-  calledProc? optional.isEmpty if
-    message op [] .pos errors appendError
-    return
-  else
-    message .length 0:iSize u> if
-      message op [] .pos errors appendInfo
-    else
-      message sb.free ..drop
-    end
-  end
-  stackValues list.free ..drop
-  calledProc? .data =:: calledProc
-  program [] .procedures
-    calledProc .procId i64 cast list.at .data
-  =:: baseProcData
-  calledType op .dataType=
-  calledType typeContext types.getProcIn .data =:: inTypes
-  inTypes .length i32 cast.u =:: argCount
-  state isGlobal
-      program [] .procedures
-        calledProcId i64 cast list.at .data
-      [] .isStatic | and state [] .mode .STATIC_PROC ! or
-      calledType typeContext types.isTypeGeneratorProc or
-      baseProcData .implementation .?Code .and .codeState .TYPE_CHECKING ! if
-    calledType calledProc true op [] .pos state interpretCall ! if
-      return
-    end
-  end
-  baseProcData [] .implementation switch
-    Code case
-      state [] .mode .LINEAR ! if
-        ## check if implementation exists if not add to list of missing imples
-        baseProcData  .implementation .Code =:: codeImpl
-        calledProc .implementationId =:: implId
-        implId -1:i32 == if
-          codeImpl [] .codeState .TYPE_CHECKED !
-        else
-          codeImpl [] .implementations
-            implId list.at .data
-          [] .codeState .TYPE_CHECKED !
-        end if
-          state [] .missingProcs
-            ## MissingProc
-              ## ProcedureImpl
-                implId
-                calledProc .procId
-              ProcedureImpl new
-              op [] .pos
-            MissingProc new list.append
-          state .missingProcs=
-        end
-      end
-      calledProc program callInfoToCall op .val .Call=
-    break
-    Extern case
-      calledProc program callInfoToCall op .val .Call=
-    break
-    BuiltIn case
-      baseProcData [] .implementation .BuiltIn .builtIn =:: builtInId
-      builtInId .SYS_ARGC or builtInId .SYS_ARGV or builtInId .SYS_ENVP if
-        true program .hasGetArgs=
-      else headConstant _if ## only constant arguments
-        calledType calledProc false op [] .pos state interpretCall ! if
-          return
-        end
-      end
-      builtInId OpValue .BuiltIn op .val=
-    break
-    Alias case ..unreachable ## resolveCall unwraps alias
-  end
+  state typeCheckCallStackless
+      stackValues list.free ..drop
+  switch
+    Error ConstEval case return
+    Generate .case break
+  end =:: calledType
+  calledType typeContext types.getProcIn .else
+    "proc has no in":s op [] .pos ..line internalErrorNoOp ..unreachable
+  end =:: inTypes
+  inTypes .length =:: argCount
   0 =:: mut: offset
-  argCount 1 - while ..dup 0 >= do =:: i
-    calledType i typeContext types.getProcArgLabel =:: eltLabel
+  argCount 1 - while $ 0 iSize.sge do =:: i
+    calledType i i32 cast.u typeContext types.getProcArgLabel =:: eltLabel
     inTypes i [] =:: elt
     eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
       ## remove static arguments from stack
