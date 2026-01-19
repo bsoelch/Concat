@@ -3,6 +3,7 @@ import slice
 import "constants.concat"
 import "types.concat"
 import "program.concat"
+import "typeCheck.concat"
 import "interpreter.concat"
 
 enum( MATCH GENERIC CAST AUTO EMPTY NONE ) =:: MatchType
@@ -87,9 +88,9 @@ proc(
   LabelId GenericArg hashMap ptr.mut : genericValues
   ReplaceFlags : flags
   FilePosition : pos
-  InterpreterContext ptr.mut : interpreterContext
+  TypeCheckState ptr.mut : typeChecker
 -> Type ) =>: replaceGenerics
-  interpreterContext [] .program =:: progContext
+  typeChecker [] .program =:: progContext
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -145,7 +146,7 @@ proc(
           genericValues
           flags ReplaceFlags.IGNORE_EMPTY |
           pos
-          interpreterContext
+          typeChecker
         replaceGenerics
         src .?Pointer ? or src .?ArrayType ? and genericSize if
           types.ArrayType .POINTER
@@ -177,7 +178,7 @@ proc(
           genericValues
           flags
           pos
-          interpreterContext
+          typeChecker
         replaceGenerics =:: newElt
         ## ! replaceGenerics changes type-buffer
         typeBuffer []
@@ -227,7 +228,7 @@ proc(
       typeBuffer [] .length =:: typeOffset
       labelBuffer [] .length =:: labelOffset
       inTypes for =:: inType
-        inType typeBuffer labelBuffer genericValues flags pos interpreterContext replaceGenerics =:: newArg
+        inType typeBuffer labelBuffer genericValues flags pos typeChecker replaceGenerics =:: newArg
         flags ReplaceFlags.IGNORE_EMPTY & ? and newArg typeContext types.isEmpty if
           continue
         end
@@ -243,7 +244,7 @@ proc(
       finally labelIndex 1:iSize + labelIndex= end
       typeBuffer [] .length =:: outTypesOffset
       outTypes for =:: outType
-        outType typeBuffer labelBuffer genericValues flags pos interpreterContext replaceGenerics =:: newRes
+        outType typeBuffer labelBuffer genericValues flags pos typeChecker replaceGenerics =:: newRes
         flags ReplaceFlags.IGNORE_EMPTY & ? and newRes typeContext types.isEmpty if
           continue
         end
@@ -278,7 +279,7 @@ proc(
           arg switch
             TypeId case
               arg .TypeId
-                typeBuffer labelBuffer genericValues flags pos interpreterContext
+                typeBuffer labelBuffer genericValues flags pos typeChecker
               replaceGenerics ConstValue .TypeId
               break
             GenericArg .case =:: argId
@@ -307,8 +308,8 @@ proc(
             generatorName
             generatorArgs
             pos
-            interpreterContext
-          interpreter.initializeGeneratedType .data
+            typeChecker
+          typeChecker.initializeGeneratedType .data
         break
         Stored case .Stored break
         Created case .Created break
@@ -772,9 +773,9 @@ proc(
   StackValue slice : stackValues
   stringBuilder ptr.mut optional : errorMessage
   FilePosition : pos
-  InterpreterContext ptr.mut : interpreterContext
+  TypeCheckState ptr.mut : typeChecker
 -> ProcedureCallInfo optional ProcId Type ) =>: export: resolveCall
-  interpreterContext [] .program =:: progContext
+  typeChecker [] .program =:: progContext
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -860,7 +861,7 @@ proc(
             NonEmpty case ..unreachable
           end =:: value
           paramType typeContext types.isTypeSet and
-              value [] paramType pos interpreterContext interpreter.checkTypeSet ! if
+              value [] paramType pos typeChecker interpreter.checkTypeSet ! if
             false current .argsMatch=
           end
           ## convert literal types to corresponding base types
@@ -927,7 +928,7 @@ proc(
           false current .argsMatch=
         end
         paramType typeContext types.isTypeSet and
-            stackVal paramType pos interpreterContext interpreter.checkTypeSet ! if
+            stackVal paramType pos typeChecker interpreter.checkTypeSet ! if
           false current .argsMatch=
         end
         paramLabel id.LABEL_ID_NONE != and
@@ -1187,7 +1188,7 @@ proc(
             candidate .genericValues
             ReplaceFlags.REPLACE_NONE
             pos
-            interpreterContext
+            typeChecker
           replaceGenerics
           ProcCodeState .PARSED
         ProcImplementation new list.append
@@ -1226,7 +1227,7 @@ proc(
         candidate .genericValues
         ReplaceFlags.REPLACE_AUTO_ARGS
         pos
-        interpreterContext
+        typeChecker
       replaceGenerics =:: newElt
       ## ! replaceGenerics changes typeBuffer
       typeBuffer
@@ -1253,7 +1254,7 @@ proc(
       candidate .genericValues
       ReplaceFlags.REPLACE_AUTO_ARGS ReplaceFlags.IGNORE_EMPTY |
       pos
-      interpreterContext
+      typeChecker
     replaceGenerics =:: newOut
     typeBuffer
       newOut list.append

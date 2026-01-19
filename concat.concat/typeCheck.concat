@@ -1221,10 +1221,16 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
+  idContext .constContext =:: constContext
   state .interpreter =:: interpreter
   calledType typeContext types.getProcIn .else
     "proc has no in":s pos ..line internalErrorNoOp ..unreachable
   end =:: inTypes
+  program [] .procedures calledProc .procId i64 cast @[] =:: procData
+  state [] .constBuffer .length =:: constOffset
+  procData .implementation .?Code ? =:: isCodeImpl
+  isCodeImpl and calledType typeContext types.isTypeGeneratorProc end =:: isTypeGenerator
+  false =:: mut: isGenericTypeGen
   ## 1. remove static arguments and apply argument conversions
   0:iSize =:: mut: argCount
   0 =:: mut: procArgIndex
@@ -1243,8 +1249,22 @@ proc(
       calledType procArgIndex typeContext types.getProcArgLabel eltLabel=
       inTypes procArgIndex [] argType=
     end
-    eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? or
-        argType typeContext types.isType or argType typeContext types.isEmpty if
+    isTypeGenerator if
+      args argIndex [] .value =:: argValue
+      state [] .constBuffer
+        argValue list.append
+      state .constBuffer=
+      argValue .?GenericArg ? or
+          argValue .?TypeId .and typeContext types.isGeneric if
+        true isGenericTypeGen=
+      end
+      eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
+        "Arguments for Type-generators should be static" sb.copyPtr
+        eltLabel labelContext id.labelPos .else pos end errors appendError
+      end
+    end
+    argType typeContext types.isEmpty or isCodeImpl and
+        eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
       continue
     end
     argCount argIndex != if
@@ -1252,7 +1272,7 @@ proc(
     end
     args argCount @[] =:: arg
     argCount 1 + argCount=
-    arg [] .valType typeContext types.isType or arg [] .valType typeContext types.isEmpty if
+    arg [] .valType typeContext types.isEmpty or isCodeImpl and arg [] .valType typeContext types.isType if
     end
     arg [] .valType argType types.typeEquals if
       continue
@@ -1270,6 +1290,50 @@ proc(
   procArgIndex iSize cast.u inTypes .length != if
     "const-args out of sync with proc-signature":s pos ..line internalErrorNoOp ..unreachable
   end
+  isTypeGenerator if
+    ## findGeneratedType
+      procData [] .labelId
+      state [] .constBuffer constOffset list.tail
+      true
+      typeContext
+      constContext
+    types.findGeneratedType .?Stored .if
+      optional.wrap
+    else ..drop isGenericTypeGen _if
+      ## initializeGeneratedType
+        procData [] .labelId
+        state [] .constBuffer constOffset list.tail
+        Type .Undefined
+        typeContext
+        constContext
+      types.initializeGeneratedType optional.wrap
+    else Type optional.empty end .if =:: genericType
+      state [] .constBuffer
+        constOffset list.setLength
+      state .constBuffer=
+      source .?Op ? if
+        args .length i32 cast.u pos state discardValues
+      end
+      source switch
+        Op case
+          ## pushConstant
+            genericType ConstValue .TypeId
+            types.primitive.TYPE
+            pos
+          state pushConstant
+        break
+        Values .case =:: target
+          target []
+            ## StackValue
+              types.primitive.TYPE
+              genericType ConstValue .TypeId
+            StackValue new list.append
+          target =[]
+        break
+      end
+      EvalResult .SUCCESS return
+    end
+  end
   ## 2. load arguments into interperter
   interpreter interpreter.offsetContext
   interpreter [] .stack
@@ -1278,7 +1342,7 @@ proc(
   interpreter [] .stackInfo
     $ .length argCount + list.ensureCap
   interpreter .stackInfo=
-  args argCount slice.head for =:: arg
+  args argCount slice.head slice.reversed for =:: arg
     interpreter [] .stack
       arg .value list.append
     interpreter .stack=
@@ -1290,8 +1354,6 @@ proc(
     interpreter .stackInfo=
   end
   ## 3. ensure procedure has been type-checked (may invalidate args!)
-  ## FIXME! detect type-generators
-  program [] .procedures calledProc .procId i64 cast @[] =:: procData
   procData .implementation .?Code .if
     calledProc .implementationId -1:i32 != if ## TODO! avoid magic number
       [] .implementations calledProc .implementationId [] .codeState
@@ -1329,6 +1391,18 @@ proc(
     EvalResult .FAILURE return
   end
   interpreter [] .stack .length resCount - =:: offset
+  isTypeGenerator if
+    ## initializeGeneratedType
+      procData [] .labelId
+      state [] .constBuffer constOffset list.tail
+      interpreter [] .stack list.peek .and [] .?TypeId .else Type .Undefined end
+      typeContext
+      constContext
+    types.initializeGeneratedType =:: genericType
+    state [] .constBuffer
+      constOffset list.setLength
+    state .constBuffer=
+  end
   ##  -> store computed constants
   offset while $ interpreter [] .stack .length u< do =:: i
     interpreter [] .stack i list.at .data =:: constant
@@ -1378,7 +1452,7 @@ proc(
     stackValues slice.freeze
     message@ optional.wrap
     pos
-    state .interpreter
+    state
   resolveCall =:: calledType
     =:: calledProcId
   .if
@@ -1549,6 +1623,73 @@ proc(
     op [] .pos
     state
   pushTypes
+end
+namespace: typeChecker
+  proc(
+    LabelId : generatorName
+    ConstValue slice : args
+    FilePosition : pos
+    TypeCheckState ptr.mut : typeChecker
+  -> Type optional ) =>: export: initializeGeneratedType
+    typeChecker [] .program =:: program
+    program .errors =:: errors
+    program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
+    generatorName idContext id.getIdentifier if ..drop
+      "could not find procedure " sb.copyPtr
+        generatorName labelContext sb.appendLabelPath
+      pos errors appendError
+      Type optional.empty return
+    end =:: idData
+    idData [] .idType .PROCEDURE ! if
+      "expected procedure got: " sb.copyPtr
+        idData id.asIdInfo labelContext sb.appendIdInfo
+      pos errors appendError
+      Type optional.empty return
+    end
+    idData [] .constValue .Procedure =:: procId
+    program [] .procedures
+      procId i64 cast list.at .data
+    =:: procData
+    procData [] .procType =:: procType
+    procType typeContext types.getProcIn .data =:: inTypes
+    inTypes .length i32 cast.u =:: argCount
+    args .length StackValue list.create =:: mut: stackValues
+    0 =:: mut: argIndex
+    args for =:: arg
+      while procType argIndex typeContext types.getProcArgLabel labelContext id.labelFlags id.FLAG_AUTO & ? do
+        argIndex 1 + argIndex=
+      end
+      stackValues
+        ## StackValue
+          inTypes argIndex []
+          arg
+        StackValue new list.append
+      stackValues=
+    finally argIndex 1 + argIndex= end
+    ## typeCheckCallStackless
+      procId@ slice.wrap
+      stackValues list.asMutableSlice
+      true
+      stackValues list.clear stackValues= stackValues@ CallSource .Values
+      pos
+      typeChecker
+    typeCheckCallStackless =:: result
+    ## generated type has been initiliaized during evaluation
+    ## findGeneratedType
+      generatorName
+      args
+      false
+      typeContext
+      constContext
+    types.findGeneratedType $ switch
+      None case "initializing generated type failed" ..panic
+      Stored case .Stored optional.wrap break
+      Created case ..unreachable
+    end return
+  end
 end
 proc(
   Operation ptr.mut : op
@@ -2887,6 +3028,7 @@ proc(
         end
         break
       ImplementProcedure .case =:: implementProcedure
+        "is this reachable" ..panic ## TODO! remove if unreachable
         op .dataType
           $ .?Undefined ? if ..drop
             program [] .procedures
@@ -2918,11 +3060,13 @@ proc(
                 $ typeContext types.isType and
                     state .argData -2 i - LabelId cast map.get .if
                   .value
+                  op .pos
+                  $1 argType op .pos opConst state appendOp
                 else
                   ConstValue .None
+                  op .pos
+                  OP_ARGUMENT
                 end
-                op .pos
-                OP_ARGUMENT
               TypeInfo new
             branchTree.push
           else
@@ -5487,11 +5631,13 @@ proc(
           $ typeContext types.isType and
               state .argData -2 i - LabelId cast map.get .if
             .value
+            procPos
+            $1 argType procPos opConst state appendOp
           else
             ConstValue .None
+            procPos
+            OP_ARGUMENT
           end
-          procPos
-          OP_ARGUMENT
         TypeInfo new
       branchTree.push
     else

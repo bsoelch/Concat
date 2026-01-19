@@ -468,79 +468,14 @@ namespace: interpreter
     pos errors appendError
     Type .Undefined ConstValue .None true return
   end
-  proc(
-    LabelId : generatorName
-    ConstValue slice : args
-    FilePosition : pos
-    InterpreterContext ptr.mut : context
-  -> Type optional ) =>: export: initializeGeneratedType
-    context [] .program =:: program
-    program .errors =:: errors
-    program .idContext =:: idContext
-    idContext .constContext =:: constContext
-    idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
-    generatorName idContext id.getIdentifier if ..drop
-      "could not find procedure " sb.copyPtr
-        generatorName labelContext sb.appendLabelPath
-      pos errors appendError
-      Type optional.empty return
-    end =:: idData
-    idData [] .idType .PROCEDURE ! if
-      "expected procedure got: " sb.copyPtr
-        idData id.asIdInfo labelContext sb.appendIdInfo
-      pos errors appendError
-      Type optional.empty return
-    end
-    idData [] .constValue .Procedure =:: procId
-    program [] .procedures
-      procId i64 cast list.at .data
-    =:: procData
-    procData [] .procType =:: procType
-    procType typeContext types.getProcIn .data =:: inTypes
-    inTypes .length i32 cast.u =:: argCount
-    context offsetContext
-    procType
-      ## IdentifierInfo
-        IdentifierType .PROCEDURE
-        generatorName
-      IdentifierInfo new
-      pos
-    opGetId =:: op ## create operation for call
-    ## TODO? directly go to evaluation of call operation (for resolving auto-args),
-    ##   instead of calling evaluateOperation
-    ## push arguments
-    0:i32 while $ argCount < do =:: i
-      procType i typeContext types.getProcArgLabel =:: argLabel
-      argLabel labelContext id.labelFlags id.FLAG_AUTO & ? if
-        continue
-      end
-      inTypes i [] =:: argType
-      args i [] =:: argValue
-      argValue argType pos context pushValue
-    finally i 1 + end ..drop
-    op@ context evaluateOperation ..drop
-    context resetContext
-    ## generated type has been initiliaized during evaluation
-    ## findGeneratedType
-      generatorName
-      args
-      false
-      typeContext
-      constContext
-    types.findGeneratedType $ switch
-      None case "initializing generated type failed" ..panic
-      Stored case .Stored optional.wrap break
-      Created case ..unreachable
-    end return
-  end
+  ## TODO move typeSet check to type-checker
   proc(
     ConstValue : value
     Type : typeSet
     FilePosition : pos
-    InterpreterContext ptr.mut : context
+    TypeCheckState ptr.mut : typeChecker
   -> bool ) =>: export: checkTypeSet
-    context [] .program =:: progContext
+    typeChecker [] .program =:: progContext
     progContext .idContext .typeContext =:: typeContext
     typeSet typeContext types.isTypeSet ! if
       false return ## only types can be in type-set
@@ -554,6 +489,8 @@ namespace: interpreter
       true return ## TODO! temporary fix, allow generics to match type-set checks
     end
     typeSet typeContext types.getTypeSetEntries =:: entries
+    typeChecker .interpreter =:: context
+    ## TODO! rewrite type-check set to use new constant call-evaluation code
     context [] .currentFile =:: prevFile
     entries for =:: e
       e switch
@@ -576,7 +513,7 @@ namespace: interpreter
         arg@ 1 slice.create
         stringBuilder ptr.mut optional.empty
         pos
-        context
+        typeChecker
       resolveCall
         =:: calledType
         ..drop ## callProcId
@@ -1407,65 +1344,9 @@ proc(
       idInfo .labelId =:: label
       idInfo .idType switch
         PROCEDURE PROCEDURE_BUNDLE case
-          label idContext id.getIdentifier if ..drop
-            "could not find " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end =:: idData
-          idData .constValue .?ProcedureBundle .if [] =:: bundleId
-            program [] .procBundles
-              bundleId i64 cast list.at .data [] .procedures
-            list.asSlice
-          else .?Procedure ._if
-            slice.wrap
-          else
-            "unexpected value for procedure constant: " sb.copyPtr
-              >$ [] typeContext sb.appendConstant
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end =:: procedures
-          context [] .stack .length StackValue list.create =:: mut: stackValues
-          context [] .stack .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
-            stackValues
-              ## StackValue
-                context [] .stackInfo i list.at .data [] .valueType
-                context [] .stack i list.at .data []
-              StackValue new list.append
-            stackValues=
-          finally i 1:iSize - end ..drop
-          ## resolve correct call for given arguments
-          0 sb.create =:: mut: message
-          ## resolveCall
-            procedures
-            stackValues list.asSlice
-            message@ optional.wrap
-            op [] .pos
-            context
-          resolveCall =:: calledType
-            ..drop ## callProcId
-          =:: calledProc?
-          message .length 0:iSize != if
-            calledProc? optional.isEmpty if
-              message op [] .pos errors appendError
-            else
-              message op [] .pos errors appendInfo
-            end
-            EvalResult .Error return
-          end
-          message sb.free ..drop
-          stackValues list.free ..drop
-          calledProc? .data =:: calledProc
-          calledProc .procId =:: procId
-          program [] .procedures
-            calledProc .procId i64 cast list.at .data
-          =:: calledProcData
-          procId
-            calledProc .implementationId
-            calledType
-            calledProc .autoArgs
-            true
-          op [] .pos context interpreter.evaluateCall wrapResult return
+          "unresolved call " sb.copyPtr
+          op [] .pos errors appendError
+          EvalResult .Error return
         LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
           context [] .localVariables optional.isEmpty if
             "missing local variables " sb.copyPtr
@@ -2639,32 +2520,6 @@ namespace: interpreter
     end
     context [] .stack .length nArgs - =:: argsOffset
     procData [] .labelId =:: procName
-    procType typeContext types.isTypeGeneratorProc if
-      implId 0 >= if
-        codeImpl [] .implementations
-          implId list.at .data
-        [] .staticArgs
-      else
-        context [] .stack list.asSlice argsOffset slice.tail
-      end =:: typeArgs
-      ## findGeneratedType
-        procName
-        typeArgs
-        true
-        typeContext
-        constContext
-      types.findGeneratedType .?Stored .if =:: genType
-        argsOffset context truncateStack
-        ## pushValue
-          genType ConstValue .TypeId
-          types.primitive.TYPE
-          pos
-        context pushValue
-        false return
-        ## TODO reuse value of type-generator
-      else ..drop end
-      true
-    else false end =:: isTypeGenerator
     procName labelContext id.labelFlags id.FLAG_EXTERN & ? and
         codeImpl [] .codeState .PARSING if
       procName args pos context evaluateExternCall return
@@ -2763,11 +2618,6 @@ namespace: interpreter
       context [] .stackInfo argOffset [] =:: valueInfo
       value .?GenericArg .if =:: genericValue
         true hasGenericArg=
-        isTypeGenerator and
-            genericValue labelContext id.labelFlags id.FLAG_STATIC & ? ! if
-          "Arguments for Type-generators should be static" sb.copyPtr
-          valueInfo .pushedAt errors appendError
-        end
       else .?TypeId .and typeContext types.isGeneric _if
         true hasGenericArg=
       end
@@ -2794,34 +2644,6 @@ namespace: interpreter
     finally
       i 1 +
     end ..drop
-    ## don't evaluate type-generator for generic arguments
-    isTypeGenerator and hasGenericArg if
-      implId 0 >= if
-        codeImpl [] .implementations
-          implId list.at .data
-        [] .staticArgs
-      else
-        context [] .stack argsOffset nArgs list.getSlice
-      end =:: typeArgs
-      ## initializeGeneratedType
-        procName
-        typeArgs
-        Type .Undefined
-        typeContext
-        constContext
-      types.initializeGeneratedType =:: generatorType
-      context resetContext
-      argsOffset context truncateStack
-      ## pushValue
-        generatorType ConstValue .TypeId
-        types.primitive.TYPE
-        pos
-      context pushValue
-      context [] .localVariables .data map.free
-      prevVariables context .localVariables=
-      context [] .localMemory offset mixedArena.reset context .localMemory=
-      false return
-    end
     implId 0 >= if
       codeImpl [] .implementations
         implId list.at .data
@@ -2950,41 +2772,6 @@ namespace: interpreter
     context [] .localMemory
       offset mixedArena.reset
     context .localMemory=
-    isTypeGenerator if
-      context [] .stack .length 1:iSize u< if
-        "could not initalized type generator " sb.copyPtr
-          procName labelContext sb.appendLabelPath
-        pos errors appendError
-        true return
-      end
-      context [] .stack
-        list.pop .?TypeId .else =:: retValue ..drop
-          "could not initalized type generator " sb.copyPtr
-            procName labelContext sb.appendLabelPath
-            " expected type got " sb.appendS
-            retValue typeContext sb.appendConstant
-          pos errors appendError
-          true return
-        end =:: generatedType
-      context .stack=
-      implId 0 >= if
-        procData .implementation .Code [] .implementations
-          implId list.at .data
-        [] .staticArgs
-      else
-        context [] .stack argsOffset nArgs list.getSlice
-      end =:: typeArgs
-      ## initializeGeneratedType
-        procName
-        typeArgs
-        generatedType
-        typeContext
-        constContext
-      types.initializeGeneratedType =:: generatorType
-      context [] .stack
-        generatorType ConstValue .TypeId list.append
-      context .stack=
-    end
     oldFile context .currentFile=
     context [] .stack .length stackOffset - =:: nReturn
     ## mem.copy
