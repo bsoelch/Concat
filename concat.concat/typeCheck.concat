@@ -1273,6 +1273,7 @@ proc(
     args argCount @[] =:: arg
     argCount 1 + argCount=
     arg [] .valType typeContext types.isEmpty or isCodeImpl and arg [] .valType typeContext types.isType if
+      continue
     end
     arg [] .valType argType types.typeEquals if
       continue
@@ -1494,7 +1495,7 @@ proc(
   inTypes .length i32 cast.u =:: argCount
   ## restrict stackValues to acually consumed stack arguments
   stackValues .length
-    argCount iSize cast.u calledProc .autoArgs .length - iSize.min
+    argCount iSize cast.u iSize.min
   stackValues@ .length=
   source .?Values ? or state isGlobal
       program [] .procedures

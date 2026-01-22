@@ -1,4 +1,4 @@
-( i32 : a -> type ) =>: test i32 end
+( i32 : static: a -> type ) =>: test i32 end
 proc( i32 : static: auto: a  a test -> a test ) =>: id end
 
 proc( -> ) =>: main
