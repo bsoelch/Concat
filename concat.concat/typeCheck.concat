@@ -1402,6 +1402,25 @@ proc(
     state [] .constBuffer
       constOffset list.setLength
     state .constBuffer=
+    source switch
+      Op case
+        ## pushConstant
+          genericType ConstValue .TypeId
+          types.primitive.TYPE
+          pos
+        state pushConstant
+      break
+      Values .case =:: target
+        target []
+          ## StackValue
+            types.primitive.TYPE
+            genericType ConstValue .TypeId
+          StackValue new list.append
+        target =[]
+      break
+    end
+    interpreter interpreter.resetContext
+    EvalResult .SUCCESS return
   end
   ##  -> store computed constants
   offset while $ interpreter [] .stack .length u< do =:: i
@@ -1412,7 +1431,7 @@ proc(
         ## pushConstant
           constant  []
           constInfo [] .valueType
-          constInfo [] .pushedAt
+          pos
         state pushConstant
       break
       Values .case =:: target
