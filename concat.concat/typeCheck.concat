@@ -1375,7 +1375,6 @@ proc(
     calledProc .implementationId
     calledType
     calledProc .autoArgs
-    false
     pos
     interpreter
   interpreter.evaluateCall if
@@ -3047,68 +3046,7 @@ proc(
             continue.opLoop
         end
         break
-      ImplementProcedure .case =:: implementProcedure
-        "is this reachable" ..panic ## TODO! remove if unreachable
-        op .dataType
-          $ .?Undefined ? if ..drop
-            program [] .procedures
-              implementProcedure .procId i64 cast
-            list.at .data =:: procData
-            procData [] .procType
-            $ op@ .dataType=
-          end
-        =:: procType
-        op state appendOp ..drop
-        ## procedure scope is handled by typeCheckProcedure
-        procType BlockInfo .Procedure state openBlock
-        true state .reachable=
-        procType typeContext types.getProcIn $ ? if .data else ..drop
-          "wrong type for procedure initialization: " sb.copyPtr
-            procType typeContext sb.appendType
-            " expected procedure" sb.appendS
-          op .pos errors appendError
-          continue.opLoop
-        end =:: argTypes
-        ## push unnamed arguments
-        0:i32 while $ iSize cast.u argTypes .length u< do =:: i
-          procType i typeContext types.getProcArgLabel =:: label
-          argTypes i [] =:: argType
-          label id.LABEL_ID_NONE == if ## push argument
-            state .stack
-              ## TypeInfo
-                argType
-                $ typeContext types.isType and
-                    state .argData -2 i - LabelId cast map.get .if
-                  .value
-                  op .pos
-                  $1 argType op .pos opConst state appendOp
-                else
-                  ConstValue .None
-                  op .pos
-                  OP_ARGUMENT
-                end
-              TypeInfo new
-            branchTree.push
-          else
-            label
-              argType
-              IdentifierType .ARGUMENT
-              i i32 cast ## index
-              ConstValue .None
-              true
-              op .pos
-              state [] .currentFile
-              idContext
-              errors
-            id.declareIdentifier if
-              "could not declare identifier for argument " sb.copyPtr
-                label labelContext sb.appendLabelName
-              op .pos errors appendError
-            end ..drop.2
-          end
-          i 1 +
-        end ..drop
-        continue.opLoop
+      ImplementProcedure case break
       GetElement GetUnionElement SetElement .case =:: index
         op .val .?SetElement ? =:: isWrite
         op .val .?GetUnionElement ? =:: isUnionGet

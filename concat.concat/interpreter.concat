@@ -531,7 +531,6 @@ namespace: interpreter
         callInfo .implementationId
         calledType
         callInfo .autoArgs
-        false
       pos context evaluateCall if
         ## TODO? ignore errors produced by call
         continue
@@ -1517,7 +1516,6 @@ proc(
         callInfo .implementationId
         op [] .dataType
         callInfo program getCallData [] .autoArgs
-        false
       op [] .pos context interpreter.evaluateCall wrapResult return
     InitializeId AutoTypedInitializeId .case =:: idInfo
       idInfo .labelId =:: label
@@ -2460,7 +2458,6 @@ namespace: interpreter
     i32 : implId
     Type : calledType
     ConstValue slice : autoArgs
-    bool : consumeStaticArgs
     FilePosition : pos
     InterpreterContext ptr.mut : context
   ->
@@ -2488,9 +2485,7 @@ namespace: interpreter
         end
       end
     =:: nStaticArgs
-    args .length autoArgs .length -
-      consumeStaticArgs ! if nStaticArgs - end
-    =:: nArgs
+    args .length autoArgs .length - nStaticArgs - =:: nArgs
     procData .implementation .?BuiltIn .if =:: builtInImpl
       implId -1:i32 != if
         "generic built-ins are not supported" sb.copyPtr
@@ -2579,7 +2574,7 @@ namespace: interpreter
         end
         continue
       end
-      consumeStaticArgs ! and labelFlags id.FLAG_STATIC & ? or
+      labelFlags id.FLAG_STATIC & ? or
           args i [] typeContext types.isType if
         implId 0 >= "implId is not negative" assert
         codeImpl [] .implementations
