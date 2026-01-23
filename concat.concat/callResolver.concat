@@ -318,6 +318,8 @@ proc(
           argOffset list.setLength
         argBuffer =[]
       return
+    SetType case "unimplemented: replaceGenerics for set-type" ..panic
+    RefinementType case "unimplemented: replaceGenerics for refinement-type" ..panic
     Undefined Empty PrimitiveType CType IntLiteral Align TypeSet case
       ..unreachable ## type should not contain generics
   end
@@ -627,6 +629,8 @@ proc(
         else ..drop end
       end
       false return
+    SetType case "unimplemented: resolveGenerics for set-type" ..panic
+    RefinementType case "unimplemented: resolveGenerics for refinement-type" ..panic
     Undefined Empty PrimitiveType CType IntLiteral Align TypeSet case
       ..unreachable ## type should not contain generics
   end
@@ -652,6 +656,9 @@ This is mainly to prioritize functions acting on smaller number types over large
 +#
 proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
   t typeContext types.isEmpty if
+    0 return
+  end
+  t typeContext types.isSetType if
     0 return
   end
   t typeContext types.unwrapNamed types.isPrimitive if
@@ -680,6 +687,9 @@ proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
   end
   t typeContext types.isTypeSet if
     types.primitive.TYPE typeContext computeTypeWeigth 1 - return
+  end
+  t typeContext types.isRefinementType if
+    t typeContext types.getBaseType typeContext computeTypeWeigth 1 - return
   end
   32 return
 end
@@ -860,6 +870,7 @@ proc(
             Value case autoValue .Value break
             NonEmpty case ..unreachable
           end =:: value
+          ## TODO! switch to general type-refinements
           paramType typeContext types.isTypeSet and
               value [] paramType pos typeChecker interpreter.checkTypeSet ! if
             false current .argsMatch=

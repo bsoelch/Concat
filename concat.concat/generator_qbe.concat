@@ -174,6 +174,8 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       ValType .PTR return
     Procedure ArrayType Struct Union RawUnion UnionElement Enum Initializer case
       ValType .REFERENCE return
+    SetType RefinementType case
+      t typeContext types.getBaseType context toValType return
     Undefined Empty GenericType Align TypeSet case
       ValType .EMPTY return
   end
@@ -611,12 +613,12 @@ namespace: sb
         sb
           t typeContext types.unwrapNamed storeType pos context
         appendTypeNameQBE
-        return
+      return
       GeneratedType case
         sb
           t typeContext types.getGeneratedType storeType pos context
         appendTypeNameQBE
-        return
+      return
       PrimitiveType .case =:: primtive
         primtive switch
           TYPE case sb ":type" sb.appendS return break
@@ -678,6 +680,11 @@ namespace: sb
       Enum case
         sb t "enum":s storeType .STACK ! context appendCompositeTypeQBE return
         break
+      SetType RefinementType case
+        sb
+          t typeContext types.getBaseType storeType pos context
+        appendTypeNameQBE
+      return
       Undefined Empty GenericType Initializer Align TypeSet case
         break
     end

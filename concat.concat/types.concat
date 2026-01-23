@@ -27,6 +27,8 @@ namespace: types
   type : ProcType
   type : GeneratedTypeName
   type : export: TypeSet
+  type : SetType
+  type : RefinementType
   ArrayData ptr =:: ArrayId
   TupleInfo ptr.mut =:: TupleId
   UnionInfo ptr.mut =:: UnionId
@@ -36,6 +38,8 @@ namespace: types
   ProcType ptr =:: ProcTypeId
   GeneratedTypeName ptr =:: GeneratedTypeId
   TypeSet ptr =:: export: TypeSetId
+  SetType ptr =:: export: SetTypeId
+  RefinementType ptr =:: export: RefinementTypeId
   ## primitive C-types for C interoperability
   enum(
     VOID BOOL
@@ -105,6 +109,8 @@ union(
     types.InitializerId : Initializer
        types.ProcTypeId : Procedure
         types.TypeSetId : TypeSet
+        types.SetTypeId : SetType
+ types.RefinementTypeId : RefinementType
                 LabelId : GenericType
                 LabelId : NamedType
   types.GeneratedTypeId : GeneratedType
@@ -146,6 +152,7 @@ namespace: types
       31 * a [] .elements typeHash@ slice.hash +
     return
   end
+  ## TODO do these procs need to be exported?
   proc( TupleId : a TupleId : b -> bool ) =>: export: tupleTypeEqual
     a b == if true return end
     a TupleInfo ptr cast =:: aData
@@ -237,6 +244,32 @@ namespace: types
   proc( GeneratedTypeId : a -> i32 ) =>: export: generatedTypeHash
     a GeneratedTypeName ptr cast [] genNameHash
   end
+  proc( SetTypeId : a SetTypeId : b -> bool ) =>: setTypeEq
+    a b == if true return end
+    a SetType ptr cast =:: aData
+    b SetType ptr cast =:: bData
+    aData [] .baseType bData [] .baseType typeEquals ! if false return end
+    aData [] .elements bData [] .elements constantEquals@ slice.eq return
+  end
+  proc( SetTypeId : a -> i32 ) =>: setTypeHash
+    a SetType ptr cast =:: aData
+    aData [] .baseType typeHash
+      31 * aData [] .elements constantHash@ slice.hash +
+    return
+  end
+  proc( RefinementTypeId : a RefinementTypeId : b -> bool ) =>: refinementTypeEq
+    a b == if true return end
+    a RefinementType ptr cast =:: aData
+    b RefinementType ptr cast =:: bData
+    aData [] .typeTrait bData [] .typeTrait != if false return end
+    aData [] .baseType bData [] .baseType typeEquals return
+  end
+  proc( RefinementTypeId : a -> i32 ) =>: refinementTypeHash
+    a RefinementType ptr cast =:: aData
+    aData [] .baseType typeHash
+      31 * aData [] .typeTrait i32 cast.u +
+    return
+  end
   proc( Type : a Type : b -> bool ) =>: export: typeEquals
     a ..label b ..label != if
       false return
@@ -285,6 +318,14 @@ namespace: types
       TypeSet  case
         a .TypeSet  b .TypeSet  == or
           a .TypeSet  TypeSet ptr cast [] b .TypeSet  TypeSet ptr cast [] typeSetEqual
+        end return
+      SetType case
+        a .SetType  b .SetType  == or
+          a .SetType b .SetType setTypeEq
+        end return
+      RefinementType case
+        a .RefinementType  b .RefinementType  == or
+          a .RefinementType b .RefinementType refinementTypeEq
         end return
     end
   end
@@ -392,6 +433,10 @@ namespace: types
         67 a .UnionElement unionElementHash * return
       RawUnion case
         71 a .RawUnion unionTypeHash * return
+      SetType  case
+        73 a .SetType setTypeHash * return
+      RefinementType  case
+        79 a .RefinementType refinementTypeHash * return
     end
   end
 end
@@ -453,7 +498,8 @@ namespace: types
          t context getBaseType context isEmpty return
        Undefined PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer
          NamedType GenericType IntLiteral UnionElement
-         GeneratedType Enum TypeSet  case false return
+         GeneratedType Enum TypeSet RefinementType case false return
+       SetType .case .elements [] .length 0 == return
        Struct Union Initializer RawUnion case ## TODO can labeled union be empty?
          t context compositeFlags COMP_FLAG_EMPTY & ? return
     end
@@ -588,7 +634,7 @@ namespace: types
            Undefined PrimitiveType Procedure  CType Pointer
            NamedType GenericType RawPointer
            GeneratedType Enum Align MutablePointer MutableRawPointer
-           Struct Union TypeSet  case
+           Struct Union TypeSet SetType RefinementType case
          false return
     end
   end
@@ -628,7 +674,7 @@ namespace: types
            Undefined  PrimitiveType Procedure CType Pointer
            NamedType GenericType RawPointer
            GeneratedType Enum Align MutablePointer MutableRawPointer
-           Struct Union TypeSet  case
+           Struct Union TypeSet SetType RefinementType case
          t return
     end
   end
@@ -888,14 +934,14 @@ namespace: types
         typeContext tryComputeTupleSize return
       Undefined Empty GenericType RawPointer MutableRawPointer
       PrimitiveType IntLiteral CType ArrayType Enum UnionElement
-      Pointer MutablePointer Procedure Align TypeSet
+      Pointer MutablePointer Procedure Align TypeSet SetType RefinementType
       NamedType GeneratedType case ..unreachable ## XXX? use assertion
     end
   end
   ## alignment of type in bytes, will be a power of two
   proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: alignOf
     t switch
-      Undefined GenericType TypeSet  case
+      Undefined GenericType TypeSet case
         TypeSize .Unknown return
       Empty  case
         1 TypeSize .Fixed return
@@ -923,6 +969,10 @@ namespace: types
         t context unwrapNamed context alignOf return
       GeneratedType case
         t context getGeneratedType context alignOf return
+      SetType .case
+        .baseType [] context alignOf return
+      RefinementType .case
+        .baseType [] context alignOf return
     end
   end
   ## return next multiple of a >= s, assumes that a is a power of 2
@@ -982,6 +1032,10 @@ namespace: types
         t context unwrapNamed aligned context computeSize return
       GeneratedType case
         t context getGeneratedType aligned context computeSize return
+      SetType .case
+        .baseType [] aligned context computeSize return
+      RefinementType .case
+        .baseType [] aligned context computeSize return
     end
   end
   ## size of value in bytes
@@ -1047,6 +1101,8 @@ namespace: types
     box context unwrapNamed switch
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
         ArrayData ptr cast [] .base return
+      SetType .case .baseType [] return
+      RefinementType .case .baseType [] return
       default Type .Undefined  return
     end
   end
@@ -1206,15 +1262,17 @@ namespace: types
     Type : base
     i32  : labelIndex
   ) =:: UnionElementInfo
-  proc( Type TypeContext ptr -> bool ) =>: export: isComposite
-    unwrapNamed
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isComposite
+    context unwrapNamed
     switch
       Enum Struct Union RawUnion Initializer UnionElement case
         true return
       Undefined Empty PrimitiveType Pointer MutablePointer ArrayType Procedure
         NamedType GenericType GeneratedType IntLiteral Align
-        CType RawPointer MutableRawPointer TypeSet  case
+        CType RawPointer MutableRawPointer TypeSet case
         false return
+      SetType .case .baseType [] context isComposite return
+      RefinementType .case .baseType [] context isComposite return
     end
   end
   ## TODO: rename all uses of Tuple to Struct (Tuple and Struct are the same)
@@ -1239,6 +1297,8 @@ namespace: types
        NamedType GenericType GeneratedType IntLiteral Initializer RawPointer
        CType Align TypeSet MutablePointer MutableRawPointer UnionElement case
          false return
+      SetType .case .baseType [] typeContext isEnumOrTaggedUnion return
+      RefinementType .case .baseType [] typeContext isEnumOrTaggedUnion return
     end
   end
   proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isRawUnion
@@ -1265,6 +1325,8 @@ namespace: types
          NamedType GenericType GeneratedType IntLiteral Align
          CType RawPointer TypeSet  MutablePointer MutableRawPointer case
           CompositeData .None return
+        SetType .case .baseType [] context compositeData return
+        RefinementType .case .baseType [] context compositeData return
       end
   end
   proc( Type : composite TypeContext ptr : context -> i32 ) =>: export: compositeEltCount
@@ -1321,12 +1383,14 @@ namespace: types
     i32 : index
     TypeContext ptr.mut : typeContext
   -> i64 optional ) =>: export: tupleElementOffset
-    tuple typeContext unwrapNamed ..dup switch
-      Struct case .Struct break
+    tuple typeContext unwrapNamed switch
+      Struct .case break
       Enum Union RawUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
        NamedType GenericType GeneratedType IntLiteral Initializer Align
-       CType RawPointer MutablePointer MutableRawPointer TypeSet  case ..drop
+       CType RawPointer MutablePointer MutableRawPointer TypeSet case
          i64 optional.empty return
+       SetType .case .baseType [] index typeContext tupleElementOffset return
+       RefinementType .case .baseType [] index typeContext tupleElementOffset return
     end =:: tupleId
     tuple tupleId typeContext tryComputeTupleSize if
       i64 optional.empty return
@@ -1349,6 +1413,8 @@ namespace: types
        NamedType GenericType GeneratedType IntLiteral Initializer Align
        CType RawPointer MutablePointer MutableRawPointer TypeSet  case
          Type .Empty i64 optional.empty return
+       SetType .case .baseType [] typeContext enumLabelInfo return
+       RefinementType .case .baseType [] typeContext enumLabelInfo return
     end =:: unionId
     enum unionId typeContext tryComputeUnionSize =:: isError
     unionId UnionInfo ptr cast =:: unionInfo
@@ -2084,10 +2150,76 @@ namespace: types
   proc( Type TypeContext ptr : context -> bool ) =>: export: isTypeSet
     context unwrapNamed .?TypeSet ? return
   end
+
+  struct(
+    Type : baseType
+    ConstValue slice : elements
+  ) =:: SetType
+  struct(
+    Type : baseType
+    ProcId : typeTrait
+  ) =:: RefinementType
+  proc(
+    Type : baseType
+    ConstValue slice : elements
+    TypeContext ptr.mut : context
+  -> Type ) =>: export: newSetType
+    ## TODO? check if set-type contains duplicate values
+    ## TODO? sort elements
+    context [] .memory
+      ## TODO: is shallow copy of type-elements save
+      elements mixedArena.copySlice =:: sliceElements
+      baseType sliceElements slice.freeze SetType new mixedArena.copyValue =:: setType
+    context .memory=
+    setType SetTypeId cast Type .SetType  return
+  end
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isSetType
+    context unwrapNamed .?SetType ? return
+  end
+  proc( Type : t TypeContext ptr : context -> ConstValue slice ) =>: export: getSetTypeEntries
+    t context unwrapNamed
+      .?SetType  .else ..drop
+        ConstValue slice.empty return
+      end
+    SetType ptr cast [] .elements return
+  end
+  proc(
+    Type : baseType
+    ProcId : typeTrait
+    TypeContext ptr.mut : context
+  -> Type ) =>: export: newRefinementType
+    context [] .memory
+      baseType typeTrait RefinementType new mixedArena.copyValue =:: refType
+    context .memory=
+    refType RefinementTypeId cast Type .RefinementType  return
+  end
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isRefinementType
+    context unwrapNamed .?RefinementType ? return
+  end
+  proc( Type TypeContext ptr : context -> ProcId optional ) =>: export: getTypeTrait
+    context unwrapNamed
+      .?RefinementType  .else ..drop
+        ProcId optional.empty return
+      end
+    RefinementType ptr cast [] .typeTrait optional.wrap return
+  end
+  ## is this type a refinement of type TYPE-type
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isTypeRefinement ## TODO? better name
+    context unwrapNamed
+      .?SetType .if
+        .baseType [] context isType
+      else .?RefinementType ._if
+        .baseType [] context isType
+      else .?TypeSet ? _if
+        true
+      else false end
+    return
+  end
+
   ## TODO? better name "is this type a type" sounds weird
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isType
     t context unwrapNamed =:: baseType
-    baseType .?TypeSet ? or baseType primitive.TYPE typeEquals end return
+    baseType primitive.TYPE typeEquals or baseType context isTypeRefinement end return
   end
   proc( Type : t TypeContext ptr : context -> TypeSetEntry slice ) =>: export: getTypeSetEntries
     t context unwrapNamed
@@ -2150,6 +2282,17 @@ namespace: types
         t context unwrapNamed context containsGeneric return
       GenericType case
         true return
+      SetType .case =:: setTypeId
+        setTypeId .baseType [] context containsGeneric if
+          true return
+        end
+        setTypeId .elements [] for =:: elt
+          elt .?GenericArg ? if true return end
+          elt .?TypeId .and context containsGeneric if true return end
+        end
+        ## TODO? cache result in type-data
+      false return
+      RefinementType .case .baseType [] context containsGeneric return
     end
   end
 
@@ -2806,7 +2949,7 @@ namespace: sb
           "..type.align" sb.appendS
           t .Align sb.appendI
         return
-      TypeSet  case
+      TypeSet case
         sb
           "typeSet( " sb.appendS
           depth 0 >= if
@@ -2820,6 +2963,35 @@ namespace: sb
                   ## TODO? print procedure name
                   break
               end
+            end
+          else t context types.getTypeSetEntries .length 0:iSize != _if
+            "..." sb.appendS
+          end
+          " )" sb.appendS
+        return
+      SetType case
+        sb
+          "oneOf( " sb.appendS
+          depth 0 >= if
+            t context types.getSetTypeEntries for
+              context sb.appendConstant ## TODO! find way to preserve recursion depth through mutual call
+              ' ' sb.appendC
+            end
+          else t context types.getTypeSetEntries .length 0:iSize != _if
+            "..." sb.appendS
+          end
+          " )" sb.appendS
+        return
+      RefinementType case
+        sb
+          t context types.getBaseType context depth 1 - appendTypeRecursive
+          " .with( " sb.appendS
+          depth 0 >= if
+            t context types.getTypeTrait .if
+              i64 cast sb.appendI
+              ":ProcId" sb.appendS
+            else
+              '?' sb.appendC
             end
           else t context types.getTypeSetEntries .length 0:iSize != _if
             "..." sb.appendS

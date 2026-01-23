@@ -618,6 +618,8 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       size 16 <= "values larger than 128 bits are pased by reference" assert
       ## TODO! treat small unions as values
       ValType .REFERENCE return
+    SetType RefinementType case
+      dataType typeContext types.getBaseType typeContext toValType return
     Undefined Empty GenericType Procedure
     Align TypeSet Initializer case
       ValType .EMPTY return
