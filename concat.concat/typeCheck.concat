@@ -2236,8 +2236,8 @@ proc(
   end
   state .stack oldBranch branchTree.reset ..drop
   state removeTrailingNOPs
-  commonType .and typeContext types.isType if
-    state [] .constBuffer constOffset list.tail =:: elements
+  state [] .constBuffer constOffset list.tail =:: elements
+  commonType .and typeContext types.isType and _EXPERIMENTAL_ ! if
     elements .length types.TypeSetEntry list.create
       elements for
         .?TypeId .else ..drop.2
@@ -2250,8 +2250,10 @@ proc(
         $1 list.asSlice
       typeContext types.newTypeSet <$
     list.free ..drop
+  else commonType ._if
+    elements typeContext types.newSetType
   else
-    "(currently) only types are allowed within set-types" sb.copyPtr pos errors appendError
+    "the elements of a set-type have to have the same type" sb.copyPtr pos errors appendError
     Type .Undefined
   end ConstValue .TypeId types.primitive.TYPE pos state pushConstant
   state [] .constBuffer

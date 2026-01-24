@@ -1637,7 +1637,7 @@ proc(
         value valInfo elementIndex op [] .pos context setElement wrapResult return
       end
       value valInfo elementIndex op [] .pos context getElement wrapResult return
-    GetUnionElement case "unimplemented" ..panic
+    GetUnionElement case "unimplemented: get union element" ..panic
     GetElement SetElement SetEnumElement .case =:: eltIndex
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
