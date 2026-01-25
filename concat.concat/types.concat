@@ -2545,8 +2545,15 @@ namespace: types
     src target types.typeEquals if
       true return
     end
-    src context types.isType and target context types.isType if
-      true return ## allow automatic conversions between different version of "type"-types
+    src context types.isSetOrRefinementType and src context unwrapRefinement target typeEquals if
+      true return ## allow automatic conversions from type-refinement to base-type
+    end
+    ## TODO allow implicit conversion type-set to superset (? allow conversion to refinement matching for all elements)
+    src context types.isTypeSet and target context types.isTypeSet or target types.primitive.TYPE typeEquals if
+      true return ## allow automatic conversions between type and type-sets
+    end
+    target context types.isTypeSet and src context types.isTypeSet or src types.primitive.TYPE typeEquals if
+      true return ## allow automatic conversions between type and type-sets
     end
     src .?Initializer ? if
       src target context canAutoCastInitializer return
