@@ -30,6 +30,7 @@ struct(
   ParameterInfo list : paramInfo
   LabelId GenericArg hashMap : genericValues
   i32 : nEmpty
+  i32 : nRefines
   i32 : nRenames
   i32 : nCasts
   i32 : nGenerics
@@ -688,8 +689,8 @@ proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
   t typeContext types.isTypeSet if
     types.primitive.TYPE typeContext computeTypeWeigth 1 - return
   end
-  t typeContext types.isRefinementType if
-    t typeContext types.unwrapRefinement typeContext computeTypeWeigth 1 - return
+  t typeContext types.isSetOrRefinementType if
+    t typeContext types.unwrapRefinement typeContext computeTypeWeigth return
   end
   32 return
 end
@@ -731,6 +732,10 @@ proc(
   a .nGenerics b .nGenerics != if
     ## prefer less generics
     a .nGenerics b .nGenerics < if -1  else 1 end return
+  end
+  a .nRefines b .nRefines != if
+    ## prefer more refines
+    a .nRefines b .nRefines > if -1  else 1 end return
   end
   a .nRenames b .nRenames != if
     ## prefer less renames
@@ -812,6 +817,7 @@ proc(
         procId
         argCount ParameterInfo list.create
         labelHash@ labelEq@ argCount i32 cast.u GenericArg map.create
+        0
         0
         0
         0
@@ -987,30 +993,33 @@ proc(
         end
       else stackType paramType types.typeEquals _if
         MatchType .MATCH matchType=
-      else stackType paramType typeContext types.canAutoCast or
+      else stackType paramType typeContext types.canAutoCast $ =:: isAutoCast or
           stackType stackVal paramType pos typeChecker typeChecker.canRefineType _if
         MatchType .CAST matchType=
-        stackType =:: mut: fromType
-        ## TODO correctly handle type-refinement in cost-computation (more refined types should be cheaper)
+        isAutoCast ! if
+          current [] .nRefines 1 + current .nRefines=
+        end
+        stackType typeContext types.unwrapRefinement =:: fromType
+        paramType typeContext types.unwrapRefinement =:: toType
         fromType paramType types.typeEquals ! if
           fromType types.isLiteral if
             ## TODO extra casts for more complicated literal conversion
             fromType typeContext types.literalToType =:: valType
-            valType paramType typeContext types.unwrapNamed types.typeEquals ! if
+            valType toType typeContext types.unwrapNamed types.typeEquals ! if
               ## changing literal counts as rename
               current [] .nRenames 1 + current .nRenames=
             end
-            paramType types.isNamedType if
+            toType types.isNamedType if
               ## changing literal to named type counts as 2 renames
               current [] .nRenames 1 + current .nRenames=
             end
             ## no cast for conversion literal -> value-type
-          else paramType typeContext types.isTypeSet and
+          else toType typeContext types.isTypeSet and
               fromType typeContext types.isTypeSet ! _if
             ## converting to type-set is no cast
             ## XXX? remember number of conversions to type-set (more restricted is better)
           else fromType typeContext types.unwrapNamed
-              paramType typeContext types.unwrapNamed
+              toType typeContext types.unwrapNamed
               types.typeEquals _if
             ## same underlying type but different name
             current [] .nRenames 1 + current .nRenames=

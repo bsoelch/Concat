@@ -1,0 +1,9 @@
+oneOf( 1 2 3 ) =:: oneTwoThree
+proc( oneTwoThree -> oneTwoThree ) =>: testA end
+proc( i32 -> i32 ) =>: testB
+  "this procedure should not be called" ..panic
+end
+overload: test testA testB end
+proc( -> ) =>: main
+  1 test =:: one
+end
