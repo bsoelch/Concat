@@ -2,6 +2,6 @@ proc( type : ignore -> bool ) =>: noMatch false end
 proc( type .with( ..types.isPrimitive ) : ignore -> bool ) =>: match true end
 overload: test match noMatch end
 proc( -> ) =>: main
-  i32 test "is is primitive" assert
+  i32 test "i32 is primitive" assert
   i32 ptr test ..builtIn.not.bool "ptr is not primitive" assert
 end

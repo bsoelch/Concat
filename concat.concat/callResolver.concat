@@ -783,6 +783,12 @@ end
 5:iSize =:: MAX_DISPLAY_ARGS_DEFAULT
 5:i32 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
 
+proc( ConstValue TypeContext ptr.mut : typeContext -> ConstValue ) =>: decayLiteralTypeConstant
+  .?TypeId .if
+    typeContext types.literalToType ConstValue .TypeId
+  end
+end
+
 proc(
   ProcId slice : procedureIds
   StackValue slice : stackValues
@@ -872,20 +878,26 @@ proc(
             current .genericValues paramLabel map.at .and =:: autoValue
             autoValue [] .?NonEmpty ? ! _if
           autoValue [] switch
-            Fixed case autoValue .Fixed break
-            Value case autoValue .Value break
+            Fixed case autoValue [] .Fixed break
+            Value case autoValue [] .Value break
             NonEmpty case ..unreachable
           end =:: value
-          ## TODO! switch to general type-refinements
           paramType typeContext types.isTypeSet and
-              value [] paramType pos typeChecker interpreter.checkTypeSet ! if
+              value typeContext decayLiteralTypeConstant
+              paramType pos typeChecker interpreter.checkTypeSet ! if
+            false current .argsMatch=
+          end
+          paramType typeContext types.isSetOrRefinementType and
+              paramType typeContext types.unwrapRefinement
+                value typeContext decayLiteralTypeConstant
+              paramType pos typeChecker typeChecker.canRefineType ! if
             false current .argsMatch=
           end
           ## convert literal types to corresponding base types
-          value [] .?TypeId .and types.isLiteral if
+          value .?TypeId .and types.isLiteral if
             current .genericValues
               paramLabel
-              value [] .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .Fixed
+              value typeContext decayLiteralTypeConstant GenericArg .Fixed
             map.put ..drop
           end
           current [] .paramInfo

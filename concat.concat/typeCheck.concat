@@ -1748,7 +1748,7 @@ namespace: typeChecker
       false return
     end
     ## arg modified by typeCheckCallStackless
-    arg .value .?Bool .or ..drop false end return
+    arg .value .?Bool .else ..drop false end return
   end
 end
 proc(
