@@ -2278,20 +2278,7 @@ proc(
   state .stack oldBranch branchTree.reset ..drop
   state removeTrailingNOPs
   state [] .constBuffer constOffset list.tail =:: elements
-  commonType .and typeContext types.isType and _EXPERIMENTAL_ ! if
-    elements .length types.TypeSetEntry list.create
-      elements for
-        .?TypeId .else ..drop.2
-          "(currently) only types are allowed within set-types" sb.copyPtr
-          pos errors appendError
-          return
-        end types.TypeSetEntry .TypeId list.append
-      end
-      id.LABEL_ID_NONE
-        $1 list.asSlice
-      typeContext types.newTypeSet <$
-    list.free ..drop
-  else commonType ._if
+  commonType .if
     elements typeContext types.newSetType
   else
     "the elements of a set-type have to have the same type" sb.copyPtr pos errors appendError
@@ -3486,19 +3473,10 @@ proc(
           "stack underflow":s op ..line state internalError ..unreachable
         end =:: constVal
         constVal .value .?TypeId .and =:: typeVal
-            typeVal typeContext types.isTypeSet if
-          typeVal typeContext types.getTypeSetEntries for
-            .?TypeId .else ..drop
-              "cannot splat type:" sb.copyPtr
-                typeVal typeContext sb.appendType
-              op .pos errors appendError
-              continue
-            end
-            ## pushConstant
-              ConstValue .TypeId
-              types.primitive.TYPE
-              op .pos
-            state pushConstant
+            typeVal typeContext types.isSetType if
+          typeVal typeContext types.unwrapRefinement =:: baseType
+          typeVal typeContext types.getSetTypeEntries for
+            #+val+# baseType op .pos state pushConstant
           end
           continue.opLoop
         end
