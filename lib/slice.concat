@@ -255,13 +255,26 @@ namespace: slice
     T slice : elts
     T : elt
   -> iSize optional ) =>: export: indexOf
-    0:iSize while ..dup elts .length u< do
-      elts .data ..over [] elt == if
+    0:iSize while $ elts .length u< do
+      elts .data $1 [] elt == if
         optional.wrap return
       end
       1:iSize +
-    end
-    ..drop
+    end ..drop
+    iSize optional.empty return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    T : elt
+    ( T T -> bool ) ptr : fEq
+  -> iSize optional ) =>: export: indexOfEq
+    0:iSize while $ elts .length u< do
+      elts .data $1 [] elt fEq () if
+        optional.wrap return
+      end
+      1:iSize +
+    end ..drop
     iSize optional.empty return
   end
   proc(
@@ -284,6 +297,14 @@ namespace: slice
     T : elt
   -> bool ) =>: export: contains
     elts elt indexOf ? return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    T : elt
+    ( T T -> bool ) ptr : fEq
+  -> bool ) =>: export: containsEq
+    elts elt fEq indexOfEq ? return
   end
 
   proc(
