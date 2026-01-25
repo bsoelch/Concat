@@ -779,6 +779,31 @@ end
 5:i32 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
 
 proc(
+  Type : stackType
+  ConstValue : stackValue
+  Type : paramType
+  TypeCheckState ptr.mut : typeChecker
+-> bool ) =>: canRefineArgument
+  typeChecker [] .program =:: progContext
+  progContext .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  stackValue .?None ? if false return end ## can only refine constants
+  paramType typeContext types.isSetType ! and paramType typeContext types.isRefinementType ! if
+    false return ## target is not an refinement type
+  end
+  paramType typeContext types.getBaseType =:: paramBase
+  stackType
+    $ typeContext types.isRefinementType if typeContext types.getBaseType end
+  paramBase typeContext types.canAutoCast ! if false return end ## base types do not match
+  paramType typeContext types.isSetType if
+    stackValue paramType typeContext types.checkSetType return
+  end
+  paramType typeContext types.getTypeTrait =:: typeTrait
+  ## TODO check refinement type -> pass call onto type-checker
+  false return
+end
+
+proc(
   ProcId slice : procedureIds
   StackValue slice : stackValues
   stringBuilder ptr.mut optional : errorMessage
@@ -932,9 +957,9 @@ proc(
           GenericArg .NonEmpty
         map.put ..drop
       end
+      stackValues stackIndex @[] .value [] =:: stackVal
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? or
           paramType typeContext types.isType if
-        stackValues stackIndex @[] .value [] =:: stackVal
         stackVal .?None ? if
           false current .argsMatch=
         end
@@ -987,12 +1012,14 @@ proc(
         end
       else stackType paramType types.typeEquals _if
         MatchType .MATCH matchType=
-      else stackType paramType typeContext types.canAutoCast _if
+      else stackType paramType typeContext types.canAutoCast or
+          stackType stackVal paramType typeChecker canRefineArgument _if
         MatchType .CAST matchType=
         stackType =:: mut: fromType
-        ## TODO extra casts for more complicated literal conversion
+        ## TODO correctly handle type-refinement in cost-computation (more refined types should be cheaper)
         fromType paramType types.typeEquals ! if
           fromType types.isLiteral if
+            ## TODO extra casts for more complicated literal conversion
             fromType typeContext types.literalToType =:: valType
             valType paramType typeContext types.unwrapNamed types.typeEquals ! if
               ## changing literal counts as rename

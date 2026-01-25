@@ -2183,6 +2183,13 @@ namespace: types
       end
     SetType ptr cast [] .elements return
   end
+  proc( ConstValue : val Type : t TypeContext ptr : context -> bool ) =>: export: checkSetType
+    t context unwrapNamed
+      .?SetType  .else ..drop
+        false return
+      end
+    SetType ptr cast [] .elements val constantEquals@ slice.containsEq return
+  end
   proc(
     Type : baseType
     ProcId : typeTrait
