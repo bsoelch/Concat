@@ -396,7 +396,7 @@ end
 
 proc(
   TypeInfo : src
-  Type : target
+  Type : mut: target
   SignType : signType
   FilePosition : pos
   TypeCheckState ptr.mut : state
@@ -413,6 +413,7 @@ proc(
   srcOp [] .val .?Constant ? ! if
     true return
   end
+  target typeContext types.unwrapRefinement target=
   ## TODO? completely merge with interpreter.castConstant
   ## casting between integer constants
   target typeContext types.isNumber and src .value .?Int ? or src .value .?Float ? if
@@ -494,10 +495,8 @@ proc(
     typeInfo .valueType typeContext types.isEmpty and expectedType typeContext types.isEmpty if
       i 1:iSize + continue
     end
-    ## canAutoCast
-      typeInfo .valueType
-      expectedType
-    typeContext types.canAutoCast if
+    typeInfo .valueType expectedType typeContext types.canAutoCast or
+        typeInfo .valueType typeInfo .value expectedType pos state typeChecker.canRefineType if
       typeInfo expectedType SignType .NONE pos state tryCastConstant ! if
         ## update constant value
         popConstants and isConstant and state [] .compiledOps typeInfo .opIndex list.at .and
@@ -1708,6 +1707,48 @@ namespace: typeChecker
       Stored case .Stored optional.wrap break
       Created case ..unreachable
     end return
+  end
+  proc(
+    Type : stackType
+    ConstValue : stackValue
+    Type : paramType
+    FilePosition : pos
+    TypeCheckState ptr.mut : state
+  -> bool ) =>: export: canRefineType
+    state [] .program =:: progContext
+    progContext .idContext =:: idContext
+    idContext .typeContext =:: typeContext
+    stackValue .?None ? if false return end ## can only refine constants
+    paramType typeContext types.isSetOrRefinementType ! if
+      false return ## target is not an refinement type
+    end
+    paramType typeContext types.unwrapRefinement =:: paramBase
+    stackType
+      typeContext types.unwrapRefinement
+    paramBase typeContext types.canAutoCast ! if false return end ## base types do not match
+    paramType typeContext types.isSetType if
+      stackValue paramType typeContext types.checkSetType return
+    end
+    ## StackValue
+      stackType
+      stackValue
+    StackValue new =:: mut: arg
+    arg@ list.wrapBuffer =:: mut: stackValues
+    paramType typeContext types.getTypeTrait .else
+      false return
+    end =:: typeTrait
+    ## typeCheckCallStackless
+      typeTrait@ slice.wrap
+      arg@ slice.wrapMutable
+      true
+      stackValues@ CallSource .Values
+      pos
+      state
+    typeCheckCallStackless .?ConstEval ? ! if
+      false return
+    end
+    ## arg modified by typeCheckCallStackless
+    arg .value .?Bool .or ..drop false end return
   end
 end
 proc(

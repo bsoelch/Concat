@@ -175,7 +175,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     Procedure ArrayType Struct Union RawUnion UnionElement Enum Initializer case
       ValType .REFERENCE return
     SetType RefinementType case
-      t typeContext types.getBaseType context toValType return
+      t typeContext types.unwrapRefinement context toValType return
     Undefined Empty GenericType Align TypeSet case
       ValType .EMPTY return
   end
@@ -275,6 +275,7 @@ proc( Type : t CompilerContext ptr.mut : context -> bool ) =>: referenceOnly
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
   t typeContext types.unwrapNamed
+    typeContext types.unwrapRefinement
     .?CType .if types.cTypeAsType else
     .?IntLiteral ._if types.intLiteralAsInt end
   =:: baseType
@@ -682,7 +683,7 @@ namespace: sb
         break
       SetType RefinementType case
         sb
-          t typeContext types.getBaseType storeType pos context
+          t typeContext types.unwrapRefinement storeType pos context
         appendTypeNameQBE
       return
       Undefined Empty GenericType Initializer Align TypeSet case

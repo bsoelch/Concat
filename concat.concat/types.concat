@@ -1101,8 +1101,6 @@ namespace: types
     box context unwrapNamed switch
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
         ArrayData ptr cast [] .base return
-      SetType .case .baseType [] return
-      RefinementType .case .baseType [] return
       default Type .Undefined  return
     end
   end
@@ -2203,6 +2201,17 @@ namespace: types
   proc( Type TypeContext ptr : context -> bool ) =>: export: isRefinementType
     context unwrapNamed .?RefinementType ? return
   end
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isSetOrRefinementType
+    context unwrapNamed =:: t0
+    t0 .?RefinementType ? or t0 .?SetType ? end return
+  end
+  proc( Type : box TypeContext ptr : context -> Type ) =>: export: unwrapRefinement
+    box context unwrapNamed switch
+      SetType .case .baseType [] return
+      RefinementType .case .baseType [] return
+      default box return
+    end
+  end
   proc( Type TypeContext ptr : context -> ProcId optional ) =>: export: getTypeTrait
     context unwrapNamed
       .?RefinementType  .else ..drop
@@ -2991,7 +3000,7 @@ namespace: sb
         return
       RefinementType case
         sb
-          t context types.getBaseType context depth 1 - appendTypeRecursive
+          t context types.unwrapRefinement context depth 1 - appendTypeRecursive
           " .with( " sb.appendS
           depth 0 >= if
             t context types.getTypeTrait .if

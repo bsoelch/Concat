@@ -85,7 +85,7 @@ proc(
       types =[]
     break
     SetType RefinementType case
-      declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
+      declared typeContext types.unwrapRefinement ptrLevel pos prog visited types declaredType
     break
   end
   -1 visited declared map.at .data =[] ## finished declaration

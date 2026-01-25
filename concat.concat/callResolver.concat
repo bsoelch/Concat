@@ -689,7 +689,7 @@ proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
     types.primitive.TYPE typeContext computeTypeWeigth 1 - return
   end
   t typeContext types.isRefinementType if
-    t typeContext types.getBaseType typeContext computeTypeWeigth 1 - return
+    t typeContext types.unwrapRefinement typeContext computeTypeWeigth 1 - return
   end
   32 return
 end
@@ -777,31 +777,6 @@ end
 
 5:iSize =:: MAX_DISPLAY_ARGS_DEFAULT
 5:i32 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
-
-proc(
-  Type : stackType
-  ConstValue : stackValue
-  Type : paramType
-  TypeCheckState ptr.mut : typeChecker
--> bool ) =>: canRefineArgument
-  typeChecker [] .program =:: progContext
-  progContext .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  stackValue .?None ? if false return end ## can only refine constants
-  paramType typeContext types.isSetType ! and paramType typeContext types.isRefinementType ! if
-    false return ## target is not an refinement type
-  end
-  paramType typeContext types.getBaseType =:: paramBase
-  stackType
-    $ typeContext types.isRefinementType if typeContext types.getBaseType end
-  paramBase typeContext types.canAutoCast ! if false return end ## base types do not match
-  paramType typeContext types.isSetType if
-    stackValue paramType typeContext types.checkSetType return
-  end
-  paramType typeContext types.getTypeTrait =:: typeTrait
-  ## TODO check refinement type -> pass call onto type-checker
-  false return
-end
 
 proc(
   ProcId slice : procedureIds
@@ -1013,7 +988,7 @@ proc(
       else stackType paramType types.typeEquals _if
         MatchType .MATCH matchType=
       else stackType paramType typeContext types.canAutoCast or
-          stackType stackVal paramType typeChecker canRefineArgument _if
+          stackType stackVal paramType pos typeChecker typeChecker.canRefineType _if
         MatchType .CAST matchType=
         stackType =:: mut: fromType
         ## TODO correctly handle type-refinement in cost-computation (more refined types should be cheaper)

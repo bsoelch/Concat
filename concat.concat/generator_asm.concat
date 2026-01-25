@@ -619,7 +619,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       ## TODO! treat small unions as values
       ValType .REFERENCE return
     SetType RefinementType case
-      dataType typeContext types.getBaseType typeContext toValType return
+      dataType typeContext types.unwrapRefinement typeContext toValType return
     Undefined Empty GenericType Procedure
     Align TypeSet Initializer case
       ValType .EMPTY return
