@@ -888,6 +888,8 @@ proc(
             false current .argsMatch=
           end
           paramType typeContext types.isSetOrRefinementType and
+              ## preemptively add refinement if refinement fails, then value is no match
+              current [] .nRefines 1 + current .nRefines=
               paramType typeContext types.unwrapRefinement
                 value typeContext decayLiteralTypeConstant
               paramType pos typeChecker typeChecker.canRefineType ! if
