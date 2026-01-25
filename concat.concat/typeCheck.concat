@@ -5223,9 +5223,6 @@ proc(
         program [] .procedures withProcId i64 cast @[] =:: withProc
         withProc [] .labelId labelContext id.currentNamespace labelContext id.setLabelNamespace
         op .pos state popType =:: baseType
-        baseType types.primitive.TYPE types.typeEquals ! if
-          "unimplemented: refinement of non-type types":s op ..line state internalError ..unreachable
-        end
         ## newProcedure
           baseType@ slice.wrap
           types.primitive.BOOL@ slice.wrap
@@ -5240,7 +5237,13 @@ proc(
           continue.opLoop
         end
         ProcCodeState .PARSED withProc .implementation .Code .codeState=
-        ## TODO: switch from type-set to true refinement types
+        _EXPERIMENTAL_ or baseType types.primitive.TYPE types.typeEquals ! if
+          baseType withProcId typeContext types.newRefinementType ConstValue .TypeId
+            types.primitive.TYPE
+            op .pos
+          state pushConstant
+          continue.opLoop
+        end
         withProcId types.TypeSetEntry .TypeTrait =:: entry
         ## typeSet
           id.LABEL_ID_NONE
