@@ -6,17 +6,6 @@ using std.literals.
 import "interpreter/operators.concat"
 import "identifiers.concat"
 import "program.concat"
-type : export: InterpreterContext ## needed by call-resolver
-import "callResolver.concat"
-
-## declarations needed from typeChecker
-type : export: TypeCheckState
-proc(
-  ProcId : procId
-  i32 : implId
-  FilePosition : expandedAt
-  TypeCheckState ptr.mut : state
--> ) : export: typeCheckChildProcedures
 
 namespace: interpreter
   struct(
@@ -37,7 +26,6 @@ end
 struct(
   using interpreter.
   ProgramContext ptr.mut : program
-  TypeCheckState ptr.mut optional : typeChecker
   LabelId Constant hashMap : globalVariables
   LabelId Constant hashMap ptr.mut optional : localVariables
   ConstValue list : stack
@@ -56,14 +44,12 @@ struct(
 namespace: interpreter
   proc(
     ProgramContext ptr.mut : progContext
-    TypeCheckState ptr.mut optional : typeChecker
     FileId : fileId
   ->
     InterpreterContext
   ) =>: export: wrapProgram
     ## InterpreterContext
       progContext
-      typeChecker
       labelHash@ labelEq@ 512 Constant map.create
       LabelId Constant hashMap ptr.mut optional.empty
       64 ConstValue list.create
@@ -2416,9 +2402,6 @@ namespace: interpreter
     procName labelContext id.labelFlags id.FLAG_EXTERN & ? and
         codeImpl [] .codeState .PARSING if
       procName args pos context evaluateExternCall return
-    end
-    context [] .typeChecker optional.hasData if
-      procId implId pos context [] .typeChecker .data typeCheckChildProcedures
     end
     context offsetContext
     context [] .stack .length =:: stackOffset

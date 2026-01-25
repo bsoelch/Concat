@@ -1366,6 +1366,7 @@ proc(
         pos
         state
       typeCheckChildProcedures
+      ## TODO! do not interpret if type-checking fails
     end
   else ..drop end
   ## 4. evalute-call in interpreter
@@ -5736,15 +5737,11 @@ proc(
 ->  ) =>: export: updateTypeCheckerPointers
   program state .program=
   program state .interpreter .program=
-  state optional.wrap state .interpreter .typeChecker=
 end
 proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCheckState
   ## TypeCheckState
     program
-    program
-      TypeCheckState ptr.mut optional.empty
-      -1:FileId
-    interpreter.wrapProgram
+    program -1:FileId interpreter.wrapProgram
     labelHash@ labelEq@ 64 TypedValue map.create
     Type optional.empty
     BlockMode .NONE

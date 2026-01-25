@@ -4,7 +4,6 @@ import "constants.concat"
 import "types.concat"
 import "program.concat"
 import "typeCheck.concat"
-import "interpreter.concat"
 
 enum( MATCH GENERIC CAST AUTO EMPTY NONE ) =:: MatchType
 
