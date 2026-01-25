@@ -457,11 +457,18 @@ namespace: interpreter
         end typeContext types.isTuple
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_TYPESET case
+     TYPE_IS_SET_TYPE case
         k 1 == "correct number of arguments" assert
         args 0 [] .?TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isTypeSet
+        end typeContext types.isSetType
+          ConstValue .Bool
+        OperatorResult .SUCCESS return
+     TYPE_IS_REFINEMENT_TYPE  case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .?TypeId .else
+          "argument is no type" ..panic
+        end typeContext types.isRefinementType
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_TAGGED_UNION case

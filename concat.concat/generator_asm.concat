@@ -621,7 +621,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
     SetType RefinementType case
       dataType typeContext types.unwrapRefinement typeContext toValType return
     Undefined Empty GenericType Procedure
-    Align TypeSet Initializer case
+    Align Initializer case
       ValType .EMPTY return
   end
 end

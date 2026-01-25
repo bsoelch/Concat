@@ -329,7 +329,7 @@ namespace: constant
       CType NamedType case ..unreachable
       SetType case
         "unimplemented: set-type default values" ..panic
-      TypeSet GenericType GeneratedType RefinementType
+      GenericType GeneratedType RefinementType
           IntLiteral Initializer case
         "unsupported type for zero-initialized constant" ..panic
     end

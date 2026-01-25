@@ -1,9 +1,9 @@
 -----------------
 identifier "selfPtr":
- - type "selfPtr" ( type [ named[4631]( "selfPtr" ) ] ) declared at ./tests/types/selfPtr.concat:2:8
+ - type "selfPtr" ( type [ named[4632]( "selfPtr" ) ] ) declared at ./tests/types/selfPtr.concat:2:8
 -----------------
 types:
 -----------------
-named[4631]( "selfPtr" [ struct( i32 named[4631]( "selfPtr" [ struct( i32 named[4631]( "selfPtr" ) ptr ) ] ) ptr ) ] )
+named[4632]( "selfPtr" [ struct( i32 named[4632]( "selfPtr" [ struct( i32 named[4632]( "selfPtr" ) ptr ) ] ) ptr ) ] )
 -----------------
 true

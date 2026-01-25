@@ -176,7 +176,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       ValType .REFERENCE return
     SetType RefinementType case
       t typeContext types.unwrapRefinement context toValType return
-    Undefined Empty GenericType Align TypeSet case
+    Undefined Empty GenericType Align case
       ValType .EMPTY return
   end
 end
@@ -686,7 +686,7 @@ namespace: sb
           t typeContext types.unwrapRefinement storeType pos context
         appendTypeNameQBE
       return
-      Undefined Empty GenericType Initializer Align TypeSet case
+      Undefined Empty GenericType Initializer Align case
         break
     end
     "unsupported type " sb.copyPtr
@@ -2427,7 +2427,7 @@ proc(
       return
     PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64 TYPE_GET_UNION_ELEMENT_UNION
         TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
-        TYPE_IS_TYPESET TYPE_IS_RAW_UNION TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_ENUM TYPE_IS_PROC
+        TYPE_IS_SET_TYPE TYPE_IS_REFINEMENT_TYPE TYPE_IS_RAW_UNION TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_ENUM TYPE_IS_PROC
         TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED TYPE_GET_UNION_ELEMENT
         TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED case
       "unsupported built-in: " sb.copyPtr

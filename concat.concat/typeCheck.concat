@@ -2244,7 +2244,7 @@ proc(
   Operation slice : ops
   FilePosition : pos
   TypeCheckState ptr.mut : state
--> ) =>: typeCheckTypeSet
+-> ) =>: typeCheckSetType
   state [] .program =:: program
   state [] .program .errors =:: errors
   program .idContext =:: idContext
@@ -3531,7 +3531,7 @@ proc(
           continue.opLoop
           TYPE_SETTYPE case
             ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
-            elts op .pos state typeCheckTypeSet
+            elts op .pos state typeCheckSetType
             opIndex
               op .pos blockInfo .jumpDistance asForwardJump +
             opIndex=
@@ -5237,18 +5237,7 @@ proc(
           continue.opLoop
         end
         ProcCodeState .PARSED withProc .implementation .Code .codeState=
-        _EXPERIMENTAL_ or baseType types.primitive.TYPE types.typeEquals ! if
-          baseType withProcId typeContext types.newRefinementType ConstValue .TypeId
-            types.primitive.TYPE
-            op .pos
-          state pushConstant
-          continue.opLoop
-        end
-        withProcId types.TypeSetEntry .TypeTrait =:: entry
-        ## typeSet
-          id.LABEL_ID_NONE
-          entry@ slice.wrap
-        typeContext types.newTypeSet ConstValue .TypeId
+        baseType withProcId typeContext types.newRefinementType ConstValue .TypeId
           types.primitive.TYPE
           op .pos
         state pushConstant

@@ -26,7 +26,6 @@ namespace: types
   type : InitializerInfo
   type : ProcType
   type : GeneratedTypeName
-  type : export: TypeSet
   type : SetType
   type : RefinementType
   ArrayData ptr =:: ArrayId
@@ -37,7 +36,6 @@ namespace: types
   InitializerInfo ptr.mut =:: InitializerId
   ProcType ptr =:: ProcTypeId
   GeneratedTypeName ptr =:: GeneratedTypeId
-  TypeSet ptr =:: export: TypeSetId
   SetType ptr =:: export: SetTypeId
   RefinementType ptr =:: export: RefinementTypeId
   ## primitive C-types for C interoperability
@@ -60,33 +58,6 @@ namespace: types
     U63 S64 U64 ## -> i64
     ## XXX? support for 128Bit integer literals
   ) =:: IntLiteral
-  union(
-    ProcId : TypeTrait
-    Type : TypeId
-  ) =:: export: TypeSetEntry
-  struct(
-    TypeSetEntry slice : elements
-  ) =:: export: TypeSet
-
-  proc( TypeSetEntry : a TypeSetEntry : b -> bool ) =>: export: typeSetEntryEqual
-    a ..label b ..label != if false return end
-    a switch
-      TypeTrait .case b .TypeTrait == return
-      TypeId .case b .TypeId typeEquals return
-    end
-  end
-  proc( TypeSetEntry : a -> i32 ) =>: export: typeSetEntryHash
-    a switch
-      TypeTrait .case i32 cast.u 1 + 2 * return
-      TypeId .case typeHash 1 + 3 * return
-    end
-  end
-  proc( TypeSet : a TypeSet : b -> bool ) =>: export: typeSetEqual
-    a .elements b .elements typeSetEntryEqual@ slice.eq
-  end
-  proc( TypeSet : a -> i32 ) =>: export: typeSetHash
-    a .elements typeSetEntryHash@ slice.hash
-  end
 end
 
 union(
@@ -108,7 +79,6 @@ union(
            types.EnumId : Enum
     types.InitializerId : Initializer
        types.ProcTypeId : Procedure
-        types.TypeSetId : TypeSet
         types.SetTypeId : SetType
  types.RefinementTypeId : RefinementType
                 LabelId : GenericType
@@ -315,10 +285,6 @@ namespace: types
         a .Procedure  b .Procedure  procTypeEqual return
       GeneratedType case
         a .GeneratedType b .GeneratedType generatedTypeEqual return
-      TypeSet  case
-        a .TypeSet  b .TypeSet  == or
-          a .TypeSet  TypeSet ptr cast [] b .TypeSet  TypeSet ptr cast [] typeSetEqual
-        end return
       SetType case
         a .SetType  b .SetType  == or
           a .SetType b .SetType setTypeEq
@@ -427,16 +393,14 @@ namespace: types
         53 a .GeneratedType generatedTypeHash * return
       Initializer case
         59 a .Initializer initializerTypeHash * return
-      TypeSet  case
-        61 a .TypeSet  TypeSet ptr cast [] typeSetHash * return
       UnionElement case
-        67 a .UnionElement unionElementHash * return
+        61 a .UnionElement unionElementHash * return
       RawUnion case
-        71 a .RawUnion unionTypeHash * return
+        67 a .RawUnion unionTypeHash * return
       SetType  case
-        73 a .SetType setTypeHash * return
+        71 a .SetType setTypeHash * return
       RefinementType  case
-        79 a .RefinementType refinementTypeHash * return
+        73 a .RefinementType refinementTypeHash * return
     end
   end
 end
@@ -498,7 +462,7 @@ namespace: types
          t context getBaseType context isEmpty return
        Undefined PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer
          NamedType GenericType IntLiteral UnionElement
-         GeneratedType Enum TypeSet RefinementType case false return
+         GeneratedType Enum RefinementType case false return
        SetType .case .elements [] .length 0 == return
        Struct Union Initializer RawUnion case ## TODO can labeled union be empty?
          t context compositeFlags COMP_FLAG_EMPTY & ? return
@@ -634,7 +598,7 @@ namespace: types
            Undefined PrimitiveType Procedure  CType Pointer
            NamedType GenericType RawPointer
            GeneratedType Enum Align MutablePointer MutableRawPointer
-           Struct Union TypeSet SetType RefinementType case
+           Struct Union SetType RefinementType case
          false return
     end
   end
@@ -674,7 +638,7 @@ namespace: types
            Undefined  PrimitiveType Procedure CType Pointer
            NamedType GenericType RawPointer
            GeneratedType Enum Align MutablePointer MutableRawPointer
-           Struct Union TypeSet SetType RefinementType case
+           Struct Union SetType RefinementType case
          t return
     end
   end
@@ -934,14 +898,14 @@ namespace: types
         typeContext tryComputeTupleSize return
       Undefined Empty GenericType RawPointer MutableRawPointer
       PrimitiveType IntLiteral CType ArrayType Enum UnionElement
-      Pointer MutablePointer Procedure Align TypeSet SetType RefinementType
+      Pointer MutablePointer Procedure Align SetType RefinementType
       NamedType GeneratedType case ..unreachable ## XXX? use assertion
     end
   end
   ## alignment of type in bytes, will be a power of two
   proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: alignOf
     t switch
-      Undefined GenericType TypeSet case
+      Undefined GenericType case
         TypeSize .Unknown return
       Empty  case
         1 TypeSize .Fixed return
@@ -988,7 +952,7 @@ namespace: types
     TypeContext ptr.mut : context
   -> TypeSize ) =>: computeSize
     t switch
-      Undefined GenericType TypeSet case
+      Undefined GenericType case
         TypeSize .Unknown return
       Empty  case
         0 TypeSize .Fixed return
@@ -1267,7 +1231,7 @@ namespace: types
         true return
       Undefined Empty PrimitiveType Pointer MutablePointer ArrayType Procedure
         NamedType GenericType GeneratedType IntLiteral Align
-        CType RawPointer MutableRawPointer TypeSet case
+        CType RawPointer MutableRawPointer case
         false return
       SetType .case .baseType [] context isComposite return
       RefinementType .case .baseType [] context isComposite return
@@ -1293,7 +1257,7 @@ namespace: types
       Enum Union case true return
       Struct Undefined Empty PrimitiveType Pointer ArrayType Procedure RawUnion
        NamedType GenericType GeneratedType IntLiteral Initializer RawPointer
-       CType Align TypeSet MutablePointer MutableRawPointer UnionElement case
+       CType Align MutablePointer MutableRawPointer UnionElement case
          false return
       SetType .case .baseType [] typeContext isEnumOrTaggedUnion return
       RefinementType .case .baseType [] typeContext isEnumOrTaggedUnion return
@@ -1321,7 +1285,7 @@ namespace: types
         Enum .case EnumInfo ptr cast CompositeData .Enum return
         Undefined Empty PrimitiveType Pointer ArrayType Procedure
          NamedType GenericType GeneratedType IntLiteral Align
-         CType RawPointer TypeSet  MutablePointer MutableRawPointer case
+         CType RawPointer MutablePointer MutableRawPointer case
           CompositeData .None return
         SetType .case .baseType [] context compositeData return
         RefinementType .case .baseType [] context compositeData return
@@ -1385,7 +1349,7 @@ namespace: types
       Struct .case break
       Enum Union RawUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
        NamedType GenericType GeneratedType IntLiteral Initializer Align
-       CType RawPointer MutablePointer MutableRawPointer TypeSet case
+       CType RawPointer MutablePointer MutableRawPointer case
          i64 optional.empty return
        SetType .case .baseType [] index typeContext tupleElementOffset return
        RefinementType .case .baseType [] index typeContext tupleElementOffset return
@@ -1409,7 +1373,7 @@ namespace: types
       RawUnion case Type .Empty i64 optional.empty return
       Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure UnionElement
        NamedType GenericType GeneratedType IntLiteral Initializer Align
-       CType RawPointer MutablePointer MutableRawPointer TypeSet  case
+       CType RawPointer MutablePointer MutableRawPointer case
          Type .Empty i64 optional.empty return
        SetType .case .baseType [] typeContext enumLabelInfo return
        RefinementType .case .baseType [] typeContext enumLabelInfo return
@@ -2132,23 +2096,6 @@ namespace: types
     end GeneratedTypeName ptr cast [] .arguments return
   end
 
-  proc(
-    LabelId : name ## TODO! is name used?
-    TypeSetEntry slice : elements
-    TypeContext ptr.mut : context
-  -> Type ) =>: export: newTypeSet
-    ## TODO? check if type-set contains duplicate values
-    context [] .memory
-      ## type-set entries can be copyied without internal updates
-      elements mixedArena.copySlice =:: sliceElements
-      sliceElements slice.freeze TypeSet new mixedArena.copyValue =:: typeSet
-    context .memory=
-    typeSet TypeSetId cast Type .TypeSet  return
-  end
-  proc( Type TypeContext ptr : context -> bool ) =>: export: isTypeSet
-    context unwrapNamed .?TypeSet ? return
-  end
-
   struct(
     Type : baseType
     ConstValue slice : elements
@@ -2226,9 +2173,7 @@ namespace: types
         .baseType [] context isType
       else .?RefinementType ._if
         .baseType [] context isType
-      else .?TypeSet ? _if
-        true
-      else false end
+      else ..drop false end
     return
   end
 
@@ -2236,13 +2181,6 @@ namespace: types
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isType
     t context unwrapNamed =:: baseType
     baseType primitive.TYPE typeEquals or baseType context isTypeRefinement end return
-  end
-  proc( Type : t TypeContext ptr : context -> TypeSetEntry slice ) =>: export: getTypeSetEntries
-    t context unwrapNamed
-      .?TypeSet  .else ..drop
-        TypeSetEntry slice.empty return
-      end
-    TypeSet ptr cast [] .elements return
   end
 
   proc( LabelId : id -> Type ) =>: export: newGenericType
@@ -2257,7 +2195,7 @@ namespace: types
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
     t switch
-      Undefined Empty PrimitiveType CType IntLiteral Align TypeSet  case
+      Undefined Empty PrimitiveType CType IntLiteral Align case
         false return
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
         ArrayData ptr cast [] =:: arrayType
@@ -2549,12 +2487,6 @@ namespace: types
       true return ## allow automatic conversions from type-refinement to base-type
     end
     ## TODO allow implicit conversion type-set to superset (? allow conversion to refinement matching for all elements)
-    src context types.isTypeSet and target context types.isTypeSet or target types.primitive.TYPE typeEquals if
-      true return ## allow automatic conversions between type and type-sets
-    end
-    target context types.isTypeSet and src context types.isTypeSet or src types.primitive.TYPE typeEquals if
-      true return ## allow automatic conversions between type and type-sets
-    end
     src .?Initializer ? if
       src target context canAutoCastInitializer return
     end
@@ -2972,26 +2904,6 @@ namespace: sb
           "..type.align" sb.appendS
           t .Align sb.appendI
         return
-      TypeSet case
-        sb
-          "typeSet( " sb.appendS
-          depth 0 >= if
-            t context types.getTypeSetEntries for =:: e
-              e switch
-                TypeId .case context depth 1 - appendTypeRecursive
-                  ' ' sb.appendC
-                  break
-                TypeTrait .case i64 cast sb.appendI
-                  ":ProcId " sb.appendS
-                  ## TODO? print procedure name
-                  break
-              end
-            end
-          else t context types.getTypeSetEntries .length 0:iSize != _if
-            "..." sb.appendS
-          end
-          " )" sb.appendS
-        return
       SetType case
         sb
           "oneOf( " sb.appendS
@@ -3000,7 +2912,7 @@ namespace: sb
               context sb.appendConstant ## TODO! find way to preserve recursion depth through mutual call
               ' ' sb.appendC
             end
-          else t context types.getTypeSetEntries .length 0:iSize != _if
+          else t context types.getSetTypeEntries .length 0:iSize != _if
             "..." sb.appendS
           end
           " )" sb.appendS
@@ -3009,16 +2921,12 @@ namespace: sb
         sb
           t context types.unwrapRefinement context depth 1 - appendTypeRecursive
           " .with( " sb.appendS
-          depth 0 >= if
             t context types.getTypeTrait .if
               i64 cast sb.appendI
               ":ProcId" sb.appendS
             else
               '?' sb.appendC
             end
-          else t context types.getTypeSetEntries .length 0:iSize != _if
-            "..." sb.appendS
-          end
           " )" sb.appendS
         return
     end

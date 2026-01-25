@@ -321,7 +321,7 @@ proc(
       return
     SetType case "unimplemented: replaceGenerics for set-type" ..panic
     RefinementType case "unimplemented: replaceGenerics for refinement-type" ..panic
-    Undefined Empty PrimitiveType CType IntLiteral Align TypeSet case
+    Undefined Empty PrimitiveType CType IntLiteral Align case
       ..unreachable ## type should not contain generics
   end
 end
@@ -632,7 +632,7 @@ proc(
       false return
     SetType case "unimplemented: resolveGenerics for set-type" ..panic
     RefinementType case "unimplemented: resolveGenerics for refinement-type" ..panic
-    Undefined Empty PrimitiveType CType IntLiteral Align TypeSet case
+    Undefined Empty PrimitiveType CType IntLiteral Align case
       ..unreachable ## type should not contain generics
   end
 end
@@ -685,9 +685,6 @@ proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
   end
   t typeContext types.isArray if
     20 return
-  end
-  t typeContext types.isTypeSet if
-    types.primitive.TYPE typeContext computeTypeWeigth 1 - return
   end
   t typeContext types.isSetOrRefinementType if
     t typeContext types.unwrapRefinement typeContext computeTypeWeigth return
@@ -882,11 +879,6 @@ proc(
             Value case autoValue [] .Value break
             NonEmpty case ..unreachable
           end =:: value
-          paramType typeContext types.isTypeSet and
-              value typeContext decayLiteralTypeConstant
-              paramType pos typeChecker interpreter.checkTypeSet ! if
-            false current .argsMatch=
-          end
           paramType typeContext types.isSetOrRefinementType and
               ## preemptively add refinement if refinement fails, then value is no match
               current [] .nRefines 1 + current .nRefines=
@@ -958,10 +950,6 @@ proc(
         stackVal .?None ? if
           false current .argsMatch=
         end
-        paramType typeContext types.isTypeSet and
-            stackVal paramType pos typeChecker interpreter.checkTypeSet ! if
-          false current .argsMatch=
-        end
         paramLabel id.LABEL_ID_NONE != and
             current .genericValues paramLabel map.at .and =:: prevVal
           prevVal [] switch
@@ -1028,10 +1016,6 @@ proc(
               current [] .nRenames 1 + current .nRenames=
             end
             ## no cast for conversion literal -> value-type
-          else toType typeContext types.isTypeSet and
-              fromType typeContext types.isTypeSet ! _if
-            ## converting to type-set is no cast
-            ## XXX? remember number of conversions to type-set (more restricted is better)
           else fromType typeContext types.unwrapNamed
               toType typeContext types.unwrapNamed
               types.typeEquals _if

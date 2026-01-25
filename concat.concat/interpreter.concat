@@ -468,83 +468,6 @@ namespace: interpreter
     pos errors appendError
     Type .Undefined ConstValue .None true return
   end
-  ## TODO move typeSet check to type-checker
-  proc(
-    ConstValue : value
-    Type : typeSet
-    FilePosition : pos
-    TypeCheckState ptr.mut : typeChecker
-  -> bool ) =>: export: checkTypeSet
-    typeChecker [] .program =:: progContext
-    progContext .idContext .typeContext =:: typeContext
-    typeSet typeContext types.isTypeSet ! if
-      false return ## only types can be in type-set
-    end
-    value .?TypeId .else ..drop false return end
-      $ types.isLiteral if ## decompose literals to type
-        typeContext types.literalToType
-      end
-    =:: toCheck
-    toCheck typeContext types.isGeneric if
-      true return ## TODO! temporary fix, allow generics to match type-set checks
-    end
-    typeSet typeContext types.getTypeSetEntries =:: entries
-    typeChecker .interpreter =:: context
-    ## TODO! rewrite type-check set to use new constant call-evaluation code
-    context [] .currentFile =:: prevFile
-    entries for =:: e
-      e switch
-        TypeId .case
-          toCheck types.typeEquals if
-            prevFile context .currentFile=
-            true return
-          end
-        continue
-        TypeTrait .case break
-      end =:: typeTrait
-      progContext .procedures [] typeTrait i64 cast list.at .data =:: procData
-      procData [] .fileId context .currentFile=
-      ## StackValue
-        types.primitive.TYPE
-        toCheck ConstValue .TypeId
-      StackValue new =:: arg
-      ## resolveCall
-        e@ .TypeTrait 1 slice.create
-        arg@ 1 slice.create
-        stringBuilder ptr.mut optional.empty
-        pos
-        typeChecker
-      resolveCall
-        =:: calledType
-        ..drop ## callProcId
-      .data =:: callInfo ## procedure should allways match
-      callInfo .procId typeTrait == "called proc is same as type-trait" assert
-      procData .implementation .?BuiltIn ? or callInfo .implementationId -1 == if
-        ## built-in needs argument on stack
-        ## pushValue
-          toCheck ConstValue .TypeId
-          types.primitive.TYPE
-        pos context pushValue
-      end
-      ## evaluateCall
-        callInfo .procId
-        callInfo .implementationId
-        calledType
-        callInfo .autoArgs
-      pos context evaluateCall if
-        ## TODO? ignore errors produced by call
-        continue
-      end
-      pos context popCondition if ..drop
-        continue
-      end if
-        prevFile context .currentFile=
-        true return
-      end
-    end
-    prevFile context .currentFile=
-    false return
-  end
   proc(
     Type : srcType
     SignType : signType
@@ -2131,31 +2054,6 @@ proc(
         context
       pushValue
       EvalResult .Ok return
-    Splat case
-      op [] .pos context popValue if ..drop.2
-        "stack underflow while evaluating operation: " sb.copyPtr
-          op [] program sb.appendOp
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end =:: value =:: valInfo
-      value .?TypeId .and =:: typeVal
-          typeVal typeContext types.isTypeSet if
-        typeVal typeContext types.getTypeSetEntries for
-          .?TypeId .else ..drop continue end
-          ## pushValue
-            ConstValue .TypeId
-            types.primitive.TYPE
-            op [] .pos
-            context
-          pushValue
-        end
-        EvalResult .Ok return
-      end
-      "cannot splat: " sb.copyPtr
-       value typeContext sb.appendConstant
-      op [] .pos errors appendError
-      value valInfo context unpopValue
-      EvalResult .Error return
     StackMod .case =:: stackMod
       stackMod .modType switch
         DROP case
@@ -2230,7 +2128,7 @@ proc(
     NewEnumReference CallPtr
     ImplementProcedure ProcPtr
     ConstantReference NewReference
-    CheckEnumLabel NestedProc case break
+    CheckEnumLabel NestedProc Splat case break
   end
   "unsupported operation in constant evaluation: " sb.copyPtr
     op [] program sb.appendOp
