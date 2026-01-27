@@ -9,7 +9,7 @@ namespace: type
   oneOf( f32 f64 ) =:: export: float
   oneOf( integer ... float ... ) =:: export: number
   oneOf( iSize i32 i64 ) =:: export: index
-  oneOf( integer ... char8 char16 char32 ) =:: export: intLike
+  oneOf( integer ... char8 ) =:: export: intLike
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive
     T ..types.isNamed and T ..types.unwrapNamed ..types.isPrimitive end

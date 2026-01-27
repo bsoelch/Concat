@@ -183,7 +183,7 @@ namespace: interpreter
         args k i64.add@ binaryOperatorInt return
       ADD_F32 case args k f32.add@ binaryOperatorFloat return
       ADD_F64 case args k f64.add@ binaryOperatorFloat return
-      SUB_I8 SUB_I16 SUB_I32 SUB_I64 C8_DIFF C16_DIFF C32_DIFF case
+      SUB_I8 SUB_I16 SUB_I32 SUB_I64 C8_DIFF case
         args k i64.sub@ binaryOperatorInt return
       SUB_F32 case args k f32.sub@ binaryOperatorFloat return
       SUB_F64 case  args k f64.sub@ binaryOperatorFloat return
@@ -225,8 +225,8 @@ namespace: interpreter
         args k i64.shl@ binaryOperatorInt return
       EQ_BOOL case args k bool.eq@ binaryOperatorBool return
       EQ_I8  EQ_C8  case args k i8.eq@ cmpOperatorInt return
-      EQ_I16 EQ_C16 case args k i16.eq@ cmpOperatorInt return
-      EQ_I32 EQ_C32 case args k i32.eq@ cmpOperatorInt return
+      EQ_I16 case args k i16.eq@ cmpOperatorInt return
+      EQ_I32 case args k i32.eq@ cmpOperatorInt return
       EQ_I64 case
         args k i64.eq@ cmpOperatorInt
           $ .ARGUMENT_ERROR if ..drop.2
@@ -240,8 +240,8 @@ namespace: interpreter
       EQ_F64 case args k f64.eq@ cmpOperatorFloat return
       NE_BOOL case args k bool.ne@ binaryOperatorBool return
       NE_I8  NE_C8  case args k i8.ne@ cmpOperatorInt return
-      NE_I16 NE_C16 case args k i16.ne@ cmpOperatorInt return
-      NE_I32 NE_C32 case args k i32.ne@ cmpOperatorInt return
+      NE_I16 case args k i16.ne@ cmpOperatorInt return
+      NE_I32 case args k i32.ne@ cmpOperatorInt return
       NE_I64 case
         args k i64.ne@ cmpOperatorInt
           $ .ARGUMENT_ERROR if ..drop.2
@@ -278,20 +278,20 @@ namespace: interpreter
       GT_F32 case args k f32.gt@ cmpOperatorFloat return
       GT_F64 case args k f64.gt@ cmpOperatorFloat return
       ULT_I8  LT_C8  case args k i8.ult@ cmpOperatorInt return
-      ULT_I16 LT_C16 case args k i16.ult@ cmpOperatorInt return
-      ULT_I32 LT_C32 case args k i32.ult@ cmpOperatorInt return
+      ULT_I16 case args k i16.ult@ cmpOperatorInt return
+      ULT_I32 case args k i32.ult@ cmpOperatorInt return
       ULT_I64 case args k i64.ult@ cmpOperatorInt return
       ULE_I8  LE_C8  case args k i8.ule@ cmpOperatorInt return
-      ULE_I16 LE_C16 case args k i16.ule@ cmpOperatorInt return
-      ULE_I32 LE_C32 case args k i32.ule@ cmpOperatorInt return
+      ULE_I16 case args k i16.ule@ cmpOperatorInt return
+      ULE_I32 case args k i32.ule@ cmpOperatorInt return
       ULE_I64 case args k i64.ule@ cmpOperatorInt return
       UGE_I8  GE_C8  case args k i8.uge@ cmpOperatorInt return
-      UGE_I16 GE_C16 case args k i16.uge@ cmpOperatorInt return
-      UGE_I32 GE_C32 case args k i32.uge@ cmpOperatorInt return
+      UGE_I16 case args k i16.uge@ cmpOperatorInt return
+      UGE_I32 case args k i32.uge@ cmpOperatorInt return
       UGE_I64 case args k i64.uge@ cmpOperatorInt return
       UGT_I8  GT_C8  case args k i8.ugt@ cmpOperatorInt return
-      UGT_I16 GT_C16 case args k i16.ugt@ cmpOperatorInt return
-      UGT_I32 GT_C32 case args k i32.ugt@ cmpOperatorInt return
+      UGT_I16 case args k i16.ugt@ cmpOperatorInt return
+      UGT_I32 case args k i32.ugt@ cmpOperatorInt return
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
       GET_PTR GET_PTR_MUT case
         k 1 == "correct number of arguments" assert
@@ -946,11 +946,11 @@ namespace: interpreter
           a constAsInt if ..drop false true return end i8 cast =:: x
           b constAsInt if ..drop false true return end i8 cast =:: y
           x y == false return
-        I16 CHAR16 case
+        I16 case
           a constAsInt if ..drop false true return end i16 cast =:: x
           b constAsInt if ..drop false true return end i16 cast =:: y
           x y == false return
-        I32 CHAR32 case
+        I32 case
           a constAsInt if ..drop false true return end i32 cast =:: x
           b constAsInt if ..drop false true return end i32 cast =:: y
           x y == false return

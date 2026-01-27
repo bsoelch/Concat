@@ -8,8 +8,7 @@ enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
  ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 ## +
- SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64
-     C8_DIFF C16_DIFF C32_DIFF ## -
+ SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 C8_DIFF ## -
  MUL_I32 MUL_I64 MUL_F32 MUL_F64                ## *
  ## XXX? div f64 i32
  DIV_I32 DIV_I64I32 DIV_I64 DIV_F32 DIV_F64     ## /
@@ -27,12 +26,12 @@ enum(
  ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64 ## >>
  SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64      ## <<
  ## comparison
- EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 EQ_C16 EQ_C32 ## ==
- NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 NE_C16 NE_C32 ## !=
- LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 LT_C16 LT_C32 ## <
- LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 LE_C16 LE_C32 ## <=
- GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 GE_C16 GE_C32 ## >=
- GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 GT_C16 GT_C32 ## >
+ EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 ## ==
+ NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 ## !=
+ LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 ## <
+ LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 ## <=
+ GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 ## >=
+ GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 ## >
  ULT_I8 ULT_I16 ULT_I32 ULT_I64                  ## u<
  ULE_I8 ULE_I16 ULE_I32 ULE_I64                  ## u<=
  UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## u>=
@@ -561,8 +560,6 @@ proc(
   types.primitive.F32    "f32":s    pos context newBuiltInType
   types.primitive.F64    "f64":s    pos context newBuiltInType
   types.primitive.CHAR8  "char8":s  pos context newBuiltInType
-  types.primitive.CHAR16 "char16":s pos context newBuiltInType
-  types.primitive.CHAR32 "char32":s pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
   "iSize":s pos labelContext createLabel =:: iSizeLabel
   types.primitive.I_SIZE iSizeLabel typeContext types.initializeNamedType .data $ types.I_SIZE=
@@ -630,8 +627,6 @@ proc(
     context mixedProcTypes
   =:: i64i32_i32 =:: i64i32_i64
   types.primitive.CHAR8  context charProcTypes =:: c8c8_i32 =:: c8c8_bool
-  types.primitive.CHAR16 context charProcTypes =:: c16c16_i32 =:: c16c16_bool
-  types.primitive.CHAR32 context charProcTypes =:: c32c32_i32 =:: c32c32_bool
   BuiltIn .NEG_I8
     "..builtIn.neg.i8":s pos labelContext createLabel
     i8_i8
@@ -707,14 +702,6 @@ proc(
   BuiltIn .C8_DIFF
     "..builtIn.diff.char8":s pos labelContext createLabel
     c8c8_i32
-  pos context addBuiltIn
-  BuiltIn .C16_DIFF
-    "..builtIn.diff.char16":s pos labelContext createLabel
-    c16c16_i32
-  pos context addBuiltIn
-  BuiltIn .C32_DIFF
-    "..builtIn.diff.char32":s pos labelContext createLabel
-    c32c32_i32
   pos context addBuiltIn
   BuiltIn .MUL_I32
     "..builtIn.mul.i32":s pos labelContext createLabel
@@ -961,14 +948,6 @@ proc(
     "..builtIn.eq.char8":s pos labelContext createLabel
     c8c8_bool
   pos context addBuiltIn
-  BuiltIn .EQ_C16
-    "..builtIn.eq.char16":s pos labelContext createLabel
-    c16c16_bool
-  pos context addBuiltIn
-  BuiltIn .EQ_C32
-    "..builtIn.eq.char32":s pos labelContext createLabel
-    c32c32_bool
-  pos context addBuiltIn
   BuiltIn .NE_BOOL
     "..builtIn.ne.bool":s pos labelContext createLabel
     boolbool_bool
@@ -1001,14 +980,6 @@ proc(
     "..builtIn.ne.char8":s pos labelContext createLabel
     c8c8_bool
   pos context addBuiltIn
-  BuiltIn .NE_C16
-    "..builtIn.ne.char16":s pos labelContext createLabel
-    c16c16_bool
-  pos context addBuiltIn
-  BuiltIn .NE_C32
-    "..builtIn.ne.char32":s pos labelContext createLabel
-    c32c32_bool
-  pos context addBuiltIn
   BuiltIn .LT_I8
     "..builtIn.lt.i8":s pos labelContext createLabel
     i8i8_bool
@@ -1036,14 +1007,6 @@ proc(
   BuiltIn .LT_C8
     "..builtIn.lt.char8":s pos labelContext createLabel
     c8c8_bool
-  pos context addBuiltIn
-  BuiltIn .LT_C16
-    "..builtIn.lt.char16":s pos labelContext createLabel
-    c16c16_bool
-  pos context addBuiltIn
-  BuiltIn .LT_C32
-    "..builtIn.lt.char32":s pos labelContext createLabel
-    c32c32_bool
   pos context addBuiltIn
   BuiltIn .LE_I8
     "..builtIn.le.i8":s pos labelContext createLabel
@@ -1073,14 +1036,6 @@ proc(
     "..builtIn.le.char8":s pos labelContext createLabel
     c8c8_bool
   pos context addBuiltIn
-  BuiltIn .LE_C16
-    "..builtIn.le.char16":s pos labelContext createLabel
-    c16c16_bool
-  pos context addBuiltIn
-  BuiltIn .LE_C32
-    "..builtIn.le.char32":s pos labelContext createLabel
-    c32c32_bool
-  pos context addBuiltIn
   BuiltIn .GE_I8
     "..builtIn.ge.i8":s pos labelContext createLabel
     i8i8_bool
@@ -1109,14 +1064,6 @@ proc(
     "..builtIn.ge.char8":s pos labelContext createLabel
     c8c8_bool
   pos context addBuiltIn
-  BuiltIn .GE_C16
-    "..builtIn.ge.char16":s pos labelContext createLabel
-    c16c16_bool
-  pos context addBuiltIn
-  BuiltIn .GE_C32
-    "..builtIn.ge.char32":s pos labelContext createLabel
-    c32c32_bool
-  pos context addBuiltIn
   BuiltIn .GT_I8
     "..builtIn.gt.i8":s pos labelContext createLabel
     i8i8_bool
@@ -1144,14 +1091,6 @@ proc(
   BuiltIn .GT_C8
     "..builtIn.gt.char8":s pos labelContext createLabel
     c8c8_bool
-  pos context addBuiltIn
-  BuiltIn .GT_C16
-    "..builtIn.gt.char16":s pos labelContext createLabel
-    c16c16_bool
-  pos context addBuiltIn
-  BuiltIn .GT_C32
-    "..builtIn.gt.char32":s pos labelContext createLabel
-    c32c32_bool
   pos context addBuiltIn
   BuiltIn .ULT_I8
     "..builtIn.ult.i8":s pos labelContext createLabel
@@ -1423,7 +1362,7 @@ end
     "..builtIn.add.f32":s "..builtIn.add.f64":s
   "..builtIn.sub.i8":s "..builtIn.sub.i16":s "..builtIn.sub.i32":s "..builtIn.sub.i64":s
     "..builtIn.sub.f32":s "..builtIn.sub.f64":s
-    "..builtIn.diff.char8":s "..builtIn.diff.char16":s "..builtIn.diff.char32":s
+    "..builtIn.diff.char8":s
   "..builtIn.mul.i32":s "..builtIn.mul.i64":s "..builtIn.mul.f32":s "..builtIn.mul.f64":s "..builtIn.div.i32":s "..builtIn.div.i64i32":s "..builtIn.div.i64":s
     "..builtIn.div.f32":s "..builtIn.div.f64":s
   "..builtIn.rem.i32":s "..builtIn.rem.i64i32":s "..builtIn.rem.i64":s
@@ -1443,22 +1382,22 @@ end
     "..builtIn.shl.i64i32":s "..builtIn.shl.i64":s
   "..builtIn.eq.bool":s "..builtIn.eq.i8":s "..builtIn.eq.i16":s "..builtIn.eq.i32":s
     "..builtIn.eq.i64":s "..builtIn.eq.f32":s "..builtIn.eq.f64":s
-    "..builtIn.eq.char8":s "..builtIn.eq.char16":s "..builtIn.eq.char32":s
+    "..builtIn.eq.char8":s
   "..builtIn.ne.bool":s "..builtIn.ne.i8":s "..builtIn.ne.i16":s "..builtIn.ne.i32":s
     "..builtIn.ne.i64":s "..builtIn.ne.f32":s "..builtIn.ne.f64":s
-    "..builtIn.ne.char8":s "..builtIn.ne.char16":s "..builtIn.ne.char32":s
+    "..builtIn.ne.char8":s
   "..builtIn.lt.i8":s "..builtIn.lt.i16":s "..builtIn.lt.i32":s "..builtIn.lt.i64":s
     "..builtIn.lt.f32":s "..builtIn.lt.f64":s
-    "..builtIn.lt.char8":s "..builtIn.lt.char16":s "..builtIn.lt.char32":s
+    "..builtIn.lt.char8":s
   "..builtIn.le.i8":s "..builtIn.le.i16":s "..builtIn.le.i32":s "..builtIn.le.i64":s
     "..builtIn.le.f32":s "..builtIn.le.f64":s
-    "..builtIn.le.char8":s "..builtIn.le.char16":s "..builtIn.le.char32":s
+    "..builtIn.le.char8":s
   "..builtIn.ge.i8":s "..builtIn.ge.i16":s "..builtIn.ge.i32":s "..builtIn.ge.i64":s
     "..builtIn.ge.f32":s "..builtIn.ge.f64":s
-    "..builtIn.ge.char8":s "..builtIn.ge.char16":s "..builtIn.ge.char32":s
+    "..builtIn.ge.char8":s
   "..builtIn.gt.i8":s "..builtIn.gt.i16":s "..builtIn.gt.i32":s "..builtIn.gt.i64":s
     "..builtIn.gt.f32":s "..builtIn.gt.f64":s
-    "..builtIn.gt.char8":s "..builtIn.gt.char16":s "..builtIn.gt.char32":s
+    "..builtIn.gt.char8":s
   "..builtIn.ult.i8":s "..builtIn.ult.i16":s "..builtIn.ult.i32":s "..builtIn.ult.i64":s
   "..builtIn.ule.i8":s "..builtIn.ule.i16":s "..builtIn.ule.i32":s "..builtIn.ule.i64":s
   "..builtIn.uge.i8":s "..builtIn.uge.i16":s "..builtIn.uge.i32":s "..builtIn.uge.i64":s

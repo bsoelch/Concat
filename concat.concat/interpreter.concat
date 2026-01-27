@@ -482,7 +482,7 @@ namespace: interpreter
           I64 case
             floatVal unsignedCast if i64 cast.u else i64 cast.s end
             ConstValue .Int return
-          BOOL F32 F64 TYPE CHAR8 CHAR16 CHAR32 case ..unreachable
+          BOOL F32 F64 TYPE CHAR8 case ..unreachable
         end
       else unsignedCast _if
         floatVal i64 cast.u ConstValue .Int return
@@ -496,9 +496,9 @@ namespace: interpreter
         srcType typeContext types.primitiveValue switch
           I8  CHAR8  case intVal i8 cast
             unsignedCast if i64 cast.u else i64 cast.s end intVal= break
-          I16 CHAR16 case intVal i16 cast
+          I16 case intVal i16 cast
             unsignedCast if i64 cast.u else i64 cast.s end intVal= break
-          I32 CHAR32 case intVal i32 cast
+          I32 case intVal i32 cast
             unsignedCast if i64 cast.u else i64 cast.s end intVal= break
           F32 F64 case break ## XXX? handle precission loss due to representing int as float
           I64 case break ## no change neccessary
@@ -886,13 +886,13 @@ namespace: interpreter
             context .localMemory=
             0:i8 localSlice slice.fill
             localSlice LocalSlice8 cast ConstValue .LocalArray8 return
-          I16 CHAR16 case
+          I16 case
             context [] .localMemory
               eltCount i32 cast i16 mixedArena.allocSlice =:: localSlice
             context .localMemory=
             0:i16 localSlice slice.fill
             localSlice LocalSlice16 cast ConstValue .LocalArray16 return
-          I32 CHAR32 case
+          I32 case
             context [] .localMemory
               eltCount i32 cast i32 mixedArena.allocSlice =:: localSlice
             context .localMemory=

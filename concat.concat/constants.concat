@@ -266,7 +266,7 @@ namespace: constant
       PrimitiveType .case switch
         BOOL case false ConstValue .Bool return
         CHAR8 case '\x00' ConstValue .Char return
-        I8 I16 I32 I64  CHAR16 CHAR32 case 0 ConstValue .Int return
+        I8 I16 I32 I64 case 0 ConstValue .Int return
         F32 F64 case 0 ConstValue .Float return
         TYPE case Type .Undefined ConstValue .TypeId return
       end break

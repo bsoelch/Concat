@@ -13,7 +13,7 @@ namespace: types
   enum(
     BOOL
     I8 I16 I32 I64
-    CHAR8 CHAR16 CHAR32
+    CHAR8
     F32 F64
     TYPE
   ) =:: export: PrimitiveType
@@ -303,11 +303,9 @@ namespace: types
       I32 case 4 return
       I64 case 5 return
       CHAR8 case 6 return
-      CHAR16 case 7 return
-      CHAR32 case 8 return
-      F32 case 9 return
-      F64 case 10 return
-      TYPE case 11 return
+      F32 case 7 return
+      F64 case 8 return
+      TYPE case 9 return
     end
   end
   proc( IntLiteral -> i32 ) =>: intLiteralId
@@ -415,8 +413,6 @@ namespace: types
     PrimitiveType .I32  Type .PrimitiveType Type =: export: I32
     PrimitiveType .I64  Type .PrimitiveType Type =: export: I64
     PrimitiveType .CHAR8  Type .PrimitiveType Type =: export: CHAR8
-    PrimitiveType .CHAR16 Type .PrimitiveType Type =: export: CHAR16
-    PrimitiveType .CHAR32 Type .PrimitiveType Type =: export: CHAR32
     PrimitiveType .F32  Type .PrimitiveType Type =: export: F32
     PrimitiveType .F64  Type .PrimitiveType Type =: export: F64
     PrimitiveType .TYPE Type .PrimitiveType Type =: export: TYPE
@@ -471,7 +467,7 @@ namespace: types
 
   proc( PrimitiveType -> bool ) =>: isIntPrimitive
     switch
-      BOOL F32 F64 TYPE CHAR8 CHAR16 CHAR32 case
+      BOOL F32 F64 TYPE CHAR8 case
         false return
       I8 I16 I32 I64 case
         true return
@@ -535,7 +531,7 @@ namespace: types
     unwrapNamed
       .?PrimitiveType .if
         switch
-          BOOL I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 TYPE case
+          BOOL I8 I16 I32 I64 CHAR8 TYPE case
             false return
           F32 F64 case
             true return
@@ -547,7 +543,7 @@ namespace: types
     unwrapNamed
       .?PrimitiveType .if
         switch
-          BOOL TYPE CHAR8 CHAR16 CHAR32 case
+          BOOL TYPE CHAR8 case
             false return
           I8 I16 I32 I64 F32 F64 case
             true return
@@ -561,7 +557,7 @@ namespace: types
         switch
           BOOL TYPE I8 I16 I32 I64 F32 F64 case
             false return
-          CHAR8 CHAR16 CHAR32 case
+          CHAR8 case
             true return
         end
       else ..drop end
@@ -573,7 +569,7 @@ namespace: types
         switch
           BOOL TYPE F32 F64 case
             false return
-          I8 I16 I32 I64 CHAR8 CHAR16 CHAR32 case
+          I8 I16 I32 I64 CHAR8 case
             true return
         end
       else ..drop end
@@ -585,7 +581,7 @@ namespace: types
         switch
           BOOL TYPE case
             false return
-          I8 I16 I32 I64 F32 F64 CHAR8 CHAR16 CHAR32 case
+          I8 I16 I32 I64 F32 F64 CHAR8 case
             true return
         end
       else ..drop end
@@ -760,9 +756,9 @@ namespace: types
         0 return
       BOOL I8 CHAR8 case
         1 return
-      I16 CHAR16 case
+      I16 case
         2 return
-      I32 F32 CHAR32 case
+      I32 F32 case
         4 return
       I64 F64 case
         8 return
@@ -2316,13 +2312,9 @@ namespace: types
   -> bool ) =>: canCastPrimitivePtrArg
     a ..label b ..label == if true return end
     a switch
-      I8  case b .CHAR8  return
-      I16 case b .CHAR16 return
-      I32 case b .CHAR32 return
-      CHAR8  case b .I8  return
-      CHAR16 case b .I16 return
-      CHAR32 case b .I32 return
-      BOOL I64 F32 F64 TYPE case false return
+      I8 case b .CHAR8  return
+      CHAR8 case b .I8  return
+      BOOL I16 I32 I64 F32 F64 TYPE case false return
     end
   end
   proc(
@@ -2672,8 +2664,6 @@ namespace: sb
       I32  case "i32"  appendS return
       I64  case "i64"  appendS return
       CHAR8  case "char8"  appendS return
-      CHAR16 case "char16" appendS return
-      CHAR32 case "char32" appendS return
       F32  case "f32"  appendS return
       F64  case "f64"  appendS return
       TYPE case "type" appendS return
