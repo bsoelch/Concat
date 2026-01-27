@@ -2399,10 +2399,6 @@ namespace: interpreter
     end
     context [] .stack .length nArgs - =:: argsOffset
     procData [] .labelId =:: procName
-    procName labelContext id.labelFlags id.FLAG_EXTERN & ? and
-        codeImpl [] .codeState .PARSING if
-      procName args pos context evaluateExternCall return
-    end
     context offsetContext
     context [] .stack .length =:: stackOffset
     context offsetStack
@@ -2418,18 +2414,14 @@ namespace: interpreter
     labelHash@ labelEq@ 256 Constant map.create newVariables =[]
     newVariables optional.wrap context .localVariables=
     ## process procedure arguments
-    false =:: mut: hasGenericArg
-    false =:: mut: hasNonStaticGenericArg
     0:i32 while $ args .length i32 cast < do =:: i
       procType i typeContext types.getProcArgLabel =:: label
       label labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_AUTO & ? if
         autoArgs autoArgOffset []
           .?GenericArg .if =:: varId
-            prevVariables optional.hasData and
-                prevVariables .data varId map.get =:: labelValue?
-              labelValue? ? if
-              labelValue? .data .value
+            prevVariables .and varId map.get .if
+              .value
             else
               "missing generic value " sb.copyPtr
                 varId i64 cast sb.appendI
@@ -2455,25 +2447,17 @@ namespace: interpreter
         end
         continue
       end
-      labelFlags id.FLAG_STATIC & ? or
-          args i [] typeContext types.isType if
+      labelFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         implId 0 >= "implId is not negative" assert
         codeImpl [] .implementations
           implId list.at .data
         [] .staticArgs staticArgOffset [] =:: value
-        value .?GenericArg ? or value .?TypeId .and typeContext types.isGeneric if
-          true hasGenericArg=
-        end
-        ## ValueInfo
-          args i []
-          pos
-        ValueInfo new =:: valInfo
         label id.LABEL_ID_NONE != if
           context [] .localVariables .data
             label
             ## Constant
               value
-              valInfo
+              args i [] pos ValueInfo new
             Constant new
           map.put ..drop
         end
@@ -2492,11 +2476,6 @@ namespace: interpreter
       end
       context [] .stack argOffset [] =:: value
       context [] .stackInfo argOffset [] =:: valueInfo
-      value .?GenericArg .if =:: genericValue
-        true hasGenericArg=
-      else .?TypeId .and typeContext types.isGeneric _if
-        true hasGenericArg=
-      end
       argOffset 1:iSize + argOffset=
       label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
         context [] .stack
@@ -2540,13 +2519,13 @@ namespace: interpreter
             " has not finished parsing" sb.appendS
           pos errors appendError
           Operation slice.empty break
-        TYPE_CHECKING case
+        PARSED TYPE_CHECKING case
           "procedure " sb.copyPtr
             procName labelContext sb.appendLabelPath
             " has not finished type-checking" sb.appendS
           pos errors appendError
           Operation slice.empty break
-        PARSED TYPE_CHECKED UNUSED COMPILED case
+        TYPE_CHECKED UNUSED COMPILED case
           codeImpl [] .code slice.freeze
           break
       end
@@ -2561,12 +2540,11 @@ namespace: interpreter
       context [] .localMemory offset mixedArena.reset context .localMemory=
       true return ## not a call
     end
-    code 0 slice.at .data =:: op
-    op [] .val .?ImplementProcedure ? ! and
-        op [] .val .?InitializeId ! .or .idType .PROCEDURE ! if
+    code 0 [] =:: op
+    op .val .?ImplementProcedure ? ! and op .val .?InitializeId ! .or .idType .PROCEDURE ! if
       "expected procedure initialization got " sb.copyPtr
-        op [] program sb.appendOp
-      op [] .pos errors appendError
+        op program sb.appendOp
+      op .pos errors appendError
       context resetContext
       context [] .localVariables .data map.free
       prevVariables context .localVariables=
