@@ -302,17 +302,18 @@ proc(
         false
         typeContext
         constContext
-      types.findGeneratedType $ switch
-        None case ..drop ## new generated type
+      types.findGeneratedType switch
+        None case ## new generated type
           ## initializeGeneratedType
             generatorName
             generatorArgs
             pos
             typeChecker
-          typeChecker.initializeGeneratedType .data
+          typeChecker.initializeGeneratedType .else
+            Type .Undefined
+          end
         break
-        Stored case .Stored break
-        Created case .Created break
+        Stored Created .case break
       end
         argBuffer []
           argOffset list.setLength

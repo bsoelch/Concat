@@ -1703,9 +1703,13 @@ namespace: typeChecker
       false
       typeContext
       constContext
-    types.findGeneratedType $ switch
-      None case "initializing generated type failed" ..panic
-      Stored case .Stored optional.wrap break
+    types.findGeneratedType switch
+      None case
+        "initializing generated type failed " sb.copyPtr
+          generatorName labelContext sb.appendLabelPath
+        pos errors appendError
+      Type optional.empty return
+      Stored .case optional.wrap break
       Created case ..unreachable
     end return
   end
