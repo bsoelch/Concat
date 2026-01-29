@@ -944,7 +944,7 @@ proc(
       end
       stackValues stackIndex @[] .value [] =:: stackVal
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? or
-          paramType typeContext types.isType if
+          paramType typeContext types.isType or stackVal .?TypeId ? if
         stackVal .?None ? if
           false current .argsMatch=
         end
@@ -1154,9 +1154,16 @@ proc(
       constArgs
         candidate .genericValues eltLabel getValueOrNone list.append
       constArgs=
-    else inTypes i [] types.primitive.TYPE typeContext types.canAutoCast _if
+    else inTypes i [] =:: eltType
+        eltType types.primitive.TYPE typeContext types.canAutoCast _if
       constArgs
         candidate .genericValues -2 i - LabelId cast.s getValueOrNone list.append
+      constArgs=
+    else eltType typeContext types.isGeneric and
+        candidate .genericValues -2 i - LabelId cast.s getValueOrNone =:: val
+        val .?None ? ! _if
+      constArgs
+        val list.append
       constArgs=
     end
     i 1 +
