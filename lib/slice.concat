@@ -355,6 +355,72 @@ namespace: slice
       end
     return
   end
+  proc(
+    type : auto: T
+    T slice : a
+    T slice : b
+  -> i32 ) =>: export: simpleLexcmp
+    a .length b .length iSize.min for =:: i
+      a i [] b i [] == if continue end
+      a i [] b i [] < if -1 else 1 end return
+    end
+    a .length b .length == if 0 return end
+    a .length b .length u< if -1 else 1 end return
+  end
+  proc(
+    type : auto: T
+    type : auto: C
+    T slice : a
+    T slice : b
+    ( T T C -> i32 ) ptr : eltCmp
+    C : context
+  -> i32 ) =>: export: checkedLexcmp
+    a .length b .length iSize.min for =:: i
+      a i [] b i [] eltCmp () =:: c
+      c ? if c return end
+    end
+    a .length b .length == if 0 return end
+    a .length b .length u< if -1 else 1 end return
+  end
+  overload: export: lexcmp
+    simpleLexcmp
+    checkedLexcmp
+  end
+  proc(
+    type : auto: T
+    T slice : a
+    T slice : b
+  -> i32 ) =>: export: simpleCmp
+    a .length b .length != if
+      a .length b .length u< if -1 else 1 end return
+    end
+    a .length b .length iSize.min for =:: i
+      a i [] b i [] == if continue end
+      a i [] b i [] < if -1 else 1 end return
+    end
+    0 return
+  end
+  proc(
+    type : auto: T
+    type : auto: C
+    T slice : a
+    T slice : b
+    ( T T C -> i32 ) ptr : eltCmp
+    C : context
+  -> i32 ) =>: export: checkedCmp
+    a .length b .length != if
+      a .length b .length u< if -1 else 1 end return
+    end
+    a .length b .length iSize.min for =:: i
+      a i [] b i [] eltCmp () =:: c
+      c ? if c return end
+    end
+    0 return
+  end
+  overload: export: cmp
+    simpleCmp
+    checkedCmp
+  end
 
   proc(
     type : auto: T
