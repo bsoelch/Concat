@@ -1192,7 +1192,7 @@ proc(
           break
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
-        CASE DOT_CASE DEFAULT UNKNOWN case break
+        CASE DOT_CASE DEFAULT DOT_DEFAULT UNKNOWN case break
       end
       "unsupported block-type in constant evaluation: " sb.copyPtr
         blockInfo .blockType sb.appendBlockType
@@ -1200,7 +1200,7 @@ proc(
       EvalResult .Error return
     BlockEnd .case =:: blockInfo
       blockInfo .blockType =:: blockType
-      BlockType ..length 42:iSize == "no-new block-types" assert
+      BlockType ..length 43:iSize == "no-new block-types" assert
       blockType switch
         ELSE SWITCH AND OR case EvalResult .Ok return
         WHILE case

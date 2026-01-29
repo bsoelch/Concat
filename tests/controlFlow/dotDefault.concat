@@ -1,0 +1,19 @@
+union(
+  _ : N1
+  _ : N2
+  i32 : I
+  f32 : F
+) =:: aUnion
+proc( aUnion -> bool ) =>: test
+  switch
+    I .case 0 == return
+    F .case 0 == return
+    .default .?N1 ? return
+  end
+end
+proc( -> ) =>: main
+  0 aUnion .I test "0" assert
+  1.5:f32 aUnion .F test ! "1.5" assert
+  aUnion .N1 test "N1" assert
+  aUnion .N2 test ! "N2" assert
+end

@@ -2018,7 +2018,7 @@ proc(
   switchBlock [] .switchPosition =:: switchPosition
   op [] .val .?Block .if
     .blockType switch
-      CASE DOT_CASE DEFAULT case
+      CASE DOT_CASE DEFAULT DOT_DEFAULT case
         false return
       BREAK case
         switchBlock [] .allowBreak if
@@ -3931,7 +3931,7 @@ proc(
             op state appendOp ..drop
             false state .reachable=
             continue.opLoop
-          CASE DOT_CASE DEFAULT case
+          CASE DOT_CASE DEFAULT DOT_DEFAULT case
             state peekBlock .and .?Switch .else
               "unexpected " sb.copyPtr
                 blockType sb.appendBlockType
@@ -3957,7 +3957,7 @@ proc(
                 blockType sb.appendBlockType
                 ", " sb.appendS
                 BlockType .DEFAULT sb.appendBlockType
-                blockType .DEFAULT if
+                blockType .DEFAULT or blockType .DOT_DEFAULT if
                   " can only appear once in " sb.appendS
                 else
                   " has to be last case in " sb.appendS
@@ -3969,7 +3969,7 @@ proc(
             end
             switchData [] .labels list.peek =:: prev?
             switchBlock [] .switchType =:: switchType
-            blockType .DEFAULT if
+            blockType .DEFAULT or blockType .DOT_DEFAULT if
               prev? optional.isEmpty if
                 "unexpected " sb.copyPtr
                   BlockType .DEFAULT sb.appendBlockType
@@ -4008,6 +4008,8 @@ proc(
             switchType op@ .dataType=
             blockType .DOT_CASE if
               BlockType .CASE op@ .val .Block .blockType=
+            else blockType .DOT_DEFAULT _if
+              BlockType .DEFAULT op@ .val .Block .blockType=
             end
             op state appendOp ..drop
             blockType .DOT_CASE if
@@ -4048,10 +4050,20 @@ proc(
                 end
               else
                 128 sb.create
-                  BlockType .DOT_CASE sb.appendBlockType
+                  blockType sb.appendBlockType
                   " is only supported for unions got: " sb.appendS
                   switchType typeContext sb.appendType
                 op .pos errors appendError
+              end
+            else blockType .DOT_DEFAULT _if
+              switchBlock [] .srcVar .if =:: srcVar
+                ## pushValue
+                  switchType
+                  ConstValue .None
+                  switchType srcVar op .pos opGetId
+                state pushValue
+              else
+                "cannot access switched type" sb.copyPtr op .pos errors appendError
               end
             end
             switchData [] .caseCount
@@ -4809,7 +4821,7 @@ proc(
             tmp state appendOp ..drop
             idContext id.closeScope ! "closing while-scope worked" assert
             continue.opLoop
-          CASE DEFAULT DOT_CASE case ## end-case should not be created by parser
+          CASE DEFAULT DOT_CASE DOT_DEFAULT case ## end-case should not be created by parser
             break
           FINALLY case
             op .pos state closeBlock .?While .else

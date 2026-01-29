@@ -70,7 +70,7 @@
           switch          |
           switch\:        |
           \.?case         |
-          default         |
+          \.?default      |
           \.?and          |
           \.?or           |
           =&gt;           |

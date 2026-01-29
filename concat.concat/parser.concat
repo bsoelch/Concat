@@ -1221,6 +1221,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       blockLabel state peekBlock .data .blockLabel=
       BlockType .SWITCH blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       return
+    ## TODO? remember if if contains .case / .default
     else $ "case":s string.eq or $ ".case":s string.eq _if =:: opName
       state peekBlock .and .blockData .?Switch .if =:: switchData
         switchData .state .DEFAULT if
@@ -1245,7 +1246,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
     ## TODO? merge with `case`
-    else $ "default":s string.eq _if ..drop
+    else $ "default":s string.eq or $ ".default":s string.eq _if =:: opName
       state peekBlock .and .blockData .?Switch .if =:: switchData
         switchData .state .DEFAULT if
           "unexpected 'default' statement, switch-block already has a 'default' branch" sb.copyPtr
@@ -1258,7 +1259,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         iSize optional.empty switchData .implicitBreak=
         switchData [] .prevCasePosition fileState [] .wordStart state setBlockJump
         state opCount switchData .prevCasePosition=
-        BlockType .DEFAULT fileState [] .wordStart opBlock  state appendOp
+        opName 0 string.charAt '.' == if
+          BlockType .DOT_DEFAULT
+        else
+          BlockType .DEFAULT
+        end fileState [] .wordStart opBlock  state appendOp
         return
       else
         "'default' is only allowed in switch-case-blocks" sb.copyPtr fileState [] .wordStart errors appendError
@@ -1642,7 +1647,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
         state [] .openBlocks list.reversed for: findContainer =:: b
-          BlockType ..length 42:iSize == "no new block types" assert
+          BlockType ..length 43:iSize == "no new block types" assert
           b .blockData switch
             Procedure case
               false inConstBlock=
@@ -2000,7 +2005,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ..drop ## discard remainder of file
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek =:: next?
-          BlockType ..length 42:iSize == "no new block types" assert
+          BlockType ..length 43:iSize == "no new block types" assert
           next? optional.hasData and next? .data [] .blockData switch
             If Switch case true break
             default false break

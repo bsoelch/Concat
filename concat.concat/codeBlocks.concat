@@ -25,7 +25,7 @@ enum(
   SWITCH
   BREAK_SWITCH
   CASE DOT_CASE
-  DEFAULT
+  DEFAULT DOT_DEFAULT
   AND
   OR
   INITIALIZER
@@ -114,6 +114,9 @@ namespace: sb
         return
       DEFAULT case
         "default" sb.appendS
+        return
+      DOT_DEFAULT case
+        ".default" sb.appendS
         return
       AND case
         "and" sb.appendS
