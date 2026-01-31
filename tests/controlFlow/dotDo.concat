@@ -1,0 +1,16 @@
+import optional
+import numbers/printNumbers
+
+proc( i32 i32 : bound -> i32 optional ) =>: less
+  $ bound < if
+    optional.wrap
+  else ..drop
+    i32 optional.empty
+  end
+end
+
+proc( -> ) =>: main
+  0 while 10 less .do
+    $ io.println
+  finally 1 + end
+end

@@ -336,7 +336,7 @@ proc( iSize slice : blockPositions FilePosition : pos ParserState ptr.mut : stat
         opPos - JumpDistance cast
       block .jumpDistance=
     else
-      "operations and blocks are out of sync, expected and got " sb.copyPtr
+      "operations and blocks are out of sync" sb.copyPtr
       pos errors appendError
       return
     end
@@ -1105,7 +1105,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       blockLabel state peekBlock .data .blockLabel=
       itrId TmpVarInfo new optional.wrap state peekBlock .data .tmpVarInfo=
       return
-    else $ "do":s string.eq _if ..drop ## TODO? `.do` statement similar to `.and`
+    else $ "do":s string.eq or $ ".do":s string.eq _if =:: opName
       state peekBlock .and =:: currentBlock
           currentBlock .blockData .?AndOr ? if
         state closeBlock .and .blockData .?AndOr .else
@@ -1121,12 +1121,23 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
       WhileBlockState .DO whileData .state=
+      opName 0 string.charAt '.' == if
+        state fileState [] .wordStart appendDotIfCheck optional.wrap
+      else TmpVarInfo optional.empty end =:: varInfo?
       whileData [] .breakPositions
         andPositions slice.freeze list.appendSlice
         andPositions slice.free ..drop
         state opCount list.append
       whileData .breakPositions=
       BlockType .DO  fileState [] .wordStart opBlock  state appendOp
+      varInfo? .if =:: varInfo
+        varInfo .varId fileState [] .wordStart opGetName state appendOp
+        "..if.ifVal":s idContext id.findIdentifierByName
+          ! "and/or val" assert
+        =:: ifGet
+        ifGet [] .valueType ifGet id.asIdInfo fileState [] .wordStart opGetId state appendOp
+      end
+      ## TODO? return else value at end of `while`, if `.do` is only branch to end
       return
     else $ "finally":s string.eq _if =:: opName
       state peekBlock .and .blockData .?While .else

@@ -63,7 +63,7 @@
           while\:         |
           for             |
           for\:           |
-          do              |
+          \.?do           |
           break           |
           continue        |
           finally         |
