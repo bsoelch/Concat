@@ -117,6 +117,7 @@ i64 =:: export: ProcBundleId
 
 proc( LabelId -> i32 ) =>: export: labelHash i32 cast end
 proc( LabelId LabelId -> bool ) =>: export: labelEq == end
+proc( LabelId LabelId -> i32 ) : export: alias: labelCmp i32.cmp
 
 i32 =:: export: NamespaceId
 ( char8 ptr.raw iSize -> NamespaceId ) : static: export: alias: :NamespaceId ..builtIn.parse.i32

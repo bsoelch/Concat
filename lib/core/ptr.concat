@@ -416,6 +416,7 @@ end
 overload: export: <=>
   ptr.cmp
   ptr.cmp0D
+  iSize.cmp
 end
 overload: export: u<
   ptr.lt

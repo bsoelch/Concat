@@ -126,62 +126,63 @@ proc(
 end
 
 proc( ConstValue : a ConstValue : b -> bool ) =>: export: constantEquals
+  a b constantCmp 0 ==
+end
+proc( ConstValue : a ConstValue : b -> i32 ) =>: export: constantCmp
   a ..label b ..label != if ##different constant types
-    false return
+    a ..label b ..label <=> return
   end
   a switch
-    None WildCard case true return
-    Bool .case b .Bool == return
-    EnumLabel .case b .EnumLabel == return
-    Int .case b .Int == return
-    Float .case b .Float == return
-    Char .case b .Char == return
-    Array8 .case b .Array8 slice.eq return
-    Array16 .case b .Array16 slice.eq return
-    Array32 .case b .Array32 slice.eq return
-    Array64 .case b .Array64 slice.eq return
-    Array .case b .Array constantEquals@ slice.eq return
-    TypeId .case b .TypeId types.typeEquals return
-    Procedure .case b .Procedure == return
-    ProcedureBundle .case b .ProcedureBundle == return
-    GenericArg .case b .GenericArg == return
+    None WildCard case 0 return
+    Bool .case ?1 b .Bool ?1 >$ - return
+    EnumLabel .case b .EnumLabel i32.cmp return
+    Int .case b .Int i64.cmp return
+    Float .case b .Float f64.cmp return
+    Char .case b .Char char8.cmp return
+    Array8 .case b .Array8 slice.cmp return
+    Array16 .case b .Array16 slice.cmp return
+    Array32 .case b .Array32 slice.cmp return
+    Array64 .case b .Array64 slice.cmp return
+    Array .case b .Array constantCmp@ slice.cmp return
+    TypeId .case b .TypeId types.typeCmp return
+    Procedure .case i64 cast.u b .Procedure i64 cast.u i64.cmp return
+    ProcedureBundle .case i64 cast.u b .ProcedureBundle i64 cast.u i64.cmp return
+    GenericArg .case i64 cast.u b .GenericArg i64 cast.u i64.cmp return
     Union case
       a .Union .eltIndex b .Union .eltIndex != if
-        false return
+        a .Union .eltIndex b .Union .eltIndex <=> return
       end
-      a .Union .value b .Union .value == if
-        true return
-      end
+      a .Union .value b .Union .value == if 0 return end
       a .Union .value []
         b .Union .value []
-      constantEquals return
+      constantCmp return
     ## local values are compared with pointer identity ! update hash function when this changes
-    LocalValue .case ConstValue ptr.raw cast b .LocalValue ConstValue ptr.raw cast == return
+    LocalValue .case ConstValue ptr.raw cast b .LocalValue ConstValue ptr.raw cast ptr.cmp return
     LocalArray case
       ## local arrays are only equal if memory ranges coincide
-      a .LocalArray .data b .LocalArray .data == and
-        a .LocalArray .length b .LocalArray .length ==
-      end return
+      a .LocalArray .length b .LocalArray .length <=>
+        $ ? if return else ..drop end
+      a .LocalArray .data b .LocalArray .data ptr.cmp return
     LocalArray8 case
       ## local arrays are only equal if memory ranges coincide
-      a .LocalArray8 .data b .LocalArray8 .data == and
-        a .LocalArray8 .length b .LocalArray8 .length ==
-      end return
+      a .LocalArray8 .length b .LocalArray8 .length <=>
+        $ ? if return else ..drop end
+      a .LocalArray8 .data b .LocalArray8 .data ptr.cmp return
     LocalArray16 case
       ## local arrays are only equal if memory ranges coincide
-      a .LocalArray16 .data b .LocalArray16 .data == and
-        a .LocalArray16 .length b .LocalArray16 .length ==
-      end return
+      a .LocalArray16 .length b .LocalArray16 .length <=>
+        $ ? if return else ..drop end
+      a .LocalArray16 .data b .LocalArray16 .data ptr.cmp return
     LocalArray32 case
       ## local arrays are only equal if memory ranges coincide
-      a .LocalArray32 .data b .LocalArray32 .data == and
-        a .LocalArray32 .length b .LocalArray32 .length ==
-      end return
+      a .LocalArray32 .length b .LocalArray32 .length <=>
+        $ ? if return else ..drop end
+      a .LocalArray32 .data b .LocalArray32 .data ptr.cmp return
     LocalArray64 case
       ## local arrays are only equal if memory ranges coincide
-      a .LocalArray64 .data b .LocalArray64 .data == and
-        a .LocalArray64 .length b .LocalArray64 .length ==
-      end return
+      a .LocalArray64 .length b .LocalArray64 .length <=>
+        $ ? if return else ..drop end
+      a .LocalArray64 .data b .LocalArray64 .data ptr.cmp return
   end
 end
 ## TODO tweak scale factors (would larger primes be better?)

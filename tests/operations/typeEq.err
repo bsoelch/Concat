@@ -1,10 +1,10 @@
 no matching signature for arguments ( type { i32 }  type { i32 }  )
 candidates:
-  * proc( named[4037]( "type.pointer" ) : auto: static: P P[ 3514:LabelId ] : p P[ 3514:LabelId ] : q -> bool ) ptr.eq
-  * proc( named[4037]( "type.pointer" ) : auto: static: P P[ 3514:LabelId ] : p P[ 3514:LabelId ] : q -> bool ) ptr.eq
-  * proc( named[4043]( "type.enum" ) : auto: static: E E[ 4110:LabelId ] : a E[ 4110:LabelId ] : b -> bool ) std.default.eqEnum
-  * proc( named[4043]( "type.enum" ) : auto: static: E E[ 4110:LabelId ] : a E[ 4110:LabelId ] : b -> bool ) std.default.eqEnum
-  * proc( named[4065]( "type.namedPrimitive" ) : auto: static: P P[ 4132:LabelId ] : a P[ 4132:LabelId ] : b -> bool ) std.default.eqNamedPrimitive
+  * proc( named[4038]( "type.pointer" ) : auto: static: P P[ 3514:LabelId ] : p P[ 3514:LabelId ] : q -> bool ) ptr.eq
+  * proc( named[4038]( "type.pointer" ) : auto: static: P P[ 3514:LabelId ] : p P[ 3514:LabelId ] : q -> bool ) ptr.eq
+  * proc( named[4044]( "type.enum" ) : auto: static: E E[ 4111:LabelId ] : a E[ 4111:LabelId ] : b -> bool ) std.default.eqEnum
+  * proc( named[4044]( "type.enum" ) : auto: static: E E[ 4111:LabelId ] : a E[ 4111:LabelId ] : b -> bool ) std.default.eqEnum
+  * proc( named[4066]( "type.namedPrimitive" ) : auto: static: P P[ 4133:LabelId ] : a P[ 4133:LabelId ] : b -> bool ) std.default.eqNamedPrimitive
   ...
  at ./tests/operations/typeEq.concat:1:9
 wrong type for assertion expected bool got type at ./tests/operations/typeEq.concat:1:49

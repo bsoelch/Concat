@@ -87,13 +87,13 @@ union(
 ) =:: export: Type
 
 namespace: types
-  proc( ArrayId : a ArrayId : b -> bool ) =>: arrayTypeEqual
-    a b == if true return end
+  proc( ArrayId : a ArrayId : b -> i32 ) =>: arrayTypeCmp
+    a b == if 0 return end
     a ArrayData ptr cast =:: aData
     b ArrayData ptr cast =:: bData
-    aData [] .size bData [] .size arraySizeEqual and
-      aData [] .base bData [] .base typeEquals
-    end return
+    aData [] .size bData [] .size arraySizeCmp
+      $ ? if return else ..drop end
+    aData [] .base bData [] .base typeCmp return
   end
   ## TODO ensure type-hash function returns distinct values for common small types
   ## TODO? cache results of hash-computation
@@ -103,16 +103,21 @@ namespace: types
   end
   ## TODO? should flags be required to be equal
   ##  * figure out why identical types can have different flags
-  proc( CompositeInfo ptr : a CompositeInfo ptr : b -> bool ) =>: compositeTypeEqual
-    a b == if true return end
-    a .elements [] .length b .elements [] .length != if false return end
-    ## TODO? should types that only differ by missing labels (id.NONE vs no label) be treated differently
-    a [] .labels ? b [] .labels ? != if false return end
-    a [] .elements b [] .elements typeEquals@ slice.eq ! if false return end
-    a [] .labels ? if
-      a .labels [] .data b .labels [] .data labelEq@ slice.eq return
+  proc( CompositeInfo ptr : a CompositeInfo ptr : b -> i32 ) =>: compositeTypeCmp
+    a b == if 0 return end
+    a .elements [] .length b .elements [] .length != if
+      a .elements [] .length b .elements [] .length iSize.cmp return
     end
-    true return
+    ## TODO? should types that only differ by missing labels (id.NONE vs no label) be treated differently
+    a [] .labels ? b [] .labels ? != if
+      a [] .labels ? if 1 else -1 end return
+    end
+    a [] .elements b [] .elements typeCmp@ slice.cmp
+      $ ? if return else ..drop end
+    a [] .labels ? if
+      a .labels [] .data b .labels [] .data labelCmp@ slice.cmp return
+    end
+    0 return
   end
   proc( CompositeInfo ptr : a -> i32 ) =>: compositeTypeHash
     0:i32
@@ -122,81 +127,87 @@ namespace: types
       31 * a [] .elements typeHash@ slice.hash +
     return
   end
-  ## TODO do these procs need to be exported?
-  proc( TupleId : a TupleId : b -> bool ) =>: export: tupleTypeEqual
-    a b == if true return end
+  proc( TupleId : a TupleId : b -> i32 ) =>: tupleTypeCmp
+    a b == if 0 return end
     a TupleInfo ptr cast =:: aData
     b TupleInfo ptr cast =:: bData
-    aData .compositeInfo bData .compositeInfo compositeTypeEqual
+    aData .compositeInfo bData .compositeInfo compositeTypeCmp
   end
-  proc( TupleId : a -> i32 ) =>: export: tupleTypeHash
+  proc( TupleId : a -> i32 ) =>: tupleTypeHash
     a TupleInfo ptr cast =:: aData
     aData .compositeInfo compositeTypeHash
   end
-  proc( UnionId : a UnionId : b -> bool ) =>: export: unionTypeEqual
-    a b == if true return end
+  proc( UnionId : a UnionId : b -> i32 ) =>: unionTypeCmp
+    a b == if 0 return end
     a UnionInfo ptr cast =:: aData
     b UnionInfo ptr cast =:: bData
-    aData [] .labelType bData [] .labelType typeEquals ! if
-      false return
-    end
-    aData .compositeInfo bData .compositeInfo compositeTypeEqual
+    aData [] .labelType bData [] .labelType typeCmp
+      $ ? if return else ..drop end
+    aData .compositeInfo bData .compositeInfo compositeTypeCmp
   end
-  proc( UnionId : a -> i32 ) =>: export: unionTypeHash
+  proc( UnionId : a -> i32 ) =>: unionTypeHash
     a UnionInfo ptr cast =:: aData
     aData [] .labelType typeHash
       31 * aData .compositeInfo compositeTypeHash +
     return
   end
-  proc( UnionElementId : a UnionElementId : b -> bool ) =>: export: unionElementEqual
-    a b == if true return end
+  proc( UnionElementId : a UnionElementId : b -> i32 ) =>: unionElementCmp
+    a b == if 0 return end
     a UnionElementInfo ptr cast =:: aData
     b UnionElementInfo ptr cast =:: bData
     aData [] .labelIndex bData [] .labelIndex != if
-      false return
+      aData [] .labelIndex bData [] .labelIndex i32.cmp return
     end
-    aData [] .base bData [] .base typeEquals
+    aData [] .base bData [] .base typeCmp
   end
-  proc( UnionElementId : a -> i32 ) =>: export: unionElementHash
+  proc( UnionElementId : a -> i32 ) =>: unionElementHash
     a UnionElementInfo ptr cast =:: aData
     aData [] .labelIndex
       31 * aData [] .base typeHash +
     return
   end
-  proc( EnumId : a EnumId : b -> bool ) =>: export: enumTypeEqual
-    a b == if true return end
+  proc( EnumId : a EnumId : b -> i32 ) =>: enumTypeCmp
+    a b == if 0 return end
     a EnumInfo ptr cast [] =:: aData
     b EnumInfo ptr cast [] =:: bData
-    aData .labelType bData .labelType typeEquals ! if
-      false return
-    end
-    aData .labels bData .labels labelEq@ slice.eq return
+    aData .labelType bData .labelType typeCmp
+      $ ? if return else ..drop end
+    aData .labels bData .labels labelCmp@ slice.cmp return
   end
-  proc( EnumId : a -> i32 ) =>: export: enumTypeHash
+  proc( EnumId : a -> i32 ) =>: enumTypeHash
     a EnumInfo ptr cast [] =:: aData
     aData .labelType typeHash
       31 * aData .labels labelHash@ slice.hash +
     return
   end
-  proc( InitializerId : a InitializerId : b -> bool ) =>: export: initializerTypeEqual
-    a b == if true return end
-    a .asTuple TupleId cast b .asTuple TupleId cast tupleTypeEqual
+  proc( InitializerId : a InitializerId : b -> i32 ) =>: initializerTypeCmp
+    a b == if 0 return end
+    a .asTuple TupleId cast b .asTuple TupleId cast tupleTypeCmp
   end
-  proc( InitializerId : a -> i32 ) =>: export: initializerTypeHash
+  proc( InitializerId : a -> i32 ) =>: initializerTypeHash
     a .asTuple TupleId cast tupleTypeHash
   end
-  proc( ProcTypeId : a ProcTypeId : b -> bool ) =>: export: procTypeEqual
-    a b == if true return end
+  proc( ProcTypeId : a ProcTypeId : b -> i32 ) =>: procTypeCmp
+    a b == if 0 return end
     a ProcType ptr cast =:: aData
     b ProcType ptr cast =:: bData
-    aData [] .callingConvention bData [] .callingConvention != if false return end
-    aData [] .inTypes .length bData [] .inTypes .length != if false return end
-    aData [] .outTypes .length bData [] .outTypes .length != if false return end
-    aData [] .labels .length bData [] .labels .length != if false return end
-    aData [] .inTypes bData [] .inTypes typeEquals@ slice.eq and
-    aData [] .outTypes bData [] .outTypes typeEquals@ slice.eq and
-      aData [] .labels bData [] .labels labelEq@ slice.eq
-    end return
+    aData [] .callingConvention bData [] .callingConvention != if
+      aData [] .callingConvention ..label bData [] .callingConvention ..label <=> return
+    end
+    aData [] .inTypes .length bData [] .inTypes .length != if
+      aData [] .inTypes .length bData [] .inTypes .length iSize.cmp return
+    end
+    aData [] .outTypes .length bData [] .outTypes .length != if
+      aData [] .outTypes .length bData [] .outTypes .length iSize.cmp return
+    end
+    aData [] .labels .length bData [] .labels .length != if
+      aData [] .labels .length bData [] .labels .length iSize.cmp return
+    end
+    aData [] .inTypes bData [] .inTypes typeCmp@ slice.cmp
+      $ ? if return else ..drop end
+    aData [] .outTypes bData [] .outTypes typeCmp@ slice.cmp
+      $ ? if return else ..drop end
+    aData [] .labels bData [] .labels labelCmp@ slice.cmp return
   end
   proc( ProcTypeId : a -> i32 ) =>: export: procTypeHash
     a ProcType ptr cast =:: aData
@@ -206,20 +217,20 @@ namespace: types
       31 * aData [] .labels labelHash@ slice.hash +
     return
   end
-  proc( GeneratedTypeId : a GeneratedTypeId : b -> bool ) =>: export: generatedTypeEqual
-    a b == or
-      a GeneratedTypeName ptr cast [] b GeneratedTypeName ptr cast [] genNameEq
-    end
+  proc( GeneratedTypeId : a GeneratedTypeId : b -> i32 ) =>: export: generatedTypeCmp
+    a b == if 0 return end
+    a GeneratedTypeName ptr cast [] b GeneratedTypeName ptr cast [] genNameCmp
   end
   proc( GeneratedTypeId : a -> i32 ) =>: export: generatedTypeHash
     a GeneratedTypeName ptr cast [] genNameHash
   end
-  proc( SetTypeId : a SetTypeId : b -> bool ) =>: setTypeEq
-    a b == if true return end
+  proc( SetTypeId : a SetTypeId : b -> i32 ) =>: setTypeCmp
+    a b == if 0 return end
     a SetType ptr cast =:: aData
     b SetType ptr cast =:: bData
-    aData [] .baseType bData [] .baseType typeEquals ! if false return end
-    aData [] .elements bData [] .elements constantEquals@ slice.eq return
+    aData [] .baseType bData [] .baseType typeCmp
+      $ ? if return else ..drop end
+    aData [] .elements bData [] .elements constantCmp@ slice.cmp return
   end
   proc( SetTypeId : a -> i32 ) =>: setTypeHash
     a SetType ptr cast =:: aData
@@ -227,12 +238,14 @@ namespace: types
       31 * aData [] .elements constantHash@ slice.hash +
     return
   end
-  proc( RefinementTypeId : a RefinementTypeId : b -> bool ) =>: refinementTypeEq
-    a b == if true return end
+  proc( RefinementTypeId : a RefinementTypeId : b -> i32 ) =>: refinementTypeCmp
+    a b == if 0 return end
     a RefinementType ptr cast =:: aData
     b RefinementType ptr cast =:: bData
-    aData [] .typeTrait bData [] .typeTrait != if false return end
-    aData [] .baseType bData [] .baseType typeEquals return
+    aData [] .typeTrait bData [] .typeTrait != if
+      aData [] .typeTrait i64 cast.u bData [] .typeTrait i64 cast.u i64.cmp return
+    end
+    aData [] .baseType bData [] .baseType typeCmp return
   end
   proc( RefinementTypeId : a -> i32 ) =>: refinementTypeHash
     a RefinementType ptr cast =:: aData
@@ -241,58 +254,57 @@ namespace: types
     return
   end
   proc( Type : a Type : b -> bool ) =>: export: typeEquals
+    a b typeCmp 0 ==
+  end
+  proc( Type : a Type : b -> i32 ) =>: export: typeCmp
     a ..label b ..label != if
-      false return
+      a ..label b ..label <=> return
     end
     a switch
       Undefined  Empty case
-        true return ## there is only one undefined/empty type
+        0 return ## there is only one undefined/empty type
       PrimitiveType case
-        a .PrimitiveType b .PrimitiveType == return
+        a .PrimitiveType primitiveId b .PrimitiveType primitiveId i32.cmp return
       IntLiteral case
-        a .IntLiteral b .IntLiteral == return
+        a .IntLiteral intLiteralId b .IntLiteral intLiteralId i32.cmp return
       CType case
-        a .CType b .CType == return
+        a .CType cTypeId b .CType cTypeId i32.cmp return
       Align case
-        a .Align b .Align == return
+        a .Align b .Align i32.cmp return
       NamedType case
-        a .NamedType b .NamedType == return
+        a .NamedType i32 cast b .NamedType i32 cast i32.cmp return
       GenericType case
-        a .GenericType b .GenericType == return
+        a .GenericType i32 cast b .GenericType i32 cast i32.cmp return
       Pointer case
-        a .Pointer b .Pointer arrayTypeEqual return
+        a .Pointer b .Pointer arrayTypeCmp return
       MutablePointer case
-        a .MutablePointer b .MutablePointer arrayTypeEqual return
+        a .MutablePointer b .MutablePointer arrayTypeCmp return
       RawPointer case
-        a .RawPointer b .RawPointer arrayTypeEqual return
+        a .RawPointer b .RawPointer arrayTypeCmp return
       MutableRawPointer case
-        a .MutableRawPointer b .MutableRawPointer arrayTypeEqual return
+        a .MutableRawPointer b .MutableRawPointer arrayTypeCmp return
       ArrayType case
-        a .ArrayType b .ArrayType arrayTypeEqual return
+        a .ArrayType b .ArrayType arrayTypeCmp return
       Struct case
-        a .Struct b .Struct tupleTypeEqual return
+        a .Struct b .Struct tupleTypeCmp return
       Enum case
-        a .Enum b .Enum enumTypeEqual return
+        a .Enum b .Enum enumTypeCmp return
       Union case
-        a .Union b .Union unionTypeEqual return
+        a .Union b .Union unionTypeCmp return
       RawUnion case
-        a .RawUnion b .RawUnion unionTypeEqual return
+        a .RawUnion b .RawUnion unionTypeCmp return
       UnionElement case
-        a .UnionElement b .UnionElement unionElementEqual return
+        a .UnionElement b .UnionElement unionElementCmp return
       Initializer case
-        a .Initializer b .Initializer initializerTypeEqual return
+        a .Initializer b .Initializer initializerTypeCmp return
       Procedure  case
-        a .Procedure  b .Procedure  procTypeEqual return
+        a .Procedure  b .Procedure  procTypeCmp return
       GeneratedType case
-        a .GeneratedType b .GeneratedType generatedTypeEqual return
+        a .GeneratedType b .GeneratedType generatedTypeCmp return
       SetType case
-        a .SetType  b .SetType  == or
-          a .SetType b .SetType setTypeEq
-        end return
+        a .SetType b .SetType setTypeCmp return
       RefinementType case
-        a .RefinementType  b .RefinementType  == or
-          a .RefinementType b .RefinementType refinementTypeEq
-        end return
+        a .RefinementType b .RefinementType refinementTypeCmp return
     end
   end
   proc( PrimitiveType -> i32 ) =>: primitiveId
@@ -1095,6 +1107,16 @@ namespace: types
       Dynamic case 2 return
       Int .case i32 cast.u 1 + 3 * return
       GenericArg .case i32 cast.u 1 + -5 * return
+    end
+  end
+  proc( ArraySize : a ArraySize : b -> i32 ) =>: arraySizeCmp
+    a ..label b ..label != if
+      a ..label b ..label <=> return
+    end
+    a switch
+      None Dynamic case 0 return
+      Int case a .Int b .Int i64.cmp return
+      GenericArg case a .GenericArg i32 cast b .GenericArg i32 cast i32.cmp return
     end
   end
   enum( POINTER MUTABLE_POINTER RAW_POINTER MUTABLE_RAW_POINTER ARRAY ) =:: export: ArrayType
@@ -1982,6 +2004,12 @@ namespace: types
       31 * a .arguments constantHash@ slice.hash +
     return
   end
+  proc( GeneratedTypeName : a GeneratedTypeName : b -> i32 ) =>: genNameCmp
+    a .generator b .generator != if
+      a .generator i32 cast.u b .generator i32 cast.u i32.cmp return
+    end
+    a .arguments b .arguments constantCmp@ slice.cmp
+  end
 
   proc( Type -> bool ) =>: export: isGeneratedType
     .?GeneratedType ? return
@@ -2110,6 +2138,7 @@ namespace: types
     context [] .memory
       ## TODO: is shallow copy of type-elements save
       elements mixedArena.copySlice =:: sliceElements
+      sliceElements constantCmp@ slice.sort
       baseType sliceElements slice.freeze SetType new mixedArena.copyValue =:: setType
     context .memory=
     setType SetTypeId cast Type .SetType  return
