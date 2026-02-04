@@ -309,6 +309,43 @@ namespace: slice
 
   proc(
     type : auto: T
+    T slice : seq
+    T slice : elts
+  -> bool ) =>: export: isSubSequenceEq
+    elts .length 0 == if true return end
+    0:iSize =:: mut: i
+    seq for =:: x
+      x elts i [] == if
+        i 1 + i=
+        i elts .length u>= if
+          true return
+        end
+      end
+    end
+    false return
+  end
+  proc(
+    type : auto: T
+    T slice : seq
+    T slice : elts
+    ( T T -> bool ) ptr : fEq
+  -> bool ) =>: export: isSubSequenceF
+    elts .length 0 == if true return end
+    0:iSize =:: mut: i
+    seq for =:: x
+      x elts i [] fEq () if
+        i 1 + i=
+        i elts .length u>= if
+          true return
+        end
+      end
+    end
+    false return
+  end
+  overload: export: isSubSequence isSubSequenceEq isSubSequenceF end
+
+  proc(
+    type : auto: T
     T slice : a
     T slice : b
   -> bool ) =>: export: simpleEq

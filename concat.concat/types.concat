@@ -2139,7 +2139,9 @@ namespace: types
       ## TODO: is shallow copy of type-elements save
       elements mixedArena.copySlice =:: sliceElements
       sliceElements constantCmp@ slice.sort
-      baseType sliceElements slice.freeze SetType new mixedArena.copyValue =:: setType
+      baseType context literalToType
+        sliceElements slice.freeze
+      SetType new mixedArena.copyValue =:: setType
     context .memory=
     setType SetTypeId cast Type .SetType  return
   end
@@ -2507,7 +2509,13 @@ namespace: types
     src context types.isSetOrRefinementType and src context unwrapRefinement target typeEquals if
       true return ## allow automatic conversions from type-refinement to base-type
     end
-    ## TODO allow implicit conversion type-set to superset (? allow conversion to refinement matching for all elements)
+    src context types.isSetType and target context types.isSetType and
+        src context unwrapRefinement target context unwrapRefinement typeEquals and
+        target context getSetTypeEntries
+          src context getSetTypeEntries
+        constantEquals@ slice.isSubSequence if
+      true return ## conversion to super-set type
+    end
     src .?Initializer ? if
       src target context canAutoCastInitializer return
     end
@@ -2932,9 +2940,9 @@ namespace: sb
               ' ' sb.appendC
             end
           else t context types.getSetTypeEntries .length 0:iSize != _if
-            "..." sb.appendS
+            "... " sb.appendS
           end
-          " )" sb.appendS
+          ")" sb.appendS
         return
       RefinementType case
         sb

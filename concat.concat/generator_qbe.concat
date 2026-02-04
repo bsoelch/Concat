@@ -2877,10 +2877,12 @@ proc(
   ## XXX? better cType <-> type conversion
   ## TODO update sign type when casting from/to  cType/intLiteral
   src0 typeContext types.unwrapNamed
+    typeContext types.unwrapRefinement
     .?CType .if types.cTypeAsType else
     .?IntLiteral ._if types.intLiteralAsInt end
   =:: src
   target0 typeContext types.unwrapNamed
+    typeContext types.unwrapRefinement
     .?CType .if types.cTypeAsType else
     .?IntLiteral ._if types.intLiteralAsInt end
   =:: target
