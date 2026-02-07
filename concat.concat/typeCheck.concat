@@ -1991,7 +1991,7 @@ proc(
         switchData [] .switchType typeContext types.isEnumOrTaggedUnion if
           ## appendLabelName
             switchData [] .switchType
-            label .EnumLabel typeContext types.compositeGetLabel
+            label .Int i32 cast.u typeContext types.compositeGetLabel
             labelContext
           sb.appendLabelName
         else
@@ -2132,8 +2132,8 @@ proc(
     switchId
     switchPosition
     ## ConstValue
-      labelIndex
-    ConstValue .EnumLabel
+      labelIndex i64 cast.u
+    ConstValue .Int
     op [] .pos
   state newSwitchLabel
   true return
@@ -4095,14 +4095,14 @@ proc(
             op state appendOp ..drop
             blockType .DOT_CASE if
               switchType typeContext types.isUnion if
-                prev? .if [] .value .EnumLabel else
+                prev? .if [] .value .Int else
                   continue.opLoop
-                end  =:: eltIndex
+                end i32 cast.u =:: eltIndex
                 switchType eltIndex typeContext types.compositeGetElement =:: labelType
                 switchData [] .labels list.reversed for  =:: label
                   ## labels in current case are al at end of label list
                   label .caseId switchData [] .caseCount < if break end
-                  switchType label .value .EnumLabel typeContext types.compositeGetElement =:: newType
+                  switchType label .value .Int i32 cast.u typeContext types.compositeGetElement =:: newType
                   newType labelType types.typeEquals if continue end
                   "incompatible types for case-values: " sb.copyPtr
                     labelType typeContext sb.appendType
@@ -4799,18 +4799,18 @@ proc(
                       typeContext
                     sb.appendType
                     "\nmissing labels:\n" sb.appendS
-                    0:i32 while ..dup eltCount < do =:: i
+                    0:i64 while $ eltCount i64 cast.u < do =:: i
                       false =:: mut:  match
                       ## XXX? use slice.find
                       labels for =:: label
-                        label .value .EnumLabel i == if
+                        label .value .Int i == if
                           true match=
                           break
                         end
                       end
                       match ! if
                         switchBlock .switchType
-                          i
+                          i i32 cast.u
                           typeContext
                         types.compositeGetLabel =:: label
                         " - \"" sb.appendS

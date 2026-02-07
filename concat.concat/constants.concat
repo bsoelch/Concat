@@ -30,7 +30,6 @@ union(
   i32 slice : Array32
   i64 slice : Array64
   ConstValue slice : Array
-  i32 : EnumLabel
   Type : TypeId
   _ : WildCard
   LabelId : GenericArg
@@ -122,7 +121,7 @@ end
 proc(
   ConstValue : union
 -> ConstValue ) =>: export: constUnionLabel
-  union .Union .eltIndex ConstValue .EnumLabel return
+  union .Union .eltIndex i64 cast.u ConstValue .Int return
 end
 
 proc( ConstValue : a ConstValue : b -> bool ) =>: export: constantEquals
@@ -135,7 +134,6 @@ proc( ConstValue : a ConstValue : b -> i32 ) =>: export: constantCmp
   a switch
     None WildCard case 0 return
     Bool .case ?1 b .Bool ?1 >$ - return
-    EnumLabel .case b .EnumLabel i32.cmp return
     Int .case b .Int i64.cmp return
     Float .case b .Float f64.cmp return
     Char .case b .Char char8.cmp return
@@ -191,8 +189,7 @@ proc( ConstValue : a -> i32 ) =>: export: constantHash
     None case 0 return
     WildCard case 1 return
     Bool .case if 2 else 3 end return
-    EnumLabel .case i32 cast.u 1 + 5 * return
-    Int .case $ 32 >>> + i32 cast.u 715415 + 7 * return
+    Int .case $ 32 >>> 5 * + i32 cast.u 715415 + 7 * return
     Float .case ## most floats will only differ on the higher 32 bits ( sign+exponent+start of magnitude )
       f64.bits 32 >>> i32 cast.u i32.bitrev 61414 + 11 * return
     Char .case i32 cast.u 1 + 13 * return
@@ -421,11 +418,6 @@ namespace: sb
           break
         TypeId case
           val .TypeId typeContext sb.appendType
-          break
-        EnumLabel case
-          "enum label: (" sb.appendS
-            val .EnumLabel  sb.appendI
-          ')'    sb.appendC
           break
         Array .case =:: mArray ## TODO? labeled array?
           mArray .length

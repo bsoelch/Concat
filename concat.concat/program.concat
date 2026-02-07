@@ -473,8 +473,6 @@ proc( ConstValue : label -> i64 ) =>: export: switchLabelAsInt
     return
   else .?Char ._if
     i64 cast.u return
-  else .?EnumLabel ._if
-    i64 cast.u return
   else ..drop end
   ## TODO? more usefull error message?
   "unexpected constant-type in switch statement" ..panic

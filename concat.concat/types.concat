@@ -2240,7 +2240,7 @@ namespace: types
         ## a GeneratedType is generic if one of its arguments is generic
         genType .arguments [] .length for =:: i
           genType [] .arguments i [] =:: arg
-          ConstValue ..length 23:iSize == "no new constants" assert
+          ConstValue ..length 22:iSize == "no new constants" assert
           arg .?GenericArg ? or arg .?TypeId .and context containsGeneric if
             true return
           end

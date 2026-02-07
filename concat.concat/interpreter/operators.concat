@@ -3,14 +3,14 @@ import "builtIns.concat"
 
 namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: export: constAsBool
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     a switch
       Bool case a .Bool false return
       default false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: export: constAsInt ## all integer calculations are done in 64 bits
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     a switch
       Char case a .Char i64 cast.u false return
       Int case a .Int i64 cast false return
@@ -18,7 +18,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: export: constAsFloat
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     a switch
       Char case a .Char i32 cast.u f64 cast false return
       Int case a .Int f64 cast false return
@@ -27,7 +27,7 @@ namespace: interpreter
     end
   end
   proc( ConstValue : a -> Type bool ) =>: export: constAsType
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     a switch
       TypeId case a .TypeId false return
       default Type .Undefined true return
@@ -53,7 +53,7 @@ namespace: interpreter
   -> ConstValue OperatorResult ) =>: unaryOperatorToBool
     k 1 != if ConstValue .None OperatorResult .ARGUMENT_ERROR return end
     args 0 [] =:: a
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     a switch
       Bool case a OperatorResult .SUCCESS return
       Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .SUCCESS return
@@ -617,7 +617,7 @@ namespace: interpreter
     TypeContext ptr.mut : typeContext
     CompilerError list ptr.mut : errors
   -> ConstValue OperatorResult ) =>: getOrOffset
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     ptrValue switch
       Int case
         ptrValue .Int =:: intConst
@@ -732,7 +732,7 @@ namespace: interpreter
     type : T
   -> bool ) =>: primitiveArrayTrySetElement
     localArray T slice.mut cast =:: arrayData
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     src switch
       Char case src .Char i64 cast.u break
       Int case src .Int break
@@ -769,7 +769,7 @@ namespace: interpreter
     TypeContext ptr.mut : typeContext
     CompilerError list ptr.mut : errors
   -> OperatorResult ) =>: setPointer
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     targetValue switch
       LocalValue case
         newValue targetValue .LocalValue ConstValue ptr.raw.mut cast =[]
@@ -849,7 +849,7 @@ namespace: interpreter
     ConstValue : b
     TypeContext ptr : typeContext
   -> bool bool ) =>: export: pointerEq
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     a switch
       Int .case =:: aInt
         b .?Int .and aInt == end false return
@@ -973,15 +973,6 @@ namespace: interpreter
         return
       end
     else #+valType+# typeContext types.isEnum or valType typeContext types.isUnion _if
-      a .?EnumLabel .and =:: aLabel b .?EnumLabel .if =:: bLabel
-        aLabel bLabel == false return
-      end
-      a .?EnumLabel .and =:: aLabel b .?Int .if =:: bLabel
-        aLabel i64 cast.u bLabel == false return
-      end
-      a .?Int .and =:: aLabel b .?EnumLabel .if =:: bLabel
-        aLabel bLabel i64 cast.u == false return
-      end
       a .?Int .and =:: aLabel b .?Int .if =:: bLabel
         aLabel bLabel == false return
       end
@@ -994,7 +985,7 @@ namespace: interpreter
   proc(
     ConstValue : src
   -> i8 ptr.raw iSize iSize bool ) =>: constantAsRawMemory
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     src switch
       Array8 case
         src .Array8 .data i8 ptr.raw cast!
@@ -1042,7 +1033,7 @@ namespace: interpreter
   proc(
     ConstValue : src
   -> i8 ptr.raw.mut iSize iSize bool ) =>: constantAsRawMutableMemory
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     src switch
       LocalArray8 case
         src .LocalArray8 .data i8 ptr.raw.mut cast!

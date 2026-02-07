@@ -5047,9 +5047,6 @@ proc(
           Bool case
             valType op [] .val .Constant .Bool ?1 i64 cast.u ValueLocation .intConstant opIndex context pushValue
             return
-          EnumLabel case
-            valType op [] .val .Constant .EnumLabel i64 cast.u ValueLocation .intConstant opIndex context pushValue
-            return
           Float case
             valType op [] .val .Constant .Float ValueLocation .floatConstant opIndex context pushValue
             return
@@ -6608,7 +6605,7 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
       end
       "Codegen: unsupported array-constant type" ..panic
     break
-    EnumLabel Union case
+    Union case
       "Codegen: union constants are currently not implemented" ..panic
     Procedure case
       "Codegen: procedure constants are currently not implemented" ..panic

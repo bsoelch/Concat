@@ -684,7 +684,7 @@ namespace: interpreter
       ## don't copy pointers
       localArray return
     end
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     localArray switch
       LocalArray case break
       LocalArray8 case
@@ -738,7 +738,7 @@ namespace: interpreter
       else
         valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
-      ConstValue ..length 23:iSize == "no new constants" assert
+      ConstValue ..length 22:iSize == "no new constants" assert
       elt switch
         LocalValue case elt .LocalValue ConstValue ptr.mut cast [] break
         LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
@@ -765,7 +765,7 @@ namespace: interpreter
       context .localMemory=
       localAddress LocalAddress cast ConstValue .LocalValue return
     end
-    ConstValue ..length 23:iSize == "no new constants" assert
+    ConstValue ..length 22:iSize == "no new constants" assert
     value switch
       Array LocalArray case break
       Array8 case
@@ -934,7 +934,7 @@ namespace: interpreter
     type : T
   -> bool ) =>: primitiveArrayTrySetElement
     localArray T slice.mut cast =:: arrayData
-    ConstValue ..length 23 == "no new constants" assert
+    ConstValue ..length 22 == "no new constants" assert
     src switch
       Char case src .Char i64 cast.u break
       Int case src .Int break
@@ -1508,7 +1508,7 @@ proc(
         eltType .?Empty ? if
           ## pushValue
             containerType typeContext types.isEnum if
-              elementIndex ConstValue .EnumLabel
+              elementIndex i64 cast.u ConstValue .Int
             else
               ConstValue .None elementIndex constContext newUnionConst
             end
@@ -1566,10 +1566,10 @@ proc(
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      value .?EnumLabel .if
-        expectedIndex == ConstValue .Bool
+      value .?Int .if
+        expectedIndex i64 cast.u == ConstValue .Bool
       else .?Union ? _if
-        value constUnionLabel .EnumLabel expectedIndex == ConstValue .Bool
+        value constUnionLabel .Int expectedIndex i64 cast.u == ConstValue .Bool
       else
         value valInfo context unpopValue
         "unexpected value for hasElement: " sb.copyPtr
@@ -1644,7 +1644,7 @@ proc(
       op [] .val .NewEnum =:: elementIndex
       op [] .dataType =:: unionType
       unionType typeContext types.isEnum if
-        elementIndex ConstValue .EnumLabel
+        elementIndex i64 cast.u ConstValue .Int
       else unionType typeContext types.isUnion _if
         unionType
           elementIndex
@@ -1837,7 +1837,7 @@ proc(
         context [] .stackInfo
           list.peek .data [] .valueType
         =:: valType
-        ConstValue ..length 23:iSize == "no new constants" assert
+        ConstValue ..length 22:iSize == "no new constants" assert
         value? .data [] switch
           LocalValue case
             value? .data []
