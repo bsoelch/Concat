@@ -2147,6 +2147,12 @@ namespace: interpreter
         values valInfos nArgs context unpopValues
         true return
       end values nArgs =[] valInfos nArgs =[]
+      valInfos nArgs [] .valueType typeContext types.isEnum and
+          eltType typeContext types.isEnum ! if
+        valInfos nArgs [] .valueType
+          typeContext types.enumLabelInfo ..drop
+        valInfos nArgs @[] .valueType=
+      end
       valInfos nArgs [] .valueType typeContext types.unwrapNamed
           eltType typeContext types.unwrapNamed typeContext types.canAutoCast ! if
         "wrong argument type for built-in " sb.copyPtr

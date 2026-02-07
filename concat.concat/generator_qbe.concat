@@ -169,10 +169,11 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       end
       break
     IntLiteral .case types.intLiteralAsInt context toValType return
+    Enum case t typeContext types.enumLabelInfo ..drop context toValType return
     CType .case types.cTypeAsType context toValType return
     Pointer MutablePointer RawPointer MutableRawPointer case
       ValType .PTR return
-    Procedure ArrayType Struct Union RawUnion UnionElement Enum Initializer case
+    Procedure ArrayType Struct Union RawUnion UnionElement Initializer case
       ValType .REFERENCE return
     SetType RefinementType case
       t typeContext types.unwrapRefinement context toValType return
@@ -280,6 +281,9 @@ proc( Type : t CompilerContext ptr.mut : context -> bool ) =>: referenceOnly
     .?IntLiteral ._if types.intLiteralAsInt end
   =:: baseType
   baseType types.isPrimitive if
+    false return
+  end
+  baseType typeContext types.isEnum if
     false return
   end
   baseType typeContext types.isPointer if
@@ -679,8 +683,10 @@ namespace: sb
         "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       Enum case
-        sb t "enum":s storeType .STACK ! context appendCompositeTypeQBE return
-        break
+        sb
+          t typeContext types.enumLabelInfo ..drop
+          storeType pos context
+        appendTypeNameQBE return
       SetType RefinementType case
         sb
           t typeContext types.unwrapRefinement storeType pos context
@@ -894,6 +900,7 @@ namespace: sb
     sb
       isGlobal and t typeContext types.isPointer or
           t typeContext types.unwrapNamed types.isPrimitive or
+          t typeContext types.isEnum or
           t .?IntLiteral ? if
         ## add name prefix for global constants, skip prefix for zero-length array constants
         t StorageType .STORE pos context sb.appendTypeNameQBE
@@ -906,7 +913,11 @@ namespace: sb
             ## treat pointer constants as integers of type iSize
             types.primitive.I_SIZE
           else
-            t typeContext types.unwrapNamed
+            t
+              $ typeContext types.isEnum if
+                typeContext types.enumLabelInfo ..drop
+              end
+              typeContext types.unwrapNamed
             .?CType .if types.cTypeAsType else
             .?IntLiteral ._if types.intLiteralAsInt end
           end =:: numType
@@ -1070,10 +1081,9 @@ namespace: sb
           isGlobal ! if
             break ## XXX? support small unions as local constants
           end
-          t typeContext types.isEnum ! and t typeContext types.isUnion ! if
+          t typeContext types.isUnion ! if
             "unsupported type for union constant: " sb.copyPtr
               t typeContext sb.appendType
-              " expected enum or union" sb.appendS
             pos errors appendError
             return
           end
@@ -1398,7 +1408,7 @@ namespace: sb
         t pos context sb.appendNestedTypeDeclarationQBE
       endTypeDeclaration return
     end
-    t typeContext types.isTuple or t typeContext types.isUnion or t typeContext types.isEnum if
+    t typeContext types.isTuple or t typeContext types.isUnion if
       sb
         t pos context startTypeDeclaration
         t pos context sb.appendNestedTypeDeclarationQBE
@@ -1533,6 +1543,24 @@ proc(
   context nextTmpId =:: labelPtr
   context nextTmpId =:: mut: label
   sb
+    enumType typeContext types.isEnum if
+      enumType context toValType =:: enumValType
+      context nextTmpId label=
+      "%t" sb.appendS
+      label sb.appendI
+      numBytes 4 < if
+        " =w ext" sb.appendS
+        labelType StorageType .ULOAD pos context sb.appendTypeNameQBE
+        " %s" sb.appendS
+      else
+        " =" sb.appendS
+        enumValType sb.appendValTypeQBE
+        " copy %s" sb.appendS
+      end
+      valId sb.appendI
+      '\n' sb.appendC
+      label enumValType return
+    end
     "%t" sb.appendS
     labelPtr sb.appendI
     " =l add %s" sb.appendS
@@ -1937,7 +1965,7 @@ proc(
   i32 : tmpId
   sb
     "## switch\n" sb.appendS
-    switchType typeContext types.isEnumOrTaggedUnion if
+    switchType typeContext types.isEnumOrTaggedUnion if ## gohere
       ## loadEnumLabel
         switchType
         valId
@@ -3451,8 +3479,8 @@ proc(
           ", " sb.appendS
           containerType index op [] .pos context tupleEltOffsetInt sb.appendI
           '\n' sb.appendC
-      else containerType typeContext types.isUnion or containerType typeContext types.isEnum _if
-        sb ## not change to pointer necessary
+      else containerType typeContext types.isUnion _if
+        sb ## no change to pointer necessary
       else
         break ## unsupported type
       end
@@ -3963,30 +3991,6 @@ proc(
             op [] .pos
             context
           appendComparisonOperator
-        return
-      end
-      op [] .dataType typeContext types.isEnum if
-        op [] .pos context popValue =:: arg1
-        op [] .pos context popValue =:: arg2
-        sb
-          op [] .dataType
-            arg1
-            op [] .pos
-          context loadEnumLabel =:: valType =:: label1
-          op [] .dataType
-            arg2
-            op [] .pos
-          context loadEnumLabel ..drop =:: label2
-          "%s" sb.appendS
-          ValType .I32 context pushValue sb.appendI
-          " =w c" sb.appendS
-          cmpName sb.appendStr
-          valType sb.appendValTypeQBE
-          " %t" sb.appendS
-          label1 sb.appendI
-          ", %t" sb.appendS
-          label2 sb.appendI
-          '\n' sb.appendC
         return
       end
       break

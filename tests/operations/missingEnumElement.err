@@ -1,5 +1,5 @@
 type named[4632]( "e" ) does not have a label "D" at ./tests/operations/missingEnumElement.concat:5:8
-no matching signature for arguments ( named[4632]( "e" ) { union element (0):none }  )
+no matching signature for arguments ( named[4632]( "e" ) { 0 }  )
 candidates:
   * proc( named[4069]( "type.unionElement" ) : auto: static: U U[ 4460:LabelId ] -> U[ 4460:LabelId ] unionElement.inv ) unionElement.invert
   * proc( named[4069]( "type.unionElement" ) : auto: static: U U[ 4460:LabelId ] -> U[ 4460:LabelId ] unionElement.inv ) unionElement.invert

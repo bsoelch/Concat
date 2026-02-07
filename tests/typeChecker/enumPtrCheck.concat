@@ -1,0 +1,10 @@
+enum( A B C ) =:: anEnum
+proc( anEnum ptr -> bool ) =>: isA
+  .A
+end
+proc( -> ) =>: main
+  anEnum .A =:: x
+  x@ isA "A is A" assert
+  anEnum .B =:: y
+  y@ isA ! "B is not A" assert
+end

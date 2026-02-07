@@ -1828,9 +1828,9 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   OP_UNLINKED =:: mut: onRead
-  isWrite ! and isUnionGet ! and containerType typeContext types.isEnumOrTaggedUnion if
+  isWrite ! and isUnionGet ! and containerType typeContext types.isTaggedUnion if
     containerType elementIndex pos opCheckEnum state appendOp onRead=
-    true program .hasCheckEnum=
+    true program .hasCheckEnum= ## TODO! rename check-enum to check-union
   end
   containerType typeContext types.isArray if
     containerType typeContext types.getBaseType
@@ -1861,6 +1861,16 @@ proc(
       2 pos state discardValues
       return
     end
+    containerType typeContext types.isEnum if
+      1 pos state discardValues ## discard old value
+      ## push new value
+      ## pushConstant
+        elementIndex i64 cast.u ConstValue .Int
+        containerType
+        pos
+      state pushConstant
+      return
+    end
     ## XXX? when writing empty value to union, elementIndex still needs to be changed
     Type 2 array : args
     targetType args@ 0 =[]
@@ -1877,7 +1887,7 @@ proc(
       srcType
       elementIndex
       pos
-    containerType typeContext types.isEnumOrTaggedUnion if
+    containerType typeContext types.isTaggedUnion if
       opSetEnumElement ## TODO? rename to set union element, make set-element on enum an error
     else
       opSetElement
@@ -3221,21 +3231,87 @@ proc(
               " is not an enum or union" sb.appendS
             op .pos errors appendError
           end
+          state .stack branchTree.peek .and .value .?Int .if
+            1 op .pos state discardValues ## remove container
+            ## pushConstant
+              [] elementIndex i64 cast.u == ConstValue .Bool
+              types.primitive.BOOL
+              op .pos
+            state pushConstant
+            continue.opLoop
+          end
           state .stack branchTree.pop ..drop ## remove container from stack
           ## check enum label
-          ## XXX? compute constant value
+          containerType typeContext types.isEnum if
+            isPtr if
+              ## newProcedure
+                srcType@ slice.wrap
+                containerType@ slice.wrap
+                LabelId slice.empty
+                CallingConvention.DEFAULT
+              typeContext types.newProcedure .else
+                "failed to create procedure":s op ..line state internalError ..unreachable
+              end
+                BuiltIn .GET_PTR
+              op .pos opBuiltIn state appendOp ..drop
+            end
+            elementIndex i64 cast.u ConstValue .Int
+              containerType
+            op .pos opConst state appendOp ..drop
+            ## pushValue
+              types.primitive.BOOL
+              ConstValue .None
+              containerType typeContext types.enumLabelInfo ..drop
+                typeContext types.unwrapNamed
+              =:: enumLabelType
+              Type 2 array : tmp
+              enumLabelType tmp@ 0 =[]
+              enumLabelType tmp@ 1 =[]
+              ## newProcedure
+                tmp@ slice.wrap
+                types.primitive.BOOL@ slice.wrap
+                LabelId slice.empty
+                CallingConvention.DEFAULT
+              typeContext types.newProcedure .else
+                "failed to create procedure":s op ..line state internalError ..unreachable
+              end
+                enumLabelType types.isPrimitive ! if
+                  "non-primitive enum-label":s op ..line state internalError ..unreachable
+                else
+                  enumLabelType typeContext types.primitiveValue switch
+                    I8 case BuiltIn .EQ_I8 break
+                    CHAR8 case BuiltIn .EQ_C8 break
+                    I16 case BuiltIn .EQ_I16 break
+                    I32 case BuiltIn .EQ_I32 break
+                    I64 case BuiltIn .EQ_I64 break
+                    default
+                      "unexpected primitive for enum-label":s
+                        op ..line state
+                      internalError ..unreachable
+                  end
+                end
+              op .pos opBuiltIn
+            state pushValue
+            continue.opLoop
+          end
           ## pushValue
             types.primitive.BOOL
             ConstValue .None
-            containerType elementIndex op .pos opHasElement
+            srcType elementIndex op .pos opHasElement
           state pushValue
           elementLabel state replaceLabel
           continue.opLoop
         end
         isType if
           1 op .pos state discardValues ## remove container
-          containerType typeContext types.isEnum ! and
-              containerType typeContext types.isUnion ! if
+          containerType typeContext types.isEnum if
+            ## pushConstant
+              elementIndex i64 cast.u ConstValue .Int
+              containerType
+              op .pos
+            state pushConstant
+            continue.opLoop
+          else containerType typeContext types.isUnion ! _if
             256 sb.create
               containerType typeContext sb.appendType
               " is not an enum or union " sb.appendS
@@ -3289,18 +3365,19 @@ proc(
         srcType containerType elementIndex isWrite accessType .UNION_GET isPtr mutable op .pos state typeCheckGetElement
         continue.opLoop
       GetEnumLabel case
-        state .stack branchTree.peek =:: label?
-        label? optional.isEmpty if
+        state .stack branchTree.peek .else
           "missing argument for operation " sb.copyPtr
             op program sb.appendOp
             " expected enum" sb.appendS
           op .pos errors appendError
           continue.opLoop
-        end
-        label? .data =:: label
+        end =:: label
         label [] .valueType =:: enumType
-        enumType typeContext types.isEnumOrTaggedUnion ! if
-          "wrong argument type for getEnumLabel expected enum got " sb.copyPtr
+        enumType typeContext types.isEnum if
+          enumType typeContext types.enumLabelInfo ..drop label .valueType=
+          continue.opLoop
+        else enumType typeContext types.isTaggedUnion ! _if
+          "wrong argument type for getEnumLabel expected enum or tagged union got " sb.copyPtr
             enumType typeContext sb.appendType
           op .pos errors appendError
         end
@@ -3696,7 +3773,9 @@ proc(
                   andOrOp .val .Block .jumpDistance=
                 end
               end
-              orCount iSize cast.u orPositions .length == "or-counts match" assert
+              orCount iSize cast.u orPositions .length != if
+                "or-counts don't match":s op ..line state internalError ..unreachable
+              end
               orPositions ifData .orPositions=
               orBranches []
                   state .stack branchTree.startBranch
@@ -3826,7 +3905,9 @@ proc(
                 andOrOp .val .Block .jumpDistance=
               end
             end
-            andCount iSize cast.u andPositions .length == "and-counts match" assert
+            andCount iSize cast.u andPositions .length != if
+              "and-counts don't match":s op ..line state internalError ..unreachable
+            end
             andPositions ifData .andPositions=
             currentOpIndex ifData .elsePosition=
             op state appendOp ..drop

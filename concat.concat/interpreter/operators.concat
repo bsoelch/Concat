@@ -976,6 +976,15 @@ namespace: interpreter
       a .?EnumLabel .and =:: aLabel b .?EnumLabel .if =:: bLabel
         aLabel bLabel == false return
       end
+      a .?EnumLabel .and =:: aLabel b .?Int .if =:: bLabel
+        aLabel i64 cast.u bLabel == false return
+      end
+      a .?Int .and =:: aLabel b .?EnumLabel .if =:: bLabel
+        aLabel bLabel i64 cast.u == false return
+      end
+      a .?Int .and =:: aLabel b .?Int .if =:: bLabel
+        aLabel bLabel == false return
+      end
     else valType typeContext types.isPointer _if
       a b typeContext pointerEq return
     end
