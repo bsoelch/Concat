@@ -1,0 +1,21 @@
+union(
+  i32 : I
+  f32 : F
+) =:: anUnion
+
+proc( anUnion ptr.mut -> ) =>: inc
+  switch
+    I .case
+      $ [] 1 + >$ =[] break
+    F .case
+      $ [] 1 + >$ =[] break
+  end
+end
+proc( -> ) =>: main
+  1 anUnion .I =:: mut: x
+  x@ inc
+  x .?I .if 2 == else ..drop false end "2" assert
+  2.14:f32 anUnion .F =:: mut: y
+  y@ inc
+  y .?F .if 3.14:f32 == else ..drop false end "3.14" assert
+end

@@ -58,6 +58,7 @@ struct(
 ) =:: IfBlockInfo
 struct(
   Type : switchType
+  Type : switchBaseType
   branchTree.NodeId : branchRoot
   BranchPoint list : mut: caseBranches
   i32 list : mut: castOffsets
@@ -115,6 +116,7 @@ proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos -> Blo
 end
 proc(
   Type : switchType
+  Type : switchBaseType
   branchTree.NodeId : branchRoot
   IdentifierInfo optional : srcVar
   LabelId : blockLabel
@@ -124,6 +126,7 @@ proc(
 -> BlockInfo ) =>: newSwitchBlock
   ## SwitchBlockInfo
     switchType
+    switchBaseType
     branchRoot
     16 BranchPoint list.create
     16 i32 list.create
@@ -3385,7 +3388,7 @@ proc(
             enumType typeContext sb.appendType
           op .pos errors appendError
         end
-        ## XXX compile-time evaluation
+        ## TODO? compile-time evaluation
         enumType@ slice.wrap "getEnumLabel":s 0 false op .pos state requireTypes .?Err ? if
           continue.opLoop
         end
@@ -3984,6 +3987,7 @@ proc(
               $ typeContext types.isPointer if
                 typeContext types.getBaseType
               end
+            $ =:: switchValueType
               $ typeContext types.isTaggedUnion =:: isTaggedUnion
               isTaggedUnion if
                 typeContext types.enumLabelInfo ..drop
@@ -3994,17 +3998,29 @@ proc(
               0 StackModType .COPY op .pos opStackMod state appendOp ..drop
               switchType op .pos state [] .currentFile idContext id.newTmpVar =:: tmpVar
               switchType tmpVar op .pos opInitializeId state appendOp ..drop
-              op .pos opGetEnumLabel switchType >$ .dataType= state appendOp ..drop
               tmpVar optional.wrap
             else
               IdentifierInfo optional.empty
             end =:: srcVar
             switchType typeContext types.isPointer if
-              "unimplemented: pointer switch":s op ..line state internalError ..unreachable
+              ## newProcedure
+                switchType@ slice.wrap
+                switchValueType@ slice.wrap
+                LabelId slice.empty
+                CallingConvention.DEFAULT
+              typeContext types.newProcedure .else
+                "failed to create procedure":s op ..line state internalError ..unreachable
+              end
+                BuiltIn .GET_PTR
+              op .pos opBuiltIn state appendOp ..drop
+            end
+            isTaggedUnion if
+              ## TODO? support getEnumLabel on pointer and get label before poiner-dereference
+              op .pos opGetEnumLabel switchValueType >$ .dataType= state appendOp ..drop
             end
             program [] .switchData .length BlockId cast =:: switchId
             switchId op@ .val .Block .blockId=
-            switchType op@ .dataType=
+            labelType op@ .dataType=
             false 1 op .pos state clearReferences
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             program [] .switchData
@@ -4021,6 +4037,7 @@ proc(
             program .switchData=
             state .stack branchTree.startBranch =:: switchBranch
             ## newSwitchBlock
+              switchValueType
               switchType
               switchBranch
               srcVar
@@ -4114,6 +4131,7 @@ proc(
               BlockType .DEFAULT op@ .val .Block .blockType=
             end
             op state appendOp ..drop
+            switchBlock [] .switchBaseType =:: switchBaseType
             blockType .DOT_CASE if
               switchType typeContext types.isUnion if
                 prev? .if [] .value .Int else
@@ -4137,11 +4155,14 @@ proc(
                   end
                 end
                 switchBlock [] .srcVar .if =:: srcVar
-                  switchType srcVar op .pos opGetId state appendOp ..drop
+                  switchBaseType srcVar op .pos opGetId state appendOp ..drop
                   ## pushValue
                     labelType
+                      switchBaseType typeContext types.isPointer if
+                        switchBaseType typeContext types.isMutable typeContext types.getAddressType
+                      end
                     ConstValue .None
-                    switchType
+                    switchBaseType
                       eltIndex
                       op .pos
                     opGetElement
@@ -4160,9 +4181,9 @@ proc(
             else blockType .DOT_DEFAULT _if
               switchBlock [] .srcVar .if =:: srcVar
                 ## pushValue
-                  switchType
+                  switchBaseType
                   ConstValue .None
-                  switchType srcVar op .pos opGetId
+                  switchBaseType srcVar op .pos opGetId
                 state pushValue
               else
                 "cannot access switched type" sb.copyPtr op .pos errors appendError
