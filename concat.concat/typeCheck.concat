@@ -3989,7 +3989,7 @@ proc(
               end
             $ =:: switchValueType
               $ typeContext types.isTaggedUnion =:: isTaggedUnion
-              isTaggedUnion if
+              $ typeContext types.isEnumOrTaggedUnion if
                 typeContext types.enumLabelInfo ..drop
               end
             =:: labelType

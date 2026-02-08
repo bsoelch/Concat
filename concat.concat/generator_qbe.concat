@@ -1958,13 +1958,7 @@ proc(
   i32 : tmpId
   sb
     "## switch\n" sb.appendS
-    switchType typeContext types.isEnumOrTaggedUnion if ## gohere
-      ## loadEnumLabel
-        switchType
-        valId
-        pos
-      context loadEnumLabel valType= tmpId=
-    else switchType typeContext types.isInt or switchType typeContext types.isChar _if
+    switchType typeContext types.isInt or switchType typeContext types.isChar if
       switchType
         typeContext types.primitiveValue
       types.sizeOfPrimitive =:: numBytes
