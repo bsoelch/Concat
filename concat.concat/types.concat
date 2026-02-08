@@ -1641,6 +1641,17 @@ namespace: types
       unionType .TAGGED if Type .Union else Type .RawUnion end
     optional.wrap return
   end
+  proc(
+    Type : unionType
+    TypeContext ptr.mut : context
+  -> Type optional ) =>: export: asRawUnion
+    unionType context unwrapNamed .?Union .if
+      Type .RawUnion optional.wrap return
+    else .?RawUnion ? _if
+      unionType optional.wrap return
+    end
+    Type optional.empty return
+  end
 end
 namespace: sb
   proc(

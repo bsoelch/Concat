@@ -1318,7 +1318,11 @@ namespace: sb
       t typeContext types.compositeElts =:: elts
       false =:: mut: hasElt
       0:i64 =:: mut: bodySize
-      t pos context enumLabelInfoInt =:: labelOffset =:: labelType
+      isTagged if
+        t pos context enumLabelInfoInt
+      else
+        Type .Empty 0
+      end =:: labelOffset =:: labelType
       sb
         -1:iSize =:: mut: nonEmptyIndex
         0:iSize =:: mut: nonEmptyCount
@@ -1335,23 +1339,23 @@ namespace: sb
             elt
             pos
           context sb.appendNestedTypeDeclarationQBE
-          ',' sb.appendC
           elt pos context typeSizeInt =:: eltSize
           eltSize labelOffset < if
-            "b " sb.appendS
+            ",b " sb.appendS
             labelOffset eltSize - sb.appendI
-            ',' sb.appendC
           end
         else
           "b " sb.appendS
           labelOffset sb.appendI
-          ',' sb.appendC
         end
-        ## appendTypeNameQBE
-          labelType
-          StorageType .STORE
-          pos
-        context sb.appendTypeNameQBE
+        isTagged if
+          ',' sb.appendC
+          ## appendTypeNameQBE
+            labelType
+            StorageType .STORE
+            pos
+          context sb.appendTypeNameQBE
+        end
       return
     end
     sb

@@ -1,0 +1,11 @@
+union(
+  i32 : I
+  f32 : F
+) =:: aUnion
+proc( -> ) =>: main
+  0 aUnion .I =:: x
+  0 aUnion .F =:: y
+  x ..raw =:: x1
+  y ..raw =:: y1
+  x1 .I y1 .I == "raw value for 0 the same" assert
+end

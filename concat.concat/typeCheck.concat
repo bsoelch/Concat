@@ -5285,7 +5285,9 @@ proc(
           valType typeContext types.getUnionElementType
         else valType typeContext types.isUnion _if
           state .stack branchTree.pop ..drop
-          "unimplemented: union ..raw":s op ..line state internalError ..unreachable
+          valType typeContext types.asRawUnion .else
+            "union-type .asRawUnion should return value" ..panic
+          end
         else
           "unexpected argument for " sb.copyPtr
             valType typeContext sb.appendType
