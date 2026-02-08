@@ -1959,6 +1959,7 @@ end
 proc(
   BlockId : switchId
   i32 : switchPosition
+  Type : switchType
   ConstValue : label0
   FilePosition : pos
   TypeCheckState ptr.mut : state
@@ -1975,7 +1976,6 @@ proc(
   label0
     ## truncate constant to correct number of bits (switch-lables are treated as unsigned numbers)
     $ .?Int .and =:: intVal
-        switchData [] .switchType =:: switchType
         switchType typeContext types.isIntOrChar and
         switchType typeContext types.sizeOf .?Fixed .and =:: size
         size 8 < if ..drop
@@ -1988,9 +1988,9 @@ proc(
       label
     constantEquals if
       "duplicate label " sb.copyPtr
-        switchData [] .switchType typeContext types.isEnumOrTaggedUnion if
+        switchType typeContext types.isEnumOrTaggedUnion if
           ## appendLabelName
-            switchData [] .switchType
+            switchType
             label .Int i32 cast.u typeContext types.compositeGetLabel
             labelContext
           sb.appendLabelName
@@ -2050,6 +2050,7 @@ proc(
       ## newSwitchLabel
         switchId
         switchPosition
+        switchType
         constVal
         op [] .pos
       state newSwitchLabel
@@ -2070,6 +2071,7 @@ proc(
       ## newSwitchLabel
         switchId
         switchPosition
+        switchType
         idData [] .constValue
         op [] .pos
       state newSwitchLabel
@@ -2090,6 +2092,7 @@ proc(
       ## newSwitchLabel
         switchId
         switchPosition
+        switchType
         idData [] .constValue
         op [] .pos
       state newSwitchLabel
@@ -2131,6 +2134,7 @@ proc(
   ## newSwitchLabel
     switchId
     switchPosition
+    switchType
     ## ConstValue
       labelIndex i64 cast.u
     ConstValue .Int
@@ -3960,7 +3964,10 @@ proc(
             end
             value? .data [] .valueType =:: switchType
             switchType typeContext types.isIntOrChar ! and
-                switchType typeContext types.isEnumOrTaggedUnion ! if
+                switchType typeContext types.isEnumOrTaggedUnion ! and
+                switchType typeContext types.isPointer ! or
+                  switchType typeContext types.getBaseType
+                typeContext types.isEnumOrTaggedUnion ! if
               "cannot switch values of type " sb.copyPtr
                 switchType typeContext sb.appendType
               op .pos errors appendError
@@ -3973,14 +3980,28 @@ proc(
             state requireTypes .?Err ? if
               continue.opLoop
             end
-            switchType typeContext types.isUnion if
+            switchType
+              $ typeContext types.isPointer if
+                typeContext types.getBaseType
+              end
+              $ typeContext types.isTaggedUnion =:: isTaggedUnion
+              isTaggedUnion if
+                typeContext types.enumLabelInfo ..drop
+              end
+            =:: labelType
+            isTaggedUnion if
               ## TODO? only create tmp-var if switch uses `.case`
               0 StackModType .COPY op .pos opStackMod state appendOp ..drop
-              ## TODO better way to deal with tmp-variable
               switchType op .pos state [] .currentFile idContext id.newTmpVar =:: tmpVar
               switchType tmpVar op .pos opInitializeId state appendOp ..drop
+              op .pos opGetEnumLabel switchType >$ .dataType= state appendOp ..drop
               tmpVar optional.wrap
-            else IdentifierInfo optional.empty end =:: srcVar
+            else
+              IdentifierInfo optional.empty
+            end =:: srcVar
+            switchType typeContext types.isPointer if
+              "unimplemented: pointer switch":s op ..line state internalError ..unreachable
+            end
             program [] .switchData .length BlockId cast =:: switchId
             switchId op@ .val .Block .blockId=
             switchType op@ .dataType=
@@ -3989,7 +4010,7 @@ proc(
             program [] .switchData
               ## SwitchData
                 16 LabelData list.create
-                switchType
+                labelType
                 0 ## case-count
                 0 ## break-count
                 currentOpIndex
