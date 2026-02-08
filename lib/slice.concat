@@ -586,10 +586,10 @@ namespace: slice
     T slice : elts
     iSize optional : n
   -> T slice ) =>: export: head_O
-    n ? ! if
+    n .else
       T empty return
-    end
-    elts  n .data head_Z return
+    end =:: cound
+    elts cound head_Z return
   end
   proc(
     type : auto: T
@@ -620,10 +620,10 @@ namespace: slice
     T slice.mut : elts
     iSize optional : n
   -> T slice.mut ) =>: export: head_Omut
-    n ? ! if
+    n .else
       T emptyMutable return
-    end
-    elts  n .data head_mut return
+    end =:: count
+    elts count head_mut return
   end
   proc(
     type : auto: T
@@ -657,10 +657,10 @@ namespace: slice
     T slice : elts
     iSize optional : n
   -> T slice ) =>: export: tail_O
-    n ? ! if
+    n .else
       elts return
-    end
-    elts  n .data  tail_Z return
+    end =:: count
+    elts  count  tail_Z return
   end
   proc(
     type : auto: T
@@ -691,10 +691,10 @@ namespace: slice
     T slice.mut : elts
     iSize optional : n
   -> T slice ) =>: export: tail_Omut
-    n ? ! if
+    n .else
       elts return
-    end
-    elts  n .data  tail_mut return
+    end =:: count
+    elts  count  tail_mut return
   end
   proc(
     type : auto: T
@@ -759,10 +759,10 @@ namespace: slice
     T slice : elts
     iSize optional : index
   -> T slice T slice ) =>: export: splitIndex_O
-    index ? ! if
+    index .else
       T empty elts return
-    end
-    elts index .data splitIndex_Z
+    end =:: count
+    elts count splitIndex_Z
   end
   proc(
     type : auto: T

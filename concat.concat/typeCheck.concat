@@ -1832,6 +1832,7 @@ proc(
   idContext .typeContext =:: typeContext
   OP_UNLINKED =:: mut: onRead
   isWrite ! and isUnionGet ! and containerType typeContext types.isTaggedUnion if
+    "old-style union-element access" sb.copyPtr pos errors appendInfo
     containerType elementIndex pos opCheckEnum state appendOp onRead=
     true program .hasCheckEnum= ## TODO! rename check-enum to check-union
   end

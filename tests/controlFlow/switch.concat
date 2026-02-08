@@ -18,10 +18,10 @@ proc( i32 : i anUnion : e char8 : c -> ) =>: switchTest
     A B case
       break
     C case
-      e .C debug.print
+      e ..raw .C debug.print
       break
     D case
-      e .D debug.print
+      e ..raw .D debug.print
       break
   end
   c switch ## switch character

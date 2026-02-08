@@ -134,7 +134,7 @@ namespace: arenaAlloc
     arena .strictOrder ! if
       ## search for gaps in previous chunks
       arena .fullChunks while $ iSize cast.u arena .chunks .length u< do =:: i
-        arena .chunks i list.at .data =:: chunk
+        arena .chunks i @[] =:: chunk
         chunk [] .eltCount chunkSize == if
           ## chunk full -> skip on next allocation
           arena .fullChunks 1 + arena@ .fullChunks=
@@ -147,7 +147,7 @@ namespace: arenaAlloc
       finally i 1 + end ..drop
     end
     arena .chunks .length 0:iSize != and
-        arena .chunks $ .length 1:iSize - list.at .data =:: lastChunk
+        arena .chunks $ .length 1:iSize - @[] =:: lastChunk
         lastChunk [] .eltCount count + chunkSize u<= if
       ## return
         arena
@@ -261,7 +261,7 @@ namespace: arenaAlloc
         1 - arena .chunkSizeShift <<
         arena .chunks
           chunkCount 1 -
-        list.at .data [] .eltCount i64 cast.u +
+        @[] .eltCount [] i64 cast.u +
       end
     return
   end
@@ -281,10 +281,10 @@ namespace: arenaAlloc
     arena .freeElt =:: freeElt
     0 =:: mut: continueChunkCount ## continue chunks after last chunk
     chunks .length i64 cast.u 1 - while $ newChunkCount >= do =:: i
-      chunks i list.at .data =:: chunk
-      freeElt optional.hasData if
+      chunks i @[] =:: chunk
+      freeElt .if =:: eltData
         chunk [] .eltCount 1 - while $ 0 >= do =:: j
-          chunk [] .data j @[] T ptr cast! freeElt .data ()
+          chunk [] .data j @[] T ptr cast! eltData ()
         finally j 1 - end ..drop
       end
       chunk [] .chunkType switch
@@ -313,11 +313,11 @@ namespace: arenaAlloc
       newChunkCount i32 cast 1 - i32.min
     arena@ .fullChunks=
     ## shrink last chunk if neccessary
-    chunks newChunkCount 1 - list.at .data =:: lastChunk
+    chunks newChunkCount 1 -  @[] =:: lastChunk
     lastChunk [] .eltCount newEltCount >= "reset point inside allocated memory" assert
-    freeElt optional.hasData if
+    freeElt .if =:: eltData
       lastChunk [] .eltCount 1 - while $ newEltCount >= do =:: j
-        lastChunk [] .data j @[] T ptr cast! freeElt .data ()
+        lastChunk [] .data j @[] T ptr cast! eltData ()
       finally j 1 - end ..drop
     end
     lastChunk [] .eltCount newEltCount > if

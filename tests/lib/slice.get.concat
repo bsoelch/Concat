@@ -3,12 +3,12 @@ import list
 proc( -> ) =>: main
   { 4 3 2 1 } slice.wrap
     $ -1 slice.get optional.isEmpty "out of bounds get returns empty" assert
-    $ 2:i64 slice.get .data 2 == "{ 4 3 2 1 } 2 get 2 ==" assert
+    $ 2:i64 slice.get optional.unwrap 2 == "{ 4 3 2 1 } 2 get 2 ==" assert
   ..drop
   { 3 1 4 1 } =:: mut: anArray
   anArray@ slice.wrapMutable
     $ 4 slice.get optional.isEmpty "out of bounds get returns empty" assert
-    $ 0:i64 slice.get .data 3 == "{ 3 1 4 1 } 0 get 3 ==" assert
+    $ 0:i64 slice.get optional.unwrap 3 == "{ 3 1 4 1 } 0 get 3 ==" assert
   ..drop
   16 i32 list.create
     $ 1 list.get optional.isEmpty "out of bounds get returns empty" assert
@@ -17,6 +17,6 @@ proc( -> ) =>: main
     5 list.append
     7 list.append
     11 list.append
-    $ 3:i64 list.get .data 7 == "{ 2 3 5 7 11 } 3 get 3 ==" assert
+    $ 3:i64 list.get optional.unwrap 7 == "{ 2 3 5 7 11 } 3 get 3 ==" assert
   list.free ..drop
 end

@@ -8,7 +8,7 @@ proc( -> ) =>: main
   aMap@ 1 1 map.put ..drop
   aMap@ 2 2 map.put ..drop
   aMap@ 3 3 map.put ..drop
-  aMap@ 2 map.remove .data 2 == "removed 2" assert
+  aMap@ 2 map.remove optional.unwrap 2 == "removed 2" assert
   aMap@ 2 4 map.put optional.isEmpty "2 was removed" assert
   aMap@ map.clear
   aMap@ 1 2 map.put optional.isEmpty "1 was removed" assert

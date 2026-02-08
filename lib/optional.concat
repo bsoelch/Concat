@@ -18,6 +18,9 @@ namespace: optional
   proc( type : auto: T  T optional -> T ) =>: export: get
     .?data ..raw
   end
+  proc( type : auto: T  T optional -> T ) =>: export: unwrap
+    .?data ..raw
+  end
 
   proc( type : auto: T  T optional -> T optional ) =>: prepareIf end
   proc( type : auto: T  T optional : ignore -> ) =>: elseVal end

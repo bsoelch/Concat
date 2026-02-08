@@ -16,7 +16,7 @@ proc( i64 optional -> ) =>: printOpt
   end
   16 sb.create 
     "optional(" sb.appendS
-    ..swap .data sb.appendI
+    >$ optional.unwrap sb.appendI
     ")\n"         sb.appendS
   io.stdOut ..swap io.fputSb ..drop
 end

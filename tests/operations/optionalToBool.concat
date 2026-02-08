@@ -1,7 +1,7 @@
 import optional
 
 proc( i32 optional : n -> bool ) =>: isEven
-  n ? and n .data 1 & ? ! end return
+  n ? and n optional.unwrap 1 & ? ! end return
 end
 
 proc( -> ) =>: main

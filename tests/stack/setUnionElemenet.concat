@@ -8,10 +8,10 @@ proc( -> ) =>: main
   x@
     1 ..over .C=
     2 ..over .A=
-  [] .A 2 == "x .A 2 ==" assert
+  [] ..raw .A 2 == "x .A 2 ==" assert
   x
     3 ..swap .A=
     4 ..swap .C=
-  .C 4 == ".C 4 ==" assert
-  x .A 2 == "x .A 2 ==" assert
+  ..raw .C 4 == ".C 4 ==" assert
+  x ..raw .A 2 == "x .A 2 ==" assert
 end

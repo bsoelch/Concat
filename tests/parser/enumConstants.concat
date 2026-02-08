@@ -8,7 +8,7 @@ elt .B container .x =:: Bx
 5 container .y =:: y
 
 proc( -> ) =>: main
-  Ax .x .A debug.print
-  Bx .x .B debug.print
-  y .y debug.print
+  Ax ..raw .x .A debug.print
+  Bx ..raw .x .B debug.print
+  y ..raw .y debug.print
 end

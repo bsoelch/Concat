@@ -121,7 +121,7 @@ namespace: map
       map [] .freeNodes =:: freeNodeId
         map [] .nodeBuffer
           freeNodeId i64 cast 1 -
-        list.at .data =:: freeNode
+        @[] =:: freeNode
         freeNode [] .next map .freeNodes=
         NO_NODE freeNode .next= ## unlink returned node
       freeNodeId
@@ -154,7 +154,7 @@ namespace: map
       nodeIdLoc [] =:: nodeId
       nodeId NO_NODE !=
     do
-      map [] .nodeBuffer nodeId i64 cast 1 - list.at .data =:: node
+      map [] .nodeBuffer nodeId i64 cast 1 - @[] =:: node
       node [] .key key map [] .eq () if
         operation .DELETE if
           ## unlink node from map
@@ -188,7 +188,7 @@ namespace: map
       nodeIdLoc [] =:: nodeId
       nodeId NO_NODE !=
     do
-      map [] .nodeBuffer nodeId i64 cast 1 - list.at .data =:: node
+      map [] .nodeBuffer nodeId i64 cast 1 - @[] =:: node
       node [] .key key map [] .eq () if
         nodeId return
       end
@@ -219,7 +219,7 @@ namespace: map
     nodeId NO_NODE == if
       V ptr.mut optional.empty return
     end
-    data [] .nodeBuffer nodeId i64 cast 1 - list.at .data .value optional.wrap return
+    data [] .nodeBuffer nodeId i64 cast 1 - @[] .value optional.wrap return
   end
   proc(
     type : auto: K
@@ -235,7 +235,7 @@ namespace: map
         data .nodeBuffer=
         V optional.empty return
       end
-    data [] .nodeBuffer nodeId i32 cast 1 - list.at .data
+    data [] .nodeBuffer nodeId i32 cast 1 - @[]
       $ [] .value =:: prevValue
       value $1 .value=
     =:: nodeData
@@ -258,7 +258,7 @@ namespace: map
     end
     data [] .nodeBuffer
       nodeId i32 cast 1 -
-    list.at .data [] .value optional.wrap return
+    list.at .if [] .value optional.wrap else V optional.empty end return
   end
 
   ( type : K type : V -> type ) =>: Iterator
@@ -292,7 +292,7 @@ namespace: map
     -> V ptr.mut K ptr ) =>: export: getAddr
       itr .map [] .nodeBuffer
         itr .next i64 cast 1 -
-      list.at .data =:: res
+      @[] =:: res
       res .value res .key return
     end
     proc(
@@ -309,7 +309,7 @@ namespace: map
     -> K V Iterator ) =>: export: step
       itr .map [] .nodeBuffer
         itr .next i64 cast 1 -
-      list.at .data [] .next itr@ .next=
+      @[] .next [] itr@ .next=
       itr .next NO_NODE == if
         while itr .index itr .map [] .hashMask <= do
           itr .map [] .data itr .index [] NO_NODE != if

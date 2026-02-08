@@ -12,15 +12,15 @@ proc( -> ) =>: main
   anUnion .A anUnion =: f
   u .?A ? debug.print
   u .?C ? debug.print
-  u .C debug.print
+  u ..raw .C debug.print
 
   labelEnum .A =:: mut: l1
   l1 .B if
     labelEnum .C l1=
   end
   241 'A' ( i32 char8 ) new u@ .D=
-  u .D
-    2 u@ .D .0=
+  u ..raw .D
+    2 u@ .?D .else "u .D" ..panic end .0=
     $ .1 debug.print
   .0 debug.print
 end
