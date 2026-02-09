@@ -234,7 +234,7 @@ proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> i32 ) 
   context nextValueId =:: newId
   context .stackInfo
     offset
-  branchTree.replaceAt .data =:: stackElt
+  branchTree.replaceAt optional.unwrap =:: stackElt
   newId stackElt .varId=
   valType stackElt .valType=
   newId return
@@ -351,10 +351,7 @@ proc(
   context [] .program =:: program
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
-  t i typeContext types.tupleElementOffset =:: eltOffset?
-  eltOffset? optional.hasData if
-    eltOffset? .data return
-  end
+  t i typeContext types.tupleElementOffset .if return end
   "could not compute offset of element " sb.copyPtr
     i sb.appendI
     " in tuple " sb.appendS
@@ -370,14 +367,12 @@ proc(
   context [] .program =:: program
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
-  t typeContext types.enumLabelInfo =:: labelOffset? =:: labelType
-  labelOffset? optional.hasData if
-    labelType labelOffset? .data return
-  end
-  "could not compute offset of label in enum " sb.copyPtr
-    t typeContext sb.appendType
-  pos errors appendError
-  labelType 0 return
+  t typeContext types.enumLabelInfo .else
+    "could not compute offset of label in enum " sb.copyPtr
+      t typeContext sb.appendType
+    pos errors appendError
+    0
+  end return
 end
 
 struct(
@@ -458,7 +453,7 @@ end
 proc(
   BlockId : blockId
   CompilerContext ptr.mut : context
--> ) =>: openIfBlock
+-> IfBlockInfo ptr.mut ) =>: openIfBlock
   using branchTree.:NodeId
   ## IfBlockInfo
     8 branchTree.NodeId list.create
@@ -472,6 +467,7 @@ proc(
     false
     false
   IfBlockInfo new BlockInfo .If context openBlock
+  context [] .openBlocks list.peek optional.unwrap .?If .else ..unreachable end
 end
 proc(
   BlockId : blockId
@@ -504,18 +500,19 @@ proc(
     blockStart
   WhileBlockInfo new BlockInfo .While context openBlock
   context [] .tmpCount
-    context [] .program [] .whileData blockId i64 cast list.at .data [] .modifiedTypes +
+    context [] .program [] .whileData blockId i64 cast @[] .modifiedTypes [] +
   context .tmpCount=
 end
 proc(
   BlockId : blockId
   CompilerContext ptr.mut : context
--> ) =>: openAndOrBlock
+-> AndOrBlockInfo ptr.mut ) =>: openAndOrBlock
   ## SwitchBlockInfo
     16 branchTree.NodeId list.create
     16 BranchId list.create
     blockId
   AndOrBlockInfo new BlockInfo .AndOr context openBlock
+  context [] .openBlocks list.peek optional.unwrap .?AndOr .else ..unreachable end
 end
 
 enum( WHILE SWITCH ) =:: BreakType
@@ -573,13 +570,10 @@ namespace: sb
     Type : t
     CompilerContext ptr.mut : context
   -> i64 ) =>: getTypeId
-    context .typeIds t map.get $ ? if
-      .data return
-    else ..drop
+    context .typeIds t map.get .else
       context [] .typeIdCount
         context .typeIds t $2 map.put ..drop
-        $ 1 + context .typeIdCount=
-      return
+      $ 1 + context .typeIdCount=
     end
   end
   proc(
@@ -678,7 +672,7 @@ namespace: sb
         sb t "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       UnionElement case
-        sb t typeContext types.getUnionElementUnion .data
+        sb t typeContext types.getUnionElementUnion optional.unwrap
           typeContext types.unwrapNamed
         "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
@@ -732,7 +726,7 @@ namespace: sb
     prog .idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     procType typeContext types.getCallConvention =:: callConvention
-    procType typeContext types.getProcIn .data =:: args
+    procType typeContext types.getProcIn optional.unwrap =:: args
     procType typeContext types.getProcOutArgs =:: outArgs
     false =:: mut: hasArgs
     sb
@@ -873,7 +867,7 @@ namespace: sb
         constant [] .valType
         types.ArrayType .ARRAY
         size
-      typeContext types.newArrayType .data
+      typeContext types.newArrayType optional.unwrap
     else
       constant [] .valType
     end =:: valType
@@ -1023,12 +1017,11 @@ namespace: sb
             containerType typeContext types.getBaseType =:: eltType
             eltType pos context typeSizeInt =:: eltSize
             eltType pos context typeStrideInt =:: eltStride
-            value .Array =:: elts
-            0:iSize while $ elts .length u< do =:: i
+            0:iSize while $ arrayValue .length u< do =:: i
               i 0:iSize != if
                 ',' sb.appendC
               end
-              eltType elts i [] true pos context appendConstQBE
+              eltType arrayValue i [] true pos context appendConstQBE
               eltSize eltStride < if
                 ",z " sb.appendS
                 eltStride eltSize - sb.appendI
@@ -1133,11 +1126,11 @@ namespace: sb
             appendConstQBE
           end
           return
-        Procedure case
+        Procedure .case =:: procValue
           ## appendGlobalName
             prog [] .procedures
-              value .Procedure i64 cast
-            list.at .data [] .labelId
+              procValue i64 cast
+            @[] .labelId []
             -1
           context appendGlobalName
           return
@@ -1431,7 +1424,7 @@ end
 
 proc( string : fileName ProgramContext ptr : prog -> FileId ) =>: findFileId
   prog [] .progFiles .length for =:: i
-    prog [] .progFiles i list.at .data [] .fileName sb.asStr =:: currentName
+    prog [] .progFiles i @[] .fileName [] sb.asStr =:: currentName
     fileName currentName string.eq if
       i FileId cast return
     end
@@ -1471,13 +1464,13 @@ proc(
   context [] .currentProc
     labelId
     typeContext
-  types.findProcArgLabel $ optional.hasData if .data =:: index
+  types.findProcArgLabel .if =:: index
     ## appendArgName
       index
       labelId
       context
     sb.appendArgName return
-  end ..drop
+  end
   "cannot find generic argument: " sb.copyPtr
     labelId labelContext sb.appendLabelName
   pos errors appendError
@@ -1839,14 +1832,14 @@ proc(
   labels .length 3:iSize u<= if
     false =:: mut: contiguous
     labels .length =:: mut: loopCount
-    lower optional.hasData and upper optional.hasData and
-        upper .data lower .data - labels .length i64 cast.u == contiguous=
+    lower .and =:: lowVal upper .and =:: upVal
+        upVal lowVal - labels .length i64 cast.u == contiguous=
         contiguous if
       loopCount 1:iSize - loopCount=
     end
     sb
       0:iSize while $ loopCount u< do =:: i
-        labels i slice.at .data [] .caseId =:: caseId
+        labels i @[] .caseId [] =:: caseId
         ## BranchId
           BranchType .LABEL
           opIndex caseJumpDistances caseId [] i32 cast +
@@ -1870,7 +1863,7 @@ proc(
       end ..drop
       "jmp " sb.appendS
       contiguous if
-        labels loopCount slice.at .data [] .caseId =:: caseId
+        labels loopCount @[] .caseId [] =:: caseId
         ## BranchId
           BranchType .LABEL
           opIndex caseJumpDistances caseId [] i32 cast +
@@ -1915,11 +1908,9 @@ proc(
       caseJumpDistances
       opIndex
       lower
-      upper optional.isEmpty if
-        cmpVal optional.wrap
-      else
-        upper .data cmpVal i64.min optional.wrap
-      end
+      cmpVal
+        upper .if i64.min end
+      optional.wrap
       pos context
     appendSwitchJumpTree
     geBranch sb.appendBranchId
@@ -1931,11 +1922,9 @@ proc(
       rElts
       caseJumpDistances
       opIndex
-      lower optional.isEmpty if
-        cmpVal optional.wrap
-      else
-        lower .data cmpVal i64.max optional.wrap
-      end
+      cmpVal
+        lower .if i64.max end
+      optional.wrap
       upper
       pos context
     appendSwitchJumpTree
@@ -2166,7 +2155,7 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  opType typeContext types.getProcIn .data =:: inTypes
+  opType typeContext types.getProcIn optional.unwrap =:: inTypes
   inTypes .length 0:iSize != if
     opType 0 typeContext types.getProcArgLabel
         labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -2176,7 +2165,7 @@ proc(
     end =:: firstArg
     inTypes firstArg []
   else
-      opType typeContext types.getProcOut .data =:: outTypes
+      opType typeContext types.getProcOut optional.unwrap =:: outTypes
       outTypes .length 0:iSize != _if
     outTypes 0 []
   else
@@ -2404,7 +2393,7 @@ proc(
       return
     CHECK_UNION_ELEMENT case
       sb
-        baseType typeContext types.getUnionElementUnion .data
+        baseType typeContext types.getUnionElementUnion optional.unwrap
           pos context popValue
           baseType typeContext types.getUnionElementIndex
         pos context checkEnumIndex ..drop.2 =:: c
@@ -2914,10 +2903,10 @@ proc(
     sb return
   end
   castType .AUTO_CAST if
-    context .stackInfo offset branchTree.at .data [] .valType
-    context .stackInfo offset branchTree.at .data [] .varId
+    context .stackInfo offset branchTree.at optional.unwrap [] .valType
+    context .stackInfo offset branchTree.at optional.unwrap [] .varId
   else
-    context .stackInfo offset branchTree.at .data [] .valType
+    context .stackInfo offset branchTree.at optional.unwrap [] .valType
     pos context popValue
   end =:: srcId =:: valType
   castType .AUTO_CAST if
@@ -3002,12 +2991,12 @@ proc(
     context [] .currentProc
       genArg
       typeContext
-    types.findProcArgLabel $ optional.hasData if .data =:: index
-      context [] .currentProc typeContext types.getProcIn .data index [] srcType=
+    types.findProcArgLabel .if =:: index
+      context [] .currentProc typeContext types.getProcIn optional.unwrap index [] srcType=
       srcType typeContext types.unwrapNamed
         constType typeContext types.unwrapNamed
       types.typeEquals ! needCast=
-    else ..drop end
+    end
   else ..drop end
   sb
     pos sb.appendPosQBE
@@ -3096,7 +3085,7 @@ proc(
     " (" sb.appendS
     false =:: mut: hasArgs
     argIndices [] .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
-      argIndices [] i list.at .data =:: arg
+      argIndices [] i @[] =:: arg
       hasArgs if
         ',' sb.appendC
       end
@@ -3122,14 +3111,14 @@ proc(
     else ..drop end
     ## convert out-arg references to values
     outArgsOffset while $ argIndices [] .length u< do =:: i
-      argIndices [] i list.at .data [] .valType =:: argType
+      argIndices [] i @[] .valType [] =:: argType
       argType context referenceOnly if
         continue
       end
       ## TODO? extract load operations to common procedure
       argIndices [] .length i - i32 cast =:: offset
-      context .stackInfo offset branchTree.at .data [] .valType =:: valType
-      context .stackInfo offset branchTree.at .data [] .varId =:: srcId
+      context .stackInfo offset branchTree.at optional.unwrap [] .valType =:: valType
+      context .stackInfo offset branchTree.at optional.unwrap [] .varId =:: srcId
       argType context toValType offset context replaceValue =:: targetId
       "%s" sb.appendS
       targetId sb.appendI
@@ -3164,22 +3153,22 @@ proc(
   op [] .val switch
     NOP case
       sb return
-    Constant case
+    Constant .case =:: constVal
       sb
         op [] .dataType
-        op [] .val .Constant
+        constVal
         op [] .pos
         context
       pushConstant
       return
-    ConstantReference case
+    ConstantReference .case =:: constId
       sb
         "%s" sb.appendS
         ValType .REFERENCE context pushValue sb.appendI
         " =l " sb.appendS
         " copy $" sb.appendS
         CONST_REFERENCE_NAME sb.appendS
-        op [] .val .ConstantReference i64 cast sb.appendI
+        constId i64 cast sb.appendI
         '\n' sb.appendC
       return
     DeclareId InitializeId .case =:: idInfo
@@ -3223,7 +3212,7 @@ proc(
       break
     ImplementProcedure .case =:: implInfo
       prog [] .procedures
-        implInfo .procId i64 cast list.at .data
+        implInfo .procId i64 cast @[]
       =:: procInfo
       op [] .dataType context .currentProc=
       procInfo [] .labelId labelContext id.labelFlags =:: labelFlags
@@ -3254,7 +3243,7 @@ proc(
           0
         BranchId new string.empty context startBranch
         ## push unnamed arguments
-        op [] .dataType typeContext types.getProcIn .data =:: args
+        op [] .dataType typeContext types.getProcIn optional.unwrap =:: args
         0:i32 while $ iSize cast.u args .length u< do =:: i
           op [] .dataType i typeContext types.getProcArgLabel =:: label
           args i [] =:: argType
@@ -3306,7 +3295,7 @@ proc(
           ## allocate space for variables
           implInfo .implementationId 0 >= if
             codeImpl .implementations
-              implInfo .implementationId list.at .data [] .variables
+              implInfo .implementationId @[] .variables []
           else
             codeImpl .variables
           end =:: variables
@@ -3379,7 +3368,7 @@ proc(
     ProcPtr .case =:: procImpl
       prog [] .procedures
         procImpl .procId i64 cast
-      list.at .data =:: procData
+      @[] =:: procData
       sb
         op [] .pos sb.appendPosQBE
         "%s" sb.appendS
@@ -3654,17 +3643,16 @@ proc(
         '\n' sb.appendC
       return
     GetEnumLabel case
-      context .stackInfo branchTree.pop =:: srcVal?
-      srcVal? optional.isEmpty if
+      context .stackInfo branchTree.pop .else
         "stack underflow" sb.copyPtr
         op [] .pos errors appendError
         sb return
-      end
+      end =:: srcVal
       sb
         op [] .pos sb.appendPosQBE
         ## loadEnumLabel
           op [] .dataType
-          srcVal? .data [] .varId
+          srcVal [] .varId
           op [] .pos
         context loadEnumLabel =:: labelType =:: labelId
         context nextTmpId =:: c
@@ -3678,29 +3666,27 @@ proc(
         '\n' sb.appendC
       return
     CheckEnumLabel .case =:: index
-      context .stackInfo branchTree.peek =:: srcVal?
-      srcVal? optional.isEmpty if
+      context .stackInfo branchTree.peek .else
         "stack underflow" sb.copyPtr
         op [] .pos errors appendError
         sb return
-      end
+      end =:: srcVal
       sb
         op [] .pos sb.appendPosQBE
         ## appendEnumCheck
           op [] .dataType
-          srcVal? .data [] .varId
+          srcVal [] .varId
           index
           op [] .pos
           context
         appendEnumCheck
       return
     SetEnumElement .case =:: elementId
-      context .stackInfo branchTree.peek =:: srcVal?
-      srcVal? optional.isEmpty if
+      context .stackInfo branchTree.peek .else
         "stack underflow" sb.copyPtr
         op [] .pos errors appendError
         sb return
-      end
+      end =:: srcVal
       ## TODO? special handling for access through pointer?
       op [] .dataType
         $ typeContext types.isPointer =:: isPtr
@@ -3713,7 +3699,7 @@ proc(
         ## storeEnumLabel
           enumType
           's'
-          srcVal? .data [] .varId
+          srcVal [] .varId
           elementId
           op [] .pos
           context
@@ -3799,16 +3785,18 @@ proc(
       break
     Call .case =:: callInfo
       prog [] .procedures
-        callInfo .procId i64 cast list.at .data
+        callInfo .procId i64 cast @[]
       =:: procData
       callInfo .implementationId 0 >= if
-        procData [] .implementation .Code .implementations
-          callInfo .implementationId list.at .data
-        [] .procType
+        procData [] .implementation .?Code .else
+          "expected code-proc" ..panic
+        end .implementations
+          callInfo .implementationId @[]
+        .procType []
       else
         procData [] .procType
       end =:: calledType
-      calledType typeContext types.getProcIn .data =:: inTypes
+      calledType typeContext types.getProcIn optional.unwrap =:: inTypes
       calledType typeContext types.getProcOutArgs =:: outArgs
       inTypes .length =:: argCount
       argCount TypedValId list.create =:: mut: argIndices
@@ -3865,11 +3853,11 @@ proc(
       argIndices .length =:: mut: argIndex
       while argIndex 0:iSize iSize.sgt do
         argIndex 1:iSize - argIndex=
-        argIndices argIndex list.at .data [] .valId 0 >= if
+        argIndices argIndex @[] .valId [] 0 >= if
           continue ## argument already set
         end
         ## get argument from stack
-        argIndices argIndex list.at .data =:: arg
+        argIndices argIndex @[] =:: arg
         op [] .pos context popValue arg .valId=
       end
       newSb
@@ -3905,7 +3893,7 @@ proc(
           typeContext types.getBaseType
         calledType=
       end
-      calledType typeContext types.getProcIn .data =:: inTypes
+      calledType typeContext types.getProcIn optional.unwrap =:: inTypes
       calledType typeContext types.getProcOutArgs =:: outArgs
       0:iSize =:: mut: outArgCount
       0:iSize while $ outArgs .length u< do =:: i
@@ -3914,7 +3902,7 @@ proc(
           ## skip empty arguments
           i 1:iSize + continue
         end
-        arg argIndices outArgCount list.at .data .valType=
+        arg argIndices outArgCount @[] .valType=
         outArgCount 1:iSize + outArgCount=
         i 1:iSize +
       end ..drop
@@ -4012,7 +4000,6 @@ proc(
             ifBlock
           else ## start if block if not already open
             blockVal .blockId context openIfBlock
-            context [] .openBlocks list.peek .data .If
           end =:: ifBlock
           true ifBlock .hasIf=
           ifBlock [] .andBranches
@@ -4054,7 +4041,6 @@ proc(
             ifBlock
           else ## start if block if not already open
             blockVal .blockId context openIfBlock
-            context [] .openBlocks list.peek .data .If
           end =:: ifBlock
           blockVal .blockType .OR_IF or
             blockVal .blockType .OR_TRUE or
@@ -4104,12 +4090,14 @@ proc(
             context startBranch
           return
         ELSE ELSE_TRUE ELSE_FALSE case
-          context [] .openBlocks list.peek .data =:: ifBlock
-          context .stackInfo ifBlock [] .If .branchRoot branchTree.reset =:: ifBranch
-          context [] .reachable ifBlock .If .ifBranchTerminates=
+          context [] .openBlocks list.peek .and .?If .else
+            "expected if-block" ..panic
+          end =:: ifBlock
+          context .stackInfo ifBlock [] .branchRoot branchTree.reset =:: ifBranch
+          context [] .reachable ifBlock .ifBranchTerminates=
           ## BranchPoint
-          ifBranch ifBlock .If .ifBranch=
-          context [] .currentBranch ifBlock .If .ifBranchId=
+          ifBranch ifBlock .ifBranch=
+          context [] .currentBranch ifBlock .ifBranchId=
           sb
             ## don't add position for labels
             context [] .reachable if
@@ -4130,15 +4118,15 @@ proc(
             startBranch
             true context .reachable=
           =:: mut: newSb
-          ifBlock [] .If .andBranches .length 1:iSize u>= "if block has if branch" assert
+          ifBlock [] .andBranches .length 1:iSize u>= "if block has if branch" assert
           ## mergeValues
             context .stackInfo
-            ifBlock [] .If .andBranches list.asSlice
+            ifBlock [] .andBranches list.asSlice
             mergeBranches@
             ## MergePoint
               "and-if":s
-              ifBlock [] .If .blockId
-              ifBlock [] .If .andBranchIds list.asSlice
+              ifBlock [] .blockId
+              ifBlock [] .andBranchIds list.asSlice
               op [] .pos
               context
               newSb@
@@ -4151,7 +4139,7 @@ proc(
         SWITCH case
           blockVal .blockId =:: switchId
           prog [] .switchData
-            switchId i64 cast list.at .data
+            switchId i64 cast @[]
           =:: switchData
           sb
             op [] .pos sb.appendPosQBE
@@ -4235,8 +4223,10 @@ proc(
             whileId
               opIndex
             context openWhileBlock
-            context [] .openBlocks list.peek .data .While =:: whileBlock
-            prog [] .whileData whileId i64 cast list.at .data =:: whileData
+            context [] .openBlocks list.peek .and .?While .else
+              "expected while-block" ..panic
+            end =:: whileBlock
+            prog [] .whileData whileId i64 cast @[] =:: whileData
             context [] .currentBranch =:: prevBranch
             whileData [] .modifiedTypes =:: loopEltCount
             loopEltCount StackElement list.create =:: mut: loopElts
@@ -4247,7 +4237,7 @@ proc(
             end
             0:i32 while $ loopEltCount < do 1 +
               loopElts
-                context .stackInfo branchTree.pop .data list.appendP
+                context .stackInfo branchTree.pop optional.unwrap list.appendP
               loopElts=
             end ..drop
             sb
@@ -4256,7 +4246,7 @@ proc(
               '\n' sb.appendC
               branchId "while":s context startBranch
               loopEltCount 1 - while $ 0 >= do =:: i
-                loopElts i list.at .data =:: elt
+                loopElts i @[] =:: elt
                 "%s" sb.appendS
                 elt [] .valType context pushValue sb.appendI
                 " =" sb.appendS
@@ -4278,7 +4268,9 @@ proc(
               loopElts list.free loopElts=
             return
         AND_DO OR_DO case
-          context [] .openBlocks list.peek .data .While =:: whileBlock
+          context [] .openBlocks list.peek .and .?While .else
+            "expected while-block" ..panic
+          end =:: whileBlock
           blockVal .blockType .OR_DO =:: isOr
           ## BranchId
             BranchType .NEXT
@@ -4323,7 +4315,9 @@ proc(
             nextBranch "and/or do":s context startBranch
           return
         DO case
-          context [] .openBlocks list.peek .data .While =:: whileBlock
+          context [] .openBlocks list.peek .and .?While .else
+            "expected while-block" ..panic
+          end =:: whileBlock
           ## BranchId
             BranchType .LABEL
             opIndex
@@ -4418,9 +4412,9 @@ proc(
             false context .reachable=
           return
         FINALLY case
-          context [] .openBlocks list.peek
-            .data .While
-          =:: mut: whileBlock
+          context [] .openBlocks list.peek .and .?While .else
+            "expected while-block" ..panic
+          end =:: whileBlock
           whileBlock .continueBranches =:: mut: continueBranches
           context [] .reachable if
             whileBlock .continueBranchIds []
@@ -4466,7 +4460,6 @@ proc(
           context [] .openBlocks list.peek .and .?AndOr .else
             ## start if block if not already open
             blockVal .blockId context openAndOrBlock
-            context [] .openBlocks list.peek .data .AndOr
           end =:: andOrBlock
           andOrBlock [] .branches
             context .stackInfo branchTree.startBranch list.append
@@ -4525,8 +4518,9 @@ proc(
             ## TODO merge branches if neccessary
           return
         ELSE case
-          context [] .openBlocks
-            list.pop .If =:: ifBlock
+          context [] .openBlocks list.pop .?If .else
+            "expected if-block" ..panic
+          end =:: ifBlock
           context .openBlocks=
           branchTree.NodeId 2 array new =:: mut: branches
           BranchId 2 array new =:: mut: branchIds
@@ -4578,7 +4572,9 @@ proc(
           newSb return
         SWITCH case
           context [] .openBlocks
-            list.pop .Switch =:: switchBlock
+            list.pop .?Switch .else
+              "expected switch-block" ..panic
+            end =:: switchBlock
           context .openBlocks=
           switchBlock .caseBranches =:: caseBranches
           caseBranches .length 0:iSize != context .reachable=
@@ -4618,9 +4614,11 @@ proc(
           newSb return
         WHILE case
           context [] .openBlocks
-            list.pop .While =:: mut: whileBlock
+            list.pop .?While .else
+              "expected while-block" ..panic
+            end =:: whileBlock
           context .openBlocks=
-          prog [] .whileData whileBlock .blockId i32 cast list.at .data =:: whileData
+          prog [] .whileData whileBlock .blockId i32 cast @[] =:: whileData
           context [] .stackInfo branchTree.depth whileData [] .modifiedTypes < if
             "stack underflow" sb.copyPtr
             op [] .pos errors appendError
@@ -4629,7 +4627,11 @@ proc(
           sb
             ## copy values to loop vars
             0:i32 while $ whileData [] .modifiedTypes < do =:: i
-              context .stackInfo branchTree.pop .data =:: elt
+              context .stackInfo branchTree.pop .else
+                "stack underflow" sb.copyPtr
+                op [] .pos errors appendError
+                return
+              end =:: elt
               "%t" sb.appendS
               whileBlock .loopValOffset i + sb.appendI
               " =" sb.appendS
@@ -4692,7 +4694,9 @@ proc(
           newSb return
         AND OR case
           context [] .openBlocks
-            list.pop .AndOr =:: mut: andOrBlock
+            list.pop .?AndOr .else
+              "expected and-or-block" ..panic
+            end =:: mut: andOrBlock
           context .openBlocks=
           andOrBlock .branches
             context .stackInfo branchTree.startBranch list.append
@@ -4752,7 +4756,7 @@ proc(
       retType switch
         Empty case 0:i32 break
         Value case 1:i32 break
-        Tuple case retType .Tuple typeContext types.compositeEltCount break
+        Tuple .case typeContext types.compositeEltCount break
       end =:: retCount
       false context .reachable=
       sb
@@ -4802,17 +4806,17 @@ proc(
         retId sb.appendI
         '\n' sb.appendC
       return
-    InlineReturn case
+    InlineReturn .case =:: retId
       sb
         "jmp " sb.appendS
         ## BranchId
           BranchType .END_INLINE
-          op [] .val .InlineReturn i32 cast
+          retId i32 cast
         BranchId new sb.appendBranchId
         '\n' sb.appendC
         ## TODO! keep track of branches
       return
-    RuntimeAssert case
+    RuntimeAssert .case =:: msg
       ## BranchId
         BranchType .NEXT
         context nextJumpLabelId
@@ -4836,9 +4840,9 @@ proc(
         "call $printf(l $" sb.appendS
         ASSERT_FORMAT sb.appendS
         ",l " sb.appendS
-        op [] .val .RuntimeAssert .length sb.appendI
+        msg .length sb.appendI
         ",l " sb.appendS
-        op [] .val .RuntimeAssert context sb.appendStringPtrConstQBE
+        msg context sb.appendStringPtrConstQBE
         op [] .pos prog appendPosPrintfArgs
         ")\ncall $exit(w 1)\nhlt\n" sb.appendS
         successBranch "end assert":s context startBranch
@@ -4874,7 +4878,7 @@ proc(
           ## copy value on stack
           context .stackInfo
             offset
-          branchTree.at .data =:: copied
+          branchTree.at optional.unwrap =:: copied
           context .stackInfo
             copied []
           branchTree.push
@@ -4942,7 +4946,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   program [] .mainLabelId =:: mainId
-  program [] .progFiles 0 list.at .data [] .fileScope idContext id.setScope
+  program [] .progFiles 0 @[] .fileScope [] idContext id.setScope
   labelContext id.clearNamespace
   1024 sb.create
     program getDeclaredTypes =:: types
@@ -5067,7 +5071,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     end
     ## cannot replace with for as loop-counter is changed during loop
     0:iSize while $ context [] .ptrConstants .length u< do =:: i
-      context [] .ptrConstants i list.at .data =:: val
+      context [] .ptrConstants i @[] =:: val
       "data $" sb.appendS
       PTR_CONST_NAME sb.appendS
       i sb.appendI
