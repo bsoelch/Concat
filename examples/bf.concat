@@ -48,7 +48,7 @@ proc( string : code i64 : tapeCap -> i8 ) =>: runBf_C
         ip code skipLoop ip=
         break
       ']' case
-        stack list.peek .data [] =:: loopStart
+        stack list.peek optional.unwrap [] =:: loopStart
         tape mp [] ? if
           loopStart ip=
           continue
