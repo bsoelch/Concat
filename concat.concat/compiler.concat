@@ -191,15 +191,13 @@ proc( -> ) =>: parseArgs
   end
   srcPath sb.asStr '.' string.lastIndexOf =:: mut: iDot
   srcPath sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
-  iDot optional.hasData and iSlash optional.hasData and iDot .data iSlash .data u< if
+  iDot .and =:: dotIndex iSlash .and dotIndex >$ u< if
     iSize optional.empty iDot=
   end
   hasOut ! if
     targetPath
       srcPath sb.asStr
-        iDot optional.hasData if
-          iDot .data string.head
-        end sb.appendStr
+      iDot string.head sb.appendStr
     targetPath=
   end
   targetPath sb.asStr baseName=
@@ -214,10 +212,10 @@ proc( -> ) =>: parseArgs
       end
     end
   outPath=
-  iSlash optional.isEmpty if
-    "./":s
+  iSlash .if =:: slashIndex
+    srcPath sb.asStr slashIndex 1:iSize + string.head string.copy
   else
-    srcPath sb.asStr iSlash .data 1:iSize + string.head string.copy
+    "./":s
   end basePath=
   hasLib ! if
     "./lib/":s libPath=
@@ -246,7 +244,7 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
         true hasError=
       end
     end
-    errorFile optional.hasData if errorFile .data io.OPEN_WRITE io.fopenStr ..drop else io.stdErr end
+    errorFile .if io.OPEN_WRITE io.fopenStr ..drop else io.stdErr end
       ..dup ..over.2 io.fputSb ..drop
     errorFile optional.hasData if io.fclose ..drop else ..drop end ## don't close stdErr
   sb.free ..drop
@@ -336,8 +334,8 @@ proc( -> ) =>: main ## TODO check return value of fopen
         ## 1. compile to "pseudo-asm"
         ## 2. compile "pseudo-asm" to "real" asm
         targetFile intermediateFile? prog@ compileToASM
-        intermediateFile? optional.hasData if
-          intermediateFile? .data io.fclose ..drop
+        intermediateFile? .if
+          io.fclose ..drop
         end
         intermediatePath sb.free ..drop
         break

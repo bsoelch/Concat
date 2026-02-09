@@ -125,14 +125,14 @@ namespace: RegisterContent
     end
     a switch
       empty forceClear preserveValue case true return
-      variable case a .variable b .variable == return
-      variableLow case a .variableLow b .variableLow == return
-      variableHi case a .variableHi b .variableHi == return
-      variableReference case a .variableReference b .variableReference == return
-      stackSlotReference case a .stackSlotReference b .stackSlotReference == return
-      stackSlot case a .stackSlot b .stackSlot == return
-      stackSlotHi case a .stackSlotHi b .stackSlotHi == return
-      stackSlotLow case a .stackSlotLow b .stackSlotLow == return
+      variable .case b ..raw .variable == return
+      variableLow .case b ..raw .variableLow == return
+      variableHi .case b ..raw .variableHi == return
+      variableReference .case b ..raw .variableReference == return
+      stackSlotReference .case b ..raw .stackSlotReference == return
+      stackSlot .case b ..raw .stackSlot == return
+      stackSlotHi .case b ..raw .stackSlotHi == return
+      stackSlotLow .case b ..raw .stackSlotLow == return
     end
   end
 end
@@ -398,8 +398,8 @@ namespace: AMD64
     i32 : stackSize
     TypeContext ptr.mut : typeContext
   -> ArgumentLocation slice.mut RegisterState slice.mut RegisterState slice.mut ) =>: computeArgumentLocations
-    procType typeContext types.getProcIn .data =:: inTypes
-    procType typeContext types.getProcOut .data =:: outTypes
+    procType typeContext types.getProcIn .else "proc-in" ..panic end =:: inTypes
+    procType typeContext types.getProcOut .else "proc-out" ..panic end =:: outTypes
     ## TODO? ensure buffer is unused
     argBuffer [] outTypes .length list.setLength argBuffer =[]
     outTypes
@@ -531,7 +531,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
-      dataType typeContext types.sizeOf .Fixed =:: byteSize
+      dataType typeContext types.sizeOf typeSizeAsInt =:: byteSize
       byteSize 16 <= "values larger than 128 bits are pased by reference" assert
       dataType typeContext types.getBaseType =:: eltType
       eltType typeContext toValType =:: eltVal
@@ -560,7 +560,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
-      dataType typeContext types.sizeOf .Fixed =:: byteSize
+      dataType typeContext types.sizeOf typeSizeAsInt =:: byteSize
       byteSize 16 <= "values larger than 128 bits are pased by reference" assert
       true =:: mut: floatOnlyLow
       true =:: mut: floatOnlyHi
@@ -572,11 +572,11 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
             false floatOnlyLow=
             break
           end
-          dataType i typeContext types.tupleElementOffset .data =:: eltOffset
+          dataType i typeContext types.tupleElementOffset .else 0 end =:: eltOffset
           eltOffset 8 < if
             false floatOnlyLow=
           end
-          eltOffset 8 >= or eltOffset eltType typeContext types.sizeOf .Fixed + 8 > if
+          eltOffset 8 >= or eltOffset eltType typeContext types.sizeOf typeSizeAsInt + 8 > if
             false floatOnlyHi=
             break
           end
@@ -614,7 +614,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
-      dataType typeContext types.sizeOf .Fixed =:: size
+      dataType typeContext types.sizeOf typeSizeAsInt =:: size
       size 16 <= "values larger than 128 bits are pased by reference" assert
       ## TODO! treat small unions as values
       ValType .REFERENCE return
@@ -860,13 +860,13 @@ namespace: asm
   proc( Operand : op -> ValType ) =>: guessValType
     op switch
       empty unknown cmpType bitMoveInfo case ValType .EMPTY return
-      register case op .register getRegType regTypeAsValType return
+      register .case getRegType regTypeAsValType return
       constF32 case ValType .F32 return
       constF64 case ValType .F64 return
       constInt case ValType .EMPTY return ## TODO? ensure int is not interpreted as float
       constPtr constPtrAndOffset stackData stackData128 stackData128Hi stackData128Low intArgument floatArgument
       localMemory localMemoryAndOffset globalMemory regAndOffset localLabel globalLabel jumpTableElement case ValType .PTR return
-      valType case op .valType return
+      valType .case return
     end
   end
 end
@@ -1081,92 +1081,80 @@ namespace: sb
       val switch
         empty case break
         unknown case "?" sb.appendS break
-        cmpType case
-          val .cmpType sb.appendCmpType
+        cmpType .case sb.appendCmpType break
+        register .case sb.appendRegister break
+        constInt .case sb.appendI break
+        constF32 .case sb.appendF32 break
+        constF64 .case sb.appendF break
+        constPtr .case =:: constPtr
+          "@ptr" sb.appendS constPtr sb.appendI
           break
-        register case
-          val .register sb.appendRegister
+        constPtrAndOffset .case =:: ptrAndOffset
+          "@ptr" sb.appendS ptrAndOffset .const sb.appendI
+          ':' sb.appendC ptrAndOffset .offset i64 cast.u sb.appendI
           break
-        constInt case
-          val .constInt sb.appendI
+        stackData .case =:: stackData
+          "@stackMem" sb.appendS stackData sb.appendI
           break
-        constF32 case
-          val .constF32 sb.appendF32
+        stackData128 .case =:: stackData128
+          "@stack128Mem" sb.appendS stackData128 sb.appendI
           break
-        constF64 case
-          val .constF64 sb.appendF
+        stackData128Hi .case =:: stackData128Hi
+          "@stack128Mem" sb.appendS stackData128Hi sb.appendI 'h' sb.appendC
           break
-        constPtr case
-          "@ptr" sb.appendS val .constPtr sb.appendI
+        stackData128Low .case =:: stackData128Low
+          "@stack128Mem" sb.appendS stackData128Low sb.appendI 'l' sb.appendC
           break
-        constPtrAndOffset case
-          "@ptr" sb.appendS val .constPtrAndOffset .const sb.appendI
-          ':' sb.appendC val .constPtrAndOffset .offset i64 cast.u sb.appendI
+        intArgument .case =:: intArgument
+          "@argI" sb.appendS intArgument sb.appendI
           break
-        stackData case
-          "@stackMem" sb.appendS val .stackData sb.appendI
+        floatArgument .case =:: floatArgument
+          "@argF" sb.appendS floatArgument sb.appendI
           break
-        stackData128 case
-          "@stack128Mem" sb.appendS val .stackData128 sb.appendI
+        localMemory .case =:: localMemory
+          "@mem" sb.appendS localMemory i64 cast.u sb.appendI
           break
-        stackData128Hi case
-          "@stack128Mem" sb.appendS val .stackData128Hi sb.appendI 'h' sb.appendC
+        localMemoryAndOffset .case =:: localMemoryAndOffset
+          "@mem" sb.appendS localMemoryAndOffset .label i64 cast.u sb.appendI
+          ':' sb.appendC localMemoryAndOffset .offset i64 cast.u sb.appendI
           break
-        stackData128Low case
-          "@stack128Mem" sb.appendS val .stackData128Low sb.appendI 'l' sb.appendC
+        globalMemory .case =:: globalMemory
+          '$' sb.appendC globalMemory labelContext sb.appendLabelName
           break
-        intArgument case
-          "@argI" sb.appendS val .intArgument sb.appendI
+        regAndOffset .case =:: regAndOffset
+          '(' sb.appendC regAndOffset .reg sb.appendRegister
+            '+' sb.appendC regAndOffset .offset sb.appendI ')' sb.appendC
           break
-        floatArgument case
-          "@argF" sb.appendS val .floatArgument sb.appendI
+        localLabel .case =:: localLabel
+          ".localLabel" sb.appendS localLabel i64 cast.u sb.appendI
           break
-        localMemory case
-          "@mem" sb.appendS val .localMemory i64 cast.u sb.appendI
-          break
-        localMemoryAndOffset case
-          "@mem" sb.appendS val .localMemoryAndOffset .label i64 cast.u sb.appendI
-          ':' sb.appendC val .localMemoryAndOffset .offset i64 cast.u sb.appendI
-          break
-        globalMemory case
-          '$' sb.appendC val .globalMemory labelContext sb.appendLabelName
-          break
-        regAndOffset case
-          '(' sb.appendC val .regAndOffset .reg sb.appendRegister
-            '+' sb.appendC val .regAndOffset .offset sb.appendI ')' sb.appendC
-          break
-        localLabel case
-          ".localLabel" sb.appendS val .localLabel i64 cast.u sb.appendI
-          break
-        globalLabel case
-          '$' sb.appendC val .globalLabel .labelId labelContext sb.appendLabelName
-          val .globalLabel .implId -1 != if
-            ':' sb.appendC val .globalLabel .implId sb.appendI
+        globalLabel .case =:: globalLabel
+          '$' sb.appendC globalLabel .labelId labelContext sb.appendLabelName
+          globalLabel .implId -1 != if
+            ':' sb.appendC globalLabel .implId sb.appendI
           end
           break
-        jumpTableElement case
+        jumpTableElement .case =:: jumpTableElement
           "[.localLabel" sb.appendS
-            val .jumpTableElement .offset i64 cast.u sb.appendI
+            jumpTableElement .offset i64 cast.u sb.appendI
             "+8*" sb.appendS ## TODO? don't hardcode size
-            val .jumpTableElement .reg sb.appendRegister
+            jumpTableElement .reg sb.appendRegister
           ']' sb.appendC
           break
-        valType case
-          val .valType sb.appendValType
-          break
-        bitMoveInfo case
-          val .bitMoveInfo .offset i32 cast.u sb.appendI ':' sb.appendC
-          val .bitMoveInfo .count i32 cast.u sb.appendI
-          val .bitMoveInfo .flags asm.BitMove.DST_TYPE_EXTRACT != if
+        valType .case sb.appendValType break
+        bitMoveInfo .case =:: bitMoveInfo
+          bitMoveInfo .offset i32 cast.u sb.appendI ':' sb.appendC
+          bitMoveInfo .count i32 cast.u sb.appendI
+          bitMoveInfo .flags asm.BitMove.DST_TYPE_EXTRACT != if
             ':' sb.appendC
             ## TODO? better handling of flags (? is there a way to avoid printing type of 2nd des if there is only one dst)
-            val .bitMoveInfo .flags asm.BitMove.DST1_SHIFT >> asm.BitMove.DST_TYPE_MASK & switch
+            bitMoveInfo .flags asm.BitMove.DST1_SHIFT >> asm.BitMove.DST_TYPE_MASK & switch
               asm.BitMove.DST_TYPE_EMPTY case '0' sb.appendC break
               asm.BitMove.DST_TYPE_OVERWRITE case 'X' sb.appendC break
               asm.BitMove.DST_TYPE_OVERWRITE_REG case 'R' sb.appendC break
               default '?' sb.appendC break
             end
-            val .bitMoveInfo .flags asm.BitMove.DST2_SHIFT >> asm.BitMove.DST_TYPE_MASK & switch
+            bitMoveInfo .flags asm.BitMove.DST2_SHIFT >> asm.BitMove.DST_TYPE_MASK & switch
               asm.BitMove.DST_TYPE_EMPTY case '0' sb.appendC break
               asm.BitMove.DST_TYPE_OVERWRITE case 'X' sb.appendC break
               asm.BitMove.DST_TYPE_OVERWRITE_REG case 'R' sb.appendC break
@@ -1191,37 +1179,39 @@ namespace: sb
     program .idContext .typeContext .labelContext =:: labelContext
     atom switch
       Unknown case sb "  ?\n" appendS return
-      Op case sb "  " sb.appendS atom .Op labelContext appendAsmOp '\n' sb.appendC return
+      Op .case =:: op
+        sb "  " sb.appendS op labelContext appendAsmOp '\n' sb.appendC return
       DebugUsesFile case sb return
-      DebugStartFile case
+      DebugStartFile .case =:: fileId
         sb "## " sb.appendS
-          program [] .progFiles atom .DebugStartFile i64 cast [] .fileName sb.appendSb
+          program [] .progFiles fileId i64 cast [] .fileName sb.appendSb
         '\n' sb.appendC return
       StartProc case sb "  enter\n" sb.appendS return
       LeaveProc case sb "  leave\n" sb.appendS return
       Entry case sb "  _entry:\n" sb.appendS return
       ExitEntry case sb " _exit:\n" sb.appendS return
-      Section case atom .Section switch
+      Section .case switch
           Code case sb "section code\n" sb.appendS return
           Data case sb "section data\n" sb.appendS return
         end break
       EndProc case sb "\n" sb.appendS return
-      DebugStartOp case
+      DebugStartOp .case =:: startOp
         sb
           "## " sb.appendS
-          atom .DebugStartOp program sb.appendOp
+          startOp program sb.appendOp
         return
-      DebugError case
+      DebugError .case =:: err
         sb
           "!error " sb.appendS
-          atom .DebugError sb.appendStr
+          err sb.appendStr
           '\n' sb.appendC
         return
-      Error case atom .Error switch
+      Error .case switch
           AssertFail case sb "  assertFail\n" sb.appendS return
           Panic case sb "  panic\n" sb.appendS return
         end break
-      Align case sb "align " sb.appendS atom .Align sb.appendI '\n' sb.appendC return
+      Align .case =:: align
+        sb "align " sb.appendS align sb.appendI '\n' sb.appendC return
     end
   end
 end
@@ -1396,32 +1386,33 @@ namespace: AMD64
     val switch
       empty case return
       unknown cmpType bitMoveInfo case break
-      register case val .register valType setRegType appendRegister return
-      constInt case val .constInt sb.appendI return
-      constPtr case "ccti_ptr" sb.appendS val .constPtr sb.appendI return
-      constPtrAndOffset case
-        "(ccti_ptr" sb.appendS val .constPtrAndOffset .const sb.appendI
-        "+" sb.appendS val .constPtrAndOffset .offset sb.appendI ')' sb.appendC
+      register .case valType setRegType appendRegister return
+      constInt .case sb.appendI return
+      constPtr .case =:: constPtr
+        "ccti_ptr" sb.appendS constPtr sb.appendI return
+      constPtrAndOffset .case =:: constPtrAndOffset
+        "(ccti_ptr" sb.appendS constPtrAndOffset .const sb.appendI
+        "+" sb.appendS constPtrAndOffset .offset sb.appendI ')' sb.appendC
         return
-      constF32 case
+      constF32 .case =:: constF32
         valType .PTR if
-          "0x" sb.appendS val .constF32 f32.bits sb.appendUX
-          " /*" sb.appendS val .constF32 sb.appendF32 "*/" sb.appendS
+          "0x" sb.appendS constF32 f32.bits sb.appendUX
+          " /*" sb.appendS constF32 sb.appendF32 "*/" sb.appendS
         else
           "f32const" sb.appendS context .f32Consts [] .length sb.appendI
           context [] .f32Consts
-            val .constF32 list.append
+            constF32 list.append
           context .f32Consts=
         end
         return
-      constF64 case
+      constF64 .case =:: constF64
         valType .PTR if
-          "0x" sb.appendS val .constF64 f64.bits sb.appendUX
-          " /*" sb.appendS val .constF64 sb.appendF "*/" sb.appendS
+          "0x" sb.appendS constF64 f64.bits sb.appendUX
+          " /*" sb.appendS constF64 sb.appendF "*/" sb.appendS
         else
           "f64const" sb.appendS context .f64Consts [] .length sb.appendI
           context [] .f64Consts
-            val .constF64 list.append
+            constF64 list.append
           context .f64Consts=
         end
         return
@@ -1443,20 +1434,22 @@ namespace: AMD64
         end
         "[rbp-" sb.appendS context .variableOffsets
           val .?localMemory .else .?localMemoryAndOffset ._if .label else ..unreachable end
-        map.get .data
+        map.get .else "missing memory label" ..panic end
           ## rbp-baseOffset+subOffset -> rbp-(baseOffset-subOffset)
           val .?localMemoryAndOffset .if .offset i64 cast.u - else ..drop end
         sb.appendI ']' sb.appendC
         return
       globalMemory case break
-      regAndOffset case
-        '[' sb.appendC val .regAndOffset .reg appendRegister
-          '+' sb.appendC val .regAndOffset .offset sb.appendI
+      regAndOffset .case =:: regAndOffset
+        '[' sb.appendC regAndOffset .reg appendRegister
+          '+' sb.appendC regAndOffset .offset sb.appendI
         ']' sb.appendC return
-      localLabel case ".L" sb.appendS val .localLabel i64 cast.u sb.appendI return
-      globalLabel case val .globalLabel labelContext appendGlobalName return
-      jumpTableElement case "[.L" sb.appendS val .jumpTableElement .offset i64 cast.u sb.appendI
-            "+8*" sb.appendS val .jumpTableElement .reg appendRegister ## TODO? don't hardcode size
+      localLabel .case =:: localLabel
+        ".L" sb.appendS localLabel i64 cast.u sb.appendI return
+      globalLabel .case labelContext appendGlobalName return
+      jumpTableElement .case =:: jumpTableElement
+        "[.L" sb.appendS jumpTableElement .offset i64 cast.u sb.appendI
+            "+8*" sb.appendS jumpTableElement .reg appendRegister ## TODO? don't hardcode size
           ']' sb.appendC return
       valType case "type operands are not supported" ..panic
     end
@@ -1720,22 +1713,22 @@ namespace: AMD64
         NO_REG =:: mut: srcLow
         NO_REG =:: mut: srcHi
         ## TODO? don't crash on invalid input types
-        op .operands 0 [] .register =:: mut: dstLow
+        op .operands 0 [] ..raw .register =:: mut: dstLow
         NO_REG =:: mut: dstHi
         op .operands 2 [] .?bitMoveInfo .if ## 2-operand form
-          op .operands 1 [] .register srcLow=
+          op .operands 1 [] ..raw .register srcLow=
         else ..drop op .operands 3 [] .?bitMoveInfo ._if ## 3-operand form
           op .opType .INSERT if
-            op .operands 1 [] .register dstHi=
-            op .operands 2 [] .register srcLow=
+            op .operands 1 [] ..raw .register dstHi=
+            op .operands 2 [] ..raw .register srcLow=
           else
-            op .operands 1 [] .register srcLow=
-            op .operands 2 [] .register srcHi=
+            op .operands 1 [] ..raw .register srcLow=
+            op .operands 2 [] ..raw .register srcHi=
           end
         else ..drop op .operands 4 [] .?bitMoveInfo ._if ## 4-operand form
-          op .operands 1 [] .register dstHi=
-          op .operands 2 [] .register srcLow=
-          op .operands 3 [] .register srcLow=
+          op .operands 1 [] ..raw .register dstHi=
+          op .operands 2 [] ..raw .register srcLow=
+          op .operands 3 [] ..raw .register srcLow=
         else ..drop
           "!error: expected at least one operand of insert/extract to be bitMoveInfo\n" sb.appendS
           return
@@ -1882,21 +1875,21 @@ namespace: AMD64
         0:i64 =:: mut: offset
         ## unwrap local memory to get correct address
         src .?localMemory .if =:: srcMem
-          context .variableOffsets srcMem map.get .data -_
+          context .variableOffsets srcMem map.get .else 0 end -_
           RBP asm.Operand .register src=
         else .?regAndOffset ._if =:: srcReg
           srcReg .offset i64 cast.s
           srcReg .reg asm.Operand .register src=
         else ..drop 0:i64 end =:: srcOffset
         dst .?localMemory .if =:: dstMem
-          context .variableOffsets dstMem map.get .data -_
+          context .variableOffsets dstMem map.get .else 0 end -_
           RBP asm.Operand .register dst=
         else .?regAndOffset ._if =:: dstReg
           dstReg .offset i64 cast.s
           dstReg .reg asm.Operand .register dst=
         else ..drop 0:i64 end =:: dstOffset
-        size .constInt =:: total
-        size .constInt =:: mut: remaining
+        size .?constInt .else ..drop 0 end =:: total
+        size .?constInt .else ..drop 0 end =:: mut: remaining
         while remaining 16 >= do
           "  movdqu " sb.appendS tmpV appendRegister ", XMMWORD PTR [" sb.appendS
             src ValType .PTR context appendOperand
@@ -2017,14 +2010,14 @@ namespace: AMD64
         INT_TMP_REGISTERS 0 [] =:: tmpReg
         target .?register ? "target is register" assert
         1 =:: mut: eltScale
-        scale .?constInt .if
-          switch
-            1 2 4 8 case scale .constInt i32 cast eltScale= break
+        scale .?constInt .if =:: scaleInt
+          scaleInt switch
+            1 2 4 8 case scaleInt i32 cast eltScale= break
             default
               "  imul " sb.appendS
                 tmpReg appendRegister ", " sb.appendS
                 index ValType .I64 context appendOperand ", " sb.appendS
-                scale .constInt sb.appendI
+                scaleInt sb.appendI
               '\n' sb.appendC
               tmpReg asm.Operand .register index=
             break
@@ -2064,7 +2057,7 @@ namespace: AMD64
       POP case
         "  pop " sb.appendS op .operands 0 [] ValType .PTR context appendOperand '\n' sb.appendC return
       DATA case ## TODO? optional 3rd operand to specify repetition count
-        op .operands 0 [] .valType switch ## TODO are these the correct (platform independent) sizes
+        op .operands 0 [] .?valType .else "expected type" ..panic end switch ## TODO are these the correct (platform independent) sizes
           I8  case "  .byte " sb.appendS op .operands 1 [] ValType .PTR context appendOperand '\n' sb.appendC return
           I16 case "  .2byte " sb.appendS op .operands 1 [] ValType .PTR context appendOperand '\n' sb.appendC return
           F32 I32 case "  .4byte " sb.appendS op .operands 1 [] ValType .PTR context appendOperand '\n' sb.appendC return
@@ -2073,7 +2066,7 @@ namespace: AMD64
         end
         break
       PADDING_BYTES case
-        op .operands 0 [] .constInt =:: count
+        op .operands 0 [] .?constInt .else ..drop 0 end =:: count
         count 0 <= if return end
         "  .byte 0" sb.appendS
           count 1 - for ..drop ", 0" sb.appendS end
@@ -2118,7 +2111,7 @@ namespace: AMD64
         =:: srcType
         op .operands 0 [] asm.guessValType =:: targetType
         ## break dependency chain
-        op .operands 0 [] .register clearRegister
+        op .operands 0 [] ..raw .register clearRegister
         targetType .F32 if "  cvtsi2ss " sb.appendS else "  cvtsi2sd " sb.appendS end
           op .operands 0 [] targetType context appendOperand ", " sb.appendS
           op .operands 1 [] srcType context appendOperand '\n' sb.appendC
@@ -2138,7 +2131,7 @@ namespace: AMD64
         =:: srcRegType
         op .operands 0 [] asm.guessValType =:: targetType
         ## break dependency chain
-        op .operands 0 [] .register clearRegister
+        op .operands 0 [] ..raw .register clearRegister
         srcType .I64 if
           ## TODO? does always truncating last bit leat to rounding errors?
           "  shr " sb.appendS op .operands 1 [] srcRegType context appendOperand ", 1\n" sb.appendS
@@ -2166,7 +2159,7 @@ namespace: AMD64
         INT_TMP_REGISTERS 0 [] targetRegType setRegType =:: tmpI
         FLOAT_TMP_REGISTERS 0 [] srcType setRegType =:: tmpF
         ## clear target
-        op .operands 0 [] .register clearRegister
+        op .operands 0 [] ..raw .register clearRegister
         srcType valTypeBits targetType valTypeBits > if
           srcType .F32 if "  movss " sb.appendS else "  movsd " sb.appendS end
             tmpF appendRegister ", " sb.appendS
@@ -2313,7 +2306,7 @@ namespace: AMD64
         target .?register .else
           "target is no register" ..panic ## TODO? allow non-register target when op-code exists
         end =:: targetRegister
-        src .?register ? ! or targetRegister src .register != if ## TODO! support `!` on unionElements
+        src .?register ? ! or targetRegister src ..raw .register != if ## TODO! support `!` on unionElements
           opValType isFloatValType if
             opValType .F32 if "  movss " sb.appendS else "  movsd " sb.appendS end
           else targetType opValType != _if
@@ -2343,7 +2336,7 @@ namespace: AMD64
           "target is no register" ..panic ## TODO? allow non-register target when op-code exists
         end =:: targetRegister
         opValType .I8 "bool has val-type i8" assert
-        src .?register ? ! or targetRegister src .register != if
+        src .?register ? ! or targetRegister src ..raw .register != if
           "  movzx " sb.appendS
             target ValType .I32 context appendOperand ", " sb.appendS
           src ValType .I8 context appendOperand '\n' sb.appendC
@@ -2405,12 +2398,12 @@ namespace: AMD64
         op@ .operands 3 slice.create commonValType =:: opValType
         opValType extendSmallInts =:: targetType
         ## register locations should have been assigned correctly be register allocator
-        right .register RCX == "right argument is passed in rcx" assert
+        right ..raw .register RCX == "right argument is passed in rcx" assert
         target .?register .else
           "target is no register" ..panic ## TODO? allow non-register target when op-code exists
         end =:: targetRegister
         ## TODO? keep track if value is currently sign/zero extended to avoid unnecessary extension
-        opValType targetType != or left .?register ? ! or targetRegister left .register != if
+        opValType targetType != or left .?register ? ! or targetRegister left ..raw .register != if
           opValType targetType != if
             op .opType .ASHR if "  movsx " sb.appendS else "  movzx " sb.appendS end
           else
@@ -2441,8 +2434,8 @@ namespace: AMD64
           "unimplemented: CodeGen: div with i16/i8 operands" ..panic
         end
         ## register locations should have been assigned correctly be register allocator
-        left .register i32 cast.u REG_ID_MASK & RAX_ID == "left argument is passed in rax" assert
-        target .register i32 cast.u REG_ID_MASK &
+        left ..raw .register i32 cast.u REG_ID_MASK & RAX_ID == "left argument is passed in rax" assert
+        target ..raw .register i32 cast.u REG_ID_MASK &
           op .opType .DIV or op .opType .UDIV if RAX_ID else RDX_ID end
         == "target is register rax/rdx" assert
         op .opType switch
@@ -2456,12 +2449,12 @@ namespace: AMD64
         return
       ## DIVMOD UDIVMUD MUL2 UMUL2 use same regiter sheme with 2 inputs/outputs
       CMP case
-        op .operands 0 [] .cmpType =:: cmpType
+        op .operands 0 [] .?cmpType .else "expected cmp-type" ..panic end =:: cmpType
         op .operands 1 [] =:: target
         op@ .operands 2 @[] 2 slice.create commonValType =:: opValType
         opValType isFloatValType if
           INT_TMP_REGISTERS 0 [] ValType .I32 setRegType =:: tmpReg
-          target .register clearRegister ## TODO? is it better to extend register after setcc?
+          target ..raw .register clearRegister ## TODO? is it better to extend register after setcc?
           cmpType .EQ if
             tmpReg clearRegister
           end
@@ -2520,7 +2513,7 @@ namespace: AMD64
             op .operands 2 [] opValType context appendOperand '\n' sb.appendC
           op .operands 3 []
         end =:: target
-        "  j" sb.appendS cmpType .cmpType appendCmpFlags ' ' sb.appendC
+        "  j" sb.appendS cmpType .?cmpType .else "expected cmp-type" ..panic end appendCmpFlags ' ' sb.appendC
           target ValType .PTR context appendOperand
         '\n' sb.appendC return
       CALL case ## TODO? distinguish pointer and FPTR
@@ -2538,37 +2531,37 @@ namespace: AMD64
     typeContext .labelContext =:: labelContext
     atom switch
       Unknown case "!error unkown operation\n" sb.appendS return
-      Op case atom .Op context compileAsmOp return
-      DebugUsesFile case
-        ".file " sb.appendS atom .DebugUsesFile i64 cast sb.appendI " \"" sb.appendS
-          program [] .progFiles atom .DebugUsesFile i64 cast @[] .fileName [] sb.asStr sb.appendEscapedStrC
+      Op .case context compileAsmOp return
+      DebugUsesFile .case =:: dgbFile
+        ".file " sb.appendS dgbFile i64 cast sb.appendI " \"" sb.appendS
+          program [] .progFiles dgbFile i64 cast @[] .fileName [] sb.asStr sb.appendEscapedStrC
         "\"\n" sb.appendS return
-      DebugStartFile case
+      DebugStartFile .case =:: dbgFile
         "\n/* " sb.appendS
-          program [] .progFiles atom .DebugStartFile i64 cast [] .fileName sb.appendSb
+          program [] .progFiles dbgFile i64 cast [] .fileName sb.appendSb
         "*/\n" sb.appendS return
-      DebugStartOp case
-        atom .DebugStartOp .pos =:: pos
+      DebugStartOp .case =:: dbgOp
+        dbgOp .pos =:: pos
         "/* " sb.appendS
-          atom .DebugStartOp program sb.appendOp sb.pop ..drop
+          dbgOp program sb.appendOp sb.pop ..drop
         " */\n  .loc " sb.appendS
           pos .fileId i64 cast sb.appendI ' ' sb.appendC
           pos .line sb.appendI ' ' sb.appendC pos .posInLine sb.appendI
         '\n' sb.appendC return
-      DebugError case
+      DebugError .case =:: dbgErr
         "!error " sb.appendS
-        atom .DebugError sb.appendStr
+        dbgErr sb.appendStr
         '\n' sb.appendC
         return
-      Section case atom .Section switch
+      Section .case switch
           Code case ".text\n" sb.appendS return
           Data case ".data\n" sb.appendS return
         end break
-      Align case "  .balign " sb.appendS atom .Align sb.appendI '\n' sb.appendC return
-      StartProc case
-        atom .StartProc =:: implInfo
+      Align .case =:: align
+        "  .balign " sb.appendS align sb.appendI '\n' sb.appendC return
+      StartProc .case =:: implInfo
         program [] .procedures
-          implInfo .procId i64 cast list.at .data
+          implInfo .procId i64 cast @[]
         =:: procInfo
         procInfo [] .labelId labelContext id.labelFlags id.FLAG_EXPORT id.FLAG_EXTERN | & ? if
           "  .globl " sb.appendS
@@ -2582,19 +2575,22 @@ namespace: AMD64
         ## TODO create allocations for stack-memory
         context .variableOffsets map.clear ## clear variables from previous procedure
          ## allocate space for variables
+        procInfo [] .implementation .?Code .else
+          "expected code-implementation" ..panic
+        end =:: codeImpl
         implInfo .implementationId 0 >= if
-          procInfo [] .implementation .Code .implementations
-            implInfo .implementationId list.at .data [] .variables
+          codeImpl .implementations
+            implInfo .implementationId @[] .variables []
         else
-          procInfo [] .implementation .Code .variables
+          codeImpl .variables
         end =:: variables
         ## TODO sort variables by alignment?
         0:i64 =:: mut: stackOffset
         variables for =:: varInfo
           ## TODO skip arguments passed though memory address
           varInfo .valueType =:: valType
-          valType typeContext types.alignOf .Fixed =:: alignment
-          valType typeContext types.sizeOf .Fixed
+          valType typeContext types.alignOf typeSizeAsInt =:: alignment
+          valType typeContext types.sizeOf typeSizeAsInt
             ## round up sizes of multi-register values to 16-bytes to allow direct load/store of two registers
             $ 8 > and $ 16 < if ..drop 16 end ## TODO? is this neccessary
           =:: size
@@ -2628,8 +2624,8 @@ namespace: AMD64
       ExitEntry case
           "  xor eax,eax\n  ret\n\n" sb.appendS
         return
-      Error case
-        atom .Error switch ## use call to have error location in call-stack
+      Error .case
+        switch ## use call to have error location in call-stack
           AssertFail case "  call " sb.appendS CCT_ERROR_ASSERT sb.appendStr '\n' sb.appendC return
           Panic case "  call " sb.appendS CCT_ERROR_PANIC sb.appendStr '\n' sb.appendC return
         end break
@@ -2830,6 +2826,13 @@ struct(
   i32 : labelCount
   bool : reachable
 ) =:: CompilerContext
+proc( types.TypeSize -> i64 ) =>: typeSizeAsInt
+  .?Fixed .if
+    return
+  else
+    "internal error: expected fixed size type" ..panic
+  end
+end
 
 ## TODO? directly convert to platform specific assembly when appending operation
 proc(
@@ -2892,20 +2895,15 @@ proc( LabelId : valId RegisterId : register bool : isReference i32 : opIndex Com
   context .variableLocations
     valId
     register ValueLocation .register
-  map.put =:: prevLocation?
-  ## remove previous location from register data
-  ## TODO? common procedure for clearing previous data
-  prevLocation? optional.hasData and
-      prevLocation? .data =:: prevLocation
-      prevLocation .?register .if
+  map.put .and .?register .if
+    ## remove previous location from register data
+    ## TODO? common procedure for clearing previous data
     context resetRegisterById
   else
     "CodeGen: single register value not stored in register pair" ..panic
   end
   ## update register storage
-  register context findRegister
-    $ optional.isEmpty if ..drop return end
-  .data =:: registerData
+  register context findRegister .else return end =:: registerData
   opIndex registerData .lastUsed=
   registerData .currentValue .?empty ? "caching variable does not overwrite register" assert
   valId
@@ -2926,11 +2924,8 @@ proc( LabelId : valId RegisterPair : registers i32 : opIndex CompilerContext ptr
     else
       registers ValueLocation .registers
     end
-  map.put =:: prevLocation?
-  ## remove previous location from register data
-  prevLocation? optional.hasData and
-      prevLocation? .data =:: prevLocation
-      prevLocation .?registers .if =:: prevRegs
+  map.put .and .?registers .if =:: prevRegs
+    ## remove previous location from register data
     prevRegs .low context resetRegisterById
     prevRegs .hi context resetRegisterById
   else
@@ -2938,20 +2933,18 @@ proc( LabelId : valId RegisterPair : registers i32 : opIndex CompilerContext ptr
   end
   ## update register storage
   registers .low NO_REG != if
-    registers .low context findRegister $ optional.hasData if .data =:: lowRegisterData
+    registers .low context findRegister .if =:: lowRegisterData
       opIndex lowRegisterData .lastUsed=
-      lowRegisterData .currentValue .?variableLow ? ! or lowRegisterData .currentValue [] .variableLow valId != if
+      lowRegisterData .currentValue .?variableLow ! .or [] valId != if
         lowRegisterData .currentValue .?empty ? "caching variable does not overwrite register" assert
         valId RegisterContent .variableLow lowRegisterData .currentValue=
       end
-    else ..drop end
+    end
   end
   registers .hi NO_REG != if
-    registers .hi context findRegister
-      $ optional.isEmpty if ..drop return end
-    .data =:: hiRegisterData
+    registers .hi context findRegister .else return end =:: hiRegisterData
     opIndex hiRegisterData .lastUsed=
-    hiRegisterData .currentValue .?variableHi ? ! or hiRegisterData .currentValue [] .variableHi valId != if
+    hiRegisterData .currentValue .?variableHi ! .or [] valId != if
       hiRegisterData .currentValue .?empty ? "caching variable does not overwrite register" assert
       valId RegisterContent .variableHi hiRegisterData .currentValue=
     end
@@ -2964,9 +2957,10 @@ proc( RegisterState : state -> RegisterState ) =>: resetRegister
   return
 end
 proc( RegisterId : regId CompilerContext ptr.mut : context -> ) =>: resetRegisterById
-  regId context findRegister =:: regState?
-  regState? optional.isEmpty if return end
-  regState? .data [] resetRegister regState? .data =[]
+  regId context findRegister 
+    .else return end
+  =:: regState
+  regState [] resetRegister regState =[]
 end
 proc( LabelId : valId CompilerContext ptr.mut : context -> ValueLocation ptr.mut optional ) =>: atCachedVarLocation
   context .variableLocations valId map.at
@@ -2974,12 +2968,11 @@ end
 proc( LabelId : valId bool : isGlobal CompilerContext ptr.mut : context -> ValueLocation ) =>: getVarLocation
   context .variableLocations
     valId
-  map.get =:: location?
-  location? optional.hasData if
+  map.get .if
     ## TODO update dependent cache if multi-value cache is accessed after back-jump
     ##    * variable mutable -> removes all other cached values
     ##    * variable immutable -> removes all mutable cached values
-    location? .data return
+    return
   end
   valId
     isGlobal if
@@ -2990,15 +2983,14 @@ proc( LabelId : valId bool : isGlobal CompilerContext ptr.mut : context -> Value
   return
 end
 proc( LabelId : valId CompilerContext ptr.mut : context -> ) =>: removeCachedVar
-  context .variableLocations valId map.remove =:: removed?
-  removed? optional.hasData if
-    removed? .data switch
-      register case removed? .data .register context resetRegisterById break
-      localAndLowReg case removed? .data .localAndLowReg .reg context resetRegisterById break
-      localAndHiReg case removed? .data .localAndHiReg .reg context resetRegisterById break
-      globalAndLowReg case removed? .data .globalAndLowReg .reg context resetRegisterById break
-      globalAndHiReg case removed? .data .globalAndHiReg .reg context resetRegisterById break
-      registers case removed? .data .registers =:: regs
+  context .variableLocations valId map.remove .if
+    switch
+      register .case context resetRegisterById break
+      localAndLowReg .case .reg context resetRegisterById break
+      localAndHiReg .case .reg context resetRegisterById break
+      globalAndLowReg .case .reg context resetRegisterById break
+      globalAndHiReg .case .reg context resetRegisterById break
+      registers .case =:: regs
         regs .low context resetRegisterById
         regs .hi context resetRegisterById
         break
@@ -3052,17 +3044,13 @@ proc(
   ## save previous value
   regState .currentValue switch
     empty forceClear preserveValue case break
-    stackSlot case
-      regState .currentValue .stackSlot =:: stackSlot
-      stackSlot context stackSlotData =:: stackData?
-      stackData? optional.isEmpty if
+    stackSlot .case =:: stackSlot
+      stackSlot context stackSlotData .else
         "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
         regState resetRegister return
-      end
-      stackData? .data =:: stackData
+      end =:: stackData
       stackData [] .location switch
-        register case
-          stackData .location [] .register =:: register
+        register .case =:: register
           register regState .register != if
             "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
@@ -3080,17 +3068,13 @@ proc(
     stackSlotReference case
       "CodeGen: unimplemented: clear stack-reference":s Atomic .DebugError list.append
       break
-    stackSlotHi case
-      regState .currentValue .stackSlotHi =:: stackSlot
-      stackSlot context stackSlotData =:: stackData?
-      stackData? optional.isEmpty if
+    stackSlotHi .case =:: stackSlot
+      stackSlot context stackSlotData .else
         "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
         regState resetRegister return
-      end
-      stackData? .data =:: stackData
+      end =:: stackData
       stackData [] .location switch
-        registerHi case
-          stackData .location [] .registerHi =:: register
+        registerHi .case =:: register
           register regState .register != if
             "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
@@ -3100,32 +3084,28 @@ proc(
           context appendOp2
           StackValueLocation .memory stackData .location=
           break
-        registers case
-          stackData .location [] .registers .hi regState .register != if
+        registers .case =:: registers
+          registers .hi regState .register != if
             "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
           asm.OpType .MOVE
             stackSlot asm.Operand .stackData128Hi
-            stackData .location [] .registers .hi asm.Operand .register
+            registers .hi asm.Operand .register
           context appendOp2
-          stackData .location [] .registers .low StackValueLocation .registerLow stackData .location=
+          registers .low StackValueLocation .registerLow stackData .location=
           break
         memory register registerLow case
           "CodeGen: stack-data and register-states are out of sync":s Atomic .DebugError list.append
       end
       StackValueLocation .memory stackData .location=
       break
-    stackSlotLow case
-      regState .currentValue .stackSlotLow =:: stackSlot
-      stackSlot context stackSlotData =:: stackData?
-      stackData? optional.isEmpty if
+    stackSlotLow .case =:: stackSlot
+      stackSlot context stackSlotData .else
         "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
         regState resetRegister return
-      end
-      stackData? .data =:: stackData
+      end =:: stackData
       stackData [] .location switch
-        registerLow case
-          stackData .location [] .registerLow =:: register
+        registerLow .case =:: register
           register regState .register != if
             "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
@@ -3135,40 +3115,38 @@ proc(
           context appendOp2
           StackValueLocation .memory stackData .location=
           break
-        registers case
-          stackData .location [] .registers .low regState .register != if
+        registers .case =:: registers
+          registers .low regState .register != if
             "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
           end
           asm.OpType .MOVE
             stackSlot asm.Operand .stackData128Low
-            stackData .location [] .registers .low asm.Operand .register
+            registers .low asm.Operand .register
           context appendOp2
-          stackData .location [] .registers .hi StackValueLocation .registerHi stackData .location=
+          registers .hi StackValueLocation .registerHi stackData .location=
           break
         memory register registerHi case
           "CodeGen: stack-data and register-states are out of sync":s Atomic .DebugError list.append
       end
       break
       ## TODO? check if correct value was removed
-    variable case context .variableLocations regState .currentValue .variable map.remove ..drop break
-    variableReference case
-      context .variableLocations regState .currentValue .variableReference map.remove ..drop
+    variable .case context .variableLocations >$ map.remove ..drop break
+    variableReference .case
+      context .variableLocations >$ map.remove ..drop
       break
     variableHi variableLow .case =:: varName
-      context .variableLocations varName map.remove =:: prevValue?
-      prevValue? optional.isEmpty if
+      context .variableLocations varName map.remove .else
         "CodeGen: stack-data and register state out of sync":s Atomic .DebugError list.append
         break
-      end
-      prevValue? .data =:: prevValue
+      end =:: prevValue
       prevValue switch
-        registers case
+        registers .case =:: registers
           context .variableLocations varName
             ## TODO distinguish local and global vars
             regState .currentValue .?variableHi ? if
-              varName prevValue .registers .low LabelAndReg new ValueLocation .localAndLowReg
+              varName registers .low LabelAndReg new ValueLocation .localAndLowReg
             else
-              varName prevValue .registers .hi LabelAndReg new ValueLocation .localAndHiReg
+              varName registers .hi LabelAndReg new ValueLocation .localAndHiReg
             end
           map.put ..drop
           break
@@ -3236,26 +3214,26 @@ proc( CompilerContext ptr.mut : context -> ) =>: printStack
     ## TODO? print val-type
     elt .location switch
       memory case "memory":s io.println break
-      register case
+      register .case =:: register
         "register ":s io.print
         nameBuffer@ sb.wrapBuffer
-          elt .location .register sb.appendRegister
+          register sb.appendRegister
         sb.asStr io.println break
-      registerHi case
+      registerHi .case =:: registerHi
         "registers _:":s io.print
         nameBuffer@ sb.wrapBuffer
-          elt .location .registerHi sb.appendRegister
+          registerHi sb.appendRegister
         sb.asStr io.println break
-      registerLow case
+      registerLow .case =:: registerLow
         "registers ":s io.print
         nameBuffer@ sb.wrapBuffer
-          elt .location .registerLow sb.appendRegister
+          registerLow sb.appendRegister
         sb.asStr io.print ":_":s io.println break
-      registers case
+      registers .case =:: registers
         "registers ":s io.print
         nameBuffer@ sb.wrapBuffer
-          elt .location .registers .low sb.appendRegister ':' sb.appendC
-          elt .location .registers .hi sb.appendRegister
+          registers .low sb.appendRegister ':' sb.appendC
+          registers .hi sb.appendRegister
         sb.asStr io.println break
     end
   end
@@ -3271,15 +3249,15 @@ proc( CompilerContext ptr.mut : context -> ) =>: printRegisters
       regData .register sb.appendRegister
     sb.asStr io.print
     regData .currentValue switch
-      variable case " var: ":s io.print regData .currentValue .variable labelContext id.getLabelName io.println break
-      variableReference case
-        " @var: ":s io.print regData .currentValue .variableReference labelContext id.getLabelName io.println break
-      variableHi case " var.hi: ":s io.print regData .currentValue .variableHi labelContext id.getLabelName io.println break
-      variableLow case " var.low: ":s io.print regData .currentValue .variableLow labelContext id.getLabelName io.println break
-      stackSlot case " stack: ":s io.print regData .currentValue .stackSlot io.println break
-      stackSlotReference case " @stack: ":s io.print regData .currentValue .stackSlotReference io.println break
-      stackSlotHi case " stack.hi: ":s io.print regData .currentValue .stackSlotHi io.println break
-      stackSlotLow case " stack.low: ":s io.print regData .currentValue .stackSlotLow io.println break
+      variable .case " var: ":s io.print labelContext id.getLabelName io.println break
+      variableReference .case
+        " @var: ":s io.print labelContext id.getLabelName io.println break
+      variableHi .case " var.hi: ":s io.print labelContext id.getLabelName io.println break
+      variableLow .case " var.low: ":s io.print labelContext id.getLabelName io.println break
+      stackSlot .case " stack: ":s io.print io.println break
+      stackSlotReference .case " @stack: ":s io.print io.println break
+      stackSlotHi .case " stack.hi: ":s io.print io.println break
+      stackSlotLow .case " stack.low: ":s io.print io.println break
       forceClear case " force clear":s io.println break
       preserveValue case " preserve value":s io.println break
       empty case ..unreachable
@@ -3381,24 +3359,24 @@ proc(
         currentValue regs freeSlot @[] .currentValue=
         regs i [] .lastUsed regs freeSlot @[] .lastUsed=
         currentValue switch
-          variable case
-            currentValue .variable idContext id.getIdentifier
+          variable .case =:: variable
+            variable idContext id.getIdentifier
               ! "CodeGen: identifier exists" assert
             =:: idData
-            currentValue .variable context atCachedVarLocation .data =:: varLoc
-            varLoc [] .?register ? ! or varLoc [] .register srcRegister != if
+            variable context atCachedVarLocation optional.unwrap =:: varLoc
+            varLoc [] .?register ! .or srcRegister != if
               "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
             end
             idData [] .valueType typeContext toValType
               targetRegister $1 setRegType targetRegister=
             targetRegister varLoc .register=
             break
-          variableReference case
-            currentValue .variableReference idContext id.getIdentifier
+          variableReference .case =:: variableReference
+            variableReference idContext id.getIdentifier
               ! "CodeGen: identifier exists" assert
             =:: idData
-            currentValue .variableReference context atCachedVarLocation .data =:: varLoc
-            varLoc [] .?register ? ! or varLoc [] .register srcRegister != if
+            variableReference context atCachedVarLocation optional.unwrap =:: varLoc
+            varLoc [] .?register ! .or srcRegister != if
               "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
             end
             ValType .REFERENCE
@@ -3413,26 +3391,26 @@ proc(
               currentValue .?variableHi ? if getHiValType else getLowValType end
               targetRegister $1 setRegType targetRegister=
              =:: valType
-            varName context atCachedVarLocation .data =:: varLoc
+            varName context atCachedVarLocation optional.unwrap =:: varLoc
             varLoc [] switch
               registers case
                 currentValue .?variableHi ? if
-                  targetRegister varLoc .registers .hi=
+                  targetRegister varLoc .?registers .else "expected registers" ..panic end .hi=
                 else
-                  targetRegister varLoc .registers .low=
+                  targetRegister varLoc .?registers .else "expected registers" ..panic end .low=
                 end
                 break
               localAndHiReg case
                 currentValue .?variableHi ? ! if
                   "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
                 end
-                targetRegister varLoc .localAndHiReg .reg=
+                targetRegister varLoc .?localAndHiReg .else "expected localAndHiReg" ..panic end .reg=
                 break
               localAndLowReg case
                 currentValue .?variableLow ? ! if
                   "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
                 end
-                targetRegister varLoc .localAndLowReg .reg=
+                targetRegister varLoc .?localAndLowReg .else "expected localAndLowReg" ..panic end .reg=
                 break
               default
                 "CodeGen: variable-cache and registers out of sync":s Atomic .DebugError list.append
@@ -3444,7 +3422,7 @@ proc(
               "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
               ValType .EMPTY break
             end =:: stackData
-            stackData .location [] .register srcRegister != if
+            stackData .location [] .?register .and srcRegister != if
               "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
             end
             stackData [] .valType
@@ -3467,22 +3445,22 @@ proc(
                   stackLoc .hi srcRegister != if
                     "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                   end
-                  targetRegister stackData .location .registers .hi=
+                  targetRegister stackData .location .?registers .else "expected registers" ..panic end .hi=
                 else
                   stackLoc .low srcRegister != if
                     "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                   end
-                  targetRegister stackData .location .registers .low=
+                  targetRegister stackData .location .?registers .else "expected registers" ..panic end .low=
                 end
                 break
               registerLow case
-                isHi or stackData .location [] .registerLow srcRegister != if
+                isHi or stackData .location [] .?registerLow .and srcRegister != if
                   "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 targetRegister stackData .location .registerLow=
                 break
               registerHi case
-                isHi ! or stackData .location [] .registerHi srcRegister != if
+                isHi ! or stackData .location [] .?registerHi .and srcRegister != if
                   "CodeGen: stack and registers out of sync":s Atomic .DebugError list.append
                 end
                 targetRegister stackData .location .registerHi=
@@ -3517,49 +3495,49 @@ proc(
       forceClear case
         regs i [] .currentValue .?empty ? "register is cleared" assert
         continue
-      variable case
-        expectedValue .variable idContext id.getIdentifier
+      variable .case =:: variable
+        variable idContext id.getIdentifier
           ! "CodeGen: identifier exists" assert
         =:: idData
         idData [] .valueType typeContext toValType =:: valType
         mode .RESET ! if
-          expectedValue .variable idData .idType [] .GLOBAL_VAR context getVarLocation =:: varLoc
+          variable idData .idType [] .GLOBAL_VAR context getVarLocation =:: varLoc
           varLoc switch
-            register case
+            register .case =:: register
               asm.OpType .MOVE
                 targetRegister asm.Operand .register
-                varLoc .register asm.Operand .register
+                register asm.Operand .register
               context appendOp2
               break
-            localMemory case
+            localMemory .case =:: localMemory
               valType .REFERENCE if asm.OpType .MOVE else asm.OpType .LOAD end
                 targetRegister asm.Operand .register
-                varLoc .localMemory asm.Operand .localMemory
+                localMemory asm.Operand .localMemory
               context appendOp2
               break
-            localAddr case
+            localAddr .case =:: localAddr
               asm.OpType .MOVE
                 targetRegister asm.Operand .register
-                varLoc .localAddr asm.Operand .localMemory
+                localAddr asm.Operand .localMemory
               context appendOp2
               break
-            globalMemory case
+            globalMemory .case =:: globalMemory
               valType .REFERENCE if asm.OpType .MOVE else asm.OpType .LOAD end
                 targetRegister asm.Operand .register
-                varLoc .globalMemory asm.Operand .globalMemory
+                globalMemory asm.Operand .globalMemory
               context appendOp2
               break
-            globalAddr case
+            globalAddr .case =:: globalAddr
               asm.OpType .MOVE
                 targetRegister asm.Operand .register
-                varLoc .globalAddr asm.Operand .globalMemory
+                globalAddr asm.Operand .globalMemory
               context appendOp2
               break
             localAndHiReg localAndLowReg registers case "unexpected cached location for single register variable" ..panic
             default "CodeGen: unsupported variable location" ..panic
           end
         end
-        expectedValue .variable targetRegister valType .REFERENCE buffer i [] .lastUsed context cacheVariable ## update variable location
+        variable targetRegister valType .REFERENCE buffer i [] .lastUsed context cacheVariable ## update variable location
         break
       variableHi variableLow .case =:: labelId
         labelId idContext id.getIdentifier
@@ -3617,22 +3595,18 @@ proc(
       variableReference case
         "CodeGen: unimplemented restore variableReference":s Atomic .DebugError list.append
         break
-      stackSlot case
-        expectedValue .stackSlot =:: stackSlot
-        stackSlot context stackSlotData =:: stackData?
-        stackData? optional.isEmpty if
+      stackSlot .case =:: stackSlot
+        stackSlot context stackSlotData .else
           "CodeGen: stack access out of bounds":s Atomic .DebugError list.append
           break
-        end
-        stackData? .data =:: stackData
+        end =:: stackData
         mode .RESET if
           targetRegister stackData .location .register=
           break
         end
         stackData [] .location switch
-          register case
-            stackData .location [] .register =:: register
-            register context findRegister .data =:: srcRegister
+          register .case =:: register
+            register context findRegister optional.unwrap =:: srcRegister
             srcRegister .currentValue =:: sourceValue
             srcRegister [] .lastUsed
               mode .RESET ! if regs i [] .lastUsed i32.max end
@@ -3676,12 +3650,12 @@ proc(
         expectedValue .?stackSlotHi ? =:: isHi
         NO_REG =:: mut: refReg
         stackData [] .location switch
-          registers   case stackData [] .location .registers break
-          registerHi  case NO_REG  stackData [] .location .registerHi RegisterPair new break
-          registerLow case stackData [] .location .registerLow NO_REG RegisterPair new break
+          registers   .case break
+          registerHi  .case NO_REG >$ RegisterPair new break
+          registerLow .case NO_REG RegisterPair new break
           memory      case NO_REG NO_REG RegisterPair new break
           register    .case =:: locReg
-             locReg context findRegister .data .currentValue .?stackSlotReference ? if
+             locReg context findRegister optional.unwrap .currentValue .?stackSlotReference ? if
                locReg refReg=
              else
                "CodeGen: stack-data and register-states are out of sync":s Atomic .DebugError list.append
@@ -3690,9 +3664,9 @@ proc(
         end =:: mut: regPair
         mode .RESET ! if
           refReg NO_REG != if ## source is reference
-            refReg context findRegister .data .currentValue =:: sourceRef
+            refReg context findRegister optional.unwrap .currentValue =:: sourceRef
             8 =:: lowRegSize ## TODO use correct size for low reg
-            sourceRef [] .?stackSlotReference ? if
+            sourceRef [] .?stackSlotReference .if =:: stackSlotReference
               asm.OpType .LOAD
                 targetRegister asm.Operand .register
                 isHi if
@@ -3707,20 +3681,20 @@ proc(
                 refReg asm.Operand .register
                 isHi if
                   regPair refReg >$ .low= regPair=
-                  sourceRef [] .stackSlotReference sourceRef .stackSlotLow=
+                  stackSlotReference sourceRef .stackSlotLow=
                   refReg asm.Operand .register
                 else
                   regPair refReg >$ .hi= regPair=
-                  sourceRef [] .stackSlotReference sourceRef .stackSlotHi=
+                  stackSlotReference sourceRef .stackSlotHi=
                   refReg lowRegSize asm.RegAndOffset new asm.Operand .regAndOffset
                 end
               context appendOp2
-            else
+            else ..drop
               "stack and registers are out of sync":s Atomic .DebugError list.append
             end
           else regPair isHi if .hi else .low end =:: register
               register NO_REG != _if
-            register context findRegister .data .currentValue =:: sourceValue
+            register context findRegister optional.unwrap .currentValue =:: sourceValue
             isHi if sourceValue .?stackSlotHi ? else sourceValue .?stackSlotLow ? end if
               asm.OpType .MOVE
                 targetRegister asm.Operand .register
@@ -3786,7 +3760,7 @@ proc(
       -1:iSize -1:iSize -1:iSize -1:iSize
     WhileBlockInfo new BlockInfo .While list.append
   context .openBlocks=
-  context [] .openBlocks list.peek .data .While
+  context [] .openBlocks list.peek optional.unwrap .?While .else ..unreachable end
 end
 proc(
   BlockId : blockId
@@ -3807,7 +3781,7 @@ proc(
       false
     IfBlockInfo new BlockInfo .If list.append
   context .openBlocks=
-  context [] .openBlocks list.peek .data .If
+  context [] .openBlocks list.peek optional.unwrap .?If .else ..unreachable end
 end
 proc(
   BlockId : blockId
@@ -3822,7 +3796,7 @@ proc(
       -1:iSize
     AndOrBlockInfo new BlockInfo .AndOr list.append
   context .openBlocks=
-  context [] .openBlocks list.peek .data .AndOr
+  context [] .openBlocks list.peek optional.unwrap .?AndOr .else ..unreachable end
 end
 proc(
   BlockId : blockId
@@ -3835,7 +3809,7 @@ proc(
       NO_LABEL
     InlineProcBlockInfo new BlockInfo .InlineProc list.append
   context .openBlocks=
-  context [] .openBlocks list.peek .data .InlineProc
+  context [] .openBlocks list.peek optional.unwrap .?InlineProc .else ..unreachable end
 end
 proc(
   BlockId : blockId
@@ -3856,7 +3830,7 @@ proc(
       0
     SwitchBlockInfo new BlockInfo .Switch list.append
   context .openBlocks=
-  context [] .openBlocks list.peek .data .Switch
+  context [] .openBlocks list.peek optional.unwrap .?Switch .else ..unreachable end
 end
 
 enum( WHILE SWITCH INLINE ) =:: BreakType
@@ -3961,15 +3935,15 @@ proc(
   labels $ .length 1:iSize - [] .value switchLabelAsInt =:: maxLabel
   blockInfo [] .caseLabelIds $ .length 1:iSize - [] =:: defaultLabel
   val .location switch
-    register case
-        val .location .register asm.Operand .register
-      break
+    register .case asm.Operand .register break
     memory case ## TODO is this the right offset
         context [] .stack .length i32 cast.u 1 + asm.Operand .stackData
       break
     registers registerHi registerLow case "unexpected format for condition parameter" ..panic
   end =:: switchValOperand
-  switchValOperand .register =:: switchOpReg ## TODO ensure target value is register
+  switchValOperand .?register .else
+    "expected register" ..panic
+  end =:: switchOpReg ## TODO ensure target value is register
   ## 0-4 -> linear check
   ## TODO find good way to decide which switch-type to use
   ## TODO? mixed switch: tree for sparse values, table for long continues ranges of values
@@ -4029,39 +4003,39 @@ proc(
 -> bool ) =>: pushStackValue
   false =:: mut: regOutOfSync
   val .location switch
-    register case
-      val .location .register context findRegister .data =:: regData
+    register .case =:: register
+      register context findRegister optional.unwrap =:: regData
       regData .currentValue [] .?stackSlotReference ? if
         context [] .stack .length i32 cast.u regData .currentValue .stackSlotReference=
-        val .location .register ValType .PTR setRegType regData .register=
+        register ValType .PTR setRegType regData .register=
         break
       else
         regData .currentValue [] .?stackSlot ? ! regOutOfSync=
-        val .location .register val .valType setRegType regData .register=
+        register val .valType setRegType regData .register=
       end
       context [] .stack .length i32 cast.u regData .currentValue .stackSlot=
       break
-    registerHi case
-      val .location .registerHi context findRegister .data =:: regData
+    registerHi .case =:: registerHi
+      registerHi context findRegister optional.unwrap =:: regData
       regData .currentValue [] .?stackSlotHi ? ! regOutOfSync=
       context [] .stack .length i32 cast.u regData .currentValue .stackSlotHi=
-      val .location .registerHi val .valType getHiValType setRegType regData .register=
+      registerHi val .valType getHiValType setRegType regData .register=
       break
-    registerLow case
-      val .location .registerLow context findRegister .data =:: regData
+    registerLow .case =:: registerLow
+      registerLow context findRegister optional.unwrap =:: regData
       regData .currentValue [] .?stackSlotLow ? ! regOutOfSync=
       context [] .stack .length i32 cast.u regData .currentValue .stackSlotLow=
-      val .location .registerLow val .valType getLowValType setRegType regData .register=
+      registerLow val .valType getLowValType setRegType regData .register=
       break
-    registers case
-      val .location .registers .hi context findRegister .data =:: regDataHi
+    registers .case =:: registers
+      registers .hi context findRegister optional.unwrap =:: regDataHi
       regDataHi .currentValue [] .?stackSlotHi ? ! regOutOfSync=
       context [] .stack .length i32 cast.u regDataHi .currentValue .stackSlotHi=
-      val .location .registers .hi val .valType getHiValType setRegType regDataHi .register=
-      val .location .registers .low context findRegister .data =:: regDataLow
+      registers .hi val .valType getHiValType setRegType regDataHi .register=
+      registers .low context findRegister optional.unwrap =:: regDataLow
       regDataLow .currentValue [] .?stackSlotLow ? ! regOutOfSync=
       context [] .stack .length i32 cast.u regDataLow .currentValue .stackSlotLow=
-      val .location .registers .low val .valType getLowValType setRegType regDataLow .register=
+      registers .low val .valType getLowValType setRegType regDataLow .register=
       break
     memory case break
   end
@@ -4076,7 +4050,7 @@ proc(
   CompilerContext ptr.mut : context
 -> ) =>: pushRegister
   regId valType setRegType regId=
-  regId context findRegister .data =:: regState
+  regId context findRegister optional.unwrap =:: regState
   regState .currentValue .?empty ? "CodeGen: pushed register is currently unassigned" assert
   context .stack [] .length i32 cast.u
     valType .REFERENCE if
@@ -4097,10 +4071,10 @@ proc(
 -> ) =>: pushRegisters
   lowReg valType getLowValType setRegType lowReg=
   hiReg valType getHiValType setRegType hiReg=
-  lowReg context findRegister .data =:: lowState
+  lowReg context findRegister optional.unwrap =:: lowState
   lowState .currentValue .?empty ? "CodeGen: pushed register is currently unassigned" assert
   context .stack [] .length i32 cast.u RegisterContent .stackSlotLow lowState .currentValue=
-  hiReg context findRegister .data =:: hiState
+  hiReg context findRegister optional.unwrap =:: hiState
   hiState .currentValue .?empty ? "CodeGen: pushed register is currently unassigned" assert
   context .stack [] .length i32 cast.u RegisterContent .stackSlotHi hiState .currentValue=
   context [] .stack
@@ -4116,28 +4090,27 @@ proc(
 -> Atomic list ) =>: pushValue
   context .program [] .idContext .typeContext =:: typeContext
   location switch
-    register case
+    register .case =:: register
       ## TODO better way to detect when value is reference, ? own ValueLocation(s) for reference
       valType $ isMultiRegValType if ..drop ValType .REFERENCE end =:: regValType
-      location .register context findRegister =:: regState
-      regState optional.hasData and regState .data .currentValue [] .?empty ? if
-        opIndex regState .data .lastUsed=
-        location .register regValType context pushRegister
+      register context findRegister .and =:: regState
+      regState .currentValue [] .?empty ? if
+        opIndex regState .lastUsed=
+        register regValType context pushRegister
       else ## arg register is not a valid data register
         regValType opIndex context nextRegister =:: targetRegister
         asm.OpType .MOVE
           targetRegister asm.Operand .register
-          location .register asm.Operand .register
+          register asm.Operand .register
         context appendOp2
         targetRegister regValType context pushRegister
       end
       return
-    registers case
-      location .registers =:: regs
-      regs .low context findRegister =:: lowState
-      regs .hi context findRegister =:: hiState
-      lowState optional.hasData and lowState .data .currentValue [] .?empty ? if
-        opIndex lowState .data .lastUsed=
+    registers .case =:: regs
+      regs .low context findRegister =:: lowState?
+      regs .hi context findRegister =:: hiState?
+      lowState? .and =:: lowState lowState .currentValue [] .?empty ? if
+        opIndex lowState .lastUsed=
         regs .low
       else ## TODO ensure that new nextRegister for low-state does not consume high state
         valType getLowValType opIndex context nextRegister =:: targetRegister
@@ -4147,8 +4120,8 @@ proc(
         context appendOp2
         targetRegister
       end =:: lowReg
-      hiState optional.hasData and hiState .data .currentValue [] .?empty ? if
-        opIndex hiState .data .lastUsed=
+      hiState? .and =:: hiState hiState .currentValue [] .?empty ? if
+        opIndex hiState .lastUsed=
         regs .hi
       else
         valType getHiValType opIndex context nextRegister =:: targetRegister
@@ -4162,27 +4135,27 @@ proc(
       return
     localAndLowReg localAndHiReg case
       break
-    intConstant case
+    intConstant .case =:: intConstant
       valType opIndex context nextRegister =:: targetRegister
       asm.OpType .MOVE
         targetRegister asm.Operand .register
-        location .intConstant asm.Operand .constInt
+        intConstant asm.Operand .constInt
       context appendOp2
       targetRegister valType context pushRegister
       return
-    floatConstant case
+    floatConstant .case =:: floatConstant
       valType opIndex context nextRegister =:: targetRegister
       asm.OpType .MOVE
         targetRegister valType setRegType asm.Operand .register
-        location .floatConstant valType .F32 if f32 cast asm.Operand .constF32 else asm.Operand .constF64 end
+        floatConstant valType .F32 if f32 cast asm.Operand .constF32 else asm.Operand .constF64 end
       context appendOp2
       targetRegister valType context pushRegister
       return
-    ptrConstant case
+    ptrConstant .case =:: ptrConstant
       valType opIndex context nextRegister =:: targetRegister
       asm.OpType .MOVE
         targetRegister asm.Operand .register
-        location .ptrConstant asm.Operand .constPtr
+        ptrConstant asm.Operand .constPtr
       context appendOp2
       targetRegister valType context pushRegister
       return
@@ -4192,15 +4165,15 @@ proc(
       break
     compositeArgument case
       break
-    localAddr case
+    localAddr .case =:: localAddr
       valType opIndex context nextRegister =:: targetRegister
       asm.OpType .MOVE
         targetRegister asm.Operand .register
-        location .localAddr asm.Operand .localMemory
+        localAddr asm.Operand .localMemory
       context appendOp2
       targetRegister valType context pushRegister
       return
-    localMemory case ## TODO handle composite values
+    localMemory .case =:: localMemory ## TODO handle composite values
       valType isMultiRegValType if
         valType getHiValType =:: hiVal
         valType getLowValType =:: lowVal
@@ -4208,11 +4181,11 @@ proc(
         hiVal opIndex context nextRegister =:: hiRegister
         asm.OpType .LOAD
           lowRegister asm.Operand .register
-          location .localMemory asm.Operand .localMemory
+          localMemory asm.Operand .localMemory
         context appendOp2
         asm.OpType .LOAD
           hiRegister asm.Operand .register
-          location .localMemory lowRegister getRegSize asm.LabelAndOffset new asm.Operand .localMemoryAndOffset
+          localMemory lowRegister getRegSize asm.LabelAndOffset new asm.Operand .localMemoryAndOffset
         context appendOp2
         lowRegister hiRegister valType context pushRegisters
         return
@@ -4224,7 +4197,7 @@ proc(
         asm.OpType .LOAD
       end
         targetRegister asm.Operand .register
-        location .localMemory asm.Operand .localMemory
+        localMemory asm.Operand .localMemory
       context appendOp2
       targetRegister valType context pushRegister
       return
@@ -4258,18 +4231,10 @@ proc(
   end
   ## update status of popped registers
   popped .location switch
-    register case
-      popped .location .register context resetRegisterById
-      break
-    registerHi case
-      popped .location .registerHi context resetRegisterById
-      break
-    registerLow case
-      popped .location .registerLow context resetRegisterById
-      break
-    registers case
-      popped .location .registers .low context resetRegisterById
-      popped .location .registers .hi context resetRegisterById
+    register registerHi registerLow .case context resetRegisterById break
+    registers .case =:: registers
+      registers .low context resetRegisterById
+      registers .hi context resetRegisterById
       break
     memory case break ## nothing to do
   end
@@ -4336,14 +4301,17 @@ proc(
     srcBytes targetBytes == if return end
     target typeContext toValType =:: targetType
     targetType stackEntry .valType=
-    stackEntry .location [] .register targetType setRegType =:: targetReg
+    stackEntry .location [] .?register .else
+      "expected register" ..panic
+    end =:: stackRegister
+    stackRegister targetType setRegType =:: targetReg
     srcBytes targetBytes < if
       signType .UNSIGNED if asm.OpType .EXTU else asm.OpType .EXTS end
     else
       asm.OpType .TRUNC
     end
       targetReg asm.Operand .register
-      stackEntry .location [] .register asm.Operand .register
+      stackRegister asm.Operand .register
     context appendOp2
     targetReg stackEntry .location .register=
     targetReg context findRegister ..drop ## update register type
@@ -4352,7 +4320,9 @@ proc(
   castType .BIT_CAST and src typeContext types.isNumberOrChar and target typeContext types.isNumberOrChar if
     src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
     target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
-    stackEntry .location [] .register =:: mut: targetRegister
+    stackEntry .location [] .?register .else
+      "expected register" ..panic
+    end =:: mut: targetRegister
     ## TODO? is there a need to keep track of system endianness for float <-> int bit-casts
     ## TODO? should bitcast be defined to emulate a little endian system
     ## 1. float -> int
@@ -4402,7 +4372,7 @@ proc(
         default "unexpected size for float" ..panic
       end =:: targetFloatVal
       src typeContext types.isFloat if
-        stackEntry .location [] .register targetFloatVal setRegType
+        stackEntry .location [] .?register .else "expected register" ..panic end targetFloatVal setRegType
       else
         targetFloatVal opIndex context nextRegister
       end =:: floatReg
@@ -4413,9 +4383,9 @@ proc(
       floatReg targetRegister=
     end
     target typeContext toValType stackEntry .valType=
-    stackEntry .location [] .register targetRegister baseRegEq ! if
-      stackEntry .location [] .register context findRegister .data =:: srcReg
-      srcReg [] .currentValue targetRegister context findRegister .data .currentValue=
+    stackEntry .location [] .?register .else "expected register" ..panic end targetRegister baseRegEq ! if
+      stackEntry .location [] .?register .else "expected register" ..panic end context findRegister optional.unwrap =:: srcReg
+      srcReg [] .currentValue targetRegister context findRegister optional.unwrap .currentValue=
       srcReg [] resetRegister srcReg =[]
     else
       targetRegister context findRegister ..drop ## update register type
@@ -4428,11 +4398,11 @@ proc(
     target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
     target typeContext toValType =:: targetType
     targetType stackEntry .valType=
-    stackEntry .location [] .register targetType setRegType =:: targetReg
+    stackEntry .location [] .?register .else "expected register" ..panic end targetType setRegType =:: targetReg
     srcBytes targetBytes == if return end
     srcBytes targetBytes < if asm.OpType .EXTF else asm.OpType .TRUNCF end
       targetReg asm.Operand .register
-      stackEntry .location [] .register asm.Operand .register
+      stackEntry .location [] .?register .else "expected register" ..panic end asm.Operand .register
     context appendOp2
     targetReg stackEntry .location .register=
     targetReg context findRegister ..drop ## update register type
@@ -4445,11 +4415,11 @@ proc(
     targetVal opIndex context nextRegister =:: targetRegister
     signType .UNSIGNED if asm.OpType .U2F else asm.OpType .I2F end
       targetRegister asm.Operand .register
-      stackEntry .location [] .register asm.Operand .register
+      stackEntry .location [] .?register .else "expected register" ..panic end asm.Operand .register
     context appendOp2
     ## TODO avoid manually updating register data (? movStackValue regId, regId operation )
-    stackEntry .location [] .register context findRegister .data =:: srcReg
-    srcReg [] .currentValue targetRegister context findRegister .data .currentValue=
+    stackEntry .location [] .?register .else "expected register" ..panic end context findRegister optional.unwrap =:: srcReg
+    srcReg [] .currentValue targetRegister context findRegister optional.unwrap .currentValue=
     srcReg [] resetRegister srcReg =[]
     targetRegister stackEntry .location .register=
     targetVal stackEntry .valType=
@@ -4461,7 +4431,7 @@ proc(
     primitiveTarget types.sizeOfPrimitive =:: targetBytes
     src typeContext toValType =:: srcVal
     srcVal opIndex context nextRegister =:: tmpReg
-    stackEntry .location [] .register asm.Operand .register =:: srcLoc
+    stackEntry .location [] .?register .else "expected register" ..panic end asm.Operand .register =:: srcLoc
     target typeContext toValType =:: targetVal
     targetVal opIndex context nextRegister =:: targetRegister
     signType .UNSIGNED if asm.OpType .F2U else asm.OpType .F2I end
@@ -4469,8 +4439,8 @@ proc(
       srcLoc
     context appendOp2
     ## TODO avoid manually updating register data
-    stackEntry .location [] .register context findRegister .data =:: srcReg
-    srcReg [] .currentValue targetRegister context findRegister .data .currentValue=
+    stackEntry .location [] .?register .else "expected register" ..panic end context findRegister optional.unwrap =:: srcReg
+    srcReg [] .currentValue targetRegister context findRegister optional.unwrap .currentValue=
     srcReg [] resetRegister srcReg =[]
     targetRegister stackEntry .location .register=
     targetVal stackEntry .valType=
@@ -4478,20 +4448,20 @@ proc(
   end
   ## ptr <-> int
   src typeContext types.isPointer and target typeContext types.isInt if
-    types.primitive.I_SIZE .PrimitiveType types.sizeOfPrimitive =:: srcBytes
+    types.primitive.I_SIZE typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
     target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
     target typeContext toValType stackEntry .valType=
     srcBytes targetBytes == if return end
     target typeContext toValType =:: targetType
     targetType stackEntry .valType=
-    stackEntry .location [] .register targetType setRegType =:: targetReg
+    stackEntry .location [] .?register .else "expected register" ..panic end targetType setRegType =:: targetReg
     srcBytes targetBytes < if
       signType .UNSIGNED if asm.OpType .EXTU else asm.OpType .EXTS end
     else
       asm.OpType .TRUNC
     end
       targetReg asm.Operand .register
-      stackEntry .location [] .register asm.Operand .register
+      stackEntry .location [] .?register .else "expected register" ..panic end asm.Operand .register
     context appendOp2
     targetReg stackEntry .location .register=
     targetReg context findRegister ..drop ## update register type
@@ -4499,19 +4469,19 @@ proc(
   end
   src typeContext types.isInt and target typeContext types.isPointer if
     src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcBytes
-    types.primitive.I_SIZE .PrimitiveType types.sizeOfPrimitive =:: targetBytes
+    types.primitive.I_SIZE typeContext types.primitiveValue types.sizeOfPrimitive =:: targetBytes
     target typeContext toValType stackEntry .valType=
     srcBytes targetBytes == if return end
     target typeContext toValType =:: targetType
     targetType stackEntry .valType=
-    stackEntry .location [] .register targetType setRegType =:: targetReg
+    stackEntry .location [] .?register .else "expected register" ..panic end targetType setRegType =:: targetReg
     srcBytes targetBytes < if
       signType .UNSIGNED if asm.OpType .EXTU else asm.OpType .EXTS end
     else
       asm.OpType .TRUNC
     end
       targetReg asm.Operand .register
-      stackEntry .location [] .register asm.Operand .register
+      stackEntry .location [] .?register .else "expected register" ..panic end asm.Operand .register
     context appendOp2
     targetReg stackEntry .location .register=
     targetReg context findRegister ..drop ## update register type
@@ -4530,9 +4500,7 @@ proc(
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: compileUnaryOperator
   ops
-    argType CheckValue .value pos context popValue =:: argValue?
-    argValue? optional.isEmpty if return end
-    argValue? .data =:: argValue
+    argType CheckValue .value pos context popValue .else return end =:: argValue
   =:: mut: newOps
   ## TODO check if argument caches any variables, if not reuse same register(s)
   argType switch
@@ -4543,7 +4511,7 @@ proc(
         opType
           targetRegister asm.Operand .register
           argValue .location switch ## TODO? extract for procedure
-            register case argValue .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
@@ -4581,12 +4549,12 @@ proc(
         inputLocs stackSize RegisterRestoreMode .MERGE_FALLTHROUGH pos context restoreRegisters
       end
     end
-    argType CheckValue .value pos context popValue =:: arg2?
-    arg2? optional.isEmpty if return end
-    arg2? .data =:: arg2
-    argType CheckValue .value pos context popValue =:: arg1?
-    arg1? optional.isEmpty if return end
-    arg1? .data =:: arg1
+    argType CheckValue .value pos context popValue
+      .else return end
+    =:: arg2
+    argType CheckValue .value pos context popValue
+      .else return end
+    =:: arg1
   =:: mut: newOps
   ## TODO check if first argument caches any variables, if not reuse same register(s)
   argType switch
@@ -4594,21 +4562,20 @@ proc(
     I8 I16 I32 I64 PTR F32 F64 case
       newOps
         argType isIntValType and
-            opType AMD64.fixedTargetInt =:: target?
-            target? optional.hasData if
-          target? .data argType setRegType
+            opType AMD64.fixedTargetInt .if
+          argType setRegType
         else
           argType opIndex context nextRegister
         end =:: targetRegister
         opType
           targetRegister asm.Operand .register
           arg1 .location switch ## TODO? extract for procedure
-            register case arg1 .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
           arg2 .location switch ## TODO? extract for procedure
-            register case arg2 .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
@@ -4638,12 +4605,12 @@ proc(
   CompilerContext ptr.mut : context
 -> Atomic list ) =>: compileComparisonOperator
   ops
-    argType CheckValue .value pos context popValue =:: arg2?
-    arg2? optional.isEmpty if return end
-    arg2? .data =:: arg2
-    argType CheckValue .value pos context popValue =:: arg1?
-    arg1? optional.isEmpty if return end
-    arg1? .data =:: arg1
+    argType CheckValue .value pos context popValue
+      .else return end
+    =:: arg2
+    argType CheckValue .value pos context popValue
+      .else return end
+    =:: arg1
   =:: mut: newOps
   ## TODO check if first argument caches any variables, if not reuse same register(s)
   argType switch
@@ -4655,12 +4622,12 @@ proc(
           cmpType asm.Operand .cmpType
           targetRegister asm.Operand .register
           arg1 .location switch ## TODO? extract for procedure
-            register case arg1 .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
           arg2 .location switch ## TODO? extract for procedure
-            register case arg2 .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
@@ -4698,7 +4665,7 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  opType typeContext types.getProcIn .data =:: inTypes
+  opType typeContext types.getProcIn .else "proc-in" ..panic end =:: inTypes
   inTypes .length 0:iSize != if
     opType 0 typeContext types.getProcArgLabel
         labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -4708,7 +4675,7 @@ proc(
     end =:: firstArg
     inTypes firstArg []
   else
-      opType typeContext types.getProcOut .data =:: outTypes
+      opType typeContext types.getProcOut .else "proc-out" ..panic end =:: outTypes
       outTypes .length 0:iSize != _if
     outTypes 0 []
   else
@@ -4788,16 +4755,16 @@ proc(
     DIV_I64I32 REM_I64I32 UDIV_I64I32 UMOD_I64I32 SHL_I64I32 LSHR_I64I32 ASHR_I64I32 case break ## TODO move to standard libray
     GET_PTR GET_PTR_MUT case
       ops
-        CheckValue .none pos context popValue =:: argValue?
-        argValue? optional.isEmpty if return end
-        argValue? .data =:: argValue
+        CheckValue .none pos context popValue
+          .else return end
+        =:: argValue
         baseType typeContext types.getBaseType typeContext toValType =:: eltVal
         eltVal opIndex context nextRegister =:: targetRegister
         ## TODO handle non-primitive types
         Op .LOAD
           targetRegister asm.Operand .register
           argValue .location switch ## TODO? extract for procedure
-            register case argValue .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
@@ -4806,24 +4773,24 @@ proc(
       return
     SET_PTR case
       ops
-        ValType .PTR CheckValue .value pos context popValue =:: address?
-        address? optional.isEmpty if return end
-        address? .data =:: address
-        baseVal CheckValue .valueOrReference pos context popValue =:: value?
-        value? optional.isEmpty if return end
-        value? .data =:: value
+        ValType .PTR CheckValue .value pos context popValue
+          .else return end
+        =:: address
+        baseVal CheckValue .valueOrReference pos context popValue
+          .else return end
+        =:: value
         value .valType .REFERENCE if
           "unimplemented: set-ptr with reference value" ..panic
         end
         Op .STORE
           ## TODO update/clear cache for values associated with pointer
           address .location switch
-            register case address .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
           value .location switch
-            register case value .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
@@ -4836,10 +4803,10 @@ proc(
         ValType .I64
       end =:: offsetType
       ops
-        offsetType CheckValue .value pos context popValue =:: offset?
         baseType typeContext types.getBaseType =:: eltType
-        offset? optional.isEmpty if return end
-        offset? .data =:: offset
+        offsetType CheckValue .value pos context popValue
+          .else return end
+        =:: offset
         ## TODO? use 32-bit offset if pointer size is 32-bit
         offset .location .?register .if
           ValType .I64 setRegType
@@ -4851,15 +4818,15 @@ proc(
           Op .EXTS
             offsetRegister asm.Operand .register
             offset .location switch
-              register case offset .location .register asm.Operand .register break
+              register .case asm.Operand .register break
               memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
               registers registerHi registerLow case ..unreachable ## wrong data-format
             end
           context appendOp2
         end
-        ValType .PTR CheckValue .value pos context popValue =:: base?
-        base? optional.isEmpty if return end
-        base? .data =:: address
+        ValType .PTR CheckValue .value pos context popValue
+          .else return end
+        =:: address
         address .location .?register .if
           ValType .PTR setRegType
         else ..drop
@@ -4868,12 +4835,12 @@ proc(
         Op .OFFSET
           addressRegister asm.Operand .register
           address .location switch
-            register case address .location .register asm.Operand .register break
+            register .case asm.Operand .register break
             memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
             registers registerHi registerLow case ..unreachable ## wrong data-format
           end
           offsetRegister asm.Operand .register
-          eltType typeContext types.strideOf .Fixed asm.Operand .constInt
+          eltType typeContext types.strideOf typeSizeAsInt asm.Operand .constInt
         context appendOp4
         addressRegister ValType .PTR context pushRegister
       return
@@ -4901,7 +4868,7 @@ proc(
       true context .reachable=
       op [] .dataType =:: procType
       program [] .procedures
-        implInfo [] .procId i64 cast list.at .data
+        implInfo [] .procId i64 cast @[]
       =:: procInfo
       context resetRegisters
       op [] Atomic .DebugStartOp list.append
@@ -4913,7 +4880,7 @@ proc(
       ##   -> stackMemory int,float,v128
       ##   -> localVariables
       ##   -> memory for named arguments passed in registers
-      procType typeContext types.getProcIn .data =:: args
+      procType typeContext types.getProcIn .else "proc-in" ..panic end =:: args
       0 =:: mut: intArgs
       0 =:: mut: floatArgs
       ## TODO? is there a way to avoid having two loops (registers are counted right to left, arguments are pushed left ot right)
@@ -5027,9 +4994,9 @@ proc(
     end
     op [] Atomic .DebugStartOp list.append
     op [] .val switch
-      Constant case
+      Constant .case =:: constVal
         op [] .dataType typeContext types.isPointer if
-          op [] .dataType typeContext types.ptrTarget op [] .val .Constant context newPtrConstant =:: ptrId
+          op [] .dataType typeContext types.ptrTarget constVal context newPtrConstant =:: ptrId
           ValType .PTR ptrId ValueLocation .ptrConstant opIndex context pushValue
           return
         end
@@ -5037,21 +5004,21 @@ proc(
         ## FIXME use value-type to determine target type, truncate intergers to correct size
         ## TODO make operation dependent on value type
         ## TODO extract conversion constant -> location to procedure
-        op [] .val .Constant switch
-          Int case
-            valType op [] .val .Constant .Int ValueLocation .intConstant opIndex context pushValue
+        constVal switch
+          Int .case
+            valType >$ ValueLocation .intConstant opIndex context pushValue
             return
-          Char case
-            valType op [] .val .Constant .Char i64 cast.u ValueLocation .intConstant opIndex context pushValue
+          Char .case
+            valType >$ i64 cast.u ValueLocation .intConstant opIndex context pushValue
             return
-          Bool case
-            valType op [] .val .Constant .Bool ?1 i64 cast.u ValueLocation .intConstant opIndex context pushValue
+          Bool .case
+            valType >$ ?1 i64 cast.u ValueLocation .intConstant opIndex context pushValue
             return
-          Float case
-            valType op [] .val .Constant .Float ValueLocation .floatConstant opIndex context pushValue
+          Float .case
+            valType >$ ValueLocation .floatConstant opIndex context pushValue
             return
           Array Array8 Array16 Array32 Array64 case
-            op [] .dataType op [] .val .Constant context newPtrConstant =:: ptrId
+            op [] .dataType constVal context newPtrConstant =:: ptrId
             ValType .REFERENCE ptrId ValueLocation .ptrConstant opIndex context pushValue
             #+valType isMultiRegValType if ## TODO? load value default
               valType getLowValType opIndex context nextRegister =:: lowReg
@@ -5077,18 +5044,18 @@ proc(
           default break ## TODO support other constant types
         end
         break
-      ConstantReference case
+      ConstantReference .case =:: constRef
         op [] .dataType
           program [] .constantReferences ## TODO? store const-value in const-reference once asm is main back-end
-            op [] .val .ConstantReference i64 cast.u
+            constRef i64 cast.u
           [] .value
         context newPtrConstant =:: ptrId
         ValType .REFERENCE ptrId ValueLocation .ptrConstant opIndex context pushValue
         return
-      NewEnum case
+      NewEnum .case =:: newEnum
         op [] .dataType typeContext toValType =:: valType
         op [] .dataType typeContext types.isEnum if
-          valType op [] .val .NewEnum i64 cast.s ValueLocation .intConstant opIndex context pushValue
+          valType newEnum i64 cast.s ValueLocation .intConstant opIndex context pushValue
           return
         end
         break
@@ -5128,15 +5095,15 @@ proc(
         eltTypes .length i32 cast 1 - while $ 0 >= do =:: i
           eltTypes i [] =:: eltType
           eltType typeContext toValType =:: eltVal
-          op [] .dataType i i32 cast typeContext types.tupleElementOffset .data =:: eltOffset
-          eltType typeContext types.sizeOf .Fixed =:: eltSize
+          op [] .dataType i i32 cast typeContext types.tupleElementOffset .else 0 end =:: eltOffset
+          eltType typeContext types.sizeOf typeSizeAsInt =:: eltSize
           eltVal .REFERENCE ! "no reference type in value tuple" assert
-          eltVal CheckValue .valueOrReference op [] .pos context popValue =:: elt?
-          elt? optional.isEmpty if
-            "CodeGen: invalid type for tuple-element":s Atomic .DebugError list.append
-            continue
-          end
-          elt? .data =:: elt
+          eltVal CheckValue .valueOrReference op [] .pos context popValue
+            .else
+              "CodeGen: invalid type for tuple-element":s Atomic .DebugError list.append
+              continue
+            end
+          =:: elt
           elt .valType .REFERENCE if
             "unimplemented: new with reference value" ..panic
           end
@@ -5145,7 +5112,7 @@ proc(
           eltOffset eltSize + lowRegSize <= if ## single register value
             asm.OpType .INSERT
               lowReg  asm.Operand .register
-              elt .location .register asm.Operand .register
+              elt .location .?register .else "expected register" ..panic end asm.Operand .register
               eltOffset i8 cast eltSize i8 cast
                 usedLow if
                   BitMove.DST_TYPE_EMPTY
@@ -5157,7 +5124,7 @@ proc(
           else eltOffset lowRegSize >= _if
             asm.OpType .INSERT
               hiReg  asm.Operand .register
-              elt .location .register asm.Operand .register
+              elt .location .?register .else "expected register" ..panic end asm.Operand .register
               eltOffset lowRegSize - i8 cast eltSize i8 cast
                 usedHi if
                   BitMove.DST_TYPE_EMPTY
@@ -5170,7 +5137,7 @@ proc(
             asm.OpType .INSERT
               lowReg asm.Operand .register
               hiReg  asm.Operand .register
-              elt .location .register asm.Operand .register
+              elt .location .?register .else "expected register" ..panic end asm.Operand .register
               eltOffset i8 cast eltSize i8 cast
                 usedLow if
                   BitMove.DST_TYPE_EMPTY
@@ -5196,43 +5163,41 @@ proc(
         op [] .dataType typeContext types.isTuple ! if
           "CodeGen: unsupported type for new-reference" ..panic
         end
-        ValType .PTR CheckValue .value op [] .pos context popValue =:: target?
-        target? optional.isEmpty if
-          "CodeGen: missing target for tuple-creation":s Atomic .DebugError list.append
-          return
-        end
-        target? .data =:: target
+        ValType .PTR CheckValue .value op [] .pos context popValue
+          .else
+            "CodeGen: missing target for tuple-creation":s Atomic .DebugError list.append
+            return
+          end
+        =:: target
         op [] .dataType typeContext types.compositeElts =:: eltTypes
         eltTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
           eltTypes i [] =:: eltType
           eltType typeContext toValType =:: eltVal
-          eltVal CheckValue .valueOrReference op [] .pos context popValue =:: elt?
-          elt? optional.isEmpty if
+          eltVal CheckValue .valueOrReference op [] .pos context popValue .else
             "CodeGen: invalid type for tuple-element":s Atomic .DebugError list.append
             continue
-          end
-          elt? .data =:: elt
-          op [] .dataType i i32 cast typeContext types.tupleElementOffset .data =:: eltOffset
+          end =:: elt
+          op [] .dataType i i32 cast typeContext types.tupleElementOffset .else 0 end =:: eltOffset
           ## TODO support non-register locations (! procedures for stackLoc <-> valLoc <-> operand
           elt .valType .REFERENCE if
             asm.OpType .COPY
-              target .location .register eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
-              elt .location .register asm.Operand .register
-              eltType typeContext types.sizeOf .Fixed asm.Operand .constInt
+              target .location .?register .else "expected register" ..panic end eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
+              elt .location .?register .else "expected register" ..panic end asm.Operand .register
+              eltType typeContext types.sizeOf typeSizeAsInt asm.Operand .constInt
             context appendOp3
           else
             asm.OpType .STORE
-              target .location .register eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
-              elt .location .register asm.Operand .register
+              target .location .?register .else "expected register" ..panic end eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
+              elt .location .?register .else "expected register" ..panic end asm.Operand .register
             context appendOp2
           end
         finally i 1 - end ..drop
         ## TODO support non-register localtions
-        ValType .REFERENCE target .location .register ValueLocation .register opIndex context pushValue
+        ValType .REFERENCE target .location .?register .else "expected register" ..panic end ValueLocation .register opIndex context pushValue
         return
       DeclareId case return ## nothing to do (all declarations handled at start of procedure)
       GetId case
-        op .val .GetId =:: idData
+        op .val .?GetId .else ..unreachable end =:: idData
         idData [] .labelId =:: labelId
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR GLOBAL_VAR case
@@ -5250,7 +5215,7 @@ proc(
         end
         break
       AtId case
-        op .val .AtId =:: idData
+        op .val .?AtId .else ..unreachable end =:: idData
         idData [] .labelId =:: labelId
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR GLOBAL_VAR case
@@ -5277,31 +5242,29 @@ proc(
         idData [] .idType switch
           ARGUMENT LOCAL_VAR ITR_VAR TMP_VAR case
             op [] .dataType typeContext toValType =:: valType
-            valType CheckValue .valueOrReference op [] .pos context popValue =:: stackValue?
-            stackValue? optional.isEmpty if
+            valType CheckValue .valueOrReference op [] .pos context popValue .else
               "stack undeflow":s Atomic .DebugError list.append
               return
-            end
-            stackValue? .data =:: stackValue
+            end =:: stackValue
             stackValue .location switch
-              register case
+              register .case =:: register
                 stackValue .valType .REFERENCE if
                   asm.OpType .COPY
                     labelId asm.Operand .localMemory
-                    stackValue .location .register asm.Operand .register
-                    op [] .dataType typeContext types.sizeOf .Fixed asm.Operand .constInt
+                    register asm.Operand .register
+                    op [] .dataType typeContext types.sizeOf typeSizeAsInt asm.Operand .constInt
                   context appendOp3
                 else
                   asm.OpType .STORE
                     labelId asm.Operand .localMemory
-                    stackValue .location .register asm.Operand .register
+                    register asm.Operand .register
                   context appendOp2
                 end
-                labelId stackValue .location .register stackValue .valType .REFERENCE opIndex context cacheVariable
+                labelId register stackValue .valType .REFERENCE opIndex context cacheVariable
                 return
-              registers case
+              registers .case =:: registers
                 stackValue .valType .REFERENCE ! "reference is not stored in register pair" assert
-                stackValue .location .registers .low =:: lowReg
+                registers .low =:: lowReg
                 ## TODO? is it save to always store 2 full registers
                 asm.OpType .STORE
                   labelId asm.Operand .localMemory
@@ -5309,9 +5272,9 @@ proc(
                 context appendOp2
                 asm.OpType .STORE
                   labelId lowReg getRegSize asm.LabelAndOffset new asm.Operand .localMemoryAndOffset
-                  stackValue .location .registers .hi asm.Operand .register
+                  registers .hi asm.Operand .register
                 context appendOp2
-                labelId stackValue .location .registers opIndex context cacheVariable2
+                labelId registers opIndex context cacheVariable2
                 return
               registerHi registerLow case
                 "unimplemented" ..panic
@@ -5328,7 +5291,7 @@ proc(
                   asm.OpType .COPY
                     tmpRegister asm.Operand .register
                     context [] .stack .length i32 cast.u asm.Operand .stackData
-                    op [] .dataType typeContext types.sizeOf .Fixed asm.Operand .constInt
+                    op [] .dataType typeContext types.sizeOf typeSizeAsInt asm.Operand .constInt
                   context appendOp3
                 else
                   asm.OpType .LOAD
@@ -5355,9 +5318,9 @@ proc(
         break
       GetElement .case =:: eltIndex
         op [] .dataType typeContext toValType =:: mut: valType
-        valType CheckValue .valueOrReference op [] .pos context popValue =:: container?
-        container? optional.isEmpty if return end
-        container? .data =:: container
+        valType CheckValue .valueOrReference op [] .pos context popValue
+          .else return end
+        =:: container
         container .valType valType=
         op [] .dataType
           $ typeContext types.isPointer if
@@ -5366,10 +5329,10 @@ proc(
         =:: containerType
         containerType typeContext types.isArray if
           containerType typeContext types.getBaseType
-          $ typeContext types.strideOf .Fixed eltIndex i64 cast.u *
+          $ typeContext types.strideOf typeSizeAsInt eltIndex i64 cast.u *
         else
           containerType eltIndex typeContext types.compositeGetElement
-          containerType eltIndex typeContext types.tupleElementOffset .data
+          containerType eltIndex typeContext types.tupleElementOffset .else 0 end
         end  =:: eltOffset =:: eltType
         eltType typeContext toValType =:: eltVal
         valType .PTR or valType .REFERENCE and eltVal isPrimitiveValType ! if ## ptr/reference -> ptr/reference
@@ -5377,7 +5340,7 @@ proc(
           asm.OpType .OFFSET
             targetRegister asm.Operand .register
             container .location switch
-              register case container .location .register asm.Operand .register break
+              register .case asm.Operand .register break
               memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
               registers registerHi registerLow case ..unreachable ## wrong data-format
             end
@@ -5390,8 +5353,8 @@ proc(
           asm.OpType .LOAD
             targetRegister asm.Operand .register
             container .location switch
-              register case
-                container .location .register eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset break
+              register .case
+                eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset break
               memory case
                 "unimplemented: getElement stackDataAndOffset" ..panic
               registers registerHi registerLow case ..unreachable ## wrong data-format
@@ -5400,7 +5363,7 @@ proc(
           eltVal targetRegister ValueLocation .register opIndex context pushValue
         else ## value -> value
           using: BitMove asm.BitMove.
-          eltType typeContext types.sizeOf .Fixed =:: eltSize
+          eltType typeContext types.sizeOf typeSizeAsInt =:: eltSize
           eltVal isMultiRegValType if
             eltVal getLowValType opIndex context nextRegister =:: targetRegisterLow
             eltVal getHiValType opIndex context nextRegister =:: targetRegisterHi
@@ -5408,8 +5371,8 @@ proc(
             asm.OpType .EXTRACT
               targetRegisterLow asm.Operand .register
               targetRegisterHi asm.Operand .register
-              container .location .registers .low asm.Operand .register
-              container .location .registers .hi asm.Operand .register
+              container .location .?registers .else "expected registers" ..panic end .low asm.Operand .register
+              container .location .?registers .else "expected registers" ..panic end .hi asm.Operand .register
               eltOffset i8 cast eltSize i8 cast
                 BitMove.DST_TYPE_EXTRACT
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
@@ -5417,11 +5380,11 @@ proc(
             eltVal targetRegisterLow targetRegisterHi RegisterPair new ValueLocation .registers opIndex context pushValue
           else eltVal opIndex context nextRegister =:: targetRegister
               valType isMultiRegValType _if
-            container .location .registers .low getRegSize =:: lowRegSize
+            container .location .?registers .else "expected registers" ..panic end .low getRegSize =:: lowRegSize
             eltOffset lowRegSize i64 cast.u >= if
               asm.OpType .EXTRACT
                 targetRegister asm.Operand .register
-                container .location .registers .hi asm.Operand .register
+                container .location .?registers .else "expected registers" ..panic end .hi asm.Operand .register
                 eltOffset i32 cast.u lowRegSize - i8 cast eltSize i8 cast
                   BitMove.DST_TYPE_EXTRACT
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
@@ -5429,7 +5392,7 @@ proc(
             else eltOffset eltSize + lowRegSize i64 cast.u <= _if
               asm.OpType .EXTRACT
                 targetRegister asm.Operand .register
-                container .location .registers .low asm.Operand .register
+                container .location .?registers .else "expected registers" ..panic end .low asm.Operand .register
                 eltOffset i8 cast eltSize i8 cast
                   BitMove.DST_TYPE_EXTRACT
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
@@ -5437,8 +5400,8 @@ proc(
             else
               asm.OpType .EXTRACT
                 targetRegister asm.Operand .register
-                container .location .registers .low asm.Operand .register
-                container .location .registers .hi asm.Operand .register
+                container .location .?registers .else "expected registers" ..panic end .low asm.Operand .register
+                container .location .?registers .else "expected registers" ..panic end .hi asm.Operand .register
                 eltOffset i8 cast eltSize i8 cast
                   BitMove.DST_TYPE_EXTRACT
                 asm.BitMoveInfo new asm.Operand .bitMoveInfo
@@ -5449,7 +5412,7 @@ proc(
             asm.OpType .EXTRACT
               targetRegister asm.Operand .register
               container .location switch
-                register case container .location .register asm.Operand .register break
+                register .case asm.Operand .register break
                 memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
                 registers registerHi registerLow case ..unreachable ## wrong data-format
               end
@@ -5463,9 +5426,9 @@ proc(
         return
       SetElement .case =:: eltIndex
         op [] .dataType typeContext toValType =:: mut: valType
-        valType CheckValue .valueOrReference op [] .pos context popValue =:: container?
-        container? optional.isEmpty if return end
-        container? .data =:: container
+        valType CheckValue .valueOrReference op [] .pos context popValue
+          .else return end
+        =:: container
         container .valType valType=
         op [] .dataType
           $ typeContext types.isPointer if
@@ -5474,29 +5437,29 @@ proc(
         =:: containerType
         containerType typeContext types.isArray if
           containerType typeContext types.getBaseType
-          $ typeContext types.strideOf .Fixed eltIndex i64 cast.u *
+          $ typeContext types.strideOf typeSizeAsInt eltIndex i64 cast.u *
         else
           containerType eltIndex typeContext types.compositeGetElement
-          containerType eltIndex typeContext types.tupleElementOffset .data
+          containerType eltIndex typeContext types.tupleElementOffset .else 0 end
         end  =:: eltOffset =:: eltType
         eltType typeContext toValType =:: eltVal
-        eltVal CheckValue .valueOrReference op [] .pos context popValue =:: element?
-        element? optional.isEmpty if return end
-        element? .data =:: element
+        eltVal CheckValue .valueOrReference op [] .pos context popValue
+         .else return end
+        =:: element
         op [] .dataType typeContext types.isPointer ! if
           ## TODO! ensure element is not overwritten
           valType
             container .location switch
-              register case container .location .register ValueLocation .register break
-              registers case container .location .registers ValueLocation .registers break
+              register .case ValueLocation .register break
+              registers .case ValueLocation .registers break
               memory registerHi registerLow case "setElement: unimplemented parital memory locations" ..panic
             end
           opIndex context pushValue
         end
         valType .PTR or valType .REFERENCE if ## ptr/reference, ...
           container .location switch
-            register case
-              container .location .register eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
+            register .case
+              eltOffset i32 cast asm.RegAndOffset new asm.Operand .regAndOffset
               break
             memory case
               "setElement: unimplemented copy to stack memory" ..panic
@@ -5506,17 +5469,17 @@ proc(
             asm.OpType .COPY
               targetLocation
               element .location switch
-                register case element .location .register asm.Operand .register break
+                register .case asm.Operand .register break
                 memory registers registerHi registerLow case
                   "setElement: unimplemented store-memory / store multi-reg" ..panic
               end
-              eltType typeContext types.sizeOf .Fixed asm.Operand .constInt
+              eltType typeContext types.sizeOf typeSizeAsInt asm.Operand .constInt
             context appendOp3
           else ## ptr / reference, value
             asm.OpType .STORE
               targetLocation
               element .location switch
-                register case element .location .register asm.Operand .register break
+                register .case asm.Operand .register break
                 memory registers registerHi registerLow case
                   "setElement: unimplemented store-memory / store multi-reg" ..panic
               end
@@ -5525,16 +5488,16 @@ proc(
         else ## value, value
           element .valType eltVal == "setElement: unimplemented store reference to value" assert
           using: BitMove asm.BitMove.
-          eltType typeContext types.sizeOf .Fixed =:: eltSize
+          eltType typeContext types.sizeOf typeSizeAsInt =:: eltSize
           eltVal isMultiRegValType if
             ## TODO ensure dst hi-low are not a swapped version of source hi and low (prevent unneccessary moves)
             asm.OpType .INSERT
-              container .location .registers .low asm.Operand .register
-              container .location .registers .hi asm.Operand .register
+              container .location .?registers .else "expected registers" ..panic end .low asm.Operand .register
+              container .location .?registers .else "expected registers" ..panic end .hi asm.Operand .register
               element .location switch
-                registers case
-                  element .location .registers .low asm.Operand .register
-                  element .location .registers .hi asm.Operand .register
+                registers .case =:: registers
+                  registers .low asm.Operand .register
+                  registers .hi asm.Operand .register
                   break
                 memory registerHi registerLow case "setElement: unimplemented copy memory to value" ..panic
                 register case ..unreachable ## wrong data-format
@@ -5545,12 +5508,12 @@ proc(
               asm.BitMoveInfo new asm.Operand .bitMoveInfo
             context appendOp5
           else valType isMultiRegValType _if
-            container .location .registers .low getRegSize =:: lowRegSize
+            container .location .?registers .else "expected registers" ..panic end .low getRegSize =:: lowRegSize
             eltOffset lowRegSize i64 cast.u >= if
               asm.OpType .INSERT
-                container .location .registers .hi asm.Operand .register
+                container .location .?registers .else "expected registers" ..panic end .hi asm.Operand .register
                 element .location switch
-                  register case element .location .register asm.Operand .register break
+                  register .case asm.Operand .register break
                   memory case "setElement: unimplemented copy memory to value" ..panic
                   registers registerHi registerLow case ..unreachable ## wrong data-format
                 end
@@ -5560,9 +5523,9 @@ proc(
               context appendOp3
             else eltOffset eltSize + lowRegSize i64 cast.u <= _if
               asm.OpType .INSERT
-                container .location .registers .low asm.Operand .register
+                container .location .?registers .else "expected registers" ..panic end .low asm.Operand .register
                 element .location switch
-                  register case element .location .register asm.Operand .register break
+                  register .case asm.Operand .register break
                   memory case "setElement: unimplemented copy memory to value" ..panic
                   registers registerHi registerLow case ..unreachable ## wrong data-format
                 end
@@ -5572,10 +5535,10 @@ proc(
               context appendOp3
             else
               asm.OpType .INSERT
-                container .location .registers .low asm.Operand .register
-                container .location .registers .hi asm.Operand .register
+                container .location .?registers .else "expected registers" ..panic end .low asm.Operand .register
+                container .location .?registers .else "expected registers" ..panic end .hi asm.Operand .register
                 element .location switch
-                  register case element .location .register asm.Operand .register break
+                  register .case asm.Operand .register break
                   memory case "setElement: unimplemented copy memory to value" ..panic
                   registers registerHi registerLow case ..unreachable ## wrong data-format
                 end
@@ -5588,12 +5551,12 @@ proc(
           else
             asm.OpType .INSERT
               container .location switch
-                register case container .location .register asm.Operand .register break
+                register .case asm.Operand .register break
                 memory case context [] .stack .length i32 cast.u asm.Operand .stackData break
                 registers registerHi registerLow case ..unreachable ## wrong data-format
               end
               element .location switch
-                register case element .location .register asm.Operand .register break
+                register .case asm.Operand .register break
                 memory case "setElement: unimplemented copy memory to value" ..panic
                 registers registerHi registerLow case ..unreachable ## wrong data-format
               end
@@ -5648,19 +5611,17 @@ proc(
         blockInfo .blockType switch
           AND_IF OR_IF case
             blockInfo .blockType .OR_IF =:: isOr
-            context [] .openBlocks list.peek =:: ifBlock?
-            ifBlock? optional.isEmpty or ifBlock? .data [] .?If ? ! or ifBlock? .data .If [] .hasIf if
+            context [] .openBlocks list.peek
+                ! .or .?If ! .or =:: ifBlock ifBlock [] .hasIf if
               blockInfo .blockId context openIfBlock
             else
-              ifBlock? .data .If
+              ifBlock
             end =:: ifBlock
             context [] .reachable ! if return end
-            ValType .I8 CheckValue .value op [] .pos context popValue =:: srcValue?
-            srcValue? optional.isEmpty if
+            ValType .I8 CheckValue .value op [] .pos context popValue .else
               "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            srcValue? .data =:: srcValue
+            end =:: srcValue
             isOr if
               ifBlock [] .ifLabelId NO_LABEL == if
                 context nextLabelId ifBlock .ifLabelId=
@@ -5697,9 +5658,7 @@ proc(
                 asm.CompareType .Z
               end asm.Operand .cmpType
               srcValue .location switch
-                register case
-                    srcValue .location .register asm.Operand .register
-                  break
+                register .case asm.Operand .register break
                 memory case ## TODO is this the right offset
                     context [] .stack .length i32 cast.u 1 + asm.Operand .stackData
                   break
@@ -5713,20 +5672,18 @@ proc(
             context appendOp3
             return
           IF case
-            context [] .openBlocks list.peek =:: ifBlock?
-            ifBlock? optional.isEmpty or ifBlock? .data [] .?If ? ! or ifBlock? .data .If [] .hasIf if
+            context [] .openBlocks list.peek ! .or
+                .?If ! .or =:: ifBlock ifBlock [] .hasIf if
               blockInfo .blockId context openIfBlock
             else
-              ifBlock? .data .If
+              ifBlock
             end =:: ifBlock
             true ifBlock .hasIf=
             context [] .reachable ! if return end
-            ValType .I8 CheckValue .value op [] .pos context popValue =:: srcValue?
-            srcValue? optional.isEmpty if
+            ValType .I8 CheckValue .value op [] .pos context popValue .else
               "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            srcValue? .data =:: srcValue
+            end =:: srcValue
             ifBlock [] .elseLabelId NO_LABEL == if
               ifBlock [] .regData context rememberRegisters
               ifBlock [] .ifStackSize -1:iSize == if
@@ -5746,9 +5703,7 @@ proc(
             asm.OpType .JMPIF
               asm.CompareType .Z asm.Operand .cmpType
               srcValue .location switch
-                register case
-                    srcValue .location .register asm.Operand .register
-                  break
+                register .case asm.Operand .register break
                 memory case ## TODO is this the right offset
                     context [] .stack .length i32 cast.u 1 + asm.Operand .stackData
                   break
@@ -5767,12 +5722,10 @@ proc(
             end
             return
           ELSE case
-            context [] .openBlocks list.peek =:: ifBlock?
-            ifBlock? optional.isEmpty or ifBlock? .data [] .?If ? ! if
+            context [] .openBlocks list.peek ! .or .?If ! .if
               "unexpected else-statement" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            ifBlock? .data .If =:: ifBlock
+            end =:: ifBlock
             context [] .reachable if
               context nextLabelId =:: endLabelId
               endLabelId ifBlock .endLabelId=
@@ -5808,19 +5761,15 @@ proc(
             return
           AND_DO OR_DO case
             blockInfo .blockType .OR_DO =:: isOr
-            context [] .openBlocks list.peek =:: whileBlock?
-            whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
+            context [] .openBlocks list.peek ! .or .?While ! .if
               "unexpected and/or-do-statement" sb.copyPtr op [] .pos errors appendError
               return
-            end
+            end =:: whileBlock
             context [] .reachable ! if return end
-            whileBlock? .data .While =:: whileBlock
-            ValType .I8 CheckValue .value op [] .pos context popValue =:: srcValue?
-            srcValue? optional.isEmpty if
+            ValType .I8 CheckValue .value op [] .pos context popValue .else
               "stack underflow in do-condition" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            srcValue? .data =:: srcValue
+            end =:: srcValue
             isOr if
               whileBlock [] .doLabelId NO_LABEL == if
                 context nextLabelId whileBlock .doLabelId=
@@ -5847,9 +5796,7 @@ proc(
             asm.OpType .JMPIF
               isOr if asm.CompareType .NZ else asm.CompareType .Z end asm.Operand .cmpType
               srcValue .location switch
-                register case
-                    srcValue .location .register asm.Operand .register
-                  break
+                register .case asm.Operand .register break
                 memory case ## TODO is this the right offset
                     context [] .stack .length i32 cast.u 1 + asm.Operand .stackData
                   break
@@ -5863,19 +5810,15 @@ proc(
             context appendOp3
             return
           DO case
-            context [] .openBlocks list.peek =:: whileBlock?
-            whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
+            context [] .openBlocks list.peek ! .or .?While ! .if
               "unexpected do-statement" sb.copyPtr op [] .pos errors appendError
               return
-            end
+            end =:: whileBlock
             context [] .reachable ! if return end
-            whileBlock? .data .While =:: whileBlock
-            ValType .I8 CheckValue .value op [] .pos context popValue =:: srcValue?
-            srcValue? optional.isEmpty if
+            ValType .I8 CheckValue .value op [] .pos context popValue .else
               "stack underflow in do-condition" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            srcValue? .data =:: srcValue
+            end =:: srcValue
             whileBlock [] .endLabelId NO_LABEL == if
               context nextLabelId whileBlock .endLabelId=
               whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
@@ -5889,8 +5832,7 @@ proc(
             asm.OpType .JMPIF
               asm.CompareType .Z asm.Operand .cmpType
               srcValue .location switch
-                register case
-                    srcValue .location .register asm.Operand .register
+                register .case asm.Operand .register
                   break
                 memory case ## TODO is this the right offset
                     context [] .stack .length i32 cast.u 1 + asm.Operand .stackData
@@ -5912,13 +5854,11 @@ proc(
           BREAK case
             blockInfo .blockId
               BreakType .WHILE
-            context findBreakableBlock =:: whileBlock?
-            whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
+            context findBreakableBlock ! .or .?While ! .if
               "unexpected break-statement" sb.copyPtr op [] .pos errors appendError
               return
-            end
+            end =:: whileBlock
             context [] .reachable ! if return end
-            whileBlock? .data .While =:: whileBlock
             whileBlock [] .endLabelId NO_LABEL == if
               context nextLabelId whileBlock .endLabelId=
               whileBlock [] .regData whileBlock [] .breakRegsOffset slice.tail context rememberRegisters
@@ -5937,13 +5877,11 @@ proc(
           CONTINUE case
             blockInfo .blockId
               BreakType .WHILE
-            context findBreakableBlock =:: whileBlock?
-            whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
+            context findBreakableBlock ! .or .?While ! .if
               "unexpected continue-statement" sb.copyPtr op [] .pos errors appendError
               return
-            end
+            end =:: whileBlock
             context [] .reachable ! if return end
-            whileBlock? .data .While =:: whileBlock
             whileBlock [] .finallyLabelId NO_LABEL == if
               context nextLabelId whileBlock .finallyLabelId=
               whileBlock [] .regData whileBlock [] .continueRegsOffset slice.tail context rememberRegisters
@@ -5960,12 +5898,10 @@ proc(
             false context .reachable=
             return
           FINALLY case
-            context [] .openBlocks list.peek =:: whileBlock?
-            whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
+            context [] .openBlocks list.peek ! .or .?While ! .if
               "unexpected finally-statement" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            whileBlock? .data .While =:: whileBlock
+            end =:: whileBlock
             whileBlock [] .finallyLabelId NO_LABEL != if ## create finally label only if it is used
               true context .reachable= ## finally is reachable through continue
               ## TODO? merge branches instead of resetting to first branch
@@ -5981,11 +5917,8 @@ proc(
           break
           AND OR case
             blockInfo .blockType .OR =:: isOr
-            context [] .openBlocks list.peek =:: andOrBlock?
-            andOrBlock? optional.isEmpty or andOrBlock? .data [] .?AndOr ? ! if
+            context [] .openBlocks list.peek ! .or .?AndOr ! .if
               blockInfo .blockId context openAndOrBlock
-            else
-              andOrBlock? .data .AndOr
             end =:: andOrBlock
             context [] .reachable ! if return end
             ## remember state before popping condition to preverse bool on top of stack
@@ -6003,12 +5936,10 @@ proc(
                 RegisterRestoreMode .MERGE_FALLTHROUGH
               op [] .pos context restoreRegisters
             end
-            ValType .I8 CheckValue .value op [] .pos context popValue =:: srcValue?
-            srcValue? optional.isEmpty if
+            ValType .I8 CheckValue .value op [] .pos context popValue .else
               "stack underflow in if-condition" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            srcValue? .data =:: srcValue
+            end =:: srcValue
             asm.OpType .JMPIF
               isOr if
                 asm.CompareType .NZ
@@ -6016,9 +5947,7 @@ proc(
                 asm.CompareType .Z
               end asm.Operand .cmpType
               srcValue .location switch
-                register case
-                    srcValue .location .register asm.Operand .register
-                  break
+                register .case asm.Operand .register break
                 memory case ## TODO is this the right offset
                     context [] .stack .length i32 cast.u 1 + asm.Operand .stackData
                   break
@@ -6028,15 +5957,13 @@ proc(
             context appendOp3
             return
           SWITCH case
-            program [] .switchData blockInfo .blockId i32 cast.u list.at .data =:: switchData
+            program [] .switchData blockInfo .blockId i32 cast.u @[] =:: switchData
             blockInfo .blockId switchData [] .caseCount context openSwitchBlock =:: switchBlock
             context [] .reachable ! if return end
-            CheckValue .none op [] .pos context popValue =:: srcValue?
-            srcValue? optional.isEmpty if
+            CheckValue .none op [] .pos context popValue .else
               "stack underflow in switch" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            srcValue? .data =:: srcValue
+            end =:: srcValue
             srcValue .valType switch
               I8 I16 I32 I64 case false break ## switchable
               default true break
@@ -6058,12 +5985,10 @@ proc(
             context [] .reachable if
               "case-label is reachable" sb.copyPtr op [] .pos errors appendError
             end
-            context [] .openBlocks list.peek =:: switchBlock?
-            switchBlock? optional.isEmpty or switchBlock? .data [] .?Switch ? ! if
+            context [] .openBlocks list.peek ! .or .?Switch ! .if
               "unexpected case/default-statement" sb.copyPtr op [] .pos errors appendError
               return
-            end
-            switchBlock? .data .Switch =:: switchBlock
+            end =:: switchBlock
             blockInfo .blockType .CASE if
               switchBlock [] .caseIndex
               switchBlock [] .caseIndex 1 + switchBlock .caseIndex=
@@ -6084,13 +6009,11 @@ proc(
           BREAK_SWITCH case
             blockInfo .blockId
               BreakType .SWITCH
-            context findBreakableBlock =:: switchBlock?
-            switchBlock? optional.isEmpty or switchBlock? .data [] .?Switch ? ! if
+            context findBreakableBlock ! .or .?Switch ! .if
               "unexpected break-statement" sb.copyPtr op [] .pos errors appendError
               return
-            end
+            end =:: switchBlock
             context [] .reachable ! if return end
-            switchBlock? .data .Switch =:: switchBlock
             switchBlock [] .endLabelId NO_LABEL == if
               context nextLabelId switchBlock .endLabelId=
               switchBlock [] .regData switchBlock [] .endRegsOffset slice.tail context rememberRegisters
@@ -6115,13 +6038,12 @@ proc(
       BlockEnd .case
         .blockType switch
           ELSE case
-            context [] .openBlocks list.peek =:: ifBlock?
-            ifBlock? optional.isEmpty or ifBlock? .data [] .?If ? ! if
+            context [] .openBlocks list.peek ! .or .?If ? ! if
               "unexpected end of if block" sb.copyPtr op [] .pos errors appendError
               return
             end
             context [] .openBlocks
-              list.pop .If =:: ifBlock
+              list.pop .?If .else ..unreachable end =:: ifBlock
             context .openBlocks=
             ifBlock .endLabelId NO_LABEL != if ## jump to end reachable
               ## restoreRegisters
@@ -6137,13 +6059,12 @@ proc(
             ifBlock .regData .data mem.free
             return
           WHILE case
-            context [] .openBlocks list.peek =:: whileBlock?
-            whileBlock? optional.isEmpty or whileBlock? .data [] .?While ? ! if
+            context [] .openBlocks list.peek ! .or .?While ? ! if
               "unexpected end of while block" sb.copyPtr op [] .pos errors appendError
               return
             end
             context [] .openBlocks
-              list.pop .While =:: whileBlock
+              list.pop .?While .else ..unreachable end =:: whileBlock
             context .openBlocks=
             context [] .reachable if
               whileBlock .regData
@@ -6168,13 +6089,12 @@ proc(
             whileBlock .regData .data mem.free
           return
           AND OR case
-            context [] .openBlocks list.peek =:: andOrBlock?
-            andOrBlock? optional.isEmpty or andOrBlock? .data [] .?AndOr ? ! if
+            context [] .openBlocks list.peek ! .or  .?AndOr ? ! if
               "unexpected end of and/or block" sb.copyPtr op [] .pos errors appendError
               return
             end
             context [] .openBlocks
-              list.pop .AndOr =:: andOrBlock
+              list.pop .?AndOr .else ..unreachable end =:: andOrBlock
             context .openBlocks=
             andOrBlock .endLabelId NO_LABEL != if ## end of loop reachable
               ## restoreRegisters
@@ -6190,13 +6110,12 @@ proc(
             andOrBlock .regData .data mem.free
             return
           SWITCH case
-            context [] .openBlocks list.peek =:: switchBlock?
-            switchBlock? optional.isEmpty or switchBlock? .data [] .?Switch ? ! if
+            context [] .openBlocks list.peek ! .or .?Switch ? ! if
               "unexpected end of switch block" sb.copyPtr op [] .pos errors appendError
               return
             end
             context [] .openBlocks
-              list.pop .Switch =:: switchBlock
+              list.pop .?Switch .else ..unreachable end =:: switchBlock
             context .openBlocks=
             switchBlock .endLabelId NO_LABEL != if ## jump to end reachable
               ## restoreRegisters
@@ -6216,13 +6135,12 @@ proc(
             context [] .procTail list.clear context .procTail=
             Atomic .EndProc list.append return
           INLINE_PROCEDURE case
-            context [] .openBlocks list.peek =:: procBlock?
-            procBlock? optional.isEmpty or procBlock? .data [] .?InlineProc ? ! if
+            context [] .openBlocks list.peek ! .or .?InlineProc ? ! if
               "unexpected end of inline procedure block" sb.copyPtr op [] .pos errors appendError
               return
             end
             context [] .openBlocks
-              list.pop .InlineProc =:: procBlock
+              list.pop .?InlineProc .else ..unreachable end =:: procBlock
             context .openBlocks=
             procBlock .endLabelId NO_LABEL != if ## jump to end reachable
               ## TODO? merge branches if neccessary
@@ -6255,17 +6173,17 @@ proc(
         ## TODO! clear cached values for mutable pointer arguments
         argData context .stack [] .length RegisterRestoreMode .MERGE_FALLTHROUGH op [] .pos context restoreRegisters
         asm.OpType .CALL
-          op [] .val .?CallPtr ? if
+          op [] .val .?CallPtr .if
             "unimplemented" ..panic ## TODO use call pointer
-          else
-            program [] .procedures op [] .val .Call .procId i64 cast @[] .labelId []
-              op [] .val .Call .implementationId
+          else .?Call ._if =:: callOp
+            program [] .procedures callOp .procId i64 cast @[] .labelId []
+              callOp .implementationId
             asm.GlobalLabel new asm.Operand .globalLabel
-          end
+          else ..unreachable end
         context appendOp1
         ## TODO? compute new stack size in computeArgumentLocations
-        procType typeContext types.getProcIn .data .length =:: inCount
-        procType typeContext types.getProcOut .data =:: outTypes
+        procType typeContext types.getProcIn .if .length else 0 end =:: inCount
+        procType typeContext types.getProcOut .else "proc-out" ..panic end =:: outTypes
         outTypes .length =:: outCount
         retData context .stack [] .length inCount - outCount + RegisterRestoreMode .RESET op [] .pos context restoreRegisters
         ## update stack-type of return values
@@ -6277,7 +6195,7 @@ proc(
         return
       Return case
         ## TODO? procOut or procRet
-        op [] .dataType typeContext types.getProcOut .data =:: retTypes
+        op [] .dataType typeContext types.getProcOut .else "proc-out" ..panic end =:: retTypes
         RegisterState MAX_DATA_REGISTERS array : regBuffer
         ## computeReturnLocations
           retTypes
@@ -6316,16 +6234,13 @@ proc(
         asm.OpType .RET context appendOp0
         false context .reachable=
         return
-      InlineReturn case
-        op [] .val .InlineReturn
+      InlineReturn .case
           BreakType .INLINE
-        context findBreakableBlock =:: procBlock?
-        procBlock? optional.isEmpty or procBlock? .data [] .?InlineProc ? ! if
+        context findBreakableBlock ! .or .?InlineProc ! .if
           "unexpected inline return-statement" sb.copyPtr op [] .pos errors appendError
           return
-        end
+        end =:: procBlock
         context [] .reachable ! if return end
-        procBlock? .data .InlineProc =:: procBlock
         procBlock [] .endLabelId NO_LABEL == if
           context nextLabelId procBlock .endLabelId=
           ## procBlock [] .regData procBlock [] .endRegsOffset slice.tail context rememberRegisters
@@ -6366,20 +6281,16 @@ proc(
         context .procTail=
         false context .reachable=
         return
-      RuntimeAssert case
-        ValType .I8 CheckValue .value op [] .pos context popValue =:: srcValue?
-        srcValue? optional.isEmpty if
+      RuntimeAssert .case =:: assertOp
+        ValType .I8 CheckValue .value op [] .pos context popValue .else
           "stack underflow in assert-condition" sb.copyPtr op [] .pos errors appendError
           return
-        end
+        end =:: srcValue
         context nextLabelId =:: targetLabelId
-        srcValue? .data =:: srcValue
         asm.OpType .JMPIF
           asm.CompareType .Z asm.Operand .cmpType
           srcValue .location switch
-            register case
-                srcValue .location .register asm.Operand .register
-              break
+            register .case asm.Operand .register break
             memory case ## TODO is this the right offset
                 context [] .stack .length i32 cast.u 1 + asm.Operand .stackData
               break
@@ -6392,14 +6303,14 @@ proc(
             targetLabelId asm.Operand .localLabel
           context appendOp1
           op [] Atomic .DebugStartOp list.append
-          Type .Undefined op .val [] .RuntimeAssert constContext newStringConst context newPtrConstant =:: strId
+          Type .Undefined assertOp constContext newStringConst context newPtrConstant =:: strId
           asm.OpType .MOVE
             0 AMD64.getIntArgumentRegister ValType .PTR setRegType asm.Operand .register
             strId asm.Operand .constPtr
           context appendOp2
           asm.OpType .MOVE
             1 AMD64.getIntArgumentRegister asm.Operand .register
-            op .val [] .RuntimeAssert .length i64 cast.u asm.Operand .constInt
+            assertOp .length i64 cast.u asm.Operand .constInt
           context appendOp2
           ## TODO? add argument for pointer to file position ( char8 ptr.raw : nameData i64 : nameLen i32 : line i32 : linePos )
           RuntimeErrorType .AssertFail Atomic .Error list.append
@@ -6421,18 +6332,11 @@ proc(
                 list.pop =:: popped
                 popped .location switch
                   memory case break ## nothing to do
-                  register case
-                    popped .location .register context resetRegisterById
+                  register registerLow registerHi .case context resetRegisterById
                     break
-                  registerLow case
-                    popped .location .registerLow context resetRegisterById
-                    break
-                  registerHi case
-                    popped .location .registerHi context resetRegisterById
-                    break
-                  registers case
-                    popped .location .registers .hi context resetRegisterById
-                    popped .location .registers .low context resetRegisterById
+                  registers .case =:: registers
+                    registers .hi context resetRegisterById
+                    registers .low context resetRegisterById
                     break
                 end
               end
@@ -6449,12 +6353,12 @@ proc(
             ## copy value on stack
             context [] .stack
               offset
-            list.at .data [] =:: copied
+            [] =:: copied
             copied .valType opIndex context nextRegister =:: targetRegister
             ## TODO handle case where copied value is no register
             asm.OpType .MOVE
               targetRegister asm.Operand .register
-              copied .location .register asm.Operand .register
+              copied .location .?register .else "expected register" ..panic end asm.Operand .register
             context appendOp2
             ## TODO remember that copied register holds value of old register, use old register to get value until:
             ##  a) register changes
@@ -6523,11 +6427,11 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
   value switch
-    Int case
+    Int .case =:: intVal
       asm.OpType .DATA ## TODO? create helper function for const-int-data
         constType typeContext toValType =:: eltVal
         eltVal asm.Operand .valType
-        value .Int eltVal .F32 if
+        intVal eltVal .F32 if
           f32 cast asm.Operand .constF32
         else eltVal .F64 _if
           f64 cast asm.Operand .constF64
@@ -6536,44 +6440,43 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
         end
       context appendOp2
       return
-    Char case
+    Char .case =:: charVal
       asm.OpType .DATA
         constType typeContext toValType asm.Operand .valType
-        value .Char i64 cast.u asm.Operand .constInt
+        charVal i64 cast.u asm.Operand .constInt
       context appendOp2
       return
-    Bool case
+    Bool .case =:: boolVal
       asm.OpType .DATA
         constType typeContext toValType asm.Operand .valType
-        value .Bool ?1 i64 cast.u asm.Operand .constInt
+        boolVal ?1 i64 cast.u asm.Operand .constInt
       context appendOp2
       return
-    Float case
+    Float .case =:: floatVal
       constType typeContext toValType =:: eltVal
       asm.OpType .DATA
         eltVal asm.Operand .valType
-        value .Float eltVal .F32 if f32 cast asm.Operand .constF32 else asm.Operand .constF64 end
+        floatVal eltVal .F32 if f32 cast asm.Operand .constF32 else asm.Operand .constF64 end
       context appendOp2
       return
-    Array8 case
-      value .Array8 ValType .I8 context appendPrimitiveArray
+    Array8 .case ValType .I8 context appendPrimitiveArray
       asm.OpType .DATA ## zero-terminate strings for convenient interaction with C
         ValType .I8 asm.Operand .valType
         0 asm.Operand .constInt
       context appendOp2
     return
-    Array16 case value .Array16 ValType .I16 context appendPrimitiveArray return
-    Array32 case value .Array32 ValType .I32 context appendPrimitiveArray return
-    Array64 case value .Array64 ValType .I64 context appendPrimitiveArray return
-    Array case
+    Array16 .case ValType .I16 context appendPrimitiveArray return
+    Array32 .case ValType .I32 context appendPrimitiveArray return
+    Array64 .case ValType .I64 context appendPrimitiveArray return
+    Array .case =:: arrVal
       constType typeContext types.isPointer if
         ## TODO ensure that creating of new pointer-constants does not interferat with iterating over existing constants
         "Codegen: pointer constants are currently not implemented" ..panic
       end
       constType typeContext types.isArray if
         constType typeContext types.getBaseType =:: eltType
-        eltType typeContext types.strideOf .Fixed eltType typeContext types.sizeOf .Fixed - =:: tailPadding
-        value .Array for =:: elt
+        eltType typeContext types.strideOf typeSizeAsInt eltType typeContext types.sizeOf typeSizeAsInt - =:: tailPadding
+        arrVal for =:: elt
           eltType elt context appendConstantData
           tailPadding 0 > if ## TODO? use align (? align with zeros) instruction instead of inserting bytes directly
             asm.OpType .PADDING_BYTES
@@ -6584,11 +6487,11 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
         return
       else constType typeContext types.isTuple _if
         constType typeContext types.compositeElts =:: eltTypes
-        value .Array =:: elts
+        arrVal =:: elts
         0:i64 =:: mut: offset
         0:i32 while $ iSize cast.u elts .length u< do =:: i
           eltTypes i [] =:: eltType
-          constType i typeContext types.tupleElementOffset .data =:: eltOffset
+          constType i typeContext types.tupleElementOffset .else 0 end =:: eltOffset
           offset eltOffset <= "offset <= eltOffset" assert
           offset eltOffset < if
             asm.OpType .PADDING_BYTES
@@ -6598,7 +6501,7 @@ proc( Atomic list Type : constType ConstValue : value CompilerContext ptr.mut : 
           end
           eltType elts i [] context appendConstantData
           offset
-            eltType typeContext types.sizeOf .Fixed +
+            eltType typeContext types.sizeOf typeSizeAsInt +
           offset=
         finally i 1 + end ..drop
         return
@@ -6690,8 +6593,8 @@ proc( io.FILE : target io.FILE optional : intermediateTarget? ProgramContext ptr
       context appendOp1
       constInfo .constType constInfo .constValue context appendConstantData
     end
-    intermediateTarget? optional.hasData if
-      $ program intermediateTarget? .data printOps
+    intermediateTarget? .if =:: intermediateTarget
+      $ program intermediateTarget printOps
     end
     4096 sb.create
       $1 program AMD64.buildProgram
