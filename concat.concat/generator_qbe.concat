@@ -4518,7 +4518,7 @@ proc(
             ## TODO merge branches if neccessary
           return
         ELSE case
-          context [] .openBlocks list.pop .?If .else
+          context [] .openBlocks list.pop .and .?If .else
             "expected if-block" ..panic
           end =:: ifBlock
           context .openBlocks=
@@ -4572,7 +4572,7 @@ proc(
           newSb return
         SWITCH case
           context [] .openBlocks
-            list.pop .?Switch .else
+            list.pop .and .?Switch .else
               "expected switch-block" ..panic
             end =:: switchBlock
           context .openBlocks=
@@ -4614,7 +4614,7 @@ proc(
           newSb return
         WHILE case
           context [] .openBlocks
-            list.pop .?While .else
+            list.pop .and .?While .else
               "expected while-block" ..panic
             end =:: whileBlock
           context .openBlocks=
@@ -4694,7 +4694,7 @@ proc(
           newSb return
         AND OR case
           context [] .openBlocks
-            list.pop .?AndOr .else
+            list.pop .and .?AndOr .else
               "expected and-or-block" ..panic
             end =:: mut: andOrBlock
           context .openBlocks=

@@ -947,7 +947,7 @@ namespace: id
       true return
     end
     context [] .prevNamespaces
-      list.pop context .typeContext  .labelContext .namespaceInfo=
+      list.removeLast context .typeContext  .labelContext .namespaceInfo=
     context .prevNamespaces=
     false
   end

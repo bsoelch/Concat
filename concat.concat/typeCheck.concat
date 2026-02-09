@@ -275,7 +275,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
     return
   end
   state [] .stateStack
-    list.pop =:: prevState
+    list.removeLast =:: prevState
   state .stateStack=
   ## TODO? error messages for open blocks/unhandled operations
   state [] .openBlocks
@@ -881,7 +881,7 @@ proc(
   end
   while stackElements .length 0:iSize u> do
     stackElements
-      list.pop =:: mut: elt
+      list.removeLast =:: mut: elt
     stackElements=
     clearConst if
       ConstValue .None elt@ .value=

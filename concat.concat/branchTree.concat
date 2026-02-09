@@ -337,15 +337,15 @@ namespace: branchTree
           tree branchTree.pop .data [] list.append
       end
       rotateLeft if
-        list.pop =:: lowValue
+        list.removeLast =:: lowValue
         $ .length for ..drop
-          list.pop tree >$ branchTree.push
+          list.removeLast tree >$ branchTree.push
         end
         tree lowValue branchTree.push
       else
         tree $1 0 [] branchTree.push
         $ .length 1:iSize - for ..drop
-          list.pop tree >$ branchTree.push
+          list.removeLast tree >$ branchTree.push
         end
       end
     list.free ..drop

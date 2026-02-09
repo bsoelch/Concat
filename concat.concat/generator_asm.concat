@@ -4218,7 +4218,7 @@ proc(
     ops StackValue optional.empty return
   end
   context [] .stack
-    list.pop =:: popped
+    list.removeLast =:: popped
   context .stack=
   argType .?value .and popped .valType != end or
       argType .?valueOrReference .and popped .valType != and popped .valType .REFERENCE ! if
@@ -6043,7 +6043,7 @@ proc(
               return
             end
             context [] .openBlocks
-              list.pop .?If .else ..unreachable end =:: ifBlock
+              list.pop .and .?If .else ..unreachable end =:: ifBlock
             context .openBlocks=
             ifBlock .endLabelId NO_LABEL != if ## jump to end reachable
               ## restoreRegisters
@@ -6064,7 +6064,7 @@ proc(
               return
             end
             context [] .openBlocks
-              list.pop .?While .else ..unreachable end =:: whileBlock
+              list.pop .and .?While .else ..unreachable end =:: whileBlock
             context .openBlocks=
             context [] .reachable if
               whileBlock .regData
@@ -6094,7 +6094,7 @@ proc(
               return
             end
             context [] .openBlocks
-              list.pop .?AndOr .else ..unreachable end =:: andOrBlock
+              list.pop .and .?AndOr .else ..unreachable end =:: andOrBlock
             context .openBlocks=
             andOrBlock .endLabelId NO_LABEL != if ## end of loop reachable
               ## restoreRegisters
@@ -6115,7 +6115,7 @@ proc(
               return
             end
             context [] .openBlocks
-              list.pop .?Switch .else ..unreachable end =:: switchBlock
+              list.pop .and .?Switch .else ..unreachable end =:: switchBlock
             context .openBlocks=
             switchBlock .endLabelId NO_LABEL != if ## jump to end reachable
               ## restoreRegisters
@@ -6140,7 +6140,7 @@ proc(
               return
             end
             context [] .openBlocks
-              list.pop .?InlineProc .else ..unreachable end =:: procBlock
+              list.pop .and .?InlineProc .else ..unreachable end =:: procBlock
             context .openBlocks=
             procBlock .endLabelId NO_LABEL != if ## jump to end reachable
               ## TODO? merge branches if neccessary
@@ -6329,8 +6329,7 @@ proc(
             end
             context [] .stack
               count for ..drop
-                list.pop =:: popped
-                popped .location switch
+                list.removeLast .location switch
                   memory case break ## nothing to do
                   register registerLow registerHi .case context resetRegisterById
                     break
@@ -6382,19 +6381,19 @@ proc(
               eltCount StackValue list.create
             end
               eltCount for ..drop
-                context [] .stack list.pop >$ context .stack=
+                context [] .stack list.removeLast >$ context .stack=
                 list.append
               end
               offset 0 > if
-                list.pop =:: lowValue
+                list.removeLast =:: lowValue
                 $ .length for ..drop
-                  list.pop context pushStackValue regOutOfSync | regOutOfSync=
+                  list.removeLast context pushStackValue regOutOfSync | regOutOfSync=
                 end
                 lowValue context pushStackValue regOutOfSync | regOutOfSync=
               else
                 $ 0 [] context pushStackValue regOutOfSync | regOutOfSync=
                 $ .length 1:iSize - for ..drop
-                  list.pop context pushStackValue regOutOfSync | regOutOfSync=
+                  list.removeLast context pushStackValue regOutOfSync | regOutOfSync=
                 end
               end
             list.free ..drop

@@ -294,7 +294,7 @@ proc(
     BlockInfo optional.empty return
   end
   state [] .openBlocks
-    list.pop =:: closed
+    list.removeLast =:: closed
   state .openBlocks=
   closed .hasScope if
     closed
@@ -1432,7 +1432,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
                 "unexpected end of procedure" sb.copyPtr fileState [] .wordStart errors appendError
                 return
               end
-              list.pop =:: currentProcId
+              list.removeLast =:: currentProcId
             state .currentProcs=
             progContext [] .procedures
               currentProcId i64 cast list.at .data
@@ -1606,7 +1606,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               "unexpected end of procedure" sb.copyPtr fileState [] .wordStart errors appendError
               return
             end
-            list.pop =:: withProcId
+            list.removeLast =:: withProcId
           state .currentProcs=
           progContext [] .procedures
             withProcId i64 cast list.at .data

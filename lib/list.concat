@@ -444,6 +444,13 @@ namespace: list
 
   proc(
     type : auto: T
+    T list
+    T
+  -> T list ) =>: export: push
+    append return
+  end
+  proc(
+    type : auto: T
     T list : elts
   -> T ptr.mut optional ) =>: export: peek
     elts .length 0:iSize == if
@@ -453,17 +460,22 @@ namespace: list
   end
   proc(
     type : auto: T
-    T list
-    T
-  -> T list ) =>: export: push
-    append return
+    T list : elts
+  -> T list T optional ) =>: export: pop
+    elts .length 0:iSize == if
+      elts T optional.empty return
+    end
+    elts
+      $ .length 1:iSize - >$ .length=
+      $ .data $1 .length [] optional.wrap
+    return
   end
   proc(
     type : auto: T
     T list : elts
-  -> T list T ) =>: export: pop
+  -> T list T ) =>: export: removeLast
     elts .length 0:iSize == if
-      "pop from empty list" ..panic
+      "remove last element of empty list" ..panic
     end
     elts
       $ .length 1:iSize - >$ .length=

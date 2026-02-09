@@ -97,7 +97,7 @@ namespace: interpreter
       return
     end
     context [] .stateStack
-      list.pop =:: prevState
+      list.removeLast =:: prevState
     context .stateStack=
     context [] .stackOffsets
       prevState .callStackDepth list.setLength
@@ -113,7 +113,7 @@ namespace: interpreter
       return
     end
     context [] .stateStack
-      list.pop =:: prevState
+      list.removeLast =:: prevState
     context .stateStack=
     context [] .stackOffsets
       prevState .callStackDepth list.setLength
@@ -190,10 +190,10 @@ namespace: interpreter
       true return
     end
     context [] .stack
-      list.pop =:: value
+      list.removeLast =:: value
     context .stack=
     context [] .stackInfo
-      list.pop =:: valInfo
+      list.removeLast =:: valInfo
     context .stackInfo=
     valInfo value false return
   end

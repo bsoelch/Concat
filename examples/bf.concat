@@ -54,7 +54,7 @@ proc( string : code i64 : tapeCap -> i8 ) =>: runBf_C
           continue
         else
           stack list.pop ..drop stack=
-        end       
+        end
         break
     end
   finally ip 1 + ip= end
