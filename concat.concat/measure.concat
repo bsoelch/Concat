@@ -17,7 +17,7 @@ proc(
 -> ) =>: declaredType
   prog .errors =:: errors
   prog .idContext .typeContext =:: typeContext
-  visited declared map.at ..dup optional.hasData if .data []
+  visited declared map.at .if []
     ptrLevel == if
       0 sb.create
         declared prog .idContext .typeContext sb.appendType
@@ -25,7 +25,7 @@ proc(
       pos errors appendError
     end
     return
-  else ..drop end
+  end
   visited declared ptrLevel map.put ..drop
   declared switch
     Undefined Empty PrimitiveType GenericType CType IntLiteral Align case
@@ -63,10 +63,10 @@ proc(
       types =[]
       break
     Procedure case
-      declared typeContext types.getProcIn .data for
+      declared typeContext types.getProcIn optional.unwrap for
         ptrLevel pos prog visited types declaredType
       end
-      declared typeContext types.getProcOut .data for
+      declared typeContext types.getProcOut optional.unwrap for
         ptrLevel pos prog visited types declaredType
       end
       ## don't add procedure type to list of declared types
@@ -88,7 +88,7 @@ proc(
       declared typeContext types.unwrapRefinement ptrLevel pos prog visited types declaredType
     break
   end
-  -1 visited declared map.at .data =[] ## finished declaration
+  -1 visited declared map.at optional.unwrap =[] ## finished declaration
 end
 
 proc( Operation ptr : op ProgramContext ptr.mut : prog Type i32 hashMap ptr.mut : visited Type list ptr.mut : types -> ) =>: addOpType

@@ -56,8 +56,10 @@ proc(
   program [] .procedures callInfo .procId i64 cast.u @[] =:: procInfo
   program [] .progFiles
     procInfo [] .fileId i64 cast.u
-  list.at .data =:: procFile
-  procInfo .implementation .Code =:: impl
+  @[] =:: procFile
+  procInfo .implementation .?Code .else
+    "expected code-proc" ..panic
+  end =:: impl
   callInfo .implementationId -1 == if
     impl [] .code slice.freeze
   else
@@ -101,9 +103,11 @@ proc(
   BlockId cast =:: inlineId
   labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapLabels ## TODO store in context
   BlockType .INLINE_PROCEDURE pos opBlock list.append
-  inlineId $1 list.peek .data .val .Block .blockId=
+  inlineId $1 list.peek .and .val .?Block .else
+    "expected block" ..panic
+  end .blockId=
   procOps 0 [] .dataType =:: procType
-  procType typeContext types.getProcIn .data =:: inTypes
+  procType typeContext types.getProcIn optional.unwrap =:: inTypes
   0 =:: mut: offset
   ## create tmp-variables for named arguments
   inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
@@ -125,19 +129,18 @@ proc(
       op list.append
       continue
     else op .val .?GetId ._if .labelId =:: label
-      remapLabels@ label map.get =:: newName?
-      newName? optional.hasData if newName? .data op@ .val .GetId= end
+      remapLabels@ label map.get .if op@ .val .GetId= end
     else .?SetId ._if .labelId =:: label
-      remapLabels@ label map.get =:: newName?
-      newName? optional.hasData if newName? .data op@ .val .SetId= end
+      remapLabels@ label map.get .if op@ .val .SetId= end
     else .?AtId ._if .labelId =:: label
-      remapLabels@ label map.get =:: newName?
-      newName? optional.hasData if newName? .data op@ .val .AtId= end
+      remapLabels@ label map.get .if op@ .val .AtId= end
     else ..drop end
     op context compileOp
   end
   BlockType .INLINE_PROCEDURE pos opEndBlock list.append
-  inlineId $1 list.peek .data .val .BlockEnd .blockId=
+  inlineId $1 list.peek .and .val .?BlockEnd .else
+    "expected block-end" ..panic
+  end .blockId=
   remapLabels@ map.free
 end
 
@@ -163,7 +166,7 @@ proc(
         op list.append ## nothing to change
       return
     ImplementProcedure case
-      op .dataType typeContext types.getProcIn .data =:: args
+      op .dataType typeContext types.getProcIn optional.unwrap =:: args
       args .length i32 cast.u =:: argCount
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
@@ -194,7 +197,7 @@ proc(
       newOps
         op list.append ## nothing to change
       return
-    Constant case
+    Constant .case =:: constVal
       ## TODO? smarter way to determine when to use const-reference?
       op .dataType typeContext types.referenceOnly ! if
         newOps
@@ -202,7 +205,7 @@ proc(
         return
       end
       newOps
-        op .val .Constant op .dataType op .pos program opConstReference list.append
+        constVal op .dataType op .pos program opConstReference list.append
       return
     Copy case
       op .dataType =:: baseType
@@ -298,7 +301,7 @@ proc(
         program getCallData
       else ..unreachable end =:: callData
       calledType typeContext types.getCallConvention .PTRCALL =:: isPtrCall
-      calledType typeContext types.getProcOut .data =:: outTypes
+      calledType typeContext types.getProcOut optional.unwrap =:: outTypes
       false =:: mut: hasLabel
       program [] .labelBuffer
         $ .length 0:iSize == "label buffer is empty before use" assert
@@ -427,25 +430,25 @@ proc(
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndIf
-          op@ .val .BlockEnd .jumpDistance=
+          op@ .val .?BlockEnd .else ..unreachable end .jumpDistance=
           newOps op list.append return
         SWITCH case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndSwitch
-          op@ .val .BlockEnd .jumpDistance=
+          op@ .val .?BlockEnd .else ..unreachable end .jumpDistance=
           newOps op list.append return
         WHILE case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndWhile
-          op@ .val .BlockEnd .jumpDistance=
+          op@ .val .?BlockEnd .else ..unreachable end .jumpDistance=
           newOps op list.append return
         AND OR case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndAndOr
-          op@ .val .BlockEnd .jumpDistance=
+          op@ .val .?BlockEnd .else ..unreachable end .jumpDistance=
           newOps op list.append return
         AND_IF OR_IF AND_DO OR_DO FINALLY INLINE_PROCEDURE
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
@@ -516,7 +519,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc [] .fileId context .currentFile=
     program [] .progFiles
       currentProc [] .fileId i64 cast
-    list.at .data =:: f
+    @[] =:: f
     currentProc [] .hasStaticArg if
       impl [] .implementations list.atItr for =:: currentImpl
         currentImpl .codeState [] .UNUSED if
@@ -545,14 +548,16 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   end
   ## create implementations for built-in procedure-pointers
   program [] .procedures .length for =:: procId
-    program [] .procedures procId list.at .data =:: currentProc
+    program [] .procedures procId @[] =:: currentProc
     currentProc .implementation .?BuiltIn .else ..drop
       break ## built-ins at start of procedure list
     end =:: builtInImpl
     builtInImpl [] .hasPtr ! if
       continue
     end
-    currentProc [] .labelId labelContext id.labelPos .data =:: pos
+    currentProc [] .labelId labelContext id.labelPos .else
+      "missing label position" ..panic
+    end =:: pos
     4 Operation mem.alloc 4 slice.createMutable =:: opBuffer
     opBuffer list.wrapSlice
       ## opImplementProc
