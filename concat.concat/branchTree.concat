@@ -31,7 +31,7 @@ namespace: branchTree
   proc( type : auto: T T BranchTree ptr : tree NodeId : root -> ) =>: export: checkNode
     root i32 cast =:: mut: nodeId
     while nodeId 0 >= do
-      tree [] .nodes nodeId list.at .data =:: node
+      tree [] .nodes nodeId @[] =:: node
       node [] .childCount 0 > "positive child count" assert
       node [] .parent i32 cast nodeId=
     end
@@ -71,20 +71,20 @@ namespace: branchTree
       itr .id iSize cast.u itr .tree [] .nodes .length u>= if
         itr false return
       end
-      itr itr .tree [] .nodes itr .id i32 cast list.at .data [] .childCount 0 > return
+      itr itr .tree [] .nodes itr .id i32 cast @[] .childCount [] 0 > return
     end
     proc( type : auto: T T BranchItr : itr -> T BranchItr T ptr ) =>: export: next
-      itr .tree [] .nodes itr .id i32 cast list.at .data =:: node
+      itr .tree [] .nodes itr .id i32 cast @[] =:: node
       ## return
         itr .tree node [] .parent T BranchItr new
       node .data return
     end
     proc( type : auto: T T BranchItr : itr -> T BranchItr T ptr ) =>: export: peekNext
-      itr .tree [] .nodes itr .id i32 cast list.at .data =:: node
+      itr .tree [] .nodes itr .id i32 cast @[] =:: node
       itr node .data return
     end
     proc( type : auto: T T BranchItr : itr -> T BranchItr ) =>: export: skipNext
-      itr .tree [] .nodes itr .id i32 cast list.at .data =:: node
+      itr .tree [] .nodes itr .id i32 cast @[] =:: node
       itr .tree node [] .parent T BranchItr new return
     end
   end
@@ -94,7 +94,7 @@ namespace: branchTree
     T BranchTree ptr.mut : tree
     NodeId : id
   -> ) =>: export: unlinkNode
-    tree [] .nodes id i32 cast list.at .data =:: node
+    tree [] .nodes id i32 cast @[] =:: node
     ## TODO find out if nodes with zero-child count existing is a bug
     node [] .childCount 0 > if
       node [] .childCount
@@ -105,7 +105,7 @@ namespace: branchTree
       return
     end
     tree [] .nodes .length 1:iSize - while ..dup 0:iSize iSize.sge do =:: i
-      tree [] .nodes i list.at .data [] .childCount 0 > if
+      tree [] .nodes i @[] .childCount [] 0 > if
         i break
       end
       i 1:iSize -
@@ -130,7 +130,7 @@ namespace: branchTree
     end
     tree .nodes
       root i32 cast
-    list.at .data [] .level return
+    @[] .level [] return
   end
   proc(
     type : auto: T
@@ -138,7 +138,7 @@ namespace: branchTree
   -> NodeId ) =>: export: startBranch
     tree check
     tree [] .branchHead EMPTY != if
-      tree [] .nodes tree [] .branchHead i32 cast list.at .data =:: node
+      tree [] .nodes tree [] .branchHead i32 cast @[] =:: node
       node [] .childCount
         1 +
       node .childCount=
@@ -160,7 +160,7 @@ namespace: branchTree
   -> ) =>: export: endBranch
     id iSize cast.u =:: mut: nodeId
     while nodeId tree [] .nodes .length u< do
-      tree [] .nodes nodeId list.at .data =:: node
+      tree [] .nodes nodeId @[] =:: node
       tree nodeId NodeId cast unlinkNode
       node [] .childCount 0 > if
         break
@@ -177,7 +177,7 @@ namespace: branchTree
     tree [] .branchHead =:: oldHead
       branchPoint tree .branchHead=
       branchPoint EMPTY != if
-        tree [] .nodes branchPoint i32 cast list.at .data =:: node
+        tree [] .nodes branchPoint i32 cast @[] =:: node
         node [] .childCount
           1 +
         node .childCount=
@@ -195,7 +195,7 @@ namespace: branchTree
     else
       tree [] .nodes
         tree [] .branchHead i32 cast
-      list.at .data [] .level 1 +
+      @[] .level [] 1 +
     end =:: level
     ## no change of child-count for head as head field counts as child
     value tree [] .branchHead level 1 T Node new =:: newNode
@@ -224,11 +224,11 @@ namespace: branchTree
         T ptr.mut optional.empty return
       end
     ..dup 0 > do
-      tree [] .nodes nodeId list.at .data [] .parent iSize cast.u nodeId=
+      tree [] .nodes nodeId @[] .parent [] iSize cast.u nodeId=
       1 -
     end ..drop
-    tree [] .nodes nodeId list.at
-      .data .data T ptr.mut cast
+    tree [] .nodes nodeId @[]
+      .data T ptr.mut cast
     optional.wrap return
   end
   ## returns a mutable pointer to the stack element at the given index (0-indexed from top), writing to the returned pointer will only modify the current branch
@@ -244,7 +244,7 @@ namespace: branchTree
         T ptr.mut optional.empty return
       end
     ..dup 0 > do
-      tree [] .nodes nodeId list.at .data =:: nodeData
+      tree [] .nodes nodeId @[] =:: nodeData
       nodeData [] .childCount 1 > if
         true needCopy= ## node on multiple branches
       end
@@ -252,7 +252,7 @@ namespace: branchTree
       1 -
     end ..drop
     needCopy ! and
-        tree [] .nodes nodeId list.at .data =:: node
+        tree [] .nodes nodeId @[] =:: node
         node [] .childCount 1 <= if
       node .data optional.wrap return
     end
@@ -262,7 +262,7 @@ namespace: branchTree
     tree [] .branchHead =:: oldHead
     tree [] .nodes
       tree [] .branchHead i32 cast
-    list.at .data =:: mut: currentNode
+    @[] =:: mut: currentNode
     currentNode [] =:: mut: newNode
     tree [] .nodes .length NodeId cast tree .branchHead=
     1 newNode@ .childCount=
@@ -271,9 +271,9 @@ namespace: branchTree
       newNode list.append
     tree .nodes=
     index while ..dup 0 > do 1 -
-      tree [] .nodes nodeId list.at .data currentNode=
+      tree [] .nodes nodeId @[] currentNode=
       tree [] .nodes
-        currentNode [] .parent i32 cast list.at .data []
+        currentNode [] .parent i32 cast []
       newNode=
       tree [] .nodes .length NodeId cast currentNode .parent=
       tree [] .nodes .length nodeId=
@@ -282,18 +282,18 @@ namespace: branchTree
         newNode list.append
       tree .nodes=
     end ..drop
-    tree [] .nodes nodeId list.at .data currentNode=
+    tree [] .nodes nodeId @[] currentNode=
     currentNode [] .parent EMPTY != if
       tree [] .nodes
         currentNode [] .parent i32 cast
-      list.at .data =:: parentNode
+      @[] =:: parentNode
       parentNode [] .childCount
         1 +
       parentNode .childCount=
     end
     tree oldHead endBranch ## remove old head from branch
-    tree [] .nodes nodeId list.at
-      .data .data
+    tree [] .nodes nodeId @[]
+      .data
     optional.wrap return
   end
   proc(
@@ -305,11 +305,11 @@ namespace: branchTree
     nodeId tree [] .nodes .length u>= if
       T ptr optional.empty return
     end
-    tree [] .nodes nodeId list.at .data =:: popped
+    tree [] .nodes nodeId @[] =:: popped
     popped [] .parent tree .branchHead=
     popped [] .childCount 1 > if ## popped node stays child
       tree [] .branchHead EMPTY != if
-        tree [] .nodes tree [] .branchHead i32 cast list.at .data =:: newNode
+        tree [] .nodes tree [] .branchHead i32 cast @[] =:: newNode
         newNode [] .childCount
           1 +
         newNode .childCount=
@@ -334,7 +334,7 @@ namespace: branchTree
       eltCount T list.create
     end
       eltCount for ..drop
-          tree branchTree.pop .data [] list.append
+          tree branchTree.pop optional.unwrap [] list.append
       end
       rotateLeft if
         list.removeLast =:: lowValue
@@ -385,7 +385,7 @@ namespace: branchTree
       nodeId -1 == if
         0:i32
       else
-        tree [] .nodes nodeId list.at .data =:: nodeData
+        tree [] .nodes nodeId @[] =:: nodeData
         nodeData [] .childCount
           1 -
         nodeData .childCount=
@@ -413,7 +413,7 @@ namespace: branchTree
       tree [] .branchHead EMPTY != if
         tree [] .nodes
           tree [] .branchHead i32 cast
-        list.at .data =:: newHead
+        @[] =:: newHead
         newHead [] .childCount
           1 +
         newHead .childCount=
@@ -428,7 +428,7 @@ namespace: branchTree
          branchHeads 0 [] i32 cast
        [] list.append
     tree .nodes=
-    tree [] .nodes list.peek .data =:: mut: currentNode
+    tree [] .nodes list.peek optional.unwrap =:: mut: currentNode
     1 currentNode .childCount=
     ## create mutable copy of heads
     branchHeads .length =:: headCount
@@ -437,7 +437,7 @@ namespace: branchTree
     headCount T ptr mem.alloc =:: buffer
     0 =:: mut: offset
     while
-      tree [] .nodes heads 0 [] i32 cast list.at .data =:: root
+      tree [] .nodes heads 0 [] i32 cast @[] =:: root
       root [] .parent parentId=
       root .data buffer 0 =[]
       ## store parent node before unlinking child
@@ -452,7 +452,7 @@ namespace: branchTree
       parentId heads 0 =[]
       false needMerge=
       1:i32 =:: mut: i while i iSize cast.u headCount u< do
-        tree [] .nodes heads i [] i32 cast list.at .data =:: next
+        tree [] .nodes heads i [] i32 cast @[] =:: next
         next [] .parent parentId != if
           true needMerge=
         end
@@ -473,9 +473,9 @@ namespace: branchTree
     needMerge do
       tree [] .nodes .length NodeId cast currentNode .parent=
       tree [] .nodes
-         parentNode .data list.append
+         parentNode .else "parent is missing" ..panic end list.append
       tree .nodes=
-      tree [] .nodes list.peek .data currentNode=
+      tree [] .nodes list.peek optional.unwrap currentNode=
       1 currentNode .childCount=
     end
     ## cleanup

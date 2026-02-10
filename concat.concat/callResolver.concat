@@ -52,17 +52,15 @@ proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   size switch
     Dynamic case ConstValue .None return
     None case 1 ConstValue .Int return
-    Int case size .Int ConstValue .Int return
-    GenericArg case size .GenericArg ConstValue .GenericArg return
+    Int .case ConstValue .Int return
+    GenericArg .case ConstValue .GenericArg return
   end
 end
 proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
   ConstValue ..length 22:iSize == "no new constants" assert
   val switch
-    Int case
-      val .Int types.ArraySize .Int return
-    GenericArg case
-      val .GenericArg types.ArraySize .GenericArg return
+    Int .case types.ArraySize .Int return
+    GenericArg .case types.ArraySize .GenericArg return
     default ..unreachable
   end
 end
@@ -103,7 +101,7 @@ proc(
       src types.getGenericTypeId LabelId cast =:: genericId
       genericValues genericId map.at .if
         [] switch
-          Fixed Value .case .TypeId return
+          Fixed Value .case .?TypeId .else "expected type" ..panic end return
           NonEmpty case break
         end
       end
@@ -132,7 +130,7 @@ proc(
             true genericSize=
           end
           genericValues genericId map.at .if
-            [] .Fixed constAsSize
+            [] .?Fixed .else "expected fixed constant" ..panic end constAsSize
           else
             size
           end
@@ -161,7 +159,8 @@ proc(
         end
         newSize
         typeContext
-      types.newArrayType .data
+      types.newArrayType
+        .else "failed to create array-type" ..panic end
         idContext [] .arraySizeBuffer
           sizeOffset list.setLength
         idContext .arraySizeBuffer=
@@ -213,7 +212,8 @@ proc(
         Initializer case
           "generic initializers are not supported" ..panic
         default ..unreachable
-      end .data
+      end
+        .else "failed to create composite-type" ..panic end
         ## reset buffer
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
         labelBuffer [] labelOffset list.setLength labelBuffer =[]
@@ -221,8 +221,8 @@ proc(
     ## FIXME: implement replace-generic for union-elements
     UnionElement case "unimplemented: generic union-element check" ..panic
     Procedure case
-      src typeContext types.getProcIn .data =:: inTypes
-      src typeContext types.getProcOut .data =:: outTypes
+      src typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
+      src typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
       src typeContext types.getProcLabels =:: oldLabels
       0:iSize =:: mut: labelIndex
       typeBuffer [] .length =:: typeOffset
@@ -264,7 +264,8 @@ proc(
         labelBuffer [] list.asSlice labelOffset slice.tail
         src typeContext types.getCallConvention
         typeContext
-      types.newProcedure .data
+      types.newProcedure
+        .else "failed to create procedure-type" ..panic end
         ## reset buffers
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
         labelBuffer [] labelOffset list.setLength labelBuffer =[]
@@ -277,8 +278,7 @@ proc(
         argBuffer []
           ConstValue ..length 22:iSize == "no new constants" assert
           arg switch
-            TypeId case
-              arg .TypeId
+            TypeId .case
                 typeBuffer labelBuffer genericValues flags pos typeChecker
               replaceGenerics ConstValue .TypeId
               break
@@ -354,10 +354,8 @@ proc(
   target switch
     GenericType case
       target types.getGenericTypeId LabelId cast =:: genericId
-      genericValues genericId map.at =:: oldValue?
-      oldValue? optional.hasData if
-        oldValue? .data [] =:: oldValue
-        oldValue switch
+      genericValues genericId map.get .if
+        switch
           NonEmpty case
             src typeContext types.isEmpty if
               true return
@@ -543,8 +541,8 @@ proc(
       end
       ## TODO? create helper funtion for matching type-array
       ## separately run for in and out arguments
-      src typeContext types.getProcIn .data =:: srcIn
-      target typeContext types.getProcIn .data =:: targetIn
+      src typeContext types.getProcIn .else "proc without in" ..panic end =:: srcIn
+      target typeContext types.getProcIn .else "proc without in" ..panic end =:: targetIn
       targetIn .length for =:: i
         i srcIn .length u< if
           srcIn i []
@@ -562,8 +560,8 @@ proc(
           true return
         end
       end
-      src typeContext types.getProcOut .data =:: srcOut
-      target typeContext types.getProcOut .data =:: targetOut
+      src typeContext types.getProcOut .else "proc without out" ..panic end =:: srcOut
+      target typeContext types.getProcOut .else "proc without out" ..panic end =:: targetOut
       targetOut .length for =:: i
         i srcOut .length u< if
           srcOut i []
@@ -643,9 +641,9 @@ proc(
 -> CallSignatureInfo ptr.mut ) =>: copyElement
   elts [] ## TODO? add procedure for element copy to list
     $ .length 1:iSize + list.ensureCap
-    $ index list.at .data list.appendP
+    $ index @[] list.appendP
   elts =[]
-  elts [] list.peek .data =:: newVal
+  elts [] list.peek optional.unwrap =:: newVal
     newVal [] .paramInfo list.copy newVal .paramInfo=
     newVal [] .genericValues map.copy newVal .genericValues=
   newVal return
@@ -797,19 +795,19 @@ proc(
   typeContext .labelContext =:: labelContext
   idContext .constContext =:: constContext
   procedureIds .length 0:iSize == if
-    errorMessage optional.hasData if
-      errorMessage .data []
+    errorMessage .if =:: messageData
+      messageData []
         "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
-      errorMessage .data =[]
+      messageData =[]
     end
     ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
   MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
   procedureIds for =:: procId
-    progContext [] .procedures procId i64 cast list.at .data =:: procInfo
+    progContext [] .procedures procId i64 cast @[] =:: procInfo
     procInfo [] .procType
-      typeContext types.getProcIn $ ? if .data .length else ..drop 0:iSize end
+      typeContext types.getProcIn .if .length else 0:iSize end
     =:: argCount
     maxArgs argCount iSize.max maxArgs=
     ## TODO! do not create a map for every single procedure
@@ -831,21 +829,21 @@ proc(
   end
   0:iSize while $ stackValues .length u<= do =:: stackIndex
     stackIndex stackValues .length u< if
-      stackValues stackIndex slice.at .data [] .valType
+      stackValues stackIndex @[] .valType []
     else
       ## add dummy type below stack to ensure auto-arguments get matched
       Type .Undefined
     end =:: stackType
     0:iSize while $ currentSignatures .length u< do =:: i
-      currentSignatures i list.at .data =:: mut: current
+      currentSignatures i @[] =:: mut: current
       current [] .argsMatch ! or current [] .needsParam ! if
         ## don't continue checking if first arguments were no match / all params matched
         i 1:iSize + continue
       end
       progContext [] .procedures
-        current [] .procId i64 cast list.at .data
-      [] .procType =:: procType
-      procType typeContext types.getProcIn .data =:: inTypes
+        current [] .procId i64 cast @[]
+      .procType [] =:: procType
+      procType typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
       inTypes .length 1:iSize -
         current [] .paramInfo .length -
       i32 cast.u =:: mut: paramIndex
@@ -858,9 +856,10 @@ proc(
               paramType
                 typeContext types.unwrapNamed
               types.getGenericTypeId LabelId cast =:: paramId
-              current .genericValues paramId map.at =:: typeVal?
-              typeVal? optional.hasData and typeVal? .data [] typeContext isEmptyConstant
-            end and stackType typeContext types.isEmpty ! if
+              current .genericValues paramId map.at .and
+                [] typeContext isEmptyConstant
+              end
+            and stackType typeContext types.isEmpty ! if
           ## empty parameter, non-empty argument
           current [] .paramInfo
             ## ParameterInfo
@@ -873,8 +872,7 @@ proc(
             current .genericValues paramLabel map.at .and =:: autoValue
             autoValue [] .?NonEmpty ? ! _if
           autoValue [] switch
-            Fixed case autoValue [] .Fixed break
-            Value case autoValue [] .Value break
+            Fixed Value .case break
             NonEmpty case ..unreachable
           end =:: value
           paramType typeContext types.isSetOrRefinementType and
@@ -928,7 +926,7 @@ proc(
         ## add copy of signature with generic type set to empty
         i currentSignatures@ copyElement =:: copySig
         ## update current pointer after changing list
-        currentSignatures i list.at .data current=
+        currentSignatures i @[] current=
         copySig .genericValues
           paramId
           Type .Empty ConstValue .TypeId GenericArg .Fixed
@@ -1041,15 +1039,15 @@ proc(
     stackIndex 1:iSize +
   end ..drop
   currentSignatures cmpSignatures@ progContext list.sort
-  currentSignatures 0 list.at .data =:: candidate
+  currentSignatures 0 @[] =:: candidate
   candidate [] .needsParam or candidate [] .argsMatch ! if
     ## no match
-    errorMessage optional.hasData if
-      errorMessage .data []
+    errorMessage .if =:: messageData
+      messageData []
         "no matching signature for arguments ( " sb.appendS
         stackValues .length maxArgs u> if "... " sb.appendS end
         stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
-          stackValues i slice.at .data =:: val
+          stackValues i @[] =:: val
           val [] .valType typeContext sb.appendType
           val [] .value .?None ? ! if
             " { " sb.appendS
@@ -1062,9 +1060,9 @@ proc(
         ")\ncandidates:\n" sb.appendS
         MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
         maxSignatures for =:: i
-          currentSignatures i list.at .data =:: mut: current
+          currentSignatures i @[] =:: mut: current
           progContext [] .procedures
-            current [] .procId i64 cast list.at .data
+            current [] .procId i64 cast @[]
           =:: procInfo
           "  * " sb.appendS
           procInfo [] .procType typeContext sb.appendType
@@ -1073,7 +1071,7 @@ proc(
           '\n' sb.appendC
         end
         currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
-      errorMessage .data =[]
+      messageData =[]
     end
     currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
@@ -1081,16 +1079,16 @@ proc(
   currentSignatures .length 1:iSize != and
       ## cmpSignatures
         candidate []
-        currentSignatures 1 list.at .data []
+        currentSignatures 1 []
         progContext
       cmpSignatures 0 == if
     ## multiple matches
-    errorMessage optional.hasData if
-      errorMessage .data []
+    errorMessage .if =:: messageData
+      messageData []
         "multiple matching signatures for arguments ( " sb.appendS
         stackValues .length maxArgs u> if "... " sb.appendS end
         stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
-          stackValues i slice.at .data =:: val
+          stackValues i @[] =:: val
           val [] .valType typeContext sb.appendType
           val [] .value .?None ? ! if
             " { " sb.appendS
@@ -1104,9 +1102,9 @@ proc(
         true =:: mut: isEquivalent
         MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
         maxSignatures for =:: i
-          currentSignatures i list.at .data =:: mut: current
+          currentSignatures i @[] =:: mut: current
           progContext [] .procedures
-            current [] .procId i64 cast list.at .data
+            current [] .procId i64 cast @[]
           =:: procInfo
           isEquivalent and
               candidate [] current [] progContext cmpSignatures 0 != if
@@ -1120,13 +1118,13 @@ proc(
           '\n' sb.appendC
         end
         currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
-      errorMessage .data =[]
+      messageData =[]
     end
     currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
   end
   progContext [] .procedures
-    candidate [] .procId i32 cast list.at .data
+    candidate [] .procId i32 cast @[]
   =:: procInfo
   candidate [] .procId =:: calledProcId
   ## TODO? nested alias
@@ -1173,14 +1171,14 @@ proc(
   eltCount LabelId list.create =:: mut: labelBuffer
   constArgs .length 0:iSize != and
       progContext [] .procedures
-        baseProcId i64 cast list.at .data
+        baseProcId i64 cast @[]
       =:: baseProcInfo
       baseProcInfo .implementation =:: implData
       ## TODO support alias for generic procedures
       implData .?Code .if .implementations =:: impls
     false =:: mut: isMatch
     impls [] .length for =:: i
-      impls [] i list.at .data =:: impl
+      impls [] i @[] =:: impl
       impl [] .staticArgs .length constArgs .length == "correct number of static arguments" assert
       true isMatch=
       constArgs .length for =:: j
@@ -1205,7 +1203,7 @@ proc(
           0 VariableInfo list.create
           Operation slice.emptyMutable
           pos
-          implData .Code [] .expansionLevel 1:i16 +
+          implData .?Code .else "expected code-impl" ..panic end [] .expansionLevel 1:i16 +
           ## replaceGenerics
             baseProcInfo [] .procType
             typeBuffer@
@@ -1233,10 +1231,11 @@ proc(
         false needArg=
       end
       ## convert literal types to corresponding types
-      value .?TypeId .and types.isLiteral if
+      value .?TypeId .and =:: typeVal
+          typeVal types.isLiteral if
         candidate .genericValues
           eltLabel
-          value .TypeId typeContext types.literalToType ConstValue .TypeId GenericArg .Fixed
+          typeVal typeContext types.literalToType ConstValue .TypeId GenericArg .Fixed
         map.put ..drop
       end
       constArgs
@@ -1292,7 +1291,7 @@ proc(
     labelBuffer list.asSlice
     procInfo [] .procType typeContext types.getCallConvention
     typeContext
-  types.newProcedure .data =:: calledType
+  types.newProcedure .else "failed to create procedure" ..panic end =:: calledType
   typeBuffer list.free typeBuffer=
   labelBuffer list.free labelBuffer=
   ## ProcedureCallInfo

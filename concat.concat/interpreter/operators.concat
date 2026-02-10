@@ -5,31 +5,31 @@ namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: export: constAsBool
     ConstValue ..length 22:iSize == "no new constants" assert
     a switch
-      Bool case a .Bool false return
+      Bool .case false return
       default false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: export: constAsInt ## all integer calculations are done in 64 bits
     ConstValue ..length 22:iSize == "no new constants" assert
     a switch
-      Char case a .Char i64 cast.u false return
-      Int case a .Int i64 cast false return
+      Char .case i64 cast.u false return
+      Int .case i64 cast false return
       default 0:i64 true return
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: export: constAsFloat
     ConstValue ..length 22:iSize == "no new constants" assert
     a switch
-      Char case a .Char i32 cast.u f64 cast false return
-      Int case a .Int f64 cast false return
-      Float case a .Float f64 cast false return
+      Char .case i32 cast.u f64 cast false return
+      Int .case f64 cast false return
+      Float .case f64 cast false return
       default 0 f64 cast true return
     end
   end
   proc( ConstValue : a -> Type bool ) =>: export: constAsType
     ConstValue ..length 22:iSize == "no new constants" assert
     a switch
-      TypeId case a .TypeId false return
+      TypeId .case false return
       default Type .Undefined true return
     end
   end
@@ -581,8 +581,9 @@ namespace: interpreter
         k 1 == "correct number of arguments" assert
         args 0 [] .?TypeId .else
           "argument is no type" ..panic
-        end typeContext types.getUnionElementUnion .else
-          args 0 [] .TypeId
+        end =:: typeArg
+        typeArg typeContext types.getUnionElementUnion .else
+          typeArg
         end
           ConstValue .TypeId
         OperatorResult .SUCCESS return
@@ -619,8 +620,7 @@ namespace: interpreter
   -> ConstValue OperatorResult ) =>: getOrOffset
     ConstValue ..length 22:iSize == "no new constants" assert
     ptrValue switch
-      Int case
-        ptrValue .Int =:: intConst
+      Int .case =:: intConst
           isOffset if
             valueType typeContext types.strideOf switch
               Fixed .case
@@ -637,81 +637,71 @@ namespace: interpreter
             pos errors appendError
           end
           ConstValue .None OperatorResult .ARGUMENT_ERROR return
-      Array8 case
-        ptrValue .Array8 =:: arrayConst
+      Array8 .case =:: arrayConst
           isOffset if
             arrayConst offset slice.tail ConstValue .Array8
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .SUCCESS return
-      Array16 case
-        ptrValue .Array16 =:: arrayConst
+      Array16 .case =:: arrayConst
           isOffset if
             arrayConst offset slice.tail ConstValue .Array16
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .SUCCESS return
-      Array32 case
-        ptrValue .Array32 =:: arrayConst
+      Array32 .case =:: arrayConst
           isOffset if
             arrayConst offset slice.tail ConstValue .Array32
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .SUCCESS return
-      Array64 case
-        ptrValue .Array64 =:: arrayConst
+      Array64 .case =:: arrayConst
           isOffset if
             arrayConst offset slice.tail ConstValue .Array64
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .SUCCESS return
-      Array case
-        ptrValue .Array =:: arrayConst
+      Array .case =:: arrayConst
           isOffset if
             arrayConst offset slice.tail ConstValue .Array
           else
             arrayConst 0 []
           end
         OperatorResult .SUCCESS return
-      LocalValue case
+      LocalValue .case
         ## XXX? correctly handle local value ( local array ( ... ) )
-        ptrValue .LocalValue ConstValue ptr.mut cast [] OperatorResult .SUCCESS return
-      LocalArray case
-        ptrValue .LocalArray ConstValue slice.mut cast =:: arrayConst
+        ConstValue ptr.mut cast [] OperatorResult .SUCCESS return
+      LocalArray .case ConstValue slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice cast ConstValue .LocalArray
           else
-            arrayConst 0 slice.at .data LocalAddress cast ConstValue .LocalValue
+            arrayConst 0 @[] LocalAddress cast ConstValue .LocalValue
           end
         OperatorResult .SUCCESS return
-      LocalArray8 case
-        ptrValue .LocalArray8 i8 slice.mut cast =:: arrayConst
+      LocalArray8 .case i8 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice8 cast ConstValue .LocalArray8
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end
         OperatorResult .SUCCESS return
-      LocalArray16 case
-        ptrValue .LocalArray16 i16 slice.mut cast =:: arrayConst
+      LocalArray16 .case i16 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice16 cast ConstValue .LocalArray16
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end OperatorResult .SUCCESS return
-      LocalArray32 case
-        ptrValue .LocalArray32 i32 slice.mut cast =:: arrayConst
+      LocalArray32 .case i32 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice32 cast ConstValue .LocalArray32
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end OperatorResult .SUCCESS return
-      LocalArray64 case
-        ptrValue .LocalArray64 i64 slice.mut cast =:: arrayConst
+      LocalArray64 .case i64 slice.mut cast =:: arrayConst
           isOffset if
             arrayConst offset slice.tail LocalSlice64 cast ConstValue .LocalArray64
           else
@@ -734,8 +724,8 @@ namespace: interpreter
     localArray T slice.mut cast =:: arrayData
     ConstValue ..length 22:iSize == "no new constants" assert
     src switch
-      Char case src .Char i64 cast.u break
-      Int case src .Int break
+      Char .case i64 cast.u break
+      Int .case break
       ## XXX? support floats?
       default false return
     end =:: intValue
@@ -771,10 +761,10 @@ namespace: interpreter
   -> OperatorResult ) =>: setPointer
     ConstValue ..length 22:iSize == "no new constants" assert
     targetValue switch
-      LocalValue case
-        newValue targetValue .LocalValue ConstValue ptr.raw.mut cast =[]
+      LocalValue .case =:: localValue
+        newValue localValue ConstValue ptr.raw.mut cast =[]
         OperatorResult .SUCCESS return
-      LocalArray case
+      LocalArray .case =:: localArray
         newValue .?Array .else .?LocalArray ._if
           ConstValue slice.mut cast slice.freeze
         else ..drop
@@ -783,9 +773,9 @@ namespace: interpreter
           pos errors appendError
           OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
-        targetValue .LocalArray srcArray pos errors setLocalArray return
-      LocalArray8 case
-        newValue targetValue .LocalArray8 i8 primitiveArrayTrySetElement if
+        localArray srcArray pos errors setLocalArray return
+      LocalArray8 .case =:: localArray
+        newValue localArray i8 primitiveArrayTrySetElement if
           OperatorResult .SUCCESS return
         end
         newValue .?Array8 .else .?LocalArray8 ._if
@@ -796,9 +786,9 @@ namespace: interpreter
           pos errors appendError
           OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
-        targetValue .LocalArray8 srcArray pos errors setLocalArray return
-      LocalArray16 case
-        newValue targetValue .LocalArray16 i16 primitiveArrayTrySetElement if
+        localArray srcArray pos errors setLocalArray return
+      LocalArray16 .case =:: localArray
+        newValue localArray i16 primitiveArrayTrySetElement if
           OperatorResult .SUCCESS return
         end
         newValue .?Array16 .else .?LocalArray16 ._if
@@ -809,9 +799,9 @@ namespace: interpreter
           pos errors appendError
           OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
-        targetValue .LocalArray16 srcArray pos errors setLocalArray return
-      LocalArray32 case
-        newValue targetValue .LocalArray32 i32 primitiveArrayTrySetElement if
+        localArray srcArray pos errors setLocalArray return
+      LocalArray32 .case =:: localArray
+        newValue localArray i32 primitiveArrayTrySetElement if
           OperatorResult .SUCCESS return
         end
         newValue .?Array32 .else .?LocalArray32 ._if
@@ -822,9 +812,9 @@ namespace: interpreter
           pos errors appendError
           OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
-        targetValue .LocalArray32 srcArray pos errors setLocalArray return
-      LocalArray64 case
-        newValue targetValue .LocalArray64 i64 primitiveArrayTrySetElement if
+        localArray srcArray pos errors setLocalArray return
+      LocalArray64 .case =:: localArray
+        newValue localArray i64 primitiveArrayTrySetElement if
           OperatorResult .SUCCESS return
         end
         newValue .?Array64 .else .?LocalArray64 ._if
@@ -835,7 +825,7 @@ namespace: interpreter
           pos errors appendError
           OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
-        targetValue .LocalArray64 srcArray pos errors setLocalArray return
+        localArray srcArray pos errors setLocalArray return
       default
         "unexpected target for setValue, expected writable memory location got: " sb.copyPtr
           targetValue typeContext sb.appendConstant
@@ -987,44 +977,44 @@ namespace: interpreter
   -> i8 ptr.raw iSize iSize bool ) =>: constantAsRawMemory
     ConstValue ..length 22:iSize == "no new constants" assert
     src switch
-      Array8 case
-        src .Array8 .data i8 ptr.raw cast!
-        src .Array8 .length
+      Array8 .case =:: srcArray
+        srcArray .data i8 ptr.raw cast!
+        srcArray .length
         i8 ..types.stride
         false return
-      Array16 case
-        src .Array16 .data i8 ptr.raw cast!
-        src .Array16 .length
+      Array16 .case =:: srcArray
+        srcArray .data i8 ptr.raw cast!
+        srcArray .length
         i16 ..types.stride
         false return
-      Array32 case
-        src .Array32 .data i8 ptr.raw cast!
-        src .Array32 .length
+      Array32 .case =:: srcArray
+        srcArray .data i8 ptr.raw cast!
+        srcArray .length
         i32 ..types.stride
         false return
-      Array64 case
-        src .Array64 .data i8 ptr.raw cast!
-        src .Array64 .length
+      Array64 .case =:: srcArray
+        srcArray .data i8 ptr.raw cast!
+        srcArray .length
         i64 ..types.stride
         false return
-      LocalArray8 case
-        src .LocalArray8 .data i8 ptr.raw cast!
-        src .LocalArray8 .length
+      LocalArray8 .case =:: srcArray
+        srcArray .data i8 ptr.raw cast!
+        srcArray .length
         i8 ..types.stride
         false return
-      LocalArray16 case
-        src .LocalArray16 .data i8 ptr.raw cast!
-        src .LocalArray16 .length
+      LocalArray16 .case =:: srcArray
+        srcArray .data i8 ptr.raw cast!
+        srcArray .length
         i16 ..types.stride
         false return
-      LocalArray32 case
-        src .LocalArray32 .data i8 ptr.raw cast!
-        src .LocalArray32 .length
+      LocalArray32 .case =:: srcArray
+        srcArray .data i8 ptr.raw cast!
+        srcArray .length
         i32 ..types.stride
         false return
-      LocalArray64 case
-        src .LocalArray64 .data i8 ptr.raw cast!
-        src .LocalArray64 .length
+      LocalArray64 .case =:: srcArray
+        srcArray .data i8 ptr.raw cast!
+        srcArray .length
         i64 ..types.stride
         false return
       default 0 i8 ptr.raw cast! 0:iSize 0:iSize true return
@@ -1035,24 +1025,24 @@ namespace: interpreter
   -> i8 ptr.raw.mut iSize iSize bool ) =>: constantAsRawMutableMemory
     ConstValue ..length 22:iSize == "no new constants" assert
     src switch
-      LocalArray8 case
-        src .LocalArray8 .data i8 ptr.raw.mut cast!
-        src .LocalArray8 .length
+      LocalArray8 .case =:: srcArray
+        srcArray .data i8 ptr.raw.mut cast!
+        srcArray .length
         i8 ..types.stride
         false return
-      LocalArray16 case
-        src .LocalArray16 .data i8 ptr.raw.mut cast!
-        src .LocalArray16 .length
+      LocalArray16 .case =:: srcArray
+        srcArray .data i8 ptr.raw.mut cast!
+        srcArray .length
         i16 ..types.stride
         false return
-      LocalArray32 case
-        src .LocalArray32 .data i8 ptr.raw.mut cast!
-        src .LocalArray32 .length
+      LocalArray32 .case =:: srcArray
+        srcArray .data i8 ptr.raw.mut cast!
+        srcArray .length
         i32 ..types.stride
         false return
-      LocalArray64 case
-        src .LocalArray64 .data i8 ptr.raw.mut cast!
-        src .LocalArray64 .length
+      LocalArray64 .case =:: srcArray
+        srcArray .data i8 ptr.raw.mut cast!
+        srcArray .length
         i64 ..types.stride
         false return
       default 0 i8 ptr.raw.mut cast! 0:iSize 0:iSize true return

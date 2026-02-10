@@ -140,12 +140,11 @@ namespace: interpreter
     false return
   end
   proc( InterpreterContext ptr.mut : context -> iSize ) =>: minStackOffset
-    context [] .stateStack .length 0:iSize != if
-      context [] .stateStack list.peek .data =:: rootState
+    context [] .stateStack list.peek .if =:: rootState
       rootState [] .stackSize rootState [] .callStackDepth
     else 0:iSize 0:iSize end =:: baseBlock =:: baseOffset
     context [] .stackOffsets .length baseBlock u> if
-      context [] .stackOffsets list.peek .data [] return
+      context [] .stackOffsets list.peek optional.unwrap [] return
     end
     baseOffset return
   end
@@ -305,7 +304,7 @@ namespace: interpreter
     else .?LocalArray8 ._if
       i8 slice.mut cast slice.freeze
         persistentCopy if
-          constContext newArray8Const .Array8
+          constContext newArray8Const .?Array8 .else ..unreachable end
         end
       string.fromBytes
       false return
@@ -560,16 +559,16 @@ namespace: interpreter
           $ [] .?LocalArray16 ? ! and $ [] .?LocalArray32 ? ! and $ [] .?LocalArray64 ? ! if
         LocalAddress cast ConstValue .LocalValue
       else [] end
-    else .?Union ? _if
+    else .?Union ._if =:: unionValue
       containerValue elementIndex constUnionElement if
         "union index (" sb.copyPtr
           elementIndex sb.appendI
           ") does not match current value (" sb.appendS
-          containerValue .Union .eltIndex sb.appendI
+          unionValue .eltIndex sb.appendI
           ")" sb.appendS
         pos errors appendError
       end
-    else
+    else ..drop
       "unexpected value for composite constant: " sb.copyPtr
         containerValue typeContext sb.appendConstant
       pos errors appendError
@@ -686,18 +685,16 @@ namespace: interpreter
     end
     ConstValue ..length 22:iSize == "no new constants" assert
     localArray switch
-      LocalArray case break
-      LocalArray8 case
-        localArray .LocalArray8 i8 slice.mut cast =:: arrayData
-        localArray .LocalArray8 .length 1:iSize == and valType typeContext types.isIntLike if
+      LocalArray .case break
+      LocalArray8 .case i8 slice.mut cast =:: arrayData
+        arrayData .length 1:iSize == and valType typeContext types.isIntLike if
           arrayData 0 [] i64 cast.u ConstValue .Int return
         end
         allocator []
           arrayData mixedArena.copyMutableSlice =:: tmpArray
         allocator =[]
         tmpArray slice.freeze constContext newArray8Const return
-      LocalArray16 case
-        localArray .LocalArray16 i16 slice.mut cast =:: arrayData
+      LocalArray16 .case i16 slice.mut cast =:: arrayData
         arrayData .length 1:iSize == and valType typeContext types.isIntLike if
           arrayData 0 [] i64 cast.u ConstValue .Int return
         end
@@ -705,8 +702,7 @@ namespace: interpreter
           arrayData mixedArena.copyMutableSlice =:: tmpArray
         allocator =[]
         tmpArray slice.freeze constContext newArray16Const return
-      LocalArray32 case
-        localArray .LocalArray32 i32 slice.mut cast =:: arrayData
+      LocalArray32 .case i32 slice.mut cast =:: arrayData
         arrayData .length 1:iSize == and valType typeContext types.isIntLike if
           arrayData 0 [] i64 cast.u ConstValue .Int return
         end
@@ -714,8 +710,7 @@ namespace: interpreter
           arrayData mixedArena.copyMutableSlice =:: tmpArray
         allocator =[]
         tmpArray slice.freeze constContext newArray32Const return
-      LocalArray64 case
-        localArray .LocalArray64 i64 slice.mut cast =:: arrayData
+      LocalArray64 .case i64 slice.mut cast =:: arrayData
         arrayData .length 1:iSize == and valType typeContext types.isIntLike if
           arrayData 0 [] ConstValue .Int return
         end
@@ -724,8 +719,7 @@ namespace: interpreter
         allocator =[]
         tmpArray slice.freeze constContext newArray64Const return
       default ..unreachable
-    end
-    localArray .LocalArray ConstValue slice.mut cast =:: dataArray
+    end ConstValue slice.mut cast =:: dataArray
     allocator []
       dataArray mixedArena.copyMutableSlice =:: tmpArray
     allocator =[]
@@ -740,7 +734,7 @@ namespace: interpreter
       end =:: eltType
       ConstValue ..length 22:iSize == "no new constants" assert
       elt switch
-        LocalValue case elt .LocalValue ConstValue ptr.mut cast [] break
+        LocalValue .case ConstValue ptr.mut cast [] break
         LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
           elt eltType allocator program copyLocalArray break
         default elt break
@@ -768,51 +762,51 @@ namespace: interpreter
     ConstValue ..length 22:iSize == "no new constants" assert
     value switch
       Array LocalArray case break
-      Array8 case
+      Array8 .case =:: arrayValue
         context [] .localMemory
-          value .Array8 mixedArena.copySlice =:: localAddress
+          arrayValue mixedArena.copySlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice8 cast ConstValue .LocalArray8
         return
-      LocalArray8 case
+      LocalArray8 .case =:: arrayValue
         context [] .localMemory
-          value .LocalArray8 i8 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
+          arrayValue i8 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice8 cast ConstValue .LocalArray8
         return
-      Array16 case
+      Array16 .case =:: arrayValue
         context [] .localMemory
-          value .Array16 mixedArena.copySlice =:: localAddress
+          arrayValue mixedArena.copySlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice16 cast ConstValue .LocalArray16
         return
-      LocalArray16 case
+      LocalArray16 .case =:: arrayValue
         context [] .localMemory
-          value .LocalArray16 i16 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
+          arrayValue i16 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice16 cast ConstValue .LocalArray16
         return
-      Array32 case
+      Array32 .case =:: arrayValue
         context [] .localMemory
-          value .Array32 mixedArena.copySlice =:: localAddress
+          arrayValue mixedArena.copySlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice32 cast ConstValue .LocalArray32
         return
-      LocalArray32 case
+      LocalArray32 .case =:: arrayValue
         context [] .localMemory
-          value .LocalArray32 i32 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
+          arrayValue i32 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice32 cast ConstValue .LocalArray32
         return
-      Array64 case
+      Array64 .case =:: arrayValue
         context [] .localMemory
-          value .Array64 mixedArena.copySlice =:: localAddress
+          arrayValue mixedArena.copySlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice64 cast ConstValue .LocalArray64
         return
-      LocalArray64 case
+      LocalArray64 .case =:: arrayValue
         context [] .localMemory
-          value .LocalArray64 i64 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
+          arrayValue i64 slice.mut cast mixedArena.copyMutableSlice =:: localAddress
         context .localMemory=
         localAddress LocalSlice64 cast ConstValue .LocalArray64
         return
@@ -832,7 +826,7 @@ namespace: interpreter
     valType typeContext types.getBaseType =:: arrayBase
     ## copy sub-arrays
     localSlice .length for =:: i
-      localSlice i slice.at .data =:: elt
+      localSlice i @[] =:: elt
       arrayBase .?Undefined ? ! if
         arrayBase
       else
@@ -1000,8 +994,8 @@ namespace: interpreter
       0:iSize iSize.smax
     else 0:iSize end =:: minOffset
     context [] .stack .length 1:iSize - while $ minOffset iSize.sge do =:: i
-      context [] .stack i list.at .data =:: value
-      context [] .stackInfo i list.at .data =:: valueInfo
+      context [] .stack i @[] =:: value
+      context [] .stackInfo i @[] =:: valueInfo
       sb
         valueInfo [] .valueType
           typeContext
@@ -1045,15 +1039,14 @@ proc(
     Constant .case =:: constVal
       constVal .?GenericArg .and =:: label
           context [] .localVariables .if
-        label map.get =:: value?
-        value? optional.isEmpty if
+        label map.get .else
           "missing value for " sb.copyPtr
-            op [] .val .GetId labelContext sb.appendIdInfo
+            label labelContext sb.appendLabelPath
           op [] .pos errors appendError
           EvalResult .Error return
-        end
+        end =:: value
         ## pushValue
-          value? .data .value
+          value .value
           op [] .dataType
           op [] .pos
         context pushValue
@@ -1172,10 +1165,10 @@ proc(
           =:: switchValue ..drop
           program [] .switchData
             blockInfo .blockId i64 cast.u
-          list.at .data =:: switchData
+          @[] =:: switchData
           switchData [] .switchType =:: switchType
           switchData [] .labels .length for =:: i
-            switchData [] .labels i list.at .data =:: label
+            switchData [] .labels i @[] =:: label
             label [] .value switchValue switchType typeContext operatorEq if
               "cannot check equality of switch value " sb.copyPtr
                 switchValue typeContext sb.appendConstant
@@ -1221,12 +1214,11 @@ proc(
         LOCAL_VAR TMP_VAR ITR_VAR case
           ## XXX? common procedure for resolving of auto-types
           op [] .dataType =:: dataType
-          context [] .localVariables optional.isEmpty if
+          context [] .localVariables .else
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError
             EvalResult .Error return
           end
-          context [] .localVariables .data
             labelId
             ## Constant
               dataType op [] .pos context allocLocalValue
@@ -1261,29 +1253,23 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-          context [] .localVariables .data label map.get =:: value?
-          value? optional.isEmpty if
+          context [] .localVariables .and label map.get .else
             "missing value for " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op [] .pos errors appendError
             EvalResult .Error return
-          end
-          value? .data =:: value
+          end =:: value
           value .value value .info .valueType op [] .pos context pushValue
           EvalResult .Ok return
         LABEL case
-          context [] .localVariables optional.hasData if
-            context [] .localVariables .data
-          else
+          context [] .localVariables .else
             context .globalVariables
-          end label map.get =:: value?
-          value? optional.isEmpty if
+          end label map.get .else
             "missing value for " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op [] .pos errors appendError
             EvalResult .Error return
-          end
-          value? .data =:: value
+          end =:: value
           value .value value .info .valueType op [] .pos context pushValue
           EvalResult .Ok return
         TYPE GLOBAL_VAR case
@@ -1318,19 +1304,16 @@ proc(
       idInfo .idType switch
         LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
           ## XXX? extract common code with getId to procedure
-          context [] .localVariables optional.isEmpty if
+          context [] .localVariables .else
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError
             EvalResult .Error return
-          end
-          context [] .localVariables .data label map.get =:: value?
-          value? optional.isEmpty if
+          end label map.get .else
             "missing value for " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op [] .pos errors appendError
             EvalResult .Error return
-          end
-          value? .data =:: value
+          end =:: value
           label labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: isMutable
           ## pushValue
             value .value
@@ -1353,8 +1336,8 @@ proc(
           ## pushValue
             idData .constValue []
             program [] .procedures
-              procVal i64 cast list.at .data
-            [] .procType false typeContext types.getAddressType
+              procVal i64 cast @[]
+            .procType [] false typeContext types.getAddressType
             op [] .pos
           context pushValue
           EvalResult .Ok return
@@ -1389,13 +1372,12 @@ proc(
       ## TODO? is it neccessary to cast value
       idInfo .idType switch
         LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
-          context [] .localVariables optional.isEmpty if
+          context [] .localVariables .else
             value valInfo context unpopValue
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError
             EvalResult .Error return
           end
-          context [] .localVariables .data
             label
             value valInfo Constant new
           map.put ..drop
@@ -1448,12 +1430,11 @@ proc(
           map.put ..drop
           EvalResult .Ok return
         LOCAL_VAR LABEL TMP_VAR ITR_VAR case
-          context [] .localVariables optional.isEmpty if
+          context [] .localVariables .else
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError
             EvalResult .Error return
           end
-          context [] .localVariables .data
             label
             ## Constant
               label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
@@ -1494,7 +1475,7 @@ proc(
       ## enum/union element initializer
       containerType
         labelId
-      typeContext types.compositeFindLabel $ ? if .data else ..drop
+      typeContext types.compositeFindLabel .else
         "type " sb.copyPtr
           containerType typeContext sb.appendType
           " does not have a label \"" sb.appendS
@@ -1605,7 +1586,7 @@ proc(
       value .?Int .if
         expectedIndex i64 cast.u == ConstValue .Bool
       else .?Union ? _if
-        value constUnionLabel .Int expectedIndex i64 cast.u == ConstValue .Bool
+        value constUnionLabel .?Int .else ..unreachable end expectedIndex i64 cast.u == ConstValue .Bool
       else
         value valInfo context unpopValue
         "unexpected value for hasElement: " sb.copyPtr
@@ -1676,8 +1657,7 @@ proc(
         context unpopValue
       end
       EvalResult .Error return
-    NewEnum case
-      op [] .val .NewEnum =:: elementIndex
+    NewEnum .case =:: elementIndex
       op [] .dataType =:: unionType
       unionType typeContext types.isEnum if
         elementIndex i64 cast.u ConstValue .Int
@@ -1868,23 +1848,20 @@ proc(
       op [] .pos errors appendError
       EvalResult .Error return
     Copy case
-      context [] .stack list.peek =:: value?
-      value? optional.hasData if
+      context [] .stack list.peek .if =:: value
         context [] .stackInfo
-          list.peek .data [] .valueType
+          list.peek optional.unwrap [] .valueType
         =:: valType
         ConstValue ..length 22:iSize == "no new constants" assert
-        value? .data [] switch
-          LocalValue case
-            value? .data []
-              .LocalValue ConstValue ptr.mut cast []
-            value? .data =[]
+        value [] switch
+          LocalValue .case
+            ConstValue ptr.mut cast [] value =[]
             break
           LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
             context [] .localMemory mixedArena.offset =:: localOffset
-            value? .data []
+            value []
               valType context .localMemory program copyLocalArray
-            value? .data =[]
+            value =[]
             ## clear memory used by copy
             context [] .localMemory
               localOffset mixedArena.reset
@@ -1927,18 +1904,16 @@ proc(
         message sb.appendStr
       op [] .pos errors appendError
       EvalResult .Error return
-    Error case
+    Error .case =:: errVal
       false op [] .pos context popString if ..drop.2
         EvalResult .Error return
       end =:: msg ..drop
       msg sb.fromStr
-        context [] .callPositions .length 0:iSize != if
-          context [] .callPositions list.peek .data []
-        else
+        context [] .callPositions list.peek .if [] else
           op [] .pos
         end
         errors
-      op [] .val .Error switch
+      errVal switch
         ERROR case appendError break
         WARNING case appendWarning break
         INFO case appendInfo break
@@ -2050,7 +2025,7 @@ proc(
       ## mergeTypes
         valInfos 0 [] .valueType
         valInfos 1 [] .valueType
-      typeContext types.mergeTypes $ ? if .data else ..drop
+      typeContext types.mergeTypes .else
         "incompatible types for equality check: " sb.copyPtr
           valInfos 0 [] .valueType typeContext sb.appendType
           " and " sb.appendS
@@ -2171,7 +2146,7 @@ namespace: interpreter
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
-    calledType typeContext types.getProcIn .data =:: inTypes
+    calledType typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
     ConstValue 3 array new =:: mut: valueData
     valueData@ =:: values
     ValueInfo 3 array new =:: mut: valInfoData
@@ -2213,12 +2188,11 @@ namespace: interpreter
     pos typeContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
     resultType switch
       SUCCESS case
-        calledType typeContext types.getProcRet =:: retType
-        retType switch
+        calledType typeContext types.getProcRet switch
           Empty case break
-          Value case
+          Value .case =:: retVal
             value
-              retType .Value
+              retVal
               pos
               context
             pushValue
@@ -2318,13 +2292,13 @@ proc(
 ) =>: evaluateOperations
   using interpreter.
   0:iSize while $ ops .length u< do =:: offset
-    ops offset slice.at .data =:: op
+    ops offset @[] =:: op
       op context evaluateOperation =:: result
       result switch
         Error case true return
         Return case false return
         Ok case offset break
-        Jump case offset result .Jump iSize cast.s + break
+        Jump .case iSize cast.s offset + break
       end
   finally 1:iSize + end ..drop
   ## XXX? error if unwanted open blocks
@@ -2349,7 +2323,7 @@ namespace: interpreter
     end
     context [] .stack .length elts .length - =:: offset
     0:iSize while $ elts .length u< do =:: i
-      context [] .stackInfo offset i + list.at .data =:: stackInfo
+      context [] .stackInfo offset i + @[] =:: stackInfo
       stackInfo [] .valueType elts i [] typeContext types.canAutoCast ! if
         "wrong argument for tuple creation expected: " sb.copyPtr
           elts i [] typeContext sb.appendType
@@ -2396,9 +2370,9 @@ namespace: interpreter
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
-    program [] .procedures procId i64 cast list.at .data =:: procData
+    program [] .procedures procId i64 cast @[] =:: procData
     procData [] .procType =:: procType
-    procType typeContext types.getProcIn .data =:: args
+    procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
     0:iSize ## XXX? is there a better way to get number of non-auto static args
       implId -1:i32 != if
         args .length i32 cast.u for =:: i
@@ -2473,7 +2447,7 @@ namespace: interpreter
             end
           end
         =:: value
-        context [] .localVariables .data
+        context [] .localVariables optional.unwrap
           label
           ## Constant
             value
@@ -2492,10 +2466,10 @@ namespace: interpreter
       labelFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         implId 0 >= "implId is not negative" assert
         codeImpl [] .implementations
-          implId list.at .data
-        [] .staticArgs staticArgOffset [] =:: value
+          implId @[]
+        .staticArgs [] staticArgOffset [] =:: value
         label id.LABEL_ID_NONE != if
-          context [] .localVariables .data
+          context [] .localVariables optional.unwrap
             label
             ## Constant
               value
@@ -2510,7 +2484,7 @@ namespace: interpreter
         "not enough arguments for procedure " sb.copyPtr
           procName labelContext sb.appendLabelPath
         pos errors appendError
-        context [] .localVariables .data map.free
+        context [] .localVariables optional.unwrap map.free
         prevVariables context .localVariables=
         context [] .localMemory offset mixedArena.reset context .localMemory=
         context resetContext
@@ -2530,7 +2504,7 @@ namespace: interpreter
           ValueInfo new list.append
         context .stackInfo=
       else ## store argument as value
-        context [] .localVariables .data
+        context [] .localVariables optional.unwrap
           label
           ## Constant
             value
@@ -2543,7 +2517,7 @@ namespace: interpreter
     end ..drop
     implId 0 >= if
       codeImpl [] .implementations
-        implId list.at .data
+        implId @[]
       =:: currentImpl
       currentImpl .codeState .TYPE_CHECKED or currentImpl .codeState .UNUSED or currentImpl .codeState .COMPILED if
         currentImpl [] .code slice.freeze
@@ -2577,7 +2551,7 @@ namespace: interpreter
         procName labelContext sb.appendLabelPath
       pos errors appendError
       context resetContext
-      context [] .localVariables .data map.free
+      context [] .localVariables optional.unwrap map.free
       prevVariables context .localVariables=
       context [] .localMemory offset mixedArena.reset context .localMemory=
       true return ## not a call
@@ -2588,7 +2562,7 @@ namespace: interpreter
         op program sb.appendOp
       op .pos errors appendError
       context resetContext
-      context [] .localVariables .data map.free
+      context [] .localVariables optional.unwrap map.free
       prevVariables context .localVariables=
       context [] .localMemory offset mixedArena.reset context .localMemory=
       true return ## not a call
@@ -2605,7 +2579,7 @@ namespace: interpreter
       context [] .callPositions
         list.pop ..drop
       context .callPositions=
-      context [] .localVariables .data map.free
+      context [] .localVariables optional.unwrap map.free
       prevVariables context .localVariables=
       context [] .localMemory offset mixedArena.reset context .localMemory=
       context resetContext
@@ -2614,9 +2588,9 @@ namespace: interpreter
     context [] .callPositions
       list.pop ..drop
     context .callPositions=
-    calledType typeContext types.getProcOut .data =:: outTypes
+    calledType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
     outTypes .length "return":s pos context checkStack if
-      context [] .localVariables .data map.free
+      context [] .localVariables optional.unwrap map.free
       prevVariables context .localVariables=
       context [] .localMemory offset mixedArena.reset context .localMemory=
       context resetContext
@@ -2629,7 +2603,7 @@ namespace: interpreter
           ## TODO update generics
         end
       =:: valType
-      context [] .stackInfo outOffset i + list.at .data =:: outValInfo
+      context [] .stackInfo outOffset i + @[] =:: outValInfo
       outValInfo [] .valueType valType typeContext types.canAutoCast ! if
         "cannot cast " sb.copyPtr
           outValInfo [] .valueType typeContext sb.appendType
@@ -2641,13 +2615,14 @@ namespace: interpreter
       context [] .stack outOffset i + []
         ## TODO ensure returned values do not point to deleted local memory
         valType typeContext types.isPointer ! if
+          =:: localVal
           ## unwrap local values
-          $ switch ## XXX? handle nested local values
-            LocalValue case .LocalValue ConstValue ptr.mut cast [] break
+          localVal switch ## XXX? handle nested local values
+            LocalValue .case ConstValue ptr.mut cast [] break
             LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
-              valType context .localMemory program copyLocalArray
+              localVal valType context .localMemory program copyLocalArray
               break
-            default break
+            .default break
           end
         end
         outValInfo [] .valueType valType types.typeEquals ! if
@@ -2663,7 +2638,7 @@ namespace: interpreter
         end
       context [] .stack outOffset i + list.set
     end
-    context [] .localVariables .data map.free
+    context [] .localVariables optional.unwrap map.free
     prevVariables context .localVariables=
     context [] .localMemory
       offset mixedArena.reset
@@ -2689,7 +2664,7 @@ namespace: interpreter
     context .stackInfo=
     argsOffset while $ context [] .stackInfo .length u< do
       ## update push position of return values
-      pos context [] .stackInfo $2 list.at .data .pushedAt=
+      pos context [] .stackInfo $2 @[] .pushedAt=
       1:iSize +
     end ..drop
     false return
