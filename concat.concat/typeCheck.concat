@@ -5332,7 +5332,7 @@ proc(
         state pushValue
         continue.opLoop
       ProcPtr BuiltIn
-      NewEnum Call CheckEnumLabel
+      NewEnum Call
       ExistsName HasElement case
         break
       StackMod .case =:: stackMod

@@ -178,7 +178,6 @@ union(
    EqualityOperator : shadow: EqualityOperator
                   _ : Splat
                   _ : GetEnumLabel
-                i32 : CheckEnumLabel
                 i32 : SetEnumElement
                   _ : Copy
   StackModification : StackMod
@@ -349,10 +348,6 @@ proc( FilePosition : pos -> Operation ) =>: export: opGetEnumLabel
 end
 proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export: opTypeInfo
   infoType OpValue .TypeInfo t pos Operation new return
-end
-proc( Type i32 FilePosition -> Operation ) =>: export: opCheckEnum
-  =:: pos
-  OpValue .CheckEnumLabel ..swap pos Operation new return
 end
 proc( Type i32 FilePosition -> Operation ) =>: export: opSetEnumElement
   =:: pos
@@ -639,7 +634,6 @@ struct(
                        ProcId : mainProcId
                          bool : saveGlobalTokens
                          bool : inLibFile
-                         bool : hasCheckEnum
                          bool : hasGetArgs
 ) =:: export: ProgramContext
 
@@ -671,7 +665,6 @@ proc(
     NO_PROC ## main ProcId
     saveGlobalTokens
     false ## inLibFile
-    false ## hasCheckEnum
     false ## has getArgs
   ProgramContext new
 end
@@ -695,7 +688,6 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .errors list.free >$ .errors=
   id.LABEL_ID_NONE >$ .mainLabelId=
   NO_PROC >$ .mainProcId=
-  false >$ .hasCheckEnum=
   false >$ .hasGetArgs=
 end
 
@@ -1071,12 +1063,6 @@ namespace: sb
         "get enum label ( " sb.appendS
         op .dataType typeContext sb.appendType
         " )" sb.appendS
-      break
-      CheckEnumLabel .case =:: index
-        "check enum label ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        index sb.appendI
       break
       SetEnumElement .case =:: index
         "set enum element ( " sb.appendS

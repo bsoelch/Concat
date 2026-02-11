@@ -1644,54 +1644,6 @@ end
 
 proc(
   stringBuilder : sb
-  Type : enumType
-  i32 : valId
-  i32 : expectedIndex
-  FilePosition : pos
-  CompilerContext ptr.mut : context
--> stringBuilder ) =>: appendEnumCheck
-  context [] .program =:: prog
-  prog .errors =:: errors
-  prog .idContext =:: idContext
-  idContext .constContext =:: constContext
-  idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
-  ## BranchId
-    BranchType .ERROR
-    context nextJumpLabelId
-  BranchId new =:: errorBranch
-  ## BranchId
-    BranchType .NEXT
-    context nextJumpLabelId
-  BranchId new =:: okBranch
-  sb
-    "## check enum \n" sb.appendS
-    enumType valId expectedIndex pos context checkEnumIndex =:: labelType =:: label =:: c
-    "jnz %t" sb.appendS
-    c sb.appendI
-    ", " sb.appendS
-    okBranch sb.appendBranchId
-    ", " sb.appendS
-    errorBranch sb.appendBranchId
-    '\n' sb.appendC
-    errorBranch sb.appendBranchId
-    "\ncall $printf (l $" sb.appendS
-    CHECK_ENUM_FORMAT sb.appendS
-    ", ...," sb.appendS
-    labelType sb.appendValTypeQBE
-    " %t" sb.appendS
-    label sb.appendI
-    ",w " sb.appendS
-    expectedIndex sb.appendI
-    pos prog appendPosPrintfArgs
-    ")\n" sb.appendS
-    "call $exit (w 1)\nhlt\n" sb.appendS ## use exit for flushing stdout
-    okBranch "checkEnum":s context startBranch
-  return
-end
-
-proc(
-  stringBuilder : sb
   Type : tupleType
   i32 : tupleId
   FilePosition : pos
@@ -3665,22 +3617,6 @@ proc(
         labelId sb.appendI
         '\n' sb.appendC
       return
-    CheckEnumLabel .case =:: index
-      context .stackInfo branchTree.peek .else
-        "stack underflow" sb.copyPtr
-        op [] .pos errors appendError
-        sb return
-      end =:: srcVal
-      sb
-        op [] .pos sb.appendPosQBE
-        ## appendEnumCheck
-          op [] .dataType
-          srcVal [] .varId
-          index
-          op [] .pos
-          context
-        appendEnumCheck
-      return
     SetEnumElement .case =:: elementId
       context .stackInfo branchTree.peek .else
         "stack underflow" sb.copyPtr
@@ -4955,11 +4891,6 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         ## TODO? use declaration position of type
         FILE_POS_UNKNOWN
       context sb.appendTypeDeclarationQBE
-    end
-    program [] .hasCheckEnum if
-      "data $" sb.appendS
-      CHECK_ENUM_FORMAT sb.appendS
-      " = { b \"enum index (%i) does not match current value (%u) at %.*s:%i:%i\\n\", b 0 }\n" sb.appendS
     end
     "data $" sb.appendS
     ASSERT_FORMAT sb.appendS

@@ -2125,7 +2125,7 @@ proc(
     NewEnumReference CallPtr
     ImplementProcedure ProcPtr
     ConstantReference NewReference
-    CheckEnumLabel NestedProc Splat case break
+    NestedProc Splat case break
   end
   "unsupported operation in constant evaluation: " sb.copyPtr
     op [] program sb.appendOp
