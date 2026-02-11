@@ -59,7 +59,9 @@ proc(
     mutable if types.ArrayType .MUTABLE_RAW_POINTER else types.ArrayType .RAW_POINTER end
     types.ArraySize .None
     typeContext
-  types.newArrayType .data return
+  types.newArrayType .else
+    "failed to create array-type" ..panic
+  end return
 end
 
 proc(
@@ -191,31 +193,41 @@ proc(
     Type slice.empty
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: consumeVal
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: consumeVal
   ## newProcedure
     args@ 1 slice.create
     args@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: unOpProc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: unOpProc
   ## newProcedure
     args@ slice.wrap
     args@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: binOpProc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: binOpProc
   ## newProcedure
     args@ slice.wrap
     types.primitive.BOOL@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: cmpOpProc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: cmpOpProc
   ## newProcedure
     args@ 1 slice.create
     types.primitive.BOOL@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: toBoolOpProc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: toBoolOpProc
   binOpProc unOpProc cmpOpProc toBoolOpProc consumeVal return
 end
 proc(
@@ -234,13 +246,17 @@ proc(
     args@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: aba
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: aba
   ## newProcedure
     args@ 2 slice.create
     args@ 1 @[] 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: abb
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: abb
   aba abb return
 end
 ## i64 i32 -> i32 mod/rem/and
@@ -261,13 +277,17 @@ proc(
     types.primitive.BOOL@ slice.wrap
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: cc_b
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: cc_b
   ## newProcedure
     args@ slice.wrap
     types.primitive.I32@ slice.wrap
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: cc_i
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: cc_i
   cc_b cc_i return
 end
 proc(
@@ -283,13 +303,17 @@ proc(
     types.primitive.I64@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: v_i64
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: v_i64
   ## newProcedure
     Type slice.empty
     c8pp@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: v_c8pp
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: v_c8pp
   v_c8pp v_i64 return
 end
 proc(
@@ -309,37 +333,49 @@ proc(
     types.primitive.I8@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: s_i8
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: s_i8
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I16@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: s_i16
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: s_i16
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I32@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: s_i32
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: s_i32
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I64@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: s_i64
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: s_i64
   ## newProcedure
     argTypes slice.wrap
     types.primitive.F32@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: s_f32
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: s_f32
   ## newProcedure
     argTypes slice.wrap
     types.primitive.F64@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: s_f64
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: s_f64
   s_f64 s_f32 s_i64 s_i32 s_i16 s_i8 return
 end
 proc(
@@ -372,48 +408,62 @@ proc(
     Type slice.empty
     labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: setProc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: setProc
   basePtr typeData@ 1 =[]
   ## newProcedure
     typeData@ 2 slice.create
     baseType@ slice.wrap
     labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: getProc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: getProc
   types.primitive.I32 typeData@ 2 =[]
   ## newProcedure
     typeData@ slice.wrap
     typeData@ 1 @[] 1 slice.create
     labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: offset32Proc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: offset32Proc
   types.primitive.I64 typeData@ 2 =[]
   ## newProcedure
     typeData@ slice.wrap
     typeData@ 1 @[] 1 slice.create
     labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: offset64Proc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: offset64Proc
   basePtrMut typeData@ 1 =[] ## auto: T T ptr.raw.mut i64
   ## newProcedure
     typeData@ 2 slice.create
     baseType@ slice.wrap
     labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: getMutProc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: getMutProc
   ## newProcedure
     typeData@ slice.wrap
     typeData@ 1 @[] 1 slice.create
     labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: offsetMut64Proc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: offsetMut64Proc
   types.primitive.I32 typeData@ 2 =[]
   ## newProcedure
     typeData@ slice.wrap
     typeData@ 1 @[] 1 slice.create
     labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: offsetMut32Proc
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: offsetMut32Proc
   offsetMut64Proc offsetMut32Proc offset64Proc offset32Proc setProc getMutProc getProc
 end
 proc(
@@ -430,26 +480,34 @@ proc(
     types.primitive.BOOL@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: t_b
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: t_b
   ## newProcedure
     types.primitive.TYPE@ 1 slice.create
     types.primitive.TYPE@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: t_t
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: t_t
   ## newProcedure
     args@ 2 slice.create
     types.primitive.BOOL@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: tt_b
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: tt_b
   types.primitive.I32 args@ 1 =[]
   ## newProcedure
     args@ 2 slice.create
     types.primitive.BOOL@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data =:: ti32_b
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: ti32_b
   ti32_b tt_b t_t t_b return
 end
 proc(
@@ -482,7 +540,9 @@ proc(
     types.primitive.BOOL@ slice.wrap
     labelData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure .data
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end
 end
 
 proc(
@@ -562,7 +622,9 @@ proc(
   types.primitive.CHAR8  "char8":s  pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
   "iSize":s pos labelContext createLabel =:: iSizeLabel
-  types.primitive.I_SIZE iSizeLabel typeContext types.initializeNamedType .data $ types.I_SIZE=
+  types.primitive.I_SIZE iSizeLabel typeContext types.initializeNamedType .else
+    "failed to initialize named type" ..panic
+  end $ types.I_SIZE=
   iSizeLabel pos context newBuiltInTypeLabel
   types.primitive.I_SIZE "..type.iSize":s pos context newBuiltInType
   ## TODO? should I_MAX be visible to user-code

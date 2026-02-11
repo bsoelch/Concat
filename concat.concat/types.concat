@@ -114,15 +114,15 @@ namespace: types
     end
     a [] .elements b [] .elements typeCmp@ slice.cmp
       $ ? if return else ..drop end
-    a [] .labels ? if
-      a .labels [] .data b .labels [] .data labelCmp@ slice.cmp return
+    a [] .labels .if
+      b .labels [] optional.unwrap labelCmp@ slice.cmp return
     end
     0 return
   end
   proc( CompositeInfo ptr : a -> i32 ) =>: compositeTypeHash
     0:i32
-      a [] .labels ? if
-        31 * a [] .labels .data labelHash@ slice.hash +
+      a [] .labels .if labelHash@ slice.hash
+        >$ 31 * +
       end
       31 * a [] .elements typeHash@ slice.hash +
     return
@@ -263,48 +263,48 @@ namespace: types
     a switch
       Undefined  Empty case
         0 return ## there is only one undefined/empty type
-      PrimitiveType case
-        a .PrimitiveType primitiveId b .PrimitiveType primitiveId i32.cmp return
-      IntLiteral case
-        a .IntLiteral intLiteralId b .IntLiteral intLiteralId i32.cmp return
-      CType case
-        a .CType cTypeId b .CType cTypeId i32.cmp return
-      Align case
-        a .Align b .Align i32.cmp return
-      NamedType case
-        a .NamedType i32 cast b .NamedType i32 cast i32.cmp return
-      GenericType case
-        a .GenericType i32 cast b .GenericType i32 cast i32.cmp return
-      Pointer case
-        a .Pointer b .Pointer arrayTypeCmp return
-      MutablePointer case
-        a .MutablePointer b .MutablePointer arrayTypeCmp return
-      RawPointer case
-        a .RawPointer b .RawPointer arrayTypeCmp return
-      MutableRawPointer case
-        a .MutableRawPointer b .MutableRawPointer arrayTypeCmp return
-      ArrayType case
-        a .ArrayType b .ArrayType arrayTypeCmp return
-      Struct case
-        a .Struct b .Struct tupleTypeCmp return
-      Enum case
-        a .Enum b .Enum enumTypeCmp return
-      Union case
-        a .Union b .Union unionTypeCmp return
-      RawUnion case
-        a .RawUnion b .RawUnion unionTypeCmp return
-      UnionElement case
-        a .UnionElement b .UnionElement unionElementCmp return
-      Initializer case
-        a .Initializer b .Initializer initializerTypeCmp return
-      Procedure  case
-        a .Procedure  b .Procedure  procTypeCmp return
-      GeneratedType case
-        a .GeneratedType b .GeneratedType generatedTypeCmp return
-      SetType case
-        a .SetType b .SetType setTypeCmp return
-      RefinementType case
-        a .RefinementType b .RefinementType refinementTypeCmp return
+      PrimitiveType .case
+        primitiveId b .?PrimitiveType .else ..unreachable end primitiveId i32.cmp return
+      IntLiteral .case
+        intLiteralId b .?IntLiteral .else ..unreachable end intLiteralId i32.cmp return
+      CType .case
+        cTypeId b .?CType .else ..unreachable end cTypeId i32.cmp return
+      Align .case
+        b .?Align .else ..unreachable end i32.cmp return
+      NamedType .case
+        i32 cast b .?NamedType .else ..unreachable end i32 cast i32.cmp return
+      GenericType .case
+        i32 cast b .?GenericType .else ..unreachable end i32 cast i32.cmp return
+      Pointer .case
+        b .?Pointer .else ..unreachable end arrayTypeCmp return
+      MutablePointer .case
+        b .?MutablePointer .else ..unreachable end arrayTypeCmp return
+      RawPointer .case
+        b .?RawPointer .else ..unreachable end arrayTypeCmp return
+      MutableRawPointer .case
+        b .?MutableRawPointer .else ..unreachable end arrayTypeCmp return
+      ArrayType .case
+        b .?ArrayType .else ..unreachable end arrayTypeCmp return
+      Struct .case
+        b .?Struct .else ..unreachable end tupleTypeCmp return
+      Enum .case
+        b .?Enum .else ..unreachable end enumTypeCmp return
+      Union .case
+        b .?Union .else ..unreachable end unionTypeCmp return
+      RawUnion .case
+        b .?RawUnion .else ..unreachable end unionTypeCmp return
+      UnionElement .case
+        b .?UnionElement .else ..unreachable end unionElementCmp return
+      Initializer .case
+        b .?Initializer .else ..unreachable end initializerTypeCmp return
+      Procedure .case
+        b .?Procedure .else ..unreachable end  procTypeCmp return
+      GeneratedType .case
+        b .?GeneratedType .else ..unreachable end generatedTypeCmp return
+      SetType .case
+        b .?SetType .else ..unreachable end setTypeCmp return
+      RefinementType .case
+        b .?RefinementType .else ..unreachable end refinementTypeCmp return
     end
   end
   proc( PrimitiveType -> i32 ) =>: primitiveId
@@ -369,48 +369,27 @@ namespace: types
         0 return ## there is only one undefined
       Empty case
         1 return ## there is only one empty type
-      PrimitiveType case
-        2 a .PrimitiveType primitiveId 1 + * return
-      IntLiteral case
-        3 a .IntLiteral intLiteralId 1 + * return
-      CType case
-        5 a .CType cTypeId 1 + * return
-      Align case
-        7 a .Align 1 + * return
-      NamedType case
-        11 a .NamedType i32 cast 1 + * return
-      GenericType case
-        13 a .GenericType i32 cast 1 + * return
-      ArrayType case
-        17 a .ArrayType arrayTypeHash * return
-      Pointer case
-        19 a .Pointer arrayTypeHash * return
-      RawPointer case
-        23 a .RawPointer arrayTypeHash * return
-      MutablePointer case
-        29 a .MutablePointer arrayTypeHash * return
-      MutableRawPointer case
-        31 a .MutableRawPointer arrayTypeHash * return
-      Struct case
-        37 a .Struct tupleTypeHash * return
-      Enum case
-        41 a .Enum enumTypeHash * return
-      Union case
-        43 a .Union unionTypeHash * return
-      Procedure  case
-        47 a .Procedure  procTypeHash * return
-      GeneratedType case
-        53 a .GeneratedType generatedTypeHash * return
-      Initializer case
-        59 a .Initializer initializerTypeHash * return
-      UnionElement case
-        61 a .UnionElement unionElementHash * return
-      RawUnion case
-        67 a .RawUnion unionTypeHash * return
-      SetType  case
-        71 a .SetType setTypeHash * return
-      RefinementType  case
-        73 a .RefinementType refinementTypeHash * return
+      PrimitiveType .case primitiveId 1 + 2 * return
+      IntLiteral .case intLiteralId 1 + 3 * return
+      CType .case cTypeId 1 + 5 * return
+      Align .case 1 + 7 * return
+      NamedType .case i32 cast 1 + 11 * return
+      GenericType .case i32 cast 1 + 13 * return
+      ArrayType .case arrayTypeHash 17 * return
+      Pointer .case arrayTypeHash 19 * return
+      RawPointer .case arrayTypeHash 23 * return
+      MutablePointer .case arrayTypeHash 29 * return
+      MutableRawPointer .case arrayTypeHash 31 * return
+      Struct .case tupleTypeHash 37 * return
+      Enum .case enumTypeHash 41 * return
+      Union .case unionTypeHash 43 * return
+      Procedure .case procTypeHash 47 * return
+      GeneratedType .case generatedTypeHash 53 * return
+      Initializer .case initializerTypeHash 59 * return
+      UnionElement .case unionElementHash 61 * return
+      RawUnion .case unionTypeHash 67 * return
+      SetType .case setTypeHash 71 * return
+      RefinementType .case refinementTypeHash 73 * return
     end
   end
 end
@@ -612,9 +591,8 @@ namespace: types
   end
   proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: literalToType
     t switch
-       IntLiteral case t .IntLiteral intLiteralAsInt return
-       Initializer case
-        t .Initializer InitializerInfo ptr.mut cast =:: initInfo
+       IntLiteral .case intLiteralAsInt return
+       Initializer .case InitializerInfo ptr.mut cast =:: initInfo
         ## TODO? store initialiter elements directly in initialiter data
         initInfo .asTuple TupleInfo ptr cast =:: tupleInfo
         tupleInfo .compositeInfo .elements [] .length =:: eltCount
@@ -625,7 +603,9 @@ namespace: types
             baseType
             ArrayType .ARRAY
             size
-          context newArrayType .data return
+          context newArrayType .else
+            "failed to create array-type" ..panic
+          end return
         end
         tupleInfo .compositeInfo .flags [] COMP_FLAG_CONTAINS_LITERAL & ? if
           context [] .memory
@@ -639,7 +619,9 @@ namespace: types
             newElements slice.freeze
             tupleInfo .compositeInfo [] .labels
             context
-          newTuple .data return
+          newTuple  .else
+            "failed to create tuple-type" ..panic
+          end return
         end
         initInfo .asTuple TupleId cast Type .Struct return
        Empty  ArrayType UnionElement RawUnion
@@ -667,10 +649,9 @@ namespace: types
   64 =:: export: MAX_INT_WIDTH
   i64.MAX =:: export: MAX_SIGNED_INT
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: canAutoCastIntLiteral
-    src .?IntLiteral ? ! or target context types.isNumber ! if
+    target context types.isNumber ! or src .?IntLiteral ! .if
       true return
-    end
-    src .IntLiteral switch
+    end switch
       U7  case false  7:i64 break
       S8  case true   8:i64 break
       U8  case false  8:i64 break
@@ -875,14 +856,18 @@ namespace: types
       end
     end
     unionInfo [] .labelType typeContext isEmpty ! if
-      unionInfo [] .labelType typeContext alignOf .Fixed =:: labelAlign
+      unionInfo [] .labelType typeContext alignOf .?Fixed .else
+        "union label-type does not have fixed alignemnt" ..panic
+      end =:: labelAlign
       labelAlign alignment > if
         labelAlign alignment=
       end
       size
         labelAlign alignSize
-        ..dup unionInfo .enumLabelOffset=
-        unionInfo [] .labelType typeContext sizeOf .Fixed +
+        $ unionInfo .enumLabelOffset=
+        unionInfo [] .labelType typeContext sizeOf .?Fixed .else
+          "union label-type does not have fixed size" ..panic
+        end +
       size=
     end
     alignment unionInfo .compositeInfo .alignment=
@@ -899,10 +884,10 @@ namespace: types
     composite switch
       Struct .case composite >$ typeContext tryComputeTupleSize return
       Union RawUnion .case composite >$ typeContext tryComputeUnionSize return
-      Initializer case
+      Initializer .case
         ## tryComputeUnionSize
           composite
-          composite .Initializer InitializerInfo ptr.mut cast .asTuple TupleId cast
+          >$ InitializerInfo ptr.mut cast .asTuple TupleId cast
         typeContext tryComputeTupleSize return
       Undefined Empty GenericType RawPointer MutableRawPointer
       PrimitiveType IntLiteral CType ArrayType Enum UnionElement
@@ -915,16 +900,12 @@ namespace: types
     t switch
       Undefined GenericType case
         TypeSize .Unknown return
-      Empty  case
+      Empty case
         1 TypeSize .Fixed return
-      Align case
-        t .Align i64 cast.u TypeSize .Fixed return
-      PrimitiveType case
-        t .PrimitiveType sizeOfPrimitive TypeSize .Fixed return
-      IntLiteral case
-        t .IntLiteral sizeOfIntLiteral TypeSize .Fixed return
-      CType case
-        t .CType sizeOfCType TypeSize .Fixed return
+      Align .case i64 cast.u TypeSize .Fixed return
+      PrimitiveType .case sizeOfPrimitive TypeSize .Fixed return
+      IntLiteral .case sizeOfIntLiteral TypeSize .Fixed return
+      CType .case sizeOfCType TypeSize .Fixed return
       Pointer MutablePointer RawPointer MutableRawPointer Procedure  case
         PTR_SIZE TypeSize .Fixed return
       ArrayType case
@@ -933,7 +914,9 @@ namespace: types
         t context tryComputeSize if
           TypeSize .Unknown return
         end
-        t context compositeData .Composite =:: compData
+        t context compositeData .?Composite .else
+          "unexpected composite-type" ..panic
+        end =:: compData
         compData [] .alignment TypeSize .Fixed return
       UnionElement .case UnionElementInfo ptr cast [] .base context alignOf return
       Enum .case EnumInfo ptr cast [] .labelType context alignOf return
@@ -964,14 +947,12 @@ namespace: types
         TypeSize .Unknown return
       Empty  case
         0 TypeSize .Fixed return
-      Align case
-        aligned if t .Align i64 cast.u else 0:i64 end TypeSize .Fixed return
-      PrimitiveType case
-        t .PrimitiveType sizeOfPrimitive TypeSize .Fixed return
-      IntLiteral case ## XXX? don't use fixed size for int literals
-        t .IntLiteral sizeOfIntLiteral TypeSize .Fixed return
-      CType case
-        t .CType sizeOfCType TypeSize .Fixed return
+      Align .case =:: alignment
+        aligned if alignment i64 cast.u else 0:i64 end TypeSize .Fixed return
+      PrimitiveType .case sizeOfPrimitive TypeSize .Fixed return
+      ## TODO? don't use fixed size for int literals
+      IntLiteral .case sizeOfIntLiteral TypeSize .Fixed return
+      CType .case sizeOfCType TypeSize .Fixed return
       Pointer MutablePointer RawPointer MutableRawPointer Procedure  case
         PTR_SIZE TypeSize .Fixed return
       ArrayType case
@@ -992,7 +973,9 @@ namespace: types
         t context tryComputeSize if
           TypeSize .Unknown return
         end
-        t context compositeData .Composite =:: compData
+        t context compositeData .?Composite .else
+          "unexpected composite-type" ..panic
+        end =:: compData
         compData [] .size
           aligned if
             compData [] .alignment alignSize
@@ -1097,8 +1080,8 @@ namespace: types
     end
     a switch
       None Dynamic case true return
-      Int case a .Int b .Int == return
-      GenericArg case a .GenericArg b .GenericArg == return
+      Int .case b .?Int .else ..unreachable end == return
+      GenericArg .case b .?GenericArg .else ..unreachable end == return
     end
   end
   proc( ArraySize : a -> i32 ) =>: arraySizeHash
@@ -1115,8 +1098,8 @@ namespace: types
     end
     a switch
       None Dynamic case 0 return
-      Int case a .Int b .Int i64.cmp return
-      GenericArg case a .GenericArg i32 cast b .GenericArg i32 cast i32.cmp return
+      Int .case b .?Int .else ..unreachable end i64.cmp return
+      GenericArg .case i32 cast b .?GenericArg .else ..unreachable end i32 cast i32.cmp return
     end
   end
   enum( POINTER MUTABLE_POINTER RAW_POINTER MUTABLE_RAW_POINTER ARRAY ) =:: export: ArrayType
@@ -1177,7 +1160,9 @@ namespace: types
       initInfo [] .arrayType
       arrayType
       size
-    context newArrayType .data return
+    context newArrayType .else
+      "failed to create array-type" ..panic
+    end return
   end
   proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsArray
     t context ArrayType .ARRAY initializerAsArrayOrPtr
@@ -1310,17 +1295,17 @@ namespace: types
       end
   end
   proc( Type : composite TypeContext ptr : context -> i32 ) =>: export: compositeEltCount
-    composite context compositeData $ switch
-      None case ..drop 0 return
-      Enum case .Enum .labels [] .length i32 cast return
-      Composite case .Composite .elements [] .length i32 cast return
+    composite context compositeData switch
+      None case 0 return
+      Enum .case .labels [] .length i32 cast return
+      Composite .case .elements [] .length i32 cast return
     end
   end
   proc( Type : composite i32 : index TypeContext ptr : context -> LabelId ) =>: export: compositeGetLabel
-    composite context compositeData $ switch
-      None case ..drop id.LABEL_ID_NONE return
-      Enum case .Enum [] .labels break
-      Composite case .Composite
+    composite context compositeData switch
+      None case id.LABEL_ID_NONE return
+      Enum .case [] .labels break
+      Composite .case
         [] .labels .else
           id.LABEL_ID_NONE return
         end
@@ -1337,11 +1322,11 @@ namespace: types
     TypeContext ptr : context
   -> i32 optional ) =>: export: compositeFindLabel
     context .labelContext =:: labelContext
-    composite context compositeData $ switch
-      None case ..drop i32 optional.empty return
-      Enum case .Enum [] .labels break
-      Composite case .Composite
-        [] .labels $ ? if .data else ..drop
+    composite context compositeData switch
+      None case i32 optional.empty return
+      Enum .case [] .labels break
+      Composite .case
+        [] .labels .else
           i32 optional.empty return
         end
       break
@@ -1606,7 +1591,7 @@ namespace: types
     end
     context [] .memory
       labels mixedArena.copySlice slice.freeze
-        baseType $ ? if .data else ..drop
+        baseType .else
           labels .length UnionType .TAGGED computeEnumLabelType
         end
       EnumInfo new mixedArena.copyValue =:: enumId
@@ -1680,7 +1665,9 @@ namespace: sb
   -> stringBuilder ) =>: appendComposite
     context .labelContext =:: labelContext
     sb
-      t context types.compositeData .Composite =:: comp
+      t context types.compositeData .?Composite .else
+        "unexpected composite-type" ..panic
+      end =:: comp
       comp [] .labels ? ! =:: unlabeled
       0:i32 while $ iSize cast.u comp [] .elements .length u< do
         >$
@@ -1838,7 +1825,9 @@ namespace: types
         ## TODO reuse slice memory if possible
         outTypes
           LabelId slice optional.empty
-        context newTuple .data ProcRet .Tuple return
+        context newTuple .else
+          "failed to create tuple-type" ..panic
+        end ProcRet .Tuple return
     end
   end
   proc( Type : proc TypeContext ptr : context -> Type slice ) =>: export: getProcOutArgs
@@ -1882,7 +1871,9 @@ namespace: types
         true isPtr=
       end
     =:: mProc
-    mProc .Procedure  ProcType ptr cast =:: procData
+    mProc .?Procedure .else
+      "unexpected callable type" ..panic
+    end ProcType ptr cast =:: procData
     procData [] .labels .length 0:iSize == if
       proc return
     end
@@ -1896,7 +1887,9 @@ namespace: types
     context .memory=
     procId ProcTypeId cast Type .Procedure
       isPtr if
-        ArrayType .POINTER ArraySize .None context newArrayType .data return
+        ArrayType .POINTER ArraySize .None context newArrayType .else
+          "failed to create array-type" ..panic
+        end return
       end
     return
   end
@@ -1914,9 +1907,8 @@ namespace: types
     LabelId : label
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: initializeNamedType
-    context .namedTypes label value map.put =:: oldValue
-    oldValue ? if
-      context .namedTypes label oldValue .data map.put ..drop
+    context .namedTypes label value map.put .if =:: oldValue
+      context .namedTypes label oldValue map.put ..drop
       Type optional.empty return
     end
     label Type .NamedType optional.wrap return
@@ -1985,7 +1977,7 @@ namespace: sb
       depth 0 > if
         " [ " sb.appendS
         ## appendTypeRecursive
-          context .namedTypes name map.get .data
+          context .namedTypes name map.get .else Type .Undefined end
           context
           depth 1 -
         appendTypeRecursive
@@ -2042,12 +2034,11 @@ namespace: types
   -> GeneratedTypeState ) =>: export: findGeneratedType
     typeContext .labelContext =:: labelContext
     generatorName arguments GeneratedTypeName new =:: genName
-    typeContext .generatedTypes genName map.get =:: prevValue
-    prevValue optional.hasData if
-      generatorName labelContext id.labelFlags id.FLAG_NO_WRAP & ? and prevValue .data .value .if
+    typeContext .generatedTypes genName map.get .if =:: prevValue
+      generatorName labelContext id.labelFlags id.FLAG_NO_WRAP & ? and prevValue .value .if
         GeneratedTypeState .Stored return
       end
-      prevValue .data .key Type .GeneratedType GeneratedTypeState .Stored return
+      prevValue .key Type .GeneratedType GeneratedTypeState .Stored return
     end
     create if
       typeContext [] .memory
@@ -2080,18 +2071,17 @@ namespace: types
       true
       typeContext
       constContext
-    findGeneratedType $ switch
-      Stored case .Stored break
-      Created case .Created break
+    findGeneratedType switch
+      Stored Created .case break
       None case ..unreachable
     end =:: prevType
-    value .?Undefined  ? or prevType .?GeneratedType ? ! if
+    value .?Undefined ? or prevType .?GeneratedType ! .if
       prevType return
-    end
+    end =:: prevGeneratorName
     value optional.wrap
       typeContext .generatedTypes
-        prevType .GeneratedType GeneratedTypeName ptr cast []
-      map.at .data
+        prevGeneratorName GeneratedTypeName ptr cast []
+      map.at optional.unwrap
     .value=
     generatorName typeContext .labelContext id.labelFlags id.FLAG_NO_WRAP & ? if
       value return
@@ -2100,14 +2090,13 @@ namespace: types
   end
 
   proc( Type : generator TypeContext ptr : context -> Type ) =>: export: getGeneratedType
-    generator =:: mut: t
-    t .?NamedType ? if
-      t context unwrapNamedKeepGenerated t=
-    end
-    t .?GeneratedType ? ! if
+    generator
+      $ .?NamedType ? if context unwrapNamedKeepGenerated end
+    =:: t
+    t .?GeneratedType .else ..drop
       generator return
-    end
-    context .generatedTypes t .GeneratedType GeneratedTypeName ptr cast [] map.get
+    end =:: genTypeName
+    context .generatedTypes genTypeName GeneratedTypeName ptr cast [] map.get
       .and .value .else Type .Undefined  end
     return
   end
@@ -2246,8 +2235,7 @@ namespace: types
         false return
       Struct Enum Union RawUnion Initializer UnionElement case
         t context compositeFlags COMP_FLAG_STATIC_ARGS & ? return
-      GeneratedType case
-        t .GeneratedType GeneratedTypeName ptr cast =:: genType
+      GeneratedType .case GeneratedTypeName ptr cast =:: genType
         ## a GeneratedType is generic if one of its arguments is generic
         genType .arguments [] .length for =:: i
           genType [] .arguments i [] =:: arg
@@ -2299,9 +2287,11 @@ namespace: types
       unwraped context getBaseType
         mutable if ArrayType .MUTABLE_POINTER else ArrayType .POINTER end
         unwraped context getArraySize
-      context newArrayType .data return
+      context newArrayType .else
+        "failed to create array-type" ..panic
+      end return
     end
-    src .?Undefined  ? if
+    src .?Undefined ? if
       src return
     end
     src context isProcedure if
@@ -2311,7 +2301,9 @@ namespace: types
     end
       mutable if ArrayType .MUTABLE_POINTER else ArrayType .POINTER end
       ArraySize .None
-    context newArrayType .data return
+    context newArrayType .else
+      "failed to create array-type" ..panic
+    end return
   end
   proc( Type : src TypeContext ptr.mut : context -> Type ) =>: export: ptrTarget
     src context isPointer ! if
@@ -2323,7 +2315,9 @@ namespace: types
       unwraped context getBaseType
         ArrayType .ARRAY
         unwraped context getArraySize
-      context newArrayType .data return
+      context newArrayType .else
+        "failed to create array-type" ..panic
+      end return
     end
     src context getBaseType return
   end
@@ -2458,7 +2452,9 @@ namespace: types
       false return ## cannot cast non-empty initializer to mutable pointer
     end
     targetBase context types.isArray or targetBase context types.isArrayPointer if
-      src .Initializer InitializerInfo ptr cast =:: initInfo
+      src .?Initializer .else
+        "expected initializer-tyüe" ..panic
+      end InitializerInfo ptr cast =:: initInfo
       targetBase context getBaseType =:: eltType
       initInfo .arrayType [] eltType context canAutoCast and
         targetBase context getArraySize =:: targetSize
@@ -2488,8 +2484,8 @@ namespace: types
       src context getCallConvention target context getCallConvention != if
         false return
       end
-      src context getProcIn .data =:: srcIn
-      target context getProcIn .data =:: targetIn
+      src context getProcIn .else "proc without in" ..panic end =:: srcIn
+      target context getProcIn .else "proc without in" ..panic end =:: targetIn
       srcIn .length targetIn .length != if
         false return
       end
@@ -2498,8 +2494,8 @@ namespace: types
           false return
         end
       end
-      src context getProcOut .data =:: srcOut
-      target context getProcOut .data =:: targetOut
+      src context getProcOut .else "proc without out" ..panic end =:: srcOut
+      target context getProcOut .else "proc without out" ..panic end =:: targetOut
       srcOut .length targetOut .length != if
         false return
       end
@@ -2624,7 +2620,7 @@ namespace: types
     srcSize targetSize == or
       ## allow int-literals to be smaller than target-type
       src .?IntLiteral .and intLiteralBytes targetSize <= and
-        primitive.I_MAX .PrimitiveType sizeOfPrimitive targetSize >= end
+        primitive.I_MAX context primitiveValue sizeOfPrimitive targetSize >= end
     return
   end
   proc( Type : a Type : b TypeContext ptr.mut : context -> Type optional ) =>: export: mergeTypes
@@ -2786,15 +2782,15 @@ namespace: sb
       size switch
         None case break
         Dynamic case " _" sb.appendS break
-        Int case
+        Int .case =:: sizeInt
           ' ' sb.appendC
-          size .Int sb.appendI
+          sizeInt sb.appendI
           break
-        GenericArg case
+        GenericArg .case =:: genSize
           ' ' sb.appendC
-          size .GenericArg labelContext appendLabelName
+          genSize labelContext appendLabelName
           "[ " sb.appendS
-          size .GenericArg i64 cast.s sb.appendI
+          genSize i64 cast.s sb.appendI
           ":LabelId ]" sb.appendS
           break
       end
@@ -2895,13 +2891,13 @@ namespace: sb
           end
           ")" appendS
         return
-      NamedType case
+      NamedType .case =:: typeName
         sb
           "named[" appendS
-          t .NamedType i64 cast appendI
+          typeName i64 cast appendI
           "]( "    appendS
           ## appendNamedType
-            t .NamedType
+            typeName
             context
             depth
           appendNamedType
@@ -2925,22 +2921,22 @@ namespace: sb
             " [ "     appendS
               context .generatedTypes
                 genTypeName []
-              map.get $ ? if .data
-                .value $ ? if .data
+              map.get .if
+                .value .if
                   context depth 1 - appendTypeRecursive
-                else ..drop
+                else
                   '?' sb.appendC
                 end
-              else ..drop
+              else
                 "??" sb.appendS
               end
             " ]"     appendS
           end
         return
-      Align case
+      Align .case =:: alignment
         sb
           "..type.align" sb.appendS
-          t .Align sb.appendI
+          alignment sb.appendI
         return
       SetType case
         sb

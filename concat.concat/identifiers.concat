@@ -166,7 +166,7 @@ namespace: id
   end
 
   proc( Scope list ScopeId -> Scope ptr.mut ) =>: getScopeData
-    i64 cast.u list.at .data
+    i64 cast.u @[]
   end
   proc( IdentifierContext ptr : context -> ScopeId ) =>: export: currentScope
     context [] .currentScopeId
@@ -251,12 +251,12 @@ namespace: id
         context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
-          matches optional.isEmpty if
+          matches .else
             idName idLabel false return
-          end
-          matches .data []
+          end =:: matchData
+          matchData []
             idName idLabel IdentifierMatch new list.append
-          matches .data =[]
+          matchData =[]
         end
         idName .scope GLOBAL_SCOPE !=
       do
@@ -293,12 +293,12 @@ namespace: id
         context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
-          matches optional.isEmpty if
+          matches .else
             idName idLabel false return
-          end
-          matches .data []
+          end =:: matchData
+          matchData []
             idName idLabel IdentifierMatch new list.append
-          matches .data =[]
+          matchData =[]
         end
         idName .scope GLOBAL_SCOPE !=
       do
@@ -315,7 +315,7 @@ namespace: id
     do =:: importId
       context [] .typeContext .labelContext .namespaceImports
         importId i64 cast
-      list.at .data =:: importInfo
+      @[] =:: importInfo
       importInfo [] .nameAlias .length 0:iSize == if
         importInfo [] .imported path  context .typeContext .labelContext findNamespace relSpace=
       else
@@ -339,10 +339,10 @@ namespace: id
         context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idLabel .labelId context isVisible if
-          matches optional.hasData if
-            matches .data []
+          matches .if =:: matchData
+            matchData []
               idName idLabel IdentifierMatch new list.append
-            matches .data =[]
+            matchData =[]
           end
           mNamespace NAMESPACE_ID_NONE == if
             idLabel optional.wrap match=
@@ -358,9 +358,9 @@ namespace: id
         idName@ .scope=
       end
     finally importInfo [] .parent end ..drop
-    matches optional.isEmpty and match optional.hasData if
+    matches optional.isEmpty and match .if
       ## TODO return value indicating multi-match
-      idName match .data false return
+      idName >$ false return
     end
     "could not find identifier":s NAMESPACE_ID_NONE scopeId IdentifierName new
     id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
@@ -371,11 +371,8 @@ namespace: id
     end
     context .identifierData
       nameId
-    map.at =:: data?
-    data? optional.isEmpty if
-      ID_TMP_DATA@ true return
-    end
-    data? .data false return
+    map.at .if false return end
+    ID_TMP_DATA@ true return
   end
   ## finds an identifier with the same name as the given label
   ## to get the identifier-data for a given labelId use `getIdentifier`
@@ -492,7 +489,7 @@ namespace: id
     false return
   end
   proc( AliasId : aliasId IdentifierContext ptr : context -> FilePosition ) =>: export: getAliasPos
-    context [] .aliasInfo aliasId i64 cast list.at .data [] .declaredAt
+    context [] .aliasInfo aliasId i64 cast @[] .declaredAt []
   end
   union(
     _ : OK
@@ -522,9 +519,8 @@ namespace: id
     name
       labelContext [] .namespaceInfo .current
     scopeId IdentifierName new =:: mut: idName
-    context .identifierNames idName map.get =:: prevId?
-    prevId? optional.hasData if
-      prevId? .data DeclareNameResult .Redeclare return
+    context .identifierNames idName map.get .if
+      DeclareNameResult .Redeclare return
     end
     name context findIdByName ! if =:: shadowedName
       shadowedName .labelId labelContext id.labelFlags =:: shadowFlags
@@ -621,7 +617,9 @@ namespace: id
       context
       errors
     declareName .?Redeclare .if =:: prevId
-      context .identifierData prevId .labelId map.at .data =:: prevDec
+      context .identifierData prevId .labelId map.at .else
+        "could not find previous id of redeclaration" ..panic
+      end =:: prevDec
       prevId .aliasId NO_ALIAS == and
           ## initialization for declaration / declaration for initialized identifier
           prevDec [] .declarationOnly isInit ! | and
@@ -722,7 +720,9 @@ namespace: id
       errors
     declareName .?Redeclare .if =:: prevId
       prevId .aliasId NO_ALIAS == if
-        context .identifierData prevId .labelId map.at .data [] .declaredAt
+        context .identifierData prevId .labelId map.at .else
+          "could not find previous id of redeclaration" ..panic
+        end [] .declaredAt
       else
         prevId .aliasId context getAliasPos
       end =:: prevPos
