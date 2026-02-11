@@ -5312,21 +5312,27 @@ proc(
           continue.opLoop
         end [] .valueType =:: valType
         valType op@ .dataType=
-        valType typeContext types.isUnionElement if
+        valType
+          valType typeContext types.isPointer =:: isPointer
+          isPointer if typeContext types.getBaseType end
+        =:: baseType
+        baseType typeContext types.isUnionElement if
           state .stack branchTree.pop ..drop
-          valType typeContext types.getUnionElementType
-        else valType typeContext types.isUnion _if
+          baseType typeContext types.getUnionElementType
+        else baseType typeContext types.isUnion _if
           state .stack branchTree.pop ..drop
-          valType typeContext types.asRawUnion .else
+          baseType typeContext types.asRawUnion .else
             "union-type .asRawUnion should return value" ..panic
           end
         else
-          "unexpected argument for " sb.copyPtr
+          "unexpected argument for raw-value expected union got: " sb.copyPtr
             valType typeContext sb.appendType
-            " expected union" sb.appendS
           op .pos errors appendError
           continue.opLoop
         end
+          isPointer if
+            valType typeContext types.isMutable typeContext types.getAddressType
+          end
           ConstValue .None
           op
         state pushValue

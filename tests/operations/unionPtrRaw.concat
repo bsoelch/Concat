@@ -1,0 +1,7 @@
+union( i32 : I f32 : F ) =:: aUnion
+proc( -> ) =>: main
+  0 aUnion .I =:: mut: x
+  x@ ..raw .I =:: intPtr
+  2 intPtr =[]
+  x .?I .and 2 == end "union-ptr-set" assert
+end
