@@ -1841,9 +1841,7 @@ proc(
   idContext .typeContext =:: typeContext
   OP_UNLINKED =:: mut: onRead
   isWrite ! and isUnionGet ! and containerType typeContext types.isTaggedUnion if
-    "old-style union-element access" sb.copyPtr pos errors appendInfo
-    containerType elementIndex pos opCheckEnum state appendOp onRead=
-    true program .hasCheckEnum= ## TODO! rename check-enum to check-union
+    "old-style union-element access" sb.copyPtr pos errors appendError
   end
   containerType typeContext types.isArray if
     containerType typeContext types.getBaseType
@@ -5316,10 +5314,6 @@ proc(
         valType op@ .dataType=
         valType typeContext types.isUnionElement if
           state .stack branchTree.pop ..drop
-          valType typeContext types.getUnionElementUnion optional.unwrap
-            valType typeContext types.getUnionElementIndex
-          op .pos opCheckEnum state appendOp ..drop
-          true program .hasCheckEnum=
           valType typeContext types.getUnionElementType
         else valType typeContext types.isUnion _if
           state .stack branchTree.pop ..drop
