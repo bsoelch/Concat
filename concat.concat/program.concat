@@ -567,10 +567,10 @@ proc(
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  procType typeContext types.getProcIn $ ? if .data else ..drop
+  procType typeContext types.getProcIn .else
     Type slice.empty
   end =:: inTypes
-  procType typeContext types.getProcOut $ ? if .data else ..drop
+  procType typeContext types.getProcOut .else
     Type slice.empty
   end =:: outTypes
   inTypes procType typeContext types.getProcArgLabels typeContext hasStaticElement =:: hasStaticArg
@@ -795,7 +795,7 @@ namespace: sb
         ":ProcId" sb.appendS
       break
       ConstantReference .case =:: refId
-        progContext [] .constantReferences refId i64 cast list.at .data =:: constData
+        progContext [] .constantReferences refId i64 cast @[] =:: constData
         "constant reference ( " sb.appendS
         constData [] .constType typeContext sb.appendType
         " )[" sb.appendS
@@ -826,7 +826,7 @@ namespace: sb
         op .dataType  typeContext sb.appendType
         " ) : " sb.appendS
         progContext [] .procedures
-          callInfo .procId i64 cast list.at .data
+          callInfo .procId i64 cast @[]
         =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
         callInfo .implementationId 0 >= if
@@ -872,7 +872,7 @@ namespace: sb
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         progContext [] .procedures
-          implInfo .procId i64 cast list.at .data
+          implInfo .procId i64 cast @[]
         =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
         implInfo .implementationId 0 >= if
@@ -887,7 +887,7 @@ namespace: sb
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         progContext [] .procedures
-          implInfo .procId i64 cast list.at .data
+          implInfo .procId i64 cast @[]
         =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
         implInfo .implementationId 0 >= if
@@ -1252,7 +1252,7 @@ namespace: program.jumps
   -> ) =>: export: updateAndIf
     program [] .ifData
       blockId i32 cast
-    list.at .data =:: ifData
+    @[] =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
       newIndex ifData .blockStart=
     end
@@ -1268,7 +1268,7 @@ namespace: program.jumps
   -> ) =>: export: updateOrIf
     program [] .ifData
       blockId i32 cast
-    list.at .data =:: ifData
+    @[] =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
       newIndex ifData .blockStart=
     end
@@ -1284,7 +1284,7 @@ namespace: program.jumps
   -> ) =>: export: updateIf
     program [] .ifData
       blockId i32 cast
-    list.at .data =:: ifData
+    @[] =:: ifData
     ifData [] .andCount ifData [] .orCount + 0 == if
       newOps .length i32 cast ifData .blockStart=
     end
@@ -1296,8 +1296,8 @@ namespace: program.jumps
       newOps .length i32 cast
         orPos - JumpDistance cast
       newOps
-        orPos slice.at .data
-      .val .Block .jumpDistance=
+        orPos @[]
+      .val .?Block .else "expected block" ..panic end .jumpDistance=
     end
     0 ifData .orCount=
   end
@@ -1308,7 +1308,7 @@ namespace: program.jumps
   -> ) =>: export: updateElse
     program [] .ifData
       blockId i32 cast
-    list.at .data =:: ifData
+    @[] =:: ifData
     newOps .length i32 cast ifData .elsePosition=
     ifData [] .andCount for =:: i
       ifData [] .andPositions
@@ -1317,15 +1317,15 @@ namespace: program.jumps
       newOps .length i32 cast
         andPos - JumpDistance cast
       newOps
-        andPos slice.at .data
-      .val .Block .jumpDistance=
+        andPos @[]
+      .val .?Block .else "expected block" ..panic end .jumpDistance=
     end
     0 ifData .andCount=
     newOps .length i32 cast
       ifData [] .ifPosition - JumpDistance cast
     newOps
-      ifData [] .ifPosition slice.at .data
-    .val .Block .jumpDistance=
+      ifData [] .ifPosition @[]
+    .val .?Block .else "expected block" ..panic end .jumpDistance=
   end
   proc(
     BlockId : blockId
@@ -1334,12 +1334,12 @@ namespace: program.jumps
   -> JumpDistance ) =>: export: updateEndIf
     program [] .ifData
       blockId i32 cast
-    list.at .data =:: ifData
+    @[] =:: ifData
     newOps .length i32 cast
       ifData [] .elsePosition - JumpDistance cast
     newOps
-      ifData [] .elsePosition slice.at .data
-    .val .Block .jumpDistance=
+      ifData [] .elsePosition @[]
+    .val .?Block .else "expected block" ..panic end .jumpDistance=
     ifData [] .blockStart
       newOps .length i32 cast -
     JumpDistance cast
@@ -1351,7 +1351,7 @@ namespace: program.jumps
     ProgramContext ptr.mut : program
   -> ) =>: export: updateSwitch
     newIndex
-      program [] .switchData blockId i32 cast list.at .data
+      program [] .switchData blockId i32 cast @[]
     .switchPosition=
   end
   proc(
@@ -1361,7 +1361,7 @@ namespace: program.jumps
   -> ) =>: export: updateCase
     program [] .switchData
       blockId i32 cast
-    list.at .data =:: switchData
+    @[] =:: switchData
     switchData [] .caseCount
       newIndex
         switchData [] .switchPosition - JumpDistance cast
@@ -1376,7 +1376,7 @@ namespace: program.jumps
   -> ) =>: export: updateDefault
     program [] .switchData
       blockId i32 cast
-    list.at .data =:: switchData
+    @[] =:: switchData
     newIndex
       switchData [] .switchPosition - JumpDistance cast
     switchData .defaultJumpDistance=
@@ -1388,7 +1388,7 @@ namespace: program.jumps
   -> ) =>: export: updateBreakSwitch
     program [] .switchData
       blockId i32 cast
-    list.at .data =:: switchData
+    @[] =:: switchData
     switchData [] .breakCount
       newIndex switchData [] .breakPositions $2 slice.set
       1 +
@@ -1401,7 +1401,7 @@ namespace: program.jumps
   -> JumpDistance ) =>: export: updateEndSwitch
     program [] .switchData
       blockId i32 cast
-    list.at .data =:: switchData
+    @[] =:: switchData
     switchData [] .breakCount for =:: i
       switchData [] .breakPositions
         i
@@ -1409,8 +1409,8 @@ namespace: program.jumps
       newOps .length i32 cast
         breakPos - JumpDistance cast
       newOps
-        breakPos slice.at .data
-      .val .Block .jumpDistance=
+        breakPos @[]
+      .val .?Block .else "expected block" ..panic end .jumpDistance=
     end
     0 switchData .breakCount=
     switchData [] .switchPosition
@@ -1425,7 +1425,7 @@ namespace: program.jumps
   -> ) =>: export: updateWhile
     program [] .whileData
       blockId i32 cast
-    list.at .data =:: whileData
+    @[] =:: whileData
     newIndex whileData .loopStart=
   end
   proc(
@@ -1435,7 +1435,7 @@ namespace: program.jumps
   -> ) =>: export: updateOrDo
     program [] .whileData
       blockId i32 cast
-    list.at .data =:: whileData
+    @[] =:: whileData
     whileData [] .orCount
       newIndex whileData [] .orPositions $2 slice.set
       1 +
@@ -1448,7 +1448,7 @@ namespace: program.jumps
   -> ) =>: export: updateBreak
     program [] .whileData
       blockId i32 cast
-    list.at .data =:: whileData
+    @[] =:: whileData
     whileData [] .breakCount
       newIndex whileData [] .breakPositions $2 slice.set
       1 +
@@ -1466,7 +1466,7 @@ namespace: program.jumps
   -> ) =>: export: updateContinue
     program [] .whileData
       blockId i32 cast
-    list.at .data =:: whileData
+    @[] =:: whileData
     whileData [] .continueCount
       newIndex whileData [] .continuePositions $2 slice.set
       1 +
@@ -1480,14 +1480,14 @@ namespace: program.jumps
     blockId newOps .length i32 cast program updateBreak
     program [] .whileData
       blockId i32 cast
-    list.at .data =:: whileData
+    @[] =:: whileData
     whileData [] .orCount for =:: i
       whileData [] .orPositions i [] =:: orPos
       newOps .length i32 cast
         orPos - JumpDistance cast
       newOps
-        orPos slice.at .data
-      .val .Block .jumpDistance=
+        orPos @[]
+      .val .?Block .else "expected block" ..panic end .jumpDistance=
     end
     0 whileData .orCount=
   end
@@ -1498,7 +1498,7 @@ namespace: program.jumps
   -> ) =>: export: updateFinally
     program [] .whileData
       blockId i32 cast
-    list.at .data =:: whileData
+    @[] =:: whileData
     whileData [] .continueCount for =:: i
       whileData [] .continuePositions
         i
@@ -1506,8 +1506,8 @@ namespace: program.jumps
       newOps .length i32 cast
         continuePos - JumpDistance cast
       newOps
-        continuePos slice.at .data
-      .val .Block .jumpDistance=
+        continuePos @[]
+      .val .?Block .else "expected block" ..panic end .jumpDistance=
     end
     0 whileData .continueCount=
   end
@@ -1518,14 +1518,14 @@ namespace: program.jumps
   -> JumpDistance ) =>: export: updateEndWhile
     program [] .whileData
       blockId i32 cast
-    list.at .data =:: whileData
+    @[] =:: whileData
     whileData [] .breakCount for =:: i
       whileData [] .breakPositions i [] =:: breakPos
       newOps .length i32 cast
         breakPos - JumpDistance cast
       newOps
-        breakPos slice.at .data
-      .val .Block .jumpDistance=
+        breakPos @[]
+      .val .?Block .else "expected block" ..panic end .jumpDistance=
     end
     0 whileData .breakCount=
     newOps .length i32 cast
@@ -1533,8 +1533,8 @@ namespace: program.jumps
     =:: loopLength
     loopLength JumpDistance cast
     newOps whileData [] .loopStart
-      slice.at .data
-    .val .Block .jumpDistance=
+      @[]
+    .val .?Block .else "expected block" ..panic end .jumpDistance=
     loopLength -_ JumpDistance cast
   end
 
@@ -1545,7 +1545,7 @@ namespace: program.jumps
   -> ) =>: export: updateAnd
     program [] .andOrData
       blockId i32 cast
-    list.at .data =:: andOrData
+    @[] =:: andOrData
     andOrData [] .andOrCount 0 == if
       newIndex andOrData .blockStart=
     end
@@ -1566,7 +1566,7 @@ namespace: program.jumps
   -> JumpDistance ) =>: export: updateEndAndOr
     program [] .andOrData
       blockId i32 cast
-    list.at .data =:: andOrData
+    @[] =:: andOrData
     andOrData [] .andOrCount for =:: i
       andOrData [] .andOrPositions
         i
@@ -1574,8 +1574,8 @@ namespace: program.jumps
       newOps .length i32 cast
         andOrPos - JumpDistance cast
       newOps
-        andOrPos slice.at .data
-      .val .Block .jumpDistance=
+        andOrPos @[]
+      .val .?Block .else "expected block" ..panic end .jumpDistance=
     end
     0 andOrData .andOrCount=
     andOrData [] .blockStart

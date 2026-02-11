@@ -136,7 +136,9 @@ proc(
   progContext .idContext .typeContext =:: typeContext
   literalType switch
     FIXED case
-      intType typeContext types.sizeOf .Fixed i32 cast 8 * =:: bitCount
+      intType typeContext types.sizeOf .?Fixed .else
+        "expected fixed size" ..panic
+      end i32 cast 8 * =:: bitCount
       value bitCount checkIntSize if
         "integer literal overflows size for type " sb.copyPtr
           intType typeContext sb.appendType
@@ -198,7 +200,9 @@ proc(
   strArray .length i64 cast.u ArraySize .Int =:: size
   ## opConst
     str
-    types.primitive.CHAR8 types.ArrayType .POINTER size typeContext newArrayType .data
+    types.primitive.CHAR8 types.ArrayType .POINTER size typeContext newArrayType .else
+      "failed to create array-type" ..panic
+    end
     pos
   opConst state appendOp
   strArray .length
@@ -233,7 +237,7 @@ proc( BlockInfoData : blockData ParserState ptr.mut : state -> BlockInfoData ptr
   state [] .openBlocks
     blockData id.LABEL_ID_NONE TmpVarInfo optional.empty false false BlockInfo new list.append
   state .openBlocks=
-  state [] .openBlocks list.peek .data .blockData
+  state [] .openBlocks list.peek optional.unwrap .blockData
 end
 proc( ParserState ptr.mut : state -> ) =>: closedConstBlock
   state [] .constBlockCount
@@ -351,7 +355,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos Parse
       pos errors appendError
       iSize slice.emptyMutable return
     end
-    state [] .parsedOps opPos list.at .data =:: opData
+    state [] .parsedOps opPos @[] =:: opData
     opData .val .?Block .else ..drop
       "operations and blocks are out of sync, expected and/or got " sb.copyPtr
         opData [] progContext sb.appendOp
@@ -372,7 +376,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition : pos Parse
       break
       default
         "operations and blocks are out of sync, expected and/or got " sb.copyPtr
-          opData [] .val .Block .blockType sb.appendBlockType
+          blockData [] .blockType sb.appendBlockType
         pos errors appendError
       iSize slice.emptyMutable return
     end blockData .blockType=
@@ -543,7 +547,9 @@ proc(
     UNSIGNED case
       literalType switch
         FIXED case
-          intType typeContext types.sizeOf .Fixed 8 * i32 cast types.MAX_INT_WIDTH < if
+          intType typeContext types.sizeOf .?Fixed .else
+            "expected fixed size" ..panic
+          end 8 * i32 cast types.MAX_INT_WIDTH < if
             ..drop types.MAX_SIGNED_INT ## replace with maximum signed value to trigger overflow check
           end
           break
@@ -677,7 +683,9 @@ proc(
     pos progContext .errors constContext constants.parseStringConstant ## escape character
     ## TODO is check for unicode needed?, source is already utf8 would checking for length 1 be enough
     ## TODO? allow multi-char character literals (push char8 ... array)
-      .Array8 string.fromBytes
+      .?Array8 .else
+        "expected array8" ..panic
+      end string.fromBytes
       0:iSize utf8.nextCodepoint =:: cp
     #+nextIndex+# >$ .length u< if
       "A character literal has to contain exactly one character" sb.copyPtr pos errors appendError
@@ -737,20 +745,22 @@ proc(
         string.empty true return
       Char .case fileState [] .wordStart state parseCharConstant
         string.empty true return
-      Identifier .case string.empty fileState [] .wordStart state tryParseNumberLiteral if
+      Identifier .case =:: idToken
+        idToken string.empty fileState [] .wordStart state tryParseNumberLiteral if
           string.empty true return
         end
-        token .Identifier
+        idToken
         break
-      Literal case
+      Literal .case =:: literalToken
         fileState [] .wordStart =:: literalStart
         fileState nextToken =:: literalType
         literalType fileState [] .wordStart errors checkLiteralType if
           string.empty true return
         end
-        literalType .LiteralType "?":s string.eq if
+        literalType .?LiteralType .else ..unreachable end =:: literalTypeName
+        literalTypeName "?":s string.eq if
           false =:: mut: isElement
-          token .Literal
+          literalToken
             $ .length 2:iSize u>= and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != if
               1 string.tail
               true isElement=
@@ -769,12 +779,12 @@ proc(
           string.empty true return
         end
         ## XXX? remove special case for number literals
-        token .Literal literalType .LiteralType literalStart state tryParseNumberLiteral if
+        literalToken literalTypeName literalStart state tryParseNumberLiteral if
           string.empty true return
         end
         ## literal not a primitive number type -> convert to string and call literal procedure
         ## appendStringConstant
-          token .Literal constContext newStringConst
+          literalToken constContext newStringConst
           literalStart
         state appendStringConstant =:: charCount
         charCount i64 cast.u ConstValue .Int
@@ -783,7 +793,7 @@ proc(
         progContext [] .tmpString
           sb.clear ## clear tmp string
           ':' sb.appendC
-          literalType .LiteralType sb.appendStr
+          literalTypeName sb.appendStr
         progContext .tmpString=
         progContext [] .tmpString sb.asStr false return
       LiteralChar LiteralString LiteralRawString .case
@@ -795,11 +805,12 @@ proc(
         literalType fileState [] .wordStart errors checkLiteralType  if
           string.empty true return
         end
+        literalType .?LiteralType .else ..unreachable end =:: literalTypeName
         ## XXX? more usefull error for missing parse procedure?
         progContext [] .tmpString
           sb.clear ## clear tmp string
           ':' sb.appendC
-          literalType .LiteralType sb.appendStr
+          literalTypeName sb.appendStr
         progContext .tmpString=
         progContext [] .tmpString sb.asStr false return
       LiteralType case
@@ -982,7 +993,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state opCount optional.wrap ifData .elsePosition=
           ifData [] .ifPosition fileState [] .wordStart state setBlockJump
           ifData [] .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
-          state peekBlock .data current == "top pointer does not change" assert
+          state peekBlock .and current == end "top pointer does not change" assert
           BlockType .ELSE fileState [] .wordStart opBlock state appendOp
           ifData [] .andPositions .length 0 == if
             varInfo state fileState [] .wordStart appendElseVal
@@ -1062,7 +1073,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state opCount
         WhileBlockState .WHILE
       WhileBlockData new BlockInfoData .While state openBlock ..drop
-      blockLabel state peekBlock .data .blockLabel=
+      blockLabel state peekBlock optional.unwrap .blockLabel=
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       return
     else $ "for":s string.eq or $ "for:":s string.eq _if =:: opName
@@ -1102,8 +1113,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         whilePos
         WhileBlockState .DO
       WhileBlockData new BlockInfoData .While state openBlock ..drop
-      blockLabel state peekBlock .data .blockLabel=
-      itrId TmpVarInfo new optional.wrap state peekBlock .data .tmpVarInfo=
+      blockLabel state peekBlock optional.unwrap .blockLabel=
+      itrId TmpVarInfo new optional.wrap state peekBlock optional.unwrap .tmpVarInfo=
       return
     else $ "do":s string.eq or $ ".do":s string.eq _if =:: opName
       state peekBlock .and =:: currentBlock
@@ -1229,7 +1240,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         iSize optional.empty
         SwitchBlockState .CASE_LABEL
       SwitchBlockData new BlockInfoData .Switch state openBlock ..drop
-      blockLabel state peekBlock .data .blockLabel=
+      blockLabel state peekBlock optional.unwrap .blockLabel=
       BlockType .SWITCH blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       return
     ## TODO? remember if if contains .case / .default
@@ -1375,7 +1386,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               ifData .andPositions .length 0 != =:: hasAnd
               ifData .andPositions slice.freeze fileState [] .wordStart state setBlockJumps
               BlockType .ELSE fileState [] .wordStart opBlock  state appendOp
-              1:JumpDistance state peekOp .if .val .Block .jumpDistance= else ..drop end
+              1:JumpDistance state peekOp .and .val .?Block .if .jumpDistance= else ..drop end
               hasAnd ! and closedBlock .tmpVarInfo .if
                 state fileState [] .wordStart appendElseVal
               end
@@ -1405,9 +1416,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             BlockType .FINALLY fileState [] .wordStart opEndBlock  state appendOp
             whileData .whilePosition
               state opCount - JumpDistance cast
-            state peekOp .if
-              .val .BlockEnd .jumpDistance=
-            else ..drop end
+            state peekOp .and .val .?BlockEnd .if .jumpDistance= else ..drop end
             closedBlock .tmpVarInfo .if
               state fileState [] .wordStart appendItrEnd
             end
@@ -1435,19 +1444,19 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               list.removeLast =:: currentProcId
             state .currentProcs=
             progContext [] .procedures
-              currentProcId i64 cast list.at .data
+              currentProcId i64 cast @[]
             =:: currentProc
+            currentProc .implementation .?Code .else
+              "expected code-implementation" ..panic
+            end =:: codeImpl
             state [] .parsedOps list.asSlice
               procBlockData .blockStart slice.tail
               $ 0 @[] =:: procStart
               slice.copy
-            currentProc .implementation .Code .code=
+            codeImpl .code=
             state [] .parsedOps
               procBlockData .blockStart list.setLength
             state .parsedOps=
-            currentProc [] .procType .?Undefined ? ! if
-              ProcCodeState .PARSED currentProc .implementation .Code .codeState=
-            end
           break
           Namespace case
             BlockType .NAMESPACE fileState [] .wordStart opEndBlock state appendOp
@@ -1609,12 +1618,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             list.removeLast =:: withProcId
           state .currentProcs=
           progContext [] .procedures
-            withProcId i64 cast list.at .data
+            withProcId i64 cast @[]
           =:: withProc
           state [] .parsedOps
             offset list.tail
             slice.copy
-          withProc .implementation .Code .code=
+          withProc .implementation .?Code .else
+            "expected code-implementation" ..panic
+          end .code=
           state [] .parsedOps
             offset list.setLength
           state .parsedOps=
@@ -2014,10 +2025,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "..compiler.return":s string.eq _if ..drop
       ..drop ## discard remainder of file
+      BlockType ..length 43:iSize == "no new block types" assert
       ## close open if-blocks/switch-branches
-      while state [] .openBlocks list.peek =:: next?
-          BlockType ..length 43:iSize == "no new block types" assert
-          next? optional.hasData and next? .data [] .blockData switch
+      while state [] .openBlocks list.peek .and [] .blockData switch
             If Switch case true break
             default false break
           end do
@@ -2033,7 +2043,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         types.ArrayType .POINTER
         name .length i64 cast.u types.ArraySize .Int =:: size
         size
-      typeContext types.newArrayType .data
+      typeContext types.newArrayType .else
+        "failed to create array-type" ..panic
+      end
       fileState [] .wordStart opConst state appendOp
       return
     else $ "..line":s string.eq _if ..drop
@@ -2144,7 +2156,7 @@ proc( FileId : includedId io.IOError : err FilePosition : pos ParserState ptr.mu
   end
   state [] .progContext =:: progContext
   progContext .errors =:: errors
-  progContext [] .progFiles includedId i64 cast list.at .data [] .fileName sb.asStr =:: fileName
+  progContext [] .progFiles includedId i64 cast @[] .fileName [] sb.asStr =:: fileName
   err switch
     FILE_ERROR_NONE case ..unreachable ## already handled this case
     FILE_ERR_PATH_OVERFLOW FILE_ERR_OPEN_MODE FILE_ERR_FILE_NOT_FOUND FILE_ERR_FILE_IS_DIR FILE_ERR_ACCESS_DENIED FILE_ERR_INVALID_FILE case
@@ -2226,7 +2238,7 @@ proc(
   end
   ## TODO correctly resolve sub-imports for cyclic imports
   imported
-    progContext [] .progFiles imported i64 cast list.at .data [] .fileScope
+    progContext [] .progFiles imported i64 cast @[] .fileScope []
   progContext .idContext id.importFile
 end
 
@@ -2328,7 +2340,7 @@ proc(
   end
   idContext id.openScope
   fileId id.NO_SCOPE idContext id.importFile ## import file in its own scope
-  idContext id.currentScope progContext [] .progFiles fileId i64 cast list.at .data .fileScope=
+  idContext id.currentScope progContext [] .progFiles fileId i64 cast @[] .fileScope=
   ## TODO? find good heuristic for token count based on character to reduce number of buffer reallocations
   state [] .parsedOps
     fileBody .length 8 / list.ensureCap
