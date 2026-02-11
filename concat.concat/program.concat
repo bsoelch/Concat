@@ -153,7 +153,6 @@ union(
       ProcedureImpl : ImplementProcedure
       ProcedureImpl : ProcPtr
             LabelId : GetLabel
-            LabelId : GetUnionLabel
             LabelId : SetLabel
             LabelId : ExistsLabel
                 i32 : GetElement
@@ -280,9 +279,6 @@ proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opHa
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetLabel
   OpValue .GetLabel Type .Undefined pos Operation new return
-end
-proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetUnionLabel
-  OpValue .GetUnionLabel Type .Undefined pos Operation new return
 end
 proc( LabelId FilePosition  -> Operation ) =>: export: opSetLabel
   =:: pos
@@ -903,12 +899,6 @@ namespace: sb
       break
       GetLabel .case =:: name
         "get label ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        name labelContext sb.appendLabelName
-      break
-      GetUnionLabel .case =:: name
-        "get union label ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         name labelContext sb.appendLabelName

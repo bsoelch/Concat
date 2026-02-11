@@ -1743,10 +1743,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         isWrite if
           $ .length 1:iSize - string.head
         end
-        $ "?":s string.startsWith =:: isTryGet ## temporary syntax for new union element access
-        isTryGet if
-          1 string.tail
-        end
       =:: label
       label 10 number.tryParseUInt .NONE if
         $ i64 cast.u i32.UMAX > if
@@ -1759,8 +1755,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState [] .wordStart
           isWrite if
             opSetElement
-          else isTryGet _if
-            opGetUnionElement
           else
             opGetElement
           end
@@ -1770,8 +1764,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState [] .wordStart
           isWrite if
             opSetLabel
-          else isTryGet _if
-            opGetUnionLabel
           else
             opGetLabel
           end

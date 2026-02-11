@@ -463,7 +463,7 @@ proc(
       newOps return
     AutoTypedInitializeId ConstantReference NewReference
     TypeInfo NewEnumReference UsingNamespace UsingIdentifier InlineReturn
-    GetName AtName SetName GetLabel GetUnionLabel Assert DeclareName AliasName InitializeName
+    GetName AtName SetName GetLabel Assert DeclareName AliasName InitializeName
     SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc Import LibImport case
       break ## XXX error message
   end

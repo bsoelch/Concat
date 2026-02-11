@@ -1457,76 +1457,6 @@ proc(
           EvalResult .Error return
       end
       break
-    GetUnionLabel case "unimplemented" ..panic
-    GetLabel SetLabel .case =:: labelId
-      op [] .val .SetLabel ? =:: isWrite
-      op [] .pos context popValue if ..drop.2
-        "stack underflow while evaluating operation: " sb.copyPtr
-          op [] program sb.appendOp
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end =:: value =:: valInfo
-      value .TypeId .and =:: typeId
-          typeId typeContext types.isEnumOrTaggedUnion if
-        typeId true
-      else
-        valInfo .valueType false
-      end  =:: isType =:: containerType
-      ## enum/union element initializer
-      containerType
-        labelId
-      typeContext types.compositeFindLabel .else
-        "type " sb.copyPtr
-          containerType typeContext sb.appendType
-          " does not have a label \"" sb.appendS
-          labelId labelContext sb.appendLabelName
-          '"' sb.appendC
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end =:: elementIndex
-      containerType elementIndex typeContext types.compositeGetElement =:: eltType
-      isType if
-        eltType .Empty ? if
-          ## pushValue
-            containerType typeContext types.isEnum if
-              elementIndex i64 cast.u ConstValue .Int
-            else
-              ConstValue .None elementIndex constContext newUnionConst
-            end
-            containerType
-            op [] .pos
-          context pushValue
-          EvalResult .Ok return
-        end
-        op [] .pos context popValue if ..drop.2
-          "stack underflow while evaluating operation: " sb.copyPtr
-            op [] program sb.appendOp
-          op [] .pos errors appendError
-          EvalResult .Error return
-        end =:: eltValue =:: eltValInfo
-        eltValInfo .valueType eltType typeContext types.canAutoCast if
-          ## pushValue
-            eltValue elementIndex constContext newUnionConst
-            containerType
-            op [] .pos
-          context pushValue
-          EvalResult .Ok return
-        end
-        ## unpopValue
-          eltValue
-          eltValInfo
-        context unpopValue
-        "wrong value for union element, expected " sb.copyPtr
-          eltType typeContext sb.appendType
-          " got " sb.appendS
-          eltValInfo .valueType typeContext sb.appendType
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end
-      isWrite if
-        value valInfo elementIndex op [] .pos context setElement wrapResult return
-      end
-      value valInfo elementIndex op [] .pos context getElement wrapResult return
     GetUnionElement case "unimplemented: get union element" ..panic
     GetEnumLabel case
       op [] .pos context popValue if ..drop.2
@@ -2121,7 +2051,7 @@ proc(
           EvalResult .Ok return ## TODO find
       end
       break
-    Import LibImport
+    Import LibImport GetLabel SetLabel
     NewEnumReference CallPtr
     ImplementProcedure ProcPtr
     ConstantReference NewReference
