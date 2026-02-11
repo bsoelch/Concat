@@ -340,7 +340,7 @@ proc(
         depth
       sb.appendTypeRecursive
       printValues if
-        val [] .value .?None ? ! if
+        val [] .value .None ? ! if
           " { " sb.appendS
           val [] .value typeContext sb.appendConstant
           " }" sb.appendS
@@ -406,20 +406,20 @@ proc(
 -> bool ) =>: tryCastConstant
   state [] .program .errors =:: errors
   state [] .program .idContext .typeContext =:: typeContext
-  src .value .?None ? if
+  src .value .None ? if
     true return
   end
   src .opIndex 0 < if
     true return
   end
   state [] .compiledOps src .opIndex @[] =:: srcOp
-  srcOp [] .val .?Constant ? ! if
+  srcOp [] .val .Constant ? ! if
     true return
   end
   target typeContext types.unwrapRefinement target=
   ## TODO? completely merge with interpreter.castConstant
   ## casting between integer constants
-  target typeContext types.isNumber and src .value .?Int ? or src .value .?Float ? if
+  target typeContext types.isNumber and src .value .Int ? or src .value .Float ? if
     src .valueType signType src .value target typeContext interpreter.castConstant srcOp .val .Constant=
     target srcOp .dataType=
     false return
@@ -484,7 +484,7 @@ proc(
       "stack underflow":s pos ..line internalErrorNoOp ..unreachable
     end [] =:: typeInfo
     popConstants and isConstant if
-      typeInfo .value .?None ? if
+      typeInfo .value .None ? if
         false isConstant=
       else
         state [] .constBuffer typeInfo .value list.append state .constBuffer=
@@ -503,7 +503,7 @@ proc(
       typeInfo expectedType SignType .NONE pos state tryCastConstant ! if
         ## update constant value
         popConstants and isConstant and state [] .compiledOps typeInfo .opIndex list.at .and
-            .val [] .?Constant .if
+            .val [] .Constant .if
           state [] .constBuffer list.peek .else
             "missing constant":s pos ..line internalErrorNoOp ..unreachable
           end  =[]
@@ -614,7 +614,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
     pos errors appendError
     Type .Undefined return
   end
-  typeInfo [] .value .?TypeId .else
+  typeInfo [] .value .TypeId .else
     "expected type-constant got " sb.copyPtr
       >$ typeContext sb.appendConstant
     pos errors appendError
@@ -642,7 +642,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> string ) =>: popStrin
   1 pos state checkStackSize if string.empty return end
   state .stack branchTree.peek optional.unwrap =:: typeInfo
   ## XXX? allow Array: { string, i64 } as string constant
-  typeInfo [] .value .?Array8 .else
+  typeInfo [] .value .Array8 .else
     "expected string-constant got " sb.copyPtr
       >$ typeContext sb.appendConstant
     pos errors appendError
@@ -776,10 +776,10 @@ proc(
   closed return
 end
 proc( TypeCheckState ptr.mut : state -> bool ) =>: inIfCondition
-  state peekBlock .and .?If .and [] .flags IfBlockFlags.hasIf & ? ! end
+  state peekBlock .and .If .and [] .flags IfBlockFlags.hasIf & ? ! end
 end
 proc( TypeCheckState ptr : state -> bool ) =>: inSwitchLabel
-  state [] .openBlocks list.peek .and [] .?Switch .and .inLabel end
+  state [] .openBlocks list.peek .and [] .Switch .and .inLabel end
 end
 proc(
   BlockType : breakType
@@ -793,11 +793,11 @@ proc(
   typeContext .labelContext =:: labelContext
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
-    block [] .?While .and =:: whileBlock blockLabel id.LABEL_ID_NONE == or
+    block [] .While .and =:: whileBlock blockLabel id.LABEL_ID_NONE == or
         whileBlock .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
     end
-    breakType .BREAK and block [] .?Switch .and =:: switchBlock
+    breakType .BREAK and block [] .Switch .and =:: switchBlock
         blockLabel id.LABEL_ID_NONE == or
         switchBlock .blockLabel blockLabel labelContext id.labelNamesEq if
       block optional.wrap return
@@ -840,14 +840,14 @@ proc(
     switchBlock .caseBranches=
   end
   BlockType .BREAK_SWITCH pos opBlock =:: mut: breakOp
-  switchBlock [] .blockId breakOp@ .val .?Block .else "expected block" ..panic end .blockId=
+  switchBlock [] .blockId breakOp@ .val .Block .else "expected block" ..panic end .blockId=
   switchBlock [] .breakPositions
     state [] .compiledOps .length i32 cast.u list.append
   switchBlock .breakPositions=
   breakOp state appendOp ..drop
   false state .reachable=
   ## TODO is block info in param same block-info as block-info on stack
-  state [] .openBlocks list.peek .and [] .?Switch ? if
+  state [] .openBlocks list.peek .and [] .Switch ? if
     switchBlock [] .inLabel ! if
       state [] .program .idContext id.closeScope ! "closing case-scope worked" assert
     end
@@ -856,7 +856,7 @@ proc(
 end
 ## terminate current switch branch
 proc( FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: endSwitchBranch
-  state peekBlock .and .?Switch .and =:: switchBlock
+  state peekBlock .and .Switch .and =:: switchBlock
       switchBlock [] .inLabel ! if
     switchBlock pos state breakSwitch
   end
@@ -1002,7 +1002,7 @@ proc(
           mergePoint .castPointOffsets i [] =:: castRoot
           castRoot 0 >= if
             mergePoint .state [] .compiledOps castRoot offset + @[] =:: castPoint
-            castPoint [] .val .?NOP .and .RESERVED if
+            castPoint [] .val .NOP .and .RESERVED if
               ## opAutoCast
                 currentType
                 offset i32 cast
@@ -1097,10 +1097,10 @@ proc(
   state [] .compiledOps index list.at .else
     false return
   end =:: op
-  op [] .val .?Constant ? if
+  op [] .val .Constant ? if
     true return
   end
-  op [] .val .?GetId .if .labelId =:: labelId
+  op [] .val .GetId .if .labelId =:: labelId
       state [] .program .idContext =:: idContext
       labelId
         idContext .typeContext .labelContext id.labelFlags
@@ -1112,7 +1112,7 @@ proc(
         idContext
       id.getIdentifier if ..drop
         false return
-      end .constValue .?None ? ! return
+      end .constValue .None ? ! return
   else ..drop end
   false return
 end
@@ -1157,7 +1157,7 @@ end
 proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
   state [] .compiledOps .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
     state [] .compiledOps i @[] =:: op
-    op [] .val .?NOP ! .or .EMPTY ! if
+    op [] .val .NOP ! .or .EMPTY ! if
       i break
     end
     i 1:iSize -
@@ -1230,7 +1230,7 @@ proc(
   end =:: inTypes
   program [] .procedures calledProc .procId i64 cast @[] =:: procData
   state [] .constBuffer .length =:: constOffset
-  procData .implementation .?Code ? =:: isCodeImpl
+  procData .implementation .Code ? =:: isCodeImpl
   isCodeImpl and calledType typeContext types.isTypeGeneratorProc end =:: isTypeGenerator
   false =:: mut: isGenericTypeGen
   ## 1. remove static arguments and apply argument conversions
@@ -1256,8 +1256,8 @@ proc(
       state [] .constBuffer
         argValue list.append
       state .constBuffer=
-      argValue .?GenericArg ? or
-          argValue .?TypeId .and typeContext types.isGeneric if
+      argValue .GenericArg ? or
+          argValue .TypeId .and typeContext types.isGeneric if
         true isGenericTypeGen=
       end
       eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
@@ -1300,7 +1300,7 @@ proc(
       true
       typeContext
       constContext
-    types.findGeneratedType .?Stored .if
+    types.findGeneratedType .Stored .if
       optional.wrap
     else ..drop isGenericTypeGen _if
       ## initializeGeneratedType
@@ -1314,7 +1314,7 @@ proc(
       state [] .constBuffer
         constOffset list.setLength
       state .constBuffer=
-      source .?Op ? if
+      source .Op ? if
         args .length i32 cast.u pos state discardValues
       end
       source switch
@@ -1357,7 +1357,7 @@ proc(
     interpreter .stackInfo=
   end
   ## 3. ensure procedure has been type-checked (may invalidate args!)
-  procData .implementation .?Code .if
+  procData .implementation .Code .if
     calledProc .implementationId -1:i32 != if ## TODO! avoid magic number
       [] .implementations calledProc .implementationId [] .codeState
     else
@@ -1385,7 +1385,7 @@ proc(
     EvalResult .FAILURE return
   end
   ## 5. load arguments from interpreter, reset interpreter state
-  source .?Op ? if
+  source .Op ? if
     args .length i32 cast.u pos state discardValues
   end
   calledType typeContext types.getProcOut .if .length else 0 end =:: resCount
@@ -1398,7 +1398,7 @@ proc(
     ## initializeGeneratedType
       procData [] .labelId
       state [] .constBuffer constOffset list.tail
-      interpreter [] .stack list.peek .and [] .?TypeId .else Type .Undefined end
+      interpreter [] .stack list.peek .and [] .TypeId .else Type .Undefined end
       typeContext
       constContext
     types.initializeGeneratedType =:: genericType
@@ -1490,7 +1490,7 @@ proc(
   program [] .procedures
     calledProc .procId i64 cast @[]
   =:: baseProcData
-  source .?Op .if
+  source .Op .if
     calledType >$ .dataType=
   else ..drop end
   calledType typeContext types.getProcIn .else
@@ -1501,12 +1501,12 @@ proc(
   stackValues .length
     argCount iSize cast.u iSize.min
   stackValues@ .length=
-  source .?Values ? or state isGlobal
+  source .Values ? or state isGlobal
       program [] .procedures
         calledProcId i64 cast @[]
       .isStatic [] | and state [] .mode .STATIC_PROC ! or
       calledType typeContext types.isTypeGeneratorProc or
-      baseProcData .implementation .?Code .and .codeState .TYPE_CHECKING ! if
+      baseProcData .implementation .Code .and .codeState .TYPE_CHECKING ! if
     source stackValues calledType calledProc pos state evaluateCall .SUCCESS if
       TypeCheckCallResult .ConstEval return
     end
@@ -1534,12 +1534,12 @@ proc(
           state .missingProcs=
         end
       end
-      source .?Op .if
+      source .Op .if
         calledProc program callInfoToCall >$ .val .Call=
       else ..drop end
     break
     Extern case
-      source .?Op .if
+      source .Op .if
         calledProc program callInfoToCall >$ .val .Call=
       else ..drop end
     break
@@ -1551,7 +1551,7 @@ proc(
           TypeCheckCallResult .ConstEval return
         end
       end
-      source .?Op .if
+      source .Op .if
         builtInId OpValue .BuiltIn >$ .val=
       else ..drop end
     break
@@ -1575,7 +1575,7 @@ proc(
   state .stack branchTree.itr.start while
     branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
     ## TODO? don't treat genericArg as constant
-    val [] .value .?None ? or val [] .value .?GenericArg ? if
+    val [] .value .None ? or val [] .value .GenericArg ? if
       false headConstant=
     end
     stackValues
@@ -1634,7 +1634,7 @@ proc(
         offset false
         op [] .pos
         state
-      requireTypes .?Err ? if
+      requireTypes .Err ? if
         return
       end
       offset 1 + offset=
@@ -1673,7 +1673,7 @@ namespace: typeChecker
       pos errors appendError
       Type optional.empty return
     end
-    idData [] .constValue .?Procedure .else
+    idData [] .constValue .Procedure .else
       "expected procedure got: " sb.copyPtr
         >$ typeContext sb.appendConstant
       pos errors appendError
@@ -1735,7 +1735,7 @@ namespace: typeChecker
     state [] .program =:: progContext
     progContext .idContext =:: idContext
     idContext .typeContext =:: typeContext
-    stackValue .?None ? if false return end ## can only refine constants
+    stackValue .None ? if false return end ## can only refine constants
     paramType typeContext types.isSetOrRefinementType ! if
       false return ## target is not an refinement type
     end
@@ -1761,11 +1761,11 @@ namespace: typeChecker
       stackValues@ CallSource .Values
       pos
       state
-    typeCheckCallStackless .?ConstEval ? ! if
+    typeCheckCallStackless .ConstEval ? ! if
       false return
     end
     ## arg modified by typeCheckCallStackless
-    arg .value .?Bool .else ..drop false end return
+    arg .value .Bool .else ..drop false end return
   end
 end
 proc(
@@ -1809,7 +1809,7 @@ proc(
     "return statement":s
     0 false
     op [] .pos
-  state requireTypes .?Err ? if
+  state requireTypes .Err ? if
     return
   end
   op [] state appendOp ..drop
@@ -1888,7 +1888,7 @@ proc(
       "element write":s
       0 false
       pos
-    state requireTypes .?Err ? if
+    state requireTypes .Err ? if
       return
     end
     ## opSetElement
@@ -1920,7 +1920,7 @@ proc(
     state .stack branchTree.pop ..drop
   end
   ## operation before get element is copy
-  state [] .compiledOps list.peek .and .val .?Copy ? end =:: directCopy
+  state [] .compiledOps list.peek .and .val .Copy ? end =:: directCopy
   directCopy if
     state [] .compiledOps
       $ .length 1:iSize - list.setLength
@@ -1981,9 +1981,9 @@ proc(
   =:: switchData
   label0
     ## truncate constant to correct number of bits (switch-lables are treated as unsigned numbers)
-    $ .?Int .and =:: intVal
+    $ .Int .and =:: intVal
         switchType typeContext types.isIntOrChar and
-        switchType typeContext types.sizeOf .?Fixed .and =:: size
+        switchType typeContext types.sizeOf .Fixed .and =:: size
         size 8 < if ..drop
       intVal 1:i64 size 8 * << 1 - & ConstValue .Int
     end
@@ -1997,7 +1997,7 @@ proc(
         switchType typeContext types.isEnumOrTaggedUnion if
           ## appendLabelName
             switchType
-            label .?Int .else
+            label .Int .else
               "expected int":s pos ..line internalErrorNoOp ..unreachable
             end i32 cast.u typeContext types.compositeGetLabel
             labelContext
@@ -2030,13 +2030,13 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  state peekBlock .and .?Switch .else
+  state peekBlock .and .Switch .else
     "typeCheckSwitchLabel outside switch":s op [] .pos ..line internalErrorNoOp ..unreachable
   end =:: switchBlock
   switchBlock [] .switchType =:: switchType
   switchBlock [] .blockId =:: switchId
   switchBlock [] .switchPosition =:: switchPosition
-  op [] .val .?Block .if
+  op [] .val .Block .if
     .blockType switch
       CASE DOT_CASE DEFAULT DOT_DEFAULT case
         false return
@@ -2049,14 +2049,14 @@ proc(
       default
         break
     end
-  else .?BlockEnd ? _if
+  else .BlockEnd ? _if
     false return
   end
   ## operation after switch -> don't allow break statement
   false switchBlock .allowBreak=
   switchType typeContext types.isEnumOrTaggedUnion ! if
     ## TODO? allow use of Interpreter in switch labels
-    op [] .val .?Constant .if =:: constVal
+    op [] .val .Constant .if =:: constVal
       ## newSwitchLabel
         switchId
         switchPosition
@@ -2064,7 +2064,7 @@ proc(
         constVal
         op [] .pos
       state newSwitchLabel
-    else .?GetId ._if =:: idInfo
+    else .GetId ._if =:: idInfo
       idInfo .labelId
         idContext
       id.getIdentifier if ..drop
@@ -2073,7 +2073,7 @@ proc(
         op [] .pos errors appendError
         true return
       end =:: idData
-      idData [] .constValue .?None ? if
+      idData [] .constValue .None ? if
         "expected constant got " sb.copyPtr
           idData id.asIdInfo labelContext sb.appendIdInfo
         op [] .pos errors appendError
@@ -2086,7 +2086,7 @@ proc(
         idData [] .constValue
         op [] .pos
       state newSwitchLabel
-    else .?GetName ._if =:: name
+    else .GetName ._if =:: name
       name
         idContext
       id.findIdentifierByLabel if ..drop
@@ -2095,7 +2095,7 @@ proc(
         op [] .pos errors appendError
         true return
       end =:: idData
-      idData [] .constValue .?None ? if
+      idData [] .constValue .None ? if
         "expected constant got " sb.copyPtr
           idData id.asIdInfo labelContext sb.appendIdInfo
         op [] .pos errors appendError
@@ -2117,10 +2117,10 @@ proc(
     true return
   end
   ## enum-switch -> try read label
-  op [] .val .?GetId .if
+  op [] .val .GetId .if
     .labelId
-  else .?GetName
-  ._else .?Constant .and .?TypeId .and =:: constType
+  else .GetName
+  ._else .Constant .and .TypeId .and =:: constType
       constType types.isNamedType _if
     constType typeContext types.namedTypeName
   else
@@ -2330,7 +2330,7 @@ proc(
   program .labelBuffer [] .length =:: labelOffset
   program [] .labelBuffer
     ops for =:: op
-      op .val .?GetName .if
+      op .val .GetName .if
         list.append
       else ..drop
         "unexpected operation in Enum block: " sb.copyPtr
@@ -2428,7 +2428,7 @@ proc(
         end break
         BlockEnd .case .blockType switch
           AND OR case ## only close and-or if top-block is and-or
-            state peekBlock .and .?AndOr ? if break else continue.opLoop end
+            state peekBlock .and .AndOr ? if break else continue.opLoop end
           break
           default break
         end break
@@ -2438,16 +2438,16 @@ proc(
       end
     end
     ## resolve names
-    op .val .?GetName .and op@ state resolveIdentifer .if
+    op .val .GetName .and op@ state resolveIdentifer .if
       op@ .val .GetId=
-    else op .val .?SetName .and op@ state resolveIdentifer ._if
+    else op .val .SetName .and op@ state resolveIdentifer ._if
       op@ .val .SetId=
-    else op .val .?AtName .and op@ state resolveIdentifer ._if
+    else op .val .AtName .and op@ state resolveIdentifer ._if
       op@ .val .AtId=
-    else op .val .?ExistsName ._if
+    else op .val .ExistsName ._if
       op@ state resolveIdentifer ? ConstValue .Bool op@ .val .Constant=
       types.primitive.BOOL op@ .dataType=
-    else .?AliasName ._if =:: nameAlias
+    else .AliasName ._if =:: nameAlias
       op .pos state popType =:: aliasType
       aliasType typeContext types.isProcedure ! if
         "alias is only supported for procedure types" sb.copyPtr op .pos errors appendError
@@ -2464,16 +2464,16 @@ proc(
           aliasData [] .idType sb.appendIdType
         op .pos errors appendError
       end
-      aliasData [] .constValue .?Procedure .else
+      aliasData [] .constValue .Procedure .else
         "unexpected constant for procedure alias: " sb.copyPtr
           >$ typeContext sb.appendConstant
         op .pos errors appendError
         continue.opLoop
       end =:: mut: aliasId
       program [] .procedures aliasId i64 cast @[]
-        $ .implementation [] .?Alias .if aliasId= ..drop
+        $ .implementation [] .Alias .if aliasId= ..drop
           program [] .procedures aliasId i64 cast @[]
-          $ .implementation [] .?Alias ? ! "no double alias" assert
+          $ .implementation [] .Alias ? ! "no double alias" assert
         else ..drop end
       =:: aliasProc
       aliasType aliasProc [] .procType typeContext types.canAlias ! if
@@ -2497,7 +2497,7 @@ proc(
       id.declareIdentifier if ..drop.2
         ## error message is created by declareIdentifier
         continue.opLoop
-      end >$ ..drop .constValue .?Procedure ? ! if
+      end >$ ..drop .constValue .Procedure ? ! if
         nameAlias .alias aliasType state [] .currentFile aliasId false op .pos program newProcData
           ConstValue .Procedure
         nameAlias .alias idContext id.getIdentifier
@@ -2505,17 +2505,17 @@ proc(
         .constValue=
       end
       continue.opLoop
-    else .?DeclareName ? or op .val .?InitializeName ? _if
-      op .val .?InitializeName ? =:: isInit
-      op .val .?InitializeName .if =:: initName
+    else .DeclareName ? or op .val .InitializeName ? _if
+      op .val .InitializeName ? =:: isInit
+      op .val .InitializeName .if =:: initName
         op@ initName .initType .AUTO state resolveDeclarationType
         initName .label
-      else .?DeclareName ._else ..unreachable end
+      else .DeclareName ._else ..unreachable end
         state [] .blockMode .NONE ! if
           Type .Undefined
           IdentifierType .LABEL
         else
-          op .dataType $ .?Undefined ? if ..drop
+          op .dataType $ .Undefined ? if ..drop
             op .pos state popType
             $ op@ .dataType=
           end
@@ -2545,14 +2545,14 @@ proc(
       op .dataType idData@ id.asIdInfo op .pos
       isInit ! if
         opDeclareId
-      else op .val .?InitializeName .and .initType .AUTO _if
+      else op .val .InitializeName .and .initType .AUTO _if
         opAutoTypedInitializeId
       else
         opInitializeId
       end op=
     end
     ## convert static arguments to constants
-    op .val .?GetId .and .labelId =:: label
+    op .val .GetId .and .labelId =:: label
         label labelContext id.labelFlags id.FLAG_STATIC & ? and
         state .argData label map.at .if =:: argData
       argData [] .valType op@ .dataType=
@@ -2563,8 +2563,8 @@ proc(
       Constant .case op .dataType op .pos state pushConstant continue.opLoop
       NestedProc .case =:: procId
         program [] .procedures procId i64 cast @[] =:: procData
-        procData [] .procType .?Undefined ? ! or
-            procData .implementation .?Code ! .or [] .codeState .PARSING ! if
+        procData [] .procType .Undefined ? ! or
+            procData .implementation .Code ! .or [] .codeState .PARSING ! if
           "unexpected state for nested procedure" sb.copyPtr
           op .pos errors appendError
           continue.opLoop
@@ -2582,7 +2582,7 @@ proc(
         op .pos state popType =:: procType
         procType procData typeContext setProcType
         idContext id.currentScope procData .scopeId= ## remember host scope
-        ProcCodeState .PARSED procData .implementation .?Code .else
+        ProcCodeState .PARSED procData .implementation .Code .else
           "expected code-proc":s op .pos ..line internalErrorNoOp ..unreachable
         end .codeState=
         procId ConstValue .Procedure
@@ -2655,7 +2655,7 @@ proc(
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
             idInfo .labelId =:: labelId
-            mutable ! and constValue .?None ? ! and idInfo .idType .GLOBAL_VAR if
+            mutable ! and constValue .None ? ! and idInfo .idType .GLOBAL_VAR if
               ## replace access to immutable global variable with constant
               constValue op .dataType op .pos opConst op=
             end
@@ -2687,7 +2687,7 @@ proc(
             continue.opLoop
           PROCEDURE PROCEDURE_BUNDLE case
             idInfo .idType .PROCEDURE if
-              constValue@ .?Procedure .else ..drop
+              constValue@ .Procedure .else ..drop
                 "missing implementation for " sb.copyPtr
                   idInfo labelContext sb.appendIdInfo
                 op .pos errors appendError
@@ -2698,7 +2698,7 @@ proc(
               =:: procData
               procId slice.wrap
             else  ## PROCEDURE_BUNDLE
-              constValue .?ProcedureBundle .else ..drop
+              constValue .ProcedureBundle .else ..drop
                 "missing implementation for " sb.copyPtr
                   idInfo labelContext sb.appendIdInfo
                 op .pos errors appendError
@@ -2742,7 +2742,7 @@ proc(
           0 false
           op .pos
           state
-        requireTypes .?Err ? if continue.opLoop end
+        requireTypes .Err ? if continue.opLoop end
         calledType op@ .dataType=
         calledType typeContext types.isPointer if
           calledType typeContext types.getBaseType
@@ -2758,7 +2758,7 @@ proc(
           1 false
           op .pos
           state
-        requireTypes .?Err ? if continue.opLoop end
+        requireTypes .Err ? if continue.opLoop end
         op state appendOp ..drop
         procType typeContext types.getProcOut .else
           "proc has no out":s op .pos ..line internalErrorNoOp ..unreachable
@@ -2784,17 +2784,17 @@ proc(
                 op .pos errors appendError
                 continue.opLoop
               end =:: idData
-              idData [] .constValue .?Procedure .else
+              idData [] .constValue .Procedure .else
                 "expected procedure-constant":s op ..line state internalError ..unreachable
               end =:: mut: procId
               program [] .procedures
                 procId i64 cast @[]
                 $ [] .procType op@ .dataType=
-                $ .implementation .?Alias .if [] procId= ..drop
+                $ .implementation .Alias .if [] procId= ..drop
                   program [] .procedures procId i64 cast list.at .else
                     "could not find procedure alias":s op ..line state internalError ..unreachable
                   end
-                  $ .implementation [] .?Alias ? ! "no double alias" assert
+                  $ .implementation [] .Alias ? ! "no double alias" assert
                 else ..drop end
               =:: procData
               -1:i32 =:: mut: implId
@@ -2805,9 +2805,9 @@ proc(
                 ##  -> generic proc ptr : ( procId, implId )
                 break
               end
-              procData .implementation .?BuiltIn .if
+              procData .implementation .BuiltIn .if
                 true >$ .hasPtr=
-              else .?Code ._if =:: codeImpl
+              else .Code ._if =:: codeImpl
                 codeImpl .codeState [] .TYPE_CHECKED ! if
                   state [] .missingProcs
                     ## MissingProc
@@ -2872,7 +2872,7 @@ proc(
           0 false
           op .pos
           state
-        requireTypes .?Err ? if continue.opLoop end
+        requireTypes .Err ? if continue.opLoop end
         op state appendOp ..drop
         continue.opLoop
       DeclareId .case =:: idInfo
@@ -2894,13 +2894,13 @@ proc(
             end =:: idData
             state [] .blockMode switch
               TYPE case
-                stackVal [] .value .?WildCard .if ..drop
+                stackVal [] .value .WildCard .if ..drop
                   ## TODO make behaviour of _ dependent on container type
                   ##  Union -> empty element, Proc -> anonymous generic, Struct -> compiler error
                   types.primitive.TYPE stackVal .valueType=
                   Type .Empty ConstValue .TypeId stackVal .value=
                   Type .Empty
-                else .?TypeId ._else ..drop
+                else .TypeId ._else ..drop
                   stackVal [] .valueType
                 end idData .valueType=
                 idInfo .labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -2919,7 +2919,7 @@ proc(
               break
               NONE case ..unreachable
             end
-            stackVal [] .value .?TypeId .and typeContext types.isType if
+            stackVal [] .value .TypeId .and typeContext types.isType if
               ## type-arguments are always static
               idInfo .labelId id.FLAG_STATIC labelContext id.addLabelFlags
             end
@@ -2966,7 +2966,7 @@ proc(
             NONE case ..unreachable
           end
         end
-        op .dataType .?Undefined ? if
+        op .dataType .Undefined ? if
           op@ false state resolveDeclarationType
         end
         idInfo .idType switch
@@ -2977,8 +2977,8 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end .constValue =:: constVal
-            constVal [] .?None .if ..drop
-            else .?Procedure ._if =:: procId
+            constVal [] .None .if ..drop
+            else .Procedure ._if =:: procId
               continue.opLoop ## skip if value already exits
             else
               "unexpected constant for procedure: " sb.copyPtr
@@ -3028,8 +3028,8 @@ proc(
         end
         break
       InitializeId AutoTypedInitializeId .case =:: idInfo
-        op .val .?AutoTypedInitializeId ? =:: autoTyped
-        op .dataType .?Undefined ? if
+        op .val .AutoTypedInitializeId ? =:: autoTyped
+        op .dataType .Undefined ? if
           op@ autoTyped state resolveDeclarationType
         end
         idInfo op@ .val .InitializeId= ## auto-typed initializations have been resolved
@@ -3038,7 +3038,7 @@ proc(
             state .stack branchTree.peek .if
               [] .value
               idInfo .idType .TYPE if
-                .?TypeId .else
+                .TypeId .else
                   "unexpected constant for type declaration" sb.copyPtr
                     >$ typeContext sb.appendConstant
                   op .pos errors appendError
@@ -3051,7 +3051,7 @@ proc(
                 end ConstValue .TypeId
               end
             else ConstValue .None end =:: constVal
-            constVal .?TypeId ? or state isGlobal and constVal .?None ? ! if
+            constVal .TypeId ? or state isGlobal and constVal .None ? ! if
               ## remove type-constant from code
               1 op .pos state discardValues
             else
@@ -3060,13 +3060,13 @@ proc(
                 "initialization":s
                 0 false
                 op .pos
-              state requireTypes .?Err ? if ## TODO? can requireTypes change constVal
+              state requireTypes .Err ? if ## TODO? can requireTypes change constVal
                 continue.opLoop
               end
             end
             ## update constant value in identifier if stack-value is constant
             ##   don't update mutable local variables
-            constVal .?TypeId ? or constVal .?None ? ! and
+            constVal .TypeId ? or constVal .None ? ! and
                 state isGlobal or idInfo .idType .GLOBAL_VAR or idInfo .idType .PROCEDURE or
                 idInfo .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
               ## TODO special handling for procedure constants
@@ -3081,9 +3081,9 @@ proc(
                 constVal idData .constValue=
               end
               idInfo .idType .PROCEDURE if
-                constVal .?Procedure .if =:: procId
+                constVal .Procedure .if =:: procId
                   program [] .procedures procId iSize cast.u @[] =:: procInfo
-                  procInfo .procType .?Undefined ? if
+                  procInfo .procType .Undefined ? if
                     op .dataType procInfo .procType=
                   end
                   procInfo .labelId [] labelContext id.labelFlags id.FLAG_LAMBDA & ? if
@@ -3104,7 +3104,7 @@ proc(
                 end
               end
               ## don't create code for declaration of type-constant
-              constVal .?TypeId ? or state isGlobal if
+              constVal .TypeId ? or state isGlobal if
                 continue.opLoop
               end
             end
@@ -3119,8 +3119,8 @@ proc(
         break
       ImplementProcedure case break
       GetElement GetUnionElement SetElement .case =:: index
-        op .val .?SetElement ? =:: isWrite
-        op .val .?GetUnionElement ? =:: isUnionGet
+        op .val .SetElement ? =:: isWrite
+        op .val .GetUnionElement ? =:: isUnionGet
         isWrite if 2 else 1 end op .pos state checkStackSize if
           continue.opLoop
         end
@@ -3155,7 +3155,7 @@ proc(
           end
           srcType containerType index isWrite isUnionGet isPtr mutable op .pos state typeCheckGetElement
         else containerType typeContext types.isArray _if
-          containerType typeContext types.getArraySize .?Int .else ..drop
+          containerType typeContext types.getArraySize .Int .else ..drop
             "generic arrays are not supported" sb.copyPtr
             op .pos errors appendError
             continue.opLoop
@@ -3178,10 +3178,10 @@ proc(
       GetLabel GetUnionLabel SetLabel ExistsLabel .case =:: labelId
         enum( CHECK CHECK_ENUM GET UNION_GET ) =:: LabelAccessType
         LabelAccessType .GET =:: mut: accessType
-        op .val .?SetLabel ? =:: isWrite
-        op .val .?ExistsLabel ? if
+        op .val .SetLabel ? =:: isWrite
+        op .val .ExistsLabel ? if
           LabelAccessType .CHECK accessType=
-        else op .val .?GetUnionLabel ? _if
+        else op .val .GetUnionLabel ? _if
           LabelAccessType .UNION_GET accessType=
         end
         1:i32 isWrite if 1 + end op .pos state checkStackSize if
@@ -3193,7 +3193,7 @@ proc(
         false =:: mut: isPtr
         false =:: mut: isType
         srcType
-          $ typeContext types.isType and container .value .?TypeId .if =:: typeId ..drop
+          $ typeContext types.isType and container .value .TypeId .if =:: typeId ..drop
             true isType=
             typeId
           else $ typeContext types.isPointer _if
@@ -3257,7 +3257,7 @@ proc(
               " is not an enum or union" sb.appendS
             op .pos errors appendError
           end
-          state .stack branchTree.peek .and .value .?Int .if
+          state .stack branchTree.peek .and .value .Int .if
             1 op .pos state discardValues ## remove container
             ## pushConstant
               [] elementIndex i64 cast.u == ConstValue .Bool
@@ -3348,7 +3348,7 @@ proc(
             op .pos errors appendError
           end
           ConstValue .None =:: mut: constValue
-          eltType .?Empty ? if
+          eltType .Empty ? if
             ## newUnionConst
               ConstValue .None
               elementIndex
@@ -3372,7 +3372,7 @@ proc(
             end
           end
           ## XXX discard operation and push constant if there is a constant value
-          constValue .?None ? if
+          constValue .None ? if
             ## pushValue
               containerType
               constValue
@@ -3408,7 +3408,7 @@ proc(
           op .pos errors appendError
         end
         ## TODO? compile-time evaluation
-        enumType@ slice.wrap "getEnumLabel":s 0 false op .pos state requireTypes .?Err ? if
+        enumType@ slice.wrap "getEnumLabel":s 0 false op .pos state requireTypes .Err ? if
           continue.opLoop
         end
         enumType op@ .dataType=
@@ -3417,7 +3417,7 @@ proc(
       SetEnumElement case
         break
       Cast Cast! BitCast case
-        op .dataType .?Undefined ? if
+        op .dataType .Undefined ? if
           ## resolve data type
           op .pos state popType op@ .dataType=
         end
@@ -3425,14 +3425,14 @@ proc(
           continue.opLoop
         end
         state .stack branchTree.pop optional.unwrap [] =:: value
-        op@ .val .?Cast .if
+        op@ .val .Cast .if
           value .valueType >$ .src=
-        else [] .?BitCast ? _if
+        else [] .BitCast ? _if
           value .valueType op@ .val .BitCast=
         else
           value .valueType op@ .val .Cast!=
         end
-        op .val .?BitCast ? if
+        op .val .BitCast ? if
           ## canBitCast
             value .valueType
             op .dataType
@@ -3447,7 +3447,7 @@ proc(
           ## canCast
             value .valueType
             op .dataType
-            op .val .?Cast ? !
+            op .val .Cast ? !
           typeContext types.canCast ! if
             "cannot cast " sb.copyPtr
               value .valueType typeContext sb.appendType
@@ -3457,13 +3457,13 @@ proc(
           end
         end
         ## XXX try cast constant on stack
-        op .val .?BitCast ? if
+        op .val .BitCast ? if
           ConstValue .None
         else
           ## tryCastConstant
             value
             op .dataType
-            op .val .?Cast .if .signType else ..drop SignType .NONE end
+            op .val .Cast .if .signType else ..drop SignType .NONE end
             op .pos
             state
           tryCastConstant ! if
@@ -3471,7 +3471,7 @@ proc(
             state .stack
               value
                 op .dataType >$ .valueType=
-                srcOp .val [] .?Constant .else
+                srcOp .val [] .Constant .else
                   "expected constant":s op ..line state internalError ..unreachable
                 end >$ .value= ## TODO avoid direct access to operation
             branchTree.push ## update value
@@ -3482,7 +3482,7 @@ proc(
         op .dataType newValue op state pushValue
         continue.opLoop
       New case
-        op .dataType .?Undefined ? if
+        op .dataType .Undefined ? if
           ## resolve data type
           op .pos state popType op@ .dataType=
         end
@@ -3490,7 +3490,7 @@ proc(
           op .dataType typeContext types.isFixedSize ! if
             "variable size arrays are not supported" sb.copyPtr op .pos errors appendError
           end
-          op .dataType typeContext types.getArraySize .?Int .else
+          op .dataType typeContext types.getArraySize .Int .else
             "unsupported array-size":s op ..line state internalError ..unreachable
           end =:: count
           state isGlobal if ## TODO? always create constant if count is small
@@ -3547,7 +3547,7 @@ proc(
           op .pos errors appendError
           continue.opLoop
         end =:: argType
-        values 0 [] .?None ? ! and values 1 [] .?None ? ! if
+        values 0 [] .None ? ! and values 1 [] .None ? ! if
           2 op .pos state discardValues
           values 1 [] values 0 [] argType typeContext interpreter.operatorEq if ..drop
             "unsupported values for equality check: " sb.copyPtr
@@ -3572,7 +3572,7 @@ proc(
           "equality-check":s
           0 false
           op .pos
-        state requireTypes .?Err ? if
+        state requireTypes .Err ? if
           continue.opLoop
         end
         types.primitive.BOOL ConstValue .None op state pushValue
@@ -3584,7 +3584,7 @@ proc(
         state popTypedValue .else
           "stack underflow":s op ..line state internalError ..unreachable
         end =:: constVal
-        constVal .value .?TypeId .and =:: typeVal
+        constVal .value .TypeId .and =:: typeVal
             typeVal typeContext types.isSetType if
           typeVal typeContext types.unwrapRefinement =:: baseType
           typeVal typeContext types.getSetTypeEntries for
@@ -3667,7 +3667,7 @@ proc(
           continue.opLoop
           ## TODO remove checks for well-formed blocks, they are now handled by parser
           AND_IF OR_IF case
-            state .stack branchTree.peek .and .value [] .?Bool .if =:: boolVal
+            state .stack branchTree.peek .and .value [] .Bool .if =:: boolVal
               boolVal blockType .AND_IF == if
                 oldBlockStart state .blockStart= ## keep previous block start
                 1 op .pos state discardValues
@@ -3689,22 +3689,22 @@ proc(
               "and/or-condition":s
               0 false
               op .pos
-            state requireTypes .?Err ? if
+            state requireTypes .Err ? if
               continue.opLoop
             end
             false 1 op .pos state clearReferences
             state inIfCondition ! if
               state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
-              blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+              blockId op@ .val .Block .else "expected block" ..panic end .blockId=
               state .stack branchTree.startBranch =:: ifRoot
               ifRoot blockId op .pos newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
               idContext id.openScope
             end
-            state peekBlock .and .?If .else
+            state peekBlock .and .If .else
               "expected if-block":s op ..line state internalError ..unreachable
             end =:: ifBlock
-            ifBlock [] .blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            ifBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
             blockType .AND_IF if
               ifBlock [] .flags IfBlockFlags.hasAndIf | ifBlock .flags=
               ifBlock .andBranches
@@ -3734,7 +3734,7 @@ proc(
             end
             state inIfCondition ! if
               ## don't constant fold `if` if there are open and-if / or-if branches
-              state .stack branchTree.peek .and .value [] .?Bool .if =:: boolVal
+              state .stack branchTree.peek .and .value [] .Bool .if =:: boolVal
                 oldBlockStart state .blockStart= ## keep previous block start
                 1 op .pos state discardValues
                 BlockInfo .ConstIf state openBlock
@@ -3752,7 +3752,7 @@ proc(
               ifBlock state openBlock
               idContext id.openScope
             end
-            state peekBlock .and .?If .else
+            state peekBlock .and .If .else
               "expected if-block":s op ..line state internalError ..unreachable
             end =:: ifBlock
             ## requireTypes
@@ -3760,7 +3760,7 @@ proc(
               "if-condition":s
               0 false
               op .pos
-            state requireTypes .?Err ? if
+            state requireTypes .Err ? if
               continue.opLoop
             end
             false 1 op .pos state clearReferences
@@ -3776,7 +3776,7 @@ proc(
             ifBlock [] .flags
               IfBlockFlags.hasIf |
             ifBlock .flags=
-            ifBlock [] .blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            ifBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
             program [] .ifData
               ifBlock [] .blockId i64 cast
             @[] =:: ifData
@@ -3799,12 +3799,12 @@ proc(
                 state [] .compiledOps
                   andOrIndex
                 @[] =:: andOrOp
-                andOrOp .val .?Block .and .blockType .OR_IF if
+                andOrOp .val .Block .and .blockType .OR_IF if
                   andOrIndex orPositions orCount slice.set
                   orCount 1 + orCount=
                   currentOpIndex
                     andOrIndex - JumpDistance cast
-                  andOrOp .val .?Block .else "expected block" ..panic end .jumpDistance=
+                  andOrOp .val .Block .else "expected block" ..panic end .jumpDistance=
                 end
               end
               orCount iSize cast.u orPositions .length != if
@@ -3832,7 +3832,7 @@ proc(
                   0
                   MergeType .NO_CAST
                 MergePoint new
-              branchTree.merge .?Error ? if
+              branchTree.merge .Error ? if
                 "different number of types at the start of if-branch: " sb.copyPtr
                   orBranches [] for =:: branchPoint
                     "\n  * " sb.appendS
@@ -3854,7 +3854,7 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end =:: currentBlock
-            currentBlock .?ConstIf ? if ## reachaed `else` in ConstIf -> can skip else branch
+            currentBlock .ConstIf ? if ## reachaed `else` in ConstIf -> can skip else branch
               op .pos state closeBlock ..drop
               idContext id.closeScope ! "closing if-scope worked" assert
               oldBlockStart state .blockStart= ## keep previous block start
@@ -3863,7 +3863,7 @@ proc(
               opIndex=
               continue.opLoop
             end
-            currentBlock .?If .else ..drop
+            currentBlock .If .else ..drop
               "unexpected else-statement, else can only appear in if-blocks" sb.copyPtr
               op .pos errors appendError
               continue.opLoop
@@ -3886,7 +3886,7 @@ proc(
             else
               idContext id.openScope
             end
-            ifBlock [] .blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            ifBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
             state [] .stack branchTree.depth =:: ifTypes
             state .stack
               ifBlock [] .branchRoot
@@ -3920,7 +3920,7 @@ proc(
               state [] .compiledOps
                 ifData [] .ifPosition
               @[]
-            .val .?Block .else "expected block" ..panic end .jumpDistance=
+            .val .Block .else "expected block" ..panic end .jumpDistance=
             program [] .programMemory
               ifBlock [] .andOrPositions .length
                 ifData [] .orPositions .length - i32 cast
@@ -3931,12 +3931,12 @@ proc(
               state [] .compiledOps
                 andOrPos
               @[] =:: andOrOp
-              andOrOp .val .?Block .and [] .blockType .AND_IF if
+              andOrOp .val .Block .and [] .blockType .AND_IF if
                 andOrPos andPositions andCount slice.set
                 andCount 1 + andCount=
                 currentOpIndex
                   andOrPos - JumpDistance cast
-                andOrOp .val .?Block .else "expected block" ..panic end .jumpDistance=
+                andOrOp .val .Block .else "expected block" ..panic end .jumpDistance=
               end
             end
             andCount iSize cast.u andPositions .length != if
@@ -3962,7 +3962,7 @@ proc(
                   0
                   MergeType .NO_CAST
                 MergePoint new
-              branchTree.merge .?Error ? if
+              branchTree.merge .Error ? if
                 "different number of types at the start of else-branch: " sb.copyPtr
                   ifBlock [] .andBranches for =:: branchPoint
                     "\n  * " sb.appendS
@@ -4005,7 +4005,7 @@ proc(
               "switch value":s
               0 false
               op .pos
-            state requireTypes .?Err ? if
+            state requireTypes .Err ? if
               continue.opLoop
             end
             switchType
@@ -4044,7 +4044,7 @@ proc(
               op .pos opGetEnumLabel switchValueType >$ .dataType= state appendOp ..drop
             end
             program [] .switchData .length BlockId cast =:: switchId
-            switchId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            switchId op@ .val .Block .else "expected block" ..panic end .blockId=
             labelType op@ .dataType=
             false 1 op .pos state clearReferences
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
@@ -4076,7 +4076,7 @@ proc(
             false state .reachable=
             continue.opLoop
           CASE DOT_CASE DEFAULT DOT_DEFAULT case
-            state peekBlock .and .?Switch .else
+            state peekBlock .and .Switch .else
               "unexpected " sb.copyPtr
                 blockType sb.appendBlockType
                 ", " sb.appendS
@@ -4146,26 +4146,26 @@ proc(
                 JumpDistance cast list.append
               switchBlock .caseJumpDistances=
             end
-            switchBlock [] .blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            switchBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
             true state .reachable=
             switchType op@ .dataType=
             blockType .DOT_CASE if
-              BlockType .CASE op@ .val .?Block .else "expected block" ..panic end .blockType=
+              BlockType .CASE op@ .val .Block .else "expected block" ..panic end .blockType=
             else blockType .DOT_DEFAULT _if
-              BlockType .DEFAULT op@ .val .?Block .else "expected block" ..panic end .blockType=
+              BlockType .DEFAULT op@ .val .Block .else "expected block" ..panic end .blockType=
             end
             op state appendOp ..drop
             switchBlock [] .switchBaseType =:: switchBaseType
             blockType .DOT_CASE if
               switchType typeContext types.isUnion if
-                prev? .and [] .value .?Int .else
+                prev? .and [] .value .Int .else
                   continue.opLoop
                 end i32 cast.u =:: eltIndex
                 switchType eltIndex typeContext types.compositeGetElement =:: labelType
                 switchData [] .labels list.reversed for  =:: label
                   ## labels in current case are al at end of label list
                   label .caseId switchData [] .caseCount < if break end
-                  switchType label .value .?Int .else
+                  switchType label .value .Int .else
                     "expected int-constant":s op ..line state internalError ..unreachable
                   end i32 cast.u typeContext types.compositeGetElement =:: newType
                   newType labelType types.typeEquals if continue end
@@ -4230,15 +4230,15 @@ proc(
               continue.opLoop ## error message handled by findBreakableBlock
             end =:: breakBlock
             false 0 op .pos state clearReferences
-            breakBlock .?Switch .if =:: switchBlock
+            breakBlock .Switch .if =:: switchBlock
               state peekBlock optional.unwrap =:: currentBlock
-              currentBlock [] .?Switch .and .blockId switchBlock [] .blockId == if
+              currentBlock [] .Switch .and .blockId switchBlock [] .blockId == if
                 ## top-level break statement
                 false switchBlock .allowBreak=
               end
               switchBlock op .pos state breakSwitch
               continue.opLoop
-            else .?While ._if =:: whileBlock
+            else .While ._if =:: whileBlock
               blockType .CONTINUE if
                 whileBlock .hasFinally [] if
                   "unexpected " sb.copyPtr
@@ -4259,7 +4259,7 @@ proc(
                 whileBlock .breakCastOffsets
                 whileBlock .breakBranches
               end =:: branches =:: castOffsets
-              whileBlock [] .blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+              whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
               ## add space for casts of values on stack
               castOffsets []
                 ## reserveOps
@@ -4294,7 +4294,7 @@ proc(
             state .stack branchTree.startBranch =:: whileBranch
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             program [] .whileData .length BlockId cast =:: whileId
-            whileId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            whileId op@ .val .Block .else "expected block" ..panic end .blockId=
             program [] .whileData
               ## WhileData
                 -1
@@ -4316,7 +4316,7 @@ proc(
             op state appendOp ..drop
             continue.opLoop
           AND_DO OR_DO case
-            state peekBlock .and .?While .else
+            state peekBlock .and .While .else
               "unexpected " sb.copyPtr
                 blockType sb.appendBlockType
                 "-statement, " sb.appendS
@@ -4332,7 +4332,7 @@ proc(
               "and/or-condition":s
               0 false
               op .pos
-            state requireTypes .?Err ? if
+            state requireTypes .Err ? if
               continue.opLoop
             end
             false 1 op .pos state clearReferences
@@ -4352,7 +4352,7 @@ proc(
                 op .pos
               BranchPoint new list.append
             branches =[]
-            whileBlock [] .blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
             whileBlock [] .labelPositions
               state [] .compiledOps .length i32 cast.u list.append
             whileBlock .labelPositions=
@@ -4360,7 +4360,7 @@ proc(
             continue.opLoop
           DO case
             state peekBlock =:: currentBlock?
-            currentBlock? .and .?While .else
+            currentBlock? .and .While .else
               "unexpected " sb.copyPtr
                 BlockType .DO sb.appendBlockType
                 "-statement, " sb.appendS
@@ -4376,12 +4376,12 @@ proc(
               "while-condition":s
               0 false
               op .pos
-            state requireTypes .?Err ? if
+            state requireTypes .Err ? if
               continue.opLoop
             end
             ## passing an offset of 1 ensures that cast-offsets consider do-condition
             false 1 op .pos state clearReferences
-            whileBlock [] .blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
             whileBlock []
               .breakCastOffsets .length i32 cast.u
             whileBlock .doBranchIndex=
@@ -4417,7 +4417,7 @@ proc(
                   0
                   MergeType .NO_CAST
                 MergePoint new
-              branchTree.merge .?Error ? if
+              branchTree.merge .Error ? if
                 "different number of types at the start of do-branch: " sb.copyPtr
                   doBranches [] for =:: branchPoint
                     "\n  * " sb.appendS
@@ -4438,10 +4438,10 @@ proc(
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             whileBlock [] .labelPositions for =:: orPos
               state [] .compiledOps orPos @[] =:: orOp
-              orOp .val .?Block .and [] .blockType .OR_DO if
+              orOp .val .Block .and [] .blockType .OR_DO if
                 currentOpIndex
                   orPos - JumpDistance cast
-                orOp .val .?Block .else "expected block" ..panic end .jumpDistance=
+                orOp .val .Block .else "expected block" ..panic end .jumpDistance=
                 whileBlock [] .orCount 1 -
                   orPos orPositions $2 slice.set
                 whileBlock .orCount=
@@ -4457,7 +4457,7 @@ proc(
             op state appendOp ..drop
             continue.opLoop
           FINALLY case
-            state peekBlock .and .?While .else
+            state peekBlock .and .While .else
               "unexpected " sb.copyPtr
                 BlockType .FINALLY sb.appendBlockType
                 "-statement, '" sb.appendS
@@ -4470,7 +4470,7 @@ proc(
             end =:: whileBlock
             false 0 op .pos state clearReferences
             true whileBlock .hasFinally=
-            whileBlock [] .blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+            whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
             whileBlock [] .continueBranches =:: mut: continueBranches
             state [] .reachable if
               whileBlock [] .continueCastOffsets
@@ -4503,7 +4503,7 @@ proc(
                   0
                   MergeType .MERGE
                 MergePoint new
-              branchTree.merge .?Error ? if
+              branchTree.merge .Error ? if
                 "different numbers of types at the end of continue branches: " sb.copyPtr
                   continueBranches for =:: branchPoint
                     "\n  * " sb.appendS
@@ -4530,10 +4530,10 @@ proc(
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             whileBlock [] .labelPositions for =:: continuePos
               state [] .compiledOps continuePos @[] =:: continueOp
-              continueOp .val .?Block .else "expected block" ..panic end [] .blockType .CONTINUE if
+              continueOp .val .Block .else "expected block" ..panic end [] .blockType .CONTINUE if
                 currentOpIndex
                   continuePos - JumpDistance cast
-                continueOp .val .?Block .else "expected block" ..panic end .jumpDistance=
+                continueOp .val .Block .else "expected block" ..panic end .jumpDistance=
                 whileBlock [] .continueCount 1 -
                   continuePos continuePositions $2 slice.set
                 whileBlock .continueCount=
@@ -4547,7 +4547,7 @@ proc(
             continue.opLoop
           AND OR case
             false 1 op .pos state clearReferences
-            state peekBlock .and .?AndOr .if =:: andOrBlock
+            state peekBlock .and .AndOr .if =:: andOrBlock
               andOrBlock .branches =:: branches
               branches []
                   state .stack branchTree.startBranch
@@ -4557,7 +4557,7 @@ proc(
               andOrBlock [] .blockId
             else
               state [] .compiledOps .length i32 cast.u program createAndOrData =:: blockId
-              blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
+              blockId op@ .val .Block .else "expected block" ..panic end .blockId=
               state .stack branchTree.startBranch =:: rootBranch
               rootBranch
                 blockId
@@ -4572,11 +4572,11 @@ proc(
               "and/or-condition":s
               0 false
               op .pos
-            state requireTypes .?Err ? if
+            state requireTypes .Err ? if
               continue.opLoop
             end
-            blockId op@ .val .?Block .else "expected block" ..panic end .blockId=
-            state peekBlock .and .?AndOr .else
+            blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+            state peekBlock .and .AndOr .else
               "expected and-or block":s op ..line state internalError ..unreachable
             end =:: currentBlock
             currentBlock [] .andOrPositions
@@ -4633,7 +4633,7 @@ proc(
                 continue.opLoop
               end
               ## XXX? warn for incompatible flags
-              idData [] .constValue .?ProcedureBundle .else
+              idData [] .constValue .ProcedureBundle .else
                 "expected proc-bundle constant":s op ..line state internalError ..unreachable
               end
             end =:: bundleId
@@ -4657,7 +4657,7 @@ proc(
                 continue
               end =:: idData
               idData [] .idType .PROCEDURE if
-                idData [] .constValue .?Procedure .else ..drop
+                idData [] .constValue .Procedure .else ..drop
                   256 sb.create
                     idData [] .idType sb.appendIdType
                     "missing procedure data for \"" sb.appendS
@@ -4673,7 +4673,7 @@ proc(
                   >$ list.append
                 bundleData .procedures=
               else idData [] .idType .PROCEDURE_BUNDLE _if
-                idData [] .constValue .?ProcedureBundle .else ..drop
+                idData [] .constValue .ProcedureBundle .else ..drop
                   256 sb.create
                     idData [] .idType sb.appendIdType
                     "missing procedure data for \"" sb.appendS
@@ -4727,7 +4727,7 @@ proc(
             op .pos errors appendError
             continue.opLoop
           PROCEDURE case
-            op .pos state closeBlock .?Procedure .else
+            op .pos state closeBlock .Procedure .else
               "unexpected end of " sb.copyPtr
                 >$ sb.appendBlockInfoName
                 " block expected Procedure block" sb.appendS
@@ -4744,11 +4744,11 @@ proc(
             continue.opLoop
           ELSE case
             op .pos state closeBlock =:: closed
-            closed .?ConstIf ? if
+            closed .ConstIf ? if
               oldBlockStart state .blockStart= ## keep previous block start
               idContext id.closeScope ! "closing if-scope worked" assert
               continue.opLoop
-            else closed .?If ._else
+            else closed .If ._else
               "unexpected end of " sb.copyPtr
                 >$ sb.appendBlockInfoName
                 " block expected " sb.appendS
@@ -4791,7 +4791,7 @@ proc(
                   0
                   MergeType .MERGE
                 MergePoint new
-              branchTree.merge .?Error ? if
+              branchTree.merge .Error ? if
                 "different numbers of types at the end of " sb.copyPtr
                   closed sb.appendBlockInfoName
                   " block\n  * ifBranch: " sb.appendS
@@ -4807,20 +4807,20 @@ proc(
                 op .pos errors appendError
               end
             end
-            closedIf .blockId op@ .val .?BlockEnd .else "expected block" ..panic end .blockId=
+            closedIf .blockId op@ .val .BlockEnd .else "expected block" ..panic end .blockId=
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             program [] .ifData
               closedIf .blockId i64 cast
             @[] =:: ifData
             ifData [] .ifPosition
               currentOpIndex - JumpDistance cast
-            op@ .val .?BlockEnd .else "expected block" ..panic end .jumpDistance=
+            op@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
             currentOpIndex
               ifData [] .elsePosition - JumpDistance cast
               state [] .compiledOps
                 ifData [] .elsePosition
               @[]
-            .val .?Block .else "expected block" ..panic end .jumpDistance=
+            .val .Block .else "expected block" ..panic end .jumpDistance=
             op state appendOp ..drop
             idContext id.closeScope ! "closing else-scope worked" assert
             ## cleanup closed block
@@ -4833,7 +4833,7 @@ proc(
           SWITCH case
             ## break current branch
             op .pos state endSwitchBranch
-            op .pos state closeBlock .?Switch .else
+            op .pos state closeBlock .Switch .else
               "unexpected end of " sb.copyPtr
                 >$ sb.appendBlockInfoName
                 "-block expected " sb.appendS
@@ -4852,7 +4852,7 @@ proc(
             switchData [] .labels switchLabelCmp@ program list.sort
             switchData [] .defaultJumpDistance ? ! if
               BlockType .DEFAULT op .pos opBlock =:: mut: tmp
-              switchBlock .blockId tmp@ .val .?Block .else "expected block" ..panic end .blockId=
+              switchBlock .blockId tmp@ .val .Block .else "expected block" ..panic end .blockId=
               state [] .compiledOps .length
                 switchBlock .switchPosition iSize cast.u -
                 JumpDistance cast
@@ -4873,7 +4873,7 @@ proc(
                       false =:: mut:  match
                       ## XXX? use slice.find
                       labels for =:: label
-                        label .value .?Int .and i == if
+                        label .value .Int .and i == if
                           true match=
                           break
                         end
@@ -4907,7 +4907,7 @@ proc(
                 caseBranches=
               end
               BlockType .BREAK_SWITCH op .pos opBlock tmp=
-              switchBlock .blockId tmp@ .val .?Block .else "expected block" ..panic end .blockId=
+              switchBlock .blockId tmp@ .val .Block .else "expected block" ..panic end .blockId=
               breakPositions
                 state [] .compiledOps .length i32 cast.u list.append
               breakPositions=
@@ -4930,7 +4930,7 @@ proc(
                   0
                   MergeType .MERGE
                 MergePoint new
-              branchTree.merge .?Error ? if
+              branchTree.merge .Error ? if
                 "different numbers of types at the end of switch-branches: " sb.copyPtr
                   caseBranches for =:: branchPoint
                     "\n  * " sb.appendS
@@ -4947,7 +4947,7 @@ proc(
             end
             caseBranches .length 0:iSize != state .reachable=
             BlockType .SWITCH op .pos opEndBlock =:: mut: tmp
-            switchBlock .blockId tmp@ .val .?BlockEnd .else "expected block" ..panic end .blockId=
+            switchBlock .blockId tmp@ .val .BlockEnd .else "expected block" ..panic end .blockId=
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             breakPositions for =:: breakPos
               state [] .compiledOps breakPos list.at .else
@@ -4955,7 +4955,7 @@ proc(
               end =:: breakOp
               currentOpIndex
                 breakPos - JumpDistance cast
-              breakOp .val .?Block .else "expected block" ..panic end .jumpDistance=
+              breakOp .val .Block .else "expected block" ..panic end .jumpDistance=
             end
             program [] .programMemory
               breakPositions
@@ -4972,14 +4972,14 @@ proc(
             switchBlock .caseJumpDistances list.free ..drop
             switchBlock .switchPosition
               currentOpIndex - JumpDistance cast
-            tmp@ .val .?BlockEnd .else "expected block" ..panic end .jumpDistance=
+            tmp@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
             tmp state appendOp ..drop
             idContext id.closeScope ! "closing while-scope worked" assert
             continue.opLoop
           CASE DEFAULT DOT_CASE DOT_DEFAULT case ## end-case should not be created by parser
             break
           FINALLY case
-            op .pos state closeBlock .?While .else
+            op .pos state closeBlock .While .else
               "unexpected end of " sb.copyPtr
                 >$ sb.appendBlockInfoName
                 "-block expected " sb.appendS
@@ -5012,7 +5012,7 @@ proc(
                 0
                 MergeType .MERGE_ROOT
               MergePoint new
-            branchTree.merge .?Success .else ..drop
+            branchTree.merge .Success .else ..drop
               "different numbers of types at beginning and end of while-block: " sb.copyPtr
                 "\n  * " sb.appendS
                 state [] .stack
@@ -5053,7 +5053,7 @@ proc(
                   whileBlock .doBranchIndex
                   MergeType .MERGE_ROOT
                 MergePoint new
-              branchTree.merge .?Error ? if
+              branchTree.merge .Error ? if
                 "different numbers of types at the end of while branches: " sb.copyPtr
                   breakBranches for =:: branchPoint
                     "\n  * " sb.appendS
@@ -5069,7 +5069,7 @@ proc(
             end
             branchPoints list.free ..drop
             whileBlock .breakBranches .length 0:iSize != state .reachable=
-            whileId op@ .val .?BlockEnd .else "expected block" ..panic end .blockId=
+            whileId op@ .val .BlockEnd .else "expected block" ..panic end .blockId=
             whileBlock .breakBranches list.free ..drop
             whileBlock .breakCastOffsets list.free ..drop
             whileBlock .continueBranches list.free ..drop
@@ -5085,37 +5085,37 @@ proc(
             0:i32 =:: mut: breakCount
             whileBlock .labelPositions for =:: labelPos
               state [] .compiledOps labelPos @[] =:: labelOp
-              labelOp .val .?Block .and [] .blockType switch
+              labelOp .val .Block .and [] .blockType switch
                 AND_DO BREAK DO case true break
                 OR_DO CONTINUE case false break
                 default ..unreachable
               end if
                 currentOpIndex
                   labelPos - JumpDistance cast
-                labelOp .val .?Block .else "expected block" ..panic end .jumpDistance=
+                labelOp .val .Block .else "expected block" ..panic end .jumpDistance=
                 labelPos breakPositions breakCount slice.set
               end
             end
             breakPositions whileData .breakPositions=
             whileBlock .labelPositions list.free ..drop
             BlockType .WHILE op .pos opEndBlock =:: mut: tmp
-            whileBlock .blockId tmp@ .val .?BlockEnd .else "expected block" ..panic end .blockId=
+            whileBlock .blockId tmp@ .val .BlockEnd .else "expected block" ..panic end .blockId=
             whileBlock .whilePosition
               currentOpIndex - JumpDistance cast
-            tmp@ .val .?BlockEnd .else "expected block" ..panic end .jumpDistance=
+            tmp@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
             currentOpIndex
               whileBlock .whilePosition - JumpDistance cast
               state [] .compiledOps
                 whileBlock .whilePosition
               @[]
-            .val .?Block .else "expected block" ..panic end .jumpDistance=
+            .val .Block .else "expected block" ..panic end .jumpDistance=
             tmp state appendOp ..drop
             idContext id.closeScope ! "closing switch-scope worked" assert
             continue.opLoop
           WHILE DO case ## end-while/end-do should not be created by parser
             break
           AND OR case
-            op .pos state closeBlock .?AndOr .else
+            op .pos state closeBlock .AndOr .else
               "unexpected end of " sb.copyPtr
                 >$ sb.appendBlockInfoName
                 "-block expected " sb.appendS
@@ -5128,7 +5128,7 @@ proc(
               "the end of all branches of an and/or block should be reachable, use if-else for conditional exit" sb.copyPtr
               op .pos errors appendError
             end
-            andOrBlock .blockId op@ .val .?BlockEnd .else "expected block" ..panic end .blockId=
+            andOrBlock .blockId op@ .val .BlockEnd .else "expected block" ..panic end .blockId=
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             andOrBlock .andOrPositions for =:: andOrPos
               state [] .compiledOps andOrPos list.at .else
@@ -5137,7 +5137,7 @@ proc(
               end =:: andOrOp
               currentOpIndex
                 andOrPos - JumpDistance cast
-              andOrOp .val .?Block .else "expected block" ..panic end .jumpDistance=
+              andOrOp .val .Block .else "expected block" ..panic end .jumpDistance=
             end
             program [] .programMemory
               andOrBlock .andOrPositions mixedArena.copyList
@@ -5148,7 +5148,7 @@ proc(
             program .programMemory=
             andOrBlock .andOrPositions 0 list.get .if
                 currentOpIndex - JumpDistance cast
-              op@ .val .?BlockEnd .else "expected block" ..panic end .jumpDistance=
+              op@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
             end
             andOrBlock .andOrPositions list.free ..drop
             op state appendOp ..drop
@@ -5173,7 +5173,7 @@ proc(
                 0
                 MergeType .NO_CAST
               MergePoint new
-            branchTree.merge .?Error ? if
+            branchTree.merge .Error ? if
               "different number of types at the end or and-or branch: " sb.copyPtr
                 branches for =:: branchPoint
                   "\n  * " sb.appendS
@@ -5208,15 +5208,15 @@ proc(
         continue.opLoop
       InlineReturn case break
       Assert RuntimeAssert case
-        op .val .?Assert ? if
+        op .val .Assert ? if
           op .pos state popString =:: message
           message op .pos opRuntimeAssert op=
         end
-        state .stack branchTree.peek .and .value [] .?Bool .if =:: boolVal
+        state .stack branchTree.peek .and .value [] .Bool .if =:: boolVal
           1 op .pos state discardValues
           boolVal ! if
             "assertion failed: " sb.copyPtr
-              op .val .?RuntimeAssert .else 
+              op .val .RuntimeAssert .else 
                 "expected runtime-assertion":s op ..line state internalError ..unreachable
               end sb.appendStr
             op .pos errors appendError
@@ -5228,7 +5228,7 @@ proc(
           "assertion":s
           0 false
           op .pos
-        state requireTypes .?Err ? if
+        state requireTypes .Err ? if
           continue.opLoop
         end
         op state appendOp ..drop
@@ -5408,7 +5408,7 @@ proc(
         typeContext types.newProcedure .else
           "failed to create procedure":s op ..line state internalError ..unreachable
         end withProc typeContext setProcType
-        withProc .implementation .?Code .else
+        withProc .implementation .Code .else
           "expected code-procedure":s op ..line state internalError ..unreachable
         end =:: codeImpl
         codeImpl [] .codeState .PARSING ! if
@@ -5497,7 +5497,7 @@ proc(
         state pushConstant
         continue.opLoop
       Import LibImport .case
-          op .val .?LibImport ?
+          op .val .LibImport ?
           state [] .currentFile
           op .pos
           program
@@ -5555,7 +5555,7 @@ proc(
                 idData id.asIdInfo labelContext sb.appendIdInfo
                 " ( " sb.appendS
                 idData [] .valueType typeContext sb.appendType
-                idData [] .constValue .?None ? ! if
+                idData [] .constValue .None ? ! if
                   " [ " sb.appendS
                   idData [] .constValue typeContext sb.appendConstant
                   " ]" sb.appendS
@@ -5590,7 +5590,7 @@ proc(
   ProgramContext ptr.mut : program
 -> i32 ) =>: nextImpl
   ## TODO remember index up to which all operations have been checked
-  procInfo .implementation .?Code .else
+  procInfo .implementation .Code .else
     "expected code-impl" ..panic
   end =:: codeImpl
   codeImpl [] .implementations .length i32 cast.u =:: implLength
@@ -5659,7 +5659,7 @@ proc(
   program [] .procedures procId i64 cast list.at .else
     "missing procedure":s expandedAt .else FILE_POS_UNKNOWN end ..line internalErrorNoOp ..unreachable
   end =:: currentProc
-  currentProc .implementation .?Code .else ..drop
+  currentProc .implementation .Code .else ..drop
     ## TODO replace alias with underlying proc
     ##  skip built-ins
     return
@@ -5897,7 +5897,7 @@ proc(
   state [] .compiledOps .length codeOffset u> if
     "unable to fold constants in global code:\n" sb.copyPtr
       state [] .compiledOps for
-        $ .val .?NOP .and .EMPTY if ..drop continue end
+        $ .val .NOP .and .EMPTY if ..drop continue end
         program sb.appendOp
       end
     state [] .compiledOps list.peek .else "peek empty" ..panic end
@@ -5967,7 +5967,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
     end
-    currentProc .implementation .?Code .else ..drop
+    currentProc .implementation .Code .else ..drop
       procId 1 + continue ## procedure implementation not in code
     end =:: codeImpl
     codeImpl .code [] .length 0 == if
@@ -6002,7 +6002,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
       procId 1 + continue
     end
-    currentProc  .implementation .?Code .else ..drop
+    currentProc  .implementation .Code .else ..drop
       procId 1 + continue ## procedure implementation not in code
     end =:: codeImpl
     codeImpl .code [] .length 0 == if
@@ -6028,7 +6028,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
       currentProc [] .isStatic if
         procId 1 + continue ## don't type-check static procedures
       end
-      currentProc .implementation .?Code .else ..drop
+      currentProc .implementation .Code .else ..drop
         procId 1 + continue ## procedure implementation not in code
       end =:: codeImpl
       codeImpl [] .code .length 0 == if
@@ -6055,9 +6055,9 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
         end
         ## ignore procedures with generic signature
         implData [] .staticArgs for
-          .?GenericArg .if ..drop
+          .GenericArg .if ..drop
             procId 1 + continue.procLoop
-          else .?TypeId .and typeContext types.isGeneric _if
+          else .TypeId .and typeContext types.isGeneric _if
             procId 1 + continue.procLoop
           end
         end

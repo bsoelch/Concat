@@ -616,7 +616,7 @@ namespace: id
       declaredAt
       context
       errors
-    declareName .?Redeclare .if =:: prevId
+    declareName .Redeclare .if =:: prevId
       context .identifierData prevId .labelId map.at .else
         "could not find previous id of redeclaration" ..panic
       end =:: prevDec
@@ -718,7 +718,7 @@ namespace: id
       declaredAt
       context
       errors
-    declareName .?Redeclare .if =:: prevId
+    declareName .Redeclare .if =:: prevId
       prevId .aliasId NO_ALIAS == if
         context .identifierData prevId .labelId map.at .else
           "could not find previous id of redeclaration" ..panic
@@ -763,7 +763,7 @@ namespace: id
         IdentifierType .ITR_VAR
         false
       IdentifierData new
-    map.put .?empty ? "each itr-var has an unique id" assert
+    map.put ? ! "each itr-var has an unique id" assert
     idInfo return
   end
   ## label varType pos idContext
@@ -784,7 +784,7 @@ namespace: id
         IdentifierType .TMP_VAR
         false
       IdentifierData new
-    map.put .?empty ? "each tmp-var has an unique id" assert
+    map.put ? ! "each tmp-var has an unique id" assert
   end
 end
 namespace: sb

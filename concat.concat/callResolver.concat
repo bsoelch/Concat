@@ -43,8 +43,8 @@ proc( GenericArg : val TypeContext ptr.mut : typeContext -> bool ) =>: isEmptyCo
     NonEmpty case false return
     Value Fixed .case break
   end =:: constVal
-  constVal .?None ? or
-    constVal .?TypeId .and typeContext types.isEmpty
+  constVal .None ? or
+    constVal .TypeId .and typeContext types.isEmpty
   end return
 end
 
@@ -101,7 +101,7 @@ proc(
       src types.getGenericTypeId LabelId cast =:: genericId
       genericValues genericId map.at .if
         [] switch
-          Fixed Value .case .?TypeId .else "expected type" ..panic end return
+          Fixed Value .case .TypeId .else "expected type" ..panic end return
           NonEmpty case break
         end
       end
@@ -130,7 +130,7 @@ proc(
             true genericSize=
           end
           genericValues genericId map.at .if
-            [] .?Fixed .else "expected fixed constant" ..panic end constAsSize
+            [] .Fixed .else "expected fixed constant" ..panic end constAsSize
           else
             size
           end
@@ -146,13 +146,13 @@ proc(
           pos
           typeChecker
         replaceGenerics
-        src .?Pointer ? or src .?ArrayType ? and genericSize if
+        src .Pointer ? or src .ArrayType ? and genericSize if
           types.ArrayType .POINTER
-        else src .?MutablePointer ? _if
+        else src .MutablePointer ? _if
           types.ArrayType .MUTABLE_POINTER
-        else src .?RawPointer ? _if
+        else src .RawPointer ? _if
           types.ArrayType .RAW_POINTER
-        else src .?MutableRawPointer ? _if
+        else src .MutableRawPointer ? _if
           types.ArrayType .MUTABLE_RAW_POINTER
         else
           types.ArrayType .ARRAY
@@ -199,7 +199,7 @@ proc(
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
             labelBuffer [] list.asSlice labelOffset slice.tail
-            src .?Union ? if types.UnionType .TAGGED else types.UnionType .RAW end
+            src .Union ? if types.UnionType .TAGGED else types.UnionType .RAW end
             typeContext
           types.newUnion break
         Enum case
@@ -361,7 +361,7 @@ proc(
               true return
             end
             src break
-          Fixed .case .?TypeId .else ..drop
+          Fixed .case .TypeId .else ..drop
               false return
             end =:: oldTypeId
             src typeContext types.isEmpty and oldTypeId typeContext types.isEmpty if
@@ -376,7 +376,7 @@ proc(
               true return
             end
             oldTypeId break
-          Value .case .?TypeId .else ..drop
+          Value .case .TypeId .else ..drop
               false return
             end =:: oldIdType
             src typeContext types.isEmpty and oldIdType typeContext types.isEmpty if
@@ -413,7 +413,7 @@ proc(
           unwrapSrc typeContext types.flatUnwrapNamed unwrapSrc=
         end
         unwrapTarget typeContext types.flatUnwrapNamed unwrapTarget=
-      unwrapTarget .?NamedType ? do end
+      unwrapTarget .NamedType ? do end
       ## resolveGenerics
         unwrapSrc
         unwrapTarget
@@ -458,15 +458,15 @@ proc(
         targetSize switch
           Dynamic case break
           None case
-            srcSize .?None ? ! if
+            srcSize .None ? ! if
               true return
             end
             break
           Int .case =:: targetSizeValue
-            srcSize .?Int .if targetSizeValue != if
+            srcSize .Int .if targetSizeValue != if
                 true return
               end
-            else .?None ? ! or targetSizeValue 1 != if
+            else .None ? ! or targetSizeValue 1 != if
                 true return
               end
             end
@@ -595,9 +595,9 @@ proc(
       targetArgs .length for =:: i
         srcArgs i [] =:: srcArg
         targetArgs i [] =:: targetArg
-        targetArg .?TypeId .if =:: targetId
+        targetArg .TypeId .if =:: targetId
           ## resolveGenerics
-            srcArg .?TypeId .else "expected srcArg to be Type" ..panic end
+            srcArg .TypeId .else "expected srcArg to be Type" ..panic end
             targetId
             true
             needCast
@@ -606,7 +606,7 @@ proc(
           resolveGenerics if
             true return
           end
-        else .?GenericArg ._if =:: argId
+        else .GenericArg ._if =:: argId
           genericValues
             argId
           map.at .if
@@ -777,7 +777,7 @@ end
 5:i32 =:: MAX_DISPLAY_SIGNATURES ## XXX? make customizable
 
 proc( ConstValue TypeContext ptr.mut : typeContext -> ConstValue ) =>: decayLiteralTypeConstant
-  .?TypeId .if
+  .TypeId .if
     typeContext types.literalToType ConstValue .TypeId
   end
 end
@@ -870,7 +870,7 @@ proc(
           paramIndex 1 - paramIndex=
         else paramLabel labelContext id.labelFlags id.FLAG_AUTO & ? and
             current .genericValues paramLabel map.at .and =:: autoValue
-            autoValue [] .?NonEmpty ? ! _if
+            autoValue [] .NonEmpty ? ! _if
           autoValue [] switch
             Fixed Value .case break
             NonEmpty case ..unreachable
@@ -884,7 +884,7 @@ proc(
             false current .argsMatch=
           end
           ## convert literal types to corresponding base types
-          value .?TypeId .and types.isLiteral if
+          value .TypeId .and types.isLiteral if
             current .genericValues
               paramLabel
               value typeContext decayLiteralTypeConstant GenericArg .Fixed
@@ -942,15 +942,15 @@ proc(
       end
       stackValues stackIndex @[] .value [] =:: stackVal
       paramLabel labelContext id.labelFlags id.FLAG_STATIC & ? or
-          paramType typeContext types.isType or stackVal .?TypeId ? if
-        stackVal .?None ? if
+          paramType typeContext types.isType or stackVal .TypeId ? if
+        stackVal .None ? if
           false current .argsMatch=
         end
         paramLabel id.LABEL_ID_NONE != and
             current .genericValues paramLabel map.at .and =:: prevVal
           prevVal [] switch
             NonEmpty case
-              stackVal .?TypeId .and typeContext types.isEmpty end
+              stackVal .TypeId .and typeContext types.isEmpty end
               break
             Value Fixed .case stackVal constantEquals ! break
         end if
@@ -964,7 +964,7 @@ proc(
           map.put ..drop
         end
       end
-      stackType typeContext types.getArraySize .?None ? and paramType typeContext types.getArraySize .?None ? ! if
+      stackType typeContext types.getArraySize .None ? and paramType typeContext types.getArraySize .None ? ! if
         ## count conversion from 0D ptr to 1D ptr as cast
         current [] .nCasts
           1 +
@@ -1049,7 +1049,7 @@ proc(
         stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
           stackValues i @[] =:: val
           val [] .valType typeContext sb.appendType
-          val [] .value .?None ? ! if
+          val [] .value .None ? ! if
             " { " sb.appendS
             val [] .value typeContext sb.appendConstant
             " }" sb.appendS
@@ -1090,7 +1090,7 @@ proc(
         stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
           stackValues i @[] =:: val
           val [] .valType typeContext sb.appendType
-          val [] .value .?None ? ! if
+          val [] .value .None ? ! if
             " { " sb.appendS
             val [] .value typeContext sb.appendConstant
             " }" sb.appendS
@@ -1128,7 +1128,7 @@ proc(
   =:: procInfo
   candidate [] .procId =:: calledProcId
   ## TODO? nested alias
-  procInfo [] .implementation .?Alias .else ..drop
+  procInfo [] .implementation .Alias .else ..drop
     calledProcId
   end =:: baseProcId
   procInfo [] .procType =:: procType
@@ -1159,7 +1159,7 @@ proc(
       constArgs=
     else eltType typeContext types.isGeneric and
         candidate .genericValues -2 i - LabelId cast.s getValueOrNone =:: val
-        val .?None ? ! _if
+        val .None ? ! _if
       constArgs
         val list.append
       constArgs=
@@ -1175,7 +1175,7 @@ proc(
       =:: baseProcInfo
       baseProcInfo .implementation =:: implData
       ## TODO support alias for generic procedures
-      implData .?Code .if .implementations =:: impls
+      implData .Code .if .implementations =:: impls
     false =:: mut: isMatch
     impls [] .length for =:: i
       impls [] i @[] =:: impl
@@ -1203,7 +1203,7 @@ proc(
           0 VariableInfo list.create
           Operation slice.emptyMutable
           pos
-          implData .?Code .else "expected code-impl" ..panic end [] .expansionLevel 1:i16 +
+          implData .Code .else "expected code-impl" ..panic end [] .expansionLevel 1:i16 +
           ## replaceGenerics
             baseProcInfo [] .procType
             typeBuffer@
@@ -1227,11 +1227,11 @@ proc(
     true =:: mut: needArg
     flags id.FLAG_AUTO & ? if
       candidate .genericValues eltLabel getValueOrNone =:: value
-      value .?None ? ! if
+      value .None ? ! if
         false needArg=
       end
       ## convert literal types to corresponding types
-      value .?TypeId .and =:: typeVal
+      value .TypeId .and =:: typeVal
           typeVal types.isLiteral if
         candidate .genericValues
           eltLabel

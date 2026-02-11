@@ -3,10 +3,10 @@ union(
   f32 : f
 ) =:: aUnion
 proc( aUnion -> bool ) =>: isInt
-  .?f ! .or $ i64 cast f32 cast == end
+  .f ! .or $ i64 cast f32 cast == end
 end
 proc( aUnion ptr -> bool ) =>: isIntPtr
-  .?f ! .or [] $ i64 cast f32 cast == end
+  .f ! .or [] $ i64 cast f32 cast == end
 end
 proc( -> ) =>: main
   3.0:f32 aUnion .f isInt "3 is int" assert

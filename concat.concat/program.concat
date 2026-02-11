@@ -68,7 +68,7 @@ struct(
   bool : isStatic
 ) =:: export: ProcedureInfo
 proc( ProcedureInfo : p -> ) =>: freeProcedure
-  p .implementation .?Code .if =:: impl
+  p .implementation .Code .if =:: impl
     impl .code slice.free ..drop
     impl .implementations for
       .code slice.free ..drop
@@ -464,9 +464,9 @@ struct(
 
 struct( ConstValue : value FilePosition : pos i32 : caseId ) =:: export: LabelData
 proc( ConstValue : label -> i64 ) =>: export: switchLabelAsInt
-  label .?Int .if
+  label .Int .if
     return
-  else .?Char ._if
+  else .Char ._if
     i64 cast.u return
   else ..drop end
   ## TODO? more usefull error message?
@@ -1213,7 +1213,7 @@ namespace: sb
     "## global:\n" sb.appendS
     prog [] .globalOps for prog sb.appendOp end
     prog [] .procedures for =:: proc
-      proc .implementation .?Code .else
+      proc .implementation .Code .else
         ..drop continue
       end =:: impl
       "## "          sb.appendS
@@ -1283,7 +1283,7 @@ namespace: program.jumps
         orPos - JumpDistance cast
       newOps
         orPos @[]
-      .val .?Block .else "expected block" ..panic end .jumpDistance=
+      .val .Block .else "expected block" ..panic end .jumpDistance=
     end
     0 ifData .orCount=
   end
@@ -1304,14 +1304,14 @@ namespace: program.jumps
         andPos - JumpDistance cast
       newOps
         andPos @[]
-      .val .?Block .else "expected block" ..panic end .jumpDistance=
+      .val .Block .else "expected block" ..panic end .jumpDistance=
     end
     0 ifData .andCount=
     newOps .length i32 cast
       ifData [] .ifPosition - JumpDistance cast
     newOps
       ifData [] .ifPosition @[]
-    .val .?Block .else "expected block" ..panic end .jumpDistance=
+    .val .Block .else "expected block" ..panic end .jumpDistance=
   end
   proc(
     BlockId : blockId
@@ -1325,7 +1325,7 @@ namespace: program.jumps
       ifData [] .elsePosition - JumpDistance cast
     newOps
       ifData [] .elsePosition @[]
-    .val .?Block .else "expected block" ..panic end .jumpDistance=
+    .val .Block .else "expected block" ..panic end .jumpDistance=
     ifData [] .blockStart
       newOps .length i32 cast -
     JumpDistance cast
@@ -1396,7 +1396,7 @@ namespace: program.jumps
         breakPos - JumpDistance cast
       newOps
         breakPos @[]
-      .val .?Block .else "expected block" ..panic end .jumpDistance=
+      .val .Block .else "expected block" ..panic end .jumpDistance=
     end
     0 switchData .breakCount=
     switchData [] .switchPosition
@@ -1473,7 +1473,7 @@ namespace: program.jumps
         orPos - JumpDistance cast
       newOps
         orPos @[]
-      .val .?Block .else "expected block" ..panic end .jumpDistance=
+      .val .Block .else "expected block" ..panic end .jumpDistance=
     end
     0 whileData .orCount=
   end
@@ -1493,7 +1493,7 @@ namespace: program.jumps
         continuePos - JumpDistance cast
       newOps
         continuePos @[]
-      .val .?Block .else "expected block" ..panic end .jumpDistance=
+      .val .Block .else "expected block" ..panic end .jumpDistance=
     end
     0 whileData .continueCount=
   end
@@ -1511,7 +1511,7 @@ namespace: program.jumps
         breakPos - JumpDistance cast
       newOps
         breakPos @[]
-      .val .?Block .else "expected block" ..panic end .jumpDistance=
+      .val .Block .else "expected block" ..panic end .jumpDistance=
     end
     0 whileData .breakCount=
     newOps .length i32 cast
@@ -1520,7 +1520,7 @@ namespace: program.jumps
     loopLength JumpDistance cast
     newOps whileData [] .loopStart
       @[]
-    .val .?Block .else "expected block" ..panic end .jumpDistance=
+    .val .Block .else "expected block" ..panic end .jumpDistance=
     loopLength -_ JumpDistance cast
   end
 
@@ -1561,7 +1561,7 @@ namespace: program.jumps
         andOrPos - JumpDistance cast
       newOps
         andOrPos @[]
-      .val .?Block .else "expected block" ..panic end .jumpDistance=
+      .val .Block .else "expected block" ..panic end .jumpDistance=
     end
     0 andOrData .andOrCount=
     andOrData [] .blockStart

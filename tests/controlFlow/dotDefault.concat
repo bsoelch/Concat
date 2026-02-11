@@ -8,7 +8,7 @@ proc( aUnion -> bool ) =>: test
   switch
     I .case 0 == return
     F .case 0 == return
-    .default .?N1 ? return
+    .default .N1 ? return
   end
 end
 proc( -> ) =>: main

@@ -1,25 +1,27 @@
 ( type : V -> type ) =>: export: optional
-  union( _ : empty V : data )
+  union( _ : None V : Some )
 end
 namespace: optional
   proc( type : V -> V optional ) =>: export: empty
-    V optional .empty return
+    V optional .None return
   end
   proc( type : auto: V  V -> V optional ) =>: export: wrap
-    V optional .data return
+    V optional .Some return
   end
 
   proc( type : auto: V V optional -> bool ) =>: export: isEmpty
-    .?empty ? return
+    .None ? return
   end
   proc( type : auto: V  V optional -> bool ) =>: export: hasData
-    .?data ? return
+    .Some ? return
   end
   proc( type : auto: T  T optional -> T ) =>: export: get
-    .?data ..raw
+    ..raw .Some
   end
   proc( type : auto: T  T optional -> T ) =>: export: unwrap
-    .?data ..raw
+    .Some .else
+      "unwrap of empty optional" ..panic
+    end
   end
 
   proc( type : auto: T  T optional -> T optional ) =>: prepareIf end

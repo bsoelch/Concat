@@ -332,7 +332,7 @@ namespace: interpreter
         errors setPointer return
       CHECK_UNION_ELEMENT case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?Union .else
+        args 0 [] .Union .else
           "argument is no string" ..panic
         end .eltIndex
           inTypes 0 [] typeContext types.getUnionElementIndex ==
@@ -340,10 +340,10 @@ namespace: interpreter
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
         k 2 == "correct number of arguments" assert
-        args 0 [] .?Array8 .else
+        args 0 [] .Array8 .else
           "argument is no string" ..panic
         end =:: argument
-        args 1 [] .?Int .else
+        args 1 [] .Int .else
           "length is no int" ..panic
         end =:: argLength
         argument .length argLength iSize cast.u u< if
@@ -397,10 +397,10 @@ namespace: interpreter
         parsed ConstValue .Int OperatorResult .SUCCESS return
       PARSE_F32 PARSE_F64 case
         k 2 == "correct number of arguments" assert
-        args 0 [] .?Array8 .else
+        args 0 [] .Array8 .else
           "argument is no string" ..panic
         end =:: argument
-        args 1 [] .?Int .else
+        args 1 [] .Int .else
           "length is no int" ..panic
         end =:: argLength
         argument .length argLength iSize cast.u u< if
@@ -424,129 +424,129 @@ namespace: interpreter
      TYPE_IS_PRIMITIVE case ##XXX? wrapper proc for Type -> bool
         k 1 == "correct number of arguments" assert
         ## named primitives are not counted as primitive
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isPrimitive
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_POINTER case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isPointer
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_RAW_POINTER case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isRawPointer
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_ARRAY case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isArray
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_STRUCT case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isTuple
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_SET_TYPE case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isSetType
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_REFINEMENT_TYPE  case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isRefinementType
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_TAGGED_UNION case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isTaggedUnion
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_UNION_ELEMENT case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isUnionElement
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_RAW_UNION case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isRawUnion
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_ENUM case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isEnum
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_PROC case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isProcedure
           ConstValue .Bool
         OperatorResult .SUCCESS return
     TYPE_IS_NAMED case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isNamedType
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_CTYPE case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.unwrapNamed .?CType ?
+        end typeContext types.unwrapNamed .CType ?
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_ALIGN case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end  typeContext types.unwrapNamed .?Align ?
+        end  typeContext types.unwrapNamed .Align ?
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_MUTABLE case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isMutable
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_DEFINED case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.unwrapNamed
-          .?Undefined ? ! ConstValue .Bool
+          .Undefined ? ! ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_CAN_ASSIGN case
         k 2 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument1 is no type" ..panic
         end
-          args 1 [] .?TypeId .else
+          args 1 [] .TypeId .else
             "argument2 is no type" ..panic
           end
         typeContext types.canAutoCast
@@ -554,10 +554,10 @@ namespace: interpreter
         OperatorResult .SUCCESS return
      TYPE_CAN_CAST case
         k 2 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument1 is no type" ..panic
         end
-          args 1 [] .?TypeId .else
+          args 1 [] .TypeId .else
             "argument2 is no type" ..panic
           end
         false typeContext types.canCast
@@ -565,21 +565,21 @@ namespace: interpreter
         OperatorResult .SUCCESS return
      TYPE_ARRAY_ELEMENT case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.getBaseType
           ConstValue .TypeId
         OperatorResult .SUCCESS return
       TYPE_GET_UNION_ELEMENT case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.getUnionElementType
           ConstValue .TypeId
         OperatorResult .SUCCESS return
       TYPE_GET_UNION_ELEMENT_UNION case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end =:: typeArg
         typeArg typeContext types.getUnionElementUnion .else
@@ -589,17 +589,17 @@ namespace: interpreter
         OperatorResult .SUCCESS return
       TYPE_UNWRAP_NAMED case
         k 1 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.unwrapNamed
           ConstValue .TypeId
         OperatorResult .SUCCESS return
       TYPE_GET_ELEMENT case
         k 2 == "correct number of arguments" assert
-        args 0 [] .?TypeId .else
+        args 0 [] .TypeId .else
           "argument is no type" ..panic
         end
-          args 1 [] .?Int .else
+          args 1 [] .Int .else
             "argument is no int" ..panic
           end i32 cast
         typeContext types.compositeGetElement
@@ -765,7 +765,7 @@ namespace: interpreter
         newValue localValue ConstValue ptr.raw.mut cast =[]
         OperatorResult .SUCCESS return
       LocalArray .case =:: localArray
-        newValue .?Array .else .?LocalArray ._if
+        newValue .Array .else .LocalArray ._if
           ConstValue slice.mut cast slice.freeze
         else ..drop
           "unexpected source for assignment expected array got:" sb.copyPtr
@@ -778,7 +778,7 @@ namespace: interpreter
         newValue localArray i8 primitiveArrayTrySetElement if
           OperatorResult .SUCCESS return
         end
-        newValue .?Array8 .else .?LocalArray8 ._if
+        newValue .Array8 .else .LocalArray8 ._if
           i8 slice.mut cast slice.freeze
         else ..drop
           "unexpected source for assignment expected array got:" sb.copyPtr
@@ -791,7 +791,7 @@ namespace: interpreter
         newValue localArray i16 primitiveArrayTrySetElement if
           OperatorResult .SUCCESS return
         end
-        newValue .?Array16 .else .?LocalArray16 ._if
+        newValue .Array16 .else .LocalArray16 ._if
           i16 slice.mut cast slice.freeze
         else ..drop
           "unexpected source for assignment expected array got:" sb.copyPtr
@@ -804,7 +804,7 @@ namespace: interpreter
         newValue localArray i32 primitiveArrayTrySetElement if
           OperatorResult .SUCCESS return
         end
-        newValue .?Array32 .else .?LocalArray32 ._if
+        newValue .Array32 .else .LocalArray32 ._if
           i32 slice.mut cast slice.freeze
         else ..drop
           "unexpected source for assignment expected array got:" sb.copyPtr
@@ -817,7 +817,7 @@ namespace: interpreter
         newValue localArray i64 primitiveArrayTrySetElement if
           OperatorResult .SUCCESS return
         end
-        newValue .?Array64 .else .?LocalArray64 ._if
+        newValue .Array64 .else .LocalArray64 ._if
           i64 slice.mut cast slice.freeze
         else ..drop
           "unexpected source for assignment expected array got:" sb.copyPtr
@@ -842,74 +842,74 @@ namespace: interpreter
     ConstValue ..length 22:iSize == "no new constants" assert
     a switch
       Int .case =:: aInt
-        b .?Int .and aInt == end false return
+        b .Int .and aInt == end false return
       LocalValue .case ConstValue ptr.raw cast  =:: aVal
-        b .?LocalValue .and ConstValue ptr.raw cast aVal == end false return
+        b .LocalValue .and ConstValue ptr.raw cast aVal == end false return
       Array8 .case =:: aVals
-        b .?Array8 .else
+        b .Array8 .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       Array16 .case =:: aVals
-        b .?Array16 .else
+        b .Array16 .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       Array32 .case =:: aVals
-        b .?Array32 .else
+        b .Array32 .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       Array64 .case =:: aVals
-        b .?Array64 .else
+        b .Array64 .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       Array .case =:: aVals
-        b .?Array .else
+        b .Array .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       LocalArray .case =:: aVals
-        b .?LocalArray .else
+        b .LocalArray .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       LocalArray8 .case =:: aVals
-        b .?LocalArray8 .else
+        b .LocalArray8 .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       LocalArray16 .case =:: aVals
-        b .?LocalArray16 .else
+        b .LocalArray16 .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       LocalArray32 .case =:: aVals
-        b .?LocalArray32 .else
+        b .LocalArray32 .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
       LocalArray64 .case =:: aVals
-        b .?LocalArray64 .else
+        b .LocalArray64 .else
           ..drop false false return
         end =:: bVals
         aVals .data bVals .data == and
@@ -926,7 +926,7 @@ namespace: interpreter
     TypeContext ptr : typeContext
   -> bool  bool ) =>: export: operatorEq
     valType0 typeContext types.unwrapNamed =:: valType
-    valType .?PrimitiveType .if
+    valType .PrimitiveType .if
       switch
         BOOL case
           a constAsBool if ..drop false true return end =:: x
@@ -963,7 +963,7 @@ namespace: interpreter
         return
       end
     else #+valType+# typeContext types.isEnum or valType typeContext types.isUnion _if
-      a .?Int .and =:: aLabel b .?Int .if =:: bLabel
+      a .Int .and =:: aLabel b .Int .if =:: bLabel
         aLabel bLabel == false return
       end
     else valType typeContext types.isPointer _if

@@ -14,8 +14,8 @@ end
 proc( -> ) =>: main
   1 anUnion .I =:: mut: x
   x@ inc
-  x .?I .if 2 == else ..drop false end "2" assert
+  x .I .and 2 == end "2" assert
   2.14:f32 anUnion .F =:: mut: y
   y@ inc
-  y .?F .if 3.14:f32 == else ..drop false end "3.14" assert
+  y .F .and 3.14:f32 == end "3.14" assert
 end

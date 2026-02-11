@@ -8,13 +8,13 @@ proc( -> aUnion ) =>: testVal
   0 aUnion .Int
 end
 proc( -> ) =>: main
-  testVal .?Float ? ! and testVal .?Int .if
+  testVal .Float ? ! and testVal .Int .if
     0 == "testVal is 0" assert
   end ## no value pushed on else (to match and-branch)
-  testVal .?Float ? ! or testVal .?Int ! .else ## no value pushed on if (due to or)
+  testVal .Float ? ! or testVal .Int ! .else ## no value pushed on if (due to or)
     0 == "testVal is 0" assert
   end
-  testVal .?Float ? ! and testVal .?Char ? ! or testVal .?Int .if
+  testVal .Float ? ! and testVal .Char ? ! or testVal .Int .if
     ## nothing is pushed here ...
   end
 end

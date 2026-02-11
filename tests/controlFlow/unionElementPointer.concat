@@ -4,9 +4,9 @@ union(
 ) =:: aUnion
 
 proc( aUnion ptr : u -> f64 ) =>: ptrRead
-  u .?Int .if
+  u .Int .if
     [] f64 cast
-  else .?Float ._if
+  else .Float ._if
     [] f64 cast
   else ..unreachable end  
 end
@@ -18,7 +18,7 @@ proc( -> ) =>: main
   uf@ ptrRead 2.5 == "read 2.5" assert
   ## write to unionElement pointer
   3.14:f32 aUnion .Float =:: mut: um
-  um@ .?Float .if
+  um@ .Float .if
    5 >$ =[]
   else ..drop end
   um@ ptrRead 5 == "read 5" assert

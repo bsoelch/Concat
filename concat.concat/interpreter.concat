@@ -251,7 +251,7 @@ namespace: interpreter
     isError if
       valInfo Type .Undefined true return
     end
-    value .?TypeId .if
+    value .TypeId .if
       valInfo >$ false return
     else ..drop end
     "expected type got: " sb.copyPtr
@@ -280,7 +280,7 @@ namespace: interpreter
       pos errors appendInfo
       false true return
     end
-    value .?Bool .if
+    value .Bool .if
       false return
     else ..drop end
     "expected boolean got: " sb.copyPtr
@@ -299,28 +299,28 @@ namespace: interpreter
     bool : allowArray
     ConstantContext ptr.mut : constContext
   -> string bool ) =>: constValueAsString
-    value .?Array8 .if
+    value .Array8 .if
       string.fromBytes false return
-    else .?LocalArray8 ._if
+    else .LocalArray8 ._if
       i8 slice.mut cast slice.freeze
         persistentCopy if
-          constContext newArray8Const .?Array8 .else ..unreachable end
+          constContext newArray8Const .Array8 .else ..unreachable end
         end
       string.fromBytes
       false return
     else ..drop allowArray ! _if
       string.empty true return
     end
-    value .?Array .and =:: valArray
+    value .Array .and =:: valArray
         valArray .length 2:iSize == if
       valArray
-    else value .?LocalArray .and =:: valArray
+    else value .LocalArray .and =:: valArray
         valArray .length 2:iSize == _if
       valArray ConstValue slice.mut cast slice.freeze
     else
       string.empty true return
     end =:: str
-    str 1 [] .?Int .else ..drop
+    str 1 [] .Int .else ..drop
       string.empty true return
     end iSize cast.u =:: length
     persistentCopy str 0 [] false constContext constValueAsString =:: isErr
@@ -405,7 +405,7 @@ namespace: interpreter
     false =:: mut: isType
     t =:: mut: valType
     valType typeContext types.isType if
-      value .?TypeId .else ..drop
+      value .TypeId .else ..drop
         "unexpected constant value for type type: " sb.copyPtr
           value typeContext sb.appendConstant
         pos errors appendError
@@ -421,13 +421,13 @@ namespace: interpreter
         Type .Undefined ConstValue .None true return
       end
       valType typeContext types.getArraySize =:: size
-      size .?Int .if =:: intVal
+      size .Int .if =:: intVal
         ## return
           types.I_SIZE
           intVal ConstValue .Int
           false
         return
-      else .?GenericArg ._if =:: genericVal
+      else .GenericArg ._if =:: genericVal
         ## return
           types.I_SIZE
           genericVal ConstValue .GenericArg
@@ -466,7 +466,7 @@ namespace: interpreter
       targetType typeContext types.isUnsignedInt or targetType typeContext types.isChar
     end =:: unsignedCast
     ## XXX ? correctly handle 32-bit floats at compile time
-    oldValue .?Float .and =:: floatVal targetType typeContext types.isInt if
+    oldValue .Float .and =:: floatVal targetType typeContext types.isInt if
       targetType typeContext types.unwrapNamed types.isPrimitive if
         targetType typeContext types.primitiveValue switch
           I8  case
@@ -490,7 +490,7 @@ namespace: interpreter
       end
     end
     ## XXX? zero/sign extend small types
-    oldValue .?Int .if =:: mut: intVal
+    oldValue .Int .if =:: mut: intVal
       srcType typeContext types.unwrapNamed types.isPrimitive if
         srcType typeContext types.primitiveValue switch
           I8  CHAR8  case intVal i8 cast
@@ -541,25 +541,25 @@ namespace: interpreter
     =:: eltType
     ## TODO? support (Local)Array8 ... Array64
     value
-      .?LocalValue .if ConstValue ptr.mut cast [] end
+      .LocalValue .if ConstValue ptr.mut cast [] end
     =:: containerValue
-    containerValue .?Array .if
+    containerValue .Array .if
       elementIndex slice.get .else
         "pointer read out of bounds" sb.copyPtr pos errors appendError
         true return
       end
-    else .?LocalArray ._if
+    else .LocalArray ._if
       ConstValue slice.mut cast
         elementIndex slice.at .else
           "pointer read out of bounds" sb.copyPtr pos errors appendError
           true return
         end
       ## TODO proc for checking if value is Local
-      isPtr and $ [] .?LocalValue ? ! and $ [] .?LocalArray ? ! and $ [] .?LocalArray8 ? ! and
-          $ [] .?LocalArray16 ? ! and $ [] .?LocalArray32 ? ! and $ [] .?LocalArray64 ? ! if
+      isPtr and $ [] .LocalValue ? ! and $ [] .LocalArray ? ! and $ [] .LocalArray8 ? ! and
+          $ [] .LocalArray16 ? ! and $ [] .LocalArray32 ? ! and $ [] .LocalArray64 ? ! if
         LocalAddress cast ConstValue .LocalValue
       else [] end
-    else .?Union ._if =:: unionValue
+    else .Union ._if =:: unionValue
       containerValue elementIndex constUnionElement if
         "union index (" sb.copyPtr
           elementIndex sb.appendI
@@ -633,21 +633,21 @@ namespace: interpreter
       true return
     end
     value
-      .?LocalValue .if ConstValue ptr.mut cast [] end
+      .LocalValue .if ConstValue ptr.mut cast [] end
     =:: containerValue
     ## XXX? support (Local)Array8 ...  Array64
-    containerValue .?Array .if =:: arrayValue
+    containerValue .Array .if =:: arrayValue
       context [] .localMemory
         arrayValue mixedArena.copySlice =:: localAddress
       context .localMemory=
       newValue localAddress elementIndex slice.set
       localAddress LocalSlice cast ConstValue .LocalArray
-    else .?LocalArray ._if =:: arrayValue
+    else .LocalArray ._if =:: arrayValue
       newValue
         arrayValue ConstValue slice.mut cast
       elementIndex slice.set
       containerValue
-    else .?Union ? _if
+    else .Union ? _if
       newValue elementIndex constContext newUnionConst
     else
       "unexpected value for writable constant: " sb.copyPtr
@@ -657,7 +657,7 @@ namespace: interpreter
       containerValue valInfo context unpopValue
       true return
     end =:: newContainer
-    value .?LocalValue .if
+    value .LocalValue .if
       newContainer >$ ConstValue ptr.mut cast =[]
       true
     else ..drop false end =:: wrapped
@@ -727,7 +727,7 @@ namespace: interpreter
     ## 1. copy elements
     dataArray .length for =:: i
       dataArray i [] =:: elt
-      arrayBase .?Undefined ? ! if
+      arrayBase .Undefined ? ! if
         arrayBase
       else
         valType i i32 cast typeContext types.compositeGetElement
@@ -819,20 +819,20 @@ namespace: interpreter
         return
     end
     context [] .localMemory
-      value .?Array .else
-        .?LocalArray ._if ConstValue slice.mut cast slice.freeze
+      value .Array .else
+        .LocalArray ._if ConstValue slice.mut cast slice.freeze
       else ..unreachable end mixedArena.copySlice =:: localSlice
     context .localMemory=
     valType typeContext types.getBaseType =:: arrayBase
     ## copy sub-arrays
     localSlice .length for =:: i
       localSlice i @[] =:: elt
-      arrayBase .?Undefined ? ! if
+      arrayBase .Undefined ? ! if
         arrayBase
       else
         valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
-      elt [] .?Array ? if
+      elt [] .Array ? if
         elt []
           eltType false context localCopy
         elt =[]
@@ -865,7 +865,7 @@ namespace: interpreter
       localSlice LocalSlice cast ConstValue .LocalArray return
     else dataType typeContext types.isArray _if
       ## XXX? merge with previous case
-      dataType typeContext types.getArraySize .?Int .else ..drop
+      dataType typeContext types.getArraySize .Int .else ..drop
         "generic arrays are not supported" sb.copyPtr
         pos errors appendError
         0
@@ -1002,7 +1002,7 @@ namespace: interpreter
           depth
         sb.appendTypeRecursive
         printValues if
-          value [] .?None ? ! if
+          value [] .None ? ! if
             " { " sb.appendS
             value [] typeContext sb.appendConstant
             " }" sb.appendS
@@ -1037,7 +1037,7 @@ proc(
     NOP case
       EvalResult .Ok return
     Constant .case =:: constVal
-      constVal .?GenericArg .and =:: label
+      constVal .GenericArg .and =:: label
           context [] .localVariables .if
         label map.get .else
           "missing value for " sb.copyPtr
@@ -1161,7 +1161,7 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-            $ .?Union ? if constUnionLabel end
+            $ .Union ? if constUnionLabel end
           =:: switchValue ..drop
           program [] .switchData
             blockInfo .blockId i64 cast.u
@@ -1288,7 +1288,7 @@ proc(
             ## compile-time evaluation of mutable global variables not supported
             EvalResult .Error return
           end
-          idData [] .constValue .?None ? if
+          idData [] .constValue .None ? if
             "identifier " sb.copyPtr
               label labelContext sb.appendLabelPath
               " has not been initialized" sb.appendS
@@ -1327,7 +1327,7 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: idData
-          idData [] .constValue .?Procedure .else ..drop
+          idData [] .constValue .Procedure .else ..drop
             "could not determine id of procedure" sb.copyPtr
               label labelContext sb.appendLabelName
             op [] .pos errors appendError
@@ -1459,14 +1459,14 @@ proc(
       break
     GetUnionLabel case "unimplemented" ..panic
     GetLabel SetLabel .case =:: labelId
-      op [] .val .?SetLabel ? =:: isWrite
+      op [] .val .SetLabel ? =:: isWrite
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      value .?TypeId .and =:: typeId
+      value .TypeId .and =:: typeId
           typeId typeContext types.isEnumOrTaggedUnion if
         typeId true
       else
@@ -1486,7 +1486,7 @@ proc(
       end =:: elementIndex
       containerType elementIndex typeContext types.compositeGetElement =:: eltType
       isType if
-        eltType .?Empty ? if
+        eltType .Empty ? if
           ## pushValue
             containerType typeContext types.isEnum if
               elementIndex i64 cast.u ConstValue .Int
@@ -1545,9 +1545,9 @@ proc(
         context unpopValue
         EvalResult .Error return
       end
-      value .?Union ? if
+      value .Union ? if
         value constUnionLabel
-      else value .?Int ? _if
+      else value .Int ? _if
         value
       else
         "unexpected value for get-label: " sb.copyPtr
@@ -1571,7 +1571,7 @@ proc(
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      op [] .val .?GetElement ? ! =:: isWrite
+      op [] .val .GetElement ? ! =:: isWrite
       isWrite if
         value valInfo eltIndex op [] .pos context setElement wrapResult return
       end
@@ -1583,10 +1583,10 @@ proc(
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      value .?Int .if
+      value .Int .if
         expectedIndex i64 cast.u == ConstValue .Bool
-      else .?Union ? _if
-        value constUnionLabel .?Int .else ..unreachable end expectedIndex i64 cast.u == ConstValue .Bool
+      else .Union ? _if
+        value constUnionLabel .Int .else ..unreachable end expectedIndex i64 cast.u == ConstValue .Bool
       else
         value valInfo context unpopValue
         "unexpected value for hasElement: " sb.copyPtr
@@ -1617,7 +1617,7 @@ proc(
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: poppedValue
-      op [] .dataType .?Undefined ? if
+      op [] .dataType .Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
         end poppedType= valInfo=
@@ -1665,7 +1665,7 @@ proc(
         unionType
           elementIndex
         typeContext types.compositeGetElement =:: eltType
-        eltType .?Empty ? ! if
+        eltType .Empty ? ! if
           op [] .pos context popValue if ..drop.2
             "missing argument for union element expected" sb.copyPtr
               eltType typeContext sb.appendType
@@ -1700,7 +1700,7 @@ proc(
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: isPoppedType
-      op [] .dataType .?Undefined ? if
+      op [] .dataType .Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
         end poppedType= valInfo=
@@ -1731,7 +1731,7 @@ proc(
       ## canCast
         valInfo .valueType
         targetType
-        op [] .val .?Cast! ?
+        op [] .val .Cast! ?
       typeContext types.canCast ! if
         "cannot cast " sb.copyPtr
           valInfo .valueType typeContext sb.appendType
@@ -1740,7 +1740,7 @@ proc(
         op [] .pos errors appendError
         EvalResult .Error return
       end
-      op [] .val .?Cast .if
+      op [] .val .Cast .if
         .signType
       else ..drop
         SignType .NONE
@@ -1872,7 +1872,7 @@ proc(
       end
       EvalResult .Ok return
     Assert RuntimeAssert case
-      op [] .val .?RuntimeAssert .else ..drop
+      op [] .val .RuntimeAssert .else ..drop
         true op [] .pos context popString if ..drop.2
           EvalResult .Error return
         end ..swap ..drop
@@ -1883,7 +1883,7 @@ proc(
         op [] .pos errors appendError
         EvalResult .Error return
       end =:: value =:: valInfo
-      value .?Bool .else ..drop
+      value .Bool .else ..drop
         "wrong constant value for assert, expected boolean got: " sb.copyPtr
           value typeContext sb.appendConstant
         op [] .pos errors appendError
@@ -1895,7 +1895,7 @@ proc(
       end
       EvalResult .Ok return
     Panic PanicWithMessage case
-      op [] .val .?PanicWithMessage .else ..drop
+      op [] .val .PanicWithMessage .else ..drop
         true op [] .pos context popString if ..drop.2
           EvalResult .Error return
         end ..swap ..drop
@@ -1966,7 +1966,7 @@ proc(
       Type : poppedType
       ValueInfo : valInfo
       false =:: mut: poppedValue
-      op [] .dataType .?Undefined ? if
+      op [] .dataType .Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
         end poppedType= valInfo=
@@ -2256,7 +2256,7 @@ namespace: interpreter
       pos context popValue ! "hasValue" assert =:: targetValue =:: targetInfo
       pos context popValue ! "hasValue" assert =:: srcValue =:: srcInfo
       pos context popValue ! "hasValue" assert =:: lenValue =:: lenInfo
-      lenValue .?Int .else ..drop ## XXX? support GenericArg as length
+      lenValue .Int .else ..drop ## XXX? support GenericArg as length
         "unexpected argument for memcpy, expected Integer got: " sb.copyPtr
           lenValue typeContext sb.appendConstant
         pos errors appendError
@@ -2386,7 +2386,7 @@ namespace: interpreter
       end
     =:: nStaticArgs
     args .length autoArgs .length - nStaticArgs - =:: nArgs
-    procData .implementation .?BuiltIn .if =:: builtInImpl
+    procData .implementation .BuiltIn .if =:: builtInImpl
       implId -1:i32 != if
         "generic built-ins are not supported" sb.copyPtr
         pos errors appendError
@@ -2395,9 +2395,9 @@ namespace: interpreter
         calledType
         builtInImpl [] .builtIn
       pos context tryEvaluateBuiltIn return
-    else .?Extern ._if []
+    else .Extern ._if []
       args pos context evaluateExternCall return
-    else .?Code ._else ..drop
+    else .Code ._else ..drop
       "unexpected implementation type" sb.copyPtr
       pos errors appendError
       true return
@@ -2435,7 +2435,7 @@ namespace: interpreter
       label labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_AUTO & ? if
         autoArgs autoArgOffset []
-          .?GenericArg .if =:: varId
+          .GenericArg .if =:: varId
             prevVariables .and varId map.get .if
               .value
             else
@@ -2557,7 +2557,7 @@ namespace: interpreter
       true return ## not a call
     end
     code 0 [] =:: op
-    op .val .?ImplementProcedure ? ! and op .val .?InitializeId ! .or .idType .PROCEDURE ! if
+    op .val .ImplementProcedure ? ! and op .val .InitializeId ! .or .idType .PROCEDURE ! if
       "expected procedure initialization got " sb.copyPtr
         op program sb.appendOp
       op .pos errors appendError

@@ -8,10 +8,10 @@ union(
   char8 : Char
 ) =:: aUnion
 proc( aUnion : u -> ) =>: printU
-  u .?Int .if
+  u .Int .if
     "int: ":s io.print
     io.println
-  else .?Float ._if
+  else .Float ._if
     "float: ":s io.print
     io.println
   else ..drop

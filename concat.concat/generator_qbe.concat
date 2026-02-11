@@ -277,8 +277,8 @@ proc( Type : t CompilerContext ptr.mut : context -> bool ) =>: referenceOnly
   program .idContext .typeContext =:: typeContext
   t typeContext types.unwrapNamed
     typeContext types.unwrapRefinement
-    .?CType .if types.cTypeAsType else
-    .?IntLiteral ._if types.intLiteralAsInt end
+    .CType .if types.cTypeAsType else
+    .IntLiteral ._if types.intLiteralAsInt end
   =:: baseType
   baseType types.isPrimitive if
     false return
@@ -467,7 +467,7 @@ proc(
     false
     false
   IfBlockInfo new BlockInfo .If context openBlock
-  context [] .openBlocks list.peek optional.unwrap .?If .else ..unreachable end
+  context [] .openBlocks list.peek optional.unwrap .If .else ..unreachable end
 end
 proc(
   BlockId : blockId
@@ -512,7 +512,7 @@ proc(
     16 BranchId list.create
     blockId
   AndOrBlockInfo new BlockInfo .AndOr context openBlock
-  context [] .openBlocks list.peek optional.unwrap .?AndOr .else ..unreachable end
+  context [] .openBlocks list.peek optional.unwrap .AndOr .else ..unreachable end
 end
 
 enum( WHILE SWITCH ) =:: BreakType
@@ -525,10 +525,10 @@ proc(
   context [] .program =:: program
   program .errors =:: errors
   context [] .openBlocks list.atReversed for =:: block
-    breakType .WHILE and block [] .?While .and .blockId blockId == if
+    breakType .WHILE and block [] .While .and .blockId blockId == if
       block optional.wrap return
     end
-    breakType .SWITCH and block [] .?Switch .and .blockId blockId == if
+    breakType .SWITCH and block [] .Switch .and .blockId blockId == if
       block optional.wrap return
     end
   end
@@ -657,7 +657,7 @@ namespace: sb
       CType .case
         sb
           >$ types.cTypeAsType
-          $ .?Undefined ? if ..drop.2 break end
+          $ .Undefined ? if ..drop.2 break end
         storeType pos context appendTypeNameQBE
         return
       Pointer MutablePointer RawPointer MutableRawPointer Procedure case
@@ -823,7 +823,7 @@ namespace: sb
     FilePosition : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendPtrConstQBE
-    value .?Array .and .length 0:iSize == if
+    value .Array .and .length 0:iSize == if
       sb 0 sb.appendI return ## pointer to zero length array -> NULL-pointer
     end
     sb
@@ -852,7 +852,7 @@ namespace: sb
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     constant [] .value =:: value
-    constant [] .valType types.isPrimitive or constant [] .valType .?IntLiteral ? and
+    constant [] .valType types.isPrimitive or constant [] .valType .IntLiteral ? and
         ConstValue ..length 22:iSize == "no new constants" assert
         value switch
           Array8  .case .length 0:iSize == break
@@ -895,7 +895,7 @@ namespace: sb
       isGlobal and t typeContext types.isPointer or
           t typeContext types.unwrapNamed types.isPrimitive or
           t typeContext types.isEnum or
-          t .?IntLiteral ? if
+          t .IntLiteral ? if
         ## add name prefix for global constants, skip prefix for zero-length array constants
         t StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
@@ -912,8 +912,8 @@ namespace: sb
                 typeContext types.enumLabelInfo ..drop
               end
               typeContext types.unwrapNamed
-            .?CType .if types.cTypeAsType else
-            .?IntLiteral ._if types.intLiteralAsInt end
+            .CType .if types.cTypeAsType else
+            .IntLiteral ._if types.intLiteralAsInt end
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
@@ -937,8 +937,8 @@ namespace: sb
         break
         Float .case =:: floatValue
           t typeContext types.unwrapNamed
-            .?CType .if types.cTypeAsType else
-            .?IntLiteral ._if types.intLiteralAsInt end
+            .CType .if types.cTypeAsType else
+            .IntLiteral ._if types.intLiteralAsInt end
           =:: numType
           numType types.primitive.F32 types.typeEquals if
             floatValue f32 cast f32.bits sb.appendI
@@ -1239,7 +1239,7 @@ namespace: sb
     prog .idContext .constContext =:: constContext
     t0 typeContext types.unwrapNamed =:: t
     t typeContext types.isArray if
-      t typeContext types.getArraySize .?Int .else ..drop
+      t typeContext types.getArraySize .Int .else ..drop
         sb return ## no declaration for var-size array
       end =:: size
       t typeContext types.getBaseType =:: baseType
@@ -1590,7 +1590,7 @@ proc(
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
   enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
-  labelType .?Empty ? if sb return end
+  labelType .Empty ? if sb return end
   context nextTmpId =:: labelPtr
   sb
     "%t" sb.appendS
@@ -2056,14 +2056,14 @@ proc(
   context [] .program =:: prog
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  src typeContext types.unwrapNamed .?CType .if =:: cType
+  src typeContext types.unwrapNamed .CType .if =:: cType
     sb
       cType types.cTypeAsType
       signed
       pos
       context
     extendArguments return
-  else .?IntLiteral ._if =:: intLiteral
+  else .IntLiteral ._if =:: intLiteral
     sb
       intLiteral types.intLiteralAsInt
       signed
@@ -2838,13 +2838,13 @@ proc(
   ## TODO update sign type when casting from/to  cType/intLiteral
   src0 typeContext types.unwrapNamed
     typeContext types.unwrapRefinement
-    .?CType .if types.cTypeAsType else
-    .?IntLiteral ._if types.intLiteralAsInt end
+    .CType .if types.cTypeAsType else
+    .IntLiteral ._if types.intLiteralAsInt end
   =:: src
   target0 typeContext types.unwrapNamed
     typeContext types.unwrapRefinement
-    .?CType .if types.cTypeAsType else
-    .?IntLiteral ._if types.intLiteralAsInt end
+    .CType .if types.cTypeAsType else
+    .IntLiteral ._if types.intLiteralAsInt end
   =:: target
   src target types.typeEquals if
     sb return ## nothing to do
@@ -2939,7 +2939,7 @@ proc(
   idContext .typeContext =:: typeContext
   false =:: mut: needCast
   constType =:: mut: srcType
-  value .?GenericArg .if =:: genArg
+  value .GenericArg .if =:: genArg
     context [] .currentProc
       genArg
       typeContext
@@ -3055,7 +3055,7 @@ proc(
       arg [] .valId sb.appendI
     finally i 1:iSize - end ..drop
     ")\n" sb.appendS
-    retType .?Tuple .if
+    retType .Tuple .if
       ## flattenTupleQBE
         pos context popValue
         pos
@@ -3124,7 +3124,7 @@ proc(
         '\n' sb.appendC
       return
     DeclareId InitializeId .case =:: idInfo
-      op [] .val .?InitializeId ? =:: assignValue
+      op [] .val .InitializeId ? =:: assignValue
       idInfo .labelId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & ? =:: mutable
       idInfo .idType switch
@@ -3243,7 +3243,7 @@ proc(
           end
           i 1 +
         end ..drop
-        procInfo [] .implementation .?Code .if =:: codeImpl
+        procInfo [] .implementation .Code .if =:: codeImpl
           ## allocate space for variables
           implInfo .implementationId 0 >= if
             codeImpl .implementations
@@ -3264,7 +3264,7 @@ proc(
         true context .reachable=
       return
     GetId AtId .case =:: idInfo
-      op [] .val .?AtId ? =:: isAddr
+      op [] .val .AtId ? =:: isAddr
       idInfo .idType switch
         PROCEDURE  case
           ## procedures are handled by call & procPtr instructions
@@ -3527,8 +3527,8 @@ proc(
       op [] .pos errors appendError
       sb return
     New NewEnum NewReference NewEnumReference case
-      op [] .val .?NewReference ? or op [] .val .?NewEnumReference ? end =:: hasReference
-      op [] .val .?NewEnum ? or op [] .val .?NewEnumReference ? end =:: isEnum
+      op [] .val .NewReference ? or op [] .val .NewEnumReference ? end =:: hasReference
+      op [] .val .NewEnum ? or op [] .val .NewEnumReference ? end =:: isEnum
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
@@ -3538,8 +3538,8 @@ proc(
           op [] .dataType op [] .pos context true appendAlloc 't'
         end =:: dataPtrType =:: dataPtrId
         isEnum if ## TODO store enums without values as integer
-          op [] .val .?NewEnum .else
-            .?NewEnumReference ._else ..unreachable
+          op [] .val .NewEnum .else
+            .NewEnumReference ._else ..unreachable
           end =:: index
           op [] .dataType index typeContext types.compositeGetElement =:: eltType
           ## storeEnumLabel
@@ -3699,15 +3699,15 @@ proc(
     Cast Cast! BitCast case
       sb
         op [] .pos sb.appendPosQBE
-        op [] .val .?Cast .if =:: castVal
+        op [] .val .Cast .if =:: castVal
           CastType .CAST
           castVal .signType
           castVal .src
-        else .?BitCast ._if =:: castVal
+        else .BitCast ._if =:: castVal
           CastType .BIT_CAST
           SignType .UNSIGNED
           castVal
-        else .?Cast! ._if =:: castVal
+        else .Cast! ._if =:: castVal
           CastType .CAST!
           SignType .NONE ## XXX? use sign information for forced cast
           castVal
@@ -3723,7 +3723,7 @@ proc(
         callInfo .procId i64 cast @[]
       =:: procData
       callInfo .implementationId 0 >= if
-        procData [] .implementation .?Code .else
+        procData [] .implementation .Code .else
           "expected code-proc" ..panic
         end .implementations
           callInfo .implementationId @[]
@@ -3756,7 +3756,7 @@ proc(
         argFlags id.FLAG_AUTO & ? if
           callInfo prog getCallData [] .autoArgs autoArgIndex [] =:: argVal
           autoArgIndex 1 + autoArgIndex=
-          argVal .?None ? ! if
+          argVal .None ? ! if
             newSb
               arg argVal op [] .pos context pushConstant
             newSb=
@@ -3930,7 +3930,7 @@ proc(
             BranchId new sb.appendBranchId
             '\n' sb.appendC
           =:: mut: newSb
-          context [] .openBlocks list.peek .and .?If .and =:: ifBlock
+          context [] .openBlocks list.peek .and .If .and =:: ifBlock
               ifBlock [] .hasIf ! if
             ifBlock
           else ## start if block if not already open
@@ -3962,7 +3962,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?Error ? if
+            branchTree.merge .Error ? if
               "could not merge or-if branches" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -3971,7 +3971,7 @@ proc(
             ifBranch "if":s context startBranch
           return
         AND_IF OR_IF AND_TRUE AND_FALSE OR_TRUE OR_FALSE case
-          context [] .openBlocks list.peek .and .?If .and =:: ifBlock
+          context [] .openBlocks list.peek .and .If .and =:: ifBlock
               ifBlock [] .hasIf ! if
             ifBlock
           else ## start if block if not already open
@@ -4025,7 +4025,7 @@ proc(
             context startBranch
           return
         ELSE ELSE_TRUE ELSE_FALSE case
-          context [] .openBlocks list.peek .and .?If .else
+          context [] .openBlocks list.peek .and .If .else
             "expected if-block" ..panic
           end =:: ifBlock
           context .stackInfo ifBlock [] .branchRoot branchTree.reset =:: ifBranch
@@ -4066,7 +4066,7 @@ proc(
               context
               newSb@
             MergePoint new
-          branchTree.merge .?Error ? if
+          branchTree.merge .Error ? if
             "could not merge and-if branches" sb.copyPtr
             op [] .pos errors appendError
           end
@@ -4114,7 +4114,7 @@ proc(
               ## error message handled by findBreakableBlock
               sb return
             end =:: breakBlock
-            breakBlock .?Switch .else ..drop
+            breakBlock .Switch .else ..drop
               "unexpected block for " sb.copyPtr
                 BlockType .BREAK_SWITCH sb.appendBlockType
                 ": " sb.appendS
@@ -4158,7 +4158,7 @@ proc(
             whileId
               opIndex
             context openWhileBlock
-            context [] .openBlocks list.peek .and .?While .else
+            context [] .openBlocks list.peek .and .While .else
               "expected while-block" ..panic
             end =:: whileBlock
             prog [] .whileData whileId i64 cast @[] =:: whileData
@@ -4203,7 +4203,7 @@ proc(
               loopElts list.free loopElts=
             return
         AND_DO OR_DO case
-          context [] .openBlocks list.peek .and .?While .else
+          context [] .openBlocks list.peek .and .While .else
             "expected while-block" ..panic
           end =:: whileBlock
           blockVal .blockType .OR_DO =:: isOr
@@ -4250,7 +4250,7 @@ proc(
             nextBranch "and/or do":s context startBranch
           return
         DO case
-          context [] .openBlocks list.peek .and .?While .else
+          context [] .openBlocks list.peek .and .While .else
             "expected while-block" ..panic
           end =:: whileBlock
           ## BranchId
@@ -4295,7 +4295,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?Error ? if
+            branchTree.merge .Error ? if
               "could not merge or-do branches" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4314,7 +4314,7 @@ proc(
             ## error message handled by findBreakableBlock
             sb return
           end =:: breakBlock
-          breakBlock .?While .else ..drop
+          breakBlock .While .else ..drop
             "unexpected block for " sb.copyPtr
               blockType sb.appendBlockType
               ": " sb.appendS
@@ -4347,7 +4347,7 @@ proc(
             false context .reachable=
           return
         FINALLY case
-          context [] .openBlocks list.peek .and .?While .else
+          context [] .openBlocks list.peek .and .While .else
             "expected while-block" ..panic
           end =:: whileBlock
           whileBlock .continueBranches =:: mut: continueBranches
@@ -4384,7 +4384,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?Error ? if
+            branchTree.merge .Error ? if
               "could not merge continue branches of while block" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4392,7 +4392,7 @@ proc(
           newSb return
         AND OR case
           blockVal .blockType .OR =:: isOr
-          context [] .openBlocks list.peek .and .?AndOr .else
+          context [] .openBlocks list.peek .and .AndOr .else
             ## start if block if not already open
             blockVal .blockId context openAndOrBlock
           end =:: andOrBlock
@@ -4453,7 +4453,7 @@ proc(
             ## TODO merge branches if neccessary
           return
         ELSE case
-          context [] .openBlocks list.pop .and .?If .else
+          context [] .openBlocks list.pop .and .If .else
             "expected if-block" ..panic
           end =:: ifBlock
           context .openBlocks=
@@ -4494,7 +4494,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?Error ? if
+            branchTree.merge .Error ? if
               "could not merge branches of if-else block" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4507,7 +4507,7 @@ proc(
           newSb return
         SWITCH case
           context [] .openBlocks
-            list.pop .and .?Switch .else
+            list.pop .and .Switch .else
               "expected switch-block" ..panic
             end =:: switchBlock
           context .openBlocks=
@@ -4538,7 +4538,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?Error ? if
+            branchTree.merge .Error ? if
               "could not merge branches of switch-case block" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4549,7 +4549,7 @@ proc(
           newSb return
         WHILE case
           context [] .openBlocks
-            list.pop .and .?While .else
+            list.pop .and .While .else
               "expected while-block" ..panic
             end =:: whileBlock
           context .openBlocks=
@@ -4614,7 +4614,7 @@ proc(
                 context
                 newSb@
               MergePoint new
-            branchTree.merge .?Error ? if
+            branchTree.merge .Error ? if
               "could not merge break branches of while block" sb.copyPtr
               op [] .pos errors appendError
             end
@@ -4629,7 +4629,7 @@ proc(
           newSb return
         AND OR case
           context [] .openBlocks
-            list.pop .and .?AndOr .else
+            list.pop .and .AndOr .else
               "expected and-or-block" ..panic
             end =:: mut: andOrBlock
           context .openBlocks=
@@ -4661,7 +4661,7 @@ proc(
               context
               newSb@
             MergePoint new
-          branchTree.merge .?Error ? if
+          branchTree.merge .Error ? if
             "could not merge break branches of and/or block" sb.copyPtr
             op [] .pos errors appendError
           end
@@ -4926,7 +4926,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       " = align " sb.appendS
       valType idData [] .declaredAt context typeAlignmentInt sb.appendI
       " {" sb.appendS
-      idData [] .constValue .?None ? ! if
+      idData [] .constValue .None ? ! if
         valType idData [] .constValue true idData [] .declaredAt context sb.appendConstQBE
       else
         "z " sb.appendS
@@ -4958,7 +4958,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     end
     ## code
     program [] .procedures for =:: proc
-      proc .implementation .?Code .else
+      proc .implementation .Code .else
         ..drop continue
       end =:: impl
       impl .codeState .UNUSED if continue end
