@@ -1840,9 +1840,6 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   OP_UNLINKED =:: mut: onRead
-  isWrite ! and isUnionGet ! and containerType typeContext types.isTaggedUnion if
-    "old-style union-element access" sb.copyPtr pos errors appendError
-  end
   containerType typeContext types.isArray if
     containerType typeContext types.getBaseType
   else isUnionGet and containerType typeContext types.isUnion _if
@@ -3234,17 +3231,17 @@ proc(
         end =:: elementIndex
         containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
         containerType elementIndex typeContext types.compositeGetElement =:: eltType
-        isWrite ! and isType ! and accessType .GET and containerType typeContext types.isEnum if
-          LabelAccessType .CHECK_ENUM accessType=
+        isWrite ! and isType ! and accessType .GET if
+          containerType typeContext types.isEnum if
+            LabelAccessType .CHECK_ENUM accessType=
+          else containerType typeContext types.isTaggedUnion _if
+            LabelAccessType .UNION_GET accessType=
+          end
         end
         accessType .UNION_GET and isType or containerType typeContext types.isTaggedUnion ! if
           "unsupported type for union-get expected tagged union got: " sb.copyPtr
             srcType typeContext sb.appendType
           op .pos errors appendError
-        #+else accessType .GET and isType ! and containerType typeContext types.isTaggedUnion _if
-          "raw access to elements of tagged unions is deprecated use `.?Name` instead of `.Name` " sb.copyPtr
-            srcType typeContext sb.appendType
-          op .pos errors appendWarning+#
         end
         accessType .CHECK if
           ## label exists
