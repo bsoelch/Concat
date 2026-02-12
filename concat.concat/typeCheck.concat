@@ -3265,65 +3265,60 @@ proc(
             continue.opLoop
           end
           state .stack branchTree.pop ..drop ## remove container from stack
+          containerType typeContext types.enumLabelInfo ..drop
+            typeContext types.unwrapNamed
+          =:: enumLabelType
           ## check enum label
-          containerType typeContext types.isEnum if
-            isPtr if
-              ## newProcedure
-                srcType@ slice.wrap
-                containerType@ slice.wrap
-                LabelId slice.empty
-                CallingConvention.DEFAULT
-              typeContext types.newProcedure .else
-                "failed to create procedure":s op ..line state internalError ..unreachable
-              end
-                BuiltIn .GET_PTR
-              op .pos opBuiltIn state appendOp ..drop
+          isPtr if ## gohere
+            ## newProcedure
+              srcType@ slice.wrap
+              containerType@ slice.wrap
+              LabelId slice.empty
+              CallingConvention.DEFAULT
+            typeContext types.newProcedure .else
+              "failed to create procedure":s op ..line state internalError ..unreachable
             end
-            elementIndex i64 cast.u ConstValue .Int
-              containerType
-            op .pos opConst state appendOp ..drop
-            ## pushValue
-              types.primitive.BOOL
-              ConstValue .None
-              containerType typeContext types.enumLabelInfo ..drop
-                typeContext types.unwrapNamed
-              =:: enumLabelType
-              Type 2 array : tmp
-              enumLabelType tmp@ 0 =[]
-              enumLabelType tmp@ 1 =[]
-              ## newProcedure
-                tmp@ slice.wrap
-                types.primitive.BOOL@ slice.wrap
-                LabelId slice.empty
-                CallingConvention.DEFAULT
-              typeContext types.newProcedure .else
-                "failed to create procedure":s op ..line state internalError ..unreachable
-              end
-                enumLabelType types.isPrimitive ! if
-                  "non-primitive enum-label":s op ..line state internalError ..unreachable
-                else
-                  enumLabelType typeContext types.primitiveValue switch
-                    I8 case BuiltIn .EQ_I8 break
-                    CHAR8 case BuiltIn .EQ_C8 break
-                    I16 case BuiltIn .EQ_I16 break
-                    I32 case BuiltIn .EQ_I32 break
-                    I64 case BuiltIn .EQ_I64 break
-                    default
-                      "unexpected primitive for enum-label":s
-                        op ..line state
-                      internalError ..unreachable
-                  end
-                end
-              op .pos opBuiltIn
-            state pushValue
-            continue.opLoop
+              BuiltIn .GET_PTR
+            op .pos opBuiltIn state appendOp ..drop
           end
+          containerType typeContext types.isTaggedUnion if
+            ## TODO? support get-label on pointer and get label before dereference
+            op .pos opGetEnumLabel containerType >$ .dataType= state appendOp ..drop
+          end
+          elementIndex i64 cast.u ConstValue .Int
+            enumLabelType
+          op .pos opConst state appendOp ..drop
           ## pushValue
             types.primitive.BOOL
             ConstValue .None
-            srcType elementIndex op .pos opHasElement
+            Type 2 array : tmp
+            enumLabelType tmp@ 0 =[]
+            enumLabelType tmp@ 1 =[]
+            ## newProcedure
+              tmp@ slice.wrap
+              types.primitive.BOOL@ slice.wrap
+              LabelId slice.empty
+              CallingConvention.DEFAULT
+            typeContext types.newProcedure .else
+              "failed to create procedure":s op ..line state internalError ..unreachable
+            end
+              enumLabelType types.isPrimitive ! if
+                "non-primitive enum-label":s op ..line state internalError ..unreachable
+              else
+                enumLabelType typeContext types.primitiveValue switch
+                  I8 case BuiltIn .EQ_I8 break
+                  CHAR8 case BuiltIn .EQ_C8 break
+                  I16 case BuiltIn .EQ_I16 break
+                  I32 case BuiltIn .EQ_I32 break
+                  I64 case BuiltIn .EQ_I64 break
+                  default
+                    "unexpected primitive for enum-label":s
+                      op ..line state
+                    internalError ..unreachable
+                end
+              end
+            op .pos opBuiltIn
           state pushValue
-          elementLabel state replaceLabel
           continue.opLoop
         end
         isType if
