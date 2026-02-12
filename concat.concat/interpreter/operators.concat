@@ -330,13 +330,6 @@ namespace: interpreter
           pos
           typeContext
         errors setPointer return
-      CHECK_UNION_ELEMENT case
-        k 1 == "correct number of arguments" assert
-        args 0 [] .Union .else
-          "argument is no string" ..panic
-        end .eltIndex
-          inTypes 0 [] typeContext types.getUnionElementIndex ==
-        ConstValue .Bool OperatorResult .SUCCESS return
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
         k 2 == "correct number of arguments" assert

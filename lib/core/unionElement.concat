@@ -2,8 +2,8 @@ import core/type
 
 namespace: unionElement
   proc( type.unionElement : auto: U  U -> U ) =>: prepareIf end
-  proc( type.unionElement : auto: U  U -> bool ) =>: export: check
-    ..builtIn.check.unionElement
+  proc( type.unionElement : auto: U  U : x -> bool ) =>: export: check
+    x ..label U ..label ==
   end
   proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: get
     ..raw
@@ -16,8 +16,8 @@ namespace: unionElement
   proc( type.unionElement : auto: U  U -> U inv ) =>: invert U inv cast end
   proc( type.unionElement : auto: U  U inv -> U ) =>: invert2 U cast end
   proc( type.unionElement : auto: U  U inv -> U inv ) =>: prepareIfInv end
-  proc( type.unionElement : auto: U  U inv -> bool ) =>: checkInv
-    U cast ..builtIn.check.unionElement !
+  proc( type.unionElement : auto: U  U inv : x -> bool ) =>: checkInv
+    x U cast ..label U ..label !=
   end
   proc( type.unionElement : auto: U  U inv -> U type.unionElementType ) =>: getInv
     U cast ..raw
@@ -28,7 +28,7 @@ namespace: unionElement
 
   proc( type.unionElementPointer : auto: U  U -> U ) =>: prepareIfPtr end
   proc( type.unionElementPointer : auto: U  U -> bool ) =>: checkPtr
-    [] ..builtIn.check.unionElement
+    [] ..label U ..types.arrayElement ..label ==
   end
   proc( type.unionElementPointer : auto: U  U -> U type.unionElementPtrType ) =>: getPtr
     U type.unionElementPtrType cast! ## elements are all stored at same address as union
@@ -42,7 +42,7 @@ namespace: unionElement
   proc( type.unionElementPointer : auto: U  U invPtr -> U ) =>: invertPtr2 .val end
   proc( type.unionElementPointer : auto: U  U invPtr -> U invPtr ) =>: prepareIfPtrInv end
   proc( type.unionElementPointer : auto: U  U invPtr -> bool ) =>: checkPtrInv
-    .val [] ..builtIn.check.unionElement !
+    .val [] ..label U ..types.arrayElement ..label !=
   end
   proc( type.unionElementPointer : auto: U  U invPtr -> U type.unionElementPtrType ) =>: getPtrInv
     .val U type.unionElementPtrType cast! ## elements are all stored at same address as union
@@ -56,7 +56,7 @@ overload: merge: export: !
   unionElement.invert
 end
 overload: merge: export: ?
-  ..builtIn.check.unionElement
+  unionElement.check
   unionElement.checkPtr
 end
 overload: merge: export: ..if.prepare
@@ -66,7 +66,7 @@ overload: merge: export: ..if.prepare
   unionElement.prepareIfPtrInv
 end
 overload: merge: export: ..if.check
-  ..builtIn.check.unionElement
+  unionElement.check
   unionElement.checkInv
   unionElement.checkPtr
   unionElement.checkPtrInv

@@ -1374,7 +1374,8 @@ namespace: types
       Enum .case EnumInfo ptr cast [] .labelType 0:i64  optional.wrap return
       Union .case break
       RawUnion case Type .Empty i64 optional.empty return
-      Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure UnionElement
+      UnionElement .case .base [] typeContext enumLabelInfo return
+      Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure
        NamedType GenericType GeneratedType IntLiteral Initializer Align
        CType RawPointer MutablePointer MutableRawPointer case
          Type .Empty i64 optional.empty return

@@ -1607,38 +1607,6 @@ proc(
     '\n' sb.appendC
   return
 end
-proc(
-  stringBuilder : sb
-  Type : enumType
-  i32 : valId
-  i32 : expectedIndex
-  FilePosition : pos
-  CompilerContext ptr.mut : context
--> stringBuilder i32 i32 ValType ) =>: checkUnionIndex
-  context [] .program =:: prog
-  prog .errors =:: errors
-  prog .idContext =:: idContext
-  idContext .constContext =:: constContext
-  idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
-  sb
-    ## loadUnionLabel
-      enumType
-      valId
-      pos
-    context loadUnionLabel =:: labelType =:: labelId
-    context nextTmpId =:: c
-    "%t" sb.appendS
-    c sb.appendI
-    " =w ceq" sb.appendS
-    labelType sb.appendValTypeQBE
-    " %t" sb.appendS
-    labelId sb.appendI
-    ", " sb.appendS
-    expectedIndex sb.appendI
-    '\n' sb.appendC
-  c labelId labelType return
-end
 
 proc(
   stringBuilder : sb
@@ -2339,18 +2307,6 @@ proc(
         srcPtr sb.appendI
         ", %s" sb.appendS
         offset sb.appendI
-        '\n' sb.appendC
-      return
-    CHECK_UNION_ELEMENT case
-      sb
-        baseType typeContext types.getUnionElementUnion optional.unwrap
-          pos context popValue
-          baseType typeContext types.getUnionElementIndex
-        pos context checkUnionIndex ..drop.2 =:: c
-        "%s" sb.appendS
-        ValType .I32 context pushValue sb.appendI
-        " =w copy %t" sb.appendS
-        c sb.appendI
         '\n' sb.appendC
       return
     SYS_ARGC case
