@@ -1506,28 +1506,6 @@ proc(
         value valInfo eltIndex op [] .pos context setElement wrapResult return
       end
       value valInfo eltIndex op [] .pos context getElement wrapResult return
-    HasElement .case =:: expectedIndex
-      op [] .pos context popValue if ..drop.2
-        "stack underflow while evaluating operation: " sb.copyPtr
-          op [] program sb.appendOp
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end =:: value =:: valInfo
-      value .Int .if
-        expectedIndex i64 cast.u == ConstValue .Bool
-      else .Union ? _if
-        value constUnionLabel .Int .else ..unreachable end expectedIndex i64 cast.u == ConstValue .Bool
-      else
-        value valInfo context unpopValue
-        "unexpected value for hasElement: " sb.copyPtr
-          value typeContext sb.appendConstant
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end
-        types.primitive.BOOL
-        op [] .pos
-      context pushValue
-      EvalResult .Ok return
     ExistsName .case =:: label
       label idContext id.findIdentifierByLabel ! =:: exists
       ..drop

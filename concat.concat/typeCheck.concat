@@ -3236,23 +3236,18 @@ proc(
             LabelAccessType .UNION_GET accessType=
           end
         end
-        accessType .UNION_GET and isType or containerType typeContext types.isTaggedUnion ! if
-          "unsupported type for union-get expected tagged union got: " sb.copyPtr
-            srcType typeContext sb.appendType
-          op .pos errors appendError
-        end
         accessType .CHECK if
           ## label exists
           1 op .pos state discardValues ## remove container
           true ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
           continue.opLoop
         else accessType .CHECK_ENUM _if
-          isType or containerType typeContext types.isEnumOrTaggedUnion ! if
+          isType or containerType typeContext types.isEnum ! if
             "type " sb.copyPtr
               isType ! if
                 containerType typeContext sb.appendType
               end
-              " is not an enum or union" sb.appendS
+              " is not an enum" sb.appendS
             op .pos errors appendError
           end
           state .stack branchTree.peek .and .value .Int .if
@@ -3280,10 +3275,6 @@ proc(
             end
               BuiltIn .GET_PTR
             op .pos opBuiltIn state appendOp ..drop
-          end
-          containerType typeContext types.isTaggedUnion if
-            ## TODO? support get-label on pointer and get label before dereference
-            op .pos opGetEnumLabel containerType >$ .dataType= state appendOp ..drop
           end
           elementIndex i64 cast.u ConstValue .Int
             enumLabelType
@@ -5277,7 +5268,7 @@ proc(
         continue.opLoop
       ProcPtr BuiltIn
       NewEnum Call
-      ExistsName HasElement case
+      ExistsName case
         break
       StackMod .case =:: stackMod
         stackMod .modType switch

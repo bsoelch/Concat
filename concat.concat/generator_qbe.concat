@@ -3669,21 +3669,6 @@ proc(
           '\n' sb.appendC
         end
       return
-    HasElement .case =:: index
-      op [] .dataType =:: containerType
-      containerType typeContext types.isEnumOrTaggedUnion ! if
-        break
-      end
-      op [] .pos context popValue =:: srcId
-      sb
-        op [] .pos sb.appendPosQBE
-        containerType srcId index op [] .pos context checkEnumIndex ..drop.2 =:: c
-        "%s" sb.appendS
-        ValType .I32 context pushValue sb.appendI
-        " =w copy %t" sb.appendS
-        c sb.appendI
-        '\n' sb.appendC
-      return
     AutoCast .case =:: castInfo
       sb
         op [] .pos sb.appendPosQBE

@@ -159,7 +159,7 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage
-    HasElement GetId SetId AtId GetEnumLabel SetEnumElement
+    GetId SetId AtId GetEnumLabel SetEnumElement
     SetElement RuntimeAssert Error StackMod GetElement GetUnionElement
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps

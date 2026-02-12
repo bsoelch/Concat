@@ -157,7 +157,6 @@ union(
                 i32 : GetElement
                 i32 : GetUnionElement
                 i32 : SetElement
-                i32 : HasElement
                   _ : Return
             BlockId : InlineReturn ## TODO? remember jump distance
                   _ : New
@@ -271,9 +270,6 @@ proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opGe
 end
 proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opSetElement
   index OpValue .SetElement base pos Operation new return
-end
-proc( Type : base i32 : index FilePosition : pos -> Operation ) =>: export: opHasElement
-  index OpValue .HasElement base pos Operation new return
 end
 proc( LabelId FilePosition : pos -> Operation ) =>: export: opGetLabel
   OpValue .GetLabel Type .Undefined pos Operation new return
@@ -931,12 +927,6 @@ namespace: sb
       break
       SetElement .case =:: index
         "set element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        index sb.appendI
-      break
-      HasElement .case =:: index
-        "has element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         index sb.appendI
