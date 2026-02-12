@@ -2389,7 +2389,7 @@ proc(
         TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
         TYPE_IS_SET_TYPE TYPE_IS_REFINEMENT_TYPE TYPE_IS_RAW_UNION TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_ENUM TYPE_IS_PROC
         TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED TYPE_GET_UNION_ELEMENT
-        TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED case
+        TYPE_EQUAL TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED case
       "unsupported built-in: " sb.copyPtr
         builtIn sb.appendBuiltIn
       pos errors appendError
@@ -3889,25 +3889,6 @@ proc(
           context
         appendBuiltInQBE
       return
-    EqualityOperator .case
-      .EQ if
-        "eq":s
-      else
-        "ne":s
-      end =:: cmpName
-      op [] .dataType context referenceOnly ! if
-        op [] .dataType context toValType =:: valType
-        sb
-          op [] .dataType true op [] .pos context extendArguments
-          ## appendComparisonOperator
-            cmpName
-            valType
-            op [] .pos
-            context
-          appendComparisonOperator
-        return
-      end
-      break
     Splat case
       break
     Block .case =:: blockVal

@@ -541,6 +541,17 @@ namespace: interpreter
         end typeContext types.unwrapNamed
           .Undefined ? ! ConstValue .Bool
         OperatorResult .SUCCESS return
+     TYPE_EQUAL case
+        k 2 == "correct number of arguments" assert
+        args 0 [] .TypeId .else
+          "argument1 is no type" ..panic
+        end
+          args 1 [] .TypeId .else
+            "argument2 is no type" ..panic
+          end
+        types.typeEquals
+          ConstValue .Bool
+        OperatorResult .SUCCESS return
      TYPE_CAN_ASSIGN case
         k 2 == "correct number of arguments" assert
         args 0 [] .TypeId .else

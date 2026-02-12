@@ -1,4 +1,7 @@
-i32 i32 == "this should not crash the compiler" assert
+i32 i32 == "equal" assert
+i32 =:: u32
+i32 u32 != "not equal" assert
+i32 u32 ..types.unwrapNamed == "equal" assert
 proc( -> ) =>: main
 
 end

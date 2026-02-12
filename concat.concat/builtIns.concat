@@ -46,7 +46,8 @@ enum(
  TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
  TYPE_IS_SET_TYPE TYPE_IS_REFINEMENT_TYPE TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_RAW_UNION TYPE_IS_ENUM TYPE_IS_PROC
  TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED
- TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_UNION_ELEMENT TYPE_GET_UNION_ELEMENT_UNION TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED
+ TYPE_EQUAL TYPE_CAN_ASSIGN TYPE_CAN_CAST
+ TYPE_ARRAY_ELEMENT TYPE_GET_UNION_ELEMENT TYPE_GET_UNION_ELEMENT_UNION TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED
 ) =:: export: BuiltIn
 ## TODO? rename type_array_element to type_get_base_type
 
@@ -1387,6 +1388,10 @@ proc(
     "..types.getUnionElementUnion":s pos labelContext createLabel
     t_t
   pos context addStaticBuiltIn
+  BuiltIn .TYPE_EQUAL
+    "..types.equals":s pos labelContext createLabel
+    tt_b
+  pos context addStaticBuiltIn
   BuiltIn .TYPE_CAN_ASSIGN
     "..types.canAssign":s pos labelContext createLabel
     tt_b
@@ -1474,7 +1479,7 @@ end
   "..types.isPrimitive":s "..types.isPointer":s "..types.isRawPointer":s "..types.isArray":s
     "..types.isStruct":s "..types.isSetType":s "..types.isRefinementType":s "..types.isTaggedUnion":s "..types.isUnionElement":s "..types.isRawUnion":s "..types.isEnum":s
     "..types.isProc":s "..types.isNamed":s "..types.isCtype":s "..types.isAlign":s
-    "..types.isMutable":s "..types.isDefined":s "..types.canAssign":s "..types.canCast":s
+    "..types.isMutable":s "..types.isDefined":s "..types.equals":s "..types.canAssign":s "..types.canCast":s
     "..types.arrayElement":s "..types.getUnionElement":s "..types.getUnionElementUnion":s "..types.getElement":s "..types.unwrapNamed":s
 } =:: builtInNames
 BuiltIn ..length builtInNames ..length == "correct number of names" assert

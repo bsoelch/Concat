@@ -7,7 +7,6 @@ import "identifiers.concat"
 type : export: ProgramContext
 import "builtIns.concat"
 
-enum( EQ NEQ ) =:: export: EqualityOperator
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
@@ -174,7 +173,6 @@ union(
            CastInfo : Cast
                Type : Cast!
                Type : BitCast
-   EqualityOperator : shadow: EqualityOperator
                   _ : Splat
                   _ : GetEnumLabel
                 i32 : SetEnumElement
@@ -290,12 +288,6 @@ proc( LabelId FilePosition  -> Operation ) =>: export: opExistsLabel
 end
 proc( Type FilePosition : pos -> Operation ) =>: export: opReturn
   OpValue .Return >$ pos Operation new return
-end
-proc( FilePosition : pos -> Operation ) =>: export: opEqual
-  EqualityOperator .EQ OpValue .EqualityOperator Type .Undefined pos Operation new return
-end
-proc( FilePosition : pos -> Operation ) =>: export: opNotEqual
-  EqualityOperator .NEQ OpValue .EqualityOperator Type .Undefined pos Operation new return
 end
 proc( FilePosition : pos -> Operation ) =>: export: opSplat
   OpValue .Splat Type .Undefined pos Operation new return
@@ -958,14 +950,6 @@ namespace: sb
         "InlineReturn " sb.appendS
           blockId i64 cast sb.appendI
         " ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
-      break
-      EqualityOperator .case
-        switch
-          EQ case "Equal ( " sb.appendS break
-          NEQ case "Not Equal ( " sb.appendS break
-        end
         op .dataType typeContext sb.appendType
         " )" sb.appendS
       break

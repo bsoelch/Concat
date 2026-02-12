@@ -240,7 +240,7 @@ namespace: ptr
   end
 end
 namespace: iSize
-  iSize ..types.unwrapNamed i64 === if
+  iSize ..types.unwrapNamed i64 == if
     ( char8 ptr.raw iSize -> iSize ) : static: export: alias: parse ..builtIn.parse.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: add ..builtIn.add.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: sub ..builtIn.sub.i64
@@ -264,7 +264,7 @@ namespace: iSize
     ( iSize : a iSize : b -> bool ) : export: alias: sle ..builtIn.le.i64
     ( iSize : a iSize : b -> bool ) : export: alias: sge ..builtIn.ge.i64
     ( iSize : a iSize : b -> bool ) : export: alias: sgt ..builtIn.gt.i64
-  else iSize ..types.unwrapNamed i32 === _if
+  else iSize ..types.unwrapNamed i32 == _if
     ( char8 ptr.raw iSize -> iSize ) : static: export: alias: parse ..builtIn.parse.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: add ..builtIn.add.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: sub ..builtIn.sub.i32

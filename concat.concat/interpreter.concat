@@ -1939,48 +1939,6 @@ proc(
       EvalResult .Ok return
     BuiltIn .case =:: builtIn
       op [] .dataType builtIn op [] .pos context tryEvaluateBuiltIn wrapResult return
-    EqualityOperator .case =:: equalityOperator
-      ConstValue 2 array new =:: mut: valueData
-      valueData@ =:: values
-      ValueInfo 2 array new =:: mut: valInfoData
-      valInfoData@ =:: valInfos
-      0:i64 =:: mut: nArgs
-      0 while ..dup 2 < do 1 +
-        op [] .pos context popValue if ..drop.3
-          values valInfos nArgs context unpopValues
-          EvalResult .Error return
-        end values nArgs =[] valInfos nArgs =[]
-        nArgs 1 + nArgs=
-      end ..drop
-      ## mergeTypes
-        valInfos 0 [] .valueType
-        valInfos 1 [] .valueType
-      typeContext types.mergeTypes .else
-        "incompatible types for equality check: " sb.copyPtr
-          valInfos 0 [] .valueType typeContext sb.appendType
-          " and " sb.appendS
-          valInfos 1 [] .valueType typeContext sb.appendType
-        op [] .pos errors appendError
-        values valInfos nArgs context unpopValues
-        EvalResult .Error return
-      end =:: resType
-      ## pushValue
-        values 1 [] values 0 [] resType typeContext interpreter.operatorEq if ..drop
-          "unsupported values for equality check: " sb.copyPtr
-            values 0 [] typeContext sb.appendConstant
-            " and " sb.appendS
-            values 1 [] typeContext sb.appendConstant
-          op [] .pos errors appendError
-          values valInfos nArgs context unpopValues
-          EvalResult .Error return
-        end
-          equalityOperator .NEQ ^ ## invert result for NEQ
-        ConstValue .Bool
-        types.primitive.BOOL
-        op [] .pos
-        context
-      pushValue
-      EvalResult .Ok return
     StackMod .case =:: stackMod
       stackMod .modType switch
         DROP case

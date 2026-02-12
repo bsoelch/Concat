@@ -1,4 +1,9 @@
 namespace: type
+  proc( type type -> bool ) : export: alias: equals ..types.equals
+  proc( type type -> bool ) =>: notEquals
+    ..types.equals !
+  end
+
   type .with( ..types.isPrimitive ) =:: export: primitive
   type .with( ..types.isPointer ) =:: export: pointer
   type .with( ..types.isArray ) =:: export: array
@@ -55,3 +60,5 @@ namespace: type
     return
   end
 end
+overload: merge: == type.equals end
+overload: merge: != type.notEquals end

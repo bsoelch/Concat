@@ -158,7 +158,7 @@ proc(
   op .val switch
     NOP case
       newOps return ## ignore no-ops
-    BuiltIn EqualityOperator Splat ProcPtr Panic PanicWithMessage
+    BuiltIn Splat ProcPtr Panic PanicWithMessage
     HasElement GetId SetId AtId GetEnumLabel SetEnumElement
     SetElement RuntimeAssert Error StackMod GetElement GetUnionElement
     AutoCast Cast Cast! BitCast Return RawValue case
