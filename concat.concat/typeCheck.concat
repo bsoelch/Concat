@@ -1896,7 +1896,7 @@ proc(
       elementIndex
       pos
     containerType typeContext types.isTaggedUnion if
-      opSetEnumElement ## TODO? rename to set union element, make set-element on enum an error
+      opSetUnionElement ## TODO? rename to set union element, make set-element on enum an error
     else
       opSetElement
     end =:: newOp
@@ -3360,7 +3360,7 @@ proc(
             ## pushValue
               containerType
               constValue
-              containerType elementIndex op .pos opNewEnum
+              containerType elementIndex op .pos opNewUnion
             state pushValue
           else
             ## pushConstant
@@ -3374,7 +3374,7 @@ proc(
         end
         srcType containerType elementIndex isWrite accessType .UNION_GET isPtr mutable op .pos state typeCheckGetElement
         continue.opLoop
-      GetEnumLabel case
+      GetUnionLabel case
         state .stack branchTree.peek .else
           "missing argument for operation " sb.copyPtr
             op program sb.appendOp
@@ -3387,18 +3387,18 @@ proc(
           enumType typeContext types.enumLabelInfo ..drop label .valueType=
           continue.opLoop
         else enumType typeContext types.isTaggedUnion ! _if
-          "wrong argument type for getEnumLabel expected enum or tagged union got " sb.copyPtr
+          "wrong argument type for getUnionLabel expected enum or tagged union got " sb.copyPtr
             enumType typeContext sb.appendType
           op .pos errors appendError
         end
         ## TODO? compile-time evaluation
-        enumType@ slice.wrap "getEnumLabel":s 0 false op .pos state requireTypes .Err ? if
+        enumType@ slice.wrap "getUnionLabel":s 0 false op .pos state requireTypes .Err ? if
           continue.opLoop
         end
         enumType op@ .dataType=
         enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
         continue.opLoop
-      SetEnumElement case
+      SetUnionElement case
         break
       Cast Cast! BitCast case
         op .dataType .Undefined ? if
@@ -3972,8 +3972,8 @@ proc(
               op .pos opBuiltIn state appendOp ..drop
             end
             isTaggedUnion if
-              ## TODO? support getEnumLabel on pointer and get label before poiner-dereference
-              op .pos opGetEnumLabel switchValueType >$ .dataType= state appendOp ..drop
+              ## TODO? support getUnionLabel on pointer and get label before poiner-dereference
+              op .pos opGetUnionLabel switchValueType >$ .dataType= state appendOp ..drop
             end
             program [] .switchData .length BlockId cast =:: switchId
             switchId op@ .val .Block .else "expected block" ..panic end .blockId=
@@ -5267,7 +5267,7 @@ proc(
         state pushValue
         continue.opLoop
       ProcPtr BuiltIn
-      NewEnum Call
+      NewUnion Call
       ExistsName case
         break
       StackMod .case =:: stackMod
@@ -5436,7 +5436,7 @@ proc(
           state
         parseImportFile
       continue.opLoop
-      AutoCast Copy ConstantReference NewReference NewEnumReference case
+      AutoCast Copy ConstantReference NewReference NewUnionReference case
         "unsupported operation: " sb.copyPtr
           op program sb.appendOp
         op .pos errors appendError

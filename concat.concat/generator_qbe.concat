@@ -15,8 +15,6 @@ import "branchTree.concat"
 "cctI_string" =:: STRING_CONST_NAME
 "cctI_ptr" =:: PTR_CONST_NAME
 "cctI_constRef" =:: CONST_REFERENCE_NAME
-"cctI_checkIndexFormat" =:: CHECK_INDEX_FORMAT
-"cctI_checkEnumFormat" =:: CHECK_ENUM_FORMAT
 "cctI_assertFormat" =:: ASSERT_FORMAT
 "cctI_panicFormat" =:: PANIC_FORMAT
 "fileName" =:: FILE_NAME_NAME
@@ -1523,7 +1521,7 @@ proc(
   i32 : valId
   FilePosition : pos
   CompilerContext ptr.mut : context
--> stringBuilder i32 ValType ) =>: loadEnumLabel
+-> stringBuilder i32 ValType ) =>: loadUnionLabel
   context [] .program =:: prog
   prog .errors =:: errors
   prog .idContext =:: idContext
@@ -1584,7 +1582,7 @@ proc(
   i32 : newLabel
   FilePosition : pos
   CompilerContext ptr.mut : context
--> stringBuilder ) =>: storeEnumLabel
+-> stringBuilder ) =>: storeUnionLabel
   context [] .program =:: prog
   prog .errors =:: errors
   prog .idContext =:: idContext
@@ -1616,7 +1614,7 @@ proc(
   i32 : expectedIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
--> stringBuilder i32 i32 ValType ) =>: checkEnumIndex
+-> stringBuilder i32 i32 ValType ) =>: checkUnionIndex
   context [] .program =:: prog
   prog .errors =:: errors
   prog .idContext =:: idContext
@@ -1624,11 +1622,11 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   sb
-    ## loadEnumLabel
+    ## loadUnionLabel
       enumType
       valId
       pos
-    context loadEnumLabel =:: labelType =:: labelId
+    context loadUnionLabel =:: labelType =:: labelId
     context nextTmpId =:: c
     "%t" sb.appendS
     c sb.appendI
@@ -2348,7 +2346,7 @@ proc(
         baseType typeContext types.getUnionElementUnion optional.unwrap
           pos context popValue
           baseType typeContext types.getUnionElementIndex
-        pos context checkEnumIndex ..drop.2 =:: c
+        pos context checkUnionIndex ..drop.2 =:: c
         "%s" sb.appendS
         ValType .I32 context pushValue sb.appendI
         " =w copy %t" sb.appendS
@@ -3526,9 +3524,9 @@ proc(
         sb.appendType
       op [] .pos errors appendError
       sb return
-    New NewEnum NewReference NewEnumReference case
-      op [] .val .NewReference ? or op [] .val .NewEnumReference ? end =:: hasReference
-      op [] .val .NewEnum ? or op [] .val .NewEnumReference ? end =:: isEnum
+    New NewUnion NewReference NewUnionReference case
+      op [] .val .NewReference ? or op [] .val .NewUnionReference ? end =:: hasReference
+      op [] .val .NewUnion ? or op [] .val .NewUnionReference ? end =:: isUnion
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
@@ -3537,19 +3535,19 @@ proc(
         else
           op [] .dataType op [] .pos context true appendAlloc 't'
         end =:: dataPtrType =:: dataPtrId
-        isEnum if ## TODO store enums without values as integer
-          op [] .val .NewEnum .else
-            .NewEnumReference ._else ..unreachable
+        isUnion if ## TODO store enums without values as integer
+          op [] .val .NewUnion .else
+            .NewUnionReference ._else ..unreachable
           end =:: index
           op [] .dataType index typeContext types.compositeGetElement =:: eltType
-          ## storeEnumLabel
+          ## storeUnionLabel
             op [] .dataType
             dataPtrType
             dataPtrId
             index
             op [] .pos
             context
-          storeEnumLabel
+          storeUnionLabel
           eltType typeContext types.isEmpty ! if
             eltType context referenceOnly if
               "blit %s" sb.appendS
@@ -3593,7 +3591,7 @@ proc(
         dataPtrId sb.appendI
         '\n' sb.appendC
       return
-    GetEnumLabel case
+    GetUnionLabel case
       context .stackInfo branchTree.pop .else
         "stack underflow" sb.copyPtr
         op [] .pos errors appendError
@@ -3601,11 +3599,11 @@ proc(
       end =:: srcVal
       sb
         op [] .pos sb.appendPosQBE
-        ## loadEnumLabel
+        ## loadUnionLabel
           op [] .dataType
           srcVal [] .varId
           op [] .pos
-        context loadEnumLabel =:: labelType =:: labelId
+        context loadUnionLabel =:: labelType =:: labelId
         context nextTmpId =:: c
         "%s" sb.appendS
         labelType context pushValue sb.appendI
@@ -3616,7 +3614,7 @@ proc(
         labelId sb.appendI
         '\n' sb.appendC
       return
-    SetEnumElement .case =:: elementId
+    SetUnionElement .case =:: elementId
       context .stackInfo branchTree.peek .else
         "stack underflow" sb.copyPtr
         op [] .pos errors appendError
@@ -3631,14 +3629,14 @@ proc(
       =:: enumType
       sb
         op [] .pos sb.appendPosQBE
-        ## storeEnumLabel
+        ## storeUnionLabel
           enumType
           's'
           srcVal [] .varId
           elementId
           op [] .pos
           context
-        storeEnumLabel
+        storeUnionLabel
         enumType elementId typeContext types.compositeGetElement =:: eltType
         eltType typeContext types.isEmpty if
           return

@@ -5052,10 +5052,10 @@ proc(
         context newPtrConstant =:: ptrId
         ValType .REFERENCE ptrId ValueLocation .ptrConstant opIndex context pushValue
         return
-      NewEnum .case =:: newEnum
+      NewUnion .case =:: newUnion
         op [] .dataType typeContext toValType =:: valType
         op [] .dataType typeContext types.isEnum if
-          valType newEnum i64 cast.s ValueLocation .intConstant opIndex context pushValue
+          valType newUnion i64 cast.s ValueLocation .intConstant opIndex context pushValue
           return
         end
         break

@@ -157,12 +157,14 @@ union(
                 i32 : GetElement
                 i32 : GetUnionElement
                 i32 : SetElement
+                i32 : SetUnionElement
+                  _ : GetUnionLabel
                   _ : Return
             BlockId : InlineReturn ## TODO? remember jump distance
                   _ : New
                   _ : NewReference
-                i32 : NewEnum
-                i32 : NewEnumReference
+                i32 : NewUnion
+                i32 : NewUnionReference
       ProcedureCall : Call
             BuiltIn : shadow: BuiltIn
         PointerCall : CallPtr
@@ -173,8 +175,6 @@ union(
                Type : Cast!
                Type : BitCast
                   _ : Splat
-                  _ : GetEnumLabel
-                i32 : SetEnumElement
                   _ : Copy
   StackModification : StackMod
             LabelId : GetName
@@ -294,13 +294,13 @@ end
 proc( Type FilePosition : pos -> Operation ) =>: export: opNewReference
   OpValue .NewReference ..swap pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnum
+proc( Type i32 FilePosition -> Operation ) =>: export: opNewUnion
   =:: pos
-  OpValue .NewEnum ..swap pos Operation new return
+  OpValue .NewUnion >$ pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export: opNewEnumReference
+proc( Type i32 FilePosition -> Operation ) =>: export: opNewUnionReference
   =:: pos
-  OpValue .NewEnumReference ..swap pos Operation new return
+  OpValue .NewUnionReference >$ pos Operation new return
 end
 proc( Type : target SignType : sign FilePosition : pos -> Operation ) =>: export: opCast
    Type .Undefined sign CastInfo new OpValue .Cast target pos Operation new return
@@ -327,15 +327,15 @@ end
 proc( FilePosition : pos -> Operation ) =>: export: opRawValue
   OpValue .RawValue Type .Undefined pos Operation new return
 end
-proc( FilePosition : pos -> Operation ) =>: export: opGetEnumLabel
-  OpValue .GetEnumLabel Type .Undefined pos Operation new return
+proc( FilePosition : pos -> Operation ) =>: export: opGetUnionLabel
+  OpValue .GetUnionLabel Type .Undefined pos Operation new return
 end
 proc( Type : t TypeMemoryInfo : infoType FilePosition : pos -> Operation ) =>: export: opTypeInfo
   infoType OpValue .TypeInfo t pos Operation new return
 end
-proc( Type i32 FilePosition -> Operation ) =>: export: opSetEnumElement
+proc( Type i32 FilePosition -> Operation ) =>: export: opSetUnionElement
   =:: pos
-  OpValue .SetEnumElement ..swap pos Operation new return
+  OpValue .SetUnionElement >$ pos Operation new return
 end
 proc( Type : t FilePosition : pos -> Operation ) =>: export: opCopy
   OpValue .Copy t pos Operation new return
@@ -955,14 +955,14 @@ namespace: sb
         "new reference: " sb.appendS
         op .dataType typeContext sb.appendType
       break
-      NewEnum .case =:: eltIndex
-        "new enum ( " sb.appendS
+      NewUnion .case =:: eltIndex
+        "new union ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         eltIndex sb.appendI
       break
-      NewEnumReference .case =:: eltIndex
-        "new enum reference ( " sb.appendS
+      NewUnionReference .case =:: eltIndex
+        "new union reference ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         eltIndex sb.appendI
@@ -1023,13 +1023,13 @@ namespace: sb
           STRIDE case "stride" sb.appendS break
         end
       break
-      GetEnumLabel case
-        "get enum label ( " sb.appendS
+      GetUnionLabel case
+        "get union label ( " sb.appendS
         op .dataType typeContext sb.appendType
         " )" sb.appendS
       break
-      SetEnumElement .case =:: index
-        "set enum element ( " sb.appendS
+      SetUnionElement .case =:: index
+        "set union element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         index sb.appendI

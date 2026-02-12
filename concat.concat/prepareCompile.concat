@@ -159,7 +159,7 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage
-    GetId SetId AtId GetEnumLabel SetEnumElement
+    GetId SetId AtId GetUnionLabel SetUnionElement
     SetElement RuntimeAssert Error StackMod GetElement GetUnionElement
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps
@@ -234,7 +234,7 @@ proc(
           op .pos
         opGetId list.append
       return
-    New NewEnum case
+    New NewUnion case
       op .dataType typeContext types.referenceOnly ! if
         newOps
           op list.append
@@ -252,8 +252,8 @@ proc(
           tmpId
           op .pos
         opAtId list.append
-        op .val .NewEnum .if
-          op .dataType >$ op .pos opNewEnumReference list.append
+        op .val .NewUnion .if
+          op .dataType >$ op .pos opNewUnionReference list.append
         else ..drop
           op .dataType op .pos opNewReference list.append
         end
@@ -462,7 +462,7 @@ proc(
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
     AutoTypedInitializeId ConstantReference NewReference
-    TypeInfo NewEnumReference UsingNamespace UsingIdentifier InlineReturn
+    TypeInfo NewUnionReference UsingNamespace UsingIdentifier InlineReturn
     GetName AtName SetName GetLabel Assert DeclareName AliasName InitializeName
     SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc Import LibImport case
       break ## XXX error message

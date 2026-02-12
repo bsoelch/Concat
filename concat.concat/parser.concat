@@ -1815,7 +1815,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState [] .wordStart opRawValue state appendOp
       return
     else ..dup "..label":s string.eq _if ..drop
-      fileState [] .wordStart opGetEnumLabel state appendOp
+      fileState [] .wordStart opGetUnionLabel state appendOp
       return
     else ..dup "..types.alignment":s string.eq or
          ..dup "..types.size":s string.eq or

@@ -1458,7 +1458,7 @@ proc(
       end
       break
     GetUnionElement case "unimplemented: get union element" ..panic
-    GetEnumLabel case
+    GetUnionLabel case
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
@@ -1494,7 +1494,7 @@ proc(
       context pushValue
       EvalResult .Ok return
     break
-    GetElement SetElement SetEnumElement .case =:: eltIndex
+    GetElement SetElement SetUnionElement .case =:: eltIndex
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
@@ -1565,7 +1565,7 @@ proc(
         context unpopValue
       end
       EvalResult .Error return
-    NewEnum .case =:: elementIndex
+    NewUnion .case =:: elementIndex
       op [] .dataType =:: unionType
       unionType typeContext types.isEnum if
         elementIndex i64 cast.u ConstValue .Int
@@ -1988,7 +1988,7 @@ proc(
       end
       break
     Import LibImport GetLabel SetLabel
-    NewEnumReference CallPtr
+    NewUnionReference CallPtr
     ImplementProcedure ProcPtr
     ConstantReference NewReference
     NestedProc Splat case break
