@@ -610,7 +610,7 @@ proc( Type : dataType TypeContext ptr.mut : typeContext -> ValType ) =>: toValTy
         end
       end
       break
-    Union RawUnion UnionElement case
+    TaggedUnion RawUnion UnionElement case
       dataType typeContext types.referenceOnly if
         ValType .REFERENCE return
       end
