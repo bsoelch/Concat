@@ -357,21 +357,6 @@ proc(
   pos errors appendError
   0 return
 end
-proc(
-  Type : t
-  FilePosition : pos
-  CompilerContext ptr.mut : context
--> Type i64 ) =>: enumLabelInfoInt
-  context [] .program =:: program
-  program .errors =:: errors
-  program .idContext .typeContext =:: typeContext
-  t typeContext types.enumLabelInfo .else
-    "could not compute offset of label in enum " sb.copyPtr
-      t typeContext sb.appendType
-    pos errors appendError
-    0
-  end return
-end
 
 struct(
   string : blockName
@@ -1494,66 +1479,6 @@ proc(
     elseBranch sb.appendBranchId
     "\n" sb.appendS
   return
-end
-
-proc(
-  stringBuilder : sb
-  Type : enumType
-  i32 : valId
-  FilePosition : pos
-  CompilerContext ptr.mut : context
--> stringBuilder i32 ValType ) =>: loadUnionLabel
-  context [] .program =:: prog
-  prog .errors =:: errors
-  prog .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
-  labelType typeContext types.primitiveValue types.sizeOfPrimitive =:: numBytes
-  context nextTmpId =:: labelPtr
-  context nextTmpId =:: mut: label
-  sb
-    enumType typeContext types.isEnum if
-      enumType context toValType =:: enumValType
-      context nextTmpId label=
-      "%t" sb.appendS
-      label sb.appendI
-      numBytes 4 < if
-        " =w ext" sb.appendS
-        labelType StorageType .ULOAD pos context sb.appendTypeNameQBE
-        " %s" sb.appendS
-      else
-        " =" sb.appendS
-        enumValType sb.appendValTypeQBE
-        " copy %s" sb.appendS
-      end
-      valId sb.appendI
-      '\n' sb.appendC
-      label enumValType return
-    end
-    "%t" sb.appendS
-    labelPtr sb.appendI
-    " =l add %s" sb.appendS
-    valId sb.appendI
-    ", " sb.appendS
-    labelOffset sb.appendI
-    "\n%t" sb.appendS
-    label sb.appendI
-    " =w load" sb.appendS
-    labelType StorageType .ULOAD pos context sb.appendTypeNameQBE
-    " %t" sb.appendS
-    labelPtr sb.appendI
-    numBytes 4 < if
-      label =:: oldLabel
-      context nextTmpId label=
-      "\n%t" sb.appendS
-      label sb.appendI
-      " =w ext" sb.appendS
-      labelType StorageType .ULOAD pos context sb.appendTypeNameQBE
-      " %t" sb.appendS
-      oldLabel sb.appendI
-    end
-    '\n' sb.appendC
-  label ValType .I32 return
 end
 
 proc(
@@ -3302,7 +3227,7 @@ proc(
           ", " sb.appendS
           index i64 cast.u eltType op [] .pos context typeStrideInt * sb.appendI
           '\n' sb.appendC
-      else containerType typeContext types.isTuple _if
+      else containerType typeContext types.isTuple or containerType typeContext types.isTaggedUnion  _if
         op [] .pos context popValue =:: srcId
         sb
           op [] .pos sb.appendPosQBE
@@ -3485,29 +3410,6 @@ proc(
         " =l copy %" sb.appendS
         dataPtrType sb.appendC
         dataPtrId sb.appendI
-        '\n' sb.appendC
-      return
-    GetUnionLabel case
-      context .stackInfo branchTree.pop .else
-        "stack underflow" sb.copyPtr
-        op [] .pos errors appendError
-        sb return
-      end =:: srcVal
-      sb
-        op [] .pos sb.appendPosQBE
-        ## loadUnionLabel
-          op [] .dataType
-          srcVal [] .varId
-          op [] .pos
-        context loadUnionLabel =:: labelType =:: labelId
-        context nextTmpId =:: c
-        "%s" sb.appendS
-        labelType context pushValue sb.appendI
-        " ="  sb.appendS
-        labelType sb.appendValTypeQBE
-        " copy " sb.appendS
-        " %t" sb.appendS
-        labelId sb.appendI
         '\n' sb.appendC
       return
     SetUnionElement .case =:: elementId
@@ -4684,7 +4586,7 @@ proc(
       break
     CompilerInfo case
       sb return ## XXX? print compiler info
-    AutoTypedInitializeId TypeInfo Copy UsingNamespace UsingIdentifier
+    AutoTypedInitializeId TypeInfo Copy UsingNamespace UsingIdentifier GetUnionLabel
     GetName AtName SetName GetLabel Error Assert Panic DeclareName AliasName InitializeName Import LibImport
     SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc case
       break ## XXX error message

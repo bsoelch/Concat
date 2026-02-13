@@ -3448,7 +3448,11 @@ proc(
         enumType@ slice.wrap "getUnionLabel":s 0 false op .pos state requireTypes .Err ? if
           continue.opLoop
         end
-        enumType op@ .dataType=
+        enumType
+          $ typeContext types.isUnionElement if
+            typeContext types.getUnionElementUnion optional.unwrap
+          end
+        1 op .pos opGetElement op=
         enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
         continue.opLoop
       SetUnionElement case
@@ -4025,8 +4029,8 @@ proc(
               op .pos opBuiltIn state appendOp ..drop
             end
             isTaggedUnion if
-              ## TODO? support getUnionLabel on pointer and get label before poiner-dereference
-              op .pos opGetUnionLabel switchValueType >$ .dataType= state appendOp ..drop
+              ## TODO get label before poiner-dereference
+              switchValueType 1 op .pos opGetElement state appendOp ..drop
             end
             program [] .switchData .length BlockId cast =:: switchId
             switchId op@ .val .Block .else "expected block" ..panic end .blockId=
