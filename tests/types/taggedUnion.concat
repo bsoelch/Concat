@@ -1,0 +1,17 @@
+union( _ : N i32 : I f32 : F ) =:: aUnion
+proc( f32 -> aUnion ) =>: wrap
+  aUnion .F
+end
+proc( -> ) =>: main
+  0 aUnion .I =:: x
+  x .I =:: y
+  y ? "x is I" assert
+  x .F ? ! "x is not F" assert
+  y .and 0 == end "x is 0" assert
+  1.5:f32 wrap .F ? "float wrap ist float" assert
+  aUnion .N =:: mut: z
+  2 z@ .F=
+  x 4 >$ .I= =:: w
+  z .F .and 2 == end "z is 2" assert
+  w .I .and 4 == end "w is 4" assert
+end
