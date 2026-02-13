@@ -4016,10 +4016,18 @@ proc(
             else
               IdentifierInfo optional.empty
             end =:: srcVar
+            isTaggedUnion if
+              switchType 1 op .pos opGetElement state appendOp ..drop
+            end
+            ## TODO! some enum / tagged-union / enum-label macro-ops are not well-typed
+            ##   should type-checker rely on compatible internal representation or should conversions be emmitted
             switchType typeContext types.isPointer if
+              labelType
+                switchType typeContext types.isMutable
+              typeContext types.getAddressType =:: labelPtrType
               ## newProcedure
-                switchType@ slice.wrap
-                switchValueType@ slice.wrap
+                labelPtrType@ slice.wrap
+                labelType@ slice.wrap
                 LabelId slice.empty
                 CallingConvention.DEFAULT
               typeContext types.newProcedure .else
@@ -4027,10 +4035,6 @@ proc(
               end
                 BuiltIn .GET_PTR
               op .pos opBuiltIn state appendOp ..drop
-            end
-            isTaggedUnion if
-              ## TODO get label before poiner-dereference
-              switchValueType 1 op .pos opGetElement state appendOp ..drop
             end
             program [] .switchData .length BlockId cast =:: switchId
             switchId op@ .val .Block .else "expected block" ..panic end .blockId=
