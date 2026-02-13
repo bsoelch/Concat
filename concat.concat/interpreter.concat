@@ -1466,7 +1466,7 @@ proc(
         EvalResult .Error return
       end =:: value =:: valInfo
       valInfo .valueType typeContext types.isEnumOrTaggedUnion ! if
-        "unexpected type for get-label expected eum or union got: " sb.copyPtr
+        "unexpected type for get-label expected enum or union got: " sb.copyPtr
           valInfo .valueType typeContext sb.appendType
         op [] .pos errors appendError
         ## unpopValue
@@ -1477,7 +1477,9 @@ proc(
       end
       value .Union ? if
         value constUnionLabel
-      else value .Int ? _if
+      else value .Array ._if
+        1 []
+      else .Int ? _if
         value
       else
         "unexpected value for get-label: " sb.copyPtr

@@ -2152,7 +2152,9 @@ proc(
     true return
   end =:: labelId
   ## compositeFindLabel
-    switchType
+    switchType $ typeContext types.isTaggedUnion if
+      typeContext types.asRawUnion .else ..unreachable end
+    end
     labelId
   typeContext types.compositeFindLabel .else
     "enum " sb.copyPtr
@@ -4144,11 +4146,12 @@ proc(
                 prev? .and [] .value .Int .else
                   continue.opLoop
                 end i32 cast.u =:: eltIndex
-                switchType eltIndex typeContext types.compositeGetElement =:: labelType
+                switchType typeContext types.asRawUnion .else ..unreachable end =:: rawSwitchType
+                rawSwitchType eltIndex typeContext types.compositeGetElement =:: labelType
                 switchData [] .labels list.reversed for  =:: label
                   ## labels in current case are al at end of label list
                   label .caseId switchData [] .caseCount < if break end
-                  switchType label .value .Int .else
+                  rawSwitchType label .value .Int .else
                     "expected int-constant":s op ..line state internalError ..unreachable
                   end i32 cast.u typeContext types.compositeGetElement =:: newType
                   newType labelType types.typeEquals if continue end
@@ -4165,13 +4168,17 @@ proc(
                 end
                 switchBlock [] .srcVar .if =:: srcVar
                   switchBaseType srcVar op .pos opGetId state appendOp ..drop
+                  switchBaseType 0 op .pos opGetElement state appendOp ..drop
                   ## pushValue
                     labelType
                       switchBaseType typeContext types.isPointer if
                         switchBaseType typeContext types.isMutable typeContext types.getAddressType
                       end
                     ConstValue .None
-                    switchBaseType
+                    rawSwitchType
+                      switchBaseType typeContext types.isPointer if
+                        switchBaseType typeContext types.isMutable typeContext types.getAddressType
+                      end
                       eltIndex
                       op .pos
                     opGetElement
