@@ -1,0 +1,2 @@
+union( _ : N i32 : I f32 : F ) ..length 3 == "..length works on union" assert
+proc( -> ) =>: main end

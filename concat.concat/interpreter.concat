@@ -439,6 +439,14 @@ namespace: interpreter
         pos errors appendError
         Type .Undefined ConstValue .None true return
       end
+    else isType and valType typeContext types.isTaggedUnion _if
+      ## return
+        types.I_SIZE
+        valType typeContext types.asRawUnion .else ..unreachable end
+          typeContext types.compositeEltCount i64 cast.u
+        ConstValue .Int
+        false
+      return
     else valType typeContext types.isArrayLiteral or isType and valType typeContext types.isComposite _if
       ## return
         types.I_SIZE
