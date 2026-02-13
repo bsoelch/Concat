@@ -1027,7 +1027,7 @@ namespace: sb
               i 1:iSize +
             end ..drop
             return
-          else containerType typeContext types.isTuple _if
+          else containerType typeContext types.isTuple or containerType typeContext types.isTaggedUnion _if
             ## TODO ensure elements are ordered by memory location
             containerType typeContext types.compositeElts =:: types
             0:i64 =:: mut: offset
@@ -1078,7 +1078,6 @@ namespace: sb
             pos errors appendError
             return
           end
-          t pos context enumLabelInfoInt =:: labelOffset =:: labelType
           unionValue .eltIndex =:: eltIndex
           eltIndex 0 < if break end
           eltIndex t typeContext types.compositeEltCount >= if
@@ -1107,21 +1106,11 @@ namespace: sb
             true needComma=
           end
           t pos context typeSizeInt =:: size
-          offset labelOffset < if
+          offset size < if
             needComma if ',' sb.appendC end
             "z " sb.appendS
-            labelOffset offset - sb.appendI
+            size offset - sb.appendI
             true needComma=
-          end
-          labelType typeContext types.isEmpty ! if
-            needComma if ',' sb.appendC end
-            ## appendConstQBE
-              labelType
-              eltIndex i64 cast.u ConstValue .Int
-              isGlobal
-              pos
-              context
-            appendConstQBE
           end
           return
         Procedure .case =:: procValue
@@ -1257,7 +1246,7 @@ namespace: sb
         size sb.appendI
       return
     end
-    t typeContext types.isTuple if
+    t typeContext types.isTuple or t typeContext types.isTaggedUnion if
       t typeContext types.compositeElts =:: elts
       0:i64 =:: mut: offset
       false =:: mut: hasElt
@@ -1304,16 +1293,11 @@ namespace: sb
         context sb.appendTypeNameQBE
       return
     end
-    t typeContext types.isUnion if
-      t typeContext types.isTaggedUnion =:: isTagged
+    t typeContext types.isRawUnion if
       t typeContext types.compositeElts =:: elts
       false =:: mut: hasElt
       0:i64 =:: mut: bodySize
-      isTagged if
-        t pos context enumLabelInfoInt
-      else
-        Type .Empty 0
-      end =:: labelOffset =:: labelType
+      t pos context typeSizeInt =:: totalSize
       sb
         -1:iSize =:: mut: nonEmptyIndex
         0:iSize =:: mut: nonEmptyCount
@@ -1321,6 +1305,11 @@ namespace: sb
           elts i [] =:: elt
           elt typeContext types.isEmpty if continue end
           nonEmptyCount 1:iSize + nonEmptyCount=
+          nonEmptyIndex -1 != and
+              elts nonEmptyIndex [] pos context typeAlignmentInt
+              elt pos context typeAlignmentInt >= if
+            continue ## already found element with higher alignemnt
+          end
           i nonEmptyIndex=
         end
         nonEmptyCount 0:iSize != "non-empty union has non-empty element" assert
@@ -1331,21 +1320,13 @@ namespace: sb
             pos
           context sb.appendNestedTypeDeclarationQBE
           elt pos context typeSizeInt =:: eltSize
-          eltSize labelOffset < if
+          eltSize totalSize < if
             ",b " sb.appendS
-            labelOffset eltSize - sb.appendI
+            totalSize eltSize - sb.appendI
           end
         else
           "b " sb.appendS
-          labelOffset sb.appendI
-        end
-        isTagged if
-          ',' sb.appendC
-          ## appendTypeNameQBE
-            labelType
-            StorageType .STORE
-            pos
-          context sb.appendTypeNameQBE
+          totalSize sb.appendI
         end
       return
     end
@@ -1573,39 +1554,6 @@ proc(
     end
     '\n' sb.appendC
   label ValType .I32 return
-end
-proc(
-  stringBuilder : sb
-  Type : enumType
-  char8  : stackType
-  i32 : valId
-  i32 : newLabel
-  FilePosition : pos
-  CompilerContext ptr.mut : context
--> stringBuilder ) =>: storeUnionLabel
-  context [] .program =:: prog
-  prog .errors =:: errors
-  prog .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  enumType pos context enumLabelInfoInt =:: labelOffset =:: labelType
-  labelType .Empty ? if sb return end
-  context nextTmpId =:: labelPtr
-  sb
-    "%t" sb.appendS
-    labelPtr sb.appendI
-    " =l add %" sb.appendS
-    stackType sb.appendC
-    valId sb.appendI
-    ", " sb.appendS
-    labelOffset sb.appendI
-    "\nstore" sb.appendS
-    labelType StorageType .STORE pos context sb.appendTypeNameQBE
-    ' ' sb.appendC
-    newLabel sb.appendI
-    ", %t" sb.appendS
-    labelPtr sb.appendI
-    '\n' sb.appendC
-  return
 end
 
 proc(
@@ -3491,19 +3439,11 @@ proc(
         else
           op [] .dataType op [] .pos context true appendAlloc 't'
         end =:: dataPtrType =:: dataPtrId
-        isUnion if ## TODO store enums without values as integer
+        isUnion if
           op [] .val .NewUnion .else
             .NewUnionReference ._else ..unreachable
           end =:: index
           op [] .dataType index typeContext types.compositeGetElement =:: eltType
-          ## storeUnionLabel
-            op [] .dataType
-            dataPtrType
-            dataPtrId
-            index
-            op [] .pos
-            context
-          storeUnionLabel
           eltType typeContext types.isEmpty ! if
             eltType context referenceOnly if
               "blit %s" sb.appendS
@@ -3522,7 +3462,7 @@ proc(
             end
             '\n' sb.appendC
           end
-        else op [] .dataType typeContext types.isTuple _if
+        else op [] .dataType typeContext types.isTuple or op [] .dataType typeContext types.isTaggedUnion _if
           op [] .dataType dataPtrType dataPtrId op [] .pos context initializeTupleQBE
         else op [] .dataType typeContext types.isArray _if
           ## zero-initialize array
@@ -3585,14 +3525,6 @@ proc(
       =:: enumType
       sb
         op [] .pos sb.appendPosQBE
-        ## storeUnionLabel
-          enumType
-          's'
-          srcVal [] .varId
-          elementId
-          op [] .pos
-          context
-        storeUnionLabel
         enumType elementId typeContext types.compositeGetElement =:: eltType
         eltType typeContext types.isEmpty if
           return

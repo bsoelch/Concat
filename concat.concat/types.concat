@@ -73,7 +73,7 @@ union(
           types.ArrayId : MutableRawPointer
           types.ArrayId : ArrayType
           types.TupleId : Struct
-          types.UnionId : TaggedUnion
+          types.TupleId : TaggedUnion
           types.UnionId : RawUnion
    types.UnionElementId : UnionElement
            types.EnumId : Enum
@@ -141,15 +141,11 @@ namespace: types
     a b == if 0 return end
     a UnionInfo ptr cast =:: aData
     b UnionInfo ptr cast =:: bData
-    aData [] .labelType bData [] .labelType typeCmp
-      $ ? if return else ..drop end
     aData .compositeInfo bData .compositeInfo compositeTypeCmp
   end
   proc( UnionId : a -> i32 ) =>: unionTypeHash
     a UnionInfo ptr cast =:: aData
-    aData [] .labelType typeHash
-      31 * aData .compositeInfo compositeTypeHash +
-    return
+    aData .compositeInfo compositeTypeHash return
   end
   proc( UnionElementId : a UnionElementId : b -> i32 ) =>: unionElementCmp
     a b == if 0 return end
@@ -290,7 +286,7 @@ namespace: types
       Enum .case
         b .Enum .else ..unreachable end enumTypeCmp return
       TaggedUnion .case
-        b .TaggedUnion .else ..unreachable end unionTypeCmp return
+        b .TaggedUnion .else ..unreachable end tupleTypeCmp return
       RawUnion .case
         b .RawUnion .else ..unreachable end unionTypeCmp return
       UnionElement .case
@@ -382,7 +378,7 @@ namespace: types
       MutableRawPointer .case arrayTypeHash 31 * return
       Struct .case tupleTypeHash 37 * return
       Enum .case enumTypeHash 41 * return
-      TaggedUnion .case unionTypeHash 43 * return
+      TaggedUnion .case tupleTypeHash 43 * return
       Procedure .case procTypeHash 47 * return
       GeneratedType .case generatedTypeHash 53 * return
       Initializer .case initializerTypeHash 59 * return
@@ -855,21 +851,6 @@ namespace: types
         eltSize size=
       end
     end
-    unionInfo [] .labelType typeContext isEmpty ! if
-      unionInfo [] .labelType typeContext alignOf .Fixed .else
-        "union label-type does not have fixed alignemnt" ..panic
-      end =:: labelAlign
-      labelAlign alignment > if
-        labelAlign alignment=
-      end
-      size
-        labelAlign alignSize
-        $ unionInfo .enumLabelOffset=
-        unionInfo [] .labelType typeContext sizeOf .Fixed .else
-          "union label-type does not have fixed size" ..panic
-        end +
-      size=
-    end
     alignment unionInfo .compositeInfo .alignment=
     size unionInfo .compositeInfo .size=
     unionInfo [] .compositeInfo .flags
@@ -882,8 +863,8 @@ namespace: types
     TypeContext ptr.mut : typeContext
   -> bool ) =>: tryComputeSize
     composite switch
-      Struct .case composite >$ typeContext tryComputeTupleSize return
-      TaggedUnion RawUnion .case composite >$ typeContext tryComputeUnionSize return
+      Struct TaggedUnion .case composite >$ typeContext tryComputeTupleSize return
+      RawUnion .case composite >$ typeContext tryComputeUnionSize return
       Initializer .case
         ## tryComputeUnionSize
           composite
@@ -1216,8 +1197,6 @@ namespace: types
   ) =:: InitializerInfo
   struct(
     CompositeInfo : compositeInfo
-    i64 : enumLabelOffset
-    Type  : labelType
   ) =:: UnionInfo
   struct(
     LabelId slice : labels
@@ -1251,7 +1230,6 @@ namespace: types
     unwrapNamed =:: t
     t .TaggedUnion ? or t .RawUnion ? end return
   end
-  ## temporary name from isTaggedUnion while transitioning from old implementation
   proc( Type TypeContext ptr -> bool ) =>: export: isTaggedUnion
     unwrapNamed .TaggedUnion ?
   end
@@ -1280,8 +1258,8 @@ namespace: types
   proc( Type : composite TypeContext ptr : context -> CompositeData ) =>: compositeData
     composite context unwrapNamed
       switch
-        Struct .case TupleInfo ptr cast .compositeInfo CompositeData .Composite return
-        TaggedUnion RawUnion .case UnionInfo ptr cast .compositeInfo CompositeData .Composite return
+        Struct TaggedUnion .case TupleInfo ptr cast .compositeInfo CompositeData .Composite return
+        RawUnion .case UnionInfo ptr cast .compositeInfo CompositeData .Composite return
         UnionElement .case UnionElementInfo ptr cast [] .base context compositeData return
         Initializer .case
           InitializerInfo ptr cast .asTuple .compositeInfo CompositeData .Composite return
@@ -1349,8 +1327,8 @@ namespace: types
     TypeContext ptr.mut : typeContext
   -> i64 optional ) =>: export: tupleElementOffset
     tuple typeContext unwrapNamed switch
-      Struct .case break
-      Enum TaggedUnion RawUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
+      Struct TaggedUnion .case break
+      Enum RawUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
        NamedType GenericType GeneratedType IntLiteral Initializer Align
        CType RawPointer MutablePointer MutableRawPointer case
          i64 optional.empty return
@@ -1372,7 +1350,8 @@ namespace: types
   -> Type i64 optional ) =>: export: enumLabelInfo
     enum typeContext unwrapNamed switch
       Enum .case EnumInfo ptr cast [] .labelType 0:i64  optional.wrap return
-      TaggedUnion .case break
+      TaggedUnion .case .compositeInfo [] .elements 1 []
+        enum 1 typeContext tupleElementOffset return
       RawUnion case Type .Empty i64 optional.empty return
       UnionElement .case .base [] typeContext enumLabelInfo return
       Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure
@@ -1381,16 +1360,7 @@ namespace: types
          Type .Empty i64 optional.empty return
        SetType .case .baseType [] typeContext enumLabelInfo return
        RefinementType .case .baseType [] typeContext enumLabelInfo return
-    end =:: unionId
-    enum unionId typeContext tryComputeUnionSize =:: isError
-    unionId UnionInfo ptr cast =:: unionInfo
-    unionInfo [] .labelType
-      isError if
-        i64 optional.empty
-      else
-        unionInfo [] .enumLabelOffset optional.wrap
-      end
-    return
+    end
   end
   proc( Type : composite TypeContext ptr : context -> CompositeFlags ) =>: compositeFlags
     composite context compositeData switch
@@ -1416,7 +1386,9 @@ namespace: types
     end
   end
   proc( Type : composite i32 : index TypeContext ptr.mut : context -> Type optional ) =>: export: newUnionElement
-    composite context compositeData switch
+    composite context asRawUnion .else
+      Type optional.empty return
+    end context compositeData switch
       None case Type optional.empty return
       Enum case Type optional.empty return
       Composite .case break
@@ -1424,11 +1396,6 @@ namespace: types
     index 0 < or index iSize cast.u compData [] .elements .length u>= if
       Type optional.empty return
     end
-    composite context unwrapNamed
-      .TaggedUnion .else ..drop
-        Type optional.empty return
-      end
-    =:: unionType
     context [] .memory
       ## UnionElementInfo
         composite
@@ -1447,7 +1414,9 @@ namespace: types
   proc( Type TypeContext ptr : context -> Type ) =>: export: getUnionElementType
     context unwrapNamed .UnionElement .if
       UnionElementInfo ptr cast =:: element
-      element [] .base element [] .labelIndex context compositeGetElement
+      element [] .base context types.asRawUnion .if
+        element [] .labelIndex context compositeGetElement
+      else Type .Undefined end
     else ..drop
       Type .Undefined
     end
@@ -1609,30 +1578,38 @@ namespace: types
       Type optional.empty return
     end
     context [] .memory
-      ## UnionInfo
-        elts mixedArena.copySlice slice.freeze =:: eltCopy
-        labels mixedArena.copySlice slice.freeze optional.wrap =:: labelCopy
-        ## CompositeInfo
-          eltCopy
-          labelCopy
-          elts context computeCompositeFlags
-          -1
-          -1
-        CompositeInfo new
-        0
-        labels .length unionType computeEnumLabelType
-      UnionInfo new mixedArena.copyValue =:: unionId
+      elts mixedArena.copySlice slice.freeze =:: eltCopy
+      labels mixedArena.copySlice slice.freeze optional.wrap =:: labelCopy
+      ## CompositeInfo
+        eltCopy
+        labelCopy
+        elts context computeCompositeFlags
+        -1
+        -1
+      CompositeInfo new UnionInfo new mixedArena.copyValue =:: unionData
     context .memory=
-    unionId UnionId cast
-      unionType .TAGGED if Type .TaggedUnion else Type .RawUnion end
-    optional.wrap return
+    unionData UnionId cast Type .RawUnion =:: rawValue
+    unionType .RAW if
+      rawValue optional.wrap return
+    end
+    Type 2 array : elements
+    rawValue elements@ 0 =[]
+    labels .length unionType computeEnumLabelType elements@ 1 =[]
+    ## newTuple
+      elements@ slice.wrap
+      LabelId slice optional.empty
+    context newTuple .and .Struct .if
+      Type .TaggedUnion optional.wrap
+    else
+      Type optional.empty
+    end
   end
   proc(
     Type : unionType
-    TypeContext ptr.mut : context
+    TypeContext ptr : context
   -> Type optional ) =>: export: asRawUnion
     unionType context unwrapNamed .TaggedUnion .if
-      Type .RawUnion optional.wrap return
+      .compositeInfo [] .elements 0 slice.get return
     else .RawUnion ? _if
       unionType optional.wrap return
     end
@@ -2864,7 +2841,9 @@ namespace: sb
         sb
           baseType context depth appendTypeRecursive
           '.' sb.appendC
-          baseType element [] .labelIndex context types.compositeGetLabel labelContext appendLabelName
+          baseType context types.asRawUnion .else baseType end
+            element [] .labelIndex
+          context types.compositeGetLabel labelContext appendLabelName
         return
       Procedure  .case types.ProcType ptr cast [] =:: procType
         sb

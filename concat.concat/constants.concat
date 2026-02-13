@@ -537,7 +537,7 @@ namespace: sb
         Union .case =:: unionVal
           "union element ("  sb.appendS
             unionVal .eltIndex sb.appendI
-          "):" sb.appendS
+          "): " sb.appendS
             unionVal .value []
             typeContext
           sb.appendConstant

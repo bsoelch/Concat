@@ -1842,13 +1842,14 @@ proc(
   OP_UNLINKED =:: mut: onRead
   containerType typeContext types.isArray if
     containerType typeContext types.getBaseType
-  else isUnionGet and containerType typeContext types.isUnion _if
-    ## TODO! do not allow union-get for non-union types
+  else isUnionGet and containerType typeContext types.isTaggedUnion _if
     containerType elementIndex typeContext types.newUnionElement .else
-      "cannot create union element" sb.copyPtr
-      pos errors appendError
-      containerType elementIndex typeContext types.compositeGetElement
+      "cannot create union element":s pos ..line internalErrorNoOp ..unreachable
     end
+  else containerType typeContext types.isTaggedUnion _if
+    containerType typeContext types.asRawUnion .else
+      "cannot get raw union-data":s pos ..line internalErrorNoOp ..unreachable
+    end elementIndex typeContext types.compositeGetElement
   else
     containerType elementIndex typeContext types.compositeGetElement
   end =:: eltType
@@ -1879,7 +1880,6 @@ proc(
       state pushConstant
       return
     end
-    ## XXX? when writing empty value to union, elementIndex still needs to be changed
     Type 2 array : args
     targetType args@ 0 =[]
     srcType args@ 1 =[]
@@ -1891,13 +1891,32 @@ proc(
     state requireTypes .Err ? if
       return
     end
-    ## opSetElement
-      srcType
-      elementIndex
-      pos
+    ## TODO? constant folding
     containerType typeContext types.isTaggedUnion if
-      opSetUnionElement ## TODO? rename to set union element, make set-element on enum an error
+      targetType typeContext types.isEmpty ! if
+        1 StackModType .ROTATE pos opStackMod state appendOp ..drop
+        1 StackModType .COPY pos opStackMod state appendOp ..drop
+        ## TODO? do not use magic-numbers for indices of tagged-union elements
+        srcType 0 pos opGetElement state appendOp ..drop
+        containerType typeContext types.asRawUnion .else ..unreachable end
+          isPtr if
+            srcType typeContext types.isMutable typeContext types.getAddressType
+          end
+        elementIndex pos opSetUnionElement state appendOp ..drop
+        isPtr ! if
+          1 StackModType .ROTATE pos opStackMod state appendOp ..drop
+          srcType 0 pos opSetElement state appendOp ..drop
+        end
+        containerType typeContext types.enumLabelInfo ..drop =:: labelType
+        elementIndex i64 cast.u ConstValue .Int labelType pos opConst state appendOp ..drop
+      end
+      1 StackModType .ROTATE pos opStackMod state appendOp ..drop
+      srcType 1 pos opSetElement
     else
+      ## opSetElement
+        srcType
+        elementIndex
+        pos
       opSetElement
     end =:: newOp
     isPtr if
@@ -1905,7 +1924,7 @@ proc(
     else
       ## pushValue
         srcType
-        ConstValue .None ## XXX? update constant
+        ConstValue .None ## TODO? update constant
         newOp
       state pushValue
     end
@@ -3207,9 +3226,14 @@ proc(
               op .pos errors appendError
             end
           end
-        =:: mut: containerType
+        =:: containerType
+        containerType
+          $ typeContext types.isTaggedUnion if
+            typeContext types.asRawUnion .else ..unreachable end
+          end
+        =:: innerContainerType
         ## compositeFindLabel
-          containerType
+          innerContainerType
           labelId
           typeContext
         types.compositeFindLabel .else
@@ -3227,8 +3251,8 @@ proc(
           op .pos errors appendError
           continue.opLoop
         end =:: elementIndex
-        containerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
-        containerType elementIndex typeContext types.compositeGetElement =:: eltType
+        innerContainerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
+        innerContainerType elementIndex typeContext types.compositeGetElement =:: eltType
         isWrite ! and isType ! and accessType .GET if
           containerType typeContext types.isEnum if
             LabelAccessType .CHECK_ENUM accessType=
@@ -3264,7 +3288,7 @@ proc(
             typeContext types.unwrapNamed
           =:: enumLabelType
           ## check enum label
-          isPtr if ## gohere
+          isPtr if
             ## newProcedure
               srcType@ slice.wrap
               containerType@ slice.wrap
@@ -3340,7 +3364,7 @@ proc(
           else
             ## requireTypes
               eltType@ slice.wrap
-              "enum-creation":s
+              "union-creation":s
               0 true
               op .pos
             state requireTypes switch
@@ -3355,13 +3379,32 @@ proc(
               break
             end
           end
-          ## XXX discard operation and push constant if there is a constant value
+          constValue .None ? ! and containerType typeContext types.isTaggedUnion if
+            ConstValue 2 array : unionData
+            constValue unionData@ 0 =[]
+            elementIndex i64 cast.u ConstValue .Int unionData@ 1 =[]
+            unionData@ slice.wrap constContext newArrayConst constValue=
+          end
           constValue .None ? if
             ## pushValue
-              containerType
+              innerContainerType
               constValue
-              containerType elementIndex op .pos opNewUnion
+              innerContainerType elementIndex op .pos opNewUnion
             state pushValue
+            containerType typeContext types.isTaggedUnion if
+              ## pushConstant
+                elementIndex i64 cast.u ConstValue .Int
+                containerType typeContext types.enumLabelInfo ..drop
+                op .pos
+              state pushConstant
+              state .stack branchTree.pop ..drop ## remove label from stack
+              state .stack branchTree.pop ..drop ## remove value from stack
+              ## pushValue
+                containerType
+                constValue
+                containerType op .pos opNew
+              state pushValue
+            end
           else
             ## pushConstant
               constValue
