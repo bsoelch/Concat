@@ -648,16 +648,16 @@ namespace: sb
       ArrayType case
         sb t "array":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      Struct case
+      Struct TaggedUnion case
         sb t "struct":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      TaggedUnion RawUnion case
+      RawUnion case
         sb t "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       UnionElement case
         sb t typeContext types.getUnionElementUnion optional.unwrap
           typeContext types.unwrapNamed
-        "union":s storeType .STACK ! context appendCompositeTypeQBE return
+        "struct":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       Enum case
         sb
