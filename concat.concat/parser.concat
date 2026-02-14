@@ -1315,6 +1315,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         else flags id.FLAG_ALIAS & ? _if
           "procedure alias cannot have an implementation" sb.copyPtr
           fileState [] .wordStart errors appendError
+          fileState [] .wordStart >>$
+            fileState errors nextIdentifier
+              id.FLAG_NONE
+              fileState [] .wordStart
+              state [] .currentFile
+            labelContext id.newLabel <<<$
+          <<<$ opAliasName state appendOp
+          return
         end
       else
         procImplName

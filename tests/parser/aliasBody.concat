@@ -1,0 +1,4 @@
+proc( i32 i32 -> i32 ) =>: alias: add i32.add
+proc( -> ) =>: main
+  2 3 add 5 == "ok" assert
+end

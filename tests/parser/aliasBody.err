@@ -1,0 +1,1 @@
+procedure alias cannot have an implementation at ./tests/parser/aliasBody.concat:1:35
