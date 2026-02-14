@@ -1,0 +1,113 @@
+import slice
+import stringBuilder
+import numbers
+using std.literals.
+
+import "asm/asm.concat"
+
+namespace: AMD64
+  using asm.
+  namespace: op
+    proc( i32 -> i32 OpCode ) =>: static: nextOpCode
+      $ 1 + >$ OpCode cast
+    end
+    0
+      nextOpCode =:: export: MOV
+      nextOpCode =:: export: MOVZX
+      nextOpCode =:: export: MOVSX
+      nextOpCode =:: export: ADD
+      nextOpCode =:: export: SUB
+      nextOpCode =:: export: MUL
+    ..drop
+    { "mov":s "movzx":s "movsx":s "add":s "sub":s "mul":s } =:: OPCODE_NAMES
+    proc( stringBuilder OpCode : opCode -> stringBuilder ) =>: export: appendName
+      opCode iSize cast.u OPCODE_NAMES ..length u>= if
+        "???":s sb.appendStr return
+      end
+      OPCODE_NAMES opCode iSize cast.u [] sb.appendStr
+    end
+  end
+  namespace: reg
+    proc( i32 -> i32 RegisterId ) =>: static: nextBaseRegId
+      $ 1 + >$ RegisterId cast RegisterId.BASE_SHIFT <<
+    end
+    0
+      nextBaseRegId =:: export: RAX
+      nextBaseRegId =:: export: RCX
+      nextBaseRegId =:: export: RDX
+      nextBaseRegId =:: export: RBX
+      nextBaseRegId =:: export: RSP
+      nextBaseRegId =:: export: RBP
+      nextBaseRegId =:: export: RSI
+      nextBaseRegId =:: export: RDI
+      nextBaseRegId =:: export: R8
+      nextBaseRegId =:: export: R9
+      nextBaseRegId =:: export: R10
+      nextBaseRegId =:: export: R11
+      nextBaseRegId =:: export: R12
+      nextBaseRegId =:: export: R13
+      nextBaseRegId =:: export: R14
+      nextBaseRegId =:: export: R15
+    ..drop
+    0x1000:RegisterId RegisterId.BASE_SHIFT << =:: FLAG_VEC
+    proc( i32 -> RegisterId ) =>: export: r
+      $ 0 >= and $ 15 <= end "register-id in range" assert
+      RegisterId cast RegisterId.BASE_SHIFT <<
+    end
+    proc( i32 -> RegisterId ) =>: export: xmm
+      $ 0 >= and $ 15 <= end "xmm-register in range" assert
+      RegisterId cast RegisterId.BASE_SHIFT << FLAG_VEC |
+    end
+    proc( stringBuilder RegisterId : regId char8 : baseName -> stringBuilder ) =>: appendRegNamed1
+      regId RegisterId.SIZE_MASK & switch
+        RegisterId.SIZE_64 case 'r' sb.appendC baseName sb.appendC 'x' sb.appendC return
+        RegisterId.SIZE_32 case 'e' sb.appendC baseName sb.appendC 'x' sb.appendC return
+        RegisterId.SIZE_16 case baseName sb.appendC 'x' sb.appendC return
+        RegisterId.SIZE_8  case baseName sb.appendC 'l' sb.appendC return
+      end
+    end
+    proc( stringBuilder RegisterId : regId string : baseName -> stringBuilder ) =>: appendRegNamed2
+      regId RegisterId.SIZE_MASK & switch
+        RegisterId.SIZE_64 case 'r' sb.appendC baseName sb.appendStr return
+        RegisterId.SIZE_32 case 'e' sb.appendC baseName sb.appendStr return
+        RegisterId.SIZE_16 case baseName sb.appendStr return
+        RegisterId.SIZE_8  case baseName sb.appendStr 'l' sb.appendC return
+      end
+    end
+    proc( stringBuilder RegisterId : regId -> stringBuilder ) =>: export: appendName
+      regId FLAG_VEC & ? if
+        "xmm":s sb.appendStr
+        regId FLAG_VEC ^ RegisterId.BASE_SHIFT >>> i32 cast.u sb.appendI
+      else
+        regId RegisterId.BASE_MASK & switch
+          RAX case regId 'a' appendRegNamed1 break
+          RBX case regId 'b' appendRegNamed1 break
+          RCX case regId 'c' appendRegNamed1 break
+          RDX case regId 'd' appendRegNamed1 break
+          RSI case regId "si":s appendRegNamed2 break
+          RDI case regId "di":s appendRegNamed2 break
+          RSP case regId "sp":s appendRegNamed2 break
+          RBP case regId "bp":s appendRegNamed2 break
+          R8 R9 R10 R11 R12 R13 R14 R15 case
+            'r' sb.appendC regId RegisterId.BASE_SHIFT >>> i32 cast.u sb.appendI
+            regId RegisterId.SIZE_MASK & switch
+              RegisterId.SIZE_64 case break
+              RegisterId.SIZE_32 case 'd' sb.appendC break
+              RegisterId.SIZE_16 case 'w' sb.appendC break
+              RegisterId.SIZE_8  case 'b' sb.appendC break
+            end
+          break
+        end
+      end
+    end
+  end
+  asm.Context optional.empty =:: mut: _asmContext
+  proc( -> asm.Context ) =>: export: asmContext
+    _asmContext .else
+      ## asm.Context
+        op.appendName@
+        reg.appendName@
+      asm.Context new $ optional.wrap _asmContext=
+    end
+  end
+end

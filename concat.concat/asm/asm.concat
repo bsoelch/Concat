@@ -1,0 +1,129 @@
+import slice
+import stringBuilder
+import numbers
+using std.literals.
+namespace: asm
+  i32 =:: export: OpCode
+  ( char8 ptr.raw iSize -> OpCode ) : alias: export: :OpCode :i32
+  i32 =:: export: RegisterId
+  ( char8 ptr.raw iSize -> RegisterId ) : alias: export: :RegisterId :i32
+  namespace: RegisterId
+    0x3:RegisterId =:: export: SIZE_MASK
+    0x0:RegisterId =:: export: SIZE_64
+    0x1:RegisterId =:: export: SIZE_32
+    0x2:RegisterId =:: export: SIZE_16
+    0x3:RegisterId =:: export: SIZE_8
+    0x4:RegisterId =:: export: FLAG_VEC
+    4 =:: export: BASE_SHIFT
+    0xffff_fff0:RegisterId =:: export: BASE_MASK
+    ( RegisterId -> bool ) : alias: export: toBool i32.toBool
+    ( RegisterId -> RegisterId  ) : alias: export: flip i32.flip
+    ( RegisterId RegisterId -> RegisterId  ) : alias: export: and i32.and
+    ( RegisterId RegisterId -> RegisterId  ) : alias: export: or i32.or
+    ( RegisterId RegisterId -> RegisterId  ) : alias: export: xor i32.xor
+    ( RegisterId i32 -> RegisterId  ) : alias: export: shl i32.shl
+    ( RegisterId i32 -> RegisterId  ) : alias: export: shr i32.lshr
+    overload: merge: ? toBool end
+    overload: merge: ~ flip end
+    overload: merge: & RegisterId.and end
+    overload: merge: | RegisterId.or end
+    overload: merge: ^ xor end
+    overload: merge: << shl end
+    overload: merge: >>> shr end
+  end
+
+  i32 =:: export: GlobalLabel
+  i32 =:: export: LocalLabel
+
+  union(
+    RegisterId : Register
+    i64 : Int
+    GlobalLabel : shadow: GlobalLabel
+    LocalLabel : shadow: LocalLabel
+  ) =:: export: Operand
+  union(
+    Operand         : Val
+    Operand 2 array : Val2
+    Operand 3 array : Val3
+    Operand slice   : Vals
+  ) =:: export: Operands
+  struct(
+    asm.OpCode : opCode
+    Operands : args
+  ) =:: export: Instruction
+  union(
+    i64 : Int
+    f64 : Float
+    GlobalLabel : Label
+  ) =:: export: Data
+  union(
+    _ : None
+  ) =:: export: Directive
+  union(
+    _ : None
+  ) =:: export: Info
+  union(
+    asm.Instruction : shadow: Instruction
+    asm.Data : shadow: Data
+    asm.Directive : shadow: Directive
+    asm.Info : shadow: Info
+  ) =:: export: Atom
+  struct(
+    proc( stringBuilder OpCode -> stringBuilder ) ptr : appendOpCode
+    proc( stringBuilder RegisterId -> stringBuilder ) ptr : appendReg
+  ) =:: export: Context
+  proc( OpCode : opCode RegisterId : r1 RegisterId : r2 -> Atom ) =>: export: opRR
+    Operand 2 array : ops
+    r1 Operand .Register ops@ 0 =[]
+    r2 Operand .Register ops@ 1 =[]
+    opCode ops Operands .Val2 Instruction new Atom .Instruction
+  end
+  proc( OpCode : opCode RegisterId : r1 i64 : imm -> Atom ) =>: export: opRI
+    Operand 2 array : ops
+    r1 Operand .Register ops@ 0 =[]
+    imm Operand .Int ops@ 1 =[]
+    opCode ops Operands .Val2 Instruction new Atom .Instruction
+  end
+  overload: export: op2 opRR opRI end
+  
+  proc( stringBuilder Operand : arg  Context : asmContext -> stringBuilder ) =>: export: appendOperand
+    arg switch
+      Register .case asmContext .appendReg () return
+      Int .case sb.appendI return
+      GlobalLabel .case "TODO" ..panic
+      LocalLabel .case "TODO" ..panic
+    end
+  end
+  proc( stringBuilder Instruction : op  Context : asmContext -> stringBuilder ) =>: export: appendInstruction
+    op .opCode asmContext .appendOpCode ()
+    ' ' sb.appendC
+    op .args switch
+      Val .case  asmContext appendOperand return
+      Val2 .case =:: args
+        args .0 asmContext appendOperand
+        ", ":s sb.appendStr
+        args .1 asmContext appendOperand
+      return
+      Vals .case =:: args
+        true =:: mut: first
+        args for =:: arg
+          first if
+            false first=
+          else
+            ", ":s sb.appendStr
+          end
+          arg asmContext appendOperand
+        end
+      return
+    end
+  end
+  proc( stringBuilder Atom : atom  Context : asmContext -> stringBuilder ) =>: export: appendAtom
+    atom switch
+      Instruction .case asmContext appendInstruction break
+      Data .case "TODO" ..panic
+      Directive .case "TODO" ..panic
+      Info .case "TODO" ..panic
+    end
+    '\n' sb.appendC
+  end
+end
