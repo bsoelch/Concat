@@ -9,7 +9,6 @@ import "parser.concat"
 import "typeCheck.concat"
 import "prepareCompile.concat"
 import "generator_qbe.concat"
-import "generator_asm.concat"
 
 stringBuilder : mut: srcPath
 stringBuilder : mut: targetPath
@@ -322,22 +321,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
     _BACKEND_ switch
       QBE case targetFile prog@ compileToQBE break
       ASM case
-        ## TODO make intermediatePath compiler-argument like paths for dumping tokens
-        baseName .length 5:iSize + sb.create
-          baseName sb.appendStr
-          ".asm\x00" sb.appendS
-        =:: intermediatePath
-        intermediatePath sb.asStr
-          io.OPEN_WRITE io.fopenStr ..drop
-        optional.wrap =:: intermediateFile?
-        ## TODO? split compileToASM in two steps
-        ## 1. compile to "pseudo-asm"
-        ## 2. compile "pseudo-asm" to "real" asm
-        targetFile intermediateFile? prog@ compileToASM
-        intermediateFile? .if
-          io.fclose ..drop
-        end
-        intermediatePath sb.free ..drop
+        "assembly-backend is currently not supported" ..panic
         break
     end
   targetFile io.fclose ..drop
