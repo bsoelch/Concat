@@ -1,0 +1,4 @@
+proc( -> ) =>: main
+  5 return
+  thisShouldNeverBeTypeChecked
+end

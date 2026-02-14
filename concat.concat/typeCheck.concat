@@ -1777,6 +1777,7 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
+  false state .reachable=
   state [] .currentProcType .else
     "return is only supported within procedures" sb.copyPtr
     op [] .pos errors appendError
@@ -1813,7 +1814,6 @@ proc(
     return
   end
   op [] state appendOp ..drop
-  false state .reachable=
   state [] .stack branchTree.depth 0 > if
     state .stack branchTree.pop optional.unwrap =:: val
     "extra value at the end of procedure" sb.copyPtr
