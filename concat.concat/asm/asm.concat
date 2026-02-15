@@ -32,7 +32,7 @@ namespace: asm
     overload: merge: >>> shr end
   end
 
-  i32 =:: export: GlobalLabel
+  string =:: export: GlobalLabel
   i32 =:: export: LocalLabel
 
   union(
@@ -57,7 +57,9 @@ namespace: asm
     GlobalLabel : Label
   ) =:: export: Data
   union(
-    _ : None
+    GlobalLabel : Enter
+    _ : Leave
+    LocalLabel : Label
   ) =:: export: Directive
   union(
     _ : None
@@ -117,11 +119,24 @@ namespace: asm
       return
     end
   end
+  proc( stringBuilder GlobalLabel : label  Context : asmContext -> stringBuilder ) =>: export: appendGlobalLabel
+    label string cast sb.appendStr
+  end
+  proc( stringBuilder LocalLabel : label  Context : asmContext -> stringBuilder ) =>: export: appendLocalLabel
+    ".L":s sb.appendStr label i64 cast.u sb.appendI
+  end
+  proc( stringBuilder Directive : directive  Context : asmContext -> stringBuilder ) =>: export: appendDirective
+    directive switch
+      Enter .case =:: label "enter ":s sb.appendStr label asmContext appendGlobalLabel ':' sb.appendC return
+      Leave case "leave":s sb.appendStr return
+      Label .case asmContext appendLocalLabel ':' sb.appendC return
+    end
+  end
   proc( stringBuilder Atom : atom  Context : asmContext -> stringBuilder ) =>: export: appendAtom
     atom switch
       Instruction .case asmContext appendInstruction break
+      Directive .case asmContext appendDirective break
       Data .case "TODO" ..panic
-      Directive .case "TODO" ..panic
       Info .case "TODO" ..panic
     end
     '\n' sb.appendC
