@@ -9,6 +9,7 @@ import "parser.concat"
 import "typeCheck.concat"
 import "prepareCompile.concat"
 import "generator_qbe.concat"
+import "generator_asm.concat"
 
 stringBuilder : mut: srcPath
 stringBuilder : mut: targetPath
@@ -320,9 +321,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
   outPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop  =:: targetFile
     _BACKEND_ switch
       QBE case targetFile prog@ compileToQBE break
-      ASM case
-        "assembly-backend is currently not supported" ..panic
-        break
+      ASM case targetFile prog@ compileToASM break
     end
   targetFile io.fclose ..drop
   prog@ .errors checkErrors
@@ -375,9 +374,13 @@ proc( -> ) =>: main ## TODO check return value of fopen
           "compile generated Assembly-code:":s io.println
           "-----------------------------------------":s io.println
         end
+        tmpPath sb.clear
+          libPath sb.appendStr
+          "extern.c":s sb.appendStr
+        tmpPath=
         "gcc":s exec.build
           "-g":s exec.add "-lm":s exec.add
-          outPath sb.asStr exec.add "extern.c":s exec.add
+          outPath sb.asStr exec.add tmpPath sb.asStr exec.add
           "-o":s exec.add targetPath sb.asStr exec.add
         exec.run exec.check ! if
           false runCompiledProgram=
