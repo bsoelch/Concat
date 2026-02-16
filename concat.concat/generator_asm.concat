@@ -12,7 +12,21 @@ import "asm/amd64.concat"
 struct(
   ProgramContext ptr.mut : program
   asm.Context : asmContext
+  asm.Atom list : tmpOps
 ) =:: CompilerContext
+
+proc(
+  ProcedureImpl : procImpl
+  CompilerContext ptr.mut : context
+-> string ) =>: getProcName
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  ## TODO correctly mange procedure names
+  program [] .procedures procImpl .procId iSize cast.u [] .labelId labelContext id.getLabelName
+end
 
 proc(
   asm.Atom list
@@ -20,7 +34,44 @@ proc(
   i32 : opIndex
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: compileOp
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+   op .val switch
+     ImplementProcedure .case [] context getProcName asm.enter list.append return
+     Return case
+       ## TODO ensure return values are in correct registers
+       asm.leave list.append
+     return
+     default break
+   end
+   "unsupported operation: " sb.copyPtr
+     op [] program sb.appendOp
+   op [] .pos errors appendError
+end
 
+proc(
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: beginProcedure
+  context [] .tmpOps
+  asm.Atom list.emptyNoReallloc context .tmpOps=
+  ## TODO prepare internal state for comping proc (rememeber used stack-space, used registers, ...)
+end
+proc(
+  asm.Atom list : code
+  asm.Atom list : procOps
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: finishProcedure
+  code
+    ## TODO post-processing (proc-header / update references / proc epilogoue)
+    procOps for
+      list.append
+    end
+    procOps context .tmpOps=
+  return
 end
 
 proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compileToASM
@@ -30,6 +81,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   ## CompilerContext
     program
     AMD64.asmContext
+    1024 asm.Atom list.create
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   ## TODO? compile procedures seperately
@@ -38,15 +90,19 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       proc .implementation .Code .else ..drop continue end =:: impl
       impl .codeState .UNUSED if continue end
       impl .codeState .COMPILED if
-        impl .code .length for i32 cast.u =:: opIndex
-          impl .code opIndex @[] opIndex context compileOp
-        end
+        context beginProcedure
+          impl .code .length for i32 cast.u =:: opIndex
+            impl .code opIndex @[] opIndex context compileOp
+          end
+        context finishProcedure
       end
       impl .implementations for =:: genericImpl
         genericImpl .codeState .COMPILED if
-          genericImpl .code .length for i32 cast.u =:: opIndex
-            genericImpl .code opIndex @[] opIndex context compileOp
-          end
+          context beginProcedure
+            genericImpl .code .length for i32 cast.u =:: opIndex
+              genericImpl .code opIndex @[] opIndex context compileOp
+            end
+          context finishProcedure
         end
       end
     end

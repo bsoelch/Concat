@@ -30,6 +30,7 @@ struct(
 
 type : export: Operation
 enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED UNUSED COMPILED ) =:: export: ProcCodeState
+## TODO there are both ProcImplementation and ProcedureImpl types, is there a less confusing choice of naming?
 struct(
   ConstValue slice : staticArgs
   VariableInfo list : variables

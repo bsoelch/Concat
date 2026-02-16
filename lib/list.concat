@@ -86,6 +86,11 @@ namespace: list
     buffer 0:iSize k ListCapType .STATIC asCapacity T list new return
   end
   proc(
+    type : T
+  -> T list ) =>: export: emptyNoReallloc
+    0 T ptr.mut cast! 0:iSize 0 ListCapType .STATIC asCapacity T list new return
+  end
+  proc(
     type : auto: T
     T slice.mut : buffer
   -> T list ) =>: export: wrapSlice

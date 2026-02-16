@@ -87,6 +87,12 @@ namespace: asm
     opCode ops Operands .Val2 Instruction new Atom .Instruction
   end
   overload: export: op2 opRR opRI end
+  proc( string : name -> Atom ) =>: export: enter
+    name GlobalLabel cast Directive .Enter Atom .Directive
+  end
+  proc( -> Atom ) =>: export: leave
+    Directive .Leave Atom .Directive
+  end
   
   proc( stringBuilder Operand : arg  Context : asmContext -> stringBuilder ) =>: export: appendOperand
     arg switch
