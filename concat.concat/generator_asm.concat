@@ -9,11 +9,111 @@ import "measure.concat"
 import "asm/asm.concat"
 import "asm/amd64.concat"
 
+enum( EMPTY I8 I16 I32 I64 F32 F64 POINTER PROC_POINTER ) =:: ValType
+namespace: ValType
+  proc( Type : t -> ValType ) =>: fromType
+    t switch
+      PrimitiveType .case switch
+        BOOL I8 CHAR8 case ValType .I8 return
+        I16 case ValType .I16 return
+        I32 case ValType .I32 return
+        I64 case ValType .I64 return
+        F32 case ValType .F32 return
+        F64 case ValType .F64 return
+        TYPE case ValType .EMPTY return
+      end break
+      default "unsupported type" ..panic
+    end
+  end
+  proc( ValType : valType -> bool ) =>: isInt
+    valType switch
+      I8 I16 I32 I64 POINTER PROC_POINTER case true return
+      EMPTY F32 F64 case false return
+    end
+  end
+  proc( ValType : valType -> bool ) =>: isFloat
+    valType switch
+      F32 F64 case true return
+      EMPTY I8 I16 I32 I64 POINTER PROC_POINTER case false return
+    end
+  end
+  proc( ValType : valType -> bool ) =>: isAddress
+    valType switch
+      POINTER PROC_POINTER case true return
+      EMPTY I8 I16 I32 I64 F32 F64 case false return
+    end
+  end
+end
+struct(
+  asm.Value : val
+  ValType : valType
+) =:: TypedValue
+union(
+  TypedValue : Val
+  ( TypedValue TypedValue ) : Val2
+  ( TypedValue TypedValue TypedValue ) : Val3
+) =:: StackValue
+namespace: StackValue
+  proc( asm.Value : v ValType : t -> StackValue ) =>: val
+    v t TypedValue new StackValue .Val
+  end
+  proc( asm.Value : v1 ValType : t1 asm.Value : v2 ValType : t2 -> StackValue ) =>: val2
+    v1 t1 TypedValue new v2 t2 TypedValue new ( TypedValue TypedValue ) new StackValue .Val2
+  end
+  proc(
+    asm.Value : v1 ValType : t1
+    asm.Value : v2 ValType : t2
+    asm.Value : v3 ValType : t3
+  -> StackValue ) =>: val3
+    v1 t1 TypedValue new
+      v2 t2 TypedValue new
+      v3 t3 TypedValue new
+    ( TypedValue TypedValue TypedValue ) new StackValue .Val3
+  end
+end
 struct(
   ProgramContext ptr.mut : program
   asm.Context : asmContext
   asm.Atom list : tmpOps
+  StackValue list : stack
 ) =:: CompilerContext
+
+proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context -> ) =>: pushConstant
+  context [] .stack
+    constant switch
+      Bool .case
+        ?1 i64 cast.u asm.Value .Int valType StackValue.val list.append
+      break
+      Char .case
+        i64 cast.u asm.Value .Int valType StackValue.val list.append
+      break
+      Int .case
+        asm.Value .Int valType StackValue.val list.append
+      break
+      Float .case
+        asm.Value .Float valType StackValue.val list.append
+      break
+      default "unsupported value-constant" ..panic
+    end
+  context .stack=
+end
+
+proc( CompilerContext ptr.mut : context -> ) =>: freezeStack
+  ## TODO ensure all values are in (unique) register or memory
+  ## TODO remember stack-state (? return state-id)
+end
+
+proc( ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>: nextFreeRegister
+  ## TODO make target specific
+  ## TODO correctly find free registers
+  valType ValType.isInt if
+    AMD64.reg.RAX return
+  else valType ValType.isFloat _if
+    0 AMD64.reg.xmm return
+  end
+  "unsupported value for register" ..panic
+end
+
 
 proc(
   ProcedureImpl : procImpl
@@ -24,7 +124,7 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  ## TODO correctly mange procedure names
+  ## TODO correctly mangle procedure names
   program [] .procedures procImpl .procId iSize cast.u [] .labelId labelContext id.getLabelName
 end
 
@@ -41,6 +141,8 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
    op .val switch
+     NOP case return
+     Constant .case [] op [] .dataType ValType.fromType context pushConstant return
      ImplementProcedure .case [] context getProcName asm.enter list.append return
      Return case
        ## TODO ensure return values are in correct registers
@@ -56,9 +158,10 @@ end
 proc(
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: beginProcedure
-  context [] .tmpOps
-  asm.Atom list.emptyNoReallloc context .tmpOps=
+  context [] .stack list.clear context .stack=
   ## TODO prepare internal state for comping proc (rememeber used stack-space, used registers, ...)
+  context [] .tmpOps
+  asm.Atom list.emptyNoReallloc context .tmpOps= ## ensure tmp-ops on compiler are not modified while on stack
 end
 proc(
   asm.Atom list : code
@@ -82,6 +185,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     program
     AMD64.asmContext
     1024 asm.Atom list.create
+    64 StackValue list.create
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   ## TODO? compile procedures seperately

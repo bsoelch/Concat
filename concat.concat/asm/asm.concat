@@ -36,6 +36,13 @@ namespace: asm
   i32 =:: export: LocalLabel
 
   union(
+    _ : None
+    RegisterId : Register
+    i64 : Int
+    f64 : Float
+    ## TODO memory values
+  ) =:: export: Value
+  union(
     RegisterId : Register
     i64 : Int
     GlobalLabel : shadow: GlobalLabel
