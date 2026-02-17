@@ -77,9 +77,11 @@ namespace: asm
     asm.Directive : shadow: Directive
     asm.Info : shadow: Info
   ) =:: export: Atom
+  enum( AMD64 ) =:: export: TargetId
   struct(
     proc( stringBuilder OpCode -> stringBuilder ) ptr : appendOpCode
     proc( stringBuilder RegisterId -> stringBuilder ) ptr : appendReg
+    TargetId : targetId
   ) =:: export: Context
   proc( OpCode : opCode RegisterId : r1 RegisterId : r2 -> Atom ) =>: export: opRR
     Operand 2 array : ops

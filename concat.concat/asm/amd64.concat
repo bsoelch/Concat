@@ -107,6 +107,7 @@ namespace: AMD64
       ## asm.Context
         op.appendName@
         reg.appendName@
+        asm.TargetId .AMD64
       asm.Context new $ optional.wrap _asmContext=
     end
   end

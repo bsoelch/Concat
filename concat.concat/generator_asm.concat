@@ -45,7 +45,7 @@ namespace: ValType
   end
 end
 struct(
-  asm.Value : val
+  asm.Value : value
   ValType : valType
 ) =:: TypedValue
 union(
@@ -76,6 +76,7 @@ struct(
   i32 : whileLabel
   i32 : finallyLabel
   i32 : endLabel
+  StackValue slice : whileState
 ) =:: WhileBlockInfo
 union(
   WhileBlockInfo : While
@@ -109,11 +110,6 @@ proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context
   context .stack=
 end
 
-proc( CompilerContext ptr.mut : context -> ) =>: freezeStack
-  ## TODO ensure all values are in (unique) register or memory
-  ## TODO remember stack-state (? return state-id)
-end
-
 proc( ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>: nextFreeRegister
   ## TODO make target specific
   ## TODO correctly find free registers
@@ -142,6 +138,7 @@ proc(
       context nextLocalLabel ## whileLabel
       context nextLocalLabel ## finallyLabel
       context nextLocalLabel ## endLabel
+      StackValue slice.empty
     WhileBlockInfo new BlockInfo .While
   map.put .if ..drop
     "multiple blocks with same id: " sb.copyPtr
@@ -169,6 +166,85 @@ end
 
 proc(
   asm.Atom list
+  ValType : moveType
+  asm.Value : dst
+  asm.Value : src
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: opMove
+  ## TODO remember which registers currently contain which value(s)
+  context .asmContext .targetId switch
+    AMD64 case
+      moveType ValType.isInt if
+        AMD64.op.MOV
+          dst .Register .if
+            src .Register .if
+              asm.op2
+            else .Int ._if
+              asm.op2
+            else
+              "unsupported source for mov" ..panic
+            end
+          else
+            "can only move to register" ..panic ## TODO support move to memory
+          end
+        list.append return
+      end
+    break
+  end
+  "unimplemented configuration for: mov" ..panic
+end
+
+proc(
+  asm.Atom list
+  TypedValue : val
+  CompilerContext ptr.mut : context
+-> asm.Atom list asm.RegisterId ) =>: moveToRegister
+  val .value .Register .if return else ..drop end
+  val .valType context nextFreeRegister =:: reg
+  val .valType reg asm.Value .Register val .value context opMove
+  reg return
+end
+proc(
+  asm.Atom list
+  TypedValue : val
+  CompilerContext ptr.mut : context
+-> asm.Atom list TypedValue ) =>: freezeTypedValue
+  val .value switch
+    Int case
+      val context moveToRegister asm.Value .Register
+    break
+    Float case "unsupported value" ..panic
+    Register .case =:: regId
+      ## TODO! ensure register is unique
+      val .value
+    break
+  end val .value=
+end
+proc(
+  asm.Atom list
+  CompilerContext ptr.mut : context
+-> asm.Atom list StackValue slice ) =>: freezeStack
+  ## TODO ensure all values are in (unique) register or memory
+  context [] .stack .length for =:: i
+    context [] .stack i [] switch
+      Val .case
+        context freezeTypedValue
+      StackValue .Val break
+      Val2 .case
+        >$ $1 .0 context freezeTypedValue >>$ .0=
+        >$ $1 .1 context freezeTypedValue >>$ .1=
+      StackValue .Val2 break
+      Val3 .case
+        >$ $1 .0 context freezeTypedValue >>$ .0=
+        >$ $1 .1 context freezeTypedValue >>$ .1=
+        >$ $1 .2 context freezeTypedValue >>$ .2=
+      StackValue .Val3 break
+    end context [] .stack i =[]
+  end
+  context [] .stack list.asSlice slice.copy slice.freeze
+end
+proc(
+  asm.Atom list
   Operation ptr : op
   i32 : opIndex
   CompilerContext ptr.mut : context
@@ -187,6 +263,7 @@ proc(
        blockData .blockType switch
          WHILE case
            blockData [] .blockId op [] .pos context newWhileBlock =:: whileBlock
+           context freezeStack whileBlock .whileState=
            ## TODO! freeze register state and remember in while block
            whileBlock [] .whileLabel asm.localLabel list.append return
          break
@@ -220,7 +297,7 @@ proc(
 -> asm.Atom list ) =>: beginProcedure
   context [] .stack list.clear context .stack=
   ## TODO prepare internal state for comping proc (rememeber used stack-space, used registers, ...)
-  context [] .tmpOps
+  context [] .tmpOps list.clear
   asm.Atom list.emptyNoReallloc context .tmpOps= ## ensure tmp-ops on compiler are not modified while on stack
 end
 proc(
