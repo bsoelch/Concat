@@ -72,10 +72,21 @@ namespace: StackValue
   end
 end
 struct(
+  ## TODO remember state(s) at while/continue/break
+  i32 : whileLabel
+  i32 : finallyLabel
+  i32 : endLabel
+) =:: WhileBlockInfo
+union(
+  WhileBlockInfo : While
+) =:: BlockInfo
+struct(
   ProgramContext ptr.mut : program
   asm.Context : asmContext
+  BlockId BlockInfo hashMap : openBlocks
   asm.Atom list : tmpOps
   StackValue list : stack
+  i32 : labelCount
 ) =:: CompilerContext
 
 proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context -> ) =>: pushConstant
@@ -114,6 +125,34 @@ proc( ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>
   "unsupported value for register" ..panic
 end
 
+proc( CompilerContext ptr.mut : context -> i32 ) =>: nextLocalLabel
+  context [] .labelCount
+    $ 1 + context .labelCount=
+  return
+end
+proc(
+  BlockId : blockId
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> WhileBlockInfo ptr.mut ) =>: newWhileBlock
+  context [] .program .errors =:: errors
+  context .openBlocks
+    blockId
+    ## WhileBlockInfo
+      context nextLocalLabel ## whileLabel
+      context nextLocalLabel ## finallyLabel
+      context nextLocalLabel ## endLabel
+    WhileBlockInfo new BlockInfo .While
+  map.put .if ..drop
+    "multiple blocks with same id: " sb.copyPtr
+      blockId i64 cast.u sb.appendI
+    pos errors appendError
+  end
+  context .openBlocks blockId map.at .and .While .else
+    "map corruption" ..panic
+  end return
+end
+
 
 proc(
   ProcedureImpl : procImpl
@@ -144,6 +183,27 @@ proc(
      NOP case return
      Constant .case [] op [] .dataType ValType.fromType context pushConstant return
      ImplementProcedure .case [] context getProcName asm.enter list.append return
+     Block .case =:: blockData
+       blockData .blockType switch
+         WHILE case
+           blockData [] .blockId op [] .pos context newWhileBlock =:: whileBlock
+           ## TODO! freeze register state and remember in while block
+           whileBlock [] .whileLabel asm.localLabel list.append return
+         break
+         FINALLY case
+           context .openBlocks blockData [] .blockId map.at .and .While .else
+             "incompatible block-types for block-id " sb.copyPtr
+               blockData [] .blockId i64 cast.u sb.appendI
+               " expected while-block":s sb.appendStr
+             op [] .pos errors appendError
+             return
+           end =:: whileBlock
+           ## TODO! ensure state is compatible with continue branches
+           whileBlock [] .finallyLabel asm.localLabel list.append return
+         break
+         default break
+       end
+     break
      Return case
        ## TODO ensure return values are in correct registers
        asm.leave list.append
@@ -184,8 +244,13 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   ## CompilerContext
     program
     AMD64.asmContext
+    ( BlockId -> i32 ) => i32 cast end
+      ( BlockId BlockId -> bool ) => == end
+      512
+    BlockInfo map.create
     1024 asm.Atom list.create
     64 StackValue list.create
+    0
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   ## TODO? compile procedures seperately

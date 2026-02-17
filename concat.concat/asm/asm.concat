@@ -100,6 +100,9 @@ namespace: asm
   proc( -> Atom ) =>: export: leave
     Directive .Leave Atom .Directive
   end
+  proc( i32 -> Atom ) =>: export: localLabel
+    LocalLabel cast Directive .Label Atom .Directive
+  end
   
   proc( stringBuilder Operand : arg  Context : asmContext -> stringBuilder ) =>: export: appendOperand
     arg switch
