@@ -81,16 +81,99 @@ struct(
 union(
   WhileBlockInfo : While
 ) =:: BlockInfo
+union(
+  _ : None
+  iSize : Stack
+  LabelId : LocalVariable
+  LabelId : GlobalVariable
+) =:: ValueLocation
+union(
+  _ : None
+  ValueLocation : Val
+  ( ValueLocation ValueLocation ) : Val2
+  ValueLocation list : Vals
+) =:: RegisterUse
+struct(
+  RegisterUse : uses
+) =:: RegisterInfo
 struct(
   ProgramContext ptr.mut : program
   asm.Context : asmContext
   BlockId BlockInfo hashMap : openBlocks
+  asm.RegisterId RegisterInfo hashMap : registerInfo
   asm.RegisterId list : availableIntRegisters
   asm.RegisterId list : availableFloatRegisters
   asm.Atom list : tmpOps
   StackValue list : stack
   i32 : labelCount
 ) =:: CompilerContext
+
+proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: addLocation
+  context .registerInfo regId map.at .else
+    context .registerInfo regId loc RegisterUse .Val RegisterInfo new map.put ..drop
+    return
+  end =:: regInfo
+  regInfo [] .uses switch
+    None case loc RegisterUse .Val break
+    Val .case loc ( ValueLocation ValueLocation ) new RegisterUse .Val2 break
+    Val2 .case =:: vals
+      8 ValueLocation list.create
+        vals .0 list.append
+        vals .1 list.append
+        loc list.append
+      RegisterUse .Vals
+    break
+    Vals .case
+      loc list.append RegisterUse .Vals
+    break
+  end regInfo .uses=
+end
+proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: removeLocation
+  context .registerInfo regId map.at .else
+    return
+  end =:: regInfo
+  ## TODO! support removing register location
+  ## TODO make available once there are no more locations in use
+end
+proc( TypedValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: copyValueElt
+  val .value .Register .if
+    loc context addLocation
+  else ..drop end
+end
+proc( TypedValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: discardValueElt
+  val .value .Register .if
+    loc context removeLocation
+  else ..drop end
+end
+## TODO? generic procedure for applying proc to all elements of StackValue
+proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: copyValue
+  val switch
+    Val .case loc context copyValueElt break
+    Val2 .case
+      $ .0 loc context copyValueElt
+      .1 loc context copyValueElt
+    break
+    Val3 .case
+      $ .0 loc context copyValueElt
+      $ .1 loc context copyValueElt
+      .2 loc context copyValueElt
+    break
+  end
+end
+proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: discardValue
+  val switch
+    Val .case loc context discardValueElt break
+    Val2 .case
+      $ .0 loc context discardValueElt
+      .1 loc context discardValueElt
+    break
+    Val3 .case
+      $ .0 loc context discardValueElt
+      $ .1 loc context discardValueElt
+      .2 loc context discardValueElt
+    break
+  end
+end
 
 proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context -> ) =>: pushConstant
   context [] .stack
@@ -180,7 +263,6 @@ proc(
   asm.Value : src
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opMove
-  ## TODO remember which registers currently contain which value(s)
   context .asmContext .targetId switch
     AMD64 case
       moveType ValType.isInt if
@@ -206,21 +288,24 @@ end
 proc(
   asm.Atom list
   TypedValue : val
+  ValueLocation : loc
   CompilerContext ptr.mut : context
 -> asm.Atom list asm.RegisterId ) =>: moveToRegister
   val .value .Register .if return else ..drop end
   val .valType context nextFreeRegister =:: reg
+  reg loc context addLocation
   val .valType reg asm.Value .Register val .value context opMove
   reg return
 end
 proc(
   asm.Atom list
   TypedValue : val
+  ValueLocation : loc
   CompilerContext ptr.mut : context
 -> asm.Atom list TypedValue ) =>: freezeTypedValue
   val .value switch
     Int case
-      val context moveToRegister asm.Value .Register
+      val loc context moveToRegister asm.Value .Register
     break
     Float case "unsupported value" ..panic
     Register .case =:: regId
@@ -235,18 +320,19 @@ proc(
 -> asm.Atom list StackValue slice ) =>: freezeStack
   ## TODO ensure all values are in (unique) register or memory
   context [] .stack .length for =:: i
+    i ValueLocation .Stack =:: eltLoc
     context [] .stack i [] switch
       Val .case
-        context freezeTypedValue
+        eltLoc context freezeTypedValue
       StackValue .Val break
       Val2 .case
-        >$ $1 .0 context freezeTypedValue >>$ .0=
-        >$ $1 .1 context freezeTypedValue >>$ .1=
+        >$ $1 .0 eltLoc context freezeTypedValue >>$ .0=
+        >$ $1 .1 eltLoc context freezeTypedValue >>$ .1=
       StackValue .Val2 break
       Val3 .case
-        >$ $1 .0 context freezeTypedValue >>$ .0=
-        >$ $1 .1 context freezeTypedValue >>$ .1=
-        >$ $1 .2 context freezeTypedValue >>$ .2=
+        >$ $1 .0 eltLoc context freezeTypedValue >>$ .0=
+        >$ $1 .1 eltLoc context freezeTypedValue >>$ .1=
+        >$ $1 .2 eltLoc context freezeTypedValue >>$ .2=
       StackValue .Val3 break
     end context [] .stack i =[]
   end
@@ -262,16 +348,18 @@ proc(
     "stack underflow" sb.copyPtr pos errors appendError
     return
   end =:: popped
-  ## TODO update usage counter for registers
+  context [] .stack .length ValueLocation .Stack =:: valLoc
+  popped valLoc context discardValue
 end
 proc(
   StackValue : value
   CompilerContext ptr.mut : context
 -> ) =>: pushValue
+  context [] .stack .length ValueLocation .Stack =:: valLoc
   context [] .stack
     value list.append
   context .stack=
-  ## TODO update usage counter for registers
+  value valLoc context copyValue
 end
 proc(
   i32 : index
@@ -379,6 +467,13 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       ( BlockId BlockId -> bool ) => == end
       512
     BlockInfo map.create
+    ( asm.RegisterId -> i32 ) => asm.RegisterId.BASE_MASK & i32 cast end
+      ( asm.RegisterId asm.RegisterId -> bool ) =>
+        asm.RegisterId.BASE_MASK & >$ asm.RegisterId.BASE_MASK &
+        ==
+      end
+      512
+    RegisterInfo map.create
     AMD64.reg.GP_INT_REGISTERS list.fromSlice
     AMD64.reg.FLOAT_REGISTERS list.fromSlice
     1024 asm.Atom list.create
