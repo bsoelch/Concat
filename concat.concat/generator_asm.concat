@@ -85,6 +85,8 @@ struct(
   ProgramContext ptr.mut : program
   asm.Context : asmContext
   BlockId BlockInfo hashMap : openBlocks
+  asm.RegisterId list : availableIntRegisters
+  asm.RegisterId list : availableFloatRegisters
   asm.Atom list : tmpOps
   StackValue list : stack
   i32 : labelCount
@@ -111,12 +113,19 @@ proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context
 end
 
 proc( ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>: nextFreeRegister
-  ## TODO make target specific
   ## TODO correctly find free registers
   valType ValType.isInt if
-    AMD64.reg.RAX return
+    context [] .availableIntRegisters list.pop .if
+      >$ context .availableIntRegisters=
+      return
+    end
+    "unimplemented: freeing reigister" ..panic
   else valType ValType.isFloat _if
-    0 AMD64.reg.xmm return
+    context [] .availableFloatRegisters list.pop .if
+      >$ context .availableFloatRegisters=
+      return
+    end
+    "unimplemented: freeing reigister" ..panic
   end
   "unsupported value for register" ..panic
 end
@@ -244,6 +253,34 @@ proc(
   context [] .stack list.asSlice slice.copy slice.freeze
 end
 proc(
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> ) =>: dropValue
+  context [] .program =:: program
+  program .errors =:: errors
+  context [] .stack list.pop >$ context .stack= .else
+    "stack underflow" sb.copyPtr pos errors appendError
+    return
+  end =:: popped
+  ## TODO update usage counter for registers
+end
+proc(
+  StackValue : value
+  CompilerContext ptr.mut : context
+-> ) =>: pushValue
+  context [] .stack
+    value list.append
+  context .stack=
+  ## TODO update usage counter for registers
+end
+proc(
+  i32 : index
+  CompilerContext ptr.mut : context
+-> StackValue optional ) =>: peekValue
+  context [] .stack $ .length 1 - index iSize cast.u - list.get
+end
+
+proc(
   asm.Atom list
   Operation ptr : op
   i32 : opIndex
@@ -255,41 +292,58 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-   op .val switch
-     NOP case return
-     Constant .case [] op [] .dataType ValType.fromType context pushConstant return
-     ImplementProcedure .case [] context getProcName asm.enter list.append return
-     Block .case =:: blockData
-       blockData .blockType switch
-         WHILE case
-           blockData [] .blockId op [] .pos context newWhileBlock =:: whileBlock
-           context freezeStack whileBlock .whileState=
-           ## TODO! freeze register state and remember in while block
-           whileBlock [] .whileLabel asm.localLabel list.append return
-         break
-         FINALLY case
-           context .openBlocks blockData [] .blockId map.at .and .While .else
-             "incompatible block-types for block-id " sb.copyPtr
-               blockData [] .blockId i64 cast.u sb.appendI
-               " expected while-block":s sb.appendStr
-             op [] .pos errors appendError
-             return
-           end =:: whileBlock
-           ## TODO! ensure state is compatible with continue branches
-           whileBlock [] .finallyLabel asm.localLabel list.append return
-         break
-         default break
-       end
-     break
-     Return case
-       ## TODO ensure return values are in correct registers
-       asm.leave list.append
-     return
-     default break
-   end
-   "unsupported operation: " sb.copyPtr
-     op [] program sb.appendOp
-   op [] .pos errors appendError
+  op .val switch
+    NOP case return
+    Constant .case [] op [] .dataType ValType.fromType context pushConstant return
+    ImplementProcedure .case [] context getProcName asm.enter list.append return
+    Block .case =:: blockData
+      blockData .blockType switch
+        WHILE case
+          blockData [] .blockId op [] .pos context newWhileBlock =:: whileBlock
+          context freezeStack whileBlock .whileState=
+          ## TODO! freeze register state and remember in while block
+          whileBlock [] .whileLabel asm.localLabel list.append return
+        break
+        FINALLY case
+          context .openBlocks blockData [] .blockId map.at .and .While .else
+            "incompatible block-types for block-id " sb.copyPtr
+              blockData [] .blockId i64 cast.u sb.appendI
+              " expected while-block":s sb.appendStr
+            op [] .pos errors appendError
+            return
+          end =:: whileBlock
+          ## TODO! ensure state is compatible with continue branches
+          whileBlock [] .finallyLabel asm.localLabel list.append return
+        break
+        default break
+      end
+    break
+    Return case
+      ## TODO ensure return values are in correct registers
+      asm.leave list.append
+    return
+   StackMod .case =:: modData
+      modData [] .modType switch
+        COPY case
+          modData [] .n context peekValue .else
+            "stack underflow" sb.copyPtr op [] .pos errors appendError
+            return
+          end context pushValue
+        return
+        ROTATE case
+        break
+        DROP case
+          modData [] .n for ..drop
+            op [] .pos context dropValue
+          end
+        return
+      end
+    break
+    default break
+  end
+  "unsupported operation: " sb.copyPtr
+    op [] program sb.appendOp
+  op [] .pos errors appendError
 end
 
 proc(
@@ -325,10 +379,14 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       ( BlockId BlockId -> bool ) => == end
       512
     BlockInfo map.create
+    AMD64.reg.GP_INT_REGISTERS list.fromSlice
+    AMD64.reg.FLOAT_REGISTERS list.fromSlice
     1024 asm.Atom list.create
     64 StackValue list.create
     0
   CompilerContext new =:: mut: contextData
+  contextData .availableIntRegisters list.reverse
+  contextData .availableFloatRegisters list.reverse
   contextData@ =:: context
   ## TODO? compile procedures seperately
   1024 asm.Atom list.create
@@ -360,4 +418,5 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     target $1 io.fputSb ..drop
   sb.free ..drop
   ops list.free ..drop
+  ## TODO cleanup context
 end
