@@ -115,6 +115,7 @@ struct(
 ) =:: CompilerContext
 
 proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: addLocation
+  loc .None ? if return end
   context .registerInfo regId map.at .else
     context .registerInfo regId loc RegisterUse .Val RegisterInfo new map.put ..drop
     return
@@ -135,6 +136,7 @@ proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : conte
   end regInfo .uses=
 end
 proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: removeLocation
+  loc .None ? if return end
   context .registerInfo regId map.at .else
     return
   end =:: regInfo
@@ -290,6 +292,43 @@ proc(
   end
   "unimplemented configuration for: mov" ..panic
 end
+enum( EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CmpType
+proc(
+  asm.Atom list
+  ValType : argType
+  CmpType : cmpType
+  asm.Value : dst
+  asm.Value : arg1
+  asm.Value : arg2
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: opCmp
+  context .asmContext .targetId switch
+    AMD64 case
+      argType ValType.isInt if
+        AMD64.op.CMP
+          arg1 .Register .else "unimplemented" ..panic end
+          arg2 .Register .if
+            asm.op2
+          else .Int ._if
+            asm.op2
+          else
+            "unsupported arg for cmp" ..panic
+          end
+        list.append
+        ## TODO? use "xor, cmp, set" instead of "cmp, set, movzx" if dst does not overlap arg
+        AMD64.op.SETGT
+          dst .Register .else "unimplemented" ..panic end asm.RegisterId.SIZE_8 |
+        asm.op1 list.append
+        AMD64.op.MOVZX
+          dst .Register .else "unimplemented" ..panic end
+          $ asm.RegisterId.SIZE_8 |
+        asm.op2 list.append
+        return
+      end
+    break
+  end
+  "unimplemented configuration for: cmp" ..panic
+end
 
 proc(
   asm.Atom list
@@ -347,15 +386,16 @@ end
 proc(
   FilePosition : pos
   CompilerContext ptr.mut : context
--> ) =>: dropValue
+-> StackValue optional ) =>: popValue
   context [] .program =:: program
   program .errors =:: errors
   context [] .stack list.pop >$ context .stack= .else
     "stack underflow" sb.copyPtr pos errors appendError
-    return
+    StackValue optional.empty return
   end =:: popped
   context [] .stack .length ValueLocation .Stack =:: valLoc
   popped valLoc context discardValue
+  popped optional.wrap
 end
 proc(
   StackValue : value
@@ -376,6 +416,39 @@ end
 
 proc(
   asm.Atom list
+  BuiltIn : builtIn
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: compileBuiltIn
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  ## TODO reduce amount of duplicate code needed to handle built-ins
+  builtIn switch
+    GT_I64 case
+      pos context popValue
+        .else return end .Val .else "expected single value" ..panic end
+      =:: arg2 ## FIXME ensure that arg2 is not overwritten by move to register
+      pos context popValue
+        .else return end .Val .else "expected single value" ..panic end
+      ValueLocation .None context moveToRegister =:: arg1
+      ## TODO? option to merge cmp+jump
+      ValType .I64
+        CmpType .GT
+        $1 context nextFreeRegister asm.Value .Register
+        arg1 asm.Value .Register
+        arg2 .value
+      context opCmp
+    return
+    default break
+  end
+  "unsupported built-in: " sb.copyPtr
+    builtIn sb.appendBuiltIn
+  pos errors appendError
+end
+proc(
+  asm.Atom list
   Operation ptr : op
   i32 : opIndex
   CompilerContext ptr.mut : context
@@ -389,6 +462,7 @@ proc(
   op .val switch
     NOP case return
     Constant .case [] op [] .dataType ValType.fromType context pushConstant return
+    BuiltIn .case [] op [] .pos context compileBuiltIn return
     ImplementProcedure .case [] =:: implId
       implId context getProcName asm.enter list.append
       program [] .procedures implId .procId iSize cast.u @[] =:: procData
@@ -421,19 +495,19 @@ proc(
         inTypes i [] ValType.fromType =:: argValType
         procType i i32 cast.u typeContext types.getProcArgLabel =:: argLabel
         argValType ValType.isInt if
-          intCount 1 + intCount=
           intCount AMD64.reg.intArg .if
             asm.Value .Register argValType StackValue.val
           else
             "memory arguments are not supported" ..panic
           end
+          intCount 1 + intCount=
         else argValType ValType.isFloat _if
-          floatCount 1 + floatCount=
           floatCount AMD64.reg.floatArg .if
             asm.Value .Register argValType StackValue.val
           else
             "memory arguments are not supported" ..panic
           end
+          floatCount 1 + floatCount=
         else
           "unsupported valType" ..panic
         end =:: argValue
@@ -482,7 +556,7 @@ proc(
         break
         DROP case
           modData [] .n for ..drop
-            op [] .pos context dropValue
+            op [] .pos context popValue ..drop
           end
         return
       end
