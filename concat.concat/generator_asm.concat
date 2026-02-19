@@ -86,6 +86,7 @@ union(
   iSize : Stack
   LabelId : LocalVariable
   LabelId : GlobalVariable
+  i32 : LocalMemory
 ) =:: ValueLocation
 union(
   _ : None
@@ -97,10 +98,15 @@ struct(
   RegisterUse : uses
 ) =:: RegisterInfo
 struct(
+  ValueLocation : permanentLocation
+  ValueLocation : cachedLocation
+) =:: VariableLocation
+struct(
   ProgramContext ptr.mut : program
   asm.Context : asmContext
   BlockId BlockInfo hashMap : openBlocks
   asm.RegisterId RegisterInfo hashMap : registerInfo
+  LabelId VariableLocation hashMap : variableInfo
   asm.RegisterId list : availableIntRegisters
   asm.RegisterId list : availableFloatRegisters
   asm.Atom list : tmpOps
@@ -383,7 +389,61 @@ proc(
   op .val switch
     NOP case return
     Constant .case [] op [] .dataType ValType.fromType context pushConstant return
-    ImplementProcedure .case [] context getProcName asm.enter list.append return
+    ImplementProcedure .case [] =:: implId
+      implId context getProcName asm.enter list.append
+      program [] .procedures implId .procId iSize cast.u @[] =:: procData
+      procData .implementation .Code .else
+        "only code-procs should have impl-id" ..panic
+      end =:: procImpl
+      implId .implementationId 0 >= if
+        procImpl [] .implementations implId .implementationId @[] =:: procInfo
+        procInfo [] .procType procInfo [] .variables
+      else
+        procData [] .procType procImpl [] .variables
+      end =:: variables =:: procType
+      ## TODO? remember memory-slot info
+      0 variables for =:: var =:: i
+        context .variableInfo var .label
+          ## VariableLocation
+            i ValueLocation .LocalMemory
+            ValueLocation .None
+          VariableLocation new
+        map.put ..drop
+      finally i 1 + end ..drop
+      ## move procedure args into stack-slots/memory
+      procType typeContext types.getProcIn .else
+        "proc without in" ..panic
+      end =:: inTypes
+      ## TODO correctly handle (target specific) calling convention
+      0 =:: mut: intCount
+      0 =:: mut: floatCount
+      inTypes .length 1 - while $ 0 iSize.sge do =:: i
+        inTypes i [] ValType.fromType =:: argValType
+        procType i i32 cast.u typeContext types.getProcArgLabel =:: argLabel
+        argValType ValType.isInt if
+          intCount 1 + intCount=
+          intCount AMD64.reg.intArg .if
+            asm.Value .Register argValType StackValue.val
+          else
+            "memory arguments are not supported" ..panic
+          end
+        else argValType ValType.isFloat _if
+          floatCount 1 + floatCount=
+          floatCount AMD64.reg.floatArg .if
+            asm.Value .Register argValType StackValue.val
+          else
+            "memory arguments are not supported" ..panic
+          end
+        else
+          "unsupported valType" ..panic
+        end =:: argValue
+        context .variableInfo argLabel map.at .if =:: argVar
+          "unimplemented: named arguments" ..panic
+        else ## variable does not exist
+          argValue context pushValue
+        end
+      finally i 1 - end ..drop
+    return
     Block .case =:: blockData
       blockData .blockType switch
         WHILE case
@@ -434,11 +494,19 @@ proc(
   op [] .pos errors appendError
 end
 
-proc(
-  CompilerContext ptr.mut : context
--> asm.Atom list ) =>: beginProcedure
+proc( CompilerContext ptr.mut : context -> asm.Atom list ) =>: beginProcedure
   context [] .stack list.clear context .stack=
-  ## TODO prepare internal state for comping proc (rememeber used stack-space, used registers, ...)
+  context .openBlocks map.clear
+  context .registerInfo map.clear
+  context .variableInfo map.clear
+  context [] .availableIntRegisters list.clear
+    AMD64.reg.GP_INT_REGISTERS list.appendSlice
+  context .availableIntRegisters=
+  context [] .availableIntRegisters list.reverse
+  context [] .availableFloatRegisters
+    AMD64.reg.FLOAT_REGISTERS list.appendSlice
+  context .availableFloatRegisters=
+  context [] .availableFloatRegisters list.reverse
   context [] .tmpOps list.clear
   asm.Atom list.emptyNoReallloc context .tmpOps= ## ensure tmp-ops on compiler are not modified while on stack
 end
@@ -467,21 +535,20 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       ( BlockId BlockId -> bool ) => == end
       512
     BlockInfo map.create
-    ( asm.RegisterId -> i32 ) => asm.RegisterId.BASE_MASK & i32 cast end
+    ( asm.RegisterId -> i32 ) => asm.RegisterId.BASE_SHIFT >>> i32 cast end
       ( asm.RegisterId asm.RegisterId -> bool ) =>
         asm.RegisterId.BASE_MASK & >$ asm.RegisterId.BASE_MASK &
         ==
       end
-      512
+      64
     RegisterInfo map.create
-    AMD64.reg.GP_INT_REGISTERS list.fromSlice
-    AMD64.reg.FLOAT_REGISTERS list.fromSlice
+    labelHash@ labelEq@ 1024 VariableLocation map.create
+    asm.RegisterId list.empty
+    asm.RegisterId list.empty
     1024 asm.Atom list.create
     64 StackValue list.create
     0
   CompilerContext new =:: mut: contextData
-  contextData .availableIntRegisters list.reverse
-  contextData .availableFloatRegisters list.reverse
   contextData@ =:: context
   ## TODO? compile procedures seperately
   1024 asm.Atom list.create

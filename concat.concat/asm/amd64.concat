@@ -66,6 +66,18 @@ namespace: AMD64
       8 xmm 9 xmm 10 xmm 11 xmm 12 xmm 13 xmm 14 xmm 15 xmm
     } =:: _FLOAT_REGISTERS
     proc( -> RegisterId slice ) => _FLOAT_REGISTERS@ slice.wrap end =:: export: FLOAT_REGISTERS
+    {
+      RDI RSI RDX RCX R8 R9
+    } =:: _INT_ARG_REGISTERS
+    proc( i32 : i -> RegisterId optional ) =>: export: intArg
+      _INT_ARG_REGISTERS@ slice.wrap i slice.get
+    end
+    proc( i32 : i -> RegisterId optional ) =>: export: floatArg
+      i 0 < or i 7 > if
+        RegisterId optional.empty return
+      end
+      i xmm optional.wrap return
+    end
     proc( stringBuilder RegisterId : regId char8 : baseName -> stringBuilder ) =>: appendRegNamed1
       regId RegisterId.SIZE_MASK & switch
         RegisterId.SIZE_64 case 'r' sb.appendC baseName sb.appendC 'x' sb.appendC return
