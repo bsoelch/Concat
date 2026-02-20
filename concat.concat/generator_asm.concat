@@ -387,6 +387,7 @@ proc(
   val .value .Register .if return else ..drop end
   val .valType context nextFreeRegister =:: reg
   reg loc context addLocation
+  ## TODO update register-id size for returned register
   val .valType reg asm.Value .Register val .value context opMove
   reg return
 end
@@ -562,6 +563,23 @@ proc(
           ## TODO! freeze register state and remember in while block
           whileBlock [] .whileLabel asm.localLabel list.append return
         break
+        DO case
+          context .openBlocks blockData [] .blockId map.at .and .While .else
+            "incompatible block-types for block-id " sb.copyPtr
+              blockData [] .blockId i64 cast.u sb.appendI
+              " expected while-block":s sb.appendStr
+            op [] .pos errors appendError
+            return
+          end =:: whileBlock
+          op [] .pos context popValue
+            .and .Val .else "expected single value" ..panic end
+          ValueLocation .None context moveToRegister asm.RegisterId.SIZE_8 | =:: arg
+          ## TODO: add some way to fuse compare+jump
+          AMD64.op.TEST arg arg asm.op2 list.append
+          ## TODO! ensure state is compatible with break branches
+          AMD64.op.JZ whileBlock [] .endLabel asm.LocalLabel cast asm.op1 list.append
+          return
+        break
         FINALLY case
           context .openBlocks blockData [] .blockId map.at .and .While .else
             "incompatible block-types for block-id " sb.copyPtr
@@ -580,6 +598,20 @@ proc(
       blockData .blockType switch
         PROCEDURE case
           asm.endProc list.append
+        return
+        WHILE case
+          context .openBlocks blockData [] .blockId map.at .and .While .else
+            "incompatible block-types for block-id " sb.copyPtr
+              blockData [] .blockId i64 cast.u sb.appendI
+              " expected while-block":s sb.appendStr
+            op [] .pos errors appendError
+            return
+          end =:: whileBlock
+          ## TODO! ensure state is compatible with while branch
+          AMD64.op.JMP whileBlock [] .whileLabel asm.LocalLabel cast asm.op1 list.append
+          ## TODO! ensure state is compatible with break branches
+          whileBlock [] .endLabel asm.localLabel list.append
+          ## TODO: cleanup block-data
         return
         default break
       end
