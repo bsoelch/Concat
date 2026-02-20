@@ -66,6 +66,7 @@ namespace: asm
   union(
     GlobalLabel : Enter
     _ : Leave
+    _ : EndProc
     LocalLabel : Label
   ) =:: export: Directive
   union(
@@ -106,6 +107,9 @@ namespace: asm
   proc( -> Atom ) =>: export: leave
     Directive .Leave Atom .Directive
   end
+  proc( -> Atom ) =>: export: endProc
+    Directive .EndProc Atom .Directive
+  end
   proc( i32 -> Atom ) =>: export: localLabel
     LocalLabel cast Directive .Label Atom .Directive
   end
@@ -119,6 +123,7 @@ namespace: asm
     end
   end
   proc( stringBuilder Instruction : op  Context : asmContext -> stringBuilder ) =>: export: appendInstruction
+    "  ":s sb.appendStr
     op .opCode asmContext .appendOpCode ()
     ' ' sb.appendC
     op .args switch
@@ -151,6 +156,7 @@ namespace: asm
     directive switch
       Enter .case =:: label "enter ":s sb.appendStr label asmContext appendGlobalLabel ':' sb.appendC return
       Leave case "leave":s sb.appendStr return
+      EndProc case "endProc\n":s sb.appendStr return
       Label .case asmContext appendLocalLabel ':' sb.appendC return
     end
   end

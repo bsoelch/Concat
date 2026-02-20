@@ -9,7 +9,7 @@ import "measure.concat"
 import "asm/asm.concat"
 import "asm/amd64.concat"
 
-enum( EMPTY I8 I16 I32 I64 F32 F64 POINTER PROC_POINTER ) =:: ValType
+enum( EMPTY BOOL I8 I16 I32 I64 F32 F64 POINTER PROC_POINTER ) =:: ValType
 namespace: ValType
   proc( Type : t -> ValType ) =>: fromType
     t switch
@@ -27,20 +27,20 @@ namespace: ValType
   end
   proc( ValType : valType -> bool ) =>: isInt
     valType switch
-      I8 I16 I32 I64 POINTER PROC_POINTER case true return
+      BOOL I8 I16 I32 I64 POINTER PROC_POINTER case true return
       EMPTY F32 F64 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isFloat
     valType switch
       F32 F64 case true return
-      EMPTY I8 I16 I32 I64 POINTER PROC_POINTER case false return
+      EMPTY BOOL I8 I16 I32 I64 POINTER PROC_POINTER case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isAddress
     valType switch
       POINTER PROC_POINTER case true return
-      EMPTY I8 I16 I32 I64 F32 F64 case false return
+      EMPTY BOOL I8 I16 I32 I64 F32 F64 case false return
     end
   end
 end
@@ -292,21 +292,73 @@ proc(
   end
   "unimplemented configuration for: mov" ..panic
 end
+
+proc(
+  asm.Atom list
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list asm.RegisterId asm.Value ) =>: amd64GetBinOpArgs
+  pos context popValue
+    .and .Val .else "expected single value" ..panic end
+  .value =:: arg2 ## FIXME ensure that arg2 is not overwritten by move to register
+  pos context popValue
+    .and .Val .else "expected single value" ..panic end
+  ValueLocation .None context moveToRegister =:: arg1
+  arg1 arg2
+end
+enum( ADD SUB MUL ) =:: BinOp
+{ AMD64.op.ADD AMD64.op.SUB AMD64.op.IMUL } =:: AMD64_BIN_OPS
+proc( BinOp : op -> asm.OpCode ) =>: binOpCodeAMD64
+  AMD64_BIN_OPS op ..label iSize cast.u []
+end
+## TODO! check stack-size before bin-op / cmp
+proc(
+  asm.Atom list
+  ValType : argType
+  BinOp : opType
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: opBinOp
+  context .asmContext .targetId switch
+    AMD64 case
+      pos context amd64GetBinOpArgs =:: arg2 =:: arg1
+      argType context nextFreeRegister =:: dst
+      ## TODO? create proc for nextReg+push
+      dst asm.Value .Register argType StackValue.val context pushValue
+      argType ValType.isInt if
+        opType binOpCodeAMD64
+          arg1
+          arg2 .Register .if
+            asm.op2
+          else .Int ._if
+            asm.op2
+          else
+            "unsupported arg for binary-operation" ..panic
+          end
+        list.append
+        return
+      end
+    break
+  end
+  "unimplemented configuration for: cmp" ..panic
+end
 enum( EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CmpType
 proc(
   asm.Atom list
   ValType : argType
   CmpType : cmpType
-  asm.Value : dst
-  asm.Value : arg1
-  asm.Value : arg2
+  FilePosition : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opCmp
   context .asmContext .targetId switch
     AMD64 case
+      pos context amd64GetBinOpArgs =:: arg2 =:: arg1
+      ValType .BOOL context nextFreeRegister =:: dst
+      dst asm.Value .Register ValType .BOOL StackValue.val context pushValue
+      ## TODO? option to merge cmp+jump
       argType ValType.isInt if
         AMD64.op.CMP
-          arg1 .Register .else "unimplemented" ..panic end
+          arg1
           arg2 .Register .if
             asm.op2
           else .Int ._if
@@ -315,14 +367,10 @@ proc(
             "unsupported arg for cmp" ..panic
           end
         list.append
+        ## TODO use correct sizes
         ## TODO? use "xor, cmp, set" instead of "cmp, set, movzx" if dst does not overlap arg
-        AMD64.op.SETGT
-          dst .Register .else "unimplemented" ..panic end asm.RegisterId.SIZE_8 |
-        asm.op1 list.append
-        AMD64.op.MOVZX
-          dst .Register .else "unimplemented" ..panic end
-          $ asm.RegisterId.SIZE_8 |
-        asm.op2 list.append
+        AMD64.op.SETGT dst asm.RegisterId.SIZE_8 | asm.op1 list.append
+        AMD64.op.MOVZX dst $ asm.RegisterId.SIZE_8 | asm.op2 list.append
         return
       end
     break
@@ -426,21 +474,9 @@ proc(
   idContext .typeContext =:: typeContext
   ## TODO reduce amount of duplicate code needed to handle built-ins
   builtIn switch
-    GT_I64 case
-      pos context popValue
-        .else return end .Val .else "expected single value" ..panic end
-      =:: arg2 ## FIXME ensure that arg2 is not overwritten by move to register
-      pos context popValue
-        .else return end .Val .else "expected single value" ..panic end
-      ValueLocation .None context moveToRegister =:: arg1
-      ## TODO? option to merge cmp+jump
-      ValType .I64
-        CmpType .GT
-        $1 context nextFreeRegister asm.Value .Register
-        arg1 asm.Value .Register
-        arg2 .value
-      context opCmp
-    return
+    GT_I64 case ValType .I64 CmpType .GT pos context opCmp return
+    ADD_I64 case ValType .I64 BinOp .ADD pos context opBinOp return
+    SUB_I64 case ValType .I64 BinOp .SUB pos context opBinOp return
     default break
   end
   "unsupported built-in: " sb.copyPtr
@@ -540,6 +576,14 @@ proc(
         default break
       end
     break
+    BlockEnd .case =:: blockData
+      blockData .blockType switch
+        PROCEDURE case
+          asm.endProc list.append
+        return
+        default break
+      end
+    break
     Return case
       ## TODO ensure return values are in correct registers
       asm.leave list.append
@@ -553,7 +597,39 @@ proc(
           end context pushValue
         return
         ROTATE case
-        break
+          modData [] .n =:: offset
+          offset i32.abs 1 + =:: eltCount
+          context [] .stack .length eltCount iSize cast.u u< if
+            "CodeGen: stack underflow in rotate, stackSize: " sb.copyPtr
+              context [] .stack .length sb.appendI
+            op [] .pos errors appendError
+            return
+          end
+          eltCount 3 <= if
+            StackValue 3 array : buffer
+            buffer@ list.wrapBuffer
+          else
+            eltCount StackValue list.create
+          end
+            eltCount for ..drop
+              op [] .pos context popValue .else
+                "stack underflow" ..panic ## should not be rechached due to pre-checking size
+              end list.append
+            end
+            offset 0 > if
+              list.removeLast =:: lowValue
+              $ .length for ..drop
+                list.removeLast context pushValue
+              end
+              lowValue context pushValue
+            else
+              $ 0 [] context pushValue
+              $ .length 1:iSize - for ..drop
+                list.removeLast context pushValue
+              end
+            end
+          list.free ..drop
+        return
         DROP case
           modData [] .n for ..drop
             op [] .pos context popValue ..drop
