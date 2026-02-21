@@ -584,7 +584,9 @@ proc( TypeCheckState ptr.mut : state -> TypedValue optional ) =>: popTypedValue
   state .stack branchTree.pop .else
     TypedValue optional.empty return
   end =:: typeInfo
-    typeInfo [] .opIndex state deleteOp ## remove stored operation
+  typeInfo [] .opIndex state tryDeleteOp if ## remove stored operation
+    TypedValue optional.empty return
+  end
   typeInfo [] .valueType typeInfo [] .value TypedValue new optional.wrap return
 end
 proc( TypeCheckState ptr.mut : state -> ConstValue optional ) =>: popValue
@@ -2400,7 +2402,8 @@ proc(
   while count 0 != do
     count 1 - count=
     state popTypedValue .else
-      "stack underflow":s pos ..line internalErrorNoOp ..unreachable
+      "missing value in initializer expected constant" sb.copyPtr pos errors appendError
+      break
     end
       $ .valType state [] .typeBuffer count typesTail + =[]
     .value state [] .constBuffer count valsTail + =[]

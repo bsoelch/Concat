@@ -1,0 +1,4 @@
+proc( -> i32 ) =>: zero 0 end
+proc( -> ) =>: main
+  { zero } =:: x
+end
