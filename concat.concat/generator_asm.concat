@@ -412,6 +412,7 @@ proc(
   CompilerContext ptr.mut : context
 -> asm.Atom list TypedValue ) =>: freezeTypedValue
   val .value switch
+    None case "unsupported value" ..panic
     Int case
       val loc context moveToRegister asm.Value .Register
     break

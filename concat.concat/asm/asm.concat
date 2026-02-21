@@ -136,6 +136,13 @@ namespace: asm
         ", ":s sb.appendStr
         args .1 asmContext appendOperand
       return
+      Val3 .case =:: args
+        args .0 asmContext appendOperand
+        ", ":s sb.appendStr
+        args .1 asmContext appendOperand
+        ", ":s sb.appendStr
+        args .2 asmContext appendOperand
+      return
       Vals .case =:: args
         true =:: mut: first
         args for =:: arg
