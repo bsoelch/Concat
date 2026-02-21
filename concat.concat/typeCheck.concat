@@ -4858,6 +4858,11 @@ proc(
               tmp state appendOp ..drop
               switchBlock .switchType typeContext types.isEnumOrTaggedUnion if
                 switchBlock .switchType
+                  $ typeContext types.isTaggedUnion if
+                    typeContext types.asRawUnion .else ..unreachable end
+                  end
+                =:: rawSwitchType
+                rawSwitchType
                   typeContext
                 types.compositeEltCount =:: eltCount
                 switchData [] .labels =:: labels
@@ -4877,13 +4882,13 @@ proc(
                         end
                       end
                       match ! if
-                        switchBlock .switchType
+                        rawSwitchType
                           i i32 cast.u
                           typeContext
                         types.compositeGetLabel =:: label
                         " - \"" sb.appendS
                         label labelContext sb.appendLabelPath
-                        "\" declaredAt" sb.appendS
+                        "\" declaredAt"  sb.appendS
                         label labelContext id.labelPos .if
                           sb.appendPos
                         else

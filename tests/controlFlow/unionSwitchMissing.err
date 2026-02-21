@@ -1,0 +1,4 @@
+switch statement does not cover all labels in enum named[4651]( "anUnion" )
+missing labels:
+ - "C" declaredAt./tests/controlFlow/unionSwitchMissing.concat:1:32
+ at ./tests/controlFlow/unionSwitchMissing.concat:7:3
