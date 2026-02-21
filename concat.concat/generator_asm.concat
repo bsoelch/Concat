@@ -72,11 +72,17 @@ namespace: StackValue
   end
 end
 struct(
-  ## TODO remember state(s) at while/continue/break
+  StackValue slice.mut : stack
+) =:: RegisterState
+struct(
   i32 : whileLabel
   i32 : finallyLabel
   i32 : endLabel
-  StackValue slice : whileState
+  bool : hasBreak
+  bool : hasContinue
+  RegisterState : whileState
+  RegisterState : breakState
+  RegisterState : continueState
 ) =:: WhileBlockInfo
 union(
   WhileBlockInfo : While
@@ -238,7 +244,10 @@ proc(
       context nextLocalLabel ## whileLabel
       context nextLocalLabel ## finallyLabel
       context nextLocalLabel ## endLabel
-      StackValue slice.empty
+      false false
+      StackValue slice.emptyMutable RegisterState new
+      StackValue slice.emptyMutable RegisterState new
+      StackValue slice.emptyMutable RegisterState new
     WhileBlockInfo new BlockInfo .While
   map.put .if ..drop
     "multiple blocks with same id: " sb.copyPtr
@@ -248,6 +257,11 @@ proc(
   context .openBlocks blockId map.at .and .While .else
     "map corruption" ..panic
   end return
+end
+proc( WhileBlockInfo : block -> ) =>: freeWhileBlock
+  block .whileState .stack slice.free ..drop
+  block .breakState .stack slice.free ..drop
+  block .continueState .stack slice.free ..drop
 end
 
 
@@ -411,7 +425,7 @@ end
 proc(
   asm.Atom list
   CompilerContext ptr.mut : context
--> asm.Atom list StackValue slice ) =>: freezeStack
+-> asm.Atom list RegisterState ) =>: rememberState
   ## TODO ensure all values are in (unique) register or memory
   context [] .stack .length for =:: i
     i ValueLocation .Stack =:: eltLoc
@@ -430,8 +444,34 @@ proc(
       StackValue .Val3 break
     end context [] .stack i =[]
   end
-  context [] .stack list.asSlice slice.copy slice.freeze
+  context [] .stack list.asSlice slice.copy RegisterState new
 end
+proc(
+  RegisterState : state
+  CompilerContext ptr.mut : context
+-> ) =>: resetState
+  context [] .stack list.clear context .stack=
+  state .stack for context pushValue end
+end
+proc(
+  asm.Atom list
+  RegisterState : state
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: restoreState
+  context [] .program =:: program
+  program .errors =:: errors
+  state .stack =:: oldStack
+  context .stack [] .length oldStack .length != if
+    "register-states out of sync" sb.copyPtr pos errors appendError
+    state context resetState return
+  end
+  ## TODO! update new state tp match old state
+  ## go through stack-elements one by one: if match -> do nothing
+  ## if slot is non-empty: reassign element that currently is in slot to new position
+  ## move value to slot, update all other references
+end
+
 proc(
   FilePosition : pos
   CompilerContext ptr.mut : context
@@ -559,7 +599,7 @@ proc(
       blockData .blockType switch
         WHILE case
           blockData [] .blockId op [] .pos context newWhileBlock =:: whileBlock
-          context freezeStack whileBlock .whileState=
+          context rememberState whileBlock .whileState=
           ## TODO! freeze register state and remember in while block
           whileBlock [] .whileLabel asm.localLabel list.append return
         break
@@ -576,7 +616,12 @@ proc(
           ValueLocation .None context moveToRegister asm.RegisterId.SIZE_8 | =:: arg
           ## TODO: add some way to fuse compare+jump
           AMD64.op.TEST arg arg asm.op2 list.append
-          ## TODO! ensure state is compatible with break branches
+          whileBlock [] .hasBreak if
+            whileBlock [] .breakState op [] .pos context restoreState
+          else
+            context rememberState whileBlock .breakState=
+            true whileBlock .hasBreak=
+          end
           AMD64.op.JZ whileBlock [] .endLabel asm.LocalLabel cast asm.op1 list.append
           return
         break
@@ -588,7 +633,9 @@ proc(
             op [] .pos errors appendError
             return
           end =:: whileBlock
-          ## TODO! ensure state is compatible with continue branches
+          whileBlock [] .hasContinue if
+            whileBlock [] .continueState op [] .pos context restoreState
+          end
           whileBlock [] .finallyLabel asm.localLabel list.append return
         break
         default break
@@ -600,18 +647,18 @@ proc(
           asm.endProc list.append
         return
         WHILE case
-          context .openBlocks blockData [] .blockId map.at .and .While .else
+          context .openBlocks blockData [] .blockId map.remove .and .While .else
             "incompatible block-types for block-id " sb.copyPtr
               blockData [] .blockId i64 cast.u sb.appendI
               " expected while-block":s sb.appendStr
             op [] .pos errors appendError
             return
           end =:: whileBlock
-          ## TODO! ensure state is compatible with while branch
-          AMD64.op.JMP whileBlock [] .whileLabel asm.LocalLabel cast asm.op1 list.append
-          ## TODO! ensure state is compatible with break branches
-          whileBlock [] .endLabel asm.localLabel list.append
-          ## TODO: cleanup block-data
+          whileBlock .whileState op [] .pos context restoreState
+          AMD64.op.JMP whileBlock .whileLabel asm.LocalLabel cast asm.op1 list.append
+          whileBlock .endLabel asm.localLabel list.append
+          whileBlock .breakState context resetState
+          whileBlock freeWhileBlock
         return
         default break
       end
