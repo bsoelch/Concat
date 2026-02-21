@@ -1,0 +1,9 @@
+import slice
+i32 =:: u32
+0 u32 cast =:: A
+1 u32 cast =:: B
+2 u32 cast =:: C
+{ A B C } slice.wrap =:: ARR
+proc( -> ) =>: main
+  ARR =:: x
+end
