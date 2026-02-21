@@ -2429,12 +2429,14 @@ namespace: types
     targetBase context types.isMutable if
       false return ## cannot cast non-empty initializer to mutable pointer
     end
-    targetBase context types.isArray or targetBase context types.isArrayPointer if
+    targetBase context types.isArray or targetBase context types.isArrayPointer or
+        targetBase context types.isRawPointer if
       src .Initializer .else
-        "expected initializer-tyüe" ..panic
+        "expected initializer-type" ..panic
       end InitializerInfo ptr cast =:: initInfo
       targetBase context getBaseType =:: eltType
       initInfo .arrayType [] eltType context canAutoCast and
+        targetBase context types.isRawPointer or
         targetBase context getArraySize =:: targetSize
         targetSize .Int .and srcSize i64 cast.u == if
           true return
