@@ -122,16 +122,43 @@ struct(
   i32 : labelCount
 ) =:: CompilerContext
 
+proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: usedRegister
+  regId context [] .asmContext .isIntRegister () if
+    context [] .availableIntRegisters
+      regId list.removeValue ..drop
+    context .availableIntRegisters=
+  else
+    context [] .availableFloatRegisters
+      regId list.removeValue ..drop
+    context .availableFloatRegisters=
+  end
+end
+proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: freeRegister
+  regId context [] .asmContext .isIntRegister () if
+    context [] .availableIntRegisters
+      $ list.asSlice regId slice.contains ! if
+        regId list.append
+      end
+    context .availableIntRegisters=
+  else
+    context [] .availableFloatRegisters
+      $ list.asSlice regId slice.contains ! if
+        regId list.append
+      end
+    context .availableFloatRegisters=
+  end
+end
 proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: addLocation
   loc .None ? if return end
   context .registerInfo regId map.at .else
     context .registerInfo regId loc RegisterUse .Val RegisterInfo new map.put ..drop
+    regId context usedRegister
     return
   end =:: regInfo
   regInfo [] .uses switch
     None case
-      loc RegisterUse .Val 
-      ## TODO mark register as not available
+      loc RegisterUse .Val
+      regId context usedRegister
     break
     Val .case loc ( ValueLocation ValueLocation ) new RegisterUse .Val2 break
     Val2 .case =:: vals

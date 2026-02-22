@@ -93,6 +93,7 @@ namespace: asm
   struct(
     proc( stringBuilder OpCode -> stringBuilder ) ptr : appendOpCode
     proc( stringBuilder RegisterId -> stringBuilder ) ptr : appendReg
+    proc( RegisterId -> bool ) ptr : isIntRegister
     TargetId : targetId
   ) =:: export: Context
   proc( OpCode : opCode RegisterId : r1 -> Atom ) =>: export: opR

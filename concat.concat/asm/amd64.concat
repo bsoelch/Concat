@@ -83,6 +83,9 @@ namespace: AMD64
       end
       i xmm optional.wrap return
     end
+    proc( RegisterId -> bool ) =>: isIntReg
+      FLAG_VEC & ? !
+    end
     proc( stringBuilder RegisterId : regId char8 : baseName -> stringBuilder ) =>: appendRegNamed1
       regId RegisterId.SIZE_MASK & switch
         RegisterId.SIZE_64 case 'r' sb.appendC baseName sb.appendC 'x' sb.appendC return
@@ -132,6 +135,7 @@ namespace: AMD64
       ## asm.Context
         op.appendName@
         reg.appendName@
+        reg.isIntReg@
         asm.TargetId .AMD64
       asm.Context new $ optional.wrap _asmContext=
     end

@@ -445,7 +445,30 @@ namespace: list
       $ .length b .length + >$ .length=
     return
   end
-  ## XXX? insert64
+  proc(
+    type : auto: T
+    T list
+    iSize : index
+  -> T list ) =>: export: remove
+    $ index checkIndex
+    $ .data index @[] $1 .data index 1 + @[] $2 .length index - 1 - mem.move ..drop
+    $ .length 1:iSize - >$ .length=
+  end
+
+  proc(
+    type : auto: T
+    T list
+    T : elt
+  -> T list bool ) =>: export: removeValue
+    $ .length 0:iSize == if
+      false return
+    end
+    $ asSlice elt slice.indexOf .if
+      remove true return
+    end
+    false return
+  end
+  ## TODO? removeAll
 
   proc(
     type : auto: T
