@@ -96,6 +96,20 @@ union(
   LabelId : GlobalVariable
   i32 : LocalMemory
 ) =:: ValueLocation
+namespace: ValueLocation
+  proc( ValueLocation : a ValueLocation : b -> bool ) =>: eq
+    a ..label b ..label != if false return end
+    a switch
+      None case true return
+      Stack .case b .Stack .else ..unreachable end == return
+      Stack2 .case b .Stack2 .else ..unreachable end == return
+      Stack3 .case b .Stack3 .else ..unreachable end == return
+      LocalVariable .case b .LocalVariable .else ..unreachable end == return
+      GlobalVariable .case b .LocalVariable .else ..unreachable end == return
+      LocalMemory .case b .LocalMemory .else ..unreachable end == return
+    end
+  end
+end
 union(
   _ : None
   ValueLocation : Val
@@ -178,6 +192,42 @@ proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : conte
   context .registerInfo regId map.at .else
     return
   end =:: regInfo
+  regInfo [] .uses switch
+    None case return
+    Val .case =:: oldVal
+      oldVal loc ValueLocation.eq if
+        regId context freeRegister
+        RegisterUse .None
+      else
+        oldVal RegisterUse .Val
+      end
+    break
+    Val2 .case =:: oldVals
+      oldVals .0 loc ValueLocation.eq if
+        oldVals .1 RegisterUse .Val
+      else oldVals .1 loc ValueLocation.eq _if
+        oldVals .0 RegisterUse .Val
+      else
+        oldVals RegisterUse .Val2
+      end
+    break
+    Vals .case
+      loc ValueLocation.eq@ list.removeValue if
+        $ .length 0 == if
+          list.free ..drop
+          regId context freeRegister
+          RegisterUse .None
+        else $ .length 1 == _if
+          $ 0 [] RegisterUse .Val
+          >$ list.free ..drop
+        else
+          RegisterUse .Vals
+        end
+      else
+        RegisterUse .Vals
+      end
+    break
+  end regInfo .uses=
   ## TODO! support removing register location
   ## TODO make available once there are no more locations in use
 end

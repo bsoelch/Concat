@@ -284,7 +284,22 @@ namespace: slice
   -> iSize optional ) =>: export: lastIndexOf
     elts .length 1:iSize - ## index
     while $ -1:iSize != do ## decrement until reaching zero (inclusive)
-      elts .data ..over [] elt == if
+      elts .data $1 [] elt == if
+        optional.wrap return
+      end
+      1:iSize -
+    end ..drop
+    iSize optional.empty return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    T : elt
+    ( T T -> bool ) ptr : fEq
+  -> iSize optional ) =>: export: lastIndexOfEq
+    elts .length 1:iSize - ## index
+    while $ -1:iSize != do ## decrement until reaching zero (inclusive)
+      elts .data $1 [] elt fEq () if
         optional.wrap return
       end
       1:iSize -
