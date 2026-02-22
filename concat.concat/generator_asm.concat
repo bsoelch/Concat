@@ -129,7 +129,10 @@ proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : conte
     return
   end =:: regInfo
   regInfo [] .uses switch
-    None case loc RegisterUse .Val break
+    None case
+      loc RegisterUse .Val 
+      ## TODO mark register as not available
+    break
     Val .case loc ( ValueLocation ValueLocation ) new RegisterUse .Val2 break
     Val2 .case =:: vals
       8 ValueLocation list.create
@@ -338,12 +341,17 @@ proc(
   context .asmContext .targetId switch
     AMD64 case
       pos context amd64GetBinOpArgs =:: arg2 =:: arg1
+      ## TODO: use arg1 as dst if register is available
+      ## TODO: ensure that arg2 is not used as dst for 2-argument op-codes
       argType context nextFreeRegister =:: dst
       ## TODO? create proc for nextReg+push
       dst asm.Value .Register argType StackValue.val context pushValue
+      arg1 dst != if
+        AMD64.op.MOV dst arg1 asm.op2 list.append
+      end
       argType ValType.isInt if
         opType binOpCodeAMD64
-          arg1
+          dst
           arg2 .Register .if
             asm.op2
           else .Int ._if
@@ -457,6 +465,30 @@ proc(
 end
 proc(
   asm.Atom list
+  ValueLocation : loc
+  TypedValue : src
+  TypedValue : dst
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: restoreValue
+  context [] .program =:: program
+  program .errors =:: errors
+  src .valType dst .valType != if
+    "stack-values are out of sync" sb.copyPtr pos errors appendError
+    return
+  end
+  src .value dst .value asm.Value.equal if
+    return ## nothing to do if values are equal
+  end
+  "failed to move value " sb.copyPtr
+    src .value context [] .asmContext asm.appendValue
+  pos errors appendWarning
+  ## 2. mark value as moving
+  ## 2. clear destination slot if neccessary (detect move-loops)
+  ## 3. move to destination
+end
+proc(
+  asm.Atom list
   RegisterState : state
   FilePosition : pos
   CompilerContext ptr.mut : context
@@ -471,10 +503,26 @@ proc(
   oldStack .length for =:: i
     oldStack i [] =:: targetVal
     context [] .stack i [] =:: srcVal
-    ## 1. check if srcVal == targetVal
-    ## 2. if targetVal is memory -> move src to target (via tmp-reg if neccessary)
-    ## 3. clear target-reg
-    ## 4. mov src to target
+    srcVal ..label targetVal ..label != if
+      "stack-values are out of sync" sb.copyPtr pos errors appendError
+      state context resetState return
+    end
+    srcVal switch
+      Val .case =:: srcElt
+        i ValueLocation .Stack srcElt targetVal .Val .else ..unreachable end pos context restoreValue
+      break
+      Val2 .case =:: srcElts
+        targetVal .Val2 .else ..unreachable end =:: targetElts
+        i ValueLocation .Stack srcElts .0 targetElts .0 pos context restoreValue
+        i ValueLocation .Stack2 srcElts .1 targetElts .1 pos context restoreValue
+      break
+      Val3 .case =:: srcElts
+        targetVal .Val3 .else ..unreachable end =:: targetElts
+        i ValueLocation .Stack srcElts .0 targetElts .0 pos context restoreValue
+        i ValueLocation .Stack2 srcElts .1 targetElts .1 pos context restoreValue
+        i ValueLocation .Stack3 srcElts .2 targetElts .2 pos context restoreValue
+      break
+    end
   end
 end
 

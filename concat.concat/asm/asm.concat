@@ -42,6 +42,17 @@ namespace: asm
     f64 : Float
     ## TODO memory values
   ) =:: export: Value
+  namespace: Value
+    proc( Value : a Value : b -> bool ) =>: export: equal
+      a ..label b ..label != if false return end
+      a switch
+        None case true return
+        Register .case b .Register .else ..unreachable end == return
+        Int .case b .Int .else ..unreachable end == return
+        Float .case b .Float .else ..unreachable end == return
+      end
+    end
+  end
   union(
     RegisterId : Register
     i64 : Int
@@ -117,6 +128,14 @@ namespace: asm
     LocalLabel cast Directive .Label Atom .Directive
   end
   
+  proc( stringBuilder Value : arg  Context : asmContext -> stringBuilder ) =>: export: appendValue
+    arg switch
+      None case "None":s sb.appendStr return
+      Register .case asmContext .appendReg () return
+      Int .case sb.appendI return
+      Float .case sb.appendF ":f64":s sb.appendStr return
+    end
+  end
   proc( stringBuilder Operand : arg  Context : asmContext -> stringBuilder ) =>: export: appendOperand
     arg switch
       Register .case asmContext .appendReg () return
