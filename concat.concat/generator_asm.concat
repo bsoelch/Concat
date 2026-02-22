@@ -90,6 +90,8 @@ union(
 union(
   _ : None
   iSize : Stack
+  iSize : Stack2
+  iSize : Stack3
   LabelId : LocalVariable
   LabelId : GlobalVariable
   i32 : LocalMemory
@@ -165,12 +167,12 @@ proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> 
     Val .case loc context copyValueElt break
     Val2 .case
       $ .0 loc context copyValueElt
-      .1 loc context copyValueElt
+      .1 loc .Stack .if ValueLocation .Stack2 end context copyValueElt
     break
     Val3 .case
       $ .0 loc context copyValueElt
-      $ .1 loc context copyValueElt
-      .2 loc context copyValueElt
+      $ .1 loc .Stack .if ValueLocation .Stack2 end context copyValueElt
+      .2 loc .Stack .if ValueLocation .Stack3 end context copyValueElt
     break
   end
 end
@@ -179,12 +181,12 @@ proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> 
     Val .case loc context discardValueElt break
     Val2 .case
       $ .0 loc context discardValueElt
-      .1 loc context discardValueElt
+      .1 loc .Stack .if ValueLocation .Stack2 end context discardValueElt
     break
     Val3 .case
       $ .0 loc context discardValueElt
-      $ .1 loc context discardValueElt
-      .2 loc context discardValueElt
+      $ .1 loc .Stack .if ValueLocation .Stack2 end context discardValueElt
+      .2 loc .Stack .if ValueLocation .Stack3 end context discardValueElt
     break
   end
 end
@@ -429,19 +431,18 @@ proc(
 -> asm.Atom list RegisterState ) =>: rememberState
   ## TODO ensure all values are in (unique) register or memory
   context [] .stack .length for =:: i
-    i ValueLocation .Stack =:: eltLoc
     context [] .stack i [] switch
       Val .case
-        eltLoc context freezeTypedValue
+        i ValueLocation .Stack context freezeTypedValue
       StackValue .Val break
       Val2 .case
-        >$ $1 .0 eltLoc context freezeTypedValue >>$ .0=
-        >$ $1 .1 eltLoc context freezeTypedValue >>$ .1=
+        >$ $1 .0 i ValueLocation .Stack context freezeTypedValue >>$ .0=
+        >$ $1 .1 i ValueLocation .Stack2 context freezeTypedValue >>$ .1=
       StackValue .Val2 break
       Val3 .case
-        >$ $1 .0 eltLoc context freezeTypedValue >>$ .0=
-        >$ $1 .1 eltLoc context freezeTypedValue >>$ .1=
-        >$ $1 .2 eltLoc context freezeTypedValue >>$ .2=
+        >$ $1 .0 i ValueLocation .Stack context freezeTypedValue >>$ .0=
+        >$ $1 .1 i ValueLocation .Stack2 context freezeTypedValue >>$ .1=
+        >$ $1 .2 i ValueLocation .Stack3 context freezeTypedValue >>$ .2=
       StackValue .Val3 break
     end context [] .stack i =[]
   end
@@ -467,10 +468,14 @@ proc(
     "register-states out of sync" sb.copyPtr pos errors appendError
     state context resetState return
   end
-  ## TODO! update new state tp match old state
-  ## go through stack-elements one by one: if match -> do nothing
-  ## if slot is non-empty: reassign element that currently is in slot to new position
-  ## move value to slot, update all other references
+  oldStack .length for =:: i
+    oldStack i [] =:: targetVal
+    context [] .stack i [] =:: srcVal
+    ## 1. check if srcVal == targetVal
+    ## 2. if targetVal is memory -> move src to target (via tmp-reg if neccessary)
+    ## 3. clear target-reg
+    ## 4. mov src to target
+  end
 end
 
 proc(
