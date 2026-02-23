@@ -291,18 +291,30 @@ proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context
   context .stack=
 end
 
+proc( asm.RegisterId ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>: setRegSize
+  ## TODO: make sizes for bool & pointer target specific
+  valType switch
+    EMPTY case return
+    BOOL case asm.RegisterId.SIZE_8 break
+    I8 case asm.RegisterId.SIZE_8 break
+    I16 case asm.RegisterId.SIZE_16 break
+    I32 F32 case asm.RegisterId.SIZE_32 break
+    I64 F64 case asm.RegisterId.SIZE_64 break
+    POINTER PROC_POINTER case asm.RegisterId.SIZE_64 break
+  end asm.RegisterId.setSize
+end
 proc( ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>: nextFreeRegister
   ## TODO correctly find free registers
   valType ValType.isInt if
     context [] .availableIntRegisters list.pop .if
       >$ context .availableIntRegisters=
-      return
+      valType context setRegSize return
     end
     "unimplemented: freeing reigister" ..panic
   else valType ValType.isFloat _if
     context [] .availableFloatRegisters list.pop .if
       >$ context .availableFloatRegisters=
-      return
+      valType context setRegSize return
     end
     "unimplemented: freeing reigister" ..panic
   end
@@ -391,9 +403,11 @@ end
 
 proc(
   asm.Atom list
+  ValType : argType
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list asm.RegisterId asm.Value ) =>: amd64GetBinOpArgs
+  ## TODO? extend registers to 32-bit for arithmetic operations to prevent partial register write
   pos context popValue
     .and .Val .else "expected single value" ..panic end
   .value =:: arg2 ## FIXME ensure that arg2 is not overwritten by move to register
@@ -417,9 +431,9 @@ proc(
 -> asm.Atom list ) =>: opBinOp
   context .asmContext .targetId switch
     AMD64 case
-      pos context amd64GetBinOpArgs =:: arg2 =:: arg1
-      ## TODO: use arg1 as dst if register is available
-      ## TODO: ensure that arg2 is not used as dst for 2-argument op-codes
+      argType pos context amd64GetBinOpArgs =:: arg2 =:: arg1
+      ## TODO: prefer arg1 as dst if register is available
+      ## TODO: ensure that arg2 is not used as dst for 2-argument op-codes (lea can be used as 3-operand add: `lea dst, [arg1+arg2]`)
       argType context nextFreeRegister =:: dst
       ## TODO? create proc for nextReg+push
       dst asm.Value .Register argType StackValue.val context pushValue
@@ -453,7 +467,7 @@ proc(
 -> asm.Atom list ) =>: opCmp
   context .asmContext .targetId switch
     AMD64 case
-      pos context amd64GetBinOpArgs =:: arg2 =:: arg1
+      argType pos context amd64GetBinOpArgs =:: arg2 =:: arg1
       ValType .BOOL context nextFreeRegister =:: dst
       dst asm.Value .Register ValType .BOOL StackValue.val context pushValue
       ## TODO? option to merge cmp+jump
@@ -468,10 +482,9 @@ proc(
             "unsupported arg for cmp" ..panic
           end
         list.append
-        ## TODO use correct sizes
         ## TODO? use "xor, cmp, set" instead of "cmp, set, movzx" if dst does not overlap arg
-        AMD64.op.SETGT dst asm.RegisterId.SIZE_8 | asm.op1 list.append
-        AMD64.op.MOVZX dst $ asm.RegisterId.SIZE_8 | asm.op2 list.append
+        AMD64.op.SETGT dst asm.op1 list.append
+        AMD64.op.MOVZX dst $ asm.RegisterId.SIZE_32 asm.RegisterId.setSize >$ asm.op2 list.append
         return
       end
     break
@@ -561,8 +574,8 @@ proc(
     src .value context [] .asmContext asm.appendValue
   pos errors appendWarning
   ## 2. mark value as moving
-  ## 2. clear destination slot if neccessary (detect move-loops)
-  ## 3. move to destination
+  ## 3. clear destination slot if neccessary (detect move-loops)
+  ## 4. move to destination
 end
 proc(
   asm.Atom list
@@ -646,8 +659,11 @@ proc(
   idContext .typeContext =:: typeContext
   ## TODO reduce amount of duplicate code needed to handle built-ins
   builtIn switch
+    GT_I32 case ValType .I32 CmpType .GT pos context opCmp return
     GT_I64 case ValType .I64 CmpType .GT pos context opCmp return
+    ADD_I32 case ValType .I32 BinOp .ADD pos context opBinOp return
     ADD_I64 case ValType .I64 BinOp .ADD pos context opBinOp return
+    SUB_I32 case ValType .I32 BinOp .SUB pos context opBinOp return
     SUB_I64 case ValType .I64 BinOp .SUB pos context opBinOp return
     default break
   end
@@ -704,14 +720,14 @@ proc(
         procType i i32 cast.u typeContext types.getProcArgLabel =:: argLabel
         argValType ValType.isInt if
           intCount AMD64.reg.intArg .if
-            asm.Value .Register argValType StackValue.val
+            argValType context setRegSize asm.Value .Register argValType StackValue.val
           else
             "memory arguments are not supported" ..panic
           end
           intCount 1 + intCount=
         else argValType ValType.isFloat _if
           floatCount AMD64.reg.floatArg .if
-            asm.Value .Register argValType StackValue.val
+            argValType context setRegSize asm.Value .Register argValType StackValue.val
           else
             "memory arguments are not supported" ..panic
           end

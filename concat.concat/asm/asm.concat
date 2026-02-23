@@ -16,6 +16,9 @@ namespace: asm
     0x4:RegisterId =:: export: FLAG_VEC
     4 =:: export: BASE_SHIFT
     0xffff_fff0:RegisterId =:: export: BASE_MASK
+    proc( RegisterId RegisterId : newSize -> RegisterId ) =>: export: setSize
+      BASE_MASK & newSize |
+    end
     ( RegisterId -> bool ) : alias: export: toBool i32.toBool
     ( RegisterId -> RegisterId  ) : alias: export: flip i32.flip
     ( RegisterId RegisterId -> RegisterId  ) : alias: export: and i32.and
