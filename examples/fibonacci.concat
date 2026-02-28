@@ -1,7 +1,7 @@
 #+
 Computes the n-th Fibonacci number
 +#
-import debug
+import numbers/printNumbers
 
 proc( i64 : mut: n -> i64 ) =>: fib
   0:i64 1:i64
@@ -12,11 +12,11 @@ proc( i64 : mut: n -> i64 ) =>: fib
 end
 
 proc( -> ) =>: main
-  1 fib debug.print
-  2 fib debug.print
-  3 fib debug.print
-  4 fib debug.print
-  5 fib debug.print
-  10 fib debug.print
-  20 fib debug.print
+  1 fib io.println
+  2 fib io.println
+  3 fib io.println
+  4 fib io.println
+  5 fib io.println
+  10 fib io.println
+  20 fib io.println
 end
