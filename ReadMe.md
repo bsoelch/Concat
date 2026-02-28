@@ -12,10 +12,11 @@ A (partial) description of the syntax can be found in the `doc` folder <!-- TODO
 
 Hello World:
 ```
-import io
+import stringIO
+using std.literals.
 
 proc( -> ) =>: main
-  "Hello World!" io.puts ..drop
+  "Hello World!":s io.println
 end
 ```
 Print prime factors:

@@ -1,5 +1,6 @@
-import io
+import stringIO
+using std.literals.
 
 proc( -> ) =>: main
-  "Hello World!" io.puts io.FILE_ERROR_NONE == "puts works" assert
+  "Hello World!":s io.println
 end

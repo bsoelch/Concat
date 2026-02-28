@@ -9,7 +9,6 @@ proc( -> ) =>: main
 
   stdOut "Hello World!" 0:iSize 5:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u debug.print
   stdOut "Hello World!" 6:iSize 5:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u debug.print
-  "!" puts io.FILE_ERROR_NONE == "puts works" assert
   stdOut buff@ 0:iSize 45:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u debug.print
   stdOut '\n' fputc io.FILE_ERROR_NONE == "fputc works" assert
   "./lib" OPEN_WRITE fopenS io.FILE_ERR_FILE_IS_DIR == "open directory" assert =:: empty

@@ -5,20 +5,22 @@ import io
 import stringBuilder
 import numbers/printInt
 import stringIO
+using std.literals.
 
 proc( i32 -> i32 ) =>: i32Hash end
 proc( i32 i32 -> bool ) =>: i32Eq  == end
 
 proc( i64 optional -> ) =>: printOpt
-  ..dup optional.isEmpty if ..drop
-    "empty" io.puts ..drop
+  .else
+    "empty":s io.println
     return
   end
-  16 sb.create 
+  char8 32 array : buf
+  buf@ sb.wrapBuffer
     "optional(" sb.appendS
-    >$ optional.unwrap sb.appendI
-    ")\n"         sb.appendS
-  io.stdOut ..swap io.fputSb ..drop
+    >$ sb.appendI
+    ")\n" sb.appendS
+  sb.asStr io.print
 end
 
 proc( -> ) =>: main
@@ -31,7 +33,7 @@ proc( -> ) =>: main
     ..dup 11  5 map.put printOpt
     ..dup 2   6 map.put printOpt
     ..dup 42  7 map.put printOpt
-    "-------------" io.puts ..drop
+    "-------------":s io.println
     ..dup 0   map.get printOpt
     ..dup -5  map.get printOpt
     ..dup 2   map.get printOpt
