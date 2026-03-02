@@ -450,7 +450,7 @@ proc(
     false
     false
   IfBlockInfo new BlockInfo .If context openBlock
-  context [] .openBlocks list.peek optional.unwrap .If .else ..unreachable end
+  context [] .openBlocks list.peek optional.unwrap .If unionElement.unwrapPtr
 end
 proc(
   BlockId : blockId
@@ -495,7 +495,7 @@ proc(
     16 BranchId list.create
     blockId
   AndOrBlockInfo new BlockInfo .AndOr context openBlock
-  context [] .openBlocks list.peek optional.unwrap .AndOr .else ..unreachable end
+  context [] .openBlocks list.peek optional.unwrap .AndOr unionElement.unwrapPtr
 end
 
 enum( WHILE SWITCH ) =:: BreakType

@@ -137,21 +137,21 @@ proc( ConstValue : a ConstValue : b -> i32 ) =>: export: constantCmp
   end
   a switch
     None WildCard case 0 return
-    Bool .case ?1 b .Bool .else ..unreachable end ?1 >$ - return
-    Int .case b .Int .else ..unreachable end i64.cmp return
-    Float .case b .Float .else ..unreachable end  f64.cmp return
-    Char .case b .Char .else ..unreachable end char8.cmp return
-    Array8 .case b .Array8 .else ..unreachable end slice.cmp return
-    Array16 .case b .Array16 .else ..unreachable end slice.cmp return
-    Array32 .case b .Array32 .else ..unreachable end slice.cmp return
-    Array64 .case b .Array64 .else ..unreachable end slice.cmp return
-    Array .case b .Array .else ..unreachable end constantCmp@ slice.cmp return
-    TypeId .case b .TypeId .else ..unreachable end types.typeCmp return
-    Procedure .case i64 cast.u b .Procedure .else ..unreachable end i64 cast.u i64.cmp return
-    ProcedureBundle .case i64 cast.u b .ProcedureBundle .else ..unreachable end i64 cast.u i64.cmp return
-    GenericArg .case i64 cast.u b .GenericArg .else ..unreachable end i64 cast.u i64.cmp return
+    Bool .case ?1 b .Bool unionElement.unwrap ?1 >$ - return
+    Int .case b .Int unionElement.unwrap i64.cmp return
+    Float .case b .Float unionElement.unwrap  f64.cmp return
+    Char .case b .Char unionElement.unwrap char8.cmp return
+    Array8 .case b .Array8 unionElement.unwrap slice.cmp return
+    Array16 .case b .Array16 unionElement.unwrap slice.cmp return
+    Array32 .case b .Array32 unionElement.unwrap slice.cmp return
+    Array64 .case b .Array64 unionElement.unwrap slice.cmp return
+    Array .case b .Array unionElement.unwrap constantCmp@ slice.cmp return
+    TypeId .case b .TypeId unionElement.unwrap types.typeCmp return
+    Procedure .case i64 cast.u b .Procedure unionElement.unwrap i64 cast.u i64.cmp return
+    ProcedureBundle .case i64 cast.u b .ProcedureBundle unionElement.unwrap i64 cast.u i64.cmp return
+    GenericArg .case i64 cast.u b .GenericArg unionElement.unwrap i64 cast.u i64.cmp return
     Union .case =:: aUnion
-      b .Union .else ..unreachable end =:: bUnion
+      b .Union unionElement.unwrap =:: bUnion
       aUnion .eltIndex bUnion .eltIndex != if
         aUnion .eltIndex bUnion .eltIndex <=> return
       end
@@ -160,33 +160,33 @@ proc( ConstValue : a ConstValue : b -> i32 ) =>: export: constantCmp
         bUnion .value []
       constantCmp return
     ## local values are compared with pointer identity ! update hash function when this changes
-    LocalValue .case ConstValue ptr.raw cast b .LocalValue .else ..unreachable end ConstValue ptr.raw cast ptr.cmp return
+    LocalValue .case ConstValue ptr.raw cast b .LocalValue unionElement.unwrap ConstValue ptr.raw cast ptr.cmp return
     LocalArray .case =:: aLocalArray
-      b .LocalArray .else ..unreachable end =:: bLocalArray
+      b .LocalArray unionElement.unwrap =:: bLocalArray
       ## local arrays are only equal if memory ranges coincide
       aLocalArray .length bLocalArray .length <=>
         $ ? if return else ..drop end
       aLocalArray .data bLocalArray .data ptr.cmp return
     LocalArray8 .case =:: aLocalArray
-      b .LocalArray8 .else ..unreachable end =:: bLocalArray
+      b .LocalArray8 unionElement.unwrap =:: bLocalArray
       ## local arrays are only equal if memory ranges coincide
       aLocalArray .length bLocalArray .length <=>
         $ ? if return else ..drop end
       aLocalArray .data bLocalArray .data ptr.cmp return
     LocalArray16 .case =:: aLocalArray
-      b .LocalArray16 .else ..unreachable end =:: bLocalArray
+      b .LocalArray16 unionElement.unwrap =:: bLocalArray
       ## local arrays are only equal if memory ranges coincide
       aLocalArray .length bLocalArray .length <=>
         $ ? if return else ..drop end
       aLocalArray .data bLocalArray .data ptr.cmp return
     LocalArray32 .case =:: aLocalArray
-      b .LocalArray32 .else ..unreachable end =:: bLocalArray
+      b .LocalArray32 unionElement.unwrap =:: bLocalArray
       ## local arrays are only equal if memory ranges coincide
       aLocalArray .length bLocalArray .length <=>
         $ ? if return else ..drop end
       aLocalArray .data bLocalArray .data ptr.cmp return
     LocalArray64 .case =:: aLocalArray
-      b .LocalArray64 .else ..unreachable end =:: bLocalArray
+      b .LocalArray64 unionElement.unwrap =:: bLocalArray
       ## local arrays are only equal if memory ranges coincide
       aLocalArray .length bLocalArray .length <=>
         $ ? if return else ..drop end

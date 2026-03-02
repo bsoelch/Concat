@@ -430,25 +430,25 @@ proc(
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndIf
-          op@ .val .BlockEnd .else ..unreachable end .jumpDistance=
+          op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
           newOps op list.append return
         SWITCH case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndSwitch
-          op@ .val .BlockEnd .else ..unreachable end .jumpDistance=
+          op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
           newOps op list.append return
         WHILE case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndWhile
-          op@ .val .BlockEnd .else ..unreachable end .jumpDistance=
+          op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
           newOps op list.append return
         AND OR case
           blockId
             newOps list.asMutableSlice
           program program.jumps.updateEndAndOr
-          op@ .val .BlockEnd .else ..unreachable end .jumpDistance=
+          op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
           newOps op list.append return
         AND_IF OR_IF AND_DO OR_DO FINALLY INLINE_PROCEDURE
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE

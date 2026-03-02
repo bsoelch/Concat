@@ -260,47 +260,47 @@ namespace: types
       Undefined  Empty case
         0 return ## there is only one undefined/empty type
       PrimitiveType .case
-        primitiveId b .PrimitiveType .else ..unreachable end primitiveId i32.cmp return
+        primitiveId b .PrimitiveType unionElement.unwrap primitiveId i32.cmp return
       IntLiteral .case
-        intLiteralId b .IntLiteral .else ..unreachable end intLiteralId i32.cmp return
+        intLiteralId b .IntLiteral unionElement.unwrap intLiteralId i32.cmp return
       CType .case
-        cTypeId b .CType .else ..unreachable end cTypeId i32.cmp return
+        cTypeId b .CType unionElement.unwrap cTypeId i32.cmp return
       Align .case
-        b .Align .else ..unreachable end i32.cmp return
+        b .Align unionElement.unwrap i32.cmp return
       NamedType .case
-        i32 cast b .NamedType .else ..unreachable end i32 cast i32.cmp return
+        i32 cast b .NamedType unionElement.unwrap i32 cast i32.cmp return
       GenericType .case
-        i32 cast b .GenericType .else ..unreachable end i32 cast i32.cmp return
+        i32 cast b .GenericType unionElement.unwrap i32 cast i32.cmp return
       Pointer .case
-        b .Pointer .else ..unreachable end arrayTypeCmp return
+        b .Pointer unionElement.unwrap arrayTypeCmp return
       MutablePointer .case
-        b .MutablePointer .else ..unreachable end arrayTypeCmp return
+        b .MutablePointer unionElement.unwrap arrayTypeCmp return
       RawPointer .case
-        b .RawPointer .else ..unreachable end arrayTypeCmp return
+        b .RawPointer unionElement.unwrap arrayTypeCmp return
       MutableRawPointer .case
-        b .MutableRawPointer .else ..unreachable end arrayTypeCmp return
+        b .MutableRawPointer unionElement.unwrap arrayTypeCmp return
       ArrayType .case
-        b .ArrayType .else ..unreachable end arrayTypeCmp return
+        b .ArrayType unionElement.unwrap arrayTypeCmp return
       Struct .case
-        b .Struct .else ..unreachable end tupleTypeCmp return
+        b .Struct unionElement.unwrap tupleTypeCmp return
       Enum .case
-        b .Enum .else ..unreachable end enumTypeCmp return
+        b .Enum unionElement.unwrap enumTypeCmp return
       TaggedUnion .case
-        b .TaggedUnion .else ..unreachable end tupleTypeCmp return
+        b .TaggedUnion unionElement.unwrap tupleTypeCmp return
       RawUnion .case
-        b .RawUnion .else ..unreachable end unionTypeCmp return
+        b .RawUnion unionElement.unwrap unionTypeCmp return
       UnionElement .case
-        b .UnionElement .else ..unreachable end unionElementCmp return
+        b .UnionElement unionElement.unwrap unionElementCmp return
       Initializer .case
-        b .Initializer .else ..unreachable end initializerTypeCmp return
+        b .Initializer unionElement.unwrap initializerTypeCmp return
       Procedure .case
-        b .Procedure .else ..unreachable end  procTypeCmp return
+        b .Procedure unionElement.unwrap  procTypeCmp return
       GeneratedType .case
-        b .GeneratedType .else ..unreachable end generatedTypeCmp return
+        b .GeneratedType unionElement.unwrap generatedTypeCmp return
       SetType .case
-        b .SetType .else ..unreachable end setTypeCmp return
+        b .SetType unionElement.unwrap setTypeCmp return
       RefinementType .case
-        b .RefinementType .else ..unreachable end refinementTypeCmp return
+        b .RefinementType unionElement.unwrap refinementTypeCmp return
     end
   end
   proc( PrimitiveType -> i32 ) =>: primitiveId
@@ -1061,8 +1061,8 @@ namespace: types
     end
     a switch
       None Dynamic case true return
-      Int .case b .Int .else ..unreachable end == return
-      GenericArg .case b .GenericArg .else ..unreachable end == return
+      Int .case b .Int unionElement.unwrap == return
+      GenericArg .case b .GenericArg unionElement.unwrap == return
     end
   end
   proc( ArraySize : a -> i32 ) =>: arraySizeHash
@@ -1079,8 +1079,8 @@ namespace: types
     end
     a switch
       None Dynamic case 0 return
-      Int .case b .Int .else ..unreachable end i64.cmp return
-      GenericArg .case i32 cast b .GenericArg .else ..unreachable end i32 cast i32.cmp return
+      Int .case b .Int unionElement.unwrap i64.cmp return
+      GenericArg .case i32 cast b .GenericArg unionElement.unwrap i32 cast i32.cmp return
     end
   end
   enum( POINTER MUTABLE_POINTER RAW_POINTER MUTABLE_RAW_POINTER ARRAY ) =:: export: ArrayType

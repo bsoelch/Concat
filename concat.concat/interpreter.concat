@@ -304,7 +304,7 @@ namespace: interpreter
     else .LocalArray8 ._if
       i8 slice.mut cast slice.freeze
         persistentCopy if
-          constContext newArray8Const .Array8 .else ..unreachable end
+          constContext newArray8Const .Array8 unionElement.unwrap
         end
       string.fromBytes
       false return
@@ -442,7 +442,7 @@ namespace: interpreter
     else isType and valType typeContext types.isTaggedUnion _if
       ## return
         types.I_SIZE
-        valType typeContext types.asRawUnion .else ..unreachable end
+        valType typeContext types.asRawUnion optional.unwrap
           typeContext types.compositeEltCount i64 cast.u
         ConstValue .Int
         false

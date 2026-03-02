@@ -64,5 +64,5 @@ proc( -> ) =>: main
   "Hello" startItr while nextChar do
     #+char+# debug.print
   end endItr
-  42 unionCreate .a .else ..unreachable end debug.print
+  42 unionCreate .a unionElement.unwrap debug.print
 end

@@ -8,6 +8,10 @@ namespace: unionElement
   proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: get
     ..raw
   end
+  proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: unwrap
+    $ check ! if "unwrapped union-element does not match current value" ..panic end
+    ..raw
+  end
   proc( type.unionElement : auto: U  U -> U type.unionElementUnion ) =>: elseVal
     U type.unionElementUnion cast
   end
@@ -31,6 +35,10 @@ namespace: unionElement
     [] ..label U ..types.arrayElement ..label ==
   end
   proc( type.unionElementPointer : auto: U  U -> U type.unionElementPtrType ) =>: getPtr
+    U type.unionElementPtrType cast! ## elements are all stored at same address as union
+  end
+  proc( type.unionElementPointer : auto: U  U -> U type.unionElementPtrType ) =>: export: unwrapPtr
+    $ checkPtr ! if "unwrapped union-element does not match current value" ..panic end
     U type.unionElementPtrType cast! ## elements are all stored at same address as union
   end
   proc( type.unionElementPointer : auto: U  U -> U type.unionElementUnionPtr ) =>: elseValPtr

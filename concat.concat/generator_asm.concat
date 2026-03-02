@@ -101,12 +101,12 @@ namespace: ValueLocation
     a ..label b ..label != if false return end
     a switch
       None case true return
-      Stack .case b .Stack .else ..unreachable end == return
-      Stack2 .case b .Stack2 .else ..unreachable end == return
-      Stack3 .case b .Stack3 .else ..unreachable end == return
-      LocalVariable .case b .LocalVariable .else ..unreachable end == return
-      GlobalVariable .case b .LocalVariable .else ..unreachable end == return
-      LocalMemory .case b .LocalMemory .else ..unreachable end == return
+      Stack .case b .Stack unionElement.unwrap == return
+      Stack2 .case b .Stack2 unionElement.unwrap == return
+      Stack3 .case b .Stack3 unionElement.unwrap == return
+      LocalVariable .case b .LocalVariable unionElement.unwrap == return
+      GlobalVariable .case b .LocalVariable unionElement.unwrap == return
+      LocalMemory .case b .LocalMemory unionElement.unwrap == return
     end
   end
 end
@@ -599,15 +599,15 @@ proc(
     end
     srcVal switch
       Val .case =:: srcElt
-        i ValueLocation .Stack srcElt targetVal .Val .else ..unreachable end pos context restoreValue
+        i ValueLocation .Stack srcElt targetVal .Val unionElement.unwrap pos context restoreValue
       break
       Val2 .case =:: srcElts
-        targetVal .Val2 .else ..unreachable end =:: targetElts
+        targetVal .Val2 unionElement.unwrap =:: targetElts
         i ValueLocation .Stack srcElts .0 targetElts .0 pos context restoreValue
         i ValueLocation .Stack2 srcElts .1 targetElts .1 pos context restoreValue
       break
       Val3 .case =:: srcElts
-        targetVal .Val3 .else ..unreachable end =:: targetElts
+        targetVal .Val3 unionElement.unwrap =:: targetElts
         i ValueLocation .Stack srcElts .0 targetElts .0 pos context restoreValue
         i ValueLocation .Stack2 srcElts .1 targetElts .1 pos context restoreValue
         i ValueLocation .Stack3 srcElts .2 targetElts .2 pos context restoreValue

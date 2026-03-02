@@ -757,7 +757,7 @@ proc(
         literalType fileState [] .wordStart errors checkLiteralType if
           string.empty true return
         end
-        literalType .LiteralType .else ..unreachable end =:: literalTypeName
+        literalType .LiteralType unionElement.unwrap =:: literalTypeName
         literalTypeName "?":s string.eq if
           false =:: mut: isElement
           literalToken
@@ -805,7 +805,7 @@ proc(
         literalType fileState [] .wordStart errors checkLiteralType  if
           string.empty true return
         end
-        literalType .LiteralType .else ..unreachable end =:: literalTypeName
+        literalType .LiteralType unionElement.unwrap =:: literalTypeName
         ## XXX? more usefull error for missing parse procedure?
         progContext [] .tmpString
           sb.clear ## clear tmp string

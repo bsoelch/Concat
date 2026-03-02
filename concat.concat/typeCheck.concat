@@ -1900,7 +1900,7 @@ proc(
         1 StackModType .COPY pos opStackMod state appendOp ..drop
         ## TODO? do not use magic-numbers for indices of tagged-union elements
         srcType 0 pos opGetElement state appendOp ..drop
-        containerType typeContext types.asRawUnion .else ..unreachable end
+        containerType typeContext types.asRawUnion optional.unwrap
           isPtr if
             srcType typeContext types.isMutable typeContext types.getAddressType
           end
@@ -2155,7 +2155,7 @@ proc(
   end =:: labelId
   ## compositeFindLabel
     switchType $ typeContext types.isTaggedUnion if
-      typeContext types.asRawUnion .else ..unreachable end
+      typeContext types.asRawUnion optional.unwrap
     end
     labelId
   typeContext types.compositeFindLabel .else
@@ -3234,7 +3234,7 @@ proc(
         =:: containerType
         containerType
           $ typeContext types.isTaggedUnion if
-            typeContext types.asRawUnion .else ..unreachable end
+            typeContext types.asRawUnion optional.unwrap
           end
         =:: innerContainerType
         ## compositeFindLabel
@@ -4157,7 +4157,7 @@ proc(
                 prev? .and [] .value .Int .else
                   continue.opLoop
                 end i32 cast.u =:: eltIndex
-                switchType typeContext types.asRawUnion .else ..unreachable end =:: rawSwitchType
+                switchType typeContext types.asRawUnion optional.unwrap =:: rawSwitchType
                 rawSwitchType eltIndex typeContext types.compositeGetElement =:: labelType
                 switchData [] .labels list.reversed for  =:: label
                   ## labels in current case are al at end of label list
@@ -4862,7 +4862,7 @@ proc(
               switchBlock .switchType typeContext types.isEnumOrTaggedUnion if
                 switchBlock .switchType
                   $ typeContext types.isTaggedUnion if
-                    typeContext types.asRawUnion .else ..unreachable end
+                    typeContext types.asRawUnion optional.unwrap
                   end
                 =:: rawSwitchType
                 rawSwitchType
@@ -5466,7 +5466,7 @@ proc(
             "raw pointers cannot be sized" sb.copyPtr op .pos errors appendError
           end
         end
-        baseType0 .else ..unreachable end
+        baseType0 optional.unwrap
           idContext [] .arraySizeBuffer list.asSlice
             1 slice.tail
           slice.reversed for =:: size

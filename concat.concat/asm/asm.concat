@@ -50,9 +50,9 @@ namespace: asm
       a ..label b ..label != if false return end
       a switch
         None case true return
-        Register .case b .Register .else ..unreachable end == return
-        Int .case b .Int .else ..unreachable end == return
-        Float .case b .Float .else ..unreachable end == return
+        Register .case b .Register unionElement.unwrap == return
+        Int .case b .Int unionElement.unwrap == return
+        Float .case b .Float unionElement.unwrap == return
       end
     end
   end
