@@ -1,0 +1,132 @@
+( type : R -> type ) =>: export: Complex
+  struct(
+    R : real
+    R : imag
+  )
+end
+f32 Complex =:: complex32
+f64 Complex =:: complex64
+
+namespace: complex
+  proc( 
+    type : auto: T
+    T Complex : z
+  -> T ) =>: absSq
+    z .real $ * z .imag $ * +
+  end
+  proc( 
+    type : auto: T
+    T Complex : z
+  -> T Complex ) =>: conj
+    z .real z .imag -_ T Complex new
+  end
+  proc( 
+    type : auto: T
+    T Complex : z
+  -> T Complex ) =>: neg
+    z .real -_ z .imag -_ T Complex new
+  end
+  proc(
+    type : auto: T
+    T Complex : z
+    T Complex : w
+  -> T Complex ) =>: export: add
+    ## Complex
+      z .real w .real +
+      z .imag w .imag +
+    T Complex new
+  end
+  proc(
+    type : auto: T
+    T Complex : z
+    T Complex : w
+  -> T Complex ) =>: export: sub
+    ## Complex
+      z .real w .real -
+      z .imag w .imag -
+    T Complex new
+  end
+  proc(
+    type : auto: T
+    T Complex : z
+    T Complex : w
+  -> T Complex ) =>: export: mul
+    ## Complex
+      z .real w .real * z .imag w .imag * -
+      z .real w .imag * z .imag w .real * +
+    T Complex new
+  end
+  proc(
+    type : auto: T
+    T Complex : z
+    T Complex : w
+  -> T Complex ) =>: export: div
+    ## (a + bi)/(c + di) = ((a + bi)(c - di))/(c² + d²)
+    w .real w .real * w .imag w .imag * + =:: N
+    ## Complex
+      z .real w .real * z .imag w .imag * + N /
+      z .imag w .real * z .real w .imag * - N /
+    T Complex new
+  end
+end
+namespace: complex32
+  proc( complex32 -> f32 ) =>: absSq
+    f32 Complex cast complex.absSq
+  end
+  proc( complex32 -> complex32 ) =>: conj
+    f32 Complex cast complex.conj complex32 cast
+  end
+  proc( complex32 -> complex32 ) =>: neg
+    f32 Complex cast complex.neg complex32 cast
+  end
+  proc( complex32 : z complex32 : w -> complex32 ) =>: export: add
+    z f32 Complex cast w f32 Complex cast complex.add complex32 cast
+  end
+  proc( complex32 : z complex32 : w -> complex32 ) =>: export: sub
+    z f32 Complex cast w f32 Complex cast complex.sub complex32 cast
+  end
+  proc( complex32 : z complex32 : w -> complex32 ) =>: export: mul
+    z f32 Complex cast w f32 Complex cast complex.mul complex32 cast
+  end
+  proc( complex32 : z complex32 : w -> complex32 ) =>: export: div
+    z f32 Complex cast w f32 Complex cast complex.div complex32 cast
+  end
+end
+namespace: complex64
+  proc( complex64 -> f64 ) =>: absSq
+    f64 Complex cast complex.absSq
+  end
+  proc( complex64 -> complex64 ) =>: conj
+    f64 Complex cast complex.conj complex64 cast
+  end
+  proc( complex64 -> complex64 ) =>: neg
+    f64 Complex cast complex.neg complex64 cast
+  end
+  proc( complex64 : z complex64 : w -> complex64 ) =>: export: add
+    z f64 Complex cast w f64 Complex cast complex.add complex64 cast
+  end
+  proc( complex64 : z complex64 : w -> complex64 ) =>: export: sub
+    z f64 Complex cast w f64 Complex cast complex.sub complex64 cast
+  end
+  proc( complex64 : z complex64 : w -> complex64 ) =>: export: mul
+    z f64 Complex cast w f64 Complex cast complex.mul complex64 cast
+  end
+  proc( complex64 : z complex64 : w -> complex64 ) =>: export: div
+    z f64 Complex cast w f64 Complex cast complex.div complex64 cast
+  end
+end
+overload: -_
+  complex.neg complex32.neg complex64.neg
+end
+overload: +
+  complex.add complex32.add complex64.add
+end
+overload: -
+  complex.sub complex32.sub complex64.sub
+end
+overload: *
+  complex.mul complex32.mul complex64.mul
+end
+overload: /
+  complex.div complex32.div complex64.div
+end
