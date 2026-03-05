@@ -5583,6 +5583,7 @@ proc(
             continue.opLoop ## TODO find
         end
         break
+        LocalJump LocalLabel case break
     end
     "type-checking for operation: " sb.copyPtr
       op program sb.appendOp

@@ -3672,6 +3672,7 @@ proc(
       return
     Splat case
       break
+    LocalJump LocalLabel case break
     Block .case =:: blockVal
       blockVal .blockType switch
         IF IF_TRUE IF_FALSE case

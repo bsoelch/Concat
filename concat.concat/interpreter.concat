@@ -1071,6 +1071,7 @@ proc(
       EvalResult .Return return
     InlineReturn case
       "unimplemented" ..panic
+    LocalJump LocalLabel case break
     Block .case =:: blockInfo
       blockInfo .blockType switch
         TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION

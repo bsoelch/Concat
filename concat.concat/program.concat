@@ -6,6 +6,7 @@ import "codeBlocks.concat"
 import "identifiers.concat"
 type : export: ProgramContext
 import "builtIns.concat"
+using std.literals.
 
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
@@ -17,6 +18,22 @@ enum( SIGNED NONE UNSIGNED ) =:: export: SignType
 struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
+i64 =:: LocalLabelId
+enum( NONE LABEL_START LABEL_END LABEL_MIDDLE HINT_START HINT_END ) =:: LocalLabelType
+enum( NONE TRUE FALSE EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CompareType
+{
+  "none":s "true":s "false":s "eq":s "ne":s
+  "lt":s "le":s "ge":s "gt":s
+  "ult":s "ule":s "uge":s "ugt":s
+} =:: CMP_TYPE_NAMES
+struct(
+  LocalLabelId : labelId
+  LocalLabelType : labelType
+) =:: LocalLabelInfo
+struct(
+  LocalLabelId : labelId
+  CompareType : cmpType
+) =:: LocalJumpInfo
 
 i64 =:: ConstReferenceId
 
@@ -144,6 +161,8 @@ union(
    ConstReferenceId : ConstantReference
           BlockData : Block
           BlockData : BlockEnd
+     LocalLabelInfo : LocalLabel
+      LocalJumpInfo : LocalJump
      IdentifierInfo : GetId
      IdentifierInfo : SetId
      IdentifierInfo : AtId
@@ -750,6 +769,19 @@ namespace: sb
         break
     end
   end
+  proc( stringBuilder LocalLabelType -> stringBuilder ) =>: export: appendLocalLabelType
+    switch
+      NONE case "?" sb.appendS return
+      LABEL_START case "start" sb.appendS return
+      LABEL_END case "end" sb.appendS return
+      LABEL_MIDDLE case "middle" sb.appendS return
+      HINT_START case "hint-start" sb.appendS return
+      HINT_END case "hint-end" sb.appendS return
+    end
+  end
+  proc( stringBuilder CompareType -> stringBuilder ) =>: export: appendCmpType
+    CMP_TYPE_NAMES@ >$ ..label iSize cast.u [] sb.appendStr
+  end
   proc( stringBuilder Operation : op ProgramContext ptr : progContext -> stringBuilder ) =>: export: appendOp
     progContext .idContext .typeContext =:: typeContext
     progContext .idContext .typeContext .labelContext =:: labelContext
@@ -797,6 +829,18 @@ namespace: sb
           " ->" sb.appendS
           blockData .jumpDistance i64 cast sb.appendI
         ')' sb.appendC
+      break
+      LocalLabel .case =:: labelInfo
+        "Label(" sb.appendS
+        labelInfo .labelType sb.appendLocalLabelType
+        "): " sb.appendS
+        labelInfo .labelId i64 cast sb.appendI
+      break
+      LocalJump .case =:: jumpInfo
+        "Jump(" sb.appendS
+        jumpInfo .cmpType sb.appendCmpType
+        "): " sb.appendS
+        jumpInfo .labelId i64 cast sb.appendI
       break
       Call .case =:: callInfo
         "call ( " sb.appendS

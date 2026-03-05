@@ -325,7 +325,8 @@ proc(
       newOps
         op list.append
       return
-    ## XXX merge identical variables on independent branches
+    LocalJump LocalLabel case break
+    ## TODO? merge identical variables on independent branches
     Block .case =:: blockInfo
       blockInfo .blockId =:: blockId
       blockInfo .blockType switch
