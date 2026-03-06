@@ -18,9 +18,9 @@ enum( SIGNED NONE UNSIGNED ) =:: export: SignType
 struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
-i64 =:: LocalLabelId
-enum( NONE LABEL_START LABEL_END LABEL_MIDDLE HINT_START HINT_END ) =:: LocalLabelType
-enum( NONE TRUE FALSE EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CompareType
+i64 =:: export: LocalLabelId
+enum( NONE LABEL_START LABEL_END LABEL_MIDDLE HINT_START HINT_END ) =:: export: LocalLabelType
+enum( NONE TRUE FALSE EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export: CompareType
 {
   "none":s "true":s "false":s "eq":s "ne":s
   "lt":s "le":s "ge":s "gt":s
@@ -250,6 +250,13 @@ proc( BlockType FilePosition : pos -> Operation ) =>: export: opEndBlock
     0:JumpDistance
   BlockData new OpValue .BlockEnd Type .Undefined pos Operation new return
 end
+proc( LocalLabelId LocalLabelType FilePosition : pos -> Operation ) =>: export: opLabel
+  LocalLabelInfo new OpValue .LocalLabel Type .Undefined pos Operation new return
+end
+proc( LocalLabelId CompareType FilePosition : pos -> Operation ) =>: export: opJump
+  LocalJumpInfo new OpValue .LocalJump Type .Undefined pos Operation new return
+end
+
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGetId
   =:: pos
   OpValue .GetId ..swap pos Operation new return
@@ -623,6 +630,7 @@ struct(
                     Type list : autoTypes
                Operation list : globalOps
           MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
+                 LocalLabelId : nextLabelId
               SwitchData list : switchData
                WhileData list : whileData
                   IfData list : ifData
@@ -640,6 +648,13 @@ struct(
                          bool : inLibFile
                          bool : hasGetArgs
 ) =:: export: ProgramContext
+namespace: program
+  proc( ProgramContext ptr.mut -> LocalLabelId ) =>: export: nextLocalLabel
+    .nextLabelId $
+      [] $ i64 cast.u 1 + LocalLabelId cast.u
+    >>$ =[]
+  end
+end
 
 proc(
   string : basePath
@@ -654,6 +669,7 @@ proc(
     32  Type            list.create
     1024 Operation      list.create
     4096                mixedArena.create
+    0 LocalLabelId cast
     128 SwitchData      list.create
     128 WhileData       list.create
     256 IfData          list.create
