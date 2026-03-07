@@ -75,18 +75,9 @@ struct(
   StackValue slice.mut : stack
 ) =:: RegisterState
 struct(
-  i32 : whileLabel
-  i32 : finallyLabel
-  i32 : endLabel
-  bool : hasBreak
-  bool : hasContinue
-  RegisterState : whileState
-  RegisterState : breakState
-  RegisterState : continueState
-) =:: WhileBlockInfo
-union(
-  WhileBlockInfo : While
-) =:: BlockInfo
+  RegisterState : registerState
+  i32 : asmLabel
+) =:: LabelState
 union(
   _ : None
   iSize : Stack
@@ -126,7 +117,7 @@ struct(
 struct(
   ProgramContext ptr.mut : program
   asm.Context : asmContext
-  BlockId BlockInfo hashMap : openBlocks
+  LocalLabelId LabelState hashMap : labelStates
   asm.RegisterId RegisterInfo hashMap : registerInfo
   LabelId VariableLocation hashMap : variableInfo
   asm.RegisterId list : availableIntRegisters
@@ -134,6 +125,7 @@ struct(
   asm.Atom list : tmpOps
   StackValue list : stack
   i32 : labelCount
+  bool : reachable
 ) =:: CompilerContext
 
 proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: usedRegister
@@ -326,38 +318,6 @@ proc( CompilerContext ptr.mut : context -> i32 ) =>: nextLocalLabel
     $ 1 + context .labelCount=
   return
 end
-proc(
-  BlockId : blockId
-  FilePosition : pos
-  CompilerContext ptr.mut : context
--> WhileBlockInfo ptr.mut ) =>: newWhileBlock
-  context [] .program .errors =:: errors
-  context .openBlocks
-    blockId
-    ## WhileBlockInfo
-      context nextLocalLabel ## whileLabel
-      context nextLocalLabel ## finallyLabel
-      context nextLocalLabel ## endLabel
-      false false
-      StackValue slice.emptyMutable RegisterState new
-      StackValue slice.emptyMutable RegisterState new
-      StackValue slice.emptyMutable RegisterState new
-    WhileBlockInfo new BlockInfo .While
-  map.put .if ..drop
-    "multiple blocks with same id: " sb.copyPtr
-      blockId i64 cast.u sb.appendI
-    pos errors appendError
-  end
-  context .openBlocks blockId map.at .and .While .else
-    "map corruption" ..panic
-  end return
-end
-proc( WhileBlockInfo : block -> ) =>: freeWhileBlock
-  block .whileState .stack slice.free ..drop
-  block .breakState .stack slice.free ..drop
-  block .continueState .stack slice.free ..drop
-end
-
 
 proc(
   ProcedureImpl : procImpl
@@ -615,6 +575,28 @@ proc(
     end
   end
 end
+proc(
+  asm.Atom list
+  LocalLabelId : labelId
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list i32 ) =>: syncLabelState
+  context .labelStates labelId map.get .else
+    context rememberState =:: regState
+    context nextLocalLabel =:: asmLabel
+    context .labelStates
+      labelId
+      regState asmLabel LabelState new
+    map.put ..drop
+    asmLabel return
+  end =:: labelState
+  context [] .reachable if
+    labelState .registerState pos context restoreState
+  else
+    labelState .registerState context resetState
+  end
+  labelState .asmLabel
+end
 
 proc(
   FilePosition : pos
@@ -742,79 +724,52 @@ proc(
         end
       finally i 1 - end ..drop
     return
-    Block .case =:: blockData
-      blockData .blockType switch
-        WHILE case
-          blockData [] .blockId op [] .pos context newWhileBlock =:: whileBlock
-          context rememberState whileBlock .whileState=
-          ## TODO! freeze register state and remember in while block
-          whileBlock [] .whileLabel asm.localLabel list.append return
-        break
-        DO case
-          context .openBlocks blockData [] .blockId map.at .and .While .else
-            "incompatible block-types for block-id " sb.copyPtr
-              blockData [] .blockId i64 cast.u sb.appendI
-              " expected while-block":s sb.appendStr
-            op [] .pos errors appendError
-            return
-          end =:: whileBlock
+    LocalLabel .case =:: labelInfo
+      labelInfo .labelType switch
+        HINT_START case return
+        HINT_END case
+          context .labelStates labelInfo [] .labelId map.remove ..drop
+        return
+        LABEL_START LABEL_END LABEL_MIDDLE NONE case break
+      end
+      labelInfo [] .labelId op [] .pos context syncLabelState asm.localLabel list.append
+      true context .reachable=
+      labelInfo .labelType [] .LABEL_END if
+        context .labelStates labelInfo [] .labelId map.remove ..drop
+      end
+    return
+    LocalJump .case =:: labelInfo
+      ## TODO make jump-code target independent? prepare-jump / jump procedures
+      labelInfo [] .cmpType switch
+        NONE case break
+        TRUE FALSE case
           op [] .pos context popValue
             .and .Val .else "expected single value" ..panic end
           ValueLocation .None context moveToRegister asm.RegisterId.SIZE_8 | =:: arg
-          ## TODO: add some way to fuse compare+jump
           AMD64.op.TEST arg arg asm.op2 list.append
-          whileBlock [] .hasBreak if
-            whileBlock [] .breakState op [] .pos context restoreState
-          else
-            context rememberState whileBlock .breakState=
-            true whileBlock .hasBreak=
-          end
-          AMD64.op.JZ whileBlock [] .endLabel asm.LocalLabel cast asm.op1 list.append
-          return
         break
-        FINALLY case
-          context .openBlocks blockData [] .blockId map.at .and .While .else
-            "incompatible block-types for block-id " sb.copyPtr
-              blockData [] .blockId i64 cast.u sb.appendI
-              " expected while-block":s sb.appendStr
-            op [] .pos errors appendError
-            return
-          end =:: whileBlock
-          whileBlock [] .hasContinue if
-            whileBlock [] .continueState op [] .pos context restoreState
-          end
-          whileBlock [] .finallyLabel asm.localLabel list.append return
+        EQ NE LT LE GE GT ULT ULE UGE UGT case
+          "unimplemented: fused compare&jump" ..panic
         break
-        default break
       end
-    break
-    BlockEnd .case =:: blockData
-      blockData .blockType switch
-        PROCEDURE case
-          asm.endProc list.append
-        return
-        WHILE case
-          context .openBlocks blockData [] .blockId map.remove .and .While .else
-            "incompatible block-types for block-id " sb.copyPtr
-              blockData [] .blockId i64 cast.u sb.appendI
-              " expected while-block":s sb.appendStr
-            op [] .pos errors appendError
-            return
-          end =:: whileBlock
-          whileBlock .whileState op [] .pos context restoreState
-          AMD64.op.JMP whileBlock .whileLabel asm.LocalLabel cast asm.op1 list.append
-          whileBlock .endLabel asm.localLabel list.append
-          whileBlock .breakState context resetState
-          whileBlock freeWhileBlock
-        return
-        default break
-      end
-    break
+      labelInfo [] .labelId op [] .pos context syncLabelState =:: jumpLabel
+      labelInfo [] .cmpType switch
+        NONE case AMD64.op.JMP break
+        TRUE case AMD64.op.JNZ break
+        FALSE case AMD64.op.JZ break
+        default "unimplemented: jump-type" ..panic break
+      end jumpLabel asm.LocalLabel cast asm.op1 list.append
+      labelInfo .cmpType [] .NONE ! context .reachable=
+    return
+    BlockEnd .case .blockType .PROCEDURE if
+       asm.endProc list.append return
+    end break
     Return case
       ## TODO ensure return values are in correct registers
       asm.leave list.append
+      false context .reachable=
     return
-   StackMod .case =:: modData
+    StackMod .case =:: modData
       modData [] .modType switch
         COPY case
           modData [] .n context peekValue .else
@@ -872,7 +827,7 @@ end
 
 proc( CompilerContext ptr.mut : context -> asm.Atom list ) =>: beginProcedure
   context [] .stack list.clear context .stack=
-  context .openBlocks map.clear
+  context .labelStates map.clear
   context .registerInfo map.clear
   context .variableInfo map.clear
   context [] .availableIntRegisters list.clear
@@ -884,6 +839,7 @@ proc( CompilerContext ptr.mut : context -> asm.Atom list ) =>: beginProcedure
   context .availableFloatRegisters=
   context [] .availableFloatRegisters list.reverse
   context [] .tmpOps list.clear
+  true context .reachable=
   asm.Atom list.emptyNoReallloc context .tmpOps= ## ensure tmp-ops on compiler are not modified while on stack
 end
 proc(
@@ -907,10 +863,10 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   ## CompilerContext
     program
     AMD64.asmContext
-    ( BlockId -> i32 ) => i32 cast end
-      ( BlockId BlockId -> bool ) => == end
+    ( LocalLabelId -> i32 ) => i32 cast end
+      ( LocalLabelId LocalLabelId -> bool ) => == end
       512
-    BlockInfo map.create
+    LabelState map.create
     ( asm.RegisterId -> i32 ) => asm.RegisterId.BASE_SHIFT >>> i32 cast end
       ( asm.RegisterId asm.RegisterId -> bool ) =>
         asm.RegisterId.BASE_MASK & >$ asm.RegisterId.BASE_MASK &
@@ -924,6 +880,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     1024 asm.Atom list.create
     64 StackValue list.create
     0
+    false
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   ## TODO? compile procedures seperately
