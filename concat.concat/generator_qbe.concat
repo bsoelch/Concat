@@ -377,7 +377,6 @@ end
 
 struct(
   string : blockName
-  BlockId : blockId
   BranchId slice : branchIds
   FilePosition : pos
   CompilerContext ptr.mut : context
@@ -3707,25 +3706,96 @@ proc(
             LabelState.new
           map.put ..drop
         break
-        LABEL_END LABEL_MIDDLE case
-          ## FIXME sync label state
+        LABEL_END LABEL_MIDDLE case break
+      end
+      context .labelStates labelInfo .labelId map.at .else
+        "missing label state" ..panic
+      end =:: labelState
+      context [] .reachable if
+        labelState [] .branches
+          context .stackInfo branchTree.startBranch list.append
+        labelState .branches=
+        labelState [] .branchIds
+          context [] .currentBranch list.append
+        labelState .branchIds=
+      end
+      sb
+        ## BranchId
+          BranchType .LABEL
+          labelInfo .labelId i32 cast.u
+        BranchId new "label":s context startBranch
+      =:: mut: newSb
+      true context .reachable=
+      labelInfo .labelType switch
+        HINT_START HINT_END case break
+        LABEL_START LABEL_END LABEL_MIDDLE case
+          ## mergeValues
+            context .stackInfo
+            labelState [] .branches list.asSlice
+            mergeBranches@
+            ## MergePoint
+              "label":s
+              labelState [] .branchIds list.asSlice
+              op [] .pos
+              context
+              newSb@
+            MergePoint new
+          branchTree.merge .Error ? if
+            "could not merge label branches" sb.copyPtr
+            op [] .pos errors appendError
+          end
         break
       end
-      ## FIXME generate label
-      true context .reachable=
       labelInfo .labelType .LABEL_END if
         context .labelStates labelInfo .labelId map.remove .if LabelState.free end
       end
-    break
+    newSb return
     LocalJump .case =:: labelInfo
+      context [] .reachable ! if sb return end ## ignore unreachable branch
+      context .labelStates labelInfo .labelId map.at .else
+        "missing label state" ..panic
+      end =:: labelState
+      ## FIXME correctly handle backwards jumps
+      labelState [] .branches
+        context .stackInfo branchTree.startBranch list.append
+      labelState .branches=
+      labelState [] .branchIds
+        context [] .currentBranch list.append
+      labelState .branchIds=
+      ## appendBranchId
+        BranchType .LABEL
+          labelInfo .labelId i32 cast.u
+      BranchId new =:: targetBranchId
+      ## appendBranchId
+        BranchType .NEXT
+        context nextJumpLabelId
+      BranchId new =:: nextBranch
       labelInfo .cmpType switch
         NONE case
-          ## TODO remember state, correctly handle backward jumps
-          ## FIXME generate uncoditional jump
-        break
+          sb
+            "jmp " sb.appendS
+            targetBranchId sb.appendBranchId
+            '\n' sb.appendC
+            false context .reachable=
+          return
         TRUE FALSE case
-          ## TODO remember state
-          ## FIXME generate coditional jump
+          sb
+            op [] .pos sb.appendPosQBE
+            "jnz %s" sb.appendS
+            op [] .pos context popValue sb.appendI
+            ", " sb.appendS
+            labelInfo .cmpType .TRUE if
+              targetBranchId sb.appendBranchId
+              ", " sb.appendS
+              nextBranch sb.appendBranchId
+            else
+              nextBranch sb.appendBranchId
+              ", " sb.appendS
+              targetBranchId sb.appendBranchId
+            end
+            '\n' sb.appendC
+            nextBranch "jump-if":s context startBranch
+          return
         break
         EQ NE LT LE GE GT ULT ULE UGE UGT case
           "fused compare&jump is not supported by QBE-backend" ..panic
@@ -3778,7 +3848,6 @@ proc(
               mergeBranches@
               ## MergePoint
                 "or-if":s
-                ifBlock [] .blockId
                 ifBlock [] .orBranchIds list.asSlice
                 op [] .pos
                 context
@@ -3882,7 +3951,6 @@ proc(
             mergeBranches@
             ## MergePoint
               "and-if":s
-              ifBlock [] .blockId
               ifBlock [] .andBranchIds list.asSlice
               op [] .pos
               context
@@ -4111,7 +4179,6 @@ proc(
             mergeBranches@
             ## MergePoint
                 "or-do":s
-                whileBlock [] .blockId
                 whileBlock [] .doBranchIds list.asSlice
                 op [] .pos
                 context
@@ -4200,7 +4267,6 @@ proc(
               mergeBranches@
               ## MergePoint
                 "while":s
-                whileBlock [] .blockId
                 whileBlock .continueBranchIds [] list.asSlice
                 op [] .pos
                 context
@@ -4310,7 +4376,6 @@ proc(
               mergeBranches@
               ## MergeIf
                 "if":s
-                ifBlock .blockId
                 branchIds@ nBranches slice.create
                 op [] .pos
                 context
@@ -4354,7 +4419,6 @@ proc(
               mergeBranches@
               ## MergePoint
                 "switch":s
-                switchBlock .blockId
                 switchBlock .caseBranchIds list.asSlice
                 op [] .pos
                 context
@@ -4430,7 +4494,6 @@ proc(
               mergeBranches@
               ## MergePoint
                 "while":s
-                whileBlock .blockId
                 whileBlock .breakBranchIds list.asSlice
                 op [] .pos
                 context
@@ -4477,7 +4540,6 @@ proc(
             mergeBranches@
             ## MergePoint
               "and/or":s
-              andOrBlock .blockId
               andOrBlock .branchIds list.asSlice
               op [] .pos
               context
