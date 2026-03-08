@@ -19,7 +19,7 @@ struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
 i64 =:: export: LocalLabelId
-enum( NONE LABEL_START LABEL_END LABEL_MIDDLE HINT_START HINT_END ) =:: export: LocalLabelType
+enum( LABEL_START LABEL_END LABEL_MIDDLE HINT_START HINT_END ) =:: export: LocalLabelType
 enum( NONE TRUE FALSE EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export: CompareType
 {
   "none":s "true":s "false":s "eq":s "ne":s
@@ -787,7 +787,6 @@ namespace: sb
   end
   proc( stringBuilder LocalLabelType -> stringBuilder ) =>: export: appendLocalLabelType
     switch
-      NONE case "?" sb.appendS return
       LABEL_START case "start" sb.appendS return
       LABEL_END case "end" sb.appendS return
       LABEL_MIDDLE case "middle" sb.appendS return

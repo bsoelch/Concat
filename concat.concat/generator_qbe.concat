@@ -96,6 +96,22 @@ union(
   WhileBlockInfo : While
   AndOrBlockInfo : AndOr
 ) =:: BlockInfo
+struct(
+  branchTree.NodeId list : branches
+  BranchId list : branchIds
+) =:: LabelState
+namespace: LabelState
+  proc( -> LabelState ) =>: new
+    ## LabelState
+      8 branchTree.NodeId list.create
+      8 BranchId list.create
+    LabelState new
+  end
+  proc( LabelState -> ) =>: free
+    $ .branches list.free ..drop
+    .branchIds list.free ..drop
+  end
+end
 
 namespace: sb
   proc( stringBuilder BlockInfo -> stringBuilder ) =>: appendBlockInfo
@@ -113,6 +129,7 @@ struct(
   StackElement BranchTree : stackInfo
   BranchId : currentBranch
   BlockInfo list : openBlocks
+  LocalLabelId LabelState hashMap : labelStates
   LocalConst list : localConstants
   string list : stringConstants
   PtrConstant list : ptrConstants
@@ -3672,7 +3689,49 @@ proc(
       return
     Splat case
       break
-    LocalJump LocalLabel case break
+    LocalLabel .case =:: labelInfo
+      labelInfo .labelType switch
+        HINT_START case
+          context .labelStates
+            labelInfo .labelId
+            LabelState.new
+          map.put ..drop
+        sb return
+        HINT_END case
+          context .labelStates labelInfo .labelId map.remove .if LabelState.free end
+        sb return
+        LABEL_START case
+          ## FIXME handle backwards jumps
+          context .labelStates
+            labelInfo .labelId
+            LabelState.new
+          map.put ..drop
+        break
+        LABEL_END LABEL_MIDDLE case
+          ## FIXME sync label state
+        break
+      end
+      ## FIXME generate label
+      true context .reachable=
+      labelInfo .labelType .LABEL_END if
+        context .labelStates labelInfo .labelId map.remove .if LabelState.free end
+      end
+    break
+    LocalJump .case =:: labelInfo
+      labelInfo .cmpType switch
+        NONE case
+          ## TODO remember state, correctly handle backward jumps
+          ## FIXME generate uncoditional jump
+        break
+        TRUE FALSE case
+          ## TODO remember state
+          ## FIXME generate coditional jump
+        break
+        EQ NE LT LE GE GT ULT ULE UGE UGT case
+          "fused compare&jump is not supported by QBE-backend" ..panic
+        break
+      end
+    break
     Block .case =:: blockVal
       blockVal .blockType switch
         IF IF_TRUE IF_FALSE case
@@ -4620,6 +4679,7 @@ proc( CompilerContext ptr.mut : context -> ) =>: cleanupCompilerContext
   context [] .ptrConstants
     list.free
   context .ptrConstants=
+  ( LocalLabelId : ignore -> ) => end LabelState.free@ context .labelStates map.freeAll
 end
 proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compileToQBE
   program .idContext =:: idContext
@@ -4630,6 +4690,10 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     StackElement branchTree.create
     BranchType .START 0 BranchId new
     32 BlockInfo list.create
+    ( LocalLabelId -> i32 ) => i32 cast end
+      ( LocalLabelId LocalLabelId -> bool ) => == end
+      512
+    LabelState map.create
     32 LocalConst list.create
     32 string list.create
     32 PtrConstant list.create

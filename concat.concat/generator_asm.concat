@@ -730,7 +730,7 @@ proc(
         HINT_END case
           context .labelStates labelInfo [] .labelId map.remove ..drop
         return
-        LABEL_START LABEL_END LABEL_MIDDLE NONE case break
+        LABEL_START LABEL_END LABEL_MIDDLE case break
       end
       labelInfo [] .labelId op [] .pos context syncLabelState asm.localLabel list.append
       true context .reachable=
