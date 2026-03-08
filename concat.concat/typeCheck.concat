@@ -124,9 +124,9 @@ proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos TypeCh
     IfBlockFlags.none
     id.ScopeId optional.empty
   IfBlockInfo new
-    $ .endLabel LocalLabelType .HINT_START pos opLabel state appendOp ..drop
-    $ .elseLabel LocalLabelType .HINT_START pos opLabel state appendOp ..drop
-    $ .ifLabel LocalLabelType .HINT_START pos opLabel state appendOp ..drop
+    $ .endLabel LocalLabelType .HINT_START pos state localLabel
+    $ .elseLabel LocalLabelType .HINT_START pos state localLabel
+    $ .ifLabel LocalLabelType .HINT_START pos state localLabel
   BlockInfo .If return
 end
 proc(
@@ -1072,6 +1072,12 @@ proc(
     op list.append
   state .compiledOps=
   index return
+end
+proc( LocalLabelId LocalLabelType FilePosition TypeCheckState ptr.mut : state -> ) =>: localLabel
+  opLabel state appendOp ..drop
+end
+proc( LocalLabelId CompareType FilePosition TypeCheckState ptr.mut : state -> ) =>: localJump
+  opJump state appendOp ..drop
 end
 ## reserve space for count operations at the current position, returns the position of the first operation
 proc(
@@ -3738,7 +3744,7 @@ proc(
               ifBlock [] .elseLabel CompareType .FALSE
             else
               ifBlock [] .ifLabel CompareType .TRUE
-            end op .pos opJump state appendOp ..drop
+            end op .pos state localJump
             continue.opLoop
           IF case
             state [] .reachable ! if
@@ -3800,8 +3806,8 @@ proc(
               ifBlock [] .blockId i64 cast
             @[] =:: ifData
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            ifBlock [] .elseLabel CompareType .FALSE op .pos opJump state appendOp ..drop
-            ifBlock [] .ifLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
+            ifBlock [] .elseLabel CompareType .FALSE op .pos state localJump
+            ifBlock [] .ifLabel LocalLabelType .LABEL_END op .pos state localLabel
             currentOpIndex ifData .ifPosition=
             ifBlock [] .andBranches
                 state .stack branchTree.startBranch
@@ -3964,8 +3970,8 @@ proc(
             end
             andPositions ifData .andPositions=
             currentOpIndex ifData .elsePosition=
-            ifBlock [] .endLabel CompareType .NONE op .pos opJump state appendOp ..drop
-            ifBlock [] .elseLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
+            ifBlock [] .endLabel CompareType .NONE op .pos state localJump
+            ifBlock [] .elseLabel LocalLabelType .LABEL_END op .pos state localLabel
             true state .reachable=
             ifBlock [] .andBranches .length 0:iSize != if
               ifBlock [] .andBranches .length branchTree.NodeId list.create
@@ -4313,7 +4319,7 @@ proc(
               whileBlock .labelPositions=
               whileBlock
                 blockType .CONTINUE if [] .finallyLabel else [] .endLabel end              
-              CompareType .NONE op .pos opJump state appendOp ..drop
+              CompareType .NONE op .pos state localJump
               continue.opLoop
             else ..drop end
             break
@@ -4348,10 +4354,10 @@ proc(
               op .pos
               state
             newWhileBlock
-              $ .endLabel LocalLabelType .HINT_START op .pos opLabel state appendOp ..drop
-              $ .whileLabel LocalLabelType .LABEL_START op .pos opLabel state appendOp ..drop
-              $ .finallyLabel LocalLabelType .HINT_START op .pos opLabel state appendOp ..drop
-              $ .doLabel LocalLabelType .HINT_START op .pos opLabel state appendOp ..drop
+              $ .endLabel LocalLabelType .HINT_START op .pos state localLabel
+              $ .whileLabel LocalLabelType .LABEL_START op .pos state localLabel
+              $ .finallyLabel LocalLabelType .HINT_START op .pos state localLabel
+              $ .doLabel LocalLabelType .HINT_START op .pos state localLabel
             BlockInfo .While state openBlock
             idContext id.openScope
             continue.opLoop
@@ -4400,7 +4406,7 @@ proc(
               whileBlock [] .endLabel CompareType .FALSE
             else
               whileBlock [] .doLabel CompareType .TRUE
-            end op .pos opJump state appendOp ..drop
+            end op .pos state localJump
             continue.opLoop
           DO case
             state peekBlock =:: currentBlock?
@@ -4498,8 +4504,8 @@ proc(
             whileBlock [] .labelPositions
               currentOpIndex list.append
             whileBlock .labelPositions=
-            whileBlock [] .endLabel CompareType .FALSE op .pos opJump state appendOp ..drop
-            whileBlock [] .doLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
+            whileBlock [] .endLabel CompareType .FALSE op .pos state localJump
+            whileBlock [] .doLabel LocalLabelType .LABEL_END op .pos state localLabel
             continue.opLoop
           FINALLY case
             state peekBlock .and .While .else
@@ -4588,7 +4594,7 @@ proc(
               program [] .whileData
               whileBlock [] .blockId i64 cast.u
             @[] .continuePositions=
-            whileBlock [] .finallyLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
+            whileBlock [] .finallyLabel LocalLabelType .LABEL_END op .pos state localLabel
             continue.opLoop
           AND OR case
             false 1 op .pos state clearReferences
@@ -4608,7 +4614,7 @@ proc(
                 blockId
                 state [] .compiledOps .length i32 cast.u
               op .pos state newAndOrBlock
-                $ .endLabel LocalLabelType .HINT_START op .pos opLabel state appendOp ..drop
+                $ .endLabel LocalLabelType .HINT_START op .pos state localLabel
               BlockInfo .AndOr state openBlock
               idContext id.openScope
               blockId
@@ -4632,7 +4638,7 @@ proc(
             0 StackModType .COPY op .pos opStackMod state appendOp ..drop
             currentBlock [] .endLabel
               blockType .AND if CompareType .FALSE else CompareType .TRUE end
-            op .pos opJump state appendOp ..drop
+            op .pos state localJump
             1 StackModType .DROP op .pos opStackMod state appendOp ..drop
             continue.opLoop
           NAMESPACE case
@@ -4870,7 +4876,7 @@ proc(
                 ifData [] .elsePosition
               @[]
             .val .Block .else "expected block" ..panic end .jumpDistance=
-            closedIf .endLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
+            closedIf .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             idContext id.closeScope ! "closing else-scope worked" assert
             ## cleanup closed block
             closedIf .andBranches list.free ..drop
@@ -5151,9 +5157,9 @@ proc(
             end
             breakPositions whileData .breakPositions=
             whileBlock .labelPositions list.free ..drop
-            whileBlock .whileLabel CompareType .NONE op .pos opJump state appendOp ..drop
-            whileBlock .whileLabel LocalLabelType .HINT_END op .pos opLabel state appendOp ..drop
-            whileBlock .endLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
+            whileBlock .whileLabel CompareType .NONE op .pos state localJump
+            whileBlock .whileLabel LocalLabelType .HINT_END op .pos state localLabel
+            whileBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             idContext id.closeScope ! "closing switch-scope worked" assert
             continue.opLoop
           WHILE DO case ## end-while/end-do should not be created by parser
@@ -5195,7 +5201,7 @@ proc(
               op@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
             end
             andOrBlock .andOrPositions list.free ..drop
-            andOrBlock .endLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
+            andOrBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             andOrBlock .branches =:: mut: branches
             branches
                 state .stack branchTree.startBranch
