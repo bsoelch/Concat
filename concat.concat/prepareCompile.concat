@@ -411,14 +411,7 @@ proc(
     Block .case =:: blockInfo
       blockInfo .blockId =:: blockId
       blockInfo .blockType switch
-        AND_IF case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateAndIf
-            newOps op list.append return
-          end
-        newOps
+        AND_IF case newOps
           blockId context getIfLabelInfo if
             >$
               $1 .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
@@ -427,14 +420,7 @@ proc(
             <$
           end .elseLabel CompareType .FALSE op .pos opJump list.append
         return
-        OR_IF case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateOrIf
-            newOps op list.append return
-          end
-        newOps
+        OR_IF case newOps
           blockId context getIfLabelInfo if
             >$
               $1 .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
@@ -443,14 +429,7 @@ proc(
             <$
           end .ifLabel CompareType .TRUE op .pos opJump list.append
         return
-        IF case
-          _BACKEND_ .QBE if
-            blockId
-              newOps list.asMutableSlice
-            program program.jumps.updateIf
-            newOps op list.append return
-          end
-        newOps
+        IF case newOps
           blockId context getIfLabelInfo =:: isBlockStart =:: ifLabelInfo
           isBlockStart if
             ifLabelInfo .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
@@ -461,14 +440,7 @@ proc(
             ifLabelInfo .ifLabel LocalLabelType .LABEL_END op .pos opLabel list.append
           end
         return
-        ELSE case
-          _BACKEND_ .QBE if
-            blockId
-              newOps list.asMutableSlice
-            program program.jumps.updateElse
-            newOps op list.append return
-          end
-        newOps
+        ELSE case newOps
           blockId context getIfLabelInfo ..drop .endLabel CompareType .NONE op .pos opJump list.append
           blockId context getIfLabelInfo ..drop .elseLabel LocalLabelType .LABEL_END op .pos opLabel list.append
         return
@@ -492,95 +464,44 @@ proc(
             newOps .length i32 cast.u
           program program.jumps.updateBreakSwitch
           newOps op list.append return
-        WHILE case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateWhile
-            newOps op list.append return
-          end
+        WHILE case newOps
           blockId context getWhileLabelInfo =:: whileInfo
-        newOps
           whileInfo .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
           whileInfo .whileLabel LocalLabelType .LABEL_START op .pos opLabel list.append
           whileInfo .finallyLabel LocalLabelType .HINT_START op .pos opLabel list.append
           whileInfo .doLabel LocalLabelType .HINT_START op .pos opLabel list.append
         return
         OR_DO case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateOrDo
-            newOps op list.append return
-          end
           newOps
             blockId context getWhileLabelInfo .doLabel CompareType .TRUE op .pos opJump
           list.append
         return
         AND_DO case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateAndDo
-            newOps op list.append return
-          end
           newOps
             blockId context getWhileLabelInfo .endLabel CompareType .FALSE op .pos opJump
           list.append
         return
-        DO case
-          _BACKEND_ .QBE if
-            blockId
-              newOps list.asMutableSlice
-            program program.jumps.updateDo
-            newOps op list.append return
-          end
-        blockId context getWhileLabelInfo =:: whileBlockInfo
-        newOps
+        DO case newOps
+          blockId context getWhileLabelInfo =:: whileBlockInfo
           whileBlockInfo .endLabel CompareType .FALSE op .pos opJump list.append
           whileBlockInfo .doLabel LocalLabelType .LABEL_END op .pos opLabel list.append
         return
         BREAK case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateBreak
-            newOps op list.append return
-          end
           newOps
             blockId context getWhileLabelInfo .endLabel CompareType .NONE op .pos opJump
           list.append
         return
         CONTINUE case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateContinue
-            newOps op list.append return
-          end
           newOps
             blockId context getWhileLabelInfo .finallyLabel CompareType .NONE op .pos opJump
           list.append
         return
         FINALLY case
-          _BACKEND_ .QBE if
-            blockId
-              newOps list.asMutableSlice
-            program program.jumps.updateFinally
-            newOps op list.append return
-          end
           newOps
             blockId context getWhileLabelInfo .finallyLabel LocalLabelType .LABEL_END op .pos opLabel
           list.append
         return
-        AND case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateAnd
-            newOps op list.append return
-          end
-        newOps
+        AND case newOps
           0 StackModType .COPY op .pos opStackMod list.append
           blockId context getAndOrLabelInfo if
             >$
@@ -588,14 +509,7 @@ proc(
             <$
           end .endLabel CompareType .FALSE op .pos opJump list.append
         return
-        OR case
-          _BACKEND_ .QBE if
-            blockId
-              newOps .length i32 cast.u
-            program program.jumps.updateOr
-            newOps op list.append return
-          end
-        newOps
+        OR case newOps
           0 StackModType .COPY op .pos opStackMod list.append
           blockId context getAndOrLabelInfo if
             >$
@@ -617,13 +531,6 @@ proc(
         PROCEDURE case
           newOps op list.append return
         ELSE case
-          _BACKEND_ .QBE if
-            blockId
-              newOps list.asMutableSlice
-            program program.jumps.updateEndIf
-            op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
-            newOps op list.append return
-          end
           newOps
             blockId context removeIfLabelInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel
           list.append
@@ -634,28 +541,13 @@ proc(
           program program.jumps.updateEndSwitch
           op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
           newOps op list.append return
-        WHILE case
-          _BACKEND_ .QBE if
-            blockId
-              newOps list.asMutableSlice
-            program program.jumps.updateEndWhile
-            op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
-            newOps op list.append return
-          end
-        blockId context removeWhileLabelInfo =:: whileBlockInfo
-        newOps
+        WHILE case newOps
+          blockId context removeWhileLabelInfo =:: whileBlockInfo
           whileBlockInfo .whileLabel CompareType .NONE op .pos opJump list.append
           whileBlockInfo .whileLabel LocalLabelType .HINT_END op .pos opLabel list.append
           whileBlockInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel list.append
         return
         AND OR case
-          _BACKEND_ .QBE if
-            blockId
-              newOps list.asMutableSlice
-            program program.jumps.updateEndAndOr
-            op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
-            newOps op list.append return
-          end
           newOps
             blockId context removeAndOrLabelInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel
           list.append
