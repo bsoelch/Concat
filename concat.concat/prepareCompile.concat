@@ -17,7 +17,7 @@ enum( IF AND_OR WHILE SWITCH ) =:: LocalBlockType
 proc( BlockId LocalBlockType -> BlockUId ) =>: getBlockUId
   ..label i64 cast.u
     $ 0b100 <= "LocalBlockType fits in two bits" assert
-  >$ i64 cast.u << 2 | BlockUId cast
+  >$ i64 cast.u 2 << | BlockUId cast
 end
 struct(
   LocalLabelId : endLabel
@@ -466,6 +466,7 @@ proc(
           newOps op list.append return
         WHILE case newOps
           blockId context getWhileLabelInfo =:: whileInfo
+          ## TODO remember number of types modified by while
           whileInfo .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
           whileInfo .whileLabel LocalLabelType .LABEL_START op .pos opLabel list.append
           whileInfo .finallyLabel LocalLabelType .HINT_START op .pos opLabel list.append
@@ -524,7 +525,6 @@ proc(
             TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE case break
       end
     break
-    ## TODO remove block-label-info after closing block
     BlockEnd .case =:: blockInfo
       blockInfo .blockId =:: blockId
       blockInfo .blockType switch
