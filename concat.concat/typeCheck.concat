@@ -4711,8 +4711,6 @@ proc(
             opIndex=
             continue.opLoop
           PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
-          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           UNKNOWN case
             break
         end
@@ -5205,8 +5203,6 @@ proc(
           continue.opLoop
           AND_IF OR_IF AND_DO OR_DO INLINE_PROCEDURE
           BREAK CONTINUE BREAK_SWITCH
-          IF_TRUE IF_FALSE AND_TRUE AND_FALSE
-          OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
           UNKNOWN OVERLOAD case
             break
         end

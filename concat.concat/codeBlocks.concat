@@ -10,11 +10,6 @@ enum(
   AND_IF
   OR_IF
   ELSE
-  ## if-block with known condition
-  IF_TRUE IF_FALSE
-  AND_TRUE AND_FALSE
-  OR_TRUE OR_FALSE
-  ELSE_TRUE ELSE_FALSE
   WHILE
   DO
   AND_DO
@@ -73,18 +68,6 @@ namespace: sb
       ELSE case
         "else" sb.appendS
         return
-      IF_TRUE case
-        "true if" sb.appendS
-        return
-      IF_FALSE case
-        "false if" sb.appendS
-        return
-      ELSE_TRUE case
-        "false if ... else" sb.appendS
-        return
-      ELSE_FALSE case
-        "true if ... else" sb.appendS
-        return
       WHILE case
         "while" sb.appendS
         return
@@ -129,18 +112,6 @@ namespace: sb
         return
       OR_IF case
         "or if" sb.appendS
-        return
-      AND_TRUE case
-        "true and" sb.appendS
-        return
-      AND_FALSE case
-        "false and" sb.appendS
-        return
-      OR_TRUE case
-        "true or" sb.appendS
-        return
-      OR_FALSE case
-        "false or" sb.appendS
         return
       AND_DO case
         "and do" sb.appendS

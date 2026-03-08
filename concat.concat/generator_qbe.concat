@@ -3715,7 +3715,7 @@ proc(
       end
     break
     Block .case =:: blockVal
-      BlockType ..length 43:iSize == "no-new block-types" assert
+      BlockType ..length 35:iSize == "no-new block-types" assert
       blockVal .blockType switch
         SWITCH case
           blockVal .blockId =:: switchId
@@ -3745,7 +3745,7 @@ proc(
       end
       break
     BlockEnd .case =:: blockEnd
-      BlockType ..length 43:iSize == "no-new block-types" assert
+      BlockType ..length 35:iSize == "no-new block-types" assert
       blockEnd .blockType switch
         PROCEDURE case
           Type .Undefined context .currentProc=

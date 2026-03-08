@@ -2019,7 +2019,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "..compiler.return":s string.eq _if ..drop
       ..drop ## discard remainder of file
-      BlockType ..length 43:iSize == "no new block types" assert
+      BlockType ..length 35:iSize == "no new block types" assert
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek .and [] .blockData switch
             If Switch case true break
