@@ -19,6 +19,19 @@ struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
 i64 =:: export: LocalLabelId
+namespace: LocalLabelId
+  proc( LocalLabelId LocalLabelId -> bool ) : export: alias: eq i64.eq
+  ## fast hash
+  proc( LocalLabelId -> i32 ) =>: export: hash i32 cast.u end
+  ## hash function that reduces collisions in low bits for non-consequtive values
+  proc( LocalLabelId -> i32 ) =>: export: skewHash
+    0
+      >$ i64 cast.u while $ 0 != do =:: x
+        11 * x 0x7 & i32 cast.u +
+      finally x 3 >>> end ..drop
+    return
+  end
+end
 enum( LABEL_START LABEL_END LABEL_MIDDLE HINT_START HINT_END ) =:: export: LocalLabelType
 enum( NONE TRUE FALSE EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export: CompareType
 {
@@ -34,6 +47,14 @@ struct(
   LocalLabelId : labelId
   CompareType : cmpType
 ) =:: LocalJumpInfo
+struct(
+  i32 : modifiedTypes
+) =:: BackJumpInfo
+namespace: BackJumpInfo
+  proc( i32 -> BackJumpInfo ) =>: export: new
+    BackJumpInfo new
+  end
+end
 
 i64 =:: ConstReferenceId
 
@@ -623,30 +644,31 @@ struct(
 ) =:: export: TypedConstant
 
 struct(
-            IdentifierContext : idContext
-             ProgramFile list : progFiles
-           ProcedureInfo list : procedures
-         ProcedureBundle list : procBundles
-                    Type list : autoTypes
-               Operation list : globalOps
-          MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
-                 LocalLabelId : nextLabelId
-              SwitchData list : switchData
-               WhileData list : whileData
-                  IfData list : ifData
-               AndOrData list : andOrData
-           TypedConstant list : constantReferences
-                 LabelId list : labelBuffer
-                stringBuilder : tmpString
-                CallData list : callData
-           CompilerError list : errors
-                        string : basePath
-                        string : libPath
-                      LabelId : mainLabelId
-                       ProcId : mainProcId
-                         bool : saveGlobalTokens
-                         bool : inLibFile
-                         bool : hasGetArgs
+  IdentifierContext : idContext
+  ProgramFile list : progFiles
+  ProcedureInfo list : procedures
+  ProcedureBundle list : procBundles
+  Type list : autoTypes
+  Operation list : globalOps
+  MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
+  LocalLabelId BackJumpInfo hashMap : backJumpInfo
+  LocalLabelId : nextLabelId
+  SwitchData list : switchData
+  WhileData list : whileData
+  IfData list : ifData
+  AndOrData list : andOrData
+  TypedConstant list : constantReferences
+  LabelId list : labelBuffer
+  stringBuilder : tmpString
+  CallData list : callData
+  CompilerError list : errors
+  string : basePath
+  string : libPath
+  LabelId : mainLabelId
+  ProcId : mainProcId
+  bool : saveGlobalTokens
+  bool : inLibFile
+  bool : hasGetArgs
 ) =:: export: ProgramContext
 namespace: program
   proc( ProgramContext ptr.mut -> LocalLabelId ) =>: export: nextLocalLabel
@@ -669,6 +691,7 @@ proc(
     32  Type            list.create
     1024 Operation      list.create
     4096                mixedArena.create
+    LocalLabelId.skewHash@ LocalLabelId.eq@ 1024 BackJumpInfo map.create
     0 LocalLabelId cast
     128 SwitchData      list.create
     128 WhileData       list.create
@@ -709,6 +732,9 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   id.LABEL_ID_NONE >$ .mainLabelId=
   NO_PROC >$ .mainProcId=
   false >$ .hasGetArgs=
+  =:: mut: tmp ## is there a way to avoid switching to variable
+    tmp@ .backJumpInfo map.free
+  tmp
 end
 
 proc(

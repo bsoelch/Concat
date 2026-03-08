@@ -4057,10 +4057,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     StackElement branchTree.create
     BranchType .START 0 BranchId new
     32 BlockInfo list.create
-    ( LocalLabelId -> i32 ) => i32 cast end
-      ( LocalLabelId LocalLabelId -> bool ) => == end
-      512
-    LabelState map.create
+    LocalLabelId.hash@ LocalLabelId.eq@ 512 LabelState map.create
     32 LocalConst list.create
     32 string list.create
     32 PtrConstant list.create

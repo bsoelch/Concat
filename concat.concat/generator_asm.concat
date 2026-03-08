@@ -863,10 +863,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
   ## CompilerContext
     program
     AMD64.asmContext
-    ( LocalLabelId -> i32 ) => i32 cast end
-      ( LocalLabelId LocalLabelId -> bool ) => == end
-      512
-    LabelState map.create
+    LocalLabelId.hash@ LocalLabelId.eq@ 512 LabelState map.create
     ( asm.RegisterId -> i32 ) => asm.RegisterId.BASE_SHIFT >>> i32 cast end
       ( asm.RegisterId asm.RegisterId -> bool ) =>
         asm.RegisterId.BASE_MASK & >$ asm.RegisterId.BASE_MASK &

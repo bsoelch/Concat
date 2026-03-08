@@ -466,7 +466,10 @@ proc(
           newOps op list.append return
         WHILE case newOps
           blockId context getWhileLabelInfo =:: whileInfo
-          ## TODO remember number of types modified by while
+          program .backJumpInfo
+            whileInfo .whileLabel
+            program [] .whileData blockId iSize cast.u @[] .modifiedTypes [] BackJumpInfo.new
+          map.put ..drop
           whileInfo .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
           whileInfo .whileLabel LocalLabelType .LABEL_START op .pos opLabel list.append
           whileInfo .finallyLabel LocalLabelType .HINT_START op .pos opLabel list.append
