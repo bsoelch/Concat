@@ -517,7 +517,10 @@ proc(
   aInt bInt < if -1 else 1 end return
 end
 struct(
-  LabelData list : labels
+  LabelData list : switchLabels
+  LocalLabelId slice : branchLabels
+  LocalLabelId : defaultLabel
+  LocalLabelId : endLabel
   Type : switchType
   i32 : caseCount
   i32 : breakCount
@@ -1277,80 +1280,5 @@ namespace: sb
         '\n' sb.appendC
       end
     end
-  end
-end
-
-namespace: program.jumps
-  proc(
-    BlockId : blockId
-    i32 : newIndex
-    ProgramContext ptr.mut : program
-  -> ) =>: export: updateSwitch
-    newIndex
-      program [] .switchData blockId i32 cast @[]
-    .switchPosition=
-  end
-  proc(
-    BlockId : blockId
-    i32 : newIndex
-    ProgramContext ptr.mut : program
-  -> ) =>: export: updateCase
-    program [] .switchData
-      blockId i32 cast
-    @[] =:: switchData
-    switchData [] .caseCount
-      newIndex
-        switchData [] .switchPosition - JumpDistance cast
-      switchData [] .caseJumpDistances $2 slice.set
-      1 +
-    switchData .caseCount=
-  end
-  proc(
-    BlockId : blockId
-    i32 : newIndex
-    ProgramContext ptr.mut : program
-  -> ) =>: export: updateDefault
-    program [] .switchData
-      blockId i32 cast
-    @[] =:: switchData
-    newIndex
-      switchData [] .switchPosition - JumpDistance cast
-    switchData .defaultJumpDistance=
-  end
-  proc(
-    BlockId : blockId
-    i32 : newIndex
-    ProgramContext ptr.mut : program
-  -> ) =>: export: updateBreakSwitch
-    program [] .switchData
-      blockId i32 cast
-    @[] =:: switchData
-    switchData [] .breakCount
-      newIndex switchData [] .breakPositions $2 slice.set
-      1 +
-    switchData .breakCount=
-  end
-  proc(
-    BlockId : blockId
-    Operation slice.mut : newOps
-    ProgramContext ptr.mut : program
-  -> JumpDistance ) =>: export: updateEndSwitch
-    program [] .switchData
-      blockId i32 cast
-    @[] =:: switchData
-    switchData [] .breakCount for =:: i
-      switchData [] .breakPositions
-        i
-      [] =:: breakPos
-      newOps .length i32 cast
-        breakPos - JumpDistance cast
-      newOps
-        breakPos @[]
-      .val .Block .else "expected block" ..panic end .jumpDistance=
-    end
-    0 switchData .breakCount=
-    switchData [] .switchPosition
-      newOps .length i32 cast -
-    JumpDistance cast
   end
 end

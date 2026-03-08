@@ -33,10 +33,16 @@ struct(
   LocalLabelId : finallyLabel
   LocalLabelId : endLabel
 ) =:: WhileBlockLabelInfo
+struct(
+  LocalLabelId : defaultLabel
+  LocalLabelId : endLabel
+  i32 : caseCount
+) =:: SwitchBlockLabelInfo
 union(
   AndOrBlockLabelInfo : AndOr
   IfBlockLabelInfo : If
   WhileBlockLabelInfo : While
+  SwitchBlockLabelInfo : Switch
 ) =:: BlockLabelInfo
 struct(
   ProgramContext ptr.mut : program
@@ -96,6 +102,39 @@ proc( BlockId ConverterContext ptr.mut : context -> WhileBlockLabelInfo ) =>: re
   LocalBlockType .WHILE getBlockUId =:: blockId
   context .blockLabels blockId map.remove .and .While .else
     "missing WhileBlockLabelInfo" ..panic
+  end
+end
+proc( BlockId : blockId ConverterContext ptr.mut : context -> ) =>: initSwitchLabelInfo
+  context [] .program =:: program
+  program [] .switchData blockId iSize cast.u @[] =:: switchData
+  program [] .programMemory
+    switchData [] .caseCount LocalLabelId mixedArena.allocSlice =:: labelMemory
+  program .programMemory=
+  labelMemory slice.@itr for
+    program program.nextLocalLabel >$ =[]
+  end
+  program program.nextLocalLabel switchData .defaultLabel=
+  program program.nextLocalLabel switchData .endLabel=
+  labelMemory slice.freeze switchData .branchLabels=
+  context .blockLabels
+    blockId LocalBlockType .SWITCH getBlockUId
+    ## SwitchBlockLabelInfo
+      switchData [] .defaultLabel
+      switchData [] .endLabel
+      0
+    SwitchBlockLabelInfo new BlockLabelInfo .Switch
+  map.put ..drop
+end
+proc( BlockId ConverterContext ptr.mut : context -> SwitchBlockLabelInfo ptr.mut ) =>: getSwitchLabelInfo
+  LocalBlockType .SWITCH getBlockUId =:: blockId
+  context .blockLabels blockId map.at .and .Switch .else
+    "expected SwitchBlockLabelInfo" ..panic
+  end
+end
+proc( BlockId ConverterContext ptr.mut : context -> SwitchBlockLabelInfo ) =>: removeSwitchLabelInfo
+  LocalBlockType .SWITCH getBlockUId =:: blockId
+  context .blockLabels blockId map.remove .and .Switch .else
+    "expected SwitchBlockLabelInfo" ..panic
   end
 end
 
@@ -445,25 +484,27 @@ proc(
           blockId context getIfLabelInfo ..drop .elseLabel LocalLabelType .LABEL_END op .pos opLabel list.append
         return
         SWITCH case
-          blockId
-            newOps .length i32 cast.u
-          program program.jumps.updateSwitch
+          blockId context initSwitchLabelInfo
           newOps op list.append return
         CASE DOT_CASE case
-          blockId
-            newOps .length i32 cast.u
-          program program.jumps.updateCase
-          newOps op list.append return
+          program [] .switchData blockId iSize cast.u @[] =:: switchData
+          blockId context getSwitchLabelInfo =:: labelInfo
+          newOps
+            switchData [] .branchLabels
+              labelInfo [] .caseCount $ 1 + labelInfo .caseCount=
+            [] LocalLabelType .LABEL_END op .pos opLabel
+          list.append
+        return
         DEFAULT DOT_DEFAULT case
-          blockId
-            newOps .length i32 cast.u
-          program program.jumps.updateDefault
-          newOps op list.append return
+          newOps
+            blockId context getSwitchLabelInfo [] .defaultLabel LocalLabelType .LABEL_END op .pos opLabel
+          list.append
+        return
         BREAK_SWITCH case
-          blockId
-            newOps .length i32 cast.u
-          program program.jumps.updateBreakSwitch
-          newOps op list.append return
+          newOps
+            blockId context getSwitchLabelInfo [] .endLabel CompareType .NONE op .pos opJump
+          list.append
+        return
         WHILE case newOps
           blockId context getWhileLabelInfo =:: whileInfo
           program .backJumpInfo
@@ -543,11 +584,10 @@ proc(
           list.append
         return
         SWITCH case
-          blockId
-            newOps list.asMutableSlice
-          program program.jumps.updateEndSwitch
-          op@ .val .BlockEnd unionElement.unwrapPtr .jumpDistance=
-          newOps op list.append return
+          newOps
+            blockId context removeSwitchLabelInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel
+          list.append
+        return
         WHILE case newOps
           blockId context removeWhileLabelInfo =:: whileBlockInfo
           whileBlockInfo .whileLabel CompareType .NONE op .pos opJump list.append

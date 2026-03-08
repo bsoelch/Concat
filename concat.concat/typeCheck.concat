@@ -2009,7 +2009,7 @@ proc(
       intVal 1:i64 size 8 * << 1 - & ConstValue .Int
     end
   =:: label
-  switchData [] .labels list.atItr for =:: labelData
+  switchData [] .switchLabels list.atItr for =:: labelData
     ## constantEquals
       labelData [] .value
       label
@@ -2032,13 +2032,13 @@ proc(
       pos errors appendError
     end
   end
-  switchData [] .labels
+  switchData [] .switchLabels
     ## LabelData
       label
       pos
       switchData [] .caseCount
     LabelData new list.append
-  switchData .labels=
+  switchData .switchLabels=
 end
 proc(
   Operation ptr : op
@@ -4047,6 +4047,9 @@ proc(
             program [] .switchData
               ## SwitchData
                 16 LabelData list.create
+                LocalLabelId slice.empty
+                -1 LocalLabelId cast
+                -1 LocalLabelId cast
                 labelType
                 0 ## case-count
                 0 ## break-count
@@ -4107,7 +4110,7 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end
-            switchData [] .labels list.peek =:: prev?
+            switchData [] .switchLabels list.peek =:: prev?
             switchBlock [] .switchType =:: switchType
             blockType .DEFAULT or blockType .DOT_DEFAULT if
               prev? .else
@@ -4159,7 +4162,7 @@ proc(
                 end i32 cast.u =:: eltIndex
                 switchType typeContext types.asRawUnion optional.unwrap =:: rawSwitchType
                 rawSwitchType eltIndex typeContext types.compositeGetElement =:: labelType
-                switchData [] .labels list.reversed for  =:: label
+                switchData [] .switchLabels list.reversed for  =:: label
                   ## labels in current case are al at end of label list
                   label .caseId switchData [] .caseCount < if break end
                   rawSwitchType label .value .Int .else
@@ -4850,7 +4853,7 @@ proc(
               switchBlock .blockId i64 cast
             @[] =:: switchData
             ## sort switch-labels
-            switchData [] .labels switchLabelCmp@ program list.sort
+            switchData [] .switchLabels switchLabelCmp@ program list.sort
             switchData [] .defaultJumpDistance ? ! if
               BlockType .DEFAULT op .pos opBlock =:: mut: tmp
               switchBlock .blockId tmp@ .val .Block .else "expected block" ..panic end .blockId=
@@ -4868,7 +4871,7 @@ proc(
                 rawSwitchType
                   typeContext
                 types.compositeEltCount =:: eltCount
-                switchData [] .labels =:: labels
+                switchData [] .switchLabels =:: labels
                 labels  .length eltCount iSize cast.u u< if
                   "switch statement does not cover all labels in enum " sb.copyPtr
                     switchBlock .switchType
@@ -4973,7 +4976,6 @@ proc(
                 mixedArena.copyList
               switchData .caseJumpDistances=
             program .programMemory=
-            0 switchData .caseCount= ## reset case-count
             breakPositions list.free ..drop
             switchBlock .caseJumpDistances list.free ..drop
             switchBlock .switchPosition

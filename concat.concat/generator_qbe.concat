@@ -24,7 +24,6 @@ enum(
   NEXT
   ERROR
   LABEL
-  LABEL_OLD
   END_INLINE
 ) =:: BranchType
 struct( BranchType : branchType i32 : id ) =:: BranchId
@@ -54,17 +53,6 @@ struct(
 ) =:: LocalConst
 
 struct(
-  branchTree.NodeId list : caseBranches
-  BranchId list : caseBranchIds
-  branchTree.NodeId : branchRoot
-  BlockId : blockId
-  i32 : blockEnd
-) =:: SwitchBlockInfo
-
-union(
-  SwitchBlockInfo : Switch
-) =:: BlockInfo
-struct(
   branchTree.NodeId list : branches
   BranchId list : branchIds
 ) =:: LabelState
@@ -81,19 +69,10 @@ namespace: LabelState
   end
 end
 
-namespace: sb
-  proc( stringBuilder BlockInfo -> stringBuilder ) =>: appendBlockInfo
-    switch
-      Switch case "switch-case block" sb.appendS return
-    end
-  end
-end
-
 struct(
   ProgramContext ptr.mut : program
   StackElement BranchTree : stackInfo
   BranchId : currentBranch
-  BlockInfo list : openBlocks
   LocalLabelId LabelState hashMap : labelStates
   LocalConst list : localConstants
   string list : stringConstants
@@ -171,7 +150,6 @@ namespace: sb
         NEXT case "@next" sb.appendS branch .id sb.appendI break
         ERROR case "@error" sb.appendS branch .id sb.appendI break
         LABEL case "@label_" sb.appendS branch .id sb.appendI break
-        LABEL_OLD case "@blocklabel" sb.appendS branch .id sb.appendI break
         END_INLINE case "@endInline" sb.appendS branch .id sb.appendI break
       end
     return
@@ -408,6 +386,12 @@ proc(
     rootValue [] .valType
   StackElement new return
 end
+
+
+proc( LabelState CompilerContext ptr.mut : context -> LabelState ) =>: rememberStackStateAtLabel
+  $ .branches context .stackInfo branchTree.startBranch list.append >$ .branches=
+  $ .branchIds context [] .currentBranch list.append >$ .branchIds=
+end
 proc( stringBuilder
   LocalLabelId : labelId
   FilePosition : pos
@@ -431,51 +415,8 @@ proc( stringBuilder
     context .labelStates labelId map.at .else
       "missing label state" ..panic
     end =:: labelState
-    labelState [] .branches
-      context .stackInfo branchTree.startBranch list.append
-    labelState .branches=
-    labelState [] .branchIds
-      context [] .currentBranch list.append
-    labelState .branchIds=
+    labelState [] context rememberStackStateAtLabel labelState =[]
   end
-end
-
-proc( BlockInfo : block CompilerContext ptr.mut : context -> ) =>: openBlock
-  context [] .openBlocks
-    block list.append
-  context .openBlocks=
-end
-proc(
-  BlockId : blockId
-  i32 : blockEnd
-  CompilerContext ptr.mut : context
--> ) =>: openSwitchBlock
-  ## SwitchBlockInfo
-    16 branchTree.NodeId list.create
-    16 BranchId list.create
-    context .stackInfo branchTree.startBranch
-    blockId
-    blockEnd
-  SwitchBlockInfo new BlockInfo .Switch context openBlock
-end
-
-enum( WHILE SWITCH ) =:: BreakType
-proc(
-  BlockId : blockId
-  BreakType : breakType
-  FilePosition : pos
-  CompilerContext ptr.mut : context
--> BlockInfo ptr.mut optional ) =>: findBreakableBlock
-  context [] .program =:: program
-  program .errors =:: errors
-  context [] .openBlocks list.atReversed for =:: block
-    breakType .SWITCH and block [] .Switch .and .blockId blockId == if
-      block optional.wrap return
-    end
-  end
-  "could not find target of break/continue " sb.copyPtr
-  pos errors appendError
-  BlockInfo ptr.mut optional.empty return
 end
 
 namespace: sb
@@ -1577,9 +1518,9 @@ proc(
   stringBuilder : sb
   ValType : valType
   i32 : valId
-  JumpDistance : defaultJumpDistance
   LabelData slice : labels
-  JumpDistance slice.mut : caseJumpDistances
+  LocalLabelId slice : branchLabels
+  LocalLabelId : defaultLabel
   i32 : opIndex
   i64 optional : lower
   i64 optional : upper
@@ -1598,8 +1539,8 @@ proc(
       0:iSize while $ loopCount u< do =:: i
         labels i @[] .caseId [] =:: caseId
         ## BranchId
-          BranchType .LABEL_OLD
-          opIndex caseJumpDistances caseId [] i32 cast +
+          BranchType .LABEL
+          branchLabels caseId [] i32 cast.u
         BranchId new =:: caseBranch
         ## BranchId
           BranchType .NEXT
@@ -1622,14 +1563,14 @@ proc(
       contiguous if
         labels loopCount @[] .caseId [] =:: caseId
         ## BranchId
-          BranchType .LABEL_OLD
-          opIndex caseJumpDistances caseId [] i32 cast +
+          BranchType .LABEL
+          branchLabels caseId [] i32 cast.u
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       else
         ## BranchId
-          BranchType .LABEL_OLD
-          opIndex defaultJumpDistance i32 cast +
+          BranchType .LABEL
+          defaultLabel i32 cast.u
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       end
@@ -1660,9 +1601,9 @@ proc(
     ## appendSwitchJumpTree
       valType
       valId
-      defaultJumpDistance
       lElts
-      caseJumpDistances
+      branchLabels
+      defaultLabel
       opIndex
       lower
       cmpVal
@@ -1675,9 +1616,9 @@ proc(
     ## appendSwitchJumpTree
       valType
       valId
-      defaultJumpDistance
       rElts
-      caseJumpDistances
+      branchLabels
+      defaultLabel
       opIndex
       cmpVal
         lower .if i64.max end
@@ -1691,9 +1632,9 @@ proc(
   stringBuilder : sb
   Type : switchType
   i32 : valId
-  JumpDistance : defaultJumpDistance
   LabelData list : labels ## switch labels (sorted by type-checker)
-  JumpDistance slice.mut : caseJumpDistances
+  LocalLabelId slice : branchLabels
+  LocalLabelId : defaultLabel
   i32 : opIndex
   FilePosition : pos
   CompilerContext ptr.mut : context
@@ -1704,6 +1645,16 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
+  branchLabels for =:: labelId
+    context .labelStates
+      labelId
+      LabelState.new context rememberStackStateAtLabel
+    map.put ..drop
+  end
+  context .labelStates
+    defaultLabel
+    LabelState.new context rememberStackStateAtLabel
+  map.put ..drop
   ValType : valType
   i32 : tmpId
   sb
@@ -1738,9 +1689,9 @@ proc(
     ## appendJumpTable
       valType
       tmpId
-      defaultJumpDistance
       labels list.asSlice
-      caseJumpDistances
+      branchLabels
+      defaultLabel
       opIndex
       i64 optional.empty
       i64 optional.empty
@@ -3691,12 +3642,7 @@ proc(
         "missing label state" ..panic
       end =:: labelState
       context [] .reachable if
-        labelState [] .branches
-          context .stackInfo branchTree.startBranch list.append
-        labelState .branches=
-        labelState [] .branchIds
-          context [] .currentBranch list.append
-        labelState .branchIds=
+        labelState [] context rememberStackStateAtLabel labelState =[]
       end
       sb
         labelState [] .branches .length 0 != if
@@ -3781,73 +3727,19 @@ proc(
             ## appendSwitchTable
               switchData [] .switchType
               op [] .pos context popValue
-              switchData [] .defaultJumpDistance
-              switchData [] .labels
-              switchData [] .caseJumpDistances
+              switchData [] .switchLabels
+              switchData [] .branchLabels
+              switchData [] .defaultLabel
               opIndex
               op [] .pos
               context
             appendSwitchTable
-            switchId
-              opIndex blockVal .jumpDistance i32 cast +
-            context openSwitchBlock
+            context .labelStates
+              switchData [] .endLabel
+              LabelState.new ## ! do not remember state for end-label
+            map.put ..drop
             false context .reachable=
           return
-        CASE DEFAULT case
-            sb
-              ## startBranch
-                ## BranchId
-                  BranchType .LABEL_OLD
-                  opIndex
-                BranchId new
-                "case/default":s
-              context startBranch
-              true context .reachable=
-            return
-        BREAK_SWITCH case
-            ## findBreakableBlock
-              blockVal .blockId
-              BreakType .SWITCH
-              op [] .pos
-              context
-            findBreakableBlock .else
-              ## error message handled by findBreakableBlock
-              sb return
-            end =:: breakBlock
-            breakBlock .Switch .else ..drop
-              "unexpected block for " sb.copyPtr
-                BlockType .BREAK_SWITCH sb.appendBlockType
-                ": " sb.appendS
-                breakBlock [] sb.appendBlockInfo
-              op [] .pos errors appendError
-              sb return
-            end =:: switchBlock
-            context .stackInfo
-              switchBlock [] .branchRoot
-            branchTree.reset =:: caseBranchId
-            ## remember break (if reachable)
-            context [] .reachable if
-              switchBlock [] .caseBranches
-                caseBranchId list.append
-              switchBlock .caseBranches=
-              switchBlock [] .caseBranchIds
-                context [] .currentBranch list.append
-              switchBlock .caseBranchIds=
-            end
-            sb
-              context [] .reachable if
-                ## don't add jump in unreachable branches
-                op [] .pos sb.appendPosQBE
-                "jmp " sb.appendS
-                ## BlockId
-                  BranchType .LABEL_OLD
-                  opIndex blockVal .jumpDistance i32 cast +
-                BranchId new sb.appendBranchId
-                '\n' sb.appendC
-              end
-              false context .reachable=
-            return
-          break
         INLINE_PROCEDURE case sb return
         default break
       end
@@ -3871,47 +3763,6 @@ proc(
             BranchId new "inline proc":s context startBranch
             ## TODO merge branches if neccessary
           return
-        SWITCH case
-          context [] .openBlocks
-            list.pop .and .Switch .else
-              "expected switch-block" ..panic
-            end =:: switchBlock
-          context .openBlocks=
-          switchBlock .caseBranches =:: caseBranches
-          caseBranches .length 0:iSize != context .reachable=
-          sb
-            ## don't add position for labels
-            ## startBranch
-              ## BranchId
-                BranchType .LABEL_OLD
-                opIndex
-              BranchId new
-              "end switch":s
-              context
-            startBranch
-          =:: mut: newSb
-          caseBranches .length 1:iSize u>= if
-            caseBranches .length =:: nodeCount
-            ## mergeValues
-              context .stackInfo
-              caseBranches list.asSlice
-              mergeBranches@
-              ## MergePoint
-                "switch":s
-                switchBlock .caseBranchIds list.asSlice
-                op [] .pos
-                context
-                newSb@
-              MergePoint new
-            branchTree.merge .Error ? if
-              "could not merge branches of switch-case block" sb.copyPtr
-              op [] .pos errors appendError
-            end
-          end
-          caseBranches .length 0:iSize != context .reachable=
-          caseBranches list.free ..drop
-          switchBlock .caseBranchIds list.free ..drop
-          newSb return
         default break
       end
       break
@@ -4082,9 +3933,6 @@ end
 
 proc( CompilerContext ptr.mut : context -> ) =>: cleanupCompilerContext
   context .stackInfo branchTree.free
-  context [] .openBlocks
-    list.free
-  context .openBlocks=
   context [] .localConstants
     list.free
   context .localConstants=
@@ -4104,7 +3952,6 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     program
     StackElement branchTree.create
     BranchType .START 0 BranchId new
-    32 BlockInfo list.create
     LocalLabelId.hash@ LocalLabelId.eq@ 512 LabelState map.create
     32 LocalConst list.create
     32 string list.create

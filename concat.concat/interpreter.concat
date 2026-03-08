@@ -1176,8 +1176,8 @@ proc(
             blockInfo .blockId i64 cast.u
           @[] =:: switchData
           switchData [] .switchType =:: switchType
-          switchData [] .labels .length for =:: i
-            switchData [] .labels i @[] =:: label
+          switchData [] .switchLabels .length for =:: i
+            switchData [] .switchLabels i @[] =:: label
             label [] .value switchValue switchType typeContext operatorEq if
               "cannot check equality of switch value " sb.copyPtr
                 switchValue typeContext sb.appendConstant
