@@ -51,6 +51,9 @@ struct(
   BranchPoint list : andBranches
   BranchPoint list : orBranches
   i32 list : andOrPositions
+  LocalLabelId : ifLabel
+  LocalLabelId : elseLabel
+  LocalLabelId : endLabel
   i32 : ifCastsOffset
   BlockId : blockId
   IfBlockFlags : flags
@@ -101,18 +104,25 @@ union(
   WhileBlockInfo : While
   AndOrBlockInfo : AndOr
 ) =:: BlockInfo
-proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos -> BlockInfo ) =>: newIfBlock
+proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos TypeCheckState ptr.mut : state -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
     branchRoot
     branchTree.EMPTY pos BranchPoint new ## dummy value
     8 BranchPoint list.create
     8 BranchPoint list.create
     16 i32 list.create
+    state [] .program program.nextLocalLabel
+    state [] .program program.nextLocalLabel
+    state [] .program program.nextLocalLabel
     -1
     blockId
     IfBlockFlags.none
     id.ScopeId optional.empty
-  IfBlockInfo new BlockInfo .If return
+  IfBlockInfo new
+    $ .endLabel LocalLabelType .HINT_START pos opLabel state appendOp ..drop
+    $ .elseLabel LocalLabelType .HINT_START pos opLabel state appendOp ..drop
+    $ .ifLabel LocalLabelType .HINT_START pos opLabel state appendOp ..drop
+  BlockInfo .If return
 end
 proc(
   Type : switchType
@@ -3689,7 +3699,7 @@ proc(
               state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
               blockId op@ .val .Block .else "expected block" ..panic end .blockId=
               state .stack branchTree.startBranch =:: ifRoot
-              ifRoot blockId op .pos newIfBlock =:: mut: ifBlock
+              ifRoot blockId op .pos state newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
               idContext id.openScope
             end
@@ -3712,7 +3722,11 @@ proc(
             ifBlock [] .andOrPositions
               state [] .compiledOps .length i32 cast.u list.append
             ifBlock .andOrPositions=
-            op state appendOp ..drop
+            blockType .AND_IF if
+              ifBlock [] .elseLabel CompareType .FALSE
+            else
+              ifBlock [] .ifLabel CompareType .TRUE
+            end op .pos opJump state appendOp ..drop
             continue.opLoop
           IF case
             state [] .reachable ! if
@@ -3724,7 +3738,8 @@ proc(
               opIndex=
               continue.opLoop
             end
-            state inIfCondition ! if
+            state inIfCondition ! =:: needCreateIf
+            needCreateIf if
               ## don't constant fold `if` if there are open and-if / or-if branches
               state .stack branchTree.peek .and .value [] .Bool .if =:: boolVal
                 oldBlockStart state .blockStart= ## keep previous block start
@@ -3740,7 +3755,7 @@ proc(
               end
               state .stack branchTree.startBranch =:: ifBranch
               state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
-              ifBranch blockId op .pos newIfBlock =:: mut: ifBlock
+              ifBranch blockId op .pos state newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
               idContext id.openScope
             end
@@ -3773,7 +3788,8 @@ proc(
               ifBlock [] .blockId i64 cast
             @[] =:: ifData
             state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            op state appendOp ..drop
+            ifBlock [] .elseLabel CompareType .FALSE op .pos opJump state appendOp ..drop
+            ifBlock [] .ifLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
             currentOpIndex ifData .ifPosition=
             ifBlock [] .andBranches
                 state .stack branchTree.startBranch
@@ -3936,7 +3952,8 @@ proc(
             end
             andPositions ifData .andPositions=
             currentOpIndex ifData .elsePosition=
-            op state appendOp ..drop
+            ifBlock [] .endLabel CompareType .NONE op .pos opJump state appendOp ..drop
+            ifBlock [] .elseLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
             true state .reachable=
             ifBlock [] .andBranches .length 0:iSize != if
               ifBlock [] .andBranches .length branchTree.NodeId list.create
@@ -4823,7 +4840,7 @@ proc(
                 ifData [] .elsePosition
               @[]
             .val .Block .else "expected block" ..panic end .jumpDistance=
-            op state appendOp ..drop
+            closedIf .endLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
             idContext id.closeScope ! "closing else-scope worked" assert
             ## cleanup closed block
             closedIf .andBranches list.free ..drop
