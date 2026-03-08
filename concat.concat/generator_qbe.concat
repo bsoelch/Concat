@@ -408,6 +408,37 @@ proc(
     rootValue [] .valType
   StackElement new return
 end
+proc( stringBuilder
+  LocalLabelId : labelId
+  FilePosition : pos
+  CompilerContext ptr.mut : context
+-> stringBuilder ) =>: rememberStackState
+  context [] .program .backJumpInfo labelId map.get .if
+    context .stackInfo branchTree.startBranch =:: oldBranch
+    .modifiedTypes for =:: i
+      context .stackInfo branchTree.pop .else
+        "stack underflow" sb.copyPtr pos context [] .program .errors appendError
+        return
+      end =:: srcVal
+      "%label" sb.appendS labelId i64 cast.u sb.appendI
+        '_' sb.appendC i sb.appendI
+      " =" sb.appendS srcVal [] .valType sb.appendValTypeQBE
+      " copy %s" sb.appendS srcVal [] .varId sb.appendI '\n' sb.appendC
+    end
+    context .stackInfo oldBranch branchTree.reset =:: tmpBranch
+    context .stackInfo tmpBranch branchTree.endBranch
+  else
+    context .labelStates labelId map.at .else
+      "missing label state" ..panic
+    end =:: labelState
+    labelState [] .branches
+      context .stackInfo branchTree.startBranch list.append
+    labelState .branches=
+    labelState [] .branchIds
+      context [] .currentBranch list.append
+    labelState .branchIds=
+  end
+end
 
 proc( BlockInfo : block CompilerContext ptr.mut : context -> ) =>: openBlock
   context [] .openBlocks
@@ -3611,13 +3642,50 @@ proc(
           context .labelStates labelInfo .labelId map.remove .if LabelState.free end
         sb return
         LABEL_START case
-          ## FIXME handle backwards jumps
           context .labelStates
             labelInfo .labelId
             LabelState.new
           map.put ..drop
-        break
-        LABEL_END LABEL_MIDDLE case break
+          context [] .program .backJumpInfo labelInfo .labelId map.get .else
+            "start label without back-jump info" ..panic
+          end =:: backJumpInfo
+        sb
+          context [] .reachable ! if
+            "unreachable back-jump labels are not supported in QBE-backend" ..panic
+          end
+          ## copy the top-n stack-elements to tmp-vars
+          ## TODO? common buffer in context
+          backJumpInfo .modifiedTypes ValType list.create =:: mut: valTypeBuffer
+          ## TODO? merge with version in rememberStackState
+          backJumpInfo .modifiedTypes for =:: i
+            context .stackInfo branchTree.pop .else
+              "stack underflow" sb.copyPtr op [] .pos context [] .program .errors appendError
+              break
+            end =:: srcVal
+            "%label" sb.appendS labelInfo .labelId i64 cast.u sb.appendI
+              '_' sb.appendC i sb.appendI
+            " =" sb.appendS srcVal [] .valType sb.appendValTypeQBE
+            " copy %s" sb.appendS srcVal [] .varId sb.appendI '\n' sb.appendC
+            valTypeBuffer srcVal [] .valType list.append valTypeBuffer=
+          end
+          ## BranchId
+            BranchType .LABEL
+            labelInfo .labelId i32 cast.u
+          BranchId new "label":s context startBranch
+          ## copy the tmp-vars stack-elements to the top-n stack-elements
+          backJumpInfo .modifiedTypes 1 - while $ 0 >= do =:: i
+            valTypeBuffer i list.get .else ValType .EMPTY end =:: eltVal
+            "%s" sb.appendS eltVal context pushValue sb.appendI
+            " =" sb.appendS eltVal sb.appendValTypeQBE
+            " copy %label" sb.appendS
+              labelInfo .labelId i64 cast.u sb.appendI
+            '_' sb.appendC i sb.appendI '\n' sb.appendC
+          finally i 1 - end ..drop
+          valTypeBuffer list.free ..drop
+          true context .reachable=
+        return
+        LABEL_END case break
+        LABEL_MIDDLE case "bi-directional labels are not supported by the QBE-backend" ..panic
       end
       context .labelStates labelInfo .labelId map.at .else
         "missing label state" ..panic
@@ -3631,15 +3699,12 @@ proc(
         labelState .branchIds=
       end
       sb
-        ## BranchId
-          BranchType .LABEL
-          labelInfo .labelId i32 cast.u
-        BranchId new "label":s context startBranch
-      =:: mut: newSb
-      true context .reachable=
-      labelInfo .labelType switch
-        HINT_START HINT_END case break
-        LABEL_START LABEL_END LABEL_MIDDLE case
+        labelState [] .branches .length 0 != if
+          ## BranchId
+            BranchType .LABEL
+            labelInfo .labelId i32 cast.u
+          BranchId new "label":s context startBranch
+          =:: mut: newSb
           ## mergeValues
             context .stackInfo
             labelState [] .branches list.asSlice
@@ -3655,18 +3720,13 @@ proc(
             "could not merge label branches" sb.copyPtr
             op [] .pos errors appendError
           end
-        break
-      end
-      labelInfo .labelType .LABEL_END if
-        context .labelStates labelInfo .labelId map.remove .if LabelState.free end
-      end
-    newSb return
+          true context .reachable=
+          newSb
+        end
+      context .labelStates labelInfo .labelId map.remove .if LabelState.free end
+    return
     LocalJump .case =:: labelInfo
       context [] .reachable ! if sb return end ## ignore unreachable jump
-      context .labelStates labelInfo .labelId map.at .else
-        "missing label state" ..panic
-      end =:: labelState
-      ## FIXME correctly handle backwards jumps
       ## appendBranchId
         BranchType .LABEL
           labelInfo .labelId i32 cast.u
@@ -3677,13 +3737,8 @@ proc(
       BranchId new =:: nextBranch
       labelInfo .cmpType switch
         NONE case
-          labelState [] .branches
-            context .stackInfo branchTree.startBranch list.append
-          labelState .branches=
-          labelState [] .branchIds
-            context [] .currentBranch list.append
-          labelState .branchIds=
           sb
+            labelInfo .labelId op [] .pos context rememberStackState
             "jmp " sb.appendS
             targetBranchId sb.appendBranchId
             '\n' sb.appendC
@@ -3692,16 +3747,9 @@ proc(
         TRUE FALSE case
           sb
             op [] .pos sb.appendPosQBE
-            "jnz %s" sb.appendS
-            op [] .pos context popValue sb.appendI
-          ## remember branch after poping condition
-          labelState [] .branches
-            context .stackInfo branchTree.startBranch list.append
-          labelState .branches=
-          labelState [] .branchIds
-            context [] .currentBranch list.append
-          labelState .branchIds=
-            ", " sb.appendS
+            op [] .pos context popValue =:: condId
+            labelInfo .labelId op [] .pos context rememberStackState
+            "jnz %s" sb.appendS condId sb.appendI ", " sb.appendS
             labelInfo .cmpType .TRUE if
               targetBranchId sb.appendBranchId
               ", " sb.appendS
