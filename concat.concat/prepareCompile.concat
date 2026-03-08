@@ -506,20 +506,24 @@ proc(
           list.append
         return
         AND case newOps
-          0 StackModType .COPY op .pos opStackMod list.append
           blockId context getAndOrLabelInfo if
             >$
               $1 .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
             <$
-          end .endLabel CompareType .FALSE op .pos opJump list.append
+          end .endLabel
+           >$ 0 StackModType .COPY op .pos opStackMod list.append <$
+          CompareType .FALSE op .pos opJump list.append
+          1 StackModType .DROP op .pos opStackMod list.append
         return
         OR case newOps
-          0 StackModType .COPY op .pos opStackMod list.append
           blockId context getAndOrLabelInfo if
             >$
               $1 .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
             <$
-          end .endLabel CompareType .TRUE op .pos opJump list.append
+          end .endLabel
+           >$ 0 StackModType .COPY op .pos opStackMod list.append <$
+          CompareType .TRUE op .pos opJump list.append
+          1 StackModType .DROP op .pos opStackMod list.append
         return
         IF_TRUE IF_FALSE AND_TRUE AND_FALSE
         OR_TRUE OR_FALSE ELSE_TRUE ELSE_FALSE
