@@ -24,7 +24,7 @@ enum(
   NEXT
   ERROR
   LABEL
-  LABEL_PRE
+  LABEL_OLD
   END_INLINE
 ) =:: BranchType
 struct( BranchType : branchType i32 : id ) =:: BranchId
@@ -171,7 +171,7 @@ namespace: sb
         NEXT case "@next" sb.appendS branch .id sb.appendI break
         ERROR case "@error" sb.appendS branch .id sb.appendI break
         LABEL case "@label_" sb.appendS branch .id sb.appendI break
-        LABEL_PRE case "@label_pre" sb.appendS branch .id sb.appendI break
+        LABEL_OLD case "@blocklabel" sb.appendS branch .id sb.appendI break
         END_INLINE case "@endInline" sb.appendS branch .id sb.appendI break
       end
     return
@@ -1598,7 +1598,7 @@ proc(
       0:iSize while $ loopCount u< do =:: i
         labels i @[] .caseId [] =:: caseId
         ## BranchId
-          BranchType .LABEL
+          BranchType .LABEL_OLD
           opIndex caseJumpDistances caseId [] i32 cast +
         BranchId new =:: caseBranch
         ## BranchId
@@ -1622,13 +1622,13 @@ proc(
       contiguous if
         labels loopCount @[] .caseId [] =:: caseId
         ## BranchId
-          BranchType .LABEL
+          BranchType .LABEL_OLD
           opIndex caseJumpDistances caseId [] i32 cast +
         BranchId new sb.appendBranchId
         '\n' sb.appendC
       else
         ## BranchId
-          BranchType .LABEL
+          BranchType .LABEL_OLD
           opIndex defaultJumpDistance i32 cast +
         BranchId new sb.appendBranchId
         '\n' sb.appendC
@@ -3797,7 +3797,7 @@ proc(
             sb
               ## startBranch
                 ## BranchId
-                  BranchType .LABEL
+                  BranchType .LABEL_OLD
                   opIndex
                 BranchId new
                 "case/default":s
@@ -3840,7 +3840,7 @@ proc(
                 op [] .pos sb.appendPosQBE
                 "jmp " sb.appendS
                 ## BlockId
-                  BranchType .LABEL
+                  BranchType .LABEL_OLD
                   opIndex blockVal .jumpDistance i32 cast +
                 BranchId new sb.appendBranchId
                 '\n' sb.appendC
@@ -3883,7 +3883,7 @@ proc(
             ## don't add position for labels
             ## startBranch
               ## BranchId
-                BranchType .LABEL
+                BranchType .LABEL_OLD
                 opIndex
               BranchId new
               "end switch":s
