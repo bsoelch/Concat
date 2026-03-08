@@ -83,6 +83,10 @@ struct(
   BranchPoint list : mut: doBranches
   i32 : mut: doBranchIndex ## index of do-branch in break branches
   i32 list : mut: labelPositions
+  LocalLabelId : whileLabel
+  LocalLabelId : doLabel
+  LocalLabelId : finallyLabel
+  LocalLabelId : endLabel
   i32 : mut: orCount
   i32 : mut: continueCount
   LabelId : blockLabel
@@ -93,6 +97,7 @@ struct(
 struct(
   BranchPoint list : mut: branches
   i32 list : mut: andOrPositions
+  LocalLabelId : endLabel
   BlockId : blockId
 ) =:: AndOrBlockInfo
 union(
@@ -156,7 +161,8 @@ proc(
   BlockId : blockId
   i32 : whilePosition
   FilePosition : pos
--> BlockInfo ) =>: newWhileBlock
+  TypeCheckState ptr.mut : state
+-> WhileBlockInfo ) =>: newWhileBlock
   ## WhileBlockInfo
       branchRoot
       pos
@@ -168,28 +174,34 @@ proc(
     16 BranchPoint list.create
     -1
     16 i32 list.create
+    state [] .program program.nextLocalLabel
+    state [] .program program.nextLocalLabel
+    state [] .program program.nextLocalLabel
+    state [] .program program.nextLocalLabel
     0:i32
     0:i32
     blockLabel
     blockId
     whilePosition
     false
-  WhileBlockInfo new BlockInfo .While return
+  WhileBlockInfo new return
 end
 proc(
   branchTree.NodeId : branchRoot
   BlockId : blockId
   i32 : blockStart
   FilePosition : pos
--> BlockInfo ) =>: newAndOrBlock
+  TypeCheckState ptr.mut : state
+-> AndOrBlockInfo ) =>: newAndOrBlock
   ## AndOrBlockInfo
     16 BranchPoint list.create
       branchRoot
       pos
     BranchPoint new list.append
     16 i32 list.create
+    state [] .program program.nextLocalLabel
     blockId
-  AndOrBlockInfo new BlockInfo .AndOr return
+  AndOrBlockInfo new return
 end
 "if-else" =:: IF_BLOCK_INFO_NAME
 "switch-case" =:: SWITCH_BLOCK_INFO_NAME
@@ -4299,7 +4311,9 @@ proc(
               whileBlock [] .labelPositions
                 state [] .compiledOps .length i32 cast.u list.append
               whileBlock .labelPositions=
-              op state appendOp ..drop
+              whileBlock
+                blockType .CONTINUE if [] .finallyLabel else [] .endLabel end              
+              CompareType .NONE op .pos opJump state appendOp ..drop
               continue.opLoop
             else ..drop end
             break
@@ -4332,9 +4346,14 @@ proc(
               whileId
               currentOpIndex
               op .pos
-            newWhileBlock state openBlock
+              state
+            newWhileBlock
+              $ .endLabel LocalLabelType .HINT_START op .pos opLabel state appendOp ..drop
+              $ .whileLabel LocalLabelType .LABEL_START op .pos opLabel state appendOp ..drop
+              $ .finallyLabel LocalLabelType .HINT_START op .pos opLabel state appendOp ..drop
+              $ .doLabel LocalLabelType .HINT_START op .pos opLabel state appendOp ..drop
+            BlockInfo .While state openBlock
             idContext id.openScope
-            op state appendOp ..drop
             continue.opLoop
           AND_DO OR_DO case
             state peekBlock .and .While .else
@@ -4377,7 +4396,11 @@ proc(
             whileBlock [] .labelPositions
               state [] .compiledOps .length i32 cast.u list.append
             whileBlock .labelPositions=
-            op state appendOp ..drop
+            blockType .AND_DO if
+              whileBlock [] .endLabel CompareType .FALSE
+            else
+              whileBlock [] .doLabel CompareType .TRUE
+            end op .pos opJump state appendOp ..drop
             continue.opLoop
           DO case
             state peekBlock =:: currentBlock?
@@ -4475,7 +4498,8 @@ proc(
             whileBlock [] .labelPositions
               currentOpIndex list.append
             whileBlock .labelPositions=
-            op state appendOp ..drop
+            whileBlock [] .endLabel CompareType .FALSE op .pos opJump state appendOp ..drop
+            whileBlock [] .doLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
             continue.opLoop
           FINALLY case
             state peekBlock .and .While .else
@@ -4564,7 +4588,7 @@ proc(
               program [] .whileData
               whileBlock [] .blockId i64 cast.u
             @[] .continuePositions=
-            op state appendOp ..drop
+            whileBlock [] .finallyLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
             continue.opLoop
           AND OR case
             false 1 op .pos state clearReferences
@@ -4583,8 +4607,9 @@ proc(
               rootBranch
                 blockId
                 state [] .compiledOps .length i32 cast.u
-              op .pos newAndOrBlock =:: andOrBlock
-              andOrBlock state openBlock
+              op .pos state newAndOrBlock
+                $ .endLabel LocalLabelType .HINT_START op .pos opLabel state appendOp ..drop
+              BlockInfo .AndOr state openBlock
               idContext id.openScope
               blockId
             end =:: blockId
@@ -4604,6 +4629,11 @@ proc(
               state [] .compiledOps .length i32 cast.u list.append
             currentBlock .andOrPositions=
             op state appendOp ..drop
+            0 StackModType .COPY op .pos opStackMod state appendOp ..drop
+            currentBlock [] .endLabel
+              blockType .AND if CompareType .FALSE else CompareType .TRUE end
+            op .pos opJump state appendOp ..drop
+            1 StackModType .DROP op .pos opStackMod state appendOp ..drop
             continue.opLoop
           NAMESPACE case
             blockInfo .blockLabel idContext id.beginNamespace
@@ -5121,18 +5151,9 @@ proc(
             end
             breakPositions whileData .breakPositions=
             whileBlock .labelPositions list.free ..drop
-            BlockType .WHILE op .pos opEndBlock =:: mut: tmp
-            whileBlock .blockId tmp@ .val .BlockEnd .else "expected block" ..panic end .blockId=
-            whileBlock .whilePosition
-              currentOpIndex - JumpDistance cast
-            tmp@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
-            currentOpIndex
-              whileBlock .whilePosition - JumpDistance cast
-              state [] .compiledOps
-                whileBlock .whilePosition
-              @[]
-            .val .Block .else "expected block" ..panic end .jumpDistance=
-            tmp state appendOp ..drop
+            whileBlock .whileLabel CompareType .NONE op .pos opJump state appendOp ..drop
+            whileBlock .whileLabel LocalLabelType .HINT_END op .pos opLabel state appendOp ..drop
+            whileBlock .endLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
             idContext id.closeScope ! "closing switch-scope worked" assert
             continue.opLoop
           WHILE DO case ## end-while/end-do should not be created by parser
@@ -5174,7 +5195,7 @@ proc(
               op@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
             end
             andOrBlock .andOrPositions list.free ..drop
-            op state appendOp ..drop
+            andOrBlock .endLabel LocalLabelType .LABEL_END op .pos opLabel state appendOp ..drop
             andOrBlock .branches =:: mut: branches
             branches
                 state .stack branchTree.startBranch
