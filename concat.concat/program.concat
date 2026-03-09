@@ -848,9 +848,14 @@ namespace: sb
         labelInfo .labelId i64 cast sb.appendI
       break
       LocalJump .case =:: jumpInfo
-        "Jump(" sb.appendS
+        "Jump( " sb.appendS
         jumpInfo .cmpType sb.appendCmpType
-        "): " sb.appendS
+        jumpInfo .cmpType .NONE ! and  jumpInfo .cmpType .TRUE ! and
+            jumpInfo .cmpType .FALSE ! if
+          ' ' sb.appendC
+          op .dataType  typeContext sb.appendType
+        end
+        " ): " sb.appendS
         jumpInfo .labelId i64 cast.u sb.appendI
         " -> " sb.appendS
         jumpInfo .jumpDistance i64 cast.s sb.appendI

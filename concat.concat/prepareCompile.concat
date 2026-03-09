@@ -144,6 +144,92 @@ proc(
   remapLabels@ map.free
 end
 
+proc( BuiltIn -> bool ) =>: canMergeJumpIf
+  BuiltIn ..length 175 == "no new builtins" assert
+  switch
+    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 ## ==
+    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 ## !=
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 ## <
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 ## <=
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 ## >=
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 ## >
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64                 ## u<
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64                 ## u<=
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64                 ## u>=
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64                 ## u>
+    case true return
+    default false return
+  end
+end
+proc( CompareType -> CompareType ) =>: adjustFlippedFloatCmpType
+  switch
+    EQ case CompareType .EQ break
+    NE case CompareType .NE break
+    LT case CompareType .ULT break
+    LE case CompareType .ULE break
+    GE case CompareType .UGE break
+    GT case CompareType .UGT break
+    default "unexpected compare-type for float" ..panic
+  end
+end
+proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJumpIf
+  cmpType .FALSE or cmpType .TRUE end "can only merge cmp.true and cmp.false" assert
+  cmpType .FALSE =:: flip
+  BuiltIn ..length 175 == "no new builtins" assert
+  builtIn switch
+    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 case
+      flip if CompareType .NE else CompareType .EQ end
+    break
+    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 case
+      flip if CompareType .EQ else CompareType .NE end
+    break
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 case
+      flip if CompareType .GE else CompareType .LT end
+    break
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 case
+      flip if CompareType .GT else CompareType .LE end
+    break
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 case
+      flip if CompareType .LT else CompareType .GE end
+    break
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 case
+      flip if CompareType .LE else CompareType .GT end
+    break
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
+      flip if CompareType .UGE else CompareType .ULT end
+    break
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
+      flip if CompareType .UGT else CompareType .ULE end
+    break
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
+      flip if CompareType .ULT else CompareType .UGE end
+    break
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
+      flip if CompareType .ULE else CompareType .UGT end
+    break
+    default "unsupported built-in for jump-merge" ..panic
+  end
+  builtIn switch
+    EQ_BOOL NE_BOOL case types.primitive.BOOL break
+    EQ_C8 NE_C8 LT_C8 LE_C8 GE_C8 GT_C8
+    EQ_I8 NE_I8 LT_I8 LE_I8 GE_I8 GT_I8 ULT_I8 ULE_I8 UGE_I8 UGT_I8 case
+      types.primitive.I8 break
+    EQ_I16 NE_I16 LT_I16 LE_I16 GE_I16 GT_I16 ULT_I16 ULE_I16 UGE_I16 UGT_I16 case
+      types.primitive.I16 break
+    EQ_I32 NE_I32 LT_I32 LE_I32 GE_I32 GT_I32 ULT_I32 ULE_I32 UGE_I32 UGT_I32 case
+      types.primitive.I32 break
+    EQ_I64 NE_I64 LT_I64 LE_I64 GE_I64 GT_I64 ULT_I64 ULE_I64 UGE_I64 UGT_I64 case
+      types.primitive.I64 break
+    EQ_F32 NE_F32 LT_F32 LE_F32 GE_F32 GT_F32 case
+      flip if adjustFlippedFloatCmpType end
+      types.primitive.F32 break
+    EQ_F64 NE_F64 LT_F64 LE_F64 GE_F64 GT_F64 case
+      flip if adjustFlippedFloatCmpType end
+      types.primitive.F64 break
+    default "unsupported built-in for jump-merge" ..panic
+  end
+end
+
 proc(
   Operation list : newOps
   Operation : mut: op
@@ -330,20 +416,27 @@ proc(
     LocalLabel case newOps op list.append return
     LocalJump .case =:: jumpInfo
       0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
-      ## TODO? fuse compare+jumpif (if supported by back-end)
-      ## fuse not+jump
-      jumpInfo .cmpType .TRUE or jumpInfo .cmpType .FALSE if
-        newOps list.peek .and .val .BuiltIn .and [] .NOT_BOOL if
-          newOps
+      newOps
+      ## fuse compare+jumpif
+        jumpInfo .cmpType .TRUE or jumpInfo .cmpType .FALSE if
+          jumpInfo .cmpType =:: mut: newCmpType
+          $ list.peek .and .val .BuiltIn .and [] .NOT_BOOL if
             list.pop ..drop
-            jumpInfo .cmpType .TRUE
-              if CompareType .FALSE else CompareType .TRUE end
-            op@ .val .LocalJump .if .cmpType= else ..unreachable end
-            op list.append
-          return
+            newCmpType
+              .TRUE if CompareType .FALSE else CompareType .TRUE end
+            newCmpType=
+          end
+          _BACKEND_ .ASM and $ list.peek .and .val .BuiltIn .and [] canMergeJumpIf if
+            list.pop .and .val .BuiltIn .else ..unreachable end =:: builtInVal
+            newCmpType
+              builtInVal mergeJumpIf op@ .dataType=
+            newCmpType=
+          end
+          jumpInfo .cmpType newCmpType != if
+            newCmpType op@ .val .LocalJump .if .cmpType= else ..unreachable end
+          end
         end
-      end
-      newOps op list.append
+      op list.append
     return
     Block .case .blockType
       BlockType ..length 33:iSize == "no new block types" assert
