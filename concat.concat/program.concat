@@ -520,10 +520,7 @@ struct(
   LabelData list : switchLabels
   LocalLabelId slice : branchLabels
   LocalLabelId : defaultLabel
-  LocalLabelId : endLabel
   Type : switchType
-  i32 : caseCount
-  i32 : breakCount
 ) =:: export: SwitchData
 
 struct(

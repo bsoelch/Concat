@@ -107,20 +107,11 @@ end
 proc( BlockId : blockId ConverterContext ptr.mut : context -> ) =>: initSwitchLabelInfo
   context [] .program =:: program
   program [] .switchData blockId iSize cast.u @[] =:: switchData
-  program [] .programMemory
-    switchData [] .caseCount LocalLabelId mixedArena.allocSlice =:: labelMemory
-  program .programMemory=
-  labelMemory slice.@itr for
-    program program.nextLocalLabel >$ =[]
-  end
-  program program.nextLocalLabel switchData .defaultLabel=
-  program program.nextLocalLabel switchData .endLabel=
-  labelMemory slice.freeze switchData .branchLabels=
   context .blockLabels
     blockId LocalBlockType .SWITCH getBlockUId
     ## SwitchBlockLabelInfo
       switchData [] .defaultLabel
-      switchData [] .endLabel
+      context [] .program program.nextLocalLabel
       0
     SwitchBlockLabelInfo new BlockLabelInfo .Switch
   map.put ..drop

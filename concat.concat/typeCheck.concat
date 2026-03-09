@@ -64,6 +64,9 @@ struct(
   branchTree.NodeId : branchRoot
   BranchPoint list : caseBranches
   i32 list : castOffsets
+  LocalLabelId list : caseLabels
+  LocalLabelId : defaultLabel
+  LocalLabelId : endLabel
   LabelId : blockLabel
   BlockId : blockId
   IdentifierInfo optional : srcVar
@@ -130,6 +133,7 @@ proc(
   LabelId : blockLabel
   BlockId : blockId
   FilePosition : pos
+  TypeCheckState ptr.mut : state
 -> BlockInfo ) =>: newSwitchBlock
   ## SwitchBlockInfo
     switchType
@@ -137,6 +141,9 @@ proc(
     branchRoot
     16 BranchPoint list.create
     16 i32 list.create
+    16 LocalLabelId list.create
+    state [] .program program.nextLocalLabel
+    state [] .program program.nextLocalLabel
     blockLabel
     blockId
     srcVar
@@ -848,9 +855,7 @@ proc(
       BranchPoint new list.append
     switchBlock .caseBranches=
   end
-  BlockType .BREAK_SWITCH pos opBlock =:: mut: breakOp
-  switchBlock [] .blockId breakOp@ .val .Block .else "expected block" ..panic end .blockId=
-  breakOp state appendOp ..drop
+  switchBlock [] .endLabel CompareType .NONE pos state localJump
   false state .reachable=
   ## TODO is block info in param same block-info as block-info on stack
   state [] .openBlocks list.peek .and [] .Switch ? if
@@ -1997,6 +2002,7 @@ proc(
   BlockId : switchId
   Type : switchType
   ConstValue : label0
+  iSize : caseCount
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> ) =>: newSwitchLabel
@@ -2045,7 +2051,7 @@ proc(
     ## LabelData
       label
       pos
-      switchData [] .caseCount
+      caseCount i32 cast.u
     LabelData new list.append
   switchData .switchLabels=
 end
@@ -2090,6 +2096,7 @@ proc(
         switchId
         switchType
         constVal
+        switchBlock .caseLabels [] .length
         op [] .pos
       state newSwitchLabel
     else .GetId ._if =:: idInfo
@@ -2111,6 +2118,7 @@ proc(
         switchId
         switchType
         idData [] .constValue
+        switchBlock .caseLabels [] .length
         op [] .pos
       state newSwitchLabel
     else .GetName ._if =:: name
@@ -2132,6 +2140,7 @@ proc(
         switchId
         switchType
         idData [] .constValue
+        switchBlock .caseLabels [] .length
         op [] .pos
       state newSwitchLabel
     else ..drop
@@ -2177,6 +2186,7 @@ proc(
     ## ConstValue
       labelIndex i64 cast.u
     ConstValue .Int
+    switchBlock .caseLabels [] .length
     op [] .pos
   state newSwitchLabel
   true return
@@ -3981,10 +3991,7 @@ proc(
                 16 LabelData list.create
                 LocalLabelId slice.empty
                 -1 LocalLabelId cast
-                -1 LocalLabelId cast
                 labelType
-                0 ## case-count
-                0 ## break-count
               SwitchData new list.append
             program .switchData=
             state .stack branchTree.startBranch =:: switchBranch
@@ -3996,6 +4003,7 @@ proc(
               blockInfo .blockLabel
               switchId
               op .pos
+              state
             newSwitchBlock state openBlock
             idContext id.openScope
             op state appendOp ..drop
@@ -4039,6 +4047,7 @@ proc(
             end
             switchData [] .switchLabels list.peek =:: prev?
             switchBlock [] .switchType =:: switchType
+            switchBlock .caseLabels [] .length =:: currentCaseId
             blockType .DEFAULT or blockType .DOT_DEFAULT if
               prev? .else
                 "unexpected " sb.copyPtr
@@ -4049,30 +4058,25 @@ proc(
                   BlockType .CASE sb.appendBlockType
                 op .pos errors appendError
                 continue.opLoop
-              end [] .caseId switchData [] .caseCount == if
+              end [] .caseId iSize cast.u currentCaseId == if
                 64 sb.create
                   BlockType .DEFAULT sb.appendBlockType
                   " cannot be preceded by at labels" sb.appendS
                 op .pos errors appendError
               end
               true switchBlock .hasDefault=
+              switchData [] .defaultLabel
             else ## case or .case
-              prev? ! .or [] .caseId switchData [] .caseCount < if
+              prev? ! .or [] .caseId iSize cast.u currentCaseId u< if
                 64 sb.create
                   BlockType .CASE sb.appendBlockType
                   " has to be preceded by at least one label" sb.appendS
                 op .pos errors appendError
               end
-            end
-            switchBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+              state [] .program program.nextLocalLabel
+              switchBlock [] .caseLabels $1 list.append switchBlock .caseLabels=
+            end LocalLabelType .LABEL_END op .pos state localLabel
             true state .reachable=
-            switchType op@ .dataType=
-            blockType .DOT_CASE if
-              BlockType .CASE op@ .val .Block .else "expected block" ..panic end .blockType=
-            else blockType .DOT_DEFAULT _if
-              BlockType .DEFAULT op@ .val .Block .else "expected block" ..panic end .blockType=
-            end
-            op state appendOp ..drop
             switchBlock [] .switchBaseType =:: switchBaseType
             blockType .DOT_CASE if
               switchType typeContext types.isUnion if
@@ -4082,8 +4086,8 @@ proc(
                 switchType typeContext types.asRawUnion optional.unwrap =:: rawSwitchType
                 rawSwitchType eltIndex typeContext types.compositeGetElement =:: labelType
                 switchData [] .switchLabels list.reversed for  =:: label
-                  ## labels in current case are al at end of label list
-                  label .caseId switchData [] .caseCount < if break end
+                  ## labels in current case are all at end of label list
+                  label .caseId iSize cast.u currentCaseId u< if break end
                   rawSwitchType label .value .Int .else
                     "expected int-constant":s op ..line state internalError ..unreachable
                   end i32 cast.u typeContext types.compositeGetElement =:: newType
@@ -4138,9 +4142,6 @@ proc(
                 "cannot access switched type" sb.copyPtr op .pos errors appendError
               end
             end
-            switchData [] .caseCount
-              1 +
-            switchData .caseCount=
             true switchBlock .allowBreak=
             continue.opLoop
           BREAK CONTINUE case
@@ -4717,10 +4718,8 @@ proc(
             @[] =:: switchData
             ## sort switch-labels
             switchData [] .switchLabels switchLabelCmp@ program list.sort
-            switchBlock .hasDefault if
-              BlockType .DEFAULT op .pos opBlock =:: mut: tmp
-              switchBlock .blockId tmp@ .val .Block .else "expected block" ..panic end .blockId=
-              tmp state appendOp ..drop
+            switchBlock .hasDefault ! if
+              switchData [] .defaultLabel LocalLabelType .LABEL_END op .pos state localLabel
               switchBlock .switchType typeContext types.isEnumOrTaggedUnion if
                 switchBlock .switchType
                   $ typeContext types.isTaggedUnion if
@@ -4774,9 +4773,7 @@ proc(
                   BranchPoint new list.append
                 caseBranches=
               end
-              BlockType .BREAK_SWITCH op .pos opBlock tmp=
-              switchBlock .blockId tmp@ .val .Block .else "expected block" ..panic end .blockId=
-              tmp state appendOp ..drop
+              switchBlock .endLabel CompareType .NONE op .pos state localJump
             end
             ## set stack head to one of the accepting branches
             caseBranches .length 1:iSize u>= if
@@ -4811,9 +4808,7 @@ proc(
               branchPoints list.free ..drop
             end
             caseBranches .length 0:iSize != state .reachable=
-            BlockType .SWITCH op .pos opEndBlock =:: mut: tmp
-            switchBlock .blockId tmp@ .val .BlockEnd .else "expected block" ..panic end .blockId=
-            tmp state appendOp ..drop
+            switchBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             idContext id.closeScope ! "closing while-scope worked" assert
             continue.opLoop
           CASE DEFAULT DOT_CASE DOT_DEFAULT case ## end-case should not be created by parser
