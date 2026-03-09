@@ -1066,11 +1066,106 @@ proc(
   state .compiledOps=
   index return
 end
-proc( LocalLabelId LocalLabelType FilePosition TypeCheckState ptr.mut : state -> ) =>: localLabel
-  opLabel state appendOp ..drop
+
+proc(
+  iSize : srcPosition
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: updateJump
+  state [] .compiledOps
+    $ .length srcPosition - JumpDistance cast <$
+    srcPosition
+  list.at .and .val .LocalJump .else
+    "expected jump":s pos ..line internalErrorNoOp ..unreachable
+  end .jumpDistance=
 end
-proc( LocalLabelId CompareType FilePosition TypeCheckState ptr.mut : state -> ) =>: localJump
-  opJump state appendOp ..drop
+proc(
+  LocalLabelId : labelId
+  LocalLabelType : labelType
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: localLabel
+  labelType switch
+    HINT_START case break
+    HINT_END case
+      state .jumpOffsets labelId map.remove .and .Label ! .if
+        "unhandled jumps in closed label":s pos ..line internalErrorNoOp ..unreachable
+      end
+    break
+    LABEL_START LABEL_END LABEL_MIDDLE case
+      state .jumpOffsets
+        labelId state .compiledOps [] .length JumpOffsets .Label
+      map.put .if
+        switch
+          Label case "duplicate label":s pos ..line internalErrorNoOp ..unreachable
+          Jump .case pos state updateJump break
+          Jump2 .case $ .0 pos state updateJump .1 pos state updateJump break
+          Jump3 .case
+            $ .0 pos state updateJump
+            $ .1 pos state updateJump
+            .2 pos state updateJump
+          break
+          Jumps .case $ for pos state updateJump end list.free ..drop break
+        end
+      end
+    break
+  end
+  labelId labelType pos opLabel state appendOp ..drop
+end
+proc(
+  LocalLabelId : labelId
+  CompareType : cmpType
+  FilePosition : pos
+  TypeCheckState ptr.mut : state
+-> ) =>: localJump
+  state .compiledOps [] .length =:: opOffset
+  state .jumpOffsets
+    labelId
+  map.get .if
+    switch
+      Label .case opOffset - JumpDistance cast.s break
+      Jump .case
+        state .jumpOffsets
+          labelId >>$ opOffset ( iSize iSize ) new JumpOffsets .Jump2
+        map.put ..drop
+        0:JumpDistance
+      break
+      Jump2 .case
+        state .jumpOffsets
+          labelId
+          $2 .0
+            >>>$ .1
+            opOffset
+          ( iSize iSize iSize ) new JumpOffsets .Jump3
+        map.put ..drop
+        0:JumpDistance
+      break
+      Jump3 .case
+        8 iSize list.create
+          $1 .0 list.append
+          $1 .1 list.append
+          >$ .2 list.append
+          opOffset list.append
+        state .jumpOffsets
+          labelId >>$ JumpOffsets .Jumps
+        map.put ..drop
+        0:JumpDistance
+      break
+      Jumps .case
+          opOffset list.append
+        state .jumpOffsets
+          labelId >>$ JumpOffsets .Jumps
+        map.put ..drop
+        0:JumpDistance
+      break
+    end
+  else
+    state .jumpOffsets
+      labelId opOffset JumpOffsets .Jump
+    map.put ..drop
+    0:JumpDistance
+  end =:: jumpDistance
+  labelId jumpDistance cmpType pos opJump state appendOp ..drop
 end
 ## reserve space for count operations at the current position, returns the position of the first operation
 proc(

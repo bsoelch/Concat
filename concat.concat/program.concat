@@ -275,8 +275,8 @@ end
 proc( LocalLabelId LocalLabelType FilePosition : pos -> Operation ) =>: export: opLabel
   LocalLabelInfo new OpValue .LocalLabel Type .Undefined pos Operation new return
 end
-proc( LocalLabelId CompareType FilePosition : pos -> Operation ) =>: export: opJump
-  0:JumpDistance >$ LocalJumpInfo new OpValue .LocalJump Type .Undefined pos Operation new return
+proc( LocalLabelId JumpDistance CompareType FilePosition : pos -> Operation ) =>: export: opJump
+  LocalJumpInfo new OpValue .LocalJump Type .Undefined pos Operation new return
 end
 
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGetId
@@ -849,7 +849,9 @@ namespace: sb
         "Jump(" sb.appendS
         jumpInfo .cmpType sb.appendCmpType
         "): " sb.appendS
-        jumpInfo .labelId i64 cast sb.appendI
+        jumpInfo .labelId i64 cast.u sb.appendI
+        " -> " sb.appendS
+        jumpInfo .jumpDistance i64 cast.s sb.appendI
       break
       Call .case =:: callInfo
         "call ( " sb.appendS

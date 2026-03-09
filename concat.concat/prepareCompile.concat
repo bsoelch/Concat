@@ -448,7 +448,7 @@ proc(
               $1 .elseLabel LocalLabelType .HINT_START op .pos opLabel list.append
               $1 .ifLabel LocalLabelType .HINT_START op .pos opLabel list.append
             <$
-          end .elseLabel CompareType .FALSE op .pos opJump list.append
+          end .elseLabel 0:JumpDistance CompareType .FALSE op .pos opJump list.append
         return
         OR_IF case newOps
           blockId context getIfLabelInfo if
@@ -457,7 +457,7 @@ proc(
               $1 .elseLabel LocalLabelType .HINT_START op .pos opLabel list.append
               $1 .ifLabel LocalLabelType .HINT_START op .pos opLabel list.append
             <$
-          end .ifLabel CompareType .TRUE op .pos opJump list.append
+          end .ifLabel 0:JumpDistance CompareType .TRUE op .pos opJump list.append
         return
         IF case newOps
           blockId context getIfLabelInfo =:: isBlockStart =:: ifLabelInfo
@@ -465,13 +465,13 @@ proc(
             ifLabelInfo .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
             ifLabelInfo .elseLabel LocalLabelType .HINT_START op .pos opLabel list.append
           end
-          ifLabelInfo .elseLabel CompareType .FALSE op .pos opJump list.append
+          ifLabelInfo .elseLabel 0:JumpDistance CompareType .FALSE op .pos opJump list.append
           isBlockStart ! if ## do not need if-label when block starts with if
             ifLabelInfo .ifLabel LocalLabelType .LABEL_END op .pos opLabel list.append
           end
         return
         ELSE case newOps
-          blockId context getIfLabelInfo ..drop .endLabel CompareType .NONE op .pos opJump list.append
+          blockId context getIfLabelInfo ..drop .endLabel 0:JumpDistance CompareType .NONE op .pos opJump list.append
           blockId context getIfLabelInfo ..drop .elseLabel LocalLabelType .LABEL_END op .pos opLabel list.append
         return
         SWITCH case
@@ -493,7 +493,7 @@ proc(
         return
         BREAK_SWITCH case
           newOps
-            blockId context getSwitchLabelInfo [] .endLabel CompareType .NONE op .pos opJump
+            blockId context getSwitchLabelInfo [] .endLabel 0:JumpDistance CompareType .NONE op .pos opJump
           list.append
         return
         WHILE case newOps
@@ -505,27 +505,27 @@ proc(
         return
         OR_DO case
           newOps
-            blockId context getWhileLabelInfo .doLabel CompareType .TRUE op .pos opJump
+            blockId context getWhileLabelInfo .doLabel 0:JumpDistance CompareType .TRUE op .pos opJump
           list.append
         return
         AND_DO case
           newOps
-            blockId context getWhileLabelInfo .endLabel CompareType .FALSE op .pos opJump
+            blockId context getWhileLabelInfo .endLabel 0:JumpDistance CompareType .FALSE op .pos opJump
           list.append
         return
         DO case newOps
           blockId context getWhileLabelInfo =:: whileBlockInfo
-          whileBlockInfo .endLabel CompareType .FALSE op .pos opJump list.append
+          whileBlockInfo .endLabel 0:JumpDistance CompareType .FALSE op .pos opJump list.append
           whileBlockInfo .doLabel LocalLabelType .LABEL_END op .pos opLabel list.append
         return
         BREAK case
           newOps
-            blockId context getWhileLabelInfo .endLabel CompareType .NONE op .pos opJump
+            blockId context getWhileLabelInfo .endLabel 0:JumpDistance CompareType .NONE op .pos opJump
           list.append
         return
         CONTINUE case
           newOps
-            blockId context getWhileLabelInfo .finallyLabel CompareType .NONE op .pos opJump
+            blockId context getWhileLabelInfo .finallyLabel 0:JumpDistance CompareType .NONE op .pos opJump
           list.append
         return
         FINALLY case
@@ -540,7 +540,7 @@ proc(
             <$
           end .endLabel
            >$ 0 StackModType .COPY op .pos opStackMod list.append <$
-          CompareType .FALSE op .pos opJump list.append
+          0:JumpDistance CompareType .FALSE op .pos opJump list.append
           1 StackModType .DROP op .pos opStackMod list.append
         return
         OR case newOps
@@ -550,7 +550,7 @@ proc(
             <$
           end .endLabel
            >$ 0 StackModType .COPY op .pos opStackMod list.append <$
-          CompareType .TRUE op .pos opJump list.append
+          0:JumpDistance CompareType .TRUE op .pos opJump list.append
           1 StackModType .DROP op .pos opStackMod list.append
         return
         UNKNOWN INITIALIZER NAMESPACE PROCEDURE INLINE_PROCEDURE OVERLOAD
@@ -575,7 +575,7 @@ proc(
         return
         WHILE case newOps
           blockId context removeWhileLabelInfo =:: whileBlockInfo
-          whileBlockInfo .whileLabel CompareType .NONE op .pos opJump list.append
+          whileBlockInfo .whileLabel 0:JumpDistance CompareType .NONE op .pos opJump list.append
           whileBlockInfo .whileLabel LocalLabelType .HINT_END op .pos opLabel list.append
           whileBlockInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel list.append
         return
