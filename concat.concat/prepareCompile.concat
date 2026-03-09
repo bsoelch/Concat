@@ -328,9 +328,21 @@ proc(
     ## TODO? merge identical variables on independent branches
     ## TODO cleanup unused labels
     LocalLabel case newOps op list.append return
-    ## TODO fuse not+jump
-    LocalJump case
+    LocalJump .case =:: jumpInfo
       0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
+      ## TODO? fuse compare+jumpif (if supported by back-end)
+      ## fuse not+jump
+      jumpInfo .cmpType .TRUE or jumpInfo .cmpType .FALSE if
+        newOps list.peek .and .val .BuiltIn .and [] .NOT_BOOL if
+          newOps
+            list.pop ..drop
+            jumpInfo .cmpType .TRUE
+              if CompareType .FALSE else CompareType .TRUE end
+            op@ .val .LocalJump .if .cmpType= else ..unreachable end
+            op list.append
+          return
+        end
+      end
       newOps op list.append
     return
     Block .case .blockType
