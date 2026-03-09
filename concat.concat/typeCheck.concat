@@ -134,7 +134,7 @@ proc(
   BlockId : blockId
   FilePosition : pos
   TypeCheckState ptr.mut : state
--> BlockInfo ) =>: newSwitchBlock
+-> SwitchBlockInfo ) =>: newSwitchBlock
   ## SwitchBlockInfo
     switchType
     switchBaseType
@@ -150,7 +150,7 @@ proc(
     true
     false
     false
-  SwitchBlockInfo new BlockInfo .Switch return
+  SwitchBlockInfo new return
 end
 proc(
   branchTree.NodeId : branchRoot
@@ -4087,14 +4087,6 @@ proc(
             switchId op@ .val .Block .else "expected block" ..panic end .blockId=
             labelType op@ .dataType=
             false 1 op .pos state clearReferences
-            program [] .switchData
-              ## SwitchData
-                16 LabelData list.create
-                LocalLabelId slice.empty
-                -1 LocalLabelId cast
-                labelType
-              SwitchData new list.append
-            program .switchData=
             state .stack branchTree.startBranch =:: switchBranch
             ## newSwitchBlock
               switchValueType
@@ -4105,7 +4097,17 @@ proc(
               switchId
               op .pos
               state
-            newSwitchBlock state openBlock
+            newSwitchBlock
+              $ .defaultLabel =:: defLabel
+            BlockInfo .Switch state openBlock
+            program [] .switchData
+              ## SwitchData
+                16 LabelData list.create
+                LocalLabelId slice.empty
+                defLabel
+                labelType
+              SwitchData new list.append
+            program .switchData=
             idContext id.openScope
             op state appendOp ..drop
             false state .reachable=

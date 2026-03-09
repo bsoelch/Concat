@@ -1071,98 +1071,32 @@ proc(
       EvalResult .Return return
     InlineReturn case
       "unimplemented" ..panic
-    LocalJump LocalLabel case break
+    LocalLabel case EvalResult .Ok return ## ignore labels
+    LocalJump .case =:: jumpInfo
+      jumpInfo .jumpDistance 0:JumpDistance == if
+        "jump distance should be non-zero" sb.copyPtr
+        op [] .pos errors appendError
+        EvalResult .Error return
+      end
+      jumpInfo .cmpType switch
+        NONE case jumpInfo .jumpDistance EvalResult .Jump return
+        TRUE FALSE case
+          op [] .pos context popCondition if ..drop
+            EvalResult .Error return
+          end jumpInfo .cmpType .TRUE == if
+            jumpInfo .jumpDistance EvalResult .Jump return
+          else
+            EvalResult .Ok return
+          end
+        break
+        EQ NE LT LE GE GT ULT ULE UGE UGT case
+          "fused compare&jump is not supported by interpreter" ..panic
+        break
+      end
+    break
     Block .case =:: blockInfo
+      BlockType ..length 35:iSize == "no new block types" assert
       blockInfo .blockType switch
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-        TYPE_PROC_IN TYPE_CPROC_IN TYPE_COMPOSITE TYPE_SETTYPE
-        INITIALIZER TYPE_PROC_ARROW PROCEDURE INLINE_PROCEDURE NAMESPACE OVERLOAD case
-          "unsupported block-type in constant evaluation: " sb.copyPtr
-            blockInfo .blockType sb.appendBlockType
-          op [] .pos errors appendError
-          EvalResult .Error return
-        ## TODO use jumps from blocks
-        IF case
-          op [] .pos context popCondition if ..drop
-            EvalResult .Error return
-          end =:: val
-          blockInfo .jumpDistance 0:JumpDistance == if
-            "jump distance should be non-zero" sb.copyPtr
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-          val if
-            EvalResult .Ok return
-          else
-            blockInfo .jumpDistance EvalResult .Jump return
-          end
-          break
-        ELSE case
-          blockInfo .jumpDistance 0:JumpDistance == if
-            "jump distance should be non-zero" sb.copyPtr
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-          blockInfo .jumpDistance EvalResult .Jump return
-        AND OR AND_IF OR_IF case
-          op [] .pos context popCondition if ..drop
-            EvalResult .Error return
-          end =:: val
-          blockInfo .jumpDistance 0:JumpDistance == if
-            "jump distance should be non-zero" sb.copyPtr
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-          blockInfo .blockType =:: blockType
-          blockType .OR_IF or blockType .OR end =:: isOr
-          val isOr == if
-            ## TODO? does this value get lost when poping the and-or block
-            blockType .AND or blockType .OR if
-              val ConstValue .Bool types.primitive.BOOL op [] .pos context pushValue
-            end
-            blockInfo .jumpDistance EvalResult .Jump return
-          else
-            EvalResult .Ok return
-          end
-          break
-        WHILE FINALLY case
-          EvalResult .Ok return
-        DO AND_DO case
-          blockInfo .jumpDistance 0:JumpDistance == if
-            "jump distance should be non-zero" sb.copyPtr
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-          op [] .pos context popCondition if ..drop
-            EvalResult .Error return
-          end if
-            EvalResult .Ok return
-          else
-            blockInfo .jumpDistance EvalResult .Jump return
-          end
-          break
-        OR_DO case
-          blockInfo .jumpDistance 0:JumpDistance == if
-            "jump distance should be non-zero" sb.copyPtr
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-          op [] .pos context popCondition if ..drop
-            EvalResult .Error return
-          end if
-            blockInfo .jumpDistance EvalResult .Jump return
-          else
-            EvalResult .Ok return
-          end
-          break
-        BREAK CONTINUE BREAK_SWITCH case
-          blockInfo .jumpDistance 0:JumpDistance == if
-            "jump distance should be non-zero" sb.copyPtr
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-          blockInfo .jumpDistance EvalResult .Jump return
-          break
         SWITCH case
           op [] .pos context popValue if ..drop.2
             "stack underflow while evaluating operation: " sb.copyPtr
@@ -1189,29 +1123,16 @@ proc(
               0:JumpDistance EvalResult .Jump return
             end
           end
-          0:JumpDistance EvalResult .Jump return
-          break
-        CASE DOT_CASE DEFAULT DOT_DEFAULT UNKNOWN case break
+          0:JumpDistance EvalResult .Jump
+        return
+        default break
       end
       "unsupported block-type in constant evaluation: " sb.copyPtr
         blockInfo .blockType sb.appendBlockType
       op [] .pos errors appendError
-      EvalResult .Error return
-    BlockEnd .case =:: blockInfo
-      blockInfo .blockType =:: blockType
-      BlockType ..length 35:iSize == "no-new block-types" assert
-      blockType switch
-        ELSE SWITCH AND OR case EvalResult .Ok return
-        WHILE case
-          blockInfo .jumpDistance 0:JumpDistance == if
-            "jump distance should be non-zero" sb.copyPtr
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-          blockInfo .jumpDistance EvalResult .Jump return
-        default break
-      end
-      break
+      EvalResult .Error
+    return
+    BlockEnd case break
     DeclareId .case =:: idInfo
       idInfo .labelId =:: labelId
       idInfo .idType switch
