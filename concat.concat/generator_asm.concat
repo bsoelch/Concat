@@ -530,12 +530,31 @@ proc(
   src .value dst .value asm.Value.equal if
     return ## nothing to do if values are equal
   end
-  "failed to move value " sb.copyPtr
-    src .value context [] .asmContext asm.appendValue
-  pos errors appendWarning
   ## 2. mark value as moving
-  ## 3. clear destination slot if neccessary (detect move-loops)
+  src .value .Register .if =:: srcReg
+    ## TODO mark register as moving
+  else .Int ? ! and src .value .Float ? ! _if
+    "unsupported source value: " sb.copyPtr
+      dst .value context [] .asmContext asm.appendValue
+    pos errors appendError
+  end
+  dst .value .Register .if =:: dstReg
+    ## 3. clear destination slot if neccessary (detect move-loops)
+    context .registerInfo dstReg map.get .if =:: regInfo
+      regInfo .uses .None ? ! if
+        ## TODO clear register
+        "failed to clear register " sb.copyPtr
+          dst .value context [] .asmContext asm.appendValue
+        pos errors appendWarning
+      end
+    end
+  else ..drop
+    "unsupported destination value: " sb.copyPtr
+      dst .value context [] .asmContext asm.appendValue
+    pos errors appendError
+  end
   ## 4. move to destination
+  src .valType dst .value src .value context opMove
 end
 proc(
   asm.Atom list
