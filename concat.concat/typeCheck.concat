@@ -1132,11 +1132,7 @@ proc(
       break
       Jump2 .case
         state .jumpOffsets
-          labelId
-          $2 .0
-            >>>$ .1
-            opOffset
-          ( iSize iSize iSize ) new JumpOffsets .Jump3
+          labelId >>$ ... opOffset ( iSize iSize iSize ) new JumpOffsets .Jump3
         map.put ..drop
         0:JumpDistance
       break
