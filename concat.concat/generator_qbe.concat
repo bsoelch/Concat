@@ -3734,6 +3734,10 @@ proc(
               op [] .pos
               context
             appendSwitchTable
+            context .labelStates
+              switchData [] .endLabel
+              LabelState.new
+            map.put ..drop
             false context .reachable=
           return
         INLINE_PROCEDURE case sb return

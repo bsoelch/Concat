@@ -521,6 +521,9 @@ struct(
   LabelData list : switchLabels
   LocalLabelId slice : branchLabels
   LocalLabelId : defaultLabel
+  LocalLabelId : endLabel
+  JumpDistance slice : caseJumpDistances
+  JumpDistance : defaultJumpDistance
   Type : switchType
 ) =:: export: SwitchData
 

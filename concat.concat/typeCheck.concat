@@ -64,8 +64,8 @@ struct(
   branchTree.NodeId : branchRoot
   BranchPoint list : caseBranches
   i32 list : castOffsets
+  iSize : switchPos
   LocalLabelId list : caseLabels
-  LocalLabelId : defaultLabel
   LocalLabelId : endLabel
   LabelId : blockLabel
   BlockId : blockId
@@ -141,8 +141,8 @@ proc(
     branchRoot
     16 BranchPoint list.create
     16 i32 list.create
+    state [] .compiledOps .length
     16 LocalLabelId list.create
-    state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
     blockLabel
     blockId
@@ -4098,13 +4098,16 @@ proc(
               op .pos
               state
             newSwitchBlock
-              $ .defaultLabel =:: defLabel
+              $ .endLabel =:: endLabel
             BlockInfo .Switch state openBlock
             program [] .switchData
               ## SwitchData
                 16 LabelData list.create
                 LocalLabelId slice.empty
-                defLabel
+                program program.nextLocalLabel
+                endLabel
+                JumpDistance slice.empty
+                0:JumpDistance
                 labelType
               SwitchData new list.append
             program .switchData=
@@ -4911,7 +4914,28 @@ proc(
               branchPoints list.free ..drop
             end
             caseBranches .length 0:iSize != state .reachable=
+            program [] .programMemory
+              switchBlock .caseLabels list.asSlice mixedArena.copySlice =:: caseLabels
+              switchBlock .caseLabels .length i32 cast.u JumpDistance mixedArena.allocSlice =:: caseJumps
+            program .programMemory=
+            caseLabels .length for =:: i
+              state .jumpOffsets caseLabels i [] map.remove .and .Label .else
+                "expected label":s op ..line state internalError ..unreachable
+              end
+                switchBlock .switchPos -
+              JumpDistance cast.s caseJumps i =[]
+            end
+            caseLabels slice.freeze switchData .branchLabels=
+            caseJumps slice.freeze switchData .caseJumpDistances=
+            state .jumpOffsets switchData [] .defaultLabel map.remove .and .Label .else
+              "expected label":s op ..line state internalError ..unreachable
+            end
+              switchBlock .switchPos -
+            JumpDistance cast.s switchData .defaultJumpDistance=
             switchBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
+            switchBlock .caseLabels list.free ..drop
+            switchBlock .caseBranches list.free ..drop
+            switchBlock .castOffsets list.free ..drop
             idContext id.closeScope ! "closing while-scope worked" assert
             continue.opLoop
           CASE DEFAULT DOT_CASE DOT_DEFAULT case ## end-case should not be created by parser
