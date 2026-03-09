@@ -1,7 +1,7 @@
 # Concat
 Concat is a self-hosted concatenative Programing Language
 
-!!! The language is still in active development, there are frequent breaking changes
+!!! The language is still in early development, there are frequent breaking changes
 use at your own risk !!!
 
 <!--TODO short description of language -->
