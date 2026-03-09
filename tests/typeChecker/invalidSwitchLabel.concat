@@ -1,0 +1,5 @@
+proc( -> ) =>: main
+  4 switch
+    i32 case break
+  end
+end

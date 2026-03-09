@@ -1,0 +1,2 @@
+unsupported constant in switch-label: i32 at ./tests/typeChecker/invalidSwitchLabel.concat:3:5
+case has to be preceded by at least one label at ./tests/typeChecker/invalidSwitchLabel.concat:3:9
