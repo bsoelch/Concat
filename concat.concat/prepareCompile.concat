@@ -12,122 +12,12 @@ import "measure.concat"
 import "branchTree.concat"
 using id.LabelFlag
 
-i64 =:: BlockUId
-enum( IF AND_OR WHILE SWITCH ) =:: LocalBlockType
-proc( BlockId LocalBlockType -> BlockUId ) =>: getBlockUId
-  ..label i64 cast.u
-    $ 0b100 <= "LocalBlockType fits in two bits" assert
-  >$ i64 cast.u 2 << | BlockUId cast
-end
-struct(
-  LocalLabelId : endLabel
-) =:: AndOrBlockLabelInfo
-struct(
-  LocalLabelId : ifLabel
-  LocalLabelId : elseLabel
-  LocalLabelId : endLabel
-) =:: IfBlockLabelInfo
-struct(
-  LocalLabelId : whileLabel
-  LocalLabelId : doLabel
-  LocalLabelId : finallyLabel
-  LocalLabelId : endLabel
-) =:: WhileBlockLabelInfo
-struct(
-  LocalLabelId : defaultLabel
-  LocalLabelId : endLabel
-  i32 : caseCount
-) =:: SwitchBlockLabelInfo
-union(
-  AndOrBlockLabelInfo : AndOr
-  IfBlockLabelInfo : If
-  WhileBlockLabelInfo : While
-  SwitchBlockLabelInfo : Switch
-) =:: BlockLabelInfo
 struct(
   ProgramContext ptr.mut : program
-  BlockUId BlockLabelInfo hashMap : blockLabels
   VariableInfo list : variables
   FileId : mut: currentFile
   i32 : mut: inlineCount
 ) =:: ConverterContext
-proc( BlockId ConverterContext ptr.mut : context -> AndOrBlockLabelInfo bool ) =>: getAndOrLabelInfo
-  LocalBlockType .AND_OR getBlockUId =:: blockId
-  context .blockLabels blockId map.get .else
-    ## AndOrBlockLabelInfo
-      context [] .program program.nextLocalLabel
-    AndOrBlockLabelInfo new
-      context .blockLabels blockId $2 BlockLabelInfo .AndOr map.put ..drop
-    true return
-  end .AndOr .else "expected AndOrBlockLabelInfo" ..panic end false
-end
-proc( BlockId ConverterContext ptr.mut : context -> AndOrBlockLabelInfo ) =>: removeAndOrLabelInfo
-  LocalBlockType .AND_OR getBlockUId =:: blockId
-  context .blockLabels blockId map.remove .and .AndOr .else
-    "missing AndOrBlockLabelInfo" ..panic
-  end
-end
-proc( BlockId ConverterContext ptr.mut : context -> IfBlockLabelInfo bool ) =>: getIfLabelInfo
-  LocalBlockType .IF getBlockUId =:: blockId
-  context .blockLabels blockId map.get .else
-    ## IfBlockLabelInfo
-      context [] .program program.nextLocalLabel
-      context [] .program program.nextLocalLabel
-      context [] .program program.nextLocalLabel
-    IfBlockLabelInfo new
-      context .blockLabels blockId $2 BlockLabelInfo .If map.put ..drop
-    true return
-  end .If .else "expected IfBlockLabelInfo" ..panic end false
-end
-proc( BlockId ConverterContext ptr.mut : context -> IfBlockLabelInfo ) =>: removeIfLabelInfo
-  LocalBlockType .IF getBlockUId =:: blockId
-  context .blockLabels blockId map.remove .and .If .else
-    "missing IfBlockLabelInfo" ..panic
-  end
-end
-proc( BlockId ConverterContext ptr.mut : context -> WhileBlockLabelInfo ) =>: getWhileLabelInfo
-  LocalBlockType .WHILE getBlockUId =:: blockId
-  context .blockLabels blockId map.get .else
-    ## WhileBlockLabelInfo
-      context [] .program program.nextLocalLabel
-      context [] .program program.nextLocalLabel
-      context [] .program program.nextLocalLabel
-      context [] .program program.nextLocalLabel
-    WhileBlockLabelInfo new
-      context .blockLabels blockId $2 BlockLabelInfo .While map.put ..drop
-    return
-  end .While .else "expected WhileBlockLabelInfo" ..panic end
-end
-proc( BlockId ConverterContext ptr.mut : context -> WhileBlockLabelInfo ) =>: removeWhileLabelInfo
-  LocalBlockType .WHILE getBlockUId =:: blockId
-  context .blockLabels blockId map.remove .and .While .else
-    "missing WhileBlockLabelInfo" ..panic
-  end
-end
-proc( BlockId : blockId ConverterContext ptr.mut : context -> ) =>: initSwitchLabelInfo
-  context [] .program =:: program
-  program [] .switchData blockId iSize cast.u @[] =:: switchData
-  context .blockLabels
-    blockId LocalBlockType .SWITCH getBlockUId
-    ## SwitchBlockLabelInfo
-      switchData [] .defaultLabel
-      context [] .program program.nextLocalLabel
-      0
-    SwitchBlockLabelInfo new BlockLabelInfo .Switch
-  map.put ..drop
-end
-proc( BlockId ConverterContext ptr.mut : context -> SwitchBlockLabelInfo ptr.mut ) =>: getSwitchLabelInfo
-  LocalBlockType .SWITCH getBlockUId =:: blockId
-  context .blockLabels blockId map.at .and .Switch .else
-    "expected SwitchBlockLabelInfo" ..panic
-  end
-end
-proc( BlockId ConverterContext ptr.mut : context -> SwitchBlockLabelInfo ) =>: removeSwitchLabelInfo
-  LocalBlockType .SWITCH getBlockUId =:: blockId
-  context .blockLabels blockId map.remove .and .Switch .else
-    "expected SwitchBlockLabelInfo" ..panic
-  end
-end
 
 proc(
   Type : varType
@@ -435,162 +325,28 @@ proc(
       newOps
         op list.append
       return
-    LocalJump LocalLabel case break
-    ## TODO! generate correct label hints
     ## TODO? merge identical variables on independent branches
-    Block .case =:: blockInfo
-      blockInfo .blockId =:: blockId
-      blockInfo .blockType switch
-        AND_IF case newOps
-          blockId context getIfLabelInfo if
-            >$
-              $1 .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
-              $1 .elseLabel LocalLabelType .HINT_START op .pos opLabel list.append
-              $1 .ifLabel LocalLabelType .HINT_START op .pos opLabel list.append
-            <$
-          end .elseLabel 0:JumpDistance CompareType .FALSE op .pos opJump list.append
-        return
-        OR_IF case newOps
-          blockId context getIfLabelInfo if
-            >$
-              $1 .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
-              $1 .elseLabel LocalLabelType .HINT_START op .pos opLabel list.append
-              $1 .ifLabel LocalLabelType .HINT_START op .pos opLabel list.append
-            <$
-          end .ifLabel 0:JumpDistance CompareType .TRUE op .pos opJump list.append
-        return
-        IF case newOps
-          blockId context getIfLabelInfo =:: isBlockStart =:: ifLabelInfo
-          isBlockStart if
-            ifLabelInfo .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
-            ifLabelInfo .elseLabel LocalLabelType .HINT_START op .pos opLabel list.append
-          end
-          ifLabelInfo .elseLabel 0:JumpDistance CompareType .FALSE op .pos opJump list.append
-          isBlockStart ! if ## do not need if-label when block starts with if
-            ifLabelInfo .ifLabel LocalLabelType .LABEL_END op .pos opLabel list.append
-          end
-        return
-        ELSE case newOps
-          blockId context getIfLabelInfo ..drop .endLabel 0:JumpDistance CompareType .NONE op .pos opJump list.append
-          blockId context getIfLabelInfo ..drop .elseLabel LocalLabelType .LABEL_END op .pos opLabel list.append
-        return
-        SWITCH case
-          blockId context initSwitchLabelInfo
-          newOps op list.append return
-        CASE DOT_CASE case
-          program [] .switchData blockId iSize cast.u @[] =:: switchData
-          blockId context getSwitchLabelInfo =:: labelInfo
-          newOps
-            switchData [] .branchLabels
-              labelInfo [] .caseCount $ 1 + labelInfo .caseCount=
-            [] LocalLabelType .LABEL_END op .pos opLabel
-          list.append
-        return
-        DEFAULT DOT_DEFAULT case
-          newOps
-            blockId context getSwitchLabelInfo [] .defaultLabel LocalLabelType .LABEL_END op .pos opLabel
-          list.append
-        return
-        BREAK_SWITCH case
-          newOps
-            blockId context getSwitchLabelInfo [] .endLabel 0:JumpDistance CompareType .NONE op .pos opJump
-          list.append
-        return
-        WHILE case newOps
-          blockId context getWhileLabelInfo =:: whileInfo
-          whileInfo .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
-          whileInfo .whileLabel LocalLabelType .LABEL_START op .pos opLabel list.append
-          whileInfo .finallyLabel LocalLabelType .HINT_START op .pos opLabel list.append
-          whileInfo .doLabel LocalLabelType .HINT_START op .pos opLabel list.append
-        return
-        OR_DO case
-          newOps
-            blockId context getWhileLabelInfo .doLabel 0:JumpDistance CompareType .TRUE op .pos opJump
-          list.append
-        return
-        AND_DO case
-          newOps
-            blockId context getWhileLabelInfo .endLabel 0:JumpDistance CompareType .FALSE op .pos opJump
-          list.append
-        return
-        DO case newOps
-          blockId context getWhileLabelInfo =:: whileBlockInfo
-          whileBlockInfo .endLabel 0:JumpDistance CompareType .FALSE op .pos opJump list.append
-          whileBlockInfo .doLabel LocalLabelType .LABEL_END op .pos opLabel list.append
-        return
-        BREAK case
-          newOps
-            blockId context getWhileLabelInfo .endLabel 0:JumpDistance CompareType .NONE op .pos opJump
-          list.append
-        return
-        CONTINUE case
-          newOps
-            blockId context getWhileLabelInfo .finallyLabel 0:JumpDistance CompareType .NONE op .pos opJump
-          list.append
-        return
-        FINALLY case
-          newOps
-            blockId context getWhileLabelInfo .finallyLabel LocalLabelType .LABEL_END op .pos opLabel
-          list.append
-        return
-        AND case newOps
-          blockId context getAndOrLabelInfo if
-            >$
-              $1 .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
-            <$
-          end .endLabel
-           >$ 0 StackModType .COPY op .pos opStackMod list.append <$
-          0:JumpDistance CompareType .FALSE op .pos opJump list.append
-          1 StackModType .DROP op .pos opStackMod list.append
-        return
-        OR case newOps
-          blockId context getAndOrLabelInfo if
-            >$
-              $1 .endLabel LocalLabelType .HINT_START op .pos opLabel list.append
-            <$
-          end .endLabel
-           >$ 0 StackModType .COPY op .pos opStackMod list.append <$
-          0:JumpDistance CompareType .TRUE op .pos opJump list.append
-          1 StackModType .DROP op .pos opStackMod list.append
-        return
-        UNKNOWN INITIALIZER NAMESPACE PROCEDURE INLINE_PROCEDURE OVERLOAD
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_SETTYPE
-            TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE case break
+    ## TODO cleanup unused labels
+    LocalLabel case newOps op list.append return
+    ## TODO fuse not+jump
+    LocalJump case
+      0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
+      newOps op list.append
+    return
+    Block .case .blockType
+      BlockType ..length 35:iSize == "no new block types" assert
+      switch
+        SWITCH case newOps op list.append return
+        default break
       end
     break
-    BlockEnd .case =:: blockInfo
-      blockInfo .blockId =:: blockId
-      blockInfo .blockType switch
-        PROCEDURE case
-          newOps op list.append return
-        ELSE case
-          newOps
-            blockId context removeIfLabelInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel
-          list.append
-        return
-        SWITCH case
-          newOps
-            blockId context removeSwitchLabelInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel
-          list.append
-        return
-        WHILE case newOps
-          blockId context removeWhileLabelInfo =:: whileBlockInfo
-          whileBlockInfo .whileLabel 0:JumpDistance CompareType .NONE op .pos opJump list.append
-          whileBlockInfo .whileLabel LocalLabelType .HINT_END op .pos opLabel list.append
-          whileBlockInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel list.append
-        return
-        AND OR case
-          newOps
-            blockId context removeAndOrLabelInfo .endLabel LocalLabelType .LABEL_END op .pos opLabel
-          list.append
-        return
-        AND_IF OR_IF AND_DO OR_DO FINALLY INLINE_PROCEDURE
-        UNKNOWN CASE DOT_CASE DEFAULT DOT_DEFAULT BREAK_SWITCH DO BREAK
-        CONTINUE INITIALIZER IF NAMESPACE TYPE_SETTYPE OVERLOAD
-        TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION
-        TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE case break
+    BlockEnd .case .blockType
+      BlockType ..length 35:iSize == "no new block types" assert
+      switch
+        PROCEDURE case newOps op list.append return
+        default break
       end
-      break
+    break
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
     AutoTypedInitializeId ConstantReference NewReference
@@ -635,7 +391,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   typeContext .labelContext =:: labelContext
   ## ConverterContext
     program
-    proc( BlockUId -> i32 ) => i32 cast end proc( BlockUId BlockUId -> bool ) => == end 256 BlockLabelInfo map.create
     0 VariableInfo list.create
     -1:FileId
     0
