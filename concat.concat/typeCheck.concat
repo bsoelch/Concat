@@ -4076,7 +4076,9 @@ proc(
               "missing argument for switch-statement" sb.copyPtr
               op .pos errors appendError
               continue.opLoop
-            end [] .valueType =:: switchType
+            end [] .valueType
+              typeContext types.literalToType
+            =:: switchType
             switchType typeContext types.isIntOrChar ! and
                 switchType typeContext types.isEnumOrTaggedUnion ! and
                 switchType typeContext types.isPointer ! or
