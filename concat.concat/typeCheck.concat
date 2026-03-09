@@ -3672,19 +3672,73 @@ proc(
         1 op .pos state checkStackSize if
           continue.opLoop
         end
+        state .stack branchTree.peek .and =:: stackVal
+            stackVal .value [] .None ? if
+          stackVal [] .valueType =:: valType
+          valType@ slice.wrap
+            "splat":s
+            0 false
+            op .pos
+          state requireTypes .Err ? if
+            continue.opLoop
+          end
+          valType typeContext types.isTuple if
+            valType typeContext types.compositeElts =:: eltTypes
+            eltTypes .length for =:: i
+              0 StackModType .COPY op .pos opStackMod state appendOp ..drop
+              eltTypes i []
+                ConstValue .None
+                valType i i32 cast.u op .pos opGetElement
+              state pushValue
+              1 StackModType .ROTATE op .pos opStackMod state appendOp ..drop
+            end
+            1 StackModType .DROP op .pos opStackMod state appendOp ..drop
+            continue.opLoop
+          else
+            "unsupported type for splat: " sb.copyPtr
+              valType typeContext sb.appendType
+            op .pos errors appendError
+            continue.opLoop
+          end
+        end
         state popTypedValue .else
           "stack underflow":s op ..line state internalError ..unreachable
         end =:: constVal
-        constVal .value .TypeId .and =:: typeVal
-            typeVal typeContext types.isSetType if
-          typeVal typeContext types.unwrapRefinement =:: baseType
-          typeVal typeContext types.getSetTypeEntries for
-            #+val+# baseType op .pos state pushConstant
+        constVal .value .TypeId .if =:: typeVal
+          typeVal typeContext types.isSetType if
+            typeVal typeContext types.unwrapRefinement =:: baseType
+            typeVal typeContext types.getSetTypeEntries for
+              #+val+# baseType op .pos state pushConstant
+            end
+            continue.opLoop
+          else typeVal typeContext types.isTuple _if
+            typeVal typeContext types.compositeElts for
+              #+elt+# ConstValue .TypeId types.primitive.TYPE op .pos state pushConstant
+            end
+            continue.opLoop
           end
-          continue.opLoop
-        end
-        "unsupported value for splat:" sb.copyPtr
+        else .Array ._if =:: elements
+          constVal .valType typeContext types.isTuple if
+            constVal .valType typeContext types.compositeElts =:: eltTypes
+            elements .length eltTypes .length != if
+              "tuple-constant has wrong number of elements":s op ..line state internalError ..unreachable
+            end
+            eltTypes .length for =:: i
+              elements i [] eltTypes i [] op .pos state pushConstant
+            end
+            continue.opLoop
+          else
+            "unsupported type value for array-constant: " sb.copyPtr
+              constVal .valType typeContext sb.appendType
+            op .pos errors appendError
+            continue.opLoop
+          end
+        else ..drop end
+        "unsupported value for splat: " sb.copyPtr
+          constVal .valType typeContext sb.appendType
+          " [ " sb.appendS
           constVal .value typeContext sb.appendConstant
+          " ]" sb.appendS
         op .pos errors appendError
         continue.opLoop
       Block .case =:: blockInfo
@@ -5274,7 +5328,7 @@ proc(
             eltCount op .pos state checkStackSize if
               continue.opLoop
             end
-            ## TODO? if rotated value is constant replace with move of value to top of stack
+            ## TODO! support stack rotation in constant evaluation
             state .stack eltCount offset 0 > branchTree.rotate
             ## clear stack references after rotation (removing stack values after rotation messes up stack)
             false eltCount op .pos state clearReferences

@@ -1,0 +1,14 @@
+proc( ( i32 i32 ) -> ( i32 i32 i32 ) ) =>: test
+  ... $1 $1 + ( i32 i32 i32 ) new
+end
+proc( -> ) =>: export: main
+  1 2 ( i32 i32 ) new =:: x
+  x ... 3 ( i32 i32 i32 ) new =:: y
+  x test =:: z
+  z .2 3 == "z.2" assert
+  y ... z ...
+    >>>$ == <$
+    >>>$ == & <<$
+    == &
+  "splated tuples are equal" assert
+end

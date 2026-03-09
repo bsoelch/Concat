@@ -742,7 +742,7 @@ namespace: sb
       mod .modType switch
         COPY case
           mod .n 0 == if
-            "DUP " sb.appendS
+            "DUP" sb.appendS
           else
             "OVER " sb.appendS
             mod .n sb.appendI
@@ -750,9 +750,10 @@ namespace: sb
           break
         ROTATE case
           mod .n 1 == if
-            "SWAP " sb.appendS
+            "SWAP" sb.appendS
           else
             "ROTATE " sb.appendS
+            mod .n sb.appendI
           end
           break
         DROP case
