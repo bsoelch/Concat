@@ -334,14 +334,14 @@ proc(
       newOps op list.append
     return
     Block .case .blockType
-      BlockType ..length 34:iSize == "no new block types" assert
+      BlockType ..length 33:iSize == "no new block types" assert
       switch
         SWITCH case newOps op list.append return
         default break
       end
     break
     BlockEnd .case .blockType
-      BlockType ..length 34:iSize == "no new block types" assert
+      BlockType ..length 33:iSize == "no new block types" assert
       switch
         PROCEDURE case newOps op list.append return
         default break

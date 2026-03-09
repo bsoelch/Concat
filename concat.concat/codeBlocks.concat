@@ -17,7 +17,6 @@ enum(
   CONTINUE
   FINALLY
   SWITCH
-  BREAK_SWITCH
   CASE DOT_CASE
   DEFAULT DOT_DEFAULT
   AND
@@ -72,9 +71,6 @@ namespace: sb
         return
       BREAK case
         "break" sb.appendS
-        return
-      BREAK_SWITCH case
-        "break switch" sb.appendS
         return
       CONTINUE case
         "continue" sb.appendS

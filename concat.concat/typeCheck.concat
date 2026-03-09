@@ -4697,7 +4697,7 @@ proc(
               op .pos blockInfo .jumpDistance asForwardJump +
             opIndex=
             continue.opLoop
-          PROCEDURE BREAK_SWITCH
+          PROCEDURE
           UNKNOWN case
             break
         end
@@ -5104,7 +5104,7 @@ proc(
             end
           continue.opLoop
           AND_IF OR_IF AND_DO OR_DO
-          BREAK CONTINUE BREAK_SWITCH
+          BREAK CONTINUE
           UNKNOWN OVERLOAD case
             break
         end

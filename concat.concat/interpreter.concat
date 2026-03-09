@@ -1093,7 +1093,7 @@ proc(
       end
     break
     Block .case =:: blockInfo
-      BlockType ..length 34:iSize == "no new block types" assert
+      BlockType ..length 33:iSize == "no new block types" assert
       blockInfo .blockType switch
         SWITCH case
           op [] .pos context popValue if ..drop.2
