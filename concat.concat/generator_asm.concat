@@ -749,7 +749,20 @@ proc(
           AMD64.op.TEST arg arg asm.op2 list.append
         break
         EQ NE LT LE GE GT ULT ULE UGE UGT case
-          "unimplemented: fused compare&jump" ..panic
+          op [] .dataType ValType.fromType =:: argType
+          ## TODO merge duplicate code with opCmp
+          argType op [] .pos context amd64GetBinOpArgs =:: arg2 =:: arg1
+          ## TODO! handle float compare (! use comiss + ja/jb)
+          AMD64.op.CMP
+            arg1
+            arg2 .Register .if
+              asm.op2
+            else .Int ._if
+              asm.op2
+            else
+              "unsupported arg for cmp" ..panic
+            end
+          list.append
         break
       end
       labelInfo [] .labelId op [] .pos context syncLabelState =:: jumpLabel
@@ -757,6 +770,12 @@ proc(
         NONE case AMD64.op.JMP break
         TRUE case AMD64.op.JNZ break
         FALSE case AMD64.op.JZ break
+        EQ case AMD64.op.JEQ break
+        NE case AMD64.op.JNE break
+        LT case AMD64.op.JLT break
+        LE case AMD64.op.JLE break
+        GE case AMD64.op.JGE break
+        GT case AMD64.op.JGT break
         default "unimplemented: jump-type" ..panic break
       end jumpLabel asm.LocalLabel cast asm.op1 list.append
       labelInfo .cmpType [] .NONE ! context .reachable=
