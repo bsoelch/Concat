@@ -227,7 +227,13 @@ struct(
 ) =:: TypeBlockState
 
 enum( NONE TYPE INITIALIZER ) =:: BlockMode
-
+union(
+  iSize : Label
+  iSize : Jump
+  ( iSize iSize ) : Jump2
+  ( iSize iSize iSize ) : Jump3
+  iSize list : Jumps
+) =:: JumpOffsets
 struct(
   iSize : openBlocksOffset
   iSize : compiledOpsOffset
@@ -245,6 +251,7 @@ struct(
   ProgramContext ptr.mut : program
   InterpreterContext : interpreter
   LabelId TypedValue hashMap : argData
+  LocalLabelId JumpOffsets hashMap : jumpOffsets
   Type optional : currentProcType
   BlockMode : blockMode
   TypeInfo BranchTree : stack
@@ -872,7 +879,6 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: endSwitchBranch
     switchBlock pos state breakSwitch
   end
 end
-
 
 proc(
   bool : clearConst
@@ -5705,6 +5711,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     program
     program -1:FileId interpreter.wrapProgram
     labelHash@ labelEq@ 64 TypedValue map.create
+    LocalLabelId.hash@ LocalLabelId.eq@ 512 JumpOffsets map.create
     Type optional.empty
     BlockMode .NONE
     TypeInfo branchTree.create
@@ -5861,6 +5868,12 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   state .stack branchTree.free
   state .interpreter interpreter.cleanupContext
   state .argData map.free
+  ( LocalLabelId : _ -> ) => end
+    ( JumpOffsets -> ) =>
+      .Jumps .if list.free ..drop else ..drop end
+    end
+    state .jumpOffsets
+  map.freeAll
   state [] .initializationStack list.free ..drop
   state [] .stateStack list.free ..drop
   state [] .typeBuffer list.free ..drop

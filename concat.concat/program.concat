@@ -45,6 +45,7 @@ struct(
 ) =:: LocalLabelInfo
 struct(
   LocalLabelId : labelId
+  JumpDistance : jumpDistance
   CompareType : cmpType
 ) =:: LocalJumpInfo
 struct(
@@ -275,7 +276,7 @@ proc( LocalLabelId LocalLabelType FilePosition : pos -> Operation ) =>: export: 
   LocalLabelInfo new OpValue .LocalLabel Type .Undefined pos Operation new return
 end
 proc( LocalLabelId CompareType FilePosition : pos -> Operation ) =>: export: opJump
-  LocalJumpInfo new OpValue .LocalJump Type .Undefined pos Operation new return
+  0:JumpDistance >$ LocalJumpInfo new OpValue .LocalJump Type .Undefined pos Operation new return
 end
 
 proc( Type IdentifierInfo FilePosition  -> Operation ) =>: export: opGetId
