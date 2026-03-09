@@ -1676,8 +1676,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state [] .constBlockCount 0 != =:: mut: inConstBlock
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
+        BlockType ..length 35:iSize == "no new block types" assert
         state [] .openBlocks list.reversed for: findContainer =:: b
-          BlockType ..length 43:iSize == "no new block types" assert
           b .blockData switch
             Procedure case
               false inConstBlock=

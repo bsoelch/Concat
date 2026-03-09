@@ -524,35 +524,7 @@ struct(
   Type : switchType
   i32 : caseCount
   i32 : breakCount
-  i32 : switchPosition
-  JumpDistance : defaultJumpDistance
-  JumpDistance slice.mut : caseJumpDistances
-  i32 slice.mut : breakPositions
 ) =:: export: SwitchData
-struct(
-  i32 : modifiedTypes
-  i32 : loopStart
-  i32 slice.mut : orPositions
-  i32 slice.mut : continuePositions
-  i32 slice.mut : breakPositions
-  i32 : orCount
-  i32 : continueCount
-  i32 : breakCount
-) =:: export: WhileData
-struct(
-  i32 : blockStart
-  i32 : ifPosition
-  i32 : elsePosition
-  i32 slice.mut : andPositions
-  i32 slice.mut : orPositions
-  i32 : andCount
-  i32 : orCount
-) =:: export: IfData
-struct(
-  i32 : blockStart
-  i32 slice.mut : andOrPositions
-  i32 : andOrCount
-) =:: export: AndOrData
 
 struct(
   ProcId list : procedures
@@ -657,9 +629,9 @@ struct(
   LocalLabelId BackJumpInfo hashMap : backJumpInfo
   LocalLabelId : nextLabelId
   SwitchData list : switchData
-  WhileData list : whileData
-  IfData list : ifData
-  AndOrData list : andOrData
+  i32 : whileCount
+  i32 : ifCount
+  i32 : andOrCount
   TypedConstant list : constantReferences
   LabelId list : labelBuffer
   stringBuilder : tmpString
@@ -697,9 +669,7 @@ proc(
     LocalLabelId.skewHash@ LocalLabelId.eq@ 1024 BackJumpInfo map.create
     0 LocalLabelId cast
     128 SwitchData      list.create
-    128 WhileData       list.create
-    256 IfData          list.create
-    128 AndOrData       list.create
+    0 0 0
     32  TypedConstant   list.create
     32  LabelId         list.create
     256 sb.create
@@ -724,9 +694,6 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .globalOps list.free >$ .globalOps=
   $ .programMemory mixedArena.free >$ .programMemory=
   $ .switchData list.free >$ .switchData=
-  $ .whileData list.free >$ .whileData=
-  $ .ifData list.free >$ .ifData=
-  $ .andOrData list.free >$ .andOrData=
   $ .constantReferences list.free >$ .constantReferences=
   $ .labelBuffer list.free >$ .labelBuffer=
   $ .tmpString sb.free >$ .tmpString=

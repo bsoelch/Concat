@@ -1185,12 +1185,11 @@ proc(
                 label [] .value typeContext sb.appendConstant
               op [] .pos errors appendError
             end if
-              switchData [] .caseJumpDistances
-                label [] .caseId []
-              EvalResult .Jump return
+              ## FIXME: fix jump
+              0:JumpDistance EvalResult .Jump return
             end
           end
-          switchData [] .defaultJumpDistance EvalResult .Jump return
+          0:JumpDistance EvalResult .Jump return
           break
         CASE DOT_CASE DEFAULT DOT_DEFAULT UNKNOWN case break
       end

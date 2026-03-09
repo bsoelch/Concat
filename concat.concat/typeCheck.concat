@@ -50,7 +50,6 @@ struct(
   BranchPoint : ifBranch
   BranchPoint list : andBranches
   BranchPoint list : orBranches
-  i32 list : andOrPositions
   LocalLabelId : ifLabel
   LocalLabelId : elseLabel
   LocalLabelId : endLabel
@@ -63,16 +62,14 @@ struct(
   Type : switchType
   Type : switchBaseType
   branchTree.NodeId : branchRoot
-  BranchPoint list : mut: caseBranches
-  i32 list : mut: castOffsets
-  i32 list : mut: breakPositions
-  JumpDistance list : mut: caseJumpDistances
+  BranchPoint list : caseBranches
+  i32 list : castOffsets
   LabelId : blockLabel
   BlockId : blockId
-  i32 : switchPosition
   IdentifierInfo optional : srcVar
-  bool : mut: inLabel
-  bool : mut: allowBreak
+  bool : inLabel
+  bool : allowBreak
+  bool : hasDefault
 ) =:: SwitchBlockInfo
 struct(
   BranchPoint : branchRoot
@@ -82,7 +79,6 @@ struct(
   i32 list : mut: continueCastOffsets
   BranchPoint list : mut: doBranches
   i32 : mut: doBranchIndex ## index of do-branch in break branches
-  i32 list : mut: labelPositions
   LocalLabelId : whileLabel
   LocalLabelId : doLabel
   LocalLabelId : finallyLabel
@@ -91,12 +87,10 @@ struct(
   i32 : mut: continueCount
   LabelId : blockLabel
   BlockId : blockId
-  i32 : whilePosition
   bool : mut: hasFinally
 ) =:: WhileBlockInfo
 struct(
   BranchPoint list : mut: branches
-  i32 list : mut: andOrPositions
   LocalLabelId : endLabel
   BlockId : blockId
 ) =:: AndOrBlockInfo
@@ -115,7 +109,6 @@ proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos TypeCh
     branchTree.EMPTY pos BranchPoint new ## dummy value
     8 BranchPoint list.create
     8 BranchPoint list.create
-    16 i32 list.create
     state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
@@ -136,7 +129,6 @@ proc(
   IdentifierInfo optional : srcVar
   LabelId : blockLabel
   BlockId : blockId
-  i32 : switchPosition
   FilePosition : pos
 -> BlockInfo ) =>: newSwitchBlock
   ## SwitchBlockInfo
@@ -145,13 +137,11 @@ proc(
     branchRoot
     16 BranchPoint list.create
     16 i32 list.create
-    16 i32 list.create
-    16 JumpDistance list.create
     blockLabel
     blockId
-    switchPosition
     srcVar
     true
+    false
     false
   SwitchBlockInfo new BlockInfo .Switch return
 end
@@ -159,7 +149,6 @@ proc(
   branchTree.NodeId : branchRoot
   LabelId : blockLabel
   BlockId : blockId
-  i32 : whilePosition
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> WhileBlockInfo ) =>: newWhileBlock
@@ -173,7 +162,6 @@ proc(
     16 i32 list.create
     16 BranchPoint list.create
     -1
-    16 i32 list.create
     state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
@@ -182,14 +170,12 @@ proc(
     0:i32
     blockLabel
     blockId
-    whilePosition
     false
   WhileBlockInfo new return
 end
 proc(
   branchTree.NodeId : branchRoot
   BlockId : blockId
-  i32 : blockStart
   FilePosition : pos
   TypeCheckState ptr.mut : state
 -> AndOrBlockInfo ) =>: newAndOrBlock
@@ -198,7 +184,6 @@ proc(
       branchRoot
       pos
     BranchPoint new list.append
-    16 i32 list.create
     state [] .program program.nextLocalLabel
     blockId
   AndOrBlockInfo new return
@@ -865,9 +850,6 @@ proc(
   end
   BlockType .BREAK_SWITCH pos opBlock =:: mut: breakOp
   switchBlock [] .blockId breakOp@ .val .Block .else "expected block" ..panic end .blockId=
-  switchBlock [] .breakPositions
-    state [] .compiledOps .length i32 cast.u list.append
-  switchBlock .breakPositions=
   breakOp state appendOp ..drop
   false state .reachable=
   ## TODO is block info in param same block-info as block-info on stack
@@ -2013,7 +1995,6 @@ end
 
 proc(
   BlockId : switchId
-  i32 : switchPosition
   Type : switchType
   ConstValue : label0
   FilePosition : pos
@@ -2084,7 +2065,6 @@ proc(
   end =:: switchBlock
   switchBlock [] .switchType =:: switchType
   switchBlock [] .blockId =:: switchId
-  switchBlock [] .switchPosition =:: switchPosition
   op [] .val .Block .if
     .blockType switch
       CASE DOT_CASE DEFAULT DOT_DEFAULT case
@@ -2108,7 +2088,6 @@ proc(
     op [] .val .Constant .if =:: constVal
       ## newSwitchLabel
         switchId
-        switchPosition
         switchType
         constVal
         op [] .pos
@@ -2130,7 +2109,6 @@ proc(
       end
       ## newSwitchLabel
         switchId
-        switchPosition
         switchType
         idData [] .constValue
         op [] .pos
@@ -2152,7 +2130,6 @@ proc(
       end
       ## newSwitchLabel
         switchId
-        switchPosition
         switchType
         idData [] .constValue
         op [] .pos
@@ -2196,7 +2173,6 @@ proc(
   end =:: labelIndex
   ## newSwitchLabel
     switchId
-    switchPosition
     switchType
     ## ConstValue
       labelIndex i64 cast.u
@@ -2206,31 +2182,15 @@ proc(
   true return
 end
 
-proc( i32 : blockStart ProgramContext ptr.mut : program -> BlockId ) =>: createIfData
-  program [] .ifData .length =:: oldLength
-    program [] .ifData
-      ## IfData
-        blockStart
-        0:i32
-        0:i32
-        i32 slice.emptyMutable
-        i32 slice.emptyMutable
-        0:i32
-        0:i32
-      IfData new list.append
-    program .ifData=
-  oldLength BlockId cast
+proc( ProgramContext ptr.mut : program -> BlockId ) =>: nextIfId
+  program [] .ifCount
+    $ 1 + program .ifCount=
+  BlockId cast
 end
-proc( i32 : blockStart ProgramContext ptr.mut : program -> BlockId ) =>: createAndOrData
-  program [] .andOrData .length =:: oldLength
-    program [] .andOrData
-      ## AndOrData
-        blockStart
-        i32 slice.emptyMutable
-        0:i32
-      AndOrData new list.append
-    program .andOrData=
-  oldLength BlockId cast
+proc( ProgramContext ptr.mut : program -> BlockId ) =>: nextAndOrId
+  program [] .andOrCount
+    $ 1 + program .andOrCount=
+  BlockId cast
 end
 
 proc(
@@ -3714,7 +3674,7 @@ proc(
             end
             false 1 op .pos state clearReferences
             state inIfCondition ! if
-              state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
+              program nextIfId =:: blockId
               blockId op@ .val .Block .else "expected block" ..panic end .blockId=
               state .stack branchTree.startBranch =:: ifRoot
               ifRoot blockId op .pos state newIfBlock =:: mut: ifBlock
@@ -3737,9 +3697,6 @@ proc(
                 op .pos
               BranchPoint new list.append
             branches =[]
-            ifBlock [] .andOrPositions
-              state [] .compiledOps .length i32 cast.u list.append
-            ifBlock .andOrPositions=
             blockType .AND_IF if
               ifBlock [] .elseLabel CompareType .FALSE
             else
@@ -3772,7 +3729,7 @@ proc(
                 continue.opLoop
               end
               state .stack branchTree.startBranch =:: ifBranch
-              state [] .compiledOps .length i32 cast.u program createIfData =:: blockId
+              program nextIfId =:: blockId
               ifBranch blockId op .pos state newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
               idContext id.openScope
@@ -3802,13 +3759,8 @@ proc(
               IfBlockFlags.hasIf |
             ifBlock .flags=
             ifBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
-            program [] .ifData
-              ifBlock [] .blockId i64 cast
-            @[] =:: ifData
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             ifBlock [] .elseLabel CompareType .FALSE op .pos state localJump
             ifBlock [] .ifLabel LocalLabelType .LABEL_END op .pos state localLabel
-            currentOpIndex ifData .ifPosition=
             ifBlock [] .andBranches
                 state .stack branchTree.startBranch
                 op .pos
@@ -3816,27 +3768,6 @@ proc(
             ifBlock .andBranches=
             ifBlock .orBranches =:: orBranches
             orBranches [] .length 0:iSize != if
-              ifBlock [] .andOrPositions =:: andOrPos
-              program [] .programMemory
-                orBranches [] .length i32 cast i32 mixedArena.allocSlice =:: orPositions
-              program .programMemory=
-              0:i32 =:: mut: orCount
-              andOrPos for =:: andOrIndex
-                state [] .compiledOps
-                  andOrIndex
-                @[] =:: andOrOp
-                andOrOp .val .Block .and .blockType .OR_IF if
-                  andOrIndex orPositions orCount slice.set
-                  orCount 1 + orCount=
-                  currentOpIndex
-                    andOrIndex - JumpDistance cast
-                  andOrOp .val .Block .else "expected block" ..panic end .jumpDistance=
-                end
-              end
-              orCount iSize cast.u orPositions .length != if
-                "or-counts don't match":s op ..line state internalError ..unreachable
-              end
-              orPositions ifData .orPositions=
               orBranches []
                   state .stack branchTree.startBranch
                   op .pos
@@ -3937,39 +3868,6 @@ proc(
             ifBlock [] .flags
               IfBlockFlags.hasElse |
             ifBlock .flags=
-            program [] .ifData
-              ifBlock [] .blockId i64 cast
-            @[] =:: ifData
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            currentOpIndex
-              ifData [] .ifPosition - JumpDistance cast
-              state [] .compiledOps
-                ifData [] .ifPosition
-              @[]
-            .val .Block .else "expected block" ..panic end .jumpDistance=
-            program [] .programMemory
-              ifBlock [] .andOrPositions .length
-                ifData [] .orPositions .length - i32 cast
-              i32 mixedArena.allocSlice =:: andPositions
-            program .programMemory=
-            0:i32 =:: mut: andCount
-            ifBlock [] .andOrPositions for =:: andOrPos
-              state [] .compiledOps
-                andOrPos
-              @[] =:: andOrOp
-              andOrOp .val .Block .and [] .blockType .AND_IF if
-                andOrPos andPositions andCount slice.set
-                andCount 1 + andCount=
-                currentOpIndex
-                  andOrPos - JumpDistance cast
-                andOrOp .val .Block .else "expected block" ..panic end .jumpDistance=
-              end
-            end
-            andCount iSize cast.u andPositions .length != if
-              "and-counts don't match":s op ..line state internalError ..unreachable
-            end
-            andPositions ifData .andPositions=
-            currentOpIndex ifData .elsePosition=
             ifBlock [] .endLabel CompareType .NONE op .pos state localJump
             ifBlock [] .elseLabel LocalLabelType .LABEL_END op .pos state localLabel
             true state .reachable=
@@ -4078,7 +3976,6 @@ proc(
             switchId op@ .val .Block .else "expected block" ..panic end .blockId=
             labelType op@ .dataType=
             false 1 op .pos state clearReferences
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
             program [] .switchData
               ## SwitchData
                 16 LabelData list.create
@@ -4088,10 +3985,6 @@ proc(
                 labelType
                 0 ## case-count
                 0 ## break-count
-                currentOpIndex
-                0:JumpDistance ## default jump distance
-                JumpDistance slice.emptyMutable
-                i32 slice.emptyMutable
               SwitchData new list.append
             program .switchData=
             state .stack branchTree.startBranch =:: switchBranch
@@ -4102,7 +3995,6 @@ proc(
               srcVar
               blockInfo .blockLabel
               switchId
-              currentOpIndex
               op .pos
             newSwitchBlock state openBlock
             idContext id.openScope
@@ -4130,7 +4022,7 @@ proc(
             program [] .switchData
               switchBlock [] .blockId i64 cast @[]
             =:: switchData
-            switchData [] .defaultJumpDistance ? if
+            switchBlock [] .hasDefault if
               "unexpected " sb.copyPtr
                 blockType sb.appendBlockType
                 ", " sb.appendS
@@ -4163,10 +4055,7 @@ proc(
                   " cannot be preceded by at labels" sb.appendS
                 op .pos errors appendError
               end
-              state [] .compiledOps .length
-                switchBlock [] .switchPosition iSize cast.u -
-                JumpDistance cast
-              switchData .defaultJumpDistance=
+              true switchBlock .hasDefault=
             else ## case or .case
               prev? ! .or [] .caseId switchData [] .caseCount < if
                 64 sb.create
@@ -4174,11 +4063,6 @@ proc(
                   " has to be preceded by at least one label" sb.appendS
                 op .pos errors appendError
               end
-              switchBlock [] .caseJumpDistances
-                state [] .compiledOps .length
-                  switchBlock [] .switchPosition iSize cast.u -
-                JumpDistance cast list.append
-              switchBlock .caseJumpDistances=
             end
             switchBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
             true state .reachable=
@@ -4314,9 +4198,6 @@ proc(
                 BranchPoint new list.append
               branches =[]
               false state .reachable=
-              whileBlock [] .labelPositions
-                state [] .compiledOps .length i32 cast.u list.append
-              whileBlock .labelPositions=
               whileBlock
                 blockType .CONTINUE if [] .finallyLabel else [] .endLabel end              
               CompareType .NONE op .pos state localJump
@@ -4333,24 +4214,15 @@ proc(
             end
             true 0 op .pos state clearReferences
             state .stack branchTree.startBranch =:: whileBranch
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            program [] .whileData .length BlockId cast =:: whileId
+            program [] .whileCount
+              $ BlockId cast =:: whileId
+              1 +
+            program .whileCount=
             whileId op@ .val .Block .else "expected block" ..panic end .blockId=
-            program [] .whileData
-              ## WhileData
-                -1
-                currentOpIndex
-                i32 slice.emptyMutable
-                i32 slice.emptyMutable
-                i32 slice.emptyMutable
-                0:i32 0:i32 0:i32
-              WhileData new list.append
-            program .whileData=
             ## newWhileBlock
               whileBranch
               blockInfo .blockLabel
               whileId
-              currentOpIndex
               op .pos
               state
             newWhileBlock
@@ -4399,9 +4271,6 @@ proc(
               BranchPoint new list.append
             branches =[]
             whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
-            whileBlock [] .labelPositions
-              state [] .compiledOps .length i32 cast.u list.append
-            whileBlock .labelPositions=
             blockType .AND_DO if
               whileBlock [] .endLabel CompareType .FALSE
             else
@@ -4485,25 +4354,6 @@ proc(
             program [] .programMemory
               whileBlock [] .orCount i32 mixedArena.allocSlice =:: orPositions
             program .programMemory=
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            whileBlock [] .labelPositions for =:: orPos
-              state [] .compiledOps orPos @[] =:: orOp
-              orOp .val .Block .and [] .blockType .OR_DO if
-                currentOpIndex
-                  orPos - JumpDistance cast
-                orOp .val .Block .else "expected block" ..panic end .jumpDistance=
-                whileBlock [] .orCount 1 -
-                  orPos orPositions $2 slice.set
-                whileBlock .orCount=
-              end
-            end
-            orPositions
-              program [] .whileData
-              whileBlock [] .blockId i64 cast.u
-            @[] .orPositions=
-            whileBlock [] .labelPositions
-              currentOpIndex list.append
-            whileBlock .labelPositions=
             whileBlock [] .endLabel CompareType .FALSE op .pos state localJump
             whileBlock [] .doLabel LocalLabelType .LABEL_END op .pos state localLabel
             continue.opLoop
@@ -4578,22 +4428,6 @@ proc(
             program [] .programMemory
               whileBlock [] .continueCount i32 mixedArena.allocSlice =:: continuePositions
             program .programMemory=
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            whileBlock [] .labelPositions for =:: continuePos
-              state [] .compiledOps continuePos @[] =:: continueOp
-              continueOp .val .Block .else "expected block" ..panic end [] .blockType .CONTINUE if
-                currentOpIndex
-                  continuePos - JumpDistance cast
-                continueOp .val .Block .else "expected block" ..panic end .jumpDistance=
-                whileBlock [] .continueCount 1 -
-                  continuePos continuePositions $2 slice.set
-                whileBlock .continueCount=
-              end
-            end
-            continuePositions
-              program [] .whileData
-              whileBlock [] .blockId i64 cast.u
-            @[] .continuePositions=
             whileBlock [] .finallyLabel LocalLabelType .LABEL_END op .pos state localLabel
             continue.opLoop
           AND OR case
@@ -4607,13 +4441,10 @@ proc(
               branches =[]
               andOrBlock [] .blockId
             else
-              state [] .compiledOps .length i32 cast.u program createAndOrData =:: blockId
+              program nextAndOrId =:: blockId
               blockId op@ .val .Block .else "expected block" ..panic end .blockId=
               state .stack branchTree.startBranch =:: rootBranch
-              rootBranch
-                blockId
-                state [] .compiledOps .length i32 cast.u
-              op .pos state newAndOrBlock
+              rootBranch blockId op .pos state newAndOrBlock
                 $ .endLabel LocalLabelType .HINT_START op .pos state localLabel
               BlockInfo .AndOr state openBlock
               idContext id.openScope
@@ -4631,10 +4462,6 @@ proc(
             state peekBlock .and .AndOr .else
               "expected and-or block":s op ..line state internalError ..unreachable
             end =:: currentBlock
-            currentBlock [] .andOrPositions
-              state [] .compiledOps .length i32 cast.u list.append
-            currentBlock .andOrPositions=
-            op state appendOp ..drop
             0 StackModType .COPY op .pos opStackMod state appendOp ..drop
             currentBlock [] .endLabel
               blockType .AND if CompareType .FALSE else CompareType .TRUE end
@@ -4863,25 +4690,11 @@ proc(
               end
             end
             closedIf .blockId op@ .val .BlockEnd .else "expected block" ..panic end .blockId=
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            program [] .ifData
-              closedIf .blockId i64 cast
-            @[] =:: ifData
-            ifData [] .ifPosition
-              currentOpIndex - JumpDistance cast
-            op@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
-            currentOpIndex
-              ifData [] .elsePosition - JumpDistance cast
-              state [] .compiledOps
-                ifData [] .elsePosition
-              @[]
-            .val .Block .else "expected block" ..panic end .jumpDistance=
             closedIf .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             idContext id.closeScope ! "closing else-scope worked" assert
             ## cleanup closed block
             closedIf .andBranches list.free ..drop
             closedIf .orBranches list.free ..drop
-            closedIf .andOrPositions list.free ..drop
             nBranches 0 > state .reachable=
             continue.opLoop
           IF case break ## end-if should not be created by parser
@@ -4899,19 +4712,14 @@ proc(
             end =:: switchBlock
             ## XXX? check for stray labels
             switchBlock .caseBranches =:: mut: caseBranches
-            switchBlock .breakPositions =:: mut: breakPositions
             program [] .switchData
               switchBlock .blockId i64 cast
             @[] =:: switchData
             ## sort switch-labels
             switchData [] .switchLabels switchLabelCmp@ program list.sort
-            switchData [] .defaultJumpDistance ? ! if
+            switchBlock .hasDefault if
               BlockType .DEFAULT op .pos opBlock =:: mut: tmp
               switchBlock .blockId tmp@ .val .Block .else "expected block" ..panic end .blockId=
-              state [] .compiledOps .length
-                switchBlock .switchPosition iSize cast.u -
-                JumpDistance cast
-              switchData .defaultJumpDistance=
               tmp state appendOp ..drop
               switchBlock .switchType typeContext types.isEnumOrTaggedUnion if
                 switchBlock .switchType
@@ -4968,9 +4776,6 @@ proc(
               end
               BlockType .BREAK_SWITCH op .pos opBlock tmp=
               switchBlock .blockId tmp@ .val .Block .else "expected block" ..panic end .blockId=
-              breakPositions
-                state [] .compiledOps .length i32 cast.u list.append
-              breakPositions=
               tmp state appendOp ..drop
             end
             ## set stack head to one of the accepting branches
@@ -5008,30 +4813,6 @@ proc(
             caseBranches .length 0:iSize != state .reachable=
             BlockType .SWITCH op .pos opEndBlock =:: mut: tmp
             switchBlock .blockId tmp@ .val .BlockEnd .else "expected block" ..panic end .blockId=
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            breakPositions for =:: breakPos
-              state [] .compiledOps breakPos list.at .else
-                "invalid break position":s op ..line state internalError ..unreachable
-              end =:: breakOp
-              currentOpIndex
-                breakPos - JumpDistance cast
-              breakOp .val .Block .else "expected block" ..panic end .jumpDistance=
-            end
-            program [] .programMemory
-              breakPositions
-                mixedArena.copyList
-              switchData .breakPositions=
-            program .programMemory=
-            program [] .programMemory
-              switchBlock .caseJumpDistances
-                mixedArena.copyList
-              switchData .caseJumpDistances=
-            program .programMemory=
-            breakPositions list.free ..drop
-            switchBlock .caseJumpDistances list.free ..drop
-            switchBlock .switchPosition
-              currentOpIndex - JumpDistance cast
-            tmp@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
             tmp state appendOp ..drop
             idContext id.closeScope ! "closing while-scope worked" assert
             continue.opLoop
@@ -5091,10 +4872,10 @@ proc(
             end =:: depth
             whileBlock .blockId =:: whileId
             ## remember number of changed stack values ( necessary for merging values in compiled code )
-            program [] .whileData
-              whileId i64 cast
-            @[] =:: whileData
-            depth whileData .modifiedTypes=
+            program .backJumpInfo
+              whileBlock .whileLabel
+              depth BackJumpInfo.new
+            map.put ..drop
             breakBranches .length 1:iSize u>= if
               branchPoints
                 list.clear
@@ -5134,29 +4915,6 @@ proc(
             whileBlock .continueBranches list.free ..drop
             whileBlock .continueCastOffsets list.free ..drop
             whileBlock .doBranches list.free ..drop
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            program [] .programMemory
-              whileBlock .labelPositions .length i32 cast.u
-                whileBlock .orCount -
-                whileBlock .continueCount -
-              i32 mixedArena.allocSlice =:: breakPositions
-            program .programMemory=
-            0:i32 =:: mut: breakCount
-            whileBlock .labelPositions for =:: labelPos
-              state [] .compiledOps labelPos @[] =:: labelOp
-              labelOp .val .Block .and [] .blockType switch
-                AND_DO BREAK DO case true break
-                OR_DO CONTINUE case false break
-                default ..unreachable
-              end if
-                currentOpIndex
-                  labelPos - JumpDistance cast
-                labelOp .val .Block .else "expected block" ..panic end .jumpDistance=
-                labelPos breakPositions breakCount slice.set
-              end
-            end
-            breakPositions whileData .breakPositions=
-            whileBlock .labelPositions list.free ..drop
             whileBlock .whileLabel CompareType .NONE op .pos state localJump
             whileBlock .whileLabel LocalLabelType .HINT_END op .pos state localLabel
             whileBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
@@ -5179,28 +4937,6 @@ proc(
               op .pos errors appendError
             end
             andOrBlock .blockId op@ .val .BlockEnd .else "expected block" ..panic end .blockId=
-            state [] .compiledOps .length i32 cast.u =:: currentOpIndex
-            andOrBlock .andOrPositions for =:: andOrPos
-              state [] .compiledOps andOrPos list.at .else
-                andOrPos debug.print
-                "invalid break position":s op ..line state internalError ..unreachable
-              end =:: andOrOp
-              currentOpIndex
-                andOrPos - JumpDistance cast
-              andOrOp .val .Block .else "expected block" ..panic end .jumpDistance=
-            end
-            program [] .programMemory
-              andOrBlock .andOrPositions mixedArena.copyList
-                program [] .andOrData
-                  andOrBlock .blockId i64 cast
-                @[]
-              .andOrPositions=
-            program .programMemory=
-            andOrBlock .andOrPositions 0 list.get .if
-                currentOpIndex - JumpDistance cast
-              op@ .val .BlockEnd .else "expected block" ..panic end .jumpDistance=
-            end
-            andOrBlock .andOrPositions list.free ..drop
             andOrBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             andOrBlock .branches =:: mut: branches
             branches
