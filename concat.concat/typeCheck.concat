@@ -2112,6 +2112,12 @@ proc(
   program [] .switchData
     switchId i64 cast.u @[]
   =:: switchData
+  label0 .Int ? ! and label0 .Char ? ! if
+    "unsupported constant in switch-label: " sb.copyPtr
+      label0 typeContext sb.appendConstant
+    pos errors appendError
+    return
+  end
   label0
     ## truncate constant to correct number of bits (switch-lables are treated as unsigned numbers)
     $ .Int .and =:: intVal
