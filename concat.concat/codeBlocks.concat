@@ -5,7 +5,6 @@ import "common.concat"
 enum(
   UNKNOWN
   PROCEDURE
-  INLINE_PROCEDURE
   IF
   AND_IF
   OR_IF
@@ -58,9 +57,6 @@ namespace: sb
         return
       PROCEDURE case
         "procedure" sb.appendS
-        return
-      INLINE_PROCEDURE case
-        "inline-procedure" sb.appendS
         return
       IF case
         "if" sb.appendS

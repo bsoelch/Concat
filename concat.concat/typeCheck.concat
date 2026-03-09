@@ -4697,7 +4697,7 @@ proc(
               op .pos blockInfo .jumpDistance asForwardJump +
             opIndex=
             continue.opLoop
-          PROCEDURE INLINE_PROCEDURE BREAK_SWITCH
+          PROCEDURE BREAK_SWITCH
           UNKNOWN case
             break
         end
@@ -5103,7 +5103,7 @@ proc(
               "unexpected end of namespace" sb.copyPtr op .pos errors appendError
             end
           continue.opLoop
-          AND_IF OR_IF AND_DO OR_DO INLINE_PROCEDURE
+          AND_IF OR_IF AND_DO OR_DO
           BREAK CONTINUE BREAK_SWITCH
           UNKNOWN OVERLOAD case
             break
@@ -5112,7 +5112,6 @@ proc(
       Return case
         op@ state typeCheckReturn
         continue.opLoop
-      InlineReturn case break
       Assert RuntimeAssert case
         op .val .Assert ? if
           op .pos state popString =:: message

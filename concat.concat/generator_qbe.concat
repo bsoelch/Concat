@@ -3715,7 +3715,7 @@ proc(
       end
     break
     Block .case =:: blockVal
-      BlockType ..length 35:iSize == "no-new block-types" assert
+      BlockType ..length 34:iSize == "no-new block-types" assert
       blockVal .blockType switch
         SWITCH case
           blockVal .blockId =:: switchId
@@ -3740,12 +3740,11 @@ proc(
             map.put ..drop
             false context .reachable=
           return
-        INLINE_PROCEDURE case sb return
         default break
       end
       break
     BlockEnd .case =:: blockEnd
-      BlockType ..length 35:iSize == "no-new block-types" assert
+      BlockType ..length 34:iSize == "no-new block-types" assert
       blockEnd .blockType switch
         PROCEDURE case
           Type .Undefined context .currentProc=
@@ -3754,14 +3753,6 @@ proc(
             ## ( type-checker ensures there is a return before end )
             "@end\nhlt\n}\n" sb.appendS
             op [] .pos context sb.appendLocalConstants
-          return
-        INLINE_PROCEDURE case
-          sb
-            ## BranchId
-              BranchType .END_INLINE
-              blockEnd .blockId i32 cast
-            BranchId new "inline proc":s context startBranch
-            ## TODO merge branches if neccessary
           return
         default break
       end
@@ -3828,16 +3819,6 @@ proc(
         retStr sb.appendStr
         retId sb.appendI
         '\n' sb.appendC
-      return
-    InlineReturn .case =:: retId
-      sb
-        "jmp " sb.appendS
-        ## BranchId
-          BranchType .END_INLINE
-          retId i32 cast
-        BranchId new sb.appendBranchId
-        '\n' sb.appendC
-        ## TODO! keep track of branches
       return
     RuntimeAssert .case =:: msg
       ## BranchId

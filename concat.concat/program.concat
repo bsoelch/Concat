@@ -202,7 +202,6 @@ union(
                 i32 : SetUnionElement
                   _ : GetUnionLabel
                   _ : Return
-            BlockId : InlineReturn ## TODO? remember jump distance
                   _ : New
                   _ : NewReference
                 i32 : NewUnion
@@ -994,13 +993,6 @@ namespace: sb
         "Return( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) " sb.appendS
-      break
-      InlineReturn .case =:: blockId
-        "InlineReturn " sb.appendS
-          blockId i64 cast sb.appendI
-        " ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
       break
       Splat case
         "splat: " sb.appendS

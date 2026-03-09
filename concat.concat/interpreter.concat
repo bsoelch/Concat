@@ -1069,8 +1069,6 @@ proc(
     Return case
       ## XXX? check if in procedure
       EvalResult .Return return
-    InlineReturn case
-      "unimplemented" ..panic
     LocalLabel case EvalResult .Ok return ## ignore labels
     LocalJump .case =:: jumpInfo
       jumpInfo .jumpDistance 0:JumpDistance == if
@@ -1095,7 +1093,7 @@ proc(
       end
     break
     Block .case =:: blockInfo
-      BlockType ..length 35:iSize == "no new block types" assert
+      BlockType ..length 34:iSize == "no new block types" assert
       blockInfo .blockType switch
         SWITCH case
           op [] .pos context popValue if ..drop.2

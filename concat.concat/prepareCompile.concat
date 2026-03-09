@@ -102,7 +102,8 @@ proc(
     $ 1 + context .inlineCount=
   BlockId cast =:: inlineId
   labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapLabels ## TODO store in context
-  BlockType .INLINE_PROCEDURE pos opBlock list.append
+  program program.nextLocalLabel =:: procEnd
+  procEnd LocalLabelType .HINT_START pos opLabel list.append
   inlineId $1 list.peek .and .val .Block .else
     "expected block" ..panic
   end .blockId=
@@ -125,8 +126,7 @@ proc(
   procOps 1:iSize $1 .length 2:iSize - slice.getSlice for =:: mut: op
     ## TODO? move remapping to compileOp ( flag to check if within inlined proc )
     op .val .Return ? if
-      inlineId op@ .val .InlineReturn=
-      op list.append
+      procEnd 0:JumpDistance CompareType .NONE op .pos opJump list.append
       continue
     else op .val .GetId ._if .labelId =:: label
       remapLabels@ label map.get .if op@ .val .GetId= end
@@ -137,7 +137,7 @@ proc(
     else ..drop end
     op context compileOp
   end
-  BlockType .INLINE_PROCEDURE pos opEndBlock list.append
+  procEnd LocalLabelType .LABEL_END pos opLabel list.append
   inlineId $1 list.peek .and .val .BlockEnd .else
     "expected block-end" ..panic
   end .blockId=
@@ -334,14 +334,14 @@ proc(
       newOps op list.append
     return
     Block .case .blockType
-      BlockType ..length 35:iSize == "no new block types" assert
+      BlockType ..length 34:iSize == "no new block types" assert
       switch
         SWITCH case newOps op list.append return
         default break
       end
     break
     BlockEnd .case .blockType
-      BlockType ..length 35:iSize == "no new block types" assert
+      BlockType ..length 34:iSize == "no new block types" assert
       switch
         PROCEDURE case newOps op list.append return
         default break
@@ -350,7 +350,7 @@ proc(
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
     AutoTypedInitializeId ConstantReference NewReference
-    TypeInfo NewUnionReference UsingNamespace UsingIdentifier InlineReturn
+    TypeInfo NewUnionReference UsingNamespace UsingIdentifier
     GetName AtName SetName GetLabel Assert DeclareName AliasName InitializeName
     SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc Import LibImport case
       break ## XXX error message
