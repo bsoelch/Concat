@@ -1,0 +1,8 @@
+( i32 f32 ) =:: T1
+( T1 ... >$ ) =:: T2
+proc( T1 -> T2 ) =>: test ... >$ T2 new end
+proc( -> ) =>: main
+  1 2 T1 new test =:: x
+  x .0 2:f32 == "ok" assert
+  x .1 1:i32 == "ok" assert
+end
