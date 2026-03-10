@@ -1206,7 +1206,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           whileData .breakPositions=
         end
       else .Switch ._if =:: switchData
-        ## FIXME: do not clear implicit break if broken block is not innermost switch
         switchData fileState [] .wordStart state clearImplicitBreak
         isContinue if
           "unimplemented: continue switch" ..panic
