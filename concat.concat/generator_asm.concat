@@ -370,7 +370,7 @@ proc(
   ## TODO? extend registers to 32-bit for arithmetic operations to prevent partial register write
   pos context popValue
     .and .Val .else "expected single value" ..panic end
-  .value =:: arg2 ## FIXME ensure that arg2 is not overwritten by move to register
+  .value =:: arg2 ## TODO! ensure that arg2 is not overwritten by move to register
   pos context popValue
     .and .Val .else "expected single value" ..panic end
   ValueLocation .None context moveToRegister =:: arg1
