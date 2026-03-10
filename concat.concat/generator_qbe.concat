@@ -121,7 +121,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     PrimitiveType .case
       switch
         TYPE case ValType .EMPTY return
-        BOOL I8 I16 I32 CHAR8 case ValType .I32 return
+        BOOL I8 I16 I32 case ValType .I32 return
         I64 case ValType .I64 return
         F32 case ValType .FLOAT return
         F64 case ValType .DOUBLE return
@@ -510,7 +510,7 @@ namespace: sb
               STORE case sb "b" sb.appendS return
             end
             break
-          I8 CHAR8 case
+          I8 case
             storeType switch
               STACK case sb "w" sb.appendS return
               LOAD case sb primtive .I8 if "sb" else "ub" end sb.appendS return
@@ -807,7 +807,7 @@ namespace: sb
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
-              I8  CHAR8  case intValue 0xff &   sb.appendI return
+              I8  case intValue 0xff &   sb.appendI return
               I16 case intValue 0xffff & sb.appendI return
               I32 case intValue i32 cast sb.appendI return
               I64 case intValue sb.appendI return
@@ -1887,7 +1887,7 @@ proc(
     ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
       sb "add":s baseVal pos context appendBinaryOperator
       return
-    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 C8_DIFF case
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
       sb "sub":s baseVal pos context appendBinaryOperator
       return ## TODO ensure char-diff arguments are zero extended
     MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
@@ -1954,12 +1954,12 @@ proc(
     SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64 case
       sb "shl":s baseVal pos context appendBinaryOperator
       return
-    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 case
+    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 case
       sb
         baseType true pos context extendArguments
         "eq":s baseVal pos context appendComparisonOperator
       return
-    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 case
+    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 case
       sb
         baseType true pos context extendArguments
         "ne":s baseVal pos context appendComparisonOperator
@@ -2004,22 +2004,22 @@ proc(
         baseType true pos context extendArguments
         "gt":s baseVal pos context appendComparisonOperator
       return
-    ULT_I8 ULT_I16 ULT_I32 ULT_I64 LT_C8 case
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
       sb
         baseType false pos context extendArguments
         "ult":s baseVal pos context appendComparisonOperator
       return
-    ULE_I8 ULE_I16 ULE_I32 ULE_I64 LE_C8 case
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
       sb
         baseType false pos context extendArguments
         "ule":s baseVal pos context appendComparisonOperator
       return
-    UGE_I8 UGE_I16 UGE_I32 UGE_I64 GE_C8 case
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
       sb
         baseType false pos context extendArguments
         "uge":s baseVal pos context appendComparisonOperator
       return
-    UGT_I8 UGT_I16 UGT_I32 UGT_I64 GT_C8 case
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
       sb
         baseType false pos context extendArguments
         "ugt":s baseVal pos context appendComparisonOperator
@@ -2151,7 +2151,7 @@ proc(
 -> stringBuilder ) =>: appendNumberBound
   sb
     srcType switch
-      I8  CHAR8  case
+      I8 case
         unsigned if boundType .MIN if 0 else i8.UMAX i64 cast.u end
           else boundType .MIN _if i8.MIN i64 cast.s else i8.MAX i64 cast.s end
         break
@@ -2170,7 +2170,7 @@ proc(
       BOOL case boundType .MIN if 0 else 1 end break
       F32 case
         asType switch
-          I8 I16 I32 I64 CHAR8 case
+          I8 I16 I32 I64 case
             asType unsigned boundType asType appendNumberBound return
           F32 case
             boundType .MIN if f32.MIN else f32.MAX end f32.bits sb.appendI return
@@ -2181,7 +2181,7 @@ proc(
         break
       F64 case
         asType switch
-          I8 I16 I32 I64 CHAR8 case
+          I8 I16 I32 I64 case
             asType unsigned boundType asType appendNumberBound return
           F32 case
             boundType .MIN if f32.Infinity else f32.-Infinity end f32.bits sb.appendI return
@@ -2193,7 +2193,7 @@ proc(
       TYPE case ..unreachable
     end =:: intVal
   asType switch
-    I8 I16 I32 I64 CHAR8 case
+    I8 I16 I32 I64 case
       intVal sb.appendI return
     F32 case intVal unsigned if f32 cast.u else f32 cast end f32.bits sb.appendI return
     F64 case intVal unsigned if f64 cast.u else f64 cast end f64.bits sb.appendI return
@@ -2379,7 +2379,7 @@ proc(
           's' sb.appendC
         end
         fromVal switch
-          I8  CHAR8  case "b" sb.appendS break
+          I8  case "b" sb.appendS break
           I16 case "h" sb.appendS break
           I32 case "w" sb.appendS break
           I64 case "l" sb.appendS break
@@ -2409,7 +2409,7 @@ proc(
             srcIndex sb.appendI
             '\n' sb.appendC
           return
-        I8 I16 I32 I64 CHAR8 case
+        I8 I16 I32 I64 case
           sb
             fromVal srcIndex target toVal targetIndex
             signType .UNSIGNED
@@ -2426,7 +2426,7 @@ proc(
       signType .UNSIGNED if " u" sb.appendS else " s" sb.appendS end
       fromVal switch
         I64 case "ltof" sb.appendS break
-        I8 I16 I32 CHAR8 case "wtof" sb.appendS break
+        I8 I16 I32 case "wtof" sb.appendS break
         BOOL TYPE F32 F64 case ..unreachable
       end
       " %s" sb.appendS
@@ -2516,7 +2516,7 @@ proc(
       fromSize toSize < if
         fromVal switch
           BOOL TYPE F32 F64 case break
-          I8  CHAR8  case " extub" sb.appendS break
+          I8  case " extub" sb.appendS break
           I16 case " extuh" sb.appendS break
           I32 case " extuw" sb.appendS break
           I64 case " extul" sb.appendS break

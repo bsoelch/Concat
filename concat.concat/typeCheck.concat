@@ -3434,7 +3434,6 @@ proc(
               else
                 enumLabelType typeContext types.primitiveValue switch
                   I8 case BuiltIn .EQ_I8 break
-                  CHAR8 case BuiltIn .EQ_C8 break
                   I16 case BuiltIn .EQ_I16 break
                   I32 case BuiltIn .EQ_I32 break
                   I64 case BuiltIn .EQ_I64 break

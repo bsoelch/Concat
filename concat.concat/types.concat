@@ -13,7 +13,6 @@ namespace: types
   enum(
     BOOL
     I8 I16 I32 I64
-    CHAR8
     F32 F64
     TYPE
   ) =:: export: PrimitiveType
@@ -310,10 +309,9 @@ namespace: types
       I16 case 3 return
       I32 case 4 return
       I64 case 5 return
-      CHAR8 case 6 return
-      F32 case 7 return
-      F64 case 8 return
-      TYPE case 9 return
+      F32 case 6 return
+      F64 case 7 return
+      TYPE case 8 return
     end
   end
   proc( IntLiteral -> i32 ) =>: intLiteralId
@@ -399,15 +397,16 @@ namespace: types
     PrimitiveType .I16  Type .PrimitiveType Type =: export: I16
     PrimitiveType .I32  Type .PrimitiveType Type =: export: I32
     PrimitiveType .I64  Type .PrimitiveType Type =: export: I64
-    PrimitiveType .CHAR8  Type .PrimitiveType Type =: export: CHAR8
     PrimitiveType .F32  Type .PrimitiveType Type =: export: F32
     PrimitiveType .F64  Type .PrimitiveType Type =: export: F64
     PrimitiveType .TYPE Type .PrimitiveType Type =: export: TYPE
     ## compiler internal type-aliases for special purpose types
+    PrimitiveType .I8   Type .PrimitiveType Type =: export: CHAR8
     PrimitiveType .I64  Type .PrimitiveType Type =: export: I_SIZE ## integer with size to hold pointers/sizes
     PrimitiveType .I64  Type .PrimitiveType Type =: export: I_MAX  ## largest native integer type
   end
   primitive.I_SIZE =:: mut: export: I_SIZE
+  primitive.I_SIZE =:: mut: export: CHAR8
   namespace: intLiteral
     IntLiteral .U7  Type .IntLiteral Type =: export: U7
     IntLiteral .S8  Type .IntLiteral Type =: export: S8
@@ -454,7 +453,7 @@ namespace: types
 
   proc( PrimitiveType -> bool ) =>: isIntPrimitive
     switch
-      BOOL F32 F64 TYPE CHAR8 case
+      BOOL F32 F64 TYPE case
         false return
       I8 I16 I32 I64 case
         true return
@@ -518,7 +517,7 @@ namespace: types
     unwrapNamed
       .PrimitiveType .if
         switch
-          BOOL I8 I16 I32 I64 CHAR8 TYPE case
+          BOOL I8 I16 I32 I64 TYPE case
             false return
           F32 F64 case
             true return
@@ -530,7 +529,7 @@ namespace: types
     unwrapNamed
       .PrimitiveType .if
         switch
-          BOOL TYPE CHAR8 case
+          BOOL TYPE case
             false return
           I8 I16 I32 I64 F32 F64 case
             true return
@@ -538,17 +537,8 @@ namespace: types
       else ..drop end
     false return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isChar
-    unwrapNamed
-      .PrimitiveType .if
-        switch
-          BOOL TYPE I8 I16 I32 I64 F32 F64 case
-            false return
-          CHAR8 case
-            true return
-        end
-      else ..drop end
-    false return
+  proc( Type TypeContext ptr : _ -> bool ) =>: export: isChar
+    CHAR8 typeEquals return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isIntOrChar
     unwrapNamed
@@ -556,7 +546,7 @@ namespace: types
         switch
           BOOL TYPE F32 F64 case
             false return
-          I8 I16 I32 I64 CHAR8 case
+          I8 I16 I32 I64 case
             true return
         end
       else ..drop end
@@ -568,7 +558,7 @@ namespace: types
         switch
           BOOL TYPE case
             false return
-          I8 I16 I32 I64 F32 F64 CHAR8 case
+          I8 I16 I32 I64 F32 F64 case
             true return
         end
       else ..drop end
@@ -743,7 +733,7 @@ namespace: types
     switch
       TYPE case
         0 return
-      BOOL I8 CHAR8 case
+      BOOL I8 case
         1 return
       I16 case
         2 return
@@ -2321,17 +2311,6 @@ namespace: types
   end
 
   proc(
-    PrimitiveType : a
-    PrimitiveType : b
-  -> bool ) =>: canCastPrimitivePtrArg
-    a ..label b ..label == if true return end
-    a switch
-      I8 case b .CHAR8  return
-      CHAR8 case b .I8  return
-      BOOL I16 I32 I64 F32 F64 TYPE case false return
-    end
-  end
-  proc(
     Type : mut: src
     Type : mut: target
     bool : allowRename
@@ -2343,11 +2322,6 @@ namespace: types
       target context unwrapNamed target=
     end
     src target types.typeEquals if
-      true return
-    end
-    allowRename and src .PrimitiveType .and =:: srcVal
-        target .PrimitiveType .and =:: targetVal
-        srcVal targetVal canCastPrimitivePtrArg if
       true return
     end
     ## allow casting union-element pointer to union pointer
@@ -2687,7 +2661,6 @@ namespace: sb
       I16  case "i16"  appendS return
       I32  case "i32"  appendS return
       I64  case "i64"  appendS return
-      CHAR8  case "char8"  appendS return
       F32  case "f32"  appendS return
       F64  case "f64"  appendS return
       TYPE case "type" appendS return

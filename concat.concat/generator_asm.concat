@@ -14,7 +14,7 @@ namespace: ValType
   proc( Type : t -> ValType ) =>: fromType
     t switch
       PrimitiveType .case switch
-        BOOL I8 CHAR8 case ValType .I8 return
+        BOOL I8 case ValType .I8 return
         I16 case ValType .I16 return
         I32 case ValType .I32 return
         I64 case ValType .I64 return

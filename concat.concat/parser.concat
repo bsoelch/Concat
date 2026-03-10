@@ -180,7 +180,7 @@ proc(
 -> ) =>: appendCharConstant
   ## newConstant
     char char8 cast ConstValue .Char
-    types.primitive.CHAR8
+    types.CHAR8
   pos opConst state appendOp
 end
 proc(
@@ -200,7 +200,7 @@ proc(
   strArray .length i64 cast.u ArraySize .Int =:: size
   ## opConst
     str
-    types.primitive.CHAR8 types.ArrayType .POINTER size typeContext newArrayType .else
+    types.CHAR8 types.ArrayType .POINTER size typeContext newArrayType .else
       "failed to create array-type" ..panic
     end
     pos
@@ -2032,7 +2032,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "..file":s string.eq _if ..drop
       fileState [] .wordStart .fileName =:: name
       name constContext newStringConst
-      types.primitive.CHAR8
+      types.CHAR8
         types.ArrayType .POINTER
         name .length i64 cast.u types.ArraySize .Int =:: size
         size

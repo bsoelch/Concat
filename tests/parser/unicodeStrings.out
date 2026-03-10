@@ -1,7 +1,7 @@
 stack:
 -----------------
-char8 { 'a' } pushed at ./tests/parser/unicodeStrings.concat:5:3
-char8 { '\xFE' } pushed at ./tests/parser/unicodeStrings.concat:4:3
-char8 29 ptr { "This is an Unicode String\xF0\x9F\x91\x8D" } pushed at ./tests/parser/unicodeStrings.concat:3:3
-char8 16 ptr { "This is a String" } pushed at ./tests/parser/unicodeStrings.concat:2:3
+named[10]( "char8" ) { 'a' } pushed at ./tests/parser/unicodeStrings.concat:5:3
+named[10]( "char8" ) { '\xFE' } pushed at ./tests/parser/unicodeStrings.concat:4:3
+named[10]( "char8" ) 29 ptr { "This is an Unicode String\xF0\x9F\x91\x8D" } pushed at ./tests/parser/unicodeStrings.concat:3:3
+named[10]( "char8" ) 16 ptr { "This is a String" } pushed at ./tests/parser/unicodeStrings.concat:2:3
 -----------------

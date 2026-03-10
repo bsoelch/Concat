@@ -273,7 +273,6 @@ namespace: constant
       Undefined Empty Align case ConstValue .None return
       PrimitiveType .case switch
         BOOL case false ConstValue .Bool return
-        CHAR8 case '\x00' ConstValue .Char return
         I8 I16 I32 I64 case 0 ConstValue .Int return
         F32 F64 case 0 ConstValue .Float return
         TYPE case Type .Undefined ConstValue .TypeId return

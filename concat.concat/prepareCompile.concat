@@ -145,18 +145,18 @@ proc(
 end
 
 proc( BuiltIn -> bool ) =>: canMergeJumpIf
-  BuiltIn ..length 175 == "no new builtins" assert
+  BuiltIn ..length 168 == "no new builtins" assert
   switch
-    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 ## ==
-    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 ## !=
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 ## <
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 ## <=
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 ## >=
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 ## >
-    ULT_I8 ULT_I16 ULT_I32 ULT_I64                 ## u<
-    ULE_I8 ULE_I16 ULE_I32 ULE_I64                 ## u<=
-    UGE_I8 UGE_I16 UGE_I32 UGE_I64                 ## u>=
-    UGT_I8 UGT_I16 UGT_I32 UGT_I64                 ## u>
+    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 ## ==
+    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 ## !=
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 ## <
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 ## <=
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 ## >=
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 ## >
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64           ## u<
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64           ## u<=
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64           ## u>=
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64           ## u>
     case true return
     default false return
   end
@@ -175,24 +175,24 @@ end
 proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJumpIf
   cmpType .FALSE or cmpType .TRUE end "can only merge cmp.true and cmp.false" assert
   cmpType .FALSE =:: flip
-  BuiltIn ..length 175 == "no new builtins" assert
+  BuiltIn ..length 168 == "no new builtins" assert
   builtIn switch
-    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 EQ_C8 case
+    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 case
       flip if CompareType .NE else CompareType .EQ end
     break
-    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 NE_C8 case
+    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 case
       flip if CompareType .EQ else CompareType .NE end
     break
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 LT_C8 case
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
       flip if CompareType .GE else CompareType .LT end
     break
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 LE_C8 case
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
       flip if CompareType .GT else CompareType .LE end
     break
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 GE_C8 case
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
       flip if CompareType .LT else CompareType .GE end
     break
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 GT_C8 case
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
       flip if CompareType .LE else CompareType .GT end
     break
     ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
@@ -211,7 +211,6 @@ proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJum
   end
   builtIn switch
     EQ_BOOL NE_BOOL case types.primitive.BOOL break
-    EQ_C8 NE_C8 LT_C8 LE_C8 GE_C8 GT_C8
     EQ_I8 NE_I8 LT_I8 LE_I8 GE_I8 GT_I8 ULT_I8 ULE_I8 UGE_I8 UGT_I8 case
       types.primitive.I8 break
     EQ_I16 NE_I16 LT_I16 LE_I16 GE_I16 GT_I16 ULT_I16 ULE_I16 UGE_I16 UGT_I16 case
