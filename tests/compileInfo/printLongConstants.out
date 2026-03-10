@@ -1,10 +1,10 @@
 stack:
 -----------------
-named[10]( "char8" ) 36 ptr { "This is a string with 36 characters!" } pushed at ./tests/compileInfo/printLongConstants.concat:2:3
+"char8" 36 ptr { "This is a string with 36 characters!" } pushed at ./tests/compileInfo/printLongConstants.concat:2:3
 -----------------
 stack:
 -----------------
-named[10]( "char8" ) 37 ptr { "This is a string with 36"..."acters!!" } pushed at ./tests/compileInfo/printLongConstants.concat:3:3
+"char8" 37 ptr { "This is a string with 37"..."acters!!" } pushed at ./tests/compileInfo/printLongConstants.concat:3:3
 -----------------
 stack:
 -----------------
@@ -12,5 +12,5 @@ i32 16 array { { 1 2 3 4 5 6 7 ... 16 } } pushed at ./tests/compileInfo/printLon
 -----------------
 stack:
 -----------------
-named[10]( "char8" ) 16 ptr { { 1:i8 2:i8 3:i8 4:i8 5:i8 6:i8 7:i8 8:i8 9:i8 10:i8 11:i8 ... 16:i8 } } pushed at ./tests/compileInfo/printLongConstants.concat:6:3
+"char8" 16 ptr { { 1:i8 2:i8 3:i8 4:i8 5:i8 6:i8 7:i8 8:i8 9:i8 10:i8 11:i8 ... 16:i8 } } pushed at ./tests/compileInfo/printLongConstants.concat:6:3
 -----------------

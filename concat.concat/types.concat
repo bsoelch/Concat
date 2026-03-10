@@ -2848,15 +2848,11 @@ namespace: sb
         return
       NamedType .case =:: typeName
         sb
-          "named[" appendS
-          typeName i64 cast appendI
-          "]( "    appendS
           ## appendNamedType
             typeName
             context
             depth
           appendNamedType
-        " )" appendS
         return
       GenericType .case =:: labelId
         sb
