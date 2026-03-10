@@ -76,6 +76,7 @@ union(
 ## TODO? assign block-ids in parser
 struct(
   BlockInfoData : blockData
+  FilePosition : openedAt
   LabelId : blockLabel
   TmpVarInfo optional : tmpVarInfo
   bool : autoClose
@@ -233,9 +234,9 @@ proc( ParserState ptr.mut : state -> Operation ptr.mut optional ) =>: peekOp
 end
 
 
-proc( BlockInfoData : blockData ParserState ptr.mut : state -> BlockInfoData ptr.mut ) =>: openBlock
+proc( BlockInfoData : blockData FilePosition : pos ParserState ptr.mut : state -> BlockInfoData ptr.mut ) =>: openBlock
   state [] .openBlocks
-    blockData id.LABEL_ID_NONE TmpVarInfo optional.empty false false BlockInfo new list.append
+    blockData pos id.LABEL_ID_NONE TmpVarInfo optional.empty false false BlockInfo new list.append
   state .openBlocks=
   state [] .openBlocks list.peek optional.unwrap .blockData
 end
@@ -244,7 +245,7 @@ proc( ParserState ptr.mut : state -> ) =>: closedConstBlock
     1 -
   state .constBlockCount=
 end
-proc( BlockType : baseType ParserState ptr.mut : state -> ) =>: openTypeBlock
+proc( BlockType : baseType FilePosition : pos ParserState ptr.mut : state -> ) =>: openTypeBlock
   state [] .progContext .idContext id.openScope
   state [] .constBlockCount
     1 +
@@ -254,10 +255,10 @@ proc( BlockType : baseType ParserState ptr.mut : state -> ) =>: openTypeBlock
       state opCount
       iSize optional.empty
       baseType
-    TypeBlockData new BlockInfoData .TypeBlock id.LABEL_ID_NONE TmpVarInfo optional.empty false true BlockInfo new list.append
+    TypeBlockData new BlockInfoData .TypeBlock pos id.LABEL_ID_NONE TmpVarInfo optional.empty false true BlockInfo new list.append
   state .openBlocks=
 end
-proc( ParserState ptr.mut : state -> ) =>: openInitializerBlock
+proc( FilePosition : pos ParserState ptr.mut : state -> ) =>: openInitializerBlock
   state [] .progContext .idContext id.openScope
   state [] .constBlockCount
     1 +
@@ -265,16 +266,17 @@ proc( ParserState ptr.mut : state -> ) =>: openInitializerBlock
   state [] .openBlocks
     ## InitializerBlockData
       state opCount
-    InitializerBlockData new BlockInfoData .Initializer id.LABEL_ID_NONE TmpVarInfo optional.empty false true BlockInfo new list.append
+    InitializerBlockData new BlockInfoData .Initializer pos id.LABEL_ID_NONE TmpVarInfo optional.empty false true BlockInfo new list.append
   state .openBlocks=
 end
 ## TODO handle initializer blocks
-proc( ParserState ptr.mut : state -> ) =>: openProcBlock
+proc( FilePosition : pos ParserState ptr.mut : state -> ) =>: openProcBlock
   state [] .openBlocks
     ## BlockInfo
       ## ProcBlockData
         state opCount
       ProcBlockData new BlockInfoData .Procedure
+      pos
       id.LABEL_ID_NONE
       TmpVarInfo optional.empty
       false
@@ -953,7 +955,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           iSize slice.emptyMutable
           state opCount
           iSize optional.empty
-        IfBlockData new BlockInfoData .If state openBlock ..drop
+        IfBlockData new BlockInfoData .If fileState [] .wordStart state openBlock ..drop
         false
       end =:: hasOrIf
       state peekBlock .else
@@ -1017,7 +1019,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ## AndOrBlockData
           8 iSize list.create ## TODO? pool of short lists for and-or blocks
           isOr
-        AndOrBlockData new BlockInfoData .AndOr state openBlock .AndOr .else
+        AndOrBlockData new BlockInfoData .AndOr fileState [] .wordStart state openBlock .AndOr .else
           "opening AndOr should return AndOr" ..panic
         end
       end =:: andOrBlock
@@ -1072,7 +1074,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         16 iSize list.create
         state opCount
         WhileBlockState .WHILE
-      WhileBlockData new BlockInfoData .While state openBlock ..drop
+      WhileBlockData new BlockInfoData .While fileState [] .wordStart state openBlock ..drop
       blockLabel state peekBlock optional.unwrap .blockLabel=
       BlockType .WHILE blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       return
@@ -1112,7 +1114,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         16 iSize list.create
         whilePos
         WhileBlockState .DO
-      WhileBlockData new BlockInfoData .While state openBlock ..drop
+      WhileBlockData new BlockInfoData .While fileState [] .wordStart state openBlock ..drop
       blockLabel state peekBlock optional.unwrap .blockLabel=
       itrId TmpVarInfo new optional.wrap state peekBlock optional.unwrap .tmpVarInfo=
       return
@@ -1238,7 +1240,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state opCount
         iSize optional.empty
         SwitchBlockState .CASE_LABEL
-      SwitchBlockData new BlockInfoData .Switch state openBlock ..drop
+      SwitchBlockData new BlockInfoData .Switch fileState [] .wordStart state openBlock ..drop
       blockLabel state peekBlock optional.unwrap .blockLabel=
       BlockType .SWITCH blockLabel fileState [] .wordStart opLabeledBlock state appendOp
       return
@@ -1333,7 +1335,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         procName fileState [] .wordStart opAutoTypedInitializeName state appendOp
       end
       state [] .currentProcs procId list.append state .currentProcs=
-      state openProcBlock
+      fileState [] .wordStart state openProcBlock
       ## TODO? special op for proc-start
       return
     else $ "return":s string.eq _if ..drop
@@ -1358,7 +1360,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       id.FLAG_NONE fileState [] .wordStart state [] .currentFile labelContext id.newLabel
         BlockType .NAMESPACE >$ fileState [] .wordStart opLabeledBlock state appendOp
-      BlockInfoData .Namespace state openBlock ..drop
+      BlockInfoData .Namespace fileState [] .wordStart state openBlock ..drop
       return
     else $ "overload:":s string.eq _if =:: opName
       state [] .currentProcs .length 0:iSize != if
@@ -1374,7 +1376,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "alias is only supported for procedure declarations" sb.copyPtr
         fileState [] .wordStart errors appendError
       end
-      state opCount BlockInfoData .Overload state openBlock ..drop
+      state opCount BlockInfoData .Overload fileState [] .wordStart state openBlock ..drop
       BlockType .OVERLOAD labelId fileState [] .wordStart opLabeledBlock state appendOp
       return
     else $ "end":s string.eq _if ..drop
@@ -1483,29 +1485,29 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       do end
       return
     else $ "(":s string.eq _if ..drop
-      BlockType .TYPE_COMPOSITE state openTypeBlock
+      BlockType .TYPE_COMPOSITE fileState [] .wordStart state openTypeBlock
       BlockType .TYPE_COMPOSITE fileState [] .wordStart opBlock state appendOp
       return
     else $ "tuple(":s string.eq _if ..drop
-      BlockType .TYPE_TUPLE state openTypeBlock
+      BlockType .TYPE_TUPLE fileState [] .wordStart state openTypeBlock
       BlockType .TYPE_TUPLE fileState [] .wordStart opBlock state appendOp
       return
     ## forward compatability: `struct.fixed` will be used for structure with fixed element order
     ## forward compatability: `struct.c` will be used for structure with c-style padding
     else $ "struct(":s string.eq or $ "struct.fixed(":s string.eq or $ "struct.c(":s string.eq _if ..drop
-      BlockType .TYPE_STRUCT state openTypeBlock
+      BlockType .TYPE_STRUCT fileState [] .wordStart state openTypeBlock
       BlockType .TYPE_STRUCT fileState [] .wordStart opBlock state appendOp
       return
     else $ "union(":s string.eq _if ..drop
-      BlockType .TYPE_UNION state openTypeBlock
+      BlockType .TYPE_UNION fileState [] .wordStart state openTypeBlock
       BlockType .TYPE_UNION fileState [] .wordStart opBlock state appendOp
       return
     else $ "union.raw(":s string.eq _if ..drop
-      BlockType .TYPE_UNTAGGED_UNION state openTypeBlock
+      BlockType .TYPE_UNTAGGED_UNION fileState [] .wordStart state openTypeBlock
       BlockType .TYPE_UNTAGGED_UNION fileState [] .wordStart opBlock state appendOp
       return
     else $ "enum(":s string.eq _if ..drop
-      BlockType .TYPE_ENUM state openTypeBlock
+      BlockType .TYPE_ENUM fileState [] .wordStart state openTypeBlock
       BlockType .TYPE_ENUM fileState [] .wordStart opBlock state appendOp
       return
     ## forward compatability: `proc.c` will be used for proc with c-call convention
@@ -1515,7 +1517,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       else
         BlockType .TYPE_CPROC_IN
       end =:: procBlockType
-      procBlockType state openTypeBlock
+      procBlockType fileState [] .wordStart state openTypeBlock
       procBlockType fileState [] .wordStart opBlock state appendOp
       return
     else $ "->":s string.eq _if =:: opName
@@ -1565,11 +1567,11 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .TYPE_PROC_ARROW fileState [] .wordStart opBlock state appendOp
       return
     else $ "oneOf(":s string.eq _if ..drop
-      BlockType .TYPE_SETTYPE state openTypeBlock
+      BlockType .TYPE_SETTYPE fileState [] .wordStart state openTypeBlock
       BlockType .TYPE_SETTYPE fileState [] .wordStart opBlock state appendOp
       return
     else $ ".with(":s string.eq _if ..drop
-      state opCount BlockInfoData .With state openBlock ..drop
+      state opCount BlockInfoData .With fileState [] .wordStart state openBlock ..drop
       char8 32 array : buffer
         buffer@ sb.wrapBuffer
           "with@" sb.appendS
@@ -1647,7 +1649,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
       end
     else $ "{":s string.eq _if ..drop
-      state openInitializerBlock
+      fileState [] .wordStart state openInitializerBlock
       BlockType .INITIALIZER fileState [] .wordStart opBlock state appendOp
       return
     else $ "}":s string.eq _if =:: opName
@@ -2345,7 +2347,20 @@ proc(
     do end ..drop
   ..drop
   fileBody sb.free ..drop
-  state [] .parsedOps list.asSlice state [] .typeChecker typeCheckGlobalCode
+  state [] .openBlocks .length blockCount u> if
+    ## XXX? print start of last block
+    "unclosed block at end of file ( opened at " sb.copyPtr
+      state [] .openBlocks blockCount @[] .openedAt [] sb.appendPos
+      " )" sb.appendS
+      fileState .currentPos
+    errors appendError
+  else state [] .openBlocks .length blockCount u< _if
+    "file closed additional code block" sb.copyPtr
+      fileState .currentPos
+    errors appendError
+  else
+    state [] .parsedOps list.asSlice state [] .typeChecker typeCheckGlobalCode
+  end
   idContext id.closeScope ! "file scope closed correctly" assert
   prevScope idContext id.setScope
   prevNamespace labelContext id.resetNamespace
@@ -2353,16 +2368,6 @@ proc(
   fileId newFileId == "fileId did not change" assert
   prevFile state .currentFile=
   wasLibFile progContext .inLibFile=
-  state [] .openBlocks .length blockCount u> if
-    ## XXX? print start of last block
-    "unclosed block at end of file" sb.copyPtr
-      fileState .currentPos
-    errors appendError
-  else state [] .openBlocks .length blockCount u< _if
-    "file closed additional code block" sb.copyPtr
-      fileState .currentPos
-    errors appendError
-  end
   state [] .parsedOps list.free ..drop
   oldOps state .parsedOps=
   newFileId io.FILE_ERROR_NONE return

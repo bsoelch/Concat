@@ -1,0 +1,11 @@
+proc( bool : a -> i64 ) =>: test
+  a if
+    0 return
+  else a if
+    1 return
+  end
+  "panic" ..panic
+end
+proc( -> ) =>: main
+  false test ..drop
+end
