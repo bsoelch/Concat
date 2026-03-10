@@ -2531,13 +2531,6 @@ namespace: types
       end
       srcCType cTypeAsType target forceCast context canCast return
     else ..drop end
-    ## char <-> int
-    src context isChar and target context isInt if
-      true return
-    end
-    src context isInt and target context isChar if
-      true return
-    end
     src context types.isNumber or src .IntLiteral ? and target context types.isNumber if
       true return
     end
