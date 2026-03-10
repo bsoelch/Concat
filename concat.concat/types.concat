@@ -2303,6 +2303,7 @@ namespace: types
     Type : mut: target
     bool : allowRename
     bool : mutableParent
+    bool : allowArray
     TypeContext ptr : context
   -> bool ) =>: canCastPtr
     allowRename if
@@ -2315,6 +2316,12 @@ namespace: types
     ## allow casting union-element pointer to union pointer
     allowRename and src context types.getUnionElementUnion .and context unwrapNamed target typeEquals if
       true return
+    end
+    allowArray and src context types.isArray if
+      src context types.getBaseType
+        target
+        allowRename mutableParent allowArray
+      context canCastPtr return
     end
     ## TODO! allow cast  T k array l ptr -> T  k l *  ptr
     src context types.isPointer ! or target context types.isPointer ! if
@@ -2334,6 +2341,7 @@ namespace: types
       target context types.getBaseType
       allowRename
       mutableParent mutableTarget |
+      target context types.isRawPointer
     context canCastPtr return
   end
   ## TODO? allow reordering fields
@@ -2486,7 +2494,7 @@ namespace: types
     end
     ## TODO? allow proc-pointer assignment when arg-names differ
     src context types.isPointer and target context types.isPointer if
-      src target false false context canCastPtr return
+      src target false false false context canCastPtr return
     end
     src context types.isProcedure and target context types.isProcedure if
       src context types.getProcIn .else "proc has in" ..panic end =:: srcIn
@@ -2534,7 +2542,7 @@ namespace: types
       true return
     end
     src context types.isPointer and target context types.isPointer and
-        src target true false context canCastPtr if
+        src target true false false context canCastPtr if
       true return
     end
     ## allow cast union-element -> union
