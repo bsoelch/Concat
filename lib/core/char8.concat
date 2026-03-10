@@ -1,14 +1,5 @@
 import core/bool
 namespace: char8
-..compiler.version 492 < if
-  proc( char8 char8 -> i32 ) : export: alias: diff ..builtIn.diff.char8
-  proc( char8 char8 -> bool ) : export: alias: eq ..builtIn.eq.char8
-  proc( char8 char8 -> bool ) : export: alias: ne ..builtIn.ne.char8
-  proc( char8 char8 -> bool ) : export: alias: lt ..builtIn.lt.char8
-  proc( char8 char8 -> bool ) : export: alias: le ..builtIn.le.char8
-  proc( char8 char8 -> bool ) : export: alias: ge ..builtIn.ge.char8
-  proc( char8 char8 -> bool ) : export: alias: gt ..builtIn.gt.char8
-else
   proc( char8 char8 -> i32 ) =>: export: diff
     >$ i32 cast.u >$ i32 cast.u -
   end
@@ -18,7 +9,6 @@ else
   proc( char8 char8 -> bool ) : export: alias: le ..builtIn.le.i8
   proc( char8 char8 -> bool ) : export: alias: ge ..builtIn.ge.i8
   proc( char8 char8 -> bool ) : export: alias: gt ..builtIn.gt.i8
-end
 
   proc( char8 : a char8 : b -> i32 ) =>: export: cmp
     b a lt ?1 a b lt ?1 ..builtIn.sub.i32
