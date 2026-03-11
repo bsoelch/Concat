@@ -1,4 +1,3 @@
-import debug
 union( i32 : mut: x i32 : y ) =:: anUnion
 struct( anUnion : mut: a i32 : mut: b ) =:: aStruct
 
@@ -10,5 +9,5 @@ end
 proc( -> ) =>: main
  0 anUnion .x 0 aStruct new =:: mut: s
  1 s@ test =[]
- s .a ..raw .x debug.print
+ s .a ..raw .x 1 == "s.a.x" assert
 end

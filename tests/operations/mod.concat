@@ -1,35 +1,33 @@
-import debug
-
 proc( -> ) =>: main
-  3 4 // debug.print
-  3 -4 // debug.print
-  -3 4 // debug.print
-  -3 -4 // debug.print
-  9 3 // debug.print
-  9 -3 // debug.print
-  -9 3 // debug.print
-  -9 -3 // debug.print
+  3 4 // 0 == "3 4 //" assert
+  3 -4 // -1 == "3 -4 //" assert
+  -3 4 // -1 == "-3 4 //" assert
+  -3 -4 // 0 == "-3 -4 //" assert
+  9 3 // 3 == "9 3 //" assert
+  9 -3 // -3 == "9 -3 //" assert
+  -9 3 // -3 == "-9 3 //" assert
+  -9 -3 // 3 == "-9 -3 //" assert
 
-  3 4 %% debug.print
-  3 -4 %% debug.print
-  -3 4 %% debug.print
-  -3 -4 %% debug.print
-  31415 27182:i64 %% debug.print
-  31415 -27182:i64 %% debug.print
-  -31415 27182:i64 %% debug.print
-  -31415 -27182:i64 %% debug.print
+  3 4 %% 3 == "3 4 %%" assert
+  3 -4 %% -1 == "3 -4 %%" assert
+  -3 4 %% 1 == "-3 4 %%" assert
+  -3 -4 %% -3 == "-3 -4 %%" assert
+  31415 27182:i64 %% 4233 == "31415 27182:i64 %%" assert
+  31415 -27182:i64 %% -22949 == "31415 -27182:i64 %%" assert
+  -31415 27182:i64 %% 22949 == "-31415 27182:i64 %%" assert
+  -31415 -27182:i64 %% -4233 == "-31415 -27182:i64 %%" assert
 
-  1.5 1.0 %% debug.print
-  -1.6 1.0 %% debug.print
-  1.5 -1.0 %% debug.print
-  -1.6 -1.0 %% debug.print
+  1.5 1.0 %% 0.5 == "1.5 1.0 %%" assert
+  -1.6 1.0 %% 0.4 - f64.abs 1e-15 < "-1.6 1.0 %%" assert
+  1.5 -1.0 %% -0.5 == "1.5 -1.0 %%" assert
+  -1.6 -1.0 %% -0.6 == "-1.6 -1.0 %%" assert
 
-  2.0 3.0 // debug.print
-  2.0 3.0 %% debug.print
-  2.0 -3.0 // debug.print
-  2.0 -3.0 %% debug.print
-  -2.0 3.0 // debug.print
-  -2.0 3.0 %% debug.print
-  -2.0 -3.0 // debug.print
-  -2.0 -3.0 %% debug.print
+  2.0 3.0 // 0 == "2.0 3.0 //" assert
+  2.0 3.0 %% 2 == "2.0 3.0 %%" assert
+  2.0 -3.0 // -1 == "2.0 -3.0 //" assert
+  2.0 -3.0 %% -1 == "2.0 -3.0 %%" assert
+  -2.0 3.0 // -1 == "-2.0 3.0 //" assert
+  -2.0 3.0 %% 1 == "-2.0 3.0 %%" assert
+  -2.0 -3.0 // 0 == "-2.0 -3.0 //" assert
+  -2.0 -3.0 %% -2 == "-2.0 -3.0 %%" assert
 end

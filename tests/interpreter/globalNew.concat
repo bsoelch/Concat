@@ -1,4 +1,3 @@
-import debug
 struct( i32 : x i32 : y ) =:: Point
 
 1 2 Point new =:: p
@@ -6,11 +5,11 @@ struct( i32 : x i32 : y ) =:: Point
 42 Point ptr.raw cast! 5 ( Point ptr.raw : data i64 : length ) new =:: sizedPointer
 
 proc( -> ) =>: main
-  p .x debug.print
-  p .y debug.print
+  p .x 1 == "p.x" assert
+  p .y 2 == "p.y" assert
   sys.argc i32 cast 5 Point new =:: dynamicPoint
-  dynamicPoint .x debug.print
-  dynamicPoint .y debug.print
-  sizedPointer .data debug.print
-  sizedPointer .length debug.print
+  dynamicPoint .x 1 == "dp.x" assert
+  dynamicPoint .y 5 == "dp.y" assert
+  sizedPointer .data i64 cast! 0x2A == "sp.data" assert
+  sizedPointer .length 5 == "sp.len" assert
 end

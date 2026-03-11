@@ -1,11 +1,11 @@
 import list
-import debug
+import numbers/print
 proc( -> ) =>: main
   { 1 2 3 4 5 } =:: mut: buffer
   buffer@ list.wrapBuffer
     buffer ..length list.setLength
   =:: l
   l list.reversed for
-    debug.print
+    io.println
   end
 end

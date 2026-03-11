@@ -1,4 +1,4 @@
-import debug
+import numbers/print
 proc( i32 : a i32 : b -> i32 i32 ) =>: proc0
   doNothing
   b a return
@@ -11,7 +11,7 @@ end
 
 proc( -> ) =>: main
   proc0@ =:: fct
-  1 2 fct () debug.print debug.print
-  1 2 proc0 doNothing proc0 debug.print debug.print
+  1 2 fct () io.println io.println
+  1 2 proc0 doNothing proc0 io.println io.println
   2 3 argTest
 end

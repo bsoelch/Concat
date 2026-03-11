@@ -1,25 +1,25 @@
 import slice
-import debug
+import numbers/print
 proc( -> ) =>: main
   { 1 2 3 4 5 6 7 8 9 } =:: mut: data1
   { -1.5 -1.0 -0.75 -0.5 0.0 0.5 0.75 1.0 1.5 } =:: data2
   data1@ slice.wrapMutable
     slice.map for $ * end
-  for debug.print end
-  ' ' debug.print
+  for io.println end
+  ' ' io.println
   data2@ slice.wrap
     data1@ slice.wrapMutable slice.mapTo for
       i32 cast
     end
-  for debug.print end
-  ' ' debug.print
+  for io.println end
+  ' ' io.println
   { -3 -2 -1 0 1 2 3 } =:: mut: data3
   data3@ slice.wrapMutable i32.abs@ slice.map for
-    debug.print
+    io.println
   end
-  ' ' debug.print
+  ' ' io.println
   f64 9 array : data4
   data2@ slice.wrap data4@ slice.wrapMutable f64.round@ slice.mapTo for
-    debug.print
+    io.println
   end
 end

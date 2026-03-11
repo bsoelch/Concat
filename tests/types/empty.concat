@@ -1,4 +1,3 @@
-import debug
 proc(
   type : auto: L
   type : auto: R
@@ -25,7 +24,7 @@ proc( ( ) : v testStruct ptr.mut : S -> ( ( ) ) ( ) ) =>: assignEmpty
 end
 
 proc( -> ) =>: main
-  5 f1@ 3 test debug.print
+  5 f1@ 3 test 8 == "5+3" assert
   testStruct : mut: aStruct
   ( ) : X
   X aStruct@ assignEmpty ..drop.2

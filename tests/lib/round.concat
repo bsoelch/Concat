@@ -1,33 +1,33 @@
 import math
-import debug
+import numbers/print
 
 proc( -> ) =>: main
-  -1e400 math.round debug.print
-  -1e308 math.round debug.print
-  -1e10 0.5 + math.round debug.print
-  -2.5 math.round debug.print
-  -2.0 math.round debug.print
-  -1.5 math.round debug.print
-  -1.25 math.round debug.print
-  -1.0 math.round debug.print
-  -0.75 math.round debug.print
-  -0.5 1e-15 - math.round debug.print
-  -0.5 math.round debug.print
-  -0.25 math.round debug.print
-  -5e-324 math.round debug.print
-  -0.0 math.round debug.print
-  0.0 math.round debug.print
-  5e-324 math.round debug.print
-  0.25 math.round debug.print
-  0.5 math.round debug.print
-  0.75 math.round debug.print
-  1.0 math.round debug.print
-  1.25 math.round debug.print
-  1.5 1e-15 - math.round debug.print
-  1.5 math.round debug.print
-  2.0 math.round debug.print
-  2.5 math.round debug.print
-  1e10 0.5 + math.round debug.print
-  1e308 math.round debug.print
-  1e400 math.round debug.print
+  -1e400 math.round io.println
+  -1e308 math.round io.println
+  -1e10 0.5 + math.round io.println
+  -2.5 math.round io.println
+  -2.0 math.round io.println
+  -1.5 math.round io.println
+  -1.25 math.round io.println
+  -1.0 math.round io.println
+  -0.75 math.round io.println
+  -0.5 1e-15 - math.round io.println
+  -0.5 math.round io.println
+  -0.25 math.round io.println
+  -5e-324 math.round io.println
+  -0.0 math.round io.println
+  0.0 math.round io.println
+  5e-324 math.round io.println
+  0.25 math.round io.println
+  0.5 math.round io.println
+  0.75 math.round io.println
+  1.0 math.round io.println
+  1.25 math.round io.println
+  1.5 1e-15 - math.round io.println
+  1.5 math.round io.println
+  2.0 math.round io.println
+  2.5 math.round io.println
+  1e10 0.5 + math.round io.println
+  1e308 math.round io.println
+  1e400 math.round io.println
 end

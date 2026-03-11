@@ -1,4 +1,3 @@
-import debug
 proc( i64 : auto: D i32 D array : varArray -> i32 ) =>: sum
   0
     0:i64 while ..dup D < do =:: i
@@ -9,6 +8,6 @@ proc( i64 : auto: D i32 D array : varArray -> i32 ) =>: sum
 end
 
 proc( -> ) =>: main
-  { 1 2 3 } sum debug.print
-  { 1 2 3 4 5 } sum debug.print
+  { 1 2 3 } sum 6 == "sum" assert
+  { 1 2 3 4 5 } sum 15 == "sum" assert
 end

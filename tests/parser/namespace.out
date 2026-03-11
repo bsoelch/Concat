@@ -6,6 +6,3 @@ identifier "i":
  - global variable "B.i" ( i32 [ 2 ] ) declared at ./tests/parser/namespace.concat:33:9
  - global variable "A.i" ( i32 [ 1 ] ) declared at ./tests/parser/namespace.concat:30:9
 -----------------
-0
-1
-2

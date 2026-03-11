@@ -1,90 +1,90 @@
-import debug
+import numbers/print
 
 proc( bool : f bool : t i32 : one i32 : two -> ) =>: test
   t if 
-    1 debug.print
+    1 io.println
   end
   f if 
-    0 debug.print
+    0 io.println
   else 
-    1 debug.print
+    1 io.println
   end
   1 one + 2 == if 
-    1 debug.print
+    1 io.println
   else 2 two * 4 != _if
-    0 debug.print
+    0 io.println
   end
   1 1 + two == if 
-    1 debug.print
+    1 io.println
   else 2 two * 4 == _if
-    0 debug.print
+    0 io.println
   else
-    0 debug.print
+    0 io.println
   end
   f if else f _if else f _if else f _if else f _if else f _if else f _if else f _if end
   f if else f _if else f _if else f _if else f _if else f _if else f _if else f _if else end
   42 ## push value through if statements 
   t if 
-    1 debug.print
+    1 io.println
   end
   f if 
-    0 debug.print
+    0 io.println
   else 
-    1 debug.print
+    1 io.println
   end
   1 1 + two == if 
-    1 debug.print
+    1 io.println
   else 2 2 * 4 != _if
-    0 debug.print
+    0 io.println
   end
   1 one + 2 == if 
-    1 debug.print
+    1 io.println
   else 2 two * 4 == _if
-    0 debug.print
+    0 io.println
   else
-    0 debug.print
+    0 io.println
   end
   f if else f _if else f _if else f _if else f _if else f _if else f _if else f _if end
   f if else f _if else f _if else f _if else f _if else f _if else f _if else f _if else end
-  debug.print
+  io.println
   ## return value from if statements 
   f if 
-    0 debug.print 2
+    0 io.println 2
   else 
-    1 debug.print 3
+    1 io.println 3
   end 
-  debug.print
+  io.println
   1 one + 2 == if 
-    1 debug.print 4 
+    1 io.println 4 
   else 5 2 2 * 4 != _if
-    0 debug.print
+    0 io.println
   end
-  debug.print
+  io.println
   one 1 + 2 == if 
-    1 debug.print 6
+    1 io.println 6
   else 2 two * 4 == _if
-    0 debug.print 7
+    0 io.println 7
   else
-    0 debug.print 8
-  end debug.print
-  f if 9 else 11 f _if else f _if else f _if else f _if else f _if else f _if else f _if end debug.print
-  f if 10 else 12 f _if else f _if else f _if else f _if else f _if else f _if else f _if else end debug.print
+    0 io.println 8
+  end io.println
+  f if 9 else 11 f _if else f _if else f _if else f _if else f _if else f _if else f _if end io.println
+  f if 10 else 12 f _if else f _if else f _if else f _if else f _if else f _if else f _if else end io.println
   ##push value in if-statement
   1 f if 
-    0 debug.print debug.print
+    0 io.println io.println
   else 
-    1 debug.print debug.print
+    1 io.println io.println
   end
   
   2 1 1 + two == if 
-    1 debug.print debug.print
+    1 io.println io.println
   else 2 two * 4 == _if
-    0 debug.print debug.print
+    0 io.println io.println
   else
-    0 debug.print debug.print
+    0 io.println io.println
   end
-  3 f if debug.print else debug.print f _if else f _if else f _if else f _if else f _if else f _if else f _if end
-  4 f if debug.print else f _if debug.print else debug.print f _if else f _if else f _if else f _if else f _if else f _if else end
+  3 f if io.println else io.println f _if else f _if else f _if else f _if else f _if else f _if else f _if end
+  4 f if io.println else f _if io.println else io.println f _if else f _if else f _if else f _if else f _if else f _if else end
 end
 proc( -> ) =>: main
   false true 1 2 test

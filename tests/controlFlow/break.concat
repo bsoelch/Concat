@@ -1,4 +1,4 @@
-import debug
+import numbers/print
 proc( -> i32 ) =>: inline.never: getLimit
   5
 end
@@ -11,7 +11,7 @@ proc( -> ) =>: main
         break
       end
     end
-  debug.print
+  6 == "" assert
   0
     while
       $ limit > if
@@ -21,7 +21,7 @@ proc( -> ) =>: main
     do
       1 + 
     end
-  debug.print
+  6 == "" assert
   0
     true while do
       1 + 
@@ -30,7 +30,7 @@ proc( -> ) =>: main
       end
       false
     end
-  debug.print
+  5 == "" assert
   0
     while 
       1 + 
@@ -39,5 +39,5 @@ proc( -> ) =>: main
       end
       false
     do end
-  debug.print
+  5 == "" assert
 end

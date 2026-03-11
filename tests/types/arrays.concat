@@ -1,11 +1,10 @@
-import debug
 proc( i32 3 ptr : in  i64 3 4 array : multi -> ) =>: arrayTest
   i32 3 ptr : a
   i64 2 4 6 8 10 array : b
   i32 ptr 2 ptr.mut : c
-  in ..length debug.print
-  multi ..length debug.print
-  in in 0 [] [] debug.print 
+  in ..length 3 == "in.len" assert
+  multi ..length 4 == "multi.len" assert
+  in in 0 [] [] 0 == "in 0" assert
 end
   
 proc( -> ) =>: main
@@ -17,5 +16,5 @@ proc( -> ) =>: main
   
   i32 2 3 array new =:: mut: matrix
   -14121 matrix@ 2 @[] 1 =[] ##  0 1  2 3  4 5
-  matrix@ i32 ptr.raw cast 5 [] debug.print
+  matrix@ i32 ptr.raw cast 5 [] -14121 == "matrix@ 5 []" assert
 end

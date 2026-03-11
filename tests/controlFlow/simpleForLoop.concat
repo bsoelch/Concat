@@ -1,8 +1,8 @@
-import debug
+import numbers/print
 proc( -> ) =>: main
   5
     true while do
-      ..dup debug.print 
+      ..dup io.println
       
       1 -  
       ..dup 0 > 

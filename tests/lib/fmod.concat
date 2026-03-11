@@ -1,8 +1,6 @@
-import debug
-
 proc( -> ) =>: main
-  1.5 1 % debug.print
-  -1.4 1 % debug.print
-  1e3 42 % debug.print
-  1024 f32 cast 10 % debug.print
+  1.5 1 % 0.5 == "1.5 1 %" assert
+  -1.4 1 % -0.4 - f64.abs 1e-15 < "-1.4 1 %" assert
+  1e3 42 % 34 == "1e3 42 %" assert
+  1024 f32 cast 10 % 4 == "1024:f32 10 %" assert
 end

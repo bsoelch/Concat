@@ -1,10 +1,9 @@
-import debug
 proc( -> ) =>: main
   i32 5 array new =:: mut: a
   a@ 3 @[] =:: p
   3 p =[]
-  a@ 0 [] debug.print
-  a@ 3 [] debug.print
+  a@ 0 [] 0 == "a@ 0" assert
+  a@ 3 [] 3 == "a@ 3" assert
   i32 2 array 2 array new =:: a2
-  a2@ 1 @[] 1 [] debug.print
+  a2@ 1 @[] 1 [] 0 == "a2@ 1 1 0" assert
 end

@@ -1,10 +1,9 @@
-import debug
 proc( -> ) =>: main
-  str1 ..length debug.print
-  str1 12 [] debug.print
-  c0 debug.print
+  str1 ..length 16 == "str1.len" assert
+  str1 12 [] 'r' == "str1 12 []" assert
+  c0 'A' == "c0" assert
   'B' c0=  
-  c0 debug.print
+  c0 'B' == "c0" assert
   ..?find.y
 end
 

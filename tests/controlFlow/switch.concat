@@ -1,4 +1,4 @@
-import debug
+import numbers/print
 union( _ : A _ : B i32 : C char8 : D ) =:: anUnion
 
 proc( i32 : i anUnion : e char8 : c -> ) =>: switchTest
@@ -18,10 +18,10 @@ proc( i32 : i anUnion : e char8 : c -> ) =>: switchTest
     A B case
       break
     C case
-      e ..raw .C debug.print
+      e ..raw .C io.println
       break
     D case
-      e ..raw .D debug.print
+      e ..raw .D io.println
       break
   end
   c switch ## switch character
@@ -32,7 +32,7 @@ proc( i32 : i anUnion : e char8 : c -> ) =>: switchTest
     false
     break
   end =:: isSpace
-  isSpace debug.print
+  isSpace io.println
 end
 
 proc( -> ) =>: main

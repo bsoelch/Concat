@@ -1,4 +1,3 @@
-import debug
 0 i32 =: x
   
 proc( -> ( ( i32 i32 ptr.raw ) ptr.raw i32 ) ) =>: ptrTest
@@ -7,20 +6,20 @@ proc( -> ( ( i32 i32 ptr.raw ) ptr.raw i32 ) ) =>: ptrTest
 end
 
 proc( -> ) =>: main
-  ptrTest .0 [] .1 [] debug.print
+  ptrTest .0 [] .1 [] 0 == "ptrTest.0.1" assert
   
   1 2 ( i64 i64 ) new =:: mut: tmp
   
-  tmp@ .0 [] debug.print
+  tmp@ .0 [] 1 == "tmp.0" assert
   tmp@ ( i64 i64 ) ptr.raw =: tmpPtr
-  tmpPtr [] .1 debug.print
+  tmpPtr [] .1 2 == "tmpPtr.1" assert
   
-  "Hello World!" 1 [] debug.print
-  "World" ..length debug.print
+  "Hello World!" 1 [] 'e' == "e" assert
+  "World" ..length 5 == "`World`.length" assert
   
   0 =:: mut: A
   A@  i32 ptr.raw.mut =: mut: aPtr
   -312512  aPtr =[]
-  aPtr [] debug.print
-  A debug.print
+  aPtr [] -312512 == "aPtr" assert
+  A -312512 == "A" assert
 end

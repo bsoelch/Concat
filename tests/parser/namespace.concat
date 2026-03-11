@@ -1,4 +1,4 @@
-import debug
+
 namespace: mut
   namespace: subspace
    1 i32 =: spaceVar
@@ -11,10 +11,10 @@ namespace: i32
 end
 proc( -> ) =>: spaceTest
   using mut.
-  spaceVar debug.print
+  spaceVar 0 == "mut.spaceVar" assert
   using mut.subspace.
-  spaceVar debug.print
-  subspace.subspaceVar debug.print
+  spaceVar 1 == "mut.subspace.spaceVar" assert
+  subspace.subspaceVar 2 == "mut.subspace.subspaceVar" assert
 end
 namespace: mut
   namespace: subspace

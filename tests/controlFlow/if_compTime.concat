@@ -1,88 +1,88 @@
-import debug
+import numbers/print
 
 proc( -> ) =>: main
   true if 
-    1 debug.print
+    1 io.println
   end
   false if 
-    0 debug.print
+    0 io.println
   else 
-    1 debug.print
+    1 io.println
   end
   1 1 + 2 == if 
-    1 debug.print
+    1 io.println
   else 2 2 * 4 != _if
-    0 debug.print
+    0 io.println
   end
   1 1 + 2 == if 
-    1 debug.print
+    1 io.println
   else 2 2 * 4 == _if
-    0 debug.print
+    0 io.println
   else
-    0 debug.print
+    0 io.println
   end
   false if else false _if else false _if else false _if else false _if else false _if else false _if else false _if end
   false if else false _if else false _if else false _if else false _if else false _if else false _if else false _if else end
   42 ## push value through if statements 
   true if 
-    1 debug.print
+    1 io.println
   end
   false if 
-    0 debug.print
+    0 io.println
   else 
-    1 debug.print
+    1 io.println
   end
   1 1 + 2 == if 
-    1 debug.print
+    1 io.println
   else 2 2 * 4 != _if
-    0 debug.print
+    0 io.println
   end
   1 1 + 2 == if 
-    1 debug.print
+    1 io.println
   else 2 2 * 4 == _if
-    0 debug.print
+    0 io.println
   else
-    0 debug.print
+    0 io.println
   end
   false if else false _if else false _if else false _if else false _if else false _if else false _if else false _if end
   false if else false _if else false _if else false _if else false _if else false _if else false _if else false _if else end
-  debug.print
+  io.println
   ## return value from if statements 
   false if 
-    0 debug.print 2
+    0 io.println 2
   else 
-    1 debug.print 3
+    1 io.println 3
   end 
-  debug.print
+  io.println
   1 1 + 2 == if 
-    1 debug.print 4 
+    1 io.println 4 
   else 5 2 2 * 4 != _if
-    0 debug.print
+    0 io.println
   end
-  debug.print
+  io.println
   1 1 + 2 == if 
-    1 debug.print 6
+    1 io.println 6
   else 2 2 * 4 == _if
-    0 debug.print 7
+    0 io.println 7
   else
-    0 debug.print 8
-  end debug.print
-  false if 9 else 11 false _if else false _if else false _if else false _if else false _if else false _if else false _if end debug.print
-  false if 10 else 12 false _if else false _if else false _if else false _if else false _if else false _if else false _if else end debug.print
+    0 io.println 8
+  end io.println
+  false if 9 else 11 false _if else false _if else false _if else false _if else false _if else false _if else false _if end io.println
+  false if 10 else 12 false _if else false _if else false _if else false _if else false _if else false _if else false _if else end io.println
   ##push value in if-statement
   1 false if 
-    0 debug.print debug.print
+    0 io.println io.println
   else 
-    1 debug.print debug.print
+    1 io.println io.println
   end
   
   2 1 1 + 2 == if 
-    1 debug.print debug.print
+    1 io.println io.println
   else 2 2 * 4 == _if
-    0 debug.print debug.print
+    0 io.println io.println
   else
-    0 debug.print debug.print
+    0 io.println io.println
   end
-  3 false if debug.print else debug.print false _if else false _if else false _if else false _if else false _if else false _if else false _if end
-  4 false if debug.print else false _if debug.print else debug.print false _if else false _if else false _if else false _if else false _if else false _if else end
+  3 false if io.println else io.println false _if else false _if else false _if else false _if else false _if else false _if else false _if end
+  4 false if io.println else false _if io.println else io.println false _if else false _if else false _if else false _if else false _if else false _if else end
 end

@@ -1,7 +1,7 @@
 namespace: inner
-  import debug
+  import numbers/print
   1 =:: x
 end
 proc( -> ) =>: main
-  inner.x debug.print ## should debug be visible here?
+  inner.x io.println ## should println be visible here?
 end

@@ -1,37 +1,37 @@
 import mem
-import debug
+import numbers/print
 
 proc( -> ) =>: main
   1024:iSize i32 mem.alloc i32 ptr.raw.mut =: mut: dynamicArray
   1 dynamicArray 0 =[]
   2 dynamicArray 1023 =[]
-  dynamicArray 0 [] debug.print
+  dynamicArray 0 [] io.println
   dynamicArray 2048:iSize mem.realloc dynamicArray=
-  dynamicArray 1023 [] debug.print
+  dynamicArray 1023 [] io.println
   3 dynamicArray 2047 =[]
   128:iSize i32 mem.calloc i32 ptr.raw.mut =: mut: dynamicArray2
   dynamicArray2 dynamicArray 128:iSize mem.copy dynamicArray2= 
   dynamicArray 16:iSize mem.clear dynamicArray=
-  dynamicArray 0 [] debug.print
+  dynamicArray 0 [] io.println
   dynamicArray mem.free
-  dynamicArray2 0 [] debug.print
-  dynamicArray2 1 [] debug.print
+  dynamicArray2 0 [] io.println
+  dynamicArray2 1 [] io.println
   dynamicArray2 2 @[] dynamicArray2 16:iSize mem.move ..drop
   dynamicArray2 2 @[]  dynamicArray2 16:iSize mem.move ..drop
   dynamicArray2 dynamicArray2 1 @[] 16:iSize mem.move ..drop
-  dynamicArray2 0 [] debug.print
-  dynamicArray2 1 [] debug.print
-  dynamicArray2 2 [] debug.print
-  dynamicArray2 3 [] debug.print
-  dynamicArray2 4 [] debug.print
-  "Hello" "World" 5:iSize mem.compare 0 <  debug.print
-  "hello" "World" 5:iSize mem.compare 0 >  debug.print
-  "World" "World" 5:iSize mem.compare 0 == debug.print
+  dynamicArray2 0 [] io.println
+  dynamicArray2 1 [] io.println
+  dynamicArray2 2 [] io.println
+  dynamicArray2 3 [] io.println
+  dynamicArray2 4 [] io.println
+  "Hello" "World" 5:iSize mem.compare 0 <  io.println
+  "hello" "World" 5:iSize mem.compare 0 >  io.println
+  "World" "World" 5:iSize mem.compare 0 == io.println
   
   i32 16 array new =:: mut: a
   a@ 10:iSize 42 mem.fill
   0:iSize while ..dup a ..length u< do
-    a@ ..over [] debug.print
+    a@ ..over [] io.println
     1:iSize +
   end ..drop
 end

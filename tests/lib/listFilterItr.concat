@@ -1,5 +1,5 @@
 import itrs/list
-import debug
+import numbers/print
 proc( -> ) =>: main
   { 1 2 3 4 5 6 7 } =:: mut: elts
   elts@ list.wrapBuffer
@@ -8,6 +8,6 @@ proc( -> ) =>: main
       2 % ?
     end
   for
-    debug.print
+    io.println
   end
 end

@@ -1,4 +1,3 @@
-import debug
 type : selfPtr 
 ( i32 selfPtr ptr ) =:: selfPtr
 
@@ -6,5 +5,5 @@ proc( -> ) =>: main
   ..?find.selfPtr
   selfPtr : mut: X
   1 X@ selfPtr new X=
-  X ..?types..4 .1  X .1 [] .1 == debug.print
+  X ..?types..4 .1  X .1 [] .1 == "X .1 X .1 .1 ==" assert
 end

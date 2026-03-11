@@ -1,9 +1,9 @@
 import list
-import debug
+import numbers/print
 
 proc( type : auto: T  T list : l -> ) =>: printList
   0:iSize while ..dup l .length u< do
-    l .data ..over [] debug.print
+    l .data ..over [] io.println
     1:iSize +
   end ..drop
 end
@@ -25,7 +25,7 @@ proc( -> ) =>: main
     l       list.appendAll
   printList
  
-  l 0 [] debug.print
+  l 0 [] io.println
   '\x2a' l 3 list.set
-  l 3 [] debug.print
+  l 3 [] io.println
 end

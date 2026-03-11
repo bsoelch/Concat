@@ -1,4 +1,4 @@
-import debug
+import numbers/print
 proc(
   i64 : a
   i64 : b
@@ -13,6 +13,6 @@ proc( i64 : x i64 : y i8 : ignore -> i64 ) =>: add
 end
 
 proc( -> ) =>: main
-  1 2  add@ 0:i8 apply debug.print
-  3:i64 4:i64  0:i8 add debug.print
+  1 2  add@ 0:i8 apply io.println
+  3:i64 4:i64  0:i8 add io.println
 end

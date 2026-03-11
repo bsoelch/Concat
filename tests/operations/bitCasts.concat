@@ -1,7 +1,6 @@
-import debug
 proc( -> ) =>: main
-  42.0 i64 ..bitcast debug.print
-  0x7f7fffff f32 ..bitcast debug.print
-  0xff800000:i32 f32 ..bitcast debug.print
-  1 f64 ..bitcast debug.print
+  42.0 i64 ..bitcast 4631107791820423168 == "42.0" assert
+  0x7f7fffff f32 ..bitcast 3.40282346638529E+38:f32 == "0x7f7fffff" assert
+  0xff800000:i32 f32 ..bitcast f32.-Infinity == "-inf" assert
+  1 f64 ..bitcast 5E-324 == "1" assert
 end

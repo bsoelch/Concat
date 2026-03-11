@@ -1,4 +1,3 @@
-import debug
 enum( A B C ) =:: elt
 
 union( elt : x i32 : y ( i64 i32 ) : z ) =:: container
@@ -8,7 +7,7 @@ elt .B container .x =:: Bx
 5 container .y =:: y
 
 proc( -> ) =>: main
-  Ax ..raw .x .A debug.print
-  Bx ..raw .x .B debug.print
-  y ..raw .y debug.print
+  Ax ..raw .x .A "Ax.x.A" assert
+  Bx ..raw .x .B "Bx.x.B" assert
+  y ..raw .y 5 == "y.y" assert
 end

@@ -2,6 +2,7 @@ import sys
 import string
 import numbers
 import exec
+import file
 
 using std.literals.
 
@@ -42,7 +43,7 @@ proc( string : path -> ) =>: printUsage
     "  -S: only emmit assembly (QBE-IR for QBE backend)\n" sb.appendS
     "  -R: run compiled code\n" sb.appendS
     "  --no-core: don't include libray core by default \n" sb.appendS
-    io.stdOut ..over io.fputSb ..drop
+    $ sb.asStr io.print
   sb.free ..drop
 end
 enum( NONE IN OUT LIB_PATH ERR_PATH ) =:: ArgParserState
@@ -144,7 +145,7 @@ proc( -> ) =>: parseArgs
       "unknown compiler option: \"" sb.copyPtr
         arg sb.appendStr
         "\"\n" sb.appendS
-        io.stdErr ..over io.fputSb ..drop
+        file.stdErr $1 sb.asStr file.write ..drop
       sb.free ..drop
       continue
     end
@@ -153,7 +154,7 @@ proc( -> ) =>: parseArgs
         "expected compiler option got \"" sb.copyPtr
           arg sb.appendStr
           "\"\n" sb.appendS
-          io.stdErr ..over io.fputSb ..drop
+          file.stdErr $1 sb.asStr file.write ..drop
         sb.free ..drop
         break
       IN case

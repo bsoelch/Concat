@@ -41,6 +41,25 @@ namespace: io
       '\n' sb.appendC
     sb.asStr printS
   end
+  proc( iSize : i -> ) =>: export: printXZ
+    char8 24 array : buffer ## -8000000000000000
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendX
+    sb.asStr printS
+  end
+  proc( iSize : i -> ) =>: export: printZ
+    char8 24 array : buffer ## -9223372036854775808\n
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendI
+    sb.asStr printS
+  end
+  proc( iSize : i -> ) =>: export: printlnZ
+    char8 24 array : buffer
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendI
+      '\n' sb.appendC
+    sb.asStr printS
+  end
   proc( i8 : i -> ) =>: export: printI8   i i32 cast printI32 end
   proc( i8 : i -> ) =>: export: printlnI8 i i32 cast printlnI32 end
   proc( i16 : i -> ) =>: export: printI16   i i32 cast printI32 end
@@ -71,7 +90,7 @@ namespace: io
       '\n' sb.appendC
     sb.asStr printS
   end
-  overload: export: print printI8 printI16 printI32 printI64 printF32 printF64 end
-  overload: export: printX printX32 printX64 end ## TODO? support printX for other types
-  overload: export: println printlnI8 printlnI16 printlnI32 printlnI64 printlnF32 printlnF64 end
+  overload: export: print printI8 printI16 printI32 printI64 printZ printF32 printF64 end
+  overload: export: printX printX32 printX64 printXZ end ## TODO? support printX for other types
+  overload: export: println printlnI8 printlnI16 printlnI32 printlnI64 printlnZ printlnF32 printlnF64 end
 end

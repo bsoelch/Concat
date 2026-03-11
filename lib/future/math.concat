@@ -1,7 +1,4 @@
 ## math library in pure concat
-
-import debug
-
 import core/floats
 
 namespace: f64

@@ -1,18 +1,18 @@
-import debug
+import numbers/print
 "A" =:: str1
 "A string" =:: str2
 
 proc( -> ) =>: main
   ..?find.str2
-  str3 ..length debug.print
-  specialString ..length debug.print
+  str3 ..length io.println
+  specialString ..length io.println
   0:iSize while ..dup specialString ..length u< do
-    specialString ..over [] debug.print
+    specialString ..over [] i32 cast.u io.println
     1:iSize +
   end ..drop
-  multiLine ..length debug.print
+  multiLine ..length io.println
   0:iSize while ..dup multiLine ..length u< do
-    multiLine ..over [] debug.print
+    multiLine ..over [] i32 cast.u io.println
     1:iSize +
   end ..drop
 end

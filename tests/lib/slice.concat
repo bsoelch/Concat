@@ -1,21 +1,21 @@
 import slice
-import debug
+import numbers/print
 
 proc( type : auto: T  T slice : l -> ) =>: printArray
   0:iSize while ..dup l .length u< do
-    l .data ..over [] debug.print
+    l .data ..over [] io.println
     1:iSize +
   end ..drop
 end
 
 proc( -> ) =>: main
   "Hello World" slice.wrap =:: str
-  str 5 [] debug.print
-  str 'A' slice.indexOf ? debug.print
-  str 'o' slice.indexOf optional.unwrap debug.print
-  str 'A' slice.lastIndexOf ? debug.print
-  str 'o' slice.lastIndexOf optional.unwrap debug.print
-  str 'c' slice.contains debug.print
+  str 6 [] io.println
+  str 'A' slice.indexOf ? io.println
+  str 'o' slice.indexOf optional.unwrap io.println
+  str 'A' slice.lastIndexOf ? io.println
+  str 'o' slice.lastIndexOf optional.unwrap io.println
+  str 'c' slice.contains io.println
   i32 10 array new =:: mut: a
   0:i32 while $ iSize cast.u a ..length u< do
     ..dup ..dup * a@ ..over.2 =[]
@@ -23,18 +23,18 @@ proc( -> ) =>: main
   end ..drop
   a@ 8 slice.create
     ..dup 3 slice.head printArray
-    -141516511 debug.print
+    -141516511 io.println
     ..dup 5 slice.tail printArray
-    -34731715 debug.print
+    -34731715 io.println
     ..dup 1:iSize 4:iSize slice.getSlice printArray
-    -82745267 debug.print
+    -82745267 io.println
     ..dup 0:iSize 12:iSize slice.getSlice printArray
-    -125136145 debug.print
-    ..dup 4:iSize slice.cutIndex printArray -313123 debug.print printArray
-    -991749124 debug.print
-    ..dup 3 slice.split printArray -112414 debug.print printArray
-    -124151151 debug.print
-    ..dup 16 slice.split printArray -112414 debug.print printArray
-    -434262161 debug.print
+    -125136145 io.println
+    ..dup 4:iSize slice.cutIndex printArray -313123 io.println printArray
+    -991749124 io.println
+    ..dup 3 slice.split printArray -112414 io.println printArray
+    -124151151 io.println
+    ..dup 16 slice.split printArray -112414 io.println printArray
+    -434262161 io.println
   printArray
 end

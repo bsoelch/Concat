@@ -1,8 +1,8 @@
-import debug
+import numbers/print
 
 proc( -> ) =>: main
   0 while
-    $ debug.print
+    $ io.println
     1 +
   $ 5 < end ..drop
 end

@@ -1,5 +1,5 @@
 import string
-import debug
+import print
 
 proc( iSize : auto: k char8 k ptr : str -> string iSize ) =>: startItr
   str string.wrap 0:iSize
@@ -19,6 +19,6 @@ end
 
 proc( -> ) =>: main
   "Hello" startItr while nextChar do
-    #+char+# debug.print
+    #+char+# io.println
   end endItr
 end

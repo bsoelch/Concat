@@ -1,11 +1,11 @@
 import numbers
-import debug
+import numbers/print
 
 proc( -> ) =>: main
-  1 3 i32.min debug.print
-  2 4_000_000_000:i32 i32.max debug.print
-  3 4_000_000_000:i64 i64.min debug.print
-  4 -3_000_000_000 i64.max debug.print
-  -5 i32.abs debug.print
-  6 i64.abs debug.print
+  1 3 i32.min 1 == "1" assert
+  2 4_000_000_000:i32 i32.max 2 == "2" assert
+  3 4_000_000_000:i64 i64.min 3 == "3" assert
+  4 -3_000_000_000 i64.max 4 == "4" assert
+  -5 i32.abs 5 == "5" assert
+  6 i64.abs  6 == "6" assert
 end

@@ -46,7 +46,6 @@ proc(
   IdentifierInfo new return
 end
 
-import debug
 ## TODO? move inlining to seperate optimization pass
 proc(
   ProcedureCall : callInfo
@@ -66,7 +65,7 @@ proc(
     callImpl [] .code slice.freeze
   end
 end
-import debug
+
 proc(
   ProcedureCall : callInfo
   ProgramContext ptr.mut : program

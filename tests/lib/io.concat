@@ -1,18 +1,18 @@
 import io
 using io.
-import debug
+import numbers/print
 
 proc( -> ) =>: main
   i8 64 array new =:: mut: buff
-  stdIn buff@  0:iSize 16:iSize fread io.FILE_ERROR_NONE == "fread works" assert i64 cast.u debug.print
-  stdIn buff@ 16:iSize 32:iSize fread io.FILE_ERR_END_OF_FILE == "EOF detection" assert i64 cast.u debug.print
+  stdIn buff@  0:iSize 16:iSize fread io.FILE_ERROR_NONE == "fread works" assert i64 cast.u io.println
+  stdIn buff@ 16:iSize 32:iSize fread io.FILE_ERR_END_OF_FILE == "EOF detection" assert i64 cast.u io.println
 
-  stdOut "Hello World!" 0:iSize 5:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u debug.print
-  stdOut "Hello World!" 6:iSize 5:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u debug.print
-  stdOut buff@ 0:iSize 45:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u debug.print
+  stdOut "Hello World!" 0:iSize 5:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u io.println
+  stdOut "Hello World!" 6:iSize 5:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u io.println
+  stdOut buff@ 0:iSize 45:iSize fwrite io.FILE_ERROR_NONE == "fwrite works" assert i64 cast.u io.println
   stdOut '\n' fputc io.FILE_ERROR_NONE == "fputc works" assert
   "./lib" OPEN_WRITE fopenS io.FILE_ERR_FILE_IS_DIR == "open directory" assert =:: empty
-  empty ( ) ptr cast! debug.print
+  empty ( ) ptr cast! i64 cast! io.println
   empty fclose io.FILE_ERR_INVALID_FILE == "fclose invalid" assert
   "./tests/lib/io.out2" OPEN_READ OPEN_WRITE | fopenS io.FILE_ERROR_NONE == "fopenS works" assert =:: file
   file "Written directly to file!\n" fputs io.FILE_ERROR_NONE == "fputs works" assert

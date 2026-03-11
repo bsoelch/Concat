@@ -1,4 +1,4 @@
-import debug
+import numbers/print
 
 i32 =:: u32
 union(
@@ -10,10 +10,10 @@ union(
 proc( aUnion -> ) =>: test
   switch
     UInt Int .case =:: intVal
-      intVal debug.print
+      intVal io.println
     break
     Float .case =:: floatVal
-      floatVal debug.print
+      floatVal io.println
     break
   end
 end

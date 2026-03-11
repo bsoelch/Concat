@@ -1,8 +1,8 @@
-import debug
+import numbers/print
 
 proc( -> ) =>: main
   0 while $ 5 < do
     $ 2 % ? if continue end
-    $ debug.print
+    $ io.println
   finally 1 + end ..drop
 end

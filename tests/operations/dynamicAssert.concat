@@ -1,9 +1,9 @@
-import debug
+import numbers/print
 proc( i32 -> i32 ) =>: positive
   ..dup 0 > "positive" assert
 end
 
 proc( -> ) =>: main
-  1 positive debug.print
-  0 positive debug.print
+  1 positive io.println
+  0 positive io.println
 end

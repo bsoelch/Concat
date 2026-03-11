@@ -1,8 +1,4 @@
 -----------------
 identifier "y":
- - global variable "y" ( struct( ... ) [ { { 1 1 } 2 } ] ) declared at ./tests/parser/global.concat:14:51
+ - global variable "y" ( struct( ... ) [ { { 1 1 } 2 } ] ) declared at ./tests/parser/global.concat:13:51
 -----------------
-16
-114 ('r')
-65 ('A')
-66 ('B')
