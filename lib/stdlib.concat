@@ -17,6 +17,5 @@ import numbers
 import optional
 import string
 import stringBuilder
-import stringIO
 import sys
 import unicode
