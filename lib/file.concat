@@ -1,10 +1,57 @@
-import io
+import optional
+import string
+import stringBuilder
+using std.literals.
+
+namespace: file
+  i32 =:: Error
+  namespace: Error
+    0 Error =: export: FILE_ERROR_NONE
+    -1 Error =: export: FILE_ERR_END_OF_FILE
+    1 Error =: export: FILE_ERR_IO
+    2 Error =: export: FILE_ERR_PATH_OVERFLOW
+    3 Error =: export: FILE_ERR_OPEN_MODE
+    4 Error =: export: FILE_ERR_FILE_NOT_FOUND
+    5 Error =: export: FILE_ERR_FILE_IS_DIR
+    6 Error =: export: FILE_ERR_FILE_ALREADY_EXISTS
+    7 Error =: export: FILE_ERR_ACCESS_DENIED
+    8 Error =: export: FILE_ERR_INVALID_FILE
+  end
+end
 namespace: c
-  proc.c( io.FILE : file -> i32 ) : extern: fgetc
+  ..ctype.struct ptr.mut =:: export: FILE
+  ## wrapper functions to allow interoperability with lib-c code
+  proc.c( -> FILE ) : extern: concatIOHelper_stdin
+  proc.c( -> FILE ) : extern: concatIOHelper_stdout
+  proc.c( -> FILE ) : extern: concatIOHelper_stderr
+  proc.c( -> ) : extern: concatIOHelper_resetErrno
+  proc.c( -> file.Error ) : extern: concatIOHelper_checkErrno
+  proc.c(
+    ..ctype.char ptr.raw : mode
+    ..ctype.char ptr.raw : path
+  -> FILE ) : extern: fopen
+  proc.c( FILE -> ) : extern: clearerr
+  proc.c( FILE -> ..ctype.int ) : extern: feof
+  proc.c( FILE -> ..ctype.int ) : extern: ferror
+  proc.c( FILE : file -> i32 ) : extern: fgetc
+  proc.c(
+    FILE : file
+    ..ctype.size : eltCount
+    ..ctype.size : eltSize
+    ..ctype.void ptr.raw.mut : buffer
+  -> ..ctype.size ) : extern: fread
+  proc.c(
+    FILE : file
+    ..ctype.size : eltCount
+    ..ctype.size : eltSize
+    ..ctype.void ptr.raw : buffer
+  -> ..ctype.size ) : extern: fwrite
+  proc.c( FILE : file -> ..ctype.int ) : extern: fflush
+  proc.c( FILE : file -> ..ctype.int ) : extern: fclose
 end
 namespace: io
   proc( -> char8 optional ) =>: getChar
-    io.stdIn fgetc $ 0 > if
+    c.concatIOHelper_stdin c.fgetc $ 0 > if
       char8 cast.u optional.wrap return
     else ..drop
       char8 optional.empty return
@@ -28,42 +75,101 @@ overload: merge: ^ file.Flags.xor end
 overload: merge: ? file.Flags.toBool end
 namespace: file
   struct(
-    io.FILE : file
-    io.IOError : error
+    c.FILE : file
+    Error : error
     Flags : flags
   ) =:: export: FILE
   ## TODO? more modes: read+append ?
   enum( READ WRITE APPEND READ_WRITE ) =:: export: OpenMode
-  proc( FILE -> bool ) =>: export: isOk   .error io.FILE_ERROR_NONE == end
-  proc( FILE -> bool ) =>: export: isErr  .error io.FILE_ERROR_NONE != end
-  proc( FILE -> io.IOError ) =>: export: getError   .error  end
+  proc( FILE -> bool ) =>: export: isOk   .error Error.FILE_ERROR_NONE == end
+  proc( FILE -> bool ) =>: export: isErr  .error Error.FILE_ERROR_NONE != end
+  proc( FILE -> Error ) =>: export: getError   .error  end
   proc( FILE -> FILE ) =>: export: clearError
-    io.FILE_ERROR_NONE >$ .error=
+    Error.FILE_ERROR_NONE >$ .error=
   end
-  proc( -> FILE ) =>: export: stdIn  io.stdIn  io.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
-  proc( -> FILE ) =>: export: stdOut io.stdOut io.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
-  proc( -> FILE ) =>: export: stdErr io.stdErr io.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdIn  c.concatIOHelper_stdin  Error.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdOut c.concatIOHelper_stdout Error.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdErr c.concatIOHelper_stderr Error.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
 
+  char8 4096 array : mut: fileNameBuffer ## XXX make buffer thread safe
   proc( string : fileName OpenMode : openMode -> FILE ) =>: export: open
     openMode switch
-      READ case io.OPEN_READ break
-      WRITE case io.OPEN_WRITE break
-      APPEND case io.OPEN_APPEND break
-      READ_WRITE case io.OPEN_READ io.OPEN_WRITE | break
-    end =:: ioOpenMode
-    fileName .data fileName .length ioOpenMode io.fopen
-      =:: ioError
-    =:: file
-    file ioError Flags.NONE FILE new
+      READ case "rb\x00" ..ctype.char ptr.raw cast! break
+      WRITE case "wb\x00" ..ctype.char ptr.raw cast! break
+      APPEND case "ab\x00" ..ctype.char ptr.raw cast! break
+      READ_WRITE case "r+b\x00" ..ctype.char ptr.raw cast! break
+    end
+      char8 ptr.raw.mut optional.empty =:: mut: freePath
+      fileName $ .length 1 - string.charAt '\x00' == if
+        fileName .data
+      else
+        fileName .length fileNameBuffer@ ptr.length u< if
+          fileNameBuffer@
+        else
+          fileName .length 1 + char8 mem.alloc
+          $ optional.wrap freePath=
+        end
+          fileName .data
+          fileName .length
+        mem.copy
+        '\x00' $1 fileName .length =[]
+      end ..ctype.char ptr.raw cast!
+    c.fopen
+      freePath .if mem.free end ## free memory used for path-name
+      $ ( ) ptr cast! c.isNull if
+        c.concatIOHelper_checkErrno
+      else
+        Error.FILE_ERROR_NONE
+      end
+    Flags.NONE FILE new
   end
-  ## TODO read
+  proc( FILE char8 ptr.raw.mut : buffer iSize : count -> FILE iSize ) =>: export: fread_wrapper
+    $ .file
+      count ..ctype.size cast
+      1 ..ctype.size cast
+      buffer ..ctype.void ptr.raw.mut cast!
+    c.fread iSize cast.s =:: nRead
+      $ .file c.feof i32 cast ? if
+        Error.FILE_ERR_END_OF_FILE >$ .error=
+      end
+      $ .file c.ferror i32 cast ? if
+        c.concatIOHelper_checkErrno >$ .error=
+      end
+    nRead
+  end
+  proc( FILE string : s -> FILE iSize ) =>: export: fwrite_wrapper
+    $ .file
+      s .length ..ctype.size cast
+      1 ..ctype.size cast
+      s .data ..ctype.void ptr.raw cast!
+    c.fwrite iSize cast.s =:: nWritten
+      $ .file c.feof i32 cast ? if
+        Error.FILE_ERR_END_OF_FILE >$ .error=
+      end
+      $ .file c.ferror i32 cast ? if
+        c.concatIOHelper_checkErrno >$ .error=
+      end
+    nWritten
+  end
+  proc( FILE char8 slice.mut : s -> FILE string ) =>: export: read
+    $ isErr if "":s return end
+    $ .file c.clearerr
+    c.concatIOHelper_resetErrno
+    0:iSize =:: mut: count
+    while count s .length u< do
+      s .data count @[] s .length count - fread_wrapper count + count=
+    finally
+      $ isErr if s .data count string.create return end
+    end
+    s .data count string.create
+  end
   ## TODO? io buffering?
   proc( FILE string : mut: s -> FILE ) =>: export: write
     $ isErr if return end
+    $ .file c.clearerr
+    c.concatIOHelper_resetErrno
     while s .length 0 != do
-      $ .file
-        s .data 0 s .length io.fwrite >$ =:: nWritten
-      >$ .error=
+      s fwrite_wrapper =:: nWritten
     finally
       $ isErr if return end
       s nWritten string.tail s=
@@ -73,13 +179,13 @@ namespace: file
     f isErr if f >$ return end
     while
       $ .length $ 2 * >$ 8192 + iSize.min sb.ensureCap
-      f .file $1 .data $2 .length $3 sb.getCapacity $1 - io.fread f@ .error= =:: nRead
+      f $1 .data $2 .length @[] $2 sb.getCapacity $3 .length - fread_wrapper =:: nRead f=
       $ .length nRead + >$ .length=
       f isOk
     end
     f
-      $ .error io.FILE_ERR_END_OF_FILE == if ## do not treat end of file as error
-        io.FILE_ERROR_NONE >$ .error=
+      $ .error Error.FILE_ERR_END_OF_FILE == if ## do not treat end of file as error
+        Error.FILE_ERROR_NONE >$ .error=
       end
     >$ return
   end
@@ -88,6 +194,8 @@ namespace: file
   end
   proc( FILE -> ) =>: export: close
     $ .flags Flags.NO_CLOSE & ? if ..drop return end
-    .file io.fclose ..drop
+    .file
+      $ ( ) ptr cast! c.isNull if ..drop return end
+    c.fclose ..drop
   end
 end

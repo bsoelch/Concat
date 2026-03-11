@@ -1,0 +1,27 @@
+import file
+import numbers/print
+using std.literals.
+
+proc( -> ) =>: export: main
+  "./tests/lib/file.concat":s file.OpenMode .READ file.open
+    file.readAll =:: contents
+    $ file.getError i32 cast.s io.println
+  file.close
+  contents .length io.println
+  "./tests":s file.OpenMode .WRITE file.open
+    $ file.getError i32 cast.s io.println
+  file.close
+  file.stdOut
+    contents sb.asStr file.write
+  file.close ## calling close on standard output should have no effect
+  "still open!":s io.println
+  char8 64 array : buffer
+  file.stdIn
+    buffer@ slice.wrapMutable file.read =:: inString
+    $ file.getError i32 cast.s io.println
+  file.close
+  inString .length io.println
+  file.stdErr
+    inString file.write
+  file.close
+end
