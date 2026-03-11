@@ -50,7 +50,7 @@ namespace: c
   proc.c( FILE : file -> ..ctype.int ) : extern: fclose
 end
 namespace: io
-  proc( -> char8 optional ) =>: getChar
+  proc( -> char8 optional ) =>: export: getChar
     c.concatIOHelper_stdin c.fgetc $ 0 > if
       char8 cast.u optional.wrap return
     else ..drop
