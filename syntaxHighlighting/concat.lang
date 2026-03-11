@@ -176,9 +176,9 @@
                 over(\.[0-9]+)?    |
                 \?(
                   types(\.([0-9]*\.)?[0-9]+)? |
+                  type\.layout(\.[0-9]+)?     |
                   stack(\.[0-9]+)?            |
-                  ops(\.[0-9]+)?              |
-                  parser\.ops(\.[0-9]+)?
+                  ops(\.[0-9]+)?
                 ) |
                 compiler\.(
                   error   |
@@ -194,7 +194,7 @@
            )
           )(\Z|(?=[[:space:]])) # end of file or white-space
           )|
-          \.\.\?(parser\.)?find\.(?=([^[:space:]\.]+(\.[^[:space:]\.]+)*(\Z|[[:space:]])))
+          \.\.\?find\.(?=([^[:space:]\.]+(\.[^[:space:]\.]+)*(\Z|[[:space:]])))
         )) |
         (?&lt;=[^[:space:]])\:\?(\Z|[[:space:]]) ## :? postfix
       </match>

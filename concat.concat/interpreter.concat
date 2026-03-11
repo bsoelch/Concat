@@ -1873,6 +1873,7 @@ proc(
           EvalResult .Ok return ## TODO print ops
         Find case
           EvalResult .Ok return ## TODO find
+        TypeLayout case break ## should not exist in interpreter
       end
       break
     Import LibImport GetLabel SetLabel

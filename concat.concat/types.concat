@@ -5,6 +5,7 @@ import string
 import stringBuilder
 import arenaAlloc
 import map
+using std.literals.
 
 import "labels.concat"
 import "constants.concat"
@@ -2907,5 +2908,48 @@ namespace: sb
   end
   proc( stringBuilder Type TypeContext ptr -> stringBuilder ) =>: export: appendType
     0 appendTypeRecursive return ## TODO? change default value to 1
+  end
+  proc(
+    stringBuilder
+    Type : t
+    TypeContext ptr.mut : context
+    i32 : mut: level
+    i32 : levels
+  -> stringBuilder ) =>: export: appendTypeLayoutRecursive
+    context .labelContext =:: labelContext
+    ## string 16
+    ##    0 | char8 ptr.raw | 8
+    ##    8 | "iSize"       | 8
+    t context appendType " | ":s sb.appendStr
+    $ .length =:: l0
+    t context types.sizeOf switch
+      Fixed .case sb.appendI break
+      DynamicArray .case sb.appendI " array":s sb.appendStr return
+      Unknown case '?' sb.appendC return
+    end
+    $ .length l0 - =:: sizeWidth
+    level levels u>= if return end
+    level 1 + level=
+    t context types.isTuple if
+      t context types.compositeEltCount for =:: i
+        '\n' sb.appendC level sb.indent
+        $ .length =:: l1
+        t i context types.tupleElementOffset .if sb.appendI else '?' sb.appendC end
+        $ .length l1 - =:: w
+        w sizeWidth u< if
+          sizeWidth w - i32 cast.u sb.indent
+        end
+        " | ":s sb.appendStr
+        t i context types.compositeGetElement context level levels appendTypeLayoutRecursive
+      end
+    else t context types.isUnion _if
+      t context types.compositeElts for =:: elt
+        '\n' sb.appendC level sb.indent
+        elt context level levels appendTypeLayoutRecursive
+      end
+    end
+  end
+  proc( stringBuilder Type i32 : depth TypeContext ptr.mut -> stringBuilder ) =>: export: appendTypeLayout
+    0 depth appendTypeLayoutRecursive return
   end
 end

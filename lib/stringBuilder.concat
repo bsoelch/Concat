@@ -94,6 +94,12 @@ namespace: sb
   proc( stringBuilder : buffer stringBuilder : str -> stringBuilder ) =>: export: appendSb
     buffer char8 list cast str char8 list cast list.appendAll stringBuilder cast return
   end
+  proc( stringBuilder : buffer i32 : n -> stringBuilder ) =>: export: indent
+    buffer char8 list cast
+      $ .length n iSize cast.u + list.ensureCap
+      n for ..drop ' ' list.append end
+    stringBuilder cast return
+  end
   proc( stringBuilder -> char8 slice ) =>: export: asSlice
     ..dup .data ..swap .length slice.create return
   end

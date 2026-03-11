@@ -5535,6 +5535,16 @@ proc(
               0
             state printTypes
             continue.opLoop
+          TypeLayout .case =:: depth
+            program [] .tmpString
+              sb.clear
+              "-----------------\n" sb.appendS
+              op .pos state popType depth typeContext sb.appendTypeLayout
+              "\n-----------------\n" sb.appendS
+              io.stdOut $1 io.fputSb ..drop
+              sb.clear
+            program .tmpString=
+            continue.opLoop
           CompiledOps case
             continue.opLoop ## TODO print ops
           Find .case =:: idLabel
