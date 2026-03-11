@@ -6,16 +6,16 @@ using std.literals.
 namespace: file
   i32 =:: export: Error
   namespace: Error
-    0 Error =: export: FILE_ERROR_NONE
-    -1 Error =: export: FILE_ERR_END_OF_FILE
-    1 Error =: export: FILE_ERR_IO
-    2 Error =: export: FILE_ERR_PATH_OVERFLOW
-    3 Error =: export: FILE_ERR_OPEN_MODE
-    4 Error =: export: FILE_ERR_FILE_NOT_FOUND
-    5 Error =: export: FILE_ERR_FILE_IS_DIR
-    6 Error =: export: FILE_ERR_FILE_ALREADY_EXISTS
-    7 Error =: export: FILE_ERR_ACCESS_DENIED
-    8 Error =: export: FILE_ERR_INVALID_FILE
+    0 Error =: export: NONE
+    -1 Error =: export: END_OF_FILE
+    1 Error =: export: IO
+    2 Error =: export: PATH_OVERFLOW
+    3 Error =: export: OPEN_MODE
+    4 Error =: export: FILE_NOT_FOUND
+    5 Error =: export: FILE_IS_DIR
+    6 Error =: export: FILE_ALREADY_EXISTS
+    7 Error =: export: ACCESS_DENIED
+    8 Error =: export: INVALID_FILE
   end
 end
 namespace: c
@@ -81,15 +81,15 @@ namespace: file
   ) =:: export: FILE
   ## TODO? more modes: read+append ?
   enum( READ WRITE APPEND READ_WRITE ) =:: export: OpenMode
-  proc( FILE -> bool ) =>: export: isOk   .error Error.FILE_ERROR_NONE == end
-  proc( FILE -> bool ) =>: export: isErr  .error Error.FILE_ERROR_NONE != end
+  proc( FILE -> bool ) =>: export: isOk   .error Error.NONE == end
+  proc( FILE -> bool ) =>: export: isErr  .error Error.NONE != end
   proc( FILE -> Error ) =>: export: getError   .error  end
   proc( FILE -> FILE ) =>: export: clearError
-    Error.FILE_ERROR_NONE >$ .error=
+    Error.NONE >$ .error=
   end
-  proc( -> FILE ) =>: export: stdIn  c.concatIOHelper_stdin  Error.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
-  proc( -> FILE ) =>: export: stdOut c.concatIOHelper_stdout Error.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
-  proc( -> FILE ) =>: export: stdErr c.concatIOHelper_stderr Error.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdIn  c.concatIOHelper_stdin  Error.NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdOut c.concatIOHelper_stdout Error.NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdErr c.concatIOHelper_stderr Error.NONE Flags.NO_CLOSE FILE new end
 
   char8 4096 array : mut: fileNameBuffer ## XXX make buffer thread safe
   proc( string : fileName OpenMode : openMode -> FILE ) =>: export: open
@@ -119,7 +119,7 @@ namespace: file
       $ ( ) ptr cast! c.isNull if
         c.concatIOHelper_checkErrno
       else
-        Error.FILE_ERROR_NONE
+        Error.NONE
       end
     Flags.NONE FILE new
   end
@@ -130,7 +130,7 @@ namespace: file
       buffer ..ctype.void ptr.raw.mut cast!
     c.fread iSize cast.s =:: nRead
       $ .file c.feof i32 cast ? if
-        Error.FILE_ERR_END_OF_FILE >$ .error=
+        Error.END_OF_FILE >$ .error=
       end
       $ .file c.ferror i32 cast ? if
         c.concatIOHelper_checkErrno >$ .error=
@@ -144,7 +144,7 @@ namespace: file
       s .data ..ctype.void ptr.raw cast!
     c.fwrite iSize cast.s =:: nWritten
       $ .file c.feof i32 cast ? if
-        Error.FILE_ERR_END_OF_FILE >$ .error=
+        Error.END_OF_FILE >$ .error=
       end
       $ .file c.ferror i32 cast ? if
         c.concatIOHelper_checkErrno >$ .error=
@@ -184,8 +184,8 @@ namespace: file
       f isOk
     end
     f
-      $ .error Error.FILE_ERR_END_OF_FILE == if ## do not treat end of file as error
-        Error.FILE_ERROR_NONE >$ .error=
+      $ .error Error.END_OF_FILE == if ## do not treat end of file as error
+        Error.NONE >$ .error=
       end
     >$ return
   end

@@ -2153,16 +2153,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   return
 end
 proc( FileId : includedId file.Error : err FilePosition : pos ParserState ptr.mut : state -> FileId ) =>: checkIOError
-  using file.Error.
-  err FILE_ERROR_NONE == if
+  err file.Error.NONE == if
     includedId return ## exit early on normal path
   end
   state [] .progContext =:: progContext
   progContext .errors =:: errors
   progContext [] .progFiles includedId i64 cast @[] .fileName [] sb.asStr =:: fileName
   err switch
-    FILE_ERROR_NONE case ..unreachable ## already handled this case
-    FILE_ERR_PATH_OVERFLOW FILE_ERR_OPEN_MODE FILE_ERR_FILE_NOT_FOUND FILE_ERR_FILE_IS_DIR FILE_ERR_ACCESS_DENIED FILE_ERR_INVALID_FILE case
+    file.Error.NONE case ..unreachable ## already handled this case
+    file.Error.PATH_OVERFLOW file.Error.OPEN_MODE file.Error.FILE_NOT_FOUND file.Error.FILE_IS_DIR file.Error.ACCESS_DENIED file.Error.INVALID_FILE case
       "cannot include file \"" sb.copyPtr fileName sb.appendStr '"' sb.appendC pos errors appendError
       FILE_ID_NONE return
     default
@@ -2320,7 +2319,7 @@ proc(
     =:: fileBody
     $ .error =:: readError
   file.close
-  readError file.Error.FILE_ERROR_NONE != if
+  readError file.Error.NONE != if
     prevFile state .currentFile= ## reset file id
     wasLibFile progContext .inLibFile=
     fileId readError return
@@ -2372,5 +2371,5 @@ proc(
   wasLibFile progContext .inLibFile=
   state [] .parsedOps list.free ..drop
   oldOps state .parsedOps=
-  newFileId file.Error.FILE_ERROR_NONE return
+  newFileId file.Error.NONE return
 end
