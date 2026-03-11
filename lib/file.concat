@@ -4,7 +4,7 @@ import stringBuilder
 using std.literals.
 
 namespace: file
-  i32 =:: Error
+  i32 =:: export: Error
   namespace: Error
     0 Error =: export: FILE_ERROR_NONE
     -1 Error =: export: FILE_ERR_END_OF_FILE

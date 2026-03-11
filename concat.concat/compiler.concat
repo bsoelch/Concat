@@ -66,7 +66,7 @@ proc( -> ) =>: parseArgs
     end
     arg 0 string.charAt '-' == if
       arg .length 2:iSize u< if
-        io.stdErr "invalid argument \"-\"" io.fputs ..drop
+        file.stdErr "invalid argument \"-\"":s file.write ..drop
         1 + continue
       end
       arg 1 string.charAt switch
@@ -183,7 +183,7 @@ proc( -> ) =>: parseArgs
       0 sys.exit
       ..unreachable
     end
-    io.stdErr "no input file specified\n" io.fputs ..drop
+    file.stdErr "no input file specified\n":s file.write ..drop
     path printUsage
     srcPath sb.free
     outPath sb.free
@@ -221,7 +221,7 @@ proc( -> ) =>: parseArgs
   hasLib ! if
     "./lib/":s libPath=
   else libPath $ .length 1:iSize - string.charAt ..dup '/' != ..swap '\\' != & _if
-    io.stdErr "library path has to end with '/' or '\\'\n" io.fputs ..drop
+    file.stdErr "library path has to end with '/' or '\\'\n":s file.write ..drop
     srcPath sb.free
     outPath sb.free
     1 sys.exit

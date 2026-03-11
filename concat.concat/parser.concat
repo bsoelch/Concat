@@ -2152,8 +2152,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   state appendOp
   return
 end
-proc( FileId : includedId io.IOError : err FilePosition : pos ParserState ptr.mut : state -> FileId ) =>: checkIOError
-  using io.
+proc( FileId : includedId file.Error : err FilePosition : pos ParserState ptr.mut : state -> FileId ) =>: checkIOError
+  using file.Error.
   err FILE_ERROR_NONE == if
     includedId return ## exit early on normal path
   end
@@ -2289,7 +2289,7 @@ proc(
   stringBuilder : fileName
   bool : isLibFile
   ParserState ptr.mut : state
--> FileId io.IOError ) =>: parseFile
+-> FileId file.Error ) =>: parseFile
   fileName
     state [] .progContext =:: progContext
     state [] .parsedOps =:: oldOps
@@ -2320,7 +2320,7 @@ proc(
     =:: fileBody
     $ .error =:: readError
   file.close
-  readError io.FILE_ERROR_NONE != if
+  readError file.Error.FILE_ERROR_NONE != if
     prevFile state .currentFile= ## reset file id
     wasLibFile progContext .inLibFile=
     fileId readError return
@@ -2372,5 +2372,5 @@ proc(
   wasLibFile progContext .inLibFile=
   state [] .parsedOps list.free ..drop
   oldOps state .parsedOps=
-  newFileId io.FILE_ERROR_NONE return
+  newFileId file.Error.FILE_ERROR_NONE return
 end
