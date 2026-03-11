@@ -1,7 +1,6 @@
 import list
 import string
-import stringIO
-import numbers/printNumbers
+import file
 using std.literals.
 
 import "program.concat"
@@ -894,7 +893,7 @@ proc(
   return
 end
 
-proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compileToASM
+proc( file.FILE : target ProgramContext ptr.mut : program -> file.FILE ) =>: export: compileToASM
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -941,12 +940,14 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
       end
     end
   =:: ops
-  ops .length 8 * sb.create
-    ops for
-      contextData .asmContext asm.appendAtom
-    end
-    target $1 io.fputSb ..drop
-  sb.free ..drop
-  ops list.free ..drop
-  ## TODO cleanup context
+  target
+    ops .length 8 * sb.create
+      ops for
+        contextData .asmContext asm.appendAtom
+      end
+      >$ $1 sb.asStr file.write <$
+    sb.free ..drop
+    ops list.free ..drop
+    ## TODO cleanup context
+  return
 end

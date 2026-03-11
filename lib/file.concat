@@ -1,8 +1,24 @@
 import io
 namespace: file
+  i8 =:: Flags
+  namespace: Flags
+    0x00 Flags =: NONE
+    0x01 Flags =: NO_CLOSE
+    proc( Flags Flags -> Flags ) : alias: or i8.or
+    proc( Flags Flags -> Flags ) : alias: and i8.and
+    proc( Flags Flags -> Flags ) : alias: xor i8.xor
+    proc( Flags -> bool ) : alias: toBool i8.toBool
+  end
+end
+overload: merge: & file.Flags.and end
+overload: merge: | file.Flags.or end
+overload: merge: ^ file.Flags.xor end
+overload: merge: ? file.Flags.toBool end
+namespace: file
   struct(
     io.FILE : file
     io.IOError : error
+    Flags : flags
   ) =:: export: FILE
   ## TODO? more modes: read+append ?
   enum( READ WRITE APPEND READ_WRITE ) =:: export: OpenMode
@@ -12,6 +28,9 @@ namespace: file
   proc( FILE -> FILE ) =>: export: clearError
     io.FILE_ERROR_NONE >$ .error=
   end
+  proc( -> FILE ) =>: export: stdIn  io.stdIn  io.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdOut io.stdOut io.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdErr io.stdErr io.FILE_ERROR_NONE Flags.NO_CLOSE FILE new end
 
   proc( string : fileName OpenMode : openMode -> FILE ) =>: export: open
     openMode switch
@@ -23,30 +42,40 @@ namespace: file
     fileName .data fileName .length ioOpenMode io.fopen
       =:: ioError
     =:: file
-    file ioError FILE new
+    file ioError Flags.NONE FILE new
+  end
+  ## TODO? io buffering?
+  proc( FILE string : mut: s -> FILE ) =>: export: write
+    $ isErr if return end
+    while s .length 0 != do
+      $ .file
+        s .data 0 s .length io.fwrite >$ =:: nWritten
+      >$ .error=
+    finally
+      $ isErr if return end
+      s nWritten string.tail s=
+    end
   end
   ## TODO? ( FILE buffer count -> FILE ) read / ( FILE string -> FILE ) write
-  proc( FILE : f0 -> FILE stringBuilder ) =>: export: readAll
-    f0 isErr if f0 0 sb.create return end
-    f0 =:: mut: f
-    256 sb.create =:: mut: sb
+  proc( FILE : mut: f stringBuilder -> FILE stringBuilder ) =>: export: readTo
+    f isErr if f >$ return end
     while
-      sb
-        $ .length 2 * sb.ensureCap
-      sb=
-      f .file sb .data sb .length sb sb.getCapacity sb .length - io.fread f@ .error= =:: nRead
-      sb .length
-        nRead +
-      sb@ .length=
+      $ .length $ 2 * >$ 8192 + iSize.min sb.ensureCap
+      f .file $1 .data $2 .length $3 sb.getCapacity $1 - io.fread f@ .error= =:: nRead
+      $ .length nRead + >$ .length=
       f isOk
     end
     f
       $ .error io.FILE_ERR_END_OF_FILE == if ## do not treat end of file as error
         io.FILE_ERROR_NONE >$ .error=
       end
-    sb return
+    >$ return
+  end
+  proc( FILE -> FILE stringBuilder ) =>: export: readAll
+    256 sb.create readTo
   end
   proc( FILE -> ) =>: export: close
+    $ .flags Flags.NO_CLOSE & ? if ..drop return end
     .file io.fclose ..drop
   end
 end

@@ -1,10 +1,9 @@
-import stringIO
+import print
 import sys
 
 proc( -> ) =>: main
   0:i64 while ..dup sys.argc < do
-    ..dup sys.getArg string.create io.stdOut ..swap io.fputStr ..drop
-    io.stdOut '\n' io.fputc ..drop
+    ..dup sys.getArg string.create io.println
     1 +
   end ..drop
 end

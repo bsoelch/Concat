@@ -1,0 +1,24 @@
+import optional
+import numbers/print
+using std.literals.
+
+proc( i32 optional -> ) =>: printOption
+  .if
+    "wrap(":s io.print
+    io.print
+    ")":s io.println
+  else
+    "empty":s io.println
+  end
+end
+proc( i32 optional -> ) =>: getOrDefault
+  .else -1 end io.println
+end
+
+proc( -> ) =>: main
+ 1 optional.wrap printOption
+ i32 optional.empty printOption
+ 
+ 3 optional.wrap getOrDefault
+ i32 optional.empty getOrDefault
+end

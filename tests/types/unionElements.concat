@@ -1,5 +1,4 @@
-import stringIO
-import numbers/printNumbers
+import numbers/print
 using std.literals.
 
 union(

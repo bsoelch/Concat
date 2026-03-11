@@ -1,5 +1,5 @@
 import numbers
-import stringIO
+import print
 
 proc( -> ) =>: main
   0 sb.create
@@ -14,6 +14,6 @@ proc( -> ) =>: main
     1.55 2 sb.appendF? '\n' sb.appendC
     1.234 -1 sb.appendF? '\n' sb.appendC
     
-    io.stdOut ..over io.fputSb ..drop
+    $ sb.asStr io.print
   sb.free ..drop
 end

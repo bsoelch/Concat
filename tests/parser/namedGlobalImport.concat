@@ -1,4 +1,4 @@
-import stringIO
+import print
 
 using std.literals.
 using: println io.println

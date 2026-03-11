@@ -1,7 +1,7 @@
 import mem
 
 ## DEBUG imports
-import numbers/printNumbers
+import numbers/print
 using std.literals.
 
 ( type : T -> type ) =>: rcSliceHeader

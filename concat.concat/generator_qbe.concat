@@ -1,5 +1,5 @@
 import string
-import stringIO
+import file
 using std.literals.
 
 import "program.concat"
@@ -3925,7 +3925,7 @@ proc( CompilerContext ptr.mut : context -> ) =>: cleanupCompilerContext
   context .ptrConstants=
   ( LocalLabelId : ignore -> ) => end LabelState.free@ context .labelStates map.freeAll
 end
-proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compileToQBE
+proc( file.FILE : mut: target ProgramContext ptr.mut : program -> file.FILE ) =>: export: compileToQBE
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -4000,7 +4000,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         valType idData [] .declaredAt context typeSizeInt sb.appendI
       end
       "}\n" sb.appendS
-      target $1 io.fputSb ..drop
+      target $1 sb.asStr file.write target=
       sb.clear
     sb=
   end ..drop
@@ -4040,7 +4040,7 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         impl .code .length for i32 cast.u =:: opIndex
           impl .code opIndex @[] opIndex context compileOp
         end
-        target $1 io.fputSb ..drop
+        target $1 sb.asStr file.write target=
         sb.clear
       end
       impl .implementations for =:: genericImpl
@@ -4048,12 +4048,12 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
           genericImpl .code .length for i32 cast.u =:: opIndex
             genericImpl .code opIndex @[] opIndex context compileOp
           end
-          target $1 io.fputSb ..drop
+          target $1 sb.asStr file.write target=
           sb.clear
         end
       end
     end
-    target $1 io.fputSb ..drop
+    target $1 sb.asStr file.write target=
     sb.clear
     context [] .stringConstants .length for =:: i
       context [] .stringConstants i [] =:: str
@@ -4076,12 +4076,12 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
         val context sb.appendPtrConstDataQBE
       "}\n" sb.appendS
     finally i 1:iSize + end ..drop
-    target $1 io.fputSb ..drop
+    target $1 sb.asStr file.write target=
     sb.clear
     mainId id.LABEL_ID_NONE == if ## no main
       sb.free ..drop
       context cleanupCompilerContext
-      return
+      target return
     end
     program [] .hasGetArgs if
       "data $" sb.appendS
@@ -4109,7 +4109,8 @@ proc( io.FILE : target ProgramContext ptr.mut : program -> ) =>: export: compile
     end
     mainId -1 context sb.appendGlobalName
     "()\nret 0\n}\n" sb.appendS
-    target $1 io.fputSb ..drop
+    target $1 sb.asStr file.write target=
   sb.free ..drop
   context cleanupCompilerContext
+  target
 end

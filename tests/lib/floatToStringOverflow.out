@@ -1,0 +1,4 @@
+stack:
+-----------------
+f32 { 1000 } pushed at ./tests/lib/floatToStringOverflow.concat:2:3
+-----------------

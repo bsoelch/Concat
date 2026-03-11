@@ -1,10 +1,10 @@
-import stringIO
 import list
 import itrs/list
 import slice
 import string
 import numbers
 import unicode
+import file
 using std.literals.
 
 import "program.concat"
@@ -2300,9 +2300,9 @@ proc(
     ..dup ..over .length 1:iSize - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
     end
-    ..dup .length 1:iSize - sb.setLength ## do not include zero terminator in length
+    $ .length 1:iSize - sb.setLength ## do not include zero terminator in length
     progContext [] .progFiles .length FileId cast =:: fileId
-    ..dup sb.asStr fileId 0 1 FilePosition new ..dup FileState new =:: mut: fileState
+    $ sb.asStr fileId 0 1 FilePosition new ..dup FileState new =:: mut: fileState
     progContext [] .progFiles
       ..over fileId newProgFile list.append
     progContext .progFiles=
@@ -2310,27 +2310,21 @@ proc(
   progContext [] .inLibFile =:: wasLibFile
   isLibFile progContext .inLibFile=
   fileId state .currentFile=
-  $ .data >$ .length 1:iSize + #+include zero-terminator after file-name+# io.OPEN_READ io.fopen
-    $ io.FILE_ERROR_NONE != if =:: openError
-      ..drop ## discard code file
-      prevFile state .currentFile= ## reset file id
-      wasLibFile progContext .inLibFile=
-      fileId openError return
-    end ..drop =:: f
-    128 sb.create
+    $ .length 1:iSize + sb.setLength ## include zero terminate for open
+  sb.asStr file.OpenMode .READ file.open
+    ## TODO the newline at the file-start and end feely a bit hacky...
+    1024 sb.create
       '\n' sb.appendC
-      f sb.appendFile =:: readError
+      file.readTo
       '\n' sb.appendC
     =:: fileBody
-  f io.fclose $ io.FILE_ERROR_NONE != or readError io.FILE_ERROR_NONE != if =:: closeError
-      prevFile state .currentFile= ## reset file id
-      wasLibFile progContext .inLibFile=
-      readError io.FILE_ERROR_NONE != if
-        fileId readError return
-      else
-        fileId closeError return
-      end
-  end ..drop
+    $ .error =:: readError
+  file.close
+  readError io.FILE_ERROR_NONE != if
+    prevFile state .currentFile= ## reset file id
+    wasLibFile progContext .inLibFile=
+    fileId readError return
+  end
   state [] .openBlocks .length =:: blockCount
   labelContext id.currentNamespace =:: prevNamespace
   labelContext id.clearNamespace

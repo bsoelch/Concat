@@ -1,5 +1,5 @@
 import numbers/printInt
-import stringIO
+import print
 
 proc( -> ) =>: main
   16 sb.create
@@ -12,6 +12,6 @@ proc( -> ) =>: main
    -0x8000_0000_0000_0000 sb.appendI    '\n' sb.appendC
    -1:i64                 sb.appendU    '\n' sb.appendC
    -1:i64                 sb.appendUBin '\n' sb.appendC
-   io.stdOut ..over io.fputSb io.FILE_ERROR_NONE == "fputSb works" assert
+    $ sb.asStr io.print
   sb.free ..drop
 end

@@ -1,4 +1,4 @@
-import stringIO
+import print
 import stringBuilder
 
 proc( -> ) =>: main 
@@ -7,6 +7,6 @@ proc( -> ) =>: main
     ' '     sb.appendC
     "World" sb.appendS
     '\n'    sb.appendC
-    io.stdOut ..over io.fputSb io.FILE_ERROR_NONE == "fputSb works" assert
+    $ sb.asStr io.print
   sb.free ..drop
 end

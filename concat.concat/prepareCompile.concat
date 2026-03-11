@@ -4,7 +4,6 @@ common first step for all compiler back-ends:
 * limit size of stack-values
 * explicitly create temporary variables for copy/output arguments
 +#
-import stringIO
 import arenaAlloc
 
 import "program.concat"

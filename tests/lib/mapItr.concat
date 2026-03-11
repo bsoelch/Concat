@@ -3,7 +3,7 @@ import map
 import io
 import stringBuilder
 import numbers/printInt
-import stringIO
+import print
 
 proc( i32 -> i32 ) =>: i32Hash end
 proc( i32 i32 -> bool ) =>: i32Eq  == end
@@ -25,7 +25,7 @@ proc( -> ) =>: main
         ": " sb.appendS
         val sb.appendI
         '\n' sb.appendC
-      io.stdOut >$ io.fputSb ..drop
+      sb.asStr io.print
     end
  map.free
 end

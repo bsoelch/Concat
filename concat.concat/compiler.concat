@@ -244,9 +244,9 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
         true hasError=
       end
     end
-    errorFile .if io.OPEN_WRITE io.fopenStr ..drop else io.stdErr end
-      ..dup ..over.2 io.fputSb ..drop
-    errorFile optional.hasData if io.fclose ..drop else ..drop end ## don't close stdErr
+    errorFile .if file.OpenMode .WRITE file.open else file.stdErr end
+      $1 sb.asStr file.write
+    file.close
   sb.free ..drop
   hasError if
     1 sys.exit
@@ -268,9 +268,9 @@ proc( -> ProgramContext ) =>: parseAndTypeCheck
     1024 sb.create
       prog@ sb.appendProgram
     =:: parsedOps
-    tmpPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop
-      ..dup parsedOps io.fputSb ..drop
-    io.fclose ..drop
+    tmpPath sb.asStr file.OpenMode .WRITE file.open
+      parsedOps sb.asStr file.write
+    file.close
     parsedOps sb.free ..drop
   end
   prog@ .errors checkErrors
@@ -295,10 +295,10 @@ proc( -> ) =>: main ## TODO check return value of fopen
       baseName sb.appendStr
       ".tokens.typeChecker":s sb.appendStr
     tmpPath=
-    tmpPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop
-      ..dup parsedOps io.fputSb ..drop
-      ..dup "\n-----------------\n" io.fputs ..drop
-    io.fclose ..drop
+    tmpPath sb.asStr file.OpenMode .WRITE file.open
+      parsedOps sb.asStr file.write
+      "\n-----------------\n":s file.write
+    file.close
     parsedOps sb.free ..drop
   end
   prog@ .errors checkErrors
@@ -312,18 +312,18 @@ proc( -> ) =>: main ## TODO check return value of fopen
       baseName sb.appendStr
       ".tokens.preCompile":s sb.appendStr
     tmpPath=
-    tmpPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop
-      ..dup parsedOps io.fputSb ..drop
-    io.fclose ..drop
+    tmpPath sb.asStr file.OpenMode .WRITE file.open
+      parsedOps sb.asStr file.write
+    file.close
     parsedOps sb.free ..drop
   end
   prog@ .errors checkErrors
-  outPath sb.asStr io.OPEN_WRITE io.fopenStr ..drop  =:: targetFile
+  outPath sb.asStr file.OpenMode .WRITE file.open
     _BACKEND_ switch
-      QBE case targetFile prog@ compileToQBE break
-      ASM case targetFile prog@ compileToASM break
+      QBE case prog@ compileToQBE break
+      ASM case prog@ compileToASM break
     end
-  targetFile io.fclose ..drop
+  file.close
   prog@ .errors checkErrors
   prog freeProgramContext ..drop
   0 =:: mut: retCode

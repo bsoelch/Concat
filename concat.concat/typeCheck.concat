@@ -374,7 +374,7 @@ proc(
   end ..drop
   sb
     "-----------------\n" sb.appendS
-    io.stdOut ..over io.fputSb ..drop
+    $ sb.asStr io.print
   sb.free ..drop
 end
 
@@ -385,7 +385,7 @@ proc( string : msg Operation : op i64 : errLine TypeCheckState ptr.mut : state -
     ..file sb.appendS ':' sb.appendC errLine sb.appendI
     " while type-checking operation " sb.appendS
     op state [] .program sb.appendOp
-  io.stdOut >$ io.fputSb
+  sb.asStr io.print
   1 sys.exit
   ..unreachable
 end
@@ -397,7 +397,7 @@ proc( string : msg FilePosition : codePos i64 : errLine -> ) =>: internalErrorNo
     " while type-checking operation at " sb.appendS
     codePos sb.appendPos
     '\n' sb.appendC
-  io.stdOut >$ io.fputSb
+  sb.asStr io.print
   1 sys.exit
   ..unreachable
 end
@@ -5541,7 +5541,7 @@ proc(
               "-----------------\n" sb.appendS
               op .pos state popType depth typeContext sb.appendTypeLayout
               "\n-----------------\n" sb.appendS
-              io.stdOut $1 io.fputSb ..drop
+              $ sb.asStr io.print
               sb.clear
             program .tmpString=
             continue.opLoop
@@ -5586,7 +5586,7 @@ proc(
                 i 1:iSize +
               end ..drop
               "-----------------\n" sb.appendS
-              io.stdOut $1 io.fputSb ..drop
+              $ sb.asStr io.print
               sb.clear
             program .tmpString=
             matches list.free ..drop

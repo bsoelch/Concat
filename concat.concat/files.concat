@@ -1,4 +1,3 @@
-import stringIO
 import numbers
 import chars
 import string

@@ -1,4 +1,0 @@
-stack:
------------------
-f32 { 1000 } pushed at ./tests/lib/printFloatOverflow.concat:2:3
------------------

@@ -12,7 +12,7 @@ A (partial) description of the syntax can be found in the `doc` folder <!-- TODO
 
 Hello World:
 ```
-import stringIO
+import print
 using std.literals.
 
 proc( -> ) =>: main
@@ -26,7 +26,7 @@ Print prime factors:
 Prints all prime factors of a given number
 +#
 import stringBuilder
-import stringIO
+import print
 import numbers/printInt
 ## define overloaded <+ operator to simplify string building
 overload: <+ sb.appendC sb.appendS sb.appendI64 end
@@ -45,7 +45,7 @@ proc( i64 : n -> ) =>: printFactors
   256 sb.create
     "the factors of " <+ n <+ " are:" <+
     n appendFactors '\n' <+
-    io.stdOut $1 io.fputSb ..drop
+    $ sb.asStr io.print
   sb.free ..drop
 end
 

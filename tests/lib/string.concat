@@ -1,6 +1,5 @@
 import string
-import io
-import stringIO
+import print
 
 proc( -> ) =>: main
   "Hello World!" string.wrap io.println
@@ -13,13 +12,8 @@ proc( string : str char8 : chr -> ) =>: printSplit
   0 =:: mut: i
   str 
   while
-    chr string.split printStr
+    chr string.split io.println
     $ .length 0:iSize u>
   do end ..drop
-end
-
-proc( string : str -> ) =>: printStr
-  io.stdOut str .data 0:iSize str .length io.fwrite ..drop.2
-  io.stdOut  '\n' io.fputc ..drop
 end
 

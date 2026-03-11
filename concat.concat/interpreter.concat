@@ -1,6 +1,7 @@
 import map
 import arenaAlloc
 import string
+import print
 using std.literals.
 
 import "interpreter/operators.concat"
@@ -1023,7 +1024,7 @@ namespace: interpreter
     finally i 1:iSize - end ..drop
     sb
       "-----------------\n" sb.appendS
-      io.stdOut $1 io.fputSb ..drop
+      $ sb.asStr io.println
     sb.free ..drop
   end
 end

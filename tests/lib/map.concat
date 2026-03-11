@@ -4,7 +4,7 @@ import optional
 import io
 import stringBuilder
 import numbers/printInt
-import stringIO
+import print
 using std.literals.
 
 proc( i32 -> i32 ) =>: i32Hash end
