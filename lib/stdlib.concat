@@ -10,8 +10,8 @@ import math
 import mem
 import numbers/i128
 import numbers/f128
-import numbers/printFloat
-import numbers/printInt
+import numbers/intToStr
+import numbers/floatToStr
 import print
 import numbers/print
 import numbers

@@ -2,7 +2,7 @@ import map
 
 import io
 import stringBuilder
-import numbers/printInt
+import numbers/intToStr
 import print
 
 proc( i32 -> i32 ) =>: i32Hash end

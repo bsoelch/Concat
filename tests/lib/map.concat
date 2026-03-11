@@ -3,7 +3,7 @@ import optional
 
 import io
 import stringBuilder
-import numbers/printInt
+import numbers/intToStr
 import print
 using std.literals.
 

@@ -1,5 +1,5 @@
-import numbers/printInt ## TODO better name (printInt does not contain print procs for ints)
-import numbers/printFloat
+import numbers/intToStr
+import numbers/floatToStr
 import print
 
 namespace: io

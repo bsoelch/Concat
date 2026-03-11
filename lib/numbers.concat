@@ -1,8 +1,8 @@
 import core/integers
 import core/floats
 
-import numbers/printFloat
-import numbers/printInt
+import numbers/floatToStr
+import numbers/intToStr
 import string
 
 namespace: number

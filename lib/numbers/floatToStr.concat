@@ -2,7 +2,7 @@ import core/integers
 import core/floats
 
 import stringBuilder
-import numbers/printInt
+import numbers/intToStr
 import math
 
 proc( i32 -> char8 ) =>: getDigit

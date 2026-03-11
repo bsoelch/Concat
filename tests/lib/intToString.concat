@@ -1,4 +1,4 @@
-import numbers/printInt
+import numbers/intToStr
 import print
 
 proc( -> ) =>: main
