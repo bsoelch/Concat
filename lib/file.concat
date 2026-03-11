@@ -1,4 +1,16 @@
 import io
+namespace: c
+  proc.c( io.FILE : file -> i32 ) : extern: fgetc
+end
+namespace: io
+  proc( -> char8 optional ) =>: getChar
+    io.stdIn fgetc $ 0 > if
+      char8 cast.u optional.wrap return
+    else ..drop
+      char8 optional.empty return
+    end
+  end
+end
 namespace: file
   i8 =:: Flags
   namespace: Flags
@@ -44,6 +56,7 @@ namespace: file
     =:: file
     file ioError Flags.NONE FILE new
   end
+  ## TODO read
   ## TODO? io buffering?
   proc( FILE string : mut: s -> FILE ) =>: export: write
     $ isErr if return end
@@ -56,7 +69,6 @@ namespace: file
       s nWritten string.tail s=
     end
   end
-  ## TODO? ( FILE buffer count -> FILE ) read / ( FILE string -> FILE ) write
   proc( FILE : mut: f stringBuilder -> FILE stringBuilder ) =>: export: readTo
     f isErr if f >$ return end
     while

@@ -3,7 +3,6 @@ Compile-time Brainfuck interpreter
 +#
 import stringBuilder
 import list
-import io
 
 proc( i64 : ip string : code -> i64 ) =>: skipLoop
   1 =:: mut: n

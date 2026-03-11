@@ -2,7 +2,6 @@
 import array
 import slice
 import chars
-import io
 import list
 import map
 import math

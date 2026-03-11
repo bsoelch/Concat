@@ -3,7 +3,8 @@ simple Brainfuck interpreter
 +#
 import string
 import list
-import io
+import file
+import print
 using std.literals. ## move literals to top-level namespace
 
 proc( string -> i8 ) =>: runBf_0
@@ -32,11 +33,11 @@ proc( string : code i64 : tapeCap -> i8 ) =>: runBf_C
       '-' case tape mp [] 1 - tape mp =[] break
       '>' case mp 1 + tapeCap %% mp= break
       '<' case mp 1 - tapeCap %% mp= break
-      '.' case tape mp [] char8 cast io.putc ..drop break
+      '.' case tape mp [] char8 cast io.print break
       ',' case
-          io.getChar io.FILE_ERROR_NONE == if
+          io.getChar .if
             i8 cast tape mp =[]
-          else ..drop
+          else
             0:i8 tape mp =[]
           end
           break
