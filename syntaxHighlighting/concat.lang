@@ -270,9 +270,9 @@
           string(8|16|32)             |
           stringBuilder               |
           MixedArenaAllocator         |
-          (io\.)?FILE                 |
-          (io\.)?IOError              |
-          (io\.)?OpenMode
+          (file\.)?FILE               |
+          file\.Error                 |
+          file\.OpenMode
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
