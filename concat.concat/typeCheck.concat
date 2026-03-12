@@ -434,6 +434,11 @@ proc(
     true return
   end
   state [] .compiledOps src .opIndex @[] =:: srcOp
+  ## TODO! check if this needs to be more strict
+  src .valueType typeContext types.isPointer and target typeContext types.isPointer if
+    target srcOp .dataType=
+    false return
+  end
   srcOp [] .val .Constant ? ! if
     true return
   end
@@ -1220,19 +1225,22 @@ proc(
   op [] .val .Constant ? if
     true return
   end
+  op [] .val .AtId .if
+    .idType .GLOBAL_VAR return
+  else ..drop end
   op [] .val .GetId .if .labelId =:: labelId
-      state [] .program .idContext =:: idContext
+    state [] .program .idContext =:: idContext
+    labelId
+      idContext .typeContext .labelContext id.labelFlags
+    id.FLAG_MUTABLE & ? if
+      false return
+    end
+    ## getIdentifier
       labelId
-        idContext .typeContext .labelContext id.labelFlags
-      id.FLAG_MUTABLE & ? if
-        false return
-      end
-      ## getIdentifier
-        labelId
-        idContext
-      id.getIdentifier if ..drop
-        false return
-      end .constValue .None ? ! return
+      idContext
+    id.getIdentifier if ..drop
+      false return
+    end .constValue .None ? ! return
   else ..drop end
   false return
 end
@@ -2973,7 +2981,11 @@ proc(
                 op .dataType
                   mutable
                 typeContext types.getAddressType
-                ConstValue .None
+                idInfo .idType .GLOBAL_VAR if
+                  labelId ConstValue .GlobalPointer
+                else
+                  ConstValue .None
+                end
                 op
               state pushValue
             end

@@ -692,7 +692,7 @@ namespace: interpreter
       ## don't copy pointers
       localArray return
     end
-    ConstValue ..length 22:iSize == "no new constants" assert
+    ConstValue ..length 23:iSize == "no new constants" assert
     localArray switch
       LocalArray .case break
       LocalArray8 .case i8 slice.mut cast =:: arrayData
@@ -741,7 +741,7 @@ namespace: interpreter
       else
         valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
-      ConstValue ..length 22:iSize == "no new constants" assert
+      ConstValue ..length 23:iSize == "no new constants" assert
       elt switch
         LocalValue .case ConstValue ptr.mut cast [] break
         LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
@@ -768,7 +768,7 @@ namespace: interpreter
       context .localMemory=
       localAddress LocalAddress cast ConstValue .LocalValue return
     end
-    ConstValue ..length 22:iSize == "no new constants" assert
+    ConstValue ..length 23:iSize == "no new constants" assert
     value switch
       Array LocalArray case break
       Array8 .case =:: arrayValue
@@ -937,7 +937,7 @@ namespace: interpreter
     type : T
   -> bool ) =>: primitiveArrayTrySetElement
     localArray T slice.mut cast =:: arrayData
-    ConstValue ..length 22 == "no new constants" assert
+    ConstValue ..length 23 == "no new constants" assert
     src switch
       Char case src .Char i64 cast.u break
       Int case src .Int break
@@ -1649,7 +1649,7 @@ proc(
         context [] .stackInfo
           list.peek optional.unwrap [] .valueType
         =:: valType
-        ConstValue ..length 22:iSize == "no new constants" assert
+        ConstValue ..length 23:iSize == "no new constants" assert
         value [] switch
           LocalValue .case
             ConstValue ptr.mut cast [] value =[]

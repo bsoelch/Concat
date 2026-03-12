@@ -34,6 +34,7 @@ union(
   Type : TypeId
   _ : WildCard
   LabelId : GenericArg
+  LabelId : GlobalPointer
   ProcId : Procedure
   ProcBundleId : ProcedureBundle
   UnionConstant : Union
@@ -150,6 +151,7 @@ proc( ConstValue : a ConstValue : b -> i32 ) =>: export: constantCmp
     Procedure .case i64 cast.u b .Procedure unionElement.unwrap i64 cast.u i64.cmp return
     ProcedureBundle .case i64 cast.u b .ProcedureBundle unionElement.unwrap i64 cast.u i64.cmp return
     GenericArg .case i64 cast.u b .GenericArg unionElement.unwrap i64 cast.u i64.cmp return
+    GlobalPointer .case i64 cast.u b .GlobalPointer unionElement.unwrap i64 cast.u i64.cmp return
     Union .case =:: aUnion
       b .Union unionElement.unwrap =:: bUnion
       aUnion .eltIndex bUnion .eltIndex != if
@@ -212,33 +214,34 @@ proc( ConstValue : a -> i32 ) =>: export: constantHash
     Procedure .case i32 cast.u 1 + 41 * return
     ProcedureBundle .case i32 cast.u 1 + 43 * return
     GenericArg .case i32 cast.u 1 + 47 * return
+    GlobalPointer .case i32 cast.u 1 + 53 * return
     Union .case =:: unionVal
       unionVal .eltIndex
         31 * unionVal .value [] constantHash +
-      53 * return
+      57 * return
     LocalValue .case ## identity hash for identity comparisson
-      ConstValue ptr.raw cast iSize cast! i64 cast.u $ 32 >>> >$ + i32 cast.u 57 * return
+      ConstValue ptr.raw cast iSize cast! i64 cast.u $ 32 >>> >$ + i32 cast.u 59 * return
     ## local arrays are only equal if memory ranges coincide
     LocalArray .case =:: arrayData
       arrayData .data iSize cast! 31:iSize *
         arrayData .length +
-      i64 cast.u $ 32 >>> >$ + i32 cast.u 59 * return
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 61 * return
     LocalArray8 .case =:: arrayData
       arrayData .data iSize cast! 31:iSize *
         arrayData .length +
-      i64 cast.u $ 32 >>> >$ + i32 cast.u 61 * return
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 67 * return
     LocalArray16 .case =:: arrayData
       arrayData .data iSize cast! 31:iSize *
         arrayData .length +
-      i64 cast.u $ 32 >>> >$ + i32 cast.u 67 * return
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 71 * return
     LocalArray32 .case =:: arrayData
       arrayData .data iSize cast! 31:iSize *
         arrayData .length +
-      i64 cast.u $ 32 >>> >$ + i32 cast.u 71 * return
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 73 * return
     LocalArray64 .case =:: arrayData
       arrayData .data iSize cast! 31:iSize *
         arrayData .length +
-      i64 cast.u $ 32 >>> >$ + i32 cast.u 73 * return
+      i64 cast.u $ 32 >>> >$ + i32 cast.u 79 * return
   end
 end
 namespace: constant
@@ -531,7 +534,11 @@ namespace: sb
           break
         GenericArg .case i64 cast sb.appendI
           ":LabelId"  sb.appendS
-          ## XXX? print label
+          ## TODO? print label
+          break
+        GlobalPointer .case
+          typeContext .labelContext sb.appendLabelPath
+          '@' sb.appendC
           break
         Union .case =:: unionVal
           "union element ("  sb.appendS

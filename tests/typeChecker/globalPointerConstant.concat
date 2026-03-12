@@ -1,0 +1,8 @@
+0 =:: x
+x@ =:: y
+0 =:: xMut
+xMut@ =:: z
+proc( -> ) =>: main
+  y x@ == "x" assert
+  z xMut@ == "xMut" assert
+end

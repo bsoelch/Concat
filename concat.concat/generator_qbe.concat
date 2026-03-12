@@ -743,7 +743,7 @@ namespace: sb
     typeContext .labelContext =:: labelContext
     constant [] .value =:: value
     constant [] .valType types.isPrimitive or constant [] .valType .IntLiteral ? and
-        ConstValue ..length 22:iSize == "no new constants" assert
+        ConstValue ..length 23:iSize == "no new constants" assert
         value switch
           Array8  .case .length 0:iSize == break
           Array16 .case .length 0:iSize == break
@@ -1014,6 +1014,7 @@ namespace: sb
             -1
           context appendGlobalName
           return
+        GlobalPointer .case -1 context appendGlobalName return
         None WildCard TypeId LocalValue LocalArray
             LocalArray8 LocalArray16 LocalArray32 LocalArray64
             ProcedureBundle case
