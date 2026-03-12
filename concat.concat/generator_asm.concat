@@ -108,6 +108,7 @@ union(
 ) =:: RegisterUse
 struct(
   RegisterUse : uses
+  bool : moving
 ) =:: RegisterInfo
 struct(
   ValueLocation : permanentLocation
@@ -156,7 +157,7 @@ end
 proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: addLocation
   loc .None ? if return end
   context .registerInfo regId map.at .else
-    context .registerInfo regId loc RegisterUse .Val RegisterInfo new map.put ..drop
+    context .registerInfo regId loc RegisterUse .Val false RegisterInfo new map.put ..drop
     regId context usedRegister
     return
   end =:: regInfo
@@ -517,6 +518,7 @@ proc(
   ValueLocation : loc
   TypedValue : src
   TypedValue : dst
+  RegisterState : targetState
   FilePosition : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: restoreValue
@@ -531,7 +533,9 @@ proc(
   end
   ## 2. mark value as moving
   src .value .Register .if =:: srcReg
-    ## TODO mark register as moving
+    context .registerInfo srcReg map.at .if
+      true >$ .moving= ## TODO mark register as no longer moving once move is complete
+    end
   else .Int ? ! and src .value .Float ? ! _if
     "unsupported source value: " sb.copyPtr
       dst .value context [] .asmContext asm.appendValue
@@ -540,11 +544,18 @@ proc(
   dst .value .Register .if =:: dstReg
     ## 3. clear destination slot if neccessary (detect move-loops)
     context .registerInfo dstReg map.get .if =:: regInfo
-      regInfo .uses .None ? ! if
-        ## TODO clear register
-        "failed to clear register " sb.copyPtr
-          dst .value context [] .asmContext asm.appendValue
-        pos errors appendWarning
+      regInfo .uses switch
+        None case break
+        Val .case =:: regUse
+          ## TODO 1. find target location for regUse
+          ## 2a. if target-register not moving: recursively start move of target-register
+          ## 2b. if target-register moving: move target to tmp-var, update register
+        break
+        default ## TODO for multi-use: pick most convenient target among uses
+          "multi-use registers are not yet supported" sb.copyPtr
+            dst .value context [] .asmContext asm.appendValue
+          pos errors appendWarning
+        break
       end
     end
   else ..drop
@@ -577,18 +588,18 @@ proc(
     end
     srcVal switch
       Val .case =:: srcElt
-        i ValueLocation .Stack srcElt targetVal .Val unionElement.unwrap pos context restoreValue
+        i ValueLocation .Stack srcElt targetVal .Val unionElement.unwrap state pos context restoreValue
       break
       Val2 .case =:: srcElts
         targetVal .Val2 unionElement.unwrap =:: targetElts
-        i ValueLocation .Stack srcElts .0 targetElts .0 pos context restoreValue
-        i ValueLocation .Stack2 srcElts .1 targetElts .1 pos context restoreValue
+        i ValueLocation .Stack srcElts .0 targetElts .0 state pos context restoreValue
+        i ValueLocation .Stack2 srcElts .1 targetElts .1 state pos context restoreValue
       break
       Val3 .case =:: srcElts
         targetVal .Val3 unionElement.unwrap =:: targetElts
-        i ValueLocation .Stack srcElts .0 targetElts .0 pos context restoreValue
-        i ValueLocation .Stack2 srcElts .1 targetElts .1 pos context restoreValue
-        i ValueLocation .Stack3 srcElts .2 targetElts .2 pos context restoreValue
+        i ValueLocation .Stack srcElts .0 targetElts .0 state pos context restoreValue
+        i ValueLocation .Stack2 srcElts .1 targetElts .1 state pos context restoreValue
+        i ValueLocation .Stack3 srcElts .2 targetElts .2 state pos context restoreValue
       break
     end
   end
