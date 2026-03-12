@@ -18,14 +18,10 @@ namespace: file
     8 Error =: export: INVALID_FILE
   end
 end
+## TODO: move low-level code to platform dependent section of library
 namespace: c
   ..ctype.struct ptr.mut =:: export: FILE
-  ## wrapper functions to allow interoperability with lib-c code
-  proc.c( -> FILE ) : extern: concatIOHelper_stdin
-  proc.c( -> FILE ) : extern: concatIOHelper_stdout
-  proc.c( -> FILE ) : extern: concatIOHelper_stderr
-  proc.c( -> ) : extern: concatIOHelper_resetErrno
-  proc.c( -> file.Error ) : extern: concatIOHelper_checkErrno
+  ..ctype.struct ptr.mut =:: DIR
   proc.c(
     ..ctype.char ptr.raw : mode
     ..ctype.char ptr.raw : path
@@ -48,6 +44,16 @@ namespace: c
   -> ..ctype.size ) : extern: fwrite
   proc.c( FILE : file -> ..ctype.int ) : extern: fflush
   proc.c( FILE : file -> ..ctype.int ) : extern: fclose
+  proc.c( ..ctype.char ptr.raw -> DIR ) : extern: opendir
+  proc.c( DIR -> ..ctype.int ) : extern: closedir
+  ## wrapper functions to allow interoperability with lib-c code
+  proc.c( -> FILE ) : extern: concatIOHelper_stdin
+  proc.c( -> FILE ) : extern: concatIOHelper_stdout
+  proc.c( -> FILE ) : extern: concatIOHelper_stderr
+  proc.c( -> ) : extern: concatIOHelper_resetErrno
+  proc.c( -> file.Error ) : extern: concatIOHelper_checkErrno
+  proc.c( DIR -> ..ctype.char ptr.raw ) : extern: concatIOHelper_readdirname
+  proc.c( ..ctype.char ptr.raw -> iSize ) : extern: strlen
 end
 namespace: io
   proc( -> char8 optional ) =>: export: getChar
@@ -74,87 +80,120 @@ overload: merge: | file.Flags.or end
 overload: merge: ^ file.Flags.xor end
 overload: merge: ? file.Flags.toBool end
 namespace: file
+  union(
+    _ : None
+    c.FILE : File
+    c.DIR : Dir
+  ) =:: export: FileValue
   struct(
-    c.FILE : file
+    ## TODO? remember path
+    FileValue : value
     Error : error
     Flags : flags
-  ) =:: export: FILE
+  ) =:: export: FILE ## TODO rename: FILE -> File
   ## TODO? more modes: read+append ?
-  enum( READ WRITE APPEND READ_WRITE ) =:: export: OpenMode
+  enum( READ WRITE APPEND READ_WRITE DIR ) =:: export: OpenMode
   proc( FILE -> bool ) =>: export: isOk   .error Error.NONE == end
   proc( FILE -> bool ) =>: export: isErr  .error Error.NONE != end
+  proc( FILE -> bool ) =>: export: isFile .value .File ? end
+  proc( FILE -> bool ) =>: export: isDir  .value .Dir ? end
   proc( FILE -> Error ) =>: export: getError   .error  end
   proc( FILE -> FILE ) =>: export: clearError
     Error.NONE >$ .error=
   end
-  proc( -> FILE ) =>: export: stdIn  c.concatIOHelper_stdin  Error.NONE Flags.NO_CLOSE FILE new end
-  proc( -> FILE ) =>: export: stdOut c.concatIOHelper_stdout Error.NONE Flags.NO_CLOSE FILE new end
-  proc( -> FILE ) =>: export: stdErr c.concatIOHelper_stderr Error.NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdIn  c.concatIOHelper_stdin  FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdOut c.concatIOHelper_stdout FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
+  proc( -> FILE ) =>: export: stdErr c.concatIOHelper_stderr FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
+  ## TODO: path management functions:
+  ## .path / .create / .createDir / .delete / .parent
 
   char8 4096 array : mut: fileNameBuffer ## XXX make buffer thread safe
+  proc( string : fileName -> ..ctype.char ptr.raw bool ) =>: getCPath
+    false =:: mut: shouldFree
+    fileName $ .length 1 - string.charAt '\x00' == if
+      fileName .data
+    else
+      fileName .length fileNameBuffer@ ptr.length u< if
+        fileNameBuffer@
+      else
+        fileName .length 1 + char8 mem.alloc
+        true shouldFree=
+      end
+        fileName .data
+        fileName .length
+      mem.copy
+      '\x00' $1 fileName .length =[]
+    end ..ctype.char ptr.raw cast! shouldFree
+  end
+  ## TODO? open as directory when mode is READ and path is directory
   proc( string : fileName OpenMode : openMode -> FILE ) =>: export: open
+    c.concatIOHelper_resetErrno
+    fileName getCPath =:: shouldFree =:: path
     openMode switch
       READ case "rb\x00" ..ctype.char ptr.raw cast! break
       WRITE case "wb\x00" ..ctype.char ptr.raw cast! break
       APPEND case "ab\x00" ..ctype.char ptr.raw cast! break
       READ_WRITE case "r+b\x00" ..ctype.char ptr.raw cast! break
+      DIR case
+        path c.opendir
+          $ ( ) ptr cast! c.isNull if
+            c.concatIOHelper_checkErrno
+            >$ ..drop FileValue .None <$
+          else
+            FileValue .Dir Error.NONE
+          end
+          shouldFree if path iSize cast! char8 ptr.raw.mut cast! mem.free end
+        Flags.NONE FILE new
+      return
     end
-      char8 ptr.raw.mut optional.empty =:: mut: freePath
-      fileName $ .length 1 - string.charAt '\x00' == if
-        fileName .data
-      else
-        fileName .length fileNameBuffer@ ptr.length u< if
-          fileNameBuffer@
-        else
-          fileName .length 1 + char8 mem.alloc
-          $ optional.wrap freePath=
-        end
-          fileName .data
-          fileName .length
-        mem.copy
-        '\x00' $1 fileName .length =[]
-      end ..ctype.char ptr.raw cast!
+      path
     c.fopen
-      freePath .if mem.free end ## free memory used for path-name
       $ ( ) ptr cast! c.isNull if
+        ..drop FileValue .None
         c.concatIOHelper_checkErrno
       else
-        Error.NONE
+        FileValue .File Error.NONE
       end
+      shouldFree if path iSize cast! char8 ptr.raw.mut cast! mem.free end
     Flags.NONE FILE new
   end
   proc( FILE char8 ptr.raw.mut : buffer iSize : count -> FILE iSize ) =>: export: fread_wrapper
-    $ .file
+    $ .value .File .else ..drop 0 return end =:: fileVal
+    fileVal c.clearerr
+    c.concatIOHelper_resetErrno
+    fileVal
       count ..ctype.size cast
       1 ..ctype.size cast
       buffer ..ctype.void ptr.raw.mut cast!
     c.fread iSize cast.s =:: nRead
-      $ .file c.feof i32 cast ? if
+      fileVal c.feof i32 cast ? if
         Error.END_OF_FILE >$ .error=
       end
-      $ .file c.ferror i32 cast ? if
+      fileVal c.ferror i32 cast ? if
         c.concatIOHelper_checkErrno >$ .error=
       end
     nRead
   end
   proc( FILE string : s -> FILE iSize ) =>: export: fwrite_wrapper
-    $ .file
+    $ .value .File .else ..drop 0 return end =:: fileVal
+    fileVal c.clearerr
+    c.concatIOHelper_resetErrno
+    fileVal
       s .length ..ctype.size cast
       1 ..ctype.size cast
       s .data ..ctype.void ptr.raw cast!
     c.fwrite iSize cast.s =:: nWritten
-      $ .file c.feof i32 cast ? if
+      fileVal c.feof i32 cast ? if
         Error.END_OF_FILE >$ .error=
       end
-      $ .file c.ferror i32 cast ? if
+      fileVal c.ferror i32 cast ? if
         c.concatIOHelper_checkErrno >$ .error=
       end
     nWritten
   end
   proc( FILE char8 slice.mut : s -> FILE string ) =>: export: read
     $ isErr if "":s return end
-    $ .file c.clearerr
-    c.concatIOHelper_resetErrno
+    $ isFile ! if "":s return end ## TODO set error flag
     0:iSize =:: mut: count
     while count s .length u< do
       s .data count @[] s .length count - fread_wrapper count + count=
@@ -166,8 +205,7 @@ namespace: file
   ## TODO? io buffering?
   proc( FILE string : mut: s -> FILE ) =>: export: write
     $ isErr if return end
-    $ .file c.clearerr
-    c.concatIOHelper_resetErrno
+    $ isFile ! if return end ## TODO set error flag
     while s .length 0 != do
       s fwrite_wrapper =:: nWritten
     finally
@@ -177,6 +215,7 @@ namespace: file
   end
   proc( FILE : mut: f stringBuilder -> FILE stringBuilder ) =>: export: readTo
     f isErr if f >$ return end
+    f isFile ! if f >$ return end ## TODO set error flag
     while
       $ .length $ 2 * >$ 8192 + iSize.min sb.ensureCap
       f $1 .data $2 .length @[] $2 sb.getCapacity $3 .length - fread_wrapper =:: nRead f=
@@ -189,13 +228,89 @@ namespace: file
       end
     >$ return
   end
+  ## TODO? convenience Function: ( string -> stringBuilder ) : readAll
   proc( FILE -> FILE stringBuilder ) =>: export: readAll
     256 sb.create readTo
   end
   proc( FILE -> ) =>: export: close
     $ .flags Flags.NO_CLOSE & ? if ..drop return end
-    .file
-      $ ( ) ptr cast! c.isNull if ..drop return end
-    c.fclose ..drop
+    .value switch
+      None case return
+      File .case c.fclose ..drop return
+      Dir .case c.closedir ..drop return
+    end
   end
+
+  union(
+    _ : End
+    string : Ok
+    Error : Err
+  ) =:: DirResult
+  struct(
+    c.DIR : dir
+    DirResult : next
+  ) =:: export: DirItr
+  ## TODO: make entries iterate over files and "entryNames" over entry-names
+  proc( FILE -> DirItr ) =>: export: entries
+    .value .Dir .else ..drop
+      DirItr.empty return
+    end DirItr.fromDir return
+  end
+  namespace: DirItr
+    proc( -> DirItr ) =>: empty
+      0 c.DIR cast! DirResult .End DirItr new
+    end
+    proc( c.DIR : dir -> DirItr ) =>: fromDir
+      dir $ nextDirEntry DirItr new
+    end
+    proc( c.DIR : dir -> DirResult ) =>: nextDirEntry
+      c.concatIOHelper_resetErrno
+      dir c.concatIOHelper_readdirname
+        $ c.isNull if ..drop
+          c.concatIOHelper_checkErrno
+            $ Error.NONE == if ..drop DirResult .End return end
+          DirResult .Err return
+        end
+      $ char8 ptr.raw cast! >$ c.strlen string new
+        $ ".":s string.eq or $ "..":s string.eq if ..drop
+          dir nextDirEntry return
+        end
+      DirResult .Ok
+    end
+    proc( DirItr -> DirItr ) =>: id end
+    proc( DirItr -> string ) =>:  get
+      .next .Ok .else "missing value" ..panic end
+    end
+    proc( DirItr -> DirItr ) =>:  step
+      $ .dir nextDirEntry >$ .next=
+    end
+    proc( DirItr -> bool ) =>: export: hasNext
+      .next .Ok ?
+    end
+    proc( DirItr -> DirItr string ) =>: export: next
+      $ .next .Ok .else "missing value" ..panic end
+        $1 .dir nextDirEntry >>$ .next=
+      >$
+    end
+    proc( DirItr -> Error ) =>: checkError
+      .next .Err .else ..drop
+        Error.NONE
+      end return
+    end
+  end
+end
+overload: merge: ..itr.prepare
+  file.DirItr.id
+end
+overload: merge: ..itr.check
+  file.DirItr.hasNext
+end
+overload: merge: ..itr.get
+  file.DirItr.get
+end
+overload: merge: ..itr.step
+  file.DirItr.step
+end
+overload: merge: ..itr.end
+  file.DirItr.checkError
 end

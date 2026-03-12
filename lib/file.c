@@ -5,6 +5,8 @@
 #include <inttypes.h>
 #include <errno.h>
 
+#include <dirent.h>
+
 typedef int32_t FileError;
 static const FileError FILE_ERR_NONE=0;
 static const FileError FILE_ERR_END_OF_FILE=-1;
@@ -48,4 +50,10 @@ FileError concatIOHelper_checkErrno(void){
       return FILE_ERR_INVALID_FILE;
   }
   return FILE_ERR_IO;
+}
+
+char* concatIOHelper_readdirname(DIR* dir){
+  struct dirent *entry = readdir(dir);
+  if (entry) return entry -> d_name;
+  return NULL;
 }

@@ -1,0 +1,12 @@
+.gitignore
+codeGen
+compileInfo
+controlFlow
+interpreter
+lib
+operations
+parser
+preCompiler
+stack
+typeChecker
+types

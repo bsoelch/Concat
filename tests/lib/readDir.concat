@@ -1,0 +1,16 @@
+import file
+import print
+import list
+using std.literals.
+
+proc( -> ) =>: main
+  "./tests/":s file.OpenMode .DIR file.open
+    16 string list.create
+      $1 file.entries for string.copy list.append end ..drop
+    =:: entries
+  file.close
+  entries string.compare@ list.sort
+  entries for
+    io.println
+  end
+end
