@@ -98,24 +98,24 @@ namespace: file
     FileValue : value
     Error : error
     Flags : flags
-  ) =:: export: FILE ## TODO rename: FILE -> File
+  ) =:: export: File
   ## TODO? more modes: read+append ?
   enum( READ WRITE APPEND READ_WRITE DIR ) =:: export: OpenMode
-  proc( FILE -> bool ) =>: export: isOk   .error Error.NONE == end
-  proc( FILE -> bool ) =>: export: isErr  .error Error.NONE != end
-  proc( FILE -> bool ) =>: export: isFile .value .File ? end
-  proc( FILE -> bool ) =>: export: isDir  .value .Dir ? end
+  proc( File -> bool ) =>: export: isOk   .error Error.NONE == end
+  proc( File -> bool ) =>: export: isErr  .error Error.NONE != end
+  proc( File -> bool ) =>: export: isFile .value .File ? end
+  proc( File -> bool ) =>: export: isDir  .value .Dir ? end
   ## TODO: state checker .isReadable / .isWriteable / .size
-  proc( FILE -> Error ) =>: export: getError   .error  end
-  proc( FILE -> FILE ) =>: export: clearError
+  proc( File -> Error ) =>: export: getError   .error  end
+  proc( File -> File ) =>: export: clearError
     Error.NONE >$ .error=
   end
-  proc( -> FILE ) =>: export: stdIn  c.concatIOHelper_stdin  FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
-  proc( -> FILE ) =>: export: stdOut c.concatIOHelper_stdout FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
-  proc( -> FILE ) =>: export: stdErr c.concatIOHelper_stderr FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
+  proc( -> File ) =>: export: stdIn  c.concatIOHelper_stdin  FileValue .File Error.NONE Flags.NO_CLOSE File new end
+  proc( -> File ) =>: export: stdOut c.concatIOHelper_stdout FileValue .File Error.NONE Flags.NO_CLOSE File new end
+  proc( -> File ) =>: export: stdErr c.concatIOHelper_stderr FileValue .File Error.NONE Flags.NO_CLOSE File new end
 
   ## redirect input/output
-  ## TODO? versions that take FILE instead of string
+  ## TODO? versions that take File instead of string
   proc( string -> bool ) =>: export: setStdIn
     OpenMode .READ open
       $ .value .File .else ..drop.2 false return end
@@ -162,7 +162,7 @@ namespace: file
     end ..ctype.char ptr.raw cast! shouldFree
   end
   ## TODO? open as directory when mode is READ and path is directory
-  proc( string : fileName OpenMode : openMode -> FILE ) =>: export: open
+  proc( string : fileName OpenMode : openMode -> File ) =>: export: open
     c.concatIOHelper_resetErrno
     fileName getCPath =:: shouldFree =:: path
     openMode switch
@@ -179,7 +179,7 @@ namespace: file
             FileValue .Dir Error.NONE
           end
           shouldFree if path iSize cast! char8 ptr.raw.mut cast! mem.free end
-        Flags.NONE FILE new
+        Flags.NONE File new
       return
     end
       path
@@ -191,9 +191,9 @@ namespace: file
         FileValue .File Error.NONE
       end
       shouldFree if path iSize cast! char8 ptr.raw.mut cast! mem.free end
-    Flags.NONE FILE new
+    Flags.NONE File new
   end
-  proc( FILE char8 ptr.raw.mut : buffer iSize : count -> FILE iSize ) =>: export: fread_wrapper
+  proc( File char8 ptr.raw.mut : buffer iSize : count -> File iSize ) =>: export: fread_wrapper
     $ .value .File .else ..drop 0 return end =:: fileVal
     fileVal c.clearerr
     c.concatIOHelper_resetErrno
@@ -210,7 +210,7 @@ namespace: file
       end
     nRead
   end
-  proc( FILE string : s -> FILE iSize ) =>: export: fwrite_wrapper
+  proc( File string : s -> File iSize ) =>: export: fwrite_wrapper
     $ .value .File .else ..drop 0 return end =:: fileVal
     fileVal c.clearerr
     c.concatIOHelper_resetErrno
@@ -227,7 +227,7 @@ namespace: file
       end
     nWritten
   end
-  proc( FILE char8 slice.mut : s -> FILE string ) =>: export: read
+  proc( File char8 slice.mut : s -> File string ) =>: export: read
     $ isErr if "":s return end
     $ isFile ! if "":s return end ## TODO set error flag
     0:iSize =:: mut: count
@@ -239,7 +239,7 @@ namespace: file
     s .data count string.create
   end
   ## TODO? io buffering?
-  proc( FILE string : mut: s -> FILE ) =>: export: write
+  proc( File string : mut: s -> File ) =>: export: write
     $ isErr if return end
     $ isFile ! if return end ## TODO set error flag
     while s .length 0 != do
@@ -249,7 +249,7 @@ namespace: file
       s nWritten string.tail s=
     end
   end
-  proc( FILE : mut: f stringBuilder -> FILE stringBuilder ) =>: export: readTo
+  proc( File : mut: f stringBuilder -> File stringBuilder ) =>: export: readTo
     f isErr if f >$ return end
     f isFile ! if f >$ return end ## TODO set error flag
     while
@@ -265,10 +265,10 @@ namespace: file
     >$ return
   end
   ## TODO? convenience Function: ( string -> stringBuilder ) : readAll
-  proc( FILE -> FILE stringBuilder ) =>: export: readAll
+  proc( File -> File stringBuilder ) =>: export: readAll
     256 sb.create readTo
   end
-  proc( FILE -> ) =>: export: close
+  proc( File -> ) =>: export: close
     $ .flags Flags.NO_CLOSE & ? if ..drop return end
     .value switch
       None case return
@@ -287,7 +287,7 @@ namespace: file
     DirResult : next
   ) =:: export: DirItr
   ## TODO: make entries iterate over files and "entryNames" over entry-names
-  proc( FILE -> DirItr ) =>: export: entries
+  proc( File -> DirItr ) =>: export: entries
     .value .Dir .else ..drop
       DirItr.empty return
     end DirItr.fromDir return

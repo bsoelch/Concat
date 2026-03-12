@@ -904,7 +904,7 @@ proc(
   return
 end
 
-proc( file.FILE : target ProgramContext ptr.mut : program -> file.FILE ) =>: export: compileToASM
+proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: export: compileToASM
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext

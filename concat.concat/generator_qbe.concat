@@ -3926,7 +3926,7 @@ proc( CompilerContext ptr.mut : context -> ) =>: cleanupCompilerContext
   context .ptrConstants=
   ( LocalLabelId : ignore -> ) => end LabelState.free@ context .labelStates map.freeAll
 end
-proc( file.FILE : mut: target ProgramContext ptr.mut : program -> file.FILE ) =>: export: compileToQBE
+proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>: export: compileToQBE
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext

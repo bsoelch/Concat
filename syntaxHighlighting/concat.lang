@@ -270,7 +270,7 @@
           string(8|16|32)             |
           stringBuilder               |
           MixedArenaAllocator         |
-          (file\.)?FILE               |
+          (file\.)?File               |
           file\.Error                 |
           file\.OpenMode
         )(\Z|(?=[[:space:]])) # end of file or white-space
