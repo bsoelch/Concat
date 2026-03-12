@@ -4692,7 +4692,7 @@ proc(
                   "\", incompatible id-type for previous declaration: " sb.appendS
                   idData [] .idType sb.appendIdType
                   " ( declared at " sb.appendS
-                  idData [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
+                  idData [] .declaredAt [] sb.appendPos
                   " ) expected: " sb.appendS
                   IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
                 op .pos errors appendError
@@ -4729,7 +4729,7 @@ proc(
                     "missing procedure data for \"" sb.appendS
                     idData [] .labelId labelContext sb.appendLabelPath
                     "\" ( declared at " sb.appendS
-                    idData [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
+                    idData [] .declaredAt [] sb.appendPos
                     " ) expected ProcId got:" sb.appendS
                     idData [] .constValue typeContext sb.appendConstant
                   op .pos errors appendError
@@ -4745,7 +4745,7 @@ proc(
                     "missing procedure data for \"" sb.appendS
                     idData [] .labelId labelContext sb.appendLabelPath
                     "\" ( declared at " sb.appendS
-                    idData [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
+                    idData [] .declaredAt [] sb.appendPos
                     " ) expected ProcBundleId got:" sb.appendS
                     idData [] .constValue typeContext sb.appendConstant
                   op .pos errors appendError
@@ -4762,7 +4762,7 @@ proc(
                   " \"" sb.appendS
                   idData [] .labelId labelContext sb.appendLabelPath
                   "\" ( declared at " sb.appendS
-                  idData [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
+                  idData [] .declaredAt [] sb.appendPos
                   " ) is not a procedure" sb.appendS
                 op .pos errors appendError
                 return

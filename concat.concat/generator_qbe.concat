@@ -3993,13 +3993,13 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
       "data " sb.appendS
       labelId -1 context sb.appendGlobalName
       " = align " sb.appendS
-      valType idData [] .declaredAt .else FILE_POS_UNKNOWN@ end context typeAlignmentInt sb.appendI
+      valType idData [] .declaredAt context typeAlignmentInt sb.appendI
       " {" sb.appendS
       idData [] .constValue .None ? ! if
-        valType idData [] .constValue true idData [] .declaredAt .else FILE_POS_UNKNOWN@ end context sb.appendConstQBE
+        valType idData [] .constValue true idData [] .declaredAt context sb.appendConstQBE
       else
         "z " sb.appendS
-        valType idData [] .declaredAt .else FILE_POS_UNKNOWN@ end context typeSizeInt sb.appendI
+        valType idData [] .declaredAt context typeSizeInt sb.appendI
       end
       "}\n" sb.appendS
       target $1 sb.asStr file.write target=

@@ -25,7 +25,7 @@ enum(
 struct(
   Type : valueType
   ConstValue : constValue
-  FilePosition ptr optional : declaredAt ## TODO: this is only optional to allow global initialization
+  FilePosition ptr : declaredAt
   LabelId : labelId
   i32 : index
   IdentifierType : idType
@@ -66,7 +66,7 @@ namespace: id
   ## IdentifierData
     Type .Undefined
     ConstValue .None
-    FilePosition ptr optional.empty ## TODO! allow pointer to global variable as global variable
+    FILE_POS_UNKNOWN@
     LABEL_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
@@ -75,7 +75,7 @@ namespace: id
   ## IdentifierData
     Type .Undefined
     ConstValue .None
-    FilePosition ptr optional.empty
+    FILE_POS_UNKNOWN@
     LABEL_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
@@ -542,7 +542,7 @@ namespace: id
             declaredAt errors appendError
           else shadowedName .aliasId NO_ALIAS == _if
               "\" shadows previous declaration ( at" sb.appendS
-              shadowed [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
+              shadowed [] .declaredAt [] sb.appendPos
               " )" sb.appendS
             declaredAt errors appendWarning
           else
@@ -634,7 +634,7 @@ namespace: id
             "\":\n  * " sb.appendS
             prevDec [] .valueType typeContext sb.appendType
             " at " sb.appendS
-            prevDec [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
+            prevDec [] .declaredAt [] sb.appendPos
             "\n  * " sb.appendS
             valType typeContext sb.appendType
           declaredAt errors appendError
@@ -646,7 +646,7 @@ namespace: id
             "\" are not compatible expected: " sb.appendS
             prevDec [] .idType sb.appendIdType
             " ( declared at " sb.appendS
-            prevDec [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
+            prevDec [] .declaredAt [] sb.appendPos
             " )" sb.appendS
             " got: " sb.appendS
             idType sb.appendIdType
@@ -659,7 +659,7 @@ namespace: id
             "\" differ: " sb.appendS
             ## TODO? print flags
             " ( declaration at " sb.appendS
-            prevDec [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
+            prevDec [] .declaredAt [] sb.appendPos
             " )" sb.appendS
           declaredAt errors appendWarning
         end
@@ -667,13 +667,13 @@ namespace: id
           valType prevDec .valueType=
           constVal prevDec .constValue=
           index prevDec .index=
-          declaredAt optional.wrap prevDec .declaredAt=
+          declaredAt prevDec .declaredAt=
           false prevDec .declarationOnly=
         end
         prevDec [] .labelId prevDec [] false return
       end
       prevId .aliasId NO_ALIAS == if
-        prevDec [] .declaredAt .else FILE_POS_UNKNOWN@ end
+        prevDec [] .declaredAt
       else
         prevId .aliasId context getAliasPos
       end =:: prevPos
@@ -688,7 +688,7 @@ namespace: id
     ## IdentifierData
       valType
       constVal
-      declaredAt optional.wrap
+      declaredAt
       label
       index
       idType
@@ -722,7 +722,7 @@ namespace: id
       prevId .aliasId NO_ALIAS == if
         context .identifierData prevId .labelId map.at .else
           "could not find previous id of redeclaration" ..panic
-        end [] .declaredAt .else FILE_POS_UNKNOWN@ end
+        end [] .declaredAt
       else
         prevId .aliasId context getAliasPos
       end =:: prevPos
@@ -757,7 +757,7 @@ namespace: id
       ## IdentifierData
         itrType
         ConstValue .None
-        pos optional.wrap
+        pos
         label
         -1
         IdentifierType .ITR_VAR
@@ -778,7 +778,7 @@ namespace: id
       ## IdentifierData
         varType
         ConstValue .None
-        pos optional.wrap
+        pos
         label
         -1
         IdentifierType .TMP_VAR

@@ -115,7 +115,7 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     idData [] .idType .GLOBAL_VAR ! if
       continue
     end
-    idData [] .valueType 0 idData [] .declaredAt .else FILE_POS_UNKNOWN@ end prog visited@ types@ declaredType
+    idData [] .valueType 0 idData [] .declaredAt prog visited@ types@ declaredType
   end ..drop
   prog [] .globalOps for =:: op
     op@ prog visited@ types@ addOpType
