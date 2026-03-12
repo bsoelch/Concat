@@ -11,7 +11,7 @@ import "program.concat"
 namespace: interpreter
   struct(
     Type : valueType
-    FilePosition : pushedAt
+    FilePosition ptr : pushedAt
   ) =:: export: ValueInfo
 
   struct(
@@ -37,7 +37,7 @@ struct(
   Type list : typeBuffer
   ConstValue list : valueBuffer
   LabelId list : labelBuffer
-  FilePosition list : callPositions
+  FilePosition ptr list : callPositions
   InterpreterState list : stateStack
   FileId : currentFile
 ) =:: export: InterpreterContext
@@ -61,7 +61,7 @@ namespace: interpreter
       64 Type       list.create
       64 ConstValue list.create
       64 LabelId    list.create
-      64 FilePosition list.create
+      64 FilePosition ptr list.create
       32 InterpreterState list.create
       fileId
     InterpreterContext new
@@ -124,7 +124,7 @@ namespace: interpreter
   proc(
     iSize : count
     string : name
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: export: checkStack
     context minStackOffset =:: offset
@@ -161,7 +161,7 @@ namespace: interpreter
   proc(
     ConstValue : value
     Type : valType
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> ) =>: pushValue
     context [] .stack
@@ -175,7 +175,7 @@ namespace: interpreter
     context .stackInfo=
   end
   proc(
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> ValueInfo ConstValue bool ) =>: popValue
     context [] .stack .length 0:iSize == if
@@ -239,7 +239,7 @@ namespace: interpreter
   end
 
   proc(
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> ValueInfo Type bool ) =>: popType
     context [] .program .errors =:: errors
@@ -266,7 +266,7 @@ namespace: interpreter
     valInfo Type .Undefined true return
   end
   proc(
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> bool bool ) =>: popCondition
     context [] .program .errors =:: errors
@@ -331,7 +331,7 @@ namespace: interpreter
   end
   proc(
     bool : persistentCopy
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> ValueInfo string bool ) =>: popString
     context [] .program =:: program
@@ -395,7 +395,7 @@ namespace: interpreter
   proc(
     Type : t
     ConstValue : value
-    FilePosition : pos
+    FilePosition ptr : pos
     ProgramContext ptr.mut : program
   -> Type ConstValue bool ) =>: export: sizeOfValue
     ## TODO support length of initializers
@@ -528,7 +528,7 @@ namespace: interpreter
     ConstValue : value
     ValueInfo : valInfo
     i32 : elementIndex
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: getElement
     context [] .program =:: program
@@ -598,7 +598,7 @@ namespace: interpreter
     ConstValue : value
     ValueInfo : valInfo
     i32 : elementIndex
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: setElement
     context [] .program =:: program
@@ -851,7 +851,7 @@ namespace: interpreter
   end
   proc(
     Type : dataType
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> ConstValue ) =>: allocLocalValue
     context [] .program =:: program
@@ -962,7 +962,7 @@ namespace: interpreter
     type : auto: W type : auto: T
     W : targetArray
     T slice : srcArray
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerError list ptr.mut : errors
   -> EvalResult ) =>: setLocalArray
     srcArray .length targetArray .length != if
@@ -1017,7 +1017,7 @@ namespace: interpreter
             " }" sb.appendS
           end
           " pushed at " sb.appendS
-          valueInfo [] .pushedAt sb.appendPos
+          valueInfo [] .pushedAt [] sb.appendPos
         end
         '\n' sb.appendC
       sb=
@@ -1893,7 +1893,7 @@ namespace: interpreter
   proc(
     Type : calledType
     BuiltIn : builtIn
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: tryEvaluateBuiltIn
     context [] .program .errors =:: errors
@@ -1986,7 +1986,7 @@ namespace: interpreter
   proc(
     LabelId : procName
     Type slice : args
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: evaluateExternCall
     context [] .program =:: program
@@ -2064,7 +2064,7 @@ end
 namespace: interpreter
   proc(
     Type : tupleType
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   -> bool ) =>: newTuple
     context [] .program .errors =:: errors
@@ -2114,7 +2114,7 @@ namespace: interpreter
     i32 : implId
     Type : calledType
     ConstValue slice : autoArgs
-    FilePosition : pos
+    FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   ->
     bool

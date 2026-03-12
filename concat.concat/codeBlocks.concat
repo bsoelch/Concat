@@ -43,10 +43,10 @@ namespace: JumpDistance
 end
 overload: ? JumpDistance.toBool end
 struct(
-  BlockType : blockType
   LabelId : blockLabel
   BlockId : blockId
   JumpDistance : jumpDistance
+  BlockType : blockType
 ) =:: export: BlockData
 namespace: sb
   proc( stringBuilder BlockType -> stringBuilder ) =>: export: appendBlockType

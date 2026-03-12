@@ -85,26 +85,26 @@ proc( FilePosition : a FilePosition : b -> i32 ) =>: export: filePosCmp
   a .posInLine b .posInLine i32.cmp return
 end
 enum( ERROR WARNING INFO ) =:: export: ErrorType
-struct( stringBuilder : message ErrorType : errType FilePosition : pos ) =:: export: CompilerError
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : errors -> ) =>: export: appendError
+struct( stringBuilder : message FilePosition ptr : pos ErrorType : errType ) =:: export: CompilerError
+proc( stringBuilder : message FilePosition ptr : pos CompilerError list ptr.mut : errors -> ) =>: export: appendError
   errors []
-    message ErrorType .ERROR pos CompilerError new list.append
+    message pos ErrorType .ERROR CompilerError new list.append
   errors =[]
 end
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : errors -> ) =>: export: appendWarning
+proc( stringBuilder : message FilePosition ptr : pos CompilerError list ptr.mut : errors -> ) =>: export: appendWarning
   errors []
-    message ErrorType .WARNING pos CompilerError new list.append
+    message pos ErrorType .WARNING CompilerError new list.append
   errors =[]
 end
-proc( stringBuilder : message FilePosition : pos CompilerError list ptr.mut : errors -> ) =>: export: appendInfo
+proc( stringBuilder : message FilePosition ptr : pos CompilerError list ptr.mut : errors -> ) =>: export: appendInfo
   errors []
-    message ErrorType .INFO pos CompilerError new list.append
+    message pos ErrorType .INFO CompilerError new list.append
   errors =[]
 end
 proc( CompilerError : a CompilerError : b -> i32 ) =>: export: errorCmp
   a .errType ..label i32 cast.u  b .errType ..label i32 cast.u - =:: errTypeCmp
   errTypeCmp 0 != if errTypeCmp return end ## errors before warnings before info
-  a .pos b .pos filePosCmp return
+  a .pos [] b .pos [] filePosCmp return
 end
 
 i32 =:: export: LabelId

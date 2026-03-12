@@ -11,10 +11,10 @@ import "callResolver.concat"
 import "parser.concat"
 
 struct(
-  Type         : mut: valueType
-  ConstValue   : mut: value
-  FilePosition : mut: pushedAt
-  i32          : mut: opIndex
+  ConstValue   : value
+  Type         : valueType
+  i32          : opIndex
+  FilePosition ptr : pushedAt
 ) =:: TypeInfo
 
 -1:i32 =:: OP_UNLINKED
@@ -25,7 +25,7 @@ struct(
 
 struct(
   branchTree.NodeId : node
-  FilePosition : pos
+  FilePosition ptr : pos
 ) =:: BranchPoint
 i32 =:: IfBlockFlags
 ( char8 ptr.raw iSize -> IfBlockFlags ) : static: alias: :IfBlockFlags ..builtIn.parse.i32
@@ -106,7 +106,7 @@ union(
   WhileBlockInfo : While
   AndOrBlockInfo : AndOr
 ) =:: BlockInfo
-proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition : pos TypeCheckState ptr.mut : state -> BlockInfo ) =>: newIfBlock
+proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition ptr : pos TypeCheckState ptr.mut : state -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
     branchRoot
     branchTree.EMPTY pos BranchPoint new ## dummy value
@@ -132,7 +132,7 @@ proc(
   IdentifierInfo optional : srcVar
   LabelId : blockLabel
   BlockId : blockId
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> SwitchBlockInfo ) =>: newSwitchBlock
   ## SwitchBlockInfo
@@ -156,7 +156,7 @@ proc(
   branchTree.NodeId : branchRoot
   LabelId : blockLabel
   BlockId : blockId
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> WhileBlockInfo ) =>: newWhileBlock
   ## WhileBlockInfo
@@ -183,7 +183,7 @@ end
 proc(
   branchTree.NodeId : branchRoot
   BlockId : blockId
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> AndOrBlockInfo ) =>: newAndOrBlock
   ## AndOrBlockInfo
@@ -219,7 +219,7 @@ enum( PROC_CHILD STATIC_PROC LINEAR ) =:: TypeCheckMode
 
 struct(
   ProcedureImpl : impl
-  FilePosition : expandedAt
+  FilePosition ptr : expandedAt
 ) =:: MissingProc
 struct(
   iSize : typeOffset
@@ -263,7 +263,7 @@ struct(
   TypeBlockState optional : arrowState
   MissingProc list : missingProcs
   FileId : currentFile
-  FilePosition list : initializationStack
+  FilePosition ptr list : initializationStack
   TypeCheckStateState list : stateStack
   TypeCheckMode :  mode
   bool : reachable
@@ -367,7 +367,7 @@ proc(
           " }" sb.appendS
         end
         " pushed at " sb.appendS
-        val [] .pushedAt sb.appendPos
+        val [] .pushedAt [] sb.appendPos
       end
       '\n' sb.appendC
     sb=
@@ -389,13 +389,13 @@ proc( string : msg Operation : op i64 : errLine TypeCheckState ptr.mut : state -
   1 sys.exit
   ..unreachable
 end
-proc( string : msg FilePosition : codePos i64 : errLine -> ) =>: internalErrorNoOp
+proc( string : msg FilePosition ptr : codePos i64 : errLine -> ) =>: internalErrorNoOp
   "internal compiler error: " sb.copyPtr
     msg sb.appendStr
     " at " sb.appendS
     ..file sb.appendS ':' sb.appendC errLine sb.appendI
     " while type-checking operation at " sb.appendS
-    codePos sb.appendPos
+    codePos [] sb.appendPos
     '\n' sb.appendC
   sb.asStr io.print
   1 sys.exit
@@ -404,7 +404,7 @@ end
 
 proc(
   i32 : count
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: checkStackSize
   state [] .stack branchTree.depth count < if
@@ -422,7 +422,7 @@ proc(
   TypeInfo : src
   Type : mut: target
   SignType : signType
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> bool ) =>: tryCastConstant
   state [] .program .errors =:: errors
@@ -463,7 +463,7 @@ proc(
   ## number of values already popped by instruction
   i32 : mut: stackCastOffset
   bool : popConstants ## TODO? make argument static to reduce runtime const of if-checks
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> TypeMatch ) =>: requireTypes
   state [] .program .errors =:: errors
@@ -579,7 +579,7 @@ proc(
   end
   TypeMatch .Match return
 end
-proc( i32 : count FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: discardValues
+proc( i32 : count FilePosition ptr : pos TypeCheckState ptr.mut : state -> ) =>: discardValues
   state [] .program =:: program
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -620,7 +620,7 @@ proc( TypeCheckState ptr.mut : state -> ConstValue optional ) =>: popValue
     end
   typeInfo [] .value optional.wrap return
 end
-proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
+proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
   state [] .program =:: program
   state [] .program .errors =:: errors
   state [] .program .idContext =:: idContext
@@ -647,7 +647,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
       "type-constant " sb.copyPtr
         typeInfo [] .value typeContext sb.appendConstant
         " at " sb.appendS
-        typeInfo [] .pushedAt sb.appendPos
+        typeInfo [] .pushedAt [] sb.appendPos
         " was declared outside current block" sb.appendS
       pos errors appendError
       Type .Undefined return
@@ -655,7 +655,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> Type ) =>: popType
     typeInfo [] .opIndex state deleteOp ## remove stored operation
   return
 end
-proc( FilePosition : pos TypeCheckState ptr.mut : state -> string ) =>: popString
+proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> string ) =>: popString
   state [] .program =:: program
   state [] .program .errors =:: errors
   state [] .program .idContext =:: idContext
@@ -675,7 +675,7 @@ proc( FilePosition : pos TypeCheckState ptr.mut : state -> string ) =>: popStrin
       "string-constant " sb.copyPtr
         typeInfo [] .value typeContext sb.appendConstant
         " at " sb.appendS
-        typeInfo [] .pushedAt sb.appendPos
+        typeInfo [] .pushedAt [] sb.appendPos
         " was declared outside current block" sb.appendS
       pos errors appendError
       string.empty return
@@ -689,7 +689,7 @@ end
 proc(
   ConstValue : value
   Type : valType
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: pushConstant
     state [] .program =:: program
@@ -703,10 +703,10 @@ proc(
     ## branchTree.push
       state .stack
       ## TypeInfo
-        valType
         value
-        pos
+        valType
         opIndex
+        pos
       TypeInfo new
     branchTree.push
     opIndex 0 < if
@@ -739,10 +739,10 @@ proc(
     ## branchTree.push
       state .stack
       ## TypeInfo
-        valType
         value
-        op .pos
+        valType
         opIndex
+        op .pos
       TypeInfo new
     branchTree.push
     opIndex 0 < if
@@ -754,18 +754,18 @@ proc(
 end
 proc(
   Type slice : types
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: pushTypes
   state [] .program .idContext .typeContext =:: typeContext
   types for =:: t
     state .stack
       ## TypeInfo
-        t
         ConstValue .None
-        pos
+        t
         ## multiple types from one op -> cannot modify op to modify types
         OP_UNLINKED
+        pos
       TypeInfo new
     branchTree.push
   end
@@ -790,7 +790,7 @@ proc(
   state [] .openBlocks list.peek
 end
 proc(
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> BlockInfo ) =>: closeBlock
   state [] .program .errors =:: errors
@@ -813,7 +813,7 @@ end
 proc(
   BlockType : breakType
   LabelId : blockLabel
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> BlockInfo ptr.mut optional ) =>: findBreakableBlock
   state [] .program =:: program
@@ -845,7 +845,7 @@ end
 ## break from current switch-branch, but don't terminate the branch
 proc(
   SwitchBlockInfo ptr.mut : switchBlock
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: breakSwitch
   state [] .stack branchTree.depth =:: caseTypes
@@ -879,7 +879,7 @@ proc(
   end
 end
 ## terminate current switch branch
-proc( FilePosition : pos TypeCheckState ptr.mut : state -> ) =>: endSwitchBranch
+proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> ) =>: endSwitchBranch
   state peekBlock .and .Switch .and =:: switchBlock
       switchBlock [] .inLabel ! if
     switchBlock pos state breakSwitch
@@ -889,7 +889,7 @@ end
 proc(
   bool : clearConst
   i32 : offset
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: clearReferences ## TODO? is clearing references necessary for non-loop blocks
   state [] .program .idContext .typeContext =:: typeContext
@@ -928,7 +928,7 @@ end
 enum( MERGE MERGE_ROOT NO_CAST ) =:: MergeType
 struct(
   string : blockName
-  FilePosition : mergePoint
+  FilePosition ptr : mergePoint
   i32 slice : castPointOffsets
   TypeCheckState ptr.mut : state
   i32 : rootBranch
@@ -979,11 +979,11 @@ proc(
             "\n cannot merge types " sb.appendS
             mergedType typeContext sb.appendType
             " ( pushed at " sb.appendS
-            root [] .pushedAt sb.appendPos
+            root [] .pushedAt [] sb.appendPos
             " )\n and " sb.appendS
             currentType typeContext sb.appendType
             " ( pushed at " sb.appendS
-            current [] .pushedAt sb.appendPos
+            current [] .pushedAt [] sb.appendPos
             " )\n" sb.appendS
           mergePoint .mergePoint errors appendError
           false noError=
@@ -1002,11 +1002,11 @@ proc(
             "\n expected: " sb.appendS
             mergedType typeContext sb.appendType
             " ( pushed at " sb.appendS
-            root [] .pushedAt sb.appendPos
+            root [] .pushedAt [] sb.appendPos
             " )\n got: " sb.appendS
             currentType typeContext sb.appendType
             " ( pushed at " sb.appendS
-            current [] .pushedAt sb.appendPos
+            current [] .pushedAt [] sb.appendPos
             " )\n" sb.appendS
           mergePoint .mergePoint errors appendError
           false noError=
@@ -1049,10 +1049,10 @@ proc(
     end ..drop
   end
   ## TypeInfo
-    mergedType
     ConstValue .None ## XXX merge constants
-    mergePoint .mergePoint
+    mergedType
     OP_UNLINKED
+    mergePoint .mergePoint
   TypeInfo new return
 end
 
@@ -1075,7 +1075,7 @@ end
 
 proc(
   iSize : srcPosition
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: updateJump
   state [] .compiledOps
@@ -1088,7 +1088,7 @@ end
 proc(
   LocalLabelId : labelId
   LocalLabelType : labelType
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: localLabel
   labelType switch
@@ -1121,7 +1121,7 @@ end
 proc(
   LocalLabelId : labelId
   CompareType : cmpType
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: localJump
   state .compiledOps [] .length =:: opOffset
@@ -1172,7 +1172,7 @@ end
 ## reserve space for count operations at the current position, returns the position of the first operation
 proc(
   i32 : count
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> i32 ) =>: reserveOps
   state [] .compiledOps .length i32 cast.u =:: offset
@@ -1335,7 +1335,7 @@ proc(
   StackValue slice.mut : mut: args
   Type : calledType
   ProcedureCallInfo : calledProc
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> EvalResult ) =>: evaluateCall
   state [] .program =:: program
@@ -1580,7 +1580,7 @@ proc(
   StackValue slice.mut : mut: stackValues
   bool : headConstant
   CallSource : source
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> TypeCheckCallResult ) =>: export: typeCheckCallStackless
   state [] .program =:: program
@@ -1730,7 +1730,7 @@ proc(
       state .stack branchTree.pop optional.unwrap =:: opData
       opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
         "could not remove static argument ( pushed at " sb.copyPtr
-          opData [] .pushedAt sb.appendPos
+          opData [] .pushedAt [] sb.appendPos
           " )" sb.appendS
         op [] .pos errors appendError
       end
@@ -1743,7 +1743,7 @@ proc(
         ## remove push operations for type-arguments
         opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
           "could not remove type argument ( pushed at " sb.copyPtr
-            opData [] .pushedAt sb.appendPos
+            opData [] .pushedAt [] sb.appendPos
             " )" sb.appendS
           op [] .pos errors appendError
         end
@@ -1772,7 +1772,7 @@ namespace: typeChecker
   proc(
     LabelId : generatorName
     ConstValue slice : args
-    FilePosition : pos
+    FilePosition ptr : pos
     TypeCheckState ptr.mut : typeChecker
   -> Type optional ) =>: export: initializeGeneratedType
     typeChecker [] .program =:: program
@@ -1849,7 +1849,7 @@ namespace: typeChecker
     Type : stackType
     ConstValue : stackValue
     Type : paramType
-    FilePosition : pos
+    FilePosition ptr : pos
     TypeCheckState ptr.mut : state
   -> bool ) =>: export: canRefineType
     state [] .program =:: progContext
@@ -1939,7 +1939,7 @@ proc(
     "extra value at the end of procedure" sb.copyPtr
        val [] .valueType typeContext sb.appendType
        " ( pushed at " sb.appendS
-       val [] .pushedAt sb.appendPos
+       val [] .pushedAt [] sb.appendPos
        " )" sb.appendS
     op [] .pos errors appendError
   end
@@ -1952,7 +1952,7 @@ proc(
   bool : isUnionGet
   bool : isPtr ## TODO? pass enum( VALUE PTR PTR_MUT ) instead if two booleans
   bool : mutable
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckGetElement
   state [] .program =:: program
@@ -2106,7 +2106,7 @@ proc(
   Type : switchType
   ConstValue : label0
   iSize : caseCount
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: newSwitchLabel
   state [] .program =:: program
@@ -2151,7 +2151,7 @@ proc(
           label0 typeContext sb.appendConstant
         end
         " in switch-case ( previous occurence at " sb.appendS
-        labelData [] .pos sb.appendPos
+        labelData [] .pos [] sb.appendPos
         " )" sb.appendS
       pos errors appendError
     end
@@ -2159,8 +2159,8 @@ proc(
   switchData [] .switchLabels
     ## LabelData
       label
-      pos
       caseCount i32 cast.u
+      pos
     LabelData new list.append
   switchData .switchLabels=
 end
@@ -2325,7 +2325,7 @@ proc(
   idData [] .valueType op .dataType=
   idData id.asIdInfo optional.wrap return
 end
-proc( FilePosition : pos JumpDistance -> iSize ) =>: asForwardJump
+proc( FilePosition ptr : pos JumpDistance -> iSize ) =>: asForwardJump
   iSize cast.u
     $ 0x8000'0000 u>= if
       "negative jump distance":s pos ..line internalErrorNoOp ..unreachable
@@ -2337,7 +2337,7 @@ enum( TUPLE UNION RAW_UNION PROC C_PROC ) =:: CompositeType
 proc(
   Operation slice : ops
   CompositeType : compType
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckCompositeType
   state [] .program =:: program
@@ -2403,7 +2403,7 @@ proc(
 end
 proc(
   Operation slice : ops
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckSetType
   state [] .program =:: program
@@ -2450,7 +2450,7 @@ proc(
 end
 proc(
   Operation slice : ops
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckEnumType
   state [] .program =:: program
@@ -2477,7 +2477,7 @@ proc(
 end
 proc(
   Operation slice : ops
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckInitializer
   state [] .program =:: program
@@ -3969,7 +3969,7 @@ proc(
                        branchPoint .node
                     branchTree.depthFrom sb.appendI
                     " in branch at " sb.appendS
-                    branchPoint .pos sb.appendPos
+                    branchPoint .pos [] sb.appendPos
                   end
                   '\n' sb.appendC
                 op .pos errors appendError
@@ -4067,7 +4067,7 @@ proc(
                        branchPoint .node
                     branchTree.depthFrom sb.appendI
                     " in branch at " sb.appendS
-                    branchPoint .pos sb.appendPos
+                    branchPoint .pos [] sb.appendPos
                   end
                   '\n' sb.appendC
                 op .pos errors appendError
@@ -4514,7 +4514,7 @@ proc(
                       branchPoint .node
                     branchTree.depthFrom sb.appendI
                     " in branch at " sb.appendS
-                    branchPoint .pos sb.appendPos
+                    branchPoint .pos [] sb.appendPos
                   end
                   '\n' sb.appendC
                 op .pos errors appendError
@@ -4582,7 +4582,7 @@ proc(
                        branchPoint .node
                     branchTree.depthFrom sb.appendI
                     " in branch at " sb.appendS
-                    branchPoint .pos sb.appendPos
+                    branchPoint .pos [] sb.appendPos
                   end
                   '\n' sb.appendC
                 op .pos errors appendError
@@ -4680,7 +4680,7 @@ proc(
                   "\", incompatible id-type for previous declaration: " sb.appendS
                   idData [] .idType sb.appendIdType
                   " ( declared at " sb.appendS
-                  idData [] .declaredAt sb.appendPos
+                  idData [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
                   " ) expected: " sb.appendS
                   IdentifierType .PROCEDURE_BUNDLE sb.appendIdType
                 op .pos errors appendError
@@ -4717,7 +4717,7 @@ proc(
                     "missing procedure data for \"" sb.appendS
                     idData [] .labelId labelContext sb.appendLabelPath
                     "\" ( declared at " sb.appendS
-                    idData [] .declaredAt sb.appendPos
+                    idData [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
                     " ) expected ProcId got:" sb.appendS
                     idData [] .constValue typeContext sb.appendConstant
                   op .pos errors appendError
@@ -4733,7 +4733,7 @@ proc(
                     "missing procedure data for \"" sb.appendS
                     idData [] .labelId labelContext sb.appendLabelPath
                     "\" ( declared at " sb.appendS
-                    idData [] .declaredAt sb.appendPos
+                    idData [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
                     " ) expected ProcBundleId got:" sb.appendS
                     idData [] .constValue typeContext sb.appendConstant
                   op .pos errors appendError
@@ -4750,7 +4750,7 @@ proc(
                   " \"" sb.appendS
                   idData [] .labelId labelContext sb.appendLabelPath
                   "\" ( declared at " sb.appendS
-                  idData [] .declaredAt sb.appendPos
+                  idData [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
                   " ) is not a procedure" sb.appendS
                 op .pos errors appendError
                 return
@@ -4851,7 +4851,7 @@ proc(
                     closedIf .ifBranch .node
                   branchTree.depthFrom sb.appendI
                   " at " sb.appendS
-                  closedIf .ifBranch .pos sb.appendPos
+                  closedIf .ifBranch .pos [] sb.appendPos
                   "\n  * elseBranch: " sb.appendS
                   state [] .stack
                     branches@ 1 []
@@ -4923,7 +4923,7 @@ proc(
                         label labelContext sb.appendLabelPath
                         "\" declaredAt"  sb.appendS
                         label labelContext id.labelPos .if
-                          sb.appendPos
+                          [] sb.appendPos
                         else
                           "?" sb.appendS
                         end
@@ -4969,7 +4969,7 @@ proc(
                       branchPoint .node
                     branchTree.depthFrom sb.appendI
                     " in branch at " sb.appendS
-                    branchPoint .pos sb.appendPos
+                    branchPoint .pos [] sb.appendPos
                   end
                   '\n' sb.appendC
                 op .pos errors appendError
@@ -5044,13 +5044,13 @@ proc(
                    whileBlock .branchRoot .node
                 branchTree.depthFrom sb.appendI
                 " in branch at " sb.appendS
-                whileBlock .branchRoot .pos sb.appendPos
+                whileBlock .branchRoot .pos [] sb.appendPos
                 "\n  * " sb.appendS
                 state [] .stack
                   branchPoints list.peek optional.unwrap []
                 branchTree.depthFrom sb.appendI
                 " in branch at " sb.appendS
-                op .pos sb.appendPos
+                op .pos [] sb.appendPos
                 '\n' sb.appendC
               op .pos errors appendError
               continue.opLoop
@@ -5086,7 +5086,7 @@ proc(
                       branchPoint .node
                     branchTree.depthFrom sb.appendI
                     " in branch at " sb.appendS
-                    branchPoint .pos sb.appendPos
+                    branchPoint .pos [] sb.appendPos
                   end
                   '\n' sb.appendC
                 op .pos errors appendError
@@ -5152,7 +5152,7 @@ proc(
                     branchPoint .node
                   branchTree.depthFrom sb.appendI
                   " in branch at " sb.appendS
-                  branchPoint .pos sb.appendPos
+                  branchPoint .pos [] sb.appendPos
                 end
                 '\n' sb.appendC
               op .pos errors appendError
@@ -5226,13 +5226,13 @@ proc(
           ## TODO? append initialization stack for all error messages
           state [] .initializationStack .length 0:iSize != if
             "\n  caused by initializing code at " sb.appendS
-            op .pos sb.appendPos
+            op .pos [] sb.appendPos
             '\n' sb.appendC
             state [] .initializationStack .length i32 cast.u 1 - while
               $ 0 > ## XXX? only go until position in last reset
             do =:: i
               "  caused by initializing code at " sb.appendS
-              state [] .initializationStack i [] sb.appendPos
+              state [] .initializationStack i [] [] sb.appendPos
               '\n' sb.appendC
             finally i 1 - end ..drop
             state [] .initializationStack 0 []
@@ -5565,7 +5565,7 @@ proc(
                 " - " sb.appendS
                 aliasId id.NO_ALIAS != if
                   "alias (declared at " sb.appendS
-                  aliasId idContext id.getAliasPos sb.appendPos
+                  aliasId idContext id.getAliasPos [] sb.appendPos
                   ")  to " sb.appendS
                 end
                 idData id.asIdInfo labelContext sb.appendIdInfo
@@ -5578,7 +5578,7 @@ proc(
                 end
                 " ) declared at " sb.appendS
                 labelId labelContext id.labelPos .if
-                  sb.appendPos
+                  [] sb.appendPos
                 else
                   "?" sb.appendS
                 end
@@ -5629,7 +5629,7 @@ proc(
   LabelId : procName
   ProcCheckType : checkType
   bool : isUnused
-  FilePosition : expandedAt
+  FilePosition ptr : expandedAt
   ProgramContext ptr.mut : program
 -> bool ) =>: checkProcState
   program .idContext .typeContext .labelContext =:: labelContext
@@ -5665,7 +5665,7 @@ proc(
   ProcId : procId
   i32 : implId
   ProcCheckType : checkType
-  FilePosition optional : expandedAt
+  FilePosition ptr optional : expandedAt
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckProcedure
   ## XXX? is there a way to reset local auto-types without copying the whole list
@@ -5674,7 +5674,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   program [] .procedures procId i64 cast list.at .else
-    "missing procedure":s expandedAt .else FILE_POS_UNKNOWN end ..line internalErrorNoOp ..unreachable
+    "missing procedure":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
   end =:: currentProc
   currentProc .implementation .Code .else ..drop
     ## TODO replace alias with underlying proc
@@ -5682,7 +5682,7 @@ proc(
     return
   end =:: codeImpl
   currentProc [] .labelId labelContext id.getLabelPos .else
-    "proc label has no pos":s expandedAt .else FILE_POS_UNKNOWN end ..line internalErrorNoOp ..unreachable
+    "proc label has no pos":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
   end =:: procPos
   expandedAt .else procPos end =:: initPos
   codeImpl [] .expansionLevel =:: prevExpansionLevel
@@ -5706,7 +5706,7 @@ proc(
           ')' sb.appendC
           state [] .initializationStack list.reversed for =:: prevExpand
             "  caused by initializing code at " sb.appendS
-            prevExpand sb.appendPos
+            prevExpand [] sb.appendPos
             '\n' sb.appendC
           end
         initPos program .errors appendError
@@ -5798,17 +5798,17 @@ proc(
     label id.LABEL_ID_NONE == if ## push argument
       state .stack
         ## TypeInfo
-          argType
-          $ typeContext types.isType and
+          argType typeContext types.isType and
               state .argData -2 i - LabelId cast map.get .if
             .value
-            procPos
+            argType
             $1 argType procPos opConst state appendOp
           else
             ConstValue .None
-            procPos
+            argType
             OP_ARGUMENT
           end
+          procPos
         TypeInfo new
       branchTree.push
     else
@@ -5869,7 +5869,7 @@ end
 proc(
   ProcId : procId
   i32 : implId
-  FilePosition : expandedAt
+  FilePosition ptr : expandedAt
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckChildProcedures
   state rememberState
@@ -5954,7 +5954,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     TypeBlockState optional.empty
     128 MissingProc list.create
     FILE_ID_NONE
-    16 FilePosition list.create
+    16 FilePosition ptr list.create
     8 TypeCheckStateState list.create
     TypeCheckMode .LINEAR
     true ## reachable
@@ -6030,7 +6030,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
       ProcCodeState .UNUSED codeImpl .codeState=
       procId 1 + continue ## ignore parsing procedures
     end
-    procId ProcId cast -1 ProcCheckType .REQUIRE_DEFINED FilePosition optional.empty state typeCheckProcedure
+    procId ProcId cast -1 ProcCheckType .REQUIRE_DEFINED FilePosition ptr optional.empty state typeCheckProcedure
     procId 1 +
   end ..drop
   ## static procedures

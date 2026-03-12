@@ -42,13 +42,13 @@ struct(
 struct(
   ConstValue   : value
   Type         : valType
-  FilePosition : pos
+  FilePosition ptr : pos
 ) =:: PtrConstant
 
 struct(
   Type       : valType
   ConstValue : value
-  FilePosition : pos
+  FilePosition ptr : pos
   i32 : id
 ) =:: LocalConst
 
@@ -198,7 +198,7 @@ proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> i32 ) 
   newId return
 end
 proc(
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> i32 ) =>: popValue
   context .stackInfo branchTree.pop .if
@@ -253,7 +253,7 @@ end
 proc(
   types.TypeSize : size
   Type : t
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> i64 ) =>: typeSizeAsInt
   context [] .program =:: program
@@ -275,7 +275,7 @@ proc(
 end
 proc(
   Type : t
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> i64 ) =>: typeAlignmentInt
   context [] .program =:: program
@@ -284,7 +284,7 @@ proc(
 end
 proc(
   Type : t
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> i64 ) =>: typeSizeInt
   context [] .program =:: program
@@ -293,7 +293,7 @@ proc(
 end
 proc(
   Type : t
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> i64 ) =>: typeStrideInt
   context [] .program =:: program
@@ -303,7 +303,7 @@ end
 proc(
   Type : t
   i32 : i
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> i64 ) =>: tupleEltOffsetInt
   context [] .program =:: program
@@ -321,7 +321,7 @@ end
 struct(
   string : blockName
   BranchId slice : branchIds
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
   stringBuilder ptr.mut : out
 ) =:: MergePoint
@@ -394,7 +394,7 @@ proc( LabelState CompilerContext ptr.mut : context -> LabelState ) =>: rememberS
 end
 proc( stringBuilder
   LocalLabelId : labelId
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: rememberStackState
   context [] .program .backJumpInfo labelId map.get .if
@@ -482,7 +482,7 @@ namespace: sb
     stringBuilder : sb
     Type : t
     StorageType : storeType
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendTypeNameQBE
     context [] .program =:: prog
@@ -600,7 +600,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     Type : procType
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendProcSignature
     context [] .program =:: prog
@@ -702,7 +702,7 @@ namespace: sb
     stringBuilder : sb
     ConstValue : value
     Type : ptrType
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendPtrConstQBE
     context [] .program .idContext .typeContext =:: typeContext
@@ -773,7 +773,7 @@ namespace: sb
     Type : t
     ConstValue : value
     bool : isGlobal
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendConstQBE
     context [] .program =:: prog
@@ -1041,7 +1041,7 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendLocalConstants
     context [] .program .idContext .typeContext =:: typeContext
@@ -1065,7 +1065,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     Type : t
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: startTypeDeclaration
     sb
@@ -1079,7 +1079,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     Type : t
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: startEltTypeDeclaration
     sb
@@ -1093,7 +1093,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     Type : t
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: eltTypeName
     sb
@@ -1109,7 +1109,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     Type : t0
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendNestedTypeDeclarationQBE
     context [] .program =:: prog
@@ -1234,7 +1234,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     Type : t
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendTypeDeclarationQBE
     context [] .program =:: prog
@@ -1280,15 +1280,15 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    FilePosition : pos
+    FilePosition ptr : pos
   -> stringBuilder ) =>: appendPosQBE
     sb
       "dbgloc " sb.appendS
-      pos .line sb.appendI
+      pos [] .line sb.appendI
       ',' sb.appendC
-      pos .posInLine sb.appendI
+      pos [] .posInLine sb.appendI
       " ## " sb.appendS
-      pos .fileName sb.appendEscapedStrC
+      pos [] .fileName sb.appendEscapedStrC
       '\n' sb.appendC
     return
   end
@@ -1306,26 +1306,26 @@ end
 
 proc(
   stringBuilder : sb
-  FilePosition : pos
+  FilePosition ptr : pos
   ProgramContext ptr : prog
 -> stringBuilder ) =>: appendPosPrintfArgs
   sb
     ",l " sb.appendS
-    pos .fileName .length sb.appendI
+    pos [] .fileName .length sb.appendI
     ",l $" sb.appendS
     FILE_NAME_NAME sb.appendS
-    pos .fileName prog findFileId i64 cast sb.appendI
+    pos [] .fileName prog findFileId i64 cast sb.appendI
     ",w " sb.appendS
-    pos .line sb.appendI
+    pos [] .line sb.appendI
     ",w " sb.appendS
-    pos .posInLine sb.appendI
+    pos [] .posInLine sb.appendI
   return
 end
 
 proc(
   stringBuilder
   LabelId  : labelId
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendGenericArg
   context [] .program =:: prog
@@ -1358,7 +1358,7 @@ proc(
   IntValue : value
   BranchId : ifBranch
   BranchId : elseBranch
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendCmpInt
   context nextTmpId =:: tmpId
@@ -1393,7 +1393,7 @@ proc(
   stringBuilder : sb
   Type : tupleType
   i32 : tupleId
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: flattenTupleQBE
   context [] .program =:: prog
@@ -1447,7 +1447,7 @@ proc(
   Type : tupleType
   char8 : dataPtrType
   i32 : dataPtrId
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: initializeTupleQBE
   context [] .program =:: prog
@@ -1493,7 +1493,7 @@ end
 proc(
   stringBuilder : sb
   Type : valType
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
   bool : createId
 -> stringBuilder i32 ) =>: appendAlloc
@@ -1525,7 +1525,7 @@ proc(
   i32 : opIndex
   i64 optional : lower
   i64 optional : upper
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendSwitchJumpTree
   labels .length 3:iSize u<= if
@@ -1637,7 +1637,7 @@ proc(
   LocalLabelId slice : branchLabels
   LocalLabelId : defaultLabel
   i32 : opIndex
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendSwitchTable
   context [] .program =:: prog
@@ -1705,7 +1705,7 @@ proc(
   stringBuilder : sb
   string : name
   ValType : valType
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendUnaryOperator
   pos context popValue =:: arg
@@ -1725,7 +1725,7 @@ proc(
   stringBuilder : sb
   string : name
   ValType : valType
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendBinaryOperator
   pos context popValue =:: arg2
@@ -1750,7 +1750,7 @@ proc(
   ValType : resValue
   ValType : arg2Value
   bool : signed
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendMixedDivisionOperator
   pos context popValue =:: arg2
@@ -1784,7 +1784,7 @@ proc(
   stringBuilder : sb
   string : cmpType
   ValType : valType
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendComparisonOperator
   pos context popValue =:: arg2
@@ -1806,7 +1806,7 @@ proc(
   stringBuilder : sb
   Type : src
   bool : signed
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: extendArguments
   i32 2 array new =:: mut: args
@@ -1855,7 +1855,7 @@ proc(
   stringBuilder : sb
   BuiltIn : builtIn
   Type : opType
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendBuiltInQBE
   context [] .program =:: prog
@@ -2210,7 +2210,7 @@ proc(
   types.PrimitiveType : targetVal
   i32 : targetIndex
   bool : unsigned
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: castFloatToInt
   BranchId 7 array new =:: mut: branches
@@ -2334,7 +2334,7 @@ proc(
   i32 : srcIndex
   Type : target
   i32 : targetIndex
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
   SignType : signType
 -> stringBuilder ) =>: castNumbers
@@ -2457,7 +2457,7 @@ proc(
   i32 : srcIndex
   Type : target
   i32 : targetIndex
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: bitcastNumbers
   context [] .program =:: prog
@@ -2555,7 +2555,7 @@ proc(
   Type : src0
   i32 : offset
   Type : target0
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: compileCast
   context [] .program =:: prog
@@ -2676,7 +2676,7 @@ proc(
   stringBuilder : sb
   Type : constType
   ConstValue : value
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: pushConstant
   context [] .program =:: prog
@@ -2728,7 +2728,7 @@ proc(
   Type : calledType
   TypedValId list ptr.mut : argIndices
   iSize : outArgsOffset
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: prepareCall
   context [] .program =:: prog
@@ -2770,7 +2770,7 @@ proc(
   Type : calledType
   TypedValId list ptr.mut : argIndices
   iSize : outArgsOffset
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: finishCall
   context [] .program =:: prog
@@ -3956,7 +3956,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     types for =:: t
       t
         ## TODO? use declaration position of type
-        FILE_POS_UNKNOWN
+        FILE_POS_UNKNOWN@
       context sb.appendTypeDeclarationQBE
     end
     "data $" sb.appendS
@@ -3992,13 +3992,13 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
       "data " sb.appendS
       labelId -1 context sb.appendGlobalName
       " = align " sb.appendS
-      valType idData [] .declaredAt context typeAlignmentInt sb.appendI
+      valType idData [] .declaredAt .else FILE_POS_UNKNOWN@ end context typeAlignmentInt sb.appendI
       " {" sb.appendS
       idData [] .constValue .None ? ! if
-        valType idData [] .constValue true idData [] .declaredAt context sb.appendConstQBE
+        valType idData [] .constValue true idData [] .declaredAt .else FILE_POS_UNKNOWN@ end context sb.appendConstQBE
       else
         "z " sb.appendS
-        valType idData [] .declaredAt context typeSizeInt sb.appendI
+        valType idData [] .declaredAt .else FILE_POS_UNKNOWN@ end context typeSizeInt sb.appendI
       end
       "}\n" sb.appendS
       target $1 sb.asStr file.write target=

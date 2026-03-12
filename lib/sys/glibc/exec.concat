@@ -63,7 +63,7 @@ namespace: exec
     ..ctype.int : status
     ## waitpid
       0 ..ctype.int cast
-      status @
+      status@
       childId
     c.waitpid i32 cast -1 == if
       -1 RunState .WAIT_FAILURE return

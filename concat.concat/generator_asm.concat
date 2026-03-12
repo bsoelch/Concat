@@ -384,7 +384,7 @@ end
 proc(
   asm.Atom list
   ValType : argType
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list asm.RegisterId asm.Value ) =>: amd64GetBinOpArgs
   ## TODO? extend registers to 32-bit for arithmetic operations to prevent partial register write
@@ -406,7 +406,7 @@ proc(
   asm.Atom list
   ValType : argType
   BinOp : opType
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opBinOp
   context .asmContext .targetId switch
@@ -442,7 +442,7 @@ proc(
   asm.Atom list
   ValType : argType
   CmpType : cmpType
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opCmp
   context .asmContext .targetId switch
@@ -589,7 +589,7 @@ proc(
   TypedValue : src
   TypedValue : dst
   RegisterState : targetState
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: restoreValue
   context [] .program =:: program
@@ -654,7 +654,7 @@ end
 proc(
   asm.Atom list
   RegisterState : state
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: restoreState
   context [] .program =:: program
@@ -692,7 +692,7 @@ end
 proc(
   asm.Atom list
   LocalLabelId : labelId
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list i32 ) =>: syncLabelState
   context .labelStates labelId map.get .else
@@ -713,7 +713,7 @@ proc(
 end
 
 proc(
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> StackValue optional ) =>: popValue
   context [] .program =:: program
@@ -746,7 +746,7 @@ end
 proc(
   asm.Atom list
   BuiltIn : builtIn
-  FilePosition : pos
+  FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: compileBuiltIn
   context [] .program =:: program

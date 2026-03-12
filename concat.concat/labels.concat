@@ -66,7 +66,7 @@ end
 struct( string : name NamespaceId list : children NamespaceId : parent ) =:: Namespace
 struct(
   string : name
-  FilePosition : pos
+  FilePosition ptr : pos
   NamespaceInfo : namespaceInfo
   FileId : srcFile
   id.LabelFlag : flags
@@ -132,9 +132,9 @@ namespace: id
       FILE_ID_NONE return
     end [] .srcFile return
   end
-  proc( LabelId : id LabelContext ptr.mut : context -> FilePosition optional ) =>: export: getLabelPos
+  proc( LabelId : id LabelContext ptr.mut : context -> FilePosition ptr optional ) =>: export: getLabelPos
     id context getLabel .else
-      FilePosition optional.empty return
+      FilePosition ptr optional.empty return
     end [] .pos optional.wrap return
   end
   proc( LabelId : id NamespaceInfo : newVal LabelContext ptr.mut : context -> ) =>: export: setLabelNamespace
@@ -184,9 +184,9 @@ namespace: id
       newFlags |
     flags =[]
   end
-  proc( LabelId : id LabelContext ptr : context -> FilePosition optional ) =>: export: labelPos
+  proc( LabelId : id LabelContext ptr : context -> FilePosition ptr optional ) =>: export: labelPos
     id context getLabel .else
-      FilePosition optional.empty return
+      FilePosition ptr optional.empty return
     end [] .pos optional.wrap return
   end
   proc(
@@ -201,7 +201,7 @@ namespace: id
   proc(
     string : str
     LabelFlag : flags
-    FilePosition : pos
+    FilePosition ptr : pos
     FileId : srcFile
     LabelContext ptr.mut : context
   -> LabelId ) =>: export: newLabel

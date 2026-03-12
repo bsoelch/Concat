@@ -21,7 +21,7 @@ struct(
 proc(
   Type : varType
   bool : mutable
-  FilePosition : pos
+  FilePosition ptr : pos
   ConverterContext ptr.mut : context
 -> IdentifierInfo ) =>: newTmpVar
   context [] .program .idContext =:: idContext
@@ -85,7 +85,7 @@ end
 proc(
   Operation list
   ProcedureCall : callInfo
-  FilePosition : pos
+  FilePosition ptr : pos
   ConverterContext ptr.mut : context
 -> Operation list ) =>: inlineCall
   context [] .program =:: program

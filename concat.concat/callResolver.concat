@@ -85,7 +85,7 @@ proc(
   LabelId list ptr.mut : labelBuffer
   LabelId GenericArg hashMap ptr.mut : genericValues
   ReplaceFlags : flags
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : typeChecker
 -> Type ) =>: replaceGenerics
   typeChecker [] .program =:: progContext
@@ -785,7 +785,7 @@ proc(
   ProcId slice : procedureIds
   StackValue slice : stackValues
   stringBuilder ptr.mut optional : errorMessage
-  FilePosition : pos
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : typeChecker
 -> ProcedureCallInfo optional ProcId Type ) =>: export: resolveCall
   typeChecker [] .program =:: progContext
@@ -1202,7 +1202,6 @@ proc(
           0 VariableInfo list.create
           Operation slice.emptyMutable
           pos
-          implData .Code .else "expected code-impl" ..panic end [] .expansionLevel 1:i16 +
           ## replaceGenerics
             baseProcInfo [] .procType
             typeBuffer@
@@ -1213,6 +1212,7 @@ proc(
             typeChecker
           replaceGenerics
           ProcCodeState .PARSED
+          implData .Code .else "expected code-impl" ..panic end [] .expansionLevel 1:i16 +
         ProcImplementation new list.append
       impls =[]
     end

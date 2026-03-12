@@ -170,7 +170,7 @@ namespace: interpreter
     Type slice : inTypes
     ConstValue ptr.raw : args
     i32 : k
-    FilePosition : pos
+    FilePosition ptr : pos
     TypeContext ptr.mut : typeContext
     CompilerError list ptr.mut : errors
   -> ConstValue OperatorResult ) =>: export: evaluateBuiltIn
@@ -618,7 +618,7 @@ namespace: interpreter
     bool : isOffset
     i64 : offset
     Type : valueType
-    FilePosition : pos
+    FilePosition ptr : pos
     TypeContext ptr.mut : typeContext
     CompilerError list ptr.mut : errors
   -> ConstValue OperatorResult ) =>: getOrOffset
@@ -740,7 +740,7 @@ namespace: interpreter
     type : auto: W type : auto: T
     W : targetArray
     T slice : srcArray
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerError list ptr.mut : errors
   -> OperatorResult ) =>: setLocalArray
     srcArray .length targetArray .length != if
@@ -759,7 +759,7 @@ namespace: interpreter
   proc(
     ConstValue : newValue
     ConstValue : targetValue
-    FilePosition : pos
+    FilePosition ptr : pos
     TypeContext ptr.mut : typeContext
     CompilerError list ptr.mut : errors
   -> OperatorResult ) =>: setPointer
@@ -1056,7 +1056,7 @@ namespace: interpreter
     ConstValue : target
     ConstValue : src
     iSize : length
-    FilePosition : pos
+    FilePosition ptr : pos
     ProgramContext ptr.mut : program
   -> ConstValue bool ) =>: export: opMemcopy
     length 0:iSize == if

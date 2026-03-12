@@ -6,11 +6,10 @@ import map
 import "program.concat"
 import "types.concat"
 
-
 proc(
   Type : declared
   i32 : ptrLevel
-  FilePosition : pos
+  FilePosition ptr : pos
   ProgramContext ptr.mut : prog
   Type i32 hashMap ptr.mut : visited
   Type list ptr.mut : types
@@ -116,7 +115,7 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     idData [] .idType .GLOBAL_VAR ! if
       continue
     end
-    idData [] .valueType 0 idData [] .declaredAt prog visited@ types@ declaredType
+    idData [] .valueType 0 idData [] .declaredAt .else FILE_POS_UNKNOWN@ end prog visited@ types@ declaredType
   end ..drop
   prog [] .globalOps for =:: op
     op@ prog visited@ types@ addOpType

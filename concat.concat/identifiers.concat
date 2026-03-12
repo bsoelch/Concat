@@ -25,7 +25,7 @@ enum(
 struct(
   Type : valueType
   ConstValue : constValue
-  FilePosition : declaredAt
+  FilePosition ptr optional : declaredAt ## TODO: this is only optional to allow global initialization
   LabelId : labelId
   i32 : index
   IdentifierType : idType
@@ -40,7 +40,7 @@ namespace: id
   i32 =:: export: AliasId
   ( char8 ptr.raw iSize -> AliasId ) : static: export: alias: :AliasId ..builtIn.parse.i32
   -1:AliasId =:: export: NO_ALIAS
-  struct( FilePosition : declaredAt ) =:: AliasInfo
+  struct( FilePosition ptr : declaredAt ) =:: AliasInfo
   i32 =:: ImportId
   ( char8 ptr.raw iSize -> ImportId ) : static: alias: :ImportId ..builtIn.parse.i32
   -1:ImportId =:: export: NO_IMPORTS
@@ -66,7 +66,7 @@ namespace: id
   ## IdentifierData
     Type .Undefined
     ConstValue .None
-    FILE_POS_UNKNOWN
+    FilePosition ptr optional.empty ## TODO! allow pointer to global variable as global variable
     LABEL_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
@@ -75,7 +75,7 @@ namespace: id
   ## IdentifierData
     Type .Undefined
     ConstValue .None
-    FILE_POS_UNKNOWN
+    FilePosition ptr optional.empty
     LABEL_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
@@ -440,7 +440,7 @@ namespace: id
   proc(
     string : id
     NameContext : context
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: checkIdentifier
     id .length 0:iSize == if
@@ -488,7 +488,7 @@ namespace: id
     end
     false return
   end
-  proc( AliasId : aliasId IdentifierContext ptr : context -> FilePosition ) =>: export: getAliasPos
+  proc( AliasId : aliasId IdentifierContext ptr : context -> FilePosition ptr ) =>: export: getAliasPos
     context [] .aliasInfo aliasId i64 cast @[] .declaredAt []
   end
   union(
@@ -500,7 +500,7 @@ namespace: id
     string : name
     bool : isAlias
     IdentifierType : idType
-    FilePosition : declaredAt
+    FilePosition ptr : declaredAt
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   -> DeclareNameResult ) =>: declareName
@@ -542,12 +542,12 @@ namespace: id
             declaredAt errors appendError
           else shadowedName .aliasId NO_ALIAS == _if
               "\" shadows previous declaration ( at" sb.appendS
-              shadowed [] .declaredAt sb.appendPos
+              shadowed [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
               " )" sb.appendS
             declaredAt errors appendWarning
           else
               "\" shadows alias ( at" sb.appendS
-              shadowedName .aliasId context getAliasPos sb.appendPos
+              shadowedName .aliasId context getAliasPos [] sb.appendPos
               " )" sb.appendS
             declaredAt errors appendWarning
           end
@@ -575,7 +575,7 @@ namespace: id
     i32 : index
     ConstValue : constVal
     bool : isInit
-    FilePosition : declaredAt
+    FilePosition ptr : declaredAt
     FileId : currentFile
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
@@ -634,7 +634,7 @@ namespace: id
             "\":\n  * " sb.appendS
             prevDec [] .valueType typeContext sb.appendType
             " at " sb.appendS
-            prevDec [] .declaredAt sb.appendPos
+            prevDec [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
             "\n  * " sb.appendS
             valType typeContext sb.appendType
           declaredAt errors appendError
@@ -646,7 +646,7 @@ namespace: id
             "\" are not compatible expected: " sb.appendS
             prevDec [] .idType sb.appendIdType
             " ( declared at " sb.appendS
-            prevDec [] .declaredAt sb.appendPos
+            prevDec [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
             " )" sb.appendS
             " got: " sb.appendS
             idType sb.appendIdType
@@ -659,7 +659,7 @@ namespace: id
             "\" differ: " sb.appendS
             ## TODO? print flags
             " ( declaration at " sb.appendS
-            prevDec [] .declaredAt sb.appendPos
+            prevDec [] .declaredAt .if [] else FILE_POS_UNKNOWN end sb.appendPos
             " )" sb.appendS
           declaredAt errors appendWarning
         end
@@ -667,20 +667,20 @@ namespace: id
           valType prevDec .valueType=
           constVal prevDec .constValue=
           index prevDec .index=
-          declaredAt prevDec .declaredAt=
+          declaredAt optional.wrap prevDec .declaredAt=
           false prevDec .declarationOnly=
         end
         prevDec [] .labelId prevDec [] false return
       end
       prevId .aliasId NO_ALIAS == if
-        prevDec [] .declaredAt
+        prevDec [] .declaredAt .else FILE_POS_UNKNOWN@ end
       else
         prevId .aliasId context getAliasPos
       end =:: prevPos
       "re declaration of identifier \"" sb.copyPtr
         label labelContext sb.appendLabelPath
         "\" ( previous declaration at " sb.appendS
-        prevPos sb.appendPos
+        prevPos [] sb.appendPos
         " )" sb.appendS
       declaredAt errors appendError
       LABEL_ID_NONE ID_NONE_DATA true return
@@ -688,7 +688,7 @@ namespace: id
     ## IdentifierData
       valType
       constVal
-      declaredAt
+      declaredAt optional.wrap
       label
       index
       idType
@@ -704,7 +704,7 @@ namespace: id
     LabelId : srcId
     string : newName
     IdentifierType : idType
-    FilePosition : declaredAt
+    FilePosition ptr : declaredAt
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: declareNameAlias
@@ -722,14 +722,14 @@ namespace: id
       prevId .aliasId NO_ALIAS == if
         context .identifierData prevId .labelId map.at .else
           "could not find previous id of redeclaration" ..panic
-        end [] .declaredAt
+        end [] .declaredAt .else FILE_POS_UNKNOWN@ end
       else
         prevId .aliasId context getAliasPos
       end =:: prevPos
       "re declaration of identifier \"" sb.copyPtr
         newName sb.appendStr
         "\" ( previous declaration at " sb.appendS
-        prevPos sb.appendPos
+        prevPos [] sb.appendPos
         " )" sb.appendS
       declaredAt errors appendWarning
       true return
@@ -738,7 +738,7 @@ namespace: id
   end
   proc(
     Type : itrType
-    FilePosition : pos
+    FilePosition ptr : pos
     FileId : currentFile
     IdentifierContext ptr.mut : context
   -> IdentifierInfo ) =>: export: newTmpVar
@@ -757,7 +757,7 @@ namespace: id
       ## IdentifierData
         itrType
         ConstValue .None
-        pos
+        pos optional.wrap
         label
         -1
         IdentifierType .ITR_VAR
@@ -770,7 +770,7 @@ namespace: id
   proc(
     LabelId : label
     Type : varType
-    FilePosition : pos
+    FilePosition ptr : pos
     IdentifierContext ptr.mut : context
   -> ) =>: export: declareTmpVar
     context .identifierData
@@ -778,7 +778,7 @@ namespace: id
       ## IdentifierData
         varType
         ConstValue .None
-        pos
+        pos optional.wrap
         label
         -1
         IdentifierType .TMP_VAR
@@ -917,7 +917,7 @@ namespace: id
   proc(
     string : usedName string : nameAlias
     IdentifierContext ptr.mut : idContext
-    FilePosition : pos
+    FilePosition ptr : pos
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: importIdentifier
     idContext .typeContext .labelContext =:: labelContext
