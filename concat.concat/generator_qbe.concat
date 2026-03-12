@@ -785,6 +785,7 @@ namespace: sb
       isGlobal and t typeContext types.isPointer or
           t typeContext types.unwrapNamed types.isPrimitive or
           t typeContext types.isEnum or
+          t typeContext types.unwrapNamed .CType ? or
           t .IntLiteral ? if
         ## add name prefix for global constants, skip prefix for zero-length array constants
         t StorageType .STORE pos context sb.appendTypeNameQBE
