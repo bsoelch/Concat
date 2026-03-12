@@ -21,7 +21,8 @@ end
 ## TODO: move low-level code to platform dependent section of library
 namespace: c
   ..ctype.struct ptr.mut =:: export: FILE
-  ..ctype.struct ptr.mut =:: DIR
+  ..ctype.struct ptr.mut =:: export: DIR
+  ..ctype.int =:: fd
   proc.c(
     ..ctype.char ptr.raw : mode
     ..ctype.char ptr.raw : path
@@ -46,14 +47,16 @@ namespace: c
   proc.c( FILE : file -> ..ctype.int ) : extern: fclose
   proc.c( ..ctype.char ptr.raw -> DIR ) : extern: opendir
   proc.c( DIR -> ..ctype.int ) : extern: closedir
+  proc.c( FILE -> fd ) : extern: fileno
+  proc.c( fd fd -> i32 ) : extern: dup2
   ## wrapper functions to allow interoperability with lib-c code
+  proc.c( ..ctype.char ptr.raw -> iSize ) : extern: strlen
   proc.c( -> FILE ) : extern: concatIOHelper_stdin
   proc.c( -> FILE ) : extern: concatIOHelper_stdout
   proc.c( -> FILE ) : extern: concatIOHelper_stderr
   proc.c( -> ) : extern: concatIOHelper_resetErrno
   proc.c( -> file.Error ) : extern: concatIOHelper_checkErrno
   proc.c( DIR -> ..ctype.char ptr.raw ) : extern: concatIOHelper_readdirname
-  proc.c( ..ctype.char ptr.raw -> iSize ) : extern: strlen
 end
 namespace: io
   proc( -> char8 optional ) =>: export: getChar
@@ -104,6 +107,32 @@ namespace: file
   proc( -> FILE ) =>: export: stdIn  c.concatIOHelper_stdin  FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
   proc( -> FILE ) =>: export: stdOut c.concatIOHelper_stdout FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
   proc( -> FILE ) =>: export: stdErr c.concatIOHelper_stderr FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
+
+  ## redirect input/output
+  proc( string -> bool ) =>: export: setStdIn
+    OpenMode .READ open
+      $ .value .File .else ..drop.2 false return end
+      0 c.fd cast >$ c.fileno
+    c.dup2 0 >=
+      >$ ..drop
+    return
+  end
+  proc( string -> bool ) =>: export: setStdOut
+    OpenMode .WRITE open
+      $ .value .File .else ..drop.2 false return end
+      1 c.fd cast >$ c.fileno
+    c.dup2 0 >=
+      >$ ..drop
+    return
+  end
+  proc( string -> bool ) =>: export: setStdErr
+    OpenMode .WRITE open
+      $ .value .File .else ..drop.2 false return end
+      2 c.fd cast >$ c.fileno
+    c.dup2 0 >=
+      >$ ..drop
+    return
+  end
   ## TODO: path management functions:
   ## .path / .create / .createDir / .delete / .parent
 

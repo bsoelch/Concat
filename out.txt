@@ -1,0 +1,4 @@
+true
+#+ ## TODO compile-time element access
+i32 4 array new =:: x
+( i
