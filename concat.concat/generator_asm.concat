@@ -89,6 +89,37 @@ namespace: StackValue
       Val3 .case .2 optional.wrap return
     end
   end
+  proc( TypedValue StackValue ptr.mut -> ) =>: set1
+    switch
+      Val .case =[] break
+      Val2 .case .0 =[] break
+      Val3 .case .0 =[] break
+    end
+  end
+  proc( TypedValue StackValue ptr.mut : dst -> ) =>: set2
+    dst switch
+      Val .case [] >$ ( TypedValue TypedValue ) new StackValue .Val2 dst =[] break
+      Val2 .case .1 =[] break
+      Val3 .case .1 =[] break
+    end
+  end
+  proc( TypedValue StackValue ptr.mut : dst -> ) =>: set3
+    dst switch
+      Val .case
+          []
+          asm.Value .None ValType .EMPTY TypedValue new
+          >>$
+        ( TypedValue TypedValue TypedValue ) new StackValue .Val3 dst =[]
+      break
+      Val2 .case
+        $ .0 []
+        >$ .1 []
+        >>$
+        ( TypedValue TypedValue TypedValue ) new StackValue .Val3 dst =[]
+      break
+      Val3 .case .2 =[] break
+    end
+  end
 end
 struct(
   StackValue slice.mut : stack
@@ -240,8 +271,30 @@ proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : conte
       end
     break
   end regInfo .uses=
-  ## TODO! support removing register location
-  ## TODO make available once there are no more locations in use
+end
+proc( ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: removeRegUse
+  "unimplemented: unlinking register uses" ..panic
+end
+proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: clearRegUses
+  context .registerInfo regId map.at .else
+    return
+  end =:: regInfo
+  ## TODO! if there is different register that holds same value: update references instead of deleting
+  regInfo [] .uses switch
+    None case return
+    Val .case
+      context removeRegUse
+    break
+    Val2 .case
+        $ .0 context removeRegUse
+      .1 context removeRegUse
+    break
+    Vals .case
+        $ for context removeRegUse end
+      list.free ..drop
+    break
+  end
+  RegisterUse .None regInfo .uses=
 end
 proc( TypedValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: copyValueElt
   val .value .Register .if
@@ -535,6 +588,42 @@ proc(
 end
 proc(
   ValueLocation : location
+  TypedValue : newValue
+  FilePosition ptr : pos
+  CompilerContext ptr.mut : context
+-> ) =>: setStorageLocation
+  location switch
+    None case return
+    Stack .case =:: index
+      newValue
+        context [] .stack index list.at .else ..drop
+          "stack-values are out of sync" sb.copyPtr pos context [] .program .errors appendError
+          return
+        end
+      StackValue.set1
+    return
+    Stack2 .case =:: index
+      newValue
+        context [] .stack index list.at .else ..drop
+          "stack-values are out of sync" sb.copyPtr pos context [] .program .errors appendError
+          return
+        end
+      StackValue.set2
+    return
+    Stack3 .case =:: index
+      newValue
+        context [] .stack index list.at .else ..drop
+          "stack-values are out of sync" sb.copyPtr pos context [] .program .errors appendError
+          return
+        end
+      StackValue.set3
+    return
+    LocalVariable GlobalVariable LocalMemory case
+      "unsupported value location" ..panic
+  end
+end
+proc(
+  ValueLocation : location
   CompilerContext ptr.mut : context
 -> TypedValue optional ) =>: findStorageLocation
   location switch
@@ -585,8 +674,44 @@ proc(
 end
 proc(
   asm.Atom list
+  ValType : valType
+  ValueLocation : valLoc
+  asm.Value : dstValue
+  asm.Value : srcValue
+  bool : clearSrc
+  FilePosition ptr : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: moveValue
+  srcValue .Register .if =:: srcReg
+    srcReg valLoc context removeLocation
+    ## mark source as no longer moving
+    context .registerInfo srcReg map.at .if =:: regInfo
+      clearSrc and regInfo .uses .None ? ! if
+        ## TODO remember other locations and remove from src
+        "unimplemented: multi-use source" ..panic
+      end
+      false regInfo .moving=
+    end
+  else
+    "unimplemented: non-register source" ..panic
+  end
+  ## clear references in destination register
+  dstValue .Register .if =:: dstReg
+    dstReg context clearRegUses
+    dstReg valLoc context addLocation
+    ## TODO if clearSrc: add other source locations to dst
+    ## TODO mark src and dst as containing the same value
+  else
+    "unimplemented: non-register destinations" ..panic
+  end
+  ## TODO? should addLocation call setStorageLocation by default
+  valLoc dstValue valType TypedValue new pos context setStorageLocation
+  valType dstValue srcValue context opMove
+end
+proc(
+  asm.Atom list
   ValueLocation : loc
-  TypedValue : src
+  TypedValue : mut: src
   TypedValue : dst
   RegisterState : targetState
   FilePosition ptr : pos
@@ -615,16 +740,11 @@ proc(
     ## 3. clear destination slot if neccessary (detect move-loops)
     context .registerInfo dstReg map.at .if =:: regInfo
       regInfo [] .moving if
-        ## TODO! update Value Locations
-        ## moveValue function that
-        ## 1. moves value
-        ## 2. updates locations
-        ## 3. clears moving flag on source value
-        src .valType
+        src .valType loc
           src .valType context nextFreeRegister asm.Value .Register
           src .value
-        context opMove
-        false regInfo .moving=
+          true
+        pos context moveValue
         return
       end
       regInfo [] .uses switch
@@ -632,7 +752,10 @@ proc(
         Val .case =:: regUse
           regUse targetState findTargetStorageLocation .if =:: dstTarget
             regUse dst dstTarget targetState pos context restoreValue
-            ## TODO update source register location
+            ## ensure source-location still matches up with value
+            loc context findStorageLocation .else
+              "source no longer exists" ..panic
+            end src=
           end
         break
         default ## TODO for multi-use: pick most convenient target among uses
@@ -648,8 +771,7 @@ proc(
     pos errors appendError
   end
   ## 4. move to destination
-  ## TODO! update Value Locations
-  src .valType dst .value src .value context opMove
+  src .valType loc dst .value src .value false pos context moveValue
 end
 proc(
   asm.Atom list
