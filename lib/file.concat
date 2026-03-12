@@ -23,6 +23,11 @@ namespace: c
   ..ctype.struct ptr.mut =:: export: FILE
   ..ctype.struct ptr.mut =:: export: DIR
   ..ctype.int =:: fd
+  namespace: fd
+    0 fd =: stdIn
+    1 fd =: stdOut
+    2 fd =: stdErr
+  end
   proc.c(
     ..ctype.char ptr.raw : mode
     ..ctype.char ptr.raw : path
@@ -100,6 +105,7 @@ namespace: file
   proc( FILE -> bool ) =>: export: isErr  .error Error.NONE != end
   proc( FILE -> bool ) =>: export: isFile .value .File ? end
   proc( FILE -> bool ) =>: export: isDir  .value .Dir ? end
+  ## TODO: state checker .isReadable / .isWriteable / .size
   proc( FILE -> Error ) =>: export: getError   .error  end
   proc( FILE -> FILE ) =>: export: clearError
     Error.NONE >$ .error=
@@ -109,10 +115,11 @@ namespace: file
   proc( -> FILE ) =>: export: stdErr c.concatIOHelper_stderr FileValue .File Error.NONE Flags.NO_CLOSE FILE new end
 
   ## redirect input/output
+  ## TODO? versions that take FILE instead of string
   proc( string -> bool ) =>: export: setStdIn
     OpenMode .READ open
       $ .value .File .else ..drop.2 false return end
-      0 c.fd cast >$ c.fileno
+      c.fd.stdIn c.fd cast >$ c.fileno
     c.dup2 0 >=
       >$ ..drop
     return
@@ -120,7 +127,7 @@ namespace: file
   proc( string -> bool ) =>: export: setStdOut
     OpenMode .WRITE open
       $ .value .File .else ..drop.2 false return end
-      1 c.fd cast >$ c.fileno
+      c.fd.stdOut c.fd cast >$ c.fileno
     c.dup2 0 >=
       >$ ..drop
     return
@@ -128,7 +135,7 @@ namespace: file
   proc( string -> bool ) =>: export: setStdErr
     OpenMode .WRITE open
       $ .value .File .else ..drop.2 false return end
-      2 c.fd cast >$ c.fileno
+      c.fd.stdErr c.fd cast >$ c.fileno
     c.dup2 0 >=
       >$ ..drop
     return
