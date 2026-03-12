@@ -69,6 +69,26 @@ namespace: StackValue
       v3 t3 TypedValue new
     ( TypedValue TypedValue TypedValue ) new StackValue .Val3
   end
+  proc( StackValue -> TypedValue ) =>: get1
+    switch
+      Val .case return
+      Val2 .case .0 return
+      Val3 .case .0 return
+    end
+  end
+  proc( StackValue -> TypedValue optional ) =>: get2
+    switch
+      Val case TypedValue optional.empty return
+      Val2 .case .1 optional.wrap return
+      Val3 .case .1 optional.wrap return
+    end
+  end
+  proc( StackValue -> TypedValue optional ) =>: get3
+    switch
+      Val Val2 case TypedValue optional.empty return
+      Val3 .case .2 optional.wrap return
+    end
+  end
 end
 struct(
   StackValue slice.mut : stack
@@ -514,6 +534,56 @@ proc(
   state .stack for context pushValue end
 end
 proc(
+  ValueLocation : location
+  CompilerContext ptr.mut : context
+-> TypedValue optional ) =>: findStorageLocation
+  location switch
+    None case TypedValue optional.empty return
+    Stack .case =:: index
+      context [] .stack index list.get .else
+        TypedValue optional.empty return
+      end StackValue.get1 optional.wrap
+    return
+    Stack2 .case =:: index
+      context [] .stack index list.get .else
+        TypedValue optional.empty return
+      end StackValue.get2
+    return
+    Stack3 .case =:: index
+      context [] .stack index list.get .else
+        TypedValue optional.empty return
+      end StackValue.get3
+    return
+    LocalVariable GlobalVariable LocalMemory case
+      "unsupported value location" ..panic
+  end
+end
+proc(
+  ValueLocation : location
+  RegisterState : targetState
+-> TypedValue optional ) =>: findTargetStorageLocation
+  location switch
+    None case TypedValue optional.empty return
+    Stack .case =:: index
+      targetState .stack index slice.get .else
+        TypedValue optional.empty return
+      end StackValue.get1 optional.wrap
+    return
+    Stack2 .case =:: index
+      targetState .stack index slice.get .else
+        TypedValue optional.empty return
+      end StackValue.get2
+    return
+    Stack3 .case =:: index
+      targetState .stack index slice.get .else
+        TypedValue optional.empty return
+      end StackValue.get3
+    return
+    LocalVariable GlobalVariable LocalMemory case
+      "unsupported value location" ..panic
+  end
+end
+proc(
   asm.Atom list
   ValueLocation : loc
   TypedValue : src
@@ -543,13 +613,27 @@ proc(
   end
   dst .value .Register .if =:: dstReg
     ## 3. clear destination slot if neccessary (detect move-loops)
-    context .registerInfo dstReg map.get .if =:: regInfo
-      regInfo .uses switch
+    context .registerInfo dstReg map.at .if =:: regInfo
+      regInfo [] .moving if
+        ## TODO! update Value Locations
+        ## moveValue function that
+        ## 1. moves value
+        ## 2. updates locations
+        ## 3. clears moving flag on source value
+        src .valType
+          src .valType context nextFreeRegister asm.Value .Register
+          src .value
+        context opMove
+        false regInfo .moving=
+        return
+      end
+      regInfo [] .uses switch
         None case break
         Val .case =:: regUse
-          ## TODO 1. find target location for regUse
-          ## 2a. if target-register not moving: recursively start move of target-register
-          ## 2b. if target-register moving: move target to tmp-var, update register
+          regUse targetState findTargetStorageLocation .if =:: dstTarget
+            regUse dst dstTarget targetState pos context restoreValue
+            ## TODO update source register location
+          end
         break
         default ## TODO for multi-use: pick most convenient target among uses
           "multi-use registers are not yet supported" sb.copyPtr
@@ -564,6 +648,7 @@ proc(
     pos errors appendError
   end
   ## 4. move to destination
+  ## TODO! update Value Locations
   src .valType dst .value src .value context opMove
 end
 proc(
