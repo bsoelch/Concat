@@ -433,33 +433,15 @@ proc(
   src .opIndex 0 < if
     true return
   end
-  state [] .compiledOps src .opIndex @[] =:: srcOp
-  ## TODO! check if this needs to be more strict
-  src .valueType typeContext types.isPointer and target typeContext types.isPointer if
-    target srcOp .dataType=
-    false return
-  end
-  srcOp [] .val .Constant ? ! if
+  src .opIndex state canDeleteOp ! if
     true return
   end
-  target typeContext types.unwrapRefinement target=
-  ## TODO? completely merge with interpreter.castConstant
-  ## casting between integer constants
-  target typeContext types.isNumber and src .value .Int ? or src .value .Float ? if
-    src .valueType signType src .value target typeContext interpreter.castConstant srcOp .val .Constant=
-    target srcOp .dataType=
-    false return
-  end
-  src .valueType types.isLiteral if
-    src .valueType signType src .value target typeContext interpreter.castConstant srcOp .val .Constant=
-    target srcOp .dataType=
-    false return
-  end
-  src .valueType typeContext types.isType and target typeContext types.isType if
-    ## TODO! check refinement-types
-    false return
-  end
-  true return
+  state [] .compiledOps src .opIndex @[] =:: srcOp
+  target typeContext types.unwrapRefinement =:: targetBase
+  ## TODO! check refinement-types
+  src .valueType signType src .value targetBase typeContext interpreter.castConstant srcOp .val .Constant=
+  target srcOp .dataType=
+  false return
 end
 union( _ : Err _ : Match ConstValue slice : Constant ) =:: TypeMatch
 proc(
@@ -1222,26 +1204,10 @@ proc(
   state [] .compiledOps index list.at .else
     false return
   end =:: op
-  op [] .val .Constant ? if
+  op [] .val .Constant ? or op [] .val .AtId ? or op [] .val .GetId ? if
+    ## deleting op will no remove side-effects
     true return
   end
-  op [] .val .AtId .if
-    .idType .GLOBAL_VAR return
-  else ..drop end
-  op [] .val .GetId .if .labelId =:: labelId
-    state [] .program .idContext =:: idContext
-    labelId
-      idContext .typeContext .labelContext id.labelFlags
-    id.FLAG_MUTABLE & ? if
-      false return
-    end
-    ## getIdentifier
-      labelId
-      idContext
-    id.getIdentifier if ..drop
-      false return
-    end .constValue .None ? ! return
-  else ..drop end
   false return
 end
 proc(
@@ -1249,7 +1215,18 @@ proc(
   TypeCheckState ptr.mut : state
 -> bool ) =>: canCopyOp
   opIndex OP_ARGUMENT == if false return end
-  opIndex state canDeleteOp return
+  ## can only copy deletable ops
+  opIndex state canDeleteOp ! if false return end
+  state [] .compiledOps opIndex list.at .else
+    false return
+  end .val [] .GetId .if .labelId =:: labelId
+    labelId
+      state [] .program .idContext .typeContext .labelContext id.labelFlags
+    id.FLAG_MUTABLE & ? if
+      false return ## cannot copy mutable get (value might change between invocations)
+    end
+  else ..drop end
+  true return
 end
 proc(
   i32 : index
@@ -4791,6 +4768,7 @@ proc(
             op .pos errors appendError
             continue.opLoop
           PROCEDURE case
+            oldBlockStart state .blockStart= ## keep constants intact
             op .pos state closeBlock .Procedure .else
               "unexpected end of " sb.copyPtr
                 >$ sb.appendBlockInfoName
@@ -5334,7 +5312,6 @@ proc(
             branchTree.at optional.unwrap [] =:: mut: copied
             op .pos copied@ .pushedAt=
             copied .valueType typeContext types.isEmpty ! if
-              ## TODO? don't copy composite operations
               ## copy value in code
               copied .opIndex state tryCopyOp if ..drop
                 ## copied operation can no longer be deleted
