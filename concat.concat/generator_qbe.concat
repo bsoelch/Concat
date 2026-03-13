@@ -770,7 +770,7 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    Type : t
+    Type : t0
     ConstValue : value
     bool : isGlobal
     FilePosition ptr : pos
@@ -781,11 +781,12 @@ namespace: sb
     prog .idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
     prog .idContext .constContext =:: constContext
+    t0 typeContext types.unwrapNamed typeContext types.unwrapRefinement =:: t
     sb
       isGlobal and t typeContext types.isPointer or
-          t typeContext types.unwrapNamed types.isPrimitive or
+          t types.isPrimitive or
           t typeContext types.isEnum or
-          t typeContext types.unwrapNamed .CType ? or
+          t .CType ? or
           t .IntLiteral ? if
         ## add name prefix for global constants, skip prefix for zero-length array constants
         t StorageType .STORE pos context sb.appendTypeNameQBE
@@ -802,7 +803,6 @@ namespace: sb
               $ typeContext types.isEnum if
                 typeContext types.enumLabelInfo ..drop
               end
-              typeContext types.unwrapNamed
             .CType .if types.cTypeAsType else
             .IntLiteral ._if types.intLiteralAsInt end
           end =:: numType
@@ -827,7 +827,7 @@ namespace: sb
         Char .case i32 cast.u sb.appendI return
         break
         Float .case =:: floatValue
-          t typeContext types.unwrapNamed
+          t
             .CType .if types.cTypeAsType else
             .IntLiteral ._if types.intLiteralAsInt end
           =:: numType
