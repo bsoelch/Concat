@@ -1162,17 +1162,17 @@ proc(
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> i32 ) =>: reserveOps
-  state [] .compiledOps .length i32 cast.u =:: offset
+  state [] .compiledOps .length =:: offset
   state [] .compiledOps
-    offset count + list.ensureCap
-    offset count + list.setLength
+    offset count iSize cast.u + list.ensureCap
+    offset count iSize cast.u + list.setLength
   state .compiledOps=
   ## mem.fill
     state [] .compiledOps .data offset @[]
     count iSize cast.u
     pos reserveOp
   mem.fill
-  offset return
+  offset i32 cast.u return
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
   state [] .program =:: program
@@ -1259,6 +1259,11 @@ proc(
   end
   0 true return
 end
+proc( TypeCheckState ptr.mut : state -> ) =>: adjustBlockStart
+  state [] .blockStart
+    state [] .compiledOps .length i32 cast.u i32.min
+  state .blockStart=
+end
 proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
   state [] .compiledOps .length 1:iSize - while $ 0:iSize iSize.sge do =:: i
     state [] .compiledOps i @[] =:: op
@@ -1270,6 +1275,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
   state [] .compiledOps
     offset list.setLength
   state .compiledOps=
+  state adjustBlockStart
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: clearOps
   0 state .blockStart=
@@ -2049,6 +2055,7 @@ proc(
     state [] .compiledOps
       $ .length 1:iSize - list.setLength
     state .compiledOps=
+    state adjustBlockStart
   end
   emptyValue and isPtr if
     ## pushConstant
@@ -6001,8 +6008,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   end
   ## type-check unreachable procs
   TypeCheckMode .LINEAR state .mode=
-  ## TODO reset state
-  state .compiledOps =:: originalOps
+  ## TODO reset state?
   ## procedures
   0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
     program [] .procedures procId iSize cast.u @[] =:: currentProc
