@@ -14,7 +14,7 @@ namespace: types
   enum(
     BOOL
     I8 I16 I32 I64
-    F32 F64
+    F16 F32 F64
     TYPE
   ) =:: export: PrimitiveType
   type : ArrayData
@@ -51,6 +51,7 @@ namespace: types
   ) =:: CType
   enum(
     U7  S8  U8  ## largest numbers castable to i8;  -> i32 by default
+    ## TODO? add U/S values for largest value fitting in f16
     U15 S16 U16 ## largest numbers castable to i16; -> i32 by default
     U24 S25   ## largest numbers castable to f32 ( -2^24 <= k <= 2^24 ); -> i32 by default
     U31 S32 U32 ## -> i32
@@ -310,9 +311,10 @@ namespace: types
       I16 case 3 return
       I32 case 4 return
       I64 case 5 return
-      F32 case 6 return
-      F64 case 7 return
-      TYPE case 8 return
+      F16 case 6 return
+      F32 case 7 return
+      F64 case 8 return
+      TYPE case 9 return
     end
   end
   proc( IntLiteral -> i32 ) =>: intLiteralId
@@ -398,6 +400,7 @@ namespace: types
     PrimitiveType .I16  Type .PrimitiveType Type =: export: I16
     PrimitiveType .I32  Type .PrimitiveType Type =: export: I32
     PrimitiveType .I64  Type .PrimitiveType Type =: export: I64
+    PrimitiveType .F16  Type .PrimitiveType Type =: export: F16
     PrimitiveType .F32  Type .PrimitiveType Type =: export: F32
     PrimitiveType .F64  Type .PrimitiveType Type =: export: F64
     PrimitiveType .TYPE Type .PrimitiveType Type =: export: TYPE
@@ -454,7 +457,7 @@ namespace: types
 
   proc( PrimitiveType -> bool ) =>: isIntPrimitive
     switch
-      BOOL F32 F64 TYPE case
+      BOOL F16 F32 F64 TYPE case
         false return
       I8 I16 I32 I64 case
         true return
@@ -520,6 +523,19 @@ namespace: types
         switch
           BOOL I8 I16 I32 I64 TYPE case
             false return
+          F16 F32 F64 case
+            true return
+        end
+      else ..drop end
+    false return
+  end
+  ## internally f16 is represented as int in QBE backend
+  proc( Type TypeContext ptr -> bool ) =>: export: isTrueFloat
+    unwrapNamed
+      .PrimitiveType .if
+        switch
+          BOOL I8 I16 I32 I64 F16 TYPE case
+            false return
           F32 F64 case
             true return
         end
@@ -532,7 +548,7 @@ namespace: types
         switch
           BOOL TYPE case
             false return
-          I8 I16 I32 I64 F32 F64 case
+          I8 I16 I32 I64 F16 F32 F64 case
             true return
         end
       else ..drop end
@@ -541,11 +557,11 @@ namespace: types
   proc( Type TypeContext ptr : _ -> bool ) =>: export: isChar
     CHAR8 typeEquals return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isIntOrChar
+  proc( Type TypeContext ptr -> bool ) =>: export: isIntOrChar ## TODO better name
     unwrapNamed
       .PrimitiveType .if
         switch
-          BOOL TYPE F32 F64 case
+          BOOL TYPE F16 F32 F64 case
             false return
           I8 I16 I32 I64 case
             true return
@@ -648,6 +664,8 @@ namespace: types
     targetPrimitive isIntPrimitive if
       targetPrimitive sizeOfPrimitive 8 * =:: targetBits
       srcBits targetBits <= return
+    else targetPrimitive .F16 _if
+      true return ## TODO support cast to F16
     else targetPrimitive .F32 _if
       srcBits 24 <= return
     else targetPrimitive .F64 _if
@@ -724,7 +742,7 @@ namespace: types
         0 return
       BOOL I8 case
         1 return
-      I16 case
+      I16 F16 case
         2 return
       I32 F32 case
         4 return
@@ -2651,6 +2669,7 @@ namespace: sb
       I16  case "i16"  appendS return
       I32  case "i32"  appendS return
       I64  case "i64"  appendS return
+      F16  case "f16"  appendS return
       F32  case "f32"  appendS return
       F64  case "f64"  appendS return
       TYPE case "type" appendS return

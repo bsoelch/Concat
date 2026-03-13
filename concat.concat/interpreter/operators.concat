@@ -952,6 +952,10 @@ namespace: interpreter
           a constAsInt if ..drop false true return end i64 cast =:: x
           b constAsInt if ..drop false true return end i64 cast =:: y
           x y == false return
+        F16 case
+          a constAsFloat if ..drop false true return end f16.fromF64 =:: x
+          b constAsFloat if ..drop false true return end f16.fromF64 =:: y
+          x y == false return
         F32 case
           a constAsFloat if ..drop false true return end f32 cast =:: x
           b constAsFloat if ..drop false true return end f32 cast =:: y

@@ -277,7 +277,7 @@ namespace: constant
       PrimitiveType .case switch
         BOOL case false ConstValue .Bool return
         I8 I16 I32 I64 case 0 ConstValue .Int return
-        F32 F64 case 0 ConstValue .Float return
+        F16 F32 F64 case 0 ConstValue .Float return
         TYPE case Type .Undefined ConstValue .TypeId return
       end break
       Pointer MutablePointer RawPointer MutableRawPointer Procedure case

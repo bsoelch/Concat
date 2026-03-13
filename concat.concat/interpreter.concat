@@ -490,7 +490,7 @@ namespace: interpreter
           I64 case
             floatVal unsignedCast if i64 cast.u else i64 cast.s end
             ConstValue .Int return
-          BOOL F32 F64 TYPE case ..unreachable
+          BOOL F16 F32 F64 TYPE case ..unreachable
         end
       else unsignedCast _if
         floatVal i64 cast.u ConstValue .Int return
@@ -508,7 +508,7 @@ namespace: interpreter
             unsignedCast if i64 cast.u else i64 cast.s end intVal= break
           I32 case intVal i32 cast
             unsignedCast if i64 cast.u else i64 cast.s end intVal= break
-          F32 F64 case break ## XXX? handle precission loss due to representing int as float
+          F16 F32 F64 case break ## XXX? handle precission loss due to representing int as float
           I64 case break ## no change neccessary
           BOOL TYPE case ..unreachable
         end
@@ -907,7 +907,7 @@ namespace: interpreter
             context .localMemory=
             0:i64 localSlice slice.fill
             localSlice LocalSlice64 cast ConstValue .LocalArray64 return
-          F32 F64 TYPE case break ## XXX? store float arrays in Array32/Array64
+          F16 F32 F64 TYPE case break ## XXX? store float arrays in Array32/Array64
         end
       end
       context [] .localMemory

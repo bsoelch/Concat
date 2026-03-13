@@ -8,7 +8,7 @@ import "measure.concat"
 import "asm/asm.concat"
 import "asm/amd64.concat"
 
-enum( EMPTY BOOL I8 I16 I32 I64 F32 F64 POINTER PROC_POINTER ) =:: ValType
+enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER ) =:: ValType
 namespace: ValType
   proc( Type : t -> ValType ) =>: fromType
     t switch
@@ -17,6 +17,7 @@ namespace: ValType
         I16 case ValType .I16 return
         I32 case ValType .I32 return
         I64 case ValType .I64 return
+        F16 case ValType .F16 return
         F32 case ValType .F32 return
         F64 case ValType .F64 return
         TYPE case ValType .EMPTY return
@@ -27,19 +28,19 @@ namespace: ValType
   proc( ValType : valType -> bool ) =>: isInt
     valType switch
       BOOL I8 I16 I32 I64 POINTER PROC_POINTER case true return
-      EMPTY F32 F64 case false return
+      EMPTY F16 F32 F64 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isFloat
     valType switch
-      F32 F64 case true return
+      F16 F32 F64 case true return
       EMPTY BOOL I8 I16 I32 I64 POINTER PROC_POINTER case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isAddress
     valType switch
       POINTER PROC_POINTER case true return
-      EMPTY BOOL I8 I16 I32 I64 F32 F64 case false return
+      EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 case false return
     end
   end
 end
@@ -362,7 +363,7 @@ proc( asm.RegisterId ValType : valType CompilerContext ptr.mut : context -> asm.
     EMPTY case return
     BOOL case asm.RegisterId.SIZE_8 break
     I8 case asm.RegisterId.SIZE_8 break
-    I16 case asm.RegisterId.SIZE_16 break
+    I16 F16 case asm.RegisterId.SIZE_16 break
     I32 F32 case asm.RegisterId.SIZE_32 break
     I64 F64 case asm.RegisterId.SIZE_64 break
     POINTER PROC_POINTER case asm.RegisterId.SIZE_64 break

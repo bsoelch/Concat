@@ -121,7 +121,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     PrimitiveType .case
       switch
         TYPE case ValType .EMPTY return
-        BOOL I8 I16 I32 case ValType .I32 return
+        BOOL I8 I16 I32 F16 case ValType .I32 return
         I64 case ValType .I64 return
         F32 case ValType .FLOAT return
         F64 case ValType .DOUBLE return
@@ -521,13 +521,20 @@ namespace: sb
           I16 case
             storeType switch
               STACK case sb "w" sb.appendS return
-              LOAD case sb primtive .I16 if "sh" else "uh" end sb.appendS return
+              LOAD case sb "sh" sb.appendS return
               ULOAD case sb "uh" sb.appendS return
               STORE case sb "h" sb.appendS return
             end
-            break
+          break
           I32 case sb "w" sb.appendS return
           I64 case sb "l" sb.appendS return
+          F16 case
+            storeType switch
+              STACK case sb "w" sb.appendS return
+              LOAD ULOAD case sb "uh" sb.appendS return
+              STORE case sb "h" sb.appendS return
+            end
+          break
           F32 case sb "s" sb.appendS return
           F64 case sb "d" sb.appendS return
         end
@@ -812,6 +819,7 @@ namespace: sb
               I16 case intValue 0xffff & sb.appendI return
               I32 case intValue i32 cast sb.appendI return
               I64 case intValue sb.appendI return
+              F16 case intValue f32 cast f16.fromF32 f16.bits i32 cast.s sb.appendI return
               F32 case intValue f32 cast f32.bits sb.appendI return
               F64 case intValue f64 cast f64.bits sb.appendI return
               BOOL TYPE case break
@@ -835,6 +843,8 @@ namespace: sb
             floatValue f32 cast f32.bits sb.appendI
           else numType types.primitive.F64 types.typeEquals _if
             floatValue f64.bits sb.appendI
+          else numType types.primitive.F16 types.typeEquals _if
+            floatValue f16.fromF64 f16.bits i32 cast.s sb.appendI
           else
             "unexpected type for float: " sb.copyPtr
               t typeContext sb.appendType
@@ -2170,10 +2180,25 @@ proc(
           else boundType .MIN _if i64.MIN else i64.MAX end
         break
       BOOL case boundType .MIN if 0 else 1 end break
+      F16 case
+        asType switch
+          I8 I16 I32 I64 case
+            asType unsigned boundType asType appendNumberBound return
+          F16 case
+            boundType .MIN if f16.MIN else f16.MAX end f16.bits i32 cast.s sb.appendI return
+          F32 case
+            boundType .MIN if f32.MIN else f32.MAX end f32.bits sb.appendI return
+          F64 case
+            boundType .MIN if f64.MIN else f64.MAX end f64.bits sb.appendI return
+          BOOL TYPE case ..unreachable
+        end
+        break
       F32 case
         asType switch
           I8 I16 I32 I64 case
             asType unsigned boundType asType appendNumberBound return
+          F16 case
+            boundType .MIN if f16.Infinity else f16.-Infinity end f16.bits i32 cast.s sb.appendI return
           F32 case
             boundType .MIN if f32.MIN else f32.MAX end f32.bits sb.appendI return
           F64 case
@@ -2185,6 +2210,8 @@ proc(
         asType switch
           I8 I16 I32 I64 case
             asType unsigned boundType asType appendNumberBound return
+          F16 case
+            boundType .MIN if f16.Infinity else f16.-Infinity end f16.bits i32 cast.s sb.appendI return
           F32 case
             boundType .MIN if f32.Infinity else f32.-Infinity end f32.bits sb.appendI return
           F64 case
@@ -2197,6 +2224,7 @@ proc(
   asType switch
     I8 I16 I32 I64 case
       intVal sb.appendI return
+    F16 case intVal unsigned if f32 cast.u else f32 cast end f16.fromF32 f16.bits i32 cast.s sb.appendI return
     F32 case intVal unsigned if f32 cast.u else f32 cast end f32.bits sb.appendI return
     F64 case intVal unsigned if f64 cast.u else f64 cast end f64.bits sb.appendI return
     BOOL TYPE case ..unreachable
@@ -2385,7 +2413,7 @@ proc(
           I16 case "h" sb.appendS break
           I32 case "w" sb.appendS break
           I64 case "l" sb.appendS break
-          BOOL TYPE F32 F64 case ..unreachable
+          BOOL TYPE F16 F32 F64 case ..unreachable
         end
       end
       " %s" sb.appendS
@@ -2395,6 +2423,7 @@ proc(
   ## case 2: float -> float/int
   else fromVal .F32 or fromVal .F64 _if
       toVal switch
+        F16 case "unimplemented" ..panic
         F32 case
           sb
             "%s" sb.appendS
@@ -2429,7 +2458,7 @@ proc(
       fromVal switch
         I64 case "ltof" sb.appendS break
         I8 I16 I32 case "wtof" sb.appendS break
-        BOOL TYPE F32 F64 case ..unreachable
+        BOOL TYPE F16 F32 F64 case ..unreachable
       end
       " %s" sb.appendS
       srcIndex sb.appendI
@@ -2452,6 +2481,14 @@ namespace: sb
     return
   end
 end
+proc( types.PrimitiveType : a types.PrimitiveType : b -> bool ) =>: f16bitcast
+  a .F16 if
+    b .I16 return
+  else a .I16 _if
+    b .F16 return
+  end
+  false return
+end
 proc(
   stringBuilder : sb
   Type : src
@@ -2472,7 +2509,7 @@ proc(
   ## sizes of arguments scaled to bits
   fromVal types.sizeOfPrimitive 8 * =:: fromSize
   toVal types.sizeOfPrimitive 8 * =:: toSize
-  fromVal toVal == if
+  fromVal toVal == or fromVal toVal f16bitcast if
     sb
       "%s" sb.appendS
       targetIndex sb.appendI
@@ -2488,18 +2525,18 @@ proc(
   's' targetIndex StackVal new =:: mut: last
   last =:: mut: next
   0 =:: mut: nSteps
-  src typeContext types.isFloat if nSteps 1 + nSteps= end
+  src typeContext types.isTrueFloat if nSteps 1 + nSteps= end
   fromSize toSize != if
     nSteps 1 + nSteps=
   end
-  target typeContext types.isFloat if nSteps 1 + nSteps= end
+  target typeContext types.isTrueFloat if nSteps 1 + nSteps= end
   nSteps 0 > "bit-cast casts non-equal types" assert
   nSteps 1 > if
     't' context nextTmpId StackVal new next=
   end
   sb
     ## 1. convert floats to int
-    src typeContext types.isFloat if
+    src typeContext types.isTrueFloat if
       next sb.appendStackVal
       " =" sb.appendS
       fromSize 32 <= if 'w' else 'l' end sb.appendC
@@ -2517,7 +2554,7 @@ proc(
       toSize 32 <= if 'w' else 'l' end sb.appendC
       fromSize toSize < if
         fromVal switch
-          BOOL TYPE F32 F64 case break
+          BOOL TYPE F16 F32 F64 case break
           I8  case " extub" sb.appendS break
           I16 case " extuh" sb.appendS break
           I32 case " extuw" sb.appendS break
@@ -2534,7 +2571,7 @@ proc(
       nSteps 1 > if 't' context nextTmpId StackVal new else last end next=
     end
     ## 3. convert int to float
-    target typeContext types.isFloat if
+    target typeContext types.isTrueFloat if
       next sb.appendStackVal
       " =" sb.appendS
       toSize 32 == if 's' else 'd' end sb.appendC

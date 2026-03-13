@@ -554,6 +554,7 @@ proc(
   types.primitive.I16    "i16":s    pos context newBuiltInType
   types.primitive.I32    "i32":s    pos context newBuiltInType
   types.primitive.I64    "i64":s    pos context newBuiltInType
+  types.primitive.F16    "f16":s    pos context newBuiltInType
   types.primitive.F32    "f32":s    pos context newBuiltInType
   types.primitive.F64    "f64":s    pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
