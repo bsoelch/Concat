@@ -1,0 +1,10 @@
+import numbers/print
+union( i32 : I f32 : F ) =:: aUnion
+proc( i32 : x -> ) =>: test
+  x
+    aUnion ..length 3 == "this should be hit at compile-time" assert
+  io.println
+end
+proc( -> ) =>: main
+  1 test
+end

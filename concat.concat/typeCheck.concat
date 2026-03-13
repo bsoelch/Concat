@@ -1571,11 +1571,11 @@ union(
 proc(
   ProcId slice : procedures
   StackValue slice.mut : mut: stackValues
-  bool : headConstant
+  iSize : leadingConstArgs
   CallSource : source
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
--> TypeCheckCallResult ) =>: export: typeCheckCallStackless
+-> TypeCheckCallResult ) =>: typeCheckCallStackless
   state [] .program =:: program
   state [] .program .errors =:: errors
   program .idContext =:: idContext
@@ -1659,7 +1659,7 @@ proc(
     BuiltIn .case [] .builtIn =:: builtInId
       builtInId .SYS_ARGC or builtInId .SYS_ARGV or builtInId .SYS_ENVP if
         true program .hasGetArgs=
-      else headConstant _if ## only constant arguments
+      else leadingConstArgs stackValues .length u>= _if ## only constant arguments
         source stackValues calledType calledProc pos state evaluateCall .SUCCESS if
           TypeCheckCallResult .ConstEval return
         end
@@ -1683,13 +1683,15 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   true =:: mut: headConstant
+  0:iSize =:: mut: constCount
   ## TODO do not recreate list for each call
   state [] .stack branchTree.depth StackValue list.create =:: mut: stackValues
   state .stack branchTree.itr.start while
     branchTree.itr.hasNext do branchTree.itr.next =:: val ## don't consume value
-    ## TODO? don't treat genericArg as constant
     val [] .value .None ? or val [] .value .GenericArg ? if
       false headConstant=
+    else headConstant _if
+      constCount 1 + constCount=
     end
     stackValues
       ## StackValue
@@ -1701,7 +1703,7 @@ proc(
   ## typeCheckCallStackless
     procedures
     stackValues list.asMutableSlice
-    headConstant
+    constCount
     op CallSource .Op
     op [] .pos
   state typeCheckCallStackless
@@ -1816,7 +1818,7 @@ namespace: typeChecker
     ## typeCheckCallStackless
       procId@ slice.wrap
       stackValues list.asMutableSlice
-      true
+      stackValues .length
       stackValues list.clear stackValues= stackValues@ CallSource .Values
       pos
       typeChecker
@@ -1870,7 +1872,7 @@ namespace: typeChecker
     ## typeCheckCallStackless
       typeTrait@ slice.wrap
       arg@ slice.wrapMutable
-      true
+      stackValues .length
       stackValues@ CallSource .Values
       pos
       state
