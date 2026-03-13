@@ -1278,18 +1278,20 @@ proc( TypeCheckState ptr.mut : state -> ) =>: removeTrailingNOPs
   state adjustBlockStart
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: clearOps
-  0 state .blockStart=
   state [] .stateStack list.peek .if =:: prevState
+    prevState [] .compiledOpsOffset i32 cast.u state .blockStart=
     state [] .compiledOps
       prevState [] .compiledOpsOffset list.setLength
     state .compiledOps=
     return
   end
+  0 state .blockStart=
   state [] .compiledOps
     list.clear
   state .compiledOps=
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: freeOps
+  0 state .blockStart=
   state [] .compiledOps
     list.free
   state .compiledOps=
