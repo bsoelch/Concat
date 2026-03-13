@@ -1,10 +1,10 @@
 type "e" does not have a label "D" at ./tests/operations/missingEnumElement.concat:5:8
 no matching signature for arguments ( "e" { 0 }  )
 candidates:
-  * proc( "type.unionElement" : auto: static: U U[ 4477:LabelId ] -> U[ 4477:LabelId ] unionElement.inv ) unionElement.invert
-  * proc( "type.unionElement" : auto: static: U U[ 4477:LabelId ] -> U[ 4477:LabelId ] unionElement.inv ) unionElement.invert
-  * proc( "type.unionElementPointer" : auto: static: U U[ 4581:LabelId ] -> U[ 4581:LabelId ] unionElement.invPtr ) unionElement.invertPtr
-  * proc( "type.unionElementPointer" : auto: static: U U[ 4581:LabelId ] -> U[ 4581:LabelId ] unionElement.invPtr ) unionElement.invertPtr
+  * proc( "type.unionElement" : auto: static: U `U` -> `U` unionElement.inv ) unionElement.invert
+  * proc( "type.unionElement" : auto: static: U `U` -> `U` unionElement.inv ) unionElement.invert
+  * proc( "type.unionElementPointer" : auto: static: U `U` -> `U` unionElement.invPtr ) unionElement.invertPtr
+  * proc( "type.unionElementPointer" : auto: static: U `U` -> `U` unionElement.invPtr ) unionElement.invertPtr
   * proc( bool -> bool ) bool.not
  at ./tests/operations/missingEnumElement.concat:5:11
 wrong type for assertion expected bool got "e" at ./tests/operations/missingEnumElement.concat:5:33

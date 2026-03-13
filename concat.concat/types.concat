@@ -2749,11 +2749,9 @@ namespace: sb
           sizeInt sb.appendI
           break
         GenericArg .case =:: genSize
-          ' ' sb.appendC
+          '`' sb.appendC
           genSize labelContext appendLabelName
-          "[ " sb.appendS
-          genSize i64 cast.s sb.appendI
-          ":LabelId ]" sb.appendS
+          '`' sb.appendC
           break
       end
     return
@@ -2865,10 +2863,9 @@ namespace: sb
         return
       GenericType .case =:: labelId
         sb
+          '`' sb.appendC
           labelId labelContext appendLabelName
-          "[ " appendS
-          labelId  i64 cast appendI
-          ":LabelId ]"  appendS
+          '`' sb.appendC
         return
       GeneratedType .case types.GeneratedTypeName ptr cast =:: genTypeName
         sb
