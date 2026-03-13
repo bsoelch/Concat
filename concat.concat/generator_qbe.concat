@@ -1892,6 +1892,7 @@ proc(
     Type .Undefined
   end =:: baseType
   baseType context toValType =:: baseVal
+  BuiltIn ..length 169 == "no new built-ins" assert
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       sb "neg":s baseVal pos context appendUnaryOperator
@@ -2141,11 +2142,7 @@ proc(
         CONCAT_ENVP_NAME sb.appendS
         '\n' sb.appendC
       return
-    PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64 TYPE_GET_UNION_ELEMENT_UNION
-        TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
-        TYPE_IS_SET_TYPE TYPE_IS_REFINEMENT_TYPE TYPE_IS_RAW_UNION TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_ENUM TYPE_IS_PROC
-        TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED TYPE_GET_UNION_ELEMENT
-        TYPE_EQUAL TYPE_CAN_ASSIGN TYPE_CAN_CAST TYPE_ARRAY_ELEMENT TYPE_GET_ELEMENT TYPE_UNWRAP_NAMED case
+    default
       "unsupported built-in: " sb.copyPtr
         builtIn sb.appendBuiltIn
       pos errors appendError

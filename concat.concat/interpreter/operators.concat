@@ -388,7 +388,7 @@ namespace: interpreter
           end
         end
         parsed ConstValue .Int OperatorResult .SUCCESS return
-      PARSE_F32 PARSE_F64 case
+      PARSE_F16 PARSE_F32 PARSE_F64 case
         k 2 == "correct number of arguments" assert
         args 0 [] .Array8 .else
           "argument is no string" ..panic

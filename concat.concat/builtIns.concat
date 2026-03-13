@@ -40,7 +40,7 @@ enum(
  ## pointer access
  GET_PTR GET_PTR_MUT SET_PTR OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT
  ## XXX? more built-in operations
- PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F32 PARSE_F64
+ PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F16 PARSE_F32 PARSE_F64
  TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
  TYPE_IS_SET_TYPE TYPE_IS_REFINEMENT_TYPE TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_RAW_UNION TYPE_IS_ENUM TYPE_IS_PROC
  TYPE_IS_NAMED TYPE_IS_CTYPE TYPE_IS_ALIGN TYPE_IS_MUTABLE TYPE_IS_DEFINED
@@ -290,7 +290,7 @@ end
 proc(
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
--> Type Type Type Type Type Type ) =>: parseProcTypes
+-> Type Type Type Type Type Type Type ) =>: parseProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
@@ -333,6 +333,14 @@ proc(
   end =:: s_i64
   ## newProcedure
     argTypes slice.wrap
+    types.primitive.F16@ 1 slice.create
+    LabelId slice.empty
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end =:: s_f16
+  ## newProcedure
+    argTypes slice.wrap
     types.primitive.F32@ 1 slice.create
     LabelId slice.empty
     CallingConvention.DEFAULT
@@ -347,7 +355,7 @@ proc(
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
   end =:: s_f64
-  s_f64 s_f32 s_i64 s_i32 s_i16 s_i8 return
+  s_f64 s_f32 s_f16 s_i64 s_i32 s_i16 s_i8 return
 end
 proc(
   FilePosition ptr : pos
@@ -1182,7 +1190,7 @@ proc(
     "..builtIn.sys.envp":s pos labelContext createLabel
     v_c8pp
   pos context addBuiltIn
-  pos context parseProcTypes =:: s_i8 =:: s_i16 =:: s_i32 =:: s_i64 =:: s_f32 =:: s_f64
+  pos context parseProcTypes =:: s_i8 =:: s_i16 =:: s_i32 =:: s_i64 =:: s_f16 =:: s_f32 =:: s_f64
   BuiltIn .PARSE_I8
     "..builtIn.parse.i8":s pos labelContext createLabel
     s_i8
@@ -1198,6 +1206,10 @@ proc(
   BuiltIn .PARSE_I64
     "..builtIn.parse.i64":s pos labelContext createLabel
     s_i64
+  pos context addStaticBuiltIn
+  BuiltIn .PARSE_F16
+    "..builtIn.parse.f16":s pos labelContext createLabel
+    s_f16
   pos context addStaticBuiltIn
   BuiltIn .PARSE_F32
     "..builtIn.parse.f32":s pos labelContext createLabel
@@ -1375,7 +1387,7 @@ end
     "..builtIn.offset.ptr.i32":s "..builtIn.offset.ptr.i64":s "..builtIn.offset.ptr":s
     "..builtIn.offset.ptr.mut.i32":s "..builtIn.offset.ptr.mut.i64":s "..builtIn.offset.ptr.mut":s
   "..builtIn.parse.i8":s "..builtIn.parse.i16":s "..builtIn.parse.i32":s "..builtIn.parse.i64":s
-    "..builtIn.parse.f32":s "..builtIn.parse.f64":s
+    "..builtIn.parse.f16":s "..builtIn.parse.f32":s "..builtIn.parse.f64":s
   "..types.isPrimitive":s "..types.isPointer":s "..types.isRawPointer":s "..types.isArray":s
     "..types.isStruct":s "..types.isSetType":s "..types.isRefinementType":s "..types.isTaggedUnion":s "..types.isUnionElement":s "..types.isRawUnion":s "..types.isEnum":s
     "..types.isProc":s "..types.isNamed":s "..types.isCtype":s "..types.isAlign":s

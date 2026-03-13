@@ -10,12 +10,16 @@ else
 end =:: NATIVE_F16
 
 ..builtIn.parse.f16:? ! if
-  import core/f64
-  import core/i64
-  import core/f32
   proc( char8 ptr.raw iSize -> f16 ) =>: export: static: :f16
     ..builtIn.parse.f64 f16.fromF64 return
   end
+else
+  proc( char8 ptr.raw iSize -> f16 ) : alias: export: static: :f16 ..builtIn.parse.f16
+end
+..builtIn.convert.f16.f32:? ! if
+  import core/f64
+  import core/i64
+  import core/f32
   namespace: f16
     ## TODO test conversion functions
     proc( f16 -> f32 ) =>: export: asF32
