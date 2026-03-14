@@ -36,6 +36,9 @@ enum(
  ULE_I8 ULE_I16 ULE_I32 ULE_I64                  ## u<=
  UGE_I8 UGE_I16 UGE_I32 UGE_I64                  ## u>=
  UGT_I8 UGT_I16 UGT_I32 UGT_I64                  ## u>
+ ## conversions
+ CONVERT_I32_I8 CONVERT_I32_I16 CONVERT_S32_I64 CONVERT_U32_I64 ## i32 -> ...
+   CONVERT_S32_F32 CONVERT_U32_F32 CONVERT_S32_F64 CONVERT_U32_F64
  SYS_ARGC SYS_ARGV SYS_ENVP
  ## pointer access
  GET_PTR GET_PTR_MUT SET_PTR OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT
@@ -181,7 +184,6 @@ proc(
 -> Type Type Type Type Type ) =>: operatorProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
   ## TODO? own calling convention for built-ins
   LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
@@ -236,7 +238,6 @@ proc(
 -> Type Type ) =>: mixedProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
   Type 2 array new =:: mut: args
   t1 args@ 0 =[]
   t2 args@ 1 =[]
@@ -260,13 +261,27 @@ proc(
 end
 ## i64 i32 -> i32 mod/rem/and
 ## i64 i32 -> i64 div/udiv/shifts
+proc(
+  Type : t1
+  Type : t2
+  ProgramContext ptr.mut : context
+-> Type ) =>: convertProcType ## t1 -> t2
+  context .idContext .typeContext =:: typeContext
+  ## newProcedure
+    t1@ 1 slice.create
+    t2@ 1 slice.create
+    LabelId slice.empty
+    CallingConvention.DEFAULT
+  typeContext types.newProcedure .else
+    "failed to create procedure-type" ..panic
+  end return
+end
 
 proc(
   ProgramContext ptr.mut : context
 -> Type Type ) =>: sysProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
   LabelId slice optional.empty =:: argLabels
   types.CHAR8 false typeContext wrapPtr false typeContext wrapPtr =:: c8pp
   ## newProcedure
@@ -293,7 +308,6 @@ proc(
 -> Type Type Type Type Type Type Type ) =>: parseProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
   Type 2 array : typeData
   typeData@ =:: argTypes
   ## char8 ptr.raw  iSize   -> ...
@@ -1177,6 +1191,35 @@ proc(
     "..builtIn.offset.ptr.mut":s pos labelContext createLabel
     offsetMut64_proc
   pos context addBuiltIn
+  BuiltIn .CONVERT_I32_I8
+    "..builtIn.cvt.i32.i8":s pos labelContext createLabel
+    types.primitive.I32 types.primitive.I8 context convertProcType
+  pos context addBuiltIn
+  BuiltIn .CONVERT_I32_I16
+    "..builtIn.cvt.i32.i16":s pos labelContext createLabel
+    types.primitive.I32 types.primitive.I16 context convertProcType
+  pos context addBuiltIn
+  types.primitive.I32 types.primitive.I64 context convertProcType =:: i32_i64
+  BuiltIn .CONVERT_S32_I64
+    "..builtIn.cvt.s32.i64":s pos labelContext createLabel i32_i64
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U32_I64
+    "..builtIn.cvt.u32.i64":s pos labelContext createLabel i32_i64
+  pos context addBuiltIn
+  types.primitive.I32 types.primitive.F32 context convertProcType =:: i32_f32
+  BuiltIn .CONVERT_S32_F32
+    "..builtIn.cvt.s32.f32":s pos labelContext createLabel i32_f32
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U32_F32
+    "..builtIn.cvt.u32.f32":s pos labelContext createLabel i32_f32
+  pos context addBuiltIn
+  types.primitive.I32 types.primitive.F64 context convertProcType =:: i32_f64
+  BuiltIn .CONVERT_S32_F64
+    "..builtIn.cvt.s32.f64":s pos labelContext createLabel i32_f64
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U32_F64
+    "..builtIn.cvt.u32.f64":s pos labelContext createLabel i32_f64
+  pos context addBuiltIn
   context sysProcTypes =:: v_i64 =:: v_c8pp
   BuiltIn .SYS_ARGC
     "..builtIn.sys.argc":s pos labelContext createLabel
@@ -1382,6 +1425,8 @@ end
   "..builtIn.ule.i8":s "..builtIn.ule.i16":s "..builtIn.ule.i32":s "..builtIn.ule.i64":s
   "..builtIn.uge.i8":s "..builtIn.uge.i16":s "..builtIn.uge.i32":s "..builtIn.uge.i64":s
   "..builtIn.ugt.i8":s "..builtIn.ugt.i16":s "..builtIn.ugt.i32":s "..builtIn.ugt.i64":s
+  "..builtIn.cvt.i32.i8":s "..builtIn.cvt.i32.i16":s "..builtIn.cvt.s32.i64":s "..builtIn.cvt.u32.i64":s
+    "..builtIn.cvt.s32.f32":s "..builtIn.cvt.u32.f32":s "..builtIn.cvt.s32.f64":s "..builtIn.cvt.u32.f64":s
   "..builtIn.sys.argc":s "..builtIn.sys.argv":s "..builtIn.sys.envp":s
   "..builtIn.get.ptr":s "..builtIn.get.ptr.mut":s "..builtIn.set.ptr":s
     "..builtIn.offset.ptr.i32":s "..builtIn.offset.ptr.i64":s "..builtIn.offset.ptr":s
