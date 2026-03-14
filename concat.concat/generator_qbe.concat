@@ -1892,7 +1892,7 @@ proc(
     Type .Undefined
   end =:: baseType
   baseType context toValType =:: baseVal
-  BuiltIn ..length 177 == "no new built-ins" assert
+  BuiltIn ..length 221 == "no new built-ins" assert
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       sb "neg":s baseVal pos context appendUnaryOperator
@@ -2112,14 +2112,61 @@ proc(
         offset sb.appendI
         '\n' sb.appendC
       return
-    CONVERT_I32_I8  case sb "extub":s ValType .I32 pos context appendUnaryOperator return
-    CONVERT_I32_I16 case sb "extuh":s ValType .I32 pos context appendUnaryOperator return
+    CONVERT_S8_I16 CONVERT_S8_I32 case sb "extsb":s ValType .I32 pos context appendUnaryOperator return
+    CONVERT_S8_I64 case sb "extsb":s ValType .I64 pos context appendUnaryOperator return
+    CONVERT_U8_I16 CONVERT_U8_I32 CONVERT_I16_I8 CONVERT_I32_I8 CONVERT_I64_I8 case
+      sb "extub":s ValType .I32 pos context appendUnaryOperator return
+    CONVERT_U8_I64 case sb "extub":s ValType .I64 pos context appendUnaryOperator return
+    CONVERT_S16_I32 case sb "extsh":s ValType .I32 pos context appendUnaryOperator return
+    CONVERT_S16_I64 case sb "extsh":s ValType .I64 pos context appendUnaryOperator return
+    CONVERT_U16_I32 CONVERT_I32_I16 CONVERT_I64_I16 case
+      sb "extuh":s ValType .I32 pos context appendUnaryOperator return
+    CONVERT_U16_I64 case sb "extuh":s ValType .I64 pos context appendUnaryOperator return
     CONVERT_S32_I64 case sb "extsw":s ValType .I64 pos context appendUnaryOperator return
     CONVERT_U32_I64 case sb "extuw":s ValType .I64 pos context appendUnaryOperator return
-    CONVERT_S32_F32 case sb "swtof":s ValType .FLOAT pos context appendUnaryOperator return
-    CONVERT_S32_F64 case sb "swtof":s ValType .DOUBLE pos context appendUnaryOperator return
-    CONVERT_U32_F32 case sb "uwtof":s ValType .FLOAT pos context appendUnaryOperator return
-    CONVERT_U32_F64 case sb "uwtof":s ValType .DOUBLE pos context appendUnaryOperator return
+    CONVERT_I64_I32 case sb "copy":s ValType .I32 pos context appendUnaryOperator return
+    CONVERT_S8_F32 CONVERT_S16_F32 CONVERT_S32_F32 CONVERT_S64_F32 case
+      sb "swtof":s ValType .FLOAT pos context appendUnaryOperator return
+    CONVERT_S8_F64 CONVERT_S16_F64 CONVERT_S32_F64 CONVERT_S64_F64 case
+      sb "swtof":s ValType .DOUBLE pos context appendUnaryOperator return
+    CONVERT_U8_F32 CONVERT_U16_F32 CONVERT_U32_F32 CONVERT_U64_F32 case
+      sb "uwtof":s ValType .FLOAT pos context appendUnaryOperator return
+    CONVERT_U8_F64 CONVERT_U16_F64 CONVERT_U32_F64 CONVERT_U64_F64 case
+      sb "uwtof":s ValType .DOUBLE pos context appendUnaryOperator return
+    CONVERT_F32_S8 case ## TODO simplify float->int conversion
+      sb types.PrimitiveType .F32 types.PrimitiveType .I8 false pos context castFloatToIntHelper return
+    CONVERT_F32_U8 case
+      sb types.PrimitiveType .F32 types.PrimitiveType .I8 true pos context castFloatToIntHelper return
+    CONVERT_F64_S8 case
+      sb types.PrimitiveType .F64 types.PrimitiveType .I8 false pos context castFloatToIntHelper return
+    CONVERT_F64_U8 case
+      sb types.PrimitiveType .F64 types.PrimitiveType .I8 true pos context castFloatToIntHelper return
+    CONVERT_F32_S16 case
+      sb types.PrimitiveType .F32 types.PrimitiveType .I16 false pos context castFloatToIntHelper return
+    CONVERT_F32_U16 case
+      sb types.PrimitiveType .F32 types.PrimitiveType .I16 true pos context castFloatToIntHelper return
+    CONVERT_F64_S16 case
+      sb types.PrimitiveType .F64 types.PrimitiveType .I16 false pos context castFloatToIntHelper return
+    CONVERT_F64_U16 case
+      sb types.PrimitiveType .F64 types.PrimitiveType .I16 true pos context castFloatToIntHelper return
+    CONVERT_F32_S32 case
+      sb types.PrimitiveType .F32 types.PrimitiveType .I32 false pos context castFloatToIntHelper return
+    CONVERT_F32_U32 case
+      sb types.PrimitiveType .F32 types.PrimitiveType .I32 true pos context castFloatToIntHelper return
+    CONVERT_F64_S32 case
+      sb types.PrimitiveType .F64 types.PrimitiveType .I32 false pos context castFloatToIntHelper return
+    CONVERT_F64_U32 case
+      sb types.PrimitiveType .F64 types.PrimitiveType .I32 true pos context castFloatToIntHelper return
+    CONVERT_F32_S64 case
+      sb types.PrimitiveType .F32 types.PrimitiveType .I64 false pos context castFloatToIntHelper return
+    CONVERT_F32_U64 case
+      sb types.PrimitiveType .F32 types.PrimitiveType .I64 true pos context castFloatToIntHelper return
+    CONVERT_F64_S64 case
+      sb types.PrimitiveType .F64 types.PrimitiveType .I64 false pos context castFloatToIntHelper return
+    CONVERT_F64_U64 case
+      sb types.PrimitiveType .F64 types.PrimitiveType .I64 true pos context castFloatToIntHelper return
+    CONVERT_F32_F64 case sb "exts":s ValType .DOUBLE pos context appendUnaryOperator return
+    CONVERT_F64_F32 case sb "truncd":s ValType .FLOAT pos context appendUnaryOperator return
     SYS_ARGC case
       sb
         "%s" sb.appendS
@@ -2236,6 +2283,25 @@ proc(
   end
 end
 
+proc(
+  stringBuilder
+  types.PrimitiveType : srcVal
+  types.PrimitiveType : targetVal
+  bool : unsigned
+  FilePosition ptr : pos
+  CompilerContext ptr.mut : context
+-> stringBuilder ) =>: castFloatToIntHelper
+  pos context popValue =:: srcIndex
+  targetVal .I64 if ValType .I64 else ValType .I32 end context pushValue =:: targetIndex
+  ## castFloatToInt
+    srcVal
+    srcIndex
+    targetVal Type .PrimitiveType
+    targetVal
+    targetIndex
+    unsigned
+  pos context castFloatToInt
+end
 proc(
   stringBuilder : sb
   types.PrimitiveType : srcVal

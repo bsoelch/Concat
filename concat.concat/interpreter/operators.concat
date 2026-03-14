@@ -183,6 +183,21 @@ namespace: interpreter
       ! if ..drop ConstValue .None OperatorResult .ARGUMENT_ERROR return end
     T cast f64 cast.u ConstValue .Float OperatorResult .SUCCESS
   end
+  proc( ConstValue : arg type : F type : I -> ConstValue OperatorResult ) =>: floatToIntS
+    arg constAsFloat
+      ! if ..drop ConstValue .None OperatorResult .ARGUMENT_ERROR return end
+    F cast I cast.s i64 cast.u ConstValue .Int OperatorResult .SUCCESS
+  end
+  proc( ConstValue : arg type : F type : I -> ConstValue OperatorResult ) =>: floatToIntU
+    arg constAsFloat
+      ! if ..drop ConstValue .None OperatorResult .ARGUMENT_ERROR return end
+    F cast I cast.u i64 cast.u ConstValue .Int OperatorResult .SUCCESS
+  end
+  proc( ConstValue : arg type : T -> ConstValue OperatorResult ) =>: cvtFloat
+    arg constAsFloat
+      ! if ..drop ConstValue .None OperatorResult .ARGUMENT_ERROR return end
+    T cast f64 cast ConstValue .Float OperatorResult .SUCCESS
+  end
 
   ## XXX? do I need differnet handling for i64i32 operations
   proc(
@@ -350,12 +365,38 @@ namespace: interpreter
           pos
           typeContext
         errors setPointer return
-      CONVERT_I32_I8 case args [] i8 cvtIntU return
-      CONVERT_I32_I16 case args [] i16 cvtIntU return
+      CONVERT_U8_I16 CONVERT_U8_I32 CONVERT_U8_I64 CONVERT_I16_I8 CONVERT_I32_I8 CONVERT_I64_I8 case
+        args [] i8 cvtIntU return
+      CONVERT_S8_I16 CONVERT_S8_I32 CONVERT_S8_I64 case args [] i8 cvtIntS return
+      CONVERT_U16_I32 CONVERT_U16_I64 CONVERT_I32_I16 CONVERT_I64_I16 case args [] i16 cvtIntU return
+      CONVERT_S16_I32 CONVERT_S16_I64 case args [] i16 cvtIntS return
+      CONVERT_U32_I64 CONVERT_I64_I32 case args [] i32 cvtIntU return
       CONVERT_S32_I64 case args [] i32 cvtIntS return
-      CONVERT_U32_I64 case args [] i32 cvtIntU return
+      CONVERT_S8_F32 CONVERT_S8_F64 case args [] i8 intToFloatS return
+      CONVERT_U8_F32 CONVERT_U8_F64 case args [] i8 intToFloatU return
+      CONVERT_S16_F32 CONVERT_S16_F64 case args [] i16 intToFloatS return
+      CONVERT_U16_F32 CONVERT_U16_F64 case args [] i16 intToFloatU return
       CONVERT_S32_F32 CONVERT_S32_F64 case args [] i32 intToFloatS return
       CONVERT_U32_F32 CONVERT_U32_F64 case args [] i32 intToFloatU return
+      CONVERT_S64_F32 CONVERT_S64_F64 case args [] i64 intToFloatS return
+      CONVERT_U64_F32 CONVERT_U64_F64 case args [] i64 intToFloatU return
+      CONVERT_F32_U8 case args [] f32 i8 floatToIntU return
+      CONVERT_F32_S8 case args [] f32 i8 floatToIntS return
+      CONVERT_F64_U8 case args [] f64 i8 floatToIntU return
+      CONVERT_F64_S8 case args [] f64 i8 floatToIntS return
+      CONVERT_F32_U16 case args [] f32 i16 floatToIntU return
+      CONVERT_F32_S16 case args [] f32 i16 floatToIntS return
+      CONVERT_F64_U16 case args [] f64 i16 floatToIntU return
+      CONVERT_F64_S16 case args [] f64 i16 floatToIntS return
+      CONVERT_F32_U32 case args [] f32 i32 floatToIntU return
+      CONVERT_F32_S32 case args [] f32 i32 floatToIntS return
+      CONVERT_F64_U32 case args [] f64 i32 floatToIntU return
+      CONVERT_F64_S32 case args [] f64 i32 floatToIntS return
+      CONVERT_F32_U64 case args [] f32 i64 floatToIntU return
+      CONVERT_F32_S64 case args [] f32 i64 floatToIntS return
+      CONVERT_F64_U64 case args [] f64 i64 floatToIntU return
+      CONVERT_F64_S64 case args [] f64 i64 floatToIntS return
+      CONVERT_F32_F64 CONVERT_F64_F32 case args [] f32 cvtFloat return
       SYS_ARGC SYS_ARGV SYS_ENVP case break ## TODO error message
       PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 case
         k 2 == "correct number of arguments" assert
