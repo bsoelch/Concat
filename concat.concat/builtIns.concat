@@ -3,7 +3,6 @@ using std.literals.
 
 import "program.concat"
 
-## TODO? char+-int
 enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_
@@ -194,7 +193,6 @@ proc(
 -> Type Type Type Type Type ) =>: operatorProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  ## TODO? own calling convention for built-ins
   LabelId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
   t args@ 0 =[]
@@ -601,7 +599,6 @@ proc(
   end $ types.I_SIZE=
   iSizeLabel pos context newBuiltInTypeLabel
   types.primitive.I_SIZE "..type.iSize":s pos context newBuiltInType
-  ## TODO? should I_MAX be visible to user-code
   2  Type .Align "..type.align2":s  pos context newBuiltInType
   4  Type .Align "..type.align4":s  pos context newBuiltInType
   8  Type .Align "..type.align8":s  pos context newBuiltInType
@@ -1201,8 +1198,73 @@ proc(
     "..builtIn.offset.ptr.mut":s pos labelContext createLabel
     offsetMut64_proc
   pos context addBuiltIn
-  ## TODO cvt i8 ->
-  ## TODO cvt i16 ->
+  types.primitive.I8 types.primitive.I16 context convertProcType =:: i8_i16
+  BuiltIn .CONVERT_S8_I16
+    "..builtIn.cvt.s8.i16":s pos labelContext createLabel i8_i16
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U8_I16
+    "..builtIn.cvt.u8.i16":s pos labelContext createLabel i8_i16
+  pos context addBuiltIn
+  types.primitive.I8 types.primitive.I32 context convertProcType =:: i8_i32
+  BuiltIn .CONVERT_S8_I32
+    "..builtIn.cvt.s8.i32":s pos labelContext createLabel i8_i32
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U8_I32
+    "..builtIn.cvt.u8.i32":s pos labelContext createLabel i8_i32
+  pos context addBuiltIn
+  types.primitive.I8 types.primitive.I64 context convertProcType =:: i8_i64
+  BuiltIn .CONVERT_S8_I64
+    "..builtIn.cvt.s8.i64":s pos labelContext createLabel i8_i64
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U8_I64
+    "..builtIn.cvt.u8.i64":s pos labelContext createLabel i8_i64
+  pos context addBuiltIn
+  types.primitive.I8 types.primitive.F32 context convertProcType =:: i8_f32
+  BuiltIn .CONVERT_S8_F32
+    "..builtIn.cvt.s8.f32":s pos labelContext createLabel i8_f32
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U8_F32
+    "..builtIn.cvt.u8.f32":s pos labelContext createLabel i8_f32
+  pos context addBuiltIn
+  types.primitive.I8 types.primitive.F64 context convertProcType =:: i8_f64
+  BuiltIn .CONVERT_S8_F64
+    "..builtIn.cvt.s8.f64":s pos labelContext createLabel i8_f64
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U8_F64
+    "..builtIn.cvt.u8.f64":s pos labelContext createLabel i8_f64
+  pos context addBuiltIn
+  BuiltIn .CONVERT_I16_I8
+    "..builtIn.cvt.i16.i8":s pos labelContext createLabel
+    types.primitive.I16 types.primitive.I8 context convertProcType
+  pos context addBuiltIn
+  types.primitive.I16 types.primitive.I32 context convertProcType =:: i16_i32
+  BuiltIn .CONVERT_S16_I32
+    "..builtIn.cvt.s16.i32":s pos labelContext createLabel i16_i32
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U16_I32
+    "..builtIn.cvt.u16.i32":s pos labelContext createLabel i16_i32
+  pos context addBuiltIn
+  types.primitive.I16 types.primitive.I64 context convertProcType =:: i16_i64
+  BuiltIn .CONVERT_S16_I64
+    "..builtIn.cvt.s16.i64":s pos labelContext createLabel i16_i64
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U16_I64
+    "..builtIn.cvt.u16.i64":s pos labelContext createLabel i16_i64
+  pos context addBuiltIn
+  types.primitive.I16 types.primitive.F32 context convertProcType =:: i16_f32
+  BuiltIn .CONVERT_S16_F32
+    "..builtIn.cvt.s16.f32":s pos labelContext createLabel i16_f32
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U16_F32
+    "..builtIn.cvt.u16.f32":s pos labelContext createLabel i16_f32
+  pos context addBuiltIn
+  types.primitive.I16 types.primitive.F64 context convertProcType =:: i16_f64
+  BuiltIn .CONVERT_S16_F64
+    "..builtIn.cvt.s16.f64":s pos labelContext createLabel i16_f64
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U16_F64
+    "..builtIn.cvt.u16.f64":s pos labelContext createLabel i16_f64
+  pos context addBuiltIn
   BuiltIn .CONVERT_I32_I8
     "..builtIn.cvt.i32.i8":s pos labelContext createLabel
     types.primitive.I32 types.primitive.I8 context convertProcType
@@ -1232,7 +1294,32 @@ proc(
   BuiltIn .CONVERT_U32_F64
     "..builtIn.cvt.u32.f64":s pos labelContext createLabel i32_f64
   pos context addBuiltIn
-  ## TODO cvt i64 ->
+  BuiltIn .CONVERT_I64_I8
+    "..builtIn.cvt.i64.i8":s pos labelContext createLabel
+    types.primitive.I64 types.primitive.I8 context convertProcType
+  pos context addBuiltIn
+  BuiltIn .CONVERT_I64_I16
+    "..builtIn.cvt.i64.i16":s pos labelContext createLabel
+    types.primitive.I64 types.primitive.I16 context convertProcType
+  pos context addBuiltIn
+  BuiltIn .CONVERT_I64_I16
+    "..builtIn.cvt.i64.i32":s pos labelContext createLabel
+    types.primitive.I64 types.primitive.I32 context convertProcType
+  pos context addBuiltIn
+  types.primitive.I64 types.primitive.F32 context convertProcType =:: i64_f32
+  BuiltIn .CONVERT_S64_F32
+    "..builtIn.cvt.s64.f32":s pos labelContext createLabel i64_f32
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U64_F32
+    "..builtIn.cvt.u64.f32":s pos labelContext createLabel i64_f32
+  pos context addBuiltIn
+  types.primitive.I64 types.primitive.F64 context convertProcType =:: i64_f64
+  BuiltIn .CONVERT_S64_F64
+    "..builtIn.cvt.s64.f64":s pos labelContext createLabel i64_f64
+  pos context addBuiltIn
+  BuiltIn .CONVERT_U64_F64
+    "..builtIn.cvt.u64.f64":s pos labelContext createLabel i64_f64
+  pos context addBuiltIn
   types.primitive.F32 types.primitive.I8 context convertProcType =:: f32_i8
   BuiltIn .CONVERT_F32_S8
     "..builtIn.cvt.f32.s8":s pos labelContext createLabel f32_i8
