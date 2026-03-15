@@ -892,8 +892,7 @@ proc(
 end
 proc(
   asm.Atom list
-  Operation ptr : op
-  i32 : opIndex
+  Operation : op
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: compileOp
   context [] .program =:: program
@@ -904,9 +903,9 @@ proc(
   typeContext .labelContext =:: labelContext
   op .val switch
     NOP case return
-    Constant .case [] op [] .dataType ValType.fromType context pushConstant return
-    BuiltIn .case [] op [] .pos context compileBuiltIn return
-    ImplementProcedure .case [] =:: implId
+    Constant .case op .dataType ValType.fromType context pushConstant return
+    BuiltIn .case op .pos context compileBuiltIn return
+    ImplementProcedure .case =:: implId
       implId context getProcName asm.enter list.append
       program [] .procedures implId .procId iSize cast.u @[] =:: procData
       procData .implementation .Code .else
@@ -965,30 +964,30 @@ proc(
       labelInfo .labelType switch
         HINT_START case return
         HINT_END case
-          context .labelStates labelInfo [] .labelId map.remove ..drop
+          context .labelStates labelInfo .labelId map.remove ..drop
         return
         LABEL_START LABEL_END LABEL_MIDDLE case break
       end
-      labelInfo [] .labelId op [] .pos context syncLabelState asm.localLabel list.append
+      labelInfo .labelId op .pos context syncLabelState asm.localLabel list.append
       true context .reachable=
-      labelInfo .labelType [] .LABEL_END if
-        context .labelStates labelInfo [] .labelId map.remove ..drop
+      labelInfo .labelType .LABEL_END if
+        context .labelStates labelInfo .labelId map.remove ..drop
       end
     return
     LocalJump .case =:: labelInfo
       ## TODO make jump-code target independent? prepare-jump / jump procedures
-      labelInfo [] .cmpType switch
+      labelInfo .cmpType switch
         NONE case break
         TRUE FALSE case
-          op [] .pos context popValue
+          op .pos context popValue
             .and .Val .else "expected single value" ..panic end
           ValueLocation .None context moveToRegister asm.RegisterId.SIZE_8 | =:: arg
           AMD64.op.TEST arg arg asm.op2 list.append
         break
         EQ NE LT LE GE GT ULT ULE UGE UGT case
-          op [] .dataType ValType.fromType =:: argType
+          op .dataType ValType.fromType =:: argType
           ## TODO merge duplicate code with opCmp
-          argType op [] .pos context amd64GetBinOpArgs =:: arg2 =:: arg1
+          argType op .pos context amd64GetBinOpArgs =:: arg2 =:: arg1
           ## TODO! handle float compare (! use comiss + ja/jb)
           AMD64.op.CMP
             arg1
@@ -1002,8 +1001,8 @@ proc(
           list.append
         break
       end
-      labelInfo [] .labelId op [] .pos context syncLabelState =:: jumpLabel
-      labelInfo [] .cmpType switch
+      labelInfo .labelId op .pos context syncLabelState =:: jumpLabel
+      labelInfo .cmpType switch
         NONE case AMD64.op.JMP break
         TRUE case AMD64.op.JNZ break
         FALSE case AMD64.op.JZ break
@@ -1015,7 +1014,7 @@ proc(
         GT case AMD64.op.JGT break
         default "unimplemented: jump-type" ..panic break
       end jumpLabel asm.LocalLabel cast asm.op1 list.append
-      labelInfo .cmpType [] .NONE ! context .reachable=
+      labelInfo .cmpType .NONE ! context .reachable=
     return
     BlockEnd .case .blockType .PROCEDURE if
        asm.endProc list.append return
@@ -1026,20 +1025,20 @@ proc(
       false context .reachable=
     return
     StackMod .case =:: modData
-      modData [] .modType switch
+      modData .modType switch
         COPY case
-          modData [] .n context peekValue .else
-            "stack underflow" sb.copyPtr op [] .pos errors appendError
+          modData .n context peekValue .else
+            "stack underflow" sb.copyPtr op  .pos errors appendError
             return
           end context pushValue
         return
         ROTATE case
-          modData [] .n =:: offset
+          modData .n =:: offset
           offset i32.abs 1 + =:: eltCount
           context [] .stack .length eltCount iSize cast.u u< if
             "CodeGen: stack underflow in rotate, stackSize: " sb.copyPtr
               context [] .stack .length sb.appendI
-            op [] .pos errors appendError
+            op  .pos errors appendError
             return
           end
           eltCount 3 <= if
@@ -1049,7 +1048,7 @@ proc(
             eltCount StackValue list.create
           end
             eltCount for ..drop
-              op [] .pos context popValue .else
+              op  .pos context popValue .else
                 "stack underflow" ..panic ## should not be rechached due to pre-checking size
               end list.append
             end
@@ -1068,8 +1067,8 @@ proc(
           list.free ..drop
         return
         DROP case
-          modData [] .n for ..drop
-            op [] .pos context popValue ..drop
+          modData .n for ..drop
+            op .pos context popValue ..drop
           end
         return
       end
@@ -1077,8 +1076,8 @@ proc(
     default break
   end
   "unsupported operation: " sb.copyPtr
-    op [] program sb.appendOp
-  op [] .pos errors appendError
+    op program sb.appendOp
+  op .pos errors appendError
 end
 
 proc( CompilerContext ptr.mut : context -> asm.Atom list ) =>: beginProcedure
@@ -1143,17 +1142,13 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
       impl .codeState .UNUSED if continue end
       impl .codeState .COMPILED if
         context beginProcedure
-          impl .code .length for i32 cast.u =:: opIndex
-            impl .code opIndex @[] opIndex context compileOp
-          end
+          impl .code for context compileOp end
         context finishProcedure
       end
       impl .implementations for =:: genericImpl
         genericImpl .codeState .COMPILED if
           context beginProcedure
-            genericImpl .code .length for i32 cast.u =:: opIndex
-              genericImpl .code opIndex @[] opIndex context compileOp
-            end
+            genericImpl .code for context compileOp end
           context finishProcedure
         end
       end
