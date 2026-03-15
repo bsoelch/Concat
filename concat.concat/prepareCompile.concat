@@ -71,17 +71,24 @@ proc(
   ProgramContext ptr.mut : program
 -> bool ) =>: shouldInlineCall
   program .idContext .typeContext .labelContext =:: labelContext
-  optimizerFlags.ALLOW_INLINE ! if false return end
-  ## TODO allow inlining of small procedures when ALLOW_INLINE_SMALL is set
+  optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
   program [] .procedures callInfo .procId i64 cast.u @[] =:: procData
   procData [] .isStatic or procData .implementation [] .Code ? ! or
-      procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? if
+      procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? or
+      procData [] .labelId labelContext id.labelFlags id.FLAG_NO_INLINE & ? if
     false return
   end
   callInfo program calledProcOps =:: procOps
+  ## TODO? small procedures should only be inlined if they don't contain jumps
+  procOps .length 10 u<= if true return end ## init+op{0-7}+ret+end
+  optimizerFlags.ALLOW_INLINE ! if false return end
+  ## TODO! detect if proc is currently being inlined (smaller inline-limits in nested inline, prevent recursive inline)
   ## TODO compute inline weight depending on operations in procedure, cache weight in procedure(-impl) info
-  procOps .length 16:iSize u<
+  procOps .length 18:iSize u<=
 end
+## FIXME inline should use original proc-code BEFORE pre-compilation was called
+##  ? postpone pre-compile of inlinable-procs until other procs are done
+##  * mark inlined procs that are never called directly as unused
 proc(
   Operation list
   ProcedureCall : callInfo
@@ -95,50 +102,58 @@ proc(
     callInfo .procId i64 cast.u @[] .implementation []
   .Code ? "only code-procs are inlined" assert
   callInfo program calledProcOps =:: procOps
-  "Inlining procedures is currently experimental" sb.copyPtr pos program .errors appendWarning
-  context [] .inlineCount
-    $ 1 + context .inlineCount=
-  BlockId cast =:: inlineId
-  labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapLabels ## TODO store in context
+  labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
+  LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
   program program.nextLocalLabel =:: procEnd
   procEnd LocalLabelType .HINT_START pos opLabel list.append
-  inlineId $1 list.peek .and .val .Block .else
-    "expected block" ..panic
-  end .blockId=
   procOps 0 [] .dataType =:: procType
   procType typeContext types.getProcIn optional.unwrap =:: inTypes
   0 =:: mut: offset
   ## create tmp-variables for named arguments
   inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
     procType i typeContext types.getProcArgLabel =:: argLabel
+    inTypes i [] =:: eltType
+    eltType typeContext types.isEmpty if continue end ## ignore empty arguments
     argLabel id.LABEL_ID_NONE == if
       offset 1 + offset=
     else argLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! _if
-      ## TODO 1. rotate labeled argument to top
-      inTypes i [] =:: eltType
+      offset 0 != if
+        ## rotate labeled argument to top
+        offset StackModType .ROTATE pos opStackMod list.append
+      end
       eltType argLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
       eltType tmpId pos opInitializeId list.append
-      remapLabels@ argLabel tmpId map.put optional.isEmpty "label-value only reassigned once" assert
+      remapIds@ argLabel tmpId map.put optional.isEmpty "label-value only reassigned once" assert
     end
   finally i 1 - end ..drop
-  procOps 1:iSize $1 .length 2:iSize - slice.getSlice for =:: mut: op
-    ## TODO? move remapping to compileOp ( flag to check if within inlined proc )
+  procOps 1:iSize $1 .length 2:iSize - slice.getSlice
+    $ .length 1 - =:: last
+    $ last [] .val .Return ? if last >$ .length= end ## ignore return at end of proc
+  for =:: mut: op
     op .val .Return ? if
       procEnd 0:JumpDistance CompareType .NONE op .pos opJump list.append
       continue
     else op .val .GetId ._if .labelId =:: label
-      remapLabels@ label map.get .if op@ .val .GetId= end
+      remapIds@ label map.get .if op@ .val .GetId= end
     else .SetId ._if .labelId =:: label
-      remapLabels@ label map.get .if op@ .val .SetId= end
+      remapIds@ label map.get .if op@ .val .SetId= end
     else .AtId ._if .labelId =:: label
-      remapLabels@ label map.get .if op@ .val .AtId= end
+      remapIds@ label map.get .if op@ .val .AtId= end
+    else .LocalJump ._if .labelId =:: label
+      remapLabels@ label map.get .else
+        program program.nextLocalLabel
+        remapLabels@ label $2 map.put ..drop
+      end op@ .val .LocalJump .if .labelId =[] else ..drop.2 end
+    else .LocalLabel ._if .labelId =:: label
+      remapLabels@ label map.get .else
+        program program.nextLocalLabel
+        remapLabels@ label $2 map.put ..drop
+      end op@ .val .LocalLabel .if .labelId =[] else ..drop.2 end
     else ..drop end
     op context compileOp
   end
   procEnd LocalLabelType .LABEL_END pos opLabel list.append
-  inlineId $1 list.peek .and .val .BlockEnd .else
-    "expected block-end" ..panic
-  end .blockId=
+  remapIds@ map.free
   remapLabels@ map.free
 end
 
@@ -300,12 +315,14 @@ proc(
       end
       baseType true op .pos context newTmpVar =:: tmpId
       newOps
-        ## opAutoCast
-          op .dataType
-          0
-          baseType
-          op .pos
-        opAutoCast list.append
+        op .dataType baseType types.typeEquals ! if
+          ## opAutoCast
+            op .dataType
+            0
+            baseType
+            op .pos
+          opAutoCast list.append
+        end
         ## opInitializeId
           baseType
           tmpId

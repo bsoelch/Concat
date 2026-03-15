@@ -2020,9 +2020,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       flagName "experimental":s string.eq if
         _EXPERIMENTAL_ ConstValue .Bool
         types.primitive.BOOL
-      else flagName "foldConstants":s string.eq _if
-        _FOLD_CONSTANTS_ ConstValue .Bool
-        types.primitive.BOOL
       else flagName "noCore":s string.eq _if
         _INCLUDE_CORE_ ! ConstValue .Bool
         types.primitive.BOOL

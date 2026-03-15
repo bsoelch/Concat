@@ -17,7 +17,7 @@ enum( ## XXX more precise names
   ..compiler.flag.incrementVersionNumber if 1 + end
 =:: export: _VERSION_ ## compiler version auto incremenets on each recompile
 false =:: mut: export: _W_ERROR_
-true =:: mut: export: _FOLD_CONSTANTS_ ## enable constant-folding
+
 false =:: mut: export: _EXPERIMENTAL_
 true =:: mut: export: _INCLUDE_CORE_
 true =:: mut: export: _INCREMENT_VERSION_
@@ -25,9 +25,8 @@ BackEnd .QBE =:: mut: export: _BACKEND_
 ## TODO make changable using compiler argument
 false =:: mut: export: EXPORT_GLOBALS ## include all (non-library) exported procedures in binary
 namespace: optimizerFlags
-  true =:: export: mut: FOLD_CONSTANTS
   true =:: export: mut: REMOVE_UNUSED_PROCS ## don't include unused procedures in compiled code
-  true =:: export: mut: ALLOW_INLINE_SMALL
+  false =:: export: mut: ALLOW_INLINE_SMALL
   false =:: export: mut: ALLOW_INLINE
   ## XXX! determine good constants
   ## XXX? make dependent on structure of code ? #ops - #args
@@ -37,23 +36,20 @@ namespace: optimizerFlags
 
   ## diable all optimizations
   proc( -> ) =>: export: optLevel0
-    false FOLD_CONSTANTS=
     false REMOVE_UNUSED_PROCS=
     false ALLOW_INLINE_SMALL=
     false ALLOW_INLINE=
   end
   ## minimal optimizations, for debug builds
   proc( -> ) =>: export: optLevelDefault
-    true FOLD_CONSTANTS=
     true REMOVE_UNUSED_PROCS=
-    true ALLOW_INLINE_SMALL=
+    false ALLOW_INLINE_SMALL= ## TODO allow inlining small procs once inline is stable
     false ALLOW_INLINE=
   end
   proc( -> ) =>: export: optLevel1
-    true FOLD_CONSTANTS=
     true REMOVE_UNUSED_PROCS=
     true ALLOW_INLINE_SMALL=
-    false ALLOW_INLINE= ## TODO endable inlining for opt-level 1 once inlining is stable
+    false ALLOW_INLINE= ## TODO endable inlining once inlining is stable
     ## true ALLOW_INLINE=
   end
   ## enable experimental optimizations
