@@ -63,6 +63,7 @@ namespace: asm
     LocalLabel : shadow: LocalLabel
   ) =:: export: Operand
   union(
+    _               : None
     Operand         : Val
     Operand 2 array : Val2
     Operand 3 array : Val3
@@ -81,7 +82,9 @@ namespace: asm
     GlobalLabel : Enter
     _ : Leave
     _ : EndProc
-    LocalLabel : Label
+    GlobalLabel : Export
+    LocalLabel : shadow: LocalLabel
+    GlobalLabel : shadow: GlobalLabel
   ) =:: export: Directive
   union(
     _ : None
@@ -99,6 +102,9 @@ namespace: asm
     proc( RegisterId -> bool ) ptr : isIntRegister
     TargetId : targetId
   ) =:: export: Context
+  proc( OpCode : opCode -> Atom ) =>: export: op0
+    opCode Operands .None Instruction new Atom .Instruction
+  end
   proc( OpCode : opCode RegisterId : r1 -> Atom ) =>: export: opR
     opCode r1 Operand .Register Operands .Val Instruction new Atom .Instruction
   end
@@ -132,7 +138,26 @@ namespace: asm
     Directive .EndProc Atom .Directive
   end
   proc( i32 -> Atom ) =>: export: localLabel
-    LocalLabel cast Directive .Label Atom .Directive
+    LocalLabel cast Directive .LocalLabel Atom .Directive
+  end
+  proc( string -> Atom ) =>: export: globalLabel
+    GlobalLabel cast Directive .GlobalLabel Atom .Directive
+  end
+  proc( string -> Atom ) =>: export: exportName
+    GlobalLabel cast Directive .Export Atom .Directive
+  end
+  proc( Atom -> string optional ) =>: export: isEnter
+    .Directive .and .Enter .if
+      string cast optional.wrap
+     else
+      string optional.empty return
+     end
+  end
+  proc( Atom -> bool ) =>: export: isLeave
+    .Directive .and .Leave ? end
+  end
+  proc( Atom -> bool ) =>: export: isEndProc
+    .Directive .and .EndProc ? end
   end
   
   proc( stringBuilder Value : arg  Context : asmContext -> stringBuilder ) =>: export: appendValue
@@ -156,7 +181,8 @@ namespace: asm
     op .opCode asmContext .appendOpCode ()
     ' ' sb.appendC
     op .args switch
-      Val .case  asmContext appendOperand return
+      None case sb.removeLast ..drop return
+      Val .case asmContext appendOperand return
       Val2 .case =:: args
         args .0 asmContext appendOperand
         ", ":s sb.appendStr
@@ -193,7 +219,9 @@ namespace: asm
       Enter .case =:: label "enter ":s sb.appendStr label asmContext appendGlobalLabel ':' sb.appendC return
       Leave case "leave":s sb.appendStr return
       EndProc case "endProc\n":s sb.appendStr return
-      Label .case asmContext appendLocalLabel ':' sb.appendC return
+      LocalLabel .case asmContext appendLocalLabel ':' sb.appendC return
+      GlobalLabel .case asmContext appendGlobalLabel ':' sb.appendC return
+      Export .case =:: label ".globl ":s sb.appendStr label asmContext appendGlobalLabel return
     end
   end
   proc( stringBuilder Atom : atom  Context : asmContext -> stringBuilder ) =>: export: appendAtom

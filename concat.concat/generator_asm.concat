@@ -1061,8 +1061,12 @@ proc(
     Constant .case op .dataType typeContext ValType.fromType context pushConstant return
     BuiltIn .case op .pos context compileBuiltIn return
     ImplementProcedure .case =:: implInfo
-      implInfo .procId implInfo .implementationId context getProcName asm.enter list.append
       program [] .procedures implInfo .procId iSize cast.u @[] =:: procData
+      implInfo .procId implInfo .implementationId context getProcName =:: procName
+      procData [] .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? if
+        procName asm.exportName list.append
+      end
+      procName asm.enter list.append
       procData .implementation .Code .else
         "only code-procs should have impl-id" ..panic
       end =:: procImpl
@@ -1260,8 +1264,17 @@ proc(
 -> asm.Atom list ) =>: finishProcedure
   code
     ## TODO post-processing (proc-header / update references / proc epilogoue)
-    procOps for
-      list.append
+    procOps for =:: op
+      op asm.isEnter .if
+        asm.globalLabel list.append
+        continue
+      else op asm.isLeave _if
+        AMD64.op.RET asm.op0 list.append
+        continue
+      else op asm.isEndProc _if
+        continue
+      end
+      op list.append
     end
     procOps context .tmpOps=
   return

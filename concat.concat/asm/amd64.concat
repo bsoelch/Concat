@@ -29,8 +29,9 @@ namespace: AMD64
       nextOpCode =:: export: JGT
       nextOpCode =:: export: SETGT
       nextOpCode =:: export: CALL
+      nextOpCode =:: export: RET
     ..drop
-    { "mov":s "movzx":s "movsx":s "add":s "sub":s "imul":s "cmp":s "test":s "jmp":s "jeq":s "jne":s "jlt":s "jle":s "jge":s "jgt":s "setgt":s "call":s } =:: OPCODE_NAMES
+    { "mov":s "movzx":s "movsx":s "add":s "sub":s "imul":s "cmp":s "test":s "jmp":s "jeq":s "jne":s "jlt":s "jle":s "jge":s "jgt":s "setgt":s "call":s "ret":s } =:: OPCODE_NAMES
     proc( stringBuilder OpCode : opCode -> stringBuilder ) =>: export: appendName
       opCode iSize cast.u OPCODE_NAMES ..length u>= if
         "???":s sb.appendStr return
