@@ -105,6 +105,9 @@ namespace: asm
   proc( OpCode : opCode LocalLabel : l1 -> Atom ) =>: export: opL
     opCode l1 Operand .LocalLabel Operands .Val Instruction new Atom .Instruction
   end
+  proc( OpCode : opCode string : l1 -> Atom ) =>: export: opG
+    opCode l1 GlobalLabel cast Operand .GlobalLabel Operands .Val Instruction new Atom .Instruction
+  end
   proc( OpCode : opCode RegisterId : r1 RegisterId : r2 -> Atom ) =>: export: opRR
     Operand 2 array : ops
     r1 Operand .Register ops@ 0 =[]
@@ -117,7 +120,7 @@ namespace: asm
     imm Operand .Int ops@ 1 =[]
     opCode ops Operands .Val2 Instruction new Atom .Instruction
   end
-  overload: export: op1 opR opL end
+  overload: export: op1 opR opL opG end
   overload: export: op2 opRR opRI end
   proc( string : name -> Atom ) =>: export: enter
     name GlobalLabel cast Directive .Enter Atom .Directive
@@ -144,7 +147,7 @@ namespace: asm
     arg switch
       Register .case asmContext .appendReg () return
       Int .case sb.appendI return
-      GlobalLabel .case "TODO" ..panic
+      GlobalLabel .case asmContext appendGlobalLabel return
       LocalLabel .case asmContext appendLocalLabel return
     end
   end

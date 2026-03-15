@@ -10,8 +10,8 @@ import "asm/amd64.concat"
 
 enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER ) =:: ValType
 namespace: ValType
-  proc( Type : t -> ValType ) =>: fromType
-    t switch
+  proc( Type : t TypeContext ptr : typeContext -> ValType ) =>: fromType
+    t typeContext types.unwrapNamed switch
       PrimitiveType .case switch
         BOOL I8 case ValType .I8 return
         I16 case ValType .I16 return
@@ -22,7 +22,11 @@ namespace: ValType
         F64 case ValType .F64 return
         TYPE case ValType .EMPTY return
       end break
-      default "unsupported type" ..panic
+      default
+        "unsupported type: " sb.copyPtr
+          t typeContext sb.appendType
+        sb.asStr io.println
+        "unimplemented" ..panic
     end
   end
   proc( ValType : valType -> bool ) =>: isInt
@@ -430,7 +434,8 @@ proc( CompilerContext ptr.mut : context -> i32 ) =>: nextLocalLabel
 end
 
 proc(
-  ProcedureImpl : procImpl
+  ProcId : procId
+  i32 : implId
   CompilerContext ptr.mut : context
 -> string ) =>: getProcName
   context [] .program =:: program
@@ -439,7 +444,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   ## TODO correctly mangle procedure names
-  program [] .procedures procImpl .procId iSize cast.u [] .labelId labelContext id.getLabelName
+  program [] .procedures procId iSize cast.u [] .labelId labelContext id.getLabelName
 end
 
 proc(
@@ -730,7 +735,7 @@ proc(
       end
       false regInfo .moving=
     end
-  else
+  else .Int ? ! _if
     "unimplemented: non-register source" ..panic
   end
   ## clear references in destination register
@@ -946,18 +951,18 @@ proc(
     0 =:: mut: intCount
     0 =:: mut: floatCount
     outTypes .length while $ 1 - >$ 0 != do =:: i
-      outTypes i [] ValType.fromType =:: outValType
+      outTypes i [] typeContext ValType.fromType =:: outValType
       outValType ValType.isInt if
         intCount AMD64.reg.intRet .if
           asm.Value .Register outValType StackValue.val expectedStack i =[]
         else
-          "unimplemted: memory return" ..panic
+          "unimplemented: memory return" ..panic
         end
       else outValType ValType.isFloat _if
         intCount AMD64.reg.floatRet .if
           asm.Value .Register outValType StackValue.val expectedStack i =[]
         else
-          "unimplemted: memory return" ..panic
+          "unimplemented: memory return" ..panic
         end
       else
         "unsuported value type for return" ..panic
@@ -968,6 +973,76 @@ proc(
   end
   asm.leave list.append
   false context .reachable=
+end
+proc(
+  asm.Atom list
+  Type : procType
+  string : procName
+  FilePosition ptr : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: compileCall
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
+  procType typeContext types.getProcIn .else "proc without in" ..panic end =:: argTypes
+  procType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
+  context .stack [] .length $ StackValue mem.alloc >$ slice.createMutable =:: expectedStack
+  0 =:: mut: intCount
+  0 =:: mut: floatCount
+  1:iSize while $ argTypes .length u<= do =:: offset
+    argTypes $ .length offset - [] typeContext ValType.fromType =:: argValType
+    argValType ValType.isInt if
+      intCount AMD64.reg.intArg .if
+        asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
+      else
+        "unimplemented: memory argument" ..panic
+      end
+    else argValType ValType.isFloat _if
+      intCount AMD64.reg.floatArg .if
+        asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
+      else
+        "unimplemented: memory argument" ..panic
+      end
+    else
+      "unimplemented value type for argument" ..panic
+    end
+  finally offset 1 + end $ expectedStack .length u<= if =:: offset
+    ## TODO move remaining stack values to memory or callee-saved register
+    "unimplemented: memory value" ..panic
+  end ..drop
+  ## TODO ensure all non-stack values are in memory or callee-saved register
+  expectedStack RegisterState new pos context restoreState
+  argTypes .length for ..drop
+    pos context popValue ..drop
+  end
+  AMD64.op.CALL procName asm.op1 list.append
+  outTypes .length 0 != if
+    outTypes .length $ StackValue mem.alloc >$ slice.createMutable =:: expectedRetStack
+    0 intCount=
+    0 floatCount=
+    outTypes .length while $ 1 - >$ 0 != do =:: i
+      outTypes i [] typeContext ValType.fromType =:: outValType
+      outValType ValType.isInt if
+        intCount AMD64.reg.intRet .if
+          asm.Value .Register outValType StackValue.val expectedRetStack i =[]
+        else
+          "unimplemented: memory return" ..panic
+        end
+      else outValType ValType.isFloat _if
+        intCount AMD64.reg.floatRet .if
+          asm.Value .Register outValType StackValue.val expectedRetStack i =[]
+        else
+          "unimplemented: memory return" ..panic
+        end
+      else
+        "unsuported value type for return" ..panic
+      end
+    finally i end ..drop
+    expectedRetStack for
+      context pushValue
+    end
+  end
+  ## TODO! ensure stack contains correct return values
 end
 
 proc(
@@ -983,16 +1058,16 @@ proc(
   typeContext .labelContext =:: labelContext
   op .val switch
     NOP case return
-    Constant .case op .dataType ValType.fromType context pushConstant return
+    Constant .case op .dataType typeContext ValType.fromType context pushConstant return
     BuiltIn .case op .pos context compileBuiltIn return
-    ImplementProcedure .case =:: implId
-      implId context getProcName asm.enter list.append
-      program [] .procedures implId .procId iSize cast.u @[] =:: procData
+    ImplementProcedure .case =:: implInfo
+      implInfo .procId implInfo .implementationId context getProcName asm.enter list.append
+      program [] .procedures implInfo .procId iSize cast.u @[] =:: procData
       procData .implementation .Code .else
         "only code-procs should have impl-id" ..panic
       end =:: procImpl
-      implId .implementationId 0 >= if
-        procImpl [] .implementations implId .implementationId @[] =:: procInfo
+      implInfo .implementationId 0 >= if
+        procImpl [] .implementations implInfo .implementationId @[] =:: procInfo
         procInfo [] .procType procInfo [] .variables
       else
         procData [] .procType procImpl [] .variables
@@ -1014,7 +1089,7 @@ proc(
       0 =:: mut: intCount
       0 =:: mut: floatCount
       inTypes .length 1 - while $ 0 iSize.sge do =:: i
-        inTypes i [] ValType.fromType =:: argValType
+        inTypes i [] typeContext ValType.fromType =:: argValType
         procType i i32 cast.u typeContext types.getProcArgLabel =:: argLabel
         argValType ValType.isInt if
           intCount AMD64.reg.intArg .if
@@ -1065,7 +1140,7 @@ proc(
           AMD64.op.TEST arg arg asm.op2 list.append
         break
         EQ NE LT LE GE GT ULT ULE UGE UGT case
-          op .dataType ValType.fromType =:: argType
+          op .dataType typeContext ValType.fromType =:: argType
           ## TODO merge duplicate code with opCmp
           argType op .pos context amd64GetBinOpArgs =:: arg2 =:: arg1
           ## TODO! handle float compare (! use comiss + ja/jb)
@@ -1099,6 +1174,9 @@ proc(
     BlockEnd .case .blockType .PROCEDURE if
        asm.endProc list.append return
     end break
+    Call .case =:: callInfo
+      op .dataType callInfo .procId callInfo .implementationId context getProcName op .pos context compileCall
+    return
     Return case
       op .dataType op .pos context compileReturn
     return
@@ -1234,6 +1312,7 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
   =:: ops
   target
     ops .length 8 * sb.create
+      ".intel_syntax noprefix\n":s sb.appendStr ## use intel syntax in GAS
       ops for
         contextData .asmContext asm.appendAtom
       end
