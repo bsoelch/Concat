@@ -82,7 +82,20 @@ namespace: AMD64
       INT_ARG_REGISTERS i slice.get
     end
     proc( i32 : i -> RegisterId optional ) =>: export: floatArg
-      i 0 < or i 7 > if
+      i 7 u> if
+        RegisterId optional.empty return
+      end
+      i xmm optional.wrap return
+    end
+    proc( i32 : i -> RegisterId optional ) =>: export: intRet
+      i switch
+        0 case RAX optional.wrap return
+        1 case RDX optional.wrap return
+        default RegisterId optional.empty return
+      end
+    end
+    proc( i32 : i -> RegisterId optional ) =>: export: floatRet
+      i 1 u> if
         RegisterId optional.empty return
       end
       i xmm optional.wrap return

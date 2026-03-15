@@ -890,6 +890,48 @@ proc(
     builtIn sb.appendBuiltIn
   pos errors appendError
 end
+
+proc(
+  asm.Atom list
+  Type : retType
+  FilePosition ptr : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: compileReturn
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
+  retType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
+  ## TODO! make code dependent on target and calling convention
+  ## TODO? share code for arg/ret-register resolving between call, return and proc-start
+  outTypes .length 0 != if
+    outTypes .length $ StackValue mem.alloc >$ slice.createMutable =:: expectedStack
+    0 =:: mut: intCount
+    0 =:: mut: floatCount
+    outTypes .length while $ 1 - >$ 0 != do =:: i
+      outTypes i [] ValType.fromType =:: outValType
+      outValType ValType.isInt if
+        intCount AMD64.reg.intRet .if
+          asm.Value .Register outValType StackValue.val expectedStack i =[]
+        else
+          "unimplemted: memory return" ..panic
+        end
+      else outValType ValType.isFloat _if
+        intCount AMD64.reg.floatRet .if
+          asm.Value .Register outValType StackValue.val expectedStack i =[]
+        else
+          "unimplemted: memory return" ..panic
+        end
+      else
+        "unsuported value type for return" ..panic
+      end
+    finally i end ..drop
+    ## TODO clear all non-stack values from registers
+    expectedStack RegisterState new pos context restoreState
+  end
+  asm.leave list.append
+  false context .reachable=
+end
+
 proc(
   asm.Atom list
   Operation : op
@@ -1020,9 +1062,7 @@ proc(
        asm.endProc list.append return
     end break
     Return case
-      ## TODO ensure return values are in correct registers
-      asm.leave list.append
-      false context .reachable=
+      op .dataType op .pos context compileReturn
     return
     StackMod .case =:: modData
       modData .modType switch
