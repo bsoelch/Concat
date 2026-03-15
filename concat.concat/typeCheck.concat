@@ -2464,8 +2464,10 @@ proc(
         op .pos errors appendError
       end
     end
+    $ labelOffset list.tail =:: labels
+    labelOffset list.setLength
   program .labelBuffer=
-  Type optional.empty program [] .labelBuffer labelOffset list.tail typeContext types.newEnum .else
+  Type optional.empty labels typeContext types.newEnum .else
     "failed to create enum-type" sb.copyPtr
     pos errors appendError
     return
