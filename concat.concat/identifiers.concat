@@ -95,12 +95,12 @@ namespace: id
 
   struct(
     ScopeId : parentScope
-    ProcId : currentProc
+    ProcId optional : currentProc
     NamespaceImportId : prevImports
     ImportId : visibleFiles
   ) =:: Scope
 
-  proc( ScopeId : parent ProcId : procId NamespaceImportId : imports ImportId : visibleFiles -> Scope ) =>: newScope
+  proc( ScopeId : parent ProcId optional : procId NamespaceImportId : imports ImportId : visibleFiles -> Scope ) =>: newScope
      ## Scope
       parent
       procId
@@ -129,7 +129,7 @@ namespace: id
     types.newTypeContext
       newConstContext
       128 Scope list.create
-        id.GLOBAL_SCOPE NO_PROC NAMESPACE_IMPORT_NONE NO_IMPORTS newScope
+        id.GLOBAL_SCOPE ProcId optional.empty NAMESPACE_IMPORT_NONE NO_IMPORTS newScope
       list.append
       idHash@    idEq@    4096 NameId map.create
       labelHash@ labelEq@ 4096 IdentifierData map.create
@@ -272,7 +272,7 @@ namespace: id
       searchingNonProc
     do
       context [] .scopes firstNonProcScope getScopeData =:: scopeData
-      scopeData [] .currentProc NO_PROC == if
+      scopeData [] .currentProc ? ! if
         break
       end
       scopeData [] .parentScope firstNonProcScope=
@@ -510,7 +510,7 @@ namespace: id
     isAlias ! and flags FLAG_EXPORT & ? and
         context [] .scopes
           context [] .currentScopeId
-        getScopeData [] .currentProc NO_PROC == if
+        getScopeData [] .currentProc ? ! if
       ## exported identifier outside procedure -> global scope
       GLOBAL_SCOPE
     else

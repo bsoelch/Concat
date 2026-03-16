@@ -1341,7 +1341,7 @@ proc(
   calledType typeContext types.getProcIn .else
     "proc has no in":s pos ..line internalErrorNoOp ..unreachable
   end =:: inTypes
-  program [] .procedures calledProc .procId i64 cast @[] =:: procData
+  calledProc .procId ProcId.getProcInfo =:: procData
   state [] .constBuffer .length =:: constOffset
   procData .implementation .Code ? =:: isCodeImpl
   isCodeImpl and calledType typeContext types.isTypeGeneratorProc end =:: isTypeGenerator
@@ -1600,9 +1600,7 @@ proc(
     message pos errors appendError
     TypeCheckCallResult .Error return
   end =:: calledProc
-  program [] .procedures
-    calledProc .procId i64 cast @[]
-  =:: baseProcData
+  calledProc .procId ProcId.getProcInfo =:: baseProcData
   source .Op .if
     calledType >$ .dataType=
   else ..drop end
@@ -1614,10 +1612,11 @@ proc(
   stackValues .length
     argCount iSize cast.u iSize.min
   stackValues@ .length=
-  source .Values ? or state isGlobal
-      program [] .procedures
-        calledProcId i64 cast @[]
-      .isStatic [] | and state [] .mode .STATIC_PROC ! or
+  calledProcId .else
+    "expected procedure":s pos ..line internalErrorNoOp ..unreachable
+  end ProcId.getProcInfo =:: calledProcData
+  source .Values ? or state isGlobal calledProcData [] .isStatic | and
+      state [] .mode .STATIC_PROC ! or
       calledType typeContext types.isTypeGeneratorProc or
       baseProcData .implementation .Code .and .codeState .TYPE_CHECKING ! if
     source stackValues calledType calledProc pos state evaluateCall .SUCCESS if
@@ -1639,8 +1638,8 @@ proc(
           state [] .missingProcs
             ## MissingProc
               ## ProcedureImpl
-                implId
                 calledProc .procId
+                implId
               ProcedureImpl new
               pos
             MissingProc new list.append
@@ -1794,9 +1793,7 @@ namespace: typeChecker
       pos errors appendError
       Type optional.empty return
     end =:: procId
-    program [] .procedures
-      procId i64 cast @[]
-    =:: procData
+    procId ProcId.getProcInfo =:: procData
     procData [] .procType =:: procType
     procType typeContext types.getProcIn .else
       "proc has no in":s pos ..line internalErrorNoOp ..unreachable
@@ -2599,10 +2596,9 @@ proc(
         op .pos errors appendError
         continue.opLoop
       end =:: mut: aliasId
-      program [] .procedures aliasId i64 cast @[]
+      aliasId ProcId.getProcInfo
         $ .implementation [] .Alias .if aliasId= ..drop
-          program [] .procedures aliasId i64 cast @[]
-          $ .implementation [] .Alias ? ! "no double alias" assert
+          aliasId ProcId.getProcInfo $ .implementation [] .Alias ? ! "no double alias" assert
         else ..drop end
       =:: aliasProc
       aliasType aliasProc [] .procType typeContext types.canAlias ! if
@@ -2627,7 +2623,7 @@ proc(
         ## error message is created by declareIdentifier
         continue.opLoop
       end >$ ..drop .constValue .Procedure ? ! if
-        nameAlias .alias aliasType state [] .currentFile aliasId false op .pos program newProcData
+        nameAlias .alias aliasType state [] .currentFile aliasId optional.wrap false op .pos program newProcData
           ConstValue .Procedure
         nameAlias .alias idContext id.getIdentifier
           ! "procName is identifier" assert
@@ -2691,7 +2687,7 @@ proc(
       NOP case continue.opLoop
       Constant .case op .dataType op .pos state pushConstant continue.opLoop
       NestedProc .case =:: procId
-        program [] .procedures procId i64 cast @[] =:: procData
+        procId ProcId.getProcInfo =:: procData
         procData [] .procType .Undefined ? ! or
             procData .implementation .Code ! .or [] .codeState .PARSING ! if
           "unexpected state for nested procedure" sb.copyPtr
@@ -2702,8 +2698,8 @@ proc(
         state [] .missingProcs
           ## MissingProc
             ## ProcedureImpl
-              -1
               procId
+              -1
             ProcedureImpl new
             op .pos
           MissingProc new list.append
@@ -2822,9 +2818,7 @@ proc(
                 op .pos errors appendError
                 continue.opLoop
               end =:: procId
-              program [] .procedures
-                procId [] i64 cast @[]
-              =:: procData
+              procId [] ProcId.getProcInfo =:: procData
               procId slice.wrap
             else  ## PROCEDURE_BUNDLE
               constValue .ProcedureBundle .else ..drop
@@ -2916,13 +2910,10 @@ proc(
               idData [] .constValue .Procedure .else
                 "expected procedure-constant":s op ..line state internalError ..unreachable
               end =:: mut: procId
-              program [] .procedures
-                procId i64 cast @[]
+              procId ProcId.getProcInfo
                 $ [] .procType op@ .dataType=
                 $ .implementation .Alias .if [] procId= ..drop
-                  program [] .procedures procId i64 cast list.at .else
-                    "could not find procedure alias":s op ..line state internalError ..unreachable
-                  end
+                  procId ProcId.getProcInfo
                   $ .implementation [] .Alias ? ! "no double alias" assert
                 else ..drop end
               =:: procData
@@ -2941,8 +2932,8 @@ proc(
                   state [] .missingProcs
                     ## MissingProc
                       ## ProcedureImpl
-                        implId
                         procId
+                        implId
                       ProcedureImpl new
                       op .pos
                     MissingProc new list.append
@@ -2952,8 +2943,8 @@ proc(
                 "unexpected proc implementation":s op ..line state internalError ..unreachable
               end
               ## ProcedureImpl
-                implId
                 procId
+                implId
               ProcedureImpl new
                 OpValue .ProcPtr
               op@ .val=
@@ -3123,7 +3114,7 @@ proc(
               idInfo .labelId
               op .dataType
               state [] .currentFile
-              NO_PROC
+              ProcId optional.empty
               false
               op .pos
               program
@@ -3215,7 +3206,7 @@ proc(
               end
               idInfo .idType .PROCEDURE if
                 constVal .Procedure .if =:: procId
-                  program [] .procedures procId iSize cast.u @[] =:: procInfo
+                  procId ProcId.getProcInfo =:: procInfo
                   procInfo .procType .Undefined ? if
                     op .dataType procInfo .procType=
                   end
@@ -3223,7 +3214,7 @@ proc(
                     MAIN_NAME idInfo .labelId labelContext id.labelNameEq if
                       ## TODO! check if main has correct signature
                       idInfo .labelId program .mainLabelId=
-                      procId program .mainProcId=
+                      procId optional.wrap program .mainProcId=
                     end
                     idInfo .labelId procInfo .labelId=
                     idInfo .labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
@@ -3849,7 +3840,9 @@ proc(
             false 1 op .pos state clearReferences
             state inIfCondition ! if
               program nextIfId =:: blockId
-              blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+              blockId op@ .val .Block .else
+                "expected block":s op ..line state internalError ..unreachable
+              end .blockId=
               state .stack branchTree.startBranch =:: ifRoot
               ifRoot blockId op .pos state newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
@@ -3858,7 +3851,9 @@ proc(
             state peekBlock .and .If .else
               "expected if-block":s op ..line state internalError ..unreachable
             end =:: ifBlock
-            ifBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+            ifBlock [] .blockId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             blockType .AND_IF if
               ifBlock [] .flags IfBlockFlags.hasAndIf | ifBlock .flags=
               ifBlock .andBranches
@@ -3932,7 +3927,9 @@ proc(
             ifBlock [] .flags
               IfBlockFlags.hasIf |
             ifBlock .flags=
-            ifBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+            ifBlock [] .blockId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             ifBlock [] .elseLabel CompareType .FALSE op .pos state localJump
             ifBlock [] .ifLabel LocalLabelType .LABEL_END op .pos state localLabel
             ifBlock [] .andBranches
@@ -4017,7 +4014,9 @@ proc(
             else
               idContext id.openScope
             end
-            ifBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+            ifBlock [] .blockId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             state [] .stack branchTree.depth =:: ifTypes
             state .stack
               ifBlock [] .branchRoot
@@ -4149,7 +4148,9 @@ proc(
               op .pos opBuiltIn state appendOp ..drop
             end
             program [] .switchData .length BlockId cast =:: switchId
-            switchId op@ .val .Block .else "expected block" ..panic end .blockId=
+            switchId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             labelType op@ .dataType=
             false 1 op .pos state clearReferences
             state .stack branchTree.startBranch =:: switchBranch
@@ -4354,7 +4355,9 @@ proc(
                 whileBlock .breakCastOffsets
                 whileBlock .breakBranches
               end =:: branches =:: castOffsets
-              whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+              whileBlock [] .blockId op@ .val .Block .else
+                "expected block":s op ..line state internalError ..unreachable
+              end .blockId=
               ## add space for casts of values on stack
               castOffsets []
                 ## reserveOps
@@ -4371,7 +4374,7 @@ proc(
               branches =[]
               false state .reachable=
               whileBlock
-                blockType .CONTINUE if [] .finallyLabel else [] .endLabel end              
+                blockType .CONTINUE if [] .finallyLabel else [] .endLabel end
               CompareType .NONE op .pos state localJump
               continue.opLoop
             else ..drop end
@@ -4390,7 +4393,9 @@ proc(
               $ BlockId cast =:: whileId
               1 +
             program .whileCount=
-            whileId op@ .val .Block .else "expected block" ..panic end .blockId=
+            whileId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             ## newWhileBlock
               whileBranch
               blockInfo .blockLabel
@@ -4442,7 +4447,9 @@ proc(
                 op .pos
               BranchPoint new list.append
             branches =[]
-            whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+            whileBlock [] .blockId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             blockType .AND_DO if
               whileBlock [] .endLabel CompareType .FALSE
             else
@@ -4472,7 +4479,9 @@ proc(
             end
             ## passing an offset of 1 ensures that cast-offsets consider do-condition
             false 1 op .pos state clearReferences
-            whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+            whileBlock [] .blockId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             whileBlock []
               .breakCastOffsets .length i32 cast.u
             whileBlock .doBranchIndex=
@@ -4543,7 +4552,9 @@ proc(
             end =:: whileBlock
             false 0 op .pos state clearReferences
             true whileBlock .hasFinally=
-            whileBlock [] .blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+            whileBlock [] .blockId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             whileBlock [] .continueBranches =:: mut: continueBranches
             state [] .reachable if
               whileBlock [] .continueCastOffsets
@@ -4614,7 +4625,9 @@ proc(
               andOrBlock [] .blockId
             else
               program nextAndOrId =:: blockId
-              blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+              blockId op@ .val .Block .else
+                "expected block":s op ..line state internalError ..unreachable
+              end .blockId=
               state .stack branchTree.startBranch =:: rootBranch
               rootBranch blockId op .pos state newAndOrBlock
                 $ .endLabel LocalLabelType .HINT_START op .pos state localLabel
@@ -4630,7 +4643,9 @@ proc(
             state requireTypes .Err ? if
               continue.opLoop
             end
-            blockId op@ .val .Block .else "expected block" ..panic end .blockId=
+            blockId op@ .val .Block .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             state peekBlock .and .AndOr .else
               "expected and-or block":s op ..line state internalError ..unreachable
             end =:: currentBlock
@@ -4862,7 +4877,9 @@ proc(
                 op .pos errors appendError
               end
             end
-            closedIf .blockId op@ .val .BlockEnd .else "expected block" ..panic end .blockId=
+            closedIf .blockId op@ .val .BlockEnd .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             closedIf .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             idContext id.closeScope ! "closing else-scope worked" assert
             ## cleanup closed block
@@ -5097,7 +5114,9 @@ proc(
             end
             branchPoints list.free ..drop
             whileBlock .breakBranches .length 0:iSize != state .reachable=
-            whileId op@ .val .BlockEnd .else "expected block" ..panic end .blockId=
+            whileId op@ .val .BlockEnd .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             whileBlock .breakBranches list.free ..drop
             whileBlock .breakCastOffsets list.free ..drop
             whileBlock .continueBranches list.free ..drop
@@ -5124,7 +5143,9 @@ proc(
               "the end of all branches of an and/or block should be reachable, use if-else for conditional exit" sb.copyPtr
               op .pos errors appendError
             end
-            andOrBlock .blockId op@ .val .BlockEnd .else "expected block" ..panic end .blockId=
+            andOrBlock .blockId op@ .val .BlockEnd .else
+              "expected block":s op ..line state internalError ..unreachable
+            end .blockId=
             andOrBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             andOrBlock .branches =:: mut: branches
             branches
@@ -5187,7 +5208,7 @@ proc(
           1 op .pos state discardValues
           boolVal ! if
             "assertion failed: " sb.copyPtr
-              op .val .RuntimeAssert .else 
+              op .val .RuntimeAssert .else
                 "expected runtime-assertion":s op ..line state internalError ..unreachable
               end sb.appendStr
             op .pos errors appendError
@@ -5290,7 +5311,7 @@ proc(
         else baseType typeContext types.isUnion _if
           state .stack branchTree.pop ..drop
           baseType typeContext types.asRawUnion .else
-            "union-type .asRawUnion should return value" ..panic
+            "union-type .asRawUnion should return value":s op ..line state internalError ..unreachable
           end
         else
           "unexpected argument for raw-value expected union got: " sb.copyPtr
@@ -5405,7 +5426,7 @@ proc(
         state pushConstant
       continue.opLoop
       TypeWith .case =:: withProcId
-        program [] .procedures withProcId i64 cast @[] =:: withProc
+        withProcId ProcId.getProcInfo =:: withProc
         withProc [] .labelId labelContext id.currentNamespace labelContext id.setLabelNamespace
         op .pos state popType =:: baseType
         ## newProcedure
@@ -5675,9 +5696,7 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  program [] .procedures procId i64 cast list.at .else
-    "missing procedure":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
-  end =:: currentProc
+  procId ProcId.getProcInfo =:: currentProc
   currentProc .implementation .Code .else ..drop
     ## TODO replace alias with underlying proc
     ##  skip built-ins
@@ -5778,8 +5797,8 @@ proc(
   ## opImplementProc
     procType
     ## ProcedureImpl
-      implId
       procId
+      implId
     ProcedureImpl new
     procPos
   opImplementProc state appendOp ..drop
@@ -5971,44 +5990,45 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  program [] .mainProcId NO_PROC != =:: hasMain
-  hasMain if
+  program [] .mainProcId ? =:: hasMain
+  program [] .mainProcId .if =:: mainProcId
     ## check all procedures reachable from main proc
     program [] .mainLabelId labelContext id.getLabelPos .else
       "main-proc has no position" ..panic
     end =:: mainProcPos
-    program [] .mainProcId -1 mainProcPos state typeCheckChildProcedures
+    mainProcId -1 mainProcPos state typeCheckChildProcedures
   end
   ## TODO? create seperate list of all "root-procedures" to avoid iterating procedures twice
   ## lambdas and exported (non-generic) procedures
   ## TODO detect unused lambda in special cases (e.g. only accessible through unused variable)
-  0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
-    program [] .procedures procId iSize cast.u @[] =:: currentProc
+  ## ! for loop not save as list may be modified in loop
+  0:iSize while $ program [] .procedures .length u< do =:: index
+    program [] .procedures index [] =:: procId
+    procId ProcId.getProcInfo =:: currentProc
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
-      procId 1 + continue
+      continue
     end
     currentProc .implementation .Code .else ..drop
-      procId 1 + continue ## procedure implementation not in code
+      continue ## procedure implementation not in code
     end =:: codeImpl
     codeImpl .code [] .length 0 == if
-      procId 1 + continue ## procedure not implemented
+      continue ## procedure not implemented
     end
     codeImpl .codeState [] .PARSING if
       ## TODO? handle use in currenty unchecked procedure
       ProcCodeState .UNUSED codeImpl .codeState=
-      procId 1 + continue ## ignore parsing procedures
+      continue ## ignore parsing procedures
     end
     currentProc [] .labelId labelContext id.labelFlags =:: flags
     flags id.FLAG_LAMBDA & ? or EXPORT_GLOBALS hasMain ! | and flags id.FLAG_EXPORT & ? if
-      procId ProcId cast
+      procId
         -1
         currentProc [] .labelId labelContext id.getLabelPos .else
           "proc has no position" ..panic
         end
       state typeCheckChildProcedures
     end
-    procId 1 +
-  end ..drop
+  finally index 1 + end ..drop
   optimizerFlags.REMOVE_UNUSED_PROCS if
     true state .isUnusedProc=
   end
@@ -6016,50 +6036,53 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   TypeCheckMode .LINEAR state .mode=
   ## TODO reset state?
   ## procedures
-  0:i32 while $ iSize cast.u program [] .procedures .length u< do =:: procId
-    program [] .procedures procId iSize cast.u @[] =:: currentProc
+  ## ! for loop not save as list may be modified in loop
+  0:iSize while $ program [] .procedures .length u< do =:: index
+    program [] .procedures index [] =:: procId
+    procId ProcId.getProcInfo =:: currentProc
     currentProc [] .hasStaticArg or currentProc [] .isStatic if
-      procId 1 + continue
+      continue
     end
     currentProc  .implementation .Code .else ..drop
-      procId 1 + continue ## procedure implementation not in code
+      continue ## procedure implementation not in code
     end =:: codeImpl
     codeImpl .code [] .length 0 == if
-      procId 1 + continue ## procedure not implemented
+      continue ## procedure not implemented
     end
     codeImpl .codeState [] .PARSING if
       ProcCodeState .UNUSED codeImpl .codeState=
-      procId 1 + continue ## ignore parsing procedures
+      continue ## ignore parsing procedures
     end
-    procId ProcId cast -1 ProcCheckType .REQUIRE_DEFINED FilePosition ptr optional.empty state typeCheckProcedure
-    procId 1 +
-  end ..drop
+    procId -1 ProcCheckType .REQUIRE_DEFINED FilePosition ptr optional.empty state typeCheckProcedure
+  finally index 1 + end ..drop
   ## static procedures
   0 =:: mut: depth
   false =:: mut: compiledImplementation
   while
     false compiledImplementation=
-    0:i32 while: procLoop $ iSize cast.u program [] .procedures .length u< do =:: procId
-      program [] .procedures procId @[] =:: currentProc
+    ## ! for loop not save as list may be modified in loop
+    0:iSize while: procLoop $ program [] .procedures .length u< do =:: index
+      program [] .procedures index [] =:: procId
+      procId ProcId.getProcInfo =:: currentProc
       currentProc [] .hasStaticArg ! if
-        procId 1 + continue ## handled by previous loop
+        continue ## handled by previous loop
       end
       currentProc [] .isStatic if
-        procId 1 + continue ## don't type-check static procedures
+        continue ## don't type-check static procedures
       end
       currentProc .implementation .Code .else ..drop
-        procId 1 + continue ## procedure implementation not in code
+        continue ## procedure implementation not in code
       end =:: codeImpl
       codeImpl [] .code .length 0 == if
-        procId 1 + continue ## procedure not implemented
+        continue ## procedure not implemented
       end
       codeImpl [] .codeState .PARSING if
-        procId 1 + continue ## ignore parsing procedures
+        continue ## ignore parsing procedures
       end
       currentProc program nextImpl =:: nextId
       codeImpl [] .implementations .length i32 cast.u =:: implLength
       nextId implLength >= if
-        procId 1 + continue
+        continue
       end
       true compiledImplementation=
       nextId while ..dup implLength < do =:: implId
@@ -6075,16 +6098,15 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
         ## ignore procedures with generic signature
         implData [] .staticArgs for
           .GenericArg .if ..drop
-            procId 1 + continue.procLoop
+            continue.procLoop
           else .TypeId .and typeContext types.isGeneric _if
-            procId 1 + continue.procLoop
+            continue.procLoop
           end
         end
         procId ProcId cast implId ProcCheckType .REQUIRE_DEFINED implData [] .firstUse optional.wrap state typeCheckProcedure
         implId 1 +
       end ..drop
-      procId 1 +
-    end ..drop
+    finally index 1 + end ..drop
     compiledImplementation if
       depth 1 + depth=
       depth MAX_STATIC_RECURSION > if

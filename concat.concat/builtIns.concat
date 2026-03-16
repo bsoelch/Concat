@@ -119,17 +119,19 @@ proc(
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  context [] .procedures
-    ..dup .length ProcId cast =:: procId
+  context [] .programMemory
     ## ProcedureInfo
       buildIn false BuiltInData new ProcImplType .BuiltIn
-      procType
       procLabel
       FILE_ID_BUILT_IN
       id.GLOBAL_SCOPE
+      procType
       hasStaticArgs
       isStatic
-    ProcedureInfo new list.append
+    ProcedureInfo new mixedArena.copyValue ProcId.create =:: procId
+  context .programMemory=
+  context [] .procedures
+    procId list.append
   context .procedures=
   procLabel labelContext id.inLabelNamespace
   ## declareIdentifier

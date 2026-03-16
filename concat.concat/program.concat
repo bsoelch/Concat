@@ -99,10 +99,10 @@ union(
 ) =:: export: ProcImplType
 struct(
   ProcImplType : implementation
-  Type : procType
   LabelId : labelId
   FileId : fileId
   id.ScopeId : scopeId ## host-scope if parsing, body-scope if type-checked
+  Type : procType
   bool : hasStaticArg
   bool : isStatic
 ) =:: export: ProcedureInfo
@@ -113,6 +113,11 @@ proc( ProcedureInfo : p -> ) =>: freeProcedure
       .code slice.free ..drop
     end
   else ..drop end
+end
+namespace: ProcId
+  proc( ProcId -> LabelId ) =>: export: getLabel
+    getProcInfo [] .labelId
+  end
 end
 struct(
   ConstValue slice : autoArgs
@@ -166,8 +171,8 @@ proc(
   context [] .callData call .callDataId i64 cast @[]
 end
 struct(
-  i32 : implementationId
   ProcId : procId
+  i32 : implementationId
 ) =:: export: ProcedureImpl
 
 enum( FIXED AUTO ) =:: InitType
@@ -568,7 +573,7 @@ proc(
   LabelId : procName
   Type : procType
   FileId : fileId
-  ProcId : aliasId
+  ProcId optional : aliasId
   bool : hasImpl
   FilePosition ptr : pos
   ProgramContext ptr.mut : progContext
@@ -586,11 +591,10 @@ proc(
   outTypes procType typeContext types.getProcRetLabels typeContext hasStaticElement
     procName labelContext id.labelFlags id.FLAG_STATIC & ? |
   =:: isStatic
-  progContext [] .procedures
-    $ .length ProcId cast =:: procId
+  progContext [] .programMemory
     ## ProcedureInfo
-      aliasId NO_PROC != if
-        aliasId ProcImplType .Alias
+      aliasId .if
+        ProcImplType .Alias
       else hasImpl ! _if
         procName ProcImplType .Extern
       else
@@ -602,13 +606,16 @@ proc(
           ProcCodeState .PARSING
         CodeProcData new ProcImplType .Code
       end
-      procType
       procName
       fileId
       idContext id.currentScope
+      procType
       hasStaticArg
       isStatic
-    ProcedureInfo new list.append
+    ProcedureInfo new mixedArena.copyValue ProcId.create =:: procId
+  progContext .programMemory=
+  progContext [] .procedures
+    procId list.append
   progContext .procedures=
   procId return
 end
@@ -627,7 +634,7 @@ struct(
 struct(
   IdentifierContext : idContext
   ProgramFile list : progFiles
-  ProcedureInfo list : procedures
+  ProcId list : procedures
   ProcedureBundle list : procBundles
   Type list : autoTypes
   Operation list : globalOps
@@ -646,7 +653,7 @@ struct(
   string : basePath
   string : libPath
   LabelId : mainLabelId
-  ProcId : mainProcId
+  ProcId optional : mainProcId
   bool : saveGlobalTokens
   bool : inLibFile
   bool : hasGetArgs
@@ -667,7 +674,7 @@ proc(
   ## ProgramContext
     id.newIdentifierContext
     16  ProgramFile     list.create
-    64  ProcedureInfo   list.create
+    64  ProcId          list.create
     64  ProcedureBundle list.create
     32  Type            list.create
     1024 Operation      list.create
@@ -684,7 +691,7 @@ proc(
     basePath
     libPath
     id.LABEL_ID_NONE ## main LabelId
-    NO_PROC ## main ProcId
+    ProcId optional.empty ## main ProcId
     saveGlobalTokens
     false ## inLibFile
     false ## has getArgs
@@ -693,7 +700,7 @@ end
 proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .idContext id.freeIdentifierContext >$ .idContext=
   $ .progFiles list.free >$ .progFiles=
-  $ .procedures for freeProcedure end
+  $ .procedures for ProcId.getProcInfo [] freeProcedure end
   $ .procedures list.free >$ .procedures=
   $ .procBundles list.free >$ .procBundles=
   $ .autoTypes list.free >$ .autoTypes=
@@ -706,7 +713,7 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .callData list.free >$ .callData=
   $ .errors list.free >$ .errors=
   id.LABEL_ID_NONE >$ .mainLabelId=
-  NO_PROC >$ .mainProcId=
+  ProcId optional.empty >$ .mainProcId=
   false >$ .hasGetArgs=
   =:: mut: tmp ## is there a way to avoid switching to variable
     tmp@ .backJumpInfo map.free
@@ -818,8 +825,7 @@ namespace: sb
         "nested proc ( " sb.appendS
         op .dataType  typeContext sb.appendType
         " ) : " sb.appendS
-        procId i64 cast.u sb.appendI
-        ":ProcId" sb.appendS
+        procId ProcId.getLabel labelContext sb.appendLabelPath
       break
       ConstantReference .case =:: refId
         progContext [] .constantReferences refId i64 cast @[] =:: constData
@@ -871,9 +877,7 @@ namespace: sb
         "call ( " sb.appendS
         op .dataType  typeContext sb.appendType
         " ) : " sb.appendS
-        progContext [] .procedures
-          callInfo .procId i64 cast @[]
-        =:: procInfo
+        callInfo .procId ProcId.getProcInfo =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
         callInfo .implementationId 0 >= if
           ## XXX append static args instead of impl id
@@ -917,9 +921,7 @@ namespace: sb
         "implement ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        progContext [] .procedures
-          implInfo .procId i64 cast @[]
-        =:: procInfo
+        implInfo .procId ProcId.getProcInfo =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
         implInfo .implementationId 0 >= if
           ## XXX append static args instead of impl id
@@ -932,9 +934,7 @@ namespace: sb
         "procedure pointer ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        progContext [] .procedures
-          implInfo .procId i64 cast @[]
-        =:: procInfo
+        implInfo .procId ProcId.getProcInfo =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
         implInfo .implementationId 0 >= if
           ## XXX append static args instead of impl id
@@ -975,8 +975,8 @@ namespace: sb
       break
       TypeWith .case =:: procId
         "type with( " sb.appendS
-          procId i64 cast.u sb.appendI
-        ":ProcId )" sb.appendS
+          procId ProcId.getLabel labelContext sb.appendLabelPath
+        "@ )" sb.appendS
       break
       TypeModifier .case =:: typeModifier
         "typeModifier \"" sb.appendS
@@ -1246,17 +1246,17 @@ namespace: sb
     prog [] .errors for sb.appendCompilerError end
     "## global:\n" sb.appendS
     prog [] .globalOps for prog sb.appendOp end
-    prog [] .procedures for =:: proc
+    prog [] .procedures for ProcId.getProcInfo =:: proc
       proc .implementation .Code .else
         ..drop continue
       end =:: impl
       "## "          sb.appendS
-      proc .labelId labelContext sb.appendLabelPath
+      proc [] .labelId labelContext sb.appendLabelPath
       '\n'           sb.appendC
-      impl .codeState .UNUSED if continue end ## ignore unused procs
-      impl .code for prog sb.appendOp end
+      impl [] .codeState .UNUSED if continue end ## ignore unused procs
+      impl [] .code for prog sb.appendOp end
       '\n' sb.appendC
-      impl .implementations for =:: genericImpl
+      impl [] .implementations for =:: genericImpl
         genericImpl .code for prog sb.appendOp end
         '\n' sb.appendC
       end

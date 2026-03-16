@@ -1260,9 +1260,7 @@ proc(
           end =:: procVal
           ## pushValue
             idData .constValue []
-            program [] .procedures
-              procVal i64 cast @[]
-            .procType [] false typeContext types.getAddressType
+            procVal ProcId.getProcInfo .procType [] false typeContext types.getAddressType
             op [] .pos
           context pushValue
           EvalResult .Ok return
@@ -2126,7 +2124,7 @@ namespace: interpreter
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
-    program [] .procedures procId i64 cast @[] =:: procData
+    procId ProcId.getProcInfo =:: procData
     procData [] .procType =:: procType
     procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
     0:iSize ## XXX? is there a better way to get number of non-auto static args

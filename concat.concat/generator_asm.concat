@@ -444,7 +444,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   ## TODO correctly mangle procedure names
-  program [] .procedures procId iSize cast.u [] .labelId labelContext id.getLabelName
+  procId ProcId.getLabel labelContext id.getLabelName
 end
 
 proc(
@@ -1061,7 +1061,7 @@ proc(
     Constant .case op .dataType typeContext ValType.fromType context pushConstant return
     BuiltIn .case op .pos context compileBuiltIn return
     ImplementProcedure .case =:: implInfo
-      program [] .procedures implInfo .procId iSize cast.u @[] =:: procData
+      implInfo .procId ProcId.getProcInfo =:: procData
       implInfo .procId implInfo .implementationId context getProcName =:: procName
       procData [] .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? if
         procName asm.exportName list.append
@@ -1306,15 +1306,15 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
   contextData@ =:: context
   ## TODO? compile procedures seperately
   1024 asm.Atom list.create
-    program [] .procedures for =:: proc
+    program [] .procedures for ProcId.getProcInfo =:: proc
       proc .implementation .Code .else ..drop continue end =:: impl
-      impl .codeState .UNUSED if continue end
-      impl .codeState .COMPILED if
+      impl .codeState [] .UNUSED if continue end
+      impl .codeState [] .COMPILED if
         context beginProcedure
-          impl .code for context compileOp end
+          impl [] .code for context compileOp end
         context finishProcedure
       end
-      impl .implementations for =:: genericImpl
+      impl [] .implementations for =:: genericImpl
         genericImpl .codeState .COMPILED if
           context beginProcedure
             genericImpl .code for context compileOp end

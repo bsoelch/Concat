@@ -148,7 +148,7 @@ proc( ConstValue : a ConstValue : b -> i32 ) =>: export: constantCmp
     Array64 .case b .Array64 unionElement.unwrap slice.cmp return
     Array .case b .Array unionElement.unwrap constantCmp@ slice.cmp return
     TypeId .case b .TypeId unionElement.unwrap types.typeCmp return
-    Procedure .case i64 cast.u b .Procedure unionElement.unwrap i64 cast.u i64.cmp return
+    Procedure .case b .Procedure unionElement.unwrap ProcId.cmp return
     ProcedureBundle .case i64 cast.u b .ProcedureBundle unionElement.unwrap i64 cast.u i64.cmp return
     GenericArg .case i64 cast.u b .GenericArg unionElement.unwrap i64 cast.u i64.cmp return
     GlobalPointer .case i64 cast.u b .GlobalPointer unionElement.unwrap i64 cast.u i64.cmp return
@@ -211,7 +211,7 @@ proc( ConstValue : a -> i32 ) =>: export: constantHash
     Array64 .case ( i64 -> i32 ) => $ 32 >> >$ + i32 cast.u end slice.hash 29 * return
     Array .case constantHash@ slice.hash 31 * return
     TypeId .case types.typeHash 37 * return
-    Procedure .case i32 cast.u 1 + 41 * return
+    Procedure .case ProcId.hash 1 + 41 * return
     ProcedureBundle .case i32 cast.u 1 + 43 * return
     GenericArg .case i32 cast.u 1 + 47 * return
     GlobalPointer .case i32 cast.u 1 + 53 * return
@@ -526,8 +526,8 @@ namespace: sb
           end
           "}" sb.appendS
           break
-        Procedure .case i64 cast sb.appendI
-          ":ProcId"  sb.appendS
+        Procedure .case
+          ProcId.getLabel labelContext sb.appendLabelPath '@' sb.appendC
           break
         ProcedureBundle .case i64 cast sb.appendI
           ":ProcBundleId"  sb.appendS

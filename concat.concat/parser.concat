@@ -1348,7 +1348,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end =:: mut: procName
       fileState program wordPos =:: procPos
       ## declare procedure name outside procedure
-      procImplName Type .Undefined state [] .currentFile NO_PROC true procPos program newProcData =:: procId
+      procImplName Type .Undefined state [] .currentFile ProcId optional.empty true procPos program newProcData =:: procId
       procId procPos opNestedProc state appendOp
       named if
         procName procPos opAutoTypedInitializeName state appendOp
@@ -1464,19 +1464,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           break
           Procedure .case =:: procBlockData
             state [] .currentProcs
-              $ list.peek .if
-                [] NO_PROC != if ## append op before poping procedure
-                  BlockType .PROCEDURE blockPos opEndBlock  state appendOp
-                end
+              $ .length 0 != if ## append op before poping procedure
+                BlockType .PROCEDURE blockPos opEndBlock  state appendOp
               else ..drop ## current-procs are empty -> no pop possible
                 "unexpected end of procedure" sb.copyPtr blockPos errors appendError
                 return
               end
               list.removeLast =:: currentProcId
             state .currentProcs=
-            program [] .procedures
-              currentProcId i64 cast @[]
-            =:: currentProc
+            currentProcId ProcId.getProcInfo =:: currentProc
             currentProc .implementation .Code .else
               "expected code-implementation" ..panic
             end =:: codeImpl
@@ -1617,7 +1613,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       labelContext id.newLabel
         Type .Undefined
         state [] .currentFile
-        NO_PROC true
+        ProcId optional.empty true
       blockPos program newProcData =:: procId
       state [] .currentProcs procId list.append state .currentProcs=
       return
@@ -1649,19 +1645,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         return
         With .case =:: offset
           state [] .currentProcs
-            $ list.peek .if
-              [] NO_PROC != if ## append op before poping procedure
-                BlockType .PROCEDURE blockPos opEndBlock  state appendOp
-              end
+            $ .length 0 != if ## append op before poping procedure
+              BlockType .PROCEDURE blockPos opEndBlock  state appendOp
             else ..drop ## current-procs are empty -> no pop possible
               "unexpected end of procedure" sb.copyPtr blockPos errors appendError
               return
             end
             list.removeLast =:: withProcId
           state .currentProcs=
-          program [] .procedures
-            withProcId i64 cast @[]
-          =:: withProc
+          withProcId ProcId.getProcInfo =:: withProc
           state [] .parsedOps
             offset list.tail
             slice.copy

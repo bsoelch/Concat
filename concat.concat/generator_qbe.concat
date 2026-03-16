@@ -1018,9 +1018,7 @@ namespace: sb
           return
         Procedure .case =:: procValue
           ## appendGlobalName
-            prog [] .procedures
-              procValue i64 cast
-            @[] .labelId []
+            procValue ProcId.getLabel
             -1
           context appendGlobalName
           return
@@ -3017,9 +3015,7 @@ proc(
       end
       break
     ImplementProcedure .case =:: implInfo
-      prog [] .procedures
-        implInfo .procId i64 cast @[]
-      =:: procInfo
+      implInfo .procId ProcId.getProcInfo =:: procInfo
       op [] .dataType context .currentProc=
       procInfo [] .labelId labelContext id.labelFlags =:: labelFlags
       ## reset stack-info in context
@@ -3172,9 +3168,7 @@ proc(
       end
       break
     ProcPtr .case =:: procImpl
-      prog [] .procedures
-        procImpl .procId i64 cast
-      @[] =:: procData
+      procImpl .procId ProcId.getProcInfo =:: procData
       sb
         op [] .pos sb.appendPosQBE
         "%s" sb.appendS
@@ -3519,9 +3513,7 @@ proc(
       compileCast return
       break
     Call .case =:: callInfo
-      prog [] .procedures
-        callInfo .procId i64 cast @[]
-      =:: procData
+      callInfo .procId ProcId.getProcInfo =:: procData
       callInfo .implementationId 0 >= if
         procData [] .implementation .Code .else
           "expected code-proc" ..panic
@@ -4134,26 +4126,26 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
       "} \n" sb.appendS
     end
     ## code
-    program [] .procedures for =:: proc
+    program [] .procedures for ProcId.getProcInfo =:: proc
       proc .implementation .Code .else
         ..drop continue
       end =:: impl
-      impl .codeState .UNUSED if continue end
-      program [] .progFiles proc .fileId iSize cast.u list.get .if =:: f
+      impl .codeState [] .UNUSED if continue end
+      program [] .progFiles proc [] .fileId iSize cast.u list.get .if =:: f
         "dbgfile \"" sb.appendS
         f .fileName sb.appendSb
         "\"\n"    sb.appendS
       else
         "dbgfile \"..internal\"\n"    sb.appendS
       end
-      impl .codeState .COMPILED if
-        impl .code .length for i32 cast.u =:: opIndex
-          impl .code opIndex @[] opIndex context compileOp
+      impl .codeState [] .COMPILED if
+        impl .code [] .length for i32 cast.u =:: opIndex
+          impl [] .code opIndex @[] opIndex context compileOp
         end
         target $1 sb.asStr file.write target=
         sb.clear
       end
-      impl .implementations for =:: genericImpl
+      impl [] .implementations for =:: genericImpl
         genericImpl .codeState .COMPILED if
           genericImpl .code .length for i32 cast.u =:: opIndex
             genericImpl .code opIndex @[] opIndex context compileOp

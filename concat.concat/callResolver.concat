@@ -705,7 +705,7 @@ proc(
     ## no-match -> compare number of matched parameters
     a .paramInfo .length b .paramInfo .length == if
       ## sort non-matching signatures by declaration order
-      a .procId i64 cast b .procId i64 cast < if -1 else a .procId b .procId == _if 0 else 1 end return
+      0 return
     end
     a .paramInfo .length b .paramInfo .length u> if
       -1
@@ -788,7 +788,7 @@ proc(
   stringBuilder ptr.mut optional : errorMessage
   FilePosition ptr : pos
   TypeCheckState ptr.mut : typeChecker
--> ProcedureCallInfo optional ProcId Type ) =>: export: resolveCall
+-> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall
   typeChecker [] .program =:: progContext
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -800,12 +800,12 @@ proc(
         "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
       messageData =[]
     end
-    ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
+    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
   MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
   procedureIds for =:: procId
-    progContext [] .procedures procId i64 cast @[] =:: procInfo
+    procId ProcId.getProcInfo =:: procInfo
     procInfo [] .procType
       typeContext types.getProcIn .if .length else 0:iSize end
     =:: argCount
@@ -840,9 +840,7 @@ proc(
         ## don't continue checking if first arguments were no match / all params matched
         i 1:iSize + continue
       end
-      progContext [] .procedures
-        current [] .procId i64 cast @[]
-      .procType [] =:: procType
+      current [] .procId ProcId.getProcInfo .procType [] =:: procType
       procType typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
       inTypes .length 1:iSize -
         current [] .paramInfo .length -
@@ -1061,9 +1059,7 @@ proc(
         MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
         maxSignatures for =:: i
           currentSignatures i @[] =:: mut: current
-          progContext [] .procedures
-            current [] .procId i64 cast @[]
-          =:: procInfo
+          current [] .procId ProcId.getProcInfo =:: procInfo
           "  * " sb.appendS
           procInfo [] .procType typeContext sb.appendType
           ' ' sb.appendC
@@ -1074,7 +1070,7 @@ proc(
       messageData =[]
     end
     currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
+    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
   currentSignatures .length 1:iSize != and
       ## cmpSignatures
@@ -1103,9 +1099,7 @@ proc(
         MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
         maxSignatures for =:: i
           currentSignatures i @[] =:: mut: current
-          progContext [] .procedures
-            current [] .procId i64 cast @[]
-          =:: procInfo
+          current [] .procId ProcId.getProcInfo =:: procInfo
           isEquivalent and
               candidate [] current [] progContext cmpSignatures 0 != if
             "other signatures: \n" sb.appendS
@@ -1121,11 +1115,9 @@ proc(
       messageData =[]
     end
     currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
+    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
-  progContext [] .procedures
-    candidate [] .procId i32 cast @[]
-  =:: procInfo
+  candidate [] .procId ProcId.getProcInfo =:: procInfo
   candidate [] .procId =:: calledProcId
   ## TODO? nested alias
   procInfo [] .implementation .Alias .else ..drop
@@ -1140,7 +1132,7 @@ proc(
       >$ =[]
     end
     currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty NO_PROC Type .Undefined return
+    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
   procType typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
   procType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
@@ -1169,10 +1161,8 @@ proc(
   -1:i32 =:: mut: implId
   eltCount Type list.create =:: mut: typeBuffer
   eltCount LabelId list.create =:: mut: labelBuffer
+  baseProcId ProcId.getProcInfo =:: baseProcInfo
   constArgs .length 0:iSize != and
-      progContext [] .procedures
-        baseProcId i64 cast @[]
-      =:: baseProcInfo
       baseProcInfo .implementation =:: implData
       ## TODO support alias for generic procedures
       implData .Code .if .implementations =:: impls
@@ -1301,5 +1291,5 @@ proc(
   ProcedureCallInfo new =:: result
   constArgs list.free constArgs=
   currentSignatures@ cleanupSignatures
-  result optional.wrap calledProcId calledType return
+  result optional.wrap calledProcId optional.wrap calledType return
 end

@@ -120,17 +120,17 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
   prog [] .globalOps for =:: op
     op@ prog visited@ types@ addOpType
   end
-  prog [] .procedures for =:: proc
+  prog [] .procedures for ProcId.getProcInfo =:: proc
     proc .implementation .Code .else
       ..drop continue
     end =:: impl
-    impl .codeState .UNUSED if continue end
-    impl .codeState .COMPILED if
-      impl .code for =:: op
+    impl .codeState [] .UNUSED if continue end
+    impl .codeState [] .COMPILED if
+      impl [] .code for =:: op
         op@ prog visited@ types@ addOpType
       end
     end
-    impl .implementations for =:: genericImpl
+    impl [] .implementations for =:: genericImpl
       genericImpl .codeState .COMPILED if
         genericImpl .code for =:: op
           op@ prog visited@ types@ addOpType

@@ -51,7 +51,7 @@ proc(
   ProcedureCall : callInfo
   ProgramContext ptr.mut : program
 -> Operation slice ) =>: calledProcOps
-  program [] .procedures callInfo .procId i64 cast.u @[] =:: procInfo
+  callInfo .procId ProcId.getProcInfo =:: procInfo
   program [] .progFiles
     procInfo [] .fileId i64 cast.u
   @[] =:: procFile
@@ -72,7 +72,7 @@ proc(
 -> bool ) =>: shouldInlineCall
   program .idContext .typeContext .labelContext =:: labelContext
   optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
-  program [] .procedures callInfo .procId i64 cast.u @[] =:: procData
+  callInfo .procId ProcId.getProcInfo =:: procData
   procData [] .isStatic or procData .implementation [] .Code ? ! or
       procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? or
       procData [] .labelId labelContext id.labelFlags id.FLAG_NO_INLINE & ? if
@@ -98,9 +98,7 @@ proc(
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  program [] .procedures
-    callInfo .procId i64 cast.u @[] .implementation []
-  .Code ? "only code-procs are inlined" assert
+  callInfo .procId ProcId.getProcInfo .implementation [] .Code ? "only code-procs are inlined" assert
   callInfo program calledProcOps =:: procOps
   labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
   LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
@@ -517,7 +515,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
   Operation list.empty =:: mut: tmpOps
-  program [] .procedures list.atItr for =:: currentProc
+  program [] .procedures for ProcId.getProcInfo =:: currentProc
     currentProc [] .isStatic if continue end
     currentProc .implementation .Code .else ..drop
       continue
@@ -554,8 +552,8 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     end
   end
   ## create implementations for built-in procedure-pointers
-  program [] .procedures .length for =:: procId
-    program [] .procedures procId @[] =:: currentProc
+  program [] .procedures for =:: procId
+    procId ProcId.getProcInfo =:: currentProc
     currentProc .implementation .BuiltIn .else ..drop
       break ## built-ins at start of procedure list
     end =:: builtInImpl
@@ -570,8 +568,8 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       ## opImplementProc
         currentProc [] .procType
         ## ProcedureImpl
+          procId
           -1
-          procId ProcId cast
         ProcedureImpl new
         pos
       opImplementProc list.append

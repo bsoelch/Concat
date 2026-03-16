@@ -239,15 +239,15 @@ namespace: types
     a b == if 0 return end
     a RefinementType ptr cast =:: aData
     b RefinementType ptr cast =:: bData
-    aData [] .typeTrait bData [] .typeTrait != if
-      aData [] .typeTrait i64 cast.u bData [] .typeTrait i64 cast.u i64.cmp return
-    end
+    aData [] .typeTrait bData [] .typeTrait ProcId.cmp
+      $ ? if return end
+    ..drop
     aData [] .baseType bData [] .baseType typeCmp return
   end
   proc( RefinementTypeId : a -> i32 ) =>: refinementTypeHash
     a RefinementType ptr cast =:: aData
     aData [] .baseType typeHash
-      31 * aData [] .typeTrait i32 cast.u +
+      31 * aData [] .typeTrait ProcId.hash +
     return
   end
   proc( Type : a Type : b -> bool ) =>: export: typeEquals
@@ -2913,8 +2913,7 @@ namespace: sb
           t context types.unwrapRefinement context depth 1 - appendTypeRecursive
           " .with( " sb.appendS
             t context types.getTypeTrait .if
-              i64 cast sb.appendI
-              ":ProcId" sb.appendS
+              ProcId.getLabel labelContext sb.appendLabelPath '@' sb.appendC
             else
               '?' sb.appendC
             end

@@ -105,9 +105,25 @@ end
 
 i32 =:: export: LabelId
 ( char8 ptr.raw iSize -> LabelId ) : static: export: alias: :LabelId ..builtIn.parse.i32
-i64 =:: export: ProcId
-( char8 ptr.raw iSize -> ProcId ) : static: export: alias: :ProcId ..builtIn.parse.i64
--1:ProcId =:: export: NO_PROC
+type : export: ProcedureInfo
+struct( ## TODO? use low 3 bits of pointer to store important info (isStatic/isBuiltIn/isExtern/ isInline?)
+  ProcedureInfo ptr.mut : Data
+) =:: export: ProcId
+namespace: ProcId
+  proc( ProcId : a  ProcId : b -> i32 ) =>: export: cmp
+    a .Data b .Data ptr.cmp return
+  end
+  proc( ProcId : a -> i32 ) =>: export: hash
+    a .Data iSize cast! $ 32 >>> ^ i32 cast
+  end
+  proc( ProcId -> LabelId ) : export: getLabel
+  proc( ProcedureInfo ptr.mut -> ProcId ) =>: export: create
+    ProcId new
+  end
+  proc( ProcId -> ProcedureInfo ptr.mut ) =>: export: getProcInfo
+    .Data
+  end
+end
 i64 =:: export: ProcBundleId
 ( char8 ptr.raw iSize -> ProcBundleId ) : static: export: alias: :ProcBundleId ..builtIn.parse.i64
 

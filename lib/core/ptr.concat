@@ -254,6 +254,7 @@ namespace: iSize
     ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i64i32
     ( iSize : a iSize : b -> iSize ) : export: alias: and ..builtIn.and.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: or ..builtIn.or.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: xor ..builtIn.xor.i64
     ( iSize : a iSize : b -> bool ) : export: alias: eq ..builtIn.eq.i64
     ( iSize : a iSize : b -> bool ) : export: alias: ne ..builtIn.ne.i64
     ( iSize : a iSize : b -> bool ) : export: alias: lt ..builtIn.ult.i64
@@ -278,6 +279,7 @@ namespace: iSize
     ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: and ..builtIn.and.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: or ..builtIn.or.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: xor ..builtIn.xor.i32
     ( iSize : a iSize : b -> bool ) : export: alias: eq ..builtIn.eq.i32
     ( iSize : a iSize : b -> bool ) : export: alias: ne ..builtIn.ne.i32
     ( iSize : a iSize : b -> bool ) : export: alias: lt ..builtIn.ult.i32
@@ -385,6 +387,9 @@ overload: export: &
 end
 overload: export: |
   iSize.or
+end
+overload: export: ^
+  iSize.xor
 end
 overload: export: ?
   iSize.toBool
