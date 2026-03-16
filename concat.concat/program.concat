@@ -559,6 +559,12 @@ proc(
   outTypes newProcType typeContext types.getProcRetLabels typeContext hasStaticElement
     procInfo [] .labelId typeContext .labelContext id.labelFlags id.FLAG_STATIC & ? |
   procInfo .isStatic=
+  procInfo .implementation .Code .if =:: codeImpl
+    codeImpl .genericInfo .None ? and procInfo [] .hasStaticArg or
+        newProcType typeContext types.containsGeneric if
+      0 ProcId list.create GenericProcInfo .Implementations codeImpl .genericInfo=
+    end
+  else ..drop end
 end
 proc(
   LabelId : procName
@@ -592,7 +598,7 @@ proc(
         ## CodeProcData
           0 VariableInfo list.create
           Operation slice.emptyMutable
-          procType typeContext types.containsGeneric if
+          hasStaticArg or procType typeContext types.containsGeneric if
             0 ProcId list.create GenericProcInfo .Implementations
           else
             GenericProcInfo .None

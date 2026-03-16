@@ -5655,10 +5655,56 @@ proc(
   end =:: procPos
   expandedAt .else procPos end =:: initPos
   ## FIXME! update expansion-level in base-proc
-  codeImpl [] .expansionLevel =:: prevExpansionLevel
   codeImpl [] .codeState currentProc [] .labelId checkType state [] .isUnusedProc initPos program checkProcState if
     return
   end
+  ProcCodeState .TYPE_CHECKING codeImpl .codeState=
+  codeImpl [] .expansionLevel =:: prevExpansionLevel
+  codeImpl .genericInfo .ImplInfo .if =:: implInfo
+    #+currentImpl [] .expansionLevel ## TODO check&update expansion level on parent
+      $ MAX_EXPANSION_DEPTH > if ..drop
+        "exceeded maximum expansion depth (" sb.copyPtr
+          MAX_EXPANSION_DEPTH i32 cast.u sb.appendI
+          ')' sb.appendC
+          state [] .initializationStack list.reversed for =:: prevExpand
+            "  caused by initializing code at " sb.appendS
+            prevExpand [] sb.appendPos
+            '\n' sb.appendC
+          end
+        initPos program .errors appendError
+        return
+      end
+    codeImpl .expansionLevel=+#
+    currentProc [] .procType typeContext types.getProcIn .else
+      "proc has no in":s procPos ..line internalErrorNoOp ..unreachable
+    end =:: inTypes
+    0:i32 =:: mut: staticArgCount
+    ## TODO? clear/reset argument map
+    0:i32 while $ iSize cast.u inTypes .length u< do =:: i
+      currentProc [] .procType i typeContext types.getProcArgLabel =:: labelId
+      inTypes i [] =:: argType
+      labelId labelContext id.labelFlags id.FLAG_STATIC & ? or
+          argType typeContext types.isType if
+        implInfo [] .staticArgs
+          staticArgCount slice.get .else
+            "missing static argument":s initPos ..line internalErrorNoOp ..unreachable
+          end
+        =:: argValue
+        state .argData labelId
+          $ id.LABEL_ID_NONE == if ..drop
+            -2 i - LabelId cast.s ## dummy labels for static generic arguments
+          end
+          argType argValue TypedValue new
+        map.put ..drop
+        staticArgCount 1 + staticArgCount=
+      else labelId id.LABEL_ID_NONE != _if
+        state .argData labelId
+          argType ConstValue .None TypedValue new
+        map.put ..drop
+      end
+      i 1 +
+    end ..drop
+  else ..drop end
   codeImpl [] .expansionLevel 1 + codeImpl .expansionLevel=
   ProcCodeState .TYPE_CHECKING codeImpl .codeState=
   currentProc [] .isStatic and state [] .mode .PROC_CHILD if

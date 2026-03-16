@@ -1186,7 +1186,7 @@ proc(
         ## ProcedureInfo
           ## CodeProcData
             0 VariableInfo list.create
-            Operation slice.emptyMutable
+            codeImpl [] .code slice.copy ## TODO? can copying slice be avoided ("if impl and parsing source code in parent")
             ## GenericImplementationInfo
               implArgs
               baseProcId
@@ -1210,6 +1210,9 @@ proc(
           baseProcInfo [] .isStatic
         ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
       progContext .programMemory=
+      progContext [] .procedures
+        implProdId list.append
+      progContext .procedures=
       implProdId optional.wrap implId=
       impls []
         implProdId list.append
