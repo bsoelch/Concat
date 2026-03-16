@@ -5657,9 +5657,9 @@ proc(
     return
   end
   ProcCodeState .TYPE_CHECKING codeImpl .codeState=
-  codeImpl [] .expansionLevel =:: prevExpansionLevel
+  i16 optional.empty =:: mut: prevExpansionLevel
   codeImpl .genericInfo .ImplInfo .if =:: implInfo
-    #+currentImpl [] .expansionLevel ## TODO check&update expansion level on parent
+    codeImpl [] .expansionLevel
       $ MAX_EXPANSION_DEPTH > if ..drop
         "exceeded maximum expansion depth (" sb.copyPtr
           MAX_EXPANSION_DEPTH i32 cast.u sb.appendI
@@ -5672,7 +5672,11 @@ proc(
         initPos program .errors appendError
         return
       end
-    codeImpl .expansionLevel=+#
+    implInfo [] .genericProc ProcId.getProcInfo .implementation .Code .else
+       "expected code impl" ..panic
+    end
+      $ [] .expansionLevel optional.wrap prevExpansionLevel=
+    .expansionLevel=
     currentProc [] .procType typeContext types.getProcIn .else
       "proc has no in":s procPos ..line internalErrorNoOp ..unreachable
     end =:: inTypes
@@ -5793,7 +5797,12 @@ proc(
   state clearOps
   ## remember new code position
   newOps codeImpl .code=
-  prevExpansionLevel codeImpl .expansionLevel=
+  prevExpansionLevel .if
+    codeImpl .genericInfo .ImplInfo .and
+        [] .genericProc ProcId.getProcInfo .implementation .Code .else
+      "prevExpansionLevel should only exists if proc is generic impl" ..panic
+    end .expansionLevel=
+  end
   newProcState codeImpl .codeState=
   idContext id.currentScope currentProc .scopeId=
   state [] .initializationStack
