@@ -707,7 +707,7 @@ export data $cct_types_dctype_dSTRUCT = align 8 {b 16,z 7,b 4}
 export data $cct_types_dintLiteral_dU16 = align 8 {b 5,z 7,b 3}
 export data $cct_f16_dSIGN__FLAG = align 2 {h 32768}
 data $cct_52_Fid_dID__NONE__DATA = align 8 {z 8,b 0,z 7,z 16,b 0,z 7,l $cct_FILE__POS__UNKNOWN,w -1,w -1,b 3,b 0}
-export data $cct___VERSION__ = align 8 {l 523}
+export data $cct___VERSION__ = align 8 {l 525}
 data $cct_41_Futf16_dSURROGATE__BIAS = align 4 {w 65536}
 export data $cct_types_dCHAR8 = align 8 {b 4,z 7,b 2}
 export data $cct_AMD64_dreg_dR9 = align 4 {w 144}
@@ -920,7 +920,7 @@ data $cctI_constRef22 = {z 48,b 0}
 data $cctI_constRef23 = {z 16,b 11} 
 data $cctI_constRef24 = {z 57,b 7} 
 data $cctI_constRef25 = {z 16,b 0} 
-data $cctI_constRef26 = {l 523,z 8,b 3} 
+data $cctI_constRef26 = {l 525,z 8,b 3} 
 data $cctI_constRef27 = {l 0,l 0,l 0} 
 data $cctI_constRef28 = {l 0,l 0,l 0} 
 data $cctI_constRef29 = {l 0,l 0,l 0} 
@@ -180317,43 +180317,43 @@ dbgloc 2552,5 ## ./concat.concat/types.concat
 %s82 =:struct62 call $cct_19_FunionElement_delseVal_I2 (:struct62 %s81)
 @label_8581 ## label
 dbgloc 2553,5 ## ./concat.concat/types.concat
-%s83 =l copy %l32888
+%s83 =l copy %l32892
 dbgloc 2553,5 ## ./concat.concat/types.concat
 blit %s83,%l83173,9
 dbgloc 2553,5 ## ./concat.concat/types.concat
 %s84 =l copy %l83173
-dbgloc 2553,9 ## ./concat.concat/types.concat
+dbgloc 2553,12 ## ./concat.concat/types.concat
 %s85 =l loadl %l32882
-dbgloc 2553,17 ## ./concat.concat/types.concat
+dbgloc 2553,20 ## ./concat.concat/types.concat
 %s86 =l copy %s85
-dbgloc 2553,17 ## ./concat.concat/types.concat
+dbgloc 2553,20 ## ./concat.concat/types.concat
 %s87 =ub call $cct_types_disNumber (l %s86,:struct62 %s84)
-dbgloc 2553,32 ## ./concat.concat/types.concat
-jnz %s87, @label_8591, @next11
-@next11 ## jump-if
 dbgloc 2553,35 ## ./concat.concat/types.concat
+jnz %s87, @next11, @label_8592
+@next11 ## jump-if
+dbgloc 2553,39 ## ./concat.concat/types.concat
 %s88 =l copy %l32888
 dbgloc 2553,39 ## ./concat.concat/types.concat
 blit %s88,%l83174,9
 dbgloc 2553,39 ## ./concat.concat/types.concat
 %s89 =l copy %l83174
+dbgloc 2553,43 ## ./concat.concat/types.concat
+%s90 =l loadl %l32882
 dbgloc 2553,51 ## ./concat.concat/types.concat
-%s90 =ub call $cct_unionElement_dcheck_I9 (:struct62 %s89)
-dbgloc 2553,53 ## ./concat.concat/types.concat
-jnz %s90, @next12, @label_8592
+%s91 =l copy %s90
+dbgloc 2553,51 ## ./concat.concat/types.concat
+%s92 =ub call $cct_types_disNumber (l %s91,:struct62 %s89)
+dbgloc 2553,66 ## ./concat.concat/types.concat
+jnz %s92, @label_8591, @next12
 @next12 ## jump-if
-dbgloc 2553,57 ## ./concat.concat/types.concat
-%s91 =l copy %l32892
-dbgloc 2553,57 ## ./concat.concat/types.concat
-blit %s91,%l83175,9
-dbgloc 2553,57 ## ./concat.concat/types.concat
-%s92 =l copy %l83175
-dbgloc 2553,64 ## ./concat.concat/types.concat
-%s93 =l loadl %l32882
-dbgloc 2553,72 ## ./concat.concat/types.concat
-%s94 =l copy %s93
-dbgloc 2553,72 ## ./concat.concat/types.concat
-%s95 =ub call $cct_types_disNumber (l %s94,:struct62 %s92)
+dbgloc 2553,69 ## ./concat.concat/types.concat
+%s93 =l copy %l32888
+dbgloc 2553,73 ## ./concat.concat/types.concat
+blit %s93,%l83175,9
+dbgloc 2553,73 ## ./concat.concat/types.concat
+%s94 =l copy %l83175
+dbgloc 2553,85 ## ./concat.concat/types.concat
+%s95 =ub call $cct_unionElement_dcheck_I9 (:struct62 %s94)
 dbgloc 2553,87 ## ./concat.concat/types.concat
 jnz %s95, @next13, @label_8592
 @next13 ## jump-if
