@@ -1158,41 +1158,45 @@ proc(
     end
     i 1 +
   end ..drop
-  -1:i32 =:: mut: implId
+  ProcId optional.empty =:: mut: implId
   eltCount Type list.create =:: mut: typeBuffer
   eltCount LabelId list.create =:: mut: labelBuffer
   baseProcId ProcId.getProcInfo =:: baseProcInfo
   constArgs .length 0:iSize != and
+    ## TODO extract to procedure in program.concat
       baseProcInfo .implementation =:: implData
       ## TODO support alias for generic procedures
-      implData .Code .if .implementations =:: impls
+      implData .Code .and =:: codeImpl
+      codeImpl .genericInfo .Implementations .if =:: impls
     false =:: mut: isMatch
-    impls [] .length for =:: i
-      impls [] i @[] =:: impl
-      impl [] .staticArgs .length constArgs .length == "correct number of static arguments" assert
-      true isMatch=
-      constArgs .length for =:: j
-        ## constEquals
-          impl [] .staticArgs j []
-          constArgs j []
-        constantEquals ! if
-          false isMatch=
-          break
-        end
-      end
-      isMatch if
-        i i32 cast.u implId=
+    impls [] for =:: implProcId
+      implProcId ProcId.getProcInfo .implementation .Code .and .genericInfo .ImplInfo .else
+        "expected generic-proc implementation" ..panic
+      end =:: implInfo
+      implInfo [] .staticArgs .length constArgs .length == "correct number of static arguments" assert
+      implInfo [] .staticArgs constArgs list.asSlice constantEquals@ slice.eq if
+        implProcId optional.wrap implId=
+        true isMatch=
         break
       end
     end
     isMatch ! if ## no matching implementation -> create new one
-      impls []
-        $ .length i32 cast.u implId=
-        ## ProcImplementation
-          constArgs list.asSlice constContext constArray
-          0 VariableInfo list.create
-          Operation slice.emptyMutable
-          pos
+      constArgs list.asSlice constContext constArray =:: implArgs
+      progContext [] .programMemory
+        ## ProcedureInfo
+          ## CodeProcData
+            0 VariableInfo list.create
+            Operation slice.emptyMutable
+            ## GenericImplementationInfo
+              implArgs
+              baseProcId
+            GenericImplementationInfo new GenericProcInfo .ImplInfo
+            ProcCodeState .PARSED
+            codeImpl [] .expansionLevel 1:i16 +
+          CodeProcData new ProcImplType .Code
+          baseProcInfo [] .labelId ## FIXME! create unique name for impl
+          baseProcInfo [] .fileId
+          baseProcInfo [] .scopeId
           ## replaceGenerics
             baseProcInfo [] .procType
             typeBuffer@
@@ -1202,9 +1206,13 @@ proc(
             pos
             typeChecker
           replaceGenerics
-          ProcCodeState .PARSED
-          implData .Code .else "expected code-impl" ..panic end [] .expansionLevel 1:i16 +
-        ProcImplementation new list.append
+          false
+          baseProcInfo [] .isStatic
+        ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
+      progContext .programMemory=
+      implProdId optional.wrap implId=
+      impls []
+        implProdId list.append
       impls =[]
     end
   end
@@ -1285,8 +1293,7 @@ proc(
   typeBuffer list.free typeBuffer=
   labelBuffer list.free labelBuffer=
   ## ProcedureCallInfo
-    baseProcId
-    implId
+    implId .else baseProcId end    
     constArgs list.asSlice constContext constArray
   ProcedureCallInfo new =:: result
   constArgs list.free constArgs=

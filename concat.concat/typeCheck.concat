@@ -218,7 +218,7 @@ struct( Type : valType ConstValue : value ) =:: TypedValue
 enum( PROC_CHILD STATIC_PROC LINEAR ) =:: TypeCheckMode
 
 struct(
-  ProcedureImpl : impl
+  ProcId : procId
   FilePosition ptr : expandedAt
 ) =:: MissingProc
 struct(
@@ -1470,25 +1470,17 @@ proc(
     interpreter .stackInfo=
   end
   ## 3. ensure procedure has been type-checked (may invalidate args!)
-  procData .implementation .Code .if
-    calledProc .implementationId -1:i32 != if ## TODO! avoid magic number
-      [] .implementations calledProc .implementationId [] .codeState
-    else
-      [] .codeState
-    end  .TYPE_CHECKED ! if
+  procData .implementation .Code .and [] .codeState .TYPE_CHECKED ! if
       ## typeCheckChildProcedures
         calledProc .procId
-        calledProc .implementationId
         pos
         state
       typeCheckChildProcedures
       ## TODO! do not interpret if type-checking fails
-    end
-  else ..drop end
+  end
   ## 4. evalute-call in interpreter
   ## evaluateCall
     calledProc .procId
-    calledProc .implementationId
     calledType
     calledProc .autoArgs
     pos
@@ -1627,20 +1619,10 @@ proc(
     Code .case =:: codeImpl
       state [] .mode .LINEAR ! if
         ## check if implementation exists if not add to list of missing imples
-        calledProc .implementationId =:: implId
-        implId -1:i32 == if
-          codeImpl [] .codeState .TYPE_CHECKED !
-        else
-          codeImpl [] .implementations
-            implId @[]
-          .codeState [] .TYPE_CHECKED !
-        end if
+        codeImpl [] .codeState .TYPE_CHECKED ! if
           state [] .missingProcs
             ## MissingProc
-              ## ProcedureImpl
-                calledProc .procId
-                implId
-              ProcedureImpl new
+              calledProc .procId
               pos
             MissingProc new list.append
           state .missingProcs=
@@ -2697,10 +2679,7 @@ proc(
          ## ensure lambda is type-checked
         state [] .missingProcs
           ## MissingProc
-            ## ProcedureImpl
-              procId
-              -1
-            ProcedureImpl new
+            procId
             op .pos
           MissingProc new list.append
         state .missingProcs=
@@ -2917,12 +2896,11 @@ proc(
                   $ .implementation [] .Alias ? ! "no double alias" assert
                 else ..drop end
               =:: procData
-              -1:i32 =:: mut: implId
               procData [] .hasStaticArg if
                 ## TODO resolve implementation id
                 ##  -> get static args from stack
                 ##  -> replace op with generic-procedure pointer
-                ##  -> generic proc ptr : ( procId, implId )
+                ##  -> generic proc ptr : ( procId )
                 break
               end
               procData .implementation .BuiltIn .if
@@ -2931,10 +2909,7 @@ proc(
                 codeImpl .codeState [] .TYPE_CHECKED ! if
                   state [] .missingProcs
                     ## MissingProc
-                      ## ProcedureImpl
-                        procId
-                        implId
-                      ProcedureImpl new
+                      procId
                       op .pos
                     MissingProc new list.append
                   state .missingProcs=
@@ -2942,12 +2917,7 @@ proc(
               else
                 "unexpected proc implementation":s op ..line state internalError ..unreachable
               end
-              ## ProcedureImpl
-                procId
-                implId
-              ProcedureImpl new
-                OpValue .ProcPtr
-              op@ .val=
+              procId OpValue .ProcPtr op@ .val=
             end
             op .dataType typeContext types.isEmpty if
               ## pushValue
@@ -5625,27 +5595,6 @@ proc(
   finally opIndex 1 + end ..drop
 end
 
-proc(
-  ProcedureInfo ptr : procInfo
-  ProgramContext ptr.mut : program
--> i32 ) =>: nextImpl
-  ## TODO remember index up to which all operations have been checked
-  procInfo .implementation .Code .else
-    "expected code-impl" ..panic
-  end =:: codeImpl
-  codeImpl [] .implementations .length i32 cast.u =:: implLength
-  0:i32 while $ implLength < do =:: implId
-    codeImpl [] .implementations
-      implId @[]
-    =:: implData
-    implData [] .codeState switch
-      TYPE_CHECKED TYPE_CHECKING UNUSED COMPILED case break
-      PARSED PARSING case implId return
-    end
-  finally implId 1 + end ..drop
-  implLength return
-end
-
 enum( SKIP_UNDEFINED REQUIRE_DEFINED ) =:: ProcCheckType
 proc(
   ProcCodeState : codeState
@@ -5686,7 +5635,6 @@ proc(
 end
 proc(
   ProcId : procId
-  i32 : implId
   ProcCheckType : checkType
   FilePosition ptr optional : expandedAt
   TypeCheckState ptr.mut : state
@@ -5706,64 +5654,13 @@ proc(
     "proc label has no pos":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
   end =:: procPos
   expandedAt .else procPos end =:: initPos
+  ## FIXME! update expansion-level in base-proc
   codeImpl [] .expansionLevel =:: prevExpansionLevel
-  implId -1 == if
-    codeImpl [] .codeState currentProc [] .labelId checkType state [] .isUnusedProc initPos program checkProcState if
-      return
-    end
-    ProcCodeState .TYPE_CHECKING codeImpl .codeState=
-  else
-    codeImpl [] .implementations
-      implId @[]
-    =:: currentImpl
-    currentImpl [] .codeState currentProc [] .labelId checkType state [] .isUnusedProc initPos program checkProcState if
-      return
-    end
-    ProcCodeState .TYPE_CHECKING currentImpl .codeState=
-    currentImpl [] .expansionLevel
-      $ MAX_EXPANSION_DEPTH > if ..drop
-        "exceeded maximum expansion depth (" sb.copyPtr
-          MAX_EXPANSION_DEPTH i32 cast.u sb.appendI
-          ')' sb.appendC
-          state [] .initializationStack list.reversed for =:: prevExpand
-            "  caused by initializing code at " sb.appendS
-            prevExpand [] sb.appendPos
-            '\n' sb.appendC
-          end
-        initPos program .errors appendError
-        return
-      end
-    codeImpl .expansionLevel=
-    currentImpl [] .procType typeContext types.getProcIn .else
-      "proc has no in":s procPos ..line internalErrorNoOp ..unreachable
-    end =:: inTypes
-    0:i32 =:: mut: staticArgCount
-    ## XXX? clear/reset argument map
-    0:i32 while $ iSize cast.u inTypes .length u< do =:: i
-      currentImpl [] .procType i typeContext types.getProcArgLabel =:: labelId
-      inTypes i [] =:: argType
-      labelId labelContext id.labelFlags id.FLAG_STATIC & ? or
-          argType typeContext types.isType if
-        currentImpl [] .staticArgs
-          staticArgCount slice.get .else
-            "missing static argument":s initPos ..line internalErrorNoOp ..unreachable
-          end
-        =:: argValue
-        state .argData labelId
-          $ id.LABEL_ID_NONE == if ..drop
-            -2 i - LabelId cast.s ## dummy labels for static generic arguments
-          end
-          argType argValue TypedValue new
-        map.put ..drop
-        staticArgCount 1 + staticArgCount=
-      else labelId id.LABEL_ID_NONE != _if
-        state .argData labelId
-          argType ConstValue .None TypedValue new
-        map.put ..drop
-      end
-      i 1 +
-    end ..drop
+  codeImpl [] .codeState currentProc [] .labelId checkType state [] .isUnusedProc initPos program checkProcState if
+    return
   end
+  codeImpl [] .expansionLevel 1 + codeImpl .expansionLevel=
+  ProcCodeState .TYPE_CHECKING codeImpl .codeState=
   currentProc [] .isStatic and state [] .mode .PROC_CHILD if
     TypeCheckMode .STATIC_PROC state .mode=
   end
@@ -5786,20 +5683,11 @@ proc(
   idContext id.currentScope =:: prevScope
   currentProc [] .scopeId idContext id.setScope
   idContext id.openScope
-  implId 0 >= if ## update procedure type
-    codeImpl [] .implementations
-      implId @[]
-    .procType []
-  else
-    currentProc [] .procType
-  end =:: procType
+  currentProc [] .procType =:: procType
   procType optional.wrap state .currentProcType=
   ## opImplementProc
     procType
-    ## ProcedureImpl
-      procId
-      implId
-    ProcedureImpl new
+    procId
     procPos
   opImplementProc state appendOp ..drop
   ## procedure scope is handled by typeCheckProcedure
@@ -5861,18 +5749,10 @@ proc(
   state [] .compiledOps list.asSlice codeOffset slice.tail slice.copy =:: newOps
   state clearOps
   ## remember new code position
-  implId -1 == if
-    newOps codeImpl .code=
-    newProcState codeImpl .codeState=
-    idContext id.currentScope currentProc .scopeId=
-  else
-    codeImpl [] .implementations
-      implId @[]
-    =:: currentImpl
-    newOps currentImpl .code=
-    newProcState currentImpl .codeState=
-    prevExpansionLevel codeImpl .expansionLevel=
-  end
+  newOps codeImpl .code=
+  prevExpansionLevel codeImpl .expansionLevel=
+  newProcState codeImpl .codeState=
+  idContext id.currentScope currentProc .scopeId=
   state [] .initializationStack
     offset list.setLength
   state .initializationStack=
@@ -5889,7 +5769,6 @@ proc(
 end
 proc(
   ProcId : procId
-  i32 : implId
   FilePosition ptr : expandedAt
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckChildProcedures
@@ -5899,14 +5778,13 @@ proc(
   labelContext id.currentNamespace =:: prevNamespace
   TypeCheckMode .PROC_CHILD state .mode=
   state [] .missingProcs .length =:: missingProcsOffset
-  procId implId ProcCheckType .REQUIRE_DEFINED expandedAt optional.wrap state typeCheckProcedure
+  procId ProcCheckType .REQUIRE_DEFINED expandedAt optional.wrap state typeCheckProcedure
   ##  go through called procedures in breadth first order
   missingProcsOffset while $ state [] .missingProcs .length u< do =:: i
     state [] .missingProcs i [] =:: nextProc
     ## XXX? remember/restore complete expansion stack
     ## typeCheckProcedure
-      nextProc .impl .procId
-      nextProc .impl .implementationId
+      nextProc .procId
       ProcCheckType .SKIP_UNDEFINED
       nextProc .expandedAt optional.wrap
     state typeCheckProcedure
@@ -5996,7 +5874,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     program [] .mainLabelId labelContext id.getLabelPos .else
       "main-proc has no position" ..panic
     end =:: mainProcPos
-    mainProcId -1 mainProcPos state typeCheckChildProcedures
+    mainProcId mainProcPos state typeCheckChildProcedures
   end
   ## TODO? create seperate list of all "root-procedures" to avoid iterating procedures twice
   ## lambdas and exported (non-generic) procedures
@@ -6022,7 +5900,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .labelId labelContext id.labelFlags =:: flags
     flags id.FLAG_LAMBDA & ? or EXPORT_GLOBALS hasMain ! | and flags id.FLAG_EXPORT & ? if
       procId
-        -1
         currentProc [] .labelId labelContext id.getLabelPos .else
           "proc has no position" ..panic
         end
@@ -6053,70 +5930,8 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
       ProcCodeState .UNUSED codeImpl .codeState=
       continue ## ignore parsing procedures
     end
-    procId -1 ProcCheckType .REQUIRE_DEFINED FilePosition ptr optional.empty state typeCheckProcedure
+    procId ProcCheckType .REQUIRE_DEFINED FilePosition ptr optional.empty state typeCheckProcedure
   finally index 1 + end ..drop
-  ## static procedures
-  0 =:: mut: depth
-  false =:: mut: compiledImplementation
-  while
-    false compiledImplementation=
-    ## ! for loop not save as list may be modified in loop
-    0:iSize while: procLoop $ program [] .procedures .length u< do =:: index
-      program [] .procedures index [] =:: procId
-      procId ProcId.getProcInfo =:: currentProc
-      currentProc [] .hasStaticArg ! if
-        continue ## handled by previous loop
-      end
-      currentProc [] .isStatic if
-        continue ## don't type-check static procedures
-      end
-      currentProc .implementation .Code .else ..drop
-        continue ## procedure implementation not in code
-      end =:: codeImpl
-      codeImpl [] .code .length 0 == if
-        continue ## procedure not implemented
-      end
-      codeImpl [] .codeState .PARSING if
-        continue ## ignore parsing procedures
-      end
-      currentProc program nextImpl =:: nextId
-      codeImpl [] .implementations .length i32 cast.u =:: implLength
-      nextId implLength >= if
-        continue
-      end
-      true compiledImplementation=
-      nextId while ..dup implLength < do =:: implId
-        codeImpl [] .implementations
-          implId @[]
-        =:: implData
-        depth MAX_STATIC_RECURSION >= if
-          "exceeded maximum static recursion depth (" sb.copyPtr
-            MAX_STATIC_RECURSION sb.appendI
-            ')' sb.appendC
-          implData [] .firstUse errors appendError
-        end
-        ## ignore procedures with generic signature
-        implData [] .staticArgs for
-          .GenericArg .if ..drop
-            continue.procLoop
-          else .TypeId .and typeContext types.isGeneric _if
-            continue.procLoop
-          end
-        end
-        procId ProcId cast implId ProcCheckType .REQUIRE_DEFINED implData [] .firstUse optional.wrap state typeCheckProcedure
-        implId 1 +
-      end ..drop
-    finally index 1 + end ..drop
-    compiledImplementation if
-      depth 1 + depth=
-      depth MAX_STATIC_RECURSION > if
-        ## error message appended in implementation
-        break
-      end
-      continue
-    end
-    false ## break loop while reaching condition
-  do end
   ## TODO? put state cleanup into procedure
   state freeOps
   state .stack branchTree.free

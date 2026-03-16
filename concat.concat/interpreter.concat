@@ -1327,7 +1327,6 @@ proc(
       break
     Call .case =:: callInfo
       callInfo .procId
-        callInfo .implementationId
         op [] .dataType
         callInfo program getCallData [] .autoArgs
       op [] .pos context interpreter.evaluateCall wrapResult return
@@ -2109,7 +2108,6 @@ namespace: interpreter
   #+evaluate procedure body with the given arguments+#
   proc(
     ProcId : procId
-    i32 : implId
     Type : calledType
     ConstValue slice : autoArgs
     FilePosition ptr : pos
@@ -2128,23 +2126,17 @@ namespace: interpreter
     procData [] .procType =:: procType
     procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
     0:iSize ## XXX? is there a better way to get number of non-auto static args
-      implId -1:i32 != if
-        args .length i32 cast.u for =:: i
-          procType i typeContext types.getProcArgLabel =:: label
-          label labelContext id.labelFlags =:: flags
-          flags id.FLAG_AUTO & ? ! and flags id.FLAG_STATIC & ? or
-              args i [] typeContext types.isType if
-            1:iSize +
-          end
+      args .length i32 cast.u for =:: i
+        procType i typeContext types.getProcArgLabel =:: label
+        label labelContext id.labelFlags =:: flags
+        flags id.FLAG_AUTO & ? ! and flags id.FLAG_STATIC & ? or
+            args i [] typeContext types.isType if
+          1:iSize +
         end
       end
     =:: nStaticArgs
     args .length autoArgs .length - nStaticArgs - =:: nArgs
     procData .implementation .BuiltIn .if =:: builtInImpl
-      implId -1:i32 != if
-        "generic built-ins are not supported" sb.copyPtr
-        pos errors appendError
-      end
       ## tryEvaluateBuiltIn
         calledType
         builtInImpl [] .builtIn
@@ -2218,10 +2210,10 @@ namespace: interpreter
         continue
       end
       labelFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
-        implId 0 >= "implId is not negative" assert
-        codeImpl [] .implementations
-          implId @[]
-        .staticArgs [] staticArgOffset [] =:: value
+        codeImpl .genericInfo .ImplInfo .else
+          "expected generic implementation" ..panic
+        end =:: implInfo
+        implInfo [] .staticArgs staticArgOffset [] =:: value
         label id.LABEL_ID_NONE != if
           context [] .localVariables optional.unwrap
             label
@@ -2269,36 +2261,22 @@ namespace: interpreter
     finally
       i 1 +
     end ..drop
-    implId 0 >= if
-      codeImpl [] .implementations
-        implId @[]
-      =:: currentImpl
-      currentImpl .codeState .TYPE_CHECKED or currentImpl .codeState .UNUSED or currentImpl .codeState .COMPILED if
-        currentImpl [] .code slice.freeze
-      else
-        "no implementaion for procedure " sb.copyPtr
+    codeImpl [] .codeState switch
+      PARSING case
+        "procedure " sb.copyPtr
           procName labelContext sb.appendLabelPath
+          " has not finished parsing" sb.appendS
         pos errors appendError
-        Operation slice.empty
-      end
-    else
-      codeImpl [] .codeState switch
-        PARSING case
-          "procedure " sb.copyPtr
-            procName labelContext sb.appendLabelPath
-            " has not finished parsing" sb.appendS
-          pos errors appendError
-          Operation slice.empty break
-        PARSED TYPE_CHECKING case
-          "procedure " sb.copyPtr
-            procName labelContext sb.appendLabelPath
-            " has not finished type-checking" sb.appendS
-          pos errors appendError
-          Operation slice.empty break
-        TYPE_CHECKED UNUSED COMPILED case
-          codeImpl [] .code slice.freeze
-          break
-      end
+        Operation slice.empty break
+      PARSED TYPE_CHECKING case
+        "procedure " sb.copyPtr
+          procName labelContext sb.appendLabelPath
+          " has not finished type-checking" sb.appendS
+        pos errors appendError
+        Operation slice.empty break
+      TYPE_CHECKED UNUSED COMPILED case
+        codeImpl [] .code slice.freeze
+        break
     end =:: code
     code .length 0:iSize == if
       "no operations in procedure " sb.copyPtr

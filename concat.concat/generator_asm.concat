@@ -435,7 +435,6 @@ end
 
 proc(
   ProcId : procId
-  i32 : implId
   CompilerContext ptr.mut : context
 -> string ) =>: getProcName
   context [] .program =:: program
@@ -1060,9 +1059,9 @@ proc(
     NOP case return
     Constant .case op .dataType typeContext ValType.fromType context pushConstant return
     BuiltIn .case op .pos context compileBuiltIn return
-    ImplementProcedure .case =:: implInfo
-      implInfo .procId ProcId.getProcInfo =:: procData
-      implInfo .procId implInfo .implementationId context getProcName =:: procName
+    ImplementProcedure .case =:: procId
+      procId ProcId.getProcInfo =:: procData
+      procId context getProcName =:: procName
       procData [] .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? if
         procName asm.exportName list.append
       end
@@ -1070,12 +1069,8 @@ proc(
       procData .implementation .Code .else
         "only code-procs should have impl-id" ..panic
       end =:: procImpl
-      implInfo .implementationId 0 >= if
-        procImpl [] .implementations implInfo .implementationId @[] =:: procInfo
-        procInfo [] .procType procInfo [] .variables
-      else
-        procData [] .procType procImpl [] .variables
-      end =:: variables =:: procType
+      procData [] .procType =:: procType
+      procImpl [] .variables =:: variables
       ## TODO? remember memory-slot info
       0 variables for =:: var =:: i
         context .variableInfo var .label
@@ -1179,7 +1174,7 @@ proc(
        asm.endProc list.append return
     end break
     Call .case =:: callInfo
-      op .dataType callInfo .procId callInfo .implementationId context getProcName op .pos context compileCall
+      op .dataType callInfo .procId context getProcName op .pos context compileCall
     return
     Return case
       op .dataType op .pos context compileReturn
@@ -1313,13 +1308,6 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
         context beginProcedure
           impl [] .code for context compileOp end
         context finishProcedure
-      end
-      impl [] .implementations for =:: genericImpl
-        genericImpl .codeState .COMPILED if
-          context beginProcedure
-            genericImpl .code for context compileOp end
-          context finishProcedure
-        end
       end
     end
   =:: ops

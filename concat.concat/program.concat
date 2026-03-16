@@ -69,23 +69,21 @@ struct(
 
 type : export: Operation
 enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED UNUSED COMPILED ) =:: export: ProcCodeState
-## TODO there are both ProcImplementation and ProcedureImpl types, is there a less confusing choice of naming?
 struct(
   ConstValue slice : staticArgs
-  VariableInfo list : variables
-  Operation slice.mut : code
-  FilePosition ptr : firstUse
-  Type : procType
-  ProcCodeState : codeState
-  i16 : expansionLevel ## nesting level of this imlementation
-) =:: export: ProcImplementation
+  ProcId : genericProc
+) =:: export: GenericImplementationInfo
+union(
+  _ : None
+  ProcId list : Implementations
+  GenericImplementationInfo : ImplInfo
+) =:: export: GenericProcInfo
 struct(
-  ## TODO? create seperate procedures for proc-implementations, only link to ids of implementation procs
-  ProcImplementation list : implementations
   VariableInfo list : variables ## for single implementation in non-generic case
   Operation slice.mut : code
-  i16 : expansionLevel ## level of currently active expansion
+  GenericProcInfo : genericInfo
   ProcCodeState : codeState
+  i16 : expansionLevel ## level of currently active expansion
 ) =:: export: CodeProcData
 struct(
   BuiltIn : builtIn
@@ -109,9 +107,9 @@ struct(
 proc( ProcedureInfo : p -> ) =>: freeProcedure
   p .implementation .Code .if =:: impl
     impl .code slice.free ..drop
-    impl .implementations for
-      .code slice.free ..drop
-    end
+    impl .genericInfo .Implementations .if
+      list.free ..drop
+    else ..drop end
   else ..drop end
 end
 namespace: ProcId
@@ -128,7 +126,6 @@ i32 =:: CallDataId
 -1:CallDataId =:: NO_CALL_DATA
 struct(
   ProcId : procId
-  i32 : implementationId
   CallDataId : callDataId
 ) =:: export: ProcedureCall
 struct(
@@ -137,7 +134,6 @@ struct(
 ) =:: export: PointerCall
 struct(
   ProcId : procId
-  i32 : implementationId
   ConstValue slice : autoArgs
 ) =:: export: ProcedureCallInfo
 proc(
@@ -154,7 +150,6 @@ proc(
   context .callData=
   ## ProcedureCall
     callInfo .procId
-    callInfo .implementationId
     callDataId CallDataId cast
   ProcedureCall new
 end
@@ -170,10 +165,6 @@ proc(
 -> CallData ptr.mut ) =>: export: getPtrCallData
   context [] .callData call .callDataId i64 cast @[]
 end
-struct(
-  ProcId : procId
-  i32 : implementationId
-) =:: export: ProcedureImpl
 
 enum( FIXED AUTO ) =:: InitType
 struct( LabelId : label InitType : initType ) =:: export: NameInitInfo
@@ -196,8 +187,8 @@ union(
      IdentifierInfo : InitializeId
      IdentifierInfo : AutoTypedInitializeId
      IdentifierInfo : DeclareId
-      ProcedureImpl : ImplementProcedure
-      ProcedureImpl : ProcPtr
+             ProcId : ImplementProcedure
+             ProcId : ProcPtr
             LabelId : GetLabel
             LabelId : SetLabel
             LabelId : ExistsLabel
@@ -314,7 +305,7 @@ end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opDeclareId
   pos idInfo OpValue .DeclareId opType Operation new return
 end
-proc( Type : opType ProcedureImpl : procImpl FilePosition ptr : pos -> Operation ) =>: export: opImplementProc
+proc( Type : opType ProcId : procImpl FilePosition ptr : pos -> Operation ) =>: export: opImplementProc
   pos procImpl OpValue .ImplementProcedure opType Operation new return
 end
 proc( Type : opType BuiltIn : builtIn FilePosition ptr : pos -> Operation ) =>: export: opBuiltIn
@@ -599,11 +590,15 @@ proc(
         procName ProcImplType .Extern
       else
         ## CodeProcData
-          0 ProcImplementation list.create
           0 VariableInfo list.create
           Operation slice.emptyMutable
-          0:i16
+          procType typeContext types.containsGeneric if
+            0 ProcId list.create GenericProcInfo .Implementations
+          else
+            GenericProcInfo .None
+          end
           ProcCodeState .PARSING
+          0:i16
         CodeProcData new ProcImplType .Code
       end
       procName
@@ -879,12 +874,6 @@ namespace: sb
         " ) : " sb.appendS
         callInfo .procId ProcId.getProcInfo =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
-        callInfo .implementationId 0 >= if
-          ## XXX append static args instead of impl id
-          " (" sb.appendS
-          callInfo .implementationId sb.appendI
-          ')' sb.appendC
-        end
         ## XXX? print auto args
       break
       BuiltIn .case =:: builtInId
@@ -917,31 +906,19 @@ namespace: sb
         " ) : " sb.appendS
         id labelContext sb.appendIdInfo
       break
-      ImplementProcedure .case =:: implInfo
+      ImplementProcedure .case =:: procId
         "implement ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        implInfo .procId ProcId.getProcInfo =:: procInfo
+        procId ProcId.getProcInfo =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
-        implInfo .implementationId 0 >= if
-          ## XXX append static args instead of impl id
-          " (" sb.appendS
-          implInfo .implementationId sb.appendI
-          ')' sb.appendC
-        end
       break
-      ProcPtr .case =:: implInfo
+      ProcPtr .case =:: procId
         "procedure pointer ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        implInfo .procId ProcId.getProcInfo =:: procInfo
+        procId ProcId.getProcInfo =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
-        implInfo .implementationId 0 >= if
-          ## XXX append static args instead of impl id
-          " (" sb.appendS
-          implInfo .implementationId sb.appendI
-          ')' sb.appendC
-        end
       break
       AutoTypedInitializeId .case =:: id
         "auto-typed initialize ( " sb.appendS
@@ -1256,10 +1233,6 @@ namespace: sb
       impl [] .codeState .UNUSED if continue end ## ignore unused procs
       impl [] .code for prog sb.appendOp end
       '\n' sb.appendC
-      impl [] .implementations for =:: genericImpl
-        genericImpl .code for prog sb.appendOp end
-        '\n' sb.appendC
-      end
     end
   end
 end

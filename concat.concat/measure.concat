@@ -130,13 +130,6 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
         op@ prog visited@ types@ addOpType
       end
     end
-    impl [] .implementations for =:: genericImpl
-      genericImpl .codeState .COMPILED if
-        genericImpl .code for =:: op
-          op@ prog visited@ types@ addOpType
-        end
-      end
-    end
   end
   visited@ map.free
   types return

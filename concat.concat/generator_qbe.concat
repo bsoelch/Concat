@@ -423,7 +423,6 @@ namespace: sb
   proc(
     stringBuilder : sb
     LabelId : label
-    i32 : implId
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendGlobalName
     context [] .program =:: prog
@@ -441,10 +440,6 @@ namespace: sb
         "_F" sb.appendS
       end
       label labelContext sb.appendAsciifiedLabelPath
-      implId 0 >= if
-        "_I" sb.appendS
-        implId sb.appendI
-      end
     return
   end
 
@@ -1019,10 +1014,9 @@ namespace: sb
         Procedure .case =:: procValue
           ## appendGlobalName
             procValue ProcId.getLabel
-            -1
           context appendGlobalName
           return
-        GlobalPointer .case -1 context appendGlobalName return
+        GlobalPointer .case context appendGlobalName return
         None WildCard TypeId LocalValue LocalArray
             LocalArray8 LocalArray16 LocalArray32 LocalArray64
             ProcedureBundle case
@@ -3014,8 +3008,8 @@ proc(
           break ## XXX error message
       end
       break
-    ImplementProcedure .case =:: implInfo
-      implInfo .procId ProcId.getProcInfo =:: procInfo
+    ImplementProcedure .case =:: procId
+      procId ProcId.getProcInfo =:: procInfo
       op [] .dataType context .currentProc=
       procInfo [] .labelId labelContext id.labelFlags =:: labelFlags
       ## reset stack-info in context
@@ -3024,8 +3018,7 @@ proc(
       0 context .jumpLabelCount=
       context .stackInfo branchTree.clear
       sb
-        implInfo .implementationId  0 < and
-            labelFlags id.FLAG_EXPORT & ? or labelFlags id.FLAG_EXTERN & ? if
+        labelFlags id.FLAG_EXPORT & ? or labelFlags id.FLAG_EXTERN & ? if
           "export " sb.appendS
         end
         "function " sb.appendS
@@ -3037,7 +3030,7 @@ proc(
             ' ' sb.appendC
           break
         end
-        procInfo [] .labelId implInfo .implementationId context sb.appendGlobalName
+        procInfo [] .labelId context sb.appendGlobalName
         op [] .dataType op [] .pos context sb.appendProcSignature
         "{\n" sb.appendS
         ## BranchId
@@ -3095,12 +3088,7 @@ proc(
         end ..drop
         procInfo [] .implementation .Code .if =:: codeImpl
           ## allocate space for variables
-          implInfo .implementationId 0 >= if
-            codeImpl .implementations
-              implInfo .implementationId @[] .variables []
-          else
-            codeImpl .variables
-          end =:: variables
+          codeImpl .variables =:: variables
           variables for =:: varInfo
             VariableType ..length 3:iSize == "no new variable types" assert
             varInfo .variableType .ARGUMENT if
@@ -3138,7 +3126,7 @@ proc(
               sb.appendTypeNameQBE
               " " sb.appendS
             end
-            idInfo .labelId -1 context sb.appendGlobalName
+            idInfo .labelId context sb.appendGlobalName
             '\n' sb.appendC
           return
         LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
@@ -3167,8 +3155,8 @@ proc(
           break ## XXX error message
       end
       break
-    ProcPtr .case =:: procImpl
-      procImpl .procId ProcId.getProcInfo =:: procData
+    ProcPtr .case =:: procId
+      procId ProcId.getProcInfo =:: procData
       sb
         op [] .pos sb.appendPosQBE
         "%s" sb.appendS
@@ -3176,7 +3164,6 @@ proc(
         " =l copy " sb.appendS
         ## appendGlobalName
           procData [] .labelId
-          procImpl .implementationId
         context sb.appendGlobalName
         "\n" sb.appendS
       return
@@ -3196,7 +3183,7 @@ proc(
         ", " sb.appendS
         idInfo .idType switch
           GLOBAL_VAR case
-            idInfo .labelId -1 context sb.appendGlobalName
+            idInfo .labelId context sb.appendGlobalName
             break
           LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
             " %l" sb.appendS
@@ -3514,15 +3501,7 @@ proc(
       break
     Call .case =:: callInfo
       callInfo .procId ProcId.getProcInfo =:: procData
-      callInfo .implementationId 0 >= if
-        procData [] .implementation .Code .else
-          "expected code-proc" ..panic
-        end .implementations
-          callInfo .implementationId @[]
-        .procType []
-      else
-        procData [] .procType
-      end =:: calledType
+      procData [] .procType =:: calledType
       calledType typeContext types.getProcIn optional.unwrap =:: inTypes
       calledType typeContext types.getProcOutArgs =:: outArgs
       inTypes .length =:: argCount
@@ -3593,9 +3572,7 @@ proc(
           outArgOffset
           op [] .pos
         context prepareCall
-        procData [] .labelId
-          callInfo .implementationId
-        context sb.appendGlobalName
+        procData [] .labelId context sb.appendGlobalName
         calledType
           argIndices@
           outArgOffset
@@ -4091,7 +4068,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
         "export " sb.appendS
       end
       "data " sb.appendS
-      labelId -1 context sb.appendGlobalName
+      labelId context sb.appendGlobalName
       " = align " sb.appendS
       valType idData [] .declaredAt context typeAlignmentInt sb.appendI
       " {" sb.appendS
@@ -4144,15 +4121,6 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
         end
         target $1 sb.asStr file.write target=
         sb.clear
-      end
-      impl [] .implementations for =:: genericImpl
-        genericImpl .codeState .COMPILED if
-          genericImpl .code .length for i32 cast.u =:: opIndex
-            genericImpl .code opIndex @[] opIndex context compileOp
-          end
-          target $1 sb.asStr file.write target=
-          sb.clear
-        end
       end
     end
     target $1 sb.asStr file.write target=
@@ -4209,7 +4177,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     else
       "export function w $main(){\n@start\ncall " sb.appendS
     end
-    mainId -1 context sb.appendGlobalName
+    mainId context sb.appendGlobalName
     "()\nret 0\n}\n" sb.appendS
     target $1 sb.asStr file.write target=
   sb.free ..drop

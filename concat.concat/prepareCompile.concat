@@ -58,12 +58,7 @@ proc(
   procInfo .implementation .Code .else
     "expected code-proc" ..panic
   end =:: impl
-  callInfo .implementationId -1 == if
-    impl [] .code slice.freeze
-  else
-    impl [] .implementations callInfo .implementationId @[] =:: callImpl
-    callImpl [] .code slice.freeze
-  end
+  impl [] .code slice.freeze
 end
 
 proc(
@@ -517,6 +512,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   Operation list.empty =:: mut: tmpOps
   program [] .procedures for ProcId.getProcInfo =:: currentProc
     currentProc [] .isStatic if continue end
+    currentProc [] .hasStaticArg if continue end
     currentProc .implementation .Code .else ..drop
       continue
     end =:: impl
@@ -525,31 +521,16 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     program [] .progFiles
       currentProc [] .fileId i64 cast
     @[] =:: f
-    currentProc [] .hasStaticArg if
-      impl [] .implementations list.atItr for =:: currentImpl
-        currentImpl .codeState [] .UNUSED if
-          continue
-        end
-        ## convertProc
-          currentImpl [] .code
-          tmpOps@
-          currentImpl .variables
-          context
-        convertProc currentImpl .code=
-        ProcCodeState .COMPILED currentImpl .codeState=
-      end
-    else
-      impl .codeState [] .UNUSED if
-        continue
-      end
-      ## convertProc
-        impl [] .code
-        tmpOps@
-        impl .variables
-        context
-      convertProc impl .code=
-      ProcCodeState .COMPILED impl .codeState=
+    impl .codeState [] .UNUSED if
+      continue
     end
+    ## convertProc
+      impl [] .code
+      tmpOps@
+      impl .variables
+      context
+    convertProc impl .code=
+    ProcCodeState .COMPILED impl .codeState=
   end
   ## create implementations for built-in procedure-pointers
   program [] .procedures for =:: procId
@@ -567,10 +548,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     opBuffer list.wrapSlice
       ## opImplementProc
         currentProc [] .procType
-        ## ProcedureImpl
-          procId
-          -1
-        ProcedureImpl new
+        procId
         pos
       opImplementProc list.append
       ## opBuiltIn
@@ -582,11 +560,11 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       BlockType .PROCEDURE pos opEndBlock list.append
     ..drop
     ## CodeProcData
-      0 ProcImplementation list.create
       0 VariableInfo list.create
       opBuffer
-      0:i16
+      GenericProcInfo .None
       ProcCodeState .COMPILED
+      0:i16
     CodeProcData new currentProc .implementation .Code=
   end
   tmpOps list.free ..drop
