@@ -1,0 +1,5 @@
+union( i32 : I f32 : F ) =:: aUnion
+proc( -> ) =>: export: main
+  1:iSize =:: mut: x
+  x aUnion cast =:: y
+end

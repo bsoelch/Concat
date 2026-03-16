@@ -1,0 +1,1 @@
+cannot cast "iSize" to "aUnion" at ./tests/typeChecker/castToUnion.concat:4:12
