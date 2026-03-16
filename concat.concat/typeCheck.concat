@@ -1746,7 +1746,7 @@ proc(
 end
 namespace: typeChecker
   proc(
-    LabelId : generatorName
+    LabelId : mut: generatorName
     ConstValue slice : args
     FilePosition ptr : pos
     TypeCheckState ptr.mut : typeChecker
@@ -1757,9 +1757,10 @@ namespace: typeChecker
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
-    generatorName idContext id.getIdentifier if ..drop
+    generatorName labelContext id.getBaseLabel =:: generatorBaseName
+    generatorBaseName idContext id.getIdentifier if ..drop
       "could not find procedure " sb.copyPtr
-        generatorName labelContext sb.appendLabelPath
+        generatorBaseName labelContext sb.appendLabelPath
       pos errors appendError
       Type optional.empty return
     end =:: idData
@@ -1804,7 +1805,7 @@ namespace: typeChecker
     typeCheckCallStackless =:: result
     ## generated type has been initiliaized during evaluation
     ## findGeneratedType
-      generatorName
+      generatorBaseName
       args
       false
       typeContext
@@ -1812,7 +1813,7 @@ namespace: typeChecker
     types.findGeneratedType switch
       None case
         "initializing generated type failed " sb.copyPtr
-          generatorName labelContext sb.appendLabelPath
+          generatorBaseName labelContext sb.appendLabelPath
         pos errors appendError
       Type optional.empty return
       Stored .case optional.wrap break
@@ -2598,7 +2599,6 @@ proc(
         ConstValue .None
         false
         op .pos
-        state [] .currentFile
         idContext
         errors
       id.declareIdentifier if ..drop.2
@@ -2642,7 +2642,6 @@ proc(
         ConstValue .None
         isInit
         op .pos
-        state [] .currentFile
         idContext
         errors
       id.declareIdentifier if ..drop.2
@@ -4091,7 +4090,7 @@ proc(
             isTaggedUnion if
               ## TODO? only create tmp-var if switch uses `.case`
               0 StackModType .COPY op .pos opStackMod state appendOp ..drop
-              switchType op .pos state [] .currentFile idContext id.newTmpVar =:: tmpVar
+              switchType op .pos idContext id.newTmpVar =:: tmpVar
               switchType tmpVar op .pos opInitializeId state appendOp ..drop
               tmpVar optional.wrap
             else
@@ -4653,7 +4652,6 @@ proc(
                 bundleId ConstValue .ProcedureBundle
                 true
                 op .pos
-                state [] .currentFile
                 idContext
                 errors
               id.declareIdentifier if ..drop.2
@@ -5774,7 +5772,6 @@ proc(
         ConstValue .None
         true
         procPos
-        state [] .currentFile
         idContext
         program .errors
       id.declareIdentifier if

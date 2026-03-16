@@ -2001,13 +2001,14 @@ namespace: types
   #+ finds the generated type for the given type generator and arguments
      returns the type and a boolean that is true if a new GeneratedType was created +#
   proc(
-    LabelId : generatorName
+    LabelId : generatorName0
     ConstValue slice : arguments
     bool : create
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> GeneratedTypeState ) =>: export: findGeneratedType
     typeContext .labelContext =:: labelContext
+    generatorName0 labelContext id.getBaseLabel =:: generatorName
     generatorName arguments GeneratedTypeName new =:: genName
     typeContext .generatedTypes genName map.get .if =:: prevValue
       generatorName labelContext id.labelFlags id.FLAG_NO_WRAP & ? and prevValue .value .if
@@ -2034,12 +2035,13 @@ namespace: types
   end
 
   proc(
-    LabelId : generatorName
+    LabelId : generatorName0
     ConstValue slice : arguments
     Type : value
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> Type ) =>: export: initializeGeneratedType
+    generatorName0 typeContext .labelContext id.getBaseLabel =:: generatorName
     ## findGeneratedType
       generatorName
       arguments

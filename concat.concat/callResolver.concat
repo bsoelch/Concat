@@ -1194,7 +1194,7 @@ proc(
             ProcCodeState .PARSED
             codeImpl [] .expansionLevel 1:i16 +
           CodeProcData new ProcImplType .Code
-          baseProcInfo [] .labelId ## FIXME! create unique name for impl
+          baseProcInfo [] .labelId impls [] .length i32 cast.u labelContext id.newImplLabel
           baseProcInfo [] .fileId
           baseProcInfo [] .scopeId
           ## replaceGenerics

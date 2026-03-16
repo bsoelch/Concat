@@ -33,7 +33,6 @@ proc(
     string.empty
     flags ## XXX? special flag for tmp vars
     pos
-    context [] .currentFile
     labelContext
   id.newLabel =:: label
   label varType pos idContext id.declareTmpVar

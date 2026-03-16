@@ -91,7 +91,6 @@ proc(
     name
     id.FLAG_EXPORT id.FLAG_BUILT_IN |
     pos
-    FILE_ID_BUILT_IN
   labelContext id.newLabel =:: label
   ## declareIdentifier
     label
@@ -101,7 +100,6 @@ proc(
     bundleId ConstValue .ProcedureBundle
     true
     pos
-    FILE_ID_BUILT_IN
     idContext
     context .errors
   id.declareIdentifier =:: isError ..drop.2
@@ -142,7 +140,6 @@ proc(
     procId ConstValue .Procedure
     true
     pos
-    FILE_ID_BUILT_IN
     idContext
     context .errors
   id.declareIdentifier =:: isError ..drop.2
@@ -185,7 +182,6 @@ proc(
     name
     id.FLAG_EXPORT id.FLAG_SHADOW | id.FLAG_BUILT_IN |
     pos
-    FILE_ID_BUILT_IN
   labelContext id.newLabel
 end
 
@@ -395,7 +391,6 @@ proc(
     "T":s
     id.FLAG_STATIC id.FLAG_BUILT_IN | id.FLAG_AUTO |
     pos
-    FILE_ID_BUILT_IN
     labelContext
   id.newLabel labelData@ 0 =[]
   id.LABEL_ID_NONE labelData@ 1 =[]
@@ -529,7 +524,6 @@ proc(
     t ConstValue .TypeId
     true
     pos
-    FILE_ID_BUILT_IN
     idContext
     context .errors
   id.declareIdentifier =:: isError ..drop.2
@@ -564,7 +558,6 @@ proc(
     value
     true
     pos
-    FILE_ID_BUILT_IN
     idContext
     context .errors
   id.declareIdentifier =:: isError ..drop.2

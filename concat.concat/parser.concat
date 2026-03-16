@@ -529,7 +529,7 @@ proc(
     isModifier do ..drop
       fileState program nextIdentifier
     end
-  flags initFlags | fileState program wordPos state [] .currentFile state [] .program .idContext .typeContext .labelContext id.newLabel return
+  flags initFlags | fileState program wordPos state [] .program .idContext .typeContext .labelContext id.newLabel return
 end
 proc( string : code string : start FileState ptr.mut : fileState  ParserState ptr.mut : state -> string LabelId ) =>: readLabel
   code start fileState state 0:LabelFlag readLabelAddFlags
@@ -779,7 +779,7 @@ proc(
           idName
             id.FLAG_NONE
             literalStart
-          state [] .currentFile labelContext id.newLabel
+          labelContext id.newLabel
           literalStart
             isElement if opExistsLabel else opExistsName end
           state appendOp
@@ -882,7 +882,6 @@ proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state ->
 end
 proc(
   FilePosition ptr : pos
-  FileId : currentFile
   LabelContext ptr.mut : labelContext
 -> LabelId ) =>: newItrId
   char8 32 array : buffer
@@ -895,7 +894,6 @@ proc(
     sb.asStr
     id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
     pos
-    currentFile
   labelContext id.newLabel
 end
 proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: appendDotIfCheck
@@ -905,7 +903,7 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: app
     ! "..if.prepare" assert
   =:: ifPrepare
   ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
-  pos state [] .currentFile idContext .typeContext .labelContext newItrId =:: ifName
+  pos idContext .typeContext .labelContext newItrId =:: ifName
   ifName pos opAutoTypedInitializeName state appendOp
   ifName pos opGetName state appendOp
   "..if.check":s idContext id.findIdentifierByName
@@ -1073,7 +1071,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-          state [] .currentFile
         labelContext id.newLabel
       else
         id.LABEL_ID_NONE
@@ -1093,7 +1090,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-          state [] .currentFile
         labelContext id.newLabel
       else
         id.LABEL_ID_NONE
@@ -1103,7 +1099,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ! "..itr.prepare" assert
       =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo blockPos opGetId state appendOp
-      blockPos state [] .currentFile idContext .typeContext .labelContext newItrId =:: itrId
+      blockPos idContext .typeContext .labelContext newItrId =:: itrId
       itrId blockPos opAutoTypedInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockLabel blockPos opLabeledBlock state appendOp
@@ -1198,7 +1194,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           breakLabel
           id.FLAG_NONE
           blockPos
-          state [] .currentFile
         labelContext id.newLabel
       else
         id.LABEL_ID_NONE
@@ -1243,7 +1238,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-          state [] .currentFile
         labelContext id.newLabel
       else
         id.LABEL_ID_NONE
@@ -1322,7 +1316,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         sb.asStr
         id.FLAG_LAMBDA
         fileState program wordPos
-        state [] .currentFile
       labelContext id.newLabel =:: procImplName
       named if ## =>:
         fileState program nextIdentifier fileState state readLabel
@@ -1338,7 +1331,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             fileState program nextIdentifier
               id.FLAG_NONE
               fileState program wordPos
-              state [] .currentFile
             labelContext id.newLabel <<<$
           <<<$ opAliasName state appendOp
           return
@@ -1379,7 +1371,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "\" is not a valid namespace name" sb.appendS
         namePos errors appendError return
       end
-      id.FLAG_NONE namePos state [] .currentFile labelContext id.newLabel
+      id.FLAG_NONE namePos labelContext id.newLabel
         BlockType .NAMESPACE >$ namePos opLabeledBlock state appendOp
       BlockInfoData .Namespace namePos state openBlock ..drop
       return
@@ -1609,7 +1601,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         sb.asStr
         id.FLAG_LAMBDA id.FLAG_IGNORE_UNUSED |
         blockPos
-        state [] .currentFile
       labelContext id.newLabel
         Type .Undefined
         state [] .currentFile
@@ -1736,7 +1727,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             fileState program nextIdentifier
               id.FLAG_NONE
               opPos
-              state [] .currentFile
             labelContext id.newLabel <<<$
           <<<$ opAliasName
         else
@@ -1777,7 +1767,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           end
         state appendOp
       else ..drop
-        label id.FLAG_NONE opPos state [] .currentFile labelContext id.newLabel
+        label id.FLAG_NONE opPos labelContext id.newLabel
         opPos
           isWrite if
             opSetLabel
@@ -1959,22 +1949,22 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState program wordPos =:: usePos
       importNamespace if
         usedName id.FLAG_NONE
-          usePos state [] .currentFile
+          usePos
         labelContext id.newLabel =:: namespaceLabel
         aliasName .length 0:iSize != if
           aliasName id.FLAG_NONE
-            usePos state [] .currentFile
+            usePos
           labelContext id.newLabel
         else id.LABEL_ID_NONE end =:: aliasLabel
         namespaceLabel aliasLabel usePos opUsingNamespace state appendOp
         return
       end
       usedName id.FLAG_NONE
-        usePos state [] .currentFile
+        usePos
       labelContext id.newLabel =:: usedLabel
       aliasName .length 0:iSize != if
         aliasName id.FLAG_NONE
-          usePos state [] .currentFile
+          usePos
         labelContext id.newLabel
       else id.LABEL_ID_NONE end =:: aliasLabel
       usedLabel aliasLabel usePos opUsingIdentifier state appendOp
@@ -2114,7 +2104,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         idName
           id.FLAG_NONE
           opPos
-          state [] .currentFile
         labelContext id.newLabel
         opPos
       opPrintIdentifierMatches state appendOp
@@ -2159,7 +2148,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     end ..drop
   end
   idName
-    id.FLAG_NONE opPos state [] .currentFile
+    id.FLAG_NONE opPos
   labelContext id.newLabel =:: labelId
   labelId opPos
   isAddr if
@@ -2273,11 +2262,11 @@ proc(
 -> ProgramContext TypeCheckState ) =>: export: parseProgram
   basePath libPath saveGlobalTokens newProgramContext =:: mut: programContext
   ## initBuiltInConstants
-    FILE_POS_UNKNOWN@
+    FILE_POS_BUILTIN@
     programContext@
   initBuiltInConstants
   ## initBuiltInProcs
-    FILE_POS_UNKNOWN@
+    FILE_POS_BUILTIN@
     programContext@
   initBuiltInProcs if
     ## TODO handle error

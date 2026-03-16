@@ -69,6 +69,7 @@ i32 =:: export: FileId
 -2:FileId =:: export: FILE_ID_BUILT_IN
 struct( string : fileName FileId : fileId i32 : line i32 : posInLine ) =:: export: FilePosition
 string.empty FILE_ID_NONE 0 0 FilePosition new =:: export: FILE_POS_UNKNOWN
+string.empty FILE_ID_BUILT_IN 0 0 FilePosition new =:: export: FILE_POS_BUILTIN
 proc( FilePosition : a FilePosition : b -> i32 ) =>: export: filePosCmp
   ## high file ids first
   a .fileId b .fileId != if

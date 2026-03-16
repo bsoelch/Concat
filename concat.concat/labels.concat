@@ -68,7 +68,7 @@ struct(
   string : name
   FilePosition ptr : pos
   NamespaceInfo : namespaceInfo
-  FileId : srcFile
+  LabelId : baseLabel
   id.LabelFlag : flags
 ) =:: Label
 
@@ -130,12 +130,19 @@ namespace: id
   proc( LabelId : id LabelContext ptr.mut : context -> FileId ) =>: export: getLabelFile
     id context getLabel .else
       FILE_ID_NONE return
-    end [] .srcFile return
+    end [] .pos [] .fileId return
   end
   proc( LabelId : id LabelContext ptr.mut : context -> FilePosition ptr optional ) =>: export: getLabelPos
     id context getLabel .else
       FilePosition ptr optional.empty return
     end [] .pos optional.wrap return
+  end
+  proc( LabelId : id LabelContext ptr.mut : context -> LabelId ) =>: export: getBaseLabel
+    id context getLabel .else
+      id return
+    end [] .baseLabel $ LABEL_ID_NONE == if
+      ..drop id return
+    end return
   end
   proc( LabelId : id NamespaceInfo : newVal LabelContext ptr.mut : context -> ) =>: export: setLabelNamespace
     id context getLabel .if
@@ -202,7 +209,6 @@ namespace: id
     string : str
     LabelFlag : flags
     FilePosition ptr : pos
-    FileId : srcFile
     LabelContext ptr.mut : context
   -> LabelId ) =>: export: newLabel
     context [] .labels
@@ -210,8 +216,34 @@ namespace: id
         str context copyString
         pos
         context [] .namespaceInfo
-        srcFile
+        id.LABEL_ID_NONE
         flags
+      Label new list.append
+    context .labels=
+    context [] .labels .length 1:iSize - LabelId cast return
+  end
+  proc(
+    LabelId : baseLabelId
+    i32 : implId
+    LabelContext ptr.mut : context
+  -> LabelId ) =>: export: newImplLabel
+    context [] .labels baseLabelId iSize cast.u @[] =:: baseLabel
+    implId i32.highestSetBit 4 / 2 + =:: idLength ## hex-length +1
+    context [] .nameBuffer
+      baseLabel [] .name .length i32 cast.u idLength + arenaAlloc.allocSlice =:: nameMemory
+    context .nameBuffer=
+    nameMemory sb.wrapSlice sb.clear
+      baseLabel [] .name sb.appendStr
+      ':' sb.appendC
+      implId sb.appendX
+    sb.asStr =:: implName
+    context [] .labels
+      ## Label
+        implName
+        baseLabel [] .pos
+        baseLabel [] .namespaceInfo
+        baseLabelId
+        baseLabel [] .flags id.FLAG_EXPORT ~ &
       Label new list.append
     context .labels=
     context [] .labels .length 1:iSize - LabelId cast return

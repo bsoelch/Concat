@@ -576,7 +576,6 @@ namespace: id
     ConstValue : constVal
     bool : isInit
     FilePosition ptr : declaredAt
-    FileId : currentFile
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
   ->  LabelId IdentifierData bool ) =>: export: declareIdentifier
@@ -739,14 +738,12 @@ namespace: id
   proc(
     Type : itrType
     FilePosition ptr : pos
-    FileId : currentFile
     IdentifierContext ptr.mut : context
   -> IdentifierInfo ) =>: export: newTmpVar
     ## newLabel
       string.empty
       id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
       pos
-      currentFile
     context .typeContext .labelContext newLabel =:: label
     ## IdentifierInfo
       IdentifierType .ITR_VAR
