@@ -3499,8 +3499,8 @@ proc(
         context
       compileCast return
       break
-    Call .case =:: callInfo
-      callInfo .procId ProcId.getProcInfo =:: procData
+    Call .case =:: procId
+      procId ProcId.getProcInfo =:: procData
       procData [] .procType =:: calledType
       calledType typeContext types.getProcIn optional.unwrap =:: inTypes
       calledType typeContext types.getProcOutArgs =:: outArgs
@@ -3563,17 +3563,6 @@ proc(
         context finishCall
       return
     CallPtr .case =:: callInfo
-      callInfo .outArgCount TypedValId list.create =:: mut: argIndices
-      0:iSize while $ callInfo .outArgCount u< do =:: i
-        argIndices
-          ## TypedValId
-            Type .Undefined
-            op [] .pos context popValue
-          TypedValId new list.append
-        argIndices=
-        i 1:iSize +
-      end ..drop
-      op [] .pos context popValue =:: calledId
       op [] .dataType =:: mut: calledType
       calledType typeContext types.isPointer if
         calledType
@@ -3582,18 +3571,19 @@ proc(
       end
       calledType typeContext types.getProcIn optional.unwrap =:: inTypes
       calledType typeContext types.getProcOutArgs =:: outArgs
-      0:iSize =:: mut: outArgCount
-      0:iSize while $ outArgs .length u< do =:: i
-        outArgs i [] =:: arg
-        arg typeContext types.isEmpty if
-          ## skip empty arguments
-          i 1:iSize + continue
+      outArgs .length TypedValId list.create =:: mut: argIndices
+      outArgs .length while $ 1 - >$ 0 != do =:: i
+        outArgs i [] typeContext types.isEmpty if
+          continue ## skip empty arguments
         end
-        arg argIndices outArgCount @[] .valType=
-        outArgCount 1:iSize + outArgCount=
-        i 1:iSize +
-      end ..drop
-      outArgCount callInfo .outArgCount == "correct number of out arguments" assert
+        argIndices
+          ## TypedValId
+            outArgs i []
+            op [] .pos context popValue
+          TypedValId new list.append
+        argIndices=
+      finally i end ..drop
+      op [] .pos context popValue =:: calledId
       inTypes .length =:: argCount
       argIndices
         $ .length argCount + list.ensureCap

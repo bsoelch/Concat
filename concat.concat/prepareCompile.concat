@@ -47,10 +47,10 @@ end
 
 ## TODO? move inlining to seperate optimization pass
 proc(
-  ProcedureCall : callInfo
+  ProcId : procId
   ProgramContext ptr.mut : program
 -> Operation slice ) =>: calledProcOps
-  callInfo .procId ProcId.getProcInfo =:: procInfo
+  procId ProcId.getProcInfo =:: procInfo
   program [] .progFiles
     procInfo [] .fileId i64 cast.u
   @[] =:: procFile
@@ -61,18 +61,18 @@ proc(
 end
 
 proc(
-  ProcedureCall : callInfo
+  ProcId : procId
   ProgramContext ptr.mut : program
 -> bool ) =>: shouldInlineCall
   program .idContext .typeContext .labelContext =:: labelContext
   optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
-  callInfo .procId ProcId.getProcInfo =:: procData
+  procId ProcId.getProcInfo =:: procData
   procData [] .isStatic or procData .implementation [] .Code ? ! or
       procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? or
       procData [] .labelId labelContext id.labelFlags id.FLAG_NO_INLINE & ? if
     false return
   end
-  callInfo program calledProcOps =:: procOps
+  procId program calledProcOps =:: procOps
   ## TODO? small procedures should only be inlined if they don't contain jumps
   procOps .length 10 u<= if true return end ## init+op{0-7}+ret+end
   optimizerFlags.ALLOW_INLINE ! if false return end
@@ -85,15 +85,15 @@ end
 ##  * mark inlined procs that are never called directly as unused
 proc(
   Operation list
-  ProcedureCall : callInfo
+  ProcId : procId
   FilePosition ptr : pos
   ConverterContext ptr.mut : context
 -> Operation list ) =>: inlineCall
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
-  callInfo .procId ProcId.getProcInfo .implementation [] .Code ? "only code-procs are inlined" assert
-  callInfo program calledProcOps =:: procOps
+  procId ProcId.getProcInfo .implementation [] .Code ? "only code-procs are inlined" assert
+  procId program calledProcOps =:: procOps
   labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
   LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
   program program.nextLocalLabel =:: procEnd
@@ -363,10 +363,6 @@ proc(
       ## special handling for pointer-call procedures
       _BACKEND_ .QBE if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
         calledType typeContext types.getProcOutArgs =:: outArgs
-        op@ .val .CallPtr .if
-          ## remember number of out-args in call operation
-          outArgs .length >$ .outArgCount=
-        else ..drop end
         newOps
           outArgs for =:: arg
             arg typeContext types.isEmpty if
@@ -387,33 +383,6 @@ proc(
           op list.append
         return
       end
-      op .val .CallPtr .if
-        program getPtrCallData
-      else .Call ._if
-        program getCallData
-      else ..unreachable end =:: callData
-      calledType typeContext types.getCallConvention .PTRCALL =:: isPtrCall
-      calledType typeContext types.getProcOut optional.unwrap =:: outTypes
-      false =:: mut: hasLabel
-      program [] .labelBuffer
-        $ .length 0:iSize == "label buffer is empty before use" assert
-        outTypes .length for =:: i
-          outTypes i [] =:: arg
-          arg typeContext types.isEmpty if continue end
-          arg typeContext types.referenceOnly or isPtrCall and i outTypes .length 1:iSize - u< if
-            true hasLabel=
-            arg true op .pos context newTmpVar .labelId
-          else
-            id.LABEL_ID_NONE
-          end list.append
-        end
-        hasLabel if
-          program [] .programMemory
-            $1 mixedArena.copyList callData .retValueLocations=
-          program .programMemory=
-        end
-        list.clear
-      program .labelBuffer=
       newOps
         op list.append
       return

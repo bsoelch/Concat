@@ -119,52 +119,11 @@ namespace: ProcId
     getProcInfo [] .labelId
   end
 end
-struct(
-  LabelId slice.mut : retValueLocations
-) =:: CallData
-i32 =:: CallDataId
-( char8 ptr.raw iSize -> CallDataId ) : static: alias: :CallDataId ..builtIn.parse.i32
--1:CallDataId =:: NO_CALL_DATA
-struct(
-  ProcId : procId
-  CallDataId : callDataId
-) =:: export: ProcedureCall
-struct(
-  iSize : outArgCount
-  CallDataId : callDataId
-) =:: export: PointerCall
+
 struct(
   ProcId : procId
   ConstValue slice : autoArgs
 ) =:: export: ProcedureCallInfo
-proc(
-  ProcedureCallInfo : callInfo
-  ProgramContext ptr.mut : context
--> ProcedureCall ) =>: export: callInfoToCall
-  context [] .callData
-    $ .length =:: callDataId
-    ## CallData
-      ## TODO? create labels for composite ret-values here and make slice immutable
-      LabelId slice.emptyMutable
-    CallData new list.append
-  context .callData=
-  ## ProcedureCall
-    callInfo .procId
-    callDataId CallDataId cast
-  ProcedureCall new
-end
-proc(
-  ProcedureCall : call
-  ProgramContext ptr.mut : context
--> CallData ptr.mut ) =>: export: getCallData
-  context [] .callData call .callDataId i64 cast @[]
-end
-proc(
-  PointerCall : call
-  ProgramContext ptr.mut : context
--> CallData ptr.mut ) =>: export: getPtrCallData
-  context [] .callData call .callDataId i64 cast @[]
-end
 
 enum( FIXED AUTO ) =:: InitType
 struct( LabelId : label InitType : initType ) =:: export: NameInitInfo
@@ -202,9 +161,9 @@ union(
                   _ : NewReference
                 i32 : NewUnion
                 i32 : NewUnionReference
-      ProcedureCall : Call
+             ProcId : Call
             BuiltIn : shadow: BuiltIn
-        PointerCall : CallPtr
+                  _ : CallPtr
                   _ : Length
                   _ : RawValue
        AutoCastInfo : AutoCast
@@ -363,7 +322,7 @@ proc( i32 StackModType FilePosition ptr : pos -> Operation ) =>: export: opStack
   pos <<$ StackModification new OpValue .StackMod Type .Undefined Operation new return
 end
 proc( FilePosition ptr : pos -> Operation ) =>: export: opCallPtr
-  pos -1:iSize NO_CALL_DATA PointerCall new OpValue .CallPtr Type .Undefined Operation new return
+  pos OpValue .CallPtr Type .Undefined Operation new return
 end
 proc( FilePosition ptr : pos -> Operation ) =>: export: opLength
   pos OpValue .Length types.I_SIZE Operation new return
@@ -649,7 +608,6 @@ struct(
   TypedConstant list : constantReferences
   LabelId list : labelBuffer
   stringBuilder : tmpString
-  CallData list : callData
   CompilerError list : errors
   string : basePath
   string : libPath
@@ -687,7 +645,6 @@ proc(
     32  TypedConstant   list.create
     32  LabelId         list.create
     256 sb.create
-    1024 CallData       list.create
     32  CompilerError   list.create
     basePath
     libPath
@@ -720,7 +677,6 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .constantReferences list.free >$ .constantReferences=
   $ .labelBuffer list.free >$ .labelBuffer=
   $ .tmpString sb.free >$ .tmpString=
-  $ .callData list.free >$ .callData=
   $ .errors list.free >$ .errors=
   id.LABEL_ID_NONE >$ .mainLabelId=
   ProcId optional.empty >$ .mainProcId=
@@ -883,11 +839,11 @@ namespace: sb
         " -> " sb.appendS
         jumpInfo .jumpDistance i64 cast.s sb.appendI
       break
-      Call .case =:: callInfo
+      Call .case =:: procId
         "call ( " sb.appendS
         op .dataType  typeContext sb.appendType
         " ) : " sb.appendS
-        callInfo .procId ProcId.getProcInfo =:: procInfo
+        procId ProcId.getProcInfo =:: procInfo
         procInfo [] .labelId labelContext sb.appendLabelPath
         ## XXX? print auto args
       break

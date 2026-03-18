@@ -1325,8 +1325,8 @@ proc(
           EvalResult .Error return
       end
       break
-    Call .case =:: callInfo
-      callInfo .procId
+    Call .case =:: procId
+      procId
         op [] .dataType
       op [] .pos context interpreter.evaluateCall wrapResult return
     InitializeId AutoTypedInitializeId .case =:: idInfo

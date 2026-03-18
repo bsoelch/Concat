@@ -1173,8 +1173,8 @@ proc(
     BlockEnd .case .blockType .PROCEDURE if
        asm.endProc list.append return
     end break
-    Call .case =:: callInfo
-      op .dataType callInfo .procId context getProcName op .pos context compileCall
+    Call .case =:: procId
+      op .dataType procId context getProcName op .pos context compileCall
     return
     Return case
       op .dataType op .pos context compileReturn

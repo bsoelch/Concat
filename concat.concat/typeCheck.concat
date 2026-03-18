@@ -1636,7 +1636,7 @@ proc(
           "unimplemented: dynamic auto-args" ..panic
           ## TODO push auto-args to stack (and rotate to correct index)
         end
-        calledProc program callInfoToCall >$ .val .Call=
+        calledProc .procId >$ .val .Call=
       else ..drop end
     break
     Extern case
@@ -1645,7 +1645,7 @@ proc(
           "unimplemented: dynamic auto-args" ..panic
           ## TODO push auto-args to stack (and rotate to correct index)
         end
-        calledProc program callInfoToCall >$ .val .Call=
+        calledProc .procId >$ .val .Call=
       else ..drop end
     break
     BuiltIn .case [] .builtIn =:: builtInId
