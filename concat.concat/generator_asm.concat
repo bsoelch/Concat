@@ -448,6 +448,20 @@ end
 
 proc(
   asm.Atom list
+  LabelId : dst
+  StackValue : src
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: opStoreLocal
+  src .Val .else
+    "unimplemented: multi-value store" ..panic
+  end =:: srcVal
+  srcVal .valType
+    dst asm.LocalVarId cast.u 0 asm.localAddress
+    srcVal .value
+  context opMove
+end
+proc(
+  asm.Atom list
   ValType : moveType
   asm.Value : dst
   asm.Value : src
@@ -465,8 +479,15 @@ proc(
             else
               "unsupported source for mov" ..panic
             end
+          else .LocalAddress ._if
+            src .Register .if
+              asm.op2
+            else
+              ## TODO? support move through tmp register
+              "when moving to memory source has to be register" ..panic
+            end
           else
-            "can only move to register" ..panic ## TODO support move to memory
+            "can only move to register or local variable" ..panic ## TODO support move to memory
           end
         list.append return
       end
@@ -483,7 +504,7 @@ proc(
 -> asm.Atom list asm.RegisterId asm.Value ) =>: amd64GetBinOpArgs
   ## TODO? extend registers to 32-bit for arithmetic operations to prevent partial register write
   pos context popValue
-    .and .Val .else "expected single value" ..panic end
+    .and .Val .else "expected single value" ..panic end ## FIXME: don't crash on invalid stack-state
   .value =:: arg2 ## TODO! ensure that arg2 is not overwritten by move to register
   pos context popValue
     .and .Val .else "expected single value" ..panic end
@@ -503,6 +524,11 @@ proc(
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opBinOp
+  context [] .stack .length 2 u< if ## TODO extract to proc
+    "CodeGen: stack underflow" sb.copyPtr
+    pos context [] .program .errors appendError
+    return
+  end
   context .asmContext .targetId switch
     AMD64 case
       argType pos context amd64GetBinOpArgs =:: arg2 =:: arg1
@@ -539,6 +565,11 @@ proc(
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opCmp
+  context [] .stack .length 2 u< if ## TODO extract to proc
+    "CodeGen: stack underflow" sb.copyPtr
+    pos context [] .program .errors appendError
+    return
+  end
   context .asmContext .targetId switch
     AMD64 case
       argType pos context amd64GetBinOpArgs =:: arg2 =:: arg1
@@ -587,7 +618,7 @@ proc(
 -> asm.Atom list TypedValue ) =>: freezeTypedValue
   val .value switch
     None case "unsupported value" ..panic
-    Int case
+    Int LocalAddress case
       val loc context moveToRegister asm.Value .Register
     break
     Float case "unsupported value" ..panic
@@ -1108,7 +1139,7 @@ proc(
           "unsupported valType" ..panic
         end =:: argValue
         context .variableInfo argLabel map.at .if =:: argVar
-          "unimplemented: named arguments" ..panic
+          argLabel argValue context opStoreLocal
         else ## variable does not exist
           argValue context pushValue
         end
@@ -1133,12 +1164,22 @@ proc(
       labelInfo .cmpType switch
         NONE case break
         TRUE FALSE case
+          context [] .stack .length 1 u< if ## TODO extract to proc
+            "CodeGen: stack underflow" sb.copyPtr
+            op  .pos errors appendError
+            return
+          end
           op .pos context popValue
             .and .Val .else "expected single value" ..panic end
           ValueLocation .None context moveToRegister asm.RegisterId.SIZE_8 | =:: arg
           AMD64.op.TEST arg arg asm.op2 list.append
         break
         EQ NE LT LE GE GT ULT ULE UGE UGT case
+          context [] .stack .length 2 u< if ## TODO extract to proc
+            "CodeGen: stack underflow" sb.copyPtr
+            op  .pos errors appendError
+            return
+          end
           op .dataType typeContext ValType.fromType =:: argType
           ## TODO merge duplicate code with opCmp
           argType op .pos context amd64GetBinOpArgs =:: arg2 =:: arg1

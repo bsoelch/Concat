@@ -38,11 +38,20 @@ namespace: asm
   string =:: export: GlobalLabel
   i32 =:: export: LocalLabel
 
+  i32 =:: export: LocalVarId
+  struct( LocalVarId : varId i32 : offset ) =:: export: LocalAddress
+  namespace: LocalAddress
+    proc( LocalAddress : a LocalAddress : b -> bool ) =>: export: eq
+      a .varId b .varId == and a .offset b .offset == end
+    end
+  end
+
   union(
     _ : None
     RegisterId : Register
     i64 : Int
     f64 : Float
+    LocalAddress : shadow: LocalAddress
     ## TODO memory values
   ) =:: export: Value
   namespace: Value
@@ -53,14 +62,19 @@ namespace: asm
         Register .case b .Register unionElement.unwrap == return
         Int .case b .Int unionElement.unwrap == return
         Float .case b .Float unionElement.unwrap == return
+        LocalAddress .case b .LocalAddress unionElement.unwrap LocalAddress.eq return
       end
     end
+  end
+  proc( LocalVarId i32 -> Value ) =>: export: localAddress
+    LocalAddress new Value .LocalAddress
   end
   union(
     RegisterId : Register
     i64 : Int
     GlobalLabel : shadow: GlobalLabel
     LocalLabel : shadow: LocalLabel
+    LocalAddress : shadow: LocalAddress
   ) =:: export: Operand
   union(
     _               : None
@@ -114,6 +128,12 @@ namespace: asm
   proc( OpCode : opCode string : l1 -> Atom ) =>: export: opG
     opCode l1 GlobalLabel cast Operand .GlobalLabel Operands .Val Instruction new Atom .Instruction
   end
+  proc( OpCode : opCode LocalAddress : l1 RegisterId : r1 -> Atom ) =>: export: opLR
+    Operand 2 array : ops
+    l1 Operand .LocalAddress ops@ 0 =[]
+    r1 Operand .Register ops@ 1 =[]
+    opCode ops Operands .Val2 Instruction new Atom .Instruction
+  end
   proc( OpCode : opCode RegisterId : r1 RegisterId : r2 -> Atom ) =>: export: opRR
     Operand 2 array : ops
     r1 Operand .Register ops@ 0 =[]
@@ -127,7 +147,7 @@ namespace: asm
     opCode ops Operands .Val2 Instruction new Atom .Instruction
   end
   overload: export: op1 opR opL opG end
-  overload: export: op2 opRR opRI end
+  overload: export: op2 opLR opRR opRI end
   proc( string : name -> Atom ) =>: export: enter
     name GlobalLabel cast Directive .Enter Atom .Directive
   end
@@ -160,12 +180,22 @@ namespace: asm
     .Directive .and .EndProc ? end
   end
   
+  proc( stringBuilder LocalAddress : local Context : asmContext -> stringBuilder ) =>: export: appendLocalAddress
+    "[local":s sb.appendStr
+      local .varId i32 cast.u sb.appendU
+      local .offset 0 != if
+        '+' sb.appendC
+        local .offset sb.appendU
+      end
+    ']' sb.appendC
+  end
   proc( stringBuilder Value : arg  Context : asmContext -> stringBuilder ) =>: export: appendValue
     arg switch
       None case "None":s sb.appendStr return
       Register .case asmContext .appendReg () return
       Int .case sb.appendI return
       Float .case sb.appendF ":f64":s sb.appendStr return
+      LocalAddress .case asmContext appendLocalAddress return
     end
   end
   proc( stringBuilder Operand : arg  Context : asmContext -> stringBuilder ) =>: export: appendOperand
@@ -174,6 +204,7 @@ namespace: asm
       Int .case sb.appendI return
       GlobalLabel .case asmContext appendGlobalLabel return
       LocalLabel .case asmContext appendLocalLabel return
+      LocalAddress .case asmContext appendLocalAddress return
     end
   end
   proc( stringBuilder Instruction : op  Context : asmContext -> stringBuilder ) =>: export: appendInstruction
