@@ -1182,7 +1182,15 @@ proc(
     end
     isMatch ! if ## no matching implementation -> create new one
       constArgs list.asSlice constContext constArray =:: implArgs
-      ## TODO? is it neccessary to create implementations for generic proc-generators
+      false =:: mut: hasStaticArg
+      implArgs for
+        .TypeId .if
+          typeContext types.containsGeneric hasStaticArg | hasStaticArg=
+        else .GenericArg ? _if
+          true hasStaticArg=
+        end
+      end
+      ## TODO? is it neccessary to create implementations for generic type-generators
       progContext [] .programMemory
         ## ProcedureInfo
           ## CodeProcData
@@ -1207,7 +1215,7 @@ proc(
             pos
             typeChecker
           replaceGenerics
-          false
+          hasStaticArg
           baseProcInfo [] .isStatic
         ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
       progContext .programMemory=

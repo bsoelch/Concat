@@ -1370,7 +1370,7 @@ proc(
         argValue list.append
       state .constBuffer=
       argValue .GenericArg ? or
-          argValue .TypeId .and typeContext types.isGeneric if
+          argValue .TypeId .and typeContext types.containsGeneric if
         true isGenericTypeGen=
       end
       eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
@@ -5987,6 +5987,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     end
     procId ProcCheckType .REQUIRE_DEFINED FilePosition ptr optional.empty state typeCheckProcedure
   finally index 1 + end ..drop
+  program freeStaticProcs
   ## TODO? put state cleanup into procedure
   state freeOps
   state .stack branchTree.free

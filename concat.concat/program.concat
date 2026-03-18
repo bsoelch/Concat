@@ -700,6 +700,15 @@ proc(
     false ## has getArgs
   ProgramContext new
 end
+proc( ProgramContext ptr.mut -> ) =>: export: freeStaticProcs
+  $ [] .procedures list.filter for ProcId.getProcInfo =:: procInfo
+    procInfo [] .isStatic or procInfo [] .hasStaticArg if
+      procInfo [] freeProcedure false
+    else
+      true
+    end
+  end >$ .procedures=
+end
 proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .idContext id.freeIdentifierContext >$ .idContext=
   $ .progFiles list.free >$ .progFiles=
@@ -1225,7 +1234,8 @@ namespace: sb
     end
   end
   proc( stringBuilder ProgramContext ptr : prog -> stringBuilder ) =>: export: appendProgram
-    prog .idContext .typeContext .labelContext =:: labelContext
+    prog .idContext .typeContext =:: typeContext
+    typeContext .labelContext =:: labelContext
     "## errors:\n" sb.appendS
     prog [] .errors errorCmp@ list.sort
     prog [] .errors for sb.appendCompilerError end
@@ -1237,6 +1247,9 @@ namespace: sb
       end =:: impl
       "## "          sb.appendS
       proc [] .labelId labelContext sb.appendLabelPath
+      impl .genericInfo .ImplInfo .if
+        [] .staticArgs for >$ ' ' sb.appendC <$ typeContext sb.appendConstant end
+      else ..drop end
       '\n'           sb.appendC
       impl [] .codeState .UNUSED if continue end ## ignore unused procs
       impl [] .code for prog sb.appendOp end
