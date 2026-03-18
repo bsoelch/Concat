@@ -1458,6 +1458,10 @@ proc(
   interpreter [] .stackInfo
     $ .length argCount + list.ensureCap
   interpreter .stackInfo=
+  calledProc .autoArgs .length 0 != if
+    ## TODO include auto-args in argument list
+    "unimplemented: dynamic auto-arguments" ..panic
+  end
   args argCount slice.head slice.reversed for =:: arg
     interpreter [] .stack
       arg .value list.append
@@ -1482,7 +1486,6 @@ proc(
   ## evaluateCall
     calledProc .procId
     calledType
-    calledProc .autoArgs
     pos
     interpreter
   interpreter.evaluateCall if
@@ -1629,11 +1632,19 @@ proc(
         end
       end
       source .Op .if
+        calledProc .autoArgs .length 0 != if
+          "unimplemented: dynamic auto-args" ..panic
+          ## TODO push auto-args to stack (and rotate to correct index)
+        end
         calledProc program callInfoToCall >$ .val .Call=
       else ..drop end
     break
     Extern case
       source .Op .if
+        calledProc .autoArgs .length 0 != if
+          "unimplemented: dynamic auto-args" ..panic
+          ## TODO push auto-args to stack (and rotate to correct index)
+        end
         calledProc program callInfoToCall >$ .val .Call=
       else ..drop end
     break
@@ -5655,7 +5666,6 @@ proc(
     "proc label has no pos":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
   end =:: procPos
   expandedAt .else procPos end =:: initPos
-  ## FIXME! update expansion-level in base-proc
   codeImpl [] .codeState currentProc [] .labelId checkType state [] .isUnusedProc initPos program checkProcState if
     return
   end

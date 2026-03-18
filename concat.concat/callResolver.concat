@@ -1248,9 +1248,11 @@ proc(
           typeVal typeContext types.literalToType ConstValue .TypeId GenericArg .Fixed
         map.put ..drop
       end
-      constArgs
-        value list.append
-      constArgs=
+      flags id.FLAG_STATIC & ? ! if
+        constArgs
+          value list.append
+        constArgs=
+      end
     end
     needArg if ## need argument from stack
       inTypes i [] =:: eltType

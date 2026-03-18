@@ -1328,7 +1328,6 @@ proc(
     Call .case =:: callInfo
       callInfo .procId
         op [] .dataType
-        callInfo program getCallData [] .autoArgs
       op [] .pos context interpreter.evaluateCall wrapResult return
     InitializeId AutoTypedInitializeId .case =:: idInfo
       idInfo .labelId =:: label
@@ -2109,7 +2108,6 @@ namespace: interpreter
   proc(
     ProcId : procId
     Type : calledType
-    ConstValue slice : autoArgs
     FilePosition ptr : pos
     InterpreterContext ptr.mut : context
   ->
@@ -2129,13 +2127,13 @@ namespace: interpreter
       args .length i32 cast.u for =:: i
         procType i typeContext types.getProcArgLabel =:: label
         label labelContext id.labelFlags =:: flags
-        flags id.FLAG_AUTO & ? ! and flags id.FLAG_STATIC & ? or
+        flags id.FLAG_STATIC & ? or
             args i [] typeContext types.isType if
           1:iSize +
         end
       end
     =:: nStaticArgs
-    args .length autoArgs .length - nStaticArgs - =:: nArgs
+    args .length nStaticArgs - =:: nArgs
     procData .implementation .BuiltIn .if =:: builtInImpl
       ## tryEvaluateBuiltIn
         calledType
@@ -2154,8 +2152,6 @@ namespace: interpreter
         args for typeContext sb.appendType ' ' sb.appendC end
         "-> ... ) arguments: " sb.appendS
         args .length sb.appendI
-        " auto-args: " sb.appendS
-        autoArgs .length sb.appendI
       pos errors appendInfo
       true return
     end
@@ -2179,36 +2175,6 @@ namespace: interpreter
     0:i32 while $ args .length i32 cast < do =:: i
       procType i typeContext types.getProcArgLabel =:: label
       label labelContext id.labelFlags =:: labelFlags
-      labelFlags id.FLAG_AUTO & ? if
-        autoArgs autoArgOffset []
-          .GenericArg .if =:: varId
-            prevVariables .and varId map.get .if
-              .value
-            else
-              "missing generic value " sb.copyPtr
-                varId i64 cast sb.appendI
-                ":LabelId" sb.appendS
-              pos errors appendError
-              varId ConstValue .GenericArg
-            end
-          end
-        =:: value
-        context [] .localVariables optional.unwrap
-          label
-          ## Constant
-            value
-            ## ValueInfo
-              args i []
-              pos
-            ValueInfo new
-          Constant new
-        map.put ..drop
-        autoArgOffset 1 + autoArgOffset=
-        labelFlags id.FLAG_STATIC & ? if
-          staticArgOffset 1 + staticArgOffset=
-        end
-        continue
-      end
       labelFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         codeImpl .genericInfo .ImplInfo .else
           "expected generic implementation" ..panic

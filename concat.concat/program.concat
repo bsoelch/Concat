@@ -120,7 +120,6 @@ namespace: ProcId
   end
 end
 struct(
-  ConstValue slice : autoArgs
   LabelId slice.mut : retValueLocations
 ) =:: CallData
 i32 =:: CallDataId
@@ -145,7 +144,6 @@ proc(
   context [] .callData
     $ .length =:: callDataId
     ## CallData
-      callInfo .autoArgs
       ## TODO? create labels for composite ret-values here and make slice immutable
       LabelId slice.emptyMutable
     CallData new list.append

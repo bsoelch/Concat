@@ -3510,7 +3510,6 @@ proc(
         op [] .pos sb.appendPosQBE
       =:: mut: newSb
       ## index of current auto-argument
-      0:i32 =:: mut: autoArgIndex
       0:i32 while $ argCount i32 cast.u < do =:: i
         inTypes i [] =:: mut: arg
         calledType i typeContext types.getProcArgLabel =:: argLabel
@@ -3519,23 +3518,7 @@ proc(
         end
         argLabel labelContext id.labelFlags =:: argFlags
         argFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
-          argFlags id.FLAG_AUTO & ? if
-            autoArgIndex 1 + autoArgIndex=
-          end
           i 1 + continue ## skip static arguments
-        end
-        argFlags id.FLAG_AUTO & ? if
-          callInfo prog getCallData [] .autoArgs autoArgIndex [] =:: argVal
-          autoArgIndex 1 + autoArgIndex=
-          argVal .None ? ! if
-            newSb
-              arg argVal op [] .pos context pushConstant
-            newSb=
-            argIndices
-              arg op [] .pos context popValue TypedValId new list.append
-            argIndices=
-            i 1 + continue
-          end
         end
         arg typeContext types.isArray and arg typeContext types.containsGeneric if
           arg false typeContext types.getAddressType arg=
