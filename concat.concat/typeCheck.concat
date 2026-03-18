@@ -820,10 +820,15 @@ proc(
     end
   end
   60 sb.create
+    blockLabel id.LABEL_ID_NONE != if
+      "could not find breakable block for label \"":s sb.appendStr
+      blockLabel labelContext sb.appendLabelPath
+      "\" ":s sb.appendStr
+    end
     breakType sb.appendBlockType
-    " can only appear in loops " sb.appendS
+    " can only appear in loops ":s sb.appendStr
     breakType .BREAK if
-      "and switch-case statements" sb.appendS
+      "and switch-case statements":s sb.appendStr
     end
   pos errors appendError
   BlockInfo ptr.mut optional.empty return
