@@ -1182,11 +1182,12 @@ proc(
     end
     isMatch ! if ## no matching implementation -> create new one
       constArgs list.asSlice constContext constArray =:: implArgs
+      ## TODO? is it neccessary to create implementations for generic proc-generators
       progContext [] .programMemory
         ## ProcedureInfo
           ## CodeProcData
             0 VariableInfo list.create
-            codeImpl [] .code slice.copy ## TODO? can copying slice be avoided ("if impl and parsing source code in parent")
+            codeImpl [] .code ## reuse code from generic base procedure
             ## GenericImplementationInfo
               implArgs
               baseProcId

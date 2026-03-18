@@ -80,7 +80,7 @@ union(
 ) =:: export: GenericProcInfo
 struct(
   VariableInfo list : variables ## for single implementation in non-generic case
-  Operation slice.mut : code
+  Operation slice.mut : code ## mutable to allow feeing allocation
   GenericProcInfo : genericInfo
   ProcCodeState : codeState
   i16 : expansionLevel ## level of currently active expansion
@@ -106,7 +106,9 @@ struct(
 ) =:: export: ProcedureInfo
 proc( ProcedureInfo : p -> ) =>: freeProcedure
   p .implementation .Code .if =:: impl
-    impl .code slice.free ..drop
+    impl .codeState .PARSED ! or impl .genericInfo .ImplInfo ? ! if
+      impl .code slice.free ..drop ## parsed impl contains shallow copy of generic-proc code
+    end
     impl .genericInfo .Implementations .if
       list.free ..drop
     else ..drop end

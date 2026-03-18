@@ -5648,6 +5648,9 @@ proc(
     ##  skip built-ins
     return
   end =:: codeImpl
+  codeImpl .genericInfo .Implementations ? if
+    "generic proc should not be type-checked":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
+  end
   currentProc [] .labelId labelContext id.getLabelPos .else
     "proc label has no pos":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
   end =:: procPos
