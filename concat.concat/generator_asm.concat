@@ -178,8 +178,10 @@ struct(
   bool : moving
 ) =:: RegisterInfo
 struct(
-  ValueLocation : permanentLocation
-  ValueLocation : cachedLocation
+  asm.LocalVarId : varId
+  asm.RegisterId optional : cachedValue ## TODO: support composite values that are only partially in register
+  Type : variableType
+  bool : isRead
 ) =:: VariableLocation
 struct(
   ProgramContext ptr.mut : program
@@ -448,20 +450,6 @@ end
 
 proc(
   asm.Atom list
-  LabelId : dst
-  StackValue : src
-  CompilerContext ptr.mut : context
--> asm.Atom list ) =>: opStoreLocal
-  src .Val .else
-    "unimplemented: multi-value store" ..panic
-  end =:: srcVal
-  srcVal .valType
-    dst asm.LocalVarId cast.u 0 asm.localAddress
-    srcVal .value
-  context opMove
-end
-proc(
-  asm.Atom list
   ValType : moveType
   asm.Value : dst
   asm.Value : src
@@ -494,6 +482,59 @@ proc(
     break
   end
   "unimplemented configuration for: mov" ..panic
+end
+## TODO! keep value-info info in registers up to data
+proc(
+  asm.Atom list
+  LabelId : dst
+  StackValue : src
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: opStoreLocal
+  src .Val .else
+    "unimplemented: multi-value store" ..panic
+  end =:: srcVal
+  context .variableInfo dst map.at .if =:: varInfo
+    srcVal .value .Register .if
+      optional.wrap varInfo .cachedValue=
+    else ..drop end
+  end
+  srcVal .valType
+    dst asm.LocalVarId cast.u 0 asm.localAddress
+    srcVal .value
+  context opMove
+end
+proc(
+  asm.Atom list
+  asm.RegisterId optional : dst
+  LabelId : src
+  CompilerContext ptr.mut : context
+-> asm.Atom list StackValue ) =>: opLoadLocal
+  context [] .program =:: program
+  program .idContext .typeContext =:: typeContext
+  context .variableInfo src map.at .else
+    "missing info for local variable" ..panic
+  end =:: varInfo
+  varInfo [] .variableType typeContext ValType.fromType =:: valType
+  varInfo [] .cachedValue .if
+    dst .if asm.Value .Register =:: dstReg
+      valType
+        dstReg
+        >>$ asm.Value .Register ## src
+      context opMove
+      dstReg
+    else
+      asm.Value .Register
+    end valType StackValue.val return
+  end
+  true varInfo .isRead=
+  dst .else
+    valType context nextFreeRegister
+  end asm.Value .Register =:: dstVal
+  valType
+    dstVal
+    src asm.LocalVarId cast.u 0 asm.localAddress
+  context opMove
+  dstVal valType StackValue.val
 end
 
 proc(
@@ -1089,6 +1130,30 @@ proc(
   op .val switch
     NOP case return
     Constant .case op .dataType typeContext ValType.fromType context pushConstant return
+    GetId .case =:: idInfo
+      idInfo .idType switch
+        ARGUMENT LOCAL_VAR case
+          asm.RegisterId optional.empty
+            idInfo .labelId
+          context opLoadLocal context pushValue
+        return
+        default break
+      end
+    break
+    SetId .case =:: idInfo
+      idInfo .idType switch
+        ARGUMENT LOCAL_VAR case
+          op .pos context popValue .else
+            "CodeGen: stack underflow" sb.copyPtr
+            op  .pos errors appendError return
+          end =:: newVal
+          idInfo .labelId
+            newVal
+          context opStoreLocal
+        return
+        default break
+      end
+    break
     BuiltIn .case op .pos context compileBuiltIn return
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procData
@@ -1106,8 +1171,10 @@ proc(
       0 variables for =:: var =:: i
         context .variableInfo var .label
           ## VariableLocation
-            i ValueLocation .LocalMemory
-            ValueLocation .None
+            var .label asm.LocalVarId cast.u
+            asm.RegisterId optional.empty
+            var .valueType
+            false
           VariableLocation new
         map.put ..drop
       finally i 1 + end ..drop
