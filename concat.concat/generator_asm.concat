@@ -495,7 +495,8 @@ proc(
   end =:: srcVal
   context .variableInfo dst map.at .if =:: varInfo
     srcVal .value .Register .if
-      optional.wrap varInfo .cachedValue=
+      $ optional.wrap varInfo .cachedValue=
+      dst ValueLocation .LocalVariable context addLocation
     else ..drop end
   end
   srcVal .valType
@@ -505,7 +506,6 @@ proc(
 end
 proc(
   asm.Atom list
-  asm.RegisterId optional : dst
   LabelId : src
   CompilerContext ptr.mut : context
 -> asm.Atom list StackValue ) =>: opLoadLocal
@@ -516,20 +516,13 @@ proc(
   end =:: varInfo
   varInfo [] .variableType typeContext ValType.fromType =:: valType
   varInfo [] .cachedValue .if
-    dst .if asm.Value .Register =:: dstReg
-      valType
-        dstReg
-        >>$ asm.Value .Register ## src
-      context opMove
-      dstReg
-    else
-      asm.Value .Register
-    end valType StackValue.val return
+    asm.Value .Register valType StackValue.val return
   end
   true varInfo .isRead=
-  dst .else
-    valType context nextFreeRegister
-  end asm.Value .Register =:: dstVal
+  valType context nextFreeRegister
+    $ src ValueLocation .LocalVariable context addLocation
+    $ optional.wrap varInfo .cachedValue=
+  asm.Value .Register =:: dstVal
   valType
     dstVal
     src asm.LocalVarId cast.u 0 asm.localAddress
@@ -1133,9 +1126,7 @@ proc(
     GetId .case =:: idInfo
       idInfo .idType switch
         ARGUMENT LOCAL_VAR case
-          asm.RegisterId optional.empty
-            idInfo .labelId
-          context opLoadLocal context pushValue
+          idInfo .labelId context opLoadLocal context pushValue
         return
         default break
       end
