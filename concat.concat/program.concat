@@ -5,6 +5,7 @@ import "constants.concat"
 import "codeBlocks.concat"
 import "identifiers.concat"
 type : export: ProgramContext
+type : export: ProcFlags
 import "builtIns.concat"
 using std.literals.
 
@@ -95,14 +96,29 @@ union(
   LabelId : Extern
   ProcId : Alias
 ) =:: export: ProcImplType
+i16 =:: export: ProcFlags
+namespace: ProcFlags
+  ( ProcFlags ProcFlags -> ProcFlags ) : export: alias: and i16.and
+  ( ProcFlags ProcFlags -> ProcFlags ) : export: alias: or i16.or
+  ( ProcFlags ProcFlags -> ProcFlags ) : export: alias: xor i16.xor
+  ( ProcFlags -> ProcFlags ) : export: alias: flip i16.flip
+  ( ProcFlags -> bool ) : export: alias: toBool i16.toBool
+  0x00 ProcFlags =: export: NONE
+  0x01 ProcFlags =: export: HAS_STATIC_ARG
+  0x02 ProcFlags =: export: IS_STATIC
+end
+overload: merge: & ProcFlags.and end
+overload: merge: | ProcFlags.or end
+overload: merge: ^ ProcFlags.xor end
+overload: merge: ~ ProcFlags.flip end
+overload: merge: ? ProcFlags.toBool end
 struct(
   ProcImplType : implementation
   LabelId : labelId
   FileId : fileId
   id.ScopeId : scopeId ## host-scope if parsing, body-scope if type-checked
   Type : procType
-  bool : hasStaticArg
-  bool : isStatic
+  ProcFlags : flags
 ) =:: export: ProcedureInfo
 proc( ProcedureInfo : p -> ) =>: freeProcedure
   p .implementation .Code .if =:: impl
@@ -514,12 +530,17 @@ proc(
   newProcType procInfo .procType=
   newProcType typeContext types.getProcIn .else Type slice.empty end =:: inTypes
   newProcType typeContext types.getProcOut .else Type slice.empty end =:: outTypes
-  inTypes newProcType typeContext types.getProcArgLabels typeContext hasStaticElement procInfo .hasStaticArg=
-  outTypes newProcType typeContext types.getProcRetLabels typeContext hasStaticElement
-    procInfo [] .labelId typeContext .labelContext id.labelFlags id.FLAG_STATIC & ? |
-  procInfo .isStatic=
+  procInfo [] .flags
+    inTypes newProcType typeContext types.getProcArgLabels typeContext hasStaticElement if
+      ProcFlags.HAS_STATIC_ARG |
+    end
+    outTypes newProcType typeContext types.getProcRetLabels typeContext hasStaticElement or
+        procInfo [] .labelId typeContext .labelContext id.labelFlags id.FLAG_STATIC & ? if
+      ProcFlags.IS_STATIC |
+    end
+  procInfo .flags=
   procInfo .implementation .Code .if =:: codeImpl
-    codeImpl .genericInfo .None ? and procInfo [] .hasStaticArg or
+    codeImpl .genericInfo .None ? and procInfo [] .flags ProcFlags.HAS_STATIC_ARG & ? or
         newProcType typeContext types.containsGeneric if
       0 ProcId list.create GenericProcInfo .Implementations codeImpl .genericInfo=
     end
@@ -570,8 +591,10 @@ proc(
       fileId
       idContext id.currentScope
       procType
-      hasStaticArg
-      isStatic
+      ProcFlags.NONE
+        hasStaticArg if ProcFlags.HAS_STATIC_ARG | end
+        isStatic if ProcFlags.IS_STATIC | end
+      ## ^flags
     ProcedureInfo new mixedArena.copyValue ProcId.create =:: procId
   progContext .programMemory=
   progContext [] .procedures
@@ -657,7 +680,7 @@ proc(
 end
 proc( ProgramContext ptr.mut -> ) =>: export: freeStaticProcs
   $ [] .procedures list.filter for ProcId.getProcInfo =:: procInfo
-    procInfo [] .isStatic or procInfo [] .hasStaticArg if
+    procInfo [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if
       procInfo [] freeProcedure false
     else
       true

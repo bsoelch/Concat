@@ -1628,7 +1628,7 @@ proc(
   calledProcId .else
     "expected procedure":s pos ..line internalErrorNoOp ..unreachable
   end ProcId.getProcInfo =:: calledProcData
-  source .Values ? or state isGlobal calledProcData [] .isStatic | and
+  source .Values ? or state isGlobal calledProcData [] .flags ProcFlags.IS_STATIC & ? | and
       state [] .mode .STATIC_PROC ! or
       calledType typeContext types.isTypeGeneratorProc or
       baseProcData .implementation .Code .and .codeState .TYPE_CHECKING ! if
@@ -2922,7 +2922,7 @@ proc(
                   $ .implementation [] .Alias ? ! "no double alias" assert
                 else ..drop end
               =:: procData
-              procData [] .hasStaticArg if
+              procData [] .flags ProcFlags.HAS_STATIC_ARG & ? if
                 ## TODO resolve implementation id
                 ##  -> get static args from stack
                 ##  -> replace op with generic-procedure pointer
@@ -3214,7 +3214,9 @@ proc(
                     end
                     idInfo .labelId procInfo .labelId=
                     idInfo .labelId labelContext id.labelFlags id.FLAG_STATIC & ? if
-                      true procInfo .isStatic=
+                      procInfo [] .flags
+                        ProcFlags.IS_STATIC |
+                      procInfo .flags=
                     end
                   end
                 else ..drop
@@ -5741,7 +5743,7 @@ proc(
   else ..drop end
   codeImpl [] .expansionLevel 1 + codeImpl .expansionLevel=
   ProcCodeState .TYPE_CHECKING codeImpl .codeState=
-  currentProc [] .isStatic and state [] .mode .PROC_CHILD if
+  currentProc [] .flags ProcFlags.IS_STATIC & ? and state [] .mode .PROC_CHILD if
     TypeCheckMode .STATIC_PROC state .mode=
   end
   ## compile procedures to local code of given file
@@ -5822,7 +5824,7 @@ proc(
   end ..drop
   codeImpl [] .code slice.freeze state typeCheckOps
   ## TODO? compile exported procedure normally
-  state [] .isUnusedProc ! and currentProc [] .isStatic ! if
+  state [] .isUnusedProc ! and currentProc [] .flags ProcFlags.IS_STATIC & ? ! if
     ProcCodeState .TYPE_CHECKED
   else
     ProcCodeState .UNUSED
@@ -5969,7 +5971,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   0:iSize while $ program [] .procedures .length u< do =:: index
     program [] .procedures index [] =:: procId
     procId ProcId.getProcInfo =:: currentProc
-    currentProc [] .hasStaticArg or currentProc [] .isStatic if
+    currentProc [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if
       continue
     end
     currentProc .implementation .Code .else ..drop
@@ -6003,7 +6005,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   0:iSize while $ program [] .procedures .length u< do =:: index
     program [] .procedures index [] =:: procId
     procId ProcId.getProcInfo =:: currentProc
-    currentProc [] .hasStaticArg or currentProc [] .isStatic if
+    currentProc [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if
       continue
     end
     currentProc  .implementation .Code .else ..drop

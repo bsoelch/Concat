@@ -1215,8 +1215,13 @@ proc(
             pos
             typeChecker
           replaceGenerics
-          hasStaticArg
-          baseProcInfo [] .isStatic
+          baseProcInfo [] .flags
+            hasStaticArg if
+              ProcFlags.HAS_STATIC_ARG |
+            else
+              ProcFlags.HAS_STATIC_ARG ~ ^
+            end
+          ## ^flags
         ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
       progContext .programMemory=
       progContext [] .procedures

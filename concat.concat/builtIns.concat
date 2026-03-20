@@ -111,8 +111,7 @@ proc(
   Type : procType
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
-  bool : hasStaticArgs
-  bool : isStatic
+  ProcFlags : flags
 -> ProcId ) =>: addBuiltIn_internal
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -124,8 +123,7 @@ proc(
       FILE_ID_BUILT_IN
       id.GLOBAL_SCOPE
       procType
-      hasStaticArgs
-      isStatic
+      flags
     ProcedureInfo new mixedArena.copyValue ProcId.create =:: procId
   context .programMemory=
   context [] .procedures
@@ -152,7 +150,7 @@ proc(
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
 -> ) =>: addBuiltIn
-  buildIn procLabel procType pos context false false addBuiltIn_internal ..drop
+  buildIn procLabel procType pos context ProcFlags.NONE addBuiltIn_internal ..drop
 end
 proc(
   BuiltIn : buildIn
@@ -161,7 +159,7 @@ proc(
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
 -> ) =>: addStaticBuiltIn
-  buildIn procLabel procType pos context false true addBuiltIn_internal ..drop
+  buildIn procLabel procType pos context ProcFlags.IS_STATIC addBuiltIn_internal ..drop
 end
 proc(
   BuiltIn : buildIn
@@ -170,7 +168,7 @@ proc(
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
 -> ProcId ) =>: addStaticBuiltInGetId
-  buildIn procLabel procType pos context false true addBuiltIn_internal
+  buildIn procLabel procType pos context ProcFlags.IS_STATIC addBuiltIn_internal
 end
 
 proc(

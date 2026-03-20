@@ -67,7 +67,7 @@ proc(
   program .idContext .typeContext .labelContext =:: labelContext
   optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
   procId ProcId.getProcInfo =:: procData
-  procData [] .isStatic or procData .implementation [] .Code ? ! or
+  procData .implementation [] .Code ? ! or
       procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? or
       procData [] .labelId labelContext id.labelFlags id.FLAG_NO_INLINE & ? if
     false return
@@ -479,8 +479,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
   Operation list.empty =:: mut: tmpOps
   program [] .procedures for ProcId.getProcInfo =:: currentProc
-    currentProc [] .isStatic if continue end
-    currentProc [] .hasStaticArg if continue end
+    currentProc [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if continue end
     currentProc .implementation .Code .else ..drop
       continue
     end =:: impl
