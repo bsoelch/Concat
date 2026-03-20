@@ -1,0 +1,253 @@
+import arenaAlloc
+
+import "program.concat"
+import "branchTree.concat"
+using id.LabelFlag
+
+struct(
+  ProgramContext ptr.mut : program
+  FileId : mut: currentFile
+  i32 : mut: inlineCount
+) =:: ConverterContext
+
+proc(
+  ProcId : procId
+  ProgramContext ptr.mut : program
+-> Operation slice ) =>: calledProcOps
+  procId ProcId.getProcInfo =:: procInfo
+  program [] .progFiles
+    procInfo [] .fileId i64 cast.u
+  @[] =:: procFile
+  procInfo .implementation .Code .else
+    "expected code-proc" ..panic
+  end =:: impl
+  impl [] .code slice.freeze
+end
+
+proc(
+  ProcId : procId
+  ProgramContext ptr.mut : program
+-> bool ) =>: shouldInline
+  program .idContext .typeContext .labelContext =:: labelContext
+  optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
+  procId ProcId.getProcInfo =:: procData
+  procData .implementation [] .Code ? ! or
+      procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? or
+      procData [] .labelId labelContext id.labelFlags id.FLAG_NO_INLINE & ? if
+    false return
+  end
+  procId program calledProcOps =:: procOps
+  ## TODO? small procedures should only be inlined if they don't contain jumps
+  procOps .length 10 u<= if true return end ## init+op{0-7}+ret+end
+  optimizerFlags.ALLOW_INLINE ! if false return end
+  ## TODO! detect if proc is currently being inlined (smaller inline-limits in nested inline, prevent recursive inline)
+  ## TODO compute inline weight depending on operations in procedure, cache weight in procedure(-impl) info
+  procOps .length 18:iSize u<=
+end
+
+proc(
+  Operation list
+  ProcId : procId
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> Operation list ) =>: inlineCall
+  context [] .program =:: program
+  program .idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  procId ProcId.getProcInfo .implementation [] .Code ? "only code-procs are inlined" assert
+  procId program calledProcOps =:: procOps
+  labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
+  LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
+  program program.nextLocalLabel =:: procEnd
+  procEnd LocalLabelType .HINT_START pos opLabel context analizeOp
+  procOps 0 [] .dataType =:: procType
+  procType typeContext types.getProcIn optional.unwrap =:: inTypes
+  0 =:: mut: offset
+  ## create tmp-variables for named arguments
+  inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
+    procType i typeContext types.getProcArgLabel =:: argLabel
+    inTypes i [] =:: eltType
+    eltType typeContext types.isEmpty if continue end ## ignore empty arguments
+    argLabel id.LABEL_ID_NONE == if
+      offset 1 + offset=
+    else argLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! _if
+      offset 0 != if
+        ## rotate labeled argument to top
+        offset StackModType .ROTATE pos opStackMod context analizeOp
+      end
+      eltType argLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
+      eltType tmpId pos opInitializeId context analizeOp
+      remapIds@ argLabel tmpId map.put optional.isEmpty "label-value only reassigned once" assert
+    end
+  finally i 1 - end ..drop
+  procOps 1:iSize $1 .length 2:iSize - slice.getSlice
+    $ .length 1 - =:: last
+    $ last [] .val .Return ? if last >$ .length= end ## ignore return at end of proc
+  for =:: mut: op
+    op .val .Return ? if
+      procEnd 0:JumpDistance CompareType .NONE op .pos opJump context analizeOp
+      continue
+    else op .val .GetId ._if .labelId =:: label
+      remapIds@ label map.get .if op@ .val .GetId= end
+    else .SetId ._if .labelId =:: label
+      remapIds@ label map.get .if op@ .val .SetId= end
+    else .AtId ._if .labelId =:: label
+      remapIds@ label map.get .if op@ .val .AtId= end
+    else .LocalJump ._if .labelId =:: label
+      remapLabels@ label map.get .else
+        program program.nextLocalLabel
+        remapLabels@ label $2 map.put ..drop
+      end op@ .val .LocalJump .if .labelId =[] else ..drop.2 end
+    else .LocalLabel ._if .labelId =:: label
+      remapLabels@ label map.get .else
+        program program.nextLocalLabel
+        remapLabels@ label $2 map.put ..drop
+      end op@ .val .LocalLabel .if .labelId =[] else ..drop.2 end
+    else ..drop end
+    op context analizeOp
+  end
+  procEnd LocalLabelType .LABEL_END pos opLabel context analizeOp
+  remapIds@ map.free
+  remapLabels@ map.free
+end
+
+proc(
+  Operation list : newOps
+  Operation : mut: op
+  ConverterContext ptr.mut : context
+-> Operation list ) =>: analizeOp
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  op .val switch
+    NOP case newOps return ## ignore no-ops
+    AutoTypedInitializeId ConstantReference NewReference
+    TypeInfo NewUnionReference UsingNamespace UsingIdentifier
+    GetName AtName SetName GetLabel Assert DeclareName AliasName InitializeName
+    SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc Import LibImport case
+      "unsupported operation " sb.copyPtr
+        op program sb.appendOp
+      op .pos errors appendError
+    newOps return
+    default
+      newOps op list.append ## nothing to change
+    return
+  end
+end
+
+proc(
+  Operation slice.mut : mut: oldOps
+  Operation list ptr.mut : tmpOps
+  VariableInfo list ptr.mut : variables
+  ConverterContext ptr.mut : context
+-> Operation slice.mut ) =>: convertProc
+  context [] .program =:: program
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  variables [] context .variables=
+  tmpOps []
+    $ .length 0 == "tmp-ops are empty" assert
+    oldOps for
+      context analizeOp
+    end list.filter for
+      context filterOp
+    end
+    $ list.asSlice codeStart slice.tail slice.copy =:: newCode
+    oldOps slice.free oldOps=
+  tmpOps =[]
+  context [] .variables variables =[]
+  newCode
+end
+
+proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .labelContext =:: labelContext
+  ## ConverterContext
+    program
+    -1:FileId
+    0
+  ConverterContext new =:: mut: contextData
+  ## TODO sort procedures:
+  ## 1. built-ins & extern procs (skip for code analysis)
+  ## 2. inlinable procs
+  ## 3. non-inlinable procs
+  ## TODO 3 passes for each proc (first iteration: pass 1+2, second iteration: pass 3)
+  ## pass 1
+  ## * detect unused labels
+  ## * mark writes that are never read
+  ## * mark last read before overwrite
+  ## ? detect stack values that are never read (? only if optimizations are enabled)
+  ## * inline calls (TODO? does it make sence to already inline some procs in type-checker)
+  ## pass 2
+  ## * delete unused labels
+  ## * remove unused writes
+  ## ? 2nd round of constant folding for procs that contain inlined code
+  ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
+  ## pass 3
+  ## * insert 'copy' operations for composites
+  ## ? borrow-checking
+  contextData@ =:: context
+  program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
+  Operation list.empty =:: mut: tmpOps
+  program [] .procedures for ProcId.getProcInfo =:: currentProc
+    currentProc .implementation .Code .else ..drop
+      continue
+    end =:: impl
+    tmpOps list.clear tmpOps=
+    currentProc [] .fileId context .currentFile=
+    program [] .progFiles
+      currentProc [] .fileId i64 cast
+    @[] =:: f
+    impl .codeState [] .UNUSED if
+      continue ## TODO? filter out unused procs in type-checker
+    end
+    ## convertProc
+      impl [] .code
+      tmpOps@
+      impl .variables
+      context
+    convertProc impl .code=
+    ProcCodeState .COMPILED impl .codeState=
+  end
+  ## create implementations for built-in procedure-pointers
+  program [] .procedures for =:: procId
+    procId ProcId.getProcInfo =:: currentProc
+    currentProc .implementation .BuiltIn .else ..drop
+      break ## built-ins at start of procedure list
+    end =:: builtInImpl
+    builtInImpl [] .hasPtr ! if
+      continue
+    end
+    currentProc [] .labelId labelContext id.labelPos .else
+      "missing label position" ..panic
+    end =:: pos
+    4 Operation mem.alloc 4 slice.createMutable =:: opBuffer
+    opBuffer list.wrapSlice
+      ## opImplementProc
+        currentProc [] .procType
+        procId
+        pos
+      opImplementProc list.append
+      ## opBuiltIn
+        currentProc [] .procType
+        builtInImpl [] .builtIn
+        pos
+      opBuiltIn list.append
+      currentProc [] .procType pos opReturn list.append
+      BlockType .PROCEDURE pos opEndBlock list.append
+    ..drop
+    ## CodeProcData
+      0 VariableInfo list.create
+      opBuffer
+      GenericProcInfo .None
+      ProcCodeState .COMPILED
+      0:i16
+    CodeProcData new currentProc .implementation .Code=
+  end
+  tmpOps list.free ..drop
+end
