@@ -693,8 +693,14 @@ proc(
       StackValue .Val3 break
     end context [] .stack i =[]
   end
-  ## TODO! remember cached variables
-  context [] .stack list.asSlice slice.copy CachedVariable slice.emptyMutable RegisterState new
+  ## TODO? would it be cheaper to iterate registers instead of values
+  0 CachedVariable list.create
+    context .variableInfo for =:: varName =:: varInfo
+      varInfo .cachedValue .None ? if continue end
+      varName varInfo .cachedValue CachedVariable new list.append
+    end
+  =:: cachedVars
+  context [] .stack list.asSlice slice.copy cachedVars list.asMutableSlice RegisterState new
 end
 proc(
   RegisterState : state
