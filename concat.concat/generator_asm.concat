@@ -126,8 +126,17 @@ namespace: StackValue
     end
   end
 end
+union(
+  _ : None
+  asm.RegisterId : Register
+) =:: VariableCacheLocation
+struct(
+  LabelId : varId
+  VariableCacheLocation : location
+) =:: CachedVariable
 struct(
   StackValue slice.mut : stack
+  CachedVariable slice.mut : cachedVars
 ) =:: RegisterState
 struct(
   RegisterState : registerState
@@ -179,7 +188,7 @@ struct(
 ) =:: RegisterInfo
 struct(
   asm.LocalVarId : varId
-  asm.RegisterId optional : cachedValue ## TODO: support composite values that are only partially in register
+  VariableCacheLocation : cachedValue ## TODO: support composite values that are only partially in register
   Type : variableType
   bool : isRead
 ) =:: VariableLocation
@@ -495,7 +504,7 @@ proc(
   end =:: srcVal
   context .variableInfo dst map.at .if =:: varInfo
     srcVal .value .Register .if
-      $ optional.wrap varInfo .cachedValue=
+      $ VariableCacheLocation .Register varInfo .cachedValue=
       dst ValueLocation .LocalVariable context addLocation
     else ..drop end
   end
@@ -515,13 +524,14 @@ proc(
     "missing info for local variable" ..panic
   end =:: varInfo
   varInfo [] .variableType typeContext ValType.fromType =:: valType
-  varInfo [] .cachedValue .if
-    asm.Value .Register valType StackValue.val return
+  varInfo [] .cachedValue switch
+    None case break
+    Register .case asm.Value .Register valType StackValue.val return
   end
   true varInfo .isRead=
   valType context nextFreeRegister
     $ src ValueLocation .LocalVariable context addLocation
-    $ optional.wrap varInfo .cachedValue=
+    $ VariableCacheLocation .Register varInfo .cachedValue=
   asm.Value .Register =:: dstVal
   valType
     dstVal
@@ -683,7 +693,8 @@ proc(
       StackValue .Val3 break
     end context [] .stack i =[]
   end
-  context [] .stack list.asSlice slice.copy RegisterState new
+  ## TODO! remember cached variables
+  context [] .stack list.asSlice slice.copy CachedVariable slice.emptyMutable RegisterState new
 end
 proc(
   RegisterState : state
@@ -1033,7 +1044,7 @@ proc(
       end
     finally i end ..drop
     ## TODO clear all non-stack values from registers
-    expectedStack RegisterState new pos context restoreState
+    expectedStack CachedVariable slice.emptyMutable RegisterState new pos context restoreState
   end
   asm.leave list.append
   false context .reachable=
@@ -1075,7 +1086,7 @@ proc(
     "unimplemented: memory value" ..panic
   end ..drop
   ## TODO ensure all non-stack values are in memory or callee-saved register
-  expectedStack RegisterState new pos context restoreState
+  expectedStack CachedVariable slice.emptyMutable RegisterState new pos context restoreState
   argTypes .length for ..drop
     pos context popValue ..drop
   end
@@ -1163,7 +1174,7 @@ proc(
         context .variableInfo var .label
           ## VariableLocation
             var .label asm.LocalVarId cast.u
-            asm.RegisterId optional.empty
+            VariableCacheLocation .None
             var .valueType
             false
           VariableLocation new
