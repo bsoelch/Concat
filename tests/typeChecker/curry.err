@@ -1,0 +1,2 @@
+could not find identifier: x at ./tests/typeChecker/curry.concat:3:21
+not enough types for return statement at ./tests/typeChecker/curry.concat:3:23

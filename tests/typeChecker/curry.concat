@@ -1,0 +1,5 @@
+proc( -> ) =>: export: main
+  0 =:: mut: x
+  proc( -> i32 ) => x end =:: curry
+  curry () =:: y
+end
