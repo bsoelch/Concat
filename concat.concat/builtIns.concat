@@ -91,9 +91,9 @@ proc(
     name
     id.FLAG_EXPORT id.FLAG_BUILT_IN |
     pos
-  labelContext id.newLabel =:: label
+  labelContext id.newLabel =:: nameId
   ## declareIdentifier
-    label
+    nameId
     Type .Undefined
     IdentifierType .PROCEDURE_BUNDLE
     -1
@@ -107,7 +107,7 @@ end
 -1:ProcBundleId =:: NO_BUNDLE
 proc(
   BuiltIn : buildIn
-  LabelId : procLabel
+  NameId : procName
   Type : procType
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
@@ -119,7 +119,7 @@ proc(
   context [] .programMemory
     ## ProcedureInfo
       buildIn false BuiltInData new ProcImplType .BuiltIn
-      procLabel
+      procName
       FILE_ID_BUILT_IN
       id.GLOBAL_SCOPE
       procType
@@ -129,9 +129,9 @@ proc(
   context [] .procedures
     procId list.append
   context .procedures=
-  procLabel labelContext id.inLabelNamespace
+  procName labelContext id.inLabelNamespace
   ## declareIdentifier
-    procLabel
+    procName
     Type .Undefined
     IdentifierType .PROCEDURE
     -1
@@ -145,37 +145,37 @@ proc(
 end
 proc(
   BuiltIn : buildIn
-  LabelId : procLabel
+  NameId : procName
   Type : procType
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
 -> ) =>: addBuiltIn
-  buildIn procLabel procType pos context ProcFlags.NONE addBuiltIn_internal ..drop
+  buildIn procName procType pos context ProcFlags.NONE addBuiltIn_internal ..drop
 end
 proc(
   BuiltIn : buildIn
-  LabelId : procLabel
+  NameId : procName
   Type : procType
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
 -> ) =>: addStaticBuiltIn
-  buildIn procLabel procType pos context ProcFlags.IS_STATIC addBuiltIn_internal ..drop
+  buildIn procName procType pos context ProcFlags.IS_STATIC addBuiltIn_internal ..drop
 end
 proc(
   BuiltIn : buildIn
-  LabelId : procLabel
+  NameId : procName
   Type : procType
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
 -> ProcId ) =>: addStaticBuiltInGetId
-  buildIn procLabel procType pos context ProcFlags.IS_STATIC addBuiltIn_internal
+  buildIn procName procType pos context ProcFlags.IS_STATIC addBuiltIn_internal
 end
 
 proc(
   string : name
   FilePosition ptr : pos
   LabelContext ptr.mut : labelContext
--> LabelId ) =>: createLabel
+-> NameId ) =>: createLabel
   ## newLabel
     name
     id.FLAG_EXPORT id.FLAG_SHADOW | id.FLAG_BUILT_IN |
@@ -189,14 +189,14 @@ proc(
 -> Type Type Type Type Type ) =>: operatorProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  LabelId slice optional.empty =:: argLabels
+  NameId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
   t args@ 0 =[]
   t args@ 1 =[]
   ## newProcedure
     args@ 1 slice.create
     Type slice.empty
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -204,7 +204,7 @@ proc(
   ## newProcedure
     args@ 1 slice.create
     args@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -212,7 +212,7 @@ proc(
   ## newProcedure
     args@ slice.wrap
     args@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -220,7 +220,7 @@ proc(
   ## newProcedure
     args@ slice.wrap
     types.primitive.BOOL@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -228,7 +228,7 @@ proc(
   ## newProcedure
     args@ 1 slice.create
     types.primitive.BOOL@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -248,7 +248,7 @@ proc(
   ## newProcedure
     args@ 2 slice.create
     args@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -256,7 +256,7 @@ proc(
   ## newProcedure
     args@ 2 slice.create
     args@ 1 @[] 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -274,7 +274,7 @@ proc(
   ## newProcedure
     t1@ 1 slice.create
     t2@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -286,12 +286,12 @@ proc(
 -> Type Type ) =>: sysProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  LabelId slice optional.empty =:: argLabels
+  NameId slice optional.empty =:: argLabels
   types.CHAR8 false typeContext wrapPtr false typeContext wrapPtr =:: c8pp
   ## newProcedure
     Type slice.empty
     types.primitive.I64@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -299,7 +299,7 @@ proc(
   ## newProcedure
     Type slice.empty
     c8pp@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -320,7 +320,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I8@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -328,7 +328,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I16@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -336,7 +336,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I32@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -344,7 +344,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I64@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -352,7 +352,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.F16@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -360,7 +360,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.F32@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -368,7 +368,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.F64@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -383,18 +383,18 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   ## type : auto: T
-  LabelId 3 array : labelData
+  NameId 3 array : nameData
   Type 3 array : typeData
   ## newLabel
     "T":s
     id.FLAG_STATIC id.FLAG_BUILT_IN | id.FLAG_AUTO |
     pos
     labelContext
-  id.newLabel labelData@ 0 =[]
-  id.LABEL_ID_NONE labelData@ 1 =[]
-  id.LABEL_ID_NONE labelData@ 2 =[]
+  id.newLabel nameData@ 0 =[]
+  id.NAME_ID_NONE nameData@ 1 =[]
+  id.NAME_ID_NONE nameData@ 2 =[]
   types.primitive.TYPE typeData@ 0 =[]
-  labelData 0 [] types.newGenericType =:: baseType
+  nameData 0 [] types.newGenericType =:: baseType
   baseType false typeContext wrapPtr =:: basePtr
   baseType true typeContext wrapPtr =:: basePtrMut
   baseType typeData@ 1 =[]
@@ -402,7 +402,7 @@ proc(
   ## newProcedure
     typeData@ slice.wrap
     Type slice.empty
-    labelData@ slice.wrap
+    nameData@ slice.wrap
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -411,7 +411,7 @@ proc(
   ## newProcedure
     typeData@ 2 slice.create
     baseType@ slice.wrap
-    labelData@ slice.wrap
+    nameData@ slice.wrap
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -420,7 +420,7 @@ proc(
   ## newProcedure
     typeData@ slice.wrap
     typeData@ 1 @[] 1 slice.create
-    labelData@ slice.wrap
+    nameData@ slice.wrap
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -429,7 +429,7 @@ proc(
   ## newProcedure
     typeData@ slice.wrap
     typeData@ 1 @[] 1 slice.create
-    labelData@ slice.wrap
+    nameData@ slice.wrap
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -438,7 +438,7 @@ proc(
   ## newProcedure
     typeData@ 2 slice.create
     baseType@ slice.wrap
-    labelData@ slice.wrap
+    nameData@ slice.wrap
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -446,7 +446,7 @@ proc(
   ## newProcedure
     typeData@ slice.wrap
     typeData@ 1 @[] 1 slice.create
-    labelData@ slice.wrap
+    nameData@ slice.wrap
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -455,7 +455,7 @@ proc(
   ## newProcedure
     typeData@ slice.wrap
     typeData@ 1 @[] 1 slice.create
-    labelData@ slice.wrap
+    nameData@ slice.wrap
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -474,7 +474,7 @@ proc(
   ## newProcedure
     types.primitive.TYPE@ 1 slice.create
     types.primitive.BOOL@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -482,7 +482,7 @@ proc(
   ## newProcedure
     types.primitive.TYPE@ 1 slice.create
     types.primitive.TYPE@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -490,7 +490,7 @@ proc(
   ## newProcedure
     args@ 2 slice.create
     types.primitive.BOOL@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -499,7 +499,7 @@ proc(
   ## newProcedure
     args@ 2 slice.create
     types.primitive.BOOL@ 1 slice.create
-    LabelId slice.empty
+    NameId slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -509,13 +509,13 @@ end
 
 proc(
   Type : t
-  LabelId : label
+  NameId : nameId
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
 -> ) =>: newBuiltInTypeLabel
   context .idContext =:: idContext
   ## declareIdentifier
-    label
+    nameId
     types.primitive.TYPE
     IdentifierType .TYPE
     -1

@@ -43,7 +43,7 @@ namespace: JumpDistance
 end
 overload: ? JumpDistance.toBool end
 struct(
-  LabelId : blockLabel
+  NameId : blockName
   BlockId : blockId
   JumpDistance : jumpDistance
   BlockType : blockType

@@ -34,14 +34,14 @@ proc(
     flags ## XXX? special flag for tmp vars
     pos
     labelContext
-  id.newLabel =:: label
-  label varType pos idContext id.declareTmpVar
+  id.newLabel =:: nameId
+  nameId varType pos idContext id.declareTmpVar
   context [] .variables
-    varType label VariableType .TMP_VAR VariableInfo new list.append
+    varType nameId VariableType .TMP_VAR VariableInfo new list.append
   context .variables=
   ## IdInfo
     IdentifierType .TMP_VAR
-    label
+    nameId
   IdentifierInfo new return
 end
 
@@ -68,8 +68,8 @@ proc(
   optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
   procId ProcId.getProcInfo =:: procData
   procData .implementation [] .Code ? ! or
-      procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? or
-      procData [] .labelId labelContext id.labelFlags id.FLAG_NO_INLINE & ? if
+      procData [] .nameId labelContext id.labelFlags id.FLAG_EXTERN & ? or
+      procData [] .nameId labelContext id.labelFlags id.FLAG_NO_INLINE & ? if
     false return
   end
   procId program calledProcOps =:: procOps
@@ -94,7 +94,7 @@ proc(
   typeContext .labelContext =:: labelContext
   procId ProcId.getProcInfo .implementation [] .Code ? "only code-procs are inlined" assert
   procId program calledProcOps =:: procOps
-  labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
+  NameId.hash@ NameId.eq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
   LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
   program program.nextLocalLabel =:: procEnd
   procEnd LocalLabelType .HINT_START pos opLabel list.append
@@ -106,7 +106,7 @@ proc(
     procType i typeContext types.getProcArgLabel =:: argLabel
     inTypes i [] =:: eltType
     eltType typeContext types.isEmpty if continue end ## ignore empty arguments
-    argLabel id.LABEL_ID_NONE == if
+    argLabel id.NAME_ID_NONE == if
       offset 1 + offset=
     else argLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! _if
       offset 0 != if
@@ -125,12 +125,12 @@ proc(
     op .val .Return ? if
       procEnd 0:JumpDistance CompareType .NONE op .pos opJump list.append
       continue
-    else op .val .GetId ._if .labelId =:: label
-      remapIds@ label map.get .if op@ .val .GetId= end
-    else .SetId ._if .labelId =:: label
-      remapIds@ label map.get .if op@ .val .SetId= end
-    else .AtId ._if .labelId =:: label
-      remapIds@ label map.get .if op@ .val .AtId= end
+    else op .val .GetId ._if .nameId =:: nameId
+      remapIds@ nameId map.get .if op@ .val .GetId= end
+    else .SetId ._if .nameId =:: nameId
+      remapIds@ nameId map.get .if op@ .val .SetId= end
+    else .AtId ._if .nameId =:: nameId
+      remapIds@ nameId map.get .if op@ .val .AtId= end
     else .LocalJump ._if .labelId =:: label
       remapLabels@ label map.get .else
         program program.nextLocalLabel
@@ -260,15 +260,15 @@ proc(
       args .length i32 cast.u =:: argCount
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
-          op .dataType i typeContext types.getProcArgLabel =:: label
-          label id.LABEL_ID_NONE == or label labelContext id.labelFlags id.FLAG_STATIC & ? if
+          op .dataType i typeContext types.getProcArgLabel =:: argName
+          argName id.NAME_ID_NONE == or argName labelContext id.labelFlags id.FLAG_STATIC & ? if
             continue
           end
           args i [] =:: argType
           argType typeContext types.isEmpty if continue end
           ## VariableInfo
             argType
-            label
+            argName
             VariableType .ARGUMENT
           VariableInfo new list.append
         finally i 1 + end ..drop
@@ -280,7 +280,7 @@ proc(
       context [] .variables
         ## VariableInfo
           op .dataType
-          idInfo .labelId
+          idInfo .nameId
           VariableType .LOCAL_VAR
         VariableInfo new list.append
       context .variables=
@@ -508,8 +508,8 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     builtInImpl [] .hasPtr ! if
       continue
     end
-    currentProc [] .labelId labelContext id.labelPos .else
-      "missing label position" ..panic
+    currentProc [] .nameId labelContext id.labelPos .else
+      "missing nameId position" ..panic
     end =:: pos
     4 Operation mem.alloc 4 slice.createMutable =:: opBuffer
     opBuffer list.wrapSlice

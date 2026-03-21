@@ -21,7 +21,7 @@ using id.LabelFlag
 using id.:LabelFlag
 
 struct(
-  LabelId : varId
+  NameId : varId
 ) =:: TmpVarInfo
 struct(
   iSize list : andOrPositions
@@ -76,7 +76,7 @@ union(
 ## TODO? assign block-ids in parser
 struct(
   BlockInfoData : blockData
-  LabelId : blockLabel
+  NameId : blockName
   FilePosition ptr : openedAt
   TmpVarInfo optional : tmpVarInfo
   bool : autoClose
@@ -233,7 +233,7 @@ end
 
 proc( BlockInfoData : blockData FilePosition ptr : pos ParserState ptr.mut : state -> BlockInfoData ptr.mut ) =>: openBlock
   state [] .openBlocks
-    blockData id.LABEL_ID_NONE pos TmpVarInfo optional.empty false false BlockInfo new list.append
+    blockData id.NAME_ID_NONE pos TmpVarInfo optional.empty false false BlockInfo new list.append
   state .openBlocks=
   state [] .openBlocks list.peek optional.unwrap .blockData
 end
@@ -252,7 +252,7 @@ proc( BlockType : baseType FilePosition ptr : pos ParserState ptr.mut : state ->
       state opCount
       iSize optional.empty
       baseType
-    TypeBlockData new BlockInfoData .TypeBlock id.LABEL_ID_NONE pos TmpVarInfo optional.empty false true BlockInfo new list.append
+    TypeBlockData new BlockInfoData .TypeBlock id.NAME_ID_NONE pos TmpVarInfo optional.empty false true BlockInfo new list.append
   state .openBlocks=
 end
 proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openInitializerBlock
@@ -263,7 +263,7 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openInitialize
   state [] .openBlocks
     ## InitializerBlockData
       state opCount
-    InitializerBlockData new BlockInfoData .Initializer id.LABEL_ID_NONE pos TmpVarInfo optional.empty false true BlockInfo new list.append
+    InitializerBlockData new BlockInfoData .Initializer id.NAME_ID_NONE pos TmpVarInfo optional.empty false true BlockInfo new list.append
   state .openBlocks=
 end
 ## TODO handle initializer blocks
@@ -273,7 +273,7 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openProcBlock
       ## ProcBlockData
         state opCount
       ProcBlockData new BlockInfoData .Procedure
-      id.LABEL_ID_NONE
+      id.NAME_ID_NONE
       pos
       TmpVarInfo optional.empty
       false
@@ -383,7 +383,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition ptr : pos P
 end
 proc(
   BlockType : breakType
-  LabelId : blockLabel
+  NameId : blockName
   FilePosition ptr : pos
   ParserState ptr.mut : state
 -> BlockInfo ptr.mut optional ) =>: findBreakableBlock
@@ -393,17 +393,17 @@ proc(
   typeContext .labelContext =:: labelContext
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
-    block [] .blockData .While ? and blockLabel id.LABEL_ID_NONE == or
-        block [] .blockLabel blockLabel labelContext id.labelNamesEq if
+    block [] .blockData .While ? and blockName id.NAME_ID_NONE == or
+        block [] .blockName blockName labelContext id.labelNamesEq if
       block optional.wrap return
     end
     breakType .BREAK and block [] .blockData .Switch ? and
-        blockLabel id.LABEL_ID_NONE == or
-        block [] .blockLabel blockLabel labelContext id.labelNamesEq if
+        blockName id.NAME_ID_NONE == or
+        block [] .blockName blockName labelContext id.labelNamesEq if
       block optional.wrap return
     end
   end
-  ## TODO! adjust error message to work in case of labeled blocks
+  ## TODO! adjust error message to work in case of named blocks
   64 sb.create
     breakType sb.appendBlockType
     " can only appear in loops " sb.appendS
@@ -439,7 +439,7 @@ proc(
       currentBlock .blockData .Switch .if =:: switchData
     switchData pos state clearImplicitBreak
     state opCount optional.wrap switchData .implicitBreak=
-    BlockType .BREAK currentBlock [] .blockLabel pos opLabeledBlock state appendOp
+    BlockType .BREAK currentBlock [] .blockName pos opNamedBlock state appendOp
   end
 end
 
@@ -466,7 +466,7 @@ proc(
   FileState ptr.mut : fileState
   ParserState ptr.mut : state
   id.LabelFlag : initFlags
--> string LabelId ) =>: readLabelAddFlags
+-> string NameId ) =>: readLabelAddFlags
   state [] .program =:: program
   program .errors =:: errors
   program [] .inLibFile if
@@ -531,7 +531,7 @@ proc(
     end
   flags initFlags | fileState program wordPos state [] .program .idContext .typeContext .labelContext id.newLabel return
 end
-proc( string : code string : start FileState ptr.mut : fileState  ParserState ptr.mut : state -> string LabelId ) =>: readLabel
+proc( string : code string : start FileState ptr.mut : fileState  ParserState ptr.mut : state -> string NameId ) =>: readLabel
   code start fileState state 0:LabelFlag readLabelAddFlags
 end
 
@@ -883,7 +883,7 @@ end
 proc(
   FilePosition ptr : pos
   LabelContext ptr.mut : labelContext
--> LabelId ) =>: newItrId
+-> NameId ) =>: newItrId
   char8 32 array : buffer
   ## newLabel
     buffer@ sb.wrapBuffer
@@ -1073,8 +1073,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState program wordPos
         labelContext id.newLabel
       else
-        id.LABEL_ID_NONE
-      end =:: blockLabel
+        id.NAME_ID_NONE
+      end =:: blockName
       fileState program wordPos =:: blockPos
       ## WhileBlockData
         16 iSize list.create
@@ -1082,8 +1082,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         state opCount
         WhileBlockState .WHILE
       WhileBlockData new BlockInfoData .While blockPos state openBlock ..drop
-      blockLabel state peekBlock optional.unwrap .blockLabel=
-      BlockType .WHILE blockLabel blockPos opLabeledBlock state appendOp
+      blockName state peekBlock optional.unwrap .blockName=
+      BlockType .WHILE blockName blockPos opNamedBlock state appendOp
       return
     else $ "for":s string.eq or $ "for:":s string.eq _if =:: opName
       opName "for:":s string.eq if
@@ -1092,8 +1092,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState program wordPos
         labelContext id.newLabel
       else
-        id.LABEL_ID_NONE
-      end =:: blockLabel
+        id.NAME_ID_NONE
+      end =:: blockName
       fileState program wordPos =:: blockPos
       "..itr.prepare":s idContext id.findIdentifierByName
         ! "..itr.prepare" assert
@@ -1102,7 +1102,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       blockPos idContext .typeContext .labelContext newItrId =:: itrId
       itrId blockPos opAutoTypedInitializeName state appendOp
       state opCount =::  whilePos
-      BlockType .WHILE blockLabel blockPos opLabeledBlock state appendOp
+      BlockType .WHILE blockName blockPos opNamedBlock state appendOp
       itrId blockPos opGetName state appendOp
       "..itr.check":s idContext id.findIdentifierByName
         ! "..itr.check" assert
@@ -1122,7 +1122,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         whilePos
         WhileBlockState .DO
       WhileBlockData new BlockInfoData .While blockPos state openBlock ..drop
-      blockLabel state peekBlock optional.unwrap .blockLabel=
+      blockName state peekBlock optional.unwrap .blockName=
       itrId TmpVarInfo new optional.wrap state peekBlock optional.unwrap .tmpVarInfo=
       return
     else $ "do":s string.eq or $ ".do":s string.eq _if =:: opName
@@ -1196,10 +1196,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           blockPos
         labelContext id.newLabel
       else
-        id.LABEL_ID_NONE
-      end =:: blockLabel
+        id.NAME_ID_NONE
+      end =:: blockName
       isContinue if BlockType .CONTINUE else BlockType .BREAK end =:: blockType
-      blockType blockLabel blockPos state findBreakableBlock .else
+      blockType blockName blockPos state findBreakableBlock .else
         return ## error message handled by findBreakableBlock
       end =:: breakBlock
       breakBlock .blockData .While .if =:: whileData
@@ -1227,9 +1227,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       else
         "unsupported block for break" ..panic
       end
-      blockType blockLabel blockPos opLabeledBlock state appendOp
+      blockType blockName blockPos opNamedBlock state appendOp
       ## broken block is not the same as innermost block
-      state peekBlock .and .blockLabel breakBlock .blockLabel != if
+      state peekBlock .and .blockName breakBlock .blockName != if
         blockPos state implicitBreakSwitch
       end
       return
@@ -1240,8 +1240,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           fileState program wordPos
         labelContext id.newLabel
       else
-        id.LABEL_ID_NONE
-      end =:: blockLabel
+        id.NAME_ID_NONE
+      end =:: blockName
       fileState program wordPos =:: blockPos
       ## SwitchBlockData
         16 iSize list.create
@@ -1250,8 +1250,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         iSize optional.empty
         SwitchBlockState .CASE_LABEL
       SwitchBlockData new BlockInfoData .Switch blockPos state openBlock ..drop
-      blockLabel state peekBlock optional.unwrap .blockLabel=
-      BlockType .SWITCH blockLabel blockPos opLabeledBlock state appendOp
+      blockName state peekBlock optional.unwrap .blockName=
+      BlockType .SWITCH blockName blockPos opNamedBlock state appendOp
       return
     ## TODO? remember if if contains .case / .default
     else $ "case":s string.eq or $ ".case":s string.eq _if =:: opName
@@ -1372,7 +1372,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         namePos errors appendError return
       end
       id.FLAG_NONE namePos labelContext id.newLabel
-        BlockType .NAMESPACE >$ namePos opLabeledBlock state appendOp
+        BlockType .NAMESPACE >$ namePos opNamedBlock state appendOp
       BlockInfoData .Namespace namePos state openBlock ..drop
       return
     else $ "overload:":s string.eq _if =:: opName
@@ -1383,15 +1383,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState program nextIdentifier
         fileState state
         id.FLAG_MERGEABLE
-      readLabelAddFlags =:: mut: labelId
-      labelId labelContext id.labelFlags =:: labelFlags
+      readLabelAddFlags =:: mut: nameId
+      nameId labelContext id.labelFlags =:: labelFlags
       fileState program wordPos =:: namePos
       labelFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
         namePos errors appendError
       end
       state opCount BlockInfoData .Overload namePos state openBlock ..drop
-      BlockType .OVERLOAD labelId namePos opLabeledBlock state appendOp
+      BlockType .OVERLOAD nameId namePos opNamedBlock state appendOp
       return
     else $ "end":s string.eq _if ..drop
       fileState program wordPos =:: blockPos
@@ -1735,13 +1735,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state appendOp
       return
     else $ "=::":s string.eq _if ..drop
-      fileState program nextIdentifier fileState state readLabel =:: mut: labelId
+      fileState program nextIdentifier fileState state readLabel =:: mut: nameId
       fileState program wordPos =:: opPos
-      labelId labelContext id.labelFlags id.FLAG_ALIAS & ? if
+      nameId labelContext id.labelFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
         opPos errors appendError
       end
-      labelId opPos opAutoTypedInitializeName state appendOp
+      nameId opPos opAutoTypedInitializeName state appendOp
       return
     else $ .length 1:iSize u> and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != _if
       1 string.tail
@@ -1950,13 +1950,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       importNamespace if
         usedName id.FLAG_NONE
           usePos
-        labelContext id.newLabel =:: namespaceLabel
+        labelContext id.newLabel =:: namespaceName
         aliasName .length 0:iSize != if
           aliasName id.FLAG_NONE
             usePos
           labelContext id.newLabel
-        else id.LABEL_ID_NONE end =:: aliasLabel
-        namespaceLabel aliasLabel usePos opUsingNamespace state appendOp
+        else id.NAME_ID_NONE end =:: aliasNameId
+        namespaceName aliasNameId usePos opUsingNamespace state appendOp
         return
       end
       usedName id.FLAG_NONE
@@ -1966,8 +1966,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         aliasName id.FLAG_NONE
           usePos
         labelContext id.newLabel
-      else id.LABEL_ID_NONE end =:: aliasLabel
-      usedLabel aliasLabel usePos opUsingIdentifier state appendOp
+      else id.NAME_ID_NONE end =:: aliasNameId
+      usedLabel aliasNameId usePos opUsingIdentifier state appendOp
       return
     else $ "assert":s string.eq _if =:: opName
       ## opAssert
@@ -2149,8 +2149,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   end
   idName
     id.FLAG_NONE opPos
-  labelContext id.newLabel =:: labelId
-  labelId opPos
+  labelContext id.newLabel =:: nameId
+  nameId opPos
   isAddr if
     opAtName
   else isSetter _if

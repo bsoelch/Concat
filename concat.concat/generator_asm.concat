@@ -131,7 +131,7 @@ union(
   asm.RegisterId : Register
 ) =:: VariableCacheLocation
 struct(
-  LabelId : varId
+  NameId : varId
   VariableCacheLocation : location
 ) =:: CachedVariable
 struct(
@@ -147,8 +147,8 @@ union(
   iSize : Stack
   iSize : Stack2
   iSize : Stack3
-  LabelId : LocalVariable
-  LabelId : GlobalVariable
+  NameId : LocalVariable
+  NameId : GlobalVariable
   i32 : LocalMemory
 ) =:: ValueLocation
 namespace: ValueLocation
@@ -197,7 +197,7 @@ struct(
   asm.Context : asmContext
   LocalLabelId LabelState hashMap : labelStates
   asm.RegisterId RegisterInfo hashMap : registerInfo
-  LabelId VariableLocation hashMap : variableInfo
+  NameId VariableLocation hashMap : variableInfo
   asm.RegisterId list : availableIntRegisters
   asm.RegisterId list : availableFloatRegisters
   asm.Atom list : tmpOps
@@ -495,7 +495,7 @@ end
 ## TODO! keep value-info info in registers up to data
 proc(
   asm.Atom list
-  LabelId : dst
+  NameId : dst
   StackValue : src
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opStoreLocal
@@ -515,7 +515,7 @@ proc(
 end
 proc(
   asm.Atom list
-  LabelId : src
+  NameId : src
   CompilerContext ptr.mut : context
 -> asm.Atom list StackValue ) =>: opLoadLocal
   context [] .program =:: program
@@ -1143,7 +1143,7 @@ proc(
     GetId .case =:: idInfo
       idInfo .idType switch
         ARGUMENT LOCAL_VAR case
-          idInfo .labelId context opLoadLocal context pushValue
+          idInfo .nameId context opLoadLocal context pushValue
         return
         default break
       end
@@ -1155,7 +1155,7 @@ proc(
             "CodeGen: stack underflow" sb.copyPtr
             op  .pos errors appendError return
           end =:: newVal
-          idInfo .labelId
+          idInfo .nameId
             newVal
           context opStoreLocal
         return
@@ -1166,7 +1166,7 @@ proc(
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procData
       procId context getProcName =:: procName
-      procData [] .labelId labelContext id.labelFlags id.FLAG_EXPORT & ? if
+      procData [] .nameId labelContext id.labelFlags id.FLAG_EXPORT & ? if
         procName asm.exportName list.append
       end
       procName asm.enter list.append
@@ -1177,9 +1177,9 @@ proc(
       procImpl [] .variables =:: variables
       ## TODO? remember memory-slot info
       0 variables for =:: var =:: i
-        context .variableInfo var .label
+        context .variableInfo var .nameId
           ## VariableLocation
-            var .label asm.LocalVarId cast.u
+            var .nameId asm.LocalVarId cast.u
             VariableCacheLocation .None
             var .valueType
             false
@@ -1406,7 +1406,7 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
       end
       64
     RegisterInfo map.create
-    labelHash@ labelEq@ 1024 VariableLocation map.create
+    NameId.hash@ NameId.eq@ 1024 VariableLocation map.create
     asm.RegisterId list.empty
     asm.RegisterId list.empty
     1024 asm.Atom list.create

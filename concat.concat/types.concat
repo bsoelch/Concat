@@ -82,8 +82,8 @@ union(
        types.ProcTypeId : Procedure
         types.SetTypeId : SetType
  types.RefinementTypeId : RefinementType
-                LabelId : GenericType
-                LabelId : NamedType
+                NameId : GenericType
+                NameId : NamedType
   types.GeneratedTypeId : GeneratedType
 ) =:: export: Type
 
@@ -109,20 +109,20 @@ namespace: types
     a .elements [] .length b .elements [] .length != if
       a .elements [] .length b .elements [] .length iSize.cmp return
     end
-    ## TODO? should types that only differ by missing labels (id.NONE vs no label) be treated differently
-    a [] .labels ? b [] .labels ? != if
-      a [] .labels ? if 1 else -1 end return
+    ## TODO? should types that only differ by missing eltNames (id.NONE vs no label) be treated differently
+    a [] .eltNames ? b [] .eltNames ? != if
+      a [] .eltNames ? if 1 else -1 end return
     end
     a [] .elements b [] .elements typeCmp@ slice.cmp
       $ ? if return else ..drop end
-    a [] .labels .if
-      b .labels [] optional.unwrap labelCmp@ slice.cmp return
+    a [] .eltNames .if
+      b .eltNames [] optional.unwrap NameId.cmp@ slice.cmp return
     end
     0 return
   end
   proc( CompositeInfo ptr : a -> i32 ) =>: compositeTypeHash
     0:i32
-      a [] .labels .if labelHash@ slice.hash
+      a [] .eltNames .if NameId.hash@ slice.hash
         >$ 31 * +
       end
       31 * a [] .elements typeHash@ slice.hash +
@@ -169,12 +169,12 @@ namespace: types
     b EnumInfo ptr cast [] =:: bData
     aData .labelType bData .labelType typeCmp
       $ ? if return else ..drop end
-    aData .labels bData .labels labelCmp@ slice.cmp return
+    aData .eltNames bData .eltNames NameId.cmp@ slice.cmp return
   end
   proc( EnumId : a -> i32 ) =>: enumTypeHash
     a EnumInfo ptr cast [] =:: aData
     aData .labelType typeHash
-      31 * aData .labels labelHash@ slice.hash +
+      31 * aData .eltNames NameId.hash@ slice.hash +
     return
   end
   proc( InitializerId : a InitializerId : b -> i32 ) =>: initializerTypeCmp
@@ -197,21 +197,21 @@ namespace: types
     aData [] .outTypes .length bData [] .outTypes .length != if
       aData [] .outTypes .length bData [] .outTypes .length iSize.cmp return
     end
-    aData [] .labels .length bData [] .labels .length != if
-      aData [] .labels .length bData [] .labels .length iSize.cmp return
+    aData [] .eltNames .length bData [] .eltNames .length != if
+      aData [] .eltNames .length bData [] .eltNames .length iSize.cmp return
     end
     aData [] .inTypes bData [] .inTypes typeCmp@ slice.cmp
       $ ? if return else ..drop end
     aData [] .outTypes bData [] .outTypes typeCmp@ slice.cmp
       $ ? if return else ..drop end
-    aData [] .labels bData [] .labels labelCmp@ slice.cmp return
+    aData [] .eltNames bData [] .eltNames NameId.cmp@ slice.cmp return
   end
   proc( ProcTypeId : a -> i32 ) =>: export: procTypeHash
     a ProcType ptr cast =:: aData
     aData [] .callingConvention ..label i32 cast.u
       31 * aData [] .inTypes typeHash@ slice.hash +
       31 * aData [] .outTypes typeHash@ slice.hash +
-      31 * aData [] .labels labelHash@ slice.hash +
+      31 * aData [] .eltNames NameId.hash@ slice.hash +
     return
   end
   proc( GeneratedTypeId : a GeneratedTypeId : b -> i32 ) =>: export: generatedTypeCmp
@@ -608,7 +608,7 @@ namespace: types
           finally i 1:iSize + end ..drop
           ## newTuple
             newElements slice.freeze
-            tupleInfo .compositeInfo [] .labels
+            tupleInfo .compositeInfo [] .eltNames
             context
           newTuple  .else
             "failed to create tuple-type" ..panic
@@ -981,7 +981,7 @@ namespace: types
   end
 
   ## array & pointer types
-  union( _ : None _ : Dynamic i64 : Int LabelId : GenericArg ) =:: export: ArraySize
+  union( _ : None _ : Dynamic i64 : Int NameId : GenericArg ) =:: export: ArraySize
   struct(
     Type : base
     ArraySize : size
@@ -1179,7 +1179,7 @@ namespace: types
 
   struct(
     Type slice : elements
-    LabelId slice optional : labels
+    NameId slice optional : eltNames
     CompositeFlags : flags
     i64 : alignment
     i64 : size
@@ -1196,7 +1196,7 @@ namespace: types
     CompositeInfo : compositeInfo
   ) =:: UnionInfo
   struct(
-    LabelId slice : labels
+    NameId slice : eltNames
     Type  : labelType
   ) =:: EnumInfo
   struct(
@@ -1272,45 +1272,45 @@ namespace: types
   proc( Type : composite TypeContext ptr : context -> i32 ) =>: export: compositeEltCount
     composite context compositeData switch
       None case 0 return
-      Enum .case .labels [] .length i32 cast return
+      Enum .case .eltNames [] .length i32 cast return
       Composite .case .elements [] .length i32 cast return
     end
   end
-  proc( Type : composite i32 : index TypeContext ptr : context -> LabelId ) =>: export: compositeGetLabel
+  proc( Type : composite i32 : index TypeContext ptr : context -> NameId ) =>: export: compositeGetLabel
     composite context compositeData switch
-      None case id.LABEL_ID_NONE return
-      Enum .case [] .labels break
+      None case id.NAME_ID_NONE return
+      Enum .case [] .eltNames break
       Composite .case
-        [] .labels .else
-          id.LABEL_ID_NONE return
+        [] .eltNames .else
+          id.NAME_ID_NONE return
         end
       break
-    end =:: labels
-    index 0 < or index iSize cast.u labels .length u>= if
-      id.LABEL_ID_NONE return
+    end =:: eltNames
+    index 0 < or index iSize cast.u eltNames .length u>= if
+      id.NAME_ID_NONE return
     end
-    labels index [] return
+    eltNames index [] return
   end
   proc(
     Type : composite
-    LabelId : name
+    NameId : name
     TypeContext ptr : context
   -> i32 optional ) =>: export: compositeFindLabel
     context .labelContext =:: labelContext
     composite context compositeData switch
       None case i32 optional.empty return
-      Enum .case [] .labels break
+      Enum .case [] .eltNames break
       Composite .case
-        [] .labels .else
+        [] .eltNames .else
           i32 optional.empty return
         end
       break
-    end =:: labels
+    end =:: eltNames
     ## TODO? move linear search in slice to standard library
-    0:i32 while $ iSize cast.u labels .length u< do =:: i
+    0:i32 while $ iSize cast.u eltNames .length u< do =:: i
       ## labelNamesEq
         name
-        labels i []
+        eltNames i []
       labelContext id.labelNamesEq if
         i optional.wrap return
       end
@@ -1451,30 +1451,30 @@ namespace: types
 
   proc(
     MixedArenaAllocator
-    LabelId slice optional : labels
-  -> MixedArenaAllocator LabelId slice optional ) =>: copyLabels
-    labels .if
-      ## truncate labels
+    NameId slice optional : eltNames
+  -> MixedArenaAllocator NameId slice optional ) =>: copyLabels
+    eltNames .if
+      ## truncate eltNames
       $ .length =:: mut: N
-      while N 0 != and $ N 1 - [] id.LABEL_ID_NONE == do
+      while N 0 != and $ N 1 - [] id.NAME_ID_NONE == do
         N 1 - N=
       end
       N 0 == if ..drop ## no named label
-        LabelId slice optional.empty return
+        NameId slice optional.empty return
       end
       N slice.head mixedArena.copySlice slice.freeze optional.wrap
-    else labels end
+    else eltNames end
   end
   ## creates struct
   proc(
     Type slice : elts
-    LabelId slice optional : labels
+    NameId slice optional : eltNames
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: newTuple
     elts context computeCompositeFlags =:: flags
     context [] .memory
       elts mixedArena.copySlice slice.freeze =:: eltCopy
-      labels copyLabels =:: labelCopy
+      eltNames copyLabels =:: labelCopy
       ## TupleInfo
         ## CompositeInfo
           eltCopy
@@ -1490,7 +1490,7 @@ namespace: types
   end
   proc(
     Type slice : elts
-    LabelId slice optional : labels
+    NameId slice optional : eltNames
     TypeContext ptr.mut : context
   -> Type ) =>: export: newInitializerType
     ##  check if initializer can be array
@@ -1501,7 +1501,7 @@ namespace: types
     end =:: mut: arrayType
     0:iSize while $ elts .length u< do =:: i
       elts i [] =:: eltType
-      labels .and i slice.get .and id.LABEL_ID_NONE != if
+      eltNames .and i slice.get .and id.NAME_ID_NONE != if
         ## if there is a labeled element the initializer is not an array
         Type .Undefined  arrayType=
         i break
@@ -1517,7 +1517,7 @@ namespace: types
     context [] .memory
       ## InitializerInfo
       elts mixedArena.copySlice slice.freeze =:: eltCopy
-      labels copyLabels =:: labelCopy
+      eltNames copyLabels =:: labelCopy
         ## TupleInfo
           ## CompositeInfo
             eltCopy
@@ -1550,16 +1550,16 @@ namespace: types
   end
   proc(
     Type optional : baseType
-    LabelId slice : labels
+    NameId slice : eltNames
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: newEnum
-    labels .length 0:iSize == if
+    eltNames .length 0:iSize == if
       Type optional.empty return
     end
     context [] .memory
-      labels mixedArena.copySlice slice.freeze
+      eltNames mixedArena.copySlice slice.freeze
         baseType .else
-          labels .length UnionType .TAGGED computeEnumLabelType
+          eltNames .length UnionType .TAGGED computeEnumLabelType
         end
       EnumInfo new mixedArena.copyValue =:: enumId
     context .memory=
@@ -1567,16 +1567,16 @@ namespace: types
   end
   proc(
     Type slice : elts
-    LabelId slice : labels
+    NameId slice : eltNames
     UnionType : unionType
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: newUnion
-    elts .length 0:iSize == or elts .length labels .length != if
+    elts .length 0:iSize == or elts .length eltNames .length != if
       Type optional.empty return
     end
     context [] .memory
       elts mixedArena.copySlice slice.freeze =:: eltCopy
-      labels mixedArena.copySlice slice.freeze optional.wrap =:: labelCopy
+      eltNames mixedArena.copySlice slice.freeze optional.wrap =:: labelCopy
       ## CompositeInfo
         eltCopy
         labelCopy
@@ -1591,10 +1591,10 @@ namespace: types
     end
     Type 2 array : elements
     rawValue elements@ 0 =[]
-    labels .length unionType computeEnumLabelType elements@ 1 =[]
+    eltNames .length unionType computeEnumLabelType elements@ 1 =[]
     ## newTuple
       elements@ slice.wrap
-      LabelId slice optional.empty
+      NameId slice optional.empty
     context newTuple .and .Struct .if
       Type .TaggedUnion optional.wrap
     else
@@ -1616,21 +1616,21 @@ end
 namespace: sb
   proc(
     stringBuilder
-    LabelId : label
+    NameId : nameId
     LabelContext ptr : labelContext
   -> stringBuilder ) =>: appendTypeElementLabel
-    label id.LABEL_ID_NONE == if return end
+    nameId id.NAME_ID_NONE == if return end
     " : " appendS
-    label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+    nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
       "mut: " appendS
     end
-    label labelContext id.labelFlags id.FLAG_AUTO & ? if
+    nameId labelContext id.labelFlags id.FLAG_AUTO & ? if
       "auto: " appendS
     end
-    label labelContext id.labelFlags id.FLAG_STATIC & ? if
+    nameId labelContext id.labelFlags id.FLAG_STATIC & ? if
       "static: " appendS
     end
-    label labelContext appendLabelName
+    nameId labelContext appendLabelName
   end
   proc(
     stringBuilder : sb
@@ -1643,7 +1643,7 @@ namespace: sb
       t context types.compositeData .Composite .else
         "unexpected composite-type" ..panic
       end =:: comp
-      comp [] .labels ? ! =:: unlabeled
+      comp [] .eltNames ? ! =:: unlabeled
       0:i32 while $ iSize cast.u comp [] .elements .length u< do
         >$
           t $2 context types.compositeGetElement =:: eltType
@@ -1653,7 +1653,7 @@ namespace: sb
             <$ 1 + continue
           end
           t $2 context types.compositeGetLabel =:: label
-          label id.LABEL_ID_NONE !=
+          label id.NAME_ID_NONE !=
             label labelContext id.labelFlags id.FLAG_DUMMY & ? ! &
           =:: printLabel
           eltType context types.isEmpty if
@@ -1675,7 +1675,7 @@ namespace: sb
     types.EnumInfo : enumInfo
     LabelContext ptr : labelContext
   -> stringBuilder ) =>: appendEnumElements
-    enumInfo .labels for labelContext appendLabelName ' ' sb.appendC end
+    enumInfo .eltNames for labelContext appendLabelName ' ' sb.appendC end
   end
 end
 namespace: types
@@ -1683,7 +1683,7 @@ namespace: types
   struct(
     Type slice : inTypes
     Type slice : outTypes
-    LabelId slice : labels
+    NameId slice : eltNames
     CallingConvention : callingConvention
   ) =:: ProcType
 
@@ -1717,36 +1717,36 @@ namespace: types
       Type slice optional.empty return
     end
   end
-  proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcLabels
+  proc( Type : proc TypeContext ptr : context -> NameId slice ) =>: export: getProcLabels
     proc context getProcData .else
-      LabelId slice.empty return
-    end [] .labels
+      NameId slice.empty return
+    end [] .eltNames
   end
-  proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcArgLabels
+  proc( Type : proc TypeContext ptr : context -> NameId slice ) =>: export: getProcArgLabels
     proc context getProcData .else
-      LabelId slice.empty return
+      NameId slice.empty return
     end =:: procData
-    procData [] .labels procData [] .inTypes .length slice.head
+    procData [] .eltNames procData [] .inTypes .length slice.head
   end
-  proc( Type : proc TypeContext ptr : context -> LabelId slice ) =>: export: getProcRetLabels
+  proc( Type : proc TypeContext ptr : context -> NameId slice ) =>: export: getProcRetLabels
     proc context getProcData .else
-      LabelId slice.empty return
+      NameId slice.empty return
     end =:: procData
-    procData [] .labels procData [] .inTypes .length slice.tail
+    procData [] .eltNames procData [] .inTypes .length slice.tail
   end
-  proc( Type : proc i32 : argIndex TypeContext ptr : context -> LabelId ) =>: export: getProcArgLabel
-    proc context getProcArgLabels =:: labels
-    argIndex 0 < or argIndex iSize cast.u labels .length u>= if
-      id.LABEL_ID_NONE return
+  proc( Type : proc i32 : argIndex TypeContext ptr : context -> NameId ) =>: export: getProcArgLabel
+    proc context getProcArgLabels =:: eltNames
+    argIndex 0 < or argIndex iSize cast.u eltNames .length u>= if
+      id.NAME_ID_NONE return
     end
-    labels argIndex []
+    eltNames argIndex []
   end
-  proc( Type : proc LabelId : argName TypeContext ptr : context -> i32 optional ) =>: export: findProcArgLabel
-    proc context getProcArgLabels =:: labels
-    0:i32 while $ iSize cast.u labels .length u< do =:: i
+  proc( Type : proc NameId : argName TypeContext ptr : context -> i32 optional ) =>: export: findProcArgLabel
+    proc context getProcArgLabels =:: eltNames
+    0:i32 while $ iSize cast.u eltNames .length u< do =:: i
       ## labelNamesEq
         argName
-        labels i []
+        eltNames i []
       context .labelContext id.labelNamesEq if
         i optional.wrap return
       end
@@ -1799,7 +1799,7 @@ namespace: types
         ## TODO! filter out empty elements
         ## TODO reuse slice memory if possible
         outTypes
-          LabelId slice optional.empty
+          NameId slice optional.empty
         context newTuple .else
           "failed to create tuple-type" ..panic
         end ProcRet .Tuple return
@@ -1820,15 +1820,15 @@ namespace: types
         outTypes outTypes .length 1:iSize - slice.head return
     end
   end
-  proc( Type slice : in Type slice : out LabelId slice : labels CallingConvention : callConvention TypeContext ptr.mut : context -> Type optional ) =>: export: newProcedure
+  proc( Type slice : in Type slice : out NameId slice : eltNames CallingConvention : callConvention TypeContext ptr.mut : context -> Type optional ) =>: export: newProcedure
     callConvention .CCALL and out .length 1:iSize u> if
       Type optional.empty return ## XXX? better error handling
     end
     context [] .memory
       in mixedArena.copySlice slice.freeze =:: inCopy
       out mixedArena.copySlice slice.freeze =:: outCopy
-      labels mixedArena.copySlice slice.freeze =:: labelsCopy
-      inCopy outCopy labelsCopy callConvention ProcType new mixedArena.copyValue =:: procId
+      eltNames mixedArena.copySlice slice.freeze =:: eltNamesCopy
+      inCopy outCopy eltNamesCopy callConvention ProcType new mixedArena.copyValue =:: procId
     context .memory=
     procId ProcTypeId cast Type .Procedure  optional.wrap return
   end
@@ -1849,14 +1849,14 @@ namespace: types
     mProc .Procedure .else
       "unexpected callable type" ..panic
     end ProcType ptr cast =:: procData
-    procData [] .labels .length 0:iSize == if
+    procData [] .eltNames .length 0:iSize == if
       proc return
     end
     context [] .memory
       ## ProcType
         procData [] .inTypes
         procData [] .outTypes
-        LabelId slice.empty
+        NameId slice.empty
         procData [] .callingConvention
       ProcType new mixedArena.copyValue =:: procId
     context .memory=
@@ -1871,22 +1871,22 @@ namespace: types
 
   ## named types
   proc(
-    LabelId : label
+    NameId : nameId
     TypeContext ptr.mut : context
   -> Type ) =>: export: declareNamedType
-    label Type .NamedType return
+    nameId Type .NamedType return
   end
 
   proc(
     Type : value
-    LabelId : label
+    NameId : nameId
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: initializeNamedType
-    context .namedTypes label value map.put .if =:: oldValue
-      context .namedTypes label oldValue map.put ..drop
+    context .namedTypes nameId value map.put .if =:: oldValue
+      context .namedTypes nameId oldValue map.put ..drop
       Type optional.empty return
     end
-    label Type .NamedType optional.wrap return
+    nameId Type .NamedType optional.wrap return
   end
 
   proc( Type -> bool ) =>: export: isNamedType
@@ -1930,9 +1930,9 @@ namespace: types
     false do end
     return
   end
-  proc( Type TypeContext ptr : context -> LabelId ) =>: export: namedTypeName
+  proc( Type TypeContext ptr : context -> NameId ) =>: export: namedTypeName
     .NamedType .else ..drop
-      id.LABEL_ID_NONE return
+      id.NAME_ID_NONE return
     end
   end
 end
@@ -1940,7 +1940,7 @@ end
 namespace: sb
   proc(
     stringBuilder : sb
-    LabelId : name
+    NameId : name
     TypeContext ptr : context
     i32 : depth
   -> stringBuilder ) =>: appendNamedType
@@ -1965,7 +1965,7 @@ namespace: types
   ## generated types
 
   struct(
-    LabelId : generator
+    NameId : generator
     ConstValue slice : arguments
   ) =:: GeneratedTypeName
   struct(
@@ -2001,7 +2001,7 @@ namespace: types
   #+ finds the generated type for the given type generator and arguments
      returns the type and a boolean that is true if a new GeneratedType was created +#
   proc(
-    LabelId : generatorName0
+    NameId : generatorName0
     ConstValue slice : arguments
     bool : create
     TypeContext ptr.mut : typeContext
@@ -2035,7 +2035,7 @@ namespace: types
   end
 
   proc(
-    LabelId : generatorName0
+    NameId : generatorName0
     ConstValue slice : arguments
     Type : value
     TypeContext ptr.mut : typeContext
@@ -2078,13 +2078,13 @@ namespace: types
     return
   end
 
-  proc( Type : generator TypeContext ptr : context -> LabelId ) =>: export: getGeneratorLabel
+  proc( Type : generator TypeContext ptr : context -> NameId ) =>: export: getGeneratorLabel
     generator =:: mut: t
     t .NamedType ? if
       t context unwrapNamedKeepGenerated t=
     end
     t .GeneratedType .else ..drop
-      id.LABEL_ID_NONE return
+      id.NAME_ID_NONE return
     end GeneratedTypeName ptr cast [] .generator return
   end
   proc( Type : generator TypeContext ptr : context -> ConstValue slice ) =>: export: getGeneratorArgs
@@ -2187,14 +2187,14 @@ namespace: types
     baseType primitive.TYPE typeEquals or baseType context isTypeRefinement end return
   end
 
-  proc( LabelId : id -> Type ) =>: export: newGenericType
+  proc( NameId : id -> Type ) =>: export: newGenericType
     id Type .GenericType return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isGeneric
     unwrapNamed .GenericType ? return
   end
-  proc( Type : t -> LabelId ) =>: export: getGenericTypeId
-    t .GenericType .else ..drop id.LABEL_ID_NONE end return
+  proc( Type : t -> NameId ) =>: export: getGenericTypeId
+    t .GenericType .else ..drop id.NAME_ID_NONE end return
   end
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
@@ -2388,20 +2388,20 @@ namespace: types
     srcElts .length targetElts .length != if
       false return
     end
-    srcInfo .compositeInfo .labels [] =:: srcLabels?
-    targetInfo .compositeInfo .labels [] =:: targetLabels?
-    srcLabels? optional.isEmpty targetLabels? optional.isEmpty != if
+    srcInfo .compositeInfo .eltNames [] =:: srcEltNames?
+    targetInfo .compositeInfo .eltNames [] =:: targetEltNames?
+    srcEltNames? optional.isEmpty targetEltNames? optional.isEmpty != if
       false return ## eigther both labeled or both unlabled
     end
-    srcLabels? optional.hasData =:: labeled
+    srcEltNames? optional.hasData =:: labeled
     srcElts .length for =:: i
       srcElts i [] targetElts i [] context canAutoCast ! if
         false return
       end
       labeled if
         ## labelNamesEq
-          srcLabels? .and i slice.get .else id.LABEL_ID_NONE end
-          targetLabels? .and i slice.get .else id.LABEL_ID_NONE end
+          srcEltNames? .and i slice.get .else id.NAME_ID_NONE end
+          targetEltNames? .and i slice.get .else id.NAME_ID_NONE end
         labelContext id.labelNamesEq ! if
           false return
         end
@@ -2642,7 +2642,7 @@ end
 struct(
   LabelContext        : labelContext
   MixedArenaAllocator : memory
-  LabelId Type hashMap : namedTypes
+  NameId Type hashMap : namedTypes
   types.GeneratedTypeName types.GeneratedTypeValue hashMap : generatedTypes
 ) =:: export: TypeContext
 namespace: types
@@ -2650,7 +2650,7 @@ namespace: types
     ## TypeContext
       id.newLabelContext
       4096 mixedArena.create
-      labelHash@ labelEq@ 1024 Type map.create
+      NameId.hash@ NameId.eq@ 1024 Type map.create
       genNameHash@ genNameEq@ 1024 types.GeneratedTypeValue map.create
     TypeContext new return
   end
@@ -2838,8 +2838,8 @@ namespace: sb
           0:iSize =:: mut: labelIndex
           procType .inTypes for
             context depth appendTypeRecursive
-            labelIndex procType .labels .length u< if
-              procType .labels labelIndex []  labelContext appendTypeElementLabel
+            labelIndex procType .eltNames .length u< if
+              procType .eltNames labelIndex []  labelContext appendTypeElementLabel
               labelIndex 1:iSize + labelIndex=
             end
             ' ' sb.appendC
@@ -2847,8 +2847,8 @@ namespace: sb
           "-> " appendS
           procType .outTypes for
             context depth appendTypeRecursive
-            labelIndex procType .labels .length u< if
-              procType .labels labelIndex []  labelContext appendTypeElementLabel
+            labelIndex procType .eltNames .length u< if
+              procType .eltNames labelIndex []  labelContext appendTypeElementLabel
               labelIndex 1:iSize + labelIndex=
             end
             ' ' sb.appendC
@@ -2863,10 +2863,10 @@ namespace: sb
             depth
           appendNamedType
         return
-      GenericType .case =:: labelId
+      GenericType .case =:: nameId
         sb
           '`' sb.appendC
-          labelId labelContext appendLabelName
+          nameId labelContext appendLabelName
           '`' sb.appendC
         return
       GeneratedType .case types.GeneratedTypeName ptr cast =:: genTypeName

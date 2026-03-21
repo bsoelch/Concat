@@ -12,7 +12,7 @@ using std.literals.
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
-union( StackTypesInfo : TypeInfo i32 : StackInfo i32 : CompiledOps i32 : TypeLayout LabelId : Find ) =:: export: CompilerInfo
+union( StackTypesInfo : TypeInfo i32 : StackInfo i32 : CompiledOps i32 : TypeLayout NameId : Find ) =:: export: CompilerInfo
 enum( PTR ARRAY PTR_MUT RAW_PTR RAW_PTR_MUT ) =:: export: TypeModifier
 struct( Type : src i32 : offset ) =:: export: AutoCastInfo ## offset: zero-indexed from top of stack
 enum( SIGNED NONE UNSIGNED ) =:: export: SignType
@@ -64,7 +64,7 @@ i64 =:: ConstReferenceId
 enum( ARGUMENT LOCAL_VAR TMP_VAR ) =:: export: VariableType
 struct(
   Type : valueType
-  LabelId : label
+  NameId : nameId
   VariableType : variableType
 ) =:: export: VariableInfo
 
@@ -93,7 +93,7 @@ struct(
 union(
   BuiltInData : shadow: BuiltIn
   CodeProcData : Code
-  LabelId : Extern
+  NameId : Extern
   ProcId : Alias
 ) =:: export: ProcImplType
 i16 =:: export: ProcFlags
@@ -114,7 +114,7 @@ overload: merge: ~ ProcFlags.flip end
 overload: merge: ? ProcFlags.toBool end
 struct(
   ProcImplType : implementation
-  LabelId : labelId
+  NameId : nameId
   FileId : fileId
   id.ScopeId : scopeId ## host-scope if parsing, body-scope if type-checked
   Type : procType
@@ -131,8 +131,8 @@ proc( ProcedureInfo : p -> ) =>: freeProcedure
   else ..drop end
 end
 namespace: ProcId
-  proc( ProcId -> LabelId ) =>: export: getLabel
-    getProcInfo [] .labelId
+  proc( ProcId -> NameId ) =>: export: getLabel
+    getProcInfo [] .nameId
   end
 end
 
@@ -142,9 +142,9 @@ struct(
 ) =:: export: ProcedureCallInfo
 
 enum( FIXED AUTO ) =:: InitType
-struct( LabelId : label InitType : initType ) =:: export: NameInitInfo
+struct( NameId : nameId InitType : initType ) =:: export: NameInitInfo
 
-struct( LabelId : baseName LabelId : alias ) =:: export: NameAliasInfo
+struct( NameId : baseName NameId : alias ) =:: export: NameAliasInfo
 
 ## TODO find& eliminate large entries, extract additional data to seperate storage
 union(
@@ -164,9 +164,9 @@ union(
      IdentifierInfo : DeclareId
              ProcId : ImplementProcedure
              ProcId : ProcPtr
-            LabelId : GetLabel
-            LabelId : SetLabel
-            LabelId : ExistsLabel
+            NameId : GetLabel
+            NameId : SetLabel
+            NameId : ExistsLabel
                 i32 : GetElement
                 i32 : GetUnionElement
                 i32 : SetElement
@@ -189,12 +189,12 @@ union(
                   _ : Splat
                   _ : Copy
   StackModification : StackMod
-            LabelId : GetName
-            LabelId : SetName
-            LabelId : AtName
-            LabelId : ExistsName
+            NameId : GetName
+            NameId : SetName
+            NameId : AtName
+            NameId : ExistsName
       NameAliasInfo : AliasName
-            LabelId : DeclareName
+            NameId : DeclareName
        NameInitInfo : InitializeName
       NameAliasInfo : UsingNamespace
       NameAliasInfo : UsingIdentifier
@@ -226,16 +226,16 @@ end
 
 proc( BlockType : blockType FilePosition ptr : pos -> Operation ) =>: export: opBlock
   pos
-    id.LABEL_ID_NONE
+    id.NAME_ID_NONE
       -1:BlockId
       0:JumpDistance
       blockType
     BlockData new OpValue .Block
   Type .Undefined Operation new return
 end
-proc( BlockType : blockType LabelId : label FilePosition ptr : pos -> Operation ) =>: export: opLabeledBlock
+proc( BlockType : blockType NameId : nameId FilePosition ptr : pos -> Operation ) =>: export: opNamedBlock
   pos
-    label
+    nameId
       -1:BlockId
       0:JumpDistance
       blockType
@@ -244,7 +244,7 @@ proc( BlockType : blockType LabelId : label FilePosition ptr : pos -> Operation 
 end
 proc( BlockType : blockType FilePosition ptr : pos -> Operation ) =>: export: opEndBlock
   pos
-    id.LABEL_ID_NONE
+    id.NAME_ID_NONE
       -1:BlockId
       0:JumpDistance
       blockType
@@ -295,13 +295,13 @@ end
 proc( Type : base i32 : index FilePosition ptr : pos -> Operation ) =>: export: opSetElement
   pos index OpValue .SetElement base Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos -> Operation ) =>: export: opGetLabel
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opGetLabel
   pos id OpValue .GetLabel Type .Undefined Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos -> Operation ) =>: export: opSetLabel
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opSetLabel
   pos id OpValue .SetLabel Type .Undefined Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos -> Operation ) =>: export: opExistsLabel
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opExistsLabel
   pos id OpValue .ExistsLabel Type .Undefined Operation new return
 end
 proc( Type : retType FilePosition ptr : pos -> Operation ) =>: export: opReturn
@@ -358,43 +358,43 @@ end
 proc( Type : t FilePosition ptr : pos -> Operation ) =>: export: opCopy
   pos OpValue .Copy t Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos -> Operation ) =>: export: opGetName
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opGetName
   pos id OpValue .GetName Type .Undefined Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos -> Operation ) =>: export: opAtName
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opAtName
   pos id OpValue .AtName Type .Undefined Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos -> Operation ) =>: export: opSetName
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opSetName
   pos id OpValue .SetName Type .Undefined Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos -> Operation ) =>: export: opExistsName
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opExistsName
   pos id OpValue .ExistsName Type .Undefined Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos -> Operation ) =>: export: opDeclareName
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opDeclareName
   pos id OpValue .DeclareName Type .Undefined Operation new return
 end
-proc( LabelId : baseName LabelId : nameAlias FilePosition ptr : pos -> Operation ) =>: export: opAliasName
+proc( NameId : baseName NameId : nameAlias FilePosition ptr : pos -> Operation ) =>: export: opAliasName
   pos baseName nameAlias NameAliasInfo new OpValue .AliasName Type .Undefined Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos  -> Operation ) =>: export: opInitializeName
+proc( NameId : id FilePosition ptr : pos  -> Operation ) =>: export: opInitializeName
   pos
     id InitType .FIXED NameInitInfo new OpValue .InitializeName
     Type .Undefined
   Operation new return
 end
-proc( LabelId : id FilePosition ptr : pos  -> Operation ) =>: export: opAutoTypedInitializeName
+proc( NameId : id FilePosition ptr : pos  -> Operation ) =>: export: opAutoTypedInitializeName
   pos
     id InitType .AUTO NameInitInfo new OpValue .InitializeName
     Type .Undefined
   Operation new return
 end
-proc( LabelId : src LabelId : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingNamespace
+proc( NameId : src NameId : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingNamespace
   pos
     src alias NameAliasInfo new OpValue .UsingNamespace
     Type .Undefined
   Operation new return
 end
-proc( LabelId : src LabelId : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingIdentifier
+proc( NameId : src NameId : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingIdentifier
   pos
     src alias NameAliasInfo new OpValue .UsingIdentifier
     Type .Undefined
@@ -459,7 +459,7 @@ end
 proc( i32 : count FilePosition ptr : pos -> Operation ) =>: export: opPrintCompiledOps
   pos count CompilerInfo .CompiledOps OpValue .CompilerInfo Type .Undefined Operation new return
 end
-proc( LabelId : name FilePosition ptr : pos -> Operation ) =>: export: opPrintIdentifierMatches
+proc( NameId : name FilePosition ptr : pos -> Operation ) =>: export: opPrintIdentifierMatches
   pos name CompilerInfo .Find OpValue .CompilerInfo Type .Undefined Operation new return
 end
 proc( i32 : depth FilePosition ptr : pos -> Operation ) =>: export: opTypeLayout
@@ -509,7 +509,7 @@ struct(
 ) =:: export: ProcedureBundle
 
 ## check if composite has any static elements, types are static by default
-proc( Type slice : elements LabelId slice : labels TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
+proc( Type slice : elements NameId slice : labels TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
   typeContext .labelContext =:: labelContext
   elements .length for =:: i
     i labels .length u< and labels i []
@@ -535,7 +535,7 @@ proc(
       ProcFlags.HAS_STATIC_ARG |
     end
     outTypes newProcType typeContext types.getProcRetLabels typeContext hasStaticElement or
-        procInfo [] .labelId typeContext .labelContext id.labelFlags id.FLAG_STATIC & ? if
+        procInfo [] .nameId typeContext .labelContext id.labelFlags id.FLAG_STATIC & ? if
       ProcFlags.IS_STATIC |
     end
   procInfo .flags=
@@ -547,7 +547,7 @@ proc(
   else ..drop end
 end
 proc(
-  LabelId : procName
+  NameId : procName
   Type : procType
   FileId : fileId
   ProcId optional : aliasId
@@ -629,12 +629,12 @@ struct(
   i32 : ifCount
   i32 : andOrCount
   TypedConstant list : constantReferences
-  LabelId list : labelBuffer
+  NameId list : nameBuffer
   stringBuilder : tmpString
   CompilerError list : errors
   string : basePath
   string : libPath
-  LabelId : mainLabelId
+  NameId : mainId
   ProcId optional : mainProcId
   bool : saveGlobalTokens
   bool : inLibFile
@@ -666,12 +666,12 @@ proc(
     128 SwitchData      list.create
     0 0 0
     32  TypedConstant   list.create
-    32  LabelId         list.create
+    32  NameId         list.create
     256 sb.create
     32  CompilerError   list.create
     basePath
     libPath
-    id.LABEL_ID_NONE ## main LabelId
+    id.NAME_ID_NONE ## main NameId
     ProcId optional.empty ## main ProcId
     saveGlobalTokens
     false ## inLibFile
@@ -698,10 +698,10 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .programMemory mixedArena.free >$ .programMemory=
   $ .switchData list.free >$ .switchData=
   $ .constantReferences list.free >$ .constantReferences=
-  $ .labelBuffer list.free >$ .labelBuffer=
+  $ .nameBuffer list.free >$ .nameBuffer=
   $ .tmpString sb.free >$ .tmpString=
   $ .errors list.free >$ .errors=
-  id.LABEL_ID_NONE >$ .mainLabelId=
+  id.NAME_ID_NONE >$ .mainId=
   ProcId optional.empty >$ .mainProcId=
   false >$ .hasGetArgs=
   =:: mut: tmp ## is there a way to avoid switching to variable
@@ -867,7 +867,7 @@ namespace: sb
         op .dataType  typeContext sb.appendType
         " ) : " sb.appendS
         procId ProcId.getProcInfo =:: procInfo
-        procInfo [] .labelId labelContext sb.appendLabelPath
+        procInfo [] .nameId labelContext sb.appendLabelPath
         ## XXX? print auto args
       break
       BuiltIn .case =:: builtInId
@@ -905,14 +905,14 @@ namespace: sb
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         procId ProcId.getProcInfo =:: procInfo
-        procInfo [] .labelId labelContext sb.appendLabelPath
+        procInfo [] .nameId labelContext sb.appendLabelPath
       break
       ProcPtr .case =:: procId
         "procedure pointer ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         procId ProcId.getProcInfo =:: procInfo
-        procInfo [] .labelId labelContext sb.appendLabelPath
+        procInfo [] .nameId labelContext sb.appendLabelPath
       break
       AutoTypedInitializeId .case =:: id
         "auto-typed initialize ( " sb.appendS
@@ -1107,12 +1107,12 @@ namespace: sb
           "auto-typed " sb.appendS
         end
         "initialize name: " sb.appendS
-        initInfo .label labelContext sb.appendLabelPath
+        initInfo .nameId labelContext sb.appendLabelPath
       break
       UsingNamespace .case =:: usingNamespace
         "using namespace: " sb.appendS
         usingNamespace .baseName labelContext sb.appendLabelPath
-        usingNamespace .alias id.LABEL_ID_NONE != if
+        usingNamespace .alias id.NAME_ID_NONE != if
           " as " sb.appendS
           usingNamespace .alias labelContext sb.appendLabelName
         end
@@ -1120,7 +1120,7 @@ namespace: sb
       UsingIdentifier .case =:: usingIdentifier
         "using idenfifier: " sb.appendS
         usingIdentifier .baseName labelContext sb.appendLabelPath
-        usingIdentifier .alias id.LABEL_ID_NONE != if
+        usingIdentifier .alias id.NAME_ID_NONE != if
           " as " sb.appendS
           usingIdentifier .alias labelContext sb.appendLabelName
         end
@@ -1223,7 +1223,7 @@ namespace: sb
         ..drop continue
       end =:: impl
       "## "          sb.appendS
-      proc [] .labelId labelContext sb.appendLabelPath
+      proc [] .nameId labelContext sb.appendLabelPath
       impl .genericInfo .ImplInfo .if
         [] .staticArgs for >$ ' ' sb.appendC <$ typeContext sb.appendConstant end
       else ..drop end

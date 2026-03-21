@@ -422,24 +422,24 @@ end
 namespace: sb
   proc(
     stringBuilder : sb
-    LabelId : label
+    NameId : nameId
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendGlobalName
     context [] .program =:: prog
     prog .idContext .typeContext .labelContext =:: labelContext
     sb
       '$' sb.appendC
-      label labelContext id.labelFlags id.FLAG_EXTERN & ? if
+      nameId labelContext id.labelFlags id.FLAG_EXTERN & ? if
         ## use unmodified name for extern values
-        label labelContext sb.appendLabelName
+        nameId labelContext sb.appendLabelName
         return
       end
       CONCAT_PREFIX sb.appendS
-      label labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
-        label labelContext id.getLabelFile i64 cast sb.appendI
+      nameId labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
+        nameId labelContext id.getLabelFile i64 cast sb.appendI
         "_F" sb.appendS
       end
-      label labelContext sb.appendAsciifiedLabelPath
+      nameId labelContext sb.appendAsciifiedLabelPath
     return
   end
 
@@ -581,7 +581,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     i32 : index
-    LabelId : labelId
+    NameId : nameId
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendArgName
     sb
@@ -1327,7 +1327,7 @@ end
 
 proc(
   stringBuilder
-  LabelId  : labelId
+  NameId  : nameId
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: appendGenericArg
@@ -1337,21 +1337,21 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .labelContext =:: labelContext
   context [] .currentProc
-    labelId
+    nameId
     typeContext
   types.findProcArgLabel .if =:: index
     ## appendArgName
       index
-      labelId
+      nameId
       context
     sb.appendArgName return
   end
   "cannot find generic argument: " sb.copyPtr
-    labelId labelContext sb.appendLabelName
+    nameId labelContext sb.appendLabelName
   pos errors appendError
 end
 
-union( i64 : Constant i32 : StackId LabelId : AutoArg i32 : LocalId i32 : TmpId ) =:: IntValue
+union( i64 : Constant i32 : StackId NameId : AutoArg i32 : LocalId i32 : TmpId ) =:: IntValue
 proc(
   stringBuilder : sb
   ValType : valType
@@ -2971,7 +2971,7 @@ proc(
       return
     DeclareId InitializeId .case =:: idInfo
       op [] .val .InitializeId ? =:: assignValue
-      idInfo .labelId labelContext id.labelFlags =:: labelFlags
+      idInfo .nameId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & ? =:: mutable
       idInfo .idType switch
         PROCEDURE case
@@ -2996,7 +2996,7 @@ proc(
               op [] .pos context popValue sb.appendI
               ',' sb.appendC
               "%l" sb.appendS
-              idInfo .labelId i64 cast sb.appendI
+              idInfo .nameId i64 cast sb.appendI
               isValue ! if
                 ',' sb.appendC
                 op [] .dataType op [] .pos context typeSizeInt sb.appendI
@@ -3011,7 +3011,7 @@ proc(
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procInfo
       op [] .dataType context .currentProc=
-      procInfo [] .labelId labelContext id.labelFlags =:: labelFlags
+      procInfo [] .nameId labelContext id.labelFlags =:: labelFlags
       ## reset stack-info in context
       0 context .stackCount=
       0 context .tmpCount=
@@ -3030,7 +3030,7 @@ proc(
             ' ' sb.appendC
           break
         end
-        procInfo [] .labelId context sb.appendGlobalName
+        procInfo [] .nameId context sb.appendGlobalName
         op [] .dataType op [] .pos context sb.appendProcSignature
         "{\n" sb.appendS
         ## BranchId
@@ -3053,13 +3053,13 @@ proc(
           else
             argType context toValType
           end =:: valType
-          label id.LABEL_ID_NONE == if ## push argument
+          label id.NAME_ID_NONE == if ## push argument
             "%s" sb.appendS
             valType context pushValue sb.appendI
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
-            i id.LABEL_ID_NONE context sb.appendArgName
+            i id.NAME_ID_NONE context sb.appendArgName
             '\n' sb.appendC
           else valType .REFERENCE _if
             "%l" sb.appendS
@@ -3067,7 +3067,7 @@ proc(
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
-            i id.LABEL_ID_NONE context sb.appendArgName
+            i id.NAME_ID_NONE context sb.appendArgName
             '\n' sb.appendC
           else
             "%l" sb.appendS
@@ -3079,7 +3079,7 @@ proc(
             "\nstore" sb.appendS
             argType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
             ' ' sb.appendC
-            i id.LABEL_ID_NONE context sb.appendArgName
+            i id.NAME_ID_NONE context sb.appendArgName
             ", %l" sb.appendS
             label i64 cast sb.appendI
             '\n' sb.appendC
@@ -3095,7 +3095,7 @@ proc(
               continue
             end
             "%l" sb.appendS
-            varInfo .label i64 cast.u sb.appendI
+            varInfo .nameId i64 cast.u sb.appendI
             varInfo .valueType op [] .pos context false appendAlloc ..drop
           end
         else ..drop end
@@ -3126,7 +3126,7 @@ proc(
               sb.appendTypeNameQBE
               " " sb.appendS
             end
-            idInfo .labelId context sb.appendGlobalName
+            idInfo .nameId context sb.appendGlobalName
             '\n' sb.appendC
           return
         LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
@@ -3148,7 +3148,7 @@ proc(
               sb.appendTypeNameQBE
               " %l" sb.appendS
             end
-            idInfo .labelId i64 cast sb.appendI
+            idInfo .nameId i64 cast sb.appendI
             '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case
@@ -3163,7 +3163,7 @@ proc(
         ValType .PTR context pushValue sb.appendI
         " =l copy " sb.appendS
         ## appendGlobalName
-          procData [] .labelId
+          procData [] .nameId
         context sb.appendGlobalName
         "\n" sb.appendS
       return
@@ -3183,11 +3183,11 @@ proc(
         ", " sb.appendS
         idInfo .idType switch
           GLOBAL_VAR case
-            idInfo .labelId context sb.appendGlobalName
+            idInfo .nameId context sb.appendGlobalName
             break
           LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
             " %l" sb.appendS
-            idInfo .labelId i64 cast sb.appendI
+            idInfo .nameId i64 cast sb.appendI
             break
          PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case
             "unsupported identifier for setId " sb.copyPtr
@@ -3555,7 +3555,7 @@ proc(
           outArgOffset
           op [] .pos
         context prepareCall
-        procData [] .labelId context sb.appendGlobalName
+        procData [] .nameId context sb.appendGlobalName
         calledType
           argIndices@
           outArgOffset
@@ -3999,7 +3999,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     true
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
-  program [] .mainLabelId =:: mainId
+  program [] .mainId =:: mainId
   program [] .progFiles 0 @[] .fileScope [] idContext id.setScope
   labelContext id.clearNamespace
   1024 sb.create
@@ -4021,15 +4021,15 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
   idContext .identifierNames map.itr.start while map.itr.hasNext do map.itr.next
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 [] .aliasId id.NO_ALIAS != if continue end
-    declaration .1 [] .labelId =:: labelId
-    labelId idContext id.getIdentifier
-      ! "labelId is identifier" assert
+    declaration .1 [] .nameId =:: nameId
+    nameId idContext id.getIdentifier
+      ! "nameId is identifier" assert
     =:: idData
     idData [] .idType .GLOBAL_VAR ! if
       continue
     end
     idData [] .valueType =:: mut: valType
-    labelId labelContext id.labelFlags =:: labelFlags
+    nameId labelContext id.labelFlags =:: labelFlags
     valType types.primitive.TYPE types.typeEquals or
         valType typeContext types.isEmpty or
         valType typeContext types.isProcedure or
@@ -4041,7 +4041,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
         "export " sb.appendS
       end
       "data " sb.appendS
-      labelId context sb.appendGlobalName
+      nameId context sb.appendGlobalName
       " = align " sb.appendS
       valType idData [] .declaredAt context typeAlignmentInt sb.appendI
       " {" sb.appendS
@@ -4121,7 +4121,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     finally i 1:iSize + end ..drop
     target $1 sb.asStr file.write target=
     sb.clear
-    mainId id.LABEL_ID_NONE == if ## no main
+    mainId id.NAME_ID_NONE == if ## no main
       sb.free ..drop
       context cleanupCompilerContext
       target return

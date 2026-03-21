@@ -27,8 +27,8 @@ end
 struct(
   using interpreter.
   ProgramContext ptr.mut : program
-  LabelId Constant hashMap : globalVariables
-  LabelId Constant hashMap ptr.mut optional : localVariables
+  NameId Constant hashMap : globalVariables
+  NameId Constant hashMap ptr.mut optional : localVariables
   ConstValue list : stack
   ValueInfo  list : stackInfo
   iSize list : stackOffsets
@@ -36,7 +36,7 @@ struct(
   ## XXX globalMemory (?heapMemory)
   Type list : typeBuffer
   ConstValue list : valueBuffer
-  LabelId list : labelBuffer
+  NameId list : nameBuffer
   FilePosition ptr list : callPositions
   InterpreterState list : stateStack
   FileId : currentFile
@@ -51,8 +51,8 @@ namespace: interpreter
   ) =>: export: wrapProgram
     ## InterpreterContext
       progContext
-      labelHash@ labelEq@ 512 Constant map.create
-      LabelId Constant hashMap ptr.mut optional.empty
+      NameId.hash@ NameId.eq@ 512 Constant map.create
+      NameId Constant hashMap ptr.mut optional.empty
       64 ConstValue list.create
       64 ValueInfo  list.create
       64 iSize  list.create
@@ -60,7 +60,7 @@ namespace: interpreter
       4096 true mixedArena.create
       64 Type       list.create
       64 ConstValue list.create
-      64 LabelId    list.create
+      64 NameId    list.create
       64 FilePosition ptr list.create
       32 InterpreterState list.create
       fileId
@@ -74,7 +74,7 @@ namespace: interpreter
     context [] .stackOffsets  list.free context .stackOffsets=
     context [] .typeBuffer  list.free context .typeBuffer=
     context [] .valueBuffer list.free context .valueBuffer=
-    context [] .labelBuffer list.free context .labelBuffer=
+    context [] .nameBuffer  list.free context .nameBuffer=
     context [] .callPositions list.free context .callPositions=
     context [] .localMemory mixedArena.free context .localMemory=
     context [] .stack list.free context .stack=
@@ -1132,7 +1132,7 @@ proc(
     return
     BlockEnd case break
     DeclareId .case =:: idInfo
-      idInfo .labelId =:: labelId
+      idInfo .nameId =:: nameId
       idInfo .idType switch
         GLOBAL_VAR TYPE case
           break
@@ -1144,7 +1144,7 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-            labelId
+            nameId
             ## Constant
               dataType op [] .pos context allocLocalValue
               ## ValueInfo
@@ -1166,7 +1166,7 @@ proc(
       op [] .pos errors appendError
       EvalResult .Error return
     GetId .case =:: idInfo
-      idInfo .labelId =:: label
+      idInfo .nameId =:: nameId
       idInfo .idType switch
         PROCEDURE PROCEDURE_BUNDLE case
           "unresolved call " sb.copyPtr
@@ -1178,7 +1178,7 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-          context [] .localVariables .and label map.get .else
+          context [] .localVariables .and nameId map.get .else
             "missing value for " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op [] .pos errors appendError
@@ -1189,7 +1189,7 @@ proc(
         LABEL case
           context [] .localVariables .else
             context .globalVariables
-          end label map.get .else
+          end nameId map.get .else
             "missing value for " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op [] .pos errors appendError
@@ -1198,24 +1198,24 @@ proc(
           value .value value .info .valueType op [] .pos context pushValue
           EvalResult .Ok return
         TYPE GLOBAL_VAR case
-          label
+          nameId
             idContext
           id.getIdentifier if ..drop
             "could not find identifier: " sb.copyPtr
-              label labelContext sb.appendLabelPath
+              nameId labelContext sb.appendLabelPath
             op [] .pos errors appendError
             EvalResult .Error return ## unknown identifier
           end =:: idData
-          idData [] .labelId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+          idData [] .nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
             "mutable global variables are not supported: " sb.copyPtr
-              label labelContext sb.appendLabelPath
+              nameId labelContext sb.appendLabelPath
             op [] .pos errors appendError
             ## compile-time evaluation of mutable global variables not supported
             EvalResult .Error return
           end
           idData [] .constValue .None ? if
             "identifier " sb.copyPtr
-              label labelContext sb.appendLabelPath
+              nameId labelContext sb.appendLabelPath
               " has not been initialized" sb.appendS
             op [] .pos errors appendError
             EvalResult .Error return
@@ -1225,7 +1225,7 @@ proc(
       end
       break
     AtId .case =:: idInfo
-      idInfo .labelId =:: label
+      idInfo .nameId =:: nameId
       idInfo .idType switch
         LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
           ## XXX? extract common code with getId to procedure
@@ -1233,20 +1233,20 @@ proc(
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError
             EvalResult .Error return
-          end label map.get .else
+          end nameId map.get .else
             "missing value for " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: value
-          label labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: isMutable
+          nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: isMutable
           ## pushValue
             value .value
             value .info .valueType isMutable typeContext types.getAddressType
           op [] .pos context pushValue
           EvalResult .Ok return
         PROCEDURE case
-          label idContext id.getIdentifier if ..drop
+          nameId idContext id.getIdentifier if ..drop
             "could not find " sb.copyPtr
               idInfo labelContext sb.appendIdInfo
             op [] .pos errors appendError
@@ -1254,7 +1254,7 @@ proc(
           end =:: idData
           idData [] .constValue .Procedure .else ..drop
             "could not determine id of procedure" sb.copyPtr
-              label labelContext sb.appendLabelName
+              nameId labelContext sb.appendLabelName
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: procVal
@@ -1273,8 +1273,8 @@ proc(
       end
       break
     SetId .case =:: idInfo
-      idInfo .labelId =:: label
-      label
+      idInfo .nameId =:: nameId
+      nameId
         labelContext id.labelFlags id.FLAG_MUTABLE & ?
       "setId only created for mutable identifiers" assert
       op [] .pos context popValue if ..drop.2
@@ -1301,17 +1301,17 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-            label
+            nameId
             value valInfo Constant new
           map.put ..drop
           EvalResult .Ok return
         TYPE GLOBAL_VAR case
-          label
+          nameId
             idContext
           id.getIdentifier if ..drop
             value valInfo context unpopValue
             "could not find identifier: " sb.copyPtr
-              label labelContext sb.appendLabelPath
+              nameId labelContext sb.appendLabelPath
             op [] .pos errors appendError
             EvalResult .Error return ## unknown identifier
           end =:: idData
@@ -1330,7 +1330,7 @@ proc(
         op [] .dataType
       op [] .pos context interpreter.evaluateCall wrapResult return
     InitializeId AutoTypedInitializeId .case =:: idInfo
-      idInfo .labelId =:: label
+      idInfo .nameId =:: nameId
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
@@ -1340,7 +1340,7 @@ proc(
       idInfo .idType switch
         GLOBAL_VAR TYPE case
           context .globalVariables
-            label
+            nameId
             ## Constant
               value
               ## ValueInfo
@@ -1356,9 +1356,9 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-            label
+            nameId
             ## Constant
-              label labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+              nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
                 value valInfo .valueType true context localCopy
               else
                 value
@@ -1980,7 +1980,7 @@ namespace: interpreter
     end
   end
   proc(
-    LabelId : procName
+    NameId : procName
     Type slice : args
     FilePosition ptr : pos
     InterpreterContext ptr.mut : context
@@ -2156,7 +2156,7 @@ namespace: interpreter
       true return
     end
     context [] .stack .length nArgs - =:: argsOffset
-    procData [] .labelId =:: procName
+    procData [] .nameId =:: procName
     context offsetContext
     context [] .stack .length =:: stackOffset
     context offsetStack
@@ -2166,23 +2166,23 @@ namespace: interpreter
     context [] .localVariables =:: prevVariables
     context [] .localMemory mixedArena.offset =:: offset
     context [] .localMemory
-      LabelId Constant hashMap mixedArena.alloc =:: newVariables
+      NameId Constant hashMap mixedArena.alloc =:: newVariables
     context .localMemory=
     ## XXX? allocate lookup table in localMemory
-    labelHash@ labelEq@ 256 Constant map.create newVariables =[]
+    NameId.hash@ NameId.eq@ 256 Constant map.create newVariables =[]
     newVariables optional.wrap context .localVariables=
     ## process procedure arguments
     0:i32 while $ args .length i32 cast < do =:: i
-      procType i typeContext types.getProcArgLabel =:: label
-      label labelContext id.labelFlags =:: labelFlags
+      procType i typeContext types.getProcArgLabel =:: nameId
+      nameId labelContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         codeImpl .genericInfo .ImplInfo .else
           "expected generic implementation" ..panic
         end =:: implInfo
         implInfo [] .staticArgs staticArgOffset [] =:: value
-        label id.LABEL_ID_NONE != if
+        nameId id.NAME_ID_NONE != if
           context [] .localVariables optional.unwrap
-            label
+            nameId
             ## Constant
               value
               args i [] pos ValueInfo new
@@ -2205,7 +2205,7 @@ namespace: interpreter
       context [] .stack argOffset [] =:: value
       context [] .stackInfo argOffset [] =:: valueInfo
       argOffset 1:iSize + argOffset=
-      label id.LABEL_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
+      nameId id.NAME_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
         context [] .stack
           value list.append
         context .stack=
@@ -2217,7 +2217,7 @@ namespace: interpreter
         context .stackInfo=
       else ## store argument as value
         context [] .localVariables optional.unwrap
-          label
+          nameId
           ## Constant
             value
             valueInfo

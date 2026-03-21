@@ -26,14 +26,14 @@ struct(
   Type : valueType
   ConstValue : constValue
   FilePosition ptr : declaredAt
-  LabelId : labelId
+  NameId : nameId
   i32 : index
   IdentifierType : idType
   bool : declarationOnly
 ) =:: IdentifierData
 struct(
   IdentifierType : idType
-  LabelId : labelId
+  NameId : nameId
 ) =:: export: IdentifierInfo
 
 namespace: id
@@ -51,12 +51,12 @@ namespace: id
     ScopeId : scope
   ) =:: IdentifierName
   struct(
-    LabelId : labelId
+    NameId  : nameId
     AliasId : aliasId
-  ) =:: export: NameId
+  ) =:: export: NameInfo
   struct(
     IdentifierName : name
-    NameId : nameData
+    NameInfo : nameData
   ) =:: export: IdentifierMatch
   ## IdentifierName
     string.empty
@@ -67,7 +67,7 @@ namespace: id
     Type .Undefined
     ConstValue .None
     FILE_POS_UNKNOWN@
-    LABEL_ID_NONE
+    NAME_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
     false
@@ -76,12 +76,11 @@ namespace: id
     Type .Undefined
     ConstValue .None
     FILE_POS_UNKNOWN@
-    LABEL_ID_NONE
+    NAME_ID_NONE
     -1
     IdentifierType .GLOBAL_VAR
     false
   IdentifierData new =:: mut: ID_TMP_DATA
-  -2:LabelId =:: LABEL_ID_TMP
 
   proc( IdentifierName : a -> i32 ) =>: idHash
     a .name string.hash 31 * a .namespace i32 cast + 31 * a .scope i32 cast + return
@@ -114,8 +113,8 @@ end
     TypeContext : typeContext
     ConstantContext : constContext
     Scope list : scopes
-    IdentifierName  NameId hashMap : identifierNames
-    LabelId IdentifierData hashMap : identifierData
+    IdentifierName  NameInfo hashMap : identifierNames
+    NameId IdentifierData hashMap : identifierData
     ConstValue list : argBuffer
     types.ArraySize list : arraySizeBuffer
     NamespaceInfo list : prevNamespaces
@@ -131,8 +130,8 @@ namespace: id
       128 Scope list.create
         id.GLOBAL_SCOPE ProcId optional.empty NAMESPACE_IMPORT_NONE NO_IMPORTS newScope
       list.append
-      idHash@    idEq@    4096 NameId map.create
-      labelHash@ labelEq@ 4096 IdentifierData map.create
+      idHash@    idEq@    4096 NameInfo map.create
+      NameId.hash@ NameId.eq@ 4096 IdentifierData map.create
       32  ConstValue      list.create
       128 types.ArraySize list.create
       128 NamespaceInfo   list.create
@@ -161,7 +160,7 @@ namespace: id
 
   proc( IdentifierData ptr : idData -> IdentifierInfo ) =>: export: asIdInfo
     idData [] .idType
-    idData [] .labelId
+    idData [] .nameId
     IdentifierInfo new return
   end
 
@@ -203,12 +202,12 @@ namespace: id
     currentScopeData [] .parentScope context .currentScopeId=
     false return
   end
-  proc( LabelId : label IdentifierContext ptr.mut : context -> bool ) =>: isVisible
+  proc( NameId : nameId IdentifierContext ptr.mut : context -> bool ) =>: isVisible
     context .typeContext .labelContext =:: labelContext
-    label labelContext labelFlags id.FLAG_BUILT_IN id.FLAG_MERGEABLE | & ? if
+    nameId labelContext labelFlags id.FLAG_BUILT_IN id.FLAG_MERGEABLE | & ? if
       true return ## built-ins and mergable identifiers are always visible
     end
-    label labelContext getLabelFile =:: srcFile
+    nameId labelContext getLabelFile =:: srcFile
     context [] .scopes context [] .currentScopeId getScopeData =:: currentScopeData
     currentScopeData [] .visibleFiles while $ NO_IMPORTS != do =:: id
       context [] .visibleFiles id i64 cast [] =:: importInfo
@@ -224,25 +223,25 @@ namespace: id
     bool : checkVisible
     IdentifierContext ptr.mut : context
     IdentifierMatch list ptr.mut optional : matches
-  -> IdentifierName NameId bool ) =>: export: searchIdentifier
+  -> IdentifierName NameInfo bool ) =>: export: searchIdentifier
     context [] .currentScopeId =:: scopeId
     context [] .typeContext .labelContext .namespaceInfo .current =:: mut: mNamespace
     NamespaceId : relSpace
     mNamespace NAMESPACE_ID_NONE == if
       "invalid current namespace id":s NAMESPACE_ID_NONE scopeId IdentifierName new
-      id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
+      id.NAME_ID_NONE id.NO_ALIAS NameInfo new true return
     end
     id 0 string.charAt '.' == if
       id .length 2:iSize u>= and id 1 string.charAt '.' == if
         id string.empty
       else
         "identifiers cannot start with .":s NAMESPACE_ID_NONE scopeId IdentifierName new
-        id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
+        id.NAME_ID_NONE id.NO_ALIAS NameInfo new true return
       end
     else
       id '.' string.splitLast
     end =:: path =:: name
-    NameId : idLabel
+    NameInfo : idLabel
     ## 1. search in current scopes
     mNamespace path  context .typeContext .labelContext findNamespace relSpace=
     name relSpace scopeId IdentifierName new =:: mut: idName
@@ -250,7 +249,7 @@ namespace: id
       while
         context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
-            idLabel .labelId context isVisible if
+            idLabel .nameId context isVisible if
           matches .else
             idName idLabel false return
           end =:: matchData
@@ -292,7 +291,7 @@ namespace: id
       while
         context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
-            idLabel .labelId context isVisible if
+            idLabel .nameId context isVisible if
           matches .else
             idName idLabel false return
           end =:: matchData
@@ -309,7 +308,7 @@ namespace: id
     end
     ## 3. search imports
     false =:: mut: multiMatch
-    NameId optional.empty =:: mut: match
+    NameInfo optional.empty =:: mut: match
     context [] .typeContext .labelContext .namespaceInfo .imports while
       $ NAMESPACE_IMPORT_NONE !=
     do =:: importId
@@ -338,7 +337,7 @@ namespace: id
       while
         context .identifierNames idName map.get .and idLabel=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
-            idLabel .labelId context isVisible if
+            idLabel .nameId context isVisible if
           matches .if =:: matchData
             matchData []
               idName idLabel IdentifierMatch new list.append
@@ -363,21 +362,18 @@ namespace: id
       idName >$ false return
     end
     "could not find identifier":s NAMESPACE_ID_NONE scopeId IdentifierName new
-    id.LABEL_ID_NONE id.NO_ALIAS NameId new true return
+    id.NAME_ID_NONE id.NO_ALIAS NameInfo new true return
   end
-  proc( LabelId : nameId IdentifierContext ptr.mut : context -> IdentifierData ptr.mut bool ) =>: export: getIdentifier
-    nameId LABEL_ID_TMP == if
-      ID_TMP_DATA@ false return
-    end
+  proc( NameId : nameId IdentifierContext ptr.mut : context -> IdentifierData ptr.mut bool ) =>: export: getIdentifier
     context .identifierData
       nameId
     map.at .if false return end
     ID_TMP_DATA@ true return
   end
   ## finds an identifier with the same name as the given label
-  ## to get the identifier-data for a given labelId use `getIdentifier`
+  ## to get the identifier-data for a given nameId use `getIdentifier`
   proc(
-    LabelId : nameId
+    NameId : nameId
     IdentifierContext ptr.mut : context
   -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByLabel
     ## searchIdentifier
@@ -385,12 +381,12 @@ namespace: id
       true
       context
       IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError .labelId =:: label ..drop
+    searchIdentifier =:: isError .nameId =:: label ..drop
     label context getIdentifier isError | return
   end
   ## unlike `findIdentifierByLabel` this procedure also find invisible identifiers
   proc(
-    LabelId : nameId
+    NameId : nameId
     IdentifierContext ptr.mut : context
   -> IdentifierData ptr.mut bool ) =>: export: findDeclaredIdentifierByLabel
     ## searchIdentifier
@@ -398,13 +394,13 @@ namespace: id
       false
       context
       IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError .labelId =:: label ..drop
+    searchIdentifier =:: isError .nameId =:: label ..drop
     label context getIdentifier isError | return
   end
   proc(
     string : name
     IdentifierContext ptr.mut : context
-  -> NameId bool ) =>: findIdByName
+  -> NameInfo bool ) =>: findIdByName
     name .length 0:iSize != "name is non-empty" assert
     ## searchIdentifier
       name
@@ -424,7 +420,7 @@ namespace: id
       true
       context
       IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError .labelId =:: label =:: idName
+    searchIdentifier =:: isError .nameId =:: label =:: idName
     label context getIdentifier isError | return
   end
   enum( BUILT_IN NAMESPACE PROCEDURE VARIABLE LABEL ) =:: export: NameContext
@@ -493,10 +489,10 @@ namespace: id
   end
   union(
     _ : OK
-    NameId : Redeclare
+    NameInfo : Redeclare
   ) =:: DeclareNameResult
   proc(
-    LabelId : label
+    NameId : nameId
     string : name
     bool : isAlias
     IdentifierType : idType
@@ -506,7 +502,7 @@ namespace: id
   -> DeclareNameResult ) =>: declareName
     context .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
-    label labelContext labelFlags =:: flags
+    nameId labelContext labelFlags =:: flags
     isAlias ! and flags FLAG_EXPORT & ? and
         context [] .scopes
           context [] .currentScopeId
@@ -523,9 +519,9 @@ namespace: id
       DeclareNameResult .Redeclare return
     end
     name context findIdByName ! if =:: shadowedName
-      shadowedName .labelId labelContext id.labelFlags =:: shadowFlags
+      shadowedName .nameId labelContext id.labelFlags =:: shadowFlags
       flags FLAG_SHADOW & ? ! or shadowFlags id.FLAG_BUILT_IN & ? if
-        shadowedName .labelId context getIdentifier
+        shadowedName .nameId context getIdentifier
           ! "shadowedName exists" assert
         =:: shadowed
         ## allow shadoing for labels
@@ -564,12 +560,12 @@ namespace: id
     end =:: aliasId
     context .identifierNames
       idName
-      label aliasId NameId new
+      nameId aliasId NameInfo new
     map.put ..drop ## previous entry is always empty
     DeclareNameResult .OK return
   end
   proc(
-    LabelId : label
+    NameId : nameId
     Type : valType
     IdentifierType : idType
     i32 : index
@@ -578,26 +574,26 @@ namespace: id
     FilePosition ptr : declaredAt
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
-  ->  LabelId IdentifierData bool ) =>: export: declareIdentifier
+  ->  NameId IdentifierData bool ) =>: export: declareIdentifier
     context .typeContext =:: typeContext
     typeContext .labelContext =:: labelContext
-    label LABEL_ID_NONE == if
-      "invalid label id" sb.copyPtr declaredAt errors appendError
-      LABEL_ID_NONE ID_NONE_DATA true return
+    nameId NAME_ID_NONE == if
+      "invalid name id" sb.copyPtr declaredAt errors appendError
+      NAME_ID_NONE ID_NONE_DATA true return
     end
-    label labelContext id.currentNamespace labelContext id.setLabelNamespace
-    label labelContext labelFlags =:: flags
+    nameId labelContext id.currentNamespace labelContext id.setLabelNamespace
+    nameId labelContext labelFlags =:: flags
     flags FLAG_MUTABLE & ? if
       idType .TYPE if
         "type definitions cannot be mutable" sb.copyPtr declaredAt errors appendError
-        LABEL_ID_NONE ID_NONE_DATA true return
+        NAME_ID_NONE ID_NONE_DATA true return
       end
       idType .PROCEDURE if
         "procedures cannot be mutable" sb.copyPtr declaredAt errors appendError
-        LABEL_ID_NONE ID_NONE_DATA true return
+        NAME_ID_NONE ID_NONE_DATA true return
       end
     end
-    label labelContext id.getLabelName =:: name
+    nameId labelContext id.getLabelName =:: name
     ## don't check names of built-in identifiers
     name
       flags FLAG_BUILT_IN & ? or flags FLAG_LAMBDA & ? if
@@ -606,9 +602,9 @@ namespace: id
         idType idTypeAsNameContext
       end
     declaredAt errors checkIdentifier if
-      LABEL_ID_NONE ID_NONE_DATA true return
+      NAME_ID_NONE ID_NONE_DATA true return
     end
-    label
+    nameId
       name
       false
       idType
@@ -616,7 +612,7 @@ namespace: id
       context
       errors
     declareName .Redeclare .if =:: prevId
-      context .identifierData prevId .labelId map.at .else
+      context .identifierData prevId .nameId map.at .else
         "could not find previous id of redeclaration" ..panic
       end =:: prevDec
       prevId .aliasId NO_ALIAS == and
@@ -629,7 +625,7 @@ namespace: id
             prevDec [] .valueType  typeContext types.asUnlabeledProc
             types.typeEquals ! if
           "incompatible types for declaration and initialization of \"" sb.copyPtr
-            label labelContext sb.appendLabelPath
+            nameId labelContext sb.appendLabelPath
             "\":\n  * " sb.appendS
             prevDec [] .valueType typeContext sb.appendType
             " at " sb.appendS
@@ -637,11 +633,11 @@ namespace: id
             "\n  * " sb.appendS
             valType typeContext sb.appendType
           declaredAt errors appendError
-          LABEL_ID_NONE ID_NONE_DATA true return
+          NAME_ID_NONE ID_NONE_DATA true return
         end
         prevDec [] .idType idType != if
           "declaration and initialization of \"" sb.copyPtr
-            label labelContext sb.appendLabelPath
+            nameId labelContext sb.appendLabelPath
             "\" are not compatible expected: " sb.appendS
             prevDec [] .idType sb.appendIdType
             " ( declared at " sb.appendS
@@ -650,11 +646,11 @@ namespace: id
             " got: " sb.appendS
             idType sb.appendIdType
           declaredAt errors appendError
-          LABEL_ID_NONE ID_NONE_DATA true return
+          NAME_ID_NONE ID_NONE_DATA true return
         end
-        prevDec [] .labelId labelContext labelFlags flags != if
+        prevDec [] .nameId labelContext labelFlags flags != if
           "flags for declaration and initialization of \"" sb.copyPtr
-            label labelContext sb.appendLabelPath
+            nameId labelContext sb.appendLabelPath
             "\" differ: " sb.appendS
             ## TODO? print flags
             " ( declaration at " sb.appendS
@@ -669,7 +665,7 @@ namespace: id
           declaredAt prevDec .declaredAt=
           false prevDec .declarationOnly=
         end
-        prevDec [] .labelId prevDec [] false return
+        prevDec [] .nameId prevDec [] false return
       end
       prevId .aliasId NO_ALIAS == if
         prevDec [] .declaredAt
@@ -677,30 +673,30 @@ namespace: id
         prevId .aliasId context getAliasPos
       end =:: prevPos
       "re declaration of identifier \"" sb.copyPtr
-        label labelContext sb.appendLabelPath
+        nameId labelContext sb.appendLabelPath
         "\" ( previous declaration at " sb.appendS
         prevPos [] sb.appendPos
         " )" sb.appendS
       declaredAt errors appendError
-      LABEL_ID_NONE ID_NONE_DATA true return
+      NAME_ID_NONE ID_NONE_DATA true return
     else ..drop end
     ## IdentifierData
       valType
       constVal
       declaredAt
-      label
+      nameId
       index
       idType
       isInit !
     IdentifierData new =:: idData
     context .identifierData
-      label
+      nameId
       idData
     map.put ..drop ## previous entry is always empty
-    label idData false return
+    nameId idData false return
   end
   proc(
-    LabelId : srcId
+    NameId : srcId
     string : newName
     IdentifierType : idType
     FilePosition ptr : declaredAt
@@ -719,7 +715,7 @@ namespace: id
       errors
     declareName .Redeclare .if =:: prevId
       prevId .aliasId NO_ALIAS == if
-        context .identifierData prevId .labelId map.at .else
+        context .identifierData prevId .nameId map.at .else
           "could not find previous id of redeclaration" ..panic
         end [] .declaredAt
       else
@@ -763,20 +759,19 @@ namespace: id
     map.put ? ! "each itr-var has an unique id" assert
     idInfo return
   end
-  ## label varType pos idContext
   proc(
-    LabelId : label
+    NameId : nameId
     Type : varType
     FilePosition ptr : pos
     IdentifierContext ptr.mut : context
   -> ) =>: export: declareTmpVar
     context .identifierData
-      label
+      nameId
       ## IdentifierData
         varType
         ConstValue .None
         pos
-        label
+        nameId
         -1
         IdentifierType .TMP_VAR
         false
@@ -819,7 +814,7 @@ namespace: sb
   end
   proc( stringBuilder : sb IdentifierInfo : id LabelContext ptr : labelContext -> stringBuilder ) =>: export: appendIdInfo
     sb
-      id .labelId labelContext id.labelFlags >$
+      id .nameId labelContext id.labelFlags >$
         $1 id.FLAG_EXPORT & ? if
           "export: " sb.appendS
         end
@@ -837,54 +832,54 @@ namespace: sb
       id .idType switch
         TYPE case
           "type \"" sb.appendS
-          id .labelId labelContext sb.appendLabelPath
+          id .nameId labelContext sb.appendLabelPath
           "\"" sb.appendS
           return
         PROCEDURE case
           "procedure \"" sb.appendS
-          id .labelId labelContext sb.appendLabelPath
+          id .nameId labelContext sb.appendLabelPath
           "\"" sb.appendS
           return
         PROCEDURE_BUNDLE case
           "procedure bundle  \"" sb.appendS
-          id .labelId labelContext sb.appendLabelPath
+          id .nameId labelContext sb.appendLabelPath
           "\"" sb.appendS
           return
         GLOBAL_VAR case
           "global variable \"" sb.appendS
-          id .labelId labelContext sb.appendLabelPath
+          id .nameId labelContext sb.appendLabelPath
           "\"" sb.appendS
           return
         LABEL case
           "label \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
+          id .nameId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         LOCAL_VAR case
           "local variable: \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
+          id .nameId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         ARGUMENT case
           "procedure argument \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
+          id .nameId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         TMP_VAR case
           "temporary variable \"" sb.appendS
-          id .labelId labelContext sb.appendLabelName
+          id .nameId labelContext sb.appendLabelName
           "\"" sb.appendS
           return
         ITR_VAR case
           "iterator variable (" sb.appendS
-          id .labelId i64 cast sb.appendI
+          id .nameId i64 cast sb.appendI
           ")" sb.appendS
           return
       end
   end
 end
 namespace: id
-  proc( LabelId : name IdentifierContext ptr.mut : context -> ) =>: export: beginNamespace
+  proc( NameId : name IdentifierContext ptr.mut : context -> ) =>: export: beginNamespace
     context [] .prevNamespaces
       context [] .typeContext  .labelContext .namespaceInfo list.append
     context .prevNamespaces=
@@ -895,7 +890,7 @@ namespace: id
     context .typeContext  .labelContext .namespaceInfo .current=
   end
   proc(
-    LabelId : name
+    NameId : name
     string : nameAlias
     IdentifierContext ptr.mut : context
   -> bool ) =>: export: importNamespace
@@ -924,11 +919,11 @@ namespace: id
       "\" does not exist in the current scope" sb.appendS pos errors appendError
      true return
     end =:: target
-      target [] .labelId
+      target [] .nameId
       nameAlias .length 0:iSize != if
         nameAlias labelContext id.copyString ## create copy to ensure string stays alive
       else
-        target [] .labelId labelContext id.getLabelName
+        target [] .nameId labelContext id.getLabelName
           $ '.' string.lastIndexOf
         string.tail
       end

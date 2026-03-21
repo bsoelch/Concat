@@ -33,8 +33,8 @@ union(
   ConstValue slice : Array
   Type : TypeId
   _ : WildCard
-  LabelId : GenericArg
-  LabelId : GlobalPointer
+  NameId : GenericArg
+  NameId : GlobalPointer
   ProcId : Procedure
   ProcBundleId : ProcedureBundle
   UnionConstant : Union
@@ -533,7 +533,7 @@ namespace: sb
           ":ProcBundleId"  sb.appendS
           break
         GenericArg .case i64 cast sb.appendI
-          ":LabelId"  sb.appendS
+          ":NameId"  sb.appendS
           ## TODO? print label
           break
         GlobalPointer .case
