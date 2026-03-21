@@ -1219,7 +1219,7 @@ proc(
             hasStaticArg if
               ProcFlags.HAS_STATIC_ARG |
             else
-              ProcFlags.HAS_STATIC_ARG ~ ^
+              ProcFlags.HAS_STATIC_ARG ~ &
             end
           ## ^flags
         ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
