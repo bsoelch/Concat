@@ -126,14 +126,28 @@ namespace: StackValue
     end
   end
 end
+struct(
+  asm.RegisterId : reg
+  ValType : valType
+) =:: TypedReg
+namespace: TypedReg
+  proc( TypedReg -> TypedValue ) =>: asTypedValue
+    $ .reg asm.Value .Register >$ .valType TypedValue new
+  end
+end
 union(
   _ : None
-  asm.RegisterId : Register
+  TypedReg : Register
 ) =:: VariableCacheLocation
 struct(
   NameId : varId
   VariableCacheLocation : location
 ) =:: CachedVariable
+namespace: CachedVariable
+  proc( CachedVariable : a CachedVariable : b -> i32 ) =>: cmp
+    a .varId b .varId NameId.cmp
+  end
+end
 struct(
   StackValue slice.mut : stack
   CachedVariable slice.mut : cachedVars
@@ -188,7 +202,7 @@ struct(
 ) =:: RegisterInfo
 struct(
   asm.LocalVarId : varId
-  VariableCacheLocation : cachedValue ## TODO: support composite values that are only partially in register
+  VariableCacheLocation : cachedValue
   Type : variableType
   bool : isRead
 ) =:: VariableLocation
@@ -499,12 +513,16 @@ proc(
   StackValue : src
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opStoreLocal
+  context [] .program =:: program
+  program .idContext .typeContext =:: typeContext
   src .Val .else
     "unimplemented: multi-value store" ..panic
   end =:: srcVal
   context .variableInfo dst map.at .if =:: varInfo
     srcVal .value .Register .if
-      $ VariableCacheLocation .Register varInfo .cachedValue=
+      ## TypedReg
+        $ varInfo [] .variableType typeContext ValType.fromType
+      TypedReg new VariableCacheLocation .Register varInfo .cachedValue=
       dst ValueLocation .LocalVariable context addLocation
     else ..drop end
   end
@@ -526,12 +544,12 @@ proc(
   varInfo [] .variableType typeContext ValType.fromType =:: valType
   varInfo [] .cachedValue switch
     None case break
-    Register .case asm.Value .Register valType StackValue.val return
+    Register .case .reg asm.Value .Register valType StackValue.val return
   end
   true varInfo .isRead=
   valType context nextFreeRegister
     $ src ValueLocation .LocalVariable context addLocation
-    $ VariableCacheLocation .Register varInfo .cachedValue=
+    $ valType TypedReg new VariableCacheLocation .Register varInfo .cachedValue=
   asm.Value .Register =:: dstVal
   valType
     dstVal
@@ -700,6 +718,7 @@ proc(
       varName varInfo .cachedValue CachedVariable new list.append
     end
   =:: cachedVars
+  cachedVars CachedVariable.cmp@ list.sort
   context [] .stack list.asSlice slice.copy cachedVars list.asMutableSlice RegisterState new
 end
 proc(
@@ -750,6 +769,8 @@ proc(
   ValueLocation : location
   CompilerContext ptr.mut : context
 -> TypedValue optional ) =>: findStorageLocation
+  context [] .program =:: program
+  program .idContext .typeContext =:: typeContext
   location switch
     None case TypedValue optional.empty return
     Stack .case =:: index
@@ -767,7 +788,20 @@ proc(
         TypedValue optional.empty return
       end StackValue.get3
     return
-    LocalVariable GlobalVariable LocalMemory case
+    LocalVariable .case =:: varName ## TODO? split VariableLocation into 3 slots (for the up to 3 cache registers)
+      context .variableInfo varName map.get .else
+        TypedValue optional.empty return
+      end =:: varInfo
+      varInfo .cachedValue switch
+        None case
+          varName asm.LocalVarId cast.u 0 asm.localAddress
+            varInfo .variableType typeContext ValType.fromType
+          TypedValue new optional.wrap return
+        break
+        Register .case TypedReg.asTypedValue optional.wrap return
+      end
+    break
+    GlobalVariable LocalMemory case
       "unsupported value location" ..panic
   end
 end
@@ -792,7 +826,19 @@ proc(
         TypedValue optional.empty return
       end StackValue.get3
     return
-    LocalVariable GlobalVariable LocalMemory case
+    LocalVariable .case =:: nameId
+      targetState .cachedVars slice.freeze
+        nameId VariableCacheLocation .None CachedVariable new
+        CachedVariable.cmp@
+      slice.binarySearch .else
+        TypedValue optional.empty return
+      end targetState .cachedVars >$ [] .location =:: varLocation
+      varLocation switch
+        None case TypedValue optional.empty return
+        Register .case TypedReg.asTypedValue optional.wrap return
+      end
+    break
+    GlobalVariable LocalMemory case
       "unsupported value location" ..panic
   end
 end
