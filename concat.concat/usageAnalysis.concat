@@ -65,7 +65,7 @@ proc(
   0 =:: mut: offset
   ## create tmp-variables for named arguments
   inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
-    procType i typeContext types.getProcArgLabel =:: argName
+    procType i typeContext types.getProcArgName =:: argName
     inTypes i [] =:: eltType
     eltType typeContext types.isEmpty if continue end ## ignore empty arguments
     argName id.NAME_ID_NONE == if

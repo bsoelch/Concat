@@ -1195,7 +1195,7 @@ proc(
       0 =:: mut: floatCount
       inTypes .length 1 - while $ 0 iSize.sge do =:: i
         inTypes i [] typeContext ValType.fromType =:: argValType
-        procType i i32 cast.u typeContext types.getProcArgLabel =:: argLabel
+        procType i i32 cast.u typeContext types.getProcArgName =:: argName
         argValType ValType.isInt if
           intCount AMD64.reg.intArg .if
             argValType context setRegSize asm.Value .Register argValType StackValue.val
@@ -1213,8 +1213,8 @@ proc(
         else
           "unsupported valType" ..panic
         end =:: argValue
-        context .variableInfo argLabel map.at .if =:: argVar
-          argLabel argValue context opStoreLocal
+        context .variableInfo argName map.at .if =:: argVar
+          argName argValue context opStoreLocal
         else ## variable does not exist
           argValue context pushValue
         end

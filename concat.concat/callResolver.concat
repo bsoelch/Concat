@@ -167,7 +167,7 @@ proc(
       return
     Struct TaggedUnion RawUnion Enum Initializer case
       typeBuffer [] .length =:: typeOffset
-      nameBuffer [] .length =:: labelOffset
+      nameBuffer [] .length =:: nameOffset
       src typeContext types.compositeEltCount =:: eltCount
       eltCount for =:: i
         ## replaceGenerics
@@ -183,29 +183,29 @@ proc(
         typeBuffer []
           newElt list.append
         typeBuffer =[]
-        ## TODO? pass original labels instead of creating copy
+        ## TODO? pass original names instead of creating copy
         nameBuffer []
-          src i typeContext types.compositeGetLabel list.append
+          src i typeContext types.compositeGetEltName list.append
         nameBuffer =[]
       end
       src switch
         Struct case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
-            nameBuffer [] list.asSlice labelOffset slice.tail optional.wrap
+            nameBuffer [] list.asSlice nameOffset slice.tail optional.wrap
             typeContext
           types.newTuple break
         TaggedUnion RawUnion case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
-            nameBuffer [] list.asSlice labelOffset slice.tail
+            nameBuffer [] list.asSlice nameOffset slice.tail
             src .TaggedUnion ? if types.UnionType .TAGGED else types.UnionType .RAW end
             typeContext
           types.newUnion break
         Enum case
           ## newEnum
             Type optional.empty ## TODO preserve base-type
-            nameBuffer [] list.asSlice labelOffset slice.tail
+            nameBuffer [] list.asSlice nameOffset slice.tail
             typeContext
           types.newEnum break
         ## TODO update initializer type
@@ -216,59 +216,59 @@ proc(
         .else "failed to create composite-type" ..panic end
         ## reset buffer
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
-        nameBuffer [] labelOffset list.setLength nameBuffer =[]
+        nameBuffer [] nameOffset list.setLength nameBuffer =[]
       return
     ## TODO implement replace-generic for union-elements
     UnionElement case "unimplemented: generic union-element check" ..panic
     Procedure case
       src typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
       src typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
-      src typeContext types.getProcLabels =:: oldLabels
-      0:iSize =:: mut: labelIndex
+      src typeContext types.getProcEltNames =:: oldNames
+      0:iSize =:: mut: nameIndex
       typeBuffer [] .length =:: typeOffset
-      nameBuffer [] .length =:: labelOffset
+      nameBuffer [] .length =:: nameOffset
       inTypes for =:: inType
         inType typeBuffer nameBuffer genericValues flags pos typeChecker replaceGenerics =:: newArg
         flags ReplaceFlags.IGNORE_EMPTY & ? and newArg typeContext types.isEmpty if
           continue
         end
         ## ! cannot use buffer on stack when pointer to buffer is pssed to child
-        labelIndex oldLabels .length u< if
+        nameIndex oldNames .length u< if
           nameBuffer []
-            oldLabels labelIndex [] list.append
+            oldNames nameIndex [] list.append
           nameBuffer =[]
         end
         typeBuffer []
           newArg list.append
         typeBuffer =[]
-      finally labelIndex 1:iSize + labelIndex= end
+      finally nameIndex 1:iSize + nameIndex= end
       typeBuffer [] .length =:: outTypesOffset
       outTypes for =:: outType
         outType typeBuffer nameBuffer genericValues flags pos typeChecker replaceGenerics =:: newRes
         flags ReplaceFlags.IGNORE_EMPTY & ? and newRes typeContext types.isEmpty if
           continue
         end
-        labelIndex oldLabels .length u< if
+        nameIndex oldNames .length u< if
           nameBuffer []
-            oldLabels labelIndex [] list.append
+            oldNames nameIndex [] list.append
           nameBuffer =[]
         end
         typeBuffer []
           newRes list.append
         typeBuffer =[]
-      finally labelIndex 1:iSize + labelIndex= end
+      finally nameIndex 1:iSize + nameIndex= end
       ## newProcedure
         typeBuffer [] typeOffset outTypesOffset $1 - list.getSlice
         typeBuffer [] list.asSlice outTypesOffset slice.tail
-        ## TODO? reuse old labels if there was no change
-        nameBuffer [] list.asSlice labelOffset slice.tail
+        ## TODO? reuse old names if there was no change
+        nameBuffer [] list.asSlice nameOffset slice.tail
         src typeContext types.getCallConvention
         typeContext
       types.newProcedure
         .else "failed to create procedure-type" ..panic end
         ## reset buffers
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
-        nameBuffer [] labelOffset list.setLength nameBuffer =[]
+        nameBuffer [] nameOffset list.setLength nameBuffer =[]
       return
     GeneratedType case
       src typeContext types.getGeneratorArgs =:: args
@@ -294,7 +294,7 @@ proc(
           end list.append
         argBuffer =[]
       end
-      src typeContext types.getGeneratorLabel =:: generatorName
+      src typeContext types.getGeneratorName =:: generatorName
       argBuffer [] list.asSlice argOffset slice.tail =:: generatorArgs
       ##findGeneratedType
         generatorName
@@ -585,8 +585,8 @@ proc(
       ## src has to be a compatible generated type
       src types.isGeneratedType ! if
         true return
-      else src typeContext types.getGeneratorLabel
-           target typeContext types.getGeneratorLabel != _if
+      else src typeContext types.getGeneratorName
+           target typeContext types.getGeneratorName != _if
         true return
       end
       src typeContext types.getGeneratorArgs =:: srcArgs
@@ -846,7 +846,7 @@ proc(
         current [] .paramInfo .length -
       i32 cast.u =:: mut: paramIndex
       inTypes paramIndex [] =:: mut: paramType
-      procType paramIndex typeContext types.getProcArgLabel =:: mut: paramLabel
+      procType paramIndex typeContext types.getProcArgName =:: mut: paramName
       ## XXX? allow passing arrays as individual elements
       while ## skip empty parameters if stack-value is non-empty
         paramType typeContext types.isEmpty or
@@ -866,8 +866,8 @@ proc(
             ParameterInfo new list.append
           current .paramInfo=
           paramIndex 1 - paramIndex=
-        else paramLabel nameContext id.identifierFlags id.FLAG_AUTO & ? and
-            current .genericValues paramLabel map.at .and =:: autoValue
+        else paramName nameContext id.identifierFlags id.FLAG_AUTO & ? and
+            current .genericValues paramName map.at .and =:: autoValue
             autoValue [] .NonEmpty ? ! _if
           autoValue [] switch
             Fixed Value .case break
@@ -884,7 +884,7 @@ proc(
           ## convert literal types to corresponding base types
           value .TypeId .and types.isLiteral if
             current .genericValues
-              paramLabel
+              paramName
               value typeContext decayLiteralTypeConstant GenericArg .Fixed
             map.put ..drop
           end
@@ -904,7 +904,7 @@ proc(
         end
       paramIndex 0 >= do
         inTypes paramIndex [] paramType=
-        procType paramIndex typeContext types.getProcArgLabel paramLabel=
+        procType paramIndex typeContext types.getProcArgName paramName=
       end
       paramIndex 0 < if
         false current .needsParam=
@@ -939,13 +939,13 @@ proc(
         map.put ..drop
       end
       stackValues stackIndex @[] .value [] =:: stackVal
-      paramLabel nameContext id.identifierFlags id.FLAG_STATIC & ? or
+      paramName nameContext id.identifierFlags id.FLAG_STATIC & ? or
           paramType typeContext types.isType or stackVal .TypeId ? if
         stackVal .None ? if
           false current .argsMatch=
         end
-        paramLabel id.NAME_ID_NONE != and
-            current .genericValues paramLabel map.at .and =:: prevVal
+        paramName id.NAME_ID_NONE != and
+            current .genericValues paramName map.at .and =:: prevVal
           prevVal [] switch
             NonEmpty case
               stackVal .TypeId .and typeContext types.isEmpty end
@@ -955,7 +955,7 @@ proc(
           false current .argsMatch=
         else
           current .genericValues
-            paramLabel $ id.NAME_ID_NONE == if ..drop
+            paramName $ id.NAME_ID_NONE == if ..drop
               -2 paramIndex - NameId cast.s
             end
             stackVal GenericArg .Fixed
@@ -1139,10 +1139,10 @@ proc(
   inTypes .length i32 cast.u =:: eltCount
   eltCount ConstValue list.create =:: mut: constArgs
   0:i32 while ..dup eltCount < do =:: i
-    procType i typeContext types.getProcArgLabel =:: eltLabel
-    eltLabel nameContext id.identifierFlags id.FLAG_STATIC & ? if
+    procType i typeContext types.getProcArgName =:: eltName
+    eltName nameContext id.identifierFlags id.FLAG_STATIC & ? if
       constArgs
-        candidate .genericValues eltLabel getValueOrNone list.append
+        candidate .genericValues eltName getValueOrNone list.append
       constArgs=
     else inTypes i [] =:: eltType
         eltType types.primitive.TYPE typeContext types.canAutoCast _if
@@ -1237,11 +1237,11 @@ proc(
     list.clear
   constArgs=
   eltCount for =:: i
-    procType i typeContext types.getProcArgLabel =:: eltLabel
-    eltLabel nameContext id.identifierFlags =:: flags
+    procType i typeContext types.getProcArgName =:: eltName
+    eltName nameContext id.identifierFlags =:: flags
     true =:: mut: needArg
     flags id.FLAG_AUTO & ? if
-      candidate .genericValues eltLabel getValueOrNone =:: value
+      candidate .genericValues eltName getValueOrNone =:: value
       value .None ? ! if
         false needArg=
       end
@@ -1249,7 +1249,7 @@ proc(
       value .TypeId .and =:: typeVal
           typeVal types.isLiteral if
         candidate .genericValues
-          eltLabel
+          eltName
           typeVal typeContext types.literalToType ConstValue .TypeId GenericArg .Fixed
         map.put ..drop
       end
@@ -1275,7 +1275,7 @@ proc(
          newElt list.append
       typeBuffer=
       nameBuffer
-        eltLabel list.append
+        eltName list.append
       nameBuffer=
     end
   end
@@ -1300,7 +1300,7 @@ proc(
     typeBuffer
       newOut list.append
     typeBuffer=
-    ## TODO? ensure out-labels are preserved
+    ## TODO? ensure out-names are preserved
   end
   ## newProcedure
     typeBuffer list.asSlice inTypeCount slice.head

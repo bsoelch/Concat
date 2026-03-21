@@ -103,19 +103,19 @@ proc(
   0 =:: mut: offset
   ## create tmp-variables for named arguments
   inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
-    procType i typeContext types.getProcArgLabel =:: argLabel
+    procType i typeContext types.getProcArgName =:: argName
     inTypes i [] =:: eltType
     eltType typeContext types.isEmpty if continue end ## ignore empty arguments
-    argLabel id.NAME_ID_NONE == if
+    argName id.NAME_ID_NONE == if
       offset 1 + offset=
-    else argLabel nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
+    else argName nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
       offset 0 != if
         ## rotate labeled argument to top
         offset StackModType .ROTATE pos opStackMod list.append
       end
-      eltType argLabel nameContext id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
+      eltType argName nameContext id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
       eltType tmpId pos opInitializeId list.append
-      remapIds@ argLabel tmpId map.put optional.isEmpty "label-value only reassigned once" assert
+      remapIds@ argName tmpId map.put optional.isEmpty "label-value only reassigned once" assert
     end
   finally i 1 - end ..drop
   procOps 1:iSize $1 .length 2:iSize - slice.getSlice
@@ -260,7 +260,7 @@ proc(
       args .length i32 cast.u =:: argCount
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
-          op .dataType i typeContext types.getProcArgLabel =:: argName
+          op .dataType i typeContext types.getProcArgName =:: argName
           argName id.NAME_ID_NONE == or argName nameContext id.identifierFlags id.FLAG_STATIC & ? if
             continue
           end

@@ -531,10 +531,10 @@ proc(
   newProcType typeContext types.getProcIn .else Type slice.empty end =:: inTypes
   newProcType typeContext types.getProcOut .else Type slice.empty end =:: outTypes
   procInfo [] .flags
-    inTypes newProcType typeContext types.getProcArgLabels typeContext hasStaticElement if
+    inTypes newProcType typeContext types.getProcArgNames typeContext hasStaticElement if
       ProcFlags.HAS_STATIC_ARG |
     end
-    outTypes newProcType typeContext types.getProcRetLabels typeContext hasStaticElement or
+    outTypes newProcType typeContext types.getProcRetNames typeContext hasStaticElement or
         procInfo [] .nameId typeContext .nameContext id.identifierFlags id.FLAG_STATIC & ? if
       ProcFlags.IS_STATIC |
     end
@@ -564,8 +564,8 @@ proc(
   procType typeContext types.getProcOut .else
     Type slice.empty
   end =:: outTypes
-  inTypes procType typeContext types.getProcArgLabels typeContext hasStaticElement =:: hasStaticArg
-  outTypes procType typeContext types.getProcRetLabels typeContext hasStaticElement
+  inTypes procType typeContext types.getProcArgNames typeContext hasStaticElement =:: hasStaticArg
+  outTypes procType typeContext types.getProcRetNames typeContext hasStaticElement
     procName nameContext id.identifierFlags id.FLAG_STATIC & ? |
   =:: isStatic
   progContext [] .programMemory

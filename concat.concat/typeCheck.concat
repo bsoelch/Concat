@@ -1367,15 +1367,15 @@ proc(
     procArgIndex iSize cast.u inTypes .length u>= if
       "const-args out of sync with proc-signature":s pos ..line internalErrorNoOp ..unreachable
     end
-    calledType procArgIndex typeContext types.getProcArgLabel =:: mut: eltLabel
+    calledType procArgIndex typeContext types.getProcArgName =:: mut: eltName
     inTypes procArgIndex [] =:: mut: argType
     ## skip auto-args
     while
-      eltLabel nameContext id.identifierFlags id.FLAG_AUTO & ? or
+      eltName nameContext id.identifierFlags id.FLAG_AUTO & ? or
       argType typeContext types.isEmpty
     do
       procArgIndex 1 + procArgIndex=
-      calledType procArgIndex typeContext types.getProcArgLabel eltLabel=
+      calledType procArgIndex typeContext types.getProcArgName eltName=
       inTypes procArgIndex [] argType=
     end
     isTypeGenerator if
@@ -1387,13 +1387,13 @@ proc(
           argValue .TypeId .and typeContext types.containsGeneric if
         true isGenericTypeGen=
       end
-      eltLabel nameContext id.identifierFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
+      eltName nameContext id.identifierFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
         "Arguments for Type-generators should be static" sb.copyPtr
-        eltLabel nameContext id.identifierPos .else pos end errors appendError
+        eltName nameContext id.identifierPos .else pos end errors appendError
       end
     end
     argType typeContext types.isEmpty or isCodeImpl and
-        eltLabel nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+        eltName nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
       continue
     end
     argCount argIndex != if
@@ -1724,9 +1724,9 @@ proc(
   inTypes .length =:: argCount
   0 =:: mut: offset
   argCount 1 - while $ 0 iSize.sge do =:: i
-    calledType i i32 cast.u typeContext types.getProcArgLabel =:: eltLabel
+    calledType i i32 cast.u typeContext types.getProcArgName =:: eltName
     inTypes i [] =:: elt
-    eltLabel nameContext id.identifierFlags id.FLAG_STATIC & ? if
+    eltName nameContext id.identifierFlags id.FLAG_STATIC & ? if
       ## remove static arguments from stack
       state .stack branchTree.pop optional.unwrap =:: opData
       opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
@@ -1810,7 +1810,7 @@ namespace: typeChecker
     args .length StackValue list.create =:: mut: stackValues
     0 =:: mut: argIndex
     args for =:: arg
-      while procType argIndex typeContext types.getProcArgLabel nameContext id.identifierFlags id.FLAG_AUTO & ? do
+      while procType argIndex typeContext types.getProcArgName nameContext id.identifierFlags id.FLAG_AUTO & ? do
         argIndex 1 + argIndex=
       end
       stackValues
@@ -2030,7 +2030,7 @@ proc(
           1 StackModType .ROTATE pos opStackMod state appendOp ..drop
           srcType 0 pos opSetElement state appendOp ..drop
         end
-        containerType typeContext types.enumLabelInfo ..drop =:: labelType
+        containerType typeContext types.enumTagInfo ..drop =:: labelType
         elementIndex i64 cast.u ConstValue .Int labelType pos opConst state appendOp ..drop
       end
       1 StackModType .ROTATE pos opStackMod state appendOp ..drop
@@ -2143,7 +2143,7 @@ proc(
             switchType
             label .Int .else
               "expected int":s pos ..line internalErrorNoOp ..unreachable
-            end i32 cast.u typeContext types.compositeGetLabel
+            end i32 cast.u typeContext types.compositeGetEltName
             nameContext
           sb.appendIdentifierName
         else
@@ -2275,12 +2275,12 @@ proc(
     op [] .pos errors appendError
     true return
   end =:: nameId
-  ## compositeFindLabel
+  ## compositeFindName
     switchType $ typeContext types.isTaggedUnion if
       typeContext types.asRawUnion optional.unwrap
     end
     nameId
-  typeContext types.compositeFindLabel .else
+  typeContext types.compositeFindName .else
     "enum " sb.copyPtr
       switchType typeContext sb.appendType
       " does not have a label " sb.appendS
@@ -3327,11 +3327,11 @@ proc(
             typeContext types.asRawUnion optional.unwrap
           end
         =:: innerContainerType
-        ## compositeFindLabel
+        ## compositeFindName
           innerContainerType
           nameId
           typeContext
-        types.compositeFindLabel .else
+        types.compositeFindName .else
           accessType .CHECK if
             ## label does not exists
             1 op .pos state discardValues ## remove container
@@ -3346,7 +3346,7 @@ proc(
           op .pos errors appendError
           continue.opLoop
         end =:: elementIndex
-        innerContainerType elementIndex typeContext types.compositeGetLabel =:: elementLabel
+        innerContainerType elementIndex typeContext types.compositeGetEltName =:: elementName
         innerContainerType elementIndex typeContext types.compositeGetElement =:: eltType
         isWrite ! and isType ! and accessType .GET if
           containerType typeContext types.isEnum if
@@ -3379,7 +3379,7 @@ proc(
             continue.opLoop
           end
           state .stack branchTree.pop ..drop ## remove container from stack
-          containerType typeContext types.enumLabelInfo ..drop
+          containerType typeContext types.enumTagInfo ..drop
             typeContext types.unwrapNamed
           =:: enumLabelType
           ## check enum label
@@ -3488,7 +3488,7 @@ proc(
             containerType typeContext types.isTaggedUnion if
               ## pushConstant
                 elementIndex i64 cast.u ConstValue .Int
-                containerType typeContext types.enumLabelInfo ..drop
+                containerType typeContext types.enumTagInfo ..drop
                 op .pos
               state pushConstant
               state .stack branchTree.pop ..drop ## remove label from stack
@@ -3520,13 +3520,13 @@ proc(
         end =:: label
         label [] .valueType =:: enumType
         enumType typeContext types.isEnum if
-          enumType typeContext types.enumLabelInfo ..drop label .valueType=
+          enumType typeContext types.enumTagInfo ..drop label .valueType=
           continue.opLoop
         else enumType typeContext types.isType and label .value .TypeId .and [] =:: unionEltType
             unionEltType typeContext types.isUnionElement _if
           1 op .pos state discardValues ## remove type from stack
           unionEltType typeContext types.getUnionElementIndex i64 cast.u ConstValue .Int
-            unionEltType typeContext types.enumLabelInfo ..drop
+            unionEltType typeContext types.enumTagInfo ..drop
             op .pos
           state pushConstant
           continue.opLoop
@@ -3544,7 +3544,7 @@ proc(
             typeContext types.getUnionElementUnion optional.unwrap
           end
         1 op .pos opGetElement op=
-        enumType typeContext types.enumLabelInfo ..drop ConstValue .None op state pushValue
+        enumType typeContext types.enumTagInfo ..drop ConstValue .None op state pushValue
         continue.opLoop
       SetUnionElement case
         break
@@ -4105,7 +4105,7 @@ proc(
             $ =:: switchValueType
               $ typeContext types.isTaggedUnion =:: isTaggedUnion
               $ typeContext types.isEnumOrTaggedUnion if
-                typeContext types.enumLabelInfo ..drop
+                typeContext types.enumTagInfo ..drop
               end
             =:: labelType
             isTaggedUnion if
@@ -4708,10 +4708,10 @@ proc(
                     elt program sb.appendOp
                   op .pos errors appendError
                 continue
-              end =:: eltLabel
-              eltLabel idContext id.findIdentifier if ..drop
+              end =:: eltName
+              eltName idContext id.findIdentifier if ..drop
                 "could not find identifier \"" sb.copyPtr
-                  eltLabel nameContext sb.appendIdentifierPath
+                  eltName nameContext sb.appendIdentifierPath
                   '"' sb.appendC
                 op .pos errors appendError
                 continue
@@ -4927,11 +4927,11 @@ proc(
                         rawSwitchType
                           i i32 cast.u
                           typeContext
-                        types.compositeGetLabel =:: label
+                        types.compositeGetEltName =:: eltName
                         " - \"" sb.appendS
-                        label nameContext sb.appendIdentifierPath
+                        eltName nameContext sb.appendIdentifierPath
                         "\" declaredAt"  sb.appendS
-                        label nameContext id.identifierPos .if
+                        eltName nameContext id.identifierPos .if
                           [] sb.appendPos
                         else
                           "?" sb.appendS
@@ -5708,7 +5708,7 @@ proc(
     0:i32 =:: mut: staticArgCount
     ## TODO? clear/reset argument map
     0:i32 while $ iSize cast.u inTypes .length u< do =:: i
-      currentProc [] .procType i typeContext types.getProcArgLabel =:: nameId
+      currentProc [] .procType i typeContext types.getProcArgName =:: nameId
       inTypes i [] =:: argType
       nameId nameContext id.identifierFlags id.FLAG_STATIC & ? or
           argType typeContext types.isType if
@@ -5775,9 +5775,9 @@ proc(
   end =:: argTypes
   ## push unnamed arguments
   0:i32 while $ iSize cast.u argTypes .length u< do =:: i
-    procType i typeContext types.getProcArgLabel =:: label
+    procType i typeContext types.getProcArgName =:: argName
     argTypes i [] =:: argType
-    label id.NAME_ID_NONE == if ## push argument
+    argName id.NAME_ID_NONE == if ## push argument
       state .stack
         ## TypeInfo
           argType typeContext types.isType and
@@ -5796,7 +5796,7 @@ proc(
         TypeInfo new
       branchTree.push
     else
-      label
+      argName
         argType
         IdentifierType .ARGUMENT
         i i32 cast ## index
@@ -5807,7 +5807,7 @@ proc(
         program .errors
       id.declareIdentifier if
         "could not declare identifier for argument " sb.copyPtr
-          label nameContext sb.appendIdentifierName
+          argName nameContext sb.appendIdentifierName
         procPos program .errors appendError
       end ..drop.2
     end

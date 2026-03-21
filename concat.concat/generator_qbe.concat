@@ -128,7 +128,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       end
       break
     IntLiteral .case types.intLiteralAsInt context toValType return
-    Enum case t typeContext types.enumLabelInfo ..drop context toValType return
+    Enum case t typeContext types.enumTagInfo ..drop context toValType return
     CType .case types.cTypeAsType context toValType return
     Pointer MutablePointer RawPointer MutableRawPointer case
       ValType .PTR return
@@ -562,7 +562,7 @@ namespace: sb
         break
       Enum case
         sb
-          t typeContext types.enumLabelInfo ..drop
+          t typeContext types.enumTagInfo ..drop
           storeType pos context
         appendTypeNameQBE return
       SetType RefinementType case
@@ -641,7 +641,7 @@ namespace: sb
             pos errors appendError
           end
         end
-        procType i typeContext types.getProcArgLabel =:: label
+        procType i typeContext types.getProcArgName =:: label
         arg typeContext types.isEmpty if
           ## skip empty arguments
           continue
@@ -655,7 +655,7 @@ namespace: sb
         true hasArgs=
         arg StorageType .LOAD pos context appendTypeNameQBE
         ' ' sb.appendC
-        i procType i typeContext types.getProcArgLabel context appendArgName
+        i procType i typeContext types.getProcArgName context appendArgName
       finally i 1 - end ..drop
       ")" sb.appendS
     return
@@ -803,7 +803,7 @@ namespace: sb
           else
             t
               $ typeContext types.isEnum if
-                typeContext types.enumLabelInfo ..drop
+                typeContext types.enumTagInfo ..drop
               end
             .CType .if types.cTypeAsType else
             .IntLiteral ._if types.intLiteralAsInt end
@@ -1183,7 +1183,7 @@ namespace: sb
     t typeContext types.isEnum if
       sb
         ## appendTypeNameQBE
-          t typeContext types.enumLabelInfo ..drop
+          t typeContext types.enumTagInfo ..drop
           StorageType .STORE
           pos
         context sb.appendTypeNameQBE
@@ -1339,7 +1339,7 @@ proc(
   context [] .currentProc
     nameId
     typeContext
-  types.findProcArgLabel .if =:: index
+  types.findProcArgName .if =:: index
     ## appendArgName
       index
       nameId
@@ -1869,7 +1869,7 @@ proc(
   typeContext .nameContext =:: nameContext
   opType typeContext types.getProcIn optional.unwrap =:: inTypes
   inTypes .length 0:iSize != if
-    opType 0 typeContext types.getProcArgLabel
+    opType 0 typeContext types.getProcArgName
         nameContext id.identifierFlags id.FLAG_STATIC & ? if
       1:i32
     else
@@ -2789,7 +2789,7 @@ proc(
     context [] .currentProc
       genArg
       typeContext
-    types.findProcArgLabel .if =:: index
+    types.findProcArgName .if =:: index
       context [] .currentProc typeContext types.getProcIn optional.unwrap index [] srcType=
       srcType typeContext types.unwrapNamed
         constType typeContext types.unwrapNamed
@@ -3040,12 +3040,12 @@ proc(
         ## push unnamed arguments
         op [] .dataType typeContext types.getProcIn optional.unwrap =:: args
         0:i32 while $ iSize cast.u args .length u< do =:: i
-          op [] .dataType i typeContext types.getProcArgLabel =:: label
+          op [] .dataType i typeContext types.getProcArgName =:: argName
           args i [] =:: argType
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
-          label nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+          argName nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
             i 1 + continue ## skip static arguments
           end
           argType context referenceOnly if
@@ -3053,7 +3053,7 @@ proc(
           else
             argType context toValType
           end =:: valType
-          label id.NAME_ID_NONE == if ## push argument
+          argName id.NAME_ID_NONE == if ## push argument
             "%s" sb.appendS
             valType context pushValue sb.appendI
             " =" sb.appendS
@@ -3063,7 +3063,7 @@ proc(
             '\n' sb.appendC
           else valType .REFERENCE _if
             "%l" sb.appendS
-            label i64 cast sb.appendI
+            argName i64 cast sb.appendI
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
@@ -3071,7 +3071,7 @@ proc(
             '\n' sb.appendC
           else
             "%l" sb.appendS
-            label i64 cast sb.appendI
+            argName i64 cast sb.appendI
             " =l alloc" sb.appendS
             argType op [] .pos context typeAlignmentInt 4 i64.max sb.appendI
             ' ' sb.appendC
@@ -3081,7 +3081,7 @@ proc(
             ' ' sb.appendC
             i id.NAME_ID_NONE context sb.appendArgName
             ", %l" sb.appendS
-            label i64 cast sb.appendI
+            argName i64 cast sb.appendI
             '\n' sb.appendC
           end
           i 1 +
@@ -3512,11 +3512,11 @@ proc(
       ## index of current auto-argument
       0:i32 while $ argCount i32 cast.u < do =:: i
         inTypes i [] =:: mut: arg
-        calledType i typeContext types.getProcArgLabel =:: argLabel
+        calledType i typeContext types.getProcArgName =:: argName
         arg typeContext types.isEmpty if
           i 1 + continue ## skip empty arguments
         end
-        argLabel nameContext id.identifierFlags =:: argFlags
+        argName nameContext id.identifierFlags =:: argFlags
         argFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
           i 1 + continue ## skip static arguments
         end

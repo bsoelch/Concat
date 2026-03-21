@@ -1913,7 +1913,7 @@ namespace: interpreter
       valInfos nArgs [] .valueType typeContext types.isEnum and
           eltType typeContext types.isEnum ! if
         valInfos nArgs [] .valueType
-          typeContext types.enumLabelInfo ..drop
+          typeContext types.enumTagInfo ..drop
         valInfos nArgs @[] .valueType=
       end
       valInfos nArgs [] .valueType typeContext types.unwrapNamed
@@ -2125,8 +2125,8 @@ namespace: interpreter
     procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
     0:iSize ## XXX? is there a better way to get number of non-auto static args
       args .length i32 cast.u for =:: i
-        procType i typeContext types.getProcArgLabel =:: label
-        label nameContext id.identifierFlags =:: flags
+        procType i typeContext types.getProcArgName =:: argName
+        argName nameContext id.identifierFlags =:: flags
         flags id.FLAG_STATIC & ? or
             args i [] typeContext types.isType if
           1:iSize +
@@ -2173,7 +2173,7 @@ namespace: interpreter
     newVariables optional.wrap context .localVariables=
     ## process procedure arguments
     0:i32 while $ args .length i32 cast < do =:: i
-      procType i typeContext types.getProcArgLabel =:: nameId
+      procType i typeContext types.getProcArgName =:: nameId
       nameId nameContext id.identifierFlags =:: identifierFlags
       identifierFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         codeImpl .genericInfo .ImplInfo .else
