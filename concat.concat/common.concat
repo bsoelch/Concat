@@ -116,6 +116,9 @@ struct( ## TODO? use low 3 bits of pointer to store important info (isStatic/isB
   ProcedureInfo ptr.mut : Data
 ) =:: export: ProcId
 namespace: ProcId
+  proc( ProcId : a  ProcId : b -> bool ) =>: export: eq
+    a .Data b .Data ptr.eq return
+  end
   proc( ProcId : a  ProcId : b -> i32 ) =>: export: cmp
     a .Data b .Data ptr.cmp return
   end

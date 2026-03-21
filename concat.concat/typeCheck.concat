@@ -5755,7 +5755,7 @@ proc(
   currentProc [] .nameId nameContext id.inIdentifierNamespace
   idContext id.currentScope =:: prevScope
   currentProc [] .scopeId idContext id.setScope
-  idContext id.openScope
+  procId optional.wrap idContext id.openProcScope
   currentProc [] .procType =:: procType
   procType optional.wrap state .currentProcType=
   ## opImplementProc

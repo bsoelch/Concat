@@ -176,18 +176,21 @@ namespace: id
   proc( ScopeId : scopeId IdentifierContext ptr.mut : context -> ) =>: export: setScope
     scopeId context .currentScopeId=
   end
-  proc( IdentifierContext ptr.mut : context -> ) =>: export: openScope
+  proc( ProcId optional : newProc IdentifierContext ptr.mut : context -> ) =>: export: openProcScope
     context [] .scopes context [] .currentScopeId getScopeData =:: parentScope
     context [] .scopes
       $ .length ScopeId cast =:: newScopeId
         context [] .currentScopeId
-          parentScope [] .currentProc
+          newProc ? if newProc else parentScope [] .currentProc end
           context [] .typeContext .nameContext .namespaceInfo .imports
           parentScope [] .visibleFiles
         newScope
       list.append
     context .scopes=
     newScopeId context .currentScopeId=
+  end
+  proc( IdentifierContext ptr.mut : context -> ) =>: export: openScope
+    ProcId optional.empty context openProcScope
   end
   proc(
     IdentifierContext ptr.mut : context
@@ -243,6 +246,7 @@ namespace: id
     end =:: path =:: name
     NameInfo : idNameInfo
     ## 1. search in current scopes
+    context [] .scopes scopeId getScopeData [] .currentProc =:: currentProc?
     mNamespace path  context .typeContext .nameContext findNamespace relSpace=
     name relSpace scopeId IdentifierName new =:: mut: idName
     relSpace NAMESPACE_ID_NONE != if
@@ -375,14 +379,18 @@ namespace: id
   proc(
     NameId : nameId
     IdentifierContext ptr.mut : context
-  -> IdentifierData ptr.mut bool ) =>: export: findIdentifier
+  -> IdentifierData ptr.mut bool ) =>: export: findIdentifier ## TODO return union( data : Ok data : Curry string : Err )
     ## searchIdentifier
       nameId context .typeContext  .nameContext id.getIdentifierName
       true
       context
       IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError .nameId =:: label ..drop
-    label context getIdentifier isError | return
+    searchIdentifier =:: isError .nameId =:: label
+      context [] .scopes >$ .scope getScopeData [] .currentProc .and =:: scopeProc
+        context [] .scopes context [] .currentScopeId getScopeData [] .currentProc .and =:: currentProc
+        scopeProc currentProc ProcId.eq !
+      end =:: isCurry
+    label context getIdentifier isError | isCurry | return
   end
   ## unlike `findIdentifier` this procedure also find invisible identifiers
   proc(
