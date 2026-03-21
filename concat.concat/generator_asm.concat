@@ -1467,8 +1467,8 @@ proc(
     ## post-processing (proc-header / update references / proc epilogoue)
     0:iSize =:: mut: offset
     ## TODO use more efficient variable allocation order
-    ## TODO omit variables that are never read
     context .variableInfo map.atItr for [] =:: varId =:: varInfo
+      varInfo [] .isRead ! if continue end ## skip variables that are never read
       varInfo [] .variableType typeContext types.alignOf .Fixed .else
         "only fixed alignment is supported" ..panic
       end iSize cast.u =:: align
@@ -1485,30 +1485,37 @@ proc(
       offset=
     end
     procOps for
+        true context .reachable= ## use 'reachable' as error indicator for mapping
         ( asm.Operand CompilerContext ptr.mut : shadow: context -> asm.Operand ) =>
           .LocalAddress .if =:: localAddress
             AMD64.reg.RBP
               localAddress .offset
               context .variableInfo localAddress .varId NameId cast map.get .and .varOffset .else
-                "missing variable-offset" ..panic
+                false context .reachable= 0 ## no address exists -> ignore operation
               end -
             asm.RegisterAddress new asm.Operand .RegisterAddress
           end
         end
         context
       asm.mapOperands =:: op
+      context [] .reachable ! if continue end ## skip operations that have argument error
       op asm.isEnter .if
-        ## TODO! ensure callee-saved registers are presered
+        ## TODO! ensure callee-saved registers are preserved
         asm.globalLabel list.append
-        AMD64.op.PUSH AMD64.reg.RBP asm.op1 list.append
-        AMD64.op.MOV AMD64.reg.RBP AMD64.reg.RSP asm.op2 list.append
         offset 0 != if
-          AMD64.op.SUB AMD64.reg.RSP offset i64 cast.u asm.op2 list.append
+          AMD64.op.PUSH AMD64.reg.RBP asm.op1 list.append
+          offset 8 + offset=
+          AMD64.op.MOV AMD64.reg.RBP AMD64.reg.RSP asm.op2 list.append
+          AMD64.op.SUB AMD64.reg.RSP
+            offset 15 + -16 & i64 cast.u ## align to 16 bytes
+          asm.op2 list.append
         end
         continue
       else op asm.isLeave _if
-        AMD64.op.MOV AMD64.reg.RSP AMD64.reg.RBP asm.op2 list.append
-        AMD64.op.POP AMD64.reg.RBP asm.op1 list.append
+        offset 0 != if
+          AMD64.op.MOV AMD64.reg.RSP AMD64.reg.RBP asm.op2 list.append
+          AMD64.op.POP AMD64.reg.RBP asm.op1 list.append
+        end
         AMD64.op.RET asm.op0 list.append
         continue
       else op asm.isEndProc _if
