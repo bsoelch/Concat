@@ -264,6 +264,16 @@ namespace: map
   ( type : K type : V -> type ) =>: Iterator
     struct( K V hashMap ptr : map i32 : mut: index NodeId : mut: next )
   end
+  ( type : K type : V -> type ) =>: AtIterator
+    K V Iterator
+  end
+  proc(
+    type : auto: K
+    type : auto: V
+    K V hashMap ptr.mut
+  -> K V AtIterator ) =>: export: atItr
+    itr.prepare K V AtIterator cast
+  end
   namespace: itr
     proc(
       type : auto: K
@@ -351,20 +361,51 @@ namespace: map
           step
         val return
     end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V AtIterator
+    -> K V AtIterator ) =>: prepareAt end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V AtIterator
+    -> bool ) =>: checkAt
+      K V Iterator cast check
+    end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V AtIterator
+    -> V ptr.mut K ptr ) =>: getAt
+      K V Iterator cast getAddr
+    end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V AtIterator
+    -> K V AtIterator ) =>: stepAt
+      K V Iterator cast step K V AtIterator cast
+    end
+    proc(
+      type : auto: K
+      type : auto: V
+      K V AtIterator : itr
+    -> ) =>: export: endAt end
   end
 end
 overload: export: ..itr.prepare
-  map.itr.prepare
+  map.itr.prepare map.itr.prepareAt
 end
 overload: export: ..itr.check
-  map.itr.check
+  map.itr.check map.itr.checkAt
 end
 overload: export: ..itr.get
-  map.itr.getEntry
+  map.itr.getEntry map.itr.getAt
 end
 overload: export: ..itr.step
-  map.itr.step
+  map.itr.step map.itr.stepAt
 end
 overload: export: ..itr.end
-  map.itr.endItr
+  map.itr.endItr map.itr.endAt
 end
