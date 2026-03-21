@@ -164,9 +164,9 @@ union(
      IdentifierInfo : DeclareId
              ProcId : ImplementProcedure
              ProcId : ProcPtr
-             NameId : GetLabel
-             NameId : SetLabel
-             NameId : ExistsLabel
+             NameId : GetNamedElt
+             NameId : SetNamedElt
+             NameId : ExistsNamedElt
                 i32 : GetElement
                 i32 : GetUnionElement
                 i32 : SetElement
@@ -295,14 +295,14 @@ end
 proc( Type : base i32 : index FilePosition ptr : pos -> Operation ) =>: export: opSetElement
   pos index OpValue .SetElement base Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opGetLabel
-  pos id OpValue .GetLabel Type .Undefined Operation new return
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opGetNamedElt
+  pos id OpValue .GetNamedElt Type .Undefined Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opSetLabel
-  pos id OpValue .SetLabel Type .Undefined Operation new return
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opSetNamedElt
+  pos id OpValue .SetNamedElt Type .Undefined Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opExistsLabel
-  pos id OpValue .ExistsLabel Type .Undefined Operation new return
+proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opExistsNamedElt
+  pos id OpValue .ExistsNamedElt Type .Undefined Operation new return
 end
 proc( Type : retType FilePosition ptr : pos -> Operation ) =>: export: opReturn
   pos OpValue .Return retType Operation new return
@@ -926,20 +926,20 @@ namespace: sb
         " ) : " sb.appendS
         id nameContext sb.appendIdInfo
       break
-      GetLabel .case =:: name
-        "get label ( " sb.appendS
+      GetNamedElt .case =:: name
+        "get element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         name nameContext sb.appendIdentifierName
       break
-      SetLabel .case =:: name
-        "set label ( " sb.appendS
+      SetNamedElt .case =:: name
+        "set element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         name nameContext sb.appendIdentifierName
       break
-      ExistsLabel .case =:: name
-        "exists label ( " sb.appendS
+      ExistsNamedElt .case =:: name
+        "exists element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         name nameContext sb.appendIdentifierName

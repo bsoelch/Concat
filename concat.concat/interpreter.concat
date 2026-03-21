@@ -1400,7 +1400,7 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    AtName SetName ExistsLabel DeclareName AliasName InitializeName UsingNamespace UsingIdentifier TypeWith TypeModifier case
+    AtName SetName DeclareName AliasName InitializeName UsingNamespace UsingIdentifier TypeWith TypeModifier case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp
@@ -1873,7 +1873,7 @@ proc(
         TypeLayout case break ## should not exist in interpreter
       end
       break
-    Import LibImport GetLabel SetLabel
+    Import LibImport GetNamedElt SetNamedElt ExistsNamedElt
     NewUnionReference CallPtr GetUnionLabel
     ImplementProcedure ProcPtr
     ConstantReference NewReference

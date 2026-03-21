@@ -3289,11 +3289,11 @@ proc(
           op .pos errors appendError
         end
         continue.opLoop
-      GetLabel SetLabel ExistsLabel .case =:: nameId
+      GetNamedElt SetNamedElt ExistsNamedElt .case =:: nameId
         enum( CHECK CHECK_ENUM GET UNION_GET ) =:: LabelAccessType
         LabelAccessType .GET =:: mut: accessType
-        op .val .SetLabel ? =:: isWrite
-        op .val .ExistsLabel ? if
+        op .val .SetNamedElt ? =:: isWrite
+        op .val .ExistsNamedElt ? if
           LabelAccessType .CHECK accessType=
         end
         1:i32 isWrite if 1 + end op .pos state checkStackSize if

@@ -781,7 +781,7 @@ proc(
             literalStart
           nameContext id.newIdentifier
           literalStart
-            isElement if opExistsLabel else opExistsName end
+            isElement if opExistsNamedElt else opExistsName end
           state appendOp
           string.empty true return
         end
@@ -1770,9 +1770,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         label id.FLAG_NONE opPos nameContext id.newIdentifier
         opPos
           isWrite if
-            opSetLabel
+            opSetNamedElt
           else
-            opGetLabel
+            opGetNamedElt
           end
         state appendOp
       end

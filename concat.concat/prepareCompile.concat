@@ -431,8 +431,8 @@ proc(
       newOps return
     AutoTypedInitializeId ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
-    GetName AtName SetName GetLabel Assert DeclareName AliasName InitializeName
-    SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc Import LibImport case
+    GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
+    SetNamedElt Length TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
       break ## XXX error message
   end
   "unsupported operation " sb.copyPtr
