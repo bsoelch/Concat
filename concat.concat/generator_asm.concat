@@ -519,6 +519,15 @@ proc(
     "unimplemented: multi-value store" ..panic
   end =:: srcVal
   context .variableInfo dst map.at .if =:: varInfo
+    varInfo [] .cachedValue switch
+      None case break
+      Register .case .reg
+        srcVal .valType
+          >$ asm.Value .Register
+          srcVal .value
+        context opMove ## move to current register location
+      return
+    end
     srcVal .value .Register .if
       ## TypedReg
         $ varInfo [] .variableType typeContext ValType.fromType
@@ -761,7 +770,17 @@ proc(
         end
       StackValue.set3
     return
-    LocalVariable GlobalVariable LocalMemory case
+    LocalVariable .case =:: varId
+      newValue .value .Register .else
+        "unsupported location for variable" ..panic
+      end newValue .valType TypedReg new VariableCacheLocation .Register
+        context .variableInfo varId map.at .else ..drop
+          "missing variable info" sb.copyPtr pos context [] .program .errors appendError
+          return
+        end
+      .cachedValue=
+    break
+    GlobalVariable LocalMemory case
       "unsupported value location" ..panic
   end
 end
@@ -977,6 +996,26 @@ proc(
         i ValueLocation .Stack srcElts .0 targetElts .0 state pos context restoreValue
         i ValueLocation .Stack2 srcElts .1 targetElts .1 state pos context restoreValue
         i ValueLocation .Stack3 srcElts .2 targetElts .2 state pos context restoreValue
+      break
+    end
+  end
+  state .cachedVars for =:: varState
+    context .variableInfo varState .varId map.get .else
+      "missing variable info" ..panic
+    end =:: varInfo
+    varInfo .cachedValue .None ? if
+      "unimplemented: load variable" ..panic
+    else varInfo .cachedValue ..label varState .location ..label != _if
+      "stack-values are out of sync" sb.copyPtr pos errors appendError
+      state context resetState return
+    end
+    varInfo .cachedValue switch
+      None case ..unreachable
+      Register .case =:: srcReg
+        varState .varId ValueLocation .LocalVariable
+          srcReg TypedReg.asTypedValue
+          varState .location .Register unionElement.unwrap TypedReg.asTypedValue
+        state pos context restoreValue
       break
     end
   end
