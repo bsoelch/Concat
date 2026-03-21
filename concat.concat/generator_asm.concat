@@ -201,10 +201,11 @@ struct(
   bool : moving
 ) =:: RegisterInfo
 struct(
-  asm.LocalVarId : varId
   VariableCacheLocation : cachedValue
+  asm.LocalVarId : varId
   Type : variableType
   bool : isRead
+  i32 optional : varOffset
 ) =:: VariableLocation
 struct(
   ProgramContext ptr.mut : program
@@ -692,7 +693,7 @@ proc(
     Int LocalAddress case
       val loc context moveToRegister asm.Value .Register
     break
-    Float case "unsupported value" ..panic
+    Float RegisterAddress case "unsupported value" ..panic
     Register .case =:: regId
       ## TODO! ensure register is unique
       val .value
@@ -1264,10 +1265,11 @@ proc(
       0 variables for =:: var =:: i
         context .variableInfo var .nameId
           ## VariableLocation
-            var .nameId asm.LocalVarId cast.u
             VariableCacheLocation .None
+            var .nameId asm.LocalVarId cast.u
             var .valueType
             false
+            i32 optional.empty
           VariableLocation new
         map.put ..drop
       finally i 1 + end ..drop
@@ -1458,13 +1460,55 @@ proc(
   asm.Atom list : procOps
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: finishProcedure
+  ## TODO? target specific post-processing
+  context [] .program =:: program
+  program .idContext .typeContext =:: typeContext
   code
-    ## TODO post-processing (proc-header / update references / proc epilogoue)
-    procOps for =:: op
+    ## post-processing (proc-header / update references / proc epilogoue)
+    0:iSize =:: mut: offset
+    ## TODO use more efficient variable allocation order
+    ## TODO omit variables that are never read
+    context .variableInfo map.atItr for [] =:: varId =:: varInfo
+      varInfo [] .variableType typeContext types.alignOf .Fixed .else
+        "only fixed alignment is supported" ..panic
+      end iSize cast.u =:: align
+      varInfo [] .variableType typeContext types.sizeOf .Fixed .else
+        "only fixed size types are supported" ..panic
+      end iSize cast.u =:: size
+      offset
+        $ align 1 - & =:: delta
+        delta ? if
+          align delta - +
+        end
+        size +
+        $ i32 cast.u optional.wrap varInfo .varOffset=
+      offset=
+    end
+    procOps for
+        ( asm.Operand CompilerContext ptr.mut : shadow: context -> asm.Operand ) =>
+          .LocalAddress .if =:: localAddress
+            AMD64.reg.RBP
+              localAddress .offset
+              context .variableInfo localAddress .varId NameId cast map.get .and .varOffset .else
+                "missing variable-offset" ..panic
+              end -
+            asm.RegisterAddress new asm.Operand .RegisterAddress
+          end
+        end
+        context
+      asm.mapOperands =:: op
       op asm.isEnter .if
+        ## TODO! ensure callee-saved registers are presered
         asm.globalLabel list.append
+        AMD64.op.PUSH AMD64.reg.RBP asm.op1 list.append
+        AMD64.op.MOV AMD64.reg.RBP AMD64.reg.RSP asm.op2 list.append
+        offset 0 != if
+          AMD64.op.SUB AMD64.reg.RSP offset i64 cast.u asm.op2 list.append
+        end
         continue
       else op asm.isLeave _if
+        AMD64.op.MOV AMD64.reg.RSP AMD64.reg.RBP asm.op2 list.append
+        AMD64.op.POP AMD64.reg.RBP asm.op1 list.append
         AMD64.op.RET asm.op0 list.append
         continue
       else op asm.isEndProc _if

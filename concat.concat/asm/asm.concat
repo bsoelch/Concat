@@ -45,6 +45,12 @@ namespace: asm
       a .varId b .varId == and a .offset b .offset == end
     end
   end
+  struct( RegisterId : reg i32 : offset ) =:: export: RegisterAddress
+  namespace: RegisterAddress
+    proc( RegisterAddress : a RegisterAddress : b -> bool ) =>: export: eq
+      a .reg b .reg == and a .offset b .offset == end
+    end
+  end
 
   union(
     _ : None
@@ -52,6 +58,7 @@ namespace: asm
     i64 : Int
     f64 : Float
     LocalAddress : shadow: LocalAddress
+    RegisterAddress : shadow: RegisterAddress
     ## TODO memory values
   ) =:: export: Value
   namespace: Value
@@ -63,24 +70,33 @@ namespace: asm
         Int .case b .Int unionElement.unwrap == return
         Float .case b .Float unionElement.unwrap == return
         LocalAddress .case b .LocalAddress unionElement.unwrap LocalAddress.eq return
+        RegisterAddress .case b .RegisterAddress unionElement.unwrap RegisterAddress.eq return
       end
     end
   end
   proc( LocalVarId i32 -> Value ) =>: export: localAddress
     LocalAddress new Value .LocalAddress
   end
+  proc( RegisterId -> Value ) =>: regAddress1
+    0 RegisterAddress new Value .RegisterAddress
+  end
+  proc( RegisterId i32 -> Value ) =>: regAddress2
+    RegisterAddress new Value .RegisterAddress
+  end
+  overload: export: regAddress regAddress1 regAddress2 end
   union(
     RegisterId : Register
     i64 : Int
     GlobalLabel : shadow: GlobalLabel
     LocalLabel : shadow: LocalLabel
     LocalAddress : shadow: LocalAddress
+    RegisterAddress : shadow: RegisterAddress
   ) =:: export: Operand
   union(
     _               : None
     Operand         : Val
-    Operand 2 array : Val2
-    Operand 3 array : Val3
+    ( Operand Operand ) : Val2
+    ( Operand Operand Operand ) : Val3
     Operand slice   : Vals
   ) =:: export: Operands
   struct(
@@ -129,22 +145,22 @@ namespace: asm
     opCode l1 GlobalLabel cast Operand .GlobalLabel Operands .Val Instruction new Atom .Instruction
   end
   proc( OpCode : opCode LocalAddress : l1 RegisterId : r1 -> Atom ) =>: export: opLR
-    Operand 2 array : ops
-    l1 Operand .LocalAddress ops@ 0 =[]
-    r1 Operand .Register ops@ 1 =[]
-    opCode ops Operands .Val2 Instruction new Atom .Instruction
+    opCode
+      l1 Operand .LocalAddress
+      r1 Operand .Register
+    ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
   end
   proc( OpCode : opCode RegisterId : r1 RegisterId : r2 -> Atom ) =>: export: opRR
-    Operand 2 array : ops
-    r1 Operand .Register ops@ 0 =[]
-    r2 Operand .Register ops@ 1 =[]
-    opCode ops Operands .Val2 Instruction new Atom .Instruction
+    opCode
+      r1 Operand .Register
+      r2 Operand .Register
+    ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
   end
   proc( OpCode : opCode RegisterId : r1 i64 : imm -> Atom ) =>: export: opRI
-    Operand 2 array : ops
-    r1 Operand .Register ops@ 0 =[]
-    imm Operand .Int ops@ 1 =[]
-    opCode ops Operands .Val2 Instruction new Atom .Instruction
+    opCode
+      r1 Operand .Register
+      imm Operand .Int
+    ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
   end
   overload: export: op1 opR opL opG end
   overload: export: op2 opLR opRR opRI end
@@ -179,6 +195,24 @@ namespace: asm
   proc( Atom -> bool ) =>: export: isEndProc
     .Directive .and .EndProc ? end
   end
+  proc( type : auto: C Atom ( Operand C -> Operand ) ptr : f C : curry -> Atom ) =>: export: mapOperands
+    .Instruction .if
+      $ .args switch
+        None case Operands .None break
+        Val  .case curry f () Operands .Val break
+        Val2 .case
+           $ .0 curry f () >$ .1 curry f ()
+         ( Operand Operand ) new Operands .Val2 break
+        Val3 .case
+           $ .0 curry f () $1 .1 curry f () >>$ .2 curry f ()
+         ( Operand Operand Operand ) new Operands .Val3 break
+        Vals .case
+          ## slice.map for curry f () end
+          "mapOperands not supported for operations with more that 3 arguments" ..panic
+        break
+      end >$ .args= Atom .Instruction
+    end
+  end
   
   proc( stringBuilder LocalAddress : local Context : asmContext -> stringBuilder ) =>: export: appendLocalAddress
     "[local":s sb.appendStr
@@ -189,6 +223,17 @@ namespace: asm
       end
     ']' sb.appendC
   end
+  proc( stringBuilder RegisterAddress : addr Context : asmContext -> stringBuilder ) =>: export: appendRegisterAddress
+    ## TODO! make target specific
+    "[":s sb.appendStr
+      addr .reg asmContext .appendReg ()
+      addr .offset 0 != if
+        addr .offset
+          $ 0 > if <$ '+' sb.appendC >$ end
+        sb.appendI
+      end
+    ']' sb.appendC
+  end
   proc( stringBuilder Value : arg  Context : asmContext -> stringBuilder ) =>: export: appendValue
     arg switch
       None case "None":s sb.appendStr return
@@ -196,6 +241,7 @@ namespace: asm
       Int .case sb.appendI return
       Float .case sb.appendF ":f64":s sb.appendStr return
       LocalAddress .case asmContext appendLocalAddress return
+      RegisterAddress .case asmContext appendRegisterAddress return
     end
   end
   proc( stringBuilder Operand : arg  Context : asmContext -> stringBuilder ) =>: export: appendOperand
@@ -205,6 +251,7 @@ namespace: asm
       GlobalLabel .case asmContext appendGlobalLabel return
       LocalLabel .case asmContext appendLocalLabel return
       LocalAddress .case asmContext appendLocalAddress return
+      RegisterAddress .case asmContext appendRegisterAddress return
     end
   end
   proc( stringBuilder Instruction : op  Context : asmContext -> stringBuilder ) =>: export: appendInstruction
