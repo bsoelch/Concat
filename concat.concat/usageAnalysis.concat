@@ -2,7 +2,7 @@ import arenaAlloc
 
 import "program.concat"
 import "branchTree.concat"
-using id.LabelFlag
+using id.IdentifierFlag
 
 struct(
   ProgramContext ptr.mut : program
@@ -28,12 +28,12 @@ proc(
   ProcId : procId
   ProgramContext ptr.mut : program
 -> bool ) =>: shouldInline
-  program .idContext .typeContext .labelContext =:: labelContext
+  program .idContext .typeContext .nameContext =:: nameContext
   optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
   procId ProcId.getProcInfo =:: procData
   procData .implementation [] .Code ? ! or
-      procData [] .labelId labelContext id.labelFlags id.FLAG_EXTERN & ? or
-      procData [] .labelId labelContext id.labelFlags id.FLAG_NO_INLINE & ? if
+      procData [] .nameId nameContext id.identifierFlags id.FLAG_EXTERN & ? or
+      procData [] .nameId nameContext id.identifierFlags id.FLAG_NO_INLINE & ? if
     false return
   end
   procId program calledProcOps =:: procOps
@@ -53,10 +53,10 @@ proc(
 -> Operation list ) =>: inlineCall
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   procId ProcId.getProcInfo .implementation [] .Code ? "only code-procs are inlined" assert
   procId program calledProcOps =:: procOps
-  labelHash@ labelEq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
+  NameId.hash@ NameId.eq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
   LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
   program program.nextLocalLabel =:: procEnd
   procEnd LocalLabelType .HINT_START pos opLabel context analizeOp
@@ -65,19 +65,19 @@ proc(
   0 =:: mut: offset
   ## create tmp-variables for named arguments
   inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
-    procType i typeContext types.getProcArgLabel =:: argLabel
+    procType i typeContext types.getProcArgLabel =:: argName
     inTypes i [] =:: eltType
     eltType typeContext types.isEmpty if continue end ## ignore empty arguments
-    argLabel id.LABEL_ID_NONE == if
+    argName id.NAME_ID_NONE == if
       offset 1 + offset=
-    else argLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! _if
+    else argName nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
       offset 0 != if
-        ## rotate labeled argument to top
+        ## rotate named argument to top
         offset StackModType .ROTATE pos opStackMod context analizeOp
       end
-      eltType argLabel labelContext id.labelFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
+      eltType argName nameContext id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
       eltType tmpId pos opInitializeId context analizeOp
-      remapIds@ argLabel tmpId map.put optional.isEmpty "label-value only reassigned once" assert
+      remapIds@ argName tmpId map.put optional.isEmpty "identifier-value only reassigned once" assert
     end
   finally i 1 - end ..drop
   procOps 1:iSize $1 .length 2:iSize - slice.getSlice
@@ -87,12 +87,12 @@ proc(
     op .val .Return ? if
       procEnd 0:JumpDistance CompareType .NONE op .pos opJump context analizeOp
       continue
-    else op .val .GetId ._if .labelId =:: label
-      remapIds@ label map.get .if op@ .val .GetId= end
-    else .SetId ._if .labelId =:: label
-      remapIds@ label map.get .if op@ .val .SetId= end
-    else .AtId ._if .labelId =:: label
-      remapIds@ label map.get .if op@ .val .AtId= end
+    else op .val .GetId ._if .nameId =:: nameId
+      remapIds@ nameId map.get .if op@ .val .GetId= end
+    else .SetId ._if .nameId =:: nameId
+      remapIds@ nameId map.get .if op@ .val .SetId= end
+    else .AtId ._if .nameId =:: nameId
+      remapIds@ nameId map.get .if op@ .val .AtId= end
     else .LocalJump ._if .labelId =:: label
       remapLabels@ label map.get .else
         program program.nextLocalLabel
@@ -121,7 +121,7 @@ proc(
   program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   op .val switch
     NOP case newOps return ## ignore no-ops
     AutoTypedInitializeId ConstantReference NewReference
@@ -147,7 +147,7 @@ proc(
   context [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   variables [] context .variables=
   tmpOps []
     $ .length 0 == "tmp-ops are empty" assert
@@ -166,7 +166,7 @@ end
 proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   ## ConverterContext
     program
     -1:FileId
@@ -223,8 +223,8 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     builtInImpl [] .hasPtr ! if
       continue
     end
-    currentProc [] .labelId labelContext id.labelPos .else
-      "missing label position" ..panic
+    currentProc [] .nameId nameContext id.identifierPos .else
+      "missing identifier position" ..panic
     end =:: pos
     4 Operation mem.alloc 4 slice.createMutable =:: opBuffer
     opBuffer list.wrapSlice
