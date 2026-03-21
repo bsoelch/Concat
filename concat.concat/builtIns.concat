@@ -87,11 +87,11 @@ proc(
     ..dup .length ProcBundleId cast =:: bundleId
     newProcBundle list.append
   context .procBundles=
-  ## newLabel
+  ## newIdentifier
     name
     id.FLAG_EXPORT id.FLAG_BUILT_IN |
     pos
-  nameContext id.newLabel =:: nameId
+  nameContext id.newIdentifier =:: nameId
   ## declareIdentifier
     nameId
     Type .Undefined
@@ -129,7 +129,7 @@ proc(
   context [] .procedures
     procId list.append
   context .procedures=
-  procName nameContext id.inLabelNamespace
+  procName nameContext id.inIdentifierNamespace
   ## declareIdentifier
     procName
     Type .Undefined
@@ -175,12 +175,12 @@ proc(
   string : name
   FilePosition ptr : pos
   NameContext ptr.mut : nameContext
--> NameId ) =>: createLabel
-  ## newLabel
+-> NameId ) =>: createIdentifier
+  ## newIdentifier
     name
     id.FLAG_EXPORT id.FLAG_SHADOW | id.FLAG_BUILT_IN |
     pos
-  nameContext id.newLabel
+  nameContext id.newIdentifier
 end
 
 proc(
@@ -385,12 +385,12 @@ proc(
   ## type : auto: T
   NameId 3 array : nameData
   Type 3 array : typeData
-  ## newLabel
+  ## newIdentifier
     "T":s
     id.FLAG_STATIC id.FLAG_BUILT_IN | id.FLAG_AUTO |
     pos
     nameContext
-  id.newLabel nameData@ 0 =[]
+  id.newIdentifier nameData@ 0 =[]
   id.NAME_ID_NONE nameData@ 1 =[]
   id.NAME_ID_NONE nameData@ 2 =[]
   types.primitive.TYPE typeData@ 0 =[]
@@ -512,7 +512,7 @@ proc(
   NameId : nameId
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
--> ) =>: newBuiltInTypeLabel
+-> ) =>: newBuiltInTypeIdentifier
   context .idContext =:: idContext
   ## declareIdentifier
     nameId
@@ -535,9 +535,9 @@ proc(
   context .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
   t
-    name pos nameContext createLabel
+    name pos nameContext createIdentifier
     pos
-  context newBuiltInTypeLabel
+  context newBuiltInTypeIdentifier
 end
 proc(
   Type : valType
@@ -549,7 +549,7 @@ proc(
   context .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
   ## declareIdentifier
-    name pos nameContext createLabel
+    name pos nameContext createIdentifier
     valType
     IdentifierType .GLOBAL_VAR
     -1
@@ -581,16 +581,16 @@ proc(
   types.primitive.F32    "f32":s    pos context newBuiltInType
   types.primitive.F64    "f64":s    pos context newBuiltInType
   types.primitive.TYPE   "type":s   pos context newBuiltInType
-  "char8":s pos nameContext createLabel =:: char8Label
-  types.primitive.CHAR8 char8Label typeContext types.initializeNamedType .else
+  "char8":s pos nameContext createIdentifier =:: char8Identifier
+  types.primitive.CHAR8 char8Identifier typeContext types.initializeNamedType .else
     "failed to initialize named type" ..panic
   end $ types.CHAR8=
-  char8Label pos context newBuiltInTypeLabel
-  "iSize":s pos nameContext createLabel =:: iSizeLabel
-  types.primitive.I_SIZE iSizeLabel typeContext types.initializeNamedType .else
+  char8Identifier pos context newBuiltInTypeIdentifier
+  "iSize":s pos nameContext createIdentifier =:: iSizeIdentifier
+  types.primitive.I_SIZE iSizeIdentifier typeContext types.initializeNamedType .else
     "failed to initialize named type" ..panic
   end $ types.I_SIZE=
-  iSizeLabel pos context newBuiltInTypeLabel
+  iSizeIdentifier pos context newBuiltInTypeIdentifier
   types.primitive.I_SIZE "..type.iSize":s pos context newBuiltInType
   2  Type .Align "..type.align2":s  pos context newBuiltInType
   4  Type .Align "..type.align4":s  pos context newBuiltInType
@@ -653,871 +653,871 @@ proc(
     context mixedProcTypes
   =:: i64i32_i32 =:: i64i32_i64
   BuiltIn .NEG_I8
-    "..builtIn.neg.i8":s pos nameContext createLabel
+    "..builtIn.neg.i8":s pos nameContext createIdentifier
     i8_i8
   pos context addBuiltIn
   BuiltIn .NEG_I16
-    "..builtIn.neg.i16":s pos nameContext createLabel
+    "..builtIn.neg.i16":s pos nameContext createIdentifier
     i16_i16
   pos context addBuiltIn
   BuiltIn .NEG_I32
-    "..builtIn.neg.i32":s pos nameContext createLabel
+    "..builtIn.neg.i32":s pos nameContext createIdentifier
     i32_i32
   pos context addBuiltIn
   BuiltIn .NEG_I64
-    "..builtIn.neg.i64":s pos nameContext createLabel
+    "..builtIn.neg.i64":s pos nameContext createIdentifier
     i64_i64
   pos context addBuiltIn
   BuiltIn .NEG_F32
-    "..builtIn.neg.f32":s pos nameContext createLabel
+    "..builtIn.neg.f32":s pos nameContext createIdentifier
     f32_f32
   pos context addBuiltIn
   BuiltIn .NEG_F64
-    "..builtIn.neg.f64":s pos nameContext createLabel
+    "..builtIn.neg.f64":s pos nameContext createIdentifier
     f64_f64
   pos context addBuiltIn
   BuiltIn .ADD_I8
-    "..builtIn.add.i8":s pos nameContext createLabel
+    "..builtIn.add.i8":s pos nameContext createIdentifier
     i8i8_i8
   pos context addBuiltIn
   BuiltIn .ADD_I16
-    "..builtIn.add.i16":s pos nameContext createLabel
+    "..builtIn.add.i16":s pos nameContext createIdentifier
     i16i16_i16
   pos context addBuiltIn
   BuiltIn .ADD_I32
-    "..builtIn.add.i32":s pos nameContext createLabel
+    "..builtIn.add.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .ADD_I64
-    "..builtIn.add.i64":s pos nameContext createLabel
+    "..builtIn.add.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .ADD_F32
-    "..builtIn.add.f32":s pos nameContext createLabel
+    "..builtIn.add.f32":s pos nameContext createIdentifier
     f32f32_f32
   pos context addBuiltIn
   BuiltIn .ADD_F64
-    "..builtIn.add.f64":s pos nameContext createLabel
+    "..builtIn.add.f64":s pos nameContext createIdentifier
     f64f64_f64
   pos context addBuiltIn
   BuiltIn .SUB_I8
-    "..builtIn.sub.i8":s pos nameContext createLabel
+    "..builtIn.sub.i8":s pos nameContext createIdentifier
     i8i8_i8
   pos context addBuiltIn
   BuiltIn .SUB_I16
-    "..builtIn.sub.i16":s pos nameContext createLabel
+    "..builtIn.sub.i16":s pos nameContext createIdentifier
     i16i16_i16
   pos context addBuiltIn
   BuiltIn .SUB_I32
-    "..builtIn.sub.i32":s pos nameContext createLabel
+    "..builtIn.sub.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .SUB_I64
-    "..builtIn.sub.i64":s pos nameContext createLabel
+    "..builtIn.sub.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .SUB_F32
-    "..builtIn.sub.f32":s pos nameContext createLabel
+    "..builtIn.sub.f32":s pos nameContext createIdentifier
     f32f32_f32
   pos context addBuiltIn
   BuiltIn .SUB_F64
-    "..builtIn.sub.f64":s pos nameContext createLabel
+    "..builtIn.sub.f64":s pos nameContext createIdentifier
     f64f64_f64
   pos context addBuiltIn
   BuiltIn .MUL_I32
-    "..builtIn.mul.i32":s pos nameContext createLabel
+    "..builtIn.mul.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .MUL_I64
-    "..builtIn.mul.i64":s pos nameContext createLabel
+    "..builtIn.mul.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .MUL_F32
-    "..builtIn.mul.f32":s pos nameContext createLabel
+    "..builtIn.mul.f32":s pos nameContext createIdentifier
     f32f32_f32
   pos context addBuiltIn
   BuiltIn .MUL_F64
-    "..builtIn.mul.f64":s pos nameContext createLabel
+    "..builtIn.mul.f64":s pos nameContext createIdentifier
     f64f64_f64
   pos context addBuiltIn
   BuiltIn .DIV_I32
-    "..builtIn.div.i32":s pos nameContext createLabel
+    "..builtIn.div.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .DIV_I64
-    "..builtIn.div.i64":s pos nameContext createLabel
+    "..builtIn.div.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .DIV_I64I32
-    "..builtIn.div.i64i32":s pos nameContext createLabel
+    "..builtIn.div.i64i32":s pos nameContext createIdentifier
     i64i32_i64
   pos context addBuiltIn
   BuiltIn .DIV_F32
-    "..builtIn.div.f32":s pos nameContext createLabel
+    "..builtIn.div.f32":s pos nameContext createIdentifier
     f32f32_f32
   pos context addBuiltIn
   BuiltIn .DIV_F64
-    "..builtIn.div.f64":s pos nameContext createLabel
+    "..builtIn.div.f64":s pos nameContext createIdentifier
     f64f64_f64
   pos context addBuiltIn
   BuiltIn .REM_I32
-    "..builtIn.rem.i32":s pos nameContext createLabel
+    "..builtIn.rem.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .REM_I64
-    "..builtIn.rem.i64":s pos nameContext createLabel
+    "..builtIn.rem.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .REM_I64I32
-    "..builtIn.rem.i64i32":s pos nameContext createLabel
+    "..builtIn.rem.i64i32":s pos nameContext createIdentifier
     i64i32_i32
   pos context addBuiltIn
   ## float remainder defined in standard library (numbers/float)
   BuiltIn .UDIV_I32
-    "..builtIn.udiv.i32":s pos nameContext createLabel
+    "..builtIn.udiv.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .UDIV_I64
-    "..builtIn.udiv.i64":s pos nameContext createLabel
+    "..builtIn.udiv.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .UDIV_I64I32
-    "..builtIn.udiv.i64i32":s pos nameContext createLabel
+    "..builtIn.udiv.i64i32":s pos nameContext createIdentifier
     i64i32_i64
   pos context addBuiltIn
   BuiltIn .UMOD_I32
-    "..builtIn.umod.i32":s pos nameContext createLabel
+    "..builtIn.umod.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .UMOD_I64I32
-    "..builtIn.umod.i64i32":s pos nameContext createLabel
+    "..builtIn.umod.i64i32":s pos nameContext createIdentifier
     i64i32_i32
   pos context addBuiltIn
   BuiltIn .UMOD_I64
-    "..builtIn.umod.i64":s pos nameContext createLabel
+    "..builtIn.umod.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .NOT_BOOL
-    "..builtIn.not.bool":s pos nameContext createLabel
+    "..builtIn.not.bool":s pos nameContext createIdentifier
     bool_bool
   pos context addBuiltIn
   BuiltIn .FLIP_I8
-    "..builtIn.flip.i8":s pos nameContext createLabel
+    "..builtIn.flip.i8":s pos nameContext createIdentifier
     i8_i8
   pos context addBuiltIn
   BuiltIn .FLIP_I16
-    "..builtIn.flip.i16":s pos nameContext createLabel
+    "..builtIn.flip.i16":s pos nameContext createIdentifier
     i16_i16
   pos context addBuiltIn
   BuiltIn .FLIP_I32
-    "..builtIn.flip.i32":s pos nameContext createLabel
+    "..builtIn.flip.i32":s pos nameContext createIdentifier
     i32_i32
   pos context addBuiltIn
   BuiltIn .FLIP_I64
-    "..builtIn.flip.i64":s pos nameContext createLabel
+    "..builtIn.flip.i64":s pos nameContext createIdentifier
     i64_i64
   pos context addBuiltIn
   BuiltIn .AND_BOOL
-    "..builtIn.and.bool":s pos nameContext createLabel
+    "..builtIn.and.bool":s pos nameContext createIdentifier
     boolbool_bool
   pos context addBuiltIn
   BuiltIn .AND_I8
-    "..builtIn.and.i8":s pos nameContext createLabel
+    "..builtIn.and.i8":s pos nameContext createIdentifier
     i8i8_i8
   pos context addBuiltIn
   BuiltIn .AND_I16
-    "..builtIn.and.i16":s pos nameContext createLabel
+    "..builtIn.and.i16":s pos nameContext createIdentifier
     i16i16_i16
   pos context addBuiltIn
   BuiltIn .AND_I32
-    "..builtIn.and.i32":s pos nameContext createLabel
+    "..builtIn.and.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .AND_I64
-    "..builtIn.and.i64":s pos nameContext createLabel
+    "..builtIn.and.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .OR_BOOL
-    "..builtIn.or.bool":s pos nameContext createLabel
+    "..builtIn.or.bool":s pos nameContext createIdentifier
     boolbool_bool
   pos context addBuiltIn
   BuiltIn .OR_I8
-    "..builtIn.or.i8":s pos nameContext createLabel
+    "..builtIn.or.i8":s pos nameContext createIdentifier
     i8i8_i8
   pos context addBuiltIn
   BuiltIn .OR_I16
-    "..builtIn.or.i16":s pos nameContext createLabel
+    "..builtIn.or.i16":s pos nameContext createIdentifier
     i16i16_i16
   pos context addBuiltIn
   BuiltIn .OR_I32
-    "..builtIn.or.i32":s pos nameContext createLabel
+    "..builtIn.or.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .OR_I64
-    "..builtIn.or.i64":s pos nameContext createLabel
+    "..builtIn.or.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .XOR_BOOL
-    "..builtIn.xor.bool":s pos nameContext createLabel
+    "..builtIn.xor.bool":s pos nameContext createIdentifier
     boolbool_bool
   pos context addBuiltIn
   BuiltIn .XOR_I8
-    "..builtIn.xor.i8":s pos nameContext createLabel
+    "..builtIn.xor.i8":s pos nameContext createIdentifier
     i8i8_i8
   pos context addBuiltIn
   BuiltIn .XOR_I16
-    "..builtIn.xor.i16":s pos nameContext createLabel
+    "..builtIn.xor.i16":s pos nameContext createIdentifier
     i16i16_i16
   pos context addBuiltIn
   BuiltIn .XOR_I32
-    "..builtIn.xor.i32":s pos nameContext createLabel
+    "..builtIn.xor.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .XOR_I64
-    "..builtIn.xor.i64":s pos nameContext createLabel
+    "..builtIn.xor.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .LSHR_I8
-    "..builtIn.lshr.i8":s pos nameContext createLabel
+    "..builtIn.lshr.i8":s pos nameContext createIdentifier
     i8i8_i8
   pos context addBuiltIn
   BuiltIn .LSHR_I16
-    "..builtIn.lshr.i16":s pos nameContext createLabel
+    "..builtIn.lshr.i16":s pos nameContext createIdentifier
     i16i16_i16
   pos context addBuiltIn
   BuiltIn .LSHR_I32
-    "..builtIn.lshr.i32":s pos nameContext createLabel
+    "..builtIn.lshr.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .LSHR_I64
-    "..builtIn.lshr.i64":s pos nameContext createLabel
+    "..builtIn.lshr.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .LSHR_I64I32
-    "..builtIn.lshr.i64i32":s pos nameContext createLabel
+    "..builtIn.lshr.i64i32":s pos nameContext createIdentifier
     i64i32_i64
   pos context addBuiltIn
   BuiltIn .ASHR_I8
-    "..builtIn.ashr.i8":s pos nameContext createLabel
+    "..builtIn.ashr.i8":s pos nameContext createIdentifier
     i8i8_i8
   pos context addBuiltIn
   BuiltIn .ASHR_I16
-    "..builtIn.ashr.i16":s pos nameContext createLabel
+    "..builtIn.ashr.i16":s pos nameContext createIdentifier
     i16i16_i16
   pos context addBuiltIn
   BuiltIn .ASHR_I32
-    "..builtIn.ashr.i32":s pos nameContext createLabel
+    "..builtIn.ashr.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .ASHR_I64
-    "..builtIn.ashr.i64":s pos nameContext createLabel
+    "..builtIn.ashr.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .ASHR_I64I32
-    "..builtIn.ashr.i64i32":s pos nameContext createLabel
+    "..builtIn.ashr.i64i32":s pos nameContext createIdentifier
     i64i32_i64
   pos context addBuiltIn
   BuiltIn .SHL_I8
-    "..builtIn.shl.i8":s pos nameContext createLabel
+    "..builtIn.shl.i8":s pos nameContext createIdentifier
     i8i8_i8
   pos context addBuiltIn
   BuiltIn .SHL_I16
-    "..builtIn.shl.i16":s pos nameContext createLabel
+    "..builtIn.shl.i16":s pos nameContext createIdentifier
     i16i16_i16
   pos context addBuiltIn
   BuiltIn .SHL_I32
-    "..builtIn.shl.i32":s pos nameContext createLabel
+    "..builtIn.shl.i32":s pos nameContext createIdentifier
     i32i32_i32
   pos context addBuiltIn
   BuiltIn .SHL_I64
-    "..builtIn.shl.i64":s pos nameContext createLabel
+    "..builtIn.shl.i64":s pos nameContext createIdentifier
     i64i64_i64
   pos context addBuiltIn
   BuiltIn .SHL_I64I32
-    "..builtIn.shl.i64i32":s pos nameContext createLabel
+    "..builtIn.shl.i64i32":s pos nameContext createIdentifier
     i64i32_i64
   pos context addBuiltIn
   BuiltIn .EQ_BOOL
-    "..builtIn.eq.bool":s pos nameContext createLabel
+    "..builtIn.eq.bool":s pos nameContext createIdentifier
     boolbool_bool
   pos context addBuiltIn
   BuiltIn .EQ_I8
-    "..builtIn.eq.i8":s pos nameContext createLabel
+    "..builtIn.eq.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .EQ_I16
-    "..builtIn.eq.i16":s pos nameContext createLabel
+    "..builtIn.eq.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .EQ_I32
-    "..builtIn.eq.i32":s pos nameContext createLabel
+    "..builtIn.eq.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .EQ_I64
-    "..builtIn.eq.i64":s pos nameContext createLabel
+    "..builtIn.eq.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .EQ_F32
-    "..builtIn.eq.f32":s pos nameContext createLabel
+    "..builtIn.eq.f32":s pos nameContext createIdentifier
     f32f32_bool
   pos context addBuiltIn
   BuiltIn .EQ_F64
-    "..builtIn.eq.f64":s pos nameContext createLabel
+    "..builtIn.eq.f64":s pos nameContext createIdentifier
     f64f64_bool
   pos context addBuiltIn
   BuiltIn .NE_BOOL
-    "..builtIn.ne.bool":s pos nameContext createLabel
+    "..builtIn.ne.bool":s pos nameContext createIdentifier
     boolbool_bool
   pos context addBuiltIn
   BuiltIn .NE_I8
-    "..builtIn.ne.i8":s pos nameContext createLabel
+    "..builtIn.ne.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .NE_I16
-    "..builtIn.ne.i16":s pos nameContext createLabel
+    "..builtIn.ne.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .NE_I32
-    "..builtIn.ne.i32":s pos nameContext createLabel
+    "..builtIn.ne.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .NE_I64
-    "..builtIn.ne.i64":s pos nameContext createLabel
+    "..builtIn.ne.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .NE_F32
-    "..builtIn.ne.f32":s pos nameContext createLabel
+    "..builtIn.ne.f32":s pos nameContext createIdentifier
     f32f32_bool
   pos context addBuiltIn
   BuiltIn .NE_F64
-    "..builtIn.ne.f64":s pos nameContext createLabel
+    "..builtIn.ne.f64":s pos nameContext createIdentifier
     f64f64_bool
   pos context addBuiltIn
   BuiltIn .LT_I8
-    "..builtIn.lt.i8":s pos nameContext createLabel
+    "..builtIn.lt.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .LT_I16
-    "..builtIn.lt.i16":s pos nameContext createLabel
+    "..builtIn.lt.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .LT_I32
-    "..builtIn.lt.i32":s pos nameContext createLabel
+    "..builtIn.lt.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .LT_I64
-    "..builtIn.lt.i64":s pos nameContext createLabel
+    "..builtIn.lt.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .LT_F32
-    "..builtIn.lt.f32":s pos nameContext createLabel
+    "..builtIn.lt.f32":s pos nameContext createIdentifier
     f32f32_bool
   pos context addBuiltIn
   BuiltIn .LT_F64
-    "..builtIn.lt.f64":s pos nameContext createLabel
+    "..builtIn.lt.f64":s pos nameContext createIdentifier
     f64f64_bool
   pos context addBuiltIn
   BuiltIn .LE_I8
-    "..builtIn.le.i8":s pos nameContext createLabel
+    "..builtIn.le.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .LE_I16
-    "..builtIn.le.i16":s pos nameContext createLabel
+    "..builtIn.le.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .LE_I32
-    "..builtIn.le.i32":s pos nameContext createLabel
+    "..builtIn.le.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .LE_I64
-    "..builtIn.le.i64":s pos nameContext createLabel
+    "..builtIn.le.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .LE_F32
-    "..builtIn.le.f32":s pos nameContext createLabel
+    "..builtIn.le.f32":s pos nameContext createIdentifier
     f32f32_bool
   pos context addBuiltIn
   BuiltIn .LE_F64
-    "..builtIn.le.f64":s pos nameContext createLabel
+    "..builtIn.le.f64":s pos nameContext createIdentifier
     f64f64_bool
   pos context addBuiltIn
   BuiltIn .GE_I8
-    "..builtIn.ge.i8":s pos nameContext createLabel
+    "..builtIn.ge.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .GE_I16
-    "..builtIn.ge.i16":s pos nameContext createLabel
+    "..builtIn.ge.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .GE_I32
-    "..builtIn.ge.i32":s pos nameContext createLabel
+    "..builtIn.ge.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .GE_I64
-    "..builtIn.ge.i64":s pos nameContext createLabel
+    "..builtIn.ge.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .GE_F32
-    "..builtIn.ge.f32":s pos nameContext createLabel
+    "..builtIn.ge.f32":s pos nameContext createIdentifier
     f32f32_bool
   pos context addBuiltIn
   BuiltIn .GE_F64
-    "..builtIn.ge.f64":s pos nameContext createLabel
+    "..builtIn.ge.f64":s pos nameContext createIdentifier
     f64f64_bool
   pos context addBuiltIn
   BuiltIn .GT_I8
-    "..builtIn.gt.i8":s pos nameContext createLabel
+    "..builtIn.gt.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .GT_I16
-    "..builtIn.gt.i16":s pos nameContext createLabel
+    "..builtIn.gt.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .GT_I32
-    "..builtIn.gt.i32":s pos nameContext createLabel
+    "..builtIn.gt.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .GT_I64
-    "..builtIn.gt.i64":s pos nameContext createLabel
+    "..builtIn.gt.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .GT_F32
-    "..builtIn.gt.f32":s pos nameContext createLabel
+    "..builtIn.gt.f32":s pos nameContext createIdentifier
     f32f32_bool
   pos context addBuiltIn
   BuiltIn .GT_F64
-    "..builtIn.gt.f64":s pos nameContext createLabel
+    "..builtIn.gt.f64":s pos nameContext createIdentifier
     f64f64_bool
   pos context addBuiltIn
   BuiltIn .ULT_I8
-    "..builtIn.ult.i8":s pos nameContext createLabel
+    "..builtIn.ult.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .ULT_I16
-    "..builtIn.ult.i16":s pos nameContext createLabel
+    "..builtIn.ult.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .ULT_I32
-    "..builtIn.ult.i32":s pos nameContext createLabel
+    "..builtIn.ult.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .ULT_I64
-    "..builtIn.ult.i64":s pos nameContext createLabel
+    "..builtIn.ult.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .ULE_I8
-    "..builtIn.ule.i8":s pos nameContext createLabel
+    "..builtIn.ule.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .ULE_I16
-    "..builtIn.ule.i16":s pos nameContext createLabel
+    "..builtIn.ule.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .ULE_I32
-    "..builtIn.ule.i32":s pos nameContext createLabel
+    "..builtIn.ule.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .ULE_I64
-    "..builtIn.ule.i64":s pos nameContext createLabel
+    "..builtIn.ule.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .UGE_I8
-    "..builtIn.uge.i8":s pos nameContext createLabel
+    "..builtIn.uge.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .UGE_I16
-    "..builtIn.uge.i16":s pos nameContext createLabel
+    "..builtIn.uge.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .UGE_I32
-    "..builtIn.uge.i32":s pos nameContext createLabel
+    "..builtIn.uge.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .UGE_I64
-    "..builtIn.uge.i64":s pos nameContext createLabel
+    "..builtIn.uge.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   BuiltIn .UGT_I8
-    "..builtIn.ugt.i8":s pos nameContext createLabel
+    "..builtIn.ugt.i8":s pos nameContext createIdentifier
     i8i8_bool
   pos context addBuiltIn
   BuiltIn .UGT_I16
-    "..builtIn.ugt.i16":s pos nameContext createLabel
+    "..builtIn.ugt.i16":s pos nameContext createIdentifier
     i16i16_bool
   pos context addBuiltIn
   BuiltIn .UGT_I32
-    "..builtIn.ugt.i32":s pos nameContext createLabel
+    "..builtIn.ugt.i32":s pos nameContext createIdentifier
     i32i32_bool
   pos context addBuiltIn
   BuiltIn .UGT_I64
-    "..builtIn.ugt.i64":s pos nameContext createLabel
+    "..builtIn.ugt.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
   pos context ptrProcTypes =:: get_proc =:: getMut_proc =:: set_proc
     =:: offset32_proc =:: offset64_proc =:: offsetMut32_proc =:: offsetMut64_proc
   BuiltIn .GET_PTR
-    "..builtIn.get.ptr":s pos nameContext createLabel
+    "..builtIn.get.ptr":s pos nameContext createIdentifier
     get_proc
   pos context addBuiltIn
   BuiltIn .GET_PTR_MUT
-    "..builtIn.get.ptr.mut":s pos nameContext createLabel
+    "..builtIn.get.ptr.mut":s pos nameContext createIdentifier
     getMut_proc
   pos context addBuiltIn
   BuiltIn .SET_PTR
-    "..builtIn.set.ptr":s pos nameContext createLabel
+    "..builtIn.set.ptr":s pos nameContext createIdentifier
     set_proc
   pos context addBuiltIn
   BuiltIn .OFFSET_PTR_I32
-    "..builtIn.offset.ptr.i32":s pos nameContext createLabel
+    "..builtIn.offset.ptr.i32":s pos nameContext createIdentifier
     offset32_proc
   pos context addBuiltIn
   BuiltIn .OFFSET_PTR_I64
-    "..builtIn.offset.ptr.i64":s pos nameContext createLabel
+    "..builtIn.offset.ptr.i64":s pos nameContext createIdentifier
     offset64_proc
   pos context addBuiltIn
   BuiltIn .OFFSET_PTR
-    "..builtIn.offset.ptr":s pos nameContext createLabel
+    "..builtIn.offset.ptr":s pos nameContext createIdentifier
     offset64_proc
   pos context addBuiltIn
   BuiltIn .OFFSET_PTR_MUT_I32
-    "..builtIn.offset.ptr.mut.i32":s pos nameContext createLabel
+    "..builtIn.offset.ptr.mut.i32":s pos nameContext createIdentifier
     offsetMut32_proc
   pos context addBuiltIn
   BuiltIn .OFFSET_PTR_MUT_I64
-    "..builtIn.offset.ptr.mut.i64":s pos nameContext createLabel
+    "..builtIn.offset.ptr.mut.i64":s pos nameContext createIdentifier
     offsetMut64_proc
   pos context addBuiltIn
   BuiltIn .OFFSET_PTR_MUT
-    "..builtIn.offset.ptr.mut":s pos nameContext createLabel
+    "..builtIn.offset.ptr.mut":s pos nameContext createIdentifier
     offsetMut64_proc
   pos context addBuiltIn
   types.primitive.I8 types.primitive.I16 context convertProcType =:: i8_i16
   BuiltIn .CONVERT_S8_I16
-    "..builtIn.cvt.s8.i16":s pos nameContext createLabel i8_i16
+    "..builtIn.cvt.s8.i16":s pos nameContext createIdentifier i8_i16
   pos context addBuiltIn
   BuiltIn .CONVERT_U8_I16
-    "..builtIn.cvt.u8.i16":s pos nameContext createLabel i8_i16
+    "..builtIn.cvt.u8.i16":s pos nameContext createIdentifier i8_i16
   pos context addBuiltIn
   types.primitive.I8 types.primitive.I32 context convertProcType =:: i8_i32
   BuiltIn .CONVERT_S8_I32
-    "..builtIn.cvt.s8.i32":s pos nameContext createLabel i8_i32
+    "..builtIn.cvt.s8.i32":s pos nameContext createIdentifier i8_i32
   pos context addBuiltIn
   BuiltIn .CONVERT_U8_I32
-    "..builtIn.cvt.u8.i32":s pos nameContext createLabel i8_i32
+    "..builtIn.cvt.u8.i32":s pos nameContext createIdentifier i8_i32
   pos context addBuiltIn
   types.primitive.I8 types.primitive.I64 context convertProcType =:: i8_i64
   BuiltIn .CONVERT_S8_I64
-    "..builtIn.cvt.s8.i64":s pos nameContext createLabel i8_i64
+    "..builtIn.cvt.s8.i64":s pos nameContext createIdentifier i8_i64
   pos context addBuiltIn
   BuiltIn .CONVERT_U8_I64
-    "..builtIn.cvt.u8.i64":s pos nameContext createLabel i8_i64
+    "..builtIn.cvt.u8.i64":s pos nameContext createIdentifier i8_i64
   pos context addBuiltIn
   types.primitive.I8 types.primitive.F32 context convertProcType =:: i8_f32
   BuiltIn .CONVERT_S8_F32
-    "..builtIn.cvt.s8.f32":s pos nameContext createLabel i8_f32
+    "..builtIn.cvt.s8.f32":s pos nameContext createIdentifier i8_f32
   pos context addBuiltIn
   BuiltIn .CONVERT_U8_F32
-    "..builtIn.cvt.u8.f32":s pos nameContext createLabel i8_f32
+    "..builtIn.cvt.u8.f32":s pos nameContext createIdentifier i8_f32
   pos context addBuiltIn
   types.primitive.I8 types.primitive.F64 context convertProcType =:: i8_f64
   BuiltIn .CONVERT_S8_F64
-    "..builtIn.cvt.s8.f64":s pos nameContext createLabel i8_f64
+    "..builtIn.cvt.s8.f64":s pos nameContext createIdentifier i8_f64
   pos context addBuiltIn
   BuiltIn .CONVERT_U8_F64
-    "..builtIn.cvt.u8.f64":s pos nameContext createLabel i8_f64
+    "..builtIn.cvt.u8.f64":s pos nameContext createIdentifier i8_f64
   pos context addBuiltIn
   BuiltIn .CONVERT_I16_I8
-    "..builtIn.cvt.i16.i8":s pos nameContext createLabel
+    "..builtIn.cvt.i16.i8":s pos nameContext createIdentifier
     types.primitive.I16 types.primitive.I8 context convertProcType
   pos context addBuiltIn
   types.primitive.I16 types.primitive.I32 context convertProcType =:: i16_i32
   BuiltIn .CONVERT_S16_I32
-    "..builtIn.cvt.s16.i32":s pos nameContext createLabel i16_i32
+    "..builtIn.cvt.s16.i32":s pos nameContext createIdentifier i16_i32
   pos context addBuiltIn
   BuiltIn .CONVERT_U16_I32
-    "..builtIn.cvt.u16.i32":s pos nameContext createLabel i16_i32
+    "..builtIn.cvt.u16.i32":s pos nameContext createIdentifier i16_i32
   pos context addBuiltIn
   types.primitive.I16 types.primitive.I64 context convertProcType =:: i16_i64
   BuiltIn .CONVERT_S16_I64
-    "..builtIn.cvt.s16.i64":s pos nameContext createLabel i16_i64
+    "..builtIn.cvt.s16.i64":s pos nameContext createIdentifier i16_i64
   pos context addBuiltIn
   BuiltIn .CONVERT_U16_I64
-    "..builtIn.cvt.u16.i64":s pos nameContext createLabel i16_i64
+    "..builtIn.cvt.u16.i64":s pos nameContext createIdentifier i16_i64
   pos context addBuiltIn
   types.primitive.I16 types.primitive.F32 context convertProcType =:: i16_f32
   BuiltIn .CONVERT_S16_F32
-    "..builtIn.cvt.s16.f32":s pos nameContext createLabel i16_f32
+    "..builtIn.cvt.s16.f32":s pos nameContext createIdentifier i16_f32
   pos context addBuiltIn
   BuiltIn .CONVERT_U16_F32
-    "..builtIn.cvt.u16.f32":s pos nameContext createLabel i16_f32
+    "..builtIn.cvt.u16.f32":s pos nameContext createIdentifier i16_f32
   pos context addBuiltIn
   types.primitive.I16 types.primitive.F64 context convertProcType =:: i16_f64
   BuiltIn .CONVERT_S16_F64
-    "..builtIn.cvt.s16.f64":s pos nameContext createLabel i16_f64
+    "..builtIn.cvt.s16.f64":s pos nameContext createIdentifier i16_f64
   pos context addBuiltIn
   BuiltIn .CONVERT_U16_F64
-    "..builtIn.cvt.u16.f64":s pos nameContext createLabel i16_f64
+    "..builtIn.cvt.u16.f64":s pos nameContext createIdentifier i16_f64
   pos context addBuiltIn
   BuiltIn .CONVERT_I32_I8
-    "..builtIn.cvt.i32.i8":s pos nameContext createLabel
+    "..builtIn.cvt.i32.i8":s pos nameContext createIdentifier
     types.primitive.I32 types.primitive.I8 context convertProcType
   pos context addBuiltIn
   BuiltIn .CONVERT_I32_I16
-    "..builtIn.cvt.i32.i16":s pos nameContext createLabel
+    "..builtIn.cvt.i32.i16":s pos nameContext createIdentifier
     types.primitive.I32 types.primitive.I16 context convertProcType
   pos context addBuiltIn
   types.primitive.I32 types.primitive.I64 context convertProcType =:: i32_i64
   BuiltIn .CONVERT_S32_I64
-    "..builtIn.cvt.s32.i64":s pos nameContext createLabel i32_i64
+    "..builtIn.cvt.s32.i64":s pos nameContext createIdentifier i32_i64
   pos context addBuiltIn
   BuiltIn .CONVERT_U32_I64
-    "..builtIn.cvt.u32.i64":s pos nameContext createLabel i32_i64
+    "..builtIn.cvt.u32.i64":s pos nameContext createIdentifier i32_i64
   pos context addBuiltIn
   types.primitive.I32 types.primitive.F32 context convertProcType =:: i32_f32
   BuiltIn .CONVERT_S32_F32
-    "..builtIn.cvt.s32.f32":s pos nameContext createLabel i32_f32
+    "..builtIn.cvt.s32.f32":s pos nameContext createIdentifier i32_f32
   pos context addBuiltIn
   BuiltIn .CONVERT_U32_F32
-    "..builtIn.cvt.u32.f32":s pos nameContext createLabel i32_f32
+    "..builtIn.cvt.u32.f32":s pos nameContext createIdentifier i32_f32
   pos context addBuiltIn
   types.primitive.I32 types.primitive.F64 context convertProcType =:: i32_f64
   BuiltIn .CONVERT_S32_F64
-    "..builtIn.cvt.s32.f64":s pos nameContext createLabel i32_f64
+    "..builtIn.cvt.s32.f64":s pos nameContext createIdentifier i32_f64
   pos context addBuiltIn
   BuiltIn .CONVERT_U32_F64
-    "..builtIn.cvt.u32.f64":s pos nameContext createLabel i32_f64
+    "..builtIn.cvt.u32.f64":s pos nameContext createIdentifier i32_f64
   pos context addBuiltIn
   BuiltIn .CONVERT_I64_I8
-    "..builtIn.cvt.i64.i8":s pos nameContext createLabel
+    "..builtIn.cvt.i64.i8":s pos nameContext createIdentifier
     types.primitive.I64 types.primitive.I8 context convertProcType
   pos context addBuiltIn
   BuiltIn .CONVERT_I64_I16
-    "..builtIn.cvt.i64.i16":s pos nameContext createLabel
+    "..builtIn.cvt.i64.i16":s pos nameContext createIdentifier
     types.primitive.I64 types.primitive.I16 context convertProcType
   pos context addBuiltIn
   BuiltIn .CONVERT_I64_I16
-    "..builtIn.cvt.i64.i32":s pos nameContext createLabel
+    "..builtIn.cvt.i64.i32":s pos nameContext createIdentifier
     types.primitive.I64 types.primitive.I32 context convertProcType
   pos context addBuiltIn
   types.primitive.I64 types.primitive.F32 context convertProcType =:: i64_f32
   BuiltIn .CONVERT_S64_F32
-    "..builtIn.cvt.s64.f32":s pos nameContext createLabel i64_f32
+    "..builtIn.cvt.s64.f32":s pos nameContext createIdentifier i64_f32
   pos context addBuiltIn
   BuiltIn .CONVERT_U64_F32
-    "..builtIn.cvt.u64.f32":s pos nameContext createLabel i64_f32
+    "..builtIn.cvt.u64.f32":s pos nameContext createIdentifier i64_f32
   pos context addBuiltIn
   types.primitive.I64 types.primitive.F64 context convertProcType =:: i64_f64
   BuiltIn .CONVERT_S64_F64
-    "..builtIn.cvt.s64.f64":s pos nameContext createLabel i64_f64
+    "..builtIn.cvt.s64.f64":s pos nameContext createIdentifier i64_f64
   pos context addBuiltIn
   BuiltIn .CONVERT_U64_F64
-    "..builtIn.cvt.u64.f64":s pos nameContext createLabel i64_f64
+    "..builtIn.cvt.u64.f64":s pos nameContext createIdentifier i64_f64
   pos context addBuiltIn
   types.primitive.F32 types.primitive.I8 context convertProcType =:: f32_i8
   BuiltIn .CONVERT_F32_S8
-    "..builtIn.cvt.f32.s8":s pos nameContext createLabel f32_i8
+    "..builtIn.cvt.f32.s8":s pos nameContext createIdentifier f32_i8
   pos context addBuiltIn
   BuiltIn .CONVERT_F32_U8
-    "..builtIn.cvt.f32.u8":s pos nameContext createLabel f32_i8
+    "..builtIn.cvt.f32.u8":s pos nameContext createIdentifier f32_i8
   pos context addBuiltIn
   types.primitive.F32 types.primitive.I16 context convertProcType =:: f32_i16
   BuiltIn .CONVERT_F32_S16
-    "..builtIn.cvt.f32.s16":s pos nameContext createLabel f32_i16
+    "..builtIn.cvt.f32.s16":s pos nameContext createIdentifier f32_i16
   pos context addBuiltIn
   BuiltIn .CONVERT_F32_U16
-    "..builtIn.cvt.f32.u16":s pos nameContext createLabel f32_i16
+    "..builtIn.cvt.f32.u16":s pos nameContext createIdentifier f32_i16
   pos context addBuiltIn
   types.primitive.F32 types.primitive.I32 context convertProcType =:: f32_i32
   BuiltIn .CONVERT_F32_S32
-    "..builtIn.cvt.f32.s32":s pos nameContext createLabel f32_i32
+    "..builtIn.cvt.f32.s32":s pos nameContext createIdentifier f32_i32
   pos context addBuiltIn
   BuiltIn .CONVERT_F32_U32
-    "..builtIn.cvt.f32.u32":s pos nameContext createLabel f32_i32
+    "..builtIn.cvt.f32.u32":s pos nameContext createIdentifier f32_i32
   pos context addBuiltIn
   types.primitive.F32 types.primitive.I64 context convertProcType =:: f32_i64
   BuiltIn .CONVERT_F32_S64
-    "..builtIn.cvt.f32.s64":s pos nameContext createLabel f32_i64
+    "..builtIn.cvt.f32.s64":s pos nameContext createIdentifier f32_i64
   pos context addBuiltIn
   BuiltIn .CONVERT_F32_U64
-    "..builtIn.cvt.f32.u64":s pos nameContext createLabel f32_i64
+    "..builtIn.cvt.f32.u64":s pos nameContext createIdentifier f32_i64
   pos context addBuiltIn
   BuiltIn .CONVERT_F32_F64
-    "..builtIn.cvt.f32.f64":s pos nameContext createLabel
+    "..builtIn.cvt.f32.f64":s pos nameContext createIdentifier
     types.primitive.F32 types.primitive.F64 context convertProcType
   pos context addBuiltIn
   types.primitive.F64 types.primitive.I8 context convertProcType =:: f64_i8
   BuiltIn .CONVERT_F64_S8
-    "..builtIn.cvt.f64.s8":s pos nameContext createLabel f64_i8
+    "..builtIn.cvt.f64.s8":s pos nameContext createIdentifier f64_i8
   pos context addBuiltIn
   BuiltIn .CONVERT_F64_U8
-    "..builtIn.cvt.f64.u8":s pos nameContext createLabel f64_i8
+    "..builtIn.cvt.f64.u8":s pos nameContext createIdentifier f64_i8
   pos context addBuiltIn
   types.primitive.F64 types.primitive.I16 context convertProcType =:: f64_i16
   BuiltIn .CONVERT_F64_S16
-    "..builtIn.cvt.f64.s16":s pos nameContext createLabel f64_i16
+    "..builtIn.cvt.f64.s16":s pos nameContext createIdentifier f64_i16
   pos context addBuiltIn
   BuiltIn .CONVERT_F64_U16
-    "..builtIn.cvt.f64.u16":s pos nameContext createLabel f64_i16
+    "..builtIn.cvt.f64.u16":s pos nameContext createIdentifier f64_i16
   pos context addBuiltIn
   types.primitive.F64 types.primitive.I32 context convertProcType =:: f64_i32
   BuiltIn .CONVERT_F64_S32
-    "..builtIn.cvt.f64.s32":s pos nameContext createLabel f64_i32
+    "..builtIn.cvt.f64.s32":s pos nameContext createIdentifier f64_i32
   pos context addBuiltIn
   BuiltIn .CONVERT_F64_U32
-    "..builtIn.cvt.f64.u32":s pos nameContext createLabel f64_i32
+    "..builtIn.cvt.f64.u32":s pos nameContext createIdentifier f64_i32
   pos context addBuiltIn
   types.primitive.F64 types.primitive.I64 context convertProcType =:: f64_i64
   BuiltIn .CONVERT_F64_S64
-    "..builtIn.cvt.f64.s64":s pos nameContext createLabel f64_i64
+    "..builtIn.cvt.f64.s64":s pos nameContext createIdentifier f64_i64
   pos context addBuiltIn
   BuiltIn .CONVERT_F64_U64
-    "..builtIn.cvt.f64.u64":s pos nameContext createLabel f64_i64
+    "..builtIn.cvt.f64.u64":s pos nameContext createIdentifier f64_i64
   pos context addBuiltIn
   BuiltIn .CONVERT_F64_F32
-    "..builtIn.cvt.f64.f32":s pos nameContext createLabel
+    "..builtIn.cvt.f64.f32":s pos nameContext createIdentifier
     types.primitive.F64 types.primitive.F32 context convertProcType
   pos context addBuiltIn
   context sysProcTypes =:: v_i64 =:: v_c8pp
   BuiltIn .SYS_ARGC
-    "..builtIn.sys.argc":s pos nameContext createLabel
+    "..builtIn.sys.argc":s pos nameContext createIdentifier
     v_i64
   pos context addBuiltIn
   BuiltIn .SYS_ARGV
-    "..builtIn.sys.argv":s pos nameContext createLabel
+    "..builtIn.sys.argv":s pos nameContext createIdentifier
     v_c8pp
   pos context addBuiltIn
   BuiltIn .SYS_ENVP
-    "..builtIn.sys.envp":s pos nameContext createLabel
+    "..builtIn.sys.envp":s pos nameContext createIdentifier
     v_c8pp
   pos context addBuiltIn
   pos context parseProcTypes =:: s_i8 =:: s_i16 =:: s_i32 =:: s_i64 =:: s_f16 =:: s_f32 =:: s_f64
   BuiltIn .PARSE_I8
-    "..builtIn.parse.i8":s pos nameContext createLabel
+    "..builtIn.parse.i8":s pos nameContext createIdentifier
     s_i8
   pos context addStaticBuiltIn
   BuiltIn .PARSE_I16
-    "..builtIn.parse.i16":s pos nameContext createLabel
+    "..builtIn.parse.i16":s pos nameContext createIdentifier
     s_i16
   pos context addStaticBuiltIn
   BuiltIn .PARSE_I32
-    "..builtIn.parse.i32":s pos nameContext createLabel
+    "..builtIn.parse.i32":s pos nameContext createIdentifier
     s_i32
   pos context addStaticBuiltIn
   BuiltIn .PARSE_I64
-    "..builtIn.parse.i64":s pos nameContext createLabel
+    "..builtIn.parse.i64":s pos nameContext createIdentifier
     s_i64
   pos context addStaticBuiltIn
   BuiltIn .PARSE_F16
-    "..builtIn.parse.f16":s pos nameContext createLabel
+    "..builtIn.parse.f16":s pos nameContext createIdentifier
     s_f16
   pos context addStaticBuiltIn
   BuiltIn .PARSE_F32
-    "..builtIn.parse.f32":s pos nameContext createLabel
+    "..builtIn.parse.f32":s pos nameContext createIdentifier
     s_f32
   pos context addStaticBuiltIn
   BuiltIn .PARSE_F64
-    "..builtIn.parse.f64":s pos nameContext createLabel
+    "..builtIn.parse.f64":s pos nameContext createIdentifier
     s_f64
   pos context addStaticBuiltIn
   context typeProcTypes =:: t_b =:: t_t =:: tt_b =:: ti32_t
   BuiltIn .TYPE_IS_PRIMITIVE
-    "..types.isPrimitive":s pos nameContext createLabel
+    "..types.isPrimitive":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_POINTER
-    "..types.isPointer":s pos nameContext createLabel
+    "..types.isPointer":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_RAW_POINTER
-    "..types.isRawPointer":s pos nameContext createLabel
+    "..types.isRawPointer":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_ARRAY
-    "..types.isArray":s pos nameContext createLabel
+    "..types.isArray":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_STRUCT
-    "..types.isStruct":s pos nameContext createLabel
+    "..types.isStruct":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_SET_TYPE
-    "..types.isSetType":s pos nameContext createLabel
+    "..types.isSetType":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_REFINEMENT_TYPE
-    "..types.isRefinementType":s pos nameContext createLabel
+    "..types.isRefinementType":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_TAGGED_UNION
-    "..types.isTaggedUnion":s pos nameContext createLabel
+    "..types.isTaggedUnion":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_UNION_ELEMENT
-    "..types.isUnionElement":s pos nameContext createLabel
+    "..types.isUnionElement":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltInGetId =:: getUnionId
   BuiltIn .TYPE_IS_RAW_UNION
-    "..types.isRawUnion":s pos nameContext createLabel
+    "..types.isRawUnion":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_ENUM
-    "..types.isEnum":s pos nameContext createLabel
+    "..types.isEnum":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_PROC
-    "..types.isProc":s pos nameContext createLabel
+    "..types.isProc":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_NAMED
-    "..types.isNamed":s pos nameContext createLabel
+    "..types.isNamed":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_CTYPE
-    "..types.isCtype":s pos nameContext createLabel
+    "..types.isCtype":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_ALIGN
-    "..types.isAlign":s pos nameContext createLabel
+    "..types.isAlign":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_MUTABLE
-    "..types.isMutable":s pos nameContext createLabel
+    "..types.isMutable":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_IS_DEFINED
-    "..types.isDefined":s pos nameContext createLabel
+    "..types.isDefined":s pos nameContext createIdentifier
     t_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_ARRAY_ELEMENT
-    "..types.arrayElement":s pos nameContext createLabel
+    "..types.arrayElement":s pos nameContext createIdentifier
     t_t
   pos context addStaticBuiltIn
   BuiltIn .TYPE_UNWRAP_NAMED
-    "..types.unwrapNamed":s pos nameContext createLabel
+    "..types.unwrapNamed":s pos nameContext createIdentifier
     t_t
   pos context addStaticBuiltIn
   BuiltIn .TYPE_GET_ELEMENT
-    "..types.getElement":s pos nameContext createLabel
+    "..types.getElement":s pos nameContext createIdentifier
     ti32_t
   pos context addStaticBuiltIn
   BuiltIn .TYPE_GET_UNION_ELEMENT
-    "..types.getUnionElement":s pos nameContext createLabel
+    "..types.getUnionElement":s pos nameContext createIdentifier
     t_t
   pos context addStaticBuiltIn
   BuiltIn .TYPE_GET_UNION_ELEMENT_UNION
-    "..types.getUnionElementUnion":s pos nameContext createLabel
+    "..types.getUnionElementUnion":s pos nameContext createIdentifier
     t_t
   pos context addStaticBuiltIn
   BuiltIn .TYPE_EQUAL
-    "..types.equals":s pos nameContext createLabel
+    "..types.equals":s pos nameContext createIdentifier
     tt_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_CAN_ASSIGN
-    "..types.canAssign":s pos nameContext createLabel
+    "..types.canAssign":s pos nameContext createIdentifier
     tt_b
   pos context addStaticBuiltIn
   BuiltIn .TYPE_CAN_CAST
-    "..types.canCast":s pos nameContext createLabel
+    "..types.canCast":s pos nameContext createIdentifier
     tt_b
   pos context addStaticBuiltIn
   #+ TODO more type info procs

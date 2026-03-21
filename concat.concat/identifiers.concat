@@ -204,10 +204,10 @@ namespace: id
   end
   proc( NameId : nameId IdentifierContext ptr.mut : context -> bool ) =>: isVisible
     context .typeContext .nameContext =:: nameContext
-    nameId nameContext labelFlags id.FLAG_BUILT_IN id.FLAG_MERGEABLE | & ? if
+    nameId nameContext identifierFlags id.FLAG_BUILT_IN id.FLAG_MERGEABLE | & ? if
       true return ## built-ins and mergable identifiers are always visible
     end
-    nameId nameContext getLabelFile =:: srcFile
+    nameId nameContext getIdentifierFile =:: srcFile
     context [] .scopes context [] .currentScopeId getScopeData =:: currentScopeData
     currentScopeData [] .visibleFiles while $ NO_IMPORTS != do =:: id
       context [] .visibleFiles id i64 cast [] =:: importInfo
@@ -241,20 +241,20 @@ namespace: id
     else
       id '.' string.splitLast
     end =:: path =:: name
-    NameInfo : idLabel
+    NameInfo : idNameInfo
     ## 1. search in current scopes
     mNamespace path  context .typeContext .nameContext findNamespace relSpace=
     name relSpace scopeId IdentifierName new =:: mut: idName
     relSpace NAMESPACE_ID_NONE != if
       while
-        context .identifierNames idName map.get .and idLabel=
+        context .identifierNames idName map.get .and idNameInfo=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
-            idLabel .nameId context isVisible if
+            idNameInfo .nameId context isVisible if
           matches .else
-            idName idLabel false return
+            idName idNameInfo false return
           end =:: matchData
           matchData []
-            idName idLabel IdentifierMatch new list.append
+            idName idNameInfo IdentifierMatch new list.append
           matchData =[]
         end
         idName .scope GLOBAL_SCOPE !=
@@ -289,14 +289,14 @@ namespace: id
       ## search all scopes outside procedure
       firstNonProcScope idName@ .scope=
       while
-        context .identifierNames idName map.get .and idLabel=
+        context .identifierNames idName map.get .and idNameInfo=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
-            idLabel .nameId context isVisible if
+            idNameInfo .nameId context isVisible if
           matches .else
-            idName idLabel false return
+            idName idNameInfo false return
           end =:: matchData
           matchData []
-            idName idLabel IdentifierMatch new list.append
+            idName idNameInfo IdentifierMatch new list.append
           matchData =[]
         end
         idName .scope GLOBAL_SCOPE !=
@@ -335,16 +335,16 @@ namespace: id
       ## search all scopes outside procedure
       firstNonProcScope idName@ .scope=
       while
-        context .identifierNames idName map.get .and idLabel=
+        context .identifierNames idName map.get .and idNameInfo=
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
-            idLabel .nameId context isVisible if
+            idNameInfo .nameId context isVisible if
           matches .if =:: matchData
             matchData []
-              idName idLabel IdentifierMatch new list.append
+              idName idNameInfo IdentifierMatch new list.append
             matchData =[]
           end
           mNamespace NAMESPACE_ID_NONE == if
-            idLabel optional.wrap match=
+            idNameInfo optional.wrap match=
             importInfo [] .imported mNamespace=
           else
             true multiMatch=
@@ -375,22 +375,22 @@ namespace: id
   proc(
     NameId : nameId
     IdentifierContext ptr.mut : context
-  -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByLabel
+  -> IdentifierData ptr.mut bool ) =>: export: findIdentifier
     ## searchIdentifier
-      nameId context .typeContext  .nameContext id.getLabelName
+      nameId context .typeContext  .nameContext id.getIdentifierName
       true
       context
       IdentifierMatch list ptr.mut optional.empty
     searchIdentifier =:: isError .nameId =:: label ..drop
     label context getIdentifier isError | return
   end
-  ## unlike `findIdentifierByLabel` this procedure also find invisible identifiers
+  ## unlike `findIdentifier` this procedure also find invisible identifiers
   proc(
     NameId : nameId
     IdentifierContext ptr.mut : context
-  -> IdentifierData ptr.mut bool ) =>: export: findDeclaredIdentifierByLabel
+  -> IdentifierData ptr.mut bool ) =>: export: findDeclaredIdentifier
     ## searchIdentifier
-      nameId context .typeContext  .nameContext id.getLabelName
+      nameId context .typeContext  .nameContext id.getIdentifierName
       false
       context
       IdentifierMatch list ptr.mut optional.empty
@@ -502,7 +502,7 @@ namespace: id
   -> DeclareNameResult ) =>: declareName
     context .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
-    nameId nameContext labelFlags =:: flags
+    nameId nameContext identifierFlags =:: flags
     isAlias ! and flags FLAG_EXPORT & ? and
         context [] .scopes
           context [] .currentScopeId
@@ -519,7 +519,7 @@ namespace: id
       DeclareNameResult .Redeclare return
     end
     name context findIdByName ! if =:: shadowedName
-      shadowedName .nameId nameContext id.labelFlags =:: shadowFlags
+      shadowedName .nameId nameContext id.identifierFlags =:: shadowFlags
       flags FLAG_SHADOW & ? ! or shadowFlags id.FLAG_BUILT_IN & ? if
         shadowedName .nameId context getIdentifier
           ! "shadowedName exists" assert
@@ -581,8 +581,8 @@ namespace: id
       "invalid name id" sb.copyPtr declaredAt errors appendError
       NAME_ID_NONE ID_NONE_DATA true return
     end
-    nameId nameContext id.currentNamespace nameContext id.setLabelNamespace
-    nameId nameContext labelFlags =:: flags
+    nameId nameContext id.currentNamespace nameContext id.setIdentifierNamespace
+    nameId nameContext identifierFlags =:: flags
     flags FLAG_MUTABLE & ? if
       idType .TYPE if
         "type definitions cannot be mutable" sb.copyPtr declaredAt errors appendError
@@ -593,7 +593,7 @@ namespace: id
         NAME_ID_NONE ID_NONE_DATA true return
       end
     end
-    nameId nameContext id.getLabelName =:: name
+    nameId nameContext id.getIdentifierName =:: name
     ## don't check names of built-in identifiers
     name
       flags FLAG_BUILT_IN & ? or flags FLAG_LAMBDA & ? if
@@ -625,7 +625,7 @@ namespace: id
             prevDec [] .valueType  typeContext types.asUnlabeledProc
             types.typeEquals ! if
           "incompatible types for declaration and initialization of \"" sb.copyPtr
-            nameId nameContext sb.appendLabelPath
+            nameId nameContext sb.appendIdentifierPath
             "\":\n  * " sb.appendS
             prevDec [] .valueType typeContext sb.appendType
             " at " sb.appendS
@@ -637,7 +637,7 @@ namespace: id
         end
         prevDec [] .idType idType != if
           "declaration and initialization of \"" sb.copyPtr
-            nameId nameContext sb.appendLabelPath
+            nameId nameContext sb.appendIdentifierPath
             "\" are not compatible expected: " sb.appendS
             prevDec [] .idType sb.appendIdType
             " ( declared at " sb.appendS
@@ -648,9 +648,9 @@ namespace: id
           declaredAt errors appendError
           NAME_ID_NONE ID_NONE_DATA true return
         end
-        prevDec [] .nameId nameContext labelFlags flags != if
+        prevDec [] .nameId nameContext identifierFlags flags != if
           "flags for declaration and initialization of \"" sb.copyPtr
-            nameId nameContext sb.appendLabelPath
+            nameId nameContext sb.appendIdentifierPath
             "\" differ: " sb.appendS
             ## TODO? print flags
             " ( declaration at " sb.appendS
@@ -673,7 +673,7 @@ namespace: id
         prevId .aliasId context getAliasPos
       end =:: prevPos
       "re declaration of identifier \"" sb.copyPtr
-        nameId nameContext sb.appendLabelPath
+        nameId nameContext sb.appendIdentifierPath
         "\" ( previous declaration at " sb.appendS
         prevPos [] sb.appendPos
         " )" sb.appendS
@@ -736,11 +736,11 @@ namespace: id
     FilePosition ptr : pos
     IdentifierContext ptr.mut : context
   -> IdentifierInfo ) =>: export: newTmpVar
-    ## newLabel
+    ## newIdentifier
       string.empty
       id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
       pos
-    context .typeContext .nameContext newLabel =:: label
+    context .typeContext .nameContext newIdentifier =:: label
     ## IdentifierInfo
       IdentifierType .ITR_VAR
       label
@@ -814,7 +814,7 @@ namespace: sb
   end
   proc( stringBuilder : sb IdentifierInfo : id NameContext ptr : nameContext -> stringBuilder ) =>: export: appendIdInfo
     sb
-      id .nameId nameContext id.labelFlags >$
+      id .nameId nameContext id.identifierFlags >$
         $1 id.FLAG_EXPORT & ? if
           "export: " sb.appendS
         end
@@ -832,42 +832,42 @@ namespace: sb
       id .idType switch
         TYPE case
           "type \"" sb.appendS
-          id .nameId nameContext sb.appendLabelPath
+          id .nameId nameContext sb.appendIdentifierPath
           "\"" sb.appendS
           return
         PROCEDURE case
           "procedure \"" sb.appendS
-          id .nameId nameContext sb.appendLabelPath
+          id .nameId nameContext sb.appendIdentifierPath
           "\"" sb.appendS
           return
         PROCEDURE_BUNDLE case
           "procedure bundle  \"" sb.appendS
-          id .nameId nameContext sb.appendLabelPath
+          id .nameId nameContext sb.appendIdentifierPath
           "\"" sb.appendS
           return
         GLOBAL_VAR case
           "global variable \"" sb.appendS
-          id .nameId nameContext sb.appendLabelPath
+          id .nameId nameContext sb.appendIdentifierPath
           "\"" sb.appendS
           return
         LABEL case
           "label \"" sb.appendS
-          id .nameId nameContext sb.appendLabelName
+          id .nameId nameContext sb.appendIdentifierName
           "\"" sb.appendS
           return
         LOCAL_VAR case
           "local variable: \"" sb.appendS
-          id .nameId nameContext sb.appendLabelName
+          id .nameId nameContext sb.appendIdentifierName
           "\"" sb.appendS
           return
         ARGUMENT case
           "procedure argument \"" sb.appendS
-          id .nameId nameContext sb.appendLabelName
+          id .nameId nameContext sb.appendIdentifierName
           "\"" sb.appendS
           return
         TMP_VAR case
           "temporary variable \"" sb.appendS
-          id .nameId nameContext sb.appendLabelName
+          id .nameId nameContext sb.appendIdentifierName
           "\"" sb.appendS
           return
         ITR_VAR case
@@ -884,7 +884,7 @@ namespace: id
       context [] .typeContext  .nameContext .namespaceInfo list.append
     context .prevNamespaces=
     context [] .typeContext  .nameContext .namespaceInfo .current
-      name context .typeContext  .nameContext id.getLabelName
+      name context .typeContext  .nameContext id.getIdentifierName
         true
       context .typeContext  .nameContext childId
     context .typeContext  .nameContext .namespaceInfo .current=
@@ -895,7 +895,7 @@ namespace: id
     IdentifierContext ptr.mut : context
   -> bool ) =>: export: importNamespace
     0 NamespaceId cast
-      name context .typeContext  .nameContext id.getLabelName
+      name context .typeContext  .nameContext id.getIdentifierName
     context .typeContext  .nameContext findNamespace
       $ NAMESPACE_ID_NONE == if ..drop
         true return
@@ -923,7 +923,7 @@ namespace: id
       nameAlias .length 0:iSize != if
         nameAlias nameContext id.copyString ## create copy to ensure string stays alive
       else
-        target [] .nameId nameContext id.getLabelName
+        target [] .nameId nameContext id.getIdentifierName
           $ '.' string.lastIndexOf
         string.tail
       end

@@ -122,7 +122,7 @@ namespace: ProcId
   proc( ProcId : a -> i32 ) =>: export: hash
     a .Data iSize cast! $ 32 >>> ^ i32 cast
   end
-  proc( ProcId -> NameId ) : export: getLabel
+  proc( ProcId -> NameId ) : export: getName
   proc( ProcedureInfo ptr.mut -> ProcId ) =>: export: create
     ProcId new
   end

@@ -131,7 +131,7 @@ proc( ProcedureInfo : p -> ) =>: freeProcedure
   else ..drop end
 end
 namespace: ProcId
-  proc( ProcId -> NameId ) =>: export: getLabel
+  proc( ProcId -> NameId ) =>: export: getName
     getProcInfo [] .nameId
   end
 end
@@ -164,9 +164,9 @@ union(
      IdentifierInfo : DeclareId
              ProcId : ImplementProcedure
              ProcId : ProcPtr
-            NameId : GetLabel
-            NameId : SetLabel
-            NameId : ExistsLabel
+             NameId : GetLabel
+             NameId : SetLabel
+             NameId : ExistsLabel
                 i32 : GetElement
                 i32 : GetUnionElement
                 i32 : SetElement
@@ -509,11 +509,11 @@ struct(
 ) =:: export: ProcedureBundle
 
 ## check if composite has any static elements, types are static by default
-proc( Type slice : elements NameId slice : labels TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
+proc( Type slice : elements NameId slice : eltNames TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
   typeContext .nameContext =:: nameContext
   elements .length for =:: i
-    i labels .length u< and labels i []
-        nameContext id.labelFlags id.FLAG_STATIC & ? if
+    i eltNames .length u< and eltNames i []
+        nameContext id.identifierFlags id.FLAG_STATIC & ? if
       true return
     end
     elements i [] typeContext types.isType if
@@ -535,7 +535,7 @@ proc(
       ProcFlags.HAS_STATIC_ARG |
     end
     outTypes newProcType typeContext types.getProcRetLabels typeContext hasStaticElement or
-        procInfo [] .nameId typeContext .nameContext id.labelFlags id.FLAG_STATIC & ? if
+        procInfo [] .nameId typeContext .nameContext id.identifierFlags id.FLAG_STATIC & ? if
       ProcFlags.IS_STATIC |
     end
   procInfo .flags=
@@ -566,7 +566,7 @@ proc(
   end =:: outTypes
   inTypes procType typeContext types.getProcArgLabels typeContext hasStaticElement =:: hasStaticArg
   outTypes procType typeContext types.getProcRetLabels typeContext hasStaticElement
-    procName nameContext id.labelFlags id.FLAG_STATIC & ? |
+    procName nameContext id.identifierFlags id.FLAG_STATIC & ? |
   =:: isStatic
   progContext [] .programMemory
     ## ProcedureInfo
@@ -814,7 +814,7 @@ namespace: sb
         "nested proc ( " sb.appendS
         op .dataType  typeContext sb.appendType
         " ) : " sb.appendS
-        procId ProcId.getLabel nameContext sb.appendLabelPath
+        procId ProcId.getName nameContext sb.appendIdentifierPath
       break
       ConstantReference .case =:: refId
         progContext [] .constantReferences refId i64 cast @[] =:: constData
@@ -867,7 +867,7 @@ namespace: sb
         op .dataType  typeContext sb.appendType
         " ) : " sb.appendS
         procId ProcId.getProcInfo =:: procInfo
-        procInfo [] .nameId nameContext sb.appendLabelPath
+        procInfo [] .nameId nameContext sb.appendIdentifierPath
         ## XXX? print auto args
       break
       BuiltIn .case =:: builtInId
@@ -905,14 +905,14 @@ namespace: sb
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         procId ProcId.getProcInfo =:: procInfo
-        procInfo [] .nameId nameContext sb.appendLabelPath
+        procInfo [] .nameId nameContext sb.appendIdentifierPath
       break
       ProcPtr .case =:: procId
         "procedure pointer ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         procId ProcId.getProcInfo =:: procInfo
-        procInfo [] .nameId nameContext sb.appendLabelPath
+        procInfo [] .nameId nameContext sb.appendIdentifierPath
       break
       AutoTypedInitializeId .case =:: id
         "auto-typed initialize ( " sb.appendS
@@ -930,23 +930,23 @@ namespace: sb
         "get label ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        name nameContext sb.appendLabelName
+        name nameContext sb.appendIdentifierName
       break
       SetLabel .case =:: name
         "set label ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        name nameContext sb.appendLabelName
+        name nameContext sb.appendIdentifierName
       break
       ExistsLabel .case =:: name
         "exists label ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        name nameContext sb.appendLabelName
+        name nameContext sb.appendIdentifierName
       break
       TypeWith .case =:: procId
         "type with( " sb.appendS
-          procId ProcId.getLabel nameContext sb.appendLabelPath
+          procId ProcId.getName nameContext sb.appendIdentifierPath
         "@ )" sb.appendS
       break
       TypeModifier .case =:: typeModifier
@@ -1079,50 +1079,50 @@ namespace: sb
       break
       GetName .case =:: name
         "get: " sb.appendS
-        name nameContext sb.appendLabelPath
+        name nameContext sb.appendIdentifierPath
       break
       AtName .case =:: name
         "address of: " sb.appendS
-        name nameContext sb.appendLabelPath
+        name nameContext sb.appendIdentifierPath
       break
       SetName .case =:: name
         "set: " sb.appendS
-        name nameContext sb.appendLabelPath
+        name nameContext sb.appendIdentifierPath
       break
       ExistsName .case =:: name
         "exists name: " sb.appendS
-        name nameContext sb.appendLabelPath
+        name nameContext sb.appendIdentifierPath
       break
       DeclareName .case =:: name
         "declare name: " sb.appendS
-        name nameContext sb.appendLabelPath
+        name nameContext sb.appendIdentifierPath
       break
       AliasName .case =:: aliasData
         "alias name: " sb.appendS
-        aliasData .alias nameContext sb.appendLabelPath
-        aliasData .baseName nameContext sb.appendLabelPath
+        aliasData .alias nameContext sb.appendIdentifierPath
+        aliasData .baseName nameContext sb.appendIdentifierPath
       break
       InitializeName .case =:: initInfo
         initInfo .initType .AUTO if
           "auto-typed " sb.appendS
         end
         "initialize name: " sb.appendS
-        initInfo .nameId nameContext sb.appendLabelPath
+        initInfo .nameId nameContext sb.appendIdentifierPath
       break
       UsingNamespace .case =:: usingNamespace
         "using namespace: " sb.appendS
-        usingNamespace .baseName nameContext sb.appendLabelPath
+        usingNamespace .baseName nameContext sb.appendIdentifierPath
         usingNamespace .alias id.NAME_ID_NONE != if
           " as " sb.appendS
-          usingNamespace .alias nameContext sb.appendLabelName
+          usingNamespace .alias nameContext sb.appendIdentifierName
         end
       break
       UsingIdentifier .case =:: usingIdentifier
         "using idenfifier: " sb.appendS
-        usingIdentifier .baseName nameContext sb.appendLabelPath
+        usingIdentifier .baseName nameContext sb.appendIdentifierPath
         usingIdentifier .alias id.NAME_ID_NONE != if
           " as " sb.appendS
-          usingIdentifier .alias nameContext sb.appendLabelName
+          usingIdentifier .alias nameContext sb.appendIdentifierName
         end
       break
       Assert case
@@ -1206,7 +1206,7 @@ namespace: sb
         break
       Find .case =:: id
         "..?find." sb.appendS
-        id nameContext sb.appendLabelPath
+        id nameContext sb.appendIdentifierPath
         break
     end
   end
@@ -1223,7 +1223,7 @@ namespace: sb
         ..drop continue
       end =:: impl
       "## "          sb.appendS
-      proc [] .nameId nameContext sb.appendLabelPath
+      proc [] .nameId nameContext sb.appendIdentifierPath
       impl .genericInfo .ImplInfo .if
         [] .staticArgs for >$ ' ' sb.appendC <$ typeContext sb.appendConstant end
       else ..drop end

@@ -123,7 +123,7 @@ proc(
         None Int Dynamic case
           size break
         GenericArg .case =:: genericId
-          genericId nameContext id.labelFlags id.FLAG_STATIC & ? ! if
+          genericId nameContext id.identifierFlags id.FLAG_STATIC & ? ! if
             flags ReplaceFlags.REPLACE_AUTO_ARGS & ? ! if
               size break
             end
@@ -866,7 +866,7 @@ proc(
             ParameterInfo new list.append
           current .paramInfo=
           paramIndex 1 - paramIndex=
-        else paramLabel nameContext id.labelFlags id.FLAG_AUTO & ? and
+        else paramLabel nameContext id.identifierFlags id.FLAG_AUTO & ? and
             current .genericValues paramLabel map.at .and =:: autoValue
             autoValue [] .NonEmpty ? ! _if
           autoValue [] switch
@@ -939,7 +939,7 @@ proc(
         map.put ..drop
       end
       stackValues stackIndex @[] .value [] =:: stackVal
-      paramLabel nameContext id.labelFlags id.FLAG_STATIC & ? or
+      paramLabel nameContext id.identifierFlags id.FLAG_STATIC & ? or
           paramType typeContext types.isType or stackVal .TypeId ? if
         stackVal .None ? if
           false current .argsMatch=
@@ -1063,7 +1063,7 @@ proc(
           "  * " sb.appendS
           procInfo [] .procType typeContext sb.appendType
           ' ' sb.appendC
-          procInfo [] .nameId nameContext sb.appendLabelPath
+          procInfo [] .nameId nameContext sb.appendIdentifierPath
           '\n' sb.appendC
         end
         currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
@@ -1108,7 +1108,7 @@ proc(
           "  * " sb.appendS
           procInfo [] .procType typeContext sb.appendType
           ' ' sb.appendC
-          procInfo [] .nameId nameContext sb.appendLabelPath
+          procInfo [] .nameId nameContext sb.appendIdentifierPath
           '\n' sb.appendC
         end
         currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
@@ -1140,7 +1140,7 @@ proc(
   eltCount ConstValue list.create =:: mut: constArgs
   0:i32 while ..dup eltCount < do =:: i
     procType i typeContext types.getProcArgLabel =:: eltLabel
-    eltLabel nameContext id.labelFlags id.FLAG_STATIC & ? if
+    eltLabel nameContext id.identifierFlags id.FLAG_STATIC & ? if
       constArgs
         candidate .genericValues eltLabel getValueOrNone list.append
       constArgs=
@@ -1203,7 +1203,7 @@ proc(
             ProcCodeState .PARSED
             codeImpl [] .expansionLevel 1:i16 +
           CodeProcData new ProcImplType .Code
-          baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplLabel
+          baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplName
           baseProcInfo [] .fileId
           baseProcInfo [] .scopeId
           ## replaceGenerics
@@ -1238,7 +1238,7 @@ proc(
   constArgs=
   eltCount for =:: i
     procType i typeContext types.getProcArgLabel =:: eltLabel
-    eltLabel nameContext id.labelFlags =:: flags
+    eltLabel nameContext id.identifierFlags =:: flags
     true =:: mut: needArg
     flags id.FLAG_AUTO & ? if
       candidate .genericValues eltLabel getValueOrNone =:: value

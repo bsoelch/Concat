@@ -9,7 +9,7 @@ import arenaAlloc
 import "program.concat"
 import "measure.concat"
 import "branchTree.concat"
-using id.LabelFlag
+using id.IdentifierFlag
 
 struct(
   ProgramContext ptr.mut : program
@@ -27,14 +27,14 @@ proc(
   context [] .program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
   id.FLAG_NONE mutable if
-    id.FLAG_MUTABLE | LabelFlag cast
+    id.FLAG_MUTABLE | IdentifierFlag cast
   end =:: flags
-  ## newLabel
+  ## newIdentifier
     string.empty
     flags ## XXX? special flag for tmp vars
     pos
     nameContext
-  id.newLabel =:: nameId
+  id.newIdentifier =:: nameId
   nameId varType pos idContext id.declareTmpVar
   context [] .variables
     varType nameId VariableType .TMP_VAR VariableInfo new list.append
@@ -68,8 +68,8 @@ proc(
   optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
   procId ProcId.getProcInfo =:: procData
   procData .implementation [] .Code ? ! or
-      procData [] .nameId nameContext id.labelFlags id.FLAG_EXTERN & ? or
-      procData [] .nameId nameContext id.labelFlags id.FLAG_NO_INLINE & ? if
+      procData [] .nameId nameContext id.identifierFlags id.FLAG_EXTERN & ? or
+      procData [] .nameId nameContext id.identifierFlags id.FLAG_NO_INLINE & ? if
     false return
   end
   procId program calledProcOps =:: procOps
@@ -108,12 +108,12 @@ proc(
     eltType typeContext types.isEmpty if continue end ## ignore empty arguments
     argLabel id.NAME_ID_NONE == if
       offset 1 + offset=
-    else argLabel nameContext id.labelFlags id.FLAG_STATIC & ? ! _if
+    else argLabel nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
       offset 0 != if
         ## rotate labeled argument to top
         offset StackModType .ROTATE pos opStackMod list.append
       end
-      eltType argLabel nameContext id.labelFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
+      eltType argLabel nameContext id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
       eltType tmpId pos opInitializeId list.append
       remapIds@ argLabel tmpId map.put optional.isEmpty "label-value only reassigned once" assert
     end
@@ -261,7 +261,7 @@ proc(
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
           op .dataType i typeContext types.getProcArgLabel =:: argName
-          argName id.NAME_ID_NONE == or argName nameContext id.labelFlags id.FLAG_STATIC & ? if
+          argName id.NAME_ID_NONE == or argName nameContext id.identifierFlags id.FLAG_STATIC & ? if
             continue
           end
           args i [] =:: argType
@@ -508,7 +508,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     builtInImpl [] .hasPtr ! if
       continue
     end
-    currentProc [] .nameId nameContext id.labelPos .else
+    currentProc [] .nameId nameContext id.identifierPos .else
       "missing nameId position" ..panic
     end =:: pos
     4 Operation mem.alloc 4 slice.createMutable =:: opBuffer

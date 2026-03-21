@@ -1050,7 +1050,7 @@ proc(
           context [] .localVariables .if
         label map.get .else
           "missing value for " sb.copyPtr
-            label nameContext sb.appendLabelPath
+            label nameContext sb.appendIdentifierPath
           op [] .pos errors appendError
           EvalResult .Error return
         end =:: value
@@ -1202,20 +1202,20 @@ proc(
             idContext
           id.getIdentifier if ..drop
             "could not find identifier: " sb.copyPtr
-              nameId nameContext sb.appendLabelPath
+              nameId nameContext sb.appendIdentifierPath
             op [] .pos errors appendError
             EvalResult .Error return ## unknown identifier
           end =:: idData
-          idData [] .nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? if
+          idData [] .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
             "mutable global variables are not supported: " sb.copyPtr
-              nameId nameContext sb.appendLabelPath
+              nameId nameContext sb.appendIdentifierPath
             op [] .pos errors appendError
             ## compile-time evaluation of mutable global variables not supported
             EvalResult .Error return
           end
           idData [] .constValue .None ? if
             "identifier " sb.copyPtr
-              nameId nameContext sb.appendLabelPath
+              nameId nameContext sb.appendIdentifierPath
               " has not been initialized" sb.appendS
             op [] .pos errors appendError
             EvalResult .Error return
@@ -1239,7 +1239,7 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: value
-          nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? =:: isMutable
+          nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? =:: isMutable
           ## pushValue
             value .value
             value .info .valueType isMutable typeContext types.getAddressType
@@ -1254,7 +1254,7 @@ proc(
           end =:: idData
           idData [] .constValue .Procedure .else ..drop
             "could not determine id of procedure" sb.copyPtr
-              nameId nameContext sb.appendLabelName
+              nameId nameContext sb.appendIdentifierName
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: procVal
@@ -1275,7 +1275,7 @@ proc(
     SetId .case =:: idInfo
       idInfo .nameId =:: nameId
       nameId
-        nameContext id.labelFlags id.FLAG_MUTABLE & ?
+        nameContext id.identifierFlags id.FLAG_MUTABLE & ?
       "setId only created for mutable identifiers" assert
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
@@ -1311,7 +1311,7 @@ proc(
           id.getIdentifier if ..drop
             value valInfo context unpopValue
             "could not find identifier: " sb.copyPtr
-              nameId nameContext sb.appendLabelPath
+              nameId nameContext sb.appendIdentifierPath
             op [] .pos errors appendError
             EvalResult .Error return ## unknown identifier
           end =:: idData
@@ -1358,7 +1358,7 @@ proc(
           end
             nameId
             ## Constant
-              nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? if
+              nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
                 value valInfo .valueType true context localCopy
               else
                 value
@@ -1392,7 +1392,7 @@ proc(
       end
       value valInfo eltIndex op [] .pos context getElement wrapResult return
     ExistsName .case =:: label
-      label idContext id.findIdentifierByLabel ! =:: exists
+      label idContext id.findIdentifier ! =:: exists
       ..drop
       ## pushValue
         exists ConstValue .Bool
@@ -1989,7 +1989,7 @@ namespace: interpreter
     program .errors =:: errors
     program .idContext .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
-    "memcpy":s procName nameContext id.labelNameEq if
+    "memcpy":s procName nameContext id.identifierNameEq if
       args .length 3:iSize != or
           args 2 [] typeContext types.isPointer ! or
           args 2 [] typeContext types.isMutable ! or
@@ -2030,7 +2030,7 @@ namespace: interpreter
       false return
     end
     "call to unsupported extern procedure: " sb.copyPtr
-      procName nameContext sb.appendLabelPath
+      procName nameContext sb.appendIdentifierPath
     pos errors appendInfo
     true return
   end
@@ -2126,7 +2126,7 @@ namespace: interpreter
     0:iSize ## XXX? is there a better way to get number of non-auto static args
       args .length i32 cast.u for =:: i
         procType i typeContext types.getProcArgLabel =:: label
-        label nameContext id.labelFlags =:: flags
+        label nameContext id.identifierFlags =:: flags
         flags id.FLAG_STATIC & ? or
             args i [] typeContext types.isType if
           1:iSize +
@@ -2174,8 +2174,8 @@ namespace: interpreter
     ## process procedure arguments
     0:i32 while $ args .length i32 cast < do =:: i
       procType i typeContext types.getProcArgLabel =:: nameId
-      nameId nameContext id.labelFlags =:: labelFlags
-      labelFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
+      nameId nameContext id.identifierFlags =:: identifierFlags
+      identifierFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         codeImpl .genericInfo .ImplInfo .else
           "expected generic implementation" ..panic
         end =:: implInfo
@@ -2194,7 +2194,7 @@ namespace: interpreter
       end
       argOffset stackOffset u>= if
         "not enough arguments for procedure " sb.copyPtr
-          procName nameContext sb.appendLabelPath
+          procName nameContext sb.appendIdentifierPath
         pos errors appendError
         context [] .localVariables optional.unwrap map.free
         prevVariables context .localVariables=
@@ -2205,7 +2205,7 @@ namespace: interpreter
       context [] .stack argOffset [] =:: value
       context [] .stackInfo argOffset [] =:: valueInfo
       argOffset 1:iSize + argOffset=
-      nameId id.NAME_ID_NONE == or labelFlags id.FLAG_DUMMY & ? if ## push argument
+      nameId id.NAME_ID_NONE == or identifierFlags id.FLAG_DUMMY & ? if ## push argument
         context [] .stack
           value list.append
         context .stack=
@@ -2230,13 +2230,13 @@ namespace: interpreter
     codeImpl [] .codeState switch
       PARSING case
         "procedure " sb.copyPtr
-          procName nameContext sb.appendLabelPath
+          procName nameContext sb.appendIdentifierPath
           " has not finished parsing" sb.appendS
         pos errors appendError
         Operation slice.empty break
       PARSED TYPE_CHECKING case
         "procedure " sb.copyPtr
-          procName nameContext sb.appendLabelPath
+          procName nameContext sb.appendIdentifierPath
           " has not finished type-checking" sb.appendS
         pos errors appendError
         Operation slice.empty break
@@ -2246,7 +2246,7 @@ namespace: interpreter
     end =:: code
     code .length 0:iSize == if
       "no operations in procedure " sb.copyPtr
-        procName nameContext sb.appendLabelPath
+        procName nameContext sb.appendIdentifierPath
       pos errors appendError
       context resetContext
       context [] .localVariables optional.unwrap map.free

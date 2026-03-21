@@ -1308,10 +1308,10 @@ namespace: types
     end =:: eltNames
     ## TODO? move linear search in slice to standard library
     0:i32 while $ iSize cast.u eltNames .length u< do =:: i
-      ## labelNamesEq
+      ## identifierNamesEq
         name
         eltNames i []
-      nameContext id.labelNamesEq if
+      nameContext id.identifierNamesEq if
         i optional.wrap return
       end
       i 1 +
@@ -1621,16 +1621,16 @@ namespace: sb
   -> stringBuilder ) =>: appendTypeElementLabel
     nameId id.NAME_ID_NONE == if return end
     " : " appendS
-    nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? if
+    nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
       "mut: " appendS
     end
-    nameId nameContext id.labelFlags id.FLAG_AUTO & ? if
+    nameId nameContext id.identifierFlags id.FLAG_AUTO & ? if
       "auto: " appendS
     end
-    nameId nameContext id.labelFlags id.FLAG_STATIC & ? if
+    nameId nameContext id.identifierFlags id.FLAG_STATIC & ? if
       "static: " appendS
     end
-    nameId nameContext appendLabelName
+    nameId nameContext appendIdentifierName
   end
   proc(
     stringBuilder : sb
@@ -1654,7 +1654,7 @@ namespace: sb
           end
           t $2 context types.compositeGetLabel =:: label
           label id.NAME_ID_NONE !=
-            label nameContext id.labelFlags id.FLAG_DUMMY & ? ! &
+            label nameContext id.identifierFlags id.FLAG_DUMMY & ? ! &
           =:: printLabel
           eltType context types.isEmpty if
             "_" sb.appendS
@@ -1675,7 +1675,7 @@ namespace: sb
     types.EnumInfo : enumInfo
     NameContext ptr : nameContext
   -> stringBuilder ) =>: appendEnumElements
-    enumInfo .eltNames for nameContext appendLabelName ' ' sb.appendC end
+    enumInfo .eltNames for nameContext appendIdentifierName ' ' sb.appendC end
   end
 end
 namespace: types
@@ -1744,10 +1744,10 @@ namespace: types
   proc( Type : proc NameId : argName TypeContext ptr : context -> i32 optional ) =>: export: findProcArgLabel
     proc context getProcArgLabels =:: eltNames
     0:i32 while $ iSize cast.u eltNames .length u< do =:: i
-      ## labelNamesEq
+      ## identifierNamesEq
         argName
         eltNames i []
-      context .nameContext id.labelNamesEq if
+      context .nameContext id.identifierNamesEq if
         i optional.wrap return
       end
       i 1 +
@@ -1947,7 +1947,7 @@ namespace: sb
     context .nameContext =:: nameContext
     sb
       '"' sb.appendC
-      name nameContext sb.appendLabelPath
+      name nameContext sb.appendIdentifierPath
       '"' sb.appendC
       depth 0 > if
         " [ " sb.appendS
@@ -2008,10 +2008,10 @@ namespace: types
     ConstantContext ptr.mut : constContext
   -> GeneratedTypeState ) =>: export: findGeneratedType
     typeContext .nameContext =:: nameContext
-    generatorName0 nameContext id.getBaseLabel =:: generatorName
+    generatorName0 nameContext id.getBaseName =:: generatorName
     generatorName arguments GeneratedTypeName new =:: genName
     typeContext .generatedTypes genName map.get .if =:: prevValue
-      generatorName nameContext id.labelFlags id.FLAG_NO_WRAP & ? and prevValue .value .if
+      generatorName nameContext id.identifierFlags id.FLAG_NO_WRAP & ? and prevValue .value .if
         GeneratedTypeState .Stored return
       end
       prevValue .key Type .GeneratedType GeneratedTypeState .Stored return
@@ -2041,7 +2041,7 @@ namespace: types
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> Type ) =>: export: initializeGeneratedType
-    generatorName0 typeContext .nameContext id.getBaseLabel =:: generatorName
+    generatorName0 typeContext .nameContext id.getBaseName =:: generatorName
     ## findGeneratedType
       generatorName
       arguments
@@ -2060,7 +2060,7 @@ namespace: types
         prevGeneratorName GeneratedTypeName ptr cast []
       map.at optional.unwrap
     .value=
-    generatorName typeContext .nameContext id.labelFlags id.FLAG_NO_WRAP & ? if
+    generatorName typeContext .nameContext id.identifierFlags id.FLAG_NO_WRAP & ? if
       value return
     end
     prevType return
@@ -2399,10 +2399,10 @@ namespace: types
         false return
       end
       labeled if
-        ## labelNamesEq
+        ## identifierNamesEq
           srcEltNames? .and i slice.get .else id.NAME_ID_NONE end
           targetEltNames? .and i slice.get .else id.NAME_ID_NONE end
-        nameContext id.labelNamesEq ! if
+        nameContext id.identifierNamesEq ! if
           false return
         end
       end
@@ -2752,7 +2752,7 @@ namespace: sb
           break
         GenericArg .case =:: genSize
           '`' sb.appendC
-          genSize nameContext appendLabelName
+          genSize nameContext appendIdentifierName
           '`' sb.appendC
           break
       end
@@ -2827,7 +2827,7 @@ namespace: sb
           '.' sb.appendC
           baseType context types.asRawUnion .else baseType end
             element [] .labelIndex
-          context types.compositeGetLabel nameContext appendLabelName
+          context types.compositeGetLabel nameContext appendIdentifierName
         return
       Procedure  .case types.ProcType ptr cast [] =:: procType
         sb
@@ -2866,7 +2866,7 @@ namespace: sb
       GenericType .case =:: nameId
         sb
           '`' sb.appendC
-          nameId nameContext appendLabelName
+          nameId nameContext appendIdentifierName
           '`' sb.appendC
         return
       GeneratedType .case types.GeneratedTypeName ptr cast =:: genTypeName
@@ -2875,7 +2875,7 @@ namespace: sb
             genTypeName [] .arguments i [] context sb.appendConstant
             ' ' sb.appendC
           end
-          genTypeName [] .generator nameContext sb.appendLabelPath
+          genTypeName [] .generator nameContext sb.appendIdentifierPath
           depth 0 > if
             " [ "     appendS
               context .generatedTypes
@@ -2915,7 +2915,7 @@ namespace: sb
           t context types.unwrapRefinement context depth 1 - appendTypeRecursive
           " .with( " sb.appendS
             t context types.getTypeTrait .if
-              ProcId.getLabel nameContext sb.appendLabelPath '@' sb.appendC
+              ProcId.getName nameContext sb.appendIdentifierPath '@' sb.appendC
             else
               '?' sb.appendC
             end

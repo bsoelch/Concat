@@ -170,8 +170,8 @@ namespace: ValueLocation
       Stack .case =:: index "Stack: ":s sb.appendStr index sb.appendI break
       Stack2 .case =:: index "Stack.2: ":s sb.appendStr index sb.appendI break
       Stack3 .case =:: index "Stack.3: ":s sb.appendStr index sb.appendI break
-      LocalVariable .case =:: id "LocalVar: ":s sb.appendStr id nameContext sb.appendLabelPath break
-      GlobalVariable .case =:: id "GlobalVar: ":s sb.appendStr id nameContext sb.appendLabelPath break
+      LocalVariable .case =:: id "LocalVar: ":s sb.appendStr id nameContext sb.appendIdentifierPath break
+      GlobalVariable .case =:: id "GlobalVar: ":s sb.appendStr id nameContext sb.appendIdentifierPath break
       LocalMemory .case =:: id "LocalMemory: ":s sb.appendStr id sb.appendI break
     end
   end
@@ -454,7 +454,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   ## TODO correctly mangle procedure names
-  procId ProcId.getLabel nameContext id.getLabelName
+  procId ProcId.getName nameContext id.getIdentifierName
 end
 
 proc(
@@ -1166,7 +1166,7 @@ proc(
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procData
       procId context getProcName =:: procName
-      procData [] .nameId nameContext id.labelFlags id.FLAG_EXPORT & ? if
+      procData [] .nameId nameContext id.identifierFlags id.FLAG_EXPORT & ? if
         procName asm.exportName list.append
       end
       procName asm.enter list.append

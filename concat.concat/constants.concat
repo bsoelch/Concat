@@ -527,7 +527,7 @@ namespace: sb
           "}" sb.appendS
           break
         Procedure .case
-          ProcId.getLabel nameContext sb.appendLabelPath '@' sb.appendC
+          ProcId.getName nameContext sb.appendIdentifierPath '@' sb.appendC
           break
         ProcedureBundle .case i64 cast sb.appendI
           ":ProcBundleId"  sb.appendS
@@ -537,7 +537,7 @@ namespace: sb
           ## TODO? print label
           break
         GlobalPointer .case
-          typeContext .nameContext sb.appendLabelPath
+          typeContext .nameContext sb.appendIdentifierPath
           '@' sb.appendC
           break
         Union .case =:: unionVal
