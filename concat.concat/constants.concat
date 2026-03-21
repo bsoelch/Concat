@@ -3,7 +3,7 @@ import arenaAlloc
 import unicode
 
 import "files.concat"
-import "labels.concat"
+import "names.concat"
 import "types.concat"
 using std.literals.
 

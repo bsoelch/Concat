@@ -6,7 +6,7 @@ using std.literals.
 
 import "constants.concat"
 import "types.concat"
-import "labels.concat"
+import "names.concat"
 import "codeBlocks.concat"
 import "common.concat"
 

@@ -7,7 +7,7 @@ import arenaAlloc
 import map
 using std.literals.
 
-import "labels.concat"
+import "names.concat"
 import "constants.concat"
 
 namespace: types

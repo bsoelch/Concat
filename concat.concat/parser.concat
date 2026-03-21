@@ -9,7 +9,7 @@ using std.literals.
 
 import "program.concat"
 import "files.concat"
-import "labels.concat"
+import "names.concat"
 import "types.concat"
 import "constants.concat"
 import "codeBlocks.concat"
