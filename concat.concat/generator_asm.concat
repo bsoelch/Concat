@@ -164,14 +164,14 @@ namespace: ValueLocation
       LocalMemory .case b .LocalMemory unionElement.unwrap == return
     end
   end
-  proc( stringBuilder ValueLocation LabelContext ptr : labelContext -> stringBuilder ) =>: sbAppend
+  proc( stringBuilder ValueLocation NameContext ptr : nameContext -> stringBuilder ) =>: sbAppend
     switch
       None case "None":s sb.appendStr break
       Stack .case =:: index "Stack: ":s sb.appendStr index sb.appendI break
       Stack2 .case =:: index "Stack.2: ":s sb.appendStr index sb.appendI break
       Stack3 .case =:: index "Stack.3: ":s sb.appendStr index sb.appendI break
-      LocalVariable .case =:: id "LocalVar: ":s sb.appendStr id labelContext sb.appendLabelPath break
-      GlobalVariable .case =:: id "GlobalVar: ":s sb.appendStr id labelContext sb.appendLabelPath break
+      LocalVariable .case =:: id "LocalVar: ":s sb.appendStr id nameContext sb.appendLabelPath break
+      GlobalVariable .case =:: id "GlobalVar: ":s sb.appendStr id nameContext sb.appendLabelPath break
       LocalMemory .case =:: id "LocalMemory: ":s sb.appendStr id sb.appendI break
     end
   end
@@ -207,19 +207,19 @@ struct(
 ) =:: CompilerContext
 
 proc( CompilerContext ptr.mut : context -> ) =>: dumpState
-  context [] .program .idContext .typeContext .labelContext =:: labelContext
+  context [] .program .idContext .typeContext .nameContext =:: nameContext
   512 sb.create
     context .registerInfo for =:: reg =:: regInfo
       reg context .asmContext [] .appendReg () ": ":s sb.appendStr
       regInfo .uses switch
         None case "None":s sb.appendStr break
-        Val .case labelContext ValueLocation.sbAppend break
+        Val .case nameContext ValueLocation.sbAppend break
         Val2 .case =:: loc
-          loc .0 labelContext ValueLocation.sbAppend
+          loc .0 nameContext ValueLocation.sbAppend
           ", ":s sb.appendStr
-          loc .1 labelContext ValueLocation.sbAppend
+          loc .1 nameContext ValueLocation.sbAppend
         break
-        Vals .case for labelContext ValueLocation.sbAppend ", ":s sb.appendStr end break
+        Vals .case for nameContext ValueLocation.sbAppend ", ":s sb.appendStr end break
       end
       '\n' sb.appendC
     end
@@ -321,9 +321,9 @@ proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : conte
   end regInfo .uses=
 end
 proc( ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: removeRegUse
-  context [] .program .idContext .typeContext .labelContext =:: labelContext
+  context [] .program .idContext .typeContext .nameContext =:: nameContext
   256 sb.create
-    loc labelContext ValueLocation.sbAppend
+    loc nameContext ValueLocation.sbAppend
   sb.asStr io.println
   "unimplemented: unlinking register uses" ..panic
 end
@@ -452,9 +452,9 @@ proc(
   program .errors =:: errors
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   ## TODO correctly mangle procedure names
-  procId ProcId.getLabel labelContext id.getLabelName
+  procId ProcId.getLabel nameContext id.getLabelName
 end
 
 proc(
@@ -1136,7 +1136,7 @@ proc(
   program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   op .val switch
     NOP case return
     Constant .case op .dataType typeContext ValType.fromType context pushConstant return
@@ -1166,7 +1166,7 @@ proc(
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procData
       procId context getProcName =:: procName
-      procData [] .nameId labelContext id.labelFlags id.FLAG_EXPORT & ? if
+      procData [] .nameId nameContext id.labelFlags id.FLAG_EXPORT & ? if
         procName asm.exportName list.append
       end
       procName asm.enter list.append
@@ -1394,7 +1394,7 @@ end
 proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: export: compileToASM
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   ## CompilerContext
     program
     AMD64.asmContext

@@ -78,10 +78,10 @@ struct(
   Namespace list : namespaces
   NamespaceImport list : namespaceImports
   NamespaceInfo : namespaceInfo
-) =:: export: LabelContext
+) =:: export: NameContext
 namespace: id
 
-  proc( -> LabelContext ) =>: export: newLabelContext
+  proc( -> NameContext ) =>: export: newNameContext
     4096 char8 arenaAlloc.create
     128          Label list.create
     32       Namespace list.create
@@ -93,9 +93,9 @@ namespace: id
       0:NamespaceId
       NAMESPACE_IMPORT_NONE
     NamespaceInfo new
-    LabelContext new return
+    NameContext new return
   end
-  proc( LabelContext -> LabelContext ) =>: export: freeLabelContext
+  proc( NameContext -> NameContext ) =>: export: freeNameContext
     =:: mut: context
     context .nameBuffer arenaAlloc.free context@ .nameBuffer=
     context .labels           list.free context@ .labels=
@@ -109,66 +109,66 @@ namespace: id
     context return
   end
 
-  proc( NameId : id LabelContext ptr : context -> Label ptr.mut optional ) =>: getLabel
+  proc( NameId : id NameContext ptr : context -> Label ptr.mut optional ) =>: getLabel
     id NAME_ID_NONE == if
       Label ptr.mut optional.empty return
     end
     ## index check done by list.at
     context [] .labels id i64 cast list.at return
   end
-  proc( NameId : id LabelContext ptr.mut : context -> string ) =>: export: getLabelName
+  proc( NameId : id NameContext ptr.mut : context -> string ) =>: export: getLabelName
     ## the addresses of label names are stable for the lifetime of the context
     id context getLabel .else
       string.empty return
     end [] .name return
   end
-  proc( NameId : id LabelContext ptr.mut : context -> NamespaceId ) =>: export: getLabelNamespace
+  proc( NameId : id NameContext ptr.mut : context -> NamespaceId ) =>: export: getLabelNamespace
     id context getLabel .else
       NAMESPACE_ID_NONE return
     end [] .namespaceInfo .current return
   end
-  proc( NameId : id LabelContext ptr.mut : context -> FileId ) =>: export: getLabelFile
+  proc( NameId : id NameContext ptr.mut : context -> FileId ) =>: export: getLabelFile
     id context getLabel .else
       FILE_ID_NONE return
     end [] .pos [] .fileId return
   end
-  proc( NameId : id LabelContext ptr.mut : context -> FilePosition ptr optional ) =>: export: getLabelPos
+  proc( NameId : id NameContext ptr.mut : context -> FilePosition ptr optional ) =>: export: getLabelPos
     id context getLabel .else
       FilePosition ptr optional.empty return
     end [] .pos optional.wrap return
   end
-  proc( NameId : id LabelContext ptr.mut : context -> NameId ) =>: export: getBaseLabel
+  proc( NameId : id NameContext ptr.mut : context -> NameId ) =>: export: getBaseLabel
     id context getLabel .else
       id return
     end [] .baseName $ NAME_ID_NONE == if
       ..drop id return
     end return
   end
-  proc( NameId : id NamespaceInfo : newVal LabelContext ptr.mut : context -> ) =>: export: setLabelNamespace
+  proc( NameId : id NamespaceInfo : newVal NameContext ptr.mut : context -> ) =>: export: setLabelNamespace
     id context getLabel .if
       newVal >$ .namespaceInfo=
     end
   end
-  proc( LabelContext ptr.mut : context -> NamespaceInfo ) =>: export: currentNamespace
+  proc( NameContext ptr.mut : context -> NamespaceInfo ) =>: export: currentNamespace
     context [] .namespaceInfo return
   end
-  proc( NameId : id LabelContext ptr.mut : context -> ) =>: export: inLabelNamespace
+  proc( NameId : id NameContext ptr.mut : context -> ) =>: export: inLabelNamespace
     id context getLabel .if
        [] .namespaceInfo context .namespaceInfo=
     end
   end
-  proc( NamespaceInfo LabelContext ptr.mut : context -> ) =>: export: resetNamespace
+  proc( NamespaceInfo NameContext ptr.mut : context -> ) =>: export: resetNamespace
     context .namespaceInfo=
   end
-  proc( LabelContext ptr.mut : context -> ) =>: export: clearNamespace
+  proc( NameContext ptr.mut : context -> ) =>: export: clearNamespace
     0:NamespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new context .namespaceInfo=
   end
-  proc( string : str NameId : id LabelContext ptr : context -> bool ) =>: export: labelNameEq
+  proc( string : str NameId : id NameContext ptr : context -> bool ) =>: export: labelNameEq
     id context getLabel .else
       false return
     end [] .name str string.eq return
   end
-  proc( NameId : a NameId : b LabelContext ptr : context -> bool ) =>: export: labelNamesEq
+  proc( NameId : a NameId : b NameContext ptr : context -> bool ) =>: export: labelNamesEq
     a b == if
       true return
     end
@@ -178,12 +178,12 @@ namespace: id
     end
     false return
   end
-  proc( NameId : id LabelContext ptr : context -> LabelFlag ) =>: export: labelFlags
+  proc( NameId : id NameContext ptr : context -> LabelFlag ) =>: export: labelFlags
     id context getLabel .else
       0:LabelFlag return
     end [] .flags return
   end
-  proc( NameId : id LabelFlag : newFlags LabelContext ptr : context -> ) =>: export: addLabelFlags
+  proc( NameId : id LabelFlag : newFlags NameContext ptr : context -> ) =>: export: addLabelFlags
     id context getLabel .else
       return
     end .flags =:: flags
@@ -191,14 +191,14 @@ namespace: id
       newFlags |
     flags =[]
   end
-  proc( NameId : id LabelContext ptr : context -> FilePosition ptr optional ) =>: export: labelPos
+  proc( NameId : id NameContext ptr : context -> FilePosition ptr optional ) =>: export: labelPos
     id context getLabel .else
       FilePosition ptr optional.empty return
     end [] .pos optional.wrap return
   end
   proc(
     string : str
-    LabelContext ptr.mut : context
+    NameContext ptr.mut : context
   -> string ) =>: export: copyString
     context [] .nameBuffer
       str string.chars arenaAlloc.copySlice slice.freeze string.fromChars =:: nameData
@@ -209,7 +209,7 @@ namespace: id
     string : str
     LabelFlag : flags
     FilePosition ptr : pos
-    LabelContext ptr.mut : context
+    NameContext ptr.mut : context
   -> NameId ) =>: export: newLabel
     context [] .labels
       ## Label
@@ -225,7 +225,7 @@ namespace: id
   proc(
     NameId : baseNameId
     i32 : implId
-    LabelContext ptr.mut : context
+    NameContext ptr.mut : context
   -> NameId ) =>: export: newImplLabel
     context [] .labels baseNameId iSize cast.u @[] =:: baseLabel
     implId i32.highestSetBit 4 / 2 + =:: idLength ## hex-length +1
@@ -249,7 +249,7 @@ namespace: id
     context [] .labels .length 1:iSize - NameId cast return
   end
 
-  proc( NamespaceId : parent string : name  LabelContext ptr.mut : context -> NamespaceId ) =>: newNamespace
+  proc( NamespaceId : parent string : name  NameContext ptr.mut : context -> NamespaceId ) =>: newNamespace
     context [] .namespaces .length =:: id
     context [] .namespaces
       name context copyString
@@ -259,7 +259,7 @@ namespace: id
     context .namespaces=
     id NamespaceId cast return
   end
-  proc( NamespaceId : base string : childName bool : create  LabelContext ptr.mut : context  -> NamespaceId ) =>: export: childId
+  proc( NamespaceId : base string : childName bool : create  NameContext ptr.mut : context  -> NamespaceId ) =>: export: childId
     base NAMESPACE_ID_NONE == or childName .length 0:iSize == if
       NAMESPACE_ID_NONE return
     end
@@ -294,7 +294,7 @@ namespace: id
   proc(
     NamespaceId : base
     string : path
-    LabelContext ptr.mut : context
+    NameContext ptr.mut : context
     bool : create
   -> NamespaceId ) =>: export: findNamespace_internal
     base NamespaceId =: mut: id
@@ -312,17 +312,17 @@ namespace: id
   proc(
     NamespaceId : base
     string : path
-    LabelContext ptr.mut : context
+    NameContext ptr.mut : context
   -> NamespaceId ) =>: export: findNamespace
     base path context false findNamespace_internal
   end
-  proc( NamespaceId : id LabelContext ptr : context -> string ) =>: export: namespaceName
+  proc( NamespaceId : id NameContext ptr : context -> string ) =>: export: namespaceName
     id NAMESPACE_ID_NONE == if
       string.empty return
     end
     context [] .namespaces id i64 cast [] .name return
   end
-  proc( NamespaceId : id LabelContext ptr : context -> NamespaceId ) =>: export: parentNamespace
+  proc( NamespaceId : id NameContext ptr : context -> NamespaceId ) =>: export: parentNamespace
     id NAMESPACE_ID_NONE == if
       NAMESPACE_ID_NONE return
     end
@@ -332,7 +332,7 @@ namespace: id
     NamespaceImportId : parent
     NamespaceId : importId
     string : aliasName
-    LabelContext ptr.mut : context
+    NameContext ptr.mut : context
   -> NamespaceImportId ) =>: export: getNamespaceImportId
     context [] .namespaceImports .length 0:iSize != if
       parent NAMESPACE_IMPORT_NONE == if
@@ -369,12 +369,12 @@ namespace: id
 end
 
 namespace: sb
-  proc( stringBuilder NameId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendLabelName
+  proc( stringBuilder NameId : id NameContext ptr : context -> stringBuilder ) =>: export: appendLabelName
     id context id.getLabel .else
       return
     end [] .name sb.appendStr return
   end
-  proc( stringBuilder : sb NameId : id LabelContext ptr : context bool : asciify -> stringBuilder ) =>: appendLabelPath_internal
+  proc( stringBuilder : sb NameId : id NameContext ptr : context bool : asciify -> stringBuilder ) =>: appendLabelPath_internal
     id context id.getLabel .else
       sb return
     end =:: label
@@ -404,10 +404,10 @@ namespace: sb
       return
     end
   end
-  proc( stringBuilder : sb NameId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendLabelPath
+  proc( stringBuilder : sb NameId : id NameContext ptr : context -> stringBuilder ) =>: export: appendLabelPath
     sb id context false appendLabelPath_internal
   end
-  proc( stringBuilder : sb NameId : id LabelContext ptr : context -> stringBuilder ) =>: export: appendAsciifiedLabelPath
+  proc( stringBuilder : sb NameId : id NameContext ptr : context -> stringBuilder ) =>: export: appendAsciifiedLabelPath
     sb id context true appendLabelPath_internal
   end
 end

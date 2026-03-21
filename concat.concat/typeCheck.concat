@@ -339,7 +339,7 @@ proc(
 -> ) =>: printTypes
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   idContext .constContext =:: constContext
   maxCount =:: mut: remaining
   printValues if
@@ -458,7 +458,7 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   state [] .constBuffer .length =:: constOffset
   i32 list.empty =:: mut: constOffsets
   true =:: mut: isConstant
@@ -614,7 +614,7 @@ proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> Type ) =>: popTyp
   state [] .program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   state .stack branchTree.pop .else
     Type .Undefined return
   end =:: typeInfo
@@ -649,7 +649,7 @@ proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> string ) =>: popS
   state [] .program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   1 pos state checkStackSize if string.empty return end
   state .stack branchTree.peek optional.unwrap =:: typeInfo
   ## XXX? allow Array: { string, i64 } as string constant
@@ -806,23 +806,23 @@ proc(
   state [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
     block [] .While .and =:: whileBlock blockName id.NAME_ID_NONE == or
-        whileBlock .blockName blockName labelContext id.labelNamesEq if
+        whileBlock .blockName blockName nameContext id.labelNamesEq if
       block optional.wrap return
     end
     breakType .BREAK and block [] .Switch .and =:: switchBlock
         blockName id.NAME_ID_NONE == or
-        switchBlock .blockName blockName labelContext id.labelNamesEq if
+        switchBlock .blockName blockName nameContext id.labelNamesEq if
       block optional.wrap return
     end
   end
   60 sb.create
     blockName id.NAME_ID_NONE != if
       "could not find breakable block for label \"":s sb.appendStr
-      blockName labelContext sb.appendLabelPath
+      blockName nameContext sb.appendLabelPath
       "\" ":s sb.appendStr
     end
     breakType sb.appendBlockType
@@ -936,7 +936,7 @@ proc(
   program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   toMerge .length 1:iSize == if
     toMerge 0 [] [] return
   end
@@ -1235,7 +1235,7 @@ proc(
     false return
   end .val [] .GetId .if .nameId =:: nameId
     nameId
-      state [] .program .idContext .typeContext .labelContext id.labelFlags
+      state [] .program .idContext .typeContext .nameContext id.labelFlags
     id.FLAG_MUTABLE & ? if
       false return ## cannot copy mutable get (value might change between invocations)
     end
@@ -1349,7 +1349,7 @@ proc(
   state [] .program .errors =:: errors
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   idContext .constContext =:: constContext
   state .interpreter =:: interpreter
   calledType typeContext types.getProcIn .else
@@ -1371,7 +1371,7 @@ proc(
     inTypes procArgIndex [] =:: mut: argType
     ## skip auto-args
     while
-      eltLabel labelContext id.labelFlags id.FLAG_AUTO & ? or
+      eltLabel nameContext id.labelFlags id.FLAG_AUTO & ? or
       argType typeContext types.isEmpty
     do
       procArgIndex 1 + procArgIndex=
@@ -1387,13 +1387,13 @@ proc(
           argValue .TypeId .and typeContext types.containsGeneric if
         true isGenericTypeGen=
       end
-      eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
+      eltLabel nameContext id.labelFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
         "Arguments for Type-generators should be static" sb.copyPtr
-        eltLabel labelContext id.labelPos .else pos end errors appendError
+        eltLabel nameContext id.labelPos .else pos end errors appendError
       end
     end
     argType typeContext types.isEmpty or isCodeImpl and
-        eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+        eltLabel nameContext id.labelFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
       continue
     end
     argCount argIndex != if
@@ -1589,7 +1589,7 @@ proc(
   state [] .program .errors =:: errors
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   0 sb.create =:: mut: message
   ## resolveCall
     procedures
@@ -1687,7 +1687,7 @@ proc(
   state [] .program .errors =:: errors
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   true =:: mut: headConstant
   0:iSize =:: mut: constCount
   ## TODO do not recreate list for each call
@@ -1726,7 +1726,7 @@ proc(
   argCount 1 - while $ 0 iSize.sge do =:: i
     calledType i i32 cast.u typeContext types.getProcArgLabel =:: eltLabel
     inTypes i [] =:: elt
-    eltLabel labelContext id.labelFlags id.FLAG_STATIC & ? if
+    eltLabel nameContext id.labelFlags id.FLAG_STATIC & ? if
       ## remove static arguments from stack
       state .stack branchTree.pop optional.unwrap =:: opData
       opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
@@ -1781,17 +1781,17 @@ namespace: typeChecker
     program .idContext =:: idContext
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
-    generatorName labelContext id.getBaseLabel =:: generatorBaseName
+    typeContext .nameContext =:: nameContext
+    generatorName nameContext id.getBaseLabel =:: generatorBaseName
     generatorBaseName idContext id.getIdentifier if ..drop
       "could not find procedure " sb.copyPtr
-        generatorBaseName labelContext sb.appendLabelPath
+        generatorBaseName nameContext sb.appendLabelPath
       pos errors appendError
       Type optional.empty return
     end =:: idData
     idData [] .idType .PROCEDURE ! if
       "expected procedure got: " sb.copyPtr
-        idData id.asIdInfo labelContext sb.appendIdInfo
+        idData id.asIdInfo nameContext sb.appendIdInfo
       pos errors appendError
       Type optional.empty return
     end
@@ -1810,7 +1810,7 @@ namespace: typeChecker
     args .length StackValue list.create =:: mut: stackValues
     0 =:: mut: argIndex
     args for =:: arg
-      while procType argIndex typeContext types.getProcArgLabel labelContext id.labelFlags id.FLAG_AUTO & ? do
+      while procType argIndex typeContext types.getProcArgLabel nameContext id.labelFlags id.FLAG_AUTO & ? do
         argIndex 1 + argIndex=
       end
       stackValues
@@ -1838,7 +1838,7 @@ namespace: typeChecker
     types.findGeneratedType switch
       None case
         "initializing generated type failed " sb.copyPtr
-          generatorBaseName labelContext sb.appendLabelPath
+          generatorBaseName nameContext sb.appendLabelPath
         pos errors appendError
       Type optional.empty return
       Stored .case optional.wrap break
@@ -1896,7 +1896,7 @@ proc(
   state [] .program .errors =:: errors
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   false state .reachable=
   state [] .currentProcType .else
     "return is only supported within procedures" sb.copyPtr
@@ -2113,7 +2113,7 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   program [] .switchData
     switchId i64 cast.u @[]
   =:: switchData
@@ -2144,7 +2144,7 @@ proc(
             label .Int .else
               "expected int":s pos ..line internalErrorNoOp ..unreachable
             end i32 cast.u typeContext types.compositeGetLabel
-            labelContext
+            nameContext
           sb.appendLabelName
         else
           label0 typeContext sb.appendConstant
@@ -2173,7 +2173,7 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   state peekBlock .and .Switch .else
     "typeCheckSwitchLabel outside switch":s op [] .pos ..line internalErrorNoOp ..unreachable
   end =:: switchBlock
@@ -2212,13 +2212,13 @@ proc(
         idContext
       id.getIdentifier if ..drop
         "could not find " sb.copyPtr
-          idInfo labelContext sb.appendIdInfo
+          idInfo nameContext sb.appendIdInfo
         op [] .pos errors appendError
         true return
       end =:: idData
       idData [] .constValue .None ? if
         "expected constant got " sb.copyPtr
-          idData id.asIdInfo labelContext sb.appendIdInfo
+          idData id.asIdInfo nameContext sb.appendIdInfo
         op [] .pos errors appendError
         true return
       end
@@ -2234,13 +2234,13 @@ proc(
         idContext
       id.findIdentifierByLabel if ..drop
         "could not find " sb.copyPtr
-          name labelContext sb.appendLabelName
+          name nameContext sb.appendLabelName
         op [] .pos errors appendError
         true return
       end =:: idData
       idData [] .constValue .None ? if
         "expected constant got " sb.copyPtr
-          idData id.asIdInfo labelContext sb.appendIdInfo
+          idData id.asIdInfo nameContext sb.appendIdInfo
         op [] .pos errors appendError
         true return
       end
@@ -2284,7 +2284,7 @@ proc(
     "enum " sb.copyPtr
       switchType typeContext sb.appendType
       " does not have a label " sb.appendS
-      nameId labelContext sb.appendLabelName
+      nameId nameContext sb.appendLabelName
     op [] .pos errors appendError
     true return
   end =:: labelIndex
@@ -2543,7 +2543,7 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   ## TODO extract parts of type-checking code into procedures
   0:iSize while: opLoop $ ops .length u< do =:: mut: opIndex
     ops opIndex [] =:: mut: op
@@ -2587,7 +2587,7 @@ proc(
       end
       nameAlias .baseName idContext id.findIdentifierByLabel if ..drop
         "cannot find identifer: " sb.copyPtr
-          nameAlias .baseName labelContext sb.appendLabelPath
+          nameAlias .baseName nameContext sb.appendLabelPath
         op .pos errors appendError
         continue.opLoop
       end =:: aliasData
@@ -2650,7 +2650,7 @@ proc(
             $ op@ .dataType=
           end
         state isGlobal _if
-          $1 labelContext id.currentNamespace labelContext id.setLabelNamespace
+          $1 nameContext id.currentNamespace nameContext id.setLabelNamespace
           $ typeContext types.isProcedure if
             IdentifierType .PROCEDURE
           else $ typeContext types.isType _if
@@ -2682,7 +2682,7 @@ proc(
     end
     ## convert static arguments to constants
     op .val .GetId .and .nameId =:: nameId
-        nameId labelContext id.labelFlags id.FLAG_STATIC & ? and
+        nameId nameContext id.labelFlags id.FLAG_STATIC & ? and
         state .argData nameId map.at .if =:: argData
       argData [] .valType op@ .dataType=
       argData [] .value op@ .val .Constant=
@@ -2717,7 +2717,7 @@ proc(
         continue.opLoop
       GetName SetName AtName .case =:: nameId
         "could not find identifier: " sb.copyPtr
-          nameId labelContext sb.appendLabelPath
+          nameId nameContext sb.appendLabelPath
         op .pos errors appendError
         continue.opLoop
       InitializeName DeclareName AliasName case ..unreachable
@@ -2727,12 +2727,12 @@ proc(
           $ id.NAME_ID_NONE == if ..drop
             string.empty
           else
-            labelContext id.getLabelName
+            nameContext id.getLabelName
           end
         =:: aliasName
         namespaceLabel aliasName idContext id.importNamespace if
           "namespace \"" sb.copyPtr
-            namespaceLabel labelContext sb.appendLabelName
+            namespaceLabel nameContext sb.appendLabelName
           "\" does not exist in the current scope" sb.appendS op .pos errors appendWarning
         end
         continue.opLoop
@@ -2742,17 +2742,17 @@ proc(
           $ id.NAME_ID_NONE == if ..drop
             string.empty
           else
-            labelContext id.getLabelName
+            nameContext id.getLabelName
           end
         =:: aliasName
-        srcLabel labelContext id.getLabelName
+        srcLabel nameContext id.getLabelName
           aliasName
           idContext
           op .pos
         errors id.importIdentifier ..drop
         continue.opLoop
       GetId .case =:: idInfo
-        idInfo .nameId labelContext id.labelFlags =:: flags
+        idInfo .nameId nameContext id.labelFlags =:: flags
         flags id.FLAG_MUTABLE & ? =:: mutable
         flags id.FLAG_STATIC & ? =:: isStatic
         mutable and isStatic ! and state isGlobal ! if
@@ -2769,7 +2769,7 @@ proc(
               idContext
             id.getIdentifier if ..drop
               "could not find " sb.copyPtr
-                idInfo labelContext sb.appendIdInfo
+                idInfo nameContext sb.appendIdInfo
               op .pos errors appendError
               continue.opLoop
             end =:: idData
@@ -2812,7 +2812,7 @@ proc(
             idInfo .idType .PROCEDURE if
               constValue@ .Procedure .else ..drop
                 "missing implementation for " sb.copyPtr
-                  idInfo labelContext sb.appendIdInfo
+                  idInfo nameContext sb.appendIdInfo
                 op .pos errors appendError
                 continue.opLoop
               end =:: procId
@@ -2821,7 +2821,7 @@ proc(
             else  ## PROCEDURE_BUNDLE
               constValue .ProcedureBundle .else ..drop
                 "missing implementation for " sb.copyPtr
-                  idInfo labelContext sb.appendIdInfo
+                  idInfo nameContext sb.appendIdInfo
                 op .pos errors appendError
                 continue.opLoop
               end =:: bundleId
@@ -2893,7 +2893,7 @@ proc(
           GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ITR_VAR ARGUMENT case
             idInfo .nameId =:: nameId
             nameId
-              labelContext id.labelFlags
+              nameContext id.labelFlags
             id.FLAG_MUTABLE & ? =:: mutable
             idInfo .idType .PROCEDURE if
               ## getIdentifierByLabel
@@ -2901,7 +2901,7 @@ proc(
                 idContext
               id.getIdentifier if ..drop
                 "could not find " sb.copyPtr
-                  idInfo labelContext sb.appendIdInfo
+                  idInfo nameContext sb.appendIdInfo
                 op .pos errors appendError
                 continue.opLoop
               end =:: idData
@@ -2962,7 +2962,7 @@ proc(
             continue.opLoop
           TYPE LABEL PROCEDURE_BUNDLE case
             "taking the address of identifier " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
+              idInfo nameContext sb.appendIdInfo
               " is not supported" sb.appendS
             op .pos errors appendError
             continue.opLoop
@@ -2971,10 +2971,10 @@ proc(
       SetId .case =:: idInfo
         idInfo .nameId =:: nameId
         nameId
-          labelContext id.labelFlags
+          nameContext id.labelFlags
         id.FLAG_MUTABLE & ? ! if
           256 sb.create
-            idInfo labelContext sb.appendIdInfo
+            idInfo nameContext sb.appendIdInfo
             " is not mutable" sb.appendS
           op .pos errors appendError
         end
@@ -3000,7 +3000,7 @@ proc(
               idContext
             id.getIdentifier if ..drop
               "could not find " sb.copyPtr
-                idInfo labelContext sb.appendIdInfo
+                idInfo nameContext sb.appendIdInfo
               op .pos errors appendError
               continue.opLoop
             end =:: idData
@@ -3015,7 +3015,7 @@ proc(
                 else .TypeId ._else ..drop
                   stackVal [] .valueType
                 end idData .valueType=
-                idInfo .nameId labelContext id.labelFlags id.FLAG_STATIC & ? if
+                idInfo .nameId nameContext id.labelFlags id.FLAG_STATIC & ? if
                   stackVal [] .valueType typeContext types.isType if
                     idInfo .nameId types.newGenericType ConstValue .TypeId
                   else
@@ -3033,7 +3033,7 @@ proc(
             end
             stackVal [] .value .TypeId .and typeContext types.isType if
               ## type-arguments are always static
-              idInfo .nameId id.FLAG_STATIC labelContext id.addLabelFlags
+              idInfo .nameId id.FLAG_STATIC nameContext id.addLabelFlags
             end
           end
           state [] .arrowState ? if
@@ -3085,7 +3085,7 @@ proc(
           PROCEDURE case
             idInfo .nameId idContext id.getIdentifier if ..drop
               "could not find " sb.copyPtr
-                idInfo .nameId labelContext sb.appendLabelPath
+                idInfo .nameId nameContext sb.appendLabelPath
               op .pos errors appendError
               continue.opLoop
             end .constValue =:: constVal
@@ -3119,7 +3119,7 @@ proc(
               idContext
             id.getIdentifier if ..drop
               "could not find " sb.copyPtr
-                idInfo labelContext sb.appendIdInfo
+                idInfo nameContext sb.appendIdInfo
               op .pos errors appendError
             else =:: idData
               idInfo .nameId
@@ -3129,12 +3129,12 @@ proc(
           continue.opLoop
           LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
             "unexpected declaration of identifier " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
+              idInfo nameContext sb.appendIdInfo
             op .pos errors appendError
           continue.opLoop
           ARGUMENT case
             "cannot declare identifier " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
+              idInfo nameContext sb.appendIdInfo
             op .pos errors appendError
           continue.opLoop
         end
@@ -3157,7 +3157,7 @@ proc(
                   continue.opLoop
                 end idInfo .nameId typeContext types.initializeNamedType .else
                   "re-initialization of named type" sb.copyPtr
-                    idInfo .nameId labelContext sb.appendLabelPath
+                    idInfo .nameId nameContext sb.appendLabelPath
                   op .pos errors appendError
                   continue.opLoop
                 end ConstValue .TypeId
@@ -3180,14 +3180,14 @@ proc(
             ##   don't update mutable local variables
             constVal .TypeId ? or constVal .None ? ! and
                 state isGlobal or idInfo .idType .GLOBAL_VAR or idInfo .idType .PROCEDURE or
-                idInfo .nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? ! if
+                idInfo .nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? ! if
               ## TODO special handling for procedure constants
               ## getIdentifier
                 idInfo .nameId
                 idContext
               id.getIdentifier if ..drop
                 "could not find " sb.copyPtr
-                  idInfo labelContext sb.appendIdInfo
+                  idInfo nameContext sb.appendIdInfo
                 op .pos errors appendError
               else =:: idData
                 constVal idData .constValue=
@@ -3198,14 +3198,14 @@ proc(
                   procInfo .procType .Undefined ? if
                     op .dataType procInfo .procType=
                   end
-                  procInfo .nameId [] labelContext id.labelFlags id.FLAG_LAMBDA & ? if
-                    MAIN_NAME idInfo .nameId labelContext id.labelNameEq if
+                  procInfo .nameId [] nameContext id.labelFlags id.FLAG_LAMBDA & ? if
+                    MAIN_NAME idInfo .nameId nameContext id.labelNameEq if
                       ## TODO! check if main has correct signature
                       idInfo .nameId program .mainId=
                       procId optional.wrap program .mainProcId=
                     end
                     idInfo .nameId procInfo .nameId=
-                    idInfo .nameId labelContext id.labelFlags id.FLAG_STATIC & ? if
+                    idInfo .nameId nameContext id.labelFlags id.FLAG_STATIC & ? if
                       procInfo [] .flags
                         ProcFlags.IS_STATIC |
                       procInfo .flags=
@@ -3226,7 +3226,7 @@ proc(
             continue.opLoop
           PROCEDURE_BUNDLE LABEL ARGUMENT TMP_VAR case
             "unexpected initialization of identifier " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
+              idInfo nameContext sb.appendIdInfo
             op .pos errors appendError
             continue.opLoop
         end
@@ -3341,7 +3341,7 @@ proc(
           "type " sb.copyPtr
             containerType typeContext sb.appendType
             " does not have a label \"" sb.appendS
-            nameId labelContext sb.appendLabelName
+            nameId nameContext sb.appendLabelName
             '"' sb.appendC
           op .pos errors appendError
           continue.opLoop
@@ -4651,13 +4651,13 @@ proc(
           OVERLOAD case
             ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             blockInfo .blockName =:: mut: nameId
-            nameId labelContext id.currentNamespace labelContext id.setLabelNamespace
+            nameId nameContext id.currentNamespace nameContext id.setLabelNamespace
             nameId idContext id.findDeclaredIdentifierByLabel or
-                nameId labelContext id.labelFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
-                $ [] .nameId labelContext id.getLabelNamespace labelContext id.currentNamespace .current != if ..drop
-              nameId labelContext id.labelFlags id.FLAG_MERGE & ? if
+                nameId nameContext id.labelFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
+                $ [] .nameId nameContext id.getLabelNamespace nameContext id.currentNamespace .current != if ..drop
+              nameId nameContext id.labelFlags id.FLAG_MERGE & ? if
                 "unable to merge namespace: \"" sb.copyPtr
-                nameId labelContext sb.appendLabelPath
+                nameId nameContext sb.appendLabelPath
                 '"' sb.appendC
                 op .pos errors appendError
               end
@@ -4682,7 +4682,7 @@ proc(
             else =:: idData
               idData [] .idType .PROCEDURE_BUNDLE ! if
                 "cannot overload \"" sb.copyPtr
-                  nameId labelContext sb.appendLabelPath
+                  nameId nameContext sb.appendLabelPath
                   "\", incompatible id-type for previous declaration: " sb.appendS
                   idData [] .idType sb.appendIdType
                   " ( declared at " sb.appendS
@@ -4711,7 +4711,7 @@ proc(
               end =:: eltLabel
               eltLabel idContext id.findIdentifierByLabel if ..drop
                 "could not find identifier \"" sb.copyPtr
-                  eltLabel labelContext sb.appendLabelPath
+                  eltLabel nameContext sb.appendLabelPath
                   '"' sb.appendC
                 op .pos errors appendError
                 continue
@@ -4721,7 +4721,7 @@ proc(
                   256 sb.create
                     idData [] .idType sb.appendIdType
                     "missing procedure data for \"" sb.appendS
-                    idData [] .nameId labelContext sb.appendLabelPath
+                    idData [] .nameId nameContext sb.appendLabelPath
                     "\" ( declared at " sb.appendS
                     idData [] .declaredAt [] sb.appendPos
                     " ) expected ProcId got:" sb.appendS
@@ -4737,7 +4737,7 @@ proc(
                   256 sb.create
                     idData [] .idType sb.appendIdType
                     "missing procedure data for \"" sb.appendS
-                    idData [] .nameId labelContext sb.appendLabelPath
+                    idData [] .nameId nameContext sb.appendLabelPath
                     "\" ( declared at " sb.appendS
                     idData [] .declaredAt [] sb.appendPos
                     " ) expected ProcBundleId got:" sb.appendS
@@ -4754,7 +4754,7 @@ proc(
                 256 sb.create
                   idData [] .idType sb.appendIdType
                   " \"" sb.appendS
-                  idData [] .nameId labelContext sb.appendLabelPath
+                  idData [] .nameId nameContext sb.appendLabelPath
                   "\" ( declared at " sb.appendS
                   idData [] .declaredAt [] sb.appendPos
                   " ) is not a procedure" sb.appendS
@@ -4929,9 +4929,9 @@ proc(
                           typeContext
                         types.compositeGetLabel =:: label
                         " - \"" sb.appendS
-                        label labelContext sb.appendLabelPath
+                        label nameContext sb.appendLabelPath
                         "\" declaredAt"  sb.appendS
-                        label labelContext id.labelPos .if
+                        label nameContext id.labelPos .if
                           [] sb.appendPos
                         else
                           "?" sb.appendS
@@ -5418,7 +5418,7 @@ proc(
       continue.opLoop
       TypeWith .case =:: withProcId
         withProcId ProcId.getProcInfo =:: withProc
-        withProc [] .nameId labelContext id.currentNamespace labelContext id.setLabelNamespace
+        withProc [] .nameId nameContext id.currentNamespace nameContext id.setLabelNamespace
         op .pos state popType =:: baseType
         ## newProcedure
           baseType@ slice.wrap
@@ -5564,11 +5564,11 @@ proc(
           Find .case =:: idLabel
             16 id.IdentifierMatch list.create =:: mut: matches
             ## TODO? directly search by label
-            idLabel labelContext id.getLabelName true idContext matches@ optional.wrap id.searchIdentifier ..drop.3
+            idLabel nameContext id.getLabelName true idContext matches@ optional.wrap id.searchIdentifier ..drop.3
             program [] .tmpString
               sb.clear
               "-----------------\n" sb.appendS
-              "identifier \"" sb.appendS idLabel labelContext sb.appendLabelName "\":\n" sb.appendS
+              "identifier \"" sb.appendS idLabel nameContext sb.appendLabelName "\":\n" sb.appendS
               0:iSize while $ matches .length u< do =:: i
                 matches i @[] =:: match
                 match [] .nameData .nameId =:: nameId
@@ -5582,7 +5582,7 @@ proc(
                   aliasId idContext id.getAliasPos [] sb.appendPos
                   ")  to " sb.appendS
                 end
-                idData id.asIdInfo labelContext sb.appendIdInfo
+                idData id.asIdInfo nameContext sb.appendIdInfo
                 " ( " sb.appendS
                 idData [] .valueType typeContext sb.appendType
                 idData [] .constValue .None ? ! if
@@ -5591,7 +5591,7 @@ proc(
                   " ]" sb.appendS
                 end
                 " ) declared at " sb.appendS
-                nameId labelContext id.labelPos .if
+                nameId nameContext id.labelPos .if
                   [] sb.appendPos
                 else
                   "?" sb.appendS
@@ -5625,12 +5625,12 @@ proc(
   FilePosition ptr : expandedAt
   ProgramContext ptr.mut : program
 -> bool ) =>: checkProcState
-  program .idContext .typeContext .labelContext =:: labelContext
+  program .idContext .typeContext .nameContext =:: nameContext
   codeState switch
     PARSED case
-      isUnused and procName labelContext id.labelFlags id.FLAG_IGNORE_UNUSED & ? ! if
+      isUnused and procName nameContext id.labelFlags id.FLAG_IGNORE_UNUSED & ? ! if
         "procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
+          procName nameContext sb.appendLabelPath
           " is never used" sb.appendS
         expandedAt program .errors appendInfo
       end
@@ -5639,7 +5639,7 @@ proc(
     PARSING case
       checkType .SKIP_UNDEFINED ! if
         "procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
+          procName nameContext sb.appendLabelPath
           " has not finished parsing" sb.appendS
         expandedAt program .errors appendError
       end
@@ -5647,7 +5647,7 @@ proc(
     TYPE_CHECKING case
       checkType .SKIP_UNDEFINED ! if
         "procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
+          procName nameContext sb.appendLabelPath
           " has not finished type-checking" sb.appendS
         expandedAt program .errors appendError
       end
@@ -5664,7 +5664,7 @@ proc(
   state [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   procId ProcId.getProcInfo =:: currentProc
   currentProc .implementation .Code .else ..drop
     ## TODO replace alias with underlying proc
@@ -5674,7 +5674,7 @@ proc(
   codeImpl .genericInfo .Implementations ? if
     "generic proc should not be type-checked":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
   end
-  currentProc [] .nameId labelContext id.getLabelPos .else
+  currentProc [] .nameId nameContext id.getLabelPos .else
     "proc label has no pos":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
   end =:: procPos
   expandedAt .else procPos end =:: initPos
@@ -5710,7 +5710,7 @@ proc(
     0:i32 while $ iSize cast.u inTypes .length u< do =:: i
       currentProc [] .procType i typeContext types.getProcArgLabel =:: nameId
       inTypes i [] =:: argType
-      nameId labelContext id.labelFlags id.FLAG_STATIC & ? or
+      nameId nameContext id.labelFlags id.FLAG_STATIC & ? or
           argType typeContext types.isType if
         implInfo [] .staticArgs
           staticArgCount slice.get .else
@@ -5752,7 +5752,7 @@ proc(
   state clearOps
   ## TODO? compile code to new list (prevents need to copy result after type-checking)
   state [] .compiledOps .length i32 cast.u =:: codeOffset
-  currentProc [] .nameId labelContext id.inLabelNamespace
+  currentProc [] .nameId nameContext id.inLabelNamespace
   idContext id.currentScope =:: prevScope
   currentProc [] .scopeId idContext id.setScope
   idContext id.openScope
@@ -5807,7 +5807,7 @@ proc(
         program .errors
       id.declareIdentifier if
         "could not declare identifier for argument " sb.copyPtr
-          label labelContext sb.appendLabelName
+          label nameContext sb.appendLabelName
         procPos program .errors appendError
       end ..drop.2
     end
@@ -5853,8 +5853,8 @@ proc(
 -> ) =>: export: typeCheckChildProcedures
   state rememberState
   BlockMode .NONE state .blockMode=
-  state [] .program .idContext .typeContext .labelContext =:: labelContext
-  labelContext id.currentNamespace =:: prevNamespace
+  state [] .program .idContext .typeContext .nameContext =:: nameContext
+  nameContext id.currentNamespace =:: prevNamespace
   TypeCheckMode .PROC_CHILD state .mode=
   state [] .missingProcs .length =:: missingProcsOffset
   procId ProcCheckType .REQUIRE_DEFINED expandedAt optional.wrap state typeCheckProcedure
@@ -5871,7 +5871,7 @@ proc(
   state [] .missingProcs
     missingProcsOffset list.setLength
   state .missingProcs=
-  prevNamespace labelContext id.resetNamespace
+  prevNamespace nameContext id.resetNamespace
   state resetState
 end
 proc(
@@ -5879,13 +5879,13 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckGlobalCode
   state [] .program =:: program
-  program .idContext .typeContext .labelContext =:: labelContext
-  labelContext id.currentNamespace =:: prevNamespace
+  program .idContext .typeContext .nameContext =:: nameContext
+  nameContext id.currentNamespace =:: prevNamespace
   ## TODO ensure code is run in correct scope
   ## TODO? make target namespace an optional parameter
   0:NamespaceId
     id.NAMESPACE_IMPORT_NONE
-  NamespaceInfo new labelContext id.resetNamespace
+  NamespaceInfo new nameContext id.resetNamespace
   state [] .compiledOps .length =:: codeOffset
   ops state typeCheckOps
   state removeTrailingNOPs
@@ -5905,7 +5905,7 @@ proc(
     stackVal [] .pushedAt program .errors appendWarning
   end
   state clearOps
-  prevNamespace labelContext id.resetNamespace
+  prevNamespace nameContext id.resetNamespace
 end
 
 proc(
@@ -5946,11 +5946,11 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   program [] .mainProcId ? =:: hasMain
   program [] .mainProcId .if =:: mainProcId
     ## check all procedures reachable from main proc
-    program [] .mainId labelContext id.getLabelPos .else
+    program [] .mainId nameContext id.getLabelPos .else
       "main-proc has no position" ..panic
     end =:: mainProcPos
     mainProcId mainProcPos state typeCheckChildProcedures
@@ -5976,10 +5976,10 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
       ProcCodeState .UNUSED codeImpl .codeState=
       continue ## ignore parsing procedures
     end
-    currentProc [] .nameId labelContext id.labelFlags =:: flags
+    currentProc [] .nameId nameContext id.labelFlags =:: flags
     flags id.FLAG_LAMBDA & ? or EXPORT_GLOBALS hasMain ! | and flags id.FLAG_EXPORT & ? if
       procId
-        currentProc [] .nameId labelContext id.getLabelPos .else
+        currentProc [] .nameId nameContext id.getLabelPos .else
           "proc has no position" ..panic
         end
       state typeCheckChildProcedures

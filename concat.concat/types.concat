@@ -1088,7 +1088,7 @@ namespace: types
     ArraySize : size
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: newArrayType
-    context .labelContext =:: labelContext
+    context .nameContext =:: nameContext
     target =:: mut: base
     base .Undefined  ? if
       Type optional.empty  return
@@ -1296,7 +1296,7 @@ namespace: types
     NameId : name
     TypeContext ptr : context
   -> i32 optional ) =>: export: compositeFindLabel
-    context .labelContext =:: labelContext
+    context .nameContext =:: nameContext
     composite context compositeData switch
       None case i32 optional.empty return
       Enum .case [] .eltNames break
@@ -1311,7 +1311,7 @@ namespace: types
       ## labelNamesEq
         name
         eltNames i []
-      labelContext id.labelNamesEq if
+      nameContext id.labelNamesEq if
         i optional.wrap return
       end
       i 1 +
@@ -1617,20 +1617,20 @@ namespace: sb
   proc(
     stringBuilder
     NameId : nameId
-    LabelContext ptr : labelContext
+    NameContext ptr : nameContext
   -> stringBuilder ) =>: appendTypeElementLabel
     nameId id.NAME_ID_NONE == if return end
     " : " appendS
-    nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+    nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? if
       "mut: " appendS
     end
-    nameId labelContext id.labelFlags id.FLAG_AUTO & ? if
+    nameId nameContext id.labelFlags id.FLAG_AUTO & ? if
       "auto: " appendS
     end
-    nameId labelContext id.labelFlags id.FLAG_STATIC & ? if
+    nameId nameContext id.labelFlags id.FLAG_STATIC & ? if
       "static: " appendS
     end
-    nameId labelContext appendLabelName
+    nameId nameContext appendLabelName
   end
   proc(
     stringBuilder : sb
@@ -1638,7 +1638,7 @@ namespace: sb
     i32 : depth
     TypeContext ptr : context
   -> stringBuilder ) =>: appendComposite
-    context .labelContext =:: labelContext
+    context .nameContext =:: nameContext
     sb
       t context types.compositeData .Composite .else
         "unexpected composite-type" ..panic
@@ -1654,7 +1654,7 @@ namespace: sb
           end
           t $2 context types.compositeGetLabel =:: label
           label id.NAME_ID_NONE !=
-            label labelContext id.labelFlags id.FLAG_DUMMY & ? ! &
+            label nameContext id.labelFlags id.FLAG_DUMMY & ? ! &
           =:: printLabel
           eltType context types.isEmpty if
             "_" sb.appendS
@@ -1662,7 +1662,7 @@ namespace: sb
             eltType context depth 1 - appendTypeRecursive
           end
           printLabel if
-            label labelContext appendTypeElementLabel
+            label nameContext appendTypeElementLabel
           end
           ' ' appendC
         <$
@@ -1673,9 +1673,9 @@ namespace: sb
   proc(
     stringBuilder
     types.EnumInfo : enumInfo
-    LabelContext ptr : labelContext
+    NameContext ptr : nameContext
   -> stringBuilder ) =>: appendEnumElements
-    enumInfo .eltNames for labelContext appendLabelName ' ' sb.appendC end
+    enumInfo .eltNames for nameContext appendLabelName ' ' sb.appendC end
   end
 end
 namespace: types
@@ -1747,7 +1747,7 @@ namespace: types
       ## labelNamesEq
         argName
         eltNames i []
-      context .labelContext id.labelNamesEq if
+      context .nameContext id.labelNamesEq if
         i optional.wrap return
       end
       i 1 +
@@ -1944,10 +1944,10 @@ namespace: sb
     TypeContext ptr : context
     i32 : depth
   -> stringBuilder ) =>: appendNamedType
-    context .labelContext =:: labelContext
+    context .nameContext =:: nameContext
     sb
       '"' sb.appendC
-      name labelContext sb.appendLabelPath
+      name nameContext sb.appendLabelPath
       '"' sb.appendC
       depth 0 > if
         " [ " sb.appendS
@@ -2007,11 +2007,11 @@ namespace: types
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> GeneratedTypeState ) =>: export: findGeneratedType
-    typeContext .labelContext =:: labelContext
-    generatorName0 labelContext id.getBaseLabel =:: generatorName
+    typeContext .nameContext =:: nameContext
+    generatorName0 nameContext id.getBaseLabel =:: generatorName
     generatorName arguments GeneratedTypeName new =:: genName
     typeContext .generatedTypes genName map.get .if =:: prevValue
-      generatorName labelContext id.labelFlags id.FLAG_NO_WRAP & ? and prevValue .value .if
+      generatorName nameContext id.labelFlags id.FLAG_NO_WRAP & ? and prevValue .value .if
         GeneratedTypeState .Stored return
       end
       prevValue .key Type .GeneratedType GeneratedTypeState .Stored return
@@ -2041,7 +2041,7 @@ namespace: types
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> Type ) =>: export: initializeGeneratedType
-    generatorName0 typeContext .labelContext id.getBaseLabel =:: generatorName
+    generatorName0 typeContext .nameContext id.getBaseLabel =:: generatorName
     ## findGeneratedType
       generatorName
       arguments
@@ -2060,7 +2060,7 @@ namespace: types
         prevGeneratorName GeneratedTypeName ptr cast []
       map.at optional.unwrap
     .value=
-    generatorName typeContext .labelContext id.labelFlags id.FLAG_NO_WRAP & ? if
+    generatorName typeContext .nameContext id.labelFlags id.FLAG_NO_WRAP & ? if
       value return
     end
     prevType return
@@ -2367,7 +2367,7 @@ namespace: types
   end
   ## TODO? allow reordering fields
   proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: canCastTupleInitializer
-    context .labelContext =:: labelContext
+    context .nameContext =:: nameContext
     src context unwrapNamed =:: srcBase
     target context unwrapNamed =:: targetBase
     srcBase .Struct .if
@@ -2402,7 +2402,7 @@ namespace: types
         ## labelNamesEq
           srcEltNames? .and i slice.get .else id.NAME_ID_NONE end
           targetEltNames? .and i slice.get .else id.NAME_ID_NONE end
-        labelContext id.labelNamesEq ! if
+        nameContext id.labelNamesEq ! if
           false return
         end
       end
@@ -2640,7 +2640,7 @@ namespace: types
 end
 ## type context
 struct(
-  LabelContext        : labelContext
+  NameContext        : nameContext
   MixedArenaAllocator : memory
   NameId Type hashMap : namedTypes
   types.GeneratedTypeName types.GeneratedTypeValue hashMap : generatedTypes
@@ -2648,7 +2648,7 @@ struct(
 namespace: types
   proc( -> TypeContext ) =>: export: newTypeContext
     ## TypeContext
-      id.newLabelContext
+      id.newNameContext
       4096 mixedArena.create
       NameId.hash@ NameId.eq@ 1024 Type map.create
       genNameHash@ genNameEq@ 1024 types.GeneratedTypeValue map.create
@@ -2658,7 +2658,7 @@ namespace: types
     context@ .namedTypes map.free
     context@ .generatedTypes map.free
     context
-      $ .labelContext id.freeLabelContext >$ .labelContext=
+      $ .nameContext id.freeNameContext >$ .nameContext=
       $ .memory mixedArena.free >$ .memory=
     return
   end
@@ -2740,7 +2740,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     types.ArraySize : size
-    LabelContext ptr : labelContext
+    NameContext ptr : nameContext
   -> stringBuilder  ) =>: export: appendSliceSize
     sb
       size switch
@@ -2752,7 +2752,7 @@ namespace: sb
           break
         GenericArg .case =:: genSize
           '`' sb.appendC
-          genSize labelContext appendLabelName
+          genSize nameContext appendLabelName
           '`' sb.appendC
           break
       end
@@ -2764,7 +2764,7 @@ namespace: sb
     TypeContext ptr : context
     i32 : depth
   -> stringBuilder ) =>: export: appendTypeRecursive
-    context .labelContext =:: labelContext
+    context .nameContext =:: nameContext
     t switch
       Undefined  case
         sb "undefined" appendS return
@@ -2783,7 +2783,7 @@ namespace: sb
             context
             depth
           appendTypeRecursive
-          t context types.getArraySize labelContext appendSliceSize
+          t context types.getArraySize nameContext appendSliceSize
           t .Pointer ? if
             " ptr" appendS
           else t .MutablePointer ? _if
@@ -2817,7 +2817,7 @@ namespace: sb
       Enum .case =:: enumType
         sb
           "enum( " appendS
-          enumType types.EnumInfo ptr cast [] context .labelContext appendEnumElements
+          enumType types.EnumInfo ptr cast [] context .nameContext appendEnumElements
           ")" appendS
         return
       UnionElement .case types.UnionElementInfo ptr cast =:: element
@@ -2827,7 +2827,7 @@ namespace: sb
           '.' sb.appendC
           baseType context types.asRawUnion .else baseType end
             element [] .labelIndex
-          context types.compositeGetLabel labelContext appendLabelName
+          context types.compositeGetLabel nameContext appendLabelName
         return
       Procedure  .case types.ProcType ptr cast [] =:: procType
         sb
@@ -2839,7 +2839,7 @@ namespace: sb
           procType .inTypes for
             context depth appendTypeRecursive
             labelIndex procType .eltNames .length u< if
-              procType .eltNames labelIndex []  labelContext appendTypeElementLabel
+              procType .eltNames labelIndex []  nameContext appendTypeElementLabel
               labelIndex 1:iSize + labelIndex=
             end
             ' ' sb.appendC
@@ -2848,7 +2848,7 @@ namespace: sb
           procType .outTypes for
             context depth appendTypeRecursive
             labelIndex procType .eltNames .length u< if
-              procType .eltNames labelIndex []  labelContext appendTypeElementLabel
+              procType .eltNames labelIndex []  nameContext appendTypeElementLabel
               labelIndex 1:iSize + labelIndex=
             end
             ' ' sb.appendC
@@ -2866,7 +2866,7 @@ namespace: sb
       GenericType .case =:: nameId
         sb
           '`' sb.appendC
-          nameId labelContext appendLabelName
+          nameId nameContext appendLabelName
           '`' sb.appendC
         return
       GeneratedType .case types.GeneratedTypeName ptr cast =:: genTypeName
@@ -2875,7 +2875,7 @@ namespace: sb
             genTypeName [] .arguments i [] context sb.appendConstant
             ' ' sb.appendC
           end
-          genTypeName [] .generator labelContext sb.appendLabelPath
+          genTypeName [] .generator nameContext sb.appendLabelPath
           depth 0 > if
             " [ "     appendS
               context .generatedTypes
@@ -2915,7 +2915,7 @@ namespace: sb
           t context types.unwrapRefinement context depth 1 - appendTypeRecursive
           " .with( " sb.appendS
             t context types.getTypeTrait .if
-              ProcId.getLabel labelContext sb.appendLabelPath '@' sb.appendC
+              ProcId.getLabel nameContext sb.appendLabelPath '@' sb.appendC
             else
               '?' sb.appendC
             end
@@ -2933,7 +2933,7 @@ namespace: sb
     i32 : mut: level
     i32 : levels
   -> stringBuilder ) =>: export: appendTypeLayoutRecursive
-    context .labelContext =:: labelContext
+    context .nameContext =:: nameContext
     ## string 16
     ##    0 | char8 ptr.raw | 8
     ##    8 | "iSize"       | 8

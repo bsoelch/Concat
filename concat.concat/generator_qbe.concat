@@ -336,7 +336,7 @@ proc(
   program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   toMerge 0 [] =:: rootValue
   rootValue [] .varId =:: rootId
   true =:: mut: isMerged
@@ -426,20 +426,20 @@ namespace: sb
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendGlobalName
     context [] .program =:: prog
-    prog .idContext .typeContext .labelContext =:: labelContext
+    prog .idContext .typeContext .nameContext =:: nameContext
     sb
       '$' sb.appendC
-      nameId labelContext id.labelFlags id.FLAG_EXTERN & ? if
+      nameId nameContext id.labelFlags id.FLAG_EXTERN & ? if
         ## use unmodified name for extern values
-        nameId labelContext sb.appendLabelName
+        nameId nameContext sb.appendLabelName
         return
       end
       CONCAT_PREFIX sb.appendS
-      nameId labelContext id.labelFlags id.FLAG_EXPORT & ? ! if
-        nameId labelContext id.getLabelFile i64 cast sb.appendI
+      nameId nameContext id.labelFlags id.FLAG_EXPORT & ? ! if
+        nameId nameContext id.getLabelFile i64 cast sb.appendI
         "_F" sb.appendS
       end
-      nameId labelContext sb.appendAsciifiedLabelPath
+      nameId nameContext sb.appendAsciifiedLabelPath
     return
   end
 
@@ -483,7 +483,7 @@ namespace: sb
     context [] .program =:: prog
     prog .errors =:: errors
     prog .idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     t switch
       NamedType case
         sb
@@ -608,7 +608,7 @@ namespace: sb
     context [] .program =:: prog
     prog .errors =:: errors
     prog .idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     procType typeContext types.getCallConvention =:: callConvention
     procType typeContext types.getProcIn optional.unwrap =:: args
     procType typeContext types.getProcOutArgs =:: outArgs
@@ -646,7 +646,7 @@ namespace: sb
           ## skip empty arguments
           continue
         end
-        label labelContext id.labelFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
+        label nameContext id.labelFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
           continue
         end
         hasArgs if
@@ -742,7 +742,7 @@ namespace: sb
     prog .errors =:: errors
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     constant [] .value =:: value
     constant [] .valType types.isPrimitive or constant [] .valType .IntLiteral ? and
         ConstValue ..length 23:iSize == "no new constants" assert
@@ -781,7 +781,7 @@ namespace: sb
     context [] .program =:: prog
     prog .errors =:: errors
     prog .idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     prog .idContext .constContext =:: constContext
     t0 typeContext types.unwrapNamed typeContext types.unwrapRefinement =:: t
     sb
@@ -1118,7 +1118,7 @@ namespace: sb
     context [] .program =:: prog
     prog .errors =:: errors
     prog .idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     prog .idContext .constContext =:: constContext
     t0 typeContext types.unwrapNamed =:: t
     t typeContext types.isArray if
@@ -1243,7 +1243,7 @@ namespace: sb
     context [] .program =:: prog
     prog .errors =:: errors
     prog .idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     prog .idContext .constContext =:: constContext
     t types.isNamedType or t types.isGeneratedType if
       sb return ## ignore named types
@@ -1335,7 +1335,7 @@ proc(
   prog .errors =:: errors
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   context [] .currentProc
     nameId
     typeContext
@@ -1347,7 +1347,7 @@ proc(
     sb.appendArgName return
   end
   "cannot find generic argument: " sb.copyPtr
-    nameId labelContext sb.appendLabelName
+    nameId nameContext sb.appendLabelName
   pos errors appendError
 end
 
@@ -1648,7 +1648,7 @@ proc(
   prog .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   branchLabels for =:: labelId
     context .labelStates
       labelId
@@ -1866,11 +1866,11 @@ proc(
   prog .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   opType typeContext types.getProcIn optional.unwrap =:: inTypes
   inTypes .length 0:iSize != if
     opType 0 typeContext types.getProcArgLabel
-        labelContext id.labelFlags id.FLAG_STATIC & ? if
+        nameContext id.labelFlags id.FLAG_STATIC & ? if
       1:i32
     else
       0:i32
@@ -2435,7 +2435,7 @@ proc(
   prog .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   src typeContext types.primitiveValue =:: fromVal
   target typeContext types.primitiveValue =:: toVal
   ## case 0: identical types
@@ -2566,7 +2566,7 @@ proc(
   prog .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   src typeContext types.primitiveValue =:: fromVal
   target typeContext types.primitiveValue =:: toVal
   ## sizes of arguments scaled to bits
@@ -2664,7 +2664,7 @@ proc(
   prog .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   signType0
     $ .NONE if ..drop
       src0 typeContext types.isUnsignedInt or src0 typeContext types.isChar if
@@ -2947,7 +2947,7 @@ proc(
   prog .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   op [] .val switch
     NOP case
       sb return
@@ -2971,7 +2971,7 @@ proc(
       return
     DeclareId InitializeId .case =:: idInfo
       op [] .val .InitializeId ? =:: assignValue
-      idInfo .nameId labelContext id.labelFlags =:: labelFlags
+      idInfo .nameId nameContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_MUTABLE & ? =:: mutable
       idInfo .idType switch
         PROCEDURE case
@@ -3011,7 +3011,7 @@ proc(
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procInfo
       op [] .dataType context .currentProc=
-      procInfo [] .nameId labelContext id.labelFlags =:: labelFlags
+      procInfo [] .nameId nameContext id.labelFlags =:: labelFlags
       ## reset stack-info in context
       0 context .stackCount=
       0 context .tmpCount=
@@ -3045,7 +3045,7 @@ proc(
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
-          label labelContext id.labelFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+          label nameContext id.labelFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
             i 1 + continue ## skip static arguments
           end
           argType context referenceOnly if
@@ -3191,7 +3191,7 @@ proc(
             break
          PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case
             "unsupported identifier for setId " sb.copyPtr
-            idInfo labelContext sb.appendIdInfo
+            idInfo nameContext sb.appendIdInfo
             op [] .pos errors appendError
             return
         end
@@ -3516,7 +3516,7 @@ proc(
         arg typeContext types.isEmpty if
           i 1 + continue ## skip empty arguments
         end
-        argLabel labelContext id.labelFlags =:: argFlags
+        argLabel nameContext id.labelFlags =:: argFlags
         argFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
           i 1 + continue ## skip static arguments
         end
@@ -3980,7 +3980,7 @@ end
 proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>: export: compileToQBE
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   ## CompilerContext
     program
     StackElement branchTree.create
@@ -4001,7 +4001,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
   contextData@ =:: context
   program [] .mainId =:: mainId
   program [] .progFiles 0 @[] .fileScope [] idContext id.setScope
-  labelContext id.clearNamespace
+  nameContext id.clearNamespace
   1024 sb.create
     program getDeclaredTypes =:: types
     types for =:: t
@@ -4029,7 +4029,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
       continue
     end
     idData [] .valueType =:: mut: valType
-    nameId labelContext id.labelFlags =:: labelFlags
+    nameId nameContext id.labelFlags =:: labelFlags
     valType types.primitive.TYPE types.typeEquals or
         valType typeContext types.isEmpty or
         valType typeContext types.isProcedure or

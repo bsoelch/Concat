@@ -390,16 +390,16 @@ proc(
   state [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
     block [] .blockData .While ? and blockName id.NAME_ID_NONE == or
-        block [] .blockName blockName labelContext id.labelNamesEq if
+        block [] .blockName blockName nameContext id.labelNamesEq if
       block optional.wrap return
     end
     breakType .BREAK and block [] .blockData .Switch ? and
         blockName id.NAME_ID_NONE == or
-        block [] .blockName blockName labelContext id.labelNamesEq if
+        block [] .blockName blockName nameContext id.labelNamesEq if
       block optional.wrap return
     end
   end
@@ -529,7 +529,7 @@ proc(
     isModifier do ..drop
       fileState program nextIdentifier
     end
-  flags initFlags | fileState program wordPos state [] .program .idContext .typeContext .labelContext id.newLabel return
+  flags initFlags | fileState program wordPos state [] .program .idContext .typeContext .nameContext id.newLabel return
 end
 proc( string : code string : start FileState ptr.mut : fileState  ParserState ptr.mut : state -> string NameId ) =>: readLabel
   code start fileState state 0:LabelFlag readLabelAddFlags
@@ -683,7 +683,7 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   idContext .constContext =:: constContext
-  idContext .typeContext .labelContext =:: labelContext
+  idContext .typeContext .nameContext =:: nameContext
   token
     fileState [] .wordStart program .errors constContext constants.parseStringConstant ## escape character
     fileState program wordPos =:: opPos
@@ -737,7 +737,7 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   idContext .constContext =:: constContext
-  idContext .typeContext .labelContext =:: labelContext
+  idContext .typeContext .nameContext =:: nameContext
   code
     token switch
       Empty case
@@ -779,7 +779,7 @@ proc(
           idName
             id.FLAG_NONE
             literalStart
-          labelContext id.newLabel
+          nameContext id.newLabel
           literalStart
             isElement if opExistsLabel else opExistsName end
           state appendOp
@@ -882,7 +882,7 @@ proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state ->
 end
 proc(
   FilePosition ptr : pos
-  LabelContext ptr.mut : labelContext
+  NameContext ptr.mut : nameContext
 -> NameId ) =>: newItrId
   char8 32 array : buffer
   ## newLabel
@@ -894,7 +894,7 @@ proc(
     sb.asStr
     id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
     pos
-  labelContext id.newLabel
+  nameContext id.newLabel
 end
 proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: appendDotIfCheck
   state [] .program =:: program
@@ -903,7 +903,7 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: app
     ! "..if.prepare" assert
   =:: ifPrepare
   ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
-  pos idContext .typeContext .labelContext newItrId =:: ifName
+  pos idContext .typeContext .nameContext newItrId =:: ifName
   ifName pos opAutoTypedInitializeName state appendOp
   ifName pos opGetName state appendOp
   "..if.check":s idContext id.findIdentifierByName
@@ -927,7 +927,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   idContext .constContext =:: constContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   code
     token fileState state tryParseConstant if
       ..drop return
@@ -1071,7 +1071,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-        labelContext id.newLabel
+        nameContext id.newLabel
       else
         id.NAME_ID_NONE
       end =:: blockName
@@ -1090,7 +1090,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-        labelContext id.newLabel
+        nameContext id.newLabel
       else
         id.NAME_ID_NONE
       end =:: blockName
@@ -1099,7 +1099,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ! "..itr.prepare" assert
       =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo blockPos opGetId state appendOp
-      blockPos idContext .typeContext .labelContext newItrId =:: itrId
+      blockPos idContext .typeContext .nameContext newItrId =:: itrId
       itrId blockPos opAutoTypedInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockName blockPos opNamedBlock state appendOp
@@ -1194,7 +1194,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           breakLabel
           id.FLAG_NONE
           blockPos
-        labelContext id.newLabel
+        nameContext id.newLabel
       else
         id.NAME_ID_NONE
       end =:: blockName
@@ -1238,7 +1238,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-        labelContext id.newLabel
+        nameContext id.newLabel
       else
         id.NAME_ID_NONE
       end =:: blockName
@@ -1316,10 +1316,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         sb.asStr
         id.FLAG_LAMBDA
         fileState program wordPos
-      labelContext id.newLabel =:: procImplName
+      nameContext id.newLabel =:: procImplName
       named if ## =>:
         fileState program nextIdentifier fileState state readLabel
-        $ labelContext id.labelFlags =:: flags
+        $ nameContext id.labelFlags =:: flags
         fileState program wordPos =:: idPos
         flags id.FLAG_MUTABLE & ? if
           "procedures cannot be mutable" sb.copyPtr
@@ -1331,7 +1331,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             fileState program nextIdentifier
               id.FLAG_NONE
               fileState program wordPos
-            labelContext id.newLabel <<<$
+            nameContext id.newLabel <<<$
           <<<$ opAliasName state appendOp
           return
         end
@@ -1364,14 +1364,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState program nextIdentifier
       fileState program wordPos =:: namePos
       $
-        id.NameContext .NAMESPACE
+        id.DeclarationContext .NAMESPACE
       namePos program .errors id.checkIdentifier if
         "\"" sb.copyPtr
           >$ sb.appendStr
         "\" is not a valid namespace name" sb.appendS
         namePos errors appendError return
       end
-      id.FLAG_NONE namePos labelContext id.newLabel
+      id.FLAG_NONE namePos nameContext id.newLabel
         BlockType .NAMESPACE >$ namePos opNamedBlock state appendOp
       BlockInfoData .Namespace namePos state openBlock ..drop
       return
@@ -1384,7 +1384,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState state
         id.FLAG_MERGEABLE
       readLabelAddFlags =:: mut: nameId
-      nameId labelContext id.labelFlags =:: labelFlags
+      nameId nameContext id.labelFlags =:: labelFlags
       fileState program wordPos =:: namePos
       labelFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
@@ -1601,7 +1601,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         sb.asStr
         id.FLAG_LAMBDA id.FLAG_IGNORE_UNUSED |
         blockPos
-      labelContext id.newLabel
+      nameContext id.newLabel
         Type .Undefined
         state [] .currentFile
         ProcId optional.empty true
@@ -1712,7 +1712,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         ## make pre-declared variables mutable by default
         isInit ! and inProcedure if id.FLAG_MUTABLE else id.FLAG_NONE end
       readLabelAddFlags =:: mut: label
-      label labelContext id.labelFlags =:: labelFlags
+      label nameContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_ALIAS & ? =:: isAlias
       fileState program wordPos =:: opPos
       isAlias and isInit if
@@ -1727,7 +1727,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             fileState program nextIdentifier
               id.FLAG_NONE
               opPos
-            labelContext id.newLabel <<<$
+            nameContext id.newLabel <<<$
           <<<$ opAliasName
         else
           opDeclareName
@@ -1737,7 +1737,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "=::":s string.eq _if ..drop
       fileState program nextIdentifier fileState state readLabel =:: mut: nameId
       fileState program wordPos =:: opPos
-      nameId labelContext id.labelFlags id.FLAG_ALIAS & ? if
+      nameId nameContext id.labelFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
         opPos errors appendError
       end
@@ -1767,7 +1767,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           end
         state appendOp
       else ..drop
-        label id.FLAG_NONE opPos labelContext id.newLabel
+        label id.FLAG_NONE opPos nameContext id.newLabel
         opPos
           isWrite if
             opSetLabel
@@ -1950,22 +1950,22 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       importNamespace if
         usedName id.FLAG_NONE
           usePos
-        labelContext id.newLabel =:: namespaceName
+        nameContext id.newLabel =:: namespaceName
         aliasName .length 0:iSize != if
           aliasName id.FLAG_NONE
             usePos
-          labelContext id.newLabel
+          nameContext id.newLabel
         else id.NAME_ID_NONE end =:: aliasNameId
         namespaceName aliasNameId usePos opUsingNamespace state appendOp
         return
       end
       usedName id.FLAG_NONE
         usePos
-      labelContext id.newLabel =:: usedLabel
+      nameContext id.newLabel =:: usedLabel
       aliasName .length 0:iSize != if
         aliasName id.FLAG_NONE
           usePos
-        labelContext id.newLabel
+        nameContext id.newLabel
       else id.NAME_ID_NONE end =:: aliasNameId
       usedLabel aliasNameId usePos opUsingIdentifier state appendOp
       return
@@ -2104,7 +2104,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         idName
           id.FLAG_NONE
           opPos
-        labelContext id.newLabel
+        nameContext id.newLabel
         opPos
       opPrintIdentifierMatches state appendOp
       return
@@ -2149,7 +2149,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   end
   idName
     id.FLAG_NONE opPos
-  labelContext id.newLabel =:: nameId
+  nameContext id.newLabel =:: nameId
   nameId opPos
   isAddr if
     opAtName
@@ -2196,8 +2196,8 @@ proc(
   FilePosition ptr : pos
   ParserState ptr.mut : state
 -> ) =>: prepareImport
-  state [] .program .idContext .typeContext .labelContext =:: labelContext
-  fileName labelContext id.copyString isLibImport pos opImportFile state appendOp
+  state [] .program .idContext .typeContext .nameContext =:: nameContext
+  fileName nameContext id.copyString isLibImport pos opImportFile state appendOp
 end
 proc(
   string : fileName
@@ -2297,7 +2297,7 @@ proc(
     state [] .parsedOps =:: oldOps
     Operation list.empty state .parsedOps=
     program .idContext =:: idContext
-    idContext .typeContext .labelContext =:: labelContext
+    idContext .typeContext .nameContext =:: nameContext
     program .errors =:: errors
     ..dup ..over .length 1:iSize - sb.charAt '\x00' != if
       '\x00' sb.appendC ## ensure file-name is zero terminated
@@ -2328,8 +2328,8 @@ proc(
     fileId readError return
   end
   state [] .openBlocks .length =:: blockCount
-  labelContext id.currentNamespace =:: prevNamespace
-  labelContext id.clearNamespace
+  nameContext id.currentNamespace =:: prevNamespace
+  nameContext id.clearNamespace
   idContext id.currentScope =:: prevScope
   idContext id.clearScope
   _INCLUDE_CORE_ if
@@ -2368,7 +2368,7 @@ proc(
   end
   idContext id.closeScope ! "file scope closed correctly" assert
   prevScope idContext id.setScope
-  prevNamespace labelContext id.resetNamespace
+  prevNamespace nameContext id.resetNamespace
   state [] .currentFile =:: newFileId
   fileId newFileId == "fileId did not change" assert
   prevFile state .currentFile=

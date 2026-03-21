@@ -247,7 +247,7 @@ namespace: interpreter
     context [] .program .idContext =:: idContext
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
       valInfo Type .Undefined true return
@@ -339,7 +339,7 @@ namespace: interpreter
     program .idContext =:: idContext
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     pos context popValue =:: isError =:: value =:: valInfo
     isError if
       valInfo string.empty true return
@@ -369,7 +369,7 @@ namespace: interpreter
     program .idContext =:: idContext
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     t typeContext types.containsGeneric if
       ConstValue .None true return
     end
@@ -987,7 +987,7 @@ namespace: interpreter
   -> ) =>: printTypes
     context [] .program .idContext =:: idContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     idContext .constContext =:: constContext
     printValues if
       "stack:\n" sb.copyPtr
@@ -1041,7 +1041,7 @@ proc(
   context [] .program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
-  typeContext .labelContext =:: labelContext
+  typeContext .nameContext =:: nameContext
   op [] .val switch
     NOP case
       EvalResult .Ok return
@@ -1050,7 +1050,7 @@ proc(
           context [] .localVariables .if
         label map.get .else
           "missing value for " sb.copyPtr
-            label labelContext sb.appendLabelPath
+            label nameContext sb.appendLabelPath
           op [] .pos errors appendError
           EvalResult .Error return
         end =:: value
@@ -1180,7 +1180,7 @@ proc(
           end
           context [] .localVariables .and nameId map.get .else
             "missing value for " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
+              idInfo nameContext sb.appendIdInfo
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: value
@@ -1191,7 +1191,7 @@ proc(
             context .globalVariables
           end nameId map.get .else
             "missing value for " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
+              idInfo nameContext sb.appendIdInfo
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: value
@@ -1202,20 +1202,20 @@ proc(
             idContext
           id.getIdentifier if ..drop
             "could not find identifier: " sb.copyPtr
-              nameId labelContext sb.appendLabelPath
+              nameId nameContext sb.appendLabelPath
             op [] .pos errors appendError
             EvalResult .Error return ## unknown identifier
           end =:: idData
-          idData [] .nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+          idData [] .nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? if
             "mutable global variables are not supported: " sb.copyPtr
-              nameId labelContext sb.appendLabelPath
+              nameId nameContext sb.appendLabelPath
             op [] .pos errors appendError
             ## compile-time evaluation of mutable global variables not supported
             EvalResult .Error return
           end
           idData [] .constValue .None ? if
             "identifier " sb.copyPtr
-              nameId labelContext sb.appendLabelPath
+              nameId nameContext sb.appendLabelPath
               " has not been initialized" sb.appendS
             op [] .pos errors appendError
             EvalResult .Error return
@@ -1235,11 +1235,11 @@ proc(
             EvalResult .Error return
           end nameId map.get .else
             "missing value for " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
+              idInfo nameContext sb.appendIdInfo
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: value
-          nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? =:: isMutable
+          nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? =:: isMutable
           ## pushValue
             value .value
             value .info .valueType isMutable typeContext types.getAddressType
@@ -1248,13 +1248,13 @@ proc(
         PROCEDURE case
           nameId idContext id.getIdentifier if ..drop
             "could not find " sb.copyPtr
-              idInfo labelContext sb.appendIdInfo
+              idInfo nameContext sb.appendIdInfo
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: idData
           idData [] .constValue .Procedure .else ..drop
             "could not determine id of procedure" sb.copyPtr
-              nameId labelContext sb.appendLabelName
+              nameId nameContext sb.appendLabelName
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: procVal
@@ -1275,7 +1275,7 @@ proc(
     SetId .case =:: idInfo
       idInfo .nameId =:: nameId
       nameId
-        labelContext id.labelFlags id.FLAG_MUTABLE & ?
+        nameContext id.labelFlags id.FLAG_MUTABLE & ?
       "setId only created for mutable identifiers" assert
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
@@ -1311,7 +1311,7 @@ proc(
           id.getIdentifier if ..drop
             value valInfo context unpopValue
             "could not find identifier: " sb.copyPtr
-              nameId labelContext sb.appendLabelPath
+              nameId nameContext sb.appendLabelPath
             op [] .pos errors appendError
             EvalResult .Error return ## unknown identifier
           end =:: idData
@@ -1358,7 +1358,7 @@ proc(
           end
             nameId
             ## Constant
-              nameId labelContext id.labelFlags id.FLAG_MUTABLE & ? if
+              nameId nameContext id.labelFlags id.FLAG_MUTABLE & ? if
                 value valInfo .valueType true context localCopy
               else
                 value
@@ -1897,7 +1897,7 @@ namespace: interpreter
     context [] .program .idContext =:: idContext
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     calledType typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
     ConstValue 3 array new =:: mut: valueData
     valueData@ =:: values
@@ -1988,8 +1988,8 @@ namespace: interpreter
     context [] .program =:: program
     program .errors =:: errors
     program .idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
-    "memcpy":s procName labelContext id.labelNameEq if
+    typeContext .nameContext =:: nameContext
+    "memcpy":s procName nameContext id.labelNameEq if
       args .length 3:iSize != or
           args 2 [] typeContext types.isPointer ! or
           args 2 [] typeContext types.isMutable ! or
@@ -2030,7 +2030,7 @@ namespace: interpreter
       false return
     end
     "call to unsupported extern procedure: " sb.copyPtr
-      procName labelContext sb.appendLabelPath
+      procName nameContext sb.appendLabelPath
     pos errors appendInfo
     true return
   end
@@ -2068,7 +2068,7 @@ namespace: interpreter
     context [] .program .idContext =:: idContext
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     tupleType typeContext types.compositeElts =:: elts
     elts .length "tuple-creation":s pos context checkStack if
       true return
@@ -2119,14 +2119,14 @@ namespace: interpreter
     context [] .program .idContext =:: idContext
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
-    typeContext .labelContext =:: labelContext
+    typeContext .nameContext =:: nameContext
     procId ProcId.getProcInfo =:: procData
     procData [] .procType =:: procType
     procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
     0:iSize ## XXX? is there a better way to get number of non-auto static args
       args .length i32 cast.u for =:: i
         procType i typeContext types.getProcArgLabel =:: label
-        label labelContext id.labelFlags =:: flags
+        label nameContext id.labelFlags =:: flags
         flags id.FLAG_STATIC & ? or
             args i [] typeContext types.isType if
           1:iSize +
@@ -2174,7 +2174,7 @@ namespace: interpreter
     ## process procedure arguments
     0:i32 while $ args .length i32 cast < do =:: i
       procType i typeContext types.getProcArgLabel =:: nameId
-      nameId labelContext id.labelFlags =:: labelFlags
+      nameId nameContext id.labelFlags =:: labelFlags
       labelFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         codeImpl .genericInfo .ImplInfo .else
           "expected generic implementation" ..panic
@@ -2194,7 +2194,7 @@ namespace: interpreter
       end
       argOffset stackOffset u>= if
         "not enough arguments for procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
+          procName nameContext sb.appendLabelPath
         pos errors appendError
         context [] .localVariables optional.unwrap map.free
         prevVariables context .localVariables=
@@ -2230,13 +2230,13 @@ namespace: interpreter
     codeImpl [] .codeState switch
       PARSING case
         "procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
+          procName nameContext sb.appendLabelPath
           " has not finished parsing" sb.appendS
         pos errors appendError
         Operation slice.empty break
       PARSED TYPE_CHECKING case
         "procedure " sb.copyPtr
-          procName labelContext sb.appendLabelPath
+          procName nameContext sb.appendLabelPath
           " has not finished type-checking" sb.appendS
         pos errors appendError
         Operation slice.empty break
@@ -2246,7 +2246,7 @@ namespace: interpreter
     end =:: code
     code .length 0:iSize == if
       "no operations in procedure " sb.copyPtr
-        procName labelContext sb.appendLabelPath
+        procName nameContext sb.appendLabelPath
       pos errors appendError
       context resetContext
       context [] .localVariables optional.unwrap map.free
