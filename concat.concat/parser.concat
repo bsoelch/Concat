@@ -860,26 +860,14 @@ proc(
   return
 end
 proc( string : eltName bool : isWrite FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: parseElementAccess
-  eltName 10 number.tryParseUInt .NONE and $ i32.UMAX u<= if
-    Type .Undefined ## TODO? move  conversion of integer index to get-element into type-check phase
-      >$ i32 cast.u ## index
-      pos
-      isWrite if
-        opSetElement
-      else
-        opGetElement
-      end
-    state appendOp
-  else ..drop
-    eltName state [] .program .idContext .typeContext .nameContext id.copyString
-      pos
-      isWrite if
-        opSetNamedElt
-      else
-        opGetNamedElt
-      end
-    state appendOp
-  end
+  eltName state [] .program .idContext .typeContext .nameContext id.copyString
+    pos
+    isWrite if
+      opSetNamedElt
+    else
+      opGetNamedElt
+    end
+  state appendOp
 end
 proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendItrStep
   state [] .program .idContext =:: idContext

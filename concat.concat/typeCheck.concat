@@ -3231,64 +3231,7 @@ proc(
             continue.opLoop
         end
         break
-      ImplementProcedure case break
-      GetElement GetUnionElement SetElement .case =:: index
-        op .val .SetElement ? =:: isWrite
-        op .val .GetUnionElement ? =:: isUnionGet
-        isWrite if 2 else 1 end op .pos state checkStackSize if
-          continue.opLoop
-        end
-        false =:: mut: mutable
-        false =:: mut: isPtr
-        state .stack branchTree.peek optional.unwrap [] =:: container
-        container .valueType =:: mut: srcType
-        srcType
-          $ typeContext types.isPointer if
-             $ srcType=
-             true isPtr=
-             $ typeContext types.isMutable mutable=
-             typeContext types.ptrTarget
-          else $ types.isLiteral _if
-            typeContext types.literalToType
-              $ srcType=
-            container $1 SignType .NONE op .pos state tryCastConstant if
-              "could not convert literal to type: " sb.copyPtr
-                srcType typeContext sb.appendType
-              op .pos errors appendError
-            end
-          end
-        =:: mut: containerType
-        containerType typeContext types.isTuple if
-          index containerType typeContext types.compositeEltCount >= if
-            "element index out of range: " sb.copyPtr
-              index sb.appendI
-              " size: " sb.appendS
-              containerType typeContext types.compositeEltCount sb.appendI
-            op .pos errors appendError
-            continue.opLoop
-          end
-          srcType containerType index isWrite isUnionGet isPtr mutable op .pos state typeCheckGetElement
-        else containerType typeContext types.isArray _if
-          containerType typeContext types.getArraySize .Int .else ..drop
-            "generic arrays are not supported" sb.copyPtr
-            op .pos errors appendError
-            continue.opLoop
-          end =:: eltCount
-          index i64 cast.u eltCount >= if
-            "element index out of range: " sb.copyPtr
-              index sb.appendI
-              " size: " sb.appendS
-              containerType typeContext types.compositeEltCount sb.appendI
-            op .pos errors appendError
-            continue.opLoop
-          end
-          srcType containerType index isWrite isUnionGet isPtr mutable op .pos state typeCheckGetElement
-        else
-          "indexed element access is only supported on tuples, structs and arrays got: " sb.copyPtr
-            srcType typeContext sb.appendType
-          op .pos errors appendError
-        end
-        continue.opLoop
+      ImplementProcedure GetElement GetUnionElement SetElement case break
       GetNamedElt SetNamedElt ExistsNamedElt .case =:: name
         enum( CHECK CHECK_ENUM GET UNION_GET ) =:: LabelAccessType
         LabelAccessType .GET =:: mut: accessType
@@ -3327,11 +3270,15 @@ proc(
             typeContext types.asRawUnion optional.unwrap
           end
         =:: innerContainerType
-        ## compositeFindName
-          innerContainerType
-          name
-          typeContext
-        types.compositeFindName .else
+        name 10 number.tryParseUInt .NONE and $ innerContainerType typeContext types.compositeEltCount i64 cast.u u<= if
+          i32 cast.u
+        else ..drop
+          ## compositeFindName
+            innerContainerType
+            name
+            typeContext
+          types.compositeFindName
+        ._else
           accessType .CHECK if
             ## label does not exists
             1 op .pos state discardValues ## remove container
