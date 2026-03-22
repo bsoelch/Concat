@@ -163,6 +163,9 @@ namespace: string
   proc( string : str char8 : chr -> string string ) =>: export: splitLast
     str char8 slice cast chr slice.splitLast ..swap string cast ..swap string cast return
   end
+  proc( string : str string : substr -> string string ) =>: export: splitStr
+    str char8 slice cast substr char8 slice cast slice.splitSeq ..swap string cast ..swap string cast return
+  end
 end
 
 namespace: std.literals

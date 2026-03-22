@@ -853,6 +853,18 @@ namespace: slice
       end
     splitIndex return
   end
+  proc(
+    type : auto: T
+    T slice : elts
+    T slice : subseq
+  -> T slice T slice ) =>: export: splitSeq
+    elts subseq ( T T -> bool ) => == end indexOfSlice .else
+      T empty elts return
+    end =:: offset
+      elts offset subseq .length + tail
+      elts offset head
+    return
+  end
 
   proc( type : auto: T
     T slice : elts
