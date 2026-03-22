@@ -1103,7 +1103,7 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end
-            $ .Union ? if constUnionLabel end
+            $ .Union ? if constUnionTag end
           =:: switchValue ..drop
           program [] .switchData
             blockInfo .blockId i64 cast.u
@@ -1874,7 +1874,7 @@ proc(
       end
       break
     Import LibImport GetNamedElt SetNamedElt ExistsNamedElt
-    NewUnionReference CallPtr GetUnionLabel
+    NewUnionReference CallPtr GetUnionTag
     ImplementProcedure ProcPtr
     ConstantReference NewReference
     NestedProc Splat case break

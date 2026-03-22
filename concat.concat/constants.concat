@@ -125,7 +125,7 @@ proc(
 end
 proc(
   ConstValue : union
--> ConstValue ) =>: export: constUnionLabel
+-> ConstValue ) =>: export: constUnionTag
   union .Union .else return end .eltIndex i64 cast.u ConstValue .Int return
 end
 

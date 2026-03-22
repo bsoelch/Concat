@@ -171,7 +171,7 @@ union(
                 i32 : GetUnionElement
                 i32 : SetElement
                 i32 : SetUnionElement
-                  _ : GetUnionLabel
+                  _ : GetUnionTag
                   _ : Return
                   _ : New
                   _ : NewReference
@@ -343,8 +343,8 @@ end
 proc( FilePosition ptr : pos -> Operation ) =>: export: opRawValue
   pos OpValue .RawValue Type .Undefined Operation new return
 end
-proc( FilePosition ptr : pos -> Operation ) =>: export: opGetUnionLabel
-  pos OpValue .GetUnionLabel Type .Undefined Operation new return
+proc( FilePosition ptr : pos -> Operation ) =>: export: opGetUnionTag
+  pos OpValue .GetUnionTag Type .Undefined Operation new return
 end
 proc( Type : t TypeMemoryInfo : infoType FilePosition ptr : pos -> Operation ) =>: export: opTypeInfo
   pos infoType OpValue .TypeInfo t Operation new return
@@ -1054,7 +1054,7 @@ namespace: sb
           STRIDE case "stride" sb.appendS break
         end
       break
-      GetUnionLabel case
+      GetUnionTag case
         "get union label ( " sb.appendS
         op .dataType typeContext sb.appendType
         " )" sb.appendS

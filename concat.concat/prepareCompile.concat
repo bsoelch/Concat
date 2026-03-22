@@ -145,7 +145,7 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage
-    GetId SetId AtId GetUnionLabel SetUnionElement
+    GetId SetId AtId GetUnionTag SetUnionElement
     SetElement RuntimeAssert Error StackMod GetElement GetUnionElement
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps

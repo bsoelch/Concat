@@ -3457,7 +3457,7 @@ proc(
         end
         srcType containerType elementIndex isWrite accessType .UNION_GET isPtr mutable op .pos state typeCheckGetElement
         continue.opLoop
-      GetUnionLabel case
+      GetUnionTag case
         state .stack branchTree.peek .else
           "missing argument for operation " sb.copyPtr
             op program sb.appendOp
@@ -3478,12 +3478,12 @@ proc(
           state pushConstant
           continue.opLoop
         else enumType typeContext types.isTaggedUnion ! and enumType typeContext types.isUnionElement ! _if
-          "wrong argument type for getUnionLabel expected enum or tagged union got " sb.copyPtr
+          "wrong argument type for GetUnionTag expected enum or tagged union got " sb.copyPtr
             enumType typeContext sb.appendType
           op .pos errors appendError
         end
         ## TODO? compile-time evaluation
-        enumType@ slice.wrap "getUnionLabel":s 0 false op .pos state requireTypes .Err ? if
+        enumType@ slice.wrap "GetUnionTag":s 0 false op .pos state requireTypes .Err ? if
           continue.opLoop
         end
         enumType
