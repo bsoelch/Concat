@@ -92,9 +92,9 @@ struct(
 ) =:: export: BuiltInData
 union(
   BuiltInData : shadow: BuiltIn
-  CodeProcData : Code
-  NameId : Extern
   ProcId : Alias
+  NameId : Extern
+  CodeProcData : Code
 ) =:: export: ProcImplType
 i16 =:: export: ProcFlags
 namespace: ProcFlags

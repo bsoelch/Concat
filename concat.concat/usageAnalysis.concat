@@ -153,6 +153,11 @@ proc(
   typeContext .nameContext =:: nameContext
   op .val switch
     NOP case newOps return ## ignore no-ops
+    Call .case =:: callVal
+      callVal program shouldInline if
+        newOps callVal op .pos context inlineCall return
+      end
+    break
     AutoTypedInitializeId ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
@@ -161,10 +166,9 @@ proc(
         op program sb.appendOp
       op .pos errors appendError
     newOps return
-    default
-      newOps op list.append ## nothing to change
-    return
+    default break
   end
+  newOps op list.append return ## nothing to change
 end
 proc(
   Operation : mut: op
@@ -209,24 +213,33 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     -1:FileId
     0
   ConverterContext new =:: mut: contextData
-  ## TODO sort procedures:
-  ## 1. built-ins & extern procs (skip for code analysis)
-  ## 2. inlinable procs
-  ## 3. non-inlinable procs
-  ## TODO 3 passes for each proc (first iteration: pass 1+2, second iteration: pass 3)
+  ## sort procs to ensure inlinable procs are before non-inlinable procs
+  ## TODO: precompute for each proc if it should be inlined
+  program [] .procedures ( ProcId : a ProcId : b -> i32 ) =>
+    a ProcId.getProcInfo =:: aData
+    b ProcId.getProcInfo =:: bData
+    aData [] .implementation ..label bData [] .implementation ..label != if
+      aData [] .implementation ..label i32 cast.s bData [] .implementation ..label i32 cast.s - return
+    end
+    aData .implementation [] .Code .else ..drop 0 return end =:: aCode
+    bData .implementation [] .Code .else ..drop 0 return end =:: bCode
+    ## TODO sort by inlinability
+    aCode .code .length bCode .code .length iSize.cmp return
+  end list.sort
+  ## TODO 2 passes for each proc
+  ## TODO? make inlining a seperate pass
   ## pass 1
-  ## * detect unused labels
+  ## * detect unused labels (? information should already exist in type-checker?)
   ## * mark writes that are never read
   ## * mark last read before overwrite
   ## ? detect stack values that are never read (? only if optimizations are enabled)
-  ## * inline calls (TODO? does it make sence to already inline some procs in type-checker)
   ## pass 2
   ## * delete unused labels
   ## * remove unused writes
-  ## ? 2nd round of constant folding for procs that contain inlined code
   ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
-  ## pass 3
+  ## TODO -> seperate compilation phase for copy-analysis
   ## * insert 'copy' operations for composites
+  ## ? 2nd round of constant folding for procs that contain inlined code
   ## ? borrow-checking
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed

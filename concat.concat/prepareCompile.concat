@@ -45,110 +45,6 @@ proc(
   IdentifierInfo new return
 end
 
-## TODO? move inlining to seperate optimization pass
-proc(
-  ProcId : procId
-  ProgramContext ptr.mut : program
--> Operation slice ) =>: calledProcOps
-  procId ProcId.getProcInfo =:: procInfo
-  program [] .progFiles
-    procInfo [] .fileId i64 cast.u
-  @[] =:: procFile
-  procInfo .implementation .Code .else
-    "expected code-proc" ..panic
-  end =:: impl
-  impl [] .code slice.freeze
-end
-
-proc(
-  ProcId : procId
-  ProgramContext ptr.mut : program
--> bool ) =>: shouldInlineCall
-  program .idContext .typeContext .nameContext =:: nameContext
-  optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
-  procId ProcId.getProcInfo =:: procData
-  procData .implementation [] .Code ? ! or
-      procData [] .nameId nameContext id.identifierFlags id.FLAG_EXTERN & ? or
-      procData [] .nameId nameContext id.identifierFlags id.FLAG_NO_INLINE & ? if
-    false return
-  end
-  procId program calledProcOps =:: procOps
-  ## TODO? small procedures should only be inlined if they don't contain jumps
-  procOps .length 10 u<= if true return end ## init+op{0-7}+ret+end
-  optimizerFlags.ALLOW_INLINE ! if false return end
-  ## TODO! detect if proc is currently being inlined (smaller inline-limits in nested inline, prevent recursive inline)
-  ## TODO compute inline weight depending on operations in procedure, cache weight in procedure(-impl) info
-  procOps .length 18:iSize u<=
-end
-## FIXME inline should use original proc-code BEFORE pre-compilation was called
-##  ? postpone pre-compile of inlinable-procs until other procs are done
-##  * mark inlined procs that are never called directly as unused
-proc(
-  Operation list
-  ProcId : procId
-  FilePosition ptr : pos
-  ConverterContext ptr.mut : context
--> Operation list ) =>: inlineCall
-  context [] .program =:: program
-  program .idContext .typeContext =:: typeContext
-  typeContext .nameContext =:: nameContext
-  procId ProcId.getProcInfo .implementation [] .Code ? "only code-procs are inlined" assert
-  procId program calledProcOps =:: procOps
-  NameId.hash@ NameId.eq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
-  LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
-  program program.nextLocalLabel =:: procEnd
-  procEnd LocalLabelType .HINT_START pos opLabel list.append
-  procOps 0 [] .dataType =:: procType
-  procType typeContext types.getProcIn optional.unwrap =:: inTypes
-  0 =:: mut: offset
-  ## create tmp-variables for named arguments
-  inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
-    procType i typeContext types.getProcArgName =:: argName
-    inTypes i [] =:: eltType
-    eltType typeContext types.isEmpty if continue end ## ignore empty arguments
-    argName id.NAME_ID_NONE == if
-      offset 1 + offset=
-    else argName nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
-      offset 0 != if
-        ## rotate labeled argument to top
-        offset StackModType .ROTATE pos opStackMod list.append
-      end
-      eltType argName nameContext id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
-      eltType tmpId pos opInitializeId list.append
-      remapIds@ argName tmpId map.put optional.isEmpty "label-value only reassigned once" assert
-    end
-  finally i 1 - end ..drop
-  procOps 1:iSize $1 .length 2:iSize - slice.getSlice
-    $ .length 1 - =:: last
-    $ last [] .val .Return ? if last >$ .length= end ## ignore return at end of proc
-  for =:: mut: op
-    op .val .Return ? if
-      procEnd 0:JumpDistance CompareType .NONE op .pos opJump list.append
-      continue
-    else op .val .GetId ._if .nameId =:: nameId
-      remapIds@ nameId map.get .if op@ .val .GetId= end
-    else .SetId ._if .nameId =:: nameId
-      remapIds@ nameId map.get .if op@ .val .SetId= end
-    else .AtId ._if .nameId =:: nameId
-      remapIds@ nameId map.get .if op@ .val .AtId= end
-    else .LocalJump ._if .labelId =:: label
-      remapLabels@ label map.get .else
-        program program.nextLocalLabel
-        remapLabels@ label $2 map.put ..drop
-      end op@ .val .LocalJump .if .labelId =[] else ..drop.2 end
-    else .LocalLabel ._if .labelId =:: label
-      remapLabels@ label map.get .else
-        program program.nextLocalLabel
-        remapLabels@ label $2 map.put ..drop
-      end op@ .val .LocalLabel .if .labelId =[] else ..drop.2 end
-    else ..drop end
-    op context compileOp
-  end
-  procEnd LocalLabelType .LABEL_END pos opLabel list.append
-  remapIds@ map.free
-  remapLabels@ map.free
-end
-
 proc( BuiltIn -> bool ) =>: canMergeJumpIf
   BuiltIn ..length 221 == "no new builtins" assert
   switch
@@ -351,10 +247,6 @@ proc(
         end
       return
     Call CallPtr case
-      op .val .Call .and =:: callVal
-          callVal program shouldInlineCall if
-        newOps callVal op .pos context inlineCall return
-      end
       op .dataType
         $ typeContext types.isPointer if
           typeContext types.getBaseType
