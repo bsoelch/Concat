@@ -4,13 +4,13 @@ namespace: std.default
     E : a
     E : b
   -> bool ) =>: eqEnum
-    a ..label b ..label ==
+    a ..tag b ..tag ==
   end
   proc( type.enum : auto: E
     E : a
     E : b
   -> bool ) =>: neEnum
-    a ..label b ..label !=
+    a ..tag b ..tag !=
   end
   proc( type.namedPrimitive : auto: P
     P : a

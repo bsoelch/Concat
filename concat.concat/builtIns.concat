@@ -1614,7 +1614,7 @@ BuiltIn ..length builtInNames ..length == "correct number of names" assert
 namespace: sb
   proc( stringBuilder : sb BuiltIn : builtIn -> stringBuilder ) =>: export: appendBuiltIn
     sb
-      builtInNames builtIn ..label i32 cast.u [] sb.appendStr
+      builtInNames builtIn ..tag i32 cast.u [] sb.appendStr
     return
   end
 end

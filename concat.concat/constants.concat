@@ -133,8 +133,8 @@ proc( ConstValue : a ConstValue : b -> bool ) =>: export: constantEquals
   a b constantCmp 0 ==
 end
 proc( ConstValue : a ConstValue : b -> i32 ) =>: export: constantCmp
-  a ..label b ..label != if ##different constant types
-    a ..label b ..label <=> return
+  a ..tag b ..tag != if ##different constant types
+    a ..tag b ..tag <=> return
   end
   a switch
     None WildCard case 0 return

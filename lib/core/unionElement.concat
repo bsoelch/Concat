@@ -3,7 +3,7 @@ import core/type
 namespace: unionElement
   proc( type.unionElement : auto: U  U -> U ) =>: prepareIf end
   proc( type.unionElement : auto: U  U : x -> bool ) =>: export: check
-    x ..label U ..label ==
+    x ..tag U ..tag ==
   end
   proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: get
     ..raw
@@ -21,7 +21,7 @@ namespace: unionElement
   proc( type.unionElement : auto: U  U inv -> U ) =>: invert2 U cast end
   proc( type.unionElement : auto: U  U inv -> U inv ) =>: prepareIfInv end
   proc( type.unionElement : auto: U  U inv : x -> bool ) =>: checkInv
-    x U cast ..label U ..label !=
+    x U cast ..tag U ..tag !=
   end
   proc( type.unionElement : auto: U  U inv -> U type.unionElementType ) =>: getInv
     U cast ..raw
@@ -32,7 +32,7 @@ namespace: unionElement
 
   proc( type.unionElementPointer : auto: U  U -> U ) =>: prepareIfPtr end
   proc( type.unionElementPointer : auto: U  U -> bool ) =>: checkPtr
-    [] ..label U ..types.arrayElement ..label ==
+    [] ..tag U ..types.arrayElement ..tag ==
   end
   proc( type.unionElementPointer : auto: U  U -> U type.unionElementPtrType ) =>: getPtr
     U type.unionElementPtrType cast! ## elements are all stored at same address as union
@@ -50,7 +50,7 @@ namespace: unionElement
   proc( type.unionElementPointer : auto: U  U invPtr -> U ) =>: invertPtr2 .val end
   proc( type.unionElementPointer : auto: U  U invPtr -> U invPtr ) =>: prepareIfPtrInv end
   proc( type.unionElementPointer : auto: U  U invPtr -> bool ) =>: checkPtrInv
-    .val [] ..label U ..types.arrayElement ..label !=
+    .val [] ..tag U ..types.arrayElement ..tag !=
   end
   proc( type.unionElementPointer : auto: U  U invPtr -> U type.unionElementPtrType ) =>: getPtrInv
     .val U type.unionElementPtrType cast! ## elements are all stored at same address as union

@@ -791,7 +791,7 @@ namespace: sb
     end
   end
   proc( stringBuilder CompareType -> stringBuilder ) =>: export: appendCmpType
-    CMP_TYPE_NAMES@ >$ ..label iSize cast.u [] sb.appendStr
+    CMP_TYPE_NAMES@ >$ ..tag iSize cast.u [] sb.appendStr
   end
   proc( stringBuilder Operation : op ProgramContext ptr : progContext -> stringBuilder ) =>: export: appendOp
     progContext .idContext .typeContext =:: typeContext

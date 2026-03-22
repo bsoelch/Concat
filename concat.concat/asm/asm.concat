@@ -63,7 +63,7 @@ namespace: asm
   ) =:: export: Value
   namespace: Value
     proc( Value : a Value : b -> bool ) =>: export: equal
-      a ..label b ..label != if false return end
+      a ..tag b ..tag != if false return end
       a switch
         None case true return
         Register .case b .Register unionElement.unwrap == return

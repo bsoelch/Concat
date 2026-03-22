@@ -1806,7 +1806,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..raw":s string.eq _if ..drop
       fileState program wordPos opRawValue state appendOp
       return
-    else $ "..label":s string.eq or $ "..tag":s string.eq _if ..drop
+    else $ "..tag":s string.eq _if ..drop
       fileState program wordPos opGetUnionTag state appendOp
       return
     else ..dup "..types.alignment":s string.eq or

@@ -218,8 +218,8 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   program [] .procedures ( ProcId : a ProcId : b -> i32 ) =>
     a ProcId.getProcInfo =:: aData
     b ProcId.getProcInfo =:: bData
-    aData [] .implementation ..label bData [] .implementation ..label != if
-      aData [] .implementation ..label i32 cast.s bData [] .implementation ..label i32 cast.s - return
+    aData [] .implementation ..tag bData [] .implementation ..tag != if
+      aData [] .implementation ..tag i32 cast.s bData [] .implementation ..tag i32 cast.s - return
     end
     aData .implementation [] .Code .else ..drop 0 return end =:: aCode
     bData .implementation [] .Code .else ..drop 0 return end =:: bCode

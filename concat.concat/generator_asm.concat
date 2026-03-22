@@ -167,7 +167,7 @@ union(
 ) =:: ValueLocation
 namespace: ValueLocation
   proc( ValueLocation : a ValueLocation : b -> bool ) =>: eq
-    a ..label b ..label != if false return end
+    a ..tag b ..tag != if false return end
     a switch
       None case true return
       Stack .case b .Stack unionElement.unwrap == return
@@ -586,7 +586,7 @@ end
 enum( ADD SUB MUL ) =:: BinOp
 { AMD64.op.ADD AMD64.op.SUB AMD64.op.IMUL } =:: AMD64_BIN_OPS
 proc( BinOp : op -> asm.OpCode ) =>: binOpCodeAMD64
-  AMD64_BIN_OPS op ..label iSize cast.u []
+  AMD64_BIN_OPS op ..tag iSize cast.u []
 end
 ## TODO! check stack-size before bin-op / cmp
 proc(
@@ -979,7 +979,7 @@ proc(
   oldStack .length for =:: i
     oldStack i [] =:: targetVal
     context [] .stack i [] =:: srcVal
-    srcVal ..label targetVal ..label != if
+    srcVal ..tag targetVal ..tag != if
       "stack-values are out of sync" sb.copyPtr pos errors appendError
       state context resetState return
     end
@@ -1006,7 +1006,7 @@ proc(
     end =:: varInfo
     varInfo .cachedValue .None ? if
       "unimplemented: load variable" ..panic
-    else varInfo .cachedValue ..label varState .location ..label != _if
+    else varInfo .cachedValue ..tag varState .location ..tag != _if
       "stack-values are out of sync" sb.copyPtr pos errors appendError
       state context resetState return
     end

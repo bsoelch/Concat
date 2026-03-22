@@ -189,7 +189,7 @@ namespace: types
     a ProcType ptr cast =:: aData
     b ProcType ptr cast =:: bData
     aData [] .callingConvention bData [] .callingConvention != if
-      aData [] .callingConvention ..label bData [] .callingConvention ..label <=> return
+      aData [] .callingConvention ..tag bData [] .callingConvention ..tag <=> return
     end
     aData [] .inTypes .length bData [] .inTypes .length != if
       aData [] .inTypes .length bData [] .inTypes .length iSize.cmp return
@@ -208,7 +208,7 @@ namespace: types
   end
   proc( ProcTypeId : a -> i32 ) =>: export: procTypeHash
     a ProcType ptr cast =:: aData
-    aData [] .callingConvention ..label i32 cast.u
+    aData [] .callingConvention ..tag i32 cast.u
       31 * aData [] .inTypes typeHash@ slice.hash +
       31 * aData [] .outTypes typeHash@ slice.hash +
       31 * aData [] .eltNames NameId.hash@ slice.hash +
@@ -254,8 +254,8 @@ namespace: types
     a b typeCmp 0 ==
   end
   proc( Type : a Type : b -> i32 ) =>: export: typeCmp
-    a ..label b ..label != if
-      a ..label b ..label <=> return
+    a ..tag b ..tag != if
+      a ..tag b ..tag <=> return
     end
     a switch
       Undefined  Empty case
@@ -1053,7 +1053,7 @@ namespace: types
     return
   end
   proc( ArraySize : a ArraySize : b -> bool ) =>: arraySizeEqual
-    a ..label b ..label != if
+    a ..tag b ..tag != if
       false return
     end
     a switch
@@ -1071,8 +1071,8 @@ namespace: types
     end
   end
   proc( ArraySize : a ArraySize : b -> i32 ) =>: arraySizeCmp
-    a ..label b ..label != if
-      a ..label b ..label <=> return
+    a ..tag b ..tag != if
+      a ..tag b ..tag <=> return
     end
     a switch
       None Dynamic case 0 return

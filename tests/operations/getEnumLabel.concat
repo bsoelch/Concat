@@ -5,14 +5,14 @@ proc( -> ) =>: main
   anEnum .A =:: a1
   anEnum .A =:: a2
   anEnum .C =:: c1
-  a1 ..label a2 ..label == "a1 and a2 have same label" assert
-  a1 ..label anEnum .B ..label != "a1 and anEnum .B do not have the same label" assert
-  a1 ..label c1 ..label != "a1 and c1 do not have the same label" assert
+  a1 ..tag a2 ..tag == "a1 and a2 have same label" assert
+  a1 ..tag anEnum .B ..tag != "a1 and anEnum .B do not have the same label" assert
+  a1 ..tag c1 ..tag != "a1 and c1 do not have the same label" assert
 
   1 anUnion .A =:: u1
   2 anUnion .A =:: u2
   3.0 anUnion .C =:: u3
-  u1 ..label u2 ..label == "u1 and u2 have same label" assert
-  u1 ..label anUnion .B ..label != "u1 and anEnum .B do not have the same label" assert
-  u1 ..label u3 ..label != "u1 and u3 do not have the same label" assert
+  u1 ..tag u2 ..tag == "u1 and u2 have same label" assert
+  u1 ..tag anUnion .B ..tag != "u1 and anEnum .B do not have the same label" assert
+  u1 ..tag u3 ..tag != "u1 and u3 do not have the same label" assert
 end

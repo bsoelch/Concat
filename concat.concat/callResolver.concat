@@ -503,7 +503,7 @@ proc(
       resolveGenerics return
     Struct TaggedUnion RawUnion Enum Initializer case
       src typeContext types.unwrapNamed src=
-      src ..label target ..label != if
+      src ..tag target ..tag != if
         true return ## src and target have to be same type of composite
       end
       target typeContext types.compositeEltCount =:: targetCount
@@ -536,7 +536,7 @@ proc(
       "unimplemented: call-resolving union elements" ..panic
     Procedure case
       src typeContext types.unwrapNamed src=
-      src ..label target ..label != if
+      src ..tag target ..tag != if
         true return
       end
       ## TODO? create helper funtion for matching type-array
