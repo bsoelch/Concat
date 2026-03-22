@@ -735,12 +735,13 @@ namespace: id
   end
   proc(
     Type : itrType
+    IdentifierFlag : flags
     FilePosition ptr : pos
     IdentifierContext ptr.mut : context
   -> IdentifierInfo ) =>: export: newTmpVar
     ## newIdentifier
       string.empty
-      id.FLAG_ITR_VAR id.FLAG_MUTABLE | id.FLAG_BUILT_IN |
+      flags
       pos
     context .typeContext .nameContext newIdentifier =:: label
     ## IdentifierInfo

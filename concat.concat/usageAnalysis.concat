@@ -6,6 +6,7 @@ using id.IdentifierFlag
 
 struct(
   ProgramContext ptr.mut : program
+  VariableInfo list : variables
   FileId : mut: currentFile
   i32 : mut: inlineCount
 ) =:: ConverterContext
@@ -24,6 +25,33 @@ proc(
   impl [] .code slice.freeze
 end
 
+
+proc(
+  Type : varType
+  bool : mutable
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> IdentifierInfo ) =>: newTmpVar ## TODO? merge with id.newTmpVar
+  context [] .program .idContext =:: idContext
+  idContext .typeContext .nameContext =:: nameContext
+  id.FLAG_NONE mutable if
+    id.FLAG_MUTABLE | IdentifierFlag cast
+  end =:: flags
+  ## newIdentifier
+    string.empty
+    flags ## XXX? special flag for tmp vars
+    pos
+    nameContext
+  id.newIdentifier =:: nameId
+  nameId varType pos idContext id.declareTmpVar
+  context [] .variables
+    varType nameId VariableType .TMP_VAR VariableInfo new list.append
+  context .variables=
+  ## IdInfo
+    IdentifierType .TMP_VAR
+    nameId
+  IdentifierInfo new return
+end
 proc(
   ProcId : procId
   ProgramContext ptr.mut : program
@@ -52,7 +80,8 @@ proc(
   ConverterContext ptr.mut : context
 -> Operation list ) =>: inlineCall
   context [] .program =:: program
-  program .idContext .typeContext =:: typeContext
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   procId ProcId.getProcInfo .implementation [] .Code ? "only code-procs are inlined" assert
   procId program calledProcOps =:: procOps
@@ -126,8 +155,8 @@ proc(
     NOP case newOps return ## ignore no-ops
     AutoTypedInitializeId ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
-    GetName AtName SetName GetLabel Assert DeclareName AliasName InitializeName
-    SetLabel Length TypeModifier TypeWith ExistsLabel ExistsName NestedProc Import LibImport case
+    GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
+    SetNamedElt Length TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
       "unsupported operation " sb.copyPtr
         op program sb.appendOp
       op .pos errors appendError
@@ -137,13 +166,20 @@ proc(
     return
   end
 end
+proc(
+  Operation : mut: op
+  ConverterContext ptr.mut : context
+-> bool ) =>: filterOp
+  true
+end
 
+## TODO move inlining and variable detection to usage analysis phase
 proc(
   Operation slice.mut : mut: oldOps
   Operation list ptr.mut : tmpOps
   VariableInfo list ptr.mut : variables
   ConverterContext ptr.mut : context
--> Operation slice.mut ) =>: convertProc
+-> Operation slice.mut ) =>: analizeProc
   context [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -156,7 +192,7 @@ proc(
     end list.filter for
       context filterOp
     end
-    $ list.asSlice codeStart slice.tail slice.copy =:: newCode
+    $ list.asSlice slice.copy =:: newCode
     oldOps slice.free oldOps=
   tmpOps =[]
   context [] .variables variables =[]
@@ -169,6 +205,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   typeContext .nameContext =:: nameContext
   ## ConverterContext
     program
+    128 VariableInfo list.create
     -1:FileId
     0
   ConverterContext new =:: mut: contextData
@@ -206,13 +243,13 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     impl .codeState [] .UNUSED if
       continue ## TODO? filter out unused procs in type-checker
     end
-    ## convertProc
+    ## analizeProc
       impl [] .code
       tmpOps@
       impl .variables
       context
-    convertProc impl .code=
-    ProcCodeState .COMPILED impl .codeState=
+    analizeProc impl .code=
+    ## ProcCodeState .COMPILED impl .codeState= ## TODO? add extrac code-state for proc after current phase
   end
   ## create implementations for built-in procedure-pointers
   program [] .procedures for =:: procId
@@ -245,7 +282,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
       0 VariableInfo list.create
       opBuffer
       GenericProcInfo .None
-      ProcCodeState .COMPILED
+      ProcCodeState .COMPILED ## skip pre-compiler
       0:i16
     CodeProcData new currentProc .implementation .Code=
   end

@@ -8,6 +8,7 @@ using std.literals.
 
 import "parser.concat"
 import "typeCheck.concat"
+import "usageAnalysis.concat"
 import "prepareCompile.concat"
 import "generator_qbe.concat"
 import "generator_asm.concat"
@@ -303,6 +304,8 @@ proc( -> ) =>: main ## TODO check return value of fopen
     parsedOps sb.free ..drop
   end
   prog@ .errors checkErrors
+  prog@ usageAnalysis
+  ## TODO? option to dump tokens after usage analysis
   prog@ prepareCompile
   ## TODO seperate file for each compilation step
   dumpTokens if

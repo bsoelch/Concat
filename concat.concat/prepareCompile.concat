@@ -23,7 +23,7 @@ proc(
   bool : mutable
   FilePosition ptr : pos
   ConverterContext ptr.mut : context
--> IdentifierInfo ) =>: newTmpVar
+-> IdentifierInfo ) =>: newTmpVar ## TODO? merge with id.newTmpVar
   context [] .program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
   id.FLAG_NONE mutable if
@@ -483,14 +483,14 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc .implementation .Code .else ..drop
       continue
     end =:: impl
+    impl .codeState [] .UNUSED or impl .codeState [] .COMPILED if
+      continue
+    end
     tmpOps list.clear tmpOps=
     currentProc [] .fileId context .currentFile=
     program [] .progFiles
       currentProc [] .fileId i64 cast
     @[] =:: f
-    impl .codeState [] .UNUSED if
-      continue
-    end
     ## convertProc
       impl [] .code
       tmpOps@
@@ -498,41 +498,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
       context
     convertProc impl .code=
     ProcCodeState .COMPILED impl .codeState=
-  end
-  ## create implementations for built-in procedure-pointers
-  program [] .procedures for =:: procId
-    procId ProcId.getProcInfo =:: currentProc
-    currentProc .implementation .BuiltIn .else ..drop
-      break ## built-ins at start of procedure list
-    end =:: builtInImpl
-    builtInImpl [] .hasPtr ! if
-      continue
-    end
-    currentProc [] .nameId nameContext id.identifierPos .else
-      "missing nameId position" ..panic
-    end =:: pos
-    4 Operation mem.alloc 4 slice.createMutable =:: opBuffer
-    opBuffer list.wrapSlice
-      ## opImplementProc
-        currentProc [] .procType
-        procId
-        pos
-      opImplementProc list.append
-      ## opBuiltIn
-        currentProc [] .procType
-        builtInImpl [] .builtIn
-        pos
-      opBuiltIn list.append
-      currentProc [] .procType pos opReturn list.append
-      BlockType .PROCEDURE pos opEndBlock list.append
-    ..drop
-    ## CodeProcData
-      0 VariableInfo list.create
-      opBuffer
-      GenericProcInfo .None
-      ProcCodeState .COMPILED
-      0:i16
-    CodeProcData new currentProc .implementation .Code=
   end
   tmpOps list.free ..drop
 end
