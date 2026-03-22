@@ -853,7 +853,7 @@ namespace: slice
       end
     splitIndex return
   end
-  proc(
+  #+proc( ## TODO this proc triggers a compiler bug
     type : auto: T
     T slice : elts
     T slice : subseq
@@ -864,7 +864,7 @@ namespace: slice
       elts offset subseq .length + tail
       elts offset head
     return
-  end
+  end+#
 
   proc( type : auto: T
     T slice : elts
