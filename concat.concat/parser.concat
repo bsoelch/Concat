@@ -863,6 +863,28 @@ proc(
   end
   return
 end
+proc( string : eltName bool : isWrite FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: parseElementAccess
+  eltName 10 number.tryParseUInt .NONE and $ i32.UMAX u<= if
+    Type .Undefined ## TODO? move  conversion of integer index to get-element into type-check phase
+      >$ i32 cast.u ## index
+      pos
+      isWrite if
+        opSetElement
+      else
+        opGetElement
+      end
+    state appendOp
+  else ..drop
+    eltName id.FLAG_NONE pos state [] .program .idContext .typeContext .nameContext id.newIdentifier
+    pos
+      isWrite if
+        opSetNamedElt
+      else
+        opGetNamedElt
+      end
+    state appendOp
+  end
+end
 proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendItrStep
   state [] .program .idContext =:: idContext
   varInfo .varId pos opGetName state appendOp
@@ -1744,39 +1766,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       nameId opPos opAutoTypedInitializeName state appendOp
       return
     else $ .length 1:iSize u> and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != _if
+      fileState program wordPos =:: opPos
       1 string.tail
         $ "=":s string.endsWith =:: isWrite
         isWrite if
           $ .length 1:iSize - string.head
         end
-      =:: label
-      fileState program wordPos =:: opPos
-      label 10 number.tryParseUInt .NONE if
-        $ i64 cast.u i32.UMAX > if
-          "element index outside allowed range: " sb.copyPtr
-            $1 sb.appendI
-          opPos errors appendError
-        end
-        Type .Undefined
-          >$ i32 cast.u ## index
-          opPos
-          isWrite if
-            opSetElement
-          else
-            opGetElement
-          end
-        state appendOp
-      else ..drop
-        label id.FLAG_NONE opPos nameContext id.newIdentifier
-        opPos
-          isWrite if
-            opSetNamedElt
-          else
-            opGetNamedElt
-          end
-        state appendOp
-      end
-      return
+      isWrite opPos state parseElementAccess return
     else ..dup "()":s string.eq _if ..drop
       fileState program wordPos opCallPtr state appendOp
       return
@@ -2131,9 +2127,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     isAddr or isSetter if
       $ .length 1:iSize - string.head
     end
+    $ "..":s string.startsWith if string.empty else
+      "..":s string.splitStr >$
+    end =:: tail
   =:: idName
   fileState program wordPos =:: opPos
-  state [] .currentProcs .length 0:iSize == if
+  state [] .currentProcs .length 0:iSize == if ## TODO! is this  needed?
     idName idContext id.findIdentifierByName ! if ## try parsing as identifier
       ..dup [] .valueType ..swap id.asIdInfo opPos
         isAddr if
@@ -2153,12 +2152,18 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
   nameId opPos
   isAddr if
     opAtName
-  else isSetter _if
+  else isSetter and tail .length 0 == _if
     opSetName
   else
     opGetName
   end
   state appendOp
+  tail .length 0 != if
+    tail isSetter opPos state parseElementAccess
+    isSetter if
+      nameId opPos opSetName state appendOp
+    end
+  end
   return
 end
 proc( FileId : includedId file.Error : err FilePosition ptr : pos ParserState ptr.mut : state -> FileId ) =>: checkIOError
