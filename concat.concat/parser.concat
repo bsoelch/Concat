@@ -2132,20 +2132,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     end =:: tail
   =:: idName
   fileState program wordPos =:: opPos
-  state [] .currentProcs .length 0:iSize == if ## TODO! is this  needed?
-    idName idContext id.findIdentifierByName ! if ## try parsing as identifier
-      ..dup [] .valueType ..swap id.asIdInfo opPos
-        isAddr if
-          opAtId
-        else isSetter _if
-          opSetId
-        else
-          opGetId
-        end
-      state appendOp
-      return
-    end ..drop
-  end
   idName
     id.FLAG_NONE opPos
   nameContext id.newIdentifier =:: nameId
