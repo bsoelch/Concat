@@ -164,9 +164,9 @@ union(
      IdentifierInfo : DeclareId
              ProcId : ImplementProcedure
              ProcId : ProcPtr
-             NameId : GetNamedElt
-             NameId : SetNamedElt
-             NameId : ExistsNamedElt
+             string : GetNamedElt
+             string : SetNamedElt
+             string : ExistsNamedElt
                 i32 : GetElement
                 i32 : GetUnionElement
                 i32 : SetElement
@@ -189,12 +189,12 @@ union(
                   _ : Splat
                   _ : Copy
   StackModification : StackMod
-            NameId : GetName
-            NameId : SetName
-            NameId : AtName
-            NameId : ExistsName
+             string : GetName
+             string : SetName
+             string : AtName
+             string : ExistsName
       NameAliasInfo : AliasName
-            NameId : DeclareName
+             NameId : DeclareName
        NameInitInfo : InitializeName
       NameAliasInfo : UsingNamespace
       NameAliasInfo : UsingIdentifier
@@ -265,9 +265,6 @@ end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opGetId
   pos idInfo OpValue .GetId opType Operation new return
 end
-proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opSetId
-  pos idInfo OpValue .SetId opType Operation new return
-end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opAtId
   pos idInfo OpValue .AtId opType Operation new return
 end
@@ -295,14 +292,14 @@ end
 proc( Type : base i32 : index FilePosition ptr : pos -> Operation ) =>: export: opSetElement
   pos index OpValue .SetElement base Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opGetNamedElt
-  pos id OpValue .GetNamedElt Type .Undefined Operation new return
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opGetNamedElt
+  pos name OpValue .GetNamedElt Type .Undefined Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opSetNamedElt
-  pos id OpValue .SetNamedElt Type .Undefined Operation new return
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opSetNamedElt
+  pos name OpValue .SetNamedElt Type .Undefined Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opExistsNamedElt
-  pos id OpValue .ExistsNamedElt Type .Undefined Operation new return
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opExistsNamedElt
+  pos name OpValue .ExistsNamedElt Type .Undefined Operation new return
 end
 proc( Type : retType FilePosition ptr : pos -> Operation ) =>: export: opReturn
   pos OpValue .Return retType Operation new return
@@ -358,17 +355,17 @@ end
 proc( Type : t FilePosition ptr : pos -> Operation ) =>: export: opCopy
   pos OpValue .Copy t Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opGetName
-  pos id OpValue .GetName Type .Undefined Operation new return
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opGetName
+  pos name OpValue .GetName Type .Undefined Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opAtName
-  pos id OpValue .AtName Type .Undefined Operation new return
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opAtName
+  pos name OpValue .AtName Type .Undefined Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opSetName
-  pos id OpValue .SetName Type .Undefined Operation new return
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opSetName
+  pos name OpValue .SetName Type .Undefined Operation new return
 end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opExistsName
-  pos id OpValue .ExistsName Type .Undefined Operation new return
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opExistsName
+  pos name OpValue .ExistsName Type .Undefined Operation new return
 end
 proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opDeclareName
   pos id OpValue .DeclareName Type .Undefined Operation new return
@@ -930,19 +927,19 @@ namespace: sb
         "get element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        name nameContext sb.appendIdentifierName
+        name sb.appendStr
       break
       SetNamedElt .case =:: name
         "set element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        name nameContext sb.appendIdentifierName
+        name sb.appendStr
       break
       ExistsNamedElt .case =:: name
         "exists element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
-        name nameContext sb.appendIdentifierName
+        name sb.appendStr
       break
       TypeWith .case =:: procId
         "type with( " sb.appendS
@@ -1079,19 +1076,19 @@ namespace: sb
       break
       GetName .case =:: name
         "get: " sb.appendS
-        name nameContext sb.appendIdentifierPath
+        name sb.appendStr
       break
       AtName .case =:: name
         "address of: " sb.appendS
-        name nameContext sb.appendIdentifierPath
+        name sb.appendStr
       break
       SetName .case =:: name
         "set: " sb.appendS
-        name nameContext sb.appendIdentifierPath
+        name sb.appendStr
       break
       ExistsName .case =:: name
         "exists name: " sb.appendS
-        name nameContext sb.appendIdentifierPath
+        name sb.appendStr
       break
       DeclareName .case =:: name
         "declare name: " sb.appendS

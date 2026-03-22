@@ -379,18 +379,8 @@ namespace: id
   proc(
     NameId : nameId
     IdentifierContext ptr.mut : context
-  -> IdentifierData ptr.mut bool ) =>: export: findIdentifier ## TODO return union( data : Ok data : Curry string : Err )
-    ## searchIdentifier
-      nameId context .typeContext  .nameContext id.getIdentifierName
-      true
-      context
-      IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError .nameId =:: label
-      context [] .scopes >$ .scope getScopeData [] .currentProc .and =:: scopeProc
-        context [] .scopes context [] .currentScopeId getScopeData [] .currentProc .and =:: currentProc
-        scopeProc currentProc ProcId.eq !
-      end =:: isCurry
-    label context getIdentifier isError | isCurry | return
+  -> IdentifierData ptr.mut bool ) =>: export: findIdentifier
+    nameId context .typeContext  .nameContext id.getIdentifierName context findIdentifierByName return
   end
   ## unlike `findIdentifier` this procedure also find invisible identifiers
   proc(
@@ -421,15 +411,19 @@ namespace: id
   proc(
     string : name
     IdentifierContext ptr.mut : context
-  -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByName ## TODO? change return value to optional
+  -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByName ## TODO return union( data : Ok data : Curry string : Err )
     name .length 0:iSize != "name is non-empty" assert
     ## searchIdentifier
       name
       true
       context
       IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError .nameId =:: label =:: idName
-    label context getIdentifier isError | return
+    searchIdentifier =:: isError .nameId =:: label
+      context [] .scopes >$ .scope getScopeData [] .currentProc .and =:: scopeProc
+        context [] .scopes context [] .currentScopeId getScopeData [] .currentProc .and =:: currentProc
+        scopeProc currentProc ProcId.eq !
+      end =:: isCurry
+    label context getIdentifier isError | isCurry | return
   end
   enum( BUILT_IN NAMESPACE PROCEDURE VARIABLE LABEL ) =:: export: DeclarationContext
   proc( IdentifierType : idType -> DeclarationContext ) =>: idDeclarationContext

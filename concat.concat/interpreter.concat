@@ -1391,8 +1391,8 @@ proc(
         value valInfo eltIndex op [] .pos context setElement wrapResult return
       end
       value valInfo eltIndex op [] .pos context getElement wrapResult return
-    ExistsName .case =:: label
-      label idContext id.findIdentifier ! =:: exists
+    ExistsName .case =:: name
+      name idContext id.findIdentifierByName ! =:: exists
       ..drop
       ## pushValue
         exists ConstValue .Bool

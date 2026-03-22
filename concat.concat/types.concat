@@ -1293,7 +1293,7 @@ namespace: types
   end
   proc(
     Type : composite
-    NameId : name
+    string : name
     TypeContext ptr : context
   -> i32 optional ) =>: export: compositeFindName
     context .nameContext =:: nameContext
@@ -1311,7 +1311,7 @@ namespace: types
       ## identifierNamesEq
         name
         eltNames i []
-      nameContext id.identifierNamesEq if
+      nameContext id.identifierNameEq if
         i optional.wrap return
       end
       i 1 +

@@ -2232,9 +2232,9 @@ proc(
     else .GetName ._if =:: name
       name
         idContext
-      id.findIdentifier if ..drop
+      id.findIdentifierByName if ..drop
         "could not find " sb.copyPtr
-          name nameContext sb.appendIdentifierName
+          name sb.appendStr
         op [] .pos errors appendError
         true return
       end =:: idData
@@ -2261,11 +2261,11 @@ proc(
   end
   ## enum-switch -> try read label
   op [] .val .GetId .if
-    .nameId
+    .nameId nameContext id.getIdentifierName
   else .GetName
   ._else .Constant .and .TypeId .and =:: constType
       constType types.isNamedType _if
-    constType typeContext types.namedTypeName
+    constType typeContext types.namedTypeName nameContext id.getIdentifierName
   else
     "unsupported operation for switch label of type " sb.copyPtr
       switchType typeContext sb.appendType
@@ -2274,17 +2274,17 @@ proc(
       " expected identifier" sb.appendS
     op [] .pos errors appendError
     true return
-  end =:: nameId
+  end =:: name
   ## compositeFindName
     switchType $ typeContext types.isTaggedUnion if
       typeContext types.asRawUnion optional.unwrap
     end
-    nameId
+    name
   typeContext types.compositeFindName .else
     "enum " sb.copyPtr
       switchType typeContext sb.appendType
       " does not have a label " sb.appendS
-      nameId nameContext sb.appendIdentifierName
+      name sb.appendStr
     op [] .pos errors appendError
     true return
   end =:: labelIndex
@@ -2312,13 +2312,13 @@ proc( ProgramContext ptr.mut : program -> BlockId ) =>: nextAndOrId
 end
 
 proc(
-  NameId : nameId
+  string : name
   Operation ptr.mut : op
   TypeCheckState ptr.mut : state
 -> IdentifierInfo optional ) =>: resolveIdentifier
   state [] .program =:: program
   state [] .program .idContext =:: idContext
-  nameId idContext id.findIdentifier if
+  name idContext id.findIdentifierByName if
     ..drop IdentifierInfo optional.empty return
   end =:: idData
   idData [] .valueType op .dataType=
@@ -2460,7 +2460,7 @@ proc(
   program [] .nameBuffer
     ops for =:: op
       op .val .GetName .if
-        list.append
+        id.FLAG_NONE op .pos typeContext .nameContext id.newIdentifier list.append
       else ..drop
         "unexpected operation in Enum block: " sb.copyPtr
           op program sb.appendOp
@@ -2715,9 +2715,9 @@ proc(
           procType ## TODO? special type for procedure literal
         op .pos state pushConstant
         continue.opLoop
-      GetName SetName AtName .case =:: nameId
+      GetName SetName AtName .case =:: name
         "could not find identifier: " sb.copyPtr
-          nameId nameContext sb.appendIdentifierPath
+          name sb.appendStr
         op .pos errors appendError
         continue.opLoop
       InitializeName DeclareName AliasName case ..unreachable
@@ -3289,7 +3289,7 @@ proc(
           op .pos errors appendError
         end
         continue.opLoop
-      GetNamedElt SetNamedElt ExistsNamedElt .case =:: nameId
+      GetNamedElt SetNamedElt ExistsNamedElt .case =:: name
         enum( CHECK CHECK_ENUM GET UNION_GET ) =:: LabelAccessType
         LabelAccessType .GET =:: mut: accessType
         op .val .SetNamedElt ? =:: isWrite
@@ -3329,7 +3329,7 @@ proc(
         =:: innerContainerType
         ## compositeFindName
           innerContainerType
-          nameId
+          name
           typeContext
         types.compositeFindName .else
           accessType .CHECK if
@@ -3341,7 +3341,7 @@ proc(
           "type " sb.copyPtr
             containerType typeContext sb.appendType
             " does not have a label \"" sb.appendS
-            nameId nameContext sb.appendIdentifierName
+            name sb.appendStr
             '"' sb.appendC
           op .pos errors appendError
           continue.opLoop
@@ -4701,7 +4701,7 @@ proc(
             elts for =:: elt
               elt .val switch
                 GetName .case break
-                GetId .case .nameId break
+                GetId .case .nameId nameContext id.getIdentifierName break
                 ## NestedProc .case =:: procId break
                 default
                   "unsupported operation in overload block: " sb.copyPtr
@@ -4709,9 +4709,9 @@ proc(
                   op .pos errors appendError
                 continue
               end =:: eltName
-              eltName idContext id.findIdentifier if ..drop
+              eltName idContext id.findIdentifierByName if ..drop
                 "could not find identifier \"" sb.copyPtr
-                  eltName nameContext sb.appendIdentifierPath
+                  eltName sb.appendStr
                   '"' sb.appendC
                 op .pos errors appendError
                 continue

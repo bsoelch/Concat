@@ -775,12 +775,8 @@ proc(
             $ "@":s string.endsWith if
               $ .length 1:iSize - string.head
             end
-          =:: idName
-          idName
-            id.FLAG_NONE
+          nameContext id.copyString
             literalStart
-          nameContext id.newIdentifier
-          literalStart
             isElement if opExistsNamedElt else opExistsName end
           state appendOp
           string.empty true return
@@ -875,8 +871,8 @@ proc( string : eltName bool : isWrite FilePosition ptr : pos ParserState ptr.mut
       end
     state appendOp
   else ..drop
-    eltName id.FLAG_NONE pos state [] .program .idContext .typeContext .nameContext id.newIdentifier
-    pos
+    eltName state [] .program .idContext .typeContext .nameContext id.copyString
+      pos
       isWrite if
         opSetNamedElt
       else
@@ -887,16 +883,18 @@ proc( string : eltName bool : isWrite FilePosition ptr : pos ParserState ptr.mut
 end
 proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendItrStep
   state [] .program .idContext =:: idContext
-  varInfo .varId pos opGetName state appendOp
+  idContext .typeContext .nameContext =:: nameContext
+  varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
   "..itr.step":s idContext id.findIdentifierByName
     ! "..itr.step" assert
   =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
-  varInfo .varId pos opSetName state appendOp
+  varInfo .varId nameContext id.getIdentifierName pos opSetName state appendOp
 end
 proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendItrEnd
   state [] .program .idContext =:: idContext
-  varInfo .varId pos opGetName state appendOp
+  idContext .typeContext .nameContext =:: nameContext
+  varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
   "..itr.end":s idContext id.findIdentifierByName
     ! "..itr.end" assert
   =:: itrEnd
@@ -921,13 +919,14 @@ end
 proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: appendDotIfCheck
   state [] .program =:: program
   program .idContext =:: idContext
+  idContext .typeContext .nameContext =:: nameContext
   "..if.prepare":s idContext id.findIdentifierByName
     ! "..if.prepare" assert
   =:: ifPrepare
   ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
-  pos idContext .typeContext .nameContext newItrId =:: ifName
+  pos nameContext newItrId =:: ifName
   ifName pos opAutoTypedInitializeName state appendOp
-  ifName pos opGetName state appendOp
+  ifName nameContext id.getIdentifierName pos opGetName state appendOp
   "..if.check":s idContext id.findIdentifierByName
     ! "..if.check" assert
   =:: ifCheck
@@ -936,7 +935,8 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: app
 end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition ptr : pos -> ) =>: appendElseVal
   state [] .program .idContext =:: idContext
-  varInfo .varId pos opGetName state appendOp
+  idContext .typeContext .nameContext =:: nameContext
+  varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
   "..if.elseVal":s idContext id.findIdentifierByName
     ! "..if.elseVal" assert
   =:: elseVal
@@ -1009,7 +1009,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           "expected if-block to have tmp-var" ..panic
         end =:: varInfo
         hasOrIf ! if
-          varInfo .varId blockPos opGetName state appendOp
+          varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
           "..if.ifVal":s idContext id.findIdentifierByName
             ! "..if.ifVal" assert
           =:: ifGet
@@ -1057,7 +1057,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       andOrBlock .andOrPositions=
       blockType blockPos opBlock  state appendOp
       varInfo? .if =:: varInfo
-        varInfo .varId blockPos opGetName state appendOp
+        varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
         isOr if "..if.elseVal":s else "..if.ifVal":s end idContext id.findIdentifierByName
           ! "and/or val" assert
         =:: ifGet
@@ -1125,14 +1125,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       itrId blockPos opAutoTypedInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockName blockPos opNamedBlock state appendOp
-      itrId blockPos opGetName state appendOp
+      itrId nameContext id.getIdentifierName blockPos opGetName state appendOp
       "..itr.check":s idContext id.findIdentifierByName
         ! "..itr.check" assert
       =:: itrCheck
       itrCheck [] .valueType itrCheck id.asIdInfo blockPos opGetId state appendOp
       state opCount =::  doPos
       BlockType .DO blockPos opBlock  state appendOp
-      itrId blockPos opGetName state appendOp
+      itrId nameContext id.getIdentifierName blockPos opGetName state appendOp
       "..itr.get":s idContext id.findIdentifierByName
         ! "..itr.get" assert
       =:: itrGet
@@ -1174,7 +1174,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       whileData .breakPositions=
       BlockType .DO blockPos opBlock  state appendOp
       varInfo? .if =:: varInfo
-        varInfo .varId blockPos opGetName state appendOp
+        varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
         "..if.ifVal":s idContext id.findIdentifierByName
           ! "and/or val" assert
         =:: ifGet
@@ -2132,22 +2132,21 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     end =:: tail
   =:: idName
   fileState program wordPos =:: opPos
-  idName
-    id.FLAG_NONE opPos
-  nameContext id.newIdentifier =:: nameId
-  nameId opPos
-  isAddr if
-    opAtName
-  else isSetter and tail .length 0 == _if
-    opSetName
-  else
-    opGetName
-  end
+  idName nameContext id.copyString =:: name
+  name
+    opPos
+    isAddr if
+      opAtName
+    else isSetter and tail .length 0 == _if
+      opSetName
+    else
+      opGetName
+    end
   state appendOp
   tail .length 0 != if
     tail isSetter opPos state parseElementAccess
     isSetter if
-      nameId opPos opSetName state appendOp
+      name opPos opSetName state appendOp
     end
   end
   return
