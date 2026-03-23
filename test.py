@@ -2,6 +2,8 @@
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
+import argparse
 
 CURRENT_DIR=os.getcwd()
 TESTS_REL_PATH= "/tests/"
@@ -12,6 +14,7 @@ nTested=0
 nPassed=0
 failed=[]
 concatPath=CURRENT_DIR+"/concat"
+thread_count = None
 
 def runInEachSubdir(f,path=TESTS_PATH):
   for file in os.listdir(os.fsencode(path)):
@@ -20,9 +23,6 @@ def runInEachSubdir(f,path=TESTS_PATH):
       f(path+file+"/")
 
 def runTest(fileName,filePath,*,cctFlags=None):
-  global nTested
-  global nPassed
-  print(fileName+": ",end="")
   basePath=filePath+fileName[:-len(".concat")]
   cctFlags = cctFlags if cctFlags is not None else []
   try:
@@ -47,21 +47,20 @@ def runTest(fileName,filePath,*,cctFlags=None):
   errFile=open(errPath,mode="a+")
   codePath=basePath
   retCode=(subprocess.run([
-    concatPath,
-    filePath+fileName,
-    "-o",codePath,
-    "-l","./lib/",
-    *cctFlags
+     concatPath,
+     filePath+fileName,
+     "-l","./lib/",
+     "-o",codePath,
+     *cctFlags
   ],stdout=outFile,stderr=errFile).returncode==0 and
   subprocess.run([
       codePath,
       *args
-    ],stdin=inFile,stdout=outFile,stderr=errFile).returncode)
+  ],stdin=inFile,stdout=outFile,stderr=errFile).returncode)
   if inFile is not None:
     inFile.close()
   outFile.close()
   errFile.close()
-  nTested+=1
   with open(outPath,mode="r") as f:
     progOut=f.read()
   with open(errPath,mode="r") as f:
@@ -76,15 +75,15 @@ def runTest(fileName,filePath,*,cctFlags=None):
       expectedProgErr=f.read()
   else:
     expectedProgErr=""
+  failedPath = None
   if progErr!=expectedProgErr:
-    print("FAILED (err)")
-    failed.append(filePath+fileName)
+    print(fileName+": FAILED (err)")
+    failedPath = filePath+fileName
   elif progOut!=expectedProgOut:
-    print("FAILED (out)")
-    failed.append(filePath+fileName)
+    print(fileName+": FAILED (out)")
+    failedPath = filePath+fileName
   else:
-    print("PASSED")
-    nPassed+=1
+    print(fileName+": PASSED")
     try:
       os.remove(codePath+".ssa")
       os.remove(codePath+".s")
@@ -93,8 +92,13 @@ def runTest(fileName,filePath,*,cctFlags=None):
       pass
     os.remove(outPath)
     os.remove(errPath)
+  return failedPath
 
 def runTests(path,*,cctFlags=None):
+  global nPassed
+  global nTested
+  global failed
+  global thread_count
   if not os.path.isdir(path):
     if os.path.isfile(path) and path.endswith(".concat"):
       runTest(path,"",cctFlags=cctFlags)
@@ -106,29 +110,58 @@ def runTests(path,*,cctFlags=None):
   print("-----------------------")
   relPath=("."+path[len(CURRENT_DIR):])if path.startswith(CURRENT_DIR)else path
   print(relPath+":\n") ## double new line
+  if thread_count is not None:
+    with ThreadPoolExecutor(max_workers = thread_count) as executor:
+      futures = []
+      for file in os.listdir(os.fsencode(path)):
+        file = os.fsdecode(file)
+        if file.endswith(".concat"):
+          futures.append(executor.submit(runTest,file,relPath,cctFlags=cctFlags))
+      nTested += len(futures)
+      for future in futures:
+        failedPath = future.result()  # Raises exception if occurred
+        if failedPath is not None:
+          failed.append(failedPath)
+        else:
+          nPassed +=1
+    return
   for file in os.listdir(os.fsencode(path)):
     file=os.fsdecode(file)
     if file.endswith(".concat"):
-      runTest(file,relPath,cctFlags=cctFlags)
+      nTested += 1
+      failedPath = runTest(file,relPath,cctFlags=cctFlags)
+      if failedPath is not None:
+        failed.append(failedPath)
+      else:
+        nPassed +=1
 
 def main():
   global concatPath
+  global thread_count
   ## XXX? should test-script clear console
   subprocess.run(["clear"])
-  ## TODO ignore `-X` / `-full` after `--`
-  if "-X" in sys.argv:## experimental mode
-    concatPath=CURRENT_DIR+"/concatX"
-    print("running tests on developement version of compiler")
+  parser = argparse.ArgumentParser(description="Concat Compiler Test")
+  parser.add_argument('-X', action='store_true', help='Use developement version of compiler')
+  parser.add_argument('-XX', action='store_true', help='Run test code with `-X` flag (enables `-X`)')
+  parser.add_argument('--full', '-full', action='store_true', help='Include examples')
+  parser.add_argument('-j', type=int, help='Number of threads, should be followed by a number', default=None)
+  args, unknown = parser.parse_known_args()
+  # Determine behavior based on flags
+  concatPath = CURRENT_DIR + "/concat"
   cctFlags = []
-  if "-XX" in sys.argv:## doubly experimental mode ( add -X flag to each test )
-    concatPath=CURRENT_DIR+"/concatX"
+  if args.XX:
+    concatPath = CURRENT_DIR + "/concatX"
     cctFlags.append("-X")
-    print("running tests in experimental mode")
-  full = "-full" in sys.argv or "--full" in sys.argv
+  elif args.X:
+    concatPath = CURRENT_DIR + "/concatX"
+    print("running tests on development version of compiler")
+  thread_count = args.j
+  if thread_count is not None:
+    print(f"running asynchronously on {thread_count} threads")
   try:
     dirIndex=sys.argv.index("--")
     dirs=sys.argv[dirIndex+1:]
-    if full:
+    if args.full:
       print("`-full` will be ignored when using explicit arguments")
   except ValueError:
     dirs=None
@@ -137,7 +170,7 @@ def main():
       runTests(d,cctFlags=cctFlags)
   else:
     runInEachSubdir(lambda p:runTests(p,cctFlags=cctFlags))
-    if full:
+    if args.full:
       runTests(CURRENT_DIR+"/examples/",cctFlags=cctFlags)
   if nPassed==nTested:
     print(f"\nSUCCESS: passed {nPassed} of {nTested} tests")
