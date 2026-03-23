@@ -1855,7 +1855,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       1 StackModType .ROTATE fileState program wordPos opStackMod state appendOp
       return
     else $ $ .length 1:iSize - string.charAt '$' == and $ 0 string.charAt =:: c0 c0 '>' == or c0 '<' == _if =:: opName
-      opName 0 string.charAt =:: c0
       1 =:: mut: rotCount
       1 =:: mut: i
       while opName i string.charAt c0 == do
