@@ -4668,9 +4668,9 @@ proc(
             ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             blockInfo .blockName =:: mut: nameId
             nameId nameContext id.currentNamespace nameContext id.setIdentifierNamespace
-            nameId idContext id.findDeclaredIdentifier $ .Ok ? ! or ## FIXME: switch to .or once and-or-if scopes are fixed
+            nameId idContext id.findDeclaredIdentifier .Ok ! .or =:: idData
                 nameId nameContext id.identifierFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
-                $ .Ok unionElement.unwrap [] .nameId nameContext id.getIdentifierNamespace nameContext id.currentNamespace .current != if ..drop
+                idData [] .nameId nameContext id.getIdentifierNamespace nameContext id.currentNamespace .current != if
               nameId nameContext id.identifierFlags id.FLAG_MERGE & ? if
                 "unable to merge overload: \"" sb.copyPtr
                 nameId nameContext sb.appendIdentifierPath
@@ -4695,7 +4695,7 @@ proc(
                 continue.opLoop
               end ..drop nameId=
               bundleId
-            else .Ok unionElement.unwrap =:: idData
+            else
               idData [] .idType .PROCEDURE_BUNDLE ! if
                 "cannot overload \"" sb.copyPtr
                   nameId nameContext sb.appendIdentifierPath
