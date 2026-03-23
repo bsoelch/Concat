@@ -5919,6 +5919,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
+  program [] .globalOps list.free program .globalOps= ## global ops are no longer needed
   program [] .mainProcId ? =:: hasMain
   program [] .mainProcId .if =:: mainProcId
     ## check all procedures reachable from main proc
