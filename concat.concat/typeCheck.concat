@@ -3020,10 +3020,12 @@ proc(
         end
         break
       SetId .case =:: idInfo
+        ## TODO: support SetId for global variable (if mutable or uninitialized)
         idInfo .nameId =:: nameId
         nameId
           nameContext id.identifierFlags
-        id.FLAG_MUTABLE & ? ! if
+        id.FLAG_MUTABLE & ? ! and _EXPERIMENTAL_ ! or idInfo .idType .LOCAL_VAR ! if
+          ## mutability of local vars will be checked in usage analysis phase ## TODO! actualy implement that check
           256 sb.create
             idInfo nameContext sb.appendIdInfo
             " is not mutable" sb.appendS

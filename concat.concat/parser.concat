@@ -1699,7 +1699,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       fileState program nextIdentifier fileState state
         ## make pre-declared variables mutable by default
-        isInit ! and inProcedure if id.FLAG_MUTABLE else id.FLAG_NONE end
+        isInit ! and inProcedure and _EXPERIMENTAL_ ! if id.FLAG_MUTABLE else id.FLAG_NONE end
       readIdentifierAddFlags =:: mut: label
       label nameContext id.identifierFlags =:: identifierFlags
       identifierFlags id.FLAG_ALIAS & ? =:: isAlias
