@@ -1808,7 +1808,7 @@ namespace: typeChecker
     idContext .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
     generatorName nameContext id.getBaseName =:: generatorBaseName
-    generatorBaseName idContext id.getIdentifier if ..drop
+    generatorBaseName idContext id.getIdentifier .else
       "could not find procedure " sb.copyPtr
         generatorBaseName nameContext sb.appendIdentifierPath
       pos errors appendError
@@ -2235,7 +2235,7 @@ proc(
     else .GetId ._if =:: idInfo
       idInfo .nameId
         idContext
-      id.getIdentifier if ..drop
+      id.getIdentifier .else
         "could not find " sb.copyPtr
           idInfo nameContext sb.appendIdInfo
         op [] .pos errors appendError
@@ -2257,11 +2257,21 @@ proc(
     else .GetName ._if =:: name
       name
         idContext
-      id.findIdentifierByName if ..drop
-        "could not find " sb.copyPtr
-          name sb.appendStr
-        op [] .pos errors appendError
+      id.findIdentifierByName switch
+        Err case
+          "could not find " sb.copyPtr
+            name sb.appendStr
+          op [] .pos errors appendError
         true return
+        Curry .case =:: curryData
+          "currying is not supported: `" sb.copyPtr
+            name sb.appendStr
+            "` ( declared at ":s sb.appendStr
+              curryData [] .declaredAt [] sb.appendPos
+            " )":s sb.appendStr
+          op [] .pos errors appendError
+        true return
+        Ok .case break
       end =:: idData
       idData [] .constValue .None ? if
         "expected constant got " sb.copyPtr
@@ -2343,8 +2353,17 @@ proc(
 -> IdentifierInfo optional ) =>: resolveIdentifier
   state [] .program =:: program
   state [] .program .idContext =:: idContext
-  name idContext id.findIdentifierByName if
-    ..drop IdentifierInfo optional.empty return
+  name idContext id.findIdentifierByName switch
+    Ok .case break
+    Err case IdentifierInfo optional.empty return
+    Curry .case =:: curryData
+      "currying is not supported: `" sb.copyPtr
+          name sb.appendStr
+          "` ( declared at ":s sb.appendStr
+          curryData [] .declaredAt [] sb.appendPos
+        " )":s sb.appendStr
+      op [] .pos program .errors appendError
+    IdentifierInfo optional.empty return
   end =:: idData
   idData [] .valueType op .dataType=
   idData id.asIdInfo optional.wrap return
@@ -2610,10 +2629,20 @@ proc(
         "alias is only supported for procedure types" sb.copyPtr op .pos errors appendError
         continue.opLoop
       end
-      nameAlias .baseName idContext id.findIdentifier if ..drop
-        "cannot find Identifier: " sb.copyPtr
-          nameAlias .baseName nameContext sb.appendIdentifierPath
-        op .pos errors appendError
+      nameAlias .baseName idContext id.findIdentifier switch
+        Ok .case break
+        Curry .case =:: curryData
+          "currying is not supported: `" sb.copyPtr
+              nameAlias .baseName nameContext sb.appendIdentifierPath
+              "` ( declared at ":s sb.appendStr
+              curryData [] .declaredAt [] sb.appendPos
+            " )":s sb.appendStr
+          op .pos errors appendError
+        continue.opLoop
+        Err case
+          "cannot find Identifier: " sb.copyPtr
+            nameAlias .baseName nameContext sb.appendIdentifierPath
+          op .pos errors appendError
         continue.opLoop
       end =:: aliasData
       aliasData .idType [] .PROCEDURE ! if
@@ -2655,9 +2684,7 @@ proc(
       end >$ ..drop .constValue .Procedure ? ! if
         nameAlias .alias aliasType state [] .currentFile aliasId optional.wrap false op .pos program newProcData
           ConstValue .Procedure
-        nameAlias .alias idContext id.getIdentifier
-          ! "procName is identifier" assert
-        .constValue=
+        nameAlias .alias idContext id.getIdentifier optional.unwrap .constValue=
       end
       continue.opLoop
     else .DeclareName ? or op .val .InitializeName ? _if
@@ -2792,7 +2819,7 @@ proc(
             ## getIdentifier
               idInfo .nameId
               idContext
-            id.getIdentifier if ..drop
+            id.getIdentifier .else
               "could not find " sb.copyPtr
                 idInfo nameContext sb.appendIdInfo
               op .pos errors appendError
@@ -2924,7 +2951,7 @@ proc(
               ## getIdentifier
                 idInfo .nameId
                 idContext
-              id.getIdentifier if ..drop
+              id.getIdentifier .else
                 "could not find " sb.copyPtr
                   idInfo nameContext sb.appendIdInfo
                 op .pos errors appendError
@@ -3021,7 +3048,7 @@ proc(
             ## getIdentifier
               idInfo .nameId
               idContext
-            id.getIdentifier if ..drop
+            id.getIdentifier .else
               "could not find " sb.copyPtr
                 idInfo nameContext sb.appendIdInfo
               op .pos errors appendError
@@ -3106,7 +3133,7 @@ proc(
         end
         idInfo .idType switch
           PROCEDURE case
-            idInfo .nameId idContext id.getIdentifier if ..drop
+            idInfo .nameId idContext id.getIdentifier .else
               "could not find " sb.copyPtr
                 idInfo .nameId nameContext sb.appendIdentifierPath
               op .pos errors appendError
@@ -3140,14 +3167,14 @@ proc(
             ## getIdentifier
               idInfo .nameId
               idContext
-            id.getIdentifier if ..drop
-              "could not find " sb.copyPtr
-                idInfo nameContext sb.appendIdInfo
-              op .pos errors appendError
-            else =:: idData
+            id.getIdentifier .if =:: idData
               idInfo .nameId
                 typeContext types.declareNamedType
               ConstValue .TypeId idData .constValue=
+            else
+              "could not find " sb.copyPtr
+                idInfo nameContext sb.appendIdInfo
+              op .pos errors appendError
             end
           continue.opLoop
           LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
@@ -3208,12 +3235,12 @@ proc(
               ## getIdentifier
                 idInfo .nameId
                 idContext
-              id.getIdentifier if ..drop
+              id.getIdentifier .if =:: idData
+                constVal idData .constValue=
+              else
                 "could not find " sb.copyPtr
                   idInfo nameContext sb.appendIdInfo
                 op .pos errors appendError
-              else =:: idData
-                constVal idData .constValue=
               end
               idInfo .idType .PROCEDURE if
                 constVal .Procedure .if =:: procId
@@ -4622,11 +4649,11 @@ proc(
             ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
             blockInfo .blockName =:: mut: nameId
             nameId nameContext id.currentNamespace nameContext id.setIdentifierNamespace
-            nameId idContext id.findDeclaredIdentifier or
+            nameId idContext id.findDeclaredIdentifier $ .Ok ? ! or ## FIXME: switch to .or once and-or-if scopes are fixed
                 nameId nameContext id.identifierFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
-                $ [] .nameId nameContext id.getIdentifierNamespace nameContext id.currentNamespace .current != if ..drop
+                $ .Ok unionElement.unwrap [] .nameId nameContext id.getIdentifierNamespace nameContext id.currentNamespace .current != if ..drop
               nameId nameContext id.identifierFlags id.FLAG_MERGE & ? if
-                "unable to merge namespace: \"" sb.copyPtr
+                "unable to merge overload: \"" sb.copyPtr
                 nameId nameContext sb.appendIdentifierPath
                 '"' sb.appendC
                 op .pos errors appendError
@@ -4649,7 +4676,7 @@ proc(
                 continue.opLoop
               end ..drop nameId=
               bundleId
-            else =:: idData
+            else .Ok unionElement.unwrap =:: idData
               idData [] .idType .PROCEDURE_BUNDLE ! if
                 "cannot overload \"" sb.copyPtr
                   nameId nameContext sb.appendIdentifierPath
@@ -4679,11 +4706,21 @@ proc(
                   op .pos errors appendError
                 continue
               end =:: eltName
-              eltName idContext id.findIdentifierByName if ..drop
-                "could not find identifier \"" sb.copyPtr
-                  eltName sb.appendStr
-                  '"' sb.appendC
-                op .pos errors appendError
+              eltName idContext id.findIdentifierByName switch
+                Ok .case break
+                Err case
+                  "could not find identifier \"" sb.copyPtr
+                    eltName sb.appendStr
+                    '"' sb.appendC
+                  op .pos errors appendError
+                continue
+                Curry .case =:: curryData
+                  "currying is not supported: `" sb.copyPtr
+                      eltName sb.appendStr
+                      "` ( declared at ":s sb.appendStr
+                      curryData [] .declaredAt [] sb.appendPos
+                    " )":s sb.appendStr
+                  op .pos errors appendError
                 continue
               end =:: idData
               idData [] .idType .PROCEDURE if
@@ -5534,7 +5571,7 @@ proc(
           Find .case =:: idLabel
             16 id.IdentifierMatch list.create =:: mut: matches
             ## TODO? directly search by label
-            idLabel nameContext id.getIdentifierName true idContext matches@ optional.wrap id.searchIdentifier ..drop.3
+            idLabel nameContext id.getIdentifierName true idContext matches@ optional.wrap id.searchIdentifier ..drop.2
             program [] .tmpString
               sb.clear
               "-----------------\n" sb.appendS
@@ -5543,9 +5580,7 @@ proc(
                 matches i @[] =:: match
                 match [] .nameData .nameId =:: nameId
                 match [] .nameData .aliasId =:: aliasId
-                nameId idContext id.getIdentifier
-                  ! "matched identifier exists" assert
-                =:: idData
+                nameId idContext id.getIdentifier optional.unwrap =:: idData
                 " - " sb.appendS
                 aliasId id.NO_ALIAS != if
                   "alias (declared at " sb.appendS

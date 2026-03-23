@@ -604,8 +604,7 @@ proc(
     else literalTypeName "i64":s string.eq _if types.primitive.I64
     else literalTypeName "f32":s string.eq _if types.primitive.F32
     else literalTypeName "f64":s string.eq _if types.primitive.F64
-    else literalTypeName idContext id.findIdentifierByName
-        ..swap =:: idData ! and
+    else literalTypeName idContext id.findIdentifierByName .Ok .and =:: idData
         idData .idType .TYPE and idData .constValue .TypeId ._if
       []
     else
@@ -873,9 +872,7 @@ proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state ->
   state [] .program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
   varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
-  "..itr.step":s idContext id.findIdentifierByName
-    ! "..itr.step" assert
-  =:: itrStep
+  "..itr.step":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
   varInfo .varId nameContext id.getIdentifierName pos opSetName state appendOp
 end
@@ -883,9 +880,7 @@ proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state ->
   state [] .program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
   varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
-  "..itr.end":s idContext id.findIdentifierByName
-    ! "..itr.end" assert
-  =:: itrEnd
+  "..itr.end":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrEnd
   itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
 end
 proc(
@@ -908,16 +903,12 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: app
   state [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
-  "..if.prepare":s idContext id.findIdentifierByName
-    ! "..if.prepare" assert
-  =:: ifPrepare
+  "..if.prepare":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifPrepare
   ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
   pos nameContext newItrId =:: ifName
   ifName pos opAutoTypedInitializeName state appendOp
   ifName nameContext id.getIdentifierName pos opGetName state appendOp
-  "..if.check":s idContext id.findIdentifierByName
-    ! "..if.check" assert
-  =:: ifCheck
+  "..if.check":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifCheck
   ifCheck [] .valueType ifCheck id.asIdInfo pos opGetId state appendOp
   ifName TmpVarInfo new
 end
@@ -925,9 +916,7 @@ proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition ptr : pos ->
   state [] .program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
   varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
-  "..if.elseVal":s idContext id.findIdentifierByName
-    ! "..if.elseVal" assert
-  =:: elseVal
+  "..if.elseVal":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: elseVal
   elseVal [] .valueType elseVal id.asIdInfo pos opGetId state appendOp
 end
 
@@ -998,9 +987,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end =:: varInfo
         hasOrIf ! if
           varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
-          "..if.ifVal":s idContext id.findIdentifierByName
-            ! "..if.ifVal" assert
-          =:: ifGet
+          "..if.ifVal":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifGet
           ifGet [] .valueType ifGet id.asIdInfo blockPos opGetId state appendOp
         else ifData [] .andPositions .length 0 != _if
           ".if has no effect on if-statements with both `and` and `or` statements" sb.copyPtr
@@ -1047,7 +1034,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       varInfo? .if =:: varInfo
         varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
         isOr if "..if.elseVal":s else "..if.ifVal":s end idContext id.findIdentifierByName
-          ! "and/or val" assert
+           .Ok unionElement.unwrap
         =:: ifGet
         ifGet [] .valueType ifGet id.asIdInfo blockPos opGetId state appendOp
       end
@@ -1105,25 +1092,19 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         id.NAME_ID_NONE
       end =:: blockName
       fileState program wordPos =:: blockPos
-      "..itr.prepare":s idContext id.findIdentifierByName
-        ! "..itr.prepare" assert
-      =:: itrPrepare
+      "..itr.prepare":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo blockPos opGetId state appendOp
       blockPos idContext .typeContext .nameContext newItrId =:: itrId
       itrId blockPos opAutoTypedInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockName blockPos opNamedBlock state appendOp
       itrId nameContext id.getIdentifierName blockPos opGetName state appendOp
-      "..itr.check":s idContext id.findIdentifierByName
-        ! "..itr.check" assert
-      =:: itrCheck
+      "..itr.check":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrCheck
       itrCheck [] .valueType itrCheck id.asIdInfo blockPos opGetId state appendOp
       state opCount =::  doPos
       BlockType .DO blockPos opBlock  state appendOp
       itrId nameContext id.getIdentifierName blockPos opGetName state appendOp
-      "..itr.get":s idContext id.findIdentifierByName
-        ! "..itr.get" assert
-      =:: itrGet
+      "..itr.get":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrGet
       itrGet [] .valueType itrGet id.asIdInfo blockPos opGetId state appendOp
       ## WhileBlockData
         16 iSize list.create
@@ -1163,9 +1144,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .DO blockPos opBlock  state appendOp
       varInfo? .if =:: varInfo
         varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
-        "..if.ifVal":s idContext id.findIdentifierByName
-          ! "and/or val" assert
-        =:: ifGet
+        "..if.ifVal":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifGet
         ifGet [] .valueType ifGet id.asIdInfo blockPos opGetId state appendOp
       end
       ## TODO? return else value at end of `while`, if `.do` is only branch to end

@@ -1200,7 +1200,7 @@ proc(
         TYPE GLOBAL_VAR case
           nameId
             idContext
-          id.getIdentifier if ..drop
+          id.getIdentifier .else
             "could not find identifier: " sb.copyPtr
               nameId nameContext sb.appendIdentifierPath
             op [] .pos errors appendError
@@ -1246,7 +1246,7 @@ proc(
           op [] .pos context pushValue
           EvalResult .Ok return
         PROCEDURE case
-          nameId idContext id.getIdentifier if ..drop
+          nameId idContext id.getIdentifier .else
             "could not find " sb.copyPtr
               idInfo nameContext sb.appendIdInfo
             op [] .pos errors appendError
@@ -1308,7 +1308,7 @@ proc(
         TYPE GLOBAL_VAR case
           nameId
             idContext
-          id.getIdentifier if ..drop
+          id.getIdentifier .else
             value valInfo context unpopValue
             "could not find identifier: " sb.copyPtr
               nameId nameContext sb.appendIdentifierPath
@@ -1392,8 +1392,7 @@ proc(
       end
       value valInfo eltIndex op [] .pos context getElement wrapResult return
     ExistsName .case =:: name
-      name idContext id.findIdentifierByName ! =:: exists
-      ..drop
+      name idContext id.findIdentifierByName .Ok ? =:: exists
       ## pushValue
         exists ConstValue .Bool
         types.primitive.BOOL

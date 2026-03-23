@@ -226,20 +226,20 @@ namespace: id
     bool : checkVisible
     IdentifierContext ptr.mut : context
     IdentifierMatch list ptr.mut optional : matches
-  -> IdentifierName NameInfo bool ) =>: export: searchIdentifier
+  -> IdentifierName NameInfo optional ) =>: export: searchIdentifier
     context [] .currentScopeId =:: scopeId
     context [] .typeContext .nameContext .namespaceInfo .current =:: mut: mNamespace
     NamespaceId : relSpace
     mNamespace NAMESPACE_ID_NONE == if
       "invalid current namespace id":s NAMESPACE_ID_NONE scopeId IdentifierName new
-      id.NAME_ID_NONE id.NO_ALIAS NameInfo new true return
+      NameInfo optional.empty return
     end
     id 0 string.charAt '.' == if
       id .length 2:iSize u>= and id 1 string.charAt '.' == if
         id string.empty
       else
         "identifiers cannot start with .":s NAMESPACE_ID_NONE scopeId IdentifierName new
-        id.NAME_ID_NONE id.NO_ALIAS NameInfo new true return
+        NameInfo optional.empty return
       end
     else
       id '.' string.splitLast
@@ -255,7 +255,7 @@ namespace: id
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idNameInfo .nameId context isVisible if
           matches .else
-            idName idNameInfo false return
+            idName idNameInfo optional.wrap return
           end =:: matchData
           matchData []
             idName idNameInfo IdentifierMatch new list.append
@@ -297,7 +297,7 @@ namespace: id
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idNameInfo .nameId context isVisible if
           matches .else
-            idName idNameInfo false return
+            idName idNameInfo optional.wrap return
           end =:: matchData
           matchData []
             idName idNameInfo IdentifierMatch new list.append
@@ -363,67 +363,87 @@ namespace: id
     finally importInfo [] .parent end ..drop
     matches optional.isEmpty and match .if
       ## TODO return value indicating multi-match
-      idName >$ false return
+      idName >$ optional.wrap return
     end
     "could not find identifier":s NAMESPACE_ID_NONE scopeId IdentifierName new
-    id.NAME_ID_NONE id.NO_ALIAS NameInfo new true return
+    NameInfo optional.empty return
   end
-  proc( NameId : nameId IdentifierContext ptr.mut : context -> IdentifierData ptr.mut bool ) =>: export: getIdentifier
+  proc( NameId : nameId IdentifierContext ptr.mut : context -> IdentifierData ptr.mut optional ) =>: export: getIdentifier
     context .identifierData
       nameId
-    map.at .if false return end
-    ID_TMP_DATA@ true return
+    map.at return
+  end
+  proc(
+    string : name
+    IdentifierContext ptr.mut : context
+  -> NameInfo optional ) =>: findIdByName
+    name .length 0:iSize != "name is non-empty" assert
+    ## searchIdentifier
+      name
+      true
+      context
+      IdentifierMatch list ptr.mut optional.empty
+    searchIdentifier >$ ..drop return
+  end
+  union(
+    IdentifierData ptr.mut : Ok
+    IdentifierData ptr.mut : Curry
+    string : Err
+  ) =:: export: IdentifierResult
+  ## finds an identifier with the given name
+  proc(
+    string : name
+    IdentifierContext ptr.mut : context
+  -> IdentifierResult ) =>: export: findIdentifierByName ## TODO return union( data : Ok data : Curry string : Err )
+    name .length 0:iSize != "name is non-empty" assert
+    ## searchIdentifier
+      name
+      true
+      context
+      IdentifierMatch list ptr.mut optional.empty
+    searchIdentifier .else
+      .name IdentifierResult .Err return
+    end .nameId context getIdentifier .else ..drop "could not find identifier":s IdentifierResult .Err return end
+      context [] .scopes >>$ .scope getScopeData [] .currentProc .and =:: scopeProc
+        context [] .scopes context [] .currentScopeId getScopeData [] .currentProc .and =:: currentProc
+        scopeProc currentProc ProcId.eq !
+      if
+        IdentifierResult .Curry
+      else
+        IdentifierResult .Ok
+      end
+    return
   end
   ## finds an identifier with the same name as the given label
   ## to get the identifier-data for a given nameId use `getIdentifier`
   proc(
     NameId : nameId
     IdentifierContext ptr.mut : context
-  -> IdentifierData ptr.mut bool ) =>: export: findIdentifier
+  -> IdentifierResult ) =>: export: findIdentifier
     nameId context .typeContext  .nameContext id.getIdentifierName context findIdentifierByName return
   end
-  ## unlike `findIdentifier` this procedure also find invisible identifiers
+  ## unlike `findIdentifier` this procedure can also find invisible identifiers
   proc(
     NameId : nameId
     IdentifierContext ptr.mut : context
-  -> IdentifierData ptr.mut bool ) =>: export: findDeclaredIdentifier
+  -> IdentifierResult ) =>: export: findDeclaredIdentifier ## TODO? merge with findIdentifier
     ## searchIdentifier
       nameId context .typeContext  .nameContext id.getIdentifierName
       false
       context
       IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError .nameId =:: label ..drop
-    label context getIdentifier isError | return
-  end
-  proc(
-    string : name
-    IdentifierContext ptr.mut : context
-  -> NameInfo bool ) =>: findIdByName
-    name .length 0:iSize != "name is non-empty" assert
-    ## searchIdentifier
-      name
-      true
-      context
-      IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError =:: nameData =:: idName
-    nameData isError return
-  end
-  proc(
-    string : name
-    IdentifierContext ptr.mut : context
-  -> IdentifierData ptr.mut bool ) =>: export: findIdentifierByName ## TODO return union( data : Ok data : Curry string : Err )
-    name .length 0:iSize != "name is non-empty" assert
-    ## searchIdentifier
-      name
-      true
-      context
-      IdentifierMatch list ptr.mut optional.empty
-    searchIdentifier =:: isError .nameId =:: label
-      context [] .scopes >$ .scope getScopeData [] .currentProc .and =:: scopeProc
+    searchIdentifier .else
+      .name IdentifierResult .Err return
+    end .nameId context getIdentifier .else ..drop "could not find identifier":s IdentifierResult .Err return end
+      context [] .scopes >>$ .scope getScopeData [] .currentProc .and =:: scopeProc
         context [] .scopes context [] .currentScopeId getScopeData [] .currentProc .and =:: currentProc
         scopeProc currentProc ProcId.eq !
-      end =:: isCurry
-    label context getIdentifier isError | isCurry | return
+      if
+        IdentifierResult .Curry
+      else
+        IdentifierResult .Ok
+      end
+    return
   end
   enum( BUILT_IN NAMESPACE PROCEDURE VARIABLE LABEL ) =:: export: DeclarationContext
   proc( IdentifierType : idType -> DeclarationContext ) =>: idDeclarationContext
@@ -520,12 +540,10 @@ namespace: id
     context .identifierNames idName map.get .if
       DeclareNameResult .Redeclare return
     end
-    name context findIdByName ! if =:: shadowedName
+    name context findIdByName .if =:: shadowedName
       shadowedName .nameId nameContext id.identifierFlags =:: shadowFlags
       flags FLAG_SHADOW & ? ! or shadowFlags id.FLAG_BUILT_IN & ? if
-        shadowedName .nameId context getIdentifier
-          ! "shadowedName exists" assert
-        =:: shadowed
+        shadowedName .nameId context getIdentifier optional.unwrap =:: shadowed
         ## allow shadoing for labels
         ## TODO? only allow shadowed labels in initializers
         isAlias or idType .LABEL ! or shadowed [] .idType .LABEL ! if
@@ -551,7 +569,7 @@ namespace: id
           end
         end
       end
-    else ..drop end
+    end
     isAlias if
       context .aliasInfo [] .length AliasId cast
       context .aliasInfo []
@@ -916,10 +934,12 @@ namespace: id
     CompilerError list ptr.mut : errors
   -> bool ) =>: export: importIdentifier
     idContext .typeContext .nameContext =:: nameContext
-    usedName idContext id.findIdentifierByName if ..drop
+    usedName idContext id.findIdentifierByName .Ok .else .Curry ? =:: isCurry
      "identifier \"" sb.copyPtr
         usedName sb.appendStr
-      "\" does not exist in the current scope" sb.appendS pos errors appendError
+        "\" does not exist in the current scope":s sb.appendStr
+        isCurry if " currying is not supported":s sb.appendStr end
+      pos errors appendError
      true return
     end =:: target
       target [] .nameId

@@ -4022,9 +4022,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 [] .aliasId id.NO_ALIAS != if continue end
     declaration .1 [] .nameId =:: nameId
-    nameId idContext id.getIdentifier
-      ! "nameId is identifier" assert
-    =:: idData
+    nameId idContext id.getIdentifier optional.unwrap =:: idData
     idData [] .idType .GLOBAL_VAR ! if
       continue
     end
