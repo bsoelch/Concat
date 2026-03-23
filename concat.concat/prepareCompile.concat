@@ -375,7 +375,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc .implementation .Code .else ..drop
       continue
     end =:: impl
-    impl .codeState [] .UNUSED or impl .codeState [] .COMPILED if
+    impl .codeState [] .COMPILED if
       continue
     end
     tmpOps list.clear tmpOps=

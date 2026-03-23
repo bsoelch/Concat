@@ -226,10 +226,9 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     ## TODO sort by inlinability
     aCode .code .length bCode .code .length iSize.cmp return
   end list.sort
-  ## TODO 2 passes for each proc
   ## TODO? make inlining a seperate pass
+  ## TODO 2 passes for each proc
   ## pass 1
-  ## * detect unused labels (? information should already exist in type-checker?)
   ## * mark writes that are never read
   ## * mark last read before overwrite
   ## ? detect stack values that are never read (? only if optimizations are enabled)
@@ -253,9 +252,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     program [] .progFiles
       currentProc [] .fileId i64 cast
     @[] =:: f
-    impl .codeState [] .UNUSED if
-      continue ## TODO? filter out unused procs in type-checker
-    end
     ## analizeProc
       impl [] .code
       tmpOps@

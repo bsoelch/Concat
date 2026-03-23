@@ -5984,7 +5984,8 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     procId ProcCheckType .REQUIRE_DEFINED FilePosition ptr optional.empty state typeCheckProcedure
   finally index 1 + end ..drop
   program freeStaticProcs
-  ## TODO? put state cleanup into procedure
+  program freeUnusedProcs
+  ## TODO? extract state cleanup to procedure
   state freeOps
   state .stack branchTree.free
   state .interpreter interpreter.cleanupContext

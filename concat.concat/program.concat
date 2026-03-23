@@ -684,6 +684,15 @@ proc( ProgramContext ptr.mut -> ) =>: export: freeStaticProcs
     end
   end >$ .procedures=
 end
+proc( ProgramContext ptr.mut -> ) =>: export: freeUnusedProcs
+  $ [] .procedures list.filter for ProcId.getProcInfo =:: procInfo
+    procInfo [] .implementation .Code .and .codeState .UNUSED if
+      procInfo [] freeProcedure false
+    else
+      true
+    end
+  end >$ .procedures=
+end
 proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .idContext id.freeIdentifierContext >$ .idContext=
   $ .progFiles list.free >$ .progFiles=

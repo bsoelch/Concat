@@ -4080,7 +4080,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
       proc .implementation .Code .else
         ..drop continue
       end =:: impl
-      impl .codeState [] .UNUSED if continue end
+      impl .codeState [] .COMPILED ! if continue end
       program [] .progFiles proc [] .fileId iSize cast.u list.get .if =:: f
         "dbgfile \"" sb.appendS
         f .fileName sb.appendSb
@@ -4088,13 +4088,11 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
       else
         "dbgfile \"..internal\"\n"    sb.appendS
       end
-      impl .codeState [] .COMPILED if
-        impl .code [] .length for i32 cast.u =:: opIndex
-          impl [] .code opIndex @[] opIndex context compileOp
-        end
-        target $1 sb.asStr file.write target=
-        sb.clear
+      impl .code [] .length for i32 cast.u =:: opIndex
+        impl [] .code opIndex @[] opIndex context compileOp
       end
+      target $1 sb.asStr file.write target=
+      sb.clear
     end
     target $1 sb.asStr file.write target=
     sb.clear
