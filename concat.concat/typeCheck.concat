@@ -231,6 +231,7 @@ enum( NONE TYPE INITIALIZER ) =:: BlockMode
 union(
   iSize : Label
   iSize : Jump
+  iSize : HintStart
   ( iSize iSize ) : Jump2
   ( iSize iSize iSize ) : Jump3
   iSize list : Jumps
@@ -1085,11 +1086,18 @@ proc(
   TypeCheckState ptr.mut : state
 -> ) =>: localLabel
   labelType switch
-    HINT_START case break
+    HINT_START case
+      state .jumpOffsets
+        labelId state .compiledOps [] .length JumpOffsets .HintStart
+      map.put .if
+        "duplicate label":s pos ..line internalErrorNoOp ..unreachable
+      end
+    break
     HINT_END case
-      state .jumpOffsets labelId map.remove .and .Label ! .if
+      state .jumpOffsets labelId map.remove .and .Label ? ! if
         "unhandled jumps in closed label":s pos ..line internalErrorNoOp ..unreachable
       end
+      ## TODO? detect backwards labels without jump
     break
     LABEL_START LABEL_END LABEL_MIDDLE case
       state .jumpOffsets
@@ -1097,6 +1105,17 @@ proc(
       map.put .if
         switch
           Label case "duplicate label":s pos ..line internalErrorNoOp ..unreachable
+          HintStart .case =:: startIndex
+            labelType .LABEL_START if "duplicate label":s pos ..line internalErrorNoOp ..unreachable end
+            ## no jumps since start -> do not generate start-hint
+            state .compiledOps [] startIndex @[] =:: startOp
+            startOp .val [] .LocalLabel ? ! if "expected label":s pos ..line internalErrorNoOp ..unreachable end
+            opValNOP startOp .val=
+            labelType .LABEL_MIDDLE if  ## no forward jumps -> turn into start-label
+              labelId LocalLabelType .LABEL_START pos opLabel state appendOp ..drop
+            end
+            return
+          break
           Jump .case pos state updateJump break
           Jump2 .case $ .0 pos state updateJump .1 pos state updateJump break
           Jump3 .case
@@ -1123,6 +1142,12 @@ proc(
   map.get .if
     switch
       Label .case opOffset - JumpDistance cast.s break
+      HintStart case
+        state .jumpOffsets
+          labelId opOffset JumpOffsets .Jump
+        map.put ..drop
+        0:JumpDistance
+      break
       Jump .case
         state .jumpOffsets
           labelId >>$ opOffset ( iSize iSize ) new JumpOffsets .Jump2
