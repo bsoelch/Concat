@@ -158,6 +158,11 @@ proc(
         newOps callVal op .pos context inlineCall return
       end
     break
+    ProcPtr .case =:: procId
+      procId ProcId.getProcInfo .implementation .BuiltIn .if
+        true >$ .hasPtr=
+      else ..drop end
+    break
     AutoTypedInitializeId ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
@@ -235,6 +240,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   ## pass 2
   ## * delete unused labels
   ## * remove unused writes
+  ## * remove procs that are always inlined
   ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
   ## TODO -> seperate compilation phase for copy-analysis
   ## * insert 'copy' operations for composites

@@ -2947,9 +2947,7 @@ proc(
                 ##  -> generic proc ptr : ( procId )
                 break
               end
-              procData .implementation .BuiltIn .if
-                true >$ .hasPtr=
-              else .Code ._if =:: codeImpl
+              procData .implementation .Code .if =:: codeImpl
                 codeImpl .codeState [] .TYPE_CHECKED ! if
                   state [] .missingProcs
                     ## MissingProc
@@ -2958,7 +2956,7 @@ proc(
                     MissingProc new list.append
                   state .missingProcs=
                 end
-              else
+              else .BuiltIn ? ! _if
                 "unexpected proc implementation":s op ..line state internalError ..unreachable
               end
               procId OpValue .ProcPtr op@ .val=
