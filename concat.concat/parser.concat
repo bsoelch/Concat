@@ -499,7 +499,7 @@ proc(
       else ..dup "inline:":s string.eq _if
         id.FLAG_INLINE flags | flags=
         true isModifier=
-      else ..dup "no:inline:":s string.eq _if
+      else ..dup "inline.never:":s string.eq _if
         id.FLAG_NO_INLINE flags | flags=
         true isModifier=
       else ..dup "#:experimental:":s string.eq _if

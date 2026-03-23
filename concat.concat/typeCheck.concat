@@ -46,6 +46,7 @@ overload: & IfBlockFlags.and end
 overload: | IfBlockFlags.or end
 overload: ~ IfBlockFlags.flip end
 overload: ? IfBlockFlags.toBool end
+union( _ : None id.ScopeId : And id.ScopeId : Or ) =:: AndOrIfScope
 struct(
   branchTree.NodeId : branchRoot
   BranchPoint : ifBranch
@@ -57,7 +58,7 @@ struct(
   i32 : ifCastsOffset
   BlockId : blockId
   IfBlockFlags : flags
-  id.ScopeId optional : orIfScope
+  AndOrIfScope : andOrIfScope
 ) =:: IfBlockInfo
 struct(
   Type : switchType
@@ -119,7 +120,7 @@ proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition ptr : pos Ty
     -1
     blockId
     IfBlockFlags.none
-    id.ScopeId optional.empty
+    AndOrIfScope .None
   IfBlockInfo new
     $ .endLabel LocalLabelType .HINT_START pos state localLabel
     $ .elseLabel LocalLabelType .HINT_START pos state localLabel
@@ -3842,10 +3843,22 @@ proc(
               "expected block":s op ..line state internalError ..unreachable
             end .blockId=
             blockType .AND_IF if
-              ifBlock [] .flags IfBlockFlags.hasAndIf | ifBlock .flags=
+              ifBlock [] .flags
+                $ IfBlockFlags.hasOrIf & ? and ifBlock [] .andOrIfScope .None ? if
+                  idContext id.currentScope AndOrIfScope .Or ifBlock .andOrIfScope=
+                  idContext id.openScope
+                end
+                IfBlockFlags.hasAndIf |
+              ifBlock .flags=
               ifBlock .andBranches
             else
-              ifBlock [] .flags IfBlockFlags.hasOrIf | ifBlock .flags=
+              ifBlock [] .flags
+                $ IfBlockFlags.hasAndIf & ? and ifBlock [] .andOrIfScope .None ? if
+                  idContext id.currentScope AndOrIfScope .And ifBlock .andOrIfScope=
+                  idContext id.openScope
+                end
+                IfBlockFlags.hasOrIf |
+              ifBlock .flags=
               ifBlock .orBranches
             end =:: branches
             branches []
@@ -3904,12 +3917,18 @@ proc(
             false 1 op .pos state clearReferences
             ## reset scope if or apprears before if
             ifBlock [] .flags IfBlockFlags.hasOrIf & ? if
-              ifBlock [] .flags IfBlockFlags.hasAndIf & ? ! if
+              ifBlock [] .flags IfBlockFlags.hasAndIf & ? if
+                idContext id.closeScope ! "closing and-or-if scope worked" assert
+              else ifBlock [] .andOrIfScope .None ? _if
                 ## remember or-scope for else-branch
-                idContext id.currentScope optional.wrap ifBlock .orIfScope=
+                idContext id.currentScope AndOrIfScope .Or ifBlock .andOrIfScope=
               end
               idContext id.closeScope ! "closing or-if scope worked" assert
-              idContext id.openScope
+              ifBlock .andOrIfScope [] .And .if
+                idContext id.setScope
+              else ..drop
+                idContext id.openScope
+              end
             end
             ifBlock [] .flags
               IfBlockFlags.hasIf |
@@ -3996,9 +4015,9 @@ proc(
             false 0 op .pos state clearReferences
             idContext id.closeScope ! "closing if-scope worked" assert
             ## switch to else-scope
-            ifBlock [] .orIfScope .if
+            ifBlock [] .andOrIfScope .Or .if
               idContext id.setScope
-            else
+            else ..drop
               idContext id.openScope
             end
             ifBlock [] .blockId op@ .val .Block .else

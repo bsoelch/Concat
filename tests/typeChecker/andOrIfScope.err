@@ -1,0 +1,38 @@
+could not find identifier: a1 at ./tests/typeChecker/andOrIfScope.concat:5:5
+could not find identifier: a2 at ./tests/typeChecker/andOrIfScope.concat:5:8
+different numbers of types at the end of if-else block
+  * ifBranch: 2 at ./tests/typeChecker/andOrIfScope.concat:4:3
+  * elseBranch: 0 at ./tests/typeChecker/andOrIfScope.concat:6:3
+stack underflow: need 2 values got 0 at ./tests/typeChecker/andOrIfScope.concat:6:7
+could not find identifier: a1 at ./tests/typeChecker/andOrIfScope.concat:7:3
+could not find identifier: a2 at ./tests/typeChecker/andOrIfScope.concat:7:6
+stack underflow: need 2 values got 0 at ./tests/typeChecker/andOrIfScope.concat:7:9
+could not find identifier: b2 at ./tests/typeChecker/andOrIfScope.concat:9:8
+could not find identifier: b1 at ./tests/typeChecker/andOrIfScope.concat:11:5
+could not find identifier: b2 at ./tests/typeChecker/andOrIfScope.concat:11:8
+different numbers of types at the end of if-else block
+  * ifBranch: 1 at ./tests/typeChecker/andOrIfScope.concat:10:3
+  * elseBranch: 0 at ./tests/typeChecker/andOrIfScope.concat:12:3
+stack underflow: need 2 values got 0 at ./tests/typeChecker/andOrIfScope.concat:12:7
+could not find identifier: b1 at ./tests/typeChecker/andOrIfScope.concat:13:3
+could not find identifier: b2 at ./tests/typeChecker/andOrIfScope.concat:13:6
+stack underflow: need 2 values got 0 at ./tests/typeChecker/andOrIfScope.concat:13:9
+could not find identifier: c1 at ./tests/typeChecker/andOrIfScope.concat:15:5
+could not find identifier: c2 at ./tests/typeChecker/andOrIfScope.concat:15:8
+could not find identifier: c2 at ./tests/typeChecker/andOrIfScope.concat:17:8
+different numbers of types at the end of if-else block
+  * ifBranch: 0 at ./tests/typeChecker/andOrIfScope.concat:16:3
+  * elseBranch: 1 at ./tests/typeChecker/andOrIfScope.concat:18:3
+stack underflow: need 2 values got 0 at ./tests/typeChecker/andOrIfScope.concat:18:7
+could not find identifier: c1 at ./tests/typeChecker/andOrIfScope.concat:19:3
+could not find identifier: c2 at ./tests/typeChecker/andOrIfScope.concat:19:6
+stack underflow: need 2 values got 0 at ./tests/typeChecker/andOrIfScope.concat:19:9
+could not find identifier: d1 at ./tests/typeChecker/andOrIfScope.concat:23:5
+could not find identifier: d2 at ./tests/typeChecker/andOrIfScope.concat:23:8
+different numbers of types at the end of if-else block
+  * ifBranch: 2 at ./tests/typeChecker/andOrIfScope.concat:22:3
+  * elseBranch: 0 at ./tests/typeChecker/andOrIfScope.concat:24:3
+stack underflow: need 2 values got 0 at ./tests/typeChecker/andOrIfScope.concat:24:7
+could not find identifier: d1 at ./tests/typeChecker/andOrIfScope.concat:25:3
+could not find identifier: d2 at ./tests/typeChecker/andOrIfScope.concat:25:6
+stack underflow: need 2 values got 0 at ./tests/typeChecker/andOrIfScope.concat:25:9
