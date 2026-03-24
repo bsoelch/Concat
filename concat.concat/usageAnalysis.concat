@@ -21,20 +21,20 @@ namespace: VariableUse
   proc( LocalLabelId -> VariableUse ) =>: label
     iSize cast TAG_BITS << TYPE_LABEL | VariableUse cast
   end
-  proc( VariableUse -> bool ) =>: isRead
-    iSize cast TYPE_MASK & TYPE_READ ==
+  proc( VariableUse -> iSize optional ) =>: asRead
+    iSize cast $ TYPE_MASK & TYPE_READ == if
+      TAG_BITS >>> optional.wrap
+    else ..drop iSize optional.empty end
   end
-  proc( VariableUse -> bool ) =>: isWrite
-    iSize cast TYPE_MASK & TYPE_WRITE ==
+  proc( VariableUse -> iSize optional ) =>: asWrite
+    iSize cast $ TYPE_MASK & TYPE_WRITE == if
+      TAG_BITS >>> optional.wrap
+    else ..drop iSize optional.empty end
   end
-  proc( VariableUse -> bool ) =>: isLabel
-    iSize cast TYPE_MASK & TYPE_LABEL ==
-  end
-  proc( VariableUse -> iSize ) =>: getLoc
-    iSize cast TAG_BITS >>>
-  end
-  proc( VariableUse -> LocalLabelId ) =>: getLabel
-    iSize cast TAG_BITS >>> LocalLabelId cast
+  proc( VariableUse -> LocalLabelId optional ) =>: asLabel
+    iSize cast $ TYPE_MASK & TYPE_LABEL == if
+      iSize cast TAG_BITS >>> LocalLabelId cast optional.wrap
+    else ..drop LocalLabelId optional.empty end
   end
 end
 union(
@@ -55,6 +55,11 @@ namespace: VariableUses
   proc( LocalLabelId -> VariableUses ) =>: label
     VariableUse.label VariableUses .Use
   end
+ ( VariableUses -> VariableUses ) =>: copy
+   .Uses .if
+     list.copy VariableUses .Uses
+   end
+ end
   proc( type : auto: C VariableUses ( VariableUse C -> ) ptr : f C : context -> ) =>: forEach
     switch
       Arg Read case return
@@ -80,12 +85,15 @@ namespace: VariableUseInfo
  ( VariableUseInfo : a VariableUseInfo : b -> i32 ) =>: cmp
    a .name b .name NameId.cmp
  end
+ ( VariableUseInfo -> VariableUseInfo ) =>: copy
+   $ .uses VariableUses.copy >$ .uses=
+ end
 end
 
 struct(
   ProgramContext ptr.mut : program
   NameId VariableUses hashMap : variableUses
-  LocalLabelId VariableUseInfo list hashMap : localVariableUses
+  LocalLabelId VariableUseInfo list hashMap : labelVariableUses
   VariableInfo list : variables
   FileId : currentFile
   i32 : inlineCount
@@ -232,6 +240,148 @@ proc(
 end
 
 proc(
+  Operation slice.mut : ops
+  iSize : index
+  ConverterContext ptr.mut : context
+-> ) =>: analizeOp
+  ops index [] =:: op
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  op .val switch
+    ImplementProcedure case
+      ## TODO initialize argument variables
+      true context .reachable=
+    break
+    GetId .case =:: idInfo
+      ## TODO check if var is uninitialized
+      context .variableUses
+        idInfo .nameId
+        index VariableUses.read
+      map.put .if =:: prevUses
+        ( ConverterContext ptr.mut : shadow: context NameId : nameId ) =:: Curry
+        ## mark all preceding labels as read
+        prevUses ( VariableUse : use Curry : curry -> ) =>
+          use VariableUse.asLabel .if =:: useLabel
+            curry .context .labelVariableUses
+              useLabel
+            map.at .if =:: varInfo
+              VariableUses .Read curry .nameId VariableUseInfo new =:: newUse
+              varInfo [] list.asSlice
+                newUse
+                VariableUseInfo.cmp@
+              slice.binarySearch switch
+                Match .case newUse varInfo [] >>$ =[] break
+                Missing .case
+                  varInfo [] newUse >>$ list.insert varInfo =[]
+                break
+              end
+            end
+          else use VariableUse.asRead ._if =:: readIndex
+            ## TODO mark read as reused
+          else use VariableUse.asWrite ._if =:: writeIndex
+            ## TODO mark write as used
+          end
+        end context idInfo .nameId Curry new VariableUses.forEach
+        prevUses .Uses .if list.free ..drop else ..drop end
+      end
+    break
+    SetId .case =:: idInfo
+      context .variableUses
+        idInfo .nameId
+        index VariableUses.write
+      map.put .if
+        .Uses .if list.free ..drop else ..drop end
+        ## check is var is writeable
+        idInfo .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? ! if
+          256 sb.create
+            idInfo nameContext sb.appendIdInfo
+            " is not mutable" sb.appendS
+          op .pos errors appendError
+        end
+      end
+    break
+    LocalJump .case =:: jumpInfo
+      jumpInfo .cmpType .NONE if
+        false context .reachable=
+      end
+      context .labelVariableUses jumpInfo .labelId map.at .else
+        context .labelVariableUses jumpInfo .labelId 4 VariableUseInfo list.create map.put ..drop
+        context .labelVariableUses jumpInfo .labelId map.at optional.unwrap
+      end =:: labelUseInfo
+      ## merge current state into label state
+      context .variableUses for =:: nameId =:: uses
+        uses nameId VariableUseInfo new =:: currentUses
+        context [] .reachable =:: mut: needCopy
+        labelUseInfo [] list.asSlice
+           currentUses
+           VariableUseInfo.cmp@
+        slice.binarySearch switch: labelMatch
+          Match .case
+            labelUseInfo [] >$ @[] =:: labelUses
+            labelUses .uses switch
+              Read case
+                ## TODO mark all current uses as read
+              break.labelMatch
+              Arg case
+                currentUses
+                  needCopy if VariableUseInfo.copy false needCopy= end
+                labelUses =[]
+              break.labelMatch
+              Uses .case break
+              Use .case []
+                4 VariableUse list.create >$ list.append labelUses .uses .Uses=
+                labelUses .uses .Uses .else ..unreachable end
+              break
+              Use2 .case []
+                4 VariableUse list.create $1 .0 list.append >$ .1 list.append labelUses .uses .Uses=
+                labelUses .uses .Uses .else ..unreachable end
+              break
+              Use3 .case []
+                4 VariableUse list.create $1 .0 list.append $1 .1 list.append >$ .2 list.append labelUses .uses .Uses=
+                labelUses .uses .Uses .else ..unreachable end
+              break
+            end =:: useList
+            ( ConverterContext ptr.mut : shadow: context VariableUse list ptr.mut : shadow: useList ) =:: Curry
+            ## mark all preceding labels as read
+            uses ( VariableUse : use Curry : curry -> ) =>
+              use VariableUse.asLabel .if =:: labelUse
+                ## TODO add all uses of label to uses
+              else
+                curry .useList [] use list.append curry .useList =[]
+              end
+            end context useList Curry new VariableUses.forEach
+          break
+          Missing .case
+            labelUseInfo [] currentUses
+              needCopy if VariableUseInfo.copy false needCopy= end
+            >>$ list.insert labelUseInfo =[]
+          break
+        end
+        needCopy ! and uses .Uses .if list.free ..drop end
+      end
+    break
+    LocalLabel .case =:: labelInfo
+      labelInfo .labelType switch
+        HINT_START HINT_END case return
+        LABEL_START LABEL_MIDDLE LABEL_END case break
+      end
+      context [] .reachable if
+        context .variableUses map.atItr for [] =:: nameId =:: useInfo
+          ## TODO add current var-uses to label (recursively taversing dependent labels)
+          labelInfo .labelId VariableUses.label useInfo =[]
+        end
+      else
+        true context .reachable=
+        ## TODO reset to state at label (error if label has not been reached yet)
+      end
+    break
+    default break
+  end
+end
+proc(
   Operation list : newOps
   Operation : mut: op
   ConverterContext ptr.mut : context
@@ -265,79 +415,6 @@ proc(
     default break
   end
   newOps op list.append return ## nothing to change
-end
-proc(
-  Operation slice.mut : ops
-  iSize : index
-  ConverterContext ptr.mut : context
--> ) =>: analizeOp
-  ops index [] =:: op
-  op .val switch
-    ImplementProcedure case
-      ## TODO initialize argument variables
-      true context .reachable=
-    break
-    GetId .case =:: idInfo
-      ## TODO check if var is uninitialized
-      context .variableUses
-        idInfo .nameId
-        index VariableUses.read
-      map.put .if =:: prevUses
-        ( ConverterContext ptr.mut : shadow: context NameId : nameId ) =:: Curry
-        ## mark all preceding labels as read
-        prevUses ( VariableUse : use Curry : curry -> ) =>
-          use VariableUse.isLabel if
-            curry .context .localVariableUses
-              use VariableUse.getLabel
-            map.at .if =:: varInfo
-              VariableUses .Read curry .nameId VariableUseInfo new =:: newUse
-              varInfo [] list.asSlice
-                newUse
-                VariableUseInfo.cmp@
-              slice.binarySearch switch
-                Match .case newUse varInfo [] >>$ =[] break
-                Missing .case
-                  varInfo [] newUse >>$ list.insert varInfo =[]
-                break
-              end
-            end
-          end
-        end context idInfo .nameId Curry new VariableUses.forEach
-        prevUses .Uses .if list.free ..drop else ..drop end
-      end
-    break
-    SetId .case =:: idInfo
-      ## TODO check if var is writable or uninitialized
-      context .variableUses
-        idInfo .nameId
-        index VariableUses.write
-      map.put .if =:: prevUses
-        ## TODO mark preceeding reads/writes as unread
-      end
-    break
-    LocalJump .case =:: jumpInfo
-      ## TODO merge current state into label state
-      jumpInfo .cmpType .NONE if
-        false context .reachable=
-      end
-    break
-    LocalLabel .case =:: labelInfo
-      labelInfo .labelType switch
-        HINT_START HINT_END case return
-        LABEL_START LABEL_MIDDLE LABEL_END case break
-      end
-      context [] .reachable if
-        context .variableUses map.atItr for =:: nameId =:: useInfo
-          ## TODO add current var-uses to label (recursively taversing dependent labels)
-          labelInfo .labelId VariableUses.label useInfo =[]
-        end
-      else
-        true context .reachable=
-        ## TODO reset to state at label (error if label has not been reached yet)
-      end
-    break
-    default break
-  end
 end
 
 proc(
