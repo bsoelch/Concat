@@ -394,6 +394,9 @@ namespace: list
     T : elt
     iSize : index
   -> T list ) =>: export: insert
+    a .length index == if
+      a elt append return
+    end
     a index checkIndex
     a
       $ .length 1:iSize + ensureCap
@@ -409,6 +412,7 @@ namespace: list
     T k ptr : b
     iSize : index
   -> T list ) =>: export: insertP
+    ## TODO allow insert at end of list
     a index checkIndex
     a
       $ .length k + ensureCap
