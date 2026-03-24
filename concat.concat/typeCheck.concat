@@ -1211,6 +1211,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: markAsUnique
   state .stack branchTree.peek .if true >$ .uniqueRef= end
 end
 proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
+  _EXPERIMENTAL_ if return end ## copy-generation will be moved to later phase
   state .stack branchTree.peek ! .or [] .uniqueRef if
     return ## no need to copy uniqueRef value
   end
