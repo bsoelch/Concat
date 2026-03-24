@@ -331,6 +331,9 @@ namespace: slice
     T slice : elts
     T : elt
   -> SearchResult ) =>: export: binarySearchC
+    elts .length 0 == if
+      0 SearchResult .Missing return
+    end
     0:iSize =:: mut: l
     elts .length 1 - =:: mut: r
     while l r u<= do
@@ -352,6 +355,9 @@ namespace: slice
     T : elt
     ( T T -> i32 ) ptr : f
   -> SearchResult ) =>: export: binarySearchF
+    elts .length 0 == if
+      0 SearchResult .Missing return
+    end
     0:iSize =:: mut: l
     elts .length 1 - =:: mut: shadow: r
     while l r u<= do
@@ -361,6 +367,8 @@ namespace: slice
         mid SearchResult .Match return
       else c 0 < _if
         mid 1 + l=
+      else mid 0 == _if
+        0 SearchResult .Missing return
       else
         mid 1 - r=
       end
@@ -368,7 +376,6 @@ namespace: slice
     r SearchResult .Missing return
   end
   overload: export: binarySearch binarySearchC binarySearchF end
-
   proc(
     type : auto: T
     T slice : seq
