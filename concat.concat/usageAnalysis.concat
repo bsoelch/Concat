@@ -88,6 +88,7 @@ proc(
   NameId.hash@ NameId.eq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
   LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
   program program.nextLocalLabel =:: procEnd
+  $ .length =:: startLabelPos
   procEnd LocalLabelType .HINT_START pos opLabel context filterOp
   procOps 0 [] .dataType =:: procType
   procType typeContext types.getProcIn optional.unwrap =:: inTypes
@@ -109,11 +110,13 @@ proc(
       remapIds@ argName tmpId map.put optional.isEmpty "identifier-value only reassigned once" assert
     end
   finally i 1 - end ..drop
+  false =:: mut: hasEarlyReturn
   procOps 1:iSize $1 .length 2:iSize - slice.getSlice
     $ .length 1 - =:: last
     $ last [] .val .Return ? if last >$ .length= end ## ignore return at end of proc
   for =:: mut: op
     op .val .Return ? if
+      true hasEarlyReturn=
       procEnd 0:JumpDistance CompareType .NONE op .pos opJump context filterOp
       continue
     else op .val .GetId ._if .nameId =:: nameId
@@ -135,7 +138,13 @@ proc(
     else ..drop end
     op context filterOp
   end
-  procEnd LocalLabelType .LABEL_END pos opLabel context filterOp
+  hasEarlyReturn if
+    procEnd LocalLabelType .LABEL_END pos opLabel context filterOp
+  else
+    $ startLabelPos list.at .and =:: op op .val [] .LocalLabel .and .labelType .HINT_START if
+      opValNOP op .val=
+    end
+  end
   remapIds@ map.free
   remapLabels@ map.free
 end
