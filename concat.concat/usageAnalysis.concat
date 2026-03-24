@@ -39,6 +39,7 @@ namespace: VariableUse
 end
 union(
   _ : Arg
+  _ : Read
   VariableUse : Use
   ( VariableUse VariableUse ) : Use2
   ( VariableUse VariableUse VariableUse ) : Use3
@@ -54,11 +55,37 @@ namespace: VariableUses
   proc( LocalLabelId -> VariableUses ) =>: label
     VariableUse.label VariableUses .Use
   end
+  proc( type : auto: C VariableUses ( VariableUse C -> ) ptr : f C : context -> ) =>: forEach
+    switch
+      Arg Read case return
+      Use .case context f () return
+      Use2 .case
+          $ .0 context f ()
+        .1 context f ()
+      return
+      Use3 .case
+          $ .0 context f ()
+          $ .1 context f ()
+        .2 context f ()
+      return
+      Uses .case for context f () end return
+    end
+  end
+end
+struct(
+  VariableUses : uses
+  NameId : name
+) =:: VariableUseInfo
+namespace: VariableUseInfo
+ ( VariableUseInfo : a VariableUseInfo : b -> i32 ) =>: cmp
+   a .name b .name NameId.cmp
+ end
 end
 
 struct(
   ProgramContext ptr.mut : program
   NameId VariableUses hashMap : variableUses
+  LocalLabelId VariableUseInfo list hashMap : localVariableUses
   VariableInfo list : variables
   FileId : currentFile
   i32 : inlineCount
@@ -256,7 +283,27 @@ proc(
         idInfo .nameId
         index VariableUses.read
       map.put .if =:: prevUses
-        ## TODO mark all preceding labels/reads/writes as read
+        ( ConverterContext ptr.mut : shadow: context NameId : nameId ) =:: Curry
+        ## mark all preceding labels as read
+        prevUses ( VariableUse : use Curry : curry -> ) =>
+          use VariableUse.isLabel if
+            curry .context .localVariableUses
+              use VariableUse.getLabel
+            map.at .if =:: varInfo
+              VariableUses .Read curry .nameId VariableUseInfo new =:: newUse
+              varInfo [] list.asSlice
+                newUse
+                VariableUseInfo.cmp@
+              slice.binarySearch switch
+                Match .case newUse varInfo [] >>$ =[] break
+                Missing .case
+                  varInfo [] newUse >>$ list.insert varInfo =[]
+                break
+              end
+            end
+          end
+        end context idInfo .nameId Curry new VariableUses.forEach
+        prevUses .Uses .if list.free ..drop else ..drop end
       end
     break
     SetId .case =:: idInfo
@@ -328,6 +375,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   ## ConverterContext
     program
     NameId.hash@ NameId.eq@ 1024 VariableUses map.create
+    LocalLabelId.hash@ LocalLabelId.eq@ 1024 VariableUseInfo list map.create
     VariableInfo list.empty
     -1:FileId
     0
