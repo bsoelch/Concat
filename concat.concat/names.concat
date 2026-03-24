@@ -57,6 +57,7 @@ namespace: id
   0x8000:IdentifierFlag =:: export: FLAG_MERGEABLE
   0x10000:IdentifierFlag =:: export: FLAG_IGNORE_UNUSED
   0x20000:IdentifierFlag =:: export: FLAG_NO_WRAP
+  0x40000:IdentifierFlag =:: export: FLAG_HAS_POINTER
 
  ## 0x20000000:IdentifierFlag FLAG_IGNORE_UNUSED | =:: export: FLAG_LIB_FILE ## in library file
   0x20010000:IdentifierFlag =:: export: FLAG_LIB_FILE ## XXX temporary until renamed built-ins are supported

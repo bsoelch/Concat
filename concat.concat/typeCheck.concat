@@ -2943,6 +2943,7 @@ proc(
         pushTypes
         continue.opLoop
       AtId .case =:: idInfo
+        idInfo .nameId id.FLAG_HAS_POINTER nameContext id.addIdentifierFlags
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ITR_VAR ARGUMENT case
             idInfo .nameId =:: nameId

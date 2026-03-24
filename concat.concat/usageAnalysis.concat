@@ -4,11 +4,65 @@ import "program.concat"
 import "branchTree.concat"
 using id.IdentifierFlag
 
+
+iSize =:: VariableUse ## use low two bits for type (Read,Write,Label) and remaining bits for location
+namespace: VariableUse
+  2:iSize =:: TAG_BITS
+  0:iSize =:: TYPE_READ
+  1:iSize =:: TYPE_WRITE
+  2:iSize =:: TYPE_LABEL
+  3:iSize =:: TYPE_MASK
+  proc( iSize -> VariableUse ) =>: read
+    TAG_BITS << TYPE_READ | VariableUse cast
+  end
+  proc( iSize -> VariableUse ) =>: write
+    TAG_BITS << TYPE_WRITE | VariableUse cast
+  end
+  proc( LocalLabelId -> VariableUse ) =>: label
+    iSize cast TAG_BITS << TYPE_LABEL | VariableUse cast
+  end
+  proc( VariableUse -> bool ) =>: isRead
+    iSize cast TYPE_MASK & TYPE_READ ==
+  end
+  proc( VariableUse -> bool ) =>: isWrite
+    iSize cast TYPE_MASK & TYPE_WRITE ==
+  end
+  proc( VariableUse -> bool ) =>: isLabel
+    iSize cast TYPE_MASK & TYPE_LABEL ==
+  end
+  proc( VariableUse -> iSize ) =>: getLoc
+    iSize cast TAG_BITS >>>
+  end
+  proc( VariableUse -> LocalLabelId ) =>: getLabel
+    iSize cast TAG_BITS >>> LocalLabelId cast
+  end
+end
+union(
+  _ : Arg
+  VariableUse : Use
+  ( VariableUse VariableUse ) : Use2
+  ( VariableUse VariableUse VariableUse ) : Use3
+  VariableUse list : Uses
+) =:: VariableUses
+namespace: VariableUses
+  proc( iSize -> VariableUses ) =>: read
+    VariableUse.read VariableUses .Use
+  end
+  proc( iSize -> VariableUses ) =>: write
+    VariableUse.write VariableUses .Use
+  end
+  proc( LocalLabelId -> VariableUses ) =>: label
+    VariableUse.label VariableUses .Use
+  end
+end
+
 struct(
   ProgramContext ptr.mut : program
+  NameId VariableUses hashMap : variableUses
   VariableInfo list : variables
-  FileId : mut: currentFile
-  i32 : mut: inlineCount
+  FileId : currentFile
+  i32 : inlineCount
+  bool : reachable
 ) =:: ConverterContext
 
 proc(
@@ -186,15 +240,56 @@ proc(
   newOps op list.append return ## nothing to change
 end
 proc(
-  Operation : op
+  Operation slice.mut : ops
+  iSize : index
   ConverterContext ptr.mut : context
 -> ) =>: analizeOp
-  op switch
-    GetId case break
-    SetId case break
-    AtId case break
-    LocalJump case break
-    LocalLabel case break
+  ops index [] =:: op
+  op .val switch
+    ImplementProcedure case
+      ## TODO initialize argument variables
+      true context .reachable=
+    break
+    GetId .case =:: idInfo
+      ## TODO check if var is uninitialized
+      context .variableUses
+        idInfo .nameId
+        index VariableUses.read
+      map.put .if =:: prevUses
+        ## TODO mark all preceding labels/reads/writes as read
+      end
+    break
+    SetId .case =:: idInfo
+      ## TODO check if var is writable or uninitialized
+      context .variableUses
+        idInfo .nameId
+        index VariableUses.write
+      map.put .if =:: prevUses
+        ## TODO mark preceeding reads/writes as unread
+      end
+    break
+    LocalJump .case =:: jumpInfo
+      ## TODO merge current state into label state
+      jumpInfo .cmpType .NONE if
+        false context .reachable=
+      end
+    break
+    LocalLabel .case =:: labelInfo
+      labelInfo .labelType switch
+        HINT_START HINT_END case return
+        LABEL_START LABEL_MIDDLE LABEL_END case break
+      end
+      context [] .reachable if
+        context .variableUses map.atItr for =:: nameId =:: useInfo
+          ## TODO add current var-uses to label (recursively taversing dependent labels)
+          labelInfo .labelId VariableUses.label useInfo =[]
+        end
+      else
+        true context .reachable=
+        ## TODO reset to state at label (error if label has not been reached yet)
+      end
+    break
+    default break
   end
 end
 
@@ -208,9 +303,10 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
+  context [] .variables =:: oldVars
   variables [] context .variables=
-  oldOps for
-    context analizeOp
+  oldOps .length for =:: index
+    oldOps index context analizeOp
   end
   tmpOps []
     $ .length 0 == "tmp-ops are empty" assert
@@ -218,9 +314,10 @@ proc(
       context filterOp
     end
     $ list.asSlice slice.copy =:: newCode
-    oldOps slice.free oldOps=
   tmpOps =[]
   context [] .variables variables =[]
+  oldVars context .variables=
+  oldOps slice.free ..drop
   newCode
 end
 
@@ -230,9 +327,11 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   typeContext .nameContext =:: nameContext
   ## ConverterContext
     program
-    128 VariableInfo list.create
+    NameId.hash@ NameId.eq@ 1024 VariableUses map.create
+    VariableInfo list.empty
     -1:FileId
     0
+    false
   ConverterContext new =:: mut: contextData
   ## sort procs to ensure inlinable procs are before non-inlinable procs
   ## TODO: precompute for each proc if it should be inlined
@@ -249,19 +348,21 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   end list.sort
   ## TODO 2 passes for each proc
   ## pass 1
-  ## * mark writes that are never read
-  ## * mark last read before overwrite
-  ## ? detect stack values that are never read (? only if optimizations are enabled)
+  ## [ ] mark writes that are never read
+  ## [ ] mark last direct read before write
+  ## [ ] detect unconditional jump directly after label(s) -> can replace jump to label with jumpto target
   ## pass 2
   ## [*] inlining
   ## [ ] remove unused writes
-  ## [ ] merged aliased local variables
-  ## [ ] second round of constant folding
-  ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
+  ## [ ] update chain jumps, remove chain labels
   ## afterwards:
   ## * discard procs that are always inlined
   ## TODO -> seperate compilation phase for copy-analysis
   ## * insert 'copy' operations for composites
+  ## * second round of constant folding
+  ## * merged aliased local variables
+  ## ? detect stack values that are never read (? only if optimizations are enabled)
+  ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
   ## ? borrow-checking
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
