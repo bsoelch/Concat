@@ -397,7 +397,7 @@ namespace: list
     a index checkIndex
     a
       $ .length 1:iSize + ensureCap
-      $ .data index 1:iSize + + $1 .data index + $2 .length index - mem.move ..drop
+      $ .data index 1:iSize + @[] $1 .data index @[] $2 .length index - mem.move ..drop
       elt $1 .data index =[]
       $ .length 1:iSize + >$ .length=
     return
