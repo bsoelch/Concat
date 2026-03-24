@@ -88,7 +88,7 @@ proc(
   NameId.hash@ NameId.eq@ 64 IdentifierInfo map.create =:: mut: remapIds ## TODO? store in context
   LocalLabelId.hash@ LocalLabelId.eq@ 64 LocalLabelId map.create =:: mut: remapLabels
   program program.nextLocalLabel =:: procEnd
-  procEnd LocalLabelType .HINT_START pos opLabel context analizeOp
+  procEnd LocalLabelType .HINT_START pos opLabel context filterOp
   procOps 0 [] .dataType =:: procType
   procType typeContext types.getProcIn optional.unwrap =:: inTypes
   0 =:: mut: offset
@@ -102,10 +102,10 @@ proc(
     else argName nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
       offset 0 != if
         ## rotate named argument to top
-        offset StackModType .ROTATE pos opStackMod context analizeOp
+        offset StackModType .ROTATE pos opStackMod context filterOp
       end
       eltType argName nameContext id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
-      eltType tmpId pos opInitializeId context analizeOp
+      eltType tmpId pos opInitializeId context filterOp
       remapIds@ argName tmpId map.put optional.isEmpty "identifier-value only reassigned once" assert
     end
   finally i 1 - end ..drop
@@ -114,7 +114,7 @@ proc(
     $ last [] .val .Return ? if last >$ .length= end ## ignore return at end of proc
   for =:: mut: op
     op .val .Return ? if
-      procEnd 0:JumpDistance CompareType .NONE op .pos opJump context analizeOp
+      procEnd 0:JumpDistance CompareType .NONE op .pos opJump context filterOp
       continue
     else op .val .GetId ._if .nameId =:: nameId
       remapIds@ nameId map.get .if op@ .val .GetId= end
@@ -133,9 +133,9 @@ proc(
         remapLabels@ label $2 map.put ..drop
       end op@ .val .LocalLabel .if .labelId =[] else ..drop.2 end
     else ..drop end
-    op context analizeOp
+    op context filterOp
   end
-  procEnd LocalLabelType .LABEL_END pos opLabel context analizeOp
+  procEnd LocalLabelType .LABEL_END pos opLabel context filterOp
   remapIds@ map.free
   remapLabels@ map.free
 end
@@ -144,7 +144,7 @@ proc(
   Operation list : newOps
   Operation : mut: op
   ConverterContext ptr.mut : context
--> Operation list ) =>: analizeOp
+-> Operation list ) =>: filterOp
   context [] .program =:: program
   program .errors =:: errors
   program .idContext =:: idContext
@@ -176,13 +176,12 @@ proc(
   newOps op list.append return ## nothing to change
 end
 proc(
-  Operation : mut: op
+  Operation : op
   ConverterContext ptr.mut : context
--> bool ) =>: filterOp
-  true
+-> ) =>: analizeOp
+
 end
 
-## TODO move inlining and variable detection to usage analysis phase
 proc(
   Operation slice.mut : mut: oldOps
   Operation list ptr.mut : tmpOps
@@ -194,11 +193,12 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   variables [] context .variables=
+  oldOps for
+    context analizeOp
+  end
   tmpOps []
     $ .length 0 == "tmp-ops are empty" assert
     oldOps for
-      context analizeOp
-    end list.filter for
       context filterOp
     end
     $ list.asSlice slice.copy =:: newCode
@@ -240,8 +240,10 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   ## pass 2
   ## * delete unused labels
   ## * remove unused writes
-  ## * remove procs that are always inlined
+  ## * inlining
   ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
+  ## afterwards:
+  ## * discard procs that are always inlined
   ## TODO -> seperate compilation phase for copy-analysis
   ## * insert 'copy' operations for composites
   ## ? 2nd round of constant folding for procs that contain inlined code
