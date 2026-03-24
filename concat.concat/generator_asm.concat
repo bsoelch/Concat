@@ -850,7 +850,7 @@ proc(
       targetState .cachedVars slice.freeze
         nameId VariableCacheLocation .None CachedVariable new
         CachedVariable.cmp@
-      slice.binarySearch .else
+      slice.binarySearch .Match .else ..drop
         TypedValue optional.empty return
       end targetState .cachedVars >$ [] .location =:: varLocation
       varLocation switch

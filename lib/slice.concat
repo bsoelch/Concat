@@ -321,47 +321,51 @@ namespace: slice
   -> bool ) =>: export: containsEq
     elts elt fEq indexOfEq ? return
   end
+  union(
+    iSize : Match
+    iSize : Missing
+  ) =:: export: SearchResult
   ## expects sorted slice
   proc(
     type : auto: T
     T slice : elts
     T : elt
-  -> iSize optional ) =>: export: binarySearchC
-    0:iSize =:: mut: head
-    elts .length 1 - =:: mut: tail
-    while head tail u<= do
-      head tail head - 2 / + =:: mid
-      elts .data mid [] elt <=> =:: c
-      c 0 == if
-        mid optional.wrap return
-      else c 0 < _if
-        mid 1 + mid=
-      else
-        mid 1 - tail=
-      end
-    end
-    iSize optional.empty return
-  end
-  proc(
-    type : auto: T
-    T slice : elts
-    T : elt
-    ( T T -> i32 ) ptr : f
-  -> iSize optional ) =>: export: binarySearchF
+  -> SearchResult ) =>: export: binarySearchC
     0:iSize =:: mut: l
-    elts .length 1 - =:: mut: shadow: r
+    elts .length 1 - =:: mut: r
     while l r u<= do
       l r l - 2 / + =:: mid
-      elts .data mid [] elt f () =:: c
+      elts .data mid [] elt <=> =:: c
       c 0 == if
-        mid optional.wrap return
+        mid SearchResult .Match return
       else c 0 < _if
         mid 1 + l=
       else
         mid 1 - r=
       end
     end
-    iSize optional.empty return
+    r SearchResult .Missing return
+  end
+  proc(
+    type : auto: T
+    T slice : elts
+    T : elt
+    ( T T -> i32 ) ptr : f
+  -> SearchResult ) =>: export: binarySearchF
+    0:iSize =:: mut: l
+    elts .length 1 - =:: mut: shadow: r
+    while l r u<= do
+      l r l - 2 / + =:: mid
+      elts .data mid [] elt f () =:: c
+      c 0 == if
+        mid SearchResult .Match return
+      else c 0 < _if
+        mid 1 + l=
+      else
+        mid 1 - r=
+      end
+    end
+    r SearchResult .Missing return
   end
   overload: export: binarySearch binarySearchC binarySearchF end
 
