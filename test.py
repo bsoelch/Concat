@@ -142,19 +142,20 @@ def main():
   subprocess.run(["clear"])
   parser = argparse.ArgumentParser(description="Concat Compiler Test")
   parser.add_argument('-X', action='store_true', help='Use developement version of compiler')
-  parser.add_argument('-XX', action='store_true', help='Run test code with `-X` flag (enables `-X`)')
   parser.add_argument('--full', '-full', action='store_true', help='Include examples')
   parser.add_argument('-j', type=int, help='Number of threads, should be followed by a number', default=None)
+  parser.add_argument('-cctArg', nargs=1, action = 'append', help='Add argument to concat compiler, can occur more than once', default=None)
   args, unknown = parser.parse_known_args()
   # Determine behavior based on flags
   concatPath = CURRENT_DIR + "/concat"
-  cctFlags = []
-  if args.XX:
-    concatPath = CURRENT_DIR + "/concatX"
-    cctFlags.append("-X")
-  elif args.X:
+  if args.X:
     concatPath = CURRENT_DIR + "/concatX"
     print("running tests on development version of compiler")
+  if args.cctArg:
+    cctFlags = [arg for [arg] in args.cctArg]
+    print(f"running with arguments: {','.join((map(repr,cctFlags)))}")
+  else:
+    cctFlags = []
   thread_count = args.j
   if thread_count is not None:
     print(f"running asynchronously on {thread_count} threads")
