@@ -162,6 +162,7 @@ union(
              ProcId : ProcPtr
              string : GetNamedElt
              string : SetNamedElt
+             string : SetNestedNamedElt
              string : ExistsNamedElt
                 i32 : GetElement
                 i32 : GetUnionElement
@@ -294,6 +295,9 @@ proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opGetNamed
 end
 proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opSetNamedElt
   pos name OpValue .SetNamedElt Type .Undefined Operation new return
+end
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opSetNestedNamedElt
+  pos name OpValue .SetNestedNamedElt Type .Undefined Operation new return
 end
 proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opExistsNamedElt
   pos name OpValue .ExistsNamedElt Type .Undefined Operation new return
@@ -925,6 +929,12 @@ namespace: sb
       break
       SetNamedElt .case =:: name
         "set element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name sb.appendStr
+      break
+      SetNestedNamedElt .case =:: name
+        "set nested element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         name sb.appendStr

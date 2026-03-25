@@ -305,7 +305,7 @@ proc(
       newOps return
     ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
-    GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
+    GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName SetNestedNamedElt
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
       break ## XXX error message
   end

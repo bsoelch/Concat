@@ -1843,7 +1843,7 @@ proc(
       end
       break
     Import LibImport GetNamedElt SetNamedElt ExistsNamedElt
-    NewUnionReference CallPtr GetUnionTag
+    NewUnionReference CallPtr GetUnionTag SetNestedNamedElt
     ImplementProcedure ProcPtr
     ConstantReference NewReference
     NestedProc Splat case break

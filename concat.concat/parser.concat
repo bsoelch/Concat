@@ -773,7 +773,7 @@ proc(
             $ "@":s string.endsWith if
               $ .length 1:iSize - string.head
             end
-          nameContext id.copyString
+          nameContext id.copyString ## TODO? support nested element access
             literalStart
             isElement if opExistsNamedElt else opExistsName end
           state appendOp
@@ -859,13 +859,20 @@ proc(
 end
 proc( string : eltName bool : isWrite FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: parseElementAccess
   eltName state [] .program .idContext .typeContext .nameContext id.copyString
+    while '.' string.split $1 .length 0 != do
+      pos
+      isWrite if
+        opSetNestedNamedElt state appendOp
+      else
+        opGetNamedElt state appendOp
+      end
+    end >$ ..drop
     pos
-    isWrite if
-      opSetNamedElt
-    else
-      opGetNamedElt
-    end
-  state appendOp
+  isWrite if
+    opSetNamedElt state appendOp
+  else
+    opGetNamedElt state appendOp
+  end
 end
 proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendItrStep
   state [] .program .idContext =:: idContext

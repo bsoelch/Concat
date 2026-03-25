@@ -488,7 +488,7 @@ proc(
     ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
-    SetNamedElt Length TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
+    SetNamedElt SetNestedNamedElt Length TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
       "unsupported operation " sb.copyPtr
         op program sb.appendOp
       op .pos errors appendError
