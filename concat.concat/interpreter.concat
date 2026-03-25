@@ -1275,9 +1275,6 @@ proc(
       break
     SetId .case =:: idInfo
       idInfo .nameId =:: nameId
-      nameId
-        nameContext id.identifierFlags id.FLAG_MUTABLE & ?
-      "setId only created for mutable identifiers" assert
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp

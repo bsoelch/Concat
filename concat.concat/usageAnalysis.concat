@@ -365,7 +365,7 @@ proc(
         ## mark all preceding labels/reads/writes as read
         prevUses markVarAsRead@ context ops idInfo .nameId VarReadContext new VariableUses.forEach
         prevUses .Uses .if list.free ..drop else ..drop end
-      else
+      else idInfo .idType .GLOBAL_VAR ! and idInfo .nameId nameContext id.identifierFlags id.FLAG_HAS_POINTER & ? ! _if
         "read from uninitialized value: " sb.copyPtr
           idInfo nameContext sb.appendIdInfo
         op .pos errors appendWarning
