@@ -905,7 +905,9 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: app
   "..if.prepare":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifPrepare
   ifPrepare [] .valueType ifPrepare id.asIdInfo pos opGetId state appendOp
   pos nameContext newItrId =:: ifName
-  ifName pos opAutoTypedInitializeName state appendOp
+  0 StackModType .COPY pos opStackMod state appendOp
+  pos opTypeOf state appendOp
+  ifName pos opInitializeName state appendOp
   ifName nameContext id.getIdentifierName pos opGetName state appendOp
   "..if.check":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifCheck
   ifCheck [] .valueType ifCheck id.asIdInfo pos opGetId state appendOp
@@ -1094,7 +1096,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       "..itr.prepare":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrPrepare
       itrPrepare [] .valueType itrPrepare id.asIdInfo blockPos opGetId state appendOp
       blockPos idContext .typeContext .nameContext newItrId =:: itrId
-      itrId blockPos opAutoTypedInitializeName state appendOp
+      0 StackModType .COPY blockPos opStackMod state appendOp
+      blockPos opTypeOf state appendOp
+      itrId blockPos opInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockName blockPos opNamedBlock state appendOp
       itrId nameContext id.getIdentifierName blockPos opGetName state appendOp
@@ -1331,7 +1335,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       procImplName Type .Undefined state [] .currentFile ProcId optional.empty true procPos program newProcData =:: procId
       procId procPos opNestedProc state appendOp
       named if
-        procName procPos opAutoTypedInitializeName state appendOp
+        0 StackModType .COPY procPos opStackMod state appendOp
+        procPos opTypeOf state appendOp
+        procName procPos opInitializeName state appendOp
       end
       state [] .currentProcs procId list.append state .currentProcs=
       procPos state openProcBlock
@@ -1728,7 +1734,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "alias is only supported for procedure declarations" sb.copyPtr
         opPos errors appendError
       end
-      nameId opPos opAutoTypedInitializeName state appendOp
+      0 StackModType .COPY opPos opStackMod state appendOp
+      opPos opTypeOf state appendOp
+      nameId opPos opInitializeName state appendOp
       return
     else $ .length 1:iSize u> and $ 0 string.charAt '.' == and $ 1 string.charAt '.' != _if
       fileState program wordPos =:: opPos

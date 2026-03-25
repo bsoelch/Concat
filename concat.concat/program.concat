@@ -141,9 +141,6 @@ struct(
   ConstValue slice : autoArgs
 ) =:: export: ProcedureCallInfo
 
-enum( FIXED AUTO ) =:: InitType
-struct( NameId : nameId InitType : initType ) =:: export: NameInitInfo
-
 struct( NameId : baseName NameId : alias ) =:: export: NameAliasInfo
 
 ## TODO find& eliminate large entries, extract additional data to seperate storage
@@ -160,7 +157,6 @@ union(
      IdentifierInfo : SetId
      IdentifierInfo : AtId
      IdentifierInfo : InitializeId
-     IdentifierInfo : AutoTypedInitializeId
      IdentifierInfo : DeclareId
              ProcId : ImplementProcedure
              ProcId : ProcPtr
@@ -196,7 +192,7 @@ union(
              string : ExistsName
       NameAliasInfo : AliasName
              NameId : DeclareName
-       NameInitInfo : InitializeName
+             NameId : InitializeName
       NameAliasInfo : UsingNamespace
       NameAliasInfo : UsingIdentifier
              ProcId : TypeWith
@@ -271,9 +267,6 @@ proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation 
 end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opInitializeId
   pos idInfo OpValue .InitializeId opType Operation new return
-end
-proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opAutoTypedInitializeId
-  pos idInfo OpValue .AutoTypedInitializeId opType Operation new return
 end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opDeclareId
   pos idInfo OpValue .DeclareId opType Operation new return
@@ -378,16 +371,7 @@ proc( NameId : baseName NameId : nameAlias FilePosition ptr : pos -> Operation )
   pos baseName nameAlias NameAliasInfo new OpValue .AliasName Type .Undefined Operation new return
 end
 proc( NameId : id FilePosition ptr : pos  -> Operation ) =>: export: opInitializeName
-  pos
-    id InitType .FIXED NameInitInfo new OpValue .InitializeName
-    Type .Undefined
-  Operation new return
-end
-proc( NameId : id FilePosition ptr : pos  -> Operation ) =>: export: opAutoTypedInitializeName
-  pos
-    id InitType .AUTO NameInitInfo new OpValue .InitializeName
-    Type .Undefined
-  Operation new return
+  pos id OpValue .InitializeName Type .Undefined Operation new return
 end
 proc( NameId : src NameId : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingNamespace
   pos
@@ -924,12 +908,6 @@ namespace: sb
         procId ProcId.getProcInfo =:: procInfo
         procInfo [] .nameId nameContext sb.appendIdentifierPath
       break
-      AutoTypedInitializeId .case =:: id
-        "auto-typed initialize ( " sb.appendS
-        op .dataType  typeContext sb.appendType
-        " ) : " sb.appendS
-        id nameContext sb.appendIdInfo
-      break
       DeclareId .case =:: id
         "declare ( " sb.appendS
         op .dataType typeContext sb.appendType
@@ -1115,12 +1093,9 @@ namespace: sb
         aliasData .alias nameContext sb.appendIdentifierPath
         aliasData .baseName nameContext sb.appendIdentifierPath
       break
-      InitializeName .case =:: initInfo
-        initInfo .initType .AUTO if
-          "auto-typed " sb.appendS
-        end
+      InitializeName .case =:: initName
         "initialize name: " sb.appendS
-        initInfo .nameId nameContext sb.appendIdentifierPath
+        initName nameContext sb.appendIdentifierPath
       break
       UsingNamespace .case =:: usingNamespace
         "using namespace: " sb.appendS

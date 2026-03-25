@@ -466,7 +466,7 @@ proc(
         true >$ .hasPtr=
       else ..drop end
     break
-    AutoTypedInitializeId ConstantReference NewReference
+    ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
     SetNamedElt Length TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case

@@ -1330,7 +1330,7 @@ proc(
       procId
         op [] .dataType
       op [] .pos context interpreter.evaluateCall wrapResult return
-    InitializeId AutoTypedInitializeId .case =:: idInfo
+    InitializeId .case =:: idInfo
       idInfo .nameId =:: nameId
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr

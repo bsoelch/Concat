@@ -321,7 +321,7 @@ proc(
     break
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
-    AutoTypedInitializeId ConstantReference NewReference
+    ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case

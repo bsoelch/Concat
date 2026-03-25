@@ -3,6 +3,7 @@ not enough types for and/or-condition at ./tests/typeChecker/invalidOrCondition.
 could not find identifier: b at ./tests/typeChecker/invalidOrCondition.concat:3:8
 not enough types for and/or-condition at ./tests/typeChecker/invalidOrCondition.concat:3:10
 could not find identifier: c at ./tests/typeChecker/invalidOrCondition.concat:3:13
-missing type for declaration at ./tests/typeChecker/invalidOrCondition.concat:3:23
-missing type for declaration at ./tests/typeChecker/invalidOrCondition.concat:3:23
+stack underflow: need 1 values got 0 at ./tests/typeChecker/invalidOrCondition.concat:3:23
+missing argument for type-of at ./tests/typeChecker/invalidOrCondition.concat:3:23
+ at ./tests/typeChecker/invalidOrCondition.concat:3:23
 not enough types for initialization at ./tests/typeChecker/invalidOrCondition.concat:3:23

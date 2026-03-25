@@ -1340,23 +1340,9 @@ end
 
 proc(
   Operation ptr.mut : op
-  bool : autoTyped
   TypeCheckState ptr.mut : state
 -> ) =>: resolveDeclarationType
-  state [] .program .errors =:: errors
-  state [] .program .idContext .typeContext =:: typeContext
-  autoTyped if
-    state .stack branchTree.peek .else
-      "missing type for declaration" sb.copyPtr op [] .pos errors appendError
-      return
-    end [] .valueType
-    $ types.isLiteral if
-      typeContext types.literalToType
-    end
-  else
-    op [] .pos state popType
-  end =:: valType
-  valType op .dataType=
+  op [] .pos state popType op .dataType=
 end
 
 union(
@@ -2692,8 +2678,8 @@ proc(
     else .DeclareName ? or op .val .InitializeName ? _if
       op .val .InitializeName ? =:: isInit
       op .val .InitializeName .if =:: initName
-        op@ initName .initType .AUTO state resolveDeclarationType
-        initName .nameId
+        op@ state resolveDeclarationType
+        initName
       else .DeclareName ._else ..unreachable end
         state [] .blockMode .NONE ! if
           Type .Undefined
@@ -2728,8 +2714,6 @@ proc(
       op .dataType idData@ id.asIdInfo op .pos
       isInit ! if
         opDeclareId
-      else op .val .InitializeName .and .initType .AUTO _if
-        opAutoTypedInitializeId
       else
         opInitializeId
       end op=
@@ -3134,7 +3118,7 @@ proc(
           end
         end
         op .dataType .Undefined ? if
-          op@ false state resolveDeclarationType
+          op@ state resolveDeclarationType
         end
         idInfo .idType switch
           PROCEDURE case
@@ -3194,12 +3178,10 @@ proc(
           continue.opLoop
         end
         break
-      InitializeId AutoTypedInitializeId .case =:: idInfo
-        op .val .AutoTypedInitializeId ? =:: autoTyped
-        op .dataType .Undefined ? if
-          op@ autoTyped state resolveDeclarationType
+      InitializeId .case =:: idInfo
+        op .dataType .Undefined ? if ## is this ever false
+          op@ state resolveDeclarationType
         end
-        idInfo op@ .val .InitializeId= ## auto-typed initializations have been resolved
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR ITR_VAR PROCEDURE TYPE case
             state .stack branchTree.peek .if
