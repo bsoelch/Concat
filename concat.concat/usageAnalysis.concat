@@ -354,7 +354,6 @@ proc(
     break
     GetId .case =:: idInfo
       ops index @[] .val .GetId .if true >$ .noRead= else ..unreachable end
-      ## TODO check if var is uninitialized
       context .variableUses
         idInfo .nameId
         index VariableUses.read
@@ -362,6 +361,10 @@ proc(
         ## mark all preceding labels/reads/writes as read
         prevUses markVarAsRead@ context ops idInfo .nameId VarReadContext new VariableUses.forEach
         prevUses .Uses .if list.free ..drop else ..drop end
+      else _EXPERIMENTAL_ _if
+        "read from uninitialized value: " sb.copyPtr
+          idInfo nameContext sb.appendIdInfo
+        op .pos errors appendWarning
       end
       ## FIXME! ensure variable is marked as read in ALL labels after previous write (that can be targets of back-jumps)
     break
