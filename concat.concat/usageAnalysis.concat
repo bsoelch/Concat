@@ -3,7 +3,7 @@ import arenaAlloc
 import "program.concat"
 import "branchTree.concat"
 using id.IdentifierFlag
-
+using std.literals.
 
 iSize =:: VariableUse ## use low two bits for type (Read,Write,Label) and remaining bits for location
 namespace: VariableUse
@@ -358,6 +358,7 @@ proc(
     break
     GetId .case =:: idInfo
       ops index @[] .val .GetId .if true >$ .noRead= else ..unreachable end
+      idInfo .nameId id.FLAG_IS_READ nameContext id.addIdentifierFlags
       context .variableUses
         idInfo .nameId
         index VariableUses.read
@@ -374,6 +375,7 @@ proc(
     break
     SetId .case =:: idInfo
       ops index @[] .val .SetId .if true >$ .noRead= else ..unreachable end
+      idInfo .nameId id.FLAG_IS_WRITTEN nameContext id.addIdentifierFlags
       context .variableUses
         idInfo .nameId
         index VariableUses.write
@@ -461,6 +463,23 @@ proc(
       procId ProcId.getProcInfo .implementation .BuiltIn .if
         true >$ .hasPtr=
       else ..drop end
+    break
+    DeclareId .case =:: idInfo
+      idInfo .nameId nameContext id.identifierFlags =:: flags
+      _EXPERIMENTAL_ if
+      flags id.FLAG_IS_READ id.FLAG_HAS_POINTER | & ? ! if
+        256 sb.create
+          "variable is never read: ":s sb.appendStr
+          idInfo nameContext sb.appendIdInfo
+        op .pos errors appendWarning
+      end
+      flags id.FLAG_MUTABLE & ? and flags id.FLAG_IS_WRITTEN id.FLAG_HAS_POINTER | & ? ! if
+        256 sb.create
+          "mutable variable is never written to: ":s sb.appendStr
+          idInfo nameContext sb.appendIdInfo
+        op .pos errors appendWarning
+      end
+      end
     break
     ConstantReference NewReference
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier
