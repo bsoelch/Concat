@@ -1841,7 +1841,7 @@ namespace: typeChecker
       pos
       typeChecker
     typeCheckCallStackless =:: result
-    ## generated type has been initiliaized during evaluation
+    ## generated type has been initialized during evaluation
     ## findGeneratedType
       generatorBaseName
       args
@@ -3259,6 +3259,11 @@ proc(
                 continue.opLoop
               end
             end
+            _EXPERIMENTAL_ if
+              idInfo op@ .val .DeclareId=
+              op state appendOp ..drop
+              idInfo op@ .val .SetId=
+            end
             op state appendOp ..drop
             continue.opLoop
           PROCEDURE_BUNDLE LABEL ARGUMENT TMP_VAR case
@@ -4114,7 +4119,12 @@ proc(
               ## TODO? only create tmp-var if switch uses `.case`
               0 StackModType .COPY op .pos opStackMod state appendOp ..drop
               switchType id.FLAG_NONE op .pos idContext id.newTmpVar =:: tmpVar
-              switchType tmpVar op .pos opInitializeId state appendOp ..drop
+              _EXPERIMENTAL_ if
+                switchType tmpVar op .pos opDeclareId state appendOp ..drop
+                switchType tmpVar op .pos opSetId state appendOp ..drop
+              else
+                switchType tmpVar op .pos opInitializeId state appendOp ..drop
+              end
               tmpVar optional.wrap
             else
               IdentifierInfo optional.empty

@@ -262,6 +262,9 @@ end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opGetId
   pos idInfo OpValue .GetId opType Operation new return
 end
+proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opSetId
+  pos idInfo OpValue .SetId opType Operation new return
+end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opAtId
   pos idInfo OpValue .AtId opType Operation new return
 end

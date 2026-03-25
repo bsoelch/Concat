@@ -379,8 +379,8 @@ proc(
         index VariableUses.write
       map.put .if
         .Uses .if list.free ..drop else ..drop end
-        ## check is var is writeable
-        idInfo .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? ! if
+        ## check is local var is writeable
+        idInfo .idType .LOCAL_VAR and idInfo .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? ! if
           256 sb.create
             idInfo nameContext sb.appendIdInfo
             " is not mutable" sb.appendS
