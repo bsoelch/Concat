@@ -361,7 +361,7 @@ proc(
         ## mark all preceding labels/reads/writes as read
         prevUses markVarAsRead@ context ops idInfo .nameId VarReadContext new VariableUses.forEach
         prevUses .Uses .if list.free ..drop else ..drop end
-      else _EXPERIMENTAL_ _if
+      else
         "read from uninitialized value: " sb.copyPtr
           idInfo nameContext sb.appendIdInfo
         op .pos errors appendWarning
@@ -405,6 +405,7 @@ proc(
         false context .reachable=
       end
     break
+    ## TODO? mark as unreachable&cleanup uses after return
     LocalLabel .case =:: labelInfo
       labelInfo .labelType switch
         HINT_START HINT_END case return
@@ -477,9 +478,15 @@ proc(
   typeContext .nameContext =:: nameContext
   context [] .variables =:: oldVars
   variables [] context .variables=
-  oldOps .length for =:: index
-    oldOps index context analizeOp
+  _EXPERIMENTAL_ if
+    oldOps .length for =:: index
+      oldOps index context analizeOp
+    end
+    context .variableUses
+      $ for ..drop .Uses .if list.free ..drop else ..drop end end
+    map.clear
   end
+  ## TODO? free local variable uses
   tmpOps []
     $ .length 0 == "tmp-ops are empty" assert
     oldOps for
