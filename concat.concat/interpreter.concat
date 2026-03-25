@@ -1400,7 +1400,8 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    AtName SetName DeclareName AliasName InitializeName UsingNamespace UsingIdentifier TypeWith TypeModifier TypeOf case
+    AtName SetName DeclareName AliasName InitializeName UsingNamespace UsingIdentifier
+        TypeWith TypeModifier TypeOf Length case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp
@@ -1707,29 +1708,6 @@ proc(
         WARNING case appendWarning break
         INFO case appendInfo break
       end
-      EvalResult .Ok return
-    Length case ## TODO? is this reachable?
-      op [] .pos context popValue if ..drop.2
-        EvalResult .Error return
-      end =:: value =:: valInfo
-      ## sizeOfValue
-        valInfo .valueType
-        value
-        op [] .pos
-        program
-      interpreter.sizeOfValue if ..drop.2
-        "could not compute size: " sb.copyPtr
-          op [] program sb.appendOp
-        op [] .pos errors appendError
-        value valInfo context unpopValue
-        EvalResult .Error return
-      end =:: constVal =:: constType
-      ## pushValue
-        constVal
-        constType
-        op [] .pos
-        context
-      pushValue
       EvalResult .Ok return
     RawValue case
       op [] .pos context popValue if ..drop.2
