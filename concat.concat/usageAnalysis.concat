@@ -137,8 +137,8 @@ proc(
     varType nameId VariableType .TMP_VAR VariableInfo new list.append
   context .variables=
   ## IdInfo
-    IdentifierType .TMP_VAR
     nameId
+    IdentifierType .TMP_VAR false
   IdentifierInfo new return
 end
 proc(
@@ -239,6 +239,34 @@ proc(
   remapLabels@ map.free
 end
 
+struct( ConverterContext ptr.mut : shadow: context Operation slice.mut : shadow: ops NameId : nameId ) =:: VarReadContext
+proc( VariableUse : use VarReadContext : curry -> ) =>: markVarAsRead
+  use VariableUse.asLabel .if =:: useLabel
+    curry .context .labelVariableUses
+      useLabel
+    map.at .if =:: varInfo
+      VariableUses .Read curry .nameId VariableUseInfo new =:: newUse
+      varInfo [] list.asSlice
+        newUse
+        VariableUseInfo.cmp@
+      slice.binarySearch switch
+        Match .case varInfo [] >$ @[] =:: oldUse
+          oldUse [] .uses markVarAsRead@ curry VariableUses.forEach
+          oldUse .uses [] .Uses .if list.free ..drop else ..drop end
+          newUse oldUse =[]
+        break
+        Missing .case
+          varInfo [] newUse >>$ list.insert varInfo =[]
+        break
+      end
+    end
+  else use VariableUse.asRead ._if =:: readIndex
+    curry .ops readIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
+  else use VariableUse.asWrite ._if =:: writeIndex
+    curry .ops writeIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
+  end
+end
+
 proc(
   Operation slice.mut : ops
   iSize : index
@@ -256,39 +284,19 @@ proc(
       true context .reachable=
     break
     GetId .case =:: idInfo
+      ops index @[] .val .GetId .if true >$ .noRead= else ..unreachable end
       ## TODO check if var is uninitialized
       context .variableUses
         idInfo .nameId
         index VariableUses.read
       map.put .if =:: prevUses
-        ( ConverterContext ptr.mut : shadow: context NameId : nameId ) =:: Curry
-        ## mark all preceding labels as read
-        prevUses ( VariableUse : use Curry : curry -> ) =>
-          use VariableUse.asLabel .if =:: useLabel
-            curry .context .labelVariableUses
-              useLabel
-            map.at .if =:: varInfo
-              VariableUses .Read curry .nameId VariableUseInfo new =:: newUse
-              varInfo [] list.asSlice
-                newUse
-                VariableUseInfo.cmp@
-              slice.binarySearch switch
-                Match .case newUse varInfo [] >>$ =[] break
-                Missing .case
-                  varInfo [] newUse >>$ list.insert varInfo =[]
-                break
-              end
-            end
-          else use VariableUse.asRead ._if =:: readIndex
-            ## TODO mark read as reused
-          else use VariableUse.asWrite ._if =:: writeIndex
-            ## TODO mark write as used
-          end
-        end context idInfo .nameId Curry new VariableUses.forEach
+        ## mark all preceding labels/reads/writes as read
+        prevUses markVarAsRead@ context ops idInfo .nameId VarReadContext new VariableUses.forEach
         prevUses .Uses .if list.free ..drop else ..drop end
       end
     break
     SetId .case =:: idInfo
+      ops index @[] .val .SetId .if true >$ .noRead= else ..unreachable end
       context .variableUses
         idInfo .nameId
         index VariableUses.write
@@ -323,7 +331,15 @@ proc(
             labelUseInfo [] >$ @[] =:: labelUses
             labelUses .uses switch
               Read case
-                ## TODO mark all current uses as read
+                ( Operation slice.mut : shadow: ops ) =:: Curry
+                ## var read after label -> mark all new uses for label as read
+                uses ( VariableUse : use Curry : curry -> ) =>
+                  use VariableUse.asRead .if =:: readIndex
+                    curry .ops readIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
+                  else use VariableUse.asWrite ._if =:: writeIndex
+                    curry .ops writeIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
+                  end
+                end ops Curry new VariableUses.forEach
               break.labelMatch
               Arg case
                 currentUses
@@ -347,11 +363,7 @@ proc(
             ( ConverterContext ptr.mut : shadow: context VariableUse list ptr.mut : shadow: useList ) =:: Curry
             ## mark all preceding labels as read
             uses ( VariableUse : use Curry : curry -> ) =>
-              use VariableUse.asLabel .if =:: labelUse
-                ## TODO add all uses of label to uses
-              else
-                curry .useList [] use list.append curry .useList =[]
-              end
+              curry .useList [] use list.append curry .useList =[]
             end context useList Curry new VariableUses.forEach
           break
           Missing .case

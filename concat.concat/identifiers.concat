@@ -32,8 +32,9 @@ struct(
   bool : declarationOnly
 ) =:: IdentifierData
 struct(
-  IdentifierType : idType
   NameId : nameId
+  IdentifierType : idType
+  bool : noRead
 ) =:: export: IdentifierInfo
 
 namespace: id
@@ -159,9 +160,7 @@ namespace: id
   end
 
   proc( IdentifierData ptr : idData -> IdentifierInfo ) =>: export: asIdInfo
-    idData [] .idType
-    idData [] .nameId
-    IdentifierInfo new return
+    idData [] .nameId idData [] .idType false IdentifierInfo new return
   end
 
   proc( Scope list ScopeId -> Scope ptr.mut ) =>: getScopeData
@@ -763,8 +762,8 @@ namespace: id
       pos
     context .typeContext .nameContext newIdentifier =:: label
     ## IdentifierInfo
-      IdentifierType .ITR_VAR
       label
+      IdentifierType .ITR_VAR false
     IdentifierInfo new =:: idInfo
     context .identifierData
       label
@@ -805,31 +804,31 @@ namespace: sb
     sb
     idType switch
       TYPE case
-        "type" sb.appendS
+        "type":s sb.appendStr
         return
       PROCEDURE case
-        "procedure" sb.appendS
+        "procedure":s sb.appendStr
         return
       PROCEDURE_BUNDLE case
-        "procedure bundle" sb.appendS
+        "procedure bundle":s sb.appendStr
         return
       GLOBAL_VAR case
-        "global variable" sb.appendS
+        "global variable":s sb.appendStr
         return
       LABEL case
-        "label " sb.appendS
+        "label ":s sb.appendStr
         return
       LOCAL_VAR case
-        "local variable" sb.appendS
+        "local variable":s sb.appendStr
         return
       ARGUMENT case
-        "procedure argument" sb.appendS
+        "procedure argument":s sb.appendStr
         return
       TMP_VAR case
-        "temporary variable" sb.appendS
+        "temporary variable":s sb.appendStr
         return
       ITR_VAR case
-        "iterator variable" sb.appendS
+        "iterator variable":s sb.appendStr
         return
     end
   end
@@ -837,65 +836,67 @@ namespace: sb
     sb
       id .nameId nameContext id.identifierFlags >$
         $1 id.FLAG_EXPORT & ? if
-          "export: " sb.appendS
+          "export: ":s sb.appendStr
         end
         $1 id.FLAG_EXTERN & ? if
-          "extern: " sb.appendS
+          "extern: ":s sb.appendStr
         end
         $1 id.FLAG_MUTABLE & ? if
-          "mutable: " sb.appendS
+          "mutable: ":s sb.appendStr
         end
         $1 id.FLAG_STATIC & ? if
-          "static: " sb.appendS
+          "static: ":s sb.appendStr
         end
       >$ ..drop
-      ## TODO print namespace
       id .idType switch
         TYPE case
-          "type \"" sb.appendS
+          "type \"":s sb.appendStr
           id .nameId nameContext sb.appendIdentifierPath
-          "\"" sb.appendS
+          "\"":s sb.appendStr
           return
         PROCEDURE case
-          "procedure \"" sb.appendS
+          "procedure \"":s sb.appendStr
           id .nameId nameContext sb.appendIdentifierPath
-          "\"" sb.appendS
+          "\"":s sb.appendStr
           return
         PROCEDURE_BUNDLE case
-          "procedure bundle  \"" sb.appendS
+          "procedure bundle  \"":s sb.appendStr
           id .nameId nameContext sb.appendIdentifierPath
-          "\"" sb.appendS
+          "\"":s sb.appendStr
           return
         GLOBAL_VAR case
-          "global variable \"" sb.appendS
+          "global variable \"":s sb.appendStr
           id .nameId nameContext sb.appendIdentifierPath
-          "\"" sb.appendS
+          "\"":s sb.appendStr
           return
         LABEL case
-          "label \"" sb.appendS
+          "label \"":s sb.appendStr
           id .nameId nameContext sb.appendIdentifierName
-          "\"" sb.appendS
+          "\"":s sb.appendStr
           return
         LOCAL_VAR case
-          "local variable: \"" sb.appendS
+          "local variable: \"":s sb.appendStr
           id .nameId nameContext sb.appendIdentifierName
-          "\"" sb.appendS
+          "\"":s sb.appendStr
           return
         ARGUMENT case
-          "procedure argument \"" sb.appendS
+          "procedure argument \"":s sb.appendStr
           id .nameId nameContext sb.appendIdentifierName
-          "\"" sb.appendS
+          "\"":s sb.appendStr
           return
         TMP_VAR case
-          "temporary variable \"" sb.appendS
+          "temporary variable \"":s sb.appendStr
           id .nameId nameContext sb.appendIdentifierName
-          "\"" sb.appendS
+          "\"":s sb.appendStr
           return
         ITR_VAR case
-          "iterator variable (" sb.appendS
+          "iterator variable (":s sb.appendStr
           id .nameId i64 cast sb.appendI
-          ")" sb.appendS
+          ")":s sb.appendStr
           return
+      end
+      id .noRead if
+        "no-read":s sb.appendStr
       end
   end
 end
