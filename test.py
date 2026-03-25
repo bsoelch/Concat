@@ -31,7 +31,7 @@ def runTest(fileName,filePath,*,cctFlags=None):
   except FileNotFoundError:
     args=[]
   try:
-    inFile=open(basePath+".in",mode="r")
+    inFile=open(basePath+".in",mode="rb")
   except FileNotFoundError:
     inFile=None
   outPath=basePath+".out2"
@@ -43,8 +43,8 @@ def runTest(fileName,filePath,*,cctFlags=None):
   try:
     os.remove(errPath)
   except FileNotFoundError:pass
-  outFile=open(outPath,mode="a+")
-  errFile=open(errPath,mode="a+")
+  outFile=open(outPath,mode="a+b")
+  errFile=open(errPath,mode="a+b")
   codePath=basePath
   retCode=(subprocess.run([
      concatPath,
@@ -61,20 +61,20 @@ def runTest(fileName,filePath,*,cctFlags=None):
     inFile.close()
   outFile.close()
   errFile.close()
-  with open(outPath,mode="r") as f:
+  with open(outPath,mode="rb") as f:
     progOut=f.read()
-  with open(errPath,mode="r") as f:
+  with open(errPath,mode="rb") as f:
     progErr=f.read()
   if os.path.isfile(basePath+".out"):
-    with open(basePath+".out",mode="r") as f:
+    with open(basePath+".out",mode="rb") as f:
       expectedProgOut=f.read()
   else:
-    expectedProgOut=""
+    expectedProgOut=b""
   if os.path.isfile(basePath+".err"):
-    with open(basePath+".err",mode="r") as f:
+    with open(basePath+".err",mode="rb") as f:
       expectedProgErr=f.read()
   else:
-    expectedProgErr=""
+    expectedProgErr=b""
   failedPath = None
   if progErr!=expectedProgErr:
     print(fileName+": FAILED (err)")
