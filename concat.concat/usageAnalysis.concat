@@ -405,7 +405,12 @@ proc(
         false context .reachable=
       end
     break
-    ## TODO? mark as unreachable&cleanup uses after return
+    Return case
+      context .variableUses
+        $ for ..drop .Uses .if list.free ..drop else ..drop end end
+      map.clear
+      false context .reachable=
+    break
     LocalLabel .case =:: labelInfo
       labelInfo .labelType switch
         HINT_START HINT_END case return
