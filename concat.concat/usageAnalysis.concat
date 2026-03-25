@@ -357,7 +357,9 @@ proc(
       true context .reachable=
     break
     GetId .case =:: idInfo
-      ops index @[] .val .GetId .if true >$ .noRead= else ..unreachable end
+      ops index @[] .val .GetId .if
+        idInfo .nameId nameContext id.identifierFlags id.FLAG_HAS_POINTER & ? ! >$ .noRead=
+      else ..unreachable end
       idInfo .nameId id.FLAG_IS_READ nameContext id.addIdentifierFlags
       context .variableUses
         idInfo .nameId
@@ -374,7 +376,9 @@ proc(
       ## FIXME! ensure variable is marked as read in ALL labels after previous write (that can be targets of back-jumps)
     break
     SetId .case =:: idInfo
-      ops index @[] .val .SetId .if true >$ .noRead= else ..unreachable end
+      ops index @[] .val .SetId .if
+        idInfo .nameId nameContext id.identifierFlags id.FLAG_HAS_POINTER & ? ! >$ .noRead=
+      else ..unreachable end
       idInfo .nameId id.FLAG_IS_WRITTEN nameContext id.addIdentifierFlags
       context .variableUses
         idInfo .nameId
