@@ -94,7 +94,6 @@ struct(
   ProgramContext ptr.mut : program
   NameId VariableUses hashMap : variableUses
   LocalLabelId VariableUseInfo list hashMap : labelVariableUses
-  VariableInfo list : variables
   FileId : currentFile
   i32 : inlineCount
   bool : reachable
@@ -133,9 +132,6 @@ proc(
     nameContext
   id.newIdentifier =:: nameId
   nameId varType pos idContext id.declareTmpVar
-  context [] .variables
-    varType nameId VariableType .TMP_VAR VariableInfo new list.append
-  context .variables=
   ## IdInfo
     nameId
     IdentifierType .TMP_VAR false
@@ -482,15 +478,12 @@ end
 proc(
   Operation slice.mut : mut: oldOps
   Operation list ptr.mut : tmpOps
-  VariableInfo list ptr.mut : variables
   ConverterContext ptr.mut : context
 -> Operation slice.mut ) =>: analizeProc
   context [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
-  context [] .variables =:: oldVars
-  variables [] context .variables=
   _EXPERIMENTAL_ if
     oldOps .length for =:: index
       oldOps index context analizeOp
@@ -507,8 +500,6 @@ proc(
     end
     $ list.asSlice slice.copy =:: newCode
   tmpOps =[]
-  context [] .variables variables =[]
-  oldVars context .variables=
   oldOps slice.free ..drop
   newCode
 end
@@ -521,7 +512,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     program
     NameId.hash@ NameId.eq@ 1024 VariableUses map.create
     LocalLabelId.hash@ LocalLabelId.eq@ 1024 VariableUseInfo list map.create
-    VariableInfo list.empty
     -1:FileId
     0
     false
@@ -572,7 +562,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     ## analizeProc
       impl [] .code
       tmpOps@
-      impl .variables
       context
     analizeProc impl .code=
     ## ProcCodeState .COMPILED impl .codeState= ## TODO? add extrac code-state for proc after current phase

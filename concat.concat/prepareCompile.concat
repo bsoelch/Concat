@@ -15,7 +15,6 @@ struct(
   ProgramContext ptr.mut : program
   VariableInfo list : variables
   FileId : mut: currentFile
-  i32 : mut: inlineCount
 ) =:: ConverterContext
 
 proc(
@@ -145,7 +144,7 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage
-    GetId SetId AtId GetUnionTag SetUnionElement
+    GetId SetId AtId GetUnionTag SetUnionElement LocalLabel Block BlockEnd
     SetElement RuntimeAssert Error StackMod GetElement GetUnionElement
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps
@@ -278,9 +277,6 @@ proc(
       newOps
         op list.append
       return
-    ## TODO? merge identical variables on independent branches
-    ## TODO cleanup unused labels
-    LocalLabel case newOps op list.append return
     LocalJump .case =:: jumpInfo
       0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
       newOps
@@ -305,20 +301,6 @@ proc(
         end
       op list.append
     return
-    Block .case .blockType
-      BlockType ..length 33:iSize == "no new block types" assert
-      switch
-        SWITCH case newOps op list.append return
-        default break
-      end
-    break
-    BlockEnd .case .blockType
-      BlockType ..length 33:iSize == "no new block types" assert
-      switch
-        PROCEDURE case newOps op list.append return
-        default break
-      end
-    break
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
     ConstantReference NewReference
@@ -365,7 +347,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     program
     0 VariableInfo list.create
     -1:FileId
-    0
   ConverterContext new =:: mut: contextData
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
