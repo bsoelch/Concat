@@ -1659,37 +1659,34 @@ proc(
     defaultLabel
     LabelState.new context rememberStackStateAtLabel
   map.put ..drop
-  ValType : valType
-  i32 : tmpId
   sb
     "## switch\n" sb.appendS
-    switchType typeContext types.isInt or switchType typeContext types.isChar if
-      switchType
-        typeContext types.primitiveValue
-      types.sizeOfPrimitive =:: numBytes
-      context nextTmpId tmpId=
-      switchType context toValType valType=
-      "%t" sb.appendS
-      tmpId sb.appendI
-      " =" sb.appendS
-      valType sb.appendValTypeQBE
-      numBytes 4 < if
-        " ext" sb.appendS
-        switchType
-          StorageType .ULOAD
-        pos context sb.appendTypeNameQBE
-        " %s" sb.appendS
-      else
-        " copy %s" sb.appendS
-      end
-      valId sb.appendI
-      '\n' sb.appendC
-    else
+    switchType typeContext types.isInt ! and switchType typeContext types.isChar ! if
       "unsupported type in switch: " sb.copyPtr
         switchType typeContext sb.appendType
       pos errors appendError
       return
     end
+    switchType
+      typeContext types.primitiveValue
+    types.sizeOfPrimitive =:: numBytes
+    context nextTmpId =:: mut: tmpId
+    switchType context toValType =:: mut: valType
+    "%t" sb.appendS
+    tmpId sb.appendI
+    " =" sb.appendS
+    valType sb.appendValTypeQBE
+    numBytes 4 < if
+      " ext" sb.appendS
+      switchType
+        StorageType .ULOAD
+      pos context sb.appendTypeNameQBE
+      " %s" sb.appendS
+    else
+      " copy %s" sb.appendS
+    end
+    valId sb.appendI
+    '\n' sb.appendC
     ## appendJumpTable
       valType
       tmpId

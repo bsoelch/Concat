@@ -60,7 +60,7 @@ namespace: exec
       -1 sys.exit ## do not continue child if exec fails
     end
     ## parent process
-    ..ctype.int : status
+    ..ctype.int : mut: status
     ## waitpid
       0 ..ctype.int cast
       status@

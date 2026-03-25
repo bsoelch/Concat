@@ -18,7 +18,6 @@ import "builtIns.concat"
 
 ## import "interpreter/operators.concat"
 using id.IdentifierFlag
-using id.:IdentifierFlag
 
 struct(
   NameId : varId
@@ -472,7 +471,7 @@ proc(
   program [] .inLibFile if
     id.FLAG_LIB_FILE
   else
-    0:IdentifierFlag
+    id.FLAG_NONE
   end =:: mut: flags
   false =:: mut: isModifier
   code start
@@ -532,7 +531,7 @@ proc(
   flags initFlags | fileState program wordPos state [] .program .idContext .typeContext .nameContext id.newIdentifier return
 end
 proc( string : code string : start FileState ptr.mut : fileState  ParserState ptr.mut : state -> string NameId ) =>: readIdentifier
-  code start fileState state 0:IdentifierFlag readIdentifierAddFlags
+  code start fileState state id.FLAG_NONE readIdentifierAddFlags
 end
 
 proc(
@@ -1698,8 +1697,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         end
       end
       fileState program nextIdentifier fileState state
-        ## make pre-declared variables mutable by default
-        isInit ! and inProcedure and _EXPERIMENTAL_ ! if id.FLAG_MUTABLE else id.FLAG_NONE end
+        id.FLAG_NONE
       readIdentifierAddFlags =:: mut: label
       label nameContext id.identifierFlags =:: identifierFlags
       identifierFlags id.FLAG_ALIAS & ? =:: isAlias

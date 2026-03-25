@@ -174,6 +174,7 @@ namespace: interpreter
       ValueInfo new list.append
     context .stackInfo=
   end
+  ( ValueInfo : valInfo Type : valType ) =:: PopInfo
   proc(
     FilePosition ptr : pos
     InterpreterContext ptr.mut : context
@@ -1406,13 +1407,12 @@ proc(
       op [] .pos errors appendError
       EvalResult .Error return
     New case
-      Type : poppedType
-      ValueInfo : valInfo
-      false =:: mut: poppedValue
+      PopInfo optional.empty =:: mut: popInfo
       op [] .dataType .Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType= valInfo=
+        end =:: poppedType =:: valInfo
+        valInfo poppedType PopInfo new optional.wrap popInfo=
         poppedType typeContext types.containsGeneric if
           "creating generic tuples is not supported" sb.copyPtr
           op [] .pos errors appendError
@@ -1422,7 +1422,6 @@ proc(
           context unpopValue
           EvalResult .Error return
         end
-        true poppedValue=
         poppedType
       else
         op [] .dataType
@@ -1442,10 +1441,10 @@ proc(
           op [] program sb.appendOp
         op [] .pos errors appendError
       end
-      poppedValue if
+      popInfo .if
         ## unpopValue
-          poppedType ConstValue .TypeId
-          valInfo
+          $ .valType ConstValue .TypeId
+          >$ .valInfo
         context unpopValue
       end
       EvalResult .Error return
@@ -1489,14 +1488,12 @@ proc(
       pushValue
       EvalResult .Ok return
     Cast Cast! case
-      Type : poppedType
-      ValueInfo : valInfo
-      false =:: mut: isPoppedType
+      PopInfo optional.empty =:: mut: popInfo
       op [] .dataType .Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType= valInfo=
-        true isPoppedType=
+        end =:: poppedType =:: valInfo
+        valInfo poppedType PopInfo new optional.wrap popInfo=
         poppedType typeContext types.containsGeneric if
           "generic casts are not supported" sb.copyPtr
           op [] .pos errors appendError
@@ -1512,14 +1509,14 @@ proc(
         op [] .dataType
       end =:: targetType
       op [] .pos context popValue if ..drop.2
-        isPoppedType if
+        popInfo .if
           ## unpopValue
-            poppedType ConstValue .TypeId
-            valInfo
+            $ .valType ConstValue .TypeId
+            >$ .valInfo
           context unpopValue
         end
         EvalResult .Error return
-      end =:: oldValue valInfo= ## can overwrite value info
+      end =:: oldValue =:: valInfo ## can overwrite value info
       ## canCast
         valInfo .valueType
         targetType
@@ -1755,14 +1752,12 @@ proc(
       pushValue
       EvalResult .Ok return
     TypeInfo .case =:: typeInfo
-      Type : poppedType
-      ValueInfo : valInfo
-      false =:: mut: poppedValue
+      PopInfo optional.empty =:: mut: popInfo
       op [] .dataType .Undefined ? if
         op [] .pos context popType if ..drop.2
           EvalResult .Error return
-        end poppedType= valInfo=
-        true poppedValue=
+        end =:: poppedType =:: valInfo
+        valInfo poppedType PopInfo new optional.wrap popInfo=
         poppedType typeContext types.containsGeneric if
           "generic types are not supported" sb.copyPtr
           op [] .pos errors appendError
@@ -1786,10 +1781,10 @@ proc(
             targetType typeContext sb.appendType
           op [] .pos errors appendError
           ## computing size not possible, reset stack
-          poppedValue if
+          popInfo .if
             ## unpopValue
-              poppedType ConstValue .TypeId
-              valInfo
+              $ .valType ConstValue .TypeId
+              >$ .valInfo
             context unpopValue
           end
           EvalResult .Error return

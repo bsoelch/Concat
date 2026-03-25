@@ -228,7 +228,6 @@ namespace: id
   -> IdentifierName NameInfo optional ) =>: export: searchIdentifier
     context [] .currentScopeId =:: scopeId
     context [] .typeContext .nameContext .namespaceInfo .current =:: mut: mNamespace
-    NamespaceId : relSpace
     mNamespace NAMESPACE_ID_NONE == if
       "invalid current namespace id":s NAMESPACE_ID_NONE scopeId IdentifierName new
       NameInfo optional.empty return
@@ -243,14 +242,13 @@ namespace: id
     else
       id '.' string.splitLast
     end =:: path =:: name
-    NameInfo : idNameInfo
     ## 1. search in current scopes
     context [] .scopes scopeId getScopeData [] .currentProc =:: currentProc?
-    mNamespace path  context .typeContext .nameContext findNamespace relSpace=
+    mNamespace path  context .typeContext .nameContext findNamespace =:: mut: relSpace
     name relSpace scopeId IdentifierName new =:: mut: idName
     relSpace NAMESPACE_ID_NONE != if
       while
-        context .identifierNames idName map.get .and idNameInfo=
+        context .identifierNames idName map.get .and =:: idNameInfo
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idNameInfo .nameId context isVisible if
           matches .else
@@ -292,7 +290,7 @@ namespace: id
       ## search all scopes outside procedure
       firstNonProcScope idName@ .scope=
       while
-        context .identifierNames idName map.get .and idNameInfo=
+        context .identifierNames idName map.get .and =:: idNameInfo
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idNameInfo .nameId context isVisible if
           matches .else
@@ -338,7 +336,7 @@ namespace: id
       ## search all scopes outside procedure
       firstNonProcScope idName@ .scope=
       while
-        context .identifierNames idName map.get .and idNameInfo=
+        context .identifierNames idName map.get .and =:: idNameInfo
             checkVisible ! or idName .scope GLOBAL_SCOPE != or
             idNameInfo .nameId context isVisible if
           matches .if =:: matchData

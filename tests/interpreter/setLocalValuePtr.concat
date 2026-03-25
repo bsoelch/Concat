@@ -3,7 +3,7 @@ proc( i64 ptr.mut : p -> ) =>: setX
 end
 
 proc( -> ) =>: main
-  i64 : x
+  i64 : mut: x
   x@ setX
   x 5 == "x is five" assert
 end
