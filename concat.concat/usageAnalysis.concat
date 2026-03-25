@@ -250,10 +250,11 @@ proc( VariableUse : use VarReadContext : curry -> ) =>: markVarAsRead
         newUse
         VariableUseInfo.cmp@
       slice.binarySearch switch
-        Match .case varInfo [] >$ @[] =:: oldUse
-          oldUse [] .uses markVarAsRead@ curry VariableUses.forEach
-          oldUse .uses [] .Uses .if list.free ..drop else ..drop end
-          newUse oldUse =[]
+        Match .case varInfo [] >$ @[]
+            $ [] .uses =:: oldUses
+          newUse >$ =[]
+          oldUses markVarAsRead@ curry VariableUses.forEach
+          oldUses .Uses .if list.free ..drop else ..drop end
         break
         Missing .case
           varInfo [] newUse >>$ list.insert varInfo =[]
@@ -263,7 +264,7 @@ proc( VariableUse : use VarReadContext : curry -> ) =>: markVarAsRead
   else use VariableUse.asRead ._if =:: readIndex
     curry .ops readIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
   else use VariableUse.asWrite ._if =:: writeIndex
-    curry .ops writeIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
+    curry .ops writeIndex @[] .val .SetId .if false >$ .noRead= else "ops out of sync" ..panic end
   end
 end
 proc(
@@ -294,7 +295,7 @@ proc(
               use VariableUse.asRead .if =:: readIndex
                 curry .ops readIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
               else use VariableUse.asWrite ._if =:: writeIndex
-                curry .ops writeIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
+                curry .ops writeIndex @[] .val .SetId .if false >$ .noRead= else "ops out of sync" ..panic end
               end
             end ops Curry new VariableUses.forEach
           break.labelMatch
