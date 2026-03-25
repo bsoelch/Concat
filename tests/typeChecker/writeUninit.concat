@@ -1,0 +1,14 @@
+proc( bool -> i32 ) =>: test
+  i32 : b
+  if
+    1 b=
+  else
+    2 b=
+  end
+  b
+end
+proc( -> ) =>: main
+  i32 : a
+  2 a=
+  false test ..drop
+end
