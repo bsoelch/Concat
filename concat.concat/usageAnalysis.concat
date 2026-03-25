@@ -279,7 +279,7 @@ proc(
   ## merge current state into label state
   context .variableUses for =:: nameId =:: uses
     uses nameId VariableUseInfo new =:: currentUses
-    preserveSource =:: mut: needCopy
+    preserveSource ! =:: mut: needFree
     labelUseInfo [] list.asSlice
        currentUses
        VariableUseInfo.cmp@
@@ -300,7 +300,8 @@ proc(
           break.labelMatch
           Arg case
             currentUses
-              needCopy if VariableUseInfo.copy false needCopy= end
+              preserveSource if VariableUseInfo.copy end
+              false needFree=
             labelUses =[]
           break.labelMatch
           Uses .case break
@@ -325,11 +326,12 @@ proc(
       break
       Missing .case
         labelUseInfo [] currentUses
-          needCopy if VariableUseInfo.copy false needCopy= end
+          preserveSource if VariableUseInfo.copy end
+          false needFree=
         >>$ list.insert labelUseInfo =[]
       break
     end
-    needCopy ! and uses .Uses .if list.free ..drop end
+    needFree and uses .Uses .if list.free ..drop end
   end
 end
 
@@ -387,7 +389,18 @@ proc(
         context .variableUses map.clear
       end
     break
-    ## FIXME! handle switch-jumps
+    Block .case =:: blockData
+      blockData .blockType .SWITCH if
+        program [] .switchData blockData .blockId iSize cast.u @[] =:: switchData
+        context [] .reachable "switch-start is reachable" assert
+        switchData [] .branchLabels for
+          ops >$ true context mergeVariableUses
+        end
+        ops switchData [] .defaultLabel false context mergeVariableUses
+        context .variableUses map.clear
+        false context .reachable=
+      end
+    break
     LocalLabel .case =:: labelInfo
       labelInfo .labelType switch
         HINT_START HINT_END case return
@@ -402,8 +415,7 @@ proc(
         ## reset to state at label
         true context .reachable=
         context .labelVariableUses labelInfo .labelId map.get .else
-          ##"label only readable through backwards jump" ..panic
-          return ## TODO: panic for unreachable label once switch-start is supported
+          "label only readable through backwards jump" ..panic
         end for =:: varUseInfo
           varUseInfo .uses .Read ? if continue end ## is this even reachable
           context .variableUses varUseInfo .name varUseInfo .uses map.put ..drop
