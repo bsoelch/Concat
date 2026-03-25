@@ -18,7 +18,7 @@ proc( -> ) =>: main
     io.println
   end
   ' ' io.println
-  f64 9 array : data4
+  f64 9 array : mut: data4
   data2@ slice.wrap data4@ slice.wrapMutable f64.round@ slice.mapTo for
     io.println
   end

@@ -1400,7 +1400,7 @@ proc(
             return
           end
           eltCount 3 <= if
-            StackValue 3 array : buffer
+            StackValue 3 array : mut: buffer
             buffer@ list.wrapBuffer
           else
             eltCount StackValue list.create

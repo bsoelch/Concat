@@ -2030,7 +2030,7 @@ proc(
     isPtr ! if ## copy before write to stack element
       state wrapCopy
     end
-    Type 2 array : args
+    Type 2 array : mut: args
     targetType args@ 0 =[]
     srcType args@ 1 =[]
     ## requireTypes
@@ -3403,7 +3403,7 @@ proc(
           ## pushValue
             types.primitive.BOOL
             ConstValue .None
-            Type 2 array : tmp
+            Type 2 array : mut: tmp
             enumLabelType tmp@ 0 =[]
             enumLabelType tmp@ 1 =[]
             ## newProcedure
@@ -3476,7 +3476,7 @@ proc(
             end
           end
           constValue .None ? ! and containerType typeContext types.isTaggedUnion if
-            ConstValue 2 array : unionData
+            ConstValue 2 array : mut: unionData
             constValue unionData@ 0 =[]
             elementIndex i64 cast.u ConstValue .Int unionData@ 1 =[]
             unionData@ slice.wrap constContext newArrayConst constValue=
@@ -5397,7 +5397,7 @@ proc(
             isConst if
               ## TODO? use buffer in context
               eltCount 4 <= if
-                TypeInfo 4 array : buffer
+                TypeInfo 4 array : mut: buffer
                 buffer@ list.wrapBuffer
               else
                 eltCount TypeInfo list.create

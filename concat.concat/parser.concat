@@ -887,7 +887,7 @@ proc(
   FilePosition ptr : pos
   NameContext ptr.mut : nameContext
 -> NameId ) =>: newItrId
-  char8 32 array : buffer
+  char8 32 array : mut: buffer
   ## newIdentifier
     buffer@ sb.wrapBuffer
       "itr@" sb.appendS
@@ -1296,7 +1296,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       opName .length 3:iSize == =:: named
       state [] .currentProcs .length 0:iSize != =:: isNested
       ## TODO? ensure global stack is empty at start of procedure
-      char8 32 array : buffer
+      char8 32 array : mut: buffer
         buffer@ sb.wrapBuffer
           "lambda@" sb.appendS
           fileState [] .wordStart .line sb.appendI
@@ -1581,7 +1581,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ ".with(":s string.eq _if ..drop
       fileState program wordPos =:: blockPos
       state opCount BlockInfoData .With blockPos state openBlock ..drop
-      char8 32 array : buffer
+      char8 32 array : mut: buffer
         buffer@ sb.wrapBuffer
           "with@" sb.appendS
           fileState [] .wordStart .line sb.appendI

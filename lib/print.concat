@@ -12,7 +12,7 @@ namespace: io
   end
   overload: export: print printC printS printB end
   proc( char8 : c -> ) =>: export: printlnC
-    char8 2 array : chrs
+    char8 2 array : mut: chrs
     c chrs@ 0 =[]
     '\n' chrs@ 1 =[]
     chrs@ string.wrap printS

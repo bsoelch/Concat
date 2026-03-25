@@ -312,7 +312,7 @@ proc(
 -> Type Type Type Type Type Type Type ) =>: parseProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  Type 2 array : typeData
+  Type 2 array : mut: typeData
   typeData@ =:: argTypes
   ## char8 ptr.raw  iSize   -> ...
   types.CHAR8 false typeContext wrapPtr argTypes 0 =[]
@@ -383,8 +383,8 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   ## type : auto: T
-  NameId 3 array : nameData
-  Type 3 array : typeData
+  NameId 3 array : mut: nameData
+  Type 3 array : mut: typeData
   ## newIdentifier
     "T":s
     id.FLAG_STATIC id.FLAG_BUILT_IN | id.FLAG_AUTO |

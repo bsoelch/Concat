@@ -116,7 +116,7 @@ namespace: std.literals
   ## TODO? add optional conversion to valid unicode to main libray
   proc( char8 ptr.raw : p iSize : k -> string16 ) =>: static: export: :string16
     "unimplemented" ..panic ## current implementation cannot run at compile time
-    char16 k array : buffer
+    char16 k array : mut: buffer
     buffer@ list.wrap =:: mut: str16
     p k string new
       0:iSize while $1 .length $1 u> do
@@ -132,7 +132,7 @@ namespace: std.literals
   end
   proc( char8 ptr.raw : p iSize : k -> string32 ) =>: static: export: :string32
     "unimplemented" ..panic ## current implementation cannot run at compile time
-    char32 k array : buffer
+    char32 k array : mut: buffer
     buffer@ list.wrap =:: mut: str32
     p k string new
       0:iSize while $1 .length $1 u> do

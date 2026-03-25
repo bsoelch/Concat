@@ -1,5 +1,5 @@
 0
-736
+741
 5
 import file
 import numbers/print
@@ -18,7 +18,7 @@ proc( -> ) =>: export: main
     contents sb.asStr file.write
   file.close ## calling close on standard output should have no effect
   "still open!":s io.println
-  char8 64 array : buffer
+  char8 64 array : mut: buffer
   file.stdIn
     buffer@ slice.wrapMutable file.read =:: inString
     $ file.getError i32 cast.s io.println

@@ -1050,7 +1050,7 @@ namespace: f160
 end
 namespace: std.literals
   proc( char8 ptr.raw : chars iSize : k -> f128 ) =>: static: export: :f128
-    char8 128 array : errMessageBuffer
+    char8 128 array : mut: errMessageBuffer
     chars k string.create =:: str
     str 0 f128.parse =:: err
     err .NONE or err .INT if

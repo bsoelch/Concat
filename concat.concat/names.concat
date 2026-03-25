@@ -379,7 +379,7 @@ namespace: sb
     id context id.getIdentifier .else
       sb return
     end =:: label
-    string 64 array : pathBuffer
+    string 64 array : mut: pathBuffer
     pathBuffer@ list.wrapBuffer
       label [] .namespaceInfo .current =:: mut: mNamespace
       while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do

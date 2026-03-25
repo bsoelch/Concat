@@ -9,7 +9,7 @@ proc( i32 i32 -> bool ) =>: i32Eq  == end
 
 proc( -> ) =>: main
   i32Hash@ i32Eq@ 16 i64 map.create =:: mut: myMap
-  char8 32 array : charBuff
+  char8 32 array : mut: charBuff
   myMap@
     ..dup 0   1 map.put ..drop
     ..dup -5  2 map.put ..drop

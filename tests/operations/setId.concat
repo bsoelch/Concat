@@ -2,7 +2,7 @@ proc( -> ) =>: main
   0 =:: mut: a
   1 a=
   a 1 == "setValue works" assert
-  i64 4 array : anArray
+  i64 4 array : mut: anArray
   { 1 2 3 4 } anArray=
   anArray 2 [] 3 == "composite setValue works" assert
 end

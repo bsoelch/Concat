@@ -65,8 +65,8 @@ proc(
   outStream return
 end
 proc( char8 ptr.raw : chars iSize : len -> ) =>: static: :bf
-  i8 TAPE_CAP array : tape
-  char8 OUT_CAP array : outBuffer
+  i8 TAPE_CAP array : mut: tape
+  char8 OUT_CAP array : mut: outBuffer
   outBuffer@
     tape@ chars len string.create runBf
   sb.asStr ..compiler.error

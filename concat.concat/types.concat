@@ -1589,7 +1589,7 @@ namespace: types
     unionType .RAW if
       rawValue optional.wrap return
     end
-    Type 2 array : elements
+    Type 2 array : mut: elements
     rawValue elements@ 0 =[]
     eltNames .length unionType computeEnumTagType elements@ 1 =[]
     ## newTuple

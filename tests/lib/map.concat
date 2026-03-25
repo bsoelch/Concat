@@ -14,7 +14,7 @@ proc( i64 optional -> ) =>: printOpt
     "empty":s io.println
     return
   end
-  char8 32 array : buf
+  char8 32 array : mut: buf
   buf@ sb.wrapBuffer
     "optional(" sb.appendS
     >$ sb.appendI

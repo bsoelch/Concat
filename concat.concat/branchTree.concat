@@ -328,7 +328,7 @@ namespace: branchTree
     tree check
     eltCount tree [] depth <= "stack is large enough" assert
     eltCount 3 <= if
-      T 3 array : buffer
+      T 3 array : mut: buffer
       buffer@ list.wrapBuffer
     else
       eltCount T list.create
