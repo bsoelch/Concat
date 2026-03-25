@@ -1783,6 +1783,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "..raw":s string.eq _if ..drop
       fileState program wordPos opRawValue state appendOp
       return
+    else ..dup "..type":s string.eq _if ..drop
+      fileState program wordPos opTypeOf state appendOp
+      return
     else $ "..tag":s string.eq _if ..drop
       fileState program wordPos opGetUnionTag state appendOp
       return

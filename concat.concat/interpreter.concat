@@ -1400,7 +1400,7 @@ proc(
         op [] .pos
       context pushValue
       EvalResult .Ok return
-    AtName SetName DeclareName AliasName InitializeName UsingNamespace UsingIdentifier TypeWith TypeModifier case
+    AtName SetName DeclareName AliasName InitializeName UsingNamespace UsingIdentifier TypeWith TypeModifier TypeOf case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp
@@ -1708,7 +1708,7 @@ proc(
         INFO case appendInfo break
       end
       EvalResult .Ok return
-    Length case
+    Length case ## TODO? is this reachable?
       op [] .pos context popValue if ..drop.2
         EvalResult .Error return
       end =:: value =:: valInfo

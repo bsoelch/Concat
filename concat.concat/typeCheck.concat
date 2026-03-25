@@ -5310,7 +5310,21 @@ proc(
           constType
           op .pos
         state pushConstant
-        continue.opLoop
+      continue.opLoop
+      TypeOf case
+        state .stack branchTree.peek .else
+          "missing argument for " sb.copyPtr
+            op program sb.appendOp
+          op .pos errors appendError
+          continue.opLoop
+        end [] .valueType =:: valType
+        1 op .pos state discardValues ## remove value from stack
+        ## pushConstant
+          valType ConstValue .TypeId
+          types.primitive.TYPE
+          op .pos
+        state pushConstant
+      continue.opLoop
       RawValue case
         state .stack branchTree.peek .else
           "missing argument for " sb.copyPtr
