@@ -848,6 +848,9 @@ namespace: sb
           "static: ":s sb.appendStr
         end
       >$ ..drop
+      id .noRead if
+        "no-read ":s sb.appendStr
+      end
       id .idType switch
         TYPE case
           "type \"":s sb.appendStr
@@ -894,9 +897,6 @@ namespace: sb
           id .nameId i64 cast sb.appendI
           ")":s sb.appendStr
           return
-      end
-      id .noRead if
-        "no-read":s sb.appendStr
       end
   end
 end
