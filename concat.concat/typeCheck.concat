@@ -5317,7 +5317,9 @@ proc(
             op program sb.appendOp
           op .pos errors appendError
           continue.opLoop
-        end [] .valueType =:: valType
+        end [] .valueType
+          typeContext types.literalToType
+        =:: valType
         1 op .pos state discardValues ## remove value from stack
         ## pushConstant
           valType ConstValue .TypeId
