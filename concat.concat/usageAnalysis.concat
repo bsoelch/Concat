@@ -266,6 +266,72 @@ proc( VariableUse : use VarReadContext : curry -> ) =>: markVarAsRead
     curry .ops writeIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
   end
 end
+proc(
+  Operation slice.mut : ops
+  LocalLabelId : labelId
+  bool : preserveSource
+  ConverterContext ptr.mut : context
+-> ) =>: mergeVariableUses
+  context .labelVariableUses labelId map.at .else
+    context .labelVariableUses labelId 4 VariableUseInfo list.create map.put ..drop
+    context .labelVariableUses labelId map.at optional.unwrap
+  end =:: labelUseInfo
+  ## merge current state into label state
+  context .variableUses for =:: nameId =:: uses
+    uses nameId VariableUseInfo new =:: currentUses
+    preserveSource =:: mut: needCopy
+    labelUseInfo [] list.asSlice
+       currentUses
+       VariableUseInfo.cmp@
+    slice.binarySearch switch: labelMatch
+      Match .case
+        labelUseInfo [] >$ @[] =:: labelUses
+        labelUses .uses switch
+          Read case
+            ( Operation slice.mut : shadow: ops ) =:: Curry
+            ## var read after label -> mark all new uses for label as read
+            uses ( VariableUse : use Curry : curry -> ) =>
+              use VariableUse.asRead .if =:: readIndex
+                curry .ops readIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
+              else use VariableUse.asWrite ._if =:: writeIndex
+                curry .ops writeIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
+              end
+            end ops Curry new VariableUses.forEach
+          break.labelMatch
+          Arg case
+            currentUses
+              needCopy if VariableUseInfo.copy false needCopy= end
+            labelUses =[]
+          break.labelMatch
+          Uses .case break
+          Use .case []
+            4 VariableUse list.create >$ list.append labelUses .uses .Uses=
+            labelUses .uses .Uses .else ..unreachable end
+          break
+          Use2 .case []
+            4 VariableUse list.create $1 .0 list.append >$ .1 list.append labelUses .uses .Uses=
+            labelUses .uses .Uses .else ..unreachable end
+          break
+          Use3 .case []
+            4 VariableUse list.create $1 .0 list.append $1 .1 list.append >$ .2 list.append labelUses .uses .Uses=
+            labelUses .uses .Uses .else ..unreachable end
+          break
+        end =:: useList
+        ( ConverterContext ptr.mut : shadow: context VariableUse list ptr.mut : shadow: useList ) =:: Curry
+        ## mark all preceding labels as read
+        uses ( VariableUse : use Curry : curry -> ) =>
+          curry .useList [] use list.append curry .useList =[]
+        end context useList Curry new VariableUses.forEach
+      break
+      Missing .case
+        labelUseInfo [] currentUses
+          needCopy if VariableUseInfo.copy false needCopy= end
+        >>$ list.insert labelUseInfo =[]
+      break
+    end
+    needCopy ! and uses .Uses .if list.free ..drop end
+  end
+end
 
 proc(
   Operation slice.mut : ops
@@ -315,64 +381,9 @@ proc(
       jumpInfo .cmpType .NONE if
         false context .reachable=
       end
-      context .labelVariableUses jumpInfo .labelId map.at .else
-        context .labelVariableUses jumpInfo .labelId 4 VariableUseInfo list.create map.put ..drop
-        context .labelVariableUses jumpInfo .labelId map.at optional.unwrap
-      end =:: labelUseInfo
-      ## merge current state into label state
-      context .variableUses for =:: nameId =:: uses
-        uses nameId VariableUseInfo new =:: currentUses
-        context [] .reachable =:: mut: needCopy
-        labelUseInfo [] list.asSlice
-           currentUses
-           VariableUseInfo.cmp@
-        slice.binarySearch switch: labelMatch
-          Match .case
-            labelUseInfo [] >$ @[] =:: labelUses
-            labelUses .uses switch
-              Read case
-                ( Operation slice.mut : shadow: ops ) =:: Curry
-                ## var read after label -> mark all new uses for label as read
-                uses ( VariableUse : use Curry : curry -> ) =>
-                  use VariableUse.asRead .if =:: readIndex
-                    curry .ops readIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
-                  else use VariableUse.asWrite ._if =:: writeIndex
-                    curry .ops writeIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
-                  end
-                end ops Curry new VariableUses.forEach
-              break.labelMatch
-              Arg case
-                currentUses
-                  needCopy if VariableUseInfo.copy false needCopy= end
-                labelUses =[]
-              break.labelMatch
-              Uses .case break
-              Use .case []
-                4 VariableUse list.create >$ list.append labelUses .uses .Uses=
-                labelUses .uses .Uses .else ..unreachable end
-              break
-              Use2 .case []
-                4 VariableUse list.create $1 .0 list.append >$ .1 list.append labelUses .uses .Uses=
-                labelUses .uses .Uses .else ..unreachable end
-              break
-              Use3 .case []
-                4 VariableUse list.create $1 .0 list.append $1 .1 list.append >$ .2 list.append labelUses .uses .Uses=
-                labelUses .uses .Uses .else ..unreachable end
-              break
-            end =:: useList
-            ( ConverterContext ptr.mut : shadow: context VariableUse list ptr.mut : shadow: useList ) =:: Curry
-            ## mark all preceding labels as read
-            uses ( VariableUse : use Curry : curry -> ) =>
-              curry .useList [] use list.append curry .useList =[]
-            end context useList Curry new VariableUses.forEach
-          break
-          Missing .case
-            labelUseInfo [] currentUses
-              needCopy if VariableUseInfo.copy false needCopy= end
-            >>$ list.insert labelUseInfo =[]
-          break
-        end
-        needCopy ! and uses .Uses .if list.free ..drop end
+      ops jumpInfo .labelId context [] .reachable context mergeVariableUses
+      context [] .reachable ! if
+        context .variableUses map.clear
       end
     break
     LocalLabel .case =:: labelInfo
@@ -381,13 +392,19 @@ proc(
         LABEL_START LABEL_MIDDLE LABEL_END case break
       end
       context [] .reachable if
+        ops labelInfo .labelId false context mergeVariableUses
         context .variableUses map.atItr for [] =:: nameId =:: useInfo
-          ## TODO add current var-uses to label (recursively taversing dependent labels)
           labelInfo .labelId VariableUses.label useInfo =[]
         end
       else
+        ## reset to state at label
         true context .reachable=
-        ## TODO reset to state at label (error if label has not been reached yet)
+        context .labelVariableUses labelInfo .labelId map.get .else
+          "label only readable through backwards jump" ..panic
+        end for =:: varUseInfo
+          varUseInfo .uses .Read ? if continue end ## is this even reachable
+          context .variableUses varUseInfo .name varUseInfo .uses map.put ..drop
+        end
       end
     break
     default break
