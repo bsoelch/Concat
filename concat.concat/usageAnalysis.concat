@@ -349,7 +349,15 @@ proc(
   typeContext .nameContext =:: nameContext
   op .val switch
     ImplementProcedure case
-      ## TODO initialize argument variables
+      ## mark argument variables as initialized
+      op .dataType typeContext types.getProcArgNames for =:: nameId
+        nameId id.NAME_ID_NONE != if
+          context .variableUses
+            nameId
+            VariableUses .Arg
+          map.put ..drop
+        end
+      end
       true context .reachable=
     break
     GetId .case =:: idInfo
