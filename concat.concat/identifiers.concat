@@ -535,7 +535,9 @@ namespace: id
       nameContext [] .namespaceInfo .current
     scopeId IdentifierName new =:: mut: idName
     context .identifierNames idName map.get .if
-      DeclareNameResult .Redeclare return
+      flags FLAG_SHADOW & ? ! or $ .nameId nameContext id.identifierFlags id.FLAG_BUILT_IN & ? if
+        DeclareNameResult .Redeclare return
+      else ..drop end
     end
     name context findIdByName .if =:: shadowedName
       shadowedName .nameId nameContext id.identifierFlags =:: shadowFlags
