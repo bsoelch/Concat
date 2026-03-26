@@ -269,7 +269,7 @@ namespace: interpreter
   proc(
     FilePosition ptr : pos
     InterpreterContext ptr.mut : context
-  -> bool bool ) =>: popCondition
+  -> bool optional ) =>: popCondition
     context [] .program .errors =:: errors
     context [] .program =:: program
     context [] .program .idContext =:: idContext
@@ -280,10 +280,12 @@ namespace: interpreter
       ## popValue already created error message
       "missing value for condition" sb.copyPtr
       pos errors appendInfo
-      false true return
+      bool optional.empty return
     end
-    value .Bool .if
-      false return
+    value
+      .LocalValue .if ConstValue ptr cast [] end
+    .Bool .if
+      optional.wrap return
     else ..drop end
     "expected boolean got: " sb.copyPtr
       valInfo .valueType typeContext sb.appendType
@@ -293,7 +295,7 @@ namespace: interpreter
     pos errors appendError
     ## restore stack
     value valInfo context unpopValue
-    false true return
+    bool optional.empty return
   end
   proc(
     bool : persistentCopy
@@ -1081,7 +1083,7 @@ proc(
       jumpInfo .cmpType switch
         NONE case jumpInfo .jumpDistance EvalResult .Jump return
         TRUE FALSE case
-          op [] .pos context popCondition if ..drop
+          op [] .pos context popCondition .else
             EvalResult .Error return
           end jumpInfo .cmpType .TRUE == if
             jumpInfo .jumpDistance EvalResult .Jump return
@@ -1185,7 +1187,9 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: value
-          value .value value .info .valueType op [] .pos context pushValue
+          value .value
+            .LocalValue .if ConstValue ptr cast [] end
+          value .info .valueType op [] .pos context pushValue
           EvalResult .Ok return
         LABEL case
           context [] .localVariables .else
@@ -1300,7 +1304,11 @@ proc(
             EvalResult .Error return
           end
             nameId
-            value valInfo Constant new
+            nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
+              value valInfo .valueType true context localCopy
+            else
+              value
+            end valInfo Constant new
           map.put ..drop
           EvalResult .Ok return
         TYPE GLOBAL_VAR case
@@ -1665,18 +1673,7 @@ proc(
           EvalResult .Error return
         end ..swap ..drop
       end =:: message
-      op [] .pos context popValue if
-        ..drop.2
-        "missing argument for assert, expected boolean" sb.copyPtr
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end =:: value =:: valInfo
-      value .Bool .else ..drop
-        "wrong constant value for assert, expected boolean got: " sb.copyPtr
-          value typeContext sb.appendConstant
-        op [] .pos errors appendError
-        EvalResult .Ok return
-      end ! if
+      op [] .pos context popCondition .and ! if
         "assertion failed: " sb.copyPtr
           message sb.appendStr
         op [] .pos errors appendError
@@ -1897,6 +1894,9 @@ namespace: interpreter
         pos errors appendError
         values valInfos nArgs 1 + context unpopValues
         true return
+      end
+      values nArgs [] .LocalValue .and =:: argVal valInfos nArgs [] .valueType typeContext types.isPointer ! if
+        argVal ConstValue ptr cast [] values nArgs =[]
       end
       nArgs 1 + nArgs=
     end
