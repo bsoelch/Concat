@@ -140,12 +140,12 @@ union(
   TypedReg : Register
 ) =:: VariableCacheLocation
 struct(
-  NameId : varId
+  asm.LocalVarId : varId
   VariableCacheLocation : location
 ) =:: CachedVariable
 namespace: CachedVariable
   proc( CachedVariable : a CachedVariable : b -> i32 ) =>: cmp
-    a .varId b .varId NameId.cmp
+    a .varId b .varId asm.LocalVarId.cmp
   end
 end
 struct(
@@ -161,7 +161,7 @@ union(
   iSize : Stack
   iSize : Stack2
   iSize : Stack3
-  NameId : LocalVariable
+  asm.LocalVarId : LocalVariable
   NameId : GlobalVariable
   i32 : LocalMemory
 ) =:: ValueLocation
@@ -174,7 +174,7 @@ namespace: ValueLocation
       Stack2 .case b .Stack2 unionElement.unwrap == return
       Stack3 .case b .Stack3 unionElement.unwrap == return
       LocalVariable .case b .LocalVariable unionElement.unwrap == return
-      GlobalVariable .case b .LocalVariable unionElement.unwrap == return
+      GlobalVariable .case b .GlobalVariable unionElement.unwrap == return
       LocalMemory .case b .LocalMemory unionElement.unwrap == return
     end
   end
@@ -184,7 +184,7 @@ namespace: ValueLocation
       Stack .case =:: index "Stack: ":s sb.appendStr index sb.appendI break
       Stack2 .case =:: index "Stack.2: ":s sb.appendStr index sb.appendI break
       Stack3 .case =:: index "Stack.3: ":s sb.appendStr index sb.appendI break
-      LocalVariable .case =:: id "LocalVar: ":s sb.appendStr id nameContext sb.appendIdentifierPath break
+      LocalVariable .case =:: id "LocalVar: ":s sb.appendStr id i64 cast.u sb.appendI break
       GlobalVariable .case =:: id "GlobalVar: ":s sb.appendStr id nameContext sb.appendIdentifierPath break
       LocalMemory .case =:: id "LocalMemory: ":s sb.appendStr id sb.appendI break
     end
@@ -212,7 +212,7 @@ struct(
   asm.Context : asmContext
   LocalLabelId LabelState hashMap : labelStates
   asm.RegisterId RegisterInfo hashMap : registerInfo
-  NameId VariableLocation hashMap : variableInfo
+  asm.LocalVarId VariableLocation hashMap : variableInfo
   asm.RegisterId list : availableIntRegisters
   asm.RegisterId list : availableFloatRegisters
   asm.Atom list : tmpOps
@@ -507,10 +507,13 @@ proc(
   end
   "unimplemented configuration for: mov" ..panic
 end
+proc( NameId -> asm.LocalVarId ) =>: nameVarId
+  asm.LocalVarId cast! ## FIXME: better conversion
+end
 ## TODO! keep value-info info in registers up to data
 proc(
   asm.Atom list
-  NameId : dst
+  asm.LocalVarId : dst
   StackValue : src
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opStoreLocal
@@ -537,7 +540,7 @@ proc(
     else ..drop end
   end
   srcVal .valType
-    dst asm.LocalVarId cast.u 0 asm.localAddress
+    dst 0 asm.localAddress
     srcVal .value
   context opMove
 end
@@ -548,7 +551,7 @@ proc(
 -> asm.Atom list StackValue ) =>: opLoadLocal
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
-  context .variableInfo src map.at .else
+  context .variableInfo src nameVarId map.at .else
     "missing info for local variable" ..panic
   end =:: varInfo
   varInfo [] .variableType typeContext ValType.fromType =:: valType
@@ -558,12 +561,12 @@ proc(
   end
   true varInfo .isRead=
   valType context nextFreeRegister
-    $ src ValueLocation .LocalVariable context addLocation
+    $ src nameVarId ValueLocation .LocalVariable context addLocation
     $ valType TypedReg new VariableCacheLocation .Register varInfo .cachedValue=
   asm.Value .Register =:: dstVal
   valType
     dstVal
-    src asm.LocalVarId cast.u 0 asm.localAddress
+    src nameVarId 0 asm.localAddress
   context opMove
   dstVal valType StackValue.val
 end
@@ -814,7 +817,7 @@ proc(
       end =:: varInfo
       varInfo .cachedValue switch
         None case
-          varName asm.LocalVarId cast.u 0 asm.localAddress
+          varName 0 asm.localAddress
             varInfo .variableType typeContext ValType.fromType
           TypedValue new optional.wrap return
         break
@@ -1241,7 +1244,7 @@ proc(
             "CodeGen: stack underflow" sb.copyPtr
             op  .pos errors appendError return
           end =:: newVal
-          idInfo .nameId
+          idInfo .nameId nameVarId
             newVal
           context opStoreLocal
         return
@@ -1263,10 +1266,10 @@ proc(
       procImpl [] .variables =:: variables
       ## TODO? remember memory-slot info
       0 variables for =:: var =:: i
-        context .variableInfo var .nameId
+        context .variableInfo var .nameId nameVarId
           ## VariableLocation
             VariableCacheLocation .None
-            var .nameId asm.LocalVarId cast.u
+            var .nameId nameVarId
             var .valueType
             false
             i32 optional.empty
@@ -1282,7 +1285,7 @@ proc(
       0 =:: mut: floatCount
       inTypes .length 1 - while $ 0 iSize.sge do =:: i
         inTypes i [] typeContext ValType.fromType =:: argValType
-        procType i i32 cast.u typeContext types.getProcArgName =:: argName
+        procType i i32 cast.u typeContext types.getProcArgName =:: argName?
         argValType ValType.isInt if
           intCount AMD64.reg.intArg .if
             argValType context setRegSize asm.Value .Register argValType StackValue.val
@@ -1300,8 +1303,8 @@ proc(
         else
           "unsupported valType" ..panic
         end =:: argValue
-        context .variableInfo argName map.at .if =:: argVar
-          argName argValue context opStoreLocal
+        argName? .and nameVarId =:: varId context .variableInfo varId map.at .if =:: argVar
+          varId argValue context opStoreLocal
         else ## variable does not exist
           argValue context pushValue
         end
@@ -1490,7 +1493,7 @@ proc(
           .LocalAddress .if =:: localAddress
             AMD64.reg.RBP
               localAddress .offset
-              context .variableInfo localAddress .varId NameId cast map.get .and .varOffset .else
+              context .variableInfo localAddress .varId map.get .and .varOffset .else
                 false context .reachable= 0 ## no address exists -> ignore operation
               end -
             asm.RegisterAddress new asm.Operand .RegisterAddress
@@ -1542,7 +1545,7 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
       end
       64
     RegisterInfo map.create
-    NameId.hash@ NameId.eq@ 1024 VariableLocation map.create
+    asm.LocalVarId.hash@ asm.LocalVarId.eq@ 1024 VariableLocation map.create
     asm.RegisterId list.empty
     asm.RegisterId list.empty
     1024 asm.Atom list.create

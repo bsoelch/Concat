@@ -36,7 +36,7 @@ proc(
   id.newIdentifier =:: nameId
   nameId varType pos idContext id.declareTmpVar
   context [] .variables
-    varType nameId VariableType .TMP_VAR VariableInfo new list.append
+    nameId varType VariableType .TMP_VAR VariableInfo new list.append
   context .variables=
   ## IdInfo
     nameId
@@ -155,15 +155,17 @@ proc(
       args .length i32 cast.u =:: argCount
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
-          op .dataType i typeContext types.getProcArgName =:: argName
-          argName id.NAME_ID_NONE == or argName nameContext id.identifierFlags id.FLAG_STATIC & ? if
+          op .dataType i typeContext types.getProcArgName .else
+            continue
+          end =:: argName
+          argName nameContext id.identifierFlags id.FLAG_STATIC & ? if
             continue
           end
           args i [] =:: argType
           argType typeContext types.isEmpty if continue end
           ## VariableInfo
-            argType
             argName
+            argType
             VariableType .ARGUMENT
           VariableInfo new list.append
         finally i 1 + end ..drop
@@ -174,8 +176,8 @@ proc(
     DeclareId InitializeId .case =:: idInfo
       context [] .variables
         ## VariableInfo
-          op .dataType
           idInfo .nameId
+          op .dataType
           VariableType .LOCAL_VAR
         VariableInfo new list.append
       context .variables=

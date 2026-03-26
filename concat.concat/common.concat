@@ -106,13 +106,7 @@ proc( CompilerError : a CompilerError : b -> i32 ) =>: export: errorCmp
   a .pos [] b .pos [] filePosCmp return
 end
 
-i32 =:: export: NameId
-( char8 ptr.raw iSize -> NameId ) : static: export: alias: :NameId ..builtIn.parse.i32
-namespace: NameId
-  proc( NameId -> i32 ) =>: export: hash i32 cast end
-  proc( NameId NameId -> bool ) : export: alias: eq i32.eq
-  proc( NameId NameId -> i32 ) : export: alias: cmp i32.cmp
-end
+type : export: NameId
 type : export: ProcedureInfo
 struct( ## TODO? use low 3 bits of pointer to store important info (isStatic/isBuiltIn/isExtern/ isInline?)
   ProcedureInfo ptr.mut : Data
@@ -144,7 +138,6 @@ i32 =:: export: NamespaceId
 i32 =:: export: NamespaceImportId
 ( char8 ptr.raw iSize -> NamespaceImportId ) : static: export: alias: :NamespaceImportId ..builtIn.parse.i32
 namespace: id
-  -1:NameId =:: export: NAME_ID_NONE
   -1:NamespaceId =:: export: NAMESPACE_ID_NONE
   -1:NamespaceImportId =:: export: NAMESPACE_IMPORT_NONE
 end

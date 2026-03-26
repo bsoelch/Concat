@@ -581,7 +581,7 @@ namespace: sb
   proc(
     stringBuilder : sb
     i32 : index
-    NameId : nameId
+    NameId optional : nameId
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendArgName
     sb
@@ -641,12 +641,12 @@ namespace: sb
             pos errors appendError
           end
         end
-        procType i typeContext types.getProcArgName =:: label
+        procType i typeContext types.getProcArgName =:: argName?
         arg typeContext types.isEmpty if
           ## skip empty arguments
           continue
         end
-        label nameContext id.identifierFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
+        argName? .and nameContext id.identifierFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
           continue
         end
         hasArgs if
@@ -655,7 +655,7 @@ namespace: sb
         true hasArgs=
         arg StorageType .LOAD pos context appendTypeNameQBE
         ' ' sb.appendC
-        i procType i typeContext types.getProcArgName context appendArgName
+        i argName? context appendArgName
       finally i 1 - end ..drop
       ")" sb.appendS
     return
@@ -1342,7 +1342,7 @@ proc(
   types.findProcArgName .if =:: index
     ## appendArgName
       index
-      nameId
+      nameId optional.wrap
       context
     sb.appendArgName return
   end
@@ -1866,7 +1866,7 @@ proc(
   typeContext .nameContext =:: nameContext
   opType typeContext types.getProcIn optional.unwrap =:: inTypes
   inTypes .length 0:iSize != if
-    opType 0 typeContext types.getProcArgName
+    opType 0 typeContext types.getProcArgName .and
         nameContext id.identifierFlags id.FLAG_STATIC & ? if
       1:i32
     else
@@ -2932,6 +2932,9 @@ proc(
     argIndices [] list.free argIndices =[]
   return
 end
+proc( NameId -> i64 ) =>: localVarId
+  iSize cast! i64 cast.u ## TODO? better computation
+end
 
 proc(
   stringBuilder : sb
@@ -2993,7 +2996,7 @@ proc(
               op [] .pos context popValue sb.appendI
               ',' sb.appendC
               "%l" sb.appendS
-              idInfo .nameId i64 cast sb.appendI
+              idInfo .nameId localVarId sb.appendI
               isValue ! if
                 ',' sb.appendC
                 op [] .dataType op [] .pos context typeSizeInt sb.appendI
@@ -3037,12 +3040,12 @@ proc(
         ## push unnamed arguments
         op [] .dataType typeContext types.getProcIn optional.unwrap =:: args
         0:i32 while $ iSize cast.u args .length u< do =:: i
-          op [] .dataType i typeContext types.getProcArgName =:: argName
+          op [] .dataType i typeContext types.getProcArgName =:: argName?
           args i [] =:: argType
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
-          argName nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+          argName? .and nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
             i 1 + continue ## skip static arguments
           end
           argType context referenceOnly if
@@ -3050,25 +3053,25 @@ proc(
           else
             argType context toValType
           end =:: valType
-          argName id.NAME_ID_NONE == if ## push argument
+          argName? ! .if ## push argument
             "%s" sb.appendS
             valType context pushValue sb.appendI
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
-            i id.NAME_ID_NONE context sb.appendArgName
+            i argName? context sb.appendArgName
             '\n' sb.appendC
-          else valType .REFERENCE _if
+          else =:: argName valType .REFERENCE _if
             "%l" sb.appendS
-            argName i64 cast sb.appendI
+            argName localVarId sb.appendI
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
-            i id.NAME_ID_NONE context sb.appendArgName
+            i argName optional.wrap context sb.appendArgName
             '\n' sb.appendC
           else
             "%l" sb.appendS
-            argName i64 cast sb.appendI
+            argName localVarId sb.appendI
             " =l alloc" sb.appendS
             argType op [] .pos context typeAlignmentInt 4 i64.max sb.appendI
             ' ' sb.appendC
@@ -3076,9 +3079,9 @@ proc(
             "\nstore" sb.appendS
             argType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
             ' ' sb.appendC
-            i id.NAME_ID_NONE context sb.appendArgName
+            i argName optional.wrap context sb.appendArgName
             ", %l" sb.appendS
-            argName i64 cast sb.appendI
+            argName localVarId sb.appendI
             '\n' sb.appendC
           end
           i 1 +
@@ -3092,7 +3095,7 @@ proc(
               continue
             end
             "%l" sb.appendS
-            varInfo .nameId i64 cast.u sb.appendI
+            varInfo .nameId localVarId sb.appendI
             varInfo .valueType op [] .pos context false appendAlloc ..drop
           end
         else ..drop end
@@ -3145,7 +3148,7 @@ proc(
               sb.appendTypeNameQBE
               " %l" sb.appendS
             end
-            idInfo .nameId i64 cast sb.appendI
+            idInfo .nameId localVarId sb.appendI
             '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case
@@ -3184,7 +3187,7 @@ proc(
             break
           LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
             " %l" sb.appendS
-            idInfo .nameId i64 cast sb.appendI
+            idInfo .nameId localVarId sb.appendI
             break
          PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case
             "unsupported identifier for setId " sb.copyPtr
@@ -3576,11 +3579,12 @@ proc(
       ## index of current auto-argument
       0:i32 while $ argCount i32 cast.u < do =:: i
         inTypes i [] =:: mut: arg
-        calledType i typeContext types.getProcArgName =:: argName
+        calledType i typeContext types.getProcArgName .if
+          nameContext id.identifierFlags
+        else id.FLAG_NONE end =:: argFlags
         arg typeContext types.isEmpty if
           i 1 + continue ## skip empty arguments
         end
-        argName nameContext id.identifierFlags =:: argFlags
         argFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
           i 1 + continue ## skip static arguments
         end
@@ -4063,7 +4067,6 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     true
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
-  program [] .mainId =:: mainId
   program [] .progFiles 0 @[] .fileScope [] idContext id.setScope
   nameContext id.clearNamespace
   1024 sb.create
@@ -4181,11 +4184,11 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     finally i 1:iSize + end ..drop
     target $1 sb.asStr file.write target=
     sb.clear
-    mainId id.NAME_ID_NONE == if ## no main
+    program [] .mainId .else ## no main
       sb.free ..drop
       context cleanupCompilerContext
       target return
-    end
+    end =:: mainId
     program [] .hasGetArgs if
       "data $" sb.appendS
       CONCAT_ARGC_NAME sb.appendS

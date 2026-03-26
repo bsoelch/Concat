@@ -64,24 +64,6 @@ namespace: id
     NAMESPACE_ID_NONE
     GLOBAL_SCOPE
   IdentifierName new =:: ID_NONE
-  ## IdentifierData
-    Type .Undefined
-    ConstValue .None
-    FILE_POS_UNKNOWN@
-    NAME_ID_NONE
-    -1
-    IdentifierType .GLOBAL_VAR
-    false
-  IdentifierData new =:: ID_NONE_DATA
-  ## IdentifierData
-    Type .Undefined
-    ConstValue .None
-    FILE_POS_UNKNOWN@
-    NAME_ID_NONE
-    -1
-    IdentifierType .GLOBAL_VAR
-    false
-  IdentifierData new =:: mut: ID_TMP_DATA
 
   proc( IdentifierName : a -> i32 ) =>: idHash
     a .name string.hash 31 * a .namespace i32 cast + 31 * a .scope i32 cast + return
@@ -593,23 +575,19 @@ namespace: id
     FilePosition ptr : declaredAt
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
-  ->  NameId IdentifierData bool ) =>: export: declareIdentifier
+  -> IdentifierData optional NameId optional ) =>: export: declareIdentifier
     context .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
-    nameId NAME_ID_NONE == if
-      "invalid name id" sb.copyPtr declaredAt errors appendError
-      NAME_ID_NONE ID_NONE_DATA true return
-    end
     nameId nameContext id.currentNamespace nameContext id.setIdentifierNamespace
     nameId nameContext identifierFlags =:: flags
     flags FLAG_MUTABLE & ? if
       idType .TYPE if
         "type definitions cannot be mutable" sb.copyPtr declaredAt errors appendError
-        NAME_ID_NONE ID_NONE_DATA true return
+        IdentifierData optional.empty NameId optional.empty return
       end
       idType .PROCEDURE if
         "procedures cannot be mutable" sb.copyPtr declaredAt errors appendError
-        NAME_ID_NONE ID_NONE_DATA true return
+        IdentifierData optional.empty NameId optional.empty return
       end
     end
     nameId nameContext id.getIdentifierName =:: name
@@ -621,7 +599,7 @@ namespace: id
         idType idDeclarationContext
       end
     declaredAt errors checkIdentifier if
-      NAME_ID_NONE ID_NONE_DATA true return
+      IdentifierData optional.empty NameId optional.empty return
     end
     nameId
       name
@@ -652,7 +630,7 @@ namespace: id
             "\n  * " sb.appendS
             valType typeContext sb.appendType
           declaredAt errors appendError
-          NAME_ID_NONE ID_NONE_DATA true return
+          IdentifierData optional.empty NameId optional.empty return
         end
         prevDec [] .idType idType != if
           "declaration and initialization of \"" sb.copyPtr
@@ -665,7 +643,7 @@ namespace: id
             " got: " sb.appendS
             idType sb.appendIdType
           declaredAt errors appendError
-          NAME_ID_NONE ID_NONE_DATA true return
+          IdentifierData optional.empty NameId optional.empty return
         end
         prevDec [] .nameId nameContext identifierFlags flags != if
           "flags for declaration and initialization of \"" sb.copyPtr
@@ -684,7 +662,7 @@ namespace: id
           declaredAt prevDec .declaredAt=
           false prevDec .declarationOnly=
         end
-        prevDec [] .nameId prevDec [] false return
+        prevDec [] prevDec [] .nameId optional.wrap return
       end
       prevId .aliasId NO_ALIAS == if
         prevDec [] .declaredAt
@@ -697,7 +675,7 @@ namespace: id
         prevPos [] sb.appendPos
         " )" sb.appendS
       declaredAt errors appendError
-      NAME_ID_NONE ID_NONE_DATA true return
+      IdentifierData optional.empty NameId optional.empty return
     else ..drop end
     ## IdentifierData
       valType
@@ -712,7 +690,7 @@ namespace: id
       nameId
       idData
     map.put ..drop ## previous entry is always empty
-    nameId idData false return
+    idData nameId optional.wrap return
   end
   proc(
     NameId : srcId

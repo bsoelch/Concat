@@ -39,6 +39,11 @@ namespace: asm
   i32 =:: export: LocalLabel
 
   i32 =:: export: LocalVarId
+  namespace: LocalVarId
+    proc( LocalVarId -> i32 ) =>: export: hash i32 cast end
+    proc( LocalVarId LocalVarId -> bool ) : export: alias: eq i32.eq
+    proc( LocalVarId LocalVarId -> i32 ) : export: alias: cmp i32.cmp
+  end
   struct( LocalVarId : varId i32 : offset ) =:: export: LocalAddress
   namespace: LocalAddress
     proc( LocalAddress : a LocalAddress : b -> bool ) =>: export: eq

@@ -63,8 +63,8 @@ i64 =:: ConstReferenceId
 ## XXX? do I need a seperate type for tmp-vars
 enum( ARGUMENT LOCAL_VAR TMP_VAR ) =:: export: VariableType
 struct(
-  Type : valueType
   NameId : nameId
+  Type : valueType
   VariableType : variableType
 ) =:: export: VariableInfo
 
@@ -665,7 +665,9 @@ struct(
   LocalLabelId BackJumpInfo hashMap : backJumpInfo
   LocalLabelId : nextLabelId
   SwitchData list : switchData
+  NameId optional : mainId
   i32 : whileCount
+  ProcId optional : mainProcId
   i32 : ifCount
   i32 : andOrCount
   TypedConstant list : constantReferences
@@ -674,8 +676,6 @@ struct(
   CompilerError list : errors
   string : basePath
   string : libPath
-  NameId : mainId
-  ProcId optional : mainProcId
   bool : saveGlobalTokens
   bool : inLibFile
   bool : hasGetArgs
@@ -704,15 +704,16 @@ proc(
     LocalLabelId.skewHash@ LocalLabelId.eq@ 1024 BackJumpInfo map.create
     0 LocalLabelId cast
     128 SwitchData      list.create
-    0 0 0
+    NameId optional.empty ## main NameId
+    0
+    ProcId optional.empty ## main ProcId
+    0 0
     32  TypedConstant   list.create
     32  NameId         list.create
     256 sb.create
     32  CompilerError   list.create
     basePath
     libPath
-    id.NAME_ID_NONE ## main NameId
-    ProcId optional.empty ## main ProcId
     saveGlobalTokens
     false ## inLibFile
     false ## has getArgs

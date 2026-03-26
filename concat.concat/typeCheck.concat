@@ -25,8 +25,8 @@ struct(
 16:i16 =:: MAX_EXPANSION_DEPTH
 
 struct(
-  branchTree.NodeId : node
   FilePosition ptr : pos
+  branchTree.NodeId : node
 ) =:: BranchPoint
 i32 =:: IfBlockFlags
 ( char8 ptr.raw iSize -> IfBlockFlags ) : static: alias: :IfBlockFlags ..builtIn.parse.i32
@@ -67,9 +67,9 @@ struct(
   BranchPoint list : caseBranches
   i32 list : castOffsets
   iSize : switchPos
+  NameId : blockName
   LocalLabelId list : caseLabels
   LocalLabelId : endLabel
-  NameId : blockName
   BlockId : blockId
   IdentifierInfo optional : srcVar
   bool : inLabel
@@ -77,12 +77,13 @@ struct(
   bool : hasDefault
 ) =:: SwitchBlockInfo
 struct(
-  BranchPoint : branchRoot
   BranchPoint list : mut: breakBranches
   i32 list : mut: breakCastOffsets
   BranchPoint list : mut: continueBranches
   i32 list : mut: continueCastOffsets
   BranchPoint list : mut: doBranches
+  NameId : blockName
+  BranchPoint : branchRoot
   i32 : mut: doBranchIndex ## index of do-branch in break branches
   LocalLabelId : whileLabel
   LocalLabelId : doLabel
@@ -90,7 +91,6 @@ struct(
   LocalLabelId : endLabel
   i32 : mut: orCount
   i32 : mut: continueCount
-  NameId : blockName
   BlockId : blockId
   bool : mut: hasFinally
 ) =:: WhileBlockInfo

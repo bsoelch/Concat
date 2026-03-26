@@ -71,9 +71,19 @@ struct(
   string : name
   FilePosition ptr : pos
   NamespaceInfo : namespaceInfo
-  NameId : baseName
+  NameId optional : baseName
   id.IdentifierFlag : flags
 ) =:: Identifier
+Identifier ptr.mut =:: export: NameId
+namespace: NameId
+  proc( NameId -> i32 ) =>: export: hash Identifier ptr cast [] .name string.hash end
+  proc( NameId : a NameId : b -> bool ) =>: export: eq
+    a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.eq
+  end
+  proc( NameId : a NameId : b -> i32 ) =>: export: cmp
+    a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.cmp
+  end
+end
 
 struct(
   char8 ArenaAllocator : nameBuffer
@@ -112,12 +122,8 @@ namespace: id
     context return
   end
 
-  proc( NameId : id NameContext ptr : context -> Identifier ptr.mut optional ) =>: getIdentifier
-    id NAME_ID_NONE == if
-      Identifier ptr.mut optional.empty return
-    end
-    ## index check done by list.at
-    context [] .identifiers id i64 cast list.at return
+  proc( NameId : id NameContext ptr : context -> Identifier ptr.mut ) =>: getIdentifier
+    id Identifier ptr.mut cast
   end
   proc( NameId : id NameContext ptr.mut : context -> string ) =>: export: getIdentifierName
     ## the addresses of label names are stable for the lifetime of the context
@@ -140,12 +146,10 @@ namespace: id
       FilePosition ptr optional.empty return
     end [] .pos optional.wrap return
   end
-  proc( NameId : id NameContext ptr.mut : context -> NameId ) =>: export: getBaseName
+  proc( NameId : id NameContext ptr.mut : context -> NameId optional ) =>: export: getBaseName
     id context getIdentifier .else
       id return
-    end [] .baseName $ NAME_ID_NONE == if
-      ..drop id return
-    end return
+    end [] .baseName return
   end
   proc( NameId : id NamespaceInfo : newVal NameContext ptr.mut : context -> ) =>: export: setIdentifierNamespace
     id context getIdentifier .if
@@ -219,7 +223,7 @@ namespace: id
         str context copyString
         pos
         context [] .namespaceInfo
-        id.NAME_ID_NONE
+        NameId optional.empty
         flags
       Identifier new list.append
     context .identifiers=

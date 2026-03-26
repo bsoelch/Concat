@@ -78,8 +78,8 @@ namespace: VariableUses
   end
 end
 struct(
-  VariableUses : uses
   NameId : name
+  VariableUses : uses
 ) =:: VariableUseInfo
 namespace: VariableUseInfo
  ( VariableUseInfo : a VariableUseInfo : b -> i32 ) =>: cmp
@@ -180,12 +180,12 @@ proc(
   0 =:: mut: offset
   ## create tmp-variables for named arguments
   inTypes .length i32 cast.u 1 - while $ 0 >= do =:: i
-    procType i typeContext types.getProcArgName =:: argName
+    procType i typeContext types.getProcArgName =:: argName?
     inTypes i [] =:: eltType
     eltType typeContext types.isEmpty if continue end ## ignore empty arguments
-    argName id.NAME_ID_NONE == if
+    argName? ! .if
       offset 1 + offset=
-    else argName nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
+    else =:: argName argName nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
       offset 0 != if
         ## rotate named argument to top
         offset StackModType .ROTATE pos opStackMod context filterOp
@@ -241,7 +241,7 @@ proc( VariableUse : use VarReadContext : curry -> ) =>: markVarAsRead
     curry .context .labelVariableUses
       useLabel
     map.at .if =:: varInfo
-      VariableUses .Read curry .nameId VariableUseInfo new =:: newUse
+      curry .nameId VariableUses .Read VariableUseInfo new =:: newUse
       varInfo [] list.asSlice
         newUse
         VariableUseInfo.cmp@
@@ -275,7 +275,7 @@ proc(
   end =:: labelUseInfo
   ## merge current state into label state
   context .variableUses for =:: nameId =:: uses
-    uses nameId VariableUseInfo new =:: currentUses
+    nameId uses VariableUseInfo new =:: currentUses
     preserveSource ! =:: mut: needFree
     labelUseInfo [] list.asSlice
        currentUses
@@ -346,8 +346,8 @@ proc(
   op .val switch
     ImplementProcedure case
       ## mark argument variables as initialized
-      op .dataType typeContext types.getProcArgNames for =:: nameId
-        nameId id.NAME_ID_NONE != if
+      op .dataType typeContext types.getProcArgNames for
+        .if =:: nameId
           context .variableUses
             nameId
             VariableUses .Arg
@@ -499,14 +499,14 @@ proc(
 end
 
 enum( PRIMITIVE POINTER COMPOSITE COMPOSITE_OWNED ) =:: StackValueType
-NameId ..types.size 4 == "sizeof(NameId) == 4" assert
+NameId ..types.size 8 == "sizeof(NameId) == 8" assert
 struct(
-  NameId 6 array : data
+  NameId 3 array : data
   i8 : count
-) =:: LocalVarPointers6
+) =:: LocalVarPointers3
 union(
   _ : None
-  LocalVarPointers6 : Inplace
+  LocalVarPointers3 : Inplace
   NameId list : Dynamic
 ) =:: LocalVarPointers
 struct(

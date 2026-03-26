@@ -24,10 +24,30 @@ union(
            _ : NonEmpty
 ) =:: GenericArg
 
+iSize =:: ArgumentId
+namespace: ArgumentId
+  1:iSize =:: VALUE_SHIFT
+  1:iSize =:: TAG_MASK
+  0:iSize =:: TAG_NAME
+  1:iSize =:: TAG_INDEX
+  proc( NameId -> ArgumentId ) =>: fromName
+    iSize cast!
+      $ TAG_MASK & TAG_NAME == "NameId is alligned" assert
+    ArgumentId cast
+  end
+  proc( i32 -> ArgumentId ) =>: fromIndex
+    iSize cast.u VALUE_SHIFT << TAG_INDEX | ArgumentId cast
+  end
+  proc( ArgumentId -> i32 ) =>: hash
+    iSize cast $ 32 >>> + i32 cast
+  end
+  proc( ArgumentId ArgumentId -> bool ) : alias: eq iSize.eq
+end
+
 struct(
   ProcId : procId
   ParameterInfo list : paramInfo
-  NameId GenericArg hashMap : genericValues
+  ArgumentId GenericArg hashMap : genericValues
   i32 : nEmpty
   i32 : nRefines
   i32 : nRenames
@@ -82,8 +102,8 @@ overload: merge: ? ReplaceFlags.toBool end
 proc(
   Type : src
   Type list ptr.mut : typeBuffer
-  NameId list ptr.mut : nameBuffer
-  NameId GenericArg hashMap ptr.mut : genericValues
+  NameId optional list ptr.mut : nameBuffer
+  ArgumentId GenericArg hashMap ptr.mut : genericValues
   ReplaceFlags : flags
   FilePosition ptr : pos
   TypeCheckState ptr.mut : typeChecker
@@ -99,7 +119,7 @@ proc(
   src switch
     GenericType case
       src types.getGenericTypeId NameId cast =:: genericId
-      genericValues genericId map.at .if
+      genericValues genericId ArgumentId.fromName map.at .if
         [] switch
           Fixed Value .case .TypeId .else "expected type" ..panic end return
           NonEmpty case break
@@ -129,7 +149,7 @@ proc(
             end
             true genericSize=
           end
-          genericValues genericId map.at .if
+          genericValues genericId ArgumentId.fromName map.at .if
             [] .Fixed .else "expected fixed constant" ..panic end constAsSize
           else
             size
@@ -286,7 +306,7 @@ proc(
               replaceGenerics ConstValue .TypeId
               break
             GenericArg .case =:: argId
-              genericValues argId map.at .else
+              genericValues argId ArgumentId.fromName map.at .else
                 arg break
               end [] switch
                 Value Fixed .case break
@@ -334,7 +354,7 @@ proc(
   Type : target
   bool : exactMatch
   bool ptr.mut : needCast
-  NameId GenericArg hashMap ptr.mut : genericValues
+  ArgumentId GenericArg hashMap ptr.mut : genericValues
   ProgramContext ptr.mut : progContext
 -> bool ) =>: resolveGenerics
   progContext .idContext =:: idContext
@@ -357,7 +377,7 @@ proc(
   target switch
     GenericType case
       target types.getGenericTypeId NameId cast =:: genericId
-      genericValues genericId map.get .if
+      genericValues genericId ArgumentId.fromName map.get .if
         switch
           NonEmpty case
             src typeContext types.isEmpty if
@@ -400,7 +420,7 @@ proc(
         src
       end =:: genericValue
       genericValues
-        genericId
+        genericId ArgumentId.fromName
         genericValue ConstValue .TypeId exactMatch if
           GenericArg .Fixed
         else
@@ -476,7 +496,7 @@ proc(
           break
           GenericArg .case =:: genericId
             srcSize sizeAsConst =:: newValue
-            genericValues genericId map.at .if
+            genericValues genericId ArgumentId.fromName map.at .if
               [] switch
                 NonEmpty case break
                 Value .case
@@ -490,7 +510,7 @@ proc(
               end
             end
             genericValues
-              genericId
+              genericId ArgumentId.fromName
               newValue GenericArg .Fixed
             map.put ..drop
             break
@@ -611,7 +631,7 @@ proc(
           end
         else .GenericArg ._if =:: argId
           genericValues
-            argId
+            argId ArgumentId.fromName
           map.at .if
             [] switch
               Value .case
@@ -625,7 +645,7 @@ proc(
             end
           end
           genericValues
-            argId
+            argId ArgumentId.fromName
             srcArg GenericArg .Fixed
           map.put ..drop
         else ..drop end
@@ -763,8 +783,8 @@ proc(
 end
 
 proc(
-  NameId GenericArg hashMap ptr.mut : genericValues
-  NameId : key
+  ArgumentId GenericArg hashMap ptr.mut : genericValues
+  ArgumentId : key
 -> ConstValue ) =>: getValueOrNone
   genericValues key map.at .if
     [] switch
@@ -818,7 +838,7 @@ proc(
       ## CallSignatureInfo
         procId
         argCount ParameterInfo list.create
-        NameId.hash@ NameId.eq@ argCount i32 cast.u GenericArg map.create
+        ArgumentId.hash@ ArgumentId.eq@ argCount i32 cast.u GenericArg map.create
         0
         0
         0
@@ -849,7 +869,7 @@ proc(
         current [] .paramInfo .length -
       i32 cast.u =:: mut: paramIndex
       inTypes paramIndex [] =:: mut: paramType
-      procType paramIndex typeContext types.getProcArgName =:: mut: paramName
+      procType paramIndex typeContext types.getProcArgName =:: mut: paramName?
       ## XXX? allow passing arrays as individual elements
       while ## skip empty parameters if stack-value is non-empty
         paramType typeContext types.isEmpty or
@@ -857,7 +877,7 @@ proc(
               paramType
                 typeContext types.unwrapNamed
               types.getGenericTypeId NameId cast =:: paramId
-              current .genericValues paramId map.at .and
+              current .genericValues paramId ArgumentId.fromName map.at .and
                 [] typeContext isEmptyConstant
               end
             and stackType typeContext types.isEmpty ! if
@@ -869,8 +889,8 @@ proc(
             ParameterInfo new list.append
           current .paramInfo=
           paramIndex 1 - paramIndex=
-        else paramName nameContext id.identifierFlags id.FLAG_AUTO & ? and
-            current .genericValues paramName map.at .and =:: autoValue
+        else paramName? .and $ =:: paramName nameContext id.identifierFlags id.FLAG_AUTO & ? and
+            current .genericValues paramName ArgumentId.fromName map.at .and =:: autoValue
             autoValue [] .NonEmpty ? ! _if
           autoValue [] switch
             Fixed Value .case break
@@ -887,7 +907,7 @@ proc(
           ## convert literal types to corresponding base types
           value .TypeId .and types.isLiteral if
             current .genericValues
-              paramName
+              paramName ArgumentId.fromName
               value typeContext decayLiteralTypeConstant GenericArg .Fixed
             map.put ..drop
           end
@@ -907,7 +927,7 @@ proc(
         end
       paramIndex 0 >= do
         inTypes paramIndex [] paramType=
-        procType paramIndex typeContext types.getProcArgName paramName=
+        procType paramIndex typeContext types.getProcArgName paramName?=
       end
       paramIndex 0 < if
         false current .needsParam=
@@ -922,14 +942,14 @@ proc(
             typeContext types.unwrapNamed
           types.getGenericTypeId NameId cast =:: paramId
           current .genericValues
-            paramId
+            paramId ArgumentId.fromName
           map.at optional.isEmpty if
         ## add copy of signature with generic type set to empty
         i currentSignatures@ copyElement =:: copySig
         ## update current pointer after changing list
         currentSignatures i @[] current=
         copySig .genericValues
-          paramId
+          paramId ArgumentId.fromName
           Type .Empty ConstValue .TypeId GenericArg .Fixed
         map.put ..drop
         copySig [] .nEmpty
@@ -937,18 +957,18 @@ proc(
         copySig .nEmpty=
         ## mark generic as non-empty
         current .genericValues
-          paramId
+          paramId ArgumentId.fromName
           GenericArg .NonEmpty
         map.put ..drop
       end
       stackValues stackIndex @[] .value [] =:: stackVal
-      paramName nameContext id.identifierFlags id.FLAG_STATIC & ? or
+      paramName? .and nameContext id.identifierFlags id.FLAG_STATIC & ? end or
           paramType typeContext types.isType or stackVal .TypeId ? if
         stackVal .None ? if
           false current .argsMatch=
         end
-        paramName id.NAME_ID_NONE != and
-            current .genericValues paramName map.at .and =:: prevVal
+        paramName? .and =:: paramName
+            current .genericValues paramName ArgumentId.fromName map.at .and =:: prevVal
           prevVal [] switch
             NonEmpty case
               stackVal .TypeId .and typeContext types.isEmpty end
@@ -958,9 +978,7 @@ proc(
           false current .argsMatch=
         else
           current .genericValues
-            paramName $ id.NAME_ID_NONE == if ..drop
-              -2 paramIndex - NameId cast.s
-            end
+            paramIndex ArgumentId.fromIndex
             stackVal GenericArg .Fixed
           map.put ..drop
         end
@@ -1142,18 +1160,18 @@ proc(
   inTypes .length i32 cast.u =:: eltCount
   eltCount ConstValue list.create =:: mut: constArgs
   0:i32 while ..dup eltCount < do =:: i
-    procType i typeContext types.getProcArgName =:: eltName
-    eltName nameContext id.identifierFlags id.FLAG_STATIC & ? if
+    procType i typeContext types.getProcArgName .and $ =:: eltName
+        nameContext id.identifierFlags id.FLAG_STATIC & ? if
       constArgs
-        candidate .genericValues eltName getValueOrNone list.append
+        candidate .genericValues eltName ArgumentId.fromName getValueOrNone list.append
       constArgs=
     else inTypes i [] =:: eltType
         eltType types.primitive.TYPE typeContext types.canAutoCast _if
       constArgs
-        candidate .genericValues -2 i - NameId cast.s getValueOrNone list.append
+        candidate .genericValues i ArgumentId.fromIndex getValueOrNone list.append
       constArgs=
     else eltType typeContext types.isGeneric and
-        candidate .genericValues -2 i - NameId cast.s getValueOrNone =:: val
+        candidate .genericValues i ArgumentId.fromIndex getValueOrNone =:: val
         val .None ? ! _if
       constArgs
         val list.append
@@ -1163,7 +1181,7 @@ proc(
   end ..drop
   ProcId optional.empty =:: mut: implId
   eltCount Type list.create =:: mut: typeBuffer ## TODO? resuse buffers in context
-  eltCount NameId list.create =:: mut: nameBuffer
+  eltCount NameId optional list.create =:: mut: nameBuffer
   baseProcId ProcId.getProcInfo =:: baseProcInfo
   constArgs .length 0:iSize != and
     ## TODO extract to procedure in program.concat
@@ -1240,11 +1258,11 @@ proc(
     list.clear
   constArgs=
   eltCount for =:: i
-    procType i typeContext types.getProcArgName =:: eltName
-    eltName nameContext id.identifierFlags =:: flags
+    procType i typeContext types.getProcArgName =:: eltName?
+    eltName? .if nameContext id.identifierFlags else id.FLAG_NONE end =:: flags
     true =:: mut: needArg
-    flags id.FLAG_AUTO & ? if
-      candidate .genericValues eltName getValueOrNone =:: value
+    eltName? .and =:: eltName flags id.FLAG_AUTO & ? if
+      candidate .genericValues eltName ArgumentId.fromName getValueOrNone =:: value
       value .None ? ! if
         false needArg=
       end
@@ -1252,7 +1270,7 @@ proc(
       value .TypeId .and =:: typeVal
           typeVal types.isLiteral if
         candidate .genericValues
-          eltName
+          eltName ArgumentId.fromName
           typeVal typeContext types.literalToType ConstValue .TypeId GenericArg .Fixed
         map.put ..drop
       end
@@ -1286,7 +1304,7 @@ proc(
   nameBuffer .length 0:iSize != if
     while nameBuffer .length typeBuffer .length u< do
       nameBuffer
-        id.NAME_ID_NONE list.append
+        NameId optional.empty list.append
       nameBuffer=
     end
   end

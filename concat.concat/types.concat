@@ -1287,7 +1287,7 @@ namespace: types
       end
     end
   end
-  proc( Type : composite i32 : index TypeContext ptr : context -> NameId ) =>: export: compositeGetEltName
+  proc( Type : composite i32 : index TypeContext ptr : context -> NameId optional ) =>: export: compositeGetEltName
     composite context compositeData switch
       None case id.NAME_ID_NONE return
       Enum .case [] .eltNames break
@@ -1479,7 +1479,7 @@ namespace: types
   ## creates struct
   proc(
     Type slice : elts
-    NameId slice optional : eltNames
+    NameId optional slice optional : eltNames
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: newTuple
     elts context computeCompositeFlags =:: flags
@@ -1733,9 +1733,9 @@ namespace: types
       NameId slice.empty return
     end [] .eltNames
   end
-  proc( Type : proc TypeContext ptr : context -> NameId slice ) =>: export: getProcArgNames
+  proc( Type : proc TypeContext ptr : context -> NameId optional slice ) =>: export: getProcArgNames
     proc context getProcData .else
-      NameId slice.empty return
+      NameId optional slice.empty return
     end =:: procData
     procData [] .eltNames procData [] .inTypes .length slice.head
   end
@@ -1745,12 +1745,12 @@ namespace: types
     end =:: procData
     procData [] .eltNames procData [] .inTypes .length slice.tail
   end
-  proc( Type : proc i32 : argIndex TypeContext ptr : context -> NameId ) =>: export: getProcArgName
+  proc( Type : proc i32 : argIndex TypeContext ptr : context -> NameId optional ) =>: export: getProcArgName
     proc context getProcArgNames =:: eltNames
     argIndex 0 < or argIndex iSize cast.u eltNames .length u>= if
-      id.NAME_ID_NONE return
+      nameId optional.empty return
     end
-    eltNames argIndex []
+    eltNames argIndex slice.get
   end
   proc( Type : proc NameId : argName TypeContext ptr : context -> i32 optional ) =>: export: findProcArgName
     proc context getProcArgNames =:: eltNames
