@@ -3267,7 +3267,73 @@ proc(
         srcId sb.appendI
         '\n' sb.appendC
       return
-    SetNestedElement case break ## TODO! set nested element
+    SetNestedElement .case =:: path
+      ( Type : eltType i64 : offset ) =:: ElementInfo
+      op [] .dataType
+        $ typeContext types.isPointer =:: isPtr
+        isPtr if
+          typeContext types.ptrTarget
+        end
+      0 ElementInfo new =:: mut: eltInfo
+      ( ElementInfo ptr.mut : shadow: eltInfo CompilerContext ptr.mut : shadow: context FilePosition ptr : pos ) =:: Curry
+      path ( i32 : index Curry : curry -> ) =>
+        curry .context [] .program .idContext .typeContext =:: shadow: typeContext
+        curry .eltInfo [] .eltType
+          $ typeContext types.isArray if
+            typeContext types.getBaseType
+            $ curry .pos curry .context typeStrideInt index i64 cast.u *
+              curry .eltInfo [] .offset +
+            curry .eltInfo .offset=
+          else $ typeContext types.isRawUnion _if
+            index typeContext types.compositeGetElement
+          else
+            $ index curry .pos curry .context tupleEltOffsetInt
+              curry .eltInfo [] .offset +
+            curry .eltInfo .offset=
+            index typeContext types.compositeGetElement
+          end
+        curry .eltInfo .eltType=
+      end eltInfo@ context op [] .pos Curry new NestedElementPath.forEach
+      eltInfo .eltType =:: eltType
+      eltInfo .offset =:: offset
+      ## TODO! extract element-set to procedure (merge occurences in setElement,setNestedElement and setUnionElement)
+      sb
+        op [] .pos context popValue =:: structId
+        op [] .pos sb.appendPosQBE
+        "%s" sb.appendS
+        isPtr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
+        " =l add %s" sb.appendS
+        structId sb.appendI
+        ", " sb.appendS
+        offset sb.appendI
+        '\n' sb.appendC
+        op [] .pos context popValue =:: targetId
+        op [] .pos context popValue =:: valueId
+        eltType context referenceOnly if
+          "blit %s" sb.appendS
+        else
+          "store" sb.appendS
+          eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
+          " %s" sb.appendS
+        end
+        valueId sb.appendI
+        ", %s" sb.appendS
+        targetId sb.appendI
+        eltType context referenceOnly if
+          ',' sb.appendC
+          eltType op [] .pos context typeSizeInt sb.appendI
+        end
+        '\n' sb.appendC
+        isPtr ! if
+          ## keep non-pointer value on stack
+          "%s" sb.appendS
+          ValType .REFERENCE context pushValue sb.appendI
+          " =l copy %s" sb.appendS
+          structId sb.appendI
+          '\n' sb.appendC
+        end
+      return
+    break
     SetElement .case =:: index
       ## TODO? special handling for access through pointer?
       op [] .dataType

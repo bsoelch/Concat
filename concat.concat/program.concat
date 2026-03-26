@@ -161,6 +161,28 @@ union(
   NestedElementPath32 : Path32
   i32 slice : LongPath
 ) =:: export: NestedElementPath
+namespace: NestedElementPath
+  proc( type : auto: C NestedElementPath ( i32 C -> ) ptr : f C : c -> ) =>: export: forEach
+    switch
+      Path8 .case =:: path
+        path .length iSize cast.u for
+          path .path >$ [] i32 cast.u c f ()
+        end
+      break
+      Path16 .case =:: path
+        path .length iSize cast.u for
+          path .path >$ [] i32 cast.u c f ()
+        end
+      break
+      Path32 .case =:: path
+        path .length iSize cast.u for
+          path .path >$ [] i32 cast.u c f ()
+        end
+      break
+      LongPath .case for c f () end break
+    end
+  end
+end
 
 union(
             NopType : NOP
@@ -999,26 +1021,13 @@ namespace: sb
         "set nested element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) :" sb.appendS
-        path switch
-          Path8 .case =:: shadow: path
-            path .length iSize cast.u for
-              <$ ' ' sb.appendC path .path >>$ [] i64 cast.u sb.appendI
-            end
-          break
-          Path16 .case =:: shadow: path
-            path .length iSize cast.u for
-              <$ ' ' sb.appendC path .path >>$ [] i64 cast.u sb.appendI
-            end
-          break
-          Path32 .case =:: shadow: path
-            path .length iSize cast.u for
-              <$ ' ' sb.appendC path .path >>$ [] i64 cast.u sb.appendI
-            end
-          break
-          LongPath .case for
-            <$ ' ' sb.appendC >$ sb.appendI
-          end break
-        end
+        =:: mut: newSb
+        path ( i32 : i stringBuilder ptr.mut : sb -> ) =>
+          sb []
+            ' ' sb.appendC
+            i sb.appendI
+          sb =[]
+        end newSb@ NestedElementPath.forEach newSb
       break
       Return case
         "Return( " sb.appendS
