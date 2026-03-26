@@ -168,6 +168,9 @@ proc(
     Struct TaggedUnion RawUnion Enum Initializer case
       typeBuffer [] .length =:: typeOffset
       nameBuffer [] .length =:: nameOffset
+      src
+        $ .TaggedUnion ? $ =:: srcTagged if typeContext types.asRawUnion .else "union unwrap" ..panic end end
+      =:: shadow: src
       src typeContext types.compositeEltCount =:: eltCount
       eltCount for =:: i
         ## replaceGenerics
@@ -195,11 +198,11 @@ proc(
             nameBuffer [] list.asSlice nameOffset slice.tail optional.wrap
             typeContext
           types.newTuple break
-        TaggedUnion RawUnion case
+        RawUnion case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
             nameBuffer [] list.asSlice nameOffset slice.tail
-            src .TaggedUnion ? if types.UnionType .TAGGED else types.UnionType .RAW end
+            srcTagged if types.UnionType .TAGGED else types.UnionType .RAW end
             typeContext
           types.newUnion break
         Enum case
