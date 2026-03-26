@@ -241,10 +241,11 @@ struct(
   i32 list : path
   Type : rootType
   i32 : maxElement
+  IdentifierInfo optional : srcVar
 ) =:: NestedElementInfo
 namespace: NestedElementInfo
   proc( -> NestedElementInfo ) =>: create
-    i32 list.empty Type .Undefined 0 NestedElementInfo new
+    i32 list.empty Type .Undefined 0 IdentifierInfo optional.empty NestedElementInfo new
   end
   proc( NestedElementInfo -> NestedElementInfo ) =>: free
     $ .path list.free >$ .path=
@@ -2114,13 +2115,20 @@ proc(
     end =:: newOp
     isPtr if
       newOp state appendOp ..drop
+      IdentifierInfo optional.empty state .nestedElementInfo .srcVar=
     else
-      ## pushValue
-        newOp .dataType
-        ConstValue .None ## TODO? update constant
-        newOp
-      state pushValue
-      state markAsUnique ## value in stack write is unique
+      state .nestedElementInfo [] .srcVar .if =:: idInfo
+        newOp state appendOp ..drop
+        newOp .dataType idInfo pos opSetId state appendOp ..drop
+        IdentifierInfo optional.empty state .nestedElementInfo .srcVar=
+      else
+        ## pushValue
+          newOp .dataType
+          ConstValue .None ## TODO? update constant
+          newOp
+        state pushValue
+        state markAsUnique ## value in stack write is unique
+      end
     end
     return
   end
@@ -2678,6 +2686,9 @@ proc(
       op@ .val .GetId=
     else op .val .SetName .and op@ state resolveIdentifier ._if
       op@ .val .SetId=
+    else op .val .ElementSetName .and op@ state resolveIdentifier ._if
+      $ optional.wrap state .nestedElementInfo .srcVar=
+      op@ .val .GetId=
     else op .val .AtName .and op@ state resolveIdentifier ._if
       op@ .val .AtId=
     else op .val .ExistsName ._if
@@ -2825,7 +2836,7 @@ proc(
           procType ## TODO? special type for procedure literal
         op .pos state pushConstant
         continue.opLoop
-      GetName SetName AtName .case =:: name
+      GetName SetName AtName ElementSetName .case =:: name
         "could not find identifier: " sb.copyPtr
           name sb.appendStr
         op .pos errors appendError
@@ -3410,6 +3421,7 @@ proc(
             end
           ..drop
           state .nestedElementInfo [] .path list.clear state .nestedElementInfo .path=
+          IdentifierInfo optional.empty state .nestedElementInfo .srcVar=
         end
         name 10 number.tryParseUInt .NONE and innerContainerType typeContext types.getEltCount .Int .and $1 u> if
           i32 cast.u

@@ -2119,17 +2119,18 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     opPos
     isAddr if
       opAtName
-    else isSetter and tail .length 0 == _if
-      opSetName
+    else isSetter _if
+      tail .length 0 == if
+        opSetName
+      else
+        opElementSetName
+      end
     else
       opGetName
     end
   state appendOp
   tail .length 0 != if
     tail isSetter opPos state parseElementAccess
-    isSetter if
-      name opPos opSetName state appendOp
-    end
   end
   return
 end

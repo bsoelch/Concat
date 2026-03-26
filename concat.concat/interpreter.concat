@@ -1399,7 +1399,7 @@ proc(
       context pushValue
       EvalResult .Ok return
     AtName SetName DeclareName AliasName InitializeName UsingNamespace UsingIdentifier
-        TypeWith TypeModifier TypeOf Length case
+        TypeWith TypeModifier TypeOf Length ElementSetName case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp

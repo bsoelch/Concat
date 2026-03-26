@@ -304,7 +304,7 @@ proc(
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
     ConstantReference NewReference
-    TypeInfo NewUnionReference UsingNamespace UsingIdentifier
+    TypeInfo NewUnionReference UsingNamespace UsingIdentifier ElementSetName
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName SetNestedNamedElt
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
       break ## XXX error message

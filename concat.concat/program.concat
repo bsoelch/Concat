@@ -230,6 +230,7 @@ union(
   StackModification : StackMod
              string : GetName
              string : SetName
+             string : ElementSetName
              string : AtName
              string : ExistsName
       NameAliasInfo : AliasName
@@ -411,6 +412,9 @@ proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opAtName
 end
 proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opSetName
   pos name OpValue .SetName Type .Undefined Operation new return
+end
+proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opElementSetName
+  pos name OpValue .ElementSetName Type .Undefined Operation new return
 end
 proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opExistsName
   pos name OpValue .ExistsName Type .Undefined Operation new return
@@ -1147,6 +1151,10 @@ namespace: sb
       break
       SetName .case =:: name
         "set: " sb.appendS
+        name sb.appendStr
+      break
+      ElementSetName .case =:: name
+        "element set: " sb.appendS
         name sb.appendStr
       break
       ExistsName .case =:: name

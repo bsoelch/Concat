@@ -1,0 +1,10 @@
+union( i32 : I f32 : F ) =:: aUnion
+proc( -> ) =>: main
+  2 3 aUnion .I ( i32 aUnion ) new =:: mut: x
+  1 x@ ( i32 ( i32 aUnion ) ptr.mut ) new =:: y
+  y..1.0 [] 2 == "y.1.0" assert
+  4 y..1.0=
+  5 y .1.1.F=
+  y .1.0 [] 4 == "y.1.0" assert
+  y..1.1.F .and [] 5 == end "y.1.1" assert
+end
