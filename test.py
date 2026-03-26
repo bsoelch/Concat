@@ -100,10 +100,18 @@ def runTests(path,*,cctFlags=None):
   global failed
   global thread_count
   if not os.path.isdir(path):
+    nTested += 1
     if os.path.isfile(path) and path.endswith(".concat"):
-      runTest(path,"",cctFlags=cctFlags)
+      failedPath = runTest(path,"",cctFlags=cctFlags)
     elif os.path.isfile(path+".concat"):
-      runTest(path+".concat","",cctFlags=cctFlags)
+      failedPath = runTest(path+".concat","",cctFlags=cctFlags)
+    else:
+      print(f"could not find file {path}")
+      return
+    if failedPath is not None:
+      failed.append(failedPath)
+    else:
+      nPassed +=1
     return
   if path[-1]!='/':
     path+='/'
