@@ -1260,8 +1260,8 @@ proc(
   state [] .compiledOps index list.at .else
     false return
   end =:: op
-  op [] .val .Constant ? or op [] .val .AtId ? or op [] .val .GetId ? if
-    ## deleting op will no remove side-effects
+  op [] .val .Constant ? or op [] .val .AtId ? or op [] .val .GetId ? or op [] .val .StackMod .and .modType .COPY if
+    ## deleting op will not remove side-effects
     true return
   end
   false return
@@ -1281,7 +1281,9 @@ proc(
     id.FLAG_MUTABLE & ? if
       false return ## cannot copy mutable get (value might change between invocations)
     end
-  else ..drop end
+  else .StackMod ? _if
+    false return ## cannot copy stack-mod
+  end
   true return
 end
 proc(
