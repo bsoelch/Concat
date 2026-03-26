@@ -1,0 +1,2 @@
+re declaration of identifier "a" ( previous declaration at ./tests/typeChecker/redeclare.concat:2:9 ) at ./tests/typeChecker/redeclare.concat:3:9
+wrong number of return values at the end of procedure expected: 0 got: 1 at ./tests/typeChecker/redeclare.concat:4:1
