@@ -470,19 +470,19 @@ proc(
     break
     DeclareId .case =:: idInfo
       idInfo .nameId nameContext id.identifierFlags =:: flags
-      _EXPERIMENTAL_ if
-      flags id.FLAG_IS_READ id.FLAG_HAS_POINTER | & ? ! if
-        256 sb.create
-          "variable is never read: ":s sb.appendStr
-          idInfo nameContext sb.appendIdInfo
-        op .pos errors appendWarning
-      end
-      flags id.FLAG_MUTABLE & ? and flags id.FLAG_IS_WRITTEN id.FLAG_HAS_POINTER | & ? ! if
-        256 sb.create
-          "mutable variable is never written to: ":s sb.appendStr
-          idInfo nameContext sb.appendIdInfo
-        op .pos errors appendWarning
-      end
+      _EXPERIMENTAL_ and flags id.FLAG_HAS_POINTER id.FLAG_STATIC | & ? ! if
+        flags id.FLAG_IS_READ & ? ! if
+          256 sb.create
+            "variable is never read: ":s sb.appendStr
+            idInfo nameContext sb.appendIdInfo
+          op .pos errors appendWarning
+        end
+        flags id.FLAG_MUTABLE & ? and flags id.FLAG_IS_WRITTEN & ? ! if
+          256 sb.create
+            "mutable variable is never written to: ":s sb.appendStr
+            idInfo nameContext sb.appendIdInfo
+          op .pos errors appendWarning
+        end
       end
     break
     ConstantReference NewReference
