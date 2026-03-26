@@ -17,6 +17,8 @@ enum( ## XXX more precise names
   ..compiler.flag.incrementVersionNumber if 1 + end
 =:: export: _VERSION_ ## compiler version auto incremenets on each recompile
 false =:: mut: export: _W_ERROR_
+## options to enable/disable specific warnings
+false =:: mut: export: _W_UNUSED_
 
 false =:: mut: export: _EXPERIMENTAL_
 true =:: mut: export: _INCLUDE_CORE_

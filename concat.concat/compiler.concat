@@ -40,6 +40,7 @@ proc( string : path -> ) =>: printUsage
     "  -l \"fileName\": set path to standard library (default: \"./lib/\")\n" sb.appendS ## XXX allow more than one library path
     "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
     "  -W: treat warnings as errors\n" sb.appendS
+    "  -Wunused: create warnings for unused variables\n" sb.appendS
     "  -v: vebose mode\n" sb.appendS
     "  -S: only emmit assembly (QBE-IR for QBE backend)\n" sb.appendS
     "  -R: run compiled code\n" sb.appendS
@@ -92,7 +93,9 @@ proc( -> ) =>: parseArgs
           ArgParserState .ERR_PATH state=
           continue
         'W' case
-          arg .length 2:iSize u> if break end
+          arg "-Wunused":s string.eq if
+            true _W_UNUSED_= continue
+          else arg .length 2:iSize u> _if break end
           true _W_ERROR_=
           continue
         'v' case

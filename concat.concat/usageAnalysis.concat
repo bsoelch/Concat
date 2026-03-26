@@ -470,7 +470,7 @@ proc(
     break
     DeclareId .case =:: idInfo
       idInfo .nameId nameContext id.identifierFlags =:: flags
-      _EXPERIMENTAL_ and flags id.FLAG_HAS_POINTER id.FLAG_STATIC | & ? ! if
+      _W_UNUSED_ and flags id.FLAG_HAS_POINTER id.FLAG_STATIC | & ? ! if
         flags id.FLAG_IS_READ & ? ! if
           256 sb.create
             "variable is never read: ":s sb.appendStr
