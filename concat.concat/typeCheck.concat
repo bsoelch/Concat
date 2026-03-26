@@ -3380,21 +3380,29 @@ proc(
             end
           end
         =:: containerType
+        containerType typeContext types.isComposite ! and containerType typeContext types.isArray ! if
+          "can only access elements of composites or arrays" sb.copyPtr
+          op .pos errors appendError
+          continue.opLoop
+        end
         containerType
           $ typeContext types.isTaggedUnion if
             typeContext types.asRawUnion optional.unwrap
           end
         =:: innerContainerType
         op .val .SetNestedNamedElt ? if
-          isPtr ! if
-            ElementAccessType .SET_NESTED accessType=
-          else state .nestedElementInfo [] .path .length 0 != _if
-            ## TODO: generate ops to get element
-            "writing to pointer in nested element is not yet supported" sb.copyPtr
-            op .pos errors appendError
-          end
+          isPtr if
+            ElementAccessType .GET
+          else
+            ElementAccessType .SET_NESTED
+          end accessType=
         end
-        name 10 number.tryParseUInt .NONE and $ innerContainerType typeContext types.compositeEltCount i64 cast.u u<= if
+        isPtr and state .nestedElementInfo [] .path .length 0 != if
+          ## TODO: generate ops to get element
+          "writing to pointer in nested element is not yet supported" sb.copyPtr
+          op .pos errors appendError
+        end
+        name 10 number.tryParseUInt .NONE and innerContainerType typeContext types.getEltCount .Int .and $1 u> if
           i32 cast.u
         else ..drop
           ## compositeFindName
@@ -3417,8 +3425,6 @@ proc(
           op .pos errors appendError
           continue.opLoop
         end =:: elementIndex
-        innerContainerType elementIndex typeContext types.compositeGetEltName =:: elementName
-        innerContainerType elementIndex typeContext types.compositeGetElement =:: eltType
         isType ! and accessType .GET if
           containerType typeContext types.isEnum if
             ElementAccessType .CHECK_ENUM accessType=
@@ -3527,6 +3533,7 @@ proc(
             op .pos errors appendError
           end
           ConstValue .None =:: mut: constValue
+          innerContainerType elementIndex typeContext types.compositeGetElement =:: eltType
           eltType .Empty ? if
             ## newUnionConst
               ConstValue .None

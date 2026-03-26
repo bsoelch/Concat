@@ -1276,6 +1276,17 @@ namespace: types
       Composite .case .elements [] .length i32 cast return
     end
   end
+  proc( Type : composite TypeContext ptr : context -> ArraySize ) =>: export: getEltCount
+    composite context isArray if
+      composite context getArraySize
+    else
+      composite context compositeData switch
+        None case ArraySize .None return
+        Enum .case .eltNames [] .length i64 cast.u ArraySize .Int return
+        Composite .case .elements [] .length i64 cast.u ArraySize .Int return
+      end
+    end
+  end
   proc( Type : composite i32 : index TypeContext ptr : context -> NameId ) =>: export: compositeGetEltName
     composite context compositeData switch
       None case id.NAME_ID_NONE return

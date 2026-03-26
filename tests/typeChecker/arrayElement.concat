@@ -1,0 +1,7 @@
+proc( -> ) =>: main
+  i32 4 array : mut: anArray
+  2 anArray@ .1=
+  3 anArray..2=
+  anArray .1 2 == "anArray.1" assert
+  anArray@ .2 [] 3 == "anArray.2" assert
+end
