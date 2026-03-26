@@ -498,6 +498,60 @@ proc(
   newOps op list.append return ## nothing to change
 end
 
+enum( PRIMITIVE POINTER COMPOSITE COMPOSITE_OWNED ) =:: StackValueType
+NameId ..types.size 4 == "sizeof(NameId) == 4" assert
+struct(
+  NameId 6 array : data
+  i8 : count
+) =:: LocalVarPointers6
+union(
+  _ : None
+  LocalVarPointers6 : Inplace
+  NameId list : Dynamic
+) =:: LocalVarPointers
+struct(
+  LocalVarPointers : pointerInfo
+  StackValueType : valType
+) =:: StackValue
+proc(
+  Operation list
+  Operation : mut: op
+  ConverterContext ptr.mut : context
+-> Operation list ) =>: aliasCheckOp
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  ## TODO: keep track of stack avoid unneccessary copies
+  ## * detect return/global store of local variable
+  ## * second round of constant folding
+  ## * merge aliased local variables
+  ## ? detect stack values that are never read (? only if optimizations are enabled)
+  ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
+  ## ? borrow-checking
+  op .val switch
+    NOP case return ## ignore no-ops
+    GetId .case =:: idInfo
+      op list.append
+      idInfo .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
+        op .dataType op .pos opCopy list.append ## ommit copy if variable is not modified for lifetim of stack value
+      end
+    return
+    GetElement case
+      ## TODO: copy , GetElement -> getElement , copy
+      ## TODO: ..ptr.get , getElement -> getElement , ..ptr.get
+    break
+    SetElement SetNestedElement case
+      op .dataType op .pos opCopy list.append ## TODO only copy if value is not owned
+    break
+    default break
+  end
+  op list.append return ## nothing to change
+end
+
+
 proc(
   Operation slice.mut : mut: oldOps
   Operation list ptr.mut : tmpOps
@@ -515,13 +569,21 @@ proc(
       $ for ..drop .Uses .if list.free ..drop else ..drop end end
     map.clear
   end
-  ## TODO? free local variable uses
+  ## TODO? remember label-variable uses for register allocator
   tmpOps []
     $ .length 0 == "tmp-ops are empty" assert
     oldOps for
       context filterOp
     end
     $ list.asSlice slice.copy =:: newCode
+    _EXPERIMENTAL_ if
+      list.clear
+      newCode for
+        context aliasCheckOp
+      end
+    end
+    $ list.asSlice slice.copy =:: shadow: newCode
+    list.clear
   tmpOps =[]
   oldOps slice.free ..drop
   newCode
@@ -552,10 +614,9 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     ## TODO sort by inlinability
     aCode .code .length bCode .code .length iSize.cmp return
   end list.sort
+  ## TODO: option to dump program state at each sub-phase (clear at start, append for each proc)
   ## TODO 2 passes for each proc
   ## pass 1
-  ## [ ] mark writes that are never read
-  ## [ ] mark last direct read before write
   ## [ ] detect unconditional jump directly after label(s) -> can replace jump to label with jumpto target
   ## pass 2
   ## [*] inlining
@@ -563,13 +624,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   ## [ ] update chain jumps, remove chain labels
   ## afterwards:
   ## * discard procs that are always inlined
-  ## TODO -> seperate compilation phase for copy-analysis
-  ## * insert 'copy' operations for composites
-  ## * second round of constant folding
-  ## * merged aliased local variables
-  ## ? detect stack values that are never read (? only if optimizations are enabled)
-  ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
-  ## ? borrow-checking
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
   Operation list.empty =:: mut: tmpOps
