@@ -1188,7 +1188,9 @@ proc(
             EvalResult .Error return
           end =:: value
           value .value
-            .LocalValue .if ConstValue ptr cast [] end
+            value .info .valueType typeContext types.isPointer ! if
+              .LocalValue .if ConstValue ptr cast [] end
+            end
           value .info .valueType op [] .pos context pushValue
           EvalResult .Ok return
         LABEL case
