@@ -1,0 +1,1 @@
+local variable: "a" is not mutable at ./tests/typeChecker/immutableWrite.concat:3:5
