@@ -2079,7 +2079,7 @@ proc(
         program .programMemory=
         pathData NestedElementPath .LongPath
       end =:: eltPath
-      path list.free state .nestedElementInfo .path=
+      path list.clear state .nestedElementInfo .path=
       ## opSetElement
         state .nestedElementInfo [] .rootType
         eltPath
@@ -3381,7 +3381,8 @@ proc(
           end
         =:: containerType
         containerType typeContext types.isComposite ! and containerType typeContext types.isArray ! if
-          "can only access elements of composites or arrays" sb.copyPtr
+          "can only access elements of composites or arrays got: " sb.copyPtr
+            srcType typeContext sb.appendType
           op .pos errors appendError
           continue.opLoop
         end
@@ -3398,9 +3399,17 @@ proc(
           end accessType=
         end
         isPtr and state .nestedElementInfo [] .path .length 0 != if
-          ## TODO: generate ops to get element
-          "writing to pointer in nested element is not yet supported" sb.copyPtr
-          op .pos errors appendError
+          state .nestedElementInfo [] .rootType
+            state .nestedElementInfo [] .path for =:: index
+              $ index op .pos opGetElement state appendOp ..drop
+              $ typeContext types.isArray if
+                typeContext types.getBaseType
+              else
+                index typeContext types.compositeGetElement
+              end
+            end
+          ..drop
+          state .nestedElementInfo [] .path list.clear state .nestedElementInfo .path=
         end
         name 10 number.tryParseUInt .NONE and innerContainerType typeContext types.getEltCount .Int .and $1 u> if
           i32 cast.u
