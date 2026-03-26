@@ -1,0 +1,10 @@
+import slice
+proc( -> ) =>: main
+  42 =:: x
+  x@ optional.wrap =:: y
+  y@ slice.wrap =:: aSlice
+  aSlice slice.unwrapAll =:: bSlice
+  bSlice .if
+    0 [] x@ == "x@ in slice" assert
+  end
+end

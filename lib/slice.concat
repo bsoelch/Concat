@@ -877,6 +877,14 @@ namespace: slice
     return
   end+#
 
+  proc( type.valuePointer : auto: V  V optional slice : elt -> V slice optional ) =>: export: unwrapAll
+    elt for
+      optional.isEmpty if V slice optional.empty return end
+    end
+    V optional ..types.stride V ..types.stride == "V optional and V have the same size" assert
+    elt .data V ptr.mut cast! elt .length V slice new optional.wrap
+  end
+
   proc( type : auto: T
     T slice : elts
   -> T ptr.Itr ) =>: export: getItr
