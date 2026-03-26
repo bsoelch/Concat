@@ -142,6 +142,7 @@ struct(
 ) =:: export: ProcedureCallInfo
 
 struct( NameId : baseName NameId : alias ) =:: export: NameAliasInfo
+struct( NameId : baseName NameId optional : alias ) =:: export: UsingNameInfo
 
 struct(
   i8 16 array : path
@@ -236,8 +237,8 @@ union(
       NameAliasInfo : AliasName
              NameId : DeclareName
              NameId : InitializeName
-      NameAliasInfo : UsingNamespace
-      NameAliasInfo : UsingIdentifier
+      UsingNameInfo : UsingNamespace
+      UsingNameInfo : UsingIdentifier
              ProcId : TypeWith
        TypeModifier : shadow: TypeModifier
                   _ : Assert
@@ -428,15 +429,15 @@ end
 proc( NameId : id FilePosition ptr : pos  -> Operation ) =>: export: opInitializeName
   pos id OpValue .InitializeName Type .Undefined Operation new return
 end
-proc( NameId : src NameId : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingNamespace
+proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingNamespace
   pos
-    src alias NameAliasInfo new OpValue .UsingNamespace
+    src alias UsingNameInfo new OpValue .UsingNamespace
     Type .Undefined
   Operation new return
 end
-proc( NameId : src NameId : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingIdentifier
+proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingIdentifier
   pos
-    src alias NameAliasInfo new OpValue .UsingIdentifier
+    src alias UsingNameInfo new OpValue .UsingIdentifier
     Type .Undefined
  Operation new return
 end
@@ -671,7 +672,7 @@ struct(
   i32 : ifCount
   i32 : andOrCount
   TypedConstant list : constantReferences
-  NameId list : nameBuffer
+  NameId optional list : nameBuffer
   stringBuilder : tmpString
   CompilerError list : errors
   string : basePath

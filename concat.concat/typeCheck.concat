@@ -67,7 +67,7 @@ struct(
   BranchPoint list : caseBranches
   i32 list : castOffsets
   iSize : switchPos
-  NameId : blockName
+  NameId optional : blockName
   LocalLabelId list : caseLabels
   LocalLabelId : endLabel
   BlockId : blockId
@@ -82,7 +82,7 @@ struct(
   BranchPoint list : mut: continueBranches
   i32 list : mut: continueCastOffsets
   BranchPoint list : mut: doBranches
-  NameId : blockName
+  NameId optional : blockName
   BranchPoint : branchRoot
   i32 : mut: doBranchIndex ## index of do-branch in break branches
   LocalLabelId : whileLabel
@@ -111,7 +111,7 @@ union(
 proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition ptr : pos TypeCheckState ptr.mut : state -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
     branchRoot
-    branchTree.EMPTY pos BranchPoint new ## dummy value
+    pos branchTree.EMPTY BranchPoint new ## dummy value
     8 BranchPoint list.create
     8 BranchPoint list.create
     state [] .program program.nextLocalLabel
@@ -132,7 +132,7 @@ proc(
   Type : switchBaseType
   branchTree.NodeId : branchRoot
   IdentifierInfo optional : srcVar
-  NameId : blockName
+  NameId optional : blockName
   BlockId : blockId
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
@@ -144,9 +144,9 @@ proc(
     16 BranchPoint list.create
     16 i32 list.create
     state [] .compiledOps .length
+    blockName
     16 LocalLabelId list.create
     state [] .program program.nextLocalLabel
-    blockName
     blockId
     srcVar
     true
@@ -156,20 +156,21 @@ proc(
 end
 proc(
   branchTree.NodeId : branchRoot
-  NameId : blockName
+  NameId optional : blockName
   BlockId : blockId
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> WhileBlockInfo ) =>: newWhileBlock
   ## WhileBlockInfo
-      branchRoot
+    16 BranchPoint list.create
+    16 i32 list.create
+    16 BranchPoint list.create
+    16 i32 list.create
+    16 BranchPoint list.create
+    blockName
       pos
+      branchRoot
     BranchPoint new
-    16 BranchPoint list.create
-    16 i32 list.create
-    16 BranchPoint list.create
-    16 i32 list.create
-    16 BranchPoint list.create
     -1
     state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
@@ -177,7 +178,6 @@ proc(
     state [] .program program.nextLocalLabel
     0:i32
     0:i32
-    blockName
     blockId
     false
   WhileBlockInfo new return
@@ -190,8 +190,8 @@ proc(
 -> AndOrBlockInfo ) =>: newAndOrBlock
   ## AndOrBlockInfo
     16 BranchPoint list.create
-      branchRoot
       pos
+      branchRoot
     BranchPoint new list.append
     state [] .program program.nextLocalLabel
     blockId
@@ -267,7 +267,7 @@ struct(
 struct(
   ProgramContext ptr.mut : program
   InterpreterContext : interpreter
-  NameId TypedValue hashMap : argData
+  ArgumentId TypedValue hashMap : argData
   LocalLabelId JumpOffsets hashMap : jumpOffsets
   Type optional : currentProcType
   BlockMode : blockMode
@@ -816,7 +816,7 @@ proc( TypeCheckState ptr : state -> bool ) =>: inSwitchLabel
 end
 proc(
   BlockType : breakType
-  NameId : blockName
+  NameId optional : blockName?
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> BlockInfo ptr.mut optional ) =>: findBreakableBlock
@@ -826,18 +826,18 @@ proc(
   typeContext .nameContext =:: nameContext
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
-    block [] .While .and =:: whileBlock blockName id.NAME_ID_NONE == or
-        whileBlock .blockName blockName nameContext id.identifierNamesEq if
+    block [] .While .and =:: whileBlock blockName? ! .or =:: blockName
+        whileBlock .blockName .and blockName nameContext id.identifierNamesEq if
       block optional.wrap return
     end
     breakType .BREAK and block [] .Switch .and =:: switchBlock
-        blockName id.NAME_ID_NONE == or
-        switchBlock .blockName blockName nameContext id.identifierNamesEq if
+        blockName? ! .or =:: blockName
+        switchBlock .blockName .and blockName nameContext id.identifierNamesEq if
       block optional.wrap return
     end
   end
   60 sb.create
-    blockName id.NAME_ID_NONE != if
+    blockName? .if =:: blockName
       "could not find breakable block for label \"":s sb.appendStr
       blockName nameContext sb.appendIdentifierPath
       "\" ":s sb.appendStr
@@ -872,8 +872,8 @@ proc(
     ## reset stack to start of if statement
     switchBlock [] .caseBranches
       ## BranchPoint
-        caseBranch
         pos
+        caseBranch
       BranchPoint new list.append
     switchBlock .caseBranches=
   end
@@ -1397,15 +1397,15 @@ proc(
     procArgIndex iSize cast.u inTypes .length u>= if
       "const-args out of sync with proc-signature":s pos ..line internalErrorNoOp ..unreachable
     end
-    calledType procArgIndex typeContext types.getProcArgName =:: mut: eltName
+    calledType procArgIndex typeContext types.getProcArgName =:: mut: eltName?
     inTypes procArgIndex [] =:: mut: argType
     ## skip auto-args
     while
-      eltName nameContext id.identifierFlags id.FLAG_AUTO & ? or
-      argType typeContext types.isEmpty
+      argType typeContext types.isEmpty or
+      eltName? ! .or nameContext id.identifierFlags id.FLAG_AUTO & ?
     do
       procArgIndex 1 + procArgIndex=
-      calledType procArgIndex typeContext types.getProcArgName eltName=
+      calledType procArgIndex typeContext types.getProcArgName eltName?=
       inTypes procArgIndex [] argType=
     end
     isTypeGenerator if
@@ -1417,13 +1417,13 @@ proc(
           argValue .TypeId .and typeContext types.containsGeneric if
         true isGenericTypeGen=
       end
-      eltName nameContext id.identifierFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
+      eltName? .and $ =:: eltName nameContext id.identifierFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
         "Arguments for Type-generators should be static" sb.copyPtr
         eltName nameContext id.identifierPos .else pos end errors appendError
       end
     end
     argType typeContext types.isEmpty or isCodeImpl and
-        eltName nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+        eltName? .and nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
       continue
     end
     argCount argIndex != if
@@ -1754,9 +1754,9 @@ proc(
   inTypes .length =:: argCount
   0 =:: mut: offset
   argCount 1 - while $ 0 iSize.sge do =:: i
-    calledType i i32 cast.u typeContext types.getProcArgName =:: eltName
     inTypes i [] =:: elt
-    eltName nameContext id.identifierFlags id.FLAG_STATIC & ? if
+    calledType i i32 cast.u typeContext types.getProcArgName .and
+        nameContext id.identifierFlags id.FLAG_STATIC & ? if
       ## remove static arguments from stack
       state .stack branchTree.pop optional.unwrap =:: opData
       opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
@@ -1812,7 +1812,12 @@ namespace: typeChecker
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
-    generatorName nameContext id.getBaseName =:: generatorBaseName
+    generatorName nameContext id.getBaseName .else
+      "could not find base procedure for " sb.copyPtr
+        generatorName nameContext sb.appendIdentifierPath
+      pos errors appendError
+      Type optional.empty return
+    end =:: generatorBaseName
     generatorBaseName idContext id.getIdentifier .else
       "could not find procedure " sb.copyPtr
         generatorBaseName nameContext sb.appendIdentifierPath
@@ -1840,7 +1845,7 @@ namespace: typeChecker
     args .length StackValue list.create =:: mut: stackValues
     0 =:: mut: argIndex
     args for =:: arg
-      while procType argIndex typeContext types.getProcArgName nameContext id.identifierFlags id.FLAG_AUTO & ? do
+      while procType argIndex typeContext types.getProcArgName .and nameContext id.identifierFlags id.FLAG_AUTO & ? do
         argIndex 1 + argIndex=
       end
       stackValues
@@ -2238,7 +2243,9 @@ proc(
             switchType
             label .Int .else
               "expected int":s pos ..line internalErrorNoOp ..unreachable
-            end i32 cast.u typeContext types.compositeGetEltName
+            end i32 cast.u typeContext types.compositeGetEltName .else
+              "expected element name":s pos ..line internalErrorNoOp ..unreachable
+            end
             nameContext
           sb.appendIdentifierName
         else
@@ -2488,13 +2495,17 @@ proc(
     state [] .typeBuffer typeOffset list.tail
     Type slice.empty
   end =:: inTypes =:: types
-  program [] .nameBuffer labelOffset list.tail =:: labels
+  program [] .nameBuffer labelOffset list.tail =:: eltNames
   compType switch
-    TUPLE case types labels optional.wrap typeContext types.newTuple break
-    UNION case types labels types.UnionType .TAGGED typeContext types.newUnion break
-    RAW_UNION case types labels types.UnionType .RAW typeContext types.newUnion break
-    PROC case inTypes types labels CallingConvention.DEFAULT typeContext types.newProcedure break
-    C_PROC case inTypes types labels CallingConvention .CCALL typeContext types.newProcedure break
+    TUPLE case types eltNames optional.wrap typeContext types.newTuple break
+    UNION case types eltNames slice.unwrapAll .else
+      "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
+    end types.UnionType .TAGGED typeContext types.newUnion break
+    RAW_UNION case types eltNames slice.unwrapAll .else
+      "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
+    end types.UnionType .RAW typeContext types.newUnion break
+    PROC case inTypes types eltNames CallingConvention.DEFAULT typeContext types.newProcedure break
+    C_PROC case inTypes types eltNames CallingConvention .CCALL typeContext types.newProcedure break
   end .else
     "failed to create composite-type" sb.copyPtr
     pos errors appendError
@@ -2574,7 +2585,7 @@ proc(
   program [] .nameBuffer
     ops for =:: op
       op .val .GetName .if
-        id.FLAG_NONE op .pos typeContext .nameContext id.newIdentifier list.append
+        id.FLAG_NONE op .pos typeContext .nameContext id.newIdentifier optional.wrap list.append
       else ..drop
         "unexpected operation in Enum block: " sb.copyPtr
           op program sb.appendOp
@@ -2584,7 +2595,9 @@ proc(
     $ labelOffset list.tail =:: labels
     labelOffset list.setLength
   program .nameBuffer=
-  Type optional.empty labels typeContext types.newEnum .else
+  Type optional.empty labels slice.unwrapAll .else
+    "unnamed enum element":s pos ..line internalErrorNoOp ..unreachable
+  end typeContext types.newEnum .else
     "failed to create enum-type" sb.copyPtr
     pos errors appendError
     return
@@ -2638,7 +2651,7 @@ proc(
       program [] .nameBuffer labelOffset list.tail $ .length 0 != if
         optional.wrap
       else ..drop
-        NameId slice optional.empty
+        NameId optional slice optional.empty
       end
     typeContext types.newInitializerType
     pos
@@ -2751,10 +2764,13 @@ proc(
         op .pos
         idContext
         errors
-      id.declareIdentifier if ..drop.2
+      id.declareIdentifier .else ..drop
         ## error message is created by declareIdentifier
         continue.opLoop
-      end >$ ..drop .constValue .Procedure ? ! if
+      end ..drop .else
+        ## error message is created by declareIdentifier
+        continue.opLoop
+      end .constValue .Procedure ? ! if
         nameAlias .alias aliasType state [] .currentFile aliasId optional.wrap false op .pos program newProcData
           ConstValue .Procedure
         nameAlias .alias idContext id.getIdentifier optional.unwrap .constValue=
@@ -2792,7 +2808,7 @@ proc(
         op .pos
         idContext
         errors
-      id.declareIdentifier if ..drop.2
+      id.declareIdentifier >$ .else ..drop
         ## error message is created by declareIdentifier
         continue.opLoop
       end =:: idData ..drop
@@ -2806,7 +2822,7 @@ proc(
     ## convert static arguments to constants
     op .val .GetId .and .nameId =:: nameId
         nameId nameContext id.identifierFlags id.FLAG_STATIC & ? and
-        state .argData nameId map.at .if =:: argData
+        state .argData nameId ArgumentId.fromName map.at .if =:: argData
       argData [] .valType op@ .dataType=
       argData [] .value op@ .val .Constant=
     end
@@ -2847,10 +2863,10 @@ proc(
       UsingNamespace .case =:: usingNamespace
         usingNamespace .baseName =:: namespaceLabel
         usingNamespace .alias
-          $ id.NAME_ID_NONE == if ..drop
-            string.empty
-          else
+          .if
             nameContext id.getIdentifierName
+          else
+            string.empty
           end
         =:: aliasName
         namespaceLabel aliasName idContext id.importNamespace if
@@ -2862,10 +2878,10 @@ proc(
       UsingIdentifier .case =:: usingIdentifier
         usingIdentifier .baseName =:: srcLabel
         usingIdentifier .alias
-          $ id.NAME_ID_NONE == if ..drop
-            string.empty
-          else
+          .if
             nameContext id.getIdentifierName
+          else
+            string.empty
           end
         =:: aliasName
         srcLabel nameContext id.getIdentifierName
@@ -2923,7 +2939,7 @@ proc(
             continue.opLoop
           ARGUMENT case
             idInfo .nameId =:: nameId
-            state .argData nameId map.at .if =:: argData
+            state .argData nameId ArgumentId.fromName map.at .if =:: argData
               argData [] .valType op@ .dataType=
               argData [] .value
             else
@@ -3166,9 +3182,9 @@ proc(
           state [] .stack branchTree.depth iSize cast.u =:: mut: count
           program [] .nameBuffer
             count 1 - for ..drop ## pad to correct number of labels
-              id.NAME_ID_NONE list.append
+              NameId optional.empty list.append
             end
-            idInfo .nameId list.append
+            idInfo .nameId optional.wrap list.append
           program .nameBuffer=
           state [] .blockMode switch
             TYPE case
@@ -3323,7 +3339,7 @@ proc(
                   procInfo .nameId [] nameContext id.identifierFlags id.FLAG_LAMBDA & ? if
                     MAIN_NAME idInfo .nameId nameContext id.identifierNameEq if
                       ## TODO! check if main has correct signature
-                      idInfo .nameId program .mainId=
+                      idInfo .nameId optional.wrap program .mainId=
                       procId optional.wrap program .mainProcId=
                     end
                     idInfo .nameId procInfo .nameId=
@@ -3493,7 +3509,7 @@ proc(
             ## newProcedure
               srcType@ slice.wrap
               containerType@ slice.wrap
-              NameId slice.empty
+              NameId optional slice.empty
               CallingConvention.DEFAULT
             typeContext types.newProcedure .else
               "failed to create procedure":s op ..line state internalError ..unreachable
@@ -3513,7 +3529,7 @@ proc(
             ## newProcedure
               tmp@ slice.wrap
               types.primitive.BOOL@ slice.wrap
-              NameId slice.empty
+              NameId optional slice.empty
               CallingConvention.DEFAULT
             typeContext types.newProcedure .else
               "failed to create procedure":s op ..line state internalError ..unreachable
@@ -3971,8 +3987,8 @@ proc(
               ifBlock .orBranches
             end =:: branches
             branches []
-                state .stack branchTree.startBranch
                 op .pos
+                state .stack branchTree.startBranch
               BranchPoint new list.append
             branches =[]
             blockType .AND_IF if
@@ -4048,15 +4064,15 @@ proc(
             ifBlock [] .elseLabel CompareType .FALSE op .pos state localJump
             ifBlock [] .ifLabel LocalLabelType .LABEL_END op .pos state localLabel
             ifBlock [] .andBranches
-                state .stack branchTree.startBranch
                 op .pos
+                state .stack branchTree.startBranch
               BranchPoint new list.append
             ifBlock .andBranches=
             ifBlock .orBranches =:: orBranches
             orBranches [] .length 0:iSize != if
               orBranches []
-                  state .stack branchTree.startBranch
                   op .pos
+                  state .stack branchTree.startBranch
                 BranchPoint new list.append
               orBranches =[]
               ## XXX? extract to procedure?
@@ -4146,8 +4162,8 @@ proc(
               ifBlock .ifCastsOffset=
               ## reset stack to start of if statement
               ## BranchPoint
-                ifBranch
                 op .pos
+                ifBranch
               BranchPoint new ifBlock .ifBranch=
               ifBlock [] .flags
                 IfBlockFlags.ifBranchTerminates |
@@ -4259,7 +4275,7 @@ proc(
               ## newProcedure
                 labelPtrType@ slice.wrap
                 labelType@ slice.wrap
-                NameId slice.empty
+                NameId optional slice.empty
                 CallingConvention.DEFAULT
               typeContext types.newProcedure .else
                 "failed to create procedure":s op ..line state internalError ..unreachable
@@ -4488,8 +4504,8 @@ proc(
               ## remember while branch
               branches []
                 ## BranchPoint
-                  state .stack branchTree.startBranch
                   op .pos
+                  state .stack branchTree.startBranch
                 BranchPoint new list.append
               branches =[]
               false state .reachable=
@@ -4563,8 +4579,8 @@ proc(
               whileBlock .doBranches
             end =:: branches
             branches []
-                state .stack branchTree.startBranch
                 op .pos
+                state .stack branchTree.startBranch
               BranchPoint new list.append
             branches =[]
             whileBlock [] .blockId op@ .val .Block .else
@@ -4610,15 +4626,15 @@ proc(
             whileBlock .breakCastOffsets=
             whileBlock [] .breakBranches
               ## BranchPoint
-                state .stack branchTree.startBranch
                 op .pos
+                state .stack branchTree.startBranch
               BranchPoint new list.append
             whileBlock .breakBranches=
             whileBlock .doBranches =:: doBranches
             doBranches [] .length 0:iSize != if
               doBranches []
-                  state .stack branchTree.startBranch
                   op .pos
+                  state .stack branchTree.startBranch
                 BranchPoint new list.append
               doBranches =[]
               ## XXX? extract to procedure?
@@ -4685,8 +4701,8 @@ proc(
               whileBlock .continueCastOffsets=
               continueBranches
                 ## BranchPoint
-                  state .stack branchTree.startBranch
                   op .pos
+                  state .stack branchTree.startBranch
                 BranchPoint new list.append
               continueBranches=
             end
@@ -4738,8 +4754,8 @@ proc(
             state peekBlock .and .AndOr .if =:: andOrBlock
               andOrBlock .branches =:: branches
               branches []
-                  state .stack branchTree.startBranch
                   op .pos
+                  state .stack branchTree.startBranch
                 BranchPoint new list.append
               branches =[]
               andOrBlock [] .blockId
@@ -4776,11 +4792,15 @@ proc(
             1 StackModType .DROP op .pos opStackMod state appendOp ..drop
             continue.opLoop
           NAMESPACE case
-            blockInfo .blockName idContext id.beginNamespace
+            blockInfo .blockName .else
+              "expected named block":s op ..line state internalError ..unreachable
+            end idContext id.beginNamespace
             continue.opLoop
           OVERLOAD case
             ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: elts
-            blockInfo .blockName =:: mut: nameId
+            blockInfo .blockName .else
+              "expected named block":s op ..line state internalError ..unreachable
+            end =:: mut: nameId
             nameId nameContext id.currentNamespace nameContext id.setIdentifierNamespace
             nameId idContext id.findDeclaredIdentifier .Ok ! .or =:: idData
                 nameId nameContext id.identifierFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
@@ -4805,9 +4825,9 @@ proc(
                 op .pos
                 idContext
                 errors
-              id.declareIdentifier if ..drop.2
+              id.declareIdentifier .else ..drop
                 continue.opLoop
-              end ..drop nameId=
+              end nameId= ..drop
               bundleId
             else
               idData [] .idType .PROCEDURE_BUNDLE ! if
@@ -5064,18 +5084,19 @@ proc(
                         end
                       end
                       match ! if
+                        " - \"":s sb.appendStr
                         rawSwitchType
                           i i32 cast.u
                           typeContext
-                        types.compositeGetEltName =:: eltName
-                        " - \"" sb.appendS
-                        eltName nameContext sb.appendIdentifierPath
-                        "\" declaredAt"  sb.appendS
-                        eltName nameContext id.identifierPos .if
-                          [] sb.appendPos
-                        else
-                          "?" sb.appendS
-                        end
+                        types.compositeGetEltName .if =:: eltName
+                          eltName nameContext sb.appendIdentifierPath
+                          "\" declaredAt":s sb.appendStr
+                          eltName nameContext id.identifierPos .if
+                            [] sb.appendPos
+                          else
+                            '?' sb.appendC
+                          end
+                        else i sb.appendI end
                         '\n' sb.appendC
                       end
                       i 1 +
@@ -5086,8 +5107,8 @@ proc(
               else
                 caseBranches
                   ## BranchPoint
-                    switchBlock .branchRoot
                     op .pos
+                    switchBlock .branchRoot
                   BranchPoint new list.append
                 caseBranches=
               end
@@ -5278,8 +5299,8 @@ proc(
             andOrBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             andOrBlock .branches =:: mut: branches
             branches
-                state .stack branchTree.startBranch
-                  op .pos
+                op .pos
+                  state .stack branchTree.startBranch
                 BranchPoint new list.append
             branches=
             branches .length branchTree.NodeId list.create
@@ -5579,7 +5600,7 @@ proc(
         ## newProcedure
           baseType@ slice.wrap
           types.primitive.BOOL@ slice.wrap
-          NameId slice.empty
+          NameId optional slice.empty
           CallingConvention.DEFAULT
         typeContext types.newProcedure .else
           "failed to create procedure":s op ..line state internalError ..unreachable
@@ -5862,24 +5883,26 @@ proc(
     0:i32 =:: mut: staticArgCount
     ## TODO? clear/reset argument map
     0:i32 while $ iSize cast.u inTypes .length u< do =:: i
-      currentProc [] .procType i typeContext types.getProcArgName =:: nameId
+      currentProc [] .procType i typeContext types.getProcArgName =:: nameId?
       inTypes i [] =:: argType
-      nameId nameContext id.identifierFlags id.FLAG_STATIC & ? or
-          argType typeContext types.isType if
+      argType typeContext types.isType or
+          nameId? .and nameContext id.identifierFlags id.FLAG_STATIC & ? if
         implInfo [] .staticArgs
           staticArgCount slice.get .else
             "missing static argument":s initPos ..line internalErrorNoOp ..unreachable
           end
         =:: argValue
-        state .argData nameId
-          $ id.NAME_ID_NONE == if ..drop
-            -2 i - NameId cast.s ## dummy labels for static generic arguments
+        state .argData
+          nameId? .if
+            ArgumentId.fromName
+          else
+            i ArgumentId.fromIndex
           end
           argType argValue TypedValue new
         map.put ..drop
         staticArgCount 1 + staticArgCount=
-      else nameId id.NAME_ID_NONE != _if
-        state .argData nameId
+      else nameId? ._if =:: nameId
+        state .argData nameId ArgumentId.fromName
           argType ConstValue .None TypedValue new
         map.put ..drop
       end
@@ -5929,13 +5952,27 @@ proc(
   end =:: argTypes
   ## push unnamed arguments
   0:i32 while $ iSize cast.u argTypes .length u< do =:: i
-    procType i typeContext types.getProcArgName =:: argName
     argTypes i [] =:: argType
-    argName id.NAME_ID_NONE == if ## push argument
+    procType i typeContext types.getProcArgName .if =:: argName
+      argName
+        argType
+        IdentifierType .ARGUMENT
+        i i32 cast ## index
+        ConstValue .None
+        true
+        procPos
+        idContext
+        program .errors
+      id.declareIdentifier ? ! if
+        "could not declare identifier for argument " sb.copyPtr
+          argName nameContext sb.appendIdentifierName
+        procPos program .errors appendError
+      end ..drop
+    else ## push argument
       state .stack
         ## TypeInfo
           argType typeContext types.isType and
-              state .argData -2 i - NameId cast map.get .if
+              state .argData i ArgumentId.fromIndex map.get .if
             .value
             argType
             false
@@ -5949,21 +5986,6 @@ proc(
           procPos
         TypeInfo new
       branchTree.push
-    else
-      argName
-        argType
-        IdentifierType .ARGUMENT
-        i i32 cast ## index
-        ConstValue .None
-        true
-        procPos
-        idContext
-        program .errors
-      id.declareIdentifier if
-        "could not declare identifier for argument " sb.copyPtr
-          argName nameContext sb.appendIdentifierName
-        procPos program .errors appendError
-      end ..drop.2
     end
     i 1 +
   end ..drop
@@ -6073,7 +6095,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
   ## TypeCheckState
     program
     program -1:FileId interpreter.wrapProgram
-    NameId.hash@ NameId.eq@ 64 TypedValue map.create
+    ArgumentId.hash@ ArgumentId.eq@ 64 TypedValue map.create
     LocalLabelId.hash@ LocalLabelId.eq@ 512 JumpOffsets map.create
     Type optional.empty
     BlockMode .NONE
@@ -6106,7 +6128,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   program [] .mainProcId ? =:: hasMain
   program [] .mainProcId .if =:: mainProcId
     ## check all procedures reachable from main proc
-    program [] .mainId nameContext id.getIdentifierPos .else
+    program [] .mainId .and nameContext id.getIdentifierPos .else
       "main-proc has no position" ..panic
     end =:: mainProcPos
     mainProcId mainProcPos state typeCheckChildProcedures

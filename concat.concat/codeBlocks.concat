@@ -1,6 +1,7 @@
 import stringBuilder
 
 import "common.concat"
+import "names.concat"
 
 enum(
   UNKNOWN
@@ -43,7 +44,7 @@ namespace: JumpDistance
 end
 overload: ? JumpDistance.toBool end
 struct(
-  NameId : blockName
+  NameId optional : blockName
   BlockId : blockId
   JumpDistance : jumpDistance
   BlockType : blockType

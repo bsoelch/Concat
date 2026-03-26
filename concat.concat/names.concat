@@ -67,6 +67,8 @@ namespace: id
 end
 
 struct( string : name NamespaceId list : children NamespaceId : parent ) =:: Namespace
+type : Identifier
+Identifier ptr.mut =:: export: NameId
 struct(
   string : name
   FilePosition ptr : pos
@@ -74,7 +76,6 @@ struct(
   NameId optional : baseName
   id.IdentifierFlag : flags
 ) =:: Identifier
-Identifier ptr.mut =:: export: NameId
 namespace: NameId
   proc( NameId -> i32 ) =>: export: hash Identifier ptr cast [] .name string.hash end
   proc( NameId : a NameId : b -> bool ) =>: export: eq

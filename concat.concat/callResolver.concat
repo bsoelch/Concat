@@ -24,24 +24,24 @@ union(
            _ : NonEmpty
 ) =:: GenericArg
 
-iSize =:: ArgumentId
+iSize =:: export: ArgumentId
 namespace: ArgumentId
   1:iSize =:: VALUE_SHIFT
   1:iSize =:: TAG_MASK
   0:iSize =:: TAG_NAME
   1:iSize =:: TAG_INDEX
-  proc( NameId -> ArgumentId ) =>: fromName
+  proc( NameId -> ArgumentId ) =>: export: fromName
     iSize cast!
       $ TAG_MASK & TAG_NAME == "NameId is alligned" assert
     ArgumentId cast
   end
-  proc( i32 -> ArgumentId ) =>: fromIndex
+  proc( i32 -> ArgumentId ) =>: export: fromIndex
     iSize cast.u VALUE_SHIFT << TAG_INDEX | ArgumentId cast
   end
-  proc( ArgumentId -> i32 ) =>: hash
+  proc( ArgumentId -> i32 ) =>: export: hash
     iSize cast $ 32 >>> + i32 cast
   end
-  proc( ArgumentId ArgumentId -> bool ) : alias: eq iSize.eq
+  proc( ArgumentId ArgumentId -> bool ) : export: alias: eq iSize.eq
 end
 
 struct(
@@ -221,14 +221,18 @@ proc(
         RawUnion case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
-            nameBuffer [] list.asSlice nameOffset slice.tail
+            nameBuffer [] list.asSlice nameOffset slice.tail slice.unwrapAll .else
+              "unnamed union element" ..panic
+            end
             srcTagged if types.UnionType .TAGGED else types.UnionType .RAW end
             typeContext
           types.newUnion break
         Enum case
           ## newEnum
             Type optional.empty ## TODO preserve base-type
-            nameBuffer [] list.asSlice nameOffset slice.tail
+            nameBuffer [] list.asSlice nameOffset slice.tail slice.unwrapAll .else
+              "unnamed union element" ..panic
+            end
             typeContext
           types.newEnum break
         ## TODO update initializer type
@@ -1296,7 +1300,7 @@ proc(
          newElt list.append
       typeBuffer=
       nameBuffer
-        eltName list.append
+        eltName? list.append
       nameBuffer=
     end
   end

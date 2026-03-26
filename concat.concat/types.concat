@@ -1501,7 +1501,7 @@ namespace: types
   end
   proc(
     Type slice : elts
-    NameId slice optional : eltNames
+    NameId optional slice optional : eltNames
     TypeContext ptr.mut : context
   -> Type ) =>: export: newInitializerType
     ##  check if initializer can be array
@@ -1663,17 +1663,13 @@ namespace: sb
             ' ' appendC
             <$ 1 + continue
           end
-          t $2 context types.compositeGetEltName =:: nameId
-          nameId id.NAME_ID_NONE !=
-            nameId nameContext id.identifierFlags id.FLAG_DUMMY & ? ! &
-          =:: printName
           eltType context types.isEmpty if
             "_" sb.appendS
           else
             eltType context depth 1 - appendTypeRecursive
           end
-          printName if
-            nameId nameContext appendTypeElementName
+          t $2 context types.compositeGetEltName .if
+            nameContext appendTypeElementName
           end
           ' ' appendC
         <$
@@ -1728,7 +1724,7 @@ namespace: types
       Type slice optional.empty return
     end
   end
-  proc( Type : proc TypeContext ptr : context -> NameId slice ) =>: export: getProcEltNames
+  proc( Type : proc TypeContext ptr : context -> NameId optional slice ) =>: export: getProcEltNames
     proc context getProcData .else
       NameId slice.empty return
     end [] .eltNames
@@ -1831,7 +1827,7 @@ namespace: types
         outTypes outTypes .length 1:iSize - slice.head return
     end
   end
-  proc( Type slice : in Type slice : out NameId slice : eltNames CallingConvention : callConvention TypeContext ptr.mut : context -> Type optional ) =>: export: newProcedure
+  proc( Type slice : in Type slice : out NameId optional slice : eltNames CallingConvention : callConvention TypeContext ptr.mut : context -> Type optional ) =>: export: newProcedure
     callConvention .CCALL and out .length 1:iSize u> if
       Type optional.empty return ## XXX? better error handling
     end

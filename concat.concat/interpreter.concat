@@ -2097,8 +2097,7 @@ namespace: interpreter
     procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
     0:iSize ## XXX? is there a better way to get number of non-auto static args
       args .length i32 cast.u for =:: i
-        procType i typeContext types.getProcArgName =:: argName
-        argName nameContext id.identifierFlags =:: flags
+        procType i typeContext types.getProcArgName .and nameContext id.identifierFlags =:: flags
         flags id.FLAG_STATIC & ? or
             args i [] typeContext types.isType if
           1:iSize +
@@ -2145,14 +2144,14 @@ namespace: interpreter
     newVariables optional.wrap context .localVariables=
     ## process procedure arguments
     0:i32 while $ args .length i32 cast < do =:: i
-      procType i typeContext types.getProcArgName =:: nameId
-      nameId nameContext id.identifierFlags =:: identifierFlags
+      procType i typeContext types.getProcArgName =:: nameId?
+      nameId? .if nameContext id.identifierFlags else id.FLAG_NONE end =:: identifierFlags
       identifierFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         codeImpl .genericInfo .ImplInfo .else
           "expected generic implementation" ..panic
         end =:: implInfo
         implInfo [] .staticArgs staticArgOffset [] =:: value
-        nameId id.NAME_ID_NONE != if
+        nameId? .if =:: nameId
           context [] .localVariables optional.unwrap
             nameId
             ## Constant
@@ -2177,7 +2176,15 @@ namespace: interpreter
       context [] .stack argOffset [] =:: value
       context [] .stackInfo argOffset [] =:: valueInfo
       argOffset 1:iSize + argOffset=
-      nameId id.NAME_ID_NONE == or identifierFlags id.FLAG_DUMMY & ? if ## push argument
+      nameId? .if =:: nameId ## store argument as value
+        context [] .localVariables optional.unwrap
+          nameId
+          ## Constant
+            value
+            valueInfo
+          Constant new
+        map.put ..drop
+      else ## push argument
         context [] .stack
           value list.append
         context .stack=
@@ -2187,14 +2194,6 @@ namespace: interpreter
             pos
           ValueInfo new list.append
         context .stackInfo=
-      else ## store argument as value
-        context [] .localVariables optional.unwrap
-          nameId
-          ## Constant
-            value
-            valueInfo
-          Constant new
-        map.put ..drop
       end
     finally
       i 1 +

@@ -106,7 +106,6 @@ proc( CompilerError : a CompilerError : b -> i32 ) =>: export: errorCmp
   a .pos [] b .pos [] filePosCmp return
 end
 
-type : export: NameId
 type : export: ProcedureInfo
 struct( ## TODO? use low 3 bits of pointer to store important info (isStatic/isBuiltIn/isExtern/ isInline?)
   ProcedureInfo ptr.mut : Data
@@ -121,7 +120,6 @@ namespace: ProcId
   proc( ProcId : a -> i32 ) =>: export: hash
     a .Data iSize cast! $ 32 >>> ^ i32 cast
   end
-  proc( ProcId -> NameId ) : export: getName
   proc( ProcedureInfo ptr.mut -> ProcId ) =>: export: create
     ProcId new
   end
