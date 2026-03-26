@@ -1,28 +1,59 @@
 ( type : V -> type ) =>: export: optional
-  union( _ : None V : Some )
+  V type.isValuePointer if
+    ( V : val )
+  else
+    union( _ : None V : Some )
+  end
 end
 namespace: optional
-  proc( type : V -> V optional ) =>: export: empty
+  0:iSize =:: NULL_PTR
+  proc( type : V -> V optional ) =>: emptyV
     V optional .None return
   end
-  proc( type : auto: V  V -> V optional ) =>: export: wrap
+  proc( type.valuePointer : V -> V optional ) =>: emptyP
+    NULL_PTR V cast! V optional new
+  end
+  overload: export: empty emptyV emptyP end
+  proc( type : auto: V  V -> V optional ) =>: wrapV
     V optional .Some return
   end
+  proc( type.valuePointer : auto: V  V -> V optional ) =>: wrapP
+    V optional new return
+  end
+  overload: export: wrap wrapV wrapP end
 
-  proc( type : auto: V V optional -> bool ) =>: export: isEmpty
+  proc( type : auto: V V optional -> bool ) =>: isEmptyV
     .None ? return
   end
-  proc( type : auto: V  V optional -> bool ) =>: export: hasData
+  proc( type.valuePointer : auto: V V optional -> bool ) =>: isEmptyP
+    .val iSize cast! NULL_PTR ==
+  end
+  overload: export: isEmpty isEmptyV isEmptyP end
+  proc( type : auto: V  V optional -> bool ) =>: hasDataV
     .Some ? return
   end
-  proc( type : auto: T  T optional -> T ) =>: export: get
+  proc( type.valuePointer : auto: V  V optional -> bool ) =>: hasDataP
+    .val iSize cast! NULL_PTR !=
+  end
+  overload: export: hasData hasDataV hasDataP end
+  proc( type : auto: T  T optional -> T ) =>: getV
     ..raw .Some
   end
-  proc( type : auto: T  T optional -> T ) =>: export: unwrap
+  proc( type.valuePointer : auto: T  T optional -> T ) =>: getP
+    .val
+  end
+  overload: export: get getV getP end
+  proc( type : auto: T  T optional -> T ) =>: export: unwrapV
     .Some .else
       "unwrap of empty optional" ..panic
     end
   end
+  proc( type.valuePointer : auto: T  T optional -> T ) =>: export: unwrapP
+    .val $ iSize cast! NULL_PTR == if
+      "unwrap of empty optional" ..panic
+    end
+  end
+  overload: export: unwrap unwrapV unwrapP end
 
   proc( type : auto: T  T optional -> T optional ) =>: prepareIf end
   proc( type : auto: T  T optional : ignore -> ) =>: elseVal end
