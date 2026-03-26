@@ -1,0 +1,4 @@
+proc( -> ) =>: export: main
+  0 =:: a
+  1 a=
+end
