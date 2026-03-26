@@ -11,7 +11,7 @@ namespace: type
   type .with( ..types.isTaggedUnion ) =:: export: union
 
   proc( type : T -> bool ) =>: export: static: isValuePointer
-    T ..types.isPointer and T ..types.isRawPointer ! end
+    T ..types.unwrapNamed ..types.isPointer and T ..types.unwrapNamed ..types.isRawPointer ! end
   end
   type .with( isValuePointer ) =:: export: valuePointer
 
