@@ -238,6 +238,19 @@ union(
   iSize list : Jumps
 ) =:: JumpOffsets
 struct(
+  i32 list : path
+  Type : rootType
+  i32 : maxElement
+) =:: NestedElementInfo
+namespace: NestedElementInfo
+  proc( -> NestedElementInfo ) =>: create
+    i32 list.empty Type .Undefined 0 NestedElementInfo new
+  end
+  proc( NestedElementInfo -> NestedElementInfo ) =>: free
+    $ .path list.free >$ .path=
+  end
+end
+struct(
   iSize : openBlocksOffset
   iSize : compiledOpsOffset
   iSize : initializationStackOffset
@@ -262,6 +275,7 @@ struct(
   Operation list : compiledOps
   Type list : typeBuffer
   ConstValue list : constBuffer
+  NestedElementInfo : nestedElementInfo
   i32 : blockStart
   TypeBlockState optional : arrowState
   MissingProc list : missingProcs
@@ -1957,12 +1971,12 @@ proc(
     op [] .pos errors appendError
   end
 end
+enum( CHECK CHECK_ENUM GET UNION_GET SET SET_NESTED ) =:: ElementAccessType
 proc(
   Type : srcType
   Type : containerType
   i32 : elementIndex
-  bool : isWrite ## TODO pass enum( GET TRY_GET SET ) instead if two booleans
-  bool : isUnionGet
+  ElementAccessType : accessType
   bool : isPtr ## TODO? pass enum( VALUE PTR PTR_MUT ) instead if two booleans
   bool : mutable
   FilePosition ptr : pos
@@ -1975,7 +1989,7 @@ proc(
   OP_UNLINKED =:: mut: onRead
   containerType typeContext types.isArray if
     containerType typeContext types.getBaseType
-  else isUnionGet and containerType typeContext types.isTaggedUnion _if
+  else accessType .UNION_GET and containerType typeContext types.isTaggedUnion _if
     containerType elementIndex typeContext types.newUnionElement .else
       "cannot create union element":s pos ..line internalErrorNoOp ..unreachable
     end
@@ -1987,12 +2001,12 @@ proc(
     containerType elementIndex typeContext types.compositeGetElement
   end =:: eltType
   ## can only take address of reference or pointer
-  isPtr and isWrite ! if
+  isPtr and accessType .SET ! if
     eltType mutable typeContext types.getAddressType
   else
     eltType
   end =:: targetType
-  isWrite if
+  accessType .SET if
     isPtr and mutable ! if ## TODO more detailed message (? print ptr-type & label name if existent)
       "cannot write to element of immutable pointer" sb.copyPtr
       pos errors appendError
@@ -2028,7 +2042,48 @@ proc(
       return
     end
     ## TODO? constant folding
-    containerType typeContext types.isTaggedUnion if
+    state .nestedElementInfo .path [] .length 0 != if
+      containerType typeContext types.isTaggedUnion if
+        "nested write to union is not yet supported" sb.copyPtr
+        pos errors appendError
+        ## TODO: create union value with correct index and set whole struct
+      end
+      state .nestedElementInfo [] .path
+        elementIndex list.append
+      =:: path
+      path .length 4 u< if
+        i32 4 array : mut: pathData
+        path .length for =:: i
+          path i [] pathData@ i =[]
+        end
+        pathData path .length i8 cast.u NestedElementPath32 new NestedElementPath .Path32
+      else path .length 8 u< and
+          state .nestedElementInfo [] .maxElement 0x10000 < _if
+        i16 8 array : mut: pathData
+        path .length for =:: i
+          path i [] i16 cast.u pathData@ i =[]
+        end
+        pathData path .length i8 cast.u NestedElementPath16 new NestedElementPath .Path16
+      else path .length 16 u< and
+          state .nestedElementInfo [] .maxElement 0x100 < _if
+        i8 16 array : mut: pathData
+        path .length for =:: i
+          path i [] i8 cast.u pathData@ i =[]
+        end
+        pathData path .length i8 cast.u NestedElementPath8 new NestedElementPath .Path8
+      else
+        program [] .programMemory
+          path mixedArena.copyList slice.freeze =:: pathData
+        program .programMemory=
+        pathData NestedElementPath .LongPath
+      end =:: eltPath
+      path list.free state .nestedElementInfo .path=
+      ## opSetElement
+        state .nestedElementInfo [] .rootType
+        eltPath
+        pos
+      opSetNestedElement
+    else containerType typeContext types.isTaggedUnion _if
       targetType typeContext types.isEmpty ! if
         1 StackModType .ROTATE pos opStackMod state appendOp ..drop
         1 StackModType .COPY pos opStackMod state appendOp ..drop
@@ -2043,9 +2098,9 @@ proc(
           1 StackModType .ROTATE pos opStackMod state appendOp ..drop
           srcType 0 pos opSetElement state appendOp ..drop
         end
-        containerType typeContext types.enumTagInfo ..drop =:: labelType
-        elementIndex i64 cast.u ConstValue .Int labelType pos opConst state appendOp ..drop
       end
+      containerType typeContext types.enumTagInfo ..drop =:: labelType
+      elementIndex i64 cast.u ConstValue .Int labelType pos opConst state appendOp ..drop
       1 StackModType .ROTATE pos opStackMod state appendOp ..drop
       srcType 1 pos opSetElement
     else
@@ -2059,12 +2114,27 @@ proc(
       newOp state appendOp ..drop
     else
       ## pushValue
-        srcType
+        newOp .dataType
         ConstValue .None ## TODO? update constant
         newOp
       state pushValue
       state markAsUnique ## value in stack write is unique
     end
+    return
+  end
+  accessType .SET_NESTED if
+    state .nestedElementInfo .path [] .length 0 == if
+      srcType state .nestedElementInfo .rootType=
+      0 state .nestedElementInfo .maxElement=
+    end
+    ## TODO? support constant-folding
+    state .stack branchTree.peek .if targetType >$ .valueType= end
+    state .nestedElementInfo [] .path
+      elementIndex list.append
+    state .nestedElementInfo .path=
+    state .nestedElementInfo [] .maxElement
+      elementIndex i32.max
+    state .nestedElementInfo .maxElement=
     return
   end
   eltType typeContext types.isEmpty =:: emptyValue
@@ -2093,11 +2163,11 @@ proc(
   end
   ## pushValue
     targetType
-    ConstValue .None ## XXX compute constant value
+    ConstValue .None ## TODO? compute constant value
     srcType
       elementIndex
       pos
-    isUnionGet if
+    accessType .UNION_GET if
       opGetUnionElement
     else
       opGetElement
@@ -3273,15 +3343,16 @@ proc(
             continue.opLoop
         end
         break
-      ImplementProcedure GetElement GetUnionElement SetElement case break
+      ImplementProcedure GetElement GetUnionElement SetElement SetNestedElement case break
       GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case =:: name
-        enum( CHECK CHECK_ENUM GET UNION_GET ) =:: LabelAccessType
-        LabelAccessType .GET =:: mut: accessType
-        op .val .SetNamedElt ? =:: isWrite
-        op .val .ExistsNamedElt ? if
-          LabelAccessType .CHECK accessType=
+        ElementAccessType .GET =:: mut: accessType
+        op .val .SetNamedElt ? if
+          ElementAccessType .SET accessType=
         end
-        1:i32 isWrite if 1 + end op .pos state checkStackSize if
+        op .val .ExistsNamedElt ? if
+          ElementAccessType .CHECK accessType=
+        end
+        1:i32 accessType .SET if 1 + end op .pos state checkStackSize if
           continue.opLoop
         end
         state .stack branchTree.peek optional.unwrap [] =:: container
@@ -3312,13 +3383,14 @@ proc(
             typeContext types.asRawUnion optional.unwrap
           end
         =:: innerContainerType
-        op .val .SetNestedNamedElt ? and isPtr ! if
-          ## TODO support nested element access
-          ## .x.y.z=  ->  <$ $1 .x   <$ $1 .y   .z=   >$ .y=   >$ .x=
-          ## ? stack of pending operations, unwind operations after hiting final set-element
-          ## TODO: handle case where one of the sub-elements is a pointer
-          "nested access for values is not yet supported: " sb.copyPtr
-          op .pos errors appendError
+        op .val .SetNestedNamedElt ? if
+          isPtr ! if
+            ElementAccessType .SET_NESTED accessType=
+          else state .nestedElementInfo [] .path .length 0 != _if
+            ## TODO: generate ops to get element
+            "writing to pointer in nested element is not yet supported" sb.copyPtr
+            op .pos errors appendError
+          end
         end
         name 10 number.tryParseUInt .NONE and $ innerContainerType typeContext types.compositeEltCount i64 cast.u u<= if
           i32 cast.u
@@ -3345,11 +3417,17 @@ proc(
         end =:: elementIndex
         innerContainerType elementIndex typeContext types.compositeGetEltName =:: elementName
         innerContainerType elementIndex typeContext types.compositeGetElement =:: eltType
-        isWrite ! and isType ! and accessType .GET if
+        isType ! and accessType .GET if
           containerType typeContext types.isEnum if
-            LabelAccessType .CHECK_ENUM accessType=
+            ElementAccessType .CHECK_ENUM accessType=
           else containerType typeContext types.isTaggedUnion _if
-            LabelAccessType .UNION_GET accessType=
+            ElementAccessType .UNION_GET accessType=
+          end
+        end
+        accessType .SET_NESTED if
+          containerType typeContext types.isEnum or containerType typeContext types.isTaggedUnion if
+            "cannot write to element of enum/union-element" sb.copyPtr
+            op .pos errors appendError
           end
         end
         accessType .CHECK if
@@ -3442,7 +3520,7 @@ proc(
               " is not an enum or union " sb.appendS
             op .pos errors appendError
             continue.opLoop
-          else isWrite _if
+          else accessType .SET or accessType .SET_NESTED _if
             "cannot write to enum/union-generator" sb.copyPtr
             op .pos errors appendError
           end
@@ -3505,7 +3583,7 @@ proc(
           end
           continue.opLoop
         end
-        srcType containerType elementIndex isWrite accessType .UNION_GET isPtr mutable op .pos state typeCheckGetElement
+        srcType containerType elementIndex accessType isPtr mutable op .pos state typeCheckGetElement
         continue.opLoop
       GetUnionTag case
         state .stack branchTree.peek .else
@@ -5972,6 +6050,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     128 Operation list.create
     64 Type list.create
     64 ConstValue list.create
+    NestedElementInfo.create
     0:i32
     TypeBlockState optional.empty
     128 MissingProc list.create
@@ -6073,4 +6152,5 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   state [] .stateStack list.free ..drop
   state [] .typeBuffer list.free ..drop
   state [] .constBuffer list.free ..drop
+  state [] .nestedElementInfo NestedElementInfo.free ..drop
 end

@@ -1377,6 +1377,7 @@ proc(
       end
       break
     GetUnionElement case "unimplemented: get union element" ..panic
+    SetNestedElement case "unimplemented: set nested element" ..panic
     GetElement SetElement SetUnionElement .case =:: eltIndex
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr

@@ -3267,6 +3267,7 @@ proc(
         srcId sb.appendI
         '\n' sb.appendC
       return
+    SetNestedElement case break ## TODO! set nested element
     SetElement .case =:: index
       ## TODO? special handling for access through pointer?
       op [] .dataType

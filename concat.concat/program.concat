@@ -143,7 +143,25 @@ struct(
 
 struct( NameId : baseName NameId : alias ) =:: export: NameAliasInfo
 
-## TODO find& eliminate large entries, extract additional data to seperate storage
+struct(
+  i8 16 array : path
+  i8 : length
+) =:: export: NestedElementPath8
+struct(
+  i16 8 array : path
+  i8 : length
+) =:: export: NestedElementPath16
+struct(
+  i32 4 array : path
+  i8 : length
+) =:: export: NestedElementPath32
+union(
+  NestedElementPath8 : Path8
+  NestedElementPath16 : Path16
+  NestedElementPath32 : Path32
+  i32 slice : LongPath
+) =:: export: NestedElementPath
+
 union(
             NopType : NOP
          ConstValue : Constant
@@ -167,6 +185,7 @@ union(
                 i32 : GetElement
                 i32 : GetUnionElement
                 i32 : SetElement
+  NestedElementPath : SetNestedElement
                 i32 : SetUnionElement
                   _ : GetUnionTag
                   _ : Return
@@ -289,6 +308,9 @@ proc( Type : base i32 : index FilePosition ptr : pos -> Operation ) =>: export: 
 end
 proc( Type : base i32 : index FilePosition ptr : pos -> Operation ) =>: export: opSetElement
   pos index OpValue .SetElement base Operation new return
+end
+proc( Type : base NestedElementPath : path FilePosition ptr : pos -> Operation ) =>: export: opSetNestedElement
+  pos path OpValue .SetNestedElement base Operation new return
 end
 proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opGetNamedElt
   pos name OpValue .GetNamedElt Type .Undefined Operation new return
@@ -972,6 +994,31 @@ namespace: sb
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         index sb.appendI
+      break
+      SetNestedElement .case =:: path
+        "set nested element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) :" sb.appendS
+        path switch
+          Path8 .case =:: shadow: path
+            path .length iSize cast.u for
+              <$ ' ' sb.appendC path .path >>$ [] i64 cast.u sb.appendI
+            end
+          break
+          Path16 .case =:: shadow: path
+            path .length iSize cast.u for
+              <$ ' ' sb.appendC path .path >>$ [] i64 cast.u sb.appendI
+            end
+          break
+          Path32 .case =:: shadow: path
+            path .length iSize cast.u for
+              <$ ' ' sb.appendC path .path >>$ [] i64 cast.u sb.appendI
+            end
+          break
+          LongPath .case for
+            <$ ' ' sb.appendC >$ sb.appendI
+          end break
+        end
       break
       Return case
         "Return( " sb.appendS
