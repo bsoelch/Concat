@@ -2044,13 +2044,15 @@ proc(
     ## TODO? constant folding
     state .nestedElementInfo .path [] .length 0 != if
       containerType typeContext types.isTaggedUnion if
-        "nested write to union is not yet supported" sb.copyPtr
-        pos errors appendError
-        ## TODO: create union value with correct index and set whole struct
-      end
-      state .nestedElementInfo [] .path
-        elementIndex list.append
-      =:: path
+        1 StackModType .ROTATE pos opStackMod state appendOp ..drop
+        containerType typeContext types.asRawUnion .else
+          "cannot get raw union-data":s pos ..line internalErrorNoOp ..unreachable
+        end elementIndex pos opNewUnion state appendOp ..drop
+        1 StackModType .ROTATE pos opStackMod state appendOp ..drop
+        state .nestedElementInfo [] .path
+      else
+        state .nestedElementInfo [] .path elementIndex list.append
+      end =:: path
       path .length 4 u< if
         i32 4 array : mut: pathData
         path .length for =:: i
