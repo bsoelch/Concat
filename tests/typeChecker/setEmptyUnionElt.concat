@@ -1,0 +1,12 @@
+proc( type : auto: U type : auto: V
+  U : e
+  union( U : A V : B ) : u
+-> union( U : A V : B ) ) =>: test
+  e u .A=
+end
+proc( -> ) =>: export: main
+  union( i32 : A i32 : B ) =:: U
+  union( _ : A _ : B ) =:: V
+  1 0 U .A test .A .and 1 == end "U .A" assert
+  V .B test .A ? "V .A" assert
+end
