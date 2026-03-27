@@ -174,7 +174,7 @@ namespace: ValueLocation
       Stack2 .case b .Stack2 unionElement.unwrap == return
       Stack3 .case b .Stack3 unionElement.unwrap == return
       LocalVariable .case b .LocalVariable unionElement.unwrap == return
-      GlobalVariable .case b .GlobalVariable unionElement.unwrap == return
+      GlobalVariable .case b .GlobalVariable unionElement.unwrap NameId.eq return
       LocalMemory .case b .LocalMemory unionElement.unwrap == return
     end
   end

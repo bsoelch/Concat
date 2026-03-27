@@ -95,7 +95,7 @@ namespace: NameId
     .else 0 return end hashName
   end
   proc( NameId : a NameId : b -> i32 ) =>: export: cmpName
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.compare
   end
   proc( NameId optional : a? NameId optional : b? -> i32 ) =>: export: cmpNameO
@@ -182,7 +182,7 @@ namespace: id
     id getIdentifier [] .name str string.eq return
   end
   proc( NameId : a NameId : b -> bool ) =>: export: identifierNamesEq
-    a b == if
+    a b ptr.eq if
       true return
     end
     a getIdentifier [] .name b getIdentifier [] .name string.eq return

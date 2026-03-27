@@ -89,7 +89,7 @@ union(
 
 namespace: types
   proc( ArrayId : a ArrayId : b -> i32 ) =>: arrayTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a ArrayData ptr cast =:: aData
     b ArrayData ptr cast =:: bData
     aData [] .size bData [] .size arraySizeCmp
@@ -105,7 +105,7 @@ namespace: types
   ## TODO? should flags be required to be equal
   ##  * figure out why identical types can have different flags
   proc( CompositeInfo ptr : a CompositeInfo ptr : b -> i32 ) =>: compositeTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a .elements [] .length b .elements [] .length != if
       a .elements [] .length b .elements [] .length iSize.cmp return
     end
@@ -129,7 +129,7 @@ namespace: types
     return
   end
   proc( TupleId : a TupleId : b -> i32 ) =>: tupleTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a TupleInfo ptr cast =:: aData
     b TupleInfo ptr cast =:: bData
     aData .compositeInfo bData .compositeInfo compositeTypeCmp
@@ -139,7 +139,7 @@ namespace: types
     aData .compositeInfo compositeTypeHash
   end
   proc( UnionId : a UnionId : b -> i32 ) =>: unionTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a UnionInfo ptr cast =:: aData
     b UnionInfo ptr cast =:: bData
     aData .compositeInfo bData .compositeInfo compositeTypeCmp
@@ -149,7 +149,7 @@ namespace: types
     aData .compositeInfo compositeTypeHash return
   end
   proc( UnionElementId : a UnionElementId : b -> i32 ) =>: unionElementCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a UnionElementInfo ptr cast =:: aData
     b UnionElementInfo ptr cast =:: bData
     aData [] .index bData [] .index != if
@@ -164,7 +164,7 @@ namespace: types
     return
   end
   proc( EnumId : a EnumId : b -> i32 ) =>: enumTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a EnumInfo ptr cast [] =:: aData
     b EnumInfo ptr cast [] =:: bData
     aData .tagType bData .tagType typeCmp
@@ -178,14 +178,14 @@ namespace: types
     return
   end
   proc( InitializerId : a InitializerId : b -> i32 ) =>: initializerTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a .asTuple TupleId cast b .asTuple TupleId cast tupleTypeCmp
   end
   proc( InitializerId : a -> i32 ) =>: initializerTypeHash
     a .asTuple TupleId cast tupleTypeHash
   end
   proc( ProcTypeId : a ProcTypeId : b -> i32 ) =>: procTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a ProcType ptr cast =:: aData
     b ProcType ptr cast =:: bData
     aData [] .callingConvention bData [] .callingConvention != if
@@ -215,14 +215,14 @@ namespace: types
     return
   end
   proc( GeneratedTypeId : a GeneratedTypeId : b -> i32 ) =>: export: generatedTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a GeneratedTypeName ptr cast [] b GeneratedTypeName ptr cast [] genNameCmp
   end
   proc( GeneratedTypeId : a -> i32 ) =>: export: generatedTypeHash
     a GeneratedTypeName ptr cast [] genNameHash
   end
   proc( SetTypeId : a SetTypeId : b -> i32 ) =>: setTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a SetType ptr cast =:: aData
     b SetType ptr cast =:: bData
     aData [] .baseType bData [] .baseType typeCmp
@@ -236,7 +236,7 @@ namespace: types
     return
   end
   proc( RefinementTypeId : a RefinementTypeId : b -> i32 ) =>: refinementTypeCmp
-    a b == if 0 return end
+    a b ptr.eq if 0 return end
     a RefinementType ptr cast =:: aData
     b RefinementType ptr cast =:: bData
     aData [] .typeTrait bData [] .typeTrait ProcId.cmp

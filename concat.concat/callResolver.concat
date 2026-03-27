@@ -625,7 +625,7 @@ proc(
       src types.isGeneratedType ! if
         true return
       else src typeContext types.getGeneratorName optional.unwrap
-           target typeContext types.getGeneratorName optional.unwrap != _if
+           target typeContext types.getGeneratorName optional.unwrap NameId.eq ! _if
         true return
       end
       src typeContext types.getGeneratorArgs =:: srcArgs
