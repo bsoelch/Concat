@@ -335,6 +335,11 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
+  context [] .reachable ! and op .val .LocalLabel ? ! and op .val .BlockEnd ? ! and
+      op .val .ImplementProcedure ? ! if
+    opValNOP ops index @[] .val=
+    return
+  end
   op .val switch
     ImplementProcedure case
       ## mark argument variables as initialized
@@ -428,7 +433,9 @@ proc(
         ## reset to state at label
         true context .reachable=
         context .labelVariableUses labelInfo .labelId map.get .else
-          "label only readable through backwards jump" ..panic
+          opValNOP ops index @[] .val= ## unreachable label (assuming there is no back-jump to unreachable label)
+          false context .reachable=
+          return ## TODO! mark label as unreachable, treat any jump to unreachable label is error
         end for =:: varUseInfo
           ## varUseInfo .uses .Read ? if continue end ## TODO is this even reachable
           context .variableUses varUseInfo .name varUseInfo .uses map.put ..drop
