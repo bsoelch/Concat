@@ -1059,7 +1059,7 @@ namespace: types
     a switch
       None Dynamic case true return
       Int .case b .Int unionElement.unwrap == return
-      GenericArg .case b .GenericArg unionElement.unwrap == return
+      GenericArg .case b .GenericArg unionElement.unwrap NameId.eq return
     end
   end
   proc( ArraySize : a -> i32 ) =>: arraySizeHash
@@ -2423,14 +2423,14 @@ namespace: types
     false return
   end
 
-  proc( Type : src0 Type : target0 TypeContext ptr.mut : context -> bool ) =>: export: canAlias
-    src0 context unwrapNamed =:: src
-    target0 context unwrapNamed =:: target
+  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canAlias
+    src context unwrapNamed =:: shadow: src
+    target context unwrapNamed =:: shadow: target
     src target types.typeEquals if
       true return ## same type-different names
     end
     ## procedure: compare call-convention, arguments and return-values
-    src .Procedure  ? and target .Procedure  ? if
+    src .Procedure ? and target .Procedure  ? if
       src context getCallConvention target context getCallConvention != if
         false return
       end

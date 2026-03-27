@@ -10,6 +10,19 @@ import "files.concat"
 import "common.concat"
 
 struct( NamespaceId : current NamespaceImportId : imports ) =:: export: NamespaceInfo
+namespace: NamespaceInfo
+  proc( NamespaceInfo -> i32 ) =>: hash
+    $ .current i32 cast >$ .imports i32 cast 31 * +
+  end
+  proc( NamespaceInfo : a NamespaceInfo : b -> bool ) =>: eq
+    a .current b .current == and a .imports b .imports == end
+  end
+  proc( NamespaceInfo : a NamespaceInfo : b -> i32 ) =>: cmp
+    a .current i32 cast.u b .current i32 cast.u i32.cmp
+      $ ? if return else ..drop end
+    a .imports i32 cast.u b .imports i32 cast.u i32.cmp
+  end
+end
 
 struct(
   NamespaceId : imported
@@ -77,12 +90,22 @@ struct(
   id.IdentifierFlag : flags
 ) =:: Identifier
 namespace: NameId
-  ## FIXME! ensure Name in different namespace does not compare/hash equal
-  proc( NameId -> i32 ) =>: export: hash Identifier ptr cast [] .name string.hash end
+  ## TODO? should hash/equality/cmp be by value or by reference
+  proc( NameId : a -> i32 ) =>: export: hash
+    a iSize cast! $ 32 >>> ^ i32 cast.u return
+    a Identifier ptr cast [] .namespaceInfo NamespaceInfo.hash 31 *
+    a Identifier ptr cast [] .name string.hash +
+  end
   proc( NameId : a NameId : b -> bool ) =>: export: eq
-    a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.eq
+    a iSize cast! b iSize cast! iSize.eq return
+    a Identifier ptr cast [] .namespaceInfo b Identifier ptr cast [] .namespaceInfo NamespaceInfo.eq and
+      a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.eq
+    end
   end
   proc( NameId : a NameId : b -> i32 ) =>: export: cmp
+    a iSize cast! b iSize cast! iSize.cmp return
+    a Identifier ptr cast [] .namespaceInfo b Identifier ptr cast [] .namespaceInfo NamespaceInfo.cmp =:: c
+      c ? if c return end
     a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.compare
   end
   proc( NameId optional -> i32 ) =>: export: hashO

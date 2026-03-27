@@ -2097,9 +2097,9 @@ namespace: interpreter
     procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
     0:iSize ## XXX? is there a better way to get number of non-auto static args
       args .length i32 cast.u for =:: i
-        procType i typeContext types.getProcArgName .and id.identifierFlags =:: flags
-        flags id.FLAG_STATIC & ? or
-            args i [] typeContext types.isType if
+        args i [] typeContext types.isType or
+            procType i typeContext types.getProcArgName .and
+            id.identifierFlags id.FLAG_STATIC & ? if
           1:iSize +
         end
       end

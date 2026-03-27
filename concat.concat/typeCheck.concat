@@ -1420,8 +1420,8 @@ proc(
         eltName id.getIdentifierPos errors appendError
       end
     end
-    argType typeContext types.isEmpty or isCodeImpl and
-        eltName? .and id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+    argType typeContext types.isEmpty or isCodeImpl and argType typeContext types.isType or
+        eltName? .and id.identifierFlags id.FLAG_STATIC & ? if
       continue
     end
     argCount argIndex != if
@@ -1810,12 +1810,7 @@ namespace: typeChecker
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
-    generatorName id.getBaseName .else
-      "could not find base procedure for " sb.copyPtr
-        generatorName nameContext sb.appendIdentifierPath
-      pos errors appendError
-      Type optional.empty return
-    end =:: generatorBaseName
+    generatorName id.getBaseName .else generatorName end =:: generatorBaseName
     generatorBaseName idContext id.getIdData .else
       "could not find procedure " sb.copyPtr
         generatorBaseName nameContext sb.appendIdentifierPath

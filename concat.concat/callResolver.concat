@@ -38,10 +38,22 @@ namespace: ArgumentId
   proc( i32 -> ArgumentId ) =>: export: fromIndex
     iSize cast.u VALUE_SHIFT << TAG_INDEX | ArgumentId cast
   end
-  proc( ArgumentId -> i32 ) =>: export: hash
-    iSize cast $ 32 >>> + i32 cast
+  proc( ArgumentId : a -> i32 ) =>: export: hash
+    a iSize cast TAG_MASK & switch
+      TAG_NAME case a NameId cast! NameId.hash return
+      TAG_INDEX case a i32 cast.u 2381 * return
+      default "unexpected tag for ArgumentId" ..panic
+    end
   end
-  proc( ArgumentId ArgumentId -> bool ) : export: alias: eq iSize.eq
+  proc( ArgumentId : a ArgumentId : b -> bool ) =>: export: eq
+    a iSize cast b iSize cast == if true return end
+    a iSize cast TAG_MASK & b iSize cast TAG_MASK & != if false return end
+    a iSize cast TAG_MASK & switch
+      TAG_NAME case a NameId cast! b NameId cast! NameId.eq return
+      TAG_INDEX case a iSize cast b iSize cast iSize.eq return
+      default "unexpected tag for ArgumentId" ..panic
+    end
+  end
 end
 
 struct(
@@ -972,17 +984,21 @@ proc(
           false current .argsMatch=
         end
         paramName? .and =:: paramName
-            current .genericValues paramName ArgumentId.fromName map.at .and =:: prevVal
-          prevVal [] switch
-            NonEmpty case
-              stackVal .TypeId .and typeContext types.isEmpty end
-              break
-            Value Fixed .case stackVal constantEquals ! break
-        end if
+            current .genericValues paramName ArgumentId.fromName map.at .and [] switch
+              NonEmpty case
+                stackVal .TypeId .and typeContext types.isEmpty end
+                break
+              Value Fixed .case stackVal constantEquals ! break
+            end
+        if
           false current .argsMatch=
         else
           current .genericValues
-            paramIndex ArgumentId.fromIndex
+            paramName? .if
+              ArgumentId.fromName
+            else
+              paramIndex ArgumentId.fromIndex
+            end
             stackVal GenericArg .Fixed
           map.put ..drop
         end

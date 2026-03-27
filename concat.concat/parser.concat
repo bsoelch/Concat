@@ -392,11 +392,12 @@ proc(
   typeContext .nameContext =:: nameContext
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
-    block [] .blockData .While ? and blockName block [] .blockName id.identifierNamesEqO if
+    block [] .blockData .While ? and blockName ! .or =:: shadow: blockName
+        block [] .blockName .and blockName id.identifierNamesEq if
       block optional.wrap return
     end
-    breakType .BREAK and block [] .blockData .Switch ? and
-        blockName block [] .blockName id.identifierNamesEqO if
+    breakType .BREAK and block [] .blockData .Switch ? and blockName ! .or =:: shadow: blockName
+        block [] .blockName .and blockName id.identifierNamesEq if
       block optional.wrap return
     end
   end

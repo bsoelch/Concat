@@ -646,7 +646,7 @@ namespace: sb
           ## skip empty arguments
           continue
         end
-        argName? .and id.identifierFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
+        arg typeContext types.isType or argName? .and id.identifierFlags id.FLAG_STATIC & ? if
           continue
         end
         hasArgs if
@@ -3044,7 +3044,7 @@ proc(
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
-          argName? .and id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+          argType typeContext types.isType or argName? .and id.identifierFlags id.FLAG_STATIC & ? if
             i 1 + continue ## skip static arguments
           end
           argType context referenceOnly if
