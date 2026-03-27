@@ -1,12 +1,12 @@
 import core/type
 namespace: std.default
-  proc( type.enum : auto: E
+  proc( type.namedEnum : auto: E
     E : a
     E : b
   -> bool ) =>: eqEnum
     a ..tag b ..tag ==
   end
-  proc( type.enum : auto: E
+  proc( type.namedEnum : auto: E
     E : a
     E : b
   -> bool ) =>: neEnum

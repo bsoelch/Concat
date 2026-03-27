@@ -11,13 +11,18 @@ namespace: type
   type .with( ..types.isTaggedUnion ) =:: export: union
 
   proc( type : T -> bool ) =>: export: static: isPointerValue
-    T ..types.unwrapNamed ..types.isPointer and T ..types.unwrapNamed ..types.isRawPointer ! end
+    T ..types.unwrapNamed $ ..types.isPointer >$ ..types.isRawPointer ! &
   end
+  type .with( ..types.unwrapNamed $ ..types.isPointer >$ ..types.isRawPointer ! & ) =:: export: pointerValue
   proc( type : T -> bool ) =>: export: static: isNamedPointer
     T ..types.unwrapNamed ..types.isPointer
   end
-  type .with( isPointerValue ) =:: export: pointerValue
-  type .with( isNamedPointer ) =:: export: namedPointer
+  type .with( ..types.unwrapNamed ..types.isPointer ) =:: export: namedPointer
+
+  proc( type : T -> bool ) =>: export: static: isNamedEnum
+    T ..types.unwrapNamed ..types.isEnum
+  end
+  type .with( ..types.unwrapNamed ..types.isEnum ) =:: export: namedEnum
 
   oneOf( i8 i16 i32 i64 ) =:: export: integer
   oneOf( f32 f64 ) =:: export: float
