@@ -2069,7 +2069,7 @@ proc(
         targetPtr sb.appendI
         baseType context referenceOnly if
           ", " sb.appendS
-          baseType pos context typeStrideInt sb.appendI
+          baseType pos context typeSizeInt sb.appendI
         end
         '\n' sb.appendC
       return
