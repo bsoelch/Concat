@@ -929,11 +929,15 @@ namespace: sb
             ## TODO ensure elements are ordered by memory location
             containerType typeContext types.compositeElts =:: types
             0:i64 =:: mut: offset
+            false =:: mut: needsComma
             0:i32 while $ iSize cast.u arrayValue .length u< do =:: i
               types i [] =:: elt
+              elt typeContext types.isEmpty if continue end
               containerType i pos context tupleEltOffsetInt =:: eltOffset
-              i 0 > if
+              needsComma if
                 ',' sb.appendC
+              else
+                true needsComma=
               end
               offset eltOffset < if
                 "z " sb.appendS
@@ -950,8 +954,7 @@ namespace: sb
               offset
                 elt pos context typeSizeInt +
               offset=
-              i 1 +
-            end ..drop
+            finally i 1 + end ..drop
             containerType pos context typeSizeInt =:: size
             offset size < if
               ",z " sb.appendS
