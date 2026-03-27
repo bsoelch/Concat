@@ -2977,44 +2977,7 @@ proc(
         constId i64 cast sb.appendI
         '\n' sb.appendC
       return
-    DeclareId InitializeId .case =:: idInfo
-      op [] .val .InitializeId ? =:: assignValue
-      idInfo .nameId id.identifierFlags =:: identifierFlags
-      identifierFlags id.FLAG_MUTABLE & ? =:: mutable
-      idInfo .idType switch
-        PROCEDURE case
-          assignValue ! if
-            sb return ## ignore procedure declarations
-          end
-          break
-        LOCAL_VAR TMP_VAR case
-          op [] .dataType =:: valType
-          ## use pointers as stack representation of arrays and composites
-          valType context referenceOnly ! =:: isValue
-          sb
-            op [] .pos sb.appendPosQBE
-            assignValue if
-              isValue if
-                "store" sb.appendS
-                valType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-              else
-                "blit" sb.appendS ## XXX call memcopy for large structs
-              end
-              " %s" sb.appendS
-              op [] .pos context popValue sb.appendI
-              ',' sb.appendC
-              idInfo .nameId appendLocalVar
-              isValue ! if
-                ',' sb.appendC
-                op [] .dataType op [] .pos context typeSizeInt sb.appendI
-              end
-              '\n' sb.appendC
-            end
-          return
-        GLOBAL_VAR TYPE ARGUMENT LABEL PROCEDURE_BUNDLE case
-          break ## XXX error message
-      end
-      break
+    DeclareId case sb return ## ignore declarations
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procInfo
       op [] .dataType context .currentProc=
@@ -4023,7 +3986,7 @@ proc(
       break
     CompilerInfo case
       sb return ## XXX? print compiler info
-    TypeInfo Copy UsingNamespace UsingIdentifier GetUnionTag SetNestedNamedElt
+    TypeInfo Copy UsingNamespace UsingIdentifier GetUnionTag SetNestedNamedElt InitializeId
     GetName AtName ElementSetName SetName GetNamedElt Error Assert Panic DeclareName AliasName InitializeName Import LibImport
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc case
       break ## XXX error message

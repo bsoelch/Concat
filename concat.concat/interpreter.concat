@@ -1337,55 +1337,6 @@ proc(
       procId
         op [] .dataType
       op [] .pos context interpreter.evaluateCall wrapResult return
-    InitializeId .case =:: idInfo
-      idInfo .nameId =:: nameId
-      op [] .pos context popValue if ..drop.2
-        "stack underflow while evaluating operation: " sb.copyPtr
-          op [] program sb.appendOp
-        op [] .pos errors appendError
-        EvalResult .Error return
-      end =:: value =:: valInfo
-      idInfo .idType switch
-        GLOBAL_VAR TYPE case
-          context .globalVariables
-            nameId
-            ## Constant
-              value
-              ## ValueInfo
-                valInfo .valueType
-                op [] .pos
-              ValueInfo new
-            Constant new
-          map.put ..drop
-          EvalResult .Ok return
-        LOCAL_VAR LABEL TMP_VAR case
-          context [] .localVariables .else
-            "missing local variables " sb.copyPtr
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-            nameId
-            ## Constant
-              nameId id.identifierFlags id.FLAG_MUTABLE & ? if
-                value valInfo .valueType true context localCopy
-              else
-                value
-              end
-              ## ValueInfo
-                valInfo .valueType
-                op [] .pos
-              ValueInfo new
-            Constant new
-          map.put ..drop
-          EvalResult .Ok return
-        ARGUMENT PROCEDURE PROCEDURE_BUNDLE case
-          value valInfo context unpopValue
-          "unsupported operation in constant evaluation: " sb.copyPtr
-            op [] program sb.appendOp
-          op [] .pos errors appendError
-          EvalResult .Error return
-      end
-      break
     GetUnionElement case "unimplemented: get union element" ..panic
     SetNestedElement case "unimplemented: set nested element" ..panic
     GetElement SetElement SetUnionElement .case =:: eltIndex
@@ -1409,7 +1360,7 @@ proc(
       context pushValue
       EvalResult .Ok return
     AtName SetName DeclareName AliasName InitializeName UsingNamespace UsingIdentifier
-        TypeWith TypeModifier TypeOf Length ElementSetName case
+        TypeWith TypeModifier TypeOf Length ElementSetName InitializeId case
       ## label/name should have been resolved in type-checker
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp

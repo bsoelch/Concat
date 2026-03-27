@@ -172,7 +172,7 @@ proc(
       newOps
         op list.append ## nothing to change
       return
-    DeclareId InitializeId .case =:: idInfo
+    DeclareId .case =:: idInfo
       context [] .variables
         ## VariableInfo
           idInfo .nameId
@@ -211,16 +211,9 @@ proc(
             op .pos
           opAutoCast list.append
         end
-        ## opInitializeId
-          baseType
-          tmpId
-          op .pos
-        opInitializeId list.append
-        ## opGetId
-          baseType
-          tmpId
-          op .pos
-        opGetId list.append
+        baseType tmpId op .pos opDeclareId list.append
+        baseType tmpId op .pos opSetId list.append
+        baseType tmpId op .pos opGetId list.append
       return
     New NewUnion case
       op .dataType typeContext types.referenceOnly ! if
@@ -230,7 +223,7 @@ proc(
       end
       op .dataType true op .pos context newTmpVar =:: tmpId
       newOps
-        ## opInitializeId
+        ## opDeclareId
           op .dataType
           tmpId
           op .pos
@@ -304,7 +297,7 @@ proc(
     return
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
-    ConstantReference NewReference
+    ConstantReference NewReference InitializeId
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier ElementSetName
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName SetNestedNamedElt
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
