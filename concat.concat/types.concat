@@ -599,9 +599,9 @@ namespace: types
           end return
         end
         tupleInfo .compositeInfo .flags [] COMP_FLAG_CONTAINS_LITERAL & ? if
-          context [] .memory
+          context .nameContext [] .allocator
             eltCount i32 cast.u Type mixedArena.allocSlice =:: newElements
-          context .memory=
+          context .nameContext .allocator=
           tupleInfo .compositeInfo [] .elements =:: oldElts
           0:iSize while $ eltCount u< do =:: i
             oldElts i [] context literalToType newElements i =[]
@@ -789,19 +789,19 @@ namespace: types
     t typeContext compositeElts =:: elts
     1:i64 =:: mut: alignment
     0:i64 =:: mut: size
-    typeContext [] .memory
+    typeContext .nameContext [] .allocator
       $ mixedArena.offset =:: memOffset
       elts .length i32 cast.u i64 mixedArena.allocSlice =:: offsetBuffer
-    typeContext .memory=
+    typeContext .nameContext .allocator=
     0:iSize =:: mut: offsetCount
     elts for =:: elt
       ## size and alignment
       elt typeContext alignOf .Fixed .else ..drop
-        typeContext [] .memory memOffset mixedArena.reset typeContext .memory=
+        typeContext .nameContext [] .allocator memOffset mixedArena.reset typeContext .nameContext .allocator=
         true return ## elements are not fixed size
       end =:: eltAlign
       elt typeContext sizeOf .Fixed .else ..drop
-        typeContext [] .memory memOffset mixedArena.reset typeContext .memory=
+        typeContext .nameContext [] .allocator memOffset mixedArena.reset typeContext .nameContext .allocator=
         true return ## elements are not fixed size
       end =:: eltSize
       eltAlign alignment > if
@@ -1111,9 +1111,9 @@ namespace: types
         context asUnlabeledProc
       base=
     end
-    context [] .memory
+    context .nameContext [] .allocator
       base size ArrayData new mixedArena.copyValue =:: arrayId
-    context .memory=
+    context .nameContext .allocator=
     arrayId ArrayId cast
       arrayType switch
         POINTER case Type .Pointer break
@@ -1393,12 +1393,12 @@ namespace: types
     index 0 < or index iSize cast.u compData [] .elements .length u>= if
       Type optional.empty return
     end
-    context [] .memory
+    context .nameContext [] .allocator
       ## UnionElementInfo
         composite
         index
       UnionElementInfo new mixedArena.copyValue =:: elementId
-    context .memory=
+    context .nameContext .allocator=
     elementId UnionElementId cast Type .UnionElement optional.wrap return
   end
   proc( Type TypeContext ptr -> Type optional ) =>: export: getUnionElementUnion
@@ -1472,7 +1472,7 @@ namespace: types
     TypeContext ptr.mut : context
   -> Type optional ) =>: export: newTuple
     elts context computeCompositeFlags =:: flags
-    context [] .memory
+    context .nameContext [] .allocator
       elts mixedArena.copySlice slice.freeze =:: eltCopy
       eltNames copyEltNames =:: namesCopy
       ## TupleInfo
@@ -1485,7 +1485,7 @@ namespace: types
         CompositeInfo new
         i64 slice.empty
       TupleInfo new mixedArena.copyValue =:: tupleId
-    context .memory=
+    context .nameContext .allocator=
     tupleId TupleId cast Type .Struct optional.wrap return
   end
   proc(
@@ -1514,7 +1514,7 @@ namespace: types
       end
     finally i 1:iSize + end ..drop
     elts context computeCompositeFlags =:: flags
-    context [] .memory
+    context .nameContext [] .allocator
       ## InitializerInfo
       elts mixedArena.copySlice slice.freeze =:: eltCopy
       eltNames copyEltNames =:: namesCopy
@@ -1530,7 +1530,7 @@ namespace: types
         TupleInfo new
         arrayType
       InitializerInfo new mixedArena.copyValue =:: initializerId
-    context .memory=
+    context .nameContext .allocator=
     initializerId InitializerId cast Type .Initializer return
   end
   enum( TAGGED RAW ) =:: export: UnionType
@@ -1556,13 +1556,13 @@ namespace: types
     eltNames .length 0:iSize == if
       Type optional.empty return
     end
-    context [] .memory
+    context .nameContext [] .allocator
       eltNames mixedArena.copySlice slice.freeze
         baseType .else
           eltNames .length UnionType .TAGGED computeEnumTagType
         end
       EnumInfo new mixedArena.copyValue =:: enumId
-    context .memory=
+    context .nameContext .allocator=
     enumId EnumId cast Type .Enum optional.wrap return
   end
   proc(
@@ -1574,7 +1574,7 @@ namespace: types
     elts .length 0:iSize == or elts .length eltNames .length != if
       Type optional.empty return
     end
-    context [] .memory
+    context .nameContext [] .allocator
       elts mixedArena.copySlice slice.freeze =:: eltCopy
       eltNames mixedArena.copySlice slice.freeze optional.wrap =:: namesCopy
       ## CompositeInfo
@@ -1584,7 +1584,7 @@ namespace: types
         -1
         -1
       CompositeInfo new UnionInfo new mixedArena.copyValue =:: unionData
-    context .memory=
+    context .nameContext .allocator=
     unionData UnionId cast Type .RawUnion =:: rawValue
     unionType .RAW if
       rawValue optional.wrap return
@@ -1806,12 +1806,12 @@ namespace: types
     callConvention .CCALL and out .length 1:iSize u> if
       Type optional.empty return ## XXX? better error handling
     end
-    context [] .memory
+    context .nameContext [] .allocator
       in mixedArena.copySlice slice.freeze =:: inCopy
       out mixedArena.copySlice slice.freeze =:: outCopy
       eltNames mixedArena.copySlice slice.freeze =:: eltNamesCopy
       inCopy outCopy eltNamesCopy callConvention ProcType new mixedArena.copyValue =:: procId
-    context .memory=
+    context .nameContext .allocator=
     procId ProcTypeId cast Type .Procedure  optional.wrap return
   end
   proc(
@@ -1834,14 +1834,14 @@ namespace: types
     procData [] .eltNames .length 0:iSize == if
       proc return
     end
-    context [] .memory
+    context .nameContext [] .allocator
       ## ProcType
         procData [] .inTypes
         procData [] .outTypes
         NameId optional slice.empty
         procData [] .callingConvention
       ProcType new mixedArena.copyValue =:: procId
-    context .memory=
+    context .nameContext .allocator=
     procId ProcTypeId cast Type .Procedure
       isPtr if
         ArrayType .POINTER ArraySize .None context newArrayType .else
@@ -1999,11 +1999,11 @@ namespace: types
       prevValue .key Type .GeneratedType GeneratedTypeState .Stored return
     end
     create if
-      typeContext [] .memory
+      typeContext .nameContext [] .allocator
         arguments mixedArena.copySlice slice.freeze =:: newArgs
         generatorName newArgs GeneratedTypeName new =:: newName
         newName mixedArena.copyValue GeneratedTypeId cast =:: newKey
-      typeContext .memory=
+      typeContext .nameContext .allocator=
       typeContext .generatedTypes
         newName
         ## GeneratedTypeValue
@@ -2094,14 +2094,14 @@ namespace: types
   -> Type ) =>: export: newSetType
     ## TODO? check if set-type contains duplicate values
     ## TODO? sort elements
-    context [] .memory
+    context .nameContext [] .allocator
       ## TODO: is shallow copy of type-elements save
       elements mixedArena.copySlice =:: sliceElements
       sliceElements constantCmp@ slice.sort
       baseType context literalToType
         sliceElements slice.freeze
       SetType new mixedArena.copyValue =:: setType
-    context .memory=
+    context .nameContext .allocator=
     setType SetTypeId cast Type .SetType  return
   end
   proc( Type TypeContext ptr : context -> bool ) =>: export: isSetType
@@ -2126,9 +2126,9 @@ namespace: types
     ProcId : typeTrait
     TypeContext ptr.mut : context
   -> Type ) =>: export: newRefinementType
-    context [] .memory
+    context .nameContext [] .allocator
       baseType typeTrait RefinementType new mixedArena.copyValue =:: refType
-    context .memory=
+    context .nameContext .allocator=
     refType RefinementTypeId cast Type .RefinementType  return
   end
   proc( Type TypeContext ptr : context -> bool ) =>: export: isRefinementType
@@ -2619,8 +2619,7 @@ namespace: types
 end
 ## type context
 struct(
-  NameContext        : nameContext
-  MixedArenaAllocator : memory
+  NameContext         : nameContext
   NameId Type hashMap : namedTypes
   types.GeneratedTypeName types.GeneratedTypeValue hashMap : generatedTypes
 ) =:: export: TypeContext
@@ -2628,7 +2627,6 @@ namespace: types
   proc( -> TypeContext ) =>: export: newTypeContext
     ## TypeContext
       id.newNameContext
-      4096 mixedArena.create
       NameId.hash@ NameId.eq@ 1024 Type map.create
       genNameHash@ genNameEq@ 1024 types.GeneratedTypeValue map.create
     TypeContext new return
@@ -2638,7 +2636,6 @@ namespace: types
     context@ .generatedTypes map.free
     context
       $ .nameContext id.freeNameContext >$ .nameContext=
-      $ .memory mixedArena.free >$ .memory=
     return
   end
 end
