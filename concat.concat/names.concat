@@ -123,6 +123,7 @@ end
 
 struct(
   MixedArenaAllocator : allocator
+  i32 : tmpCount
   Namespace list : namespaces
   NamespaceImport list : namespaceImports
   NamespaceInfo : namespaceInfo
@@ -131,7 +132,8 @@ namespace: id
 
   proc( -> NameContext ) =>: export: newNameContext
     4096   mixedArena.create
-    32       Namespace list.create
+      0
+      32 Namespace list.create
       string.empty
       32 NamespaceId list.create
       NAMESPACE_ID_NONE
@@ -240,6 +242,23 @@ namespace: id
       Identifier new mixedArena.copyValue NameId cast =:: nameId
     context .allocator=
     nameId return
+  end
+  proc(
+    IdentifierFlag : flags
+    FilePosition ptr : pos
+    NameContext ptr.mut : context
+  -> NameId ) =>: export: newTmpIdentifier
+    char8 16 array : mut: buffer
+    ## newIdentifier
+      buffer@ sb.wrapBuffer
+        "tmp@":s sb.appendStr
+        context [] .tmpCount
+          $ 1 + context .tmpCount=
+        i64 cast.u 62 sb.appendU?
+      sb.asStr
+      flags
+      pos
+    context newIdentifier
   end
   proc(
     NameId : baseNameId
@@ -390,6 +409,9 @@ end
 namespace: sb
   proc( stringBuilder NameId : id -> stringBuilder ) =>: export: appendIdentifierName
     id id.getIdentifier [] .name sb.appendStr return
+  end
+  proc( stringBuilder NameId : id -> stringBuilder ) =>: export: appendAciifiedIdentifierName
+    id id.getIdentifier [] .name sb.appendAsciified return
   end
   proc( stringBuilder : sb NameId : id NameContext ptr : context bool : asciify -> stringBuilder ) =>: appendIdentifierPath_internal
     id id.getIdentifier =:: ident

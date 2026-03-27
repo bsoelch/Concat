@@ -6,7 +6,7 @@ import "program.concat"
 import "measure.concat"
 import "branchTree.concat"
 
-## XXX make prefix customizable
+## TODO? make prefix customizable
 "cct_" =:: CONCAT_PREFIX
 "cctI_argc" =:: CONCAT_ARGC_NAME
 "cctI_argv" =:: CONCAT_ARGV_NAME
@@ -2931,8 +2931,14 @@ proc(
     argIndices [] list.free argIndices =[]
   return
 end
-proc( NameId -> i64 ) =>: localVarId
-  iSize cast! i64 cast.u ## TODO? better computation
+proc( stringBuilder NameId : nameId -> stringBuilder ) =>: appendLocalVar
+  "%l":s sb.appendStr
+  nameId id.getIdentifierPos =:: pos
+  pos [] .line sb.appendI
+  '_' sb.appendC
+  pos [] .posInLine sb.appendI
+  '_' sb.appendC
+  nameId sb.appendAciifiedIdentifierName
 end
 
 proc(
@@ -2994,8 +3000,7 @@ proc(
               " %s" sb.appendS
               op [] .pos context popValue sb.appendI
               ',' sb.appendC
-              "%l" sb.appendS
-              idInfo .nameId localVarId sb.appendI
+              idInfo .nameId appendLocalVar
               isValue ! if
                 ',' sb.appendC
                 op [] .dataType op [] .pos context typeSizeInt sb.appendI
@@ -3061,16 +3066,14 @@ proc(
             i argName? context sb.appendArgName
             '\n' sb.appendC
           else =:: argName valType .REFERENCE _if
-            "%l" sb.appendS
-            argName localVarId sb.appendI
+            argName appendLocalVar
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
             i argName optional.wrap context sb.appendArgName
             '\n' sb.appendC
           else
-            "%l" sb.appendS
-            argName localVarId sb.appendI
+            argName appendLocalVar
             " =l alloc" sb.appendS
             argType op [] .pos context typeAlignmentInt 4 i64.max sb.appendI
             ' ' sb.appendC
@@ -3079,8 +3082,8 @@ proc(
             argType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
             ' ' sb.appendC
             i argName optional.wrap context sb.appendArgName
-            ", %l" sb.appendS
-            argName localVarId sb.appendI
+            ", " sb.appendS
+            argName appendLocalVar
             '\n' sb.appendC
           end
           i 1 +
@@ -3093,8 +3096,7 @@ proc(
             varInfo .variableType .ARGUMENT if
               continue
             end
-            "%l" sb.appendS
-            varInfo .nameId localVarId sb.appendI
+            varInfo .nameId appendLocalVar
             varInfo .valueType op [] .pos context false appendAlloc ..drop
           end
         else ..drop end
@@ -3134,7 +3136,7 @@ proc(
             "%s" sb.appendS
             isAddr or op [] .dataType context referenceOnly if
               isAddr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
-              " =l copy %l" sb.appendS
+              " =l copy " sb.appendS
             else
               op [] .dataType context toValType =:: valType
               valType context pushValue sb.appendI
@@ -3145,9 +3147,9 @@ proc(
                 op [] .pos
                 context
               sb.appendTypeNameQBE
-              " %l" sb.appendS
+              ' ' sb.appendC
             end
-            idInfo .nameId localVarId sb.appendI
+            idInfo .nameId appendLocalVar
             '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case
@@ -3185,8 +3187,7 @@ proc(
             idInfo .nameId context sb.appendGlobalName
             break
           LOCAL_VAR TMP_VAR ARGUMENT case
-            " %l" sb.appendS
-            idInfo .nameId localVarId sb.appendI
+            idInfo .nameId appendLocalVar
             break
          PROCEDURE TYPE LABEL PROCEDURE_BUNDLE case
             "unsupported identifier for setId " sb.copyPtr

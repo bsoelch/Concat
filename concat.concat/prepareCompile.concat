@@ -29,11 +29,10 @@ proc(
     id.FLAG_MUTABLE | IdentifierFlag cast
   end =:: flags
   ## newIdentifier
-    string.empty
     flags ## XXX? special flag for tmp vars
     pos
     nameContext
-  id.newIdentifier =:: nameId
+  id.newTmpIdentifier =:: nameId
   nameId varType pos idContext id.declareTmpVar
   context [] .variables
     nameId varType VariableType .TMP_VAR VariableInfo new list.append

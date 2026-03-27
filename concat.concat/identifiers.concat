@@ -733,17 +733,10 @@ namespace: id
     FilePosition ptr : pos
     IdentifierContext ptr.mut : context
   -> IdentifierInfo ) =>: export: newTmpVar
-    char8 32 array : mut: buffer
-    ## newIdentifier
-      buffer@ sb.wrapBuffer
-        "tmp@":s sb.appendStr
-        pos [] .line sb.appendI
-        ':' sb.appendC
-        pos [] .posInLine sb.appendI
-      sb.asStr
+    ## newTmpIdentifier
       flags
       pos
-    context .typeContext .nameContext newIdentifier =:: idName
+    context .typeContext .nameContext newTmpIdentifier =:: idName
     ## IdentifierInfo
       idName
       IdentifierType .TMP_VAR false
