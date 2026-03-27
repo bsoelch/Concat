@@ -116,13 +116,13 @@ namespace: types
     a [] .elements b [] .elements typeCmp@ slice.cmp
       $ ? if return else ..drop end
     a [] .eltNames .if
-      b .eltNames [] optional.unwrap NameId.cmpO@ slice.cmp return
+      b .eltNames [] optional.unwrap NameId.cmpNameO@ slice.cmp return
     end
     0 return
   end
   proc( CompositeInfo ptr : a -> i32 ) =>: compositeTypeHash
     0:i32
-      a [] .eltNames .if NameId.hashO@ slice.hash
+      a [] .eltNames .if NameId.hashNameO@ slice.hash
         >$ 31 * +
       end
       31 * a [] .elements typeHash@ slice.hash +
@@ -169,12 +169,12 @@ namespace: types
     b EnumInfo ptr cast [] =:: bData
     aData .tagType bData .tagType typeCmp
       $ ? if return else ..drop end
-    aData .eltNames bData .eltNames NameId.cmp@ slice.cmp return
+    aData .eltNames bData .eltNames NameId.cmpName@ slice.cmp return
   end
   proc( EnumId : a -> i32 ) =>: enumTypeHash
     a EnumInfo ptr cast [] =:: aData
     aData .tagType typeHash
-      31 * aData .eltNames NameId.hash@ slice.hash +
+      31 * aData .eltNames NameId.hashName@ slice.hash +
     return
   end
   proc( InitializerId : a InitializerId : b -> i32 ) =>: initializerTypeCmp
@@ -204,14 +204,14 @@ namespace: types
       $ ? if return else ..drop end
     aData [] .outTypes bData [] .outTypes typeCmp@ slice.cmp
       $ ? if return else ..drop end
-    aData [] .eltNames bData [] .eltNames NameId.cmpO@ slice.cmp return
+    aData [] .eltNames bData [] .eltNames NameId.cmpNameO@ slice.cmp return
   end
   proc( ProcTypeId : a -> i32 ) =>: export: procTypeHash
     a ProcType ptr cast =:: aData
     aData [] .callingConvention ..tag i32 cast.u
       31 * aData [] .inTypes typeHash@ slice.hash +
       31 * aData [] .outTypes typeHash@ slice.hash +
-      31 * aData [] .eltNames NameId.hashO@ slice.hash +
+      31 * aData [] .eltNames NameId.hashNameO@ slice.hash +
     return
   end
   proc( GeneratedTypeId : a GeneratedTypeId : b -> i32 ) =>: export: generatedTypeCmp
