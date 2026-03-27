@@ -156,7 +156,7 @@
             f(32|64)\.((s|u)(8|16|32|64)) |
             f32\.f64 | f64\.f32
           ) |
-          \.\.types\.(alignment|size|stride|is(Primitive|Pointer|RawPointer|Array|Struct|
+          \.\.types\.(alignment|size|stride|is(Primitive|Pointer|ValuePointer|RawPointer|Array|Struct|
             SetType|RefinementType|TaggedUnion|UnionElement|RawUnion|Enum|Proc|Named|Ctype|Align|Mutable|Defined)|
             equals|canAssign|canCast|arrayElement|getElement|getUnionElement|getUnionElementUnion|unwrapNamed)@? |
           \.\.\.
