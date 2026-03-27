@@ -1400,7 +1400,7 @@ proc(
     ## skip auto-args
     while
       argType typeContext types.isEmpty or
-      eltName? ! .or id.identifierFlags id.FLAG_AUTO & ?
+      eltName? .and id.identifierFlags id.FLAG_AUTO & ?
     do
       procArgIndex 1 + procArgIndex=
       calledType procArgIndex typeContext types.getProcArgName eltName?=

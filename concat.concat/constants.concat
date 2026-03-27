@@ -150,8 +150,8 @@ proc( ConstValue : a ConstValue : b -> i32 ) =>: export: constantCmp
     TypeId .case b .TypeId unionElement.unwrap types.typeCmp return
     Procedure .case b .Procedure unionElement.unwrap ProcId.cmp return
     ProcedureBundle .case i64 cast.u b .ProcedureBundle unionElement.unwrap i64 cast.u i64.cmp return
-    GenericArg .case i64 cast.u b .GenericArg unionElement.unwrap i64 cast.u i64.cmp return
-    GlobalPointer .case i64 cast.u b .GlobalPointer unionElement.unwrap i64 cast.u i64.cmp return
+    GenericArg .case b .GenericArg unionElement.unwrap NameId.cmp return
+    GlobalPointer .case b .GlobalPointer unionElement.unwrap NameId.cmp return
     Union .case =:: aUnion
       b .Union unionElement.unwrap =:: bUnion
       aUnion .eltIndex bUnion .eltIndex != if
@@ -213,8 +213,8 @@ proc( ConstValue : a -> i32 ) =>: export: constantHash
     TypeId .case types.typeHash 37 * return
     Procedure .case ProcId.hash 1 + 41 * return
     ProcedureBundle .case i32 cast.u 1 + 43 * return
-    GenericArg .case i32 cast.u 1 + 47 * return
-    GlobalPointer .case i32 cast.u 1 + 53 * return
+    GenericArg .case NameId.hash 1 + 47 * return
+    GlobalPointer .case NameId.hash 1 + 53 * return
     Union .case =:: unionVal
       unionVal .eltIndex
         31 * unionVal .value [] constantHash +
@@ -531,11 +531,10 @@ namespace: sb
           break
         ProcedureBundle .case i64 cast sb.appendI
           ":ProcBundleId"  sb.appendS
-          break
-        GenericArg .case i64 cast sb.appendI
-          ":NameId"  sb.appendS
-          ## TODO? print label
-          break
+        break
+        GenericArg .case
+          sb.appendIdentifierName
+        break
         GlobalPointer .case
           typeContext .nameContext sb.appendIdentifierPath
           '@' sb.appendC

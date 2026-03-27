@@ -267,14 +267,14 @@ end
 
 proc( BlockType : blockType FilePosition ptr : pos -> Operation ) =>: export: opBlock
   pos
-    id.NAME_ID_NONE
+    NameId optional.empty
       -1:BlockId
       0:JumpDistance
       blockType
     BlockData new OpValue .Block
   Type .Undefined Operation new return
 end
-proc( BlockType : blockType NameId : nameId FilePosition ptr : pos -> Operation ) =>: export: opNamedBlock
+proc( BlockType : blockType NameId optional : nameId FilePosition ptr : pos -> Operation ) =>: export: opNamedBlock
   pos
     nameId
       -1:BlockId
@@ -285,7 +285,7 @@ proc( BlockType : blockType NameId : nameId FilePosition ptr : pos -> Operation 
 end
 proc( BlockType : blockType FilePosition ptr : pos -> Operation ) =>: export: opEndBlock
   pos
-    id.NAME_ID_NONE
+    NameId optional.empty
       -1:BlockId
       0:JumpDistance
       blockType
@@ -550,11 +550,10 @@ struct(
 ) =:: export: ProcedureBundle
 
 ## check if composite has any static elements, types are static by default
-proc( Type slice : elements NameId slice : eltNames TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
+proc( Type slice : elements NameId optional slice : eltNames TypeContext ptr : typeContext -> bool ) =>: hasStaticElement
   typeContext .nameContext =:: nameContext
   elements .length for =:: i
-    i eltNames .length u< and eltNames i []
-        nameContext id.identifierFlags id.FLAG_STATIC & ? if
+    eltNames i slice.get optional.flat .and id.identifierFlags id.FLAG_STATIC & ? if
       true return
     end
     elements i [] typeContext types.isType if
@@ -576,7 +575,7 @@ proc(
       ProcFlags.HAS_STATIC_ARG |
     end
     outTypes newProcType typeContext types.getProcRetNames typeContext hasStaticElement or
-        procInfo [] .nameId typeContext .nameContext id.identifierFlags id.FLAG_STATIC & ? if
+        procInfo [] .nameId id.identifierFlags id.FLAG_STATIC & ? if
       ProcFlags.IS_STATIC |
     end
   procInfo .flags=
@@ -607,7 +606,7 @@ proc(
   end =:: outTypes
   inTypes procType typeContext types.getProcArgNames typeContext hasStaticElement =:: hasStaticArg
   outTypes procType typeContext types.getProcRetNames typeContext hasStaticElement
-    procName nameContext id.identifierFlags id.FLAG_STATIC & ? |
+    procName id.identifierFlags id.FLAG_STATIC & ? |
   =:: isStatic
   progContext [] .programMemory
     ## ProcedureInfo
@@ -710,7 +709,7 @@ proc(
     ProcId optional.empty ## main ProcId
     0 0
     32  TypedConstant   list.create
-    32  NameId         list.create
+    32  NameId optional list.create
     256 sb.create
     32  CompilerError   list.create
     basePath
@@ -752,7 +751,7 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .nameBuffer list.free >$ .nameBuffer=
   $ .tmpString sb.free >$ .tmpString=
   $ .errors list.free >$ .errors=
-  id.NAME_ID_NONE >$ .mainId=
+  NameId optional.empty >$ .mainId=
   ProcId optional.empty >$ .mainProcId=
   false >$ .hasGetArgs=
   =:: mut: tmp ## is there a way to avoid switching to variable
@@ -1173,23 +1172,23 @@ namespace: sb
         aliasData .baseName nameContext sb.appendIdentifierPath
       break
       InitializeName .case =:: initName
-        "initialize name: " sb.appendS
+        "initialize name: ":s sb.appendStr
         initName nameContext sb.appendIdentifierPath
       break
       UsingNamespace .case =:: usingNamespace
-        "using namespace: " sb.appendS
+        "using namespace: ":s sb.appendStr
         usingNamespace .baseName nameContext sb.appendIdentifierPath
-        usingNamespace .alias id.NAME_ID_NONE != if
-          " as " sb.appendS
-          usingNamespace .alias nameContext sb.appendIdentifierName
+        usingNamespace .alias .if =:: aliasName
+          " as ":s sb.appendStr
+          aliasName sb.appendIdentifierName
         end
       break
       UsingIdentifier .case =:: usingIdentifier
-        "using idenfifier: " sb.appendS
+        "using idenfifier: ":s sb.appendStr
         usingIdentifier .baseName nameContext sb.appendIdentifierPath
-        usingIdentifier .alias id.NAME_ID_NONE != if
-          " as " sb.appendS
-          usingIdentifier .alias nameContext sb.appendIdentifierName
+        usingIdentifier .alias .if =:: aliasName
+          " as ":s sb.appendStr
+          aliasName sb.appendIdentifierName
         end
       break
       Assert case

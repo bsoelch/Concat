@@ -75,7 +75,7 @@ union(
 ## TODO? assign block-ids in parser
 struct(
   BlockInfoData : blockData
-  NameId : blockName
+  NameId optional : blockName
   FilePosition ptr : openedAt
   TmpVarInfo optional : tmpVarInfo
   bool : autoClose
@@ -232,7 +232,7 @@ end
 
 proc( BlockInfoData : blockData FilePosition ptr : pos ParserState ptr.mut : state -> BlockInfoData ptr.mut ) =>: openBlock
   state [] .openBlocks
-    blockData id.NAME_ID_NONE pos TmpVarInfo optional.empty false false BlockInfo new list.append
+    blockData NameId optional.empty pos TmpVarInfo optional.empty false false BlockInfo new list.append
   state .openBlocks=
   state [] .openBlocks list.peek optional.unwrap .blockData
 end
@@ -251,7 +251,7 @@ proc( BlockType : baseType FilePosition ptr : pos ParserState ptr.mut : state ->
       state opCount
       iSize optional.empty
       baseType
-    TypeBlockData new BlockInfoData .TypeBlock id.NAME_ID_NONE pos TmpVarInfo optional.empty false true BlockInfo new list.append
+    TypeBlockData new BlockInfoData .TypeBlock NameId optional.empty pos TmpVarInfo optional.empty false true BlockInfo new list.append
   state .openBlocks=
 end
 proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openInitializerBlock
@@ -262,7 +262,7 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openInitialize
   state [] .openBlocks
     ## InitializerBlockData
       state opCount
-    InitializerBlockData new BlockInfoData .Initializer id.NAME_ID_NONE pos TmpVarInfo optional.empty false true BlockInfo new list.append
+    InitializerBlockData new BlockInfoData .Initializer NameId optional.empty pos TmpVarInfo optional.empty false true BlockInfo new list.append
   state .openBlocks=
 end
 ## TODO handle initializer blocks
@@ -272,7 +272,7 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openProcBlock
       ## ProcBlockData
         state opCount
       ProcBlockData new BlockInfoData .Procedure
-      id.NAME_ID_NONE
+      NameId optional.empty
       pos
       TmpVarInfo optional.empty
       false
@@ -382,7 +382,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition ptr : pos P
 end
 proc(
   BlockType : breakType
-  NameId : blockName
+  NameId optional : blockName
   FilePosition ptr : pos
   ParserState ptr.mut : state
 -> BlockInfo ptr.mut optional ) =>: findBreakableBlock
@@ -392,13 +392,11 @@ proc(
   typeContext .nameContext =:: nameContext
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
-    block [] .blockData .While ? and blockName id.NAME_ID_NONE == or
-        block [] .blockName blockName nameContext id.identifierNamesEq if
+    block [] .blockData .While ? and blockName block [] .blockName id.identifierNamesEqO if
       block optional.wrap return
     end
     breakType .BREAK and block [] .blockData .Switch ? and
-        blockName id.NAME_ID_NONE == or
-        block [] .blockName blockName nameContext id.identifierNamesEq if
+        blockName block [] .blockName id.identifierNamesEqO if
       block optional.wrap return
     end
   end
@@ -877,15 +875,15 @@ end
 proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendItrStep
   state [] .program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
-  varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
+  varInfo .varId id.getIdentifierName pos opGetName state appendOp
   "..itr.step":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrStep
   itrStep [] .valueType itrStep id.asIdInfo pos opGetId state appendOp
-  varInfo .varId nameContext id.getIdentifierName pos opSetName state appendOp
+  varInfo .varId id.getIdentifierName pos opSetName state appendOp
 end
 proc( TmpVarInfo : varInfo FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendItrEnd
   state [] .program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
-  varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
+  varInfo .varId id.getIdentifierName pos opGetName state appendOp
   "..itr.end":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrEnd
   itrEnd [] .valueType itrEnd id.asIdInfo pos opGetId state appendOp
 end
@@ -915,7 +913,7 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> TmpVarInfo ) =>: app
   0 StackModType .COPY pos opStackMod state appendOp
   pos opTypeOf state appendOp
   ifName pos opInitializeName state appendOp
-  ifName nameContext id.getIdentifierName pos opGetName state appendOp
+  ifName id.getIdentifierName pos opGetName state appendOp
   "..if.check":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifCheck
   ifCheck [] .valueType ifCheck id.asIdInfo pos opGetId state appendOp
   ifName TmpVarInfo new
@@ -923,7 +921,7 @@ end
 proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition ptr : pos -> ) =>: appendElseVal
   state [] .program .idContext =:: idContext
   idContext .typeContext .nameContext =:: nameContext
-  varInfo .varId nameContext id.getIdentifierName pos opGetName state appendOp
+  varInfo .varId id.getIdentifierName pos opGetName state appendOp
   "..if.elseVal":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: elseVal
   elseVal [] .valueType elseVal id.asIdInfo pos opGetId state appendOp
 end
@@ -994,7 +992,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           "expected if-block to have tmp-var" ..panic
         end =:: varInfo
         hasOrIf ! if
-          varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
+          varInfo .varId id.getIdentifierName blockPos opGetName state appendOp
           "..if.ifVal":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifGet
           ifGet [] .valueType ifGet id.asIdInfo blockPos opGetId state appendOp
         else ifData [] .andPositions .length 0 != _if
@@ -1040,7 +1038,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       andOrBlock .andOrPositions=
       blockType blockPos opBlock  state appendOp
       varInfo? .if =:: varInfo
-        varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
+        varInfo .varId id.getIdentifierName blockPos opGetName state appendOp
         isOr if "..if.elseVal":s else "..if.ifVal":s end idContext id.findIdentifierByName
            .Ok unionElement.unwrap
         =:: ifGet
@@ -1076,9 +1074,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-        nameContext id.newIdentifier
+        nameContext id.newIdentifier optional.wrap
       else
-        id.NAME_ID_NONE
+        NameId optional.empty
       end =:: blockName
       fileState program wordPos =:: blockPos
       ## WhileBlockData
@@ -1095,9 +1093,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-        nameContext id.newIdentifier
+        nameContext id.newIdentifier optional.wrap
       else
-        id.NAME_ID_NONE
+        NameId optional.empty
       end =:: blockName
       fileState program wordPos =:: blockPos
       "..itr.prepare":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrPrepare
@@ -1108,12 +1106,12 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       itrId blockPos opInitializeName state appendOp
       state opCount =::  whilePos
       BlockType .WHILE blockName blockPos opNamedBlock state appendOp
-      itrId nameContext id.getIdentifierName blockPos opGetName state appendOp
+      itrId id.getIdentifierName blockPos opGetName state appendOp
       "..itr.check":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrCheck
       itrCheck [] .valueType itrCheck id.asIdInfo blockPos opGetId state appendOp
       state opCount =::  doPos
       BlockType .DO blockPos opBlock  state appendOp
-      itrId nameContext id.getIdentifierName blockPos opGetName state appendOp
+      itrId id.getIdentifierName blockPos opGetName state appendOp
       "..itr.get":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: itrGet
       itrGet [] .valueType itrGet id.asIdInfo blockPos opGetId state appendOp
       ## WhileBlockData
@@ -1153,7 +1151,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       whileData .breakPositions=
       BlockType .DO blockPos opBlock  state appendOp
       varInfo? .if =:: varInfo
-        varInfo .varId nameContext id.getIdentifierName blockPos opGetName state appendOp
+        varInfo .varId id.getIdentifierName blockPos opGetName state appendOp
         "..if.ifVal":s idContext id.findIdentifierByName .Ok unionElement.unwrap =:: ifGet
         ifGet [] .valueType ifGet id.asIdInfo blockPos opGetId state appendOp
       end
@@ -1193,9 +1191,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           breakName
           id.FLAG_NONE
           blockPos
-        nameContext id.newIdentifier
+        nameContext id.newIdentifier optional.wrap
       else
-        id.NAME_ID_NONE
+        NameId optional.empty
       end =:: blockName
       isContinue if BlockType .CONTINUE else BlockType .BREAK end =:: blockType
       blockType blockName blockPos state findBreakableBlock .else
@@ -1237,9 +1235,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState program nextIdentifier
           id.FLAG_NONE
           fileState program wordPos
-        nameContext id.newIdentifier
+        nameContext id.newIdentifier optional.wrap
       else
-        id.NAME_ID_NONE
+        NameId optional.empty
       end =:: blockName
       fileState program wordPos =:: blockPos
       ## SwitchBlockData
@@ -1318,7 +1316,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       nameContext id.newIdentifier =:: procImplName
       named if ## =>:
         fileState program nextIdentifier fileState state readIdentifier
-        $ nameContext id.identifierFlags =:: flags
+        $ id.identifierFlags =:: flags
         fileState program wordPos =:: idPos
         flags id.FLAG_MUTABLE & ? if
           "procedures cannot be mutable" sb.copyPtr
@@ -1373,7 +1371,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         namePos errors appendError return
       end
       id.FLAG_NONE namePos nameContext id.newIdentifier
-        BlockType .NAMESPACE >$ namePos opNamedBlock state appendOp
+        BlockType .NAMESPACE >$ optional.wrap namePos opNamedBlock state appendOp
       BlockInfoData .Namespace namePos state openBlock ..drop
       return
     else $ "overload:":s string.eq _if =:: opName
@@ -1385,14 +1383,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         fileState state
         id.FLAG_MERGEABLE
       readIdentifierAddFlags =:: mut: nameId
-      nameId nameContext id.identifierFlags =:: identifierFlags
       fileState program wordPos =:: namePos
-      identifierFlags id.FLAG_ALIAS & ? if
+      nameId id.identifierFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
         namePos errors appendError
       end
       state opCount BlockInfoData .Overload namePos state openBlock ..drop
-      BlockType .OVERLOAD nameId namePos opNamedBlock state appendOp
+      BlockType .OVERLOAD nameId optional.wrap namePos opNamedBlock state appendOp
       return
     else $ "end":s string.eq _if ..drop
       fileState program wordPos =:: blockPos
@@ -1711,15 +1708,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       fileState program nextIdentifier fileState state
         id.FLAG_NONE
-      readIdentifierAddFlags =:: mut: label
-      label nameContext id.identifierFlags =:: identifierFlags
-      identifierFlags id.FLAG_ALIAS & ? =:: isAlias
+      readIdentifierAddFlags =:: mut: nameId
+      nameId id.identifierFlags id.FLAG_ALIAS & ? =:: isAlias
       fileState program wordPos =:: opPos
       isAlias and isInit if
         "alias cannot have an implementation" sb.copyPtr
         opPos errors appendError
       end
-      label opPos
+      nameId opPos
         isInit if
           opInitializeName
         else isAlias _if
@@ -1737,7 +1733,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "=::":s string.eq _if ..drop
       fileState program nextIdentifier fileState state readIdentifier =:: mut: nameId
       fileState program wordPos =:: opPos
-      nameId nameContext id.identifierFlags id.FLAG_ALIAS & ? if
+      nameId id.identifierFlags id.FLAG_ALIAS & ? if
         "alias is only supported for procedure declarations" sb.copyPtr
         opPos errors appendError
       end
@@ -1932,8 +1928,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         aliasName .length 0:iSize != if
           aliasName id.FLAG_NONE
             usePos
-          nameContext id.newIdentifier
-        else id.NAME_ID_NONE end =:: aliasNameId
+          nameContext id.newIdentifier optional.wrap
+        else NameId optional.empty end =:: aliasNameId
         namespaceName aliasNameId usePos opUsingNamespace state appendOp
         return
       end
@@ -1943,8 +1939,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       aliasName .length 0:iSize != if
         aliasName id.FLAG_NONE
           usePos
-        nameContext id.newIdentifier
-      else id.NAME_ID_NONE end =:: aliasNameId
+        nameContext id.newIdentifier optional.wrap
+      else NameId optional.empty end =:: aliasNameId
       usedIdentifier aliasNameId usePos opUsingIdentifier state appendOp
       return
     else $ "assert":s string.eq _if =:: opName

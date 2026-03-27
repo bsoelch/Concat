@@ -83,15 +83,15 @@ namespace: NameId
     a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.eq
   end
   proc( NameId : a NameId : b -> i32 ) =>: export: cmp
-    a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.cmp
+    a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.compare
   end
   proc( NameId optional -> i32 ) =>: export: hashO
     .else 0 return end hash
   end
   proc( NameId optional : a? NameId optional : b? -> i32 ) =>: export: cmpO
-    a? .else b? ? if 0 else -1 end end =:: a
+    a? .else b? ? if 0 else -1 end return end =:: a
     b? .else 1 return end =:: b
-    a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.cmp
+    a b cmp
   end
 end
 namespace: ProcId ## TODO need to prevent cyclic dependency ? move ProcId from program into seperate file
@@ -99,8 +99,7 @@ namespace: ProcId ## TODO need to prevent cyclic dependency ? move ProcId from p
 end
 
 struct(
-  char8 ArenaAllocator : nameBuffer
-  Identifier list : identifiers ## XXX change to arenaAllocator ( i32 addresses )
+  MixedArenaAllocator : allocator
   Namespace list : namespaces
   NamespaceImport list : namespaceImports
   NamespaceInfo : namespaceInfo
@@ -108,8 +107,7 @@ struct(
 namespace: id
 
   proc( -> NameContext ) =>: export: newNameContext
-    4096 char8 arenaAlloc.create
-    128          Identifier list.create
+    4096   mixedArena.create
     32       Namespace list.create
       string.empty
       32 NamespaceId list.create
@@ -123,8 +121,7 @@ namespace: id
   end
   proc( NameContext -> NameContext ) =>: export: freeNameContext
     =:: mut: context
-    context .nameBuffer arenaAlloc.free context@ .nameBuffer=
-    context .identifiers list.free context@ .identifiers=
+    context .allocator mixedArena.free context@ .allocator=
     0:iSize while $ context .namespaces .length u< do =:: i
       context .namespaces i @[] =:: namespace
       namespace [] .children list.free namespace .children=
@@ -140,9 +137,7 @@ namespace: id
   end
   proc( NameId : id -> string ) =>: export: getIdentifierName
     ## the addresses of label names are stable for the lifetime of the context
-    id getIdentifier .else
-      string.empty return
-    end [] .name return
+    id getIdentifier [] .name return
   end
   proc( NameId : id -> NamespaceId ) =>: export: getIdentifierNamespace
     id getIdentifier [] .namespaceInfo .current return
@@ -163,9 +158,7 @@ namespace: id
     context [] .namespaceInfo return
   end
   proc( NameId : id NameContext ptr.mut : context -> ) =>: export: inIdentifierNamespace
-    id context getIdentifier .if
-       [] .namespaceInfo context .namespaceInfo=
-    end
+    id getIdentifier [] .namespaceInfo context .namespaceInfo=
   end
   proc( NamespaceInfo NameContext ptr.mut : context -> ) =>: export: resetNamespace
     context .namespaceInfo=
@@ -174,31 +167,19 @@ namespace: id
     0:NamespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new context .namespaceInfo=
   end
   proc( string : str NameId : id -> bool ) =>: export: identifierNameEq
-    id getIdentifier .else
-      false return
-    end [] .name str string.eq return
+    id getIdentifier [] .name str string.eq return
   end
   proc( NameId : a NameId : b -> bool ) =>: export: identifierNamesEq
     a b == if
       true return
     end
-    a getIdentifier .and =:: aIdentifier
-       b getIdentifier .if =:: bIdentifier
-      aIdentifier [] .name bIdentifier [] .name string.eq return
-    end
+    a getIdentifier [] .name b getIdentifier [] .name string.eq return
     false return
   end
   proc( NameId optional : a? NameId optional : b? -> bool ) =>: export: identifierNamesEqO
     a? .else b? ? ! return end =:: a
     b? .else false return end =:: b
-    a b == if
-      true return
-    end
-    a getIdentifier .and =:: aIdentifier
-       b getIdentifier .if =:: bIdentifier
-      aIdentifier [] .name bIdentifier [] .name string.eq return
-    end
-    false return
+    a b identifierNamesEq
   end
   proc( NameId : id -> IdentifierFlag ) =>: export: identifierFlags
     id getIdentifier [] .flags return
@@ -214,9 +195,9 @@ namespace: id
     string : str
     NameContext ptr.mut : context
   -> string ) =>: export: copyString
-    context [] .nameBuffer
-      str string.chars arenaAlloc.copySlice slice.freeze string.fromChars =:: nameData
-    context .nameBuffer=
+    context [] .allocator
+      str string.chars mixedArena.copySlice slice.freeze string.fromChars =:: nameData
+    context .allocator=
     nameData return
   end
   proc(
@@ -225,42 +206,43 @@ namespace: id
     FilePosition ptr : pos
     NameContext ptr.mut : context
   -> NameId ) =>: export: newIdentifier
-    context [] .identifiers
+    str context copyString =:: nameCopy
+    context [] .allocator
       ## Identifier
-        str context copyString
+        nameCopy
         pos
         context [] .namespaceInfo
         NameId optional.empty
         flags
-      Identifier new list.append
-    context .identifiers=
-    context [] .identifiers .length 1:iSize - NameId cast return
+      Identifier new mixedArena.copyValue NameId cast =:: nameId
+    context .allocator=
+    nameId return
   end
   proc(
     NameId : baseNameId
     i32 : implId
     NameContext ptr.mut : context
   -> NameId ) =>: export: newImplName
-    context [] .identifiers baseNameId iSize cast.u @[] =:: baseName
+    baseNameId getIdentifier =:: baseName
     implId i32.highestSetBit 4 / 2 + =:: idLength ## hex-length +1
-    context [] .nameBuffer
-      baseName [] .name .length i32 cast.u idLength + arenaAlloc.allocSlice =:: nameMemory
-    context .nameBuffer=
+    context [] .allocator
+      baseName [] .name .length i32 cast.u idLength + char8 mixedArena.allocSlice =:: nameMemory
+    context .allocator=
     nameMemory sb.wrapSlice sb.clear
       baseName [] .name sb.appendStr
       ':' sb.appendC
       implId sb.appendX
     sb.asStr =:: implName
-    context [] .identifiers
+    context [] .allocator
       ## Identifier
         implName
         baseName [] .pos
         baseName [] .namespaceInfo
-        baseNameId
+        baseNameId optional.wrap
         baseName [] .flags id.FLAG_EXPORT ~ &
-      Identifier new list.append
-    context .identifiers=
-    context [] .identifiers .length 1:iSize - NameId cast return
+      Identifier new mixedArena.copyValue NameId cast =:: nameId
+    context .allocator=
+    nameId return
   end
 
   proc( NamespaceId : parent string : name  NameContext ptr.mut : context -> NamespaceId ) =>: newNamespace
@@ -384,17 +366,13 @@ end
 
 namespace: sb
   proc( stringBuilder NameId : id -> stringBuilder ) =>: export: appendIdentifierName
-    id id.getIdentifier .else
-      return
-    end [] .name sb.appendStr return
+    id id.getIdentifier [] .name sb.appendStr return
   end
   proc( stringBuilder : sb NameId : id NameContext ptr : context bool : asciify -> stringBuilder ) =>: appendIdentifierPath_internal
-    id id.getIdentifier .else
-      sb return
-    end =:: label
+    id id.getIdentifier =:: ident
     string 64 array : mut: pathBuffer
     pathBuffer@ list.wrapBuffer
-      label [] .namespaceInfo .current =:: mut: mNamespace
+      ident [] .namespaceInfo .current =:: mut: mNamespace
       while mNamespace id.NAMESPACE_ID_NONE != and mNamespace 0:NamespaceId != do
         mNamespace context id.namespaceName list.append
         mNamespace context id.parentNamespace mNamespace=
@@ -406,7 +384,7 @@ namespace: sb
           namePath i [] sb.appendAsciified
           ".":s sb.appendAsciified
         finally i 1:iSize - end ..drop
-        label [] .name sb.appendAsciified
+        ident [] .name sb.appendAsciified
       return
     else
       sb
@@ -414,7 +392,7 @@ namespace: sb
           namePath i [] sb.appendStr
           '.' sb.appendC
         finally i 1:iSize - end ..drop
-        label [] .name sb.appendStr
+        ident [] .name sb.appendStr
       return
     end
   end
