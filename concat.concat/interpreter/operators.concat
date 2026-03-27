@@ -496,6 +496,13 @@ namespace: interpreter
         end types.isPointer0
           ConstValue .Bool
         OperatorResult .SUCCESS return
+     TYPE_IS_VALUE_POINTER case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId .else
+          "argument is no type" ..panic
+        end types.isValuePointer0
+          ConstValue .Bool
+        OperatorResult .SUCCESS return
      TYPE_IS_RAW_POINTER case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else

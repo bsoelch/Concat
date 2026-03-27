@@ -987,6 +987,15 @@ namespace: types
     ArraySize : size
   ) =:: ArrayData
 
+  proc( Type -> bool ) =>: export: isValuePointer0
+    switch
+      Pointer MutablePointer case true return
+      default false return
+    end
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isValuePointer
+    unwrapNamed isValuePointer0
+  end
   proc( Type -> bool ) =>: export: isPointer0
     switch
       Pointer MutablePointer RawPointer MutableRawPointer case true return
