@@ -284,15 +284,8 @@ proc(
         labelUseInfo [] >$ @[] =:: labelUses
         labelUses .uses switch
           Read case
-            ( Operation slice.mut : shadow: ops ) =:: Curry
-            ## var read after label -> mark all new uses for label as read
-            uses ( VariableUse : use Curry : curry -> ) =>
-              use VariableUse.asRead .if =:: readIndex
-                curry .ops readIndex @[] .val .GetId .if false >$ .noRead= else "ops out of sync" ..panic end
-              else use VariableUse.asWrite ._if =:: writeIndex
-                curry .ops writeIndex @[] .val .SetId .if false >$ .noRead= else "ops out of sync" ..panic end
-              end
-            end ops Curry new VariableUses.forEach
+            ## mark all preceding labels/reads/writes as read
+            uses markVarAsRead@ context ops nameId VarReadContext new VariableUses.forEach
           break.labelMatch
           Arg case
             currentUses
@@ -367,11 +360,12 @@ proc(
         ## mark all preceding labels/reads/writes as read
         prevUses markVarAsRead@ context ops idInfo .nameId VarReadContext new VariableUses.forEach
         prevUses .Uses .if list.free ..drop else ..drop end
-      else idInfo .idType .GLOBAL_VAR ! and idInfo .nameId id.identifierFlags id.FLAG_HAS_POINTER & ? ! _if
+      else _EXPERIMENTAL_ and idInfo .idType .GLOBAL_VAR ! and idInfo .nameId id.identifierFlags id.FLAG_HAS_POINTER & ? ! _if
         "read from uninitialized value: " sb.copyPtr
           idInfo nameContext sb.appendIdInfo
         op .pos errors appendWarning
       end
+      ## FIXME: some variables are mistakenly marked as unused (? memory corruption)
       ## FIXME! ensure variable is marked as read in ALL labels after previous write (that can be targets of back-jumps)
     break
     SetId .case =:: idInfo
@@ -436,7 +430,7 @@ proc(
         context .labelVariableUses labelInfo .labelId map.get .else
           "label only readable through backwards jump" ..panic
         end for =:: varUseInfo
-          varUseInfo .uses .Read ? if continue end ## is this even reachable
+          ## varUseInfo .uses .Read ? if continue end ## TODO is this even reachable
           context .variableUses varUseInfo .name varUseInfo .uses map.put ..drop
         end
       end
@@ -560,14 +554,12 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
-  _EXPERIMENTAL_ if
-    oldOps .length for =:: index
-      oldOps index context analizeOp
-    end
-    context .variableUses
-      $ for ..drop .Uses .if list.free ..drop else ..drop end end
-    map.clear
+  oldOps .length for =:: index
+    oldOps index context analizeOp
   end
+  context .variableUses
+    $ for ..drop .Uses .if list.free ..drop else ..drop end end
+  map.clear
   ## TODO? remember label-variable uses for register allocator
   tmpOps []
     $ .length 0 == "tmp-ops are empty" assert

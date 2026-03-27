@@ -3094,9 +3094,8 @@ proc(
         break
       SetId .case =:: idInfo
         ## TODO: support SetId for global variable (if mutable or uninitialized)
-        idInfo .nameId =:: nameId
-        nameId id.identifierFlags id.FLAG_MUTABLE & ? ! and _EXPERIMENTAL_ ! or idInfo .idType .LOCAL_VAR ! if
-          ## mutability of local vars will be checked in usage analysis phase ## TODO! actualy implement that check
+        idInfo .idType .LOCAL_VAR ! and idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? ! if
+          ## mutability of local vars will be checked in usage analysis phase
           256 sb.create
             idInfo nameContext sb.appendIdInfo
             " is not mutable" sb.appendS
@@ -3110,7 +3109,7 @@ proc(
           state
         requireTypes .Err ? if continue.opLoop end
         op state appendOp ..drop
-        continue.opLoop
+      continue.opLoop
       DeclareId .case =:: idInfo
         state .blockMode [] .NONE ! if
           1 op .pos state checkStackSize if
@@ -3344,18 +3343,16 @@ proc(
                 continue.opLoop
               end
             end
-            _EXPERIMENTAL_ if
-              idInfo op@ .val .DeclareId=
-              op state appendOp ..drop
-              idInfo op@ .val .SetId=
-            end
+            idInfo op@ .val .DeclareId=
             op state appendOp ..drop
-            continue.opLoop
+            idInfo op@ .val .SetId=
+            op state appendOp ..drop
+          continue.opLoop
           PROCEDURE_BUNDLE LABEL ARGUMENT TMP_VAR case
             "unexpected initialization of identifier " sb.copyPtr
               idInfo nameContext sb.appendIdInfo
             op .pos errors appendError
-            continue.opLoop
+          continue.opLoop
         end
         break
       ImplementProcedure GetElement GetUnionElement SetElement SetNestedElement case break
@@ -4237,12 +4234,8 @@ proc(
               ## TODO? only create tmp-var if switch uses `.case`
               0 StackModType .COPY op .pos opStackMod state appendOp ..drop
               switchType id.FLAG_NONE op .pos idContext id.newTmpVar =:: tmpVar
-              _EXPERIMENTAL_ if
-                switchType tmpVar op .pos opDeclareId state appendOp ..drop
-                switchType tmpVar op .pos opSetId state appendOp ..drop
-              else
-                switchType tmpVar op .pos opInitializeId state appendOp ..drop
-              end
+              switchType tmpVar op .pos opDeclareId state appendOp ..drop
+              switchType tmpVar op .pos opSetId state appendOp ..drop
               tmpVar optional.wrap
             else
               IdentifierInfo optional.empty
