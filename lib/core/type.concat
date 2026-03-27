@@ -6,14 +6,15 @@ namespace: type
 
   type .with( ..types.isPrimitive ) =:: export: primitive
   type .with( ..types.isPointer ) =:: export: pointer
+  type .with( ..types.isValuePointer ) =:: export: valuePointer
   type .with( ..types.isArray ) =:: export: array
   type .with( ..types.isEnum ) =:: export: enum
   type .with( ..types.isTaggedUnion ) =:: export: union
 
   proc( type : T -> bool ) =>: export: static: isPointerValue
-    T ..types.unwrapNamed $ ..types.isPointer >$ ..types.isRawPointer ! &
+    T ..types.unwrapNamed ..types.isValuePointer
   end
-  type .with( ..types.unwrapNamed $ ..types.isPointer >$ ..types.isRawPointer ! & ) =:: export: pointerValue
+  type .with( ..types.unwrapNamed ..types.isValuePointer ) =:: export: pointerValue
   proc( type : T -> bool ) =>: export: static: isNamedPointer
     T ..types.unwrapNamed ..types.isPointer
   end
