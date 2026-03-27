@@ -987,14 +987,20 @@ namespace: types
     ArraySize : size
   ) =:: ArrayData
 
-  proc( Type TypeContext ptr -> bool ) =>: export: isPointer
-    unwrapNamed switch
+  proc( Type -> bool ) =>: export: isPointer0
+    switch
       Pointer MutablePointer RawPointer MutableRawPointer case true return
       default false return
     end
   end
+  proc( Type TypeContext ptr -> bool ) =>: export: isPointer
+    unwrapNamed isPointer0
+  end
+  proc( Type -> bool ) =>: export: isArray0
+    .ArrayType ? return
+  end
   proc( Type TypeContext ptr -> bool ) =>: export: isArray
-    unwrapNamed .ArrayType ? return
+    unwrapNamed isArray0 return
   end
   ## pointer to array-type ( fixed size and not 0D )
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isArrayPointer
@@ -1026,9 +1032,11 @@ namespace: types
      unwrapNamed =:: t
      t .Pointer ? or t .MutablePointer ? end return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isRawPointer
-     unwrapNamed =:: t
+  proc( Type : t -> bool ) =>: export: isRawPointer0
      t .RawPointer ? or t .MutableRawPointer ? end return
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isRawPointer
+     unwrapNamed isRawPointer0 return
   end
   proc( Type : box TypeContext ptr : context -> Type ) =>: export: getBaseType
     box context unwrapNamed switch
@@ -1217,18 +1225,29 @@ namespace: types
     end
   end
   ## TODO: rename all uses of Tuple to Struct (Tuple and Struct are the same)
+  proc( Type -> bool ) =>: export: isTuple0
+    .Struct ? return
+  end
   proc( Type TypeContext ptr -> bool ) =>: export: isTuple
-    unwrapNamed .Struct ? return
+    unwrapNamed isTuple0
+  end
+  proc( Type -> bool ) =>: export: isEnum0
+    .Enum ? return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isEnum
-    unwrapNamed .Enum ? return
+    unwrapNamed isEnum0
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isUnion
-    unwrapNamed =:: t
+  proc( Type : t -> bool ) =>: export: isUnion0
     t .TaggedUnion ? or t .RawUnion ? end return
   end
+  proc( Type TypeContext ptr -> bool ) =>: export: isUnion
+    unwrapNamed isUnion0
+  end
+  proc( Type -> bool ) =>: export: isTaggedUnion0
+    .TaggedUnion ?
+  end
   proc( Type TypeContext ptr -> bool ) =>: export: isTaggedUnion
-    unwrapNamed .TaggedUnion ?
+    unwrapNamed isTaggedUnion0
   end
   proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isEnumOrTaggedUnion
     typeContext unwrapNamed switch
@@ -1241,10 +1260,13 @@ namespace: types
       RefinementType .case .baseType [] typeContext isEnumOrTaggedUnion return
     end
   end
-  proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isRawUnion
-    typeContext unwrapNamed .RawUnion ?
+  proc( Type -> bool ) =>: export: isRawUnion0
+    .RawUnion ?
   end
-  proc( Type TypeContext ptr : context -> bool ) =>: export: isUnionElement
+  proc( Type TypeContext ptr -> bool ) =>: export: isRawUnion
+    unwrapNamed isRawUnion0
+  end
+  proc( Type -> bool ) =>: export: isUnionElement
     .UnionElement ? return
   end
   union(
@@ -1681,8 +1703,11 @@ namespace: types
     CallingConvention : callingConvention
   ) =:: ProcType
 
+  proc( Type -> bool ) =>: export: isProcedure0
+    .Procedure ?
+  end
   proc( Type TypeContext ptr -> bool ) =>: export: isProcedure
-    unwrapNamed .Procedure  ? return
+    unwrapNamed isProcedure0
   end
   proc( Type : mType TypeContext ptr : context -> bool ) =>: export: isCallable
     mType context unwrapNamed
@@ -2104,8 +2129,11 @@ namespace: types
     context .nameContext .allocator=
     setType SetTypeId cast Type .SetType  return
   end
-  proc( Type TypeContext ptr : context -> bool ) =>: export: isSetType
-    context unwrapNamed .SetType ? return
+  proc( Type -> bool ) =>: export: isSetType0
+     .SetType ?
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isSetType
+    unwrapNamed isSetType0
   end
   proc( Type : t TypeContext ptr : context -> ConstValue slice ) =>: export: getSetTypeEntries
     t context unwrapNamed
@@ -2131,8 +2159,11 @@ namespace: types
     context .nameContext .allocator=
     refType RefinementTypeId cast Type .RefinementType  return
   end
-  proc( Type TypeContext ptr : context -> bool ) =>: export: isRefinementType
-    context unwrapNamed .RefinementType ? return
+  proc( Type -> bool ) =>: export: isRefinementType0
+    .RefinementType ?
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isRefinementType
+    unwrapNamed isRefinementType0
   end
   proc( Type TypeContext ptr : context -> bool ) =>: export: isSetOrRefinementType
     context unwrapNamed =:: t0

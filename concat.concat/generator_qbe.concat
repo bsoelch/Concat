@@ -2734,7 +2734,7 @@ proc(
     return
   end
   src typeContext types.isPointer and target typeContext types.isPointer end or
-      src typeContext types.isUnionElement and target typeContext types.isUnion end or
+      src types.isUnionElement and target typeContext types.isUnion end or
       src typeContext types.isCallable and target typeContext types.isCallable if
     sb
       "%s" sb.appendS
@@ -3400,7 +3400,7 @@ proc(
     RawValue case
       op [] .dataType typeContext types.isUnion or op [] .dataType typeContext types.isPointer if
         sb return
-      else op [] .dataType typeContext types.isUnionElement _if
+      else op [] .dataType types.isUnionElement _if
         op [] .dataType typeContext types.getUnionElementType =:: eltType
         sb
           eltType context referenceOnly if

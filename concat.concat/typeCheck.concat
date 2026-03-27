@@ -3630,14 +3630,14 @@ proc(
           enumType typeContext types.enumTagInfo ..drop label .valueType=
           continue.opLoop
         else enumType typeContext types.isType and label .value .TypeId .and [] =:: unionEltType
-            unionEltType typeContext types.isUnionElement _if
+            unionEltType types.isUnionElement _if
           1 op .pos state discardValues ## remove type from stack
           unionEltType typeContext types.getUnionElementIndex i64 cast.u ConstValue .Int
             unionEltType typeContext types.enumTagInfo ..drop
             op .pos
           state pushConstant
           continue.opLoop
-        else enumType typeContext types.isTaggedUnion ! and enumType typeContext types.isUnionElement ! _if
+        else enumType typeContext types.isTaggedUnion ! and enumType types.isUnionElement ! _if
           "wrong argument type for GetUnionTag expected enum or tagged union got " sb.copyPtr
             enumType typeContext sb.appendType
           op .pos errors appendError
@@ -3647,7 +3647,7 @@ proc(
           continue.opLoop
         end
         enumType
-          $ typeContext types.isUnionElement if
+          $ types.isUnionElement if
             typeContext types.getUnionElementUnion optional.unwrap
           end
         1 op .pos opGetElement op=
@@ -5451,7 +5451,7 @@ proc(
           valType typeContext types.isPointer =:: isPointer
           isPointer if typeContext types.getBaseType end
         =:: baseType
-        baseType typeContext types.isUnionElement if
+        baseType types.isUnionElement if
           state .stack branchTree.pop ..drop
           baseType typeContext types.getUnionElementType
         else baseType typeContext types.isUnion _if

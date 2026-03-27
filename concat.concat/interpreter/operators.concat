@@ -493,77 +493,77 @@ namespace: interpreter
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isPointer
+        end types.isPointer0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_RAW_POINTER case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isRawPointer
+        end types.isRawPointer0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_ARRAY case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isArray
+        end types.isArray0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_STRUCT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isTuple
+        end types.isTuple0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_SET_TYPE case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isSetType
+        end types.isSetType0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_REFINEMENT_TYPE  case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isRefinementType
+        end types.isRefinementType0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_TAGGED_UNION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isTaggedUnion
+        end types.isTaggedUnion0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_UNION_ELEMENT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isUnionElement
+        end types.isUnionElement
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_RAW_UNION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isRawUnion
+        end types.isRawUnion0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_ENUM case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isEnum
+        end types.isEnum0
           ConstValue .Bool
         OperatorResult .SUCCESS return
      TYPE_IS_PROC case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.isProcedure
+        end types.isProcedure0
           ConstValue .Bool
         OperatorResult .SUCCESS return
     TYPE_IS_NAMED case

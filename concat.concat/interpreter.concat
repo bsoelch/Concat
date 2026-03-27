@@ -1710,7 +1710,7 @@ proc(
       op [] .pos context popValue if ..drop.2
         EvalResult .Error return
       end =:: value =:: valInfo
-      valInfo .valueType typeContext types.isUnionElement if
+      valInfo .valueType types.isUnionElement if
         valInfo .valueType typeContext types.getUnionElementType
       else valInfo .valueType typeContext types.isTaggedUnion _if
         ## TODO: implement ..raw for unions
