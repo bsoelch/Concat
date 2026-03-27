@@ -54,6 +54,15 @@ namespace: optional
     end
   end
   overload: export: unwrap unwrapV unwrapP end
+  proc( type : auto: T T optional optional -> T optional ) =>: export: flat
+    .else T optional.empty end
+  end
+
+  proc( type : auto: S type : auto: T
+    S optional ( S -> T ) ptr : f
+  -> T optional ) =>: export: map
+    .if f () optional.wrap else T optional.empty end
+  end
 
   proc( type : auto: T  T optional -> T optional ) =>: prepareIf end
   proc( type : auto: T  T optional : ignore -> ) =>: elseVal end

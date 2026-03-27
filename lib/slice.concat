@@ -278,6 +278,20 @@ namespace: slice
     iSize optional.empty return
   end
   proc(
+    type : auto: T type : auto: K
+    T slice : elts
+    K : key
+    ( T K -> bool ) ptr : fEq
+  -> iSize optional ) =>: export: indexOfEq2
+    0:iSize while $ elts .length u< do
+      elts .data $1 [] key fEq () if
+        optional.wrap return
+      end
+      1:iSize +
+    end ..drop
+    iSize optional.empty return
+  end
+  proc(
     type : auto: T
     T slice : elts
     T : elt
@@ -883,6 +897,10 @@ namespace: slice
     end
     V optional ..types.stride V ..types.stride == "V optional and V have the same size" assert
     elt .data V ptr.mut cast! elt .length V slice new optional.wrap
+  end
+  proc( type.valuePointer : auto: V  V slice : elt -> V optional slice ) =>: export: wrapAll
+    V optional ..types.stride V ..types.stride == "V optional and V have the same size" assert
+    elt .data V optional ptr.mut cast! elt .length V slice new
   end
 
   proc( type : auto: T
