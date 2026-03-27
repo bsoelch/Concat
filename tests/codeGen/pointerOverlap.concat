@@ -1,0 +1,8 @@
+( i32 : a i8 : b ) =:: X
+( X : ab i8 : c ) =:: Y
+proc( -> ) =>: export: main
+  0 1 X new 2 Y new =:: mut: u
+  3 4 X new 5 Y new =:: mut: v
+  v .ab u..ab@ =[]
+  u .c 2 == "pointer set does not overwrite padding values" assert
+end
