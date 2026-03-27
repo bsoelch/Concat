@@ -77,6 +77,7 @@ struct(
   id.IdentifierFlag : flags
 ) =:: Identifier
 namespace: NameId
+  ## FIXME! ensure Name in different namespace does not compare/hash equal
   proc( NameId -> i32 ) =>: export: hash Identifier ptr cast [] .name string.hash end
   proc( NameId : a NameId : b -> bool ) =>: export: eq
     a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.eq
@@ -84,6 +85,17 @@ namespace: NameId
   proc( NameId : a NameId : b -> i32 ) =>: export: cmp
     a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.cmp
   end
+  proc( NameId optional -> i32 ) =>: export: hashO
+    .else 0 return end hash
+  end
+  proc( NameId optional : a? NameId optional : b? -> i32 ) =>: export: cmpO
+    a? .else b? ? if 0 else -1 end end =:: a
+    b? .else 1 return end =:: b
+    a Identifier ptr cast [] .name b Identifier ptr cast [] .name string.cmp
+  end
+end
+namespace: ProcId ## TODO need to prevent cyclic dependency ? move ProcId from program into seperate file
+  proc( ProcId -> NameId ) : export: getName
 end
 
 struct(
@@ -123,39 +135,29 @@ namespace: id
     context return
   end
 
-  proc( NameId : id NameContext ptr : context -> Identifier ptr.mut ) =>: getIdentifier
+  proc( NameId : id -> Identifier ptr.mut ) =>: getIdentifier
     id Identifier ptr.mut cast
   end
-  proc( NameId : id NameContext ptr.mut : context -> string ) =>: export: getIdentifierName
+  proc( NameId : id -> string ) =>: export: getIdentifierName
     ## the addresses of label names are stable for the lifetime of the context
-    id context getIdentifier .else
+    id getIdentifier .else
       string.empty return
     end [] .name return
   end
-  proc( NameId : id NameContext ptr.mut : context -> NamespaceId ) =>: export: getIdentifierNamespace
-    id context getIdentifier .else
-      NAMESPACE_ID_NONE return
-    end [] .namespaceInfo .current return
+  proc( NameId : id -> NamespaceId ) =>: export: getIdentifierNamespace
+    id getIdentifier [] .namespaceInfo .current return
   end
-  proc( NameId : id NameContext ptr.mut : context -> FileId ) =>: export: getIdentifierFile
-    id context getIdentifier .else
-      FILE_ID_NONE return
-    end [] .pos [] .fileId return
+  proc( NameId : id -> FileId ) =>: export: getIdentifierFile
+    id getIdentifier [] .pos [] .fileId return
   end
-  proc( NameId : id NameContext ptr.mut : context -> FilePosition ptr optional ) =>: export: getIdentifierPos
-    id context getIdentifier .else
-      FilePosition ptr optional.empty return
-    end [] .pos optional.wrap return
+  proc( NameId : id -> FilePosition ptr ) =>: export: getIdentifierPos
+    id getIdentifier [] .pos return
   end
-  proc( NameId : id NameContext ptr.mut : context -> NameId optional ) =>: export: getBaseName
-    id context getIdentifier .else
-      id return
-    end [] .baseName return
+  proc( NameId : id -> NameId optional ) =>: export: getBaseName
+    id getIdentifier [] .baseName return
   end
-  proc( NameId : id NamespaceInfo : newVal NameContext ptr.mut : context -> ) =>: export: setIdentifierNamespace
-    id context getIdentifier .if
-      newVal >$ .namespaceInfo=
-    end
+  proc( NameId : id NamespaceInfo : newVal -> ) =>: export: setIdentifierNamespace
+    id getIdentifier  newVal >$ .namespaceInfo=
   end
   proc( NameContext ptr.mut : context -> NamespaceInfo ) =>: export: currentNamespace
     context [] .namespaceInfo return
@@ -171,39 +173,43 @@ namespace: id
   proc( NameContext ptr.mut : context -> ) =>: export: clearNamespace
     0:NamespaceId NAMESPACE_IMPORT_NONE NamespaceInfo new context .namespaceInfo=
   end
-  proc( string : str NameId : id NameContext ptr : context -> bool ) =>: export: identifierNameEq
-    id context getIdentifier .else
+  proc( string : str NameId : id -> bool ) =>: export: identifierNameEq
+    id getIdentifier .else
       false return
     end [] .name str string.eq return
   end
-  proc( NameId : a NameId : b NameContext ptr : context -> bool ) =>: export: identifierNamesEq
+  proc( NameId : a NameId : b -> bool ) =>: export: identifierNamesEq
     a b == if
       true return
     end
-    a context getIdentifier .and =:: aIdentifier
-       b context getIdentifier .if =:: bIdentifier
+    a getIdentifier .and =:: aIdentifier
+       b getIdentifier .if =:: bIdentifier
       aIdentifier [] .name bIdentifier [] .name string.eq return
     end
     false return
   end
-  proc( NameId : id NameContext ptr : context -> IdentifierFlag ) =>: export: identifierFlags
-    id context getIdentifier .else
-      0:IdentifierFlag return
-    end [] .flags return
+  proc( NameId optional : a? NameId optional : b? -> bool ) =>: export: identifierNamesEqO
+    a? .else b? ? ! return end =:: a
+    b? .else false return end =:: b
+    a b == if
+      true return
+    end
+    a getIdentifier .and =:: aIdentifier
+       b getIdentifier .if =:: bIdentifier
+      aIdentifier [] .name bIdentifier [] .name string.eq return
+    end
+    false return
   end
-  proc( NameId : id IdentifierFlag : newFlags NameContext ptr : context -> ) =>: export: addIdentifierFlags
-    id context getIdentifier .else
-      return
-    end .flags =:: flags
+  proc( NameId : id -> IdentifierFlag ) =>: export: identifierFlags
+    id getIdentifier [] .flags return
+  end
+  proc( NameId : id IdentifierFlag : newFlags -> ) =>: export: addIdentifierFlags
+    id getIdentifier .flags =:: flags
     flags []
       newFlags |
     flags =[]
   end
-  proc( NameId : id NameContext ptr : context -> FilePosition ptr optional ) =>: export: identifierPos
-    id context getIdentifier .else
-      FilePosition ptr optional.empty return
-    end [] .pos optional.wrap return
-  end
+
   proc(
     string : str
     NameContext ptr.mut : context
@@ -377,13 +383,13 @@ namespace: id
 end
 
 namespace: sb
-  proc( stringBuilder NameId : id NameContext ptr : context -> stringBuilder ) =>: export: appendIdentifierName
-    id context id.getIdentifier .else
+  proc( stringBuilder NameId : id -> stringBuilder ) =>: export: appendIdentifierName
+    id id.getIdentifier .else
       return
     end [] .name sb.appendStr return
   end
   proc( stringBuilder : sb NameId : id NameContext ptr : context bool : asciify -> stringBuilder ) =>: appendIdentifierPath_internal
-    id context id.getIdentifier .else
+    id id.getIdentifier .else
       sb return
     end =:: label
     string 64 array : mut: pathBuffer

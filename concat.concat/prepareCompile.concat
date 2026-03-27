@@ -158,7 +158,7 @@ proc(
           op .dataType i typeContext types.getProcArgName .else
             continue
           end =:: argName
-          argName nameContext id.identifierFlags id.FLAG_STATIC & ? if
+          argName id.identifierFlags id.FLAG_STATIC & ? if
             continue
           end
           args i [] =:: argType

@@ -145,8 +145,8 @@ proc(
   optimizerFlags.ALLOW_INLINE ! and optimizerFlags.ALLOW_INLINE_SMALL ! if false return end
   procId ProcId.getProcInfo =:: procData
   procData .implementation [] .Code ? ! or
-      procData [] .nameId nameContext id.identifierFlags id.FLAG_EXTERN & ? or
-      procData [] .nameId nameContext id.identifierFlags id.FLAG_NO_INLINE & ? if
+      procData [] .nameId id.identifierFlags id.FLAG_EXTERN & ? or
+      procData [] .nameId id.identifierFlags id.FLAG_NO_INLINE & ? if
     false return
   end
   procId program calledProcOps =:: procOps
@@ -185,12 +185,12 @@ proc(
     eltType typeContext types.isEmpty if continue end ## ignore empty arguments
     argName? ! .if
       offset 1 + offset=
-    else =:: argName argName nameContext id.identifierFlags id.FLAG_STATIC & ? ! _if
+    else =:: argName argName id.identifierFlags id.FLAG_STATIC & ? ! _if
       offset 0 != if
         ## rotate named argument to top
         offset StackModType .ROTATE pos opStackMod context filterOp
       end
-      eltType argName nameContext id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
+      eltType argName id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
       eltType tmpId pos opInitializeId context filterOp
       remapIds@ argName tmpId map.put optional.isEmpty "identifier-value only reassigned once" assert
     end
@@ -358,9 +358,9 @@ proc(
     break
     GetId .case =:: idInfo
       ops index @[] .val .GetId .if
-        idInfo .nameId nameContext id.identifierFlags id.FLAG_HAS_POINTER & ? ! >$ .noRead=
+        idInfo .nameId id.identifierFlags id.FLAG_HAS_POINTER & ? ! >$ .noRead=
       else ..unreachable end
-      idInfo .nameId id.FLAG_IS_READ nameContext id.addIdentifierFlags
+      idInfo .nameId id.FLAG_IS_READ id.addIdentifierFlags
       context .variableUses
         idInfo .nameId
         index VariableUses.read
@@ -368,7 +368,7 @@ proc(
         ## mark all preceding labels/reads/writes as read
         prevUses markVarAsRead@ context ops idInfo .nameId VarReadContext new VariableUses.forEach
         prevUses .Uses .if list.free ..drop else ..drop end
-      else idInfo .idType .GLOBAL_VAR ! and idInfo .nameId nameContext id.identifierFlags id.FLAG_HAS_POINTER & ? ! _if
+      else idInfo .idType .GLOBAL_VAR ! and idInfo .nameId id.identifierFlags id.FLAG_HAS_POINTER & ? ! _if
         "read from uninitialized value: " sb.copyPtr
           idInfo nameContext sb.appendIdInfo
         op .pos errors appendWarning
@@ -377,16 +377,16 @@ proc(
     break
     SetId .case =:: idInfo
       ops index @[] .val .SetId .if
-        idInfo .nameId nameContext id.identifierFlags id.FLAG_HAS_POINTER & ? ! >$ .noRead=
+        idInfo .nameId id.identifierFlags id.FLAG_HAS_POINTER & ? ! >$ .noRead=
       else ..unreachable end
-      idInfo .nameId id.FLAG_IS_WRITTEN nameContext id.addIdentifierFlags
+      idInfo .nameId id.FLAG_IS_WRITTEN id.addIdentifierFlags
       context .variableUses
         idInfo .nameId
         index VariableUses.write
       map.put .if
         .Uses .if list.free ..drop else ..drop end
         ## check is local var is writeable
-        idInfo .idType .LOCAL_VAR and idInfo .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? ! if
+        idInfo .idType .LOCAL_VAR and idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? ! if
           256 sb.create
             idInfo nameContext sb.appendIdInfo
             " is not mutable" sb.appendS
@@ -469,7 +469,7 @@ proc(
       else ..drop end
     break
     DeclareId .case =:: idInfo
-      idInfo .nameId nameContext id.identifierFlags =:: flags
+      idInfo .nameId id.identifierFlags =:: flags
       _W_UNUSED_ and flags id.FLAG_HAS_POINTER id.FLAG_STATIC | & ? ! if
         flags id.FLAG_IS_READ & ? ! if
           256 sb.create
@@ -535,7 +535,7 @@ proc(
     NOP case return ## ignore no-ops
     GetId .case =:: idInfo
       op list.append
-      idInfo .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
+      idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? if
         op .dataType op .pos opCopy list.append ## ommit copy if variable is not modified for lifetim of stack value
       end
     return
@@ -652,9 +652,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     builtInImpl [] .hasPtr ! if
       continue
     end
-    currentProc [] .nameId nameContext id.identifierPos .else
-      "missing identifier position" ..panic
-    end =:: pos
+    currentProc [] .nameId id.getIdentifierPos =:: pos
     4 Operation mem.alloc 4 slice.createMutable =:: opBuffer
     opBuffer list.wrapSlice
       ## opImplementProc

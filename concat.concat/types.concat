@@ -116,13 +116,13 @@ namespace: types
     a [] .elements b [] .elements typeCmp@ slice.cmp
       $ ? if return else ..drop end
     a [] .eltNames .if
-      b .eltNames [] optional.unwrap NameId.cmp@ slice.cmp return
+      b .eltNames [] optional.unwrap NameId.cmpO@ slice.cmp return
     end
     0 return
   end
   proc( CompositeInfo ptr : a -> i32 ) =>: compositeTypeHash
     0:i32
-      a [] .eltNames .if NameId.hash@ slice.hash
+      a [] .eltNames .if NameId.hashO@ slice.hash
         >$ 31 * +
       end
       31 * a [] .elements typeHash@ slice.hash +
@@ -204,14 +204,14 @@ namespace: types
       $ ? if return else ..drop end
     aData [] .outTypes bData [] .outTypes typeCmp@ slice.cmp
       $ ? if return else ..drop end
-    aData [] .eltNames bData [] .eltNames NameId.cmp@ slice.cmp return
+    aData [] .eltNames bData [] .eltNames NameId.cmpO@ slice.cmp return
   end
   proc( ProcTypeId : a -> i32 ) =>: export: procTypeHash
     a ProcType ptr cast =:: aData
     aData [] .callingConvention ..tag i32 cast.u
       31 * aData [] .inTypes typeHash@ slice.hash +
       31 * aData [] .outTypes typeHash@ slice.hash +
-      31 * aData [] .eltNames NameId.hash@ slice.hash +
+      31 * aData [] .eltNames NameId.hashO@ slice.hash +
     return
   end
   proc( GeneratedTypeId : a GeneratedTypeId : b -> i32 ) =>: export: generatedTypeCmp
@@ -269,9 +269,9 @@ namespace: types
       Align .case
         b .Align unionElement.unwrap i32.cmp return
       NamedType .case
-        i32 cast b .NamedType unionElement.unwrap i32 cast i32.cmp return
+        b .NamedType unionElement.unwrap NameId.cmp return
       GenericType .case
-        i32 cast b .GenericType unionElement.unwrap i32 cast i32.cmp return
+        b .GenericType unionElement.unwrap NameId.cmp return
       Pointer .case
         b .Pointer unionElement.unwrap arrayTypeCmp return
       MutablePointer .case
@@ -370,8 +370,8 @@ namespace: types
       IntLiteral .case intLiteralId 1 + 3 * return
       CType .case cTypeId 1 + 5 * return
       Align .case 1 + 7 * return
-      NamedType .case i32 cast 1 + 11 * return
-      GenericType .case i32 cast 1 + 13 * return
+      NamedType .case NameId.hash 1 + 11 * return
+      GenericType .case NameId.hash 1 + 13 * return
       ArrayType .case arrayTypeHash 17 * return
       Pointer .case arrayTypeHash 19 * return
       RawPointer .case arrayTypeHash 23 * return
@@ -1067,7 +1067,7 @@ namespace: types
       None case 1 return
       Dynamic case 2 return
       Int .case i32 cast.u 1 + 3 * return
-      GenericArg .case i32 cast.u 1 + -5 * return
+      GenericArg .case NameId.hash 1 + -5 * return
     end
   end
   proc( ArraySize : a ArraySize : b -> i32 ) =>: arraySizeCmp
@@ -1077,7 +1077,7 @@ namespace: types
     a switch
       None Dynamic case 0 return
       Int .case b .Int unionElement.unwrap i64.cmp return
-      GenericArg .case i32 cast b .GenericArg unionElement.unwrap i32 cast i32.cmp return
+      GenericArg .case b .GenericArg unionElement.unwrap NameId.cmp return
     end
   end
   enum( POINTER MUTABLE_POINTER RAW_POINTER MUTABLE_RAW_POINTER ARRAY ) =:: export: ArrayType
@@ -1179,7 +1179,7 @@ namespace: types
 
   struct(
     Type slice : elements
-    NameId slice optional : eltNames
+    NameId optional slice optional : eltNames
     CompositeFlags : flags
     i64 : alignment
     i64 : size
@@ -1289,18 +1289,14 @@ namespace: types
   end
   proc( Type : composite i32 : index TypeContext ptr : context -> NameId optional ) =>: export: compositeGetEltName
     composite context compositeData switch
-      None case id.NAME_ID_NONE return
-      Enum .case [] .eltNames break
+      None case NameId optional.empty return
+      Enum .case [] .eltNames index slice.get return
       Composite .case
         [] .eltNames .else
-          id.NAME_ID_NONE return
-        end
+          NameId optional.empty return
+        end index slice.get optional.flat return
       break
-    end =:: eltNames
-    index 0 < or index iSize cast.u eltNames .length u>= if
-      id.NAME_ID_NONE return
     end
-    eltNames index [] return
   end
   proc(
     Type : composite
@@ -1310,7 +1306,7 @@ namespace: types
     context .nameContext =:: nameContext
     composite context compositeData switch
       None case i32 optional.empty return
-      Enum .case [] .eltNames break
+      Enum .case [] .eltNames slice.wrapAll break
       Composite .case
         [] .eltNames .else
           i32 optional.empty return
@@ -1318,16 +1314,9 @@ namespace: types
       break
     end =:: eltNames
     ## TODO? move linear search in slice to standard library
-    0:i32 while $ iSize cast.u eltNames .length u< do =:: i
-      ## identifierNamesEq
-        name
-        eltNames i []
-      nameContext id.identifierNameEq if
-        i optional.wrap return
-      end
-      i 1 +
-    end ..drop
-    i32 optional.empty return
+    eltNames name ( NameId optional : elt string : shadow: name -> bool ) =>
+      elt .and name >$ id.identifierNameEq end
+    end slice.indexOfEq2 ( iSize -> i32 ) => i32 cast end optional.map
   end
   proc(
     Type : tuple
@@ -1462,16 +1451,16 @@ namespace: types
 
   proc(
     MixedArenaAllocator
-    NameId slice optional : eltNames
-  -> MixedArenaAllocator NameId slice optional ) =>: copyEltNames
+    NameId optional slice optional : eltNames
+  -> MixedArenaAllocator NameId optional slice optional ) =>: copyEltNames
     eltNames .if
       ## truncate eltNames
       $ .length =:: mut: N
-      while N 0 != and $ N 1 - [] id.NAME_ID_NONE == do
+      while N 0 != and $ N 1 - [] ? ! do
         N 1 - N=
       end
       N 0 == if ..drop ## no named identifier
-        NameId slice optional.empty return
+        NameId optional slice optional.empty return
       end
       N slice.head mixedArena.copySlice slice.freeze optional.wrap
     else eltNames end
@@ -1512,7 +1501,7 @@ namespace: types
     end =:: mut: arrayType
     0:iSize while $ elts .length u< do =:: i
       elts i [] =:: eltType
-      eltNames .and i slice.get .and id.NAME_ID_NONE != if
+      eltNames .and i slice.get .and ? if
         ## if there is a named element the initializer is not an array
         Type .Undefined  arrayType=
         i break
@@ -1590,7 +1579,7 @@ namespace: types
       eltNames mixedArena.copySlice slice.freeze optional.wrap =:: namesCopy
       ## CompositeInfo
         eltCopy
-        namesCopy
+        namesCopy ( NameId slice -> NameId optional slice ) => slice.wrapAll end optional.map
         elts context computeCompositeFlags
         -1
         -1
@@ -1605,7 +1594,7 @@ namespace: types
     eltNames .length unionType computeEnumTagType elements@ 1 =[]
     ## newTuple
       elements@ slice.wrap
-      NameId slice optional.empty
+      NameId optional slice optional.empty
     context newTuple .and .Struct .if
       Type .TaggedUnion optional.wrap
     else
@@ -1628,20 +1617,18 @@ namespace: sb
   proc(
     stringBuilder
     NameId : nameId
-    NameContext ptr : nameContext
   -> stringBuilder ) =>: appendTypeElementName
-    nameId id.NAME_ID_NONE == if return end
     " : " appendS
-    nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
+    nameId id.identifierFlags id.FLAG_MUTABLE & ? if
       "mut: " appendS
     end
-    nameId nameContext id.identifierFlags id.FLAG_AUTO & ? if
+    nameId id.identifierFlags id.FLAG_AUTO & ? if
       "auto: " appendS
     end
-    nameId nameContext id.identifierFlags id.FLAG_STATIC & ? if
+    nameId id.identifierFlags id.FLAG_STATIC & ? if
       "static: " appendS
     end
-    nameId nameContext appendIdentifierName
+    nameId appendIdentifierName
   end
   proc(
     stringBuilder : sb
@@ -1669,7 +1656,7 @@ namespace: sb
             eltType context depth 1 - appendTypeRecursive
           end
           t $2 context types.compositeGetEltName .if
-            nameContext appendTypeElementName
+            appendTypeElementName
           end
           ' ' appendC
         <$
@@ -1682,7 +1669,7 @@ namespace: sb
     types.EnumInfo : enumInfo
     NameContext ptr : nameContext
   -> stringBuilder ) =>: appendEnumElements
-    enumInfo .eltNames for nameContext appendIdentifierName ' ' sb.appendC end
+    enumInfo .eltNames for appendIdentifierName ' ' sb.appendC end
   end
 end
 namespace: types
@@ -1690,7 +1677,7 @@ namespace: types
   struct(
     Type slice : inTypes
     Type slice : outTypes
-    NameId slice : eltNames
+    NameId optional slice : eltNames
     CallingConvention : callingConvention
   ) =:: ProcType
 
@@ -1726,7 +1713,7 @@ namespace: types
   end
   proc( Type : proc TypeContext ptr : context -> NameId optional slice ) =>: export: getProcEltNames
     proc context getProcData .else
-      NameId slice.empty return
+      NameId optional slice.empty return
     end [] .eltNames
   end
   proc( Type : proc TypeContext ptr : context -> NameId optional slice ) =>: export: getProcArgNames
@@ -1735,31 +1722,19 @@ namespace: types
     end =:: procData
     procData [] .eltNames procData [] .inTypes .length slice.head
   end
-  proc( Type : proc TypeContext ptr : context -> NameId slice ) =>: export: getProcRetNames
+  proc( Type : proc TypeContext ptr : context -> NameId optional slice ) =>: export: getProcRetNames
     proc context getProcData .else
-      NameId slice.empty return
+      NameId optional slice.empty return
     end =:: procData
     procData [] .eltNames procData [] .inTypes .length slice.tail
   end
   proc( Type : proc i32 : argIndex TypeContext ptr : context -> NameId optional ) =>: export: getProcArgName
-    proc context getProcArgNames =:: eltNames
-    argIndex 0 < or argIndex iSize cast.u eltNames .length u>= if
-      nameId optional.empty return
-    end
-    eltNames argIndex slice.get
+    proc context getProcArgNames argIndex slice.get optional.flat
   end
   proc( Type : proc NameId : argName TypeContext ptr : context -> i32 optional ) =>: export: findProcArgName
-    proc context getProcArgNames =:: eltNames
-    0:i32 while $ iSize cast.u eltNames .length u< do =:: i
-      ## identifierNamesEq
-        argName
-        eltNames i []
-      context .nameContext id.identifierNamesEq if
-        i optional.wrap return
-      end
-      i 1 +
-    end ..drop
-    i32 optional.empty return
+    proc context getProcArgNames argName ( NameId optional NameId : shadow: argName -> bool ) =>
+      .and argName id.identifierNamesEq end
+    end slice.indexOfEq2 ( iSize -> i32 ) => i32 cast end optional.map
   end
   proc( Type : proc TypeContext ptr : context -> Type slice optional ) =>: export: getProcOut
     proc context getProcData .if
@@ -1806,7 +1781,7 @@ namespace: types
         ## TODO! filter out empty elements
         ## TODO reuse slice memory if possible
         outTypes
-          NameId slice optional.empty
+          NameId optional slice optional.empty
         context newTuple .else
           "failed to create tuple-type" ..panic
         end ProcRet .Tuple return
@@ -1863,7 +1838,7 @@ namespace: types
       ## ProcType
         procData [] .inTypes
         procData [] .outTypes
-        NameId slice.empty
+        NameId optional slice.empty
         procData [] .callingConvention
       ProcType new mixedArena.copyValue =:: procId
     context .memory=
@@ -1937,9 +1912,9 @@ namespace: types
     false do end
     return
   end
-  proc( Type TypeContext ptr : context -> NameId ) =>: export: namedTypeName
-    .NamedType .else ..drop
-      id.NAME_ID_NONE return
+  proc( Type TypeContext ptr : context -> NameId optional ) =>: export: namedTypeName
+    .NamedType .if optional.wrap else ..drop
+      NameId optional.empty return
     end
   end
 end
@@ -1981,17 +1956,17 @@ namespace: types
   ) =:: GeneratedTypeValue
 
   proc( GeneratedTypeName : a GeneratedTypeName : b -> bool ) =>: genNameEq
-    a .generator b .generator != if false return end
+    a .generator b .generator NameId.eq ! if false return end
     a .arguments b .arguments constantEquals@ slice.eq
   end
   proc( GeneratedTypeName : a -> i32 ) =>: genNameHash
-    a .generator i32 cast.u
+    a .generator NameId.hash
       31 * a .arguments constantHash@ slice.hash +
     return
   end
   proc( GeneratedTypeName : a GeneratedTypeName : b -> i32 ) =>: genNameCmp
-    a .generator b .generator != if
-      a .generator i32 cast.u b .generator i32 cast.u i32.cmp return
+    a .generator b .generator NameId.eq ! if
+      a .generator b .generator NameId.cmp return
     end
     a .arguments b .arguments constantCmp@ slice.cmp
   end
@@ -2008,17 +1983,17 @@ namespace: types
   #+ finds the generated type for the given type generator and arguments
      returns the type and a boolean that is true if a new GeneratedType was created +#
   proc(
-    NameId : generatorName0
+    NameId : generatorName
     ConstValue slice : arguments
     bool : create
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> GeneratedTypeState ) =>: export: findGeneratedType
     typeContext .nameContext =:: nameContext
-    generatorName0 nameContext id.getBaseName =:: generatorName
+    generatorName id.getBaseName .else generatorName end =:: shadow: generatorName
     generatorName arguments GeneratedTypeName new =:: genName
     typeContext .generatedTypes genName map.get .if =:: prevValue
-      generatorName nameContext id.identifierFlags id.FLAG_NO_WRAP & ? and prevValue .value .if
+      generatorName id.identifierFlags id.FLAG_NO_WRAP & ? and prevValue .value .if
         GeneratedTypeState .Stored return
       end
       prevValue .key Type .GeneratedType GeneratedTypeState .Stored return
@@ -2042,13 +2017,13 @@ namespace: types
   end
 
   proc(
-    NameId : generatorName0
+    NameId : generatorName
     ConstValue slice : arguments
     Type : value
     TypeContext ptr.mut : typeContext
     ConstantContext ptr.mut : constContext
   -> Type ) =>: export: initializeGeneratedType
-    generatorName0 typeContext .nameContext id.getBaseName =:: generatorName
+    generatorName id.getBaseName .else generatorName end =:: shadow: generatorName
     ## findGeneratedType
       generatorName
       arguments
@@ -2067,7 +2042,7 @@ namespace: types
         prevGeneratorName GeneratedTypeName ptr cast []
       map.at optional.unwrap
     .value=
-    generatorName typeContext .nameContext id.identifierFlags id.FLAG_NO_WRAP & ? if
+    generatorName id.identifierFlags id.FLAG_NO_WRAP & ? if
       value return
     end
     prevType return
@@ -2085,14 +2060,14 @@ namespace: types
     return
   end
 
-  proc( Type : generator TypeContext ptr : context -> NameId ) =>: export: getGeneratorName
+  proc( Type : generator TypeContext ptr : context -> NameId optional ) =>: export: getGeneratorName
     generator =:: mut: t
     t .NamedType ? if
       t context unwrapNamedKeepGenerated t=
     end
     t .GeneratedType .else ..drop
-      id.NAME_ID_NONE return
-    end GeneratedTypeName ptr cast [] .generator return
+      NameId optional.empty return
+    end GeneratedTypeName ptr cast [] .generator optional.wrap return
   end
   proc( Type : generator TypeContext ptr : context -> ConstValue slice ) =>: export: getGeneratorArgs
     generator =:: mut: t
@@ -2200,8 +2175,8 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isGeneric
     unwrapNamed .GenericType ? return
   end
-  proc( Type : t -> NameId ) =>: export: getGenericTypeId
-    t .GenericType .else ..drop id.NAME_ID_NONE end return
+  proc( Type : t -> NameId optional ) =>: export: getGenericTypeId
+    t .GenericType .if optional.wrap else ..drop NameId optional.empty end
   end
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
@@ -2397,19 +2372,16 @@ namespace: types
     end
     srcInfo .compositeInfo .eltNames [] =:: srcEltNames?
     targetInfo .compositeInfo .eltNames [] =:: targetEltNames?
-    srcEltNames? optional.isEmpty targetEltNames? optional.isEmpty != if
-      false return ## either both named or both unlabled
-    end
-    srcEltNames? optional.hasData =:: named
+    srcEltNames? optional.hasData or targetEltNames? optional.hasData end =:: named
     srcElts .length for =:: i
       srcElts i [] targetElts i [] context canAutoCast ! if
         false return
       end
       named if
         ## identifierNamesEq
-          srcEltNames? .and i slice.get .else id.NAME_ID_NONE end
-          targetEltNames? .and i slice.get .else id.NAME_ID_NONE end
-        nameContext id.identifierNamesEq ! if
+          srcEltNames? .if i slice.get optional.flat else NameId optional.empty end
+          targetEltNames? .if i slice.get optional.flat else NameId optional.empty end
+        id.identifierNamesEqO ! if
           false return
         end
       end
@@ -2759,7 +2731,7 @@ namespace: sb
           break
         GenericArg .case =:: genSize
           '`' sb.appendC
-          genSize nameContext appendIdentifierName
+          genSize appendIdentifierName
           '`' sb.appendC
           break
       end
@@ -2834,7 +2806,7 @@ namespace: sb
           '.' sb.appendC
           baseType context types.asRawUnion .else baseType end
             element [] .index
-          context types.compositeGetEltName nameContext appendIdentifierName
+          context types.compositeGetEltName optional.unwrap appendIdentifierName
         return
       Procedure  .case types.ProcType ptr cast [] =:: procType
         sb
@@ -2846,7 +2818,7 @@ namespace: sb
           procType .inTypes for
             context depth appendTypeRecursive
             eltIndex procType .eltNames .length u< if
-              procType .eltNames eltIndex []  nameContext appendTypeElementName
+              procType .eltNames eltIndex [] .if appendTypeElementName end
               eltIndex 1:iSize + eltIndex=
             end
             ' ' sb.appendC
@@ -2855,7 +2827,7 @@ namespace: sb
           procType .outTypes for
             context depth appendTypeRecursive
             eltIndex procType .eltNames .length u< if
-              procType .eltNames eltIndex []  nameContext appendTypeElementName
+              procType .eltNames eltIndex [] .if appendTypeElementName end
               eltIndex 1:iSize + eltIndex=
             end
             ' ' sb.appendC
@@ -2873,7 +2845,7 @@ namespace: sb
       GenericType .case =:: nameId
         sb
           '`' sb.appendC
-          nameId nameContext appendIdentifierName
+          nameId appendIdentifierName
           '`' sb.appendC
         return
       GeneratedType .case types.GeneratedTypeName ptr cast =:: genTypeName

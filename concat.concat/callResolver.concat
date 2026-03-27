@@ -118,7 +118,7 @@ proc(
   end
   src switch
     GenericType case
-      src types.getGenericTypeId NameId cast =:: genericId
+      src types.getGenericTypeId optional.unwrap =:: genericId
       genericValues genericId ArgumentId.fromName map.at .if
         [] switch
           Fixed Value .case .TypeId .else "expected type" ..panic end return
@@ -143,7 +143,7 @@ proc(
         None Int Dynamic case
           size break
         GenericArg .case =:: genericId
-          genericId nameContext id.identifierFlags id.FLAG_STATIC & ? ! if
+          genericId id.identifierFlags id.FLAG_STATIC & ? ! if
             flags ReplaceFlags.REPLACE_AUTO_ARGS & ? ! if
               size break
             end
@@ -321,7 +321,7 @@ proc(
           end list.append
         argBuffer =[]
       end
-      src typeContext types.getGeneratorName =:: generatorName
+      src typeContext types.getGeneratorName optional.unwrap =:: generatorName
       argBuffer [] list.asSlice argOffset slice.tail =:: generatorArgs
       ##findGeneratedType
         generatorName
@@ -380,7 +380,7 @@ proc(
   end
   target switch
     GenericType case
-      target types.getGenericTypeId NameId cast =:: genericId
+      target types.getGenericTypeId optional.unwrap =:: genericId
       genericValues genericId ArgumentId.fromName map.get .if
         switch
           NonEmpty case
@@ -612,8 +612,8 @@ proc(
       ## src has to be a compatible generated type
       src types.isGeneratedType ! if
         true return
-      else src typeContext types.getGeneratorName
-           target typeContext types.getGeneratorName != _if
+      else src typeContext types.getGeneratorName optional.unwrap
+           target typeContext types.getGeneratorName optional.unwrap != _if
         true return
       end
       src typeContext types.getGeneratorArgs =:: srcArgs
@@ -880,7 +880,7 @@ proc(
               paramType typeContext types.isGeneric and
               paramType
                 typeContext types.unwrapNamed
-              types.getGenericTypeId NameId cast =:: paramId
+              types.getGenericTypeId optional.unwrap =:: paramId
               current .genericValues paramId ArgumentId.fromName map.at .and
                 [] typeContext isEmptyConstant
               end
@@ -893,7 +893,7 @@ proc(
             ParameterInfo new list.append
           current .paramInfo=
           paramIndex 1 - paramIndex=
-        else paramName? .and $ =:: paramName nameContext id.identifierFlags id.FLAG_AUTO & ? and
+        else paramName? .and $ =:: paramName id.identifierFlags id.FLAG_AUTO & ? and
             current .genericValues paramName ArgumentId.fromName map.at .and =:: autoValue
             autoValue [] .NonEmpty ? ! _if
           autoValue [] switch
@@ -944,7 +944,7 @@ proc(
       paramType typeContext types.isGeneric and
           paramType
             typeContext types.unwrapNamed
-          types.getGenericTypeId NameId cast =:: paramId
+          types.getGenericTypeId optional.unwrap =:: paramId
           current .genericValues
             paramId ArgumentId.fromName
           map.at optional.isEmpty if
@@ -966,7 +966,7 @@ proc(
         map.put ..drop
       end
       stackValues stackIndex @[] .value [] =:: stackVal
-      paramName? .and nameContext id.identifierFlags id.FLAG_STATIC & ? end or
+      paramName? .and id.identifierFlags id.FLAG_STATIC & ? end or
           paramType typeContext types.isType or stackVal .TypeId ? if
         stackVal .None ? if
           false current .argsMatch=
@@ -1165,7 +1165,7 @@ proc(
   eltCount ConstValue list.create =:: mut: constArgs
   0:i32 while ..dup eltCount < do =:: i
     procType i typeContext types.getProcArgName .and $ =:: eltName
-        nameContext id.identifierFlags id.FLAG_STATIC & ? if
+        id.identifierFlags id.FLAG_STATIC & ? if
       constArgs
         candidate .genericValues eltName ArgumentId.fromName getValueOrNone list.append
       constArgs=
@@ -1263,7 +1263,7 @@ proc(
   constArgs=
   eltCount for =:: i
     procType i typeContext types.getProcArgName =:: eltName?
-    eltName? .if nameContext id.identifierFlags else id.FLAG_NONE end =:: flags
+    eltName? .if id.identifierFlags else id.FLAG_NONE end =:: flags
     true =:: mut: needArg
     eltName? .and =:: eltName flags id.FLAG_AUTO & ? if
       candidate .genericValues eltName ArgumentId.fromName getValueOrNone =:: value

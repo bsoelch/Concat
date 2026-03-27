@@ -429,14 +429,14 @@ namespace: sb
     prog .idContext .typeContext .nameContext =:: nameContext
     sb
       '$' sb.appendC
-      nameId nameContext id.identifierFlags id.FLAG_EXTERN & ? if
+      nameId id.identifierFlags id.FLAG_EXTERN & ? if
         ## use unmodified name for extern values
-        nameId nameContext sb.appendIdentifierName
+        nameId sb.appendIdentifierName
         return
       end
       CONCAT_PREFIX sb.appendS
-      nameId nameContext id.identifierFlags id.FLAG_EXPORT & ? ! if
-        nameId nameContext id.getIdentifierFile i64 cast sb.appendI
+      nameId id.identifierFlags id.FLAG_EXPORT & ? ! if
+        nameId id.getIdentifierFile i64 cast sb.appendI
         "_F" sb.appendS
       end
       nameId nameContext sb.appendAsciifiedIdentifierPath
@@ -646,7 +646,7 @@ namespace: sb
           ## skip empty arguments
           continue
         end
-        argName? .and nameContext id.identifierFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
+        argName? .and id.identifierFlags id.FLAG_STATIC & ? or arg typeContext types.isType if
           continue
         end
         hasArgs if
@@ -1347,7 +1347,7 @@ proc(
     sb.appendArgName return
   end
   "cannot find generic argument: " sb.copyPtr
-    nameId nameContext sb.appendIdentifierName
+    nameId sb.appendIdentifierName
   pos errors appendError
 end
 
@@ -1866,8 +1866,7 @@ proc(
   typeContext .nameContext =:: nameContext
   opType typeContext types.getProcIn optional.unwrap =:: inTypes
   inTypes .length 0:iSize != if
-    opType 0 typeContext types.getProcArgName .and
-        nameContext id.identifierFlags id.FLAG_STATIC & ? if
+    opType 0 typeContext types.getProcArgName .and id.identifierFlags id.FLAG_STATIC & ? if
       1:i32
     else
       0:i32
@@ -2971,7 +2970,7 @@ proc(
       return
     DeclareId InitializeId .case =:: idInfo
       op [] .val .InitializeId ? =:: assignValue
-      idInfo .nameId nameContext id.identifierFlags =:: identifierFlags
+      idInfo .nameId id.identifierFlags =:: identifierFlags
       identifierFlags id.FLAG_MUTABLE & ? =:: mutable
       idInfo .idType switch
         PROCEDURE case
@@ -2979,7 +2978,7 @@ proc(
             sb return ## ignore procedure declarations
           end
           break
-        LOCAL_VAR TMP_VAR ITR_VAR case
+        LOCAL_VAR TMP_VAR case
           op [] .dataType =:: valType
           ## use pointers as stack representation of arrays and composites
           valType context referenceOnly ! =:: isValue
@@ -3011,7 +3010,7 @@ proc(
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procInfo
       op [] .dataType context .currentProc=
-      procInfo [] .nameId nameContext id.identifierFlags =:: identifierFlags
+      procInfo [] .nameId id.identifierFlags =:: identifierFlags
       ## reset stack-info in context
       0 context .stackCount=
       0 context .tmpCount=
@@ -3045,7 +3044,7 @@ proc(
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
           end
-          argName? .and nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+          argName? .and id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
             i 1 + continue ## skip static arguments
           end
           argType context referenceOnly if
@@ -3129,7 +3128,7 @@ proc(
             idInfo .nameId context sb.appendGlobalName
             '\n' sb.appendC
           return
-        LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
+        LOCAL_VAR TMP_VAR ARGUMENT case
           sb
             op [] .pos sb.appendPosQBE
             "%s" sb.appendS
@@ -3185,7 +3184,7 @@ proc(
           GLOBAL_VAR case
             idInfo .nameId context sb.appendGlobalName
             break
-          LOCAL_VAR TMP_VAR ITR_VAR ARGUMENT case
+          LOCAL_VAR TMP_VAR ARGUMENT case
             " %l" sb.appendS
             idInfo .nameId localVarId sb.appendI
             break
@@ -3579,8 +3578,7 @@ proc(
       ## index of current auto-argument
       0:i32 while $ argCount i32 cast.u < do =:: i
         inTypes i [] =:: mut: arg
-        calledType i typeContext types.getProcArgName .if
-          nameContext id.identifierFlags
+        calledType i typeContext types.getProcArgName .if id.identifierFlags
         else id.FLAG_NONE end =:: argFlags
         arg typeContext types.isEmpty if
           i 1 + continue ## skip empty arguments
@@ -4089,12 +4087,12 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     =:: declaration ## TODO find out which declarations are actually used
     declaration .1 [] .aliasId id.NO_ALIAS != if continue end
     declaration .1 [] .nameId =:: nameId
-    nameId idContext id.getIdentifier optional.unwrap =:: idData
+    nameId idContext id.getIdData optional.unwrap =:: idData
     idData [] .idType .GLOBAL_VAR ! if
       continue
     end
     idData [] .valueType =:: mut: valType
-    nameId nameContext id.identifierFlags =:: identifierFlags
+    nameId id.identifierFlags =:: identifierFlags
     valType types.primitive.TYPE types.typeEquals or
         valType typeContext types.isEmpty or
         valType typeContext types.isProcedure or

@@ -1139,7 +1139,7 @@ proc(
       idInfo .idType switch
         GLOBAL_VAR TYPE case
           break
-        LOCAL_VAR TMP_VAR ITR_VAR case
+        LOCAL_VAR TMP_VAR case
           ## XXX? common procedure for resolving of auto-types
           op [] .dataType =:: dataType
           context [] .localVariables .else
@@ -1175,7 +1175,7 @@ proc(
           "unresolved call " sb.copyPtr
           op [] .pos errors appendError
           EvalResult .Error return
-        LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
+        LOCAL_VAR ARGUMENT TMP_VAR case
           context [] .localVariables optional.isEmpty if
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError
@@ -1207,13 +1207,13 @@ proc(
         TYPE GLOBAL_VAR case
           nameId
             idContext
-          id.getIdentifier .else
+          id.getIdData .else
             "could not find identifier: " sb.copyPtr
               nameId nameContext sb.appendIdentifierPath
             op [] .pos errors appendError
             EvalResult .Error return ## unknown identifier
           end =:: idData
-          idData [] .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
+          idData [] .nameId id.identifierFlags id.FLAG_MUTABLE & ? if
             "mutable global variables are not supported: " sb.copyPtr
               nameId nameContext sb.appendIdentifierPath
             op [] .pos errors appendError
@@ -1234,7 +1234,7 @@ proc(
     AtId .case =:: idInfo
       idInfo .nameId =:: nameId
       idInfo .idType switch
-        LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
+        LOCAL_VAR ARGUMENT TMP_VAR case
           ## XXX? extract common code with getId to procedure
           context [] .localVariables .else
             "missing local variables " sb.copyPtr
@@ -1246,14 +1246,14 @@ proc(
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: value
-          nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? =:: isMutable
+          nameId id.identifierFlags id.FLAG_MUTABLE & ? =:: isMutable
           ## pushValue
             value .value
             value .info .valueType isMutable typeContext types.getAddressType
           op [] .pos context pushValue
           EvalResult .Ok return
         PROCEDURE case
-          nameId idContext id.getIdentifier .else
+          nameId idContext id.getIdData .else
             "could not find " sb.copyPtr
               idInfo nameContext sb.appendIdInfo
             op [] .pos errors appendError
@@ -1261,7 +1261,7 @@ proc(
           end =:: idData
           idData [] .constValue .Procedure .else ..drop
             "could not determine id of procedure" sb.copyPtr
-              nameId nameContext sb.appendIdentifierName
+              nameId sb.appendIdentifierName
             op [] .pos errors appendError
             EvalResult .Error return
           end =:: procVal
@@ -1298,7 +1298,7 @@ proc(
       end
       ## TODO? is it neccessary to cast value
       idInfo .idType switch
-        LOCAL_VAR ARGUMENT TMP_VAR ITR_VAR case
+        LOCAL_VAR ARGUMENT TMP_VAR case
           context [] .localVariables .else
             value valInfo context unpopValue
             "missing local variables " sb.copyPtr
@@ -1306,7 +1306,7 @@ proc(
             EvalResult .Error return
           end
             nameId
-            nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
+            nameId id.identifierFlags id.FLAG_MUTABLE & ? if
               value valInfo .valueType true context localCopy
             else
               value
@@ -1316,7 +1316,7 @@ proc(
         TYPE GLOBAL_VAR case
           nameId
             idContext
-          id.getIdentifier .else
+          id.getIdData .else
             value valInfo context unpopValue
             "could not find identifier: " sb.copyPtr
               nameId nameContext sb.appendIdentifierPath
@@ -1358,7 +1358,7 @@ proc(
             Constant new
           map.put ..drop
           EvalResult .Ok return
-        LOCAL_VAR LABEL TMP_VAR ITR_VAR case
+        LOCAL_VAR LABEL TMP_VAR case
           context [] .localVariables .else
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError
@@ -1366,7 +1366,7 @@ proc(
           end
             nameId
             ## Constant
-              nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? if
+              nameId id.identifierFlags id.FLAG_MUTABLE & ? if
                 value valInfo .valueType true context localCopy
               else
                 value
@@ -1961,7 +1961,7 @@ namespace: interpreter
     program .errors =:: errors
     program .idContext .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
-    "memcpy":s procName nameContext id.identifierNameEq if
+    "memcpy":s procName id.identifierNameEq if
       args .length 3:iSize != or
           args 2 [] typeContext types.isPointer ! or
           args 2 [] typeContext types.isMutable ! or
@@ -2097,7 +2097,7 @@ namespace: interpreter
     procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
     0:iSize ## XXX? is there a better way to get number of non-auto static args
       args .length i32 cast.u for =:: i
-        procType i typeContext types.getProcArgName .and nameContext id.identifierFlags =:: flags
+        procType i typeContext types.getProcArgName .and id.identifierFlags =:: flags
         flags id.FLAG_STATIC & ? or
             args i [] typeContext types.isType if
           1:iSize +
@@ -2145,7 +2145,7 @@ namespace: interpreter
     ## process procedure arguments
     0:i32 while $ args .length i32 cast < do =:: i
       procType i typeContext types.getProcArgName =:: nameId?
-      nameId? .if nameContext id.identifierFlags else id.FLAG_NONE end =:: identifierFlags
+      nameId? .if id.identifierFlags else id.FLAG_NONE end =:: identifierFlags
       identifierFlags id.FLAG_STATIC & ? or args i [] typeContext types.isType if
         codeImpl .genericInfo .ImplInfo .else
           "expected generic implementation" ..panic

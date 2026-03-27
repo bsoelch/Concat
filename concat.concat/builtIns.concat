@@ -102,7 +102,7 @@ proc(
     pos
     idContext
     context .errors
-  id.declareIdentifier =:: isError ..drop.2
+  id.declareIdentifier ..drop
 end
 -1:ProcBundleId =:: NO_BUNDLE
 proc(
@@ -140,7 +140,7 @@ proc(
     pos
     idContext
     context .errors
-  id.declareIdentifier =:: isError ..drop.2
+  id.declareIdentifier ..drop
   procId return
 end
 proc(
@@ -189,14 +189,13 @@ proc(
 -> Type Type Type Type Type ) =>: operatorProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  NameId slice optional.empty =:: argLabels
   Type 2 array new =:: mut: args
   t args@ 0 =[]
   t args@ 1 =[]
   ## newProcedure
     args@ 1 slice.create
     Type slice.empty
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -204,7 +203,7 @@ proc(
   ## newProcedure
     args@ 1 slice.create
     args@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -212,7 +211,7 @@ proc(
   ## newProcedure
     args@ slice.wrap
     args@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -220,7 +219,7 @@ proc(
   ## newProcedure
     args@ slice.wrap
     types.primitive.BOOL@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -228,7 +227,7 @@ proc(
   ## newProcedure
     args@ 1 slice.create
     types.primitive.BOOL@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -248,7 +247,7 @@ proc(
   ## newProcedure
     args@ 2 slice.create
     args@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -256,7 +255,7 @@ proc(
   ## newProcedure
     args@ 2 slice.create
     args@ 1 @[] 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -274,7 +273,7 @@ proc(
   ## newProcedure
     t1@ 1 slice.create
     t2@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -286,12 +285,11 @@ proc(
 -> Type Type ) =>: sysProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  NameId slice optional.empty =:: argLabels
   types.CHAR8 false typeContext wrapPtr false typeContext wrapPtr =:: c8pp
   ## newProcedure
     Type slice.empty
     types.primitive.I64@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -299,7 +297,7 @@ proc(
   ## newProcedure
     Type slice.empty
     c8pp@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -320,7 +318,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I8@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -328,7 +326,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I16@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -336,7 +334,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I32@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -344,7 +342,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.I64@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -352,7 +350,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.F16@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -360,7 +358,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.F32@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -368,7 +366,7 @@ proc(
   ## newProcedure
     argTypes slice.wrap
     types.primitive.F64@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -383,18 +381,19 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   ## type : auto: T
-  NameId 3 array : mut: nameData
+  NameId optional 3 array : mut: nameData
   Type 3 array : mut: typeData
   ## newIdentifier
     "T":s
     id.FLAG_STATIC id.FLAG_BUILT_IN | id.FLAG_AUTO |
     pos
     nameContext
-  id.newIdentifier nameData@ 0 =[]
-  id.NAME_ID_NONE nameData@ 1 =[]
-  id.NAME_ID_NONE nameData@ 2 =[]
+  id.newIdentifier =:: genericName
+  genericName optional.wrap nameData@ 0 =[]
+  NameId optional.empty nameData@ 1 =[]
+  NameId optional.empty nameData@ 2 =[]
   types.primitive.TYPE typeData@ 0 =[]
-  nameData 0 [] types.newGenericType =:: baseType
+  genericName types.newGenericType =:: baseType
   baseType false typeContext wrapPtr =:: basePtr
   baseType true typeContext wrapPtr =:: basePtrMut
   baseType typeData@ 1 =[]
@@ -474,7 +473,7 @@ proc(
   ## newProcedure
     types.primitive.TYPE@ 1 slice.create
     types.primitive.BOOL@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -482,7 +481,7 @@ proc(
   ## newProcedure
     types.primitive.TYPE@ 1 slice.create
     types.primitive.TYPE@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -490,7 +489,7 @@ proc(
   ## newProcedure
     args@ 2 slice.create
     types.primitive.BOOL@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -499,7 +498,7 @@ proc(
   ## newProcedure
     args@ 2 slice.create
     types.primitive.BOOL@ 1 slice.create
-    NameId slice.empty
+    NameId optional slice.empty
     CallingConvention.DEFAULT
   typeContext types.newProcedure .else
     "failed to create procedure-type" ..panic
@@ -524,7 +523,7 @@ proc(
     pos
     idContext
     context .errors
-  id.declareIdentifier =:: isError ..drop.2
+  id.declareIdentifier ..drop
 end
 proc(
   Type : t
@@ -558,7 +557,7 @@ proc(
     pos
     idContext
     context .errors
-  id.declareIdentifier =:: isError ..drop.2
+  id.declareIdentifier ..drop
 end
 proc(
   FilePosition ptr : pos

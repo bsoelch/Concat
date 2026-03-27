@@ -109,7 +109,7 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     =:: declaration ## XXX find out which declarations are actually used
     declaration .1 [] .aliasId id.NO_ALIAS != if continue end
     declaration .1 [] .nameId =:: nameId
-    nameId idContext id.getIdentifier optional.unwrap =:: idData
+    nameId idContext id.getIdData optional.unwrap =:: idData
     idData [] .idType .GLOBAL_VAR ! if
       continue
     end

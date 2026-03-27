@@ -827,12 +827,12 @@ proc(
   program .errors =:: errors
   state [] .openBlocks list.atReversed for =:: block
     block [] .While .and =:: whileBlock blockName? ! .or =:: blockName
-        whileBlock .blockName .and blockName nameContext id.identifierNamesEq if
+        whileBlock .blockName .and blockName id.identifierNamesEq if
       block optional.wrap return
     end
     breakType .BREAK and block [] .Switch .and =:: switchBlock
         blockName? ! .or =:: blockName
-        switchBlock .blockName .and blockName nameContext id.identifierNamesEq if
+        switchBlock .blockName .and blockName id.identifierNamesEq if
       block optional.wrap return
     end
   end
@@ -1276,9 +1276,7 @@ proc(
   state [] .compiledOps opIndex list.at .else
     false return
   end .val [] .GetId .if .nameId =:: nameId
-    nameId
-      state [] .program .idContext .typeContext .nameContext id.identifierFlags
-    id.FLAG_MUTABLE & ? if
+    nameId id.identifierFlags id.FLAG_MUTABLE & ? if
       false return ## cannot copy mutable get (value might change between invocations)
     end
   else .StackMod ? _if
@@ -1402,7 +1400,7 @@ proc(
     ## skip auto-args
     while
       argType typeContext types.isEmpty or
-      eltName? ! .or nameContext id.identifierFlags id.FLAG_AUTO & ?
+      eltName? ! .or id.identifierFlags id.FLAG_AUTO & ?
     do
       procArgIndex 1 + procArgIndex=
       calledType procArgIndex typeContext types.getProcArgName eltName?=
@@ -1417,13 +1415,13 @@ proc(
           argValue .TypeId .and typeContext types.containsGeneric if
         true isGenericTypeGen=
       end
-      eltName? .and $ =:: eltName nameContext id.identifierFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
+      eltName? .and $ =:: eltName id.identifierFlags id.FLAG_STATIC & ? ! and argType typeContext types.isType ! if
         "Arguments for Type-generators should be static" sb.copyPtr
-        eltName nameContext id.identifierPos .else pos end errors appendError
+        eltName id.getIdentifierPos errors appendError
       end
     end
     argType typeContext types.isEmpty or isCodeImpl and
-        eltName? .and nameContext id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
+        eltName? .and id.identifierFlags id.FLAG_STATIC & ? or argType typeContext types.isType if
       continue
     end
     argCount argIndex != if
@@ -1756,7 +1754,7 @@ proc(
   argCount 1 - while $ 0 iSize.sge do =:: i
     inTypes i [] =:: elt
     calledType i i32 cast.u typeContext types.getProcArgName .and
-        nameContext id.identifierFlags id.FLAG_STATIC & ? if
+        id.identifierFlags id.FLAG_STATIC & ? if
       ## remove static arguments from stack
       state .stack branchTree.pop optional.unwrap =:: opData
       opData [] .opIndex state tryDeleteOp and opData [] .opIndex OP_ARGUMENT != if
@@ -1812,13 +1810,13 @@ namespace: typeChecker
     idContext .constContext =:: constContext
     idContext .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
-    generatorName nameContext id.getBaseName .else
+    generatorName id.getBaseName .else
       "could not find base procedure for " sb.copyPtr
         generatorName nameContext sb.appendIdentifierPath
       pos errors appendError
       Type optional.empty return
     end =:: generatorBaseName
-    generatorBaseName idContext id.getIdentifier .else
+    generatorBaseName idContext id.getIdData .else
       "could not find procedure " sb.copyPtr
         generatorBaseName nameContext sb.appendIdentifierPath
       pos errors appendError
@@ -1845,7 +1843,7 @@ namespace: typeChecker
     args .length StackValue list.create =:: mut: stackValues
     0 =:: mut: argIndex
     args for =:: arg
-      while procType argIndex typeContext types.getProcArgName .and nameContext id.identifierFlags id.FLAG_AUTO & ? do
+      while procType argIndex typeContext types.getProcArgName .and id.identifierFlags id.FLAG_AUTO & ? do
         argIndex 1 + argIndex=
       end
       stackValues
@@ -2246,7 +2244,6 @@ proc(
             end i32 cast.u typeContext types.compositeGetEltName .else
               "expected element name":s pos ..line internalErrorNoOp ..unreachable
             end
-            nameContext
           sb.appendIdentifierName
         else
           label0 typeContext sb.appendConstant
@@ -2312,7 +2309,7 @@ proc(
     else .GetId ._if =:: idInfo
       idInfo .nameId
         idContext
-      id.getIdentifier .else
+      id.getIdData .else
         "could not find " sb.copyPtr
           idInfo nameContext sb.appendIdInfo
         op [] .pos errors appendError
@@ -2373,11 +2370,10 @@ proc(
   end
   ## enum-switch -> try read label
   op [] .val .GetId .if
-    .nameId nameContext id.getIdentifierName
+    .nameId id.getIdentifierName
   else .GetName
-  ._else .Constant .and .TypeId .and =:: constType
-      constType types.isNamedType _if
-    constType typeContext types.namedTypeName nameContext id.getIdentifierName
+  ._else .Constant .and .TypeId .and typeContext types.namedTypeName ._if
+    id.getIdentifierName
   else
     "unsupported operation for switch label of type " sb.copyPtr
       switchType typeContext sb.appendType
@@ -2764,16 +2760,13 @@ proc(
         op .pos
         idContext
         errors
-      id.declareIdentifier .else ..drop
-        ## error message is created by declareIdentifier
-        continue.opLoop
-      end ..drop .else
+      id.declareIdentifier .else
         ## error message is created by declareIdentifier
         continue.opLoop
       end .constValue .Procedure ? ! if
         nameAlias .alias aliasType state [] .currentFile aliasId optional.wrap false op .pos program newProcData
           ConstValue .Procedure
-        nameAlias .alias idContext id.getIdentifier optional.unwrap .constValue=
+        nameAlias .alias idContext id.getIdData optional.unwrap .constValue=
       end
       continue.opLoop
     else .DeclareName ? or op .val .InitializeName ? _if
@@ -2791,7 +2784,7 @@ proc(
             $ op@ .dataType=
           end
         state isGlobal _if
-          $1 nameContext id.currentNamespace nameContext id.setIdentifierNamespace
+          $1 nameContext id.currentNamespace id.setIdentifierNamespace
           $ typeContext types.isProcedure if
             IdentifierType .PROCEDURE
           else $ typeContext types.isType _if
@@ -2808,10 +2801,10 @@ proc(
         op .pos
         idContext
         errors
-      id.declareIdentifier >$ .else ..drop
+      id.declareIdentifier .else
         ## error message is created by declareIdentifier
         continue.opLoop
-      end =:: idData ..drop
+      end =:: idData
       op .dataType idData@ id.asIdInfo op .pos
       isInit ! if
         opDeclareId
@@ -2821,7 +2814,7 @@ proc(
     end
     ## convert static arguments to constants
     op .val .GetId .and .nameId =:: nameId
-        nameId nameContext id.identifierFlags id.FLAG_STATIC & ? and
+        nameId id.identifierFlags id.FLAG_STATIC & ? and
         state .argData nameId ArgumentId.fromName map.at .if =:: argData
       argData [] .valType op@ .dataType=
       argData [] .value op@ .val .Constant=
@@ -2864,14 +2857,14 @@ proc(
         usingNamespace .baseName =:: namespaceLabel
         usingNamespace .alias
           .if
-            nameContext id.getIdentifierName
+            id.getIdentifierName
           else
             string.empty
           end
         =:: aliasName
         namespaceLabel aliasName idContext id.importNamespace if
           "namespace \"" sb.copyPtr
-            namespaceLabel nameContext sb.appendIdentifierName
+            namespaceLabel sb.appendIdentifierName
           "\" does not exist in the current scope" sb.appendS op .pos errors appendWarning
         end
         continue.opLoop
@@ -2879,19 +2872,19 @@ proc(
         usingIdentifier .baseName =:: srcLabel
         usingIdentifier .alias
           .if
-            nameContext id.getIdentifierName
+            id.getIdentifierName
           else
             string.empty
           end
         =:: aliasName
-        srcLabel nameContext id.getIdentifierName
+        srcLabel id.getIdentifierName
           aliasName
           idContext
           op .pos
         errors id.importIdentifier ..drop
         continue.opLoop
       GetId .case =:: idInfo
-        idInfo .nameId nameContext id.identifierFlags =:: flags
+        idInfo .nameId id.identifierFlags =:: flags
         flags id.FLAG_MUTABLE & ? =:: mutable
         flags id.FLAG_STATIC & ? =:: isStatic
         mutable and isStatic ! and state isGlobal ! if
@@ -2900,13 +2893,13 @@ proc(
           idInfo .idType switch
             TYPE PROCEDURE PROCEDURE_BUNDLE GLOBAL_VAR LOCAL_VAR case
               true break ## can hold Identifier
-            ARGUMENT LABEL TMP_VAR ITR_VAR case
+            ARGUMENT LABEL TMP_VAR case
               false break
           end if
-            ## getIdentifier
+            ## getIdData
               idInfo .nameId
               idContext
-            id.getIdentifier .else
+            id.getIdData .else
               "could not find " sb.copyPtr
                 idInfo nameContext sb.appendIdInfo
               op .pos errors appendError
@@ -2918,7 +2911,7 @@ proc(
           end
         end =:: constValue
         idInfo .idType switch
-          GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
+          GLOBAL_VAR LOCAL_VAR TMP_VAR case
             idInfo .nameId =:: nameId
             mutable ! and constValue .None ? ! and idInfo .idType .GLOBAL_VAR if
               ## replace access to immutable global variable with constant
@@ -3028,18 +3021,16 @@ proc(
         pushTypes
         continue.opLoop
       AtId .case =:: idInfo
-        idInfo .nameId id.FLAG_HAS_POINTER nameContext id.addIdentifierFlags
+        idInfo .nameId id.FLAG_HAS_POINTER id.addIdentifierFlags
         idInfo .idType switch
-          GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ITR_VAR ARGUMENT case
+          GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ARGUMENT case
             idInfo .nameId =:: nameId
-            nameId
-              nameContext id.identifierFlags
-            id.FLAG_MUTABLE & ? =:: mutable
+            nameId id.identifierFlags id.FLAG_MUTABLE & ? =:: mutable
             idInfo .idType .PROCEDURE if
-              ## getIdentifier
+              ## getIdData
                 idInfo .nameId
                 idContext
-              id.getIdentifier .else
+              id.getIdData .else
                 "could not find " sb.copyPtr
                   idInfo nameContext sb.appendIdInfo
                 op .pos errors appendError
@@ -3109,9 +3100,7 @@ proc(
       SetId .case =:: idInfo
         ## TODO: support SetId for global variable (if mutable or uninitialized)
         idInfo .nameId =:: nameId
-        nameId
-          nameContext id.identifierFlags
-        id.FLAG_MUTABLE & ? ! and _EXPERIMENTAL_ ! or idInfo .idType .LOCAL_VAR ! if
+        nameId id.identifierFlags id.FLAG_MUTABLE & ? ! and _EXPERIMENTAL_ ! or idInfo .idType .LOCAL_VAR ! if
           ## mutability of local vars will be checked in usage analysis phase ## TODO! actualy implement that check
           256 sb.create
             idInfo nameContext sb.appendIdInfo
@@ -3135,10 +3124,10 @@ proc(
           idInfo .idType .LABEL "composite-element has type label" assert
           ## assign constant value to label
           state .stack branchTree.peek .if =:: stackVal
-            ## getIdentifier
+            ## getIdData
               idInfo .nameId
               idContext
-            id.getIdentifier .else
+            id.getIdData .else
               "could not find " sb.copyPtr
                 idInfo nameContext sb.appendIdInfo
               op .pos errors appendError
@@ -3155,7 +3144,7 @@ proc(
                 else .TypeId ._else ..drop
                   stackVal [] .valueType
                 end idData .valueType=
-                idInfo .nameId nameContext id.identifierFlags id.FLAG_STATIC & ? if
+                idInfo .nameId id.identifierFlags id.FLAG_STATIC & ? if
                   stackVal [] .valueType typeContext types.isType if
                     idInfo .nameId types.newGenericType ConstValue .TypeId
                   else
@@ -3173,7 +3162,7 @@ proc(
             end
             stackVal [] .value .TypeId .and typeContext types.isType if
               ## type-arguments are always static
-              idInfo .nameId id.FLAG_STATIC nameContext id.addIdentifierFlags
+              idInfo .nameId id.FLAG_STATIC id.addIdentifierFlags
             end
           end
           state [] .arrowState ? if
@@ -3223,7 +3212,7 @@ proc(
         end
         idInfo .idType switch
           PROCEDURE case
-            idInfo .nameId idContext id.getIdentifier .else
+            idInfo .nameId idContext id.getIdData .else
               "could not find " sb.copyPtr
                 idInfo .nameId nameContext sb.appendIdentifierPath
               op .pos errors appendError
@@ -3248,16 +3237,16 @@ proc(
               program
             newProcData ConstValue .Procedure constVal =[]
           continue.opLoop
-          GLOBAL_VAR LOCAL_VAR TMP_VAR ITR_VAR case
+          GLOBAL_VAR LOCAL_VAR TMP_VAR case
             state isGlobal ! if ## ignore declarations outside procedure
               op state appendOp ..drop
             end
           continue.opLoop
           TYPE case ## set const-value to named type
-            ## getIdentifier
+            ## getIdData
               idInfo .nameId
               idContext
-            id.getIdentifier .if =:: idData
+            id.getIdData .if =:: idData
               idInfo .nameId
                 typeContext types.declareNamedType
               ConstValue .TypeId idData .constValue=
@@ -3284,7 +3273,7 @@ proc(
           op@ state resolveDeclarationType
         end
         idInfo .idType switch
-          GLOBAL_VAR LOCAL_VAR ITR_VAR PROCEDURE TYPE case
+          GLOBAL_VAR LOCAL_VAR PROCEDURE TYPE case
             state .stack branchTree.peek .if
               [] .value
               idInfo .idType .TYPE if
@@ -3318,12 +3307,12 @@ proc(
             ##   don't update mutable local variables
             constVal .TypeId ? or constVal .None ? ! and
                 state isGlobal or idInfo .idType .GLOBAL_VAR or idInfo .idType .PROCEDURE or
-                idInfo .nameId nameContext id.identifierFlags id.FLAG_MUTABLE & ? ! if
+                idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? ! if
               ## TODO special handling for procedure constants
-              ## getIdentifier
+              ## getIdData
                 idInfo .nameId
                 idContext
-              id.getIdentifier .if =:: idData
+              id.getIdData .if =:: idData
                 constVal idData .constValue=
               else
                 "could not find " sb.copyPtr
@@ -3336,14 +3325,14 @@ proc(
                   procInfo .procType .Undefined ? if
                     op .dataType procInfo .procType=
                   end
-                  procInfo .nameId [] nameContext id.identifierFlags id.FLAG_LAMBDA & ? if
-                    MAIN_NAME idInfo .nameId nameContext id.identifierNameEq if
+                  procInfo .nameId [] id.identifierFlags id.FLAG_LAMBDA & ? if
+                    MAIN_NAME idInfo .nameId id.identifierNameEq if
                       ## TODO! check if main has correct signature
                       idInfo .nameId optional.wrap program .mainId=
                       procId optional.wrap program .mainProcId=
                     end
                     idInfo .nameId procInfo .nameId=
-                    idInfo .nameId nameContext id.identifierFlags id.FLAG_STATIC & ? if
+                    idInfo .nameId id.identifierFlags id.FLAG_STATIC & ? if
                       procInfo [] .flags
                         ProcFlags.IS_STATIC |
                       procInfo .flags=
@@ -4801,11 +4790,11 @@ proc(
             blockInfo .blockName .else
               "expected named block":s op ..line state internalError ..unreachable
             end =:: mut: nameId
-            nameId nameContext id.currentNamespace nameContext id.setIdentifierNamespace
+            nameId nameContext id.currentNamespace id.setIdentifierNamespace
             nameId idContext id.findDeclaredIdentifier .Ok ! .or =:: idData
-                nameId nameContext id.identifierFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
-                idData [] .nameId nameContext id.getIdentifierNamespace nameContext id.currentNamespace .current != if
-              nameId nameContext id.identifierFlags id.FLAG_MERGE & ? if
+                nameId id.identifierFlags id.FLAG_MERGE & ? ! and ## explicitly merge with parent overload
+                idData [] .nameId id.getIdentifierNamespace nameContext id.currentNamespace .current != if
+              nameId id.identifierFlags id.FLAG_MERGE & ? if
                 "unable to merge overload: \"" sb.copyPtr
                 nameId nameContext sb.appendIdentifierPath
                 '"' sb.appendC
@@ -4825,9 +4814,9 @@ proc(
                 op .pos
                 idContext
                 errors
-              id.declareIdentifier .else ..drop
+              id.declareIdentifier .if .nameId else
                 continue.opLoop
-              end nameId= ..drop
+              end nameId=
               bundleId
             else
               idData [] .idType .PROCEDURE_BUNDLE ! if
@@ -4851,7 +4840,7 @@ proc(
             elts for =:: elt
               elt .val switch
                 GetName .case break
-                GetId .case .nameId nameContext id.getIdentifierName break
+                GetId .case .nameId id.getIdentifierName break
                 ## NestedProc .case =:: procId break
                 default
                   "unsupported operation in overload block: " sb.copyPtr
@@ -5091,11 +5080,7 @@ proc(
                         types.compositeGetEltName .if =:: eltName
                           eltName nameContext sb.appendIdentifierPath
                           "\" declaredAt":s sb.appendStr
-                          eltName nameContext id.identifierPos .if
-                            [] sb.appendPos
-                          else
-                            '?' sb.appendC
-                          end
+                          eltName id.getIdentifierPos [] sb.appendPos
                         else i sb.appendI end
                         '\n' sb.appendC
                       end
@@ -5595,7 +5580,7 @@ proc(
       continue.opLoop
       TypeWith .case =:: withProcId
         withProcId ProcId.getProcInfo =:: withProc
-        withProc [] .nameId nameContext id.currentNamespace nameContext id.setIdentifierNamespace
+        withProc [] .nameId nameContext id.currentNamespace id.setIdentifierNamespace
         op .pos state popType =:: baseType
         ## newProcedure
           baseType@ slice.wrap
@@ -5741,16 +5726,16 @@ proc(
           Find .case =:: idLabel
             16 id.IdentifierMatch list.create =:: mut: matches
             ## TODO? directly search by label
-            idLabel nameContext id.getIdentifierName true idContext matches@ optional.wrap id.searchIdentifier ..drop.2
+            idLabel id.getIdentifierName true idContext matches@ optional.wrap id.searchIdentifier ..drop.2
             program [] .tmpString
               sb.clear
               "-----------------\n" sb.appendS
-              "identifier \"" sb.appendS idLabel nameContext sb.appendIdentifierName "\":\n" sb.appendS
+              "identifier \"" sb.appendS idLabel sb.appendIdentifierName "\":\n" sb.appendS
               0:iSize while $ matches .length u< do =:: i
                 matches i @[] =:: match
                 match [] .nameData .nameId =:: nameId
                 match [] .nameData .aliasId =:: aliasId
-                nameId idContext id.getIdentifier optional.unwrap =:: idData
+                nameId idContext id.getIdData optional.unwrap =:: idData
                 " - " sb.appendS
                 aliasId id.NO_ALIAS != if
                   "alias (declared at " sb.appendS
@@ -5766,11 +5751,7 @@ proc(
                   " ]" sb.appendS
                 end
                 " ) declared at " sb.appendS
-                nameId nameContext id.identifierPos .if
-                  [] sb.appendPos
-                else
-                  "?" sb.appendS
-                end
+                nameId id.getIdentifierPos [] sb.appendPos
                 '\n' sb.appendC
                 i 1:iSize +
               end ..drop
@@ -5803,7 +5784,7 @@ proc(
   program .idContext .typeContext .nameContext =:: nameContext
   codeState switch
     PARSED case
-      isUnused and procName nameContext id.identifierFlags id.FLAG_IGNORE_UNUSED & ? ! if
+      isUnused and procName id.identifierFlags id.FLAG_IGNORE_UNUSED & ? ! if
         "procedure " sb.copyPtr
           procName nameContext sb.appendIdentifierPath
           " is never used" sb.appendS
@@ -5849,9 +5830,7 @@ proc(
   codeImpl .genericInfo .Implementations ? if
     "generic proc should not be type-checked":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
   end
-  currentProc [] .nameId nameContext id.getIdentifierPos .else
-    "proc label has no pos":s expandedAt .else FILE_POS_UNKNOWN@ end ..line internalErrorNoOp ..unreachable
-  end =:: procPos
+  currentProc [] .nameId id.getIdentifierPos =:: procPos
   expandedAt .else procPos end =:: initPos
   codeImpl [] .codeState currentProc [] .nameId checkType state [] .isUnusedProc initPos program checkProcState if
     return
@@ -5886,7 +5865,7 @@ proc(
       currentProc [] .procType i typeContext types.getProcArgName =:: nameId?
       inTypes i [] =:: argType
       argType typeContext types.isType or
-          nameId? .and nameContext id.identifierFlags id.FLAG_STATIC & ? if
+          nameId? .and id.identifierFlags id.FLAG_STATIC & ? if
         implInfo [] .staticArgs
           staticArgCount slice.get .else
             "missing static argument":s initPos ..line internalErrorNoOp ..unreachable
@@ -5965,9 +5944,9 @@ proc(
         program .errors
       id.declareIdentifier ? ! if
         "could not declare identifier for argument " sb.copyPtr
-          argName nameContext sb.appendIdentifierName
+          argName sb.appendIdentifierName
         procPos program .errors appendError
-      end ..drop
+      end
     else ## push argument
       state .stack
         ## TypeInfo
@@ -6128,9 +6107,9 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
   program [] .mainProcId ? =:: hasMain
   program [] .mainProcId .if =:: mainProcId
     ## check all procedures reachable from main proc
-    program [] .mainId .and nameContext id.getIdentifierPos .else
-      "main-proc has no position" ..panic
-    end =:: mainProcPos
+    program [] .mainId .else
+      "missing mainId" ..panic
+    end id.getIdentifierPos =:: mainProcPos
     mainProcId mainProcPos state typeCheckChildProcedures
   end
   ## TODO? create seperate list of all "root-procedures" to avoid iterating procedures twice
@@ -6154,12 +6133,10 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
       ProcCodeState .UNUSED codeImpl .codeState=
       continue ## ignore parsing procedures
     end
-    currentProc [] .nameId nameContext id.identifierFlags =:: flags
+    currentProc [] .nameId id.identifierFlags =:: flags
     flags id.FLAG_LAMBDA & ? or EXPORT_GLOBALS hasMain ! | and flags id.FLAG_EXPORT & ? if
       procId
-        currentProc [] .nameId nameContext id.getIdentifierPos .else
-          "proc has no position" ..panic
-        end
+        currentProc [] .nameId id.getIdentifierPos
       state typeCheckChildProcedures
     end
   finally index 1 + end ..drop

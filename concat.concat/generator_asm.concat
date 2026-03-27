@@ -469,7 +469,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   ## TODO correctly mangle procedure names
-  procId ProcId.getName nameContext id.getIdentifierName
+  procId ProcId.getName id.getIdentifierName
 end
 
 proc(
@@ -1255,7 +1255,7 @@ proc(
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procData
       procId context getProcName =:: procName
-      procData [] .nameId nameContext id.identifierFlags id.FLAG_EXPORT & ? if
+      procData [] .nameId id.identifierFlags id.FLAG_EXPORT & ? if
         procName asm.exportName list.append
       end
       procName asm.enter list.append
