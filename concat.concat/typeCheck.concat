@@ -2234,6 +2234,9 @@ proc(
         switchType typeContext types.isEnumOrTaggedUnion if
           ## appendIdentifierName
             switchType
+              $ typeContext types.isTaggedUnion if
+                typeContext types.asRawUnion optional.unwrap
+              end
             label .Int .else
               "expected int":s pos ..line internalErrorNoOp ..unreachable
             end i32 cast.u typeContext types.compositeGetEltName .else

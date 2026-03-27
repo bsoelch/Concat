@@ -1,0 +1,7 @@
+union( i32 : I f32 : F ) =:: aUnion
+proc( -> ) =>: main
+  0 aUnion .I switch
+    I case break
+    F I case break
+  end
+end
