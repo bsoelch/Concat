@@ -10,10 +10,14 @@ namespace: type
   type .with( ..types.isEnum ) =:: export: enum
   type .with( ..types.isTaggedUnion ) =:: export: union
 
-  proc( type : T -> bool ) =>: export: static: isValuePointer
+  proc( type : T -> bool ) =>: export: static: isPointerValue
     T ..types.unwrapNamed ..types.isPointer and T ..types.unwrapNamed ..types.isRawPointer ! end
   end
-  type .with( isValuePointer ) =:: export: valuePointer
+  proc( type : T -> bool ) =>: export: static: isNamedPointer
+    T ..types.unwrapNamed ..types.isPointer
+  end
+  type .with( isPointerValue ) =:: export: pointerValue
+  type .with( isNamedPointer ) =:: export: namedPointer
 
   oneOf( i8 i16 i32 i64 ) =:: export: integer
   oneOf( f32 f64 ) =:: export: float
