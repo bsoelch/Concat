@@ -1404,6 +1404,10 @@ proc(
         LE case AMD64.op.JLE break
         GE case AMD64.op.JGE break
         GT case AMD64.op.JGT break
+        ULT case AMD64.op.JB break
+        ULE case AMD64.op.JBE break
+        UGE case AMD64.op.JAE break
+        UGT case AMD64.op.JA break
         default "unimplemented: jump-type" ..panic break
       end jumpLabel asm.LocalLabel cast asm.op1 list.append
       labelInfo .cmpType .NONE ! context .reachable=
