@@ -543,9 +543,8 @@ namespace: interpreter
       ## TODO! use correct base mutablity
     true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
-      $ typeContext types.isPointer if
-        $ typeContext types.isMutable eltMutable & eltMutable=
-        typeContext types.getBaseType
+      $ typeContext types.getPointerBaseType .if
+        >$ typeContext types.isMutable eltMutable & eltMutable=
         true isPtr=
       end
       elementIndex typeContext types.compositeGetElement
@@ -613,9 +612,8 @@ namespace: interpreter
       ## TODO! use correct base mutablity
     true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
-      $ typeContext types.isPointer if
-        $ typeContext types.isMutable eltMutable & eltMutable=
-        typeContext types.getBaseType
+      $ typeContext types.getPointerBaseType .if
+        >$ typeContext types.isMutable eltMutable & eltMutable=
         true isPtr=
       end
       elementIndex typeContext types.compositeGetElement
@@ -739,9 +737,7 @@ namespace: interpreter
     ## 1. copy elements
     dataArray .length for =:: i
       dataArray i [] =:: elt
-      arrayBase .Undefined ? ! if
-        arrayBase
-      else
+      arrayBase .else
         valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
       ConstValue ..length 23:iSize == "no new constants" assert
@@ -839,9 +835,7 @@ namespace: interpreter
     ## copy sub-arrays
     localSlice .length for =:: i
       localSlice i @[] =:: elt
-      arrayBase .Undefined ? ! if
-        arrayBase
-      else
+      arrayBase .else
         valType i i32 cast typeContext types.compositeGetElement
       end =:: eltType
       elt [] .Array ? if
@@ -875,14 +869,13 @@ namespace: interpreter
         end localSlice i slice.set
       end
       localSlice LocalSlice cast ConstValue .LocalArray return
-    else dataType typeContext types.isArray _if
-      ## XXX? merge with previous case
+    else dataType typeContext types.getArrayBaseType ._if =:: eltType
+      ## TODO? merge with previous case
       dataType typeContext types.getArraySize .Int .else ..drop
         "generic arrays are not supported" sb.copyPtr
         pos errors appendError
         0
       end =:: eltCount
-      dataType typeContext types.getBaseType =:: eltType
       eltType typeContext types.unwrapNamed =:: eltBase
       eltBase types.isPrimitive if
         eltBase typeContext types.primitiveValue switch

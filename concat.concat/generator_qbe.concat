@@ -911,8 +911,7 @@ namespace: sb
           end
           isGlobal ! if break end
           t =:: containerType
-          containerType typeContext types.isArray if
-            containerType typeContext types.getBaseType =:: eltType
+          containerType typeContext types.getArrayBaseType .if =:: eltType
             eltType pos context typeSizeInt =:: eltSize
             eltType pos context typeStrideInt =:: eltStride
             0:iSize while $ arrayValue .length u< do =:: i
@@ -1126,11 +1125,10 @@ namespace: sb
     typeContext .nameContext =:: nameContext
     prog .idContext .constContext =:: constContext
     t0 typeContext types.unwrapNamed =:: t
-    t typeContext types.isArray if
+    t typeContext types.getArrayBaseType .if =:: baseType
       t typeContext types.getArraySize .Int .else ..drop
         sb return ## no declaration for var-size array
       end =:: size
-      t typeContext types.getBaseType =:: baseType
       baseType pos context typeSizeInt =:: baseSize
       baseType pos context typeStrideInt =:: baseStride
       sb
@@ -1259,8 +1257,7 @@ namespace: sb
     t typeContext types.containsGeneric if
       sb return ## ignore generic types
     end
-    t typeContext types.isArray if
-      t typeContext types.getBaseType =:: baseType
+    t typeContext types.getArrayBaseType .if =:: baseType
       baseType pos context typeSizeInt =:: baseSize
       baseType pos context typeStrideInt =:: baseStride
       sb
@@ -2032,7 +2029,10 @@ proc(
       return
     GET_PTR GET_PTR_MUT case
       ## base-type is pointer to value
-      baseType typeContext types.getBaseType =:: valueType
+      baseType typeContext types.getBaseType .else
+        "expected pointer" sb.copyPtr pos errors appendError
+        Type .Empty
+      end =:: valueType
       valueType context toValType =:: valType
       valueType context referenceOnly if
         sb return
@@ -2077,7 +2077,10 @@ proc(
       return
     OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT case
       ## baseType is pointer type
-      baseType typeContext types.getBaseType =:: eltType
+      baseType typeContext types.getBaseType .else
+        "expected pointer" sb.copyPtr pos errors appendError
+        Type .Empty
+      end =:: eltType
       sb
         builtIn .OFFSET_PTR_I32 or builtIn .OFFSET_PTR_MUT_I32 if
           pos context popValue =:: offset32
@@ -3179,10 +3182,9 @@ proc(
         containerType=
         true ptrSrc=
       end
-      containerType typeContext types.isArray =:: isArray
-      isArray if
-        containerType typeContext types.getBaseType
-      else
+      containerType typeContext types.getArrayBaseType
+        $ ? =:: isArray
+      .else
         containerType
           index
           typeContext
@@ -3249,9 +3251,8 @@ proc(
       path ( i32 : index Curry : curry -> ) =>
         curry .context [] .program .idContext .typeContext =:: shadow: typeContext
         curry .eltInfo [] .eltType
-          $ typeContext types.isArray if
-            typeContext types.getBaseType
-            $ curry .pos curry .context typeStrideInt index i64 cast.u *
+          $ typeContext types.getArrayBaseType .if
+            >$ curry .pos curry .context typeStrideInt index i64 cast.u *
               curry .eltInfo [] .offset +
             curry .eltInfo .offset=
           else $ typeContext types.isRawUnion _if
@@ -3311,10 +3312,9 @@ proc(
           $ ? =:: isPtr
         .if >$ ..drop end
       =:: containerType
-      containerType typeContext types.isArray =:: isArray
-      isArray if
-        containerType typeContext types.getBaseType
-      else
+      containerType typeContext types.getArrayBaseType
+        $ ? =:: isArray
+      .else
         containerType
           index
           typeContext
@@ -3460,12 +3460,9 @@ proc(
         sb return
       end =:: srcVal
       ## TODO? special handling for access through pointer?
-      op [] .dataType
-        $ typeContext types.isPointer =:: isPtr
-        isPtr if
-          typeContext types.getBaseType
-        end
-      =:: enumType
+      op [] .dataType typeContext types.getPointerBaseType
+        $ ? =:: isPtr
+      .else op [] .dataType end =:: enumType
       sb
         op [] .pos sb.appendPosQBE
         enumType elementId typeContext types.compositeGetElement =:: eltType
@@ -3597,9 +3594,7 @@ proc(
       return
     CallPtr .case =:: callInfo
       op [] .dataType =:: mut: calledType
-      calledType typeContext types.isPointer if
-        calledType
-          typeContext types.getBaseType
+      calledType typeContext types.getPointerBaseType .if
         calledType=
       end
       calledType typeContext types.getProcIn optional.unwrap =:: inTypes

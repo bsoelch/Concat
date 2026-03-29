@@ -146,9 +146,9 @@ proc(
         ## TODO? support generic named types: create copy with different contents
       end
       src return
-    Pointer MutablePointer RawPointer MutableRawPointer ArrayType case
-      src typeContext types.getBaseType =:: base
-      src typeContext types.getArraySize =:: size
+    Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case =:: srcArrayData
+      srcArrayData types.arrayTypeBase =:: base
+      srcArrayData types.arrayTypeSize =:: size
       idContext [] .arraySizeBuffer .length =:: sizeOffset
       false =:: mut: genericSize
       size switch
@@ -458,12 +458,11 @@ proc(
         genericValues
         progContext
       resolveGenerics return
-    Pointer MutablePointer ArrayType RawPointer MutableRawPointer case
-      src typeContext types.isPointer ! and
-          src typeContext types.isArray ! if
+    Pointer MutablePointer ArrayType RawPointer MutableRawPointer .case =:: targetArrayData
+      src typeContext types.isPointer ! and src typeContext types.isArray ! if
         ## special case for conversion procedure -> proc-pointer
         src typeContext types.isProcedure and target typeContext types.isCallable if
-          src target typeContext types.getBaseType
+          src targetArrayData types.arrayTypeBase
             true
             needCast
             genericValues
@@ -489,7 +488,7 @@ proc(
         true return ## cannot assign unknown-size to fixed-size
       end
       src typeContext types.getArraySize =:: srcSize
-      target typeContext types.getArraySize =:: targetSize
+      targetArrayData types.arrayTypeSize =:: targetSize
       targetFixed and srcFixed if
         targetSize switch
           Dynamic case break
@@ -530,8 +529,8 @@ proc(
         end
       end
       ## resolveGenerics
-        src typeContext types.getBaseType
-        target typeContext types.getBaseType
+        src typeContext types.getBaseType optional.unwrap
+        targetArrayData types.arrayTypeBase
         true
         needCast
         genericValues

@@ -282,11 +282,10 @@ namespace: constant
       end break
       Pointer MutablePointer RawPointer MutableRawPointer Procedure case
         0 ConstValue .Int return
-      ArrayType case
+      ArrayType .case types.arrayTypeBase typeContext types.unwrapNamed =:: baseType
         valType typeContext types.getArraySize .Int .else
           "unsupported size for constant array" ..panic
         end i32 cast.u =:: count
-        valType typeContext types.getBaseType typeContext types.unwrapNamed =:: baseType
         baseType types.isPrimitive and baseType types.primitive.TYPE types.typeEquals ! if
           baseType typeContext types.strideOf .Fixed .else "dynamic size primitive" ..panic end switch
             1 case

@@ -241,9 +241,7 @@ proc(
       return
     Call CallPtr case
       op .dataType
-        $ typeContext types.isPointer if
-          typeContext types.getBaseType
-        end
+        $ typeContext types.getPointerBaseType .if >$ ..drop end
       =:: calledType
       ## special handling for pointer-call procedures
       _BACKEND_ .QBE if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL

@@ -1988,8 +1988,7 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   OP_UNLINKED =:: mut: onRead
-  containerType typeContext types.isArray if
-    containerType typeContext types.getBaseType
+  containerType typeContext types.getArrayBaseType .if ## already unwrapped
   else accessType .UNION_GET and containerType typeContext types.isTaggedUnion _if
     containerType elementIndex typeContext types.newUnionElement .else
       "cannot create union element":s pos ..line internalErrorNoOp ..unreachable
@@ -3005,9 +3004,7 @@ proc(
           state
         requireTypes .Err ? if continue.opLoop end
         calledType op@ .dataType=
-        calledType typeContext types.isPointer if
-          calledType typeContext types.getBaseType
-        else
+        calledType typeContext types.getPointerBaseType .else
           calledType
         end =:: procType
         procType typeContext types.getProcIn .else
@@ -3424,8 +3421,8 @@ proc(
           state .nestedElementInfo [] .rootType
             state .nestedElementInfo [] .path for =:: index
               $ index op .pos opGetElement state appendOp ..drop
-              $ typeContext types.isArray if
-                typeContext types.getBaseType
+              $ typeContext types.getArrayBaseType .if
+                >$ ..drop
               else
                 index typeContext types.compositeGetElement
               end
@@ -4213,8 +4210,7 @@ proc(
             =:: switchType
             switchType typeContext types.isIntOrChar ! and
                 switchType typeContext types.isEnumOrTaggedUnion ! and
-                switchType typeContext types.isPointer ! or
-                  switchType typeContext types.getBaseType
+                switchType typeContext types.getPointerBaseType ! .or
                 typeContext types.isEnumOrTaggedUnion ! if
               "cannot switch values of type " sb.copyPtr
                 switchType typeContext sb.appendType
@@ -4229,8 +4225,8 @@ proc(
               continue.opLoop
             end
             switchType
-              $ typeContext types.isPointer if
-                typeContext types.getBaseType
+              $ typeContext types.getPointerBaseType .if
+                >$ ..drop
               end
             $ =:: switchValueType
               $ typeContext types.isTaggedUnion =:: isTaggedUnion
@@ -5446,10 +5442,9 @@ proc(
           continue.opLoop
         end [] .valueType =:: valType
         valType op@ .dataType=
-        valType
-          valType typeContext types.isPointer =:: isPointer
-          isPointer if typeContext types.getBaseType end
-        =:: baseType
+        valType typeContext types.getPointerBaseType
+          $ ? =:: isPointer
+        .else valType end =:: baseType
         baseType types.isUnionElement if
           state .stack branchTree.pop ..drop
           baseType typeContext types.getUnionElementType

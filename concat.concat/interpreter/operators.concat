@@ -330,7 +330,9 @@ namespace: interpreter
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
       GET_PTR GET_PTR_MUT case
         k 1 == "correct number of arguments" assert
-        inTypes 0 [] typeContext types.getBaseType =:: baseType
+        inTypes 0 [] typeContext types.getBaseType .else
+            ConstValue .None OperatorResult .ARGUMENT_ERROR return
+        end =:: baseType
         baseType typeContext types.isComposite or baseType typeContext types.isArray if
           args 0 [] OperatorResult .SUCCESS return
         end
@@ -343,7 +345,9 @@ namespace: interpreter
         errors getOrOffset return
       OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT case
         k 2 == "correct number of arguments" assert
-        inTypes 0 [] typeContext types.getBaseType =:: baseType
+        inTypes 0 [] typeContext types.getBaseType .else
+            ConstValue .None OperatorResult .ARGUMENT_ERROR return
+        end =:: baseType
         ## getOrOffset
           args 0 []
           true
@@ -645,7 +649,9 @@ namespace: interpreter
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.getBaseType
+        end typeContext types.getBaseType .else
+          Type .Undefined
+        end
           ConstValue .TypeId
         OperatorResult .SUCCESS return
       TYPE_GET_UNION_ELEMENT case

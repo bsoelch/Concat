@@ -29,14 +29,14 @@ proc(
   declared switch
     Undefined Empty PrimitiveType GenericType CType IntLiteral Align case
       break
-    Pointer MutablePointer RawPointer MutableRawPointer case
-      declared typeContext types.getBaseType ptrLevel 1 + pos prog visited types declaredType
+    Pointer MutablePointer RawPointer MutableRawPointer .case
+      types.arrayTypeBase ptrLevel 1 + pos prog visited types declaredType
       types []
         declared list.append
       types =[]
       break
-    ArrayType case
-      declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
+    ArrayType .case
+      types.arrayTypeBase ptrLevel pos prog visited types declaredType
       types []
         declared list.append
       types =[]
@@ -55,8 +55,8 @@ proc(
         declared list.append
       types =[]
       break
-    UnionElement case
-      declared typeContext types.getBaseType ptrLevel pos prog visited types declaredType
+    UnionElement .case
+      types.unionElementUnion ptrLevel pos prog visited types declaredType
       types []
         declared list.append
       types =[]

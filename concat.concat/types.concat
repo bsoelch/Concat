@@ -443,9 +443,8 @@ namespace: types
     t0 context unwrapNamed =:: t
     t switch
        Empty Align case true return
-       ArrayType case
-         ## arrays of empty values are empty
-         t context getBaseType context isEmpty return
+       ArrayType .case ## arrays of empty values are empty
+         arrayTypeBase context isEmpty return
        Undefined PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer
          NamedType GenericType IntLiteral UnionElement
          GeneratedType Enum RefinementType TaggedUnion case false return
@@ -882,8 +881,7 @@ namespace: types
       CType .case sizeOfCType TypeSize .Fixed return
       Pointer MutablePointer RawPointer MutableRawPointer Procedure  case
         PTR_SIZE TypeSize .Fixed return
-      ArrayType case
-        t context getBaseType context alignOf return
+      ArrayType .case arrayTypeBase context alignOf return
       Struct TaggedUnion RawUnion Initializer case
         t context tryComputeSize if
           TypeSize .Unknown return
@@ -929,9 +927,9 @@ namespace: types
       CType .case sizeOfCType TypeSize .Fixed return
       Pointer MutablePointer RawPointer MutableRawPointer Procedure  case
         PTR_SIZE TypeSize .Fixed return
-      ArrayType case
-        t context getArraySize =:: arraySize
-        t context getBaseType context strideOf =:: baseSize
+      ArrayType .case =:: arrayType
+        arrayType arrayTypeSize =:: arraySize
+        arrayType arrayTypeBase context strideOf =:: baseSize
         baseSize .Fixed .else ..drop
           TypeSize .Unknown return
         end =:: baseSizeVal
@@ -992,6 +990,13 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isValuePointer
     unwrapNamed isValuePointer0
   end
+  proc( Type TypeContext ptr -> Type optional ) =>: export: getValuePtrBaseType
+    unwrapNamed switch
+      Pointer MutablePointer .case
+        arrayTypeBase optional.wrap return
+      default Type optional.empty return
+    end
+  end
   proc( Type -> bool ) =>: export: isPointer0
     switch
       Pointer MutablePointer RawPointer MutableRawPointer case true return
@@ -1001,11 +1006,23 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isPointer
     unwrapNamed isPointer0
   end
+  proc( Type TypeContext ptr -> Type optional ) =>: export: getPointerBaseType
+    unwrapNamed switch
+      Pointer MutablePointer RawPointer MutableRawPointer .case
+        arrayTypeBase optional.wrap return
+      default Type optional.empty return
+    end
+  end
   proc( Type -> bool ) =>: export: isArray0
     .ArrayType ? return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isArray
     unwrapNamed isArray0 return
+  end
+  proc( Type TypeContext ptr -> Type optional ) =>: export: getArrayBaseType
+    unwrapNamed .ArrayType .else ..drop
+      Type optional.empty return
+    end arrayTypeBase optional.wrap return
   end
   ## pointer to array-type ( fixed size and not 0D )
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isArrayPointer
@@ -1043,20 +1060,24 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isRawPointer
      unwrapNamed isRawPointer0 return
   end
-  proc( Type : box TypeContext ptr : context -> Type ) =>: export: getBaseType
+  proc( ArrayId -> Type ) =>: export: arrayTypeBase
+    ArrayData ptr cast [] .base
+  end
+  proc( Type : box TypeContext ptr : context -> Type optional ) =>: export: getBaseType
     box context unwrapNamed switch
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
-        ArrayData ptr cast [] .base return
-      default Type .Undefined  return
+        arrayTypeBase optional.wrap return
+      default Type optional.empty return
     end
   end
+  proc( ArrayId -> ArraySize ) =>: export: arrayTypeSize
+    ArrayData ptr cast [] .size
+  end
   proc( Type : box TypeContext ptr : context -> ArraySize ) =>: export: getArraySize
-    box context unwrapNamed
-      switch
-        Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case break
-        default ArraySize .None return
-      end
-    ArrayData ptr cast [] .size return
+    box context unwrapNamed switch
+      Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case arrayTypeSize return
+      default ArraySize .None return
+    end
   end
 
   proc( Type TypeContext ptr -> bool ) =>: export: isMutable
@@ -1426,9 +1447,12 @@ namespace: types
     context .nameContext .allocator=
     elementId UnionElementId cast Type .UnionElement optional.wrap return
   end
+  proc( UnionElementId -> Type ) =>: export: unionElementUnion
+    UnionElementInfo ptr cast [] .base
+  end
   proc( Type TypeContext ptr -> Type optional ) =>: export: getUnionElementUnion
     unwrapNamed .UnionElement .if
-      UnionElementInfo ptr cast [] .base optional.wrap
+      unionElementUnion optional.wrap
     else ..drop
       Type optional.empty
     end
@@ -1715,10 +1739,8 @@ namespace: types
   end
   proc( Type : mType TypeContext ptr : context -> bool ) =>: export: isCallable
     mType context unwrapNamed
-      $ context isFixedSizePtr if
-        context getBaseType
-      end
-    .Procedure  ? return
+      $ context types.getValuePtrBaseType .if >$ ..drop end
+    .Procedure ? return
   end
   proc( Type : procType TypeContext ptr.mut : typeContext -> bool ) =>: export: isTypeGeneratorProc
     procType typeContext types.getProcOut .else
@@ -1847,8 +1869,8 @@ namespace: types
         proc return
       end
       false =:: mut: isPtr
-      $ context isPointer if
-        context getBaseType
+      $ context getPointerBaseType .if
+        >$ ..drop
         true isPtr=
       end
     =:: mProc
@@ -2269,10 +2291,10 @@ namespace: types
   end
 
   proc( Type : src bool : mutable TypeContext ptr.mut : context -> Type ) =>: export: getAddressType
-    src context isArray if
+    src context getArrayBaseType .if =:: baseType
       src context unwrapNamed =:: unwraped
       ## TODO? directly reuse ArrayData instead of calling newArrayType
-      unwraped context getBaseType
+      baseType
         mutable if ArrayType .MUTABLE_POINTER else ArrayType .POINTER end
         unwraped context getArraySize
       context newArrayType return
@@ -2290,18 +2312,15 @@ namespace: types
     context newArrayType return
   end
   proc( Type : src TypeContext ptr.mut : context -> Type optional ) =>: export: ptrTarget
-    src context isPointer ! if
-      Type optional.empty return
-    end
     src context isArrayPointer if
       ## TODO? directly reuse ArrayData instead of calling newArrayType
       src context unwrapNamed =:: unwraped
-      unwraped context getBaseType
+      unwraped context getBaseType optional.unwrap
         ArrayType .ARRAY
         unwraped context getArraySize
       context newArrayType optional.wrap return
     end
-    src context getBaseType optional.wrap return
+    src context getPointerBaseType return
   end
 
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: sizeCompatible
@@ -2343,16 +2362,14 @@ namespace: types
     allowRename and src context types.getUnionElementUnion .and context unwrapNamed target typeEquals if
       true return
     end
-    allowArray and src context types.isArray if
-      src context types.getBaseType
+    allowArray and src context types.getArrayBaseType .if
         target
         allowRename mutableParent allowArray
       context canCastPtr return
     end
     ## TODO! allow cast  T k array l ptr -> T  k l *  ptr
-    src context types.isPointer ! or target context types.isPointer ! if
-      false return
-    end
+    src context types.getPointerBaseType .else false return end =:: srcBase
+    target context types.getPointerBaseType .else false return end =:: targetBase
     target context types.isMutable =:: mutableTarget
     src context types.isMutable =:: mutableSrc
     mutableParent if ## cannot convert mutable to immutable if parent is mutable
@@ -2363,8 +2380,8 @@ namespace: types
       false return
     end
     ## canCastPtr
-      src context types.getBaseType
-      target context types.getBaseType
+      srcBase
+      targetBase
       allowRename
       mutableParent mutableTarget |
       target context types.isRawPointer
@@ -2412,36 +2429,36 @@ namespace: types
     true return
   end
   proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canAutoCastInitializer
-    target context unwrapNamed =:: targetBase
+    target context unwrapNamed =:: shadow: target
     src context compositeEltCount =:: srcSize
     srcSize 0 == =:: srcEmpty
-    srcEmpty and targetBase context types.isRawPointer if
+    srcEmpty and target context types.isRawPointer if
       true return ## empty initializer to raw 1D pointer
     end
     ## XXX? allow cast from empty initializer to union with single empty entry
-    targetBase context types.isMutable if
+    target context types.isMutable if
       false return ## cannot cast non-empty initializer to mutable pointer
     end
-    targetBase context types.isArray or targetBase context types.isArrayPointer or
-        targetBase context types.isRawPointer if
+    target context types.isArray or target context types.isArrayPointer or
+        target context types.isRawPointer if
       src .Initializer .else
         "expected initializer-type" ..panic
       end InitializerInfo ptr cast =:: initInfo
-      targetBase context getBaseType =:: eltType
+      target context getBaseType optional.unwrap =:: eltType
       initInfo .arrayType [] eltType context canAutoCast and
-        targetBase context types.isRawPointer or
-        targetBase context getArraySize =:: targetSize
+        target context types.isRawPointer or
+        target context getArraySize =:: targetSize
         targetSize .Int .and srcSize i64 cast.u == if
           true return
       end
     end
-    targetBase context types.isTuple if
+    target context types.isTuple if
+      src target context canCastTupleInitializer return
+    else target context types.getPointerBaseType .and =:: targetBase
+        target context getArraySize .None ? and
+        targetBase context unwrapNamed =:: shadow: targetBase
+        targetBase context types.isTuple _if
       src targetBase context canCastTupleInitializer return
-    else targetBase context types.isPointer
-        and targetBase context getArraySize .None ?
-        and targetBase context getBaseType context unwrapNamed =:: baseType
-        baseType context types.isTuple _if
-      src baseType context canCastTupleInitializer return
     end
     false return
   end
@@ -2526,8 +2543,7 @@ namespace: types
       target context types.getProcOut .else "proc has out" ..panic end =:: targetOut
       srcIn targetIn typeEquals@ slice.eq and srcOut targetOut typeEquals@ slice.eq end return
     end
-    src context types.isProcedure and target context types.isPointer and
-        target context types.getBaseType =:: targetBase
+    src context types.isProcedure and target context types.getPointerBaseType .and =:: targetBase
         targetBase context types.isProcedure if
       src targetBase context canAutoCast return
     end
@@ -2603,14 +2619,14 @@ namespace: types
     a .NamedType ? or b .NamedType ? if
       Type optional.empty return
     end
-    a context types.isPointer and b context types.isPointer and
-        a context types.getBaseType b context types.getBaseType types.typeEquals if
+    a context types.getPointerBaseType .and =:: aBase b context types.getPointerBaseType .and =:: bBase
+        aBase bBase types.typeEquals if
       a context types.isMutable b context types.isMutable & =:: mutable
       a context types.getArraySize =:: aSize
       b context types.getArraySize =:: bSize
       a context types.isFixedSize b context types.isFixedSize & =:: mut: fixedSize
       ## newArrayType
-        a context types.getBaseType
+        aBase
         mutable if
           fixedSize if ArrayType .MUTABLE_POINTER else ArrayType .MUTABLE_RAW_POINTER end
         else
@@ -2775,10 +2791,10 @@ namespace: sb
         sb literal appendIntLiteralType return
       CType .case =:: CType
         sb CType appendCType return
-      ArrayType Pointer MutablePointer RawPointer MutableRawPointer case
+      ArrayType Pointer MutablePointer RawPointer MutableRawPointer .case =:: arrayData
         sb
           ## appendTypeRecursive
-            t context types.getBaseType
+            arrayData types.arrayTypeBase
             context
             depth
           appendTypeRecursive
