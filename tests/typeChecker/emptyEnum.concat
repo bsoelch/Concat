@@ -1,0 +1,4 @@
+enum( ) =:: emptyEnum
+proc( -> ) =>: main
+
+end

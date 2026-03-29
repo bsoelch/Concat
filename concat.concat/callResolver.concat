@@ -245,7 +245,7 @@ proc(
               "unnamed union element" ..panic
             end
             typeContext
-          types.newEnum break
+          types.newEnum optional.wrap break
         ## TODO update initializer type
         Initializer case
           "generic initializers are not supported" ..panic

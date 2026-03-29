@@ -1577,9 +1577,9 @@ namespace: types
     Type optional : baseType
     NameId slice : eltNames
     TypeContext ptr.mut : context
-  -> Type optional ) =>: export: newEnum
+  -> Type ) =>: export: newEnum
     eltNames .length 0:iSize == if
-      Type optional.empty return
+      Type .Empty return
     end
     context .nameContext [] .allocator
       eltNames mixedArena.copySlice slice.freeze
@@ -1588,7 +1588,7 @@ namespace: types
         end
       EnumInfo new mixedArena.copyValue =:: enumId
     context .nameContext .allocator=
-    enumId EnumId cast Type .Enum optional.wrap return
+    enumId EnumId cast Type .Enum return
   end
   proc(
     Type slice : elts

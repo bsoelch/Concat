@@ -2598,13 +2598,13 @@ proc(
     $ labelOffset list.tail =:: labels
     labelOffset list.setLength
   program .nameBuffer=
+  labels .length 0 == if
+    "empty enum block" sb.copyPtr
+    pos errors appendError
+  end
   Type optional.empty labels slice.unwrapAll .else
     "unnamed enum element":s pos ..line internalErrorNoOp ..unreachable
-  end typeContext types.newEnum .else
-    "failed to create enum-type" sb.copyPtr
-    pos errors appendError
-    return
-  end ConstValue .TypeId types.primitive.TYPE pos state pushConstant
+  end typeContext types.newEnum ConstValue .TypeId types.primitive.TYPE pos state pushConstant
 end
 proc(
   Operation slice : ops
