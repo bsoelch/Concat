@@ -987,9 +987,6 @@ namespace: types
       default false return
     end
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isValuePointer
-    unwrapNamed isValuePointer0
-  end
   proc( Type TypeContext ptr -> Type optional ) =>: export: getValuePtrBaseType
     unwrapNamed switch
       Pointer MutablePointer .case
@@ -2176,9 +2173,6 @@ namespace: types
   proc( Type -> bool ) =>: export: isRefinementType0
     .RefinementType ?
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isRefinementType
-    unwrapNamed isRefinementType0
-  end
   proc( Type TypeContext ptr : context -> bool ) =>: export: isSetOrRefinementType
     context unwrapNamed =:: t0
     t0 .RefinementType ? or t0 .SetType ? end return
@@ -2278,10 +2272,6 @@ namespace: types
       false return
       RefinementType .case .baseType [] context containsGeneric return
     end
-  end
-
-  proc( Type : t0 TypeContext ptr : context -> bool ) =>: export: isInitializer
-    t0 context unwrapNamed .Initializer ? return
   end
 
   proc( Type : src bool : mutable TypeContext ptr.mut : context -> Type ) =>: export: getAddressType
