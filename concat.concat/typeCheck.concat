@@ -3389,10 +3389,9 @@ proc(
           $ typeContext types.isType and container .value .TypeId .if =:: typeId ..drop
             true isType=
             typeId
-          else $ typeContext types.isPointer _if
+          else $ typeContext types.ptrTarget ._if
              true isPtr=
-             $ typeContext types.isMutable mutable=
-             typeContext types.ptrTarget
+             >$ typeContext types.isMutable mutable=
           else $ types.isLiteral _if
             typeContext types.literalToType
               $ srcType=

@@ -711,7 +711,9 @@ namespace: sb
     value .Array .and .length 0:iSize == if
       sb 0 sb.appendI return ## pointer to zero length array -> NULL-pointer
     end
-    ptrType typeContext types.ptrTarget
+    ptrType typeContext types.ptrTarget .else
+      "expected pointer type" ..panic
+    end
       ptrType typeContext types.isRawPointer if
         types.ArrayType .ARRAY
           0 types.ArraySize .Int
@@ -3173,8 +3175,8 @@ proc(
     GetElement .case =:: index
       op [] .dataType =:: mut: containerType
       false =:: mut: ptrSrc
-      containerType typeContext types.isPointer if
-        containerType typeContext types.ptrTarget containerType=
+      containerType typeContext types.ptrTarget .if
+        containerType=
         true ptrSrc=
       end
       containerType typeContext types.isArray =:: isArray
@@ -3239,10 +3241,9 @@ proc(
     SetNestedElement .case =:: path
       ( Type : eltType i64 : offset ) =:: ElementInfo
       op [] .dataType
-        $ typeContext types.isPointer =:: isPtr
-        isPtr if
-          typeContext types.ptrTarget
-        end
+        $ typeContext types.ptrTarget
+          $ ? =:: isPtr
+        .if >$ ..drop end
       0 ElementInfo new =:: mut: eltInfo
       ( ElementInfo ptr.mut : shadow: eltInfo CompilerContext ptr.mut : shadow: context FilePosition ptr : pos ) =:: Curry
       path ( i32 : index Curry : curry -> ) =>
@@ -3306,10 +3307,9 @@ proc(
     SetElement .case =:: index
       ## TODO? special handling for access through pointer?
       op [] .dataType
-        $ typeContext types.isPointer =:: isPtr
-        isPtr if
-          typeContext types.ptrTarget
-        end
+        $ typeContext types.ptrTarget
+          $ ? =:: isPtr
+        .if >$ ..drop end
       =:: containerType
       containerType typeContext types.isArray =:: isArray
       isArray if

@@ -1955,11 +1955,12 @@ namespace: sb
       '"' sb.appendC
       depth 0 > if
         " [ " sb.appendS
-        ## appendTypeRecursive
-          context .namedTypes name map.get .else Type .Undefined end
-          context
-          depth 1 -
-        appendTypeRecursive
+        context .namedTypes name map.get .if
+          ## appendTypeRecursive
+            context
+            depth 1 -
+          appendTypeRecursive
+        else '?' sb.appendC end
         " ]"  sb.appendS
       end
     return
@@ -2288,9 +2289,9 @@ namespace: types
       ArraySize .None
     context newArrayType return
   end
-  proc( Type : src TypeContext ptr.mut : context -> Type ) =>: export: ptrTarget
+  proc( Type : src TypeContext ptr.mut : context -> Type optional ) =>: export: ptrTarget
     src context isPointer ! if
-      Type .Undefined  return
+      Type optional.empty return
     end
     src context isArrayPointer if
       ## TODO? directly reuse ArrayData instead of calling newArrayType
@@ -2298,9 +2299,9 @@ namespace: types
       unwraped context getBaseType
         ArrayType .ARRAY
         unwraped context getArraySize
-      context newArrayType return
+      context newArrayType optional.wrap return
     end
-    src context getBaseType return
+    src context getBaseType optional.wrap return
   end
 
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: sizeCompatible
