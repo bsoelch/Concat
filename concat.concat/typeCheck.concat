@@ -2492,12 +2492,18 @@ proc(
   program [] .nameBuffer labelOffset list.tail =:: eltNames
   compType switch
     TUPLE case types eltNames optional.wrap typeContext types.newTuple break
-    UNION case types eltNames slice.unwrapAll .else
-      "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
-    end types.UnionType .TAGGED typeContext types.newUnion break
-    RAW_UNION case types eltNames slice.unwrapAll .else
-      "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
-    end types.UnionType .RAW typeContext types.newUnion break
+    UNION RAW_UNION case
+      eltNames .length types .length u< if
+        "union contains unnamed elements" sb.copyPtr pos errors appendError
+      else eltNames .length types .length u> _if
+        "union contains more names than types":s pos ..line internalErrorNoOp ..unreachable
+      else eltNames .length 0 == _if
+        "empty union block" sb.copyPtr pos errors appendError
+      end
+      types eltNames slice.unwrapAll .else
+        "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
+      end compType .UNION if types.UnionType .TAGGED else types.UnionType .RAW end typeContext types.newUnion
+    break
     PROC case inTypes types eltNames CallingConvention.DEFAULT typeContext types.newProcedure break
     C_PROC case
       types .length 1 u> if
@@ -2595,8 +2601,7 @@ proc(
     labelOffset list.setLength
   program .nameBuffer=
   labels .length 0 == if
-    "empty enum block" sb.copyPtr
-    pos errors appendError
+    "empty enum block" sb.copyPtr pos errors appendError
   end
   Type optional.empty labels slice.unwrapAll .else
     "unnamed enum element":s pos ..line internalErrorNoOp ..unreachable

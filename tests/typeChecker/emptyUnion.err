@@ -1,0 +1,2 @@
+empty union block at ./tests/typeChecker/emptyUnion.concat:1:1
+union contains unnamed elements at ./tests/typeChecker/emptyUnion.concat:2:1

@@ -1596,11 +1596,11 @@ namespace: types
     UnionType : unionType
     TypeContext ptr.mut : context
   -> Type ) =>: export: newUnion
+    ## ensure names and elements have same size
+    eltNames elts .length slice.head =:: shadow: eltNames
+    elts eltNames .length slice.head =:: shadow: elts
     elts .length 0 == if
       Type .Empty return
-    end
-    elts .length eltNames .length u> if
-      "unnamed elements in union" ..panic
     end
     context .nameContext [] .allocator
       elts mixedArena.copySlice slice.freeze =:: eltCopy

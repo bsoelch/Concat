@@ -1,0 +1,5 @@
+union( ) =:: emptyUnion
+union( i32 ) =:: unnamedUnion
+proc( -> ) =>: main
+
+end
