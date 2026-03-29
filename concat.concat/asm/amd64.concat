@@ -18,6 +18,9 @@ namespace: AMD64
       nextOpCode =:: export: ADD
       nextOpCode =:: export: SUB
       nextOpCode =:: export: IMUL
+      nextOpCode =:: export: AND
+      nextOpCode =:: export: OR
+      nextOpCode =:: export: XOR
       nextOpCode =:: export: CMP
       nextOpCode =:: export: TEST
       nextOpCode =:: export: JMP
@@ -37,7 +40,7 @@ namespace: AMD64
       nextOpCode =:: export: PUSH
       nextOpCode =:: export: POP
     ..drop
-    { "mov":s "movzx":s "movsx":s "add":s "sub":s "imul":s "cmp":s "test":s "jmp":s "jeq":s "jne":s "jlt":s "jle":s "jge":s "jgt":s "ja":s "jae":s "jbe":s "jb":s "setgt":s "call":s "ret":s "push":s "pop":s } =:: OPCODE_NAMES
+    { "mov":s "movzx":s "movsx":s "add":s "sub":s "imul":s "and":s "or":s "xor":s "cmp":s "test":s "jmp":s "jeq":s "jne":s "jlt":s "jle":s "jge":s "jgt":s "ja":s "jae":s "jbe":s "jb":s "setgt":s "call":s "ret":s "push":s "pop":s } =:: OPCODE_NAMES
     proc( stringBuilder OpCode : opCode -> stringBuilder ) =>: export: appendName
       opCode iSize cast.u OPCODE_NAMES ..length u>= if
         "???":s sb.appendStr return

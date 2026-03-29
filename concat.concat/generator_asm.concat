@@ -604,8 +604,8 @@ proc(
   ValueLocation .None context moveToRegister =:: arg1
   arg1 arg2
 end
-enum( ADD SUB MUL ) =:: BinOp
-{ AMD64.op.ADD AMD64.op.SUB AMD64.op.IMUL } =:: AMD64_BIN_OPS
+enum( ADD SUB MUL AND OR XOR ) =:: BinOp
+{ AMD64.op.ADD AMD64.op.SUB AMD64.op.IMUL AMD64.op.AND AMD64.op.OR AMD64.op.XOR } =:: AMD64_BIN_OPS
 proc( BinOp : op -> asm.OpCode ) =>: binOpCodeAMD64
   AMD64_BIN_OPS op ..tag iSize cast.u []
 end
@@ -1115,6 +1115,12 @@ proc(
     ADD_I64 case ValType .I64 BinOp .ADD pos context opBinOp return
     SUB_I32 case ValType .I32 BinOp .SUB pos context opBinOp return
     SUB_I64 case ValType .I64 BinOp .SUB pos context opBinOp return
+    AND_I32 case ValType .I32 BinOp .AND pos context opBinOp return
+    AND_I64 case ValType .I64 BinOp .AND pos context opBinOp return
+    OR_I32  case ValType .I32 BinOp .OR  pos context opBinOp return
+    OR_I64  case ValType .I64 BinOp .OR  pos context opBinOp return
+    XOR_I32 case ValType .I32 BinOp .XOR pos context opBinOp return
+    XOR_I64 case ValType .I64 BinOp .XOR pos context opBinOp return
     default break
   end
   "unsupported built-in: " sb.copyPtr
