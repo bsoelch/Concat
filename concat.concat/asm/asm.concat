@@ -155,6 +155,12 @@ namespace: asm
       r1 Operand .Register
     ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
   end
+  proc( OpCode : opCode RegisterId : r1 LocalAddress : l1 -> Atom ) =>: export: opRL
+    opCode
+      r1 Operand .Register
+      l1 Operand .LocalAddress
+    ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
+  end
   proc( OpCode : opCode RegisterId : r1 RegisterId : r2 -> Atom ) =>: export: opRR
     opCode
       r1 Operand .Register
@@ -168,7 +174,7 @@ namespace: asm
     ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
   end
   overload: export: op1 opR opL opG end
-  overload: export: op2 opLR opRR opRI end
+  overload: export: op2 opLR opRL opRR opRI end
   proc( string : name -> Atom ) =>: export: enter
     name GlobalLabel cast Directive .Enter Atom .Directive
   end

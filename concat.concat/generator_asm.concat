@@ -47,6 +47,12 @@ namespace: ValType
       EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 case false return
     end
   end
+  proc( ValType : valType -> bool ) =>: isPrimitive
+    valType switch
+      POINTER PROC_POINTER BOOL I8 I16 I32 I64 F16 F32 F64 case true return
+      EMPTY case false return
+    end
+  end
 end
 struct(
   asm.Value : value
@@ -488,15 +494,22 @@ proc(
               asm.op2
             else .Int ._if
               asm.op2
+            else .LocalAddress ._if
+              asm.op2
             else
               "unsupported source for mov" ..panic
             end
           else .LocalAddress ._if
             src .Register .if
               asm.op2
-            else
-              ## TODO? support move through tmp register
-              "when moving to memory source has to be register" ..panic
+            else ..drop >>$
+              moveType ValType.isPrimitive if
+                ## move value through temporary register
+                src moveType TypedValue new ValueLocation .None context moveToRegister =:: srcId
+                <<$ srcId asm.op2
+              else ## TODO minimal memcopy implementation
+                "moving non-primitive values is not supported" ..panic
+              end
             end
           else
             "can only move to register or local variable" ..panic ## TODO support move to memory
@@ -522,27 +535,32 @@ proc(
   src .Val .else
     "unimplemented: multi-value store" ..panic
   end =:: srcVal
-  context .variableInfo dst map.at .if =:: varInfo
-    varInfo [] .cachedValue switch
-      None case break
-      Register .case .reg
-        srcVal .valType
-          >$ asm.Value .Register
-          srcVal .value
-        context opMove ## move to current register location
-      return
-    end
-    srcVal .value .Register .if
-      ## TypedReg
-        $ varInfo [] .variableType typeContext ValType.fromType
-      TypedReg new VariableCacheLocation .Register varInfo .cachedValue=
-      dst ValueLocation .LocalVariable context addLocation
-    else ..drop end
-  end
+  ## ensure source value is in register
+  srcVal .value .Register .else ..drop
+    ## TODO? re-use current cached location, if value is not used by different slot
+    srcVal ValueLocation .None context moveToRegister
+  end =:: srcReg
+  srcVal
+    srcReg asm.Value .Register >$ .value=
+  =:: shadow: srcVal
   srcVal .valType
     dst 0 asm.localAddress
     srcVal .value
   context opMove
+  context .variableInfo dst map.at .else
+    "missing info for local variable" ..panic
+  end =:: varInfo
+  varInfo [] .cachedValue switch
+    None case break
+    Register .case .reg
+      dst ValueLocation .LocalVariable context removeLocation ## unlink previous use
+    break
+  end
+  ## TypedReg
+  srcReg
+    $ varInfo [] .variableType typeContext ValType.fromType
+  TypedReg new VariableCacheLocation .Register varInfo .cachedValue=
+  dst ValueLocation .LocalVariable context addLocation
 end
 proc(
   asm.Atom list
@@ -1228,6 +1246,17 @@ proc(
   typeContext .nameContext =:: nameContext
   op .val switch
     NOP case return
+    DeclareId .case .nameId nameVarId =:: idName
+      context .variableInfo idName
+        ## VariableLocation
+          VariableCacheLocation .None
+          idName
+          op .dataType
+          false
+          i32 optional.empty
+        VariableLocation new
+      map.put ..drop
+    return
     Constant .case op .dataType typeContext ValType.fromType context pushConstant return
     GetId .case =:: idInfo
       idInfo .idType switch
