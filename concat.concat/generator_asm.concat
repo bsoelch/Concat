@@ -651,6 +651,10 @@ proc(
   "unimplemented configuration for: cmp" ..panic
 end
 enum( EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CmpType
+{ AMD64.op.SETEQ AMD64.op.SETNE AMD64.op.SETLT AMD64.op.SETLE AMD64.op.SETGE AMD64.op.SETGT AMD64.op.SETB AMD64.op.SETBE AMD64.op.SETAE  AMD64.op.SETA } =:: AMD64_CMP_OPS
+proc( CmpType : cmpType -> asm.OpCode ) =>: cmpFlagOpCodeAMD64
+  AMD64_CMP_OPS cmpType ..tag iSize cast.u []
+end
 proc(
   asm.Atom list
   ValType : argType
@@ -681,7 +685,7 @@ proc(
           end
         list.append
         ## TODO? use "xor, cmp, set" instead of "cmp, set, movzx" if dst does not overlap arg
-        AMD64.op.SETGT dst asm.op1 list.append
+        cmpType cmpFlagOpCodeAMD64 dst asm.op1 list.append
         AMD64.op.MOVZX dst $ asm.RegisterId.SIZE_32 asm.RegisterId.setSize >$ asm.op2 list.append
         return
       end
@@ -1109,8 +1113,26 @@ proc(
   idContext .typeContext =:: typeContext
   ## TODO reduce amount of duplicate code needed to handle built-ins
   builtIn switch
+    EQ_I32 case ValType .I32 CmpType .EQ pos context opCmp return
+    EQ_I64 case ValType .I64 CmpType .EQ pos context opCmp return
+    NE_I32 case ValType .I32 CmpType .NE pos context opCmp return
+    NE_I64 case ValType .I64 CmpType .NE pos context opCmp return
+    LT_I32 case ValType .I32 CmpType .LT pos context opCmp return
+    LT_I64 case ValType .I64 CmpType .LT pos context opCmp return
+    LE_I32 case ValType .I32 CmpType .LE pos context opCmp return
+    LE_I64 case ValType .I64 CmpType .LE pos context opCmp return
+    GE_I32 case ValType .I32 CmpType .GE pos context opCmp return
+    GE_I64 case ValType .I64 CmpType .GE pos context opCmp return
     GT_I32 case ValType .I32 CmpType .GT pos context opCmp return
     GT_I64 case ValType .I64 CmpType .GT pos context opCmp return
+    ULT_I32 case ValType .I32 CmpType .ULT pos context opCmp return
+    ULT_I64 case ValType .I64 CmpType .ULT pos context opCmp return
+    ULE_I32 case ValType .I32 CmpType .ULE pos context opCmp return
+    ULE_I64 case ValType .I64 CmpType .ULE pos context opCmp return
+    UGE_I32 case ValType .I32 CmpType .UGE pos context opCmp return
+    UGE_I64 case ValType .I64 CmpType .UGE pos context opCmp return
+    UGT_I32 case ValType .I32 CmpType .UGT pos context opCmp return
+    UGT_I64 case ValType .I64 CmpType .UGT pos context opCmp return
     ADD_I32 case ValType .I32 BinOp .ADD pos context opBinOp return
     ADD_I64 case ValType .I64 BinOp .ADD pos context opBinOp return
     SUB_I32 case ValType .I32 BinOp .SUB pos context opBinOp return
