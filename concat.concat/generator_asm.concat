@@ -1115,6 +1115,8 @@ proc(
     ADD_I64 case ValType .I64 BinOp .ADD pos context opBinOp return
     SUB_I32 case ValType .I32 BinOp .SUB pos context opBinOp return
     SUB_I64 case ValType .I64 BinOp .SUB pos context opBinOp return
+    MUL_I32 case ValType .I32 BinOp .MUL pos context opBinOp return
+    MUL_I64 case ValType .I64 BinOp .MUL pos context opBinOp return
     AND_I32 case ValType .I32 BinOp .AND pos context opBinOp return
     AND_I64 case ValType .I64 BinOp .AND pos context opBinOp return
     OR_I32  case ValType .I32 BinOp .OR  pos context opBinOp return
