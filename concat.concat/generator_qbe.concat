@@ -981,11 +981,9 @@ namespace: sb
             return
           end
           unionValue .eltIndex =:: eltIndex
-          eltIndex 0 < if break end
-          eltIndex t typeContext types.compositeEltCount >= if
+          t eltIndex typeContext types.compositeGetElement .else
             break
-          end
-          t eltIndex typeContext types.compositeGetElement =:: eltType
+          end =:: eltType
           0:i64 =:: mut: offset
           false =:: mut: needComma
           eltType typeContext types.isEmpty ! if
@@ -3188,7 +3186,13 @@ proc(
         containerType
           index
           typeContext
-        types.compositeGetElement
+        types.compositeGetElement .else
+          "missing composite element " sb.copyPtr
+          containerType typeContext sb.appendType
+          " .":s sb.appendStr index sb.appendI
+          op [] .pos errors appendError
+          sb return
+        end
       end =:: eltType
       ptrSrc if
         ValType .PTR
@@ -3249,6 +3253,7 @@ proc(
       0 ElementInfo new =:: mut: eltInfo
       ( ElementInfo ptr.mut : shadow: eltInfo CompilerContext ptr.mut : shadow: context FilePosition ptr : pos ) =:: Curry
       path ( i32 : index Curry : curry -> ) =>
+        curry .context [] .program .errors =:: shadow: errors
         curry .context [] .program .idContext .typeContext =:: shadow: typeContext
         curry .eltInfo [] .eltType
           $ typeContext types.getArrayBaseType .if
@@ -3256,12 +3261,16 @@ proc(
               curry .eltInfo [] .offset +
             curry .eltInfo .offset=
           else $ typeContext types.isRawUnion _if
-            index typeContext types.compositeGetElement
+            index typeContext types.compositeGetElement .else
+              "missing composite element" ..panic
+            end
           else
             $ index curry .pos curry .context tupleEltOffsetInt
               curry .eltInfo [] .offset +
             curry .eltInfo .offset=
-            index typeContext types.compositeGetElement
+            index typeContext types.compositeGetElement .else
+              "missing composite element" ..panic
+            end
           end
         curry .eltInfo .eltType=
       end eltInfo@ context op [] .pos Curry new NestedElementPath.forEach
@@ -3318,7 +3327,13 @@ proc(
         containerType
           index
           typeContext
-        types.compositeGetElement
+        types.compositeGetElement .else
+          "missing composite element " sb.copyPtr
+          containerType typeContext sb.appendType
+          " .":s sb.appendStr index sb.appendI
+          op [] .pos errors appendError
+          sb return
+        end
       end =:: eltType
       sb
         op [] .pos context popValue =:: structId
@@ -3363,8 +3378,7 @@ proc(
     RawValue case
       op [] .dataType typeContext types.isUnion or op [] .dataType typeContext types.isPointer if
         sb return
-      else op [] .dataType types.isUnionElement _if
-        op [] .dataType typeContext types.getUnionElementType =:: eltType
+      else op [] .dataType typeContext types.getUnionElementType ._if =:: eltType
         sb
           eltType context referenceOnly if
             return
@@ -3409,7 +3423,13 @@ proc(
           op [] .val .NewUnion .else
             .NewUnionReference ._else ..unreachable
           end =:: index
-          op [] .dataType index typeContext types.compositeGetElement =:: eltType
+          op [] .dataType index typeContext types.compositeGetElement .else
+            "missing union element " sb.copyPtr
+            op [] .dataType typeContext sb.appendType
+            " .":s sb.appendStr index sb.appendI
+            op [] .pos errors appendError
+            return
+          end =:: eltType
           eltType typeContext types.isEmpty ! if
             eltType context referenceOnly if
               "blit %s" sb.appendS
@@ -3465,7 +3485,13 @@ proc(
       .else op [] .dataType end =:: enumType
       sb
         op [] .pos sb.appendPosQBE
-        enumType elementId typeContext types.compositeGetElement =:: eltType
+        enumType elementId typeContext types.compositeGetElement .else
+          "missing enum element " sb.copyPtr
+          enumType typeContext sb.appendType
+          " .":s sb.appendStr elementId sb.appendI
+          op [] .pos errors appendError
+          return
+        end =:: eltType
         eltType typeContext types.isEmpty if
           return
         end

@@ -547,7 +547,10 @@ namespace: interpreter
         >$ typeContext types.isMutable eltMutable & eltMutable=
         true isPtr=
       end
-      elementIndex typeContext types.compositeGetElement
+      $ typeContext types.getArrayBaseType .if >$ ..drop
+      else elementIndex typeContext types.compositeGetElement ._else
+        "missing composite element" ..panic
+      end
       isPtr if eltMutable typeContext types.getAddressType end
     =:: eltType
     ## TODO? support (Local)Array8 ... Array64
@@ -616,7 +619,10 @@ namespace: interpreter
         >$ typeContext types.isMutable eltMutable & eltMutable=
         true isPtr=
       end
-      elementIndex typeContext types.compositeGetElement
+      $ typeContext types.getArrayBaseType .if >$ ..drop
+      else elementIndex typeContext types.compositeGetElement ._else
+        "missing composite element" ..panic
+      end
     =:: eltType
     eltMutable ! if
       ## XXX? better message
@@ -738,7 +744,8 @@ namespace: interpreter
     dataArray .length for =:: i
       dataArray i [] =:: elt
       arrayBase .else
-        valType i i32 cast typeContext types.compositeGetElement
+      valType i i32 cast typeContext types.compositeGetElement ._else
+        "missing element type" ..panic
       end =:: eltType
       ConstValue ..length 23:iSize == "no new constants" assert
       elt switch
@@ -836,7 +843,8 @@ namespace: interpreter
     localSlice .length for =:: i
       localSlice i @[] =:: elt
       arrayBase .else
-        valType i i32 cast typeContext types.compositeGetElement
+        valType i i32 cast typeContext types.compositeGetElement ._else
+        "missing element type" ..panic
       end =:: eltType
       elt [] .Array ? if
         elt []
@@ -861,7 +869,7 @@ namespace: interpreter
         eltCount i32 cast ConstValue mixedArena.allocSlice =:: localSlice
       context .localMemory=
       eltCount for =:: i
-        dataType i typeContext types.compositeGetElement =:: eltType
+        dataType i typeContext types.compositeGetElement optional.unwrap =:: eltType
         eltType typeContext types.isTuple or eltType typeContext types.isArray if
           eltType pos context allocLocalValue
         else
@@ -1408,7 +1416,7 @@ proc(
       else unionType typeContext types.isUnion _if
         unionType
           elementIndex
-        typeContext types.compositeGetElement =:: eltType
+        typeContext types.compositeGetElement optional.unwrap =:: eltType
         eltType .Empty ? ! if
           op [] .pos context popValue if ..drop.2
             "missing argument for union element expected" sb.copyPtr
@@ -1654,9 +1662,8 @@ proc(
       op [] .pos context popValue if ..drop.2
         EvalResult .Error return
       end =:: value =:: valInfo
-      valInfo .valueType types.isUnionElement if
-        valInfo .valueType typeContext types.getUnionElementType
-      else valInfo .valueType typeContext types.isTaggedUnion _if
+      valInfo .valueType typeContext types.getUnionElementType .else
+      valInfo .valueType typeContext types.isTaggedUnion _if
         ## TODO: implement ..raw for unions
         "unimplemented: ..raw for unions" ..panic
       else

@@ -1996,9 +1996,13 @@ proc(
   else containerType typeContext types.isTaggedUnion _if
     containerType typeContext types.asRawUnion .else
       "cannot get raw union-data":s pos ..line internalErrorNoOp ..unreachable
-    end elementIndex typeContext types.compositeGetElement
+    end elementIndex typeContext types.compositeGetElement .else
+      "missing element type":s pos ..line internalErrorNoOp ..unreachable
+    end
   else
-    containerType elementIndex typeContext types.compositeGetElement
+    containerType elementIndex typeContext types.compositeGetElement .else
+      "missing element type":s pos ..line internalErrorNoOp ..unreachable
+    end
   end =:: eltType
   ## can only take address of reference or pointer
   isPtr and accessType .SET ! if
@@ -3424,7 +3428,9 @@ proc(
               $ typeContext types.getArrayBaseType .if
                 >$ ..drop
               else
-                index typeContext types.compositeGetElement
+                index typeContext types.compositeGetElement .else
+                  "missing element type":s op .pos ..line internalErrorNoOp ..unreachable
+                end
               end
             end
           ..drop
@@ -3558,8 +3564,8 @@ proc(
             op .pos errors appendError
           end
           ConstValue .None =:: mut: constValue
-          innerContainerType elementIndex typeContext types.compositeGetElement =:: eltType
-          eltType .Empty ? if
+          innerContainerType elementIndex typeContext types.compositeGetElement ! .or =:: eltType
+              eltType .Empty ? if
             ## newUnionConst
               ConstValue .None
               elementIndex
@@ -4371,13 +4377,17 @@ proc(
                   continue.opLoop
                 end i32 cast.u =:: eltIndex
                 switchType typeContext types.asRawUnion optional.unwrap =:: rawSwitchType
-                rawSwitchType eltIndex typeContext types.compositeGetElement =:: labelType
+                rawSwitchType eltIndex typeContext types.compositeGetElement .else
+                  "missing union element":s op ..line state internalError ..unreachable
+                end =:: labelType
                 switchData [] .switchLabels list.reversed for  =:: label
                   ## labels in current case are all at end of label list
                   label .caseId iSize cast.u currentCaseId u< if break end
                   rawSwitchType label .value .Int .else
                     "expected int-constant":s op ..line state internalError ..unreachable
-                  end i32 cast.u typeContext types.compositeGetElement =:: newType
+                  end i32 cast.u typeContext types.compositeGetElement .else
+                    "missing union element":s op ..line state internalError ..unreachable
+                  end =:: newType
                   newType labelType types.typeEquals if continue end
                   "incompatible types for case-values: " sb.copyPtr
                     labelType typeContext sb.appendType
@@ -5447,7 +5457,9 @@ proc(
         .else valType end =:: baseType
         baseType types.isUnionElement if
           state .stack branchTree.pop ..drop
-          baseType typeContext types.getUnionElementType
+          baseType typeContext types.getUnionElementType .else
+            "missing union element type":s op ..line state internalError ..unreachable
+          end
         else baseType typeContext types.isUnion _if
           state .stack branchTree.pop ..drop
           baseType typeContext types.asRawUnion .else

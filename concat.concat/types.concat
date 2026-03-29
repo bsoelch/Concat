@@ -1411,16 +1411,12 @@ namespace: types
       None Enum case 0:CompositeFlags return
     end
   end
-  proc( Type : composite i32 : index TypeContext ptr : context -> Type ) =>: export: compositeGetElement
+  proc( Type : composite i32 : index TypeContext ptr : context -> Type optional ) =>: export: compositeGetElement
     composite context compositeData switch
       Composite .case break
-      None case Type .Undefined  return
-      Enum case Type .Empty return
-    end =:: compData
-    index 0 < or index iSize cast.u compData [] .elements .length u>= if
-      Type .Undefined  return
-    end
-    compData [] .elements index [] return
+      None case Type optional.empty return
+      Enum case Type .Empty optional.wrap return
+    end [] .elements index slice.get return
   end
   proc( Type : composite TypeContext ptr : context -> Type slice ) =>: export: compositeElts
     composite context compositeData switch
@@ -1457,14 +1453,14 @@ namespace: types
       Type optional.empty
     end
   end
-  proc( Type TypeContext ptr : context -> Type ) =>: export: getUnionElementType
+  proc( Type TypeContext ptr : context -> Type optional ) =>: export: getUnionElementType
     context unwrapNamed .UnionElement .if
       UnionElementInfo ptr cast =:: element
       element [] .base context types.asRawUnion .if
         element [] .index context compositeGetElement
-      else Type .Undefined end
+      else Type optional.empty end
     else ..drop
-      Type .Undefined
+      Type optional.empty
     end
   end
   proc( Type TypeContext ptr -> i32 ) =>: export: getUnionElementIndex
@@ -1694,7 +1690,7 @@ namespace: sb
       comp [] .eltNames ? ! =:: unnamed
       0:i32 while $ iSize cast.u comp [] .elements .length u< do
         >$
-          t $2 context types.compositeGetElement =:: eltType
+          t $2 context types.compositeGetElement optional.unwrap =:: eltType
           unnamed if
             eltType context depth 1 - appendTypeRecursive
             ' ' appendC
@@ -2972,7 +2968,9 @@ namespace: sb
           sizeWidth w - i32 cast.u sb.indent
         end
         " | ":s sb.appendStr
-        t i context types.compositeGetElement context level levels appendTypeLayoutRecursive
+        t i context types.compositeGetElement optional.unwrap
+          context level
+        levels appendTypeLayoutRecursive
       end
     else t context types.isUnion _if
       t context types.compositeElts for =:: elt

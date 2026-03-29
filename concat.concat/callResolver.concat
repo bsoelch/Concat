@@ -205,7 +205,7 @@ proc(
       src typeContext types.compositeEltCount =:: eltCount
       eltCount for =:: i
         ## replaceGenerics
-          src i typeContext types.compositeGetElement
+          src i typeContext types.compositeGetElement optional.unwrap
           typeBuffer
           nameBuffer
           genericValues
@@ -542,10 +542,8 @@ proc(
       end
       ## resolve generics for all elements of composite type
       targetCount for =:: i
-        target i typeContext types.compositeGetElement =:: targetElt
-        i srcCount < if
-          src i typeContext types.compositeGetElement
-        else
+        target i typeContext types.compositeGetElement optional.unwrap =:: targetElt
+        src i typeContext types.compositeGetElement .else
           Type .Empty ## extend source with empty if necessary
         end =:: srcElt
         ## resolveGenerics

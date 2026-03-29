@@ -658,7 +658,9 @@ namespace: interpreter
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end typeContext types.getUnionElementType
+        end typeContext types.getUnionElementType .else
+          Type .Undefined
+        end
           ConstValue .TypeId
         OperatorResult .SUCCESS return
       TYPE_GET_UNION_ELEMENT_UNION case
@@ -686,7 +688,9 @@ namespace: interpreter
           args 1 [] .Int .else
             "argument is no int" ..panic
           end i32 cast
-        typeContext types.compositeGetElement
+        typeContext types.compositeGetElement .else
+          Type .Undefined
+        end
           ConstValue .TypeId
         OperatorResult .SUCCESS return
     end
