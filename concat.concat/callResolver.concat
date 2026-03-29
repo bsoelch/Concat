@@ -363,7 +363,7 @@ proc(
 end
 
 proc(
-  Type : src0
+  Type : src
   Type : target
   bool : exactMatch
   bool ptr.mut : needCast
@@ -375,18 +375,12 @@ proc(
   typeContext .nameContext =:: nameContext
   idContext .constContext =:: constContext
   target typeContext types.containsGeneric ! if
-    src0 target typeContext types.canAutoCast ! return
+    src target typeContext types.canAutoCast ! return
   end
-  src0 =:: mut: src
-  src typeContext types.isInitializer if
-    target typeContext types.isArray and src typeContext types.isArrayLiteral if
-      src typeContext types.initializerAsArray src=
-    else src typeContext types.isArrayLiteral and target typeContext types.isArrayPointer _if
-      src typeContext types.initializerAsPointer src=
-    else
-      src typeContext types.initializerAsTuple src=
-    end
-  end
+  target typeContext types.isArray and src typeContext types.initializerAsArray .if
+    else target typeContext types.isArrayPointer and src typeContext types.initializerAsPointer ._if
+    else src typeContext types.initializerAsTuple
+  ._else src end =:: shadow: src
   target switch
     GenericType case
       target types.getGenericTypeId optional.unwrap =:: genericId
@@ -537,7 +531,7 @@ proc(
         progContext
       resolveGenerics return
     Struct TaggedUnion RawUnion Enum Initializer case
-      src typeContext types.unwrapNamed src=
+      src typeContext types.unwrapNamed =:: shadow: src
       src ..tag target ..tag != if
         true return ## src and target have to be same type of composite
       end
@@ -570,7 +564,7 @@ proc(
       ## TODO implement call-resolving for union-elements
       "unimplemented: call-resolving union elements" ..panic
     Procedure case
-      src typeContext types.unwrapNamed src=
+      src typeContext types.unwrapNamed =:: shadow: src
       src ..tag target ..tag != if
         true return
       end
@@ -616,7 +610,7 @@ proc(
       end
       false return
     GeneratedType case
-      src typeContext types.unwrapNamedKeepGenerated src=
+      src typeContext types.unwrapNamedKeepGenerated =:: shadow: src
       ## src has to be a compatible generated type
       src types.isGeneratedType ! if
         true return

@@ -1161,9 +1161,9 @@ namespace: types
 
   ## initializer type as array/tuple, without changing element types
   ## used for correctly resolving procedure signatures
-  proc( Type : t TypeContext ptr.mut : context ArrayType : arrayType -> Type ) =>: initializerAsArrayOrPtr
+  proc( Type : t TypeContext ptr.mut : context ArrayType : arrayType -> Type optional ) =>: initializerAsArrayOrPtr
     t .Initializer .else
-      ..drop Type .Undefined  return
+      ..drop Type optional.empty return
     end InitializerInfo ptr cast =:: initInfo
     initInfo .asTuple TupleInfo ptr cast =:: tupleInfo
     tupleInfo .compositeInfo .elements [] .length =:: eltCount
@@ -1172,18 +1172,18 @@ namespace: types
       initInfo [] .arrayType
       arrayType
       size
-    context newArrayType return
+    context newArrayType optional.wrap return
   end
-  proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsArray
+  proc( Type : t TypeContext ptr.mut : context -> Type optional ) =>: export: initializerAsArray
     t context ArrayType .ARRAY initializerAsArrayOrPtr
   end
-  proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsPointer
+  proc( Type : t TypeContext ptr.mut : context -> Type optional ) =>: export: initializerAsPointer
     t context ArrayType .POINTER initializerAsArrayOrPtr
   end
-  proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsTuple
+  proc( Type : t TypeContext ptr.mut : context -> Type optional ) =>: export: initializerAsTuple
     t .Initializer .else ..drop
-      Type .Undefined  return
-    end InitializerInfo ptr.mut cast .asTuple TupleId cast Type .Struct return
+      Type optional.empty return
+    end InitializerInfo ptr.mut cast .asTuple TupleId cast Type .Struct optional.wrap return
   end
 
   ## composite types
