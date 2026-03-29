@@ -228,7 +228,7 @@ proc(
             typeBuffer [] list.asSlice typeOffset slice.tail
             nameBuffer [] list.asSlice nameOffset slice.tail optional.wrap
             typeContext
-          types.newTuple break
+          types.newTuple optional.wrap break
         RawUnion case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail

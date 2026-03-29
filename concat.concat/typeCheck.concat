@@ -2491,7 +2491,7 @@ proc(
   end =:: inTypes =:: types
   program [] .nameBuffer labelOffset list.tail =:: eltNames
   compType switch
-    TUPLE case types eltNames optional.wrap typeContext types.newTuple break
+    TUPLE case types eltNames optional.wrap typeContext types.newTuple optional.wrap break
     UNION case types eltNames slice.unwrapAll .else
       "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
     end types.UnionType .TAGGED typeContext types.newUnion break

@@ -608,9 +608,7 @@ namespace: types
             newElements slice.freeze
             tupleInfo .compositeInfo [] .eltNames
             context
-          newTuple  .else
-            "failed to create tuple-type" ..panic
-          end return
+          newTuple return
         end
         initInfo .asTuple TupleId cast Type .Struct return
        Empty  ArrayType UnionElement RawUnion
@@ -1497,7 +1495,7 @@ namespace: types
     Type slice : elts
     NameId optional slice optional : eltNames
     TypeContext ptr.mut : context
-  -> Type optional ) =>: export: newTuple
+  -> Type ) =>: export: newTuple
     elts context computeCompositeFlags =:: flags
     context .nameContext [] .allocator
       elts mixedArena.copySlice slice.freeze =:: eltCopy
@@ -1513,7 +1511,7 @@ namespace: types
         i64 slice.empty
       TupleInfo new mixedArena.copyValue =:: tupleId
     context .nameContext .allocator=
-    tupleId TupleId cast Type .Struct optional.wrap return
+    tupleId TupleId cast Type .Struct return
   end
   proc(
     Type slice : elts
@@ -1622,11 +1620,9 @@ namespace: types
     ## newTuple
       elements@ slice.wrap
       NameId optional slice optional.empty
-    context newTuple .and .Struct .if
-      Type .TaggedUnion optional.wrap
-    else
-      Type optional.empty
-    end
+    context newTuple .Struct .else
+      "new tuple returns struct" ..panic
+    end Type .TaggedUnion optional.wrap
   end
   proc(
     Type : unionType
@@ -1812,9 +1808,7 @@ namespace: types
         ## TODO reuse slice memory if possible
         outTypes
           NameId optional slice optional.empty
-        context newTuple .else
-          "failed to create tuple-type" ..panic
-        end ProcRet .Tuple return
+        context newTuple ProcRet .Tuple return
     end
   end
   proc( Type : proc TypeContext ptr : context -> Type slice ) =>: export: getProcOutArgs
