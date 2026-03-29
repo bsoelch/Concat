@@ -1578,7 +1578,7 @@ namespace: types
     NameId slice : eltNames
     TypeContext ptr.mut : context
   -> Type ) =>: export: newEnum
-    eltNames .length 0:iSize == if
+    eltNames .length 0 == if
       Type .Empty return
     end
     context .nameContext [] .allocator
@@ -1595,9 +1595,12 @@ namespace: types
     NameId slice : eltNames
     UnionType : unionType
     TypeContext ptr.mut : context
-  -> Type optional ) =>: export: newUnion
-    elts .length 0:iSize == or elts .length eltNames .length != if
-      Type optional.empty return
+  -> Type ) =>: export: newUnion
+    elts .length 0 == if
+      Type .Empty return
+    end
+    elts .length eltNames .length u> if
+      "unnamed elements in union" ..panic
     end
     context .nameContext [] .allocator
       elts mixedArena.copySlice slice.freeze =:: eltCopy
@@ -1612,7 +1615,7 @@ namespace: types
     context .nameContext .allocator=
     unionData UnionId cast Type .RawUnion =:: rawValue
     unionType .RAW if
-      rawValue optional.wrap return
+      rawValue return
     end
     Type 2 array : mut: elements
     rawValue elements@ 0 =[]
@@ -1622,7 +1625,7 @@ namespace: types
       NameId optional slice optional.empty
     context newTuple .Struct .else
       "new tuple returns struct" ..panic
-    end Type .TaggedUnion optional.wrap
+    end Type .TaggedUnion return
   end
   proc(
     Type : unionType

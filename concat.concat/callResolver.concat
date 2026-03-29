@@ -228,7 +228,7 @@ proc(
             typeBuffer [] list.asSlice typeOffset slice.tail
             nameBuffer [] list.asSlice nameOffset slice.tail optional.wrap
             typeContext
-          types.newTuple optional.wrap break
+          types.newTuple break
         RawUnion case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
@@ -245,13 +245,12 @@ proc(
               "unnamed union element" ..panic
             end
             typeContext
-          types.newEnum optional.wrap break
+          types.newEnum break
         ## TODO update initializer type
         Initializer case
           "generic initializers are not supported" ..panic
         default ..unreachable
       end
-        .else "failed to create composite-type" ..panic end
         ## reset buffer
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
         nameBuffer [] nameOffset list.setLength nameBuffer =[]

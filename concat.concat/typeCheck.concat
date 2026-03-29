@@ -2491,14 +2491,14 @@ proc(
   end =:: inTypes =:: types
   program [] .nameBuffer labelOffset list.tail =:: eltNames
   compType switch
-    TUPLE case types eltNames optional.wrap typeContext types.newTuple optional.wrap break
+    TUPLE case types eltNames optional.wrap typeContext types.newTuple break
     UNION case types eltNames slice.unwrapAll .else
       "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
     end types.UnionType .TAGGED typeContext types.newUnion break
     RAW_UNION case types eltNames slice.unwrapAll .else
       "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
     end types.UnionType .RAW typeContext types.newUnion break
-    PROC case inTypes types eltNames CallingConvention.DEFAULT typeContext types.newProcedure optional.wrap break
+    PROC case inTypes types eltNames CallingConvention.DEFAULT typeContext types.newProcedure break
     C_PROC case
       types .length 1 u> if
         "C-procedures can have at most one return value got " sb.copyPtr
@@ -2507,12 +2507,8 @@ proc(
           types for <$ ' ' sb.appendC >$ typeContext sb.appendType end
         pos errors appendError
       end
-      inTypes types eltNames CallingConvention .CCALL typeContext types.newProcedure optional.wrap
+      inTypes types eltNames CallingConvention .CCALL typeContext types.newProcedure
     break
-  end .else
-    "failed to create composite-type" sb.copyPtr
-    pos errors appendError
-    return
   end =:: newType
   state [] .stack branchTree.depth 0 == "stack is empty after popping types" assert
   state .stack
