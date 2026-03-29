@@ -1,0 +1,1 @@
+C-procedures can have at most one return value got 2: i32 i32 at ./tests/typeChecker/cProcMultiRet.concat:1:1

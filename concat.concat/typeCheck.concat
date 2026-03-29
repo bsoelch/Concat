@@ -2498,8 +2498,17 @@ proc(
     RAW_UNION case types eltNames slice.unwrapAll .else
       "unnamed union element":s pos ..line internalErrorNoOp ..unreachable
     end types.UnionType .RAW typeContext types.newUnion break
-    PROC case inTypes types eltNames CallingConvention.DEFAULT typeContext types.newProcedure break
-    C_PROC case inTypes types eltNames CallingConvention .CCALL typeContext types.newProcedure break
+    PROC case inTypes types eltNames CallingConvention.DEFAULT typeContext types.newProcedure optional.wrap break
+    C_PROC case
+      types .length 1 u> if
+        "C-procedures can have at most one return value got " sb.copyPtr
+          types .length sb.appendI
+          ':' sb.appendC
+          types for <$ ' ' sb.appendC >$ typeContext sb.appendType end
+        pos errors appendError
+      end
+      inTypes types eltNames CallingConvention .CCALL typeContext types.newProcedure optional.wrap
+    break
   end .else
     "failed to create composite-type" sb.copyPtr
     pos errors appendError
@@ -3495,9 +3504,7 @@ proc(
               containerType@ slice.wrap
               NameId optional slice.empty
               CallingConvention.DEFAULT
-            typeContext types.newProcedure .else
-              "failed to create procedure":s op ..line state internalError ..unreachable
-            end
+            typeContext types.newProcedure
               BuiltIn .GET_PTR
             op .pos opBuiltIn state appendOp ..drop
           end
@@ -3515,9 +3522,7 @@ proc(
               types.primitive.BOOL@ slice.wrap
               NameId optional slice.empty
               CallingConvention.DEFAULT
-            typeContext types.newProcedure .else
-              "failed to create procedure":s op ..line state internalError ..unreachable
-            end
+            typeContext types.newProcedure
               enumLabelType types.isPrimitive ! if
                 "non-primitive enum-label":s op ..line state internalError ..unreachable
               else
@@ -4257,9 +4262,7 @@ proc(
                 labelType@ slice.wrap
                 NameId optional slice.empty
                 CallingConvention.DEFAULT
-              typeContext types.newProcedure .else
-                "failed to create procedure":s op ..line state internalError ..unreachable
-              end
+              typeContext types.newProcedure
                 BuiltIn .GET_PTR
               op .pos opBuiltIn state appendOp ..drop
             end
@@ -5578,9 +5581,7 @@ proc(
           types.primitive.BOOL@ slice.wrap
           NameId optional slice.empty
           CallingConvention.DEFAULT
-        typeContext types.newProcedure .else
-          "failed to create procedure":s op ..line state internalError ..unreachable
-        end withProc typeContext setProcType
+        typeContext types.newProcedure withProc typeContext setProcType
         withProc .implementation .Code .else
           "expected code-procedure":s op ..line state internalError ..unreachable
         end =:: codeImpl

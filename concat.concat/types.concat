@@ -1832,17 +1832,14 @@ namespace: types
         outTypes outTypes .length 1:iSize - slice.head return
     end
   end
-  proc( Type slice : in Type slice : out NameId optional slice : eltNames CallingConvention : callConvention TypeContext ptr.mut : context -> Type optional ) =>: export: newProcedure
-    callConvention .CCALL and out .length 1:iSize u> if
-      Type optional.empty return ## XXX? better error handling
-    end
+  proc( Type slice : in Type slice : out NameId optional slice : eltNames CallingConvention : callConvention TypeContext ptr.mut : context -> Type ) =>: export: newProcedure
     context .nameContext [] .allocator
       in mixedArena.copySlice slice.freeze =:: inCopy
       out mixedArena.copySlice slice.freeze =:: outCopy
       eltNames mixedArena.copySlice slice.freeze =:: eltNamesCopy
       inCopy outCopy eltNamesCopy callConvention ProcType new mixedArena.copyValue =:: procId
     context .nameContext .allocator=
-    procId ProcTypeId cast Type .Procedure  optional.wrap return
+    procId ProcTypeId cast Type .Procedure return
   end
   proc(
     Type : proc

@@ -303,7 +303,6 @@ proc(
         src typeContext types.getCallConvention
         typeContext
       types.newProcedure
-        .else "failed to create procedure-type" ..panic end
         ## reset buffers
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
         nameBuffer [] nameOffset list.setLength nameBuffer =[]
@@ -1348,7 +1347,7 @@ proc(
     nameBuffer list.asSlice
     procInfo [] .procType typeContext types.getCallConvention
     typeContext
-  types.newProcedure .else "failed to create procedure" ..panic end =:: calledType
+  types.newProcedure =:: calledType
   typeBuffer list.free typeBuffer=
   nameBuffer list.free nameBuffer=
   ## ProcedureCallInfo

@@ -1,0 +1,6 @@
+proc.c( i32 i32 -> i32 i32 ) =>: divmod
+  $1 $1 / <<$ %
+end
+proc( -> ) =>: main
+  2 3 divmod ..drop.2
+end
