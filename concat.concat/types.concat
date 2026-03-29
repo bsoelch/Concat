@@ -934,8 +934,6 @@ namespace: types
         arraySize switch
           None case baseSize return
           Int .case baseSizeVal *  TypeSize .Fixed return
-          ## TODO! distinguish generic-size and runtime dynamic size
-          Dynamic case baseSizeVal TypeSize .DynamicArray return
           GenericArg case baseSizeVal TypeSize .DynamicArray return
         end
         break
@@ -973,7 +971,7 @@ namespace: types
   end
 
   ## array & pointer types
-  union( _ : None _ : Dynamic i64 : Int NameId : GenericArg ) =:: export: ArraySize
+  union( _ : None i64 : Int NameId : GenericArg ) =:: export: ArraySize
   struct(
     Type : base
     ArraySize : size
@@ -1084,7 +1082,7 @@ namespace: types
       false return
     end
     a switch
-      None Dynamic case true return
+      None case true return
       Int .case b .Int unionElement.unwrap == return
       GenericArg .case b .GenericArg unionElement.unwrap NameId.eq return
     end
@@ -1092,7 +1090,6 @@ namespace: types
   proc( ArraySize : a -> i32 ) =>: arraySizeHash
     a switch
       None case 1 return
-      Dynamic case 2 return
       Int .case i32 cast.u 1 + 3 * return
       GenericArg .case NameId.hash 1 + -5 * return
     end
@@ -1102,7 +1099,7 @@ namespace: types
       a ..tag b ..tag <=> return
     end
     a switch
-      None Dynamic case 0 return
+      None case 0 return
       Int .case b .Int unionElement.unwrap i64.cmp return
       GenericArg .case b .GenericArg unionElement.unwrap NameId.cmp return
     end
@@ -1127,7 +1124,7 @@ namespace: types
         Type .MutablePointer return
       else ..drop end
     end
-    ## TODO? prevent dynamic-size array & fixed size raw_pointer
+    ## TODO? split (raw)pointer creation into seperate procedure
     ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
     base context isProcedure if
       base
@@ -2609,6 +2606,9 @@ namespace: types
       a context types.getArraySize =:: aSize
       b context types.getArraySize =:: bSize
       a context types.isRawPointer b context types.isRawPointer | =:: mut: isRaw
+      isRaw ! and aSize bSize arraySizeEqual ! if
+        Type optional.empty return
+      end
       ## newArrayType
         aBase
         mutable if
@@ -2616,7 +2616,7 @@ namespace: types
         else
           isRaw if ArrayType .RAW_POINTER else ArrayType .POINTER end
         end
-        aSize bSize arraySizeEqual if aSize else ArraySize .Dynamic end
+        aSize ## is equal to bSize
         context
       newArrayType optional.wrap return
     end
@@ -2744,7 +2744,6 @@ namespace: sb
     sb
       size switch
         None case break
-        Dynamic case " _" sb.appendS break
         Int .case =:: sizeInt
           ' ' sb.appendC
           sizeInt sb.appendI

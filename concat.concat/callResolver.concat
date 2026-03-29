@@ -82,7 +82,6 @@ end
 
 proc( types.ArraySize : size -> ConstValue ) =>: sizeAsConst
   size switch
-    Dynamic case ConstValue .None return
     None case 1 ConstValue .Int return
     Int .case ConstValue .Int return
     GenericArg .case ConstValue .GenericArg return
@@ -152,7 +151,7 @@ proc(
       idContext [] .arraySizeBuffer .length =:: sizeOffset
       false =:: mut: genericSize
       size switch
-        None Int Dynamic case
+        None Int case
           size break
         GenericArg .case =:: genericId
           genericId id.identifierFlags id.FLAG_STATIC & ? ! if
@@ -485,7 +484,6 @@ proc(
       targetArrayData types.arrayTypeSize =:: targetSize
       targetFixed and srcFixed if
         targetSize switch
-          Dynamic case break
           None case
             srcSize .None ? ! if
               true return
