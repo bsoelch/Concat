@@ -715,7 +715,7 @@ namespace: sb
       ptrType typeContext types.isRawPointer if
         types.ArrayType .ARRAY
           0 types.ArraySize .Int
-        typeContext types.newArrayType optional.unwrap
+        typeContext types.newArrayType
       end
     =:: valueType
     sb
@@ -759,7 +759,7 @@ namespace: sb
         constant [] .valType
         types.ArrayType .ARRAY
         size
-      typeContext types.newArrayType optional.unwrap
+      typeContext types.newArrayType
     else
       constant [] .valType
     end =:: valType

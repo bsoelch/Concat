@@ -594,9 +594,7 @@ namespace: types
             baseType
             ArrayType .ARRAY
             size
-          context newArrayType .else
-            "failed to create array-type" ..panic
-          end return
+          context newArrayType return
         end
         tupleInfo .compositeInfo .flags [] COMP_FLAG_CONTAINS_LITERAL & ? if
           context .nameContext [] .allocator
@@ -1104,28 +1102,28 @@ namespace: types
     ArrayType : arrayType
     ArraySize : size
     TypeContext ptr.mut : context
-  -> Type optional ) =>: export: newArrayType
+  -> Type ) =>: export: newArrayType
     context .nameContext =:: nameContext
     target =:: mut: base
-    base .Undefined  ? if
-      Type optional.empty  return
+    base .Undefined ? if
+      base return
     end
     size .None ? and base .ArrayType .if
       arrayType .POINTER if
-        Type .Pointer optional.wrap return
+        Type .Pointer return
       else arrayType .MUTABLE_POINTER _if
-        Type .MutablePointer optional.wrap return
+        Type .MutablePointer return
       else ..drop end
     end
     ## TODO? prevent dynamic-size array & fixed size raw_pointer
     ## procedure types are only allowed as base for fixed-size 0 dimensional pointers
     base context isProcedure if
-      ## TODO? allow pointer of length 1 for generic matching
-      arrayType .ARRAY or size .None ? ! if
-        Type optional.empty return
-      end
       base
         context asUnlabeledProc
+        arrayType .POINTER ! or size .None ? ! if
+          ## wrap procedure type in direct pointer
+          ArrayType .POINTER ArraySize .None context newArrayType
+        end
       base=
     end
     context .nameContext [] .allocator
@@ -1139,7 +1137,7 @@ namespace: types
         MUTABLE_RAW_POINTER case Type .MutableRawPointer break
         ARRAY case Type .ArrayType break
       end
-    optional.wrap return
+    return
   end
 
   ## initializer type as array/tuple, without changing element types
@@ -1155,9 +1153,7 @@ namespace: types
       initInfo [] .arrayType
       arrayType
       size
-    context newArrayType .else
-      "failed to create array-type" ..panic
-    end return
+    context newArrayType return
   end
   proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: initializerAsArray
     t context ArrayType .ARRAY initializerAsArrayOrPtr
@@ -1878,9 +1874,7 @@ namespace: types
     context .nameContext .allocator=
     procId ProcTypeId cast Type .Procedure
       isPtr if
-        ArrayType .POINTER ArraySize .None context newArrayType .else
-          "failed to create array-type" ..panic
-        end return
+        ArrayType .POINTER ArraySize .None context newArrayType return
       end
     return
   end
@@ -2286,9 +2280,7 @@ namespace: types
       unwraped context getBaseType
         mutable if ArrayType .MUTABLE_POINTER else ArrayType .POINTER end
         unwraped context getArraySize
-      context newArrayType .else
-        "failed to create array-type" ..panic
-      end return
+      context newArrayType return
     end
     src .Undefined ? if
       src return
@@ -2300,9 +2292,7 @@ namespace: types
     end
       mutable if ArrayType .MUTABLE_POINTER else ArrayType .POINTER end
       ArraySize .None
-    context newArrayType .else
-      "failed to create array-type" ..panic
-    end return
+    context newArrayType return
   end
   proc( Type : src TypeContext ptr.mut : context -> Type ) =>: export: ptrTarget
     src context isPointer ! if
@@ -2314,9 +2304,7 @@ namespace: types
       unwraped context getBaseType
         ArrayType .ARRAY
         unwraped context getArraySize
-      context newArrayType .else
-        "failed to create array-type" ..panic
-      end return
+      context newArrayType return
     end
     src context getBaseType return
   end
@@ -2635,7 +2623,7 @@ namespace: types
         end
         aSize bSize arraySizeEqual if aSize else ArraySize .Dynamic end
         context
-      newArrayType return
+      newArrayType optional.wrap return
     end
     a .IntLiteral ? and b context types.isNumber and
         a b context canAutoCastIntLiteral if

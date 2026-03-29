@@ -70,9 +70,7 @@ proc(
     mutable if types.ArrayType .MUTABLE_RAW_POINTER else types.ArrayType .RAW_POINTER end
     types.ArraySize .None
     typeContext
-  types.newArrayType .else
-    "failed to create array-type" ..panic
-  end return
+  types.newArrayType return
 end
 
 proc(

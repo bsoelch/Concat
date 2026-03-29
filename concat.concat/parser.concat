@@ -200,9 +200,7 @@ proc(
   strArray .length i64 cast.u ArraySize .Int =:: size
   ## opConst
     str
-    types.CHAR8 types.ArrayType .POINTER size typeContext newArrayType .else
-      "failed to create array-type" ..panic
-    end
+    types.CHAR8 types.ArrayType .POINTER size typeContext newArrayType
     pos
   opConst state appendOp
   strArray .length
@@ -2009,9 +2007,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         types.ArrayType .POINTER
         name .length i64 cast.u types.ArraySize .Int =:: size
         size
-      typeContext types.newArrayType .else
-        "failed to create array-type" ..panic
-      end
+      typeContext types.newArrayType
       fileState program wordPos opConst state appendOp
       return
     else $ "..line":s string.eq _if ..drop

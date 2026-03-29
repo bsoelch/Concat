@@ -192,7 +192,6 @@ proc(
         newSize
         typeContext
       types.newArrayType
-        .else "failed to create array-type" ..panic end
         idContext [] .arraySizeBuffer
           sizeOffset list.setLength
         idContext .arraySizeBuffer=

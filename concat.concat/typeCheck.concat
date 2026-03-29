@@ -5641,10 +5641,7 @@ proc(
               types.ArrayType .ARRAY
               size
               typeContext
-            types.newArrayType .else
-              "could not create array type" sb.copyPtr op .pos errors appendError
-              continue.opLoop
-            end
+            types.newArrayType
           end
         ## newArrayType
           typeMod switch
@@ -5656,14 +5653,7 @@ proc(
           end
           idContext [] .arraySizeBuffer 0 []
           typeContext
-        types.newArrayType .else
-          typeMod .ARRAY if
-            "could not create array type" sb.copyPtr
-          else
-            "could not create pointer type" sb.copyPtr
-          end op .pos errors appendError
-          continue.opLoop
-        end
+        types.newArrayType
           ConstValue .TypeId
           types.primitive.TYPE
           op .pos
