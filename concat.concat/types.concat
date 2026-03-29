@@ -46,7 +46,7 @@ namespace: types
     INT U_INT
     LONG LONGLONG U_LONG U_LONGLONG SIZE
     FLOAT DOUBLE
-    ## XXX? add support for long double
+    ## TODO? add support for long double
     STRUCT UNION
   ) =:: CType
   enum(
@@ -57,7 +57,6 @@ namespace: types
     U31 S32 U32 ## -> i32
     U53 S54   ## largest numbers castable to f64 ( -2^53 <= k <= 2^53 ); -> i64 by default
     U63 S64 U64 ## -> i64
-    ## XXX? support for 128Bit integer literals
   ) =:: IntLiteral
 end
 
@@ -629,7 +628,7 @@ namespace: types
   end
   ## can value be pushed onto stack
   proc( Type TypeContext ptr.mut -> bool ) =>: export: referenceOnly
-    isSmallType ! return ## XXX ? allow larger stack values
+    isSmallType ! return ## TODO? allow larger stack values
   end
   64 =:: export: MAX_INT_WIDTH
   i64.MAX =:: export: MAX_SIGNED_INT
@@ -864,7 +863,7 @@ namespace: types
       Undefined Empty GenericType RawPointer MutableRawPointer
       PrimitiveType IntLiteral CType ArrayType Enum UnionElement
       Pointer MutablePointer Procedure Align SetType RefinementType
-      NamedType GeneratedType case ..unreachable ## XXX? use assertion
+      NamedType GeneratedType case ..unreachable
     end
   end
   ## alignment of type in bytes, will be a power of two
@@ -2420,7 +2419,7 @@ namespace: types
     srcEmpty and target context types.isRawPointer if
       true return ## empty initializer to raw 1D pointer
     end
-    ## XXX? allow cast from empty initializer to union with single empty entry
+    ## TODO? allow cast from empty initializer to union with single empty entry
     target context types.isMutable if
       false return ## cannot cast non-empty initializer to mutable pointer
     end
@@ -2570,7 +2569,7 @@ namespace: types
       false return
     end
     src context types.isPointer target context types.isPointer & if
-      true return ## XXX check for compatible element sizes?, compatible mutability
+      true return ## TODO check for compatible element sizes?, compatible mutability
     end
     src context types.isPointer target context types.isInt & if
       true return
@@ -2630,7 +2629,7 @@ namespace: types
       a optional.wrap return
     end
     a .IntLiteral .and =:: aLiteral b .IntLiteral .if =:: bLiteral
-      ## XXX directly merge literal types?
+      ## TODO directly merge literal types?
       a bLiteral intLiteralAsInt context mergeTypes $ ? if
         return
       else ..drop
