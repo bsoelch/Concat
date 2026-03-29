@@ -586,8 +586,7 @@ namespace: types
         ## TODO? store initialiter elements directly in initialiter data
         initInfo .asTuple TupleInfo ptr cast =:: tupleInfo
         tupleInfo .compositeInfo .elements [] .length =:: eltCount
-        initInfo .arrayType .Undefined  ? ! if
-          initInfo [] .arrayType context literalToType =:: baseType
+        initInfo [] .arrayType .if context literalToType =:: baseType
           eltCount i64 cast.u ArraySize .Int =:: size
           ## newArrayType
             baseType
@@ -1047,7 +1046,7 @@ namespace: types
     t context unwrapNamed =:: base
     base .Initializer .else ..drop
       false return
-    end InitializerInfo ptr cast [] .arrayType .Undefined  ? ! return
+    end InitializerInfo ptr cast [] .arrayType ? return
   end
   proc( Type : t -> bool ) =>: export: isRawPointer0
      t .RawPointer ? or t .MutableRawPointer ? end return
@@ -1164,7 +1163,9 @@ namespace: types
     tupleInfo .compositeInfo .elements [] .length =:: eltCount
     eltCount i64 cast.u ArraySize .Int =:: size
     ## newArrayType
-      initInfo [] .arrayType
+      initInfo [] .arrayType .else
+        Type optional.empty return
+      end
       arrayType
       size
     context newArrayType optional.wrap return
@@ -1217,7 +1218,7 @@ namespace: types
   ) =:: TupleInfo
   struct(
     TupleInfo : asTuple
-    Type : arrayType
+    Type optional : arrayType
   ) =:: InitializerInfo
   struct(
     CompositeInfo : compositeInfo
@@ -1538,18 +1539,18 @@ namespace: types
       elts 0 []
     else ## TODO? special type for empty array?
       primitive.I32 ## TODO? better default type for empty array
-    end =:: mut: arrayType
+    end optional.wrap =:: mut: arrayType
     0:iSize while $ elts .length u< do =:: i
       elts i [] =:: eltType
       eltNames .and i slice.get .and ? if
         ## if there is a named element the initializer is not an array
-        Type .Undefined  arrayType=
+        Type optional.empty arrayType=
         i break
       end
-      arrayType eltType context mergeTypes .if
-        #+mergedType+# arrayType=
+      arrayType .and eltType context mergeTypes .if
+        #+mergedType+# optional.wrap arrayType=
       else
-        Type .Undefined  arrayType=
+        Type optional.empty arrayType=
         i break
       end
     finally i 1:iSize + end ..drop
@@ -2429,7 +2430,7 @@ namespace: types
         "expected initializer-type" ..panic
       end InitializerInfo ptr cast =:: initInfo
       target context getBaseType optional.unwrap =:: eltType
-      initInfo .arrayType [] eltType context canAutoCast and
+      initInfo .arrayType [] .and eltType context canAutoCast and
         target context types.isRawPointer or
         target context getArraySize =:: targetSize
         targetSize .Int .and srcSize i64 cast.u == if
