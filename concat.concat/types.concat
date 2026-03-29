@@ -1024,6 +1024,13 @@ namespace: types
       Type optional.empty return
     end arrayTypeBase optional.wrap return
   end
+  proc( Type bool : allowRaw TypeContext ptr -> bool ) =>: export: isArrayOrPointer
+    unwrapNamed switch
+      ArrayType Pointer MutablePointer case true return
+      RawPointer MutableRawPointer case allowRaw return
+      default false return
+    end
+  end
   ## pointer to array-type ( fixed size and not 0D )
   proc( Type : t TypeContext ptr : context -> bool ) =>: export: isArrayPointer
     t context unwrapNamed
@@ -1044,15 +1051,6 @@ namespace: types
     base .Initializer .else ..drop
       false return
     end InitializerInfo ptr cast [] .arrayType .Undefined  ? ! return
-  end
-  ## TODO? better name for "fixed-size"
-  proc( Type TypeContext ptr -> bool ) =>: export: isFixedSize
-     unwrapNamed =:: t
-     t .Pointer ? or t .MutablePointer ? or t .ArrayType ? end return
-  end
-  proc( Type TypeContext ptr -> bool ) =>: export: isFixedSizePtr
-     unwrapNamed =:: t
-     t .Pointer ? or t .MutablePointer ? end return
   end
   proc( Type : t -> bool ) =>: export: isRawPointer0
      t .RawPointer ? or t .MutableRawPointer ? end return
@@ -2321,10 +2319,10 @@ namespace: types
 
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: sizeCompatible
     using types.
-    src context isFixedSize ! and target context isFixedSize if
-      false return ## cannot cast non-fixed pointer to fixed poiner
+    src context isRawPointer and target false context isArrayOrPointer if
+      false return ## cannot cast raw non-fixed pointer to value poiner
     end
-    target context isFixedSize ! if
+    target context isRawPointer if
       true return
     end
     src context getArraySize =:: srcSize
@@ -2620,13 +2618,13 @@ namespace: types
       a context types.isMutable b context types.isMutable & =:: mutable
       a context types.getArraySize =:: aSize
       b context types.getArraySize =:: bSize
-      a context types.isFixedSize b context types.isFixedSize & =:: mut: fixedSize
+      a context types.isRawPointer b context types.isRawPointer | =:: mut: isRaw
       ## newArrayType
         aBase
         mutable if
-          fixedSize if ArrayType .MUTABLE_POINTER else ArrayType .MUTABLE_RAW_POINTER end
+          isRaw if ArrayType .MUTABLE_RAW_POINTER else ArrayType .MUTABLE_POINTER end
         else
-          fixedSize if ArrayType .POINTER else ArrayType .RAW_POINTER end
+          isRaw if ArrayType .RAW_POINTER else ArrayType .POINTER end
         end
         aSize bSize arraySizeEqual if aSize else ArraySize .Dynamic end
         context

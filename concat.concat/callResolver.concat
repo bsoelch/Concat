@@ -453,7 +453,7 @@ proc(
         progContext
       resolveGenerics return
     Pointer MutablePointer ArrayType RawPointer MutableRawPointer .case =:: targetArrayData
-      src typeContext types.isPointer ! and src typeContext types.isArray ! if
+      src true typeContext types.isArrayOrPointer ! if
         ## special case for conversion procedure -> proc-pointer
         src typeContext types.isProcedure and target typeContext types.isCallable if
           src targetArrayData types.arrayTypeBase
@@ -476,10 +476,10 @@ proc(
       srcMutable and targetMutable ! if
         true needCast =[]
       end
-      src typeContext types.isFixedSize =:: srcFixed
-      target typeContext types.isFixedSize =:: targetFixed
+      src typeContext types.isRawPointer ! =:: srcFixed
+      target typeContext types.isRawPointer ! =:: targetFixed
       targetFixed and srcFixed ! if
-        true return ## cannot assign unknown-size to fixed-size
+        true return ## cannot assign raw pointer to value pointer
       end
       src typeContext types.getArraySize =:: srcSize
       targetArrayData types.arrayTypeSize =:: targetSize
@@ -701,10 +701,10 @@ proc( Type : t TypeContext ptr : typeContext -> i32 ) =>: computeTypeWeigth
     end
   end
   t typeContext types.isPointer if
-    t typeContext types.isFixedSize if
-      12 return
+    t typeContext types.isRawPointer if
+      16 return
     end
-    16 return
+    12 return
   end
   t typeContext types.isArray if
     20 return

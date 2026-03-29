@@ -418,7 +418,7 @@ namespace: interpreter
       true isType=
     end
     valType typeContext types.isPointer or valType typeContext types.isArray if
-      valType typeContext types.isFixedSize ! if
+      valType typeContext types.isRawPointer if
         "cannot get the length  of : " sb.copyPtr
           valType typeContext sb.appendType
         pos errors appendError

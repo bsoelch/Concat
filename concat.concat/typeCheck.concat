@@ -3734,9 +3734,6 @@ proc(
           op .pos state popType op@ .dataType=
         end
         op .dataType typeContext types.isArray if
-          op .dataType typeContext types.isFixedSize ! if
-            "variable size arrays are not supported" sb.copyPtr op .pos errors appendError
-          end
           op .dataType typeContext types.getArraySize .Int .else
             "unsupported array-size":s op ..line state internalError ..unreachable
           end =:: count
