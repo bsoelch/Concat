@@ -1313,8 +1313,11 @@ proc(
       0 =:: mut: intCount
       0 =:: mut: floatCount
       inTypes .length 1 - while $ 0 iSize.sge do =:: i
-        inTypes i [] typeContext ValType.fromType =:: argValType
         procType i i32 cast.u typeContext types.getProcArgName =:: argName?
+        argName? .and id.identifierFlags id.FLAG_STATIC & ? if continue end
+        inTypes i []
+          $ typeContext types.isType if ..drop continue end
+        typeContext ValType.fromType =:: argValType
         argValType ValType.isInt if
           intCount AMD64.reg.intArg .if
             argValType context setRegSize asm.Value .Register argValType StackValue.val
