@@ -161,10 +161,16 @@ namespace: ptr
   proc( type.namedPointer : auto: P  P : p P : q -> bool ) =>: export: ne
     p iSize cast! q iSize cast! iSize.ne
   end
-  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: eq0
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: eq0
+    p iSize cast! q iSize cast! iSize.eq ## proc-pointer cannot be cast to raw-pointer -> need separate version
+  end
+  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: eqRaw
     p iSize cast! q iSize cast! iSize.eq
   end
-  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: ne0
+  proc( type : auto: T T ptr : p T ptr : q -> bool ) =>: ne0
+    p iSize cast! q iSize cast! iSize.ne
+  end
+  proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: neRaw
     p iSize cast! q iSize cast! iSize.ne
   end
   proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: export: ge
@@ -410,10 +416,12 @@ overload: export: <=
 end
 overload: export: ==
   ptr.eq0 ## don't allow renaming of arguments
+  ptr.eqRaw
   iSize.eq
 end
 overload: export: !=
   ptr.ne0
+  ptr.neRaw
   iSize.ne
 end
 overload: export: >=
