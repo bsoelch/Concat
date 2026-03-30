@@ -61,6 +61,7 @@ namespace: asm
       a .reg b .reg == and a .offset b .offset == end
     end
   end
+  i32 =:: export: PtrConstId
 
   union(
     _ : None
@@ -69,6 +70,7 @@ namespace: asm
     f64 : Float
     LocalAddress : shadow: LocalAddress
     RegisterAddress : shadow: RegisterAddress
+    PtrConstId : ConstPtr
     ## TODO memory values
   ) =:: export: Value
   namespace: Value
@@ -81,6 +83,7 @@ namespace: asm
         Float .case b .Float unionElement.unwrap == return
         LocalAddress .case b .LocalAddress unionElement.unwrap LocalAddress.eq return
         RegisterAddress .case b .RegisterAddress unionElement.unwrap RegisterAddress.eq return
+        ConstPtr .case i32 cast.u b .ConstPtr unionElement.unwrap i32 cast.u i32.eq return
       end
     end
   end
@@ -101,6 +104,7 @@ namespace: asm
     LocalLabel : shadow: LocalLabel
     LocalAddress : shadow: LocalAddress
     RegisterAddress : shadow: RegisterAddress
+    PtrConstId : ConstPtr
   ) =:: export: Operand
   union(
     _               : None
@@ -114,9 +118,14 @@ namespace: asm
     Operands : args
   ) =:: export: Instruction
   union(
-    i64 : Int
-    f64 : Float
+    i8 : Int8
+    i16 : Int16
+    i32 : Int32
+    i64 : Int64
+    f32 : Float32
+    f64 : Float64
     GlobalLabel : Label
+    string : String
   ) =:: export: Data
   union(
     GlobalLabel : Enter
@@ -125,6 +134,7 @@ namespace: asm
     GlobalLabel : Export
     LocalLabel : shadow: LocalLabel
     GlobalLabel : shadow: GlobalLabel
+    PtrConstId : ConstPtrLabel
   ) =:: export: Directive
   union(
     _ : None
@@ -166,6 +176,12 @@ namespace: asm
       l1 Operand .LocalAddress
     ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
   end
+  proc( OpCode : opCode RegisterId : r1 PtrConstId : c1 -> Atom ) =>: export: opRC
+    opCode
+      r1 Operand .Register
+      c1 Operand .ConstPtr
+    ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
+  end
   proc( OpCode : opCode RegisterId : r1 RegisterId : r2 -> Atom ) =>: export: opRR
     opCode
       r1 Operand .Register
@@ -179,7 +195,7 @@ namespace: asm
     ( Operand Operand ) new Operands .Val2 Instruction new Atom .Instruction
   end
   overload: export: op1 opR opL opG end
-  overload: export: op2 opLR opRL opRR opRI end
+  overload: export: op2 opLR opRL opRR opRI opRC end
   proc( string : name -> Atom ) =>: export: enter
     name GlobalLabel cast Directive .Enter Atom .Directive
   end
@@ -194,6 +210,9 @@ namespace: asm
   end
   proc( string -> Atom ) =>: export: globalLabel
     GlobalLabel cast Directive .GlobalLabel Atom .Directive
+  end
+  proc( PtrConstId -> Atom ) =>: export: constPtrLabel
+    Directive .ConstPtrLabel Atom .Directive
   end
   proc( string -> Atom ) =>: export: exportName
     GlobalLabel cast Directive .Export Atom .Directive
@@ -211,6 +230,11 @@ namespace: asm
   proc( Atom -> bool ) =>: export: isEndProc
     .Directive .and .EndProc ? end
   end
+
+  proc( Data -> Atom ) =>: export: data
+    Atom .Data
+  end
+
   proc( type : auto: C Atom ( Operand C -> Operand ) ptr : f C : curry -> Atom ) =>: export: mapOperands
     .Instruction .if
       $ .args switch
@@ -229,7 +253,7 @@ namespace: asm
       end >$ .args= Atom .Instruction
     end
   end
-  
+
   proc( stringBuilder LocalAddress : local Context : asmContext -> stringBuilder ) =>: export: appendLocalAddress
     "[local":s sb.appendStr
       local .varId i32 cast.u sb.appendU
@@ -250,6 +274,9 @@ namespace: asm
       end
     ']' sb.appendC
   end
+  proc( stringBuilder PtrConstId : constId Context : asmContext -> stringBuilder ) =>: export: appendConstPtr
+    "const":s sb.appendStr constId i64 cast.u sb.appendI
+  end
   proc( stringBuilder Value : arg  Context : asmContext -> stringBuilder ) =>: export: appendValue
     arg switch
       None case "None":s sb.appendStr return
@@ -258,6 +285,7 @@ namespace: asm
       Float .case sb.appendF ":f64":s sb.appendStr return
       LocalAddress .case asmContext appendLocalAddress return
       RegisterAddress .case asmContext appendRegisterAddress return
+      ConstPtr .case asmContext appendConstPtr return
     end
   end
   proc( stringBuilder Operand : arg  Context : asmContext -> stringBuilder ) =>: export: appendOperand
@@ -268,6 +296,7 @@ namespace: asm
       LocalLabel .case asmContext appendLocalLabel return
       LocalAddress .case asmContext appendLocalAddress return
       RegisterAddress .case asmContext appendRegisterAddress return
+      ConstPtr .case asmContext appendConstPtr return
     end
   end
   proc( stringBuilder Instruction : op  Context : asmContext -> stringBuilder ) =>: export: appendInstruction
@@ -315,14 +344,33 @@ namespace: asm
       EndProc case "endProc\n":s sb.appendStr return
       LocalLabel .case asmContext appendLocalLabel ':' sb.appendC return
       GlobalLabel .case asmContext appendGlobalLabel ':' sb.appendC return
+      ConstPtrLabel .case asmContext appendConstPtr ':' sb.appendC return
       Export .case =:: label ".globl ":s sb.appendStr label asmContext appendGlobalLabel return
+    end
+  end
+  proc( stringBuilder Data : shadow: data  Context : asmContext -> stringBuilder ) =>: export: appendData
+    data switch
+      Int8 .case =:: val ".byte ":s sb.appendStr val i32 cast.u sb.appendI return
+      Int16 .case =:: val ".2byte ":s sb.appendStr val i32 cast.u sb.appendI return
+      Int32 .case =:: val ".4byte ":s sb.appendStr val sb.appendI return
+      Int64 .case =:: val ".8byte ":s sb.appendStr val sb.appendI return
+      Float32 .case =:: val ".4byte 0x":s sb.appendStr val f32.bits sb.appendUX return
+      Float64 .case =:: val ".8byte 0x":s sb.appendStr val f64.bits sb.appendUX return
+      Label .case =:: label ".8byte ":s sb.appendStr label asmContext appendGlobalLabel return
+      String .case =:: strVal
+        ".byte ":s sb.appendStr
+        strVal string.bytes for
+          <$ "0x":s sb.appendStr >$ i32 cast.u sb.appendX ',' sb.appendC
+        end
+        '0' sb.appendC
+      return
     end
   end
   proc( stringBuilder Atom : atom  Context : asmContext -> stringBuilder ) =>: export: appendAtom
     atom switch
       Instruction .case asmContext appendInstruction break
       Directive .case asmContext appendDirective break
-      Data .case "TODO" ..panic
+      Data .case asmContext appendData break
       Info .case "TODO" ..panic
     end
     '\n' sb.appendC

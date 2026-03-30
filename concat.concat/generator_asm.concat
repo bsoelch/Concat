@@ -23,6 +23,8 @@ namespace: ValType
         F64  case ValType .F64 return
         TYPE case ValType .EMPTY return
       end break
+      Pointer MutablePointer RawPointer MutableRawPointer case
+        ValType .POINTER return
       default
         "unsupported type: " sb.copyPtr
           t typeContext sb.appendType
@@ -215,6 +217,10 @@ struct(
   i32 optional : varOffset
 ) =:: VariableLocation
 struct(
+  ConstValue : value
+  asm.PtrConstId : id
+) =:: ConstPtrData
+struct(
   ProgramContext ptr.mut : program
   asm.Context : asmContext
   LocalLabelId LabelState hashMap : labelStates
@@ -224,6 +230,7 @@ struct(
   asm.RegisterId list : availableFloatRegisters
   asm.Atom list : tmpOps
   StackValue list : stack
+  ConstPtrData list : constPtrs
   i32 : labelCount
   bool : reachable
 ) =:: CompilerContext
@@ -418,7 +425,20 @@ proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> 
   end
 end
 
+proc( ConstValue : val CompilerContext ptr.mut : context -> asm.PtrConstId ) =>: newCompositeConst
+  context [] .constPtrs
+    $ .length asm.PtrConstId cast.u =:: constId
+    val constId ConstPtrData new list.append
+  context .constPtrs=
+  constId return
+end
 proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context -> ) =>: pushConstant
+  valType .POINTER if
+    context [] .stack
+      constant context newCompositeConst asm.Value .ConstPtr valType StackValue.val list.append
+    context .stack=
+    return
+  end
   context [] .stack
     constant switch
       Bool .case
@@ -529,6 +549,9 @@ proc(
             else .Int ._if
               asm.op2
             else .LocalAddress ._if
+              asm.op2
+            else .ConstPtr ._if
+              >>$ ..drop AMD64.op.LEA <<$
               asm.op2
             else
               "unsupported source for mov" ..panic
@@ -815,7 +838,7 @@ proc(
 -> asm.Atom list TypedValue ) =>: freezeTypedValue
   val .value switch
     None case "unsupported value" ..panic
-    Int LocalAddress case
+    Int LocalAddress ConstPtr case
       val loc context moveToRegister asm.Value .Register
     break
     Float RegisterAddress case "unsupported value" ..panic
@@ -987,6 +1010,7 @@ proc(
       "unsupported value location" ..panic
   end
 end
+## TODO! merge with opMove? / replace uses of opMove with moveValue
 proc(
   asm.Atom list
   ValType : valType
@@ -997,18 +1021,20 @@ proc(
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: moveValue
-  srcValue .Register .if =:: srcReg
-    srcReg valLoc context removeLocation
-    ## mark source as no longer moving
-    context .registerInfo srcReg map.at .if =:: regInfo
-      clearSrc and regInfo .uses .None ? ! if
-        ## TODO remember other locations and remove from src
-        "unimplemented: multi-use source" ..panic
+  srcValue switch
+    Register .case =:: srcReg
+      srcReg valLoc context removeLocation
+      ## mark source as no longer moving
+      context .registerInfo srcReg map.at .if =:: regInfo
+        clearSrc and regInfo .uses .None ? ! if
+          ## TODO remember other locations and remove from src
+          "unimplemented: multi-use source" ..panic
+        end
+        false regInfo .moving=
       end
-      false regInfo .moving=
-    end
-  else .Int ? ! _if
-    "unimplemented: non-register source" ..panic
+    break
+    Int ConstPtr case break
+    default "unimplemented: non-register source" ..panic
   end
   ## clear references in destination register
   dstValue .Register .if =:: dstReg
@@ -1042,14 +1068,18 @@ proc(
     return ## nothing to do if values are equal
   end
   ## 2. mark value as moving
-  src .value .Register .if =:: srcReg
-    context .registerInfo srcReg map.at .if
-      true >$ .moving= ## TODO mark register as no longer moving once move is complete
-    end
-  else .Int ? ! and src .value .Float ? ! _if
-    "unsupported source value: " sb.copyPtr
-      dst .value context [] .asmContext asm.appendValue
-    pos errors appendError
+  src .value switch
+    Register .case =:: srcReg
+      context .registerInfo srcReg map.at .if
+        true >$ .moving= ## TODO mark register as no longer moving once move is complete
+      end
+    break
+    Int Float ConstPtr case break
+    default
+      "unsupported source value: " sb.copyPtr
+        src .value context [] .asmContext asm.appendValue
+      pos errors appendError
+    break
   end
   dst .value .Register .if =:: dstReg
     ## 3. clear destination slot if neccessary (detect move-loops)
@@ -1727,6 +1757,7 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
     asm.RegisterId list.empty
     1024 asm.Atom list.create
     64 StackValue list.create
+    64 ConstPtrData list.create
     0
     false
   CompilerContext new =:: mut: contextData
@@ -1739,6 +1770,14 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
       context beginProcedure
         impl [] .code for context compileOp end
       context finishProcedure
+    end
+    context [] .constPtrs for =:: info
+      info .id asm.constPtrLabel list.append
+      ## TODO extract to procedure
+      info .value switch
+        Array8 .case string.fromBytes asm.Data .String asm.data list.append break
+        default "unsupported pointer constant" ..panic
+      end
     end
   =:: ops
   target

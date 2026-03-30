@@ -15,6 +15,7 @@ namespace: AMD64
       nextOpCode =:: export: MOV
       nextOpCode =:: export: MOVZX
       nextOpCode =:: export: MOVSX
+      nextOpCode =:: export: LEA
       nextOpCode =:: export: ADD
       nextOpCode =:: export: SUB
       nextOpCode =:: export: IMUL
@@ -54,7 +55,7 @@ namespace: AMD64
       nextOpCode =:: export: POP
     ..drop
     {
-      "mov":s "movzx":s "movsx":s
+      "mov":s "movzx":s "movsx":s "lea":s
       "add":s "sub":s "imul":s "div":s "idiv":s "cdq":s "cqo":s
       "and":s "or":s "xor":s "cmp":s "test":s
       "jmp":s "je":s "jne":s "jl":s "jle":s "jge":s "jg":s "ja":s "jae":s "jbe":s "jb":s
@@ -100,7 +101,7 @@ namespace: AMD64
       RegisterId cast RegisterId.BASE_SHIFT << FLAG_VEC |
     end
    {
-      RAX RCX RDX RDI RSI R8 R9 RBX R10 R11 R12 R13 R14 R15 RBX 
+      RAX RCX RDX RDI RSI R8 R9 RBX R10 R11 R12 R13 R14 R15 RBX
     } slice.wrap =:: export: GP_INT_REGISTERS
     {
       0 xmm 1 xmm 2 xmm 3 xmm 4 xmm 5 xmm 6 xmm 7 xmm
