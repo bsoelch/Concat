@@ -46,6 +46,7 @@ end
 proc( BuiltIn -> bool ) =>: canMergeJumpIf
   BuiltIn ..length 222 == "no new builtins" assert
   switch
+    NOT_BOOL ## !
     EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 ## ==
     NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 ## !=
     LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 ## <
@@ -76,6 +77,9 @@ proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJum
   cmpType .FALSE =:: flip
   BuiltIn ..length 222 == "no new builtins" assert
   builtIn switch
+    NOT_BOOL case
+      flip if CompareType .TRUE else CompareType .FALSE end
+    break
     EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 case
       flip if CompareType .NE else CompareType .EQ end
     break
@@ -127,6 +131,7 @@ proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJum
     default "unsupported built-in for jump-merge" ..panic
   end
 end
+## TODO? merge built-ins: `compare + not` -> `compare`, `and + 0 eq/ne` -?> `bit-test`
 
 proc(
   Operation list : newOps
@@ -143,7 +148,7 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage SetNestedElement
-    GetId SetId AtId GetUnionTag SetUnionElement LocalLabel Block BlockEnd
+    GetId SetId AtId GetUnionTag SetUnionElement Block BlockEnd
     SetElement RuntimeAssert Error StackMod GetElement GetUnionElement
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps
@@ -269,6 +274,24 @@ proc(
       newOps
         op list.append
       return
+    LocalLabel .case =:: labelInfo
+      labelInfo .labelType switch
+        HINT_START HINT_END case
+          ## move mergable operation after start hint
+          newOps list.peek .and .val [] .BuiltIn .and canMergeJumpIf if
+            newOps
+              list.pop optional.unwrap =:: tmp
+              op list.append
+              tmp list.append
+            return
+          end
+        break
+        LABEL_START LABEL_MIDDLE LABEL_END case break
+      end
+      newOps
+        op list.append
+      return
+    break
     LocalJump .case =:: jumpInfo
       0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
       newOps
@@ -280,8 +303,7 @@ proc(
             newCmpType
               .TRUE if CompareType .FALSE else CompareType .TRUE end
             newCmpType=
-          end
-          _BACKEND_ .ASM and $ list.peek .and .val .BuiltIn .and [] canMergeJumpIf if
+          else _BACKEND_ .ASM and $ list.peek .and .val .BuiltIn .and [] canMergeJumpIf _if
             list.pop .and .val .BuiltIn .else ..unreachable end =:: builtInVal
             newCmpType
               builtInVal mergeJumpIf op@ .dataType=
