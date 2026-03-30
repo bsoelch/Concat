@@ -249,6 +249,7 @@ proc( CompilerContext ptr.mut : context -> ) =>: dumpState
 end
 
 proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: usedRegister
+  regId asm.RegisterId.baseReg =:: shadow: regId
   regId context [] .asmContext .isIntRegister () if
     context [] .availableIntRegisters
       regId list.removeValue ..drop
@@ -260,6 +261,7 @@ proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: usedRegi
   end
 end
 proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: freeRegister
+  regId asm.RegisterId.baseReg =:: shadow: regId
   regId context [] .asmContext .isIntRegister () if
     context [] .availableIntRegisters
       $ list.asSlice regId slice.contains ! if
@@ -273,6 +275,11 @@ proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: freeRegi
       end
     context .availableFloatRegisters=
   end
+end
+proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> bool ) =>: checkUse
+  context .registerInfo regId map.at .else
+    false return
+  end [] .uses .None ? ! return
 end
 proc( asm.RegisterId : regId ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: addLocation
   loc .None ? if return end
@@ -349,6 +356,7 @@ proc( ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: removeRegUs
   "unimplemented: unlinking register uses" ..panic
 end
 proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: clearRegUses
+  regId asm.RegisterId.baseReg =:: shadow: regId
   context .registerInfo regId map.at .else
     return
   end =:: regInfo
@@ -448,13 +456,38 @@ proc( ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>
       >$ context .availableIntRegisters=
       valType context setRegSize return
     end
-    "unimplemented: freeing reigister" ..panic
+    "unimplemented: freeing register" ..panic
   else valType ValType.isFloat _if
     context [] .availableFloatRegisters list.pop .if
       >$ context .availableFloatRegisters=
       valType context setRegSize return
     end
-    "unimplemented: freeing reigister" ..panic
+    "unimplemented: freeing register" ..panic
+  end
+  "unsupported value for register" ..panic
+end
+proc( asm.RegisterId slice : skip ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>: nextFreeRegisterSkip
+  skip .length 0 == if valType context nextFreeRegister return end
+  valType ValType.isInt if
+    context [] .availableIntRegisters =:: regs
+    regs .length while $ 1 - >$ 0 != do =:: i
+      regs i [] =:: reg
+      skip reg slice.contains ! if
+        regs i list.remove context .availableIntRegisters=
+        reg valType context setRegSize return
+      end
+    finally i end ..drop
+    "unimplemented: freeing register" ..panic
+  else valType ValType.isFloat _if
+    context [] .availableFloatRegisters =:: regs
+    regs .length while $ 1 - >$ 0 != do =:: i
+      regs i [] =:: reg
+      skip reg slice.contains ! if
+        regs i list.remove context .availableFloatRegisters=
+        reg valType context setRegSize return
+      end
+    finally i end ..drop
+    "unimplemented: freeing register" ..panic
   end
   "unsupported value for register" ..panic
 end
@@ -604,8 +637,12 @@ proc(
   ValueLocation .None context moveToRegister =:: arg1
   arg1 arg2
 end
-enum( ADD SUB MUL AND OR XOR ) =:: BinOp
-{ AMD64.op.ADD AMD64.op.SUB AMD64.op.IMUL AMD64.op.AND AMD64.op.OR AMD64.op.XOR } =:: AMD64_BIN_OPS
+enum( ADD SUB MUL AND OR XOR DIV REM UDIV UMOD ) =:: BinOp
+{
+  AMD64.op.ADD AMD64.op.SUB AMD64.op.IMUL
+  AMD64.op.AND AMD64.op.OR AMD64.op.XOR
+  AMD64.op.IDIV AMD64.op.IDIV AMD64.op.DIV AMD64.op.DIV
+} =:: AMD64_BIN_OPS
 proc( BinOp : op -> asm.OpCode ) =>: binOpCodeAMD64
   AMD64_BIN_OPS op ..tag iSize cast.u []
 end
@@ -648,7 +685,59 @@ proc(
       end
     break
   end
-  "unimplemented configuration for: cmp" ..panic
+  "unimplemented configuration for: bin-op" ..panic
+end
+proc(
+  asm.Atom list
+  ValType : argType
+  BinOp : opType
+  FilePosition ptr : pos
+  CompilerContext ptr.mut : context
+-> asm.Atom list ) =>: opDivBinOp
+  context [] .stack .length 2 u< if ## TODO extract to proc
+    "CodeGen: stack underflow" sb.copyPtr
+    pos context [] .program .errors appendError
+    return
+  end
+  context .asmContext .targetId switch
+    AMD64 case
+      opType switch
+        ADD SUB MUL AND OR XOR case
+          argType opType pos context opBinOp return
+        ## ? handle shifts here
+        DIV UDIV case false break
+        REM UMOD case true break
+      end =:: isRemainder
+      ## pop top value to register, except rax & rdx
+      pos context popValue .and .Val .else "expected single value" ..panic end =:: rhs
+      rhs { AMD64.reg.RAX AMD64.reg.RDX } slice.wrap ValueLocation .None context moveToRegisterSkip =:: rhsReg
+      ## pop second value to rax
+      pos context popValue .and .Val .else "expected single value" ..panic end =:: lhs
+      context dumpState
+      lhs .value .Register ! .or asm.RegisterId.baseReg AMD64.reg.RAX != if
+        ## TODO ensure rax is unused
+        AMD64.reg.RAX context checkUse if
+          "unimplemented: move register" ..panic
+        end
+        argType AMD64.reg.RAX argType context setRegSize asm.Value .Register lhs .value context opMove
+      end
+      ## TODO ensure rdx is unused
+      AMD64.reg.RDX context checkUse if
+        "unimplemented: move register" ..panic
+      end
+      ## division op
+      opType .DIV or opType .REM if
+        argType .I64 if AMD64.op.CQO else AMD64.op.CDQ end asm.op0 list.append ## sign extend rax -> rdx:rax
+      else
+        AMD64.reg.RDX ValType .I32 context setRegSize =:: edx
+        AMD64.op.XOR edx edx asm.op2 list.append ## clear rdx
+      end
+      opType binOpCodeAMD64 rhsReg asm.op1 list.append
+      ## push rax/rdx
+      isRemainder if AMD64.reg.RDX else AMD64.reg.RAX end asm.Value .Register argType StackValue.val context pushValue
+    return
+  end
+  "unimplemented configuration for: division-op" ..panic
 end
 enum( EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: CmpType
 { AMD64.op.SETEQ AMD64.op.SETNE AMD64.op.SETLT AMD64.op.SETLE AMD64.op.SETGE AMD64.op.SETGT AMD64.op.SETB AMD64.op.SETBE AMD64.op.SETAE  AMD64.op.SETA } =:: AMD64_CMP_OPS
@@ -697,15 +786,27 @@ end
 proc(
   asm.Atom list
   TypedValue : val
+  asm.RegisterId slice : skip
   ValueLocation : loc
   CompilerContext ptr.mut : context
--> asm.Atom list asm.RegisterId ) =>: moveToRegister
-  val .value .Register .if return else ..drop end
-  val .valType context nextFreeRegister =:: reg
+-> asm.Atom list asm.RegisterId ) =>: moveToRegisterSkip
+  val .value .Register .if
+    skip $1 slice.contains ! if return end
+    "update register position" ..panic
+  else ..drop end
+  skip val .valType context nextFreeRegisterSkip =:: reg
   reg loc context addLocation
   ## TODO update register-id size for returned register
   val .valType reg asm.Value .Register val .value context opMove
   reg return
+end
+proc(
+  asm.Atom list
+  TypedValue : val
+  ValueLocation : loc
+  CompilerContext ptr.mut : context
+-> asm.Atom list asm.RegisterId ) =>: moveToRegister
+  val asm.RegisterId slice.empty loc context moveToRegisterSkip
 end
 proc(
   asm.Atom list
@@ -1139,6 +1240,14 @@ proc(
     SUB_I64 case ValType .I64 BinOp .SUB pos context opBinOp return
     MUL_I32 case ValType .I32 BinOp .MUL pos context opBinOp return
     MUL_I64 case ValType .I64 BinOp .MUL pos context opBinOp return
+    DIV_I32 case ValType .I32 BinOp .DIV pos context opDivBinOp return
+    DIV_I64 case ValType .I64 BinOp .DIV pos context opDivBinOp return
+    UDIV_I32 case ValType .I32 BinOp .UDIV pos context opDivBinOp return
+    UDIV_I64 case ValType .I64 BinOp .UDIV pos context opDivBinOp return
+    REM_I32 case ValType .I32 BinOp .REM pos context opDivBinOp return
+    REM_I64 case ValType .I64 BinOp .REM pos context opDivBinOp return
+    UMOD_I32 case ValType .I32 BinOp .UMOD pos context opDivBinOp return
+    UMOD_I64 case ValType .I64 BinOp .UMOD pos context opDivBinOp return
     AND_I32 case ValType .I32 BinOp .AND pos context opBinOp return
     AND_I64 case ValType .I64 BinOp .AND pos context opBinOp return
     OR_I32  case ValType .I32 BinOp .OR  pos context opBinOp return

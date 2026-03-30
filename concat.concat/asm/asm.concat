@@ -19,6 +19,9 @@ namespace: asm
     proc( RegisterId RegisterId : newSize -> RegisterId ) =>: export: setSize
       BASE_MASK & newSize |
     end
+    proc( RegisterId -> RegisterId ) =>: export: baseReg
+      BASE_MASK &
+    end
     ( RegisterId -> bool ) : alias: export: toBool i32.toBool
     ( RegisterId -> RegisterId  ) : alias: export: flip i32.flip
     ( RegisterId RegisterId -> RegisterId  ) : alias: export: and i32.and
