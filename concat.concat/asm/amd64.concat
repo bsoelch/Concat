@@ -57,8 +57,8 @@ namespace: AMD64
       "mov":s "movzx":s "movsx":s
       "add":s "sub":s "imul":s "div":s "idiv":s "cdq":s "cqo":s
       "and":s "or":s "xor":s "cmp":s "test":s
-      "jmp":s "jeq":s "jne":s "jlt":s "jle":s "jge":s "jgt":s "ja":s "jae":s "jbe":s "jb":s
-      "seteq":s "setne":s "setlt":s "setle":s "setge":s "setgt":s "seta":s "setae":s "setbe":s "setb":s
+      "jmp":s "je":s "jne":s "jl":s "jle":s "jge":s "jg":s "ja":s "jae":s "jbe":s "jb":s
+      "sete":s "setne":s "setl":s "setle":s "setge":s "setg":s "seta":s "setae":s "setbe":s "setb":s
       "call":s "ret":s "push":s "pop":s
     } =:: OPCODE_NAMES
     proc( stringBuilder OpCode : opCode -> stringBuilder ) =>: export: appendName
