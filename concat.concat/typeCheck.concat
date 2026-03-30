@@ -1152,6 +1152,7 @@ proc(
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: localJump
+  state [] .reachable ! if return end ## ignore unreachable jumps
   state .compiledOps [] .length =:: opOffset
   state .jumpOffsets
     labelId
@@ -4494,10 +4495,10 @@ proc(
                   state .stack branchTree.startBranch
                 BranchPoint new list.append
               branches =[]
-              false state .reachable=
               whileBlock
                 blockType .CONTINUE if [] .finallyLabel else [] .endLabel end
               CompareType .NONE op .pos state localJump
+              false state .reachable=
               continue.opLoop
             else ..drop end
             break
@@ -5244,19 +5245,16 @@ proc(
                 op .pos errors appendError
               end
             end
-            branchPoints list.free ..drop
+            whileBlock .whileLabel CompareType .NONE op .pos state localJump
+            whileBlock .whileLabel LocalLabelType .HINT_END op .pos state localLabel
+            whileBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             whileBlock .breakBranches .length 0:iSize != state .reachable=
-            whileId op@ .val .BlockEnd .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
+            branchPoints list.free ..drop
             whileBlock .breakBranches list.free ..drop
             whileBlock .breakCastOffsets list.free ..drop
             whileBlock .continueBranches list.free ..drop
             whileBlock .continueCastOffsets list.free ..drop
             whileBlock .doBranches list.free ..drop
-            whileBlock .whileLabel CompareType .NONE op .pos state localJump
-            whileBlock .whileLabel LocalLabelType .HINT_END op .pos state localLabel
-            whileBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             idContext id.closeScope ! "closing switch-scope worked" assert
             continue.opLoop
           WHILE DO case ## end-while/end-do should not be created by parser
