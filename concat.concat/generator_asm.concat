@@ -714,14 +714,13 @@ proc(
       rhs { AMD64.reg.RAX AMD64.reg.RDX } slice.wrap ValueLocation .None context moveToRegisterSkip =:: rhsReg
       ## pop second value to rax
       pos context popValue .and .Val .else "expected single value" ..panic end =:: lhs
+      ## TODO! if lhs is rax ensure there is no second use
       lhs .value .Register ! .or asm.RegisterId.baseReg AMD64.reg.RAX != if
-        ## TODO ensure rax is unused
         AMD64.reg.RAX context checkUse if
           "unimplemented: move register" ..panic
         end
         argType AMD64.reg.RAX argType context setRegSize asm.Value .Register lhs .value context opMove
       end
-      ## TODO ensure rdx is unused
       AMD64.reg.RDX context checkUse if
         "unimplemented: move register" ..panic
       end
