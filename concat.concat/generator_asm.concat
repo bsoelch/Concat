@@ -13,13 +13,14 @@ namespace: ValType
   proc( Type : t TypeContext ptr : typeContext -> ValType ) =>: fromType
     t typeContext types.unwrapNamed switch
       PrimitiveType .case switch
-        BOOL I8 case ValType .I8 return
-        I16 case ValType .I16 return
-        I32 case ValType .I32 return
-        I64 case ValType .I64 return
-        F16 case ValType .F16 return
-        F32 case ValType .F32 return
-        F64 case ValType .F64 return
+        BOOL case ValType .BOOL return
+        I8   case ValType .I8 return
+        I16  case ValType .I16 return
+        I32  case ValType .I32 return
+        I64  case ValType .I64 return
+        F16  case ValType .F16 return
+        F32  case ValType .F32 return
+        F64  case ValType .F64 return
         TYPE case ValType .EMPTY return
       end break
       default
@@ -713,7 +714,6 @@ proc(
       rhs { AMD64.reg.RAX AMD64.reg.RDX } slice.wrap ValueLocation .None context moveToRegisterSkip =:: rhsReg
       ## pop second value to rax
       pos context popValue .and .Val .else "expected single value" ..panic end =:: lhs
-      context dumpState
       lhs .value .Register ! .or asm.RegisterId.baseReg AMD64.reg.RAX != if
         ## TODO ensure rax is unused
         AMD64.reg.RAX context checkUse if
@@ -1036,7 +1036,7 @@ proc(
   context [] .program =:: program
   program .errors =:: errors
   src .valType dst .valType != if
-    "stack-values are out of sync" sb.copyPtr pos errors appendError
+    "CodeGen: stack-values are out of sync" sb.copyPtr pos errors appendError
     return
   end
   src .value dst .value asm.Value.equal if
@@ -1106,7 +1106,7 @@ proc(
     oldStack i [] =:: targetVal
     context [] .stack i [] =:: srcVal
     srcVal ..tag targetVal ..tag != if
-      "stack-values are out of sync" sb.copyPtr pos errors appendError
+      "CodeGen: stack-values are out of sync" sb.copyPtr pos errors appendError
       state context resetState return
     end
     srcVal switch
@@ -1133,7 +1133,7 @@ proc(
     varInfo .cachedValue .None ? if
       "unimplemented: load variable" ..panic
     else varInfo .cachedValue ..tag varState .location ..tag != _if
-      "stack-values are out of sync" sb.copyPtr pos errors appendError
+      "CodeGen: stack-values are out of sync" sb.copyPtr pos errors appendError
       state context resetState return
     end
     varInfo .cachedValue switch
@@ -1281,20 +1281,23 @@ proc(
       outTypes i [] typeContext ValType.fromType =:: outValType
       outValType ValType.isInt if
         intCount AMD64.reg.intRet .if
-          asm.Value .Register outValType StackValue.val expectedStack i =[]
+          outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
         else
           "unimplemented: memory return" ..panic
         end
       else outValType ValType.isFloat _if
         intCount AMD64.reg.floatRet .if
-          asm.Value .Register outValType StackValue.val expectedStack i =[]
+          outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
         else
           "unimplemented: memory return" ..panic
         end
       else
         "unsuported value type for return" ..panic
       end
-    finally i end ..drop
+    finally i end expectedStack .length u<= if
+      "Wrong number of values for return statement" sb.copyPtr
+      pos errors appendError
+    end
     ## TODO clear all non-stack values from registers
     expectedStack CachedVariable slice.emptyMutable RegisterState new pos context restoreState
   end
@@ -1320,13 +1323,13 @@ proc(
     argTypes $ .length offset - [] typeContext ValType.fromType =:: argValType
     argValType ValType.isInt if
       intCount AMD64.reg.intArg .if
-        asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
+        argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
       else
         "unimplemented: memory argument" ..panic
       end
     else argValType ValType.isFloat _if
       intCount AMD64.reg.floatArg .if
-        asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
+        argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
       else
         "unimplemented: memory argument" ..panic
       end
