@@ -3943,9 +3943,6 @@ proc(
             false 1 op .pos state clearReferences
             state inIfCondition ! if
               program nextIfId =:: blockId
-              blockId op@ .val .Block .else
-                "expected block":s op ..line state internalError ..unreachable
-              end .blockId=
               state .stack branchTree.startBranch =:: ifRoot
               ifRoot blockId op .pos state newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
@@ -3954,9 +3951,6 @@ proc(
             state peekBlock .and .If .else
               "expected if-block":s op ..line state internalError ..unreachable
             end =:: ifBlock
-            ifBlock [] .blockId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             blockType .AND_IF if
               ifBlock [] .flags
                 $ IfBlockFlags.hasOrIf & ? and ifBlock [] .andOrIfScope .None ? if
@@ -4048,9 +4042,6 @@ proc(
             ifBlock [] .flags
               IfBlockFlags.hasIf |
             ifBlock .flags=
-            ifBlock [] .blockId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             ifBlock [] .elseLabel CompareType .FALSE op .pos state localJump
             ifBlock [] .ifLabel LocalLabelType .LABEL_END op .pos state localLabel
             ifBlock [] .andBranches
@@ -4135,9 +4126,6 @@ proc(
             else ..drop
               idContext id.openScope
             end
-            ifBlock [] .blockId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             state [] .stack branchTree.depth =:: ifTypes
             state .stack
               ifBlock [] .branchRoot
@@ -4478,9 +4466,6 @@ proc(
                 whileBlock .breakCastOffsets
                 whileBlock .breakBranches
               end =:: branches =:: castOffsets
-              whileBlock [] .blockId op@ .val .Block .else
-                "expected block":s op ..line state internalError ..unreachable
-              end .blockId=
               ## add space for casts of values on stack
               castOffsets []
                 ## reserveOps
@@ -4516,9 +4501,6 @@ proc(
               $ BlockId cast =:: whileId
               1 +
             program .whileCount=
-            whileId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             ## newWhileBlock
               whileBranch
               blockInfo .blockName
@@ -4570,9 +4552,6 @@ proc(
                 state .stack branchTree.startBranch
               BranchPoint new list.append
             branches =[]
-            whileBlock [] .blockId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             blockType .AND_DO if
               whileBlock [] .endLabel CompareType .FALSE
             else
@@ -4602,9 +4581,6 @@ proc(
             end
             ## passing an offset of 1 ensures that cast-offsets consider do-condition
             false 1 op .pos state clearReferences
-            whileBlock [] .blockId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             whileBlock []
               .breakCastOffsets .length i32 cast.u
             whileBlock .doBranchIndex=
@@ -4675,9 +4651,6 @@ proc(
             end =:: whileBlock
             false 0 op .pos state clearReferences
             true whileBlock .hasFinally=
-            whileBlock [] .blockId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             whileBlock [] .continueBranches =:: mut: continueBranches
             state [] .reachable if
               whileBlock [] .continueCastOffsets
@@ -4748,9 +4721,6 @@ proc(
               andOrBlock [] .blockId
             else
               program nextAndOrId =:: blockId
-              blockId op@ .val .Block .else
-                "expected block":s op ..line state internalError ..unreachable
-              end .blockId=
               state .stack branchTree.startBranch =:: rootBranch
               rootBranch blockId op .pos state newAndOrBlock
                 $ .endLabel LocalLabelType .HINT_START op .pos state localLabel
@@ -4766,9 +4736,6 @@ proc(
             state requireTypes .Err ? if
               continue.opLoop
             end
-            blockId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             state peekBlock .and .AndOr .else
               "expected and-or block":s op ..line state internalError ..unreachable
             end =:: currentBlock
@@ -5013,9 +4980,6 @@ proc(
                 op .pos errors appendError
               end
             end
-            closedIf .blockId op@ .val .BlockEnd .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             closedIf .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             idContext id.closeScope ! "closing else-scope worked" assert
             ## cleanup closed block
@@ -5273,9 +5237,6 @@ proc(
               "the end of all branches of an and/or block should be reachable, use if-else for conditional exit" sb.copyPtr
               op .pos errors appendError
             end
-            andOrBlock .blockId op@ .val .BlockEnd .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
             andOrBlock .endLabel LocalLabelType .LABEL_END op .pos state localLabel
             andOrBlock .branches =:: mut: branches
             branches
