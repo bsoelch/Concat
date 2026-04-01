@@ -5569,8 +5569,9 @@ proc(
             continue.opLoop
           end
           idContext [] .arraySizeBuffer
-            state popValue .else
-              "stack underflow":s op ..line state internalError ..unreachable
+            state popValue .else ..drop
+              "expected constant" sb.copyPtr op .pos errors appendError
+               continue.opLoop
             end =:: constVal
             constVal switch
               TypeId .case optional.wrap baseType0= break
