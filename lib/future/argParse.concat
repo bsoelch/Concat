@@ -1,15 +1,71 @@
 import stringBuilder
+import print
 using std.literals.
 
 namespace: args
+  enum( DEFAULT EXTENDED SPECIAL IGNORE ) =:: export: HelpLevel
+  struct(
+    string : name
+    iSize : infoLocation
+  ) =:: ArgName
+  union(
+    ## 0 parameters
+    bool ptr.mut : Enable
+    bool ptr.mut : Disable
+    bool list ptr.mut : AppendTrue
+    bool list ptr.mut : AppendFalse
+    ## 1 parameter
+    string ptr.mut : Set
+    string list ptr.mut : Append
+    ## n parameters
+    string list ptr.mut : AppendAll
+  ) =:: ArgInfo
+  namespace: ArgName
+    proc( ArgName : a ArgName : b -> i32 ) =>: cmp
+      a .name b .name string.compare
+    end
+  end
   struct(
     string : argPrefixes
+    ArgName list : argNames
+    ArgInfo list : argInfos
+    stringBuilder : helpDefault
+    stringBuilder : helpExtended
+    stringBuilder : helpSpecial
   ) =:: ArgParser
   proc( -> ArgParser ) =>: export: start
-    "-":s ArgParser new
+    "-":s
+      ArgName list.empty
+      ArgInfo list.empty
+      sb.empty
+      sb.empty
+      sb.empty
+    ArgParser new
   end
   proc( ArgParser string -> ArgParser ) =>: export: prefixes
     >$ .argPrefixes=
+  end
+  proc( ArgParser string : name -> ArgParser ) =>: checkArgName
+    ## TODO use stderr
+    name .length 0 == if
+      "Warning: empty-argument name":s io.println
+      return
+    end
+    $ .argPrefixes name 0 string.charAt string.contains ! if
+      "Warning: argument `":s io.print
+      name io.print
+      "` does not start with a valid argument prefix":s io.println
+    end
+  end
+  proc( ArgParser string : name ArgInfo : argInfo -> ArgParser ) =>: addArg
+    name checkArgName
+    $ .argInfos
+      $ .length =:: argIndex
+      argInfo list.append
+    >$ .argInfos=
+    $ .argNames
+      name argIndex ArgName new list.append
+    >$ .argNames=
   end
   proc( ArgParser -> ArgParser ) =>: export: warnUnparsed
 
@@ -19,23 +75,23 @@ namespace: args
   end
 end
 namespace: arg
-  enum( DEFAULT EXTENDED SPECIAL IGNORE ) =:: export: HelpLevel
   struct(
     string : helpText
+    args.HelpLevel : helpLevel
   ) =:: Common
   namespace: Common
     proc( -> Common ) =>: export: default
-      "":s Common new
+      "":s args.HelpLevel .DEFAULT Common new
     end
   end
   type .with( 0 ..types.getElement Common == ) =:: ArgDataType
   proc( ArgDataType : auto: A  A string -> A ) =>: export: helpText
     >$ .common.helpText=
   end
-  proc( ArgDataType : auto: A  A HelpLevel : level -> A ) =>: export: helpLevel
-    
+  proc( ArgDataType : auto: A  A args.HelpLevel -> A ) =>: export: helpLevel
+    >$ .common.helpLevel=
   end
-  proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disable
+  proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disables
     
   end
   proc( ArgDataType : auto: A  A string list ptr.mut : tail -> A ) =>: export: consumeTail
@@ -53,12 +109,16 @@ namespace: arg
       bool ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: setArg
+      argName location args.ArgInfo .Enable args.addArg
+      ## TODO handle help-text
     end
     proc( args.ArgParser
       Flag : argInfo
       bool list ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: collectArg
+      argName location args.ArgInfo .AppendTrue args.addArg
+      ## TODO handle help-text
     end
   end
   struct(
@@ -91,10 +151,10 @@ namespace: arg
   end
   struct(
     Common : common
-    string : shadow: enable
-    string : shadow: disable
+    string : enable
+    string : disable
   ) =:: FlagToggle
-  proc( string : shadow: enable string : shadow: disable -> FlagToggle ) =>: export: flagToggle
+  proc( string : enable string : disable -> FlagToggle ) =>: export: flagToggle
     Common.default enable disable FlagToggle new
   end
   namespace: flagToggle
@@ -102,11 +162,17 @@ namespace: arg
       FlagToggle : argInfo
       bool ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
+      argInfo .enable location args.ArgInfo .Enable args.addArg
+      argInfo .disable location args.ArgInfo .Disable args.addArg
+      ## TODO handle help-text
     end
     proc( args.ArgParser
       FlagToggle : argInfo
       bool list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
+      argInfo .enable location args.ArgInfo .AppendTrue args.addArg
+      argInfo .disable location args.ArgInfo .AppendFalse args.addArg
+      ## TODO handle help-text
     end
   end
   struct(
@@ -121,12 +187,16 @@ namespace: arg
       string ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: setArg
+      argName location args.ArgInfo .Set args.addArg
+      ## TODO handle help-text
     end
     proc( args.ArgParser
       ValueArg : argInfo
       string list ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: collectArg
+      argName location args.ArgInfo .Append args.addArg
+      ## TODO handle help-text
     end
   end
   struct(
