@@ -44,7 +44,7 @@ proc(
 end
 
 proc( BuiltIn -> bool ) =>: canMergeJumpIf
-  BuiltIn ..length 222 == "no new builtins" assert
+  BuiltIn ..length 223 == "no new builtins" assert
   switch
     NOT_BOOL ## !
     EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 ## ==
@@ -75,7 +75,7 @@ end
 proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJumpIf
   cmpType .FALSE or cmpType .TRUE end "can only merge cmp.true and cmp.false" assert
   cmpType .FALSE =:: flip
-  BuiltIn ..length 222 == "no new builtins" assert
+  BuiltIn ..length 223 == "no new builtins" assert
   builtIn switch
     NOT_BOOL case
       flip if CompareType .TRUE else CompareType .FALSE end

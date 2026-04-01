@@ -1880,7 +1880,7 @@ proc(
     Type .Undefined
   end =:: baseType
   baseType context toValType =:: baseVal
-  BuiltIn ..length 222 == "no new built-ins" assert
+  BuiltIn ..length 223 == "no new built-ins" assert
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       sb "neg":s baseVal pos context appendUnaryOperator

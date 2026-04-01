@@ -654,6 +654,13 @@ namespace: interpreter
         end
           ConstValue .TypeId
         OperatorResult .SUCCESS return
+      TYPE_UNION_TAG case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId .else
+          "argument is no type" ..panic
+        end typeContext types.enumTagInfo ..drop
+          ConstValue .TypeId
+        OperatorResult .SUCCESS return
       TYPE_GET_UNION_ELEMENT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else

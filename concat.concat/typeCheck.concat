@@ -1951,7 +1951,7 @@ proc(
       " got: " sb.appendS
       state [] .stack branchTree.depth sb.appendI
     op [] .pos errors appendError
-    ## XXX report position of lowest stack value
+    ## TODO? report position of lowest stack value
     return
   end
   ## requireTypes
@@ -2925,7 +2925,7 @@ proc(
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR case
             idInfo .nameId =:: nameId
-            mutable ! and constValue .None ? ! and idInfo .idType .GLOBAL_VAR if
+            op .dataType typeContext types.isType or mutable ! and constValue .None ? ! and idInfo .idType .GLOBAL_VAR if
               ## replace access to immutable global variable with constant
               constValue op .dataType op .pos opConst op=
             end
