@@ -80,6 +80,7 @@ namespace: args
   ) =:: StringArgLocation
   struct(
     string : argPrefixes
+    string : usage
     ArgName list : argNames
     ArgInfo list : argInfos
     stringBuilder : helpDefault
@@ -103,6 +104,9 @@ namespace: args
   end
   proc( ArgParser string -> ArgParser ) =>: export: prefixes
     >$ .argPrefixes=
+  end
+  proc( ArgParser -> ArgParser ) =>: export: usage
+    >$ .usage=
   end
   proc( ArgParser string : name -> ArgParser ) =>: checkArgName
     ## TODO use stderr
