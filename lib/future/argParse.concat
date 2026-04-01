@@ -16,6 +16,9 @@ namespace: args
   ( type : T -> type ) =>: setValue
     struct( T ptr.mut : dst T : val )
   end
+  ( type : T -> type ) =>: appendValue
+    struct( T list ptr.mut : dst T : val )
+  end
   union(
     ## 0 parameters
     bool ptr.mut : Enable
@@ -26,6 +29,7 @@ namespace: args
     i16 setValue : SetI16
     i32 setValue : SetI32
     i64 setValue : SetI64
+    string setValue : SetString
     i8  setValue : BitEnableI8
     i16 setValue : BitEnableI16
     i32 setValue : BitEnableI32
@@ -34,17 +38,24 @@ namespace: args
     i16 setValue : BitDisableI16
     i32 setValue : BitDisableI32
     i64 setValue : BitDisableI64
+    i8  appendValue : AppendI8
+    i16 appendValue : AppendI16
+    i32 appendValue : AppendI32
+    i64 appendValue : AppendI64
+    string appendValue : AppendString
     ## 1 parameter
     string ptr.mut : Set
     string list ptr.mut : Append
     ## n parameters
+    string list ptr.mut : SetAll
     string list ptr.mut : AppendAll
   ) =:: ArgInfo
   proc( i8  ptr.mut i8  -> ArgInfo ) =>: argInfoSetValI8  i8   setValue new ArgInfo .SetI8  end
   proc( i16 ptr.mut i16 -> ArgInfo ) =>: argInfoSetValI16 i16  setValue new ArgInfo .SetI16 end
   proc( i32 ptr.mut i32 -> ArgInfo ) =>: argInfoSetValI32 i32  setValue new ArgInfo .SetI32 end
   proc( i64 ptr.mut i64 -> ArgInfo ) =>: argInfoSetValI64 i64  setValue new ArgInfo .SetI64 end
-  overload: argInfoSetVal argInfoSetValI8 argInfoSetValI16 argInfoSetValI32 argInfoSetValI64 end
+  proc( string ptr.mut string -> ArgInfo ) =>: argInfoSetValString string  setValue new ArgInfo .SetString end
+  overload: argInfoSetVal argInfoSetValI8 argInfoSetValI16 argInfoSetValI32 argInfoSetValI64 argInfoSetValString end
   proc( i8  ptr.mut i8  -> ArgInfo ) =>: argInfoBitEnableValI8  i8   setValue new ArgInfo .BitEnableI8  end
   proc( i16 ptr.mut i16 -> ArgInfo ) =>: argInfoBitEnableValI16 i16  setValue new ArgInfo .BitEnableI16 end
   proc( i32 ptr.mut i32 -> ArgInfo ) =>: argInfoBitEnableValI32 i32  setValue new ArgInfo .BitEnableI32 end
@@ -55,6 +66,12 @@ namespace: args
   proc( i32 ptr.mut i32 -> ArgInfo ) =>: argInfoBitDisableValI32 i32  setValue new ArgInfo .BitDisableI32 end
   proc( i64 ptr.mut i64 -> ArgInfo ) =>: argInfoBitDisableValI64 i64  setValue new ArgInfo .BitDisableI64 end
   overload: argInfoBitDisableVal argInfoBitDisableValI8 argInfoBitDisableValI16 argInfoBitDisableValI32 argInfoBitDisableValI64 end
+  proc( i8  list ptr.mut i8  -> ArgInfo ) =>: argInfoAppendValI8  i8   appendValue new ArgInfo .AppendI8  end
+  proc( i16 list ptr.mut i16 -> ArgInfo ) =>: argInfoAppendValI16 i16  appendValue new ArgInfo .AppendI16 end
+  proc( i32 list ptr.mut i32 -> ArgInfo ) =>: argInfoAppendValI32 i32  appendValue new ArgInfo .AppendI32 end
+  proc( i64 list ptr.mut i64 -> ArgInfo ) =>: argInfoAppendValI64 i64  appendValue new ArgInfo .AppendI64 end
+  proc( string list ptr.mut string -> ArgInfo ) =>: argInfoAppendValString string appendValue new ArgInfo .AppendString end
+  overload: argInfoAppendVal argInfoAppendValI8 argInfoAppendValI16 argInfoAppendValI32 argInfoAppendValI64 argInfoAppendValString end
   struct(
     string : argPrefixes
     ArgName list : argNames
@@ -284,42 +301,75 @@ namespace: arg
       string list ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: setArg
+      argName location args.ArgInfo .SetAll args.addArg
+      ## TODO handle help-text
     end
     proc( args.ArgParser
       ValuesArg : argInfo
       string list ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: collectArg
+      argName location args.ArgInfo .AppendAll args.addArg
+      ## TODO handle help-text
     end
+  end
+  proc( type : T -> type ) =>: SelectArgOption
+    struct( string : name T : shadow: value )
   end
   proc( type : T -> type ) =>: SelectArg
     struct(
       Common : common
-      string list : optionNames
-      T list : optionValues
+      T SelectArgOption list : options
       T optional : defaultValue
     )
   end
   proc( type : static: T -> T SelectArg ) =>: export: select
-    Common.default string list.empty T list.empty T optional.empty T SelectArg new
+    Common.default T SelectArgOption list.empty T optional.empty T SelectArg new
   end
   namespace: select
     proc( type : auto: T T SelectArg T -> T SelectArg ) =>: export: default
       optional.wrap >$ .defaultValue=
     end
     proc( type : auto: T T SelectArg string : name T : val -> T SelectArg ) =>: export: option
-      $ .optionNames name list.append >$ .optionNames=
-      $ .optionValues val list.append >$ .optionValues=
+      $ .options name val T SelectArgOption new list.append >$ .options=
+    end
+    proc( type : static: T -> type ) =>: static: nowrap: argBaseType
+      T string == if
+        string return
+      else
+        T ..types.unwrapNamed =:: BaseType
+      BaseType type.isInteger _if
+        BaseType return
+      else BaseType type.isEnum _if
+        BaseType ..types.unionTag ..types.unwrapNamed return
+      else
+        "SelectArg is currently only supported for integers, enums and strings" ..compiler.error
+      end
     end
     proc( type : auto: T  args.ArgParser
       T SelectArg : argInfo
       T ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
+      T argBaseType =:: BaseType
+      argInfo .options for =:: elt
+        elt .name
+        location BaseType ptr.mut cast!
+          elt .value T type.isNamedEnum if ..tag end BaseType cast
+        args.argInfoSetVal args.addArg
+      end
+      argInfo .defaultValue .if location =[] end
     end
-    proc( type : auto: T  args.ArgParser
-      T SelectArg : argInfo
-      T list ptr.mut : location
+    proc( type.namedInteger : auto: I  args.ArgParser
+      I SelectArg : argInfo
+      I list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
+      T argBaseType =:: BaseType
+      argInfo .options for =:: elt
+        elt .name
+        location BaseType list ptr.mut cast!
+          elt .value T type.isNamedEnum if ..tag end BaseType cast
+        args.argInfoAddVal args.addArg
+      end
     end
   end
   struct(
