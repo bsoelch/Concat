@@ -4668,6 +4668,7 @@ proc(
             end
             ## merge continue branches
             continueBranches .length 1:iSize u>= if
+              true state .reachable=
               continueBranches .length branchTree.NodeId list.create
                 continueBranches for .node list.append end
               =:: mut: branchPoints
