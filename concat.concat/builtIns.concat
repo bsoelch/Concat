@@ -441,11 +441,11 @@ proc(
   types.primitive.I32 args@ 1 =[]
   ## newProcedure
     args@ 2 slice.create
-    types.primitive.BOOL@ 1 slice.create
+    types.primitive.TYPE@ 1 slice.create
     NameId optional slice.empty
     CallingConvention.DEFAULT
-  typeContext types.newProcedure =:: ti32_b
-  ti32_b tt_b t_t t_b return
+  typeContext types.newProcedure =:: ti32_t
+  ti32_t tt_b t_t t_b return
 end
 
 proc(
