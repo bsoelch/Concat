@@ -92,6 +92,7 @@ namespace: args
   ) =:: ArgParser
   proc( -> ArgParser ) =>: export: start
     "-":s
+      "":s
       ArgName list.empty
       ArgInfo list.empty
       sb.empty
@@ -105,7 +106,7 @@ namespace: args
   proc( ArgParser string -> ArgParser ) =>: export: prefixes
     >$ .argPrefixes=
   end
-  proc( ArgParser -> ArgParser ) =>: export: usage
+  proc( ArgParser string -> ArgParser ) =>: export: usage
     >$ .usage=
   end
   proc( ArgParser string : name -> ArgParser ) =>: checkArgName
