@@ -124,20 +124,20 @@ namespace: args
   proc( ArgParser string -> ArgParser ) =>: export: usage
     >$ .usage=
   end
-  proc( ArgParser string : name -> ArgParser ) =>: checkArgName
+  proc( ArgParser : args string : name -> ) =>: checkArgName
     ## TODO use stderr
     name .length 0 == if
       "Warning: empty-argument name":s io.println
       return
     end
-    $ .argPrefixes name 0 string.charAt string.contains ! if
+    args .argPrefixes name 0 string.charAt string.contains ! if
       "Warning: argument `":s io.print
       name io.print
       "` does not start with a valid argument prefix":s io.println
     end
   end
   proc( ArgParser string : name ArgInfo : argInfo -> ArgParser ) =>: addArg
-    name checkArgName
+    $ name checkArgName
     $ .argInfos
       $ .length =:: argIndex
       argInfo list.append
