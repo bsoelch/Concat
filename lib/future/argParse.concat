@@ -81,7 +81,7 @@ namespace: arg
   ) =:: Common
   namespace: Common
     proc( -> Common ) =>: export: default
-      "":s args.HelpLevel .DEFAULT Common new
+      string.empty args.HelpLevel .DEFAULT Common new
     end
   end
   type .with( 0 ..types.getElement Common == ) =:: ArgDataType
@@ -121,32 +121,43 @@ namespace: arg
       ## TODO handle help-text
     end
   end
-  struct(
-    Common : common
-    string list : options
-    string : matchAll
-  ) =:: FlagList
-  proc( -> FlagList ) =>: export: flagList
-    Common.default string list.empty "":s FlagList new
+  proc( type.namedInteger : I -> type ) =>: FlagGroup
+    struct(
+      Common : common
+      string list : options
+      I list : optionValues
+      string : matchAll
+      I : matchAllValue
+    )
   end
-  namespace: flagList
-    proc( FlagList string -> FlagList ) =>: export: option
-      $1 .options >$ list.append >$ .options=
+  proc( type.namedInteger : static: I -> I FlagGroup ) =>: export: flagGroup
+    Common.default string list.empty I list.empty string.empty 0 I cast I FlagGroup new
+  end
+  namespace: flagGroup
+    proc( type.namedInteger : auto: I
+      I FlagGroup
+      string : name I : shadow: value
+    -> I FlagGroup ) =>: export: option
+      $ .options name list.append >$ .options=
+      $ .optionValues value list.append >$ .optionValues=
+      $ .matchAllValue value | >$ .matchAllValue=
     end
-    proc( FlagList string -> FlagList ) =>: export: matchAll
+    proc( type.namedInteger : auto: I
+      I FlagGroup string
+    -> I FlagGroup ) =>: export: matchAll
       >$ .matchAll=
     end
-    proc( args.ArgParser
-      FlagList : argInfo
-      string ptr.mut : location
-      string : argName
+    proc( type.namedInteger : auto: I  args.ArgParser
+      I FlagGroup : argInfo
+      I ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
+      
     end
-    proc( args.ArgParser
-      FlagList : argInfo
-      string list ptr.mut : location
-      string : argName
+    proc( type.namedInteger : auto: I  args.ArgParser
+      I FlagGroup : argInfo
+      I ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
+      
     end
   end
   struct(
@@ -277,13 +288,13 @@ namespace: arg
 
   end
   overload: export: set
-    flag.setArg flagToggle.setArg flagList.setArg
+    flag.setArg flagToggle.setArg flagGroup.setArg
     value.setArg values.setArg
     select.setArg
     misc.setArg
   end
   overload: export: collect
-    flag.collectArg flagToggle.collectArg flagList.collectArg
+    flag.collectArg flagToggle.collectArg flagGroup.collectArg
     value.collectArg values.collectArg
     select.collectArg
     misc.collectArg
