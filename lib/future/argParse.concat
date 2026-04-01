@@ -21,6 +21,7 @@ namespace: args
   end
   union(
     ## 0 parameters
+    HelpLevel : Help
     bool ptr.mut : Enable
     bool ptr.mut : Disable
     bool list ptr.mut : AppendTrue
@@ -72,6 +73,11 @@ namespace: args
   proc( i64 list ptr.mut i64 -> ArgInfo ) =>: argInfoAppendValI64 i64  appendValue new ArgInfo .AppendI64 end
   proc( string list ptr.mut string -> ArgInfo ) =>: argInfoAppendValString string appendValue new ArgInfo .AppendString end
   overload: argInfoAppendVal argInfoAppendValI8 argInfoAppendValI16 argInfoAppendValI32 argInfoAppendValI64 argInfoAppendValString end
+  union(
+    _ : None
+    string ptr.mut : Set
+    string list ptr.mut : Append
+  ) =:: StringArgLocation
   struct(
     string : argPrefixes
     ArgName list : argNames
@@ -79,6 +85,9 @@ namespace: args
     stringBuilder : helpDefault
     stringBuilder : helpExtended
     stringBuilder : helpSpecial
+    StringArgLocation : headLocation
+    StringArgLocation : miscLocation
+    StringArgLocation : tailLocation
   ) =:: ArgParser
   proc( -> ArgParser ) =>: export: start
     "-":s
@@ -87,6 +96,9 @@ namespace: args
       sb.empty
       sb.empty
       sb.empty
+      StringArgLocation .None
+      StringArgLocation .None
+      StringArgLocation .None
     ArgParser new
   end
   proc( ArgParser string -> ArgParser ) =>: export: prefixes
@@ -141,7 +153,7 @@ namespace: arg
   proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disables
 
   end
-  proc( ArgDataType : auto: A  A string list ptr.mut : tail -> A ) =>: export: consumeTail
+  proc( ArgDataType : auto: A  A string list ptr.mut : shadow: tail -> A ) =>: export: consumeTail
 
   end
   struct(
@@ -382,22 +394,71 @@ namespace: arg
     proc( MiscArgs -> MiscArgs ) =>: export: require
 
     end
-    proc( MiscArgs -> MiscArgs ) =>: export: allowAfterArg
-
-    end
     proc( args.ArgParser
       MiscArgs : argInfo
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
+      location >$ .miscLocation.Set=
+      ## TODO handle help-text
     end
     proc( args.ArgParser
       MiscArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
+      location >$ .miscLocation.Append=
     end
   end
-  proc( args.ArgParser string : argName -> args.ArgParser ) =>: export: help
+  struct(
+    Common : common
+  ) =:: HeadArgs
+  proc( -> HeadArgs ) =>: export: head
+    Common.default HeadArgs new
+  end
+  namespace: head
+    proc( HeadArgs -> HeadArgs ) =>: export: require
 
+    end
+    proc( args.ArgParser
+      HeadArgs : argInfo
+      string ptr.mut : location
+    -> args.ArgParser ) =>: export: setArg
+      location >$ .headLocation.Set=
+      ## TODO handle help-text
+    end
+    proc( args.ArgParser
+      HeadArgs : argInfo
+      string list ptr.mut : location
+    -> args.ArgParser ) =>: export: collectArg
+      location >$ .headLocation.Append=
+    end
+  end
+  struct(
+    Common : common
+  ) =:: TailArgs
+  proc( -> TailArgs ) =>: export: tail
+    Common.default TailArgs new
+  end
+  namespace: tail
+    proc( TailArgs -> TailArgs ) =>: export: require
+
+    end
+    proc( args.ArgParser
+      TailArgs : argInfo
+      string ptr.mut : location
+    -> args.ArgParser ) =>: export: setArg
+      location >$ .tailLocation.Set=
+      ## TODO handle help-text
+    end
+    proc( args.ArgParser
+      TailArgs : argInfo
+      string list ptr.mut : location
+    -> args.ArgParser ) =>: export: collectArg
+      location >$ .tailLocation.Append=
+    end
+  end
+
+  proc( args.ArgParser string : argName args.HelpLevel : level -> args.ArgParser ) =>: export: help
+      argName level args.ArgInfo .Help args.addArg
   end
   overload: export: set
     flag.setArg flagToggle.setArg flagGroup.setArg
