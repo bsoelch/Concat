@@ -2034,6 +2034,12 @@ proc(
     end
     isPtr ! if ## copy before write to stack element
       state wrapCopy
+      ## copy outer container if operation is nested set
+      state .nestedElementInfo .path [] .length 0 != if
+        state .nestedElementInfo [] .rootType
+          state .compiledOps [] list.peek
+        .if .dataType= else ..drop end
+      end
     end
     Type 2 array : mut: args
     targetType args@ 0 =[]
