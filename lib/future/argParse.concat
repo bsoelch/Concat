@@ -149,11 +149,9 @@ namespace: args
   proc( ArgParser -> ArgParser ) =>: export: warnUnparsed
 
   end
-  proc( i64 : index ArgInfo : argInfo -> i64 ) =>: parseArgument
+  proc( ArgInfo : argInfo i64 : index -> i64 ) =>: parseArgument
     argInfo switch
-      Help .case =:: level
-        ## TODO: print help text
-      break
+      Help case ..unreachable
       Enable .case true >$ =[] break
       Disable .case true >$ =[] break
       AppendTrue .case $ [] true list.append >$ =[] break
@@ -224,8 +222,21 @@ namespace: args
           Match .case =:: index
             args .argInfos
               args .argNames index [] .infoLocation
-            [] =:: argInfo
-            i argInfo parseArgument i=
+            [] .Help .if =:: level
+              args .helpDefault sb.asStr io.println
+              level switch
+                DEFAULT case break
+                EXTENDED case
+                  args .helpExtended sb.asStr io.println
+                break
+                SPECIAL IGNORE case
+                  args .helpExtended sb.asStr io.println
+                  args .helpSpecial sb.asStr io.println
+                break
+              end
+            else
+              i parseArgument i=
+            end
           break
           Missing case
             "unexpected argument: ":s io.println
@@ -282,6 +293,25 @@ namespace: arg
   proc( ArgDataType : auto: A  A args.HelpLevel -> A ) =>: export: helpLevel
     >$ .common.helpLevel=
   end
+  proc( args.ArgParser string : argName Common : argInfo  -> args.ArgParser ) =>: export: addHelpText
+    argInfo .helpLevel switch
+      DEFAULT case $ .helpDefault break
+      EXTENDED case $ .helpExtended break
+      SPECIAL case $ .helpSpecial break
+      IGNORE case return
+    end
+      "  ":s sb.appendStr
+      argName sb.appendStr
+      '\t' sb.appendC
+      argInfo .helpText sb.appendStr
+      '\n' sb.appendC
+    argInfo .helpLevel switch
+      DEFAULT case >$ .helpDefault= break
+      EXTENDED case >$ .helpExtended= break
+      SPECIAL case >$ .helpSpecial= break
+      IGNORE case ..unreachable
+    end
+  end
   proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disables
 
   end
@@ -301,7 +331,7 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: setArg
       argName location args.ArgInfo .Enable args.addArg
-      ## TODO handle help-text
+      argName argInfo .common addHelpText
     end
     proc( args.ArgParser
       Flag : argInfo
@@ -309,7 +339,7 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: collectArg
       argName location args.ArgInfo .AppendTrue args.addArg
-      ## TODO handle help-text
+      argName argInfo .common addHelpText
     end
   end
   proc( type.namedInteger : I -> type ) =>: FlagGroupElement
@@ -356,8 +386,11 @@ namespace: arg
         location BaseInt ptr.mut cast!
           argInfo .enableAllValue BaseInt cast
         args.argInfoSetVal args.addArg
+        argInfo .enableAll argInfo .common addHelpText
+      else
+        "  ":s argInfo .common addHelpText
       end
-      ## TODO handle help-text
+      ## TODO! mention option names in help-text
     end
     proc( type.namedInteger : auto: I  args.ArgParser
       I FlagGroup : argInfo
@@ -379,8 +412,11 @@ namespace: arg
         location BaseInt ptr.mut cast!
           argInfo .enableAllValue BaseInt cast
         args.argInfoSetVal args.addArg
+        argInfo .enableAll argInfo .common addHelpText
+      else
+        "  ":s argInfo .common addHelpText
       end
-      ## TODO handle help-text
+      ## TODO! mention option names in help-text
     end
   end
   struct(
@@ -398,7 +434,7 @@ namespace: arg
     -> args.ArgParser ) =>: export: setArg
       argInfo .enable location args.ArgInfo .Enable args.addArg
       argInfo .disable location args.ArgInfo .Disable args.addArg
-      ## TODO handle help-text
+      argInfo .enable argInfo .common addHelpText ## TODO mention disable option in help-text
     end
     proc( args.ArgParser
       FlagToggle : argInfo
@@ -406,7 +442,7 @@ namespace: arg
     -> args.ArgParser ) =>: export: collectArg
       argInfo .enable location args.ArgInfo .AppendTrue args.addArg
       argInfo .disable location args.ArgInfo .AppendFalse args.addArg
-      ## TODO handle help-text
+      argInfo .enable argInfo .common addHelpText ## TODO mention disable option in help-text
     end
   end
   struct(
@@ -422,7 +458,7 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: setArg
       argName location args.ArgInfo .Set args.addArg
-      ## TODO handle help-text
+      argName argInfo .common addHelpText
     end
     proc( args.ArgParser
       ValueArg : argInfo
@@ -430,7 +466,7 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: collectArg
       argName location args.ArgInfo .Append args.addArg
-      ## TODO handle help-text
+      argName argInfo .common addHelpText
     end
   end
   struct(
@@ -446,7 +482,7 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: setArg
       argName location args.ArgInfo .SetAll args.addArg
-      ## TODO handle help-text
+      argName argInfo .common addHelpText
     end
     proc( args.ArgParser
       ValuesArg : argInfo
@@ -454,7 +490,7 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: collectArg
       argName location args.ArgInfo .AppendAll args.addArg
-      ## TODO handle help-text
+      argName argInfo .common addHelpText
     end
   end
   proc( type : T -> type ) =>: SelectArgOption
@@ -531,13 +567,14 @@ namespace: arg
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .miscLocation.Set=
-      ## TODO handle help-text
+      "[misc]":s argInfo .common addHelpText
     end
     proc( args.ArgParser
       MiscArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .miscLocation.Append=
+      "[misc]":s argInfo .common addHelpText
     end
   end
   struct(
@@ -555,13 +592,14 @@ namespace: arg
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .headLocation.Set=
-      ## TODO handle help-text
+      "[head]":s argInfo .common addHelpText
     end
     proc( args.ArgParser
       HeadArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .headLocation.Append=
+      "[head]":s argInfo .common addHelpText
     end
   end
   struct(
@@ -579,13 +617,14 @@ namespace: arg
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .tailLocation.Set=
-      ## TODO handle help-text
+      "[tail]":s argInfo .common addHelpText
     end
     proc( args.ArgParser
       TailArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .tailLocation.Append=
+      "[tail]":s argInfo .common addHelpText
     end
   end
 
