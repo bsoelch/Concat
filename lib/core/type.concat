@@ -29,7 +29,14 @@ namespace: type
   oneOf( f32 f64 ) =:: export: float
   oneOf( integer ... float ... ) =:: export: number
   oneOf( iSize i32 i64 ) =:: export: index
-  oneOf( integer ... char8 ) =:: export: intLike
+
+  proc( type : T -> bool ) =>: export: static: isInteger
+    T ..types.isPrimitive and T i32 == or T i64 == or T i16 == or T i8 == end
+  end
+  proc( type : T -> bool ) =>: export: static: isNamedInteger
+    T ..types.unwrapNamed isInteger
+  end
+  type .with( isNamedInteger ) =:: export: namedInteger
 
   proc( type : T -> bool ) =>: export: static: isNamedPrimitive
     T ..types.isNamed and T ..types.unwrapNamed ..types.isPrimitive end
