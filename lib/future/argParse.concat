@@ -1,0 +1,221 @@
+import stringBuilder
+using std.literals.
+
+namespace: args
+  struct(
+    string : argPrefixes
+  ) =:: ArgParser
+  proc( -> ArgParser ) =>: export: start
+    "-":s ArgParser new
+  end
+  proc( ArgParser string -> ArgParser ) =>: export: prefixes
+    >$ .argPrefixes=
+  end
+  proc( ArgParser -> ArgParser ) =>: export: warnUnparsed
+
+  end
+  proc( ArgParser : args -> ) =>: export: parse
+    
+  end
+end
+namespace: arg
+  enum( DEFAULT EXTENDED SPECIAL IGNORE ) =:: export: HelpLevel
+  struct(
+    string : helpText
+  ) =:: Common
+  namespace: Common
+    proc( -> Common ) =>: export: default
+      "":s Common new
+    end
+  end
+  type .with( 0 ..types.getElement Common == ) =:: ArgDataType
+  proc( ArgDataType : auto: A  A string -> A ) =>: export: helpText
+    >$ .common.helpText=
+  end
+  proc( ArgDataType : auto: A  A HelpLevel : level -> A ) =>: export: helpLevel
+    
+  end
+  proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disable
+    
+  end
+  proc( ArgDataType : auto: A  A string list ptr.mut : tail -> A ) =>: export: consumeTail
+    
+  end
+  struct(
+    Common : common
+  ) =:: Flag
+  proc( -> Flag ) =>: export: flag
+    Common.default Flag new
+  end
+  namespace: flag
+    proc( args.ArgParser
+      Flag : argInfo
+      bool ptr.mut : location
+      string : argName
+    -> args.ArgParser ) =>: export: setArg
+    end
+    proc( args.ArgParser
+      Flag : argInfo
+      bool list ptr.mut : location
+      string : argName
+    -> args.ArgParser ) =>: export: collectArg
+    end
+  end
+  struct(
+    Common : common
+    string list : options
+    string : matchAll
+  ) =:: FlagList
+  proc( -> FlagList ) =>: export: flagList
+    Common.default string list.empty "":s FlagList new
+  end
+  namespace: flagList
+    proc( FlagList string -> FlagList ) =>: export: option
+      $1 .options >$ list.append >$ .options=
+    end
+    proc( FlagList string -> FlagList ) =>: export: matchAll
+      >$ .matchAll=
+    end
+    proc( args.ArgParser
+      FlagList : argInfo
+      string ptr.mut : location
+      string : argName
+    -> args.ArgParser ) =>: export: setArg
+    end
+    proc( args.ArgParser
+      FlagList : argInfo
+      string list ptr.mut : location
+      string : argName
+    -> args.ArgParser ) =>: export: collectArg
+    end
+  end
+  struct(
+    Common : common
+    string : shadow: enable
+    string : shadow: disable
+  ) =:: FlagToggle
+  proc( string : shadow: enable string : shadow: disable -> FlagToggle ) =>: export: flagToggle
+    Common.default enable disable FlagToggle new
+  end
+  namespace: flagToggle
+    proc( args.ArgParser
+      FlagToggle : argInfo
+      bool ptr.mut : location
+    -> args.ArgParser ) =>: export: setArg
+    end
+    proc( args.ArgParser
+      FlagToggle : argInfo
+      bool list ptr.mut : location
+    -> args.ArgParser ) =>: export: collectArg
+    end
+  end
+  struct(
+    Common : common
+  ) =:: ValueArg
+  proc( -> ValueArg ) =>: export: value
+    Common.default ValueArg new
+  end
+  namespace: value
+    proc( args.ArgParser
+      ValueArg : argInfo
+      string ptr.mut : location
+      string : argName
+    -> args.ArgParser ) =>: export: setArg
+    end
+    proc( args.ArgParser
+      ValueArg : argInfo
+      string list ptr.mut : location
+      string : argName
+    -> args.ArgParser ) =>: export: collectArg
+    end
+  end
+  struct(
+    Common : common
+  ) =:: ValuesArg
+  proc( -> ValuesArg ) =>: export: values
+    Common.default ValuesArg new
+  end
+  namespace: values
+    proc( args.ArgParser
+      ValuesArg : argInfo
+      string list ptr.mut : location
+      string : argName
+    -> args.ArgParser ) =>: export: setArg
+    end
+    proc( args.ArgParser
+      ValuesArg : argInfo
+      string list ptr.mut : location
+      string : argName
+    -> args.ArgParser ) =>: export: collectArg
+    end
+  end
+  proc( type : T -> type ) =>: SelectArg
+    struct(
+      Common : common
+      string list : optionNames
+      T list : optionValues
+      T optional : defaultValue
+    )
+  end
+  proc( type : static: T -> T SelectArg ) =>: export: select
+    Common.default string list.empty T list.empty T optional.empty T SelectArg new
+  end
+  namespace: select
+    proc( type : auto: T T SelectArg T -> T SelectArg ) =>: export: default
+      optional.wrap >$ .defaultValue=
+    end
+    proc( type : auto: T T SelectArg string : name T : val -> T SelectArg ) =>: export: option
+      $ .optionNames name list.append >$ .optionNames=
+      $ .optionValues val list.append >$ .optionValues=
+    end
+    proc( type : auto: T  args.ArgParser
+      T SelectArg : argInfo
+      T ptr.mut : location
+    -> args.ArgParser ) =>: export: setArg
+    end
+    proc( type : auto: T  args.ArgParser
+      T SelectArg : argInfo
+      T list ptr.mut : location
+    -> args.ArgParser ) =>: export: collectArg
+    end
+  end
+  struct(
+    Common : common
+  ) =:: MiscArgs
+  proc( -> MiscArgs ) =>: export: misc
+    Common.default MiscArgs new
+  end
+  namespace: misc
+    proc( MiscArgs -> MiscArgs ) =>: export: require
+    
+    end
+    proc( MiscArgs -> MiscArgs ) =>: export: allowAfterArg
+    
+    end
+    proc( args.ArgParser
+      MiscArgs : argInfo
+      string ptr.mut : location
+    -> args.ArgParser ) =>: export: setArg
+    end
+    proc( args.ArgParser
+      MiscArgs : argInfo
+      string list ptr.mut : location
+    -> args.ArgParser ) =>: export: collectArg
+    end  
+  end
+  proc( args.ArgParser string : argName -> args.ArgParser ) =>: export: help
+
+  end
+  overload: export: set
+    flag.setArg flagToggle.setArg flagList.setArg
+    value.setArg values.setArg
+    select.setArg
+    misc.setArg
+  end
+  overload: export: collect
+    flag.collectArg flagToggle.collectArg flagList.collectArg
+    value.collectArg values.collectArg
+    select.collectArg
+    misc.collectArg
+  end
+end
