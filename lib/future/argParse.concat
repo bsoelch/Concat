@@ -20,6 +20,20 @@ namespace: args
   ( type : T -> type ) =>: appendValue
     struct( T list ptr.mut : dst T : val )
   end
+  namespace: setValue
+    proc( type : auto: T  T setValue : val -> ) =>: set
+      val .val val .dst =[]
+    end
+    proc( type : auto: T  T setValue : val -> ) =>: bitEnable
+      val .dst [] val .val | val .dst =[]
+    end
+    proc( type : auto: T  T setValue : val -> ) =>: bitDisable
+      val .dst [] val .val ~ & val .dst =[]
+    end
+    proc( type : auto: T  T appendValue : val -> ) =>: append
+      val .dst [] val .val list.append val .dst =[]
+    end
+  end
   union(
     ## 0 parameters
     HelpLevel : Help
@@ -135,12 +149,61 @@ namespace: args
   proc( ArgParser -> ArgParser ) =>: export: warnUnparsed
 
   end
+  proc( i64 : index ArgInfo : argInfo -> i64 ) =>: parseArgument
+    argInfo switch
+      Help .case =:: level
+        ## TODO: print help text
+      break
+      Enable .case true >$ =[] break
+      Disable .case true >$ =[] break
+      AppendTrue .case $ [] true list.append >$ =[] break
+      AppendFalse .case $ [] false list.append >$ =[] break
+      SetI8 .case setValue.set break
+      SetI16 .case setValue.set break
+      SetI32 .case setValue.set break
+      SetI64 .case setValue.set break
+      SetString .case setValue.set break
+      BitEnableI8 .case setValue.bitEnable break
+      BitEnableI16 .case setValue.bitEnable break
+      BitEnableI32 .case setValue.bitEnable break
+      BitEnableI64 .case setValue.bitEnable break
+      BitDisableI8 .case setValue.bitDisable break
+      BitDisableI16 .case setValue.bitDisable break
+      BitDisableI32 .case setValue.bitDisable break
+      BitDisableI64 .case setValue.bitDisable break
+      AppendI8 .case setValue.append break
+      AppendI16 .case setValue.append break
+      AppendI32 .case setValue.append break
+      AppendI64 .case setValue.append break
+      AppendString .case setValue.append break
+    ## 1 parameter
+      Set .case
+        index 1 + =:: shadow: index
+        index sys.getArg >$ =[]
+        index return
+      break
+      Append .case
+        index 1 + =:: shadow: index
+        $ []
+          index sys.getArg list.append
+        >$ =[]
+        index return
+      break
+      SetAll .case =:: dst
+        "unimplemented" ..panic
+      break
+      AppendAll .case =:: dst
+        "unimplemented" ..panic
+      break
+    end
+    index return
+  end
   proc( ArgParser : args -> ) =>: export: parse
     args .argNames ArgName.cmp@ list.sort
     0 sys.getArg =:: progName
     false =:: mut: hadArg
     string list.empty =:: mut: tailValues
-    1:i64 while $ sys.argc < do =:: i
+    1:i64 while $ sys.argc < do =:: mut: i
       i sys.getArg =:: arg
       arg .length 0 == if continue end
       arg 0 string.charAt =:: c0
@@ -162,7 +225,7 @@ namespace: args
             args .argInfos
               args .argNames index [] .infoLocation
             [] =:: argInfo
-            ## TODO! parse arg-info
+            i argInfo parseArgument i=
           break
           Missing case
             "unexpected argument: ":s io.println
