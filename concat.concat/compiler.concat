@@ -59,10 +59,10 @@ proc( -> ) =>: parseArgs
   0 sb.create outPath=
   0 sb.create tmpPath=
   string optional.empty errorFile=
-  0 sys.getArg string.create =:: path
+  0 sys.getArg =:: path
   ArgParserState .IN =:: mut: state
   1:i64 while $ sys.argc < do
-    $ sys.getArg string.create =:: arg
+    $ sys.getArg =:: arg
     arg .length 0:iSize == if
       1 + continue
     end
