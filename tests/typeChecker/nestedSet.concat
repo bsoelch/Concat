@@ -1,0 +1,25 @@
+struct( i16 : a i16 : b ) =:: Inner
+struct( i64 : x i64 : y i64 : z Inner : w ) =:: Outer
+proc( char8 64 ptr.mut : tmp -> ) =>: stackSet
+  64 for
+    '\xAA' tmp >>$ =[]
+  end
+end
+proc( -> ) =>: stackShuffle
+  char8 64 array : mut: tmp
+  tmp@ stackSet
+end
+proc( Outer -> Outer ) =>: test
+  5 >$ .w.a=
+  ## mess up stack values
+  stackShuffle
+end
+proc( -> ) =>: main
+  0 1 2 3 4 Inner new Outer new =:: x
+  x test =:: y
+  y .x 0 == "y.x" assert
+  y .y 1 == "y.y" assert
+  y .z 2 == "y.z" assert
+  y .w.a 5 == "y.w.a" assert
+  y .w.b 4 == "y.w.b" assert
+end
