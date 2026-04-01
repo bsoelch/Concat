@@ -1,5 +1,6 @@
 import stringBuilder
 import print
+import sys
 using std.literals.
 
 namespace: args
@@ -135,7 +136,70 @@ namespace: args
 
   end
   proc( ArgParser : args -> ) =>: export: parse
-
+    args .argNames ArgName.cmp@ list.sort
+    0 sys.getArg =:: progName
+    false =:: mut: hadArg
+    string list.empty =:: mut: tailValues
+    1:i64 while $ sys.argc < do =:: i
+      i sys.getArg =:: arg
+      arg .length 0 == if continue end
+      arg 0 string.charAt =:: c0
+      args .argPrefixes c0 string.contains if
+        true hadArg=
+        tailValues .length 0 != if
+          args .miscLocation switch
+            None case break
+            Set .case tailValues list.removeLast >$ tailValues= >$ =[] continue
+            Append .case $ [] tailValues list.appendAll >$ =[] continue
+          end
+          tailValues list.clear tailValues=
+        end
+        args .argNames list.asSlice
+          arg 0 ArgName new
+          ArgName.cmp@
+        slice.binarySearch switch
+          Match .case =:: index
+            args .argInfos
+              args .argNames index [] .infoLocation
+            [] =:: argInfo
+            ## TODO! parse arg-info
+          break
+          Missing case
+            "unexpected argument: ":s io.println
+            arg io.println
+          break
+        end
+      else
+        hadArg if ## don't know yet if misc or tail
+          tailValues arg list.append tailValues=
+        else
+          args .headLocation switch
+            None case break
+            Set .case arg >$ =[] continue
+            Append .case $ [] arg list.append >$ =[] continue
+          end ## no location for head -> store as misc
+          args .miscLocation switch
+            None case break
+            Set .case arg >$ =[] continue
+            Append .case $ [] arg list.append >$ =[] continue
+          end
+        end
+      end
+    finally i 1 + end ..drop
+    tailValues .length 0 != if
+      args .tailLocation switch
+        None case ## no location for tail -> store as misc
+          args .miscLocation switch
+            None case break
+            Set .case tailValues list.removeLast <$ tailValues= >$ =[] break
+            Append .case $ [] tailValues list.appendAll >$ =[] break
+          end
+        break
+        Set .case tailValues list.removeLast <$ tailValues= >$ =[] break
+        Append .case $ [] tailValues list.appendAll >$ =[] break
+      end
+    end
+    tailValues list.free ..drop
   end
 end
 namespace: arg
@@ -221,7 +285,7 @@ namespace: arg
         elt .name
         location BaseInt ptr.mut cast!
           elt .value BaseInt cast
-          elt .enable ! if argInfo .enableAllValue BaseInt cast  ^ end 
+          elt .enable ! if argInfo .enableAllValue BaseInt cast  ^ end
         BaseInt args.argInfoSetVal args.addArg
       end
       argInfo .enableAll .length 0 != if
