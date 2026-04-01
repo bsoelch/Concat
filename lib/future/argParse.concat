@@ -8,23 +8,53 @@ namespace: args
     string : name
     iSize : infoLocation
   ) =:: ArgName
+  namespace: ArgName
+    proc( ArgName : a ArgName : b -> i32 ) =>: cmp
+      a .name b .name string.compare
+    end
+  end
+  ( type : T -> type ) =>: setValue
+    struct( T ptr.mut : dst T : val )
+  end
   union(
     ## 0 parameters
     bool ptr.mut : Enable
     bool ptr.mut : Disable
     bool list ptr.mut : AppendTrue
     bool list ptr.mut : AppendFalse
+    i8  setValue : SetI8
+    i16 setValue : SetI16
+    i32 setValue : SetI32
+    i64 setValue : SetI64
+    i8  setValue : BitEnableI8
+    i16 setValue : BitEnableI16
+    i32 setValue : BitEnableI32
+    i64 setValue : BitEnableI64
+    i8  setValue : BitDisableI8
+    i16 setValue : BitDisableI16
+    i32 setValue : BitDisableI32
+    i64 setValue : BitDisableI64
     ## 1 parameter
     string ptr.mut : Set
     string list ptr.mut : Append
     ## n parameters
     string list ptr.mut : AppendAll
   ) =:: ArgInfo
-  namespace: ArgName
-    proc( ArgName : a ArgName : b -> i32 ) =>: cmp
-      a .name b .name string.compare
-    end
-  end
+  proc( i8  ptr.mut i8  -> ArgInfo ) =>: argInfoSetValI8  i8   setValue new ArgInfo .SetI8  end
+  proc( i16 ptr.mut i16 -> ArgInfo ) =>: argInfoSetValI16 i16  setValue new ArgInfo .SetI16 end
+  proc( i32 ptr.mut i32 -> ArgInfo ) =>: argInfoSetValI32 i32  setValue new ArgInfo .SetI32 end
+  proc( i64 ptr.mut i64 -> ArgInfo ) =>: argInfoSetValI64 i64  setValue new ArgInfo .SetI64 end
+  overload: argInfoSetVal argInfoSetValI8 argInfoSetValI16 argInfoSetValI32 argInfoSetValI64 end
+  proc( i8  ptr.mut i8  -> ArgInfo ) =>: argInfoBitEnableValI8  i8   setValue new ArgInfo .BitEnableI8  end
+  proc( i16 ptr.mut i16 -> ArgInfo ) =>: argInfoBitEnableValI16 i16  setValue new ArgInfo .BitEnableI16 end
+  proc( i32 ptr.mut i32 -> ArgInfo ) =>: argInfoBitEnableValI32 i32  setValue new ArgInfo .BitEnableI32 end
+  proc( i64 ptr.mut i64 -> ArgInfo ) =>: argInfoBitEnableValI64 i64  setValue new ArgInfo .BitEnableI64 end
+  overload: argInfoBitEnableVal argInfoBitEnableValI8 argInfoBitEnableValI16 argInfoBitEnableValI32 argInfoBitEnableValI64 end
+  proc( i8  ptr.mut i8  -> ArgInfo ) =>: argInfoBitDisableValI8  i8   setValue new ArgInfo .BitDisableI8  end
+  proc( i16 ptr.mut i16 -> ArgInfo ) =>: argInfoBitDisableValI16 i16  setValue new ArgInfo .BitDisableI16 end
+  proc( i32 ptr.mut i32 -> ArgInfo ) =>: argInfoBitDisableValI32 i32  setValue new ArgInfo .BitDisableI32 end
+  proc( i64 ptr.mut i64 -> ArgInfo ) =>: argInfoBitDisableValI64 i64  setValue new ArgInfo .BitDisableI64 end
+  overload: argInfoBitDisableVal argInfoBitDisableValI8 argInfoBitDisableValI16 argInfoBitDisableValI32 argInfoBitDisableValI64 end
   struct(
     string : argPrefixes
     ArgName list : argNames
@@ -71,7 +101,7 @@ namespace: args
 
   end
   proc( ArgParser : args -> ) =>: export: parse
-    
+
   end
 end
 namespace: arg
@@ -92,10 +122,10 @@ namespace: arg
     >$ .common.helpLevel=
   end
   proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disables
-    
+
   end
   proc( ArgDataType : auto: A  A string list ptr.mut : tail -> A ) =>: export: consumeTail
-    
+
   end
   struct(
     Common : common
@@ -121,43 +151,75 @@ namespace: arg
       ## TODO handle help-text
     end
   end
+  proc( type.namedInteger : I -> type ) =>: FlagGroupElement
+    struct( string : name I : shadow: value bool : enable )
+  end
   proc( type.namedInteger : I -> type ) =>: FlagGroup
     struct(
       Common : common
-      string list : options
-      I list : optionValues
-      string : matchAll
-      I : matchAllValue
+      I FlagGroupElement list : options
+      string : enableAll
+      I : enableAllValue
     )
   end
   proc( type.namedInteger : static: I -> I FlagGroup ) =>: export: flagGroup
-    Common.default string list.empty I list.empty string.empty 0 I cast I FlagGroup new
+    Common.default I FlagGroupElement list.empty string.empty 0 I cast I FlagGroup new
   end
   namespace: flagGroup
     proc( type.namedInteger : auto: I
       I FlagGroup
       string : name I : shadow: value
-    -> I FlagGroup ) =>: export: option
-      $ .options name list.append >$ .options=
-      $ .optionValues value list.append >$ .optionValues=
-      $ .matchAllValue value | >$ .matchAllValue=
+    -> I FlagGroup ) =>: export: enable
+      $ .options name value true I FlagGroupElement new list.append >$ .options=
+      $ .enableAllValue value | >$ .enableAllValue=
     end
     proc( type.namedInteger : auto: I
       I FlagGroup string
-    -> I FlagGroup ) =>: export: matchAll
-      >$ .matchAll=
+    -> I FlagGroup ) =>: export: enableAll
+      >$ .enableAll=
     end
     proc( type.namedInteger : auto: I  args.ArgParser
       I FlagGroup : argInfo
       I ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
-      
+      I ..types.unwrapNamed =:: BaseInt
+      argInfo .options for =:: elt
+        elt .name
+        location BaseInt ptr.mut cast!
+          elt .value BaseInt cast
+          elt .enable ! if argInfo .enableAllValue BaseInt cast  ^ end 
+        BaseInt args.argInfoSetVal args.addArg
+      end
+      argInfo .enableAll .length 0 != if
+        argInfo .enableAll
+        location BaseInt ptr.mut cast!
+          argInfo .enableAllValue BaseInt cast
+        args.argInfoSetVal args.addArg
+      end
+      ## TODO handle help-text
     end
     proc( type.namedInteger : auto: I  args.ArgParser
       I FlagGroup : argInfo
       I ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
-      
+      I ..types.unwrapNamed =:: BaseInt
+      argInfo .options for =:: elt
+        elt .name
+        location BaseInt ptr.mut cast!
+          elt .value BaseInt cast
+        elt .enable if
+          args.argInfoBitEnableVal
+        else
+          args.argInfoBitDisableVal
+        end args.addArg
+      end
+      argInfo .enableAll .length 0 != if
+        argInfo .enableAll
+        location BaseInt ptr.mut cast!
+          argInfo .enableAllValue BaseInt cast
+        args.argInfoSetVal args.addArg
+      end
+      ## TODO handle help-text
     end
   end
   struct(
@@ -268,10 +330,10 @@ namespace: arg
   end
   namespace: misc
     proc( MiscArgs -> MiscArgs ) =>: export: require
-    
+
     end
     proc( MiscArgs -> MiscArgs ) =>: export: allowAfterArg
-    
+
     end
     proc( args.ArgParser
       MiscArgs : argInfo
@@ -282,7 +344,7 @@ namespace: arg
       MiscArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
-    end  
+    end
   end
   proc( args.ArgParser string : argName -> args.ArgParser ) =>: export: help
 
