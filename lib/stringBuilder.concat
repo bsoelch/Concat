@@ -5,6 +5,7 @@ import slice
 
 char8 list =:: export: stringBuilder
 namespace: sb
+  char8 list.empty stringBuilder cast =:: export: empty
   proc( iSize : cap -> stringBuilder ) =>: export: createZ
     cap char8 list.create stringBuilder cast return
   end
