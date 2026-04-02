@@ -380,9 +380,10 @@ namespace: arg
     Common : common
     bool : negated
     string list ptr.mut optional : consumeTail
+    string : valueName
   ) =:: Flag
   proc( -> Flag ) =>: export: flag
-    Common.default false string list ptr.mut optional.empty Flag new
+    Common.default false string list ptr.mut optional.empty "[arg]":s Flag new
   end
   namespace: flag
     proc( Flag -> Flag ) =>: export: negate
@@ -390,6 +391,9 @@ namespace: arg
     end
     proc( Flag string list ptr.mut -> Flag ) =>: export: consumeTail
       optional.wrap >$ .consumeTail=
+    end
+    proc( Flag string -> Flag ) =>: export: setArgName
+      >$ .valueName=
     end
     proc( args.ArgParser
       Flag : argInfo
@@ -404,7 +408,9 @@ namespace: arg
         argName location argInfo .negated if args.ArgInfo .Disable else args.ArgInfo .Enable end args.addArg
       end
       argName argInfo .common startHelpText .else return end
-        argInfo .consumeTail ? if " [arg]*":s sb.appendStr end
+        argInfo .consumeTail ? if
+          ' ' sb.appendC argInfo .valueName sb.appendStr '*' sb.appendC
+        end
       argInfo .common endHelpText
     end
     proc( args.ArgParser
@@ -538,11 +544,15 @@ namespace: arg
   end
   struct(
     Common : common
+    string : valueName
   ) =:: ValueArg
   proc( -> ValueArg ) =>: export: value
-    Common.default ValueArg new
+    Common.default "[arg]":s ValueArg new
   end
   namespace: value
+    proc( ValueArg string -> ValueArg ) =>: export: setArgName
+      >$ .valueName=
+    end
     proc( args.ArgParser
       ValueArg : argInfo
       string ptr.mut : location
@@ -550,7 +560,7 @@ namespace: arg
     -> args.ArgParser ) =>: export: setArg
       argName location args.ArgInfo .Set args.addArg
       argName argInfo .common startHelpText .else return end
-        " [arg]":s sb.appendStr ## TODO allow to customize arg name
+        ' ' sb.appendC argInfo .valueName sb.appendStr
       argInfo .common endHelpText
     end
     proc( args.ArgParser
@@ -560,17 +570,21 @@ namespace: arg
     -> args.ArgParser ) =>: export: collectArg
       argName location args.ArgInfo .Append args.addArg
       argName argInfo .common startHelpText .else return end
-        " [arg]":s sb.appendStr ## TODO allow to customize arg name
+        ' ' sb.appendC argInfo .valueName sb.appendStr
       argInfo .common endHelpText
     end
   end
   struct(
     Common : common
+    string : valueName
   ) =:: ValuesArg
   proc( -> ValuesArg ) =>: export: values
-    Common.default ValuesArg new
+    Common.default "[arg]":s ValuesArg new
   end
   namespace: values
+    proc( ValuesArg string -> ValuesArg ) =>: export: setArgName
+      >$ .valueName=
+    end
     proc( args.ArgParser
       ValuesArg : argInfo
       string list ptr.mut : location
@@ -578,7 +592,7 @@ namespace: arg
     -> args.ArgParser ) =>: export: setArg
       argName location args.ArgInfo .SetAll args.addArg
       argName argInfo .common startHelpText .else return end
-        " [arg]+":s sb.appendStr ## TODO allow to customize arg name
+        ' ' sb.appendC argInfo .valueName sb.appendStr '+' sb.appendC
       argInfo .common endHelpText
     end
     proc( args.ArgParser
@@ -588,7 +602,7 @@ namespace: arg
     -> args.ArgParser ) =>: export: collectArg
       argName location args.ArgInfo .AppendAll args.addArg
       argName argInfo .common startHelpText .else return end
-        " [arg]+":s sb.appendStr ## TODO allow to customize arg name
+        ' ' sb.appendC argInfo .valueName sb.appendStr '+' sb.appendC
       argInfo .common endHelpText
     end
   end
