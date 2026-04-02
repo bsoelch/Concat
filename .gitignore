@@ -20,7 +20,6 @@ lib/future/*
 !lib/future/math.concat
 !lib/future/threads.concat
 !lib/future/rcSlice.concat
-!lib/future/argParse.concat
 !bootstrap/latest.ssa
 global_log.txt
 out.txt
