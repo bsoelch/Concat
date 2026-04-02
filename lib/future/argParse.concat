@@ -264,8 +264,8 @@ namespace: args
               "unexpected argument: ":s io.print tailValues 0 [] io.println
               true hadError=
             break
-            Set .case tailValues list.removeLast >$ tailValues= >$ =[] continue
-            Append .case $ [] tailValues list.appendAll >$ =[] continue
+            Set .case tailValues list.removeLast >$ tailValues= >$ =[] break
+            Append .case $ [] tailValues list.appendAll >$ =[] break
           end
           tailValues list.clear tailValues=
         end
