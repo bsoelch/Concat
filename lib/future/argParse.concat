@@ -34,6 +34,7 @@ namespace: args
       val .dst [] val .val list.append val .dst =[]
     end
   end
+  struct( bool ptr.mut : flag string list ptr.mut : tail ) =:: FlagAndTail
   union(
     ## 0 parameters
     HelpLevel : Help
@@ -41,6 +42,8 @@ namespace: args
     bool ptr.mut : Disable
     bool list ptr.mut : AppendTrue
     bool list ptr.mut : AppendFalse
+    FlagAndTail : EnableAndTail
+    FlagAndTail : DisableAndTail
     i8  setValue : SetI8
     i16 setValue : SetI16
     i32 setValue : SetI32
@@ -149,11 +152,26 @@ namespace: args
   proc( ArgParser -> ArgParser ) =>: export: warnUnparsed
 
   end
+  proc( string list ptr.mut  i64 -> i64 ) =>: consumeTail
+    $1 [] <$
+      while $ sys.argc < do =:: i
+        i sys.getArg list.append
+      finally i 1 + end <<$
+    >$ =[]
+  end
   proc( ArgInfo : argInfo i64 : index -> i64 ) =>: parseArgument
     argInfo switch
       Help case ..unreachable
       Enable .case true >$ =[] break
-      Disable .case true >$ =[] break
+      Disable .case false >$ =[] break
+      EnableAndTail .case =:: dst
+        true dst .flag =[]
+        dst .tail index 1 + consumeTail return
+      break
+      DisableAndTail .case =:: dst
+        false dst .flag =[]
+        dst .tail index 1 + consumeTail return
+      break
       AppendTrue .case $ [] true list.append >$ =[] break
       AppendFalse .case $ [] false list.append >$ =[] break
       SetI8 .case setValue.set break
@@ -318,26 +336,33 @@ namespace: arg
   proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disables
 
   end
-  proc( ArgDataType : auto: A  A string list ptr.mut : shadow: tail -> A ) =>: export: consumeTail
-
-  end
   struct(
     Common : common
     bool : negated
+    string list ptr.mut optional : consumeTail
   ) =:: Flag
   proc( -> Flag ) =>: export: flag
-    Common.default false Flag new
+    Common.default false string list ptr.mut optional.empty Flag new
   end
   namespace: flag
     proc( Flag -> Flag ) =>: export: negate
       $ .negated ! >$ .negated=
+    end
+    proc( Flag string list ptr.mut -> Flag ) =>: export: consumeTail
+      optional.wrap >$ .consumeTail=
     end
     proc( args.ArgParser
       Flag : argInfo
       bool ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: setArg
-      argName location argInfo .negated if args.ArgInfo .Disable else args.ArgInfo .Enable end args.addArg
+      argInfo .consumeTail .if
+        argName location >>$ args.FlagAndTail new argInfo .negated
+          if args.ArgInfo .DisableAndTail else args.ArgInfo .EnableAndTail end
+        args.addArg
+      else
+        argName location argInfo .negated if args.ArgInfo .Disable else args.ArgInfo .Enable end args.addArg
+      end
       argName argInfo .common addHelpText
     end
     proc( args.ArgParser
@@ -345,6 +370,7 @@ namespace: arg
       bool list ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: collectArg
+      argInfo .consumeTail ? if "cannot collect flag that consumes tail" ..panic end
       argName location argInfo .negated if args.ArgInfo .AppendFalse else args.ArgInfo .AppendTrue end args.addArg
       argName argInfo .common addHelpText
     end
