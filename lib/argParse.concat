@@ -226,7 +226,10 @@ namespace: args
           while nextIndex sys.argc < do
             nextIndex sys.getArg =:: nextArg
             nextArg .length 0 != and
-              args [] .argPrefixes nextArg 0 string.charAt string.contains if break end
+                args [] .argPrefixes nextArg 0 string.charAt string.contains if
+              nextIndex 1 - nextIndex= ## don't consume argument
+              break
+            end
             nextArg list.append
             true matchedArg=
           finally nextIndex 1 + nextIndex= end
@@ -241,7 +244,7 @@ namespace: args
     end
     index false return
   end
-  proc( ArgParser : args -> ) =>: export: parse
+  proc( ArgParser : args -> bool ) =>: export: parse
     args .argNames ArgName.cmp@ list.sort
     0 sys.getArg =:: progName
     false =:: mut: hadArg
@@ -360,6 +363,7 @@ namespace: args
         break
       end
     end
+    hadError return
   end
 end
 namespace: arg
@@ -473,8 +477,9 @@ namespace: arg
       I FlagGroup
       string : name I : shadow: value
     -> I FlagGroup ) =>: export: enable
+      I ..types.unwrapNamed =:: BaseInt
       $ .options name value true I FlagGroupElement new list.append >$ .options=
-      $ .enableAllValue value | >$ .enableAllValue=
+      $ .enableAllValue BaseInt cast value BaseInt cast | I cast >$ .enableAllValue=
     end
     proc( type.namedInteger : auto: I
       I FlagGroup string
