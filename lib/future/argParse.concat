@@ -223,6 +223,9 @@ namespace: args
             args .argInfos
               args .argNames index [] .infoLocation
             [] .Help .if =:: level
+              "\nusage: ":s io.print
+              progName io.print ' ' io.print
+              args .usage io.println '\n' io.print
               args .helpDefault sb.asStr io.println
               level switch
                 DEFAULT case break
@@ -571,14 +574,12 @@ namespace: arg
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .miscLocation.Set=
-      "[misc]":s argInfo .common addHelpText
     end
     proc( args.ArgParser
       MiscArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .miscLocation.Append=
-      "[misc]":s argInfo .common addHelpText
     end
   end
   struct(
@@ -596,14 +597,12 @@ namespace: arg
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .headLocation.Set=
-      "[head]":s argInfo .common addHelpText
     end
     proc( args.ArgParser
       HeadArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .headLocation.Append=
-      "[head]":s argInfo .common addHelpText
     end
   end
   struct(
@@ -621,14 +620,12 @@ namespace: arg
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .tailLocation.Set=
-      "[tail]":s argInfo .common addHelpText
     end
     proc( args.ArgParser
       TailArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .tailLocation.Append=
-      "[tail]":s argInfo .common addHelpText
     end
   end
 
