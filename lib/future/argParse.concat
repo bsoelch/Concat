@@ -107,6 +107,9 @@ namespace: args
     StringArgLocation : headLocation
     StringArgLocation : miscLocation
     StringArgLocation : tailLocation
+    string optional : requireHead
+    string optional : requireMisc
+    string optional : requireTail
   ) =:: ArgParser
   proc( -> ArgParser ) =>: export: start
     "-":s
@@ -119,6 +122,9 @@ namespace: args
       StringArgLocation .None
       StringArgLocation .None
       StringArgLocation .None
+      string optional.empty
+      string optional.empty
+      string optional.empty
     ArgParser new
   end
   proc( ArgParser string -> ArgParser ) =>: export: prefixes
@@ -148,9 +154,6 @@ namespace: args
     $ .argNames
       name argIndex ArgName new list.append
     >$ .argNames=
-  end
-  proc( ArgParser -> ArgParser ) =>: export: warnUnparsed
-
   end
   proc( string list ptr.mut  i64 -> i64 ) =>: consumeTail
     $1 [] <$
@@ -243,6 +246,9 @@ namespace: args
     0 sys.getArg =:: progName
     false =:: mut: hadArg
     false =:: mut: hadError
+    false =:: mut: hasHead
+    false =:: mut: hasMisc
+    false =:: mut: hasTail
     HelpLevel .IGNORE =:: mut: printHelp
     string list.empty =:: mut: tailValues
     1:i64 while $ sys.argc < do =:: mut: i
@@ -252,8 +258,12 @@ namespace: args
       args .argPrefixes c0 string.contains if
         true hadArg=
         tailValues .length 0 != if
+          true hasMisc=
           args .miscLocation switch
-            None case break
+            None case
+              "unexpected argument: ":s io.print tailValues 0 [] io.println
+              true hadError=
+            break
             Set .case tailValues list.removeLast >$ tailValues= >$ =[] continue
             Append .case $ [] tailValues list.appendAll >$ =[] continue
           end
@@ -284,13 +294,19 @@ namespace: args
         hadArg if ## don't know yet if misc or tail
           tailValues arg list.append tailValues=
         else
+          true hasHead=
           args .headLocation switch
-            None case break
-            Set .case arg >$ =[] continue
-            Append .case $ [] arg list.append >$ =[] continue
-          end ## no location for head -> store as misc
-          args .miscLocation switch
-            None case break
+            None case ## no location for head -> store as misc
+              true hasMisc=
+              args .miscLocation switch
+                None case
+                  "unexpected argument: ":s io.print arg io.println
+                  true hadError=
+                break
+                Set .case arg >$ =[] continue
+                Append .case $ [] arg list.append >$ =[] continue
+              end
+            break
             Set .case arg >$ =[] continue
             Append .case $ [] arg list.append >$ =[] continue
           end
@@ -298,10 +314,15 @@ namespace: args
       end
     finally i 1 + end ..drop
     tailValues .length 0 != if
+      true hasTail=
       args .tailLocation switch
         None case ## no location for tail -> store as misc
+          true hasMisc=
           args .miscLocation switch
-            None case break
+            None case
+              "unexpected argument: ":s io.print tailValues 0 [] io.println
+              true hadError=
+            break
             Set .case tailValues list.removeLast <$ tailValues= >$ =[] break
             Append .case $ [] tailValues list.appendAll >$ =[] break
           end
@@ -311,6 +332,18 @@ namespace: args
       end
     end
     tailValues list.free ..drop
+    hasHead ! and args .requireHead .if
+      io.println
+      true hadError=
+    end
+    hasMisc ! and args .requireMisc .if
+      io.println
+      true hadError=
+    end
+    hasTail ! and args .requireTail .if
+      io.println
+      true hadError=
+    end
     printHelp .IGNORE ! or hadError if
       "\nusage: ":s io.print
       progName io.print ' ' io.print
@@ -675,71 +708,80 @@ namespace: arg
   end
   struct(
     Common : common
+    string optional : require
   ) =:: MiscArgs
   proc( -> MiscArgs ) =>: export: misc
-    Common.default MiscArgs new
+    Common.default string optional.empty MiscArgs new
   end
   namespace: misc
-    proc( MiscArgs -> MiscArgs ) =>: export: require
-
+    proc( MiscArgs string : errMsg -> MiscArgs ) =>: export: require
+      errMsg optional.wrap >$ .require=
     end
     proc( args.ArgParser
       MiscArgs : argInfo
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .miscLocation.Set=
+      argInfo .require >$ .requireMisc=
     end
     proc( args.ArgParser
       MiscArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .miscLocation.Append=
+      argInfo .require >$ .requireMisc=
     end
   end
   struct(
     Common : common
+    string optional : require
   ) =:: HeadArgs
   proc( -> HeadArgs ) =>: export: head
-    Common.default HeadArgs new
+    Common.default string optional.empty HeadArgs new
   end
   namespace: head
-    proc( HeadArgs -> HeadArgs ) =>: export: require
-
+    proc( HeadArgs string : errMsg -> HeadArgs ) =>: export: require
+      errMsg optional.wrap >$ .require=
     end
     proc( args.ArgParser
       HeadArgs : argInfo
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .headLocation.Set=
+      argInfo .require >$ .requireHead=
     end
     proc( args.ArgParser
       HeadArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .headLocation.Append=
+      argInfo .require >$ .requireHead=
     end
   end
   struct(
     Common : common
+    string optional : require
   ) =:: TailArgs
   proc( -> TailArgs ) =>: export: tail
-    Common.default TailArgs new
+    Common.default string optional.empty TailArgs new
   end
   namespace: tail
-    proc( TailArgs -> TailArgs ) =>: export: require
-
+    proc( TailArgs string : errMsg -> TailArgs ) =>: export: require
+      errMsg optional.wrap >$ .require=
     end
     proc( args.ArgParser
       TailArgs : argInfo
       string ptr.mut : location
     -> args.ArgParser ) =>: export: setArg
       location >$ .tailLocation.Set=
+      argInfo .require >$ .requireTail=
     end
     proc( args.ArgParser
       TailArgs : argInfo
       string list ptr.mut : location
     -> args.ArgParser ) =>: export: collectArg
       location >$ .tailLocation.Append=
+      argInfo .require >$ .requireTail=
     end
   end
 
