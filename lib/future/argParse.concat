@@ -320,17 +320,21 @@ namespace: arg
   end
   struct(
     Common : common
+    bool : negated
   ) =:: Flag
   proc( -> Flag ) =>: export: flag
-    Common.default Flag new
+    Common.default false Flag new
   end
   namespace: flag
+    proc( Flag -> Flag ) =>: export: negate
+      $ .negated ! >$ .negated=
+    end
     proc( args.ArgParser
       Flag : argInfo
       bool ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: setArg
-      argName location args.ArgInfo .Enable args.addArg
+      argName location argInfo .negated if args.ArgInfo .Disable else args.ArgInfo .Enable end args.addArg
       argName argInfo .common addHelpText
     end
     proc( args.ArgParser
@@ -338,7 +342,7 @@ namespace: arg
       bool list ptr.mut : location
       string : argName
     -> args.ArgParser ) =>: export: collectArg
-      argName location args.ArgInfo .AppendTrue args.addArg
+      argName location argInfo .negated if args.ArgInfo .AppendFalse else args.ArgInfo .AppendTrue end args.addArg
       argName argInfo .common addHelpText
     end
   end
