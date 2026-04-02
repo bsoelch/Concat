@@ -218,6 +218,8 @@ namespace: args
     args .argNames ArgName.cmp@ list.sort
     0 sys.getArg =:: progName
     false =:: mut: hadArg
+    false =:: mut: hadError
+    HelpLevel .IGNORE =:: mut: printHelp
     string list.empty =:: mut: tailValues
     1:i64 while $ sys.argc < do =:: mut: i
       i sys.getArg =:: arg
@@ -241,19 +243,8 @@ namespace: args
             args .argInfos
               args .argNames index [] .infoLocation
             [] .Help .if =:: level
-              "\nusage: ":s io.print
-              progName io.print ' ' io.print
-              args .usage io.println '\n' io.print
-              args .helpDefault sb.asStr io.println
-              level switch
-                DEFAULT case break
-                EXTENDED case
-                  args .helpExtended sb.asStr io.println
-                break
-                SPECIAL IGNORE case
-                  args .helpExtended sb.asStr io.println
-                  args .helpSpecial sb.asStr io.println
-                break
+              printHelp .IGNORE or level ..tag printHelp ..tag > if
+                level printHelp=
               end
             else
               i parseArgument i=
@@ -262,6 +253,7 @@ namespace: args
           Missing case
             "unexpected argument: ":s io.println
             arg io.println
+            true hadError=
           break
         end
       else
@@ -295,6 +287,22 @@ namespace: args
       end
     end
     tailValues list.free ..drop
+    printHelp .IGNORE ! or hadError if
+      "\nusage: ":s io.print
+      progName io.print ' ' io.print
+      args .usage io.println '\n' io.print
+      args .helpDefault sb.asStr io.println
+      printHelp switch
+        DEFAULT IGNORE case break
+        EXTENDED case
+          args .helpExtended sb.asStr io.println
+        break
+        SPECIAL case
+          args .helpExtended sb.asStr io.println
+          args .helpSpecial sb.asStr io.println
+        break
+      end
+    end
   end
 end
 namespace: arg
@@ -314,16 +322,19 @@ namespace: arg
   proc( ArgDataType : auto: A  A args.HelpLevel -> A ) =>: export: helpLevel
     >$ .common.helpLevel=
   end
-  proc( args.ArgParser string : argName Common : argInfo  -> args.ArgParser ) =>: export: addHelpText
+  proc( args.ArgParser string : argName Common : argInfo  -> args.ArgParser stringBuilder optional ) =>: export: startHelpText
     argInfo .helpLevel switch
       DEFAULT case $ .helpDefault break
       EXTENDED case $ .helpExtended break
       SPECIAL case $ .helpSpecial break
-      IGNORE case return
+      IGNORE case stringBuilder optional.empty return
     end
       "  ":s sb.appendStr
       argName sb.appendStr
-      '\t' sb.appendC
+    optional.wrap return
+  end
+  proc( args.ArgParser stringBuilder Common : argInfo  -> args.ArgParser ) =>: export: endHelpText
+    " : ":s sb.appendStr
       argInfo .helpText sb.appendStr
       '\n' sb.appendC
     argInfo .helpLevel switch
@@ -331,6 +342,11 @@ namespace: arg
       EXTENDED case >$ .helpExtended= break
       SPECIAL case >$ .helpSpecial= break
       IGNORE case ..unreachable
+    end
+  end
+  proc( args.ArgParser string : argName Common : argInfo  -> args.ArgParser ) =>: export: addHelpText
+    argName argInfo startHelpText .if
+      argInfo endHelpText
     end
   end
   proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disables
@@ -363,7 +379,9 @@ namespace: arg
       else
         argName location argInfo .negated if args.ArgInfo .Disable else args.ArgInfo .Enable end args.addArg
       end
-      argName argInfo .common addHelpText
+      argName argInfo .common startHelpText .else return end
+        argInfo .consumeTail ? if " [arg]*":s sb.appendStr end
+      argInfo .common endHelpText
     end
     proc( args.ArgParser
       Flag : argInfo
@@ -419,11 +437,17 @@ namespace: arg
         location BaseInt ptr.mut cast!
           argInfo .enableAllValue BaseInt cast
         args.argInfoSetVal args.addArg
-        argInfo .enableAll argInfo .common addHelpText
+        argInfo .enableAll argInfo .common startHelpText .else return end
+        true
       else
-        "  ":s argInfo .common addHelpText
-      end
-      ## TODO! mention option names in help-text
+        "  ":s argInfo .common startHelpText .else return end
+        false
+      end =:: mut: needComma
+        argInfo .options for .name
+          needComma if <$ ", ":s sb.appendStr >$ else true needComma= end
+          sb.appendStr
+        end
+      argInfo .common endHelpText
     end
     proc( type.namedInteger : auto: I  args.ArgParser
       I FlagGroup : argInfo
@@ -445,11 +469,17 @@ namespace: arg
         location BaseInt ptr.mut cast!
           argInfo .enableAllValue BaseInt cast
         args.argInfoSetVal args.addArg
-        argInfo .enableAll argInfo .common addHelpText
+        argInfo .enableAll argInfo .common startHelpText .else return end
+        true
       else
-        "  ":s argInfo .common addHelpText
-      end
-      ## TODO! mention option names in help-text
+        "  ":s argInfo .common startHelpText .else return end
+        false
+      end =:: mut: needComma
+        argInfo .options for .name
+          needComma if <$ ", ":s sb.appendStr >$ else true needComma= end
+          sb.appendStr
+        end
+      argInfo .common endHelpText
     end
   end
   struct(
@@ -467,7 +497,9 @@ namespace: arg
     -> args.ArgParser ) =>: export: setArg
       argInfo .enable location args.ArgInfo .Enable args.addArg
       argInfo .disable location args.ArgInfo .Disable args.addArg
-      argInfo .enable argInfo .common addHelpText ## TODO mention disable option in help-text
+      argInfo .enable argInfo .common startHelpText .else return end
+        ", ":s sb.appendStr argInfo .disable sb.appendStr
+      argInfo .common endHelpText
     end
     proc( args.ArgParser
       FlagToggle : argInfo
@@ -475,7 +507,9 @@ namespace: arg
     -> args.ArgParser ) =>: export: collectArg
       argInfo .enable location args.ArgInfo .AppendTrue args.addArg
       argInfo .disable location args.ArgInfo .AppendFalse args.addArg
-      argInfo .enable argInfo .common addHelpText ## TODO mention disable option in help-text
+      argInfo .enable argInfo .common startHelpText .else return end
+        ", ":s sb.appendStr argInfo .disable sb.appendStr
+      argInfo .common endHelpText
     end
   end
   struct(
@@ -491,7 +525,9 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: setArg
       argName location args.ArgInfo .Set args.addArg
-      argName argInfo .common addHelpText
+      argName argInfo .common startHelpText .else return end
+        " [arg]":s sb.appendStr ## TODO allow to customize arg name
+      argInfo .common endHelpText
     end
     proc( args.ArgParser
       ValueArg : argInfo
@@ -499,7 +535,9 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: collectArg
       argName location args.ArgInfo .Append args.addArg
-      argName argInfo .common addHelpText
+      argName argInfo .common startHelpText .else return end
+        " [arg]":s sb.appendStr ## TODO allow to customize arg name
+      argInfo .common endHelpText
     end
   end
   struct(
@@ -515,7 +553,9 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: setArg
       argName location args.ArgInfo .SetAll args.addArg
-      argName argInfo .common addHelpText
+      argName argInfo .common startHelpText .else return end
+        " [arg]*":s sb.appendStr ## TODO allow to customize arg name
+      argInfo .common endHelpText
     end
     proc( args.ArgParser
       ValuesArg : argInfo
@@ -523,7 +563,9 @@ namespace: arg
       string : argName
     -> args.ArgParser ) =>: export: collectArg
       argName location args.ArgInfo .AppendAll args.addArg
-      argName argInfo .common addHelpText
+      argName argInfo .common startHelpText .else return end
+        " [arg]*":s sb.appendStr ## TODO allow to customize arg name
+      argInfo .common endHelpText
     end
   end
   proc( type : T -> type ) =>: SelectArgOption
@@ -571,6 +613,10 @@ namespace: arg
         args.argInfoSetVal args.addArg
       end
       argInfo .defaultValue .if location =[] end
+      string.empty argInfo .common startHelpText .else return end
+        argInfo .options for .name sb.appendStr ", ":s sb.appendStr end
+        argInfo .options .length 0 != if $ .length 2 - >$ .length= end ## remove last comma
+      argInfo .common endHelpText
     end
     proc( type.namedInteger : auto: I  args.ArgParser
       I SelectArg : argInfo
@@ -583,6 +629,10 @@ namespace: arg
           elt .value T type.isNamedEnum if ..tag end BaseType cast
         args.argInfoAddVal args.addArg
       end
+      string.empty argInfo .common startHelpText .else return end
+        argInfo .options for .name sb.appendStr ", ":s sb.appendStr end
+        argInfo .options .length 0 != if $ .length 2 - >$ .length end ## remove last comma
+      argInfo .common endHelpText
     end
   end
   struct(
@@ -657,6 +707,14 @@ namespace: arg
 
   proc( args.ArgParser string : argName args.HelpLevel : level -> args.ArgParser ) =>: export: help
       argName level args.ArgInfo .Help args.addArg
+      $ .helpDefault
+        "  ":s sb.appendStr argName sb.appendStr
+        level switch
+          DEFAULT  case " : print this help text\n":s sb.appendStr break
+          EXTENDED case " : print extended help text\n":s sb.appendStr break
+          SPECIAL IGNORE case " : print full help text\n":s sb.appendStr break
+        end
+      >$ .helpDefault=
   end
   overload: export: set
     flag.setArg flagToggle.setArg flagGroup.setArg
