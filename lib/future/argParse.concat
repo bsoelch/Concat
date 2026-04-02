@@ -159,7 +159,7 @@ namespace: args
       finally i 1 + end <<$
     >$ =[]
   end
-  proc( ArgInfo : argInfo string : argName i64 : index -> i64 bool ) =>: parseArgument
+  proc( ArgInfo : argInfo string ptr : argName ArgParser ptr : args i64 : index -> i64 bool ) =>: parseArgument
     argInfo switch
       Help case ..unreachable
       Enable .case true >$ =[] break
@@ -197,7 +197,7 @@ namespace: args
         index 1 + =:: shadow: index
         index sys.argc u>= if ..drop
           "missing argument for ":s io.print
-          argName io.println
+          argName [] io.println
           index true return
         end
         index sys.getArg >$ =[]
@@ -207,7 +207,7 @@ namespace: args
         index 1 + =:: shadow: index
         index sys.argc u>= if ..drop
           "missing argument for ":s io.print
-          argName io.println
+          argName [] io.println
           index true return
         end
         $ []
@@ -215,11 +215,25 @@ namespace: args
         >$ =[]
         index false return
       break
-      SetAll .case =:: dst
-        "unimplemented" ..panic
-      break
-      AppendAll .case =:: dst
-        "unimplemented" ..panic
+      SetAll AppendAll .case =:: dst
+        index 1 + =:: mut: nextIndex
+        false =:: mut: matchedArg
+        dst []
+          argInfo .SetAll ? if list.clear end
+          while nextIndex sys.argc < do
+            nextIndex sys.getArg =:: nextArg
+            nextArg .length 0 != and
+              args [] .argPrefixes nextArg 0 string.charAt string.contains if break end
+            nextArg list.append
+            true matchedArg=
+          finally nextIndex 1 + nextIndex= end
+        dst =[]
+        matchedArg ! if
+          argName [] io.print
+          " should be followed by at least one argument":s io.println
+          nextIndex true return
+        end
+        nextIndex false return
       break
     end
     index false return
@@ -257,7 +271,7 @@ namespace: args
                 level printHelp=
               end
             else
-              arg i parseArgument hadError | hadError= i=
+              arg@ args@ i parseArgument hadError | hadError= i=
             end
           break
           Missing case
@@ -564,7 +578,7 @@ namespace: arg
     -> args.ArgParser ) =>: export: setArg
       argName location args.ArgInfo .SetAll args.addArg
       argName argInfo .common startHelpText .else return end
-        " [arg]*":s sb.appendStr ## TODO allow to customize arg name
+        " [arg]+":s sb.appendStr ## TODO allow to customize arg name
       argInfo .common endHelpText
     end
     proc( args.ArgParser
@@ -574,7 +588,7 @@ namespace: arg
     -> args.ArgParser ) =>: export: collectArg
       argName location args.ArgInfo .AppendAll args.addArg
       argName argInfo .common startHelpText .else return end
-        " [arg]*":s sb.appendStr ## TODO allow to customize arg name
+        " [arg]+":s sb.appendStr ## TODO allow to customize arg name
       argInfo .common endHelpText
     end
   end
