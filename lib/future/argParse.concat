@@ -406,9 +406,7 @@ namespace: arg
       argInfo endHelpText
     end
   end
-  proc( ArgDataType : auto: A  A string : other -> A ) =>: export: disables
-
-  end
+  ## TODO? support args that activate/deactivate other args
   struct(
     Common : common
     bool : negated
