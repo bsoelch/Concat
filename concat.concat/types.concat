@@ -1386,7 +1386,7 @@ namespace: types
     enum typeContext unwrapNamed switch
       Enum .case EnumInfo ptr cast [] .tagType 0:i64  optional.wrap return
       TaggedUnion .case .compositeInfo [] .elements 1 []
-        enum 1 typeContext tupleElementOffset return
+        enum UNION_TAG_INDEX typeContext tupleElementOffset return
       RawUnion case Type .Empty i64 optional.empty return
       UnionElement .case .base [] typeContext enumTagInfo return
       Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure
@@ -1602,6 +1602,8 @@ namespace: types
     context .nameContext .allocator=
     enumId EnumId cast Type .Enum return
   end
+  0 =:: export: UNION_VALUE_INDEX
+  1 =:: export: UNION_TAG_INDEX
   proc(
     Type slice : elts
     NameId slice : eltNames
@@ -1630,8 +1632,8 @@ namespace: types
       rawValue return
     end
     Type 2 array : mut: elements
-    rawValue elements@ 0 =[]
-    eltNames .length unionType computeEnumTagType elements@ 1 =[]
+    rawValue elements@ UNION_VALUE_INDEX =[]
+    eltNames .length unionType computeEnumTagType elements@ UNION_TAG_INDEX =[]
     ## newTuple
       elements@ slice.wrap
       NameId optional slice optional.empty

@@ -2059,6 +2059,10 @@ proc(
         containerType typeContext types.asRawUnion .else
           "cannot get raw union-data":s pos ..line internalErrorNoOp ..unreachable
         end elementIndex pos opNewUnion state appendOp ..drop
+        elementIndex i64 cast.u ConstValue .Int
+          containerType types.UNION_TAG_INDEX typeContext types.compositeGetElement optional.unwrap
+        pos opConst state appendOp ..drop
+        containerType pos opNew state appendOp ..drop
         1 StackModType .ROTATE pos opStackMod state appendOp ..drop
         state .nestedElementInfo [] .path
       else
@@ -2100,8 +2104,7 @@ proc(
       targetType typeContext types.isEmpty ! if
         1 StackModType .ROTATE pos opStackMod state appendOp ..drop
         1 StackModType .COPY pos opStackMod state appendOp ..drop
-        ## TODO? do not use magic-numbers for indices of tagged-union elements
-        srcType 0 pos opGetElement state appendOp ..drop
+        srcType types.UNION_VALUE_INDEX pos opGetElement state appendOp ..drop
         containerType typeContext types.asRawUnion optional.unwrap
           isPtr if
             srcType typeContext types.isMutable typeContext types.getAddressType
@@ -2109,13 +2112,13 @@ proc(
         elementIndex pos opSetUnionElement state appendOp ..drop
         isPtr ! if
           1 StackModType .ROTATE pos opStackMod state appendOp ..drop
-          srcType 0 pos opSetElement state appendOp ..drop
+          srcType types.UNION_VALUE_INDEX pos opSetElement state appendOp ..drop
         end
       end
       containerType typeContext types.enumTagInfo ..drop =:: labelType
       elementIndex i64 cast.u ConstValue .Int labelType pos opConst state appendOp ..drop
       1 StackModType .ROTATE pos opStackMod state appendOp ..drop
-      srcType 1 pos opSetElement
+      srcType types.UNION_TAG_INDEX pos opSetElement
     else
       ## opSetElement
         srcType
@@ -3661,12 +3664,13 @@ proc(
         enumType@ slice.wrap "GetUnionTag":s 0 false op .pos state requireTypes .Err ? if
           continue.opLoop
         end
-        enumType
-          $ types.isUnionElement if
-            typeContext types.getUnionElementUnion optional.unwrap
-          end
-        1 op .pos opGetElement op=
-        enumType typeContext types.enumTagInfo ..drop ConstValue .None op state pushValue
+        enumType typeContext types.enumTagInfo ..drop ConstValue .None
+          enumType
+            $ types.isUnionElement if
+              typeContext types.getUnionElementUnion optional.unwrap
+            end
+          types.UNION_TAG_INDEX op .pos opGetElement
+        state pushValue
         continue.opLoop
       SetUnionElement case
         break
@@ -4243,7 +4247,7 @@ proc(
               IdentifierInfo optional.empty
             end =:: srcVar
             isTaggedUnion if
-              switchType 1 op .pos opGetElement state appendOp ..drop
+              switchType types.UNION_TAG_INDEX op .pos opGetElement state appendOp ..drop
             end
             ## TODO! some enum / tagged-union / enum-label macro-ops are not well-typed
             ##   should type-checker rely on compatible internal representation or should conversions be emmitted
@@ -4394,7 +4398,7 @@ proc(
                 end
                 switchBlock [] .srcVar .if =:: srcVar
                   switchBaseType srcVar op .pos opGetId state appendOp ..drop
-                  switchBaseType 0 op .pos opGetElement state appendOp ..drop
+                  switchBaseType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
                   ## pushValue
                     labelType
                       switchBaseType typeContext types.isPointer if
