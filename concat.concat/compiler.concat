@@ -3,6 +3,7 @@ import string
 import numbers
 import exec
 import file
+import argParse
 
 using std.literals.
 
@@ -13,201 +14,150 @@ import "prepareCompile.concat"
 import "generator_qbe.concat"
 import "generator_asm.concat"
 
-stringBuilder : mut: srcPath
-stringBuilder : mut: targetPath
-stringBuilder : mut: outPath
-stringBuilder : mut: tmpPath
-string : mut: baseName
-string : mut: basePath
-string : mut: libPath
-string optional : mut: errorFile
-## XXX? more controll of compilation states after which tokens will be dumped
-false =:: mut: dumpTokens
+sb.empty =:: mut: srcPath
+sb.empty =:: mut: targetPath
+sb.empty =:: mut: outPath
+sb.empty =:: mut: tmpPath
+string.empty =:: mut: baseName
+string.empty =:: mut: basePath
+string.empty =:: mut: libPath
+
+i16 =:: DumpPhases
+namespace: DumpPhases
+  0x0000 DumpPhases cast =:: NONE
+  0x0001 DumpPhases cast =:: PARSER
+  0x0002 DumpPhases cast =:: TYPE_CHECKER
+  0x0004 DumpPhases cast =:: USAGE_ANALYSIS
+  0x0008 DumpPhases cast =:: COPY_ANALYSIS
+  0x0010 DumpPhases cast =:: PRE_COMPILER
+  0xFFFF DumpPhases cast =:: ALL
+  proc( DumpPhases DumpPhases -> DumpPhases ) : alias: and i16.and
+  proc( DumpPhases -> bool ) : alias: toBool i16.toBool
+end
+overload: ? DumpPhases.toBool end
+overload: & DumpPhases.and end
+DumpPhases.NONE =:: mut: dumpPhases
 false =:: mut: verbose
 true =:: mut: compileGeneratedCode
+string list.empty =:: mut: runArgs
 ## TODO? flag for cleaning up intermediate files
 false =:: mut: runCompiledProgram
 
-## make new compiler flags accessible in code through `..compiler.flag.<...>`
-proc( string : path -> ) =>: printUsage
-  "usage: " sb.copyPtr
-    path sb.appendStr
-    " \"inputFile\" [-o \"outputFile\"]\n" sb.appendS
-    "options:\n" sb.appendS
-    "  -h: print help text\n" sb.appendS
-    "  -o \"fileName\": set output file  (default: \"./out.c\")\n" sb.appendS
-    "  -T: dump tokens in intermediate steps to file\n" sb.appendS
-    "  -l \"fileName\": set path to standard library (default: \"./lib/\")\n" sb.appendS ## XXX allow more than one library path
-    "  -e \"fileName\": write all compiler errors to the given file\n" sb.appendS
-    "  -W: treat warnings as errors\n" sb.appendS
-    "  -Wunused: create warnings for unused variables\n" sb.appendS
-    "  -v: vebose mode\n" sb.appendS
-    "  -S: only emmit assembly (QBE-IR for QBE backend)\n" sb.appendS
-    "  -R: run compiled code\n" sb.appendS
-    "  --no-core: don't include libray core by default \n" sb.appendS
-    $ sb.asStr io.print
-  sb.free ..drop
-end
-enum( NONE IN OUT LIB_PATH ERR_PATH ) =:: ArgParserState
 proc( -> ) =>: parseArgs
-  false =:: mut: printedUsage
-  false =:: mut: hasSrc
-  false =:: mut: hasOut
-  false =:: mut: hasLib
-  0 sb.create srcPath=
-  0 sb.create targetPath=
-  0 sb.create outPath=
-  0 sb.create tmpPath=
-  string optional.empty errorFile=
+  string.empty =:: mut: outPath0
+  string list.empty =:: mut: sourceFiles
+  string list.empty =:: mut: libPaths
+  OptLevel .DEFAULT =:: mut: optLevel
   0 sys.getArg =:: path
-  ArgParserState .IN =:: mut: state
-  1:i64 while $ sys.argc < do
-    $ sys.getArg =:: arg
-    arg .length 0:iSize == if
-      1 + continue
-    end
-    arg 0 string.charAt '-' == if
-      arg .length 2:iSize u< if
-        file.stdErr "invalid argument \"-\"":s file.write ..drop
-        1 + continue
-      end
-      arg 1 string.charAt switch
-        'h' case
-          printedUsage if continue end
-          path printUsage
-          true printedUsage=
-          continue
-        'o' case
-          arg .length 2:iSize u> if break end
-          ArgParserState .OUT state=
-          continue
-        'T' case
-          true dumpTokens=
-          continue
-        'l' case
-          arg .length 2:iSize u> if break end
-          ArgParserState .LIB_PATH state=
-          continue
-        'e' case
-          arg .length 2:iSize u> if break end
-          ArgParserState .ERR_PATH state=
-          continue
-        'W' case
-          arg "-Wunused":s string.eq if
-            true _W_UNUSED_= continue
-          else arg .length 2:iSize u> _if break end
-          true _W_ERROR_=
-          continue
-        'v' case
-          true verbose=
-          continue
-        'S' case
-          false compileGeneratedCode=
-          continue
-        'R' case ## run code
-          true runCompiledProgram=
-          continue
-        'X' case ## experimental features
-          arg .length 2:iSize u> if break end
-          true _EXPERIMENTAL_=
-          continue
-        'O' case ## optimization level
-          arg .length 2:iSize == if
-            1
-          else arg "-Odefault":s string.eq _if
-            optimizerFlags.optLevelDefault
-            continue
-          else arg "-Ox":s string.eq _if
-            optimizerFlags.optLevelExperimental
-            continue
-          else
-            arg 2 string.tail 10 number.tryParseInt .NONE ! if
-              ..drop 1 ## parsing as int failed
-            end
-          end =:: opLevel
-          opLevel 0 <= if
-            optimizerFlags.optLevel0
-            continue
-          else opLevel 1 >= _if
-            optimizerFlags.optLevel1
-            continue
-          end
-          break
-        '-' case
-          arg "--no-core":s string.eq if
-            false _INCLUDE_CORE_= continue
-          else arg "--export-global":s string.eq _if
-            true EXPORT_GLOBALS= continue
-          else arg "--no-inc-version":s string.eq _if
-            false _INCREMENT_VERSION_= continue
-          else arg "--asm":s string.eq _if
-            BackEnd .ASM _BACKEND_= continue
-          end
-          break
-        default break
-      end
-      "unknown compiler option: \"" sb.copyPtr
-        arg sb.appendStr
-        "\"\n" sb.appendS
-        file.stdErr $1 sb.asStr file.write ..drop
-      sb.free ..drop
-      continue
-    end
-    state switch
-      NONE case
-        "expected compiler option got \"" sb.copyPtr
-          arg sb.appendStr
-          "\"\n" sb.appendS
-          file.stdErr $1 sb.asStr file.write ..drop
-        sb.free ..drop
-        break
-      IN case
-        srcPath sb.clear arg sb.appendStr srcPath=
-        true hasSrc=
-        ArgParserState .NONE state=
-        break
-      OUT case
-        targetPath sb.clear arg sb.appendStr targetPath=
-        true hasOut=
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
-        break
-      ERR_PATH case
-        arg optional.wrap errorFile=
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
-        break
-      LIB_PATH case
-        arg libPath=
-        true hasLib=
-        hasSrc if ArgParserState .NONE else ArgParserState .IN end state=
-        break
-    end
-  finally 1 + end ..drop
-  hasSrc ! if
-    printedUsage if
-      0 sys.exit
-      ..unreachable
-    end
-    file.stdErr "no input file specified\n":s file.write ..drop
-    path printUsage
-    srcPath sb.free
-    outPath sb.free
+  args.start
+    "-":s args.prefixes ## set argument prefix
+    "[src-file]+ (-o [output-file])? [option]*":s args.usage
+    arg.value ## take next argument as value
+      "[output-file]":s arg.value.setArgName
+      "output file":s arg.helpText
+    outPath0@ "-o":s arg.set
+    DumpPhases arg.flagGroup ## consume following value-args, check for specific values
+      "-Tparser":s DumpPhases.PARSER arg.flagGroup.enable
+      "-Ttype-checker":s DumpPhases.TYPE_CHECKER arg.flagGroup.enable
+      "-Tusage-analysis":s DumpPhases.USAGE_ANALYSIS arg.flagGroup.enable
+      "-Tcopy-analysis":s DumpPhases.COPY_ANALYSIS arg.flagGroup.enable
+      "-Tpre-compiler":s DumpPhases.PRE_COMPILER arg.flagGroup.enable
+      "-T":s arg.flagGroup.enableAll
+      "dump compiler outputs after phases":s arg.helpText
+      args.HelpLevel .EXTENDED arg.helpLevel
+    dumpPhases@ arg.collect
+    arg.values ## take folowing values as list
+      "[lib-path]":s arg.values.setArgName
+      "libary path(s)":s arg.helpText
+    libPaths@ "-l":s arg.collect
+    arg.flag ## set a flag if arg appears
+      "treat warnings as errors":s arg.helpText
+    _W_ERROR_@ "-W":s arg.set
+    "-Wunused":s "-Wno-unused":s arg.flagToggle ## toggle a flag depending on argument
+      "warn for unused identifiers":s arg.helpText
+      args.HelpLevel .EXTENDED arg.helpLevel
+    _W_UNUSED_@ arg.set
+    arg.flag
+      "verbose mode":s arg.helpText
+      args.HelpLevel .EXTENDED arg.helpLevel
+    verbose@ "-v":s arg.set
+    arg.flag
+      arg.flag.negate
+      "output generated target code":s arg.helpText
+      args.HelpLevel .EXTENDED arg.helpLevel
+    compileGeneratedCode@ "-S":s arg.set
+    arg.flag
+      "run compiled code, using subsequent arguments as program arguments":s arg.helpText
+      runArgs@ arg.flag.consumeTail
+      "[program-arg]":s arg.flag.setArgName
+    runCompiledProgram@ "-R":s arg.set
+    arg.flag
+      "enable experimental features":s arg.helpText
+    _EXPERIMENTAL_@ "-X":s arg.set
+    OptLevel arg.select ## select value depending on which arg appear last
+      OptLevel .DEFAULT arg.select.default
+      "-O0":s OptLevel .NONE arg.select.option
+      "-Odefault":s OptLevel .DEFAULT arg.select.option
+      "-O":s OptLevel .OPTIMIZE arg.select.option
+      "-Ox":s OptLevel .EXPERIMENTAL arg.select.option
+      "optimization level":s arg.helpText
+    optLevel@ arg.set
+    arg.flag
+      arg.flag.negate
+      "disable core imports":s arg.helpText
+      args.HelpLevel .EXTENDED arg.helpLevel
+    _INCLUDE_CORE_@ "--no-core":s arg.set
+    "--export-globals":s "--no-export-globals":s arg.flagToggle
+      "export global identifiers":s arg.helpText
+    EXPORT_GLOBALS@ arg.set
+    arg.flag
+      arg.flag.negate
+      "don't increment version counter":s arg.helpText
+      args.HelpLevel .SPECIAL arg.helpLevel
+    _INCREMENT_VERSION_@ "--no-inc-version":s arg.set
+    BackEnd arg.select ## ? store untyped specialisations for 1,2,4,8,16 bytes types err for larger sizes
+      ## -> convert input to opaque values
+      BackEnd .QBE arg.select.default
+      "--asm":s BackEnd .ASM arg.select.option
+      "--qbe":s BackEnd .QBE arg.select.option
+      "select compiler backend":s arg.helpText
+    _BACKEND_@ arg.set
+    "-h":s args.HelpLevel .DEFAULT arg.help
+    "--help":s args.HelpLevel .DEFAULT arg.help
+    "--help+":s args.HelpLevel .EXTENDED arg.help
+    "--help++":s args.HelpLevel .SPECIAL arg.help
+    arg.misc
+      "source files":s arg.helpText
+      "need at least one source file":s arg.misc.require ## at least one value has to be given
+    sourceFiles@ arg.collect
+  args.parse if
     1 sys.exit
-    ..unreachable
   end
+  optLevel optimizerFlags.setOptLevel
+  srcPath
+    sourceFiles .length 1 u> if
+      "compilation with multiple sources is not supported":s io.println
+      sourceFiles for io.println end
+      1 sys.exit
+    end
+    sourceFiles 0 [] sb.appendStr
+  srcPath=
+  sourceFiles list.free ..drop
   srcPath sb.asStr '.' string.lastIndexOf =:: mut: iDot
-  srcPath sb.asStr '/' string.lastIndexOf =:: iSlash ##XXX? support windows paths ('\' instead of '/')
+  srcPath sb.asStr '/' string.lastIndexOf =:: iSlash ## TODO? support windows paths ('\' instead of '/')
   iDot .and =:: dotIndex iSlash .and dotIndex >$ u< if
     iSize optional.empty iDot=
   end
-  hasOut ! if
-    targetPath
-      srcPath sb.asStr
-      iDot string.head sb.appendStr
-    targetPath=
-  end
+  targetPath
+    outPath0 .length 0 != if
+      outPath0 sb.appendStr
+    else
+      srcPath sb.asStr iDot string.head sb.appendStr
+    end
+  targetPath=
   targetPath sb.asStr baseName=
-  outPath sb.clear
-    hasOut and compileGeneratedCode ! if
+  outPath
+    outPath0 .length 0 != and compileGeneratedCode ! if
       targetPath sb.appendSb
     else
       baseName sb.appendStr
@@ -222,16 +172,21 @@ proc( -> ) =>: parseArgs
   else
     "./":s
   end basePath=
-  hasLib ! if
-    "./lib/":s libPath=
-  else libPath $ .length 1:iSize - string.charAt ..dup '/' != ..swap '\\' != & _if
+  libPaths .length 0 == if
+    "./lib/":s
+  else
+    libPaths .length 1 u> if
+      "using multiple library paths are not supported":s io.println
+    end
+    libPaths 0 []
+  end libPath=
+  ## TODO? check if libPath exists
+  libPath $ .length 1:iSize - string.charAt =:: l0
+  l0 '/' != and l0 '\\' != if
     file.stdErr "library path has to end with '/' or '\\'\n":s file.write ..drop
-    srcPath sb.free
-    outPath sb.free
     1 sys.exit
-    ..unreachable
   end
-  ## XXX check if libPath exists
+  libPaths list.free ..drop
 end
 
 proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
@@ -249,7 +204,7 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
         true hasError=
       end
     end
-    errorFile .if file.OpenMode .WRITE file.open else file.stdErr end
+    file.stdErr
       $1 sb.asStr file.write
     file.close
   sb.free ..drop
@@ -261,11 +216,11 @@ proc( CompilerError list ptr.mut : errors -> ) =>: checkErrors
 end
 
 proc( -> ProgramContext ) =>: parseAndTypeCheck
-  srcPath libPath basePath dumpTokens parseProgram
+  srcPath libPath basePath dumpPhases ? parseProgram
     =:: mut: typeCheckState
   =:: mut: prog
   prog@ typeCheckState@ updateTypeCheckerPointers
-  dumpTokens if
+  dumpPhases DumpPhases.PARSER & ? if
     tmpPath sb.free
       baseName sb.appendStr
       ".tokens.parser":s sb.appendStr
@@ -292,7 +247,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
   parseArgs
   ## TODO cleanup program memory after compilation
   parseAndTypeCheck =:: mut: prog
-  dumpTokens if
+  dumpPhases DumpPhases.TYPE_CHECKER & ? if
     1024 sb.create
       prog@ sb.appendProgram
     =:: parsedOps
@@ -311,7 +266,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
   ## TODO? option to dump tokens after usage analysis
   prog@ prepareCompile
   ## TODO seperate file for each compilation step
-  dumpTokens if
+  dumpPhases DumpPhases.PRE_COMPILER & ? if
     1024 sb.create
       prog@ sb.appendProgram
     =:: parsedOps

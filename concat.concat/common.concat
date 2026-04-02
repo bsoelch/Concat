@@ -26,6 +26,7 @@ true =:: mut: export: _INCREMENT_VERSION_
 BackEnd .QBE =:: mut: export: _BACKEND_
 ## TODO make changable using compiler argument
 false =:: mut: export: EXPORT_GLOBALS ## include all (non-library) exported procedures in binary
+enum( NONE DEFAULT OPTIMIZE EXPERIMENTAL ) =:: export: OptLevel
 namespace: optimizerFlags
   true =:: export: mut: REMOVE_UNUSED_PROCS ## don't include unused procedures in compiled code
   false =:: export: mut: ALLOW_INLINE_SMALL
@@ -36,7 +37,15 @@ namespace: optimizerFlags
   16 =:: export: mut: WEAK_INLINE_MAX_OP_COUNT ## always inlined (unless marked as inline.never)
   32 =:: export: mut: INLINE_MAX_OP_COUNT ## inlined if marked as inline
 
-  ## diable all optimizations
+  proc( OptLevel -> ) =>: export: setOptLevel
+    switch
+      NONE case optLevel0 break
+      DEFAULT case optLevelDefault break
+      OPTIMIZE case optLevel1 break
+      EXPERIMENTAL case optLevelExperimental break
+    end
+  end
+  ## disable all optimizations
   proc( -> ) =>: export: optLevel0
     false REMOVE_UNUSED_PROCS=
     false ALLOW_INLINE_SMALL=
