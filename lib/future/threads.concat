@@ -60,7 +60,7 @@ namespace: thread
   end
   proc( i64 : stackMem i64 : stackSize -> i64 ) =>: cloneProcess
     using linux.clone.
-    CloneArgs : cloneArgs
+    CloneArgs : mut: cloneArgs
     cloneArgs@ 1:iSize mem.clear ..drop
     cloneArgs
       CLONE_VM CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | >$ .flags=
