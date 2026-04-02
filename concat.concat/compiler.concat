@@ -21,6 +21,7 @@ sb.empty =:: mut: tmpPath
 string.empty =:: mut: baseName
 string.empty =:: mut: basePath
 string.empty =:: mut: libPath
+string list.empty =:: mut: linkTo
 
 i16 =:: DumpPhases
 namespace: DumpPhases
@@ -70,6 +71,10 @@ proc( -> ) =>: parseArgs
       "[lib-path]":s arg.values.setArgName
       "libary path(s)":s arg.helpText
     libPaths@ "-l":s arg.collect
+    arg.values
+      "[file-path]":s arg.values.setArgName
+      "additional files to pass to the linker":s arg.helpText
+    linkTo@ "-L":s arg.collect
     arg.flag ## set a flag if arg appears
       "treat warnings as errors":s arg.helpText
     _W_ERROR_@ "-W":s arg.set
@@ -323,6 +328,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
             "extern.c":s sb.appendStr
           tmpPath=
           tmpPath sb.asStr exec.add
+          linkTo for exec.add end
           "-o":s exec.add targetPath sb.asStr exec.add
         exec.run exec.check ! if
           false runCompiledProgram=
@@ -342,7 +348,9 @@ proc( -> ) =>: main ## TODO check return value of fopen
         tmpPath=
         "gcc":s exec.build
           "-g":s exec.add "-lm":s exec.add
-          outPath sb.asStr exec.add tmpPath sb.asStr exec.add
+          outPath sb.asStr exec.add
+          tmpPath sb.asStr exec.add
+          linkTo for exec.add end
           "-o":s exec.add targetPath sb.asStr exec.add
         exec.run exec.check ! if
           false runCompiledProgram=
