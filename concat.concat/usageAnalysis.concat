@@ -190,7 +190,8 @@ proc(
         offset StackModType .ROTATE pos opStackMod context filterOp
       end
       eltType argName id.identifierFlags id.FLAG_MUTABLE & ? pos context newTmpVar =:: tmpId
-      eltType tmpId pos opInitializeId context filterOp
+      eltType tmpId pos opDeclareId context filterOp
+      eltType tmpId pos opSetId context filterOp
       remapIds@ argName tmpId map.put optional.isEmpty "identifier-value only reassigned once" assert
     end
   finally i 1 - end ..drop
