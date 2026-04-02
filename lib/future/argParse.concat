@@ -159,18 +159,18 @@ namespace: args
       finally i 1 + end <<$
     >$ =[]
   end
-  proc( ArgInfo : argInfo i64 : index -> i64 ) =>: parseArgument
+  proc( ArgInfo : argInfo string : argName i64 : index -> i64 bool ) =>: parseArgument
     argInfo switch
       Help case ..unreachable
       Enable .case true >$ =[] break
       Disable .case false >$ =[] break
       EnableAndTail .case =:: dst
         true dst .flag =[]
-        dst .tail index 1 + consumeTail return
+        dst .tail index 1 + consumeTail false return
       break
       DisableAndTail .case =:: dst
         false dst .flag =[]
-        dst .tail index 1 + consumeTail return
+        dst .tail index 1 + consumeTail false return
       break
       AppendTrue .case $ [] true list.append >$ =[] break
       AppendFalse .case $ [] false list.append >$ =[] break
@@ -195,15 +195,25 @@ namespace: args
     ## 1 parameter
       Set .case
         index 1 + =:: shadow: index
+        index sys.argc u>= if ..drop
+          "missing argument for ":s io.print
+          argName io.println
+          index true return
+        end
         index sys.getArg >$ =[]
-        index return
+        index false return
       break
       Append .case
         index 1 + =:: shadow: index
+        index sys.argc u>= if ..drop
+          "missing argument for ":s io.print
+          argName io.println
+          index true return
+        end
         $ []
           index sys.getArg list.append
         >$ =[]
-        index return
+        index false return
       break
       SetAll .case =:: dst
         "unimplemented" ..panic
@@ -212,7 +222,7 @@ namespace: args
         "unimplemented" ..panic
       break
     end
-    index return
+    index false return
   end
   proc( ArgParser : args -> ) =>: export: parse
     args .argNames ArgName.cmp@ list.sort
@@ -247,7 +257,7 @@ namespace: args
                 level printHelp=
               end
             else
-              i parseArgument i=
+              arg i parseArgument hadError | hadError= i=
             end
           break
           Missing case
