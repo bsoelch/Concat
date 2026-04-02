@@ -1,0 +1,19 @@
+proc( char8 128 ptr.mut : tmp -> ) =>: writeValues
+  128 for 'A' tmp >>$ =[] end
+end
+proc( -> ) =>: prepareStack
+  char8 128 array : mut: buff
+  buff@ writeValues
+end
+union( i32 : I f32 : F ) =:: Inner
+struct( i32 : x Inner : y ) =:: Outer
+proc( Outer -> Outer ) =>: test
+  2 >$ .y.I=
+end
+proc( -> ) =>: main
+  0 1 Inner .I Outer new =:: x
+  prepareStack
+  x test =:: y
+  y .x 0 == "y.x" assert
+  y .y .I .and 2 == end "y.y" assert
+end
