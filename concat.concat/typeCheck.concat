@@ -3081,7 +3081,7 @@ proc(
                     MissingProc new list.append
                   state .missingProcs=
                 end
-              else .BuiltIn ? ! _if
+              else .Alias ? _if
                 "unexpected proc implementation":s op ..line state internalError ..unreachable
               end
               procId OpValue .ProcPtr op@ .val=
