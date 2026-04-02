@@ -3,9 +3,9 @@ namespace: linux
   0 ..ctype.void ptr.raw.mut cast! =:: export: nullPtr
 
   i32 =:: export: FileId
-  0:FileId =:: export: stdIn
-  1:FileId =:: export: stdOut
-  2:FileId =:: export: stdErr
+  0 FileId =: export: stdIn
+  1 FileId =: export: stdOut
+  2 FileId =: export: stdErr
   ## XXX open
   proc.c(
     i64 : count
@@ -22,28 +22,28 @@ namespace: linux
   -> i64 ) : extern: export: sys_close
 
   namespace: mmap
-    -1:FileId =:: export: NO_FILE
+    -1 FileId =: export: NO_FILE
     i32 =:: export: Protection
-    0x0:Protection =:: export: PROT_NONE
-    0x1:Protection =:: export: PROT_READ
-    0x2:Protection =:: export: PROT_WRITE
-    0x4:Protection =:: export: PROT_EXEC
+    0x0 Protection =: export: PROT_NONE
+    0x1 Protection =: export: PROT_READ
+    0x2 Protection =: export: PROT_WRITE
+    0x4 Protection =: export: PROT_EXEC
     proc( Protection Protection -> Protection ) : alias: or_prot i32.or
     proc( Protection Protection -> bool ) : alias: eq_prot i32.eq
     proc( Protection Protection -> bool ) : alias: ne_prot i32.ne
     i32 =:: export: Flags
-    0x1:Flags      =:: export: MAP_SHARED
-    0x2:Flags      =:: export: MAP_PRIVATE
-    0x3:Flags      =:: export: MAP_SHARED_VALIDATE
-    0x10:Flags     =:: export: MAP_FIXED
-    0x20:Flags     =:: export: MAP_ANONYMOUS
-    0x40:Flags     =:: export: MAP_32BIT
-    0x100:Flags    =:: export: MAP_GROWSDOWN
-    0x800:Flags    =:: export: MAP_DENYWRITE
-    0x2000:Flags   =:: export: MAP_LOCKED
-    0x20000:Flags  =:: export: MAP_STACK
-    0x80000:Flags  =:: export: MAP_SYNC
-    0x100000:Flags =:: export: MAP_FIXED_NOREPLACE
+    0x1      Flags =: export: MAP_SHARED
+    0x2      Flags =: export: MAP_PRIVATE
+    0x3      Flags =: export: MAP_SHARED_VALIDATE
+    0x10     Flags =: export: MAP_FIXED
+    0x20     Flags =: export: MAP_ANONYMOUS
+    0x40     Flags =: export: MAP_32BIT
+    0x100    Flags =: export: MAP_GROWSDOWN
+    0x800    Flags =: export: MAP_DENYWRITE
+    0x2000   Flags =: export: MAP_LOCKED
+    0x20000  Flags =: export: MAP_STACK
+    0x80000  Flags =: export: MAP_SYNC
+    0x100000 Flags =: export: MAP_FIXED_NOREPLACE
     proc( Flags Flags -> Flags ) : alias: or_flags i32.or
     proc( Flags Flags -> bool ) : alias: eq_flags i32.eq
     proc( Flags Flags -> bool ) : alias: ne_flags i32.ne
@@ -53,9 +53,9 @@ namespace: linux
   end
   namespace: mremap
     i32 =:: Flags
-    0x1:Flags      =:: export: MAY_MOVE
-    0x2:Flags      =:: export: FIXED
-    0x4:Flags      =:: export: DONT_UNMAP
+    0x1 Flags =: export: MAY_MOVE
+    0x2 Flags =: export: FIXED
+    0x4 Flags =: export: DONT_UNMAP
   end
   proc.c(
     i64 : offset
@@ -91,19 +91,19 @@ namespace: linux
     overload: merge: == eq_flags end
     overload: merge: != ne_flags end
     ## copied from linux/sched.h, abreviated
-    0x00000100:CloneFlags =:: export: CLONE_VM      ## set if VM shared between processes
-    0x00000200:CloneFlags =:: export: CLONE_FS      ## set if fs info shared between processes
-    0x00000400:CloneFlags =:: export: CLONE_FILES   ## set if open files shared between processes
-    0x00000800:CloneFlags =:: export: CLONE_SIGHAND ## set if signal handlers and blocked signals shared
-    0x00001000:CloneFlags =:: export: CLONE_PIDFD   ## set if a pidfd should be placed in parent
-    0x00002000:CloneFlags =:: export: CLONE_PTRACE  ## set if we want to let tracing continue on the child too
-    0x00008000:CloneFlags =:: export: CLONE_PARENT  ## set if we want to have the same parent as the cloner
-    0x00010000:CloneFlags =:: export: CLONE_THREAD  ## Same thread group
-    0x00080000:CloneFlags =:: export: CLONE_SETTLS  ## create a new TLS for the child
-    0x00100000:CloneFlags =:: export: CLONE_PARENT_SETTID  ## set the TID in the parent
-    0x00200000:CloneFlags =:: export: CLONE_CHILD_CLEARTID ## clear the TID in the child
-    0x01000000:CloneFlags =:: export: CLONE_CHILD_SETTID   ## set the TID in the child
-    0x80000000:CloneFlags =:: export: CLONE_IO      ## Clone io context
+    0x00000100 CloneFlags =: export: CLONE_VM      ## set if VM shared between processes
+    0x00000200 CloneFlags =: export: CLONE_FS      ## set if fs info shared between processes
+    0x00000400 CloneFlags =: export: CLONE_FILES   ## set if open files shared between processes
+    0x00000800 CloneFlags =: export: CLONE_SIGHAND ## set if signal handlers and blocked signals shared
+    0x00001000 CloneFlags =: export: CLONE_PIDFD   ## set if a pidfd should be placed in parent
+    0x00002000 CloneFlags =: export: CLONE_PTRACE  ## set if we want to let tracing continue on the child too
+    0x00008000 CloneFlags =: export: CLONE_PARENT  ## set if we want to have the same parent as the cloner
+    0x00010000 CloneFlags =: export: CLONE_THREAD  ## Same thread group
+    0x00080000 CloneFlags =: export: CLONE_SETTLS  ## create a new TLS for the child
+    0x00100000 CloneFlags =: export: CLONE_PARENT_SETTID  ## set the TID in the parent
+    0x00200000 CloneFlags =: export: CLONE_CHILD_CLEARTID ## clear the TID in the child
+    0x01000000 CloneFlags =: export: CLONE_CHILD_SETTID   ## set the TID in the child
+    0x80000000 CloneFlags =: export: CLONE_IO      ## Clone io context
     struct.c( ## TODO? use more descriptive types
        CloneFlags : flags ## Flags bit mask
        i64 : pidfd ## Where to store PID file descriptor
