@@ -302,8 +302,8 @@ proc( -> ) =>: main ## TODO check return value of fopen
           "-----------------------------------------":s io.println
         end
         "qbe":s exec.build
-          outPath sb.asStr exec.add
           "-o":s exec.add tmpPath sb.asStr exec.add
+          outPath sb.asStr exec.add
         exec.run exec.check ! if
           false runCompiledProgram=
           ## TODO? print errors to stderr
