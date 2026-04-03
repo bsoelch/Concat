@@ -210,7 +210,8 @@ proc(
       remapIds@ nameId map.get .if op@ .val .SetId= end
     else .AtId ._if .nameId =:: nameId
       remapIds@ nameId map.get .if op@ .val .AtId= end
-    ## TODO? handle declareId and initializeId
+    else .DeclareId ._if .nameId =:: nameId
+      remapIds@ nameId map.get .if op@ .val .DeclareId= end
     else .LocalJump ._if .labelId =:: label
       remapLabels@ label map.get .else
         program program.nextLocalLabel
