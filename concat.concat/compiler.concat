@@ -29,7 +29,7 @@ namespace: DumpPhases
   0x0001 DumpPhases cast =:: PARSER
   0x0002 DumpPhases cast =:: TYPE_CHECKER
   0x0004 DumpPhases cast =:: USAGE_ANALYSIS
-  0x0008 DumpPhases cast =:: COPY_ANALYSIS
+  0x0008 DumpPhases cast =:: ALIAS_DETECTION
   0x0010 DumpPhases cast =:: PRE_COMPILER
   0xFFFF DumpPhases cast =:: ALL
   proc( DumpPhases DumpPhases -> DumpPhases ) : alias: and i16.and
@@ -61,7 +61,7 @@ proc( -> ) =>: parseArgs
       "-Tparser":s DumpPhases.PARSER arg.flagGroup.enable
       "-Ttype-checker":s DumpPhases.TYPE_CHECKER arg.flagGroup.enable
       "-Tusage-analysis":s DumpPhases.USAGE_ANALYSIS arg.flagGroup.enable
-      "-Tcopy-analysis":s DumpPhases.COPY_ANALYSIS arg.flagGroup.enable
+      "-Talias-detection":s DumpPhases.ALIAS_DETECTION arg.flagGroup.enable
       "-Tpre-compiler":s DumpPhases.PRE_COMPILER arg.flagGroup.enable
       "-T":s arg.flagGroup.enableAll
       "dump compiler outputs after phases":s arg.helpText
@@ -268,9 +268,36 @@ proc( -> ) =>: main ## TODO check return value of fopen
   end
   prog@ .errors checkErrors
   prog@ usageAnalysis
-  ## TODO? option to dump tokens after usage analysis
+  dumpPhases DumpPhases.USAGE_ANALYSIS & ? if
+    1024 sb.create
+      prog@ sb.appendProgram
+    =:: parsedOps
+    tmpPath sb.free
+      baseName sb.appendStr
+      ".tokens.usageAnalysis":s sb.appendStr
+    tmpPath=
+    tmpPath sb.asStr file.OpenMode .WRITE file.open
+      parsedOps sb.asStr file.write
+    file.close
+    parsedOps sb.free ..drop
+  end
+  _EXPERIMENTAL_ if
+    prog@ aliasDetection
+    dumpPhases DumpPhases.ALIAS_DETECTION & ? if
+      1024 sb.create
+        prog@ sb.appendProgram
+      =:: parsedOps
+      tmpPath sb.free
+        baseName sb.appendStr
+        ".tokens.aliasDetection":s sb.appendStr
+      tmpPath=
+      tmpPath sb.asStr file.OpenMode .WRITE file.open
+        parsedOps sb.asStr file.write
+      file.close
+      parsedOps sb.free ..drop
+    end
+  end
   prog@ prepareCompile
-  ## TODO seperate file for each compilation step
   dumpPhases DumpPhases.PRE_COMPILER & ? if
     1024 sb.create
       prog@ sb.appendProgram

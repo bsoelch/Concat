@@ -94,8 +94,6 @@ struct(
   ProgramContext ptr.mut : program
   NameId VariableUses hashMap : variableUses
   LocalLabelId VariableUseInfo list hashMap : labelVariableUses
-  FileId : currentFile
-  i32 : inlineCount
   bool : reachable
 ) =:: ConverterContext
 
@@ -157,6 +155,7 @@ proc(
   procOps .length 18:iSize u<=
 end
 
+## TODO: detect nested inlines
 proc(
   Operation list
   ProcId : procId
@@ -500,68 +499,8 @@ proc(
   newOps op list.append return ## nothing to change
 end
 
-enum( PRIMITIVE POINTER COMPOSITE COMPOSITE_OWNED ) =:: StackValueType
-NameId ..types.size 8 == "sizeof(NameId) == 8" assert
-struct(
-  NameId 3 array : data
-  i8 : count
-) =:: LocalVarPointers3
-union(
-  _ : None
-  LocalVarPointers3 : Inplace
-  NameId list : Dynamic
-) =:: LocalVarPointers
-struct(
-  LocalVarPointers : pointerInfo
-  StackValueType : valType
-) =:: StackValue
 proc(
-  Operation list
-  Operation : mut: op
-  ConverterContext ptr.mut : context
--> Operation list ) =>: aliasCheckOp
-  context [] .program =:: program
-  program .errors =:: errors
-  program .idContext =:: idContext
-  idContext .constContext =:: constContext
-  idContext .typeContext =:: typeContext
-  typeContext .nameContext =:: nameContext
-  ## TODO: keep track of stack avoid unneccessary copies
-  ## * detect return/global store of local variable
-  ## * second round of constant folding
-  ## * merge aliased local variables
-  ## ? detect stack values that are never read (? only if optimizations are enabled)
-  ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
-  ## ? borrow-checking
-  op .val switch
-    NOP case return ## ignore no-ops
-    GetId .case =:: idInfo
-      op list.append
-      idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? if
-        op .dataType op .pos opCopy list.append ## ommit copy if variable is not modified for lifetime of stack value
-      end
-    return
-    GetElement .case =:: index
-      ## TODO? getPtr + getElement -> getElement + getPtr
-      $ list.peek .and .val [] .Copy ? and op .dataType typeContext types.isPointer ! if
-        ## copy, getElement -> getElement, copy
-        list.pop ..drop
-        op list.append
-        op .dataType index typeContext types.compositeGetElement optional.unwrap op .pos opCopy list.append
-        return
-      end
-    break
-    SetElement SetNestedElement case
-      op .dataType op .pos opCopy list.append ## TODO only copy if value is not owned
-    break
-    default break
-  end
-  op list.append return ## nothing to change
-end
-
-
-proc(
-  Operation slice.mut : mut: oldOps
+  Operation slice.mut : oldOps
   Operation list ptr.mut : tmpOps
   ConverterContext ptr.mut : context
 -> Operation slice.mut ) =>: analizeProc
@@ -582,19 +521,11 @@ proc(
       context filterOp
     end
     $ list.asSlice slice.copy =:: newCode
-    _EXPERIMENTAL_ if
-      list.clear
-      newCode for
-        context aliasCheckOp
-      end
-    end
-    $ list.asSlice slice.copy =:: shadow: newCode
     list.clear
   tmpOps =[]
   oldOps slice.free ..drop
   newCode
 end
-
 proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -603,8 +534,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     program
     NameId.hash@ NameId.eq@ 1024 VariableUses map.create
     LocalLabelId.hash@ LocalLabelId.eq@ 1024 VariableUseInfo list map.create
-    -1:FileId
-    0
     false
   ConverterContext new =:: mut: contextData
   ## sort procs to ensure inlinable procs are before non-inlinable procs
@@ -638,7 +567,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
       continue
     end =:: impl
     tmpOps list.clear tmpOps=
-    currentProc [] .fileId context .currentFile=
     program [] .progFiles
       currentProc [] .fileId i64 cast
     @[] =:: f
@@ -681,6 +609,101 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
       ProcCodeState .COMPILED ## skip pre-compiler
       0:i16
     CodeProcData new currentProc .implementation .Code=
+  end
+  tmpOps list.free ..drop
+  ## TODO cleanup context
+end
+
+struct(
+  ProgramContext ptr.mut : program
+) =:: AliasCheckerContext
+proc(
+  Operation list
+  Operation : mut: op
+  AliasCheckerContext ptr.mut : context
+-> Operation list ) =>: aliasCheckOp
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  ## TODO: keep track of stack avoid unneccessary copies
+  ## * detect return/global store of local variable
+  ## * second round of constant folding
+  ## * merge aliased local variables
+  ## ? detect stack values that are never read (? only if optimizations are enabled)
+  ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
+  ## ? borrow-checking
+  op .val switch
+    NOP case return ## ignore no-ops
+    GetId .case =:: idInfo
+      op list.append
+      idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? if
+        op .dataType op .pos opCopy list.append ## ommit copy if variable is not modified for lifetime of stack value
+      end
+    return
+    GetElement .case =:: index
+      ## TODO? getPtr + getElement -> getElement + getPtr
+      $ list.peek .and .val [] .Copy ? and op .dataType typeContext types.isPointer ! if
+        ## copy, getElement -> getElement, copy
+        list.pop ..drop
+        op list.append
+        op .dataType index typeContext types.compositeGetElement optional.unwrap op .pos opCopy list.append
+        return
+      end
+    break
+    SetElement SetNestedElement case
+      op .dataType op .pos opCopy list.append ## TODO only copy if value is not owned
+    break
+    default break
+  end
+  op list.append return ## nothing to change
+end
+proc(
+  Operation slice.mut : oldOps
+  Operation list ptr.mut : tmpOps
+  AliasCheckerContext ptr.mut : context
+-> Operation slice.mut ) =>: aliasCheckProc
+  context [] .program =:: program
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  tmpOps []
+    $ .length 0 == "tmp-ops are empty" assert
+    oldOps for
+      context aliasCheckOp
+    end
+    $ list.asSlice slice.copy =:: newCode
+    list.clear
+  tmpOps =[]
+  oldOps slice.free ..drop
+  newCode
+end
+proc( ProgramContext ptr.mut : program -> ) =>: export: aliasDetection
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  ## TODO? seperate context
+  ## ConverterContext
+    program
+  AliasCheckerContext new =:: mut: contextData
+  contextData@ =:: context
+  Operation list.empty =:: mut: tmpOps
+  program [] .procedures for ProcId.getProcInfo =:: currentProc
+    currentProc .implementation .Code .else ..drop
+      continue
+    end =:: impl
+    tmpOps list.clear tmpOps=
+    program [] .progFiles
+      currentProc [] .fileId i64 cast
+    @[] =:: f
+    ## analizeProc
+      impl [] .code
+      tmpOps@
+      context
+    aliasCheckProc impl .code=
+    ## ProcCodeState .COMPILED impl .codeState= ## TODO? add extrac code-state for proc after current phase
   end
   tmpOps list.free ..drop
 end
