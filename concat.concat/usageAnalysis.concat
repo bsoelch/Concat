@@ -538,12 +538,18 @@ proc(
     GetId .case =:: idInfo
       op list.append
       idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? if
-        op .dataType op .pos opCopy list.append ## ommit copy if variable is not modified for lifetim of stack value
+        op .dataType op .pos opCopy list.append ## ommit copy if variable is not modified for lifetime of stack value
       end
     return
-    GetElement case
-      ## TODO: copy , GetElement -> getElement , copy
-      ## TODO: ..ptr.get , getElement -> getElement , ..ptr.get
+    GetElement .case =:: index
+      ## TODO? getPtr + getElement -> getElement + getPtr
+      $ list.peek .and .val [] .Copy ? and op .dataType typeContext types.isPointer ! if
+        ## copy, getElement -> getElement, copy
+        list.pop ..drop
+        op list.append
+        op .dataType index typeContext types.compositeGetElement optional.unwrap op .pos opCopy list.append
+        return
+      end
     break
     SetElement SetNestedElement case
       op .dataType op .pos opCopy list.append ## TODO only copy if value is not owned
