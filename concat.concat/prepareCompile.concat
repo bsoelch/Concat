@@ -191,14 +191,19 @@ proc(
         op list.append ## nothing to change
       return
     GetElement .case =:: index
-      op .dataType typeContext types.ptrTarget .else
+      op .dataType typeContext types.ptrTarget
+        $ ? =:: isPtr
+      .else
       _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType _if
         newOps
           op list.append ## element access on value-type
         return
       else op .dataType end =:: refBase
       newOps
-        refBase index op .pos typeContext applyElementOffset ..drop
+        refBase index op .pos typeContext applyElementOffset =:: eltType
+        isPtr ! and eltType typeContext types.isSimpleType if
+          eltType BuiltIn .GET_PTR op .pos opBuiltIn list.append
+        end
       return
     break
     SetElement .case =:: index
@@ -215,8 +220,9 @@ proc(
           1 StackModType .ROTATE op .pos opStackMod list.append
           1 StackModType .COPY op .pos opStackMod list.append
         end
-        refBase index op .pos typeContext applyElementOffset
-        BuiltIn .SET_PTR op .pos opBuiltIn list.append ## TODO? "memcopy" built-in for copy between points
+        refBase index op .pos typeContext applyElementOffset =:: eltType
+        ## TODO? "COPY_PTR" built-in for copy between reference-values
+        eltType BuiltIn .SET_PTR op .pos opBuiltIn list.append
       return
     break
     ImplementProcedure case

@@ -646,6 +646,9 @@ namespace: types
         default 127 return
       end
     end
+    proc( SimpleTypeInfo -> bool ) =>: export: isSimple
+      i8 cast MIXED i8 cast <
+    end
     proc( SimpleTypeInfo SimpleTypeInfo -> SimpleTypeInfo ) : alias: mix i8.or
   end
   proc( Type TypeContext ptr.mut : context -> SimpleTypeInfo ) =>: simpleType
@@ -691,6 +694,9 @@ namespace: types
       RefinementType .case .baseType [] context simpleType return
       NamedType GeneratedType case ..unreachable
     end
+  end
+  proc( Type TypeContext ptr.mut -> bool ) =>: export: isSimpleType
+    simpleType SimpleTypeInfo.isSimple
   end
   proc( Type TypeContext ptr.mut : context -> bool ) =>: export: isValueType
     context unwrapNamed switch
