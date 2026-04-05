@@ -2076,7 +2076,9 @@ proc(
     OFFSET_PTR OFFSET_PTR_MUT case
       ## baseType is pointer type
       baseType typeContext types.getBaseType .else
-        "expected pointer" sb.copyPtr pos errors appendError
+        baseType .Empty ? ! if
+          "expected pointer" sb.copyPtr pos errors appendError
+        end
         Type .Empty
       end =:: eltType
       sb
