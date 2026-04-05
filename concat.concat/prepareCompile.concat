@@ -156,27 +156,32 @@ proc(
         op list.append ## nothing to change
       return
     GetElement .case =:: index
-      op .dataType typeContext types.getPointerBaseType .if =:: ptrBase
-        ptrBase index typeContext types.tupleElementOffset .if =:: offset
-          newOps
-            offset 0 == if return end ## no offset -> no conversion
-            offset ConstValue .Int types.I_SIZE op .pos opConst list.append
-            Type .Empty BuiltIn .OFFSET_PTR op .pos opBuiltIn list.append
-          return
-        end
+      op .dataType typeContext types.ptrTarget .else
+      _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType _if
+        newOps
+          op list.append ## element access on value-type
+        return
+      else op .dataType end =:: refBase
+      refBase index typeContext types.tupleElementOffset .if =:: offset
+        newOps
+          offset 0 == if return end ## no offset -> no conversion
+          offset ConstValue .Int types.I_SIZE op .pos opConst list.append
+          Type .Empty BuiltIn .OFFSET_PTR op .pos opBuiltIn list.append
+        return
+      else refBase typeContext types.isRawUnion _if
+        newOps return
+      else refBase typeContext types.getArrayBaseType ._if =:: arrayBase
+        arrayBase typeContext types.sizeOf .Fixed .else
+          "array-element not fixed-sized" ..panic
+        end =:: eltSize
+        newOps
+          index 0 == or eltSize 0 == if return end ## no offset -> no conversion
+          index i64 cast.u eltSize * ConstValue .Int types.I_SIZE op .pos opConst list.append
+          Type .Empty BuiltIn .OFFSET_PTR op .pos opBuiltIn list.append
+        return
+      else
+        "unsupported type for get-element" ..panic
       end
-      _EXPERIMENTAL_ and op .dataType typeContext types.isValueType ! if
-        op .dataType index typeContext types.tupleElementOffset .if =:: offset
-          newOps
-            offset 0 == if return end ## no offset -> no conversion
-            offset ConstValue .Int types.I_SIZE op .pos opConst list.append
-            Type .Empty BuiltIn .OFFSET_PTR op .pos opBuiltIn list.append
-          return
-        end
-      end
-      newOps
-        op list.append ## nothing to change
-      return
     break
     ImplementProcedure case
       op .dataType typeContext types.getProcIn optional.unwrap =:: args
