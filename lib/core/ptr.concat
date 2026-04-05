@@ -12,7 +12,7 @@ namespace: ptr
   end
 
   proc( type : auto: T T ptr.raw : p iSize : index -> T ptr.raw ) =>: export: at
-    p index ..type.iSize cast ..builtIn.offset.ptr
+    p index ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr
   end
   proc( type : auto: T T ptr.raw : p i32 : index -> T ptr.raw ) =>: export: at32
     p index iSize cast at
@@ -21,7 +21,7 @@ namespace: ptr
     p index iSize cast at
   end
   proc( type : auto: T T ptr.raw : p iSize : index -> T ) =>: export: getOffset
-    p index ..type.iSize cast ..builtIn.offset.ptr ..builtIn.get.ptr
+    p index ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr ..builtIn.get.ptr
   end
   proc( type : auto: T T ptr.raw : p i32 : index -> T ) =>: export: get32
     p index iSize cast getOffset
@@ -30,7 +30,7 @@ namespace: ptr
     p index iSize cast getOffset
   end
   proc( type : auto: T T : newVal T ptr.raw.mut : p iSize : index -> ) =>: export: setOffset
-    newVal p index ..type.iSize cast ..builtIn.offset.ptr.mut ..builtIn.set.ptr
+    newVal p index ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr.mut ..builtIn.set.ptr
   end
   proc( type : auto: T T : newVal T ptr.raw.mut : p i32 : index -> ) =>: export: set32
     newVal p index iSize cast.u setOffset
@@ -50,7 +50,7 @@ namespace: ptr
     iSize : index
   -> T ptr ) =>: export: atChecked
     index k checkIndex
-    p index ..type.iSize cast ..builtIn.offset.ptr T ptr cast!
+    p index ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr T ptr cast!
   end
   proc(
     type : auto: T iSize : auto: k
@@ -72,7 +72,7 @@ namespace: ptr
     iSize : index
   -> T ) =>: export: getChecked
     index iSize cast.u k checkIndex
-    p index ..type.iSize cast ..builtIn.offset.ptr ..builtIn.get.ptr
+    p index ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr ..builtIn.get.ptr
   end
   proc(
     type : auto: T iSize : auto: k
@@ -94,7 +94,7 @@ namespace: ptr
     iSize : index
   -> T ) =>: export: getArray
     index k checkIndex
-    p@ index ..type.iSize cast ..builtIn.offset.ptr ..builtIn.get.ptr
+    p@ index ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr ..builtIn.get.ptr
   end
   proc(
     type : auto: T iSize : auto: k
@@ -117,7 +117,7 @@ namespace: ptr
     iSize : index
   -> ) =>: export: setChecked
     index k checkIndex
-    newVal p index ..type.iSize cast ..builtIn.offset.ptr.mut ..builtIn.set.ptr
+    newVal p index ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr.mut ..builtIn.set.ptr
   end
   proc(
     type : auto: T iSize : auto: k
@@ -203,11 +203,11 @@ namespace: ptr
   ## TODO? prohibit arithmetic on array pointers
   namespace: mut
     proc( type : auto: T T ptr.raw.mut : p -> T ) =>: shadow: export: get
-      p ..builtIn.get.ptr.mut
+      p ..builtIn.get.ptr
     end
 
     proc( type : auto: T T ptr.raw.mut : p iSize : offset -> T ptr.raw.mut ) =>: shadow: export: at
-      p offset ..type.iSize cast ..builtIn.offset.ptr.mut
+      p offset ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr.mut
     end
     proc( type : auto: T T ptr.raw.mut : p i32 : offset -> T ptr.raw.mut ) =>: shadow: export: at32
       p offset iSize cast.u at
@@ -221,7 +221,7 @@ namespace: ptr
       iSize : index
     -> T ptr.mut ) =>: shadow: export: atChecked
       index k checkIndex
-      p index ..type.iSize cast ..builtIn.offset.ptr.mut T ptr.mut cast!
+      p index ..compiler.version 602 < if ..type.iSize cast end ..builtIn.offset.ptr.mut T ptr.mut cast!
     end
     proc(
       type : auto: T iSize : auto: k

@@ -1880,7 +1880,7 @@ proc(
     Type .Undefined
   end =:: baseType
   baseType context toValType =:: baseVal
-  BuiltIn ..length 223 == "no new built-ins" assert
+  BuiltIn ..length 218 == "no new built-ins" assert
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       sb "neg":s baseVal pos context appendUnaryOperator
@@ -2025,7 +2025,7 @@ proc(
         baseType false pos context extendArguments
         "ugt":s baseVal pos context appendComparisonOperator
       return
-    GET_PTR GET_PTR_MUT case
+    GET_PTR case
       ## base-type is pointer to value
       baseType typeContext types.getBaseType .else
         "expected pointer" sb.copyPtr pos errors appendError
@@ -2073,21 +2073,13 @@ proc(
         end
         '\n' sb.appendC
       return
-    OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT case
+    OFFSET_PTR OFFSET_PTR_MUT case
       ## baseType is pointer type
       baseType typeContext types.getBaseType .else
         "expected pointer" sb.copyPtr pos errors appendError
         Type .Empty
       end =:: eltType
       sb
-        builtIn .OFFSET_PTR_I32 or builtIn .OFFSET_PTR_MUT_I32 if
-          pos context popValue =:: offset32
-          "%s" sb.appendS
-          ValType .I64 context pushValue sb.appendI
-          " =l extsw %s" sb.appendS
-          offset32 sb.appendI
-          '\n' sb.appendC
-        end
         pos context popValue =:: baseOffset
         "%s" sb.appendS
         ValType .I64 context pushValue sb.appendI

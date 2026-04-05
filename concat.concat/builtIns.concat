@@ -50,8 +50,8 @@ enum(
    CONVERT_F64_U8 CONVERT_F64_U16 CONVERT_F64_U32 CONVERT_F64_U64
  SYS_ARGC SYS_ARGV SYS_ENVP
  ## pointer access
- GET_PTR GET_PTR_MUT SET_PTR OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT
- ## XXX? more built-in operations
+ GET_PTR SET_PTR OFFSET_PTR OFFSET_PTR_MUT
+ ## TODO? more built-in operations
  PARSE_I8 PARSE_I16 PARSE_I32 PARSE_I64 PARSE_F16 PARSE_F32 PARSE_F64
  TYPE_IS_PRIMITIVE TYPE_IS_POINTER TYPE_IS_VALUE_POINTER TYPE_IS_RAW_POINTER TYPE_IS_ARRAY TYPE_IS_STRUCT
  TYPE_IS_SET_TYPE TYPE_IS_REFINEMENT_TYPE TYPE_IS_TAGGED_UNION TYPE_IS_UNION_ELEMENT TYPE_IS_RAW_UNION TYPE_IS_ENUM TYPE_IS_PROC
@@ -340,7 +340,7 @@ end
 proc(
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
--> Type Type Type Type Type Type Type ) =>: ptrProcTypes
+-> Type Type Type Type ) =>: ptrProcTypes
   context .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
@@ -367,49 +367,29 @@ proc(
     Type slice.empty
     nameData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure =:: setProc
+  typeContext types.newProcedure =:: setProc ## auto: T  T  T ptr.raw.mut ->
   basePtr typeData@ 1 =[]
   ## newProcedure
     typeData@ 2 slice.create
     baseType@ slice.wrap
     nameData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure =:: getProc
-  types.primitive.I32 typeData@ 2 =[]
+  typeContext types.newProcedure =:: getProc ## auto: T  T ptr.raw -> T
+  types.I_SIZE typeData@ 2 =[]
   ## newProcedure
     typeData@ slice.wrap
-    typeData@ 1 @[] 1 slice.create
+    basePtr@ slice.wrap
     nameData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure =:: offset32Proc
-  types.primitive.I64 typeData@ 2 =[]
+  typeContext types.newProcedure =:: offsetProc ## auto: T  T ptr.raw iSize -> T ptr.raw
+  basePtrMut typeData@ 1 =[]
   ## newProcedure
     typeData@ slice.wrap
-    typeData@ 1 @[] 1 slice.create
+    basePtrMut@ slice.wrap
     nameData@ slice.wrap
     CallingConvention.DEFAULT
-  typeContext types.newProcedure =:: offset64Proc
-  basePtrMut typeData@ 1 =[] ## auto: T T ptr.raw.mut i64
-  ## newProcedure
-    typeData@ 2 slice.create
-    baseType@ slice.wrap
-    nameData@ slice.wrap
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure =:: getMutProc
-  ## newProcedure
-    typeData@ slice.wrap
-    typeData@ 1 @[] 1 slice.create
-    nameData@ slice.wrap
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure =:: offsetMut64Proc
-  types.primitive.I32 typeData@ 2 =[]
-  ## newProcedure
-    typeData@ slice.wrap
-    typeData@ 1 @[] 1 slice.create
-    nameData@ slice.wrap
-    CallingConvention.DEFAULT
-  typeContext types.newProcedure =:: offsetMut32Proc
-  offsetMut64Proc offsetMut32Proc offset64Proc offset32Proc setProc getMutProc getProc
+  typeContext types.newProcedure =:: offsetMutProc ## auto: T  T ptr.raw.mut iSize -> T ptr.raw.mut
+  offsetMutProc offsetProc setProc getProc
 end
 proc(
   ProgramContext ptr.mut : context
@@ -1094,43 +1074,22 @@ proc(
     "..builtIn.ugt.i64":s pos nameContext createIdentifier
     i64i64_bool
   pos context addBuiltIn
-  pos context ptrProcTypes =:: get_proc =:: getMut_proc =:: set_proc
-    =:: offset32_proc =:: offset64_proc =:: offsetMut32_proc =:: offsetMut64_proc
+  pos context ptrProcTypes =:: get_proc =:: set_proc =:: offset_proc =:: offsetMut_proc
   BuiltIn .GET_PTR
     "..builtIn.get.ptr":s pos nameContext createIdentifier
     get_proc
-  pos context addBuiltIn
-  BuiltIn .GET_PTR_MUT
-    "..builtIn.get.ptr.mut":s pos nameContext createIdentifier
-    getMut_proc
   pos context addBuiltIn
   BuiltIn .SET_PTR
     "..builtIn.set.ptr":s pos nameContext createIdentifier
     set_proc
   pos context addBuiltIn
-  BuiltIn .OFFSET_PTR_I32
-    "..builtIn.offset.ptr.i32":s pos nameContext createIdentifier
-    offset32_proc
-  pos context addBuiltIn
-  BuiltIn .OFFSET_PTR_I64
-    "..builtIn.offset.ptr.i64":s pos nameContext createIdentifier
-    offset64_proc
-  pos context addBuiltIn
   BuiltIn .OFFSET_PTR
     "..builtIn.offset.ptr":s pos nameContext createIdentifier
-    offset64_proc
-  pos context addBuiltIn
-  BuiltIn .OFFSET_PTR_MUT_I32
-    "..builtIn.offset.ptr.mut.i32":s pos nameContext createIdentifier
-    offsetMut32_proc
-  pos context addBuiltIn
-  BuiltIn .OFFSET_PTR_MUT_I64
-    "..builtIn.offset.ptr.mut.i64":s pos nameContext createIdentifier
-    offsetMut64_proc
+    offset_proc
   pos context addBuiltIn
   BuiltIn .OFFSET_PTR_MUT
     "..builtIn.offset.ptr.mut":s pos nameContext createIdentifier
-    offsetMut64_proc
+    offsetMut_proc
   pos context addBuiltIn
   types.primitive.I8 types.primitive.I16 context convertProcType =:: i8_i16
   BuiltIn .CONVERT_S8_I16
@@ -1548,9 +1507,7 @@ end
     "..builtIn.cvt.f64.f32":s  "..builtIn.cvt.f64.u8":s "..builtIn.cvt.f64.u16":s "..builtIn.cvt.f64.u32":s
     "..builtIn.cvt.f64.u64":s
   "..builtIn.sys.argc":s "..builtIn.sys.argv":s "..builtIn.sys.envp":s
-  "..builtIn.get.ptr":s "..builtIn.get.ptr.mut":s "..builtIn.set.ptr":s
-    "..builtIn.offset.ptr.i32":s "..builtIn.offset.ptr.i64":s "..builtIn.offset.ptr":s
-    "..builtIn.offset.ptr.mut.i32":s "..builtIn.offset.ptr.mut.i64":s "..builtIn.offset.ptr.mut":s
+  "..builtIn.get.ptr":s "..builtIn.set.ptr":s "..builtIn.offset.ptr":s "..builtIn.offset.ptr.mut":s
   "..builtIn.parse.i8":s "..builtIn.parse.i16":s "..builtIn.parse.i32":s "..builtIn.parse.i64":s
     "..builtIn.parse.f16":s "..builtIn.parse.f32":s "..builtIn.parse.f64":s
   "..types.isPrimitive":s "..types.isPointer":s "..types.isValuePointer":s "..types.isRawPointer":s "..types.isArray":s

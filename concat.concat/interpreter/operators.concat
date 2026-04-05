@@ -328,7 +328,7 @@ namespace: interpreter
       UGT_I16 case args k i16.ugt@ cmpOperatorInt return
       UGT_I32 case args k i32.ugt@ cmpOperatorInt return
       UGT_I64 case args k i64.ugt@ cmpOperatorInt return
-      GET_PTR GET_PTR_MUT case
+      GET_PTR case
         k 1 == "correct number of arguments" assert
         inTypes 0 [] typeContext types.getBaseType .else
             ConstValue .None OperatorResult .ARGUMENT_ERROR return
@@ -343,7 +343,7 @@ namespace: interpreter
           pos
           typeContext
         errors getOrOffset return
-      OFFSET_PTR_I32 OFFSET_PTR_I64 OFFSET_PTR OFFSET_PTR_MUT_I32 OFFSET_PTR_MUT_I64 OFFSET_PTR_MUT case
+      OFFSET_PTR OFFSET_PTR_MUT case
         k 2 == "correct number of arguments" assert
         inTypes 0 [] typeContext types.getBaseType .else
             ConstValue .None OperatorResult .ARGUMENT_ERROR return
