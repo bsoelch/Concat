@@ -630,6 +630,96 @@ namespace: types
   proc( Type TypeContext ptr.mut -> bool ) =>: export: referenceOnly
     isSmallType ! return ## TODO? allow larger stack values
   end
+  i8 =:: SimpleTypeInfo
+  namespace: SimpleTypeInfo
+    0x00 SimpleTypeInfo cast =:: EMPTY
+    0x01 SimpleTypeInfo cast =:: INT
+    0x02 SimpleTypeInfo cast =:: FLOAT
+    0x03 SimpleTypeInfo cast =:: MIXED
+    0xFF SimpleTypeInfo cast =:: MANY
+    proc( SimpleTypeInfo -> i32 ) =>: weight
+      switch
+        EMPTY case 0 return
+        INT FLOAT case 1 return
+        MIXED case 2 return
+        ## choose positive value that does not overflow i32 for first 256 additions
+        default 127 return
+      end
+    end
+    proc( SimpleTypeInfo SimpleTypeInfo -> SimpleTypeInfo ) : alias: mix i8.or
+  end
+  proc( Type TypeContext ptr.mut : context -> SimpleTypeInfo ) =>: simpleType
+    context unwrapNamed switch
+      Empty Align case SimpleTypeInfo.EMPTY return
+      IntLiteral Enum Pointer MutablePointer RawPointer MutableRawPointer case SimpleTypeInfo.INT return
+      PrimitiveType .case switch
+        BOOL I8 I16 I32 I64 case SimpleTypeInfo.INT return
+        F16 F32 F64 case SimpleTypeInfo.FLOAT return
+        TYPE case SimpleTypeInfo.MANY return
+      end return
+      CType .case switch
+        VOID case SimpleTypeInfo.EMPTY return
+        BOOL CHAR S_CHAR U_CHAR SHORT U_SHORT INT U_INT
+        LONG LONGLONG U_LONG U_LONGLONG SIZE case SimpleTypeInfo.INT return
+        FLOAT DOUBLE case SimpleTypeInfo.FLOAT return
+        STRUCT UNION case SimpleTypeInfo.MANY return
+      end return
+      ArrayType .case =:: arrayData
+        arrayData .size [] .Int .else ..drop
+          SimpleTypeInfo.MANY return
+        end =:: count
+        count 1 u> if SimpleTypeInfo.MANY return end
+        count 0 == if SimpleTypeInfo.EMPTY return end
+        arrayData .base [] context simpleType return
+      Struct .case .compositeInfo =:: compositeInfo
+        compositeInfo [] .elements .length 1 u> if SimpleTypeInfo.MANY return end
+        compositeInfo [] .elements .length 0 == if SimpleTypeInfo.EMPTY return end
+        compositeInfo [] .elements 0 [] context simpleType return
+      RawUnion .case .compositeInfo =:: compositeInfo
+        SimpleTypeInfo.EMPTY =:: mut: commonType
+        compositeInfo [] .elements for
+          context simpleType =:: eltType
+          eltType SimpleTypeInfo.MANY == if eltType return end
+          eltType SimpleTypeInfo.EMPTY == if continue end
+          eltType commonType SimpleTypeInfo.mix commonType=
+        end
+      commonType return
+      Undefined Procedure GenericType UnionElement TaggedUnion case
+        SimpleTypeInfo.MANY return
+      Initializer .case .asTuple TupleId cast Type .Struct context simpleType return
+      SetType .case .baseType [] context simpleType return
+      RefinementType .case .baseType [] context simpleType return
+      NamedType GeneratedType case ..unreachable
+    end
+  end
+  proc( Type TypeContext ptr.mut : context -> bool ) =>: export: isValueType
+    context unwrapNamed switch
+      Empty PrimitiveType IntLiteral CType Align Enum
+        Pointer MutablePointer RawPointer MutableRawPointer case true return
+      ArrayType .case =:: arrayData
+        ## TODO? consider arrays fitting into vector register as a value type (only for asm back-end)
+        ## ? SOA passing for arrays of 2-element structs/mixed-raw-unions ( i32 i32 ) 4 array -> i32x4 i32x4
+        arrayData .size [] .Int .and 1 == and
+          arrayData .base [] context simpleType SimpleTypeInfo.MANY !=
+        end return
+      Struct TaggedUnion .case .compositeInfo =:: compositeInfo
+        0 =:: mut: regCount
+        compositeInfo [] .elements .length 3 u> if false return end
+          compositeInfo [] .elements for
+            ## addition will not overflow i32
+            context simpleType SimpleTypeInfo.weight regCount + regCount=
+          end
+        regCount 3 u<= return
+      RawUnion .case Type .RawUnion context simpleType SimpleTypeInfo.MANY != return
+      Undefined Procedure GenericType case false return
+      Initializer .case .asTuple TupleId cast Type .Struct context isValueType return
+      UnionElement .case unionElementUnion context isValueType return
+      SetType .case .baseType [] context isValueType return
+      RefinementType .case .baseType [] context isValueType return
+      NamedType GeneratedType case ..unreachable
+    end
+  end
+
   64 =:: export: MAX_INT_WIDTH
   i64.MAX =:: export: MAX_SIGNED_INT
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: canAutoCastIntLiteral

@@ -144,6 +144,7 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
+  ## TODO move conversion referenc-type -> pointer-to-local to pre-compiler
   op .val switch
     NOP case
       newOps return ## ignore no-ops
@@ -189,8 +190,7 @@ proc(
         op list.append ## nothing to change
       return
     Constant .case =:: constVal
-      ## TODO? smarter way to determine when to use const-reference?
-      op .dataType typeContext types.referenceOnly ! if
+      op .dataType typeContext _EXPERIMENTAL_ if types.isValueType else types.referenceOnly ! end if
         newOps
           op list.append
         return
@@ -200,11 +200,17 @@ proc(
       return
     Copy case
       op .dataType =:: baseType
-      ## TODO change to check for reference-only once composite stack values are supported by QBE back-end
-      ## baseType typeContext types.referenceOnly ! if
-      baseType typeContext types.unwrapNamed types.isPrimitive or
-          baseType typeContext types.isPointer if
-        newOps return ## primitive copy is no-op
+      _EXPERIMENTAL_ if
+        ## TODO? move delayed dereferencing to pre-compiler
+        ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
+        baseType typeContext types.isValueType if
+          newOps return ## copy of value type is no-op
+        end
+      else
+        baseType typeContext types.unwrapNamed types.isPrimitive or
+            baseType typeContext types.isPointer if
+          newOps return ## primitive copy is no-op
+        end
       end
       baseType true op .pos context newTmpVar =:: tmpId
       newOps
@@ -221,7 +227,7 @@ proc(
         baseType tmpId op .pos opGetId list.append
       return
     New NewUnion case
-      op .dataType typeContext types.referenceOnly ! if
+      op .dataType typeContext _EXPERIMENTAL_ if types.isValueType else types.referenceOnly ! end if
         newOps
           op list.append
         return
