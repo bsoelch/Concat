@@ -343,7 +343,7 @@ namespace: interpreter
           pos
           typeContext
         errors getOrOffset return
-      OFFSET_PTR OFFSET_PTR_MUT case
+      OFFSET_PTR case
         k 2 == "correct number of arguments" assert
         inTypes 0 [] typeContext types.getBaseType .else
             ConstValue .None OperatorResult .ARGUMENT_ERROR return
