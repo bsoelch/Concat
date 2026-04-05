@@ -148,16 +148,22 @@ proc( Operation list
   i32 : index
   FilePosition ptr : pos
   TypeContext ptr.mut : typeContext
--> Operation list ) =>: applyElementOffset
+-> Operation list Type ) =>: applyElementOffset
   refBase index typeContext types.tupleElementOffset .if =:: offset
-    offset pos offsetPointer return
+    offset pos offsetPointer
+      refBase index typeContext types.compositeGetElement optional.unwrap
+    return
   else refBase typeContext types.isRawUnion _if
-    return ## nothing to do
+    ## no pointer change needed
+      refBase index typeContext types.compositeGetElement optional.unwrap
+    return
   else refBase typeContext types.getArrayBaseType ._if =:: arrayBase
     arrayBase typeContext types.sizeOf .Fixed .else
       "array-element not fixed-sized" ..panic
     end =:: eltSize
-    index i64 cast.u eltSize * pos offsetPointer return
+    index i64 cast.u eltSize * pos offsetPointer
+      arrayBase
+    return
   else
     "unsupported type for get-element" ..panic
   end
@@ -179,7 +185,7 @@ proc(
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage SetNestedElement
     GetId SetId AtId GetUnionTag SetUnionElement Block BlockEnd
-    SetElement RuntimeAssert Error StackMod
+    RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps
         op list.append ## nothing to change
@@ -192,7 +198,25 @@ proc(
         return
       else op .dataType end =:: refBase
       newOps
+        refBase index op .pos typeContext applyElementOffset ..drop
+      return
+    break
+    SetElement .case =:: index
+      op .dataType typeContext types.ptrTarget
+        $ ? =:: isPtr
+      .else
+      _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType _if
+        newOps
+          op list.append ## element access on value-type
+        return
+      else op .dataType end =:: refBase
+      newOps
+        isPtr ! if ## preserve value on stack
+          1 StackModType .ROTATE op .pos opStackMod list.append
+          1 StackModType .COPY op .pos opStackMod list.append
+        end
         refBase index op .pos typeContext applyElementOffset
+        BuiltIn .SET_PTR op .pos opBuiltIn list.append ## TODO? "memcopy" built-in for copy between points
       return
     break
     ImplementProcedure case
