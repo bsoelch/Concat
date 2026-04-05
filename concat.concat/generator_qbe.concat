@@ -3684,8 +3684,6 @@ proc(
           context
         appendBuiltInQBE
       return
-    Splat case
-      break
     LocalLabel .case =:: labelInfo
       labelInfo .labelType switch
         HINT_START case
@@ -4006,7 +4004,7 @@ proc(
       break
     CompilerInfo case
       sb return ## XXX? print compiler info
-    TypeInfo Copy UsingNamespace UsingIdentifier GetUnionTag SetNestedNamedElt InitializeId
+    TypeInfo Copy UsingNamespace UsingIdentifier GetUnionTag SetNestedNamedElt InitializeId Splat
     GetName AtName ElementSetName SetName GetNamedElt Error Assert Panic DeclareName AliasName InitializeName Import LibImport
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc case
       break ## XXX error message
