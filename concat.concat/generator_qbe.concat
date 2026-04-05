@@ -2081,15 +2081,21 @@ proc(
       end =:: eltType
       sb
         pos context popValue =:: baseOffset
-        "%s" sb.appendS
-        ValType .I64 context pushValue sb.appendI
-        " =l mul %s" sb.appendS
-        baseOffset sb.appendI
-        ", " sb.appendS
-        eltType pos context typeStrideInt sb.appendI
-        '\n' sb.appendC
-        pos context popValue =:: offset
-        pos context popValue =:: srcPtr
+        eltType .Empty ? or
+            eltType pos context typeStrideInt =:: eltStride eltStride 1 == if
+          pos context popValue
+          baseOffset
+        else
+          "%s" sb.appendS
+          ValType .I64 context pushValue sb.appendI
+          " =l mul %s" sb.appendS
+          baseOffset sb.appendI
+          ", " sb.appendS
+          eltType pos context typeStrideInt sb.appendI
+          '\n' sb.appendC
+          pos context popValue
+          pos context popValue
+        end =:: srcPtr =:: offset
         "%s" sb.appendS
         ValType .PTR context pushValue sb.appendI
         " =l add %s" sb.appendS
