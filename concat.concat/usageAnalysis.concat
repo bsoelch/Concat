@@ -629,12 +629,18 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   ## TODO: keep track of stack avoid unneccessary copies
-  ## * detect return/global store of local variable
+  ## * detect return/global store of local variable-pointer
   ## * second round of constant folding
   ## * merge aliased local variables
+  ## * don't copy stack-values that are read before next write
+  ## * handle value "ownership" for proc arguments
+  ##   - args marked as mutable own their value
+  ##   - ( A.. B.. -> A.. C.. ) => all unnamed args in A.. own thier value
+  ##   - ( A.. B -> B ) => B owns it value (if not named) [unless covered by previous case]
   ## ? detect stack values that are never read (? only if optimizations are enabled)
   ## ? remove push (+pops) of values that are poped on every branch (? only if optimizations are enabled)
   ## ? borrow-checking
+  ## TODO? should copies be emited for value-types (?keep copies as hit to unwrap delayed dereferencing)
   op .val switch
     NOP case return ## ignore no-ops
     GetId .case =:: idInfo
