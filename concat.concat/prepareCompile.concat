@@ -133,6 +133,35 @@ proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJum
 end
 ## TODO? merge built-ins: `compare + not` -> `compare`, `and + 0 eq/ne` -?> `bit-test`
 
+proc( Operation list
+  i64 : offset
+  FilePosition ptr : pos
+-> Operation list ) =>: offsetPointer
+  offset 0 == if return end ## no offset -> no change
+  ## TODO merge chained (constant) pointer offset
+  offset ConstValue .Int types.I_SIZE pos opConst list.append
+  Type .Empty BuiltIn .OFFSET_PTR pos opBuiltIn list.append
+end
+
+proc( Operation list
+  Type : refBase
+  i32 : index
+  FilePosition ptr : pos
+  TypeContext ptr.mut : typeContext
+-> Operation list ) =>: applyElementOffset
+  refBase index typeContext types.tupleElementOffset .if =:: offset
+    offset pos offsetPointer return
+  else refBase typeContext types.isRawUnion _if
+    return ## nothing to do
+  else refBase typeContext types.getArrayBaseType ._if =:: arrayBase
+    arrayBase typeContext types.sizeOf .Fixed .else
+      "array-element not fixed-sized" ..panic
+    end =:: eltSize
+    index i64 cast.u eltSize * pos offsetPointer return
+  else
+    "unsupported type for get-element" ..panic
+  end
+end
 proc(
   Operation list : newOps
   Operation : mut: op
@@ -162,26 +191,9 @@ proc(
           op list.append ## element access on value-type
         return
       else op .dataType end =:: refBase
-      refBase index typeContext types.tupleElementOffset .if =:: offset
-        newOps
-          offset 0 == if return end ## no offset -> no conversion
-          offset ConstValue .Int types.I_SIZE op .pos opConst list.append
-          Type .Empty BuiltIn .OFFSET_PTR op .pos opBuiltIn list.append
-        return
-      else refBase typeContext types.isRawUnion _if
-        newOps return
-      else refBase typeContext types.getArrayBaseType ._if =:: arrayBase
-        arrayBase typeContext types.sizeOf .Fixed .else
-          "array-element not fixed-sized" ..panic
-        end =:: eltSize
-        newOps
-          index 0 == or eltSize 0 == if return end ## no offset -> no conversion
-          index i64 cast.u eltSize * ConstValue .Int types.I_SIZE op .pos opConst list.append
-          Type .Empty BuiltIn .OFFSET_PTR op .pos opBuiltIn list.append
-        return
-      else
-        "unsupported type for get-element" ..panic
-      end
+      newOps
+        refBase index op .pos typeContext applyElementOffset
+      return
     break
     ImplementProcedure case
       op .dataType typeContext types.getProcIn optional.unwrap =:: args
