@@ -1338,7 +1338,6 @@ proc(
       procId
         op [] .dataType
       op [] .pos context interpreter.evaluateCall wrapResult return
-    GetUnionElement case "unimplemented: get union element" ..panic
     SetNestedElement case "unimplemented: set nested element" ..panic
     GetElement SetElement SetUnionElement .case =:: eltIndex
       op [] .pos context popValue if ..drop.2

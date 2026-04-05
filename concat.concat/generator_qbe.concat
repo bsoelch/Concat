@@ -2739,6 +2739,7 @@ proc(
   end
   src typeContext types.isPointer and target typeContext types.isPointer end or
       src types.isUnionElement and target typeContext types.isUnion end or
+      src typeContext types.isUnion and target types.isUnionElement end or
       src typeContext types.isCallable and target typeContext types.isCallable if
     sb
       "%s" sb.appendS
@@ -3171,9 +3172,6 @@ proc(
         end
         '\n' sb.appendC
       return
-    GetUnionElement case
-      ## try-get element only changes type of top stack value
-      sb return
     GetElement .case =:: index
       op [] .dataType =:: mut: containerType
       false =:: mut: ptrSrc

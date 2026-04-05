@@ -2187,12 +2187,12 @@ proc(
   ## pushValue
     targetType
     ConstValue .None ## TODO? compute constant value
-    srcType
-      elementIndex
-      pos
     accessType .UNION_GET if
-      opGetUnionElement
+      srcType targetType SignType .UNSIGNED pos opCastFrom
     else
+      srcType
+        elementIndex
+        pos
       opGetElement
     end
   state pushValue
@@ -3379,7 +3379,7 @@ proc(
           continue.opLoop
         end
         break
-      ImplementProcedure GetElement GetUnionElement SetElement SetNestedElement case break
+      ImplementProcedure GetElement SetElement SetNestedElement case break
       GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case =:: name
         ElementAccessType .GET =:: mut: accessType
         op .val .SetNamedElt ? if

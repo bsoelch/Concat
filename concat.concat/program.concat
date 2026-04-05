@@ -206,7 +206,6 @@ union(
              string : SetNestedNamedElt
              string : ExistsNamedElt
                 i32 : GetElement
-                i32 : GetUnionElement
                 i32 : SetElement
   NestedElementPath : SetNestedElement
                 i32 : SetUnionElement
@@ -327,9 +326,6 @@ end
 proc( Type : base i32 : index FilePosition ptr : pos -> Operation ) =>: export: opGetElement
   pos index OpValue .GetElement base Operation new return
 end
-proc( Type : base i32 : index FilePosition ptr : pos -> Operation ) =>: export: opGetUnionElement
-  pos index OpValue .GetUnionElement base Operation new return
-end
 proc( Type : base i32 : index FilePosition ptr : pos -> Operation ) =>: export: opSetElement
   pos index OpValue .SetElement base Operation new return
 end
@@ -365,6 +361,9 @@ proc( Type : opType i32 : index FilePosition ptr : pos -> Operation ) =>: export
 end
 proc( Type : opType i32 : index FilePosition ptr : pos -> Operation ) =>: export: opNewUnionReference
   pos index OpValue .NewUnionReference opType Operation new return
+end
+proc( Type : src Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCastFrom
+   pos src sign CastInfo new OpValue .Cast target Operation new return
 end
 proc( Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCast
    pos Type .Undefined sign CastInfo new OpValue .Cast target Operation new return
@@ -1006,12 +1005,6 @@ namespace: sb
       break
       GetElement .case =:: index
         "get element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        index sb.appendI
-      break
-      GetUnionElement .case =:: index
-        "get union element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         index sb.appendI

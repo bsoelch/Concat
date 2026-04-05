@@ -150,7 +150,7 @@ proc(
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage SetNestedElement
     GetId SetId AtId GetUnionTag SetUnionElement Block BlockEnd
-    SetElement RuntimeAssert Error StackMod GetUnionElement
+    SetElement RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps
         op list.append ## nothing to change
