@@ -208,7 +208,6 @@ union(
                 i32 : GetElement
                 i32 : SetElement
   NestedElementPath : SetNestedElement
-                i32 : SetUnionElement
                   _ : GetUnionTag
                   _ : Return
                   _ : New
@@ -397,9 +396,6 @@ proc( FilePosition ptr : pos -> Operation ) =>: export: opGetUnionTag
 end
 proc( Type : t TypeMemoryInfo : infoType FilePosition ptr : pos -> Operation ) =>: export: opTypeInfo
   pos infoType OpValue .TypeInfo t Operation new return
-end
-proc( Type : opType i32 : index FilePosition ptr : pos -> Operation ) =>: export: opSetUnionElement
-  pos index OpValue .SetUnionElement opType Operation new return
 end
 proc( Type : t FilePosition ptr : pos -> Operation ) =>: export: opCopy
   pos OpValue .Copy t Operation new return
@@ -1116,15 +1112,9 @@ namespace: sb
         end
       break
       GetUnionTag case
-        "get union label ( " sb.appendS
+        "get union tag ( " sb.appendS
         op .dataType typeContext sb.appendType
         " )" sb.appendS
-      break
-      SetUnionElement .case =:: index
-        "set union element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        index sb.appendI
       break
       StackMod .case =:: stackMod
         "stack modification: " sb.appendS

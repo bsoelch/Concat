@@ -190,7 +190,7 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn ProcPtr Panic PanicWithMessage
-    GetId SetId AtId SetUnionElement Block BlockEnd
+    GetId SetId AtId Block BlockEnd
     RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps

@@ -2109,7 +2109,7 @@ proc(
           isPtr if
             srcType typeContext types.isMutable typeContext types.getAddressType
           end
-        elementIndex pos opSetUnionElement state appendOp ..drop
+        elementIndex pos opSetElement state appendOp ..drop
         isPtr ! if
           1 StackModType .ROTATE pos opStackMod state appendOp ..drop
           srcType types.UNION_VALUE_INDEX pos opSetElement state appendOp ..drop
@@ -3672,8 +3672,6 @@ proc(
           types.UNION_TAG_INDEX op .pos opGetElement
         state pushValue
         continue.opLoop
-      SetUnionElement case
-        break
       Cast Cast! BitCast case
         op .dataType .Undefined ? if
           ## resolve data type

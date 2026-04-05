@@ -3337,18 +3337,22 @@ proc(
       sb
         op [] .pos context popValue =:: structId
         op [] .pos sb.appendPosQBE
-        "%s" sb.appendS
-        isPtr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
-        " =l add %s" sb.appendS
-        structId sb.appendI
-        ", " sb.appendS
-        isArray if
-          index i64 cast.u eltType op [] .pos context typeStrideInt * sb.appendI
+        containerType typeContext types.isRawUnion if
+          structId
         else
-          containerType index op [] .pos context tupleEltOffsetInt sb.appendI
-        end
-        '\n' sb.appendC
-        op [] .pos context popValue =:: targetId
+          "%s" sb.appendS
+          isPtr if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
+          " =l add %s" sb.appendS
+          structId sb.appendI
+          ", " sb.appendS
+          isArray if
+            index i64 cast.u eltType op [] .pos context typeStrideInt * sb.appendI
+          else
+            containerType index op [] .pos context tupleEltOffsetInt sb.appendI
+          end
+          '\n' sb.appendC
+          op [] .pos context popValue
+        end =:: targetId
         op [] .pos context popValue =:: valueId
         eltType context referenceOnly if
           "blit %s" sb.appendS
@@ -3471,54 +3475,6 @@ proc(
         dataPtrType sb.appendC
         dataPtrId sb.appendI
         '\n' sb.appendC
-      return
-    SetUnionElement .case =:: elementId
-      context .stackInfo branchTree.peek .else
-        "stack underflow" sb.copyPtr
-        op [] .pos errors appendError
-        sb return
-      end =:: srcVal
-      ## TODO? special handling for access through pointer?
-      op [] .dataType typeContext types.getPointerBaseType
-        $ ? =:: isPtr
-      .else op [] .dataType end =:: enumType
-      sb
-        op [] .pos sb.appendPosQBE
-        enumType elementId typeContext types.compositeGetElement .else
-          "missing enum element " sb.copyPtr
-          enumType typeContext sb.appendType
-          " .":s sb.appendStr elementId sb.appendI
-          op [] .pos errors appendError
-          return
-        end =:: eltType
-        eltType typeContext types.isEmpty if
-          return
-        end
-        op [] .pos context popValue =:: unionId
-        op [] .pos context popValue =:: valueId
-        eltType context referenceOnly if
-          "blit %s" sb.appendS
-        else
-          "store" sb.appendS
-          eltType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-          " %s" sb.appendS
-        end
-        valueId sb.appendI
-        ", %s" sb.appendS
-        unionId sb.appendI
-        eltType context referenceOnly if
-          ',' sb.appendC
-          eltType op [] .pos context typeSizeInt sb.appendI
-        end
-        '\n' sb.appendC
-        isPtr ! if
-          ## keep non-pointer value on stack
-          "%s" sb.appendS
-          ValType .REFERENCE context pushValue sb.appendI
-          " =l copy %s" sb.appendS
-          unionId sb.appendI
-          '\n' sb.appendC
-        end
       return
     AutoCast .case =:: castInfo
       sb

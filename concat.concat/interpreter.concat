@@ -1339,7 +1339,7 @@ proc(
         op [] .dataType
       op [] .pos context interpreter.evaluateCall wrapResult return
     SetNestedElement case "unimplemented: set nested element" ..panic
-    GetElement SetElement SetUnionElement .case =:: eltIndex
+    GetElement SetElement .case =:: eltIndex
       op [] .pos context popValue if ..drop.2
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
