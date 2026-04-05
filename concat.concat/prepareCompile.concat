@@ -138,8 +138,14 @@ proc( Operation list
   FilePosition ptr : pos
 -> Operation list ) =>: offsetPointer
   offset 0 == if return end ## no offset -> no change
-  ## TODO merge chained (constant) pointer offset
-  offset ConstValue .Int types.I_SIZE pos opConst list.append
+  ## merge chained (constant) pointer offset
+  $ list.peek .and .val .BuiltIn .and .OFFSET_PTR and
+      $ $ .length 2 - list.at .and .val .Constant .and .Int .if [] =:: prev_offset
+    $ .length 2 - list.setLength ## discard previous operations
+    offset prev_offset + ConstValue .Int types.I_SIZE pos opConst list.append
+  else
+    offset ConstValue .Int types.I_SIZE pos opConst list.append
+  end
   Type .Empty BuiltIn .OFFSET_PTR pos opBuiltIn list.append
 end
 
@@ -183,7 +189,7 @@ proc(
   op .val switch
     NOP case
       newOps return ## ignore no-ops
-    BuiltIn Splat ProcPtr Panic PanicWithMessage SetNestedElement
+    BuiltIn Splat ProcPtr Panic PanicWithMessage
     GetId SetId AtId GetUnionTag SetUnionElement Block BlockEnd
     RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast Return RawValue case
@@ -221,6 +227,34 @@ proc(
           1 StackModType .COPY op .pos opStackMod list.append
         end
         refBase index op .pos typeContext applyElementOffset =:: eltType
+        ## TODO? "COPY_PTR" built-in for copy between reference-values
+        eltType BuiltIn .SET_PTR op .pos opBuiltIn list.append
+      return
+    break
+    SetNestedElement .case =:: path
+      op .dataType typeContext types.ptrTarget
+        $ ? =:: isPtr
+      .else
+      _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType _if
+        newOps
+          op list.append ## element access on value-type
+        return
+      else op .dataType end =:: mut: eltType
+      newOps
+        isPtr ! if ## preserve value on stack
+          1 StackModType .ROTATE op .pos opStackMod list.append
+          1 StackModType .COPY op .pos opStackMod list.append
+        end
+      =:: shadow: mut: newOps
+        ( Operation list ptr.mut : ops Type ptr.mut : shadow: eltType TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
+        path ( i32 : index Curry : curry -> ) =>
+          curry .ops []
+            curry .eltType []
+              index
+            curry .pos curry .typeContext applyElementOffset curry .eltType =[]
+          curry .ops =[]
+        end newOps@ eltType@ typeContext op .pos Curry new NestedElementPath.forEach
+      newOps
         ## TODO? "COPY_PTR" built-in for copy between reference-values
         eltType BuiltIn .SET_PTR op .pos opBuiltIn list.append
       return
