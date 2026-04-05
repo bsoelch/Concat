@@ -2,5 +2,5 @@ proc( -> ) =>: main
   ( ( ) ) : mut: emptyContainer
   emptyContainer@ .0 [] emptyContainer@ .0 =[]
   emptyContainer .0 emptyContainer@ .0 =[]
-  emptyContainer@ .0 1 ..builtIn.offset.ptr.i32 =:: x
+  emptyContainer@ .0 1 ..builtIn.offset.ptr =:: x
 end

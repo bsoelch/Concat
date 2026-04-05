@@ -15,28 +15,28 @@ namespace: ptr
     p index ..type.iSize cast ..builtIn.offset.ptr
   end
   proc( type : auto: T T ptr.raw : p i32 : index -> T ptr.raw ) =>: export: at32
-    p index ..builtIn.offset.ptr.i32
+    p index iSize cast at
   end
   proc( type : auto: T T ptr.raw : p i64 : index -> T ptr.raw ) =>: export: at64
-    p index ..builtIn.offset.ptr.i64
+    p index iSize cast at
   end
   proc( type : auto: T T ptr.raw : p iSize : index -> T ) =>: export: getOffset
     p index ..type.iSize cast ..builtIn.offset.ptr ..builtIn.get.ptr
   end
   proc( type : auto: T T ptr.raw : p i32 : index -> T ) =>: export: get32
-    p index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
+    p index iSize cast getOffset
   end
   proc( type : auto: T T ptr.raw : p i64 : index -> T ) =>: export: get64
-    p index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
+    p index iSize cast getOffset
   end
   proc( type : auto: T T : newVal T ptr.raw.mut : p iSize : index -> ) =>: export: setOffset
     newVal p index ..type.iSize cast ..builtIn.offset.ptr.mut ..builtIn.set.ptr
   end
   proc( type : auto: T T : newVal T ptr.raw.mut : p i32 : index -> ) =>: export: set32
-    newVal p index ..builtIn.offset.ptr.mut.i32 ..builtIn.set.ptr
+    newVal p index iSize cast.u setOffset
   end
   proc( type : auto: T T : newVal T ptr.raw.mut : p i64 : index -> ) =>: export: set64
-    newVal p index ..builtIn.offset.ptr.mut.i64 ..builtIn.set.ptr
+    newVal p index iSize cast.u setOffset
   end
 
   proc( iSize : index iSize : size -> ) =>: checkIndex
@@ -57,16 +57,14 @@ namespace: ptr
     T k ptr : p
     i32 : index
   -> T ptr ) =>: export: at32checked
-    index iSize cast.u k checkIndex
-    p index ..builtIn.offset.ptr.i32 T ptr cast!
+    p index iSize cast.u atChecked
   end
   proc(
     type : auto: T iSize : auto: k
     T k ptr : p
     i64 : index
   -> T ptr ) =>: export: at64checked
-    index iSize cast.u k checkIndex
-    p index ..builtIn.offset.ptr.i64 T ptr cast!
+    p index iSize cast.u atChecked
   end
   proc(
     type : auto: T iSize : auto: k
@@ -81,16 +79,14 @@ namespace: ptr
     T k ptr : p
     i32 : index
   -> T ) =>: export: get32checked
-    index iSize cast.u k checkIndex
-    p index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
+    p index iSize cast.u getChecked
   end
   proc(
     type : auto: T iSize : auto: k
     T k ptr : p
     i64 : index
   -> T ) =>: export: get64checked
-    index iSize cast.u k checkIndex
-    p index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
+    p index iSize cast.u getChecked
   end
   proc(
     type : auto: T iSize : auto: k
@@ -105,18 +101,14 @@ namespace: ptr
     T k array : p
     i32 : index
   -> T ) =>: export: getArray32
-    index iSize cast.u k checkIndex
-    p =:: t ## TODO use address of p once taking address to generic ptr-arg is supported
-    t@ index ..builtIn.offset.ptr.i32 ..builtIn.get.ptr
+    p index iSize cast.u getArray
   end
   proc(
     type : auto: T iSize : auto: k
     T k array : p
     i64 : index
   -> T ) =>: export: getArray64
-    index iSize cast.u k checkIndex
-    p =:: t
-    t@ index ..builtIn.offset.ptr.i64 ..builtIn.get.ptr
+    p index iSize cast.u getArray
   end
   proc(
     type : auto: T iSize : auto: k
@@ -133,8 +125,7 @@ namespace: ptr
     T k ptr.mut : p
     i32 : index
   -> ) =>: export: set32checked
-    index iSize cast.u k checkIndex
-    newVal p index ..builtIn.offset.ptr.mut.i32 ..builtIn.set.ptr
+    newVal p index iSize cast.u setChecked
   end
   proc(
     type : auto: T iSize : auto: k
@@ -142,8 +133,7 @@ namespace: ptr
     T k ptr.mut : p
     i64 : index
   -> ) =>: export: set64checked
-    index iSize cast.u k checkIndex
-    newVal p index ..builtIn.offset.ptr.mut.i64 ..builtIn.set.ptr
+    newVal p index iSize cast.u setChecked
   end
 
   proc( type : auto: T T ptr.raw : p T ptr.raw : q -> i32 ) =>: export: cmp
@@ -220,10 +210,10 @@ namespace: ptr
       p offset ..type.iSize cast ..builtIn.offset.ptr.mut
     end
     proc( type : auto: T T ptr.raw.mut : p i32 : offset -> T ptr.raw.mut ) =>: shadow: export: at32
-      p offset ..builtIn.offset.ptr.mut.i32
+      p offset iSize cast.u at
     end
     proc( type : auto: T T ptr.raw.mut : p i64 : offset -> T ptr.raw.mut ) =>: shadow: export: at64
-      p offset ..builtIn.offset.ptr.mut.i64
+      p offset iSize cast.u at
     end
     proc(
       type : auto: T iSize : auto: k
@@ -238,16 +228,14 @@ namespace: ptr
       T k ptr.mut : p
       i32 : index
     -> T ptr.mut ) =>: shadow: export: at32checked
-      index iSize cast.u k checkIndex
-      p index ..builtIn.offset.ptr.mut.i32 T ptr.mut cast!
+      p index iSize cast.u atChecked
     end
     proc(
       type : auto: T iSize : auto: k
       T k ptr.mut : p
       i64 : index
     -> T ptr.mut ) =>: shadow: export: at64checked
-      index iSize cast.u k checkIndex
-      p index ..builtIn.offset.ptr.mut.i64 T ptr.mut cast!
+      p index iSize cast.u atChecked
     end
   end
 end
