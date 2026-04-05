@@ -190,7 +190,7 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage
-    GetId SetId AtId GetUnionTag SetUnionElement Block BlockEnd
+    GetId SetId AtId SetUnionElement Block BlockEnd
     RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps
@@ -427,7 +427,7 @@ proc(
     return
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
-    ConstantReference NewReference InitializeId
+    ConstantReference NewReference InitializeId GetUnionTag
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier ElementSetName
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName SetNestedNamedElt
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case

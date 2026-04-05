@@ -486,7 +486,7 @@ proc(
         end
       end
     break
-    ConstantReference NewReference
+    ConstantReference NewReference GetUnionTag
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier InitializeId
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
     SetNamedElt SetNestedNamedElt Length TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
