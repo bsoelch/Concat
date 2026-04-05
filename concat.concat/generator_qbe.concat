@@ -1864,21 +1864,22 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
-  opType typeContext types.getProcIn optional.unwrap =:: inTypes
-  inTypes .length 0:iSize != if
-    opType 0 typeContext types.getProcArgName .and id.identifierFlags id.FLAG_STATIC & ? if
-      1:i32
+  opType typeContext types.getProcIn .if =:: inTypes
+    inTypes .length 0:iSize != if
+      opType 0 typeContext types.getProcArgName .and id.identifierFlags id.FLAG_STATIC & ? if
+        1:i32
+      else
+        0:i32
+      end =:: firstArg
+      inTypes firstArg []
     else
-      0:i32
-    end =:: firstArg
-    inTypes firstArg []
-  else
-      opType typeContext types.getProcOut optional.unwrap =:: outTypes
-      outTypes .length 0:iSize != _if
-    outTypes 0 []
-  else
-    Type .Undefined
-  end =:: baseType
+        opType typeContext types.getProcOut optional.unwrap =:: outTypes
+        outTypes .length 0:iSize != _if
+      outTypes 0 []
+    else
+      Type .Undefined
+    end
+  else opType end =:: baseType
   baseType context toValType =:: baseVal
   BuiltIn ..length 218 == "no new built-ins" assert
   builtIn switch

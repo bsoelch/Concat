@@ -150,11 +150,38 @@ proc(
       newOps return ## ignore no-ops
     BuiltIn Splat ProcPtr Panic PanicWithMessage SetNestedElement
     GetId SetId AtId GetUnionTag SetUnionElement Block BlockEnd
-    SetElement RuntimeAssert Error StackMod GetElement GetUnionElement
+    SetElement RuntimeAssert Error StackMod GetUnionElement
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps
         op list.append ## nothing to change
       return
+    GetElement .case =:: index
+      op .dataType typeContext types.getPointerBaseType .if =:: ptrBase
+        ptrBase index typeContext types.tupleElementOffset .if =:: offset
+          newOps
+            offset 0 == if return end ## no offset -> no conversion
+            offset ConstValue .Int types.I_SIZE op .pos opConst list.append
+            Type .Empty
+              op .dataType typeContext types.isMutable if BuiltIn .OFFSET_PTR_MUT else BuiltIn .OFFSET_PTR end
+            op .pos opBuiltIn list.append
+          return
+        end
+      end
+      _EXPERIMENTAL_ and op .dataType typeContext types.isValueType ! if
+        op .dataType index typeContext types.tupleElementOffset .if =:: offset
+          newOps
+            offset 0 == if return end ## no offset -> no conversion
+            offset ConstValue .Int types.I_SIZE op .pos opConst list.append
+            Type .Empty
+              BuiltIn .OFFSET_PTR
+            op .pos opBuiltIn list.append
+          return
+        end
+      end
+      newOps
+        op list.append ## nothing to change
+      return
+    break
     ImplementProcedure case
       op .dataType typeContext types.getProcIn optional.unwrap =:: args
       args .length i32 cast.u =:: argCount
