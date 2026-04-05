@@ -207,7 +207,9 @@ proc(
       else op .dataType end =:: refBase
       newOps
         refBase index op .pos typeContext applyElementOffset =:: eltType
-        isPtr ! and eltType typeContext types.isSimpleType if
+        isPtr ! and eltType typeContext types.isValueType if
+          ## TODO? delayed dereferencing of value-types
+          ## -> keep using pointer ops for element-access, deref on copy/branch/built-in
           eltType BuiltIn .GET_PTR op .pos opBuiltIn list.append
         end
       return
