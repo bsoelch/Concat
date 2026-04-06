@@ -567,9 +567,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
       continue
     end =:: impl
     tmpOps list.clear tmpOps=
-    program [] .progFiles
-      currentProc [] .fileId i64 cast
-    @[] =:: f
     ## analizeProc
       impl [] .code
       tmpOps@
@@ -701,9 +698,6 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: aliasDetection
       continue
     end =:: impl
     tmpOps list.clear tmpOps=
-    program [] .progFiles
-      currentProc [] .fileId i64 cast
-    @[] =:: f
     ## analizeProc
       impl [] .code
       tmpOps@
