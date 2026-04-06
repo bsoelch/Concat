@@ -115,9 +115,6 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     end
     idData [] .valueType 0 idData [] .declaredAt prog visited@ types@ declaredType
   end ..drop
-  prog [] .globalOps for =:: op
-    op@ prog visited@ types@ addOpType
-  end
   prog [] .procedures for ProcId.getProcInfo =:: proc
     proc .implementation .Code .else
       ..drop continue

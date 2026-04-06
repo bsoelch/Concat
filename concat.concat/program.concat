@@ -9,6 +9,7 @@ type : export: ProcFlags
 import "builtIns.concat"
 using std.literals.
 
+## TODO: split into multiple files
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
@@ -185,6 +186,52 @@ namespace: NestedElementPath
   end
 end
 
+
+union(
+            NopType : NOP
+         ConstValue : Constant
+             ProcId : NestedProc
+          BlockData : Block
+          BlockData : BlockEnd
+             string : GetNamedElt
+             string : SetNamedElt
+             string : SetNestedNamedElt
+             string : ExistsNamedElt
+                  _ : GetUnionTag
+                  _ : Return
+                  _ : New
+                  _ : CallPtr
+                  _ : Length
+                  _ : RawValue
+                  _ : TypeOf
+           CastInfo : Cast
+               Type : Cast!
+               Type : BitCast
+                  _ : Splat
+  StackModification : StackMod
+             string : GetName
+             string : SetName
+             string : ElementSetName
+             string : AtName
+             string : ExistsName
+      NameAliasInfo : AliasName
+             NameId : DeclareName
+             NameId : InitializeName
+      UsingNameInfo : UsingNamespace
+      UsingNameInfo : UsingIdentifier
+             ProcId : TypeWith
+       TypeModifier : shadow: TypeModifier
+                  _ : Assert
+          ErrorType : Error
+     TypeMemoryInfo : TypeInfo
+                  _ : Panic
+             string : PanicWithMessage
+             string : Import
+             string : LibImport
+       CompilerInfo : shadow: CompilerInfo
+) =:: export: PreOpValue
+struct( FilePosition ptr : pos PreOpValue : val Type : dataType ) =:: export: PreOperation
+
 union(
             NopType : NOP
          ConstValue : Constant
@@ -249,6 +296,190 @@ union(
        CompilerInfo : shadow: CompilerInfo
 ) =:: export: OpValue
 struct( FilePosition ptr : pos OpValue : val Type : dataType ) =:: export: Operation
+
+proc( -> PreOpValue ) =>: export: preOpValNOP
+  NopType .EMPTY PreOpValue .NOP return
+end
+proc( ConstValue : constValue Type : constType FilePosition ptr : pos -> PreOperation ) =>: export: preOpConst
+  pos constValue PreOpValue .Constant constType PreOperation new return
+end
+proc( ProcId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpNestedProc
+  pos id PreOpValue .NestedProc Type .Undefined PreOperation new return
+end
+proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export: preOpBlock
+  pos
+    NameId optional.empty
+      -1:BlockId
+      0:JumpDistance
+      blockType
+    BlockData new PreOpValue .Block
+  Type .Undefined PreOperation new return
+end
+proc( BlockType : blockType NameId optional : nameId FilePosition ptr : pos -> PreOperation ) =>: export: preOpNamedBlock
+  pos
+    nameId
+      -1:BlockId
+      0:JumpDistance
+      blockType
+    BlockData new PreOpValue .Block
+  Type .Undefined  PreOperation new return
+end
+proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export: preOpEndBlock
+  pos
+    NameId optional.empty
+      -1:BlockId
+      0:JumpDistance
+      blockType
+    BlockData new PreOpValue .BlockEnd
+  Type .Undefined PreOperation new return
+end
+proc( Type : retType FilePosition ptr : pos -> PreOperation ) =>: export: preOpReturn
+  pos PreOpValue .Return retType PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpGetName
+  pos name PreOpValue .GetName Type .Undefined PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpAtName
+  pos name PreOpValue .AtName Type .Undefined PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpSetName
+  pos name PreOpValue .SetName Type .Undefined PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpElementSetName
+  pos name PreOpValue .ElementSetName Type .Undefined PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpExistsName
+  pos name PreOpValue .ExistsName Type .Undefined PreOperation new return
+end
+proc( NameId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpDeclareName
+  pos id PreOpValue .DeclareName Type .Undefined PreOperation new return
+end
+proc( NameId : baseName NameId : nameAlias FilePosition ptr : pos -> PreOperation ) =>: export: preOpAliasName
+  pos baseName nameAlias NameAliasInfo new PreOpValue .AliasName Type .Undefined PreOperation new return
+end
+proc( NameId : id FilePosition ptr : pos  -> PreOperation ) =>: export: preOpInitializeName
+  pos id PreOpValue .InitializeName Type .Undefined PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpGetNamedElt
+  pos name PreOpValue .GetNamedElt Type .Undefined PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpSetNamedElt
+  pos name PreOpValue .SetNamedElt Type .Undefined PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpSetNestedNamedElt
+  pos name PreOpValue .SetNestedNamedElt Type .Undefined PreOperation new return
+end
+proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpExistsNamedElt
+  pos name PreOpValue .ExistsNamedElt Type .Undefined PreOperation new return
+end
+proc( i32 StackModType FilePosition ptr : pos -> PreOperation ) =>: export: preOpStackMod
+  pos <<$ StackModification new PreOpValue .StackMod Type .Undefined PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpCallPtr
+  pos PreOpValue .CallPtr Type .Undefined PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpLength
+  pos PreOpValue .Length types.I_SIZE PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpRawValue
+  pos PreOpValue .RawValue Type .Undefined PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeOf
+  pos PreOpValue .TypeOf Type .Undefined PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpGetUnionTag
+  pos PreOpValue .GetUnionTag Type .Undefined PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpSplat
+  pos PreOpValue .Splat Type .Undefined PreOperation new return
+end
+proc( Type : opType FilePosition ptr : pos -> PreOperation ) =>: export: preOpNew
+  pos PreOpValue .New opType PreOperation new return
+end
+proc( Type : target SignType : sign FilePosition ptr : pos -> PreOperation ) =>: export: preOpCast
+   pos Type .Undefined sign CastInfo new PreOpValue .Cast target PreOperation new return
+end
+proc( Type : target FilePosition ptr : pos -> PreOperation ) =>: export: preOpCast!
+   pos Type .Undefined PreOpValue .Cast! target PreOperation new return
+end
+proc( Type : target FilePosition ptr : pos -> PreOperation ) =>: export: preOpBitCast
+   pos Type .Undefined PreOpValue .BitCast target PreOperation new return
+end
+proc( TypeModifier : tMod FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeModifier
+  pos tMod PreOpValue .TypeModifier Type .Undefined  PreOperation new return
+end
+proc( ProcId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeWith
+  pos id PreOpValue .TypeWith Type .Undefined PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpPanic
+  pos PreOpValue .Panic Type .Undefined PreOperation new return
+end
+proc( string : message FilePosition ptr : pos -> PreOperation ) =>: export: preOpPanicWithMessage
+  pos message PreOpValue .PanicWithMessage Type .Undefined PreOperation new return
+end
+proc(
+  FilePosition ptr : pos
+-> PreOperation ) =>: export: preOpAssert
+  pos PreOpValue .Assert Type .Undefined PreOperation new return
+end
+proc(
+  ErrorType : errorType
+  FilePosition ptr : pos
+-> PreOperation ) =>: export: preOpError
+  pos errorType PreOpValue .Error Type .Undefined PreOperation new return
+end
+proc( Type : t TypeMemoryInfo : infoType FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeInfo
+  pos infoType PreOpValue .TypeInfo t PreOperation new return
+end
+proc(
+  i32 : count
+  i32 : depth
+  FilePosition ptr : pos
+-> PreOperation ) =>: export: preOpTypesInfo
+  ## Operation
+    pos
+    count depth StackTypesInfo new
+      CompilerInfo .TypeInfo
+    PreOpValue .CompilerInfo
+    Type .Undefined
+  PreOperation new return
+end
+proc( i32 : count FilePosition ptr : pos -> PreOperation ) =>: export: preOpStackInfo
+  pos count CompilerInfo .StackInfo PreOpValue .CompilerInfo Type .Undefined PreOperation new return
+end
+proc( i32 : count FilePosition ptr : pos -> PreOperation ) =>: export: preOpPrintCompiledOps
+  pos count CompilerInfo .CompiledOps PreOpValue .CompilerInfo Type .Undefined PreOperation new return
+end
+proc( NameId : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpPrintIdentifierMatches
+  pos name CompilerInfo .Find PreOpValue .CompilerInfo Type .Undefined PreOperation new return
+end
+proc( i32 : depth FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeLayout
+  pos depth CompilerInfo .TypeLayout PreOpValue .CompilerInfo Type .Undefined PreOperation new return
+end
+proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> PreOperation ) =>: export: preOpUsingNamespace
+  pos
+    src alias UsingNameInfo new PreOpValue .UsingNamespace
+    Type .Undefined
+  PreOperation new return
+end
+proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> PreOperation ) =>: export: preOpUsingIdentifier
+  pos
+    src alias UsingNameInfo new PreOpValue .UsingIdentifier
+    Type .Undefined
+ PreOperation new return
+end
+proc( string : path bool : isLibFile FilePosition ptr : pos -> PreOperation ) =>: export: preOpImportFile
+  pos
+    path
+      isLibFile if
+        PreOpValue .LibImport
+      else
+        PreOpValue .Import
+      end
+    Type .Undefined
+  PreOperation new return
+end
+
 proc( -> OpValue ) =>: export: opValNOP
   NopType .EMPTY OpValue .NOP return
 end
@@ -654,7 +885,7 @@ struct(
   ProcId list : procedures
   ProcedureBundle list : procBundles
   Type list : autoTypes
-  Operation list : globalOps
+  PreOperation list : globalOps
   MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
   LocalLabelId BackJumpInfo hashMap : backJumpInfo
   LocalLabelId : nextLabelId
@@ -693,7 +924,7 @@ proc(
     64  ProcId          list.create
     64  ProcedureBundle list.create
     32  Type            list.create
-    1024 Operation      list.create
+    PreOperation list.empty
     4096                mixedArena.create
     LocalLabelId.skewHash@ LocalLabelId.eq@ 1024 BackJumpInfo map.create
     0 LocalLabelId cast
@@ -839,6 +1070,234 @@ namespace: sb
   end
   proc( stringBuilder CompareType -> stringBuilder ) =>: export: appendCmpType
     CMP_TYPE_NAMES@ >$ ..tag iSize cast.u [] sb.appendStr
+  end
+  proc( stringBuilder PreOperation : op ProgramContext ptr : progContext -> stringBuilder ) =>: export: appendPreOp
+    progContext .idContext .typeContext =:: typeContext
+    progContext .idContext .typeContext .nameContext =:: nameContext
+    progContext .idContext .constContext =:: constContext
+    op .val switch
+      NOP case
+        "NOP" sb.appendS
+        break
+      Constant .case =:: constVal
+        "constant ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        constVal typeContext sb.appendConstant
+      break
+      NestedProc .case =:: procId
+        "nested proc ( " sb.appendS
+        op .dataType  typeContext sb.appendType
+        " ) : " sb.appendS
+        procId ProcId.getName nameContext sb.appendIdentifierPath
+      break
+      Block .case =:: blockData
+        "Block: " sb.appendS
+        blockData .blockType sb.appendBlockType
+        " (" sb.appendS
+          blockData .blockId i64 cast sb.appendI
+          " ->" sb.appendS
+          blockData .jumpDistance i64 cast sb.appendI
+        ')' sb.appendC
+      break
+      BlockEnd .case =:: blockData
+        "End: " sb.appendS
+        blockData .blockType sb.appendBlockType
+        " (" sb.appendS
+          blockData .blockId i64 cast sb.appendI
+          " ->" sb.appendS
+          blockData .jumpDistance i64 cast sb.appendI
+        ')' sb.appendC
+      break
+      GetNamedElt .case =:: name
+        "get element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name sb.appendStr
+      break
+      SetNamedElt .case =:: name
+        "set element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name sb.appendStr
+      break
+      SetNestedNamedElt .case =:: name
+        "set nested element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name sb.appendStr
+      break
+      ExistsNamedElt .case =:: name
+        "exists element ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) : " sb.appendS
+        name sb.appendStr
+      break
+      TypeWith .case =:: procId
+        "type with( " sb.appendS
+          procId ProcId.getName nameContext sb.appendIdentifierPath
+        "@ )" sb.appendS
+      break
+      TypeModifier .case =:: typeModifier
+        "typeModifier \"" sb.appendS
+          typeModifier sb.appendTypeModifier
+        "\"" sb.appendS
+      break
+      Return case
+        "Return( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) " sb.appendS
+      break
+      Splat case
+        "splat: " sb.appendS
+        op .dataType typeContext sb.appendType
+      break
+      New case
+        "new: " sb.appendS
+        op .dataType typeContext sb.appendType
+      break
+      Cast .case =:: castInfo
+        castInfo .signType switch
+          NONE case break
+          SIGNED case "signed " sb.appendS break
+          UNSIGNED case "unsigned " sb.appendS break
+        end
+        "cast ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) src: " sb.appendS
+        castInfo .src typeContext sb.appendType
+      break
+      Cast! .case =:: src
+        "cast! ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) src: " sb.appendS
+        src typeContext sb.appendType
+      break
+      BitCast .case =:: src
+        "bitCast ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ) src: " sb.appendS
+        src typeContext sb.appendType
+      break
+      CallPtr case
+        "call pointer ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      Length case
+        "length ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      RawValue case
+        "raw ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      TypeOf case
+        "type-of":s sb.appendStr
+      break
+      TypeInfo .case =:: typeInfo
+        "typeInfo ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " ): " sb.appendS
+        typeInfo switch
+          ALIGNMENT case "alignment" sb.appendS break
+          SIZE case "size" sb.appendS break
+          STRIDE case "stride" sb.appendS break
+        end
+      break
+      GetUnionTag case
+        "get union tag ( " sb.appendS
+        op .dataType typeContext sb.appendType
+        " )" sb.appendS
+      break
+      StackMod .case =:: stackMod
+        "stack modification: " sb.appendS
+        stackMod sb.appendStackMod
+      break
+      GetName .case =:: name
+        "get: " sb.appendS
+        name sb.appendStr
+      break
+      AtName .case =:: name
+        "address of: " sb.appendS
+        name sb.appendStr
+      break
+      SetName .case =:: name
+        "set: " sb.appendS
+        name sb.appendStr
+      break
+      ElementSetName .case =:: name
+        "element set: " sb.appendS
+        name sb.appendStr
+      break
+      ExistsName .case =:: name
+        "exists name: " sb.appendS
+        name sb.appendStr
+      break
+      DeclareName .case =:: name
+        "declare name: " sb.appendS
+        name nameContext sb.appendIdentifierPath
+      break
+      AliasName .case =:: aliasData
+        "alias name: " sb.appendS
+        aliasData .alias nameContext sb.appendIdentifierPath
+        aliasData .baseName nameContext sb.appendIdentifierPath
+      break
+      InitializeName .case =:: initName
+        "initialize name: ":s sb.appendStr
+        initName nameContext sb.appendIdentifierPath
+      break
+      UsingNamespace .case =:: usingNamespace
+        "using namespace: ":s sb.appendStr
+        usingNamespace .baseName nameContext sb.appendIdentifierPath
+        usingNamespace .alias .if =:: aliasName
+          " as ":s sb.appendStr
+          aliasName sb.appendIdentifierName
+        end
+      break
+      UsingIdentifier .case =:: usingIdentifier
+        "using idenfifier: ":s sb.appendStr
+        usingIdentifier .baseName nameContext sb.appendIdentifierPath
+        usingIdentifier .alias .if =:: aliasName
+          " as ":s sb.appendStr
+          aliasName sb.appendIdentifierName
+        end
+      break
+      Assert case
+        "assert" sb.appendS
+      break
+      Error .case switch
+          ERROR case "..compiler.error" sb.appendS break
+          WARNING case "..compiler.warning" sb.appendS break
+          INFO case "..compiler.info" sb.appendS break
+        end
+      break
+      Panic case
+        "..panic" sb.appendS
+      break
+      PanicWithMessage .case =:: msg
+        '"' sb.appendC
+        msg sb.appendEscapedStr
+        "\" ..panic" sb.appendS
+      break
+      Import .case =:: path
+        "import \"" sb.appendS
+        path sb.appendEscapedStr
+        '"' sb.appendC
+      break
+      LibImport .case =:: path
+        "lib-import \"" sb.appendS
+        path sb.appendEscapedStr
+        '"' sb.appendC
+      break
+      CompilerInfo .case nameContext sb.appendCompilerInfo break
+    end
+      " at " sb.appendS
+      op .pos [] sb.appendPos
+      '\n' sb.appendC
+    return
   end
   proc( stringBuilder Operation : op ProgramContext ptr : progContext -> stringBuilder ) =>: export: appendOp
     progContext .idContext .typeContext =:: typeContext
@@ -1259,7 +1718,7 @@ namespace: sb
     prog [] .errors errorCmp@ list.sort
     prog [] .errors for sb.appendCompilerError end
     "## global:\n" sb.appendS
-    prog [] .globalOps for prog sb.appendOp end
+    prog [] .globalOps for prog sb.appendPreOp end
     prog [] .procedures for ProcId.getProcInfo =:: proc
       proc .implementation .Code .else
         ..drop continue
