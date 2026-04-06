@@ -1360,6 +1360,42 @@ proc(
 -> ) =>: resolveDeclarationType
   op [] .pos state popType op .dataType=
 end
+proc(
+  NameId : name bool : isInit
+  FilePosition ptr : pos
+  TypeCheckState ptr.mut : state
+-> IdentifierData ptr optional ) =>: declareName
+  state [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  name
+    state [] .blockMode .NONE ! if
+      Type .Undefined
+      IdentifierType .LABEL
+    else
+      pos state popType
+    state isGlobal _if
+      $1 nameContext id.currentNamespace id.setIdentifierNamespace
+      $ typeContext types.isProcedure if
+        IdentifierType .PROCEDURE
+      else $ typeContext types.isType _if
+        IdentifierType .TYPE
+      else
+        IdentifierType .GLOBAL_VAR
+      end
+    else
+      IdentifierType .LOCAL_VAR
+    end
+    -1 ## index
+    ConstValue .None
+    isInit
+    pos
+    idContext
+    errors
+  id.declareIdentifier
+end
 
 union(
   Operation ptr.mut : Op
@@ -2792,46 +2828,20 @@ proc(
       continue.opLoop
     else .DeclareName ? or op .val .InitializeName ? _if
       op .val .InitializeName ? =:: isInit
-      op .val .InitializeName .if =:: initName
-        op@ state resolveDeclarationType
-        initName
-      else .DeclareName ._else ..unreachable end
-        state [] .blockMode .NONE ! if
-          Type .Undefined
-          IdentifierType .LABEL
-        else
-          op .dataType $ .Undefined ? if ..drop
-            op .pos state popType
-            $ op@ .dataType=
-          end
-        state isGlobal _if
-          $1 nameContext id.currentNamespace id.setIdentifierNamespace
-          $ typeContext types.isProcedure if
-            IdentifierType .PROCEDURE
-          else $ typeContext types.isType _if
-            IdentifierType .TYPE
-          else
-            IdentifierType .GLOBAL_VAR
-          end
-        else
-          IdentifierType .LOCAL_VAR
-        end
-        -1 ## index
-        ConstValue .None
-        isInit
-        op .pos
-        idContext
-        errors
-      id.declareIdentifier .else
+      op .val switch
+        InitializeName DeclareName .case break
+        default ..unreachable
+      end isInit op .pos state declareName .else
         ## error message is created by declareIdentifier
         continue.opLoop
       end =:: idData
-      op .dataType idData@ id.asIdInfo op .pos
+        idData [] .valueType op..dataType=
+      op .dataType idData id.asIdInfo op .pos
       isInit ! if
         opDeclareId
       else
         opInitializeId
-      end op=
+      end  op=
     end
     ## convert static arguments to constants
     op .val .GetId .and .nameId =:: nameId
@@ -4788,7 +4798,7 @@ proc(
                 op .pos
                 idContext
                 errors
-              id.declareIdentifier .if .nameId else
+              id.declareIdentifier .if [] .nameId else
                 continue.opLoop
               end nameId=
               bundleId

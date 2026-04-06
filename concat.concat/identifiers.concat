@@ -29,7 +29,7 @@ struct(
   i32 : index
   IdentifierType : idType
   bool : declarationOnly
-) =:: IdentifierData
+) =:: export: IdentifierData
 struct(
   NameId : nameId
   IdentifierType : idType
@@ -574,7 +574,7 @@ namespace: id
     FilePosition ptr : declaredAt
     IdentifierContext ptr.mut : context
     CompilerError list ptr.mut : errors
-  -> IdentifierData optional ) =>: export: declareIdentifier
+  -> IdentifierData ptr optional ) =>: export: declareIdentifier
     context .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
     nameId nameContext id.currentNamespace id.setIdentifierNamespace
@@ -582,11 +582,11 @@ namespace: id
     flags FLAG_MUTABLE & ? if
       idType .TYPE if
         "type definitions cannot be mutable" sb.copyPtr declaredAt errors appendError
-        IdentifierData optional.empty return
+        IdentifierData ptr optional.empty return
       end
       idType .PROCEDURE if
         "procedures cannot be mutable" sb.copyPtr declaredAt errors appendError
-        IdentifierData optional.empty return
+        IdentifierData ptr optional.empty return
       end
     end
     nameId id.getIdentifierName =:: name
@@ -598,7 +598,7 @@ namespace: id
         idType idDeclarationContext
       end
     declaredAt errors checkIdentifier if
-      IdentifierData optional.empty return
+      IdentifierData ptr optional.empty return
     end
     nameId
       name
@@ -629,7 +629,7 @@ namespace: id
             "\n  * " sb.appendS
             valType typeContext sb.appendType
           declaredAt errors appendError
-          IdentifierData optional.empty return
+          IdentifierData ptr optional.empty return
         end
         prevDec [] .idType idType != if
           "declaration and initialization of \"" sb.copyPtr
@@ -642,7 +642,7 @@ namespace: id
             " got: " sb.appendS
             idType sb.appendIdType
           declaredAt errors appendError
-          IdentifierData optional.empty return
+          IdentifierData ptr optional.empty return
         end
         prevDec [] .nameId identifierFlags flags != if
           "flags for declaration and initialization of \"" sb.copyPtr
@@ -661,7 +661,7 @@ namespace: id
           declaredAt prevDec .declaredAt=
           false prevDec .declarationOnly=
         end
-        prevDec [] optional.wrap return
+        prevDec IdentifierData ptr cast optional.wrap return
       end
       prevId .aliasId NO_ALIAS == if
         prevDec [] .declaredAt
@@ -674,7 +674,7 @@ namespace: id
         prevPos [] sb.appendPos
         " )" sb.appendS
       declaredAt errors appendError
-      IdentifierData optional.empty return
+      IdentifierData ptr optional.empty return
     else ..drop end
     ## IdentifierData
       valType
@@ -689,7 +689,9 @@ namespace: id
       nameId
       idData
     map.put ..drop ## previous entry is always empty
-    idData optional.wrap return
+    context .identifierData nameId map.at
+      optional.unwrap IdentifierData ptr cast optional.wrap
+    return
   end
   proc(
     NameId : srcId
