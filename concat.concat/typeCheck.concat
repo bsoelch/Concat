@@ -3235,7 +3235,9 @@ proc(
           end
         end
         op .dataType .Undefined ? if
-          "declaration has no type":s op ..line state internalError ..unreachable
+          "declaration has no type: " sb.copyPtr
+            idInfo .nameId nameContext sb.appendIdentifierPath
+          op .pos errors appendError
         end
         idInfo .idType switch
           PROCEDURE case
@@ -3302,7 +3304,9 @@ proc(
           $ .valueType [] =:: opType
         id.asIdInfo =:: idInfo
         opType .Undefined ? if
-          "initialization has no type":s op ..line state internalError ..unreachable
+          "initialization has no type: " sb.copyPtr
+            idInfo .nameId nameContext sb.appendIdentifierPath
+          op .pos errors appendError
         end
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR PROCEDURE TYPE case
@@ -3315,7 +3319,7 @@ proc(
                   op .pos errors appendError
                   continue.opLoop
                 end idInfo .nameId typeContext types.initializeNamedType .else
-                  "re-initialization of named type" sb.copyPtr
+                  "re-initialization of named type: " sb.copyPtr
                     idInfo .nameId nameContext sb.appendIdentifierPath
                   op .pos errors appendError
                   continue.opLoop
