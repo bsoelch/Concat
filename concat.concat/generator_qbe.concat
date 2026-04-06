@@ -788,10 +788,8 @@ namespace: sb
     t0 typeContext types.unwrapNamed typeContext types.unwrapRefinement =:: t
     sb
       isGlobal and t typeContext types.isPointer or
-          t types.isPrimitive or
-          t typeContext types.isEnum or
-          t .CType ? or
-          t .IntLiteral ? if
+          t types.isPrimitive or t typeContext types.isEnum or
+          t .CType ? or t .IntLiteral ? or t typeContext types.isProcedure if
         ## add name prefix for global constants, skip prefix for zero-length array constants
         t StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
