@@ -150,9 +150,9 @@ def main():
   subprocess.run(["clear"])
   parser = argparse.ArgumentParser()
   parser.add_argument('-X', action='store_true', help='use development version of compiler')
-  parser.add_argument('--full', '-full', action='store_true', help='include examples')
+  parser.add_argument('-full', '--full', action='store_true', help='include examples')
   parser.add_argument('-j', type=int, help='run tests on multiple threads, should be followed by a number specifiying the thread count', default=None)
-  parser.add_argument('-cctArg', nargs=1, action = 'append', help='add compiler-argument, can occur more than once', default=None)
+  parser.add_argument('-cctArg', '--cctArg', nargs=1, action = 'append', help='add compiler-argument, can occur more than once', default=None)
   args, _ = parser.parse_known_args()
   concatPath = CURRENT_DIR + "/concat"
   if args.X:
