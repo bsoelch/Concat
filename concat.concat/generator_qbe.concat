@@ -3960,7 +3960,7 @@ proc(
       break
     CompilerInfo case
       sb return ## XXX? print compiler info
-    TypeInfo Copy UsingNamespace UsingIdentifier GetUnionTag SetNestedNamedElt InitializeId Splat
+    TypeInfo Copy UsingNamespace UsingIdentifier GetUnionTag SetNestedNamedElt Splat
     GetName AtName ElementSetName SetName GetNamedElt Error Assert Panic DeclareName AliasName InitializeName Import LibImport
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc case
       break ## XXX error message

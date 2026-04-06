@@ -3377,7 +3377,7 @@ proc(
           continue.opLoop
         end
         break
-      ImplementProcedure GetElement SetElement SetNestedElement InitializeId DeclareId case break
+      ImplementProcedure GetElement SetElement SetNestedElement DeclareId case break
       GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case =:: name
         ElementAccessType .GET =:: mut: accessType
         op .val .SetNamedElt ? if

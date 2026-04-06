@@ -429,7 +429,7 @@ proc(
     return
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
-    ConstantReference NewReference InitializeId GetUnionTag Splat
+    ConstantReference NewReference GetUnionTag Splat
     TypeInfo NewUnionReference UsingNamespace UsingIdentifier ElementSetName
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName SetNestedNamedElt
     SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case

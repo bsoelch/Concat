@@ -487,7 +487,7 @@ proc(
       end
     break
     ConstantReference NewReference GetUnionTag Splat
-    TypeInfo NewUnionReference UsingNamespace UsingIdentifier InitializeId
+    TypeInfo NewUnionReference UsingNamespace UsingIdentifier
     GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
     SetNamedElt SetNestedNamedElt Length TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
       "unsupported operation " sb.copyPtr
