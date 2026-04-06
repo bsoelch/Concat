@@ -1864,7 +1864,9 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
-  opType typeContext types.getProcIn .if =:: inTypes
+  opType typeContext types.getProcIn
+    $ ? =:: typeIsProc
+  .if =:: inTypes
     inTypes .length 0:iSize != if
       opType 0 typeContext types.getProcArgName .and id.identifierFlags id.FLAG_STATIC & ? if
         1:i32
@@ -2028,8 +2030,12 @@ proc(
       return
     GET_PTR case
       ## base-type is pointer to value
-      baseType typeContext types.getBaseType .else
-        baseType ## if base-type is no pointer use it directly
+      typeIsProc ! if baseType else ## if type is directly given use type
+          baseType typeContext types.getBaseType ._else
+        "expected pointer got: " sb.copyPtr
+          baseType typeContext sb.appendType
+        pos errors appendError
+        baseType
       end =:: valueType
       valueType context toValType =:: valType
       valueType context referenceOnly if
@@ -2090,12 +2096,11 @@ proc(
       return
     OFFSET_PTR case
       ## baseType is pointer type
-      baseType typeContext types.getBaseType .else
-        baseType .Empty ? ! if
-          "expected pointer got: " sb.copyPtr
-            baseType typeContext sb.appendType
-          pos errors appendError
-        end
+      typeIsProc ! if baseType else
+          baseType typeContext types.getBaseType ._else
+        "expected pointer got: " sb.copyPtr
+          baseType typeContext sb.appendType
+        pos errors appendError
         Type .Empty
       end =:: eltType
       sb
