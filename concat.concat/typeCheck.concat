@@ -1365,7 +1365,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   name
-    state [] .blockMode .NONE ! if
+    isInit ! and state [] .blockMode .NONE ! if
       Type .Undefined
       IdentifierType .LABEL
     else
@@ -2347,13 +2347,13 @@ proc(
         switchBlock .caseLabels [] .length
         op [] .pos
       state newSwitchLabel
-    else .GetId ._if =:: idInfo
-      idInfo .nameId
-        idContext
-      id.getIdData .else
-        "could not find " sb.copyPtr
-          idInfo nameContext sb.appendIdInfo
-        op [] .pos errors appendError
+    else .GetName ._if =:: idName
+      idName idContext id.findIdentifierByName switch
+        Ok Curry .case break
+        Err case
+          "could not find identifier: " sb.copyPtr
+            idName sb.appendStr
+          op [] .pos errors appendError
         true return
       end =:: idData
       idData [] .constValue .None ? if
@@ -2410,10 +2410,7 @@ proc(
     true return
   end
   ## enum-switch -> try read label
-  op [] .val .GetId .if
-    .nameId id.getIdentifierName
-  else .GetName
-  ._else .Constant .and .TypeId .and typeContext types.namedTypeName ._if
+  op [] .val .GetName .else .Constant .and .TypeId .and typeContext types.namedTypeName ._if
     id.getIdentifierName
   else
     "unsupported operation for switch label of type " sb.copyPtr
@@ -2742,15 +2739,7 @@ proc(
       end
     end
     ## resolve names
-    op .val .GetName .and op .pos state resolveIdentifier .if
-        $ [] .valueType op..dataType=
-      id.asIdInfo op@ .val .GetId=
-    else op .val .ElementSetName .and op .pos state resolveIdentifier ._if
-        $ [] .valueType op..dataType=
-      id.asIdInfo
-        $ optional.wrap state .nestedElementInfo .srcVar=
-      op@ .val .GetId=
-    else op .val .ExistsName ._if
+    op .val .ExistsName .if
       op .pos state resolveIdentifier ?
         ConstValue .Bool
         types.primitive.BOOL
@@ -2821,13 +2810,6 @@ proc(
       end
       continue.opLoop
     else ..drop end
-    ## convert static arguments to constants
-    op .val .GetId .and .nameId =:: nameId
-        nameId id.identifierFlags id.FLAG_STATIC & ? and
-        state .argData nameId ArgumentId.fromName map.at .if =:: argData
-      argData [] .valType op@ .dataType=
-      argData [] .value op@ .val .Constant=
-    end
     op .val switch
       NOP case continue.opLoop
       Constant .case op .dataType op .pos state pushConstant continue.opLoop
@@ -2855,11 +2837,6 @@ proc(
         procId ConstValue .Procedure
           procType ## TODO? special type for procedure literal
         op .pos state pushConstant
-        continue.opLoop
-      GetName ElementSetName .case =:: name
-        "could not find identifier: " sb.copyPtr
-          name sb.appendStr
-        op .pos errors appendError
         continue.opLoop
       AliasName case ..unreachable
       UsingNamespace .case =:: usingNamespace
@@ -2892,7 +2869,25 @@ proc(
           op .pos
         errors id.importIdentifier ..drop
         continue.opLoop
-      GetId .case =:: idInfo
+      GetName ElementSetName .case =:: name
+         name op .pos state resolveIdentifier .else
+            "could not find identifier: " sb.copyPtr
+              name sb.appendStr
+            op .pos errors appendError
+            continue.opLoop
+          end
+          $ [] .valueType op..dataType=
+        id.asIdInfo =:: idInfo
+        op .val .ElementSetName ? if
+          idInfo optional.wrap state .nestedElementInfo .srcVar=
+        end
+        ## convert static arguments to constants
+        idInfo .nameId id.identifierFlags id.FLAG_STATIC & ? and
+            state .argData idInfo .nameId ArgumentId.fromName map.at .if =:: argData
+          argData [] .value argData [] .valType op .pos state pushConstant
+          continue.opLoop
+        end
+        idInfo op@ .val .GetId=
         idInfo .nameId id.identifierFlags =:: flags
         flags id.FLAG_MUTABLE & ? =:: mutable
         flags id.FLAG_STATIC & ? =:: isStatic
@@ -3029,19 +3024,20 @@ proc(
         pushTypes
         continue.opLoop
       AtName .case =:: name
-         name op .pos state resolveIdentifier .else
+        name op .pos state resolveIdentifier .else
             "could not find identifier: " sb.copyPtr
               name sb.appendStr
             op .pos errors appendError
             continue.opLoop
           end
-          $ [] .valueType op..dataType=
+          $ [] .valueType =:: opType
         id.asIdInfo =:: idInfo
         idInfo .nameId id.FLAG_HAS_POINTER id.addIdentifierFlags
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ARGUMENT case
             idInfo .nameId =:: nameId
             nameId id.identifierFlags id.FLAG_MUTABLE & ? =:: mutable
+            opType mutable typeContext types.getAddressType =:: ptrType
             idInfo .idType .PROCEDURE if
               ## getIdData
                 idInfo .nameId
@@ -3081,27 +3077,28 @@ proc(
               else .Alias ? _if
                 "unexpected proc implementation":s op ..line state internalError ..unreachable
               end
-              procId OpValue .ProcPtr op@ .val=
+              ## pushValue
+                ptrType
+                procId ConstValue .Procedure
+                ptrType procId op .pos opProcPtr
+              state pushValue
+              continue.opLoop
             end
-            op .dataType typeContext types.isEmpty if
+            opType typeContext types.isEmpty if
               ## pushValue
                 0 ConstValue .Int
-                op .dataType
-                  mutable
-                typeContext types.getAddressType
+                ptrType
                 op .pos
               state pushConstant
             else
               ## pushValue
-                op .dataType
-                  mutable
-                typeContext types.getAddressType
+                ptrType
                 idInfo .idType .GLOBAL_VAR if
                   nameId ConstValue .GlobalPointer
                 else
                   ConstValue .None
                 end
-                op
+                ptrType idInfo op .pos opAtId
               state pushValue
             end
             continue.opLoop
@@ -3120,7 +3117,7 @@ proc(
             op .pos errors appendError
             continue.opLoop
           end
-          $ [] .valueType op..dataType=
+          $ [] .valueType =:: opType
         id.asIdInfo =:: idInfo
         ## TODO: support SetId for global variable (if mutable or uninitialized)
         idInfo .idType .LOCAL_VAR ! and idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? ! if
@@ -3131,13 +3128,13 @@ proc(
           op .pos errors appendError
         end
         ## requireTypes
-          op@ .dataType slice.wrap
+          opType@ slice.wrap
           "set identifier":s
           0 false
           op .pos
           state
         requireTypes .Err ? if continue.opLoop end
-        op state appendOp ..drop
+        opType idInfo op .pos opSetId state appendOp ..drop
       continue.opLoop
       DeclareName .case false op .pos state declareName .else
           ## error message is created by declareName
@@ -3237,7 +3234,7 @@ proc(
             NONE case ..unreachable
           end
         end
-        op .dataType .Undefined ? ! if
+        op .dataType .Undefined ? if
           "declaration has no type":s op ..line state internalError ..unreachable
         end
         idInfo .idType switch
@@ -3304,7 +3301,7 @@ proc(
         end
           $ .valueType [] =:: opType
         id.asIdInfo =:: idInfo
-        opType .Undefined ? ! if
+        opType .Undefined ? if
           "initialization has no type":s op ..line state internalError ..unreachable
         end
         idInfo .idType switch
@@ -3394,7 +3391,7 @@ proc(
           continue.opLoop
         end
         break
-      ImplementProcedure GetElement SetElement SetNestedElement DeclareId AtId SetId case break
+      ImplementProcedure GetElement SetElement SetNestedElement DeclareId GetId AtId SetId case break
       GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case =:: name
         ElementAccessType .GET =:: mut: accessType
         op .val .SetNamedElt ? if
@@ -4829,7 +4826,6 @@ proc(
             elts for =:: elt
               elt .val switch
                 GetName .case break
-                GetId .case .nameId id.getIdentifierName break
                 ## NestedProc .case =:: procId break
                 default
                   "unsupported operation in overload block: " sb.copyPtr

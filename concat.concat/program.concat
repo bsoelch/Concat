@@ -309,6 +309,9 @@ end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opAtId
   pos idInfo OpValue .AtId opType Operation new return
 end
+proc( Type : opType ProcId : procId FilePosition ptr : pos -> Operation ) =>: export: opProcPtr
+  pos procId OpValue .ProcPtr opType Operation new return
+end
 proc( Type : opType IdentifierInfo : idInfo FilePosition ptr : pos -> Operation ) =>: export: opDeclareId
   pos idInfo OpValue .DeclareId opType Operation new return
 end
