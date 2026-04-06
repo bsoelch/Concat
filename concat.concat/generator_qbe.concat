@@ -2029,8 +2029,7 @@ proc(
     GET_PTR case
       ## base-type is pointer to value
       baseType typeContext types.getBaseType .else
-        "expected pointer" sb.copyPtr pos errors appendError
-        Type .Empty
+        baseType ## if base-type is no pointer use it directly
       end =:: valueType
       valueType context toValType =:: valType
       valueType context referenceOnly if
@@ -2078,7 +2077,9 @@ proc(
       ## baseType is pointer type
       baseType typeContext types.getBaseType .else
         baseType .Empty ? ! if
-          "expected pointer" sb.copyPtr pos errors appendError
+          "expected pointer got: " sb.copyPtr
+            baseType typeContext sb.appendType
+          pos errors appendError
         end
         Type .Empty
       end =:: eltType
