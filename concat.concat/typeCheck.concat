@@ -1355,12 +1355,6 @@ proc( TypeCheckState ptr.mut : state -> ) =>: freeOps
 end
 
 proc(
-  Operation ptr.mut : op
-  TypeCheckState ptr.mut : state
--> ) =>: resolveDeclarationType
-  op [] .pos state popType op .dataType=
-end
-proc(
   NameId : name bool : isInit
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
@@ -2826,23 +2820,7 @@ proc(
         nameAlias .alias idContext id.getIdData optional.unwrap .constValue=
       end
       continue.opLoop
-    else .DeclareName ? or op .val .InitializeName ? _if
-      op .val .InitializeName ? =:: isInit
-      op .val switch
-        InitializeName DeclareName .case break
-        default ..unreachable
-      end isInit op .pos state declareName .else
-        ## error message is created by declareIdentifier
-        continue.opLoop
-      end =:: idData
-        idData [] .valueType op..dataType=
-      op .dataType idData id.asIdInfo op .pos
-      isInit ! if
-        opDeclareId
-      else
-        opInitializeId
-      end  op=
-    end
+    else ..drop end
     ## convert static arguments to constants
     op .val .GetId .and .nameId =:: nameId
         nameId id.identifierFlags id.FLAG_STATIC & ? and
@@ -2883,7 +2861,7 @@ proc(
           name sb.appendStr
         op .pos errors appendError
         continue.opLoop
-      InitializeName DeclareName AliasName case ..unreachable
+      AliasName case ..unreachable
       UsingNamespace .case =:: usingNamespace
         usingNamespace .baseName =:: namespaceLabel
         usingNamespace .alias
@@ -3144,7 +3122,14 @@ proc(
         requireTypes .Err ? if continue.opLoop end
         op state appendOp ..drop
       continue.opLoop
-      DeclareId .case =:: idInfo
+      DeclareName .case false op .pos state declareName .else
+          ## error message is created by declareName
+          continue.opLoop
+        end =:: idData
+          idData [] .valueType op..dataType=
+        idData id.asIdInfo =:: idInfo
+        ## TODO? delay op creation
+        op .dataType idInfo op .pos opDeclareId op=
         state .blockMode [] .NONE ! if
           1 op .pos state checkStackSize if
             continue.opLoop ## stack underflow
@@ -3160,7 +3145,7 @@ proc(
                 idInfo nameContext sb.appendIdInfo
               op .pos errors appendError
               continue.opLoop
-            end =:: idData
+            end =:: shadow: idData ## get mutable reference to id-data
             state [] .blockMode switch
               TYPE case
                 stackVal [] .value .WildCard .if ..drop
@@ -3235,8 +3220,8 @@ proc(
             NONE case ..unreachable
           end
         end
-        op .dataType .Undefined ? if
-          op@ state resolveDeclarationType
+        op .dataType .Undefined ? ! if
+          "declaration has no type":s op ..line state internalError ..unreachable
         end
         idInfo .idType switch
           PROCEDURE case
@@ -3245,7 +3230,7 @@ proc(
                 idInfo .nameId nameContext sb.appendIdentifierPath
               op .pos errors appendError
               continue.opLoop
-            end .constValue =:: constVal
+            end .constValue =:: constVal ## get mutable reference to id-data
             constVal [] .None .if ..drop
             else .Procedure ._if =:: procId
               continue.opLoop ## skip if value already exits
@@ -3274,7 +3259,7 @@ proc(
             ## getIdData
               idInfo .nameId
               idContext
-            id.getIdData .if =:: idData
+            id.getIdData .if =:: shadow: idData ## get mutable reference to id-data
               idInfo .nameId
                 typeContext types.declareNamedType
               ConstValue .TypeId idData .constValue=
@@ -3296,9 +3281,14 @@ proc(
           continue.opLoop
         end
         break
-      InitializeId .case =:: idInfo
-        op .dataType .Undefined ? if ## is this ever false
-          op@ state resolveDeclarationType
+      InitializeName .case true op .pos state declareName .else
+          ## error message is created by declareIdentifier
+          continue.opLoop
+        end
+          $ .valueType [] =:: opType
+        id.asIdInfo =:: idInfo
+        opType .Undefined ? ! if
+          "initialization has no type":s op ..line state internalError ..unreachable
         end
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR PROCEDURE TYPE case
@@ -3323,7 +3313,7 @@ proc(
               1 op .pos state discardValues
             else
               ## requireTypes
-                op@ .dataType slice.wrap
+                opType@ slice.wrap
                 "initialization":s
                 0 false
                 op .pos
@@ -3340,7 +3330,7 @@ proc(
               ## getIdData
                 idInfo .nameId
                 idContext
-              id.getIdData .if =:: idData
+              id.getIdData .if =:: idData ## TODO? reuse idData from declaration
                 constVal idData .constValue=
               else
                 "could not find " sb.copyPtr
@@ -3351,7 +3341,7 @@ proc(
                 constVal .Procedure .if =:: procId
                   procId ProcId.getProcInfo =:: procInfo
                   procInfo .procType .Undefined ? if
-                    op .dataType procInfo .procType=
+                    opType procInfo .procType=
                   end
                   procInfo .nameId [] id.identifierFlags id.FLAG_LAMBDA & ? if
                     MAIN_NAME idInfo .nameId id.identifierNameEq if
@@ -3377,10 +3367,8 @@ proc(
                 continue.opLoop
               end
             end
-            idInfo op@ .val .DeclareId=
-            op state appendOp ..drop
-            idInfo op@ .val .SetId=
-            op state appendOp ..drop
+            opType idInfo op .pos opDeclareId state appendOp ..drop
+            opType idInfo op .pos opSetId state appendOp ..drop
           continue.opLoop
           PROCEDURE_BUNDLE LABEL ARGUMENT TMP_VAR case
             "unexpected initialization of identifier " sb.copyPtr
@@ -3389,7 +3377,7 @@ proc(
           continue.opLoop
         end
         break
-      ImplementProcedure GetElement SetElement SetNestedElement case break
+      ImplementProcedure GetElement SetElement SetNestedElement InitializeId DeclareId case break
       GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case =:: name
         ElementAccessType .GET =:: mut: accessType
         op .val .SetNamedElt ? if
