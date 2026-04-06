@@ -2994,7 +2994,7 @@ proc(
     ConstantReference .case =:: constId
       sb
         "%s" sb.appendS
-        ValType .REFERENCE context pushValue sb.appendI
+        _EXPERIMENTAL_ if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
         " =l " sb.appendS
         " copy $" sb.appendS
         CONST_REFERENCE_NAME sb.appendS
@@ -3489,7 +3489,7 @@ proc(
           return
         end
         "%s" sb.appendS
-        ValType .REFERENCE context pushValue sb.appendI
+        _EXPERIMENTAL_ and hasReference if ValType .PTR else ValType .REFERENCE end context pushValue sb.appendI
         " =l copy %" sb.appendS
         dataPtrType sb.appendC
         dataPtrId sb.appendI
