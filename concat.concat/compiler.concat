@@ -281,21 +281,19 @@ proc( -> ) =>: main ## TODO check return value of fopen
     file.close
     parsedOps sb.free ..drop
   end
-  _EXPERIMENTAL_ if
-    prog@ aliasDetection
-    dumpPhases DumpPhases.ALIAS_DETECTION & ? if
-      1024 sb.create
-        prog@ sb.appendProgram
-      =:: parsedOps
-      tmpPath sb.free
-        baseName sb.appendStr
-        ".tokens.aliasDetection":s sb.appendStr
-      tmpPath=
-      tmpPath sb.asStr file.OpenMode .WRITE file.open
-        parsedOps sb.asStr file.write
-      file.close
-      parsedOps sb.free ..drop
-    end
+  prog@ aliasDetection
+  dumpPhases DumpPhases.ALIAS_DETECTION & ? if
+    1024 sb.create
+      prog@ sb.appendProgram
+    =:: parsedOps
+    tmpPath sb.free
+      baseName sb.appendStr
+      ".tokens.aliasDetection":s sb.appendStr
+    tmpPath=
+    tmpPath sb.asStr file.OpenMode .WRITE file.open
+      parsedOps sb.asStr file.write
+    file.close
+    parsedOps sb.free ..drop
   end
   prog@ prepareCompile
   dumpPhases DumpPhases.PRE_COMPILER & ? if

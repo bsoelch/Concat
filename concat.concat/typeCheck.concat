@@ -1234,27 +1234,6 @@ end
 proc( TypeCheckState ptr.mut : state -> ) =>: markAsUnique
   state .stack branchTree.peek .if true >$ .uniqueRef= end
 end
-proc( TypeCheckState ptr.mut : state -> ) =>: wrapCopy
-  _EXPERIMENTAL_ if return end ## copy-generation will be moved to later phase
-  state .stack branchTree.peek ! .or [] .uniqueRef if
-    return ## no need to copy uniqueRef value
-  end
-  state [] .program =:: program
-  program .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  state .stack branchTree.pop optional.unwrap [] =:: mut: topValue
-  topValue .valueType typeContext types.isEmpty if
-    state .stack topValue branchTree.push
-    return
-  end
-  state [] .compiledOps .length i32 cast.u =:: index
-  state [] .compiledOps
-    topValue .valueType topValue .pushedAt opCopy list.append
-  state .compiledOps=
-  index topValue@ .opIndex=
-  state .stack topValue branchTree.push
-  state markAsUnique
-end
 
 proc(
   i32 : index
@@ -2070,15 +2049,6 @@ proc(
       state pushConstant
       return
     end
-    isPtr ! if ## copy before write to stack element
-      state wrapCopy
-      ## copy outer container if operation is nested set
-      state .nestedElementInfo .path [] .length 0 != if
-        state .nestedElementInfo [] .rootType
-          state .compiledOps [] list.peek
-        .if .dataType= else ..drop end
-      end
-    end
     Type 2 array : mut: args
     targetType args@ 0 =[]
     srcType args@ 1 =[]
@@ -2206,14 +2176,6 @@ proc(
     ## remove container from stack
     state .stack branchTree.pop ..drop
   end
-  ## operation before get element is copy
-  state [] .compiledOps list.peek .and .val .Copy ? end =:: directCopy
-  directCopy if
-    state [] .compiledOps
-      $ .length 1:iSize - list.setLength
-    state .compiledOps=
-    state adjustBlockStart
-  end
   emptyValue and isPtr if
     ## pushConstant
       0 ConstValue .Int
@@ -2236,11 +2198,6 @@ proc(
   state pushValue
   targetType typeContext types.isEmpty if
     return
-  end
-  directCopy if
-    ## removed copy is operation directly before get element
-    ## -> have to reinsert copy after getting element
-    state wrapCopy
   end
 end
 
@@ -2934,9 +2891,6 @@ proc(
               constValue
               op
             state pushValue
-            mutable if ## insert copy for mutable values
-              state wrapCopy ## TODO keep track of (potential) writes to variable, if no write during lifetime of copied value, discard copy
-            end
             continue.opLoop
           TYPE case
             op .dataType constValue
