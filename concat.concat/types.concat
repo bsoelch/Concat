@@ -654,7 +654,8 @@ namespace: types
   proc( Type TypeContext ptr.mut : context -> SimpleTypeInfo ) =>: simpleType
     context unwrapNamed switch
       Empty Align case SimpleTypeInfo.EMPTY return
-      IntLiteral Enum Pointer MutablePointer RawPointer MutableRawPointer case SimpleTypeInfo.INT return
+      IntLiteral Enum Pointer MutablePointer RawPointer MutableRawPointer Procedure case
+        SimpleTypeInfo.INT return
       PrimitiveType .case switch
         BOOL I8 I16 I32 I64 case SimpleTypeInfo.INT return
         F16 F32 F64 case SimpleTypeInfo.FLOAT return
@@ -687,7 +688,7 @@ namespace: types
           eltType commonType SimpleTypeInfo.mix commonType=
         end
       commonType return
-      Undefined Procedure GenericType UnionElement TaggedUnion case
+      Undefined GenericType UnionElement TaggedUnion case
         SimpleTypeInfo.MANY return
       Initializer .case .asTuple TupleId cast Type .Struct context simpleType return
       SetType .case .baseType [] context simpleType return
@@ -700,7 +701,7 @@ namespace: types
   end
   proc( Type TypeContext ptr.mut : context -> bool ) =>: export: isValueType
     context unwrapNamed switch
-      Empty PrimitiveType IntLiteral CType Align Enum
+      Empty PrimitiveType IntLiteral CType Align Enum Procedure
         Pointer MutablePointer RawPointer MutableRawPointer case true return
       ArrayType .case =:: arrayData
         ## TODO? consider arrays fitting into vector register as a value type (only for asm back-end)
@@ -717,7 +718,7 @@ namespace: types
           end
         regCount 3 u<= return
       RawUnion .case Type .RawUnion context simpleType SimpleTypeInfo.MANY != return
-      Undefined Procedure GenericType case false return
+      Undefined GenericType case false return
       Initializer .case .asTuple TupleId cast Type .Struct context isValueType return
       UnionElement .case unionElementUnion context isValueType return
       SetType .case .baseType [] context isValueType return
