@@ -652,7 +652,10 @@ proc(
         ## copy, getElement -> getElement, copy
         list.pop ..drop
         op list.append
-        op .dataType index typeContext types.compositeGetElement optional.unwrap op .pos opCopy list.append
+        op .dataType index typeContext types.compositeGetElement .else
+            op .dataType typeContext types.getArrayBaseType ._else
+          "unsupported type for get-element" ..panic
+        end op .pos opCopy list.append
         return
       end
     break
