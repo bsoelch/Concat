@@ -2754,8 +2754,11 @@ proc(
     else op .val .AtName .and op@ state resolveIdentifier ._if
       op@ .val .AtId=
     else op .val .ExistsName ._if
-      op@ state resolveIdentifier ? ConstValue .Bool op@ .val .Constant=
-      types.primitive.BOOL op@ .dataType=
+      op@ state resolveIdentifier ?
+        ConstValue .Bool
+        types.primitive.BOOL
+      op .pos state pushConstant
+      continue.opLoop
     else .AliasName ._if =:: nameAlias
       op .pos state popType =:: aliasType
       aliasType typeContext types.isProcedure ! if
