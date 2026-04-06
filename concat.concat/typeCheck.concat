@@ -2936,8 +2936,9 @@ proc(
             end
             continue.opLoop
           TYPE case
-            constValue op .dataType op .pos opConst op=
-            op .dataType constValue op state pushValue
+            op .dataType constValue
+              constValue op .dataType op .pos opConst
+            state pushValue
             continue.opLoop
           ARGUMENT case
             idInfo .nameId =:: nameId
