@@ -924,6 +924,14 @@ proc(
         elt .valueType
           typeContext types.literalToType
         elt@ .valueType=
+        state [] .compiledOps elt .opIndex list.at .if
+          $ .val .Constant ? if
+            ## TODO? cast constant value
+            elt .valueType >$ .dataType=
+          else
+            "expected literal to be constant" ..panic
+          end
+        end
       end
     end
     OP_UNLINKED elt@ .opIndex= ## TODO! is this line necessary
