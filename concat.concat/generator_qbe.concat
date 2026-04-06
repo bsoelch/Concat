@@ -1881,7 +1881,7 @@ proc(
     end
   else opType end =:: baseType
   baseType context toValType =:: baseVal
-  BuiltIn ..length 217 == "no new built-ins" assert
+  BuiltIn ..length 218 == "no new built-ins" assert
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       sb "neg":s baseVal pos context appendUnaryOperator
@@ -2071,6 +2071,21 @@ proc(
           ", " sb.appendS
           baseType pos context typeSizeInt sb.appendI
         end
+        '\n' sb.appendC
+      return
+    COPY_PTR case
+      pos context popValue =:: targetPtr
+      baseType typeContext types.isEmpty if
+        sb return
+      end
+      pos context popValue =:: srcPtr
+      sb
+        "blit %s" sb.appendS
+        srcPtr sb.appendI
+        ", %s" sb.appendS
+        targetPtr sb.appendI
+        ", " sb.appendS
+        baseType pos context typeSizeInt sb.appendI
         '\n' sb.appendC
       return
     OFFSET_PTR case

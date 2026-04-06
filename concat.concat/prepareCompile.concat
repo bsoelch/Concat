@@ -44,7 +44,7 @@ proc(
 end
 
 proc( BuiltIn -> bool ) =>: canMergeJumpIf
-  BuiltIn ..length 217 == "no new builtins" assert
+  BuiltIn ..length 218 == "no new builtins" assert
   switch
     NOT_BOOL ## !
     EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 ## ==
@@ -75,7 +75,7 @@ end
 proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJumpIf
   cmpType .FALSE or cmpType .TRUE end "can only merge cmp.true and cmp.false" assert
   cmpType .FALSE =:: flip
-  BuiltIn ..length 217 == "no new builtins" assert
+  BuiltIn ..length 218 == "no new builtins" assert
   builtIn switch
     NOT_BOOL case
       flip if CompareType .TRUE else CompareType .FALSE end
@@ -228,9 +228,13 @@ proc(
           1 StackModType .ROTATE op .pos opStackMod list.append
           1 StackModType .COPY op .pos opStackMod list.append
         end
-        refBase index op .pos typeContext applyElementOffset =:: eltType
-        ## TODO? "COPY_PTR" built-in for copy between reference-values
-        eltType BuiltIn .SET_PTR op .pos opBuiltIn list.append
+        refBase index op .pos typeContext applyElementOffset
+          $ typeContext types.isValueType if
+            BuiltIn .SET_PTR
+          else
+            BuiltIn .COPY_PTR
+          end
+        op .pos opBuiltIn list.append
       return
     break
     SetNestedElement .case =:: path
@@ -257,8 +261,13 @@ proc(
           curry .ops =[]
         end newOps@ eltType@ typeContext op .pos Curry new NestedElementPath.forEach
       newOps
-        ## TODO? "COPY_PTR" built-in for copy between reference-values
-        eltType BuiltIn .SET_PTR op .pos opBuiltIn list.append
+        eltType
+          $ typeContext types.isValueType if
+            BuiltIn .SET_PTR
+          else
+            BuiltIn .COPY_PTR
+          end
+        op .pos opBuiltIn list.append
       return
     break
     ImplementProcedure case

@@ -369,6 +369,14 @@ namespace: interpreter
           pos
           typeContext
         errors setPointer return
+      COPY_PTR case
+        k 2 == "correct number of arguments" assert
+        ConstValue .None
+          args 0 []
+          args 1 []
+          pos
+          typeContext
+        errors setPointer return
       CONVERT_U8_I16 CONVERT_U8_I32 CONVERT_U8_I64 CONVERT_I16_I8 CONVERT_I32_I8 CONVERT_I64_I8 case
         args [] i8 cvtIntU return
       CONVERT_S8_I16 CONVERT_S8_I32 CONVERT_S8_I64 case args [] i8 cvtIntS return
