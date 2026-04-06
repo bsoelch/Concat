@@ -120,14 +120,14 @@ def runTests(path,*,cctFlags=None):
   print(relPath+":\n") ## double new line
   if thread_count is not None:
     with ThreadPoolExecutor(max_workers = thread_count) as executor:
-      futures = []
+      testedFiles = []
       for file in os.listdir(os.fsencode(path)):
         file = os.fsdecode(file)
         if file.endswith(".concat"):
-          futures.append(executor.submit(runTest,file,relPath,cctFlags=cctFlags))
-      nTested += len(futures)
-      for future in futures:
-        failedPath = future.result()
+          testedFiles.append(executor.submit(runTest,file,relPath,cctFlags=cctFlags))
+      nTested += len(testedFiles)
+      for test in testedFiles:
+        failedPath = test.result()
         if failedPath is not None:
           failed.append(failedPath)
         else:
@@ -149,10 +149,10 @@ def main():
   ## TODO? should test-script clear console
   subprocess.run(["clear"])
   parser = argparse.ArgumentParser()
-  parser.add_argument('-X', action='store_true', help='Use developement version of compiler')
-  parser.add_argument('--full', '-full', action='store_true', help='Include examples')
-  parser.add_argument('-j', type=int, help='Number of threads, should be followed by a number', default=None)
-  parser.add_argument('-cctArg', nargs=1, action = 'append', help='Add argument to concat compiler, can occur more than once', default=None)
+  parser.add_argument('-X', action='store_true', help='use development version of compiler')
+  parser.add_argument('--full', '-full', action='store_true', help='include examples')
+  parser.add_argument('-j', type=int, help='run tests on multiple threads, should be followed by a number specifiying the thread count', default=None)
+  parser.add_argument('-cctArg', nargs=1, action = 'append', help='add compiler-argument, can occur more than once', default=None)
   args, _ = parser.parse_known_args()
   concatPath = CURRENT_DIR + "/concat"
   if args.X:
