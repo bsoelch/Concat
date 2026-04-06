@@ -2745,9 +2745,6 @@ proc(
     op .val .GetName .and op .pos state resolveIdentifier .if
         $ [] .valueType op..dataType=
       id.asIdInfo op@ .val .GetId=
-    else op .val .SetName .and op .pos state resolveIdentifier ._if
-        $ [] .valueType op..dataType=
-      id.asIdInfo op@ .val .SetId=
     else op .val .ElementSetName .and op .pos state resolveIdentifier ._if
         $ [] .valueType op..dataType=
       id.asIdInfo
@@ -2859,7 +2856,7 @@ proc(
           procType ## TODO? special type for procedure literal
         op .pos state pushConstant
         continue.opLoop
-      GetName SetName ElementSetName .case =:: name
+      GetName ElementSetName .case =:: name
         "could not find identifier: " sb.copyPtr
           name sb.appendStr
         op .pos errors appendError
@@ -3115,7 +3112,15 @@ proc(
             continue.opLoop
         end
         break
-      SetId .case =:: idInfo
+      SetName .case =:: name
+         name op .pos state resolveIdentifier .else
+            "could not find identifier: " sb.copyPtr
+              name sb.appendStr
+            op .pos errors appendError
+            continue.opLoop
+          end
+          $ [] .valueType op..dataType=
+        id.asIdInfo =:: idInfo
         ## TODO: support SetId for global variable (if mutable or uninitialized)
         idInfo .idType .LOCAL_VAR ! and idInfo .nameId id.identifierFlags id.FLAG_MUTABLE & ? ! if
           ## mutability of local vars will be checked in usage analysis phase
@@ -3388,7 +3393,7 @@ proc(
           continue.opLoop
         end
         break
-      ImplementProcedure GetElement SetElement SetNestedElement DeclareId AtId case break
+      ImplementProcedure GetElement SetElement SetNestedElement DeclareId AtId SetId case break
       GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case =:: name
         ElementAccessType .GET =:: mut: accessType
         op .val .SetNamedElt ? if
