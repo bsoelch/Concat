@@ -186,16 +186,35 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   ## TODO move conversion referenc-type -> pointer-to-local to pre-compiler
+  ##   [ ] update procedure signatures to handle reference types
+  ##     [ ] pass reference-types by pointer
+  ##     [ ] ommit static arguments from signatures
+  ##     [ ] pass return pointers for reference-types ( 1st ret-val before args, remaining ret-vals after args)
+  ##     [ ] arg-merging optimiztion, merge ret-ptr and src-ptr if arg-types match up ( A.. B.. -> A.. C.. ) / ( A.. B -> B )
   op .val switch
     NOP case
       newOps return ## ignore no-ops
     BuiltIn ProcPtr Panic PanicWithMessage
-    GetId SetId AtId Block BlockEnd
+    AtId Block BlockEnd
     RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps
         op list.append ## nothing to change
       return
+    GetId SetId .case =:: idInfo
+      _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType if
+        newOps
+          op list.append ## element access on value-type
+        return
+      end
+      newOps
+        ## TODO? consistent type for atId: always var-type or always address-type?
+        op .dataType idInfo op .pos opAtId list.append
+        op .val .SetId ? if
+          op .dataType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
+        end
+      return
+    break
     GetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
