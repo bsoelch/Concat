@@ -315,7 +315,7 @@ proc(
       return
     Copy case
       op .dataType =:: baseType
-      _EXPERIMENTAL_ if
+      _EXPERIMENTAL_ and _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
         ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
         baseType typeContext types.isValueType if
