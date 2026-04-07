@@ -396,13 +396,13 @@ proc(
   sb.free ..drop
 end
 
-proc( string : msg Operation : op i64 : errLine TypeCheckState ptr.mut : state -> ) =>: internalError
+proc( string : msg PreOperation : op i64 : errLine TypeCheckState ptr.mut : state -> ) =>: internalError
   "internal compiler error: " sb.copyPtr
     msg sb.appendStr
     " at " sb.appendS
     ..file sb.appendS ':' sb.appendC errLine sb.appendI
     " while type-checking operation " sb.appendS
-    op state [] .program sb.appendOp
+    op state [] .program sb.appendPreOp
   sb.asStr io.print
   1 sys.exit
   ..unreachable
@@ -1726,7 +1726,7 @@ proc(
 end
 proc(
   ProcId slice : procedures
-  Operation ptr.mut : op
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckCall
   state [] .program =:: program
@@ -1752,12 +1752,13 @@ proc(
       StackValue new list.append
     stackValues=
   end ..drop
+  pos opNOP =:: mut: op
   ## typeCheckCallStackless
     procedures
     stackValues list.asMutableSlice
     constCount
-    op CallSource .Op
-    op [] .pos
+    op@ CallSource .Op
+    op .pos
   state typeCheckCallStackless
       stackValues list.free ..drop
   switch
@@ -1765,7 +1766,7 @@ proc(
     Generate .case break
   end =:: calledType
   calledType typeContext types.getProcIn .else
-    "proc has no in":s op [] .pos ..line internalErrorNoOp ..unreachable
+    "proc has no in":s op .pos ..line internalErrorNoOp ..unreachable
   end =:: inTypes
   inTypes .length =:: argCount
   0 =:: mut: offset
@@ -1779,7 +1780,7 @@ proc(
         "could not remove static argument ( pushed at " sb.copyPtr
           opData [] .pushedAt [] sb.appendPos
           " )" sb.appendS
-        op [] .pos errors appendError
+        op .pos errors appendError
       end
     else ## next argument at top of stack
       elt typeContext types.isEmpty and
@@ -1792,14 +1793,14 @@ proc(
           "could not remove type argument ( pushed at " sb.copyPtr
             opData [] .pushedAt [] sb.appendPos
             " )" sb.appendS
-          op [] .pos errors appendError
+          op .pos errors appendError
         end
       end
       ## requireTypes
         elt@ slice.wrap
         "procedure argument":s
         offset false
-        op [] .pos
+        op .pos
         state
       requireTypes .Err ? if
         return
@@ -1807,11 +1808,11 @@ proc(
       offset 1 + offset=
     end
   finally i 1 - end ..drop
-  op [] state appendOp ..drop
+  op state appendOp ..drop
   calledType typeContext types.getProcOut .else
-    "proc has no out":s op [] .pos ..line internalErrorNoOp ..unreachable
+    "proc has no out":s op .pos ..line internalErrorNoOp ..unreachable
   end
-    op [] .pos
+    op .pos
     state
   pushTypes
 end
@@ -1935,7 +1936,7 @@ namespace: typeChecker
   end
 end
 proc(
-  Operation ptr.mut : op
+  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckReturn
   state [] .program =:: program
@@ -1946,19 +1947,18 @@ proc(
   false state .reachable=
   state [] .currentProcType .else
     "return is only supported within procedures" sb.copyPtr
-    op [] .pos errors appendError
+    pos errors appendError
     return
-  end =:: procType
-  procType op .dataType=
-  procType typeContext types.isProcedure ! if
+  end =:: retType
+  retType typeContext types.isProcedure ! if
     "unexpected type for return: " sb.copyPtr
-      procType typeContext sb.appendType
+      retType typeContext sb.appendType
       " expected procedure" sb.appendS
-    op [] .pos errors appendError
+    pos errors appendError
     return
   end
-  procType typeContext types.getProcOut .else
-    "could not resolve procedure return value" sb.copyPtr op [] .pos errors appendError
+  retType typeContext types.getProcOut .else
+    "could not resolve procedure return value" sb.copyPtr pos errors appendError
     return
   end =:: outTypes
   outTypes .length i32 cast.u =:: valCount
@@ -1967,7 +1967,7 @@ proc(
       valCount      sb.appendI
       " got: " sb.appendS
       state [] .stack branchTree.depth sb.appendI
-    op [] .pos errors appendError
+    pos errors appendError
     ## TODO? report position of lowest stack value
     return
   end
@@ -1975,11 +1975,11 @@ proc(
     outTypes
     "return statement":s
     0 false
-    op [] .pos
+    pos
   state requireTypes .Err ? if
     return
   end
-  op [] state appendOp ..drop
+  retType pos opReturn state appendOp ..drop
   state [] .stack branchTree.depth 0 > if
     state .stack branchTree.pop optional.unwrap =:: val
     "extra value at the end of procedure" sb.copyPtr
@@ -1987,7 +1987,7 @@ proc(
        " ( pushed at " sb.appendS
        val [] .pushedAt [] sb.appendPos
        " )" sb.appendS
-    op [] .pos errors appendError
+    pos errors appendError
   end
 end
 enum( CHECK CHECK_ENUM GET UNION_GET SET SET_NESTED ) =:: ElementAccessType
@@ -2269,7 +2269,7 @@ proc(
   switchData .switchLabels=
 end
 proc(
-  Operation ptr : op
+  PreOperation ptr : op
   TypeCheckState ptr.mut : state
 -> bool #+consume op+# ) =>: typeCheckSwitchLabel
   ## TODO? enable const-evalution in switch-labels
@@ -2368,7 +2368,7 @@ proc(
       state newSwitchLabel
     else ..drop
       "unsupported operation in switch label:\n " sb.copyPtr
-        op [] program sb.appendOp
+        op [] program sb.appendPreOp
       op [] .pos errors appendError
       true return
     end
@@ -2381,7 +2381,7 @@ proc(
     "unsupported operation for switch label of type " sb.copyPtr
       switchType typeContext sb.appendType
       " : " sb.appendS
-      op [] program sb.appendOp
+      op [] program sb.appendPreOp
       " expected identifier" sb.appendS
     op [] .pos errors appendError
     true return
@@ -2452,7 +2452,7 @@ end
 
 enum( TUPLE UNION RAW_UNION PROC C_PROC ) =:: CompositeType
 proc(
-  Operation slice : ops
+  PreOperation slice : ops
   CompositeType : compType
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
@@ -2534,7 +2534,7 @@ proc(
   oldArrowState state .arrowState=
 end
 proc(
-  Operation slice : ops
+  PreOperation slice : ops
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckSetType
@@ -2581,7 +2581,7 @@ proc(
   state .constBuffer=
 end
 proc(
-  Operation slice : ops
+  PreOperation slice : ops
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckEnumType
@@ -2596,7 +2596,7 @@ proc(
         id.FLAG_NONE op .pos typeContext .nameContext id.newIdentifier optional.wrap list.append
       else ..drop
         "unexpected operation in Enum block: " sb.copyPtr
-          op program sb.appendOp
+          op program sb.appendPreOp
         op .pos errors appendError
       end
     end
@@ -2611,7 +2611,7 @@ proc(
   end typeContext types.newEnum ConstValue .TypeId types.primitive.TYPE pos state pushConstant
 end
 proc(
-  Operation slice : ops
+  PreOperation slice : ops
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckInitializer
@@ -2669,7 +2669,7 @@ proc(
 end
 
 proc(
-  Operation slice : ops
+  PreOperation slice : ops
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckOps
   state [] .program =:: program
@@ -2680,7 +2680,7 @@ proc(
   typeContext .nameContext =:: nameContext
   ## TODO extract parts of type-checking code into procedures
   0:iSize while: opLoop $ ops .length u< do =:: mut: opIndex
-    ops opIndex [] =:: mut: op
+    ops opIndex [] =:: op
     ## TODO? run code in switch-labels through normal type-checker (after processing enum/union labels)
     state inSwitchLabel and op@ state typeCheckSwitchLabel if
       continue.opLoop
@@ -2698,8 +2698,6 @@ proc(
           break
           default break
         end break
-        ## implementProcedure resets reachability at proc-start
-        ImplementProcedure case break
         default continue.opLoop
       end
     end
@@ -2841,7 +2839,7 @@ proc(
             op .pos errors appendError
             continue.opLoop
           end
-          $ [] .valueType op..dataType=
+          $ [] .valueType =:: varType
         id.asIdInfo =:: idInfo
         op .val .ElementSetName ? if
           idInfo optional.wrap state .nestedElementInfo .srcVar=
@@ -2852,7 +2850,6 @@ proc(
           argData [] .value argData [] .valType op .pos state pushConstant
           continue.opLoop
         end
-        idInfo op@ .val .GetId=
         idInfo .nameId id.identifierFlags =:: flags
         flags id.FLAG_MUTABLE & ? =:: mutable
         flags id.FLAG_STATIC & ? =:: isStatic
@@ -2882,31 +2879,36 @@ proc(
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR case
             idInfo .nameId =:: nameId
-            op .dataType typeContext types.isType or mutable ! and constValue .None ? ! and idInfo .idType .GLOBAL_VAR if
-              ## replace access to immutable global variable with constant
-              constValue op .dataType op .pos opConst op=
-            end
             ## pushValue
-              op .dataType
+              varType
               constValue
-              op
+              varType typeContext types.isType or mutable ! and constValue .None ? ! and idInfo .idType .GLOBAL_VAR if
+                ## replace access to immutable global variable with constant
+                constValue varType op .pos opConst
+              else
+                varType idInfo op .pos opGetId
+              end
             state pushValue
-            continue.opLoop
+          continue.opLoop
           TYPE case
-            op .dataType constValue
-              constValue op .dataType op .pos opConst
+            varType constValue
+              constValue varType op .pos opConst
             state pushValue
-            continue.opLoop
+          continue.opLoop
           ARGUMENT case
             idInfo .nameId =:: nameId
             state .argData nameId ArgumentId.fromName map.at .if =:: argData
-              argData [] .valType op@ .dataType=
+              argData [] .valType
               argData [] .value
             else
+              varType
               ConstValue .None
-            end =:: argValue
-            op .dataType argValue op state pushValue
-            continue.opLoop
+            end =:: argValue =:: argType
+            argType
+              argValue
+              argType idInfo op .pos opGetId
+            state pushValue
+          continue.opLoop
           PROCEDURE PROCEDURE_BUNDLE case
             idInfo .idType .PROCEDURE if
               constValue@ .Procedure .else ..drop
@@ -2927,17 +2929,17 @@ proc(
               program [] .procBundles
                 bundleId i64 cast @[] .procedures []
               list.asSlice
-            end op@ state typeCheckCall
+            end op .pos state typeCheckCall
             continue.opLoop
           LABEL case
             ## pushValue
               idInfo .nameId
-                op .dataType typeContext types.isType if
+                varType typeContext types.isType if
                   types.newGenericType ConstValue .TypeId
                 else
                   ConstValue .GenericArg
                 end
-              op .dataType
+              varType
               op .pos
             state pushConstant
             continue.opLoop
@@ -2963,7 +2965,6 @@ proc(
           op .pos
           state
         requireTypes .Err ? if continue.opLoop end
-        calledType op@ .dataType=
         calledType typeContext types.getPointerBaseType .else
           calledType
         end =:: procType
@@ -2977,7 +2978,7 @@ proc(
           op .pos
           state
         requireTypes .Err ? if continue.opLoop end
-        op state appendOp ..drop
+        calledType op .pos opCallPtr state appendOp ..drop
         procType typeContext types.getProcOut .else
           "proc has no out":s op .pos ..line internalErrorNoOp ..unreachable
         end
@@ -3014,7 +3015,6 @@ proc(
                 "expected procedure-constant":s op ..line state internalError ..unreachable
               end =:: mut: procId
               procId ProcId.getProcInfo
-                $ [] .procType op@ .dataType=
                 $ .implementation .Alias .if [] procId= ..drop
                   procId ProcId.getProcInfo
                   $ .implementation [] .Alias ? ! "no double alias" assert
@@ -3102,10 +3102,8 @@ proc(
           ## error message is created by declareName
           continue.opLoop
         end =:: idData
-          idData [] .valueType op..dataType=
+          idData [] .valueType =:: varType
         idData id.asIdInfo =:: idInfo
-        ## TODO? delay op creation
-        op .dataType idInfo op .pos opDeclareId op=
         state .blockMode [] .NONE ! if
           1 op .pos state checkStackSize if
             continue.opLoop ## stack underflow
@@ -3196,7 +3194,7 @@ proc(
             NONE case ..unreachable
           end
         end
-        op .dataType .Undefined ? if
+        varType .Undefined ? if
           "declaration has no type: " sb.copyPtr
             idInfo .nameId nameContext sb.appendIdentifierPath
           op .pos errors appendError
@@ -3220,7 +3218,7 @@ proc(
             end
             ## newProcData
               idInfo .nameId
-              op .dataType
+              varType
               state [] .currentFile
               ProcId optional.empty
               false
@@ -3230,7 +3228,7 @@ proc(
           continue.opLoop
           GLOBAL_VAR LOCAL_VAR TMP_VAR case
             state isGlobal ! if ## ignore declarations outside procedure
-              op state appendOp ..drop
+              varType idInfo op .pos opDeclareId state appendOp ..drop
             end
           continue.opLoop
           TYPE case ## set const-value to named type
@@ -3357,7 +3355,7 @@ proc(
           continue.opLoop
         end
         break
-      ImplementProcedure GetElement SetElement SetNestedElement DeclareId GetId AtId SetId case break
+      ExistsName case break
       GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case =:: name
         ElementAccessType .GET =:: mut: accessType
         op .val .SetNamedElt ? if
@@ -3616,7 +3614,7 @@ proc(
       GetUnionTag case
         state .stack branchTree.peek .else
           "missing argument for operation " sb.copyPtr
-            op program sb.appendOp
+            op program sb.appendPreOp
             " expected enum" sb.appendS
           op .pos errors appendError
           continue.opLoop
@@ -3651,42 +3649,32 @@ proc(
         state pushValue
         continue.opLoop
       Cast Cast! BitCast case
-        op .dataType .Undefined ? if
-          ## resolve data type
-          op .pos state popType op@ .dataType=
-        end
+        op .pos state popType =:: castTarget
         1 op .pos state checkStackSize if
           continue.opLoop
         end
         state .stack branchTree.pop optional.unwrap [] =:: value
-        op@ .val .Cast .if
-          value .valueType >$ .src=
-        else [] .BitCast ? _if
-          value .valueType op@ .val .BitCast=
-        else
-          value .valueType op@ .val .Cast!=
-        end
         op .val .BitCast ? if
           ## canBitCast
             value .valueType
-            op .dataType
+            castTarget
           typeContext types.canBitCast ! if
             "cannot reinterpret " sb.copyPtr
               value .valueType typeContext sb.appendType
               " as " sb.appendS
-              op .dataType typeContext sb.appendType
+              castTarget typeContext sb.appendType
             op .pos errors appendError
           end
         else
           ## canCast
             value .valueType
-            op .dataType
+            castTarget
             op .val .Cast ? !
           typeContext types.canCast ! if
             "cannot cast " sb.copyPtr
               value .valueType typeContext sb.appendType
               " to " sb.appendS
-              op .dataType typeContext sb.appendType
+              castTarget typeContext sb.appendType
             op .pos errors appendError
           end
         end
@@ -3696,15 +3684,15 @@ proc(
         else
           ## tryCastConstant
             value
-            op .dataType
-            op .val .Cast .if .signType else ..drop SignType .NONE end
+            castTarget
+            op .val .Cast .else ..drop SignType .NONE end
             op .pos
             state
           tryCastConstant ! if
             state [] .compiledOps value .opIndex @[] =:: srcOp
             state .stack
               value
-                op .dataType >$ .valueType=
+                castTarget >$ .valueType=
                 srcOp .val [] .Constant .else
                   "expected constant":s op ..line state internalError ..unreachable
                 end >$ .value= ## TODO avoid direct access to operation
@@ -3713,43 +3701,55 @@ proc(
           end
           value .value
         end =:: newValue
-        op .dataType newValue op state pushValue
+        castTarget
+          newValue
+          op .val .Cast .if =:: srcSign
+            value .valueType castTarget srcSign op .pos opCastFrom
+          else .BitCast ? _if
+            value .valueType castTarget op .pos opBitCastFrom
+          else
+            value .valueType castTarget op .pos opCast!From
+          end
+        state pushValue
         continue.opLoop
       New case
-        op .dataType .Undefined ? if
-          ## resolve data type
-          op .pos state popType op@ .dataType=
-        end
-        op .dataType typeContext types.isArray if
-          op .dataType typeContext types.getArraySize .Int .else
+        op .pos state popType =:: newType
+        newType typeContext types.isArray if
+          newType typeContext types.getArraySize .Int .else
             "unsupported array-size":s op ..line state internalError ..unreachable
           end =:: count
           state isGlobal if ## TODO? always create constant if count is small
-            op .dataType typeContext constContext constant.defaultVal
-              op .dataType
+            newType typeContext constContext constant.defaultVal
+              newType
               op .pos
             state pushConstant
           else
-            op .dataType ConstValue .None op state pushValue
+            newType
+              ConstValue .None
+              newType op .pos opNew
+            state pushValue
           end
           continue.opLoop
         end
-        op .dataType typeContext types.isTuple if
-          op .dataType typeContext types.compositeEltCount =:: count
+        newType typeContext types.isTuple if
+          newType typeContext types.compositeEltCount =:: count
           ## requireTypes
-            op .dataType typeContext types.compositeElts
+            newType typeContext types.compositeElts
             "tuple element":s
             0 true
             op .pos
           state requireTypes switch
             Err case continue.opLoop
             Match case
-              op .dataType ConstValue .None op state pushValue
+              newType
+                ConstValue .None
+                newType op .pos opNew
+              state pushValue
               state markAsUnique
             continue.opLoop
             Constant .case
               constContext newArrayConst
-                op .dataType
+                newType
                 op .pos
               state pushConstant
             continue.opLoop
@@ -4241,10 +4241,6 @@ proc(
               op .pos opBuiltIn state appendOp ..drop
             end
             program [] .switchData .length BlockId cast =:: switchId
-            switchId op@ .val .Block .else
-              "expected block":s op ..line state internalError ..unreachable
-            end .blockId=
-            labelType op@ .dataType=
             false 1 op .pos state clearReferences
             state .stack branchTree.startBranch =:: switchBranch
             ## newSwitchBlock
@@ -4271,7 +4267,7 @@ proc(
               SwitchData new list.append
             program .switchData=
             idContext id.openScope
-            op state appendOp ..drop
+            labelType switchId op .pos opSwitch state appendOp ..drop
             false state .reachable=
             continue.opLoop
           CASE DOT_CASE DEFAULT DOT_DEFAULT case
@@ -4795,7 +4791,7 @@ proc(
                 ## NestedProc .case =:: procId break
                 default
                   "unsupported operation in overload block: " sb.copyPtr
-                    elt program sb.appendOp
+                    elt program sb.appendPreOp
                   op .pos errors appendError
                 continue
               end =:: eltName
@@ -4895,10 +4891,9 @@ proc(
             end =:: closedProc
             state [] .reachable if
               ## create explicit  return operation if end of procedure reachable
-              closedProc op .pos opReturn =:: mut: tmp
-              tmp@ state typeCheckReturn
+              op .pos state typeCheckReturn
             end
-            op state appendOp ..drop
+            op .pos opEndProc state appendOp ..drop
             ## procedure scope is handled by typeCheckProcedure
             continue.opLoop
           ELSE case
@@ -5274,20 +5269,15 @@ proc(
         end
         break
       Return case
-        op@ state typeCheckReturn
+        op .pos state typeCheckReturn
         continue.opLoop
-      Assert RuntimeAssert case
-        op .val .Assert ? if
-          op .pos state popString =:: message
-          message op .pos opRuntimeAssert op=
-        end
+      Assert case
+        op .pos state popString =:: message
         state .stack branchTree.peek .and .value [] .Bool .if =:: boolVal
           1 op .pos state discardValues
           boolVal ! if
             "assertion failed: " sb.copyPtr
-              op .val .RuntimeAssert .else
-                "expected runtime-assertion":s op ..line state internalError ..unreachable
-              end sb.appendStr
+              message sb.appendStr
             op .pos errors appendError
           end
           continue.opLoop
@@ -5300,17 +5290,16 @@ proc(
         state requireTypes .Err ? if
           continue.opLoop
         end
-        op state appendOp ..drop
+        message op .pos opRuntimeAssert state appendOp ..drop
         continue.opLoop
       Panic case
         op .pos state popString =:: message
-        message op .pos opPanicWithMessage op=
         false state .reachable=
-        op state appendOp ..drop
+        message op .pos opPanicWithMessage state appendOp ..drop
         continue.opLoop
-      PanicWithMessage case
+      PanicWithMessage .case =:: message
         false state .reachable=
-        op state appendOp ..drop
+        message op .pos opPanicWithMessage state appendOp ..drop
         continue.opLoop
       Error .case =:: errValue
         1 op .pos state checkStackSize if
@@ -5319,7 +5308,7 @@ proc(
         state [] .mode .STATIC_PROC if
           ## don't evaluate errors when type-checking static procs
           state .stack branchTree.pop ..drop
-          op state appendOp ..drop
+          errValue op .pos opError state appendOp ..drop
           continue.opLoop
         end
         ## appendError
@@ -5350,7 +5339,7 @@ proc(
       Length case
         state .stack branchTree.peek .else
           "missing argument for " sb.copyPtr
-            op program sb.appendOp
+            op program sb.appendPreOp
             " expected pointer or array" sb.appendS
           op .pos errors appendError
           continue.opLoop
@@ -5372,7 +5361,7 @@ proc(
       TypeOf case
         state .stack branchTree.peek .else
           "missing argument for " sb.copyPtr
-            op program sb.appendOp
+            op program sb.appendPreOp
           op .pos errors appendError
           continue.opLoop
         end [] .valueType
@@ -5388,12 +5377,11 @@ proc(
       RawValue case
         state .stack branchTree.peek .else
           "missing argument for " sb.copyPtr
-            op program sb.appendOp
+            op program sb.appendPreOp
             " expected pointer or union" sb.appendS
           op .pos errors appendError
           continue.opLoop
         end [] .valueType =:: valType
-        valType op@ .dataType=
         valType typeContext types.getPointerBaseType
           $ ? =:: isPointer
         .else valType end =:: baseType
@@ -5417,13 +5405,9 @@ proc(
             valType typeContext types.isMutable typeContext types.getAddressType
           end
           ConstValue .None
-          op
+          valType op .pos opRawValue
         state pushValue
         continue.opLoop
-      ProcPtr BuiltIn
-      NewUnion Call
-      ExistsName case
-        break
       StackMod .case =:: stackMod
         stackMod .modType switch
           DROP case
@@ -5445,7 +5429,7 @@ proc(
               ## copy value in code
               copied .opIndex state tryCopyOp if ..drop
                 ## copied operation can no longer be deleted
-                op state appendOp
+                offset StackModType .COPY op .pos opStackMod state appendOp
               end copied@ .opIndex=
             end
             state .stack copied branchTree.push
@@ -5498,7 +5482,7 @@ proc(
             state .stack eltCount offset 0 > branchTree.rotate
             ## clear stack references after rotation (removing stack values after rotation messes up stack)
             false eltCount op .pos state clearReferences
-            op state appendOp ..drop
+            offset StackModType .ROTATE op .pos opStackMod state appendOp ..drop
             continue.opLoop
         end
         break
@@ -5617,15 +5601,10 @@ proc(
           state
         parseImportFile
       continue.opLoop
-      AutoCast Copy ConstantReference NewReference NewUnionReference case
-        "unsupported operation: " sb.copyPtr
-          op program sb.appendOp
-        op .pos errors appendError
-        continue.opLoop
       CompilerInfo .case =:: compilerInfo
         state isGlobal ! if
-          ## remeber operation for interpreter
-          op state appendOp ..drop
+          ## remember operation for interpreter
+          compilerInfo op .pos opCompilerInfo state appendOp ..drop
         end
         compilerInfo switch
           TypeInfo .case =:: info
@@ -5694,10 +5673,9 @@ proc(
             continue.opLoop ## TODO find
         end
         break
-        LocalJump LocalLabel case break
     end
     "type-checking for operation: " sb.copyPtr
-      op program sb.appendOp
+      op program sb.appendPreOp
       " has not been implemented" sb.appendS
     op .pos errors appendError
   finally opIndex 1 + end ..drop
@@ -5898,7 +5876,7 @@ proc(
     end
     i 1 +
   end ..drop
-  procCode slice.freeze state typeCheckOps ..drop.2 ## temporary, to remove "invalid" args
+  procCode slice.freeze state typeCheckOps
   state [] .compiledOps list.asSlice codeOffset slice.tail slice.copy =:: newOps
   state clearOps
   ## remember new code position
@@ -5965,7 +5943,7 @@ proc(
     id.NAMESPACE_IMPORT_NONE
   NamespaceInfo new nameContext id.resetNamespace
   state [] .compiledOps .length =:: codeOffset
-  ops state typeCheckOps ..drop.2 ## temporary, to remove "invalid" args
+  ops state typeCheckOps
   state removeTrailingNOPs
   state [] .compiledOps .length codeOffset u> if
     "unable to fold constants in global code:\n" sb.copyPtr

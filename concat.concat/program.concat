@@ -219,9 +219,9 @@ union(
                   _ : Length
                   _ : RawValue
                   _ : TypeOf
-           CastInfo : Cast
-               Type : Cast!
-               Type : BitCast
+           SignType : Cast
+                  _ : Cast!
+                  _ : BitCast
                   _ : Splat
   StackModification : StackMod
              string : GetName
@@ -246,6 +246,7 @@ union(
        CompilerInfo : shadow: CompilerInfo
 ) =:: export: PreOpValue
 struct( FilePosition ptr : pos PreOpValue : val Type : dataType ) =:: export: PreOperation
+## TODO dataType only needed for Constant (? split constant into two simpler PreOps: PreOp.Type PreOp.Chars PreOp.String PreOp.Int PreOp.Float)
 
 union(
             NopType : NOP
@@ -408,17 +409,17 @@ end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpSplat
   pos PreOpValue .Splat Type .Undefined PreOperation new return
 end
-proc( Type : opType FilePosition ptr : pos -> PreOperation ) =>: export: preOpNew
-  pos PreOpValue .New opType PreOperation new return
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpNew
+  pos PreOpValue .New Type .Undefined PreOperation new return
 end
-proc( Type : target SignType : sign FilePosition ptr : pos -> PreOperation ) =>: export: preOpCast
-   pos Type .Undefined sign CastInfo new PreOpValue .Cast target PreOperation new return
+proc( SignType : sign FilePosition ptr : pos -> PreOperation ) =>: export: preOpCast
+   pos sign PreOpValue .Cast Type .Undefined PreOperation new return
 end
-proc( Type : target FilePosition ptr : pos -> PreOperation ) =>: export: preOpCast!
-   pos Type .Undefined PreOpValue .Cast! target PreOperation new return
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpCast!
+   pos PreOpValue .Cast! Type .Undefined PreOperation new return
 end
-proc( Type : target FilePosition ptr : pos -> PreOperation ) =>: export: preOpBitCast
-   pos Type .Undefined PreOpValue .BitCast target PreOperation new return
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpBitCast
+   pos PreOpValue .BitCast Type .Undefined PreOperation new return
 end
 proc( TypeModifier : tMod FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeModifier
   pos tMod PreOpValue .TypeModifier Type .Undefined  PreOperation new return
@@ -498,6 +499,9 @@ end
 proc( -> OpValue ) =>: export: opValNOP
   NopType .EMPTY OpValue .NOP return
 end
+proc( FilePosition ptr : pos  -> Operation ) =>: export: opNOP
+  pos NopType .RESERVED OpValue .NOP Type .Undefined Operation new return
+end
 proc( FilePosition ptr : pos -> Operation ) =>: export: reserveOp
   pos NopType .RESERVED OpValue .NOP Type .Undefined Operation new return
 end
@@ -532,6 +536,24 @@ proc( BlockType : blockType FilePosition ptr : pos -> Operation ) =>: export: op
       -1:BlockId
       0:JumpDistance
       blockType
+    BlockData new OpValue .BlockEnd
+  Type .Undefined Operation new return
+end
+proc( Type : labelType BlockId : switchId FilePosition ptr : pos -> Operation ) =>: export: opSwitch
+  pos
+    NameId optional.empty
+      switchId
+      0:JumpDistance
+      BlockType .SWITCH
+    BlockData new OpValue .Block
+  labelType Operation new return
+end
+proc( FilePosition ptr : pos -> Operation ) =>: export: opEndProc
+  pos
+    NameId optional.empty
+      -1:BlockId
+      0:JumpDistance
+      BlockType .PROCEDURE
     BlockData new OpValue .BlockEnd
   Type .Undefined Operation new return
 end
@@ -606,9 +628,6 @@ end
 proc( Type : opType i32 : index FilePosition ptr : pos -> Operation ) =>: export: opNewUnionReference
   pos index OpValue .NewUnionReference opType Operation new return
 end
-proc( Type : src Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCastFrom
-   pos src sign CastInfo new OpValue .Cast target Operation new return
-end
 proc( Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCast
    pos Type .Undefined sign CastInfo new OpValue .Cast target Operation new return
 end
@@ -618,20 +637,29 @@ end
 proc( Type : target FilePosition ptr : pos -> Operation ) =>: export: opBitCast
    pos Type .Undefined OpValue .BitCast target Operation new return
 end
+proc( Type : src Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCastFrom
+   pos src sign CastInfo new OpValue .Cast target Operation new return
+end
+proc( Type : src Type : target FilePosition ptr : pos -> Operation ) =>: export: opCast!From
+   pos src OpValue .Cast! target Operation new return
+end
+proc( Type : src Type : target FilePosition ptr : pos -> Operation ) =>: export: opBitCastFrom
+   pos src OpValue .BitCast target Operation new return
+end
 proc( Type : src i32 : offset Type : target FilePosition ptr : pos -> Operation ) =>: export: opAutoCast
    pos src offset AutoCastInfo new OpValue .AutoCast target Operation new return
 end
 proc( i32 StackModType FilePosition ptr : pos -> Operation ) =>: export: opStackMod
   pos <<$ StackModification new OpValue .StackMod Type .Undefined Operation new return
 end
-proc( FilePosition ptr : pos -> Operation ) =>: export: opCallPtr
-  pos OpValue .CallPtr Type .Undefined Operation new return
+proc( Type : procType FilePosition ptr : pos -> Operation ) =>: export: opCallPtr
+  pos OpValue .CallPtr procType Operation new return
 end
 proc( FilePosition ptr : pos -> Operation ) =>: export: opLength
   pos OpValue .Length types.I_SIZE Operation new return
 end
-proc( FilePosition ptr : pos -> Operation ) =>: export: opRawValue
-  pos OpValue .RawValue Type .Undefined Operation new return
+proc( Type : valType FilePosition ptr : pos -> Operation ) =>: export: opRawValue
+  pos OpValue .RawValue valType Operation new return
 end
 proc( FilePosition ptr : pos -> Operation ) =>: export: opTypeOf
   pos OpValue .TypeOf Type .Undefined Operation new return
@@ -745,6 +773,9 @@ proc( NameId : name FilePosition ptr : pos -> Operation ) =>: export: opPrintIde
 end
 proc( i32 : depth FilePosition ptr : pos -> Operation ) =>: export: opTypeLayout
   pos depth CompilerInfo .TypeLayout OpValue .CompilerInfo Type .Undefined Operation new return
+end
+proc( CompilerInfo : compInfo FilePosition ptr : pos -> Operation ) =>: export: opCompilerInfo
+  pos compInfo OpValue .CompilerInfo Type .Undefined Operation new return
 end
 
 struct(
@@ -1100,9 +1131,7 @@ namespace: sb
         constVal typeContext sb.appendConstant
       break
       NestedProc .case =:: procId
-        "nested proc ( " sb.appendS
-        op .dataType  typeContext sb.appendType
-        " ) : " sb.appendS
+        "nested proc : ":s sb.appendStr
         procId ProcId.getName nameContext sb.appendIdentifierPath
       break
       Block .case =:: blockData
@@ -1124,27 +1153,19 @@ namespace: sb
         ')' sb.appendC
       break
       GetNamedElt .case =:: name
-        "get element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
+        "get element : ":s sb.appendStr
         name sb.appendStr
       break
       SetNamedElt .case =:: name
-        "set element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
+        "set element : ":s sb.appendStr
         name sb.appendStr
       break
       SetNestedNamedElt .case =:: name
-        "set nested element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
+        "set nested element : ":s sb.appendStr
         name sb.appendStr
       break
       ExistsNamedElt .case =:: name
-        "exists element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
+        "exists element : ":s sb.appendStr
         name sb.appendStr
       break
       TypeWith .case =:: procId
@@ -1158,73 +1179,48 @@ namespace: sb
         "\"" sb.appendS
       break
       Return case
-        "Return( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) " sb.appendS
+        "return":s sb.appendStr
       break
       Splat case
-        "splat: " sb.appendS
-        op .dataType typeContext sb.appendType
+        "splat":s sb.appendStr
       break
       New case
-        "new: " sb.appendS
-        op .dataType typeContext sb.appendType
+        "new":s sb.appendStr
       break
-      Cast .case =:: castInfo
-        castInfo .signType switch
-          NONE case break
-          SIGNED case "signed " sb.appendS break
-          UNSIGNED case "unsigned " sb.appendS break
-        end
-        "cast ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) src: " sb.appendS
-        castInfo .src typeContext sb.appendType
+      Cast .case switch
+          NONE case "cast":s break
+          SIGNED case "signed cast":s break
+          UNSIGNED case "unsigned cast":s break
+        end  sb.appendStr
       break
-      Cast! .case =:: src
-        "cast! ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) src: " sb.appendS
-        src typeContext sb.appendType
+      Cast! case
+        "cast!":s sb.appendStr
       break
-      BitCast .case =:: src
-        "bitCast ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) src: " sb.appendS
-        src typeContext sb.appendType
+      BitCast case
+        "bitcast":s sb.appendStr
       break
       CallPtr case
-        "call pointer ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
+        "call pointer":s sb.appendStr
       break
       Length case
-        "length ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
+        "length":s sb.appendStr
       break
       RawValue case
-        "raw ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
+        "raw":s sb.appendStr
       break
       TypeOf case
         "type-of":s sb.appendStr
       break
       TypeInfo .case =:: typeInfo
-        "typeInfo ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ): " sb.appendS
+        "typeInfo":s sb.appendStr
         typeInfo switch
-          ALIGNMENT case "alignment" sb.appendS break
-          SIZE case "size" sb.appendS break
-          STRIDE case "stride" sb.appendS break
+          ALIGNMENT case "alignment":s sb.appendStr break
+          SIZE case "size":s sb.appendStr break
+          STRIDE case "stride":s sb.appendStr break
         end
       break
       GetUnionTag case
-        "get union tag ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
+        "get union tag":s sb.appendStr
       break
       StackMod .case =:: stackMod
         "stack modification: " sb.appendS

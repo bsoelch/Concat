@@ -1732,13 +1732,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "new":s string.eq _if =:: opName
       ## new in procedure -> determine type in type-check phase
-      Type .Undefined fileState program wordPos preOpNew state appendOp
+      fileState program wordPos preOpNew state appendOp
       return
     #+ TODO improve cast system +#
     else ..dup "cast":s string.eq or ..dup "cast!":s string.eq _if =:: opName
       opName "cast!":s string.eq =:: forceCast
       fileState program wordPos =:: opPos
-      Type .Undefined
+      ## appendOp
         forceCast if
           opPos
           preOpCast!
@@ -1750,19 +1750,15 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state appendOp
       return
     else ..dup "..bitcast":s string.eq _if =:: opName
-      Type .Undefined
-        fileState program wordPos
-      preOpBitCast state appendOp
+      fileState program wordPos preOpBitCast state appendOp
       return
     else ..dup "cast.s":s string.eq _if =:: opName
-      Type .Undefined
-        SignType .SIGNED
+      SignType .SIGNED
         fileState program wordPos
       preOpCast state appendOp
       return
     else ..dup "cast.u":s string.eq _if =:: opName
-      Type .Undefined
-        SignType .UNSIGNED
+      SignType .UNSIGNED
         fileState program wordPos
       preOpCast state appendOp
       return
