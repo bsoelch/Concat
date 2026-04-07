@@ -510,21 +510,20 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     currentProc .implementation .Code .else ..drop
       continue
     end =:: impl
-    impl .codeState [] .COMPILED if
+    impl .codeState [] .TypeChecked .else ..drop
       continue
-    end
+    end =:: procCode
     tmpOps list.clear tmpOps=
     currentProc [] .fileId context .currentFile=
     program [] .progFiles
       currentProc [] .fileId i64 cast
     @[] =:: f
     ## convertProc
-      impl [] .code
+      procCode
       tmpOps@
       impl .variables
       context
-    convertProc impl .code=
-    ProcCodeState .COMPILED impl .codeState=
+    convertProc impl .codeState .PreCompiled=
   end
   tmpOps list.free ..drop
 end

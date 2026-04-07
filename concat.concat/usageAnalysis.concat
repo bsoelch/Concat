@@ -108,7 +108,11 @@ proc(
   procInfo .implementation .Code .else
     "expected code-proc" ..panic
   end =:: impl
-  impl [] .code slice.freeze
+  impl [] .codeState switch
+    Parsing Parsed PreTypeChecking TypeChecking case "proc was not type-checked" ..panic
+    PreCompiled case "invalid proc state" ..panic
+    TypeChecked .case break
+  end slice.freeze
 end
 
 
@@ -459,15 +463,16 @@ proc(
   typeContext .nameContext =:: nameContext
   op .val switch
     NOP case newOps return ## ignore no-ops
-    Call .case =:: callVal
-      callVal program shouldInline if
-        newOps callVal op .pos context inlineCall return
+    Call .case =:: procId
+      procId program shouldInline if
+        newOps procId op .pos context inlineCall return
       end
+      procId ProcId.getProcInfo =:: procInfo
+      procInfo [] .flags ProcFlags.IS_CALLED | procInfo .flags=
     break
     ProcPtr .case =:: procId
-      procId ProcId.getProcInfo .implementation .BuiltIn .if
-        true >$ .hasPtr=
-      else ..drop end
+      procId ProcId.getProcInfo =:: procInfo
+      procInfo [] .flags ProcFlags.HAS_POINTER | procInfo .flags=
     break
     DeclareId .case =:: idInfo
       idInfo .nameId id.identifierFlags =:: flags
@@ -544,10 +549,10 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     aData [] .implementation ..tag bData [] .implementation ..tag != if
       aData [] .implementation ..tag i32 cast.s bData [] .implementation ..tag i32 cast.s - return
     end
-    aData .implementation [] .Code .else ..drop 0 return end =:: aCode
-    bData .implementation [] .Code .else ..drop 0 return end =:: bCode
+    aData .implementation [] .Code .and .codeState .TypeChecked .else 0 return end =:: aCode
+    bData .implementation [] .Code .and .codeState .TypeChecked .else 0 return end =:: bCode
     ## TODO sort by inlinability
-    aCode .code .length bCode .code .length iSize.cmp return
+    aCode .length bCode .length iSize.cmp return
   end list.sort
   ## TODO: option to dump program state at each sub-phase (clear at start, append for each proc)
   ## TODO 2 passes for each proc
@@ -566,23 +571,26 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     currentProc .implementation .Code .else ..drop
       continue
     end =:: impl
+    impl .codeState [] .TypeChecked .else ..drop
+      continue
+    end =:: implCode
     tmpOps list.clear tmpOps=
     ## analizeProc
-      impl [] .code
+      implCode
       tmpOps@
       context
-    analizeProc impl .code=
-    ## ProcCodeState .COMPILED impl .codeState= ## TODO? add extrac code-state for proc after current phase
+    analizeProc impl .codeState .TypeChecked=
+    ## TODO? add extra code-states for proc after analysis phases
   end
   ## create implementations for built-in procedure-pointers
   program [] .procedures for =:: procId
     procId ProcId.getProcInfo =:: currentProc
+    currentProc [] .flags ProcFlags.HAS_POINTER & ? if
+      continue
+    end
     currentProc .implementation .BuiltIn .else ..drop
       break ## built-ins at start of procedure list
     end =:: builtInImpl
-    builtInImpl [] .hasPtr ! if
-      continue
-    end
     currentProc [] .nameId id.getIdentifierPos =:: pos
     4 Operation mem.alloc 4 slice.createMutable =:: opBuffer
     opBuffer list.wrapSlice
@@ -601,9 +609,8 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     ..drop
     ## CodeProcData
       0 VariableInfo list.create
-      opBuffer
       GenericProcInfo .None
-      ProcCodeState .COMPILED ## skip pre-compiler
+      opBuffer ProcCodeState .PreCompiled ## skip pre-compiler
       0:i16
     CodeProcData new currentProc .implementation .Code=
   end
@@ -700,13 +707,15 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: aliasDetection
     currentProc .implementation .Code .else ..drop
       continue
     end =:: impl
+    impl .codeState [] .TypeChecked .else ..drop
+      continue
+    end =:: implCode
     tmpOps list.clear tmpOps=
     ## analizeProc
-      impl [] .code
+      implCode
       tmpOps@
       context
-    aliasCheckProc impl .code=
-    ## ProcCodeState .COMPILED impl .codeState= ## TODO? add extrac code-state for proc after current phase
+    aliasCheckProc impl .codeState .TypeChecked=
   end
   tmpOps list.free ..drop
 end

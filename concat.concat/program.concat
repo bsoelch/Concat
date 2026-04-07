@@ -70,7 +70,7 @@ struct(
 ) =:: export: VariableInfo
 
 type : export: Operation
-enum( PARSING PARSED TYPE_CHECKING TYPE_CHECKED UNUSED COMPILED ) =:: export: ProcCodeState
+type : export: PreOperation
 struct(
   ConstValue slice : staticArgs
   ProcId : genericProc
@@ -80,16 +80,23 @@ union(
   ProcId list : Implementations
   GenericImplementationInfo : ImplInfo
 ) =:: export: GenericProcInfo
+union( ## code mutable to allow freeing allocation
+  _ : Parsing
+  PreOperation slice.mut : Parsed
+  PreOperation slice.mut : PreTypeChecking
+  PreOperation slice.mut : TypeChecking ## keep operations accessible during type-checking
+  Operation slice.mut : TypeChecked
+  ## TODO? intermediate states
+  Operation slice.mut : PreCompiled
+) =:: export: ProcCodeState
 struct(
   VariableInfo list : variables ## for single implementation in non-generic case
-  Operation slice.mut : code ## mutable to allow feeing allocation
   GenericProcInfo : genericInfo
   ProcCodeState : codeState
   i16 : expansionLevel ## level of currently active expansion
 ) =:: export: CodeProcData
 struct(
   BuiltIn : builtIn
-  bool : hasPtr
 ) =:: export: BuiltInData
 union(
   BuiltInData : shadow: BuiltIn
@@ -107,6 +114,10 @@ namespace: ProcFlags
   0x00 ProcFlags =: export: NONE
   0x01 ProcFlags =: export: HAS_STATIC_ARG
   0x02 ProcFlags =: export: IS_STATIC
+
+  0x04 ProcFlags =: export: IS_CALLED
+  0x08 ProcFlags =: export: HAS_POINTER
+  IS_CALLED HAS_POINTER ProcFlags.or =:: export: IS_USED
 end
 overload: merge: & ProcFlags.and end
 overload: merge: | ProcFlags.or end
@@ -123,8 +134,12 @@ struct(
 ) =:: export: ProcedureInfo
 proc( ProcedureInfo : p -> ) =>: freeProcedure
   p .implementation .Code .if =:: impl
-    impl .codeState .PARSED ! or impl .genericInfo .ImplInfo ? ! if
-      impl .code slice.free ..drop ## parsed impl contains shallow copy of generic-proc code
+    impl .codeState switch
+      Parsing case break
+      Parsed PreTypeChecking TypeChecking .case ## parsed impl contains shallow copy of generic-proc code
+        impl .genericInfo .ImplInfo ? ! if slice.free end ..drop
+      break
+      TypeChecked PreCompiled .case slice.free ..drop break
     end
     impl .genericInfo .Implementations .if
       list.free ..drop
@@ -842,13 +857,12 @@ proc(
       else
         ## CodeProcData
           0 VariableInfo list.create
-          Operation slice.emptyMutable
           hasStaticArg or procType typeContext types.containsGeneric if
             0 ProcId list.create GenericProcInfo .Implementations
           else
             GenericProcInfo .None
           end
-          ProcCodeState .PARSING
+          ProcCodeState .Parsing
           0:i16
         CodeProcData new ProcImplType .Code
       end
@@ -955,7 +969,7 @@ proc( ProgramContext ptr.mut -> ) =>: export: freeStaticProcs
 end
 proc( ProgramContext ptr.mut -> ) =>: export: freeUnusedProcs
   $ [] .procedures list.filter for ProcId.getProcInfo =:: procInfo
-    procInfo [] .implementation .Code .and .codeState .UNUSED if
+    procInfo [] .flags ProcFlags.IS_USED & ? ! if
       procInfo [] freeProcedure false
     else
       true
@@ -1720,6 +1734,9 @@ namespace: sb
     "## global:\n" sb.appendS
     prog [] .globalOps for prog sb.appendPreOp end
     prog [] .procedures for ProcId.getProcInfo =:: proc
+      proc [] .flags ProcFlags.IS_USED & ? ! if
+        continue ## ignore unused procs
+      end
       proc .implementation .Code .else
         ..drop continue
       end =:: impl
@@ -1729,8 +1746,15 @@ namespace: sb
         [] .staticArgs for >$ ' ' sb.appendC <$ typeContext sb.appendConstant end
       else ..drop end
       '\n'           sb.appendC
-      impl [] .codeState .UNUSED if continue end ## ignore unused procs
-      impl [] .code for prog sb.appendOp end
+      impl [] .codeState switch
+        Parsing case "...Parsing":s sb.appendStr break
+        Parsed PreTypeChecking TypeChecking .case
+          for prog sb.appendPreOp end
+        break
+        TypeChecked PreCompiled .case
+          for prog sb.appendOp end
+        break
+      end
       '\n' sb.appendC
     end
   end

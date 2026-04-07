@@ -1222,12 +1222,13 @@ proc(
         ## ProcedureInfo
           ## CodeProcData
             0 VariableInfo list.create
-            codeImpl [] .code ## reuse code from generic base procedure
             ## GenericImplementationInfo
               implArgs
               baseProcId
             GenericImplementationInfo new GenericProcInfo .ImplInfo
-            ProcCodeState .PARSED
+            codeImpl [] .codeState .Parsed .else
+              "expected parsed procedure" ..panic
+            end ProcCodeState .Parsed ## reuse code from generic base procedure
             codeImpl [] .expansionLevel 1:i16 +
           CodeProcData new ProcImplType .Code
           baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplName

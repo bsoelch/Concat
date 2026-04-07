@@ -116,14 +116,10 @@ proc( ProgramContext ptr.mut : prog -> Type list ) =>: export: getDeclaredTypes
     idData [] .valueType 0 idData [] .declaredAt prog visited@ types@ declaredType
   end ..drop
   prog [] .procedures for ProcId.getProcInfo =:: proc
-    proc .implementation .Code .else
-      ..drop continue
-    end =:: impl
-    impl .codeState [] .UNUSED if continue end
-    impl .codeState [] .COMPILED if
-      impl [] .code for =:: op
-        op@ prog visited@ types@ addOpType
-      end
+    proc .implementation .Code .and .codeState [] .PreCompiled .else
+      continue
+    end for =:: op
+      op@ prog visited@ types@ addOpType
     end
   end
   visited@ map.free

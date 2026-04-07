@@ -116,7 +116,7 @@ proc(
   typeContext .nameContext =:: nameContext
   context [] .programMemory
     ## ProcedureInfo
-      buildIn false BuiltInData new ProcImplType .BuiltIn
+      buildIn BuiltInData new ProcImplType .BuiltIn
       procName
       FILE_ID_BUILT_IN
       id.GLOBAL_SCOPE

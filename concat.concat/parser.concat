@@ -1448,7 +1448,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
               procBlockData .blockStart slice.tail
               $ 0 @[] =:: procStart
               slice.copy
-            codeImpl .code=
+            codeImpl .codeState .Parsed=
             state [] .parsedOps
               procBlockData .blockStart list.setLength
             state .parsedOps=
@@ -1626,7 +1626,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             slice.copy
           withProc .implementation .Code .else
             "expected code-implementation" ..panic
-          end .code=
+          end .codeState .Parsed=
           state [] .parsedOps
             offset list.setLength
           state .parsedOps=

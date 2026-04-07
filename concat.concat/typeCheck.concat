@@ -1534,7 +1534,7 @@ proc(
     interpreter .stackInfo=
   end
   ## 3. ensure procedure has been type-checked (may invalidate args!)
-  procData .implementation .Code .and [] .codeState .TYPE_CHECKED ! if
+  procData .implementation .Code .and [] .codeState .TypeChecked ? ! if
       ## typeCheckChildProcedures
         calledProc .procId
         pos
@@ -1673,7 +1673,7 @@ proc(
   source .Values ? or state isGlobal calledProcData [] .flags ProcFlags.IS_STATIC & ? | and
       state [] .mode .STATIC_PROC ! or
       calledType typeContext types.isTypeGeneratorProc or
-      baseProcData .implementation .Code .and .codeState .TYPE_CHECKING ! if
+      baseProcData .implementation .Code .and .codeState .TypeChecking ? ! if
     source stackValues calledType calledProc pos state evaluateCall .SUCCESS if
       TypeCheckCallResult .ConstEval return
     end
@@ -1682,7 +1682,7 @@ proc(
     Code .case =:: codeImpl
       state [] .mode .LINEAR ! if
         ## check if implementation exists if not add to list of missing imples
-        codeImpl [] .codeState .TYPE_CHECKED ! if
+        codeImpl [] .codeState .TypeChecked ? ! if
           state [] .missingProcs
             ## MissingProc
               calledProc .procId
@@ -2781,11 +2781,11 @@ proc(
       NestedProc .case =:: procId
         procId ProcId.getProcInfo =:: procData
         procData [] .procType .Undefined ? ! or
-            procData .implementation .Code ! .or [] .codeState .PARSING ! if
+            procData .implementation .Code ! .or [] .codeState .Parsed ! .if
           "unexpected state for nested procedure" sb.copyPtr
           op .pos errors appendError
           continue.opLoop
-        end
+        end =:: procOps
          ## ensure lambda is type-checked
         state [] .missingProcs
           ## MissingProc
@@ -2796,7 +2796,7 @@ proc(
         op .pos state popType =:: procType
         procType procData typeContext setProcType
         idContext id.currentScope procData .scopeId= ## remember host scope
-        ProcCodeState .PARSED procData .implementation .Code .else
+        procOps ProcCodeState .PreTypeChecking procData .implementation .Code .else
           "expected code-proc":s op .pos ..line internalErrorNoOp ..unreachable
         end .codeState=
         procId ConstValue .Procedure
@@ -3028,7 +3028,7 @@ proc(
                 break
               end
               procData .implementation .Code .if =:: codeImpl
-                codeImpl .codeState [] .TYPE_CHECKED ! if
+                codeImpl .codeState [] .TypeChecked ? ! if
                   state [] .missingProcs
                     ## MissingProc
                       procId
@@ -5534,12 +5534,11 @@ proc(
         withProc .implementation .Code .else
           "expected code-procedure":s op ..line state internalError ..unreachable
         end =:: codeImpl
-        codeImpl [] .codeState .PARSING ! if
+        codeImpl [] .codeState .Parsed .else ..drop
           "unexpected state for `.with( ... )` procedure" sb.copyPtr
           op .pos errors appendError
           continue.opLoop
-        end
-        ProcCodeState .PARSED codeImpl .codeState=
+        end ProcCodeState .PreTypeChecking codeImpl .codeState=
         baseType withProcId typeContext types.newRefinementType ConstValue .TypeId
           types.primitive.TYPE
           op .pos
@@ -5712,34 +5711,34 @@ proc(
   bool : isUnused
   FilePosition ptr : expandedAt
   ProgramContext ptr.mut : program
--> bool ) =>: checkProcState
+-> PreOperation slice.mut optional ) =>: checkProcState
   program .idContext .typeContext .nameContext =:: nameContext
   codeState switch
-    PARSED case
+    Parsing Parsed case
+      checkType .SKIP_UNDEFINED ! if
+        "type of procedure " sb.copyPtr
+          procName nameContext sb.appendIdentifierPath
+          " has not yet been resolved" sb.appendS
+        expandedAt program .errors appendError
+      end
+      PreOperation slice.mut optional.empty return
+    PreTypeChecking .case
       isUnused and procName id.identifierFlags id.FLAG_IGNORE_UNUSED & ? ! if
         "procedure " sb.copyPtr
           procName nameContext sb.appendIdentifierPath
           " is never used" sb.appendS
         expandedAt program .errors appendInfo
       end
-      false return ## expected
-    TYPE_CHECKED UNUSED COMPILED case true return ## nothing to do
-    PARSING case
-      checkType .SKIP_UNDEFINED ! if
-        "procedure " sb.copyPtr
-          procName nameContext sb.appendIdentifierPath
-          " has not finished parsing" sb.appendS
-        expandedAt program .errors appendError
-      end
-      true return
-    TYPE_CHECKING case
+      optional.wrap return ## expected
+    TypeChecked PreCompiled case PreOperation slice.mut optional.empty return ## nothing to do
+    TypeChecking case
       checkType .SKIP_UNDEFINED ! if
         "procedure " sb.copyPtr
           procName nameContext sb.appendIdentifierPath
           " has not finished type-checking" sb.appendS
         expandedAt program .errors appendError
       end
-      true return
+      PreOperation slice.mut optional.empty return
   end
 end
 proc(
@@ -5764,10 +5763,10 @@ proc(
   end
   currentProc [] .nameId id.getIdentifierPos =:: procPos
   expandedAt .else procPos end =:: initPos
-  codeImpl [] .codeState currentProc [] .nameId checkType state [] .isUnusedProc initPos program checkProcState if
+  codeImpl [] .codeState currentProc [] .nameId checkType state [] .isUnusedProc initPos program checkProcState .else
     return
-  end
-  ProcCodeState .TYPE_CHECKING codeImpl .codeState=
+  end =:: procCode
+  procCode ProcCodeState .TypeChecking codeImpl .codeState=
   i16 optional.empty =:: mut: prevExpansionLevel
   codeImpl .genericInfo .ImplInfo .if =:: implInfo
     codeImpl [] .expansionLevel
@@ -5821,7 +5820,6 @@ proc(
     end ..drop
   else ..drop end
   codeImpl [] .expansionLevel 1 + codeImpl .expansionLevel=
-  ProcCodeState .TYPE_CHECKING codeImpl .codeState=
   currentProc [] .flags ProcFlags.IS_STATIC & ? and state [] .mode .PROC_CHILD if
     TypeCheckMode .STATIC_PROC state .mode=
   end
@@ -5900,24 +5898,17 @@ proc(
     end
     i 1 +
   end ..drop
-  codeImpl [] .code slice.freeze state typeCheckOps
-  ## TODO? compile exported procedure normally
-  state [] .isUnusedProc ! and currentProc [] .flags ProcFlags.IS_STATIC & ? ! if
-    ProcCodeState .TYPE_CHECKED
-  else
-    ProcCodeState .UNUSED
-  end =:: newProcState
+  procCode slice.freeze state typeCheckOps ..drop.2 ## temporary, to remove "invalid" args
   state [] .compiledOps list.asSlice codeOffset slice.tail slice.copy =:: newOps
   state clearOps
   ## remember new code position
-  newOps codeImpl .code=
+  newOps ProcCodeState .TypeChecked codeImpl .codeState=
   prevExpansionLevel .if
     codeImpl .genericInfo .ImplInfo .and
         [] .genericProc ProcId.getProcInfo .implementation .Code .else
       "prevExpansionLevel should only exists if proc is generic impl" ..panic
     end .expansionLevel=
   end
-  newProcState codeImpl .codeState=
   idContext id.currentScope currentProc .scopeId=
   state [] .initializationStack
     offset list.setLength
@@ -5962,7 +5953,7 @@ proc(
   state resetState
 end
 proc(
-  Operation slice : ops
+  PreOperation slice : ops
   TypeCheckState ptr.mut : state
 -> ) =>: export: typeCheckGlobalCode
   state [] .program =:: program
@@ -5974,7 +5965,7 @@ proc(
     id.NAMESPACE_IMPORT_NONE
   NamespaceInfo new nameContext id.resetNamespace
   state [] .compiledOps .length =:: codeOffset
-  ops state typeCheckOps
+  ops state typeCheckOps ..drop.2 ## temporary, to remove "invalid" args
   state removeTrailingNOPs
   state [] .compiledOps .length codeOffset u> if
     "unable to fold constants in global code:\n" sb.copyPtr
@@ -6054,16 +6045,10 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if
       continue
     end
-    currentProc .implementation .Code .else ..drop
+    currentProc .implementation .Code .and .codeState .PreTypeChecking .else
       continue ## procedure implementation not in code
-    end =:: codeImpl
-    codeImpl .code [] .length 0 == if
+    end [] .length 0 == if
       continue ## procedure not implemented
-    end
-    codeImpl .codeState [] .PARSING if
-      ## TODO? handle use in currenty unchecked procedure
-      ProcCodeState .UNUSED codeImpl .codeState=
-      continue ## ignore parsing procedures
     end
     currentProc [] .nameId id.identifierFlags =:: flags
     flags id.FLAG_LAMBDA & ? or EXPORT_GLOBALS hasMain ! | and flags id.FLAG_EXPORT & ? if
@@ -6086,15 +6071,10 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if
       continue
     end
-    currentProc  .implementation .Code .else ..drop
+    currentProc  .implementation .Code .and .codeState .PreTypeChecking .else
       continue ## procedure implementation not in code
-    end =:: codeImpl
-    codeImpl .code [] .length 0 == if
+    end [] .length 0 == if
       continue ## procedure not implemented
-    end
-    codeImpl .codeState [] .PARSING if
-      ProcCodeState .UNUSED codeImpl .codeState=
-      continue ## ignore parsing procedures
     end
     procId ProcCheckType .REQUIRE_DEFINED FilePosition ptr optional.empty state typeCheckProcedure
   finally index 1 + end ..drop

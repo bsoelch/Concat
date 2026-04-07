@@ -1766,9 +1766,9 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
   1024 asm.Atom list.create
     program [] .procedures for ProcId.getProcInfo =:: proc
       proc .implementation .Code .else ..drop continue end =:: impl
-      impl .codeState [] .COMPILED ! if continue end
+      impl .codeState [] .PreCompiled .else ..drop continue end =:: procCode
       context beginProcedure
-        impl [] .code for context compileOp end
+        procCode for context compileOp end
       context finishProcedure
     end
     context [] .constPtrs for =:: info

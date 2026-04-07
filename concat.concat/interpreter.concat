@@ -2149,21 +2149,13 @@ namespace: interpreter
       i 1 +
     end ..drop
     codeImpl [] .codeState switch
-      PARSING case
-        "procedure " sb.copyPtr
-          procName nameContext sb.appendIdentifierPath
-          " has not finished parsing" sb.appendS
-        pos errors appendError
-        Operation slice.empty break
-      PARSED TYPE_CHECKING case
+      Parsed Parsing PreTypeChecking TypeChecking case
         "procedure " sb.copyPtr
           procName nameContext sb.appendIdentifierPath
           " has not finished type-checking" sb.appendS
         pos errors appendError
         Operation slice.empty break
-      TYPE_CHECKED UNUSED COMPILED case
-        codeImpl [] .code slice.freeze
-        break
+      TypeChecked PreCompiled .case slice.freeze break
     end =:: code
     code .length 0:iSize == if
       "no operations in procedure " sb.copyPtr
