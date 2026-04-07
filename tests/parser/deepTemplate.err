@@ -1,2 +1,1 @@
-procedure infiniteExpand:10 has not finished type-checking at ./tests/parser/deepTemplate.concat:1:25
 exceeded maximum expansion depth (16) at ./tests/parser/deepTemplate.concat:2:11
