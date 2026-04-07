@@ -585,7 +585,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
   ## create implementations for built-in procedure-pointers
   program [] .procedures for =:: procId
     procId ProcId.getProcInfo =:: currentProc
-    currentProc [] .flags ProcFlags.HAS_POINTER & ? if
+    currentProc [] .flags ProcFlags.HAS_POINTER & ? ! if
       continue
     end
     currentProc .implementation .BuiltIn .else ..drop
