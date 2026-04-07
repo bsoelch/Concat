@@ -1656,6 +1656,7 @@ proc(
     TypeCheckCallResult .Error return
   end =:: calledProc
   calledProc .procId ProcId.getProcInfo =:: baseProcData
+  baseProcData [] .flags ProcFlags.IS_CALLED | baseProcData .flags= ## proc is called
   source .Op .if
     calledType >$ .dataType=
   else ..drop end
@@ -3326,6 +3327,9 @@ proc(
                       ## TODO! check if main has correct signature
                       idInfo .nameId optional.wrap program .mainId=
                       procId optional.wrap program .mainProcId=
+                      procInfo [] .flags
+                        ProcFlags.IS_CALLED | ## main is called
+                      procInfo .flags=
                     end
                     idInfo .nameId procInfo .nameId=
                     idInfo .nameId id.identifierFlags id.FLAG_STATIC & ? if
