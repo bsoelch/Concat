@@ -1223,27 +1223,27 @@ namespace: sb
         "get union tag":s sb.appendStr
       break
       StackMod .case =:: stackMod
-        "stack modification: " sb.appendS
+        "stack modification: ":s sb.appendStr
         stackMod sb.appendStackMod
       break
       GetName .case =:: name
-        "get: " sb.appendS
+        "get: ":s sb.appendStr
         name sb.appendStr
       break
       AtName .case =:: name
-        "address of: " sb.appendS
+        "address of: ":s sb.appendStr
         name sb.appendStr
       break
       SetName .case =:: name
-        "set: " sb.appendS
+        "set: ":s sb.appendStr
         name sb.appendStr
       break
       ElementSetName .case =:: name
-        "element set: " sb.appendS
+        "element set: ":s sb.appendStr
         name sb.appendStr
       break
       ExistsName .case =:: name
-        "exists name: " sb.appendS
+        "exists name: ":s sb.appendStr
         name sb.appendStr
       break
       DeclareName .case =:: name
@@ -1251,7 +1251,7 @@ namespace: sb
         name nameContext sb.appendIdentifierPath
       break
       AliasName .case =:: aliasData
-        "alias name: " sb.appendS
+        "alias name: ":s sb.appendStr
         aliasData .alias nameContext sb.appendIdentifierPath
         aliasData .baseName nameContext sb.appendIdentifierPath
       break
