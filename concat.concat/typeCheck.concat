@@ -2189,7 +2189,7 @@ proc(
     targetType
     ConstValue .None ## TODO? compute constant value
     accessType .UNION_GET if
-      srcType targetType SignType .UNSIGNED pos opCastFrom
+      srcType targetType SignType .UNSIGNED pos opCast
     else
       srcType
         elementIndex
@@ -3714,11 +3714,11 @@ proc(
         castTarget
           newValue
           op .val .Cast .if =:: srcSign
-            value .valueType castTarget srcSign op .pos opCastFrom
+            value .valueType castTarget srcSign op .pos opCast
           else .BitCast ? _if
-            value .valueType castTarget op .pos opBitCastFrom
+            value .valueType castTarget op .pos opBitCast
           else
-            value .valueType castTarget op .pos opCast!From
+            value .valueType castTarget op .pos opCast!
           end
         state pushValue
         continue.opLoop

@@ -491,10 +491,7 @@ proc(
         end
       end
     break
-    ConstantReference NewReference GetUnionTag Splat
-    TypeInfo NewUnionReference UsingNamespace UsingIdentifier
-    GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName
-    SetNamedElt SetNestedNamedElt Length TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
+    ConstantReference NewReference NewUnionReference case
       "unsupported operation " sb.copyPtr
         op program sb.appendOp
       op .pos errors appendError

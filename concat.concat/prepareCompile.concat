@@ -194,7 +194,7 @@ proc(
   op .val switch
     NOP case
       newOps return ## ignore no-ops
-    BuiltIn ProcPtr Panic PanicWithMessage
+    BuiltIn ProcPtr PanicWithMessage
     AtId Block BlockEnd
     RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast Return RawValue case
@@ -457,10 +457,7 @@ proc(
     return
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
-    ConstantReference NewReference GetUnionTag Splat
-    TypeInfo NewUnionReference UsingNamespace UsingIdentifier ElementSetName
-    GetName AtName SetName GetNamedElt Assert DeclareName AliasName InitializeName SetNestedNamedElt
-    SetNamedElt Length TypeOf TypeModifier TypeWith ExistsNamedElt ExistsName NestedProc Import LibImport case
+    ConstantReference NewReference NewUnionReference case
       break ## XXX error message
   end
   "unsupported operation " sb.copyPtr

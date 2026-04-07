@@ -251,7 +251,6 @@ struct( FilePosition ptr : pos PreOpValue : val Type : dataType ) =:: export: Pr
 union(
             NopType : NOP
          ConstValue : Constant
-             ProcId : NestedProc
    ConstReferenceId : ConstantReference
           BlockData : Block
           BlockData : BlockEnd
@@ -263,14 +262,9 @@ union(
      IdentifierInfo : DeclareId
              ProcId : ImplementProcedure
              ProcId : ProcPtr
-             string : GetNamedElt
-             string : SetNamedElt
-             string : SetNestedNamedElt
-             string : ExistsNamedElt
                 i32 : GetElement
                 i32 : SetElement
   NestedElementPath : SetNestedElement
-                  _ : GetUnionTag
                   _ : Return
                   _ : New
                   _ : NewReference
@@ -279,36 +273,16 @@ union(
              ProcId : Call
             BuiltIn : shadow: BuiltIn
                   _ : CallPtr
-                  _ : Length
                   _ : RawValue
-                  _ : TypeOf
        AutoCastInfo : AutoCast
            CastInfo : Cast
                Type : Cast!
                Type : BitCast
-                  _ : Splat
                   _ : Copy
   StackModification : StackMod
-             string : GetName
-             string : SetName
-             string : ElementSetName
-             string : AtName
-             string : ExistsName
-      NameAliasInfo : AliasName
-             NameId : DeclareName
-             NameId : InitializeName
-      UsingNameInfo : UsingNamespace
-      UsingNameInfo : UsingIdentifier
-             ProcId : TypeWith
-       TypeModifier : shadow: TypeModifier
-                  _ : Assert
              string : RuntimeAssert
           ErrorType : Error
-     TypeMemoryInfo : TypeInfo
-                  _ : Panic
              string : PanicWithMessage
-             string : Import
-             string : LibImport
        CompilerInfo : shadow: CompilerInfo
 ) =:: export: OpValue
 struct( FilePosition ptr : pos OpValue : val Type : dataType ) =:: export: Operation
@@ -508,28 +482,7 @@ end
 proc( ConstValue : constValue Type : constType FilePosition ptr : pos -> Operation ) =>: export: opConst
   pos constValue OpValue .Constant constType Operation new return
 end
-proc( ProcId : id FilePosition ptr : pos -> Operation ) =>: export: opNestedProc
-  pos id OpValue .NestedProc Type .Undefined Operation new return
-end
-
-proc( BlockType : blockType FilePosition ptr : pos -> Operation ) =>: export: opBlock
-  pos
-    NameId optional.empty
-      -1:BlockId
-      0:JumpDistance
-      blockType
-    BlockData new OpValue .Block
-  Type .Undefined Operation new return
-end
-proc( BlockType : blockType NameId optional : nameId FilePosition ptr : pos -> Operation ) =>: export: opNamedBlock
-  pos
-    nameId
-      -1:BlockId
-      0:JumpDistance
-      blockType
-    BlockData new OpValue .Block
-  Type .Undefined  Operation new return
-end
+## TODO? special operations for end-proc and switch
 proc( BlockType : blockType FilePosition ptr : pos -> Operation ) =>: export: opEndBlock
   pos
     NameId optional.empty
@@ -598,23 +551,8 @@ end
 proc( Type : base NestedElementPath : path FilePosition ptr : pos -> Operation ) =>: export: opSetNestedElement
   pos path OpValue .SetNestedElement base Operation new return
 end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opGetNamedElt
-  pos name OpValue .GetNamedElt Type .Undefined Operation new return
-end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opSetNamedElt
-  pos name OpValue .SetNamedElt Type .Undefined Operation new return
-end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opSetNestedNamedElt
-  pos name OpValue .SetNestedNamedElt Type .Undefined Operation new return
-end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opExistsNamedElt
-  pos name OpValue .ExistsNamedElt Type .Undefined Operation new return
-end
 proc( Type : retType FilePosition ptr : pos -> Operation ) =>: export: opReturn
   pos OpValue .Return retType Operation new return
-end
-proc( FilePosition ptr : pos -> Operation ) =>: export: opSplat
-  pos OpValue .Splat Type .Undefined Operation new return
 end
 proc( Type : opType FilePosition ptr : pos -> Operation ) =>: export: opNew
   pos OpValue .New opType Operation new return
@@ -628,22 +566,13 @@ end
 proc( Type : opType i32 : index FilePosition ptr : pos -> Operation ) =>: export: opNewUnionReference
   pos index OpValue .NewUnionReference opType Operation new return
 end
-proc( Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCast
-   pos Type .Undefined sign CastInfo new OpValue .Cast target Operation new return
-end
-proc( Type : target FilePosition ptr : pos -> Operation ) =>: export: opCast!
-   pos Type .Undefined OpValue .Cast! target Operation new return
-end
-proc( Type : target FilePosition ptr : pos -> Operation ) =>: export: opBitCast
-   pos Type .Undefined OpValue .BitCast target Operation new return
-end
-proc( Type : src Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCastFrom
+proc( Type : src Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCast
    pos src sign CastInfo new OpValue .Cast target Operation new return
 end
-proc( Type : src Type : target FilePosition ptr : pos -> Operation ) =>: export: opCast!From
+proc( Type : src Type : target FilePosition ptr : pos -> Operation ) =>: export: opCast!
    pos src OpValue .Cast! target Operation new return
 end
-proc( Type : src Type : target FilePosition ptr : pos -> Operation ) =>: export: opBitCastFrom
+proc( Type : src Type : target FilePosition ptr : pos -> Operation ) =>: export: opBitCast
    pos src OpValue .BitCast target Operation new return
 end
 proc( Type : src i32 : offset Type : target FilePosition ptr : pos -> Operation ) =>: export: opAutoCast
@@ -655,87 +584,14 @@ end
 proc( Type : procType FilePosition ptr : pos -> Operation ) =>: export: opCallPtr
   pos OpValue .CallPtr procType Operation new return
 end
-proc( FilePosition ptr : pos -> Operation ) =>: export: opLength
-  pos OpValue .Length types.I_SIZE Operation new return
-end
 proc( Type : valType FilePosition ptr : pos -> Operation ) =>: export: opRawValue
   pos OpValue .RawValue valType Operation new return
-end
-proc( FilePosition ptr : pos -> Operation ) =>: export: opTypeOf
-  pos OpValue .TypeOf Type .Undefined Operation new return
-end
-proc( FilePosition ptr : pos -> Operation ) =>: export: opGetUnionTag
-  pos OpValue .GetUnionTag Type .Undefined Operation new return
-end
-proc( Type : t TypeMemoryInfo : infoType FilePosition ptr : pos -> Operation ) =>: export: opTypeInfo
-  pos infoType OpValue .TypeInfo t Operation new return
 end
 proc( Type : t FilePosition ptr : pos -> Operation ) =>: export: opCopy
   pos OpValue .Copy t Operation new return
 end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opGetName
-  pos name OpValue .GetName Type .Undefined Operation new return
-end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opAtName
-  pos name OpValue .AtName Type .Undefined Operation new return
-end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opSetName
-  pos name OpValue .SetName Type .Undefined Operation new return
-end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opElementSetName
-  pos name OpValue .ElementSetName Type .Undefined Operation new return
-end
-proc( string : name FilePosition ptr : pos -> Operation ) =>: export: opExistsName
-  pos name OpValue .ExistsName Type .Undefined Operation new return
-end
-proc( NameId : id FilePosition ptr : pos -> Operation ) =>: export: opDeclareName
-  pos id OpValue .DeclareName Type .Undefined Operation new return
-end
-proc( NameId : baseName NameId : nameAlias FilePosition ptr : pos -> Operation ) =>: export: opAliasName
-  pos baseName nameAlias NameAliasInfo new OpValue .AliasName Type .Undefined Operation new return
-end
-proc( NameId : id FilePosition ptr : pos  -> Operation ) =>: export: opInitializeName
-  pos id OpValue .InitializeName Type .Undefined Operation new return
-end
-proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingNamespace
-  pos
-    src alias UsingNameInfo new OpValue .UsingNamespace
-    Type .Undefined
-  Operation new return
-end
-proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> Operation ) =>: export: opUsingIdentifier
-  pos
-    src alias UsingNameInfo new OpValue .UsingIdentifier
-    Type .Undefined
- Operation new return
-end
-proc( TypeModifier : tMod FilePosition ptr : pos -> Operation ) =>: export: opTypeModifier
-  pos tMod OpValue .TypeModifier Type .Undefined  Operation new return
-end
-proc( ProcId : id FilePosition ptr : pos -> Operation ) =>: export: opTypeWith
-  pos id OpValue .TypeWith Type .Undefined Operation new return
-end
-proc( FilePosition ptr : pos -> Operation ) =>: export: opPanic
-  pos OpValue .Panic Type .Undefined Operation new return
-end
 proc( string : message FilePosition ptr : pos -> Operation ) =>: export: opPanicWithMessage
   pos message OpValue .PanicWithMessage Type .Undefined Operation new return
-end
-proc( string : path bool : isLibFile FilePosition ptr : pos -> Operation ) =>: export: opImportFile
-  pos
-    path
-      isLibFile if
-        OpValue .LibImport
-      else
-        OpValue .Import
-      end
-    Type .Undefined
-  Operation new return
-end
-proc(
-  FilePosition ptr : pos
--> Operation ) =>: export: opAssert
-  pos OpValue .Assert Type .Undefined Operation new return
 end
 proc(
   string : message
@@ -748,31 +604,6 @@ proc(
   FilePosition ptr : pos
 -> Operation ) =>: export: opError
   pos errorType OpValue .Error Type .Undefined Operation new return
-end
-proc(
-  i32 : count
-  i32 : depth
-  FilePosition ptr : pos
--> Operation ) =>: export: opTypesInfo
-  ## Operation
-    pos
-    count depth StackTypesInfo new
-      CompilerInfo .TypeInfo
-    OpValue .CompilerInfo
-    Type .Undefined
-  Operation new return
-end
-proc( i32 : count FilePosition ptr : pos -> Operation ) =>: export: opStackInfo
-  pos count CompilerInfo .StackInfo OpValue .CompilerInfo Type .Undefined Operation new return
-end
-proc( i32 : count FilePosition ptr : pos -> Operation ) =>: export: opPrintCompiledOps
-  pos count CompilerInfo .CompiledOps OpValue .CompilerInfo Type .Undefined Operation new return
-end
-proc( NameId : name FilePosition ptr : pos -> Operation ) =>: export: opPrintIdentifierMatches
-  pos name CompilerInfo .Find OpValue .CompilerInfo Type .Undefined Operation new return
-end
-proc( i32 : depth FilePosition ptr : pos -> Operation ) =>: export: opTypeLayout
-  pos depth CompilerInfo .TypeLayout OpValue .CompilerInfo Type .Undefined Operation new return
 end
 proc( CompilerInfo : compInfo FilePosition ptr : pos -> Operation ) =>: export: opCompilerInfo
   pos compInfo OpValue .CompilerInfo Type .Undefined Operation new return
@@ -1323,12 +1154,6 @@ namespace: sb
         " ) : " sb.appendS
         constVal typeContext sb.appendConstant
       break
-      NestedProc .case =:: procId
-        "nested proc ( " sb.appendS
-        op .dataType  typeContext sb.appendType
-        " ) : " sb.appendS
-        procId ProcId.getName nameContext sb.appendIdentifierPath
-      break
       ConstantReference .case =:: refId
         progContext [] .constantReferences refId i64 cast @[] =:: constData
         "constant reference ( " sb.appendS
@@ -1427,40 +1252,6 @@ namespace: sb
         " ) : " sb.appendS
         id nameContext sb.appendIdInfo
       break
-      GetNamedElt .case =:: name
-        "get element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        name sb.appendStr
-      break
-      SetNamedElt .case =:: name
-        "set element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        name sb.appendStr
-      break
-      SetNestedNamedElt .case =:: name
-        "set nested element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        name sb.appendStr
-      break
-      ExistsNamedElt .case =:: name
-        "exists element ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        name sb.appendStr
-      break
-      TypeWith .case =:: procId
-        "type with( " sb.appendS
-          procId ProcId.getName nameContext sb.appendIdentifierPath
-        "@ )" sb.appendS
-      break
-      TypeModifier .case =:: typeModifier
-        "typeModifier \"" sb.appendS
-          typeModifier sb.appendTypeModifier
-        "\"" sb.appendS
-      break
       GetElement .case =:: index
         "get element ( " sb.appendS
         op .dataType typeContext sb.appendType
@@ -1489,10 +1280,6 @@ namespace: sb
         "Return( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) " sb.appendS
-      break
-      Splat case
-        "splat: " sb.appendS
-        op .dataType typeContext sb.appendType
       break
       New case
         "new: " sb.appendS
@@ -1550,31 +1337,8 @@ namespace: sb
         op .dataType typeContext sb.appendType
         " )" sb.appendS
       break
-      Length case
-        "length ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
-      break
       RawValue case
         "raw ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
-      break
-      TypeOf case
-        "type-of":s sb.appendStr
-      break
-      TypeInfo .case =:: typeInfo
-        "typeInfo ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ): " sb.appendS
-        typeInfo switch
-          ALIGNMENT case "alignment" sb.appendS break
-          SIZE case "size" sb.appendS break
-          STRIDE case "stride" sb.appendS break
-        end
-      break
-      GetUnionTag case
-        "get union tag ( " sb.appendS
         op .dataType typeContext sb.appendType
         " )" sb.appendS
       break
@@ -1587,58 +1351,6 @@ namespace: sb
         op .dataType typeContext sb.appendType
         " )" sb.appendS
       break
-      GetName .case =:: name
-        "get: " sb.appendS
-        name sb.appendStr
-      break
-      AtName .case =:: name
-        "address of: " sb.appendS
-        name sb.appendStr
-      break
-      SetName .case =:: name
-        "set: " sb.appendS
-        name sb.appendStr
-      break
-      ElementSetName .case =:: name
-        "element set: " sb.appendS
-        name sb.appendStr
-      break
-      ExistsName .case =:: name
-        "exists name: " sb.appendS
-        name sb.appendStr
-      break
-      DeclareName .case =:: name
-        "declare name: " sb.appendS
-        name nameContext sb.appendIdentifierPath
-      break
-      AliasName .case =:: aliasData
-        "alias name: " sb.appendS
-        aliasData .alias nameContext sb.appendIdentifierPath
-        aliasData .baseName nameContext sb.appendIdentifierPath
-      break
-      InitializeName .case =:: initName
-        "initialize name: ":s sb.appendStr
-        initName nameContext sb.appendIdentifierPath
-      break
-      UsingNamespace .case =:: usingNamespace
-        "using namespace: ":s sb.appendStr
-        usingNamespace .baseName nameContext sb.appendIdentifierPath
-        usingNamespace .alias .if =:: aliasName
-          " as ":s sb.appendStr
-          aliasName sb.appendIdentifierName
-        end
-      break
-      UsingIdentifier .case =:: usingIdentifier
-        "using idenfifier: ":s sb.appendStr
-        usingIdentifier .baseName nameContext sb.appendIdentifierPath
-        usingIdentifier .alias .if =:: aliasName
-          " as ":s sb.appendStr
-          aliasName sb.appendIdentifierName
-        end
-      break
-      Assert case
-      "assert" sb.appendS
-      break
       RuntimeAssert .case =:: msg
         '"' sb.appendC
         msg sb.appendStr
@@ -1650,23 +1362,10 @@ namespace: sb
           INFO case "..compiler.info" sb.appendS break
         end
       break
-      Panic case
-        "..panic" sb.appendS
-      break
       PanicWithMessage .case =:: msg
         '"' sb.appendC
         msg sb.appendEscapedStr
         "\" ..panic" sb.appendS
-      break
-      Import .case =:: path
-        "import \"" sb.appendS
-        path sb.appendEscapedStr
-        '"' sb.appendC
-      break
-      LibImport .case =:: path
-        "lib-import \"" sb.appendS
-        path sb.appendEscapedStr
-        '"' sb.appendC
       break
       CompilerInfo .case nameContext sb.appendCompilerInfo break
     end

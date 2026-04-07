@@ -1164,11 +1164,6 @@ proc(
         op [] program sb.appendOp
       op [] .pos errors appendError
       EvalResult .Error return
-    GetName case
-      "unsupported operation in constant evaluation: " sb.copyPtr
-        op [] program sb.appendOp
-      op [] .pos errors appendError
-      EvalResult .Error return
     GetId .case =:: idInfo
       idInfo .nameId =:: nameId
       idInfo .idType switch
@@ -1351,21 +1346,6 @@ proc(
         value valInfo eltIndex op [] .pos context setElement wrapResult return
       end
       value valInfo eltIndex op [] .pos context getElement wrapResult return
-    ExistsName .case =:: name
-      name idContext id.findIdentifierByName .Ok ? =:: exists
-      ## pushValue
-        exists ConstValue .Bool
-        types.primitive.BOOL
-        op [] .pos
-      context pushValue
-      EvalResult .Ok return
-    AtName SetName DeclareName AliasName InitializeName UsingNamespace UsingIdentifier
-        TypeWith TypeModifier TypeOf Length ElementSetName case
-      ## label/name should have been resolved in type-checker
-      "unsupported operation in constant evaluation: " sb.copyPtr
-        op [] program sb.appendOp
-      op [] .pos errors appendError
-      EvalResult .Error return
     New case
       PopInfo optional.empty =:: mut: popInfo
       op [] .dataType .Undefined ? if
@@ -1620,24 +1600,14 @@ proc(
         end
       end
       EvalResult .Ok return
-    Assert RuntimeAssert case
-      op [] .val .RuntimeAssert .else ..drop
-        true op [] .pos context popString if ..drop.2
-          EvalResult .Error return
-        end ..swap ..drop
-      end =:: message
+    RuntimeAssert .case =:: message
       op [] .pos context popCondition .and ! if
         "assertion failed: " sb.copyPtr
           message sb.appendStr
         op [] .pos errors appendError
       end
       EvalResult .Ok return
-    Panic PanicWithMessage case
-      op [] .val .PanicWithMessage .else ..drop
-        true op [] .pos context popString if ..drop.2
-          EvalResult .Error return
-        end ..swap ..drop
-      end =:: message
+    PanicWithMessage .case =:: message
       "PANIC!: " sb.copyPtr
         message sb.appendStr
       op [] .pos errors appendError
@@ -1672,49 +1642,6 @@ proc(
       ## pushValue
         value
         newType
-        op [] .pos
-        context
-      pushValue
-      EvalResult .Ok return
-    TypeInfo .case =:: typeInfo
-      PopInfo optional.empty =:: mut: popInfo
-      op [] .dataType .Undefined ? if
-        op [] .pos context popType if ..drop.2
-          EvalResult .Error return
-        end =:: poppedType =:: valInfo
-        valInfo poppedType PopInfo new optional.wrap popInfo=
-        poppedType typeContext types.containsGeneric if
-          "generic types are not supported" sb.copyPtr
-          op [] .pos errors appendError
-          ## computing size not possible, reset stack
-          ## unpopValue
-            poppedType ConstValue .TypeId
-            valInfo
-          context unpopValue
-          EvalResult .Error return
-        end
-        poppedType
-      else
-        op [] .dataType
-      end =:: targetType
-      ## pushValue
-        ## computeTypeInfo
-          targetType
-          typeInfo
-        program computeTypeInfo if ..drop
-          "could not compute size of type" sb.copyPtr
-            targetType typeContext sb.appendType
-          op [] .pos errors appendError
-          ## computing size not possible, reset stack
-          popInfo .if
-            ## unpopValue
-              $ .valType ConstValue .TypeId
-              >$ .valInfo
-            context unpopValue
-          end
-          EvalResult .Error return
-        end
-        types.I_SIZE
         op [] .pos
         context
       pushValue
@@ -1792,11 +1719,9 @@ proc(
         TypeLayout case break ## should not exist in interpreter
       end
       break
-    Import LibImport GetNamedElt SetNamedElt ExistsNamedElt
-    NewUnionReference CallPtr GetUnionTag SetNestedNamedElt
+    NewUnionReference CallPtr
     ImplementProcedure ProcPtr
-    ConstantReference NewReference
-    NestedProc Splat case break
+    ConstantReference NewReference case break
   end
   "unsupported operation in constant evaluation: " sb.copyPtr
     op [] program sb.appendOp
