@@ -1228,7 +1228,7 @@ proc(
             GenericImplementationInfo new GenericProcInfo .ImplInfo
             codeImpl [] .codeState .PreTypeChecking .else
               "expected parsed procedure" ..panic
-            end ProcCodeState .Parsed ## reuse code from generic base procedure
+            end ProcCodeState .PreTypeChecking ## reuse code from generic base procedure
             codeImpl [] .expansionLevel 1:i16 +
           CodeProcData new ProcImplType .Code
           baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplName

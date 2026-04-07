@@ -5729,7 +5729,6 @@ proc(
   FilePosition ptr optional : expandedAt
   TypeCheckState ptr.mut : state
 -> ) =>: typeCheckProcedure
-  ## XXX? is there a way to reset local auto-types without copying the whole list
   state [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
