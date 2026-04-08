@@ -1771,7 +1771,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "..unreachable":s string.eq _if ..drop
       fileState program wordPos =:: opPos
-      "reached `..unreachable` statement":s opPos preOpPanicWithMessage state appendOp
+      "reached `..unreachable` statement":s opPos preOpString state appendOp
+      opPos preOpPanic state appendOp
       opPos state implicitBreakSwitch
       return
     else ..dup "..panic":s string.eq _if ..drop

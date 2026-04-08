@@ -251,7 +251,6 @@ union(
           ErrorType : Error
      TypeMemoryInfo : TypeInfo
                   _ : Panic
-             string : PanicWithMessage
              string : Import
              string : LibImport
        CompilerInfo : shadow: CompilerInfo
@@ -425,9 +424,6 @@ proc( ProcId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpType
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpPanic
   pos PreOpValue .Panic PreOperation new return
-end
-proc( string : message FilePosition ptr : pos -> PreOperation ) =>: export: preOpPanicWithMessage
-  pos message PreOpValue .PanicWithMessage PreOperation new return
 end
 proc(
   FilePosition ptr : pos
@@ -1134,11 +1130,6 @@ namespace: sb
       break
       Panic case
         "..panic" sb.appendS
-      break
-      PanicWithMessage .case =:: msg
-        '"' sb.appendC
-        msg sb.appendEscapedStr
-        "\" ..panic" sb.appendS
       break
       Import .case =:: path
         "import \"" sb.appendS

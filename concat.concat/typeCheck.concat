@@ -5336,10 +5336,6 @@ proc(
         false state .reachable=
         message op .pos opPanicWithMessage state appendOp ..drop
         continue.opLoop
-      PanicWithMessage .case =:: message
-        false state .reachable=
-        message op .pos opPanicWithMessage state appendOp ..drop
-        continue.opLoop
       Error .case =:: errValue
         1 op .pos state checkStackSize if
           continue.opLoop
