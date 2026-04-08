@@ -1316,7 +1316,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "return outside procedure" sb.copyPtr retPos errors appendError
       end
       ## opReturn
-        Type .Undefined
         retPos
       preOpReturn state appendOp
       retPos state implicitBreakSwitch
@@ -1768,7 +1767,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
      else
        TypeMemoryInfo .STRIDE
      end =:: infoType
-      Type .Undefined
       infoType fileState program wordPos preOpTypeInfo state appendOp
       return
     else ..dup "..unreachable":s string.eq _if ..drop

@@ -257,8 +257,7 @@ union(
              string : LibImport
        CompilerInfo : shadow: CompilerInfo
 ) =:: export: PreOpValue
-struct( FilePosition ptr : pos PreOpValue : val Type : dataType ) =:: export: PreOperation
-## TODO dataType only needed for Constant (? split constant into two simpler PreOps: PreOp.Type PreOp.Chars PreOp.String PreOp.Int PreOp.Float)
+struct( FilePosition ptr : pos PreOpValue : val ) =:: export: PreOperation
 
 union(
             NopType : NOP
@@ -303,25 +302,25 @@ proc( -> PreOpValue ) =>: export: preOpValNOP
   NopType .EMPTY PreOpValue .NOP return
 end
 proc( bool : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpBool
-  pos constValue PreOpValue .BoolConst types.CHAR8 PreOperation new return
+  pos constValue PreOpValue .BoolConst PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpWildCard
-  pos PreOpValue .WildCard Type .Undefined PreOperation new return
+  pos PreOpValue .WildCard PreOperation new return
 end
 proc( char8 : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpChar
-  pos constValue PreOpValue .CharConst types.CHAR8 PreOperation new return
+  pos constValue PreOpValue .CharConst PreOperation new return
 end
 proc( i64 : constValue Type : constType FilePosition ptr : pos -> PreOperation ) =>: export: preOpInt
-  pos constValue constType IntConstant new PreOpValue .IntConst constType PreOperation new return
+  pos constValue constType IntConstant new PreOpValue .IntConst PreOperation new return
 end
 proc( f64 : constValue Type : constType FilePosition ptr : pos -> PreOperation ) =>: export: preOpFloat
-  pos constValue constType FloatConstant new PreOpValue .FloatConst constType PreOperation new return
+  pos constValue constType FloatConstant new PreOpValue .FloatConst PreOperation new return
 end
 proc( string : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpString
-  pos constValue PreOpValue .StringConst Type .Undefined PreOperation new return
+  pos constValue PreOpValue .StringConst PreOperation new return
 end
 proc( ProcId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpNestedProc
-  pos id PreOpValue .NestedProc Type .Undefined PreOperation new return
+  pos id PreOpValue .NestedProc PreOperation new return
 end
 proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export: preOpBlock
   pos
@@ -330,7 +329,7 @@ proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export:
       0:JumpDistance
       blockType
     BlockData new PreOpValue .Block
-  Type .Undefined PreOperation new return
+  PreOperation new return
 end
 proc( BlockType : blockType NameId optional : nameId FilePosition ptr : pos -> PreOperation ) =>: export: preOpNamedBlock
   pos
@@ -339,7 +338,7 @@ proc( BlockType : blockType NameId optional : nameId FilePosition ptr : pos -> P
       0:JumpDistance
       blockType
     BlockData new PreOpValue .Block
-  Type .Undefined  PreOperation new return
+  PreOperation new return
 end
 proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export: preOpEndBlock
   pos
@@ -348,105 +347,105 @@ proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export:
       0:JumpDistance
       blockType
     BlockData new PreOpValue .BlockEnd
-  Type .Undefined PreOperation new return
+  PreOperation new return
 end
-proc( Type : retType FilePosition ptr : pos -> PreOperation ) =>: export: preOpReturn
-  pos PreOpValue .Return retType PreOperation new return
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpReturn
+  pos PreOpValue .Return PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpGetName
-  pos name PreOpValue .GetName Type .Undefined PreOperation new return
+  pos name PreOpValue .GetName PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpAtName
-  pos name PreOpValue .AtName Type .Undefined PreOperation new return
+  pos name PreOpValue .AtName PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpSetName
-  pos name PreOpValue .SetName Type .Undefined PreOperation new return
+  pos name PreOpValue .SetName PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpElementSetName
-  pos name PreOpValue .ElementSetName Type .Undefined PreOperation new return
+  pos name PreOpValue .ElementSetName PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpExistsName
-  pos name PreOpValue .ExistsName Type .Undefined PreOperation new return
+  pos name PreOpValue .ExistsName PreOperation new return
 end
 proc( NameId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpDeclareName
-  pos id PreOpValue .DeclareName Type .Undefined PreOperation new return
+  pos id PreOpValue .DeclareName PreOperation new return
 end
 proc( NameId : baseName NameId : nameAlias FilePosition ptr : pos -> PreOperation ) =>: export: preOpAliasName
-  pos baseName nameAlias NameAliasInfo new PreOpValue .AliasName Type .Undefined PreOperation new return
+  pos baseName nameAlias NameAliasInfo new PreOpValue .AliasName PreOperation new return
 end
 proc( NameId : id FilePosition ptr : pos  -> PreOperation ) =>: export: preOpInitializeName
-  pos id PreOpValue .InitializeName Type .Undefined PreOperation new return
+  pos id PreOpValue .InitializeName PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpGetNamedElt
-  pos name PreOpValue .GetNamedElt Type .Undefined PreOperation new return
+  pos name PreOpValue .GetNamedElt PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpSetNamedElt
-  pos name PreOpValue .SetNamedElt Type .Undefined PreOperation new return
+  pos name PreOpValue .SetNamedElt PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpSetNestedNamedElt
-  pos name PreOpValue .SetNestedNamedElt Type .Undefined PreOperation new return
+  pos name PreOpValue .SetNestedNamedElt PreOperation new return
 end
 proc( string : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpExistsNamedElt
-  pos name PreOpValue .ExistsNamedElt Type .Undefined PreOperation new return
+  pos name PreOpValue .ExistsNamedElt PreOperation new return
 end
 proc( i32 StackModType FilePosition ptr : pos -> PreOperation ) =>: export: preOpStackMod
-  pos <<$ StackModification new PreOpValue .StackMod Type .Undefined PreOperation new return
+  pos <<$ StackModification new PreOpValue .StackMod PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpCallPtr
-  pos PreOpValue .CallPtr Type .Undefined PreOperation new return
+  pos PreOpValue .CallPtr PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpLength
-  pos PreOpValue .Length types.I_SIZE PreOperation new return
+  pos PreOpValue .Length PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpRawValue
-  pos PreOpValue .RawValue Type .Undefined PreOperation new return
+  pos PreOpValue .RawValue PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeOf
-  pos PreOpValue .TypeOf Type .Undefined PreOperation new return
+  pos PreOpValue .TypeOf PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpGetUnionTag
-  pos PreOpValue .GetUnionTag Type .Undefined PreOperation new return
+  pos PreOpValue .GetUnionTag PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpSplat
-  pos PreOpValue .Splat Type .Undefined PreOperation new return
+  pos PreOpValue .Splat PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpNew
-  pos PreOpValue .New Type .Undefined PreOperation new return
+  pos PreOpValue .New PreOperation new return
 end
 proc( SignType : sign FilePosition ptr : pos -> PreOperation ) =>: export: preOpCast
-   pos sign PreOpValue .Cast Type .Undefined PreOperation new return
+   pos sign PreOpValue .Cast PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpCast!
-   pos PreOpValue .Cast! Type .Undefined PreOperation new return
+   pos PreOpValue .Cast! PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpBitCast
-   pos PreOpValue .BitCast Type .Undefined PreOperation new return
+   pos PreOpValue .BitCast PreOperation new return
 end
 proc( TypeModifier : tMod FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeModifier
-  pos tMod PreOpValue .TypeModifier Type .Undefined  PreOperation new return
+  pos tMod PreOpValue .TypeModifier PreOperation new return
 end
 proc( ProcId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeWith
-  pos id PreOpValue .TypeWith Type .Undefined PreOperation new return
+  pos id PreOpValue .TypeWith PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpPanic
-  pos PreOpValue .Panic Type .Undefined PreOperation new return
+  pos PreOpValue .Panic PreOperation new return
 end
 proc( string : message FilePosition ptr : pos -> PreOperation ) =>: export: preOpPanicWithMessage
-  pos message PreOpValue .PanicWithMessage Type .Undefined PreOperation new return
+  pos message PreOpValue .PanicWithMessage PreOperation new return
 end
 proc(
   FilePosition ptr : pos
 -> PreOperation ) =>: export: preOpAssert
-  pos PreOpValue .Assert Type .Undefined PreOperation new return
+  pos PreOpValue .Assert PreOperation new return
 end
 proc(
   ErrorType : errorType
   FilePosition ptr : pos
 -> PreOperation ) =>: export: preOpError
-  pos errorType PreOpValue .Error Type .Undefined PreOperation new return
+  pos errorType PreOpValue .Error PreOperation new return
 end
-proc( Type : t TypeMemoryInfo : infoType FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeInfo
-  pos infoType PreOpValue .TypeInfo t PreOperation new return
+proc( TypeMemoryInfo : infoType FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeInfo
+  pos infoType PreOpValue .TypeInfo PreOperation new return
 end
 proc(
   i32 : count
@@ -458,31 +457,28 @@ proc(
     count depth StackTypesInfo new
       CompilerInfo .TypeInfo
     PreOpValue .CompilerInfo
-    Type .Undefined
   PreOperation new return
 end
 proc( i32 : count FilePosition ptr : pos -> PreOperation ) =>: export: preOpStackInfo
-  pos count CompilerInfo .StackInfo PreOpValue .CompilerInfo Type .Undefined PreOperation new return
+  pos count CompilerInfo .StackInfo PreOpValue .CompilerInfo PreOperation new return
 end
 proc( i32 : count FilePosition ptr : pos -> PreOperation ) =>: export: preOpPrintCompiledOps
-  pos count CompilerInfo .CompiledOps PreOpValue .CompilerInfo Type .Undefined PreOperation new return
+  pos count CompilerInfo .CompiledOps PreOpValue .CompilerInfo PreOperation new return
 end
 proc( NameId : name FilePosition ptr : pos -> PreOperation ) =>: export: preOpPrintIdentifierMatches
-  pos name CompilerInfo .Find PreOpValue .CompilerInfo Type .Undefined PreOperation new return
+  pos name CompilerInfo .Find PreOpValue .CompilerInfo PreOperation new return
 end
 proc( i32 : depth FilePosition ptr : pos -> PreOperation ) =>: export: preOpTypeLayout
-  pos depth CompilerInfo .TypeLayout PreOpValue .CompilerInfo Type .Undefined PreOperation new return
+  pos depth CompilerInfo .TypeLayout PreOpValue .CompilerInfo PreOperation new return
 end
 proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> PreOperation ) =>: export: preOpUsingNamespace
   pos
     src alias UsingNameInfo new PreOpValue .UsingNamespace
-    Type .Undefined
   PreOperation new return
 end
 proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> PreOperation ) =>: export: preOpUsingIdentifier
   pos
     src alias UsingNameInfo new PreOpValue .UsingIdentifier
-    Type .Undefined
  PreOperation new return
 end
 proc( string : path bool : isLibFile FilePosition ptr : pos -> PreOperation ) =>: export: preOpImportFile
@@ -493,7 +489,6 @@ proc( string : path bool : isLibFile FilePosition ptr : pos -> PreOperation ) =>
       else
         PreOpValue .Import
       end
-    Type .Undefined
   PreOperation new return
 end
 
@@ -1018,7 +1013,7 @@ namespace: sb
       Block .case =:: blockData
         "Block: ":s sb.appendStr
         blockData .blockType sb.appendBlockType
-        " (":s sb.appendS
+        " (":s sb.appendStr
           blockData .blockId i64 cast sb.appendI
           " ->":s sb.appendStr
           blockData .jumpDistance i64 cast sb.appendI
