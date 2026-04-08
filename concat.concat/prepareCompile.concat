@@ -195,7 +195,7 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn ProcPtr PanicWithMessage
-    AtId Block BlockEnd
+    AtId Switch EndProc
     RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast Return RawValue case
       newOps

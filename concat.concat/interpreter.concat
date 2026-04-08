@@ -1097,44 +1097,34 @@ proc(
         break
       end
     break
-    Block .case =:: blockInfo
-      BlockType ..length 33:iSize == "no new block types" assert
-      blockInfo .blockType switch
-        SWITCH case
-          op [] .pos context popValue if ..drop.2
-            "stack underflow while evaluating operation: " sb.copyPtr
-              op [] program sb.appendOp
-            op [] .pos errors appendError
-            EvalResult .Error return
-          end
-            $ .Union ? if constUnionTag end
-          =:: switchValue ..drop
-          program [] .switchData
-            blockInfo .blockId i64 cast.u
-          @[] =:: switchData
-          switchData [] .switchType =:: switchType
-          switchData [] .switchLabels .length for =:: i
-            switchData [] .switchLabels i @[] =:: label
-            label [] .value switchValue switchType typeContext operatorEq if
-              "cannot check equality of switch value " sb.copyPtr
-                switchValue typeContext sb.appendConstant
-                " with label " sb.appendS
-                label [] .value typeContext sb.appendConstant
-              op [] .pos errors appendError
-            end if
-              switchData [] .caseJumpDistances label [] .caseId [] EvalResult .Jump return
-            end
-          end
-          switchData [] .defaultJumpDistance EvalResult .Jump
-        return
-        default break
+    Switch .case =:: switchId
+      op [] .pos context popValue if ..drop.2
+        "stack underflow while evaluating operation: " sb.copyPtr
+          op [] program sb.appendOp
+        op [] .pos errors appendError
+        EvalResult .Error return
       end
-      "unsupported block-type in constant evaluation: " sb.copyPtr
-        blockInfo .blockType sb.appendBlockType
-      op [] .pos errors appendError
-      EvalResult .Error
+        $ .Union ? if constUnionTag end
+      =:: switchValue ..drop
+      program [] .switchData
+        switchId i64 cast.u
+      @[] =:: switchData
+      switchData [] .switchType =:: switchType
+      switchData [] .switchLabels .length for =:: i
+        switchData [] .switchLabels i @[] =:: label
+        label [] .value switchValue switchType typeContext operatorEq if
+          "cannot check equality of switch value " sb.copyPtr
+            switchValue typeContext sb.appendConstant
+            " with label " sb.appendS
+            label [] .value typeContext sb.appendConstant
+          op [] .pos errors appendError
+        end if
+          switchData [] .caseJumpDistances label [] .caseId [] EvalResult .Jump return
+        end
+      end
+      switchData [] .defaultJumpDistance EvalResult .Jump
     return
-    BlockEnd case break
+    EndProc case break
     DeclareId .case =:: idInfo
       idInfo .nameId =:: nameId
       idInfo .idType switch
@@ -1900,7 +1890,7 @@ proc(
         Jump .case iSize cast.s offset + break
       end
   finally 1:iSize + end ..drop
-  ## XXX? error if unwanted open blocks
+  ## TODO? error if unwanted open blocks
   false return
 end
 

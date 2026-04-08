@@ -263,10 +263,10 @@ union(
             NopType : NOP
          ConstValue : Constant
    ConstReferenceId : ConstantReference
-          BlockData : Block
-          BlockData : BlockEnd
+            BlockId : Switch
      LocalLabelInfo : LocalLabel
       LocalJumpInfo : LocalJump
+                  _ : EndProc
      IdentifierInfo : GetId
      IdentifierInfo : SetId
      IdentifierInfo : AtId
@@ -504,32 +504,14 @@ end
 proc( ConstValue : constValue Type : constType FilePosition ptr : pos -> Operation ) =>: export: opConst
   pos constValue OpValue .Constant constType Operation new return
 end
-## TODO? special operations for end-proc and switch
-proc( BlockType : blockType FilePosition ptr : pos -> Operation ) =>: export: opEndBlock
-  pos
-    NameId optional.empty
-      -1:BlockId
-      0:JumpDistance
-      blockType
-    BlockData new OpValue .BlockEnd
-  Type .Undefined Operation new return
-end
 proc( Type : labelType BlockId : switchId FilePosition ptr : pos -> Operation ) =>: export: opSwitch
   pos
-    NameId optional.empty
-      switchId
-      0:JumpDistance
-      BlockType .SWITCH
-    BlockData new OpValue .Block
+    switchId OpValue .Switch
   labelType Operation new return
 end
 proc( FilePosition ptr : pos -> Operation ) =>: export: opEndProc
   pos
-    NameId optional.empty
-      -1:BlockId
-      0:JumpDistance
-      BlockType .PROCEDURE
-    BlockData new OpValue .BlockEnd
+    OpValue .EndProc
   Type .Undefined Operation new return
 end
 proc( LocalLabelId LocalLabelType FilePosition ptr : pos -> Operation ) =>: export: opLabel
@@ -1208,23 +1190,13 @@ namespace: sb
         "] : " sb.appendS
         constData [] .value typeContext sb.appendConstant
       break
-      Block .case =:: blockData
-        "Block: " sb.appendS
-        blockData .blockType sb.appendBlockType
-        " (" sb.appendS
-          blockData .blockId i64 cast sb.appendI
-          " ->" sb.appendS
-          blockData .jumpDistance i64 cast sb.appendI
+      Switch .case =:: switchId
+        "Switch: (":s sb.appendStr
+          switchId i64 cast sb.appendI
         ')' sb.appendC
       break
-      BlockEnd .case =:: blockData
-        "End: " sb.appendS
-        blockData .blockType sb.appendBlockType
-        " (" sb.appendS
-          blockData .blockId i64 cast sb.appendI
-          " ->" sb.appendS
-          blockData .jumpDistance i64 cast sb.appendI
-        ')' sb.appendC
+      EndProc case
+        "End Procedure":s sb.appendStr
       break
       LocalLabel .case =:: labelInfo
         "Label(" sb.appendS

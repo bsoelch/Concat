@@ -3792,49 +3792,38 @@ proc(
         break
       end
     break
-    Block .case =:: blockVal
-      BlockType ..length 33:iSize == "no-new block-types" assert
-      blockVal .blockType switch
-        SWITCH case
-          blockVal .blockId =:: switchId
-          prog [] .switchData
-            switchId i64 cast @[]
-          =:: switchData
-          sb
-            op [] .pos sb.appendPosQBE
-            ## appendSwitchTable
-              switchData [] .switchType
-              op [] .pos context popValue
-              switchData [] .switchLabels
-              switchData [] .branchLabels
-              switchData [] .defaultLabel
-              opIndex
-              op [] .pos
-              context
-            appendSwitchTable
-            context .labelStates
-              switchData [] .endLabel
-              LabelState.new
-            map.put ..drop
-            false context .reachable=
-          return
-        default break
-      end
-      break
-    BlockEnd .case =:: blockEnd
-      BlockType ..length 33:iSize == "no-new block-types" assert
-      blockEnd .blockType switch
-        PROCEDURE case
-          Type .Undefined context .currentProc=
-          sb
-            ## end of procedure block always unreachable
-            ## ( type-checker ensures there is a return before end )
-            "@end\nhlt\n}\n" sb.appendS
-            op [] .pos context sb.appendLocalConstants
-          return
-        default break
-      end
-      break
+    Switch .case =:: switchId
+      prog [] .switchData
+        switchId i64 cast @[]
+      =:: switchData
+      sb
+        op [] .pos sb.appendPosQBE
+        ## appendSwitchTable
+          switchData [] .switchType
+          op [] .pos context popValue
+          switchData [] .switchLabels
+          switchData [] .branchLabels
+          switchData [] .defaultLabel
+          opIndex
+          op [] .pos
+          context
+        appendSwitchTable
+        context .labelStates
+          switchData [] .endLabel
+          LabelState.new
+        map.put ..drop
+        false context .reachable=
+      return
+    break
+    EndProc case
+      Type .Undefined context .currentProc=
+      sb
+        ## end of procedure block always unreachable
+        ## ( type-checker ensures there is a return before end )
+        "@end\nhlt\n}\n" sb.appendS
+        op [] .pos context sb.appendLocalConstants
+      return
+    break
     Return case
       op [] .dataType typeContext types.isProcedure ! if
         "unexpected type for return: " sb.copyPtr

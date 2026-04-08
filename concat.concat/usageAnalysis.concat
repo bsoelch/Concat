@@ -340,7 +340,7 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
-  context [] .reachable ! and op .val .LocalLabel ? ! and op .val .BlockEnd ? ! and
+  context [] .reachable ! and op .val .LocalLabel ? ! and op .val .EndProc ? ! and
       op .val .ImplementProcedure ? ! if
     opValNOP ops index @[] .val=
     return
@@ -406,17 +406,15 @@ proc(
         context .variableUses map.clear
       end
     break
-    Block .case =:: blockData
-      blockData .blockType .SWITCH if
-        program [] .switchData blockData .blockId iSize cast.u @[] =:: switchData
-        context [] .reachable "switch-start is reachable" assert
-        switchData [] .branchLabels for
-          ops >$ true context mergeVariableUses
-        end
-        ops switchData [] .defaultLabel false context mergeVariableUses
-        context .variableUses map.clear
-        false context .reachable=
+    Switch .case =:: switchId
+      program [] .switchData switchId iSize cast.u @[] =:: switchData
+      context [] .reachable "switch-start is reachable" assert
+      switchData [] .branchLabels for
+        ops >$ true context mergeVariableUses
       end
+      ops switchData [] .defaultLabel false context mergeVariableUses
+      context .variableUses map.clear
+      false context .reachable=
     break
     Return case
       context .variableUses
@@ -602,7 +600,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
         pos
       opBuiltIn list.append
       currentProc [] .procType pos opReturn list.append
-      BlockType .PROCEDURE pos opEndBlock list.append
+      pos opEndProc list.append
     ..drop
     ## CodeProcData
       0 VariableInfo list.create

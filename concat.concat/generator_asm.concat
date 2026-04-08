@@ -1583,9 +1583,9 @@ proc(
       end jumpLabel asm.LocalLabel cast asm.op1 list.append
       labelInfo .cmpType .NONE ! context .reachable=
     return
-    BlockEnd .case .blockType .PROCEDURE if
-       asm.endProc list.append return
-    end break
+    EndProc case
+      asm.endProc list.append return
+    break
     Call .case =:: procId
       op .dataType procId context getProcName op .pos context compileCall
     return
