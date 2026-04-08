@@ -200,11 +200,23 @@ namespace: NestedElementPath
     end
   end
 end
-
+struct(
+  i64 : value
+  Type : valType
+) =:: IntConstant
+struct(
+  f64 : value
+  Type : valType
+) =:: FloatConstant
 
 union(
             NopType : NOP
-         ConstValue : Constant
+                  _ : WildCard
+               bool : BoolConst
+              char8 : CharConst
+        IntConstant : IntConst
+      FloatConstant : FloatConst
+             string : StringConst
              ProcId : NestedProc
           BlockData : Block
           BlockData : BlockEnd
@@ -290,8 +302,23 @@ struct( FilePosition ptr : pos OpValue : val Type : dataType ) =:: export: Opera
 proc( -> PreOpValue ) =>: export: preOpValNOP
   NopType .EMPTY PreOpValue .NOP return
 end
-proc( ConstValue : constValue Type : constType FilePosition ptr : pos -> PreOperation ) =>: export: preOpConst
-  pos constValue PreOpValue .Constant constType PreOperation new return
+proc( bool : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpBool
+  pos constValue PreOpValue .BoolConst types.CHAR8 PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpWildCard
+  pos PreOpValue .WildCard Type .Undefined PreOperation new return
+end
+proc( char8 : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpChar
+  pos constValue PreOpValue .CharConst types.CHAR8 PreOperation new return
+end
+proc( i64 : constValue Type : constType FilePosition ptr : pos -> PreOperation ) =>: export: preOpInt
+  pos constValue constType IntConstant new PreOpValue .IntConst constType PreOperation new return
+end
+proc( f64 : constValue Type : constType FilePosition ptr : pos -> PreOperation ) =>: export: preOpFloat
+  pos constValue constType FloatConstant new PreOpValue .FloatConst constType PreOperation new return
+end
+proc( string : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpString
+  pos constValue PreOpValue .StringConst Type .Undefined PreOperation new return
 end
 proc( ProcId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpNestedProc
   pos id PreOpValue .NestedProc Type .Undefined PreOperation new return
@@ -953,33 +980,56 @@ namespace: sb
     progContext .idContext .constContext =:: constContext
     op .val switch
       NOP case
-        "NOP" sb.appendS
+        "NOP":s sb.appendStr
         break
-      Constant .case =:: constVal
-        "constant ( " sb.appendS
-        op .dataType  typeContext sb.appendType
+      WildCard case
+        "wild-card":s sb.appendStr
+      break
+      BoolConst .case =:: constVal
+        "boolean : ":s sb.appendStr
+        constVal if "true":s else "false":s end sb.appendStr
+      break
+      CharConst .case =:: constVal
+        "char : '":s sb.appendStr
+        constVal sb.appendEscapedChr
+        '\'' sb.appendC
+      break
+      IntConst .case =:: constVal
+        "int ( " sb.appendS
+        constVal .valType  typeContext sb.appendType
         " ) : " sb.appendS
-        constVal typeContext sb.appendConstant
+        constVal .value sb.appendI
+      break
+      FloatConst .case =:: constVal
+        "float ( " sb.appendS
+        constVal .valType typeContext sb.appendType
+        " ) : " sb.appendS
+        constVal .value sb.appendF
+      break
+      StringConst .case =:: constVal
+        "string : \"":s sb.appendStr
+        constVal sb.appendEscapedStr
+        '"' sb.appendC
       break
       NestedProc .case =:: procId
         "nested proc : ":s sb.appendStr
         procId ProcId.getName nameContext sb.appendIdentifierPath
       break
       Block .case =:: blockData
-        "Block: " sb.appendS
+        "Block: ":s sb.appendStr
         blockData .blockType sb.appendBlockType
-        " (" sb.appendS
+        " (":s sb.appendS
           blockData .blockId i64 cast sb.appendI
-          " ->" sb.appendS
+          " ->":s sb.appendStr
           blockData .jumpDistance i64 cast sb.appendI
         ')' sb.appendC
       break
       BlockEnd .case =:: blockData
-        "End: " sb.appendS
+        "End: ":s sb.appendStr
         blockData .blockType sb.appendBlockType
-        " (" sb.appendS
+        " (":s sb.appendStr
           blockData .blockId i64 cast sb.appendI
-          " ->" sb.appendS
+          " ->":s sb.appendStr
           blockData .jumpDistance i64 cast sb.appendI
         ')' sb.appendC
       break

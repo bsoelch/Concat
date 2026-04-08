@@ -97,17 +97,9 @@ proc( ParserState : state -> ) =>: cleanupParserState
   state .parsedOps list.free ..drop
 end
 
-proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendWildcardConst
-  ConstValue .WildCard Type .Undefined pos preOpConst state appendOp
-end
 proc( f64 : value Type : constType FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: appendFloatConst
-  ## Constant
-    value ConstValue .Float
-    constType
-    pos
-  preOpConst state appendOp
+  value constType pos preOpFloat state appendOp
 end
-
 
 proc(
   i64 : value
@@ -167,21 +159,20 @@ proc(
       types.intLiteral.U63
       break
   end =:: constType
-  ## preOpConst
-    value ConstValue .Int
-    constType
-    pos
-  preOpConst state appendOp
+  value constType pos preOpInt state appendOp
 end
 proc(
   unicode.Codepoint : char
   FilePosition ptr : pos
   ParserState ptr.mut : state
 -> ) =>: appendCharConstant
-  ## newConstant
-    char char8 cast ConstValue .Char
-    types.CHAR8
-  pos preOpConst state appendOp
+  char char8 cast pos preOpChar state appendOp
+end
+proc( ConstValue : str -> string ) =>: stringConstStr
+  ## TODO! clarify/ensure that fromBytes does not create copy
+  str .Array8 .else
+    "expected string to have type Array8" ..panic
+  end string.fromBytes
 end
 proc(
   ConstValue : str
@@ -193,17 +184,10 @@ proc(
   state [] .program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   idContext .constContext =:: constContext
-  using types.
-  str .Array8 .else
-    "expected string to have type Array8" ..panic
-  end =:: strArray
-  strArray .length i64 cast.u ArraySize .Int =:: size
-  ## preOpConst
-    str
-    types.CHAR8 types.ArrayType .POINTER size typeContext newArrayType
-    pos
-  preOpConst state appendOp
-  strArray .length
+  str stringConstStr
+    $ =:: strVal
+  pos preOpString state appendOp
+  strVal .length
 end
 
 
@@ -785,9 +769,9 @@ proc(
           literalToken constContext newStringConst
           literalStart
         state appendStringConstant =:: charCount
-        charCount i64 cast.u ConstValue .Int
+        charCount i64 cast.u
           types.I_SIZE
-        literalPos  preOpConst state appendOp
+        literalPos  preOpInt state appendOp
         program [] .tmpString
           sb.clear ## clear tmp string
           ':' sb.appendC
@@ -796,9 +780,9 @@ proc(
         program [] .tmpString sb.asStr false return
       LiteralChar LiteralString LiteralRawString .case
         token .LiteralRawString ? fileState state parseStringConstant =:: charCount
-        charCount i64 cast.u ConstValue .Int
+        charCount i64 cast.u
           types.I_SIZE
-        fileState program wordPos preOpConst state appendOp
+        fileState program wordPos preOpInt state appendOp
         fileState nextToken =:: literalType
         fileState program wordPos =:: literalPos
         literalType literalPos errors checkLiteralType  if
@@ -819,7 +803,7 @@ proc(
         string.empty true return
     end
     ..dup "_":s string.eq if
-      fileState program wordPos  state appendWildcardConst
+      fileState program wordPos preOpWildCard state appendOp
       true return
     end
   false return
@@ -1946,29 +1930,26 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "..compiler.flag.":s string.startsWith _if
       "..compiler.flag." ..length string.tail =:: flagName
-      ## XXX? treat compiler constants as variables, allow :? operator to check if constant exists
+      fileState program wordPos =:: opPos
+      ## TODO? treat compiler constants as variables, allow :? operator to check if constant exists
       flagName "experimental":s string.eq if
-        _EXPERIMENTAL_ ConstValue .Bool
-        types.primitive.BOOL
+        _EXPERIMENTAL_ opPos preOpBool state appendOp
       else flagName "noCore":s string.eq _if
-        _INCLUDE_CORE_ ! ConstValue .Bool
-        types.primitive.BOOL
+        _INCLUDE_CORE_ ! opPos preOpBool state appendOp
       else flagName "wError":s string.eq _if
-        _W_ERROR_ ConstValue .Bool
-        types.primitive.BOOL
+        _W_ERROR_ opPos preOpBool state appendOp
       else flagName "incrementVersionNumber":s string.eq _if
-        _INCREMENT_VERSION_ ConstValue .Bool
-        types.primitive.BOOL
+        _INCREMENT_VERSION_ opPos preOpBool state appendOp
       else
-        ConstValue .None
-        Type .Empty
+        "unknown compiler flag: " sb.copyPtr
+          flagName sb.appendStr
+        opPos errors appendWarning
       end
-      fileState program wordPos preOpConst state appendOp
       return
     else $ "..compiler.version":s string.eq _if ..drop
-      _VERSION_ ConstValue .Int
-      types.primitive.I64
-      fileState program wordPos preOpConst state appendOp
+      _VERSION_
+        types.primitive.I64
+      fileState program wordPos preOpInt state appendOp
       return
     else $ "..compiler.return":s string.eq _if ..drop
       ..drop ## discard remainder of file
@@ -1986,17 +1967,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "..file":s string.eq _if ..drop
       fileState [] .wordStart .fileName =:: name
       name constContext newStringConst
-      types.CHAR8
-        types.ArrayType .POINTER
-        name .length i64 cast.u types.ArraySize .Int =:: size
-        size
-      typeContext types.newArrayType
-      fileState program wordPos preOpConst state appendOp
+        stringConstStr
+      fileState program wordPos preOpString state appendOp
       return
     else $ "..line":s string.eq _if ..drop
-      fileState [] .wordStart .line i64 cast.u ConstValue .Int
-      types.primitive.I64 ## TODO? change to iSize
-      fileState program wordPos preOpConst state appendOp
+      fileState [] .wordStart .line i64 cast.u
+        types.primitive.I64 ## TODO? change to iSize
+      fileState program wordPos preOpInt state appendOp
       return
     else $ "..?types":s string.eq or $ "..?types.":s string.startsWith _if =:: mut: opName
       opName "..?types." ..length string.tail =:: params

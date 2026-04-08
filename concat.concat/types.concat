@@ -409,7 +409,7 @@ namespace: types
     PrimitiveType .I64  Type .PrimitiveType Type =: export: I_MAX  ## largest native integer type
   end
   primitive.I_SIZE =:: mut: export: I_SIZE
-  primitive.I_SIZE =:: mut: export: CHAR8
+  primitive.CHAR8  =:: mut: export: CHAR8
   namespace: intLiteral
     IntLiteral .U7  Type .IntLiteral Type =: export: U7
     IntLiteral .S8  Type .IntLiteral Type =: export: S8

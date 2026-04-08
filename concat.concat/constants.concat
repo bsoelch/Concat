@@ -88,6 +88,9 @@ end
 proc( string : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStringConst
   elts string.bytes context newArray8Const return
 end
+proc( string : elts -> ConstValue ) =>: export: wrapStringConst
+  elts string.bytes ConstValue .Array8 return
+end
 proc( i16 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray16Const
   elts context constPrimitiveArray ConstValue .Array16 return
 end

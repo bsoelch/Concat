@@ -691,6 +691,12 @@ proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> string ) =>: popS
   stringValue return
 end
 
+proc( iSize : length TypeContext ptr.mut : typeContext -> Type ) =>: newStringType
+  types.CHAR8
+    types.ArrayType .POINTER
+    length i64 cast.u types.ArraySize .Int
+  typeContext types.newArrayType
+end
 proc(
   ConstValue : value
   Type : valType
@@ -2305,11 +2311,19 @@ proc(
   false switchBlock .allowBreak=
   switchType typeContext types.isEnumOrTaggedUnion ! if
     ## TODO? allow use of Interpreter in switch labels
-    op [] .val .Constant .if =:: constVal
+    op [] .val .IntConst .if =:: constVal
       ## newSwitchLabel
         switchId
         switchType
-        constVal
+        constVal .value ConstValue .Int
+        switchBlock .caseLabels [] .length
+        op [] .pos
+      state newSwitchLabel
+    else .CharConst ._if =:: constVal
+      ## newSwitchLabel
+        switchId
+        switchType
+        constVal ConstValue .Char
         switchBlock .caseLabels [] .length
         op [] .pos
       state newSwitchLabel
@@ -2376,9 +2390,7 @@ proc(
     true return
   end
   ## enum-switch -> try read label
-  op [] .val .GetName .else .Constant .and .TypeId .and typeContext types.namedTypeName ._if
-    id.getIdentifierName
-  else
+  op [] .val .GetName .else ..drop
     "unsupported operation for switch label of type " sb.copyPtr
       switchType typeContext sb.appendType
       " : " sb.appendS
@@ -2776,7 +2788,24 @@ proc(
     else ..drop end
     op .val switch
       NOP case continue.opLoop
-      Constant .case op .dataType op .pos state pushConstant continue.opLoop
+      WildCard case ## TODO? special handling for wild-card
+        ConstValue .WildCard Type .Undefined op .pos state pushConstant
+      continue.opLoop
+      BoolConst .case
+        ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
+      continue.opLoop
+      CharConst .case
+        ConstValue .Char types.CHAR8 op .pos state pushConstant
+      continue.opLoop
+      IntConst .case =:: const
+        const .value ConstValue .Int const .valType op .pos state pushConstant
+      continue.opLoop
+      FloatConst .case =:: const
+        const .value ConstValue .Float const .valType op .pos state pushConstant
+      continue.opLoop
+      StringConst .case $ .length =:: charCount
+        wrapStringConst charCount typeContext newStringType op .pos state pushConstant
+      continue.opLoop
       NestedProc .case =:: procId
         procId ProcId.getProcInfo =:: procData
         procData [] .procType .Undefined ? ! or
