@@ -207,7 +207,7 @@ namespace: sb
   end
 end
 
-## XXX? merge all typed-value types
+## TODO? merge all "typed-value" types
 struct( Type : valType ConstValue : value ) =:: TypedValue
 enum( PROC_CHILD STATIC_PROC LINEAR ) =:: TypeCheckMode
 
@@ -281,8 +281,6 @@ struct(
 ) =:: export: TypeCheckState
 
 proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
-  ## XXX? flag to check if state is currently in use
-  ##   (auto-types are reset after type-checking (generic) procedure)
   state [] .stateStack
     ## TypeCheckStateState
       state [] .openBlocks .length
@@ -661,7 +659,7 @@ proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> string ) =>: popS
   typeContext .nameContext =:: nameContext
   1 pos state checkStackSize if string.empty return end
   state .stack branchTree.peek optional.unwrap =:: typeInfo
-  ## XXX? allow Array: { string, i64 } as string constant
+  ## TODO? allow Array: { string, i64 } as string constant
   typeInfo [] .value .Array8 .else
     "expected string-constant got " sb.copyPtr
       >$ typeContext sb.appendConstant
@@ -796,7 +794,7 @@ proc(
   TypeCheckState ptr.mut : state
 -> BlockInfo ) =>: closeBlock
   state [] .program .errors =:: errors
-  state [] .openBlocks .length 0:iSize == if ## XXX? check for underflow wrt. reset-state
+  state [] .openBlocks .length 0:iSize == if ## TODO? check for underflow wrt. block-offset
     BlockInfo .Unknown return
   end
   state [] .openBlocks .length 1:iSize - =:: newLength
@@ -1064,7 +1062,7 @@ proc(
     end ..drop
   end
   ## TypeInfo
-    ConstValue .None ## XXX merge constants
+    ConstValue .None ## TODO? merge constants
     mergedType
     false
     OP_UNLINKED
@@ -3260,7 +3258,7 @@ proc(
               op .pos errors appendError
             end
           continue.opLoop
-          LABEL PROCEDURE_BUNDLE case ## XXX? allow type-variables during type-check phase
+          LABEL PROCEDURE_BUNDLE case
             "unexpected declaration of identifier " sb.copyPtr
               idInfo nameContext sb.appendIdInfo
             op .pos errors appendError
@@ -3696,7 +3694,7 @@ proc(
             op .pos errors appendError
           end
         end
-        ## XXX try cast constant on stack
+        ## TODO? try to bit-cast constants (? only conversion fN <-> iN)
         op .val .BitCast ? if
           ConstValue .None
         else
@@ -4058,7 +4056,7 @@ proc(
                   state .stack branchTree.startBranch
                 BranchPoint new list.append
               orBranches =[]
-              ## XXX? extract to procedure?
+              ## TODO? extract to procedure?
               orBranches [] .length branchTree.NodeId list.create
                 orBranches [] for .node list.append end
               =:: branchPoints
@@ -4588,7 +4586,7 @@ proc(
                   state .stack branchTree.startBranch
                 BranchPoint new list.append
               doBranches =[]
-              ## XXX? extract to procedure?
+              ## TODO? extract to procedure?
               doBranches [] .length branchTree.NodeId list.create
                 doBranches [] for .node list.append end
               =:: branchPoints
@@ -4782,7 +4780,7 @@ proc(
                 op .pos errors appendError
                 continue.opLoop
               end
-              ## XXX? warn for incompatible flags
+              ## TODO? warn for incompatible flags
               idData [] .constValue .ProcedureBundle .else
                 "expected proc-bundle constant":s op ..line state internalError ..unreachable
               end
@@ -4877,7 +4875,7 @@ proc(
         blockInfo .blockType switch
           TYPE_TUPLE TYPE_STRUCT TYPE_ENUM TYPE_UNION TYPE_UNTAGGED_UNION TYPE_SETTYPE
           TYPE_PROC_IN TYPE_CPROC_IN TYPE_PROC_ARROW TYPE_COMPOSITE INITIALIZER case
-            ## XXX allow dynamic initializer blocks
+            ## TODO allow dynamic initializer blocks
             "could not evaluate " sb.copyPtr
               blockInfo .blockType sb.appendBlockType
               " block" sb.appendS
@@ -5008,15 +5006,9 @@ proc(
                     sb.appendType
                     "\nmissing labels:\n" sb.appendS
                     0:i64 while $ eltCount i64 cast.u < do =:: i
-                      false =:: mut:  match
-                      ## XXX? use slice.find
-                      labels for =:: label
-                        label .value .Int .and i == if
-                          true match=
-                          break
-                        end
-                      end
-                      match ! if
+                      labels list.asSlice i ( LabelData : label i64 : shadow: i -> bool ) =>
+                        label .value .Int .and i == end
+                      end slice.containsEq2 ! if
                         " - \"":s sb.appendStr
                         rawSwitchType
                           i i32 cast.u
@@ -5113,8 +5105,12 @@ proc(
               continue.opLoop
             end =:: whileBlock
             whileBlock .breakBranches =:: breakBranches
-            ## XXX? avoid allocation if it si not neccessary
-            breakBranches .length branchTree.NodeId list.create
+            breakBranches .length 2 iSize.max $ 4 u<= if ..drop
+              branchTree.NodeId 4 array : mut: buffer
+              buffer@ list.wrapBuffer
+            else
+              branchTree.NodeId list.create
+            end
               whileBlock .branchRoot .node list.append
               state .stack branchTree.startBranch list.append
             =:: mut: branchPoints
@@ -5315,7 +5311,7 @@ proc(
             op .pos [] sb.appendPos
             '\n' sb.appendC
             state [] .initializationStack .length i32 cast.u 1 - while
-              $ 0 > ## XXX? only go until position in last reset
+              $ 0 > ## TODO? only go up until position in last state-reset
             do =:: i
               "  caused by initializing code at " sb.appendS
               state [] .initializationStack i [] [] sb.appendPos
@@ -5498,7 +5494,7 @@ proc(
       TypeInfo .case =:: typeInfo
         op .pos state popType =:: valType
         valType typeContext types.containsGeneric if
-          break ## XXX? support var-size arrays
+          break ## TODO? support var-size arrays
         end
         ## pushConstant
           ## computeTypeInfo
@@ -5925,7 +5921,7 @@ proc(
   ##  go through called procedures in breadth first order
   missingProcsOffset while $ state [] .missingProcs .length u< do =:: i
     state [] .missingProcs i [] =:: nextProc
-    ## XXX? remember/restore complete expansion stack
+    ## TODO? remember/restore complete expansion stack
     ## typeCheckProcedure
       nextProc .procId
       ProcCheckType .SKIP_UNDEFINED

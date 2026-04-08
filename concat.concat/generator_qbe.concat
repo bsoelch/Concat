@@ -660,7 +660,7 @@ namespace: sb
       ")" sb.appendS
     return
   end
-  ## XXX? merge code for string and array constants
+  ## TODO? merge code for string and array constants
   proc(
     type : auto: T
     stringBuilder : sb
@@ -970,7 +970,7 @@ namespace: sb
           break
         Union .case =:: unionValue
           isGlobal ! if
-            break ## XXX? support small unions as local constants
+            break ## TODO? support small unions as local constants
           end
           t typeContext types.isUnion ! if
             "unsupported type for union constant: " sb.copyPtr
@@ -2702,7 +2702,7 @@ proc(
       end
     end
   =:: signType
-  ## XXX? better cType <-> type conversion
+  ## TODO? better cType <-> type conversion
   ## TODO update sign type when casting from/to  cType/intLiteral
   src0 typeContext types.unwrapNamed
     typeContext types.unwrapRefinement
@@ -2768,7 +2768,7 @@ proc(
       '\n' sb.appendC
     return ## same internal representation -> cast is no-op
   end
-  ## XXX? sign type for cast int <-> ptr
+  ## TODO? sign type for cast int <-> ptr
   src typeContext types.isInt target typeContext types.isPointer & if
     ## src -> I_SIZE ~ ptr
     sb
@@ -3143,7 +3143,7 @@ proc(
             '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case
-          break ## XXX error message
+          break ## TODO error message
       end
       break
     ProcPtr .case =:: procId
@@ -3487,7 +3487,7 @@ proc(
           castVal
         else .Cast! ._if =:: castVal
           CastType .CAST!
-          SignType .NONE ## XXX? use sign information for forced cast
+          SignType .NONE ## TODO? use sign information for forced cast
           castVal
         else ..unreachable end
         0 ## no offset
@@ -3932,9 +3932,9 @@ proc(
       end
       break
     CompilerInfo case
-      sb return ## XXX? print compiler info
+      sb return ## TODO? print compiler info
     Copy Error case
-      break ## XXX error message
+      break ## TODO error message
   end
   "unable to compile operation " sb.copyPtr
     op [] prog sb.appendOp

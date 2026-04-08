@@ -102,7 +102,7 @@ end
 
 i64 =:: ConstReferenceId
 
-## XXX? do I need a seperate type for tmp-vars
+## TODO? does tmp-var need seperate type
 enum( ARGUMENT LOCAL_VAR TMP_VAR ) =:: export: VariableType
 struct(
   NameId : nameId
@@ -1207,7 +1207,6 @@ namespace: sb
         " ) : " sb.appendS
         procId ProcId.getProcInfo =:: procInfo
         procInfo [] .nameId nameContext sb.appendIdentifierPath
-        ## XXX? print auto args
       break
       BuiltIn .case =:: builtInId
         "built-in ( " sb.appendS

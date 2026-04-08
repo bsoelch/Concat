@@ -128,7 +128,7 @@ proc(
     id.FLAG_MUTABLE | IdentifierFlag cast
   end =:: flags
   ## newIdentifier
-    flags ## XXX? special flag for tmp vars
+    flags ## TODO? special flag for tmp vars
     pos
     nameContext
   id.newTmpIdentifier =:: nameId

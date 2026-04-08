@@ -33,7 +33,7 @@ struct(
   ValueInfo  list : stackInfo
   iSize list : stackOffsets
   MixedArenaAllocator : localMemory
-  ## XXX globalMemory (?heapMemory)
+  ## TODO globalMemory (?heapMemory)
   Type list : typeBuffer
   ConstValue list : valueBuffer
   NameId list : nameBuffer
@@ -390,8 +390,8 @@ namespace: interpreter
     sizeValue switch
       Fixed .case ConstValue .Int false return
       DynamicArray case
-        ConstValue .None true return ## XXX? support generic array size
-      Unknown case ## XXX? error message for unknown size
+        ConstValue .None true return ## TODO? support generic array size
+      Unknown case ## TODO error message for unknown size
         ConstValue .None true return
     end
   end
@@ -439,7 +439,7 @@ namespace: interpreter
         return
       else ..drop
         "unsupported array-size type: " sb.copyPtr
-          ## XXX? print array-size type name
+          ## TODO? print array-size type name
         pos errors appendError
         Type .Undefined ConstValue .None true return
       end
@@ -477,7 +477,7 @@ namespace: interpreter
       srcType typeContext types.isSignedInt ! and
       targetType typeContext types.isUnsignedInt or targetType typeContext types.isChar
     end =:: unsignedCast
-    ## XXX ? correctly handle 32-bit floats at compile time
+    ## TODO? correctly handle 32-bit floats at compile time
     oldValue .Float .and =:: floatVal targetType typeContext types.isInt if
       targetType typeContext types.unwrapNamed types.isPrimitive if
         targetType typeContext types.primitiveValue switch
@@ -501,7 +501,7 @@ namespace: interpreter
         floatVal i64 cast.s ConstValue .Int return
       end
     end
-    ## XXX? zero/sign extend small types
+    ## TODO? zero/sign extend small types
     oldValue .Int .if =:: mut: intVal
       srcType typeContext types.unwrapNamed types.isPrimitive if
         srcType typeContext types.primitiveValue switch
@@ -511,7 +511,7 @@ namespace: interpreter
             unsignedCast if i64 cast.u else i64 cast.s end intVal= break
           I32 case intVal i32 cast
             unsignedCast if i64 cast.u else i64 cast.s end intVal= break
-          F16 F32 F64 case break ## XXX? handle precission loss due to representing int as float
+          F16 F32 F64 case break ## TODO? handle precission loss due to representing int as float
           I64 case break ## no change neccessary
           BOOL TYPE case ..unreachable
         end
@@ -541,7 +541,7 @@ namespace: interpreter
     idContext .typeContext =:: typeContext
     false =:: mut: isPtr
       ## TODO! use correct base mutablity
-    true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
+    true =:: mut: eltMutable ## TODO? is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
       $ typeContext types.getPointerBaseType .if
         >$ typeContext types.isMutable eltMutable & eltMutable=
@@ -613,7 +613,7 @@ namespace: interpreter
     idContext .typeContext =:: typeContext
     false =:: mut: isPtr
       ## TODO! use correct base mutablity
-    true =:: mut: eltMutable ## XXX is it possible to ignore pointer mutability in interpreter?
+    true =:: mut: eltMutable ## TODO? is it possible to ignore pointer mutability in interpreter?
     valInfo .valueType
       $ typeContext types.getPointerBaseType .if
         >$ typeContext types.isMutable eltMutable & eltMutable=
@@ -625,7 +625,7 @@ namespace: interpreter
       end
     =:: eltType
     eltMutable ! if
-      ## XXX? better message
+      ## TODO? better message
       "cannot write to immutable structure element" sb.copyPtr
       pos errors appendError
       value valInfo context unpopValue
@@ -651,7 +651,7 @@ namespace: interpreter
     value
       .LocalValue .if ConstValue ptr.mut cast [] end
     =:: containerValue
-    ## XXX? support (Local)Array8 ...  Array64
+    ## TODO? support (Local)Array8 ...  Array64
     containerValue .Array .if =:: arrayValue
       context [] .localMemory
         arrayValue mixedArena.copySlice =:: localAddress
@@ -765,7 +765,7 @@ namespace: interpreter
     InterpreterContext ptr.mut : context
   -> ConstValue ) =>: localCopy
     context [] .program .idContext .typeContext =:: typeContext
-    valType typeContext types.isPointer if ## XXX? merge with default branch
+    valType typeContext types.isPointer if ## TODO? merge with default branch
       wrapPointers ! if
         value return
       end
@@ -862,7 +862,7 @@ namespace: interpreter
     context [] .program =:: program
     program .errors =:: errors
     program .idContext .typeContext =:: typeContext
-    ## XXX? better way to detect multi-value types
+    ## TODO? better way to detect multi-value types
     dataType typeContext types.isTuple if
       dataType typeContext types.compositeEltCount =:: eltCount
       context [] .localMemory
@@ -911,7 +911,7 @@ namespace: interpreter
             context .localMemory=
             0:i64 localSlice slice.fill
             localSlice LocalSlice64 cast ConstValue .LocalArray64 return
-          F16 F32 F64 TYPE case break ## XXX? store float arrays in Array32/Array64
+          F16 F32 F64 TYPE case break ## TODO? store float arrays in Array32/Array64
         end
       end
       context [] .localMemory
@@ -945,9 +945,9 @@ namespace: interpreter
     src switch
       Char case src .Char i64 cast.u break
       Int case src .Int break
-      ## XXX? support generic args
-      ## XXX? support floats?
-      ## XXX? support primitive values
+      ## TODO? support generic args
+      ## TODO? support floats?
+      ## TODO? support primitive values
       default false return
     end =:: intValue
     intValue T cast arrayData 0 slice.set
@@ -1072,7 +1072,7 @@ proc(
       context pushValue
       EvalResult .Ok return
     Return case
-      ## XXX? check if in procedure
+      ## TODO? check if in procedure
       EvalResult .Return return
     LocalLabel case EvalResult .Ok return ## ignore labels
     LocalJump .case =:: jumpInfo
@@ -1129,7 +1129,6 @@ proc(
         GLOBAL_VAR TYPE case
           break
         LOCAL_VAR TMP_VAR case
-          ## XXX? common procedure for resolving of auto-types
           op [] .dataType =:: dataType
           context [] .localVariables .else
             "missing local variables " sb.copyPtr
@@ -1219,7 +1218,7 @@ proc(
       idInfo .nameId =:: nameId
       idInfo .idType switch
         LOCAL_VAR ARGUMENT TMP_VAR case
-          ## XXX? extract common code with getId to procedure
+          ## TODO? extract common code with getId to procedure
           context [] .localVariables .else
             "missing local variables " sb.copyPtr
             op [] .pos errors appendError
@@ -1824,7 +1823,7 @@ namespace: interpreter
       pos context popValue ! "hasValue" assert =:: targetValue =:: targetInfo
       pos context popValue ! "hasValue" assert =:: srcValue =:: srcInfo
       pos context popValue ! "hasValue" assert =:: lenValue =:: lenInfo
-      lenValue .Int .else ..drop ## XXX? support GenericArg as length
+      lenValue .Int .else ..drop ## TODO? support GenericArg as length
         "unexpected argument for memcpy, expected Integer got: " sb.copyPtr
           lenValue typeContext sb.appendConstant
         pos errors appendError
@@ -1939,7 +1938,7 @@ namespace: interpreter
     procId ProcId.getProcInfo =:: procData
     procData [] .procType =:: procType
     procType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
-    0:iSize ## XXX? is there a better way to get number of non-auto static args
+    0:iSize ## TODO? is there a better way to get number of non-auto static args
       args .length i32 cast.u for =:: i
         args i [] typeContext types.isType or
             procType i typeContext types.getProcArgName .and
@@ -1983,7 +1982,7 @@ namespace: interpreter
     context [] .localMemory
       NameId Constant hashMap mixedArena.alloc =:: newVariables
     context .localMemory=
-    ## XXX? allocate lookup table in localMemory
+    ## TODO? allocate lookup table in localMemory
     NameId.hash@ NameId.eq@ 256 Constant map.create newVariables =[]
     newVariables optional.wrap context .localVariables=
     ## process procedure arguments
@@ -2122,7 +2121,7 @@ namespace: interpreter
         valType typeContext types.isPointer ! if
           =:: localVal
           ## unwrap local values
-          localVal switch ## XXX? handle nested local values
+          localVal switch ## TODO? handle nested local values
             LocalValue .case ConstValue ptr.mut cast [] break
             LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
               localVal valType context .localMemory program copyLocalArray
