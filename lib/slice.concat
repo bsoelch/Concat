@@ -335,6 +335,15 @@ namespace: slice
   -> bool ) =>: export: containsEq
     elts elt fEq indexOfEq ? return
   end
+  proc(
+    type : auto: T
+    type : auto: K
+    T slice : elts
+    K : key
+    ( T K -> bool ) ptr : fEq
+  -> bool ) =>: export: containsEq2
+    elts key fEq indexOfEq2 ? return
+  end
   union(
     iSize : Match
     iSize : Missing
