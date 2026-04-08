@@ -224,6 +224,7 @@ proc( -> ProgramContext ) =>: parseAndTypeCheck
   srcPath libPath basePath dumpPhases ? parseProgram
     =:: mut: typeCheckState
   =:: mut: prog
+  sb.empty srcPath= ## clear source-path to avoid accidental double free
   prog@ typeCheckState@ updateTypeCheckerPointers
   dumpPhases DumpPhases.PARSER & ? if
     tmpPath sb.free
@@ -244,12 +245,12 @@ proc( -> ProgramContext ) =>: parseAndTypeCheck
   prog return
 end
 proc( -> ) =>: main ## TODO check return value of fopen
+  parseArgs
   verbose if
     "compiling ":s io.print
     srcPath sb.asStr io.println
     "-----------------------------------------":s io.println
   end
-  parseArgs
   ## TODO cleanup program memory after compilation
   parseAndTypeCheck =:: mut: prog
   dumpPhases DumpPhases.TYPE_CHECKER & ? if
@@ -408,7 +409,6 @@ proc( -> ) =>: main ## TODO check return value of fopen
   end
   outPath sb.free ..drop
   tmpPath sb.free ..drop
-  srcPath sb.free ..drop
   targetPath sb.free ..drop
   retCode sys.exit
 end

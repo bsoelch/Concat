@@ -844,6 +844,7 @@ proc( ProgramContext ptr.mut -> ) =>: export: freeUnusedProcs
 end
 proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .idContext id.freeIdentifierContext >$ .idContext=
+  $ .progFiles for .fileName sb.free ..drop end
   $ .progFiles list.free >$ .progFiles=
   $ .procedures for ProcId.getProcInfo [] freeProcedure end
   $ .procedures list.free >$ .procedures=
