@@ -9,7 +9,6 @@ type : export: ProcFlags
 import "builtIns.concat"
 using std.literals.
 
-## TODO: split into multiple files
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
 struct( i32 : count i32 : depth ) =:: StackTypesInfo
@@ -761,7 +760,6 @@ struct(
   ProgramFile list : progFiles
   ProcId list : procedures
   ProcedureBundle list : procBundles
-  Type list : autoTypes
   PreOperation list : globalOps
   MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
   LocalLabelId BackJumpInfo hashMap : backJumpInfo
@@ -800,7 +798,6 @@ proc(
     16  ProgramFile     list.create
     64  ProcId          list.create
     64  ProcedureBundle list.create
-    32  Type            list.create
     PreOperation list.empty
     4096                mixedArena.create
     LocalLabelId.skewHash@ LocalLabelId.eq@ 1024 BackJumpInfo map.create
@@ -846,7 +843,6 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .procedures for ProcId.getProcInfo [] freeProcedure end
   $ .procedures list.free >$ .procedures=
   $ .procBundles list.free >$ .procBundles=
-  $ .autoTypes list.free >$ .autoTypes=
   $ .globalOps list.free >$ .globalOps=
   $ .programMemory mixedArena.free >$ .programMemory=
   $ .switchData list.free >$ .switchData=
