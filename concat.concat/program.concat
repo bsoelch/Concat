@@ -19,7 +19,6 @@ enum( SIGNED NONE UNSIGNED ) =:: export: SignType
 struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
-iSize =:: export: SwitchId ## TODO? make pointer to switchData
 i64 =:: export: LocalLabelId
 namespace: LocalLabelId
   proc( LocalLabelId LocalLabelId -> bool ) : export: alias: eq i64.eq
@@ -56,6 +55,48 @@ struct(
 namespace: BackJumpInfo
   proc( i32 -> BackJumpInfo ) =>: export: new
     BackJumpInfo new
+  end
+end
+
+struct( ConstValue : value i32 : caseId FilePosition ptr : pos ) =:: export: LabelData
+proc( ConstValue : label -> i64 ) =>: export: switchLabelAsInt
+  label .Int .if
+    return
+  else .Char ._if
+    i64 cast.u return
+  else ..drop end
+  ## TODO? more usefull error message?
+  "unexpected constant-type in switch statement" ..panic
+end
+proc(
+  LabelData : a
+  LabelData : b
+  ProgramContext ptr : program ## forward compatability
+-> i32 ) =>: export: switchLabelCmp
+  a .value switchLabelAsInt =:: aInt
+  b .value switchLabelAsInt =:: bInt
+  aInt bInt == if
+    0 return
+  end
+  aInt bInt < if -1 else 1 end return
+end
+
+struct(
+  LabelData list : switchLabels
+  LocalLabelId slice : branchLabels
+  LocalLabelId : defaultLabel
+  LocalLabelId : endLabel
+  JumpDistance slice : caseJumpDistances
+  JumpDistance : defaultJumpDistance
+  Type : switchType
+) =:: export: SwitchData
+SwitchData ptr.mut =:: export: SwitchId
+namespace: SwitchId
+  proc( SwitchId SwitchId -> bool ) =>: export: eq
+    ptr.eq
+  end
+  proc( SwitchId -> SwitchData ptr.mut ) =>: export: getSwitchData
+    SwitchData ptr.mut cast
   end
 end
 
@@ -608,37 +649,6 @@ struct(
          id.ScopeId : fileScope
 ) =:: export: ProgramFile
 
-struct( ConstValue : value i32 : caseId FilePosition ptr : pos ) =:: export: LabelData
-proc( ConstValue : label -> i64 ) =>: export: switchLabelAsInt
-  label .Int .if
-    return
-  else .Char ._if
-    i64 cast.u return
-  else ..drop end
-  ## TODO? more usefull error message?
-  "unexpected constant-type in switch statement" ..panic
-end
-proc(
-  LabelData : a
-  LabelData : b
-  ProgramContext ptr : program ## forward compatability
--> i32 ) =>: export: switchLabelCmp
-  a .value switchLabelAsInt =:: aInt
-  b .value switchLabelAsInt =:: bInt
-  aInt bInt == if
-    0 return
-  end
-  aInt bInt < if -1 else 1 end return
-end
-struct(
-  LabelData list : switchLabels
-  LocalLabelId slice : branchLabels
-  LocalLabelId : defaultLabel
-  LocalLabelId : endLabel
-  JumpDistance slice : caseJumpDistances
-  JumpDistance : defaultJumpDistance
-  Type : switchType
-) =:: export: SwitchData
 
 struct(
   ProcId list : procedures
@@ -757,7 +767,6 @@ struct(
   MixedArenaAllocator : programMemory ## TODO? merge non-linear buffers into Allocator
   LocalLabelId BackJumpInfo hashMap : backJumpInfo
   LocalLabelId : nextLabelId
-  SwitchData list : switchData
   NameId optional : mainId
   ProcId optional : mainProcId
   TypedConstant list : constantReferences
@@ -792,7 +801,6 @@ proc(
     4096                mixedArena.create
     LocalLabelId.skewHash@ LocalLabelId.eq@ 1024 BackJumpInfo map.create
     0 LocalLabelId cast
-    128 SwitchData      list.create
     NameId optional.empty ## main NameId
     ProcId optional.empty ## main ProcId
     32  TypedConstant   list.create
@@ -833,7 +841,6 @@ proc( ProgramContext -> ProgramContext ) =>: export: freeProgramContext
   $ .procBundles list.free >$ .procBundles=
   $ .globalOps list.free >$ .globalOps=
   $ .programMemory mixedArena.free >$ .programMemory=
-  $ .switchData list.free >$ .switchData=
   $ .constantReferences list.free >$ .constantReferences=
   $ .nameBuffer list.free >$ .nameBuffer=
   $ .tmpString sb.free >$ .tmpString=
@@ -1164,9 +1171,13 @@ namespace: sb
         constData [] .value typeContext sb.appendConstant
       break
       Switch .case =:: switchId
-        "Switch: (":s sb.appendStr
-          switchId i64 cast sb.appendI
-        ')' sb.appendC
+        "switch: ( ":s sb.appendStr
+          switchId SwitchId.getSwitchData =:: switchData
+          switchData [] .branchLabels for
+            i64 cast.u sb.appendI ' ' sb.appendC
+          end
+          switchData [] .defaultLabel i64 cast.u sb.appendI
+        " )":s sb.appendStr
       break
       EndProc case
         "End Procedure":s sb.appendStr

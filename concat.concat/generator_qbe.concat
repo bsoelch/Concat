@@ -3760,9 +3760,7 @@ proc(
       end
     break
     Switch .case =:: switchId
-      prog [] .switchData
-        switchId i64 cast @[]
-      =:: switchData
+      switchId SwitchId.getSwitchData =:: switchData
       sb
         op [] .pos sb.appendPosQBE
         ## appendSwitchTable

@@ -1106,9 +1106,7 @@ proc(
       end
         $ .Union ? if constUnionTag end
       =:: switchValue ..drop
-      program [] .switchData
-        switchId i64 cast.u
-      @[] =:: switchData
+      switchId SwitchId.getSwitchData =:: switchData
       switchData [] .switchType =:: switchType
       switchData [] .switchLabels .length for =:: i
         switchData [] .switchLabels i @[] =:: label

@@ -407,7 +407,7 @@ proc(
       end
     break
     Switch .case =:: switchId
-      program [] .switchData switchId iSize cast.u @[] =:: switchData
+      switchId SwitchId.getSwitchData =:: switchData
       context [] .reachable "switch-start is reachable" assert
       switchData [] .branchLabels for
         ops >$ true context mergeVariableUses

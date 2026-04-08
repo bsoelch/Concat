@@ -142,7 +142,7 @@ proc(
     state [] .compiledOps .length
     blockName
     16 LocalLabelId list.create
-    state [] .program program.nextLocalLabel
+    switchId SwitchId.getSwitchData [] .endLabel
     switchId
     srcVar
     true
@@ -878,7 +878,7 @@ proc(
   switchBlock [] .endLabel CompareType .NONE pos state localJump
   false state .reachable=
   ## breaking innermost switch block -> code is in label
-  state [] .openBlocks list.peek .and [] .Switch .and .switchId switchBlock [] .switchId == if
+  state [] .openBlocks list.peek .and [] .Switch .and .switchId switchBlock [] .switchId SwitchId.eq if
     switchBlock [] .inLabel ! if
       state [] .program .idContext id.closeScope ! "closing case-scope worked" assert
     end
@@ -2214,9 +2214,7 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
-  program [] .switchData
-    switchId i64 cast.u @[]
-  =:: switchData
+  switchId SwitchId.getSwitchData =:: switchData
   label0 .Int ? ! and label0 .Char ? ! if
     "unsupported constant in switch-label: " sb.copyPtr
       label0 typeContext sb.appendConstant
@@ -4258,7 +4256,17 @@ proc(
                 BuiltIn .GET_PTR
               op .pos opBuiltIn state appendOp ..drop
             end
-            program [] .switchData .length SwitchId cast =:: switchId
+            program [] .programMemory
+              ## SwitchData
+                16 LabelData list.create
+                LocalLabelId slice.empty
+                program program.nextLocalLabel
+                program program.nextLocalLabel
+                JumpDistance slice.empty
+                0:JumpDistance
+                labelType
+              SwitchData new mixedArena.copyValue SwitchId cast =:: switchId
+            program .programMemory=
             false 1 op .pos state clearReferences
             state .stack branchTree.startBranch =:: switchBranch
             ## newSwitchBlock
@@ -4270,20 +4278,7 @@ proc(
               switchId
               op .pos
               state
-            newSwitchBlock
-              $ .endLabel =:: endLabel
-            BlockInfo .Switch state openBlock
-            program [] .switchData
-              ## SwitchData
-                16 LabelData list.create
-                LocalLabelId slice.empty
-                program program.nextLocalLabel
-                endLabel
-                JumpDistance slice.empty
-                0:JumpDistance
-                labelType
-              SwitchData new list.append
-            program .switchData=
+            newSwitchBlock BlockInfo .Switch state openBlock
             idContext id.openScope
             labelType switchId op .pos opSwitch state appendOp ..drop
             false state .reachable=
@@ -4306,9 +4301,7 @@ proc(
             end
             idContext id.openScope
             false switchBlock .inLabel=
-            program [] .switchData
-              switchBlock [] .switchId iSize cast.u @[]
-            =:: switchData
+            switchBlock [] .switchId SwitchId.getSwitchData =:: switchData
             switchBlock [] .hasDefault if
               "unexpected " sb.copyPtr
                 blockType sb.appendBlockType
@@ -4439,7 +4432,7 @@ proc(
             false 0 op .pos state clearReferences
             breakBlock .Switch .if =:: switchBlock
               state peekBlock optional.unwrap =:: currentBlock
-              currentBlock [] .Switch .and .switchId switchBlock [] .switchId == if
+              currentBlock [] .Switch .and .switchId switchBlock [] .switchId SwitchId.eq if
                 ## top-level break statement
                 false switchBlock .allowBreak=
               end
@@ -4993,9 +4986,7 @@ proc(
             end =:: switchBlock
             ## TODO? check for stray labels
             switchBlock .caseBranches =:: mut: caseBranches
-            program [] .switchData
-              switchBlock .switchId iSize cast.u
-            @[] =:: switchData
+            switchBlock .switchId SwitchId.getSwitchData =:: switchData
             ## sort switch-labels
             switchData [] .switchLabels switchLabelCmp@ program list.sort
             switchBlock .hasDefault ! if
