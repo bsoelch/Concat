@@ -19,6 +19,7 @@ enum( SIGNED NONE UNSIGNED ) =:: export: SignType
 struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
+iSize =:: export: SwitchId
 i64 =:: export: LocalLabelId
 namespace: LocalLabelId
   proc( LocalLabelId LocalLabelId -> bool ) : export: alias: eq i64.eq
@@ -261,7 +262,7 @@ union(
             NopType : NOP
          ConstValue : Constant
    ConstReferenceId : ConstantReference
-            BlockId : Switch
+           SwitchId : Switch
      LocalLabelInfo : LocalLabel
       LocalJumpInfo : LocalJump
                   _ : EndProc
@@ -495,7 +496,7 @@ end
 proc( ConstValue : constValue Type : constType FilePosition ptr : pos -> Operation ) =>: export: opConst
   pos constValue OpValue .Constant constType Operation new return
 end
-proc( Type : labelType BlockId : switchId FilePosition ptr : pos -> Operation ) =>: export: opSwitch
+proc( Type : labelType SwitchId : switchId FilePosition ptr : pos -> Operation ) =>: export: opSwitch
   pos
     switchId OpValue .Switch
   labelType Operation new return
@@ -758,10 +759,7 @@ struct(
   LocalLabelId : nextLabelId
   SwitchData list : switchData
   NameId optional : mainId
-  i32 : whileCount
   ProcId optional : mainProcId
-  i32 : ifCount
-  i32 : andOrCount
   TypedConstant list : constantReferences
   NameId optional list : nameBuffer
   stringBuilder : tmpString
@@ -796,9 +794,7 @@ proc(
     0 LocalLabelId cast
     128 SwitchData      list.create
     NameId optional.empty ## main NameId
-    0
     ProcId optional.empty ## main ProcId
-    0 0
     32  TypedConstant   list.create
     32  NameId optional list.create
     256 sb.create

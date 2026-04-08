@@ -56,7 +56,6 @@ struct(
   LocalLabelId : elseLabel
   LocalLabelId : endLabel
   i32 : ifCastsOffset
-  BlockId : blockId
   IfBlockFlags : flags
   AndOrIfScope : andOrIfScope
 ) =:: IfBlockInfo
@@ -70,7 +69,7 @@ struct(
   NameId optional : blockName
   LocalLabelId list : caseLabels
   LocalLabelId : endLabel
-  BlockId : blockId
+  SwitchId : switchId
   IdentifierInfo optional : srcVar
   bool : inLabel
   bool : allowBreak
@@ -91,13 +90,11 @@ struct(
   LocalLabelId : endLabel
   i32 : mut: orCount
   i32 : mut: continueCount
-  BlockId : blockId
   bool : mut: hasFinally
 ) =:: WhileBlockInfo
 struct(
   BranchPoint list : mut: branches
   LocalLabelId : endLabel
-  BlockId : blockId
 ) =:: AndOrBlockInfo
 union(
   _ : Unknown
@@ -108,7 +105,7 @@ union(
   WhileBlockInfo : While
   AndOrBlockInfo : AndOr
 ) =:: BlockInfo
-proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition ptr : pos TypeCheckState ptr.mut : state -> BlockInfo ) =>: newIfBlock
+proc( branchTree.NodeId : branchRoot FilePosition ptr : pos TypeCheckState ptr.mut : state -> BlockInfo ) =>: newIfBlock
   ## IfBlockInfo
     branchRoot
     pos branchTree.EMPTY BranchPoint new ## dummy value
@@ -118,7 +115,6 @@ proc( branchTree.NodeId : branchRoot BlockId : blockId FilePosition ptr : pos Ty
     state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
     -1
-    blockId
     IfBlockFlags.none
     AndOrIfScope .None
   IfBlockInfo new
@@ -133,7 +129,7 @@ proc(
   branchTree.NodeId : branchRoot
   IdentifierInfo optional : srcVar
   NameId optional : blockName
-  BlockId : blockId
+  SwitchId : switchId
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> SwitchBlockInfo ) =>: newSwitchBlock
@@ -147,7 +143,7 @@ proc(
     blockName
     16 LocalLabelId list.create
     state [] .program program.nextLocalLabel
-    blockId
+    switchId
     srcVar
     true
     false
@@ -157,7 +153,6 @@ end
 proc(
   branchTree.NodeId : branchRoot
   NameId optional : blockName
-  BlockId : blockId
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> WhileBlockInfo ) =>: newWhileBlock
@@ -178,13 +173,11 @@ proc(
     state [] .program program.nextLocalLabel
     0:i32
     0:i32
-    blockId
     false
   WhileBlockInfo new return
 end
 proc(
   branchTree.NodeId : branchRoot
-  BlockId : blockId
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> AndOrBlockInfo ) =>: newAndOrBlock
@@ -194,7 +187,6 @@ proc(
       branchRoot
     BranchPoint new list.append
     state [] .program program.nextLocalLabel
-    blockId
   AndOrBlockInfo new return
 end
 "if-else" =:: IF_BLOCK_INFO_NAME
@@ -886,7 +878,7 @@ proc(
   switchBlock [] .endLabel CompareType .NONE pos state localJump
   false state .reachable=
   ## breaking innermost switch block -> code is in label
-  state [] .openBlocks list.peek .and [] .Switch .and .blockId switchBlock [] .blockId == if
+  state [] .openBlocks list.peek .and [] .Switch .and .switchId switchBlock [] .switchId == if
     switchBlock [] .inLabel ! if
       state [] .program .idContext id.closeScope ! "closing case-scope worked" assert
     end
@@ -2209,7 +2201,7 @@ proc(
 end
 
 proc(
-  BlockId : switchId
+  SwitchId : switchId
   Type : switchType
   ConstValue : label0
   iSize : caseCount
@@ -2290,7 +2282,7 @@ proc(
     "typeCheckSwitchLabel outside switch":s op [] .pos ..line internalErrorNoOp ..unreachable
   end =:: switchBlock
   switchBlock [] .switchType =:: switchType
-  switchBlock [] .blockId =:: switchId
+  switchBlock [] .switchId =:: switchId
   op [] .val .Block .if
     .blockType switch
       CASE DOT_CASE DEFAULT DOT_DEFAULT case
@@ -2422,17 +2414,6 @@ proc(
     op [] .pos
   state newSwitchLabel
   true return
-end
-
-proc( ProgramContext ptr.mut : program -> BlockId ) =>: nextIfId
-  program [] .ifCount
-    $ 1 + program .ifCount=
-  BlockId cast
-end
-proc( ProgramContext ptr.mut : program -> BlockId ) =>: nextAndOrId
-  program [] .andOrCount
-    $ 1 + program .andOrCount=
-  BlockId cast
 end
 
 proc(
@@ -3967,9 +3948,8 @@ proc(
             end
             false 1 op .pos state clearReferences
             state inIfCondition ! if
-              program nextIfId =:: blockId
               state .stack branchTree.startBranch =:: ifRoot
-              ifRoot blockId op .pos state newIfBlock =:: mut: ifBlock
+              ifRoot op .pos state newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
               idContext id.openScope
             end
@@ -4032,8 +4012,7 @@ proc(
                 continue.opLoop
               end
               state .stack branchTree.startBranch =:: ifBranch
-              program nextIfId =:: blockId
-              ifBranch blockId op .pos state newIfBlock =:: mut: ifBlock
+              ifBranch op .pos state newIfBlock =:: mut: ifBlock
               ifBlock state openBlock
               idContext id.openScope
             end
@@ -4279,7 +4258,7 @@ proc(
                 BuiltIn .GET_PTR
               op .pos opBuiltIn state appendOp ..drop
             end
-            program [] .switchData .length BlockId cast =:: switchId
+            program [] .switchData .length SwitchId cast =:: switchId
             false 1 op .pos state clearReferences
             state .stack branchTree.startBranch =:: switchBranch
             ## newSwitchBlock
@@ -4328,7 +4307,7 @@ proc(
             idContext id.openScope
             false switchBlock .inLabel=
             program [] .switchData
-              switchBlock [] .blockId i64 cast @[]
+              switchBlock [] .switchId iSize cast.u @[]
             =:: switchData
             switchBlock [] .hasDefault if
               "unexpected " sb.copyPtr
@@ -4460,7 +4439,7 @@ proc(
             false 0 op .pos state clearReferences
             breakBlock .Switch .if =:: switchBlock
               state peekBlock optional.unwrap =:: currentBlock
-              currentBlock [] .Switch .and .blockId switchBlock [] .blockId == if
+              currentBlock [] .Switch .and .switchId switchBlock [] .switchId == if
                 ## top-level break statement
                 false switchBlock .allowBreak=
               end
@@ -4518,14 +4497,9 @@ proc(
             end
             true 0 op .pos state clearReferences
             state .stack branchTree.startBranch =:: whileBranch
-            program [] .whileCount
-              $ BlockId cast =:: whileId
-              1 +
-            program .whileCount=
             ## newWhileBlock
               whileBranch
               blockInfo .blockName
-              whileId
               op .pos
               state
             newWhileBlock
@@ -4740,16 +4714,13 @@ proc(
                   state .stack branchTree.startBranch
                 BranchPoint new list.append
               branches =[]
-              andOrBlock [] .blockId
             else
-              program nextAndOrId =:: blockId
               state .stack branchTree.startBranch =:: rootBranch
-              rootBranch blockId op .pos state newAndOrBlock
+              rootBranch op .pos state newAndOrBlock
                 $ .endLabel LocalLabelType .HINT_START op .pos state localLabel
               BlockInfo .AndOr state openBlock
               idContext id.openScope
-              blockId
-            end =:: blockId
+            end
             ## requireTypes
               types.primitive.BOOL@ slice.wrap
               "and/or-condition":s
@@ -5020,10 +4991,10 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end =:: switchBlock
-            ## XXX? check for stray labels
+            ## TODO? check for stray labels
             switchBlock .caseBranches =:: mut: caseBranches
             program [] .switchData
-              switchBlock .blockId i64 cast
+              switchBlock .switchId iSize cast.u
             @[] =:: switchData
             ## sort switch-labels
             switchData [] .switchLabels switchLabelCmp@ program list.sort
@@ -5192,7 +5163,6 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end =:: depth
-            whileBlock .blockId =:: whileId
             ## remember number of changed stack values ( necessary for merging values in compiled code )
             program .backJumpInfo
               whileBlock .whileLabel
