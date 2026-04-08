@@ -8,6 +8,7 @@
 *.tokens.*
 tmp/*
 build/*
+featureMap/*
 *.out
 syntaxHighlighting/update.sh
 concat

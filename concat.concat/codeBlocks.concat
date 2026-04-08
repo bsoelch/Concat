@@ -45,7 +45,6 @@ end
 overload: ? JumpDistance.toBool end
 struct(
   NameId optional : blockName
-  BlockId : blockId
   JumpDistance : jumpDistance
   BlockType : blockType
 ) =:: export: BlockData

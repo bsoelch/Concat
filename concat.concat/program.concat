@@ -325,7 +325,6 @@ end
 proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export: preOpBlock
   pos
     NameId optional.empty
-      -1:BlockId
       0:JumpDistance
       blockType
     BlockData new PreOpValue .Block
@@ -334,7 +333,6 @@ end
 proc( BlockType : blockType NameId optional : nameId FilePosition ptr : pos -> PreOperation ) =>: export: preOpNamedBlock
   pos
     nameId
-      -1:BlockId
       0:JumpDistance
       blockType
     BlockData new PreOpValue .Block
@@ -343,7 +341,6 @@ end
 proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export: preOpEndBlock
   pos
     NameId optional.empty
-      -1:BlockId
       0:JumpDistance
       blockType
     BlockData new PreOpValue .BlockEnd
@@ -996,18 +993,14 @@ namespace: sb
       Block .case =:: blockData
         "Block: ":s sb.appendStr
         blockData .blockType sb.appendBlockType
-        " (":s sb.appendStr
-          blockData .blockId i64 cast sb.appendI
-          " ->":s sb.appendStr
+        " ( ->":s sb.appendStr
           blockData .jumpDistance i64 cast sb.appendI
         ')' sb.appendC
       break
       BlockEnd .case =:: blockData
         "End: ":s sb.appendStr
         blockData .blockType sb.appendBlockType
-        " (":s sb.appendStr
-          blockData .blockId i64 cast sb.appendI
-          " ->":s sb.appendStr
+        " ( ->":s sb.appendStr
           blockData .jumpDistance i64 cast sb.appendI
         ')' sb.appendC
       break
