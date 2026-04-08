@@ -35,8 +35,6 @@ enum(
   TYPE_SETTYPE
   NAMESPACE OVERLOAD
 ) =:: export: BlockType
-i32 =:: export: BlockId
-( char8 ptr.raw iSize -> BlockId ) : static: export: alias: :BlockId ..builtIn.parse.i32
 i32 =:: export: JumpDistance
 ( char8 ptr.raw iSize -> JumpDistance ) : static: export: alias: :JumpDistance ..builtIn.parse.i32
 namespace: JumpDistance

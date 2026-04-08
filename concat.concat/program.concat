@@ -19,7 +19,7 @@ enum( SIGNED NONE UNSIGNED ) =:: export: SignType
 struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
-iSize =:: export: SwitchId
+iSize =:: export: SwitchId ## TODO? make pointer to switchData
 i64 =:: export: LocalLabelId
 namespace: LocalLabelId
   proc( LocalLabelId LocalLabelId -> bool ) : export: alias: eq i64.eq
