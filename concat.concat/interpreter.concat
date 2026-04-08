@@ -1617,25 +1617,6 @@ proc(
         INFO case appendInfo break
       end
       EvalResult .Ok return
-    RawValue case
-      op [] .pos context popValue if ..drop.2
-        EvalResult .Error return
-      end =:: value =:: valInfo
-      valInfo .valueType typeContext types.getUnionElementType .else
-      valInfo .valueType typeContext types.isTaggedUnion _if
-        ## TODO: implement ..raw for unions
-        "unimplemented: ..raw for unions" ..panic
-      else
-        value valInfo context unpopValue
-        EvalResult .Error return
-      end =:: newType
-      ## pushValue
-        value
-        newType
-        op [] .pos
-        context
-      pushValue
-      EvalResult .Ok return
     BuiltIn .case =:: builtIn
       op [] .dataType builtIn op [] .pos context tryEvaluateBuiltIn wrapResult return
     StackMod .case =:: stackMod

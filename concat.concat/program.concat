@@ -282,7 +282,6 @@ union(
              ProcId : Call
             BuiltIn : shadow: BuiltIn
                   _ : CallPtr
-                  _ : RawValue
        AutoCastInfo : AutoCast
            CastInfo : Cast
                Type : Cast!
@@ -579,9 +578,6 @@ proc( i32 StackModType FilePosition ptr : pos -> Operation ) =>: export: opStack
 end
 proc( Type : procType FilePosition ptr : pos -> Operation ) =>: export: opCallPtr
   pos OpValue .CallPtr procType Operation new return
-end
-proc( Type : valType FilePosition ptr : pos -> Operation ) =>: export: opRawValue
-  pos OpValue .RawValue valType Operation new return
 end
 proc( Type : t FilePosition ptr : pos -> Operation ) =>: export: opCopy
   pos OpValue .Copy t Operation new return
@@ -1332,11 +1328,6 @@ namespace: sb
       break
       CallPtr case
         "call pointer ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " )" sb.appendS
-      break
-      RawValue case
-        "raw ( " sb.appendS
         op .dataType typeContext sb.appendType
         " )" sb.appendS
       break

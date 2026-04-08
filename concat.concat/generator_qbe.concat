@@ -3397,39 +3397,6 @@ proc(
           '\n' sb.appendC
         end
       return
-    RawValue case
-      op [] .dataType typeContext types.isUnion or op [] .dataType typeContext types.isPointer if
-        sb return
-      else op [] .dataType typeContext types.getUnionElementType ._if =:: eltType
-        sb
-          eltType context referenceOnly if
-            return
-          end
-          ## TODO: extract unwrapping of references to procedure
-          eltType context toValType =:: valType
-          op [] .pos context popValue =:: srcId
-          op [] .pos sb.appendPosQBE
-          "%s" sb.appendS
-          valType context pushValue sb.appendI
-          " =" sb.appendS
-          valType sb.appendValTypeQBE
-          " load" sb.appendS
-          eltType
-            StorageType .LOAD
-            op [] .pos
-            context
-          sb.appendTypeNameQBE
-          " %s" sb.appendS
-          srcId sb.appendI
-          '\n' sb.appendC
-        return
-      end
-      "unexpected argument for raw-value: " sb.copyPtr
-        op [] .dataType
-          typeContext
-        sb.appendType
-      op [] .pos errors appendError
-      sb return
     New NewUnion NewReference NewUnionReference case
       op [] .val .NewReference ? or op [] .val .NewUnionReference ? end =:: hasReference
       op [] .val .NewUnion ? or op [] .val .NewUnionReference ? end =:: isUnion

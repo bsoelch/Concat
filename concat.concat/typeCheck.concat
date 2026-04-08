@@ -5420,28 +5420,41 @@ proc(
         valType typeContext types.getPointerBaseType
           $ ? =:: isPointer
         .else valType end =:: baseType
+        ## TODO: constant folding
         baseType types.isUnionElement if
           state .stack branchTree.pop ..drop
-          baseType typeContext types.getUnionElementType .else
+          baseType typeContext types.getUnionElementUnion .else
             "missing union element type":s op ..line state internalError ..unreachable
-          end
+          end $ typeContext types.asRawUnion .else
+              "expected tagged union":s op ..line state internalError ..unreachable
+            end =:: baseUnionType
+            isPointer if valType typeContext types.isMutable typeContext types.getAddressType end
+          =:: unionType
+          valType unionType SignType .UNSIGNED op .pos opCast state appendOp ..drop
+          unionType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
+          baseType typeContext types.getUnionElementIndex =:: eltIndex
+          baseUnionType eltIndex typeContext types.compositeGetElement optional.unwrap
+            isPointer if valType typeContext types.isMutable typeContext types.getAddressType end
+            ConstValue .None
+            baseUnionType
+              isPointer if valType typeContext types.isMutable typeContext types.getAddressType end
+            eltIndex op .pos opGetElement
+          state pushValue
         else baseType typeContext types.isUnion _if
           state .stack branchTree.pop ..drop
           baseType typeContext types.asRawUnion .else
             "union-type .asRawUnion should return value":s op ..line state internalError ..unreachable
           end
+            isPointer if valType typeContext types.isMutable typeContext types.getAddressType end
+            ConstValue .None
+            valType types.UNION_VALUE_INDEX op .pos opGetElement
+          state pushValue
         else
           "unexpected argument for raw-value expected union got: " sb.copyPtr
             valType typeContext sb.appendType
           op .pos errors appendError
           continue.opLoop
         end
-          isPointer if
-            valType typeContext types.isMutable typeContext types.getAddressType
-          end
-          ConstValue .None
-          valType op .pos opRawValue
-        state pushValue
         continue.opLoop
       StackMod .case =:: stackMod
         stackMod .modType switch

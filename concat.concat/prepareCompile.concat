@@ -197,7 +197,7 @@ proc(
     BuiltIn ProcPtr PanicWithMessage
     AtId Switch EndProc
     RuntimeAssert Error StackMod
-    AutoCast Cast Cast! BitCast Return RawValue case
+    AutoCast Cast Cast! BitCast Return case
       newOps
         op list.append ## nothing to change
       return
