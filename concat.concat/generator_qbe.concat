@@ -276,7 +276,7 @@ proc(
     '\n' sb.appendC
   return
 end
-proc( ValType : valType CompilerContext ptr.mut : context -> ValueId ) =>: pushValue
+proc( ValType : valType CompilerContext ptr.mut : context -> ValueId ) =>: pushNewValue
   context nextValueId =:: newId
     context .stackInfo
       newId ValueId .Stack
@@ -290,7 +290,7 @@ proc( CompilerContext ptr.mut : context -> iSize ) =>: nextValueId
   context .stackCount=
   oldCount return
 end
-proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> ValueId ) =>: replaceValue
+proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> ValueId ) =>: startReplaceValue
   context nextValueId =:: newId
   context .stackInfo
     offset
@@ -1520,7 +1520,7 @@ proc(
       ", " sb.appendS
       eltOffset sb.appendI
       '\n' sb.appendC
-      eltValType context pushValue
+      eltValType context pushNewValue
         $ =:: eltId
       ValueId.sbAppend
       eltType context referenceOnly if
@@ -1806,7 +1806,7 @@ proc(
 -> stringBuilder ) =>: appendUnaryOperator
   pos context popValue =:: arg
   sb
-    valType context pushValue ValueId.sbAppend
+    valType context pushNewValue ValueId.sbAppend
     " =" sb.appendS
     valType sb.appendValTypeQBE
     ' ' sb.appendC
@@ -1826,7 +1826,7 @@ proc(
   pos context popValue =:: arg2
   pos context popValue =:: arg1
   sb
-    valType context pushValue ValueId.sbAppend
+    valType context pushNewValue ValueId.sbAppend
     " =" sb.appendS
     valType sb.appendValTypeQBE
     ' ' sb.appendC
@@ -1860,7 +1860,7 @@ proc(
     ' ' sb.appendC
     arg2 ValueId.sbAppend
     '\n' sb.appendC
-    resValue context pushValue ValueId.sbAppend
+    resValue context pushNewValue ValueId.sbAppend
     " =":s sb.appendStr
     resValue sb.appendValTypeQBE
     ' ' sb.appendC
@@ -1882,7 +1882,7 @@ proc(
   pos context popValue =:: arg2
   pos context popValue =:: arg1
   sb
-    ValType .I32 context pushValue ValueId.sbAppend
+    ValType .I32 context pushNewValue ValueId.sbAppend
     " =w c" sb.appendS
     cmpType sb.appendStr
     valType sb.appendValTypeQBE
@@ -1929,7 +1929,7 @@ proc(
   pos context popValue args@ 0 =[]
   sb
     0 while $ 2 < do =:: i
-      ValType .I32 context pushValue ValueId.sbAppend
+      ValType .I32 context pushNewValue ValueId.sbAppend
       " =w ext" sb.appendS
       signed if 's' else 'u' end sb.appendC
       src StorageType .STORE pos context sb.appendTypeNameQBE
@@ -2014,7 +2014,7 @@ proc(
     NOT_BOOL case
       pos context popValue =:: arg
       sb
-        baseVal context pushValue ValueId.sbAppend
+        baseVal context pushNewValue ValueId.sbAppend
         " =w extub " sb.appendS
         arg ValueId.sbAppend
         '\n' sb.appendC
@@ -2135,7 +2135,7 @@ proc(
         sb return
       end
       sb
-        valType context pushValue ValueId.sbAppend
+        valType context pushNewValue ValueId.sbAppend
         " =" sb.appendS
         valType sb.appendValTypeQBE
         " load" sb.appendS
@@ -2198,7 +2198,7 @@ proc(
           pos context popValue
           baseOffset
         else
-          ValType .I64 context pushValue ValueId.sbAppend
+          ValType .I64 context pushNewValue ValueId.sbAppend
           " =l mul ":s sb.appendStr
           baseOffset ValueId.sbAppend
           ", ":s sb.appendStr
@@ -2207,7 +2207,7 @@ proc(
           pos context popValue
           pos context popValue
         end =:: srcPtr =:: offset
-        ValType .PTR context pushValue ValueId.sbAppend
+        ValType .PTR context pushNewValue ValueId.sbAppend
         " =l add ":s sb.appendStr
         srcPtr ValueId.sbAppend
         ", ":s sb.appendStr
@@ -2271,7 +2271,7 @@ proc(
     CONVERT_F64_F32 case sb "truncd":s ValType .FLOAT pos context appendUnaryOperator return
     SYS_ARGC case
       sb
-        baseVal context pushValue ValueId.sbAppend
+        baseVal context pushNewValue ValueId.sbAppend
         " =" sb.appendS
         baseVal sb.appendValTypeQBE
         " load $" sb.appendS
@@ -2280,7 +2280,7 @@ proc(
       return
     SYS_ARGV case
       sb
-        baseVal context pushValue ValueId.sbAppend
+        baseVal context pushNewValue ValueId.sbAppend
         " =" sb.appendS
         baseVal sb.appendValTypeQBE
         " load $" sb.appendS
@@ -2289,7 +2289,7 @@ proc(
       return
     SYS_ENVP case
       sb
-        baseVal context pushValue ValueId.sbAppend
+        baseVal context pushNewValue ValueId.sbAppend
         " =" sb.appendS
         baseVal sb.appendValTypeQBE
         " load $" sb.appendS
@@ -2391,7 +2391,7 @@ proc(
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: castFloatToIntHelper
   pos context popValue =:: srcLoc
-  targetVal .I64 if ValType .I64 else ValType .I32 end context pushValue =:: targetLoc
+  targetVal .I64 if ValType .I64 else ValType .I32 end context pushNewValue =:: targetLoc
   ## castFloatToInt
     srcVal
     srcLoc
@@ -2795,9 +2795,9 @@ proc(
     pos context popValue
   end =:: srcLoc =:: valType
   castType .AUTO_CAST if
-    target context toValType offset context replaceValue
+    target context toValType offset context startReplaceValue
   else
-    target context toValType context pushValue
+    target context toValType context pushNewValue
   end =:: targetLoc
   ## TODO? different behavior for bit-casts
   src typeContext types.isNumber and target typeContext types.isNumber if
@@ -2886,12 +2886,12 @@ proc(
   sb
     pos sb.appendPosQBE
     srcType context referenceOnly ! if
-      srcType context toValType context pushValue ValueId.sbAppend
+      srcType context toValType context pushNewValue ValueId.sbAppend
       " =" sb.appendS
       srcType StorageType .STACK pos context sb.appendTypeNameQBE
       " copy " sb.appendS
     else
-      ValType .REFERENCE context pushValue ValueId.sbAppend
+      ValType .REFERENCE context pushNewValue ValueId.sbAppend
       " =l copy " sb.appendS
     end
     srcType value false pos context sb.appendConstQBE
@@ -2927,7 +2927,7 @@ proc(
   ## push out arguments on stack
   outArgsOffset while $ argIndices [] .length u< do =:: i
     argIndices [] i [] =:: outArg
-    ValType .REFERENCE context pushValue =:: argId
+    ValType .REFERENCE context pushNewValue =:: argId
     newSb
       argId ValueId.sbAppend
       " =l copy " sb.appendS
@@ -2940,7 +2940,7 @@ proc(
     retType switch
       Empty case break
       Value Tuple .case =:: retVal
-        retVal context toValType context pushValue ValueId.sbAppend
+        retVal context toValType context pushNewValue ValueId.sbAppend
         " =" sb.appendS
         retVal StorageType .LOAD pos context sb.appendTypeNameQBE
         ' ' sb.appendC
@@ -3006,7 +3006,7 @@ proc(
           continue
         end
       .valueId =:: srcId
-      argType context toValType offset context replaceValue ValueId.sbAppend
+      argType context toValType offset context startReplaceValue ValueId.sbAppend
       " =" sb.appendS
       argType StorageType .STACK pos context sb.appendTypeNameQBE
       " load" sb.appendS
@@ -3044,7 +3044,7 @@ proc(
       return
     ConstantReference .case =:: constId
       sb
-        _EXPERIMENTAL_ if ValType .PTR else ValType .REFERENCE end context pushValue ValueId.sbAppend
+        _EXPERIMENTAL_ if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
         " =l " sb.appendS
         " copy $" sb.appendS
         CONST_REFERENCE_NAME sb.appendS
@@ -3098,7 +3098,7 @@ proc(
             argType context toValType
           end =:: valType
           argName? ! .if ## push argument
-            valType context pushValue ValueId.sbAppend
+            valType context pushNewValue ValueId.sbAppend
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
@@ -3151,11 +3151,11 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             isAddr or op [] .dataType context referenceOnly if
-              isAddr if ValType .PTR else ValType .REFERENCE end context pushValue ValueId.sbAppend
+              isAddr if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
               " =l copy " sb.appendS
             else
               op [] .dataType context toValType =:: valType
-              valType context pushValue ValueId.sbAppend
+              valType context pushNewValue ValueId.sbAppend
               " =" sb.appendS
               valType sb.appendValTypeQBE
               " load" sb.appendS
@@ -3172,11 +3172,11 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             isAddr or op [] .dataType context referenceOnly if
-              isAddr if ValType .PTR else ValType .REFERENCE end context pushValue ValueId.sbAppend
+              isAddr if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
               " =l copy " sb.appendS
             else
               op [] .dataType context toValType =:: valType
-              valType context pushValue ValueId.sbAppend
+              valType context pushNewValue ValueId.sbAppend
               " =" sb.appendS
               valType sb.appendValTypeQBE
               " load" sb.appendS
@@ -3197,7 +3197,7 @@ proc(
       procId ProcId.getProcInfo =:: procData
       sb
         op [] .pos sb.appendPosQBE
-        ValType .PTR context pushValue ValueId.sbAppend
+        ValType .PTR context pushNewValue ValueId.sbAppend
         " =l copy " sb.appendS
         ## appendGlobalName
           procData [] .nameId
@@ -3266,7 +3266,7 @@ proc(
       isArray if
         op [] .pos context popValue =:: srcId
         sb
-          valType context pushValue ValueId.sbAppend
+          valType context pushNewValue ValueId.sbAppend
           " =l add ":s sb.appendStr
           srcId ValueId.sbAppend
           ", ":s sb.appendStr
@@ -3276,7 +3276,7 @@ proc(
         op [] .pos context popValue =:: srcId
         sb
           op [] .pos sb.appendPosQBE
-          valType context pushValue ValueId.sbAppend
+          valType context pushNewValue ValueId.sbAppend
           " =l add ":s sb.appendStr
           srcId ValueId.sbAppend
           ", ":s sb.appendStr
@@ -3292,7 +3292,7 @@ proc(
         end
         op [] .pos context popValue =:: srcId
         op [] .pos sb.appendPosQBE
-        valType context pushValue ValueId.sbAppend
+        valType context pushNewValue ValueId.sbAppend
         " =":s sb.appendStr
         valType sb.appendValTypeQBE
         " load":s sb.appendStr
@@ -3341,7 +3341,7 @@ proc(
       sb
         op [] .pos context popValue =:: structId
         op [] .pos sb.appendPosQBE
-        isPtr if ValType .PTR else ValType .REFERENCE end context pushValue ValueId.sbAppend
+        isPtr if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
         " =l add " sb.appendS
         structId ValueId.sbAppend
         ", " sb.appendS
@@ -3366,7 +3366,7 @@ proc(
         '\n' sb.appendC
         isPtr ! if
           ## keep non-pointer value on stack
-          ValType .REFERENCE context pushValue ValueId.sbAppend
+          ValType .REFERENCE context pushNewValue ValueId.sbAppend
           " =l copy " sb.appendS
           structId ValueId.sbAppend
           '\n' sb.appendC
@@ -3400,7 +3400,7 @@ proc(
         containerType typeContext types.isRawUnion if
           structId
         else
-          isPtr if ValType .PTR else ValType .REFERENCE end context pushValue ValueId.sbAppend
+          isPtr if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
           " =l add " sb.appendS
           structId ValueId.sbAppend
           ", " sb.appendS
@@ -3430,7 +3430,7 @@ proc(
         '\n' sb.appendC
         isPtr ! if
           ## keep non-pointer value on stack
-          ValType .REFERENCE context pushValue ValueId.sbAppend
+          ValType .REFERENCE context pushNewValue ValueId.sbAppend
           " =l copy " sb.appendS
           structId ValueId.sbAppend
           '\n' sb.appendC
@@ -3492,7 +3492,7 @@ proc(
           op [] .pos errors appendError
           return
         end
-        _EXPERIMENTAL_ and hasReference if ValType .PTR else ValType .REFERENCE end context pushValue ValueId.sbAppend
+        _EXPERIMENTAL_ and hasReference if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
         " =l copy " sb.appendS
         dataPtrId ValueId.sbAppend
         '\n' sb.appendC
@@ -3710,7 +3710,7 @@ proc(
           ## copy the tmp-vars stack-elements to the top-n stack-elements
           backJumpInfo .modifiedTypes 1 - while $ 0 >= do =:: i
             valTypeBuffer i list.get .else ValType .EMPTY end =:: eltVal
-            eltVal context pushValue ValueId.sbAppend
+            eltVal context pushNewValue ValueId.sbAppend
             " =":s sb.appendStr eltVal sb.appendValTypeQBE
             " copy %label":s sb.appendStr
               labelInfo .labelId i64 cast.u sb.appendI
