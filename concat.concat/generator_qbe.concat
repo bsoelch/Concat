@@ -85,15 +85,6 @@ namespace: StackValue
   proc( ValueId : valId ValType : valType -> StackValue ) =>: val
     valId valType StackValueElement new StackValue .Val
   end
-  proc( NameId : nameId ValType : valType -> StackValue ) =>: localVar
-    nameId ValueId .LocalVar valType val
-  end
-  proc( iSize : valId ValType : valType -> StackValue ) =>: stackSlot
-    valId ValueId .Stack valType val
-  end
-  proc( i32 : valId ValType : valType -> StackValue ) =>: tmpSlot
-    valId ValueId .Tmp valType val
-  end
 
   proc( StackValue : a StackValue : b -> bool ) =>: eq
     a ..tag b ..tag != if false return end
@@ -288,9 +279,9 @@ end
 proc( ValType : valType CompilerContext ptr.mut : context -> ValueId ) =>: pushValue
   context nextValueId =:: newId
     context .stackInfo
-      newId
+      newId ValueId .Stack
       valType
-    StackValue.stackSlot branchTree.push
+    StackValue.val branchTree.push
   newId ValueId .Stack return
 end
 proc( CompilerContext ptr.mut : context -> iSize ) =>: nextValueId
@@ -304,7 +295,7 @@ proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> ValueI
   context .stackInfo
     offset
   branchTree.replaceAt optional.unwrap =:: stackElt
-  newId valType StackValue.stackSlot stackElt =[]
+  newId ValueId .Stack valType StackValue.val stackElt =[]
   newId ValueId .Stack return
 end
 proc(
@@ -322,12 +313,12 @@ proc(
   pos context [] .program .errors appendError
   ValueId .None return
 end
-proc( CompilerContext ptr.mut : context -> i32 ) =>: nextTmpId
+proc( CompilerContext ptr.mut : context -> ValueId ) =>: nextTmpId
   context [] .tmpCount =:: oldCount
     oldCount
       1 +
     context .tmpCount=
-  oldCount return
+  oldCount ValueId .Tmp return
 end
 proc( CompilerContext ptr.mut : context -> i32 ) =>: nextJumpLabelId
   context [] .jumpLabelCount =:: oldCount
@@ -496,9 +487,9 @@ proc(
         end ..drop
         '\n' sb.appendC
         ## StackValue
-          newId
+          newId ValueId .Stack
           srcVal .valType
-        StackValue.stackSlot <$
+        StackValue.val <$
       break
       Val2 Val3 case "composite-values are not supported" ..panic
     end
@@ -1475,34 +1466,31 @@ end
 proc(
   stringBuilder : sb
   ValType : valType
-  char8 : valStackType
-  i32 : valId
+  ValueId : valId
   string : cmpType
   i64 : value
   BranchId : ifBranch
   BranchId : elseBranch
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
--> stringBuilder ) =>: appendCmpInt
+-> stringBuilder ) =>: appendCmpAndJumpInt
   context nextTmpId =:: tmpId
   sb
-    "%t" sb.appendS
-    tmpId sb.appendI
-    " =w c" sb.appendS
+    tmpId ValueId.sbAppend
+    " =w c":s sb.appendStr
     cmpType sb.appendStr
     valType sb.appendValTypeQBE
-    " %" sb.appendS
-    valStackType sb.appendC
-    valId sb.appendI
-    ", " sb.appendS
+    ' ' sb.appendC
+    valId ValueId.sbAppend
+    ", ":s sb.appendStr
     value sb.appendI
-    "\njnz %t" sb.appendS
-    tmpId sb.appendI
-    ", " sb.appendS
+    "\njnz ":s sb.appendStr
+    tmpId ValueId.sbAppend
+    ", ":s sb.appendStr
     ifBranch sb.appendBranchId
-    ", " sb.appendS
+    ", ":s sb.appendStr
     elseBranch sb.appendBranchId
-    "\n" sb.appendS
+    '\n' sb.appendC
   return
 end
 
@@ -1525,9 +1513,8 @@ proc(
       eltType typeContext types.isEmpty if
         i 1 - continue
       end
-      "%t" sb.appendS
-        context nextTmpId =:: eltPtrId
-      eltPtrId sb.appendI
+      context nextTmpId =:: eltPtrId
+      eltPtrId ValueId.sbAppend
       " =l add " sb.appendS
       tupleId ValueId.sbAppend
       ", " sb.appendS
@@ -1538,15 +1525,15 @@ proc(
       ValueId.sbAppend
       eltType context referenceOnly if
         eltType pos context false appendAlloc ..drop
-        "blit %t" sb.appendS
+        "blit ":s sb.appendStr
       else
-        " =" sb.appendS
+        " =":s sb.appendStr
         eltValType sb.appendValTypeQBE
-        " load" sb.appendS
+        " load":s sb.appendStr
         eltType StorageType .LOAD pos context sb.appendTypeNameQBE
-        " %t" sb.appendS
+        ' ' sb.appendC
       end
-      eltPtrId sb.appendI
+      eltPtrId ValueId.sbAppend
       eltType context referenceOnly if
         ", " sb.appendS
         eltId ValueId.sbAppend
@@ -1576,24 +1563,23 @@ proc(
       eltType typeContext types.isEmpty if
         i 1 - continue
       end
-      "%t" sb.appendS
-        context nextTmpId =:: eltPtrId
-      eltPtrId sb.appendI
-      " =l add " sb.appendS
+      context nextTmpId =:: eltPtrId
+      eltPtrId ValueId.sbAppend
+      " =l add ":s sb.appendStr
       dataPtrId ValueId.sbAppend
-      ", " sb.appendS
+      ", ":s sb.appendStr
       eltOffset sb.appendI
       '\n' sb.appendC
       eltType context referenceOnly if
-        "blit " sb.appendS
+        "blit ":s sb.appendStr
       else
-        "store" sb.appendS
+        "store":s sb.appendStr
         eltType StorageType .STORE pos context sb.appendTypeNameQBE
         ' ' sb.appendC
       end
       pos context popValue ValueId.sbAppend
-      ", %t" sb.appendS
-      eltPtrId sb.appendI
+      ", ":s sb.appendStr
+      eltPtrId ValueId.sbAppend
       eltType context referenceOnly if
         ',' sb.appendC
         eltType pos context typeSizeInt sb.appendI
@@ -1610,16 +1596,15 @@ proc(
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
   bool : createId
--> stringBuilder i32 ) =>: appendAlloc
+-> stringBuilder ValueId ) =>: appendAlloc
   context [] .program =:: prog
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  -1:i32 =:: mut: tmpId
+  ValueId .None =:: mut: tmpId
   sb
     createId if
       context nextTmpId tmpId=
-      "%t" sb.appendS
-      tmpId sb.appendI
+      tmpId ValueId.sbAppend
     end
     " =l alloc" sb.appendS
     valType pos context typeAlignmentInt 4 i64.max sb.appendI
@@ -1632,7 +1617,7 @@ end
 proc(
   stringBuilder : sb
   ValType : valType
-  i32 : valId
+  ValueId : valId
   LabelData slice : labels
   LocalLabelId slice : branchLabels
   LocalLabelId : defaultLabel
@@ -1664,12 +1649,12 @@ proc(
         labels i [] .value switchLabelAsInt =:: cmpVal
         ## cmp int
           valType
-          't' valId
+          valId
           "eq":s
           cmpVal
           caseBranch
           nextBranch
-        pos context appendCmpInt
+        pos context appendCmpAndJumpInt
         nextBranch sb.appendBranchId
         '\n' sb.appendC
         i 1:iSize +
@@ -1705,12 +1690,12 @@ proc(
   sb
     ## cmp int
       valType
-      't' valId
+      valId
       "slt":s
       cmpVal
       ltBranch
       geBranch
-    pos context appendCmpInt
+    pos context appendCmpAndJumpInt
     ltBranch sb.appendBranchId
     '\n' sb.appendC
     ## appendSwitchJumpTree
@@ -1781,26 +1766,26 @@ proc(
     switchType
       typeContext types.primitiveValue
     types.sizeOfPrimitive =:: numBytes
-    context nextTmpId =:: mut: tmpId
-    switchType context toValType =:: mut: valType
-    "%t" sb.appendS
-    tmpId sb.appendI
-    " =" sb.appendS
-    valType sb.appendValTypeQBE
+    switchType context toValType =:: valType
     numBytes 4 < if
-      " ext" sb.appendS
+      context nextTmpId =:: tmpId
+      tmpId ValueId.sbAppend
+      " =":s sb.appendStr
+      valType sb.appendValTypeQBE
+      " ext":s sb.appendStr
       switchType
         StorageType .ULOAD
       pos context sb.appendTypeNameQBE
       ' ' sb.appendC
+      valId ValueId.sbAppend
+      '\n' sb.appendC
+      tmpId
     else
-      " copy ":s sb.appendStr
-    end
-    valId ValueId.sbAppend
-    '\n' sb.appendC
+      valId
+    end =:: srcId
     ## appendJumpTable
       valType
-      tmpId
+      srcId
       labels list.asSlice
       branchLabels
       defaultLabel
@@ -1866,25 +1851,24 @@ proc(
   pos context popValue =:: arg1
   context nextTmpId =:: tmpId
   sb
-    "%t" sb.appendS
-    tmpId sb.appendI
-    " =" sb.appendS
+    tmpId ValueId.sbAppend
+    " =":s sb.appendStr
     resValue sb.appendValTypeQBE
-    " ext" sb.appendS
+    " ext":s sb.appendStr
     signed if 's' else 'u' end sb.appendC
     arg2Value sb.appendValTypeQBE
     ' ' sb.appendC
     arg2 ValueId.sbAppend
     '\n' sb.appendC
     resValue context pushValue ValueId.sbAppend
-    " =" sb.appendS
+    " =":s sb.appendStr
     resValue sb.appendValTypeQBE
     ' ' sb.appendC
     name sb.appendStr
     ' ' sb.appendC
     arg1 ValueId.sbAppend
-    ", %t" sb.appendS
-    tmpId sb.appendI
+    ", ":s sb.appendStr
+    tmpId ValueId.sbAppend
     '\n' sb.appendC
   return
 end
@@ -2448,47 +2432,46 @@ proc(
   else ..unreachable end =:: srcTypeName
   sb
     ## isNaN?
-    "%t" sb.appendS cNaN sb.appendI
+    cNaN ValueId.sbAppend
     " =w co":s sb.appendStr srcTypeName sb.appendC
     ' ' sb.appendC
     srcLoc ValueId.sbAppend
     ", ":s sb.appendStr
     srcLoc ValueId.sbAppend
     '\n' sb.appendC
-    "jnz %t":s sb.appendStr cNaN sb.appendI
+    "jnz ":s sb.appendStr cNaN ValueId.sbAppend
     ", ":s sb.appendStr branches@ 0 [] sb.appendBranchId
     ", ":s sb.appendStr branches@ 1 [] sb.appendBranchId
     '\n' sb.appendC
     branches@ 0 [] "float->int":s context startBranch
     ## > min ?
-    "%t":s sb.appendStr cMin sb.appendI
+    cMin ValueId.sbAppend
     " =w cgt":s sb.appendStr srcTypeName sb.appendC
     ' ' sb.appendC
     srcLoc ValueId.sbAppend
     ", ":s sb.appendStr
     targetVal unsigned BoundType .MIN srcVal appendNumberBound
     '\n' sb.appendC
-    "jnz %t":s sb.appendStr cMin sb.appendI
+    "jnz ":s sb.appendStr cMin ValueId.sbAppend
     ", ":s sb.appendStr branches@ 2 [] sb.appendBranchId
     ", ":s sb.appendStr branches@ 3 [] sb.appendBranchId
     '\n' sb.appendC
     branches@ 2 [] "float->int: check undeflow":s context startBranch
     ## < max ?
-    "%t":s sb.appendStr cMin sb.appendI
+    cMin ValueId.sbAppend
     " =w clt":s sb.appendStr srcTypeName sb.appendC
     ' ' sb.appendC
     srcLoc ValueId.sbAppend
     ", " sb.appendS
     targetVal unsigned BoundType .MAX srcVal appendNumberBound
     '\n' sb.appendC
-    "jnz %t":s sb.appendStr cMin sb.appendI
+    "jnz ":s sb.appendStr cMin ValueId.sbAppend
     ", ":s sb.appendStr branches@ 4 [] sb.appendBranchId
     ", ":s sb.appendStr branches@ 5 [] sb.appendBranchId
     '\n' sb.appendC
     branches@ 4 [] "float->int: normal":s context startBranch
     ## cast value
-    "%t":s sb.appendStr
-    tCast sb.appendI
+    tCast ValueId.sbAppend
     " =":s sb.appendStr
     targetType StorageType .STACK pos context sb.appendTypeNameQBE
     ' ' sb.appendC
@@ -2499,8 +2482,7 @@ proc(
     '\n' sb.appendC
     ## NaN
     branches@ 1 [] "float->int: NaN":s context startBranch
-    "%t":s sb.appendStr
-    tNaN sb.appendI
+    tNaN ValueId.sbAppend
     " =":s sb.appendStr
     targetType StorageType .STACK pos context sb.appendTypeNameQBE
     " copy 0":s sb.appendStr
@@ -2508,8 +2490,7 @@ proc(
     '\n' sb.appendC
     ## <Min
     branches@ 3 [] "float->int: underflow":s context startBranch
-    "%t":s sb.appendStr
-    tMin sb.appendI
+    tMin ValueId.sbAppend
     " =":s sb.appendStr
     targetType StorageType .STACK pos context sb.appendTypeNameQBE
     " copy ":s sb.appendStr
@@ -2518,8 +2499,7 @@ proc(
     '\n' sb.appendC
     ## >Max
     branches@ 5 [] "float->int: overflow":s context startBranch
-    "%t":s sb.appendStr
-    tMax sb.appendI
+    tMax ValueId.sbAppend
     " =":s sb.appendStr
     targetType StorageType .STACK pos context sb.appendTypeNameQBE
     " copy ":s sb.appendStr
@@ -2531,13 +2511,13 @@ proc(
     targetType StorageType .STACK pos context sb.appendTypeNameQBE
     " phi ":s sb.appendStr
     branches@ 4 [] sb.appendBranchId
-    " %t":s sb.appendStr tCast sb.appendI
+    tCast ValueId.sbAppend
     ", ":s sb.appendStr branches@ 1 [] sb.appendBranchId
-    " %t":s sb.appendStr tNaN sb.appendI
+    tNaN ValueId.sbAppend
     ", ":s sb.appendStr branches@ 3 [] sb.appendBranchId
-    " %t":s sb.appendStr tMin sb.appendI
+    tMin ValueId.sbAppend
     ", ":s sb.appendStr branches@ 5 [] sb.appendBranchId
-    " %t":s sb.appendStr tMax sb.appendI
+    tMax ValueId.sbAppend
     '\n' sb.appendC
   return
 end
@@ -2696,7 +2676,7 @@ proc(
   target typeContext types.isTrueFloat if nSteps 1 + nSteps= end
   nSteps 0 > "bit-cast casts non-equal types" assert
   nSteps 1 > if
-    context nextTmpId ValueId .Tmp next=
+    context nextTmpId next=
   end
   sb
     ## 1. convert floats to int
@@ -2709,7 +2689,7 @@ proc(
       '\n' sb.appendC
       nSteps 1 - nSteps=
       next current=
-      nSteps 1 > if context nextTmpId ValueId .Tmp else last end next=
+      nSteps 1 > if context nextTmpId else last end next=
     end
     ## 2. zero-extend small values to correct size
     fromSize toSize != if
@@ -2732,7 +2712,7 @@ proc(
       '\n' sb.appendC
       nSteps 1 - nSteps=
       next current=
-      nSteps 1 > if context nextTmpId ValueId .Tmp else last end next=
+      nSteps 1 > if context nextTmpId else last end next=
     end
     ## 3. convert int to float
     target typeContext types.isTrueFloat if
@@ -3465,7 +3445,7 @@ proc(
         hasReference if
           op [] .pos context popValue
         else
-          op [] .dataType op [] .pos context true appendAlloc ValueId .Tmp
+          op [] .dataType op [] .pos context true appendAlloc
         end =:: dataPtrId
         isUnion if
           op [] .val .NewUnion .else
@@ -3875,9 +3855,8 @@ proc(
             Empty case "expected non-empty return value" ..panic
           end =:: retVal
           retVal op [] .pos context true appendAlloc =:: tmpId
-          retVal tmpId ValueId .Tmp op [] .pos context initializeTupleQBE
-          tmpId ValueId .Tmp
-          "ret ":s
+          retVal tmpId op [] .pos context initializeTupleQBE
+          tmpId "ret ":s
         else
           ValueId .None string.empty ## values will be ignored
         end =:: retStr =:: retId
