@@ -1010,7 +1010,7 @@ proc(
       "unsupported value location" ..panic
   end
 end
-## TODO! merge with opMove? / replace uses of opMove with moveValue
+
 proc(
   asm.Atom list
   ValType : valType
@@ -1020,7 +1020,7 @@ proc(
   bool : clearSrc
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
--> asm.Atom list ) =>: moveValue
+-> asm.Atom list ) =>: restore_moveValue
   srcValue switch
     Register .case =:: srcReg
       srcReg valLoc context removeLocation
@@ -1089,7 +1089,7 @@ proc(
           src .valType context nextFreeRegister asm.Value .Register
           src .value
           true
-        pos context moveValue
+        pos context restore_moveValue
         return
       end
       regInfo [] .uses switch
@@ -1116,7 +1116,7 @@ proc(
     pos errors appendError
   end
   ## 4. move to destination
-  src .valType loc dst .value src .value false pos context moveValue
+  src .valType loc dst .value src .value false pos context restore_moveValue
 end
 proc(
   asm.Atom list
