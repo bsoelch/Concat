@@ -101,13 +101,49 @@ namespace: StackValue
       Val  .case b .Val unionElement.unwrap StackValueElement.eq return
       Val2 .case =:: aVals b .Val2 unionElement.unwrap =:: bVals
         aVals .0 bVals .0 StackValueElement.eq and
-          aVals .0 bVals .0 StackValueElement.eq
+          aVals .1 bVals .1 StackValueElement.eq
         end return
       Val3 .case =:: aVals b .Val3 unionElement.unwrap =:: bVals
         aVals .0 bVals .0 StackValueElement.eq and
           aVals .1 bVals .1 StackValueElement.eq and
           aVals .2 bVals .2 StackValueElement.eq
         end return
+    end
+  end
+  proc( StackValue : a StackValue : b -> bool ) =>: valTypesEq
+    a ..tag b ..tag != if false return end
+    a switch
+      Val  .case .valType b .Val unionElement.unwrap .valType == return
+      Val2 .case =:: aVals b .Val2 unionElement.unwrap =:: bVals
+        aVals .0 .valType bVals .0 .valType == and
+          aVals .1 .valType bVals .1 .valType ==
+        end return
+      Val3 .case =:: aVals b .Val3 unionElement.unwrap =:: bVals
+        aVals .0 .valType bVals .0 .valType == and
+          aVals .1 .valType bVals .1 .valType == and
+          aVals .2 .valType bVals .2 .valType ==
+        end return
+    end
+  end
+  proc( stringBuilder StackValue -> stringBuilder ) =>: sbAppendValTypes
+    switch
+      Val  .case .valType sb.appendValType return
+      Val2 .case =:: vals
+        "( ":s sb.appendStr
+        vals .0 .valType sb.appendValType
+        ' ' sb.appendC
+        vals .1 .valType sb.appendValType
+        " )":s sb.appendStr
+      return
+      Val3 .case =:: vals
+        "( ":s sb.appendStr
+        vals .0 .valType sb.appendValType
+        ' ' sb.appendC
+        vals .1 .valType sb.appendValType
+        ' ' sb.appendC
+        vals .2 .valType sb.appendValType
+        " )":s sb.appendStr
+      return
     end
   end
 end
@@ -428,40 +464,45 @@ proc(
     rootValue [] return
   end
   1:iSize while $ toMerge .length u< do =:: i
-    toMerge i [] [] .Val unionElement.unwrap .valType rootValue [] .Val unionElement.unwrap .valType != if
+    toMerge i [] [] rootValue [] StackValue.valTypesEq ! if
       "branches of " sb.copyPtr
          mergePoint .blockName sb.appendStr
          "-statement are out of sync expected: " sb.appendS
-         rootValue [] .Val unionElement.unwrap .valType sb.appendValType
+         rootValue [] StackValue.sbAppendValTypes
          " got: " sb.appendS
-         toMerge i [] [] .Val unionElement.unwrap .valType sb.appendValType
+         toMerge i [] [] StackValue.sbAppendValTypes
       mergePoint .pos errors appendError
       i break
     end
     i 1:iSize +
   end ..drop
-  context nextValueId =:: newId
   mergePoint .out []
-    "%s" sb.appendS
-    newId sb.appendI
-    " =" sb.appendS
-    rootValue [] .Val unionElement.unwrap .valType sb.appendValTypeQBE
-    " phi " sb.appendS
-    0:iSize while $ toMerge .length u< do =:: i
-      i 0:iSize iSize.sgt if
-        ", " sb.appendS
-      end
-      mergePoint .branchIds i [] sb.appendBranchId
-      ' ' sb.appendC
-      toMerge i [] [] .Val unionElement.unwrap .valueId ValueId.sbAppend
-      i 1:iSize +
-    end ..drop
-    '\n' sb.appendC
+    rootValue [] switch
+      Val .case =:: srcVal
+        context nextValueId =:: newId
+        "%s" sb.appendS
+        newId sb.appendI
+        " =" sb.appendS
+        srcVal .valType sb.appendValTypeQBE
+        " phi " sb.appendS
+        0:iSize while $ toMerge .length u< do =:: i
+          i 0:iSize iSize.sgt if
+            ", " sb.appendS
+          end
+          mergePoint .branchIds i [] sb.appendBranchId
+          ' ' sb.appendC
+          toMerge i [] [] .Val .if .valueId else ..drop ValueId .None end ValueId.sbAppend
+          i 1:iSize +
+        end ..drop
+        '\n' sb.appendC
+        ## StackValue
+          newId
+          srcVal .valType
+        StackValue.stackSlot <$
+      break
+      Val2 Val3 case "composite-values are not supported" ..panic
+    end
   mergePoint .out =[]
-  ## StackValue
-    newId
-    rootValue [] .Val unionElement.unwrap .valType
-  StackValue.stackSlot return
 end
 
 
@@ -2761,10 +2802,16 @@ proc(
     sb return
   end
   castType .AUTO_CAST if
-    context .stackInfo offset branchTree.at optional.unwrap [] .Val unionElement.unwrap .valType
-    context .stackInfo offset branchTree.at optional.unwrap [] .Val unionElement.unwrap .valueId
+    context .stackInfo offset branchTree.at optional.unwrap [] .Val .else
+      "composite-values are not supported" ..panic
+    end .valType
+    context .stackInfo offset branchTree.at optional.unwrap [] .Val .else
+      "composite-values are not supported" ..panic
+    end .valueId
   else
-    context .stackInfo offset branchTree.at optional.unwrap [] .Val unionElement.unwrap .valType
+    context .stackInfo offset branchTree.at optional.unwrap [] .Val .else
+      "composite-values are not supported" ..panic
+    end .valType
     pos context popValue
   end =:: srcLoc =:: valType
   castType .AUTO_CAST if
@@ -2971,17 +3018,19 @@ proc(
       end
       ## TODO? extract load operations to common procedure
       argIndices [] .length i - i32 cast =:: offset
-      context .stackInfo offset branchTree.at optional.unwrap [] .Val unionElement.unwrap .valType =:: valType
-      context .stackInfo offset branchTree.at optional.unwrap [] .Val unionElement.unwrap .valueId =:: srcId
+      context .stackInfo offset branchTree.at optional.unwrap [] .Val .else ..drop
+        ## TODO? should reference in composite be allowed
+        continue ## reference is stored in single value
+      end
+        $ .valType .REFERENCE ! if ..drop
+          continue
+        end
+      .valueId =:: srcId
       argType context toValType offset context replaceValue ValueId.sbAppend
       " =" sb.appendS
       argType StorageType .STACK pos context sb.appendTypeNameQBE
-      valType .REFERENCE if ## unwrap reference
-        " load" sb.appendS
-        argType StorageType .LOAD pos context sb.appendTypeNameQBE
-      else
-        " copy" sb.appendS
-      end
+      " load" sb.appendS
+      argType StorageType .LOAD pos context sb.appendTypeNameQBE
       ' ' sb.appendC
       srcId ValueId.sbAppend
       '\n' sb.appendC
