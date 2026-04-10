@@ -3875,7 +3875,7 @@ proc(
         '\n' sb.appendC
         "call $printf(l $" sb.appendS
         ASSERT_FORMAT sb.appendS
-        ",l " sb.appendS
+        ",...,l " sb.appendS
         msg .length sb.appendI
         ",l " sb.appendS
         msg context sb.appendStringPtrConstQBE
@@ -3889,7 +3889,7 @@ proc(
         op [] .pos sb.appendPosQBE
         "call $printf(l $" sb.appendS ## TODO? print to stderr
         PANIC_FORMAT sb.appendS
-        ",l " sb.appendS
+        ",...,l " sb.appendS
         message .length sb.appendI
         ",l " sb.appendS
         message context sb.appendStringPtrConstQBE
