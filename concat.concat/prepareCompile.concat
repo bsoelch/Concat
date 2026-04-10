@@ -391,6 +391,11 @@ proc(
       ## special handling for pointer-call procedures
       _BACKEND_ .QBE if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
         calledType typeContext types.getProcOutArgs =:: outArgs
+        ## 1. iterate in-types: convert non-value types to pointer
+        ## 2. iterate out-types: convert non-value types to pointer, add out-args for pointer-return
+        ##   - in QBE only emmit first argument treat every other argument as pointer return,
+        ##   - if first return is by reference, try mergining location with first or last argument
+        ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
         newOps
           outArgs for =:: arg
             arg typeContext types.isEmpty if
