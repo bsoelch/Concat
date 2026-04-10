@@ -33,6 +33,7 @@ union(
   _ : None
   iSize : Stack
   i32 : Tmp
+  i32 : Arg
   NameId : LocalVar
   ## TODO? const-int
   ## TODO? arg/out-arg
@@ -51,6 +52,7 @@ namespace: ValueId
     valId switch
       None case "%_":s sb.appendStr return
       Stack .case =:: id "%s":s sb.appendStr id sb.appendI return
+      Arg .case =:: id "%a":s sb.appendStr id sb.appendI return
       Tmp .case =:: id "%t":s sb.appendStr id sb.appendI return
       LocalVar .case appendLocalVar return
     end
@@ -61,6 +63,7 @@ namespace: ValueId
       None case true return
       Stack  .case b .Stack unionElement.unwrap == return
       Tmp  .case b .Tmp unionElement.unwrap == return
+      Arg  .case b .Arg unionElement.unwrap == return
       LocalVar  .case b .LocalVar unionElement.unwrap NameId.eq return
     end
   end
@@ -276,13 +279,16 @@ proc(
     '\n' sb.appendC
   return
 end
+proc( ValType : valType ValueId : valId CompilerContext ptr.mut : context -> ) =>: pushValue
+  context .stackInfo
+    valId
+    valType
+  StackValue.val branchTree.push
+end
 proc( ValType : valType CompilerContext ptr.mut : context -> ValueId ) =>: pushNewValue
-  context nextValueId =:: newId
-    context .stackInfo
-      newId ValueId .Stack
-      valType
-    StackValue.val branchTree.push
-  newId ValueId .Stack return
+  context nextValueId ValueId .Stack
+    valType $1 context pushValue
+  return
 end
 proc( CompilerContext ptr.mut : context -> iSize ) =>: nextValueId
   context [] .stackCount =:: oldCount
@@ -695,7 +701,6 @@ namespace: sb
   proc(
     stringBuilder : sb
     i32 : index
-    NameId optional : nameId
     CompilerContext ptr.mut : context
   -> stringBuilder ) =>: appendArgName
     sb
@@ -769,7 +774,7 @@ namespace: sb
         true hasArgs=
         arg StorageType .LOAD pos context appendTypeNameQBE
         ' ' sb.appendC
-        i argName? context appendArgName
+        i context appendArgName
       finally i 1 - end ..drop
       ")" sb.appendS
     return
@@ -1454,7 +1459,6 @@ proc(
   types.findProcArgName .if =:: index
     ## appendArgName
       index
-      nameId optional.wrap
       context
     sb.appendArgName return
   end
@@ -2927,13 +2931,7 @@ proc(
   ## push out arguments on stack
   outArgsOffset while $ argIndices [] .length u< do =:: i
     argIndices [] i [] =:: outArg
-    ValType .REFERENCE context pushNewValue =:: argId
-    newSb
-      argId ValueId.sbAppend
-      " =l copy " sb.appendS
-      outArg .valId ValueId.sbAppend
-      '\n' sb.appendC
-    newSb=
+    ValType .REFERENCE outArg .valId context pushValue
     i 1:iSize +
   end ..drop
   newSb
@@ -3098,18 +3096,13 @@ proc(
             argType context toValType
           end =:: valType
           argName? ! .if ## push argument
-            valType context pushNewValue ValueId.sbAppend
-            " =" sb.appendS
-            valType sb.appendValTypeQBE
-            " copy " sb.appendS
-            i argName? context sb.appendArgName
-            '\n' sb.appendC
+            valType i ValueId .Arg context pushValue
           else =:: argName valType .REFERENCE _if
             argName appendLocalVar
             " =" sb.appendS
             valType sb.appendValTypeQBE
             " copy " sb.appendS
-            i argName optional.wrap context sb.appendArgName
+            i context sb.appendArgName
             '\n' sb.appendC
           else
             argName appendLocalVar
@@ -3120,7 +3113,7 @@ proc(
             "\nstore" sb.appendS
             argType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
             ' ' sb.appendC
-            i argName optional.wrap context sb.appendArgName
+            i context sb.appendArgName
             ", " sb.appendS
             argName appendLocalVar
             '\n' sb.appendC
@@ -3172,8 +3165,7 @@ proc(
           sb
             op [] .pos sb.appendPosQBE
             isAddr or op [] .dataType context referenceOnly if
-              isAddr if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
-              " =l copy " sb.appendS
+              isAddr if ValType .PTR else ValType .REFERENCE end idInfo .nameId ValueId .LocalVar context pushValue
             else
               op [] .dataType context toValType =:: valType
               valType context pushNewValue ValueId.sbAppend
@@ -3185,9 +3177,9 @@ proc(
                 context
               sb.appendTypeNameQBE
               ' ' sb.appendC
+              idInfo .nameId appendLocalVar
+              '\n' sb.appendC
             end
-            idInfo .nameId appendLocalVar
-            '\n' sb.appendC
           return
        TYPE LABEL PROCEDURE_BUNDLE case
           break ## TODO error message
@@ -3366,10 +3358,7 @@ proc(
         '\n' sb.appendC
         isPtr ! if
           ## keep non-pointer value on stack
-          ValType .REFERENCE context pushNewValue ValueId.sbAppend
-          " =l copy " sb.appendS
-          structId ValueId.sbAppend
-          '\n' sb.appendC
+          ValType .REFERENCE structId context pushValue
         end
       return
     break
@@ -3430,10 +3419,7 @@ proc(
         '\n' sb.appendC
         isPtr ! if
           ## keep non-pointer value on stack
-          ValType .REFERENCE context pushNewValue ValueId.sbAppend
-          " =l copy " sb.appendS
-          structId ValueId.sbAppend
-          '\n' sb.appendC
+          ValType .REFERENCE structId context pushValue
         end
       return
     New NewUnion NewReference NewUnionReference case
@@ -3492,10 +3478,7 @@ proc(
           op [] .pos errors appendError
           return
         end
-        _EXPERIMENTAL_ and hasReference if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
-        " =l copy " sb.appendS
-        dataPtrId ValueId.sbAppend
-        '\n' sb.appendC
+        _EXPERIMENTAL_ and hasReference if ValType .PTR else ValType .REFERENCE end dataPtrId context pushValue
       return
     AutoCast .case =:: castInfo
       sb
