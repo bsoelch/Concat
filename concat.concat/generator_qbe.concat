@@ -82,7 +82,6 @@ union(
   ( StackValueElement StackValueElement ) : Val2
   ( StackValueElement StackValueElement StackValueElement ) : Val3
 ) =:: StackValue
-## TODO! use ValueId to omit unnecessary copies
 ## TODO support multi-element stack-values (instead of .Val unwrap)
 namespace: StackValue
   proc( ValueId : valId ValType : valType -> StackValue ) =>: val
@@ -286,23 +285,26 @@ proc( ValType : valType ValueId : valId CompilerContext ptr.mut : context -> ) =
   StackValue.val branchTree.push
 end
 proc( ValType : valType CompilerContext ptr.mut : context -> ValueId ) =>: pushNewValue
-  context nextValueId ValueId .Stack
+  context nextStackValueId
     valType $1 context pushValue
   return
 end
-proc( CompilerContext ptr.mut : context -> iSize ) =>: nextValueId
+proc( CompilerContext ptr.mut : context -> ValueId ) =>: nextStackValueId
   context [] .stackCount =:: oldCount
     oldCount 1 +
   context .stackCount=
-  oldCount return
+  oldCount ValueId .Stack return
 end
-proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> ValueId ) =>: startReplaceValue
-  context nextValueId =:: newId
+proc( ValType : valType i32 : offset ValueId : newVal CompilerContext ptr.mut : context -> ) =>: replaceValue
   context .stackInfo
     offset
   branchTree.replaceAt optional.unwrap =:: stackElt
-  newId ValueId .Stack valType StackValue.val stackElt =[]
-  newId ValueId .Stack return
+  newVal valType StackValue.val stackElt =[]
+end
+proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> ValueId ) =>: startReplaceValue
+  context nextStackValueId
+    valType offset $2 context replaceValue
+  return
 end
 proc(
   FilePosition ptr : pos
@@ -476,9 +478,8 @@ proc(
   mergePoint .out []
     rootValue [] switch
       Val .case =:: srcVal
-        context nextValueId =:: newId
-        "%s" sb.appendS
-        newId sb.appendI
+        context nextStackValueId =:: newId
+        newId ValueId.sbAppend
         " =" sb.appendS
         srcVal .valType sb.appendValTypeQBE
         " phi " sb.appendS
@@ -493,7 +494,7 @@ proc(
         end ..drop
         '\n' sb.appendC
         ## StackValue
-          newId ValueId .Stack
+          newId
           srcVal .valType
         StackValue.val <$
       break
@@ -2395,15 +2396,15 @@ proc(
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: castFloatToIntHelper
   pos context popValue =:: srcLoc
-  targetVal .I64 if ValType .I64 else ValType .I32 end context pushNewValue =:: targetLoc
   ## castFloatToInt
     srcVal
     srcLoc
     targetVal Type .PrimitiveType
     targetVal
-    targetLoc
     unsigned
   pos context castFloatToInt
+    targetVal Type .PrimitiveType context toValType
+  >$ context pushValue
 end
 proc(
   stringBuilder : sb
@@ -2411,11 +2412,10 @@ proc(
   ValueId : srcLoc
   Type : targetType
   types.PrimitiveType : targetVal
-  ValueId : targetLoc
   bool : unsigned
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
--> stringBuilder ) =>: castFloatToInt
+-> stringBuilder ValueId ) =>: castFloatToInt
   BranchId 7 array new =:: mut: branches
   0 while $ 7 < do =:: i
     ## BranchId
@@ -2510,7 +2510,9 @@ proc(
     targetVal unsigned BoundType .MAX targetVal appendNumberBound
     '\n' sb.appendC
     branches@ 6 [] "float->int: end":s context startBranch
-    targetLoc ValueId.sbAppend
+    context nextStackValueId
+      $ =:: targetLoc
+    ValueId.sbAppend
     " =":s sb.appendStr
     targetType StorageType .STACK pos context sb.appendTypeNameQBE
     " phi ":s sb.appendStr
@@ -2523,7 +2525,7 @@ proc(
     ", ":s sb.appendStr branches@ 5 [] sb.appendBranchId
     tMax ValueId.sbAppend
     '\n' sb.appendC
-  return
+  targetLoc return
 end
 
 proc(
@@ -2531,11 +2533,10 @@ proc(
   Type : src
   ValueId : srcLoc
   Type : target
-  ValueId : targetLoc ## TODO? return target-loc instead of passing as param
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
   SignType : signType
--> stringBuilder ) =>: castNumbers
+-> stringBuilder ValueId ) =>: castNumbers
   context [] .program =:: prog
   prog .errors =:: errors
   prog .idContext =:: idContext
@@ -2546,22 +2547,15 @@ proc(
   target typeContext types.primitiveValue =:: toVal
   ## case 0: identical types
   fromVal toVal == if
-    sb
-      ## copy necessary to update value id
-      targetLoc ValueId.sbAppend
-      " =":s sb.appendStr
-      target StorageType .STACK pos context sb.appendTypeNameQBE
-      " copy ":s sb.appendStr
-      srcLoc ValueId.sbAppend
-      '\n' sb.appendC
-    return
+    sb srcLoc return
   ## case 1: integer extension/narrowing
   else src typeContext types.isIntOrChar and target typeContext types.isIntOrChar _if
     src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
     target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
     sb
+      context nextStackValueId =:: targetLoc
       targetLoc ValueId.sbAppend
-      targetPrec srcPrec <= if
+      targetPrec srcPrec <= if ## use copy for narrowing conversion
         " =":s sb.appendStr
         target StorageType .STACK pos context sb.appendTypeNameQBE
         " copy":s sb.appendStr
@@ -2585,34 +2579,37 @@ proc(
       ' ' sb.appendC
       srcLoc ValueId.sbAppend
       '\n' sb.appendC
-    return
+    targetLoc return
   ## case 2: float -> float/int
   else fromVal .F32 or fromVal .F64 _if
-      toVal switch
-        F16 case "unimplemented" ..panic
-        F32 case
-          sb
-            targetLoc ValueId.sbAppend
-            " =s truncd ":s sb.appendStr
-            srcLoc ValueId.sbAppend
-            '\n' sb.appendC
-          return
-        F64 case
-          sb
-            targetLoc ValueId.sbAppend
-            " =d exts ":s sb.appendStr
-            srcLoc ValueId.sbAppend
-            '\n' sb.appendC
-          return
-        I8 I16 I32 I64 case
-          sb
-            fromVal srcLoc target toVal targetLoc
-            signType .UNSIGNED
-          pos context castFloatToInt return
-        BOOL TYPE case ..unreachable
-      end
+    toVal switch
+      F16 case "unimplemented" ..panic
+      F32 case
+        context nextStackValueId =:: targetLoc
+        sb
+          targetLoc ValueId.sbAppend
+          " =s truncd ":s sb.appendStr
+          srcLoc ValueId.sbAppend
+          '\n' sb.appendC
+        targetLoc return
+      F64 case
+        context nextStackValueId =:: targetLoc
+        sb
+          targetLoc ValueId.sbAppend
+          " =d exts ":s sb.appendStr
+          srcLoc ValueId.sbAppend
+          '\n' sb.appendC
+        targetLoc return
+      I8 I16 I32 I64 case
+        sb
+          fromVal srcLoc target toVal
+          signType .UNSIGNED
+        pos context castFloatToInt return
+      BOOL TYPE case ..unreachable
+    end
   ## case 3: int -> float
   else ## TODO sign/zero extend 8&16 bit types before conversion
+    context nextStackValueId =:: targetLoc
     sb
       targetLoc ValueId.sbAppend
       " =" sb.appendS
@@ -2626,7 +2623,7 @@ proc(
       ' ' sb.appendC
       srcLoc ValueId.sbAppend
       '\n' sb.appendC
-    return
+    targetLoc return
   end
 end
 
@@ -2643,10 +2640,9 @@ proc(
   Type : src
   ValueId : srcLoc
   Type : target
-  ValueId : targetLoc
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
--> stringBuilder ) =>: bitcastNumbers
+-> stringBuilder ValueId ) =>: bitcastNumbers
   context [] .program =:: prog
   prog .errors =:: errors
   prog .idContext =:: idContext
@@ -2659,44 +2655,24 @@ proc(
   fromVal types.sizeOfPrimitive 8 * =:: fromSize
   toVal types.sizeOfPrimitive 8 * =:: toSize
   fromVal toVal == or fromVal toVal f16bitcast if
-    sb
-      targetLoc ValueId.sbAppend
-      ## copy necessary to update value id
-      " =":s sb.appendStr
-      target StorageType .STACK pos context sb.appendTypeNameQBE
-      " copy ":s sb.appendStr
-      srcLoc ValueId.sbAppend
-      '\n' sb.appendC
-    return
+    sb srcLoc return
   end
   srcLoc =:: mut: current
-  targetLoc =:: mut: last
-  last =:: mut: next
-  0 =:: mut: nSteps
-  src typeContext types.isTrueFloat if nSteps 1 + nSteps= end
-  fromSize toSize != if
-    nSteps 1 + nSteps=
-  end
-  target typeContext types.isTrueFloat if nSteps 1 + nSteps= end
-  nSteps 0 > "bit-cast casts non-equal types" assert
-  nSteps 1 > if
-    context nextTmpId next=
-  end
   sb
     ## 1. convert floats to int
     src typeContext types.isTrueFloat if
+      context nextStackValueId =:: next
       next ValueId.sbAppend
       " =":s sb.appendStr
       fromSize 32 <= if 'w' else 'l' end sb.appendC
       " cast ":s sb.appendStr
       current ValueId.sbAppend
       '\n' sb.appendC
-      nSteps 1 - nSteps=
       next current=
-      nSteps 1 > if context nextTmpId else last end next=
     end
     ## 2. zero-extend small values to correct size
     fromSize toSize != if
+      context nextStackValueId =:: next
       next ValueId.sbAppend
       " =":s sb.appendStr
       toSize 32 <= if 'w' else 'l' end sb.appendC
@@ -2714,22 +2690,20 @@ proc(
       end
       current ValueId.sbAppend
       '\n' sb.appendC
-      nSteps 1 - nSteps=
       next current=
-      nSteps 1 > if context nextTmpId else last end next=
     end
     ## 3. convert int to float
     target typeContext types.isTrueFloat if
+      context nextStackValueId =:: next
       next ValueId.sbAppend
       " =":s sb.appendStr
       toSize 32 == if 's' else 'd' end sb.appendC
       " cast ":s sb.appendStr
       current ValueId.sbAppend
       '\n' sb.appendC
-      nSteps 1 - nSteps=
+      next current=
     end
-    nSteps 0 == "correct step estimate in bit-cast" assert
-  return
+  current return
 end
 
 enum( AUTO_CAST CAST CAST! BIT_CAST ) =:: CastType
@@ -2785,56 +2759,45 @@ proc(
     pos errors appendError
     sb return
   end
-  castType .AUTO_CAST if
-    context .stackInfo offset branchTree.at optional.unwrap [] .Val .else
-      "composite-values are not supported" ..panic
-    end .valType
-    context .stackInfo offset branchTree.at optional.unwrap [] .Val .else
-      "composite-values are not supported" ..panic
-    end .valueId
-  else
-    context .stackInfo offset branchTree.at optional.unwrap [] .Val .else
-      "composite-values are not supported" ..panic
-    end .valType
-    pos context popValue
-  end =:: srcLoc =:: valType
-  castType .AUTO_CAST if
-    target context toValType offset context startReplaceValue
-  else
-    target context toValType context pushNewValue
-  end =:: targetLoc
+  context .stackInfo offset branchTree.at optional.unwrap [] .Val .else
+    "composite-values are not supported" ..panic
+  end =:: srcVal
+  srcVal .valueId =:: srcLoc
+  target context toValType =:: targetValType
   ## TODO? different behavior for bit-casts
   src typeContext types.isNumber and target typeContext types.isNumber if
     sb
       src srcLoc
-      target targetLoc
+      target
     pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
+    targetValType offset >>$ context replaceValue
     return
   end
   src typeContext types.isChar and target typeContext types.isInt if
     sb
       src srcLoc
-      target targetLoc
+      target
     pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
+    targetValType offset >>$ context replaceValue
     return
   end
   src typeContext types.isInt and target typeContext types.isChar if
     sb
       src srcLoc
-      target targetLoc
+      target
     pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
+    targetValType offset >>$ context replaceValue
     return
   end
   src typeContext types.isPointer and target typeContext types.isPointer end or
       src types.isUnionElement and target typeContext types.isUnion end or
       src typeContext types.isUnion and target types.isUnionElement end or
       src typeContext types.isCallable and target typeContext types.isCallable if
-    sb
-      targetLoc ValueId.sbAppend
-      " =l copy ":s sb.appendStr
-      srcLoc  ValueId.sbAppend
-      '\n' sb.appendC
-    return ## same internal representation -> cast is no-op
+    srcVal .valType targetValType != if ## update val-type
+      ## TODO? check if dereference is needed
+      targetValType offset srcLoc context replaceValue
+    end
+    sb return ## same internal representation -> cast is no-op
   end
   ## TODO? sign type for cast int <-> ptr
   src typeContext types.isInt target typeContext types.isPointer & if
@@ -2842,8 +2805,9 @@ proc(
     sb
       ## castNumbers
         src srcLoc
-        types.primitive.I_SIZE targetLoc
+        types.primitive.I_SIZE
       pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
+    targetValType offset >>$ context replaceValue
     return
   end
   src typeContext types.isPointer target typeContext types.isInt & if
@@ -2851,8 +2815,9 @@ proc(
     sb
       ## castNumbers
         types.primitive.I_SIZE srcLoc
-        target targetLoc
+        target
       pos context  castType .BIT_CAST if bitcastNumbers else signType castNumbers end
+    targetValType offset >>$ context replaceValue
     return
   end
   "casting from " sb.copyPtr
