@@ -2552,14 +2552,12 @@ proc(
   else src typeContext types.isIntOrChar and target typeContext types.isIntOrChar _if
     src typeContext types.primitiveValue types.sizeOfPrimitive =:: srcPrec
     target typeContext types.primitiveValue types.sizeOfPrimitive =:: targetPrec
-    sb
-      context nextStackValueId =:: targetLoc
-      targetLoc ValueId.sbAppend
-      targetPrec srcPrec <= if ## use copy for narrowing conversion
-        " =":s sb.appendStr
-        target StorageType .STACK pos context sb.appendTypeNameQBE
-        " copy":s sb.appendStr
-      else
+    context nextStackValueId =:: targetLoc
+    targetPrec srcPrec <= if
+      sb srcLoc return ## integer narrowing is no-op
+    else
+      sb
+        targetLoc ValueId.sbAppend
         " =":s sb.appendStr
         target StorageType .STACK pos context sb.appendTypeNameQBE
         " ext":s sb.appendStr
@@ -2569,17 +2567,16 @@ proc(
           's' sb.appendC
         end
         fromVal switch
-          I8  case "b" sb.appendS break
-          I16 case "h" sb.appendS break
-          I32 case "w" sb.appendS break
-          I64 case "l" sb.appendS break
+          I8  case "b ":s sb.appendStr break
+          I16 case "h ":s sb.appendStr break
+          I32 case "w ":s sb.appendStr break
+          I64 case "l ":s sb.appendStr break
           BOOL TYPE F16 F32 F64 case ..unreachable
         end
-      end
-      ' ' sb.appendC
-      srcLoc ValueId.sbAppend
-      '\n' sb.appendC
-    targetLoc return
+        srcLoc ValueId.sbAppend
+        '\n' sb.appendC
+      targetLoc return
+    end
   ## case 2: float -> float/int
   else fromVal .F32 or fromVal .F64 _if
     toVal switch
@@ -2671,22 +2668,17 @@ proc(
       next current=
     end
     ## 2. zero-extend small values to correct size
-    fromSize toSize != if
+    fromSize toSize < if
       context nextStackValueId =:: next
       next ValueId.sbAppend
       " =":s sb.appendStr
       toSize 32 <= if 'w' else 'l' end sb.appendC
-      fromSize toSize < if
-        fromVal switch
-          BOOL TYPE F16 F32 F64 case break
-          I8  case " extub":s sb.appendStr break
-          I16 case " extuh":s sb.appendStr break
-          I32 case " extuw":s sb.appendStr break
-          I64 case " extul":s sb.appendStr break
-        end
-      else
-        ## copy to smaller type truncates
-        " copy ":s sb.appendStr
+      fromVal switch
+        BOOL TYPE F16 F32 F64 case break
+        I8  case " extub":s sb.appendStr break
+        I16 case " extuh":s sb.appendStr break
+        I32 case " extuw":s sb.appendStr break
+        I64 case " extul":s sb.appendStr break
       end
       current ValueId.sbAppend
       '\n' sb.appendC
