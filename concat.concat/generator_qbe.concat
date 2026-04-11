@@ -3382,6 +3382,56 @@ proc(
     New NewUnion NewReference NewUnionReference case
       op [] .val .NewReference ? or op [] .val .NewUnionReference ? end =:: hasReference
       op [] .val .NewUnion ? or op [] .val .NewUnionReference ? end =:: isUnion
+      _QBE_VAL_TYPES_ and hasReference ! if
+        op [] .dataType typeContext types.isTuple or op [] .dataType typeContext types.isTaggedUnion if
+          op [] .dataType typeContext types.compositeElts =:: eltTypes
+          StackValueElement 3 array : mut: valBuffer
+          valBuffer@ list.wrapBuffer
+            eltTypes for
+                $ typeContext types.isEmpty if ..drop continue end
+              ## TODO: handle composite values
+              ## TODO? verify element val-types, usefull error message for overflow of element-buffer
+              context toValType =:: eltValType
+              context .stackInfo branchTree.pop .else
+                "stack underflow" sb.copyPtr op [] .pos context [] .program .errors appendError
+                break
+              end [] switch
+                Val .case list.append break
+                Val2 .case =:: elts
+                  elts .0 list.append
+                  elts .1 list.append
+                break
+                Val3 .case =:: elts
+                  elts .0 list.append
+                  elts .1 list.append
+                  elts .2 list.append
+                break
+              end
+            end
+          =:: eltVals
+          eltVals .length switch
+            0 case
+              "empty values should not exist at compile time" sb.copyPtr op [] .pos context [] .program .errors appendError
+            break
+            1 case context .stackInfo eltVals 0 [] StackValue .Val branchTree.push break
+            2 case
+              context .stackInfo
+                eltVals 0 [] eltVals 1 [] ( StackValueElement StackValueElement ) new StackValue .Val2
+              branchTree.push
+            break
+            3 case
+              context .stackInfo
+                eltVals 0 [] eltVals 1 [] eltVals 2 []
+                ( StackValueElement StackValueElement StackValueElement ) new StackValue .Val3
+              branchTree.push
+            break
+            default ..unreachable
+          end
+          sb return
+        else
+          "currently only tuples can be created by value" ..panic
+        end
+      end
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
