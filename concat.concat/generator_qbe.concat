@@ -2999,7 +2999,7 @@ proc(
       return
     ConstantReference .case =:: constId
       sb
-        _EXPERIMENTAL_ if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
+        _PRE_COMPILE_REFERENCES_ if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
         " =l " sb.appendS
         " copy $" sb.appendS
         CONST_REFERENCE_NAME sb.appendS
@@ -3435,7 +3435,7 @@ proc(
           op [] .pos errors appendError
           return
         end
-        _EXPERIMENTAL_ and hasReference if ValType .PTR else ValType .REFERENCE end dataPtrId context pushValue
+        _PRE_COMPILE_REFERENCES_ and hasReference if ValType .PTR else ValType .REFERENCE end dataPtrId context pushValue
       return
     AutoCast .case =:: castInfo
       sb

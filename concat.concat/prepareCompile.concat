@@ -202,7 +202,7 @@ proc(
         op list.append ## nothing to change
       return
     GetId SetId .case =:: idInfo
-      _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType if
+      _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType if
         newOps
           op list.append ## element access on value-type
         return
@@ -219,7 +219,7 @@ proc(
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
-      _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType _if
+      _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType _if
         newOps
           op list.append ## element access on value-type
         return
@@ -237,7 +237,7 @@ proc(
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
-      _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType _if
+      _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType _if
         newOps
           op list.append ## element access on value-type
         return
@@ -260,7 +260,7 @@ proc(
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
-      _EXPERIMENTAL_ ! or op .dataType typeContext types.isValueType _if
+      _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType _if
         newOps
           op list.append ## element access on value-type
         return
@@ -324,7 +324,7 @@ proc(
         op list.append ## nothing to change
       return
     Constant .case =:: constVal
-      op .dataType typeContext _EXPERIMENTAL_ if types.isValueType else types.referenceOnly ! end if
+      op .dataType typeContext _PRE_COMPILE_REFERENCES_ if types.isValueType else types.referenceOnly ! end if
         newOps
           op list.append
         return
@@ -334,7 +334,7 @@ proc(
       return
     Copy case
       op .dataType =:: baseType
-      _EXPERIMENTAL_ and _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
+      _PRE_COMPILE_REFERENCES_ and _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
         ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
         baseType typeContext types.isValueType if
@@ -361,7 +361,7 @@ proc(
         baseType tmpId op .pos opGetId list.append
       return
     New NewUnion case
-      op .dataType typeContext _EXPERIMENTAL_ if types.isValueType else types.referenceOnly ! end if
+      op .dataType typeContext _PRE_COMPILE_REFERENCES_ if types.isValueType else types.referenceOnly ! end if
         newOps
           op list.append
         return

@@ -21,6 +21,10 @@ false =:: mut: export: _W_ERROR_
 false =:: mut: export: _W_UNUSED_
 
 false =:: mut: export: _EXPERIMENTAL_
+## feature flags for experimental features
+false =:: mut: export: _PRE_COMPILE_REFERENCES_
+false =:: mut: export: _QBE_VAL_TYPES_
+
 true =:: mut: export: _INCLUDE_CORE_
 true =:: mut: export: _INCREMENT_VERSION_
 BackEnd .QBE =:: mut: export: _BACKEND_
