@@ -2133,6 +2133,12 @@ proc(
       end =:: valueType
       valueType context toValType =:: valType
       valueType context referenceOnly if
+        ## get-ptr on reference type yields reference
+        context .stackInfo branchTree.peek .if
+          ValType .REFERENCE >$ .Val .else
+            "expected pointer to be single value" ..panic
+          end .valType=
+        end
         sb return
       end
       pos context popValue =:: valPtr
