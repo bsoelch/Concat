@@ -627,10 +627,7 @@ proc(
               retValueCount 1 + retValueCount=
               continue
             end =:: retName
-            _BACKEND_ .QBE ! or context .outArgNames [] 0 slice.get .and .and retName NameId.eq if
-              retValueCount StackModType .COPY op .pos opStackMod list.append
-              retValueCount 1 + retValueCount=
-            else retValueCount 0 != _if
+            retValueCount 0 != if
               retValueCount StackModType .ROTATE op .pos opStackMod list.append
             end
             retName idContext id.getIdData .else
@@ -638,7 +635,12 @@ proc(
             end
               $ [] .valueType =:: ptrType
             id.asIdInfo ptrType <$ op .pos opGetId list.append
-            ptrType
+            _BACKEND_ .QBE ! or context .outArgNames [] 0 slice.get .and .and retName NameId.eq if
+              0 StackModType .COPY op .pos opStackMod list.append
+              retValueCount 1 + retValueCount=
+              -1 retValueCount - StackModType .ROTATE op .pos opStackMod list.append
+            end
+            ptrType typeContext types.ptrTarget .else "expected out-arg to be pointer" ..panic end
               $ typeContext types.isValueType if
                 BuiltIn .SET_PTR
               else
