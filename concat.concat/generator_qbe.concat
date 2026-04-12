@@ -3836,7 +3836,33 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         retCount 1 == if
-          op [] .pos context popValue
+          context .stackInfo branchTree.pop .else
+            "stack underflow" sb.copyPtr op [] .pos context [] .program .errors appendError
+            return
+          end switch
+            Val .case [] .valueId break
+            Val2 .case =:: elts
+              context .stackInfo elts [] .0 StackValue .Val branchTree.push
+              context .stackInfo elts [] .1 StackValue .Val branchTree.push
+              ValueId .None
+            break
+            Val3 .case =:: elts
+              context .stackInfo elts [] .0 StackValue .Val branchTree.push
+              context .stackInfo elts [] .1 StackValue .Val branchTree.push
+              context .stackInfo elts [] .2 StackValue .Val branchTree.push
+              ValueId .None
+            break
+          end .None .if ..drop
+            ## QBE can only return structs through pointer
+            retType switch
+              Value Tuple .case break
+              Empty case "expected non-empty return value" ..panic
+            end =:: retVal
+            retVal op [] .pos context true appendAlloc =:: tmpId
+            ## TODO! support non-struct composite return
+            retVal tmpId op [] .pos context initializeTupleQBE
+            tmpId
+          end
           "ret ":s
         else retCount 0 > _if
           retType switch
