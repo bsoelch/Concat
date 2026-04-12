@@ -3881,7 +3881,6 @@ proc(
             retVal tmpId op [] .pos context initializeTupleQBE
             tmpId
           end
-          "ret ":s
         else retCount 0 > _if
           retType switch
             Value Tuple .case break
@@ -3889,10 +3888,10 @@ proc(
           end =:: retVal
           retVal op [] .pos context true appendAlloc =:: tmpId
           retVal tmpId op [] .pos context initializeTupleQBE
-          tmpId "ret ":s
+          tmpId
         else
-          ValueId .None string.empty ## values will be ignored
-        end =:: retStr =:: retId
+          ValueId .None ## values will be ignored
+        end =:: retId
         outTypes .length 1:iSize - i32 cast while $ 0 >= do =:: i
           outTypes i [] =:: elt
           elt typeContext types.isEmpty if
@@ -3919,7 +3918,7 @@ proc(
           "ret\n" sb.appendS
           return
         end
-        retStr sb.appendStr
+        "ret ":s sb.appendStr
         retId ValueId.sbAppend
         '\n' sb.appendC
       return
