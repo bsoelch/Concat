@@ -174,9 +174,10 @@ proc( Operation list
   end
 end
 
-union( Operation list ptr.mut : Call Operation list ptr.mut : CallPtr NameId optional list ptr.mut : Impl ) =:: ProcSignatureType
-proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos ConverterContext ptr.mut : context -> Type ) =>: updateProcType
-  context [] .program .idContext .typeContext =:: typeContext
+union( Operation list ptr.mut : Call Operation list ptr.mut : CallPtr _ : Impl ) =:: ProcSignatureType
+proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos ConverterContext ptr.mut : context -> Type NameId slice ) =>: updateProcType
+  context [] .program =:: program
+  program .idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   calledType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
   calledType typeContext types.getProcArgNames =:: argNames
@@ -215,6 +216,7 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
       arg true typeContext types.getAddressType list.append
     end
   =:: mut: newArgs
+  program .nameBuffer [] .length =:: nameOffset
   Type list.empty
     outTypes .length for =:: index
       outTypes index [] =:: outType
@@ -229,11 +231,15 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
       end
       needNewOutTypes ! if outTypes index slice.head list.appendSlice end
       true needNewOutTypes=
-      outType true typeContext types.getAddressType list.append
+      outType true typeContext types.getAddressType =:: outArgType
       index 0 == if
+        outArgType list.append
         ## TODO merge try mergining location with first or last argument
         ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
+      else _BACKEND_ .QBE ! _if
+        outArgType list.append
       end
+      ## TODO! should all out-args be passed before the real proc args (! backend used reveresd arg-order for c-procs)
       newArgs
         needNewArgs ! if
           args list.appendSlice 
@@ -245,33 +251,31 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
           end
         end
         true needNewArgs=
-        outType true typeContext types.getAddressType list.append
+        outArgType list.append
       newArgs=
       procType switch
-        Call CallPtr .case $ []
-          outType true pos context newTmpVar =:: tmpId
-          ## opDeclareId
-            outType
-            tmpId
-            pos
-          opDeclareId list.append
-          ## opAtId
-            outType
-            tmpId
-            pos
-          opAtId list.append
-          procType .CallPtr ? if
-            1 StackModType .ROTATE pos opStackMod list.append
-          end
-        >$ =[] break
-        Impl .case $ []
-          id.FLAG_NONE pos nameContext id.newTmpIdentifier optional.wrap
-            newArgNames
-              $1 list.append
-            newArgNames=
-          list.append
-       >$ =[] break
+        Call CallPtr .case
+          $ []
+            outType true pos context newTmpVar =:: tmpId
+            ## opDeclareId
+              outType
+              tmpId
+              pos
+            opDeclareId list.append
+            ## opAtId
+              outType
+              tmpId
+              pos
+            opAtId list.append
+            procType .CallPtr ? if
+              1 StackModType .ROTATE pos opStackMod list.append
+            end
+          >$ =[]
+          tmpId .nameId
+        break
+        Impl case id.FLAG_NONE pos nameContext id.newTmpIdentifier break
       end
+      program [] .nameBuffer >$ optional.wrap list.append program .nameBuffer=
     end
   =:: newOutTypes
   needNewArgs or needNewOutTypes if
@@ -287,6 +291,10 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
   newArgs list.free ..drop
   newOutTypes list.free ..drop
   newArgNames list.free ..drop
+  program [] .nameBuffer
+    $ nameOffset list.tail slice.unwrapAll .else "empty out-arg name" ..panic end <$
+    nameOffset list.setLength
+  program .nameBuffer=
 end
 
 proc(
@@ -406,9 +414,8 @@ proc(
     break
     ImplementProcedure case
       _PRE_COMPILE_REFERENCES_ if
-        NameId optional list.empty =:: mut: outArgNames ## TODO remember out-args in context
-        op .dataType outArgNames@ ProcSignatureType .Impl op .pos context updateProcType
-        outArgNames list.free ..drop
+        op .dataType ProcSignatureType .Impl op .pos context updateProcType =:: outArgNames
+        ## TODO remember out-args in context
       else
         op .dataType
       end =:: procType
@@ -551,7 +558,7 @@ proc(
         newOps =:: mut: shadow: newOps
         calledType newOps@
           op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
-        op .pos context updateProcType =:: newProcType
+        op .pos context updateProcType =:: outArgNames =:: newProcType
         newOps =:: shadow: newOps
         newOps
           op
@@ -560,8 +567,19 @@ proc(
                 false typeContext types.getAddressType
               end
             >$ .dataType=
-            ## TODO: for QBE some return value are returned as pointers even though they are values
           list.append
+          outArgNames for
+            idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
+            idData [] .valueType
+              idData id.asIdInfo
+              op .pos
+              idData [] .valueType typeContext types.isValueType if
+                opGetId
+              else
+                opAtId
+              end
+            list.append
+          end
         return
       end
       ## special handling for pointer-call procedures

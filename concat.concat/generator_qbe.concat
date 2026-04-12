@@ -3027,7 +3027,12 @@ proc(
     DeclareId case sb return ## ignore declarations
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procInfo
-      op [] .dataType context .currentProc=
+      _PRE_COMPILE_REFERENCES_ if
+        op [] .dataType
+      else
+        procInfo [] .procType
+      end =:: procType
+      procType context .currentProc=
       procInfo [] .nameId id.identifierFlags =:: identifierFlags
       ## reset stack-info in context
       0 context .stackCount=
@@ -3039,7 +3044,7 @@ proc(
           "export " sb.appendS
         end
         "function " sb.appendS
-        op [] .dataType typeContext types.getProcRet =:: retType
+        procType typeContext types.getProcRet =:: retType
         retType switch
           Empty case break
           Value Tuple .case
@@ -3048,16 +3053,16 @@ proc(
           break
         end
         procInfo [] .nameId context sb.appendGlobalName
-        op [] .dataType op [] .pos context sb.appendProcSignature
+        procType op [] .pos context sb.appendProcSignature
         "{\n" sb.appendS
         ## BranchId
           BranchType .START
           0
         BranchId new string.empty context startBranch
         ## push unnamed arguments
-        op [] .dataType typeContext types.getProcIn optional.unwrap =:: args
+        procType typeContext types.getProcIn optional.unwrap =:: args
         0:i32 while $ iSize cast.u args .length u< do =:: i
-          op [] .dataType i typeContext types.getProcArgName =:: argName?
+          procType i typeContext types.getProcArgName =:: argName?
           args i [] =:: argType
           argType typeContext types.isEmpty if
             i 1 + continue ## skip empty arguments
@@ -3531,7 +3536,11 @@ proc(
       break
     Call .case =:: procId
       procId ProcId.getProcInfo =:: procData
-      procData [] .procType =:: calledType
+      _PRE_COMPILE_REFERENCES_ if
+        op [] .dataType
+      else
+        procData [] .procType
+      end =:: calledType
       calledType typeContext types.getProcIn optional.unwrap =:: inTypes
       calledType typeContext types.getProcOutArgs =:: outArgs
       inTypes .length =:: argCount
