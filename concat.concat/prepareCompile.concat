@@ -576,17 +576,19 @@ proc(
               end
             >$ .dataType=
           list.append
-          outArgNames for .else continue end
-            idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
-            idData [] .valueType
-              idData id.asIdInfo
-              op .pos
-              idData [] .valueType typeContext types.isValueType if
-                opGetId
-              else
-                opAtId
-              end
-            list.append
+          _BACKEND_ .QBE if
+            outArgNames 1 slice.tail for .else continue end
+              idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
+              idData [] .valueType
+                idData id.asIdInfo
+                op .pos
+                idData [] .valueType typeContext types.isValueType if
+                  opGetId
+                else
+                  opAtId
+                end
+              list.append
+            end
           end
         return
       end
@@ -625,10 +627,10 @@ proc(
               retValueCount 1 + retValueCount=
               continue
             end =:: retName
-            retValueCount 0 == or _BACKEND_ .QBE ! if
+            _BACKEND_ .QBE ! or context .outArgNames [] 0 slice.get .and .and retName NameId.eq if
               retValueCount StackModType .COPY op .pos opStackMod list.append
               retValueCount 1 + retValueCount=
-            else
+            else retValueCount 0 != _if
               retValueCount StackModType .ROTATE op .pos opStackMod list.append
             end
             retName idContext id.getIdData .else
