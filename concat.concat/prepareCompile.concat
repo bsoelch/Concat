@@ -417,14 +417,90 @@ proc(
       op .dataType
         $ typeContext types.getPointerBaseType .if >$ ..drop end
       =:: calledType
+      _PRE_COMPILE_REFERENCES_ if
+        ## FIXME: adjust ImplementProcedure and Return to match new call semantics
+        calledType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
+        calledType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
+        false =:: mut: needNewArgs
+        false =:: mut: needNewOutTypes
+        newOps =:: mut: shadow: newOps
+        Type list.empty
+          args .length for =:: index
+            args index [] =:: arg
+            ## TODO also ignore static args (do they still exist in this phase?)
+            arg typeContext types.isEmpty if
+              needNewArgs ! if args index slice.head list.appendSlice end
+              true needNewArgs=
+            end
+            arg typeContext types.isValueType if continue end
+            needNewArgs ! if args index slice.head list.appendSlice end
+            true needNewArgs=
+            arg true typeContext types.getAddressType list.append
+          end
+        =:: mut: newArgs
+        Type list.empty
+          outTypes .length for =:: index
+            outTypes index [] =:: outType
+            outType typeContext types.isEmpty if
+              needNewOutTypes ! if outTypes index slice.head list.appendSlice end
+              true needNewOutTypes=
+            end
+            outType typeContext types.isValueType and index 0 == or _BACKEND_ .QBE ! if continue end
+            needNewOutTypes ! if outTypes index slice.head list.appendSlice end
+            true needNewOutTypes=
+            outType true typeContext types.getAddressType list.append
+            index 0 == if
+              ## TODO merge try mergining location with first or last argument
+              ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
+            end
+            outType true op .pos context newTmpVar =:: tmpId
+            newOps
+              ## opDeclareId
+                outType
+                tmpId
+                op .pos
+              opDeclareId list.append
+              ## opAtId
+                outType
+                tmpId
+                op .pos
+              opAtId list.append
+              op .val .CallPtr ? if
+                1 StackModType .ROTATE op .pos opStackMod list.append
+              end
+            newOps=
+            newArgs
+              needNewArgs ! if args list.appendSlice end
+              true needNewArgs=
+              outType true typeContext types.getAddressType list.append
+            newArgs=
+          end
+        =:: newOutTypes
+        needNewArgs or needNewOutTypes if
+          ## newProcedure
+            needNewArgs if newArgs list.asSlice else args end
+            needNewOutTypes if newOutTypes list.asSlice else outTypes end
+            NameId optional slice.empty
+            calledType typeContext types.getCallConvention
+          typeContext types.newProcedure
+        else
+          calledType
+        end =:: newProcType
+        newArgs list.free newArgs=
+        newOutTypes list.free ..drop
+        newOps
+          op
+            newProcType
+              op .dataType typeContext types.isPointer if
+                false typeContext types.getAddressType
+              end
+            >$ .dataType=
+          list.append
+        return
+      end
       ## special handling for pointer-call procedures
       _BACKEND_ .QBE if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
         calledType typeContext types.getProcOutArgs =:: outArgs
-        ## 1. iterate in-types: convert non-value types to pointer
-        ## 2. iterate out-types: convert non-value types to pointer, add out-args for pointer-return
-        ##   - in QBE only emmit first argument treat every other argument as pointer return,
-        ##   - if first return is by reference, try mergining location with first or last argument
-        ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
         newOps
           outArgs for =:: arg
             arg typeContext types.isEmpty if
