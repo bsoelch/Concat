@@ -3415,12 +3415,12 @@ proc(
             1 case context .stackInfo eltVals 0 [] StackValue .Val branchTree.push break
             2 case
               context .stackInfo
-                eltVals 0 [] eltVals 1 [] ( StackValueElement StackValueElement ) new StackValue .Val2
+                eltVals 1 [] eltVals 0 [] ( StackValueElement StackValueElement ) new StackValue .Val2
               branchTree.push
             break
             3 case
               context .stackInfo
-                eltVals 0 [] eltVals 1 [] eltVals 2 []
+                eltVals 2 [] eltVals 1 [] eltVals 0 []
                 ( StackValueElement StackValueElement StackValueElement ) new StackValue .Val3
               branchTree.push
             break

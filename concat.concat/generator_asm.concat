@@ -1491,12 +1491,12 @@ proc(
           1 case context [] .stack eltVals 0 [] StackValue .Val list.push context .stack= break
           2 case
             context [] .stack
-              eltVals 0 [] eltVals 1 [] ( TypedValue TypedValue ) new StackValue .Val2
+              eltVals 1 [] eltVals 0 [] ( TypedValue TypedValue ) new StackValue .Val2
             list.push context .stack=
           break
           3 case
             context [] .stack
-              eltVals 0 [] eltVals 1 [] eltVals 2 []
+              eltVals 2 [] eltVals 1 [] eltVals 0 []
               ( TypedValue TypedValue TypedValue ) new StackValue .Val3
             list.push context .stack=
           break
