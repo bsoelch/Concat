@@ -1978,7 +1978,7 @@ proc(
     end
   else opType end =:: baseType
   baseType context toValType =:: baseVal
-  BuiltIn ..length 218 == "no new built-ins" assert
+  BuiltIn ..length 219 == "no new built-ins" assert
   builtIn switch
     NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
       sb "neg":s baseVal pos context appendUnaryOperator
@@ -2186,6 +2186,18 @@ proc(
         ", " sb.appendS
         baseType pos context typeSizeInt sb.appendI
         '\n' sb.appendC
+      return
+    CLEAR_PTR case
+      pos context popValue =:: targetPtr
+      baseType typeContext types.isEmpty if
+        sb return
+      end
+      sb ## zero-out memory
+        "call $memset(l " sb.appendS
+        targetPtr ValueId.sbAppend
+        ",w 0,l " sb.appendS
+        baseType pos context typeSizeInt sb.appendI
+        ")\n" sb.appendS
       return
     OFFSET_PTR case
       ## baseType is pointer type
@@ -3379,10 +3391,8 @@ proc(
           ValType .REFERENCE structId context pushValue
         end
       return
-    New NewUnion NewReference NewUnionReference case
-      op [] .val .NewReference ? or op [] .val .NewUnionReference ? end =:: hasReference
-      op [] .val .NewUnion ? or op [] .val .NewUnionReference ? end =:: isUnion
-      _QBE_VAL_TYPES_ and hasReference ! if
+    New NewUnion case
+      _QBE_VAL_TYPES_ if
         op [] .dataType typeContext types.isTuple or op [] .dataType typeContext types.isTaggedUnion if
           op [] .dataType typeContext types.compositeElts =:: eltTypes
           StackValueElement 3 array : mut: valBuffer
@@ -3434,15 +3444,8 @@ proc(
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
-        hasReference if
-          op [] .pos context popValue
-        else
-          op [] .dataType op [] .pos context true appendAlloc
-        end =:: dataPtrId
-        isUnion if
-          op [] .val .NewUnion .else
-            .NewUnionReference ._else ..unreachable
-          end =:: index
+        op [] .dataType op [] .pos context true appendAlloc =:: dataPtrId
+        op [] .val .NewUnion .if =:: index
           op [] .dataType index typeContext types.compositeGetElement .else
             "missing union element " sb.copyPtr
             op [] .dataType typeContext sb.appendType
@@ -3467,7 +3470,7 @@ proc(
             end
             '\n' sb.appendC
           end
-        else op [] .dataType typeContext types.isTuple or op [] .dataType typeContext types.isTaggedUnion _if
+        else ..drop op [] .dataType typeContext types.isTuple or op [] .dataType typeContext types.isTaggedUnion _if
           op [] .dataType dataPtrId op [] .pos context initializeTupleQBE
         else op [] .dataType typeContext types.isArray _if
           ## zero-initialize array
@@ -3484,7 +3487,7 @@ proc(
           op [] .pos errors appendError
           return
         end
-        _PRE_COMPILE_REFERENCES_ and hasReference if ValType .PTR else ValType .REFERENCE end dataPtrId context pushValue
+        ValType .REFERENCE dataPtrId context pushValue
       return
     AutoCast .case =:: castInfo
       sb

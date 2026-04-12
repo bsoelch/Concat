@@ -44,7 +44,7 @@ proc(
 end
 
 proc( BuiltIn -> bool ) =>: canMergeJumpIf
-  BuiltIn ..length 218 == "no new builtins" assert
+  BuiltIn ..length 219 == "no new builtins" assert
   switch
     NOT_BOOL ## !
     EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 ## ==
@@ -75,7 +75,7 @@ end
 proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJumpIf
   cmpType .FALSE or cmpType .TRUE end "can only merge cmp.true and cmp.false" assert
   cmpType .FALSE =:: flip
-  BuiltIn ..length 218 == "no new builtins" assert
+  BuiltIn ..length 219 == "no new builtins" assert
   builtIn switch
     NOT_BOOL case
       flip if CompareType .TRUE else CompareType .FALSE end
@@ -378,10 +378,39 @@ proc(
           tmpId
           op .pos
         opAtId list.append
-        op .val .NewUnion .if
-          op .dataType >$ op .pos opNewUnionReference list.append
-        else ..drop
-          op .dataType op .pos opNewReference list.append
+        op .val .NewUnion .if =:: index
+          1 StackModType .ROTATE op .pos opStackMod list.append
+          1 StackModType .COPY op .pos opStackMod list.append
+          op .dataType index op .pos typeContext applyElementOffset
+            $ typeContext types.isValueType if
+              BuiltIn .SET_PTR
+            else
+              BuiltIn .COPY_PTR
+            end
+          op .pos opBuiltIn list.append
+        else ..drop op .dataType typeContext types.isTuple or op .dataType typeContext types.isTaggedUnion _if
+          op .dataType typeContext types.compositeEltCount while $ 1 - <$ 0 != do =:: index
+            1 StackModType .ROTATE op .pos opStackMod list.append
+            1 StackModType .COPY op .pos opStackMod list.append
+            op .dataType index op .pos typeContext applyElementOffset
+              $ typeContext types.isValueType if
+                BuiltIn .SET_PTR
+              else
+                BuiltIn .COPY_PTR
+              end
+            op .pos opBuiltIn list.append
+          finally index end ..drop
+        else op .dataType typeContext types.isArray _if
+          0 StackModType .COPY op .pos opStackMod list.append
+          op .dataType BuiltIn .CLEAR_PTR op .pos opBuiltIn list.append
+        else
+          0 sb.create
+            op .dataType typeContext sb.appendType
+          sb.asStr io.println
+          "unexpected type for new" ..panic
+        end
+        _PRE_COMPILE_REFERENCES_ ! if
+          op .dataType BuiltIn .GET_PTR op .pos opBuiltIn list.append
         end
       return
     Call CallPtr case
@@ -462,7 +491,7 @@ proc(
     return
     CompilerInfo case ## XXX? preserve compilerInfo ops
       newOps return
-    ConstantReference NewReference NewUnionReference case
+    ConstantReference case
       break ## XXX error message
   end
   "unsupported operation " sb.copyPtr

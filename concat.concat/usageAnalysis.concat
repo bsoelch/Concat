@@ -489,7 +489,7 @@ proc(
         end
       end
     break
-    ConstantReference NewReference NewUnionReference case
+    ConstantReference case
       "unsupported operation " sb.copyPtr
         op program sb.appendOp
       op .pos errors appendError

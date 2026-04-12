@@ -1687,9 +1687,7 @@ proc(
         TypeLayout case break ## should not exist in interpreter
       end
       break
-    NewUnionReference CallPtr
-    ImplementProcedure ProcPtr
-    ConstantReference NewReference case break
+    CallPtr ImplementProcedure ProcPtr ConstantReference case break
   end
   "unsupported operation in constant evaluation: " sb.copyPtr
     op [] program sb.appendOp

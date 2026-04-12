@@ -318,9 +318,7 @@ union(
   NestedElementPath : SetNestedElement
                   _ : Return
                   _ : New
-                  _ : NewReference
                 i32 : NewUnion
-                i32 : NewUnionReference
              ProcId : Call
             BuiltIn : shadow: BuiltIn
                   _ : CallPtr
@@ -594,14 +592,8 @@ end
 proc( Type : opType FilePosition ptr : pos -> Operation ) =>: export: opNew
   pos OpValue .New opType Operation new return
 end
-proc( Type : opType FilePosition ptr : pos -> Operation ) =>: export: opNewReference
-  pos OpValue .NewReference opType Operation new return
-end
 proc( Type : opType i32 : index FilePosition ptr : pos -> Operation ) =>: export: opNewUnion
   pos index OpValue .NewUnion opType Operation new return
-end
-proc( Type : opType i32 : index FilePosition ptr : pos -> Operation ) =>: export: opNewUnionReference
-  pos index OpValue .NewUnionReference opType Operation new return
 end
 proc( Type : src Type : target SignType : sign FilePosition ptr : pos -> Operation ) =>: export: opCast
    pos src sign CastInfo new OpValue .Cast target Operation new return
@@ -1285,18 +1277,8 @@ namespace: sb
         "new: " sb.appendS
         op .dataType typeContext sb.appendType
       break
-      NewReference case
-        "new reference: " sb.appendS
-        op .dataType typeContext sb.appendType
-      break
       NewUnion .case =:: eltIndex
         "new union ( " sb.appendS
-        op .dataType typeContext sb.appendType
-        " ) : " sb.appendS
-        eltIndex sb.appendI
-      break
-      NewUnionReference .case =:: eltIndex
-        "new union reference ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) : " sb.appendS
         eltIndex sb.appendI
