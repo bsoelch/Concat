@@ -29,7 +29,7 @@ proc(
     id.FLAG_MUTABLE | IdentifierFlag cast
   end =:: flags
   ## newIdentifier
-    flags ## XXX? special flag for tmp vars
+    flags ## TODO? special flag for tmp vars
     pos
     nameContext
   id.newTmpIdentifier =:: nameId
@@ -148,7 +148,6 @@ proc( Operation list
   end
   Type .Empty BuiltIn .OFFSET_PTR pos opBuiltIn list.append
 end
-
 proc( Operation list
   Type : refBase
   i32 : index
@@ -174,6 +173,119 @@ proc( Operation list
     "unsupported type for get-element" ..panic
   end
 end
+
+union( Operation list ptr.mut : Call Operation list ptr.mut : CallPtr NameId optional list ptr.mut : Impl ) =:: ProcSignatureType
+proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos ConverterContext ptr.mut : context -> Type ) =>: updateProcType
+  context [] .program .idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  calledType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
+  calledType typeContext types.getProcArgNames =:: argNames
+  calledType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
+  false =:: mut: needNewArgs
+  false =:: mut: needNewOutTypes
+  NameId optional list.empty =:: mut: newArgNames
+  Type list.empty
+    args .length for =:: index
+      args index [] =:: arg
+      ## TODO also ignore static args (do they still exist in this phase?)
+      arg typeContext types.isEmpty if
+        needNewArgs ! if
+          args index slice.head list.appendSlice
+          procType .Impl ? if
+            newArgNames argNames index slice.head list.appendSlice newArgNames=
+          end
+        end
+        true needNewArgs=
+        continue
+      end
+      needNewArgs and procType .Impl ? if
+        newArgNames argNames index [] list.append newArgNames=
+      end
+      arg typeContext types.isValueType if
+        needNewArgs if arg list.append end
+        continue
+      end
+      needNewArgs ! if
+        args index slice.head list.appendSlice
+        procType .Impl ? if
+          newArgNames argNames index slice.head list.appendSlice newArgNames=
+        end
+      end
+      true needNewArgs=
+      arg true typeContext types.getAddressType list.append
+    end
+  =:: mut: newArgs
+  Type list.empty
+    outTypes .length for =:: index
+      outTypes index [] =:: outType
+      outType typeContext types.isEmpty if
+        needNewOutTypes ! if outTypes index slice.head list.appendSlice end
+        true needNewOutTypes=
+        continue
+      end
+      outType typeContext types.isValueType and index 0 == or _BACKEND_ .QBE ! if
+        needNewOutTypes if outType list.append end
+        continue
+      end
+      needNewOutTypes ! if outTypes index slice.head list.appendSlice end
+      true needNewOutTypes=
+      outType true typeContext types.getAddressType list.append
+      index 0 == if
+        ## TODO merge try mergining location with first or last argument
+        ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
+      end
+      newArgs
+        needNewArgs ! if
+          args list.appendSlice 
+          procType .Impl ? if
+            newArgNames argNames list.appendSlice newArgNames=
+          end
+        end
+        true needNewArgs=
+        outType true typeContext types.getAddressType list.append
+      newArgs=
+      procType switch
+        Call CallPtr .case $ []
+          outType true pos context newTmpVar =:: tmpId
+          ## opDeclareId
+            outType
+            tmpId
+            pos
+          opDeclareId list.append
+          ## opAtId
+            outType
+            tmpId
+            pos
+          opAtId list.append
+          procType .CallPtr ? if
+            1 StackModType .ROTATE pos opStackMod list.append
+          end
+        >$ =[] break
+        Impl .case $ []
+          id.FLAG_NONE pos nameContext id.newTmpIdentifier optional.wrap
+            newArgNames
+              $1 list.append
+            newArgNames=
+          list.append
+       >$ =[] break
+      end
+    end
+  =:: newOutTypes
+  needNewArgs or needNewOutTypes if
+    ## newProcedure
+      needNewArgs if newArgs list.asSlice else args end
+      needNewOutTypes if newOutTypes list.asSlice else outTypes end
+      NameId optional slice.empty
+      calledType typeContext types.getCallConvention
+    typeContext types.newProcedure
+  else
+    calledType
+  end
+  newArgs list.free ..drop
+  newOutTypes list.free ..drop
+  newArgNames list.free ..drop
+end
+
 proc(
   Operation list : newOps
   Operation : mut: op
@@ -418,76 +530,11 @@ proc(
         $ typeContext types.getPointerBaseType .if >$ ..drop end
       =:: calledType
       _PRE_COMPILE_REFERENCES_ if
-        ## FIXME: adjust ImplementProcedure and Return to match new call semantics
-        calledType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
-        calledType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
-        false =:: mut: needNewArgs
-        false =:: mut: needNewOutTypes
         newOps =:: mut: shadow: newOps
-        Type list.empty
-          args .length for =:: index
-            args index [] =:: arg
-            ## TODO also ignore static args (do they still exist in this phase?)
-            arg typeContext types.isEmpty if
-              needNewArgs ! if args index slice.head list.appendSlice end
-              true needNewArgs=
-            end
-            arg typeContext types.isValueType if continue end
-            needNewArgs ! if args index slice.head list.appendSlice end
-            true needNewArgs=
-            arg true typeContext types.getAddressType list.append
-          end
-        =:: mut: newArgs
-        Type list.empty
-          outTypes .length for =:: index
-            outTypes index [] =:: outType
-            outType typeContext types.isEmpty if
-              needNewOutTypes ! if outTypes index slice.head list.appendSlice end
-              true needNewOutTypes=
-            end
-            outType typeContext types.isValueType and index 0 == or _BACKEND_ .QBE ! if continue end
-            needNewOutTypes ! if outTypes index slice.head list.appendSlice end
-            true needNewOutTypes=
-            outType true typeContext types.getAddressType list.append
-            index 0 == if
-              ## TODO merge try mergining location with first or last argument
-              ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
-            end
-            outType true op .pos context newTmpVar =:: tmpId
-            newOps
-              ## opDeclareId
-                outType
-                tmpId
-                op .pos
-              opDeclareId list.append
-              ## opAtId
-                outType
-                tmpId
-                op .pos
-              opAtId list.append
-              op .val .CallPtr ? if
-                1 StackModType .ROTATE op .pos opStackMod list.append
-              end
-            newOps=
-            newArgs
-              needNewArgs ! if args list.appendSlice end
-              true needNewArgs=
-              outType true typeContext types.getAddressType list.append
-            newArgs=
-          end
-        =:: newOutTypes
-        needNewArgs or needNewOutTypes if
-          ## newProcedure
-            needNewArgs if newArgs list.asSlice else args end
-            needNewOutTypes if newOutTypes list.asSlice else outTypes end
-            NameId optional slice.empty
-            calledType typeContext types.getCallConvention
-          typeContext types.newProcedure
-        else
-          calledType
-        end =:: newProcType
-        newArgs list.free newArgs=
-        newOutTypes list.free ..drop
+        calledType newOps@
+          op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
+        op .pos context updateProcType =:: newProcType
+        newOps =:: shadow: newOps
         newOps
           op
             newProcType
