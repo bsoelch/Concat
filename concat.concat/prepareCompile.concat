@@ -458,7 +458,7 @@ proc(
       return
     Copy case
       op .dataType =:: baseType
-      _PRE_COMPILE_REFERENCES_ and _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
+      _PRE_COMPILE_REFERENCES_ and _QBE_VAL_TYPES_ or _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
         ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
         baseType typeContext types.isValueType if
@@ -481,8 +481,14 @@ proc(
           opAutoCast list.append
         end
         baseType tmpId op .pos opDeclareId list.append
-        baseType tmpId op .pos opSetId list.append
-        baseType tmpId op .pos opGetId list.append
+        _PRE_COMPILE_REFERENCES_ and baseType typeContext types.isValueType ! if ## when _QBE_VAL_TYPES_ is false baseType this can be a non-value type
+          baseType tmpId op .pos opAtId list.append
+          baseType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
+          baseType tmpId op .pos opAtId list.append
+        else
+          baseType tmpId op .pos opSetId list.append
+          baseType tmpId op .pos opGetId list.append
+        end
       return
     New NewUnion case
       op .dataType typeContext _PRE_COMPILE_REFERENCES_ if types.isValueType else types.referenceOnly ! end if
@@ -554,6 +560,7 @@ proc(
                 false typeContext types.getAddressType
               end
             >$ .dataType=
+            ## TODO: for QBE some return value are returned as pointers even though they are values
           list.append
         return
       end
