@@ -187,8 +187,8 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
   Type list.empty
     args .length for =:: index
       args index [] =:: arg
-      ## TODO also ignore static args (do they still exist in this phase?)
-      arg typeContext types.isEmpty if
+      ## ignore static and empty arguments
+      arg typeContext types.isEmpty or argNames index slice.get .and .and id.identifierFlags id.FLAG_STATIC & ? if
         needNewArgs ! if
           args index slice.head list.appendSlice
           procType .Impl ? if
@@ -199,7 +199,7 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
         continue
       end
       needNewArgs and procType .Impl ? if
-        newArgNames argNames index [] list.append newArgNames=
+        argNames index slice.get .if newArgNames >$ list.append newArgNames= end
       end
       arg typeContext types.isValueType if
         needNewArgs if arg list.append end
@@ -208,7 +208,7 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
       needNewArgs ! if
         args index slice.head list.appendSlice
         procType .Impl ? if
-          newArgNames argNames index slice.head list.appendSlice newArgNames=
+          newArgNames argNames index 1 + slice.head list.appendSlice newArgNames=
         end
       end
       true needNewArgs=
@@ -238,7 +238,10 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
         needNewArgs ! if
           args list.appendSlice 
           procType .Impl ? if
-            newArgNames argNames list.appendSlice newArgNames=
+            newArgNames
+              argNames list.appendSlice
+              args .length $1 .length - for ..drop NameId optional.empty list.append end
+            newArgNames=
           end
         end
         true needNewArgs=
@@ -275,7 +278,7 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
     ## newProcedure
       needNewArgs if newArgs list.asSlice else args end
       needNewOutTypes if newOutTypes list.asSlice else outTypes end
-      NameId optional slice.empty
+      newArgNames list.asSlice
       calledType typeContext types.getCallConvention
     typeContext types.newProcedure
   else
@@ -402,15 +405,22 @@ proc(
       return
     break
     ImplementProcedure case
-      op .dataType typeContext types.getProcIn optional.unwrap =:: args
+      _PRE_COMPILE_REFERENCES_ if
+        NameId optional list.empty =:: mut: outArgNames ## TODO remember out-args in context
+        op .dataType outArgNames@ ProcSignatureType .Impl op .pos context updateProcType
+        outArgNames list.free ..drop
+      else
+        op .dataType
+      end =:: procType
+      procType typeContext types.getProcIn optional.unwrap =:: args
       args .length i32 cast.u =:: argCount
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
-          op .dataType i typeContext types.getProcArgName .else
+          procType i typeContext types.getProcArgName .else
             continue
           end =:: argName
           argName id.identifierFlags id.FLAG_STATIC & ? if
-            continue
+            continue ## TODO? are static args even possible in this context
           end
           args i [] =:: argType
           argType typeContext types.isEmpty if continue end
@@ -422,7 +432,9 @@ proc(
         finally i 1 + end ..drop
       context .variables=
       newOps
-        op list.append ## nothing to change
+        op
+          procType >$ .dataType=
+        list.append
       return
     DeclareId .case =:: idInfo
       context [] .variables
