@@ -1652,7 +1652,9 @@ proc(
     TypeCheckCallResult .Error return
   end =:: calledProc
   calledProc .procId ProcId.getProcInfo =:: baseProcData
-  baseProcData [] .flags ProcFlags.IS_CALLED | baseProcData .flags= ## proc is called
+  state [] .isUnusedProc ! if
+    baseProcData [] .flags ProcFlags.IS_CALLED | baseProcData .flags= ## proc is called
+  end
   source .Op .if
     calledType >$ .dataType=
   else ..drop end
@@ -2798,7 +2800,7 @@ proc(
             op .pos
           MissingProc new list.append
         state .missingProcs=
-        state isGlobal ! if
+        state isGlobal ! and state [] .isUnusedProc ! if
           ## TODO find better way to detect used procedure blocks
           ##  ? mark as used if: 1) called 2) assigned to variable 3) passed to procedure 4) merged with other constant
           procData [] .flags ProcFlags.HAS_POINTER | procData .flags= ## proc has pointer
@@ -3039,7 +3041,9 @@ proc(
                 ##  -> generic proc ptr : ( procId )
                 break
               end
-              procData [] .flags ProcFlags.HAS_POINTER | procData .flags= ## proc has pointer
+              state [] .isUnusedProc ! if
+                procData [] .flags ProcFlags.HAS_POINTER | procData .flags= ## proc has pointer
+              end
               procData .implementation .Code .if =:: codeImpl
                 codeImpl .codeState [] .TypeChecked ? ! if
                   state [] .missingProcs
