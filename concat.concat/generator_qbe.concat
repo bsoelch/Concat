@@ -3387,13 +3387,12 @@ proc(
           op [] .dataType typeContext types.compositeElts =:: eltTypes
           StackValueElement 3 array : mut: valBuffer
           valBuffer@ list.wrapBuffer
-            eltTypes for
-                $ typeContext types.isEmpty if ..drop continue end
+            eltTypes for =:: eltType
+              eltType typeContext types.isEmpty if continue end
               ## TODO: handle composite values
               ## TODO? verify element val-types, usefull error message for overflow of element-buffer
-              context toValType =:: eltValType
               context .stackInfo branchTree.pop .else
-                "stack underflow" sb.copyPtr op [] .pos context [] .program .errors appendError
+                "stack underflow" sb.copyPtr op [] .pos errors appendError
                 break
               end [] switch
                 Val .case list.append break

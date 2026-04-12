@@ -1452,6 +1452,55 @@ proc(
       end
     break
     BuiltIn .case op .pos context compileBuiltIn return
+    New case
+      op .dataType typeContext types.isTuple or op .dataType typeContext types.isTaggedUnion if
+        op .dataType typeContext types.compositeElts =:: eltTypes
+        TypedValue 3 array : mut: valBuffer
+        valBuffer@ list.wrapBuffer
+          eltTypes for =:: eltType
+            eltType typeContext types.isEmpty if continue end
+            ## TODO: handle composite values
+            ## TODO? verify element val-types, usefull error message for overflow of element-buffer
+            context [] .stack list.pop >$ context .stack= .else
+              "stack underflow" sb.copyPtr op .pos errors appendError
+              break
+            end switch
+              Val .case list.append break
+              Val2 .case =:: elts
+                elts .0 list.append
+                elts .1 list.append
+              break
+              Val3 .case =:: elts
+                elts .0 list.append
+                elts .1 list.append
+                elts .2 list.append
+              break
+            end
+          end
+        =:: eltVals
+        eltVals .length switch
+          0 case
+            "empty values should not exist at compile time" sb.copyPtr op .pos context [] .program .errors appendError
+          break
+          1 case context [] .stack eltVals 0 [] StackValue .Val list.push context .stack= break
+          2 case
+            context [] .stack
+              eltVals 0 [] eltVals 1 [] ( TypedValue TypedValue ) new StackValue .Val2
+            list.push context .stack=
+          break
+          3 case
+            context [] .stack
+              eltVals 0 [] eltVals 1 [] eltVals 2 []
+              ( TypedValue TypedValue TypedValue ) new StackValue .Val3
+            list.push context .stack=
+          break
+          default ..unreachable
+        end
+        return
+      else
+        "new is currently only supported for tuples" ..panic
+      end
+    break
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procData
       procId context getProcName =:: procName
