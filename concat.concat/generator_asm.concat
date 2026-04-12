@@ -1314,12 +1314,14 @@ proc(
         else
           "unimplemented: memory return" ..panic
         end
+        intCount 1 + intCount=
       else outValType ValType.isFloat _if
-        intCount AMD64.reg.floatRet .if
+        floatCount AMD64.reg.floatRet .if
           outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
         else
           "unimplemented: memory return" ..panic
         end
+        floatCount 1 + floatCount=
       else
         "unsuported value type for return" ..panic
       end
@@ -1356,12 +1358,14 @@ proc(
       else
         "unimplemented: memory argument" ..panic
       end
+      intCount 1 + intCount=
     else argValType ValType.isFloat _if
-      intCount AMD64.reg.floatArg .if
+      floatCount AMD64.reg.floatArg .if
         argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
       else
         "unimplemented: memory argument" ..panic
       end
+      floatCount 1 + floatCount=
     else
       "unimplemented value type for argument" ..panic
     end
@@ -1387,12 +1391,14 @@ proc(
         else
           "unimplemented: memory return" ..panic
         end
+        intCount 1 + intCount=
       else outValType ValType.isFloat _if
-        intCount AMD64.reg.floatRet .if
+        floatCount AMD64.reg.floatRet .if
           asm.Value .Register outValType StackValue.val expectedRetStack i =[]
         else
           "unimplemented: memory return" ..panic
         end
+        floatCount 1 + floatCount=
       else
         "unsuported value type for return" ..panic
       end
