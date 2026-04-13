@@ -217,6 +217,7 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
       end
       true needNewArgs=
       arg true typeContext types.getAddressType list.append
+      argNames index slice.get .and .if id.FLAG_IS_REFERENCE id.addIdentifierFlags end
     end
   =:: mut: newArgs
   program .nameBuffer [] .length =:: nameOffset
@@ -324,12 +325,21 @@ proc(
     NOP case
       newOps return ## ignore no-ops
     BuiltIn ProcPtr PanicWithMessage
-    AtId Switch EndProc
+    Switch EndProc
     RuntimeAssert Error StackMod
     AutoCast Cast Cast! BitCast case
       newOps
         op list.append ## nothing to change
       return
+    AtId .case =:: idInfo
+      newOps
+        idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
+          op .dataType idInfo op .pos opGetId list.append
+        else
+          op list.append
+        end
+      return
+    break
     GetId SetId .case =:: idInfo
       _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType if
         newOps
@@ -337,9 +347,12 @@ proc(
         return
       end
       newOps
-        ## TODO? consistent type for atId: always var-type or always address-type?
-        ## FIXME: arguments already are pointer values -> no need for extra level of indirection
-        op .dataType idInfo op .pos opAtId list.append
+        idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
+          op list.append
+        else
+          ## TODO? consistent type for atId: always var-type or always address-type?
+          op .dataType idInfo op .pos opAtId list.append
+        end
         op .val .SetId ? if
           op .dataType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
         end
