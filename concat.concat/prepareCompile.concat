@@ -216,8 +216,12 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
         end
       end
       true needNewArgs=
-      arg true typeContext types.getAddressType list.append
-      argNames index slice.get .and .if id.FLAG_IS_REFERENCE id.addIdentifierFlags end
+      arg true typeContext types.getAddressType =:: argType
+      argType list.append
+      argNames index slice.get .and .if =:: argName
+        argName id.FLAG_IS_REFERENCE id.addIdentifierFlags
+        argType argName idContext id.getIdData .else "arg has data" ..panic end .valueType=
+      end
     end
   =:: mut: newArgs
   program .nameBuffer [] .length =:: nameOffset
@@ -334,7 +338,9 @@ proc(
     AtId .case =:: idInfo
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
-          op .dataType idInfo op .pos opGetId list.append
+          idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
+            idInfo op .pos
+          opGetId list.append
         else
           op list.append
         end
@@ -348,7 +354,11 @@ proc(
       end
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
-          op list.append
+          op
+            idInfo .nameId
+              idContext id.getIdData .else "arg has data" ..panic end .valueType []
+            >$ .dataType=
+          list.append
         else
           ## TODO? consistent type for atId: always var-type or always address-type?
           op .dataType idInfo op .pos opAtId list.append
