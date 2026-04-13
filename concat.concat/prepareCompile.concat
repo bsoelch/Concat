@@ -254,9 +254,13 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
           procType .Impl ? if
             newArgNames
               argNames list.appendSlice
-              args .length $1 .length - for ..drop NameId optional.empty list.append end
             newArgNames=
           end
+        end
+        procType .Impl ? and newArgs .length newArgNames .length u> if
+          newArgNames
+            newArgs .length $1 .length - for ..drop NameId optional.empty list.append end
+          newArgNames=
         end
         true needNewArgs=
         outArgType list.append
