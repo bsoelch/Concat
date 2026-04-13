@@ -1,6 +1,6 @@
 ( i64 : static: bitCount -> type ) =>: export: bitarray
-  bitCount 63:i64 + 63:i64 ~ & =:: blockCount ## round up to next multiple of 64
-  i64 bitCount array
+  bitCount 63:i64 + 6 >>> =:: blockCount ## round up to next multiple of 64
+  i64 blockCount array
 end
 i8  =:: export: bits8
 i16 =:: export: bits16
