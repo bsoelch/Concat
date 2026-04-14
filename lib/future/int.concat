@@ -1,0 +1,295 @@
+import mem
+import slice
+import optional
+import string
+import stringBuilder
+import numbers/i128
+
+namespace: int
+  iSize ..types.size i32 ..types.size >= "iSize has at least 32 bits" assert
+  iSize ..types.size i32 ..types.size == =:: BITS_32
+
+  BITS_32 if i32 else i64 end =:: Digit
+  iSize =:: IntData
+  namespace: IntData
+    3:iSize =:: MASK_TAG
+    2:iSize =:: SHIFT_TAG
+
+    1:iSize =:: MASK_TYPE
+    0:iSize =:: TYPE_INT
+    1:iSize =:: TYPE_PTR
+    2:iSize =:: FLAG_SIGN
+    proc( IntData -> Digit ptr.raw.mut optional ) =>: asPtr
+      iSize cast $ MASK_TYPE & TYPE_PTR == if
+        MASK_TAG ~ & Digit ptr.raw.mut cast! optional.wrap return
+      end ..drop Digit ptr.raw.mut optional.empty
+    end
+    proc( Digit ptr.raw.mut -> IntData ) =>: fromPtr
+      iSize cast!
+        $ MASK_TAG & ? ! "pointer is alligned" assert
+        TYPE_PTR |
+      IntData cast
+    end
+    proc( IntData -> iSize optional ) =>: asInt
+      iSize cast $ MASK_TYPE & TYPE_INT == if
+        SHIFT_TAG >>> optional.wrap return
+      end ..drop iSize optional.empty
+    end
+    proc( iSize -> IntData optional ) =>: fromInt
+      $ iSize ..types.size 8 * SHIFT_TAG - >>> 0 != if
+        IntData optional.empty return
+      end
+      SHIFT_TAG << TYPE_INT | IntData cast optional.wrap
+    end
+    proc( IntData -> bool ) =>: getSign
+      iSize cast FLAG_SIGN & ?
+    end
+    proc( IntData bool -> IntDatal ) =>: setSign
+      if
+        iSize cast FLAG_SIGN | IntData cast
+      else
+        iSize cast FLAG_SIGN ~ & IntData cast
+      end
+    end
+    proc( IntData -> IntDatal ) =>: flipSign
+      iSize cast FLAG_SIGN ^ IntData cast
+    end
+  end
+end
+## two representations:
+## int place integer ( high low )
+## heap integer ( data length )  data points to array of digits preceeded by two slots for capacity and ref-count
+struct(
+  int.IntData : data   ## high
+  iSize       : length ## low
+) =:: export: int
+namespace: int
+## internal data management
+  2:iSize =:: INFO_SLOTS
+  -1:iSize =:: CAP_INDEX
+  -2:iSize =:: REF_COUNT_INDEX
+  proc( iSize : low iSize : high bool : sign -> int optional ) =>: tryCreateInplace
+    high IntData.fromInt .if
+      sign IntData.setSign low int new optional.wrap return
+    end
+    int optional.empty return
+  end
+  proc( Digit slice : digits bool : sign -> int ) =>: fromDigits
+    digits .length while $ 0 != do
+      digits $1 1 - [] 0 != if break end
+    finally 1 - end 1 + =:: digitCount
+    digitCount INFO_SLOTS +
+      3 + -4 & ## align size to multiple of 4
+    =:: slotCount
+    slotCount Digit mem.alloc INFO_SLOTS @[] =:: basePtr
+    slotCount INFO_SLOTS - Digit cast.u basePtr CAP_INDEX =[]
+    1 Digit cast.u basePtr REF_COUNT_INDEX =[]
+    basePtr digits .data digitCount mem.copy ..drop
+    basePtr IntData.fromPtr sign IntData.setSign digitCount int new
+  end
+  proc( int bool : newSign -> int ) =>: setSign
+    $ .data newSign IntData.setSign >$ .data=
+  end
+  proc( int -> int ) =>: normalize
+    ## remove leading zeros, use small int if possible
+    "unimplemented: normalize" ..panic
+  end
+  proc( iSize : maxDigits -> int ) =>: prepareCap
+    ## prepare int that can hold up to max-digits
+    "unimplemented: prepareCap" ..panic
+  end
+  proc( int iSize : newCap -> int ) =>: ensureCap
+    ## ensure given int can hold up to max-digits
+    "unimplemented: ensureCap" ..panic
+  end
+## reference management
+  proc( int -> int ) =>: export: copy
+    "unimplemented: copy" ..panic
+  end
+  proc( int -> ) =>: export: free
+    "unimplemented: free" ..panic
+  end
+## create from integer
+  proc( i32 : val -> int ) =>: export: fromI32
+    val 0 < $ =:: sign if -_ end =:: shadow: val
+    val iSize cast.u 0 sign tryCreateInplace optional.unwrap
+  end
+  proc( i32 : val -> int ) =>: export: fromU32
+    val iSize cast.u 0 false tryCreateInplace optional.unwrap
+  end
+  0 fromI32 =:: ZERO
+  1 fromI32 =:: ONE
+  -1 fromI32 =:: NEGATIVE_ONE
+  BITS_32 if
+    proc( i64 : val -> int ) =>: export: fromI64
+      val 0 < $ =:: sign if -_ end =:: shadow: val
+      val i32 cast iSize cast.u val 32 >>> i32 cast iSize cast.u sign tryCreateInplace .else
+        Digit 2 array : mut: digits
+        val i32 cast digits@ 0 =[]
+        val 32 >>> i32 cast digits@ 1 =[]
+        digits@ slice.wrap sign fromDigits
+      end
+    end
+    proc( i64 : val -> int ) =>: export: fromU64
+      val i32 cast iSize cast.u val 32 >>> i32 cast iSize cast.u false tryCreateInplace .else
+        Digit 2 array : mut: digits
+        val i32 cast digits@ 0 =[]
+        val 32 >>> i32 cast digits@ 1 =[]
+        digits@ slice.wrap false fromDigits
+      end
+    end
+    proc( i128 : val -> int ) =>: export: fromI128
+      val 0 < $ =:: sign if -_ end =:: shadow: val
+      val fromU128 sign setSign
+    end
+    proc( i128 : val -> int ) =>: export: fromU128
+      val .high 0 == if
+        val .low fromI64
+      else
+        Digit 4 array : mut: digits
+        val .low i32 cast digits@ 0 =[]
+        val .low 32 >>> i32 cast digits@ 1 =[]
+        val .hi i32 cast digits@ 2 =[]
+        val .hi 32 >>> i32 cast digits@ 3 =[]
+        digits@ slice.wrap false fromDigits
+      end
+    end
+  else
+    proc( i64 : val -> int ) =>: export: fromI64
+      val 0 < $ =:: sign if -_ end =:: shadow: val
+      val iSize cast.u 0 sign tryCreateInplace optional.unwrap
+    end
+    proc( i64 : val -> int ) =>: export: fromU64
+      val iSize cast.u 0 false tryCreateInplace optional.unwrap
+    end
+    proc( i128 : val -> int ) =>: export: fromI128
+      val 0 < $ =:: sign if -_ end =:: shadow: val
+      val .low iSize cast.u val .high iSize cast.u sign tryCreateInplace .else
+        Digit 2 array : mut: digits
+        val .low digits@ 0 =[]
+        val .high digits@ 1 =[]
+        digits@ slice.wrap sign fromDigits
+      end
+    end
+    proc( i128 : val -> int ) =>: export: fromU128
+      val .low iSize cast.u val .high iSize cast.u false tryCreateInplace .else
+        Digit 2 array : mut: digits
+        val .low digits@ 0 =[]
+        val .high digits@ 1 =[]
+        digits@ slice.wrap false fromDigits
+      end
+    end
+  end
+  proc( int -> i32 optional ) =>: asI32
+    "unimplemented: asI32" ..panic
+  end
+  proc( int -> i32 optional ) =>: asU32
+    "unimplemented: asU32" ..panic
+  end
+  proc( int -> i64 optional ) =>: asI64
+    "unimplemented: asI64" ..panic
+  end
+  proc( int -> i64 optional ) =>: asU64
+    "unimplemented: asU64" ..panic
+  end
+  proc( int -> i128 optional ) =>: asI128
+    "unimplemented: asI128" ..panic
+  end
+  proc( int -> i128 optional ) =>: asU128
+    "unimplemented: asU128" ..panic
+  end
+## conversion from/to string
+  proc( string : val i32 : base -> int optional ) =>: export: parse
+    "unimplemented: parse" ..panic ## return int NumberParseResult instead of optional
+  end
+  proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: export: sbAppend
+    "unimplemented: sbAppend" ..panic
+  end
+## arithmetic
+  ## -1 0 1
+  proc( int -> i8 ) =>: export: sign
+    "unimplemented: sign" ..panic
+  end
+  proc( int -> int ) =>: export: abs
+    $ .data false IntData.setSign >$ .data=
+  end
+  proc( int -> int ) =>: export: negate
+    $ .data IntData.flipSign >$ .data=
+  end
+  proc( int int -> int ) =>: export: add
+    "unimplemented: add" ..panic
+  end
+  ## addI32 addI64 addI128
+  ## addU32 addU64 addU128
+  proc( int int -> int ) =>: export: sub
+    "unimplemented: sub" ..panic
+  end
+  proc( int int -> int ) =>: export: mul
+    "unimplemented: mul" ..panic
+  end
+  proc( int int -> int ) =>: export: square
+    "unimplemented: square" ..panic
+  end
+  enum( DIV REM DIV_REM FLOOR_DIV MOD DIV_MOD ) =:: DivideResult
+  proc( int : a int : b DivideResult -> int : div int : rem ) =>: divRem0
+    ## 1. handle signs
+    ## 2. handle small numbers
+    ## 3. choose good division algorithm
+    ## 4. create result
+    "unimplemented: divRem" ..panic
+  end
+  proc( int int -> int : div int : rem ) =>: export: divRem
+    DivideResult .DIV_REM divRem0
+  end
+  proc( int int -> int ) =>: export: div
+    DivideResult .DIV divRem0 free
+  end
+  proc( int int -> int ) =>: export: rem
+    DivideResult .REM divRem0 >$ free
+  end
+  proc( int int -> int : div int : rem ) =>: export: divMod
+    DivideResult .DIV_MOD divRem0
+  end
+  proc( int int -> int ) =>: export: floorDiv
+    DivideResult .FLOOR_DIVIDE divRem0 free
+  end
+  proc( int int -> int ) =>: export: mod
+    DivideResult .MOD divRem0 >$ free
+  end
+  proc( int : b i32 : e -> int ) =>: export: gcd
+    "unimplemented: gcd" ..panic
+  end
+  proc( int : b i32 : e -> int ) =>: export: pow
+    "unimplemented: pow" ..panic
+  end
+  proc( int : b int : e int : m -> int ) =>: export: modPow
+    "unimplemented: modPow" ..panic
+  end
+  proc( int : b int : m -> int ) =>: export: modInverse
+    "unimplemented: modInverse" ..panic
+  end
+## comparisons 
+## bitwise operations
+  proc( int -> i64 ) =>: export: bitLength
+    "unimplemented: bitCount" ..panic
+  end
+  proc( int -> int ) =>: export: bitNot
+    "unimplemented: bitNot" ..panic
+  end
+  proc( int int -> int ) =>: export: bitAnd
+    "unimplemented: bitAnd" ..panic
+  end
+  proc( int int -> int ) =>: export: bitOr
+    "unimplemented: bitOr" ..panic
+  end
+  proc( int int -> int ) =>: export: bitXor
+    "unimplemented: bitXor" ..panic
+  end
+  proc( int i32 -> int ) =>: export: shiftLeft
+    "unimplemented: shiftLeft" ..panic
+  end
+  proc( int i32 -> int ) =>: export: shiftRight
+    "unimplemented: shiftRight" ..panic
+  end
+end
+
