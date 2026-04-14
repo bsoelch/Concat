@@ -187,6 +187,7 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
   calledType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
   false =:: mut: needNewArgs
   false =:: mut: needNewOutTypes
+  ## TODO: reuse lists
   NameId optional list.empty =:: mut: newArgNames
   Type list.empty
     args .length for =:: index
@@ -257,9 +258,9 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
             newArgNames=
           end
         end
-        procType .Impl ? and newArgs .length newArgNames .length u> if
+        procType .Impl ? and $ .length newArgNames .length u> if
           newArgNames
-            newArgs .length $1 .length - for ..drop NameId optional.empty list.append end
+            $1 .length $1 .length - for ..drop NameId optional.empty list.append end
           newArgNames=
         end
         true needNewArgs=
