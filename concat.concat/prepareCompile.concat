@@ -359,11 +359,9 @@ proc(
       end
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
-          op
-            idInfo .nameId
-              idContext id.getIdData .else "arg has data" ..panic end .valueType []
-            >$ .dataType=
-          list.append
+          idInfo .nameId
+            idContext id.getIdData .else "arg has data" ..panic end .valueType []
+          idInfo op .pos opGetId list.append
         else
           ## TODO? consistent type for atId: always var-type or always address-type?
           op .dataType idInfo op .pos opAtId list.append
