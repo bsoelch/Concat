@@ -100,9 +100,6 @@ proc( -> ) =>: parseArgs
       "enable experimental features":s arg.helpText
     _EXPERIMENTAL_@ "-X":s arg.set
     arg.flag
-      "convert reference types to pointers in pre-compiler":s arg.helpText
-    _PRE_COMPILE_REFERENCES_@ "-Xref-to-ptr":s arg.set
-    arg.flag
       "enable experimental support for value-types in QBE-backend":s arg.helpText
     _QBE_VAL_TYPES_@ "-Xval-types":s arg.set
     OptLevel arg.select ## select value depending on which arg appear last

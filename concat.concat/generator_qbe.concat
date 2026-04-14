@@ -3017,7 +3017,7 @@ proc(
       return
     ConstantReference .case =:: constId
       sb
-        _PRE_COMPILE_REFERENCES_ if ValType .PTR else ValType .REFERENCE end context pushNewValue ValueId.sbAppend
+        ValType .PTR context pushNewValue ValueId.sbAppend
         " =l " sb.appendS
         " copy $" sb.appendS
         CONST_REFERENCE_NAME sb.appendS
@@ -3027,11 +3027,7 @@ proc(
     DeclareId case sb return ## ignore declarations
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procInfo
-      _PRE_COMPILE_REFERENCES_ if
-        op [] .dataType
-      else
-        procInfo [] .procType
-      end =:: procType
+      op [] .dataType =:: procType
       procType context .currentProc=
       procInfo [] .nameId id.identifierFlags =:: identifierFlags
       ## reset stack-info in context
@@ -3536,11 +3532,7 @@ proc(
       break
     Call .case =:: procId
       procId ProcId.getProcInfo =:: procData
-      _PRE_COMPILE_REFERENCES_ if
-        op [] .dataType
-      else
-        procData [] .procType
-      end =:: calledType
+      op [] .dataType =:: calledType
       calledType typeContext types.getProcIn optional.unwrap =:: inTypes
       calledType typeContext types.getProcOutArgs =:: outArgs
       inTypes .length =:: argCount

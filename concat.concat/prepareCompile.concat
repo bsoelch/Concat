@@ -352,7 +352,7 @@ proc(
       return
     break
     GetId SetId .case =:: idInfo
-      _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType if
+      op .dataType typeContext types.isValueType if
         newOps
           op list.append ## element access on value-type
         return
@@ -375,7 +375,7 @@ proc(
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
-      _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType _if
+      op .dataType typeContext types.isValueType _if
         newOps
           op list.append ## element access on value-type
         return
@@ -393,7 +393,7 @@ proc(
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
-      _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType _if
+      op .dataType typeContext types.isValueType _if
         newOps
           op list.append ## element access on value-type
         return
@@ -416,7 +416,7 @@ proc(
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
-      _PRE_COMPILE_REFERENCES_ ! or op .dataType typeContext types.isValueType _if
+      op .dataType typeContext types.isValueType _if
         newOps
           op list.append ## element access on value-type
         return
@@ -446,13 +446,10 @@ proc(
       return
     break
     ImplementProcedure case
-      _PRE_COMPILE_REFERENCES_ if
-        op .dataType ProcSignatureType .Impl op .pos context updateProcType =:: outArgNames
-        outArgNames slice.copy context .outArgNames=
+      op .dataType ProcSignatureType .Impl op .pos context updateProcType =:: outArgNames
+      outArgNames slice.copy context .outArgNames=
         $ optional.wrap context .currentProcType=
-      else
-        op .dataType
-      end =:: procType
+      =:: procType
       procType typeContext types.getProcIn optional.unwrap =:: args
       args .length i32 cast.u =:: argCount
       context [] .variables
@@ -489,7 +486,7 @@ proc(
         op list.append ## nothing to change
       return
     Constant .case =:: constVal
-      op .dataType typeContext _PRE_COMPILE_REFERENCES_ if types.isValueType else types.referenceOnly ! end if
+      op .dataType typeContext types.isValueType if
         newOps
           op list.append
         return
@@ -499,7 +496,7 @@ proc(
       return
     Copy case
       op .dataType =:: baseType
-      _PRE_COMPILE_REFERENCES_ and _QBE_VAL_TYPES_ or _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
+      _QBE_VAL_TYPES_ or _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
         ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
         baseType typeContext types.isValueType if
@@ -522,7 +519,7 @@ proc(
           opAutoCast list.append
         end
         baseType tmpId op .pos opDeclareId list.append
-        _PRE_COMPILE_REFERENCES_ and baseType typeContext types.isValueType ! if ## when _QBE_VAL_TYPES_ is false baseType this can be a non-value type
+        baseType typeContext types.isValueType ! if ## when _QBE_VAL_TYPES_ is false baseType this can be a non-value type
           baseType tmpId op .pos opAtId list.append
           baseType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
           baseType tmpId op .pos opAtId list.append
@@ -532,7 +529,7 @@ proc(
         end
       return
     New NewUnion case
-      op .dataType typeContext _PRE_COMPILE_REFERENCES_ if types.isValueType else types.referenceOnly ! end if
+      op .dataType typeContext types.isValueType if
         newOps
           op list.append
         return
@@ -580,105 +577,70 @@ proc(
           sb.asStr io.println
           "unexpected type for new" ..panic
         end
-        _PRE_COMPILE_REFERENCES_ ! if
-          op .dataType BuiltIn .GET_PTR op .pos opBuiltIn list.append
-        end
       return
     Call CallPtr case
       op .dataType
         $ typeContext types.getPointerBaseType .if >$ ..drop end
       =:: calledType
-      _PRE_COMPILE_REFERENCES_ if
-        newOps =:: mut: shadow: newOps
-        calledType newOps@
-          op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
-        op .pos context updateProcType =:: outArgNames =:: newProcType
-        newOps =:: shadow: newOps
-        newOps
-          op
-            newProcType
-              op .dataType typeContext types.isPointer if
-                false typeContext types.getAddressType
-              end
-            >$ .dataType=
-          list.append
-          _BACKEND_ .QBE if
-            outArgNames 1 slice.tail for .else continue end
-              idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
-              idData [] .valueType
-                idData id.asIdInfo
-                op .pos
-                idData [] .valueType typeContext types.isValueType if
-                  opGetId
-                else
-                  opAtId
-                end
-              list.append
-            end
-          end
-        return
-      end
-      ## special handling for pointer-call procedures
-      _BACKEND_ .QBE if ## TODO? is special case for QBE needed, ? should this be a check for PTRCALL
-        calledType typeContext types.getProcOutArgs =:: outArgs
-        newOps
-          outArgs for =:: arg
-            arg typeContext types.isEmpty if
-              continue
-            end
-            arg true op .pos context newTmpVar =:: tmpId
-            ## opDeclareId
-              arg
-              tmpId
-              op .pos
-            opDeclareId list.append
-            ## opAtId
-              arg
-              tmpId
-              op .pos
-            opAtId list.append
-          end
-          op list.append
-        return
-      end
+      newOps =:: mut: shadow: newOps
+      calledType newOps@
+        op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
+      op .pos context updateProcType =:: outArgNames =:: newProcType
+      newOps =:: shadow: newOps
       newOps
-        op list.append
-      return
-    Return case
-      _PRE_COMPILE_REFERENCES_ if
-        0 =:: mut: retValueCount
-        context .currentProcType [] .else "return outside procedure" ..panic end =:: retType
-        newOps
-          context .outArgNames [] slice.reversed for .else
-              retValueCount 1 + retValueCount=
-              continue
-            end =:: retName
-            retValueCount 0 != if
-              retValueCount StackModType .ROTATE op .pos opStackMod list.append
+        op
+          newProcType
+            op .dataType typeContext types.isPointer if
+              false typeContext types.getAddressType
             end
-            retName idContext id.getIdData .else
-              "out-arg has no id-data" ..panic
-            end
-              $ [] .valueType =:: ptrType
-            id.asIdInfo ptrType <$ op .pos opGetId list.append
-            _BACKEND_ .QBE ! or context .outArgNames [] 0 slice.get .and .and retName NameId.eq if
-              0 StackModType .COPY op .pos opStackMod list.append
-              retValueCount 1 + retValueCount=
-              -1 retValueCount - StackModType .ROTATE op .pos opStackMod list.append
-            end
-            ptrType typeContext types.ptrTarget .else "expected out-arg to be pointer" ..panic end
-              $ typeContext types.isValueType if
-                BuiltIn .SET_PTR
+          >$ .dataType=
+        list.append
+        _BACKEND_ .QBE if
+          outArgNames 1 slice.tail for .else continue end
+            idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
+            idData [] .valueType
+              idData id.asIdInfo
+              op .pos
+              idData [] .valueType typeContext types.isValueType if
+                opGetId
               else
-                BuiltIn .COPY_PTR
+                opAtId
               end
-            op .pos opBuiltIn list.append
+            list.append
           end
-          op retType >$ .dataType= list.append
-        return
-      end
+        end
+      return
+    break
+    Return case
+      0 =:: mut: retValueCount
+      context .currentProcType [] .else "return outside procedure" ..panic end =:: retType
       newOps
-        op list.append
+        context .outArgNames [] slice.reversed for .else
+            retValueCount 1 + retValueCount=
+            continue
+          end =:: retName
+          retValueCount 0 != if
+            retValueCount StackModType .ROTATE op .pos opStackMod list.append
+          end
+          retName idContext id.getIdData .else
+            "out-arg has no id-data" ..panic
+          end
+            $ [] .valueType =:: ptrType
+          id.asIdInfo ptrType <$ op .pos opGetId list.append
+          _BACKEND_ .QBE ! or context .outArgNames [] 0 slice.get .and .and retName NameId.eq if
+            0 StackModType .COPY op .pos opStackMod list.append
+            retValueCount 1 + retValueCount=
+            -1 retValueCount - StackModType .ROTATE op .pos opStackMod list.append
+          end
+          ptrType typeContext types.ptrTarget .else "expected out-arg to be pointer" ..panic end
+            $ typeContext types.isValueType if
+              BuiltIn .SET_PTR
+            else
+              BuiltIn .COPY_PTR
+            end
+          op .pos opBuiltIn list.append
+        end
+        op retType >$ .dataType= list.append
       return
     break
     LocalLabel .case =:: labelInfo
