@@ -301,11 +301,6 @@ proc( ValType : valType i32 : offset ValueId : newVal CompilerContext ptr.mut : 
   branchTree.replaceAt optional.unwrap =:: stackElt
   newVal valType StackValue.val stackElt =[]
 end
-proc( ValType : valType i32 : offset CompilerContext ptr.mut : context -> ValueId ) =>: startReplaceValue
-  context nextStackValueId
-    valType offset $2 context replaceValue
-  return
-end
 proc(
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
@@ -711,16 +706,6 @@ namespace: sb
   end
   proc(
     stringBuilder : sb
-    i32 : index
-    CompilerContext ptr.mut : context
-  -> stringBuilder ) =>: appendOutArgName
-    sb
-      "%o" sb.appendS
-      index sb.appendI
-    return
-  end
-  proc(
-    stringBuilder : sb
     Type : procType
     FilePosition ptr : pos
     CompilerContext ptr.mut : context
@@ -731,23 +716,9 @@ namespace: sb
     typeContext .nameContext =:: nameContext
     procType typeContext types.getCallConvention =:: callConvention
     procType typeContext types.getProcIn optional.unwrap =:: args
-    procType typeContext types.getProcOutArgs =:: outArgs
     false =:: mut: hasArgs
     sb
       "(" sb.appendS
-      outArgs .length 1:iSize - i32 cast.u while $ 0 >= do =:: i
-          outArgs i [] =:: arg
-          arg typeContext types.isEmpty if
-            ## skip empty arguments
-            continue
-          end
-          hasArgs if
-            ',' sb.appendC
-          end
-          true hasArgs=
-          "l " sb.appendS ## all out arguments are pointers
-          i context appendOutArgName
-      finally i 1 - end ..drop
       args .length 1:iSize - i32 cast.u while $ 0 >= do =:: i
         args i [] =:: mut: arg
         arg typeContext types.containsGeneric if
@@ -2893,22 +2864,14 @@ proc(
   stringBuilder : sb
   Type : calledType
   TypedValId list ptr.mut : argIndices
-  iSize : outArgsOffset
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: prepareCall
   context [] .program =:: prog
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  calledType typeContext types.getProcOutArgs =:: outArgs
   calledType typeContext types.getProcRet =:: retType
   sb =:: mut: newSb
-  ## push out arguments on stack
-  outArgsOffset while $ argIndices [] .length u< do =:: i
-    argIndices [] i [] =:: outArg
-    ValType .REFERENCE outArg .valId context pushValue
-    i 1:iSize +
-  end ..drop
   newSb
     retType switch
       Empty case break
@@ -2926,14 +2889,12 @@ proc(
   stringBuilder : sb
   Type : calledType
   TypedValId list ptr.mut : argIndices
-  iSize : outArgsOffset
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> stringBuilder ) =>: finishCall
   context [] .program =:: prog
   prog .idContext =:: idContext
   idContext .typeContext =:: typeContext
-  calledType typeContext types.getProcOutArgs =:: outArgs
   calledType typeContext types.getProcRet =:: retType
   sb
     " (" sb.appendS
@@ -2944,15 +2905,11 @@ proc(
         ',' sb.appendC
       end
       true hasArgs=
-      i outArgsOffset u< if
-        arg [] .valType
-          StorageType .LOAD
-          pos
-          context
-        sb.appendTypeNameQBE
-      else
-        'l' sb.appendC
-      end
+      arg [] .valType
+        StorageType .LOAD
+        pos
+        context
+      sb.appendTypeNameQBE
       ' ' sb.appendC
       arg [] .valId ValueId.sbAppend
     finally i 1:iSize - end ..drop
@@ -2963,31 +2920,6 @@ proc(
         pos
       context flattenTupleQBE
     else ..drop end
-    ## convert out-arg references to values
-    outArgsOffset while $ argIndices [] .length u< do =:: i
-      argIndices [] i @[] .valType [] =:: argType
-      argType context referenceOnly if
-        continue
-      end
-      ## TODO? extract load operations to common procedure
-      argIndices [] .length i - i32 cast =:: offset
-      context .stackInfo offset branchTree.at optional.unwrap [] .Val .else ..drop
-        ## TODO? should reference in composite be allowed
-        continue ## reference is stored in single value
-      end
-        $ .valType .REFERENCE ! if ..drop
-          continue
-        end
-      .valueId =:: srcId
-      argType context toValType offset context startReplaceValue ValueId.sbAppend
-      " =" sb.appendS
-      argType StorageType .STACK pos context sb.appendTypeNameQBE
-      " load" sb.appendS
-      argType StorageType .LOAD pos context sb.appendTypeNameQBE
-      ' ' sb.appendC
-      srcId ValueId.sbAppend
-      '\n' sb.appendC
-    finally i 1:iSize + end ..drop
     argIndices [] list.free argIndices =[]
   return
 end
@@ -3534,7 +3466,6 @@ proc(
       procId ProcId.getProcInfo =:: procData
       op [] .dataType =:: calledType
       calledType typeContext types.getProcIn optional.unwrap =:: inTypes
-      calledType typeContext types.getProcOutArgs =:: outArgs
       inTypes .length =:: argCount
       argCount TypedValId list.create =:: mut: argIndices
       sb
@@ -3559,17 +3490,6 @@ proc(
         argIndices=
         i 1 +
       end ..drop
-      argIndices .length =:: outArgOffset
-      ## reserve space for out-arguments
-      outArgs for =:: arg
-        arg typeContext types.isEmpty if
-          ## skip empty arguments
-          continue
-        end
-        argIndices
-          arg ValueId .None TypedValId new list.append
-        argIndices=
-      end
       argIndices .length =:: mut: argIndex
       while argIndex 0:iSize iSize.sgt do
         argIndex 1:iSize - argIndex=
@@ -3583,13 +3503,11 @@ proc(
       newSb
         calledType
           argIndices@
-          outArgOffset
           op [] .pos
         context prepareCall
         procData [] .nameId context sb.appendGlobalName
         calledType
           argIndices@
-          outArgOffset
           op [] .pos
         context finishCall
       return
@@ -3599,24 +3517,9 @@ proc(
         calledType=
       end
       calledType typeContext types.getProcIn optional.unwrap =:: inTypes
-      calledType typeContext types.getProcOutArgs =:: outArgs
-      outArgs .length TypedValId list.create =:: mut: argIndices
-      outArgs .length while $ 1 - >$ 0 != do =:: i
-        outArgs i [] typeContext types.isEmpty if
-          continue ## skip empty arguments
-        end
-        argIndices
-          ## TypedValId
-            outArgs i []
-            op [] .pos context popValue
-          TypedValId new list.append
-        argIndices=
-      finally i end ..drop
       op [] .pos context popValue =:: calledId
       inTypes .length =:: argCount
-      argIndices
-        $ .length argCount + list.ensureCap
-      argIndices=
+      argCount TypedValId list.create =:: mut: argIndices
       argCount 1:iSize - i32 cast.u while $ 0 >= do =:: i
         inTypes i []
           $ typeContext types.isArray and $ typeContext types.containsGeneric if
@@ -3635,17 +3538,14 @@ proc(
       finally i 1 - end ..drop
       ## arguments are popped in reverse order
       argIndices list.reverse
-      argCount =:: outArgOffset
       sb
         calledType
           argIndices@
-          outArgOffset
           op [] .pos
         context prepareCall
         calledId ValueId.sbAppend
         calledType
           argIndices@
-          outArgOffset
           op [] .pos
         context finishCall
       return
@@ -3836,7 +3736,6 @@ proc(
         sb return
       end
       op [] .dataType typeContext types.getProcRet =:: retType
-      op [] .dataType typeContext types.getProcOutArgs =:: outTypes
       retType switch
         Empty case 0:i32 break
         Value case 1:i32 break
@@ -3884,28 +3783,6 @@ proc(
         else
           ValueId .None ## values will be ignored
         end =:: retId
-        outTypes .length 1:iSize - i32 cast while $ 0 >= do =:: i
-          outTypes i [] =:: elt
-          elt typeContext types.isEmpty if
-            i 1 - continue
-          end
-          elt context referenceOnly if
-            "blit" sb.appendS
-          else
-            "store" sb.appendS
-            elt StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-          end
-          ' ' sb.appendC
-          op [] .pos context popValue ValueId.sbAppend
-          ", ":s sb.appendStr
-          i context sb.appendOutArgName
-          elt context referenceOnly if
-            ", ":s sb.appendStr
-            elt op [] .pos context typeSizeInt sb.appendI
-          end
-          '\n' sb.appendC
-        i 1 -
-        end ..drop
         retCount 0 == if
           "ret\n" sb.appendS
           return

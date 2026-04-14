@@ -617,19 +617,6 @@ namespace: types
     end
   end
 
-  ## does value fit in 2*64-bit values
-  proc( Type TypeContext ptr.mut -> bool ) =>: export: isSmallType
-    sizeOf =:: size
-    size switch
-      Fixed .case 16 <= return ## more than 2*i64
-      DynamicArray case false return
-      Unknown case ..unreachable ## TODO? error message
-    end
-  end
-  ## can value be pushed onto stack
-  proc( Type TypeContext ptr.mut -> bool ) =>: export: referenceOnly
-    isSmallType ! return ## TODO? allow larger stack values
-  end
   i8 =:: SimpleTypeInfo
   namespace: SimpleTypeInfo
     0x00 SimpleTypeInfo cast =:: EMPTY
@@ -1921,21 +1908,6 @@ namespace: types
         outTypes
           NameId optional slice optional.empty
         context newTuple ProcRet .Tuple return
-    end
-  end
-  proc( Type : proc TypeContext ptr : context -> Type slice ) =>: export: getProcOutArgs
-    proc context getProcData .else
-      Type slice.empty return
-    end
-      $ [] .callingConvention =:: callConvention
-    .outTypes [] =:: outTypes
-    callConvention switch
-      CCALL CONCAT case Type slice.empty return
-      PTRCALL case
-        outTypes .length 0:iSize == if
-          Type slice.empty return
-        end
-        outTypes outTypes .length 1:iSize - slice.head return
     end
   end
   proc( Type slice : in Type slice : out NameId optional slice : eltNames CallingConvention : callConvention TypeContext ptr.mut : context -> Type ) =>: export: newProcedure
