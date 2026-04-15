@@ -25,6 +25,9 @@ namespace: i128
   proc( i64 : low -> i128 ) =>: export: fromU64
     0 low i128 new
   end
+  proc( i64 : hi i64 : low -> i128 ) =>: export: create
+    hi low i128 new
+  end
 
   proc( i128 : a -> i128 ) =>: export: flip
     ## i128

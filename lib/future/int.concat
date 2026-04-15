@@ -2,6 +2,7 @@ import mem
 import slice
 import optional
 import string
+import list
 import stringBuilder
 import numbers/i128
 
@@ -10,6 +11,19 @@ namespace: int
   iSize ..types.size i32 ..types.size == =:: BITS_32
 
   BITS_32 if i32 else i64 end =:: Digit
+
+  namespace: Digits
+    proc( Digit list i64 : x -> Digit list ) =>: appendI64
+      Digit ..types.size i64 ..types.size == _if
+        x Digit cast list.append
+      else Digit ..types.size i32 ..types.size == if
+        x i32 cast Digit cast list.append
+        x 32 >>> i32 cast Digit cast list.append
+      else
+        "expected digit to have 32 or 64 bits" ..panic
+      end
+    end
+  end
   iSize =:: IntData
   namespace: IntData
     3:iSize =:: MASK_TAG
@@ -120,95 +134,170 @@ namespace: int
   0 fromI32 =:: ZERO
   1 fromI32 =:: ONE
   -1 fromI32 =:: NEGATIVE_ONE
+  proc( i64 : val -> int ) =>: export: fromI64
+    val 0 < $ =:: sign
+      if -_ end
+    fromU64 sign setSign
+  end
+  proc( i128 : val -> int ) =>: export: fromI128
+    val 0 < $ =:: sign
+      if -_ end
+    fromU128 sign setSign
+  end
   BITS_32 if
-    proc( i64 : val -> int ) =>: export: fromI64
-      val 0 < $ =:: sign if -_ end =:: shadow: val
-      val i32 cast iSize cast.u val 32 >>> i32 cast iSize cast.u sign tryCreateInplace .else
-        Digit 2 array : mut: digits
-        val i32 cast digits@ 0 =[]
-        val 32 >>> i32 cast digits@ 1 =[]
-        digits@ slice.wrap sign fromDigits
-      end
-    end
     proc( i64 : val -> int ) =>: export: fromU64
-      val i32 cast iSize cast.u val 32 >>> i32 cast iSize cast.u false tryCreateInplace .else
-        Digit 2 array : mut: digits
-        val i32 cast digits@ 0 =[]
-        val 32 >>> i32 cast digits@ 1 =[]
-        digits@ slice.wrap false fromDigits
+      val i32 cast iSize cast.u val 32 >>> i32 cast iSize cast.u sign tryCreateInplace .else
+        Digit i64 ..types.size Digit ..types.size / array : mut: digits
+        digits@ list.wrapBuffer
+          val Digits.appendI64
+        list.asSlice false fromDigits
       end
-    end
-    proc( i128 : val -> int ) =>: export: fromI128
-      val 0 < $ =:: sign if -_ end =:: shadow: val
-      val fromU128 sign setSign
     end
     proc( i128 : val -> int ) =>: export: fromU128
       val .high 0 == if
         val .low fromI64
       else
-        Digit 4 array : mut: digits
-        val .low i32 cast digits@ 0 =[]
-        val .low 32 >>> i32 cast digits@ 1 =[]
-        val .hi i32 cast digits@ 2 =[]
-        val .hi 32 >>> i32 cast digits@ 3 =[]
-        digits@ slice.wrap false fromDigits
+        Digit i128 ..types.size Digit ..types.size / array : mut: digits
+        digits@ list.wrapBuffer
+          val .low Digits.appendI64
+          val .hi Digits.appendI64
+        list.asSlice false fromDigits
       end
     end
   else
-    proc( i64 : val -> int ) =>: export: fromI64
-      val 0 < $ =:: sign if -_ end =:: shadow: val
-      val iSize cast.u 0 sign tryCreateInplace optional.unwrap
-    end
     proc( i64 : val -> int ) =>: export: fromU64
       val iSize cast.u 0 false tryCreateInplace optional.unwrap
     end
-    proc( i128 : val -> int ) =>: export: fromI128
-      val 0 < $ =:: sign if -_ end =:: shadow: val
-      val .low iSize cast.u val .high iSize cast.u sign tryCreateInplace .else
-        Digit 2 array : mut: digits
-        val .low digits@ 0 =[]
-        val .high digits@ 1 =[]
-        digits@ slice.wrap sign fromDigits
-      end
-    end
     proc( i128 : val -> int ) =>: export: fromU128
       val .low iSize cast.u val .high iSize cast.u false tryCreateInplace .else
-        Digit 2 array : mut: digits
-        val .low digits@ 0 =[]
-        val .high digits@ 1 =[]
-        digits@ slice.wrap false fromDigits
+        Digit i128 ..types.size Digit ..types.size / array : mut: digits
+        digits@ list.wrapBuffer
+          val .low Digits.appendI64
+          val .hi Digits.appendI64
+        list.asSlice false fromDigits
       end
     end
   end
-  proc( int -> i32 optional ) =>: asI32
-    "unimplemented: asI32" ..panic
+  ## TODO! reference management for int values
+  proc( int : a -> i32 optional ) =>: asI32
+    a asU32 .else
+      i32 optional.empty return
+    end
+      $ i32.MAX u> if ..drop i32 optional.empty return end
+    a sign * optional.wrap return
   end
-  proc( int -> i32 optional ) =>: asU32
-    "unimplemented: asU32" ..panic
-  end
-  proc( int -> i64 optional ) =>: asI64
-    "unimplemented: asI64" ..panic
-  end
-  proc( int -> i64 optional ) =>: asU64
-    "unimplemented: asU64" ..panic
+  proc( int : a -> i64 optional ) =>: asI64
+    a asU64 .else
+      i64 optional.empty return
+    end
+      $ i64.MAX u> if ..drop i64 optional.empty return end
+    a sign i64 cast.s * optional.wrap return
   end
   proc( int -> i128 optional ) =>: asI128
-    "unimplemented: asI128" ..panic
+    a asU128 .else
+      i128 optional.empty return
+    end
+      $ i128.MAX u> if ..drop i128 optional.empty return end
+    a sign i128.fromI32 * optional.wrap return
   end
-  proc( int -> i128 optional ) =>: asU128
-    "unimplemented: asU128" ..panic
+  proc( int : a -> i32 optional ) =>: asU32
+    a .data IntData.asInt .if
+      0 == and a .length i64 cast.u i32.UMAX u<= if
+        a .length i32 cast optional.wrap return
+      end
+    else a .length 1 == _if
+      a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
+      digit0 i64 cast.u i32.UMAX u<= if
+        digit0 i32 cast optional.wrap return
+      end
+    else a .length 0 == _if
+      0 optional.wrap return
+    end
+    i32 optional.empty return
+  end
+  BITS_32 if
+    proc( int -> i64 optional ) =>: asU64
+      a .data IntData.asInt .if i64 cast.u =:: hi
+        hi 32 << a .length i64 cast.u | optional.wrap return
+      else a .length 2 == _if
+        a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
+        a .data IntData.asPtr optional.unwrap 1 [] =:: digit1
+        digit1 i64 cast.u 32 << digit0 i64 cast.u | optional.wrap return
+      else a .length 1 == _if
+        a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
+        digit0 i64 cast.u optional.wrap return
+      else a .length 0 == _if
+        0 optional.wrap return
+      end
+      i64 optional.empty return
+    end
+    proc( int -> i128 optional ) =>: asU128
+      a .data IntData.asInt .if i64 cast.u =:: hi
+        hi 32 << a .length i64 cast.u | i128.fromU64 optional.wrap return
+      else a .length 4 u<= _if
+        0 =:: mut: shift
+        i128.ZERO
+          a .data IntData.asPtr optional.unwrap a .length slice.create for
+            i128.fromU32 shift shl_i32
+          finally shift 32 + shift= end
+        optional.wrap return
+      end
+      i128 optional.empty return
+    end
+  else
+    proc( int : a -> i64 optional ) =>: asU64
+      a .data IntData.asInt .if
+        0 == if
+          a .length i64 cast optional.wrap return
+        end
+      else a .length 1 == _if
+        a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
+        digit0 i64 cast optional.wrap return
+      else a .length 0 == _if
+        0 optional.wrap return
+      end
+      i64 optional.empty return
+    end
+    proc( int -> i128 optional ) =>: asU128
+      a .data IntData.asInt .if i64 cast.u =:: hi
+        hi a .length i64 cast i128.create optional.wrap return
+      else a .length 2 == _if
+        a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
+        a .data IntData.asPtr optional.unwrap 1 [] =:: digit1
+        digit1 i64 cast digit0 i64 cast i128.create optional.wrap return
+      else a .length 1 == _if
+        a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
+        digit0 i64 cast i128.fromU64 optional.wrap return
+      else a .length 0 == _if
+        0 optional.wrap return
+      end
+      i128 optional.empty return
+    end
   end
 ## conversion from/to string
   proc( string : val i32 : base -> int optional ) =>: export: parse
     "unimplemented: parse" ..panic ## return int NumberParseResult instead of optional
   end
-  proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: export: sbAppend
+  proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
     "unimplemented: sbAppend" ..panic
   end
+  proc( stringBuilder int -> stringBuilder ) =>: export: sbAppend
+    10 sbBaseAppend
+  end
+  proc( stringBuilder int : val -> stringBuilder ) =>: export: sbAppendX
+    "unimplemented: sbAppendX" ..panic
+  end
 ## arithmetic
+  proc( int -> bool ) =>: export: isZero
+    $ .length 0 != if false return end
+    $ .data IntData.asInt
+      .else false return end
+    0 == return
+  end
   ## -1 0 1
-  proc( int -> i8 ) =>: export: sign
-    "unimplemented: sign" ..panic
+  proc( int -> i32 ) =>: export: sign
+    $ isZero if 0 return end
+    .data IntData.getSign if -1 else 1 end return
   end
   proc( int -> int ) =>: export: abs
     $ .data false IntData.setSign >$ .data=
@@ -268,7 +357,10 @@ namespace: int
   proc( int : b int : m -> int ) =>: export: modInverse
     "unimplemented: modInverse" ..panic
   end
-## comparisons 
+## comparisons
+  proc( int int -> i32 ) =>: export: cmp
+    "unimplemented: cmp" ..panic
+  end
 ## bitwise operations
   proc( int -> i64 ) =>: export: bitLength
     "unimplemented: bitCount" ..panic
