@@ -556,14 +556,50 @@ namespace: int
   proc( int int -> int ) =>: export: mod
     DivideResult .MOD divRem0 >$ free
   end
-  proc( int : a int : b -> int ) =>: export: gcd
-    "unimplemented: gcd" ..panic
+  proc( int : mut: a int : mut: b -> int ) =>: export: gcd
+    a abs a=
+    b abs b=
+    a b cmp 0 < if
+      b a b= a=
+    end ## a >= b
+    while b isZero ! do
+      a b copy mod =:: r ## a = q*b + r
+        b a=
+      b=
+    end
+      b free
+    a return
   end
-  proc( int : b i32 : e -> int ) =>: export: pow
-    "unimplemented: pow" ..panic
+  proc( int : mut: p i32 : mut: e -> int ) =>: export: pow
+    ONE =:: mut: res
+    while
+      e 1 & if
+        res p copy * res=
+      end
+      e 1 >>> e=
+    e 0 != do
+      p square p=
+    end
+      p free
+    res return
   end
-  proc( int : b int : e int : m -> int ) =>: export: modPow
-    "unimplemented: modPow" ..panic
+  proc( int : mut: p int : mut: e int : m -> int ) =>: export: modPow
+    ONE =:: mut: res
+    b m copy mod b=
+    while
+      e 1 andU32 if
+        res
+          p copy *
+          m copy mod
+        res=
+      end
+      e 1 lshrU32 e=
+    e isZero ! do
+      p square p=
+    end
+      p free
+      m free
+    res return
   end
   proc( int : b int : m -> int ) =>: export: modInverse
     "unimplemented: modInverse" ..panic
@@ -596,17 +632,32 @@ namespace: int
   proc( int int -> int ) =>: export: bitAnd
     "unimplemented: bitAnd" ..panic
   end
+  proc( int i32 -> int ) =>: export: andI32
+    "unimplemented: andI32" ..panic
+  end
+  proc( int i32 -> int ) =>: export: andU32
+    "unimplemented: andU32" ..panic
+  end
+  proc( int i64 -> int ) =>: export: andI64
+    "unimplemented: andI64" ..panic
+  end
+  proc( int i64 -> int ) =>: export: andU64
+    "unimplemented: andU64" ..panic
+  end
   proc( int int -> int ) =>: export: bitOr
     "unimplemented: bitOr" ..panic
   end
   proc( int int -> int ) =>: export: bitXor
     "unimplemented: bitXor" ..panic
   end
-  proc( int i32 -> int ) =>: export: shiftLeft
-    "unimplemented: shiftLeft" ..panic
+  proc( int i32 -> int ) =>: export: shlU32
+    "unimplemented: shlU32" ..panic
   end
-  proc( int i32 -> int ) =>: export: shiftRight
-    "unimplemented: shiftRight" ..panic
+  proc( int i32 -> int ) =>: export: ashrU32
+    "unimplemented: ashrU32" ..panic
+  end
+  proc( int i32 -> int ) =>: export: lshrU32
+    "unimplemented: lshrU32" ..panic
   end
 
   namespace: _impl
