@@ -8,8 +8,9 @@ import "measure.concat"
 import "asm/asm.concat"
 import "asm/amd64.concat"
 
-enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER ) =:: ValType
+enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER COMPOSITE BITS32 BITS64 V128 ) =:: ValType
 namespace: ValType
+  ## TODO? return union  ValType   ValType x 2   ValType x 3   Reference
   proc( Type : t TypeContext ptr : typeContext -> ValType ) =>: fromType
     t typeContext types.unwrapNamed switch
       PrimitiveType .case switch
@@ -25,6 +26,12 @@ namespace: ValType
       end break
       Pointer MutablePointer RawPointer MutableRawPointer case
         ValType .POINTER return
+      Struct case
+        t typeContext types.compositeEltCount 1 == if
+          t 0 typeContext types.compositeGetElement optional.unwrap typeContext fromType return
+        end
+        ValType .COMPOSITE return
+      break
       default
         "unsupported type: " sb.copyPtr
           t typeContext sb.appendType
@@ -35,25 +42,31 @@ namespace: ValType
   proc( ValType : valType -> bool ) =>: isInt
     valType switch
       BOOL I8 I16 I32 I64 POINTER PROC_POINTER case true return
-      EMPTY F16 F32 F64 case false return
+      EMPTY F16 F32 F64 COMPOSITE BITS32 BITS64 V128 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isFloat
     valType switch
       F16 F32 F64 case true return
-      EMPTY BOOL I8 I16 I32 I64 POINTER PROC_POINTER case false return
+      EMPTY BOOL I8 I16 I32 I64 POINTER PROC_POINTER COMPOSITE BITS32 BITS64 V128 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isAddress
     valType switch
       POINTER PROC_POINTER case true return
-      EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 case false return
+      EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 COMPOSITE BITS32 BITS64 V128 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isPrimitive
     valType switch
       POINTER PROC_POINTER BOOL I8 I16 I32 I64 F16 F32 F64 case true return
-      EMPTY case false return
+      EMPTY COMPOSITE BITS32 BITS64 V128 case false return
+    end
+  end
+  proc( ValType : valType -> bool ) =>: isComposite
+    valType switch
+      COMPOSITE BITS32 BITS64 V128 case true return
+      EMPTY POINTER PROC_POINTER BOOL I8 I16 I32 I64 F16 F32 F64 case false return
     end
   end
 end
@@ -461,12 +474,12 @@ end
 proc( asm.RegisterId ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>: setRegSize
   ## TODO: make sizes for bool & pointer target specific
   valType switch
-    EMPTY case return
+    EMPTY COMPOSITE V128 case return
     BOOL case asm.RegisterId.SIZE_8 break
     I8 case asm.RegisterId.SIZE_8 break
     I16 F16 case asm.RegisterId.SIZE_16 break
-    I32 F32 case asm.RegisterId.SIZE_32 break
-    I64 F64 case asm.RegisterId.SIZE_64 break
+    I32 F32 BITS32 case asm.RegisterId.SIZE_32 break
+    I64 F64 BITS64 case asm.RegisterId.SIZE_64 break
     POINTER PROC_POINTER case asm.RegisterId.SIZE_64 break
   end asm.RegisterId.setSize
 end
@@ -1307,7 +1320,8 @@ proc(
     0 =:: mut: intCount
     0 =:: mut: floatCount
     outTypes .length while $ 1 - >$ 0 != do =:: i
-      outTypes i [] typeContext ValType.fromType =:: outValType
+      outTypes i [] =:: outType
+      outType typeContext ValType.fromType =:: outValType
       outValType ValType.isInt if
         intCount AMD64.reg.intRet .if
           outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
@@ -1322,8 +1336,15 @@ proc(
           "unimplemented: memory return" ..panic
         end
         floatCount 1 + floatCount=
+      else outValType ValType.isComposite _if
+        outType typeContext types.isValueType "only value types are return by value" assert
+        ## iterate elements
+        ##  collect until 8byte chunk (or end of struct)
+        ##   for single value emmit valType
+        ##   otherwise emmit bits32/bits64/v128
+        "composite return is not implemented" ..panic
       else
-        "unsuported value type for return" ..panic
+        "unsupported value type for return" ..panic
       end
     finally i end expectedStack .length u<= if
       "Wrong number of values for return statement" sb.copyPtr
@@ -1399,8 +1420,10 @@ proc(
           "unimplemented: memory return" ..panic
         end
         floatCount 1 + floatCount=
+      else outValType ValType.isComposite _if
+        "call: composite return is not implemented" ..panic
       else
-        "unsuported value type for return" ..panic
+        "unsupported value type for return" ..panic
       end
     finally i end ..drop
     expectedRetStack for
