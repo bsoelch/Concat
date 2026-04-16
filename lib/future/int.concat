@@ -107,9 +107,11 @@ namespace: int
     val .data IntData.asPtr .else ..drop
       Digit slice.mut optional.empty return
     end =:: basePtr
-    basePtr REF_COUNT_INDEX [] 1 u> if ## reference not unique
-      Digit slice.mut optional.empty return
-    end
+    basePtr REF_COUNT_INDEX []
+      $ 1 u> if ..drop ## reference not unique
+        Digit slice.mut optional.empty return
+      end
+    1 + basePtr REF_COUNT_INDEX =[]
     basePtr CAP_INDEX [] =:: dataCap
     dataCap iSize cast.u maxDigits u< if ## not enough capacity
       Digit slice.mut optional.empty return
@@ -181,7 +183,6 @@ namespace: int
   0 fromI32 =:: ZERO
   1 fromI32 =:: ONE
   -1 fromI32 =:: NEGATIVE_ONE
-  ## FIXME! correct reference management for int values
   proc( int : a -> i32 optional ) =>: asI32
     a asU32 .else
       i32 optional.empty return
@@ -306,6 +307,7 @@ namespace: int
   proc( int -> int ) =>: export: negate
     $ .data IntData.flipSign >$ .data=
   end
+  ## FIXME! correct reference management for int values
   proc( int : a int : b -> int ) =>: export: add
     a sign
       $ 0 == if ..drop a free b return end
@@ -330,36 +332,12 @@ namespace: int
     resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
     a resultDigits asWritableBuffer .else
     b resultDigits asWritableBuffer ._else
-    else
       resultDigits prepareCap
     end =:: dstData
     aData bData dstData _impl.add =:: resData
     resData .data IntData.fromPtr aSign 0 < IntData.setSign resData .length int new
-  end
-  proc( int : a i32 : b -> int ) =>: export: addI32
-    b 0 == if a return end
-    a sign
-      $ 0 == if ..drop a free b fromI32 return end
-    =:: aSign
-    "unimplemented: addI32" ..panic
-  end
-  proc( int i32 -> int ) =>: export: addU32
-    "unimplemented: addU32" ..panic
-  end
-  proc( int i32 -> int ) =>: export: addU32internal
-    "unimplemented: addU32internal" ..panic
-  end
-  proc( int i64 -> int ) =>: export: addI64
-    "unimplemented: addI64" ..panic
-  end
-  proc( int i32 -> int ) =>: export: addU64
-    "unimplemented: addU64" ..panic
-  end
-  proc( int i128 -> int ) =>: export: addI128
-    "unimplemented: addI64" ..panic
-  end
-  proc( int i128 -> int ) =>: export: addU128
-    "unimplemented: addU64" ..panic
+      a free b free
+    return
   end
   proc( int int -> int ) =>: export: sub
     a sign
@@ -390,15 +368,58 @@ namespace: int
     end =:: dstData
     aData bData _impl.cmp =:: cmp
     cmp 0 < if
-      aData bData dstData _impl.add =:: resData
+      aData bData dstData _impl.sub =:: resData
       resData .data IntData.fromPtr aSign 0 < IntData.setSign resData .length int new
     else cmp 0 > _if
-      bData aData dstData _impl.add =:: resData
+      bData aData dstData _impl.sub =:: resData
       resData .data IntData.fromPtr aSign 0 > IntData.setSign resData .length int new
     else
       ZERO
     end
+      a free b free
+    return
   end
+  proc( int : a i32 : b -> int ) =>: export: addI32
+    b 0 == if a return end
+    b 0 < if
+      a b -_ subU32
+    else
+      a b addU32
+    end
+  end
+  proc( int : a i32 : b -> int ) =>: export: subI32
+    b 0 == if a return end
+    b 0 < if
+      a b -_ addU32
+    else
+      a b subU32
+    end
+  end
+  proc( int : a i32 : b -> int ) =>: export: addU32
+    "unimplemented: addU32" ..panic
+  end
+  proc( int : a i32 : b -> int ) =>: export: subU32
+    "unimplemented: addU32" ..panic
+  end
+  proc( int i32 -> int ) =>: addU32internal
+    "unimplemented: addU32internal" ..panic
+  end
+  proc( int i32 -> int ) =>: subU32internal
+    "unimplemented: addU32internal" ..panic
+  end
+  proc( int i64 -> int ) =>: export: addI64
+    "unimplemented: addI64" ..panic
+  end
+  proc( int i32 -> int ) =>: export: addU64
+    "unimplemented: addU64" ..panic
+  end
+  proc( int i128 -> int ) =>: export: addI128
+    "unimplemented: addI64" ..panic
+  end
+  proc( int i128 -> int ) =>: export: addU128
+    "unimplemented: addU64" ..panic
+  end
+
   proc( int int -> int ) =>: export: mul
     "unimplemented: mul" ..panic
   end
