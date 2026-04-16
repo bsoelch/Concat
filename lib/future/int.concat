@@ -116,7 +116,7 @@ namespace: int
     dataCap iSize cast.u maxDigits u< if ## not enough capacity
       Digit slice.mut optional.empty return
     end
-    basePtr dataCap slice.create
+    basePtr dataCap slice.create optional.wrap
   end
   proc( int : val Digit MAX_INLINE_DIGITS ptr.mut : localBuffer -> Digit slice ) =>: asSlice
     a .data IntData.asPtr .if
@@ -183,100 +183,124 @@ namespace: int
   0 fromI32 =:: ZERO
   1 fromI32 =:: ONE
   -1 fromI32 =:: NEGATIVE_ONE
-  ## FIXME: reference management for as...
-  ##   ? return  `T int result`
-  ##   ? decrease ref-count when returing int
-  proc( int : a -> i32 optional ) =>: asI32
+  ( type : I -> type ) =>: export: IntConversionResult
+    union(
+      I : Ok
+      int : Err
+    )
+  end
+  namespace: IntConv
+    proc( type : auto: T  T IntConversionResult -> T ) =>: unwrap
+      .Ok unionElement.unwrap
+    end
+    proc( type : auto: T  T IntConversionResult -> T IntConversionResult ) =>: prepareIf  end
+    proc( type : auto: T  T IntConversionResult -> T ) =>: check  .Ok ? end
+    proc( type : auto: T  T IntConversionResult -> T ) =>: ifVal  .Ok ..raw end
+    proc( type : auto: T  T IntConversionResult -> int ) =>: elseVal  .Err ..raw end
+  end
+  proc( int : a -> i32 IntConversionResult ) =>: asI32
     a asU32 .else
-      i32 optional.empty return
+      i32 IntConversionResult .Err return
     end
-      $ i32.MAX u> if ..drop i32 optional.empty return end
-    a sign * optional.wrap return
+      $ i32.MAX u> if ..drop a i32 IntConversionResult .Err return end
+    a sign * i32 IntConversionResult .Ok return
   end
-  proc( int : a -> i64 optional ) =>: asI64
+  proc( int : a -> i64 IntConversionResult ) =>: asI64
     a asU64 .else
-      i64 optional.empty return
+      i64 IntConversionResult .Err return
     end
-      $ i64.MAX u> if ..drop i64 optional.empty return end
-    a sign i64 cast.s * optional.wrap return
+      $ i64.MAX u> if ..drop a i64 IntConversionResult .Err return end
+    a sign i64 cast.s * i64 IntConversionResult .Ok return
   end
-  proc( int -> i128 optional ) =>: asI128
+  proc( int -> i128 IntConversionResult ) =>: asI128
     a asU128 .else
-      i128 optional.empty return
+      a i128 IntConversionResult .Err return
     end
-      $ i128.MAX u> if ..drop i128 optional.empty return end
-    a sign i128.fromI32 * optional.wrap return
+      $ i128.MAX u> if ..drop a i128 IntConversionResult .Err return end
+    a sign i128.fromI32 * i128 IntConversionResult .Ok return
   end
-  proc( int : a -> i32 optional ) =>: asU32
+  proc( int : a -> i32 IntConversionResult ) =>: asU32
     a .data IntData.asInt .if
       0 == and a .length i64 cast.u i32.UMAX u<= if
-        a .length i32 cast optional.wrap return
+        a .length i32 cast i32 IntConversionResult .Ok return
       end
     else a .length 1 == _if
       a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
       digit0 i64 cast.u i32.UMAX u<= if
-        digit0 i32 cast optional.wrap return
+        a free
+        digit0 i32 cast i32 IntConversionResult .Ok return
       end
     else a .length 0 == _if
-      0 optional.wrap return
+      a free
+      0 i32 IntConversionResult .Ok return
     end
-    i32 optional.empty return
+    a i32 IntConversionResult .Err return
   end
   BITS_32 if
-    proc( int -> i64 optional ) =>: asU64
+    proc( int -> i64 IntConversionResult ) =>: asU64
       a .data IntData.asInt .if i64 cast.u =:: hi
-        hi 32 << a .length i64 cast.u | optional.wrap return
+        hi 32 << a .length i64 cast.u | i64 IntConversionResult .Ok return
       else a .length 1 == _if
         a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
-        digit0 i64 cast.u optional.wrap return
+        a free
+        digit0 i64 cast.u i64 IntConversionResult .Ok.wrap return
       else a .length 0 == _if
-        0 optional.wrap return
+        a free
+        0 i64 IntConversionResult .Ok return
       end
-      i64 optional.empty return
+      a i64 IntConversionResult .Err return
     end
     proc( int -> i128 optional ) =>: asU128
       a .data IntData.asInt .if i64 cast.u =:: hi
-        hi 32 << a .length i64 cast.u | i128.fromU64 optional.wrap return
+        hi 32 << a .length i64 cast.u | i128.fromU64 i128 IntConversionResult .Ok return
       else a .length 2 == _if
         a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
         a .data IntData.asPtr optional.unwrap 1 [] =:: digit1
-        digit1 i64 cast digit0 i64 cast i128.create optional.wrap return
+        a free
+        digit1 i64 cast digit0 i64 cast i128.create i128 IntConversionResult .Ok return
       else a .length 1 == _if
         a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
-        digit0 i64 cast i128.fromU64 optional.wrap return
+        a free
+        digit0 i64 cast i128.fromU64 i128 IntConversionResult .Ok return
       else a .length 0 == _if
-        0 optional.wrap return
+        a free
+        0 i128 IntConversionResult .Ok return
       end
-      i128 optional.empty return
+      a i128 IntConversionResult .Err return
     end
   else
-    proc( int : a -> i64 optional ) =>: asU64
+    proc( int : a -> i64 IntConversionResult ) =>: asU64
       a .data IntData.asInt .if
         0 == if
-          a .length i64 cast optional.wrap return
+          a .length i64 cast i64 IntConversionResult .Ok return
         end
       else a .length 1 == _if
         a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
-        digit0 i64 cast optional.wrap return
+        a free
+        digit0 i64 cast i64 IntConversionResult .Ok return
       else a .length 0 == _if
-        0 optional.wrap return
+        a free
+        0 i64 IntConversionResult .Ok return
       end
-      i64 optional.empty return
+      a i64 IntConversionResult .Err return
     end
     proc( int -> i128 optional ) =>: asU128
       a .data IntData.asInt .if i64 cast.u =:: hi
-        hi a .length i64 cast i128.create optional.wrap return
+        hi a .length i64 cast i128.create i128 IntConversionResult .Ok return
       else a .length 2 == _if
         a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
         a .data IntData.asPtr optional.unwrap 1 [] =:: digit1
-        digit1 i64 cast digit0 i64 cast i128.create optional.wrap return
+        a free
+        digit1 i64 cast digit0 i64 cast i128.create i128 IntConversionResult .Ok return
       else a .length 1 == _if
         a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
-        digit0 i64 cast i128.fromU64 optional.wrap return
+        a free
+        digit0 i64 cast i128.fromU64 i128 IntConversionResult .Ok return
       else a .length 0 == _if
-        0 optional.wrap return
+        a free
+        0 i128 IntConversionResult .Ok return
       end
-      i128 optional.empty return
+      a i128 IntConversionResult .Err return
     end
   end
 ## conversion from/to string
@@ -310,7 +334,6 @@ namespace: int
   proc( int -> int ) =>: export: negate
     $ .data IntData.flipSign >$ .data=
   end
-  ## FIXME! correct reference management for int values
   proc( int : a int : b -> int ) =>: export: add
     a sign
       $ 0 == if ..drop a free b return end
@@ -323,9 +346,9 @@ namespace: int
     ## handle small results
     resultBits MAX_INLINE_BITS < if
       resultBits 64 < if
-        a abs asU64 optional.unwrap b abs asU64 + fromU64 optional.unwrap aSign 0 < if negate end
+        a abs asU64 IntConv.unwrap b abs asU64 + fromU64 IntConv.unwrap aSign 0 < if negate end
       else resultBits 128 < _if
-        a abs asU128 optional.unwrap b abs asU128 + fromU128 optional.unwrap aSign 0 < if negate end
+        a abs asU128 IntConv.unwrap b abs asU128 + fromU128 IntConv.unwrap aSign 0 < if negate end
       end
     end
     Digit MAX_INLINE_DIGITS array : mut: bufA
@@ -354,9 +377,9 @@ namespace: int
     ## handle small results
     resultBits MAX_INLINE_BITS < if
       resultBits 64 < if
-        a abs asU64 optional.unwrap b abs asU64 optional.unwrap - fromU64 aSign 0 < if negate end
+        a abs asU64 IntConv.unwrap b abs asU64 IntConv.unwrap - fromU64 aSign 0 < if negate end
       else resultBits 128 < _if
-        a abs asU128 optional.unwrap b abs asU128 optional.unwrap - fromU128 aSign 0 < if negate end
+        a abs asU128 IntConv.unwrap b abs asU128 IntConv.unwrap - fromU128 aSign 0 < if negate end
       end
     end
     Digit MAX_INLINE_DIGITS array : mut: bufA
@@ -414,9 +437,9 @@ namespace: int
     a sign 0 < if a negate b subU64 negate return end
     a asU64 .if
       b + fromU64 return
-    else a asU128 ._if
+    else asU128 ._if
       b i128.fromU64 + fromU128 return
-    end
+    end =:: shadow: a
     Digit MAX_INLINE_DIGITS array : mut: bufA
     b Digit cast =:: bDigit
     a bufA@ asSlice =:: aData
@@ -433,9 +456,9 @@ namespace: int
     a sign 0 < if a negate b addU64 negate return end
     a asU64 .if
       b - fromU64 return
-    else a asU128 ._if
+    else asU128 ._if
       b i128.fromU64 - fromU128 return
-    end
+    end =:: shadow: a
     ## when this point is reached a is greather than b
     Digit MAX_INLINE_DIGITS array : mut: bufA
     b Digit cast =:: bDigit
@@ -533,7 +556,7 @@ namespace: int
   proc( int int -> int ) =>: export: mod
     DivideResult .MOD divRem0 >$ free
   end
-  proc( int : b i32 : e -> int ) =>: export: gcd
+  proc( int : a int : b -> int ) =>: export: gcd
     "unimplemented: gcd" ..panic
   end
   proc( int : b i32 : e -> int ) =>: export: pow
@@ -565,7 +588,7 @@ namespace: int
   end
 ## bitwise operations
   proc( int -> iSize ) =>: export: bitLength
-    "unimplemented: bitCount" ..panic
+    "unimplemented: bitLength" ..panic
   end
   proc( int -> int ) =>: export: bitNot
     1 addI32 negate
@@ -644,4 +667,8 @@ namespace: int
     end
   end
 end
+overload: export: merge: ..if.prepare  IntConv.prepareIf end
+overload: export: merge: ..if.check    IntConv.check end
+overload: export: merge: ..if.ifVal    IntConv.ifVal end
+overload: export: merge: ..if.elseVal  IntConv.elseVal end
 
