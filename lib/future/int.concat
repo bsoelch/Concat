@@ -99,8 +99,8 @@ namespace: int
   proc( int bool : newSign -> int ) =>: setSign
     $ .data newSign IntData.setSign >$ .data=
   end
-  proc( iSize : maxDigits -> int ) =>: prepareCap
-    ## prepare int that can hold up to max-digits
+  proc( iSize : maxDigits -> Digit slice.mut ) =>: prepareCap
+    ## prepare buffer for int that can hold up to max-digits
     "unimplemented: prepareCap" ..panic
   end
   proc( int : val iSize : maxDigits -> Digit slice.mut optional ) =>: asWritableBuffer
@@ -593,7 +593,7 @@ namespace: int
           m copy mod
         res=
       end
-      e 1 lshrU32 e=
+      e 1 shrU32 e=
     e isZero ! do
       p square p=
     end
@@ -633,16 +633,65 @@ namespace: int
     "unimplemented: bitAnd" ..panic
   end
   proc( int i32 -> int ) =>: export: andI32
-    "unimplemented: andI32" ..panic
+    i64 cast.s andI64
   end
   proc( int i32 -> int ) =>: export: andU32
-    "unimplemented: andU32" ..panic
+    i64 cast.u andU64
   end
-  proc( int i64 -> int ) =>: export: andI64
-    "unimplemented: andI64" ..panic
+  proc( int : a i64 : b -> int ) =>: export: andI64
+    a asI64 .if
+      b & fromI64
+    else a asI128 .if
+      b i128.fromI64 & fromI128
+    end =:: shadow: a
+    Digit MAX_INLINE_DIGITS array : mut: buf
+    a buf@ asSlice =:: aDigits
+    b 0 >= if
+      aDigits 0 []
+        a sign 0 < if -_ end
+        b &
+      fromU64
+        a free
+      return
+    else ## -[B3][A5] & -[04]
+      a a .length asWritableBuffer .if =:: buf
+        buf 0 []
+          a sign 0 < if -_ end
+          b -_ &
+        buf 0 =[]
+        buf .data
+      else
+        resultDigits prepareCap =:: buf
+        aDigits 0 []
+          a sign 0 < if -_ end
+          b -_ &
+        buf 0 =[]
+        buff 1 slice.tail .data aDigits 1 slice.tail .data a .length 1 - mem.copy ..drop
+        buf .data
+      end .data IntData.fromPtr a .length int new
+        a free
+      return
+    end
   end
   proc( int i64 -> int ) =>: export: andU64
-    "unimplemented: andU64" ..panic
+    a asI64 .if
+      b & fromI64
+    else a asI128 .if
+      b i128.fromU64 & fromI128
+    end =:: shadow: a
+    Digit MAX_INLINE_DIGITS array : mut: buf
+    a buf@ asSlice 0 []
+      a sign 0 < if -_ end
+      b &
+    fromU64
+      a free
+    return
+  end
+  proc( int i128 -> int ) =>: export: andI128
+    "unimplemented: andI128" ..panic
+  end
+  proc( int i128 -> int ) =>: export: andU128
+    "unimplemented: andU128" ..panic
   end
   proc( int int -> int ) =>: export: bitOr
     "unimplemented: bitOr" ..panic
@@ -653,11 +702,8 @@ namespace: int
   proc( int i32 -> int ) =>: export: shlU32
     "unimplemented: shlU32" ..panic
   end
-  proc( int i32 -> int ) =>: export: ashrU32
-    "unimplemented: ashrU32" ..panic
-  end
-  proc( int i32 -> int ) =>: export: lshrU32
-    "unimplemented: lshrU32" ..panic
+  proc( int i32 -> int ) =>: export: shrU32
+    "unimplemented: shrU32" ..panic
   end
 
   namespace: _impl
