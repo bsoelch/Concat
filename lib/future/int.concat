@@ -10,20 +10,13 @@ namespace: int
   iSize ..types.size i32 ..types.size >= "iSize has at least 32 bits" assert
   iSize ..types.size i32 ..types.size == =:: BITS_32
 
-  BITS_32 if i32 else i64 end =:: Digit
-
-  namespace: Digits
-    proc( Digit list i64 : x -> Digit list ) =>: appendI64
-      Digit ..types.size i64 ..types.size == _if
-        x Digit cast list.append
-      else Digit ..types.size i32 ..types.size == if
-        x i32 cast Digit cast list.append
-        x 32 >>> i32 cast Digit cast list.append
-      else
-        "expected digit to have 32 or 64 bits" ..panic
-      end
-    end
+  i64 =:: Digit
+  64 =:: DIGIT_BITS
+  namespace: Digit
+    proc( bool : carry Digit : a Digit : b -> bool Digit ) : alias: addc i64.addc
+    proc( bool : carry Digit : a Digit : b -> bool Digit ) : alias: subb i64.subb
   end
+
   iSize =:: IntData
   namespace: IntData
     3:iSize =:: MASK_TAG
@@ -78,6 +71,8 @@ struct(
   iSize       : length ## low
 ) =:: export: int
 namespace: int
+  BITS_32 if 64 else 128 end IntData.SHIFT_TAG - =:: MAX_INLINE_BITS
+  DIGIT_BITS MAX_INLINE_BITS $1 1 - + >$ u/ =:: MAX_INLINE_DIGITS
 ## internal data management
   2:iSize =:: INFO_SLOTS
   -1:iSize =:: CAP_INDEX
@@ -112,9 +107,32 @@ namespace: int
     ## prepare int that can hold up to max-digits
     "unimplemented: prepareCap" ..panic
   end
-  proc( int iSize : newCap -> int ) =>: ensureCap
-    ## ensure given int can hold up to max-digits
-    "unimplemented: ensureCap" ..panic
+  proc( int : val iSize : maxDigits -> Digit slice.mut optional ) =>: asWritableBuffer
+    val .data IntData.asPtr .else ..drop
+      Digit slice.mut optional.empty return
+    end =:: basePtr
+    basePtr REF_COUNT_INDEX [] 1 u> if ## reference not unique
+      Digit slice.mut optional.empty return
+    end
+    basePtr CAP_INDEX [] =:: dataCap
+    dataCap iSize cast.u maxDigits u< if ## not enough capacity
+      Digit slice.mut optional.empty return
+    end
+    basePtr dataCap slice.create
+  end
+  proc( int : val Digit MAX_INLINE_DIGITS ptr.mut : localBuffer -> Digit slice ) =>: asSlice
+    a .data IntData.asPtr .if
+      a .length slice.create
+    else a .data IntData .asInt ._if i64 cast.u =:: hi
+      BITS_32 if
+        a .length i64 cast.u hi 32 << | localBuffer .0=
+      else
+        a .length localBuffer .0=
+        hi localBuffer .1=
+      end
+    else
+      "unexpected int-data-type" ..panic
+    end
   end
 ## reference management
   proc( int -> int ) =>: export: copy
@@ -131,9 +149,6 @@ namespace: int
   proc( i32 : val -> int ) =>: export: fromU32
     val iSize cast.u 0 false tryCreateInplace optional.unwrap
   end
-  0 fromI32 =:: ZERO
-  1 fromI32 =:: ONE
-  -1 fromI32 =:: NEGATIVE_ONE
   proc( i64 : val -> int ) =>: export: fromI64
     val 0 < $ =:: sign
       if -_ end
@@ -144,41 +159,33 @@ namespace: int
       if -_ end
     fromU128 sign setSign
   end
+  proc( i128 : val -> int ) =>: export: fromU128
+    val .high 0 == if
+      val .low fromU64
+    else
+      Digit 2 array : mut: digits
+      digits@
+        val .low Digit cast $1 .0=
+        val .hi  Digit cast $1 .1=
+      slice.wrap false fromDigits
+    end
+  end
   BITS_32 if
     proc( i64 : val -> int ) =>: export: fromU64
       val i32 cast iSize cast.u val 32 >>> i32 cast iSize cast.u sign tryCreateInplace .else
-        Digit i64 ..types.size Digit ..types.size / array : mut: digits
-        digits@ list.wrapBuffer
-          val Digits.appendI64
-        list.asSlice false fromDigits
-      end
-    end
-    proc( i128 : val -> int ) =>: export: fromU128
-      val .high 0 == if
-        val .low fromI64
-      else
-        Digit i128 ..types.size Digit ..types.size / array : mut: digits
-        digits@ list.wrapBuffer
-          val .low Digits.appendI64
-          val .hi Digits.appendI64
-        list.asSlice false fromDigits
+        val Digit cast =:: digit
+        digit@ slice.wrap false fromDigits
       end
     end
   else
     proc( i64 : val -> int ) =>: export: fromU64
       val iSize cast.u 0 false tryCreateInplace optional.unwrap
     end
-    proc( i128 : val -> int ) =>: export: fromU128
-      val .low iSize cast.u val .high iSize cast.u false tryCreateInplace .else
-        Digit i128 ..types.size Digit ..types.size / array : mut: digits
-        digits@ list.wrapBuffer
-          val .low Digits.appendI64
-          val .hi Digits.appendI64
-        list.asSlice false fromDigits
-      end
-    end
   end
-  ## TODO! reference management for int values
+  0 fromI32 =:: ZERO
+  1 fromI32 =:: ONE
+  -1 fromI32 =:: NEGATIVE_ONE
+  ## FIXME! correct reference management for int values
   proc( int : a -> i32 optional ) =>: asI32
     a asU32 .else
       i32 optional.empty return
@@ -219,10 +226,6 @@ namespace: int
     proc( int -> i64 optional ) =>: asU64
       a .data IntData.asInt .if i64 cast.u =:: hi
         hi 32 << a .length i64 cast.u | optional.wrap return
-      else a .length 2 == _if
-        a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
-        a .data IntData.asPtr optional.unwrap 1 [] =:: digit1
-        digit1 i64 cast.u 32 << digit0 i64 cast.u | optional.wrap return
       else a .length 1 == _if
         a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
         digit0 i64 cast.u optional.wrap return
@@ -234,13 +237,15 @@ namespace: int
     proc( int -> i128 optional ) =>: asU128
       a .data IntData.asInt .if i64 cast.u =:: hi
         hi 32 << a .length i64 cast.u | i128.fromU64 optional.wrap return
-      else a .length 4 u<= _if
-        0 =:: mut: shift
-        i128.ZERO
-          a .data IntData.asPtr optional.unwrap a .length slice.create for
-            i128.fromU32 shift shl_i32
-          finally shift 32 + shift= end
-        optional.wrap return
+      else a .length 2 == _if
+        a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
+        a .data IntData.asPtr optional.unwrap 1 [] =:: digit1
+        digit1 i64 cast digit0 i64 cast i128.create optional.wrap return
+      else a .length 1 == _if
+        a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
+        digit0 i64 cast i128.fromU64 optional.wrap return
+      else a .length 0 == _if
+        0 optional.wrap return
       end
       i128 optional.empty return
     end
@@ -305,13 +310,98 @@ namespace: int
   proc( int -> int ) =>: export: negate
     $ .data IntData.flipSign >$ .data=
   end
-  proc( int int -> int ) =>: export: add
-    "unimplemented: add" ..panic
+  proc( int : a int : b -> int ) =>: export: add
+    a sign
+      $ 0 == if ..drop a free b return end
+    =:: aSign
+    b sign
+      $ 0 == if ..drop b free a return end
+    =:: bSign
+    aSign bSign != if a b negate sub return end
+    a bitLength b bitLength iSize.max 1 + =:: resultBits
+    ## handle small results
+    resultBits MAX_INLINE_BITS < if
+      resultBits 64 < if
+        a abs asU64 b abs asU64 + fromU64 aSign 0 < if negate end
+      else resultBits 128 < _if
+        a abs asU128 b abs asU128 + fromU128 aSign 0 < if negate end
+      end
+    end
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    Digit MAX_INLINE_DIGITS array : mut: bufB
+    a bufA@ asSlice =:: aData
+    b bufB@ asSlice =:: bData
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    a resultDigits asWritableBuffer .else
+    b resultDigits asWritableBuffer ._else
+    else
+      resultDigits prepareCap
+    end =:: dstData
+    aData bData dstData _impl.add =:: resData
+    resData .data IntData.fromPtr aSign 0 < IntData.setSign resData .length int new
   end
-  ## addI32 addI64 addI128
-  ## addU32 addU64 addU128
+  proc( int : a i32 : b -> int ) =>: export: addI32
+    b 0 == if a return end
+    a sign
+      $ 0 == if ..drop a free b fromI32 return end
+    =:: aSign
+    "unimplemented: addI32" ..panic
+  end
+  proc( int i32 -> int ) =>: export: addU32
+    "unimplemented: addU32" ..panic
+  end
+  proc( int i32 -> int ) =>: export: addU32internal
+    "unimplemented: addU32internal" ..panic
+  end
+  proc( int i64 -> int ) =>: export: addI64
+    "unimplemented: addI64" ..panic
+  end
+  proc( int i32 -> int ) =>: export: addU64
+    "unimplemented: addU64" ..panic
+  end
+  proc( int i128 -> int ) =>: export: addI128
+    "unimplemented: addI64" ..panic
+  end
+  proc( int i128 -> int ) =>: export: addU128
+    "unimplemented: addU64" ..panic
+  end
   proc( int int -> int ) =>: export: sub
-    "unimplemented: sub" ..panic
+    a sign
+      $ 0 == if ..drop a free b negate return end
+    =:: aSign
+    b sign
+      $ 0 == if ..drop b free a return end
+    =:: bSign
+    aSign bSign != if a b negate add return end
+    a bitLength b bitLength iSize.max =:: resultBits
+    ## handle small results
+    resultBits MAX_INLINE_BITS < if
+      resultBits 64 < if
+        a abs asU64 b abs asU64 - fromU64 aSign 0 < if negate end
+      else resultBits 128 < _if
+        a abs asU128 b abs asU128 - fromU128 aSign 0 < if negate end
+      end
+    end
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    Digit MAX_INLINE_DIGITS array : mut: bufB
+    a bufA@ asSlice =:: aData
+    b bufB@ asSlice =:: bData
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    a resultDigits asWritableBuffer .else
+    b resultDigits asWritableBuffer ._else
+    else
+      resultDigits prepareCap
+    end =:: dstData
+    aData bData _impl.cmp =:: cmp
+    cmp 0 < if
+      aData bData dstData _impl.add =:: resData
+      resData .data IntData.fromPtr aSign 0 < IntData.setSign resData .length int new
+    else cmp 0 > _if
+      bData aData dstData _impl.add =:: resData
+      resData .data IntData.fromPtr aSign 0 > IntData.setSign resData .length int new
+    else
+      ZERO
+    end
   end
   proc( int int -> int ) =>: export: mul
     "unimplemented: mul" ..panic
@@ -359,14 +449,28 @@ namespace: int
   end
 ## comparisons
   proc( int int -> i32 ) =>: export: cmp
-    "unimplemented: cmp" ..panic
+    a sign
+      $ 0 == if b sign -_ return end
+    =:: aSign
+    b sign
+      $ 0 == if a sign return end
+    =:: bSign
+    aSign bSign != if
+      aSign bSign - return
+    end
+    a b ucmp aSign *
+  end
+  proc( int int -> i32 ) =>: export: ucmp
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    Digit MAX_INLINE_DIGITS array : mut: bufB
+    a bufA@ asSlice b bufB@ asSlice _impl.cmp
   end
 ## bitwise operations
-  proc( int -> i64 ) =>: export: bitLength
+  proc( int -> iSize ) =>: export: bitLength
     "unimplemented: bitCount" ..panic
   end
   proc( int -> int ) =>: export: bitNot
-    "unimplemented: bitNot" ..panic
+    1 addI32 negate
   end
   proc( int int -> int ) =>: export: bitAnd
     "unimplemented: bitAnd" ..panic
@@ -382,6 +486,49 @@ namespace: int
   end
   proc( int i32 -> int ) =>: export: shiftRight
     "unimplemented: shiftRight" ..panic
+  end
+
+  namespace: _impl
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res ) =>: add
+      false
+        a .length b .length iSize.min for =:: i
+          a i [] b i [] Digit.addc res i =[]
+        end
+        a .length b .length u> if
+          b .length while $ a .length u< do =:: i
+            a i [] 0 Digit.addc res i =[]
+          finally i 1 + end ..drop
+        else a .length b .length u< _if
+          a .length while $ b .length u< do =:: i
+            b i [] 0 Digit.addc res i =[]
+          finally i 1 + end ..drop
+        end
+      if
+        1 res a .length b .length iSize.max =[]
+      end
+    end
+    proc( Digit slice : a Digit slice : b -> i32 ) =>: cmp
+      a .length b .length != if
+        a .length b .length iSize.cmp return
+      end
+      a .data b .data == if 0 return end
+      a .length while $ 1 - <$ 0 != do =:: i
+        a i [] b i [] Digit.cmp =:: c
+        c 0 != if c return end
+      finally i end ..drop
+      0 return
+    end
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res ) =>: sub
+      a .length b .length u>= "a >= b" assert
+      false
+        a .length b .length for =:: i
+          a i [] b i [] Digit.subb res i =[]
+        end
+        b .length while $ a .length u< do =:: i
+          a i [] 0 Digit.subb res i =[]
+        finally i 1 + end ..drop
+      ! "a >= b" assert
+    end
   end
 end
 
