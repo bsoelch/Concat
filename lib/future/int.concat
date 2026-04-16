@@ -183,6 +183,9 @@ namespace: int
   0 fromI32 =:: ZERO
   1 fromI32 =:: ONE
   -1 fromI32 =:: NEGATIVE_ONE
+  ## FIXME: reference management for as...
+  ##   ? return  `T int result`
+  ##   ? decrease ref-count when returing int
   proc( int : a -> i32 optional ) =>: asI32
     a asU32 .else
       i32 optional.empty return
@@ -320,9 +323,9 @@ namespace: int
     ## handle small results
     resultBits MAX_INLINE_BITS < if
       resultBits 64 < if
-        a abs asU64 b abs asU64 + fromU64 aSign 0 < if negate end
+        a abs asU64 optional.unwrap b abs asU64 + fromU64 optional.unwrap aSign 0 < if negate end
       else resultBits 128 < _if
-        a abs asU128 b abs asU128 + fromU128 aSign 0 < if negate end
+        a abs asU128 optional.unwrap b abs asU128 + fromU128 optional.unwrap aSign 0 < if negate end
       end
     end
     Digit MAX_INLINE_DIGITS array : mut: bufA
@@ -351,9 +354,9 @@ namespace: int
     ## handle small results
     resultBits MAX_INLINE_BITS < if
       resultBits 64 < if
-        a abs asU64 b abs asU64 - fromU64 aSign 0 < if negate end
+        a abs asU64 optional.unwrap b abs asU64 optional.unwrap - fromU64 aSign 0 < if negate end
       else resultBits 128 < _if
-        a abs asU128 b abs asU128 - fromU128 aSign 0 < if negate end
+        a abs asU128 optional.unwrap b abs asU128 optional.unwrap - fromU128 aSign 0 < if negate end
       end
     end
     Digit MAX_INLINE_DIGITS array : mut: bufA
@@ -379,45 +382,123 @@ namespace: int
       a free b free
     return
   end
-  proc( int : a i32 : b -> int ) =>: export: addI32
+  proc( int i32 -> int ) =>: export: addI32
+    i64 cast.s addI64
+  end
+  proc( int i32 -> int ) =>: export: subI32
+    i64 cast.s subI64
+  end
+  proc( int i32 -> int ) =>: export: addU32
+    i64 cast.u addU64
+  end
+  proc( int i32 -> int ) =>: export: subU32
+    i64 cast.u subU64
+  end
+  proc( int : a i64 : b -> int ) =>: export: addI64
     b 0 == if a return end
     b 0 < if
-      a b -_ subU32
+      a b -_ subU64
     else
-      a b addU32
+      a b addU64
     end
   end
-  proc( int : a i32 : b -> int ) =>: export: subI32
+  proc( int : a i64 : b -> int ) =>: export: subI64
     b 0 == if a return end
     b 0 < if
-      a b -_ addU32
+      a b -_ addU64
     else
-      a b subU32
+      a b subU64
     end
   end
-  proc( int : a i32 : b -> int ) =>: export: addU32
-    "unimplemented: addU32" ..panic
+  proc( int : a i64 : b -> int ) =>: export: addU64
+    a sign 0 < if a negate b subU64 negate return end
+    a asU64 .if
+      b + fromU64 return
+    else a asU128 ._if
+      b i128.fromU64 + fromU128 return
+    end
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    b Digit cast =:: bDigit
+    a bufA@ asSlice =:: aData
+    bDigit@ slice.wrap =:: bData
+    a resultDigits asWritableBuffer .else
+      resultDigits prepareCap
+    end =:: dstData
+    aData bData dstData _impl.add =:: resData
+    resData .data IntData.fromPtr resData .length int new
+      a free
+    return
   end
-  proc( int : a i32 : b -> int ) =>: export: subU32
-    "unimplemented: addU32" ..panic
+  proc( int : a i64 : b -> int ) =>: export: subU64
+    a sign 0 < if a negate b addU64 negate return end
+    a asU64 .if
+      b - fromU64 return
+    else a asU128 ._if
+      b i128.fromU64 - fromU128 return
+    end
+    ## when this point is reached a is greather than b
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    b Digit cast =:: bDigit
+    a bufA@ asSlice =:: aData
+    bDigit@ slice.wrap =:: bData
+    a resultDigits asWritableBuffer .else
+      resultDigits prepareCap
+    end =:: dstData
+    aData bData dstData _impl.sub =:: resData
+    resData .data IntData.fromPtr resData .length int new
+      a free
+    return
   end
-  proc( int i32 -> int ) =>: addU32internal
-    "unimplemented: addU32internal" ..panic
+  proc( int : a i128 : b -> int ) =>: export: addI128
+    b 0 == if a return end
+    b 0 < if
+      a b -_ subU128
+    else
+      a b addU128
+    end
   end
-  proc( int i32 -> int ) =>: subU32internal
-    "unimplemented: addU32internal" ..panic
+  proc( int : a i128 : b -> int ) =>: export: subI128
+    b 0 == if a return end
+    b 0 < if
+      a b -_ addU128
+    else
+      a b subU128
+    end
   end
-  proc( int i64 -> int ) =>: export: addI64
-    "unimplemented: addI64" ..panic
+  proc( int : a i128 : b -> int ) =>: export: addU128
+    a sign 0 < if a negate b subU128 negate return end
+    a asU128 .if
+      b + fromU128 return
+    end
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    b Digit cast =:: bDigit
+    a bufA@ asSlice =:: aData
+    bDigit@ slice.wrap =:: bData
+    a resultDigits asWritableBuffer .else
+      resultDigits prepareCap
+    end =:: dstData
+    aData bData dstData _impl.add =:: resData
+    resData .data IntData.fromPtr resData .length int new
+      a free
+    return
   end
-  proc( int i32 -> int ) =>: export: addU64
-    "unimplemented: addU64" ..panic
-  end
-  proc( int i128 -> int ) =>: export: addI128
-    "unimplemented: addI64" ..panic
-  end
-  proc( int i128 -> int ) =>: export: addU128
-    "unimplemented: addU64" ..panic
+  proc( int : a i128 : b -> int ) =>: export: subU128
+    a sign 0 < if a negate b addU128 negate return end
+    a asU128 .if
+      b - fromU128 return
+    end
+    ## when this point is reached a is greather than b
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    b Digit cast =:: bDigit
+    a bufA@ asSlice =:: aData
+    bDigit@ slice.wrap =:: bData
+    a resultDigits asWritableBuffer .else
+      resultDigits prepareCap
+    end =:: dstData
+    aData bData dstData _impl.sub =:: resData
+    resData .data IntData.fromPtr resData .length int new
+      a free
+    return
   end
 
   proc( int int -> int ) =>: export: mul
