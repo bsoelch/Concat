@@ -99,10 +99,6 @@ namespace: int
   proc( int bool : newSign -> int ) =>: setSign
     $ .data newSign IntData.setSign >$ .data=
   end
-  proc( int -> int ) =>: normalize
-    ## remove leading zeros, use small int if possible
-    "unimplemented: normalize" ..panic
-  end
   proc( iSize : maxDigits -> int ) =>: prepareCap
     ## prepare int that can hold up to max-digits
     "unimplemented: prepareCap" ..panic
@@ -503,8 +499,16 @@ namespace: int
             b i [] 0 Digit.addc res i =[]
           finally i 1 + end ..drop
         end
+        a .length b .length iSize.max =:: last
       if
-        1 res a .length b .length iSize.max =[]
+        1 res last =[]
+        res
+          last 1 + >$ .length=
+        return
+      else
+        res
+          last >$ .length=
+        return
       end
     end
     proc( Digit slice : a Digit slice : b -> i32 ) =>: cmp
@@ -528,6 +532,13 @@ namespace: int
           a i [] 0 Digit.subb res i =[]
         finally i 1 + end ..drop
       ! "a >= b" assert
+      ## remove leading zeros
+      a .length while $ 1 - <$ 0 != do =:: i
+        res i [] ? if i 1 + break end
+      finally i end =:: newLength
+      res
+        newLength >$ .length=
+      return
     end
   end
 end
