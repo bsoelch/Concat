@@ -8,64 +8,100 @@ import "measure.concat"
 import "asm/asm.concat"
 import "asm/amd64.concat"
 
-enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER COMPOSITE BITS32 BITS64 V128 ) =:: ValType
+enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER BITS32 BITS64 V128 ) =:: ValType
+union(
+  _ : Empty
+  ValType : Val
+  ( ValType ValType ) : Val2
+  ( ValType ValType ValType ) : Val3
+) =:: ValTypes
 namespace: ValType
-  ## TODO? return union  ValType   ValType x 2   ValType x 3   Reference
-  proc( Type : t TypeContext ptr : typeContext -> ValType ) =>: fromType
+  proc( Type : t TypeContext ptr : typeContext -> ValTypes ) =>: fromType
     t typeContext types.unwrapNamed switch
       PrimitiveType .case switch
-        BOOL case ValType .BOOL return
-        I8   case ValType .I8 return
-        I16  case ValType .I16 return
-        I32  case ValType .I32 return
-        I64  case ValType .I64 return
-        F16  case ValType .F16 return
-        F32  case ValType .F32 return
-        F64  case ValType .F64 return
-        TYPE case ValType .EMPTY return
+        BOOL case ValType .BOOL ValTypes .Val return
+        I8   case ValType .I8 ValTypes .Val return
+        I16  case ValType .I16 ValTypes .Val return
+        I32  case ValType .I32 ValTypes .Val return
+        I64  case ValType .I64 ValTypes .Val return
+        F16  case ValType .F16 ValTypes .Val return
+        F32  case ValType .F32 ValTypes .Val return
+        F64  case ValType .F64 ValTypes .Val return
+        TYPE case ValTypes .Empty return
       end break
       Pointer MutablePointer RawPointer MutableRawPointer case
-        ValType .POINTER return
+        ValType .POINTER ValTypes .Val return
       Struct case
+        t typeContext types.compositeEltCount 0 == if
+          ValTypes .Empty return
+        end
         t typeContext types.compositeEltCount 1 == if
           t 0 typeContext types.compositeGetElement optional.unwrap typeContext fromType return
         end
-        ValType .COMPOSITE return
+        ## TODO: more efficient way to combine slots
+        t typeContext types.compositeEltCount 2 == if
+          t 0 typeContext types.compositeGetElement optional.unwrap typeContext fromType =:: elt1
+          t 1 typeContext types.compositeGetElement optional.unwrap typeContext fromType =:: elt2
+          elt1 switch
+            Empty case elt2 return
+            Val .case
+              elt2 switch
+                Empty case ValTypes .Val return
+                Val .case ( ValType ValType ) new ValTypes .Val2 return
+                Val2 .case ... ( ValType ValType ValType ) new ValTypes .Val3 return
+                Val3 case ..drop break ## can only fit up to 3 values
+              end
+            break
+            Val2 .case ...
+              elt2 switch
+                Empty case ( ValType ValType ) new ValTypes .Val2 return
+                Val .case ( ValType ValType ValType ) new ValTypes .Val3 return
+                Val2 Val3 case ..drop.2 break ## can only fit up to 3 values
+              end
+            break
+            Val3 .case
+              elt2 .Empty ? if ## can only fit up to 3 values
+                ValTypes .Val3 return
+              else ..drop end
+            break
+          end
+        end
+        ## handle 3 slots
       break
-      default
-        "unsupported type: " sb.copyPtr
-          t typeContext sb.appendType
-        sb.asStr io.println
-        "unimplemented" ..panic
+      default break
     end
+    "unsupported type: " sb.copyPtr
+      t typeContext sb.appendType
+    sb.asStr io.println
+    "unimplemented" ..panic
   end
   proc( ValType : valType -> bool ) =>: isInt
     valType switch
       BOOL I8 I16 I32 I64 POINTER PROC_POINTER case true return
-      EMPTY F16 F32 F64 COMPOSITE BITS32 BITS64 V128 case false return
+      EMPTY F16 F32 F64 BITS32 BITS64 V128 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isFloat
     valType switch
       F16 F32 F64 case true return
-      EMPTY BOOL I8 I16 I32 I64 POINTER PROC_POINTER COMPOSITE BITS32 BITS64 V128 case false return
+      EMPTY BOOL I8 I16 I32 I64 POINTER PROC_POINTER BITS32 BITS64 V128 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isAddress
     valType switch
       POINTER PROC_POINTER case true return
-      EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 COMPOSITE BITS32 BITS64 V128 case false return
+      EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 BITS32 BITS64 V128 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isPrimitive
     valType switch
       POINTER PROC_POINTER BOOL I8 I16 I32 I64 F16 F32 F64 case true return
-      EMPTY COMPOSITE BITS32 BITS64 V128 case false return
+      EMPTY BITS32 BITS64 V128 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isComposite
     valType switch
-      COMPOSITE BITS32 BITS64 V128 case true return
+      BITS32 BITS64 V128 case true return
       EMPTY POINTER PROC_POINTER BOOL I8 I16 I32 I64 F16 F32 F64 case false return
     end
   end
@@ -445,7 +481,10 @@ proc( ConstValue : val CompilerContext ptr.mut : context -> asm.PtrConstId ) =>:
   context .constPtrs=
   constId return
 end
-proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context -> ) =>: pushConstant
+proc( ConstValue : constant ValTypes : valTypes  CompilerContext ptr.mut : context -> ) =>: pushConstant
+  valTypes .Val .else
+    "multi-values are not supported" ..panic
+  end =:: valType
   valType .POINTER if
     context [] .stack
       constant context newCompositeConst asm.Value .ConstPtr valType StackValue.val list.append
@@ -474,7 +513,7 @@ end
 proc( asm.RegisterId ValType : valType CompilerContext ptr.mut : context -> asm.RegisterId ) =>: setRegSize
   ## TODO: make sizes for bool & pointer target specific
   valType switch
-    EMPTY COMPOSITE V128 case return
+    EMPTY V128 case return
     BOOL case asm.RegisterId.SIZE_8 break
     I8 case asm.RegisterId.SIZE_8 break
     I16 F16 case asm.RegisterId.SIZE_16 break
@@ -628,7 +667,9 @@ proc(
   end
   ## TypedReg
   srcReg
-    $ varInfo [] .variableType typeContext ValType.fromType
+    $ varInfo [] .variableType typeContext ValType.fromType .Val .else
+      "multi-values are not supported" ..panic
+    end
   TypedReg new VariableCacheLocation .Register varInfo .cachedValue=
   dst ValueLocation .LocalVariable context addLocation
 end
@@ -642,7 +683,9 @@ proc(
   context .variableInfo src nameVarId map.at .else
     "missing info for local variable" ..panic
   end =:: varInfo
-  varInfo [] .variableType typeContext ValType.fromType =:: valType
+  varInfo [] .variableType typeContext ValType.fromType .Val .else
+    "multi-values are not supported" ..panic
+  end =:: valType
   varInfo [] .cachedValue switch
     None case break
     Register .case .reg asm.Value .Register valType StackValue.val return
@@ -976,7 +1019,9 @@ proc(
       varInfo .cachedValue switch
         None case
           varName 0 asm.localAddress
-            varInfo .variableType typeContext ValType.fromType
+            varInfo .variableType typeContext ValType.fromType .Val .else
+              "multi-values are not supported" ..panic
+            end
           TypedValue new optional.wrap return
         break
         Register .case TypedReg.asTypedValue optional.wrap return
@@ -1321,7 +1366,9 @@ proc(
     0 =:: mut: floatCount
     outTypes .length while $ 1 - >$ 0 != do =:: i
       outTypes i [] =:: outType
-      outType typeContext ValType.fromType =:: outValType
+      outType typeContext ValType.fromType .Val .else
+        "multi-values are not supported" ..panic
+      end =:: outValType
       outValType ValType.isInt if
         intCount AMD64.reg.intRet .if
           outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
@@ -1372,7 +1419,9 @@ proc(
   0 =:: mut: intCount
   0 =:: mut: floatCount
   1:iSize while $ argTypes .length u<= do =:: offset
-    argTypes $ .length offset - [] typeContext ValType.fromType =:: argValType
+    argTypes $ .length offset - [] typeContext ValType.fromType .Val .else
+      "multi-values are not supported" ..panic
+    end =:: argValType
     argValType ValType.isInt if
       intCount AMD64.reg.intArg .if
         argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
@@ -1405,7 +1454,9 @@ proc(
     0 intCount=
     0 floatCount=
     outTypes .length while $ 1 - >$ 0 != do =:: i
-      outTypes i [] typeContext ValType.fromType =:: outValType
+      outTypes i [] typeContext ValType.fromType .Val .else
+        "multi-values are not supported" ..panic
+      end =:: outValType
       outValType ValType.isInt if
         intCount AMD64.reg.intRet .if
           asm.Value .Register outValType StackValue.val expectedRetStack i =[]
@@ -1566,7 +1617,9 @@ proc(
         argName? .and id.identifierFlags id.FLAG_STATIC & ? if continue end
         inTypes i []
           $ typeContext types.isType if ..drop continue end
-        typeContext ValType.fromType =:: argValType
+        typeContext ValType.fromType .Val .else
+          "multi-values are not supported" ..panic
+        end =:: argValType
         argValType ValType.isInt if
           intCount AMD64.reg.intArg .if
             argValType context setRegSize asm.Value .Register argValType StackValue.val
@@ -1626,7 +1679,9 @@ proc(
             op  .pos errors appendError
             return
           end
-          op .dataType typeContext ValType.fromType =:: argType
+          op .dataType typeContext ValType.fromType .Val .else
+            "expected single value" ..panic
+          end =:: argType
           ## TODO merge duplicate code with opCmp
           argType op .pos context amd64GetBinOpArgs =:: arg2 =:: arg1
           ## TODO! handle float compare (! use comiss + ja/jb)
