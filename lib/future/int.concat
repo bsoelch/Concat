@@ -630,7 +630,40 @@ namespace: int
     1 addI32 negate
   end
   proc( int int -> int ) =>: export: bitAnd
-    "unimplemented: bitAnd" ..panic
+    a sign =:: aSign
+    b sign =:: bSign
+    aSign 0 == or bSign 0 == if
+      a free b free ZERO return
+    end
+    aSign 0 < and bSign 0 < if
+      a bitLength b bitLength iSize.max
+    else
+      a bitLength b bitLength iSize.min
+    end =:: resultBits
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    Digit MAX_INLINE_DIGITS array : mut: bufB
+    a bufA@ asSlice =:: aData
+    b bufB@ asSlice =:: bData
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    resultDigits MAX_INLINE_DIGITS <= if
+      Digit MAX_INLINE_DIGITS array : mut: resBuf
+      aData aSign bData bSign resBuf@ resultDigits slice.createMutable _impl.bitAnd =:: resData
+        a free b free
+      resData .length switch
+        0 case ZERO return
+        1 case resData 0 [] fromU64 aSign bData * 0 < if negate end return
+        2 case resData 1 [] resData 0 [] i128.create fromU128 aSign bData * 0 < if negate end return
+        default "unexpected number of digits" ..panic
+      end
+    end
+    a resultDigits asWritableBuffer .else
+    b resultDigits asWritableBuffer ._else
+      resultDigits prepareCap
+    end =:: dstData
+    aData aSign bData bSign dstData _impl.bitAnd =:: resData
+    resData .data IntData.fromPtr aSign bData * 0 < IntData.setSign resData .length int new
+      a free b free
+    return
   end
   proc( int i32 -> int ) =>: export: andI32
     i64 cast.s andI64
@@ -762,6 +795,54 @@ namespace: int
         newLength >$ .length=
       return
     end
+  end
+
+  struct( Digit slice : digits i32 : sign bool : hadNonzero ) =:: DigitIterator
+  namespace: DigitIterator
+    proc( Digit slice : digits i32 : sign -> DigitIterator ) =>: create
+      digits sign false DigitIterator new
+    end
+    proc( DigitIterator -> DigitIterator Digit ) =>: next
+      $ digits .length 0 == if
+        sign 0 < if -1 Digit cast.s else 0 Digit cast.s end return
+      end
+      $ .digits 0 [] =:: nextDigit
+      $ .digits 1 slice.tail >$ .digits=
+      sign 0 >= if
+        nextDigit return
+      end
+      $ .hadNonzero if
+        nextDigit ~ return
+      end
+      nextDigit ? >$ .hadNonzero=
+      nextDigit -_ return
+    end
+  end
+  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res ) =>: bitAnd
+    a aSign DigitIterator.create =:: mut: aItr
+    b bSign DigitIterator.create =:: mut: bItr
+    ## compute digit-wise and
+    res .length for =:: i
+      aItr DigitIterator.next >$ aItr=
+        bItr DigitIterator.next >$ bItr=
+      & res i =[]
+    end
+    aSign 0 < and bSign 0 < if
+      ## decode twos complement if result is negative
+      res slice.freeze -1 DigitIterator.create =:: mut: resItr
+      res .length for =:: i
+        resItr
+          DigitIterator.next res i =[]
+        resItr=
+      end
+    end
+    ## remove leading zeros
+    res .length while $ 1 - <$ 0 != do =:: i
+      res i [] ? if i 1 + break end
+    finally i end =:: newLength
+    res
+      newLength >$ .length=
+    return
   end
 end
 overload: export: merge: ..if.prepare  IntConv.prepareIf end
