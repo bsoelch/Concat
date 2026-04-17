@@ -1366,32 +1366,43 @@ proc(
     0 =:: mut: floatCount
     outTypes .length while $ 1 - >$ 0 != do =:: i
       outTypes i [] =:: outType
-      outType typeContext ValType.fromType .Val .else
-        "multi-values are not supported" ..panic
-      end =:: outValType
-      outValType ValType.isInt if
-        intCount AMD64.reg.intRet .if
-          outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
-        else
-          "unimplemented: memory return" ..panic
-        end
-        intCount 1 + intCount=
-      else outValType ValType.isFloat _if
-        floatCount AMD64.reg.floatRet .if
-          outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
-        else
-          "unimplemented: memory return" ..panic
-        end
-        floatCount 1 + floatCount=
-      else outValType ValType.isComposite _if
-        outType typeContext types.isValueType "only value types are return by value" assert
-        ## iterate elements
-        ##  collect until 8byte chunk (or end of struct)
-        ##   for single value emmit valType
-        ##   otherwise emmit bits32/bits64/v128
-        "composite return is not implemented" ..panic
-      else
-        "unsupported value type for return" ..panic
+      outType typeContext ValType.fromType switch
+        Empty case continue
+        Val .case =:: outValType
+          ## TODO: extract reg-allocation for fixed val-type to function
+          outValType ValType.isInt if
+            intCount AMD64.reg.intRet .if
+              outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
+            else
+              "unimplemented: memory return" ..panic
+            end
+            intCount 1 + intCount=
+          else outValType ValType.isFloat _if
+            floatCount AMD64.reg.floatRet .if
+              outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
+            else
+              "unimplemented: memory return" ..panic
+            end
+            floatCount 1 + floatCount=
+          else
+            "unsupported value type for return" ..panic
+          end
+        break
+        Val2 .case =:: vals
+          vals .0 .I32 and vals .1 .I32 if
+            intCount AMD64.reg.intRet .if
+              ValType .BITS64 context setRegSize asm.Value .Register ValType .BITS64 StackValue.val expectedStack i =[]
+            else
+              "unimplemented: memory return" ..panic
+            end
+            intCount 1 + intCount=
+          else
+            "composite return is not implemented" ..panic
+          end
+        break
+        Val3 .case =:: vals
+          "composite return is not implemented" ..panic
+        break
       end
     finally i end expectedStack .length u<= if
       "Wrong number of values for return statement" sb.copyPtr
@@ -1419,25 +1430,42 @@ proc(
   0 =:: mut: intCount
   0 =:: mut: floatCount
   1:iSize while $ argTypes .length u<= do =:: offset
-    argTypes $ .length offset - [] typeContext ValType.fromType .Val .else
-      "multi-values are not supported" ..panic
-    end =:: argValType
-    argValType ValType.isInt if
-      intCount AMD64.reg.intArg .if
-        argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
-      else
-        "unimplemented: memory argument" ..panic
-      end
-      intCount 1 + intCount=
-    else argValType ValType.isFloat _if
-      floatCount AMD64.reg.floatArg .if
-        argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
-      else
-        "unimplemented: memory argument" ..panic
-      end
-      floatCount 1 + floatCount=
-    else
-      "unimplemented value type for argument" ..panic
+    argTypes $ .length offset - [] typeContext ValType.fromType switch
+      Empty case continue
+      Val .case =:: argValType
+        argValType ValType.isInt if
+          intCount AMD64.reg.intArg .if
+            argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
+          else
+            "unimplemented: memory argument" ..panic
+          end
+          intCount 1 + intCount=
+        else argValType ValType.isFloat _if
+          floatCount AMD64.reg.floatArg .if
+            argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
+          else
+            "unimplemented: memory argument" ..panic
+          end
+          floatCount 1 + floatCount=
+        else
+          "unimplemented value type for argument" ..panic
+        end
+      break
+      Val2 .case =:: argValTypes
+        argValTypes .0 .I32 and argValTypes .1 .I32 if
+          intCount AMD64.reg.intArg .if
+            ValType .BITS64 context setRegSize asm.Value .Register ValType .BITS64 StackValue.val expectedStack $ .length offset - =[]
+          else
+            "unimplemented: memory argument" ..panic
+          end
+          intCount 1 + intCount=
+        else
+          "unimplemented: composite arguments" ..panic
+        end
+      break
+      Val3 .case =:: argValTypes
+          "unimplemented: composite arguments" ..panic
+      break
     end
   finally offset 1 + end $ expectedStack .length u<= if =:: offset
     ## TODO move remaining stack values to memory or callee-saved register
@@ -1454,27 +1482,42 @@ proc(
     0 intCount=
     0 floatCount=
     outTypes .length while $ 1 - >$ 0 != do =:: i
-      outTypes i [] typeContext ValType.fromType .Val .else
-        "multi-values are not supported" ..panic
-      end =:: outValType
-      outValType ValType.isInt if
-        intCount AMD64.reg.intRet .if
-          asm.Value .Register outValType StackValue.val expectedRetStack i =[]
-        else
-          "unimplemented: memory return" ..panic
-        end
-        intCount 1 + intCount=
-      else outValType ValType.isFloat _if
-        floatCount AMD64.reg.floatRet .if
-          asm.Value .Register outValType StackValue.val expectedRetStack i =[]
-        else
-          "unimplemented: memory return" ..panic
-        end
-        floatCount 1 + floatCount=
-      else outValType ValType.isComposite _if
-        "call: composite return is not implemented" ..panic
-      else
-        "unsupported value type for return" ..panic
+      outTypes i [] typeContext ValType.fromType switch
+        Empty case continue
+        Val .case =:: outValType
+          outValType ValType.isInt if
+            intCount AMD64.reg.intRet .if
+              asm.Value .Register outValType StackValue.val expectedRetStack i =[]
+            else
+              "unimplemented: memory return" ..panic
+            end
+            intCount 1 + intCount=
+          else outValType ValType.isFloat _if
+            floatCount AMD64.reg.floatRet .if
+              asm.Value .Register outValType StackValue.val expectedRetStack i =[]
+            else
+              "unimplemented: memory return" ..panic
+            end
+            floatCount 1 + floatCount=
+          else
+            "unsupported value type for return" ..panic
+          end
+        break
+        Val2 .case =:: vals
+          vals .0 .I32 and vals .1 .I32 if
+            intCount AMD64.reg.intRet .if
+              asm.Value .Register ValType .BITS64 StackValue.val expectedRetStack i =[]
+            else
+              "unimplemented: memory return" ..panic
+            end
+            intCount 1 + intCount=
+          else
+            "composite return is not implemented" ..panic
+          end
+        break
+        Val3 .case =:: vals
+          "composite return is not implemented" ..panic
+        break
       end
     finally i end ..drop
     expectedRetStack for
@@ -1617,30 +1660,52 @@ proc(
         argName? .and id.identifierFlags id.FLAG_STATIC & ? if continue end
         inTypes i []
           $ typeContext types.isType if ..drop continue end
-        typeContext ValType.fromType .Val .else
-          "multi-values are not supported" ..panic
-        end =:: argValType
-        argValType ValType.isInt if
-          intCount AMD64.reg.intArg .if
-            argValType context setRegSize asm.Value .Register argValType StackValue.val
-          else
-            "memory arguments are not supported" ..panic
-          end
-          intCount 1 + intCount=
-        else argValType ValType.isFloat _if
-          floatCount AMD64.reg.floatArg .if
-            argValType context setRegSize asm.Value .Register argValType StackValue.val
-          else
-            "memory arguments are not supported" ..panic
-          end
-          floatCount 1 + floatCount=
-        else
-          "unsupported valType" ..panic
-        end =:: argValue
-        argName? .and nameVarId =:: varId context .variableInfo varId map.at .if =:: argVar
-          varId argValue context opStoreLocal
-        else ## variable does not exist
-          argValue context pushValue
+        typeContext ValType.fromType switch
+          Empty case continue
+          Val .case =:: argValType
+            argValType ValType.isInt if
+              intCount AMD64.reg.intArg .if
+                argValType context setRegSize asm.Value .Register argValType StackValue.val
+              else
+                "memory arguments are not supported" ..panic
+              end
+              intCount 1 + intCount=
+            else argValType ValType.isFloat _if
+              floatCount AMD64.reg.floatArg .if
+                argValType context setRegSize asm.Value .Register argValType StackValue.val
+              else
+                "memory arguments are not supported" ..panic
+              end
+              floatCount 1 + floatCount=
+            else
+              "unsupported valType" ..panic
+            end =:: argValue
+            argName? .and nameVarId =:: varId context .variableInfo varId map.at .if =:: argVar
+              varId argValue context opStoreLocal
+            else ## variable does not exist
+              argValue context pushValue
+            end
+          break
+          Val2 .case =:: argVals
+            argVals .0 .I32 and argVals .1 .I32 if
+              intCount AMD64.reg.intArg .if
+                ValType .BITS64 context setRegSize asm.Value .Register ValType .BITS64 StackValue.val
+              else
+                "memory arguments are not supported" ..panic
+              end =:: argValue
+              argName? .and nameVarId =:: varId context .variableInfo varId map.at .if =:: argVar
+                varId argValue context opStoreLocal
+              else ## variable does not exist
+                argValue context pushValue
+              end
+              intCount 1 + intCount=
+            else
+              "composite arguments are not supported" ..panic
+            end
+          break
+          Val3 .case =:: argVals
+            "composite arguments are not supported" ..panic
+          break
         end
       finally i 1 - end ..drop
     return
