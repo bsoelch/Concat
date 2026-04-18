@@ -7,11 +7,11 @@ import stringBuilder
 import numbers/i128
 
 namespace: int
-  iSize ..types.size i32 ..types.size >= "iSize has at least 32 bits" assert
+  iSize ..types.size i32 ..types.size u>= "iSize has at least 32 bits" assert
   iSize ..types.size i32 ..types.size == =:: BITS_32
 
   i64 =:: Digit
-  64 =:: DIGIT_BITS
+  64:iSize =:: DIGIT_BITS
   namespace: Digit
     proc( bool : carry Digit : a Digit : b -> bool Digit ) : alias: addc i64.addc
     proc( bool : carry Digit : a Digit : b -> bool Digit ) : alias: subb i64.subb
@@ -43,7 +43,7 @@ namespace: int
       end ..drop iSize optional.empty
     end
     proc( iSize -> IntData optional ) =>: fromInt
-      $ iSize ..types.size 8 * SHIFT_TAG - >>> 0 != if
+      $ iSize ..types.size 8 * SHIFT_TAG - >>> 0 != if ..drop
         IntData optional.empty return
       end
       SHIFT_TAG << TYPE_INT | IntData cast optional.wrap
@@ -51,14 +51,14 @@ namespace: int
     proc( IntData -> bool ) =>: getSign
       iSize cast FLAG_SIGN & ?
     end
-    proc( IntData bool -> IntDatal ) =>: setSign
+    proc( IntData bool -> IntData ) =>: setSign
       if
         iSize cast FLAG_SIGN | IntData cast
       else
         iSize cast FLAG_SIGN ~ & IntData cast
       end
     end
-    proc( IntData -> IntDatal ) =>: flipSign
+    proc( IntData -> IntData ) =>: flipSign
       iSize cast FLAG_SIGN ^ IntData cast
     end
   end
@@ -71,30 +71,30 @@ struct(
   iSize       : length ## low
 ) =:: export: int
 namespace: int
-  BITS_32 if 64 else 128 end IntData.SHIFT_TAG - =:: MAX_INLINE_BITS
+  BITS_32 if 64:iSize else 128:iSize end IntData.SHIFT_TAG - =:: MAX_INLINE_BITS
   DIGIT_BITS MAX_INLINE_BITS $1 1 - + >$ u/ =:: MAX_INLINE_DIGITS
 ## internal data management
   2:iSize =:: INFO_SLOTS
   -1:iSize =:: CAP_INDEX
   -2:iSize =:: REF_COUNT_INDEX
-  proc( iSize : low iSize : high bool : sign -> int optional ) =>: tryCreateInplace
+  proc( iSize : low iSize : high bool : shadow: sign -> int optional ) =>: tryCreateInplace
     high IntData.fromInt .if
       sign IntData.setSign low int new optional.wrap return
     end
     int optional.empty return
   end
   proc( iSize : maxDigits -> Digit slice.mut ) =>: prepareCap
-    digitCount INFO_SLOTS +
+    maxDigits INFO_SLOTS +
       3 + -4 & ## align size to multiple of 4
     =:: slotCount
     slotCount Digit mem.alloc INFO_SLOTS @[] =:: basePtr
     slotCount INFO_SLOTS - Digit cast.u basePtr CAP_INDEX =[]
     1 Digit cast.u basePtr REF_COUNT_INDEX =[]
-    basePtr digitCount slice.createMutable
+    basePtr maxDigits slice.createMutable
   end
-  proc( Digit slice : digits bool : sign -> int ) =>: fromDigits
+  proc( Digit slice : digits bool : shadow: sign -> int ) =>: fromDigits
     digits .length while $ 0 != do
-      digits $1 1 - [] 0 != if break end
+      digits $1 1 - [] i64 cast.u 0 != if break end
     finally 1 - end 1 + =:: digitCount
     digitCount prepareCap =:: targetDigits
     targetDigits .data digits .data digitCount mem.copy ..drop
@@ -104,29 +104,31 @@ namespace: int
     $ .data newSign IntData.setSign >$ .data=
   end
   proc( int : val iSize : maxDigits -> Digit slice.mut optional ) =>: asWritableBuffer
-    val .data IntData.asPtr .else ..drop
+    val .data IntData.asPtr .else
       Digit slice.mut optional.empty return
     end =:: basePtr
-    basePtr REF_COUNT_INDEX []
+    basePtr REF_COUNT_INDEX [] i64 cast.u
       $ 1 u> if ..drop ## reference not unique
         Digit slice.mut optional.empty return
       end
-    1 + basePtr REF_COUNT_INDEX =[]
-    basePtr CAP_INDEX [] =:: dataCap
+    1 + Digit cast.u basePtr REF_COUNT_INDEX =[]
+    basePtr CAP_INDEX [] i64 cast.u =:: dataCap
     dataCap iSize cast.u maxDigits u< if ## not enough capacity
       Digit slice.mut optional.empty return
     end
-    basePtr dataCap slice.create optional.wrap
+    basePtr dataCap slice.createMutable optional.wrap
   end
-  proc( int : val Digit MAX_INLINE_DIGITS ptr.mut : localBuffer -> Digit slice ) =>: asSlice
+  proc( int : a Digit MAX_INLINE_DIGITS ptr.mut : localBuffer -> Digit slice ) =>: asSlice
     a .data IntData.asPtr .if
       a .length slice.create
-    else a .data IntData .asInt ._if i64 cast.u =:: hi
+    else a .data IntData.asInt ._if i64 cast.u =:: hi
       BITS_32 if
         a .length i64 cast.u hi 32 << | localBuffer .0=
+        localBuffer 1 slice.create
       else
-        a .length localBuffer .0=
-        hi localBuffer .1=
+        a .length Digit cast.u localBuffer .0=
+        hi Digit cast.u localBuffer .1=
+        localBuffer 2 slice.create
       end
     else
       "unexpected int-data-type" ..panic
@@ -138,42 +140,44 @@ namespace: int
       a return ## nothing to copy
     else a .data IntData.asPtr ._if
       $ REF_COUNT_INDEX []
-        1 + ## ? atomic increment
+        i64 cast.u 1 + Digit cast.u ## ? atomic increment
       >$ REF_COUNT_INDEX =[]
+      a return
     else
       "unexpected int-data-type" ..panic
     end
   end
-  proc( int -> ) =>: export: free
+  proc( int : a -> ) =>: export: free
     a .data IntData.asInt ? if
       return ## nothing to copy
     else a .data IntData.asPtr ._if
-      $ REF_COUNT_INDEX []
+      $ REF_COUNT_INDEX [] i64 cast.u
         1 - ## ? atomic decrement
-        $ 0 == if ## freed all references
+        $ 0 == if ..drop ## freed all references
           INFO_SLOTS -_ @[] mem.free
           return
         end
-      $1 REF_COUNT_INDEX =[]
+      Digit cast.u >$ REF_COUNT_INDEX =[]
     else
       "unexpected int-data-type" ..panic
     end
   end
 ## create from integer
   proc( i32 : val -> int ) =>: export: fromI32
-    val 0 < $ =:: sign if -_ end =:: shadow: val
-    val iSize cast.u 0 sign tryCreateInplace optional.unwrap
+    val
+      $ 0 < $ =:: shadow: sign if -_ end
+    iSize cast.u 0 sign tryCreateInplace optional.unwrap
   end
   proc( i32 : val -> int ) =>: export: fromU32
     val iSize cast.u 0 false tryCreateInplace optional.unwrap
   end
   proc( i64 : val -> int ) =>: export: fromI64
-    val 0 < $ =:: sign
-      if -_ end
+    val
+      $ 0 < $ =:: shadow: sign if -_ end
     fromU64 sign setSign
   end
   proc( i128 : val -> int ) =>: export: fromI128
-    val 0 < $ =:: sign
+    val 0 < $ =:: shadow: sign
       if -_ end
     fromU128 sign setSign
   end
@@ -200,9 +204,10 @@ namespace: int
       val iSize cast.u 0 false tryCreateInplace optional.unwrap
     end
   end
-  0 fromI32 =:: ZERO
-  1 fromI32 =:: ONE
-  -1 fromI32 =:: NEGATIVE_ONE
+  { 0 IntData cast 0 } int =: ZERO ## TODO! interpreter currently cannot handle running fromI32 at compile-time
+  ##0 fromI32 =:: ZERO
+  ##1 fromI32 =:: ONE
+  ##-1 fromI32 =:: NEGATIVE_ONE
   ( type : I -> type ) =>: export: IntConversionResult
     union(
       I : Ok
@@ -501,7 +506,6 @@ namespace: int
     resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
     a resultDigits asWritableBuffer .else
     b resultDigits asWritableBuffer ._else
-    else
       resultDigits prepareCap
     end =:: dstData
     aData bData _impl.cmp =:: cmp
@@ -660,7 +664,7 @@ namespace: int
   proc( int int -> int ) =>: export: rem
     DivideResult .REM divRem0 >$ free
   end
-  proc( int int -> int : div int : rem ) =>: export: divMod
+  proc( int int -> int #+div+# int #+rem+# ) =>: export: divMod
     DivideResult .DIV_MOD divRem0
   end
   proc( int int -> int ) =>: export: floorDiv
@@ -820,7 +824,7 @@ namespace: int
   proc( int : a i64 : b -> int ) =>: export: andI64
     a asI64 .if
       b & fromI64
-    else a asI128 .if
+    else a asI128 ._if
       b i128.fromI64 & fromI128
     end =:: shadow: a
     Digit MAX_INLINE_DIGITS array : mut: buf
@@ -855,7 +859,7 @@ namespace: int
   proc( int i64 -> int ) =>: export: andU64
     a asI64 .if
       b & fromI64
-    else a asI128 .if
+    else a asI128 ._if
       b i128.fromU64 & fromI128
     end =:: shadow: a
     Digit MAX_INLINE_DIGITS array : mut: buf
@@ -968,7 +972,7 @@ namespace: int
   proc( int : a i32 : n -> int ) =>: export: shrU32
      a asI64 .if
       b >> fromI64
-    else a asI128 .if
+    else a asI128 ._if
       b >> fromI128
     end =:: shadow: a
     a bitLength
@@ -985,7 +989,7 @@ namespace: int
     resultDigits MAX_INLINE_DIGITS u<= =:: inlineResult
     inlineResult if
       dstBuf@ slice.wrap
-    a resultDigits asWritableBuffer ._else
+    else a resultDigits asWritableBuffer ._else
       resultDigits prepareCap
     end =:: dstData
     aData dstData n i64 cast.u _impl.shr =:: resData
@@ -1015,7 +1019,7 @@ namespace: int
     proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: sbPow2Append
       "unimplemented: sbPow2Append" ..panic
     end
-    proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: sbBaseAppend
+    proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: shadow: sbBaseAppend
       "unimplemented: sbBaseAppend" ..panic
     end
 
@@ -1028,7 +1032,7 @@ namespace: int
       return
     end
 
-    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: add
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: add
       false
         a .length b .length iSize.min for =:: i
           a i [] b i [] Digit.addc res i =[]
@@ -1054,7 +1058,7 @@ namespace: int
         return
       end
     end
-    proc( Digit slice : a Digit slice : b -> i32 ) =>: cmp
+    proc( Digit slice : a Digit slice : b -> i32 ) =>: shadow: cmp
       a .length b .length != if
         a .length b .length iSize.cmp return
       end
@@ -1065,7 +1069,7 @@ namespace: int
       finally i end ..drop
       0 return
     end
-    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: sub
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: sub
       a .length b .length u>= "a >= b" assert
       false
         a .length b .length for =:: i
@@ -1083,9 +1087,9 @@ namespace: int
     end
   end
 
-  struct( Digit slice : digits i32 : sign bool : hadNonzero ) =:: DigitIterator
+  struct( Digit slice : digits i32 : shadow: sign bool : hadNonzero ) =:: DigitIterator
   namespace: DigitIterator
-    proc( Digit slice : digits i32 : sign -> DigitIterator ) =>: create
+    proc( Digit slice : digits i32 :  shadow: sign -> DigitIterator ) =>: create
       digits sign false DigitIterator new
     end
     proc( DigitIterator -> DigitIterator Digit ) =>: next
@@ -1104,7 +1108,7 @@ namespace: int
       nextDigit -_ return
     end
   end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: bitAnd
+  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitAnd
     a aSign DigitIterator.create =:: mut: aItr
     b bSign DigitIterator.create =:: mut: bItr
     ## compute digit-wise and
@@ -1124,7 +1128,7 @@ namespace: int
     end
     res removeLeadingZeros return
   end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: bitOr
+  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitOr
     a aSign DigitIterator.create =:: mut: aItr
     b bSign DigitIterator.create =:: mut: bItr
     ## compute digit-wise and
@@ -1144,7 +1148,7 @@ namespace: int
     end
     res removeLeadingZeros return
   end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: bitXor
+  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitXor
     a aSign DigitIterator.create =:: mut: aItr
     b bSign DigitIterator.create =:: mut: bItr
     ## compute digit-wise and
@@ -1178,7 +1182,7 @@ namespace: int
     a count >>>
     a count -_ << carry |
   end
-  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shl
+  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shadow: shl
     count 64 u/ =:: digitShift
     count 64 u% =:: bitShift
     a .length digitShift iSize cast.u =:: newLength
@@ -1201,7 +1205,7 @@ namespace: int
       newLength $1 $1 [] 0 != if 1 + end >$ .length=
     return
   end
-  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shr
+  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shadow: shr
     count 64 u/ =:: digitShift
     count 64 u% =:: bitShift
     digitShift a .length u< "shift does not underflow" assert
@@ -1231,8 +1235,8 @@ namespace: int
     removeLeadingZeros return
   end
 end
-overload: export: merge: ..if.prepare  IntConv.prepareIf end
-overload: export: merge: ..if.check    IntConv.check end
-overload: export: merge: ..if.ifVal    IntConv.ifVal end
-overload: export: merge: ..if.elseVal  IntConv.elseVal end
+overload: export: merge: ..if.prepare  int.IntConv.prepareIf end
+overload: export: merge: ..if.check    int.IntConv.check end
+overload: export: merge: ..if.ifVal    int.IntConv.ifVal end
+overload: export: merge: ..if.elseVal  int.IntConv.elseVal end
 

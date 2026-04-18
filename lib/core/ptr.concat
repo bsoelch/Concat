@@ -252,6 +252,7 @@ namespace: iSize
     ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i64i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shl ..builtIn.shl.i64
     ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i64i32
+    ( iSize : a -> iSize ) : export: alias: flip ..builtIn.flip.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: and ..builtIn.and.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: or ..builtIn.or.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: xor ..builtIn.xor.i64
@@ -277,6 +278,7 @@ namespace: iSize
     ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shl ..builtIn.shl.i32
     ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i32
+    ( iSize : a -> iSize ) : export: alias: flip ..builtIn.flip.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: and ..builtIn.and.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: or ..builtIn.or.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: xor ..builtIn.xor.i32
@@ -381,6 +383,9 @@ end
 overload: export: <<
   iSize.shl
   iSize.shlI32
+end
+overload: export: ~
+  iSize.flip
 end
 overload: export: &
   iSize.and
