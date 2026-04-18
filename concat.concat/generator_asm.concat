@@ -77,8 +77,8 @@ namespace: ValType
   end
   proc( ValType : valType -> bool ) =>: isInt
     valType switch
-      BOOL I8 I16 I32 I64 POINTER PROC_POINTER case true return
-      EMPTY F16 F32 F64 BITS32 BITS64 V128 case false return
+      BOOL I8 I16 I32 I64 POINTER PROC_POINTER BITS32 BITS64 case true return
+      EMPTY F16 F32 F64 V128 case false return
     end
   end
   proc( ValType : valType -> bool ) =>: isFloat
@@ -97,12 +97,6 @@ namespace: ValType
     valType switch
       POINTER PROC_POINTER BOOL I8 I16 I32 I64 F16 F32 F64 case true return
       EMPTY BITS32 BITS64 V128 case false return
-    end
-  end
-  proc( ValType : valType -> bool ) =>: isComposite
-    valType switch
-      BITS32 BITS64 V128 case true return
-      EMPTY POINTER PROC_POINTER BOOL I8 I16 I32 I64 F16 F32 F64 case false return
     end
   end
 end
