@@ -410,11 +410,17 @@ namespace: int
       return
     end
     val sign 0 < if '-' sb.appendC end
-    base base -_ & base == if
-      _impl.sbPow2BaseAppend
-    else
-      _impl.sbBaseAppend
-    end
+    Digit MAX_INLINE_DIGITS array : mut: buf
+    val buf@ asSlice
+      base switch
+        2  case base _impl.sbAlignedPow2Append break
+        4  case base _impl.sbAlignedPow2Append break
+        16 case base _impl.sbAlignedPow2Append break
+        8  case base _impl.sbPow2Append break
+        32 case base _impl.sbPow2Append break
+        default base _impl.sbBaseAppend break
+      end
+    return
   end
   proc( stringBuilder int -> stringBuilder ) =>: export: sbAppend
     10 sbBaseAppend
@@ -996,10 +1002,20 @@ namespace: int
   end
 
   namespace: _impl
-    proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: sbPow2BaseAppend
-      "unimplemented: sbPow2BaseAppend" ..panic
+    proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: sbAlignedPow2Append
+      digits .length 0 == if
+        '0' sb.appendC return
+      end
+      digits $ .length 1 - [] i64 cast.u base sb.appendU
+      128 base u/ =:: digitCount
+      digits $ .length 1 - slice.head slice.reversed for
+        i64 cast.u digitCount '0' base sb.appendPaddedU
+      end
     end
-    proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: sbBaseAppend
+    proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: sbPow2Append
+      "unimplemented: sbPow2Append" ..panic
+    end
+    proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: sbBaseAppend
       "unimplemented: sbBaseAppend" ..panic
     end
 
