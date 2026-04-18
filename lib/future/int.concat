@@ -401,13 +401,26 @@ namespace: int
     "unimplemented: parse" ..panic ## return int NumberParseResult instead of optional
   end
   proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
-    "unimplemented: sbAppend" ..panic
+    val asI64 .if
+      base sb.appendI
+    ## TODO? 128bit sb.append
+    end =:: shadow: val
+    base numbers.MIN_BASE < or base numbers.MAX_BASE > if
+      ## TODO: error handling
+      return
+    end
+    val sign 0 < if '-' sb.appendC end
+    base base -_ & base == if
+      _impl.sbPow2BaseAppend
+    else
+      _impl.sbBaseAppend
+    end
   end
   proc( stringBuilder int -> stringBuilder ) =>: export: sbAppend
     10 sbBaseAppend
   end
-  proc( stringBuilder int : val -> stringBuilder ) =>: export: sbAppendX
-    "unimplemented: sbAppendX" ..panic
+  proc( stringBuilder int -> stringBuilder ) =>: export: sbAppendX
+    16 sbBaseAppend
   end
 ## arithmetic
   proc( int -> bool ) =>: export: isZero
@@ -983,6 +996,13 @@ namespace: int
   end
 
   namespace: _impl
+    proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: sbPow2BaseAppend
+      "unimplemented: sbPow2BaseAppend" ..panic
+    end
+    proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: sbBaseAppend
+      "unimplemented: sbBaseAppend" ..panic
+    end
+
     proc( Digit slice.mut : res -> Digit slice.mut ) =>: removeLeadingZeros
       res .length while $ 1 - <$ 0 != do =:: i
         res i [] ? if i 1 + break end
