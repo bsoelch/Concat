@@ -717,8 +717,24 @@ namespace: int
     a bufA@ asSlice b bufB@ asSlice _impl.cmp
   end
 ## bitwise operations
-  proc( int -> iSize ) =>: export: bitLength
-    "unimplemented: bitLength" ..panic
+  proc( int : a -> iSize ) =>: export: bitLength
+    a .data IntData.asInt .if =:: hi
+      BITS_32 if
+        hi i32 cast.u highestSetBit
+          $ ? if 32 + return end
+        a .length i32 cast.u highestSetBit
+      else
+        hi i64 cast.u highestSetBit
+          $ ? if 64 + return end
+        a .length i64 cast.u highestSetBit
+      end
+    else a .data IntData .asPtr ._if =:: basePtr
+      a .length 1 - =:: index
+        basePtr index [] i64 cast.u highestSetBit
+      index 64 * +
+    else
+      "unexpected int-data type" ..panic
+    end
   end
   proc( int -> int ) =>: export: bitNot
     1 addI32 negate
