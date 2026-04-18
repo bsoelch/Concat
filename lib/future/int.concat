@@ -83,25 +83,25 @@ namespace: int
     end
     int optional.empty return
   end
-  proc( Digit slice : digits bool : sign -> int ) =>: fromDigits
-    digits .length while $ 0 != do
-      digits $1 1 - [] 0 != if break end
-    finally 1 - end 1 + =:: digitCount
+  proc( iSize : maxDigits -> Digit slice.mut ) =>: prepareCap
     digitCount INFO_SLOTS +
       3 + -4 & ## align size to multiple of 4
     =:: slotCount
     slotCount Digit mem.alloc INFO_SLOTS @[] =:: basePtr
     slotCount INFO_SLOTS - Digit cast.u basePtr CAP_INDEX =[]
     1 Digit cast.u basePtr REF_COUNT_INDEX =[]
-    basePtr digits .data digitCount mem.copy ..drop
-    basePtr IntData.fromPtr sign IntData.setSign digitCount int new
+    basePtr digitCount slice.createMutable
+  end
+  proc( Digit slice : digits bool : sign -> int ) =>: fromDigits
+    digits .length while $ 0 != do
+      digits $1 1 - [] 0 != if break end
+    finally 1 - end 1 + =:: digitCount
+    digitCount prepareCap =:: targetDigits
+    targetDigits .data digits .data digitCount mem.copy ..drop
+    targetDigits .data IntData.fromPtr sign IntData.setSign digitCount int new
   end
   proc( int bool : newSign -> int ) =>: setSign
     $ .data newSign IntData.setSign >$ .data=
-  end
-  proc( iSize : maxDigits -> Digit slice.mut ) =>: prepareCap
-    ## prepare buffer for int that can hold up to max-digits
-    "unimplemented: prepareCap" ..panic
   end
   proc( int : val iSize : maxDigits -> Digit slice.mut optional ) =>: asWritableBuffer
     val .data IntData.asPtr .else ..drop
@@ -133,11 +133,31 @@ namespace: int
     end
   end
 ## reference management
-  proc( int -> int ) =>: export: copy
-    "unimplemented: copy" ..panic
+  proc( int : a -> int ) =>: export: copy
+    a .data IntData.asInt ? if
+      a return ## nothing to copy
+    else a .data IntData.asPtr ._if
+      $ REF_COUNT_INDEX []
+        1 + ## ? atomic increment
+      >$ REF_COUNT_INDEX =[]
+    else
+      "unexpected int-data-type" ..panic
+    end
   end
   proc( int -> ) =>: export: free
-    "unimplemented: free" ..panic
+    a .data IntData.asInt ? if
+      return ## nothing to copy
+    else a .data IntData.asPtr ._if
+      $ REF_COUNT_INDEX []
+        1 - ## ? atomic decrement
+        $ 0 == if ## freed all references
+          INFO_SLOTS -_ @[] mem.free
+          return
+        end
+      $1 REF_COUNT_INDEX =[]
+    else
+      "unexpected int-data-type" ..panic
+    end
   end
 ## create from integer
   proc( i32 : val -> int ) =>: export: fromI32
