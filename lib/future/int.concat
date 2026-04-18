@@ -695,7 +695,21 @@ namespace: int
     res return
   end
   proc( int : b int : m -> int ) =>: export: modInverse
-    "unimplemented: modInverse" ..panic
+    m copy abs =:: mut: y
+    b m copy mod =:: mut: x
+    ZERO =:: mut: s
+    ONE =:: mut: t
+    int : q
+    while x isZero ! do ## extended euclidean algorithm
+      x copy
+        y x divMod q= x=
+      y=
+      t copy
+        s  q t mul sub t= ## s-qt
+      s=
+    end
+      x free y free t free
+    s m mod return
   end
   ## TODO? carry-less multiply/divide/mod : use `PCLMULQDQ`/`pmull` opcode?
 ## comparisons
