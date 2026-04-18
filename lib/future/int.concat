@@ -623,6 +623,7 @@ namespace: int
   proc( int int -> int ) =>: export: square
     "unimplemented: square" ..panic
   end
+  ## TODO? sqrt
   enum( DIV REM DIV_REM FLOOR_DIV MOD DIV_MOD ) =:: DivideResult
   proc( int : a int : b DivideResult -> int : div int : rem ) =>: divRem0
     ## 1. handle signs
@@ -730,6 +731,7 @@ namespace: int
     Digit MAX_INLINE_DIGITS array : mut: bufB
     a bufA@ asSlice b bufB@ asSlice _impl.cmp
   end
+  ## TODO? min/max
 ## bitwise operations
   proc( int : a -> iSize ) =>: export: bitLength
     a .data IntData.asInt .if =:: hi
@@ -851,6 +853,7 @@ namespace: int
   proc( int i128 -> int ) =>: export: andU128
     "unimplemented: andU128" ..panic
   end
+  ## TODO? bitAndNot
   proc( int int -> int ) =>: export: bitOr
     a sign =:: aSign
     b sign =:: bSign
@@ -923,6 +926,8 @@ namespace: int
       a free b free
     return
   end
+  ## TODO setBit / getBit / flipBit
+  ## TODO lowest setBit / bit-count
   proc( int : a i32 : n -> int ) =>: export: shlU32
     a bitLength n iSize cast.u + =:: resultBits
     resultBits 64 < if
