@@ -8,13 +8,10 @@ struct(
 
 ## TODO make sure to use unsigned comparisson for comparing parts of i128
 namespace: i128
-  ## XXX use constants
-  proc( -> i128 ) =>: export: ZERO
-    0 0 i128 new return
-  end
-  proc( -> i128 ) =>: export: ONE
-    0 1 i128 new return
-  end
+  { 0 : hi 0 : low } i128 =: export: ZERO
+  { 0 : hi 1 : low } i128 =: export: ONE
+  { i64.MIN : hi 0 : low } i128 =: export: MIN
+  { i64.MAX : hi -1 : low } i128 =: export: MAX
 
   proc( i32 : low -> i128 ) =>: export: fromI32
     low 0 < if -1:i64 else 0:i64 end low i64 cast.s i128 new
@@ -438,6 +435,8 @@ overload: ^ i128.xor end
 overload: << i128.shl i128.shl_i64 i128.shl_i32 end
 overload: >>> i128.lshr i128.lshr_i64 i128.lshr_i32 end
 overload: >> i128.ashr i128.ashr_i64 i128.ashr_i32 end
+overload: == i128.eq end
+overload: != i128.ne end
 overload: <=> i128.cmp end
 overload: u< i128.ult end
 overload: u<= i128.ule end

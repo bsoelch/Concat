@@ -4,7 +4,9 @@ import optional
 import string
 import list
 import stringBuilder
+import numbers
 import numbers/i128
+import numbers/intToStr
 
 namespace: int
   iSize ..types.size i32 ..types.size u>= "iSize has at least 32 bits" assert
@@ -15,6 +17,16 @@ namespace: int
   namespace: Digit
     proc( bool : carry Digit : a Digit : b -> bool Digit ) : alias: addc i64.addc
     proc( bool : carry Digit : a Digit : b -> bool Digit ) : alias: subb i64.subb
+    proc( Digit -> bool ) : alias: toBool i64.toBool
+    proc( Digit -> Digit ) : alias: neg i64.neg
+    proc( Digit Digit -> Digit ) : alias: add i64.add
+    proc( Digit Digit -> Digit ) : alias: sub i64.sub
+    proc( Digit Digit -> Digit ) : alias: mul i64.mul
+    proc( Digit Digit -> i32 ) : alias: cmp i64.cmp
+    proc( Digit -> Digit ) : alias: flip i64.flip
+    proc( Digit Digit -> Digit ) : alias: and i64.and
+    proc( Digit Digit -> Digit ) : alias: or i64.or
+    proc( Digit Digit -> Digit ) : alias: xor i64.xor
   end
 
   iSize =:: IntData
@@ -63,6 +75,15 @@ namespace: int
     end
   end
 end
+overload: merge: ? int.Digit.toBool end
+overload: merge: -_ int.Digit.neg end
+overload: merge: + int.Digit.add end
+overload: merge: - int.Digit.sub end
+overload: merge: * int.Digit.mul end
+overload: merge: ~ int.Digit.flip end
+overload: merge: & int.Digit.and end
+overload: merge: | int.Digit.or end
+overload: merge: ^ int.Digit.xor end
 ## two representations:
 ## int place integer ( high low )
 ## heap integer ( data length )  data points to array of digits preceeded by two slots for capacity and ref-count
@@ -177,12 +198,12 @@ namespace: int
     fromU64 sign setSign
   end
   proc( i128 : val -> int ) =>: export: fromI128
-    val 0 < $ =:: shadow: sign
-      if -_ end
+    val
+      $ i128.ZERO < $ =:: shadow: sign if -_ end
     fromU128 sign setSign
   end
   proc( i128 : val -> int ) =>: export: fromU128
-    val .high 0 == if
+    val .hi 0 == if
       val .low fromU64
     else
       Digit 2 array : mut: digits
@@ -204,7 +225,9 @@ namespace: int
       val iSize cast.u 0 false tryCreateInplace optional.unwrap
     end
   end
-  { 0 IntData cast 0 } int =: ZERO ## TODO! interpreter currently cannot handle running fromI32 at compile-time
+  ## TODO! interpreter currently cannot handle running IntData.fromInt at compile-time
+  { 0 IntData cast 0 } int =: ZERO
+  { 0 IntData cast 1 } int =: ONE
   ##0 fromI32 =:: ZERO
   ##1 fromI32 =:: ONE
   ##-1 fromI32 =:: NEGATIVE_ONE
@@ -219,39 +242,45 @@ namespace: int
       .Ok unionElement.unwrap
     end
     proc( type : auto: T  T IntConversionResult -> T IntConversionResult ) =>: prepareIf  end
-    proc( type : auto: T  T IntConversionResult -> T ) =>: check  .Ok ? end
+    proc( type : auto: T  T IntConversionResult -> bool ) =>: check  .Ok ? end
     proc( type : auto: T  T IntConversionResult -> T ) =>: ifVal  .Ok ..raw end
     proc( type : auto: T  T IntConversionResult -> int ) =>: elseVal  .Err ..raw end
   end
   proc( int : a -> i32 IntConversionResult ) =>: export: asI32
-    a asU32 .else
-      i32 IntConversionResult .Err return
+    a copy asU32 .Ok .else ..drop
+      a free
+      a i32 IntConversionResult .Err return
     end
       $ i32.MAX u> if ..drop a i32 IntConversionResult .Err return end
+      a free
     a sign * i32 IntConversionResult .Ok return
   end
   proc( int : a -> i64 IntConversionResult ) =>: export: asI64
-    a asU64 .else
-      i64 IntConversionResult .Err return
+    a copy asU64 .Ok .else ..drop
+      a free
+      a i64 IntConversionResult .Err return
     end
       $ i64.MAX u> if ..drop a i64 IntConversionResult .Err return end
+      a free
     a sign i64 cast.s * i64 IntConversionResult .Ok return
   end
-  proc( int -> i128 IntConversionResult ) =>: export: asI128
-    a asU128 .else
+  proc( int : a -> i128 IntConversionResult ) =>: export: asI128
+    a copy asU128 .Ok .else ..drop
+      a free
       a i128 IntConversionResult .Err return
     end
       $ i128.MAX u> if ..drop a i128 IntConversionResult .Err return end
+      a free
     a sign i128.fromI32 * i128 IntConversionResult .Ok return
   end
   proc( int : a -> i32 ) =>: export: toI32
-    a sign if toU32 -_ else toU32 end
+    a $ sign 0 < if toU32 -_ else toU32 end
   end
   proc( int : a -> i64 ) =>: export: toI64
-    a sign if toU64 -_ else toU64 end
+    a $ sign 0 < if toU64 -_ else toU64 end
   end
   proc( int : a -> i128 ) =>: export: toI128
-    a sign if toU128 -_ else toU128 end
+    a $ sign 0 < if toU128 -_ else toU128 end
   end
   proc( int : a -> i32 IntConversionResult ) =>: export: asU32
     a .data IntData.asInt .if
@@ -274,9 +303,9 @@ namespace: int
     a .data IntData.asInt ? if
       a .length i32 cast return
     else a .data IntData.asPtr ._if
-      a .length 0 > if 0 [] else ..drop 0 end
+      a .length 0 != if 0 [] i32 cast else ..drop 0 end
         a free
-      i32 cast return
+      return
     else
       "unexpected type for int-data" ..panic
     end
@@ -355,18 +384,18 @@ namespace: int
       end
       a i64 IntConversionResult .Err return
     end
-    proc( int -> i64 ) =>: export: toU64
+    proc( int : a -> i64 ) =>: export: toU64
       a .data IntData.asInt ? if
         a .length i64 cast.u return
       else a .data IntData.asPtr ._if
-        a .length 0 > if 0 [] else ..drop 0 end
+        a .length 0 != if 0 [] i64 cast else ..drop 0 end
           a free
-        i64 cast return
+        return
       else
         "unexpected type for int-data" ..panic
       end
     end
-    proc( int -> i128 optional ) =>: export: asU128
+    proc( int : a -> i128 IntConversionResult ) =>: export: asU128
       a .data IntData.asInt .if i64 cast.u =:: hi
         hi a .length i64 cast i128.create i128 IntConversionResult .Ok return
       else a .length 2 == _if
@@ -380,19 +409,19 @@ namespace: int
         digit0 i64 cast i128.fromU64 i128 IntConversionResult .Ok return
       else a .length 0 == _if
         a free
-        0 i128 IntConversionResult .Ok return
+        i128.ZERO i128 IntConversionResult .Ok return
       end
       a i128 IntConversionResult .Err return
     end
-    proc( int -> i128 ) =>: export: toU128
+    proc( int : a -> i128 ) =>: export: toU128
       a .data IntData.asInt .if i64 cast.u =:: hi
         hi a .length i64 cast i128.create return
       else a .data IntData.asPtr ._if =:: aData
-        a .length 2 >= if
-          aData 1 [] aData 0 [] i128.create
+        a .length 2 u>= if
+          aData 1 [] i64 cast.u aData 0 [] i64 cast.u i128.create
         else a .length 1 == _if
-          aData 0 [] i128.fromU64
-        else 0 end
+          aData 0 [] i64 cast.u i128.fromU64
+        else i128.ZERO end
           a free
         return
       else
@@ -407,10 +436,10 @@ namespace: int
   end
   proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
     val asI64 .if
-      base sb.appendI
+      base sb.appendI? return
     ## TODO? 128bit sb.append
     end =:: shadow: val
-    base numbers.MIN_BASE < or base numbers.MAX_BASE > if
+    base number.MIN_BASE < or base number.MAX_BASE > if
       ## TODO: error handling
       return
     end
@@ -434,15 +463,15 @@ namespace: int
     16 sbBaseAppend
   end
 ## arithmetic
-  proc( int -> bool ) =>: export: isZero
-    $ .length 0 != if false return end
-    $ .data IntData.asInt
+  proc( int : a -> bool ) =>: export: isZero
+    a .length 0 != if false return end
+    a .data IntData.asInt
       .else false return end
     0 == return
   end
   ## -1 0 1
   proc( int -> i32 ) =>: export: sign
-    $ isZero if 0 return end
+    $ isZero if ..drop 0 return end
     .data IntData.getSign if -1 else 1 end return
   end
   proc( int -> int ) =>: export: abs
@@ -461,12 +490,20 @@ namespace: int
     aSign bSign != if a b negate sub return end
     a bitLength b bitLength iSize.max 1 + =:: resultBits
     ## handle small results
-    resultBits MAX_INLINE_BITS < if
-      resultBits 64 < if
-        a abs asU64 IntConv.unwrap b abs asU64 + fromU64 IntConv.unwrap aSign 0 < if negate end
-      else resultBits 128 < _if
-        a abs asU128 IntConv.unwrap b abs asU128 + fromU128 IntConv.unwrap aSign 0 < if negate end
-      end
+    resultBits MAX_INLINE_BITS u< if
+      resultBits 64 u< if
+        a abs asU64 IntConv.unwrap
+          b abs asU64 IntConv.unwrap +
+        fromU64
+          aSign 0 < if negate end
+        return
+      else resultBits 128 u< _if
+        a abs asU128 IntConv.unwrap
+          b abs asU128 IntConv.unwrap +
+        fromU128
+          aSign 0 < if negate end
+        return
+      else "expected less than 128 inline bits" ..panic end
     end
     Digit MAX_INLINE_DIGITS array : mut: bufA
     Digit MAX_INLINE_DIGITS array : mut: bufB
@@ -482,7 +519,7 @@ namespace: int
       a free b free
     return
   end
-  proc( int int -> int ) =>: export: sub
+  proc( int : a int : b -> int ) =>: export: sub
     a sign
       $ 0 == if ..drop a free b negate return end
     =:: aSign
@@ -492,11 +529,19 @@ namespace: int
     aSign bSign != if a b negate add return end
     a bitLength b bitLength iSize.max =:: resultBits
     ## handle small results
-    resultBits MAX_INLINE_BITS < if
-      resultBits 64 < if
-        a abs asU64 IntConv.unwrap b abs asU64 IntConv.unwrap - fromU64 aSign 0 < if negate end
-      else resultBits 128 < _if
-        a abs asU128 IntConv.unwrap b abs asU128 IntConv.unwrap - fromU128 aSign 0 < if negate end
+    resultBits MAX_INLINE_BITS u< if
+      resultBits 64 u< if
+        a abs asU64 IntConv.unwrap
+          b abs asU64 IntConv.unwrap -
+        fromU64
+          aSign 0 < if negate end
+        return
+      else resultBits 128 u< _if
+        a abs asU128 IntConv.unwrap
+          b abs asU128 IntConv.unwrap -
+        fromU128
+          aSign 0 < if negate end
+        return
       end
     end
     Digit MAX_INLINE_DIGITS array : mut: bufA
@@ -508,11 +553,11 @@ namespace: int
     b resultDigits asWritableBuffer ._else
       resultDigits prepareCap
     end =:: dstData
-    aData bData _impl.cmp =:: cmp
-    cmp 0 < if
+    aData bData _impl.cmp =:: c
+    c 0 < if
       aData bData dstData _impl.sub =:: resData
       resData .data IntData.fromPtr aSign 0 < IntData.setSign resData .length int new
-    else cmp 0 > _if
+    else c 0 > _if
       bData aData dstData _impl.sub =:: resData
       resData .data IntData.fromPtr aSign 0 > IntData.setSign resData .length int new
     else
@@ -560,6 +605,8 @@ namespace: int
     b Digit cast =:: bDigit
     a bufA@ asSlice =:: aData
     bDigit@ slice.wrap =:: bData
+    a bitLength 1 iSize.max 1 + =:: resultBits
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
     a resultDigits asWritableBuffer .else
       resultDigits prepareCap
     end =:: dstData
@@ -580,6 +627,7 @@ namespace: int
     b Digit cast =:: bDigit
     a bufA@ asSlice =:: aData
     bDigit@ slice.wrap =:: bData
+    a bitLength 1 iSize.max =:: resultDigits
     a resultDigits asWritableBuffer .else
       resultDigits prepareCap
     end =:: dstData
@@ -589,16 +637,16 @@ namespace: int
     return
   end
   proc( int : a i128 : b -> int ) =>: export: addI128
-    b 0 == if a return end
-    b 0 < if
+    b i128.ZERO == if a return end
+    b i128.ZERO < if
       a b -_ subU128
     else
       a b addU128
     end
   end
   proc( int : a i128 : b -> int ) =>: export: subI128
-    b 0 == if a return end
-    b 0 < if
+    b i128.ZERO == if a return end
+    b i128.ZERO < if
       a b -_ addU128
     else
       a b subU128
@@ -608,11 +656,16 @@ namespace: int
     a sign 0 < if a negate b subU128 negate return end
     a asU128 .if
       b + fromU128 return
-    end
+    end =:: shadow: a
     Digit MAX_INLINE_DIGITS array : mut: bufA
-    b Digit cast =:: bDigit
+    Digit 2 array new
+      b .low Digit cast >$ .0=
+      b .hi Digit cast >$ .1=
+    =:: bDigits
     a bufA@ asSlice =:: aData
-    bDigit@ slice.wrap =:: bData
+    bDigits@ slice.wrap =:: bData
+    a bitLength 2 iSize.max 1 + =:: resultBits
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
     a resultDigits asWritableBuffer .else
       resultDigits prepareCap
     end =:: dstData
@@ -625,12 +678,17 @@ namespace: int
     a sign 0 < if a negate b addU128 negate return end
     a asU128 .if
       b - fromU128 return
-    end
+    end =:: shadow: a
     ## when this point is reached a is greather than b
     Digit MAX_INLINE_DIGITS array : mut: bufA
-    b Digit cast =:: bDigit
+    Digit 2 array new
+      b .low Digit cast >$ .0=
+      b .hi Digit cast >$ .1=
+    =:: bDigits
     a bufA@ asSlice =:: aData
-    bDigit@ slice.wrap =:: bData
+    bDigits@ slice.wrap =:: bData
+    a bitLength 2 iSize.max =:: resultBits
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
     a resultDigits asWritableBuffer .else
       resultDigits prepareCap
     end =:: dstData
@@ -643,7 +701,7 @@ namespace: int
   proc( int int -> int ) =>: export: mul
     "unimplemented: mul" ..panic
   end
-  proc( int int -> int ) =>: export: square
+  proc( int -> int ) =>: export: square
     "unimplemented: square" ..panic
   end
   ## TODO? sqrt
@@ -668,7 +726,7 @@ namespace: int
     DivideResult .DIV_MOD divRem0
   end
   proc( int int -> int ) =>: export: floorDiv
-    DivideResult .FLOOR_DIVIDE divRem0 free
+    DivideResult .FLOOR_DIV divRem0 free
   end
   proc( int int -> int ) =>: export: mod
     DivideResult .MOD divRem0 >$ free
@@ -680,7 +738,7 @@ namespace: int
       b a b= a=
     end ## a >= b
     while b isZero ! do
-      a b copy mod =:: r ## a = q*b + r
+      a b copy mod ## a = q*b + r
         b a=
       b=
     end
@@ -690,8 +748,8 @@ namespace: int
   proc( int : mut: p i32 : mut: e -> int ) =>: export: pow
     ONE =:: mut: res
     while
-      e 1 & if
-        res p copy * res=
+      e 1 & ? if
+        res p copy mul res=
       end
       e 1 >>> e=
     e 0 != do
@@ -702,11 +760,11 @@ namespace: int
   end
   proc( int : mut: p int : mut: e int : m -> int ) =>: export: modPow
     ONE =:: mut: res
-    b m copy mod b=
+    p m copy mod p=
     while
-      e 1 andU32 if
+      e 1 andU32 isZero ! if
         res
-          p copy *
+          p copy mul
           m copy mod
         res=
       end
@@ -737,19 +795,19 @@ namespace: int
   end
   ## TODO? carry-less multiply/divide/mod : use `PCLMULQDQ`/`pmull` opcode?
 ## comparisons
-  proc( int int -> i32 ) =>: export: cmp
+  proc( int : a int : b -> i32 ) =>: export: cmp
     a sign
-      $ 0 == if b sign -_ return end
+      $ 0 == if ..drop b sign -_ return end
     =:: aSign
     b sign
-      $ 0 == if a sign return end
+      $ 0 == if ..drop a sign return end
     =:: bSign
     aSign bSign != if
       aSign bSign - return
     end
     a b ucmp aSign *
   end
-  proc( int int -> i32 ) =>: export: ucmp
+  proc( int : a int : b -> i32 ) =>: export: ucmp
     Digit MAX_INLINE_DIGITS array : mut: bufA
     Digit MAX_INLINE_DIGITS array : mut: bufB
     a bufA@ asSlice b bufB@ asSlice _impl.cmp
@@ -759,17 +817,17 @@ namespace: int
   proc( int : a -> iSize ) =>: export: bitLength
     a .data IntData.asInt .if =:: hi
       BITS_32 if
-        hi i32 cast.u highestSetBit
-          $ ? if 32 + return end
-        a .length i32 cast.u highestSetBit
+        hi i32 cast.u i32.highestSetBit
+          $ ? if 32 + iSize cast.u return end ..drop
+        a .length i32 cast.u i32.highestSetBit iSize cast.u
       else
-        hi i64 cast.u highestSetBit
-          $ ? if 64 + return end
-        a .length i64 cast.u highestSetBit
+        hi i64 cast.u i64.highestSetBit
+          $ ? if 64 + iSize cast.u return end ..drop
+        a .length i64 cast.u i64.highestSetBit iSize cast.u
       end
-    else a .data IntData .asPtr ._if =:: basePtr
+    else a .data IntData.asPtr ._if =:: basePtr
       a .length 1 - =:: index
-        basePtr index [] i64 cast.u highestSetBit
+        basePtr index [] i64 cast.u i64.highestSetBit iSize cast.u
       index 64 * +
     else
       "unexpected int-data type" ..panic
@@ -779,7 +837,7 @@ namespace: int
     1 addI32 negate
   end
   ## TODO: reduce code duplication between logic ops
-  proc( int int -> int ) =>: export: bitAnd
+  proc( int : a int : b -> int ) =>: export: bitAnd
     a sign =:: aSign
     b sign =:: bSign
     aSign 0 == or bSign 0 == if
@@ -795,14 +853,17 @@ namespace: int
     a bufA@ asSlice =:: aData
     b bufB@ asSlice =:: bData
     resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
-    resultDigits MAX_INLINE_DIGITS <= if
+    resultDigits MAX_INLINE_DIGITS u<= if
       Digit MAX_INLINE_DIGITS array : mut: resBuf
       aData aSign bData bSign resBuf@ resultDigits slice.createMutable _impl.bitAnd =:: resData
         a free b free
       resData .length switch
         0 case ZERO return
-        1 case resData 0 [] fromU64 aSign 0 < and bSign 0 < if negate end return
-        2 case resData 1 [] resData 0 [] i128.create fromU128 aSign 0 < and bSign 0 < if negate end return
+        1 case resData 0 [] i64 cast.u fromU64 aSign 0 < and bSign 0 < if negate end return
+        2 case
+          resData 1 [] i64 cast.u resData 0 [] i64 cast.u i128.create fromU128
+            aSign 0 < and bSign 0 < if negate end
+          return
         default "unexpected number of digits" ..panic
       end
     end
@@ -811,7 +872,7 @@ namespace: int
       resultDigits prepareCap
     end =:: dstData
     aData aSign bData bSign dstData _impl.bitAnd =:: resData
-    resData .data IntData.fromPtr aSign bData * 0 < IntData.setSign resData .length int new
+    resData .data IntData.fromPtr aSign 0 < and bSign 0 < end IntData.setSign resData .length int new
       a free b free
     return
   end
@@ -823,14 +884,14 @@ namespace: int
   end
   proc( int : a i64 : b -> int ) =>: export: andI64
     a asI64 .if
-      b & fromI64
-    else a asI128 ._if
-      b i128.fromI64 & fromI128
+      b & fromI64 return
+    else asI128 ._if
+      b i128.fromI64 & fromI128 return
     end =:: shadow: a
-    Digit MAX_INLINE_DIGITS array : mut: buf
-    a buf@ asSlice =:: aDigits
+    Digit MAX_INLINE_DIGITS array : mut: aBuf
+    a aBuf@ asSlice =:: aDigits
     b 0 >= if
-      aDigits 0 []
+      aDigits 0 [] i64 cast.u
         a sign 0 < if -_ end
         b &
       fromU64
@@ -838,37 +899,26 @@ namespace: int
       return
     else
       a a .length asWritableBuffer .if =:: buf
-        buf 0 []
+        buf 0 [] i64 cast.u
           a sign 0 < if -_ end
           b -_ &
-        buf 0 =[]
-        buf .data
+        Digit cast.u buf 0 =[]
+        buf .data IntData.fromPtr a .length int new
       else
-        resultDigits prepareCap =:: buf
-        aDigits 0 []
+        a .length prepareCap =:: buf
+        aDigits 0 [] i64 cast.u
           a sign 0 < if -_ end
           b -_ &
-        buf 0 =[]
-        buff 1 slice.tail .data aDigits 1 slice.tail .data a .length 1 - mem.copy ..drop
-        buf .data
-      end .data IntData.fromPtr a .length int new
+        Digit cast.u buf 0 =[]
+        buf 1 slice.tail .data aDigits 1 slice.tail .data a .length 1 - mem.copy ..drop
+        buf .data IntData.fromPtr a .length int new
+      end
         a free
       return
     end
   end
-  proc( int i64 -> int ) =>: export: andU64
-    a asI64 .if
-      b & fromI64
-    else a asI128 ._if
-      b i128.fromU64 & fromI128
-    end =:: shadow: a
-    Digit MAX_INLINE_DIGITS array : mut: buf
-    a buf@ asSlice 0 []
-      a sign 0 < if -_ end
-      b &
-    fromU64
-      a free
-    return
+  proc( int : a i64 : b -> int ) =>: export: andU64
+    a toI64 b & fromI64 ## TODO? return i64
   end
   proc( int i128 -> int ) =>: export: andI128
     "unimplemented: andI128" ..panic
@@ -877,7 +927,7 @@ namespace: int
     "unimplemented: andU128" ..panic
   end
   ## TODO? bitAndNot
-  proc( int int -> int ) =>: export: bitOr
+  proc( int : a int : b -> int ) =>: export: bitOr
     a sign =:: aSign
     b sign =:: bSign
     aSign 0 == if
@@ -895,14 +945,17 @@ namespace: int
     a bufA@ asSlice =:: aData
     b bufB@ asSlice =:: bData
     resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
-    resultDigits MAX_INLINE_DIGITS <= if
+    resultDigits MAX_INLINE_DIGITS u<= if
       Digit MAX_INLINE_DIGITS array : mut: resBuf
       aData aSign bData bSign resBuf@ resultDigits slice.createMutable _impl.bitOr =:: resData
         a free b free
       resData .length switch
         0 case ZERO return
-        1 case resData 0 [] fromU64 aSign 0 < or bSign 0 < if negate end return
-        2 case resData 1 [] resData 0 [] i128.create fromU128 aSign 0 < or bSign 0 < if negate end return
+        1 case resData 0 [] i64 cast.u fromU64 aSign 0 < or bSign 0 < if negate end return
+        2 case
+          resData 1 [] i64 cast.u resData 0 [] i64 cast.u i128.create fromU128
+            aSign 0 < or bSign 0 < if negate end
+          return
         default "unexpected number of digits" ..panic
       end
     end
@@ -915,7 +968,7 @@ namespace: int
       a free b free
     return
   end
-  proc( int int -> int ) =>: export: bitXor
+  proc( int : a int : b -> int ) =>: export: bitXor
     a sign =:: aSign
     b sign =:: bSign
     aSign 0 == if
@@ -929,14 +982,17 @@ namespace: int
     a bufA@ asSlice =:: aData
     b bufB@ asSlice =:: bData
     resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
-    resultDigits MAX_INLINE_DIGITS <= if
+    resultDigits MAX_INLINE_DIGITS u<= if
       Digit MAX_INLINE_DIGITS array : mut: resBuf
       aData aSign bData bSign resBuf@ resultDigits slice.createMutable _impl.bitXor =:: resData
         a free b free
       resData .length switch
         0 case ZERO return
-        1 case resData 0 [] fromU64 aSign bSign * 0 < if negate end return
-        2 case resData 1 [] resData 0 [] i128.create fromU128 aSign bSign * 0 < if negate end return
+        1 case resData 0 [] i64 cast.u  fromU64 aSign bSign * 0 < if negate end return
+        2 case
+          resData 1 [] i64 cast.u  resData 0 [] i64 cast.u  i128.create fromU128
+            aSign bSign * 0 < if negate end
+          return
         default "unexpected number of digits" ..panic
       end
     end
@@ -953,27 +1009,27 @@ namespace: int
   ## TODO lowest setBit / bit-count
   proc( int : a i32 : n -> int ) =>: export: shlU32
     a bitLength n iSize cast.u + =:: resultBits
-    resultBits 64 < if
-      a asI64 optional.unwrap b << fromI64
-    else resultBits 128 < _if
-      a asI128 optional.unwrap b << fromI128
-    end =:: shadow: a
+    resultBits 64 u< if
+      a asI64 IntConv.unwrap n << fromI64 return
+    else resultBits 128 u< _if
+      a asI128 IntConv.unwrap n << fromI128 return
+    end
     resultBits DIGIT_BITS 1 - + DIGIT_BITS / 1 + =:: resultDigits
     Digit MAX_INLINE_DIGITS array : mut: buf
     a buf@ asSlice =:: aData
     a resultDigits asWritableBuffer .else
       resultDigits prepareCap
     end =:: dstData
-    aData dstData n i64 cast.u _impl.shl =:: resData
+    aData dstData n iSize cast.u _impl.shl =:: resData
     resData .data IntData.fromPtr a sign 0 < IntData.setSign resData .length int new
       a free
     return
   end
   proc( int : a i32 : n -> int ) =>: export: shrU32
      a asI64 .if
-      b >> fromI64
-    else a asI128 ._if
-      b >> fromI128
+      n >>> fromI64 return
+    else asI128 ._if
+      n >>> fromI128 return
     end =:: shadow: a
     a bitLength
       n iSize cast.u
@@ -988,16 +1044,18 @@ namespace: int
     a buf@ asSlice =:: aData
     resultDigits MAX_INLINE_DIGITS u<= =:: inlineResult
     inlineResult if
-      dstBuf@ slice.wrap
+      dstBuf@ slice.wrapMutable
     else a resultDigits asWritableBuffer ._else
       resultDigits prepareCap
     end =:: dstData
-    aData dstData n i64 cast.u _impl.shr =:: resData
+    aData dstData n iSize cast.u _impl.shr =:: resData
     inlineResult if
       BITS_32 if dstBuf ..length 1 == "one digit in buffer" assert
-        dstBuf 0 [] a sign i64 cast.s * fromI64 return
+        dstBuf 0 [] i64 cast.u a sign i64 cast.s * fromI64 return
       else dstBuf ..length 2 == "two digits in buffer" assert
-        dstBuf 1 [] dstBuf 0 [] i128.create a sign 0 < if -_ end fromI128 return
+        dstBuf 1 [] i64 cast.u dstBuf 0 [] i64 cast.u i128.create
+          a sign 0 < if -_ end fromI128
+        return
       end
     end
     resData .data IntData.fromPtr a sign 0 < IntData.setSign resData .length int new
@@ -1010,7 +1068,7 @@ namespace: int
       digits .length 0 == if
         '0' sb.appendC return
       end
-      digits $ .length 1 - [] i64 cast.u base sb.appendU
+      digits $ .length 1 - [] i64 cast.u base sb.appendU?
       128 base u/ =:: digitCount
       digits $ .length 1 - slice.head slice.reversed for
         i64 cast.u digitCount '0' base sb.appendPaddedU
@@ -1039,16 +1097,16 @@ namespace: int
         end
         a .length b .length u> if
           b .length while $ a .length u< do =:: i
-            a i [] 0 Digit.addc res i =[]
+            a i [] 0 Digit cast Digit.addc res i =[]
           finally i 1 + end ..drop
         else a .length b .length u< _if
           a .length while $ b .length u< do =:: i
-            b i [] 0 Digit.addc res i =[]
+            b i [] 0 Digit cast Digit.addc res i =[]
           finally i 1 + end ..drop
         end
         a .length b .length iSize.max =:: last
       if
-        1 res last =[]
+        1 Digit cast res last =[]
         res
           last 1 + >$ .length=
         return
@@ -1072,11 +1130,11 @@ namespace: int
     proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: sub
       a .length b .length u>= "a >= b" assert
       false
-        a .length b .length for =:: i
+        a .length b .length iSize.min for =:: i
           a i [] b i [] Digit.subb res i =[]
         end
         b .length while $ a .length u< do =:: i
-          a i [] 0 Digit.subb res i =[]
+          a i [] 0 Digit cast Digit.subb res i =[]
         finally i 1 + end ..drop
       ! "a >= b" assert
       ## remove leading zeros
@@ -1085,154 +1143,152 @@ namespace: int
         removeLeadingZeros
       return
     end
-  end
 
-  struct( Digit slice : digits i32 : shadow: sign bool : hadNonzero ) =:: DigitIterator
-  namespace: DigitIterator
-    proc( Digit slice : digits i32 :  shadow: sign -> DigitIterator ) =>: create
-      digits sign false DigitIterator new
-    end
-    proc( DigitIterator -> DigitIterator Digit ) =>: next
-      $ digits .length 0 == if
-        sign 0 < if -1 Digit cast.s else 0 Digit cast.s end return
+    struct( Digit slice : digits i32 : shadow: sign bool : hadNonzero ) =:: DigitIterator
+    namespace: DigitIterator
+      proc( Digit slice : digits i32 :  shadow: sign -> DigitIterator ) =>: create
+        digits sign false DigitIterator new
       end
-      $ .digits 0 [] =:: nextDigit
-      $ .digits 1 slice.tail >$ .digits=
-      sign 0 >= if
-        nextDigit return
+      proc( DigitIterator -> DigitIterator Digit ) =>: next
+        $ .digits .length 0 == if
+          $ .sign 0 < if -1 Digit cast.s else 0 Digit cast.s end return
+        end
+        $ .digits 0 [] =:: nextDigit
+        $ .digits 1 slice.tail >$ .digits=
+        $ .sign 0 >= if
+          nextDigit return
+        end
+        $ .hadNonzero if
+          nextDigit ~ return
+        end
+        nextDigit ? >$ .hadNonzero=
+        nextDigit -_ return
       end
-      $ .hadNonzero if
-        nextDigit ~ return
-      end
-      nextDigit ? >$ .hadNonzero=
-      nextDigit -_ return
     end
-  end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitAnd
-    a aSign DigitIterator.create =:: mut: aItr
-    b bSign DigitIterator.create =:: mut: bItr
-    ## compute digit-wise and
-    res .length for =:: i
-      aItr DigitIterator.next >$ aItr=
-        bItr DigitIterator.next >$ bItr=
-      & res i =[]
-    end
-    aSign 0 < and bSign 0 < if
-      ## decode twos complement if result is negative
-      res slice.freeze -1 DigitIterator.create =:: mut: resItr
+    proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitAnd
+      a aSign DigitIterator.create =:: mut: aItr
+      b bSign DigitIterator.create =:: mut: bItr
+      ## compute digit-wise and
       res .length for =:: i
-        resItr
-          DigitIterator.next res i =[]
-        resItr=
+        aItr DigitIterator.next >$ aItr=
+          bItr DigitIterator.next >$ bItr=
+        & res i =[]
       end
+      aSign 0 < and bSign 0 < if
+        ## decode twos complement if result is negative
+        res slice.freeze -1 DigitIterator.create =:: mut: resItr
+        res .length for =:: i
+          resItr
+            DigitIterator.next res i =[]
+          resItr=
+        end
+      end
+      res removeLeadingZeros return
     end
-    res removeLeadingZeros return
-  end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitOr
-    a aSign DigitIterator.create =:: mut: aItr
-    b bSign DigitIterator.create =:: mut: bItr
-    ## compute digit-wise and
-    res .length for =:: i
-      aItr DigitIterator.next >$ aItr=
-        bItr DigitIterator.next >$ bItr=
-      | res i =[]
-    end
-    aSign 0 < or bSign 0 < if
-      ## decode twos complement if result is negative
-      res slice.freeze -1 DigitIterator.create =:: mut: resItr
+    proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitOr
+      a aSign DigitIterator.create =:: mut: aItr
+      b bSign DigitIterator.create =:: mut: bItr
+      ## compute digit-wise and
       res .length for =:: i
-        resItr
-          DigitIterator.next res i =[]
-        resItr=
+        aItr DigitIterator.next >$ aItr=
+          bItr DigitIterator.next >$ bItr=
+        | res i =[]
       end
+      aSign 0 < or bSign 0 < if
+        ## decode twos complement if result is negative
+        res slice.freeze -1 DigitIterator.create =:: mut: resItr
+        res .length for =:: i
+          resItr
+            DigitIterator.next res i =[]
+          resItr=
+        end
+      end
+      res removeLeadingZeros return
     end
-    res removeLeadingZeros return
-  end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitXor
-    a aSign DigitIterator.create =:: mut: aItr
-    b bSign DigitIterator.create =:: mut: bItr
-    ## compute digit-wise and
-    res .length for =:: i
-      aItr DigitIterator.next >$ aItr=
-        bItr DigitIterator.next >$ bItr=
-      ^ res i =[]
-    end
-    aSign bSign * 0 < if
-      ## decode twos complement if result is negative
-      res slice.freeze -1 DigitIterator.create =:: mut: resItr
+    proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: shadow: bitXor
+      a aSign DigitIterator.create =:: mut: aItr
+      b bSign DigitIterator.create =:: mut: bItr
+      ## compute digit-wise and
       res .length for =:: i
-        resItr
-          DigitIterator.next res i =[]
-        resItr=
+        aItr DigitIterator.next >$ aItr=
+          bItr DigitIterator.next >$ bItr=
+        ^ res i =[]
       end
+      aSign bSign * 0 < if
+        ## decode twos complement if result is negative
+        res slice.freeze -1 DigitIterator.create =:: mut: resItr
+        res .length for =:: i
+          resItr
+            DigitIterator.next res i =[]
+          resItr=
+        end
+      end
+      res removeLeadingZeros return
     end
-    res removeLeadingZeros return
-  end
 
-  ## TODO? move shift-helpers to core/i64
-  ## 0 AAAAAAAA 3 -> AAAAA000 AAA
-  ## AAAAA000 BBBBBBBB 3 -> BBBBB000 AAAAABBB
-  proc( i64 : carry i64 : a i32 : count -> i64 : newCarry i64 : newA ) =>: i64shlc
-    a count <<
-    a count -_ >>> carry |
-  end
-  ## 0 AAAAAAAA 3 -> AAAAA AAA00000
-  ## AAAAA BBBBBBBB 3 -> BBBBB BBBAAAAA
-  proc( i64 : carry i64 : a i32 : count -> i64 : newCarry i64 : newA ) =>: i64shrc
-    a count >>>
-    a count -_ << carry |
-  end
-  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shadow: shl
-    count 64 u/ =:: digitShift
-    count 64 u% =:: bitShift
-    a .length digitShift iSize cast.u =:: newLength
-    bitShift 0 == if
-      ## shifted by multiple of digit size
-      res .data digitShift @[] a .data a .length mem.move
-      res .data digitShift mem.clear
-      res
-        newLength >$ .length=
-      return
+    ## TODO? move shift-helpers to core/i64
+    ## 0 AAAAAAAA 3 -> AAAAA000 AAA
+    ## AAAAA000 BBBBBBBB 3 -> BBBBB000 AAAAABBB
+    proc( Digit : carry Digit : a i32 : count -> Digit : newCarry Digit : newA ) =>: i64shlc
+      a i64 cast.u count << Digit cast.u
+      a i64 cast.u count -_ >>> carry i64 cast.u | Digit cast.u
     end
-    newLength =:: mut: dstIndex
-    0
-      a .length while $ 1 - <$ 0 != do =:: srcIndex
+    ## 0 AAAAAAAA 3 -> AAAAA AAA00000
+    ## AAAAA BBBBBBBB 3 -> BBBBB BBBAAAAA
+    proc( Digit : carry Digit : a i32 : count -> Digit : newCarry Digit : newA ) =>: i64shrc
+      a i64 cast.u count >>> Digit cast.u
+      a i64 cast.u count -_ << carry i64 cast.u | Digit cast.u
+    end
+    proc( Digit slice : a Digit slice.mut : res iSize : count -> Digit slice.mut ) =>: shadow: shl
+      count 64 u/ =:: digitShift
+      count 64 u% i32 cast.u =:: bitShift
+      a .length digitShift + iSize cast.u =:: newLength
+      bitShift 0 == if
+        ## shifted by multiple of digit size
+        res .data digitShift @[] a .data a .length mem.move ..drop
+        res .data digitShift mem.clear ..drop
+        res
+          newLength >$ .length=
+        return
+      end
+      newLength =:: mut: dstIndex
+      0 Digit cast.u a .length while $ 1 - <$ 0 != do =:: srcIndex
         a srcIndex [] bitShift i64shlc res dstIndex =[]
-      finally dstIndex 1 - dstIndex= end
-    ..drop
-    res .data digitShift mem.clear
-    res
-      newLength $1 $1 [] 0 != if 1 + end >$ .length=
-    return
-  end
-  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shadow: shr
-    count 64 u/ =:: digitShift
-    count 64 u% =:: bitShift
-    digitShift a .length u< "shift does not underflow" assert
-    a .length digitShift iSize cast.u =:: newLength
-    bitShift 0 == if
-      ## shifted by multiple of digit size
-      res .data a .data digitShift @[] newLength mem.move
+      finally dstIndex 1 - dstIndex= srcIndex end ..drop.2
+      res .data digitShift mem.clear ..drop
       res
-        newLength >$ .length=
+        newLength $1 $1 [] ? ! if 1 + end >$ .length=
       return
     end
-    digitShift =:: mut: srcIndex
-    0 =:: mut: dstIndex
-    0
-      a srcIndex [] bitShift i64shrc ..drop
-      while
-        srcIndex 1 + srcIndex=
-        srcIndex a .length u<
-      do
-        a srcIndex [] bitShift i64shrc res dstIndex =[]
-      finally
-        dstIndex 1 + dstIndex=
+    proc( Digit slice : a Digit slice.mut : res iSize : count -> Digit slice.mut ) =>: shadow: shr
+      count 64 u/ =:: digitShift
+      count 64 u% i32 cast.u =:: bitShift
+      digitShift a .length u< "shift does not underflow" assert
+      a .length digitShift - iSize cast.u =:: newLength
+      bitShift 0 == if
+        ## shifted by multiple of digit size
+        res .data a .data digitShift @[] newLength mem.move ..drop
+        res
+          newLength >$ .length=
+        return
       end
-    res dstIndex =[]
-    res
-      newLength >$ .length=
-    removeLeadingZeros return
+      digitShift =:: mut: srcIndex
+      0 =:: mut: dstIndex
+      0 Digit cast.u
+        a srcIndex [] bitShift i64shrc ..drop
+        while
+          srcIndex 1 + srcIndex=
+          srcIndex a .length u<
+        do
+          a srcIndex [] bitShift i64shrc res dstIndex =[]
+        finally
+          dstIndex 1 + dstIndex=
+        end
+      res dstIndex =[]
+      res
+        newLength >$ .length=
+      removeLeadingZeros return
+    end
   end
 end
 overload: export: merge: ..if.prepare  int.IntConv.prepareIf end
