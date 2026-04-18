@@ -198,28 +198,37 @@ namespace: int
     proc( type : auto: T  T IntConversionResult -> T ) =>: ifVal  .Ok ..raw end
     proc( type : auto: T  T IntConversionResult -> int ) =>: elseVal  .Err ..raw end
   end
-  proc( int : a -> i32 IntConversionResult ) =>: asI32
+  proc( int : a -> i32 IntConversionResult ) =>: export: asI32
     a asU32 .else
       i32 IntConversionResult .Err return
     end
       $ i32.MAX u> if ..drop a i32 IntConversionResult .Err return end
     a sign * i32 IntConversionResult .Ok return
   end
-  proc( int : a -> i64 IntConversionResult ) =>: asI64
+  proc( int : a -> i64 IntConversionResult ) =>: export: asI64
     a asU64 .else
       i64 IntConversionResult .Err return
     end
       $ i64.MAX u> if ..drop a i64 IntConversionResult .Err return end
     a sign i64 cast.s * i64 IntConversionResult .Ok return
   end
-  proc( int -> i128 IntConversionResult ) =>: asI128
+  proc( int -> i128 IntConversionResult ) =>: export: asI128
     a asU128 .else
       a i128 IntConversionResult .Err return
     end
       $ i128.MAX u> if ..drop a i128 IntConversionResult .Err return end
     a sign i128.fromI32 * i128 IntConversionResult .Ok return
   end
-  proc( int : a -> i32 IntConversionResult ) =>: asU32
+  proc( int : a -> i32 ) =>: export: toI32
+    a sign if toU32 -_ else toU32 end
+  end
+  proc( int : a -> i64 ) =>: export: toI64
+    a sign if toU64 -_ else toU64 end
+  end
+  proc( int : a -> i128 ) =>: export: toI128
+    a sign if toU128 -_ else toU128 end
+  end
+  proc( int : a -> i32 IntConversionResult ) =>: export: asU32
     a .data IntData.asInt .if
       0 == and a .length i64 cast.u i32.UMAX u<= if
         a .length i32 cast i32 IntConversionResult .Ok return
@@ -236,8 +245,19 @@ namespace: int
     end
     a i32 IntConversionResult .Err return
   end
+  proc( int : a -> i32 ) =>: export: toU32
+    a .data IntData.asInt ? if
+      a .length i32 cast return
+    else a .data IntData.asPtr ._if
+      a .length 0 > if 0 [] else ..drop 0 end
+        a free
+      i32 cast return
+    else
+      "unexpected type for int-data" ..panic
+    end
+  end
   BITS_32 if
-    proc( int -> i64 IntConversionResult ) =>: asU64
+    proc( int -> i64 IntConversionResult ) =>: export: asU64
       a .data IntData.asInt .if i64 cast.u =:: hi
         hi 32 << a .length i64 cast.u | i64 IntConversionResult .Ok return
       else a .length 1 == _if
@@ -250,7 +270,18 @@ namespace: int
       end
       a i64 IntConversionResult .Err return
     end
-    proc( int -> i128 optional ) =>: asU128
+    proc( int -> i64 ) =>: export: toU64
+      a .data IntData.asInt .if i64 cast.u =:: hi
+        hi 32 << a .length i64 cast.u | return
+      else a .data IntData.asPtr ._if
+        a .length 0 > if 0 [] else ..drop 0 end
+          a free
+        i64 cast return
+      else
+        "unexpected type for int-data" ..panic
+      end
+    end
+    proc( int -> i128 optional ) =>: export: asU128
       a .data IntData.asInt .if i64 cast.u =:: hi
         hi 32 << a .length i64 cast.u | i128.fromU64 i128 IntConversionResult .Ok return
       else a .length 2 == _if
@@ -268,8 +299,23 @@ namespace: int
       end
       a i128 IntConversionResult .Err return
     end
+    proc( int -> i128 ) =>: export: toU128
+      a .data IntData.asInt .if i64 cast.u =:: hi
+        hi 32 << a .length i64 cast.u | i128.fromU64 return
+      else a .data IntData.asPtr ._if =:: aData
+        a .length 2 >= if
+          aData 1 [] aData 0 [] i128.create
+        else a .length 1 == _if
+          aData 0 [] i128.fromU64
+        else 0 end
+          a free
+        return
+      else
+        "unexpected type for int-data" ..panic
+      end
+    end
   else
-    proc( int : a -> i64 IntConversionResult ) =>: asU64
+    proc( int : a -> i64 IntConversionResult ) =>: export: asU64
       a .data IntData.asInt .if
         0 == if
           a .length i64 cast i64 IntConversionResult .Ok return
@@ -284,7 +330,18 @@ namespace: int
       end
       a i64 IntConversionResult .Err return
     end
-    proc( int -> i128 optional ) =>: asU128
+    proc( int -> i64 ) =>: export: toU64
+      a .data IntData.asInt ? if
+        a .length i64 cast.u return
+      else a .data IntData.asPtr ._if
+        a .length 0 > if 0 [] else ..drop 0 end
+          a free
+        i64 cast return
+      else
+        "unexpected type for int-data" ..panic
+      end
+    end
+    proc( int -> i128 optional ) =>: export: asU128
       a .data IntData.asInt .if i64 cast.u =:: hi
         hi a .length i64 cast i128.create i128 IntConversionResult .Ok return
       else a .length 2 == _if
@@ -302,8 +359,22 @@ namespace: int
       end
       a i128 IntConversionResult .Err return
     end
+    proc( int -> i128 ) =>: export: toU128
+      a .data IntData.asInt .if i64 cast.u =:: hi
+        hi a .length i64 cast i128.create return
+      else a .data IntData.asPtr ._if =:: aData
+        a .length 2 >= if
+          aData 1 [] aData 0 [] i128.create
+        else a .length 1 == _if
+          aData 0 [] i128.fromU64
+        else 0 end
+          a free
+        return
+      else
+        "unexpected type for int-data" ..panic
+      end
+    end
   end
-  ## TODO? trucating versions of conversion to i32/64/128
   ## TODO? conversion from/to float
 ## conversion from/to string
   proc( string : val i32 : base -> int optional ) =>: export: parse
