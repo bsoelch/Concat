@@ -930,7 +930,7 @@ namespace: int
     else resultBits 128 < _if
       a asI128 optional.unwrap b << fromI128
     end =:: shadow: a
-    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / 1 + =:: resultDigits
     Digit MAX_INLINE_DIGITS array : mut: buf
     a buf@ asSlice =:: aData
     a resultDigits asWritableBuffer .else
@@ -954,7 +954,7 @@ namespace: int
         end
       -
     =:: resultBits
-    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / 1 + =:: resultDigits
     Digit MAX_INLINE_DIGITS array : mut: buf
     Digit MAX_INLINE_DIGITS array : mut: dstBuf
     a buf@ asSlice =:: aData
@@ -1124,26 +1124,71 @@ namespace: int
     res removeLeadingZeros return
   end
 
-  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shl
-    "unimplemented: shl" ..panic
-  end
-  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shr
-    "unimplemented: shr" ..panic
-  end
-  #+ add helpers in i64 ?
+  ## TODO? move shift-helpers to core/i64
   ## 0 AAAAAAAA 3 -> AAAAA000 AAA
   ## AAAAA000 BBBBBBBB 3 -> BBBBB000 AAAAABBB
-  proc( i64 : carry i64 : a i32 : count -> i64 : newCarry i64 : newA ) =>: shlc
+  proc( i64 : carry i64 : a i32 : count -> i64 : newCarry i64 : newA ) =>: i64shlc
     a count <<
     a count -_ >>> carry |
   end
   ## 0 AAAAAAAA 3 -> AAAAA AAA00000
   ## AAAAA BBBBBBBB 3 -> BBBBB BBBAAAAA
-  proc( i64 : carry i64 : a i32 : count -> i64 : newCarry i64 : newA ) =>: shrc
+  proc( i64 : carry i64 : a i32 : count -> i64 : newCarry i64 : newA ) =>: i64shrc
     a count >>>
     a count -_ << carry |
   end
-  +#
+  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shl
+    count 64 u/ =:: digitShift
+    count 64 u% =:: bitShift
+    a .length digitShift iSize cast.u =:: newLength
+    bitShift 0 == if
+      ## shifted by multiple of digit size
+      res .data digitShift @[] a .data a .length mem.move
+      res .data digitShift mem.clear
+      res
+        newLength >$ .length=
+      return
+    end
+    newLength =:: mut: dstIndex
+    0
+      a .length while $ 1 - <$ 0 != do =:: srcIndex
+        a srcIndex [] bitShift i64shlc res dstIndex =[]
+      finally dstIndex 1 - dstIndex= end
+    ..drop
+    res .data digitShift mem.clear
+    res
+      newLength $1 $1 [] 0 != if 1 + end >$ .length=
+    return
+  end
+  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shr
+    count 64 u/ =:: digitShift
+    count 64 u% =:: bitShift
+    digitShift a .length u< "shift does not underflow" assert
+    a .length digitShift iSize cast.u =:: newLength
+    bitShift 0 == if
+      ## shifted by multiple of digit size
+      res .data a .data digitShift @[] newLength mem.move
+      res
+        newLength >$ .length=
+      return
+    end
+    digitShift =:: mut: srcIndex
+    0 =:: mut: dstIndex
+    0
+      a srcIndex [] bitShift i64shrc ..drop
+      while
+        srcIndex 1 + srcIndex=
+        srcIndex a .length u<
+      do
+        a srcIndex [] bitShift i64shrc res dstIndex =[]
+      finally
+        dstIndex 1 + dstIndex=
+      end
+    res dstIndex =[]
+    res
+      newLength >$ .length=
+    removeLeadingZeros return
+  end
 end
 overload: export: merge: ..if.prepare  IntConv.prepareIf end
 overload: export: merge: ..if.check    IntConv.check end
