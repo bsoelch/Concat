@@ -923,11 +923,58 @@ namespace: int
       a free b free
     return
   end
-  proc( int i32 -> int ) =>: export: shlU32
-    "unimplemented: shlU32" ..panic
+  proc( int : a i32 : n -> int ) =>: export: shlU32
+    a bitLength n iSize cast.u + =:: resultBits
+    resultBits 64 < if
+      a asI64 optional.unwrap b << fromI64
+    else resultBits 128 < _if
+      a asI128 optional.unwrap b << fromI128
+    end =:: shadow: a
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    Digit MAX_INLINE_DIGITS array : mut: buf
+    a buf@ asSlice =:: aData
+    a resultDigits asWritableBuffer .else
+      resultDigits prepareCap
+    end =:: dstData
+    aData dstData n i64 cast.u _impl.shl =:: resData
+    resData .data IntData.fromPtr a sign 0 < IntData.setSign resData .length int new
+      a free
+    return
   end
-  proc( int i32 -> int ) =>: export: shrU32
-    "unimplemented: shrU32" ..panic
+  proc( int : a i32 : n -> int ) =>: export: shrU32
+     a asI64 .if
+      b >> fromI64
+    else a asI128 .if
+      b >> fromI128
+    end =:: shadow: a
+    a bitLength
+      n iSize cast.u
+        $1 $1 u<= if ..drop.2 ## no bits left after shift
+          a free ZERO return
+        end
+      -
+    =:: resultBits
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    Digit MAX_INLINE_DIGITS array : mut: buf
+    Digit MAX_INLINE_DIGITS array : mut: dstBuf
+    a buf@ asSlice =:: aData
+    resultDigits MAX_INLINE_DIGITS u<= =:: inlineResult
+    inlineResult if
+      dstBuf@ slice.wrap
+    a resultDigits asWritableBuffer ._else
+      resultDigits prepareCap
+    end =:: dstData
+    aData dstData n i64 cast.u _impl.shr =:: resData
+    inlineResult if
+      BITS_32 if dstBuf ..length 1 == "one digit in buffer" assert
+        dstBuf 0 [] a sign i64 cast.s * fromI64 return
+      else dstBuf ..length 2 == "two digits in buffer" assert
+        dstBuf 1 [] dstBuf 0 [] i128.create a sign 0 < if -_ end fromI128 return
+      end
+    end
+    resData .data IntData.fromPtr a sign 0 < IntData.setSign resData .length int new
+      a free
+    return
   end
 
   namespace: _impl
@@ -940,7 +987,7 @@ namespace: int
       return
     end
 
-    proc( Digit slice : a Digit slice : b Digit slice.mut : res ) =>: add
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: add
       false
         a .length b .length iSize.min for =:: i
           a i [] b i [] Digit.addc res i =[]
@@ -977,7 +1024,7 @@ namespace: int
       finally i end ..drop
       0 return
     end
-    proc( Digit slice : a Digit slice : b Digit slice.mut : res ) =>: sub
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: sub
       a .length b .length u>= "a >= b" assert
       false
         a .length b .length for =:: i
@@ -1016,7 +1063,7 @@ namespace: int
       nextDigit -_ return
     end
   end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res ) =>: bitAnd
+  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: bitAnd
     a aSign DigitIterator.create =:: mut: aItr
     b bSign DigitIterator.create =:: mut: bItr
     ## compute digit-wise and
@@ -1036,7 +1083,7 @@ namespace: int
     end
     res removeLeadingZeros return
   end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res ) =>: bitOr
+  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: bitOr
     a aSign DigitIterator.create =:: mut: aItr
     b bSign DigitIterator.create =:: mut: bItr
     ## compute digit-wise and
@@ -1056,7 +1103,7 @@ namespace: int
     end
     res removeLeadingZeros return
   end
-  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res ) =>: bitXor
+  proc( Digit slice : a i32 : aSign Digit slice : b i32 : bSign Digit slice.mut : res -> Digit slice.mut ) =>: bitXor
     a aSign DigitIterator.create =:: mut: aItr
     b bSign DigitIterator.create =:: mut: bItr
     ## compute digit-wise and
@@ -1076,6 +1123,27 @@ namespace: int
     end
     res removeLeadingZeros return
   end
+
+  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shl
+    "unimplemented: shl" ..panic
+  end
+  proc( Digit slice : a Digit slice.mut : res i64 : count -> Digit slice.mut ) =>: shr
+    "unimplemented: shr" ..panic
+  end
+  #+ add helpers in i64 ?
+  ## 0 AAAAAAAA 3 -> AAAAA000 AAA
+  ## AAAAA000 BBBBBBBB 3 -> BBBBB000 AAAAABBB
+  proc( i64 : carry i64 : a i32 : count -> i64 : newCarry i64 : newA ) =>: shlc
+    a count <<
+    a count -_ >>> carry |
+  end
+  ## 0 AAAAAAAA 3 -> AAAAA AAA00000
+  ## AAAAA BBBBBBBB 3 -> BBBBB BBBAAAAA
+  proc( i64 : carry i64 : a i32 : count -> i64 : newCarry i64 : newA ) =>: shrc
+    a count >>>
+    a count -_ << carry |
+  end
+  +#
 end
 overload: export: merge: ..if.prepare  IntConv.prepareIf end
 overload: export: merge: ..if.check    IntConv.check end
