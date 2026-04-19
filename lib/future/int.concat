@@ -946,7 +946,7 @@ namespace: int
     end
   end
   proc( int : a i64 : b -> int ) =>: export: andU64
-    a toI64 b & fromI64 ## TODO? return i64
+    a toI64 b & fromI64
   end
   proc( int i128 -> int ) =>: export: andI128
     "unimplemented: andI128" ..panic
