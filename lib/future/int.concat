@@ -1074,7 +1074,12 @@ namespace: int
         '0' sb.appendC return
       end
       digits $ .length 1 - [] i64 cast.u base sb.appendU?
-      128 base u/ =:: digitCount
+      base switch ## TODO? is there a simple equation
+        2 case 64 break
+        4 case 32 break
+        16 case 16 break
+        default "unsupported base" ..panic
+      end =:: digitCount
       digits $ .length 1 - slice.head slice.reversed for
         i64 cast.u digitCount '0' base sb.appendPaddedU
       end

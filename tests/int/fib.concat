@@ -1,0 +1,32 @@
+import future/int
+import print
+proc( i32 : n -> int ) =>: fib
+  1 int.fromI64 =:: mut: a
+  1 int.fromI64 =:: mut: b
+  n for ..drop
+    b
+      a b int.copy int.add b=
+    a=
+  end
+  a int.free
+  b return
+end
+proc( i32 : n -> int ) =>: rfib
+  1 int.fromI64 =:: mut: a
+  1 int.fromI64 =:: mut: b
+  n for ..drop
+    b
+      a b int.copy int.sub b=
+    a=
+  end
+  a int.free
+  b return
+end
+proc( -> ) =>: export: main
+  0 sb.create
+    1000 fib int.sbAppendX
+    '\n' sb.appendC
+    1001 rfib int.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
