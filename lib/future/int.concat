@@ -477,14 +477,14 @@ namespace: int
     ## handle small results
     resultBits MAX_INLINE_BITS u< if
       resultBits 64 u< if
-        a abs asI64u IntConv.unwrap
-          b abs asI64u IntConv.unwrap +
+        a asI64u IntConv.unwrap
+          b asI64u IntConv.unwrap +
         fromU64
           aSign 0 < if negate end
         return
       else resultBits 128 u< _if
-        a abs asI128u IntConv.unwrap
-          b abs asI128u IntConv.unwrap +
+        a asI128u IntConv.unwrap
+          b asI128u IntConv.unwrap +
         fromU128
           aSign 0 < if negate end
         return
@@ -516,14 +516,14 @@ namespace: int
     ## handle small results
     resultBits MAX_INLINE_BITS u< if
       resultBits 64 u< if
-        a abs asI64u IntConv.unwrap
-          b abs asI64u IntConv.unwrap -
+        a asI64u IntConv.unwrap
+          b asI64u IntConv.unwrap -
         fromU64
           aSign 0 < if negate end
         return
       else resultBits 128 u< _if
-        a abs asI128u IntConv.unwrap
-          b abs asI128u IntConv.unwrap -
+        a asI128u IntConv.unwrap
+          b asI128u IntConv.unwrap -
         fromU128
           aSign 0 < if negate end
         return
@@ -624,11 +624,77 @@ namespace: int
     end b fromU128 sub
   end
 
-  proc( int int -> int ) =>: export: mul
-    "unimplemented: mul" ..panic
+  proc( int : a int : b -> int ) =>: export: mul
+    a sign
+      $ 0 == if ..drop a free b free ZERO return end
+    =:: aSign
+    b sign
+      $ 0 == if ..drop a free b free ZERO return end
+    =:: bSign
+    a bitLength b bitLength + =:: resultBits
+    ## handle small results
+    resultBits MAX_INLINE_BITS u< if
+      resultBits 64 u< if
+        a asI64u IntConv.unwrap
+          b asI64u IntConv.unwrap *
+        fromU64
+          aSign bSign * 0 < if negate end
+        return
+      else resultBits 128 u< _if
+        a asI128u IntConv.unwrap
+          b asI128u IntConv.unwrap -
+        fromU128
+          aSign bSign * 0 < if negate end
+        return
+      end
+    end
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    Digit MAX_INLINE_DIGITS array : mut: bufB
+    a bufA@ asSlice =:: aData
+    b bufB@ asSlice =:: bData
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    aData .data bData .data == =:: isSquare
+    isSquare if
+      a .length b .length == "same data implies same length" assert
+      b free
+    end
+      a resultDigits asWritableBuffer .else
+      b resultDigits asWritableBuffer ._else
+        resultDigits prepareCap
+      end =:: dstData
+    isSquare if
+      aData dstData _impl.square =:: resData
+      resData .data IntData.fromPtr aSign bSign * 0 < IntData.setSign resData .length int new
+        a free
+      return
+    else
+      aData bData dstData _impl.mul =:: resData
+      resData .data IntData.fromPtr aSign bSign * 0 < IntData.setSign resData .length int new
+        a free b free
+      return
+    end
   end
-  proc( int -> int ) =>: export: square
-    "unimplemented: square" ..panic
+  proc( int : a -> int ) =>: export: square
+    a isZero if a free ZERO return end
+    a bitLength 2 *  =:: resultBits
+    ## handle small results
+    resultBits MAX_INLINE_BITS u< if
+      resultBits 64 u< if
+        a asI64u IntConv.unwrap $ * fromU64 return
+      else resultBits 128 u< _if
+        a asI128u IntConv.unwrap $ * fromU128 return
+      end
+    end
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    a bufA@ asSlice =:: aData
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    a resultDigits asWritableBuffer .else
+      resultDigits prepareCap
+    end =:: dstData
+    aData dstData _impl.square =:: resData
+    resData .data IntData.fromPtr resData .length int new
+      a free
+    return
   end
   proc( int -> int ) =>: export: sqrt
     "unimplemented: sqrt" ..panic
@@ -1011,6 +1077,7 @@ namespace: int
   end
 
   namespace: _impl
+  ## conversion from/to string
     proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: sbAlignedPow2Append
       digits .length 0 == if
         '0' sb.appendC return
@@ -1032,7 +1099,7 @@ namespace: int
     proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: shadow: sbBaseAppend
       "unimplemented: sbBaseAppend" ..panic
     end
-
+## helpers
     proc( Digit slice.mut : res -> Digit slice.mut ) =>: removeLeadingZeros
       res .length while $ 1 - <$ 0 != do =:: i
         res i [] ? if i 1 + break end
@@ -1041,7 +1108,7 @@ namespace: int
         newLength >$ .length=
       return
     end
-
+## add and sub
     proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: add
       false
         a .length b .length iSize.min for =:: i
@@ -1094,6 +1161,25 @@ namespace: int
         a .length >$ .length=
         removeLeadingZeros
       return
+    end
+## multiplication and squaring
+    proc( Digit slice : a Digit : b Digit slice.mut : res -> Digit slice.mut ) =>: scale
+      "unimplemented: scale" ..panic
+    end
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: mul
+      b .length 1 == if
+        a b 0 [] res scale return
+      else a .length 1 == _if
+        b a 0 [] res scale return
+      end
+      ## TODO? detect in-place operations
+      ## TODO choose algorithm depending on sizes
+      "unimplemented: mul" ..panic
+    end
+    proc( Digit slice : a Digit slice.mut : res -> Digit slice.mut ) =>: shadow: square
+      ## TODO? detect in-place operation
+      ## TODO choose algorithm depending on sizes
+      "unimplemented: square" ..panic
     end
 
     struct( Digit slice : digits i32 : shadow: sign bool : hadNonzero ) =:: DigitIterator
