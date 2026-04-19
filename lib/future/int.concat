@@ -682,7 +682,9 @@ namespace: int
   proc( int -> int ) =>: export: square
     "unimplemented: square" ..panic
   end
-  ## TODO? sqrt
+  proc( int -> int ) =>: export: sqrt
+    "unimplemented: sqrt" ..panic
+  end
   enum( DIV REM DIV_REM FLOOR_DIV MOD DIV_MOD ) =:: DivideResult
   proc( int : a int : b DivideResult -> int : div int : rem ) =>: divRem0
     ## 1. handle signs
@@ -771,7 +773,19 @@ namespace: int
       x free y free t free
     s m mod return
   end
-  ## TODO? carry-less multiply/divide/mod : use `PCLMULQDQ`/`pmull` opcode?
+## carry-less arithmetic
+  proc( int int -> int ) =>: export: pmul
+    "unimplemented: pmul" ..panic ## ? use `PCLMULQDQ`/`pmull` opcode?
+  end
+  proc( int int -> int int ) =>: export: pdivmov
+    "unimplemented: pdivmov" ..panic
+  end
+  proc( int int -> int ) =>: export: pdiv
+    "unimplemented: pdiv" ..panic
+  end
+  proc( int int -> int ) =>: export: pmod
+    "unimplemented: pmod" ..panic
+  end
 ## comparisons
   proc( int : a int : b -> i32 ) =>: export: cmp
     a sign
@@ -790,7 +804,18 @@ namespace: int
     Digit MAX_INLINE_DIGITS array : mut: bufB
     a bufA@ asSlice b bufB@ asSlice _impl.cmp
   end
-  ## TODO? min/max
+  proc( int int -> int ) =>: export: min
+    "unimplemented: min" ..panic
+  end
+  proc( int int -> int ) =>: export: max
+    "unimplemented: max" ..panic
+  end
+  proc( int int -> int ) =>: export: umin
+    "unimplemented: umin" ..panic
+  end
+  proc( int int -> int ) =>: export: umax
+    "unimplemented: umax" ..panic
+  end
 ## bitwise operations
   proc( int : a -> iSize ) =>: export: bitLength
     a .data IntData.asInt .if =:: hi
@@ -811,6 +836,8 @@ namespace: int
       "unexpected int-data type" ..panic
     end
   end
+  ## TODO? lowest setBit / bit-count
+  ## TODO? setBit / getBit / flipBit
   proc( int -> int ) =>: export: bitNot
     1 addI32 negate
   end
@@ -904,7 +931,9 @@ namespace: int
   proc( int i128 -> int ) =>: export: andU128
     "unimplemented: andU128" ..panic
   end
-  ## TODO? bitAndNot
+  proc( int : a int : b -> int ) =>: export: bitAndNot
+    "unimplemented: bitAndNot" ..panic
+  end
   proc( int : a int : b -> int ) =>: export: bitOr
     a sign =:: aSign
     b sign =:: bSign
@@ -983,8 +1012,6 @@ namespace: int
       a free b free
     return
   end
-  ## TODO setBit / getBit / flipBit
-  ## TODO lowest setBit / bit-count
   proc( int : a i32 : n -> int ) =>: export: shlU32
     a bitLength n iSize cast.u + =:: resultBits
     resultBits 64 u< if
