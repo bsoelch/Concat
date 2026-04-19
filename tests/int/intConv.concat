@@ -1,0 +1,49 @@
+import future/int
+import print
+import numbers/print
+using std.literals.
+proc( int : x -> ) =>: printInt
+  0 sb.create
+    x int.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
+proc( type : auto: T  T  -> ) =>: printXln
+  io.printX "":s io.println
+end
+proc( type : auto: T  T  -> ) =>: printUXln
+  io.printUX "":s io.println
+end
+proc( -> ) =>: export: main
+  "fromI:":s io.println
+  -0x12345678 int.fromI32 printInt
+  -0x123456789abcdef0 int.fromI64 printInt
+  0x1234567'89abcdef i128.fromI64 int.fromI128 printInt
+  -0x1234567'89abcdef'0fedcba9'87654321:i128 int.fromI128 printInt
+  "fromU:":s io.println
+  0x87654321:i32 int.fromU32 printInt
+  0xfedcba9876543210:i64 int.fromU64 printInt
+  0xfedcba98'76543210:i64 i128.fromU64 int.fromU128 printInt
+  0xfedcba98'76543210'01234567'89abcdef:i128 int.fromU128 printInt
+  "asI:":s io.println
+  0xfedcba98 int.fromU64 int.asI32 .Err ? "overflow" assert
+  0xfedcba9876543210:i64 int.fromU64 int.asI64 .Err ? "overflow" assert
+  -0x12345678 int.fromI32 int.asI64 int.IntConv.unwrap printXln
+  -0x123456789abcdef0 int.fromI64 int.asI32 .Err .if
+    int.asI64 int.IntConv.unwrap printXln
+  else ..drop end
+  0xfedcba9'87654321'12345678'9abcdef0:i128 int.fromU128 int.asI128 int.IntConv.unwrap =:: res
+    res .hi io.printX
+  res .low printXln
+  "asU:":s io.println
+  0xfedcba98 i128.fromU64 int.fromU128 int.asU32 int.IntConv.unwrap printXln
+  -1 int.fromI32 int.asU128 .Err ? "negative value is not u32" assert
+  -1 int.fromU32 int.asU64 int.IntConv.unwrap printXln
+  "toI:":s io.println
+  -1 int.fromI32 int.toI32 printXln
+  0xfedcba98'76543210:i64 int.fromU64 int.toI64 printXln
+  -1 int.fromI32 int.toI128 =:: shadow: res
+    res .hi io.printX
+  res .low printXln
+  0xfedcba9'87654321'12345678'9abcdef0:i128 int.fromU128 int.toI64 printXln
+end
