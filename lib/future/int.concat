@@ -116,7 +116,7 @@ namespace: int
   proc( Digit slice : digits bool : shadow: sign -> int ) =>: fromDigits
     digits .length while $ 0 != do
       digits $1 1 - [] i64 cast.u 0 != if break end
-    finally 1 - end 1 + =:: digitCount
+    finally 1 - end =:: digitCount
     digitCount prepareCap =:: targetDigits
     targetDigits .data digits .data digitCount mem.copy ..drop
     targetDigits .data IntData.fromPtr sign IntData.setSign digitCount int new
@@ -149,7 +149,9 @@ namespace: int
       else
         a .length Digit cast.u localBuffer .0=
         hi Digit cast.u localBuffer .1=
-        localBuffer 2 slice.create
+        localBuffer
+          hi ? if 2 else 1 end
+        slice.create
       end
     else
       "unexpected int-data-type" ..panic
@@ -206,6 +208,9 @@ namespace: int
     val .hi 0 == if
       val .low fromU64
     else
+      BITS_32 ! and val .low iSize cast.u val .hi iSize cast.u false tryCreateInplace .if
+        return
+      end
       Digit 2 array : mut: digits
       digits@
         val .low Digit cast $1 .0=
@@ -817,17 +822,17 @@ namespace: int
   proc( int : a -> iSize ) =>: export: bitLength
     a .data IntData.asInt .if =:: hi
       BITS_32 if
-        hi i32 cast.u i32.highestSetBit
+        hi i32 cast.u i32.highestSetBit 1 +
           $ ? if 32 + iSize cast.u return end ..drop
-        a .length i32 cast.u i32.highestSetBit iSize cast.u
+        a .length i32 cast.u i32.highestSetBit 1 + iSize cast.u
       else
-        hi i64 cast.u i64.highestSetBit
+        hi i64 cast.u i64.highestSetBit 1 +
           $ ? if 64 + iSize cast.u return end ..drop
-        a .length i64 cast.u i64.highestSetBit iSize cast.u
+        a .length i64 cast.u i64.highestSetBit 1 + iSize cast.u
       end
     else a .data IntData.asPtr ._if =:: basePtr
       a .length 1 - =:: index
-        basePtr index [] i64 cast.u i64.highestSetBit iSize cast.u
+        basePtr index [] i64 cast.u i64.highestSetBit 1 + iSize cast.u
       index 64 * +
     else
       "unexpected int-data type" ..panic
