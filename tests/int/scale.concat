@@ -1,0 +1,16 @@
+import future/int
+import print
+proc( int : x -> ) =>: printInt
+  0 sb.create
+    x int.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
+proc( -> ) =>: export: main
+  7 int.fromI32
+    100 for ..drop
+      7 int.fromI32 int.mul
+      $ printInt
+    end
+  int.free
+end

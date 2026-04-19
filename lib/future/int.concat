@@ -27,6 +27,28 @@ namespace: int
     proc( Digit Digit -> Digit ) : alias: and i64.and
     proc( Digit Digit -> Digit ) : alias: or i64.or
     proc( Digit Digit -> Digit ) : alias: xor i64.xor
+## helpers for combined operations
+    ## TODO? move helper implementations to core/i64
+    proc( Digit : carry Digit : a Digit : b -> Digit : hi Digit : low ) =>: mulAdd
+      a i64 cast.u b i64 cast.u i64.umul2 =:: mulLow =:: mulHi
+      false
+        mulLow carry i64 cast.u i64.addc Digit cast.u =:: resLow
+        mulHi 0 i64.addc Digit cast.u =:: resHi
+      ..drop
+      resHi resLow
+    end
+    ## 0 AAAAAAAA 3 -> AAAAA000 AAA
+    ## AAAAA000 BBBBBBBB 3 -> BBBBB000 AAAAABBB
+    proc( Digit : carry Digit : a i32 : count -> Digit : newCarry Digit : newA ) =>: shlc
+      a i64 cast.u count << Digit cast.u
+      a i64 cast.u count -_ >>> carry i64 cast.u | Digit cast.u
+    end
+    ## 0 AAAAAAAA 3 -> AAAAA AAA00000
+    ## AAAAA BBBBBBBB 3 -> BBBBB BBBAAAAA
+    proc( Digit : carry Digit : a i32 : count -> Digit : newCarry Digit : newA ) =>: shrc
+      a i64 cast.u count >>> Digit cast.u
+      a i64 cast.u count -_ << carry i64 cast.u | Digit cast.u
+    end
   end
 
   iSize =:: IntData
@@ -642,7 +664,7 @@ namespace: int
         return
       else resultBits 128 u< _if
         a asI128u IntConv.unwrap
-          b asI128u IntConv.unwrap -
+          b asI128u IntConv.unwrap *
         fromU128
           aSign bSign * 0 < if negate end
         return
@@ -1164,7 +1186,18 @@ namespace: int
     end
 ## multiplication and squaring
     proc( Digit slice : a Digit : b Digit slice.mut : res -> Digit slice.mut ) =>: scale
-      "unimplemented: scale" ..panic
+      0:iSize =:: mut: dstIndex
+      0 Digit cast
+        a for
+          b Digit.mulAdd res dstIndex =[]
+        finally dstIndex 1 + dstIndex= end
+      $ ? if
+        res dstIndex =[]
+        dstIndex 1 + dstIndex=
+      else ..drop end
+      res
+        dstIndex >$ .length=
+      return
     end
     proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: mul
       b .length 1 == if
@@ -1264,19 +1297,6 @@ namespace: int
       res removeLeadingZeros return
     end
 
-    ## TODO? move shift-helpers to core/i64
-    ## 0 AAAAAAAA 3 -> AAAAA000 AAA
-    ## AAAAA000 BBBBBBBB 3 -> BBBBB000 AAAAABBB
-    proc( Digit : carry Digit : a i32 : count -> Digit : newCarry Digit : newA ) =>: i64shlc
-      a i64 cast.u count << Digit cast.u
-      a i64 cast.u count -_ >>> carry i64 cast.u | Digit cast.u
-    end
-    ## 0 AAAAAAAA 3 -> AAAAA AAA00000
-    ## AAAAA BBBBBBBB 3 -> BBBBB BBBAAAAA
-    proc( Digit : carry Digit : a i32 : count -> Digit : newCarry Digit : newA ) =>: i64shrc
-      a i64 cast.u count >>> Digit cast.u
-      a i64 cast.u count -_ << carry i64 cast.u | Digit cast.u
-    end
     proc( Digit slice : a Digit slice.mut : res iSize : count -> Digit slice.mut ) =>: shadow: shl
       count 64 u/ =:: digitShift
       count 64 u% i32 cast.u =:: bitShift
@@ -1291,7 +1311,7 @@ namespace: int
       end
       newLength =:: mut: dstIndex
       0 Digit cast.u a .length while $ 1 - <$ 0 != do =:: srcIndex
-        a srcIndex [] bitShift i64shlc res dstIndex =[]
+        a srcIndex [] bitShift Digit.shlc res dstIndex =[]
       finally dstIndex 1 - dstIndex= srcIndex end ..drop.2
       res .data digitShift mem.clear ..drop
       res
@@ -1313,12 +1333,12 @@ namespace: int
       digitShift =:: mut: srcIndex
       0 =:: mut: dstIndex
       0 Digit cast.u
-        a srcIndex [] bitShift i64shrc ..drop
+        a srcIndex [] bitShift Digit.shrc ..drop
         while
           srcIndex 1 + srcIndex=
           srcIndex a .length u<
         do
-          a srcIndex [] bitShift i64shrc res dstIndex =[]
+          a srcIndex [] bitShift Digit.shrc res dstIndex =[]
         finally
           dstIndex 1 + dstIndex=
         end
