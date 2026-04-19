@@ -150,7 +150,7 @@ namespace: int
   proc( i32 slice : digits bool : shadow: sign -> int ) =>: export: fromI32slice
     "unimplemented: fromI32slice" ..panic
   end
-  overload: fromSlice fromI64slice fromI32slice end
+  overload: export: fromSlice fromI64slice fromI32slice end
   proc( int bool : newSign -> int ) =>: setSign
     $ .data newSign IntData.setSign >$ .data=
   end
@@ -690,7 +690,9 @@ namespace: int
         a free
       return
     else
-      aData bData dstData _impl.mul =:: resData
+      aData bData
+        bData .data dstData .data == if >$ end
+      dstData _impl.mul =:: resData
       resData .data IntData.fromPtr aSign bSign * 0 < IntData.setSign resData .length int new
         a free b free
       return
@@ -1199,15 +1201,60 @@ namespace: int
         dstIndex >$ .length=
       return
     end
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: simpleMulInplace
+      ## go through digits from right to left, pushing carry up as far as neccessary
+      "unimplemented: simpleMulInplace" ..panic
+    end
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: simpleMul
+      a .data res .data == if
+        a b res simpleMulInplace return
+      end
+      0 Digit cast =:: mut: low
+      0 Digit cast =:: mut: mid
+      0 Digit cast =:: mut: hi
+      a .length b .length + 1 - =:: newLength
+      newLength for =:: s
+        s b .length u>= if s b .length - 1 + else 0 end while $ a .length u< and $ s u<= do =:: i
+          s i - =:: j
+          ## i+j = s, 0 <= i <= len(a) , 0 <= j <= len(b)
+          low a i [] b j [] Digit.mulAdd low=
+            false >$ mid Digit.addc mid=
+            hi 0 Digit cast Digit.addc hi=
+          ! "no overflow" assert
+        finally i 1 + end ..drop
+        low res s =[]
+        ## shift values by 1 slot
+        mid low= hi mid= 0 Digit cast hi=
+      end
+      low res newLength =[]
+      mid ? ! and hi ? ! end "result does not overflow" assert
+      res
+        newLength 1 + >$ .length=
+      removeLeadingZeros return
+    end
+    proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: karatsubaMul
+      ## 0. handle uneven-multiply: (a+b*B)*c ; c < B
+      ## ? use pre-allocated fixed-buffer list as memory region for recursive calls
+      ## karatsuba (a+b*B)*(c+d*B)
+      ##  1. a+c -> tmp0
+      ##  2. b+d -> tmp1
+      ##  3. tmp0* tmp1 -> tmp0
+      ##  4. b*d -> res
+      ##  5. a*c -> res
+      ##  6. tmp0 - ac -> tmp0
+      ##  7. tmp0 - bd -> tmp0
+      ##  8. res - tmp0 -> res
+      "unimplemented: karatsubaMul" ..panic
+    end
     proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: mul
       b .length 1 == if
         a b 0 [] res scale return
       else a .length 1 == _if
         b a 0 [] res scale return
       end
-      ## TODO? detect in-place operations
-      ## TODO choose algorithm depending on sizes
-      "unimplemented: mul" ..panic
+      b .data res .data != "b and res don't overlap" assert
+      ## TODO choose different algorithm for large sizes
+      a b res simpleMul return
     end
     proc( Digit slice : a Digit slice.mut : res -> Digit slice.mut ) =>: shadow: square
       ## TODO? detect in-place operation
