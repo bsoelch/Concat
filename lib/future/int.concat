@@ -811,17 +811,33 @@ namespace: int
     Digit MAX_INLINE_DIGITS array : mut: bufB
     a bufA@ asSlice b bufB@ asSlice _impl.cmp
   end
-  proc( int int -> int ) =>: export: min
-    "unimplemented: min" ..panic
+  proc( int : a int : b -> int ) =>: export: min
+    a b cmp 0 < if
+      b free a return
+    else
+      a free b return
+    end
   end
-  proc( int int -> int ) =>: export: max
-    "unimplemented: max" ..panic
+  proc( int : a int : b -> int ) =>: export: max
+    a b cmp 0 < if
+      a free b return
+    else
+      b free a return
+    end
   end
-  proc( int int -> int ) =>: export: umin
-    "unimplemented: umin" ..panic
+  proc( int : a int : b -> int ) =>: export: umin
+    a b ucmp 0 < if
+      b free a return
+    else
+      a free b return
+    end
   end
-  proc( int int -> int ) =>: export: umax
-    "unimplemented: umax" ..panic
+  proc( int : a int : b -> int ) =>: export: umax
+    a b ucmp 0 < if
+      a free b return
+    else
+      b free a return
+    end
   end
 ## bitwise operations
   proc( int : a -> iSize ) =>: export: bitLength
