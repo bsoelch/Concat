@@ -117,10 +117,18 @@ namespace: int
     digits .length while $ 0 != do
       digits $1 1 - [] i64 cast.u 0 != if break end
     finally 1 - end =:: digitCount
+    digitCount 0 == if ZERO return end
     digitCount prepareCap =:: targetDigits
     targetDigits .data digits .data digitCount mem.copy ..drop
     targetDigits .data IntData.fromPtr sign IntData.setSign digitCount int new
   end
+  proc( i64 slice : digits bool : shadow: sign -> int ) =>: export: fromI64slice
+    digits .data Digit ptr.raw cast digits .length slice.create sign fromDigits
+  end
+  proc( i32 slice : digits bool : shadow: sign -> int ) =>: export: fromI32slice
+    "unimplemented: fromI32slice" ..panic
+  end
+  overload: fromSlice fromI64slice fromI32slice end
   proc( int bool : newSign -> int ) =>: setSign
     $ .data newSign IntData.setSign >$ .data=
   end
@@ -407,7 +415,6 @@ namespace: int
     end
   end
   ## TODO? conversion from/to float
-  ## TODO vvvvv add test-cases (where apropriate) vvvv
 ## conversion from/to string
   proc( string : val i32 : base -> int optional ) =>: export: parse
     "unimplemented: parse" ..panic ## return int NumberParseResult instead of optional
@@ -444,7 +451,7 @@ namespace: int
   proc( int : a -> bool ) =>: export: isZero
     a .length 0 != if false return end
     a .data IntData.asInt
-      .else false return end
+      .else true return end
     0 == return
   end
   ## -1 0 1

@@ -1,0 +1,35 @@
+import future/int
+import print
+proc( int : x -> ) =>: printInt
+  0 sb.create
+    x int.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
+proc( -> ) =>: export: main
+  0x12345678 int.fromI32
+    $ int.isZero ! "non-zero" assert
+  int.negate
+    $ int.isZero ! "non-zero" assert
+  printInt
+  -0x11743 int.fromI32
+    $ int.isZero ! "non-zero" assert
+  int.abs
+    $ int.isZero ! "non-zero" assert
+  printInt
+  0 int.fromI32 int.isZero "0 is 0" assert
+  { 0:i64 0:i64 0:i64 } =:: elts
+  elts@ slice.wrap true int.fromI64slice
+    $ int.isZero "slice is zero" assert
+    $ printInt
+  int.free
+  { 0x123456789abcdef 0xfedcba9876543210:i64 0x123456789abcdef } =:: shadow: elts
+  elts@ slice.wrap false int.fromI64slice
+    $ int.isZero ! "slice is non-zero" assert
+    $ printInt
+  int.negate
+    $ printInt
+  int.abs
+    $ printInt
+  int.free
+end
