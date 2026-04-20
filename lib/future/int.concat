@@ -690,9 +690,7 @@ namespace: int
         a free
       return
     else
-      aData bData
-        bData .data dstData .data == if >$ end
-      dstData _impl.mul =:: resData
+      aData bData dstData _impl.mul =:: resData
       resData .data IntData.fromPtr aSign bSign * 0 < IntData.setSign resData .length int new
         a free b free
       return
@@ -1202,8 +1200,35 @@ namespace: int
       return
     end
     proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: simpleMulInplace
-      ## go through digits from right to left, pushing carry up as far as neccessary
-      "unimplemented: simpleMulInplace" ..panic
+      a .length b .length + 1 - =:: newLength
+      ## iterate pairs in order of decreasing sum, this guarantees that the value stored at a given index can only be overwritten to when it is no longer neccessary for computing the result
+      newLength while $ 0 != do 1 - =:: s
+        0 Digit cast =:: mut: low
+        0 Digit cast =:: mut: mid
+        0 Digit cast =:: mut: hi
+        s b .length u>= if s b .length - 1 + else 0 end while $ a .length u< and $ s u<= do =:: i
+          s i - =:: j
+          ## i+j = s, 0 <= i <= len(a) , 0 <= j <= len(b)
+          low a i [] b j [] Digit.mulAdd low=
+            false >$ mid Digit.addc mid=
+            hi 0 Digit cast Digit.addc hi=
+          ! "no overflow" assert
+        finally i 1 + end ..drop
+        low res s =[]
+        s 1 + =:: mut: t
+        false
+          mid res t [] Digit.addc res t =[]
+          $ or hi ? if hi res t 1 + [] Digit.addc res t 1 + =[] end
+        $ if
+          t 2 + t=
+          while
+            res t [] 0 Digit cast Digit.addc res t =[] $
+          do t 1 + t= end
+        end ..drop
+      finally s end ..drop
+      res
+        newLength 1 + >$ .length=
+      removeLeadingZeros return
     end
     proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: simpleMul
       a .data res .data == if
@@ -1252,14 +1277,12 @@ namespace: int
       else a .length 1 == _if
         b a 0 [] res scale return
       end
-      b .data res .data != "b and res don't overlap" assert
       ## TODO choose different algorithm for large sizes
       a b res simpleMul return
     end
     proc( Digit slice : a Digit slice.mut : res -> Digit slice.mut ) =>: shadow: square
-      ## TODO? detect in-place operation
-      ## TODO choose algorithm depending on sizes
-      "unimplemented: square" ..panic
+      ## TODO? dedicated algorithms for squaring
+      a a res mul return
     end
 
     struct( Digit slice : digits i32 : shadow: sign bool : hadNonzero ) =:: DigitIterator
