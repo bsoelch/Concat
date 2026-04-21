@@ -226,6 +226,27 @@ namespace: i128
   end
   proc(
     i128 : a
+    i64 : b
+  ->
+    i64 #+remainder+#
+    i64 #+division+#
+  ) =>: export: udivmod64to64
+    a .hi b i64 cast.u u< "result first in i64" assert
+    ## TODO? dedicated algorithm (? use x64 div instruction if available)
+    a b fromU64 udivmod >$ .low >$ .low
+  end
+  proc(
+    i128 : a
+    i64 : b
+  ->
+    i128 #+remainder+#
+    i64 #+division+#
+  ) =>: export: udivmod64
+    ## TODO? dedicated algorithm
+    a b fromU64 udivmod .low
+  end
+  proc(
+    i128 : a
     i128 : b
   ->
     i128 #+remainder+#
@@ -281,6 +302,16 @@ namespace: i128
     i128 : b
   -> i128 ) =>: export: umod
     a b udivmod ..drop
+  end
+  proc(
+    i128 : a
+    i64 : b
+  ->
+    i128 #+remainder+#
+    i64 #+division+#
+  ) =>: export: divrem64
+    ## TODO? dedicated algorithm
+    a b fromU64 divrem .low
   end
   proc(
     i128 : a0

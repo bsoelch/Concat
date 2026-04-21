@@ -32,6 +32,13 @@ namespace: i32
   proc( i32 i32 -> bool ) : export: alias: uge ..builtIn.uge.i32
   proc( i32 i32 -> bool ) : export: alias: ugt ..builtIn.ugt.i32
 
+  proc( i32 : a i32 : b -> i32 #+div+# i32 #+rem+# ) =>: export: divrem
+    a b div a b rem
+  end
+  proc( i32 : a i32 : b -> i32 #+div+# i32 #+rem+# ) =>: export: udivmod
+    a b udiv a b umod
+  end
+
   proc( i32 : a i32 : b -> i32 ) =>: export: min
     a b < if a else b end
   end
