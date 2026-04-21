@@ -228,41 +228,40 @@ namespace: i128
     i128 : a
     i64 : b
   ->
-    i64 #+remainder+#
     i64 #+division+#
-  ) =>: export: udivmod64to64
+    i64 #+remainder+#
+  ) =>: export: udivMod64to64
     a .hi b i64 cast.u u< "result first in i64" assert
     ## TODO? dedicated algorithm (? use x64 div instruction if available)
-    a b fromU64 udivmod >$ .low >$ .low
+    a b fromU64 udivMod >$ .low >$ .low
   end
   proc(
     i128 : a
     i64 : b
   ->
-    i128 #+remainder+#
-    i64 #+division+#
-  ) =>: export: udivmod64
+    i128 #+division+#
+    i64 #+remainder+#
+  ) =>: export: udivMod64
     ## TODO? dedicated algorithm
-    a b fromU64 udivmod .low
+    a b fromU64 udivMod .low
   end
   proc(
     i128 : a
     i128 : b
   ->
-    i128 #+remainder+#
     i128 #+division+#
-  ) =>: export: udivmod
+    i128 #+remainder+#
+  ) =>: export: udivMod
     a b ucmp 0 < if
       ## return
-        a
         0 0 i128 new
+        a
       return
     end
     a .hi 0 == if ## both fit in 64 bits
-      ## return
-        0 a .low b .low i64.umod i128 new
-        0 a .low b .low i64.udiv i128 new
-      return
+      a .low b .low i64.udivMod
+        >$ fromU64
+      >$ fromU64 return
     end
     ## TODO? handle more special cases
     ## (b.hi=0,b.low=0,b=2^k,...)
@@ -289,37 +288,37 @@ namespace: i128
       shiftedB 1 >>> shiftedB=
       bit 1 >>> bit=
     end
-    remainderA res return
+    res remainderA return
   end
   proc(
     i128 : a
     i128 : b
   -> i128 ) =>: export: udiv
-    a b udivmod ..swap ..drop
+    a b udivMod ..drop
   end
   proc(
     i128 : a
     i128 : b
   -> i128 ) =>: export: umod
-    a b udivmod ..drop
+    a b udivMod ..swap ..drop
   end
   proc(
     i128 : a
     i64 : b
   ->
-    i128 #+remainder+#
-    i64 #+division+#
-  ) =>: export: divrem64
+    i128 #+division+#
+    i64 #+remainder+#
+  ) =>: export: divRem64
     ## TODO? dedicated algorithm
-    a b fromU64 divrem .low
+    a b fromU64 divRem .low
   end
   proc(
     i128 : a0
     i128 : b0
   ->
-    i128 #+remainder+#
     i128 #+division+#
-  ) =>: export: divrem
+    i128 #+remainder+#
+  ) =>: export: divRem
     false =:: mut: divSign
     a0 .hi 0 < =:: remSign
     a0 .hi 0 < if
@@ -334,23 +333,23 @@ namespace: i128
     else
       b0
     end =:: b
-    a b udivmod =:: mut: divVal =:: mut: remVal
+    a b udivMod =:: mut: remVal =:: mut: divVal
     ## return
-      remVal remSign if -_ end
       divVal divSign if -_ end
+      remVal remSign if -_ end
     return
   end
   proc(
     i128 : a
     i128 : b
   -> i128 ) =>: export: div
-    a b divrem ..swap ..drop
+    a b divRem ..drop
   end
   proc(
     i128 : a
     i128 : b
   -> i128 ) =>: export: rem
-    a b divrem ..drop
+    a b divRem ..swap ..drop
   end
 
   proc(

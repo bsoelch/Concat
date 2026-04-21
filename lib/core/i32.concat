@@ -32,10 +32,10 @@ namespace: i32
   proc( i32 i32 -> bool ) : export: alias: uge ..builtIn.uge.i32
   proc( i32 i32 -> bool ) : export: alias: ugt ..builtIn.ugt.i32
 
-  proc( i32 : a i32 : b -> i32 #+div+# i32 #+rem+# ) =>: export: divrem
+  proc( i32 : a i32 : b -> i32 #+div+# i32 #+rem+# ) =>: export: divRem
     a b div a b rem
   end
-  proc( i32 : a i32 : b -> i32 #+div+# i32 #+rem+# ) =>: export: udivmod
+  proc( i32 : a i32 : b -> i32 #+div+# i32 #+rem+# ) =>: export: udivMod
     a b udiv a b umod
   end
 

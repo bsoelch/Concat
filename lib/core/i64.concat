@@ -39,19 +39,19 @@ namespace: i64
   proc( i64 i64 -> bool ) : export: alias: uge ..builtIn.uge.i64
   proc( i64 i64 -> bool ) : export: alias: ugt ..builtIn.ugt.i64
 
-  proc( i64 : a i64 : b -> i64 #+div+# i64 #+rem+# ) =>: export: divrem
+  proc( i64 : a i64 : b -> i64 #+div+# i64 #+rem+# ) =>: export: divRem
     a b div a b rem
   end
-  proc( i64 : a i64 : b -> i64 #+div+# i64 #+rem+# ) =>: export: udivmod
+  proc( i64 : a i64 : b -> i64 #+div+# i64 #+rem+# ) =>: export: udivMod
     a b udiv a b umod
   end
-  proc( i64 : a i32 : b -> i64 #+div+# i32 #+rem+# ) =>: export: divrem32
+  proc( i64 : a i32 : b -> i64 #+div+# i32 #+rem+# ) =>: export: divRem32
     a b div32 a b rem32
   end
-  proc( i64 : a i32 : b -> i64 #+div+# i32 #+rem+# ) =>: export: udivmod32
+  proc( i64 : a i32 : b -> i64 #+div+# i32 #+rem+# ) =>: export: udivMod32
     a b udiv32 a b umod32
   end
-  proc( i64 : a i32 : b -> i32 #+div+# i32 #+rem+# ) =>: export: udivmod32to32
+  proc( i64 : a i32 : b -> i32 #+div+# i32 #+rem+# ) =>: export: udivMod32to32
     a 32 >>> b i64 cast.u u< "result first in i32" assert
     a b udiv32 i32 cast.u a b umod32
   end
