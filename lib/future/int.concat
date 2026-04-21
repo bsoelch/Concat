@@ -37,6 +37,17 @@ namespace: int
       ..drop
       resHi resLow
     end
+    proc( i32 : remainder Digit : a i32 : b -> i32 #+remainder+# Digit #+res+# ) =>: udivModc32
+      remainder
+        i64 cast.u 32 << a i64 cast.u 32 >> | b i64.udivMod32to32 =:: resHi
+        i64 cast.u 32 << a i64 cast.u 0xffff_ffff & | b i64.udivMod32to32 =:: resLow
+      resHi i64 cast.u 32 << resLow i64 cast.u | Digit cast.u
+    end
+    proc( Digit : remainder Digit : a Digit : b -> Digit #+remainder+# Digit #+res+# ) =>: udivModc
+      remainder i64 cast.u a i64 cast.u i128.create
+         b i64 cast.u i128.udivMod64to64 Digit cast.u
+      >$ Digit cast.u
+    end
     ## 0 AAAAAAAA 3 -> AAAAA000 AAA
     ## AAAAA000 BBBBBBBB 3 -> BBBBB000 AAAAABBB
     proc( Digit : carry Digit : a i32 : count -> Digit : newCarry Digit : newA ) =>: shlc
