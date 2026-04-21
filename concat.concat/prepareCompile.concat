@@ -234,18 +234,16 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
         true needNewOutTypes=
         continue
       end
-      outType typeContext types.isValueType and index 0 == or _BACKEND_ .QBE ! if
+      outType typeContext types.isValueType and index outTypes .length 1 - == or _BACKEND_ .QBE ! if
         needNewOutTypes if outType list.append end
         continue
       end
       needNewOutTypes ! if outTypes index slice.head list.appendSlice end
       true needNewOutTypes=
       outType true typeContext types.getAddressType =:: outArgType
-      index 0 == if
-        outArgType list.append
-        ## TODO merge try mergining location with first or last argument
-        ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
-      else _BACKEND_ .QBE ! _if
+      ## TODO merge try mergining location with first or last argument
+      ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
+      _BACKEND_ .QBE ! if
         outArgType list.append
       end
       ## TODO! should all out-args be passed before the real proc args (! backend used reveresd arg-order for c-procs)
@@ -596,7 +594,8 @@ proc(
           >$ .dataType=
         list.append
         _BACKEND_ .QBE if
-          outArgNames 1 slice.tail for .else continue end
+          newProcType typeContext types.getProcOut .if .length 0 != else false end =:: hasValueRet
+          outArgNames for .else continue end
             idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
             idData [] .valueType
               idData id.asIdInfo
@@ -607,30 +606,37 @@ proc(
                 opAtId
               end
             list.append
+            hasValueRet if
+              1 StackModType .ROTATE op .pos opStackMod list.append
+            end
           end
         end
       return
     break
     Return case
-      0 =:: mut: retValueCount
       context .currentProcType [] .else "return outside procedure" ..panic end =:: retType
+      ## TODO? don't return out-args by value independent of back-end
+      ##  ! how to deal with value args mixed with non-value args
+      retType typeContext types.getProcOut .if .length i32 cast.u else 0 end
+        _BACKEND_ .QBE if context .outArgNames [] .length i32 cast.u + end
+      =:: mut: stackValCount
       newOps
-        context .outArgNames [] slice.reversed for .else
-            retValueCount 1 + retValueCount=
+        context .outArgNames [] for .else
             continue
           end =:: retName
-          retValueCount 0 != if
-            retValueCount StackModType .ROTATE op .pos opStackMod list.append
+          stackValCount 1 u> if
+            stackValCount 1 - StackModType .ROTATE op .pos opStackMod list.append
           end
           retName idContext id.getIdData .else
             "out-arg has no id-data" ..panic
           end
             $ [] .valueType =:: ptrType
           id.asIdInfo ptrType <$ op .pos opGetId list.append
-          _BACKEND_ .QBE ! or context .outArgNames [] 0 slice.get .and .and retName NameId.eq if
+          _BACKEND_ .QBE ! if
             0 StackModType .COPY op .pos opStackMod list.append
-            retValueCount 1 + retValueCount=
-            -1 retValueCount - StackModType .ROTATE op .pos opStackMod list.append
+            stackValCount -_ StackModType .ROTATE op .pos opStackMod list.append
+          else
+            stackValCount 1 - stackValCount=
           end
           ptrType typeContext types.ptrTarget .else "expected out-arg to be pointer" ..panic end
             $ typeContext types.isValueType if
