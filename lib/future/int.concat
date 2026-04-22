@@ -554,15 +554,17 @@ namespace: int
     resultBits MAX_INLINE_BITS u< if
       resultBits 64 u< if
         a asI64u IntConv.unwrap
-          b asI64u IntConv.unwrap -
-        fromU64
-          aSign 0 < if negate end
+          b asI64u IntConv.unwrap
+          $1 $1 u< $ =:: swap if >$ end
+        - fromU64
+          aSign 0 < swap ^ if negate end
         return
       else resultBits 128 u< _if
         a asI128u IntConv.unwrap
-          b asI128u IntConv.unwrap -
-        fromU128
-          aSign 0 < if negate end
+          b asI128u IntConv.unwrap
+          $1 $1 u< $ =:: swap if >$ end
+        - fromU128
+          aSign 0 < swap ^ if negate end
         return
       end
     end
