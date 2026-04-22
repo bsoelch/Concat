@@ -39,8 +39,8 @@ namespace: int
     end
     proc( i32 : remainder Digit : a i32 : b -> i32 #+remainder+# Digit #+res+# ) =>: udivModc32
       remainder
-        i64 cast.u 32 << a i64 cast.u 32 >> | b i64.udivMod32to32 =:: resHi
-        i64 cast.u 32 << a i64 cast.u 0xffff_ffff & | b i64.udivMod32to32 =:: resLow
+        i64 cast.u 32 << a i64 cast.u 32 >>> | b i64.udivMod32to32 >$ =:: resHi
+        i64 cast.u 32 << a i64 cast.u 0xffff_ffff & | b i64.udivMod32to32 >$ =:: resLow
       resHi i64 cast.u 32 << resLow i64 cast.u | Digit cast.u
     end
     proc( Digit : remainder Digit : a i64 : b -> Digit #+remainder+# Digit #+res+# ) =>: udivModc64
@@ -1392,7 +1392,16 @@ namespace: int
     end
 ## division
     proc( Digit slice : a i32 : b Digit slice.mut : divData -> Digit slice.mut #+: divData+# i32 #+: rem+# ) =>: udivMod32
-      "unimplemented: udivMod32" ..panic
+      a .length 1 - =:: mut: resIndex
+      0
+        a slice.reversed for
+          b Digit.udivModc32 divData resIndex =[]
+        finally resIndex 1 - resIndex= end
+        resIndex -1 == "resIndex is zero" assert
+        divData
+          a .length >$ .length=
+        removeLeadingZeros
+      >$
     end
     proc( Digit slice : a i64 : b Digit slice.mut : divData -> Digit slice.mut #+: divData+# i64 #+: rem+# ) =>: udivMod64
       b i32.UMAX u<= if a b i32 cast.u divData udivMod32 i64 cast.u return end
