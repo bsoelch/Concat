@@ -754,7 +754,6 @@ namespace: int
       i32 cast FLAG_REMAINDER & ?
     end
   end
-
   proc( int : a int : b DivideOperation : divOp -> int : div int : rem ) =>: divRem0
     a sign
       $ 0 == if ..drop a free b free ZERO ZERO return end
@@ -782,17 +781,17 @@ namespace: int
         b asI64 IntConv.unwrap =:: shadow: b
         a asI64 IntConv.unwrap b i64.divRem =:: rem0 =:: div0
         divOp DivideOperation.isFloor and aSign bSign != and rem0 ? if
-          div0 1 - fromU64 b rem0 + fromU64 return
+          div0 1 - fromI64 b rem0 + fromI64 return
         else
-          div0 fromU64 rem0 fromU64 return
+          div0 fromI64 rem0 fromI64 return
         end
       else
         b asI128 IntConv.unwrap =:: shadow: b
         a asI128 IntConv.unwrap b i128.divRem =:: rem0 =:: div0
         divOp DivideOperation.isFloor and aSign bSign != and rem0 ? if
-          div0 i128.ONE - fromU128 b rem0 + fromU128 return
+          div0 i128.ONE - fromI128 b rem0 + fromI128 return
         else
-          div0 fromU128 rem0 fromU128 return
+          div0 fromI128 rem0 fromI128 return
         end
       end
     end
