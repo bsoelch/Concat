@@ -43,9 +43,9 @@ namespace: int
         i64 cast.u 32 << a i64 cast.u 0xffff_ffff & | b i64.udivMod32to32 =:: resLow
       resHi i64 cast.u 32 << resLow i64 cast.u | Digit cast.u
     end
-    proc( Digit : remainder Digit : a Digit : b -> Digit #+remainder+# Digit #+res+# ) =>: udivModc
+    proc( Digit : remainder Digit : a i64 : b -> Digit #+remainder+# Digit #+res+# ) =>: udivModc64
       remainder i64 cast.u a i64 cast.u i128.create
-         b i64 cast.u i128.udivMod64to64 Digit cast.u
+         b  i128.udivMod64to64 Digit cast.u
       >$ Digit cast.u
     end
     ## 0 AAAAAAAA 3 -> AAAAA000 AAA
@@ -1391,7 +1391,11 @@ namespace: int
       a a res mul return
     end
 ## division
+    proc( Digit slice : a i32 : b Digit slice.mut : divData -> Digit slice.mut #+: divData+# i32 #+: rem+# ) =>: udivMod32
+      "unimplemented: udivMod32" ..panic
+    end
     proc( Digit slice : a i64 : b Digit slice.mut : divData -> Digit slice.mut #+: divData+# i64 #+: rem+# ) =>: udivMod64
+      b i32.UMAX u<= if a b i32 cast.u divData udivMod32 i64 cast.u return end
       "unimplemented: udivMod64" ..panic
     end
     proc( Digit slice : a Digit slice : b Digit slice.mut : divData Digit slice.mut : remData bool : needRemainder -> Digit slice.mut #+: divData+# Digit slice.mut #+: remData+# ) =>: udivMod
