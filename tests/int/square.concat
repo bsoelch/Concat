@@ -1,0 +1,13 @@
+import future/int
+import print
+proc( int : x -> ) =>: printInt
+  0 sb.create
+    x int.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
+proc( -> ) =>: export: main
+  { -1:i64 -1 -1 } slice.wrap false int.fromSlice =:: a
+  a printInt
+  a int.square printInt
+end
