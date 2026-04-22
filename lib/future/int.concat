@@ -153,7 +153,10 @@ namespace: int
     digitCount 0 == if ZERO return end
     digitCount prepareCap =:: targetDigits
     targetDigits .data digits .data digitCount mem.copy ..drop
-    targetDigits .data IntData.fromPtr sign IntData.setSign digitCount int new
+    targetDigits sign fromRawDigits
+  end
+  proc( Digit slice.mut : digits bool : shadow: sign -> int ) =>: fromRawDigits
+    digits .data IntData.fromPtr sign IntData.setSign digits .length int new
   end
   proc( i64 slice : digits bool : shadow: sign -> int ) =>: export: fromI64slice
     digits .data Digit ptr.raw cast digits .length slice.create sign fromDigits
@@ -274,6 +277,7 @@ namespace: int
   ## TODO! interpreter currently cannot handle running IntData.fromInt at compile-time
   { 0 IntData cast 0 } int =: ZERO
   { 0 IntData cast 1 } int =: ONE
+  { IntData.FLAG_SIGN IntData cast 1 } int =: MINUS_ONE
   ##0 fromI32 =:: ZERO
   ##1 fromI32 =:: ONE
   ##-1 fromI32 =:: NEGATIVE_ONE
@@ -533,7 +537,7 @@ namespace: int
       resultDigits prepareCap
     end =:: dstData
     aData bData dstData _impl.add =:: resData
-    resData .data IntData.fromPtr aSign 0 < IntData.setSign resData .length int new
+    resData aSign 0 < fromRawDigits
       a free b free
     return
   end
@@ -574,10 +578,10 @@ namespace: int
     aData bData _impl.cmp =:: c
     c 0 < if
       aData bData dstData _impl.sub =:: resData
-      resData .data IntData.fromPtr aSign 0 < IntData.setSign resData .length int new
+      resData aSign 0 < fromRawDigits
     else c 0 > _if
       bData aData dstData _impl.sub =:: resData
-      resData .data IntData.fromPtr aSign 0 > IntData.setSign resData .length int new
+      resData aSign 0 > fromRawDigits
     else
       ZERO
     end
@@ -671,13 +675,13 @@ namespace: int
         a asI64u IntConv.unwrap
           b asI64u IntConv.unwrap *
         fromU64
-          aSign bSign * 0 < if negate end
+          aSign bSign != if negate end
         return
       else resultBits 128 u< _if
         a asI128u IntConv.unwrap
           b asI128u IntConv.unwrap *
         fromU128
-          aSign bSign * 0 < if negate end
+          aSign bSign != if negate end
         return
       end
     end
@@ -697,12 +701,12 @@ namespace: int
       end =:: dstData
     isSquare if
       aData dstData _impl.square =:: resData
-      resData .data IntData.fromPtr aSign bSign * 0 < IntData.setSign resData .length int new
+      resData aSign bSign != fromRawDigits
         a free
       return
     else
       aData bData dstData _impl.mul =:: resData
-      resData .data IntData.fromPtr aSign bSign * 0 < IntData.setSign resData .length int new
+      resData aSign bSign != fromRawDigits
         a free b free
       return
     end
@@ -725,38 +729,128 @@ namespace: int
       resultDigits prepareCap
     end =:: dstData
     aData dstData _impl.square =:: resData
-    resData .data IntData.fromPtr resData .length int new
+    resData false fromRawDigits
       a free
     return
   end
   proc( int -> int ) =>: export: sqrt
     "unimplemented: sqrt" ..panic
   end
-  enum( DIV REM DIV_REM FLOOR_DIV MOD DIV_MOD ) =:: DivideResult
-  proc( int : a int : b DivideResult -> int : div int : rem ) =>: divRem0
-    ## 1. handle signs
-    ## 2. handle small numbers
-    ## 3. choose good division algorithm
-    ## 4. create result
-    "unimplemented: divRem" ..panic
+  i32 =:: DivideOperation
+  namespace: DivideOperation
+    1 =:: FLAG_DIV
+    2 =:: FLAG_REMAINDER
+    4 =:: FLAG_FLOOR
+    FLAG_DIV DivideOperation cast =:: DIV
+    FLAG_REMAINDER DivideOperation cast =:: REM
+    FLAG_DIV FLAG_REMAINDER | DivideOperation cast =:: DIV_REM
+    FLAG_DIV FLAG_FLOOR | DivideOperation cast =:: FLOOR_DIV
+    FLAG_REMAINDER FLAG_FLOOR | DivideOperation cast =:: MOD
+    FLAG_DIV FLAG_REMAINDER |  FLAG_FLOOR | DivideOperation cast =:: DIV_MOD
+    proc( DivideOperation -> bool ) =>: isFloor
+      i32 cast FLAG_FLOOR & ?
+    end
+    proc( DivideOperation -> bool ) =>: needRemainder
+      i32 cast FLAG_REMAINDER & ?
+    end
+  end
+
+  proc( int : a int : b DivideOperation : divOp -> int : div int : rem ) =>: divRem0
+    a sign
+      $ 0 == if ..drop a free b free ZERO ZERO return end
+    =:: aSign
+    b sign
+      $ 0 == if "division by zero" ..panic end ## TODO? error handling
+    =:: bSign
+    a bitLength =:: aBits
+    b bitLength =:: bBits
+    a b ucmp =:: c
+    c 0 < if ## |a| < |b|
+      divOp DivideOperation.isFloor and aSign bSign != if
+        MINUS_ONE a b add return
+      else
+        b free ZERO a return
+      end
+    else c 0 == _if ## |a| == |b|
+      a free b free aSign bSign == if ONE else MINUS_ONE end ZERO return
+    end
+    ## |a| > |b|
+    aBits bBits - 1 + =:: resultBits
+    ## handle small results
+    aBits 128 u< and resultBits MAX_INLINE_BITS u< if
+      aBits 64 u< if
+        b asI64 IntConv.unwrap =:: shadow: b
+        a asI64 IntConv.unwrap b i64.divRem =:: rem0 =:: div0
+        divOp DivideOperation.isFloor and aSign bSign != and rem0 ? if
+          div0 1 - fromU64 b rem0 + fromU64 return
+        else
+          div0 fromU64 rem0 fromU64 return
+        end
+      else
+        b asI128 IntConv.unwrap =:: shadow: b
+        a asI128 IntConv.unwrap b i128.divRem =:: rem0 =:: div0
+        divOp DivideOperation.isFloor and aSign bSign != and rem0 ? if
+          div0 i128.ONE - fromU128 b rem0 + fromU128 return
+        else
+          div0 fromU128 rem0 fromU128 return
+        end
+      end
+    end
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    Digit MAX_INLINE_DIGITS array : mut: bufB
+    a bufA@ asSlice =:: aData
+    b bufB@ asSlice =:: bData
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
+    bBits 64 u<= if
+      b asI64u IntConv.unwrap =:: shadow: b
+      a resultDigits asWritableBuffer .else
+        resultDigits prepareCap
+      end =:: divData
+      aData b divData _impl.udivMod64 =:: rem0 =:: divDigits
+      divOp DivideOperation.isFloor and aSign bSign != and rem0 ? if
+        divDigits aSign bSign != fromRawDigits ONE sub b i64.abs rem0 - fromU64
+          a free
+        return
+      else
+        divDigits aSign bSign != fromRawDigits rem0 fromU64 aSign 0 < setSign
+          a free
+        return
+      end
+    end
+    bBits DIGIT_BITS 1 - + DIGIT_BITS / =:: remDigitCount
+    resultDigits prepareCap =:: divData
+    ## TODO? when is inplace division possible
+    a remDigitCount asWritableBuffer .else
+      remDigitCount prepareCap
+    end =:: remData
+    aData bData divData remData divOp DivideOperation.needRemainder _impl.udivMod =:: remDigits =:: divDigits
+    divOp DivideOperation.isFloor and aSign bSign != and remDigits .length 0 != if
+      divDigits aSign bSign != fromRawDigits ONE sub b remDigits aSign 0 < fromRawDigits add
+        a free
+      return
+    else
+      divDigits aSign bSign != fromRawDigits remDigits aSign 0 < fromRawDigits
+        a free b free
+      return
+    end
   end
   proc( int int -> int : div int : rem ) =>: export: divRem
-    DivideResult .DIV_REM divRem0
+    DivideOperation.DIV_REM divRem0
   end
   proc( int int -> int ) =>: export: div
-    DivideResult .DIV divRem0 free
+    DivideOperation.DIV divRem0 free
   end
   proc( int int -> int ) =>: export: rem
-    DivideResult .REM divRem0 >$ free
+    DivideOperation.REM divRem0 >$ free
   end
   proc( int int -> int #+div+# int #+rem+# ) =>: export: divMod
-    DivideResult .DIV_MOD divRem0
+    DivideOperation.DIV_MOD divRem0
   end
   proc( int int -> int ) =>: export: floorDiv
-    DivideResult .FLOOR_DIV divRem0 free
+    DivideOperation.FLOOR_DIV divRem0 free
   end
   proc( int int -> int ) =>: export: mod
-    DivideResult .MOD divRem0 >$ free
+    DivideOperation.MOD divRem0 >$ free
   end
   proc( int : mut: a int : mut: b -> int ) =>: export: gcd
     a abs a=
@@ -940,7 +1034,7 @@ namespace: int
       resultDigits prepareCap
     end =:: dstData
     aData aSign bData bSign dstData _impl.bitAnd =:: resData
-    resData .data IntData.fromPtr aSign 0 < and bSign 0 < end IntData.setSign resData .length int new
+    resData aSign 0 < and bSign 0 < end fromRawDigits
       a free b free
     return
   end
@@ -1012,7 +1106,7 @@ namespace: int
       resultDigits prepareCap
     end =:: dstData
     aData aSign bData bSign dstData _impl.bitOr =:: resData
-    resData .data IntData.fromPtr aSign 0 < or bSign 0 < end IntData.setSign resData .length int new
+    resData aSign 0 < or bSign 0 < end fromRawDigits
       a free b free
     return
   end
@@ -1036,10 +1130,10 @@ namespace: int
         a free b free
       resData .length switch
         0 case ZERO return
-        1 case resData 0 [] i64 cast.u  fromU64 aSign bSign * 0 < if negate end return
+        1 case resData 0 [] i64 cast.u  fromU64 aSign bSign != if negate end return
         2 case
           resData 1 [] i64 cast.u  resData 0 [] i64 cast.u  i128.create fromU128
-            aSign bSign * 0 < if negate end
+            aSign bSign != if negate end
           return
         default "unexpected number of digits" ..panic
       end
@@ -1049,7 +1143,7 @@ namespace: int
       resultDigits prepareCap
     end =:: dstData
     aData aSign bData bSign dstData _impl.bitXor =:: resData
-    resData .data IntData.fromPtr aSign bSign * 0 < IntData.setSign resData .length int new
+    resData aSign bSign != fromRawDigits
       a free b free
     return
   end
@@ -1067,7 +1161,7 @@ namespace: int
       resultDigits prepareCap
     end =:: dstData
     aData dstData n iSize cast.u _impl.shl =:: resData
-    resData .data IntData.fromPtr a sign 0 < IntData.setSign resData .length int new
+    resData a sign 0 < fromRawDigits
       a free
     return
   end
@@ -1104,7 +1198,7 @@ namespace: int
         return
       end
     end
-    resData .data IntData.fromPtr a sign 0 < IntData.setSign resData .length int new
+    resData a sign 0 < fromRawDigits
       a free
     return
   end
@@ -1295,6 +1389,17 @@ namespace: int
       ## TODO? dedicated algorithms for squaring
       a a res mul return
     end
+## division
+    proc( Digit slice : a i64 : b Digit slice.mut : divData -> Digit slice.mut #+: divData+# i64 #+: rem+# ) =>: udivMod64
+      "unimplemented: udivMod64" ..panic
+    end
+    proc( Digit slice : a Digit slice : b Digit slice.mut : divData Digit slice.mut : remData bool : needRemainder -> Digit slice.mut #+: divData+# Digit slice.mut #+: remData+# ) =>: udivMod
+      divData .data remData .data != "results do not overlap" assert
+      divData .data b .data != "results do not overlap with b" assert
+      remData .data b .data != "results do not overlap with b" assert
+      b .length 0 != "b is non-empty" assert
+      "unimplemented: udivMod" ..panic
+    end
 
     struct( Digit slice : digits i32 : shadow: sign bool : hadNonzero ) =:: DigitIterator
     namespace: DigitIterator
@@ -1366,7 +1471,7 @@ namespace: int
           bItr DigitIterator.next >$ bItr=
         ^ res i =[]
       end
-      aSign bSign * 0 < if
+      aSign bSign != if
         ## decode twos complement if result is negative
         res slice.freeze -1 DigitIterator.create =:: mut: resItr
         res .length for =:: i
