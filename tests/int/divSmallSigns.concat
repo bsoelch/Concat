@@ -1,0 +1,18 @@
+import future/int
+import print
+proc( int : x -> ) =>: printInt
+  0 sb.create
+    x int.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
+proc( -> ) =>: export: main
+   11 int.fromI32  3 int.fromI32 int.divRem printInt printInt
+  -11 int.fromI32  3 int.fromI32 int.divRem printInt printInt
+   11 int.fromI32 -3 int.fromI32 int.divRem printInt printInt
+  -11 int.fromI32 -3 int.fromI32 int.divRem printInt printInt
+   11 int.fromI32  3 int.fromI32 int.divMod printInt printInt
+  -11 int.fromI32  3 int.fromI32 int.divMod printInt printInt
+   11 int.fromI32 -3 int.fromI32 int.divMod printInt printInt
+  -11 int.fromI32 -3 int.fromI32 int.divMod printInt printInt
+end
