@@ -1,0 +1,8 @@
+import numbers/i128
+import numbers/print
+
+proc( -> ) =>: main
+  0x11011100101110 0x111100010011010 i64.pmul
+    $ .hi 0x100111111100 == "hi" assert
+  .low 0x1110001011001100 == "low" assert
+end

@@ -198,6 +198,21 @@ namespace: i64
     smul2 ..drop
   end
 end
+namespace: i32
+  proc( i32 : a i32 : b -> i64 ) =>: export: pmul
+    a i64 cast.u =:: mut: x
+    0:i64
+      b while $ 0 != do
+        $ 1 & ? if
+          >$ x ^ <$
+        end
+      finally
+        x 1 << x=
+        1 >>>
+      end ..drop
+    return
+  end
+end
 
 overload: export: -_ i64.neg  end
 overload: export: +  i64.add  end
