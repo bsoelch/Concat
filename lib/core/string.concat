@@ -1,0 +1,57 @@
+import core/ptr
+import core/slice
+
+char8 slice =:: export: string
+
+namespace: string
+  { "" : data 0:iSize : length } string =: export: empty
+
+  proc( char8 ptr.raw iSize -> string ) =>: export: createZ
+    string new return
+  end
+  proc( char8 ptr.raw i32 -> string ) =>: export: create32
+    iSize cast.u createZ
+  end
+  proc( char8 ptr.raw i64 -> string ) =>: export: create64
+    iSize cast.u createZ
+  end
+  overload: export: create createZ create32 create64 end
+  proc( i64 : auto: k  char8 k ptr : str -> string ) =>: export: wrap
+    str k create return
+  end
+  proc( char8 slice -> string ) =>: export: fromChars
+    string cast
+  end
+  proc( string -> char8 slice ) =>: export: chars
+    char8 slice cast
+  end
+  proc( i8 slice : arr -> string ) =>: export: fromBytes
+    arr .data char8 ptr.raw cast arr .length create
+  end
+  proc( string : str -> i8 slice ) =>: export: bytes
+    str .data i8 ptr.raw cast str .length slice.create
+  end
+
+  proc( string : str iSize : index -> char8 ) =>: export: charAt_Z
+    str char8 slice cast index slice.getValue return
+  end
+  proc( string : str i32 : index -> char8 ) =>: export: charAt_32
+    str char8 slice cast index slice.getValue return
+  end
+  proc( string : str i64 : index -> char8 ) =>: export: charAt_64
+    str char8 slice cast index slice.getValue return
+  end
+  overload: export: charAt
+    charAt_Z
+    charAt_32
+    charAt_64
+  end
+end
+proc( char8 ptr.raw : p iSize : k -> string ) =>: static: export: :string
+  p k string new
+end
+( char8 ptr.raw iSize -> string ) : static: export: alias: :s :string
+
+overload: export: merge: []
+  string.charAt
+end
