@@ -4,7 +4,6 @@ import optional
 import stringBuilder
 import numbers/intToStr
 import print
-using std.literals.
 
 proc( i32 -> i32 ) =>: i32Hash end
 proc( i32 i32 -> bool ) =>: i32Eq  == end

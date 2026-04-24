@@ -1,6 +1,5 @@
 import string
 import unicode
-using std.literals.
 
 proc( -> ) =>: main
   "This is a string literal":s =:: str

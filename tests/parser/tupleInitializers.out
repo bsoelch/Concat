@@ -4,5 +4,5 @@ stack:
 -----------------
 stack:
 -----------------
-i32 slice pushed at ./tests/parser/tupleInitializers.concat:21:7
+i32 slice2 pushed at ./tests/parser/tupleInitializers.concat:21:7
 -----------------

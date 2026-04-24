@@ -1,7 +1,7 @@
 import future/int
 import print
 import numbers/print
-using std.literals.
+
 proc( int : x -> ) =>: printInt
   0 sb.create
     x int.sbAppendX

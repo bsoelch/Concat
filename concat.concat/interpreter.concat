@@ -2,7 +2,6 @@ import map
 import arenaAlloc
 import string
 import print
-using std.literals.
 
 import "interpreter/operators.concat"
 import "identifiers.concat"

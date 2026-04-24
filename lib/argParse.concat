@@ -1,7 +1,6 @@
 import stringBuilder
 import print
 import sys
-using std.literals.
 
 namespace: args
   enum( DEFAULT EXTENDED SPECIAL IGNORE ) =:: export: HelpLevel

@@ -1,12 +1,11 @@
 0
-741
+725
 5
 import file
 import numbers/print
-using std.literals.
 
 proc( -> ) =>: export: main
-  "./tests/lib/file.concat":s file.OpenMode .READ file.open
+  "./tests/lib/file.concat\x00":s file.OpenMode .READ file.open
     file.readAll =:: contents
     $ file.getError i32 cast.s io.println
   file.close

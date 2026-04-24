@@ -1,5 +1,4 @@
 import numbers/print
-using std.literals.
 
 union(
   i32 : Int

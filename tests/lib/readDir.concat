@@ -1,7 +1,6 @@
 import file
 import print
 import list
-using std.literals.
 
 proc( -> ) =>: main
   "./tests/":s file.OpenMode .DIR file.open

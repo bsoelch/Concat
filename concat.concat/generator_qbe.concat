@@ -1,6 +1,5 @@
 import string
 import file
-using std.literals.
 
 import "program.concat"
 import "measure.concat"

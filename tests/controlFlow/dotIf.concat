@@ -1,6 +1,5 @@
 import optional
 import numbers/print
-using std.literals.
 
 proc( i32 optional -> ) =>: printOption
   .if

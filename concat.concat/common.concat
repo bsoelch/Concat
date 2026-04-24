@@ -2,7 +2,6 @@
 import list
 import stringBuilder
 import numbers
-using std.literals.:s
 
 "main":s =:: export: MAIN_NAME ## name of main procedure
 

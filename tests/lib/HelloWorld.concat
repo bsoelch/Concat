@@ -1,5 +1,4 @@
 import print
-using std.literals.
 
 proc( -> ) =>: main
   "Hello World!":s io.println

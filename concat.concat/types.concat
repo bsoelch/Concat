@@ -5,7 +5,6 @@ import string
 import stringBuilder
 import arenaAlloc
 import map
-using std.literals.
 
 import "names.concat"
 import "constants.concat"

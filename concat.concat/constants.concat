@@ -5,7 +5,6 @@ import unicode
 import "files.concat"
 import "names.concat"
 import "types.concat"
-using std.literals.
 
 type : export: ConstValue
 struct( ConstValue ptr : value i32 : eltIndex ) =:: export: UnionConstant

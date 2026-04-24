@@ -7,7 +7,6 @@ import "identifiers.concat"
 type : export: ProgramContext
 type : export: ProcFlags
 import "builtIns.concat"
-using std.literals.
 
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification

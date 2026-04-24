@@ -1,5 +1,5 @@
 import file
-using std.literals.
+
 namespace: io
   proc( char8 : c -> ) =>: export: printC
     file.stdOut c@ string.wrap file.write ..drop

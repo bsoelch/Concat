@@ -5,8 +5,6 @@ import exec
 import file
 import argParse
 
-using std.literals.
-
 import "parser.concat"
 import "typeCheck.concat"
 import "usageAnalysis.concat"

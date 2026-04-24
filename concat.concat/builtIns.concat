@@ -1,5 +1,4 @@
 import string
-using std.literals.
 
 import "program.concat"
 

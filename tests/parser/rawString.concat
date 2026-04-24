@@ -1,5 +1,4 @@
 import print
-using std.literals.
 
 proc( -> ) =>: main
  `surrounding test with `` creates a raw-string.

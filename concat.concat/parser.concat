@@ -5,7 +5,6 @@ import string
 import numbers
 import unicode
 import file
-using std.literals.
 
 import "program.concat"
 import "files.concat"

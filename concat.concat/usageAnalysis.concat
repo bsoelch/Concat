@@ -3,7 +3,6 @@ import arenaAlloc
 import "program.concat"
 import "branchTree.concat"
 using id.IdentifierFlag
-using std.literals.
 
 iSize =:: VariableUse ## use low two bits for type (Read,Write,Label) and remaining bits for location
 namespace: VariableUse

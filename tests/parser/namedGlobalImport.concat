@@ -1,6 +1,5 @@
 import print
 
-using std.literals.
 using: println io.println
 
 proc( -> ) =>: main
