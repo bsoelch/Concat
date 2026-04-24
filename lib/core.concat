@@ -24,3 +24,6 @@ import core/system
 
 import core/itr
 import core/unionElement
+
+import core/optional
+import core/slice

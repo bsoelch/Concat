@@ -1,7 +1,7 @@
 import mem
+import slice
 import list
 import string
-import slice
 
 char8 list =:: export: stringBuilder
 namespace: sb
