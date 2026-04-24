@@ -2,3 +2,4 @@ import core/i8
 import core/i16
 import core/i32
 import core/i64
+import core/i128

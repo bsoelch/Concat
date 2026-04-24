@@ -1,5 +1,7 @@
-import core/integers
-import numbers
+import core/i8
+import core/i16
+import core/i32
+import core/i64
 
 struct(
   i64 : hi
@@ -18,6 +20,9 @@ namespace: i128
   end
   proc( i64 : low -> i128 ) =>: export: fromI64
     low 0 < if -1:i64 else 0:i64 end low i128 new
+  end
+  proc( i32 : low -> i128 ) =>: export: fromU32
+    0 low i64 cast.u i128 new
   end
   proc( i64 : low -> i128 ) =>: export: fromU64
     0 low i128 new
@@ -247,6 +252,40 @@ namespace: i128
   end
   proc(
     i128 : a
+    i64 : b
+  -> i128 ) =>: export: udiv64
+    a b udivMod64 ..drop
+  end
+  proc(
+    i128 : a
+    i64 : b
+  -> i64 ) =>: export: umod64
+    a b udivMod64 ..swap ..drop
+  end
+  proc(
+    i128 : a
+    i32 : b
+  ->
+    i128 #+division+#
+    i32 #+remainder+#
+  ) =>: export: udivMod32
+    ## TODO? dedicated algorithm
+    a b fromU32 udivMod .low i32 cast.u
+  end
+  proc(
+    i128 : a
+    i32 : b
+  -> i128 ) =>: export: udiv32
+    a b udivMod32 ..drop
+  end
+  proc(
+    i128 : a
+    i32 : b
+  -> i32 ) =>: export: umod32
+    a b udivMod32 ..swap ..drop
+  end
+  proc(
+    i128 : a
     i128 : b
   ->
     i128 #+division+#
@@ -351,100 +390,6 @@ namespace: i128
   -> i128 ) =>: export: rem
     a b divRem ..swap ..drop
   end
-
-  proc(
-    string : str
-    i32 : base
-    bool : unsigned
-  -> i128 number.ParserError ) =>: export: parse
-    using number.
-    false =:: mut: overflow
-    false =:: mut: signedOverflow
-    str
-      parseSign =:: sign
-      ..dup .length 0:iSize == if ..drop
-        0 0 i128 new ParserError .EMPTY return
-      end
-      base 0 == if
-        resolveBase
-      else
-        base
-      end =:: mBase
-      mBase 0 < if ..drop
-        0 0 i128 new ParserError .INVALID_CHAR return
-      else mBase 2 < or mBase 62 > _if ..drop
-        0 0 i128 new ParserError .INVALID_BASE return
-      end
-      -1:i64 -1:i64 i128 new =:: maxUnsigned
-      unsigned if
-        maxUnsigned
-      else sign _if
-        -0x8000_0000_0000_0000:i64 0:i64 i128 new
-      else
-        0x7fff_ffff_ffff_ffff:i64 -1:i64 i128 new
-      end =:: maxVal
-      0 0 i128 new =:: mut: res
-      0 mBase i64 cast.u i128 new =:: baseI128
-      maxUnsigned baseI128 u/ =:: maxSafeUnsigned
-      maxVal baseI128 u/ =:: maxSafe ## XXX? udiv i128 by i64
-      0:iSize while ..dup ..over.2 .length u< do =:: i
-        ..dup i string.charAt =:: c
-        i 0:iSize iSize.sgt and c '_' == or c '\'' == if
-          i 1:iSize + continue ## ignore _ and ' in numbers
-        end
-        c mBase parseDigit
-          $ .DIGIT ! if
-            .IGNORED and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
-            ..drop.2
-            0 0 i128 new ParserError .INVALID_CHAR return
-          else ..drop end
-        i64 cast.u i128.fromU64 =:: delta
-        res maxSafeUnsigned u> if
-          true overflow=
-        else res maxSafe u> _if
-          true signedOverflow=
-        end
-        res
-          baseI128 * ## XXX mul i128 by i64  ## XXX add/sub i128 to/from i64
-          res maxSafeUnsigned i128.eq and $ maxUnsigned delta - u> if
-            true overflow=
-          else res maxSafe i128.eq and $ maxVal delta - u> _if
-            true signedOverflow=
-          end
-          delta +
-        res=
-        i 1:iSize +
-      end ..drop
-    ..drop
-    res
-      sign and -_ unsigned if ParserError .SIGN return end
-      overflow if ParserError .OVERFLOW return end
-      signedOverflow if ParserError .UNSIGNED return end
-    ParserError .NONE return
-  end
-end
-## TODO appendI128?? ## base, signed
-namespace: std.literals
-  proc( char8 ptr.raw : chars iSize : k -> i128 ) =>: static: export: :i128
-    char8 128 array : mut: errMessageBuffer
-    chars k string.create =:: str
-    str 0 false i128.parse =:: err
-    err .NONE or err .UNSIGNED if
-      return
-    else err .OVERFLOW _if
-      errMessageBuffer@ sb.wrapBuffer
-        "integer literal overflows size for type i128: `" sb.appendS
-        str sb.appendStr
-        '`' sb.appendC
-      sb.asStr ..compiler.warning
-      return
-    end
-    errMessageBuffer@ sb.wrapBuffer
-      "invalid integer constant: `" sb.appendS
-      str sb.appendStr
-      '`' sb.appendC
-    sb.asStr ..compiler.error
-  end
 end
 namespace: i64
   proc( i64 : a i64 : b -> i128 ) =>: export: pmul
@@ -466,8 +411,8 @@ overload: / i128.div end
 overload: % i128.rem end
 ## overload: // i128.floorDiv end
 ## overload: %% i128.mod end
-overload: u/ i128.udiv end
-overload: u% i128.umod end
+overload: u/ i128.udiv i128.udiv64 i128.udiv32 end
+overload: u% i128.umod i128.umod64 i128.umod32 end
 overload: ~ i128.flip end
 overload: & i128.and end
 overload: | i128.or end

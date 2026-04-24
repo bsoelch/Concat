@@ -2,10 +2,10 @@ struct(
   ..type.align16
   i64 : low
   i64 : hi
-) =:: i128
+) =:: bits128
 
 proc( -> ) =>: main
-  i128 ..types.size 16:iSize == "size 16" assert
-  i128 ..types.alignment 16:iSize == "alignment 16" assert
-  i128 ..types.stride 16:iSize == "stride 16" assert
+  bits128 ..types.size 16:iSize == "size 16" assert
+  bits128 ..types.alignment 16:iSize == "alignment 16" assert
+  bits128 ..types.stride 16:iSize == "stride 16" assert
 end

@@ -1,4 +1,3 @@
-import numbers/i128
 import numbers/print
 
 proc( -> ) =>: main

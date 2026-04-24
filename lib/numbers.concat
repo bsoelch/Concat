@@ -7,13 +7,14 @@ import string
 
 namespace: number
   proc( type : auto: T  T : x i64 : p -> T ) =>: export: powI
+    T f128 == if f128.ONE else 1 T cast end =:: ONE
     p 0 == if
-      1 T cast return
+      ONE return
     else p 0 < _if
-      1 T cast x p -_ powI / return
+      ONE x p -_ powI / return
     end
     x =:: mut: xPow
-    1 T cast
+    ONE
       p while ..dup 0 != do
         ..dup 1 & 0 != if
         ..swap
@@ -280,4 +281,216 @@ namespace: number
     end
     hasDot or e 0:iSize iSize.sgt if ParserError .NONE return else ParserError .INT return end
   end
+end
+namespace: i128
+  proc(
+    string : str
+    i32 : base
+    bool : unsigned
+  -> i128 number.ParserError ) =>: export: parse
+    using number.
+    false =:: mut: overflow
+    false =:: mut: signedOverflow
+    str
+      parseSign =:: sign
+      ..dup .length 0:iSize == if ..drop
+        0 0 i128 new ParserError .EMPTY return
+      end
+      base 0 == if
+        resolveBase
+      else
+        base
+      end =:: mBase
+      mBase 0 < if ..drop
+        0 0 i128 new ParserError .INVALID_CHAR return
+      else mBase 2 < or mBase 62 > _if ..drop
+        0 0 i128 new ParserError .INVALID_BASE return
+      end
+      -1:i64 -1:i64 i128 new =:: maxUnsigned
+      unsigned if
+        maxUnsigned
+      else sign _if
+        -0x8000_0000_0000_0000:i64 0:i64 i128 new
+      else
+        0x7fff_ffff_ffff_ffff:i64 -1:i64 i128 new
+      end =:: maxVal
+      0 0 i128 new =:: mut: res
+      maxUnsigned mBase u/ =:: maxSafeUnsigned
+      maxVal mBase u/ =:: maxSafe ## XXX? udiv i128 by i64
+      0:iSize while ..dup ..over.2 .length u< do =:: i
+        ..dup i string.charAt =:: c
+        i 0:iSize iSize.sgt and c '_' == or c '\'' == if
+          i 1:iSize + continue ## ignore _ and ' in numbers
+        end
+        c mBase parseDigit
+          $ .DIGIT ! if
+            .IGNORED and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
+            ..drop.2
+            0 0 i128 new ParserError .INVALID_CHAR return
+          else ..drop end
+        i64 cast.u i128.fromU64 =:: delta
+        res maxSafeUnsigned u> if
+          true overflow=
+        else res maxSafe u> _if
+          true signedOverflow=
+        end
+        res
+          mBase i128.fromU32 *
+          res maxSafeUnsigned i128.eq and $ maxUnsigned delta - u> if
+            true overflow=
+          else res maxSafe i128.eq and $ maxVal delta - u> _if
+            true signedOverflow=
+          end
+          delta +
+        res=
+        i 1:iSize +
+      end ..drop
+    ..drop
+    res
+      sign and -_ unsigned if ParserError .SIGN return end
+      overflow if ParserError .OVERFLOW return end
+      signedOverflow if ParserError .UNSIGNED return end
+    ParserError .NONE return
+  end
+end
+namespace: f128
+  proc( string : str i32 : base -> f128 number.ParserError ) =>: export: parse
+    using number.
+    false =:: mut: sign
+    0:i64 =:: mut: c
+    false bool =: mut: hasDot
+    0:iSize =:: mut: e
+    0 0 i128 new =:: mut: val
+    1:i64 56 << 0 i128 new =:: mut: maxVal ## higher precision than f128, no overflow in base 62
+    false =:: mut: cStyleHex
+    str
+      ..dup .length 0:iSize == if
+        ..drop 0 0 f128 new ParserError .EMPTY return
+      end
+      ..dup 0 string.charAt '-' == if
+        true sign=
+        1 string.tail
+      else ..dup 0 string.charAt '+' == _if
+        1 string.tail
+      end
+      ..dup .length 0:iSize == if
+        ..drop 0 0 f128 new ParserError .EMPTY return
+      end
+      base 0 == if
+        resolveBase
+      else
+        base
+      end =:: mut: mBase
+      mBase 0 < if ..drop
+        f128.NaN ParserError .INVALID_CHAR return
+      else mBase 2 < or mBase 62 > _if ..drop
+        f128.NaN ParserError .INVALID_BASE return
+      end
+      0:iSize while ..dup ..over.2 .length u< do =:: i
+        ..dup i string.charAt '.' == if
+          i 0:iSize == or hasDot if ..drop ## . cannot be first character
+            f128.NaN ParserError .INVALID_CHAR return
+          end
+          true hasDot=
+        else ..dup i string.charAt mBase isExpChar _if
+          i 0:iSize == if ..drop ##-exp char cannot be first character
+            f128.NaN ParserError .INVALID_CHAR return
+          end
+          i 1:iSize + e=
+          i break
+        else ..dup i string.charAt ..dup 'p' == ..swap 'P' == | mBase 16 == & _if
+          i 0:iSize == if ..drop ##-exp char cannot be first character
+            f128.NaN ParserError .INVALID_CHAR return
+          end
+          i 1:iSize + e=
+          true cStyleHex=
+          10 mBase= ## exponent written in base 10
+          c 4 * c= ## scale c to power of 2
+          i break
+        else
+          $ i string.charAt mBase parseDigit
+            $ .DIGIT ! if
+              .IGNORED and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
+              ..drop.2
+            f128.NaN ParserError .INVALID_CHAR return
+            else ..drop end
+          i64 cast.u i128.fromU64 =:: digit
+          val maxVal < if
+            val mBase i128.fromU32 * digit + val=
+            hasDot if
+              c 1 - c=
+            end
+          else hasDot ! _if
+            c 1 - c=
+          end
+        end
+        i 1:iSize +
+      end ..drop
+      e 0:iSize iSize.sgt if
+        ..dup e string.tail mBase tryParseInt
+          ..dup .NONE ! if =:: err
+            ..drop.2 f128.NaN err return
+          end ..drop
+        c + c=
+      end
+    ..drop
+    cStyleHex if ## calculate powers of 2 instead of powers of base
+      2 mBase=
+    end
+    val f128.fromI128
+      sign if -_ end
+    c 0 >= if
+       mBase f128.fromI32 c powI *
+    else c -1024 > _if
+       mBase f128.fromI32 c -_ powI /
+    else
+       ## split of factor of base^64 to prevent underflow of intermediate results
+       mBase f128.fromI32 c 1024 + -_ powI /
+       mBase f128.fromI32 1024 powI /
+    end
+    hasDot or e 0:iSize iSize.sgt if ParserError .NONE return else ParserError .INT return end
+  end
+end
+## TODO? move to core
+## ? move number parser (as generic) to core/numbers
+## make number parser accessible as <numType>.parse
+proc( char8 ptr.raw : chars iSize : k -> i128 ) =>: static: export: :i128
+  char8 128 array : mut: errMessageBuffer
+  chars k string.create =:: str
+  str 0 false i128.parse =:: err
+  err .NONE or err .UNSIGNED if
+    return
+  else err .OVERFLOW _if
+    errMessageBuffer@ sb.wrapBuffer
+      "integer literal overflows size for type i128: `" sb.appendS
+      str sb.appendStr
+      '`' sb.appendC
+    sb.asStr ..compiler.warning
+    return
+  end
+  errMessageBuffer@ sb.wrapBuffer
+    "invalid integer constant: `" sb.appendS
+    str sb.appendStr
+    '`' sb.appendC
+  sb.asStr ..compiler.error
+end
+proc( char8 ptr.raw : chars iSize : k -> f128 ) =>: static: export: :f128
+  char8 128 array : mut: errMessageBuffer
+  chars k string.create =:: str
+  str 0 f128.parse =:: err
+  err .NONE or err .INT if
+    return
+  else err .OVERFLOW _if
+    errMessageBuffer@ sb.wrapBuffer
+      "float literal overflows size for type f128: `" sb.appendS
+      str sb.appendStr
+      '`' sb.appendC
+    sb.asStr ..compiler.warning
+    return
+  end
+  errMessageBuffer@ sb.wrapBuffer
+    "invalid float constant: `" sb.appendS
+    str sb.appendStr
+    '`' sb.appendC
+  sb.asStr ..compiler.error
 end
