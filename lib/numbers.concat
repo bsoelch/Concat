@@ -64,7 +64,8 @@ namespace: number
       end
     return
   end
-  proc( string -> string i32 ) =>: export: resolveBase
+  proc( string i32 : base -> string i32 ) =>: export: resolveBase
+    base 0 != if base return end
     $ .length 2:iSize u< if
       10 return
     end
@@ -129,11 +130,7 @@ namespace: number
       ..dup .length 0:iSize == if
         ..drop 0 ParserError .EMPTY return
       end
-      base 0 == if
-        resolveBase
-      else
-        base
-      end =:: mBase
+      base resolveBase =:: mBase
       mBase 2 u< or mBase 62 u> if ..drop
         0 ParserError .INVALID_BASE return
       end
@@ -203,11 +200,7 @@ namespace: number
       ..dup .length 0:iSize == if
         ..drop 0 f64 cast ParserError .EMPTY return
       end
-      base 0 == if
-        resolveBase
-      else
-        base
-      end =:: mut: mBase
+      base resolveBase =:: mut: mBase
       mBase 2 u< or mBase 62 u> if ..drop
         f64.NaN ParserError .INVALID_BASE return
       end
@@ -288,11 +281,7 @@ namespace: i128
       ..dup .length 0:iSize == if ..drop
         0 0 i128 new ParserError .EMPTY return
       end
-      base 0 == if
-        resolveBase
-      else
-        base
-      end =:: mBase
+      base resolveBase =:: mBase
       mBase 2 u< or mBase 62 u> if ..drop
         i128.ZERO ParserError .INVALID_BASE return
       end
@@ -366,11 +355,7 @@ namespace: f128
       ..dup .length 0:iSize == if
         ..drop 0 0 f128 new ParserError .EMPTY return
       end
-      base 0 == if
-        resolveBase
-      else
-        base
-      end =:: mut: mBase
+      base resolveBase =:: mut: mBase
       mBase 2 u< or mBase 62 u> if ..drop
         f128.NaN ParserError .INVALID_BASE return
       end
