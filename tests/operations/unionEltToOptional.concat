@@ -1,0 +1,21 @@
+
+union( i32 : I f32 : F ) =:: aUnion
+proc( aUnion : u -> i32 ) =>: intOr0
+  u .I ?? .else
+    0 return
+  end
+end
+proc( aUnion : u -> f32 ) =>: floatOr0
+  u .F ?? .else
+    0 return
+  end
+end
+proc( aUnion ptr : u -> i32 ptr optional ) =>: intOr0P
+  u .I ??
+end
+proc( -> ) =>: export: main
+  42 aUnion .I =:: u
+  u intOr0 42 == "intOr0" assert
+  u floatOr0 0 == "floatOr0" assert
+  u@ intOr0P ? "u@ as int-pointer" assert
+end
