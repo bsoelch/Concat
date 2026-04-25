@@ -65,6 +65,7 @@ union(
   WhileBlockData : While
   SwitchBlockData : Switch
   ProcBlockData : Procedure
+  ProcBlockData : Quotation
   TypeBlockData : TypeBlock
   InitializerBlockData : Initializer
   _ : Namespace
@@ -247,12 +248,12 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openInitialize
   state .openBlocks=
 end
 ## TODO handle initializer blocks
-proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openProcBlock
+proc( FilePosition ptr : pos bool : isQuotation ParserState ptr.mut : state -> ) =>: openProcBlock
   state [] .openBlocks
     ## BlockInfo
       ## ProcBlockData
         state opCount
-      ProcBlockData new BlockInfoData .Procedure
+      ProcBlockData new isQuotation if BlockInfoData .Quotation else BlockInfoData .Procedure end
       NameId optional.empty
       pos
       TmpVarInfo optional.empty
@@ -1261,8 +1262,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "'default' is only allowed in switch-case-blocks" sb.copyPtr blockPos errors appendError
         return
       end
-    else $ "=>":s string.eq or $ "=>:":s string.eq _if =:: opName
+    else $ "=>":s string.eq or $ "=>:":s string.eq or $ "${":s string.eq _if =:: opName
       opName .length 3:iSize == =:: named
+      opName 0 [] '$' == =:: isQuotation
       state [] .currentProcs .length 0:iSize != =:: isNested
       ## TODO? ensure global stack is empty at start of procedure
       char8 32 array : mut: buffer
@@ -1299,14 +1301,18 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState program wordPos =:: procPos
       ## declare procedure name outside procedure
       procImplName Type .Undefined state [] .currentFile ProcId optional.empty true procPos program newProcData =:: procId
-      procId procPos preOpNestedProc state appendOp
+      isQuotation if ## TODO! own pre-op for quotation
+        procId procPos preOpNestedProc state appendOp
+      else
+        procId procPos preOpNestedProc state appendOp
+      end
       named if
         0 StackModType .COPY procPos preOpStackMod state appendOp
         procPos preOpTypeOf state appendOp
         procName procPos preOpInitializeName state appendOp
       end
       state [] .currentProcs procId list.append state .currentProcs=
-      procPos state openProcBlock
+      procPos isQuotation state openProcBlock
       ## TODO? special op for proc-start
       return
     else $ "return":s string.eq _if ..drop
@@ -1442,7 +1448,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             blockStart blockPos state setBlockJump
             BlockType .OVERLOAD blockPos preOpEndBlock state appendOp
           break
-          TypeBlock Initializer With case
+          TypeBlock Initializer With Quotation case
             state closedConstBlock
             ## TODO print block name
             "unexpected 'end' statement in type- or initializer-block" sb.copyPtr
@@ -1614,7 +1620,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state .parsedOps=
           withProcId blockPos preOpTypeWith state appendOp
         return
-        If AndOr While Switch Namespace Procedure Initializer Overload case
+        If AndOr While Switch Namespace Procedure Initializer Overload Quotation case
           "unexpected `" sb.copyPtr
             opName sb.appendStr
             "` statement " sb.appendS
@@ -1638,6 +1644,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           initData .blockStart blockPos state setBlockJump
           BlockType .INITIALIZER blockPos preOpEndBlock state appendOp
         return
+        Quotation .case
+          "unimplemented: closing quotations" ..panic
+        break
         TypeBlock case
           state closedConstBlock
         break
