@@ -20,7 +20,31 @@ namespace: slice
     src .data mem.free
     T slice.emptyMutable return
   end
-  
+
+  proc(
+    type : auto: T
+    T slice.mut : elts
+  -> ) =>: export: reverse
+    ## reverse
+      elts .data
+      elts .length
+    array.reverse
+  end
+  proc(
+    type : auto: T
+    type : auto: C
+    T slice.mut : elts
+    proc( T T C -> i32 ) ptr : fCmp
+    C : context
+  -> ) =>: export: sort
+    ## sort
+      elts .data
+      elts .length
+      fCmp
+      context
+    array.sort
+  end
+
   ( type : T -> type ) =>: export: MapItr
     struct(
       T ptr.raw.mut : shadow: head

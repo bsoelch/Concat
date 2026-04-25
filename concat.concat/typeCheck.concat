@@ -1219,8 +1219,8 @@ proc(
     offset count iSize cast.u + list.setLength
   state .compiledOps=
   ## slice.fill
-    state [] .compiledOps offset list.tailMul
     pos reserveOp
+    state [] .compiledOps offset list.tailMut
   slice.fill
   offset i32 cast.u return
 end
