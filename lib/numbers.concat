@@ -76,25 +76,21 @@ namespace: number
         2 string.tail 2 return
       else intType 'o' == or intType 'O' == _if
         2 string.tail 8 return
-      ## XXX? error on non-digit inputs?
       end
     end
     ## arbitrary base numbers <BASE>b<NUMBER>
     $ 1 string.charAt 'b' == or $ 1 string.charAt 'B' == if
       $ 0 string.charAt '0' - i32 cast.u =:: mut: b
-      b 0 < or b 9 > if
-        2 string.tail -1 return ## invalid base
+      b 0 >= and b 9 <= if
+        2 string.tail b return
       end
-      2 string.tail b return
-    end
-    $ .length 3:iSize u> and $ 2 string.charAt 'b' == if ## two digits before b
+    else $ .length 3:iSize u> and $ 2 string.charAt 'b' == _if ## two digits before b
       $ 0 string.charAt '0' - i32 cast.u =:: mut: b1
       $ 1 string.charAt '0' - i32 cast.u =:: mut: b2
-      b1 0 < or b1 9 > or b2 0 < or b2 9 > if
-        3 string.tail -1 return ## invalid base
+      b1 0 >= and b1 9 <= and b2 0 >= and b2 9 <= if
+        b1 10 * b2 + =:: b
+        3 string.tail b return
       end
-      b1 10 * b2 + =:: b
-      3 string.tail b return
     end
     10 return
   end
@@ -138,9 +134,7 @@ namespace: number
       else
         base
       end =:: mBase
-      mBase 0 < if ..drop
-        0 ParserError .INVALID_CHAR return
-      else mBase 2 < or mBase 62 > _if ..drop
+      mBase 2 u< or mBase 62 u> if ..drop
         0 ParserError .INVALID_BASE return
       end
       -1:i64 =:: maxUnsignedVal
@@ -214,9 +208,7 @@ namespace: number
       else
         base
       end =:: mut: mBase
-      mBase 0 < if ..drop
-        f64.NaN ParserError .INVALID_CHAR return
-      else mBase 2 < or mBase 62 > _if ..drop
+      mBase 2 u< or mBase 62 u> if ..drop
         f64.NaN ParserError .INVALID_BASE return
       end
       0:iSize while ..dup ..over.2 .length u< do =:: i
@@ -301,10 +293,8 @@ namespace: i128
       else
         base
       end =:: mBase
-      mBase 0 < if ..drop
-        0 0 i128 new ParserError .INVALID_CHAR return
-      else mBase 2 < or mBase 62 > _if ..drop
-        0 0 i128 new ParserError .INVALID_BASE return
+      mBase 2 u< or mBase 62 u> if ..drop
+        i128.ZERO ParserError .INVALID_BASE return
       end
       -1:i64 -1:i64 i128 new =:: maxUnsigned
       unsigned if
@@ -381,9 +371,7 @@ namespace: f128
       else
         base
       end =:: mut: mBase
-      mBase 0 < if ..drop
-        f128.NaN ParserError .INVALID_CHAR return
-      else mBase 2 < or mBase 62 > _if ..drop
+      mBase 2 u< or mBase 62 u> if ..drop
         f128.NaN ParserError .INVALID_BASE return
       end
       0:iSize while ..dup ..over.2 .length u< do =:: i
