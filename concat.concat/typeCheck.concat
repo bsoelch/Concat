@@ -6040,6 +6040,9 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     currentProc [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if
       continue
     end
+    currentProc [] .procType types.isQuotation if
+      continue
+    end
     currentProc .implementation .Code .and .codeState .PreTypeChecking .else
       continue ## procedure implementation not in code
     end [] .length 0 == if
@@ -6064,6 +6067,9 @@ proc( TypeCheckState ptr.mut : state -> ) =>: export: typeCheckProgram
     program [] .procedures index [] =:: procId
     procId ProcId.getProcInfo =:: currentProc
     currentProc [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if
+      continue
+    end
+    currentProc [] .procType types.isQuotation if
       continue
     end
     currentProc  .implementation .Code .and .codeState .PreTypeChecking .else
