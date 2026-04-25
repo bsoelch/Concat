@@ -570,12 +570,15 @@ namespace: types
       else ..drop end
     false return
   end
+  proc( Type -> bool ) =>: export: isQuotation
+    .Quotation ?
+  end
   proc( Type -> bool ) =>: export: isLiteral
     switch
-       IntLiteral Initializer Quotation case true return
+       IntLiteral Initializer case true return
        Empty ArrayType UnionElement RawUnion
-           Undefined PrimitiveType Procedure  CType Pointer
-           NamedType GenericType RawPointer
+           Undefined PrimitiveType Procedure CType Pointer
+           NamedType GenericType RawPointer Quotation
            GeneratedType Enum Align MutablePointer MutableRawPointer
            Struct TaggedUnion SetType RefinementType case
          false return
@@ -2291,7 +2294,7 @@ namespace: types
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
     t switch
-      Undefined Empty PrimitiveType CType IntLiteral Align Quotation case
+      Undefined Empty PrimitiveType CType IntLiteral Align case
         false return
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
         ArrayData ptr cast [] =:: arrayType
@@ -2329,7 +2332,7 @@ namespace: types
         false return
       NamedType case
         t context unwrapNamed context containsGeneric return
-      GenericType case
+      GenericType Quotation case
         true return
       SetType .case =:: setTypeId
         setTypeId .baseType [] context containsGeneric if

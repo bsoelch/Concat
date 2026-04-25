@@ -2791,19 +2791,22 @@ proc(
           op .pos errors appendError
           continue.opLoop
         end =:: procOps
-         ## ensure lambda is type-checked
-        state [] .missingProcs
-          ## MissingProc
-            procId
-            op .pos
-          MissingProc new list.append
-        state .missingProcs=
-        state isGlobal ! and state [] .isUnusedProc ! if
-          ## TODO find better way to detect used procedure blocks
-          ##  ? mark as used if: 1) called 2) assigned to variable 3) passed to procedure 4) merged with other constant
-          procData [] .flags ProcFlags.HAS_POINTER | procData .flags= ## proc has pointer
+        op .val .Quotation ? =:: isQuotation
+        isQuotation ! if
+          ## ensure lambda is type-checked
+          state [] .missingProcs
+            ## MissingProc
+              procId
+              op .pos
+            MissingProc new list.append
+          state .missingProcs=
+          state isGlobal ! and state [] .isUnusedProc ! if
+            ## TODO find better way to detect used procedure blocks
+            ##  ? mark as used if: 1) called 2) assigned to variable 3) passed to procedure 4) merged with other constant
+            procData [] .flags ProcFlags.HAS_POINTER | procData .flags= ## proc has pointer
+          end
         end
-        op .val .Quotation ? if
+        isQuotation if
           procId Type .Quotation
         else
           op .pos state popType
@@ -3401,6 +3404,10 @@ proc(
           else $ typeContext types.ptrTarget ._if
              true isPtr=
              >$ typeContext types.isMutable mutable=
+          else $ types.isQuotation _if
+            "cannot resolve type of quotation: " sb.copyPtr
+              srcType typeContext sb.appendType
+            op .pos errors appendError
           else $ types.isLiteral _if
             typeContext types.literalToType
               $ srcType=
