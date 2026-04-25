@@ -1218,11 +1218,10 @@ proc(
     offset count iSize cast.u + list.ensureCap
     offset count iSize cast.u + list.setLength
   state .compiledOps=
-  ## mem.fill
-    state [] .compiledOps .data offset @[]
-    count iSize cast.u
+  ## slice.fill
+    state [] .compiledOps offset list.tailMul
     pos reserveOp
-  mem.fill
+  slice.fill
   offset i32 cast.u return
 end
 ## mark top stack value as uniqueRef

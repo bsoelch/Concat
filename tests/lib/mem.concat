@@ -29,7 +29,7 @@ proc( -> ) =>: main
   "World" "World" 5:iSize mem.compare 0 == io.println
   
   i32 16 array new =:: mut: a
-  a@ 10:iSize 42 mem.fill
+  42 a@ 10:iSize slice.createMutable slice.fill
   0:iSize while ..dup a ..length u< do
     a@ ..over [] io.println
     1:iSize +

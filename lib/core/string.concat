@@ -46,6 +46,119 @@ namespace: string
     charAt_32
     charAt_64
   end
+
+  proc( string : a string : b -> i32 ) =>: export: compare
+    a chars b chars slice.simpleLexCmp
+  end
+  proc( string : a string : b -> i32 ) =>: export: fastCompare
+    a chars b chars slice.simpleCmp
+  end
+  proc( string string -> bool ) =>: export: eq
+    compare 0 == return
+  end
+  proc( string : str -> i32 ) =>: export: hash
+    0 ## hash
+      0:iSize while ..dup str .length u< do =:: i
+        #+hash+# 31 * str .data i [] i32 cast.u +
+        i 1:iSize +
+      end ..drop
+    return
+  end
+  ## O(1) hash function computed from length and first 4 characters
+  proc( string : str -> i32 ) =>: export: fastHash
+    str .length i32 cast.u
+      str 4 head chars for =:: c
+        31 * c i32 cast.u +
+      end
+    return
+  end
+
+  proc( string : str char8 : chr -> iSize optional ) =>: export: indexOf
+    str char8 slice cast chr slice.indexOf return
+  end
+  proc( string : str char8 : chr -> iSize optional ) =>: export: lastIndexOf
+    str char8 slice cast chr slice.lastIndexOf return
+  end
+  proc( string : base string : subStr -> iSize optional ) =>: export: indexOfStr
+    base chars subStr chars char8.eq@ slice.indexOfSlice return
+  end
+  proc( string : base string : subStr -> iSize optional ) =>: export: lastIndexOfStr
+    base chars subStr chars char8.eq@ slice.lastIndexOfSlice return
+  end
+  proc( string : base string : subStr -> bool ) =>: export: startsWith
+    subStr .length base .length u> if
+      false return
+    end
+    base .data subStr .length create subStr compare 0 == return
+  end
+  proc( string : base string : subStr -> bool ) =>: export: endsWith
+    subStr .length base .length u> if
+      false return
+    end
+    base .data base .length subStr .length - @[] subStr .length create subStr compare 0 == return
+  end
+
+  proc( string : str char8 : chr -> bool ) =>: export: contains
+    str char8 slice cast chr slice.indexOf ? return
+  end
+  proc( string : base string : subStr -> bool ) =>: export: isSubstring
+    base subStr indexOfStr ? return
+  end
+
+  ## first n characters
+  proc( string : str iSize : n -> string ) =>: export: headZ
+    str char8 slice cast n slice.head string cast return
+  end
+  proc( string : str iSize optional : n -> string ) =>: export: headO
+    str char8 slice cast n slice.head string cast return
+  end
+  proc( string : str i32 : n -> string ) =>: export: head32
+    str n i64 cast.s head64
+  end
+  proc( string : str i64 : n -> string ) =>: export: head64
+    str char8 slice cast n slice.head string cast return
+  end
+  overload: export: head headZ headO head32 head64 end
+  ## everything excluding the first n characters
+  proc( string : str iSize : n -> string ) =>: export: tailZ
+    str char8 slice cast n slice.tail string cast return
+  end
+  proc( string : str iSize optional : n -> string ) =>: export: tailO
+    str char8 slice cast n slice.tail string cast return
+  end
+  proc( string : str i32 : n -> string ) =>: export: tail32
+    str n i64 cast.s tail64
+  end
+  proc( string : str i64 : n -> string ) =>: export: tail64
+    str char8 slice cast n slice.tail string cast return
+  end
+  overload: export: tail tailO tailZ tail32 tail64 end
+  ## equivalent to:  <from> tail <len> head
+  proc( string : str iSize : from iSize : len -> string ) =>: export: getSlice
+    str char8 slice cast from len slice.getSlice string cast return
+  end
+  proc( string : str iSize : index -> string string ) =>: export: cutIndex
+    str char8 slice cast index slice.cutIndex ..swap string cast ..swap string cast return
+  end
+  proc( string : str iSize : index -> string string ) =>: export: splitIndex
+    str char8 slice cast index slice.splitIndex ..swap string cast ..swap string cast return
+  end
+  proc( string : str char8 : chr -> string string ) =>: export: split
+    str char8 slice cast chr slice.split ..swap string cast ..swap string cast return
+  end
+  proc( string : str char8 : chr -> string string ) =>: export: splitLast
+    str char8 slice cast chr slice.splitLast ..swap string cast ..swap string cast return
+  end
+  proc( string : str string : substr -> string string ) =>: export: splitStr
+    ## TODO implement on top of slice.splitSeq (once compiler-bug is fixed)
+    ## str char8 slice cast substr char8 slice cast slice.splitSeq ..swap string cast ..swap string cast return
+    str substr indexOfStr .else
+      empty str return
+    end =:: offset
+      str offset substr .length + tail
+      str offset head
+    return
+  end
 end
 proc( char8 ptr.raw : p iSize : k -> string ) =>: static: export: :string
   p k string new

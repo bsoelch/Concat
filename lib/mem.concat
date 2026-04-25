@@ -156,15 +156,4 @@ namespace: mem
       a ..ctype.void ptr.raw cast!
     c.memcmp i32 cast return
   end
-  proc(
-    type : auto: T
-    T ptr.raw.mut : data
-    iSize : count
-    T : elt
-  -> ) =>: export: fill
-    0:iSize while ..dup count u< do
-      elt data ..over.2 =[]
-      1:iSize +
-    end ..drop
-  end
 end

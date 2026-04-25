@@ -1,5 +1,4 @@
 import mem
-import itrs/array
 
 namespace: array
   proc(
