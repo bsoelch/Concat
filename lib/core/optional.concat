@@ -1,4 +1,5 @@
 import core/type
+
 ( type : V -> type ) =>: export: optional
   V type.isPointerValue if
     ( V : val )

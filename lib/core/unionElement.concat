@@ -1,4 +1,5 @@
 import core/type
+import core/optional
 
 namespace: unionElement
   proc( type.unionElement : auto: U  U -> U ) =>: prepareIf end
@@ -7,6 +8,9 @@ namespace: unionElement
   end
   proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: get
     ..raw
+  end
+  proc( type.unionElement : auto: U  U -> U type.unionElementType optional ) =>: export: tryUnwrap
+    $ check if ..raw optional.wrap else ..drop U type.unionElementType optional.empty end
   end
   proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: unwrap
     $ check ! if "unwrapped union-element does not match current value" ..panic end
@@ -41,6 +45,13 @@ namespace: unionElement
     $ checkPtr ! if "unwrapped union-element does not match current value" ..panic end
     U type.unionElementPtrType cast! ## elements are all stored at same address as union
   end
+  proc( type.unionElementPointer : auto: U  U -> U type.unionElementPtrType optional ) =>: export: tryUnwrapPtr
+    $ checkPtr if
+      U type.unionElementPtrType cast! optional.wrap
+    else ..drop
+      U type.unionElementPtrType optional.empty
+    end
+  end
   proc( type.unionElementPointer : auto: U  U -> U type.unionElementUnionPtr ) =>: elseValPtr
     U type.unionElementUnionPtr cast
   end
@@ -66,6 +77,10 @@ end
 overload: merge: export: ?
   unionElement.check
   unionElement.checkPtr
+end
+overload: export: ??
+  unionElement.tryUnwrap
+  unionElement.tryUnwrapPtr
 end
 overload: merge: export: ..if.prepare
   unionElement.prepareIf
