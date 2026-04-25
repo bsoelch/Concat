@@ -59,7 +59,7 @@ namespace: list
   proc(
     type : auto: T
     T slice : data
-  -> T list ) =>: export: fromSlice
+  -> T list ) =>: export: copySlice
     data .length $ 8 / + =:: C
     ## list
       C T mem.alloc
