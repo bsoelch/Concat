@@ -1016,6 +1016,9 @@ proc(
         end
       else stackType paramType types.typeEquals _if
         MatchType .MATCH matchType=
+      else stackType types.isQuotation and paramType typeContext types.isCallable _if
+        MatchType .CAST matchType=
+        current [] .nRenames 1 + current .nRenames=
       else stackType paramType typeContext types.canAutoCast $ =:: isAutoCast or
           stackType stackVal paramType pos typeChecker typeChecker.canRefineType _if
         MatchType .CAST matchType=

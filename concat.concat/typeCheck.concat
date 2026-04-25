@@ -513,6 +513,10 @@ proc(
     typeInfo .valueType typeContext types.isEmpty and expectedType typeContext types.isEmpty if
       i 1:iSize + continue
     end
+    typeInfo .valueType types.getQuotationId .and =:: procId expectedType typeContext types.isCallable if
+      "unimplemented: converting quotation to callable" ..panic
+      ## i 1:iSize + continue
+    end
     typeInfo .valueType expectedType typeContext types.canAutoCast or
         typeInfo .valueType typeInfo .value expectedType pos state typeChecker.canRefineType if
       typeInfo expectedType SignType .NONE pos state tryCastConstant ! if

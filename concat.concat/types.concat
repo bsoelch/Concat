@@ -573,6 +573,9 @@ namespace: types
   proc( Type -> bool ) =>: export: isQuotation
     .Quotation ?
   end
+  proc( Type -> ProcId optional ) =>: export: getQuotationId
+    .Quotation .if optional.wrap else ..drop ProcId optional.empty end
+  end
   proc( Type -> bool ) =>: export: isLiteral
     switch
        IntLiteral Initializer case true return
