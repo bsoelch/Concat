@@ -1,0 +1,9 @@
+proc( -> ) =>: main
+  0 while $ 5 < do =:: i
+    i -1 == if
+      "i is negative" ..panic
+      i 1 - continue
+    end
+    i 1 +
+  end ..drop
+end

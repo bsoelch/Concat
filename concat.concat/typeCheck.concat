@@ -4454,6 +4454,7 @@ proc(
               switchBlock op .pos state breakSwitch
               continue.opLoop
             else .While ._if =:: whileBlock
+              state [] .reachable ! if continue.opLoop end
               blockType .CONTINUE if
                 whileBlock .hasFinally [] if
                   "unexpected " sb.copyPtr
