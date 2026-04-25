@@ -258,6 +258,7 @@ union(
       FloatConstant : FloatConst
              string : StringConst
              ProcId : NestedProc
+             ProcId : Quotation
           BlockData : Block
           BlockData : BlockEnd
              string : GetNamedElt
@@ -357,6 +358,9 @@ proc( string : constValue FilePosition ptr : pos -> PreOperation ) =>: export: p
 end
 proc( ProcId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpNestedProc
   pos id PreOpValue .NestedProc PreOperation new return
+end
+proc( ProcId : id FilePosition ptr : pos -> PreOperation ) =>: export: preOpQuotation
+  pos id PreOpValue .Quotation PreOperation new return
 end
 proc( BlockType : blockType FilePosition ptr : pos -> PreOperation ) =>: export: preOpBlock
   pos
@@ -970,6 +974,10 @@ namespace: sb
       break
       NestedProc .case =:: procId
         "nested proc : ":s sb.appendStr
+        procId ProcId.getName nameContext sb.appendIdentifierPath
+      break
+      Quotation .case =:: procId
+        "quotation : ":s sb.appendStr
         procId ProcId.getName nameContext sb.appendIdentifierPath
       break
       Block .case =:: blockData

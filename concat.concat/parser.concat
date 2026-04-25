@@ -262,6 +262,31 @@ proc( FilePosition ptr : pos bool : isQuotation ParserState ptr.mut : state -> )
     BlockInfo new list.append
   state .openBlocks=
 end
+proc( ProcBlockData : procBlockData FilePosition ptr : blockPos ParserState ptr.mut : state -> ) =>: endProcedure
+  state [] .program =:: program
+  program .errors =:: errors
+  state [] .currentProcs
+    $ .length 0 != if ## append op before poping procedure
+      BlockType .PROCEDURE blockPos preOpEndBlock  state appendOp
+    else ..drop ## current-procs are empty -> no pop possible
+      "unexpected end of procedure" sb.copyPtr blockPos errors appendError
+      return
+    end
+    list.removeLast =:: currentProcId
+  state .currentProcs=
+  currentProcId ProcId.getProcInfo =:: currentProc
+  currentProc .implementation .Code .else
+    "expected code-implementation" ..panic
+  end =:: codeImpl
+  state [] .parsedOps list.asSlice
+    procBlockData .blockStart slice.tail
+    $ 0 @[] =:: procStart
+    slice.copy
+  codeImpl .codeState .Parsed=
+  state [] .parsedOps
+    procBlockData .blockStart list.setLength
+  state .parsedOps=
+end
 proc(
   ParserState ptr.mut : state
 ->
@@ -1301,8 +1326,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       fileState program wordPos =:: procPos
       ## declare procedure name outside procedure
       procImplName Type .Undefined state [] .currentFile ProcId optional.empty true procPos program newProcData =:: procId
-      isQuotation if ## TODO! own pre-op for quotation
-        procId procPos preOpNestedProc state appendOp
+      isQuotation if
+        procId procPos preOpQuotation state appendOp
       else
         procId procPos preOpNestedProc state appendOp
       end
@@ -1418,29 +1443,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             BlockType .SWITCH blockPos preOpEndBlock  state appendOp
             switchData .breakPositions list.free ..drop
           break
-          Procedure .case =:: procBlockData
-            state [] .currentProcs
-              $ .length 0 != if ## append op before poping procedure
-                BlockType .PROCEDURE blockPos preOpEndBlock  state appendOp
-              else ..drop ## current-procs are empty -> no pop possible
-                "unexpected end of procedure" sb.copyPtr blockPos errors appendError
-                return
-              end
-              list.removeLast =:: currentProcId
-            state .currentProcs=
-            currentProcId ProcId.getProcInfo =:: currentProc
-            currentProc .implementation .Code .else
-              "expected code-implementation" ..panic
-            end =:: codeImpl
-            state [] .parsedOps list.asSlice
-              procBlockData .blockStart slice.tail
-              $ 0 @[] =:: procStart
-              slice.copy
-            codeImpl .codeState .Parsed=
-            state [] .parsedOps
-              procBlockData .blockStart list.setLength
-            state .parsedOps=
-          break
+          Procedure .case blockPos state endProcedure  break
           Namespace case
             BlockType .NAMESPACE blockPos preOpEndBlock state appendOp
           break
@@ -1645,8 +1648,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           BlockType .INITIALIZER blockPos preOpEndBlock state appendOp
         return
         Quotation .case
-          "unimplemented: closing quotations" ..panic
-        break
+          blockPos state endProcedure
+        return
         TypeBlock case
           state closedConstBlock
         break

@@ -356,7 +356,7 @@ proc(
       return
     SetType case "unimplemented: replaceGenerics for set-type" ..panic
     RefinementType case "unimplemented: replaceGenerics for refinement-type" ..panic
-    Undefined Empty PrimitiveType CType IntLiteral Align case
+    Undefined Empty PrimitiveType CType IntLiteral Align Quotation case
       ..unreachable ## type should not contain generics
   end
 end
@@ -655,7 +655,7 @@ proc(
       false return
     SetType case "unimplemented: resolveGenerics for set-type" ..panic
     RefinementType case "unimplemented: resolveGenerics for refinement-type" ..panic
-    Undefined Empty PrimitiveType CType IntLiteral Align case
+    Undefined Empty PrimitiveType CType IntLiteral Align Quotation case
       ..unreachable ## type should not contain generics
   end
 end

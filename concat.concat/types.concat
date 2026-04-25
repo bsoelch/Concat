@@ -77,6 +77,7 @@ union(
    types.UnionElementId : UnionElement
            types.EnumId : Enum
     types.InitializerId : Initializer
+                 ProcId : Quotation
        types.ProcTypeId : Procedure
         types.SetTypeId : SetType
  types.RefinementTypeId : RefinementType
@@ -292,6 +293,8 @@ namespace: types
         b .UnionElement unionElement.unwrap unionElementCmp return
       Initializer .case
         b .Initializer unionElement.unwrap initializerTypeCmp return
+      Quotation .case
+        b .Quotation unionElement.unwrap ProcId.cmp return
       Procedure .case
         b .Procedure unionElement.unwrap  procTypeCmp return
       GeneratedType .case
@@ -385,6 +388,7 @@ namespace: types
       RawUnion .case unionTypeHash 67 * return
       SetType .case setTypeHash 71 * return
       RefinementType .case refinementTypeHash 73 * return
+      Quotation .case ProcId.hash 79 * return
     end
   end
 end
@@ -444,7 +448,7 @@ namespace: types
        ArrayType .case ## arrays of empty values are empty
          arrayTypeBase context isEmpty return
        Undefined PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer
-         NamedType GenericType IntLiteral UnionElement
+         NamedType GenericType IntLiteral UnionElement Quotation
          GeneratedType Enum RefinementType TaggedUnion case false return
        SetType .case .elements [] .length 0 == return
        Struct Initializer RawUnion case
@@ -568,7 +572,7 @@ namespace: types
   end
   proc( Type -> bool ) =>: export: isLiteral
     switch
-       IntLiteral Initializer case true return
+       IntLiteral Initializer Quotation case true return
        Empty ArrayType UnionElement RawUnion
            Undefined PrimitiveType Procedure  CType Pointer
            NamedType GenericType RawPointer
@@ -609,7 +613,7 @@ namespace: types
         initInfo .asTuple TupleId cast Type .Struct return
        Empty  ArrayType UnionElement RawUnion
            Undefined  PrimitiveType Procedure CType Pointer
-           NamedType GenericType RawPointer
+           NamedType GenericType RawPointer Quotation
            GeneratedType Enum Align MutablePointer MutableRawPointer
            Struct TaggedUnion SetType RefinementType case
          t return
@@ -640,7 +644,7 @@ namespace: types
   proc( Type TypeContext ptr.mut : context -> SimpleTypeInfo ) =>: simpleType
     context unwrapNamed switch
       Empty Align case SimpleTypeInfo.EMPTY return
-      IntLiteral Enum Pointer MutablePointer RawPointer MutableRawPointer Procedure case
+      IntLiteral Enum Pointer MutablePointer RawPointer MutableRawPointer Procedure Quotation case
         SimpleTypeInfo.INT return
       PrimitiveType .case switch
         BOOL I8 I16 I32 I64 case SimpleTypeInfo.INT return
@@ -687,7 +691,7 @@ namespace: types
   end
   proc( Type TypeContext ptr.mut : context -> bool ) =>: export: isValueType
     context unwrapNamed switch
-      Empty PrimitiveType IntLiteral CType Align Enum Procedure
+      Empty PrimitiveType IntLiteral CType Align Enum Procedure Quotation
         Pointer MutablePointer RawPointer MutableRawPointer case true return
       ArrayType .case =:: arrayData
         ## TODO? consider arrays fitting into vector register as a value type (only for asm back-end)
@@ -943,7 +947,7 @@ namespace: types
           composite
           >$ InitializerInfo ptr.mut cast .asTuple TupleId cast
         typeContext tryComputeTupleSize return
-      Undefined Empty GenericType RawPointer MutableRawPointer
+      Undefined Empty GenericType RawPointer MutableRawPointer Quotation
       PrimitiveType IntLiteral CType ArrayType Enum UnionElement
       Pointer MutablePointer Procedure Align SetType RefinementType
       NamedType GeneratedType case ..unreachable
@@ -960,7 +964,7 @@ namespace: types
       PrimitiveType .case sizeOfPrimitive TypeSize .Fixed return
       IntLiteral .case sizeOfIntLiteral TypeSize .Fixed return
       CType .case sizeOfCType TypeSize .Fixed return
-      Pointer MutablePointer RawPointer MutableRawPointer Procedure  case
+      Pointer MutablePointer RawPointer MutableRawPointer Procedure Quotation case
         PTR_SIZE TypeSize .Fixed return
       ArrayType .case arrayTypeBase context alignOf return
       Struct TaggedUnion RawUnion Initializer case
@@ -1006,7 +1010,7 @@ namespace: types
       ## TODO? don't use fixed size for int literals
       IntLiteral .case sizeOfIntLiteral TypeSize .Fixed return
       CType .case sizeOfCType TypeSize .Fixed return
-      Pointer MutablePointer RawPointer MutableRawPointer Procedure  case
+      Pointer MutablePointer RawPointer MutableRawPointer Procedure Quotation case
         PTR_SIZE TypeSize .Fixed return
       ArrayType .case =:: arrayType
         arrayType arrayTypeSize =:: arraySize
@@ -1317,7 +1321,7 @@ namespace: types
         true return
       Undefined Empty PrimitiveType Pointer MutablePointer ArrayType Procedure
         NamedType GenericType GeneratedType IntLiteral Align
-        CType RawPointer MutableRawPointer case
+        CType RawPointer MutableRawPointer Quotation case
         false return
       SetType .case .baseType [] context isComposite return
       RefinementType .case .baseType [] context isComposite return
@@ -1353,7 +1357,7 @@ namespace: types
       Enum TaggedUnion case true return
       Struct Undefined Empty PrimitiveType Pointer ArrayType Procedure RawUnion
        NamedType GenericType GeneratedType IntLiteral Initializer RawPointer
-       CType Align MutablePointer MutableRawPointer UnionElement case
+       CType Align MutablePointer MutableRawPointer UnionElement Quotation case
          false return
       SetType .case .baseType [] typeContext isEnumOrTaggedUnion return
       RefinementType .case .baseType [] typeContext isEnumOrTaggedUnion return
@@ -1382,7 +1386,7 @@ namespace: types
         Initializer .case
           InitializerInfo ptr cast .asTuple .compositeInfo CompositeData .Composite return
         Enum .case EnumInfo ptr cast CompositeData .Enum return
-        Undefined Empty PrimitiveType Pointer ArrayType Procedure
+        Undefined Empty PrimitiveType Pointer ArrayType Procedure Quotation
          NamedType GenericType GeneratedType IntLiteral Align
          CType RawPointer MutablePointer MutableRawPointer case
           CompositeData .None return
@@ -1447,7 +1451,7 @@ namespace: types
     tuple typeContext unwrapNamed switch
       Struct TaggedUnion .case break
       Enum RawUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
-       NamedType GenericType GeneratedType IntLiteral Initializer Align
+       NamedType GenericType GeneratedType IntLiteral Initializer Align Quotation
        CType RawPointer MutablePointer MutableRawPointer case
          i64 optional.empty return
        SetType .case .baseType [] index typeContext tupleElementOffset return
@@ -1472,7 +1476,7 @@ namespace: types
         enum UNION_TAG_INDEX typeContext tupleElementOffset return
       RawUnion case Type .Empty i64 optional.empty return
       UnionElement .case .base [] typeContext enumTagInfo return
-      Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure
+      Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure Quotation
        NamedType GenericType GeneratedType IntLiteral Initializer Align
        CType RawPointer MutablePointer MutableRawPointer case
          Type .Empty i64 optional.empty return
@@ -2287,7 +2291,7 @@ namespace: types
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
     t switch
-      Undefined Empty PrimitiveType CType IntLiteral Align case
+      Undefined Empty PrimitiveType CType IntLiteral Align Quotation case
         false return
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
         ArrayData ptr cast [] =:: arrayType
@@ -2880,8 +2884,14 @@ namespace: sb
           else
             "... " appendS
           end
-         ")" appendS
-       return
+          ")" appendS
+        return
+      Quotation .case =:: procId
+        sb
+          "quotation( ":s appendStr
+            procId ProcId.getName nameContext sb.appendIdentifierPath
+          " )":s appendStr
+        return
       Enum .case =:: enumType
         sb
           "enum( " appendS
