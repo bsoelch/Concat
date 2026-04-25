@@ -1199,13 +1199,11 @@ proc(
       implData .Code .and =:: codeImpl
       codeImpl .genericInfo .Implementations .if =:: impls
     false =:: mut: isMatch
-    impls [] for =:: implProcId
-      implProcId ProcId.getProcInfo .implementation .Code .and .genericInfo .ImplInfo .else
-        "expected generic-proc implementation" ..panic
-      end =:: implInfo
-      implInfo [] .staticArgs .length constArgs .length == "correct number of static arguments" assert
-      implInfo [] .staticArgs constArgs list.asSlice constantEquals@ slice.eq if
-        implProcId optional.wrap implId=
+    impls [] for =:: implProcInfo
+      implProcInfo .staticArgs =:: implArgs
+      implArgs .length constArgs .length == "correct number of static arguments" assert
+      implArgs constArgs list.asSlice constantEquals@ slice.eq if
+        implProcInfo .genericProc optional.wrap implId=
         true isMatch=
         break
       end
@@ -1260,7 +1258,7 @@ proc(
       progContext .procedures=
       implProdId optional.wrap implId=
       impls []
-        implProdId list.append
+        implArgs implProdId GenericImplementationInfo new list.append
       impls =[]
     end
   end
@@ -1343,7 +1341,7 @@ proc(
   typeBuffer list.free typeBuffer=
   nameBuffer list.free nameBuffer=
   ## ProcedureCallInfo
-    implId .else baseProcId end    
+    implId .else baseProcId end
     constArgs list.asSlice constContext constArray
   ProcedureCallInfo new =:: result
   constArgs list.free constArgs=

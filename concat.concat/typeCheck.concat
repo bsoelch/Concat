@@ -460,8 +460,9 @@ proc(
   FilePosition ptr : pos
   TypeCheckState ptr.mut : state
 -> TypeMatch ) =>: requireTypes
-  state [] .program .errors =:: errors
-  state [] .program .idContext =:: idContext
+  state [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
@@ -514,8 +515,27 @@ proc(
       i 1:iSize + continue
     end
     typeInfo .valueType types.getQuotationId .and =:: procId expectedType typeContext types.isCallable if
-      "unimplemented: converting quotation to callable" ..panic
-      ## i 1:iSize + continue
+      typeInfo .opIndex 0 < if
+        "cannot update quotation operation":s pos ..line internalErrorNoOp ..unreachable
+      end
+      state [] .compiledOps typeInfo .opIndex @[] =:: quotOp
+      expectedType quotOp .dataType=
+      quotOp .val .Constant .and .Procedure .else
+        "expected quotation to be procedure constant":s pos ..line internalErrorNoOp ..unreachable
+      end =:: quotConstant
+      expectedType typeContext types.getPointerBaseType .else
+        expectedType
+      end procId program program.initializeQuotation .else
+        "failed to initialize quotation":s pos ..line internalErrorNoOp ..unreachable
+      end
+        state [] .missingProcs
+          ## MissingProc
+            $1
+            pos
+          MissingProc new list.append
+        state .missingProcs=
+      quotConstant =[]
+      i 1:iSize + continue
     end
     typeInfo .valueType expectedType typeContext types.canAutoCast or
         typeInfo .valueType typeInfo .value expectedType pos state typeChecker.canRefineType if

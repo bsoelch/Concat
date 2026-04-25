@@ -115,9 +115,14 @@ struct(
   ConstValue slice : staticArgs
   ProcId : genericProc
 ) =:: export: GenericImplementationInfo
+struct(
+  Type : procType
+  ProcId : procId
+) =:: export: TypedProcedure
 union(
   _ : None
-  ProcId list : Implementations
+  GenericImplementationInfo list : Implementations
+  TypedProcedure list : QuotationImpls
   GenericImplementationInfo : ImplInfo
 ) =:: export: GenericProcInfo
 union( ## code mutable to allow freeing allocation
@@ -183,12 +188,62 @@ proc( ProcedureInfo : p -> ) =>: freeProcedure
     end
     impl .genericInfo .Implementations .if
       list.free ..drop
+    else .QuotationImpls ._if
+      list.free ..drop
     else ..drop end
   else ..drop end
 end
 namespace: ProcId
   proc( ProcId -> NameId ) =>: export: getName
     getProcInfo [] .nameId
+  end
+end
+namespace: program
+  proc(
+    Type : procType
+    ProcId : baseQuotation
+    ProgramContext ptr.mut : progContext
+  -> ProcId optional ) =>: export: initializeQuotation
+    progContext .idContext .typeContext .nameContext =:: nameContext
+    baseQuotation ProcId.getProcInfo =:: baseProcInfo
+    baseProcInfo .implementation .Code .else ..drop
+      ProcId optional.empty return
+    end =:: codeImpl
+    codeImpl .genericInfo .QuotationImpls .else ..drop
+      ProcId optional.empty return
+    end =:: impls
+    impls [] for =:: implData
+      implData .procType procType types.typeEquals if
+        implData .procId optional.wrap return
+      end
+    end
+    progContext [] .programMemory
+      ## ProcedureInfo
+        ## CodeProcData
+          0 VariableInfo list.create
+          ## GenericImplementationInfo
+            ConstValue slice.empty
+            baseQuotation
+          GenericImplementationInfo new GenericProcInfo .ImplInfo
+          codeImpl [] .codeState .PreTypeChecking .else
+            "expected parsed procedure" ..panic
+          end ProcCodeState .PreTypeChecking ## reuse code from generic base procedure
+          codeImpl [] .expansionLevel 1:i16 +
+        CodeProcData new ProcImplType .Code
+        baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplName
+        baseProcInfo [] .fileId
+        baseProcInfo [] .scopeId
+        procType
+        baseProcInfo [] .flags ProcFlags.HAS_POINTER | ProcFlags.HAS_STATIC_ARG ~ & ## TODO? can quotation have generic arg
+      ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
+    progContext .programMemory=
+    progContext [] .procedures
+      implProdId list.append
+    progContext .procedures=
+    impls []
+      procType implProdId TypedProcedure new list.append
+    impls =[]
+    implProdId optional.wrap return
   end
 end
 
@@ -680,9 +735,12 @@ proc(
     end
   procInfo .flags=
   procInfo .implementation .Code .if =:: codeImpl
-    codeImpl .genericInfo .None ? and procInfo [] .flags ProcFlags.HAS_STATIC_ARG & ? or
-        newProcType typeContext types.containsGeneric if
-      0 ProcId list.create GenericProcInfo .Implementations codeImpl .genericInfo=
+    newProcType types.isQuotation if
+      codeImpl .genericInfo [] .None ? "quotation does not replace existing proc-type" assert
+      TypedProcedure list.empty GenericProcInfo .QuotationImpls codeImpl .genericInfo=
+    else codeImpl .genericInfo [] .None ? and procInfo [] .flags ProcFlags.HAS_STATIC_ARG & ? or
+        newProcType typeContext types.containsGeneric _if
+      GenericImplementationInfo list.empty GenericProcInfo .Implementations codeImpl .genericInfo=
     end
   else ..drop end
 end
@@ -718,7 +776,7 @@ proc(
         ## CodeProcData
           0 VariableInfo list.create
           hasStaticArg or procType typeContext types.containsGeneric if
-            0 ProcId list.create GenericProcInfo .Implementations
+            GenericImplementationInfo list.empty GenericProcInfo .Implementations
           else
             GenericProcInfo .None
           end
