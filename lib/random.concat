@@ -9,8 +9,6 @@ namespace: random
     end
   end
   proc( i64 : seedHi i64 : seedLow -> Random ) =>: export: create128
-    ## TODO? use bit-cast for direct initialization
-    ## seedHi seedLow ( i64 i64 ) new Random ..bitcast
     i32 4 array new
       seedHi 32 >>> i32 cast >$ .3=
       seedHi i32 cast >$ .2=
@@ -41,7 +39,6 @@ namespace: random
 	  t return
   end
   proc( Random -> Random i8 ) =>: export: nextI8
-    ## TODO? only using 8 of the 32-created bytes seems wastefull
     nextI32 0xff & i8 cast.u
   end
   proc( Random -> Random i16 ) =>: export: nextI16
