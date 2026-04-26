@@ -113,6 +113,8 @@ namespace: io
       i i64 cast.u sb.appendX
     sb.asStr printS
   end
+  proc( i8 : i -> ) =>: export: printX8   i i32 cast.s printX32 end
+  proc( i16 : i -> ) =>: export: printX16   i i32 cast.s printX32 end
   proc( i32 : i -> ) =>: export: printXln32
     char8 12 array : mut: buffer ## -80000000
     buffer@ sb.wrapBuffer
@@ -134,6 +136,8 @@ namespace: io
       '\n' sb.appendC
     sb.asStr printS
   end
+  proc( i8 : i -> ) =>: export: printXln8   i i32 cast.s printXln32 end
+  proc( i16 : i -> ) =>: export: printXln16   i i32 cast.s printXln32 end
 
   proc( i32 : i -> ) =>: printU32
     char8 12 array : mut: buffer ## -4294967296\n
@@ -187,8 +191,8 @@ namespace: io
     printlnC printlnS printlnBool
     printlnI8 printlnI16 printlnI32 printlnI64 printlnZ printlnF32 printlnF64
   end
-  overload: export: printX printX32 printX64 printXZ end
-  overload: export: printXln printXln32 printXln64 printXlnZ end
+  overload: export: printX printX8 printX16 printX32 printX64 printXZ end
+  overload: export: printXln printXln8 printXln16 printXln32 printXln64 printXlnZ end
   overload: export: printU printU8 printU16 printU32 printU64 printUZ end
   overload: export: printUln printUln8 printUln16 printUln32 printUln64 printUlnZ end
 end

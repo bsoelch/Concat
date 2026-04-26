@@ -10,9 +10,6 @@ end
 proc( type : auto: T  T  -> ) =>: printXln
   io.printX "":s io.println
 end
-proc( type : auto: T  T  -> ) =>: printUXln
-  io.printUX "":s io.println
-end
 proc( -> ) =>: export: main
   "fromI:":s io.println
   -0x12345678 int.fromI32 printInt

@@ -54,7 +54,7 @@ namespace: sb
     i64 cast.u 10 appendI?
   end
   proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendX32
-    i64 cast.u 16 appendI?
+    i64 cast.s 16 appendI?
   end
   proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendX64
     i64 cast.s 16 appendI?
