@@ -158,15 +158,27 @@ proc( file.File -> file.File ) =>: runTestsInDirImpl
     BASE_PATH=
   end ..drop
 end
-## TODO: allow running single files
 proc( string : dirName -> ) =>: runTestsInDir
   BASE_PATH
     sb.clear
     dirName sb.appendStr
+    '\x00' sb.appendC
   BASE_PATH=
-  dirName file.OpenMode .DIR file.open
-    runTestsInDirImpl
+  BASE_PATH sb.asStr file.OpenMode .DIR file.open
+    $ file.isDir if
+      runTestsInDirImpl
+    end
   file.close
+  dirName ".concat":s string.endsWith if
+    dirName runTest
+  else
+    BASE_PATH
+      sb.clear
+      dirName .length sb.setLength
+      ".concat\x00":s sb.appendStr
+    BASE_PATH=
+    BASE_PATH sb.asStr runTest
+  end
 end
 
 proc( -> ) =>: export: main
