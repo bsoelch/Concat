@@ -1005,9 +1005,13 @@ namespace: slice
   overload: export: mapTo
     fMapTo fMapMutTo
   end
-  ## TODO? filterMap
-  ## TODO? filterMapTo
-  ## TODO? zip
+  ## TODO more mapping funtions
+  ## ( T slice ( T -> T optional ) -> T slice ) filterMap
+  ## ( T slice S slice.mut ( T -> S optional ) -> S slice.mut ) filterMapTo
+  ## ( T slice ( T T -> T ) -> T optional ) : reduce
+  ## ( T slice B ( B T -> B ) ) -> B : foldl
+  ## ( T slice ( T B -> B ) B -> B ) : foldr
+  ## ( A slice B slice C slice.mut ( A B -> C ) -> C slice.mut ) : zip
 end
 overload: export: []
   slice.getValue_Z
