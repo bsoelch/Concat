@@ -857,18 +857,18 @@ namespace: slice
       end
     splitIndex return
   end
-  #+proc( ## TODO this proc triggers a compiler bug
+  proc(
     type : auto: T
     T slice : elts
     T slice : subseq
   -> T slice T slice ) =>: export: splitSeq
-    elts subseq ( T T -> bool ) => == end indexOfSlice .else
+    elts subseq ${ == } indexOfSlice .else
       T empty elts return
     end =:: offset
       elts offset subseq .length + tail
       elts offset head
     return
-  end+#
+  end
 
   proc( type.pointerValue : auto: V  V optional slice : elt -> V slice optional ) =>: export: unwrapAll
     elt for

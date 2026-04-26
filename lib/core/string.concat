@@ -150,14 +150,7 @@ namespace: string
     str char8 slice cast chr slice.splitLast ..swap string cast ..swap string cast return
   end
   proc( string : str string : substr -> string string ) =>: export: splitStr
-    ## TODO implement on top of slice.splitSeq (once compiler-bug is fixed)
-    ## str char8 slice cast substr char8 slice cast slice.splitSeq ..swap string cast ..swap string cast return
-    str substr indexOfStr .else
-      empty str return
-    end =:: offset
-      str offset substr .length + tail
-      str offset head
-    return
+    str char8 slice cast substr char8 slice cast slice.splitSeq >$ string cast >$ string cast return
   end
 end
 proc( char8 ptr.raw : p iSize : k -> string ) =>: static: export: :string
