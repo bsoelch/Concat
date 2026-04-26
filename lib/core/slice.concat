@@ -932,17 +932,58 @@ namespace: slice
     atReversed atReversedMut
   end
 
-  ## TODO? filter
-  ## TODO? filterMap
-  ## TODO? filterMapTo
   proc( type : auto: T
-    T slice.mut : data
+    T slice : src
+    T slice.mut : dst
+    ( T -> bool ) ptr : f
+  -> T slice.mut ) =>: export: filterTo0
+    src .data =:: mut: srcPtr
+    srcPtr src .length @[] =:: endPtr
+    0:iSize =:: mut: dstCount
+    dst .length src .length u>= if
+      ## destination large enough -> no need to check on each write
+      dst .data =:: basePtr
+      while srcPtr endPtr ptr.lt do
+        srcPtr []
+          $ f () ! if ..drop continue end
+        basePtr dstCount =[]
+        dstCount 1 + dstCount=
+      finally srcPtr 1 @[] srcPtr= end
+      basePtr dstCount T slice.mut new return
+    else
+      while srcPtr endPtr ptr.lt do
+        srcPtr []
+          $ f () ! if ..drop continue end
+        dst dstCount =[] ## check for overflow on each write
+        dstCount 1 + dstCount=
+      finally srcPtr 1 @[] srcPtr= end
+      dst
+        dstCount >$ .length=
+      return
+    end
+  end
+  proc( type : auto: T
+    T slice.mut : src
+    T slice.mut : dst
+    ( T -> bool ) ptr : f
+  -> T slice.mut ) =>: export: filterToMut
+    src slice.freeze dst f filterTo0
+  end
+  overload: export: filterTo filterTo0 filterToMut end
+  proc( type : auto: T
+    T slice.mut : elts
+    ( T -> bool ) ptr : f
+  -> T slice.mut ) =>: export: filter
+    elts slice.freeze elts f filterTo0
+  end
+  proc( type : auto: T
+    T slice.mut : elts
     ( T -> T ) ptr : f
   -> T slice.mut ) =>: export: map
-    data slice.atItrMut for
+    elts slice.atItrMut for
       $ [] f () >$ =[]
     end
-    data return
+    elts return
   end
   proc( type : auto: S type : auto: T
     S slice : src
@@ -964,7 +1005,9 @@ namespace: slice
   overload: export: mapTo
     fMapTo fMapMutTo
   end
-  ## TODO zip
+  ## TODO? filterMap
+  ## TODO? filterMapTo
+  ## TODO? zip
 end
 overload: export: []
   slice.getValue_Z

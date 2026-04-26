@@ -21,13 +21,6 @@ namespace: list
       elts .data
     T ListFilterItr new
   end
-  proc( type : auto: T
-    T list : mut: elts
-    ( T -> bool ) ptr : f
-  -> T list ) =>: export: fFilter
-    elts itrFilter for f () end return
-  end
-  overload: export: filter itrFilter fFilter end
 
   namespace: filterItr
     proc( type : auto: T  T ListFilterItr -> T ListFilterItr ) =>: prepare end

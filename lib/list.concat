@@ -675,10 +675,20 @@ namespace: list
   end
 
   proc( type : auto: T
-    T list : data
+    T list : mut: elts
+    ( T -> bool ) ptr : f
+  -> T list ) =>: export: filter
+    elts
+      $ asMutableSlice f slice.filter
+      $ .data >>$ .data=
+      >$ .length >$ .length=
+    return
+  end
+  proc( type : auto: T
+    T list : elts
     ( T -> T ) ptr : f
   -> T list ) =>: export: map
-    data
+    elts
       $ asMutableSlice f slice.map
       $ .data >>$ .data=
       >$ .length >$ .length=
