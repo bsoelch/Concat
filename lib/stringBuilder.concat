@@ -111,10 +111,3 @@ namespace: sb
     sb .data sb .length slice.createMutable
   end
 end
-namespace: sb.operators
-  overload: <<+
-    sb.appendS
-    sb.appendStr
-    sb.appendC
-  end
-end

@@ -118,24 +118,3 @@ namespace: sb
     appendPaddedU64
   end
 end
-namespace: sb.operators
-  overload: <<+
-    sb.appendI
-  end
-  overload: <<U+
-    sb.appendU
-  end
-  overload: <<B+
-    sb.appendBin
-  end
-  overload: <<UB+
-    sb.appendUBin
-  end
-  ## TODO? seperate versions for upper/lower-case hex
-  overload: <<X+
-    sb.appendX
-  end
-  overload: <<UX+
-    sb.appendUX
-  end
-end
