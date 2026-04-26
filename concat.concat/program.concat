@@ -1475,8 +1475,7 @@ namespace: sb
     prog .idContext .typeContext =:: typeContext
     typeContext .nameContext =:: nameContext
     "## errors:\n" sb.appendS
-    prog [] .errors errorCmp@ list.sort
-    prog [] .errors for sb.appendCompilerError end
+    prog [] .errors errorCmp@ list.sort for sb.appendCompilerError end
     "## global:\n" sb.appendS
     prog [] .globalOps for prog sb.appendPreOp end
     prog [] .procedures for ProcId.getProcInfo =:: proc

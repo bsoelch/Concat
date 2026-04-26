@@ -2207,13 +2207,11 @@ namespace: types
   -> Type ) =>: export: newSetType
     ## TODO? check if set-type contains duplicate values
     ## TODO? sort elements
+    baseType context literalToType =:: shadow: baseType
     context .nameContext [] .allocator
       ## TODO: is shallow copy of type-elements save
-      elements mixedArena.copySlice =:: sliceElements
-      sliceElements constantCmp@ slice.sort
-      baseType context literalToType
-        sliceElements slice.freeze
-      SetType new mixedArena.copyValue =:: setType
+      elements mixedArena.copySlice
+      baseType >$ constantCmp@ slice.sort slice.freeze SetType new mixedArena.copyValue =:: setType
     context .nameContext .allocator=
     setType SetTypeId cast Type .SetType  return
   end

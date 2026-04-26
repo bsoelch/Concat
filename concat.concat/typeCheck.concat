@@ -5031,7 +5031,7 @@ proc(
             switchBlock .caseBranches =:: mut: caseBranches
             switchBlock .switchId SwitchId.getSwitchData =:: switchData
             ## sort switch-labels
-            switchData [] .switchLabels switchLabelCmp@ program list.sort
+            switchData [] .switchLabels switchLabelCmp@ program list.sort switchData .switchLabels=
             switchBlock .hasDefault ! if
               switchData [] .defaultLabel LocalLabelType .LABEL_END op .pos state localLabel
               switchBlock .switchType typeContext types.isEnumOrTaggedUnion if

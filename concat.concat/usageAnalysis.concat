@@ -547,7 +547,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: usageAnalysis
     bData .implementation [] .Code .and .codeState .TypeChecked .else 0 return end =:: bCode
     ## TODO sort by inlinability
     aCode .length bCode .length iSize.cmp return
-  end list.sort
+  end list.sort program .procedures=
   ## TODO: option to dump program state at each sub-phase (clear at start, append for each proc)
   ## TODO 2 passes for each proc
   ## pass 1

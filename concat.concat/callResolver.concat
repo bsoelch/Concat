@@ -1066,7 +1066,7 @@ proc(
     end ..drop
     stackIndex 1:iSize +
   end ..drop
-  currentSignatures cmpSignatures@ progContext list.sort
+  currentSignatures cmpSignatures@ progContext list.sort currentSignatures=
   currentSignatures 0 @[] =:: candidate
   candidate [] .needsParam or candidate [] .argsMatch ! if
     ## no match

@@ -243,8 +243,8 @@ namespace: args
     end
     index false return
   end
-  proc( ArgParser : args -> bool ) =>: export: parse
-    args .argNames ArgName.cmp@ list.sort
+  proc( ArgParser : mut: args -> bool ) =>: export: parse
+    args .argNames ArgName.cmp@ list.sort args..argNames=
     0 sys.getArg =:: progName
     false =:: mut: hadArg
     false =:: mut: hadError

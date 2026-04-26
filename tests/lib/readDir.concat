@@ -8,8 +8,7 @@ proc( -> ) =>: main
       $1 file.entries for string.copy list.append end ..drop
     =:: entries
   file.close
-  entries string.compare@ list.sort
-  entries for
+  entries string.compare@ list.sort for
     io.println
   end
 end

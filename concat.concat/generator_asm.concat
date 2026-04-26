@@ -925,8 +925,9 @@ proc(
       varName varInfo .cachedValue CachedVariable new list.append
     end
   =:: cachedVars
-  cachedVars CachedVariable.cmp@ list.sort
-  context [] .stack list.asSlice slice.copy cachedVars list.asMutableSlice RegisterState new
+  context [] .stack list.asSlice slice.copy
+    cachedVars CachedVariable.cmp@ list.sort list.asMutableSlice
+  RegisterState new
 end
 proc(
   RegisterState : state

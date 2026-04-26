@@ -640,13 +640,14 @@ namespace: list
     T list : elts
     proc( T T C -> i32 ) ptr : cmp
     C : context
-  -> ) =>: export: sort
+  -> T list ) =>: export: sort
     ## sort
       elts .data
       elts .length
       cmp
       context
     array.sort
+    elts return
   end
   proc(
     type : auto: T

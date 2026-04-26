@@ -36,13 +36,14 @@ namespace: slice
     T slice.mut : elts
     proc( T T C -> i32 ) ptr : fCmp
     C : context
-  -> ) =>: export: sort
+  -> T slice.mut ) =>: export: sort
     ## sort
       elts .data
       elts .length
       fCmp
       context
     array.sort
+    elts return
   end
 
   ( type : T -> type ) =>: export: MapItr

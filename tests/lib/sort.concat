@@ -7,7 +7,7 @@ end
 
 proc( -> ) =>: main
   "Hello, World!" sb.copyPtr
-     ..dup char8 list cast cmp@ 0 list.sort
+     char8 list cast cmp@ 0 list.sort stringBuilder cast
      '\n' sb.appendC
      $ sb.asStr io.print
    sb.free ..drop
