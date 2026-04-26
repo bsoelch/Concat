@@ -1,5 +1,4 @@
 import list
-import itrs/list
 import slice
 import string
 import numbers
@@ -354,7 +353,9 @@ end
 proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition ptr : pos ParserState ptr.mut : state -> iSize slice.mut ) =>: convertAndOrBlock
   state [] .program =:: program
   program .errors =:: errors
-  andOrBlock .andOrPositions list.itrFilter for =:: opPos ## TODO: filter for is depreated
+  0:iSize =:: mut: andPosCount
+  andOrBlock .andOrPositions .length for =:: i
+    andOrBlock .andOrPositions i [] =:: opPos
     opPos iSize cast.u state [] .parsedOps .length u>= if
       "operations and blocks are out of sync, could not determine position of and/or" sb.copyPtr
       pos errors appendError
@@ -369,14 +370,14 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition ptr : pos P
     end =:: blockData
     blockData [] .blockType switch
       AND case
-        true
         mergeWith .DO if BlockType .AND_DO else BlockType .AND_IF end
+        opPos andOrBlock .andOrPositions andPosCount =[]
+        andPosCount 1 + andPosCount=
       break
       OR case
         state opCount
           opPos - JumpDistance cast
         blockData .jumpDistance=
-        false
         mergeWith .DO if BlockType .OR_DO else BlockType .OR_IF end
       break
       default
@@ -385,7 +386,10 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition ptr : pos P
         pos errors appendError
       iSize slice.emptyMutable return
     end blockData .blockType=
-  end list.asMutableSlice
+  end
+  andOrBlock .andOrPositions
+    andPosCount list.setLength
+  list.asMutableSlice
 end
 proc(
   BlockType : breakType
