@@ -124,16 +124,16 @@ namespace: file
       >$ ..drop
     return
   end
-  proc( string -> bool ) =>: export: setStdOut
-    OpenMode .WRITE open
+  proc( string bool : append -> bool ) =>: export: setStdOut
+    append if OpenMode .APPEND else OpenMode .WRITE end open
       $ .value .File .else ..drop.2 false return end
       c.fd.stdOut c.fd cast >$ c.fileno
     c.dup2 0 >=
       >$ ..drop
     return
   end
-  proc( string -> bool ) =>: export: setStdErr
-    OpenMode .WRITE open
+  proc( string bool : append -> bool ) =>: export: setStdErr
+    append if OpenMode .APPEND else OpenMode .WRITE end open
       $ .value .File .else ..drop.2 false return end
       c.fd.stdErr c.fd cast >$ c.fileno
     c.dup2 0 >=

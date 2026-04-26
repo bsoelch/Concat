@@ -46,10 +46,10 @@ namespace: exec
         context .stdInPath file.setStdIn ..drop
       end
       context .stdOutPath .length 0 != if
-        context .stdOutPath file.setStdOut ..drop
+        context .stdOutPath context .redirectMode RedirectMode.APPEND_STD_OUT & ? file.setStdOut ..drop
       end
       context .stdErrPath .length 0 != if
-        context .stdErrPath file.setStdErr ..drop
+        context .stdErrPath context .redirectMode RedirectMode.APPEND_STD_ERR & ? file.setStdErr ..drop
       end
       ## child process
       context .argOffsets .length 1:iSize +

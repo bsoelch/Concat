@@ -3,12 +3,17 @@ import stringBuilder
 import mem
 
 namespace: exec
+  namespace: RedirectMode
+    0x1 =:: export: APPEND_STD_OUT
+    0x2 =:: export: APPEND_STD_ERR
+  end
   struct(
     i32 list : mut: argOffsets
     stringBuilder : mut: argBuffer
     string : stdInPath
     string : stdOutPath
     string : stdErrPath
+    i32 : redirectMode
   ) =:: export: ExecContext
   proc( string : command -> ExecContext ) =>: export: build
     ## ExecContext
@@ -19,6 +24,7 @@ namespace: exec
       string.empty
       string.empty
       string.empty
+      0
     ExecContext new return
   end
   proc( ExecContext : context string : argument -> ExecContext ) =>: export: add
@@ -41,6 +47,14 @@ namespace: exec
   end
   proc( ExecContext string -> ExecContext ) =>: export: setStdErr
     >$ .stdErrPath=
+  end
+  proc( ExecContext string -> ExecContext ) =>: export: appendStdOut
+    >$ .stdOutPath=
+    $ .redirectMode RedirectMode.APPEND_STD_OUT | >$ .redirectMode=
+  end
+  proc( ExecContext string -> ExecContext ) =>: export: appendStdErr
+    >$ .stdErrPath=
+    $ .redirectMode RedirectMode.APPEND_STD_ERR | >$ .redirectMode=
   end
   enum( SUCCESS FORK_FAILURE EXEC_FAILURE WAIT_FAILURE PROCESS_FAILURE ) =:: export: RunState
   proc( ExecContext : context -> i32 RunState ) : export: run

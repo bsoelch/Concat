@@ -51,8 +51,8 @@ proc( string : filePath -> ) =>: runTest
         end
       file.close
       inPath sb.asStr exec.setStdIn
-      outPath sb.asStr exec.setStdOut
-      errPath sb.asStr exec.setStdErr
+      outPath sb.asStr exec.appendStdOut
+      errPath sb.asStr exec.appendStdErr
     exec.run exec.check ..drop
   end
   inPath sb.free ..drop
