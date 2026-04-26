@@ -25,6 +25,22 @@ namespace: io
     if "true\n":s else "false\n":s end printS
   end
 
+  proc( char8 : c -> ) =>: export: eprintC
+    file.stdErr c@ string.wrap file.write ..drop
+  end
+  proc( char8 : c -> ) =>: export: eprintlnC
+    char8 2 array : mut: chrs
+    c chrs@ 0 =[]
+    '\n' chrs@ 1 =[]
+    chrs@ string.wrap eprintS
+  end
+  proc( string : s -> ) =>: export: eprintS
+    file.stdErr s file.write ..drop
+  end
+  proc( string : s -> ) =>: export: eprintlnS
+    s eprintS '\n' eprintC
+  end
+
   proc( i32 : i -> ) =>: printI32
     char8 12 array : mut: buffer ## -4294967296\n
     buffer@ sb.wrapBuffer
@@ -190,6 +206,12 @@ namespace: io
   overload: export: println
     printlnC printlnS printlnBool
     printlnI8 printlnI16 printlnI32 printlnI64 printlnZ printlnF32 printlnF64
+  end
+  overload: export: eprint
+    eprintC eprintS
+  end
+  overload: export: eprintln
+    eprintlnC eprintlnS
   end
   overload: export: printX printX8 printX16 printX32 printX64 printXZ end
   overload: export: printXln printXln8 printXln16 printXln32 printXln64 printXlnZ end

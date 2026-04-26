@@ -133,15 +133,14 @@ namespace: args
     >$ .usage=
   end
   proc( ArgParser : args string : name -> ) =>: checkArgName
-    ## TODO use stderr
     name .length 0 == if
-      "Warning: empty-argument name":s io.println
+      "Warning: empty-argument name":s io.eprintln
       return
     end
     args .argPrefixes name 0 string.charAt string.contains ! if
-      "Warning: argument `":s io.print
-      name io.print
-      "` does not start with a valid argument prefix":s io.println
+      "Warning: argument `":s io.eprint
+      name io.eprint
+      "` does not start with a valid argument prefix":s io.eprintln
     end
   end
   proc( ArgParser string : name ArgInfo : argInfo -> ArgParser ) =>: addArg
@@ -198,8 +197,8 @@ namespace: args
       Set .case
         index 1 + =:: shadow: index
         index sys.argc u>= if ..drop
-          "missing argument for ":s io.print
-          argName [] io.println
+          "missing argument for ":s io.eprint
+          argName [] io.eprintln
           index true return
         end
         index sys.getArg >$ =[]
@@ -208,8 +207,8 @@ namespace: args
       Append .case
         index 1 + =:: shadow: index
         index sys.argc u>= if ..drop
-          "missing argument for ":s io.print
-          argName [] io.println
+          "missing argument for ":s io.eprint
+          argName [] io.eprintln
           index true return
         end
         $ []
@@ -234,8 +233,8 @@ namespace: args
           finally nextIndex 1 + nextIndex= end
         dst =[]
         matchedArg ! if
-          argName [] io.print
-          " should be followed by at least one argument":s io.println
+          argName [] io.eprint
+          " should be followed by at least one argument":s io.eprintln
           nextIndex true return
         end
         nextIndex false return
@@ -263,7 +262,7 @@ namespace: args
           true hasMisc=
           args .miscLocation switch
             None case
-              "unexpected argument: ":s io.print tailValues 0 [] io.println
+              "unexpected argument: ":s io.eprint tailValues 0 [] io.eprintln
               true hadError=
             break
             Set .case tailValues list.removeLast >$ tailValues= >$ =[] break
@@ -287,8 +286,8 @@ namespace: args
             end
           break
           Missing case
-            "unexpected argument: ":s io.println
-            arg io.println
+            "unexpected argument: ":s io.eprintln
+            arg io.eprintln
             true hadError=
           break
         end
@@ -302,7 +301,7 @@ namespace: args
               true hasMisc=
               args .miscLocation switch
                 None case
-                  "unexpected argument: ":s io.print arg io.println
+                  "unexpected argument: ":s io.eprint arg io.eprintln
                   true hadError=
                 break
                 Set .case arg >$ =[] continue
@@ -322,7 +321,7 @@ namespace: args
           true hasMisc=
           args .miscLocation switch
             None case
-              "unexpected argument: ":s io.print tailValues 0 [] io.println
+              "unexpected argument: ":s io.eprint tailValues 0 [] io.eprintln
               true hadError=
             break
             Set .case tailValues list.removeLast <$ tailValues= >$ =[] break
@@ -335,15 +334,15 @@ namespace: args
     end
     tailValues list.free ..drop
     hasHead ! and args .requireHead .if
-      io.println
+      io.eprintln
       true hadError=
     end
     hasMisc ! and args .requireMisc .if
-      io.println
+      io.eprintln
       true hadError=
     end
     hasTail ! and args .requireTail .if
-      io.println
+      io.eprintln
       true hadError=
     end
     printHelp .IGNORE ! or hadError if
