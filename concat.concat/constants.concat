@@ -596,6 +596,14 @@ end
 
 namespace: constants
   proc(
+    FilePosition : pos
+    ConstantContext ptr.mut : context
+  -> FilePosition ptr ) =>: copyPos ## copy position to persistent memory
+    context [] .arrayValues
+      pos mixedArena.copyValue <$
+    context .arrayValues=
+  end
+  proc(
     string : str
     FilePosition : stringStart
     CompilerError list ptr.mut : errors
@@ -655,7 +663,7 @@ namespace: constants
                 nChars          sb.appendI
                 " got "         sb.appendS
                 str .length i - sb.appendI
-              pos@ errors appendError
+              pos context copyPos errors appendError
               continue
             end
             str .data i @[] nChars string.create 16 number.tryParseInt .NONE if
@@ -664,7 +672,7 @@ namespace: constants
                   c sb.appendC
                   str .data i @[] nChars string.create sb.appendStr
                   '\"' sb.appendC
-                pos@ errors appendError
+                pos context copyPos errors appendError
               else
                 c 'x' == if
                   char8 cast sb.appendC
@@ -684,7 +692,7 @@ namespace: constants
                   "unknown hex-escape sequence: \"\\" sb.copyPtr
                     c sb.appendC '\"'
                     sb.appendC
-                  pos@ errors appendError
+                  pos context copyPos errors appendError
                 end
               end
             else ..drop
@@ -692,7 +700,7 @@ namespace: constants
                 c sb.appendC
                 str .data i @[] nChars string.create sb.appendStr
                 '\"' sb.appendC
-              pos@ errors appendError
+              pos context copyPos errors appendError
             end
             0:iSize while $ nChars u< do =:: j
               str i j + string.charAt pos@ updateFilePos
@@ -703,7 +711,7 @@ namespace: constants
             "unknown escape sequence \"\\" sb.copyPtr
               $1 sb.appendC
               '\"' sb.appendC
-            pos@ errors appendError
+            pos context copyPos errors appendError
             pos@ updateFilePos
         end
       finally i 1:iSize + end ..drop
@@ -736,7 +744,7 @@ namespace: constants
         end
         i 1:iSize + str .length u>= if
           "unexpected end of raw string" sb.copyPtr
-          pos@ errors appendError
+          pos context copyPos errors appendError
         end
         str i 1:iSize + string.charAt
           $ pos@ updateFilePos

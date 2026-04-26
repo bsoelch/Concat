@@ -1,0 +1,1 @@
+unknown escape sequence "\0" at ./tests/parser/invalidStringEscape.concat:2:5
