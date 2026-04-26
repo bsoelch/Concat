@@ -398,7 +398,9 @@ proc( -> ) =>: main ## TODO check return value of fopen
         "run compiled code:":s io.println
         "-----------------------------------------":s io.println
       end
-      tmpPath sb.asStr exec.build exec.run .SUCCESS if
+      tmpPath sb.asStr exec.build
+        runArgs for exec.add end
+      exec.run .SUCCESS if
         retCode=
       else ..drop
         verbose if
