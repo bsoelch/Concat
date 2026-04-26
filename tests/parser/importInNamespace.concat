@@ -1,5 +1,5 @@
 namespace: inner
-  import numbers/print
+  import print
   1 =:: x
 end
 proc( -> ) =>: main

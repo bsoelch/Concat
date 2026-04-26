@@ -1,7 +1,6 @@
 import argParse
 import numbers
 import print
-import numbers/print
 import file
 import exec
 

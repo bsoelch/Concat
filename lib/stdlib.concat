@@ -9,7 +9,6 @@ import mem
 import numbers/intToStr
 import numbers/floatToStr
 import print
-import numbers/print
 import numbers
 import optional
 import string

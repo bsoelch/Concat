@@ -1,7 +1,7 @@
 #+
 Computes the n-th Fibonacci number
 +#
-import numbers/print
+import print
 
 proc( i64 : mut: n -> i64 ) =>: fib
   0:i64 1:i64

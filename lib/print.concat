@@ -1,27 +1,194 @@
 import file
+import numbers/intToStr
+import numbers/floatToStr
 
 namespace: io
   proc( char8 : c -> ) =>: export: printC
     file.stdOut c@ string.wrap file.write ..drop
   end
-  proc( string : s -> ) =>: export: printS
-    file.stdOut s file.write ..drop
-  end
-  proc( bool -> ) =>: export: printB
-    if "true":s else "false":s end printS
-  end
-  overload: export: print printC printS printB end
   proc( char8 : c -> ) =>: export: printlnC
     char8 2 array : mut: chrs
     c chrs@ 0 =[]
     '\n' chrs@ 1 =[]
     chrs@ string.wrap printS
   end
-  proc( bool -> ) =>: export: printlnB
-    if "true\n":s else "false\n":s end printS
+  proc( string : s -> ) =>: export: printS
+    file.stdOut s file.write ..drop
   end
   proc( string : s -> ) =>: export: printlnS
     s printS '\n' printC
   end
-  overload: export: println printlnC printlnS printlnB end
+  proc( bool -> ) =>: export: printBool
+    if "true":s else "false":s end printS
+  end
+  proc( bool -> ) =>: export: printlnBool
+    if "true\n":s else "false\n":s end printS
+  end
+
+  proc( i32 : i -> ) =>: printI32
+    char8 12 array : mut: buffer ## -4294967296\n
+    buffer@ sb.wrapBuffer
+      i sb.appendI
+    sb.asStr printS
+  end
+  proc( i64 : i -> ) =>: export: printI64
+    char8 24 array : mut: buffer ## -9223372036854775808\n
+    buffer@ sb.wrapBuffer
+      i sb.appendI
+    sb.asStr printS
+  end
+  proc( iSize : i -> ) =>: export: printZ
+    char8 24 array : mut: buffer ## -9223372036854775808\n
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendI
+    sb.asStr printS
+  end
+  proc( i8 : i -> ) =>: export: printI8   i i32 cast printI32 end
+  proc( i16 : i -> ) =>: export: printI16   i i32 cast printI32 end
+  proc( f32 : f -> ) =>: export: printF32
+    char8 16 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      f f64 cast 7 sb.appendF?
+    sb.asStr printS
+  end
+  proc( f64 : f -> ) =>: export: printF64
+    char8 24 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      f sb.appendF
+    sb.asStr printS
+  end
+  proc( i32 : i -> ) =>: export: printlnI32
+    char8 12 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      i sb.appendI
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( i64 : i -> ) =>: export: printlnI64
+    char8 24 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      i sb.appendI
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( iSize : i -> ) =>: export: printlnZ
+    char8 24 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendI
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( i8 : i -> ) =>: export: printlnI8 i i32 cast printlnI32 end
+  proc( i16 : i -> ) =>: export: printlnI16 i i32 cast printlnI32 end
+  proc( f32 : f -> ) =>: export: printlnF32
+    char8 16 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      f f64 cast 7 sb.appendF?
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( f64 : f -> ) =>: export: printlnF64
+    char8 24 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      f sb.appendF
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+
+  proc( i32 : i -> ) =>: export: printX32
+    char8 12 array : mut: buffer ## -80000000
+    buffer@ sb.wrapBuffer
+      i sb.appendX
+    sb.asStr printS
+  end
+  proc( i64 : i -> ) =>: export: printX64
+    char8 24 array : mut: buffer ## -8000000000000000
+    buffer@ sb.wrapBuffer
+      i sb.appendX
+    sb.asStr printS
+  end
+  proc( iSize : i -> ) =>: export: printXZ
+    char8 24 array : mut: buffer ## -8000000000000000
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendX
+    sb.asStr printS
+  end
+  proc( i32 : i -> ) =>: export: printXln32
+    char8 12 array : mut: buffer ## -80000000
+    buffer@ sb.wrapBuffer
+      i sb.appendX
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( i64 : i -> ) =>: export: printXln64
+    char8 24 array : mut: buffer ## -8000000000000000
+    buffer@ sb.wrapBuffer
+      i sb.appendX
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( iSize : i -> ) =>: export: printXlnZ
+    char8 24 array : mut: buffer ## -8000000000000000
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendX
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+
+  proc( i32 : i -> ) =>: printU32
+    char8 12 array : mut: buffer ## -4294967296\n
+    buffer@ sb.wrapBuffer
+      i sb.appendU
+    sb.asStr printS
+  end
+  proc( i64 : i -> ) =>: export: printU64
+    char8 24 array : mut: buffer ## -9223372036854775808\n
+    buffer@ sb.wrapBuffer
+      i sb.appendU
+    sb.asStr printS
+  end
+  proc( iSize : i -> ) =>: export: printUZ
+    char8 24 array : mut: buffer ## -9223372036854775808\n
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendU
+    sb.asStr printS
+  end
+  proc( i8 : i -> ) =>: export: printU8   i i32 cast.u printU32 end
+  proc( i16 : i -> ) =>: export: printU16   i i32 cast.u printU32 end
+  proc( i32 : i -> ) =>: printUln32
+    char8 12 array : mut: buffer ## 4294967296\n
+    buffer@ sb.wrapBuffer
+      i sb.appendU
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( i64 : i -> ) =>: export: printUln64
+    char8 24 array : mut: buffer ## 18446744073709551616\n
+    buffer@ sb.wrapBuffer
+      i sb.appendU
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( iSize : i -> ) =>: export: printUlnZ
+    char8 24 array : mut: buffer ## -9223372036854775808\n
+    buffer@ sb.wrapBuffer
+      i i64 cast.u sb.appendU
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( i8 : i -> ) =>: export: printUln8   i i32 cast.u printUln32 end
+  proc( i16 : i -> ) =>: export: printUln16   i i32 cast.u printUln32 end
+
+  overload: export: print
+    printC printS printBool
+    printI8 printI16 printI32 printI64 printZ printF32 printF64
+  end
+  overload: export: println
+    printlnC printlnS printlnBool
+    printlnI8 printlnI16 printlnI32 printlnI64 printlnZ printlnF32 printlnF64
+  end
+  overload: export: printX printX32 printX64 printXZ end
+  overload: export: printXln printXln32 printXln64 printXlnZ end
+  overload: export: printU printU8 printU16 printU32 printU64 printUZ end
+  overload: export: printUln printUln8 printUln16 printUln32 printUln64 printUlnZ end
 end

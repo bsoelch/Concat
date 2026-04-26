@@ -1,5 +1,5 @@
 import numbers
-import numbers/print
+import print
 
 proc( -> ) =>: main
   1 3 i32.min 1 == "1" assert

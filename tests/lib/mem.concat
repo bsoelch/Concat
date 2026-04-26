@@ -1,5 +1,5 @@
 import mem
-import numbers/print
+import print
 
 proc( -> ) =>: main
   1024:iSize i32 mem.alloc i32 ptr.raw.mut =: mut: dynamicArray

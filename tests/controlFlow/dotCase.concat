@@ -1,4 +1,4 @@
-import numbers/print
+import print
 
 i32 =:: u32
 union(

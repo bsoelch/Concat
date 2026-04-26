@@ -1,4 +1,4 @@
-import numbers/print
+import print
 "A" =:: str1
 "A string" =:: str2
 

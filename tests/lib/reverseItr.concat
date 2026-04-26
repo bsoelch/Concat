@@ -1,5 +1,5 @@
 import list
-import numbers/print
+import print
 proc( -> ) =>: main
   { 1 2 3 4 5 } =:: mut: buffer
   buffer@ list.wrapBuffer

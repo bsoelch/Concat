@@ -1,5 +1,5 @@
 import slice
-import numbers/print
+import print
 
 proc( type : auto: T  T slice : l -> ) =>: printArray
   0:iSize while ..dup l .length u< do

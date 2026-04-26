@@ -1,5 +1,5 @@
 import math
-import numbers/print
+import print
 
 proc( -> ) =>: main
   -1e400 math.round io.println

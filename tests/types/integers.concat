@@ -1,4 +1,4 @@
-import numbers/print
+import print
 proc( -> i64 ) =>: anInt
   12345678987654321 return
 end

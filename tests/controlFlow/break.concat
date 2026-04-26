@@ -1,4 +1,4 @@
-import numbers/print
+import print
 proc( -> i32 ) =>: inline.never: getLimit
   5
 end

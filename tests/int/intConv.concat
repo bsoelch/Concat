@@ -1,6 +1,5 @@
 import future/int
 import print
-import numbers/print
 
 proc( int : x -> ) =>: printInt
   0 sb.create

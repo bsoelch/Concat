@@ -1,5 +1,5 @@
 import itrs/list
-import numbers/print
+import print
 proc( -> ) =>: main
   { 1 2 3 4 5 6 7 } =:: mut: elts
   elts@ list.wrapBuffer
