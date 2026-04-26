@@ -8,6 +8,6 @@ proc( -> ) =>: main
   E .D:? ! "E .D does not exist" assert
   E:? "E exists" assert
   ThisDoesNotExist:? ! "ThisDoesNotExist" assert
-  i32.i32Itr:? "i32 iterator exists" assert
+  i32:? "i32 exists" assert
 end
 main:? "main exists" assert

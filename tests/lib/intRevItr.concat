@@ -1,0 +1,6 @@
+import print
+proc( -> ) =>: main
+  10 i32.reversed for
+    io.println
+  end
+end

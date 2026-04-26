@@ -1,62 +1,74 @@
 import core/i32
 import core/i64
 import core/ptr
-namespace: i32
-  struct( i32 : i i32 : limit ) =:: export: i32Itr
-  namespace: itr
-    proc( i32 : n -> i32Itr ) =>: export: prepare
-      0 n i32Itr new return
-    end
-    proc( i32Itr -> i32Itr ) =>: export: prepareItr end
-    proc( i32Itr : itr -> bool ) =>: export: check
-      itr .i itr .limit <
-    end
-    proc( i32Itr : itr -> i32 ) =>: export: get
-      itr .i
-    end
-    proc( i32Itr : itr -> i32Itr ) =>: export: step
-      itr .i 1 + itr .limit i32Itr new
-    end
-    proc( i32Itr : itr -> ) =>: export: endItr end
+import core/type
+
+namespace: intItr
+  ( type.integer : I -> type ) =>: export: rangeItr
+    struct( I : i I : limit )
   end
+  proc( type.integer : auto: I I : start I : limit -> I rangeItr ) =>: export: createRange
+    start limit I rangeItr new
+  end
+  proc( type.integer : auto: I I rangeItr -> I rangeItr ) =>: export: prepareRange end
+  proc( type.integer : auto: I I rangeItr : itr -> bool ) =>: export: checkRange
+    itr .i itr .limit !=
+  end
+  proc( type.integer : auto: I I rangeItr : itr -> I ) =>: export: getRange
+    itr .i
+  end
+  proc( type.integer : auto: I I rangeItr : itr -> I rangeItr ) =>: export: stepRange
+    itr .i 1 + itr .limit I rangeItr new
+  end
+  proc( type.integer : auto: I I rangeItr : itr -> ) =>: export: endRange end
+
+  ( type.integer : I -> type ) =>: export: revItr
+    struct( I : i )
+  end
+  proc( type.integer : auto: I I : start -> I revItr ) =>: export: createRev
+    start I revItr new
+  end
+  proc( type.integer : auto: I I revItr -> I revItr ) =>: export: prepareRev end
+  proc( type.integer : auto: I I revItr : itr -> bool ) =>: export: checkRev
+    itr .i 0 !=
+  end
+  proc( type.integer : auto: I I revItr : itr -> I ) =>: export: getRev
+    itr .i 1 -
+  end
+  proc( type.integer : auto: I I revItr : itr -> I revItr ) =>: export: stepRev
+    itr .i 1 - I revItr new
+  end
+  proc( type.integer : auto: I I revItr : itr -> ) =>: export: endRev end
 end
 
-namespace: i64
-  struct( i64 : i i64 : limit ) =:: export: i64Itr
+namespace: i32
   namespace: itr
-    proc( i64 : n -> i64Itr ) =>: export: prepare
-      0 n i64Itr new return
+    proc( i32 : n -> i32 intItr.rangeItr ) =>: export: prepare
+      0 n intItr.createRange
     end
-    proc( i64Itr -> i64Itr ) =>: export: prepareItr end
-    proc( i64Itr : itr -> bool ) =>: export: check
-      itr .i itr .limit <
+  end
+  proc( i32 -> i32 intItr.revItr ) =>: export: reversed
+    intItr.createRev
+  end
+end
+namespace: i64
+  namespace: itr
+    proc( i64 : n -> i64 intItr.rangeItr ) =>: export: prepare
+      0 n intItr.createRange
     end
-    proc( i64Itr : itr -> i64 ) =>: export: get
-      itr .i
-    end
-    proc( i64Itr : itr -> i64Itr ) =>: export: step
-      itr .i 1 + itr .limit i64Itr new
-    end
-    proc( i64Itr : itr -> ) =>: export: endItr end
+  end
+  proc( i64 -> i64 intItr.revItr ) =>: export: reversed
+    intItr.createRev
   end
 end
 namespace: iSize
-  struct( iSize : i iSize : limit ) =:: export: iSizeItr
   namespace: itr
-    proc( iSize : n -> iSizeItr ) =>: export: prepare
-      0:iSize n iSizeItr new return
+    proc( iSize : n -> iSize intItr.rangeItr ) =>: export: prepare
+      0 n intItr.createRange
     end
-    proc( iSizeItr -> iSizeItr ) =>: export: prepareItr end
-    proc( iSizeItr : itr -> bool ) =>: export: check
-      itr .i itr .limit u<
-    end
-    proc( iSizeItr : itr -> iSize ) =>: export: get
-      itr .i
-    end
-    proc( iSizeItr : itr -> iSizeItr ) =>: export: step
-      itr .i 1:iSize + itr .limit iSizeItr new
-    end
-    proc( iSizeItr : itr -> ) =>: export: endItr end
+  end
+  proc( iSize -> iSize intItr.revItr ) =>: export: reversed
+    intItr.createRev
   end
 end
 
@@ -230,12 +242,11 @@ namespace: array
 end
 
 overload: export: ..itr.prepare
+  intItr.prepareRev
+  intItr.prepareRange
   i32.itr.prepare
-  i32.itr.prepareItr
   i64.itr.prepare
-  i64.itr.prepareItr
   iSize.itr.prepare
-  iSize.itr.prepareItr
   ptr.itr.prepare0D
   ptr.itr.prepare
   ptr.itr.prepareItr
@@ -246,9 +257,8 @@ overload: export: ..itr.prepare
   array.itr.prepareReverseMutPtr
 end
 overload: export: ..itr.check
-  i32.itr.check
-  i64.itr.check
-  iSize.itr.check
+  intItr.checkRev
+  intItr.checkRange
   ptr.itr.check
   array.itr.checkPtr
   array.itr.checkMutPtr
@@ -257,9 +267,8 @@ overload: export: ..itr.check
   array.itr.checkReverseMutPtr
 end
 overload: export: ..itr.get
-  i32.itr.get
-  i64.itr.get
-  iSize.itr.get
+  intItr.getRev
+  intItr.getRange
   ptr.itr.get
   array.itr.getPtr
   array.itr.getMutPtr
@@ -268,9 +277,8 @@ overload: export: ..itr.get
   array.itr.getReverseMutPtr
 end
 overload: export: ..itr.step
-  i32.itr.step
-  i64.itr.step
-  iSize.itr.step
+  intItr.stepRev
+  intItr.stepRange
   ptr.itr.step
   array.itr.stepPtr
   array.itr.stepMutPtr
@@ -279,9 +287,8 @@ overload: export: ..itr.step
   array.itr.stepReverseMutPtr
 end
 overload: export: ..itr.end
-  i32.itr.endItr
-  i64.itr.endItr
-  iSize.itr.endItr
+  intItr.endRev
+  intItr.endRange
   ptr.itr.endItr
   array.itr.endPtr
   array.itr.endMutPtr
