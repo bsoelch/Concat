@@ -528,12 +528,16 @@ proc(
       end procId program program.initializeQuotation .else
         "failed to initialize quotation":s pos ..line internalErrorNoOp ..unreachable
       end
-        state [] .missingProcs
-          ## MissingProc
-            $1
-            pos
-          MissingProc new list.append
-        state .missingProcs=
+        state [] .isUnusedProc ! if
+          $ ProcId.getProcInfo =:: procData
+          procData [] .flags ProcFlags.HAS_POINTER | procData .flags= ## proc has pointer
+          state [] .missingProcs
+            ## MissingProc
+              $1
+              pos
+            MissingProc new list.append
+          state .missingProcs=
+        end
       quotConstant =[]
       i 1:iSize + continue
     end
@@ -5747,7 +5751,7 @@ proc(
       end
       PreOperation slice.mut optional.empty return
     PreTypeChecking .case
-      isUnused and procName id.identifierFlags id.FLAG_IGNORE_UNUSED & ? ! if
+      isUnused and procName id.identifierFlags id.FLAG_IGNORE_UNUSED id.FLAG_LAMBDA | & ? ! if
         "procedure " sb.copyPtr
           procName nameContext sb.appendIdentifierPath
           " is never used" sb.appendS

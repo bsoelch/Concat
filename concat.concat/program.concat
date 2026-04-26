@@ -234,7 +234,7 @@ namespace: program
         baseProcInfo [] .fileId
         baseProcInfo [] .scopeId
         procType
-        baseProcInfo [] .flags ProcFlags.HAS_POINTER | ProcFlags.HAS_STATIC_ARG ~ & ## TODO? can quotation have generic arg
+        baseProcInfo [] .flags ProcFlags.HAS_STATIC_ARG ~ & ## TODO? can quotation have generic arg
       ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
     progContext .programMemory=
     progContext [] .procedures
