@@ -2423,6 +2423,9 @@ namespace: types
     allowRename and src context types.getUnionElementUnion .and context unwrapNamed target typeEquals if
       true return
     end
+    allowRename and target context types.getUnionElementUnion .and context unwrapNamed src typeEquals if
+      true return
+    end
     allowArray and src context types.getArrayBaseType .if
         target
         allowRename mutableParent allowArray
@@ -2638,8 +2641,11 @@ namespace: types
         src target true false false context canCastPtr if
       true return
     end
-    ## allow cast union-element -> union
+    ## allow cast union-element <-> union
     src context types.getUnionElementUnion .and context types.unwrapNamed target typeEquals if
+      true return
+    end
+    target context types.getUnionElementUnion .and context types.unwrapNamed src typeEquals if
       true return
     end
     forceCast ! if

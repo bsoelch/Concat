@@ -1357,7 +1357,7 @@ proc(
         "unsupported operation in constant evaluation: " sb.copyPtr
           op [] program sb.appendOp
         op [] .pos errors appendError
-      else targetType typeContext types.isTuple _if
+      else targetType typeContext types.isTuple or targetType typeContext types.isTaggedUnion _if
         ## separate if block to avoid printing general error message on failure
         targetType op [] .pos context newTuple ! if
           EvalResult .Ok return

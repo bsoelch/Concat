@@ -273,13 +273,9 @@ namespace: int
       val iSize cast.u 0 false tryCreateInplace optional.unwrap
     end
   end
-  ## TODO! interpreter currently cannot handle running IntData.fromInt at compile-time
-  { 0 IntData cast 0 } int =: ZERO
-  { 0 IntData cast 1 } int =: ONE
-  { IntData.FLAG_SIGN IntData cast 1 } int =: MINUS_ONE
-  ##0 fromI32 =:: ZERO
-  ##1 fromI32 =:: ONE
-  ##-1 fromI32 =:: NEGATIVE_ONE
+  0 fromI32 =:: ZERO
+  1 fromI32 =:: ONE
+  -1 fromI32 =:: MINUS_ONE
   ( type : I -> type ) =>: export: IntConversionResult
     union(
       I : Ok

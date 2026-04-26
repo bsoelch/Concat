@@ -1,0 +1,8 @@
+union( i32 : I f32 : F ) =:: aUnion
+proc( i32 -> aUnion ) =>: makeUnion
+  aUnion .I
+end
+117 makeUnion =:: unionConst
+proc( -> ) =>: export: main
+  unionConst .I .and 117 == end "unionConst constant works" assert
+end
