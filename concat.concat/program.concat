@@ -722,7 +722,13 @@ proc(
   ProcedureInfo ptr.mut : procInfo
   TypeContext ptr : typeContext
 -> ) =>: export: setProcType
-  newProcType procInfo .procType=
+  procInfo [] .procType .Undefined ? ! if
+    procInfo [] .procType newProcType types.typeEquals ! if
+      "tried to overwrite type of procedure" ..panic
+    end
+  else
+    newProcType procInfo .procType=
+  end
   newProcType typeContext types.getProcIn .else Type slice.empty end =:: inTypes
   newProcType typeContext types.getProcOut .else Type slice.empty end =:: outTypes
   procInfo [] .flags
@@ -736,8 +742,11 @@ proc(
   procInfo .flags=
   procInfo .implementation .Code .if =:: codeImpl
     newProcType types.isQuotation if
-      codeImpl .genericInfo [] .None ? "quotation does not replace existing proc-type" assert
-      TypedProcedure list.empty GenericProcInfo .QuotationImpls codeImpl .genericInfo=
+      codeImpl .genericInfo [] .None ? if
+        TypedProcedure list.empty GenericProcInfo .QuotationImpls codeImpl .genericInfo=
+      else
+        codeImpl .genericInfo [] .QuotationImpls ? "quotation does not replace non-quotation proc-data" assert
+      end
     else codeImpl .genericInfo [] .None ? and procInfo [] .flags ProcFlags.HAS_STATIC_ARG & ? or
         newProcType typeContext types.containsGeneric _if
       GenericImplementationInfo list.empty GenericProcInfo .Implementations codeImpl .genericInfo=

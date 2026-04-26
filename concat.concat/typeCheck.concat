@@ -2809,10 +2809,13 @@ proc(
       continue.opLoop
       NestedProc Quotation .case =:: procId
         procId ProcId.getProcInfo =:: procData
-        procData [] .procType .Undefined ? ! or
-            procData .implementation .Code ! .or [] .codeState .Parsed ! .if
-          "unexpected state for nested procedure" sb.copyPtr
-          op .pos errors appendError
+        procData .implementation .Code .else
+          "non code nested procedure":s op ..line state internalError ..unreachable
+          continue.opLoop
+        end [] .codeState switch
+          Parsed PreTypeChecking .case break
+          default
+            "unexpected state for nested procedure":s op ..line state internalError ..unreachable
           continue.opLoop
         end =:: procOps
         op .val .Quotation ? =:: isQuotation
@@ -2838,7 +2841,7 @@ proc(
         procType procData typeContext setProcType
         idContext id.currentScope procData .scopeId= ## remember host scope
         procOps ProcCodeState .PreTypeChecking procData .implementation .Code .else
-          "expected code-proc":s op .pos ..line internalErrorNoOp ..unreachable
+          "expected code-proc":s op ..line state internalError ..unreachable
         end .codeState=
         procId ConstValue .Procedure
           procType ## TODO? special type for procedure literal
@@ -3012,7 +3015,7 @@ proc(
           calledType
         end =:: procType
         procType typeContext types.getProcIn .else
-          "proc has no in":s op .pos ..line internalErrorNoOp ..unreachable
+          "proc has no in":s op ..line state internalError ..unreachable
         end =:: inTypes
         ## requireTypes
           inTypes
@@ -3023,7 +3026,7 @@ proc(
         requireTypes .Err ? if continue.opLoop end
         calledType op .pos opCallPtr state appendOp ..drop
         procType typeContext types.getProcOut .else
-          "proc has no out":s op .pos ..line internalErrorNoOp ..unreachable
+          "proc has no out":s op ..line state internalError ..unreachable
         end
           op .pos
           state
@@ -3468,7 +3471,7 @@ proc(
                 >$ ..drop
               else
                 index typeContext types.compositeGetElement .else
-                  "missing element type":s op .pos ..line internalErrorNoOp ..unreachable
+                  "missing element type":s op ..line state internalError ..unreachable
                 end
               end
             end
