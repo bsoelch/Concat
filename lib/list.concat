@@ -652,11 +652,12 @@ namespace: list
   proc(
     type : auto: T
     T list : elts
-  -> ) =>: export: reverse
+  -> T list ) =>: export: reverse
     ## reverse
       elts .data
       elts .length
     array.reverse
+    elts
   end
   proc( type : auto: T T list -> T ptr.Itr ) =>: export: getItr
     asSlice slice.getItr

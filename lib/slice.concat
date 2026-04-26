@@ -24,11 +24,12 @@ namespace: slice
   proc(
     type : auto: T
     T slice.mut : elts
-  -> ) =>: export: reverse
+  -> T slice.mut ) =>: export: reverse
     ## reverse
       elts .data
       elts .length
     array.reverse
+    elts
   end
   proc(
     type : auto: T

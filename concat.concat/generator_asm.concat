@@ -1846,13 +1846,11 @@ proc( CompilerContext ptr.mut : context -> asm.Atom list ) =>: beginProcedure
   context .registerInfo map.clear
   context .variableInfo map.clear
   context [] .availableIntRegisters list.clear
-    AMD64.reg.GP_INT_REGISTERS list.appendSlice
+    AMD64.reg.GP_INT_REGISTERS list.appendSlice list.reverse
   context .availableIntRegisters=
-  context [] .availableIntRegisters list.reverse
-  context [] .availableFloatRegisters
-    AMD64.reg.FLOAT_REGISTERS list.appendSlice
+  context [] .availableFloatRegisters list.clear
+    AMD64.reg.FLOAT_REGISTERS list.appendSlice list.reverse
   context .availableFloatRegisters=
-  context [] .availableFloatRegisters list.reverse
   context [] .tmpOps list.clear
   true context .reachable=
   asm.Atom list.emptyNoReallloc context .tmpOps= ## ensure tmp-ops on compiler are not modified while on stack

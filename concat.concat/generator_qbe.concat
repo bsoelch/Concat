@@ -3536,7 +3536,7 @@ proc(
         argIndices=
       finally i 1 - end ..drop
       ## arguments are popped in reverse order
-      argIndices list.reverse
+      argIndices list.reverse argIndices=
       sb
         calledType
           argIndices@

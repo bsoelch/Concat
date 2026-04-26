@@ -595,8 +595,7 @@ proc(
       constOffset list.setLength
     state .constBuffer=
     isConstant if
-      constValues slice.reverse ## TODO? push values in reverse order
-      constValues slice.freeze TypeMatch .Constant return
+      constValues slice.reverse slice.freeze TypeMatch .Constant return
     end
   end
   TypeMatch .Match return
