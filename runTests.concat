@@ -29,8 +29,8 @@ proc( string : filePath -> ) =>: runTest
   basePath .length 6 + sb.create
     basePath sb.appendStr ".err2\x00":s sb.appendStr
   =:: errPath
-  basePath .length 4 + sb.create
-    basePath sb.appendStr ".arg\x00":s sb.appendStr
+  basePath .length 5 + sb.create
+    basePath sb.appendStr ".args\x00":s sb.appendStr
   =:: mut: tmpPath
   COMPILER_PATH exec.build
     filePath exec.add
@@ -47,6 +47,9 @@ proc( string : filePath -> ) =>: runTest
             $ sb.asStr while $ .length 0 != do
               '\n' string.split >>>>$ <$ exec.add <<<$
             end ..drop
+            $ sb.asStr "\n":s string.endsWith if
+              >>$ "":s exec.add <<$
+            end
           sb.free ..drop
         end
       file.close
@@ -241,6 +244,23 @@ proc( -> ) =>: export: main
     "! multi-threading is not supported!":s io.println
   end
   testPaths for runTestsInDir end
-  CCT_ARGS list.free ..drop
+  ## TODO: join thread pool
+  PASSED TESTED == if
+    "SUCCESS: passed ":s io.print
+    PASSED io.print
+    " tests":s io.println
+  else
+    "FAILURE: passed ":s io.print
+    PASSED io.print
+    " of ":s io.print
+    TESTED io.print
+    " tests":s io.println
+    FAILED for
+      "  ":s io.print io.println
+    end
+  end
   testPathBuf list.free ..drop
+  CCT_ARGS list.free ..drop
+  FAILED list.free ..drop
+  BASE_PATH sb.free ..drop
 end
