@@ -76,7 +76,21 @@ namespace: map
     data [] .hashMask iSize cast.u 1:iSize + =:: capacity
     data [] .data capacity mem.clear ..drop
     NO_NODE data .freeNodes=
-    ## TODO version that allows calling cleanup procedure on all values still in map
+  end
+  proc(
+    type : auto: K
+    type : auto: V
+    proc( K -> ) ptr : freeKey
+    proc( V -> ) ptr : freeValue
+    K V hashMap ptr.mut : data
+  -> ) =>: export: clearAll
+    data [] .nodeBuffer for =:: node
+      node .isEmpty ! if
+        node .key freeKey ()
+        node .value freeValue ()
+      end
+    end
+    data clear
   end
   proc(
     type : auto: K
