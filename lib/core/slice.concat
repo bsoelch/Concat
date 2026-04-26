@@ -931,6 +931,40 @@ namespace: slice
   overload: export: @reversed
     atReversed atReversedMut
   end
+
+  ## TODO? filter
+  ## TODO? filterMap
+  ## TODO? filterMapTo
+  proc( type : auto: T
+    T slice.mut : data
+    ( T -> T ) ptr : f
+  -> T slice.mut ) =>: export: map
+    data slice.atItrMut for
+      $ [] f () >$ =[]
+    end
+    data return
+  end
+  proc( type : auto: S type : auto: T
+    S slice : src
+    T slice.mut : target
+    ( S -> T ) ptr : f
+  -> T slice.mut ) =>: export: fMapTo
+    0 =:: mut: dstIndex
+    src for
+      f () target dstIndex =[]
+    finally dstIndex 1 + dstIndex= end
+    target return
+  end
+  proc( type : auto: S type : auto: T
+    S slice.mut : src
+    T slice.mut : target
+  -> T slice.mut ) =>: export: fMapMutTo
+    src freeze target fMapTo
+  end
+  overload: export: mapTo
+    fMapTo fMapMutTo
+  end
+  ## TODO zip
 end
 overload: export: []
   slice.getValue_Z

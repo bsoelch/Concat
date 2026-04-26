@@ -659,6 +659,8 @@ namespace: list
     array.reverse
     elts
   end
+  ## API TODO: iterating list should take ownership and return list after itr (value was not consumed)
+  ## API TODO: drain -> iterate / applyFunction then destroy list
   proc( type : auto: T T list -> T ptr.Itr ) =>: export: getItr
     asSlice slice.getItr
   end
@@ -670,6 +672,17 @@ namespace: list
   end
   proc( type : auto: T T list -> T array.ReverseMutPtrItr ) =>: export: atReversed
     asMutableSlice slice.atReversedMut
+  end
+
+  proc( type : auto: T
+    T list : data
+    ( T -> T ) ptr : f
+  -> T list ) =>: export: map
+    data
+      $ asMutableSlice f slice.map
+      $ .data >>$ .data=
+      >$ .length >$ .length=
+    return
   end
 end
 overload: export: []

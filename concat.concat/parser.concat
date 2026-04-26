@@ -354,7 +354,7 @@ end
 proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition ptr : pos ParserState ptr.mut : state -> iSize slice.mut ) =>: convertAndOrBlock
   state [] .program =:: program
   program .errors =:: errors
-  andOrBlock .andOrPositions list.filter for =:: opPos
+  andOrBlock .andOrPositions list.itrFilter for =:: opPos ## TODO: filter for is depreated
     opPos iSize cast.u state [] .parsedOps .length u>= if
       "operations and blocks are out of sync, could not determine position of and/or" sb.copyPtr
       pos errors appendError

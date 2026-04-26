@@ -246,7 +246,7 @@ namespace: asm
            $ .0 curry f () $1 .1 curry f () >>$ .2 curry f ()
          ( Operand Operand Operand ) new Operands .Val3 break
         Vals .case
-          ## slice.map for curry f () end
+          ## f curry slice.map
           "mapOperands not supported for operations with more that 3 arguments" ..panic
         break
       end >$ .args= Atom .Instruction
