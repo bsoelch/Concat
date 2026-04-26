@@ -49,6 +49,7 @@ namespace: c
   -> ..ctype.size ) : extern: fwrite
   proc.c( FILE : file -> ..ctype.int ) : extern: fflush
   proc.c( FILE : file -> ..ctype.int ) : extern: fclose
+  proc.c( ..ctype.char ptr.raw -> ..ctype.int ) : extern: remove
   proc.c( ..ctype.char ptr.raw -> DIR ) : extern: opendir
   proc.c( DIR -> ..ctype.int ) : extern: closedir
   proc.c( FILE -> fd ) : extern: fileno
@@ -191,6 +192,14 @@ namespace: file
       end
       shouldFree if path iSize cast! char8 ptr.raw.mut cast! mem.free end
     Flags.NONE File new
+  end
+  proc( string : fileName bool : deleteDir -> bool ) =>: export: delete
+    fileName getCPath =:: shouldFree =:: path
+    ## TODO: recursively delete directory if flag is set
+      path c.remove i32 cast 0 ==
+    shouldFree if
+      shouldFree if path iSize cast! char8 ptr.raw.mut cast! mem.free end
+    end
   end
   proc( File char8 ptr.raw.mut : buffer iSize : count -> File iSize ) =>: export: fread_wrapper
     $ .value .File .else ..drop 0 return end =:: fileVal

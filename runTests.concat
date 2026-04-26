@@ -18,22 +18,107 @@ string list.empty =:: mut: FAILED
 sb.empty =:: mut: BASE_PATH
 
 proc( string : filePath -> ) =>: runTest
-  TESTED 1 + TESTED=
+  TESTED 1 + TESTED= ## TODO: atomic increment
   filePath $ '.' string.lastIndexOf .if string.head end =:: basePath
+  basePath .length 3 + sb.create
+    basePath sb.appendStr ".in\x00":s sb.appendStr
+  =:: inPath
+  basePath .length 6 + sb.create
+    basePath sb.appendStr ".out2\x00":s sb.appendStr
+  =:: outPath
+  basePath .length 6 + sb.create
+    basePath sb.appendStr ".err2\x00":s sb.appendStr
+  =:: errPath
+  basePath .length 4 + sb.create
+    basePath sb.appendStr ".arg\x00":s sb.appendStr
+  =:: mut: tmpPath
   COMPILER_PATH exec.build
     filePath exec.add
     "-o":s exec.add basePath exec.add
+    "-l":s exec.add "./lib/":s exec.add
     CCT_ARGS for exec.add end
-    ## TODO: redirect stdIo
-  exec.run exec.check ! if
+    outPath sb.asStr exec.setStdOut
+    errPath sb.asStr exec.setStdErr
+  exec.run exec.check if
     basePath exec.build
-      ## TODO: pass args to program (if present)
-      ## TODO: redirect stdIo
+      tmpPath sb.asStr file.OpenMode .READ file.open
+        $ file.isFile if
+          file.readAll
+            $ sb.asStr while $ .length 0 != do
+              '\n' string.split >>>>$ <$ exec.add <<<$
+            end ..drop
+          sb.free ..drop
+        end
+      file.close
+      inPath sb.asStr exec.setStdIn
+      outPath sb.asStr exec.setStdOut
+      errPath sb.asStr exec.setStdErr
     exec.run exec.check ..drop
   end
-  ## TODO: check output file
-  basePath io.println
-  PASSED 1 + PASSED=
+  inPath sb.free ..drop
+  outPath sb.asStr file.OpenMode .READ file.open
+    file.readAll =:: programOutput
+  file.close
+  tmpPath
+    basePath .length sb.setLength
+    ".out\x00":s sb.appendStr
+  tmpPath=
+  tmpPath sb.asStr file.OpenMode .READ file.open
+    file.readAll
+      $ sb.asStr programOutput sb.asStr string.eq
+        $ =:: outputEqual
+      if
+        outPath sb.asStr false file.delete ..drop
+      end
+    sb.free ..drop
+    programOutput sb.free ..drop
+  file.close
+  errPath sb.asStr file.OpenMode .READ file.open
+    file.readAll =:: progamErrors
+  file.close
+  tmpPath
+    basePath .length sb.setLength
+    ".err\x00":s sb.appendStr
+  tmpPath=
+  tmpPath sb.asStr file.OpenMode .READ file.open
+    file.readAll
+      $ sb.asStr progamErrors sb.asStr string.eq
+        $ =:: errorsEqual
+      if
+        errPath sb.asStr false file.delete ..drop
+      end
+    sb.free ..drop
+    progamErrors sb.free ..drop
+  file.close
+  outputEqual and errorsEqual if
+    PASSED 1 + PASSED= ## TODO: atomic increment
+    "PASSED: ":s io.print basePath io.println
+    ## cleanup temporary files
+    tmpPath
+      basePath .length sb.setLength
+      ".ssa\x00":s sb.appendStr
+    tmpPath=
+    tmpPath sb.asStr false file.delete ..drop
+    tmpPath
+      basePath .length sb.setLength
+      ".s\x00":s sb.appendStr
+    tmpPath=
+    tmpPath sb.asStr false file.delete ..drop
+    tmpPath
+      basePath .length sb.setLength
+      '\x00' sb.appendC
+    tmpPath=
+    tmpPath sb.asStr false file.delete ..drop
+  else
+    "FAILED: ":s io.print basePath io.println
+    ## TODO: lock list access
+    FAILED
+      filePath string.copy list.append
+    FAILED=
+  end
+  outPath sb.free ..drop
+  errPath sb.free ..drop
+  tmpPath sb.free ..drop
 end
 proc( char8 slice.mut : filePath -> ) =>: runTestAsync
   filePath slice.freeze string.fromChars =:: filePathStr

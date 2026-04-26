@@ -2,6 +2,7 @@ import list
 import stringBuilder
 import mem
 import exec
+import file
 import sys
 
 ## interface to gnu-libc version of exec
@@ -41,6 +42,15 @@ namespace: exec
       -1 RunState .FORK_FAILURE return
     end
     childId c.FORK_CHILD == if
+      context .stdInPath .length 0 != if
+        context .stdInPath file.setStdIn ..drop
+      end
+      context .stdOutPath .length 0 != if
+        context .stdOutPath file.setStdOut ..drop
+      end
+      context .stdErrPath .length 0 != if
+        context .stdErrPath file.setStdErr ..drop
+      end
       ## child process
       context .argOffsets .length 1:iSize +
         ..ctype.char ptr.raw.mut

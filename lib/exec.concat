@@ -6,6 +6,9 @@ namespace: exec
   struct(
     i32 list : mut: argOffsets
     stringBuilder : mut: argBuffer
+    string : stdInPath
+    string : stdOutPath
+    string : stdErrPath
   ) =:: export: ExecContext
   proc( string : command -> ExecContext ) =>: export: build
     ## ExecContext
@@ -13,6 +16,9 @@ namespace: exec
         0 list.append
       command sb.fromStr
         '\x00' sb.appendC
+      string.empty
+      string.empty
+      string.empty
     ExecContext new return
   end
   proc( ExecContext : context string : argument -> ExecContext ) =>: export: add
@@ -27,6 +33,15 @@ namespace: exec
     return
   end
   proc( ExecContext : context string : argument -> ExecContext ) : alias: export: append add
+  proc( ExecContext string -> ExecContext ) =>: export: setStdIn
+    >$ .stdInPath=
+  end
+  proc( ExecContext string -> ExecContext ) =>: export: setStdOut
+    >$ .stdOutPath=
+  end
+  proc( ExecContext string -> ExecContext ) =>: export: setStdErr
+    >$ .stdErrPath=
+  end
   enum( SUCCESS FORK_FAILURE EXEC_FAILURE WAIT_FAILURE PROCESS_FAILURE ) =:: export: RunState
   proc( ExecContext : context -> i32 RunState ) : export: run
   proc( i32 : retCode RunState : state -> bool ) =>: export: check
