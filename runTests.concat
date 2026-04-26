@@ -3,6 +3,7 @@ import numbers
 import print
 import numbers/print
 import file
+import exec
 
 { "./tests":s } =:: DEFAULT_TESTS
 { "./tests":s "./examples":s } =:: DEFAULT_TESTS_FULL
@@ -17,8 +18,22 @@ string list.empty =:: mut: FAILED
 sb.empty =:: mut: BASE_PATH
 
 proc( string : filePath -> ) =>: runTest
-  ## TODO: run test
-  "  ":s io.print filePath io.println
+  TESTED 1 + TESTED=
+  filePath $ '.' string.lastIndexOf .if string.head end =:: basePath
+  COMPILER_PATH exec.build
+    filePath exec.add
+    "-o":s exec.add basePath exec.add
+    CCT_ARGS for exec.add end
+    ## TODO: redirect stdIo
+  exec.run exec.check ! if
+    basePath exec.build
+      ## TODO: pass args to program (if present)
+      ## TODO: redirect stdIo
+    exec.run exec.check ..drop
+  end
+  ## TODO: check output file
+  basePath io.println
+  PASSED 1 + PASSED=
 end
 proc( char8 slice.mut : filePath -> ) =>: runTestAsync
   filePath slice.freeze string.fromChars =:: filePathStr
@@ -28,7 +43,6 @@ proc( char8 slice.mut : filePath -> ) =>: runTestAsync
 end
 
 proc( file.File -> file.File ) =>: runTestsInDirImpl
-  BASE_PATH sb.asStr io.print ':' io.println
   $ file.entries for =:: fileName
     BASE_PATH
       $ .length =:: offset
@@ -56,6 +70,7 @@ proc( file.File -> file.File ) =>: runTestsInDirImpl
     BASE_PATH=
   end ..drop
 end
+## TODO: allow running single files
 proc( string : dirName -> ) =>: runTestsInDir
   BASE_PATH
     sb.clear
