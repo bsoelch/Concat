@@ -251,9 +251,6 @@ namespace: arenaAlloc
     return
   end
 
-  ## TODO get value(s) at offset
-  ## TODO versions of push returning index instead of pointer
-
   proc( type : auto: T T ArenaAllocator : arena -> i64 ) =>: export: offset
     arena .chunks .length i64 cast.u
       $ =:: chunkCount
@@ -339,9 +336,8 @@ namespace: arenaAlloc
 end
 
 ## Arena Allocator for mixed types
-## TODO? special type-constant for max-aligned type
 ## TODO? switch to i8-allocator& align elements seperately
-i64 =:: MaxAlign ## TODO? allow choosing alignment on creation
+i64 =:: MaxAlign
 MaxAlign ArenaAllocator =:: export: MixedArenaAllocator
 namespace: mixedArena
   proc( iSize -> i32 ) =>: alignSize

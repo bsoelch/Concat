@@ -42,7 +42,7 @@ namespace: ptr
   proc( iSize : index iSize : size -> ) =>: checkIndex
     index size u>= if "pointer index outside allowed range" ..panic end
     ## TODO better error message (print actual index)
-    ## TODO? is it possible print message at call-position of pointer access
+    ## TODO? is it possible to print message at call-position of pointer access
   end
   proc(
     type : auto: T iSize : auto: k
@@ -200,7 +200,6 @@ namespace: ptr
     ..unreachable
   end
 
-  ## TODO? prohibit arithmetic on array pointers
   namespace: mut
     proc( type : auto: T T ptr.raw.mut : p -> T ) =>: shadow: export: get
       p ..builtIn.get.ptr

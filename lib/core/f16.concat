@@ -103,7 +103,12 @@ end
     end
   end
 else
-  ## TODO alias built-in coversions (if available) to f16.from/to...
+  namespace: f16
+    proc( f16 -> f32 ) : alias: export: asF32 ..builtIn.convert.f16.f32
+    proc( f16 -> f64 ) : alias: export: asF64 ..builtIn.convert.f16.f64
+    proc( f32 -> f16 ) : alias: export: fromF32 ..builtIn.convert.f32.f16
+    proc( f64 -> f16 ) : alias: export: fromF64 ..builtIn.convert.f64.f16
+  end
 end
 ## S EEEEE MMMMMMMMMM
 namespace: f16
