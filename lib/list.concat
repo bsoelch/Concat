@@ -412,12 +412,14 @@ namespace: list
     T k ptr : b
     iSize : index
   -> T list ) =>: export: insertP
-    ## TODO allow insert at end of list
+    a .length index == if
+      a b appendP return
+    end
     a index checkIndex
     a
       $ .length k + ensureCap
-      $ .data index k + +  $1 .data index +  $2 .length index -  mem.move ..drop
-      $ .data index +  b T ptr.raw cast  k  mem.copy ..drop
+      $ .data index k + @[]  $1 .data index @[]  $2 .length index -  mem.move ..drop
+      $ .data index @[]  b T ptr.raw cast  k  mem.copy ..drop
       $ .length k + >$ .length=
     return
   end
@@ -427,11 +429,14 @@ namespace: list
     T slice : b
     iSize : index
   -> T list ) =>: export: insertSlice
+    a .length index == if
+      a b appendSlice return
+    end
     a index checkIndex
     a
       $ .length b .length + ensureCap
-      $ .data index b .length + +  $1 .data index +  $2 .length index -  mem.move ..drop
-      $ .data index +  b .data b .length  mem.copy ..drop
+      $ .data index b .length + @[]  $1 .data index @[]  $2 .length index -  mem.move ..drop
+      $ .data index @[]  b .data b .length  mem.copy ..drop
       $ .length b .length + >$ .length=
     return
   end
@@ -441,11 +446,14 @@ namespace: list
     T list : b
     iSize : index
   -> T list ) =>: export: insertAll
+    a .length index == if
+      a b appendAll return
+    end
     a index checkIndex
     a
       $ .length b .length + ensureCap
-      $ .data index b .length + +  $1 .data index +  $2 .length index -  mem.move ..drop
-      $ .data index +  b .data b .length  mem.copy ..drop
+      $ .data index b .length + @[]  $1 .data index @[]  $2 .length index -  mem.move ..drop
+      $ .data index @[]  b .data b .length  mem.copy ..drop
       $ .length b .length + >$ .length=
     return
   end
@@ -659,7 +667,7 @@ namespace: list
     array.reverse
     elts
   end
-  ## API TODO: iterating list should take ownership and return list after itr (value was not consumed)
+  ## API TODO: should iterating list take ownership and return list after itr (value was not consumed)
   ## API TODO: drain -> iterate / applyFunction then destroy list
   proc( type : auto: T T list -> T ptr.Itr ) =>: export: getItr
     asSlice slice.getItr
