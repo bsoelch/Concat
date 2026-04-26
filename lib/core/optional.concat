@@ -80,6 +80,9 @@ namespace: optional
   end
 end
 
+overload: export: unwrap
+  optional.unwrap
+end
 overload: export: !
   optional.invert
   optional.inv.invert

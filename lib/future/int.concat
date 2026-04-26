@@ -283,13 +283,16 @@ namespace: int
     )
   end
   namespace: IntConv
-    proc( type : auto: T  T IntConversionResult -> T ) =>: export: unwrap
+    proc( type : auto: T  T IntConversionResult -> T ) =>: export: shadow: unwrap
       .Ok unionElement.unwrap
     end
     proc( type : auto: T  T IntConversionResult -> T IntConversionResult ) =>: prepareIf  end
     proc( type : auto: T  T IntConversionResult -> bool ) =>: check  .Ok ? end
     proc( type : auto: T  T IntConversionResult -> T ) =>: ifVal  .Ok ..raw end
     proc( type : auto: T  T IntConversionResult -> int ) =>: elseVal  .Err ..raw end
+  end
+  overload: merge: unwrap
+    IntConv.unwrap
   end
   proc( int : a -> i32 IntConversionResult ) =>: export: asI32
     a copy asI32u .Ok .else ..drop

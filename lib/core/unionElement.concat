@@ -12,7 +12,7 @@ namespace: unionElement
   proc( type.unionElement : auto: U  U -> U type.unionElementType optional ) =>: export: tryUnwrap
     $ check if ..raw optional.wrap else ..drop U type.unionElementType optional.empty end
   end
-  proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: unwrap
+  proc( type.unionElement : auto: U  U -> U type.unionElementType ) =>: export: shadow: unwrap
     $ check ! if "unwrapped union-element does not match current value" ..panic end
     ..raw
   end
@@ -81,6 +81,10 @@ end
 overload: export: ??
   unionElement.tryUnwrap
   unionElement.tryUnwrapPtr
+end
+overload: merge: export: unwrap
+  unionElement.unwrap
+  unionElement.unwrapPtr
 end
 overload: merge: export: ..if.prepare
   unionElement.prepareIf
