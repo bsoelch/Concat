@@ -22,5 +22,6 @@ lib/future/*
 !lib/future/threads.concat
 !lib/future/int.concat
 !bootstrap/latest.ssa
+runTests
 global_log.txt
 out.txt

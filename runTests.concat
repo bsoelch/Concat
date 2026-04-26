@@ -1,0 +1,92 @@
+import argParse
+import numbers
+import print
+import file
+
+{ "./tests":s } =:: DEFAULT_TESTS
+{ "./tests":s "./examples":s } =:: DEFAULT_TESTS_FULL
+
+"./concat":s =:: mut: COMPILER_PATH
+0 =:: mut: THREAD_COUNT
+string list.empty =:: mut: CCT_ARGS
+
+0 =:: mut: TESTED
+0 =:: mut: PASSED
+string list.empty =:: mut: FAILED
+
+proc( string : dir -> ) =>: runTestsInDir
+  ## TODO: support multi-threading
+  
+end
+
+proc( -> ) =>: export: main
+  false =:: mut: devVersion
+  false =:: mut: includeExamples
+  false =:: mut: hasPaths
+  string.empty =:: mut: threadCountStr
+  string list.empty =:: mut: testPathBuf
+  args.start
+    "-":s args.prefixes ## set argument prefix
+    "[options] (-- test-paths)*":s args.usage
+    arg.flag
+      "use development version of compiler":s arg.helpText
+    devVersion@ "-X":s arg.set
+    arg.flag
+      "include examples":s arg.helpText
+    includeExamples@ "-full":s arg.set
+    arg.flag
+      "include examples":s arg.helpText
+    includeExamples@ "--full":s arg.set
+    arg.value
+      "[thread cound]":s arg.value.setArgName
+      "run tests on multiple threads, should be followed by a number specifiying the thread count":s arg.helpText
+    threadCountStr@ "-j":s arg.set
+    arg.values
+      "[arg]":s arg.values.setArgName
+      "add compiler-argument, can occur more than once":s arg.helpText
+    CCT_ARGS@ "-cctArg":s arg.collect
+    arg.values
+      "[arg]":s arg.values.setArgName
+      "add compiler-argument, can occur more than once":s arg.helpText
+    CCT_ARGS@ "--cctArg":s arg.collect
+    arg.flag
+      "use remaining arguments as test-paths":s arg.helpText
+      testPathBuf@ arg.flag.consumeTail
+      "[paths]":s arg.flag.setArgName
+    hasPaths@ "--":s arg.set
+    "-h":s args.HelpLevel .DEFAULT arg.help
+  args.parse if
+    1 sys.exit
+  end
+  hasPaths if
+    includeExamples if
+      "`-full` is ignored with explicit arguments":s io.println
+    end
+    testPathBuf list.asSlice
+  else includeExamples _if
+    DEFAULT_TESTS_FULL@ slice.wrap
+  else
+    DEFAULT_TESTS@ slice.wrap
+  end =:: testPaths
+  devVersion if
+    "running tests on development version of compiler":s io.println
+    "./concatX":s
+  else
+    "./concat":s
+  end COMPILER_PATH=
+  CCT_ARGS .length 0 != if
+    "running with arguments:":s io.print
+    CCT_ARGS for ' ' io.print io.print end '\n' io.print
+  end
+  threadCountStr .length 0 != if
+    threadCountStr 10 number.tryParseUInt .NONE ! if
+      "could not parse thread count, expected unsigned integer got: ":s io.print threadCountStr io.println
+    end
+    $ 255 > if ..drop 255
+      "thread count can be at most 255 got: ":s io.print threadCountStr io.println
+    end
+  else 0 end i32 cast.u THREAD_COUNT=
+  testPaths for runTestsInDir end
+  CCT_ARGS list.free ..drop
+  testPathBuf list.free ..drop
+end
