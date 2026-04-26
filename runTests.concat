@@ -1,6 +1,7 @@
 import argParse
 import numbers
 import print
+import numbers/print
 import file
 
 { "./tests":s } =:: DEFAULT_TESTS
@@ -13,10 +14,56 @@ string list.empty =:: mut: CCT_ARGS
 0 =:: mut: TESTED
 0 =:: mut: PASSED
 string list.empty =:: mut: FAILED
+sb.empty =:: mut: BASE_PATH
 
-proc( string : dir -> ) =>: runTestsInDir
-  ## TODO: support multi-threading
-  
+proc( string : filePath -> ) =>: runTest
+  ## TODO: run test
+  "  ":s io.print filePath io.println
+end
+proc( char8 slice.mut : filePath -> ) =>: runTestAsync
+  filePath slice.freeze string.fromChars =:: filePathStr
+  ## TODO: run test asynchronously using thread-pool
+  filePathStr runTest
+  filePath slice.free ..drop
+end
+
+proc( file.File -> file.File ) =>: runTestsInDirImpl
+  BASE_PATH sb.asStr io.print ':' io.println
+  $ file.entries for =:: fileName
+    BASE_PATH
+      $ .length =:: offset
+      '/' sb.appendC
+      fileName sb.appendStr
+      '\x00' sb.appendC
+    BASE_PATH=
+    BASE_PATH sb.asStr file.OpenMode .DIR file.open
+      $ file.isDir if
+        BASE_PATH
+          $ .length 1 - sb.setLength ## discard null-terminator
+        BASE_PATH=
+        runTestsInDirImpl
+      end
+    file.close
+    fileName ".concat":s string.endsWith if
+      THREAD_COUNT 0 u> if ## need owned string in async mode
+        BASE_PATH sb.asStr string.chars slice.copy runTestAsync
+      else
+        BASE_PATH sb.asStr runTest
+      end
+    end
+    BASE_PATH
+      offset sb.setLength
+    BASE_PATH=
+  end ..drop
+end
+proc( string : dirName -> ) =>: runTestsInDir
+  BASE_PATH
+    sb.clear
+    dirName sb.appendStr
+  BASE_PATH=
+  dirName file.OpenMode .DIR file.open
+    runTestsInDirImpl
+  file.close
 end
 
 proc( -> ) =>: export: main
@@ -85,7 +132,14 @@ proc( -> ) =>: export: main
     $ 255 > if ..drop 255
       "thread count can be at most 255 got: ":s io.print threadCountStr io.println
     end
+    $ 0 > if
+      "running asynchronously on ":s io.print $ io.print " threads":s io.println
+    end
   else 0 end i32 cast.u THREAD_COUNT=
+  THREAD_COUNT 0 u> if
+    ## TODO: prepare thread-pool
+    "! multi-threading is not supported!":s io.println
+  end
   testPaths for runTestsInDir end
   CCT_ARGS list.free ..drop
   testPathBuf list.free ..drop

@@ -160,7 +160,7 @@ namespace: file
       '\x00' $1 fileName .length =[]
     end ..ctype.char ptr.raw cast! shouldFree
   end
-  ## TODO? open as directory when mode is READ and path is directory
+  ## TODO? open as directory when mode if READ and path is directory
   proc( string : fileName OpenMode : openMode -> File ) =>: export: open
     c.concatIOHelper_resetErrno
     fileName getCPath =:: shouldFree =:: path
@@ -278,7 +278,7 @@ namespace: file
 
   union(
     _ : End
-    string : Ok
+    string : Ok ## TODO? cstring type to indicate null-terminator
     Error : Err
   ) =:: DirResult
   struct(
