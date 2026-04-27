@@ -1938,29 +1938,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         opPos
       preOpError state appendOp
       return
-    else $ "..compiler.flag.":s string.startsWith _if
-      "..compiler.flag." ..length string.tail =:: flagName
-      fileState program wordPos =:: opPos
-      ## TODO? treat compiler constants as variables, allow :? operator to check if constant exists
-      flagName "experimental":s string.eq if
-        _EXPERIMENTAL_ opPos preOpBool state appendOp
-      else flagName "noCore":s string.eq _if
-        _INCLUDE_CORE_ ! opPos preOpBool state appendOp
-      else flagName "wError":s string.eq _if
-        _W_ERROR_ opPos preOpBool state appendOp
-      else flagName "incrementVersionNumber":s string.eq _if
-        _INCREMENT_VERSION_ opPos preOpBool state appendOp
-      else
-        "unknown compiler flag: " sb.copyPtr
-          flagName sb.appendStr
-        opPos errors appendWarning
-      end
-      return
-    else $ "..compiler.version":s string.eq _if ..drop
-      _VERSION_
-        types.primitive.I64
-      fileState program wordPos preOpInt state appendOp
-      return
     else $ "..compiler.return":s string.eq _if ..drop
       ..drop ## discard remainder of file
       BlockType ..length 33:iSize == "no new block types" assert
