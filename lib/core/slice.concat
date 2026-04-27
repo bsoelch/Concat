@@ -1008,10 +1008,38 @@ namespace: slice
   ## TODO more mapping funtions
   ## ( T slice ( T -> T optional ) -> T slice ) filterMap
   ## ( T slice S slice.mut ( T -> S optional ) -> S slice.mut ) filterMapTo
-  ## ( T slice ( T T -> T ) -> T optional ) : reduce
-  ## ( T slice B ( B T -> B ) ) -> B : foldl
-  ## ( T slice ( T B -> B ) B -> B ) : foldr
   ## ( A slice B slice C slice.mut ( A B -> C ) -> C slice.mut ) : zip
+  proc( type : auto: A type : auto: B
+    B slice : elts
+    A : start
+    ( A B -> A ) ptr : f
+  -> A ) =>: export: foldl
+    start
+      elts for
+        f ()
+      end
+    return
+  end
+  proc( type : auto: A type : auto: B
+    A slice : elts
+    ( A B -> B ) ptr : f
+    B : start
+  -> B ) =>: export: foldr
+    start
+      elts reversed for
+        f ()
+      end
+    return
+  end
+  proc( type : auto: T
+    T slice : elts
+    ( T T -> T ) ptr : f
+  -> T optional ) =>: export: reduce
+    elts .length 0 == if
+      T optional.empty return
+    end
+    elts 1 tail elts 0 [] f foldl optional.wrap return
+  end
 end
 overload: export: []
   slice.getValue_Z

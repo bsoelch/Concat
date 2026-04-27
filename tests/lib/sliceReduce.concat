@@ -1,0 +1,7 @@
+import print
+proc( -> ) =>: main
+  { 1 2 3 4 5 6 7 8 } slice.wrap =:: elts
+  elts 0 ${ >$ 10 * + } slice.foldl 12345678 == "foldl" assert
+  elts ${ >$ 10 * + } 0 slice.foldr 87654321 == "foldr" assert
+  elts ${ + } slice.reduce .else 0 end 36 == "reduce" assert
+end
