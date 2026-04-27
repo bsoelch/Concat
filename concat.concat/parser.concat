@@ -71,7 +71,7 @@ union(
   iSize : Overload
   iSize : With
 ) =:: BlockInfoData
-## TODO? assign block-ids in parser
+
 struct(
   BlockInfoData : blockData
   NameId optional : blockName
@@ -168,7 +168,7 @@ proc(
   char char8 cast pos preOpChar state appendOp
 end
 proc( ConstValue : str -> string ) =>: stringConstStr
-  ## TODO! clarify/ensure that fromBytes does not create copy
+  ## TODO clarify/ensure that fromBytes does not create copy
   str .Array8 .else
     "expected string to have type Array8" ..panic
   end string.fromBytes
@@ -246,7 +246,6 @@ proc( FilePosition ptr : pos ParserState ptr.mut : state -> ) =>: openInitialize
     InitializerBlockData new BlockInfoData .Initializer NameId optional.empty pos TmpVarInfo optional.empty false true BlockInfo new list.append
   state .openBlocks=
 end
-## TODO handle initializer blocks
 proc( FilePosition ptr : pos bool : isQuotation ParserState ptr.mut : state -> ) =>: openProcBlock
   state [] .openBlocks
     ## BlockInfo
@@ -306,7 +305,6 @@ proc(
   state .openBlocks=
   closed .hasScope if
     closed
-      ## TODO better handling of this error case
       state [] .program .idContext id.closeScope if ..drop
         BlockInfo optional.empty
       else
@@ -412,8 +410,12 @@ proc(
       block optional.wrap return
     end
   end
-  ## TODO! adjust error message to work in case of named blocks
   64 sb.create
+    blockName .if =:: name
+      "could not find breakable block for label \"":s sb.appendStr
+      name nameContext sb.appendIdentifierPath
+      "\" ":s sb.appendStr
+    end
     breakType sb.appendBlockType
     " can only appear in loops " sb.appendS
     breakType .BREAK if
@@ -452,7 +454,6 @@ proc(
   end
 end
 
-## TODO! check for unneccessary calls to wordPos (called twice without position change inbetween)
 proc( FileState ptr.mut : fileState ProgramContext ptr.mut : program -> FilePosition ptr ) =>: wordPos
   program [] .programMemory
     fileState [] .wordStart mixedArena.copyValue <$
@@ -468,7 +469,7 @@ proc( string : code FileState ptr.mut : fileState ProgramContext ptr.mut : progr
     end
   return
 end
-## TODO? restict flag-types depending on id-type
+
 proc(
   string : code
   string : start
@@ -493,8 +494,7 @@ proc(
       else ..dup "auto:":s string.eq _if
         id.FLAG_AUTO flags | flags=
         id.FLAG_STATIC flags | flags=
-        ## XXX? allow auto-args to be non-static
-        ##  + error when generic-argument passed to sub-procedure
+        ## TODO? allow auto-args to be non-static
         true isModifier=
       else ..dup "static:":s string.eq _if
         id.FLAG_STATIC flags | flags=
@@ -789,7 +789,7 @@ proc(
           state appendOp
           string.empty true return
         end
-        ## XXX? remove special case for number literals
+        ## TODO remove special case for number literals ! allow custom literal in switch-label
         literalToken literalTypeName literalStart state tryParseNumberLiteral if
           string.empty true return
         end
@@ -818,7 +818,6 @@ proc(
           string.empty true return
         end
         literalType .LiteralType unionElement.unwrap =:: literalTypeName
-        ## XXX? more usefull error for missing parse procedure?
         program [] .tmpString
           sb.clear ## clear tmp string
           ':' sb.appendC
@@ -1024,7 +1023,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         andOrData
       else ## not already within an and-or chain
         ## AndOrBlockData
-          8 iSize list.create ## TODO? pool of short lists for and-or blocks
+          8 iSize list.create
           isOr
         AndOrBlockData new BlockInfoData .AndOr blockPos state openBlock .AndOr .else
           "opening AndOr should return AndOr" ..panic
@@ -1241,7 +1240,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       blockName state peekBlock optional.unwrap .blockName=
       BlockType .SWITCH blockName blockPos preOpNamedBlock state appendOp
       return
-    ## TODO? remember if if contains .case / .default
+    ## TODO? remember if switch contains .case / .default
     else $ "case":s string.eq or $ ".case":s string.eq _if =:: opName
       fileState program wordPos =:: blockPos
       state peekBlock .and .blockData .Switch .if =:: switchData
@@ -1295,7 +1294,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       opName .length 3:iSize == =:: named
       opName 0 [] '$' == =:: isQuotation
       state [] .currentProcs .length 0:iSize != =:: isNested
-      ## TODO? ensure global stack is empty at start of procedure
       char8 32 array : mut: buffer
         buffer@ sb.wrapBuffer
           "lambda@" sb.appendS
@@ -1342,7 +1340,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       end
       state [] .currentProcs procId list.append state .currentProcs=
       procPos isQuotation state openProcBlock
-      ## TODO? special op for proc-start
       return
     else $ "return":s string.eq _if ..drop
       fileState program wordPos =:: retPos
@@ -1732,7 +1729,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## new in procedure -> determine type in type-check phase
       fileState program wordPos preOpNew state appendOp
       return
-    #+ TODO improve cast system +#
     else ..dup "cast":s string.eq or ..dup "cast!":s string.eq _if =:: opName
       opName "cast!":s string.eq =:: forceCast
       fileState program wordPos =:: opPos
@@ -1813,7 +1809,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else ..dup "...":s string.eq _if ..drop
       fileState program wordPos preOpSplat state appendOp
       return
-    else ..dup "..dup":s string.eq _if =:: opName ## XXX? completely repalce ..dup by $ ?
+    else ..dup "..dup":s string.eq _if =:: opName
       0 StackModType .COPY fileState program wordPos preOpStackMod state appendOp
       return
     else ..dup "..over":s string.eq or
@@ -1844,7 +1840,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       while opName i string.charAt c0 == do
         rotCount 1 + rotCount=
       finally i 1 + i= end
-      opName i string.charAt '$' != if ## TODO? allow >N$ and <N$ (? stack rotation by more than 3 elements should be painful)
+      opName i string.charAt '$' != if
         64 sb.create
           "invalid stack-rotation, expected N occurences of eigher '>' or '<' followed by '$' got '" sb.appendS
             opName sb.appendStr
@@ -1865,7 +1861,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       StackModType .DROP opPos preOpStackMod state appendOp
       return
     else $ "import":s string.eq _if =:: opName
-      fileState nextToken ## XXX? distinquish string types
+      fileState nextToken
       fileState program wordPos =:: importPos
       .String .if ## local file
         false importPos state prepareImport
@@ -2201,7 +2197,7 @@ proc(
     FILE_POS_BUILTIN@
     programContext@
   initBuiltInProcs if
-    ## TODO handle error
+    "failed to initialize built-ins" ..panic
   end
   programContext@ newTypeCheckState =:: mut: typeChecker
   programContext@ typeChecker@ updateTypeCheckerPointers
@@ -2246,7 +2242,6 @@ proc(
   fileId state .currentFile=
     $ .length 1:iSize + sb.setLength ## include zero terminate for open
   sb.asStr file.OpenMode .READ file.open
-    ## TODO the newline at the file-start and end feely a bit hacky...
     1024 sb.create
       '\n' sb.appendC
       file.readTo
@@ -2272,7 +2267,6 @@ proc(
   idContext id.openScope
   fileId id.NO_SCOPE idContext id.importFile ## import file in its own scope
   idContext id.currentScope program [] .progFiles fileId i64 cast @[] .fileScope=
-  ## TODO? find good heuristic for token count based on character to reduce number of buffer reallocations
   state [] .parsedOps
     fileBody .length 8 / list.ensureCap
   state .parsedOps=
@@ -2285,7 +2279,6 @@ proc(
   fileBody sb.free ..drop
   fileState .currentPos fileState@ .wordStart=
   state [] .openBlocks .length blockCount u> if
-    ## XXX? print start of last block
     "unclosed block at end of file ( opened at " sb.copyPtr
       state [] .openBlocks blockCount @[] .openedAt [] [] sb.appendPos
       " )" sb.appendS
