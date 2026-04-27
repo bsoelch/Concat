@@ -307,7 +307,6 @@ struct(
 union(
             NopType : NOP
                   _ : WildCard
-               bool : BoolConst
               char8 : CharConst
         IntConstant : IntConst
       FloatConstant : FloatConst
@@ -392,9 +391,6 @@ struct( FilePosition ptr : pos OpValue : val Type : dataType ) =:: export: Opera
 
 proc( -> PreOpValue ) =>: export: preOpValNOP
   NopType .EMPTY PreOpValue .NOP return
-end
-proc( bool : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpBool
-  pos constValue PreOpValue .BoolConst PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpWildCard
   pos PreOpValue .WildCard PreOperation new return
@@ -1012,10 +1008,6 @@ namespace: sb
         break
       WildCard case
         "wild-card":s sb.appendStr
-      break
-      BoolConst .case =:: constVal
-        "boolean : ":s sb.appendStr
-        constVal if "true":s else "false":s end sb.appendStr
       break
       CharConst .case =:: constVal
         "char : '":s sb.appendStr

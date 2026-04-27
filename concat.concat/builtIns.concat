@@ -179,6 +179,17 @@ proc(
     pos
   nameContext id.newIdentifier
 end
+proc(
+  string : name
+  FilePosition ptr : pos
+  NameContext ptr.mut : nameContext
+-> NameId ) =>: createStaticIdentifier
+  ## newIdentifier
+    name
+    id.FLAG_EXPORT id.FLAG_SHADOW | id.FLAG_STATIC | id.FLAG_BUILT_IN |
+    pos
+  nameContext id.newIdentifier
+end
 
 proc(
   Type : t
@@ -481,6 +492,27 @@ proc(
   id.declareIdentifier ..drop
 end
 proc(
+  Type : valType
+  ConstValue : value
+  string : name
+  FilePosition ptr : pos
+  ProgramContext ptr.mut : context
+-> ) =>: newStaticBuiltInConstant
+  context .idContext =:: idContext
+  idContext .typeContext .nameContext =:: nameContext
+  ## declareIdentifier
+    name pos nameContext createStaticIdentifier
+    valType
+    IdentifierType .GLOBAL_VAR
+    -1
+    value
+    true
+    pos
+    idContext
+    context .errors
+  id.declareIdentifier ..drop
+end
+proc(
   FilePosition ptr : pos
   ProgramContext ptr.mut : context
 -> ) =>: export: initBuiltInConstants
@@ -539,19 +571,19 @@ proc(
   types.primitive.BOOL
     _EXPERIMENTAL_ ConstValue .Bool
     "..compiler.flag.experimental":s
-  pos context newBuiltInConstant
+  pos context newStaticBuiltInConstant
   types.primitive.BOOL
     _INCLUDE_CORE_ ! ConstValue .Bool
     "..compiler.flag.noCore":s
-  pos context newBuiltInConstant
+  pos context newStaticBuiltInConstant
   types.primitive.BOOL
     _INCREMENT_VERSION_ ConstValue .Bool
     "..compiler.flag.incrementVersionNumber":s
-  pos context newBuiltInConstant
+  pos context newStaticBuiltInConstant
   types.primitive.I64
     _VERSION_ ConstValue .Int
     "..compiler.version":s
-  pos context newBuiltInConstant
+  pos context newStaticBuiltInConstant
 end
 proc(
   FilePosition ptr : pos

@@ -2795,9 +2795,6 @@ proc(
       WildCard case ## TODO? special handling for wild-card
         ConstValue .WildCard Type .Undefined op .pos state pushConstant
       continue.opLoop
-      BoolConst .case
-        ConstValue .Bool types.primitive.BOOL op .pos state pushConstant
-      continue.opLoop
       CharConst .case
         ConstValue .Char types.CHAR8 op .pos state pushConstant
       continue.opLoop
@@ -2931,7 +2928,8 @@ proc(
             ## pushValue
               varType
               constValue
-              varType typeContext types.isType or mutable ! and constValue .None ? ! and idInfo .idType .GLOBAL_VAR if
+              varType typeContext types.isType or nameId id.identifierFlags id.FLAG_STATIC & ? or
+                  mutable ! and constValue .None ? ! and idInfo .idType .GLOBAL_VAR if
                 ## replace access to immutable global variable with constant
                 constValue varType op .pos opConst
               else
@@ -3048,7 +3046,14 @@ proc(
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR TMP_VAR PROCEDURE ARGUMENT case
             idInfo .nameId =:: nameId
-            nameId id.identifierFlags id.FLAG_MUTABLE & ? =:: mutable
+            nameId id.identifierFlags =:: flags
+            flags id.FLAG_MUTABLE & ? =:: mutable
+            flags id.FLAG_STATIC & ? if
+              "cannot take the address of the static identifier: " sb.copyPtr
+                idInfo nameContext sb.appendIdInfo
+              op .pos errors appendError
+              continue.opLoop
+            end
             opType mutable typeContext types.getAddressType =:: ptrType
             idInfo .idType .PROCEDURE if
               ## getIdData

@@ -3946,7 +3946,7 @@ proc( file.File : mut: target ProgramContext ptr.mut : program -> file.File ) =>
     valType types.primitive.TYPE types.typeEquals or
         valType typeContext types.isEmpty or
         valType typeContext types.isProcedure or
-        identifierFlags id.FLAG_EXTERN & ? if
+        identifierFlags id.FLAG_STATIC id.FLAG_EXTERN | & ? if
       continue
     end
     sb
