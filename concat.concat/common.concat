@@ -5,13 +5,14 @@ import numbers
 
 "main":s =:: export: MAIN_NAME ## name of main procedure
 
-## XXX? seperate file for compiler flags
-enum( ## XXX more precise names
+## TODO? seperate file for compiler flags
+enum( ## TODO more precise names
   QBE
   ASM
+  STACK_VM
 ) =:: export: BackEnd
 ## compiler flags
-## XXX? wrap in namespace
+## TODO? wrap in namespace
 ..compiler.version
   ..compiler.flag.incrementVersionNumber if 1 + end
 =:: export: _VERSION_ ## compiler version auto incremenets on each recompile
@@ -33,9 +34,9 @@ namespace: optimizerFlags
   true =:: export: mut: REMOVE_UNUSED_PROCS ## don't include unused procedures in compiled code
   false =:: export: mut: ALLOW_INLINE_SMALL
   false =:: export: mut: ALLOW_INLINE
-  ## XXX! determine good constants
-  ## XXX? make dependent on structure of code ? #ops - #args
-  ## XXX? make dependent on level
+  ## TODO determine good constants
+  ##   ? make dependent on structure of code ? #ops - #args
+  ##   ? make dependent on level
   16 =:: export: mut: WEAK_INLINE_MAX_OP_COUNT ## always inlined (unless marked as inline.never)
   32 =:: export: mut: INLINE_MAX_OP_COUNT ## inlined if marked as inline
 

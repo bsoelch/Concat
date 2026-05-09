@@ -1,0 +1,13 @@
+import stringBuilder
+import file
+
+import "program.concat"
+
+
+proc( file.File : mut: target ProgramContext ptr.mut : program bool : assemble -> file.File ) =>: export: compileToStackVM
+  ## 1. compile source-code to list of cctAsm operations, using labels for jumps and loads
+  ## 2. generate data-section
+  ## 3. resolve labels
+  ## 4. generate byte-code
+  "stack-vm compiler is not implemented" ..panic
+end

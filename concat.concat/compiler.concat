@@ -11,6 +11,7 @@ import "usageAnalysis.concat"
 import "prepareCompile.concat"
 import "generator_qbe.concat"
 import "generator_asm.concat"
+import "generator_stackVM.concat"
 
 sb.empty =:: mut: srcPath
 sb.empty =:: mut: targetPath
@@ -126,6 +127,7 @@ proc( -> ) =>: parseArgs
       BackEnd .QBE arg.select.default
       "--asm":s BackEnd .ASM arg.select.option
       "--qbe":s BackEnd .QBE arg.select.option
+      "--stackvm":s BackEnd .STACK_VM arg.select.option
       "select compiler backend":s arg.helpText
     _BACKEND_@ arg.set
     "-h":s args.HelpLevel .DEFAULT arg.help
@@ -168,8 +170,15 @@ proc( -> ) =>: parseArgs
     else
       baseName sb.appendStr
       _BACKEND_ switch
-        QBE case ".ssa\x00" sb.appendS break
-        ASM case ".s\x00" sb.appendS break
+        QBE case ".ssa\x00":s sb.appendStr break
+        ASM case ".s\x00":s sb.appendStr break
+        STACK_VM case
+          compileGeneratedCode if
+            ".cctbc\x00":s
+          else
+            ".cctasm\x00":s
+          end sb.appendStr
+        break
       end
     end
   outPath=
@@ -316,6 +325,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
     _BACKEND_ switch
       QBE case prog@ compileToQBE break
       ASM case prog@ compileToASM break
+      STACK_VM case prog@ compileGeneratedCode compileToStackVM break
     end
   file.close
   prog@ .errors checkErrors
@@ -385,7 +395,12 @@ proc( -> ) =>: main ## TODO check return value of fopen
           1 retCode=
           break
         end
-        break
+      break
+      STACK_VM case
+        runCompiledProgram if
+          "running stack-vm code is not supported" ..panic
+        end
+      break
     end
     runCompiledProgram if
       tmpPath sb.clear
