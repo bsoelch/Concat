@@ -5,7 +5,21 @@ import file
 import "program.concat"
 import "stackVM/ir.concat"
 
+union(
+  i64 : Int
+  f64 : Float
+  i64 : StackSlot ## count from bottom of stack to get stable id
+  i64 : LocalValue
+  i64 : RoValue
+  i64 : RwValue
+  i64 : LocalAddr
+  i64 : RoAddr
+  i64 : RwAddr
+) =:: StackValue
 struct(
+  ## srcStack -> map stack to storage locations
+  ## dstStack -> val-counts for to 16 slots
+  ## varLocs -> memory/stack locations of variables
   ProgramContext ptr.mut : program
 ) =:: CompilerContext
 

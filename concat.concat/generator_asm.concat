@@ -8,65 +8,22 @@ import "asm/asm.concat"
 import "asm/amd64.concat"
 
 enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER BITS32 BITS64 V128 ) =:: ValType
-union(
-  _ : Empty
-  ValType : Val
-  ( ValType ValType ) : Val2
-  ( ValType ValType ValType ) : Val3
-) =:: ValTypes
 namespace: ValType
-  proc( Type : t TypeContext ptr : typeContext -> ValTypes ) =>: fromType
+  proc( Type : t TypeContext ptr : typeContext -> ValType ) =>: fromType
     t typeContext types.unwrapNamed switch
       PrimitiveType .case switch
-        BOOL case ValType .BOOL ValTypes .Val return
-        I8   case ValType .I8 ValTypes .Val return
-        I16  case ValType .I16 ValTypes .Val return
-        I32  case ValType .I32 ValTypes .Val return
-        I64  case ValType .I64 ValTypes .Val return
-        F16  case ValType .F16 ValTypes .Val return
-        F32  case ValType .F32 ValTypes .Val return
-        F64  case ValType .F64 ValTypes .Val return
-        TYPE case ValTypes .Empty return
+        BOOL case ValType .BOOL return
+        I8   case ValType .I8 return
+        I16  case ValType .I16 return
+        I32  case ValType .I32 return
+        I64  case ValType .I64 return
+        F16  case ValType .F16 return
+        F32  case ValType .F32 return
+        F64  case ValType .F64 return
+        TYPE case ValType .EMPTY return
       end break
       Pointer MutablePointer RawPointer MutableRawPointer case
-        ValType .POINTER ValTypes .Val return
-      Struct case
-        t typeContext types.compositeEltCount 0 == if
-          ValTypes .Empty return
-        end
-        t typeContext types.compositeEltCount 1 == if
-          t 0 typeContext types.compositeGetElement optional.unwrap typeContext fromType return
-        end
-        ## TODO: more efficient way to combine slots
-        t typeContext types.compositeEltCount 2 == if
-          t 0 typeContext types.compositeGetElement optional.unwrap typeContext fromType =:: elt1
-          t 1 typeContext types.compositeGetElement optional.unwrap typeContext fromType =:: elt2
-          elt1 switch
-            Empty case elt2 return
-            Val .case
-              elt2 switch
-                Empty case ValTypes .Val return
-                Val .case ( ValType ValType ) new ValTypes .Val2 return
-                Val2 .case ... ( ValType ValType ValType ) new ValTypes .Val3 return
-                Val3 case ..drop break ## can only fit up to 3 values
-              end
-            break
-            Val2 .case ...
-              elt2 switch
-                Empty case ( ValType ValType ) new ValTypes .Val2 return
-                Val .case ( ValType ValType ValType ) new ValTypes .Val3 return
-                Val2 Val3 case ..drop.2 break ## can only fit up to 3 values
-              end
-            break
-            Val3 .case
-              elt2 .Empty ? if ## can only fit up to 3 values
-                ValTypes .Val3 return
-              else ..drop end
-            break
-          end
-        end
-        ## handle 3 slots
-      break
+        ValType .POINTER return
       default break
     end
     "unsupported type: " sb.copyPtr
@@ -102,79 +59,13 @@ end
 struct(
   asm.Value : value
   ValType : valType
-) =:: TypedValue
-union(
-  TypedValue : Val
-  ( TypedValue TypedValue ) : Val2
-  ( TypedValue TypedValue TypedValue ) : Val3
 ) =:: StackValue
 namespace: StackValue
-  proc( asm.Value : v ValType : t -> StackValue ) =>: val
-    v t TypedValue new StackValue .Val
+  proc( asm.Value : v ValType : t -> StackValue ) =>: create
+    v t StackValue new
   end
-  proc( asm.Value : v1 ValType : t1 asm.Value : v2 ValType : t2 -> StackValue ) =>: val2
-    v1 t1 TypedValue new v2 t2 TypedValue new ( TypedValue TypedValue ) new StackValue .Val2
-  end
-  proc(
-    asm.Value : v1 ValType : t1
-    asm.Value : v2 ValType : t2
-    asm.Value : v3 ValType : t3
-  -> StackValue ) =>: val3
-    v1 t1 TypedValue new
-      v2 t2 TypedValue new
-      v3 t3 TypedValue new
-    ( TypedValue TypedValue TypedValue ) new StackValue .Val3
-  end
-  proc( StackValue -> TypedValue ) =>: get1
-    switch
-      Val .case return
-      Val2 .case .0 return
-      Val3 .case .0 return
-    end
-  end
-  proc( StackValue -> TypedValue optional ) =>: get2
-    switch
-      Val case TypedValue optional.empty return
-      Val2 .case .1 optional.wrap return
-      Val3 .case .1 optional.wrap return
-    end
-  end
-  proc( StackValue -> TypedValue optional ) =>: get3
-    switch
-      Val Val2 case TypedValue optional.empty return
-      Val3 .case .2 optional.wrap return
-    end
-  end
-  proc( TypedValue StackValue ptr.mut -> ) =>: set1
-    switch
-      Val .case =[] break
-      Val2 .case .0 =[] break
-      Val3 .case .0 =[] break
-    end
-  end
-  proc( TypedValue StackValue ptr.mut : dst -> ) =>: set2
-    dst switch
-      Val .case [] >$ ( TypedValue TypedValue ) new StackValue .Val2 dst =[] break
-      Val2 .case .1 =[] break
-      Val3 .case .1 =[] break
-    end
-  end
-  proc( TypedValue StackValue ptr.mut : dst -> ) =>: set3
-    dst switch
-      Val .case
-          []
-          asm.Value .None ValType .EMPTY TypedValue new
-          >>$
-        ( TypedValue TypedValue TypedValue ) new StackValue .Val3 dst =[]
-      break
-      Val2 .case
-        $ .0 []
-        >$ .1 []
-        >>$
-        ( TypedValue TypedValue TypedValue ) new StackValue .Val3 dst =[]
-      break
-      Val3 .case .2 =[] break
-    end
+  proc( -> StackValue ) =>: empty
+    asm.Value .None ValType .EMPTY StackValue new
   end
 end
 struct(
@@ -182,8 +73,8 @@ struct(
   ValType : valType
 ) =:: TypedReg
 namespace: TypedReg
-  proc( TypedReg -> TypedValue ) =>: asTypedValue
-    $ .reg asm.Value .Register >$ .valType TypedValue new
+  proc( TypedReg -> StackValue ) =>: asStackValue
+    $ .reg asm.Value .Register >$ .valType StackValue new
   end
 end
 union(
@@ -210,8 +101,6 @@ struct(
 union(
   _ : None
   iSize : Stack
-  iSize : Stack2
-  iSize : Stack3
   asm.LocalVarId : LocalVariable
   NameId : GlobalVariable
   i32 : LocalMemory
@@ -222,8 +111,6 @@ namespace: ValueLocation
     a switch
       None case true return
       Stack .case b .Stack unionElement.unwrap == return
-      Stack2 .case b .Stack2 unionElement.unwrap == return
-      Stack3 .case b .Stack3 unionElement.unwrap == return
       LocalVariable .case b .LocalVariable unionElement.unwrap == return
       GlobalVariable .case b .GlobalVariable unionElement.unwrap NameId.eq return
       LocalMemory .case b .LocalMemory unionElement.unwrap == return
@@ -233,8 +120,6 @@ namespace: ValueLocation
     switch
       None case "None":s sb.appendStr break
       Stack .case =:: index "Stack: ":s sb.appendStr index sb.appendI break
-      Stack2 .case =:: index "Stack.2: ":s sb.appendStr index sb.appendI break
-      Stack3 .case =:: index "Stack.3: ":s sb.appendStr index sb.appendI break
       LocalVariable .case =:: id "LocalVar: ":s sb.appendStr id i64 cast.u sb.appendI break
       GlobalVariable .case =:: id "GlobalVar: ":s sb.appendStr id nameContext sb.appendIdentifierPath break
       LocalMemory .case =:: id "LocalMemory: ":s sb.appendStr id sb.appendI break
@@ -427,44 +312,15 @@ proc( asm.RegisterId : regId CompilerContext ptr.mut : context -> ) =>: clearReg
   end
   RegisterUse .None regInfo .uses=
 end
-proc( TypedValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: copyValueElt
+proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: copyValue
   val .value .Register .if
     loc context addLocation
   else ..drop end
 end
-proc( TypedValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: discardValueElt
+proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: discardValue
   val .value .Register .if
     loc context removeLocation
   else ..drop end
-end
-## TODO? generic procedure for applying proc to all elements of StackValue
-proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: copyValue
-  val switch
-    Val .case loc context copyValueElt break
-    Val2 .case
-      $ .0 loc context copyValueElt
-      .1 loc .Stack .if ValueLocation .Stack2 end context copyValueElt
-    break
-    Val3 .case
-      $ .0 loc context copyValueElt
-      $ .1 loc .Stack .if ValueLocation .Stack2 end context copyValueElt
-      .2 loc .Stack .if ValueLocation .Stack3 end context copyValueElt
-    break
-  end
-end
-proc( StackValue : val ValueLocation : loc CompilerContext ptr.mut : context -> ) =>: discardValue
-  val switch
-    Val .case loc context discardValueElt break
-    Val2 .case
-      $ .0 loc context discardValueElt
-      .1 loc .Stack .if ValueLocation .Stack2 end context discardValueElt
-    break
-    Val3 .case
-      $ .0 loc context discardValueElt
-      $ .1 loc .Stack .if ValueLocation .Stack2 end context discardValueElt
-      .2 loc .Stack .if ValueLocation .Stack3 end context discardValueElt
-    break
-  end
 end
 
 proc( ConstValue : val CompilerContext ptr.mut : context -> asm.PtrConstId ) =>: newCompositeConst
@@ -474,29 +330,26 @@ proc( ConstValue : val CompilerContext ptr.mut : context -> asm.PtrConstId ) =>:
   context .constPtrs=
   constId return
 end
-proc( ConstValue : constant ValTypes : valTypes  CompilerContext ptr.mut : context -> ) =>: pushConstant
-  valTypes .Val .else
-    "multi-values are not supported" ..panic
-  end =:: valType
+proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context -> ) =>: pushConstant
   valType .POINTER if
     context [] .stack
-      constant context newCompositeConst asm.Value .ConstPtr valType StackValue.val list.append
+      constant context newCompositeConst asm.Value .ConstPtr valType StackValue.create list.append
     context .stack=
     return
   end
   context [] .stack
     constant switch
       Bool .case
-        ?1 i64 cast.u asm.Value .Int valType StackValue.val list.append
+        ?1 i64 cast.u asm.Value .Int valType StackValue.create list.append
       break
       Char .case
-        i64 cast.u asm.Value .Int valType StackValue.val list.append
+        i64 cast.u asm.Value .Int valType StackValue.create list.append
       break
       Int .case
-        asm.Value .Int valType StackValue.val list.append
+        asm.Value .Int valType StackValue.create list.append
       break
       Float .case
-        asm.Value .Float valType StackValue.val list.append
+        asm.Value .Float valType StackValue.create list.append
       break
       default "unsupported value-constant" ..panic
     end
@@ -607,7 +460,7 @@ proc(
             else ..drop >>$
               moveType ValType.isPrimitive if
                 ## move value through temporary register
-                src moveType TypedValue new ValueLocation .None context moveToRegister =:: srcId
+                src moveType StackValue.create ValueLocation .None context moveToRegister =:: srcId
                 <<$ srcId asm.op2
               else ## TODO minimal memcopy implementation
                 "moving non-primitive values is not supported" ..panic
@@ -629,14 +482,11 @@ end
 proc(
   asm.Atom list
   asm.LocalVarId : dst
-  StackValue : src
+  StackValue : srcVal
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opStoreLocal
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
-  src .Val .else
-    "unimplemented: multi-value store" ..panic
-  end =:: srcVal
   ## ensure source value is in register
   srcVal .value .Register .else ..drop
     ## TODO? re-use current cached location, if value is not used by different slot
@@ -660,9 +510,7 @@ proc(
   end
   ## TypedReg
   srcReg
-    $ varInfo [] .variableType typeContext ValType.fromType .Val .else
-      "multi-values are not supported" ..panic
-    end
+    $ varInfo [] .variableType typeContext ValType.fromType
   TypedReg new VariableCacheLocation .Register varInfo .cachedValue=
   dst ValueLocation .LocalVariable context addLocation
 end
@@ -676,12 +524,10 @@ proc(
   context .variableInfo src nameVarId map.at .else
     "missing info for local variable" ..panic
   end =:: varInfo
-  varInfo [] .variableType typeContext ValType.fromType .Val .else
-    "multi-values are not supported" ..panic
-  end =:: valType
+  varInfo [] .variableType typeContext ValType.fromType =:: valType
   varInfo [] .cachedValue switch
     None case break
-    Register .case .reg asm.Value .Register valType StackValue.val return
+    Register .case .reg asm.Value .Register valType StackValue.create return
   end
   true varInfo .isRead=
   valType context nextFreeRegister
@@ -692,7 +538,7 @@ proc(
     dstVal
     src nameVarId 0 asm.localAddress
   context opMove
-  dstVal valType StackValue.val
+  dstVal valType StackValue.create
 end
 
 proc(
@@ -702,12 +548,8 @@ proc(
   CompilerContext ptr.mut : context
 -> asm.Atom list asm.RegisterId asm.Value ) =>: amd64GetBinOpArgs
   ## TODO? extend registers to 32-bit for arithmetic operations to prevent partial register write
-  pos context popValue
-    .and .Val .else "expected single value" ..panic end ## FIXME: don't crash on invalid stack-state
-  .value =:: arg2 ## TODO! ensure that arg2 is not overwritten by move to register
-  pos context popValue
-    .and .Val .else "expected single value" ..panic end
-  ValueLocation .None context moveToRegister =:: arg1
+  pos context popValue .value =:: arg2 ## TODO! ensure that arg2 is not overwritten by move to register
+  pos context popValue ValueLocation .None context moveToRegister =:: arg1
   arg1 arg2
 end
 enum( ADD SUB MUL AND OR XOR DIV REM UDIV UMOD ) =:: BinOp
@@ -739,7 +581,7 @@ proc(
       ## TODO: ensure that arg2 is not used as dst for 2-argument op-codes (lea can be used as 3-operand add: `lea dst, [arg1+arg2]`)
       argType context nextFreeRegister =:: dst
       ## TODO? create proc for nextReg+push
-      dst asm.Value .Register argType StackValue.val context pushValue
+      dst asm.Value .Register argType StackValue.create context pushValue
       arg1 dst != if
         AMD64.op.MOV dst arg1 asm.op2 list.append
       end
@@ -782,10 +624,10 @@ proc(
         REM UMOD case true break
       end =:: isRemainder
       ## pop top value to register, except rax & rdx
-      pos context popValue .and .Val .else "expected single value" ..panic end =:: rhs
+      pos context popValue =:: rhs
       rhs { AMD64.reg.RAX AMD64.reg.RDX } slice.wrap ValueLocation .None context moveToRegisterSkip =:: rhsReg
       ## pop second value to rax
-      pos context popValue .and .Val .else "expected single value" ..panic end =:: lhs
+      pos context popValue =:: lhs
       ## TODO! if lhs is rax ensure there is no second use
       lhs .value .Register ! .or asm.RegisterId.baseReg AMD64.reg.RAX != if
         AMD64.reg.RAX context checkUse if
@@ -805,7 +647,7 @@ proc(
       end
       opType binOpCodeAMD64 rhsReg asm.op1 list.append
       ## push rax/rdx
-      isRemainder if AMD64.reg.RDX else AMD64.reg.RAX end asm.Value .Register argType StackValue.val context pushValue
+      isRemainder if AMD64.reg.RDX else AMD64.reg.RAX end asm.Value .Register argType StackValue.create context pushValue
     return
   end
   "unimplemented configuration for: division-op" ..panic
@@ -831,7 +673,7 @@ proc(
     AMD64 case
       argType pos context amd64GetBinOpArgs =:: arg2 =:: arg1
       ValType .BOOL context nextFreeRegister =:: dst
-      dst asm.Value .Register ValType .BOOL StackValue.val context pushValue
+      dst asm.Value .Register ValType .BOOL StackValue.create context pushValue
       ## TODO? option to merge cmp+jump
       argType ValType.isInt if
         AMD64.op.CMP
@@ -856,7 +698,7 @@ end
 
 proc(
   asm.Atom list
-  TypedValue : val
+  StackValue : val
   asm.RegisterId slice : skip
   ValueLocation : loc
   CompilerContext ptr.mut : context
@@ -873,7 +715,7 @@ proc(
 end
 proc(
   asm.Atom list
-  TypedValue : val
+  StackValue : val
   ValueLocation : loc
   CompilerContext ptr.mut : context
 -> asm.Atom list asm.RegisterId ) =>: moveToRegister
@@ -881,10 +723,10 @@ proc(
 end
 proc(
   asm.Atom list
-  TypedValue : val
+  StackValue : val
   ValueLocation : loc
   CompilerContext ptr.mut : context
--> asm.Atom list TypedValue ) =>: freezeTypedValue
+-> asm.Atom list StackValue ) =>: freezeStackValue
   val .value switch
     None case "unsupported value" ..panic
     Int LocalAddress ConstPtr case
@@ -903,20 +745,9 @@ proc(
 -> asm.Atom list RegisterState ) =>: rememberState
   ## TODO ensure all values are in (unique) register or memory
   context [] .stack .length for =:: i
-    context [] .stack i [] switch
-      Val .case
-        i ValueLocation .Stack context freezeTypedValue
-      StackValue .Val break
-      Val2 .case
-        >$ $1 .0 i ValueLocation .Stack context freezeTypedValue >>$ .0=
-        >$ $1 .1 i ValueLocation .Stack2 context freezeTypedValue >>$ .1=
-      StackValue .Val2 break
-      Val3 .case
-        >$ $1 .0 i ValueLocation .Stack context freezeTypedValue >>$ .0=
-        >$ $1 .1 i ValueLocation .Stack2 context freezeTypedValue >>$ .1=
-        >$ $1 .2 i ValueLocation .Stack3 context freezeTypedValue >>$ .2=
-      StackValue .Val3 break
-    end context [] .stack i =[]
+    context [] .stack i []
+      i ValueLocation .Stack context freezeStackValue
+    context [] .stack i =[]
   end
   ## TODO? would it be cheaper to iterate registers instead of values
   0 CachedVariable list.create
@@ -939,35 +770,18 @@ proc(
 end
 proc(
   ValueLocation : location
-  TypedValue : newValue
+  StackValue : newValue
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> ) =>: setStorageLocation
   location switch
     None case return
     Stack .case =:: index
-      newValue
-        context [] .stack index list.at .else ..drop
+      newValue context [] .stack index list.at .else ..drop
           "stack-values are out of sync" sb.copyPtr pos context [] .program .errors appendError
           return
         end
-      StackValue.set1
-    return
-    Stack2 .case =:: index
-      newValue
-        context [] .stack index list.at .else ..drop
-          "stack-values are out of sync" sb.copyPtr pos context [] .program .errors appendError
-          return
-        end
-      StackValue.set2
-    return
-    Stack3 .case =:: index
-      newValue
-        context [] .stack index list.at .else ..drop
-          "stack-values are out of sync" sb.copyPtr pos context [] .program .errors appendError
-          return
-        end
-      StackValue.set3
+      =[]
     return
     LocalVariable .case =:: varId
       newValue .value .Register .else
@@ -986,39 +800,27 @@ end
 proc(
   ValueLocation : location
   CompilerContext ptr.mut : context
--> TypedValue optional ) =>: findStorageLocation
+-> StackValue optional ) =>: findStorageLocation
   context [] .program =:: program
   program .idContext .typeContext =:: typeContext
   location switch
-    None case TypedValue optional.empty return
+    None case StackValue optional.empty return
     Stack .case =:: index
       context [] .stack index list.get .else
-        TypedValue optional.empty return
-      end StackValue.get1 optional.wrap
-    return
-    Stack2 .case =:: index
-      context [] .stack index list.get .else
-        TypedValue optional.empty return
-      end StackValue.get2
-    return
-    Stack3 .case =:: index
-      context [] .stack index list.get .else
-        TypedValue optional.empty return
-      end StackValue.get3
+        StackValue optional.empty return
+      end optional.wrap
     return
     LocalVariable .case =:: varName ## TODO? split VariableLocation into 3 slots (for the up to 3 cache registers)
       context .variableInfo varName map.get .else
-        TypedValue optional.empty return
+        StackValue optional.empty return
       end =:: varInfo
       varInfo .cachedValue switch
         None case
           varName 0 asm.localAddress
-            varInfo .variableType typeContext ValType.fromType .Val .else
-              "multi-values are not supported" ..panic
-            end
-          TypedValue new optional.wrap return
+            varInfo .variableType typeContext ValType.fromType
+          StackValue new optional.wrap return
         break
-        Register .case TypedReg.asTypedValue optional.wrap return
+        Register .case TypedReg.asStackValue optional.wrap return
       end
     break
     GlobalVariable LocalMemory case
@@ -1028,34 +830,24 @@ end
 proc(
   ValueLocation : location
   RegisterState : targetState
--> TypedValue optional ) =>: findTargetStorageLocation
+-> StackValue optional ) =>: findTargetStorageLocation
   location switch
-    None case TypedValue optional.empty return
+    None case StackValue optional.empty return
     Stack .case =:: index
       targetState .stack index slice.get .else
-        TypedValue optional.empty return
-      end StackValue.get1 optional.wrap
-    return
-    Stack2 .case =:: index
-      targetState .stack index slice.get .else
-        TypedValue optional.empty return
-      end StackValue.get2
-    return
-    Stack3 .case =:: index
-      targetState .stack index slice.get .else
-        TypedValue optional.empty return
-      end StackValue.get3
+        StackValue optional.empty return
+      end optional.wrap
     return
     LocalVariable .case =:: nameId
       targetState .cachedVars slice.freeze
         nameId VariableCacheLocation .None CachedVariable new
         CachedVariable.cmp@
       slice.binarySearch .Match .else ..drop
-        TypedValue optional.empty return
+        StackValue optional.empty return
       end targetState .cachedVars >$ [] .location =:: varLocation
       varLocation switch
-        None case TypedValue optional.empty return
-        Register .case TypedReg.asTypedValue optional.wrap return
+        None case StackValue optional.empty return
+        Register .case TypedReg.asStackValue optional.wrap return
       end
     break
     GlobalVariable LocalMemory case
@@ -1098,14 +890,14 @@ proc(
     "unimplemented: non-register destinations" ..panic
   end
   ## TODO? should addLocation call setStorageLocation by default
-  valLoc dstValue valType TypedValue new pos context setStorageLocation
+  valLoc dstValue valType StackValue.create pos context setStorageLocation
   valType dstValue srcValue context opMove
 end
 proc(
   asm.Atom list
   ValueLocation : loc
-  TypedValue : mut: src
-  TypedValue : dst
+  StackValue : mut: src
+  StackValue : dst
   RegisterState : targetState
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
@@ -1186,26 +978,7 @@ proc(
   oldStack .length for =:: i
     oldStack i [] =:: targetVal
     context [] .stack i [] =:: srcVal
-    srcVal ..tag targetVal ..tag != if
-      "CodeGen: stack-values are out of sync" sb.copyPtr pos errors appendError
-      state context resetState return
-    end
-    srcVal switch
-      Val .case =:: srcElt
-        i ValueLocation .Stack srcElt targetVal .Val unionElement.unwrap state pos context restoreValue
-      break
-      Val2 .case =:: srcElts
-        targetVal .Val2 unionElement.unwrap =:: targetElts
-        i ValueLocation .Stack srcElts .0 targetElts .0 state pos context restoreValue
-        i ValueLocation .Stack2 srcElts .1 targetElts .1 state pos context restoreValue
-      break
-      Val3 .case =:: srcElts
-        targetVal .Val3 unionElement.unwrap =:: targetElts
-        i ValueLocation .Stack srcElts .0 targetElts .0 state pos context restoreValue
-        i ValueLocation .Stack2 srcElts .1 targetElts .1 state pos context restoreValue
-        i ValueLocation .Stack3 srcElts .2 targetElts .2 state pos context restoreValue
-      break
-    end
+    i ValueLocation .Stack srcVal targetVal state pos context restoreValue
   end
   state .cachedVars for =:: varState
     context .variableInfo varState .varId map.get .else
@@ -1221,8 +994,8 @@ proc(
       None case ..unreachable
       Register .case =:: srcReg
         varState .varId ValueLocation .LocalVariable
-          srcReg TypedReg.asTypedValue
-          varState .location .Register unionElement.unwrap TypedReg.asTypedValue
+          srcReg TypedReg.asStackValue
+          varState .location .Register unionElement.unwrap TypedReg.asStackValue
         state pos context restoreValue
       break
     end
@@ -1254,16 +1027,16 @@ end
 proc(
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
--> StackValue optional ) =>: popValue
+-> StackValue ) =>: popValue
   context [] .program =:: program
   program .errors =:: errors
   context [] .stack list.pop >$ context .stack= .else
     "stack underflow" sb.copyPtr pos errors appendError
-    StackValue optional.empty return
+    StackValue.empty return
   end =:: popped
   context [] .stack .length ValueLocation .Stack =:: valLoc
   popped valLoc context discardValue
-  popped optional.wrap
+  popped
 end
 
 proc(
@@ -1360,43 +1133,24 @@ proc(
     0 =:: mut: floatCount
     outTypes .length while $ 1 - >$ 0 != do =:: i
       outTypes i [] =:: outType
-      outType typeContext ValType.fromType switch
-        Empty case continue
-        Val .case =:: outValType
-          ## TODO: extract reg-allocation for fixed val-type to function
-          outValType ValType.isInt if
-            intCount AMD64.reg.intRet .if
-              outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
-            else
-              "unimplemented: memory return" ..panic
-            end
-            intCount 1 + intCount=
-          else outValType ValType.isFloat _if
-            floatCount AMD64.reg.floatRet .if
-              outValType context setRegSize asm.Value .Register outValType StackValue.val expectedStack i =[]
-            else
-              "unimplemented: memory return" ..panic
-            end
-            floatCount 1 + floatCount=
-          else
-            "unsupported value type for return" ..panic
-          end
-        break
-        Val2 .case =:: vals
-          vals .0 .I32 and vals .1 .I32 if
-            intCount AMD64.reg.intRet .if
-              ValType .BITS64 context setRegSize asm.Value .Register ValType .BITS64 StackValue.val expectedStack i =[]
-            else
-              "unimplemented: memory return" ..panic
-            end
-            intCount 1 + intCount=
-          else
-            "composite return is not implemented" ..panic
-          end
-        break
-        Val3 .case =:: vals
-          "composite return is not implemented" ..panic
-        break
+      outType typeContext ValType.fromType =:: outValType
+      ## TODO: extract reg-allocation for fixed val-type to function
+      outValType ValType.isInt if
+        intCount AMD64.reg.intRet .if
+          outValType context setRegSize asm.Value .Register outValType StackValue.create expectedStack i =[]
+        else
+          "unimplemented: memory return" ..panic
+        end
+        intCount 1 + intCount=
+      else outValType ValType.isFloat _if
+        floatCount AMD64.reg.floatRet .if
+          outValType context setRegSize asm.Value .Register outValType StackValue.create expectedStack i =[]
+        else
+          "unimplemented: memory return" ..panic
+        end
+        floatCount 1 + floatCount=
+      else
+        "unsupported value type for return" ..panic
       end
     finally i end expectedStack .length u<= if
       "Wrong number of values for return statement" sb.copyPtr
@@ -1424,42 +1178,23 @@ proc(
   0 =:: mut: intCount
   0 =:: mut: floatCount
   1:iSize while $ argTypes .length u<= do =:: offset
-    argTypes $ .length offset - [] typeContext ValType.fromType switch
-      Empty case continue
-      Val .case =:: argValType
-        argValType ValType.isInt if
-          intCount AMD64.reg.intArg .if
-            argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
-          else
-            "unimplemented: memory argument" ..panic
-          end
-          intCount 1 + intCount=
-        else argValType ValType.isFloat _if
-          floatCount AMD64.reg.floatArg .if
-            argValType context setRegSize asm.Value .Register argValType StackValue.val expectedStack $ .length offset - =[]
-          else
-            "unimplemented: memory argument" ..panic
-          end
-          floatCount 1 + floatCount=
-        else
-          "unimplemented value type for argument" ..panic
-        end
-      break
-      Val2 .case =:: argValTypes
-        argValTypes .0 .I32 and argValTypes .1 .I32 if
-          intCount AMD64.reg.intArg .if
-            ValType .BITS64 context setRegSize asm.Value .Register ValType .BITS64 StackValue.val expectedStack $ .length offset - =[]
-          else
-            "unimplemented: memory argument" ..panic
-          end
-          intCount 1 + intCount=
-        else
-          "unimplemented: composite arguments" ..panic
-        end
-      break
-      Val3 .case =:: argValTypes
-          "unimplemented: composite arguments" ..panic
-      break
+    argTypes $ .length offset - [] typeContext ValType.fromType =:: argValType
+    argValType ValType.isInt if
+      intCount AMD64.reg.intArg .if
+        argValType context setRegSize asm.Value .Register argValType StackValue.create expectedStack $ .length offset - =[]
+      else
+        "unimplemented: memory argument" ..panic
+      end
+      intCount 1 + intCount=
+    else argValType ValType.isFloat _if
+      floatCount AMD64.reg.floatArg .if
+        argValType context setRegSize asm.Value .Register argValType StackValue.create expectedStack $ .length offset - =[]
+      else
+        "unimplemented: memory argument" ..panic
+      end
+      floatCount 1 + floatCount=
+    else
+      "unimplemented value type for argument" ..panic
     end
   finally offset 1 + end $ expectedStack .length u<= if =:: offset
     ## TODO move remaining stack values to memory or callee-saved register
@@ -1476,42 +1211,23 @@ proc(
     0 intCount=
     0 floatCount=
     outTypes .length while $ 1 - >$ 0 != do =:: i
-      outTypes i [] typeContext ValType.fromType switch
-        Empty case continue
-        Val .case =:: outValType
-          outValType ValType.isInt if
-            intCount AMD64.reg.intRet .if
-              asm.Value .Register outValType StackValue.val expectedRetStack i =[]
-            else
-              "unimplemented: memory return" ..panic
-            end
-            intCount 1 + intCount=
-          else outValType ValType.isFloat _if
-            floatCount AMD64.reg.floatRet .if
-              asm.Value .Register outValType StackValue.val expectedRetStack i =[]
-            else
-              "unimplemented: memory return" ..panic
-            end
-            floatCount 1 + floatCount=
-          else
-            "unsupported value type for return" ..panic
-          end
-        break
-        Val2 .case =:: vals
-          vals .0 .I32 and vals .1 .I32 if
-            intCount AMD64.reg.intRet .if
-              asm.Value .Register ValType .BITS64 StackValue.val expectedRetStack i =[]
-            else
-              "unimplemented: memory return" ..panic
-            end
-            intCount 1 + intCount=
-          else
-            "composite return is not implemented" ..panic
-          end
-        break
-        Val3 .case =:: vals
-          "composite return is not implemented" ..panic
-        break
+      outTypes i [] typeContext ValType.fromType =:: outValType
+      outValType ValType.isInt if
+        intCount AMD64.reg.intRet .if
+          asm.Value .Register outValType StackValue.create expectedRetStack i =[]
+        else
+          "unimplemented: memory return" ..panic
+        end
+        intCount 1 + intCount=
+      else outValType ValType.isFloat _if
+        floatCount AMD64.reg.floatRet .if
+          asm.Value .Register outValType StackValue.create expectedRetStack i =[]
+        else
+          "unimplemented: memory return" ..panic
+        end
+        floatCount 1 + floatCount=
+      else
+        "unsupported value type for return" ..panic
       end
     finally i end ..drop
     expectedRetStack for
@@ -1557,10 +1273,7 @@ proc(
     SetId .case =:: idInfo
       idInfo .idType switch
         ARGUMENT LOCAL_VAR case
-          op .pos context popValue .else
-            "CodeGen: stack underflow" sb.copyPtr
-            op  .pos errors appendError return
-          end =:: newVal
+          op .pos context popValue =:: newVal
           idInfo .nameId nameVarId
             newVal
           context opStoreLocal
@@ -1569,55 +1282,6 @@ proc(
       end
     break
     BuiltIn .case op .pos context compileBuiltIn return
-    New case
-      op .dataType typeContext types.isTuple or op .dataType typeContext types.isTaggedUnion if
-        op .dataType typeContext types.compositeElts =:: eltTypes
-        TypedValue 3 array : mut: valBuffer
-        valBuffer@ list.wrapBuffer
-          eltTypes for =:: eltType
-            eltType typeContext types.isEmpty if continue end
-            ## TODO: handle composite values
-            ## TODO? verify element val-types, usefull error message for overflow of element-buffer
-            context [] .stack list.pop >$ context .stack= .else
-              "stack underflow" sb.copyPtr op .pos errors appendError
-              break
-            end switch
-              Val .case list.append break
-              Val2 .case =:: elts
-                elts .0 list.append
-                elts .1 list.append
-              break
-              Val3 .case =:: elts
-                elts .0 list.append
-                elts .1 list.append
-                elts .2 list.append
-              break
-            end
-          end
-        =:: eltVals
-        eltVals .length switch
-          0 case
-            "empty values should not exist at compile time" sb.copyPtr op .pos context [] .program .errors appendError
-          break
-          1 case context [] .stack eltVals 0 [] StackValue .Val list.push context .stack= break
-          2 case
-            context [] .stack
-              eltVals 1 [] eltVals 0 [] ( TypedValue TypedValue ) new StackValue .Val2
-            list.push context .stack=
-          break
-          3 case
-            context [] .stack
-              eltVals 2 [] eltVals 1 [] eltVals 0 []
-              ( TypedValue TypedValue TypedValue ) new StackValue .Val3
-            list.push context .stack=
-          break
-          default ..unreachable
-        end
-        return
-      else
-        "new is currently only supported for tuples" ..panic
-      end
-    break
     ImplementProcedure .case =:: procId
       procId ProcId.getProcInfo =:: procData
       procId context getProcName =:: procName
@@ -1654,52 +1318,28 @@ proc(
         argName? .and id.identifierFlags id.FLAG_STATIC & ? if continue end
         inTypes i []
           $ typeContext types.isType if ..drop continue end
-        typeContext ValType.fromType switch
-          Empty case continue
-          Val .case =:: argValType
-            argValType ValType.isInt if
-              intCount AMD64.reg.intArg .if
-                argValType context setRegSize asm.Value .Register argValType StackValue.val
-              else
-                "memory arguments are not supported" ..panic
-              end
-              intCount 1 + intCount=
-            else argValType ValType.isFloat _if
-              floatCount AMD64.reg.floatArg .if
-                argValType context setRegSize asm.Value .Register argValType StackValue.val
-              else
-                "memory arguments are not supported" ..panic
-              end
-              floatCount 1 + floatCount=
-            else
-              "unsupported valType" ..panic
-            end =:: argValue
-            argName? .and nameVarId =:: varId context .variableInfo varId map.at .if =:: argVar
-              varId argValue context opStoreLocal
-            else ## variable does not exist
-              argValue context pushValue
-            end
-          break
-          Val2 .case =:: argVals
-            argVals .0 .I32 and argVals .1 .I32 if
-              intCount AMD64.reg.intArg .if
-                ValType .BITS64 context setRegSize asm.Value .Register ValType .BITS64 StackValue.val
-              else
-                "memory arguments are not supported" ..panic
-              end =:: argValue
-              argName? .and nameVarId =:: varId context .variableInfo varId map.at .if =:: argVar
-                varId argValue context opStoreLocal
-              else ## variable does not exist
-                argValue context pushValue
-              end
-              intCount 1 + intCount=
-            else
-              "composite arguments are not supported" ..panic
-            end
-          break
-          Val3 .case =:: argVals
-            "composite arguments are not supported" ..panic
-          break
+        typeContext ValType.fromType =:: argValType
+        argValType ValType.isInt if
+          intCount AMD64.reg.intArg .if
+            argValType context setRegSize asm.Value .Register argValType StackValue.create
+          else
+            "memory arguments are not supported" ..panic
+          end
+          intCount 1 + intCount=
+        else argValType ValType.isFloat _if
+          floatCount AMD64.reg.floatArg .if
+            argValType context setRegSize asm.Value .Register argValType StackValue.create
+          else
+            "memory arguments are not supported" ..panic
+          end
+          floatCount 1 + floatCount=
+        else
+          "unsupported valType" ..panic
+        end =:: argValue
+        argName? .and nameVarId =:: varId context .variableInfo varId map.at .if =:: argVar
+          varId argValue context opStoreLocal
+        else ## variable does not exist
+          argValue context pushValue
         end
       finally i 1 - end ..drop
     return
@@ -1727,9 +1367,7 @@ proc(
             op  .pos errors appendError
             return
           end
-          op .pos context popValue
-            .and .Val .else "expected single value" ..panic end
-          ValueLocation .None context moveToRegister asm.RegisterId.SIZE_8 | =:: arg
+          op .pos context popValue ValueLocation .None context moveToRegister asm.RegisterId.SIZE_8 | =:: arg
           AMD64.op.TEST arg arg asm.op2 list.append
         break
         EQ NE LT LE GE GT ULT ULE UGE UGT case
@@ -1738,9 +1376,7 @@ proc(
             op  .pos errors appendError
             return
           end
-          op .dataType typeContext ValType.fromType .Val .else
-            "expected single value" ..panic
-          end =:: argType
+          op .dataType typeContext ValType.fromType =:: argType
           ## TODO merge duplicate code with opCmp
           argType op .pos context amd64GetBinOpArgs =:: arg2 =:: arg1
           ## TODO! handle float compare (! use comiss + ja/jb)
@@ -1808,9 +1444,7 @@ proc(
             eltCount StackValue list.create
           end
             eltCount for ..drop
-              op  .pos context popValue .else
-                "stack underflow" ..panic ## should not be rechached due to pre-checking size
-              end list.append
+              op  .pos context popValue list.append
             end
             offset 0 > if
               list.removeLast =:: lowValue

@@ -70,73 +70,19 @@ end
 struct(
   ValueId : valueId
   ValType : valType
-) =:: StackValueElement
-namespace: StackValueElement
-  proc( StackValueElement : a StackValueElement : b -> bool ) =>: eq
+) =:: StackValue
+namespace: StackValue
+  proc( StackValue : a StackValue : b -> bool ) =>: eq
     a .valueId b .valueId ValueId.eq
   end
-end
-union(
-  StackValueElement : Val
-  ( StackValueElement StackValueElement ) : Val2
-  ( StackValueElement StackValueElement StackValueElement ) : Val3
-) =:: StackValue
-## TODO support multi-element stack-values (instead of .Val unwrap)
-namespace: StackValue
-  proc( ValueId : valId ValType : valType -> StackValue ) =>: val
-    valId valType StackValueElement new StackValue .Val
-  end
-
-  proc( StackValue : a StackValue : b -> bool ) =>: eq
-    a ..tag b ..tag != if false return end
-    a switch
-      Val  .case b .Val unionElement.unwrap StackValueElement.eq return
-      Val2 .case =:: aVals b .Val2 unionElement.unwrap =:: bVals
-        aVals .0 bVals .0 StackValueElement.eq and
-          aVals .1 bVals .1 StackValueElement.eq
-        end return
-      Val3 .case =:: aVals b .Val3 unionElement.unwrap =:: bVals
-        aVals .0 bVals .0 StackValueElement.eq and
-          aVals .1 bVals .1 StackValueElement.eq and
-          aVals .2 bVals .2 StackValueElement.eq
-        end return
-    end
+  proc( ValueId : valId ValType : valType -> StackValue ) =>: create
+    valId valType StackValue new
   end
   proc( StackValue : a StackValue : b -> bool ) =>: valTypesEq
-    a ..tag b ..tag != if false return end
-    a switch
-      Val  .case .valType b .Val unionElement.unwrap .valType == return
-      Val2 .case =:: aVals b .Val2 unionElement.unwrap =:: bVals
-        aVals .0 .valType bVals .0 .valType == and
-          aVals .1 .valType bVals .1 .valType ==
-        end return
-      Val3 .case =:: aVals b .Val3 unionElement.unwrap =:: bVals
-        aVals .0 .valType bVals .0 .valType == and
-          aVals .1 .valType bVals .1 .valType == and
-          aVals .2 .valType bVals .2 .valType ==
-        end return
-    end
+    a .valType b .valType ==
   end
-  proc( stringBuilder StackValue -> stringBuilder ) =>: sbAppendValTypes
-    switch
-      Val  .case .valType sb.appendValType return
-      Val2 .case =:: vals
-        "( ":s sb.appendStr
-        vals .0 .valType sb.appendValType
-        ' ' sb.appendC
-        vals .1 .valType sb.appendValType
-        " )":s sb.appendStr
-      return
-      Val3 .case =:: vals
-        "( ":s sb.appendStr
-        vals .0 .valType sb.appendValType
-        ' ' sb.appendC
-        vals .1 .valType sb.appendValType
-        ' ' sb.appendC
-        vals .2 .valType sb.appendValType
-        " )":s sb.appendStr
-      return
-    end
+  proc( stringBuilder StackValue -> stringBuilder ) =>: sbAppendValType
+    .valType sb.appendValType
   end
 end
 
@@ -281,7 +227,7 @@ proc( ValType : valType ValueId : valId CompilerContext ptr.mut : context -> ) =
   context .stackInfo
     valId
     valType
-  StackValue.val branchTree.push
+  StackValue.create branchTree.push
 end
 proc( ValType : valType CompilerContext ptr.mut : context -> ValueId ) =>: pushNewValue
   context nextStackValueId
@@ -298,18 +244,14 @@ proc( ValType : valType i32 : offset ValueId : newVal CompilerContext ptr.mut : 
   context .stackInfo
     offset
   branchTree.replaceAt optional.unwrap =:: stackElt
-  newVal valType StackValue.val stackElt =[]
+  newVal valType StackValue.create stackElt =[]
 end
 proc(
   FilePosition ptr : pos
   CompilerContext ptr.mut : context
 -> ValueId ) =>: popValue
   context .stackInfo branchTree.pop .if
-    .Val .else ..drop
-      "expected single value" sb.copyPtr
-      pos context [] .program .errors appendError
-      ValueId .None return
-    end [] .valueId return
+    [] .valueId return
   end
   "stack underflow" sb.copyPtr
   pos context [] .program .errors appendError
@@ -461,39 +403,35 @@ proc(
       "branches of " sb.copyPtr
          mergePoint .blockName sb.appendStr
          "-statement are out of sync expected: " sb.appendS
-         rootValue [] StackValue.sbAppendValTypes
+         rootValue [] StackValue.sbAppendValType
          " got: " sb.appendS
-         toMerge i [] [] StackValue.sbAppendValTypes
+         toMerge i [] [] StackValue.sbAppendValType
       mergePoint .pos errors appendError
       i break
     end
     i 1:iSize +
   end ..drop
   mergePoint .out []
-    rootValue [] switch
-      Val .case =:: srcVal
-        context nextStackValueId =:: newId
-        newId ValueId.sbAppend
-        " =" sb.appendS
-        srcVal .valType sb.appendValTypeQBE
-        " phi " sb.appendS
-        0:iSize while $ toMerge .length u< do =:: i
-          i 0:iSize iSize.sgt if
-            ", " sb.appendS
-          end
-          mergePoint .branchIds i [] sb.appendBranchId
-          ' ' sb.appendC
-          toMerge i [] [] .Val .if .valueId else ..drop ValueId .None end ValueId.sbAppend
-          i 1:iSize +
-        end ..drop
-        '\n' sb.appendC
-        ## StackValue
-          newId
-          srcVal .valType
-        StackValue.val <$
-      break
-      Val2 Val3 case "composite-values are not supported" ..panic
-    end
+    rootValue [] =:: srcVal
+    context nextStackValueId =:: newId
+    newId ValueId.sbAppend
+    " =" sb.appendS
+    srcVal .valType sb.appendValTypeQBE
+    " phi " sb.appendS
+    0:iSize while $ toMerge .length u< do =:: i
+      i 0:iSize iSize.sgt if
+        ", " sb.appendS
+      end
+      mergePoint .branchIds i [] sb.appendBranchId
+      ' ' sb.appendC
+      toMerge i [] [] .valueId ValueId.sbAppend
+      i 1:iSize +
+    end ..drop
+    '\n' sb.appendC
+    ## StackValue
+      newId
+      srcVal .valType
+    StackValue.create <$
   mergePoint .out =[]
 end
 
@@ -514,15 +452,10 @@ proc( stringBuilder
         "stack underflow" sb.copyPtr pos context [] .program .errors appendError
         return
       end =:: srcVal
-      srcVal switch
-        Val .case =:: elt
-          "%label" sb.appendS labelId i64 cast.u sb.appendI
-            '_' sb.appendC i sb.appendI
-          " =" sb.appendS elt [] .valType sb.appendValTypeQBE
-          " copy " sb.appendS elt [] .valueId ValueId.sbAppend '\n' sb.appendC
-        break
-        Val2 Val3 case "multi-values are not yet supported" ..panic
-      end
+      "%label" sb.appendS labelId i64 cast.u sb.appendI
+        '_' sb.appendC i sb.appendI
+      " =" sb.appendS srcVal [] .valType sb.appendValTypeQBE
+      " copy " sb.appendS srcVal [] .valueId ValueId.sbAppend '\n' sb.appendC
     end
     context .stackInfo oldBranch branchTree.reset =:: tmpBranch
     context .stackInfo tmpBranch branchTree.endBranch
@@ -2105,9 +2038,7 @@ proc(
       valueType context referenceOnly if
         ## get-ptr on reference type yields reference
         context .stackInfo branchTree.peek .if
-          ValType .REFERENCE >$ .Val .else
-            "expected pointer to be single value" ..panic
-          end .valType=
+          ValType .REFERENCE >$ .valType=
         end
         sb return
       end
@@ -2739,9 +2670,7 @@ proc(
     pos errors appendError
     sb return
   end
-  context .stackInfo offset branchTree.at optional.unwrap [] .Val .else
-    "composite-values are not supported" ..panic
-  end =:: srcVal
+  context .stackInfo offset branchTree.at optional.unwrap [] =:: srcVal
   srcVal .valueId =:: srcLoc
   target context toValType =:: targetValType
   ## TODO? different behavior for bit-casts
@@ -3330,55 +3259,6 @@ proc(
         end
       return
     New NewUnion case
-      _QBE_VAL_TYPES_ if
-        op [] .dataType typeContext types.isTuple or op [] .dataType typeContext types.isTaggedUnion if
-          op [] .dataType typeContext types.compositeElts =:: eltTypes
-          StackValueElement 3 array : mut: valBuffer
-          valBuffer@ list.wrapBuffer
-            eltTypes for =:: eltType
-              eltType typeContext types.isEmpty if continue end
-              ## TODO: handle composite values
-              ## TODO? verify element val-types, usefull error message for overflow of element-buffer
-              context .stackInfo branchTree.pop .else
-                "stack underflow" sb.copyPtr op [] .pos errors appendError
-                break
-              end [] switch
-                Val .case list.append break
-                Val2 .case =:: elts
-                  elts .0 list.append
-                  elts .1 list.append
-                break
-                Val3 .case =:: elts
-                  elts .0 list.append
-                  elts .1 list.append
-                  elts .2 list.append
-                break
-              end
-            end
-          =:: eltVals
-          eltVals .length switch
-            0 case
-              "empty values should not exist at compile time" sb.copyPtr op [] .pos context [] .program .errors appendError
-            break
-            1 case context .stackInfo eltVals 0 [] StackValue .Val branchTree.push break
-            2 case
-              context .stackInfo
-                eltVals 1 [] eltVals 0 [] ( StackValueElement StackValueElement ) new StackValue .Val2
-              branchTree.push
-            break
-            3 case
-              context .stackInfo
-                eltVals 2 [] eltVals 1 [] eltVals 0 []
-                ( StackValueElement StackValueElement StackValueElement ) new StackValue .Val3
-              branchTree.push
-            break
-            default ..unreachable
-          end
-          sb return
-        else
-          "currently only tuples can be created by value" ..panic
-        end
-      end
       sb
         op [] .pos sb.appendPosQBE
         ## prepare memory
@@ -3590,16 +3470,11 @@ proc(
               "stack underflow" sb.copyPtr op [] .pos context [] .program .errors appendError
               break
             end =:: srcVal
-            srcVal switch
-              Val .case =:: elt
-                "%label" sb.appendS labelInfo .labelId i64 cast.u sb.appendI
-                  '_' sb.appendC i sb.appendI
-                " =" sb.appendS elt [] .valType sb.appendValTypeQBE
-                " copy ":s sb.appendStr elt [] .valueId ValueId.sbAppend '\n' sb.appendC
-                valTypeBuffer elt [] .valType list.append valTypeBuffer=
-              break
-              Val2 Val3 case "composite-values are not supported" ..panic
-            end
+            "%label" sb.appendS labelInfo .labelId i64 cast.u sb.appendI
+              '_' sb.appendC i sb.appendI
+            " =" sb.appendS srcVal [] .valType sb.appendValTypeQBE
+            " copy ":s sb.appendStr srcVal [] .valueId ValueId.sbAppend '\n' sb.appendC
+            valTypeBuffer srcVal [] .valType list.append valTypeBuffer=
           end
           ## BranchId
             BranchType .LABEL
@@ -3747,20 +3622,7 @@ proc(
           context .stackInfo branchTree.pop .else
             "stack underflow" sb.copyPtr op [] .pos context [] .program .errors appendError
             return
-          end switch
-            Val .case [] .valueId break
-            Val2 .case =:: elts
-              context .stackInfo elts [] .0 StackValue .Val branchTree.push
-              context .stackInfo elts [] .1 StackValue .Val branchTree.push
-              ValueId .None
-            break
-            Val3 .case =:: elts
-              context .stackInfo elts [] .0 StackValue .Val branchTree.push
-              context .stackInfo elts [] .1 StackValue .Val branchTree.push
-              context .stackInfo elts [] .2 StackValue .Val branchTree.push
-              ValueId .None
-            break
-          end .None .if ..drop
+          end [] .valueId .None .if ..drop
             ## QBE can only return structs through pointer
             retType switch
               Value Tuple .case break
