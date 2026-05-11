@@ -17,10 +17,11 @@ union(
   i64 : RwAddr
 ) =:: StackValue
 struct(
-  ## srcStack -> map stack to storage locations
-  ## dstStack -> val-counts for to 16 slots
-  ## varLocs -> memory/stack locations of variables
   ProgramContext ptr.mut : program
+  StackValue list : stack
+  ## dstStack: val-counts for top 16 slots
+  ## dstStack: free-slots
+  ## varLocs -> memory/stack locations of variables
 ) =:: CompilerContext
 
 proc( stackvm.Operation list Operation : op CompilerContext ptr.mut : context -> stackvm.Operation list ) =>: compileOp
@@ -39,6 +40,7 @@ proc( stackvm.Operation list Operation : op CompilerContext ptr.mut : context ->
   op .pos errors appendError
 end
 proc( stackvm.Operation list ProcedureInfo ptr : proc CompilerContext ptr.mut : context -> stackvm.Operation list ) =>: beginProcedure
+  context .stack list.clear context .stack=
   ## TODO reset stack
   ## TODO generate proc-header
 end
@@ -49,6 +51,7 @@ end
 proc( file.File : mut: target ProgramContext ptr.mut : program bool : assemble -> file.File ) =>: export: compileToStackVM
   ## CompilerContext
     program
+    StackValue list.create
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   stackvm.Operation list.empty
@@ -66,4 +69,5 @@ proc( file.File : mut: target ProgramContext ptr.mut : program bool : assemble -
   ## 4. generate byte-code
   "stack-vm compiler is not implemented" ..panic
   ops list.free ..drop
+  contextData .stack list.free ..drop
 end
