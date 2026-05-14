@@ -40,7 +40,7 @@ proc( stackvm.Operation list Operation : op CompilerContext ptr.mut : context ->
   op .pos errors appendError
 end
 proc( stackvm.Operation list ProcedureInfo ptr : proc CompilerContext ptr.mut : context -> stackvm.Operation list ) =>: beginProcedure
-  context .stack list.clear context .stack=
+  context [] .stack list.clear context .stack=
   ## TODO reset stack
   ## TODO generate proc-header
 end
@@ -51,7 +51,7 @@ end
 proc( file.File : mut: target ProgramContext ptr.mut : program bool : assemble -> file.File ) =>: export: compileToStackVM
   ## CompilerContext
     program
-    StackValue list.create
+    256 StackValue list.create
   CompilerContext new =:: mut: contextData
   contextData@ =:: context
   stackvm.Operation list.empty
