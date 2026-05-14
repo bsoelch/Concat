@@ -11,12 +11,21 @@ import "measure.concat"
 import "branchTree.concat"
 using id.IdentifierFlag
 
+union(
+  _ : Value
+  Type : Reference
+  Type : Val2
+  Type : Val3
+) =:: StackValue
+
 struct(
   ProgramContext ptr.mut : program
   VariableInfo list : variables
+  StackValue BranchTree : stack
   NameId optional slice.mut : outArgNames
   Type optional : currentProcType
   FileId : currentFile
+  bool : reachable
 ) =:: ConverterContext
 
 proc(
@@ -329,8 +338,8 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   op .val switch
-    NOP case
-      newOps return ## ignore no-ops
+    NOP case newOps return ## ignore no-ops
+    ## FIXME: apply stack-effects of operations
     BuiltIn ProcPtr PanicWithMessage
     Switch EndProc
     RuntimeAssert Error StackMod
@@ -450,6 +459,7 @@ proc(
       =:: procType
       procType typeContext types.getProcIn optional.unwrap =:: args
       args .length i32 cast.u =:: argCount
+      true context .reachable=
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
           procType i typeContext types.getProcArgName .else
@@ -733,9 +743,11 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   ## ConverterContext
     program
     0 VariableInfo list.create
+    StackValue branchTree.create
     NameId optional slice.emptyMutable
     Type optional.empty
     -1:FileId
+    false
   ConverterContext new =:: mut: contextData
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
