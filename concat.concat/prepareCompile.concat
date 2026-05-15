@@ -339,15 +339,56 @@ proc(
   typeContext .nameContext =:: nameContext
   op .val switch
     NOP case newOps return ## ignore no-ops
-    ## FIXME: apply stack-effects of operations
-    BuiltIn ProcPtr PanicWithMessage
-    Switch EndProc
-    RuntimeAssert Error StackMod
-    AutoCast Cast Cast! BitCast case
-      newOps
-        op list.append ## nothing to change
-      return
+    EndProc case ## no stack change
+      newOps op list.append return
+    break
+    ProcPtr case ## push value
+      context [] .stack
+        StackValue .Value list.append
+      context .stack=
+      newOps op list.append return
+    break
+    AutoCast Cast Cast! BitCast case ## unary operation
+      ## TODO: decay references
+      ## TODO? can casts change val-type
+      newOps op list.append return
+    break
+    PanicWithMessage case
+      ## TODO: decay references
+      newOps op list.append return
+    break
+    RuntimeAssert case
+      context [] .stack
+        StackValue .Value list.pop =:: condition
+      context .stack=
+      condition .Reference .if
+        ## TODO: decay reference
+      end
+      newOps op list.append return
+    break
+    Switch case
+      context [] .stack
+        StackValue .Value list.pop =:: value
+      context .stack=
+      value .Reference .if
+        ## TODO: decay reference
+      end
+      ## TODO: update branches
+      newOps op list.append return
+    break
+    BuiltIn case
+      ## TODO: update stack
+      newOps op list.append return
+    break
+    StackMod case
+      ## TODO: update stack
+      ## TODO: re-compute offsets
+      newOps op list.append return
+    break
     AtId .case =:: idInfo
+      context [] .stack
+        StackValue .Value list.append
+      context .stack=
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
           idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
@@ -358,6 +399,7 @@ proc(
         end
       return
     break
+    ## TODO vvv------vvvv do stack updates + split composites
     GetId SetId .case =:: idInfo
       op .dataType typeContext types.isValueType if
         newOps
@@ -700,10 +742,10 @@ proc(
         end
       op list.append
     return
-    CompilerInfo case ## XXX? preserve compilerInfo ops
+    CompilerInfo case ## TODO? preserve compilerInfo ops
       newOps return
-    ConstantReference case
-      break ## XXX error message
+    ConstantReference Error case
+      break ## unsupported
   end
   "unsupported operation " sb.copyPtr
     op program sb.appendOp
