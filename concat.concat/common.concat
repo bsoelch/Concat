@@ -9,7 +9,6 @@ import numbers
 enum( ## TODO more precise names
   QBE
   ASM
-  STACK_VM
 ) =:: export: BackEnd
 ## compiler flags
 ## TODO? wrap in namespace
