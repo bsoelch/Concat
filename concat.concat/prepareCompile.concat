@@ -11,12 +11,21 @@ import "measure.concat"
 import "branchTree.concat"
 using id.IdentifierFlag
 
+union(
+  _ : Value
+  Type : Reference
+  Type : Val2
+  Type : Val3
+) =:: StackValue
+
 struct(
   ProgramContext ptr.mut : program
   VariableInfo list : variables
+  StackValue BranchTree : stack
   NameId optional slice.mut : outArgNames
   Type optional : currentProcType
   FileId : currentFile
+  bool : reachable
 ) =:: ConverterContext
 
 proc(
@@ -329,16 +338,57 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   op .val switch
-    NOP case
-      newOps return ## ignore no-ops
-    BuiltIn ProcPtr PanicWithMessage
-    Switch EndProc
-    RuntimeAssert Error StackMod
-    AutoCast Cast Cast! BitCast case
-      newOps
-        op list.append ## nothing to change
-      return
+    NOP case newOps return ## ignore no-ops
+    EndProc case ## no stack change
+      newOps op list.append return
+    break
+    ProcPtr case ## push value
+      context [] .stack
+        StackValue .Value list.append
+      context .stack=
+      newOps op list.append return
+    break
+    AutoCast Cast Cast! BitCast case ## unary operation
+      ## TODO: decay references
+      ## TODO? can casts change val-type
+      newOps op list.append return
+    break
+    PanicWithMessage case
+      ## TODO: decay references
+      newOps op list.append return
+    break
+    RuntimeAssert case
+      context [] .stack
+        StackValue .Value list.pop =:: condition
+      context .stack=
+      condition .Reference .if
+        ## TODO: decay reference
+      end
+      newOps op list.append return
+    break
+    Switch case
+      context [] .stack
+        StackValue .Value list.pop =:: value
+      context .stack=
+      value .Reference .if
+        ## TODO: decay reference
+      end
+      ## TODO: update branches
+      newOps op list.append return
+    break
+    BuiltIn case
+      ## TODO: update stack
+      newOps op list.append return
+    break
+    StackMod case
+      ## TODO: update stack
+      ## TODO: re-compute offsets
+      newOps op list.append return
+    break
     AtId .case =:: idInfo
+      context [] .stack
+        StackValue .Value list.append
+      context .stack=
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
           idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
@@ -349,6 +399,7 @@ proc(
         end
       return
     break
+    ## TODO vvv------vvvv do stack updates + split composites
     GetId SetId .case =:: idInfo
       op .dataType typeContext types.isValueType if
         newOps
@@ -450,6 +501,7 @@ proc(
       =:: procType
       procType typeContext types.getProcIn optional.unwrap =:: args
       args .length i32 cast.u =:: argCount
+      true context .reachable=
       context [] .variables
         0:i32 while ..dup argCount < do =:: i
           procType i typeContext types.getProcArgName .else
@@ -690,10 +742,10 @@ proc(
         end
       op list.append
     return
-    CompilerInfo case ## XXX? preserve compilerInfo ops
+    CompilerInfo case ## TODO? preserve compilerInfo ops
       newOps return
-    ConstantReference case
-      break ## XXX error message
+    ConstantReference Error case
+      break ## unsupported
   end
   "unsupported operation " sb.copyPtr
     op program sb.appendOp
@@ -733,9 +785,11 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   ## ConverterContext
     program
     0 VariableInfo list.create
+    StackValue branchTree.create
     NameId optional slice.emptyMutable
     Type optional.empty
     -1:FileId
+    false
   ConverterContext new =:: mut: contextData
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
