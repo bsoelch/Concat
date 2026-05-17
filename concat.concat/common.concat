@@ -21,7 +21,7 @@ false =:: mut: export: _W_UNUSED_
 
 false =:: mut: export: _EXPERIMENTAL_
 ## feature flags for experimental features
-false =:: mut: export: _QBE_VAL_TYPES_
+false =:: mut: export: _VAL_TYPES_
 
 true =:: mut: export: _INCLUDE_CORE_
 true =:: mut: export: _INCREMENT_VERSION_

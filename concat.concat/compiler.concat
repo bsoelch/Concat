@@ -98,8 +98,8 @@ proc( -> ) =>: parseArgs
       "enable experimental features":s arg.helpText
     _EXPERIMENTAL_@ "-X":s arg.set
     arg.flag
-      "enable experimental support for value-types in QBE-backend":s arg.helpText
-    _QBE_VAL_TYPES_@ "-Xval-types":s arg.set
+      "enable experimental support for value-types":s arg.helpText
+    _VAL_TYPES_@ "-Xval-types":s arg.set
     OptLevel arg.select ## select value depending on which arg appear last
       OptLevel .DEFAULT arg.select.default
       "-O0":s OptLevel .NONE arg.select.option

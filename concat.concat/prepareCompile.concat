@@ -343,9 +343,9 @@ proc(
       newOps op list.append return
     break
     ProcPtr case ## push value
-      context [] .stack
-        StackValue .Value list.append
-      context .stack=
+      _VAL_TYPES_ if
+        context .stack StackValue .Value branchTree.push
+      end
       newOps op list.append return
     break
     AutoCast Cast Cast! BitCast case ## unary operation
@@ -358,20 +358,20 @@ proc(
       newOps op list.append return
     break
     RuntimeAssert case
-      context [] .stack
-        StackValue .Value list.pop =:: condition
-      context .stack=
-      condition .Reference .if
-        ## TODO: decay reference
+      _VAL_TYPES_ if
+        context .stack branchTree.pop unwrap =:: condition
+        condition .Reference ?? .if ..drop
+          ## TODO: decay reference
+        end
       end
       newOps op list.append return
     break
     Switch case
-      context [] .stack
-        StackValue .Value list.pop =:: value
-      context .stack=
-      value .Reference .if
-        ## TODO: decay reference
+      _VAL_TYPES_ if
+        context .stack branchTree.pop unwrap =:: condition
+        condition .Reference ?? .if ..drop
+          ## TODO: decay reference
+        end
       end
       ## TODO: update branches
       newOps op list.append return
@@ -386,9 +386,9 @@ proc(
       newOps op list.append return
     break
     AtId .case =:: idInfo
-      context [] .stack
-        StackValue .Value list.append
-      context .stack=
+      _VAL_TYPES_ if
+        context .stack StackValue .Value branchTree.push
+      end
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
           idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
@@ -546,7 +546,7 @@ proc(
       return
     Copy case
       op .dataType =:: baseType
-      _QBE_VAL_TYPES_ or _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
+      _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
         ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
         baseType typeContext types.isValueType if
@@ -815,4 +815,5 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     convertProc impl .codeState .PreCompiled=
   end
   tmpOps list.free ..drop
+  context .stack branchTree.free
 end
