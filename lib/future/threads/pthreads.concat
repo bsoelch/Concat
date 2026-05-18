@@ -1,0 +1,27 @@
+"threads.c" ..include.c
+namespace: thread
+  i64 =:: export: ThreadId
+end
+namespace: c
+  proc.c( thread.ThreadId ptr.mut ( iSize -> ) ptr iSize -> ..ctype.int ) : extern: cct_helper_createPThread
+  proc.c( thread.ThreadId -> ..ctype.int ) : extern: cct_helper_joinPThread
+  proc.c( -> ) : extern: cct_helper_exitPThread
+end
+namespace: thread
+  proc( type .with( ..types.size iSize ..types.size u<= ) : auto: T
+    ( T -> ) ptr : f
+    T : arg
+  -> ThreadId optional ) =>: export: create
+    ThreadId : mut: res
+    res@ f ( iSize -> ) ptr cast! c.cct_helper_createPThread i32 cast 0 == if
+      ThreadId optional.empty return
+    end
+    res optional.wrap return
+  end
+  proc( ThreadId -> bool ) =>: export: join
+    c.cct_helper_joinPThread i32 cast 0 !=
+  end
+  proc( -> ) =>:  export: exit
+    c.cct_helper_exitPThread
+  end
+end

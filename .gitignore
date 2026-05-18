@@ -19,7 +19,7 @@ featureMap.concat
 !tests/*/*.out
 lib/future/*
 !lib/future/math.concat
-!lib/future/threads.concat
+!lib/future/threads
 !lib/future/int.concat
 !bootstrap/latest.ssa
 runTests

@@ -1,41 +1,21 @@
 import mem
 import linux/syscalls
 
+## thread implementation on top of linux syscalls
 namespace: sys
   proc.c( -> ( -> ) ptr ptr.raw ) : extern: getBasePointer
   proc.c( -> ) : extern: cctThreadInit
-  proc.c( i32 ptr.mut -> ) : extern: cctLockAcquire
-  proc.c( i32 ptr.mut -> bool ) : extern: cctLockTryAcquire
-  proc.c( i32 ptr.mut -> bool ) : extern: cctLockRelease
 end
 namespace: thread
-  i32 ptr.mut =:: Lock
-  proc.c( i32 ptr.mut -> Lock ) =>: export: createLock
-    Lock cast
-  end
-  proc.c( Lock -> ) =>: export: acquireLock
-    i32 ptr.mut cast sys.cctLockAcquire
-  end
-  #+ returns false is successfull and true if lock already active
-    example usage:
-    while lock tryAcquireLock do
-      ## suspend thread
-    end
-    ... locked
-  +#
-  proc.c( Lock -> bool ) =>: export: tryAcquireLock
-    i32 ptr.mut cast sys.cctLockTryAcquire
-  end
-  proc.c( Lock -> ) =>: export: releaseLock
-    i32 ptr.mut cast sys.cctLockRelease if
-      "released lock was not held" ..panic
-    end
-  end
+  i64 =:: export: ThreadId
 
-  ( -> ) =>: threadExit
+  proc( -> ) =>: export: exit
     ## TODO? cleanup thread, notify parent, ...
     0 linux.sys_exit
     ..unreachable
+  end
+  proc( ThreadId -> bool ) =>: export: join
+    "unimplemented" ..panic
   end
 
   proc( i64 : stackSize -> i64 i64 ) =>: createStack
@@ -71,11 +51,18 @@ namespace: thread
     ## TODO error handling
   end
 
-  proc( ( -> ) ptr : target -> i64 ) =>: export: create
+  ## FIXME: update assembly to handle passing arg to thread
+  proc( type .with( ..types.size iSize ..types.size u<= ) : auto: T
+    ( T -> ) ptr : f
+    T : arg
+  -> ThreadId optional ) =>: export: create
     0x10000:i64 createStack =:: stackSize =:: stackMem
-    stackMem stackSize + ( -> ) ptr ptr.raw.mut cast! =:: stackHead
-    target stackHead -1 =[]
-    stackMem stackSize ( -> ) ptr ..types.size i64 cast.u - cloneProcess
+    stackMem stackSize + iSize ptr.raw.mut cast! =:: stackHead
+    arg iSize ..bitcast stackHead -1 =[]
+    target iSize cast! stackHead -2 =[]
+    stackMem stackSize iSize ..types.size 2 * i64 cast.u - cloneProcess
+      $ 0 < if ..drop ThreadId optional.empty return end
+    ThreadId cast optional.wrap
   end
 
   ## runs a new thread at the call location of this procedure

@@ -1,0 +1,17 @@
+import future/threads/mutex
+namespace: thread
+  type : export: ThreadId
+  proc( type .with( ..types.size iSize ..types.size u<= ) : auto: T
+    ( T -> ) ptr : f
+    T : arg
+  -> ThreadId optional ) : export: create
+  proc( ThreadId -> bool ) : export: join
+  proc( -> ) : export: exit  
+end
+..compiler.system.glibc if
+  import future/threads/pthreads
+else ..compiler.system.linux _if
+  import future/threads/lthreads
+else
+  "threads are not supported on this system" ..compiler.error
+end

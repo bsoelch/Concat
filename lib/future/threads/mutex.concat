@@ -1,0 +1,29 @@
+namespace: sys
+  proc.c( i32 ptr.mut -> ) : extern: cctLockAcquire
+  proc.c( i32 ptr.mut -> bool ) : extern: cctLockTryAcquire
+  proc.c( i32 ptr.mut -> bool ) : extern: cctLockRelease
+end
+namespace: thread
+  i32 ptr.mut =:: Lock
+  proc.c( i32 ptr.mut -> Lock ) =>: export: createLock
+    Lock cast
+  end
+  proc.c( Lock -> ) =>: export: acquireLock
+    i32 ptr.mut cast sys.cctLockAcquire
+  end
+  #+ returns false is successfull and true if lock already active
+    example usage:
+    while lock tryAcquireLock do
+      ## suspend thread
+    end
+    ... locked
+  +#
+  proc.c( Lock -> bool ) =>: export: tryAcquireLock
+    i32 ptr.mut cast sys.cctLockTryAcquire
+  end
+  proc.c( Lock -> ) =>: export: releaseLock
+    i32 ptr.mut cast sys.cctLockRelease if
+      "released lock was not held" ..panic
+    end
+  end
+end
