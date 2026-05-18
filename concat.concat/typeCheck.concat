@@ -4686,7 +4686,6 @@ proc(
             end =:: whileBlock
             false 0 op .pos state clearReferences
             true whileBlock .hasFinally=
-            whileBlock [] .continueBranches =:: mut: continueBranches
             state [] .reachable if
               whileBlock [] .continueCastOffsets
                 ## reserveOps
@@ -4694,13 +4693,14 @@ proc(
                   op .pos
                 state reserveOps list.append
               whileBlock .continueCastOffsets=
-              continueBranches
+              whileBlock [] .continueBranches
                 ## BranchPoint
                   op .pos
                   state .stack branchTree.startBranch
                 BranchPoint new list.append
-              continueBranches=
+              whileBlock .continueBranches= ## ensure branches in block-info are up to date
             end
+            whileBlock [] .continueBranches =:: continueBranches
             ## merge continue branches
             continueBranches .length 1:iSize u>= if
               true state .reachable=
