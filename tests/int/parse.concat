@@ -1,0 +1,12 @@
+import future/int
+import stringBuilder
+import print
+proc( -> ) =>: main "1'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000":s 0 int.parse .NONE "ok" assert =:: i
+  0 sb.create
+    i int.sbAppend
+    $ sb.asStr io.println
+    sb.clear
+    i int.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end

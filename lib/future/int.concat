@@ -451,25 +451,6 @@ namespace: int
   end
   ## TODO? conversion from/to float
 ## conversion from/to string
-  {  0  0 64 40 32 27 24 22 21 20 19 18 17 17 16 16
-    16 15 15 15 14 14 14 14 13 13 13 13 13 13 13 12
-    12 12 12 12 12 12 12 12 12 11 11 11 11 11 11 11
-    11 11 11 11 11 11 11 11 11 10 10 10 10 10 10 } =:: BASE_DIGITS_I64
-  { 0:i64 1:i64 0:i64 12157665459056928801:i64 0:i64 7450580596923828125:i64 4738381338321616896:i64
-    3909821048582988049:i64 9223372036854775808:i64 12157665459056928801:i64 10000000000000000000:i64
-    5559917313492231481:i64 2218611106740436992:i64 8650415919381337933:i64 2177953337809371136:i64
-    6568408355712890625:i64 0:i64 2862423051509815793:i64 6746640616477458432:i64 15181127029874798299:i64
-    1638400000000000000:i64 3243919932521508681:i64 6221821273427820544:i64 11592836324538749809:i64
-    876488338465357824:i64 1490116119384765625:i64 2481152873203736576:i64 4052555153018976267:i64
-    6502111422497947648:i64 10260628712958602189:i64 15943230000000000000:i64 787662783788549761:i64
-    1152921504606846976:i64 1667889514952984961:i64 2386420683693101056:i64 3379220508056640625:i64
-    4738381338321616896:i64 6582952005840035281:i64 9065737908494995456:i64 12381557655576425121:i64
-    16777216000000000000:i64 550329031716248441:i64 717368321110468608:i64 929293739471222707:i64
-    1196683881290399744:i64 1532278301220703125:i64 1951354384207722496:i64 2472159215084012303:i64
-    3116402981210161152:i64 3909821048582988049:i64 4882812500000000000:i64 6071163615208263051:i64
-    7516865509350965248:i64 9269035929372191597:i64 11384956040305711104:i64 13931233916552734375:i64
-    16985107389382393856:i64 362033331456891249:i64 430804206899405824:i64 511116753300641401:i64
-    604661760000000000:i64 713342911662882601:i64 839299365868340224:i64 } =:: BASE_POW_I64
   proc( string : digits i32 : mut: count i32 : base -> string int ) =>: parseDigits
     0:i64 =:: mut: val
     digits
@@ -477,11 +458,14 @@ namespace: int
         $ 0 string.charAt
          >$ 1 string.tail <$
         base number.parseDigit switch
-          DIGIT case i64 cast.u val base i64 cast.u * + val= continue
+          DIGIT case
+            i64 cast.u val base i64 cast.u * + val=
+            count 1 - count= ## only decrease count when hitting digit
+          continue
           IGNORED case ..drop continue
           INVALID case "invalid digit" ..panic ## invalid digits should have been filtered out by preparation step
         end
-      finally count 1 - count= end
+      end
     val fromU64
   end
   ## TODO? return union (? result) instead of pair of values
@@ -505,7 +489,7 @@ namespace: int
     digitCount 0 == if
       ZERO ParserError .EMPTY return
     end
-    BASE_DIGITS_I64 mBase [] =:: baseDigitCount
+    _impl.BASE_DIGITS_I64 mBase [] =:: baseDigitCount
     digitCount baseDigitCount iSize cast.u % i32 cast.u =:: head_digits
     digitCount baseDigitCount iSize cast.u /
       head_digits 0 != if 1 + end
@@ -527,7 +511,7 @@ namespace: int
       end ..drop
     .length 0 == "all digits were parsed" assert
     slotCount 1 u> if
-      BASE_POW_I64 mBase []
+      _impl.BASE_POW_I64 mBase []
         $ 0 == if ..drop 1 0 i128.create fromU128 else fromU64 end
       =:: mut: p
       slotCount while
@@ -579,6 +563,7 @@ namespace: int
   proc( stringBuilder int -> stringBuilder ) =>: export: sbAppendX
     16 sbBaseAppend
   end
+  ## TODO? conversion from/to digit-array (for any i32 base (with 0-> 2^32, 1 -> balanced trinary)
 ## arithmetic
   proc( int : a -> bool ) =>: export: isZero
     a .length 0 != if false return end
@@ -1301,6 +1286,37 @@ namespace: int
 
   namespace: _impl
   ## conversion from/to string
+    {  0 0 32 20 16 13 12 11 10 10 9 9 8 8 8 8 8 7 7 7
+       7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 5 5 5
+       5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 } =:: BASE_DIGITS_I32
+    { 0 1 0:i32 3486784401:i32 0:i32 1220703125:i32 2176782336:i32 1977326743:i32 1073741824:i32
+      3486784401:i32 1000000000:i32 2357947691:i32 429981696:i32 815730721:i32 1475789056:i32
+      2562890625:i32 0:i32 410338673:i32 612220032:i32 893871739:i32 1280000000:i32 1801088541:i32
+      2494357888:i32 3404825447:i32 191102976:i32 244140625:i32 308915776:i32 387420489:i32 481890304:i32
+      594823321:i32 729000000:i32 887503681:i32 1073741824:i32 1291467969:i32 1544804416:i32 1838265625:i32
+      2176782336:i32 2565726409:i32 3010936384:i32 3518743761:i32 4096000000:i32 115856201:i32 130691232:i32
+      147008443:i32 164916224:i32 184528125:i32 205962976:i32 229345007:i32 254803968:i32 282475249:i32
+      312500000:i32 345025251:i32 380204032:i32 418195493:i32 459165024:i32 503284375:i32 550731776:i32
+      601692057:i32 656356768:i32 714924299:i32 777600000:i32 844596301:i32 916132832:i32 } =:: BASE_POW_I32
+    {  0  0 64 40 32 27 24 22 21 20 19 18 17 17 16 16
+      16 15 15 15 14 14 14 14 13 13 13 13 13 13 13 12
+      12 12 12 12 12 12 12 12 12 11 11 11 11 11 11 11
+      11 11 11 11 11 11 11 11 11 10 10 10 10 10 10 } =:: BASE_DIGITS_I64
+    { 0:i64 1:i64 0:i64 12157665459056928801:i64 0:i64 7450580596923828125:i64 4738381338321616896:i64
+      3909821048582988049:i64 9223372036854775808:i64 12157665459056928801:i64 10000000000000000000:i64
+      5559917313492231481:i64 2218611106740436992:i64 8650415919381337933:i64 2177953337809371136:i64
+      6568408355712890625:i64 0:i64 2862423051509815793:i64 6746640616477458432:i64 15181127029874798299:i64
+      1638400000000000000:i64 3243919932521508681:i64 6221821273427820544:i64 11592836324538749809:i64
+      876488338465357824:i64 1490116119384765625:i64 2481152873203736576:i64 4052555153018976267:i64
+      6502111422497947648:i64 10260628712958602189:i64 15943230000000000000:i64 787662783788549761:i64
+      1152921504606846976:i64 1667889514952984961:i64 2386420683693101056:i64 3379220508056640625:i64
+      4738381338321616896:i64 6582952005840035281:i64 9065737908494995456:i64 12381557655576425121:i64
+      16777216000000000000:i64 550329031716248441:i64 717368321110468608:i64 929293739471222707:i64
+      1196683881290399744:i64 1532278301220703125:i64 1951354384207722496:i64 2472159215084012303:i64
+      3116402981210161152:i64 3909821048582988049:i64 4882812500000000000:i64 6071163615208263051:i64
+      7516865509350965248:i64 9269035929372191597:i64 11384956040305711104:i64 13931233916552734375:i64
+      16985107389382393856:i64 362033331456891249:i64 430804206899405824:i64 511116753300641401:i64
+      604661760000000000:i64 713342911662882601:i64 839299365868340224:i64 } =:: BASE_POW_I64
     proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: sbAlignedPow2Append
       digits .length 0 == if
         '0' sb.appendC return
@@ -1317,16 +1333,41 @@ namespace: int
       end
     end
     proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: sbPow2Append
+      ## O(n) to string conversion using correctly alligned shifting window
       "unimplemented: sbPow2Append" ..panic
     end
+    proc( stringBuilder Digit slice.mut : mut: digits i32 : base -> stringBuilder ) =>: shadow: sbSimpleBaseAppend
+      BASE_POW_I32 base [] =:: chunkBase
+      chunkBase 0 == if "invalid base" ..panic end
+      BASE_DIGITS_I32 base [] =:: chunkDigits
+      digits .length 3200 * 2696 u/ i32 list.create =:: mut: digitBuffer
+      while digits .length 0 != do
+        digits slice.freeze chunkBase digits udivMod32
+          digitBuffer >$ list.append digitBuffer=
+        digits=
+      end
+      digitBuffer
+        list.pop >$ digitBuffer=
+      unwrap i64 cast.u base sb.appendU?
+      digitBuffer list.reversed for
+        chunkDigits '0' base sb.appendPaddedU32
+      end
+      digits slice.free ..drop
+      digitBuffer list.free ..drop
+    end
     proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: shadow: sbBaseAppend
-      "unimplemented: sbBaseAppend" ..panic
+      ## TODO? recursive sub-quadric algorithm for large numbers
+      digits slice.copy base sbSimpleBaseAppend
     end
 ## helpers
     proc( Digit slice.mut : res -> Digit slice.mut ) =>: removeLeadingZeros
       res .length while $ 1 - <$ 0 != do =:: i
-        res i [] ? if i 1 + break end
-      finally i end =:: newLength
+        res i [] ? if i break end
+      finally i end 1 + =:: newLength
+      newLength 0 == if
+        res slice.free ..drop
+        Digit slice.emptyMutable return
+      end
       res
         newLength >$ .length=
       return
