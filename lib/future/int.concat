@@ -451,8 +451,105 @@ namespace: int
   end
   ## TODO? conversion from/to float
 ## conversion from/to string
-  proc( string : val i32 : base -> int optional ) =>: export: parse
-    "unimplemented: parse" ..panic ## return int NumberParseResult instead of optional
+  {  0  0 64 40 32 27 24 22 21 20 19 18 17 17 16 16
+    16 15 15 15 14 14 14 14 13 13 13 13 13 13 13 12
+    12 12 12 12 12 12 12 12 12 11 11 11 11 11 11 11
+    11 11 11 11 11 11 11 11 11 10 10 10 10 10 10 } =:: BASE_DIGITS_I64
+  { 0:i64 1:i64 0:i64 12157665459056928801:i64 0:i64 7450580596923828125:i64 4738381338321616896:i64
+    3909821048582988049:i64 9223372036854775808:i64 12157665459056928801:i64 10000000000000000000:i64
+    5559917313492231481:i64 2218611106740436992:i64 8650415919381337933:i64 2177953337809371136:i64
+    6568408355712890625:i64 0:i64 2862423051509815793:i64 6746640616477458432:i64 15181127029874798299:i64
+    1638400000000000000:i64 3243919932521508681:i64 6221821273427820544:i64 11592836324538749809:i64
+    876488338465357824:i64 1490116119384765625:i64 2481152873203736576:i64 4052555153018976267:i64
+    6502111422497947648:i64 10260628712958602189:i64 15943230000000000000:i64 787662783788549761:i64
+    1152921504606846976:i64 1667889514952984961:i64 2386420683693101056:i64 3379220508056640625:i64
+    4738381338321616896:i64 6582952005840035281:i64 9065737908494995456:i64 12381557655576425121:i64
+    16777216000000000000:i64 550329031716248441:i64 717368321110468608:i64 929293739471222707:i64
+    1196683881290399744:i64 1532278301220703125:i64 1951354384207722496:i64 2472159215084012303:i64
+    3116402981210161152:i64 3909821048582988049:i64 4882812500000000000:i64 6071163615208263051:i64
+    7516865509350965248:i64 9269035929372191597:i64 11384956040305711104:i64 13931233916552734375:i64
+    16985107389382393856:i64 362033331456891249:i64 430804206899405824:i64 511116753300641401:i64
+    604661760000000000:i64 713342911662882601:i64 839299365868340224:i64 } =:: BASE_POW_I64
+  proc( string : digits i32 : mut: count i32 : base -> string int ) =>: parseDigits
+    0:i64 =:: mut: val
+    digits
+      while count 0 != do
+        $ 0 string.charAt
+         >$ 1 string.tail <$
+        base number.parseDigit switch
+          DIGIT case i64 cast.u val base i64 cast.u * + val= continue
+          IGNORED case ..drop continue
+          INVALID case "invalid digit" ..panic ## invalid digits should have been filtered out by preparation step
+        end
+      finally count 1 - count= end
+    val fromU64
+  end
+  ## TODO? return union (? result) instead of pair of values
+  proc( string : str i32 : base -> int number.ParserError ) =>: export: parse
+    using number.ParserError
+    str
+      number.parseSign =:: hasSign
+      base number.resolveBase =:: mBase
+      mBase 2 u< or mBase 62 u> if ..drop
+        ZERO ParserError .INVALID_BASE return
+      end
+    =:: digits
+    0:iSize =:: mut: digitCount
+    digits string.chars for
+      mBase number.parseDigit switch
+        DIGIT case ..drop digitCount 1 + digitCount= continue
+        IGNORED case ..drop continue
+        INVALID case ..drop ZERO ParserError .INVALID_CHAR return
+      end
+    end
+    digitCount 0 == if
+      ZERO ParserError .EMPTY return
+    end
+    BASE_DIGITS_I64 mBase [] =:: baseDigitCount
+    digitCount baseDigitCount iSize cast.u % i32 cast.u =:: head_digits
+    digitCount baseDigitCount iSize cast.u /
+      head_digits 0 != if 1 + end
+    =:: slotCount
+    slotCount 4 u<= if
+      int 4 array : mut: buf
+      buf@ slice.wrapMutable
+    else
+      slotCount int slice.new
+    end =:: slots
+    digits
+      slotCount
+        head_digits 0 != if
+          >$ head_digits mBase parseDigits slots $3 1 - =[] <$
+          1 -
+        end
+      while $ 1 - <$ 0 != do
+        >$ baseDigitCount mBase parseDigits slots $3 =[] <$
+      end ..drop
+    .length 0 == "all digits were parsed" assert
+    slotCount 1 u> if
+      BASE_POW_I64 mBase []
+        $ 0 == if ..drop 1 0 i128.create fromU128 else fromU64 end
+      =:: mut: p
+      slotCount while
+        $ 2 u/ for =:: i
+          slots i 2 * []
+            slots i 2 * 1 + [] p copy int.mul
+          int.add slots i =[]
+        end
+        $ 2 u% 0 != if
+          slots $1 1 - [] slots $2 2 u/ =[]
+          2 u/ 1 +
+        else 2 u/ end
+      $ 1 u> do
+        p int.square p=
+      end ..drop
+      p free
+    end
+    slots 0 [] hasSign if negate end
+      slotCount 4 u> if
+        slots slice.free ..drop
+      end
+    ParserError .NONE return
   end
   proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
     val asI64 .if
@@ -1355,10 +1452,12 @@ namespace: int
         ## shift values by 1 slot
         mid low= hi mid= 0 Digit cast hi=
       end
-      low res newLength =[]
       mid ? ! and hi ? ! end "result does not overflow" assert
       res
-        newLength 1 + >$ .length=
+        low ? if
+          low res newLength =[]
+          newLength 1 + >$ .length=
+        end
       removeLeadingZeros return
     end
     proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: karatsubaMul

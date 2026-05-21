@@ -16,6 +16,9 @@ namespace: slice
   end
   overload: export: copy copySlice copyMut end
 
+  proc( iSize : count type : T -> T slice.mut ) =>: export: new
+    count T mem.alloc count createMutable
+  end
   proc( type : auto: T T slice.mut : src -> T slice.mut ) =>: export: free
     src .data mem.free
     T slice.emptyMutable return
