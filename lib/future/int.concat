@@ -1559,6 +1559,12 @@ namespace: int
       divData .data b .data != "results do not overlap with b" assert
       remData .data b .data != "results do not overlap with b" assert
       b .length 0 != "b is non-empty" assert
+      ## 1. take top 32 bits of b
+      ## 2. lower-bound divisor by dividing top 64-bits of A by bTop+1
+      ##  2b if less than (or equal to) 64-bits of a are left fall by normal division and remainder
+      ## 3. subtract from remainder, add scale to divisor (if needed)
+      ## ? use similar algorithm for i128 division?
+      ## ? is using newton-method divide on float more efficient as dedicdated integer-divide
       "unimplemented: udivMod" ..panic
     end
 

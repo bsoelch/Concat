@@ -863,7 +863,7 @@ namespace: f160
     hi low | 0 == if
       ## f160
         0 0 0
-        a .sign
+        a .sign swapped ^
       f160 new return
     end
     hi 0x8000'0000'0000'0000:i64 & ? if
@@ -884,17 +884,17 @@ namespace: f160
     a .exp -0x8000'0000 shift + < if ## underflow
       ## f160
         0 0 0
-        a .sign
+        a .sign swapped ^
       f160 new return
     end
     ## f160
       hi
       low
       a .exp shift -
-      a .sign
+      a .sign swapped ^
     f160 new return
   end
-  ## FIXME results are sigthly off
+  ## TODO check if result is always correct
   #+
     Computes the inverse of x, assumes that 0.5<=x<1.
     uses Newton-Raphson-Division (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
@@ -908,16 +908,16 @@ namespace: f160
     end
     0xb4b4'b4b4'b4b4'b4b4:i64 0xb4b4'b4b4'b4b4'b4b5:i64 1 false f160 new =:: p ## 48/17
     0xf0f0'f0f0'f0f0'f0f0:i64 0xf0f0'f0f0'f0f0'f0f1:i64 0 false f160 new =:: q ## 32/17
-    0x8000'0000'0000'0000:i64 0:i64                     1 false f160 new =:: two ## 2
+    0x8000'0000'0000'0000:i64 0:i64                     0 false f160 new =:: one ## 1
     ## 1. estimate 1/x as 48/17 - 32/17 * x
     p x q * -
-      ## 2. iteratate: y2 = y1(2 - y1 *x)
+      ## 2. iteratate: y2 = y1 + y1(1 - y1 *x)
       ## 5 steps should be enough
-      #+y+# two ..over x * - *
-      #+y+# two ..over x * - *
-      #+y+# two ..over x * - *
-      #+y+# two ..over x * - *
-      #+y+# two ..over x * - *
+      #+y+# $ one $1 x * - * +
+      #+y+# $ one $1 x * - * +
+      #+y+# $ one $1 x * - * +
+      #+y+# $ one $1 x * - * +
+      #+y+# $ one $1 x * - * +
     return
   end
   proc( f160 : x  -> f160 ) =>: inv
