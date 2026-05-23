@@ -1228,6 +1228,9 @@ namespace: int
       a free b free
     return
   end
+  proc( int : a iSize : n -> int ) =>: export: shl
+    a n i32 cast.u shlU32 return ## TODO: support shift by more than i32.umax
+  end
   proc( int : a i32 : n -> int ) =>: export: shlU32
     a bitLength n iSize cast.u + =:: resultBits
     resultBits 64 u< if
@@ -1245,6 +1248,9 @@ namespace: int
     resData a sign 0 < fromRawDigits
       a free
     return
+  end
+  proc( int : a iSize : n -> int ) =>: export: shr
+    a n i32 cast.u shrU32 return ## TODO: support shift by more than i32.umax
   end
   proc( int : a i32 : n -> int ) =>: export: shrU32
      a asI64 .if
