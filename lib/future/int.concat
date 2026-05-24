@@ -273,9 +273,9 @@ namespace: int
       val iSize cast.u 0 false tryCreateInplace optional.unwrap
     end
   end
-  0 fromI32 =:: ZERO
-  1 fromI32 =:: ONE
-  -1 fromI32 =:: MINUS_ONE
+  0 fromI32 =:: export: ZERO
+  1 fromI32 =:: export: ONE
+  -1 fromI32 =:: export: MINUS_ONE
   ( type : I -> type ) =>: export: IntConversionResult
     union(
       I : Ok
@@ -658,10 +658,10 @@ namespace: int
       resultDigits prepareCap
     end =:: dstData
     aData bData _impl.cmp =:: c
-    c 0 < if
+    c 0 > if
       aData bData dstData _impl.sub =:: resData
       resData aSign 0 < fromRawDigits
-    else c 0 > _if
+    else c 0 < _if
       bData aData dstData _impl.sub =:: resData
       resData aSign 0 > fromRawDigits
     else
@@ -1240,7 +1240,7 @@ namespace: int
     else resultBits 128 u< _if
       a asI128 IntConv.unwrap n << fromI128 return
     end
-    resultBits DIGIT_BITS 1 - + DIGIT_BITS / 1 + =:: resultDigits
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
     Digit MAX_INLINE_DIGITS array : mut: buf
     a buf@ asSlice =:: aData
     a resultDigits asWritableBuffer .else
@@ -1267,12 +1267,13 @@ namespace: int
         end
       -
     =:: resultBits
-    resultBits DIGIT_BITS 1 - + DIGIT_BITS / 1 + =:: resultDigits
+    resultBits DIGIT_BITS 1 - + DIGIT_BITS u/ 1 + =:: resultDigits
     Digit MAX_INLINE_DIGITS array : mut: buf
     Digit MAX_INLINE_DIGITS array : mut: dstBuf
     a buf@ asSlice =:: aData
     resultDigits MAX_INLINE_DIGITS u<= =:: inlineResult
     inlineResult if
+      dstBuf@ MAX_INLINE_DIGITS mem.clear ..drop
       dstBuf@ slice.wrapMutable
     else a resultDigits asWritableBuffer ._else
       resultDigits prepareCap
@@ -1288,6 +1289,32 @@ namespace: int
       end
     end
     resData a sign 0 < fromRawDigits
+      a free
+    return
+  end
+  proc( int : a iSize : count -> int ) =>: export: lowBits
+    a bitLength count u<= if
+      a return
+    end
+    count DIGIT_BITS 1 - + DIGIT_BITS u/ =:: resultDigits
+    a resultDigits asWritableBuffer .else
+      Digit MAX_INLINE_DIGITS array : mut: buf
+      a buf@ asSlice
+        $ .length resultDigits u>= "a.length >= resultDigits" assert
+        resultDigits >$ .length=
+      resultDigits prepareCap slice.copyTo
+    end =:: dstData
+    count DIGIT_BITS u% i64 cast.u =:: topBits
+    topBits 0 != if
+      dstData $ .length 1 - [] i64 cast.u
+        1 topBits << 1 - &
+      Digit cast.u dstData $ .length 1 - =[]
+    end
+    a sign 0 < if
+      ## apply twos complement to low bits
+      "unimplemented: low-bits of negative number" ..panic
+    end
+    dstData _impl.removeLeadingZeros false fromRawDigits
       a free
     return
   end
@@ -1703,13 +1730,22 @@ namespace: int
         return
       end
       newLength =:: mut: dstIndex
-      0 Digit cast.u a .length while $ 1 - <$ 0 != do =:: srcIndex
-        a srcIndex [] bitShift Digit.shlc res dstIndex =[]
-      finally dstIndex 1 - dstIndex= srcIndex end ..drop.2
+      0 Digit cast.u
+        a .length 1 -
+          <$ a $2 [] bitShift Digit.shlc
+          res .length dstIndex u> if
+            res dstIndex =[]
+          else ..drop end
+        >$
+          dstIndex 1 - dstIndex=
+        $ 0 != if
+          while $ 1 - <$ 0 != do =:: srcIndex
+            a srcIndex [] bitShift Digit.shlc res dstIndex =[]
+          finally dstIndex 1 - dstIndex= srcIndex end
+        end ..drop
+      res dstIndex =[]
       res .data digitShift mem.clear ..drop
-      res
-        newLength $1 $1 [] ? ! if 1 + end >$ .length=
-      return
+      res return
     end
     proc( Digit slice : a Digit slice.mut : res iSize : count -> Digit slice.mut ) =>: shadow: shr
       count 64 u/ =:: digitShift
