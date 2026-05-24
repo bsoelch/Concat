@@ -1,9 +1,28 @@
 import future/int
 
 namespace: float
+  iSize =:: export: ExpData
+  enum( EXACT FLOAT ) =:: export: FloatType
+  namespace: ExpData
+    proc( iSize : shadow: exponent FloatType : shadow: floatType -> ExpData ) =>: fromExponent
+      exponent 1 << floatType ..tag iSize cast.u | ExpData cast.u
+    end
+    proc( ExpData : x iSize : a -> ExpData ) =>: scale
+      x iSize cast.s a 1 << + ExpData cast.s
+    end
+    proc( ExpData -> iSize ) =>: exponent
+      iSize cast.s 1 iSize.ashr ## signed shift
+    end
+    proc( ExpData -> bool ) =>: isExact
+      iSize cast.u 1 & FloatType .EXACT ..tag iSize cast.u ==
+    end
+  end
   iSize =:: export: Precission
   namespace: Precission
     0 Precission cast =:: export: INFINITE
+    proc( iSize -> Precission ) =>: fromBits
+      1 iSize.max Precission cast
+    end
     proc( Precission : a Precission : b -> Precission ) =>: max
       a INFINITE == if b return end
       b INFINITE == if a return end
@@ -23,42 +42,43 @@ namespace: float
     CEIL ## round towards infinity
   ) =:: RoundingMode
 end
-## TODO? use bit-length of magnitude as precission (+ bit-tag in exponent for exact values)
-struct( int : magnitude iSize : exponent float.Precission : precission ) =:: export: float
+struct( int : magnitude float.ExpData : exponent ) =:: export: float
 
 namespace: float
-  int.ZERO      0 Precission.INFINITE float new =:: export: ZERO
-  int.ONE       0 Precission.INFINITE float new =:: export: ONE
-  int.MINUS_ONE 0 Precission.INFINITE float new =:: export: MINUS_ONE
+  int.ZERO      0 FloatType .EXACT ExpData.fromExponent float new =:: export: ZERO
+  int.ONE       0 FloatType .EXACT ExpData.fromExponent float new =:: export: ONE
+  int.MINUS_ONE 0 FloatType .EXACT ExpData.fromExponent float new =:: export: MINUS_ONE
 
   ## TODO: support rounding modes
-  proc( int : magnitude iSize : exponent Precission : shadow: precission -> float ) =>: export: createPrec
+  proc( int : magnitude iSize : exponent Precission : shadow: precission -> float ) =>: export: create
     precission Precission.INFINITE != and magnitude int.bitLength precission iSize cast.u u> if
       ## TODO round value
     end
-    magnitude exponent precission float new
+    magnitude
+      exponent
+      precission Precission.INFINITE == if FloatType .EXACT else FloatType .FLOAT end ExpData.fromExponent
+    float new
   end
-  proc( int : magnitude iSize : exponent -> float ) =>: export: create0
-    magnitude exponent Precission.INFINITE createPrec
-  end
-  overload: export: create create0 createPrec end
 ## internal data management
-  proc( float -> i64 ) =>: export: precission
-    .precission i64 cast.u
+  proc( float : a -> Precission ) =>: export: getPrecission
+    a .exponent ExpData.isExact if
+      Precission.INFINITE
+    else
+      a .magnitude int.bitLength Precission.fromBits
+    end
   end
   proc( float i64 -> float ) =>: export: setPrecission
-    Precission cast.u >$ .precission=
-    ## TODO round if neccessary
+    "setPrecission" ..panic
   end
   proc( float iSize -> float ) =>: export: scale
-    $1 .exponent + >$ .exponent=
+    $1 .exponent <$ ExpData.scale >$ .exponent=
   end
   ## TODO? float -> mag * 2^exp (mag scaled to int)
   ## TODO? float -> mag * 2^exp (mag = 0 or 1 <= mag < 2)
 
 ## reference management
   proc( float : a -> float ) =>: export: copy
-    a .magnitude int.copy a .exponent a .precission float new
+    a .magnitude int.copy a .exponent float new
   end
   proc( float -> ) =>: export: free
     .magnitude int.free
@@ -91,12 +111,13 @@ namespace: float
   ## TODO special case handling for pow2 bases
   ## TODO: printing currently leakes memory (printed int-values), should print consume its argument?
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppendFixed
-    val .exponent 0 iSize.sle if
+    val .exponent ExpData.exponent =:: exponent
+    exponent 0 iSize.sle if
       val .magnitude int.sign 0 < if '-' sb.appendC end
       val .magnitude int.copy int.abs =:: magnitude
-      val .exponent -_ =:: fracBits
+      exponent -_ =:: fracBits
       magnitude int.copy fracBits int.shr base int.sbBaseAppend ## integer part
-      val .exponent 0 != if ## fractional part
+      exponent 0 != if ## fractional part
         '.' sb.appendC
         magnitude fracBits int.lowBits =:: fracVal
         fracBits base baseDigitsForBits =:: fracDigits
@@ -109,7 +130,7 @@ namespace: float
       return
     else
       val .magnitude int.copy
-        int.ONE val .exponent int.shl int.mul
+        int.ONE exponent int.shl int.mul
       base int.sbBaseAppend ## integer part
     end
   end
@@ -117,8 +138,9 @@ namespace: float
     "unimplemented: sbBaseAppendSci" ..panic
   end
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
+    val .exponent ExpData.exponent =:: exponent
     ## print as fixed-point if -bitlen-5 < exp <= 0
-    val .exponent 0 iSize.sle and val .exponent -_ val .magnitude int.bitLength 5 + u< if
+    exponent 0 iSize.sle and exponent -_ val .magnitude int.bitLength 5 + u< if
       val base sbBaseAppendFixed
     else
       val base sbBaseAppendSci
@@ -196,40 +218,51 @@ namespace: float
   proc( float : a float : b -> float ) =>: export: add
     a .magnitude =:: mut: aMag
     b .magnitude =:: mut: bMag
-    a .exponent b .exponent iSize.sgt if
-      bMag a .exponent b .exponent - int.shl bMag=
-    else a .exponent  b .exponent iSize.slt _if
-      aMag b .exponent a .exponent - int.shl aMag=
+    a .exponent ExpData.exponent =:: aExp
+    b .exponent ExpData.exponent =:: bExp
+    a getPrecission b getPrecission Precission.max =:: resPrecission
+    aExp bExp iSize.sgt if
+      bMag aExp bExp - int.shl bMag=
+    else aExp bExp iSize.slt _if
+      aMag bExp aExp - int.shl aMag=
     end
     aMag bMag int.add
-      a .exponent b .exponent iSize.max
-      a .precission b .precission Precission.max
+      aExp bExp iSize.max
+      resPrecission
     float.create return
   end
   proc( float : a float : b -> float ) =>: export: sub
     a .magnitude =:: mut: aMag
     b .magnitude =:: mut: bMag
-    a .exponent b .exponent iSize.sgt if
-      bMag a .exponent b .exponent - int.shl bMag=
-    else a .exponent  b .exponent iSize.slt _if
-      aMag b .exponent a .exponent - int.shl aMag=
+    a .exponent ExpData.exponent =:: aExp
+    b .exponent ExpData.exponent =:: bExp
+    a getPrecission b getPrecission Precission.max =:: resPrecission
+    aExp bExp iSize.sgt if
+      bMag aExp bExp - int.shl bMag=
+    else aExp bExp iSize.slt _if
+      aMag bExp aExp - int.shl aMag=
     end
     aMag bMag int.sub
-      a .exponent b .exponent iSize.max
-      a .precission b .precission Precission.max
+      aExp bExp iSize.max
+      resPrecission
     float.create return
   end
   ## TODO? error on exponent overflow/underflow
   proc( float : a float : b -> float ) =>: export: mul
+    a .exponent ExpData.exponent =:: aExp
+    b .exponent ExpData.exponent =:: bExp
+    a getPrecission b getPrecission Precission.max =:: resPrecission
     a .magnitude b .magnitude int.mul
-      a .exponent b .exponent +
-      a .precission b .precission Precission.max
+      aExp bExp +
+      resPrecission
     float.create return
   end
   proc( float : a -> float ) =>: export: square
+    a .exponent ExpData.exponent =:: aExp
+    a getPrecission =:: prec
     a .magnitude int.square
-      a .exponent 2 *
-      a .precission
+      aExp 2 *
+      prec
     float.create return
   end
   proc( float -> float ) =>: export: sqrt
