@@ -78,22 +78,32 @@ namespace: float
   proc( string : str i32 : base -> float number.ParserError ) =>: export: parse
     "unimplemented: parse" ..panic
   end
+  { 0 0 1024 646 512 441 396 364 341 323 308 296 285 276 268 262 256 250 245
+    241 236 233 229 226 223 220 217 215 213 210 208 206 204 202 201 199 198
+    196 195 193 192 191 189 188 187 186 185 184 183 182 181 180 179 178 177
+  177 176 175 174 174 173 172 171 } =:: BASE_DIGITS_1024BITS
+  proc( iSize : bits i32 : base -> iSize ) =>: baseDigitsForBits
+    ## TODO: use higher acuracy version if bit-count gets too high
+    ## result should always be floor(bits*(log(2)/log(base)))
+    bits BASE_DIGITS_1024BITS base [] iSize cast.u * 1024 u/
+  end
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
+    ## TODO special case handling for pow2 bases
+    ## TODO choose representation (scientific vs fixed-point) depending on precission & exponent
     val .exponent 0 iSize.sle if
       val .magnitude int.sign 0 < if '-' sb.appendC end
       val .magnitude int.copy int.abs =:: magnitude
-      magnitude int.copy val .exponent -_ int.shr base int.sbBaseAppend ## integer part
+      val .exponent -_ =:: fracBits
+      magnitude int.copy fracBits int.shr base int.sbBaseAppend ## integer part
       val .exponent 0 != if ## fractional part
         '.' sb.appendC
-        ## TODO correctly handle fractional part
-        ## 1. determine number of digits in given base
-        ## 2. take fractional bits and scale by (base/2)^digitCount
-        ## 3. round result to int
-        ## 4. print int with leading zeros to match expected digit count
-        ## --- tmp soltuion
-        magnitude val .exponent -_ int.lowBits
-          int.ONE val .exponent -_ int.shl int.mul
-        base int.sbBaseAppend
+        magnitude fracBits int.lowBits =:: fracVal
+        fracBits base baseDigitsForBits =:: fracDigits
+        ## scale fractional bits by (base/2)^digitCount
+        fracVal
+          base int.fromI32 fracDigits i32 cast.u int.pow int.mul
+          fracBits int.shr ## TODO rounding
+        base '0' fracDigits int.sbPaddedBaseAppend
       else magnitude int.free end
       return
     end

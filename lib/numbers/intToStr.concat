@@ -96,20 +96,20 @@ namespace: sb
     appendUX64
   end
 ## append with padding: TODO? add padding support to main int-to-string procedure
-  proc( stringBuilder i32 : val i32 : minDigits char8 : padChar i32 : base -> stringBuilder ) =>: export: appendPaddedU32
-    val i64 cast.u minDigits padChar base appendPaddedU64
+  proc( stringBuilder i32 : val i32 : base char8 : padChar iSize : minDigits -> stringBuilder ) =>: export: appendPaddedU32
+    val i64 cast.u base padChar minDigits appendPaddedU64
   end
-  proc( stringBuilder i64 : val i32 : minDigits char8 : padChar i32 : base -> stringBuilder ) =>: export: appendPaddedU64
+  proc( stringBuilder i64 : val i32 : base char8 : padChar iSize : minDigits -> stringBuilder ) =>: export: appendPaddedU64
     char8 64 array : mut: buffer
-    minDigits 0 <= if
+    minDigits 0 == if
       val base sb.appendU? return
     end
     buffer@ sb.wrapBuffer
       val base sb.appendU?
     sb.asStr =:: strVal
     minDigits sb.ensureCap
-    strVal .length minDigits iSize cast.u u< if
-      minDigits iSize cast.u strVal .length - for ..drop padChar sb.appendC end
+    strVal .length minDigits u< if
+      minDigits strVal .length - for ..drop padChar sb.appendC end
     end
     strVal sb.appendStr
   end
