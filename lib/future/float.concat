@@ -23,6 +23,10 @@ namespace: float
     proc( iSize -> Precission ) =>: fromBits
       1 iSize.max Precission cast
     end
+    proc( Precission -> iSize optional ) =>: toBits
+      $ INFINITE == if ..drop iSize optional.empty return end
+      iSize cast.u optional.wrap
+    end
     proc( Precission : a Precission : b -> Precission ) =>: max
       a INFINITE == if b return end
       b INFINITE == if a return end
@@ -109,7 +113,7 @@ namespace: float
     bits BASE_DIGITS_1024BITS base [] iSize cast.u * 1024 u/
   end
   ## TODO special case handling for pow2 bases
-  ## TODO: printing currently leakes memory (printed int-values), should print consume its argument?
+  ## FIXME printing currently leakes memory (printed int-values), should print consume its argument?
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppendFixed
     val .exponent ExpData.exponent =:: exponent
     exponent 0 iSize.sle if
