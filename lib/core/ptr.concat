@@ -249,6 +249,8 @@ namespace: iSize
     ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: shr ..builtIn.lshr.i64
     ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i64i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: ashr ..builtIn.ashr.i64
+    ( iSize : a i32 : b -> iSize ) : export: alias: ashrI32 ..builtIn.ashr.i64i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shl ..builtIn.shl.i64
     ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i64i32
     ( iSize : a -> iSize ) : export: alias: flip ..builtIn.flip.i64
@@ -275,6 +277,8 @@ namespace: iSize
     ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shr ..builtIn.lshr.i32
     ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: ashr ..builtIn.ashr.i32
+    ( iSize : a i32 : b -> iSize ) : export: alias: ashrI32 ..builtIn.ashr.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shl ..builtIn.shl.i32
     ( iSize : a i32 : b -> iSize ) : export: alias: shlI32 ..builtIn.shl.i32
     ( iSize : a -> iSize ) : export: alias: flip ..builtIn.flip.i32
