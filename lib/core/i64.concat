@@ -77,6 +77,9 @@ namespace: i64
   proc( i64 : a i64 : b -> i32 ) =>: export: cmp
     b a lt ?1 a b lt ?1 ..builtIn.sub.i32
   end
+  proc( i64 : a i64 : b -> i32 ) =>: export: ucmp
+    b a ult ?1 a b ult ?1 ..builtIn.sub.i32
+  end
   proc( i64 : a i64 : b -> i64 ) =>: export: floorDiv
     a b /
       a b % ? and a 0 < b 0 < ^ if

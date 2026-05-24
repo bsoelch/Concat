@@ -45,6 +45,9 @@ namespace: i8
   proc( i8 : a i8 : b -> i32 ) =>: export: cmp
     b a lt ?1 a b lt ?1 ..builtIn.sub.i32
   end
+  proc( i8 : a i8 : b -> i32 ) =>: export: ucmp
+    b a ult ?1 a b ult ?1 ..builtIn.sub.i32
+  end
   proc( i8 -> bool ) =>: export: toBool
     0 !=
   end

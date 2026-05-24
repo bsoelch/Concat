@@ -21,7 +21,7 @@ namespace: int
     proc( Digit Digit -> Digit ) : alias: add i64.add
     proc( Digit Digit -> Digit ) : alias: sub i64.sub
     proc( Digit Digit -> Digit ) : alias: mul i64.mul
-    proc( Digit Digit -> i32 ) : alias: cmp i64.cmp
+    proc( Digit Digit -> i32 ) : alias: cmp i64.ucmp
     proc( Digit -> Digit ) : alias: flip i64.flip
     proc( Digit Digit -> Digit ) : alias: and i64.and
     proc( Digit Digit -> Digit ) : alias: or i64.or
@@ -816,6 +816,7 @@ namespace: int
     return
   end
   proc( int -> int ) =>: export: sqrt
+    ## ? use float to calculate result
     "unimplemented: sqrt" ..panic
   end
   i32 =:: DivideOperation
@@ -884,6 +885,7 @@ namespace: int
     resultBits DIGIT_BITS 1 - + DIGIT_BITS / =:: resultDigits
     bBits 64 u<= if
       b asI64u IntConv.unwrap =:: shadow: b
+      ## TODO? do not allocate buffer if division result is not needed
       a resultDigits asWritableBuffer .else
         resultDigits prepareCap
       end =:: divData
@@ -899,8 +901,8 @@ namespace: int
       end
     end
     bBits DIGIT_BITS 1 - + DIGIT_BITS / =:: remDigitCount
+    ## TODO? avoid allocation of divData/remData if only remainder/division is needed
     resultDigits prepareCap =:: divData
-    ## TODO? when is inplace division possible
     a remDigitCount asWritableBuffer .else
       remDigitCount prepareCap
     end =:: remData
@@ -1535,6 +1537,7 @@ namespace: int
       a a res mul return
     end
 ## division
+    ## TODO? versions of udivMod32/64 that only compute remainder
     proc( Digit slice : a i32 : b Digit slice.mut : divData -> Digit slice.mut #+: divData+# i32 #+: rem+# ) =>: udivMod32
       a .length 1 - =:: mut: resIndex
       0
@@ -1565,12 +1568,43 @@ namespace: int
       divData .data b .data != "results do not overlap with b" assert
       remData .data b .data != "results do not overlap with b" assert
       b .length 0 != "b is non-empty" assert
-      ## 1. take top 32 bits of b
-      ## 2. lower-bound divisor by dividing top 64-bits of A by bTop+1
-      ##  2b if less than (or equal to) 64-bits of a are left fall by normal division and remainder
-      ## 3. subtract from remainder, add scale to divisor (if needed)
-      ## ? use similar algorithm for i128 division?
+      ## TODO choose different algorithm for large numbers
       ## ? is using newton-method divide on float more efficient as dedicdated integer-divide
+      b .length 1 == if
+        a b 0 [] i64 cast.u divData udivMod64
+          needRemainder if
+            Digit cast.u remData 0 =[]
+          else
+            ..drop
+          end
+        remData return
+      end
+      ## 1. take top 32 bits of b
+      b $ .length 1 - [] i64 cast.u =:: hiB
+      hiB 0 != "top-digit is non-zero" assert
+      hiB i64.highestSetBit 1 + =:: hiBitB
+      hiB
+        hiBitB 32 > if
+          hiBitB 32 - >>>
+        else hiBitB 32 < _if
+          32 hiBitB - << b $ .length 2 - [] i64 cast hiBitB 32 + >>> |
+        end
+        1 + ## add 1 to ensure division estimate always below actual value
+      =:: bTop
+      ## TODO! re-use one of the given buffers if possible (? change wrapper to give buffer that can fit A and allocate result buffer for division when needed)
+      a slice.copy =:: mut: shadow: rem
+      while rem .length b .length u> do
+        ## 2. lower-bound division-result by dividing top 64-bits of A by bTop
+        a $ .length 1 - [] i64 cast.u =:: hiA
+        a $ .length 2 - [] i64 cast.u =:: lowA
+        64 hiA i64.highestSetBit 1 + - =:: shiftA
+        hiA
+          shiftA 0 != if shiftA << lowA 64 shiftA - >>> | end
+        bTop u/ =:: bScale
+        ## 3. add shifted scale to division-result (if needed)
+        ## 4. subtract scaled+shifted version of b from remainder
+      end
+      ## 5. final division step
       "unimplemented: udivMod" ..panic
     end
 

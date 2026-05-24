@@ -60,6 +60,9 @@ namespace: i32
   proc( i32 : a i32 : b -> i32 ) =>: export: cmp
     b a lt ?1 a b lt ?1 -
   end
+  proc( i32 : a i32 : b -> i32 ) =>: export: ucmp
+    b a ult ?1 a b ult ?1 -
+  end
   proc( i32 : a i32 : b -> i32 ) =>: export: floorDiv
     a b /
       a b % ? and a 0 < b 0 < ^ if

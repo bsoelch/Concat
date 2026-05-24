@@ -238,6 +238,7 @@ namespace: i128
   ) =>: export: udivMod64to64
     a .hi b i64 cast.u u< "result first in i64" assert
     ## TODO? dedicated algorithm (? use x64 div instruction if available)
+    ## ? use algorithm similar to simple-int div (divide top 64-bits by top 32-bits of result to estimate top few digits)
     a b fromU64 udivMod >$ .low >$ .low
   end
   proc(
