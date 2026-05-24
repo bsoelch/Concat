@@ -23,6 +23,7 @@ namespace: float
     CEIL ## round towards infinity
   ) =:: RoundingMode
 end
+## TODO? use bit-length of magnitude as precission (+ bit-tag in exponent for exact values)
 struct( int : magnitude iSize : exponent float.Precission : precission ) =:: export: float
 
 namespace: float
@@ -87,9 +88,9 @@ namespace: float
     ## result should always be floor(bits*(log(2)/log(base)))
     bits BASE_DIGITS_1024BITS base [] iSize cast.u * 1024 u/
   end
-  proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
-    ## TODO special case handling for pow2 bases
-    ## TODO choose representation (scientific vs fixed-point) depending on precission & exponent
+  ## TODO special case handling for pow2 bases
+  ## TODO: printing currently leakes memory (printed int-values), should print consume its argument?
+  proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppendFixed
     val .exponent 0 iSize.sle if
       val .magnitude int.sign 0 < if '-' sb.appendC end
       val .magnitude int.copy int.abs =:: magnitude
@@ -106,8 +107,22 @@ namespace: float
         base '0' fracDigits int.sbPaddedBaseAppend
       else magnitude int.free end
       return
+    else
+      val .magnitude int.copy
+        int.ONE val .exponent int.shl int.mul
+      base int.sbBaseAppend ## integer part
     end
-    "unimplemented: sbBaseAppend" ..panic
+  end
+  proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppendSci
+    "unimplemented: sbBaseAppendSci" ..panic
+  end
+  proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
+    ## print as fixed-point if -bitlen-5 < exp <= 0
+    val .exponent 0 iSize.sle and val .exponent -_ val .magnitude int.bitLength 5 + u< if
+      val base sbBaseAppendFixed
+    else
+      val base sbBaseAppendSci
+    end
   end
   proc( stringBuilder float -> stringBuilder ) =>: export: sbAppend
     10 sbBaseAppend
