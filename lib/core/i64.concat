@@ -139,22 +139,22 @@ namespace: i64
   ## a + b + carry -> newCarry res
   proc( bool : carry i64 : a i64 : b -> bool i64 ) =>: export: addc
     a b +
-      ..dup b u< =:: mut: resCarry
+      $ b u< =:: mut: resCarry
       carry if
         1 +
-        resCarry ..over 0 == | resCarry=
+        resCarry $1 0 == | resCarry=
       end
-    resCarry ..swap return
+    resCarry >$ return
   end
   ## a - (b + carry) -> newCarry res
   proc( bool : carry i64 : a i64 : b -> bool i64 ) =>: export: subb
     a b u< =:: mut: resCarry
     a b -
       carry if
+        resCarry $1 0 == | resCarry=
         1 -
-        resCarry ..over 0 == | resCarry=
       end
-    resCarry ..swap return
+    resCarry >$ return
   end
   proc( i64 : a i64 : b -> i64 i64 ) =>: export: umul2
     a i32.MASK &  i64 =: aLow
