@@ -1,0 +1,279 @@
+import future/int
+
+namespace: float
+  iSize =:: export: Precission
+  namespace: Precission
+    0 Precission cast =:: export: INFINITE
+    proc( Precission : a Precission : b -> Precission ) =>: max
+      a INFINITE == if b return end
+      b INFINITE == if a return end
+      a iSize cast.u b iSize cast.u iSize.max Precission cast.u
+    end
+  end
+  enum(
+    HALF_EVEN ## (default) round < 0.5 down, > 0.5 up, 0.5 to even number
+    HALF_ODD ## round < 0.5 down, > 0.5 up, 0.5 to odd number
+    HALF_DOWN ## round < 0.5 down, > 0.5 up, 0.5 towards zero
+    HALF_UP  ## round < 0.5 down, > 0.5 up, 0.5 away from zero
+    HALF_FLOOR ## round < 0.5 down, > 0.5 up, 0.5 towards -infinity
+    HALF_CEIL ## round < 0.5 down, > 0.5 up, 0.5 towards infinity
+    DOWN ## round towards from zero
+    UP ## round away from zero
+    FLOOR ## round towards -infinity
+    CEIL ## round towards infinity
+  ) =:: RoundingMode
+end
+struct( int : magnitude iSize : exponent float.Precission : precission ) =:: export: float
+
+namespace: float
+  int.ZERO      0 Precission.INFINITE float new =:: export: ZERO
+  int.ONE       0 Precission.INFINITE float new =:: export: ONE
+  int.MINUS_ONE 0 Precission.INFINITE float new =:: export: MINUS_ONE
+
+  ## TODO: support rounding modes
+  proc( int : magnitude iSize : exponent Precission : shadow: precission -> float ) =>: export: createPrec
+    precission Precission.INFINITE != and magnitude int.bitLength precission iSize cast.u u> if
+      ## TODO round value
+    end
+    magnitude exponent precission float new
+  end
+  proc( int : magnitude iSize : exponent -> float ) =>: export: create0
+    magnitude exponent Precission.INFINITE createPrec
+  end
+  overload: export: create create0 createPrec end
+## internal data management
+  proc( float -> i64 ) =>: export: precission
+    .precission i64 cast.u
+  end
+  proc( float i64 -> float ) =>: export: setPrecission
+    Precission cast.u >$ .precission=
+    ## TODO round if neccessary
+  end
+  proc( float iSize -> float ) =>: export: scale
+    $1 .exponent + >$ .exponent=
+  end
+  ## TODO? float -> mag * 2^exp (mag scaled to int)
+  ## TODO? float -> mag * 2^exp (mag = 0 or 1 <= mag < 2)
+
+## reference management
+  proc( float : a -> float ) =>: export: copy
+    a .magnitude int.copy a .exponent a .precission float new
+  end
+  proc( float -> ) =>: export: free
+    .magnitude int.free
+  end
+## conversions
+  proc( int -> float ) =>: export: fromInt
+    "unimplemented: fromInt" ..panic
+  end
+  proc( float -> int ) =>: export: toInt
+    "unimplemented: toInt" ..panic
+  end
+  ## TODO: conversions from/to primitive
+## conversion from/to string
+  ## TODO: support custom precission in operations
+  ## two different string formats:
+  ##  <base-prefix> <digit>+ ( '.' <digit>+ )?
+  ##  <base-prefix> <digit> ( '.' <digit>+ )? <exp-char> [+-]? <digit>+
+  proc( string : str i32 : base -> float number.ParserError ) =>: export: parse
+    "unimplemented: parse" ..panic
+  end
+  proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
+    val .exponent 0 iSize.sle if
+      val .magnitude int.sign 0 < if '-' sb.appendC end
+      val .magnitude int.copy int.abs =:: magnitude
+      magnitude int.copy val .exponent -_ int.shr base int.sbBaseAppend ## integer part
+      val .exponent 0 != if ## fractional part
+        '.' sb.appendC
+        ## TODO correctly handle fractional part
+        ## 1. determine number of digits in given base
+        ## 2. take fractional bits and scale by (base/2)^digitCount
+        ## 3. round result to int
+        ## 4. print int with leading zeros to match expected digit count
+        ## --- tmp soltuion
+        magnitude val .exponent -_ int.lowBits
+          int.ONE val .exponent -_ int.shl int.mul
+        base int.sbBaseAppend
+      else magnitude int.free end
+      return
+    end
+    "unimplemented: sbBaseAppend" ..panic
+  end
+  proc( stringBuilder float -> stringBuilder ) =>: export: sbAppend
+    10 sbBaseAppend
+  end
+  proc( stringBuilder float -> stringBuilder ) =>: export: sbAppendX
+    16 sbBaseAppend
+  end
+## rounding
+  proc( float -> float ) =>: export: floor
+    "unimplemented: floor" ..panic
+  end
+  proc( float -> float ) =>: export: ceil
+    "unimplemented: ceil" ..panic
+  end
+  proc( float -> float ) =>: export: round
+    "unimplemented: round" ..panic
+  end
+  proc( float : val iSize : shadow: precission RoundingMode : mode -> float ) =>: export: roundTo
+    "unimplemented: roundTo" ..panic
+  end
+## comparisons
+  proc( float : a float : b -> i32 ) =>: export: cmp
+    "unimplemented: cmp" ..panic
+  end
+  proc( float : a float : b -> i32 ) =>: export: ucmp
+    "unimplemented: ucmp" ..panic
+  end
+  proc( float : a float : b -> float ) =>: export: min
+    a b cmp 0 < if
+      b free a return
+    else
+      a free b return
+    end
+  end
+  proc( float : a float : b -> float ) =>: export: max
+    a b cmp 0 < if
+      a free b return
+    else
+      b free a return
+    end
+  end
+  proc( float : a float : b -> float ) =>: export: umin
+    a b ucmp 0 < if
+      b free a return
+    else
+      a free b return
+    end
+  end
+  proc( float : a float : b -> float ) =>: export: umax
+    a b ucmp 0 < if
+      a free b return
+    else
+      b free a return
+    end
+  end
+## arithmetic
+  proc( float -> bool ) =>: export: isZero
+    .magnitude int.isZero
+  end
+  ## -1 0 1
+  proc( float -> i32 ) =>: export: sign
+    .magnitude int.sign
+  end
+  proc( float -> float ) =>: export: abs
+    $ .magnitude int.abs >$ .magnitude=
+  end
+  proc( float -> float ) =>: export: negate
+    $ .magnitude int.negate >$ .magnitude=
+  end
+  ## TODO: add helpers for mixed operations
+  proc( float : a float : b -> float ) =>: export: add
+    a .magnitude =:: mut: aMag
+    b .magnitude =:: mut: bMag
+    a .exponent b .exponent iSize.sgt if
+      bMag a .exponent b .exponent - int.shl bMag=
+    else a .exponent  b .exponent iSize.slt _if
+      aMag b .exponent a .exponent - int.shl aMag=
+    end
+    aMag bMag int.add
+      a .exponent b .exponent iSize.max
+      a .precission b .precission Precission.max
+    float.create return
+  end
+  proc( float : a float : b -> float ) =>: export: sub
+    a .magnitude =:: mut: aMag
+    b .magnitude =:: mut: bMag
+    a .exponent b .exponent iSize.sgt if
+      bMag a .exponent b .exponent - int.shl bMag=
+    else a .exponent  b .exponent iSize.slt _if
+      aMag b .exponent a .exponent - int.shl aMag=
+    end
+    aMag bMag int.sub
+      a .exponent b .exponent iSize.max
+      a .precission b .precission Precission.max
+    float.create return
+  end
+  ## TODO? error on exponent overflow/underflow
+  proc( float : a float : b -> float ) =>: export: mul
+    a .magnitude b .magnitude int.mul
+      a .exponent b .exponent +
+      a .precission b .precission Precission.max
+    float.create return
+  end
+  proc( float : a -> float ) =>: export: square
+    a .magnitude int.square
+      a .exponent 2 *
+      a .precission
+    float.create return
+  end
+  proc( float -> float ) =>: export: sqrt
+    ## ? iterate x -> x + x(1-x^2/A)/2 (precompute 1/A to needed precission)
+    ## alternative: x -> x(3/2-x^2/(2A))
+    "unimplemented: sqrt" ..panic
+  end
+  proc( float -> float ) =>: export: cbrt
+    ## x^3-A -> x-(x-A/x^2)/3
+    ## A/x^3 -1 -> x + x(1-x^3/A)/3
+    ## alternative: x -> x(4/3-x^3/(3A))
+    "unimplemented: cbrt" ..panic
+  end
+  proc( float float -> float ) =>: export: div
+    ## TODO: newton-division (like in f128:  x in [0.5,1) ; y0 = 48/17 - 32/17 * x ; y =  y*( 2 - y*x )
+    "unimplemented: div" ..panic
+  end
+  proc( float float -> float #+div+# float #+rem+# ) =>: export: divRem
+    ## rem = a-b*floor(a/b)
+    "unimplemented: divRem" ..panic
+  end
+  proc( float float -> float ) =>: export: rem
+    divRem >$ free
+  end
+  proc( float -> float ) =>: export: exp
+    "unimplemented: exp" ..panic
+  end
+  proc( float -> float ) =>: export: log
+    "unimplemented: log" ..panic
+  end
+  proc( float -> float ) : export: alias: ln log
+  proc( float float -> float ) =>: export: pow
+    "unimplemented: pow" ..panic
+  end
+## bit-wise operations
+  ## flipping all bits of doubly-infinite bit-sequence exactly gives negated number
+  ## e.g. 1 <-> ...111110.1111111... <-> ...111111.0 <-> -1
+  proc( float -> float ) : export: alias: bitNot negate
+  proc( float : a float : b -> float ) =>: export: bitAnd
+    "unimplemented: bitAnd" ..panic
+  end
+  proc( float : a float : b -> float ) =>: export: bitAndNot
+    "unimplemented: bitAndNot" ..panic
+  end
+  proc( float : a float : b -> float ) =>: export: bitOr
+    "unimplemented: bitOr" ..panic
+  end
+  proc( float : a float : b -> float ) =>: export: bitXor
+    "unimplemented: bitXor" ..panic
+  end
+## trigonometric functions
+  proc( float -> float ) =>: export: sin
+    "unimplemented: sin" ..panic
+  end
+  proc( float -> float ) =>: export: cos
+    "unimplemented: cos" ..panic
+  end
+  proc( float -> float ) =>: export: tan
+    "unimplemented: tan" ..panic
+  end
+  proc( float -> float ) =>: export: asin
+    "unimplemented: asin" ..panic
+  end
+  proc( float -> float ) =>: export: acos
+    "unimplemented: acos" ..panic
+  end
+  proc( float -> float ) =>: export: atan
+    "unimplemented: atan" ..panic
+  end
+end
+
+

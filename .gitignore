@@ -21,6 +21,7 @@ lib/future/*
 !lib/future/math.concat
 !lib/future/threads
 !lib/future/int.concat
+!lib/future/float.concat
 !bootstrap/latest.ssa
 runTests
 global_log.txt
