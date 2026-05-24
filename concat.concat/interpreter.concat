@@ -1414,35 +1414,20 @@ proc(
       pushValue
       EvalResult .Ok return
     Cast Cast! case
-      PopInfo optional.empty =:: mut: popInfo
-      op [] .dataType .Undefined ? if
-        op [] .pos context popType if ..drop.2
-          EvalResult .Error return
-        end =:: poppedType =:: valInfo
-        valInfo poppedType PopInfo new optional.wrap popInfo=
-        poppedType typeContext types.containsGeneric if
-          "generic casts are not supported" sb.copyPtr
-          op [] .pos errors appendError
-          ## casting to genetic value not possible, reset stack
-          ## unpopValue
-            poppedType ConstValue .TypeId
-            valInfo
-          context unpopValue
-          EvalResult .Error return
-        end
-        poppedType
-      else
-        op [] .dataType
-      end =:: targetType
+      op [] .dataType =:: targetType
       op [] .pos context popValue if ..drop.2
-        popInfo .if
-          ## unpopValue
-            $ .valType ConstValue .TypeId
-            >$ .valInfo
-          context unpopValue
-        end
         EvalResult .Error return
       end =:: oldValue =:: valInfo ## can overwrite value info
+      valInfo .valueType typeContext types.isEnum and targetType typeContext types.isInt if
+        oldValue .Int ? "enum-constant is integer" assert
+        ## pushValue
+          oldValue
+          targetType
+          op [] .pos
+          context
+        pushValue
+        EvalResult .Ok return
+      end
       ## canCast
         valInfo .valueType
         targetType
