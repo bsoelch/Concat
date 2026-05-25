@@ -87,12 +87,69 @@ namespace: float
   proc( float -> ) =>: export: free
     .magnitude int.free
   end
+## rounding
+  proc( float -> float ) =>: export: floor
+    RoundingMode .FLOOR roundWith
+  end
+  proc( float -> float ) =>: export: ceil
+    RoundingMode .CEIL roundWith
+  end
+  proc( float -> float ) =>: export: truncate
+    RoundingMode .DOWN roundWith
+  end
+  proc( float -> float ) =>: export: roundEven
+    RoundingMode .HALF_EVEN roundWith
+  end
+  proc( float RoundingMode : mode -> float ) =>: export: roundWith
+    mode roundWithImpl
+    ## TODO set fractional part to zero
+    "unimplemented: roundWith" ..panic
+  end
+  overload: export: round roundEven roundWith end
+  ## round the integer part but keep the float-part unchanged
+  proc( float RoundingMode : mode -> float ) =>: export: roundWithImpl
+    mode .DOWN if return end
+    mode .FLOOR and $ sign 0 > if return end
+    mode .CEIL and $ sign 0 < if return end
+    ## 1. check if fractional part is: ZERO LESS_THAH_HALF HALF GREATHER_THAN_HALF
+    ## 2. update int-part according to value (add/sub shifted one) ? dedicated function for this op
+    "unimplemented: roundWithImpl" ..panic
+  end
+  proc( float -> float ) =>: export: frac
+    $ .exponent ExpData.exponent =:: exponent
+    exponent 0 iSize.sge if free ZERO return end
+    exponent -_ =:: fracBits
+    $ .magnitude fracBits int.lowBits >$ .magnitude=
+  end
+  proc( float -> bool ) =>: export: isInt
+    exponent 0 iSize.sge if false return end
+    ## TODO: check if all digits of fractional part are zero
+    "unimplemented: isInt" ..panic
+  end
+  proc( float : val iSize : shadow: precission RoundingMode : mode -> float ) =>: export: roundTo
+    "unimplemented: roundTo" ..panic
+  end
 ## conversions
   proc( int -> float ) =>: export: fromInt
-    "unimplemented: fromInt" ..panic
+    0 FloatType .EXACT ExpData.fromExponent float.new
   end
-  proc( float -> int ) =>: export: toInt
-    "unimplemented: toInt" ..panic
+  proc( float -> int ) =>: export: toIntTrunc
+    RoundingMode .DOWN toIntRound
+  end
+  proc( float RoundingMode : mode -> int ) =>: export: toIntRound
+    mode roundWithImpl
+      $ .exponent ExpData.exponent =:: exponent
+    .magnitude
+      exponent 0 iSize.sgt if
+        exponent int.shl
+      else exponent 0 iSize.slt _if
+        exponent -_ int.shl
+      end
+    return
+  end
+  overload: export: toInt toIntTrunc toIntRound end
+  proc( float -> int optional ) =>: export: asInt
+    "unimplemented: asInt" ..panic
   end
   ## TODO: conversions from/to primitive
 ## conversion from/to string
@@ -117,18 +174,20 @@ namespace: float
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppendFixed
     val .exponent ExpData.exponent =:: exponent
     exponent 0 iSize.sle if
-      val .magnitude int.sign 0 < if '-' sb.appendC end
-      val .magnitude int.copy int.abs =:: magnitude
+      val sign 0 < if '-' sb.appendC end
+      val copy abs =:: shadow: val
       exponent -_ =:: fracBits
-      magnitude int.copy fracBits int.shr base int.sbBaseAppend ## integer part
-      exponent 0 != if ## fractional part
+      val copy RoundingMode .DOWN toInt base int.sbBaseAppend ## integer part
+      ## TODO: handle numbers with all-zero fractional part
+      val isInt ! if ## fractional part
         '.' sb.appendC
-        magnitude fracBits int.lowBits =:: fracVal
+        val float.frac =:: fracVal
         fracBits base baseDigitsForBits =:: fracDigits
         ## scale fractional bits by (base/2)^digitCount
         fracVal
-          base int.fromI32 fracDigits i32 cast.u int.pow int.mul
-          fracBits int.shr ## TODO rounding
+          base int.fromI32 fracDigits i32 cast.u int.pow fromInt mul
+          ## TODO? should rounding depend on digits in base (e.g. should 0.12 in base 3 be rounded down?)
+          RoundingMode .HALF_EVEN toInt
         base '0' fracDigits int.sbPaddedBaseAppend
       else magnitude int.free end
       return
@@ -155,19 +214,6 @@ namespace: float
   end
   proc( stringBuilder float -> stringBuilder ) =>: export: sbAppendX
     16 sbBaseAppend
-  end
-## rounding
-  proc( float -> float ) =>: export: floor
-    "unimplemented: floor" ..panic
-  end
-  proc( float -> float ) =>: export: ceil
-    "unimplemented: ceil" ..panic
-  end
-  proc( float -> float ) =>: export: round
-    "unimplemented: round" ..panic
-  end
-  proc( float : val iSize : shadow: precission RoundingMode : mode -> float ) =>: export: roundTo
-    "unimplemented: roundTo" ..panic
   end
 ## comparisons
   proc( float : a float : b -> i32 ) =>: export: cmp
