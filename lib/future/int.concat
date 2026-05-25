@@ -275,6 +275,7 @@ namespace: int
   end
   0 fromI32 =:: export: ZERO
   1 fromI32 =:: export: ONE
+  2 fromI32 =:: export: TWO
   -1 fromI32 =:: export: MINUS_ONE
   ( type : I -> type ) =>: export: IntConversionResult
     union(
@@ -1140,7 +1141,7 @@ namespace: int
     else a .data IntData.asPtr ._if =:: basePtr
       a .length 1 - =:: index
         basePtr index [] i64 cast.u i64.highestSetBit 1 + iSize cast.u
-      index 64 * +
+      index DIGIT_BITS * +
     else
       "unexpected int-data type" ..panic
     end
@@ -1162,12 +1163,15 @@ namespace: int
     a bitLength index iSize.max DIGIT_BITS 1 - + DIGIT_BITS u/
       srcDigits $ .length 1 - [] i64 cast.s 0 < if 1 + end ## top-bit used -> value can overflow
     =:: resultDigits
-    a resultDigits asWritableBuffer .else
+    a resultDigits asWritableBuffer .if
+      resultDigits >$ .length=
+    else
       srcDigits
         $ .length resultDigits u<= "a.length <= resultDigits" assert
       resultDigits prepareCap slice.copyTo
+    end
       $ srcDigits .length slice.tail slice.clear ..drop ## clear top digits
-    end =:: dstData
+    =:: dstData
     index 1 - =:: shadow: index
     index DIGIT_BITS u/ =:: mut: digitIndex
     index DIGIT_BITS u% =:: bitIndex
@@ -1402,7 +1406,9 @@ namespace: int
       a return
     end
     count DIGIT_BITS 1 - + DIGIT_BITS u/ =:: resultDigits
-    a resultDigits asWritableBuffer .else
+    a resultDigits asWritableBuffer .if
+      resultDigits >$ .length=
+    else
       Digit MAX_INLINE_DIGITS array : mut: buf
       a buf@ asSlice
         $ .length resultDigits u>= "a.length >= resultDigits" assert
@@ -1428,7 +1434,9 @@ namespace: int
       a free ZERO return
     end
     a bitLength DIGIT_BITS 1 - + DIGIT_BITS u/ =:: resultDigits
-    a resultDigits asWritableBuffer .else
+    a resultDigits asWritableBuffer .if
+      resultDigits >$ .length=
+    else
       Digit MAX_INLINE_DIGITS array : mut: buf
       a buf@ asSlice
         $ .length resultDigits u>= "a.length >= resultDigits" assert

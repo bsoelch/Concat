@@ -51,6 +51,7 @@ struct( int : magnitude float.ExpData : exponent ) =:: export: float
 namespace: float
   int.ZERO      0 FloatType .EXACT ExpData.fromExponent float new =:: export: ZERO
   int.ONE       0 FloatType .EXACT ExpData.fromExponent float new =:: export: ONE
+  int.TWO       0 FloatType .EXACT ExpData.fromExponent float new =:: export: TWO
   int.MINUS_ONE 0 FloatType .EXACT ExpData.fromExponent float new =:: export: MINUS_ONE
 
   ## TODO: support rounding modes
@@ -158,7 +159,7 @@ namespace: float
     exponent 0 iSize.sge if false return end
     f .magnitude exponent -_ int.checkLowBits .ZERO
   end
-  proc( float iSize : shadow: precissionBits RoundingMode : mode -> float ) =>: export: roundTo
+  proc( float iSize : precissionBits RoundingMode : mode -> float ) =>: export: roundTo
     $ .exponent ExpData.exponent =:: oldExponent
     ## scale to precission bits in integer part
     precissionBits $1 .magnitude int.bitLength - FloatType .EXACT ExpData.fromExponent >$ .exponent=
@@ -309,12 +310,12 @@ namespace: float
     b .exponent ExpData.exponent =:: bExp
     a getPrecission b getPrecission Precission.max =:: resPrecission
     aExp bExp iSize.sgt if
-      bMag aExp bExp - int.shl bMag=
+      aMag aExp bExp - int.shl aMag=
     else aExp bExp iSize.slt _if
-      aMag bExp aExp - int.shl aMag=
+      bMag bExp aExp - int.shl bMag=
     end
     aMag bMag int.add
-      aExp bExp iSize.max
+      aExp bExp iSize.smin
       resPrecission
     float.create return
   end
@@ -325,12 +326,12 @@ namespace: float
     b .exponent ExpData.exponent =:: bExp
     a getPrecission b getPrecission Precission.max =:: resPrecission
     aExp bExp iSize.sgt if
-      bMag aExp bExp - int.shl bMag=
+      aMag aExp bExp - int.shl aMag=
     else aExp bExp iSize.slt _if
-      aMag bExp aExp - int.shl aMag=
+      bMag bExp aExp - int.shl bMag=
     end
     aMag bMag int.sub
-      aExp bExp iSize.max
+      aExp bExp iSize.smin
       resPrecission
     float.create return
   end
@@ -363,9 +364,40 @@ namespace: float
     ## alternative: x -> x(4/3-x^3/(3A))
     "unimplemented: cbrt" ..panic
   end
-  proc( float float -> float ) =>: export: div
-    ## TODO: newton-division (like in f128:  x in [0.5,1) ; y0 = 48/17 - 32/17 * x ; y =  y*( 2 - y*x )
-    "unimplemented: div" ..panic
+  proc( float : x -> float ) =>: export: inv
+    x .magnitude int.bitLength
+      x .exponent
+        $ ExpData.exponent $2 + -_ =:: scaleFactor
+      ExpData.isExact if
+        x $1 -_ FloatType .EXACT ExpData.fromExponent >$ .exponent=
+        >$ 64 iSize.max <$
+      else
+        x $1 -_ FloatType .FLOAT ExpData.fromExponent >$ .exponent=
+      end =:: shadow: x
+    =:: precission
+    ## compute Newton-Raphson inverse (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
+    0x2'd2d_2d2d_2d2d:i64 0x2d2d_2d2d_2d2d_2d2d:i64 i128.create int.fromU128
+      -108:iSize float.Precission.INFINITE
+    float.create =:: p ## 48/17
+    0x1'e1e_1e1e_1e1e:i64 0x1e1e_1e1e_1e1e_1e1e:i64 i128.create int.fromU128
+      -108:iSize float.Precission.INFINITE
+    float.create =:: q ## 32/17
+    ## initial estimate: y0 = 48/17 - 32/17 * x  [error at most 1/17+2^-100]
+    ## FIXME why does calculating in float-mode lead to completely different results
+    p q x copy mul sub
+      ## precission setPrecission
+    ## iteration step: y =  y*( 2 - y*x )  -> doubled number of correct digits
+      ## precission after N steps is 2^S * log 17 -1 -> need aproximately:  ceil(log2 (P/4 +1)) steps
+      precission 4 / 1 + i64 cast.u i64.highestSetBit 1 + for ..drop
+        TWO $1 copy x copy mul sub mul
+      end
+      TWO $1 copy x mul sub mul
+      precission setPrecission
+      $ .exponent scaleFactor ExpData.scale >$ .exponent=
+    return
+  end
+  proc( float : a float : b -> float ) =>: export: div
+    a b inv mul
   end
   proc( float float -> float #+div+# float #+rem+# ) =>: export: divRem
     ## rem = a-b*floor(a/b)
