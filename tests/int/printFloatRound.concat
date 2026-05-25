@@ -1,0 +1,27 @@
+import future/float
+import print
+
+proc( float -> ) =>: printFloatX
+  0 sb.create
+    >$ float.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
+proc( -> ) =>: main
+  "-0b1'001000":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "-0b1'001001":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "-0b1'001010":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "-0b1'001011":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "-0b1'001100":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "-0b1'001101":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "-0b1'001110":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "-0b1'001111":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "0b1'001000":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "0b1'001001":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "0b1'001010":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "0b1'001011":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "0b1'001100":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "0b1'001101":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "0b1'001110":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+  "0b1'001111":s 0 int.parse ..drop -6:iSize float.Precission.INFINITE float.create $ printFloatX float.free
+end

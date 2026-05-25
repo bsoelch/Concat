@@ -1107,7 +1107,43 @@ namespace: int
     end
   end
   ## TODO? lowest setBit / bit-count
-  ## TODO? setBit / getBit / flipBit
+  ## TODO? setBit / flipBit
+  proc( int : a iSize : index -> bool ) =>: export: checkBit
+    a bitLength index u< if
+      false return
+    end
+    index DIGIT_BITS u/ =:: digitIndex
+    index DIGIT_BITS u% =:: bitIndex
+    Digit MAX_INLINE_DIGITS array : mut: buf
+    a buf@ asSlice digitIndex [] 1:i64 bitIndex i32 cast.u << Digit cast & ?
+  end
+  proc( int : a iSize : index -> int ) =>: export: incrementBit
+    Digit MAX_INLINE_DIGITS array : mut: buf
+    a buf@ asSlice =:: srcDigits
+    a bitLength index iSize.max DIGIT_BITS 1 - + DIGIT_BITS u/
+      srcDigits $ .length 1 - [] i64 cast.s 0 < if 1 + end ## top-bit used -> value can overflow
+    =:: resultDigits
+    a resultDigits asWritableBuffer .else
+      srcDigits
+        $ .length resultDigits u<= "a.length <= resultDigits" assert
+      resultDigits prepareCap slice.copyTo
+      $ srcDigits .length slice.tail slice.clear ..drop ## clear top digits
+    end =:: dstData
+    index 1 - =:: shadow: index
+    index DIGIT_BITS u/ =:: mut: digitIndex
+    index DIGIT_BITS u% =:: bitIndex
+    false 1:i64 bitIndex i32 cast.u << Digit cast
+      dstData digitIndex [] Digit.addc dstData digitIndex =[]
+      while $ and digitIndex srcDigits .length u< do
+        digitIndex 1 + digitIndex=
+        0 Digit cast dstData digitIndex [] Digit.addc dstData digitIndex =[]
+      end
+    if 1 Digit cast dstData digitIndex 1 + =[] end
+    dstData a sign 0 < fromRawDigits
+      a free
+    return
+  end
+
   proc( int -> int ) =>: export: bitNot
     1 addI32 negate
   end
@@ -1347,6 +1383,52 @@ namespace: int
     dstData _impl.removeLeadingZeros false fromRawDigits
       a free
     return
+  end
+  proc( int : a iSize : count -> int ) =>: export: clearLowBits
+    a bitLength count u<= if
+      a free ZERO return
+    end
+    a bitLength DIGIT_BITS 1 - + DIGIT_BITS u/ =:: resultDigits
+    a resultDigits asWritableBuffer .else
+      Digit MAX_INLINE_DIGITS array : mut: buf
+      a buf@ asSlice
+        $ .length resultDigits u>= "a.length >= resultDigits" assert
+      resultDigits prepareCap slice.copyTo
+    end =:: dstData
+    count DIGIT_BITS u/ =:: lowDigits
+    count DIGIT_BITS u% i64 cast.u =:: shadow: lowBits
+    lowBits 0 != if
+      dstData lowDigits [] i64 cast.u
+        1 lowBits << 1 - ~ &
+      Digit cast.u dstData lowDigits =[]
+    end
+    dstData lowDigits slice.head slice.clear ..drop
+    dstData a sign 0 < fromRawDigits
+      a free
+    return
+  end
+  enum( ZERO LESS_THAN_HALF HALF GREATER_THAN_HALF ) =:: export: LowBitValue
+  proc( int : a iSize : count -> LowBitValue ) =>: export: checkLowBits
+    count DIGIT_BITS u% =:: shadow: lowBits
+    count DIGIT_BITS u/
+      lowBits 0 == if 1 - end
+    =:: lowDigits
+    false =:: mut: nonZero
+    Digit MAX_INLINE_DIGITS array : mut: buf
+    a buf@ asSlice =:: digits
+    digits lowDigits slice.get .if i64 cast.s else 0 end =:: topDigit
+    topDigit
+      lowBits 0 != if DIGIT_BITS lowBits - i32 cast.u << end
+      $ i64 cast.s 0 < =:: highBit
+    1 << ? if
+      highBit if LowBitValue .GREATER_THAN_HALF else LowBitValue .LESS_THAN_HALF end return
+    end
+    lowDigits digits .length iSize.min while $ 1 - >$ 0 != do
+      digits $1 [] ? if ..drop
+        highBit if LowBitValue .GREATER_THAN_HALF else LowBitValue .LESS_THAN_HALF end return
+      end
+    end ..drop
+    highBit if LowBitValue .HALF else LowBitValue .ZERO end return
   end
 
   namespace: _impl

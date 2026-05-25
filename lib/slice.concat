@@ -28,6 +28,9 @@ namespace: slice
     T slice.emptyMutable return
   end
 
+  proc( type : auto: T T slice.mut : src -> T slice.mut ) =>: export: clear
+    src .data src .length mem.clear src .length create_mut
+  end
   proc(
     type : auto: T
     T slice.mut : elts
