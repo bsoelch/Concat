@@ -9,15 +9,15 @@ end
 proc( -> ) =>: export: main
   { 0x0123456789abcdef:i64 0xfedcba9876543210:i64 0x0123456789abcdef:i64 0xfedcba9876543212:i64 } slice.wrap false int.fromSlice =:: a
   0x11111111 int.fromU32 =:: b
-  a printInt
-  b printInt
+  a int.copy printInt
+  b int.copy printInt
   a int.copy b int.divRem printInt printInt
-  a printInt
+  a int.copy printInt
   0x1111111111111111 int.fromU64 =:: c
-  c printInt
+  c int.copy printInt
   a int.copy c int.divRem printInt printInt
-  a printInt
+  a int.copy printInt
   0xFFFFFFFFFFFFFFFF:i64 int.fromU64 =:: d
-  d printInt
+  d int.copy printInt
   a d int.divRem printInt printInt
 end

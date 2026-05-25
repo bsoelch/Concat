@@ -207,12 +207,11 @@ namespace: float
     bits BASE_DIGITS_1024BITS base [] iSize cast.u * 1024 u/
   end
   ## TODO special case handling for pow2 bases
-  ## FIXME printing currently leakes memory (printed int-values), should print consume its argument?
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppendFixed
     val .exponent ExpData.exponent =:: exponent
     exponent 0 iSize.sle if
       val sign 0 < if '-' sb.appendC end
-      val copy abs =:: shadow: val
+      val abs =:: shadow: val
       exponent -_ =:: fracBits
       fracBits base baseDigitsForBits =:: fracDigits
       fracDigits 0 == if ## not enough precission for a fractional digit
@@ -231,9 +230,7 @@ namespace: float
       else val free end
       return
     else
-      val .magnitude int.copy
-        int.ONE exponent int.shl int.mul
-      base int.sbBaseAppend ## integer part
+      val .magnitude exponent int.shl base int.sbBaseAppend ## integer part
     end
   end
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppendSci
@@ -241,8 +238,9 @@ namespace: float
   end
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
     val .exponent ExpData.exponent =:: exponent
-    ## print as fixed-point if -bitlen-5 < exp <= 0
-    exponent 0 iSize.sle and exponent -_ val .magnitude int.bitLength 5 + u< if
+    ## print as fixed-point if -(bitlen(val)+3*bitlen(base)) < exp < bitlen(base)
+    base i32.highestSetBit 1 + iSize cast.u =:: baseBits
+    exponent baseBits iSize.slt and exponent val .magnitude int.bitLength baseBits 3 * + -_ iSize.sgt if
       val base sbBaseAppendFixed
     else
       val base sbBaseAppendSci

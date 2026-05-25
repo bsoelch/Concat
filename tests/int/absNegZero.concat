@@ -21,15 +21,12 @@ proc( -> ) =>: export: main
   { 0:i64 0:i64 0:i64 } =:: elts
   elts@ slice.wrap true int.fromI64slice
     $ int.isZero "slice is zero" assert
-    $ printInt
-  int.free
+  printInt
   { 0x123456789abcdef 0xfedcba9876543210:i64 0x123456789abcdef } =:: shadow: elts
   elts@ slice.wrap false int.fromI64slice
     $ int.isZero ! "slice is non-zero" assert
-    $ printInt
+    $ int.copy printInt
   int.negate
-    $ printInt
-  int.abs
-    $ printInt
-  int.free
+    $ int.copy printInt
+  int.abs printInt
 end

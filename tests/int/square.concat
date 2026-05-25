@@ -8,6 +8,6 @@ proc( int : x -> ) =>: printInt
 end
 proc( -> ) =>: export: main
   { -1:i64 -1 -1 } slice.wrap false int.fromSlice =:: a
-  a printInt
+  a int.copy printInt
   a int.square printInt
 end

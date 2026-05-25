@@ -10,7 +10,7 @@ proc( -> ) =>: export: main
   7 int.fromI32
     100 for ..drop
       7 int.fromI32 int.mul
-      $ printInt
+      $ int.copy printInt
     end
   int.free
 end

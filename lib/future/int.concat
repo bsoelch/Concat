@@ -552,17 +552,37 @@ namespace: int
         2  case
           >$ srcBits padTo u< if padTo srcBits - for ..drop padWith sb.appendC end end <$
           base _impl.sbAlignedPow2Append
+          val free
         break
         4  case
           >$ srcBits padTo 2 * u< if padTo 2 * srcBits - 2 u/ for ..drop padWith sb.appendC end end <$
           base _impl.sbAlignedPow2Append
+          val free
         break
         16 case
           >$ srcBits padTo 4 * u< if padTo 4 * srcBits - 4 u/ for ..drop padWith sb.appendC end end <$
           base _impl.sbAlignedPow2Append
+          val free
         break
         ## TODO: special case for bases 8 and 32 ( O(n) conversion )
-        default base padWith padTo _impl.sbPaddedBaseAppend break
+        default
+          val $1 .length asWritableBuffer
+            $ ? =:: inplace
+          .if
+            >$ .length >$ .length= ## truncate buffer to length needed for value
+            val free ## original value no longer needed
+          else
+            slice.copy
+            val free ## original value no longer needed
+          end
+            $ =:: digits
+          base padWith padTo _impl.sbPaddedBaseAppend
+          inplace if
+            val free ## free use for buffer
+          else
+            digits slice.free ..drop
+          end
+        break
       end
     return
   end
@@ -577,13 +597,32 @@ namespace: int
     end
     val sign 0 < if '-' sb.appendC end
     Digit MAX_INLINE_DIGITS array : mut: buf
+    ## gohere
     val buf@ asSlice
       base switch
-        2  case base _impl.sbAlignedPow2Append break
-        4  case base _impl.sbAlignedPow2Append break
-        16 case base _impl.sbAlignedPow2Append break
+        2 4 16 case
+          base _impl.sbAlignedPow2Append
+          val free
+        return
         ## TODO: special case for bases 8 and 32 ( O(n) conversion )
-        default base _impl.sbBaseAppend break
+        default
+          val $1 .length asWritableBuffer
+            $ ? =:: inplace
+          .if
+            >$ .length >$ .length= ## truncate buffer to length needed for value
+            val free ## original value no longer needed
+          else
+            slice.copy
+            val free ## original value no longer needed
+          end
+            $ =:: digits
+          base _impl.sbBaseAppend
+          inplace if
+            val free ## free use for buffer
+          else
+            digits slice.free ..drop
+          end
+        return
       end
     return
   end
@@ -1500,25 +1539,20 @@ namespace: int
       digitBuffer list.reversed for
         base '0' chunkDigits sb.appendPaddedU
       end
-      digits slice.free ..drop
       digitBuffer list.free ..drop
     end
-    proc( stringBuilder Digit slice : digits i32 : base char8 : padWith iSize : padTo -> stringBuilder ) =>: shadow: sbPaddedBaseAppend
-      digits slice.copy base padWith padTo sbSimpleBaseAppend
+    proc( stringBuilder Digit slice.mut : digits i32 : base char8 : padWith iSize : padTo -> stringBuilder ) =>: shadow: sbPaddedBaseAppend
+      digits base padWith padTo sbSimpleBaseAppend
     end
-    proc( stringBuilder Digit slice : digits i32 : base -> stringBuilder ) =>: shadow: sbBaseAppend
+    proc( stringBuilder Digit slice.mut : digits i32 : base -> stringBuilder ) =>: shadow: sbBaseAppend
       ## TODO? recursive sub-quadric algorithm for large numbers
-      digits slice.copy base '0' 0 sbSimpleBaseAppend
+      digits base '0' 0 sbSimpleBaseAppend
     end
 ## helpers
     proc( Digit slice.mut : res -> Digit slice.mut ) =>: removeLeadingZeros
       res .length while $ 1 - <$ 0 != do =:: i
         res i [] ? if i break end
       finally i end 1 + =:: newLength
-      newLength 0 == if
-        res slice.free ..drop
-        Digit slice.emptyMutable return
-      end
       res
         newLength >$ .length=
       return
