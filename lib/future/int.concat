@@ -201,6 +201,15 @@ namespace: int
     end
   end
 ## reference management
+  proc( int : a -> i64 ) =>: export: refCount
+    a .data IntData.asInt ? if
+      i64.MAX return
+    else a .data IntData.asPtr ._if
+      REF_COUNT_INDEX [] i64 cast.u return
+    else
+      "unexpected int-data-type" ..panic
+    end
+  end
   proc( int : a -> int ) =>: export: copy
     a .data IntData.asInt ? if
       a return ## nothing to copy
@@ -1224,7 +1233,9 @@ namespace: int
     a resultDigits asWritableBuffer .else
     b resultDigits asWritableBuffer ._else
       resultDigits prepareCap
-    end =:: dstData
+    end
+      resultDigits >$ .length=
+    =:: dstData
     aData aSign bData bSign dstData _impl.bitAnd =:: resData
     resData aSign 0 < and bSign 0 < end fromRawDigits
       a free b free
@@ -1296,7 +1307,9 @@ namespace: int
     a resultDigits asWritableBuffer .else
     b resultDigits asWritableBuffer ._else
       resultDigits prepareCap
-    end =:: dstData
+    end
+      resultDigits >$ .length=
+    =:: dstData
     aData aSign bData bSign dstData _impl.bitOr =:: resData
     resData aSign 0 < or bSign 0 < end fromRawDigits
       a free b free
@@ -1333,7 +1346,9 @@ namespace: int
     a resultDigits asWritableBuffer .else
     b resultDigits asWritableBuffer ._else
       resultDigits prepareCap
-    end =:: dstData
+    end
+      resultDigits >$ .length=
+    =:: dstData
     aData aSign bData bSign dstData _impl.bitXor =:: resData
     resData aSign bSign != fromRawDigits
       a free b free
@@ -1652,7 +1667,7 @@ namespace: int
         low res s =[]
         s 1 + =:: mut: t
         false
-          mid res t [] Digit.addc res t =[]
+          mid t newLength == if 0 Digit cast else res t [] end Digit.addc res t =[]
           $ or hi ? if hi res t 1 + [] Digit.addc res t 1 + =[] end
         $ if
           t 2 + t=
@@ -1691,6 +1706,8 @@ namespace: int
         low ? if
           low res newLength =[]
           newLength 1 + >$ .length=
+        else
+          newLength >$ .length=
         end
       removeLeadingZeros return
     end
@@ -1903,7 +1920,9 @@ namespace: int
         end ..drop
       res dstIndex =[]
       res .data digitShift mem.clear ..drop
-      res return
+      res
+        newLength 1 + >$ .length=
+      return
     end
     proc( Digit slice : a Digit slice.mut : res iSize : count -> Digit slice.mut ) =>: shadow: shr
       count 64 u/ =:: digitShift

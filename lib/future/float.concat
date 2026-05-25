@@ -53,7 +53,6 @@ namespace: float
   int.ONE       0 FloatType .EXACT ExpData.fromExponent float new =:: export: ONE
   int.TWO       0 FloatType .EXACT ExpData.fromExponent float new =:: export: TWO
   int.MINUS_ONE 0 FloatType .EXACT ExpData.fromExponent float new =:: export: MINUS_ONE
-
   ## TODO: support rounding modes
   proc( int : magnitude iSize : exponent Precission : shadow: precission -> float ) =>: export: create
     magnitude
@@ -383,16 +382,16 @@ namespace: float
       -108:iSize float.Precission.INFINITE
     float.create =:: q ## 32/17
     ## initial estimate: y0 = 48/17 - 32/17 * x  [error at most 1/17+2^-100]
-    ## FIXME why does calculating in float-mode lead to completely different results
-    p q x copy mul sub
-      ## precission setPrecission
-    ## iteration step: y =  y*( 2 - y*x )  -> doubled number of correct digits
-      ## precission after N steps is 2^S * log 17 -1 -> need aproximately:  ceil(log2 (P/4 +1)) steps
-      precission 4 / 1 + i64 cast.u i64.highestSetBit 1 + for ..drop
-        TWO $1 copy x copy mul sub mul
-      end
-      TWO $1 copy x mul sub mul
+    ## FIXME ref-count corruption in some floating point operation (related to precission-rounding?)
+    p q x copy mul sub ## TODO? combined mul-add / mul-sub operations
       precission setPrecission
+    ## iteration step: y =  y + y*( 1 - y*x )  -> doubles number of correct digits
+      ## precission after N steps is 2^S * log 17 -1 -> need aproximately:  ceil(log2 (P/4 +1)) steps
+      ## TODO: better estimate for required step-count to reduce number of unneccessary steps
+      precission 4 / 1 + i64 cast.u i64.highestSetBit 1 + for ..drop
+        $ copy ONE $1 copy x copy mul sub mul add
+      end
+      $ copy ONE $1 copy x mul sub mul add
       $ .exponent scaleFactor ExpData.scale >$ .exponent=
     return
   end
