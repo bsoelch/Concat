@@ -85,7 +85,7 @@ namespace: NameId
     a iSize cast! b iSize cast! iSize.eq return
   end
   proc( NameId : a NameId : b -> i32 ) =>: export: cmp
-    a iSize cast! b iSize cast! iSize.cmp return
+    a iSize cast! b iSize cast! iSize.ucmp return
   end
 
   proc( NameId : a -> i32 ) =>: export: hashName

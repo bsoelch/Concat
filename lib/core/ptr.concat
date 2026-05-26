@@ -137,7 +137,7 @@ namespace: ptr
   end
 
   proc( type : auto: T T ptr.raw : p T ptr.raw : q -> i32 ) =>: export: cmp
-    p iSize cast! q iSize cast! iSize.cmp
+    p iSize cast! q iSize cast! iSize.ucmp
   end
   proc( type : auto: T T ptr.raw : p T ptr.raw : q -> bool ) =>: export: lt
     p iSize cast! q iSize cast! iSize.lt
@@ -301,7 +301,7 @@ namespace: iSize
   ( iSize -> bool ) =>: export: toBool
     0 !=
   end
-  ( iSize : a iSize : b -> i32 ) =>: export: cmp
+  ( iSize : a iSize : b -> i32 ) =>: export: ucmp
     a b u> ?1 a b u< ?1 -
   end
   ( iSize : a iSize : b -> iSize ) =>: export: min
@@ -431,7 +431,7 @@ end
 overload: export: <=>
   ptr.cmp
   ptr.cmp0D
-  iSize.cmp
+  iSize.ucmp
 end
 overload: export: u<
   ptr.lt

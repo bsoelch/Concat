@@ -1610,7 +1610,7 @@ namespace: int
     proc( Digit slice : a Digit slice : b -> i32 ) =>: shadow: ucmp
       a $ .length 1 - [] ? and b $ .length 1 - [] ? end "leading element is non-zero" assert
       a .length b .length != if
-        a .length b .length iSize.cmp return
+        a .length b .length iSize.ucmp return
       end
       a .data b .data == if 0 return end
       a .length while $ 1 - <$ 0 != do =:: i

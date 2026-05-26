@@ -106,7 +106,7 @@ namespace: types
   proc( CompositeInfo ptr : a CompositeInfo ptr : b -> i32 ) =>: compositeTypeCmp
     a b ptr.eq if 0 return end
     a .elements [] .length b .elements [] .length != if
-      a .elements [] .length b .elements [] .length iSize.cmp return
+      a .elements [] .length b .elements [] .length iSize.ucmp return
     end
     ## TODO? should types that only differ by missing eltNames (id.NONE vs no identifier) be treated differently
     a [] .eltNames ? b [] .eltNames ? != if
@@ -191,13 +191,13 @@ namespace: types
       aData [] .callingConvention ..tag bData [] .callingConvention ..tag <=> return
     end
     aData [] .inTypes .length bData [] .inTypes .length != if
-      aData [] .inTypes .length bData [] .inTypes .length iSize.cmp return
+      aData [] .inTypes .length bData [] .inTypes .length iSize.ucmp return
     end
     aData [] .outTypes .length bData [] .outTypes .length != if
-      aData [] .outTypes .length bData [] .outTypes .length iSize.cmp return
+      aData [] .outTypes .length bData [] .outTypes .length iSize.ucmp return
     end
     aData [] .eltNames .length bData [] .eltNames .length != if
-      aData [] .eltNames .length bData [] .eltNames .length iSize.cmp return
+      aData [] .eltNames .length bData [] .eltNames .length iSize.ucmp return
     end
     aData [] .inTypes bData [] .inTypes typeCmp@ slice.cmp
       $ ? if return else ..drop end
