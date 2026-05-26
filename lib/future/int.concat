@@ -285,6 +285,7 @@ namespace: int
   0 fromI32 =:: export: ZERO
   1 fromI32 =:: export: ONE
   2 fromI32 =:: export: TWO
+  3 fromI32 =:: export: THREE
   -1 fromI32 =:: export: MINUS_ONE
   ( type : I -> type ) =>: export: IntConversionResult
     union(

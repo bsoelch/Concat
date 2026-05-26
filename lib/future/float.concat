@@ -52,6 +52,7 @@ namespace: float
   int.ZERO      0 FloatType .EXACT ExpData.fromExponent float new =:: export: ZERO
   int.ONE       0 FloatType .EXACT ExpData.fromExponent float new =:: export: ONE
   int.TWO       0 FloatType .EXACT ExpData.fromExponent float new =:: export: TWO
+  int.THREE     0 FloatType .EXACT ExpData.fromExponent float new =:: export: THREE
   int.MINUS_ONE 0 FloatType .EXACT ExpData.fromExponent float new =:: export: MINUS_ONE
   ## TODO: support rounding modes
   proc( int : magnitude iSize : exponent Precission : shadow: precission -> float ) =>: export: create
@@ -352,16 +353,50 @@ namespace: float
       prec
     float.create return
   end
-  proc( float -> float ) =>: export: sqrt
-    ## ? iterate x -> x + x(1-x^2/A)/2 (precompute 1/A to needed precission)
-    ## alternative: x -> x(3/2-x^2/(2A))
-    "unimplemented: sqrt" ..panic
+  proc( float : x -> float ) =>: export: sqrt
+    x .magnitude int.bitLength
+      $ =:: srcBits
+      x .exponent ExpData.isExact if
+        64 iSize.max
+      end
+    =:: precission
+    x copy
+      precission setPrecission
+    $ copy inv =:: xInv
+    ## initial estimate: scale top coefficient to match expected scale
+      $ .exponent ExpData.exponent srcBits - 2 / ## (bitlen+exp)/2 - bitlen
+      FloatType .FLOAT ExpData.fromExponent >$ .exponent=
+    ## iteration step: y =  y + y(1-y^2/A)/2 (precompute 1/A to needed precission)
+      ## TODO: what is a good lower bound for the number of iteration steps
+      precission i64 cast.u i64.highestSetBit 1 + for ..drop
+        $ copy ONE $1 copy square xInv copy mul sub mul -1 scale add
+      end
+      $ copy ONE $1 copy square xInv mul sub mul -1 scale add
+    return
   end
-  proc( float -> float ) =>: export: cbrt
-    ## x^3-A -> x-(x-A/x^2)/3
-    ## A/x^3 -1 -> x + x(1-x^3/A)/3
-    ## alternative: x -> x(4/3-x^3/(3A))
-    "unimplemented: cbrt" ..panic
+  proc( float : x -> float ) =>: export: cbrt
+    x .magnitude int.bitLength
+      $ =:: srcBits
+      x .exponent ExpData.isExact if
+        64 iSize.max
+      end
+    =:: precission
+    THREE copy
+      precission 1 + setPrecission
+    inv =:: oneThird
+    x copy
+      precission setPrecission
+    $ copy inv =:: xInv
+    ## initial estimate: scale top coefficient to match expected scale
+      $ .exponent ExpData.exponent srcBits 2 * - 3 / ## (bitlen+exp)/3 - bitlen = (exp-2*bitlen)/3
+      FloatType .FLOAT ExpData.fromExponent >$ .exponent=
+    ## iteration step: y =  y + y(1-y^3/A)/3 (precompute 1/A to needed precission)
+      ## TODO: what is a good lower bound for the number of iteration steps
+      precission i64 cast.u i64.highestSetBit 1 + for ..drop
+        $ copy ONE $1 copy $ copy square mul xInv copy mul sub mul oneThird copy mul add
+      end
+      $ copy ONE $1 copy $ copy square mul xInv mul sub mul oneThird mul add
+    return
   end
   proc( float : x -> float ) =>: export: inv
     x .magnitude int.bitLength
