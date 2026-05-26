@@ -245,8 +245,10 @@ namespace: iSize
     ( iSize : a iSize : b -> iSize ) : export: alias: sub ..builtIn.sub.i64
     ( iSize : a -> iSize ) : export: alias: neg ..builtIn.neg.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: mul ..builtIn.mul.i64
-    ( iSize : a iSize : b -> iSize ) : export: alias: div ..builtIn.udiv.i64
-    ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: div ..builtIn.div.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: udiv ..builtIn.udiv.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: rem ..builtIn.rem.i64
+    ( iSize : a iSize : b -> iSize ) : export: alias: umod ..builtIn.umod.i64
     ( iSize : a iSize : b -> iSize ) : export: alias: shr ..builtIn.lshr.i64
     ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i64i32
     ( iSize : a iSize : b -> iSize ) : export: alias: ashr ..builtIn.ashr.i64
@@ -273,8 +275,10 @@ namespace: iSize
     ( iSize : a iSize : b -> iSize ) : export: alias: sub ..builtIn.sub.i32
     ( iSize : a -> iSize ) : export: alias: neg ..builtIn.neg.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: mul ..builtIn.mul.i32
-    ( iSize : a iSize : b -> iSize ) : export: alias: div ..builtIn.udiv.i32
-    ( iSize : a iSize : b -> iSize ) : export: alias: mod ..builtIn.umod.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: div ..builtIn.div.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: udiv ..builtIn.udiv.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: rem ..builtIn.rem.i32
+    ( iSize : a iSize : b -> iSize ) : export: alias: umod ..builtIn.umod.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: shr ..builtIn.lshr.i32
     ( iSize : a i32 : b -> iSize ) : export: alias: shrI32 ..builtIn.lshr.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: ashr ..builtIn.ashr.i32
@@ -371,13 +375,13 @@ overload: export: /
   iSize.div
 end
 overload: export: u/
-  iSize.div
+  iSize.udiv
 end
 overload: export: %
-  iSize.mod
+  iSize.rem
 end
 overload: export: u%
-  iSize.mod
+  iSize.umod
 end
 overload: export: >>>
   iSize.shr
