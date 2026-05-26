@@ -398,9 +398,12 @@ namespace: float
   proc( float : a float : b -> float ) =>: export: div
     a b inv mul
   end
-  proc( float float -> float #+div+# float #+rem+# ) =>: export: divRem
+  proc( float : a float : b -> float #+div+# float #+rem+# ) =>: export: divRem
     ## rem = a-b*floor(a/b)
-    "unimplemented: divRem" ..panic
+    ## TODO! compute division with higher precission to get full-precission for remainder
+    a copy b copy div floor
+      a b $2 copy mul sub
+    return
   end
   proc( float float -> float ) =>: export: rem
     divRem >$ free

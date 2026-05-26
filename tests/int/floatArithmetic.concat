@@ -1,0 +1,27 @@
+## simple float-arithmetic
+import future/float
+import print
+
+proc( float -> ) =>: printFloat
+  0 sb.create
+    $1 float.copy float.sbAppend
+    $ sb.asStr io.println
+    sb.clear
+    >$ float.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
+
+proc( -> ) =>: export: main
+  "0x3'243f_6a88_85a3_08d3_1319_8a2e_0370_7344_a409_3822":s 0 int.parse ..drop =:: a0
+  "0x2'b7e1_5162_8aed_2a6a_bf71_5880_9cf4_f3c7_62e7_160f":s 0 int.parse ..drop =:: b0
+  a0 -160:iSize 162 float.Precission.fromBits float.create =:: a
+  b0 -160:iSize 162 float.Precission.fromBits float.create =:: b
+  a float.copy printFloat
+  b float.copy printFloat
+  a float.copy b float.copy float.add printFloat
+  a float.copy b float.copy float.sub printFloat
+  a float.copy b float.copy float.mul printFloat
+  a float.copy b float.copy float.div printFloat
+  a b float.rem printFloat
+end

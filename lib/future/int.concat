@@ -1369,7 +1369,9 @@ namespace: int
     a buf@ asSlice =:: aData
     a resultDigits asWritableBuffer .else
       resultDigits prepareCap
-    end =:: dstData
+    end
+      resultDigits >$ .length=
+    =:: dstData
     aData dstData n iSize cast.u _impl.shl =:: resData
     resData a sign 0 < fromRawDigits
       a free
@@ -1901,9 +1903,7 @@ namespace: int
         ## shifted by multiple of digit size
         res .data digitShift @[] a .data a .length mem.move ..drop
         res .data digitShift mem.clear ..drop
-        res
-          newLength >$ .length=
-        removeLeadingZeros return
+        res removeLeadingZeros return
       end
       newLength =:: mut: dstIndex
       0 Digit cast.u
@@ -1921,9 +1921,7 @@ namespace: int
         end ..drop
       res dstIndex =[]
       res .data digitShift mem.clear ..drop
-      res
-        newLength 1 + >$ .length=
-      removeLeadingZeros return
+      res removeLeadingZeros return
     end
     proc( Digit slice : a Digit slice.mut : res iSize : count -> Digit slice.mut ) =>: shadow: shr
       count 64 u/ =:: digitShift
