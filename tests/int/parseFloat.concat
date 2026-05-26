@@ -1,0 +1,17 @@
+import future/float
+import print
+
+proc( float -> ) =>: printFloat
+  0 sb.create
+    $1 float.copy float.sbAppend
+    $ sb.asStr io.println
+    sb.clear
+    >$ float.sbAppendX
+    $ sb.asStr io.println
+  sb.free ..drop
+end
+
+proc( -> ) =>: export: main
+  "3.1415926535897932384626433832795028851971693993":s 0 float.parse ..drop printFloat
+  "1.0001":s 0 float.parse ..drop printFloat
+end

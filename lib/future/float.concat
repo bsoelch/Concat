@@ -18,6 +18,11 @@ namespace: float
     end
   end
   iSize =:: export: Precission
+  iSize ..types.size i32 ..types.size == if
+    56:iSize
+  else
+    64:iSize
+  end =:: DEFAULT_PRECISSION
   namespace: Precission
     0 Precission cast =:: export: INFINITE
     proc( iSize -> Precission ) =>: export: fromBits
@@ -196,7 +201,44 @@ namespace: float
   ##  <base-prefix> <digit>+ ( '.' <digit>+ )?
   ##  <base-prefix> <digit> ( '.' <digit>+ )? <exp-char> [+-]? <digit>+
   proc( string : str i32 : base -> float number.ParserError ) =>: export: parse
-    "unimplemented: parse" ..panic
+    using number.ParserError
+    str
+      number.parseSign =:: hasSign
+      base number.resolveBase =:: shadow: base
+      base 2 u< or base 62 u> if ..drop
+        ZERO ParserError .INVALID_BASE return
+      end
+    =:: digits
+    0:iSize =:: mut: digitCount
+    0:iSize =:: mut: fracDigitCount
+    false =:: mut: hasDot
+    digits string.chars for
+      hasDot ! and $ '.' == if
+        ..drop true hasDot= continue
+      end
+      ## TODO handle exponents
+      base number.parseDigit switch
+        DIGIT case ..drop
+          digitCount 1 + digitCount=
+          hasDot if fracDigitCount 1 + fracDigitCount= end
+        continue
+        IGNORED case ..drop continue
+        INVALID case ..drop ZERO ParserError .INVALID_CHAR return
+      end
+    end
+    digits digitCount base int.parseRaw fromInt
+      fracDigitCount 0 != if
+        base i32.isPow2 if ## base is power of two
+          base i32.highestSetBit 1 + -_ iSize cast.s scale
+        else
+          base int.fromU32 fracDigitCount i32 cast.u int.pow fromInt
+            $1 .magnitude int.bitLength $1 .magnitude int.bitLength iSize.max DEFAULT_PRECISSION iSize.max
+              $ =:: valPrec
+            5 + setPrecission
+          div valPrec setPrecission
+        end
+      end
+    ParserError .NONE return
   end
   { 0 0 1024 646 512 441 396 364 341 323 308 296 285 276 268 262 256 250 245
     241 236 233 229 226 223 220 217 215 213 210 208 206 204 202 201 199 198
@@ -228,6 +270,9 @@ namespace: float
           base int.fromI32 fracDigits i32 cast.u int.pow fromInt mul
           RoundingMode .HALF_EVEN toInt
         base '0' fracDigits int.sbPaddedBaseAppend
+        ## TODO: print-mode that includes digits up to precission
+        ## discard trailing 0s
+        $ .length while $1 $1 1 - sb.charAt '0' == do 1 - end sb.setLength
       else val free end
       return
     else
@@ -357,7 +402,7 @@ namespace: float
     x .magnitude int.bitLength
       $ =:: srcBits
       x .exponent ExpData.isExact if
-        64 iSize.max
+        DEFAULT_PRECISSION iSize.max
       end
     =:: precission
     x copy
@@ -378,7 +423,7 @@ namespace: float
     x .magnitude int.bitLength
       $ =:: srcBits
       x .exponent ExpData.isExact if
-        64 iSize.max
+        DEFAULT_PRECISSION iSize.max
       end
     =:: precission
     THREE copy
@@ -404,7 +449,7 @@ namespace: float
         $ ExpData.exponent $2 + -_ =:: scaleFactor
       ExpData.isExact if
         x $1 -_ FloatType .EXACT ExpData.fromExponent >$ .exponent=
-        >$ 64 iSize.max <$
+        >$ DEFAULT_PRECISSION iSize.max <$
       else
         x $1 -_ FloatType .FLOAT ExpData.fromExponent >$ .exponent=
       end =:: shadow: x
@@ -422,7 +467,6 @@ namespace: float
     ## iteration step: y =  y + y*( 1 - y*x )  -> doubles number of correct digits
       ## precission after N steps is 2^S * log 17 -1 -> need aproximately:  ceil(log2 (P/4 +1)) steps
       ## TODO? compute early steps with lower precission to reduce required computation time, two steps with full precission should be enough to get accurate result from value computed with half precission
-      ## TODO: better estimate for required step-count to reduce number of unneccessary steps
       precission 4 / 1 + i64 cast.u i64.highestSetBit 1 + for ..drop
         $ copy ONE $1 copy x copy mul sub mul add
       end
@@ -431,7 +475,11 @@ namespace: float
     return
   end
   proc( float : a float : b -> float ) =>: export: div
-    a b inv mul
+    a getPrecission b getPrecission Precission.max =:: resPrecission
+    ## TODO: ensure precission of b is a least precission/bit-length of a
+    a
+      b resPrecission Precission.toBits .if setPrecission end inv
+    mul
   end
   proc( float : a float : b -> float #+div+# float #+rem+# ) =>: export: divRem
     ## rem = a-b*floor(a/b)

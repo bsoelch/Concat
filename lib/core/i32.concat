@@ -82,6 +82,9 @@ namespace: i32
     end
   end
 
+  proc( i32 -> bool ) =>: export: isPow2
+    $ $ -_ & == ## x&(-x) isolated lowest bit if x == x&(-x) then x only has a single nonzero bit
+  end
   proc( i32 -> i32 ) =>: export: bitrev
     $ 0xffff0000:i32 & 16 >>> >$ 0x0000ffff:i32 & 16 << |
     $ 0xff00ff00:i32 &  8 >>> >$ 0x00ff00ff:i32 &  8 << |

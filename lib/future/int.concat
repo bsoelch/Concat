@@ -62,6 +62,8 @@ namespace: int
   end
 
   iSize =:: IntData
+  ## TODO? variant using static-pointer (additional tag-bit for points indicating if memory is static or dynamic)
+  ##   static memory has immutable (not-owned) pointer to data, can be used to allocate large ints at compile-time (:int) literal
   namespace: IntData
     3:iSize =:: MASK_TAG
     2:iSize =:: SHIFT_TAG
@@ -473,8 +475,7 @@ namespace: int
             i64 cast.u val base i64 cast.u * + val=
             count 1 - count= ## only decrease count when hitting digit
           continue
-          IGNORED case ..drop continue
-          INVALID case "invalid digit" ..panic ## invalid digits should have been filtered out by preparation step
+          IGNORED INVALID case ..drop continue ## invalid digits should have been filtered out by preparation step
         end
       end
     val fromU64
@@ -484,14 +485,14 @@ namespace: int
     using number.ParserError
     str
       number.parseSign =:: hasSign
-      base number.resolveBase =:: mBase
-      mBase 2 u< or mBase 62 u> if ..drop
+      base number.resolveBase =:: shadow: base
+      base 2 u< or base 62 u> if ..drop
         ZERO ParserError .INVALID_BASE return
       end
     =:: digits
     0:iSize =:: mut: digitCount
     digits string.chars for
-      mBase number.parseDigit switch
+      base number.parseDigit switch
         DIGIT case ..drop digitCount 1 + digitCount= continue
         IGNORED case ..drop continue
         INVALID case ..drop ZERO ParserError .INVALID_CHAR return
@@ -500,7 +501,13 @@ namespace: int
     digitCount 0 == if
       ZERO ParserError .EMPTY return
     end
-    _impl.BASE_DIGITS_I64 mBase [] =:: baseDigitCount
+    digits digitCount base parseRaw
+       hasSign if negate end
+    ParserError .NONE
+  end
+  proc( string : digits iSize : digitCount i32 : base -> int ) =>: export: parseRaw
+    using number.ParserError
+    _impl.BASE_DIGITS_I64 base [] =:: baseDigitCount
     digitCount baseDigitCount iSize cast.u % i32 cast.u =:: head_digits
     digitCount baseDigitCount iSize cast.u /
       head_digits 0 != if 1 + end
@@ -514,15 +521,15 @@ namespace: int
     digits
       slotCount
         head_digits 0 != if
-          >$ head_digits mBase parseDigits slots $3 1 - =[] <$
+          >$ head_digits base parseDigits slots $3 1 - =[] <$
           1 -
         end
       while $ 1 - <$ 0 != do
-        >$ baseDigitCount mBase parseDigits slots $3 =[] <$
+        >$ baseDigitCount base parseDigits slots $3 =[] <$
       end ..drop
     .length 0 == "all digits were parsed" assert
     slotCount 1 u> if
-      _impl.BASE_POW_I64 mBase []
+      _impl.BASE_POW_I64 base []
         $ 0 == if ..drop 1 0 i128.create fromU128 else fromU64 end
       =:: mut: p
       slotCount while
@@ -540,11 +547,11 @@ namespace: int
       end ..drop
       p free
     end
-    slots 0 [] hasSign if negate end
+    slots 0 []
       slotCount 4 u> if
         slots slice.free ..drop
       end
-    ParserError .NONE return
+    return
   end
   proc( stringBuilder int : val i32 : base char8 : padWith iSize : padTo -> stringBuilder ) =>: export: sbPaddedBaseAppend
     val asI64 .if
