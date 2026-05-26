@@ -21,7 +21,7 @@ namespace: int
     proc( Digit Digit -> Digit ) : alias: add i64.add
     proc( Digit Digit -> Digit ) : alias: sub i64.sub
     proc( Digit Digit -> Digit ) : alias: mul i64.mul
-    proc( Digit Digit -> i32 ) : alias: cmp i64.ucmp
+    proc( Digit Digit -> i32 ) : alias: ucmp i64.ucmp
     proc( Digit -> Digit ) : alias: flip i64.flip
     proc( Digit Digit -> Digit ) : alias: and i64.and
     proc( Digit Digit -> Digit ) : alias: or i64.or
@@ -736,7 +736,7 @@ namespace: int
     b resultDigits asWritableBuffer ._else
       resultDigits prepareCap
     end =:: dstData
-    aData bData _impl.cmp =:: c
+    aData bData _impl.ucmp =:: c
     c 0 > if
       aData bData dstData _impl.sub =:: resData
       resData aSign 0 < fromRawDigits
@@ -1105,7 +1105,7 @@ namespace: int
   proc( int : a int : b -> i32 ) =>: export: ucmp
     Digit MAX_INLINE_DIGITS array : mut: bufA
     Digit MAX_INLINE_DIGITS array : mut: bufB
-    a bufA@ asSlice b bufB@ asSlice _impl.cmp
+    a bufA@ asSlice b bufB@ asSlice _impl.ucmp
   end
   proc( int : a int : b -> int ) =>: export: min
     a b cmp 0 < if
@@ -1607,14 +1607,14 @@ namespace: int
         return
       end
     end
-    proc( Digit slice : a Digit slice : b -> i32 ) =>: shadow: cmp
+    proc( Digit slice : a Digit slice : b -> i32 ) =>: shadow: ucmp
       a $ .length 1 - [] ? and b $ .length 1 - [] ? end "leading element is non-zero" assert
       a .length b .length != if
         a .length b .length iSize.cmp return
       end
       a .data b .data == if 0 return end
       a .length while $ 1 - <$ 0 != do =:: i
-        a i [] b i [] Digit.cmp =:: c
+        a i [] b i [] Digit.ucmp =:: c
         c 0 != if c return end
       finally i end ..drop
       0 return
