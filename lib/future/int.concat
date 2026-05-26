@@ -1608,6 +1608,7 @@ namespace: int
       end
     end
     proc( Digit slice : a Digit slice : b -> i32 ) =>: shadow: cmp
+      a $ .length 1 - [] ? and b $ .length 1 - [] ? end "leading element is non-zero" assert
       a .length b .length != if
         a .length b .length iSize.cmp return
       end
@@ -1902,7 +1903,7 @@ namespace: int
         res .data digitShift mem.clear ..drop
         res
           newLength >$ .length=
-        return
+        removeLeadingZeros return
       end
       newLength =:: mut: dstIndex
       0 Digit cast.u
@@ -1922,7 +1923,7 @@ namespace: int
       res .data digitShift mem.clear ..drop
       res
         newLength 1 + >$ .length=
-      return
+      removeLeadingZeros return
     end
     proc( Digit slice : a Digit slice.mut : res iSize : count -> Digit slice.mut ) =>: shadow: shr
       count 64 u/ =:: digitShift
