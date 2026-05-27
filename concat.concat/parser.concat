@@ -1290,9 +1290,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "'default' is only allowed in switch-case-blocks" sb.copyPtr blockPos errors appendError
         return
       end
-    else $ "=>":s string.eq or $ "=>:":s string.eq or $ "${":s string.eq _if =:: opName
+    else $ "=>":s string.eq or $ "=>:":s string.eq or $ "@{":s string.eq _if =:: opName
       opName .length 3:iSize == =:: named
-      opName 0 [] '$' == =:: isQuotation
+      opName 0 [] '@' == =:: isQuotation
       state [] .currentProcs .length 0:iSize != =:: isNested
       char8 32 array : mut: buffer
         buffer@ sb.wrapBuffer

@@ -862,7 +862,7 @@ namespace: slice
     T slice : elts
     T slice : subseq
   -> T slice T slice ) =>: export: splitSeq
-    elts subseq ${ == } indexOfSlice .else
+    elts subseq @{ == } indexOfSlice .else
       T empty elts return
     end =:: offset
       elts offset subseq .length + tail

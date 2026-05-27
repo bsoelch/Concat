@@ -873,7 +873,7 @@ proc(
   ProgramContext new
 end
 proc( ProgramContext ptr.mut -> ) =>: export: freeStaticProcs
-  $ [] .procedures ${ ProcId.getProcInfo =:: procInfo
+  $ [] .procedures @{ ProcId.getProcInfo =:: procInfo
     procInfo [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if
       procInfo [] freeProcedure false
     else
@@ -882,7 +882,7 @@ proc( ProgramContext ptr.mut -> ) =>: export: freeStaticProcs
   } list.filter >$ .procedures=
 end
 proc( ProgramContext ptr.mut -> ) =>: export: freeUnusedProcs
-  $ [] .procedures ${ ProcId.getProcInfo =:: procInfo
+  $ [] .procedures @{ ProcId.getProcInfo =:: procInfo
     procInfo [] .flags ProcFlags.IS_USED & ? ! if
       procInfo [] freeProcedure false
     else
