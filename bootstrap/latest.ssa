@@ -696,20 +696,20 @@ data $cct_53_Ftypes_dPTR__ALIGN = align 8 {l 8}
 data $cct_34_Ff64_dMIN__POSITIVE = align 8 {d 1}
 export data $cct_AMD64_dreg_dRBX = align 4 {w 48}
 export data $cct_unicode_dMAX__CODEPOINT = align 4 {w 1114111}
-data $cct_58_FOP__UNLINKED = align 4 {w -1}
 export data $cct_id_dFLAG__INLINE = align 4 {w 32}
+data $cct_58_FOP__UNLINKED = align 4 {w -1}
 data $cct_53_Ftypes_dSimpleTypeInfo_dMIXED = align 1 {b 3}
 data $cct_0_FDumpPhases_dTYPE__CHECKER = align 2 {h 2}
-data $cct_63_FVariableUse_dTAG__BITS = align 8 {l 2}
 export data $cct_exec_dRedirectMode_dAPPEND__STD__OUT = align 4 {w 1}
+data $cct_63_FVariableUse_dTAG__BITS = align 8 {l 2}
 export data $cct_optimizerFlags_dREMOVE__UNUSED__PROCS = align 1 {b 1}
-data $cct_63_FVariableUse_dTYPE__WRITE = align 8 {l 1}
 export data $cct_file_dError_dEND__OF__FILE = align 4 {w -1}
+data $cct_63_FVariableUse_dTYPE__WRITE = align 8 {l 1}
 export data $cct_AMD64_dreg_dRDI = align 4 {w 112}
-data $cct_45_Futf16_dLOW__SURROGATE__FLAG = align 4 {w 56320}
-data $cct_0_FdumpPhases = align 2 {h 0}
 export data $cct_AMD64_dop_dSETBE = align 4 {w 35}
 export data $cct_id_dFLAG__EMPTY = align 4 {w 128}
+data $cct_0_FdumpPhases = align 2 {h 0}
+data $cct_45_Futf16_dLOW__SURROGATE__FLAG = align 4 {w 56320}
 export data $cct_AMD64_dop_dJLT = align 4 {w 19}
 export data $cct_AMD64_dop_dCALL = align 4 {w 37}
 export data $cct_exec_dRedirectMode_dAPPEND__STD__ERR = align 4 {w 2}
@@ -722,32 +722,32 @@ export data $cct_id_dNO__SCOPE = align 4 {w -1}
 export data $cct_types_dctype_dS__CHAR = align 8 {b 3,z 7,b 4}
 export data $cct_asm_dRegisterId_dSIZE__32 = align 4 {w 1}
 export data $cct_id_dFLAG__NO__INLINE = align 4 {w 64}
-data $cct_58_FIfBlockFlags_dhasIf = align 4 {w 1}
-data $cct_56_Fid_dID__NONE = align 8 {l $cctI_ptr0,l 0,w -1,w 0}
 export data $cct_ProcFlags_dIS__STATIC = align 2 {h 2}
 export data $cct_id_dNO__IMPORTS = align 4 {w -1}
+data $cct_58_FIfBlockFlags_dhasIf = align 4 {w 1}
 export data $cct_branchTree_dEMPTY = align 4 {w -1}
+data $cct_56_Fid_dID__NONE = align 8 {l $cctI_ptr0,l 0,w -1,w 0}
 export data $cct_types_dctype_dU__SHORT = align 8 {b 6,z 7,b 4}
 data $cct_66_FLOCAL__CONST__NAME = align 8 {l $cctI_ptr1}
 export data $cct_AMD64_dop_dCMP = align 4 {w 14}
 export data $cct_types_dprimitive_dF32 = align 8 {b 6,z 7,b 2}
 data $cct_41_Fc_dfd_dstdOut = align 4 {w 1}
 export data $cct_file_dError_dOPEN__MODE = align 4 {w 3}
+data $cct_15_Ff128_dNAN__HI = align 8 {l 9223372036854775807}
 data $cct_41_Fc_dfd_dstdErr = align 4 {w 2}
 data $cct_62_FArgumentId_dVALUE__SHIFT = align 8 {l 1}
-data $cct_15_Ff128_dNAN__HI = align 8 {l 9223372036854775807}
 data $cct_0_FtargetPath = align 8 {l 0,l 0,l 0}
 export data $cct_AMD64_dreg_dRBP = align 4 {w 80}
 export data $cct_AMD64_dreg_dRSI = align 4 {w 96}
-data $cct_53_Ftypes_dCOMP__FLAG__EMPTY = align 4 {w 2}
 export data $cct_types_dintLiteral_dU32 = align 8 {b 10,z 7,b 3}
+data $cct_53_Ftypes_dCOMP__FLAG__EMPTY = align 4 {w 2}
 export data $cct_asm_dRegisterId_dBASE__MASK = align 4 {w -16}
 export data $cct_ProcFlags_dHAS__POINTER = align 2 {h 8}
 export data $cct_AMD64_dop_dSETA = align 4 {w 33}
-data $cct_45_Futf16_dHI__SURROGATE__FLAG = align 4 {w 55296}
 export data $cct_AMD64_dreg_dR15 = align 4 {w 240}
 data $cct_15_Ff128_dMANTISSA__BITS = align 8 {l 112}
 export data $cct_file_dError_dACCESS__DENIED = align 4 {w 7}
+data $cct_45_Futf16_dHI__SURROGATE__FLAG = align 4 {w 55296}
 data $cct_53_Ftypes_dSimpleTypeInfo_dFLOAT = align 1 {b 2}
 export data $cct_AMD64_dop_dJGE = align 4 {w 21}
 export data $cct_AMD64_dop_dMOVZX = align 4 {w 1}
@@ -766,22 +766,22 @@ export data $cct_types_dintLiteral_dS32 = align 8 {b 9,z 7,b 3}
 export data $cct___BACKEND__ = align 1 {b 0}
 data $cct_48_Fsb_dMAX__STRING__CHARS__HEAD = align 8 {l 24}
 data $cct_58_FIfBlockFlags_dhasOrIf = align 4 {w 16}
-data $cct_48_Fsb_dMAX__STRING__CHARS = align 8 {l 36}
 export data $cct_id_dNAMESPACE__ID__NONE = align 4 {w -1}
+data $cct_48_Fsb_dMAX__STRING__CHARS = align 8 {l 36}
 export data $cct_AMD64_dop_dIDIV = align 4 {w 8}
 export data $cct_AMD64_dreg_dR11 = align 4 {w 176}
 export data $cct_types_dintLiteral_dS54 = align 8 {b 12,z 7,b 3}
 data $cct_58_FAND__OR__BLOCK__INFO__NAME = align 8 {l $cctI_ptr3}
 data $cct_37_Fsb_dstringChars = align 8 {l $cctI_ptr4}
 data $cct_69_FAMD64_d__asmContext = align 8 {z 25,b 0}
-data $cct_58_FIfBlockFlags_dhasElse = align 4 {w 2}
 export data $cct_AMD64_dop_dMOVSX = align 4 {w 2}
+data $cct_58_FIfBlockFlags_dhasElse = align 4 {w 2}
 data $cct_57_FbuiltInNames = align 8 {l $cctI_ptr5,l 16,l $cctI_ptr6,l 17,l $cctI_ptr7,l 17,l $cctI_ptr8,l 17,l $cctI_ptr9,l 17,l $cctI_ptr10,l 17,l $cctI_ptr11,l 16,l $cctI_ptr12,l 17,l $cctI_ptr13,l 17,l $cctI_ptr14,l 17,l $cctI_ptr15,l 17,l $cctI_ptr16,l 17,l $cctI_ptr17,l 16,l $cctI_ptr18,l 17,l $cctI_ptr19,l 17,l $cctI_ptr20,l 17,l $cctI_ptr21,l 17,l $cctI_ptr22,l 17,l $cctI_ptr23,l 17,l $cctI_ptr24,l 17,l $cctI_ptr25,l 17,l $cctI_ptr26,l 17,l $cctI_ptr27,l 17,l $cctI_ptr28,l 20,l $cctI_ptr29,l 17,l $cctI_ptr30,l 17,l $cctI_ptr31,l 17,l $cctI_ptr32,l 17,l $cctI_ptr33,l 20,l $cctI_ptr34,l 17,l $cctI_ptr35,l 18,l $cctI_ptr36,l 21,l $cctI_ptr37,l 18,l $cctI_ptr38,l 18,l $cctI_ptr39,l 21,l $cctI_ptr40,l 18,l $cctI_ptr41,l 18,l $cctI_ptr42,l 17,l $cctI_ptr43,l 18,l $cctI_ptr44,l 18,l $cctI_ptr45,l 18,l $cctI_ptr46,l 18,l $cctI_ptr47,l 17,l $cctI_ptr48,l 18,l $cctI_ptr49,l 16,l $cctI_ptr50,l 17,l $cctI_ptr51,l 17,l $cctI_ptr52,l 17,l $cctI_ptr53,l 15,l $cctI_ptr54,l 16,l $cctI_ptr55,l 16,l $cctI_ptr56,l 16,l $cctI_ptr57,l 16,l $cctI_ptr58,l 17,l $cctI_ptr59,l 17,l $cctI_ptr60,l 17,l $cctI_ptr61,l 17,l $cctI_ptr62,l 18,l $cctI_ptr63,l 18,l $cctI_ptr64,l 21,l $cctI_ptr65,l 18,l $cctI_ptr66,l 17,l $cctI_ptr67,l 18,l $cctI_ptr68,l 18,l $cctI_ptr69,l 21,l $cctI_ptr70,l 18,l $cctI_ptr71,l 16,l $cctI_ptr72,l 17,l $cctI_ptr73,l 17,l $cctI_ptr74,l 20,l $cctI_ptr75,l 17,l $cctI_ptr76,l 17,l $cctI_ptr77,l 15,l $cctI_ptr78,l 16,l $cctI_ptr79,l 16,l $cctI_ptr80,l 16,l $cctI_ptr81,l 16,l $cctI_ptr82,l 16,l $cctI_ptr83,l 17,l $cctI_ptr84,l 15,l $cctI_ptr85,l 16,l $cctI_ptr86,l 16,l $cctI_ptr87,l 16,l $cctI_ptr88,l 16,l $cctI_ptr89,l 16,l $cctI_ptr90,l 15,l $cctI_ptr91,l 16,l $cctI_ptr92,l 16,l $cctI_ptr93,l 16,l $cctI_ptr94,l 16,l $cctI_ptr95,l 16,l $cctI_ptr96,l 15,l $cctI_ptr97,l 16,l $cctI_ptr98,l 16,l $cctI_ptr99,l 16,l $cctI_ptr100,l 16,l $cctI_ptr101,l 16,l $cctI_ptr102,l 15,l $cctI_ptr103,l 16,l $cctI_ptr104,l 16,l $cctI_ptr105,l 16,l $cctI_ptr106,l 16,l $cctI_ptr107,l 16,l $cctI_ptr108,l 15,l $cctI_ptr109,l 16,l $cctI_ptr110,l 16,l $cctI_ptr111,l 16,l $cctI_ptr112,l 16,l $cctI_ptr113,l 16,l $cctI_ptr114,l 16,l $cctI_ptr115,l 17,l $cctI_ptr116,l 17,l $cctI_ptr117,l 17,l $cctI_ptr118,l 16,l $cctI_ptr119,l 17,l $cctI_ptr120,l 17,l $cctI_ptr121,l 17,l $cctI_ptr122,l 16,l $cctI_ptr123,l 17,l $cctI_ptr124,l 17,l $cctI_ptr125,l 17,l $cctI_ptr126,l 16,l $cctI_ptr127,l 17,l $cctI_ptr128,l 17,l $cctI_ptr129,l 17,l $cctI_ptr130,l 20,l $cctI_ptr131,l 20,l $cctI_ptr132,l 20,l $cctI_ptr133,l 20,l $cctI_ptr134,l 22,l $cctI_ptr135,l 20,l $cctI_ptr136,l 20,l $cctI_ptr137,l 20,l $cctI_ptr138,l 20,l $cctI_ptr139,l 20,l $cctI_ptr140,l 20,l $cctI_ptr141,l 21,l $cctI_ptr142,l 21,l $cctI_ptr143,l 21,l $cctI_ptr144,l 21,l $cctI_ptr145,l 21,l $cctI_ptr146,l 21,l $cctI_ptr147,l 21,l $cctI_ptr148,l 21,l $cctI_ptr149,l 20,l $cctI_ptr150,l 21,l $cctI_ptr151,l 21,l $cctI_ptr152,l 21,l $cctI_ptr153,l 21,l $cctI_ptr154,l 21,l $cctI_ptr155,l 21,l $cctI_ptr156,l 21,l $cctI_ptr157,l 20,l $cctI_ptr158,l 21,l $cctI_ptr159,l 21,l $cctI_ptr160,l 21,l $cctI_ptr161,l 21,l $cctI_ptr162,l 21,l $cctI_ptr163,l 21,l $cctI_ptr164,l 20,l $cctI_ptr165,l 21,l $cctI_ptr166,l 21,l $cctI_ptr167,l 21,l $cctI_ptr168,l 21,l $cctI_ptr169,l 20,l $cctI_ptr170,l 21,l $cctI_ptr171,l 21,l $cctI_ptr172,l 21,l $cctI_ptr173,l 20,l $cctI_ptr174,l 21,l $cctI_ptr175,l 21,l $cctI_ptr176,l 21,l $cctI_ptr177,l 21,l $cctI_ptr178,l 20,l $cctI_ptr179,l 21,l $cctI_ptr180,l 21,l $cctI_ptr181,l 21,l $cctI_ptr182,l 18,l $cctI_ptr183,l 18,l $cctI_ptr184,l 18,l $cctI_ptr185,l 17,l $cctI_ptr186,l 17,l $cctI_ptr187,l 20,l $cctI_ptr188,l 18,l $cctI_ptr189,l 19,l $cctI_ptr190,l 18,l $cctI_ptr191,l 19,l $cctI_ptr192,l 19,l $cctI_ptr193,l 19,l $cctI_ptr194,l 19,l $cctI_ptr195,l 19,l $cctI_ptr196,l 19,l $cctI_ptr197,l 19,l $cctI_ptr198,l 17,l $cctI_ptr199,l 22,l $cctI_ptr200,l 20,l $cctI_ptr201,l 15,l $cctI_ptr202,l 16,l $cctI_ptr203,l 17,l $cctI_ptr204,l 24,l $cctI_ptr205,l 21,l $cctI_ptr206,l 22,l $cctI_ptr207,l 18,l $cctI_ptr208,l 14,l $cctI_ptr209,l 14,l $cctI_ptr210,l 15,l $cctI_ptr211,l 15,l $cctI_ptr212,l 15,l $cctI_ptr213,l 17,l $cctI_ptr214,l 17,l $cctI_ptr215,l 14,l $cctI_ptr216,l 17,l $cctI_ptr217,l 15,l $cctI_ptr218,l 20,l $cctI_ptr219,l 16,l $cctI_ptr220,l 23,l $cctI_ptr221,l 28,l $cctI_ptr222,l 18,l $cctI_ptr223,l 19}
-data $cct_36_Flist_dEMPTY__CAPACITY = align 8 {l 0}
 export data $cct_i8_dMASK = align 2 {h 255}
-data $cct_66_FCONCAT__ARGV__NAME = align 8 {l $cctI_ptr224}
+data $cct_36_Flist_dEMPTY__CAPACITY = align 8 {l 0}
 data $cct_0_FsrcPath = align 8 {l 0,l 0,l 0}
 export data $cct_ProcFlags_dIS__USED = align 2 {h 12}
+data $cct_66_FCONCAT__ARGV__NAME = align 8 {l $cctI_ptr224}
 data $cct_15_Ff128_dHIDDEN__BIT__HI = align 8 {l 281474976710656}
 export data $cct_ProcFlags_dNONE = align 2 {h 0}
 export data $cct_i16_dMASK = align 4 {w 65535}
@@ -799,15 +799,15 @@ export data $cct_f64_dMIN__INT = align 8 {l -9007199254740992}
 data $cct_0_FDumpPhases_dPRE__COMPILER = align 2 {h 16}
 export data $cct_asm_dRegisterId_dFLAG__VEC = align 4 {w 4}
 export data $cct_f32_dMIN__INT = align 4 {w -16777216}
+export data $cct_AMD64_dop_dSETNE = align 4 {w 28}
 data $cct_0_FtmpPath = align 8 {l 0,l 0,l 0}
 data $cct_63_FVariableUse_dTYPE__MASK = align 8 {l 3}
-export data $cct_AMD64_dop_dSETNE = align 4 {w 28}
 export data $cct_f16_dMIN__INT = align 2 {h 63488}
 export data $cct_id_dFLAG__MERGEABLE = align 4 {w 32768}
-data $cct_53_Ftypes_dPTR__SIZE = align 8 {l 8}
 export data $cct_types_dctype_dFLOAT = align 8 {b 14,z 7,b 4}
 export data $cct_i8_dUMAX = align 2 {h 255}
 export data $cct_id_dFLAG__DUMMY = align 4 {w 512}
+data $cct_53_Ftypes_dPTR__SIZE = align 8 {l 8}
 data $cct_63_FVariableUse_dTYPE__READ = align 8 {l 0}
 export data $cct_AMD64_dop_dJA = align 4 {w 23}
 export data $cct_types_dintLiteral_dU24 = align 8 {b 6,z 7,b 3}
@@ -818,8 +818,8 @@ export data $cct_asm_dRegisterId_dBASE__SHIFT = align 4 {w 4}
 export data $cct_i64_dUMAX = align 8 {l -1}
 data $cct_69_FAMD64_dreg_dINT__ARG__REGISTERS = align 8 {l $cctI_ptr225,l 6}
 export data $cct_types_dctype_dSIZE = align 8 {b 13,z 7,b 4}
-data $cct_58_FMAX__EXPANSION__DEPTH = align 2 {h 16}
 export data $cct_FILE__ID__NONE = align 4 {w -1}
+data $cct_58_FMAX__EXPANSION__DEPTH = align 2 {h 16}
 export data $cct_AMD64_dop_dIMUL = align 4 {w 6}
 export data $cct_id_dFLAG__IGNORE__UNUSED = align 4 {w 65536}
 export data $cct_asm_dRegisterId_dSIZE__64 = align 4 {w 0}
@@ -827,24 +827,24 @@ export data $cct_i8_dMIN = align 1 {b 128}
 export data $cct_id_dFLAG__NONE = align 4 {w 0}
 export data $cct_i16_dMIN = align 2 {h 32768}
 export data $cct_AMD64_dop_dJMP = align 4 {w 16}
-data $cct_58_FIfBlockFlags_dhasAndIf = align 4 {w 8}
-data $cct_0_FDumpPhases_dALL = align 2 {h 65535}
 export data $cct_unicode_dUNKNOWN__CODEPOINT = align 4 {w -4096}
 export data $cct_AMD64_dop_dSETB = align 4 {w 36}
 export data $cct_i32_dMIN = align 4 {w -2147483648}
+data $cct_58_FIfBlockFlags_dhasAndIf = align 4 {w 8}
 export data $cct_types_dprimitive_dF64 = align 8 {b 7,z 7,b 2}
+data $cct_0_FDumpPhases_dALL = align 2 {h 65535}
+export data $cct_i64_dMIN = align 8 {l -9223372036854775808}
 data $cct_0_FDumpPhases_dUSAGE__ANALYSIS = align 2 {h 4}
 data $cct_53_Ftypes_dCOMP__SIZE__KNOWN = align 4 {w 16}
 data $cct_0_FrunArgs = align 8 {l 0,l 0,l 0}
-export data $cct_i64_dMIN = align 8 {l -9223372036854775808}
-data $cct_15_Ff128_dNAN__LOW = align 8 {l -1}
-data $cct_63_FVariableUse_dTYPE__LABEL = align 8 {l 2}
 export data $cct_f64_dSIGN__FLAG = align 8 {l -9223372036854775808}
+data $cct_15_Ff128_dNAN__LOW = align 8 {l -1}
 export data $cct_i128_dMIN = align 8 {l -9223372036854775808,l 0}
+data $cct_63_FVariableUse_dTYPE__LABEL = align 8 {l 2}
 export data $cct_f32_dSIGN__FLAG = align 4 {w -2147483648}
-data $cct_66_FSTRING__CONST__NAME = align 8 {l $cctI_ptr226}
-export data $cct___VERSION__ = align 8 {l 651}
+export data $cct___VERSION__ = align 8 {l 653}
 export data $cct_AMD64_dop_dPUSH = align 4 {w 39}
+data $cct_66_FSTRING__CONST__NAME = align 8 {l $cctI_ptr226}
 export data $cct_AMD64_dop_dSETGE = align 4 {w 31}
 data $cct_53_Ftypes_dI__SIZE__ALIGN = align 8 {l 8}
 export data $cct_f16_dSIGN__FLAG = align 2 {h 32768}
@@ -855,11 +855,11 @@ export data $cct_types_dintLiteral_dU64 = align 8 {b 15,z 7,b 3}
 export data $cct_AMD64_dop_dJEQ = align 4 {w 17}
 export data $cct_f64_dMIN = align 8 {d -4503599627370497}
 data $cct_0_FrunCompiledProgram = align 1 {b 0}
-data $cct_46_FCMP__TYPE__NAMES = align 8 {l $cctI_ptr227,l 4,l $cctI_ptr228,l 4,l $cctI_ptr229,l 5,l $cctI_ptr230,l 2,l $cctI_ptr231,l 2,l $cctI_ptr232,l 2,l $cctI_ptr233,l 2,l $cctI_ptr234,l 2,l $cctI_ptr235,l 2,l $cctI_ptr236,l 3,l $cctI_ptr237,l 3,l $cctI_ptr238,l 3,l $cctI_ptr239,l 3}
 export data $cct_f32_dMIN = align 4 {s -8388609}
+data $cct_46_FCMP__TYPE__NAMES = align 8 {l $cctI_ptr227,l 4,l $cctI_ptr228,l 4,l $cctI_ptr229,l 5,l $cctI_ptr230,l 2,l $cctI_ptr231,l 2,l $cctI_ptr232,l 2,l $cctI_ptr233,l 2,l $cctI_ptr234,l 2,l $cctI_ptr235,l 2,l $cctI_ptr236,l 3,l $cctI_ptr237,l 3,l $cctI_ptr238,l 3,l $cctI_ptr239,l 3}
 export data $cct_id_dFLAG__ITR__VAR = align 4 {w 1024}
-data $cct_58_FMAX__STATIC__RECURSION = align 4 {w 64}
 export data $cct_file_dError_dFILE__ALREADY__EXISTS = align 4 {w 6}
+data $cct_58_FMAX__STATIC__RECURSION = align 4 {w 64}
 export data $cct_f16_dMIN = align 2 {h -1025}
 data $cct_62_FArgumentId_dTAG__NAME = align 8 {l 0}
 export data $cct_AMD64_dreg_dR12 = align 4 {w 192}
@@ -869,15 +869,15 @@ data $cct_48_Fsb_dMAX__ARRAY__ELEMENTS = align 8 {l 8}
 data $cct_0_FbasePath = align 8 {l $cctI_ptr240,l 0}
 data $cct_58_FOP__EMPTY = align 4 {w -2}
 export data $cct_asm_dRegisterId_dSIZE__16 = align 4 {w 2}
-data $cct_41_Ffile_dFlags_dNONE = align 1 {b 0}
 export data $cct_id_dNAMESPACE__IMPORT__NONE = align 4 {w -1}
 export data $cct_id_dFLAG__EXTERN = align 4 {w 4}
+data $cct_41_Ffile_dFlags_dNONE = align 1 {b 0}
 export data $cct_optimizerFlags_dALLOW__INLINE__SMALL = align 1 {b 0}
 data $cct_58_FWHILE__BLOCK__INFO__NAME = align 8 {l $cctI_ptr241}
 export data $cct_types_dprimitive_dF16 = align 8 {b 5,z 7,b 2}
-data $cct_66_FASSERT__FORMAT = align 8 {l $cctI_ptr242}
 export data $cct_types_dintLiteral_dS64 = align 8 {b 14,z 7,b 3}
 export data $cct_types_dctype_dCHAR = align 8 {b 2,z 7,b 4}
+data $cct_66_FASSERT__FORMAT = align 8 {l $cctI_ptr242}
 export data $cct_AMD64_dop_dSUB = align 4 {w 5}
 export data $cct_f64_dHIDDEN__BIT = align 8 {l 4503599627370496}
 export data $cct_types_dprimitive_dI32 = align 8 {b 3,z 7,b 2}
@@ -917,32 +917,32 @@ export data $cct_types_dctype_dLONG = align 8 {b 9,z 7,b 4}
 export data $cct_id_dFLAG__NO__WRAP = align 4 {w 131072}
 export data $cct_f32_dMAX = align 4 {s 2139095039}
 export data $cct_types_dctype_dDOUBLE = align 8 {b 15,z 7,b 4}
-data $cct_66_FCONST__REFERENCE__NAME = align 8 {l $cctI_ptr246}
 export data $cct___INCLUDE__CORE__ = align 1 {b 1}
+data $cct_66_FCONST__REFERENCE__NAME = align 8 {l $cctI_ptr246}
 export data $cct_f16_dMAX = align 2 {h 31743}
 data $cct_69_FAMD64_dop_dOPCODE__NAMES = align 8 {l $cctI_ptr247,l 3,l $cctI_ptr248,l 5,l $cctI_ptr249,l 5,l $cctI_ptr250,l 3,l $cctI_ptr251,l 3,l $cctI_ptr252,l 3,l $cctI_ptr253,l 4,l $cctI_ptr254,l 3,l $cctI_ptr255,l 4,l $cctI_ptr256,l 3,l $cctI_ptr257,l 3,l $cctI_ptr258,l 3,l $cctI_ptr259,l 2,l $cctI_ptr260,l 3,l $cctI_ptr261,l 3,l $cctI_ptr262,l 4,l $cctI_ptr263,l 3,l $cctI_ptr264,l 2,l $cctI_ptr265,l 3,l $cctI_ptr266,l 2,l $cctI_ptr267,l 3,l $cctI_ptr268,l 3,l $cctI_ptr269,l 2,l $cctI_ptr270,l 2,l $cctI_ptr271,l 3,l $cctI_ptr272,l 3,l $cctI_ptr273,l 2,l $cctI_ptr274,l 4,l $cctI_ptr275,l 5,l $cctI_ptr276,l 4,l $cctI_ptr277,l 5,l $cctI_ptr278,l 5,l $cctI_ptr279,l 4,l $cctI_ptr280,l 4,l $cctI_ptr281,l 5,l $cctI_ptr282,l 5,l $cctI_ptr283,l 4,l $cctI_ptr284,l 4,l $cctI_ptr285,l 3,l $cctI_ptr286,l 4,l $cctI_ptr287,l 3}
 export data $cct_AMD64_dop_dLEA = align 4 {w 3}
 export data $cct_AMD64_dop_dAND = align 4 {w 11}
-data $cct_53_Ftypes_dSimpleTypeInfo_dMANY = align 1 {b 255}
 export data $cct_number_dMIN__BASE = align 4 {w 2}
+data $cct_53_Ftypes_dSimpleTypeInfo_dMANY = align 1 {b 255}
 data $cct_12_FNATIVE__F16 = align 1 {b 1}
 export data $cct_true = align 1 {b 1}
 export data $cct_types_dprimitive_dBOOL = align 8 {b 0,z 7,b 2}
 export data $cct_types_dintLiteral_dS25 = align 8 {b 7,z 7,b 3}
 export data $cct_f64_dEXP__BIAS = align 8 {l 1023}
-data $cct_58_FIfBlockFlags_difBranchTerminates = align 4 {w 4}
 export data $cct___W__ERROR__ = align 1 {b 0}
 export data $cct_EXPORT__GLOBALS = align 1 {b 0}
+data $cct_58_FIfBlockFlags_difBranchTerminates = align 4 {w 4}
 export data $cct_string_dempty = align 8 {l $cctI_ptr288,l 0}
-data $cct_45_Futf16_dSURROGATE__DATA__MASK = align 4 {w 1023}
 export data $cct_id_dNO__ALIAS = align 4 {w -1}
 export data $cct_f32_dEXP__BIAS = align 4 {w 127}
-data $cct_58_FOP__ARGUMENT = align 4 {w -3}
+data $cct_45_Futf16_dSURROGATE__DATA__MASK = align 4 {w 1023}
 export data $cct_types_dprimitive_dTYPE = align 8 {b 8,z 7,b 2}
 export data $cct_f16_dEXP__BIAS = align 2 {h 15}
 export data $cct_file_dError_dFILE__IS__DIR = align 4 {w 5}
-data $cct_15_Ff128_dEXP__SHIFT__HI = align 8 {l 48}
+data $cct_58_FOP__ARGUMENT = align 4 {w -3}
 export data $cct_AMD64_dreg_dR9 = align 4 {w 144}
+data $cct_15_Ff128_dEXP__SHIFT__HI = align 8 {l 48}
 export data $cct_types_dctype_dBOOL = align 8 {b 1,z 7,b 4}
 export data $cct_types_dprimitive_dI__MAX = align 8 {b 4,z 7,b 2}
 export data $cct_sb_dempty = align 8 {l 0,l 0,l 0}
@@ -959,24 +959,24 @@ export data $cct_AMD64_dop_dOR = align 4 {w 12}
 data $cct_45_Futf16_dSURROGATE__BIAS = align 4 {w 65536}
 data $cct_53_Ftypes_dCOMP__FLAG__STATIC__ARGS = align 4 {w 4}
 data $cct_53_Ftypes_dCOMP__FLAG__NONE = align 4 {w 0}
-data $cct_53_Ftypes_dSimpleTypeInfo_dINT = align 1 {b 1}
 export data $cct___W__UNUSED__ = align 1 {b 0}
+data $cct_53_Ftypes_dSimpleTypeInfo_dINT = align 1 {b 1}
 data $cct_62_FArgumentId_dTAG__INDEX = align 8 {l 1}
 data $cct_62_FReplaceFlags_dIGNORE__EMPTY = align 4 {w 2}
 data $cct_66_FCONCAT__PREFIX = align 8 {l $cctI_ptr290}
 data $cct_67_FAMD64__BIN__OPS = align 4 {w 4,w 5,w 6,w 11,w 12,w 13,w 8,w 8,w 7,w 7}
 export data $cct_types_dintLiteral_dU7 = align 8 {b 0,z 7,b 3}
-data $cct_62_FMAX__DISPLAY__SIGNATURES = align 4 {w 5}
 export data $cct_AMD64_dreg_dRAX = align 4 {w 0}
 export data $cct_FILE__POS__UNKNOWN = align 8 {l $cctI_ptr291,l 0,w -1,w 0,w 0}
+data $cct_62_FMAX__DISPLAY__SIGNATURES = align 4 {w 5}
 export data $cct_AMD64_dop_dPOP = align 4 {w 40}
 export data $cct_AMD64_dop_dMOV = align 4 {w 0}
 export data $cct_optimizerFlags_dWEAK__INLINE__MAX__OP__COUNT = align 4 {w 16}
 data $cct_0_FlibPath = align 8 {l $cctI_ptr292,l 0}
 export data $cct_f64_dSHIFTED__EXP__MASK = align 8 {l 2047}
 export data $cct_unicode_dMIN__CODEPOINT = align 4 {w 0}
-data $cct_0_FbaseName = align 8 {l $cctI_ptr293,l 0}
 export data $cct_f32_dSHIFTED__EXP__MASK = align 4 {w 255}
+data $cct_0_FbaseName = align 8 {l $cctI_ptr293,l 0}
 export data $cct_AMD64_dop_dSETAE = align 4 {w 34}
 export data $cct_id_dFLAG__HAS__POINTER = align 4 {w 1048576}
 export data $cct_f16_dSHIFTED__EXP__MASK = align 2 {h 31}
@@ -987,8 +987,8 @@ export data $cct_AMD64_dreg_dRSP = align 4 {w 64}
 data $cct_40_Fc_dFORK__FAILURE = align 4 {w -1}
 data $cct_69_FAMD64_dreg_dFLAG__VEC = align 4 {w 65536}
 data $cct_45_Futf16_dSURROGATE__SHIFT = align 4 {w 10}
-data $cct_0_FcompileGeneratedCode = align 1 {b 1}
 export data $cct_types_dctype_dU__LONG = align 8 {b 11,z 7,b 4}
+data $cct_0_FcompileGeneratedCode = align 1 {b 1}
 export data $cct_types_dprimitive_dI64 = align 8 {b 4,z 7,b 2}
 export data $cct_AMD64_dop_dJBE = align 4 {w 25}
 export data $cct_f64_dEXP__SHIFT = align 4 {w 52}
@@ -999,23 +999,23 @@ export data $cct_id_dFLAG__ALIAS = align 4 {w 4096}
 data $cct_15_Ff128_dMANTISSA__MASK__HI = align 8 {l 281474976710655}
 export data $cct_id_dFLAG__MUTABLE = align 4 {w 1}
 export data $cct_f16_dEXP__SHIFT = align 2 {h 10}
-data $cct_58_FSWITCH__BLOCK__INFO__NAME = align 8 {l $cctI_ptr294}
 export data $cct_id_dGLOBAL__SCOPE = align 4 {w 0}
+data $cct_58_FSWITCH__BLOCK__INFO__NAME = align 8 {l $cctI_ptr294}
 data $cct_53_Ftypes_dSimpleTypeInfo_dEMPTY = align 1 {b 0}
-data $cct_57_FNO__BUNDLE = align 8 {l -1}
 export data $cct_FILE__ID__BUILT__IN = align 4 {w -2}
+data $cct_57_FNO__BUNDLE = align 8 {l -1}
 export data $cct_i128_dZERO = align 8 {l 0,l 0}
 data $cct_54_Fmap_dNO__NODE = align 4 {w 0}
-data $cct_15_Ff128_dEXP__BIAS = align 8 {l 16383}
 export data $cct_optimizerFlags_dINLINE__MAX__OP__COUNT = align 4 {w 32}
+data $cct_15_Ff128_dEXP__BIAS = align 8 {l 16383}
 data $cct_45_Futf16_dMAX__SURROGATE = align 4 {w 57343}
 export data $cct_string16_dempty = align 8 {l 0,l 0}
 data $cct_53_Ftypes_dCOMP__MASK__CONTENT__FLAGS = align 4 {w 15}
 export data $cct_f64_dEXP__MASK = align 8 {l 9218868437227405312}
 export data $cct_string32_dempty = align 8 {l 0,l 0}
 export data $cct_types_dctype_dU__INT = align 8 {b 8,z 7,b 4}
-data $cct_53_Ftypes_dI__SIZE__SIZE = align 8 {l 8}
 export data $cct_f32_dEXP__MASK = align 4 {w 2139095040}
+data $cct_53_Ftypes_dI__SIZE__SIZE = align 8 {l 8}
 data $cct_48_Fsb_dMAX__STRING__CHARS__TAIL = align 8 {l 8}
 data $cct_41_Ffile_dFlags_dNO__CLOSE = align 1 {b 1}
 export data $cct_types_dMAX__SIGNED__INT = align 8 {l 9223372036854775807}
@@ -1023,24 +1023,24 @@ export data $cct_f16_dEXP__MASK = align 2 {h 31744}
 export data $cct_AMD64_dop_dCDQ = align 4 {w 9}
 export data $cct_AMD64_dop_dTEST = align 4 {w 15}
 export data $cct_types_dI__SIZE = align 8 {b 4,z 7,b 2}
-data $cct_48_Fsb_dMAX__PRIMITIVE__ARRAY__ELEMENTS = align 8 {l 12}
 export data $cct_id_dFLAG__LAMBDA = align 4 {w 16384}
-data $cct_0_FoutPath = align 8 {l 0,l 0,l 0}
+data $cct_48_Fsb_dMAX__PRIMITIVE__ARRAY__ELEMENTS = align 8 {l 12}
 export data $cct_types_dctype_dINT = align 8 {b 7,z 7,b 4}
 export data $cct_AMD64_dop_dDIV = align 4 {w 7}
-data $cct_0_FDumpPhases_dNONE = align 2 {h 0}
+data $cct_0_FoutPath = align 8 {l 0,l 0,l 0}
 data $cct_15_Ff128_dSIGN__FLAG__HI = align 8 {l -9223372036854775808}
 export data $cct_types_dprimitive_dI__SIZE = align 8 {b 4,z 7,b 2}
+data $cct_0_FDumpPhases_dNONE = align 2 {h 0}
 export data $cct_asm_dRegisterId_dSIZE__8 = align 4 {w 3}
 export data $cct_AMD64_dop_dADD = align 4 {w 4}
 export data $cct_AMD64_dop_dRET = align 4 {w 38}
 export data $cct_types_dprimitive_dI16 = align 8 {b 2,z 7,b 2}
 data $cct_15_Ff160_dF128__SHIFT = align 8 {l 15}
 export data $cct_file_dError_dNONE = align 4 {w 0}
-data $cct_0_FDumpPhases_dALIAS__DETECTION = align 2 {h 8}
 export data $cct_types_dintLiteral_dU31 = align 8 {b 8,z 7,b 3}
-data $cct_45_Futf16_dSURROGATE__MASK = align 4 {w 64512}
+data $cct_0_FDumpPhases_dALIAS__DETECTION = align 2 {h 8}
 export data $cct_f64_dMAX__INT = align 8 {l 9007199254740992}
+data $cct_45_Futf16_dSURROGATE__MASK = align 4 {w 64512}
 data $cct_66_FCONCAT__ENVP__NAME = align 8 {l $cctI_ptr295}
 export data $cct_AMD64_dreg_dFLOAT__REGISTERS = align 8 {l $cctI_ptr296,l 16}
 export data $cct_types_dctype_dVOID = align 8 {b 0,z 7,b 4}
@@ -1049,9 +1049,9 @@ export data $cct___INCREMENT__VERSION__ = align 1 {b 1}
 export data $cct_AMD64_dreg_dR14 = align 4 {w 224}
 export data $cct_types_dintLiteral_dU53 = align 8 {b 11,z 7,b 3}
 export data $cct_f16_dMAX__INT = align 2 {h 2048}
+export data $cct_AMD64_dop_dSETGT = align 4 {w 32}
 data $cct_41_Fc_dfd_dstdIn = align 4 {w 0}
 data $cct_62_FMAX__DISPLAY__ARGS__DEFAULT = align 8 {l 5}
-export data $cct_AMD64_dop_dSETGT = align 4 {w 32}
 data $cct_15_Ff128_dEXP__MASK__HI = align 8 {l 9223090561878065152}
 data $cct_66_FPTR__CONST__NAME = align 8 {l $cctI_ptr297}
 data $cct_15_Ff128_dINF__HI = align 8 {l 9223090561878065152}
@@ -1254,7 +1254,7 @@ data $cctI_constRef179 = {z 12,b 0}
 data $cctI_constRef180 = {z 24,b 0} 
 data $cctI_constRef181 = {b 1,z 15,b 1} 
 data $cctI_constRef182 = {b 0,z 15,b 1} 
-data $cctI_constRef183 = {l 651,z 8,b 3} 
+data $cctI_constRef183 = {l 653,z 8,b 3} 
 data $cctI_constRef184 = {z 16,b 0} 
 data $cctI_constRef185 = {z 16,b 0} 
 data $cctI_constRef186 = {z 16,b 0} 
@@ -17921,11 +17921,11 @@ hlt
 dbgfile "./lib/core/ptr.concat"
 export function ub $cct_iSize_dtoBool(l %a0){
 @start
-dbgloc 302,5 ## ./lib/core/ptr.concat
+dbgloc 306,5 ## ./lib/core/ptr.concat
 %s0 =l copy 0
-dbgloc 302,7 ## ./lib/core/ptr.concat
+dbgloc 306,7 ## ./lib/core/ptr.concat
 %s1 =w cnel %a0, %s0
-dbgloc 303,3 ## ./lib/core/ptr.concat
+dbgloc 307,3 ## ./lib/core/ptr.concat
 ret %s1
 @end
 hlt
@@ -63429,22 +63429,22 @@ hlt
 dbgfile "./lib/slice.concat"
 function :struct29 $cct_29_Fslice_dreverse_X580(:struct29 %a0){
 @start
-%l33_19_elts =l copy %a0
-dbgloc 36,7 ## ./lib/slice.concat
-dbgloc 36,12 ## ./lib/slice.concat
-%s0 =l add %l33_19_elts, 0
-dbgloc 36,12 ## ./lib/slice.concat
+%l36_19_elts =l copy %a0
+dbgloc 39,7 ## ./lib/slice.concat
+dbgloc 39,12 ## ./lib/slice.concat
+%s0 =l add %l36_19_elts, 0
+dbgloc 39,12 ## ./lib/slice.concat
 %s1 =l loadl %s0
-dbgloc 37,7 ## ./lib/slice.concat
-dbgloc 37,12 ## ./lib/slice.concat
-%s2 =l add %l33_19_elts, 8
-dbgloc 37,12 ## ./lib/slice.concat
+dbgloc 40,7 ## ./lib/slice.concat
+dbgloc 40,12 ## ./lib/slice.concat
+%s2 =l add %l36_19_elts, 8
+dbgloc 40,12 ## ./lib/slice.concat
 %s3 =l loadl %s2
-dbgloc 38,5 ## ./lib/slice.concat
+dbgloc 41,5 ## ./lib/slice.concat
 call $cct_30_Farray_dreverse_X582 (l %s3,l %s1)
-dbgloc 39,5 ## ./lib/slice.concat
-dbgloc 40,3 ## ./lib/slice.concat
-ret %l33_19_elts
+dbgloc 42,5 ## ./lib/slice.concat
+dbgloc 43,3 ## ./lib/slice.concat
+ret %l36_19_elts
 @end
 hlt
 }
@@ -66664,8 +66664,8 @@ dbgloc 88,19 ## ./concat.concat/names.concat
 %s1 =l loadl %l87_29_b
 dbgloc 88,27 ## ./concat.concat/names.concat
 dbgloc 88,33 ## ./concat.concat/names.concat
-%s2 =w call $cct_iSize_dcmp (l %s1,l %s0)
-dbgloc 88,43 ## ./concat.concat/names.concat
+%s2 =w call $cct_iSize_ducmp (l %s1,l %s0)
+dbgloc 88,44 ## ./concat.concat/names.concat
 ret %s2
 @end
 hlt
@@ -69314,7 +69314,7 @@ dbgloc 140,19 ## ./lib/core/ptr.concat
 %s1 =l loadl %l139_50_q
 dbgloc 140,27 ## ./lib/core/ptr.concat
 dbgloc 140,33 ## ./lib/core/ptr.concat
-%s2 =w call $cct_iSize_dcmp (l %s1,l %s0)
+%s2 =w call $cct_iSize_ducmp (l %s1,l %s0)
 dbgloc 141,3 ## ./lib/core/ptr.concat
 ret %s2
 @end
@@ -70370,7 +70370,7 @@ dbgloc 140,19 ## ./lib/core/ptr.concat
 %s1 =l loadl %l139_50_q
 dbgloc 140,27 ## ./lib/core/ptr.concat
 dbgloc 140,33 ## ./lib/core/ptr.concat
-%s2 =w call $cct_iSize_dcmp (l %s1,l %s0)
+%s2 =w call $cct_iSize_ducmp (l %s1,l %s0)
 dbgloc 141,3 ## ./lib/core/ptr.concat
 ret %s2
 @end
@@ -70390,7 +70390,7 @@ dbgloc 140,19 ## ./lib/core/ptr.concat
 %s1 =l loadl %l139_50_q
 dbgloc 140,27 ## ./lib/core/ptr.concat
 dbgloc 140,33 ## ./lib/core/ptr.concat
-%s2 =w call $cct_iSize_dcmp (l %s1,l %s0)
+%s2 =w call $cct_iSize_ducmp (l %s1,l %s0)
 dbgloc 141,3 ## ./lib/core/ptr.concat
 ret %s2
 @end
@@ -70410,7 +70410,7 @@ dbgloc 140,19 ## ./lib/core/ptr.concat
 %s1 =l loadl %l139_50_q
 dbgloc 140,27 ## ./lib/core/ptr.concat
 dbgloc 140,33 ## ./lib/core/ptr.concat
-%s2 =w call $cct_iSize_dcmp (l %s1,l %s0)
+%s2 =w call $cct_iSize_ducmp (l %s1,l %s0)
 dbgloc 141,3 ## ./lib/core/ptr.concat
 ret %s2
 @end
@@ -70430,7 +70430,7 @@ dbgloc 140,19 ## ./lib/core/ptr.concat
 %s1 =l loadl %l139_50_q
 dbgloc 140,27 ## ./lib/core/ptr.concat
 dbgloc 140,33 ## ./lib/core/ptr.concat
-%s2 =w call $cct_iSize_dcmp (l %s1,l %s0)
+%s2 =w call $cct_iSize_ducmp (l %s1,l %s0)
 dbgloc 141,3 ## ./lib/core/ptr.concat
 ret %s2
 @end
@@ -70450,7 +70450,7 @@ dbgloc 140,19 ## ./lib/core/ptr.concat
 %s1 =l loadl %l139_50_q
 dbgloc 140,27 ## ./lib/core/ptr.concat
 dbgloc 140,33 ## ./lib/core/ptr.concat
-%s2 =w call $cct_iSize_dcmp (l %s1,l %s0)
+%s2 =w call $cct_iSize_ducmp (l %s1,l %s0)
 dbgloc 141,3 ## ./lib/core/ptr.concat
 ret %s2
 @end
@@ -70681,26 +70681,26 @@ hlt
 dbgfile "./lib/slice.concat"
 function :struct29 $cct_29_Fslice_dsort_X580(l %a1,:struct29 %a0){
 @start
-%l44_19_elts =l copy %a0
-%l45_32_fCmp =l alloc8 8
-storel %a1, %l45_32_fCmp
-dbgloc 49,7 ## ./lib/slice.concat
-dbgloc 49,12 ## ./lib/slice.concat
-%s0 =l add %l44_19_elts, 0
-dbgloc 49,12 ## ./lib/slice.concat
+%l47_19_elts =l copy %a0
+%l48_32_fCmp =l alloc8 8
+storel %a1, %l48_32_fCmp
+dbgloc 52,7 ## ./lib/slice.concat
+dbgloc 52,12 ## ./lib/slice.concat
+%s0 =l add %l47_19_elts, 0
+dbgloc 52,12 ## ./lib/slice.concat
 %s1 =l loadl %s0
-dbgloc 50,7 ## ./lib/slice.concat
-dbgloc 50,12 ## ./lib/slice.concat
-%s2 =l add %l44_19_elts, 8
-dbgloc 50,12 ## ./lib/slice.concat
+dbgloc 53,7 ## ./lib/slice.concat
+dbgloc 53,12 ## ./lib/slice.concat
+%s2 =l add %l47_19_elts, 8
+dbgloc 53,12 ## ./lib/slice.concat
 %s3 =l loadl %s2
-dbgloc 51,7 ## ./lib/slice.concat
-%s4 =l loadl %l45_32_fCmp
-dbgloc 53,5 ## ./lib/slice.concat
+dbgloc 54,7 ## ./lib/slice.concat
+%s4 =l loadl %l48_32_fCmp
+dbgloc 56,5 ## ./lib/slice.concat
 call $cct_30_Farray_dsort_X585 (l %s4,l %s3,l %s1)
-dbgloc 54,5 ## ./lib/slice.concat
-dbgloc 54,10 ## ./lib/slice.concat
-ret %l44_19_elts
+dbgloc 57,5 ## ./lib/slice.concat
+dbgloc 57,10 ## ./lib/slice.concat
+ret %l47_19_elts
 @end
 hlt
 }
@@ -77590,31 +77590,31 @@ ret %s12
 hlt
 }
 dbgfile "./lib/core/ptr.concat"
-export function w $cct_iSize_dcmp(l %a1,l %a0){
+export function w $cct_iSize_ducmp(l %a1,l %a0){
 @start
-%l304_13_a =l alloc8 8
-storel %a0, %l304_13_a
-%l304_23_b =l alloc8 8
-storel %a1, %l304_23_b
-dbgloc 305,5 ## ./lib/core/ptr.concat
-%s0 =l loadl %l304_13_a
-dbgloc 305,7 ## ./lib/core/ptr.concat
-%s1 =l loadl %l304_23_b
-dbgloc 305,9 ## ./lib/core/ptr.concat
+%l308_13_a =l alloc8 8
+storel %a0, %l308_13_a
+%l308_23_b =l alloc8 8
+storel %a1, %l308_23_b
+dbgloc 309,5 ## ./lib/core/ptr.concat
+%s0 =l loadl %l308_13_a
+dbgloc 309,7 ## ./lib/core/ptr.concat
+%s1 =l loadl %l308_23_b
+dbgloc 309,9 ## ./lib/core/ptr.concat
 %s2 =w cugtl %s0, %s1
-dbgloc 305,12 ## ./lib/core/ptr.concat
+dbgloc 309,12 ## ./lib/core/ptr.concat
 %s3 =w call $cct_bool_dasInt (ub %s2)
-dbgloc 305,15 ## ./lib/core/ptr.concat
-%s4 =l loadl %l304_13_a
-dbgloc 305,17 ## ./lib/core/ptr.concat
-%s5 =l loadl %l304_23_b
-dbgloc 305,19 ## ./lib/core/ptr.concat
+dbgloc 309,15 ## ./lib/core/ptr.concat
+%s4 =l loadl %l308_13_a
+dbgloc 309,17 ## ./lib/core/ptr.concat
+%s5 =l loadl %l308_23_b
+dbgloc 309,19 ## ./lib/core/ptr.concat
 %s6 =w cultl %s4, %s5
-dbgloc 305,22 ## ./lib/core/ptr.concat
+dbgloc 309,22 ## ./lib/core/ptr.concat
 %s7 =w call $cct_bool_dasInt (ub %s6)
-dbgloc 305,25 ## ./lib/core/ptr.concat
+dbgloc 309,25 ## ./lib/core/ptr.concat
 %s8 =w sub %s3, %s7
-dbgloc 306,3 ## ./lib/core/ptr.concat
+dbgloc 310,3 ## ./lib/core/ptr.concat
 ret %s8
 @end
 hlt
@@ -89350,28 +89350,28 @@ hlt
 dbgfile "./lib/core/ptr.concat"
 export function l $cct_iSize_dmin(l %a1,l %a0){
 @start
-%l307_13_a =l alloc8 8
-storel %a0, %l307_13_a
-%l307_23_b =l alloc8 8
-storel %a1, %l307_23_b
-dbgloc 308,5 ## ./lib/core/ptr.concat
-%s0 =l loadl %l307_13_a
-dbgloc 308,7 ## ./lib/core/ptr.concat
-%s1 =l loadl %l307_23_b
-dbgloc 308,9 ## ./lib/core/ptr.concat
+%l311_13_a =l alloc8 8
+storel %a0, %l311_13_a
+%l311_23_b =l alloc8 8
+storel %a1, %l311_23_b
+dbgloc 312,5 ## ./lib/core/ptr.concat
+%s0 =l loadl %l311_13_a
+dbgloc 312,7 ## ./lib/core/ptr.concat
+%s1 =l loadl %l311_23_b
+dbgloc 312,9 ## ./lib/core/ptr.concat
 %s2 =w cultl %s0, %s1
-dbgloc 308,12 ## ./lib/core/ptr.concat
+dbgloc 312,12 ## ./lib/core/ptr.concat
 jnz %s2, @next0, @label_2125
 @next0 ## jump-if
-dbgloc 308,15 ## ./lib/core/ptr.concat
-%s3 =l loadl %l307_13_a
+dbgloc 312,15 ## ./lib/core/ptr.concat
+%s3 =l loadl %l311_13_a
 jmp @label_2126
 @label_2125 ## label
-dbgloc 308,22 ## ./lib/core/ptr.concat
-%s4 =l loadl %l307_23_b
+dbgloc 312,22 ## ./lib/core/ptr.concat
+%s4 =l loadl %l311_23_b
 @label_2126 ## label
 %s5 =l phi @next0 %s3, @label_2125 %s4
-dbgloc 309,3 ## ./lib/core/ptr.concat
+dbgloc 313,3 ## ./lib/core/ptr.concat
 ret %s5
 @end
 hlt
@@ -89379,28 +89379,28 @@ hlt
 dbgfile "./lib/core/ptr.concat"
 export function l $cct_iSize_dmax(l %a1,l %a0){
 @start
-%l310_13_a =l alloc8 8
-storel %a0, %l310_13_a
-%l310_23_b =l alloc8 8
-storel %a1, %l310_23_b
-dbgloc 311,5 ## ./lib/core/ptr.concat
-%s0 =l loadl %l310_13_a
-dbgloc 311,7 ## ./lib/core/ptr.concat
-%s1 =l loadl %l310_23_b
-dbgloc 311,9 ## ./lib/core/ptr.concat
+%l314_13_a =l alloc8 8
+storel %a0, %l314_13_a
+%l314_23_b =l alloc8 8
+storel %a1, %l314_23_b
+dbgloc 315,5 ## ./lib/core/ptr.concat
+%s0 =l loadl %l314_13_a
+dbgloc 315,7 ## ./lib/core/ptr.concat
+%s1 =l loadl %l314_23_b
+dbgloc 315,9 ## ./lib/core/ptr.concat
 %s2 =w cugtl %s0, %s1
-dbgloc 311,12 ## ./lib/core/ptr.concat
+dbgloc 315,12 ## ./lib/core/ptr.concat
 jnz %s2, @next0, @label_6834
 @next0 ## jump-if
-dbgloc 311,15 ## ./lib/core/ptr.concat
-%s3 =l loadl %l310_13_a
+dbgloc 315,15 ## ./lib/core/ptr.concat
+%s3 =l loadl %l314_13_a
 jmp @label_6835
 @label_6834 ## label
-dbgloc 311,22 ## ./lib/core/ptr.concat
-%s4 =l loadl %l310_23_b
+dbgloc 315,22 ## ./lib/core/ptr.concat
+%s4 =l loadl %l314_23_b
 @label_6835 ## label
 %s5 =l phi @next0 %s3, @label_6834 %s4
-dbgloc 312,3 ## ./lib/core/ptr.concat
+dbgloc 316,3 ## ./lib/core/ptr.concat
 ret %s5
 @end
 hlt
@@ -89408,28 +89408,28 @@ hlt
 dbgfile "./lib/core/ptr.concat"
 export function l $cct_iSize_dsmax(l %a1,l %a0){
 @start
-%l316_13_a =l alloc8 8
-storel %a0, %l316_13_a
-%l316_23_b =l alloc8 8
-storel %a1, %l316_23_b
-dbgloc 317,5 ## ./lib/core/ptr.concat
-%s0 =l loadl %l316_13_a
-dbgloc 317,7 ## ./lib/core/ptr.concat
-%s1 =l loadl %l316_23_b
-dbgloc 317,9 ## ./lib/core/ptr.concat
+%l320_13_a =l alloc8 8
+storel %a0, %l320_13_a
+%l320_23_b =l alloc8 8
+storel %a1, %l320_23_b
+dbgloc 321,5 ## ./lib/core/ptr.concat
+%s0 =l loadl %l320_13_a
+dbgloc 321,7 ## ./lib/core/ptr.concat
+%s1 =l loadl %l320_23_b
+dbgloc 321,9 ## ./lib/core/ptr.concat
 %s2 =w csgtl %s0, %s1
-dbgloc 317,13 ## ./lib/core/ptr.concat
+dbgloc 321,13 ## ./lib/core/ptr.concat
 jnz %s2, @next0, @label_17601
 @next0 ## jump-if
-dbgloc 317,16 ## ./lib/core/ptr.concat
-%s3 =l loadl %l316_13_a
+dbgloc 321,16 ## ./lib/core/ptr.concat
+%s3 =l loadl %l320_13_a
 jmp @label_17602
 @label_17601 ## label
-dbgloc 317,23 ## ./lib/core/ptr.concat
-%s4 =l loadl %l316_23_b
+dbgloc 321,23 ## ./lib/core/ptr.concat
+%s4 =l loadl %l320_23_b
 @label_17602 ## label
 %s5 =l phi @next0 %s3, @label_17601 %s4
-dbgloc 318,3 ## ./lib/core/ptr.concat
+dbgloc 322,3 ## ./lib/core/ptr.concat
 ret %s5
 @end
 hlt
@@ -154293,7 +154293,7 @@ dbgloc 78,5 ## ./lib/array.concat
 dbgloc 78,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 78,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 78,24 ## ./lib/array.concat
 storel %s5, %l78_24_mid
 dbgloc 79,5 ## ./lib/array.concat
@@ -154385,7 +154385,7 @@ dbgloc 78,5 ## ./lib/array.concat
 dbgloc 78,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 78,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 78,24 ## ./lib/array.concat
 storel %s5, %l78_24_mid
 dbgloc 79,5 ## ./lib/array.concat
@@ -154475,7 +154475,7 @@ dbgloc 78,5 ## ./lib/array.concat
 dbgloc 78,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 78,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 78,24 ## ./lib/array.concat
 storel %s5, %l78_24_mid
 dbgloc 79,5 ## ./lib/array.concat
@@ -154569,7 +154569,7 @@ dbgloc 78,5 ## ./lib/array.concat
 dbgloc 78,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 78,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 78,24 ## ./lib/array.concat
 storel %s5, %l78_24_mid
 dbgloc 79,5 ## ./lib/array.concat
@@ -156097,7 +156097,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -156203,7 +156203,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -156553,7 +156553,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -156659,7 +156659,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -156765,7 +156765,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -156871,7 +156871,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -156977,7 +156977,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157083,7 +157083,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157189,7 +157189,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157295,7 +157295,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157401,7 +157401,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157507,7 +157507,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157613,7 +157613,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157719,7 +157719,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157825,7 +157825,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -157931,7 +157931,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -158037,7 +158037,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -158143,7 +158143,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -158249,7 +158249,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -158355,7 +158355,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -158583,7 +158583,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -158689,7 +158689,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -158795,7 +158795,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -158901,7 +158901,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159007,7 +159007,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159113,7 +159113,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159219,7 +159219,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159325,7 +159325,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159431,7 +159431,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159537,7 +159537,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159643,7 +159643,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159749,7 +159749,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159855,7 +159855,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -159961,7 +159961,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160067,7 +160067,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160173,7 +160173,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160279,7 +160279,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160385,7 +160385,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160491,7 +160491,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160597,7 +160597,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160703,7 +160703,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160809,7 +160809,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -160915,7 +160915,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161021,7 +161021,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161127,7 +161127,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161233,7 +161233,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161339,7 +161339,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161445,7 +161445,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161551,7 +161551,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161657,7 +161657,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161763,7 +161763,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161869,7 +161869,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -161975,7 +161975,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162081,7 +162081,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162187,7 +162187,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162293,7 +162293,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162399,7 +162399,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162505,7 +162505,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162611,7 +162611,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162717,7 +162717,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162823,7 +162823,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -162929,7 +162929,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163035,7 +163035,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163141,7 +163141,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163247,7 +163247,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163353,7 +163353,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163459,7 +163459,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163565,7 +163565,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163671,7 +163671,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163777,7 +163777,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163883,7 +163883,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -163989,7 +163989,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164095,7 +164095,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164201,7 +164201,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164307,7 +164307,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164413,7 +164413,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164519,7 +164519,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164625,7 +164625,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164731,7 +164731,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164837,7 +164837,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -164943,7 +164943,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -165049,7 +165049,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -165155,7 +165155,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -165261,7 +165261,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -165367,7 +165367,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -165473,7 +165473,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -165579,7 +165579,7 @@ dbgloc 160,7 ## ./lib/list.concat
 dbgloc 160,17 ## ./lib/list.concat
 %s15 =l copy 2
 dbgloc 160,25 ## ./lib/list.concat
-%s16 =l udiv %s14, %s15
+%s16 =l div %s14, %s15
 dbgloc 160,27 ## ./lib/list.concat
 %s17 =l add %s13, %s16
 dbgloc 160,29 ## ./lib/list.concat
@@ -169458,97 +169458,97 @@ hlt
 dbgfile "./lib/core/i32.concat"
 export function w $cct_i32_dbitrev(w %a0){
 @start
-dbgloc 86,7 ## ./lib/core/i32.concat
-%s0 =w copy -65536
-dbgloc 86,22 ## ./lib/core/i32.concat
-%s1 =w and %a0, %s0
-dbgloc 86,24 ## ./lib/core/i32.concat
-%s2 =w copy 16
-dbgloc 86,27 ## ./lib/core/i32.concat
-%s3 =w shr %s1, %s2
-dbgloc 86,34 ## ./lib/core/i32.concat
-%s4 =w copy 65535
-dbgloc 86,49 ## ./lib/core/i32.concat
-%s5 =w and %a0, %s4
-dbgloc 86,51 ## ./lib/core/i32.concat
-%s6 =w copy 16
-dbgloc 86,54 ## ./lib/core/i32.concat
-%s7 =w shl %s5, %s6
-dbgloc 86,57 ## ./lib/core/i32.concat
-%s8 =w or %s3, %s7
-dbgloc 87,7 ## ./lib/core/i32.concat
-%s9 =w copy -16711936
-dbgloc 87,22 ## ./lib/core/i32.concat
-%s10 =w and %s8, %s9
-dbgloc 87,25 ## ./lib/core/i32.concat
-%s11 =w copy 8
-dbgloc 87,27 ## ./lib/core/i32.concat
-%s12 =w shr %s10, %s11
-dbgloc 87,34 ## ./lib/core/i32.concat
-%s13 =w copy 16711935
-dbgloc 87,49 ## ./lib/core/i32.concat
-%s14 =w and %s8, %s13
-dbgloc 87,52 ## ./lib/core/i32.concat
-%s15 =w copy 8
-dbgloc 87,54 ## ./lib/core/i32.concat
-%s16 =w shl %s14, %s15
-dbgloc 87,57 ## ./lib/core/i32.concat
-%s17 =w or %s12, %s16
-dbgloc 88,7 ## ./lib/core/i32.concat
-%s18 =w copy -252645136
-dbgloc 88,22 ## ./lib/core/i32.concat
-%s19 =w and %s17, %s18
-dbgloc 88,25 ## ./lib/core/i32.concat
-%s20 =w copy 4
-dbgloc 88,27 ## ./lib/core/i32.concat
-%s21 =w shr %s19, %s20
-dbgloc 88,34 ## ./lib/core/i32.concat
-%s22 =w copy 252645135
-dbgloc 88,49 ## ./lib/core/i32.concat
-%s23 =w and %s17, %s22
-dbgloc 88,52 ## ./lib/core/i32.concat
-%s24 =w copy 4
-dbgloc 88,54 ## ./lib/core/i32.concat
-%s25 =w shl %s23, %s24
-dbgloc 88,57 ## ./lib/core/i32.concat
-%s26 =w or %s21, %s25
 dbgloc 89,7 ## ./lib/core/i32.concat
-%s27 =w copy -858993460
+%s0 =w copy -65536
 dbgloc 89,22 ## ./lib/core/i32.concat
-%s28 =w and %s26, %s27
-dbgloc 89,25 ## ./lib/core/i32.concat
-%s29 =w copy 2
+%s1 =w and %a0, %s0
+dbgloc 89,24 ## ./lib/core/i32.concat
+%s2 =w copy 16
 dbgloc 89,27 ## ./lib/core/i32.concat
-%s30 =w shr %s28, %s29
+%s3 =w shr %s1, %s2
 dbgloc 89,34 ## ./lib/core/i32.concat
-%s31 =w copy 858993459
+%s4 =w copy 65535
 dbgloc 89,49 ## ./lib/core/i32.concat
-%s32 =w and %s26, %s31
-dbgloc 89,52 ## ./lib/core/i32.concat
-%s33 =w copy 2
+%s5 =w and %a0, %s4
+dbgloc 89,51 ## ./lib/core/i32.concat
+%s6 =w copy 16
 dbgloc 89,54 ## ./lib/core/i32.concat
-%s34 =w shl %s32, %s33
+%s7 =w shl %s5, %s6
 dbgloc 89,57 ## ./lib/core/i32.concat
-%s35 =w or %s30, %s34
+%s8 =w or %s3, %s7
 dbgloc 90,7 ## ./lib/core/i32.concat
-%s36 =w copy -1431655766
+%s9 =w copy -16711936
 dbgloc 90,22 ## ./lib/core/i32.concat
-%s37 =w and %s35, %s36
+%s10 =w and %s8, %s9
 dbgloc 90,25 ## ./lib/core/i32.concat
-%s38 =w copy 1
+%s11 =w copy 8
 dbgloc 90,27 ## ./lib/core/i32.concat
-%s39 =w shr %s37, %s38
+%s12 =w shr %s10, %s11
 dbgloc 90,34 ## ./lib/core/i32.concat
-%s40 =w copy 1431655765
+%s13 =w copy 16711935
 dbgloc 90,49 ## ./lib/core/i32.concat
-%s41 =w and %s35, %s40
+%s14 =w and %s8, %s13
 dbgloc 90,52 ## ./lib/core/i32.concat
-%s42 =w copy 1
+%s15 =w copy 8
 dbgloc 90,54 ## ./lib/core/i32.concat
-%s43 =w shl %s41, %s42
+%s16 =w shl %s14, %s15
 dbgloc 90,57 ## ./lib/core/i32.concat
+%s17 =w or %s12, %s16
+dbgloc 91,7 ## ./lib/core/i32.concat
+%s18 =w copy -252645136
+dbgloc 91,22 ## ./lib/core/i32.concat
+%s19 =w and %s17, %s18
+dbgloc 91,25 ## ./lib/core/i32.concat
+%s20 =w copy 4
+dbgloc 91,27 ## ./lib/core/i32.concat
+%s21 =w shr %s19, %s20
+dbgloc 91,34 ## ./lib/core/i32.concat
+%s22 =w copy 252645135
+dbgloc 91,49 ## ./lib/core/i32.concat
+%s23 =w and %s17, %s22
+dbgloc 91,52 ## ./lib/core/i32.concat
+%s24 =w copy 4
+dbgloc 91,54 ## ./lib/core/i32.concat
+%s25 =w shl %s23, %s24
+dbgloc 91,57 ## ./lib/core/i32.concat
+%s26 =w or %s21, %s25
+dbgloc 92,7 ## ./lib/core/i32.concat
+%s27 =w copy -858993460
+dbgloc 92,22 ## ./lib/core/i32.concat
+%s28 =w and %s26, %s27
+dbgloc 92,25 ## ./lib/core/i32.concat
+%s29 =w copy 2
+dbgloc 92,27 ## ./lib/core/i32.concat
+%s30 =w shr %s28, %s29
+dbgloc 92,34 ## ./lib/core/i32.concat
+%s31 =w copy 858993459
+dbgloc 92,49 ## ./lib/core/i32.concat
+%s32 =w and %s26, %s31
+dbgloc 92,52 ## ./lib/core/i32.concat
+%s33 =w copy 2
+dbgloc 92,54 ## ./lib/core/i32.concat
+%s34 =w shl %s32, %s33
+dbgloc 92,57 ## ./lib/core/i32.concat
+%s35 =w or %s30, %s34
+dbgloc 93,7 ## ./lib/core/i32.concat
+%s36 =w copy -1431655766
+dbgloc 93,22 ## ./lib/core/i32.concat
+%s37 =w and %s35, %s36
+dbgloc 93,25 ## ./lib/core/i32.concat
+%s38 =w copy 1
+dbgloc 93,27 ## ./lib/core/i32.concat
+%s39 =w shr %s37, %s38
+dbgloc 93,34 ## ./lib/core/i32.concat
+%s40 =w copy 1431655765
+dbgloc 93,49 ## ./lib/core/i32.concat
+%s41 =w and %s35, %s40
+dbgloc 93,52 ## ./lib/core/i32.concat
+%s42 =w copy 1
+dbgloc 93,54 ## ./lib/core/i32.concat
+%s43 =w shl %s41, %s42
+dbgloc 93,57 ## ./lib/core/i32.concat
 %s44 =w or %s39, %s43
-dbgloc 91,3 ## ./lib/core/i32.concat
+dbgloc 94,3 ## ./lib/core/i32.concat
 ret %s44
 @end
 hlt
@@ -194335,7 +194335,7 @@ dbgloc 265,40 ## ./concat.concat/constants.concat
 dbgloc 265,42 ## ./concat.concat/constants.concat
 %s35 =l copy 8
 dbgloc 265,50 ## ./concat.concat/constants.concat
-%s36 =l udiv %s34, %s35
+%s36 =l div %s34, %s35
 dbgloc 265,52 ## ./concat.concat/constants.concat
 %s37 =w culel %s30, %s36
 dbgloc 265,56 ## ./concat.concat/constants.concat
@@ -202209,7 +202209,7 @@ dbgloc 371,13 ## ./lib/core/slice.concat
 dbgloc 371,15 ## ./lib/core/slice.concat
 %s17 =l copy 2
 dbgloc 371,17 ## ./lib/core/slice.concat
-%s18 =l udiv %s16, %s17
+%s18 =l div %s16, %s17
 dbgloc 371,19 ## ./lib/core/slice.concat
 %s19 =l add %s13, %s18
 dbgloc 371,25 ## ./lib/core/slice.concat
@@ -202387,7 +202387,7 @@ dbgloc 371,13 ## ./lib/core/slice.concat
 dbgloc 371,15 ## ./lib/core/slice.concat
 %s17 =l copy 2
 dbgloc 371,17 ## ./lib/core/slice.concat
-%s18 =l udiv %s16, %s17
+%s18 =l div %s16, %s17
 dbgloc 371,19 ## ./lib/core/slice.concat
 %s19 =l add %s13, %s18
 dbgloc 371,25 ## ./lib/core/slice.concat
@@ -202565,7 +202565,7 @@ dbgloc 371,13 ## ./lib/core/slice.concat
 dbgloc 371,15 ## ./lib/core/slice.concat
 %s17 =l copy 2
 dbgloc 371,17 ## ./lib/core/slice.concat
-%s18 =l udiv %s16, %s17
+%s18 =l div %s16, %s17
 dbgloc 371,19 ## ./lib/core/slice.concat
 %s19 =l add %s13, %s18
 dbgloc 371,25 ## ./lib/core/slice.concat
@@ -203289,154 +203289,154 @@ hlt
 dbgfile "./lib/core/i32.concat"
 export function w $cct_i32_dhighestSetBit(w %a0){
 @start
-%l94_14_x =l alloc4 4
-dbgloc 94,14 ## ./lib/core/i32.concat
-storew %a0, %l94_14_x
-dbgloc 95,5 ## ./lib/core/i32.concat
+%l97_14_x =l alloc4 4
+dbgloc 97,14 ## ./lib/core/i32.concat
+storew %a0, %l97_14_x
+dbgloc 98,5 ## ./lib/core/i32.concat
 %s0 =w copy 0
-dbgloc 96,7 ## ./lib/core/i32.concat
-%s1 =w loadw %l94_14_x
-dbgloc 96,9 ## ./lib/core/i32.concat
+dbgloc 99,7 ## ./lib/core/i32.concat
+%s1 =w loadw %l97_14_x
+dbgloc 99,9 ## ./lib/core/i32.concat
 %s2 =w copy -65536
-dbgloc 96,25 ## ./lib/core/i32.concat
+dbgloc 99,25 ## ./lib/core/i32.concat
 %s3 =w and %s1, %s2
-dbgloc 96,27 ## ./lib/core/i32.concat
+dbgloc 99,27 ## ./lib/core/i32.concat
 %s4 =ub call $cct_i32_dtoBool (w %s3)
-dbgloc 96,29 ## ./lib/core/i32.concat
+dbgloc 99,29 ## ./lib/core/i32.concat
 jnz %s4, @next0, @label_15272
 @next0 ## jump-if
-dbgloc 97,12 ## ./lib/core/i32.concat
+dbgloc 100,12 ## ./lib/core/i32.concat
 %s5 =w copy 16
-dbgloc 98,9 ## ./lib/core/i32.concat
-%s6 =w loadw %l94_14_x
-dbgloc 98,11 ## ./lib/core/i32.concat
+dbgloc 101,9 ## ./lib/core/i32.concat
+%s6 =w loadw %l97_14_x
+dbgloc 101,11 ## ./lib/core/i32.concat
 %s7 =w copy 16
-dbgloc 98,14 ## ./lib/core/i32.concat
+dbgloc 101,14 ## ./lib/core/i32.concat
 %s8 =w shr %s6, %s7
-dbgloc 98,18 ## ./lib/core/i32.concat
-storew %s8, %l94_14_x
+dbgloc 101,18 ## ./lib/core/i32.concat
+storew %s8, %l97_14_x
 jmp @label_15273
 @label_15272 ## label
 @label_15273 ## label
 %s9 =w phi @next0 %s5, @label_15272 %s0
-dbgloc 100,7 ## ./lib/core/i32.concat
-%s10 =w loadw %l94_14_x
-dbgloc 100,9 ## ./lib/core/i32.concat
+dbgloc 103,7 ## ./lib/core/i32.concat
+%s10 =w loadw %l97_14_x
+dbgloc 103,9 ## ./lib/core/i32.concat
 %s11 =w copy 65280
-dbgloc 100,20 ## ./lib/core/i32.concat
+dbgloc 103,20 ## ./lib/core/i32.concat
 %s12 =w and %s10, %s11
-dbgloc 100,22 ## ./lib/core/i32.concat
+dbgloc 103,22 ## ./lib/core/i32.concat
 %s13 =ub call $cct_i32_dtoBool (w %s12)
-dbgloc 100,24 ## ./lib/core/i32.concat
+dbgloc 103,24 ## ./lib/core/i32.concat
 jnz %s13, @next2, @label_15275
 @next2 ## jump-if
-dbgloc 101,9 ## ./lib/core/i32.concat
+dbgloc 104,9 ## ./lib/core/i32.concat
 %s14 =w copy 8
-dbgloc 101,11 ## ./lib/core/i32.concat
+dbgloc 104,11 ## ./lib/core/i32.concat
 %s15 =w add %s9, %s14
-dbgloc 102,9 ## ./lib/core/i32.concat
-%s16 =w loadw %l94_14_x
-dbgloc 102,11 ## ./lib/core/i32.concat
+dbgloc 105,9 ## ./lib/core/i32.concat
+%s16 =w loadw %l97_14_x
+dbgloc 105,11 ## ./lib/core/i32.concat
 %s17 =w copy 8
-dbgloc 102,13 ## ./lib/core/i32.concat
+dbgloc 105,13 ## ./lib/core/i32.concat
 %s18 =w shr %s16, %s17
-dbgloc 102,17 ## ./lib/core/i32.concat
-storew %s18, %l94_14_x
+dbgloc 105,17 ## ./lib/core/i32.concat
+storew %s18, %l97_14_x
 jmp @label_15276
 @label_15275 ## label
 @label_15276 ## label
 %s19 =w phi @next2 %s15, @label_15275 %s9
-dbgloc 104,7 ## ./lib/core/i32.concat
-%s20 =w loadw %l94_14_x
-dbgloc 104,9 ## ./lib/core/i32.concat
+dbgloc 107,7 ## ./lib/core/i32.concat
+%s20 =w loadw %l97_14_x
+dbgloc 107,9 ## ./lib/core/i32.concat
 %s21 =w copy 240
-dbgloc 104,18 ## ./lib/core/i32.concat
+dbgloc 107,18 ## ./lib/core/i32.concat
 %s22 =w and %s20, %s21
-dbgloc 104,20 ## ./lib/core/i32.concat
+dbgloc 107,20 ## ./lib/core/i32.concat
 %s23 =ub call $cct_i32_dtoBool (w %s22)
-dbgloc 104,22 ## ./lib/core/i32.concat
+dbgloc 107,22 ## ./lib/core/i32.concat
 jnz %s23, @next4, @label_15278
 @next4 ## jump-if
-dbgloc 105,9 ## ./lib/core/i32.concat
+dbgloc 108,9 ## ./lib/core/i32.concat
 %s24 =w copy 4
-dbgloc 105,11 ## ./lib/core/i32.concat
+dbgloc 108,11 ## ./lib/core/i32.concat
 %s25 =w add %s19, %s24
-dbgloc 106,9 ## ./lib/core/i32.concat
-%s26 =w loadw %l94_14_x
-dbgloc 106,11 ## ./lib/core/i32.concat
+dbgloc 109,9 ## ./lib/core/i32.concat
+%s26 =w loadw %l97_14_x
+dbgloc 109,11 ## ./lib/core/i32.concat
 %s27 =w copy 4
-dbgloc 106,13 ## ./lib/core/i32.concat
+dbgloc 109,13 ## ./lib/core/i32.concat
 %s28 =w shr %s26, %s27
-dbgloc 106,17 ## ./lib/core/i32.concat
-storew %s28, %l94_14_x
+dbgloc 109,17 ## ./lib/core/i32.concat
+storew %s28, %l97_14_x
 jmp @label_15279
 @label_15278 ## label
 @label_15279 ## label
 %s29 =w phi @next4 %s25, @label_15278 %s19
-dbgloc 108,7 ## ./lib/core/i32.concat
-%s30 =w loadw %l94_14_x
-dbgloc 108,9 ## ./lib/core/i32.concat
+dbgloc 111,7 ## ./lib/core/i32.concat
+%s30 =w loadw %l97_14_x
+dbgloc 111,9 ## ./lib/core/i32.concat
 %s31 =w copy 12
-dbgloc 108,20 ## ./lib/core/i32.concat
+dbgloc 111,20 ## ./lib/core/i32.concat
 %s32 =w and %s30, %s31
-dbgloc 108,22 ## ./lib/core/i32.concat
+dbgloc 111,22 ## ./lib/core/i32.concat
 %s33 =ub call $cct_i32_dtoBool (w %s32)
-dbgloc 108,24 ## ./lib/core/i32.concat
+dbgloc 111,24 ## ./lib/core/i32.concat
 jnz %s33, @next6, @label_15281
 @next6 ## jump-if
-dbgloc 109,9 ## ./lib/core/i32.concat
+dbgloc 112,9 ## ./lib/core/i32.concat
 %s34 =w copy 2
-dbgloc 109,11 ## ./lib/core/i32.concat
+dbgloc 112,11 ## ./lib/core/i32.concat
 %s35 =w add %s29, %s34
-dbgloc 110,9 ## ./lib/core/i32.concat
-%s36 =w loadw %l94_14_x
-dbgloc 110,11 ## ./lib/core/i32.concat
+dbgloc 113,9 ## ./lib/core/i32.concat
+%s36 =w loadw %l97_14_x
+dbgloc 113,11 ## ./lib/core/i32.concat
 %s37 =w copy 2
-dbgloc 110,13 ## ./lib/core/i32.concat
+dbgloc 113,13 ## ./lib/core/i32.concat
 %s38 =w shr %s36, %s37
-dbgloc 110,17 ## ./lib/core/i32.concat
-storew %s38, %l94_14_x
+dbgloc 113,17 ## ./lib/core/i32.concat
+storew %s38, %l97_14_x
 jmp @label_15282
 @label_15281 ## label
 @label_15282 ## label
 %s39 =w phi @next6 %s35, @label_15281 %s29
-dbgloc 112,7 ## ./lib/core/i32.concat
-%s40 =w loadw %l94_14_x
-dbgloc 112,9 ## ./lib/core/i32.concat
+dbgloc 115,7 ## ./lib/core/i32.concat
+%s40 =w loadw %l97_14_x
+dbgloc 115,9 ## ./lib/core/i32.concat
 %s41 =w copy 2
-dbgloc 112,18 ## ./lib/core/i32.concat
+dbgloc 115,18 ## ./lib/core/i32.concat
 %s42 =w and %s40, %s41
-dbgloc 112,20 ## ./lib/core/i32.concat
+dbgloc 115,20 ## ./lib/core/i32.concat
 %s43 =ub call $cct_i32_dtoBool (w %s42)
-dbgloc 112,22 ## ./lib/core/i32.concat
+dbgloc 115,22 ## ./lib/core/i32.concat
 jnz %s43, @next8, @label_15284
 @next8 ## jump-if
-dbgloc 113,9 ## ./lib/core/i32.concat
+dbgloc 116,9 ## ./lib/core/i32.concat
 %s44 =w copy 1
-dbgloc 113,11 ## ./lib/core/i32.concat
+dbgloc 116,11 ## ./lib/core/i32.concat
 %s45 =w add %s39, %s44
-dbgloc 114,9 ## ./lib/core/i32.concat
-%s46 =w loadw %l94_14_x
-dbgloc 114,11 ## ./lib/core/i32.concat
+dbgloc 117,9 ## ./lib/core/i32.concat
+%s46 =w loadw %l97_14_x
+dbgloc 117,11 ## ./lib/core/i32.concat
 %s47 =w copy 1
-dbgloc 114,13 ## ./lib/core/i32.concat
+dbgloc 117,13 ## ./lib/core/i32.concat
 %s48 =w shr %s46, %s47
-dbgloc 114,17 ## ./lib/core/i32.concat
-storew %s48, %l94_14_x
+dbgloc 117,17 ## ./lib/core/i32.concat
+storew %s48, %l97_14_x
 jmp @label_15285
 @label_15284 ## label
 @label_15285 ## label
 %s49 =w phi @next8 %s45, @label_15284 %s39
-dbgloc 116,5 ## ./lib/core/i32.concat
-%s50 =w loadw %l94_14_x
-dbgloc 116,7 ## ./lib/core/i32.concat
+dbgloc 119,5 ## ./lib/core/i32.concat
+%s50 =w loadw %l97_14_x
+dbgloc 119,7 ## ./lib/core/i32.concat
 %s51 =w copy 1
-dbgloc 116,9 ## ./lib/core/i32.concat
+dbgloc 119,9 ## ./lib/core/i32.concat
 %s52 =w sub %s50, %s51
-dbgloc 116,15 ## ./lib/core/i32.concat
-dbgloc 116,20 ## ./lib/core/i32.concat
+dbgloc 119,15 ## ./lib/core/i32.concat
+dbgloc 119,20 ## ./lib/core/i32.concat
 %s53 =w add %s49, %s52
-dbgloc 116,22 ## ./lib/core/i32.concat
+dbgloc 119,22 ## ./lib/core/i32.concat
 ret %s53
 @end
 hlt
@@ -209157,8 +209157,8 @@ dbgloc 109,45 ## ./concat.concat/types.concat
 dbgloc 109,45 ## ./concat.concat/types.concat
 %s20 =l loadl %s19
 dbgloc 109,53 ## ./concat.concat/types.concat
-%s21 =w call $cct_iSize_dcmp (l %s20,l %s16)
-dbgloc 109,63 ## ./concat.concat/types.concat
+%s21 =w call $cct_iSize_ducmp (l %s20,l %s16)
+dbgloc 109,64 ## ./concat.concat/types.concat
 ret %s21
 @label_10692 ## label
 dbgloc 112,5 ## ./concat.concat/types.concat
@@ -210759,8 +210759,8 @@ dbgloc 549,25 ## ./concat.concat/usageAnalysis.concat
 dbgloc 549,25 ## ./concat.concat/usageAnalysis.concat
 %s41 =l loadl %s40
 dbgloc 549,33 ## ./concat.concat/usageAnalysis.concat
-%s42 =w call $cct_iSize_dcmp (l %s41,l %s39)
-dbgloc 549,43 ## ./concat.concat/usageAnalysis.concat
+%s42 =w call $cct_iSize_ducmp (l %s41,l %s39)
+dbgloc 549,44 ## ./concat.concat/usageAnalysis.concat
 ret %s42
 @end
 hlt
@@ -237100,8 +237100,8 @@ dbgloc 194,51 ## ./concat.concat/types.concat
 dbgloc 194,51 ## ./concat.concat/types.concat
 %s36 =l loadl %s35
 dbgloc 194,59 ## ./concat.concat/types.concat
-%s37 =w call $cct_iSize_dcmp (l %s36,l %s33)
-dbgloc 194,69 ## ./concat.concat/types.concat
+%s37 =w call $cct_iSize_ducmp (l %s36,l %s33)
+dbgloc 194,70 ## ./concat.concat/types.concat
 ret %s37
 @label_7497 ## label
 dbgloc 196,5 ## ./concat.concat/types.concat
@@ -237174,8 +237174,8 @@ dbgloc 197,53 ## ./concat.concat/types.concat
 dbgloc 197,53 ## ./concat.concat/types.concat
 %s58 =l loadl %s57
 dbgloc 197,61 ## ./concat.concat/types.concat
-%s59 =w call $cct_iSize_dcmp (l %s58,l %s53)
-dbgloc 197,71 ## ./concat.concat/types.concat
+%s59 =w call $cct_iSize_ducmp (l %s58,l %s53)
+dbgloc 197,72 ## ./concat.concat/types.concat
 ret %s59
 @label_7500 ## label
 dbgloc 199,5 ## ./concat.concat/types.concat
@@ -237248,8 +237248,8 @@ dbgloc 200,53 ## ./concat.concat/types.concat
 dbgloc 200,53 ## ./concat.concat/types.concat
 %s80 =l loadl %s79
 dbgloc 200,61 ## ./concat.concat/types.concat
-%s81 =w call $cct_iSize_dcmp (l %s80,l %s75)
-dbgloc 200,71 ## ./concat.concat/types.concat
+%s81 =w call $cct_iSize_ducmp (l %s80,l %s75)
+dbgloc 200,72 ## ./concat.concat/types.concat
 ret %s81
 @label_7503 ## label
 dbgloc 202,5 ## ./concat.concat/types.concat
@@ -250374,7 +250374,7 @@ dbgloc 18,5 ## ./lib/array.concat
 dbgloc 18,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 18,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 18,24 ## ./lib/array.concat
 storel %s5, %l18_24_mid
 dbgloc 19,5 ## ./lib/array.concat
@@ -250780,7 +250780,7 @@ dbgloc 18,5 ## ./lib/array.concat
 dbgloc 18,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 18,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 18,24 ## ./lib/array.concat
 storel %s5, %l18_24_mid
 dbgloc 19,5 ## ./lib/array.concat
@@ -251179,7 +251179,7 @@ dbgloc 18,5 ## ./lib/array.concat
 dbgloc 18,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 18,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 18,24 ## ./lib/array.concat
 storel %s5, %l18_24_mid
 dbgloc 19,5 ## ./lib/array.concat
@@ -251592,7 +251592,7 @@ dbgloc 18,5 ## ./lib/array.concat
 dbgloc 18,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 18,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 18,24 ## ./lib/array.concat
 storel %s5, %l18_24_mid
 dbgloc 19,5 ## ./lib/array.concat
@@ -252005,7 +252005,7 @@ dbgloc 18,5 ## ./lib/array.concat
 dbgloc 18,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 18,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 18,24 ## ./lib/array.concat
 storel %s5, %l18_24_mid
 dbgloc 19,5 ## ./lib/array.concat
@@ -252420,7 +252420,7 @@ dbgloc 18,5 ## ./lib/array.concat
 dbgloc 18,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 18,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 18,24 ## ./lib/array.concat
 storel %s5, %l18_24_mid
 dbgloc 19,5 ## ./lib/array.concat
@@ -252841,7 +252841,7 @@ dbgloc 18,5 ## ./lib/array.concat
 dbgloc 18,10 ## ./lib/array.concat
 %s4 =l copy 2
 dbgloc 18,18 ## ./lib/array.concat
-%s5 =l udiv %s3, %s4
+%s5 =l div %s3, %s4
 dbgloc 18,24 ## ./lib/array.concat
 storel %s5, %l18_24_mid
 dbgloc 19,5 ## ./lib/array.concat
@@ -275819,7 +275819,7 @@ dbgloc 1587,10 ## ./concat.concat/generator_qbe.concat
 dbgloc 1587,18 ## ./concat.concat/generator_qbe.concat
 %s78 =l copy 2
 dbgloc 1587,26 ## ./concat.concat/generator_qbe.concat
-%s79 =l udiv %s77, %s78
+%s79 =l div %s77, %s78
 dbgloc 1587,32 ## ./concat.concat/generator_qbe.concat
 storel %s79, %l1587_32_p
 dbgloc 1589,16 ## ./concat.concat/generator_qbe.concat
@@ -278859,7 +278859,7 @@ dbgloc 2248,14 ## ./concat.concat/parser.concat
 dbgloc 2248,22 ## ./concat.concat/parser.concat
 %s141 =l copy 8
 dbgloc 2248,24 ## ./concat.concat/parser.concat
-%s142 =l udiv %s140, %s141
+%s142 =l div %s140, %s141
 dbgloc 2248,26 ## ./concat.concat/parser.concat
 %s143 =:struct503 call $cct_36_Flist_densureCap__Z_X588 (l %s142,:struct503 %s138)
 dbgloc 2249,3 ## ./concat.concat/parser.concat
@@ -284046,7 +284046,7 @@ dbgloc 171,39 ## ./concat.concat/constants.concat
 dbgloc 171,39 ## ./concat.concat/constants.concat
 %s109 =l loadl %s108
 dbgloc 171,47 ## ./concat.concat/constants.concat
-%s110 =w call $cct_iSize_dcmp (l %s109,l %s107)
+%s110 =w call $cct_iSize_ducmp (l %s109,l %s107)
 dbgloc 172,11 ## ./concat.concat/constants.concat
 %s111 =ub call $cct_i32_dtoBool (w %s110)
 dbgloc 172,13 ## ./concat.concat/constants.concat
@@ -284094,7 +284094,7 @@ dbgloc 177,39 ## ./concat.concat/constants.concat
 dbgloc 177,39 ## ./concat.concat/constants.concat
 %s122 =l loadl %s121
 dbgloc 177,47 ## ./concat.concat/constants.concat
-%s123 =w call $cct_iSize_dcmp (l %s122,l %s120)
+%s123 =w call $cct_iSize_ducmp (l %s122,l %s120)
 dbgloc 178,11 ## ./concat.concat/constants.concat
 %s124 =ub call $cct_i32_dtoBool (w %s123)
 dbgloc 178,13 ## ./concat.concat/constants.concat
@@ -284142,7 +284142,7 @@ dbgloc 183,39 ## ./concat.concat/constants.concat
 dbgloc 183,39 ## ./concat.concat/constants.concat
 %s135 =l loadl %s134
 dbgloc 183,47 ## ./concat.concat/constants.concat
-%s136 =w call $cct_iSize_dcmp (l %s135,l %s133)
+%s136 =w call $cct_iSize_ducmp (l %s135,l %s133)
 dbgloc 184,11 ## ./concat.concat/constants.concat
 %s137 =ub call $cct_i32_dtoBool (w %s136)
 dbgloc 184,13 ## ./concat.concat/constants.concat
@@ -284190,7 +284190,7 @@ dbgloc 189,39 ## ./concat.concat/constants.concat
 dbgloc 189,39 ## ./concat.concat/constants.concat
 %s148 =l loadl %s147
 dbgloc 189,47 ## ./concat.concat/constants.concat
-%s149 =w call $cct_iSize_dcmp (l %s148,l %s146)
+%s149 =w call $cct_iSize_ducmp (l %s148,l %s146)
 dbgloc 190,11 ## ./concat.concat/constants.concat
 %s150 =ub call $cct_i32_dtoBool (w %s149)
 dbgloc 190,13 ## ./concat.concat/constants.concat
@@ -284238,7 +284238,7 @@ dbgloc 195,39 ## ./concat.concat/constants.concat
 dbgloc 195,39 ## ./concat.concat/constants.concat
 %s161 =l loadl %s160
 dbgloc 195,47 ## ./concat.concat/constants.concat
-%s162 =w call $cct_iSize_dcmp (l %s161,l %s159)
+%s162 =w call $cct_iSize_ducmp (l %s161,l %s159)
 dbgloc 196,11 ## ./concat.concat/constants.concat
 %s163 =ub call $cct_i32_dtoBool (w %s162)
 dbgloc 196,13 ## ./concat.concat/constants.concat
@@ -346158,13 +346158,13 @@ storel %a2, %l332_30_context
 %l349_14_tmp_X643Hb =l alloc8 41
 %l354_14_tmp_X643Hc =l alloc8 41
 %l358_14_tmp_X643Hd =l alloc8 41
-%l362_50_condition =l alloc8 8
+%l362_52_condition =l alloc8 8
 %l363_33_tmp_X64GW =l alloc8 8
 %l363_33_tmp_X643He =l alloc8 8
 %l363_33_tmp_X643Hf =l alloc8 8
 %l365_9_tmp_X643Hg =l alloc8 8
 %l367_14_tmp_X643Hh =l alloc8 41
-%l371_50_condition =l alloc8 8
+%l371_52_condition =l alloc8 8
 %l372_33_tmp_X64GX =l alloc8 8
 %l372_33_tmp_X643Hi =l alloc8 8
 %l372_33_tmp_X643Hj =l alloc8 8
@@ -346737,10 +346737,10 @@ dbgloc 362,24 ## ./concat.concat/prepareCompile.concat
 %s34 =:struct588 call $cct_61_FbranchTree_dpop_X581 (l %s33)
 dbgloc 362,39 ## ./concat.concat/prepareCompile.concat
 %s35 =l call $cct_23_Foptional_dunwrapP_X582 (:struct588 %s34)
-dbgloc 362,50 ## ./concat.concat/prepareCompile.concat
-storel %s35, %l362_50_condition
+dbgloc 362,52 ## ./concat.concat/prepareCompile.concat
+storel %s35, %l362_52_condition
 dbgloc 363,9 ## ./concat.concat/prepareCompile.concat
-%s36 =l loadl %l362_50_condition
+%s36 =l loadl %l362_52_condition
 dbgloc 363,19 ## ./concat.concat/prepareCompile.concat
 dbgloc 363,30 ## ./concat.concat/prepareCompile.concat
 %s37 =:struct257 call $cct_22_FunionElement_dtryUnwrapPtr_X580 (l %s36)
@@ -346802,10 +346802,10 @@ dbgloc 371,24 ## ./concat.concat/prepareCompile.concat
 %s47 =:struct588 call $cct_61_FbranchTree_dpop_X581 (l %s46)
 dbgloc 371,39 ## ./concat.concat/prepareCompile.concat
 %s48 =l call $cct_23_Foptional_dunwrapP_X582 (:struct588 %s47)
-dbgloc 371,50 ## ./concat.concat/prepareCompile.concat
-storel %s48, %l371_50_condition
+dbgloc 371,52 ## ./concat.concat/prepareCompile.concat
+storel %s48, %l371_52_condition
 dbgloc 372,9 ## ./concat.concat/prepareCompile.concat
-%s49 =l loadl %l371_50_condition
+%s49 =l loadl %l371_52_condition
 dbgloc 372,19 ## ./concat.concat/prepareCompile.concat
 dbgloc 372,30 ## ./concat.concat/prepareCompile.concat
 %s50 =:struct257 call $cct_22_FunionElement_dtryUnwrapPtr_X580 (l %s49)
