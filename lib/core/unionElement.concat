@@ -82,7 +82,7 @@ overload: export: ??
   unionElement.tryUnwrap
   unionElement.tryUnwrapPtr
 end
-overload: merge: export: unwrap
+overload: merge: export: <unwrap>
   unionElement.unwrap
   unionElement.unwrapPtr
 end

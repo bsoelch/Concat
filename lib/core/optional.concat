@@ -80,7 +80,7 @@ namespace: optional
   end
 end
 
-overload: export: unwrap
+overload: export: <unwrap>
   optional.unwrap
 end
 overload: export: !

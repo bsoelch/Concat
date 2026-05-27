@@ -359,7 +359,7 @@ proc(
     break
     RuntimeAssert case
       _VAL_TYPES_ if
-        context .stack branchTree.pop unwrap =:: condition
+        context .stack branchTree.pop <unwrap> =:: condition
         condition .Reference ?? .if ..drop
           ## TODO: decay reference
         end
@@ -368,7 +368,7 @@ proc(
     break
     Switch case
       _VAL_TYPES_ if
-        context .stack branchTree.pop unwrap =:: condition
+        context .stack branchTree.pop <unwrap> =:: condition
         condition .Reference ?? .if ..drop
           ## TODO: decay reference
         end

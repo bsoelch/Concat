@@ -304,7 +304,7 @@ namespace: int
     proc( type : auto: T  T IntConversionResult -> T ) =>: ifVal  .Ok ..raw end
     proc( type : auto: T  T IntConversionResult -> int ) =>: elseVal  .Err ..raw end
   end
-  overload: merge: unwrap
+  overload: merge: <unwrap>
     IntConv.unwrap
   end
   proc( int : a -> i32 IntConversionResult ) =>: export: asI32
@@ -1568,7 +1568,7 @@ namespace: int
       end
       digitBuffer
         list.pop >$ digitBuffer=
-      unwrap i64 cast.u base padWith padDigits sb.appendPaddedU
+      <unwrap> i64 cast.u base padWith padDigits sb.appendPaddedU
       digitBuffer list.reversed for
         base '0' chunkDigits sb.appendPaddedU
       end
