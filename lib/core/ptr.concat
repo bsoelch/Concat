@@ -269,6 +269,8 @@ namespace: iSize
     ( iSize : a iSize : b -> bool ) : export: alias: sle ..builtIn.le.i64
     ( iSize : a iSize : b -> bool ) : export: alias: sge ..builtIn.ge.i64
     ( iSize : a iSize : b -> bool ) : export: alias: sgt ..builtIn.gt.i64
+    ( iSize : a iSize : b -> i32 ) : export: alias: cmp i64.cmp
+    ( iSize : a iSize : b -> i32 ) : export: alias: ucmp i64.ucmp
   else iSize ..types.unwrapNamed i32 == _if
     ( char8 ptr.raw iSize -> iSize ) : static: export: alias: parse ..builtIn.parse.i32
     ( iSize : a iSize : b -> iSize ) : export: alias: add ..builtIn.add.i32
@@ -299,14 +301,13 @@ namespace: iSize
     ( iSize : a iSize : b -> bool ) : export: alias: sle ..builtIn.le.i32
     ( iSize : a iSize : b -> bool ) : export: alias: sge ..builtIn.ge.i32
     ( iSize : a iSize : b -> bool ) : export: alias: sgt ..builtIn.gt.i32
+    ( iSize : a iSize : b -> i32 ) : export: alias: cmp i32.cmp
+    ( iSize : a iSize : b -> i32 ) : export: alias: ucmp i32.ucmp
   else
     "iSize should be i64 or i32" ..panic
   end
   ( iSize -> bool ) =>: export: toBool
     0 !=
-  end
-  ( iSize : a iSize : b -> i32 ) =>: export: ucmp
-    a b u> ?1 a b u< ?1 -
   end
   ( iSize : a iSize : b -> iSize ) =>: export: min
     a b u< if a else b end

@@ -176,6 +176,18 @@ namespace: float
   proc( int -> float ) =>: export: fromInt
     0 FloatType .EXACT ExpData.fromExponent float new
   end
+  proc( i32 -> float ) =>: export: fromI32
+    int.fromI32 fromInt
+  end
+  proc( i32 -> float ) =>: export: fromU32
+    int.fromU32 fromInt
+  end
+  proc( i64 -> float ) =>: export: fromI64
+    int.fromI64 fromInt
+  end
+  proc( i64 -> float ) =>: export: fromU64
+    int.fromU64 fromInt
+  end
   proc( float -> int ) =>: export: toIntTrunc
     RoundingMode .DOWN toIntRound
   end
@@ -193,6 +205,9 @@ namespace: float
   overload: export: toInt toIntTrunc toIntRound end
   proc( float -> int optional ) =>: export: asInt
     "unimplemented: asInt" ..panic
+  end
+  proc( float -> i64 optional ) =>: export: asU64
+    "unimplemented: asU64" ..panic
   end
   ## TODO: conversions from/to primitive
 ## conversion from/to string
@@ -300,9 +315,21 @@ namespace: float
   end
 ## comparisons
   proc( float : a float : b -> i32 ) =>: export: cmp
-    "unimplemented: cmp" ..panic
+    a .magnitude int.sign =:: aSign
+    b .magnitude int.sign =:: bSign
+    aSign bSign != if
+      aSign bSign - return
+    end
+    a b ucmp aSign * return
   end
   proc( float : a float : b -> i32 ) =>: export: ucmp
+    a .exponent ExpData.exponent =:: aExp
+    b .exponent ExpData.exponent =:: bExp
+    aExp a .magnitude int.bitLength + bExp b .magnitude int.bitLength + iSize.cmp =:: sCmp
+    sCmp 0 != if
+      sCmp return
+    end
+    ## TODO need shifted integer comparisson
     "unimplemented: ucmp" ..panic
   end
   proc( float : a float : b -> float ) =>: export: min
@@ -407,7 +434,7 @@ namespace: float
     =:: precission
     x copy
       precission setPrecission
-    $ copy inv =:: xInv
+    $ copy invert =:: xInv
     ## initial estimate: scale top coefficient to match expected scale
       $ .exponent ExpData.exponent srcBits - 2 / ## (bitlen+exp)/2 - bitlen
       FloatType .FLOAT ExpData.fromExponent >$ .exponent=
@@ -428,10 +455,10 @@ namespace: float
     =:: precission
     THREE copy
       precission 1 + setPrecission
-    inv =:: oneThird
+    invert =:: oneThird
     x copy
       precission setPrecission
-    $ copy inv =:: xInv
+    $ copy invert =:: xInv
     ## initial estimate: scale top coefficient to match expected scale
       $ .exponent ExpData.exponent srcBits 2 * - 3 / ## (bitlen+exp)/3 - bitlen = (exp-2*bitlen)/3
       FloatType .FLOAT ExpData.fromExponent >$ .exponent=
@@ -443,7 +470,7 @@ namespace: float
       $ copy ONE $1 copy $ copy square mul xInv mul sub mul oneThird mul add
     return
   end
-  proc( float : x -> float ) =>: export: inv
+  proc( float : x -> float ) =>: export: invert
     x .magnitude int.bitLength
       x .exponent
         $ ExpData.exponent $2 + -_ =:: scaleFactor
@@ -478,7 +505,7 @@ namespace: float
     a getPrecission b getPrecission Precission.max =:: resPrecission
     ## TODO: ensure precission of b is a least precission/bit-length of a
     a
-      b resPrecission Precission.toBits .if setPrecission end inv
+      b resPrecission Precission.toBits .if setPrecission end invert
     mul
   end
   proc( float : a float : b -> float #+div+# float #+rem+# ) =>: export: divRem
@@ -491,18 +518,98 @@ namespace: float
   proc( float float -> float ) =>: export: rem
     divRem >$ free
   end
-  proc( float -> float ) =>: export: exp
-    "unimplemented: exp" ..panic
+  proc( iSize : precission -> float ) =>: export: ln2
+    ## ? use caching + netwon method to get on demand value of ln2 to arbitary precission
+    "unimplemented: ln2" ..panic
   end
+  ## TODO? seperate special-case function for 1/ln2
+  proc( float : x -> float ) =>: export: exp
+    x MINUS_ONE cmp 0 < if ## TODO what is a good threshold for exp(-x) -> 1/exp(x)? (-0.5 ?)
+      x negate exp invert return
+    end
+    x .magnitude int.bitLength
+      x .exponent ExpData.isExact if
+        DEFAULT_PRECISSION iSize.max
+      end
+    =:: precission
+    x ONE cmp 0 > if ## TODO? reduce limit to about sqrt(2)/2
+      x
+        precission 5 + ln2 ## TODO find good precission value for ln2 to get accurate final result
+      divRem =:: q =:: p ## x = p*ln2 + q ## TODO: change range to -ln2/2 <= q <= ln2/2 instead of 0 <= q <= ln2
+      q exp p asU64 <unwrap> iSize cast.u scale return ## exp x = (exp q)*2^p
+    end
+    ## -1 < x < 1
+    ONE =:: mut: res
+    x copy =:: mut: p
+     2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent + precission -_ iSize.sge do =:: N
+      res p copy add res=
+      p x mul N i64 cast.u fromU64 div p=
+    finally N 1 + end ..drop
+    res p add res=
+      x free
+    res return
+  end
+  ## directly compute exp(x)-1, improved accuracy for values arround zero compared to exp(x)-1
+  proc( float : x -> float ) =>: export: exp1m
+    x abs ONE cmp 0 > if ## |x| > 1 -> fall back to using regular exp (TODO? is x < -0.5 | x > 1.5  a better threshold)
+      x exp ONE sub return
+    end
+    x .magnitude int.bitLength
+      $ x .exponent ExpData.exponent + =:: xScale
+      x .exponent ExpData.isExact if
+        DEFAULT_PRECISSION iSize.max
+      end
+    =:: precission
+    ## -1 <= x <= 1
+    ZERO =:: mut: res
+    x copy =:: mut: p
+     2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent xScale - + precission -_ iSize.sge do =:: N
+      res p copy add res=
+      p x mul N i64 cast.u fromU64 div p=
+    finally N 1 + end ..drop
+    res p add res=
+      x free
+    res return
+  end
+
+  ## TODO compute logarithms:
+  ##   1. split x = p * 2^k (2/3<=p<4/3), k in N
+  ##   2. log x = (log p) + k*(log 2)
   proc( float -> float ) =>: export: log2
-    "unimplemented: log" ..panic
+    ## x = p*2^k => log2 x = log2 p + k = log1p(p-1)/ln2 + k
+    "unimplemented: log2" ..panic
   end
   proc( float -> float ) =>: export: log
+    ## x = p*2^k => log x = log p + k*ln2 = log1p(p-1) + k*ln2
     "unimplemented: log" ..panic
   end
+  ## directly compute log(1+y), improves accuracy compared to indirect computations
+  proc( float : y -> float ) =>: export: log1p
+    y MINUS_ONE cmp 0 <= if
+      "logarithm only supported for positive number" ..panic
+    end
+    y ONE cmp 0 > if ## y > 1 -> fall back to using regular log
+      y ONE sub log return
+    end
+    ## taylor approximate log1p y  using  x -> x + (exp1m x - y)/(exp1m x + 1)
+    y copy
+      1 for ..drop ## TODO! find good iteration count
+        $ copy exp1m =:: e1m
+          e1m copy ONE add
+          e1m y copy sub
+        >$ div add
+      end
+      y free
+    return
+  end
   proc( float -> float ) : export: alias: ln log
-  proc( float float -> float ) =>: export: pow
-    "unimplemented: pow" ..panic
+  proc( float : x float : b -> float ) =>: export: logB
+    x log2 b log2 div
+  end
+  proc( float : b float : p -> float ) =>: export: pow
+    ## TODO? special casing for integer powers
+    ## TODO? special handling for negative powers
+    b log p mul exp
   end
 ## bit-wise operations
   ## flipping all bits of doubly-infinite bit-sequence exactly gives negated number
