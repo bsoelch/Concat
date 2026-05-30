@@ -55,6 +55,7 @@ struct( int : magnitude float.ExpData : exponent ) =:: export: float
 
 namespace: float
   int.ZERO      0 FloatType .EXACT ExpData.fromExponent float new =:: export: ZERO
+  int.ONE      -1 FloatType .EXACT ExpData.fromExponent float new =:: export: HALF
   int.ONE       0 FloatType .EXACT ExpData.fromExponent float new =:: export: ONE
   int.TWO       0 FloatType .EXACT ExpData.fromExponent float new =:: export: TWO
   int.THREE     0 FloatType .EXACT ExpData.fromExponent float new =:: export: THREE
@@ -271,6 +272,7 @@ namespace: float
       val sign 0 < if '-' sb.appendC end
       val abs =:: shadow: val
       exponent -_ =:: fracBits
+      ## TODO: use increased precission for exact number with fractional digits
       fracBits base baseDigitsForBits =:: fracDigits
       fracDigits 0 == if ## not enough precission for a fractional digit
         val RoundingMode .HALF_EVEN toInt base int.sbBaseAppend ## round to int
@@ -482,6 +484,7 @@ namespace: float
       end =:: shadow: x
     =:: precission
     ## compute Newton-Raphson inverse (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
+    ## TODO in 32-bit use less precise constant to ensure inplace-int
     0x2'd2d_2d2d_2d2d:i64 0x2d2d_2d2d_2d2d_2d2d:i64 i128.create int.fromU128
       -108:iSize float.Precission.INFINITE
     float.create =:: p ## 48/17
@@ -522,28 +525,37 @@ namespace: float
     ## ? use caching + netwon method to get on demand value of ln2 to arbitary precission
     "unimplemented: ln2" ..panic
   end
-  ## TODO? seperate special-case function for 1/ln2
+  ## TODO? seperate special-case function for getting 1/ln2
   proc( float : x -> float ) =>: export: exp
-    x MINUS_ONE cmp 0 < if ## TODO what is a good threshold for exp(-x) -> 1/exp(x)? (-0.5 ?)
-      x negate exp invert return
-    end
     x .magnitude int.bitLength
       x .exponent ExpData.isExact if
         DEFAULT_PRECISSION iSize.max
       end
     =:: precission
-    x ONE cmp 0 > if ## TODO? reduce limit to about sqrt(2)/2
-      x
-        precission 5 + ln2 ## TODO find good precission value for ln2 to get accurate final result
-      divRem =:: q =:: p ## x = p*ln2 + q ## TODO: change range to -ln2/2 <= q <= ln2/2 instead of 0 <= q <= ln2
-      q exp p asU64 <unwrap> iSize cast.u scale return ## exp x = (exp q)*2^p
+    ## upper bound for ln2
+    0xb1'7217'f7d1'cf7a int.fromU64 -56:iSize float.Precission.INFINITE float.create =:: CEIL_LN2
+    ## use taylor series for numbers in interval [ln 0.5, ln 2], otherwise reduce number
+    x CEIL_LN2 ucmp 0 > if
+      precission 5 + ln2 =:: ln2val ## TODO find good precission to get accurate final result
+      ## x = p*ln2 + q , with p integer and -ln2/2 <= q <= ln2/2
+      x copy ln2val copy div truncate =:: p ## truncate is cheaper than floor
+      CEIL_LN2 -1 scale =:: HALF_LN2 ## ln2 / 2
+      x p ln2val copy mul sub ## -ln2 < q < ln2
+        $ HALF_LN2 cmp 0 > if
+          ln2val sub
+        else $ HALF_LN2 negate cmp 0 < _if
+          ln2val add
+        else ## already in correct range
+          ln2val free
+        end
+      exp p asU64 <unwrap> iSize cast.u scale return ## exp x = (exp q)*2^p
     end
-    ## -1 < x < 1
+    ## -sqrt 0.5 < -ln2 < x < ln2 < sqrt 0.5
     ONE =:: mut: res
     x copy =:: mut: p
-     2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent + precission -_ iSize.sge do =:: N
+    2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent + precission -_ iSize.sge do =:: N
       res p copy add res=
-      p x mul N i64 cast.u fromU64 div p=
+      p x copy mul N i64 cast.u fromU64 div p=
     finally N 1 + end ..drop
     res p add res=
       x free
@@ -551,7 +563,8 @@ namespace: float
   end
   ## directly compute exp(x)-1, improved accuracy for values arround zero compared to exp(x)-1
   proc( float : x -> float ) =>: export: exp1m
-    x abs ONE cmp 0 > if ## |x| > 1 -> fall back to using regular exp (TODO? is x < -0.5 | x > 1.5  a better threshold)
+    0xb1'7217'f7d1'cf7a int.fromU64 -56:iSize float.Precission.INFINITE float.create =:: CEIL_LN2
+    x abs CEIL_LN2 cmp 0 > if ## |x| > ln2 -> fall back to using regular exp
       x exp ONE sub return
     end
     x .magnitude int.bitLength
