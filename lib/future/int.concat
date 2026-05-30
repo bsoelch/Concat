@@ -1389,10 +1389,10 @@ namespace: int
     a n i32 cast.u shrU32 return ## TODO: support shift by more than i32.umax
   end
   proc( int : a i32 : n -> int ) =>: export: shrU32
-     a asI64 .if
-      n >>> fromI64 return
+    a asI64 .if
+      n >> fromI64 return
     else asI128 ._if
-      n >>> fromI128 return
+      n >> fromI128 return
     end =:: shadow: a
     a bitLength
       n iSize cast.u
