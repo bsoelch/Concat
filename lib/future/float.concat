@@ -290,7 +290,7 @@ namespace: float
           base int.fromI32 fracDigits i32 cast.u int.pow fromInt mul
           RoundingMode .HALF_EVEN toInt
         base '0' fracDigits int.sbPaddedBaseAppend
-        ## TODO: print-mode that includes digits up to precission
+        ## TODO: conversion-mode that includes digits up to precission
         ## discard trailing 0s
         $ .length while $1 $1 1 - sb.charAt '0' == do 1 - end sb.setLength
       else val free end
@@ -304,7 +304,7 @@ namespace: float
   end
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
     val .exponent ExpData.exponent =:: exponent
-    ## print as fixed-point if -(bitlen(val)+3*bitlen(base)) < exp < bitlen(base)
+    ## convert to fixed-point if -(bitlen(val)+3*bitlen(base)) < exp < bitlen(base)
     base i32.highestSetBit 1 + iSize cast.u =:: baseBits
     exponent baseBits iSize.slt and exponent val .magnitude int.bitLength baseBits 3 * + -_ iSize.sgt if
       val base sbBaseAppendFixed
@@ -527,9 +527,9 @@ namespace: float
   end
   ## upper bound for ln2
   0xb1'7217'f7d1'cf7a int.fromU64 -56:iSize float.Precission.INFINITE float.create =:: CEIL_LN2
-  proc( iSize : precission -> float ) =>: export: ln2
-    CEIL_LN2 copy ## TODO ensure calculation is computed with correct precission
-      precission for ..drop ## TODO! find good iteration count
+  proc( iSize : precission -> float ) =>: export: LN2
+    CEIL_LN2 copy precission setPrecission
+      precission i64 cast.u i64.highestSetBit 3 + for ..drop ## TODO! find good iteration count
         $ copy exp1m =:: e1m
           e1m copy ONE add
           e1m ONE sub
@@ -546,15 +546,18 @@ namespace: float
     =:: precission
     ## use taylor series for numbers in interval [ln 0.5, ln 2], otherwise reduce number
     x CEIL_LN2 ucmp 0 > if
-      precission 5 + ln2 =:: ln2val ## TODO find good precission to get accurate final result
+      ## FIXME: for high precission the last few bits of the result are wrong
+      precission 5 + LN2 =:: ln2val ## TODO find good precission to get accurate final result
       ## x = p*ln2 + q , with p integer and -ln2/2 <= q <= ln2/2
-      x copy ln2val copy div truncate =:: p ## truncate is cheaper than floor
+      x copy ln2val copy div truncate =:: mut: p ## truncate is cheaper than floor
       CEIL_LN2 -1 scale =:: HALF_LN2 ## ln2 / 2
-      x p ln2val copy mul sub ## -ln2 < q < ln2
+      x p copy ln2val copy mul sub ## -ln2 < q < ln2
         $ HALF_LN2 cmp 0 > if
           ln2val sub
+          p ONE add p=
         else $ HALF_LN2 negate cmp 0 < _if
           ln2val add
+          p ONE sub p=
         else ## already in correct range
           ln2val free
         end
@@ -586,9 +589,9 @@ namespace: float
     ## -1 <= x <= 1
     ZERO =:: mut: res
     x copy =:: mut: p
-     2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent xScale - + precission -_ iSize.sge do =:: N
+    2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent xScale - + precission -_ iSize.sge do =:: N
       res p copy add res=
-      p x mul N i64 cast.u fromU64 div p=
+      p x copy mul N i64 cast.u fromU64 div p=
     finally N 1 + end ..drop
     res p add res=
       x free
@@ -598,11 +601,17 @@ namespace: float
   ## TODO compute logarithms:
   ##   1. split x = p * 2^k (2/3<=p<4/3), k in N
   ##   2. log x = (log p) + k*(log 2)
-  proc( float -> float ) =>: export: log2
+  proc( float : y -> float ) =>: export: log2
+    y ZERO cmp 0 <= if
+      "logarithm only supported for positive number" ..panic
+    end
     ## x = p*2^k => log2 x = log2 p + k = log1p(p-1)/ln2 + k
     "unimplemented: log2" ..panic
   end
-  proc( float -> float ) =>: export: log
+  proc( float : y -> float ) =>: export: log
+    y ZERO cmp 0 <= if
+      "logarithm only supported for positive number" ..panic
+    end
     ## x = p*2^k => log x = log p + k*ln2 = log1p(p-1) + k*ln2
     "unimplemented: log" ..panic
   end
