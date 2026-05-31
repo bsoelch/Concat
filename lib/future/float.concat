@@ -327,12 +327,13 @@ namespace: float
   proc( float : a float : b -> i32 ) =>: export: ucmp
     a .exponent ExpData.exponent =:: aExp
     b .exponent ExpData.exponent =:: bExp
-    aExp a .magnitude int.bitLength + bExp b .magnitude int.bitLength + iSize.cmp =:: sCmp
-    sCmp 0 != if
-      sCmp return
+    aExp bExp iSize.sgt if
+      b .magnitude a .magnitude aExp bExp - int.shiftedUCmp -_
+    else aExp bExp iSize.slt _if
+      a .magnitude b .magnitude bExp aExp - int.shiftedUCmp
+    else
+      a .magnitude b .magnitude int.ucmp
     end
-    ## TODO need shifted integer comparisson
-    "unimplemented: ucmp" ..panic
   end
   proc( float : a float : b -> float ) =>: export: min
     a b cmp 0 < if

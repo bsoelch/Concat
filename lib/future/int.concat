@@ -1115,6 +1115,14 @@ namespace: int
     Digit MAX_INLINE_DIGITS array : mut: bufB
     a bufA@ asSlice b bufB@ asSlice _impl.ucmp
   end
+  ## compare `a` and `b << bShift`
+  proc( int : a int : b iSize : bShift -> i32 ) =>: export: shiftedUCmp
+    Digit MAX_INLINE_DIGITS array : mut: bufA
+    Digit MAX_INLINE_DIGITS array : mut: bufB
+    a bitLength b bitLength bShift + iSize.cmp =:: sizeCmp
+    sizeCmp 0 != if sizeCmp return end
+    a bufA@ asSlice b bufB@ asSlice bShift _impl.ucmpShifted
+  end
   proc( int : a int : b -> int ) =>: export: min
     a b cmp 0 < if
       b free a return
@@ -1389,7 +1397,7 @@ namespace: int
     a n i32 cast.u shrU32 return ## TODO: support shift by more than i32.umax
   end
   proc( int : a i32 : n -> int ) =>: export: shrU32
-    a asI64 .if
+    a asI64 .if ## TODO? use unsigned shift on data and keep sign unchanged
       n >> fromI64 return
     else asI128 ._if
       n >> fromI128 return
@@ -1628,6 +1636,43 @@ namespace: int
         c 0 != if c return end
       finally i end ..drop
       0 return
+    end
+    proc( Digit slice : a Digit slice : b iSize : bShift -> i32 ) =>: shadow: ucmpShifted
+      a $ .length 1 - [] ? and b $ .length 1 - [] ? end "leading element is non-zero" assert
+      bShift DIGIT_BITS u/ =:: shiftDigits
+      bShift DIGIT_BITS u% i32 cast.u =:: shiftBits
+      shiftBits 0 == if
+        b .length while $ 1 - <$ 0 != do =:: i
+          a i shiftDigits + [] b i [] Digit.ucmp =:: c
+          c 0 != if c return end
+        finally i end ..drop
+        shiftDigits iSize.reversed for
+          a >$ [] ? if 1 return end
+        end
+        0 return
+      else
+        b .length 1 - =:: mut: bIndex
+        a .length 1 - =:: mut: aIndex
+        0 Digit cast.u
+          b bIndex [] shiftBits Digit.shlc
+            $ ? if
+              a aIndex [] >$ Digit.ucmp =:: c
+              c 0 != if ..drop c return end
+              aIndex 1 - aIndex=
+            else ..drop end
+          while bIndex 0 != do
+            bIndex 1 - bIndex=
+            b bIndex [] shiftBits Digit.shlc a aIndex [] >$ Digit.ucmp =:: c
+            c 0 != if ..drop c return end
+            aIndex 1 - aIndex=
+          end
+        a aIndex [] >$ Digit.ucmp =:: c
+        c 0 != if c return end
+        aIndex iSize.reversed for
+          a >$ [] ? if 1 return end
+        end
+        0 return
+      end
     end
     proc( Digit slice : a Digit slice : b Digit slice.mut : res -> Digit slice.mut ) =>: shadow: sub
       a .length b .length u>= "a >= b" assert
