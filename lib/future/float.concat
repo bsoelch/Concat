@@ -78,6 +78,7 @@ namespace: float
       a .magnitude int.bitLength Precission.fromBits
     end
   end
+  import print
   proc( float iSize : precBits -> float ) =>: export: setPrecission
     precBits RoundingMode .HALF_EVEN roundTo
     $ .magnitude int.bitLength precBits - =:: delta
@@ -598,22 +599,42 @@ namespace: float
     res return
   end
 
-  ## TODO compute logarithms:
-  ##   1. split x = p * 2^k (2/3<=p<4/3), k in N
-  ##   2. log x = (log p) + k*(log 2)
-  proc( float : y -> float ) =>: export: log2
+  0xaa'aaaa'aaaa'aaaa int.fromU64 -56:iSize float.Precission.INFINITE float.create =:: FLOOR_TWO_THIRDS
+  ## x = p*2^k => with k integer and 2/3 <= p < 4/3
+  proc( float : y -> float iSize ) =>: prepareLog
     y ZERO cmp 0 <= if
       "logarithm only supported for positive number" ..panic
     end
-    ## x = p*2^k => log2 x = log2 p + k = log1p(p-1)/ln2 + k
-    "unimplemented: log2" ..panic
+    y .magnitude int.bitLength
+      y .exponent
+        $ ExpData.exponent $2 + =:: mut: scaleFactor
+      ExpData.isExact if
+        y $1 -_ FloatType .EXACT ExpData.fromExponent >$ .exponent=
+        >$ DEFAULT_PRECISSION iSize.max <$
+      else
+        y $1 -_ FloatType .FLOAT ExpData.fromExponent >$ .exponent=
+      end ## 0.5 <= * < 1
+        $ FLOOR_TWO_THIRDS cmp 0 < if
+          TWO mul
+          scaleFactor 1 - scaleFactor=
+        end
+      >$ setPrecission
+    scaleFactor
+  end
+  proc( float : y -> float ) =>: export: log2
+    y prepareLog =:: k
+      $ getPrecission Precission.toBits <unwrap> =:: prec
+    ## x = p*2^k => log x = log2 p + k = log1p(p-1)/ln2 + k
+      ONE sub log1p
+      prec 1 + LN2 div
+    k i64 cast.s fromI64 add
   end
   proc( float : y -> float ) =>: export: log
-    y ZERO cmp 0 <= if
-      "logarithm only supported for positive number" ..panic
-    end
+    y prepareLog =:: k
+      $ getPrecission Precission.toBits <unwrap> =:: prec
     ## x = p*2^k => log x = log p + k*ln2 = log1p(p-1) + k*ln2
-    "unimplemented: log" ..panic
+      ONE sub log1p
+    k i64 cast.s fromI64 prec 1 + LN2 mul add
   end
   ## directly compute log(1+y), improves accuracy compared to indirect computations
   proc( float : y -> float ) =>: export: log1p
@@ -624,8 +645,9 @@ namespace: float
       y ONE sub log return
     end
     ## taylor approximate log1p y  using  x -> x - (exp1m x - y)/(exp1m x + 1)
-    y copy -1 scale
-      1 for ..drop ## TODO! find good iteration count
+    y copy
+      $ getPrecission Precission.toBits <unwrap> =:: prec
+      prec i64 cast.u i64.highestSetBit 3 + for ..drop ## TODO! find good iteration count
         $ copy exp1m =:: e1m
           e1m copy ONE add
           e1m y copy sub
