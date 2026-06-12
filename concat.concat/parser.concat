@@ -55,6 +55,9 @@ struct(
 ) =:: InitializerBlockData
 struct(
   iSize : blockStart
+) =:: StaticForBlockData
+struct(
+  iSize : blockStart
   iSize optional : arrowPosition
   BlockType : blockType
 ) =:: TypeBlockData
@@ -70,6 +73,7 @@ union(
   _ : Namespace
   iSize : Overload
   iSize : With
+  StaticForBlockData : StaticFor
 ) =:: BlockInfoData
 
 struct(
@@ -1082,6 +1086,13 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       blockName state peekBlock optional.unwrap .blockName=
       BlockType .WHILE blockName blockPos preOpNamedBlock state appendOp
       return
+    else $ "..static.for":s string.eq _if =:: opName
+      fileState program wordPos =:: blockPos
+      ## StaticForBlockData
+        state opCount
+      StaticForBlockData new BlockInfoData .StaticFor blockPos state openBlock ..drop
+      BlockType .STATIC_FOR blockPos preOpBlock state appendOp
+      return
     else $ "for":s string.eq or $ "for:":s string.eq _if =:: opName
       opName "for:":s string.eq if
         fileState program nextIdentifier
@@ -1445,6 +1456,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             switchData .breakPositions list.free ..drop
           break
           Procedure .case blockPos state endProcedure  break
+          StaticFor .case .blockStart blockPos state setBlockJump
+            BlockType .STATIC_FOR blockPos preOpEndBlock state appendOp
+          break
           Namespace case
             BlockType .NAMESPACE blockPos preOpEndBlock state appendOp
           break
@@ -1624,7 +1638,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           state .parsedOps=
           withProcId blockPos preOpTypeWith state appendOp
         return
-        If AndOr While Switch Namespace Procedure Initializer Overload Quotation case
+        If AndOr While Switch Namespace Procedure Initializer Overload Quotation StaticFor case
           "unexpected `" sb.copyPtr
             opName sb.appendStr
             "` statement " sb.appendS
@@ -1666,7 +1680,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state [] .constBlockCount 0 != =:: mut: inConstBlock
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
-        BlockType ..length 33:iSize == "no new block types" assert
+        BlockType ..length 34:iSize == "no new block types" assert
         state [] .openBlocks list.reversed for: findContainer =:: b
           b .blockData switch
             Procedure case
@@ -1943,7 +1957,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "..compiler.return":s string.eq _if ..drop
       ..drop ## discard remainder of file
-      BlockType ..length 33:iSize == "no new block types" assert
+      BlockType ..length 34:iSize == "no new block types" assert
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek .and [] .blockData switch
             If Switch case true break

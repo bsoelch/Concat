@@ -34,6 +34,7 @@ enum(
   TYPE_COMPOSITE
   TYPE_SETTYPE
   NAMESPACE OVERLOAD
+  STATIC_FOR
 ) =:: export: BlockType
 i32 =:: export: JumpDistance
 ( char8 ptr.raw iSize -> JumpDistance ) : static: export: alias: :JumpDistance ..builtIn.parse.i32
@@ -50,104 +51,107 @@ namespace: sb
   proc( stringBuilder BlockType -> stringBuilder ) =>: export: appendBlockType
     switch
       UNKNOWN case
-        "unknown" sb.appendS
+        "unknown":s sb.appendStr
         return
       PROCEDURE case
-        "procedure" sb.appendS
+        "procedure":s sb.appendStr
         return
       IF case
-        "if" sb.appendS
+        "if":s sb.appendStr
         return
       ELSE case
-        "else" sb.appendS
+        "else":s sb.appendStr
         return
       WHILE case
-        "while" sb.appendS
+        "while":s sb.appendStr
         return
       DO case
-        "do" sb.appendS
+        "do":s sb.appendStr
         return
       BREAK case
-        "break" sb.appendS
+        "break":s sb.appendStr
         return
       CONTINUE case
-        "continue" sb.appendS
+        "continue":s sb.appendStr
         return
       FINALLY case
-        "finally" sb.appendS
+        "finally":s sb.appendStr
         return
       SWITCH case
-        "switch" sb.appendS
+        "switch":s sb.appendStr
         return
       CASE case
-        "case" sb.appendS
+        "case":s sb.appendStr
         return
       DOT_CASE case
-        ".case" sb.appendS
+        ".case":s sb.appendStr
         return
       DEFAULT case
-        "default" sb.appendS
+        "default":s sb.appendStr
         return
       DOT_DEFAULT case
-        ".default" sb.appendS
+        ".default":s sb.appendStr
         return
       AND case
-        "and" sb.appendS
+        "and":s sb.appendStr
         return
       OR case
-        "or" sb.appendS
+        "or":s sb.appendStr
         return
       AND_IF case
-        "and if" sb.appendS
+        "and if":s sb.appendStr
         return
       OR_IF case
-        "or if" sb.appendS
+        "or if":s sb.appendStr
         return
       AND_DO case
-        "and do" sb.appendS
+        "and do":s sb.appendStr
         return
       OR_DO case
-        "or do" sb.appendS
+        "or do":s sb.appendStr
         return
       INITIALIZER case
-        "{initializer}" sb.appendS
+        "{initializer}":s sb.appendStr
         return
       TYPE_COMPOSITE case
-        "( )" sb.appendS
+        "( )":s sb.appendStr
         return
       TYPE_TUPLE case
-        "tuple( )" sb.appendS
+        "tuple( )":s sb.appendStr
         return
       TYPE_STRUCT case
-        "struct( )" sb.appendS
+        "struct( )":s sb.appendStr
         return
       TYPE_ENUM case
-        "enum( )" sb.appendS
+        "enum( )":s sb.appendStr
         return
       TYPE_UNION case
-        "union( )" sb.appendS
+        "union( )":s sb.appendStr
         return
       TYPE_UNTAGGED_UNION case
-        "union( )" sb.appendS
+        "union( )":s sb.appendStr
         return
       TYPE_PROC_IN case
-        "proc( )" sb.appendS
+        "proc( )":s sb.appendStr
         return
       TYPE_CPROC_IN case
-        "proc.c( )" sb.appendS
+        "proc.c( )":s sb.appendStr
         return
       TYPE_PROC_ARROW case
-        "->" sb.appendS
+        "->":s sb.appendStr
         return
       TYPE_SETTYPE case
-        "oneOf( )" sb.appendS
+        "oneOf( )":s sb.appendStr
         return
       NAMESPACE case
-        "namespace" sb.appendS
+        "namespace":s sb.appendStr
         return
       OVERLOAD case
-        "overload" sb.appendS
+        "overload":s sb.appendStr
         return
+      STATIC_FOR case
+        "static-for":s sb.appendStr
+      return
     end
   end
 end
