@@ -1842,6 +1842,43 @@ proc(
 end
 namespace: typeChecker
   proc(
+    Type : t
+    TypeMemoryInfo : infoType
+    ProgramContext ptr.mut : program
+  -> ConstValue Type bool ) =>: computeTypeInfo
+    program .errors =:: errors
+    program .idContext =:: idContext
+    idContext .constContext =:: constContext
+    idContext .typeContext =:: typeContext
+    typeContext .nameContext =:: nameContext
+    infoType switch
+      ALIGNMENT case
+        t typeContext types.alignOf
+        break
+      SIZE case
+        t typeContext types.sizeOf
+        break
+      STRIDE case
+        t typeContext types.strideOf
+        break
+      NAME case
+        program [] .tmpString
+          sb.clear
+          t typeContext 0 sb.appendTypeRecursive
+          $ sb.asStr nameContext id.copyString =:: name
+        program .tmpString=
+        name constContext newStringConst name .length typeContext newStringType false return
+        break
+    end =:: sizeValue
+    sizeValue switch
+      Fixed .case ConstValue .Int types.I_SIZE false return
+      DynamicArray case
+        ConstValue .None Type .Undefined true return ## TODO? support generic array size
+      Unknown case ## TODO error message for unknown size
+        ConstValue .None Type .Undefined true return
+    end
+  end
+  proc(
     NameId : mut: generatorName
     ConstValue slice : args
     FilePosition ptr : pos
@@ -5549,13 +5586,12 @@ proc(
           ## computeTypeInfo
             valType
             typeInfo
-          program interpreter.computeTypeInfo if ..drop
-            "could no compute size of type " sb.copyPtr
+          program typeChecker.computeTypeInfo if ..drop.2
+            "could no determine type-info for type " sb.copyPtr
               valType typeContext sb.appendType
             op .pos errors appendError
             continue.opLoop
           end
-          types.I_SIZE
           op .pos
         state pushConstant
       continue.opLoop

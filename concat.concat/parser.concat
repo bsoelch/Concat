@@ -1770,13 +1770,16 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else ..dup "..types.alignment":s string.eq or
          ..dup "..types.size":s string.eq or
-         ..dup "..types.stride":s string.eq _if =:: opName
+         ..dup "..types.stride":s string.eq or
+         ..dup "..types.name":s string.eq _if =:: opName
      opName "..types.alignment":s string.eq if
        TypeMemoryInfo .ALIGNMENT
      else opName "..types.size":s string.eq _if
        TypeMemoryInfo .SIZE
-     else
+     else opName "..types.stride":s string.eq _if
        TypeMemoryInfo .STRIDE
+     else
+       TypeMemoryInfo .NAME
      end =:: infoType
       infoType fileState program wordPos preOpTypeInfo state appendOp
       return

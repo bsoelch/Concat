@@ -10,6 +10,7 @@ namespace: type
   type .with( ..types.isArray ) =:: export: array
   type .with( ..types.isEnum ) =:: export: enum
   type .with( ..types.isTaggedUnion ) =:: export: union
+  type .with( ..types.isStruct ) =:: export: struct
   proc( type -> bool ) : export: alias: isEnum ..types.isEnum
 
   proc( type : T -> bool ) =>: export: static: isPointerValue

@@ -361,39 +361,6 @@ namespace: interpreter
   end
 
 ## TODO use wrapper procedures for stack access
-
-  proc(
-    Type : t
-    TypeMemoryInfo : infoType
-    ProgramContext ptr.mut : program
-  -> ConstValue bool ) =>: export: computeTypeInfo
-    program .errors =:: errors
-    program .idContext =:: idContext
-    idContext .constContext =:: constContext
-    idContext .typeContext =:: typeContext
-    typeContext .nameContext =:: nameContext
-    t typeContext types.containsGeneric if
-      ConstValue .None true return
-    end
-    infoType switch
-      ALIGNMENT case
-        t typeContext types.alignOf
-        break
-      SIZE case
-        t typeContext types.sizeOf
-        break
-      STRIDE case
-        t typeContext types.strideOf
-        break
-    end =:: sizeValue
-    sizeValue switch
-      Fixed .case ConstValue .Int false return
-      DynamicArray case
-        ConstValue .None true return ## TODO? support generic array size
-      Unknown case ## TODO error message for unknown size
-        ConstValue .None true return
-    end
-  end
   proc(
     Type : t
     ConstValue : value
