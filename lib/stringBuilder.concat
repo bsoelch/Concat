@@ -111,3 +111,6 @@ namespace: sb
     sb .data sb .length slice.createMutable
   end
 end
+overload: []
+  sb.charAt
+end
