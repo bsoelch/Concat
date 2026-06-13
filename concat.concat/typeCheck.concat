@@ -5578,49 +5578,58 @@ proc(
             eltCount op .pos state checkStackSize if
               continue.opLoop
             end
-            ## TODO? avoid duplicate work merge popping and constant check into single iteration, drop old operations on push
-            ## check if all rotated values are constant
-            true =:: mut: isConst
-            0 =:: mut: count
-            state .stack branchTree.itr.start
-              while isConst and count eltCount < and branchTree.itr.hasNext do
-                branchTree.itr.next =:: elt
-                elt .value [] .None ? or elt [] .opIndex state canDeleteOp ! if
-                  false isConst=
-                  break
-                end
-              finally count 1 + count= end
-            ..drop
-            isConst if
-              ## TODO? use buffer in context
-              eltCount 4 <= if
-                TypeInfo 4 array : mut: buffer
-                buffer@ list.wrapBuffer
-              else
-                eltCount TypeInfo list.create
-              end
-                eltCount for ..drop
-                  state .stack branchTree.pop optional.unwrap [] =:: elt
-                    elt .opIndex state deleteOp
-                  elt list.append
-                end
-                offset 0 > if ## rotate left
-                  list.removeLast =:: lowValue
-                  $ list.reversed for state pushConstTypeInfo end
-                  lowValue state pushConstTypeInfo
-                else
-                  $ 0 [] state pushConstTypeInfo
-                  $ 1 list.tail slice.reversed for
-                    state pushConstTypeInfo
+            offset 0 < if
+              ## TODO? avoid duplicate work merge popping and constant check into single iteration, drop old operations on push
+              ## check if all rotated values are constant, if yes then permuting the const-values allows to preserve static constants
+              true =:: mut: isConst
+              0 =:: mut: count
+              state .stack branchTree.itr.start
+                while isConst and count eltCount < and branchTree.itr.hasNext do
+                  branchTree.itr.next =:: elt
+                  elt .value [] .None ? or elt [] .opIndex state canDeleteOp ! if
+                    false isConst=
+                    break
                   end
+                finally count 1 + count= end
+              ..drop
+              isConst if
+                ## TODO? use buffer in context
+                eltCount 4 <= if
+                  TypeInfo 4 array : mut: buffer
+                  buffer@ list.wrapBuffer
+                else
+                  eltCount TypeInfo list.create
                 end
-              list.free ..drop
-              continue.opLoop
+                  eltCount for ..drop
+                    state .stack branchTree.pop optional.unwrap [] =:: elt
+                      elt .opIndex state deleteOp
+                    elt list.append
+                  end
+                  offset 0 > if ## rotate left
+                    list.removeLast =:: lowValue
+                    $ list.reversed for state pushConstTypeInfo end
+                    lowValue state pushConstTypeInfo
+                  else
+                    $ 0 [] state pushConstTypeInfo
+                    $ 1 list.tail slice.reversed for
+                      state pushConstTypeInfo
+                    end
+                  end
+                list.free ..drop
+                continue.opLoop
+              end
             end
             state .stack eltCount offset 0 > branchTree.rotate
-            ## clear stack references after rotation (removing stack values after rotation messes up stack)
-            false eltCount op .pos state clearReferences
-            offset StackModType .ROTATE op .pos opStackMod state appendOp ..drop
+            offset 0 > and state .stack branchTree.peek .and =:: topVal
+                topVal .value [] .None ? ! and topVal [] .opIndex state canDeleteOp if
+              ## move deleteable constant to top -> convert to delete + push constant
+              topVal [] .opIndex state deleteOp
+              topVal [] .value topVal [] .valueType topVal [] .pushedAt opConst state appendOp topVal .opIndex=
+            else
+              ## clear stack references after rotation (removing stack values after rotation messes up stack)
+              false eltCount op .pos state clearReferences
+              offset StackModType .ROTATE op .pos opStackMod state appendOp ..drop
+            end
             continue.opLoop
         end
         break
