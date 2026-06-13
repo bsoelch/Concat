@@ -1736,10 +1736,14 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           $ .length 1:iSize - string.head
         end
       isWrite opPos state parseElementAccess return
-    else ..dup "()":s string.eq _if ..drop
+    else $ "..op.getElement":s string.eq _if ..drop
+      ## resolve element index in type-check phase
+      "":s fileState program wordPos preOpGetNamedElt state appendOp
+      return
+    else $ "()":s string.eq _if ..drop
       fileState program wordPos preOpCallPtr state appendOp
       return
-    else ..dup "new":s string.eq _if =:: opName
+    else $ "new":s string.eq _if =:: opName
       ## new in procedure -> determine type in type-check phase
       fileState program wordPos preOpNew state appendOp
       return

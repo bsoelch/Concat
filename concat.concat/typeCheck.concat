@@ -3453,7 +3453,32 @@ proc(
         end
         break
       ExistsName case break
-      GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case =:: name
+      GetNamedElt SetNamedElt SetNestedNamedElt ExistsNamedElt .case
+         $ .length 0 == if ..drop ## empty elt-name -> read name from stack
+           state popValue .else
+             "expected constant location for element-access: " sb.copyPtr
+               op program sb.appendPreOp
+             op .pos errors appendError
+             continue.opLoop
+           end switch
+             Int .case
+              ## name only has to live until end of case-block so using tmp-string is ok
+              program [] .tmpString
+                sb.clear
+                >$ sb.appendI
+                $ sb.asStr <$
+              program .tmpString=
+             break
+             Array8 .case string.fromBytes break
+             .default
+               "unsupported value for element-location: " sb.copyPtr
+                 >$ typeContext sb.appendConstant
+               op .pos errors appendError
+               continue.opLoop
+             break
+           end
+         end
+        =:: name
         ElementAccessType .GET =:: mut: accessType
         op .val .SetNamedElt ? if
           ElementAccessType .SET accessType=
