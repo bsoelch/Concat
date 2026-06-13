@@ -4952,7 +4952,28 @@ proc(
           PROCEDURE UNKNOWN case
             break
           STATIC_FOR case
-          break
+            oldBlockStart state .blockStart= ## keep previous block start
+            ops opIndex 1 + blockInfo .jumpDistance iSize cast.u 1 - slice.getSlice =:: body
+            opIndex
+              op .pos blockInfo .jumpDistance asForwardJump +
+            opIndex=
+            state popTypedValue .else
+              "expected constant" sb.copyPtr op .pos errors appendError
+               continue.opLoop
+            end =:: itr
+            itr .value .Int .if
+                errors [] .length =:: oldErrors
+              for
+                ConstValue .Int itr .valType op .pos state pushConstant
+                body state typeCheckOps
+                errors [] .length oldErrors u> if continue.opLoop end
+              end
+            else
+              "unexpected constant expected int got: " sb.copyPtr
+                >$ typeContext sb.appendConstant
+              op .pos errors appendError
+            end
+          continue.opLoop
         end
         break
       BlockEnd .case =:: blockInfo
@@ -5931,6 +5952,13 @@ proc(
   0:i32 while $ iSize cast.u argTypes .length u< do =:: i
     argTypes i [] =:: argType
     procType i typeContext types.getProcArgName .if =:: argName
+      argType types.isQuotation and argName id.identifierFlags id.FLAG_STATIC & ? ! if
+        "quotation cannot be passed as dynamic argument: " sb.copyPtr
+          argType typeContext sb.appendType
+          " : ":s sb.appendStr
+          argName sb.appendIdentifierName
+        procPos program .errors appendError
+      end
       argName
         argType
         IdentifierType .ARGUMENT
@@ -5946,6 +5974,11 @@ proc(
         procPos program .errors appendError
       end
     else ## push argument
+      argType types.isQuotation if
+        "quotation cannot be passed as stack argument: " sb.copyPtr
+          argType typeContext sb.appendType
+        procPos program .errors appendError
+      end
       state .stack
         ## TypeInfo
           argType typeContext types.isType and

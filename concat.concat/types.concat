@@ -2295,7 +2295,7 @@ namespace: types
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
     t switch
-      Undefined Empty PrimitiveType CType IntLiteral Align case
+      Undefined Empty PrimitiveType CType IntLiteral Align Quotation case
         false return
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
         ArrayData ptr cast [] =:: arrayType
@@ -2333,7 +2333,7 @@ namespace: types
         false return
       NamedType case
         t context unwrapNamed context containsGeneric return
-      GenericType Quotation case
+      GenericType case
         true return
       SetType .case =:: setTypeId
         setTypeId .baseType [] context containsGeneric if
