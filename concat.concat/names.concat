@@ -231,6 +231,14 @@ namespace: id
     nameId return
   end
   proc(
+    NameId
+    NameContext ptr.mut : context
+  -> NameId ) =>: export: copyIdentifier
+    context [] .allocator
+      >$ Identifier ptr cast mixedArena.copyPtr NameId cast <$
+    context .allocator=
+  end
+  proc(
     IdentifierFlag : flags
     FilePosition ptr : pos
     NameContext ptr.mut : context

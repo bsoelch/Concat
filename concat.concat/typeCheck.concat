@@ -254,6 +254,7 @@ struct(
   TypeCheckMode : mode
   BlockMode : blockMode
   bool : reachable
+  bool : inStaticLoop
 ) =:: TypeCheckStateState
 struct(
   ProgramContext ptr.mut : program
@@ -276,6 +277,7 @@ struct(
   TypeCheckStateState list : stateStack
   TypeCheckMode :  mode
   bool : reachable
+  bool : inStaticLoop
   bool : isUnusedProc ## will be set to true once all procs reachable from main are type-checked
 ) =:: export: TypeCheckState
 
@@ -293,6 +295,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: rememberState
       state [] .mode
       state [] .blockMode
       state [] .reachable
+      state [] .inStaticLoop
     TypeCheckStateState new list.append
   state .stateStack=
   ## TODO remember Interpreter state
@@ -328,6 +331,7 @@ proc( TypeCheckState ptr.mut : state -> ) =>: resetState
   prevState .blockMode state .blockMode=
   ## TODO reset Interpreter state
   prevState .reachable state .reachable=
+  prevState .inStaticLoop state .inStaticLoop=
 end
 
 proc( TypeCheckState ptr : state -> bool ) =>: isGlobal
@@ -1380,6 +1384,7 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   name
+    state [] .inStaticLoop if nameContext id.copyIdentifier end
     isInit ! and state [] .blockMode .NONE ! if
       Type .Undefined
       IdentifierType .LABEL
@@ -5002,13 +5007,19 @@ proc(
             end =:: itr
             itr .value .Int .if
                 errors [] .length =:: oldErrors
+              state [] .inStaticLoop =:: wasInLoop
+              true state .inStaticLoop=
               for
                 idContext id.openScope
                 ConstValue .Int itr .valType op .pos state pushConstant
                 body state typeCheckOps
                 idContext id.closeScope ! "closing static-for scope worked" assert
-                errors [] .length oldErrors u> if continue.opLoop end
+                errors [] .length oldErrors u> if
+                  wasInLoop state .inStaticLoop=
+                  continue.opLoop
+                end
               end
+              wasInLoop state .inStaticLoop=
             else
               "unexpected constant expected int got: " sb.copyPtr
                 >$ typeContext sb.appendConstant
@@ -6049,7 +6060,10 @@ proc(
     end
     i 1 +
   end ..drop
+  state [] .inStaticLoop =:: wasInLoop
+  false state .inStaticLoop=
   procCode slice.freeze state typeCheckOps
+  wasInLoop state .inStaticLoop=
   state [] .compiledOps list.asSlice codeOffset slice.tail slice.copy =:: newOps
   state clearOps
   ## remember new code position
@@ -6166,6 +6180,7 @@ proc( ProgramContext ptr.mut : program -> TypeCheckState ) =>: export: newTypeCh
     8 TypeCheckStateState list.create
     TypeCheckMode .LINEAR
     true ## reachable
+    false ## inStaticLoop
     false ## isUnusedProc
   TypeCheckState new
 end
