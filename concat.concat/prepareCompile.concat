@@ -174,7 +174,7 @@ proc( Operation list
       refBase index typeContext types.compositeGetElement optional.unwrap
     return
   else refBase typeContext types.getArrayBaseType ._if =:: arrayBase
-    arrayBase typeContext types.sizeOf .Fixed .else
+    arrayBase typeContext types.strideOf .Fixed .else
       "array-element not fixed-sized" ..panic
     end =:: eltSize
     index i64 cast.u eltSize * pos offsetPointer
