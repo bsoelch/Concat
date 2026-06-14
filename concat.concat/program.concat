@@ -217,25 +217,26 @@ namespace: program
         implData .procId optional.wrap return
       end
     end
+    ## ProcedureInfo
+      ## CodeProcData
+        0 VariableInfo list.create
+        ## GenericImplementationInfo
+          ConstValue slice.empty
+          baseQuotation
+        GenericImplementationInfo new GenericProcInfo .ImplInfo
+        codeImpl [] .codeState .PreTypeChecking .else
+          "expected parsed procedure" ..panic
+        end ProcCodeState .PreTypeChecking ## reuse code from generic base procedure
+        codeImpl [] .expansionLevel 1:i16 +
+      CodeProcData new ProcImplType .Code
+      baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplName
+      baseProcInfo [] .fileId
+      baseProcInfo [] .scopeId
+      procType
+      baseProcInfo [] .flags ProcFlags.HAS_STATIC_ARG ~ & ## TODO? can quotation have generic arg
+    ProcedureInfo new
     progContext [] .programMemory
-      ## ProcedureInfo
-        ## CodeProcData
-          0 VariableInfo list.create
-          ## GenericImplementationInfo
-            ConstValue slice.empty
-            baseQuotation
-          GenericImplementationInfo new GenericProcInfo .ImplInfo
-          codeImpl [] .codeState .PreTypeChecking .else
-            "expected parsed procedure" ..panic
-          end ProcCodeState .PreTypeChecking ## reuse code from generic base procedure
-          codeImpl [] .expansionLevel 1:i16 +
-        CodeProcData new ProcImplType .Code
-        baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplName
-        baseProcInfo [] .fileId
-        baseProcInfo [] .scopeId
-        procType
-        baseProcInfo [] .flags ProcFlags.HAS_STATIC_ARG ~ & ## TODO? can quotation have generic arg
-      ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
+      >$ mixedArena.copyValue ProcId.create =:: implProdId
     progContext .programMemory=
     progContext [] .procedures
       implProdId list.append
@@ -771,33 +772,34 @@ proc(
   outTypes procType typeContext types.getProcRetNames typeContext hasStaticElement
     procName id.identifierFlags id.FLAG_STATIC & ? |
   =:: isStatic
+  ## ProcedureInfo
+    aliasId .if
+      ProcImplType .Alias
+    else hasImpl ! _if
+      procName ProcImplType .Extern
+    else
+      ## CodeProcData
+        0 VariableInfo list.create
+        hasStaticArg or procType typeContext types.containsGeneric if
+          GenericImplementationInfo list.empty GenericProcInfo .Implementations
+        else
+          GenericProcInfo .None
+        end
+        ProcCodeState .Parsing
+        0:i16
+      CodeProcData new ProcImplType .Code
+    end
+    procName
+    fileId
+    idContext id.currentScope
+    procType
+    ProcFlags.NONE
+      hasStaticArg if ProcFlags.HAS_STATIC_ARG | end
+      isStatic if ProcFlags.IS_STATIC | end
+    ## ^flags
+  ProcedureInfo new
   progContext [] .programMemory
-    ## ProcedureInfo
-      aliasId .if
-        ProcImplType .Alias
-      else hasImpl ! _if
-        procName ProcImplType .Extern
-      else
-        ## CodeProcData
-          0 VariableInfo list.create
-          hasStaticArg or procType typeContext types.containsGeneric if
-            GenericImplementationInfo list.empty GenericProcInfo .Implementations
-          else
-            GenericProcInfo .None
-          end
-          ProcCodeState .Parsing
-          0:i16
-        CodeProcData new ProcImplType .Code
-      end
-      procName
-      fileId
-      idContext id.currentScope
-      procType
-      ProcFlags.NONE
-        hasStaticArg if ProcFlags.HAS_STATIC_ARG | end
-        isStatic if ProcFlags.IS_STATIC | end
-      ## ^flags
-    ProcedureInfo new mixedArena.copyValue ProcId.create =:: procId
+    >$ mixedArena.copyValue ProcId.create =:: procId
   progContext .programMemory=
   progContext [] .procedures
     procId list.append

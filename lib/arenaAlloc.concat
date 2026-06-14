@@ -103,41 +103,39 @@ namespace: arenaAlloc
   end
   proc(
     type : auto: T
-    T ArenaAllocator : arena0
+    T ArenaAllocator : mut: arena
     i64 : newCap
   -> T ArenaAllocator ) =>: export: ensureCap
-    newCap arena0 currentCap <= if arena0 return end
-    1 arena0 .chunkSizeShift << =:: chunkSize
+    newCap arena currentCap <= if arena return end
+    1 arena .chunkSizeShift << =:: chunkSize
     newCap
       chunkSize 1 - i64 cast.u +
-      arena0 .chunkSizeShift >>>
+      arena .chunkSizeShift >>>
     =:: minChunks
-    arena0 .chunks .length minChunks >= if  arena0 return end
-    arena0 =:: mut: arena
+    arena .chunks .length minChunks >= if  arena return end
     arena .chunks
       minChunks list.ensureCap
       minChunks $1 .length - for ..drop
         chunkSize i64 cast.u T mem.alloc 0 ChunkType .ALLOC T ArenaChunk new list.append
       end
-    arena@ .chunks=
+    arena..chunks=
     arena return
   end
   proc(
     type : auto: T
-    T ArenaAllocator : arena0
+    T ArenaAllocator : mut: arena
     i32 : count
   -> T ArenaAllocator T ptr.raw.mut ) =>: alloc_internal
     count 0 >= "count is non-negative" assert
-    count 0 == if arena0 0 T ptr.raw.mut cast! return end
-    1 arena0 .chunkSizeShift << =:: chunkSize
-    arena0 =:: mut: arena
+    count 0 == if arena 0 T ptr.raw.mut cast! return end
+    1 arena .chunkSizeShift << =:: chunkSize
     arena .strictOrder ! if
       ## search for gaps in previous chunks
       arena .fullChunks while $ iSize cast.u arena .chunks .length u< do =:: i
         arena .chunks i @[] =:: chunk
         chunk [] .eltCount chunkSize == if
           ## chunk full -> skip on next allocation
-          arena .fullChunks 1 + arena@ .fullChunks=
+          arena .fullChunks 1 + arena..fullChunks=
         end
         chunk [] .eltCount count + chunkSize u<= if
           arena chunk [] .data chunk [] .eltCount @[]
@@ -156,9 +154,9 @@ namespace: arenaAlloc
       return
     end
     ## new data does not fit into last chunk
-    count iSize cast.u chunkSize iSize cast.u 1:iSize - + arena0 .chunkSizeShift >>> =:: newChunks
+    count iSize cast.u chunkSize iSize cast.u 1:iSize - + arena .chunkSizeShift >>> =:: newChunks
     newChunks 1:iSize u>= "at least one new chunk" assert
-    newChunks arena0 .chunkSizeShift << T mem.alloc =:: chunkData
+    newChunks arena .chunkSizeShift << T mem.alloc =:: chunkData
     arena .chunks
       chunkData count chunkSize i32.umin ChunkType .ALLOC T ArenaChunk new list.append
       count chunkSize - =:: mut: newCount
@@ -172,7 +170,7 @@ namespace: arenaAlloc
         newOffset chunkSize @[] newOffset=
         newCount chunkSize - newCount=
       end
-    arena@ .chunks=
+    arena..chunks=
     arena chunkData return
   end
 
@@ -264,17 +262,16 @@ namespace: arenaAlloc
   end
   proc(
     type : auto: T
-    T ArenaAllocator : arena0
+    T ArenaAllocator : mut: arena
     i64 : newLength
   -> T ArenaAllocator ) =>: export: reset
-    newLength 1:i64 arena0 .chunkSizeShift << 1 - & i32 cast =:: newEltCount
+    newLength 1:i64 arena .chunkSizeShift << 1 - & i32 cast =:: newEltCount
     newLength
-      arena0 .chunkSizeShift >>>
+      arena .chunkSizeShift >>>
       newEltCount 0 u> if 1 + end
     =:: newChunkCount
-    newChunkCount arena0 .chunks .length i64 cast.u <= "reset point inside allocated chunk" assert
-    arena0 =:: mut: arena ## XXX? prevent copy of old chunk data
-    arena .chunks =:: mut: chunks
+    newChunkCount arena .chunks .length i64 cast.u <= "reset point inside allocated chunk" assert
+    arena .chunks =:: chunks
     arena .freeElt =:: freeElt
     0 =:: mut: continueChunkCount ## continue chunks after last chunk
     chunks .length i64 cast.u 1 - while $ newChunkCount >= do =:: i
@@ -295,22 +292,22 @@ namespace: arenaAlloc
     finally i 1 - end ..drop
     chunks
       newChunkCount continueChunkCount i64 cast.u + list.setLength
-    chunks=
+    arena..chunks=
+    arena .chunks =:: shadow: chunks ## ensure old chunks are no longer accessible
     newEltCount 0 == if
       arena .fullChunks
         ## adjust number of full chunks
         newChunkCount i32 cast i32.min
-      arena@ .fullChunks=
-      chunks arena@ .chunks=
+      arena..fullChunks=
       arena return
     end
     newChunkCount 0 > "arena with elements has chunk" assert
     arena .fullChunks
       ## adjust number of full chunks
       newChunkCount i32 cast 1 - i32.min
-    arena@ .fullChunks=
+    arena..fullChunks=
     ## shrink last chunk if neccessary
-    chunks newChunkCount 1 -  @[] =:: lastChunk
+    arena .chunks newChunkCount 1 -  @[] =:: lastChunk
     lastChunk [] .eltCount newEltCount >= "reset point inside allocated memory" assert
     freeElt .if =:: eltData
       lastChunk [] .eltCount 1 - while $ newEltCount >= do =:: j
@@ -320,17 +317,16 @@ namespace: arenaAlloc
     lastChunk [] .eltCount newEltCount > if
       newEltCount lastChunk .eltCount=
     end
-    chunks arena@ .chunks=
     arena return
   end
   proc(
     type : auto: T
-    T ArenaAllocator : arena0
+    T ArenaAllocator : mut: arena
   -> T ArenaAllocator ) =>: export: free
     ## free allocated memory
-    arena0 0 reset =:: mut: arena
+    arena 0 reset arena=
     ## free internal list
-    arena .chunks list.free arena@ .chunks=
+    arena .chunks list.free arena..chunks=
     arena return
   end
 end
@@ -460,12 +456,10 @@ namespace: mixedArena
   end
 
   proc(
-    MixedArenaAllocator : arena0
+    MixedArenaAllocator : arena
   -> MixedArenaAllocator ) =>: export: free
     ## free allocated memory
-    arena0 MaxAlign ArenaAllocator cast 0 arenaAlloc.reset =:: mut: arena
-    ## free internal list
-    arena .chunks list.free arena@ .chunks=
-    arena MixedArenaAllocator cast return
+    arena MaxAlign ArenaAllocator cast arenaAlloc.free
+    MixedArenaAllocator cast return
   end
 end

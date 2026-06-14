@@ -1219,39 +1219,40 @@ proc(
         end
       end
       ## TODO? is it neccessary to create implementations for generic type-generators
+      ## ProcedureInfo
+        ## CodeProcData
+          0 VariableInfo list.create
+          ## GenericImplementationInfo
+            implArgs
+            baseProcId
+          GenericImplementationInfo new GenericProcInfo .ImplInfo
+          codeImpl [] .codeState .PreTypeChecking .else
+            "expected parsed procedure" ..panic
+          end ProcCodeState .PreTypeChecking ## reuse code from generic base procedure
+          codeImpl [] .expansionLevel 1:i16 +
+        CodeProcData new ProcImplType .Code
+        baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplName
+        baseProcInfo [] .fileId
+        baseProcInfo [] .scopeId
+        ## replaceGenerics
+          baseProcInfo [] .procType
+          typeBuffer@
+          nameBuffer@
+          candidate .genericValues
+          ReplaceFlags.REPLACE_NONE
+          pos
+          typeChecker
+        replaceGenerics
+        baseProcInfo [] .flags
+          hasStaticArg if
+            ProcFlags.HAS_STATIC_ARG |
+          else
+            ProcFlags.HAS_STATIC_ARG ~ &
+          end
+        ## ^flags
+      ProcedureInfo new
       progContext [] .programMemory
-        ## ProcedureInfo
-          ## CodeProcData
-            0 VariableInfo list.create
-            ## GenericImplementationInfo
-              implArgs
-              baseProcId
-            GenericImplementationInfo new GenericProcInfo .ImplInfo
-            codeImpl [] .codeState .PreTypeChecking .else
-              "expected parsed procedure" ..panic
-            end ProcCodeState .PreTypeChecking ## reuse code from generic base procedure
-            codeImpl [] .expansionLevel 1:i16 +
-          CodeProcData new ProcImplType .Code
-          baseProcInfo [] .nameId impls [] .length i32 cast.u nameContext id.newImplName
-          baseProcInfo [] .fileId
-          baseProcInfo [] .scopeId
-          ## replaceGenerics
-            baseProcInfo [] .procType
-            typeBuffer@
-            nameBuffer@
-            candidate .genericValues
-            ReplaceFlags.REPLACE_NONE
-            pos
-            typeChecker
-          replaceGenerics
-          baseProcInfo [] .flags
-            hasStaticArg if
-              ProcFlags.HAS_STATIC_ARG |
-            else
-              ProcFlags.HAS_STATIC_ARG ~ &
-            end
-          ## ^flags
-        ProcedureInfo new mixedArena.copyValue ProcId.create =:: implProdId
+        >$ mixedArena.copyValue ProcId.create =:: implProdId
       progContext .programMemory=
       progContext [] .procedures
         implProdId list.append
