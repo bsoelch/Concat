@@ -1,6 +1,6 @@
 stack:
 -----------------
-"string" { { "" 0 } } pushed at ./tests/parser/tupleInitializers.concat:20:3
+"string2" { { "" 0 } } pushed at ./tests/parser/tupleInitializers.concat:20:3
 -----------------
 stack:
 -----------------

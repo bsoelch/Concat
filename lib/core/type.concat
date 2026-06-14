@@ -14,8 +14,8 @@ namespace: type
   type .with( ..types.isStruct ) =:: export: struct
   type .with( ..types.isProc ) =:: export: procedure
   proc( type -> bool ) : export: alias: isProcedure ..types.isProc
- ## type .with( ..types.isQuotation ) =:: export: quotation
- ## proc( type -> bool ) : export: alias: isQuotation ..types.isQuotation
+  type .with( ..types.isQuotation ) =:: export: quotation
+  proc( type -> bool ) : export: alias: isQuotation ..types.isQuotation
 
   proc( type : T -> bool ) =>: export: static: isPointerValue
     T ..types.unwrapNamed ..types.isValuePointer

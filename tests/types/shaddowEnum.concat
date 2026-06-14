@@ -1,14 +1,14 @@
 i32 =:: int
-struct( char8 ptr.raw : chars i64 : len ) =:: string
+struct( char8 ptr.raw : chars i64 : len ) =:: string2
 5 int =: x
 
-enum( string char int x ) =:: anEnum
+enum( string2 char int x ) =:: anEnum
 
 proc( -> ) =>: main
-  anEnum .string switch
-    string case 1 break
+  anEnum .string2 switch
+    string2 case 1 break
     char case 2 break
     int case 3 break
      x case x i32 cast break
-  end 1 == "anEnum .string" assert
+  end 1 == "anEnum .string2" assert
 end

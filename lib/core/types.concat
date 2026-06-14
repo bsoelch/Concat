@@ -1,0 +1,19 @@
+import core/type
+import core/string
+namespace: types
+  namespace: struct
+    proc( type.namedStruct : auto: T type.quotation : auto: Q T : val Q  : static: f -> ) =>: export: forEach
+      T ..length ..static.for
+        val >$ ..op.getElement =:: elt
+        elt f ( elt ..type -> ) ptr cast ()
+      end
+    end
+    proc( type.namedStruct : auto: T type.quotation : auto: Q T : val Q : static: f -> ) =>: export: forEachEntry
+      T ..length ..static.for
+        T $1 ..types.getElementName ... string new =:: name
+        val >$ ..op.getElement =:: elt
+        name elt f ( string elt ..type -> ) ptr cast ()
+      end
+    end
+  end
+end

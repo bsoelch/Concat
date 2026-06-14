@@ -10,13 +10,13 @@ namespace: slice2
   end
 end
 
-char8 slice2 =:: string
+char8 slice2 =:: string2
 
-namespace: string
-  { "" : data 0 : length } string =: empty
+namespace: string2
+  { "" : data 0 : length } string2 =: empty
 end
 
 proc( -> ) =>: main
-  string.empty ..?stack .length 0 == "empty.length==0" assert
+  string2.empty ..?stack .length 0 == "empty.length==0" assert
   i32 slice2.empty ..?stack .length 0 == "empty.length==0" assert
 end

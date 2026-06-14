@@ -1,4 +1,5 @@
 import core/ptr
+import core/char8
 import core/slice
 
 char8 slice =:: export: string

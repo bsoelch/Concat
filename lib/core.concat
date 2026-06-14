@@ -27,3 +27,6 @@ import core/unionElement
 
 import core/optional
 import core/slice
+import core/string
+
+import core/types

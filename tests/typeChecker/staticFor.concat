@@ -1,0 +1,31 @@
+import print
+
+proc( type.namedStruct : auto: T  T -> ) =>: printStructBody
+  @{
+    io.print
+    $ .length 0 != if
+      " : ":s io.print io.print
+    else ..drop end ' ' io.print
+  } types.struct.forEachEntry
+end
+proc( type.namedStruct : auto: T  T -> ) =>: printStruct
+  "{ ":s io.print
+  printStructBody
+  '}' io.print
+end
+proc( type.namedStruct : auto: T  T -> ) =>: printlnStruct
+  "{ ":s io.print
+  printStructBody
+  "}\n":s io.print
+end
+namespace: io
+  overload: print printStruct end
+  overload: println printlnStruct end
+end
+
+( type : T -> type ) =>: complex
+  ( T : re T : im )
+end
+proc( -> ) =>: export: main
+ 1 '2' 3.14  4 5 f32 complex new ( i32 char8 f64 f32 complex ) new io.println
+end
