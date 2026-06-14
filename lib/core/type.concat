@@ -26,6 +26,10 @@ namespace: type
     T ..types.unwrapNamed ..types.isEnum
   end
   type .with( ..types.unwrapNamed ..types.isEnum ) =:: export: namedEnum
+  proc( type : T -> bool ) =>: export: static: isNamedStruct
+    T ..types.unwrapNamed ..types.isStruct
+  end
+  type .with( ..types.unwrapNamed ..types.isStruct ) =:: export: namedStruct
 
   oneOf( i8 i16 i32 i64 iSize ) =:: export: integer
   oneOf( f32 f64 ) =:: export: float

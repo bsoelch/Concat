@@ -87,6 +87,13 @@ end
 proc( string : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newStringConst
   elts string.bytes context newArray8Const return
 end
+proc( string : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newLenStringConst
+  ConstValue 2 array : mut: structData
+  structData@ slice.wrapMutable
+    elts context newStringConst $1 0 =[]
+    elts .length i64 cast.u ConstValue .Int $1 1 =[]
+  slice.freeze context newArrayConst
+end
 proc( string : elts -> ConstValue ) =>: export: wrapStringConst
   elts string.bytes ConstValue .Array8 return
 end

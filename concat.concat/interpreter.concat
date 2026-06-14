@@ -1701,7 +1701,7 @@ namespace: interpreter
       inTypes
       values
       nArgs i32 cast
-    pos typeContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
+    pos idContext errors interpreter.evaluateBuiltIn =:: resultType =:: value
     resultType switch
       SUCCESS case
         calledType typeContext types.getProcRet switch

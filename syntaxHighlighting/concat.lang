@@ -158,9 +158,10 @@
             f(32|64)\.((s|u)(8|16|32|64)) |
             f32\.f64 | f64\.f32
           ) |
+          \.\.op\.(getElement) |
           \.\.types\.(alignment|size|stride|name|is(Primitive|Pointer|ValuePointer|RawPointer|Array|Struct|
             SetType|RefinementType|TaggedUnion|UnionElement|RawUnion|Enum|Proc|Named|Ctype|Align|Mutable|Defined)|
-            equals|canAssign|canCast|arrayElement|unionTag|getElement|getUnionElement|getUnionElementUnion|unwrapNamed)@? |
+            equals|canAssign|canCast|arrayElement|unionTag|getElement|getElementName|getUnionElement|getUnionElementUnion|unwrapNamed)@? |
           \.\.\.
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>

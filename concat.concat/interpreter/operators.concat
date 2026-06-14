@@ -206,9 +206,10 @@ namespace: interpreter
     ConstValue ptr.raw : args
     i32 : k
     FilePosition ptr : pos
-    TypeContext ptr.mut : typeContext
+    IdentifierContext ptr.mut : idContext
     CompilerError list ptr.mut : errors
   -> ConstValue OperatorResult ) =>: export: evaluateBuiltIn
+    idContext .typeContext =:: typeContext
     builtIn switch
       NEG_I8 NEG_I16 NEG_I32 NEG_I64 case
          args k i64.neg@ unaryOperatorInt return
@@ -709,7 +710,21 @@ namespace: interpreter
           Type .Undefined
         end
           ConstValue .TypeId
-        OperatorResult .SUCCESS return
+      OperatorResult .SUCCESS return
+      TYPE_GET_ELEMENT_NAME case
+        k 2 == "correct number of arguments" assert
+        args 0 [] .TypeId .else
+          "argument is no type" ..panic
+        end
+          args 1 [] .Int .else
+            "argument is no int" ..panic
+          end i32 cast
+        typeContext types.compositeGetEltName .if
+          id.getIdentifierName
+        else
+          "":s
+        end idContext .constContext newLenStringConst
+      OperatorResult .SUCCESS return
     end
     ConstValue .None  OperatorResult .UNIMPLEMENTED return
   end
