@@ -450,6 +450,36 @@ proc(
   target srcOp .dataType=
   false return
 end
+proc( ProcId : procId i32 : opIndex Type : expectedType FilePosition ptr : pos TypeCheckState ptr.mut : state -> ConstValue ) =>: initializeQuotation
+  state [] .program =:: program
+  program .idContext .typeContext =:: typeContext
+  opIndex 0 < if
+    "cannot update quotation operation":s pos ..line internalErrorNoOp ..unreachable
+  end
+  state [] .compiledOps opIndex @[] =:: quotOp
+  expectedType quotOp .dataType=
+  quotOp .val .Constant .and .Procedure .else
+    "expected quotation to be procedure constant":s pos ..line internalErrorNoOp ..unreachable
+  end =:: quotConstant
+  expectedType typeContext types.getPointerBaseType .else
+    expectedType
+  end procId program program.initializeQuotation .else
+    "failed to initialize quotation":s pos ..line internalErrorNoOp ..unreachable
+  end
+    state [] .isUnusedProc ! if
+      $ ProcId.getProcInfo =:: procData
+      procData [] .flags ProcFlags.HAS_POINTER | procData .flags= ## proc has pointer
+      state [] .missingProcs
+        ## MissingProc
+          $1
+          pos
+        MissingProc new list.append
+      state .missingProcs=
+    end
+    $ =:: newProcId
+  quotConstant =[]
+  newProcId ConstValue .Procedure return
+end
 union( _ : Err _ : Match ConstValue slice : Constant ) =:: TypeMatch
 proc(
   Type slice : types
@@ -515,30 +545,7 @@ proc(
       i 1:iSize + continue
     end
     typeInfo .valueType types.getQuotationId .and =:: procId expectedType typeContext types.isCallable if
-      typeInfo .opIndex 0 < if
-        "cannot update quotation operation":s pos ..line internalErrorNoOp ..unreachable
-      end
-      state [] .compiledOps typeInfo .opIndex @[] =:: quotOp
-      expectedType quotOp .dataType=
-      quotOp .val .Constant .and .Procedure .else
-        "expected quotation to be procedure constant":s pos ..line internalErrorNoOp ..unreachable
-      end =:: quotConstant
-      expectedType typeContext types.getPointerBaseType .else
-        expectedType
-      end procId program program.initializeQuotation .else
-        "failed to initialize quotation":s pos ..line internalErrorNoOp ..unreachable
-      end
-        state [] .isUnusedProc ! if
-          $ ProcId.getProcInfo =:: procData
-          procData [] .flags ProcFlags.HAS_POINTER | procData .flags= ## proc has pointer
-          state [] .missingProcs
-            ## MissingProc
-              $1
-              pos
-            MissingProc new list.append
-          state .missingProcs=
-        end
-      quotConstant =[]
+      procId typeInfo .opIndex expectedType pos state initializeQuotation ..drop
       i 1:iSize + continue
     end
     typeInfo .valueType expectedType typeContext types.canAutoCast or
@@ -3792,6 +3799,13 @@ proc(
             op .pos errors appendError
           end
         else
+          value .valueType types.getQuotationId .and =:: procId castTarget typeContext types.isCallable if
+            procId value .opIndex castTarget op .pos state initializeQuotation =:: newConst
+            state .stack
+              value newConst >$ .value= castTarget >$ .valueType=
+            branchTree.push
+            continue.opLoop ## can directly convert constant
+          end
           ## canCast
             value .valueType
             castTarget
@@ -4989,8 +5003,10 @@ proc(
             itr .value .Int .if
                 errors [] .length =:: oldErrors
               for
+                idContext id.openScope
                 ConstValue .Int itr .valType op .pos state pushConstant
                 body state typeCheckOps
+                idContext id.closeScope ! "closing static-for scope worked" assert
                 errors [] .length oldErrors u> if continue.opLoop end
               end
             else

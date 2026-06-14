@@ -560,7 +560,7 @@ namespace: id
     context .identifierNames
       idName
       nameId aliasId NameInfo new
-    map.put ..drop ## previous entry is always empty
+    map.put ? ! "no re-declaration of NameId" assert
     DeclareNameResult .OK return
   end
   proc(
@@ -687,7 +687,7 @@ namespace: id
     context .identifierData
       nameId
       idData
-    map.put ..drop ## previous entry is always empty
+    map.put ? ! "no re-declaration of NameId" assert
     context .identifierData nameId map.at
       optional.unwrap IdentifierData ptr cast optional.wrap
     return
