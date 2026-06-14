@@ -219,7 +219,7 @@ struct(
   iSize : labelOffset
 ) =:: TypeBlockState
 
-enum( NONE TYPE INITIALIZER ) =:: BlockMode
+enum( NONE TYPE_TUPLE TYPE_PROC TYPE_UNION INITIALIZER ) =:: BlockMode
 union(
   iSize : Label
   iSize : Jump
@@ -2528,7 +2528,11 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   state [] .blockMode =:: prevMode
-  BlockMode .TYPE state .blockMode=
+  compType switch
+    TUPLE case BlockMode .TYPE_TUPLE break
+    UNION RAW_UNION case BlockMode .TYPE_UNION break
+    PROC C_PROC case BlockMode .TYPE_PROC break
+  end state .blockMode=
   program .nameBuffer [] .length =:: labelOffset
   state [] .arrowState =:: oldArrowState
   TypeBlockState optional.empty state .arrowState=
@@ -3227,13 +3231,18 @@ proc(
               continue.opLoop
             end =:: shadow: idData ## get mutable reference to id-data
             state [] .blockMode switch
-              TYPE case
+              TYPE_TUPLE TYPE_UNION TYPE_PROC case
                 stackVal [] .value .WildCard .if ..drop
-                  ## TODO make behaviour of _ dependent on container type
-                  ##  Union -> empty element, Proc -> anonymous generic, Struct -> compiler error
-                  types.primitive.TYPE stackVal .valueType=
-                  Type .Empty ConstValue .TypeId stackVal .value=
-                  Type .Empty
+                  state [] .blockMode .TYPE_UNION if
+                    types.primitive.TYPE stackVal .valueType=
+                    Type .Empty ConstValue .TypeId stackVal .value=
+                    Type .Empty
+                  else
+                    ## TODO? allow use of `_` for anonymous proc-arguments
+                    "`_` is only allowed in unions" sb.copyPtr
+                    op .pos errors appendError
+                    continue.opLoop
+                  end
                 else .TypeId ._else ..drop
                   stackVal [] .valueType
                 end idData .valueType=
@@ -3269,7 +3278,7 @@ proc(
             idInfo .nameId optional.wrap list.append
           program .nameBuffer=
           state [] .blockMode switch
-            TYPE case
+            TYPE_TUPLE TYPE_UNION TYPE_PROC case
               state [] .typeBuffer
                 $ .length =:: typeOffset
                 typeOffset count + list.setLength

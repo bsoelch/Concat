@@ -588,6 +588,13 @@ namespace: interpreter
         end types.isProcedure0
           ConstValue .Bool
         OperatorResult .SUCCESS return
+     TYPE_IS_QUOTATION case
+        k 1 == "correct number of arguments" assert
+        args 0 [] .TypeId .else
+          "argument is no type" ..panic
+        end types.isQuotation
+          ConstValue .Bool
+        OperatorResult .SUCCESS return
     TYPE_IS_NAMED case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
