@@ -8,57 +8,15 @@ use at your own risk !!!
 
 A (partial) description of the syntax can be found in the `doc` folder <!-- TODO link to syntax -->
 
-## Examples
-
-Hello World:
+Hello World Program:
 ```
 import print
-using std.literals.
 
 proc( -> ) =>: main
   "Hello World!":s io.println
 end
 ```
-Print prime factors:
-
-```
-#+
-Prints all prime factors of a given number
-+#
-import stringBuilder
-import print
-import numbers/intToStr
-## define overloaded <+ operator to simplify string building
-overload: <+ sb.appendC sb.appendS sb.appendI64 end
-
-proc( stringBuilder i64 -> stringBuilder ) =>: appendFactors
-  $ 0 < if -_ end =:: mut: n ## ensure number is non-negative
-  2:i64 while $ $ * n <= do =:: p
-    while n p u% 0 == do
-      ' ' <+ p <+
-      n p / n=
-    end
-  finally p 1 + end ..drop
-  n 1 > if ' ' <+ n <+ end
-end
-proc( i64 : n -> ) =>: printFactors
-  256 sb.create
-    "the factors of " <+ n <+ " are:" <+
-    n appendFactors '\n' <+
-    $ sb.asStr io.print
-  sb.free ..drop
-end
-
-proc( -> ) =>: main
-  2 printFactors
-  42 printFactors
-  64 printFactors
-  1001 printFactors
-  2381 printFactors
-end
-```
-
-more examples can be found in the `examples` folder
+A list of examples can be found in the `examples` folder
 
 ## Usage
 Currently Concat used [QBE](https://c9x.me/compile/) as its back-end.
