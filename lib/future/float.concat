@@ -490,10 +490,10 @@ namespace: float
     =:: precission
     ## compute Newton-Raphson inverse (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
     ## TODO in 32-bit use less precise constant to ensure inplace-int
-    0x2'd2d_2d2d_2d2d:i64 0x2d2d_2d2d_2d2d_2d2d:i64 i128.create int.fromU128
+    0x2d2d_2d2d_2d2d_2d2d:i64 0x2'd2d_2d2d_2d2d:i64 i128.create int.fromU128
       -108:iSize float.Precission.INFINITE
     float.create =:: p ## 48/17
-    0x1'e1e_1e1e_1e1e:i64 0x1e1e_1e1e_1e1e_1e1e:i64 i128.create int.fromU128
+    0x1e1e_1e1e_1e1e_1e1e:i64 0x1'e1e_1e1e_1e1e:i64 i128.create int.fromU128
       -108:iSize float.Precission.INFINITE
     float.create =:: q ## 32/17
     ## initial estimate: y0 = 48/17 - 32/17 * x  [error at most 1/17+2^-100]

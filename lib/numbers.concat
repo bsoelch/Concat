@@ -279,21 +279,21 @@ namespace: i128
     str
       parseSign =:: sign
       ..dup .length 0:iSize == if ..drop
-        0 0 i128 new ParserError .EMPTY return
+        i128.ZERO ParserError .EMPTY return
       end
       base resolveBase =:: mBase
       mBase 2 u< or mBase 62 u> if ..drop
         i128.ZERO ParserError .INVALID_BASE return
       end
-      -1:i64 -1:i64 i128 new =:: maxUnsigned
+      -1:i64 -1:i64 i128.create =:: maxUnsigned
       unsigned if
         maxUnsigned
       else sign _if
-        -0x8000_0000_0000_0000:i64 0:i64 i128 new
+        0:i64 -0x8000_0000_0000_0000:i64 i128.create
       else
-        0x7fff_ffff_ffff_ffff:i64 -1:i64 i128 new
+        -1:i64 0x7fff_ffff_ffff_ffff:i64 i128.create
       end =:: maxVal
-      0 0 i128 new =:: mut: res
+      i128.ZERO =:: mut: res
       maxUnsigned mBase u/ =:: maxSafeUnsigned
       maxVal mBase u/ =:: maxSafe ## XXX? udiv i128 by i64
       0:iSize while ..dup ..over.2 .length u< do =:: i
@@ -305,7 +305,7 @@ namespace: i128
           $ .DIGIT ! if
             .IGNORED and i 0:iSize iSize.sgt if ..drop i 1:iSize + continue end
             ..drop.2
-            0 0 i128 new ParserError .INVALID_CHAR return
+            i128.ZERO ParserError .INVALID_CHAR return
           else ..drop end
         i64 cast.u i128.fromU64 =:: delta
         res maxSafeUnsigned u> if
@@ -339,12 +339,12 @@ namespace: f128
     0:i64 =:: mut: c
     false bool =: mut: hasDot
     0:iSize =:: mut: e
-    0 0 i128 new =:: mut: val
-    1:i64 56 << 0 i128 new =:: mut: maxVal ## higher precision than f128, no overflow in base 62
+    i128.ZERO =:: mut: val
+    0 1:i64 56 << i128.create =:: mut: maxVal ## higher precision than f128, no overflow in base 62
     false =:: mut: cStyleHex
     str
       ..dup .length 0:iSize == if
-        ..drop 0 0 f128 new ParserError .EMPTY return
+        ..drop f128.ZERO ParserError .EMPTY return
       end
       ..dup 0 string.charAt '-' == if
         true sign=
@@ -353,7 +353,7 @@ namespace: f128
         1 string.tail
       end
       ..dup .length 0:iSize == if
-        ..drop 0 0 f128 new ParserError .EMPTY return
+        ..drop f128.ZERO ParserError .EMPTY return
       end
       base resolveBase =:: mut: mBase
       mBase 2 u< or mBase 62 u> if ..drop

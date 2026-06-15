@@ -43,7 +43,7 @@ namespace: int
       resHi i64 cast.u 32 << resLow i64 cast.u | Digit cast.u
     end
     proc( i64 : remainder Digit : a i64 : b -> i64 #+remainder+# Digit #+res+# ) =>: udivModc64
-      remainder a i64 cast.u i128.create
+      a i64 cast.u remainder i128.create
          b  i128.udivMod64to64
       >$ Digit cast.u
     end
@@ -391,13 +391,13 @@ namespace: int
       BITS_32 if
         hi 32 << a .length i64 cast.u | i128.fromU64 i128 IntConversionResult .Ok return
       else
-        hi a .length i64 cast i128.create i128 IntConversionResult .Ok return
+        a .length i64 cast hi i128.create i128 IntConversionResult .Ok return
       end
     else a .length 2 == _if
       a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
       a .data IntData.asPtr optional.unwrap 1 [] =:: digit1
       a free
-      digit1 i64 cast digit0 i64 cast i128.create i128 IntConversionResult .Ok return
+      digit0 i64 cast digit1 i64 cast i128.create i128 IntConversionResult .Ok return
     else a .length 1 == _if
       a .data IntData.asPtr optional.unwrap 0 [] =:: digit0
       a free
@@ -448,11 +448,11 @@ namespace: int
       BITS_32 if
         hi 32 << a .length i64 cast.u | i128.fromU64 return
       else
-        hi a .length i64 cast i128.create return
+        a .length i64 cast hi i128.create return
       end
     else a .data IntData.asPtr ._if =:: aData
       a .length 2 u>= if
-        aData 1 [] i64 cast.u aData 0 [] i64 cast.u i128.create
+        aData 0 [] i64 cast.u aData 1 [] i64 cast.u i128.create
       else a .length 1 == _if
         aData 0 [] i64 cast.u i128.fromU64
       else i128.ZERO end
@@ -530,7 +530,7 @@ namespace: int
     .length 0 == "all digits were parsed" assert
     slotCount 1 u> if
       _impl.BASE_POW_I64 base []
-        $ 0 == if ..drop 1 0 i128.create fromU128 else fromU64 end
+        $ 0 == if ..drop 0 1 i128.create fromU128 else fromU64 end
       =:: mut: p
       slotCount while
         $ 2 u/ for =:: i
@@ -1240,7 +1240,7 @@ namespace: int
         0 case ZERO return
         1 case resData 0 [] i64 cast.u fromU64 aSign 0 < and bSign 0 < if negate end return
         2 case
-          resData 1 [] i64 cast.u resData 0 [] i64 cast.u i128.create fromU128
+          resData 0 [] i64 cast.u resData 1 [] i64 cast.u i128.create fromU128
             aSign 0 < and bSign 0 < if negate end
           return
         default "unexpected number of digits" ..panic
@@ -1314,7 +1314,7 @@ namespace: int
         0 case ZERO return
         1 case resData 0 [] i64 cast.u fromU64 aSign 0 < or bSign 0 < if negate end return
         2 case
-          resData 1 [] i64 cast.u resData 0 [] i64 cast.u i128.create fromU128
+          resData 0 [] i64 cast.u resData 1 [] i64 cast.u i128.create fromU128
             aSign 0 < or bSign 0 < if negate end
           return
         default "unexpected number of digits" ..panic
@@ -1353,7 +1353,7 @@ namespace: int
         0 case ZERO return
         1 case resData 0 [] i64 cast.u  fromU64 aSign bSign != if negate end return
         2 case
-          resData 1 [] i64 cast.u  resData 0 [] i64 cast.u  i128.create fromU128
+          resData 0 [] i64 cast.u  resData 1 [] i64 cast.u i128.create fromU128
             aSign bSign != if negate end
           return
         default "unexpected number of digits" ..panic
@@ -1425,7 +1425,7 @@ namespace: int
       BITS_32 if dstBuf ..length 1 == "one digit in buffer" assert
         dstBuf 0 [] i64 cast.u a sign i64 cast.s * fromI64 return
       else dstBuf ..length 2 == "two digits in buffer" assert
-        dstBuf 1 [] i64 cast.u dstBuf 0 [] i64 cast.u i128.create
+        dstBuf 0 [] i64 cast.u dstBuf 1 [] i64 cast.u i128.create
           a sign 0 < if -_ end fromI128
         return
       end

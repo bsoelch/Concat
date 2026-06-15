@@ -3,57 +3,58 @@ import core/i16
 import core/i32
 import core/i64
 
+## TODO? make struct-layout dependent on target endianess (currently only little-endian systems are supported)
 struct(
-  i64 : hi
   i64 : low
+  i64 : hi
 ) =:: export: i128
 
 ## TODO make sure to use unsigned comparisson for comparing parts of i128
 namespace: i128
-  { 0 : hi 0 : low } i128 =: export: ZERO
-  { 0 : hi 1 : low } i128 =: export: ONE
-  { i64.MIN : hi 0 : low } i128 =: export: MIN
-  { i64.MAX : hi -1 : low } i128 =: export: MAX
+  { 0 : low 0 : hi } i128 =: export: ZERO
+  { 1 : low 0 : hi } i128 =: export: ONE
+  { 0 : low  i64.MIN : hi } i128 =: export: MIN
+  { -1 : low i64.MAX : hi } i128 =: export: MAX
 
-  proc( i32 : low -> i128 ) =>: export: fromI32
-    low 0 < if -1:i64 else 0:i64 end low i64 cast.s i128 new
+  proc( i64 : low i64 : hi -> i128 ) =>: export: inline: create
+    low hi i128 new
   end
-  proc( i64 : low -> i128 ) =>: export: fromI64
-    low 0 < if -1:i64 else 0:i64 end low i128 new
+  proc( i32 -> i128 ) =>: export: fromI32
+    i64 cast.s $ 0 < if -1:i64 else 0:i64 end i128.create
   end
-  proc( i32 : low -> i128 ) =>: export: fromU32
-    0 low i64 cast.u i128 new
+  proc( i64 -> i128 ) =>: export: fromI64
+    $ 0 < if -1:i64 else 0:i64 end i128.create
   end
-  proc( i64 : low -> i128 ) =>: export: fromU64
-    0 low i128 new
+  proc( i32 -> i128 ) =>: export: fromU32
+    i64 cast.u 0 i128.create
   end
-  proc( i64 : hi i64 : low -> i128 ) =>: export: create
-    hi low i128 new
+  proc( i64 -> i128 ) =>: export: fromU64
+    0 i128.create
   end
 
   proc( i128 : a -> i128 ) =>: export: flip
     ## i128
-      a .hi i64.flip
       a .low i64.flip
-    i128 new
+      a .hi i64.flip
+    i128.create
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: and
     ## i128
-      a .hi b .hi i64.and
       a .low b .low i64.and
-    i128 new
+      a .hi b .hi i64.and
+    i128.create
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: or
     ## i128
-      a .hi b .hi i64.or
       a .low b .low i64.or
-    i128 new
+      a .hi b .hi i64.or
+    i128.create
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: xor
     ## i128
-      a .hi b .hi i64.xor
       a .low b .low i64.xor
-    i128 new
+      a .hi b .hi i64.xor
+    i128.create
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: shl
     a b .low i32 cast.u shl_i32
@@ -67,14 +68,14 @@ namespace: i128
       a return
     else shift 64 >= _if
       ## i128
-        a .low shift 64 - <<
         0
-      i128 new return
+        a .low shift 64 - <<
+      i128.create return
     end
     ## i128
-      a .hi shift << a .low 64 shift - >>> |
       a .low shift <<
-    i128 new
+      a .hi shift << a .low 64 shift - >>> |
+    i128.create
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: lshr
     a b .low i32 cast.u lshr_i32
@@ -88,14 +89,14 @@ namespace: i128
       a return
     else shift 64 >= _if
       ## i128
-        0
         a .hi shift 64 - >>>
-      i128 new return
+        0
+      i128.create return
     end
     ## i128
-      a .hi shift >>>
       a .low shift >>> a .hi 64 shift - << |
-    i128 new
+      a .hi shift >>>
+    i128.create
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: ashr
     a b .low i32 cast.u ashr_i32
@@ -109,14 +110,14 @@ namespace: i128
       a return
     else shift 64 >= _if
       ## i128
-        a .hi 0 < if -1:i64 else 0:i64 end
         a .hi shift 64 - >>
-      i128 new return
+        a .hi 0 < if -1:i64 else 0:i64 end
+      i128.create return
     end
     ## i128
-      a .hi shift >>
       a .low shift >>> a .hi 64 shift - << |
-    i128 new
+      a .hi shift >>
+    i128.create
   end
   proc( i128 : x -> i32 ) =>: export: highestSetBit
     x .hi 0 == if
@@ -180,23 +181,23 @@ namespace: i128
   end
   proc( i128 : a -> i128 ) =>: export: neg
     ## i128
-      a .hi i64.flip a .low 0 == if 1 + end
       a .low i64.neg
-    i128 new
+      a .hi i64.flip a .low 0 == if 1 + end
+    i128.create
   end
   ## XXX? use i64.addc for add
   proc( i128 : a i128 : b -> i128 ) =>: export: add
     a .low b .low i64.add =:: lowSum
     ## i128
-      a .hi b .hi i64.add  lowSum a .low u< if 1 + end
       lowSum
-    i128 new
+      a .hi b .hi i64.add  lowSum a .low u< if 1 + end
+    i128.create
   end
   proc( i128 : a i128 : b -> i128 ) =>: export: sub
     ## i128
-      a .hi b .hi i64.sub  a .low b .low u< if 1 - end
       a .low b .low i64.sub
-    i128 new
+      a .hi b .hi i64.sub  a .low b .low u< if 1 - end
+    i128.create
   end
 end
 namespace: i128
@@ -204,9 +205,9 @@ namespace: i128
     ## (a+b*2^64) (c+d*2^64) = a*c+2^64*(a*d+b*c)+2^128*(b*d)
     a .low b .low i64.umul2 =:: x00low =:: x00hi
     ## i128
-      x00hi a .hi b .low * + a .low b .hi * +
       x00low
-    i128 new
+      x00hi a .hi b .low * + a .low b .hi * +
+    i128.create
   end
   proc( i128 : a i128 : b -> i128 i128 ) =>: export: umul2
     a .hi  b .hi  i64.umul2 =:: x11low =:: x11hi
@@ -227,7 +228,7 @@ namespace: i128
       res2 x10hi  i64.addc res2=
       res3 0      i64.addc res3=
     ..drop
-    res3 res2 i128 new res1 res0 i128 new return
+    res2 res3 i128.create res0 res1 i128.create return
   end
   proc(
     i128 : a
@@ -294,7 +295,7 @@ namespace: i128
   ) =>: export: udivMod
     a b ucmp 0 < if
       ## return
-        0 0 i128 new
+        ZERO
         a
       return
     end
@@ -307,18 +308,18 @@ namespace: i128
     ## (b.hi=0,b.low=0,b=2^k,...)
     a highestSetBit b highestSetBit - =:: shift
     a =:: mut: remainderA
-    0 0 i128 new =:: mut: res
+    ZERO =:: mut: res
     b shift << =:: mut: shiftedB
     shift 64 >= if
       ## i128
-        1:i64 shift 64 - <<
         0
-      i128 new
+        1:i64 shift 64 - <<
+      i128.create
     else
       ## i128
-        0
         1:i64 shift <<
-      i128 new
+        0
+      i128.create
     end =:: mut: bit
     while bit .hi bit .low | ? do
       remainderA shiftedB ucmp 0 >= if
@@ -399,7 +400,7 @@ namespace: i64
     a i32 cast.u a 32 >>> i32 cast.u ^
       b i32 cast.u b 32 >>> i32 cast.u ^
     i32.pmul abLow ^ abHi ^ =:: abMid ## (a0^a1)*(b0^b1) = a0b0^a1b0^a0b1^a1b1
-    abHi abMid 32 >>> ^ abLow abMid 32 << ^ i128.create
+    abLow abMid 32 << ^ abHi abMid 32 >>> ^ i128.create
   end
 end
 

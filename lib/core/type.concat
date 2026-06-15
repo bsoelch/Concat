@@ -1,3 +1,9 @@
+import core/i128
+import core/f128
+import core/f16
+import core/char8
+import core/char16
+import core/char32
 namespace: type
   proc( type type -> bool ) : export: alias: equals ..types.equals
   proc( type type -> bool ) =>: notEquals
@@ -35,10 +41,11 @@ namespace: type
   end
   type .with( ..types.unwrapNamed ..types.isStruct ) =:: export: namedStruct
 
-  oneOf( i8 i16 i32 i64 iSize ) =:: export: integer
-  oneOf( f32 f64 ) =:: export: float
-  oneOf( integer ... float ... ) =:: export: number
+  oneOf( i8 i16 i32 i64 i128 iSize ) =:: export: integer
+  oneOf( f16 f32 f64 f128 ) =:: export: float
   oneOf( iSize i32 i64 ) =:: export: index
+  oneOf( integer ... float ... ) =:: export: number
+  oneOf( number ... char8 char16 char32 ) =:: export: numberOrChar
 
   proc( type : T -> bool ) =>: export: static: isInteger
     T ..types.isPrimitive and T i32 == or T i64 == or T i16 == or T i8 == end

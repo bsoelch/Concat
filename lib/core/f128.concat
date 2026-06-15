@@ -1,8 +1,8 @@
 import core/integers
 
 struct(
-  i64 : hi
   i64 : low
+  i64 : hi
 ) =:: export: f128
 
 namespace: f128
@@ -19,14 +19,12 @@ namespace: f128
   EXP_MASK_HI =:: INF_HI
   0:i64 =:: INF_LOW
 
-  ## XXX? constants
-  proc( -> f128 ) =>: export: ZERO
-    0 0 f128 new return
-  end
-  proc( -> f128 ) =>: export: ONE
-    EXP_BIAS EXP_SHIFT_HI << 0 f128 new return
-  end
+  { 0 : low 0 : hi } f128 =: export: ZERO
+  { 0 : low EXP_BIAS EXP_SHIFT_HI << : hi } f128 =: export: ONE
 
+  proc( i64 : low i64 : hi -> f128 ) =>: export: create
+    low hi f128 new
+  end
   ## TODO make sure to use unsigned comparisson for comparing parts of f128
   proc( i32 : n -> f128 ) =>: export: fromI32
     n i128.fromI32 false fromI128_internal
@@ -35,7 +33,7 @@ namespace: f128
     n i128.fromI64 false fromI128_internal
   end
   proc( i64 : n -> f128 ) =>: export: fromU64
-    0 n i128 new false fromI128_internal
+    n i128.fromU64 false fromI128_internal
   end
   proc( i128 -> f128 ) =>: export: fromI128
     true fromI128_internal
@@ -45,7 +43,7 @@ namespace: f128
   end
   proc( i128 : n bool : signed -> f128 ) =>: fromI128_internal
     n .hi n .low | 0 == if
-      0 0 f128 new return
+      0 0 f128.create return
     end
     EXP_SHIFT_HI 64 + =:: mantiassaBits
     n i128.highestSetBit i64 cast.u =:: mut: bitCount
@@ -69,31 +67,31 @@ namespace: f128
       end
     =:: scaledValue
     ## f128
-      scaledValue .hi MANTISSA_MASK_HI & bitCount EXP_BIAS + EXP_SHIFT_HI << | sign if SIGN_FLAG_HI | end
       scaledValue .low
-    f128 new
+      scaledValue .hi MANTISSA_MASK_HI & bitCount EXP_BIAS + EXP_SHIFT_HI << | sign if SIGN_FLAG_HI | end
+    f128.create
   end
   ## TODO toI..., toU...
   ## TODO from/to f64 , f32
 
   proc( i128 : n -> f128 ) =>: fromBits
-    n .hi n .low f128 new return
+    n .low n .hi f128.create return
   end
   proc( f128 : x -> i128 ) =>: bits
-    x .hi x .low i128 new return
+    x .low x .hi i128.create return
   end
 
   proc( -> f128 ) =>: export: NaN
-    NAN_HI NAN_LOW f128 new return
+    NAN_LOW NAN_HI f128.create return
   end
   proc( -> f128 ) =>: export: Infinity
-    INF_HI INF_LOW f128 new return
+    INF_LOW INF_HI f128.create return
   end
   proc( -> f128 ) =>: export: -Infinity
     ## f128
-      INF_HI SIGN_FLAG_HI |
       INF_LOW
-    f128 new return
+      INF_HI SIGN_FLAG_HI |
+    f128.create return
   end
 
   proc( f128 : x -> bool ) =>: export: isNaN
@@ -219,20 +217,20 @@ namespace: f128
     end
     ## return
       ## f128
+        xLow shift <<
         xHi
           shift ? if xLow 64 shift - >>> | end
         x .hi SIGN_FLAG_HI & |
-        xLow shift <<
-      f128 new
+      f128.create
       baseShift shift +
     return
   end
 
   proc( f128 : x -> f128 ) =>: export: neg
     ## f128
-      x .hi SIGN_FLAG_HI ^
       x .low
-    f128 new
+      x .hi SIGN_FLAG_HI ^
+    f128.create
   end
   proc( f128 : x f128 : y -> f128 ) =>: export: add
     x .hi SIGN_FLAG_HI & ? y .hi SIGN_FLAG_HI & ? != if
@@ -241,10 +239,10 @@ namespace: f128
     x .hi SIGN_FLAG_HI & =:: sign
     x isNaN or y isNaN if
       ## NaN +y x+NaN -> NaN
-      sign NAN_HI | NAN_LOW f128 new return
+      NAN_LOW sign NAN_HI | f128.create return
     else x isInfinite or y isInfinite _if
       ## Inf +y x+Inf -> Inf
-      sign INF_HI | INF_LOW f128 new return
+      INF_LOW sign INF_HI | f128.create return
     end
     x .hi y .hi u< or x .hi y .hi == and x .low y .low u< if
       y x
@@ -320,12 +318,12 @@ namespace: f128
     end
     exp SHIFTED_EXP_MASK >= if
       ## number overflowed
-      sign INF_HI | INF_LOW f128 new return
+      INF_LOW sign INF_HI | f128.create return
     end
     ## f128
-      sign exp EXP_SHIFT_HI << | hiSum MANTISSA_MASK_HI & |
       lowSum
-    f128 new return
+      sign exp EXP_SHIFT_HI << | hiSum MANTISSA_MASK_HI & |
+    f128.create return
   end
   proc( f128 : x f128 : y -> f128 ) =>: export: sub
     x .hi SIGN_FLAG_HI & ? y .hi SIGN_FLAG_HI & ? != if
@@ -406,49 +404,49 @@ namespace: f128
       end
     end
     lowDiff hiDiff | 0 == if
-      0 0 f128 new return
+      0 0 f128.create return
     end
     exp 0 == if
       ## f128
-        sign hiDiff |
         lowDiff
-      f128 new return
+        sign hiDiff |
+      f128.create return
     end
-    hiDiff lowDiff f128 new normalizeMantissa =:: delta =:: mag
+    lowDiff hiDiff f128.create normalizeMantissa =:: delta =:: mag
     exp delta i64 cast.s - exp=
     ## handle subnormal numbers
     ## shifts increased by 1 to undo shifting of top bit into hidden bit
     ## no rounding necessary as total right shift at most left shift from normalization
     exp -64 <= if
       ## f128
-        sign
         mag .hi exp -_ 64 - 1 + >>>
-      f128 new return
+        sign
+      f128.create return
     else exp 0 <= _if
       ## f128
-        sign mag .hi 1 exp - >>> |
         mag .low 1 exp - >>>
           mag .hi << exp 64 + 1 +
         |
-      f128 new return
+        sign mag .hi 1 exp - >>> |
+      f128.create return
     end
     ## f128
-      sign exp EXP_SHIFT_HI << | mag .hi MANTISSA_MASK_HI & |
       mag .low
-    f128 new return
+      sign exp EXP_SHIFT_HI << | mag .hi MANTISSA_MASK_HI & |
+    f128.create return
   end
 
   proc( f128 : x f128 : y -> f128 ) =>: export: mul
     x .hi y .hi ^ SIGN_FLAG_HI & =:: sign
     x isNaN or y isNaN if ## NaN * y ,  x* NaN -> NaN
-      NAN_HI sign | NAN_LOW f128 new return
+      NAN_LOW NAN_HI sign | f128.create return
     else x isInfinite or y isInfinite _if
       x .hi SIGN_FLAG_HI ~ & x .low | ? ! or
           y .hi  SIGN_FLAG_HI ~ & y .low | ? ! if
-        NAN_HI sign | NAN_LOW f128 new return
+        NAN_LOW NAN_HI sign | f128.create return
       end
       ## Inf * y ,  x* Inf -> Inf
-      INF_HI sign | INF_LOW f128 new return
+      INF_LOW INF_HI sign | f128.create return
     end
     ## normalizeMantissa is no-op if number is normal
     x normalizeMantissa =:: shiftX =:: x1
@@ -458,13 +456,13 @@ namespace: f128
     x1 .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | =:: xHi
     y1 .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | =:: yHi
     xHi x1 .low | ? ! if ## 0 * y
-      sign 0 f128 new return
+      0 sign f128.create return
     else yHi y1 .low | ? ! _if ## x * 0
-      sign 0 f128 new return
+      0 sign f128.create return
     end
     ## 256 bit product of mantissas
-      xHi x1 .low i128 new
-      yHi y1 .low i128 new
+      x1 .low xHi i128.create
+      y1 .low yHi i128.create
     i128.umul2 =:: resLow =:: resHi
     ## truncate result to 113 bits
     resHi .hi 33 >>> ? =:: overflow
@@ -489,7 +487,7 @@ namespace: f128
       ## + 1 for hidden bit
       1 exp - =:: shift
       shift 112 > if
-        sign 0 f128 new return
+        0 sign f128.create return
       else shift 64 > _if
         1:i64 shift 64 - 1 - << =:: nextBitMask
         nz
@@ -534,17 +532,17 @@ namespace: f128
       end
     end
     exp SHIFTED_EXP_MASK >= if ## overflow
-      sign INF_HI | INF_LOW f128 new return
+      INF_LOW sign INF_HI | f128.create return
     else exp 0 <= _if ## subnormal number
       ## f128
-        sign hi MANTISSA_MASK_HI & |
         low
-      f128 new return
+        sign hi MANTISSA_MASK_HI & |
+      f128.create return
     end
     ## f128
-      sign exp EXP_SHIFT_HI << | hi MANTISSA_MASK_HI & |
       low
-    f128 new return
+      sign exp EXP_SHIFT_HI << | hi MANTISSA_MASK_HI & |
+    f128.create return
   end
 
   ## XXX prevent double-rounding when converting result of calculation to f128
@@ -564,11 +562,11 @@ end
 ## ! uses saturating arithmetic on overflow
 ## normalized number: 127+1 bit mantissa, 32 bit exponent
 struct(
-  i64 : hi
-  i64 : low
+  i128 : magnitude
   i32 : exp
   bool : sign
 ) =:: f160
+## TODO? use i128-arithmetic for f160 operations
 namespace: f160
   15:i64 =:: F128_SHIFT
   proc( f128 : x -> f160 ) =>: fromF128
@@ -582,13 +580,13 @@ namespace: f160
         x1 .low 64 F128_SHIFT - >>> |
       =:: hi
       x1 .low F128_SHIFT << =:: low
-      hi  low  exp shift i64 cast.s - i32 cast  sign f160 new return
+      low hi i128.create exp shift i64 cast.s - i32 cast  sign f160 new return
     end
     x .hi f128.MANTISSA_MASK_HI & f128.HIDDEN_BIT_HI | F128_SHIFT <<
       x .low 64 F128_SHIFT - >>> |
     =:: hi
     x .low F128_SHIFT << =:: low
-    hi low exp i32 cast sign f160 new return
+    low hi i128.create exp i32 cast sign f160 new return
   end
   proc( f160 : x -> f128 ) =>: toF128
     x .exp i64 cast.s =:: exp
@@ -601,24 +599,24 @@ namespace: f160
       end
     =:: shift
     shift 128 >= if
-      x .sign if f128.SIGN_FLAG_HI else 0 end 0 f128 new return
+      0 x .sign if f128.SIGN_FLAG_HI else 0 end f128.create return
     end
     false =:: mut: nz
     false =:: mut: nextBit
     shift 64 >= if
-      x .hi shift 64 - >>>
+      x .magnitude .hi shift 64 - >>>
       0
       1:i64 shift 64 - 1 - << =:: nextBitMask
-      x .low
-        x .hi nextBitMask 1 - & |
+      x .magnitude .low
+        x .magnitude .hi nextBitMask 1 - & |
       ? nz=
-      x .hi nextBitMask & ? nextBit=
+      x .magnitude .hi nextBitMask & ? nextBit=
     else
-      x .low shift >>> x .hi 64 shift - << |
-      x .hi shift >>>
+      x .magnitude .low shift >>> x .magnitude .hi 64 shift - << |
+      x .magnitude .hi shift >>>
       1:i64 shift 1 - << =:: nextBitMask
-      x .low nextBitMask 1 - & ? nz=
-      x .low nextBitMask & ? nextBit=
+      x .magnitude .low nextBitMask 1 - & ? nz=
+      x .magnitude .low nextBitMask & ? nextBit=
     end =:: mut: hi =:: mut: low
     ## rounding
     nextBit and nz or low 1 & ? if
@@ -637,24 +635,24 @@ namespace: f160
       hi 1 >>> hi=
     end
     ## f128
+      low
       hi f128.MANTISSA_MASK_HI &
         exp f128.EXP_BIAS + overflow if 1 + end f128.EXP_SHIFT_HI << |
-        x .sign if f128.SIGN_FLAG_HI | end
-      low
-    f128 new return
+      x .sign if f128.SIGN_FLAG_HI | end
+    f128.create return
   end
   ## multiply two 128 bit mantissas x and y
   ##  returns the mantissa of x*y and a boolean indicating if the exponent increased
   proc( f160 : x f160 : y -> f160 ) =>: mul
-    x .hi x .low | 0 == or y .hi y .low | 0 == if
+    x .magnitude i128.ZERO == or y .magnitude i128.ZERO == if
       ## f160
-        0 0 0
+        i128.ZERO 0
         x .sign y .sign ^
       f160 new return
     end
     ## 256 bit product of mantissas
-      x .hi x .low i128 new
-      y .hi y .low i128 new
+      x .magnitude
+      y .magnitude
     i128.umul2 =:: resLow =:: resHi
     ## ensure top bit is one
     resHi .hi  =:: mut: hi
@@ -690,25 +688,24 @@ namespace: f160
     x .exp i64 cast y .exp i64 cast + highBit if 1 + end overflow if 1 + end =:: exp
     exp -0x8000'0000 < if
       ## f160
-        0 0 0
+        i128.ZERO 0
         x .sign y .sign ^
       f160 new return
     else exp 0x7fff'ffff > _if
       ## f160
-        -1:i64 -1:i64
+        -1:i64 -1:i64 i128.create
         0x7fff'ffff
         x .sign y .sign ^
       f160 new return
     end
     ## f160
-      hi
-      low
+      low hi i128.create
       exp i32 cast
       x .sign y .sign ^
     f160 new return
   end
   proc( f160 : x -> f160 ) =>: neg
-    x .hi x .low x .exp x .sign ! f160 new
+    x .magnitude x .exp x .sign ! f160 new
   end
   proc( f160 : x  f160 : y -> f160 ) =>: add
     x .sign y .sign != if
@@ -719,8 +716,8 @@ namespace: f160
     else
       x y
     end =:: b =:: a
-    b .hi =:: mut: bHi
-    b .low =:: mut: bLow
+    b .magnitude .hi =:: mut: bHi
+    b .magnitude .low =:: mut: bLow
     false =:: mut: nz
     false =:: mut: nextBit
     ## a .exp >= b .exp
@@ -755,8 +752,8 @@ namespace: f160
       end
     end
     false
-      a .low bLow i64.addc =:: mut: low
-      a .hi  bHi  i64.addc =:: mut: hi
+      a .magnitude .low bLow i64.addc =:: mut: low
+      a .magnitude .hi  bHi  i64.addc =:: mut: hi
     =:: mut: carry
     carry if
       nz nextBit | nz=
@@ -781,14 +778,13 @@ namespace: f160
     end
     carry and a .exp 0x7fff'ffff == if
       ## f160
-        -1:i64 -1:i64
+        -1:i64 -1:i64 i128.create
         0x7fff'ffff
         a .sign
       f160 new return
     end
     ## f160
-      hi
-      low
+      low hi i128.create
       a .exp carry if 1 + end
       a .sign
     f160 new return
@@ -798,12 +794,11 @@ namespace: f160
       x y neg add return
     end
     x .exp y .exp < or
-      x .exp y .exp == and x .hi y .hi u< or
-      x .hi y .hi == and x .low y .low u<
+      x .exp y .exp == and x .magnitude y .magnitude u<
     end =:: swapped
     swapped if y x else x y end =:: b =:: a
-    b .low =:: mut: bLow
-    b .hi =:: mut: bHi
+    b .magnitude .low =:: mut: bLow
+    b .magnitude .hi =:: mut: bHi
     false =:: mut: nz
     false =:: mut: nextBit
     ## a .exp >= b .exp
@@ -839,10 +834,10 @@ namespace: f160
         bHi shift >>> bHi=
       end
     end
-    a .hi bHi u> or a .hi bHi == and a .low bLow u>= end "a>=b" assert
+    a .magnitude .hi bHi u> or a .magnitude.hi bHi == and a .magnitude .low bLow u>= end "a>=b" assert
     false
-      a .low bLow i64.subb =:: mut: low
-      a .hi  bHi  i64.subb =:: mut: hi
+      a .magnitude .low bLow i64.subb =:: mut: low
+      a .magnitude .hi  bHi  i64.subb =:: mut: hi
     ..drop
     ## rounding
     nextBit and nz or low 1 & ? if
@@ -862,7 +857,7 @@ namespace: f160
     end
     hi low | 0 == if
       ## f160
-        0 0 0
+        i128.ZERO 0
         a .sign swapped ^
       f160 new return
     end
@@ -883,13 +878,12 @@ namespace: f160
     end =:: shift
     a .exp -0x8000'0000 shift + < if ## underflow
       ## f160
-        0 0 0
+        i128.ZERO 0
         a .sign swapped ^
       f160 new return
     end
     ## f160
-      hi
-      low
+      low hi i128.create
       a .exp shift -
       a .sign swapped ^
     f160 new return
@@ -900,15 +894,15 @@ namespace: f160
     uses Newton-Raphson-Division (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
   +#
   proc( f160 : x  -> f160 ) =>: normalized_inv ## TODO check constants
-    x .hi 1 << x .low | ? ! if ## only non-zero bit is top bit of x.hi
+    x .magnitude .hi 1 << x .magnitude .low | ? ! if ## only non-zero bit is top bit of x.hi
       ## x == 0.5 -> skip algorithm
       x
         1 >$ .exp=
       return
     end
-    0xb4b4'b4b4'b4b4'b4b4:i64 0xb4b4'b4b4'b4b4'b4b5:i64 1 false f160 new =:: p ## 48/17
-    0xf0f0'f0f0'f0f0'f0f0:i64 0xf0f0'f0f0'f0f0'f0f1:i64 0 false f160 new =:: q ## 32/17
-    0x8000'0000'0000'0000:i64 0:i64                     0 false f160 new =:: one ## 1
+    0xb4b4'b4b4'b4b4'b4b5:i64 0xb4b4'b4b4'b4b4'b4b4:i64 i128.create 1 false f160 new =:: p ## 48/17
+    0xf0f0'f0f0'f0f0'f0f1:i64 0xf0f0'f0f0'f0f0'f0f0:i64 i128.create 0 false f160 new =:: q ## 32/17
+    0:i64                     0x8000'0000'0000'0000:i64 i128.create 0 false f160 new =:: one ## 1
     ## 1. estimate 1/x as 48/17 - 32/17 * x
     p x q * -
       ## 2. iteratate: y2 = y1 + y1(1 - y1 *x)
@@ -921,13 +915,13 @@ namespace: f160
     return
   end
   proc( f160 : x  -> f160 ) =>: inv
-    x .hi x .low | 0 == if ## 1/0
-      -1 -1 0x7fff'ffff x .sign f160 new return
+    x .magnitude i128.ZERO == if ## 1/0
+      -1 -1 i128.create 0x7fff'ffff x .sign f160 new return
     end
     ## normalize number to interval [0.5,1)
-    x .hi x .low -1 false f160 new normalized_inv =:: y
+    x .magnitude -1 false f160 new normalized_inv =:: y
     ## 1 / x = 2^( -1 - xExp) / ( x * 2^( -1 - xExp) ) = 2^( -1 - xExp) * y
-    y .hi y .low y .exp x .exp - 1 - x .sign f160 new return
+    y .magnitude y .exp x .exp - 1 - x .sign f160 new return
   end
   ## TODO? div
 end
