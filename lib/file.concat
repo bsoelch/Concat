@@ -43,6 +43,12 @@ namespace: c
   -> ..ctype.size ) : extern: fread
   proc.c(
     FILE : file
+    ..ctype.size : count
+    ..ctype.char ptr.raw.mut : buffer
+  -> ..ctype.char ptr.raw ) : extern: fgets
+
+  proc.c(
+    FILE : file
     ..ctype.size : eltCount
     ..ctype.size : eltSize
     ..ctype.void ptr.raw : buffer
@@ -276,12 +282,42 @@ namespace: file
   proc( File -> File stringBuilder ) =>: export: readAll
     256 sb.create readTo
   end
+  proc( File stringBuilder -> File stringBuilder ) =>: export: readLine
+    $1 .value .File .else ..drop return end =:: fileVal
+    while
+      fileVal c.clearerr
+      c.concatIOHelper_resetErrno
+      $ .length 16 + sb.ensureCap
+      fileVal
+        $1 sb.getCapacity $2 .length - ..ctype.size cast
+        $2 .data $3 .length @[] ..ctype.char ptr.raw.mut cast!
+      c.fgets $ c.isNull if
+        ..drop
+        >$
+          fileVal c.feof i32 cast ? if
+            Error.END_OF_FILE >$ .error=
+          end
+          fileVal c.ferror i32 cast ? if
+            c.concatIOHelper_checkErrno >$ .error=
+          end
+        <$
+        return
+      end c.strlen $1 .length + >$ .length=
+      $ $ .length 1 - [] '\n' !=
+    end return
+  end
   proc( File -> ) =>: export: close
     $ .flags Flags.NO_CLOSE & ? if ..drop return end
     .value switch
       None case return
       File .case c.fclose ..drop return
       Dir .case c.closedir ..drop return
+    end
+  end
+  proc( File -> File ) =>: export: flush
+    $ .value switch
+      None Dir case return
+      File .case c.fflush ..drop return
     end
   end
 
