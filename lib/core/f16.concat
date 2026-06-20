@@ -26,7 +26,7 @@ end
       bits =:: f16bits
       f16bits f16.SIGN_FLAG & ? =:: hasSign
       f16bits f16.EXP_SHIFT >>> f16.SHIFTED_EXP_MASK & i32 cast.u =:: exp
-      f16bits f16.MANTISSA_MASK & f16.HIDDEN_BIT | i32 cast.u =:: mantissa
+      f16bits f16.MANTISSA_MASK & i32 cast.u =:: mantissa
       f32.MANTISSA_BITS f16.MANTISSA_BITS i32 cast.u - =:: additionalBits
       hasSign if f32.SIGN_FLAG else 0:i32 end
         exp f16.SHIFTED_EXP_MASK i32 cast.u == if ## nan/infinity
@@ -36,8 +36,8 @@ end
           mantissa ? if ## non-zero
             mantissa i32.highestSetBit =:: hiBit
             mantissa f32.MANTISSA_BITS hiBit - << f32.MANTISSA_MASK & |
-            f32.EXP_BIAS f16.EXP_BIAS i32 cast.u -
-              f16.MANTISSA_BITS i32 cast.u + hiBit -
+            f32.EXP_BIAS f16.EXP_BIAS i32 cast.u - 1 +
+              f16.MANTISSA_BITS i32 cast.u - hiBit +
             f32.EXP_SHIFT << |
           end
         else ## normal
@@ -89,7 +89,7 @@ end
           exp16 f16.EXP_SHIFT << | mantissa16 f16.MANTISSA_MASK & |
         else exp16 f16.MANTISSA_BITS -_ >= _if ## subnormal number
           ## base bits on original mantiassa to avoid double roudning
-          additionalBits exp16 i64 cast.u - overflow if 1 + end =:: shift
+          additionalBits exp16 i64 cast.s - 1 + overflow if 1 + end =:: shift
           1:i64 shift 1 - << =:: nextBitMask2
           mantissa shift & ? =:: nextBit2
           mantissa shift 1 - & ? =:: lowBits2
