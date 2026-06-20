@@ -15,6 +15,7 @@ namespace: i128
   { 1 : low 0 : hi } i128 =: export: ONE
   { 0 : low  i64.MIN : hi } i128 =: export: MIN
   { -1 : low i64.MAX : hi } i128 =: export: MAX
+  { -1 : low -1 : hi } i128 =: export: UMAX
 
   proc( i64 : low i64 : hi -> i128 ) =>: export: inline: create
     low hi i128 new
