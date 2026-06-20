@@ -5,29 +5,30 @@ import print
 proc( -> ) =>: main
   5 2 powI io.println
   2 f32 cast 100 powI io.println
-  "1.25" string.wrap 10 tryParseFloat ..drop io.println
+  "1.25":s 10 f64.parse .Ok <unwrap> io.println
 
-  "f.ffffffffffff8X+ff"  string.wrap 16 tryParseFloat .NONE io.println io.println
-  "-f.ffffffffffff8X+ff"  string.wrap 16 tryParseFloat .NONE io.println io.println
-  "0.00000000000004X-ff" string.wrap 16 tryParseFloat .NONE io.println io.println
-  "-0.00000000000004X-ff" string.wrap 16 tryParseFloat .NONE io.println io.println
-  "1'000'000'000'000'000'000'000'000'000" string.wrap 0 tryParseFloat
-    .INT "parse success" assert
+  "f.ffffffffffff8X+ff":s 16 f64.parse .Ok <unwrap> io.println
+  "-f.ffffffffffff8X+ff":s 16 f64.parse .Ok <unwrap> io.println
+  "0.00000000000004X-ff":s 16 f64.parse .Ok <unwrap> io.println
+  "-0.00000000000004X-ff":s 16 f64.parse .Ok <unwrap> io.println
+  "-1.7976931348623E+308":s 0 f64.parse .Ok <unwrap> io.println
+  "5E-324":s 0 f64.parse .Ok <unwrap> io.println
+  "1'000'000'000'000'000'000'000'000'000":s 0
+    f64.parse .Ok <unwrap>
   1e27 == "large ints parse correctly" assert
 
-  "0x1000p-10"  string.wrap 0 tryParseFloat .NONE io.println io.println
+  "0x1000p-10":s 0 f64.parse .Ok <unwrap> io.println
 
-  "123456789"  string.wrap 0 tryParseFloat .NONE io.println io.println
+  "123456789":s 0 f64.parse .Ok <unwrap> io.println
 
-  "0x7fff_ffff_ffff_ffff" string.wrap 0 tryParseInt .NONE io.println io.println
-  "0x8000_0000_0000_0000" string.wrap 0 tryParseInt .NONE io.println io.println
-  "-0x8000_0000_0000_0000" string.wrap 0 tryParseInt .NONE io.println io.println
-  "0x8000_0000_0000_0000" string.wrap 0 tryParseUInt .NONE io.println io.println
-  "-1" string.wrap 0 tryParseUInt .NONE io.println io.println
+  "0x7fff_ffff_ffff_ffff":s 0 i64.parse .Ok <unwrap> io.println
+  "0x8000_0000_0000_0000":s 0 i64.parse .Unsigned <unwrap> io.println
+  "-0x8000_0000_0000_0000":s 0 i64.parse .Ok <unwrap> io.println
+  "-1":s 0 i8.parse .Ok <unwrap> io.println
 
-  "0b11'00'10'01" string.wrap 0 tryParseInt .NONE io.println io.println
-  "12345678987654321" string.wrap 0 tryParseInt .NONE io.println io.println
+  "0b11'00'10'01":s 0 i16.parse .Ok <unwrap> io.println
+  "12345678987654321":s 0 i64.parse .Ok <unwrap> io.println
 
-  "9223372036854775808" string.wrap 10 number.tryParseInt .NONE io.println io.println
-  "9223372036854775807" string.wrap 10 number.tryParseInt .NONE io.println io.println
+  "9223372036854775808":s 10 i64.parse .Unsigned <unwrap> io.println
+  "9223372036854775807":s 10 i64.parse .Ok <unwrap> io.println
 end

@@ -428,21 +428,32 @@ namespace: interpreter
         argument string.fromBytes
           argLength string.head
         =:: chars
-        chars 0 number.tryParseInt =:: parserError =:: parsed
         false =:: mut: overflow
-        ## XXX ? extract error handling code
-        parserError switch
-          NONE case break
-          UNSIGNED OVERFLOW case
-            parserError .UNSIGNED and builtIn .PARSE_I64 if break end
+        chars 0 i64.parse switch
+          Ok .case break
+          Unsigned .case
+            builtIn .PARSE_I64 if break end
             true overflow=
-            break
-          SIGN INT EMPTY INVALID_BASE INVALID_CHAR case
-            parserError number.errorString sb.fromStr
-              " while parsing number " sb.appendS
-              chars sb.appendStr
-            pos errors appendError
-            break
+          break
+          Err .case switch
+            Empty case 0 break
+            Overflow case
+              chars sb.fromStr
+                " does not fit into a 64-bit integer" sb.appendS
+              pos errors appendError
+            0 break
+            InvalidBase .case
+              "integer base outside allowed range: " sb.copyPtr
+                >$ sb.appendI
+              pos errors appendError
+            0 break
+            InvalidChar .case
+              "invalid character in integer literal: " sb.copyPtr
+                >$ sb.appendC
+              pos errors appendError
+            0 break
+          end
+          break
         end
         builtIn .PARSE_I64 if
           overflow if
@@ -451,25 +462,25 @@ namespace: interpreter
             pos errors appendWarning
           end
         else builtIn .PARSE_I32 _if
-          overflow or parsed i32.MIN i64 cast.s < or parsed i32.UMAX i64 cast.u > if
+          overflow or $ i32.MIN i64 cast.s < or $ i32.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 32-bit integer" sb.appendS
             pos errors appendWarning
           end
         else builtIn .PARSE_I16 _if
-          overflow or parsed i16.MIN i64 cast.s < or parsed i16.UMAX i64 cast.u > if
+          overflow or $ i16.MIN i64 cast.s < or $ i16.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 16-bit integer" sb.appendS
             pos errors appendWarning
           end
         else builtIn .PARSE_I8 _if
-          overflow or parsed i8.MIN i64 cast.s < or parsed i8.UMAX i64 cast.u > if
+          overflow or $ i8.MIN i64 cast.s < or $ i8.UMAX i64 cast.u > if
             chars sb.fromStr
               " does not fit into a 8-bit integer" sb.appendS
             pos errors appendWarning
           end
         end
-        parsed ConstValue .Int OperatorResult .SUCCESS return
+      ConstValue .Int OperatorResult .SUCCESS return
       PARSE_F16 PARSE_F32 PARSE_F64 case
         k 2 == "correct number of arguments" assert
         args 0 [] .Array8 .else
@@ -485,18 +496,29 @@ namespace: interpreter
         argument string.fromBytes
           argLength string.head
         =:: chars
-        chars 0 number.tryParseFloat =:: parserError =:: parsed
-        parserError switch
-          NONE INT case break
-          UNSIGNED SIGN OVERFLOW EMPTY INVALID_BASE INVALID_CHAR case
-            parserError number.errorString sb.fromStr
-              " while parsing number " sb.appendS
-              chars sb.appendStr
-            pos errors appendError
-            break
+        chars 0 f64.parse switch
+          Ok .case break
+          Err .case switch
+            Empty case 0 break
+            Overflow case
+              chars sb.fromStr
+                " does not fit into a 64-bit float" sb.appendS
+              pos errors appendError
+            0 break
+            InvalidBase .case
+              "float base outside allowed range: " sb.copyPtr
+                >$ sb.appendI
+              pos errors appendError
+            0 break
+            InvalidChar .case
+              "invalid character in float literal: " sb.copyPtr
+                >$ sb.appendC
+              pos errors appendError
+            0 break
+          end
         end
-        parsed ConstValue .Float OperatorResult .SUCCESS return
-     TYPE_IS_PRIMITIVE case ##XXX? wrapper proc for Type -> bool
+      ConstValue .Float OperatorResult .SUCCESS return
+      TYPE_IS_PRIMITIVE case ##XXX? wrapper proc for Type -> bool
         k 1 == "correct number of arguments" assert
         ## named primitives are not counted as primitive
         args 0 [] .TypeId .else
@@ -504,133 +526,133 @@ namespace: interpreter
         end types.isPrimitive
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_POINTER case
+      TYPE_IS_POINTER case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isPointer0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_VALUE_POINTER case
+      TYPE_IS_VALUE_POINTER case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isValuePointer0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_RAW_POINTER case
+      TYPE_IS_RAW_POINTER case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isRawPointer0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_ARRAY case
+      TYPE_IS_ARRAY case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isArray0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_STRUCT case
+      TYPE_IS_STRUCT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isTuple0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_SET_TYPE case
+      TYPE_IS_SET_TYPE case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isSetType0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_REFINEMENT_TYPE  case
+      TYPE_IS_REFINEMENT_TYPE  case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isRefinementType0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_TAGGED_UNION case
+      TYPE_IS_TAGGED_UNION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isTaggedUnion0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_UNION_ELEMENT case
+      TYPE_IS_UNION_ELEMENT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isUnionElement
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_RAW_UNION case
+      TYPE_IS_RAW_UNION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isRawUnion0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_ENUM case
+      TYPE_IS_ENUM case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isEnum0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_PROC case
+      TYPE_IS_PROC case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isProcedure0
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_QUOTATION case
+      TYPE_IS_QUOTATION case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isQuotation
           ConstValue .Bool
         OperatorResult .SUCCESS return
-    TYPE_IS_NAMED case
+      TYPE_IS_NAMED case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end types.isNamedType
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_CTYPE case
+      TYPE_IS_CTYPE case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.unwrapNamed .CType ?
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_ALIGN case
+      TYPE_IS_ALIGN case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end  typeContext types.unwrapNamed .Align ?
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_MUTABLE case
+      TYPE_IS_MUTABLE case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.isMutable
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_IS_DEFINED case
+      TYPE_IS_DEFINED case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
         end typeContext types.unwrapNamed
           .Undefined ? ! ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_EQUAL case
+      TYPE_EQUAL case
         k 2 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument1 is no type" ..panic
@@ -641,7 +663,7 @@ namespace: interpreter
         types.typeEquals
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_CAN_ASSIGN case
+      TYPE_CAN_ASSIGN case
         k 2 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument1 is no type" ..panic
@@ -652,7 +674,7 @@ namespace: interpreter
         typeContext types.canAutoCast
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_CAN_CAST case
+      TYPE_CAN_CAST case
         k 2 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument1 is no type" ..panic
@@ -663,7 +685,7 @@ namespace: interpreter
         false typeContext types.canCast
           ConstValue .Bool
         OperatorResult .SUCCESS return
-     TYPE_ARRAY_ELEMENT case
+      TYPE_ARRAY_ELEMENT case
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic

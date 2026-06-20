@@ -558,11 +558,11 @@ proc(
   state [] .program =:: program
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
-  literal 0 number.tryParseInt switch
-    NONE case
+  literal 0 i64.parse switch
+    Ok .case
       literalType intType literal pos state appendIntConstant
       true return
-    UNSIGNED case
+    Unsigned .case
       literalType switch
         FIXED case
           intType typeContext types.sizeOf .Fixed .else
@@ -579,19 +579,19 @@ proc(
       end
       literalType intType literal pos state appendIntConstant
       true return
-    SIGN case ..drop
-      "unsigned value is marked as negative: " sb.copyPtr
-        literal sb.appendStr
-      pos errors appendWarning
+    Err .case switch
+      Overflow case
+        "integer value outside allowed range: " sb.copyPtr
+          literal sb.appendStr
+        pos errors appendError
       true return
-    OVERFLOW case ..drop
-      "integer value outside allowed range: " sb.copyPtr
-        literal sb.appendStr
-      pos errors appendError
+      InvalidBase .case
+        "integer base outside allowed range: " sb.copyPtr
+          >$ sb.appendI
+        pos errors appendError
       true return
-    INT INVALID_BASE case ..unreachable
-    INVALID_CHAR EMPTY case ..drop
-      false return
+      Empty InvalidChar case false return
+    end break
   end
 end
 proc(
@@ -632,8 +632,7 @@ proc(
       end
       true return
     else literalType typeContext types.isFloat _if
-      literal 0 number.tryParseFloat =:: errCode
-      errCode .NONE or errCode .INT if
+      literal 0 f64.parse .Ok .if
         literalType pos state appendFloatConst
         true return
       else ..drop
@@ -649,17 +648,10 @@ proc(
   literal IntLiteralType .AUTO Type .Undefined pos state tryParseIntConstant if
     true return
   end
-  literal 0 number.tryParseFloat
-    ..dup .NONE if ..drop
-      types.primitive.F64 pos state appendFloatConst
-      true return
-    else ..dup .INT _if ..drop.2
-      "integer value outside allowed range: " sb.copyPtr
-        literal sb.appendStr
-      pos errors appendError
-      true return
-    end
-  ..drop.2
+  literal 0 f64.parse .Ok .if
+    types.primitive.F64 pos state appendFloatConst
+    true return
+  else ..drop end
   false return
 end
 proc(
@@ -848,23 +840,23 @@ proc(
 -> i32 ) =>: getCompilerOpParam
   state [] .program =:: program
   program .errors =:: errors
-  ..dup 10 number.tryParseInt .NONE ! if ..drop
-    ..dup .length 0:iSize != if
+  $ 10 i32.parse .Ok ! .if ..drop
+    $ .length 0:iSize != if
       64 sb.create
         "unexpected argument for " sb.appendS
         opName sb.appendStr
         " expected positive integer got: \"" sb.appendS
-        ..swap  sb.appendStr
+        >$  sb.appendStr
         '"'    sb.appendC
       pos errors appendError
     else ..drop end
     1 return
-  else ..swap ..drop i32 cast ..dup 1 < _if
+  else >$ ..drop $ 1 < _if
     50 sb.create
       "argument of " sb.appendS
         opName sb.appendStr
       " has to be positive got: " sb.appendS
-      ..swap sb.appendI
+      >$ sb.appendI
     pos errors appendError
     1
   end

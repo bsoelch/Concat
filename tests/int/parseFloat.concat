@@ -12,6 +12,6 @@ proc( float -> ) =>: printFloat
 end
 
 proc( -> ) =>: export: main
-  "3.1415926535897932384626433832795028851971693993":s 0 float.parse ..drop printFloat
-  "1.0001":s 0 float.parse ..drop printFloat
+  "3.1415926535897932384626433832795028851971693993":s 0 float.parse .Ok <unwrap> printFloat
+  "1.0001":s 0 float.parse .Ok <unwrap> printFloat
 end

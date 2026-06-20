@@ -1,8 +1,8 @@
 import numbers
 
 proc( -> ) =>: main
-  "3.141592653589793238462643383279502884197169399375105" string.wrap 0 f128.parse ..drop =:: pi
-  "0x2.b7e151628aed2a6abf7158809cf4f3c762e716" string.wrap 0 f128.parse ..drop =:: e
+  "3.141592653589793238462643383279502884197169399375105" string.wrap 0 f128.parse .Ok <unwrap> =:: pi
+  "0x2.b7e151628aed2a6abf7158809cf4f3c762e716" string.wrap 0 f128.parse .Ok <unwrap> =:: e
   pi e + =:: x1
   pi e - =:: x2
   pi e * =:: x3

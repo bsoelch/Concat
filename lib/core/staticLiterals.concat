@@ -1,0 +1,9 @@
+proc( char8 ptr.raw iSize -> i8  ) : export: static: alias: :i8  ..builtIn.parse.i8
+proc( char8 ptr.raw iSize -> i16 ) : export: static: alias: :i16 ..builtIn.parse.i16
+proc( char8 ptr.raw iSize -> i32 ) : export: static: alias: :i32 ..builtIn.parse.i32
+proc( char8 ptr.raw iSize -> i64 ) : export: static: alias: :i64 ..builtIn.parse.i64
+..builtIn.parse.f16:? if
+  proc( char8 ptr.raw iSize -> f16 ) : export: static: alias: :f16 ..builtIn.parse.f16
+end
+proc( char8 ptr.raw iSize -> f32 ) : export: static: alias: :f32 ..builtIn.parse.f32
+proc( char8 ptr.raw iSize -> f64 ) : export: static: alias: :f64 ..builtIn.parse.f64

@@ -18,6 +18,7 @@ import core/ptr
 import core/type
 
 import core/equality
+import core/staticLiterals
 import core/parseNumber
 
 import core/system

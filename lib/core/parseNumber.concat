@@ -1,9 +1,392 @@
-proc( char8 ptr.raw iSize -> i8  ) : export: static: alias: :i8  ..builtIn.parse.i8
-proc( char8 ptr.raw iSize -> i16 ) : export: static: alias: :i16 ..builtIn.parse.i16
-proc( char8 ptr.raw iSize -> i32 ) : export: static: alias: :i32 ..builtIn.parse.i32
-proc( char8 ptr.raw iSize -> i64 ) : export: static: alias: :i64 ..builtIn.parse.i64
-..builtIn.parse.f16:? if
-  proc( char8 ptr.raw iSize -> f16 ) : export: static: alias: :f16 ..builtIn.parse.f16
+import core/integers
+import core/floats
+import core/string
+
+namespace: number
+  union(
+    _ : Empty
+    char8 : InvalidChar
+    i32 : InvalidBase
+    _ : Overflow
+  ) =:: export: ParseError
+  ( type : F -> type ) =>: export: ParseResult
+    union(
+      F : Ok
+      ParseError : Err
+    )
+  end
+  ( type : I -> type ) =>: export: IntParseResult
+    union(
+      I : Ok
+      I : Unsigned
+      ParseError : Err
+    )
+  end
+  proc( type : auto: I I IntParseResult -> I ParseResult ) =>: export: uintOk
+    switch
+      Err .case I ParseResult .Err return
+      Unsigned .case I ParseResult .Ok return
+      Ok .case
+        $ 0 < if ..drop ParseError .Overflow I ParseResult .Err return end
+        I ParseResult .Ok
+      return
+    end
+  end
+  union( i32 : Digit _ : Ignored char8 : Invalid ) =:: export: DigitType
+  proc( char8 : chr i32 : base -> DigitType ) =>: export: parseDigit
+    chr '0' >= and chr '9' <= if
+      chr '0' - i32 cast.u
+        $ base < if
+          DigitType .Digit
+        else ..drop
+          chr DigitType .Invalid
+        end
+      return
+    else chr 'A' >= and chr 'Z' <= _if
+      chr 'A' - i32 cast.u 10 +
+        $ base < if
+          DigitType .Digit
+        else ..drop
+          chr DigitType .Invalid
+        end
+      return
+    else chr 'a' >= and chr 'z' <= _if
+      chr 'a' - i32 cast.u
+        base 36 > if 36 else 10 end +
+        $ base < if
+          DigitType .Digit
+        else ..drop
+          chr DigitType .Invalid
+        end
+      return
+    end
+    chr '_' == or chr '\'' == if
+      DigitType .Ignored
+    else
+      chr DigitType .Invalid
+    end
+  end
+  2 =:: export: MIN_BASE
+  62 =:: export: MAX_BASE
+  proc( string i32 : base -> string i32 ) =>: export: resolveBase
+    base 0 != if base return end
+    $ .length 2:iSize u< if
+      10 return
+    end
+    $ 0 [] '0' == if
+      $ 1 [] =:: intType
+      intType 'x' == or intType 'X' == if
+        2 string.tail 16 return
+      else intType 'b' == or intType 'B' == _if
+        2 string.tail 2 return
+      else intType 'o' == or intType 'O' == _if
+        2 string.tail 8 return
+      end
+    end
+    ## arbitrary base numbers <BASE>b<NUMBER>
+    $ 1 [] 'b' == or $ 1 [] 'B' == if
+      $ 0 [] '0' - i32 cast.u =:: mut: b
+      b 0 >= and b 9 <= if
+        2 string.tail b return
+      end
+    else $ .length 3:iSize u> and $ 2 [] 'b' == _if ## two digits before b
+      $ 0 [] '0' - i32 cast.u =:: mut: b1
+      $ 1 [] '0' - i32 cast.u =:: mut: b2
+      b1 0 >= and b1 9 <= and b2 0 >= and b2 9 <= if
+        b1 10 * b2 + =:: b
+        3 string.tail b return
+      end
+    end
+    10 return
+  end
+  proc( string i32 : base -> string i32 bool ) =>: inline: export: prepareParse
+    $ 0 [] '-' ==
+      $ =:: sign
+    if
+      1 string.tail
+    else $ 0 [] '+' == _if
+      1 string.tail
+    end
+    base resolveBase sign
+  end
+  proc( type.integer : auto: I
+    string
+    i32 : base
+    bool : sign
+    I #+startVal+#
+    I : maxUnsigned
+    I : maxVal
+  -> I IntParseResult ) =>: inline: parseIntImpl
+    base MIN_BASE < or base MAX_BASE > if ..drop.2
+      base ParseError .InvalidBase I IntParseResult .Err return
+    end
+    maxVal base u/ =:: maxSafe
+    maxUnsigned base u/ =:: maxSafeUnsigned
+    false =:: mut: signedOverflow
+    false =:: mut: hasDigit
+    >$ string.chars for
+      base parseDigit switch
+        Digit .case true hasDigit= break
+        Ignored case continue
+        Invalid .case >$ ..drop
+          ParseError .InvalidChar I IntParseResult .Err
+        return
+      end
+      I i128 == if i128.fromI32 else I cast.u end =:: delta
+      $ maxSafeUnsigned u> if
+        ..drop ParseError .Overflow I IntParseResult .Err return
+      else $ maxSafe u> _if
+        true signedOverflow=
+      end
+      $ =:: oldVal
+      base I i128 == if i128.fromI32 else I cast.u end *
+      oldVal maxSafeUnsigned == and $ maxUnsigned delta - u> if
+        ..drop ParseError .Overflow I IntParseResult .Err return
+      else oldVal maxSafe == and $ maxVal delta - u> _if
+        true signedOverflow=
+      end
+      delta +
+    end
+    hasDigit ! if
+      ..drop ParseError .Empty I IntParseResult .Err return
+    end
+    signedOverflow if
+      sign if ..drop
+        ParseError .Overflow I IntParseResult .Err return
+      end
+      I IntParseResult .Unsigned
+    else
+      sign if -_ end I IntParseResult .Ok
+    end
+  end
+  proc( char8 : chr i32 : base -> bool ) =>: export: isExpChar
+    chr switch
+      'e' 'E' case
+        base 15 < return
+      'x' 'X' case
+        base 10 > base 34 < & return
+      '#' case
+        true return
+      default
+        false return
+    end
+  end
+  proc( type.integer : auto: I
+    string
+    i32 : base
+    I #+startVal+#
+    I : maxVal
+  -> I ParseResult i32 ) =>: inline: parseFloatImpl
+    base MIN_BASE < or base MAX_BASE > if ..drop.2
+      base ParseError .InvalidBase I ParseResult .Err 0 return
+    end
+    maxVal base u/ =:: maxSafe
+    false =:: mut: hasDigit
+    false =:: mut: hasDot
+    0 =:: mut: exp
+    while $1 .length 0 != do $1 0 []
+      hasDigit and hasDot ! and $ '.' == if ..drop
+        true hasDot=
+        continue
+      end
+      hasDigit and $ base isExpChar if ..drop
+        $1 .length 1 u<= if ..drop.2 ParseError .Empty I ParseResult .Err 0 return end
+        >$ 1 string.tail base prepareParse 0 0x10000 $ parseIntImpl .Err .if <$ ..drop
+          I ParseResult .Err 0 return
+        else .Ok <unwrap> end exp +
+          >$ I ParseResult .Ok <$
+        return
+      end
+      base 16 == and hasDigit and $ 'p' == or $ 'P' == if ..drop
+        $1 .length 1 u<= if ..drop.2 ParseError .Empty I ParseResult .Err 0 return end
+        >$ 1 string.tail 10 prepareParse 0 0x10000 $ parseIntImpl .Err .if <$ ..drop
+          I ParseResult .Err 0 return
+        else .Ok <unwrap> end exp 4 * +
+          >$
+            $1 0x3 & << ## shift magnitude to align exponent to multiple of 4
+            I ParseResult .Ok
+          <$ 4 //
+        return
+      end
+      base parseDigit switch
+        Digit .case true hasDigit= break
+        Ignored case continue
+        Invalid .case <<$ ..drop.2
+          ParseError .InvalidChar I ParseResult .Err 0
+        return
+      end
+      I i128 == if i128.fromI32 else I cast.u end =:: delta
+      hasDot if
+        exp 1 - exp=
+      end
+      $ maxSafe u> if
+        exp 1 + exp=
+        continue
+      end
+      $ =:: oldVal
+      base I i128 == if i128.fromI32 else I cast.u end *
+      oldVal maxSafe == and $ maxVal delta - u> if
+        ..drop oldVal
+        exp 1 + exp=
+        continue
+      end
+      delta +
+    finally >$ 1 string.tail <$ end >$ ..drop
+    hasDigit ! if
+      ..drop ParseError .Empty I ParseResult .Err 0 return
+    end
+    I ParseResult .Ok exp
+  end
+
+  proc( type : auto: T  T : x i32 : p -> T ) =>: export: powI
+    T f128 == if f128.ONE else 1 T cast end =:: ONE
+    p 0 == if
+      ONE return
+    else p 0 < _if
+      ONE x p -_ powI / return
+    end
+    x =:: mut: xPow
+    ONE
+      p while ..dup 0 != do
+        ..dup 1 & 0 != if
+        ..swap
+          xPow *
+        ..swap
+        end
+        1 >>
+        xPow xPow * xPow=
+      end ..drop
+    return
+  end
 end
-proc( char8 ptr.raw iSize -> f32 ) : export: static: alias: :f32 ..builtIn.parse.f32
-proc( char8 ptr.raw iSize -> f64 ) : export: static: alias: :f64 ..builtIn.parse.f64
+namespace: i64
+  proc( string i32 -> i64 number.IntParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty i64 number.IntParseResult .Err return end
+    prepareParse 0:i64 i64.UMAX $2 if i64.MIN else i64.MAX end parseIntImpl
+  end
+end
+namespace: i32
+  proc( string i32 -> i32 number.IntParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty i32 number.IntParseResult .Err return end
+    prepareParse 0:i32 i32.UMAX i32 cast.u $2 if i32.MIN else i32.MAX end parseIntImpl
+  end
+end
+namespace: i16
+  proc( string i32 -> i16 number.IntParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty i16 number.IntParseResult .Err return end
+    prepareParse 0:i32 i16.UMAX i32 cast.u $2 if i16.MIN else i16.MAX end i32 cast.u parseIntImpl switch
+      Err .case i16 number.IntParseResult .Err return
+      Ok .case i16 cast.s i16 number.IntParseResult .Ok return
+      Unsigned .case i16 cast.u i16 number.IntParseResult .Unsigned return
+    end
+  end
+end
+namespace: i8
+  proc( string i32 -> i8 number.IntParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty i8 number.IntParseResult .Err return end
+    prepareParse 0:i32 i8.UMAX i32 cast.u $2 if i8.MIN else i8.MAX end i32 cast.u parseIntImpl switch
+      Err .case i8 number.IntParseResult .Err return
+      Ok .case i8 cast.s i8 number.IntParseResult .Ok return
+      Unsigned .case i8 cast.u i8 number.IntParseResult .Unsigned return
+    end
+  end
+end
+namespace: i128
+  proc( string i32 -> i128 number.IntParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty i128 number.IntParseResult .Err return end
+    prepareParse i128.ZERO i128.UMAX $2 if i128.MIN else i128.MAX end parseIntImpl
+  end
+end
+namespace: f64
+  proc( string i32 -> f64 number.ParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty f64 number.ParseResult .Err return end
+    prepareParse =:: sign
+      $ =:: base
+    0:i64 1:i64 59 << parseFloatImpl <$ switch
+      Err .case >$ ..drop f64 number.ParseResult .Err return
+      Ok .case ## TODO the result of M * B ^ E is slightly wrong in some edge cases e.g. f64.MAX is mapped to infinity
+        f64 cast.s
+          sign if -_ end
+        $1 -100 < if
+          ## split of factor of base^64 to prevent underflow of intermediate results
+          base f64 cast.s >>$ 64 + powI *
+          base f64 cast.s 64 powI /
+        else
+          base f64 cast.s >>$ powI *
+        end
+      f64 number.ParseResult .Ok return
+    end
+  end
+end
+namespace: f32
+  proc( string i32 -> f32 number.ParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty f32 number.ParseResult .Err return end
+    prepareParse =:: sign
+      $ =:: base
+    0:i32 1:i32 28 << parseFloatImpl <$ switch
+      Err .case >$ ..drop f32 number.ParseResult .Err return
+      Ok .case
+        f32 cast.s
+          sign if -_ end
+        $1 -20 < if
+          ## split of factor of base^16 to prevent underflow of intermediate results
+          base f32 cast.s >>$ 16 + powI *
+          base f32 cast.s 16 powI /
+        else
+          base f32 cast.s >>$ powI *
+        end
+      f32 number.ParseResult .Ok return
+    end
+  end
+end
+namespace: f16
+  proc( string i32 -> f16 number.ParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty f16 number.ParseResult .Err return end
+    prepareParse =:: sign
+      $ =:: base
+    0:i32 1:i32 16 << parseFloatImpl <$ switch
+      Err .case >$ ..drop f16 number.ParseResult .Err return
+      Ok .case
+        f32 cast.s
+          sign if -_ end
+        $1 -20 < if
+          ## split of factor of base^16 to prevent underflow of intermediate results
+          base f32 cast.s >>$ 16 + powI *
+          base f32 cast.s 16 powI /
+        else
+          base f32 cast.s >>$ powI *
+        end f16.fromF32
+      f16 number.ParseResult .Ok return
+    end
+  end
+end
+namespace: f128
+  proc( string i32 -> f128 number.ParseResult ) =>: export: parse
+    using number.
+    $1 .length 0 == if ..drop.2 ParseError .Empty f128 number.ParseResult .Err return end
+    prepareParse =:: sign
+      $ =:: base
+    i128.ZERO i128.ONE 120 << parseFloatImpl <$ switch
+      Err .case >$ ..drop f128 number.ParseResult .Err return
+      Ok .case
+        f128.fromI128
+          sign if f128.neg end
+        $1 -2048 < if
+          ## split of factor of base^1024 to prevent underflow of intermediate results
+          base f128.fromI32 >>$ 1024 + powI *
+          base f128.fromI32 1024 powI /
+        else
+          base f128.fromI32 >>$ powI *
+        end
+      f128 number.ParseResult .Ok return
+    end
+  end
+end

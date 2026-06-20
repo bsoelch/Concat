@@ -461,6 +461,17 @@ namespace: list
     type : auto: T
     T list
     iSize : index
+  -> T list T ) =>: export: extract
+    $ index checkIndex
+    $ .data index [] <$
+      $ .data index @[] $1 .data index 1 + @[] $2 .length index - 1 - mem.move ..drop
+      $ .length 1:iSize - >$ .length=
+    >$
+  end
+  proc(
+    type : auto: T
+    T list
+    iSize : index
   -> T list ) =>: export: remove
     $ index checkIndex
     $ .data index @[] $1 .data index 1 + @[] $2 .length index - 1 - mem.move ..drop

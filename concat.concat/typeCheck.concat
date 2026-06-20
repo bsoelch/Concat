@@ -3570,9 +3570,9 @@ proc(
           state .nestedElementInfo [] .path list.clear state .nestedElementInfo .path=
           IdentifierInfo optional.empty state .nestedElementInfo .srcVar=
         end
-        name 10 number.tryParseUInt .NONE and innerContainerType typeContext types.getEltCount .Int .and $1 u> if
-          i32 cast.u
-        else ..drop
+        name 10 i32.parse number.uintOk .Ok .and =:: i innerContainerType typeContext types.getEltCount .Int .and i i64 cast.u u> if
+          i
+        else
           ## compositeFindName
             innerContainerType
             name

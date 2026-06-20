@@ -471,42 +471,39 @@ namespace: int
         $ 0 string.charAt
          >$ 1 string.tail <$
         base number.parseDigit switch
-          DIGIT case
+          Digit .case
             i64 cast.u val base i64 cast.u * + val=
             count 1 - count= ## only decrease count when hitting digit
           continue
-          IGNORED INVALID case ..drop continue ## invalid digits should have been filtered out by preparation step
+          Ignored Invalid case continue ## invalid digits should have been filtered out by preparation step
         end
       end
     val fromU64
   end
   ## TODO? return union (? result) instead of pair of values
-  proc( string : str i32 : base -> int number.ParserError ) =>: export: parse
-    using number.ParserError
-    str
-      number.parseSign =:: hasSign
-      base number.resolveBase =:: shadow: base
-      base 2 u< or base 62 u> if ..drop
-        ZERO ParserError .INVALID_BASE return
+  proc( string i32 -> int number.ParseResult ) =>: export: parse
+    using number.ParseError
+    using number.ParseResult
+    number.prepareParse
+      =:: hasSign
+      $ number.MIN_BASE < or $ number.MAX_BASE > if >$ ..drop
+        ParseError .InvalidBase int ParseResult .Err return
+      end
+      =:: base
+    0:iSize =:: mut: digitCount
+      $ string.chars for
+        base number.parseDigit switch
+          Digit case digitCount 1 + digitCount= continue
+          Ignored case continue
+          Invalid .case >$ ..drop ParseError .InvalidChar int ParseResult .Err return
+        end
       end
     =:: digits
-    0:iSize =:: mut: digitCount
-    digits string.chars for
-      base number.parseDigit switch
-        DIGIT case ..drop digitCount 1 + digitCount= continue
-        IGNORED case ..drop continue
-        INVALID case ..drop ZERO ParserError .INVALID_CHAR return
-      end
-    end
-    digitCount 0 == if
-      ZERO ParserError .EMPTY return
-    end
     digits digitCount base parseRaw
        hasSign if negate end
-    ParserError .NONE
+    int ParseResult .Ok
   end
   proc( string : digits iSize : digitCount i32 : base -> int ) =>: export: parseRaw
-    using number.ParserError
     _impl.BASE_DIGITS_I64 base [] =:: baseDigitCount
     digitCount baseDigitCount iSize cast.u % i32 cast.u =:: head_digits
     digitCount baseDigitCount iSize cast.u /

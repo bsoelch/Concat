@@ -220,14 +220,15 @@ namespace: float
   ## two different string formats:
   ##  <base-prefix> <digit>+ ( '.' <digit>+ )?
   ##  <base-prefix> <digit> ( '.' <digit>+ )? <exp-char> [+-]? <digit>+
-  proc( string : str i32 : base -> float number.ParserError ) =>: export: parse
-    using number.ParserError
-    str
-      number.parseSign =:: hasSign
-      base number.resolveBase =:: shadow: base
-      base 2 u< or base 62 u> if ..drop
-        ZERO ParserError .INVALID_BASE return
+  proc( string i32 -> float number.ParseResult ) =>: export: parse
+    using number.ParseResult
+    using number.ParseError
+    number.prepareParse
+      =:: hasSign
+      $ number.MIN_BASE < or $ number.MAX_BASE > if >$ ..drop
+        ParseError .InvalidBase float ParseResult .Err return
       end
+      =:: base
     =:: digits
     0:iSize =:: mut: digitCount
     0:iSize =:: mut: fracDigitCount
@@ -238,12 +239,12 @@ namespace: float
       end
       ## TODO handle exponents
       base number.parseDigit switch
-        DIGIT case ..drop
+        Digit case
           digitCount 1 + digitCount=
           hasDot if fracDigitCount 1 + fracDigitCount= end
         continue
-        IGNORED case ..drop continue
-        INVALID case ..drop ZERO ParserError .INVALID_CHAR return
+        Ignored case continue
+        Invalid .case ParseError .InvalidChar float ParseResult .Err return
       end
     end
     digits digitCount base int.parseRaw fromInt
@@ -258,7 +259,8 @@ namespace: float
           div valPrec setPrecission
         end
       end
-    ParserError .NONE return
+      hasSign if negate end
+    float ParseResult .Ok return
   end
   { 0 0 1024 646 512 441 396 364 341 323 308 296 285 276 268 262 256 250 245
     241 236 233 229 226 223 220 217 215 213 210 208 206 204 202 201 199 198
