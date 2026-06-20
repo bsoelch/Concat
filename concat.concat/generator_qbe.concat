@@ -2497,7 +2497,7 @@ proc(
       targetLoc return
     end
   ## case 2: float -> float/int
-  else fromVal .F32 or fromVal .F64 _if
+  else fromVal .F32 or fromVal .F64 or fromVal .F16 _if
     toVal switch
       F16 case "unimplemented" ..panic
       F32 case
