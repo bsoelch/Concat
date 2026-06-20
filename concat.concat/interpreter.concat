@@ -1593,26 +1593,28 @@ proc(
           EvalResult .Ok return
         ROTATE case
           stackMod .n =:: offset
-          offset 1 == "! rotation is only implemented for two elements" assert
-          2:iSize
-            "swap":s
+          offset i32.abs iSize cast.u 1 +
+            "rotate":s
           op [] .pos context checkStack if
             EvalResult .Error return
           end
-          op [] .pos context popValue
-            ! "hasValue" assert
-          =:: upper =:: upperInfo
-          op [] .pos context popValue
-            ! "hasValue" assert
-          =:: lower =:: lowerInfo
-          context [] .stack
-            upper list.append
-            lower list.append
-          context .stack=
-          context [] .stackInfo
-            upperInfo list.append
-            lowerInfo list.append
-          context .stackInfo=
+          offset 0 < if
+            context [] .stack
+              list.removeLast
+              $1 .length offset iSize cast.s + list.insert
+            context .stack=
+            context [] .stackInfo
+              list.removeLast
+              $1 .length offset iSize cast.s + list.insert
+            context .stackInfo=
+          else
+            context [] .stack
+              $ .length offset iSize cast.u 1 + - list.extract list.push
+            context .stack=
+            context [] .stackInfo
+              $ .length offset iSize cast.u 1 + - list.extract list.push
+            context .stackInfo=
+          end
           EvalResult .Ok return
       end
       break
