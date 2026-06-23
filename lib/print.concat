@@ -61,10 +61,16 @@ namespace: io
   end
   proc( i8 : i -> ) =>: export: printI8   i i32 cast printI32 end
   proc( i16 : i -> ) =>: export: printI16   i i32 cast printI32 end
+  proc( f16 : f -> ) =>: export: printF16
+    char8 16 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      f sb.appendF16
+    sb.asStr printS
+  end
   proc( f32 : f -> ) =>: export: printF32
     char8 16 array : mut: buffer
     buffer@ sb.wrapBuffer
-      f f64 cast 7 sb.appendF?
+      f sb.appendF32
     sb.asStr printS
   end
   proc( f64 : f -> ) =>: export: printF64
@@ -96,10 +102,17 @@ namespace: io
   end
   proc( i8 : i -> ) =>: export: printlnI8 i i32 cast printlnI32 end
   proc( i16 : i -> ) =>: export: printlnI16 i i32 cast printlnI32 end
+  proc( f16 : f -> ) =>: export: printlnF16
+    char8 16 array : mut: buffer
+    buffer@ sb.wrapBuffer
+      f sb.appendF16
+      '\n' sb.appendC
+    sb.asStr printS
+  end
   proc( f32 : f -> ) =>: export: printlnF32
     char8 16 array : mut: buffer
     buffer@ sb.wrapBuffer
-      f f64 cast 7 sb.appendF?
+      f sb.appendF32
       '\n' sb.appendC
     sb.asStr printS
   end
@@ -201,11 +214,11 @@ namespace: io
 
   overload: export: print
     printC printS printBool
-    printI8 printI16 printI32 printI64 printZ printF32 printF64
+    printI8 printI16 printI32 printI64 printZ printF16 printF32 printF64
   end
   overload: export: println
     printlnC printlnS printlnBool
-    printlnI8 printlnI16 printlnI32 printlnI64 printlnZ printlnF32 printlnF64
+    printlnI8 printlnI16 printlnI32 printlnI64 printlnZ printlnF16 printlnF32 printlnF64
   end
   overload: export: eprint
     eprintC eprintS

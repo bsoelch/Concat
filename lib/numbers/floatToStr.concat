@@ -191,6 +191,9 @@ namespace: sb
   proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendF
     0 10 false appendFloat???
   end
+  proc( stringBuilder f16 #+value+# -> stringBuilder ) =>: export: appendF16
+    f16.asF64 3 10 false appendFloat???
+  end
   proc( stringBuilder f32 #+value+# -> stringBuilder ) =>: export: appendF32
     f64 cast 7 10 false appendFloat???
   end
