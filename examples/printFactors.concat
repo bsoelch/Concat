@@ -5,7 +5,7 @@ import stringBuilder
 import print
 import numbers/intToStr
 ## define overloaded <+ operator to simplify string building
-overload: <+ sb.appendC sb.appendS sb.appendI64 end
+overload: <+ sb.appendC sb.appendS i64.sbAppend end
 
 proc( stringBuilder i64 -> stringBuilder ) =>: appendFactors
   $ 0 < if -_ end =:: mut: n ## ensure number is non-negative

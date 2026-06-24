@@ -552,7 +552,7 @@ namespace: int
   end
   proc( stringBuilder int : val i32 : base char8 : padWith iSize : padTo -> stringBuilder ) =>: export: sbPaddedBaseAppend
     val asI64 .if
-      base '0' padTo sb.appendPaddedU return
+      base '0' padTo i64.paddedSbAppendU return
     ## TODO? 128bit sb.append
     end =:: shadow: val
     base number.MIN_BASE < or base number.MAX_BASE > if
@@ -603,7 +603,7 @@ namespace: int
   end
   proc( stringBuilder int : val i32 : base -> stringBuilder ) =>: export: sbBaseAppend
     val asI64 .if
-      base sb.appendI? return
+      base i64.sbAppend? return
     ## TODO? 128bit sb.append
     end =:: shadow: val
     base number.MIN_BASE < or base number.MAX_BASE > if
@@ -1545,7 +1545,7 @@ namespace: int
       digits .length 0 == if
         '0' sb.appendC return
       end
-      digits $ .length 1 - [] i64 cast.u base sb.appendU?
+      digits $ .length 1 - [] i64 cast.u base i64.sbAppendU?
       base switch ## TODO? is there a simple equation
         2 case 64 break
         4 case 32 break
@@ -1553,7 +1553,7 @@ namespace: int
         default "unsupported base" ..panic
       end =:: digitCount
       digits $ .length 1 - slice.head slice.reversed for
-        i64 cast.u base '0' digitCount iSize cast.u sb.appendPaddedU
+        i64 cast.u base '0' digitCount iSize cast.u i64.paddedSbAppendU
       end
     end
     proc( stringBuilder Digit slice.mut : mut: digits i32 : base char8 : padWith iSize : padTo -> stringBuilder ) =>: shadow: sbSimpleBaseAppend
@@ -1573,9 +1573,9 @@ namespace: int
       end
       digitBuffer
         list.pop >$ digitBuffer=
-      <unwrap> i64 cast.u base padWith padDigits sb.appendPaddedU
+      <unwrap> i64 cast.u base padWith padDigits i64.paddedSbAppendU
       digitBuffer list.reversed for
-        base '0' chunkDigits sb.appendPaddedU
+        base '0' chunkDigits i32.paddedSbAppendU
       end
       digitBuffer list.free ..drop
     end

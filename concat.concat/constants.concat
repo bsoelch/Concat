@@ -383,12 +383,12 @@ namespace: sb
       ## non-printable ASCII-characters
       "\\" sb.appendS
       chr 0xff &
-        ..dup 0o10 < if
+        ..dup 8b10 < if
           ..swap "00" sb.appendS ..swap
-        else ..dup 0o100 < _if
+        else ..dup 8b100 < _if
           ..swap '0' sb.appendC ..swap
         end
-      i64 cast.u 8 sb.appendI?
+      8 i32.sbAppend?
       return
     end
     c '\\' == c '\'' == | c '\"' == | if

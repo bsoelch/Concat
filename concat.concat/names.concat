@@ -249,7 +249,7 @@ namespace: id
         "tmp@":s sb.appendStr
         context [] .tmpCount
           $ 1 + context .tmpCount=
-        i64 cast.u 62 sb.appendU?
+        62 i32.sbAppendU?
       sb.asStr
       flags
       pos

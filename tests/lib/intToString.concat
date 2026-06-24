@@ -7,11 +7,11 @@ proc( -> ) =>: main
     "0x"                  sb.appendS
     0x1234567             sb.appendX    '\n' sb.appendC
     "0b"                  sb.appendS 
-    0b11001001            sb.appendBin  '\n' sb.appendC
+    0b11001001            2 i32.sbAppend?  '\n' sb.appendC
     0x7fff_ffff_ffff_ffff sb.appendX    '\n' sb.appendC
    -0x8000_0000_0000_0000 sb.appendI    '\n' sb.appendC
    -1:i64                 sb.appendU    '\n' sb.appendC
-   -1:i64                 sb.appendUBin '\n' sb.appendC
+   -1:i64                 2 i64.sbAppendU? '\n' sb.appendC
     $ sb.asStr io.print
   sb.free ..drop
 end

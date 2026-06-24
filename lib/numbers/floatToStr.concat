@@ -164,7 +164,7 @@ namespace: sb
         end
         base 10 <= if 'E' else base 30 <= _if 'X' else '#' end sb.appendC
         e_max 0 >= if '+' sb.appendC end
-        e_max i64 cast.s base appendI?
+        e_max base i32.sbAppend?
       else e_max 0 >= _if
         0 while ..dup n < do =:: i
           buff@ i [] getDigit sb.appendC

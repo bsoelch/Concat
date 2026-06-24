@@ -11,12 +11,13 @@ namespace: number
     end
     ## buf val
       $1 .length 1 - <$
-      while $ 0 I i128 == if i128.fromU64 end != do ## buf index val
+      while ## buf index val
         $ base u% >$ base u/
         <<<$ ## rem buf index dVal
           digitChars >$ [] $2 $2 =[]
           1 -
         >>$
+        $ 0 I i128 == if i128.fromU64 end !=
       end ..drop
     1 + slice.tail slice.freeze string.fromChars
   end
@@ -31,7 +32,7 @@ namespace: number
     end
     buffer val base uintToStr
       $ .length 0 == if return end
-      $ .length minDigits < if
+      $ .length minDigits u< if
         buffer $ .length minDigits - slice.tail ## last minDigit chars of buffer
           $ ## str buf
             $ .length >>>$ .length - slice.head
@@ -41,7 +42,6 @@ namespace: number
     return
   end
 end
-## TODO: padded append
 namespace: i64
   proc( stringBuilder i64 i32 : base bool #+signed+# -> stringBuilder ) =>: export: sbAppend??
     char8 64 array : mut: buffer
@@ -49,6 +49,18 @@ namespace: i64
       >$ '-' sb.appendC <$ -_
     end
       buffer@ slice.wrapMutable >$ base number.uintToStr
+    sb.appendStr
+  end
+  proc( stringBuilder
+    i64 #+val+#
+    i32 : base
+    char8 : padChar iSize : minDigits
+  -> stringBuilder ) =>: export: paddedSbAppendU
+    char8 64 array : mut: buffer
+    minDigits 64 u> if
+      <$ minDigits 64 - for ..drop padChar sb.appendC end >$
+    end
+      buffer@ slice.wrapMutable >$ base padChar minDigits 64 iSize.min number.uintToPaddedStr
     sb.appendStr
   end
   proc( stringBuilder i64 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
@@ -79,6 +91,18 @@ namespace: i32
       buffer@ slice.wrapMutable >$ base number.uintToStr
     sb.appendStr
   end
+  proc( stringBuilder
+    i32 #+val+#
+    i32 : base
+    char8 : padChar iSize : minDigits
+  -> stringBuilder ) =>: export: paddedSbAppendU
+    char8 32 array : mut: buffer
+    minDigits 32 u> if
+      <$ minDigits 32 - for ..drop padChar sb.appendC end >$
+    end
+      buffer@ slice.wrapMutable >$ base padChar minDigits 32 iSize.min number.uintToPaddedStr
+    sb.appendStr
+  end
   proc( stringBuilder i32 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
     true sbAppend??
   end
@@ -105,6 +129,18 @@ namespace: i16
       >$ '-' sb.appendC <$ -_
     end
       i32 cast.u buffer@ slice.wrapMutable >$ base number.uintToStr
+    sb.appendStr
+  end
+  proc( stringBuilder
+    i16 #+val+#
+    i32 : base
+    char8 : padChar iSize : minDigits
+  -> stringBuilder ) =>: export: paddedSbAppendU
+    char8 16 array : mut: buffer
+    minDigits 16 u> if
+      <$ minDigits 16 - for ..drop padChar sb.appendC end >$
+    end
+      i32 cast.u buffer@ slice.wrapMutable >$ base padChar minDigits 16 iSize.min number.uintToPaddedStr
     sb.appendStr
   end
   proc( stringBuilder i16 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
@@ -135,6 +171,18 @@ namespace: i8
       i32 cast.u buffer@ slice.wrapMutable >$ base number.uintToStr
     sb.appendStr
   end
+  proc( stringBuilder
+    i8 #+val+#
+    i32 : base
+    char8 : padChar iSize : minDigits
+  -> stringBuilder ) =>: export: paddedSbAppendU
+    char8 8 array : mut: buffer
+    minDigits 8 u> if
+      <$ minDigits 8 - for ..drop padChar sb.appendC end >$
+    end
+      i32 cast.u buffer@ slice.wrapMutable >$ base padChar minDigits 8 iSize.min number.uintToPaddedStr
+    sb.appendStr
+  end
   proc( stringBuilder i8 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
     true sbAppend??
   end
@@ -161,6 +209,18 @@ namespace: i128
       >$ '-' sb.appendC <$ i128.neg
     end
       buffer@ slice.wrapMutable >$ base number.uintToStr
+    sb.appendStr
+  end
+  proc( stringBuilder
+    i128 #+val+#
+    i32 : base
+    char8 : padChar iSize : minDigits
+  -> stringBuilder ) =>: export: paddedSbAppendU
+    char8 128 array : mut: buffer
+    minDigits 128 u> if
+      <$ minDigits 128 - for ..drop padChar sb.appendC end >$
+    end
+      buffer@ slice.wrapMutable >$ base padChar minDigits 128 iSize.min number.uintToPaddedStr
     sb.appendStr
   end
   proc( stringBuilder i128 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
@@ -191,6 +251,7 @@ namespace: iSize
     proc( stringBuilder iSize -> stringBuilder ) : alias: export: sbAppendU i64.sbAppendU
     proc( stringBuilder iSize -> stringBuilder ) : alias: export: sbAppendX i64.sbAppendX
     proc( stringBuilder iSize -> stringBuilder ) : alias: export: sbAppendUX i64.sbAppendUX
+    proc( stringBuilder iSize i32 char8 iSize -> stringBuilder ) : alias: export: paddedSbAppendU i64.paddedSbAppendU
   else iSize ..types.size i32 ..types.size == _if
     proc( stringBuilder iSize i32 : base bool #+signed+# -> stringBuilder ) : alias: export: sbAppend?? i32.sbAppend??
     proc( stringBuilder iSize i32 : base -> stringBuilder ) : alias: export: sbAppend? i32.sbAppend?
@@ -199,123 +260,42 @@ namespace: iSize
     proc( stringBuilder iSize -> stringBuilder ) : alias: export: sbAppendU i32.sbAppendU
     proc( stringBuilder iSize -> stringBuilder ) : alias: export: sbAppendX i32.sbAppendX
     proc( stringBuilder iSize -> stringBuilder ) : alias: export: sbAppendUX i32.sbAppendUX
+    proc( stringBuilder iSize i32 char8 iSize -> stringBuilder ) : alias: export: paddedSbAppendU i32.paddedSbAppendU
   else
     "iSize should have 32 or 64 bits" ..compiler.error
   end
 end
-## TODO: remove old versions
 namespace: sb
-  proc( stringBuilder : buffer i64 : i i32 : base bool : signed -> stringBuilder ) =>: export: appendI??
-    base 2 < base 62 > | if
-      ## TODO error handling
-      buffer return
-    end
-    char8 64 array new =:: mut: chrBuff
-    buffer
-      i
-      ..dup 0 < signed & if
-        ..swap '-' appendC ..swap
-        -_
-      else ..dup 0 == _if
-        ..drop '0' appendC return
-      end
-      63 ..swap ## index in chrBuff
-        while ..dup 0 != do
-          ..swap ## <buffer> <i> <chrIndex>
-            ..over base u% number.digitChars ..swap []
-            ..over chrBuff@ ..swap =[]
-            1 -
-          ..swap
-          base u/
-        end ..drop
-        while 1 + ..dup 64 < do
-          ..swap ## <chrIndex> <buffer>
-            ..over chrBuff@ ..swap [] appendC
-          ..swap
-        end
-      ..drop
-    return
-  end
-  proc( stringBuilder i64 #+value+# i32 #+base+# -> stringBuilder ) =>: export: appendI?
-    true appendI??
-  end
-  proc( stringBuilder i64 #+value+# i32 #+base+# -> stringBuilder ) =>: export: appendU?
-    false appendI??
-  end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendBin
-    2  appendI?
-  end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendI64
-    10 appendI?
-  end
-  proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendI32
-    i64 cast.s 10 appendI?
-  end
-  proc( stringBuilder iSize #+value+# -> stringBuilder ) =>: export: appendZ
-    i64 cast.u 10 appendI?
-  end
-  proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendX32
-    i64 cast.s 16 appendI?
-  end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendX64
-    i64 cast.s 16 appendI?
-  end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendUBin
-    2 false appendI??
-  end
-  proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendU32
-    i64 cast.u 10 false appendI??
-  end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendU64
-    10 false appendI??
-  end
-  proc( stringBuilder i32 #+value+# -> stringBuilder ) =>: export: appendUX32
-    i64 cast.u 16 false appendI??
-  end
-  proc( stringBuilder i64 #+value+# -> stringBuilder ) =>: export: appendUX64
-    16 false appendI??
-  end
   overload: export: appendI
-    appendI32
-    appendI64
-    appendZ
+    i8.sbAppend
+    i16.sbAppend
+    i32.sbAppend
+    i64.sbAppend
+    i128.sbAppend
+    iSize.sbAppend
   end
   overload: export: appendU
-    appendU32
-    appendU64
+    i8.sbAppendU
+    i16.sbAppendU
+    i32.sbAppendU
+    i64.sbAppendU
+    i128.sbAppendU
+    iSize.sbAppendU
   end
   overload: export: appendX
-    appendX32
-    appendX64
+    i8.sbAppendX
+    i16.sbAppendX
+    i32.sbAppendX
+    i64.sbAppendX
+    i128.sbAppendX
+    iSize.sbAppendX
   end
   overload: export: appendUX
-    appendUX32
-    appendUX64
-  end
-  overload: export: appendUHex
-    appendUX32
-    appendUX64
-  end
-## append with padding: TODO? add padding support to main int-to-string procedure
-  proc( stringBuilder i32 : val i32 : base char8 : padChar iSize : minDigits -> stringBuilder ) =>: export: appendPaddedU32
-    val i64 cast.u base padChar minDigits appendPaddedU64
-  end
-  proc( stringBuilder i64 : val i32 : base char8 : padChar iSize : minDigits -> stringBuilder ) =>: export: appendPaddedU64
-    char8 64 array : mut: buffer
-    minDigits 0 == if
-      val base sb.appendU? return
-    end
-    buffer@ sb.wrapBuffer
-      val base sb.appendU?
-    sb.asStr =:: strVal
-    minDigits sb.ensureCap
-    strVal .length minDigits u< if
-      minDigits strVal .length - for ..drop padChar sb.appendC end
-    end
-    strVal sb.appendStr
-  end
-  overload: export: appendPaddedU
-    appendPaddedU32
-    appendPaddedU64
+    i8.sbAppendUX
+    i16.sbAppendUX
+    i32.sbAppendUX
+    i64.sbAppendUX
+    i128.sbAppendUX
+    iSize.sbAppendUX
   end
 end
