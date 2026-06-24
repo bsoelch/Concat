@@ -44,6 +44,14 @@ namespace: f64
     x bits EXP_MASK & EXP_MASK !=
   end
 
+  proc( f64 -> i32 ) =>: export: exponent
+    bits $ EXP_SHIFT >>> SHIFTED_EXP_MASK & i32 cast.u
+      $ 0 == if ## subnormal
+        >$ MANTISSA_MASK & i64.highestSetBit 1 + MANTISSA_BITS i32 cast.u - +
+      else >$ ..drop end
+    EXP_BIAS i32 cast.u -
+  end
+
   proc( f64 : x -> f64 ) =>: export: truncate
     x bits =:: i
     i MANTISSA_MASK & =:: m

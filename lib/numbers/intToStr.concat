@@ -1,7 +1,7 @@
 import stringBuilder
 
 namespace: number
-  proc( type : auto: I
+  proc( type.integer : auto: I
     char8 slice.mut
     I ## val
     i32 : base

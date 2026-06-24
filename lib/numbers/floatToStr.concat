@@ -5,6 +5,60 @@ import stringBuilder
 import numbers/intToStr
 import math
 
+namespace: number
+  { 0 0 1.0 0.6309297535714575 0.5 0.43067655807339306 0.38685280723454163 0.3562071871080222 0.3333333333333333
+    0.31546487678572877 0.3010299956639812 0.2890648263178879 0.27894294565112987 0.27023815442731974
+    0.26264953503719357 0.2559580248098155 0.25 0.24465054211822604 0.23981246656813146 0.23540891336663824
+    0.23137821315975915 0.227670248696953 0.22424382421757544 0.22106472945750374 0.21810429198553155
+    0.21533827903669653 0.21274605355336318 0.2103099178571525 0.20801459767650948 0.20584683246043448
+    0.2037950470905062 0.20184908658209985 0.2 0.19823986317056053 0.1965616322328226 0.1949590218937863
+    0.19342640361727081 0.19195872000656014 0.1905514124267734 0.18920035951687003 0.18790182470910757
+    0.18665241123894338 0.1854490234153689 0.18428883314870617 0.18316925091363362 0.18208790046993825
+    0.1810425967800402 0.18003132665669264 0.17905223175104137 0.1781035935540111 0.17718382013555792
+    0.17629143438888212 0.17542506358195453 0.17458343004804494 0.17376534287144002 0.1729696904450771
+    0.17219543379409813 0.17144160057391347 0.17070727966372012 0.16999161628691403 0.16929380759878143
+    0.1686130986895011 0.16794877895704194
+  } =:: INV_BASE_LOGS
+  ## get digits of positie finite float
+  proc( type.float : auto: F
+    char8 slice.mut
+    F ## val
+    i32 : base ## base
+  -> string i32 ) =>: export: floatDigits ## temporarely marked as exported
+    base 2 < or base 62 > if
+      ..drop.2 string.empty 0 return
+    end
+    ## buf val
+    $ 0 == if ..drop
+      '0' $1 slice.fill
+      slice.freeze string.fromChars 0 return
+    end
+    $ number.exponent f64 cast INV_BASE_LOGS@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
+    base F f128 == if f128.fromI32 else F cast end
+      $ =:: shadow: base
+    exp -_ number.powI * ## TODO: handle over/underflow
+    ## estimate was off by 1
+    $ F f128 == if f128.ONE else 1 F cast end < if
+      exp 1 - exp=
+      base *
+    else $ base > _if
+      exp 1 + exp=
+      base /
+    end
+    ## TODO: the later digits are a bit off, is there a way to improve this without needing arbitary precission arithmetic
+    ## buf val index
+    0:iSize while $ $3 .length u< do
+      >$  ## buf index val
+        $ number.floor ## buf index val digit
+          $ F f128 == if f128.toI32 else i32 cast end <<$
+        - base * >$ digitChars >$ [] $3 $3 =[]
+      <$
+    finally 1 + end ..drop.2
+    slice.freeze string.fromChars exp return
+  end
+  ## TODO: float-to-string conversion
+end
+
 proc( i32 -> char8 ) =>: getDigit
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ..swap []
 end

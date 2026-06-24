@@ -22,6 +22,14 @@ namespace: f128
   { 0 : low 0 : hi } f128 =: export: ZERO
   { 0 : low EXP_BIAS EXP_SHIFT_HI << : hi } f128 =: export: ONE
 
+  proc( f128 -> i32 ) =>: export: exponent
+    $ .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & i32 cast.u
+      $ 0 == if ## subnormal
+        >$ bits $ .hi MANTISSA_MASK_HI & >$ .hi= i128.highestSetBit 1 + MANTISSA_BITS i32 cast.u - +
+      else >$ ..drop end
+    EXP_BIAS i32 cast.u -
+  end
+
   proc( i64 : low i64 : hi -> f128 ) =>: export: create
     low hi f128 new
   end
