@@ -32,6 +32,7 @@ namespace: number
       return
     end
   end
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" =:: export: digitChars
   union( i32 : Digit _ : Ignored char8 : Invalid ) =:: export: DigitType
   proc( char8 : chr i32 : base -> DigitType ) =>: export: parseDigit
     chr '0' >= and chr '9' <= if
