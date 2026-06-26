@@ -59,6 +59,18 @@ namespace: number
   ## TODO: float-to-string conversion
 end
 
+namespace: f16
+  proc(
+    f16 ## val
+  -> i32 ) =>: export: asFixedPoint
+    ## convert to 16+16 fixed point number
+    $ exponent <$
+    bits MANTISSA_MASK &
+      $1 0 != if HIDDEN_BIT | else >$ 1 + <$ end
+    i32 cast.u >$ 21 EXP_BIAS i32 cast.u - + <<
+  end
+end
+
 proc( i32 -> char8 ) =>: getDigit
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ..swap []
 end
