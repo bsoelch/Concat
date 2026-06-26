@@ -8,19 +8,19 @@ struct(
 ) =:: export: f128
 
 namespace: f128
-  0x8000'0000'0000'0000:i64 =:: SIGN_FLAG_HI
-  0x7fff'0000'0000'0000:i64 =:: EXP_MASK_HI
-  0x0001'0000'0000'0000:i64 =:: HIDDEN_BIT_HI
-  0x0000'ffff'ffff'ffff:i64 =:: MANTISSA_MASK_HI
-  48:i64 =:: EXP_SHIFT_HI
-  0x7fff:i64 =:: SHIFTED_EXP_MASK
-  0x3fff:i64 =:: EXP_BIAS
-  48:i64 =:: MANTISSA_BITS_HI
-  112:i64 =:: MANTISSA_BITS
-  0x7fff'ffff'ffff'ffff:i64 =:: NAN_HI
-  0xffff'ffff'ffff'ffff:i64 =:: NAN_LOW
-  EXP_MASK_HI =:: INF_HI
-  0:i64 =:: INF_LOW
+  0x8000'0000'0000'0000:i64 =:: export: SIGN_FLAG_HI
+  0x7fff'0000'0000'0000:i64 =:: export: EXP_MASK_HI
+  0x0001'0000'0000'0000:i64 =:: export: HIDDEN_BIT_HI
+  0x0000'ffff'ffff'ffff:i64 =:: export: MANTISSA_MASK_HI
+  48:i64 =:: export: EXP_SHIFT_HI
+  0x7fff:i64 =:: export: SHIFTED_EXP_MASK
+  0x3fff:i64 =:: export: EXP_BIAS
+  48:i64 =:: export: MANTISSA_BITS_HI
+  112:i64 =:: export: MANTISSA_BITS
+  0x7fff'ffff'ffff'ffff:i64 =:: export: NAN_HI
+  0xffff'ffff'ffff'ffff:i64 =:: export: NAN_LOW
+  EXP_MASK_HI =:: export: INF_HI
+  0:i64 =:: export: INF_LOW
 
   { 0 : low 0 : hi } f128 =: export: ZERO
   { 0 : low EXP_BIAS EXP_SHIFT_HI << : hi } f128 =: export: ONE
