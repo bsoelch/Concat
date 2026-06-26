@@ -18,7 +18,7 @@ namespace: number
     0.17629143438888212 0.17542506358195453 0.17458343004804494 0.17376534287144002 0.1729696904450771
     0.17219543379409813 0.17144160057391347 0.17070727966372012 0.16999161628691403 0.16929380759878143
     0.1686130986895011 0.16794877895704194
-  } =:: INV_BASE_LOGS
+  } =:: DIGITS_PER_BIT
   ## get digits of positie finite float
   proc( type.float : auto: F
     char8 slice.mut
@@ -33,7 +33,7 @@ namespace: number
       '0' $1 slice.fill
       slice.freeze string.fromChars 0 return
     end
-    $ number.exponent f64 cast INV_BASE_LOGS@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
+    $ number.exponent f64 cast DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
     base F f128 == if f128.fromI32 else F cast end
       $ =:: shadow: base
     exp -_ number.powI * ## TODO: handle over/underflow
@@ -68,6 +68,35 @@ namespace: f16
     bits MANTISSA_MASK &
       $1 0 != if HIDDEN_BIT | else >$ 1 + <$ end
     i32 cast.u >$ 21 EXP_BIAS i32 cast.u - + <<
+  end
+end
+namespace: f128
+  proc(
+    char8 slice.mut
+    f128 ## val
+    i32 : base ## base
+  -> string i32 ) =>: export: digits ## temporarely marked as exported
+    base 2 < or base 62 > if
+      ..drop.2 string.empty 0 return
+    end
+    122.0 number.DIGITS_PER_BIT@ base [] * i32 cast.u =:: maxDigits ## leave space for one base 62 digit
+    $1 .length maxDigits iSize cast.u u> if
+      ## TODO: seperate mode for high-precission printing
+      "unimplemented: high-precission printing" ..panic
+    end
+    ## buf val
+    $ f128.ZERO == if ..drop
+      '0' $1 slice.fill
+      slice.freeze string.fromChars 0 return
+    end
+    $ toF32 f32.approxLog2 f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
+    base f128.fromI32
+      $2 .length i32 cast.u exp - number.powI * ## TODO: handle over/underflow
+      ## TODO? adjust scale if logarith was wrong (? recompute from base value)
+      f128.round
+    f128.toI128
+      ## TODO get digits from i128 value
+    "unimplemented" ..panic
   end
 end
 

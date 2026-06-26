@@ -23,6 +23,11 @@ namespace: f32
 
   -0xf.fffffX1f:f32 =:: export: MIN
   0xf.fffffX1f:f32 =:: export: MAX
+
+  0x1.6a09'e667:f32 =:: export: SQRT2
+  0x1.b172'17f7:f32 =:: export: LOG2
+  0x1.7154'7652:f32 =:: export: LOG2_INV
+
   proc( -> f32 ) =>: export: NaN
     EXP_MASK MANTISSA_MASK | fromBits
   end
@@ -167,6 +172,24 @@ namespace: f32
   proc( f32 : a f32 : b -> f32 ) =>: export: mod
     a b / floor =:: d
     a d b * - return
+  end
+
+  ## TODO: handle subnormal numbers
+  ## approximation of natural logarithm within 5% of actual value
+  proc( f32 -> f32 ) =>: export: approxLog
+    $ exponent f32 cast LOG2 * <$
+      bits EXP_MASK ~ & EXP_BIAS EXP_SHIFT << | fromBits
+      $ SQRT2 > if >$ 1 + <$ 0.5:f32 * end
+      1 - $ $ * - ## log(1+x) ~ x - x^2/2
+    +
+  end
+  ## approximation of base 2 logarithm within 5% of actual value
+  proc( f32 -> f32 ) =>: export: approxLog2
+    $ exponent f32 cast <$
+      bits EXP_MASK ~ & EXP_BIAS EXP_SHIFT << | fromBits
+      $ SQRT2 > if >$ 1 + <$ 0.5:f32 * end
+      1 - $ $ * - LOG2_INV * ## log(1+x) ~ x - x^2/2
+    +
   end
 end
 

@@ -2,6 +2,8 @@ import core/parseNumber
 import core/bool
 import core/i64
 
+import core/f32
+
 namespace: f64
   proc( f64 -> i64 ) =>: export: bits
     i64 ..bitcast
@@ -20,9 +22,14 @@ namespace: f64
 
   -0x20'0000'0000'0000:i64 =:: export: MIN_INT
   0x20'0000'0000'0000:i64 =:: export: MAX_INT
-  
+
   -0xf.ffffffffffff8Xff =:: export: MIN
   0xf.ffffffffffff8Xff =:: export: MAX
+
+  0x1.6a09'e667'f3bc'c908 =:: export: SQRT2
+  0x1.b172'17f7'd1cf'79ab =:: export: LOG2
+  0x1.7154'7652'b82f'e177 =:: export: LOG2_INV
+
   proc( -> f64 ) =>: export: NaN
     EXP_MASK MANTISSA_MASK | fromBits
   end
@@ -167,6 +174,24 @@ namespace: f64
   proc( f64 : a f64 : b -> f64 ) =>: export: mod
     a b / floor =:: d
     a d b * - return
+  end
+
+  ## TODO: handle subnormal numbers
+  ## approximation of natural logarithm within 5% of actual value
+  proc( f64 -> f64 ) =>: export: approxLog
+    $ exponent f64 cast LOG2 * <$
+      bits EXP_MASK ~ & EXP_BIAS EXP_SHIFT << | fromBits
+      $ SQRT2 > if >$ 1 + <$ 0.5 * end
+      1 - $ $ * - ## log(1+x) ~ x - x^2/2
+    +
+  end
+  ## approximation of base 2 logarithm within 5% of actual value
+  proc( f64 -> f64 ) =>: export: approxLog2
+    $ exponent f64 cast <$
+      bits EXP_MASK ~ & EXP_BIAS EXP_SHIFT << | fromBits
+      $ SQRT2 > if >$ 1 + <$ 0.5 * end
+      1 - $ $ * - LOG2_INV * ## log(1+x) ~ x - x^2/2
+    +
   end
 end
 

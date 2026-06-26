@@ -2,7 +2,9 @@ import core/parseNumber
 import core/bool
 import core/i16
 
-f16:? ! if ## no native definition for f16 
+import core/f32
+
+f16:? ! if ## no native definition for f16
   ( i16 ) =:: export: f16 ## wrap in struct to prevent direct cast from/to i16
   false
 else
@@ -140,6 +142,11 @@ namespace: f16
   0x800:i16 =:: export: MAX_INT
   -0xf.feX3:f16 =:: export: MIN
   0xf.feX3:f16 =:: export: MAX
+
+  0x1.6a09:f16 =:: export: SQRT2
+  0x1.b172:f16 =:: export: LOG2
+  0x1.7154:f16 =:: export: LOG2_INV
+
   proc( -> f16 ) =>: export: NaN
     EXP_MASK MANTISSA_MASK | fromBits
   end
@@ -346,6 +353,15 @@ namespace: f16
   proc( f16 : a f16 : b -> f16 ) =>: export: mod
     a b / floor =:: d
     a d b * - return
+  end
+
+  ## approximation of natural logarithm within 5% of actual value
+  proc( f16 -> f16 ) =>: export: approxLog
+    asF32 f32.approxLog fromF32
+  end
+  ## approximation of base 2 logarithm within 5% of actual value
+  proc( f16 -> f16 ) =>: export: approxLog2
+    asF32 f32.approxLog2 fromF32
   end
 end
 
