@@ -147,6 +147,19 @@ namespace: i128
     a .hi 0 < if -1 else 1 end return
   end
 
+  proc( i128 : a i128 : b -> i128 ) =>: export: min
+    a b < if a else b end
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: umin
+    a b u< if a else b end
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: max
+    a b > if a else b end
+  end
+  proc( i128 : a i128 : b -> i128 ) =>: export: umax
+    a b u> if a else b end
+  end
+
   proc( i128 : a i128 : b -> bool ) =>: export: eq
     a b cmp 0 ==
   end

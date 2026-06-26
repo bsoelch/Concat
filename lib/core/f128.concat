@@ -15,6 +15,7 @@ namespace: f128
   48:i64 =:: EXP_SHIFT_HI
   0x7fff:i64 =:: SHIFTED_EXP_MASK
   0x3fff:i64 =:: EXP_BIAS
+  48:i64 =:: MANTISSA_BITS_HI
   112:i64 =:: MANTISSA_BITS
   0x7fff'ffff'ffff'ffff:i64 =:: NAN_HI
   0xffff'ffff'ffff'ffff:i64 =:: NAN_LOW
@@ -63,9 +64,8 @@ namespace: f128
     n .hi n .low | 0 == if
       0 0 f128.create return
     end
-    EXP_SHIFT_HI 64 + =:: mantiassaBits
     n i128.highestSetBit i64 cast.u =:: mut: bitCount
-    bitCount mantiassaBits - =:: shift
+    bitCount MANTISSA_BITS - =:: shift
     signed and n .hi 0 < end =:: sign
     n
       sign if -_ end
@@ -90,27 +90,77 @@ namespace: f128
     f128.create
   end
 
-  ## TODO! rounding
-  proc( f128 -> i32 ) =>: export: toI32
-    $ isNaN if ..drop 0 return end
+  ## TODO: correctly handle negative numbers
+  proc( f128 -> i32 ) =>: export: toU32
+    $ isNaN or $ .hi 0 < if ..drop 0 return end
     $ .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: exp
     exp 0 < if ..drop 0 return end
-    exp 32 > if .hi 0 < if i32.MIN else i32.MAX end return end
+    exp 32 > if ..drop i32.UMAX i32 cast.u return end
     .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI |
-      48 exp - >>>
-      $ i32.MAX i64 cast.s > if ..drop i32.MAX return end
-      $ i32.MIN i64 cast.s < if ..drop i32.MIN return end
-    i32 cast.s return
+      MANTISSA_BITS_HI exp - >>>
+    i32 cast.u return
   end
-  ## TODO toI..., toU...
+  proc( f128 -> i64 ) =>: export: toU64
+    $ isNaN or $ .hi 0 < if ..drop 0 return end
+    $ .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: exp
+    exp 0 < if ..drop 0 return end
+    exp 64 > if ..drop i64.UMAX return end
+    exp MANTISSA_BITS_HI <= if
+      .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI |
+        MANTISSA_BITS_HI exp - >>>
+      return
+    end
+    $ .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | exp MANTISSA_BITS_HI - <<
+      >$ .low 64 exp MANTISSA_BITS_HI - - >>> |
+    return
+  end
+  proc( f128 -> i128 ) =>: export: toU128
+    $ isNaN or $ .hi 0 < if ..drop i128.ZERO return end
+    $ .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: exp
+    exp 0 < if ..drop i128.ZERO return end
+    exp 128 > if ..drop i128.UMAX return end
+    exp MANTISSA_BITS_HI <= if
+      .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI |
+        MANTISSA_BITS_HI exp - >>>
+      i128.fromU64 return
+    end
+    exp MANTISSA_BITS < if
+      $ .low >$ .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | i128.create MANTISSA_BITS exp - >>>
+    else
+      $ .low >$ .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | i128.create exp MANTISSA_BITS - <<
+    end
+    return
+  end
+  proc( f128 -> i32 ) =>: export: toI32
+    $ .hi 0 < if
+      abs toU32 i32.MIN -_ i32.umin -_
+    else
+      toU32 i32.MAX i32.umin
+    end
+  end
+  proc( f128 -> i64 ) =>: export: toI64
+    $ .hi 0 < if
+      abs toU64 i64.MIN -_ i64.umin -_
+    else
+      toU64 i64.MAX i64.umin
+    end
+  end
+  proc( f128 -> i128 ) =>: export: toI128
+    $ .hi 0 < if
+      abs toU128 i128.MIN -_ i128.umin -_
+    else
+      toU128 i128.MAX i128.umin
+    end
+  end
   ## TODO from f64 , f32
+  ## TODO! rounding
   ## TODO: test subnormal number handling in conversions
   proc( f128 -> f32 ) =>: export: toF32
     $ .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & =:: exp
     exp SHIFTED_EXP_MASK == if ## NaN or infinity
       $ .hi SIGN_FLAG_HI & 32 >>> i32 cast.u
         f32.EXP_MASK |
-        >$ .hi MANTISSA_MASK_HI & MANTISSA_BITS i32 cast.u 64 - f32.MANTISSA_BITS - >>> i32 cast.u |
+        >$ .hi MANTISSA_MASK_HI & MANTISSA_BITS_HI i32 cast.u f32.MANTISSA_BITS - >>> i32 cast.u |
       f32.fromBits return
     end
     exp i32 cast.s EXP_BIAS i32 cast.s f32.EXP_BIAS - - =:: shadow: exp
@@ -120,7 +170,7 @@ namespace: f128
       else
         $ .hi SIGN_FLAG_HI & 32 >>> i32 cast.u
           >$ .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI |
-            MANTISSA_BITS i32 cast.u 64 - f32.MANTISSA_BITS - exp + >>>
+            MANTISSA_BITS_HI i32 cast.u f32.MANTISSA_BITS - exp + >>>
           i32 cast.u |
         f32.fromBits return
       end
@@ -129,7 +179,7 @@ namespace: f128
     end
     $ .hi SIGN_FLAG_HI & 32 >>> i32 cast.u
       exp f32.EXP_SHIFT << |
-      >$ .hi MANTISSA_MASK_HI & MANTISSA_BITS i32 cast.u 64 - f32.MANTISSA_BITS - >>> i32 cast.u |
+      >$ .hi MANTISSA_MASK_HI & MANTISSA_BITS_HI i32 cast.u f32.MANTISSA_BITS - >>> i32 cast.u |
     f32.fromBits return
   end
   proc( f128 -> f64 ) =>: export: toF64
@@ -137,24 +187,24 @@ namespace: f128
     exp SHIFTED_EXP_MASK == if ## NaN or infinity
       $ .hi SIGN_FLAG_HI &
         f64.EXP_MASK |
-        $1 .hi MANTISSA_MASK_HI & f64.MANTISSA_BITS MANTISSA_BITS 64 - - << |
-        >$ .low 64 f64.MANTISSA_BITS MANTISSA_BITS 64 - - - >>> |
+        $1 .hi MANTISSA_MASK_HI & f64.MANTISSA_BITS MANTISSA_BITS_HI - << |
+        >$ .low 64 f64.MANTISSA_BITS MANTISSA_BITS_HI - - >>> |
       f64.fromBits return
     end
     exp EXP_BIAS f64.EXP_BIAS - - =:: shadow: exp
     exp 0 < if ## subnormal
       exp f64.MANTISSA_BITS -_ < if
         .hi SIGN_FLAG_HI & f64.fromBits return
-      else exp MANTISSA_BITS 64 - f64.MANTISSA_BITS - < _if
+      else exp MANTISSA_BITS_HI f64.MANTISSA_BITS - < _if
         $ .hi SIGN_FLAG_HI &
           >$ .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI |
-            MANTISSA_BITS 64 - f64.MANTISSA_BITS - exp + >>>
+            MANTISSA_BITS_HI f64.MANTISSA_BITS - exp + >>>
           |
         f64.fromBits return
       else
         $ .hi SIGN_FLAG_HI &
-          $1 .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | f64.MANTISSA_BITS MANTISSA_BITS 64 - - exp + << |
-          >$ .low 64 f64.MANTISSA_BITS MANTISSA_BITS 64 - - - exp - >>> |
+          $1 .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI | f64.MANTISSA_BITS MANTISSA_BITS_HI - exp + << |
+          >$ .low 64 f64.MANTISSA_BITS MANTISSA_BITS_HI - - exp - >>> |
         f64.fromBits return
       end
     else exp f64.SHIFTED_EXP_MASK > _if ## overflow
@@ -162,8 +212,8 @@ namespace: f128
     end
     $ .hi SIGN_FLAG_HI &
       exp f64.EXP_SHIFT << |
-      $1 .hi MANTISSA_MASK_HI & f64.MANTISSA_BITS MANTISSA_BITS 64 -  - << |
-      >$ .low 64 MANTISSA_BITS 64 - f64.MANTISSA_BITS - + >>> |
+      $1 .hi MANTISSA_MASK_HI & f64.MANTISSA_BITS MANTISSA_BITS_HI  - << |
+      >$ .low 64 MANTISSA_BITS_HI f64.MANTISSA_BITS - + >>> |
     f64.fromBits return
   end
 
@@ -209,8 +259,8 @@ namespace: f128
     e MANTISSA_BITS >= if
       ## smallest bit has magnitude > 1
       x return
-    else e MANTISSA_BITS 64 - >= _if
-      x .low -1:i64 MANTISSA_BITS 64 - e - << &
+    else e MANTISSA_BITS_HI >= _if
+      x .low -1:i64 MANTISSA_BITS_HI e - << &
         x .hi
       f128.create
     else
@@ -255,8 +305,8 @@ namespace: f128
     x .low m_hi HIDDEN_BIT_HI | i128.create =:: m
     m i128.UMAX 128 MANTISSA_BITS - e + >>> & =:: fract
     i128.ONE MANTISSA_BITS 1 - e - << =:: half
-    e MANTISSA_BITS 64 - >= if
-      x .low -1:i64 MANTISSA_BITS 64 - e - << &
+    e MANTISSA_BITS_HI >= if
+      x .low -1:i64 MANTISSA_BITS_HI e - << &
         x .hi
       f128.create
     else
@@ -398,6 +448,12 @@ namespace: f128
     ## f128
       x .low
       x .hi SIGN_FLAG_HI ^
+    f128.create
+  end
+  proc( f128 : x -> f128 ) =>: export: abs
+    ## f128
+      x .low
+      x .hi SIGN_FLAG_HI ~ &
     f128.create
   end
   proc( f128 : x f128 : y -> f128 ) =>: export: add
