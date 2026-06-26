@@ -25,6 +25,6 @@ namespace: number
     f16.floor
     f32.floor
     f64.floor
-    ## f128.floor
+    f128.floor
   end
 end

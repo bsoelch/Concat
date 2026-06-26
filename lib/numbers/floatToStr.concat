@@ -29,7 +29,7 @@ namespace: number
       ..drop.2 string.empty 0 return
     end
     ## buf val
-    $ 0 == if ..drop
+    $ F f128 == if f128.ZERO else 0 end == if ..drop
       '0' $1 slice.fill
       slice.freeze string.fromChars 0 return
     end

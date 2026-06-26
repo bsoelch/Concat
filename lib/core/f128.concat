@@ -79,13 +79,24 @@ namespace: f128
       scaledValue .hi MANTISSA_MASK_HI & bitCount EXP_BIAS + EXP_SHIFT_HI << | sign if SIGN_FLAG_HI | end
     f128.create
   end
+  proc( f128 -> i32 ) =>: export: toI32
+    $ isNaN if ..drop 0 return end
+    $ .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: exp
+    exp 0 < if ..drop 0 return end
+    exp 32 > if .hi 0 < if i32.MIN else i32.MAX end return end
+    .hi MANTISSA_MASK_HI & HIDDEN_BIT_HI |
+      48 exp - >>>
+      $ i32.MAX i64 cast.s > if ..drop i32.MAX return end
+      $ i32.MIN i64 cast.s < if ..drop i32.MIN return end
+    i32 cast.s return
+  end
   ## TODO toI..., toU...
   ## TODO from/to f64 , f32
 
-  proc( i128 : n -> f128 ) =>: fromBits
+  proc( i128 : n -> f128 ) =>: export: fromBits
     n .low n .hi f128.create return
   end
-  proc( f128 : x -> i128 ) =>: bits
+  proc( f128 : x -> i128 ) =>: export: bits
     x .low x .hi i128.create return
   end
 
@@ -116,7 +127,40 @@ namespace: f128
     x .hi EXP_MASK_HI & EXP_MASK_HI != return
   end
 
-  ## TODO truncate,floor,ceil,round
+  proc( f128 : x -> f128 ) =>: export: truncate
+    x .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e 0 < if ## absolute value < 1
+      0 x .hi SIGN_FLAG_HI & f128.create return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    else e MANTISSA_BITS 64 - >= _if
+      x .low -1:i64 MANTISSA_BITS 64 - e - << &
+        x .hi
+      f128.create
+    else
+      0
+        x .hi MANTISSA_MASK_HI ~ &
+        x .hi MANTISSA_MASK_HI & -1 MANTISSA_BITS e - << & |
+      f128.create
+    end
+  end
+  proc( f128 : x -> f128 ) =>: export: floor
+    x truncate =:: y
+    x .hi 0 < and x y != if
+      y ONE - return
+    end
+    y return
+  end
+  proc( f128 : x -> f128 ) =>: export: ceil
+    x truncate =:: y
+    x .hi 0 > and x y != if
+      y ONE + return
+    end
+    y return
+  end
+  ## TODO: round
 
   ## strictly ordered comparison of values
   ## differences to IEEE comparison:
@@ -944,6 +988,8 @@ overload: / f128.div end
 ## overload: // f128.floorDiv end
 ## overload: %% f128.mod end
 overload: <=> f128.compare end
+overload: == f128.eq end
+overload: != f128.ne end
 overload: < f128.lt end
 overload: <= f128.le end
 overload: >= f128.ge end
