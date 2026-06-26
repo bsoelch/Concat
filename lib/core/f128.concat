@@ -23,6 +23,7 @@ namespace: f128
 
   { 0 : low 0 : hi } f128 =: export: ZERO
   { 0 : low EXP_BIAS EXP_SHIFT_HI << : hi } f128 =: export: ONE
+  { 0 : low EXP_BIAS EXP_SHIFT_HI << SIGN_FLAG_HI | : hi } f128 =: export: MINUS_ONE
   { 0 : low EXP_BIAS 1 + EXP_SHIFT_HI << : hi } f128 =: export: TWO
   { 0 : low EXP_BIAS 1 + 1 << 1 | EXP_SHIFT_HI 1 - << : hi } f128 =: export: THREE
   { 0 : low EXP_BIAS 1 - EXP_SHIFT_HI << : hi } f128 =: export: HALF
@@ -114,7 +115,7 @@ namespace: f128
     end
     exp i32 cast.s EXP_BIAS i32 cast.s f32.EXP_BIAS - - =:: shadow: exp
     exp 0 < if ## subnormal
-      exp f32.MANTISSA_BITS -_ > if
+      exp f32.MANTISSA_BITS -_ < if
         .hi SIGN_FLAG_HI & 32 >>> i32 cast.u f32.fromBits return
       else
         $ .hi SIGN_FLAG_HI & 32 >>> i32 cast.u
@@ -233,7 +234,49 @@ namespace: f128
     end
     y return
   end
-  ## TODO: round
+  ## half-even rounding
+  proc( f128 : x -> f128 ) =>: export: round
+    x .hi MANTISSA_MASK_HI & =:: m_hi
+    x .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e
+    e -1 < if ## absolute value < 0.5
+      0 x .hi SIGN_FLAG_HI & f128.create return
+    else e -1 == _if ## 1 < |x| <= 0.5
+      m_hi 0 == and x .low 0 == if ## |x|=0.5
+        0 x .hi SIGN_FLAG_HI & f128.create return
+      end
+      ONE
+        $ .hi x .hi SIGN_FLAG_HI & | >$ .hi=
+      return
+    end
+    e MANTISSA_BITS >= if
+      ## smallest bit has magnitude > 1
+      x return
+    end
+    x .low m_hi HIDDEN_BIT_HI | i128.create =:: m
+    m i128.UMAX 128 MANTISSA_BITS - e + >>> & =:: fract
+    i128.ONE MANTISSA_BITS 1 - e - << =:: half
+    e MANTISSA_BITS 64 - >= if
+      x .low -1:i64 MANTISSA_BITS 64 - e - << &
+        x .hi
+      f128.create
+    else
+      0
+        x .hi MANTISSA_MASK_HI ~ &
+        x .hi MANTISSA_MASK_HI & -1 MANTISSA_BITS e - << & |
+      f128.create
+    end =:: trunc
+    fract i128.ZERO == or fract half < if
+      trunc return ## already an integer
+    end
+    ONE
+      $ .hi x .hi SIGN_FLAG_HI & | >$ .hi=
+    =:: delta
+    trunc
+      fract half > or m half 1 << & i128.ZERO != if ## half and odd
+        delta +
+      end
+    return
+  end
 
   ## strictly ordered comparison of values
   ## differences to IEEE comparison:
