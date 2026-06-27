@@ -425,7 +425,7 @@ namespace: sb
           break
         Bool .case if "true":s else "false":s end sb.appendStr break
         Int .case sb.appendI break
-        Float .case sb.appendF break
+        Float .case f64.sbAppend break
         Char .case =:: charVal
           '\''  sb.appendC
             charVal sb.appendEscapedChr

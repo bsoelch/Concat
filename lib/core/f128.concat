@@ -152,7 +152,12 @@ namespace: f128
       toU128 i128.MAX i128.umin
     end
   end
-  ## TODO from f64 , f32
+  proc( f32 -> f128 ) =>: export: fromF32
+    "unimplemented" ..panic
+  end
+  proc( f64 -> f128 ) =>: export: fromF64
+    "unimplemented" ..panic
+  end
   ## TODO! rounding
   ## TODO: test subnormal number handling in conversions
   proc( f128 -> f32 ) =>: export: toF32
@@ -355,13 +360,19 @@ namespace: f128
   ## IEEE compliant comparison,
   ## if x or y is NaN  the return value will be  0 false
   ## otherwise the result of compare followed by true will be returned
-  proc( f128 : x f128 : y -> i32 bool ) =>: export: compareIEEE ## XXX? better name
+  proc( f128 : x f128 : y -> i32 bool ) =>: export: compareIEEE ## TODO? better name
     x isNaN and y isNaN if
       0 false return
     end
+    ## TODO? should -0 == 0
     x y compare true return
   end
 
+  proc( f128 -> bool ) =>: export: toBool
+    $ .hi SIGN_FLAG_HI ~ & 0 !=
+      >$ .low 0 !=
+    |
+  end
   proc( f128 f128 -> bool ) =>: export: eq
     compareIEEE if 0 == return end ..drop false return
   end
@@ -780,6 +791,24 @@ namespace: f128
     f160.mul f160.toF128 return
   end
   ## TODO rem,mod
+
+  ## TODO: handle subnormal numbers
+  ## approximation of natural logarithm within 5% of actual value
+  proc( f128 -> f128 ) =>: export: approxLog
+    $ exponent f128.fromI32 LOG2 * <$
+      $ .hi EXP_MASK_HI ~ & EXP_BIAS EXP_SHIFT_HI << | >$ .hi=
+      $ SQRT2 > if >$ ONE + <$ HALF * end
+      ONE - $ $ * - ## log(1+x) ~ x - x^2/2
+    +
+  end
+  ## approximation of base 2 logarithm within 5% of actual value
+  proc( f128 -> f128 ) =>: export: approxLog2
+    $ exponent f128.fromI32 <$
+      $ .hi EXP_MASK_HI ~ & EXP_BIAS EXP_SHIFT_HI << | >$ .hi=
+      $ SQRT2 > if >$ ONE + <$ HALF * end
+      ONE - $ $ * - LOG2_INV * ## log(1+x) ~ x - x^2/2
+    +
+  end
 end
 
 ## f160: procedures for internal calculations with higher precission
@@ -1166,3 +1195,4 @@ overload: < f128.lt end
 overload: <= f128.le end
 overload: >= f128.ge end
 overload: > f128.gt end
+overload: ? f128.toBool end

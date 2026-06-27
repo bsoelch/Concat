@@ -281,7 +281,7 @@ namespace: asm
       None case "None":s sb.appendStr return
       Register .case asmContext .appendReg () return
       Int .case sb.appendI return
-      Float .case sb.appendF ":f64":s sb.appendStr return
+      Float .case f64.sbAppend ":f64":s sb.appendStr return
       LocalAddress .case asmContext appendLocalAddress return
       RegisterAddress .case asmContext appendRegisterAddress return
       ConstPtr .case asmContext appendConstPtr return

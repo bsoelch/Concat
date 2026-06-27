@@ -27,4 +27,10 @@ namespace: number
     f64.floor
     f128.floor
   end
+  overload: export: round
+    f16.round
+    f32.round
+    f64.round
+    f128.round
+  end
 end

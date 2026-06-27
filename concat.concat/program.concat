@@ -1026,7 +1026,7 @@ namespace: sb
         "float ( " sb.appendS
         constVal .valType typeContext sb.appendType
         " ) : " sb.appendS
-        constVal .value sb.appendF
+        constVal .value f64.sbAppend
       break
       StringConst .case =:: constVal
         "string : \"":s sb.appendStr

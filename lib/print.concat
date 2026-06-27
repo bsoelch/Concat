@@ -70,19 +70,19 @@ namespace: io
   proc( f16 : f -> ) =>: export: printF16
     char8 16 array : mut: buffer
     buffer@ sb.wrapBuffer
-      f sb.appendF16
+      f f16.sbAppend
     sb.asStr printS
   end
   proc( f32 : f -> ) =>: export: printF32
     char8 16 array : mut: buffer
     buffer@ sb.wrapBuffer
-      f sb.appendF32
+      f f32.sbAppend
     sb.asStr printS
   end
   proc( f64 : f -> ) =>: export: printF64
     char8 24 array : mut: buffer
     buffer@ sb.wrapBuffer
-      f sb.appendF
+      f f64.sbAppend
     sb.asStr printS
   end
   proc( f128 : f -> ) =>: export: printF128
@@ -124,21 +124,21 @@ namespace: io
   proc( f16 : f -> ) =>: export: printlnF16
     char8 16 array : mut: buffer
     buffer@ sb.wrapBuffer
-      f sb.appendF16
+      f f16.sbAppend
       '\n' sb.appendC
     sb.asStr printS
   end
   proc( f32 : f -> ) =>: export: printlnF32
     char8 16 array : mut: buffer
     buffer@ sb.wrapBuffer
-      f sb.appendF32
+      f f32.sbAppend
       '\n' sb.appendC
     sb.asStr printS
   end
   proc( f64 : f -> ) =>: export: printlnF64
     char8 24 array : mut: buffer
     buffer@ sb.wrapBuffer
-      f sb.appendF
+      f f64.sbAppend
       '\n' sb.appendC
     sb.asStr printS
   end

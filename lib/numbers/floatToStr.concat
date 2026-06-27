@@ -23,6 +23,59 @@ namespace: number
   proc( i32 #+base+# -> char8 ) =>: export: expChar
     $ 10 <= if ..drop 'E' else 30 <= _if 'X' else '#' end
   end
+
+  proc( type.float : auto: F stringBuilder F #+val+# -> stringBuilder F optional ) =>: sbEnsureFinite
+    $ number.isFinite ! if
+      number.isNaN if
+        "[NaN]":s
+      else
+        "[Infinity]":s
+      end sb.appendStr
+      F optional.empty return
+    end
+    optional.wrap return
+  end
+  proc( type.float : auto: F
+    stringBuilder
+    F #+val+#
+    char8 slice.mut : buffer
+    i32 : precision
+    i32 : base
+    bool : sci
+  -> stringBuilder ) =>: inline: sbAppendF
+    char8 slice.mut optional.empty =:: mut: toFree
+    precision buffer .length i32 cast u<= if
+      buffer precision slice.head
+    else
+      precision iSize cast.u char8 slice.new $ optional.wrap toFree=
+    end
+      >$ base digits
+      sci or $ precision > or $ -5 < if
+        >>$ ## digits exp sb
+          $2 0 [] sb.appendC
+          '.' sb.appendC
+          >>$ 1 string.tail sb.appendStr
+          base number.expChar sb.appendC
+          $1 0 >= if '+' sb.appendC end
+          >$ sb.appendI
+        return
+      end
+      1 + $ 0 > if
+        iSize cast.u string.cutIndex <$ <<$ ## B sb A
+          sb.appendStr
+          $1 .length 0 != if
+            '.' sb.appendC
+             >$ sb.appendStr
+          else >$ ..drop end
+        return
+      else
+        >>$
+          "0.":s sb.appendStr
+          >$ -_ for ..drop '0' sb.appendC end
+        >$ sb.appendStr
+      end
+    toFree .if slice.free ..drop end
+  end
 end
 
 namespace: f16
@@ -35,9 +88,143 @@ namespace: f16
       $1 0 != if HIDDEN_BIT | else >$ 1 + <$ end
     i32 cast.u >$ 21 EXP_BIAS i32 cast.u - + <<
   end
+
+  proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppend
+    f16.asF32 3 10 false f32.sbAppend???
+  end
+end
+namespace: f32
+  ## TODO: extract reusable code to helper procs in number namespace
+  proc(
+    char8 slice.mut
+    f32 ## val
+    i32 : base ## base
+  -> string i32 ) =>: export: digits
+    base 2 < or base 62 > if
+      ..drop.2 string.empty 0 return
+    end
+    MANTISSA_BITS f64 cast number.DIGITS_PER_BIT@ base [] * i32 cast.u =:: maxDigits
+    $1 .length maxDigits iSize cast.u u> if
+      f64 cast base f64.digits return
+    end
+    ## buf val
+    $ ? ! if ..drop ## zero
+      '0' $1 slice.fill
+      slice.freeze string.fromChars 0 return
+    end
+    $ f32.approxLog2 f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
+    base f32 cast ## TODO? would pow-function be more accurate than repeated multiplication
+      $2 .length 1 - i32 cast.u exp - number.powI * ## TODO: handle over/underflow
+      ## TODO? adjust scale if logarithm was wrong (? recompute from base value)
+      number.round
+    i32 cast
+      >$
+        $ .length =:: count
+        sb.wrapSlice sb.clear
+      <$
+      base '0' count i32.paddedSbAppendU
+    sb.asStr exp
+  end
+  proc( stringBuilder f32 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
+    char8 24 array : mut: buffer ## maximum number of decimal digits is 8
+    $ 0 f32.cmp 0 < if >$ '-' sb.appendC <$ end ## cmp to ensure -0 < 0
+    number.sbEnsureFinite .else return end
+    precision 0x80 u> if 0x80 precision= end ## digits needed for exact representation of longest number in base 2
+    precision 0 == if
+      MANTISSA_BITS f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.u precision=
+    end
+    buffer@ slice.wrapMutable precision base sci number.sbAppendF
+  end
+  ## TODO appendIEEE
+  ## TODO: additional procs for: base append?
+  ## TODO: additional procs for: base precision append??
+  ## TODO: additional procs for: precision appendE?
+  ## TODO: additional procs for: precision appendF?
+  proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppend
+    0 10 false sbAppend???
+  end
+  proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendE
+    0 10 true sbAppend???
+  end
+  proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendX
+    0 16 false sbAppend???
+  end
+  proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendEX
+    0 16 true sbAppend???
+  end
+  proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendB
+    0 2 false sbAppend???
+  end
+  proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendEB
+    0 2 true sbAppend???
+  end
+end
+namespace: f64
+  proc(
+    char8 slice.mut
+    f64 ## val
+    i32 : base ## base
+  -> string i32 ) =>: export: digits
+    base 2 < or base 62 > if
+      ..drop.2 string.empty 0 return
+    end
+    MANTISSA_BITS f64 cast number.DIGITS_PER_BIT@ base [] * i32 cast.u =:: maxDigits
+    $1 .length maxDigits iSize cast.u u> if
+      f128.fromF64 base f128.digits return
+    end
+    ## buf val
+    $ ? ! if ..drop ## zero
+      '0' $1 slice.fill
+      slice.freeze string.fromChars 0 return
+    end
+    $ f64.approxLog2 f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
+    base f64 cast ## TODO? would pow-function be more accurate than repeated multiplication
+      $2 .length 1 - i32 cast.u exp - number.powI * ## TODO: handle over/underflow
+      number.round
+      ## TODO? adjust scale if logarithm was wrong (? recompute from base value)
+    i64 cast
+      >$
+        $ .length =:: count
+        sb.wrapSlice sb.clear
+      <$
+      base '0' count i64.paddedSbAppendU
+    sb.asStr exp
+  end
+  proc( stringBuilder f64 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
+    char8 24 array : mut: buffer ## maximum number of decimal digits is 16
+    $ 0 f64.cmp 0 < if >$ '-' sb.appendC <$ end ## cmp to ensure -0 < 0
+    number.sbEnsureFinite .else return end
+    precision 0x400 u> if 0x400 precision= end ## digits needed for exact representation of longest number in base 2
+    precision 0 == if
+      MANTISSA_BITS f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.u precision=
+    end
+    buffer@ slice.wrapMutable precision base sci number.sbAppendF
+  end
+  ## TODO appendIEEE
+  ## TODO: additional procs for: base append?
+  ## TODO: additional procs for: base precision append??
+  ## TODO: additional procs for: precision appendE?
+  ## TODO: additional procs for: precision appendF?
+  proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppend
+    0 10 false sbAppend???
+  end
+  proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendE
+    0 10 true sbAppend???
+  end
+  proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendX
+    0 16 false sbAppend???
+  end
+  proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendEX
+    0 16 true sbAppend???
+  end
+  proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendB
+    0 2 false sbAppend???
+  end
+  proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendEB
+    0 2 true sbAppend???
+  end
 end
 namespace: f128
-  ## TODO: extract resuable code to helper procs in number namespace
   proc(
     char8 slice.mut
     f128 ## val
@@ -46,17 +233,17 @@ namespace: f128
     base 2 < or base 62 > if
       ..drop.2 string.empty 0 return
     end
-    122.0 number.DIGITS_PER_BIT@ base [] * i32 cast.u =:: maxDigits ## leave space for one base 62 digit
+    MANTISSA_BITS f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.u =:: maxDigits
     $1 .length maxDigits iSize cast.u u> if
-      ## TODO: seperate mode for high-precission printing
-      "unimplemented: high-precission printing" ..panic
+      ## TODO: separate mode for high-precision printing
+      "unimplemented: high-precision printing" ..panic
     end
     ## buf val
-    $ f128.ZERO == if ..drop
+    $ ? ! if ..drop ## zero
       '0' $1 slice.fill
       slice.freeze string.fromChars 0 return
     end
-    $ toF32 f32.approxLog2 f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
+    $ f128.approxLog2 f128.toF64 number.DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
     base f128.fromI32 ## TODO? would pow-function be more accurate than repeated multiplication
       $2 .length 1 - i32 cast.u exp - number.powI * ## TODO: handle over/underflow
       ## TODO? adjust scale if logarithm was wrong (? recompute from base value)
@@ -69,59 +256,22 @@ namespace: f128
       base '0' count i128.paddedSbAppendU
     sb.asStr exp
   end
+
   proc( stringBuilder f128 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
     char8 40 array : mut: buffer ## maximum number of decimal digits is 36
     $ .hi 0 < if >$ '-' sb.appendC <$ end
-    $ number.isFinite ! if
-      number.isNaN if
-        "[NaN]":s
-      else
-        "[Infinity]":s
-      end sb.appendStr return
-    end
-    precision 0x4100 u> if 0x4100 precision= end ## digits needed for exact representation of longest number in base 2
+    number.sbEnsureFinite .else return end
+    precision 0x4000 u> if 0x4000 precision= end ## digits needed for integer representation of largest number in base 2
     precision 0 == if
-      f128.MANTISSA_BITS f64 cast.s number.DIGITS_PER_BIT@ base [] * f64.round i32 cast.u precision=
+      MANTISSA_BITS f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.u precision=
     end
-    char8 slice.mut optional.empty =:: mut: toFree
-    precision 40 > if
-      buffer@ slice.wrapMutable
-    else
-      precision iSize cast.u char8 slice.new $ optional.wrap toFree=
-    end
-     >$ base digits
-     ## sb digits exp
-     sci or $ precision > or $ -5 < if
-       >>$ ## digits exp sb
-        $2 0 [] sb.appendC
-        '.' sb.appendC
-        >>$ 1 string.tail sb.appendStr
-        base number.expChar sb.appendC
-        $1 0 >= if '+' sb.appendC end
-        >$ sb.appendI
-      return
-     end
-     1 + $ 0 > if
-       iSize cast.u string.cutIndex <$ <<$ ## B sb A
-         sb.appendStr
-         $1 .length 0 != if
-          '.' sb.appendC
-           >$ sb.appendStr
-         else >$ ..drop end
-       return
-     else
-       >>$
-         "0.":s sb.appendStr
-         >$ -_ for ..drop '0' sb.appendC end
-       >$ sb.appendStr
-     end
-    toFree .if slice.free ..drop end
+    buffer@ slice.wrapMutable precision base sci number.sbAppendF
   end
   ## TODO appendIEEE
   ## TODO: additional procs for: base append?
-  ## TODO: additional procs for: base precission append??
-  ## TODO: additional procs for: precission appendE?
-  ## TODO: additional procs for: precission appendF?
+  ## TODO: additional procs for: base precision append??
+  ## TODO: additional procs for: precision appendE?
+  ## TODO: additional procs for: precision appendF?
   proc( stringBuilder f128 -> stringBuilder ) =>: export: sbAppend
     0 10 false sbAppend???
   end
@@ -141,6 +291,15 @@ namespace: f128
     0 2 true sbAppend???
   end
 end
+namespace: number
+  overload: digits
+    ## f16.digits
+    f32.digits
+    f64.digits
+    f128.digits
+  end
+end
+### vvv --- Port to new format --- vvv
 
 proc( i32 -> char8 ) =>: getDigit
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ..swap []
@@ -199,172 +358,5 @@ namespace: sb
       'P' sb.appendC
       e sb.appendI
     return
-  end
-  proc( stringBuilder : sb f64 : f i32 : precision i32 : base bool : sci -> stringBuilder ) =>: export: appendFloat???
-    f =:: mut: value
-    base 2 < base 62 > | if
-      ## TODO error handling
-      sb return
-    end
-    sb
-      value f64.isFinite ! if
-        value f64.isNaN if
-          "[NaN]" sb.appendS return
-        else value 0 > _if
-          "[Infinity]" sb.appendS return
-        else
-          "-[Infinity]" sb.appendS return
-        end
-      else value 0.0 == value -0.0 == | _if
-        "0" sb.appendS return
-      end
-      value 0 < if
-        '-' sb.appendC
-        value -_ value=
-      end
-      base f64 cast =:: baseF
-      value math.log baseF math.log / math.floor i32 cast =:: mut: e
-      e =:: mut: e_max
-      baseF e f64 cast math.pow =:: mut: p
-      i32 64 array new =:: mut: buff
-      0 =:: mut: n
-      0b1e-110100 #+2^-52+# value * =:: mut: eps ##XXX? better implementation of eps
-      eps 0 == if ## adjust size of small numbers
-        baseF e 1 + f64 cast math.pow p=
-        value p / baseF * value=
-        f64.MIN_POSITIVE p / eps=
-        1 p=
-      end
-      p f64.isInfinite if ## adjust size for big numbers
-        baseF e 1 - f64 cast math.pow p=
-        value baseF / value=
-        eps baseF / eps=
-      end
-      while p eps > do
-        value p / math.floor =:: d
-        d i32 cast buff@ n =[]
-        n 1 + n=
-        ## XXX break loop if n large enough
-        value d p * - value=
-        p baseF / p=
-        e 1 + e=
-      end
-      precision 0 <= precision n >= | if
-        n 1 -
-      else
-        precision
-      end n=
-      n 0 == if 1 n= end
-      buff@ n [] base 2 / >= if
-        buff@ n 1 - []
-          1 +
-        buff@ n 1 - =[]
-      end
-      false =:: mut: inc
-      n 1 - =:: mut: j
-      while j 0 >= do
-        inc if
-          buff@ j []
-            1 +
-            $ base < if
-              false inc=
-            end
-          buff@ j =[]
-        end
-        buff@ j [] base >= if
-          true inc=
-          buff@ j [] base - buff@ j =[]
-        end
-        j 1 - j=
-      end
-      inc if
-        buff@ 1 @[] buff@ n iSize cast.u mem.move ..drop
-        1 buff@ 0 =[]
-        n 1 + n=
-        e_max 1 + e_max=
-      end
-      while n 1 - e_max > and buff@ n 1 - [] 0 == do
-        n 1 - n=
-      end
-      sci or e_max n >= or e_max -5 < if
-        while n 1 - 0 > and buff@ n 1 - [] 0 == do
-          n 1 - n=
-        end
-        buff@ 0 [] getDigit sb.appendC
-        n 1 > if
-          '.' sb.appendC
-          1 while ..dup n < do
-             ..swap
-               buff@ ..over.2 [] getDigit sb.appendC
-             ..swap 1 +
-          end ..drop
-        end
-        base 10 <= if 'E' else base 30 <= _if 'X' else '#' end sb.appendC
-        e_max 0 >= if '+' sb.appendC end
-        e_max base i32.sbAppend?
-      else e_max 0 >= _if
-        0 while ..dup n < do =:: i
-          buff@ i [] getDigit sb.appendC
-          i e_max == and i n 1 - < if
-            '.' sb.appendC
-          end
-          i 1 +
-        end ..drop
-      else
-        "0." sb.appendS
-        -1 e_max - while ..dup 0 > do
-          ..swap
-            '0' sb.appendC
-          ..swap 1 -
-        end ..drop
-        0 while ..dup n < do
-          ..swap
-            buff@ ..over.2 [] getDigit sb.appendC
-          ..swap 1 +
-        end ..drop
-      end
-    return
-  end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendF
-    0 10 false appendFloat???
-  end
-  proc( stringBuilder f16 #+value+# -> stringBuilder ) =>: export: appendF16
-    f16.asF64 3 10 false appendFloat???
-  end
-  proc( stringBuilder f32 #+value+# -> stringBuilder ) =>: export: appendF32
-    f64 cast 7 10 false appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendF?
-    10 false appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendE
-    0 10 true appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendE?
-    10 true appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendXF
-    0 16 false appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendXF?
-    16 false appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendXE
-    0 16 true appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendXE?
-    16 true appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendBF
-    0 2 false appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendBF?
-    2 false appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# -> stringBuilder ) =>: export: appendBE
-    0 2 true appendFloat???
-  end
-  proc( stringBuilder f64 #+value+# i32 #+precision+# -> stringBuilder ) =>: export: appendBE?
-    2 true appendFloat???
   end
 end
