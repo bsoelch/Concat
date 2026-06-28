@@ -2,11 +2,8 @@
 import core/floats
 
 namespace: f64
-  0x0.b17217f7d1cf79ac =:: export: LOG2
   0x0.b17217f7d1cf =:: LOG2_HI
   0x0.00000000000079abc9e3b39803f =:: LOG2_LOW
-  0x1.71547652b82fe177 =:: export: LOG2_INV
-  0x1.6a09e667f3bcc909 =:: export: SQRT2
   0x3.243f6a8885a308d3 =:: export: PI
   0x3.243f6a8885a3 =:: PI_HI
   0x0.00000000000008d313198a2e037 =:: PI_LOW

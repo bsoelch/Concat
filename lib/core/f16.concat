@@ -144,7 +144,7 @@ namespace: f16
   0xf.feX3:f16 =:: export: MAX
 
   0x1.6a09:f16 =:: export: SQRT2
-  0x1.b172:f16 =:: export: LOG2
+  0x0.b172:f16 =:: export: LOG2
   0x1.7154:f16 =:: export: LOG2_INV
 
   proc( -> f16 ) =>: export: NaN

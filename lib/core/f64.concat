@@ -27,7 +27,7 @@ namespace: f64
   0xf.ffffffffffff8Xff =:: export: MAX
 
   0x1.6a09'e667'f3bc'c908 =:: export: SQRT2
-  0x1.b172'17f7'd1cf'79ab =:: export: LOG2
+  0x0.b172'17f7'd1cf'79ab =:: export: LOG2
   0x1.7154'7652'b82f'e177 =:: export: LOG2_INV
 
   proc( -> f64 ) =>: export: NaN
