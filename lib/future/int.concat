@@ -1582,7 +1582,7 @@ namespace: int
       digits base padWith padTo sbSimpleBaseAppend
     end
     proc( stringBuilder Digit slice.mut : digits i32 : base -> stringBuilder ) =>: shadow: sbBaseAppend
-      ## TODO? recursive sub-quadric algorithm for large numbers
+      ## TODO? recursive sub-quadratic algorithm for large numbers
       digits base '0' 0 sbSimpleBaseAppend
     end
 ## helpers
@@ -1823,7 +1823,7 @@ namespace: int
       remData .data b .data != "results do not overlap with b" assert
       b .length 0 != "b is non-empty" assert
       ## TODO choose different algorithm for large numbers
-      ## ? is using newton-method divide on float more efficient as dedicdated integer-divide
+      ## ? is using newton-method divide on float more efficient as dedicated integer-divide
       b .length 1 == if
         a b 0 [] i64 cast.u divData udivMod64
           needRemainder if

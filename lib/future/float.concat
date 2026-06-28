@@ -17,25 +17,25 @@ namespace: float
       iSize cast.u 1 & FloatType .EXACT ..tag iSize cast.u ==
     end
   end
-  iSize =:: export: Precission
+  iSize =:: export: Precision
   iSize ..types.size i32 ..types.size == if
     56:iSize
   else
     64:iSize
-  end =:: DEFAULT_PRECISSION
-  namespace: Precission
-    0 Precission cast =:: export: INFINITE
-    proc( iSize -> Precission ) =>: export: fromBits
-      1 iSize.max Precission cast
+  end =:: DEFAULT_PRECISION
+  namespace: Precision
+    0 Precision cast =:: export: INFINITE
+    proc( iSize -> Precision ) =>: export: fromBits
+      1 iSize.max Precision cast
     end
-    proc( Precission -> iSize optional ) =>: export: toBits
+    proc( Precision -> iSize optional ) =>: export: toBits
       $ INFINITE == if ..drop iSize optional.empty return end
       iSize cast.u optional.wrap
     end
-    proc( Precission : a Precission : b -> Precission ) =>: max
+    proc( Precision : a Precision : b -> Precision ) =>: max
       a INFINITE == if b return end
       b INFINITE == if a return end
-      a iSize cast.u b iSize cast.u iSize.max Precission cast.u
+      a iSize cast.u b iSize cast.u iSize.max Precision cast.u
     end
   end
   enum(
@@ -61,25 +61,25 @@ namespace: float
   int.THREE     0 FloatType .EXACT ExpData.fromExponent float new =:: export: THREE
   int.MINUS_ONE 0 FloatType .EXACT ExpData.fromExponent float new =:: export: MINUS_ONE
   ## TODO: support rounding modes
-  proc( int : magnitude iSize : exponent Precission : shadow: precission -> float ) =>: export: create
+  proc( int : magnitude iSize : exponent Precision : shadow: precision -> float ) =>: export: create
     magnitude
       exponent
-      precission Precission.INFINITE == if FloatType .EXACT else FloatType .FLOAT end ExpData.fromExponent
+      precision Precision.INFINITE == if FloatType .EXACT else FloatType .FLOAT end ExpData.fromExponent
     float new
-    precission Precission.toBits .and =:: precBits magnitude int.bitLength precBits u> if
-      precBits setPrecission
+    precision Precision.toBits .and =:: precBits magnitude int.bitLength precBits u> if
+      precBits setPrecision
     end
   end
 ## internal data management
-  proc( float : a -> Precission ) =>: export: getPrecission
+  proc( float : a -> Precision ) =>: export: getPrecision
     a .exponent ExpData.isExact if
-      Precission.INFINITE
+      Precision.INFINITE
     else
-      a .magnitude int.bitLength Precission.fromBits
+      a .magnitude int.bitLength Precision.fromBits
     end
   end
   import print
-  proc( float iSize : precBits -> float ) =>: export: setPrecission
+  proc( float iSize : precBits -> float ) =>: export: setPrecision
     precBits RoundingMode .HALF_EVEN roundTo
     $ .magnitude int.bitLength precBits - =:: delta
     delta 0 iSize.sgt if
@@ -166,10 +166,10 @@ namespace: float
     exponent 0 iSize.sge if false return end
     f .magnitude exponent -_ int.checkLowBits .ZERO
   end
-  proc( float iSize : precissionBits RoundingMode : mode -> float ) =>: export: roundTo
+  proc( float iSize : precisionBits RoundingMode : mode -> float ) =>: export: roundTo
     $ .exponent ExpData.exponent =:: oldExponent
-    ## scale to precission bits in integer part
-    precissionBits $1 .magnitude int.bitLength - FloatType .EXACT ExpData.fromExponent >$ .exponent=
+    ## scale to precision bits in integer part
+    precisionBits $1 .magnitude int.bitLength - FloatType .EXACT ExpData.fromExponent >$ .exponent=
     mode roundWith ## round to int
     ## scale back to original scale
     oldExponent FloatType .FLOAT ExpData.fromExponent >$ .exponent=
@@ -216,7 +216,7 @@ namespace: float
   end
   ## TODO: conversions from/to primitive
 ## conversion from/to string
-  ## TODO: support custom precission in operations
+  ## TODO: support custom precision in operations
   ## two different string formats:
   ##  <base-prefix> <digit>+ ( '.' <digit>+ )?
   ##  <base-prefix> <digit> ( '.' <digit>+ )? <exp-char> [+-]? <digit>+
@@ -253,10 +253,10 @@ namespace: float
           base i32.highestSetBit 1 + -_ iSize cast.s scale
         else
           base int.fromU32 fracDigitCount i32 cast.u int.pow fromInt
-            $1 .magnitude int.bitLength $1 .magnitude int.bitLength iSize.max DEFAULT_PRECISSION iSize.max
+            $1 .magnitude int.bitLength $1 .magnitude int.bitLength iSize.max DEFAULT_PRECISION iSize.max
               $ =:: valPrec
-            5 + setPrecission
-          div valPrec setPrecission
+            5 + setPrecision
+          div valPrec setPrecision
         end
       end
       hasSign if negate end
@@ -267,7 +267,7 @@ namespace: float
     196 195 193 192 191 189 188 187 186 185 184 183 182 181 180 179 178 177
   177 176 175 174 174 173 172 171 } =:: BASE_DIGITS_1024BITS
   proc( iSize : bits i32 : base -> iSize ) =>: baseDigitsForBits
-    ## TODO: use higher acuracy version if bit-count gets too high
+    ## TODO: use higher accuracy version if bit-count gets too high
     ## result should always be floor(bits*(log(2)/log(base)))
     bits BASE_DIGITS_1024BITS base [] iSize cast.u * 1024 u/
   end
@@ -278,9 +278,9 @@ namespace: float
       val sign 0 < if '-' sb.appendC end
       val abs =:: shadow: val
       exponent -_ =:: fracBits
-      ## TODO: use increased precission for exact number with fractional digits
+      ## TODO: use increased precision for exact number with fractional digits
       fracBits base baseDigitsForBits =:: fracDigits
-      fracDigits 0 == if ## not enough precission for a fractional digit
+      fracDigits 0 == if ## not enough precision for a fractional digit
         val RoundingMode .HALF_EVEN toInt base int.sbBaseAppend ## round to int
         return
       end
@@ -293,7 +293,7 @@ namespace: float
           base int.fromI32 fracDigits i32 cast.u int.pow fromInt mul
           RoundingMode .HALF_EVEN toInt
         base '0' fracDigits int.sbPaddedBaseAppend
-        ## TODO: conversion-mode that includes digits up to precission
+        ## TODO: conversion-mode that includes digits up to precision
         ## discard trailing 0s
         $ .length while $1 $1 1 - sb.charAt '0' == do 1 - end sb.setLength
       else val free end
@@ -389,7 +389,7 @@ namespace: float
     b .magnitude =:: mut: bMag
     a .exponent ExpData.exponent =:: aExp
     b .exponent ExpData.exponent =:: bExp
-    a getPrecission b getPrecission Precission.max =:: resPrecission
+    a getPrecision b getPrecision Precision.max =:: resPrecision
     aExp bExp iSize.sgt if
       aMag aExp bExp - int.shl aMag=
     else aExp bExp iSize.slt _if
@@ -397,7 +397,7 @@ namespace: float
     end
     aMag bMag int.add
       aExp bExp iSize.smin
-      resPrecission
+      resPrecision
     float.create return
   end
   proc( float : a float : b -> float ) =>: export: sub
@@ -405,7 +405,7 @@ namespace: float
     b .magnitude =:: mut: bMag
     a .exponent ExpData.exponent =:: aExp
     b .exponent ExpData.exponent =:: bExp
-    a getPrecission b getPrecission Precission.max =:: resPrecission
+    a getPrecision b getPrecision Precision.max =:: resPrecision
     aExp bExp iSize.sgt if
       aMag aExp bExp - int.shl aMag=
     else aExp bExp iSize.slt _if
@@ -413,22 +413,22 @@ namespace: float
     end
     aMag bMag int.sub
       aExp bExp iSize.smin
-      resPrecission
+      resPrecision
     float.create return
   end
   ## TODO? error on exponent overflow/underflow
   proc( float : a float : b -> float ) =>: export: mul
     a .exponent ExpData.exponent =:: aExp
     b .exponent ExpData.exponent =:: bExp
-    a getPrecission b getPrecission Precission.max =:: resPrecission
+    a getPrecision b getPrecision Precision.max =:: resPrecision
     a .magnitude b .magnitude int.mul
       aExp bExp +
-      resPrecission
+      resPrecision
     float.create return
   end
   proc( float : a -> float ) =>: export: square
     a .exponent ExpData.exponent =:: aExp
-    a getPrecission =:: prec
+    a getPrecision =:: prec
     a .magnitude int.square
       aExp 2 *
       prec
@@ -438,18 +438,18 @@ namespace: float
     x .magnitude int.bitLength
       $ =:: srcBits
       x .exponent ExpData.isExact if
-        DEFAULT_PRECISSION iSize.max
+        DEFAULT_PRECISION iSize.max
       end
-    =:: precission
+    =:: precision
     x copy
-      precission setPrecission
+      precision setPrecision
     $ copy invert =:: xInv
     ## initial estimate: scale top coefficient to match expected scale
       $ .exponent ExpData.exponent srcBits - 2 / ## (bitlen+exp)/2 - bitlen
       FloatType .FLOAT ExpData.fromExponent >$ .exponent=
-    ## iteration step: y =  y + y(1-y^2/A)/2 (precompute 1/A to needed precission)
+    ## iteration step: y =  y + y(1-y^2/A)/2 (pre-compute 1/A to needed precision)
       ## TODO: what is a good lower bound for the number of iteration steps
-      precission i64 cast.u i64.highestSetBit 1 + for ..drop
+      precision i64 cast.u i64.highestSetBit 1 + for ..drop
         $ copy ONE $1 copy square xInv copy mul sub mul -1 scale add
       end
       $ copy ONE $1 copy square xInv mul sub mul -1 scale add
@@ -459,21 +459,21 @@ namespace: float
     x .magnitude int.bitLength
       $ =:: srcBits
       x .exponent ExpData.isExact if
-        DEFAULT_PRECISSION iSize.max
+        DEFAULT_PRECISION iSize.max
       end
-    =:: precission
+    =:: precision
     THREE copy
-      precission 1 + setPrecission
+      precision 1 + setPrecision
     invert =:: oneThird
     x copy
-      precission setPrecission
+      precision setPrecision
     $ copy invert =:: xInv
     ## initial estimate: scale top coefficient to match expected scale
       $ .exponent ExpData.exponent srcBits 2 * - 3 / ## (bitlen+exp)/3 - bitlen = (exp-2*bitlen)/3
       FloatType .FLOAT ExpData.fromExponent >$ .exponent=
-    ## iteration step: y =  y + y(1-y^3/A)/3 (precompute 1/A to needed precission)
+    ## iteration step: y =  y + y(1-y^3/A)/3 (pre-compute 1/A to needed precision)
       ## TODO: what is a good lower bound for the number of iteration steps
-      precission i64 cast.u i64.highestSetBit 1 + for ..drop
+      precision i64 cast.u i64.highestSetBit 1 + for ..drop
         $ copy ONE $1 copy $ copy square mul xInv copy mul sub mul oneThird copy mul add
       end
       $ copy ONE $1 copy $ copy square mul xInv mul sub mul oneThird mul add
@@ -485,26 +485,26 @@ namespace: float
         $ ExpData.exponent $2 + -_ =:: scaleFactor
       ExpData.isExact if
         x $1 -_ FloatType .EXACT ExpData.fromExponent >$ .exponent=
-        >$ DEFAULT_PRECISSION iSize.max <$
+        >$ DEFAULT_PRECISION iSize.max <$
       else
         x $1 -_ FloatType .FLOAT ExpData.fromExponent >$ .exponent=
       end =:: shadow: x
-    =:: precission
+    =:: precision
     ## compute Newton-Raphson inverse (https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division)
     ## TODO in 32-bit use less precise constant to ensure inplace-int
     0x2d2d_2d2d_2d2d_2d2d:i64 0x2'd2d_2d2d_2d2d:i64 i128.create int.fromU128
-      -108:iSize float.Precission.INFINITE
+      -108:iSize float.Precision.INFINITE
     float.create =:: p ## 48/17
     0x1e1e_1e1e_1e1e_1e1e:i64 0x1'e1e_1e1e_1e1e:i64 i128.create int.fromU128
-      -108:iSize float.Precission.INFINITE
+      -108:iSize float.Precision.INFINITE
     float.create =:: q ## 32/17
     ## initial estimate: y0 = 48/17 - 32/17 * x  [error at most 1/17+2^-100]
     p q x copy mul sub ## TODO? combined mul-add / mul-sub operations
-      precission setPrecission
+      precision setPrecision
     ## iteration step: y =  y + y*( 1 - y*x )  -> doubles number of correct digits
-      ## precission after N steps is 2^S * log 17 -1 -> need aproximately:  ceil(log2 (P/4 +1)) steps
-      ## TODO? compute early steps with lower precission to reduce required computation time, two steps with full precission should be enough to get accurate result from value computed with half precission
-      precission 4 / 1 + i64 cast.u i64.highestSetBit 1 + for ..drop
+      ## precision after N steps is 2^S * log 17 -1 -> need approximately:  ceil(log2 (P/4 +1)) steps
+      ## TODO? compute early steps with lower precision to reduce required computation time, two steps with full precision should be enough to get accurate result from value computed with half precision
+      precision 4 / 1 + i64 cast.u i64.highestSetBit 1 + for ..drop
         $ copy ONE $1 copy x copy mul sub mul add
       end
       $ copy ONE $1 copy x mul sub mul add
@@ -512,15 +512,15 @@ namespace: float
     return
   end
   proc( float : a float : b -> float ) =>: export: div
-    a getPrecission b getPrecission Precission.max =:: resPrecission
-    ## TODO: ensure precission of b is a least precission/bit-length of a
+    a getPrecision b getPrecision Precision.max =:: resPrecision
+    ## TODO: ensure precision of b is a least precision/bit-length of a
     a
-      b resPrecission Precission.toBits .if setPrecission end invert
+      b resPrecision Precision.toBits .if setPrecision end invert
     mul
   end
   proc( float : a float : b -> float #+div+# float #+rem+# ) =>: export: divRem
     ## rem = a-b*floor(a/b)
-    ## TODO! compute division with higher precission to get full-precission for remainder
+    ## TODO! compute division with higher precision to get full-precision for remainder
     a copy b copy div floor
       a b $2 copy mul sub
     return
@@ -529,10 +529,10 @@ namespace: float
     divRem >$ free
   end
   ## upper bound for ln2
-  0xb1'7217'f7d1'cf7a int.fromU64 -56:iSize float.Precission.INFINITE float.create =:: CEIL_LN2
-  proc( iSize : precission -> float ) =>: export: LN2
-    CEIL_LN2 copy precission setPrecission
-      precission i64 cast.u i64.highestSetBit 3 + for ..drop ## TODO! find good iteration count
+  0xb1'7217'f7d1'cf7a int.fromU64 -56:iSize float.Precision.INFINITE float.create =:: CEIL_LN2
+  proc( iSize : precision -> float ) =>: export: LN2
+    CEIL_LN2 copy precision setPrecision
+      precision i64 cast.u i64.highestSetBit 3 + for ..drop ## TODO! find good iteration count
         $ copy exp1m =:: e1m
           e1m copy ONE add
           e1m ONE sub
@@ -540,17 +540,17 @@ namespace: float
       end
     return ## TODO: caching for value
   end
-  ## TODO? seperate special-case function for getting 1/ln2
+  ## TODO? separate special-case function for getting 1/ln2
   proc( float : x -> float ) =>: export: exp
     x .magnitude int.bitLength
       x .exponent ExpData.isExact if
-        DEFAULT_PRECISSION iSize.max
+        DEFAULT_PRECISION iSize.max
       end
-    =:: precission
-    ## use taylor series for numbers in interval [ln 0.5, ln 2], otherwise reduce number
+    =:: precision
+    ## use Taylor series for numbers in interval [ln 0.5, ln 2], otherwise reduce number
     x CEIL_LN2 ucmp 0 > if
-      ## FIXME: for high precission the last few bits of the result are wrong
-      precission 5 + LN2 =:: ln2val ## TODO find good precission to get accurate final result
+      ## FIXME: for high precision the last few bits of the result are wrong
+      precision 5 + LN2 =:: ln2val ## TODO find good precision to get accurate final result
       ## x = p*ln2 + q , with p integer and -ln2/2 <= q <= ln2/2
       x copy ln2val copy div truncate =:: mut: p ## truncate is cheaper than floor
       CEIL_LN2 -1 scale =:: HALF_LN2 ## ln2 / 2
@@ -570,7 +570,7 @@ namespace: float
     ## -sqrt 0.5 < -ln2 < x < ln2 < sqrt 0.5
     ONE =:: mut: res
     x copy =:: mut: p
-    2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent + precission -_ iSize.sge do =:: N
+    2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent + precision -_ iSize.sge do =:: N
       res p copy add res=
       p x copy mul N i64 cast.u fromU64 div p=
     finally N 1 + end ..drop
@@ -586,13 +586,13 @@ namespace: float
     x .magnitude int.bitLength
       $ x .exponent ExpData.exponent + =:: xScale
       x .exponent ExpData.isExact if
-        DEFAULT_PRECISSION iSize.max
+        DEFAULT_PRECISION iSize.max
       end
-    =:: precission
+    =:: precision
     ## -1 <= x <= 1
     ZERO =:: mut: res
     x copy =:: mut: p
-    2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent xScale - + precission -_ iSize.sge do =:: N
+    2:iSize while p .magnitude int.bitLength p .exponent ExpData.exponent xScale - + precision -_ iSize.sge do =:: N
       res p copy add res=
       p x copy mul N i64 cast.u fromU64 div p=
     finally N 1 + end ..drop
@@ -601,7 +601,7 @@ namespace: float
     res return
   end
 
-  0xaa'aaaa'aaaa'aaaa int.fromU64 -56:iSize float.Precission.INFINITE float.create =:: FLOOR_TWO_THIRDS
+  0xaa'aaaa'aaaa'aaaa int.fromU64 -56:iSize float.Precision.INFINITE float.create =:: FLOOR_TWO_THIRDS
   ## x = p*2^k => with k integer and 2/3 <= p < 4/3
   proc( float : y -> float iSize ) =>: prepareLog
     y ZERO cmp 0 <= if
@@ -612,7 +612,7 @@ namespace: float
         $ ExpData.exponent $2 + =:: mut: scaleFactor
       ExpData.isExact if
         y $1 -_ FloatType .EXACT ExpData.fromExponent >$ .exponent=
-        >$ DEFAULT_PRECISSION iSize.max <$
+        >$ DEFAULT_PRECISION iSize.max <$
       else
         y $1 -_ FloatType .FLOAT ExpData.fromExponent >$ .exponent=
       end ## 0.5 <= * < 1
@@ -620,12 +620,12 @@ namespace: float
           TWO mul
           scaleFactor 1 - scaleFactor=
         end
-      >$ setPrecission
+      >$ setPrecision
     scaleFactor
   end
   proc( float : y -> float ) =>: export: log2
     y prepareLog =:: k
-      $ getPrecission Precission.toBits <unwrap> =:: prec
+      $ getPrecision Precision.toBits <unwrap> =:: prec
     ## x = p*2^k => log x = log2 p + k = log1p(p-1)/ln2 + k
       ONE sub log1p
       prec 1 + LN2 div
@@ -633,7 +633,7 @@ namespace: float
   end
   proc( float : y -> float ) =>: export: log
     y prepareLog =:: k
-      $ getPrecission Precission.toBits <unwrap> =:: prec
+      $ getPrecision Precision.toBits <unwrap> =:: prec
     ## x = p*2^k => log x = log p + k*ln2 = log1p(p-1) + k*ln2
       ONE sub log1p
     k i64 cast.s fromI64 prec 1 + LN2 mul add
@@ -646,9 +646,9 @@ namespace: float
     y ONE cmp 0 > if ## y > 1 -> fall back to using regular log
       y ONE sub log return
     end
-    ## taylor approximate log1p y  using  x -> x - (exp1m x - y)/(exp1m x + 1)
+    ## Taylor approximate log1p y  using  x -> x - (exp1m x - y)/(exp1m x + 1)
     y copy
-      $ getPrecission Precission.toBits <unwrap> =:: prec
+      $ getPrecision Precision.toBits <unwrap> =:: prec
       prec i64 cast.u i64.highestSetBit 3 + for ..drop ## TODO! find good iteration count
         $ copy exp1m =:: e1m
           e1m copy ONE add
