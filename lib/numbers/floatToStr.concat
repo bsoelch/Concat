@@ -55,7 +55,7 @@ namespace: number
       $1 $1 u< if ..drop.2 ## val < base^(#digits-1)
         exp 1 - exp=
         val base exp I digitInt0
-      else base I i128 == if i128.fromI32 else I cast.u end * $1 u<= _if ..drop ## val > base^(#digits)
+      else base I i128 == if i128.fromI32 else I cast.u end * $1 u<= _if ..drop ## val >= base^(#digits)
         exp 1 + exp=
         val base exp I digitInt0
       end
@@ -99,11 +99,13 @@ namespace: number
         >$ removeTrailingZeros <$
         >>$ ## digits exp sb
           $2 0 [] sb.appendC
-          '.' sb.appendC
-          >>$ 1 string.tail sb.appendStr
+          $2 .length 1 u> if
+            '.' sb.appendC
+            >>$ 1 string.tail sb.appendStr
+          else >>$ ..drop end
           base number.expChar sb.appendC
           $1 0 >= if '+' sb.appendC end
-          >$ sb.appendI
+          >$ base i32.sbAppend?
         return
       end
       1 + $ 0 > if
@@ -169,8 +171,8 @@ namespace: f32
     sb.asStr exp
   end
   proc( stringBuilder f32 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
-    char8 24 array : mut: buffer ## maximum number of decimal digits is 8
-    $ 0 f32.cmp 0 < if >$ '-' sb.appendC <$ end ## cmp to ensure -0 < 0
+    char8 MANTISSA_BITS array : mut: buffer
+    $ 0 f32.cmp 0 < if -_ >$ '-' sb.appendC <$ end ## cmp to ensure -0 < 0
     number.sbEnsureFinite .else return end
     precision 0x80 u> if 0x80 precision= end ## digits needed for exact representation of longest number in base 2
     precision 0 == if
@@ -231,8 +233,8 @@ namespace: f64
     sb.asStr exp
   end
   proc( stringBuilder f64 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
-    char8 24 array : mut: buffer ## maximum number of decimal digits is 16
-    $ 0 f64.cmp 0 < if >$ '-' sb.appendC <$ end ## cmp to ensure -0 < 0
+    char8 MANTISSA_BITS array : mut: buffer
+    $ 0 f64.cmp 0 < if -_ >$ '-' sb.appendC <$ end ## cmp to ensure -0 < 0
     number.sbEnsureFinite .else return end
     precision 0x400 u> if 0x400 precision= end ## digits needed for exact representation of longest number in base 2
     precision 0 == if
@@ -243,19 +245,26 @@ namespace: f64
   ## TODO appendIEEE
   ## TODO: additional procs for: base append?
   ## TODO: additional procs for: base precision append??
-  ## TODO: additional procs for: precision appendE?
-  ## TODO: additional procs for: precision appendF?
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppend
     0 10 false sbAppend???
   end
+  proc( stringBuilder f64 i32 -> stringBuilder ) =>: export: sbAppendF?
+    10 false sbAppend???
+  end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendE
     0 10 true sbAppend???
+  end
+  proc( stringBuilder f64 i32 -> stringBuilder ) =>: export: sbAppendE?
+    10 true sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendX
     0 16 false sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendEX
     0 16 true sbAppend???
+  end
+  proc( stringBuilder f64 i32 -> stringBuilder ) =>: export: sbAppendEX?
+    16 true sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendB
     0 2 false sbAppend???
@@ -294,8 +303,8 @@ namespace: f128
   end
 
   proc( stringBuilder f128 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
-    char8 40 array : mut: buffer ## maximum number of decimal digits is 36
-    $ .hi 0 < if >$ '-' sb.appendC <$ end
+    char8 MANTISSA_BITS array : mut: buffer
+    $ .hi 0 < if -_ >$ '-' sb.appendC <$ end
     number.sbEnsureFinite .else return end
     precision 0x4000 u> if 0x4000 precision= end ## digits needed for integer representation of largest number in base 2
     precision 0 == if

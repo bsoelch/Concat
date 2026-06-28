@@ -11,4 +11,8 @@ proc( -> ) =>: main
   123456789:i32 io.println
   1234567891011121314:i64 io.println
   123456789101112131415161718192021222324:i128 io.println
+  0.5 io.println
+  0xf.ffffffffffff8Xff io.println
+  10.0 io.println ## fix
+  4e-324 io.println ## fix
 end
