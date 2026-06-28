@@ -712,3 +712,5 @@ overload: export: <umax> float.umax  end
 overload: export: <round> float.round  end
 overload: export: <floor> float.floor  end
 overload: export: <ceil>  float.ceil  end
+
+io.print:? if import future/printFloat end

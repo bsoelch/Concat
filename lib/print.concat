@@ -342,3 +342,6 @@ namespace: io
   overload: export: printU printU8 printU16 printU32 printU64 printUZ printU128 end
   overload: export: printUln printUln8 printUln16 printUln32 printUln64 printUlnZ printUln128 end
 end
+
+int:? if import future/printInt end
+float:? if import future/printFloat end

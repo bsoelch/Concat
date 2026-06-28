@@ -2013,3 +2013,5 @@ overload: export: <min>  int.min  end
 overload: export: <max>  int.max  end
 overload: export: <umin> int.umin end
 overload: export: <umax> int.umax end
+
+io.print:? if import future/printInt end
