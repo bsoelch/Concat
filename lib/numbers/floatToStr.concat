@@ -20,21 +20,6 @@ namespace: number
     0.1686130986895011 0.16794877895704194
   } =:: DIGITS_PER_BIT
 
-  proc( i32 #+base+# -> char8 ) =>: export: expChar
-    $ 10 <= if ..drop 'E' else 30 <= _if 'X' else '#' end
-  end
-
-  proc( type.float : auto: F stringBuilder F #+val+# -> stringBuilder F optional ) =>: sbEnsureFinite
-    $ number.isFinite ! if
-      number.isNaN if
-        "[NaN]":s
-      else
-        "[Infinity]":s
-      end sb.appendStr
-      F optional.empty return
-    end
-    optional.wrap return
-  end
   proc( type.float : auto: F
     char8 slice.mut
     F #+val+#
@@ -76,6 +61,25 @@ namespace: number
       end
     exp
   end
+  proc( i32 #+base+# -> char8 ) =>: export: expChar
+    $ 10 <= if ..drop 'E' else 30 <= _if 'X' else '#' end
+  end
+  proc( type.float : auto: F stringBuilder F #+val+# -> stringBuilder F optional ) =>: sbEnsureFinite
+    $ number.isFinite ! if
+      number.isNaN if
+        "[NaN]":s
+      else
+        "[Infinity]":s
+      end sb.appendStr
+      F optional.empty return
+    end
+    optional.wrap return
+  end
+  proc( string -> string ) =>: removeTrailingZeros
+    $ .length while
+      $ 1 u> and $1 $1 1 - [] '0' ==
+    do 1 - end string.head
+  end
   proc( type.float : auto: F
     stringBuilder
     F #+val+#
@@ -92,6 +96,7 @@ namespace: number
     end
       >$ base digits
       sci or $ precision > or $ -5 < if
+        >$ removeTrailingZeros <$
         >>$ ## digits exp sb
           $2 0 [] sb.appendC
           '.' sb.appendC
@@ -104,7 +109,8 @@ namespace: number
       1 + $ 0 > if
         iSize cast.u string.cutIndex <$ <<$ ## B sb A
           sb.appendStr
-          $1 .length 0 != if
+          >$ removeTrailingZeros <$
+          $1 .length 0 != and $1 "0":s string.eq ! if
             '.' sb.appendC
              >$ sb.appendStr
           else >$ ..drop end
@@ -113,7 +119,7 @@ namespace: number
         >>$
           "0.":s sb.appendStr
           >$ -_ for ..drop '0' sb.appendC end
-        >$ sb.appendStr
+        >$ removeTrailingZeros sb.appendStr
       end
     toFree .if slice.free ..drop end
   end
