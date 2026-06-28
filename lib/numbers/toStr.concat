@@ -434,6 +434,9 @@ namespace: f16
   proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppend
     f16.asF32 3 10 false f32.sbAppend???
   end
+  proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppendX
+    f16.asF32 3 16 false f32.sbAppend???
+  end
 end
 namespace: f32
   ## TODO: extract reusable code to helper procs in number namespace

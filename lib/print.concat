@@ -175,6 +175,30 @@ namespace: io
       i i128.sbAppendX
     sb.asStr printS
   end
+  proc( f16 : i -> ) =>: export: printXF16
+    char8 16 array : mut: buffer ## -0xf.feX3
+    buffer@ sb.wrapBuffer
+      i f16.sbAppendX
+    sb.asStr printS
+  end
+  proc( f32 : i -> ) =>: export: printXF32
+    char8 16 array : mut: buffer ## -0xf.fffffX1f
+    buffer@ sb.wrapBuffer
+      i f32.sbAppendX
+    sb.asStr printS
+  end
+  proc( f64 : i -> ) =>: export: printXF64
+    char8 24 array : mut: buffer ## -f.ffffffffffff8X+ff
+    buffer@ sb.wrapBuffer
+      i f64.sbAppendX
+    sb.asStr printS
+  end
+  proc( f128 : i -> ) =>: export: printXF128
+    char8 40 array : mut: buffer ## -f.ffffffffffff8X+ff
+    buffer@ sb.wrapBuffer
+      i f128.sbAppendX
+    sb.asStr printS
+  end
   proc( i32 : i -> ) =>: export: printXln32
     char8 12 array : mut: buffer ## -80000000
     buffer@ sb.wrapBuffer
@@ -202,6 +226,34 @@ namespace: io
     char8 40 array : mut: buffer ## -80000000000000000000000000000000
     buffer@ sb.wrapBuffer
       i i128.sbAppendX
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( f16 : i -> ) =>: export: printXlnF16
+    char8 16 array : mut: buffer ## -0xf.feX3
+    buffer@ sb.wrapBuffer
+      i f16.sbAppendX
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( f32 : i -> ) =>: export: printXlnF32
+    char8 16 array : mut: buffer ## -0xf.fffffX1f
+    buffer@ sb.wrapBuffer
+      i f32.sbAppendX
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( f64 : i -> ) =>: export: printXlnF64
+    char8 24 array : mut: buffer ## -f.ffffffffffff8X+ff
+    buffer@ sb.wrapBuffer
+      i f64.sbAppendX
+      '\n' sb.appendC
+    sb.asStr printS
+  end
+  proc( f128 : i -> ) =>: export: printXlnF128
+    char8 40 array : mut: buffer ## -f.ffffffffffff8X+ff
+    buffer@ sb.wrapBuffer
+      i f128.sbAppendX
       '\n' sb.appendC
     sb.asStr printS
   end
@@ -279,8 +331,14 @@ namespace: io
   overload: export: eprintln
     eprintlnC eprintlnS
   end
-  overload: export: printX printX8 printX16 printX32 printX64 printXZ printX128 end
-  overload: export: printXln printXln8 printXln16 printXln32 printXln64 printXlnZ printXln128 end
+  overload: export: printX
+    printX8 printX16 printX32 printX64 printXZ printX128
+    printXF16 printXF32 printXF64 printXF128
+  end
+  overload: export: printXln
+    printXln8 printXln16 printXln32 printXln64 printXlnZ printXln128
+    printXlnF16 printXlnF32 printXlnF64 printXlnF128
+  end
   overload: export: printU printU8 printU16 printU32 printU64 printUZ printU128 end
   overload: export: printUln printUln8 printUln16 printUln32 printUln64 printUlnZ printUln128 end
 end
