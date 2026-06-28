@@ -255,6 +255,9 @@ namespace: f128
   proc( f128 : x -> bool ) =>: export: isFinite
     x .hi EXP_MASK_HI & EXP_MASK_HI != return
   end
+  proc( f128 -> bool ) =>: export: isNormal
+    .hi EXP_MASK_HI & $ EXP_MASK_HI != >$ 0 != &
+  end
 
   proc( f128 : x -> f128 ) =>: export: truncate
     x .hi EXP_SHIFT_HI >>> SHIFTED_EXP_MASK & EXP_BIAS - =:: e

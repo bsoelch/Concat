@@ -3,6 +3,12 @@ import core/f32
 import core/f64
 import core/f128
 namespace: number
+  overload: export: isNormal
+    f16.isNormal
+    f32.isNormal
+    f64.isNormal
+    f128.isNormal
+  end
   overload: export: isFinite
     f16.isFinite
     f32.isFinite

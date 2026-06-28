@@ -167,6 +167,9 @@ namespace: f16
   proc( f16 : x -> bool ) =>: export: isFinite
     x bits EXP_MASK & EXP_MASK !=
   end
+  proc( f16 -> bool ) =>: export: isNormal
+    bits EXP_MASK & $ EXP_MASK != >$ 0 != &
+  end
 
   proc( f16 -> i32 ) =>: export: exponent
     bits $ EXP_SHIFT >>> SHIFTED_EXP_MASK & i32 cast.u

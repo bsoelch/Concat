@@ -240,7 +240,7 @@ namespace: number
   end
 
   proc( type : auto: T  T : x i32 : p -> T ) =>: export: powI
-    T f128 == if f128.ONE else 1 T cast end =:: ONE
+    T f128 == if f128.ONE else T i128 == _if i128.ONE else 1 T cast end =:: ONE
     p 0 == if
       ONE return
     else p 0 < _if

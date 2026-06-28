@@ -36,6 +36,47 @@ namespace: number
     optional.wrap return
   end
   proc( type.float : auto: F
+    char8 slice.mut
+    F #+val+#
+    i32 : base
+    i32 : exp
+    type.integer : static: I
+  -> char8 slice.mut I ) =>: digitInt0
+    base F f128 == if f128.fromI32 else F cast.s end
+      ## TODO? would pow-function be more accurate than repeated multiplication
+      $2 .length 1 - i32 cast.u exp - number.powI
+        $ number.isFinite ! if ..drop
+          base F f128 == if f128.fromI32 else F cast.s end
+            $2 .length 1 - i32 cast.u exp -
+          $ 2 u/ >$ $1 - ## val base exp1 exp2
+            $2 >$ number.powI >>>$ * <<$
+          number.powI
+        end
+      *
+      number.round
+    I i128 == if f128.toI128 else I cast.u end
+  end
+  proc( type.float : auto: F
+    char8 slice.mut
+    F : val
+    i32 : base
+    i32 : mut: exp
+    type.integer : static: I
+  -> char8 slice.mut I i32 ) =>: digitInt
+    val base exp I digitInt0
+      base I i128 == if i128.fromI32 else I cast.u end
+        $2 .length 1 - i32 cast.u
+      number.powI ## sb iVal iPow
+      $1 $1 u< if ..drop.2 ## val < base^(#digits-1)
+        exp 1 - exp=
+        val base exp I digitInt0
+      else base I i128 == if i128.fromI32 else I cast.u end * $1 u<= _if ..drop ## val > base^(#digits)
+        exp 1 + exp=
+        val base exp I digitInt0
+      end
+    exp
+  end
+  proc( type.float : auto: F
     stringBuilder
     F #+val+#
     char8 slice.mut : buffer
@@ -113,11 +154,7 @@ namespace: f32
       slice.freeze string.fromChars 0 return
     end
     $ f32.approxLog2 f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
-    base f32 cast ## TODO? would pow-function be more accurate than repeated multiplication
-      $2 .length 1 - i32 cast.u exp - number.powI * ## TODO: handle over/underflow
-      ## TODO? adjust scale if logarithm was wrong (? recompute from base value)
-      number.round
-    i32 cast
+    base exp i32 number.digitInt exp=
       >$
         $ .length =:: count
         sb.wrapSlice sb.clear
@@ -178,11 +215,8 @@ namespace: f64
       slice.freeze string.fromChars 0 return
     end
     $ f64.approxLog2 f64 cast.s number.DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
-    base f64 cast ## TODO? would pow-function be more accurate than repeated multiplication
-      $2 .length 1 - i32 cast.u exp - number.powI * ## TODO: handle over/underflow
-      number.round
-      ## TODO? adjust scale if logarithm was wrong (? recompute from base value)
-    i64 cast
+    $ =:: val
+    base exp i64 number.digitInt exp=
       >$
         $ .length =:: count
         sb.wrapSlice sb.clear
@@ -244,11 +278,7 @@ namespace: f128
       slice.freeze string.fromChars 0 return
     end
     $ f128.approxLog2 f128.toF64 number.DIGITS_PER_BIT@ base [] * i32 cast.s =:: mut: exp ## estimate for log_base(val)
-    base f128.fromI32 ## TODO? would pow-function be more accurate than repeated multiplication
-      $2 .length 1 - i32 cast.u exp - number.powI * ## TODO: handle over/underflow
-      ## TODO? adjust scale if logarithm was wrong (? recompute from base value)
-      f128.round
-    f128.toI128
+    base exp i128 number.digitInt exp=
       >$
         $ .length =:: count
         sb.wrapSlice sb.clear
