@@ -4,7 +4,6 @@ import slice
 import chars
 import list
 import map
-import math
 import mem
 import print
 import numbers
