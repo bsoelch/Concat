@@ -75,3 +75,9 @@ overload: export: u<= i16.ule  end
 overload: export: u>= i16.uge  end
 overload: export: u>  i16.ugt  end
 overload: export: <=>   i16.cmp end
+
+overload: export: <abs>  i16.abs  end
+overload: export: <min>  i16.min  end
+overload: export: <max>  i16.max  end
+overload: export: <umin> i16.umin end
+overload: export: <umax> i16.umax end

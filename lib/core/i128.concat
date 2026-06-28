@@ -199,6 +199,9 @@ namespace: i128
       a .hi i64.flip a .low 0 == if 1 + end
     i128.create
   end
+  proc( i128 -> i128 ) =>: export: abs
+    $ .hi 0 < if neg end
+  end
   ## XXX? use i64.addc for add
   proc( i128 : a i128 : b -> i128 ) =>: export: add
     a .low b .low i64.add =:: lowSum
@@ -449,3 +452,8 @@ overload: >= i128.ge end
 overload: > i128.gt end
 overload: ? i128.toBool end
 
+overload: export: <abs>  i128.abs  end
+overload: export: <min>  i128.min  end
+overload: export: <max>  i128.max  end
+overload: export: <umin> i128.umin end
+overload: export: <umax> i128.umax end

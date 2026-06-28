@@ -2008,3 +2008,8 @@ overload: export: merge: ..if.check    int.IntConv.check end
 overload: export: merge: ..if.ifVal    int.IntConv.ifVal end
 overload: export: merge: ..if.elseVal  int.IntConv.elseVal end
 
+overload: export: <abs>  int.abs  end
+overload: export: <min>  int.min  end
+overload: export: <max>  int.max  end
+overload: export: <umin> int.umin end
+overload: export: <umax> int.umax end

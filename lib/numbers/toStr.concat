@@ -79,7 +79,7 @@ namespace: number
           number.powI
         end
       *
-      number.round
+      <round>
     I i128 == if f128.toI128 else I cast.u end
   end
   overload: approxLog2

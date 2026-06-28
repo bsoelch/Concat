@@ -215,3 +215,9 @@ overload: export: >=     f64.ge   end
 overload: export: >      f64.gt   end
 overload: export: <=>    f64.cmp  end
 
+overload: export: <abs>  f64.abs  end
+overload: export: <min>  f64.min  end
+overload: export: <max>  f64.max  end
+overload: export: <round> f64.round  end
+overload: export: <floor> f64.floor  end
+overload: export: <ceil>  f64.ceil  end

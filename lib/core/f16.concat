@@ -385,3 +385,9 @@ overload: export: >=     f16.ge   end
 overload: export: >      f16.gt   end
 overload: export: <=>    f16.cmp  end
 
+overload: export: <abs>  f16.abs  end
+overload: export: <min>  f16.min  end
+overload: export: <max>  f16.max  end
+overload: export: <round> f16.round  end
+overload: export: <floor> f16.floor  end
+overload: export: <ceil>  f16.ceil  end

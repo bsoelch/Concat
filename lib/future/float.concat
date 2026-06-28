@@ -704,4 +704,11 @@ namespace: float
   end
 end
 
-
+overload: export: <abs>  float.abs  end
+overload: export: <min>  float.min  end
+overload: export: <max>  float.max  end
+overload: export: <umin> float.umin  end
+overload: export: <umax> float.umax  end
+overload: export: <round> float.round  end
+overload: export: <floor> float.floor  end
+overload: export: <ceil>  float.ceil  end

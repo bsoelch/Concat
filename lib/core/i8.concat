@@ -75,3 +75,9 @@ overload: export: u<= i8.ule  end
 overload: export: u>= i8.uge  end
 overload: export: u>  i8.ugt  end
 overload: export: <=>   i8.cmp  end
+
+overload: export: <abs>  i8.abs  end
+overload: export: <min>  i8.min  end
+overload: export: <max>  i8.max  end
+overload: export: <umin> i8.umin end
+overload: export: <umax> i8.umax end

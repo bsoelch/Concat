@@ -247,3 +247,9 @@ overload: export: u<=  i64.ule  end
 overload: export: u>=  i64.uge  end
 overload: export: u>   i64.ugt  end
 overload: export: <=>    i64.cmp  end
+
+overload: export: <abs>  i64.abs  end
+overload: export: <min>  i64.min  end
+overload: export: <max>  i64.max  end
+overload: export: <umin> i64.umin end
+overload: export: <umax> i64.umax end

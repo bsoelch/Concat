@@ -29,18 +29,6 @@ namespace: number
     f64.exponent
     f128.exponent
   end
-  overload: export: floor
-    f16.floor
-    f32.floor
-    f64.floor
-    f128.floor
-  end
-  overload: export: round
-    f16.round
-    f32.round
-    f64.round
-    f128.round
-  end
 
   proc( f32 -> f64 ) =>: f32Up f64 cast end
   proc( f64 -> f32 ) =>: f64Down f32 cast end

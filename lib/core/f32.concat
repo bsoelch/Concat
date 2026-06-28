@@ -213,3 +213,9 @@ overload: export: >=     f32.ge   end
 overload: export: >      f32.gt   end
 overload: export: <=>    f32.cmp  end
 
+overload: export: <abs>  f32.abs  end
+overload: export: <min>  f32.min  end
+overload: export: <max>  f32.max  end
+overload: export: <round> f32.round  end
+overload: export: <floor> f32.floor  end
+overload: export: <ceil>  f32.ceil  end

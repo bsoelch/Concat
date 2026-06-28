@@ -161,3 +161,8 @@ overload: export: u>=  i32.uge  end
 overload: export: u>   i32.ugt  end
 overload: export: <=>  i32.cmp  end
 
+overload: export: <abs>  i32.abs  end
+overload: export: <min>  i32.min  end
+overload: export: <max>  i32.max  end
+overload: export: <umin> i32.umin end
+overload: export: <umax> i32.umax end
