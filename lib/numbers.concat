@@ -1,9 +1,6 @@
 import core/integers
 import core/floats
 
-import numbers/floatToStr
-import numbers/intToStr
-
 ## TODO? move to core
 proc( char8 ptr.raw : chars iSize : k -> i128 ) =>: static: export: :i128
   char8 128 array : mut: errMessageBuffer
@@ -31,3 +28,5 @@ proc( char8 ptr.raw : chars iSize : k -> f128 ) =>: static: export: :f128
     '`' sb.appendC
   sb.asStr ..compiler.error f128.ZERO
 end
+
+import numbers/toStr

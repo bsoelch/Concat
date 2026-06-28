@@ -5,7 +5,6 @@ import string
 import list
 import stringBuilder
 import numbers
-import numbers/intToStr
 
 namespace: int
   iSize ..types.size i32 ..types.size u>= "iSize has at least 32 bits" assert

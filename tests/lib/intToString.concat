@@ -1,4 +1,3 @@
-import numbers/intToStr
 import print
 
 proc( -> ) =>: main

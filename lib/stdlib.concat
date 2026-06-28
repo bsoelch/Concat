@@ -6,8 +6,6 @@ import list
 import map
 import math
 import mem
-import numbers/intToStr
-import numbers/floatToStr
 import print
 import numbers
 import optional

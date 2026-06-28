@@ -1,7 +1,6 @@
 import map
 
 import stringBuilder
-import numbers/intToStr
 import print
 
 proc( i32 -> i32 ) =>: i32Hash end

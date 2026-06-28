@@ -3,7 +3,6 @@ Prints all prime factors of a given number
 +#
 import stringBuilder
 import print
-import numbers/intToStr
 ## define overloaded <+ operator to simplify string building
 overload: <+ sb.appendC sb.appendS i64.sbAppend end
 
