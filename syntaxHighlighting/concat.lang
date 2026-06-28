@@ -272,9 +272,9 @@
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
           f16 | i128 | f128           |
+          int | float                 |
           iSize                       |
-          string                      |
-          string(8|16|32)             |
+          string(8|16|32)?            |
           stringBuilder               |
           MixedArenaAllocator         |
           (file\.)?File               |
