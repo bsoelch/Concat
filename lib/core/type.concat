@@ -47,8 +47,11 @@ namespace: type
   oneOf( integer ... float ... ) =:: export: number
   oneOf( number ... char8 char16 char32 ) =:: export: numberOrChar
 
+  proc( type : T -> bool ) =>: export: static: isFloat
+    T ..types.isPrimitive and T f32 == or T f64 == or T f16 == or T f128 == end
+  end
   proc( type : T -> bool ) =>: export: static: isInteger
-    T ..types.isPrimitive and T i32 == or T i64 == or T i16 == or T i8 == end
+    T ..types.isPrimitive and T i32 == or T i64 == or T i16 == or T i8 == or T i128 == end
   end
   proc( type : T -> bool ) =>: export: static: isNamedInteger
     T ..types.unwrapNamed isInteger

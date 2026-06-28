@@ -821,11 +821,11 @@ struct(
   i128 : magnitude
   i32 : exp
   bool : sign
-) =:: f160
+) =:: export: f160
 ## TODO? use i128-arithmetic for f160 operations
 namespace: f160
   15:i64 =:: F128_SHIFT
-  proc( f128 : x -> f160 ) =>: fromF128
+  proc( f128 : x -> f160 ) =>:  export: fromF128
     x .hi f128.SIGN_FLAG_HI & ? =:: sign
     x .hi f128.EXP_SHIFT_HI >>> f128.SHIFTED_EXP_MASK & f128.EXP_BIAS - =:: exp
     exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - == if ## NaN / Infinity
@@ -844,7 +844,7 @@ namespace: f160
     x .low F128_SHIFT << =:: low
     low hi i128.create exp i32 cast sign f160 new return
   end
-  proc( f160 : x -> f128 ) =>: toF128
+  proc( f160 : x -> f128 ) =>: export: toF128
     x .exp i64 cast.s =:: exp
     exp f128.SHIFTED_EXP_MASK f128.EXP_BIAS - >= if ## overflow
       x .sign if f128.-Infinity else f128.Infinity end return
@@ -899,7 +899,7 @@ namespace: f160
   end
   ## multiply two 128 bit mantissas x and y
   ##  returns the mantissa of x*y and a boolean indicating if the exponent increased
-  proc( f160 : x f160 : y -> f160 ) =>: mul
+  proc( f160 : x f160 : y -> f160 ) =>:  export: mul
     x .magnitude i128.ZERO == or y .magnitude i128.ZERO == if
       ## f160
         i128.ZERO 0
@@ -960,10 +960,10 @@ namespace: f160
       x .sign y .sign ^
     f160 new return
   end
-  proc( f160 : x -> f160 ) =>: neg
+  proc( f160 : x -> f160 ) =>:  export: neg
     x .magnitude x .exp x .sign ! f160 new
   end
-  proc( f160 : x  f160 : y -> f160 ) =>: add
+  proc( f160 : x  f160 : y -> f160 ) =>:  export: add
     x .sign y .sign != if
       x y neg sub return
     end
@@ -1045,7 +1045,7 @@ namespace: f160
       a .sign
     f160 new return
   end
-  proc( f160 : x  f160 : y -> f160 ) =>: sub
+  proc( f160 : x  f160 : y -> f160 ) =>: export: sub
     x .sign y .sign != if
       x y neg add return
     end

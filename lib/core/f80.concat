@@ -1,0 +1,304 @@
+import core/f64
+struct(
+  i64 : mantissa ## the highest bit of mantissa is expected to be 1
+  i32 : exponent
+  bool : sign
+) =:: export: f80
+## TODO? add checks for overflow in exponent (branch predictor should make check relatively cheap)
+namespace: f80
+  proc( f64 : x -> f80 ) =>: export: fromF64
+    x f64.bits =:: i
+    i f64.SIGN_FLAG & ? =:: sign
+    i f64.MANTISSA_MASK & =:: mut: mantissa
+    i f64.EXP_SHIFT >>> f64.SHIFTED_EXP_MASK & =:: mut: exponent
+    exponent f64.SHIFTED_EXP_MASK == if ## NaN / Infinity
+      ## TODO? handle NaN/Infinity
+      "unimplemeted" ..panic
+    else exponent 0 == _if ## subnormal numbers
+      mantissa 0 == if
+        0 0 sign f80 new return
+      end
+      mantissa i64.highestSetBit =:: hiBit
+      mantissa
+        63 hiBit - <<
+      mantissa=
+      1 f64.EXP_BIAS - f64.MANTISSA_BITS -
+        hiBit i64 cast +
+      exponent=
+    else
+      exponent f64.EXP_BIAS - exponent=
+      mantissa
+        f64.HIDDEN_BIT |
+        64 f64.MANTISSA_BITS 1 + - <<
+      mantissa=
+    end
+    ## f80
+      mantissa
+      exponent i32 cast
+      sign
+    f80 new return
+  end
+  proc( i64 : mut: x -> f80 ) =>: export: fromI64
+    x 0 == if
+      0 0 false f80 new return
+    end
+    x 0 < =:: sign
+    sign if
+      x -_ x=
+    end
+    x i64.highestSetBit =:: exponent
+    ## f80
+      x 63 exponent - <<
+      exponent
+      sign
+    f80 new return
+  end
+  proc( i64 : x -> f80 ) =>: export: fromU64
+    x 0 == if
+      0 0 false f80 new return
+    end
+    x i64.highestSetBit =:: exponent
+    ## f80
+      x 63 exponent - <<
+      exponent
+      false
+    f80 new return      
+  end
+  proc( f80 : x -> f64 ) =>: export: toF64
+    x .mantissa 0 == if
+      x .sign if -0.0 else 0.0 end return
+    end
+    x .exponent i64 cast.s f64.SHIFTED_EXP_MASK f64.EXP_BIAS - >= if ## overflow
+      x .sign if f64.-Infinity else f64.Infinity end return
+    end
+    x .exponent i64 cast.s f64.EXP_BIAS + =:: mut: exponent
+    exponent 0 <= if ## underflow
+      exponent f64.MANTISSA_BITS -_ <= if
+        x .sign if -0.0 else 0.0 end return
+      end
+      64 f64.MANTISSA_BITS - exponent - =:: shift
+      x .mantissa 64 shift - << =:: lowPart
+      lowPart 0 < =:: nextBit
+      lowPart 1 << ? =:: nz
+      x .sign if f64.SIGN_FLAG else 0 end
+        x .mantissa shift >>>
+          nextBit and nz or $ 1 & ? if
+            1 + ## round to even
+          end
+        |
+      f64.fromBits return
+    end
+    64 f64.MANTISSA_BITS 1 + - =:: shift
+    x .mantissa shift >>> f64.MANTISSA_MASK & =:: mut: newMantissa
+    x .mantissa 64 shift - << =:: lowPart
+    lowPart 0 < =:: nextBit
+    lowPart 1 << ? =:: nz
+    nz and nextBit or newMantissa 1 & ? if
+      newMantissa 1 + newMantissa=
+      newMantissa f64.MANTISSA_BITS 1 + >>> ? if ## overflow
+        newMantissa 1 >>> newMantissa=
+        exponent 1 + exponent=
+      end
+    end
+    x .sign if f64.SIGN_FLAG else 0 end
+      exponent f64.EXP_SHIFT << |
+      newMantissa |
+    f64.fromBits return
+  end
+  proc( f80 : x -> i64 ) =>: export: toI64
+    x .exponent 0 < if
+      0 return ## no integer part
+    end
+    x .exponent 64 >= if
+      x .sign if i64.MIN else i64.MAX end return ## overflow
+    end
+    ## truncates value to towards zero
+    x .mantissa 63 x .exponent - >>> =:: uvalue
+    x .sign if
+      uvalue i64.MIN -_ i64.umin -_ return        
+    else
+      uvalue i64.MAX i64.umin return
+    end
+  end
+  proc( f80 : x -> i64 ) =>: export: toU64
+    x .exponent 0 < or x .sign if
+      0 return ## no integer part
+    end
+    x .exponent 64 >= if
+      i64.UMAX return ## overflow
+    end
+    ## truncates value to towards zero
+    x .mantissa 63 x .exponent - >>>
+  end
+
+  proc( f80 -> f80 ) =>: export: neg
+    $ .sign ! >$ .sign=
+  end
+  proc( f80 : mut: a f80 : mut: b -> f80 ) =>: export: add
+    a .sign b .sign != if
+      a
+        b neg
+      sub return
+    end
+    a .exponent b .exponent < if
+      a b a= b=
+    end
+    ## a .exponent >= b .exponent
+    a .exponent b .exponent - =:: shift
+    shift 64 > if
+      a return ## bits do not interfear
+    end
+    ## remember next-bit after mantissa & if remaining bits are non-zero (for half-even rounding)
+    false =:: mut: nz
+    false =:: mut: nextBit
+    a .exponent =:: mut: newExp
+    a .mantissa =:: mut: newMantissa
+    shift 64 == if
+      ## correctly handle rounding
+      b .mantissa 0 < nextBit=
+      b .mantissa -1:i64 1 >>> & ? nz=
+    else
+      1:i64 shift 1 - << =:: nextBitMask
+      b .mantissa nextBitMask & ? nextBit=
+      b .mantissa nextBitMask 1 - & ? nz=
+      false ## addc
+        a .mantissa
+        b .mantissa shift >>>
+      i64.addc newMantissa= if ## carry
+        nz nextBit | nz=
+        newMantissa 1 & ? nextBit=
+        newMantissa 1 >>>
+          1:i64 63 << |
+        newMantissa=
+        newExp 1 + newExp=
+      end
+    end
+    ## round to even
+    nextBit and nz or newMantissa 1 & ? if
+      newMantissa 1 + newMantissa=
+      newMantissa 0 == if
+        ## f80
+          1:i64 63 <<
+          newExp 1 +
+          a .sign
+        f80 new return
+      end
+    end
+    ## f80
+      newMantissa
+      newExp
+      a .sign
+    f80 new return
+  end
+  proc( f80 : mut: a f80 : mut: b -> f80 ) =>: export: sub
+    a .sign b .sign != if
+      a
+        b neg
+      add return
+    end
+    a .exponent b .exponent < or
+      a .exponent b .exponent == and a .mantissa b .mantissa <
+    end =:: swapped
+    swapped if
+      a b a= b=
+    end
+    ## a >= b
+    false =:: mut: nz
+    false =:: mut: nextBit
+    a .mantissa =:: mut: newMantissa
+    b .exponent a .exponent == if
+      a .mantissa
+        b .mantissa
+      i64.sub newMantissa=
+    else
+      a .exponent  b .exponent - =:: shift
+      shift 64 > if
+        a
+          swapped if neg end
+        return
+      end
+      shift 64 == if
+        ## correctly handle rounding
+        b .mantissa 0 < nextBit=
+        b .mantissa -1:i64 1 >>> & ? nz=
+      else shift 0 > _if
+        1:i64 shift 1 - << =:: nextBitMask
+        b .mantissa nextBitMask & ? nextBit=
+        b .mantissa nextBitMask 1 - & ? nz=
+        a .mantissa
+          b .mantissa shift >>>
+        i64.sub newMantissa=
+      end
+    end
+    ## round to even
+    nextBit and nz or newMantissa 1 & ? if
+      swapped if
+        newMantissa 1 + newMantissa=
+        ## number cannot overflow in subtraction
+        newMantissa 0 != "no overflow" assert
+      else
+        newMantissa 0 != "no underflow" assert
+        newMantissa 1 - newMantissa=
+      end
+    end
+    newMantissa 0 == if
+      0 0 a .sign f80 new return
+    end
+    ## normalize result
+    63 newMantissa i64.highestSetBit - =:: shift
+    newMantissa shift << newMantissa=
+    ## f80
+      newMantissa
+      a .exponent shift -
+      a .sign
+    f80 new return
+  end
+  proc( f80 : a f80 : b -> f80 ) =>: export: mul
+    a .mantissa 0 == or b .mantissa 0 == if
+      0 0  a .sign b .sign ^ f80 new return
+    end
+    a .exponent b .exponent + =:: mut: newExp
+    a .mantissa b .mantissa i64.umul2 =:: low =:: mut: hi
+    hi 63 >>> ? =:: highBit
+    highBit if
+      newExp 1 + newExp=
+      low 63 >>> ?
+      low 1:i64 63 << 1 - & ?
+    else
+      hi 1 <<
+        low 63 >>> |
+      hi=
+      1:i64 62 << =:: nextBitMask
+      low nextBitMask & ?
+      low nextBitMask 1 - & ?
+    end =:: nz =:: nextBit
+    ## rounding
+    nextBit and nz or hi 1 & ? if
+      ## round up if next bit 1 and remainder >0.5 or remainder ==0.5 and number odd
+      hi 1 + hi=
+      hi 0 == if ## overflow
+        hi 1 + hi=
+        hi 0 == if
+         1:i64 63 << hi=
+         newExp 1 + newExp=
+        end
+      end
+    end
+    ## f80
+      hi
+      newExp
+      a .sign b .sign ^
+    f80 new return
+  end
+  ## a*b + c without intermediate rounding
+  proc( f80 : a f80 : b f80 : c -> f80 ) =>: export: muladd
+    "unimplemented" ..panic
+  end
+  proc( f80 : a f80 : b -> f80 ) =>: export: div
+    "unimplemented" ..panic
+  end
+end ## f80
+overload: merge: -_ f80.neg end
+overload: merge: + f80.add end
+overload: merge: - f80.sub end
+overload: merge: * f80.mul end

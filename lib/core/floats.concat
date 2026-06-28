@@ -1,7 +1,9 @@
 import core/f16
 import core/f32
 import core/f64
+import core/f80
 import core/f128
+
 namespace: number
   overload: export: isNormal
     f16.isNormal
@@ -38,5 +40,20 @@ namespace: number
     f32.round
     f64.round
     f128.round
+  end
+
+  proc( f32 -> f64 ) =>: f32Up f64 cast end
+  proc( f64 -> f32 ) =>: f64Down f32 cast end
+  overload: export: fpUp
+    f16.asF32
+    f32Up
+    f80.fromF64
+    f160.fromF128
+  end
+  overload: export: fpDown
+    f16.fromF32
+    f64Down
+    f80.toF64
+    f160.toF128
   end
 end

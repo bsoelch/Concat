@@ -1,6 +1,7 @@
 import core/integers
 import core/floats
 import core/string
+import core/f80
 
 namespace: number
   union(
@@ -244,10 +245,12 @@ namespace: number
     p 0 == if
       ONE return
     else p 0 < _if
+      ## TODO? invert before truncating
       ONE x p -_ powI / return
     end
-    x =:: mut: xPow
-    ONE
+    ## compute result with extended precission
+    x T type.isFloat if fpUp end =:: mut: xPow
+    ONE T type.isFloat if fpUp end
       p while ..dup 0 != do
         ..dup 1 & 0 != if
         ..swap
@@ -257,7 +260,7 @@ namespace: number
         1 >>
         xPow xPow * xPow=
       end ..drop
-    return
+    T type.isFloat if fpDown end return
   end
 end
 namespace: i64
