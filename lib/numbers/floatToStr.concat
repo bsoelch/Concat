@@ -3,7 +3,6 @@ import core/floats
 
 import stringBuilder
 import numbers/intToStr
-import math
 
 namespace: number
   { 0 0 1.0 0.6309297535714575 0.5 0.43067655807339306 0.38685280723454163 0.3562071871080222 0.3333333333333333
@@ -342,66 +341,5 @@ namespace: number
     f32.digits
     f64.digits
     f128.digits
-  end
-end
-### vvv --- Port to new format --- vvv
-
-proc( i32 -> char8 ) =>: getDigit
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ..swap []
-end
-
-namespace: f64
-  0x0.0000000000001P-1022 =:: MIN_POSITIVE
-end
-
-namespace: sb
-  ## appends the C-style hexadecimal representation of an IEEE double to a stringBuilder
-  proc( stringBuilder : sb f64 : f -> stringBuilder ) =>: export: appendIeeeDouble
-    f =:: mut: value
-    -1022:i64 =:: MIN_POW
-    1023:i64 =:: MAX_POW
-    13 =:: DIGIT_COUNT
-    sb
-      value f64.isFinite ! if
-        value f64.isNaN if
-          "NAN" sb.appendS return
-        else value 0 > _if
-          "INFINITY" sb.appendS return
-        else
-          "-INFINITY" sb.appendS return
-        end
-      else value 0.0 == _if
-        1 value / 0 < if ## distinguish positive and negative zero
-          "-0.0" sb.appendS return
-        else
-          "0.0" sb.appendS return
-        end
-      end
-      value 0 < if
-        '-' sb.appendC
-        value -_ value=
-      end
-      "0x" sb.appendS
-      value math.log2 math.floor i64 cast =:: mut: e
-      e MIN_POW < if
-        MIN_POW e=
-      else e MAX_POW > _if
-        MAX_POW e=
-      end
-      2 e f64 cast math.pow =:: mut: p
-      value p / value=
-      value math.floor =:: mut: d
-      d i32 cast getDigit sb.appendC
-      '.' sb.appendC
-      0 while ..dup DIGIT_COUNT < do
-        ..swap
-          value d - 16 * value=
-          value math.floor d=
-          d i32 cast getDigit sb.appendC
-        ..swap 1 +
-      end ..drop
-      'P' sb.appendC
-      e sb.appendI
-    return
   end
 end
