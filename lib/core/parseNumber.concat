@@ -124,6 +124,7 @@ namespace: number
     end
     maxVal base u/ =:: maxSafe
     maxUnsigned base u/ =:: maxSafeUnsigned
+    false =:: mut: overflow
     false =:: mut: signedOverflow
     false =:: mut: hasDigit
     >$ string.chars for
@@ -134,16 +135,17 @@ namespace: number
           ParseError .InvalidChar I IntParseResult .Err
         return
       end
+      overflow if ..drop continue end ## only check for invalid chars
       I i128 == if i128.fromI32 else I cast.u end =:: delta
       $ maxSafeUnsigned u> if
-        ..drop ParseError .Overflow I IntParseResult .Err return
+        true overflow= continue ## keep iteraing to check remaining chars
       else $ maxSafe u> _if
         true signedOverflow=
       end
       $ =:: oldVal
       base I i128 == if i128.fromI32 else I cast.u end *
       oldVal maxSafeUnsigned == and $ maxUnsigned delta - u> if
-        ..drop ParseError .Overflow I IntParseResult .Err return
+        true overflow= continue ## keep iteraing to check remaining chars
       else oldVal maxSafe == and $ maxVal delta - u> _if
         true signedOverflow=
       end
@@ -151,6 +153,9 @@ namespace: number
     end
     hasDigit ! if
       ..drop ParseError .Empty I IntParseResult .Err return
+    end
+    overflow if ..drop
+      ParseError .Overflow I IntParseResult .Err return
     end
     signedOverflow if
       sign if ..drop
