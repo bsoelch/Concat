@@ -11,8 +11,8 @@ proc( -> ) =>: main
     0x0.0000000000001P-1022 f64.sbAppendEX '\n' sb.appendC
     0x1.fffffffffffffP+1023 f64.sbAppendX '\n' sb.appendC
     1E400 f64.sbAppendB '\n' sb.appendC
-    1.55 2 f64.sbAppendF? '\n' sb.appendC
-   ## 1.234 -1 f64.sbAppendF? '\n' sb.appendC ## TODO high-precission float to string conversion
+    1.55 2 f64.sbAppend? '\n' sb.appendC
+   ## 1.234 -1 f64.sbAppend? '\n' sb.appendC ## TODO high-precission float to string conversion
     $ sb.asStr io.print
   sb.free ..drop
 end

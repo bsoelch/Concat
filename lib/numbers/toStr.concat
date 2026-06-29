@@ -55,6 +55,7 @@ namespace: number
     0.17219543379409813 0.17144160057391347 0.17070727966372012 0.16999161628691403 0.16929380759878143
     0.1686130986895011 0.16794877895704194
   } =:: export: DIGITS_PER_BIT
+  enum( DEFAULT SCI FIXED ) =:: export: FloatPrintMode
 
   proc( oneOf( i16 i32 i64 ) : auto: I  I #+bits+# i32 : base -> i32 ) =>: baseDigits
     f64 cast.s number.DIGITS_PER_BIT@ base [] *
@@ -143,7 +144,7 @@ namespace: number
     char8 slice.mut : buffer
     i32 : precision
     i32 : base
-    bool : sci
+    FloatPrintMode : mode
   -> stringBuilder ) =>: inline: sbAppendF
     char8 slice.mut optional.empty =:: mut: toFree
     precision buffer .length i32 cast u<= if
@@ -152,7 +153,7 @@ namespace: number
       precision iSize cast.u char8 slice.new $ optional.wrap toFree=
     end
       >$ base digits
-      sci or $ precision > or $ -5 < if
+      mode .SCI or mode .FIXED ! and $ precision > or $ -5 < if
         >$ removeTrailingZeros <$
         >>$ ## digits exp sb
           $2 0 [] sb.appendC
@@ -166,14 +167,20 @@ namespace: number
         return
       end
       1 + $ 0 > if
-        iSize cast.u string.cutIndex <$ <<$ ## B sb A
+        $ iSize cast.u $2 .length u> if
+          iSize cast.u $1 .length - <<$ ## exp sb A
           sb.appendStr
-          >$ removeTrailingZeros <$
-          $1 .length 0 != and $1 "0":s string.eq ! if
-            '.' sb.appendC
-             >$ sb.appendStr
-          else >$ ..drop end
-        return
+          >$ for ..drop '0' sb.appendC end
+        else
+          iSize cast.u string.cutIndex <$ <<$ ## B sb A
+            sb.appendStr
+            >$ removeTrailingZeros <$
+            $1 .length 0 != and $1 "0":s string.eq ! if
+              '.' sb.appendC
+               >$ sb.appendStr
+            else >$ ..drop end
+          return
+        end
       else
         >>$
           "0.":s sb.appendStr
@@ -452,60 +459,63 @@ namespace: f16
     i32 cast.u >$ 21 EXP_BIAS i32 cast.u - + <<
   end
 
-  proc( stringBuilder f16 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
+  proc( stringBuilder f16 i32 : mut: precision i32 : base number.FloatPrintMode : mode -> stringBuilder ) =>: export: sbAppend???
     precision 0 == if
       MANTISSA_BITS base number.baseDigits precision=
     end
-    f16.asF32 precision base sci f32.sbAppend???
+    f16.asF32 precision base mode f32.sbAppend???
   end
 
   proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppend
-    0 10 false sbAppend???
+    0 10 number.FloatPrintMode .DEFAULT sbAppend???
   end
-  proc( stringBuilder f16 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
-    0 >$ false sbAppend???
+  proc( stringBuilder f16 i32 #+prec+# -> stringBuilder ) =>: export: sbAppend?
+    10 number.FloatPrintMode .DEFAULT sbAppend???
+  end
+  proc( stringBuilder f16 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppend??
+    number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppendF
-    0 10 false sbAppend???
+    0 10 number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f16 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendF?
-    10 false sbAppend???
+    10 number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f16 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppendF??
-    false sbAppend???
+    number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppendE
-    0 10 true sbAppend???
+    0 10 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f16 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendE?
-    10 true sbAppend???
+    10 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f16 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppendE??
-    true sbAppend???
+    number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppendX
-    0 16 false sbAppend???
+    0 16 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f16 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendX?
-    16 false sbAppend???
+    16 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppendEX
-    0 16 true sbAppend???
+    0 16 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f16 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendEX?
-    16 true sbAppend???
+    16 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppendB
-    0 2 false sbAppend???
+    0 2 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f16 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendB?
-    2 false sbAppend???
+    2 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f16 -> stringBuilder ) =>: export: sbAppendEB
-    0 2 true sbAppend???
+    0 2 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f16 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendEB?
-    2 true sbAppend???
+    2 number.FloatPrintMode .SCI sbAppend???
   end
 end
 namespace: f32
@@ -522,7 +532,7 @@ namespace: f32
     end
     base i32 number.floatDigits
   end
-  proc( stringBuilder f32 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
+  proc( stringBuilder f32 i32 : mut: precision i32 : base number.FloatPrintMode : mode -> stringBuilder ) =>: export: sbAppend???
     char8 MANTISSA_BITS array : mut: buffer
     $ 0 f32.cmp 0 < if -_ >$ '-' sb.appendC <$ end ## cmp to ensure -0 < 0
     number.sbEnsureFinite .else return end
@@ -530,56 +540,59 @@ namespace: f32
     precision 0 == if
       MANTISSA_BITS base number.baseDigits precision=
     end
-    buffer@ slice.wrapMutable precision base sci number.sbAppendF
+    buffer@ slice.wrapMutable precision base mode number.sbAppendF
   end
 
   proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppend
-    0 10 false sbAppend???
+    0 10 number.FloatPrintMode .DEFAULT sbAppend???
   end
-  proc( stringBuilder f32 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
-    0 >$ false sbAppend???
+  proc( stringBuilder f32 i32 #+prec+# -> stringBuilder ) =>: export: sbAppend?
+    10 number.FloatPrintMode .DEFAULT sbAppend???
+  end
+  proc( stringBuilder f32 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppend??
+    number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendF
-    0 10 false sbAppend???
+    0 10 number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f32 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendF?
-    10 false sbAppend???
+    10 number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f32 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppendF??
-    false sbAppend???
+    number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendE
-    0 10 true sbAppend???
+    0 10 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f32 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendE?
-    10 true sbAppend???
+    10 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f32 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppendE??
-    true sbAppend???
+    number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendX
-    0 16 false sbAppend???
+    0 16 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f32 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendX?
-    16 false sbAppend???
+    16 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendEX
-    0 16 true sbAppend???
+    0 16 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f32 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendEX?
-    16 true sbAppend???
+    16 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendB
-    0 2 false sbAppend???
+    0 2 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f32 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendB?
-    2 false sbAppend???
+    2 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f32 -> stringBuilder ) =>: export: sbAppendEB
-    0 2 true sbAppend???
+    0 2 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f32 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendEB?
-    2 true sbAppend???
+    2 number.FloatPrintMode .SCI sbAppend???
   end
 end
 namespace: f64
@@ -594,7 +607,7 @@ namespace: f64
     end
     base i64 number.floatDigits
   end
-  proc( stringBuilder f64 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
+  proc( stringBuilder f64 i32 : mut: precision i32 : base number.FloatPrintMode : mode -> stringBuilder ) =>: export: sbAppend???
     char8 MANTISSA_BITS array : mut: buffer
     $ 0 f64.cmp 0 < if -_ >$ '-' sb.appendC <$ end ## cmp to ensure -0 < 0
     number.sbEnsureFinite .else return end
@@ -602,56 +615,59 @@ namespace: f64
     precision 0 == if
       MANTISSA_BITS base number.baseDigits precision=
     end
-    buffer@ slice.wrapMutable precision base sci number.sbAppendF
+    buffer@ slice.wrapMutable precision base mode number.sbAppendF
   end
   ## TODO? appendIEEEHex
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppend
-    0 10 false sbAppend???
+    0 10 number.FloatPrintMode .DEFAULT sbAppend???
   end
-  proc( stringBuilder f64 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
-    0 >$ false sbAppend???
+  proc( stringBuilder f64 i32 #+prec+# -> stringBuilder ) =>: export: sbAppend?
+    10 number.FloatPrintMode .DEFAULT sbAppend???
+  end
+  proc( stringBuilder f64 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppend??
+    number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendF
-    0 10 false sbAppend???
+    0 10 number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f64 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendF?
-    10 false sbAppend???
+    10 number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f64 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppendF??
-    false sbAppend???
+    number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendE
-    0 10 true sbAppend???
+    0 10 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f64 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendE?
-    10 true sbAppend???
+    10 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f64 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppendE??
-    true sbAppend???
+    number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendX
-    0 16 false sbAppend???
+    0 16 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f64 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendX?
-    16 false sbAppend???
+    16 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendEX
-    0 16 true sbAppend???
+    0 16 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f64 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendEX?
-    16 true sbAppend???
+    16 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendB
-    0 2 false sbAppend???
+    0 2 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f64 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendB?
-    2 false sbAppend???
+    2 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f64 -> stringBuilder ) =>: export: sbAppendEB
-    0 2 true sbAppend???
+    0 2 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f64 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendEB?
-    2 true sbAppend???
+    2 number.FloatPrintMode .SCI sbAppend???
   end
 end
 namespace: f128
@@ -668,7 +684,7 @@ namespace: f128
     base i128 number.floatDigits
   end
 
-  proc( stringBuilder f128 i32 : mut: precision i32 : base bool : sci -> stringBuilder ) =>: export: sbAppend???
+  proc( stringBuilder f128 i32 : mut: precision i32 : base number.FloatPrintMode : mode -> stringBuilder ) =>: export: sbAppend???
     char8 MANTISSA_BITS array : mut: buffer
     $ .hi 0 < if -_ >$ '-' sb.appendC <$ end
     number.sbEnsureFinite .else return end
@@ -676,56 +692,59 @@ namespace: f128
     precision 0 == if
       MANTISSA_BITS base number.baseDigits precision=
     end
-    buffer@ slice.wrapMutable precision base sci number.sbAppendF
+    buffer@ slice.wrapMutable precision base mode number.sbAppendF
   end
 
   proc( stringBuilder f128 -> stringBuilder ) =>: export: sbAppend
-    0 10 false sbAppend???
+    0 10 number.FloatPrintMode .DEFAULT sbAppend???
   end
-  proc( stringBuilder f128 i32 #+base+# -> stringBuilder ) =>: export: sbAppend?
-    0 >$ false sbAppend???
+  proc( stringBuilder f128 i32 #+prec+# -> stringBuilder ) =>: export: sbAppend?
+    10 number.FloatPrintMode .DEFAULT sbAppend???
+  end
+  proc( stringBuilder f128 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppend??
+    number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f128 -> stringBuilder ) =>: export: sbAppendF
-    0 10 false sbAppend???
+    0 10 number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f128 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendF?
-    10 false sbAppend???
+    10 number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f128 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppendF??
-    false sbAppend???
+    number.FloatPrintMode .FIXED sbAppend???
   end
   proc( stringBuilder f128 -> stringBuilder ) =>: export: sbAppendE
-    0 10 true sbAppend???
+    0 10 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f128 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendE?
-    10 true sbAppend???
+    10 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f128 i32 #+prec+# i32 #+base+# -> stringBuilder ) =>: export: sbAppendE??
-    true sbAppend???
+    number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f128 -> stringBuilder ) =>: export: sbAppendX
-    0 16 false sbAppend???
+    0 16 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f128 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendX?
-    16 false sbAppend???
+    16 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f128 -> stringBuilder ) =>: export: sbAppendEX
-    0 16 true sbAppend???
+    0 16 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f128 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendEX?
-    16 true sbAppend???
+    16 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f128 -> stringBuilder ) =>: export: sbAppendB
-    0 2 false sbAppend???
+    0 2 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f128 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendB?
-    2 false sbAppend???
+    2 number.FloatPrintMode .DEFAULT sbAppend???
   end
   proc( stringBuilder f128 -> stringBuilder ) =>: export: sbAppendEB
-    0 2 true sbAppend???
+    0 2 number.FloatPrintMode .SCI sbAppend???
   end
   proc( stringBuilder f128 i32 #+prec+# -> stringBuilder ) =>: export: sbAppendEB?
-    2 true sbAppend???
+    2 number.FloatPrintMode .SCI sbAppend???
   end
 end
 namespace: number
