@@ -1,27 +1,22 @@
 import future/float
 import print
 
-proc( float -> ) =>: printFloatX
-  0 sb.create
-    >$ float.sbAppendX
-    $ sb.asStr io.println
-  sb.free ..drop
-end
+## TODO: this used to test rounding, which is no longer done for power-of-2 bases
 proc( -> ) =>: main
-  "-0b1'001000":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "-0b1'001001":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "-0b1'001010":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "-0b1'001011":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "-0b1'001100":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "-0b1'001101":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "-0b1'001110":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "-0b1'001111":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "0b1'001000":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "0b1'001001":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "0b1'001010":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "0b1'001011":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "0b1'001100":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "0b1'001101":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "0b1'001110":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
-  "0b1'001111":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create printFloatX
+  "-0b1'001000":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "-0b1'001001":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "-0b1'001010":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "-0b1'001011":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "-0b1'001100":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "-0b1'001101":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "-0b1'001110":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "-0b1'001111":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "0b1'001000":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "0b1'001001":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "0b1'001010":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "0b1'001011":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "0b1'001100":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "0b1'001101":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "0b1'001110":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
+  "0b1'001111":s 0 int.parse .Ok <unwrap> -6:iSize float.Precision.INFINITE float.create io.printXln
 end

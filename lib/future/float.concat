@@ -1,4 +1,5 @@
 import future/int
+import numbers
 
 namespace: float
   iSize =:: export: ExpData
@@ -262,14 +263,12 @@ namespace: float
       hasSign if negate end
     float ParseResult .Ok return
   end
-  { 0 0 1024 646 512 441 396 364 341 323 308 296 285 276 268 262 256 250 245
-    241 236 233 229 226 223 220 217 215 213 210 208 206 204 202 201 199 198
-    196 195 193 192 191 189 188 187 186 185 184 183 182 181 180 179 178 177
-  177 176 175 174 174 173 172 171 } =:: BASE_DIGITS_1024BITS
-  proc( iSize : bits i32 : base -> iSize ) =>: baseDigitsForBits
+  proc( iSize i32 -> iSize ) =>: baseDigitsForBits
     ## TODO: use higher accuracy version if bit-count gets too high
     ## result should always be floor(bits*(log(2)/log(base)))
-    bits BASE_DIGITS_1024BITS base [] iSize cast.u * 1024 u/
+    >$ f64 cast.u number.DIGITS_PER_BIT@ $2 [] *
+      >$ i32.isPow2 if <ceil> end
+    iSize cast.u
   end
   ## TODO special case handling for pow2 bases
   proc( stringBuilder float : val i32 : base -> stringBuilder ) =>: export: sbBaseAppendFixed
