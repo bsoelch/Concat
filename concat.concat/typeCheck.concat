@@ -628,7 +628,7 @@ proc( i32 : count FilePosition ptr : pos TypeCheckState ptr.mut : state -> ) =>:
     1 +
   end ..drop
   state removeTrailingNOPs
-  toDrop 0 > if
+  toDrop 0 != if
     toDrop StackModType .DROP pos opStackMod state appendOp ..drop
   end
 end
@@ -5586,7 +5586,7 @@ proc(
         stackMod .modType switch
           DROP case
             stackMod .n op .pos state discardValues
-            continue.opLoop
+          continue.opLoop
           COPY case
             stackMod .n =:: offset
             offset 1 + op .pos state checkStackSize if
@@ -5604,10 +5604,13 @@ proc(
               copied .opIndex state tryCopyOp if ..drop
                 ## copied operation can no longer be deleted
                 offset StackModType .COPY op .pos opStackMod state appendOp
+                state .stack offset branchTree.at .if
+                  OP_UNLINKED >$ .opIndex= ## can no longer change op after it was copied
+                end
               end copied@ .opIndex=
             end
             state .stack copied branchTree.push
-            continue.opLoop
+          continue.opLoop
           ROTATE case
             stackMod .n =:: offset
             offset i32.abs 1 + =:: eltCount

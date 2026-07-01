@@ -1,0 +1,9 @@
+proc( i32 : x -> ) =>: inline.never: consume end
+proc( ( f32 ) 2 array i32 -> ( f32 ) 2 array ) =>: test
+  $ consume
+
+  ..drop
+end
+proc( -> ) =>: main
+  ( f32 ) 2 array new 4 test =:: x ## this should compile without problems
+end
