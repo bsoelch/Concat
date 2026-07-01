@@ -97,6 +97,13 @@ namespace: random
     end
     nextI64 size i64.umulh from + return
   end
+  iSize ..types.size i64 ..types.size == if
+    proc( Random iSize : from iSize : to -> Random iSize ) : alias: export: rangeIZ rangeI64
+  else iSize ..types.size i32 ..types.size == _if
+    proc( Random iSize : from iSize : to -> Random iSize ) : alias: export: rangeIZ rangeI32
+  else
+    "expected iSize to be i32 or i64" ..compiler.error
+  end
   proc( Random i8 : from i8 : to -> Random i8 ) =>: export: rangeI8
     from i32 cast.u to i32 cast.u rangeI32 i8 cast return
   end
@@ -114,7 +121,19 @@ namespace: random
   end
   overload: export: range
     rangeF32 rangeF64
-    rangeI8 rangeI16 rangeI32 rangeI64
+    rangeI8 rangeI16 rangeI32 rangeI64 rangeIZ
     rangeC8 rangeC16 rangeC32
+  end
+  proc( type : auto: T Random T slice.mut -> Random T slice.mut ) =>: export: shuffle
+    $ .length 1 - for ## rng slice index
+      >>$
+        $1 1 + $3 .length 1 - range ## slice index rng src
+        ## swap i-th card with card at random index > i
+        $3 $1 []
+          $4 $4 []
+          $5 >>>$ =[]
+        $3 >>>$ =[]
+      <$
+    end
   end
 end
