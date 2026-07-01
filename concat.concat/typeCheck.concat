@@ -87,7 +87,6 @@ struct(
   LocalLabelId : doLabel
   LocalLabelId : finallyLabel
   LocalLabelId : endLabel
-  i32 : mut: orCount
   i32 : mut: continueCount
   bool : mut: hasFinally
 ) =:: WhileBlockInfo
@@ -170,7 +169,6 @@ proc(
     state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
     state [] .program program.nextLocalLabel
-    0:i32
     0:i32
     false
   WhileBlockInfo new return
@@ -4652,6 +4650,7 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end =:: whileBlock
+            state [] .reachable ! if continue.opLoop end
             ## requireTypes
               types.primitive.BOOL@ slice.wrap
               "and/or-condition":s
@@ -4667,9 +4666,6 @@ proc(
               whileBlock .breakCastOffsets=
               whileBlock .breakBranches
             else
-              whileBlock [] .orCount
-                1 +
-              whileBlock .orCount=
               whileBlock .doBranches
             end =:: branches
             branches []
@@ -4696,28 +4692,30 @@ proc(
               op .pos errors appendError
               continue.opLoop
             end =:: whileBlock
-            ## requireTypes
-              types.primitive.BOOL@ slice.wrap
-              "while-condition":s
-              0 false
-              op .pos
-            state requireTypes .Err ? if
-              continue.opLoop
-            end
-            ## passing an offset of 1 ensures that cast-offsets consider do-condition
-            false 1 op .pos state clearReferences
-            whileBlock []
-              .breakCastOffsets .length i32 cast.u
-            whileBlock .doBranchIndex=
-            whileBlock [] .breakCastOffsets
-              OP_UNLINKED list.append ## merge should not change operations at do
-            whileBlock .breakCastOffsets=
-            whileBlock [] .breakBranches
-              ## BranchPoint
+            state [] .reachable if
+              ## requireTypes
+                types.primitive.BOOL@ slice.wrap
+                "while-condition":s
+                0 false
                 op .pos
-                state .stack branchTree.startBranch
-              BranchPoint new list.append
-            whileBlock .breakBranches=
+              state requireTypes .Err ? if
+                continue.opLoop
+              end
+              ## passing an offset of 1 ensures that cast-offsets consider do-condition
+              false 1 op .pos state clearReferences
+              whileBlock []
+                .breakCastOffsets .length i32 cast.u
+              whileBlock .doBranchIndex=
+              whileBlock [] .breakCastOffsets
+                OP_UNLINKED list.append ## merge should not change operations at do
+              whileBlock .breakCastOffsets=
+              whileBlock [] .breakBranches
+                ## BranchPoint
+                  op .pos
+                  state .stack branchTree.startBranch
+                BranchPoint new list.append
+              whileBlock .breakBranches=
+            end
             whileBlock .doBranches =:: doBranches
             doBranches [] .length 0:iSize != if
               doBranches []
@@ -4756,9 +4754,6 @@ proc(
               end
               branchPoints list.free ..drop
             end
-            program [] .programMemory
-              whileBlock [] .orCount i32 mixedArena.allocSlice =:: orPositions
-            program .programMemory=
             whileBlock [] .endLabel CompareType .FALSE op .pos state localJump
             whileBlock [] .doLabel LocalLabelType .LABEL_END op .pos state localLabel
             continue.opLoop
@@ -5338,8 +5333,12 @@ proc(
                   op .pos
                   whileBlock .breakCastOffsets list.asSlice
                   state
-                  whileBlock .doBranchIndex
-                  MergeType .MERGE_ROOT
+                  whileBlock .doBranchIndex $ -1 == if ..drop
+                    ## no do branch
+                    0 MergeType .MERGE
+                  else
+                    MergeType .MERGE_ROOT
+                  end
                 MergePoint new
               branchTree.merge .Error ? if
                 "different numbers of types at the end of while branches: " sb.copyPtr
