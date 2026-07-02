@@ -153,6 +153,27 @@ namespace: string
   proc( string : str string : substr -> string string ) =>: export: splitStr
     str char8 slice cast substr char8 slice cast slice.splitSeq >$ string cast >$ string cast return
   end
+  proc( string ( char8 -> bool ) ptr : f -> string ) =>: trimLeftF
+    0:iSize while $ $2 .length u< and $1 $1 [] f () do 1 + end tail
+  end
+  proc( string -> string ) =>: trimLeftSpace
+    char8.isSpace@ trimLeftF
+  end
+  proc( string ( char8 -> bool ) ptr : f -> string ) =>: trimRightF
+    $ .length while $ 0 != and $1 $1 1 - [] f () do 1 - end head
+  end
+  proc( string -> string ) =>: trimRightSpace
+    char8.isSpace@ trimRightF
+  end
+  proc( string ( char8 -> bool ) ptr : f -> string ) =>: trimF
+    f trimLeftF f trimRightF
+  end
+  proc( string -> string ) =>: trimSpace
+    trimLeftSpace trimRightSpace
+  end
+  overload: export: trimLeft trimLeftF trimLeftSpace end
+  overload: export: trimRight trimRightF trimRightSpace end
+  overload: export: trim trimF trimSpace end
 end
 proc( char8 ptr.raw : p iSize : k -> string ) =>: static: export: :string
   p k string new
