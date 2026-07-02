@@ -13,6 +13,44 @@ namespace: char8
   proc( char8 : a char8 : b -> i32 ) =>: export: cmp
     b a lt ?1 a b lt ?1 ..builtIn.sub.i32
   end
+
+  proc( char8 -> bool ) =>: export: isWhitespace
+    switch
+      ' ' '\n' '\t' '\v' '\f' '\r' case
+        true return
+      default
+        false return
+    end
+  end
+  proc( char8 -> bool ) : alias: export: isSpace isWhitespace
+  proc( char8 : d -> bool ) =>: export: isDigit
+    d '0' >=  d '9' <= &
+  end
+  proc( char8 : d -> bool ) =>: export: isBinDigit
+    d '0' >=  d '1' <= &
+  end
+  proc( char8 : d -> bool ) =>: export: isOctDigit
+    d '0' >=  d '7' <= &
+  end
+  proc( char8 : d -> bool ) =>: export: isHexDigit
+    d isDigit
+      d 'A' >= d 'F' <= & |
+      d 'a' >= d 'f' <= & |
+    return
+  end
+  proc( char8 : c -> bool ) =>: export: isUppercase
+    c 'A' >=  c 'Z' <= &
+  end
+  proc( char8 : c -> bool ) =>: export: isLowercase
+    c 'a' >=  c 'z' <= &
+  end
+  proc( char8 : c -> bool ) =>: export: isAlpha
+    c isUppercase c isLowercase |
+  end
+  proc( char8 -> bool ) : alias: export: isLetter isAlpha
+  proc( char8 : c -> bool ) =>: export: isAlphaNum
+    c isDigit c isAlpha | return
+  end
 end
 
 overload: export: -     char8.diff end

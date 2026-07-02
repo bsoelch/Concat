@@ -113,7 +113,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
   0:iSize while $ code .length u< do =:: i ## skip comments and whitespaces
     code i string.charAt =:: c
     ## only update position if char is skipped
-    c char.isWhitespace if
+    c char8.isWhitespace if
       c fileState .currentPos updateFilePos
       i 1:iSize + continue
     end
@@ -163,8 +163,8 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     string.empty Token .Empty return
   end
   code startIndex string.charAt =:: c0
-  c0 char.isDigit or c0 '-' == and
-    code .length startIndex 1 + u> and code startIndex 1 + string.charAt char.isDigit
+  c0 char8.isDigit or c0 '-' == and
+    code .length startIndex 1 + u> and code startIndex 1 + string.charAt char8.isDigit
   end =:: isNumber
   c0 '"' == or c0 '\'' == if
     c0 fileState .currentPos updateFilePos
@@ -219,7 +219,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
     $ =:: i0
   while $ code .length u< do =:: i
     code i string.charAt =:: c
-    c char.isWhitespace or
+    c char8.isWhitespace or
         c '#' == and i 1:iSize + code .length u< and "#+":s code i 1:iSize + string.charAt string.contains if
       isLiteralType ! if
         i i0 u> "identifier contains at least one character" assert
@@ -248,7 +248,7 @@ proc( string : code FileState ptr.mut : fileState -> string Token ) =>: export: 
         code i0 string.charAt '#' != and ## don't split on : in ids starting with #
         i 1:iSize + code .length u< and ## don't split at EOF
         code i 1:iSize - string.charAt ':' != and code i 1:iSize + string.charAt ':' != and ## don't split on ::
-        code i 1:iSize + string.charAt char.isWhitespace ! if ## not followed by space
+        code i 1:iSize + string.charAt char8.isWhitespace ! if ## not followed by space
       code i0 i i0 - string.getSlice =:: idName
       code i string.tail idName
       isLiteralType if
