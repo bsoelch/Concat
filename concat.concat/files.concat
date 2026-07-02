@@ -1,5 +1,4 @@
 import numbers
-import chars
 import string
 
 import "common.concat"
