@@ -41,6 +41,7 @@ true =:: mut: compileGeneratedCode
 string list.empty =:: mut: runArgs
 ## TODO? flag for cleaning up intermediate files
 false =:: mut: runCompiledProgram
+false =:: mut: explicitTarget
 
 proc( -> ) =>: parseArgs
   string.empty =:: mut: outPath0
@@ -157,6 +158,7 @@ proc( -> ) =>: parseArgs
   targetPath
     outPath0 .length 0 != if
       outPath0 sb.appendStr
+      true explicitTarget=
     else
       srcPath sb.asStr iDot string.head sb.appendStr
     end
@@ -319,6 +321,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
     end
   file.close
   prog@ .errors checkErrors
+  prog .mainProcId ? =:: hasMain
   prog freeProgramContext ..drop
   0 =:: mut: retCode
   compileGeneratedCode if
@@ -348,14 +351,21 @@ proc( -> ) =>: main ## TODO check return value of fopen
           "-----------------------------------------":s io.println
         end
         "gcc":s exec.build
-          "-g":s exec.add "-lm":s exec.add
           tmpPath sb.asStr exec.add
-          tmpPath sb.clear
-            libPath sb.appendStr
-            "extern.c":s sb.appendStr
-          tmpPath=
-          tmpPath sb.asStr exec.add
-          linkTo for exec.add end
+          hasMain if
+            tmpPath sb.clear
+              libPath sb.appendStr
+              "extern.c":s sb.appendStr
+            tmpPath=
+            tmpPath sb.asStr exec.add
+            linkTo for exec.add end
+          else
+            "-c":s exec.add
+            explicitTarget ! if ## target not set explicitly
+              targetPath ".o":s sb.appendStr targetPath=
+            end
+          end
+          "-g":s exec.add
           "-o":s exec.add targetPath sb.asStr exec.add
         exec.run exec.check ! if
           false runCompiledProgram=
@@ -374,10 +384,17 @@ proc( -> ) =>: main ## TODO check return value of fopen
           "extern.c":s sb.appendStr
         tmpPath=
         "gcc":s exec.build
-          "-g":s exec.add "-lm":s exec.add
           outPath sb.asStr exec.add
-          tmpPath sb.asStr exec.add
-          linkTo for exec.add end
+          hasMain if
+            tmpPath sb.asStr exec.add
+            linkTo for exec.add end
+          else
+            "-c":s exec.add
+            explicitTarget ! if ## target not set explicitly
+              targetPath ".o":s sb.appendStr targetPath=
+            end
+          end
+          "-g":s exec.add
           "-o":s exec.add targetPath sb.asStr exec.add
         exec.run exec.check ! if
           false runCompiledProgram=
@@ -387,7 +404,10 @@ proc( -> ) =>: main ## TODO check return value of fopen
         end
       break
     end
-    runCompiledProgram if
+    hasMain ! and runCompiledProgram if
+      "cannot run program without a main procedure":s io.print
+      baseName io.println
+    else runCompiledProgram _if
       tmpPath sb.clear
         targetPath sb.asStr '/' string.contains ! if
           "./":s sb.appendStr

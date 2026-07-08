@@ -46,17 +46,20 @@ def runTest(fileName,filePath,*,cctFlags=None):
   outFile=open(outPath,mode="a+b")
   errFile=open(errPath,mode="a+b")
   codePath=basePath
-  retCode=(subprocess.run([
-     concatPath,
-     filePath+fileName,
-     "-l","./lib/",
-     "-o",codePath,
-     *cctFlags
-  ],stdout=outFile,stderr=errFile).returncode==0 and
-  subprocess.run([
-      codePath,
-      *args
-  ],stdin=inFile,stdout=outFile,stderr=errFile).returncode)
+  try:
+    (subprocess.run([
+       concatPath,
+       filePath+fileName,
+       "-l","./lib/",
+       "-o",codePath,
+       *cctFlags
+    ],stdout=outFile,stderr=errFile).returncode==0 and
+    subprocess.run([
+        codePath,
+        *args
+    ],stdin=inFile,stdout=outFile,stderr=errFile).returncode)
+  except Exception as e:
+    errFile.write(bytes(repr(e)+'\n',encoding="utf8"))
   if inFile is not None:
     inFile.close()
   outFile.close()

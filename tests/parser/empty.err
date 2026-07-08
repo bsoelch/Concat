@@ -1,3 +1,1 @@
-/usr/bin/ld: /usr/lib/gcc/x86_64-redhat-linux/15/../../../../lib64/crt1.o: in function `_start':
-(.text+0x1b): undefined reference to `main'
-collect2: Fehler: ld gab 1 als Ende-Status zurück
+PermissionError(13, 'Permission denied')
