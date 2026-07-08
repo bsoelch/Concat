@@ -332,14 +332,9 @@
       <start>(\A|(?&lt;=[[:space:]]))'</start>
       <end>'</end>
       <include>
+        <context ref="def:line-continue"/>
         <context style-ref="char-escape" once-only="true">
           <match>\%{escaped-character}</match>
-        </context>
-        <context once-only="true" extend-parent="false">
-          <match>.</match>
-        </context>
-        <context style-ref="def:error" extend-parent="false">
-          <match>.</match>
         </context>
       </include>
     </context>

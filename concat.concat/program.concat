@@ -312,6 +312,7 @@ union(
         IntConstant : IntConst
       FloatConstant : FloatConst
              string : StringConst
+             string : CharArrayConst
              ProcId : NestedProc
              ProcId : Quotation
           BlockData : Block
@@ -398,6 +399,9 @@ proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpWildCard
 end
 proc( char8 : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpChar
   pos constValue PreOpValue .CharConst PreOperation new return
+end
+proc( string : constValue FilePosition ptr : pos -> PreOperation ) =>: export: preOpChars
+  pos constValue PreOpValue .CharArrayConst PreOperation new return
 end
 proc( i64 : constValue Type : constType FilePosition ptr : pos -> PreOperation ) =>: export: preOpInt
   pos constValue constType IntConstant new PreOpValue .IntConst PreOperation new return
@@ -1016,6 +1020,16 @@ namespace: sb
         constVal sb.appendEscapedChr
         '\'' sb.appendC
       break
+      CharArrayConst .case =:: constVal
+        "char array : '":s sb.appendStr
+        constVal sb.appendEscapedStr
+        '\'' sb.appendC
+      break
+      StringConst .case =:: constVal
+        "string : \"":s sb.appendStr
+        constVal sb.appendEscapedStr
+        '"' sb.appendC
+      break
       IntConst .case =:: constVal
         "int ( " sb.appendS
         constVal .valType  typeContext sb.appendType
@@ -1027,11 +1041,6 @@ namespace: sb
         constVal .valType typeContext sb.appendType
         " ) : " sb.appendS
         constVal .value f64.sbAppend
-      break
-      StringConst .case =:: constVal
-        "string : \"":s sb.appendStr
-        constVal sb.appendEscapedStr
-        '"' sb.appendC
       break
       NestedProc .case =:: procId
         "nested proc : ":s sb.appendStr

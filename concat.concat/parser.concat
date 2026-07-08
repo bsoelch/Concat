@@ -165,11 +165,11 @@ proc(
   value constType pos preOpInt state appendOp
 end
 proc(
-  unicode.Codepoint : char
-  FilePosition ptr : pos
+  char8
+  FilePosition ptr #+pos+#
   ParserState ptr.mut : state
 -> ) =>: appendCharConstant
-  char char8 cast pos preOpChar state appendOp
+  preOpChar state appendOp
 end
 proc( ConstValue : str -> string ) =>: stringConstStr
   ## TODO clarify/ensure that fromBytes does not create copy
@@ -178,21 +178,21 @@ proc( ConstValue : str -> string ) =>: stringConstStr
   end string.fromBytes
 end
 proc(
-  ConstValue : str
+  ConstValue #+str+#
   FilePosition ptr : pos
   ParserState ptr.mut : state
 -> iSize ) =>: appendStringConstant
-  state [] .program =:: program
-  program .errors =:: errors
-  state [] .program .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  idContext .constContext =:: constContext
-  str stringConstStr
-    $ =:: strVal
-  pos preOpString state appendOp
-  strVal .length
+  stringConstStr
+    $ pos preOpString state appendOp
+  .length
 end
-
+proc(
+  string #+chars+#
+  FilePosition ptr : pos
+  ParserState ptr.mut : state
+-> ) =>: appendCharArrayConstant
+  pos preOpChars state appendOp
+end
 
 proc( ParserState ptr.mut : state -> iSize ) =>: opCount
   state [] .parsedOps .length return
@@ -691,27 +691,25 @@ proc(
   token
     fileState [] .wordStart program .errors constContext constants.parseStringConstant ## escape character
     fileState program wordPos =:: opPos
-    ## TODO is check for unicode needed?, source is already utf8 would checking for length 1 be enough
-    ## TODO? allow multi-char character literals (push char8 ... array)
       .Array8 .else
         "expected array8" ..panic
       end string.fromBytes
-      0:iSize utf8.nextCodepoint =:: cp
-    #+nextIndex+# >$ .length u< if
-      "A character literal has to contain exactly one character" sb.copyPtr opPos errors appendError
+      0:iSize utf8.nextCodepoint
+    $1 #+nextIndex+# $3 .length == and $ i32 cast.s 0x7F <= if <<$ ..drop.2
+      ## appendCharConstant
+        i32 cast.s $ 0 < if -_ end char8 cast.u
+      opPos state appendCharConstant
+    else
+      >$ #+nextIndex+# $2 .length == if
+        "codepoint 0x"  sb.copyPtr
+          $1 i32 cast sb.appendX
+          " ('" sb.appendS
+          >$ sb.appendCodepoint
+         "') cannot be encoded as a single character" sb.appendS
+        opPos errors appendWarning
+      else ..drop end
+      opPos state appendCharArrayConstant
     end
-    0x7F =:: maxCodepoint
-    cp i32 cast maxCodepoint > if
-      "codepoint 0x"  sb.copyPtr
-        cp i32 cast sb.appendX
-        " ('" sb.appendS
-        cp sb.appendCodepoint
-       "') cannot be encoded as a single character" sb.appendS
-      opPos errors appendError
-    end
-  ## appendCharConstant
-    cp $ i32 cast 0 < if i32 cast -_ unicode.Codepoint cast end
-  opPos state appendCharConstant
 end
 proc(
   Token : literalType

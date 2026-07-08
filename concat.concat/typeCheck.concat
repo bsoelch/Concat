@@ -716,6 +716,12 @@ proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> string ) =>: popS
   stringValue return
 end
 
+proc( iSize : length TypeContext ptr.mut : typeContext -> Type ) =>: newCharArrayType
+  types.CHAR8
+    types.ArrayType .ARRAY
+    length i64 cast.u types.ArraySize .Int
+  typeContext types.newArrayType
+end
 proc( iSize : length TypeContext ptr.mut : typeContext -> Type ) =>: newStringType
   types.CHAR8
     types.ArrayType .POINTER
@@ -2854,6 +2860,9 @@ proc(
       continue.opLoop
       FloatConst .case =:: const
         const .value ConstValue .Float const .valType op .pos state pushConstant
+      continue.opLoop
+      CharArrayConst .case $ .length =:: charCount
+        wrapStringConst charCount typeContext newCharArrayType op .pos state pushConstant
       continue.opLoop
       StringConst .case $ .length =:: charCount
         wrapStringConst charCount typeContext newStringType op .pos state pushConstant
