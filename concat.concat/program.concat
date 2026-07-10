@@ -349,7 +349,8 @@ union(
           ErrorType : Error
      TypeMemoryInfo : TypeInfo
                   _ : Panic
-             string : Import
+                  _ : Import
+             string : FileImport
              string : LibImport
        CompilerInfo : shadow: CompilerInfo
 ) =:: export: PreOpValue
@@ -577,9 +578,12 @@ proc( string : path bool : isLibFile FilePosition ptr : pos -> PreOperation ) =>
       isLibFile if
         PreOpValue .LibImport
       else
-        PreOpValue .Import
+        PreOpValue .FileImport
       end
   PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpImport
+  pos PreOpValue .Import PreOperation new return
 end
 
 proc( -> OpValue ) =>: export: opValNOP
@@ -1200,7 +1204,10 @@ namespace: sb
       Panic case
         "..panic" sb.appendS
       break
-      Import .case =:: path
+      Import case
+        "import" sb.appendS
+      break
+      FileImport .case =:: path
         "import \"" sb.appendS
         path sb.appendEscapedStr
         '"' sb.appendC

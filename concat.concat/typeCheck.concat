@@ -5786,13 +5786,36 @@ proc(
           op .pos
         state pushConstant
         continue.opLoop
-      Import LibImport .case
+      FileImport LibImport .case
           op .val .LibImport ?
           state [] .currentFile
           op .pos
           program
           state
         parseImportFile
+      continue.opLoop
+      Import case
+        state popTypedValue .else
+          "missing value for import, expected constant" sb.copyPtr op .pos errors appendError
+          continue.opLoop
+        end
+          $ .value .Array8 ? ! if
+            "unexpected value for import location, expected string got: " sb.copyPtr
+              >$ .value typeContext sb.appendConstant
+            op .pos errors appendError
+            continue.opLoop
+          end
+        $ .valType typeContext types.isPointer if ## local import
+          ## 1. resolve part relative to current file location (prevent access to files outside current root folder)
+          ## 2. import file
+          ..drop
+          "postfix style local imports are not yet supported" sb.copyPtr op .pos errors appendError
+        else ## lib import
+          ## 1. resolve file path from lib-path
+          ## 2. import file
+          ..drop
+          "postfix style lib imports are not yet supported" sb.copyPtr op .pos errors appendError
+        end
       continue.opLoop
       CompilerInfo .case =:: compilerInfo
         state isGlobal ! if

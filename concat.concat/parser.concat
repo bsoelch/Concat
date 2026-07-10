@@ -1871,7 +1871,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       params opName opPos state getCompilerOpParam ## :count
       StackModType .DROP opPos preOpStackMod state appendOp
       return
-    else $ "import":s string.eq _if =:: opName
+    else $ "import":s string.eq or $ "import*":s string.eq _if =:: opName
       fileState nextToken
       fileState program wordPos =:: importPos
       .String .if ## local file
@@ -1887,6 +1887,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         >$ sb.appendToken
         " expected identifier or string" sb.appendS
       importPos errors appendError
+      return
+    else $ "*import":s string.eq _if =:: opName
+      fileState program wordPos preOpImport state appendOp
       return
     else $ "using":s string.eq or $ "using:":s string.eq _if =:: opName
       opName "using:":s string.eq =:: isAlias
