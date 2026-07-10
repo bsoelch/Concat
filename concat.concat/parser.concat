@@ -1871,9 +1871,21 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       params opName opPos state getCompilerOpParam ## :count
       StackModType .DROP opPos preOpStackMod state appendOp
       return
-    else $ "import":s string.eq or $ "import*":s string.eq _if =:: opName
+    else $ "import":s string.eq  or $ "import*":s string.eq _if =:: opName
       fileState nextToken
-      fileState program wordPos =:: importPos
+        fileState program wordPos =:: importPos
+        64 sb.create
+          opName "import":s string.eq if
+            "the keyword `" sb.appendS
+            opName sb.appendStr
+            "` will change its behavior in a future version.\n":s sb.appendStr
+          else
+            "the use of `" sb.appendS
+            opName sb.appendStr
+            "` is deprecated and will be removed in a future version.\n":s sb.appendStr
+          end
+          "Use `*import` instead":s sb.appendStr
+        importPos errors appendWarning
       .String .if ## local file
         false importPos state prepareImport
         return
