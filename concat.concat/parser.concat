@@ -2119,13 +2119,62 @@ proc(
   fileName nameContext id.copyString isLibImport pos preOpImportFile state appendOp
 end
 proc(
+  string #+fileName+#
+  FilePosition ptr : pos
+  ProgramContext ptr.mut : program
+  TypeCheckState ptr.mut : typeChecker
+-> stringBuilder ) =>: export: resolveLocalImportPath
+  program [] .progFiles
+    typeChecker [] .currentFile iSize cast.u
+  [] .fileName sb.asStr '/' string.splitLast >$ ..drop #+baseName+#
+    program [] .basePath
+  $ .length $2 .length + $2 .length + 1 + sb.create
+    >$ sb.appendStr
+    >$ sb.appendStr '/' sb.appendC
+    >$ sb.appendStr
+  return
+end
+proc(
+  string : fileName
+  FilePosition ptr : pos
+  ProgramContext ptr.mut : program
+  TypeCheckState ptr.mut : typeChecker
+-> stringBuilder ) =>: export: resolveLibImportPath
+  ## TODO? support multiple libraries
+  program [] .libPath .length fileName .length + ".concat" ..length + sb.create
+    program [] .libPath sb.appendStr
+    fileName sb.appendStr
+    ".concat" sb.appendS
+  return
+end
+proc(
+  stringBuilder
+  bool #+libImport+#
+  FilePosition ptr : pos
+  ProgramContext ptr.mut : program
+  TypeCheckState ptr.mut : typeChecker
+-> ) =>: export: parseImportFile
+  ## ParserState
+    program
+    typeChecker
+    64  BlockInfo list.create
+    PreOperation list.empty
+    0:i32
+    typeChecker [] .currentFile
+    32  ProcId list.create
+  ParserState new =:: mut: parserState
+  #+libImport+# or program [] .inLibFile end pos parserState@ importFile
+  parserState cleanupParserState
+end
+
+proc(
   string : fileName
   bool : isLibImport
   FileId : hostFile
   FilePosition ptr : pos
   ProgramContext ptr.mut : program
   TypeCheckState ptr.mut : typeChecker
--> ) =>: export: parseImportFile
+-> ) =>: export: parseImportFileOld
   ## ParserState
     program
     typeChecker
@@ -2280,6 +2329,7 @@ proc(
       fileState@ program wordPos
     errors appendError
   else
+    state [] .currentFile state [] .typeChecker .currentFile=
     state [] .parsedOps list.asSlice state [] .typeChecker typeCheckGlobalCode
   end
   idContext id.closeScope ! "file scope closed correctly" assert
