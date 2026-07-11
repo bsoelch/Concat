@@ -2345,8 +2345,10 @@ proc(
       fileState@ program wordPos
     errors appendError
   else
-    state [] .currentFile state [] .typeChecker .currentFile=
-    state [] .parsedOps list.asSlice state [] .typeChecker typeCheckGlobalCode
+    state [] .typeChecker [] .currentFile
+      state [] .currentFile state [] .typeChecker .currentFile=
+      state [] .parsedOps list.asSlice state [] .typeChecker typeCheckGlobalCode
+    state [] .typeChecker .currentFile=
   end
   idContext id.closeScope ! "file scope closed correctly" assert
   prevScope idContext id.setScope
