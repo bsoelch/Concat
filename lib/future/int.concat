@@ -1,10 +1,10 @@
-import mem
-import slice
-import optional
-import string
-import list
-import stringBuilder
-import numbers
+"../mem" *import
+"../slice" *import
+"../optional" *import
+"../string" *import
+"../list" *import
+"../stringBuilder" *import
+"../numbers" *import
 
 namespace: int
   iSize ..types.size i32 ..types.size u>= "iSize has at least 32 bits" assert
@@ -2014,4 +2014,4 @@ overload: export: <max>  int.max  end
 overload: export: <umin> int.umin end
 overload: export: <umax> int.umax end
 
-io.print:? if import future/printInt end
+io.print:? if "printInt" *import end

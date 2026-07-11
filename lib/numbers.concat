@@ -1,5 +1,5 @@
-import core/integers
-import core/floats
+"core/integers" *import
+"core/floats" *import
 
 ## TODO? move to core
 proc( char8 ptr.raw : chars iSize : k -> i128 ) =>: static: export: :i128
@@ -29,4 +29,4 @@ proc( char8 ptr.raw : chars iSize : k -> f128 ) =>: static: export: :f128
   sb.asStr ..compiler.error f128.ZERO
 end
 
-import numbers/toStr
+"numbers/toStr" *import

@@ -1,11 +1,11 @@
-import core/itr
-import core/integers
-import core/ptr
+"core/itr" *import
+"core/integers" *import
+"core/ptr" *import
 
-import mem
-import slice
-import optional
-import list
+"mem" *import
+"slice" *import
+"optional" *import
+"list" *import
 
 #+
 arena allocator

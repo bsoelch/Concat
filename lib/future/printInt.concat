@@ -1,5 +1,5 @@
-import print
-import future/int
+"../print" *import
+"int" *import
 
 namespace: int
   proc( int -> ) =>: print

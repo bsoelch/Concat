@@ -1,5 +1,5 @@
 ## math library in pure concat
-import core/floats
+"../core/floats" *import
 
 namespace: f64
   0x0.b17217f7d1cf =:: LOG2_HI

@@ -1,14 +1,14 @@
 ## import the complete standard library
-import array
-import slice
-import chars
-import list
-import map
-import mem
-import print
-import numbers
-import optional
-import string
-import stringBuilder
-import sys
-import unicode
+"array" *import
+"slice" *import
+"chars" *import
+"list" *import
+"map" *import
+"mem" *import
+"print" *import
+"numbers" *import
+"optional" *import
+"string" *import
+"stringBuilder" *import
+"sys" *import
+"unicode" *import

@@ -1,5 +1,5 @@
-import print
-import future/float
+"../print" *import
+"float" *import
 
 namespace: float
   proc( float -> ) =>: print

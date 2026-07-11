@@ -1,5 +1,5 @@
-import file
-import numbers/toStr
+"file" *import
+"numbers/toStr" *import
 
 namespace: io
   proc( char8 : c -> ) =>: export: printC
@@ -343,5 +343,5 @@ namespace: io
   overload: export: printUln printUln8 printUln16 printUln32 printUln64 printUlnZ printUln128 end
 end
 
-int:? if import future/printInt end
-float:? if import future/printFloat end
+int:? if "future/printInt" *import end
+float:? if "future/printFloat" *import end

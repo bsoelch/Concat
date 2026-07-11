@@ -1,5 +1,5 @@
-import mem
-import linux/syscalls
+"../../mem" *import
+"../../linux/syscalls" *import
 
 ## thread implementation on top of linux syscalls
 namespace: sys

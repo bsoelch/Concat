@@ -1,6 +1,6 @@
-import stringBuilder
-import print
-import sys
+"stringBuilder" *import
+"print" *import
+"sys" *import
 
 namespace: args
   enum( DEFAULT EXTENDED SPECIAL IGNORE ) =:: export: HelpLevel

@@ -1,4 +1,4 @@
-import stringBuilder
+"stringBuilder" *import
 
 ## TODO! rewrite unicode library
 char8  slice =:: export: string8

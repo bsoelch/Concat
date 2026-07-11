@@ -1,6 +1,6 @@
-import list
-import stringBuilder
-import mem
+"list" *import
+"stringBuilder" *import
+"mem" *import
 
 namespace: exec
   namespace: RedirectMode
@@ -63,5 +63,5 @@ namespace: exec
   end
 end
 ## TODO conditional compilation depending on target
-import sys/glibc/exec
+"sys/glibc/exec" *import
 ## TODO versions for different targets

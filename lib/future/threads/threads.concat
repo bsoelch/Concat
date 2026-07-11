@@ -1,4 +1,4 @@
-import future/threads/mutex
+"mutex" *import
 namespace: thread
   type : export: ThreadId
   proc( type .with( ..types.size iSize ..types.size u<= ) : auto: T
@@ -9,9 +9,9 @@ namespace: thread
   proc( -> ) : export: exit  
 end
 ..compiler.system.glibc if
-  import future/threads/pthreads
+  "pthreads" *import
 else ..compiler.system.linux _if
-  import future/threads/lthreads
+  "lthreads" *import
 else
   "threads are not supported on this system" ..compiler.error
 end

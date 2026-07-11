@@ -1,6 +1,6 @@
-import optional
-import string
-import stringBuilder
+"optional" *import
+"string" *import
+"stringBuilder" *import
 
 namespace: file
   i32 =:: export: Error
