@@ -2142,8 +2142,18 @@ proc(
     program [] .inLibFile or $ program [] .basePath string.startsWith if "":s else program [] .basePath end
   $ .length $2 .length + $2 .length + 8 + sb.create
     >$ sb.appendStr
-    >$ sb.appendStr '/' sb.appendC
-    >$ sb.appendStr
+    >$ $ .length 0 != if sb.appendStr else ..drop $ .length 1 - >$ .length= end
+    >$
+      while $ "../":s string.startsWith do
+        $1 sb.asStr $ io.println '/' string.lastIndexOf .if
+          >>$ .length= <$ ## cut of last part from parent
+        else
+          break ## no more parts of path available
+        end $1 sb.asStr io.println
+        "../" ..length string.tail
+      end
+      >$ '/' sb.appendC <$
+    sb.appendStr
     ## TODO? do not add extension if file already uses different extension
     $ sb.asStr ".concat":s string.endsWith ! if
       ".concat":s sb.appendStr
