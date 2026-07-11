@@ -1874,7 +1874,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "import":s string.eq  or $ "import*":s string.eq _if =:: opName
       fileState nextToken
         fileState program wordPos =:: importPos
-        64 sb.create
+        false if 64 sb.create
           opName "import":s string.eq if
             "the keyword `" sb.appendS
             opName sb.appendStr
@@ -1885,7 +1885,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             "` is deprecated and will be removed in a future version.\n":s sb.appendStr
           end
           "Use `*import` instead":s sb.appendStr
-        importPos errors appendWarning
+        importPos errors appendWarning end
       .String .if ## local file
         false importPos state prepareImport
         return
@@ -2139,7 +2139,7 @@ proc(
   program [] .progFiles
     typeChecker [] .currentFile iSize cast.u
   [] .fileName sb.asStr '/' string.splitLast >$ ..drop #+baseName+#
-    program [] .basePath
+    program [] .inLibFile or $ program [] .basePath string.startsWith if "":s else program [] .basePath end
   $ .length $2 .length + $2 .length + 8 + sb.create
     >$ sb.appendStr
     >$ sb.appendStr '/' sb.appendC
