@@ -2140,10 +2140,14 @@ proc(
     typeChecker [] .currentFile iSize cast.u
   [] .fileName sb.asStr '/' string.splitLast >$ ..drop #+baseName+#
     program [] .basePath
-  $ .length $2 .length + $2 .length + 1 + sb.create
+  $ .length $2 .length + $2 .length + 8 + sb.create
     >$ sb.appendStr
     >$ sb.appendStr '/' sb.appendC
     >$ sb.appendStr
+    ## TODO? do not add extension if file already uses different extension
+    $ sb.asStr ".concat":s string.endsWith ! if
+      ".concat":s sb.appendStr
+    end
   return
 end
 proc(
