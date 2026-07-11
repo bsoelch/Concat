@@ -2145,11 +2145,11 @@ proc(
     >$ $ .length 0 != if sb.appendStr else ..drop $ .length 1 - >$ .length= end
     >$
       while $ "../":s string.startsWith do
-        $1 sb.asStr $ io.println '/' string.lastIndexOf .if
+        $1 sb.asStr '/' string.lastIndexOf .if
           >>$ .length= <$ ## cut of last part from parent
         else
           break ## no more parts of path available
-        end $1 sb.asStr io.println
+        end
         "../" ..length string.tail
       end
       >$ '/' sb.appendC <$
