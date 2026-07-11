@@ -1,0 +1,37 @@
+import print
+import future/int
+
+namespace: int
+  proc( int -> ) =>: print
+    0 sb.create
+      >$ int.sbAppend
+      $ sb.asStr io.print
+    sb.free ..drop
+  end
+  proc( int -> ) =>: println
+    0 sb.create
+      >$ int.sbAppend
+      '\n' sb.appendC
+      $ sb.asStr io.print
+    sb.free ..drop
+  end
+  proc( int -> ) =>: printX
+    0 sb.create
+      >$ int.sbAppendX
+      $ sb.asStr io.print
+    sb.free ..drop
+  end
+  proc( int -> ) =>: printXln
+    0 sb.create
+      >$ int.sbAppendX
+      '\n' sb.appendC
+      $ sb.asStr io.print
+    sb.free ..drop
+  end
+end
+namespace: io
+  overload: export: merge: print int.print end
+  overload: export: merge: println int.println end
+  overload: export: merge: printX int.printX end
+  overload: export: merge: printXln int.printXln end
+end

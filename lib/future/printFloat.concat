@@ -1,0 +1,37 @@
+import print
+import future/float
+
+namespace: float
+  proc( float -> ) =>: print
+    0 sb.create
+      >$ float.sbAppend
+      $ sb.asStr io.print
+    sb.free ..drop
+  end
+  proc( float -> ) =>: println
+    0 sb.create
+      >$ float.sbAppend
+      '\n' sb.appendC
+      $ sb.asStr io.print
+    sb.free ..drop
+  end
+  proc( float -> ) =>: printX
+    0 sb.create
+      >$ float.sbAppendX
+      $ sb.asStr io.print
+    sb.free ..drop
+  end
+  proc( float -> ) =>: printXln
+    0 sb.create
+      >$ float.sbAppendX
+      '\n' sb.appendC
+      $ sb.asStr io.print
+    sb.free ..drop
+  end
+end
+namespace: io
+  overload: export: merge: print float.print end
+  overload: export: merge: println float.println end
+  overload: export: merge: printX float.printX end
+  overload: export: merge: printXln float.printXln end
+end
