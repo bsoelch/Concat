@@ -877,6 +877,9 @@ proc(
 end
 
 ## vvv port generator_qbe l 1090 vvv
+## typeDeclarations (indicirect port will probably work better)
+## 1. typedefs for struct-bodies + declaration for aligned wrappers
+## 2. definitions for composite types & proc-pointers
 
 ## TODO: appendGenericArg -> sbAppendGenericArg
 
