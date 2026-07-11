@@ -1,6 +1,6 @@
-import core/ptr
-import core/optional
-import core/itr
+"ptr" *import
+"optional" *import
+"itr" *import
 
 ( type : T -> type ) =>: export: slice
   struct( T ptr.raw : data iSize : length )

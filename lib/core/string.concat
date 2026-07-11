@@ -1,6 +1,6 @@
-import core/ptr
-import core/char8
-import core/slice
+"ptr" *import
+"char8" *import
+"slice" *import
 
 char8 slice =:: export: string
 

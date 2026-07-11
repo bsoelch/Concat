@@ -1,4 +1,4 @@
-import core/type
+"type" *import
 
 ( type : V -> type ) =>: export: optional
   V type.isPointerValue if

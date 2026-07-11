@@ -1,7 +1,6 @@
-import core/i32
-import core/i64
-import core/ptr
-import core/type
+"integers" *import
+"ptr" *import
+"type" *import
 
 namespace: intItr
   ( type.integer : I -> type ) =>: export: rangeItr

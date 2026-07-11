@@ -1,6 +1,6 @@
-import core/bool
-import core/i32
-import core/parseNumber
+"bool" *import
+"i32" *import
+"parseNumber" *import
 namespace: i64
   -0x8000_0000_0000_0000:i64 =:: export: MIN
    0x7fff_ffff_ffff_ffff:i64 =:: export: MAX

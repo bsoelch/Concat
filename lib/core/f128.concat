@@ -1,6 +1,6 @@
-import core/integers
-import core/f32
-import core/f64
+"integers" *import
+"f32" *import
+"f64" *import
 
 struct(
   i64 : low

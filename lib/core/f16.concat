@@ -1,8 +1,8 @@
-import core/parseNumber
-import core/bool
-import core/i16
+"parseNumber" *import
+"bool" *import
+"i16" *import
 
-import core/f32
+"f32" *import
 
 f16:? ! if ## no native definition for f16
   ( i16 ) =:: export: f16 ## wrap in struct to prevent direct cast from/to i16
@@ -19,9 +19,9 @@ else
   proc( char8 ptr.raw iSize -> f16 ) : alias: export: static: :f16 ..builtIn.parse.f16
 end
 ..builtIn.convert.f16.f32:? ! if
-  import core/f64
-  import core/i64
-  import core/f32
+  "f64" *import
+  "i64" *import
+  "f32" *import
   namespace: f16
     ## TODO test conversion functions
     proc( f16 -> f32 ) =>: export: asF32
@@ -257,7 +257,7 @@ namespace: f16
     proc( f16 f16 -> f16 ) : export: alias: add ..builtIn.add.f16
     proc( f16 f16 -> f16 ) : export: alias: sub ..builtIn.sub.f16
   else
-    import core/f32
+    "f32" *import
     proc( f16 : a f16 : b -> f16 ) =>: export: add
       a asF32 b asF32 f32.add fromF32
     end
@@ -268,7 +268,7 @@ namespace: f16
   ..builtIn.mul.f16:? if
     proc( f16 f16 -> f16 ) : export: alias: mul ..builtIn.mul.f16
   else
-    import core/f32
+    "f32" *import
     proc( f16 : a f16 : b -> f16 ) =>: export: mul
       a asF32 b asF32 f32.mul fromF32
     end
@@ -276,7 +276,7 @@ namespace: f16
   ..builtIn.div.f16:? if
     proc( f16 f16 -> f16 ) : export: alias: div ..builtIn.div.f16
   else
-    import core/f32
+    "f32" *import
     proc( f16 : a f16 : b -> f16 ) =>: export: div
       a asF32 b asF32 f32.div fromF32
     end
@@ -285,7 +285,7 @@ namespace: f16
     proc( f16 f16 -> bool ) : export: alias: eq ..builtIn.eq.f16
     proc( f16 f16 -> bool ) : export: alias: ne ..builtIn.ne.f16
   else
-    import core/i32
+    "i32" *import
     proc( f16 : a f16 : b -> bool ) =>: export: eq
       a isNaN or b isNaN if false return end
       a b cmp 0 ==
@@ -301,7 +301,7 @@ namespace: f16
     proc( f16 f16 -> bool ) : export: alias: ge ..builtIn.ge.f16
     proc( f16 f16 -> bool ) : export: alias: gt ..builtIn.gt.f16
   else
-    import core/i32
+    "i32" *import
     proc( f16 : a f16 : b -> bool ) =>: export: lt
       a isNaN or b isNaN if false return end
       a b cmp 0 <

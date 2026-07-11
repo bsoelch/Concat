@@ -1,4 +1,4 @@
-import core/type
+"type" *import
 namespace: std.default
   proc( type.namedEnum : auto: E
     E : a

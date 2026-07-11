@@ -1,8 +1,8 @@
-import core/f16
-import core/f32
-import core/f64
-import core/f80
-import core/f128
+"f16" *import
+"f32" *import
+"f64" *import
+"f80" *import
+"f128" *import
 
 namespace: number
   overload: export: isNormal

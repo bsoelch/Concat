@@ -1,5 +1,5 @@
-import core/type
-import core/string
+"type" *import
+"string" *import
 namespace: types
   namespace: struct
     proc( type.namedStruct : auto: T type.quotation : auto: Q T : val Q  : static: f -> ) =>: export: forEach

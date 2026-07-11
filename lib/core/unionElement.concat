@@ -1,5 +1,5 @@
-import core/type
-import core/optional
+"type" *import
+"optional" *import
 
 namespace: unionElement
   proc( type.unionElement : auto: U  U -> U ) =>: prepareIf end

@@ -1,7 +1,7 @@
-import core/integers
-import core/floats
-import core/string
-import core/f80
+"integers" *import
+"floats" *import
+"string" *import
+"f80" *import
 
 namespace: number
   union(

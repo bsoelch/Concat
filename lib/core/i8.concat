@@ -1,5 +1,5 @@
-import core/bool
-import core/parseNumber
+"bool" *import
+"parseNumber" *import
 namespace: i8
   -0x80:i8 i8 =: export: MIN
    0x7f:i8 i8 =: export: MAX

@@ -1,4 +1,4 @@
-import core/f64
+"f64" *import
 struct(
   i64 : mantissa ## the highest bit of mantissa is expected to be 1
   i32 : exponent
