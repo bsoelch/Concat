@@ -2,6 +2,7 @@
 "ptr" *import
 "type" *import
 
+
 namespace: intItr
   ( type.integer : I -> type ) =>: export: rangeItr
     struct( I : i I : limit )
