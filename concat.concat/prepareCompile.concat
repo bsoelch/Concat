@@ -4,11 +4,11 @@ common first step for all compiler back-ends:
 * limit size of stack-values
 * explicitly create temporary variables for copy/output arguments
 +#
-import arenaAlloc
+'arenaAlloc' *import
 
-import "program.concat"
-import "measure.concat"
-import "branchTree.concat"
+"program" *import
+"measure" *import
+"branchTree" *import
 using id.IdentifierFlag
 
 union(

@@ -1,8 +1,8 @@
-import slice
-import stringBuilder
-import numbers
+'slice' *import
+'stringBuilder' *import
+'numbers' *import
 
-import "asm/asm.concat"
+"asm" *import
 
 namespace: AMD64
   using asm.

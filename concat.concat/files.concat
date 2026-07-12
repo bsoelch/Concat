@@ -1,7 +1,7 @@
-import numbers
-import string
+'numbers' *import
+'string' *import
 
-import "common.concat"
+"common" *import
 
 struct( FilePosition : mut: currentPos FilePosition : mut: wordStart ) =:: export: FileState
 

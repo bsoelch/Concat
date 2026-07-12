@@ -1,11 +1,11 @@
-import list
-import string
-import file
+'list' *import
+'string' *import
+'file' *import
 
-import "program.concat"
-import "measure.concat"
-import "asm/asm.concat"
-import "asm/amd64.concat"
+"program" *import
+"measure" *import
+"asm/asm" *import
+"asm/amd64" *import
 
 enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER BITS32 BITS64 V128 ) =:: ValType
 namespace: ValType

@@ -1,20 +1,19 @@
-import list
-import slice
-import string
-import numbers
-import unicode
-import file
+'list' *import
+'slice' *import
+'string' *import
+'numbers' *import
+'unicode' *import
+'file' *import
 
-import "program.concat"
-import "files.concat"
-import "names.concat"
-import "types.concat"
-import "constants.concat"
-import "codeBlocks.concat"
-import "identifiers.concat"
-import "builtIns.concat"
+"program" *import
+"files" *import
+"names" *import
+"types" *import
+"constants" *import
+"codeBlocks" *import
+"identifiers" *import
+"builtIns" *import
 
-## import "interpreter/operators.concat"
 using id.IdentifierFlag
 
 struct(
@@ -2245,7 +2244,7 @@ proc(
   program .idContext id.importFile
 end
 
-import "typeCheck.concat"
+"typeCheck" *import
 proc(
   stringBuilder : rootFile
   string : libPath

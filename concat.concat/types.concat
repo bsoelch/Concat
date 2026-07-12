@@ -1,13 +1,13 @@
-import core
-import list
-import slice
-import string
-import stringBuilder
-import arenaAlloc
-import map
+'core' *import
+'list' *import
+'slice' *import
+'string' *import
+'stringBuilder' *import
+'arenaAlloc' *import
+'map' *import
 
-import "names.concat"
-import "constants.concat"
+"names" *import
+"constants" *import
 
 namespace: types
   enum(

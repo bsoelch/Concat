@@ -1,13 +1,13 @@
-import string
-import stringBuilder
-import map
-import optional
+'string' *import
+'stringBuilder' *import
+'map' *import
+'optional' *import
 
-import "constants.concat"
-import "types.concat"
-import "names.concat"
-import "codeBlocks.concat"
-import "common.concat"
+"constants" *import
+"types" *import
+"names" *import
+"codeBlocks" *import
+"common" *import
 
 enum(
   TYPE

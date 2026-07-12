@@ -1,6 +1,6 @@
-import string
+'string' *import
 
-import "program.concat"
+"program" *import
 
 enum(
  ## arithmetic

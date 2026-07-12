@@ -1,16 +1,16 @@
-import sys
-import string
-import numbers
-import exec
-import file
-import argParse
+'sys' *import
+'string' *import
+'numbers' *import
+'exec' *import
+'file' *import
+'argParse' *import
 
-import "parser.concat"
-import "typeCheck.concat"
-import "usageAnalysis.concat"
-import "prepareCompile.concat"
-import "generator_qbe.concat"
-import "generator_asm.concat"
+"parser" *import
+"typeCheck" *import
+"usageAnalysis" *import
+"prepareCompile" *import
+"generator_qbe" *import
+"generator_asm" *import
 
 sb.empty =:: mut: srcPath
 sb.empty =:: mut: targetPath

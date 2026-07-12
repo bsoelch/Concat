@@ -1,7 +1,7 @@
-import stringBuilder
+'stringBuilder' *import
 
-import "common.concat"
-import "names.concat"
+"common" *import
+"names" *import
 
 enum(
   UNKNOWN

@@ -1,5 +1,5 @@
-import "constants.concat"
-import "builtIns.concat"
+"../constants" *import
+"../builtIns" *import
 
 namespace: interpreter
   proc( ConstValue : a -> bool bool ) =>: export: constAsBool

@@ -1,9 +1,9 @@
-import string
-import file
+'string' *import
+'file' *import
 
-import "program.concat"
-import "measure.concat"
-import "branchTree.concat"
+"program" *import
+"measure" *import
+"branchTree" *import
 
 "cct_":s =:: CONCAT_PREFIX
 "cct_type":s =:: TYPE_PREFIX

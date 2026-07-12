@@ -1,10 +1,10 @@
 #+
 common code for code generators
 +#
-import map
+'map' *import
 
-import "program.concat"
-import "types.concat"
+"program" *import
+"types" *import
 
 proc(
   Type : declared

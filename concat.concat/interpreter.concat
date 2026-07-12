@@ -1,11 +1,11 @@
-import map
-import arenaAlloc
-import string
-import print
+'map' *import
+'arenaAlloc' *import
+'string' *import
+'print' *import
 
-import "interpreter/operators.concat"
-import "identifiers.concat"
-import "program.concat"
+"interpreter/operators" *import
+"identifiers" *import
+"program" *import
 
 namespace: interpreter
   struct(

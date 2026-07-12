@@ -1,12 +1,12 @@
-import numbers
-import string
-import stringBuilder
-import list
-import optional
-import arenaAlloc
+'numbers' *import
+'string' *import
+'stringBuilder' *import
+'list' *import
+'optional' *import
+'arenaAlloc' *import
 
-import "files.concat"
-import "common.concat"
+"files" *import
+"common" *import
 
 struct( NamespaceId : current NamespaceImportId : imports ) =:: export: NamespaceInfo
 
