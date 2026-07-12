@@ -89,6 +89,9 @@ namespace: sb
   proc( stringBuilder : buffer i64 : auto: k char8 k ptr : str -> stringBuilder ) =>: export: appendS
     buffer char8 list cast str list.appendP stringBuilder cast return
   end
+  proc( stringBuilder : buffer string : str -> stringBuilder ) =>: export: prependStr
+    buffer char8 list cast str char8 slice cast 0 list.insertSlice stringBuilder cast return
+  end
   proc( stringBuilder : buffer string : str -> stringBuilder ) =>: export: appendStr
     buffer char8 list cast str char8 slice cast list.appendSlice stringBuilder cast return
   end

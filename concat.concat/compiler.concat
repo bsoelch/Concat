@@ -178,6 +178,7 @@ proc( -> ) =>: parseArgs
   iSlash .if =:: slashIndex
     srcPath sb.asStr slashIndex 1:iSize + string.head string.copy
   else
+    srcPath "./":s sb.prependStr srcPath=
     "./":s
   end basePath=
   libPaths .length 0 == if

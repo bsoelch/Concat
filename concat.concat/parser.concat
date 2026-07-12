@@ -2139,10 +2139,8 @@ proc(
   program [] .progFiles
     typeChecker [] .currentFile iSize cast.u
   [] .fileName sb.asStr '/' string.splitLast >$ ..drop #+baseName+#
-    program [] .inLibFile or $ program [] .basePath string.startsWith if "":s else program [] .basePath end
-  $ .length $2 .length + $2 .length + 8 + sb.create
+  $1 .length $1 .length + 8 + sb.create
     >$ sb.appendStr
-    >$ $ .length 0 != if sb.appendStr else ..drop $ .length 1 - >$ .length= end
     >$
       while $ "../":s string.startsWith do
         $1 sb.asStr '/' string.lastIndexOf .if
