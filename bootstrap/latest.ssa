@@ -797,8 +797,8 @@ export data $cct_file_dError_dINVALID__FILE = align 4 {w 8}
 export data $cct_f64_dSQRT2 = align 8 {d 4609047870845172685}
 export data $cct_AMD64_dop_dIDIV = align 4 {w 8}
 data $cct_0_FtargetPath = align 8 {l 0,l 0,l 0}
-data $cct_62_FArgumentId_dVALUE__SHIFT = align 8 {l 1}
 export data $cct_types_dCHAR8 = align 8 {b 1,z 7,b 2}
+data $cct_62_FArgumentId_dVALUE__SHIFT = align 8 {l 1}
 export data $cct_AMD64_dreg_dR11 = align 4 {w 176}
 export data $cct_types_dintLiteral_dS54 = align 8 {b 12,z 7,b 3}
 export data $cct_f16_dSQRT2 = align 2 {h 15784}
@@ -831,9 +831,9 @@ export data $cct_types_dctype_dFLOAT = align 8 {b 14,z 7,b 4}
 export data $cct_i16_dUMAX = align 4 {w 65535}
 export data $cct_AMD64_dop_dJA = align 4 {w 23}
 export data $cct_types_dintLiteral_dU24 = align 8 {b 6,z 7,b 3}
-data $cct_49_Fsb_dMAX__STRING__CHARS__HEAD = align 8 {l 24}
 export data $cct_i32_dUMAX = align 8 {l 4294967295}
 export data $cct_f128_dINF__LOW = align 8 {l 0}
+data $cct_49_Fsb_dMAX__STRING__CHARS__HEAD = align 8 {l 24}
 export data $cct_id_dFLAG__MERGEABLE = align 4 {w 32768}
 data $cct_49_Fsb_dMAX__STRING__CHARS = align 8 {l 36}
 data $cct_69_FAMD64_d__asmContext = align 8 {z 25,b 0}
@@ -868,13 +868,13 @@ data $cct_0_FDumpPhases_dPRE__COMPILER = align 2 {h 16}
 export data $cct_unicode_dUNKNOWN__CODEPOINT = align 4 {w -4096}
 export data $cct_f32_dMIN = align 4 {s -8388609}
 data $cct_0_FtmpPath = align 8 {l 0,l 0,l 0}
-export data $cct___VERSION__ = align 8 {l 693}
+export data $cct___VERSION__ = align 8 {l 695}
 export data $cct_AMD64_dop_dPUSH = align 4 {w 39}
 export data $cct_f64_dMIN = align 8 {d -4503599627370497}
 export data $cct_AMD64_dop_dSETGE = align 4 {w 31}
 export data $cct_f16_dMIN = align 2 {h -1025}
-data $cct_63_FVariableUse_dTYPE__MASK = align 8 {l 3}
 export data $cct_number_dMIN__BASE = align 4 {w 2}
+data $cct_63_FVariableUse_dTYPE__MASK = align 8 {l 3}
 export data $cct_AMD64_dreg_dR8 = align 4 {w 128}
 export data $cct_types_dintLiteral_dS8 = align 8 {b 1,z 7,b 3}
 data $cct_63_FVariableUse_dTYPE__READ = align 8 {l 0}
@@ -905,8 +905,8 @@ export data $cct_types_dintLiteral_dS64 = align 8 {b 14,z 7,b 3}
 export data $cct_types_dctype_dCHAR = align 8 {b 2,z 7,b 4}
 export data $cct_id_dNAMESPACE__IMPORT__NONE = align 4 {w -1}
 export data $cct_id_dFLAG__EXTERN = align 4 {w 4}
-data $cct_63_FVariableUse_dTYPE__LABEL = align 8 {l 2}
 export data $cct_optimizerFlags_dALLOW__INLINE__SMALL = align 1 {b 0}
+data $cct_63_FVariableUse_dTYPE__LABEL = align 8 {l 2}
 export data $cct_AMD64_dop_dSUB = align 4 {w 5}
 data $cct_66_FSTRING__CONST__NAME = align 8 {l $cctI_ptr231}
 export data $cct_types_dprimitive_dI32 = align 8 {b 3,z 7,b 2}
@@ -922,10 +922,10 @@ export data $cct_types_dintLiteral_dU16 = align 8 {b 5,z 7,b 3}
 export data $cct_id_dFLAG__IS__READ = align 4 {w 262144}
 data $cct_47_FCMP__TYPE__NAMES = align 8 {l $cctI_ptr234,l 4,l $cctI_ptr235,l 4,l $cctI_ptr236,l 5,l $cctI_ptr237,l 2,l $cctI_ptr238,l 2,l $cctI_ptr239,l 2,l $cctI_ptr240,l 2,l $cctI_ptr241,l 2,l $cctI_ptr242,l 2,l $cctI_ptr243,l 3,l $cctI_ptr244,l 3,l $cctI_ptr245,l 3,l $cctI_ptr246,l 3}
 export data $cct_i32_dMAX = align 4 {w 2147483647}
-data $cct_0_Fverbose = align 1 {b 0}
 export data $cct_types_dctype_dSTRUCT = align 8 {b 16,z 7,b 4}
-data $cct_58_FMAX__STATIC__RECURSION = align 4 {w 64}
+data $cct_0_Fverbose = align 1 {b 0}
 export data $cct_types_dMAX__SIGNED__INT = align 8 {l 9223372036854775807}
+data $cct_58_FMAX__STATIC__RECURSION = align 4 {w 64}
 export data $cct_f128_dHALF = align 8 {l 0,l 4611123068473966592}
 data $cct_0_FbasePath = align 8 {l $cctI_ptr247,l 0}
 data $cct_62_FArgumentId_dTAG__NAME = align 8 {l 0}
@@ -1005,8 +1005,8 @@ data $cct_53_Ftypes_dSimpleTypeInfo_dMANY = align 1 {b 255}
 export data $cct_f32_dSHIFTED__EXP__MASK = align 4 {w 255}
 export data $cct_f128_dEXP__MASK__HI = align 8 {l 9223090561878065152}
 export data $cct_f128_dINF__HI = align 8 {l 9223090561878065152}
-data $cct_58_FIfBlockFlags_difBranchTerminates = align 4 {w 4}
 export data $cct_f64_dSHIFTED__EXP__MASK = align 8 {l 2047}
+data $cct_58_FIfBlockFlags_difBranchTerminates = align 4 {w 4}
 export data $cct_types_dintLiteral_dU7 = align 8 {b 0,z 7,b 3}
 export data $cct_AMD64_dreg_dRAX = align 4 {w 0}
 export data $cct_FILE__POS__UNKNOWN = align 8 {l $cctI_ptr295,l 0,w -1,w 0,w 0}
@@ -1026,8 +1026,8 @@ export data $cct_f128_dTWO = align 8 {l 0,l 4611686018427387904}
 export data $cct_false = align 1 {b 0}
 export data $cct_AMD64_dop_dSETLE = align 4 {w 30}
 export data $cct_unicode_dMIN__CODEPOINT = align 4 {w 0}
-data $cct_53_Ftypes_dCOMP__FLAG__CONTAINS__LITERAL = align 4 {w 32}
 export data $cct___EXPERIMENTAL__ = align 1 {b 0}
+data $cct_53_Ftypes_dCOMP__FLAG__CONTAINS__LITERAL = align 4 {w 32}
 export data $cct_f64_dEXP__SHIFT = align 4 {w 52}
 data $cct_53_Ftypes_dPTR__ALIGN = align 8 {l 8}
 export data $cct_AMD64_dreg_dRSP = align 4 {w 64}
@@ -1048,8 +1048,8 @@ data $cct_66_FCONCAT__PREFIX = align 8 {l $cctI_ptr297}
 export data $cct_i128_dZERO = align 8 {l 0,l 0}
 export data $cct_f64_dEXP__MASK = align 8 {l 9218868437227405312}
 export data $cct_FILE__ID__BUILT__IN = align 4 {w -2}
-data $cct_67_FAMD64__BIN__OPS = align 4 {w 4,w 5,w 6,w 11,w 12,w 13,w 8,w 8,w 7,w 7}
 export data $cct_id_dFLAG__MUTABLE = align 4 {w 1}
+data $cct_67_FAMD64__BIN__OPS = align 4 {w 4,w 5,w 6,w 11,w 12,w 13,w 8,w 8,w 7,w 7}
 data $cct_62_FMAX__DISPLAY__SIGNATURES = align 4 {w 5}
 export data $cct_f16_dEXP__MASK = align 2 {h 31744}
 data $cct_0_FlibPath = align 8 {l $cctI_ptr298,l 0}
@@ -1084,14 +1084,14 @@ data $cct_53_Ftypes_dCOMP__FLAG__EMPTY = align 4 {w 2}
 export data $cct_AMD64_dreg_dFLOAT__REGISTERS = align 8 {l $cctI_ptr300,l 16}
 export data $cct_types_dctype_dVOID = align 8 {b 0,z 7,b 4}
 export data $cct_file_dError_dNONE = align 4 {w 0}
-data $cct_58_FSWITCH__BLOCK__INFO__NAME = align 8 {l $cctI_ptr301}
 export data $cct___INCREMENT__VERSION__ = align 1 {b 1}
+data $cct_58_FSWITCH__BLOCK__INFO__NAME = align 8 {l $cctI_ptr301}
 export data $cct_f128_dNAN__HI = align 8 {l 9223372036854775807}
 export data $cct_AMD64_dreg_dR14 = align 4 {w 224}
 export data $cct_types_dintLiteral_dU53 = align 8 {b 11,z 7,b 3}
 data $cct_53_Ftypes_dSimpleTypeInfo_dEMPTY = align 1 {b 0}
-data $cct_57_FNO__BUNDLE = align 8 {l -1}
 export data $cct_f32_dMANTISSA__BITS = align 4 {w 23}
+data $cct_57_FNO__BUNDLE = align 8 {l -1}
 export data $cct_AMD64_dop_dSETGT = align 4 {w 32}
 export data $cct_f64_dMANTISSA__BITS = align 8 {l 52}
 data $cct_54_Fmap_dNO__NODE = align 4 {w 0}
@@ -1308,7 +1308,7 @@ data $cctI_constRef190 = {z 12,b 0}
 data $cctI_constRef191 = {z 24,b 0} 
 data $cctI_constRef192 = {b 1,z 15,b 1} 
 data $cctI_constRef193 = {b 0,z 15,b 1} 
-data $cctI_constRef194 = {l 693,z 8,b 3} 
+data $cctI_constRef194 = {l 695,z 8,b 3} 
 data $cctI_constRef195 = {z 4,b 0,z 3,b 1} 
 data $cctI_constRef196 = {z 4,b 0,z 3,b 1} 
 data $cctI_constRef197 = {z 4,b 0,z 3,b 1} 
@@ -398724,7 +398724,7 @@ storel %a3, %l920_88_state
 %l1869_37_opPos =l alloc8 8
 %l1870_14_tmp_X643uv =l alloc8 16
 %l1871_32_tmp_X643uw =l alloc8 26
-%l1873_69_opName =l alloc8 16
+%l1873_42_opName =l alloc8 16
 %l1874_17_tmp_X643ux =l alloc8 16
 %l1874_17_tmp_X643uy =l alloc8 17
 %l1875_39_importPos =l alloc8 8
@@ -398740,7 +398740,7 @@ storel %a3, %l920_88_state
 %l1891_24_tmp_X643v6 =l alloc8 17
 %l1893_7_tmp_X643v7 =l alloc8 17
 %l1893_7_tmp_X643v8 =l alloc8 17
-%l1902_42_opName =l alloc8 16
+%l1902_69_opName =l alloc8 16
 %l1903_33_tmp_X643v9 =l alloc8 26
 %l1905_66_opName =l alloc8 16
 %l1906_39_isAlias =l alloc4 4
@@ -407131,87 +407131,79 @@ call $cct_45_FappendOp (l %s2273,l %l1871_32_tmp_X643uw)
 dbgloc 1872,7 ## ./concat.concat/parser.concat
 ret %l928_27_tmp_X643q2
 @label_4921 ## label
-dbgloc 1873,21 ## ./concat.concat/parser.concat
+dbgloc 1873,22 ## ./concat.concat/parser.concat
 %s2274 =l copy $cctI_local1520
-dbgloc 1873,23 ## ./concat.concat/parser.concat
+dbgloc 1873,24 ## ./concat.concat/parser.concat
 %s2275 =ub call $cct_string_deq (:struct1 %s2274,:struct1 %l928_27_tmp_X643q3)
 dbgloc 1873,34 ## ./concat.concat/parser.concat
-jnz %s2275, @label_4923, @next374
+jnz %s2275, @next374, @label_4924
 @next374 ## jump-if
-dbgloc 1873,49 ## ./concat.concat/parser.concat
-%s2276 =l copy $cctI_local1521
-dbgloc 1873,51 ## ./concat.concat/parser.concat
-%s2277 =ub call $cct_string_deq (:struct1 %s2276,:struct1 %l928_27_tmp_X643q3)
-dbgloc 1873,61 ## ./concat.concat/parser.concat
-jnz %s2277, @next375, @label_4924
-@next375 ## jump-if
-@label_4923 ## label
-dbgloc 1873,69 ## ./concat.concat/parser.concat
-blit %l928_27_tmp_X643q3, %l1873_69_opName,16
+dbgloc 1873,42 ## ./concat.concat/parser.concat
+blit %l928_27_tmp_X643q3, %l1873_42_opName,16
 dbgloc 1874,7 ## ./concat.concat/parser.concat
-%s2278 =l loadl %l920_55_fileState
+%s2276 =l loadl %l920_55_fileState
 dbgloc 1874,17 ## ./concat.concat/parser.concat
 dbgloc 1874,17 ## ./concat.concat/parser.concat
 dbgloc 1874,17 ## ./concat.concat/parser.concat
-call $cct_nextToken (l %l1874_17_tmp_X643uy,l %l1874_17_tmp_X643ux,l %s2278,:struct1 %l928_27_tmp_X643q2)
+call $cct_nextToken (l %l1874_17_tmp_X643uy,l %l1874_17_tmp_X643ux,l %s2276,:struct1 %l928_27_tmp_X643q2)
 dbgloc 1874,17 ## ./concat.concat/parser.concat
 dbgloc 1874,17 ## ./concat.concat/parser.concat
 dbgloc 1875,9 ## ./concat.concat/parser.concat
-%s2279 =l loadl %l920_55_fileState
+%s2277 =l loadl %l920_55_fileState
 dbgloc 1875,19 ## ./concat.concat/parser.concat
-%s2280 =l loadl %l921_25_program
+%s2278 =l loadl %l921_25_program
 dbgloc 1875,27 ## ./concat.concat/parser.concat
-%s2281 =l call $cct_45_FwordPos (l %s2280,l %s2279)
+%s2279 =l call $cct_45_FwordPos (l %s2278,l %s2277)
 dbgloc 1875,39 ## ./concat.concat/parser.concat
-storel %s2281, %l1875_39_importPos
+storel %s2279, %l1875_39_importPos
 dbgloc 1876,9 ## ./concat.concat/parser.concat
-%s2282 =w copy 64
+%s2280 =w copy 64
 dbgloc 1876,12 ## ./concat.concat/parser.concat
-%s2283 =:struct93 call $cct_sb_dcreate32 (w %s2282)
+%s2281 =:struct93 call $cct_sb_dcreate32 (w %s2280)
 dbgloc 1877,11 ## ./concat.concat/parser.concat
 dbgloc 1877,27 ## ./concat.concat/parser.concat
-%s2284 =l copy $cctI_local1522
+%s2282 =l copy $cctI_local1521
 dbgloc 1877,29 ## ./concat.concat/parser.concat
-%s2285 =ub call $cct_string_deq (:struct1 %s2284,:struct1 %l1873_69_opName)
+%s2283 =ub call $cct_string_deq (:struct1 %s2282,:struct1 %l1873_42_opName)
 dbgloc 1877,39 ## ./concat.concat/parser.concat
-jnz %s2285, @next376, @label_4927
-@next376 ## jump-if
+jnz %s2283, @next375, @label_4927
+@next375 ## jump-if
 dbgloc 1878,13 ## ./concat.concat/parser.concat
-%s2286 =l copy $cctI_ptr2403
+%s2284 =l copy $cctI_ptr2403
 dbgloc 1878,29 ## ./concat.concat/parser.concat
-%s2287 =:struct93 call $cct_38_Fsb_dappendS_X58B (l %s2286,:struct93 %s2283)
+%s2285 =:struct93 call $cct_38_Fsb_dappendS_X58B (l %s2284,:struct93 %s2281)
 dbgloc 1879,13 ## ./concat.concat/parser.concat
 dbgloc 1879,20 ## ./concat.concat/parser.concat
-%s2288 =:struct93 call $cct_sb_dappendStr (:struct1 %l1873_69_opName,:struct93 %s2287)
+%s2286 =:struct93 call $cct_sb_dappendStr (:struct1 %l1873_42_opName,:struct93 %s2285)
 dbgloc 1880,65 ## ./concat.concat/parser.concat
-%s2289 =l copy $cctI_local1523
+%s2287 =l copy $cctI_local1522
 dbgloc 1880,67 ## ./concat.concat/parser.concat
-%s2290 =:struct93 call $cct_sb_dappendStr (:struct1 %s2289,:struct93 %s2288)
+%s2288 =:struct93 call $cct_sb_dappendStr (:struct1 %s2287,:struct93 %s2286)
 jmp @label_4928
 @label_4927 ## label
 dbgloc 1882,13 ## ./concat.concat/parser.concat
-%s2291 =l copy $cctI_ptr2404
+%s2289 =l copy $cctI_ptr2404
 dbgloc 1882,28 ## ./concat.concat/parser.concat
-%s2292 =:struct93 call $cct_38_Fsb_dappendS_X5815 (l %s2291,:struct93 %s2283)
+%s2290 =:struct93 call $cct_38_Fsb_dappendS_X5815 (l %s2289,:struct93 %s2281)
 dbgloc 1883,13 ## ./concat.concat/parser.concat
 dbgloc 1883,20 ## ./concat.concat/parser.concat
-%s2293 =:struct93 call $cct_sb_dappendStr (:struct1 %l1873_69_opName,:struct93 %s2292)
+%s2291 =:struct93 call $cct_sb_dappendStr (:struct1 %l1873_42_opName,:struct93 %s2290)
 dbgloc 1884,74 ## ./concat.concat/parser.concat
-%s2294 =l copy $cctI_local1524
+%s2292 =l copy $cctI_local1523
 dbgloc 1884,76 ## ./concat.concat/parser.concat
-%s2295 =:struct93 call $cct_sb_dappendStr (:struct1 %s2294,:struct93 %s2293)
+%s2293 =:struct93 call $cct_sb_dappendStr (:struct1 %s2292,:struct93 %s2291)
 @label_4928 ## label
-%s2296 =l phi @next376 %s2290, @label_4927 %s2295
+%s2294 =l phi @next375 %s2288, @label_4927 %s2293
 dbgloc 1886,35 ## ./concat.concat/parser.concat
-%s2297 =l copy $cctI_local1525
+%s2295 =l copy $cctI_local1524
 dbgloc 1886,37 ## ./concat.concat/parser.concat
-%s2298 =:struct93 call $cct_sb_dappendStr (:struct1 %s2297,:struct93 %s2296)
+%s2296 =:struct93 call $cct_sb_dappendStr (:struct1 %s2295,:struct93 %s2294)
 dbgloc 1887,9 ## ./concat.concat/parser.concat
-%s2299 =l loadl %l1875_39_importPos
+%s2297 =l loadl %l1875_39_importPos
 dbgloc 1887,19 ## ./concat.concat/parser.concat
-%s2300 =l loadl %l922_23_errors
+%s2298 =l loadl %l922_23_errors
 dbgloc 1887,26 ## ./concat.concat/parser.concat
-call $cct_appendWarning (l %s2300,l %s2299,:struct93 %s2298)
+call $cct_appendWarning (l %s2298,l %s2297,:struct93 %s2296)
 dbgloc 1888,7 ## ./concat.concat/parser.concat
 dbgloc 1888,15 ## ./concat.concat/parser.concat
 dbgloc 1888,15 ## ./concat.concat/parser.concat
@@ -407226,25 +407218,25 @@ dbgloc 1888,15 ## ./concat.concat/parser.concat
 blit %l1888_15_tmp_X642p, %l1888_15_tmp_X643v0, 17
 dbgloc 1888,15 ## ./concat.concat/parser.concat
 dbgloc 1888,15 ## ./concat.concat/parser.concat
-%s2301 =ub call $cct_28_FunionElement_dcheck_X5847 (l %l1888_15_tmp_X643v0)
+%s2299 =ub call $cct_28_FunionElement_dcheck_X5847 (l %l1888_15_tmp_X643v0)
 dbgloc 1888,15 ## ./concat.concat/parser.concat
-jnz %s2301, @next378, @label_4931
-@next378 ## jump-if
+jnz %s2299, @next377, @label_4931
+@next377 ## jump-if
 dbgloc 1888,15 ## ./concat.concat/parser.concat
 dbgloc 1888,15 ## ./concat.concat/parser.concat
 dbgloc 1888,15 ## ./concat.concat/parser.concat
 blit %l1888_15_tmp_X642p, %l1888_15_tmp_X643v1, 17
 dbgloc 1888,15 ## ./concat.concat/parser.concat
 dbgloc 1888,15 ## ./concat.concat/parser.concat
-%s2302 =:struct1 call $cct_28_FunionElement_dget_X5826 (l %l1888_15_tmp_X643v1)
+%s2300 =:struct1 call $cct_28_FunionElement_dget_X5826 (l %l1888_15_tmp_X643v1)
 dbgloc 1889,9 ## ./concat.concat/parser.concat
-%s2303 =w copy 0
+%s2301 =w copy 0
 dbgloc 1889,15 ## ./concat.concat/parser.concat
-%s2304 =l loadl %l1875_39_importPos
+%s2302 =l loadl %l1875_39_importPos
 dbgloc 1889,25 ## ./concat.concat/parser.concat
-%s2305 =l loadl %l920_88_state
+%s2303 =l loadl %l920_88_state
 dbgloc 1889,31 ## ./concat.concat/parser.concat
-call $cct_45_FprepareImport (l %s2305,l %s2304,ub %s2303,:struct1 %s2302)
+call $cct_45_FprepareImport (l %s2303,l %s2302,ub %s2301,:struct1 %s2300)
 dbgloc 1890,9 ## ./concat.concat/parser.concat
 ret %l1874_17_tmp_X643ux
 @label_4931 ## label
@@ -407271,25 +407263,25 @@ dbgloc 1891,24 ## ./concat.concat/parser.concat
 blit %l1891_24_tmp_X642q, %l1891_24_tmp_X643v5, 17
 dbgloc 1891,24 ## ./concat.concat/parser.concat
 dbgloc 1891,24 ## ./concat.concat/parser.concat
-%s2306 =ub call $cct_28_FunionElement_dcheck_X5848 (l %l1891_24_tmp_X643v5)
+%s2304 =ub call $cct_28_FunionElement_dcheck_X5848 (l %l1891_24_tmp_X643v5)
 dbgloc 1891,24 ## ./concat.concat/parser.concat
-jnz %s2306, @next379, @label_4935
-@next379 ## jump-if
+jnz %s2304, @next378, @label_4935
+@next378 ## jump-if
 dbgloc 1891,24 ## ./concat.concat/parser.concat
 dbgloc 1891,24 ## ./concat.concat/parser.concat
 dbgloc 1891,24 ## ./concat.concat/parser.concat
 blit %l1891_24_tmp_X642q, %l1891_24_tmp_X643v6, 17
 dbgloc 1891,24 ## ./concat.concat/parser.concat
 dbgloc 1891,24 ## ./concat.concat/parser.concat
-%s2307 =:struct1 call $cct_28_FunionElement_dget_X5827 (l %l1891_24_tmp_X643v6)
+%s2305 =:struct1 call $cct_28_FunionElement_dget_X5827 (l %l1891_24_tmp_X643v6)
 dbgloc 1892,9 ## ./concat.concat/parser.concat
-%s2308 =w copy 1
+%s2306 =w copy 1
 dbgloc 1892,14 ## ./concat.concat/parser.concat
-%s2309 =l loadl %l1875_39_importPos
+%s2307 =l loadl %l1875_39_importPos
 dbgloc 1892,24 ## ./concat.concat/parser.concat
-%s2310 =l loadl %l920_88_state
+%s2308 =l loadl %l920_88_state
 dbgloc 1892,30 ## ./concat.concat/parser.concat
-call $cct_45_FprepareImport (l %s2310,l %s2309,ub %s2308,:struct1 %s2307)
+call $cct_45_FprepareImport (l %s2308,l %s2307,ub %s2306,:struct1 %s2305)
 dbgloc 1892,44 ## ./concat.concat/parser.concat
 ret %l1874_17_tmp_X643ux
 @label_4935 ## label
@@ -407303,44 +407295,52 @@ dbgloc 1893,7 ## ./concat.concat/parser.concat
 call $cct_28_FunionElement_delseVal_X5820 (l %l1893_7_tmp_X643v8,l %l1893_7_tmp_X643v7)
 dbgloc 1893,7 ## ./concat.concat/parser.concat
 dbgloc 1894,7 ## ./concat.concat/parser.concat
-%s2311 =w copy 64
+%s2309 =w copy 64
 dbgloc 1894,10 ## ./concat.concat/parser.concat
-%s2312 =:struct93 call $cct_sb_dcreate32 (w %s2311)
+%s2310 =:struct93 call $cct_sb_dcreate32 (w %s2309)
 dbgloc 1895,9 ## ./concat.concat/parser.concat
-%s2313 =l copy $cctI_ptr2405
+%s2311 =l copy $cctI_ptr2405
 dbgloc 1895,34 ## ./concat.concat/parser.concat
-%s2314 =:struct93 call $cct_38_Fsb_dappendS_X581F (l %s2313,:struct93 %s2312)
+%s2312 =:struct93 call $cct_38_Fsb_dappendS_X581F (l %s2311,:struct93 %s2310)
 dbgloc 1896,9 ## ./concat.concat/parser.concat
 dbgloc 1896,16 ## ./concat.concat/parser.concat
-%s2315 =:struct93 call $cct_sb_dappendStr (:struct1 %l1873_69_opName,:struct93 %s2314)
+%s2313 =:struct93 call $cct_sb_dappendStr (:struct1 %l1873_42_opName,:struct93 %s2312)
 dbgloc 1897,9 ## ./concat.concat/parser.concat
-%s2316 =w copy 58
+%s2314 =w copy 58
 dbgloc 1897,13 ## ./concat.concat/parser.concat
-%s2317 =:struct93 call $cct_sb_dappendC (sb %s2316,:struct93 %s2315)
+%s2315 =:struct93 call $cct_sb_dappendC (sb %s2314,:struct93 %s2313)
 dbgloc 1898,12 ## ./concat.concat/parser.concat
-%s2318 =:struct93 call $cct_sb_dappendToken (l %l1893_7_tmp_X643v8,:struct93 %s2317)
+%s2316 =:struct93 call $cct_sb_dappendToken (l %l1893_7_tmp_X643v8,:struct93 %s2315)
 dbgloc 1899,9 ## ./concat.concat/parser.concat
-%s2319 =l copy $cctI_ptr2406
+%s2317 =l copy $cctI_ptr2406
 dbgloc 1899,42 ## ./concat.concat/parser.concat
-%s2320 =:struct93 call $cct_38_Fsb_dappendS_X5822 (l %s2319,:struct93 %s2318)
+%s2318 =:struct93 call $cct_38_Fsb_dappendS_X5822 (l %s2317,:struct93 %s2316)
 dbgloc 1900,7 ## ./concat.concat/parser.concat
-%s2321 =l loadl %l1875_39_importPos
+%s2319 =l loadl %l1875_39_importPos
 dbgloc 1900,17 ## ./concat.concat/parser.concat
-%s2322 =l loadl %l922_23_errors
+%s2320 =l loadl %l922_23_errors
 dbgloc 1900,24 ## ./concat.concat/parser.concat
-call $cct_appendError (l %s2322,l %s2321,:struct93 %s2320)
+call $cct_appendError (l %s2320,l %s2319,:struct93 %s2318)
 dbgloc 1901,7 ## ./concat.concat/parser.concat
 ret %l1874_17_tmp_X643ux
 @label_4924 ## label
-dbgloc 1902,22 ## ./concat.concat/parser.concat
-%s2323 =l copy $cctI_local1526
-dbgloc 1902,24 ## ./concat.concat/parser.concat
-%s2324 =ub call $cct_string_deq (:struct1 %s2323,:struct1 %l928_27_tmp_X643q3)
+dbgloc 1902,21 ## ./concat.concat/parser.concat
+%s2321 =l copy $cctI_local1525
+dbgloc 1902,23 ## ./concat.concat/parser.concat
+%s2322 =ub call $cct_string_deq (:struct1 %s2321,:struct1 %l928_27_tmp_X643q3)
 dbgloc 1902,34 ## ./concat.concat/parser.concat
+jnz %s2322, @label_4937, @next379
+@next379 ## jump-if
+dbgloc 1902,49 ## ./concat.concat/parser.concat
+%s2323 =l copy $cctI_local1526
+dbgloc 1902,51 ## ./concat.concat/parser.concat
+%s2324 =ub call $cct_string_deq (:struct1 %s2323,:struct1 %l928_27_tmp_X643q3)
+dbgloc 1902,61 ## ./concat.concat/parser.concat
 jnz %s2324, @next380, @label_4938
 @next380 ## jump-if
-dbgloc 1902,42 ## ./concat.concat/parser.concat
-blit %l928_27_tmp_X643q3, %l1902_42_opName,16
+@label_4937 ## label
+dbgloc 1902,69 ## ./concat.concat/parser.concat
+blit %l928_27_tmp_X643q3, %l1902_69_opName,16
 dbgloc 1903,7 ## ./concat.concat/parser.concat
 %s2325 =l loadl %l920_55_fileState
 dbgloc 1903,17 ## ./concat.concat/parser.concat
@@ -408692,12 +408692,12 @@ data $cctI_local1516 = align 8 {l $cctI_ptr2516,l 6}
 data $cctI_local1517 = align 8 {l $cctI_ptr2517,l 6}
 data $cctI_local1518 = align 8 {l $cctI_ptr2518,l 7}
 data $cctI_local1519 = align 8 {l $cctI_ptr2519,l 6}
-data $cctI_local1520 = align 8 {l $cctI_ptr2520,l 6}
-data $cctI_local1521 = align 8 {l $cctI_ptr2521,l 7}
-data $cctI_local1522 = align 8 {l $cctI_ptr2522,l 6}
-data $cctI_local1523 = align 8 {l $cctI_ptr2523,l 48}
-data $cctI_local1524 = align 8 {l $cctI_ptr2524,l 57}
-data $cctI_local1525 = align 8 {l $cctI_ptr2525,l 21}
+data $cctI_local1520 = align 8 {l $cctI_ptr2520,l 7}
+data $cctI_local1521 = align 8 {l $cctI_ptr2521,l 6}
+data $cctI_local1522 = align 8 {l $cctI_ptr2522,l 48}
+data $cctI_local1523 = align 8 {l $cctI_ptr2523,l 57}
+data $cctI_local1524 = align 8 {l $cctI_ptr2524,l 21}
+data $cctI_local1525 = align 8 {l $cctI_ptr2525,l 6}
 data $cctI_local1526 = align 8 {l $cctI_ptr2526,l 7}
 data $cctI_local1527 = align 8 {l $cctI_ptr2527,l 5}
 data $cctI_local1528 = align 8 {l $cctI_ptr2528,l 6}
@@ -438830,12 +438830,12 @@ data $cctI_ptr2516 = {b 46,b 46,b 115,b 119,b 97,b 112}
 data $cctI_ptr2517 = {b 46,b 46,b 100,b 114,b 111,b 112}
 data $cctI_ptr2518 = {b 46,b 46,b 100,b 114,b 111,b 112,b 46}
 data $cctI_ptr2519 = {b 46,b 46,b 100,b 114,b 111,b 112}
-data $cctI_ptr2520 = {b 105,b 109,b 112,b 111,b 114,b 116}
-data $cctI_ptr2521 = {b 105,b 109,b 112,b 111,b 114,b 116,b 42}
-data $cctI_ptr2522 = {b 105,b 109,b 112,b 111,b 114,b 116}
-data $cctI_ptr2523 = {b 96,b 32,b 119,b 105,b 108,b 108,b 32,b 99,b 104,b 97,b 110,b 103,b 101,b 32,b 105,b 116,b 115,b 32,b 98,b 101,b 104,b 97,b 118,b 105,b 111,b 114,b 32,b 105,b 110,b 32,b 97,b 32,b 102,b 117,b 116,b 117,b 114,b 101,b 32,b 118,b 101,b 114,b 115,b 105,b 111,b 110,b 46,b 10}
-data $cctI_ptr2524 = {b 96,b 32,b 105,b 115,b 32,b 100,b 101,b 112,b 114,b 101,b 99,b 97,b 116,b 101,b 100,b 32,b 97,b 110,b 100,b 32,b 119,b 105,b 108,b 108,b 32,b 98,b 101,b 32,b 114,b 101,b 109,b 111,b 118,b 101,b 100,b 32,b 105,b 110,b 32,b 97,b 32,b 102,b 117,b 116,b 117,b 114,b 101,b 32,b 118,b 101,b 114,b 115,b 105,b 111,b 110,b 46,b 10}
-data $cctI_ptr2525 = {b 85,b 115,b 101,b 32,b 96,b 42,b 105,b 109,b 112,b 111,b 114,b 116,b 96,b 32,b 105,b 110,b 115,b 116,b 101,b 97,b 100}
+data $cctI_ptr2520 = {b 105,b 109,b 112,b 111,b 114,b 116,b 42}
+data $cctI_ptr2521 = {b 105,b 109,b 112,b 111,b 114,b 116}
+data $cctI_ptr2522 = {b 96,b 32,b 119,b 105,b 108,b 108,b 32,b 99,b 104,b 97,b 110,b 103,b 101,b 32,b 105,b 116,b 115,b 32,b 98,b 101,b 104,b 97,b 118,b 105,b 111,b 114,b 32,b 105,b 110,b 32,b 97,b 32,b 102,b 117,b 116,b 117,b 114,b 101,b 32,b 118,b 101,b 114,b 115,b 105,b 111,b 110,b 46,b 10}
+data $cctI_ptr2523 = {b 96,b 32,b 105,b 115,b 32,b 100,b 101,b 112,b 114,b 101,b 99,b 97,b 116,b 101,b 100,b 32,b 97,b 110,b 100,b 32,b 119,b 105,b 108,b 108,b 32,b 98,b 101,b 32,b 114,b 101,b 109,b 111,b 118,b 101,b 100,b 32,b 105,b 110,b 32,b 97,b 32,b 102,b 117,b 116,b 117,b 114,b 101,b 32,b 118,b 101,b 114,b 115,b 105,b 111,b 110,b 46,b 10}
+data $cctI_ptr2524 = {b 85,b 115,b 101,b 32,b 96,b 42,b 105,b 109,b 112,b 111,b 114,b 116,b 96,b 32,b 105,b 110,b 115,b 116,b 101,b 97,b 100}
+data $cctI_ptr2525 = {b 105,b 109,b 112,b 111,b 114,b 116}
 data $cctI_ptr2526 = {b 42,b 105,b 109,b 112,b 111,b 114,b 116}
 data $cctI_ptr2527 = {b 117,b 115,b 105,b 110,b 103}
 data $cctI_ptr2528 = {b 117,b 115,b 105,b 110,b 103,b 58}
