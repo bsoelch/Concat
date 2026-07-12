@@ -1,6 +1,6 @@
-"i32" *import
-"i64" *import
-"type" *import
+"i32" import
+"i64" import
+"type" import
 namespace: ptr
   proc( type : auto: T iSize : auto: k T k ptr : _ -> iSize ) =>: export: length
     k

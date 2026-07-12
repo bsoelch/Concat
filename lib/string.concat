@@ -1,7 +1,7 @@
-"core/string" *import
+"core/string" import
 
-"slice" *import
-"mem" *import
+"slice" import
+"mem" import
 
 namespace: string
   ## TODO? sperate type for owned/mutable fixed-size string

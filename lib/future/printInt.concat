@@ -1,5 +1,5 @@
-"../print" *import
-"int" *import
+"../print" import
+"int" import
 
 namespace: int
   proc( int -> ) =>: print

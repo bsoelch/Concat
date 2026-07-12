@@ -1,9 +1,9 @@
-"i128" *import
-"f128" *import
-"f16" *import
-"char8" *import
-"char16" *import
-"char32" *import
+"i128" import
+"f128" import
+"f16" import
+"char8" import
+"char16" import
+"char32" import
 namespace: type
   proc( type type -> bool ) : export: alias: equals ..types.equals
   proc( type type -> bool ) =>: notEquals

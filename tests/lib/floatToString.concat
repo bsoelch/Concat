@@ -1,5 +1,5 @@
-'numbers' *import
-'print' *import
+'numbers' import
+'print' import
 
 proc( -> ) =>: main
   0 sb.create

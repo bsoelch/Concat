@@ -1,12 +1,12 @@
-'stringBuilder' *import
+'stringBuilder' import
 
-"common" *import
-"constants" *import
-"codeBlocks" *import
-"identifiers" *import
+"common" import
+"constants" import
+"codeBlocks" import
+"identifiers" import
 type : export: ProgramContext
 type : export: ProcFlags
-"builtIns" *import
+"builtIns" import
 
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification

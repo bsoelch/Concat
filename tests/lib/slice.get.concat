@@ -1,5 +1,5 @@
-'slice' *import
-'list' *import
+'slice' import
+'list' import
 proc( -> ) =>: main
   { 4 3 2 1 } slice.wrap
     $ -1 slice.get optional.isEmpty "out of bounds get returns empty" assert

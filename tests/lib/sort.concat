@@ -1,5 +1,5 @@
-'stringBuilder' *import
-'print' *import
+'stringBuilder' import
+'print' import
 
 proc( char8 : a char8 : b i32 : C -> i32 ) =>: cmp
   a i32 cast.u b i32 cast.u -

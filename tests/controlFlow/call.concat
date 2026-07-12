@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 
 proc( i32 i32 -> i32 i32 ) =>: divMod
   ..over ..over % =:: mod / mod return

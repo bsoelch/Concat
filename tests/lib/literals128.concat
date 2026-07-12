@@ -1,4 +1,4 @@
-'numbers' *import
+'numbers' import
 
 proc( -> ) =>: main
   "0":i128 0 i128.fromU64 i128.eq "0" assert

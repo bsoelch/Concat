@@ -1,8 +1,8 @@
-'slice' *import
-'stringBuilder' *import
-'numbers' *import
+'slice' import
+'stringBuilder' import
+'numbers' import
 
-"../common" *import
+"../common" import
 namespace: asm
   i32 =:: export: OpCode
   ( char8 ptr.raw iSize -> OpCode ) : alias: export: :OpCode :i32

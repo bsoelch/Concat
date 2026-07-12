@@ -1,6 +1,6 @@
-"../array" *import
-"../slice" *import
-"syscalls" *import
+"../array" import
+"../slice" import
+"syscalls" import
 
 ## XXX? change bit order in chunkInfo? bit 0 <-> cell 0
 ## XXX? make allocator independent of concrete mmap implementation

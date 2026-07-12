@@ -1,8 +1,8 @@
-"parseNumber" *import
-"bool" *import
-"i64" *import
+"parseNumber" import
+"bool" import
+"i64" import
 
-"f32" *import
+"f32" import
 
 namespace: f64
   proc( f64 -> i64 ) =>: export: bits

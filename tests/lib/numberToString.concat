@@ -1,5 +1,5 @@
-'print' *import
-'numbers' *import ## :i128 / :f128
+'print' import
+'numbers' import ## :i128 / :f128
 
 proc( -> ) =>: main
   3.1415:f16 io.println

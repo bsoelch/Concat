@@ -1,9 +1,9 @@
-"core/itr" *import
-"core/slice" *import
+"core/itr" import
+"core/slice" import
 
-"array" *import
-"mem" *import
-"optional" *import
+"array" import
+"mem" import
+"optional" import
 
 namespace: slice
   proc( type : auto: T T slice : src -> T slice.mut ) =>: copySlice

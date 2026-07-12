@@ -1,5 +1,5 @@
-"i8" *import
-"i16" *import
-"i32" *import
-"i64" *import
-"i128" *import
+"i8" import
+"i16" import
+"i32" import
+"i64" import
+"i128" import

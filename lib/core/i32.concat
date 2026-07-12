@@ -1,5 +1,5 @@
-"bool" *import
-"parseNumber" *import
+"bool" import
+"parseNumber" import
 namespace: i32
   -0x8000_0000 i32 =: export: MIN
    0x7fff_ffff i32 =: export: MAX

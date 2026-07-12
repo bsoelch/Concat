@@ -1,7 +1,7 @@
-'arenaAlloc' *import
+'arenaAlloc' import
 
-"program" *import
-"branchTree" *import
+"program" import
+"branchTree" import
 using id.IdentifierFlag
 
 iSize =:: VariableUse ## use low two bits for type (Read,Write,Label) and remaining bits for location

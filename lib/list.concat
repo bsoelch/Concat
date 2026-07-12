@@ -1,7 +1,7 @@
-"mem" *import
-"slice" *import
-"optional" *import
-"array" *import
+"mem" import
+"slice" import
+"optional" import
+"array" import
 
 ## TODO? allow implicity conversion from list -> slice
 

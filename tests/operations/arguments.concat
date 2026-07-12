@@ -1,5 +1,5 @@
-'print' *import
-'sys' *import
+'print' import
+'sys' import
 
 proc( -> ) =>: main
   0:i64 while ..dup sys.argc < do

@@ -1,7 +1,7 @@
-'numbers' *import
-'string' *import
+'numbers' import
+'string' import
 
-"common" *import
+"common" import
 
 struct( FilePosition : mut: currentPos FilePosition : mut: wordStart ) =:: export: FileState
 

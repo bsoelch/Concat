@@ -1,4 +1,4 @@
-'arenaAlloc' *import
+'arenaAlloc' import
 
 0 =:: mut: valCount
 0 =:: mut: valId

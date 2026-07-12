@@ -1,4 +1,4 @@
-"../core/floats" *import
+"../core/floats" import
 
 namespace: c
   proc.c( ..ctype.double -> ..ctype.double ) : extern: floor

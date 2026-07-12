@@ -1,6 +1,6 @@
-'future/int' *import
-'stringBuilder' *import
-'print' *import
+'future/int' import
+'stringBuilder' import
+'print' import
 proc( -> ) =>: main "1'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000'00000_00000":s 0 int.parse .Ok <unwrap> =:: i
   0 sb.create
     i int.copy int.sbAppend

@@ -1,13 +1,13 @@
-'core' *import
-'list' *import
-'slice' *import
-'string' *import
-'stringBuilder' *import
-'arenaAlloc' *import
-'map' *import
+'core' import
+'list' import
+'slice' import
+'string' import
+'stringBuilder' import
+'arenaAlloc' import
+'map' import
 
-"names" *import
-"constants" *import
+"names" import
+"constants" import
 
 namespace: types
   enum(

@@ -1,4 +1,4 @@
-'slice' *import
+'slice' import
 i32 =:: u32
 0 u32 cast =:: A
 1 u32 cast =:: B

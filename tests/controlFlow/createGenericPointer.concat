@@ -1,4 +1,4 @@
-'mem' *import
+'mem' import
 proc( iSize : auto: k char8 k ptr : p -> char8 k ptr ) =>: strDup
   k char8 mem.alloc =:: M
   M p k mem.copy char8 k ptr cast! return

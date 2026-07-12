@@ -1,5 +1,5 @@
-"../print" *import
-"float" *import
+"../print" import
+"float" import
 
 namespace: float
   proc( float -> ) =>: print

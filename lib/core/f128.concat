@@ -1,6 +1,6 @@
-"integers" *import
-"f32" *import
-"f64" *import
+"integers" import
+"f32" import
+"f64" import
 
 struct(
   i64 : low

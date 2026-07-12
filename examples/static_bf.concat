@@ -1,8 +1,8 @@
 #+
 Compile-time Brainfuck interpreter
 +#
-'stringBuilder' *import
-'list' *import
+'stringBuilder' import
+'list' import
 
 proc( i64 : ip string : code -> i64 ) =>: skipLoop
   1 =:: mut: n

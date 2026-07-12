@@ -1,13 +1,13 @@
-'string' *import
-'stringBuilder' *import
-'map' *import
-'optional' *import
+'string' import
+'stringBuilder' import
+'map' import
+'optional' import
 
-"constants" *import
-"types" *import
-"names" *import
-"codeBlocks" *import
-"common" *import
+"constants" import
+"types" import
+"names" import
+"codeBlocks" import
+"common" import
 
 enum(
   TYPE

@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 
 proc( -> ) =>: main
   10'000'000'000'000'000'000:i64 =:: x

@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 
 proc( type.namedStruct : auto: T  T -> ) =>: printStructBody
   @{

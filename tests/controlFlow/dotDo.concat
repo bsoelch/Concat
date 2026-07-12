@@ -1,5 +1,5 @@
-'optional' *import
-'print' *import
+'optional' import
+'print' import
 
 proc( i32 i32 : bound -> i32 optional ) =>: less
   $ bound < if

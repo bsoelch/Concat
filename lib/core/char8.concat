@@ -1,4 +1,4 @@
-"bool" *import
+"bool" import
 namespace: char8
   proc( char8 char8 -> i32 ) =>: export: diff
     >$ i32 cast.u >$ i32 cast.u -

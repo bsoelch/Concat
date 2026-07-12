@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 
 union(
   i32 : Int

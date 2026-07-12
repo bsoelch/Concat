@@ -1,7 +1,7 @@
-"integers" *import
-"floats" *import
-"string" *import
-"f80" *import
+"integers" import
+"floats" import
+"string" import
+"f80" import
 
 namespace: number
   union(

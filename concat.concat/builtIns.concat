@@ -1,6 +1,6 @@
-'string' *import
+'string' import
 
-"program" *import
+"program" import
 
 enum(
  ## arithmetic

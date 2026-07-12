@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 proc( -> i64 ) =>: anInt
   12345678987654321 return
 end

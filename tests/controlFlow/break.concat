@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 proc( -> i32 ) =>: inline.never: getLimit
   5
 end

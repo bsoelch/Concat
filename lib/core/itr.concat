@@ -1,6 +1,6 @@
-"integers" *import
-"ptr" *import
-"type" *import
+"integers" import
+"ptr" import
+"type" import
 
 
 namespace: intItr

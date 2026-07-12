@@ -1,9 +1,9 @@
-'string' *import
-'file' *import
+'string' import
+'file' import
 
-"program" *import
-"measure" *import
-"branchTree" *import
+"program" import
+"measure" import
+"branchTree" import
 
 ## TODO? make prefix customizable
 "cct_" =:: CONCAT_PREFIX

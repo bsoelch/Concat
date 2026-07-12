@@ -1,5 +1,5 @@
-"int" *import
-"../numbers" *import
+"int" import
+"../numbers" import
 
 namespace: float
   iSize =:: export: ExpData
@@ -79,7 +79,7 @@ namespace: float
       a .magnitude int.bitLength Precision.fromBits
     end
   end
-  "../print" *import
+  "../print" import
   proc( float iSize : precBits -> float ) =>: export: setPrecision
     precBits RoundingMode .HALF_EVEN roundTo
     $ .magnitude int.bitLength precBits - =:: delta
@@ -712,4 +712,4 @@ overload: export: <round> float.round  end
 overload: export: <floor> float.floor  end
 overload: export: <ceil>  float.ceil  end
 
-io.print:? if "printFloat" *import end
+io.print:? if "printFloat" import end

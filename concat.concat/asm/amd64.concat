@@ -1,8 +1,8 @@
-'slice' *import
-'stringBuilder' *import
-'numbers' *import
+'slice' import
+'stringBuilder' import
+'numbers' import
 
-"asm" *import
+"asm" import
 
 namespace: AMD64
   using asm.

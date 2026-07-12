@@ -1,11 +1,11 @@
-'list' *import
-'string' *import
-'file' *import
+'list' import
+'string' import
+'file' import
 
-"program" *import
-"measure" *import
-"asm/asm" *import
-"asm/amd64" *import
+"program" import
+"measure" import
+"asm/asm" import
+"asm/amd64" import
 
 enum( EMPTY BOOL I8 I16 I32 I64 F16 F32 F64 POINTER PROC_POINTER BITS32 BITS64 V128 ) =:: ValType
 namespace: ValType

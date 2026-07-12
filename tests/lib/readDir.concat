@@ -1,6 +1,6 @@
-'file' *import
-'print' *import
-'list' *import
+'file' import
+'print' import
+'list' import
 
 proc( -> ) =>: main
   "./tests/":s file.OpenMode .DIR file.open

@@ -1,11 +1,11 @@
-'map' *import
-'arenaAlloc' *import
-'string' *import
-'print' *import
+'map' import
+'arenaAlloc' import
+'string' import
+'print' import
 
-"interpreter/operators" *import
-"identifiers" *import
-"program" *import
+"interpreter/operators" import
+"identifiers" import
+"program" import
 
 namespace: interpreter
   struct(

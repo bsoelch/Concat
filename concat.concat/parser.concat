@@ -1,18 +1,18 @@
-'list' *import
-'slice' *import
-'string' *import
-'numbers' *import
-'unicode' *import
-'file' *import
+'list' import
+'slice' import
+'string' import
+'numbers' import
+'unicode' import
+'file' import
 
-"program" *import
-"files" *import
-"names" *import
-"types" *import
-"constants" *import
-"codeBlocks" *import
-"identifiers" *import
-"builtIns" *import
+"program" import
+"files" import
+"names" import
+"types" import
+"constants" import
+"codeBlocks" import
+"identifiers" import
+"builtIns" import
 
 using id.IdentifierFlag
 
@@ -2244,7 +2244,7 @@ proc(
   program .idContext id.importFile
 end
 
-"typeCheck" *import
+"typeCheck" import
 proc(
   stringBuilder : rootFile
   string : libPath

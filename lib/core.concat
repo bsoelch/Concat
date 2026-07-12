@@ -1,36 +1,36 @@
 #+
 core library files, included by default
 +#
-"core/bool" *import
-"core/i8" *import
-"core/i16" *import
-"core/i32" *import
-"core/i64" *import
-"core/i128" *import
-"core/char8" *import
-"core/char16" *import
-"core/char32" *import
-"core/f16" *import
-"core/f32" *import
-"core/f64" *import
-"core/f128" *import
-"core/ptr" *import
-"core/type" *import
+"core/bool" import
+"core/i8" import
+"core/i16" import
+"core/i32" import
+"core/i64" import
+"core/i128" import
+"core/char8" import
+"core/char16" import
+"core/char32" import
+"core/f16" import
+"core/f32" import
+"core/f64" import
+"core/f128" import
+"core/ptr" import
+"core/type" import
 
-"core/equality" *import
-"core/staticLiterals" *import
-"core/parseNumber" *import
+"core/equality" import
+"core/staticLiterals" import
+"core/parseNumber" import
 
-"core/system" *import
+"core/system" import
 
-"core/itr" *import
-"core/unionElement" *import
+"core/itr" import
+"core/unionElement" import
 
-"core/optional" *import
-"core/slice" *import
-"core/string" *import
+"core/optional" import
+"core/slice" import
+"core/string" import
 
-"core/types" *import
-..compiler.version 693 < if
+"core/types" import
+..compiler.version 695 < if
   "your compiler is not compatible with the current version of the standard library, re-bootstrap the compiler or migrate through an intermediate version" ..compiler.error
 end

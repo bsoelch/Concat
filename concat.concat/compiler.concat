@@ -1,16 +1,16 @@
-'sys' *import
-'string' *import
-'numbers' *import
-'exec' *import
-'file' *import
-'argParse' *import
+'sys' import
+'string' import
+'numbers' import
+'exec' import
+'file' import
+'argParse' import
 
-"parser" *import
-"typeCheck" *import
-"usageAnalysis" *import
-"prepareCompile" *import
-"generator_qbe" *import
-"generator_asm" *import
+"parser" import
+"typeCheck" import
+"usageAnalysis" import
+"prepareCompile" import
+"generator_qbe" import
+"generator_asm" import
 
 sb.empty =:: mut: srcPath
 sb.empty =:: mut: targetPath

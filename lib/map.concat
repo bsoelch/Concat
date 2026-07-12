@@ -1,6 +1,6 @@
-"mem" *import
-"list" *import
-"optional" *import
+"mem" import
+"list" import
+"optional" import
 
 namespace: map
   i32 =:: NodeId

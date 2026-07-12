@@ -1,5 +1,5 @@
-'slice' *import
-'print' *import
+'slice' import
+'print' import
 
 proc( type : auto: T  T slice : l -> ) =>: printArray
   0:iSize while ..dup l .length u< do

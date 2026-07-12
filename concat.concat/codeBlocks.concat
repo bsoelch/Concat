@@ -1,7 +1,7 @@
-'stringBuilder' *import
+'stringBuilder' import
 
-"common" *import
-"names" *import
+"common" import
+"names" import
 
 enum(
   UNKNOWN

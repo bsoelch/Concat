@@ -1,4 +1,4 @@
-'optional' *import
+'optional' import
 proc( -> i32 optional ) =>: getOptional
   i32 optional.empty
 end

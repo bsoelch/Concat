@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 
 proc( -> ) =>: main
   "Hello World!":s io.println

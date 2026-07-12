@@ -1,7 +1,7 @@
-"mem" *import
-"slice" *import
-"list" *import
-"string" *import
+"mem" import
+"slice" import
+"list" import
+"string" import
 
 char8 list =:: export: stringBuilder
 namespace: sb

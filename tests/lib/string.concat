@@ -1,5 +1,5 @@
-'string' *import
-'print' *import
+'string' import
+'print' import
 
 proc( -> ) =>: main
   "Hello World!" string.wrap io.println

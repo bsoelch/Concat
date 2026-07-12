@@ -1,13 +1,13 @@
-'string' *import
-'sys' *import
+'string' import
+'sys' import
 
-"program" *import
-"types" *import
-"identifiers" *import
-"interpreter" *import
-"branchTree" *import
-"callResolver" *import
-"parser" *import
+"program" import
+"types" import
+"identifiers" import
+"interpreter" import
+"branchTree" import
+"callResolver" import
+"parser" import
 
 struct(
   ConstValue   : value
@@ -5800,7 +5800,7 @@ proc(
           continue.opLoop
         end
           $ .value .Array8 .else ..drop
-            "unexpected value for 'location,' *import expected string got: " sb.copyPtr
+            "unexpected value for 'location,' import expected string got: " sb.copyPtr
               >$ .value typeContext sb.appendConstant
             op .pos errors appendError
             continue.opLoop

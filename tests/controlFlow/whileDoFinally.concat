@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 
 proc( -> ) =>: main
   0 while $ 5 < do

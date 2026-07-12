@@ -1,4 +1,4 @@
-"../stringBuilder" *import
+"../stringBuilder" import
 
 namespace: number
   proc( type.integer : auto: I

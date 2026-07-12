@@ -1,7 +1,7 @@
-"i8" *import
-"i16" *import
-"i32" *import
-"i64" *import
+"i8" import
+"i16" import
+"i32" import
+"i64" import
 
 ## TODO? make struct-layout dependent on target endianess (currently only little-endian systems are supported)
 struct(

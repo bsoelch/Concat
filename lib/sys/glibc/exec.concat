@@ -1,9 +1,9 @@
-"../../list" *import
-"../../stringBuilder" *import
-"../../mem" *import
-"../../exec" *import
-"../../file" *import
-"../../sys" *import
+"../../list" import
+"../../stringBuilder" import
+"../../mem" import
+"../../exec" import
+"../../file" import
+"../../sys" import
 
 ## interface to gnu-libc version of exec
 namespace: c

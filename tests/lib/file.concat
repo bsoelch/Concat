@@ -1,5 +1,5 @@
-'file' *import
-'print' *import
+'file' import
+'print' import
 
 proc( -> ) =>: export: main
   "./tests/lib/file.concat\x00":s file.OpenMode .READ file.open

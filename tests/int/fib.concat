@@ -1,5 +1,5 @@
-'future/int' *import
-'print' *import
+'future/int' import
+'print' import
 proc( i32 : n -> int ) =>: fib
   1 int.fromI64 =:: mut: a
   1 int.fromI64 =:: mut: b

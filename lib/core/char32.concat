@@ -1,5 +1,5 @@
-"bool" *import
-"i32" *import
+"bool" import
+"i32" import
 i32 =:: export: char32
 namespace: char32
   proc( char32 char32 -> i32 ) : export: alias: diff i32.sub

@@ -1,5 +1,5 @@
-"bool" *import
-"parseNumber" *import
+"bool" import
+"parseNumber" import
 namespace: i16
   -0x8000:i16 i16 =: export: MIN
    0x7fff:i16 i16 =: export: MAX

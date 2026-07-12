@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 proc( i32 : a i32 : b -> i32 i32 ) =>: proc0
   doNothing
   b a return

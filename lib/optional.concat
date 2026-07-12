@@ -1,4 +1,4 @@
-"core/optional" *import
+"core/optional" import
 namespace: optional
   proc( type : auto: S type : auto: T
     S optional ( S -> T ) ptr : f

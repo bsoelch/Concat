@@ -1,12 +1,12 @@
-'numbers' *import
-'string' *import
-'stringBuilder' *import
-'list' *import
-'optional' *import
-'arenaAlloc' *import
+'numbers' import
+'string' import
+'stringBuilder' import
+'list' import
+'optional' import
+'arenaAlloc' import
 
-"files" *import
-"common" *import
+"files" import
+"common" import
 
 struct( NamespaceId : current NamespaceImportId : imports ) =:: export: NamespaceInfo
 

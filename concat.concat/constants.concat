@@ -1,10 +1,10 @@
-'stringBuilder' *import
-'arenaAlloc' *import
-'unicode' *import
+'stringBuilder' import
+'arenaAlloc' import
+'unicode' import
 
-"files" *import
-"names" *import
-"types" *import
+"files" import
+"names" import
+"types" import
 
 type : export: ConstValue
 struct( ConstValue ptr : value i32 : eltIndex ) =:: export: UnionConstant

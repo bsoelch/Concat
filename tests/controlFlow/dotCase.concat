@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 
 i32 =:: u32
 union(

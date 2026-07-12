@@ -1,10 +1,10 @@
 #+
 common code for code generators
 +#
-'map' *import
+'map' import
 
-"program" *import
-"types" *import
+"program" import
+"types" import
 
 proc(
   Type : declared

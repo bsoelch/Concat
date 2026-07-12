@@ -1,6 +1,6 @@
-'mem' *import
-'slice' *import
-'list' *import
+'mem' import
+'slice' import
+'list' import
 
 namespace: branchTree
   i32 =:: export: NodeId

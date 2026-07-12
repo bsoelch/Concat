@@ -1,9 +1,9 @@
-'slice' *import
+'slice' import
 
-"constants" *import
-"types" *import
-"program" *import
-"typeCheck" *import
+"constants" import
+"types" import
+"program" import
+"typeCheck" import
 
 enum( MATCH GENERIC CAST AUTO EMPTY NONE ) =:: MatchType
 

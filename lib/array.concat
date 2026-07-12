@@ -1,4 +1,4 @@
-"mem" *import
+"mem" import
 
 namespace: array
   proc(

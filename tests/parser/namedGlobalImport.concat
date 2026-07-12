@@ -1,4 +1,4 @@
-'print' *import
+'print' import
 
 using: println io.println
 

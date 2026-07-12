@@ -1,6 +1,6 @@
-"ptr" *import
-"char8" *import
-"slice" *import
+"ptr" import
+"char8" import
+"slice" import
 
 char8 slice =:: export: string
 

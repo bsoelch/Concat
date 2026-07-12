@@ -1,5 +1,5 @@
-"mem" *import ## for c.isNull
-"string" *import
+"mem" import ## for c.isNull
+"string" import
 namespace: c ## XXX? special file for general C procedures
   proc.c( ..ctype.int -> ) : extern: noReturn: exit
   proc.c( char8 ptr.raw -> i64 ) : extern: strlen
