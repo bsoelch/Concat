@@ -31,3 +31,6 @@ core library files, included by default
 "core/string" *import
 
 "core/types" *import
+..compiler.version 693 < if
+  "your compiler is not compatible with the current version of the standard library, re-bootstrap the compiler or migrate through an intermediate version" ..compiler.error
+end
