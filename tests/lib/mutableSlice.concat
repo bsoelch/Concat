@@ -1,4 +1,4 @@
-import slice
+'slice' *import
 
 proc( -> ) =>: main
   i32 64 array new =:: mut: anArray

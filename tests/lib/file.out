@@ -1,8 +1,8 @@
 0
-717
+723
 5
-import file
-import print
+'file' *import
+'print' *import
 
 proc( -> ) =>: export: main
   "./tests/lib/file.concat\x00":s file.OpenMode .READ file.open

@@ -1,8 +1,8 @@
 #+
 Prints all prime factors of a given number
 +#
-import stringBuilder
-import print
+'stringBuilder' *import
+'print' *import
 ## define overloaded <+ operator to simplify string building
 overload: <+ sb.appendC sb.appendS i64.sbAppend end
 

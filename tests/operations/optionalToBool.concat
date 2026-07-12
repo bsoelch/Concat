@@ -1,4 +1,4 @@
-import optional
+'optional' *import
 
 proc( i32 optional : n -> bool ) =>: isEven
   n ? and n optional.unwrap 1 & ? ! end return

@@ -10,7 +10,7 @@ A (partial) description of the syntax can be found in the `doc` folder <!-- TODO
 
 Hello World Program:
 ```
-import print
+'print' *import
 
 proc( -> ) =>: main
   "Hello World!":s io.println

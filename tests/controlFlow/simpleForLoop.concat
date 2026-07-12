@@ -1,4 +1,4 @@
-import print
+'print' *import
 proc( -> ) =>: main
   5
     true while do

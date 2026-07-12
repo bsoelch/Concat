@@ -1,8 +1,8 @@
-import argParse
-import numbers
-import print
-import file
-import exec
+'argParse' *import
+'numbers' *import
+'print' *import
+'file' *import
+'exec' *import
 
 { "./tests":s } =:: DEFAULT_TESTS
 { "./tests":s "./examples":s } =:: DEFAULT_TESTS_FULL

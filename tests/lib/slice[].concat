@@ -1,4 +1,4 @@
-import slice
+'slice' *import
 proc( -> ) =>: main
   { 1 2 3 4 5 } =:: mut: buff
   buff@ slice.wrapMutable =:: s

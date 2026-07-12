@@ -1,4 +1,4 @@
-import print
+'print' *import
 union( i32 : I f32 : F ) =:: aUnion
 proc( i32 : x -> ) =>: test
   x

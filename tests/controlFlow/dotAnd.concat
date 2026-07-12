@@ -1,4 +1,4 @@
-import optional
+'optional' *import
 
 proc( i32 optional : val? -> bool ) =>: positive
   val? .and 0 > if

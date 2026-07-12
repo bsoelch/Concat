@@ -1,8 +1,8 @@
-import map
-import optional
+'map' *import
+'optional' *import
 
-import stringBuilder
-import print
+'stringBuilder' *import
+'print' *import
 
 proc( i32 -> i32 ) =>: i32Hash end
 proc( i32 i32 -> bool ) =>: i32Eq  == end

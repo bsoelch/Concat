@@ -1,4 +1,4 @@
-import print
+'print' *import
 proc( -> ) =>: main
 ## end
 ## this is a comment

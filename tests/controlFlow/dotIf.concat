@@ -1,5 +1,5 @@
-import optional
-import print
+'optional' *import
+'print' *import
 
 proc( i32 optional -> ) =>: printOption
   .if

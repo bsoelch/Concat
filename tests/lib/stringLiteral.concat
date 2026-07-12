@@ -1,5 +1,5 @@
-import string
-import unicode
+'string' *import
+'unicode' *import
 
 proc( -> ) =>: main
   "This is a string literal":s =:: str

@@ -1,5 +1,5 @@
-import print
-import stringBuilder
+'print' *import
+'stringBuilder' *import
 
 proc( -> ) =>: main 
   16 sb.create

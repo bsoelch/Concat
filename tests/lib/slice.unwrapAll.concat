@@ -1,4 +1,4 @@
-import slice
+'slice' *import
 proc( -> ) =>: main
   42 =:: x
   x@ optional.wrap =:: y

@@ -1,4 +1,4 @@
-import list
+'list' *import
 
 proc( -> ) =>: main
   16 char8 list.create

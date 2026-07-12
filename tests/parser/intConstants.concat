@@ -1,4 +1,4 @@
-import print
+'print' *import
 proc( -> ) =>: main
   0b11'00'10'01 io.println
   0x123_4567_89ab_cdef io.println

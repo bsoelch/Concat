@@ -1,5 +1,5 @@
-import future/float
-import print
+'future/float' *import
+'print' *import
 
 proc( float -> ) =>: printFloat
   0 sb.create

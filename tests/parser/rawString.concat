@@ -1,4 +1,4 @@
-import print
+'print' *import
 
 proc( -> ) =>: main
  `surrounding test with `` creates a raw-string.

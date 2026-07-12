@@ -1,5 +1,5 @@
-import string
-import print
+'string' *import
+'print' *import
 
 proc( iSize : auto: k char8 k ptr : str -> string iSize ) =>: startItr
   str string.wrap 0:iSize

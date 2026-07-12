@@ -1,6 +1,6 @@
-import numbers
+'numbers' *import
 using number.
-import print
+'print' *import
 
 proc( -> ) =>: main
   5 2 powI io.println

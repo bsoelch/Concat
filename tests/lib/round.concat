@@ -1,4 +1,4 @@
-import print
+'print' *import
 
 proc( -> ) =>: main
   -1e400 f64.round io.println

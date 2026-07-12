@@ -1,4 +1,4 @@
-import core/bitarray
+'core/bitarray' *import
 proc( -> ) =>: main
   bits32.create =:: mut: a
   a bits32.any ! "empty on creation" assert

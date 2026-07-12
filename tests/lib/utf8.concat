@@ -1,5 +1,5 @@
-import unicode
-import print
+'unicode' *import
+'print' *import
 
 proc( -> ) =>: main
   "ACBÄÖÜ°?ℂ💻!0\xc2\x80\xc1\xbf\xec\x3a\xf0" string.wrap =:: str

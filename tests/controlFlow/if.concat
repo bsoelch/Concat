@@ -1,4 +1,4 @@
-import print
+'print' *import
 
 proc( bool : f bool : t i32 : one i32 : two -> ) =>: test
   t if 

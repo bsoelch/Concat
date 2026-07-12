@@ -1,4 +1,4 @@
-import numbers
+'numbers' *import
 
 proc( -> ) =>: main
   12345678987654321:i128 "12345678987654321":i128 i128.eq "id literal is string literal" assert

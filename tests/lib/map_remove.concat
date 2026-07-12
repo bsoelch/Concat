@@ -1,4 +1,4 @@
-import map
+'map' *import
 
 proc( i32 -> i32 ) =>: i32Hash end
 proc( i32 i32 -> bool ) =>: i32Eq  == end

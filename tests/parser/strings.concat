@@ -1,4 +1,4 @@
-import print
+'print' *import
 "A" =:: str1
 "A string" =:: str2
 

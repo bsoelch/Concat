@@ -1,5 +1,5 @@
-import future/float
-import print
+'future/float' *import
+'print' *import
 
 ## TODO: this used to test rounding, which is no longer done for power-of-2 bases
 proc( -> ) =>: main

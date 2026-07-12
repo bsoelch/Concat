@@ -1,4 +1,4 @@
-import numbers
+'numbers' *import
 
 proc( -> ) =>: main
   "3.141592653589793238462643383279502884197169399375105" string.wrap 0 f128.parse .Ok <unwrap> =:: pi

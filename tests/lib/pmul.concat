@@ -1,4 +1,4 @@
-import print
+'print' *import
 
 proc( -> ) =>: main
   0x11011100101110 0x111100010011010 i64.pmul

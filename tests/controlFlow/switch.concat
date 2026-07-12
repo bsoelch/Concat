@@ -1,4 +1,4 @@
-import print
+'print' *import
 union( _ : A _ : B i32 : C char8 : D ) =:: anUnion
 
 proc( i32 : i anUnion : e char8 : c -> ) =>: switchTest

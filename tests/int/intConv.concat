@@ -1,5 +1,5 @@
-import future/int
-import print
+'future/int' *import
+'print' *import
 
 proc( int : x -> ) =>: printInt
   0 sb.create
