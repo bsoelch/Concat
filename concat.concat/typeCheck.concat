@@ -5786,14 +5786,6 @@ proc(
           op .pos
         state pushConstant
         continue.opLoop
-      FileImport LibImport .case
-          op .val .LibImport ?
-          state [] .currentFile
-          op .pos
-          program
-          state
-        parseImportFileOld
-      continue.opLoop
       Import case
         state popTypedValue .else
           "missing value for import, expected constant" sb.copyPtr op .pos errors appendError

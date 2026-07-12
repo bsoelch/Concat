@@ -1870,36 +1870,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       params opName opPos state getCompilerOpParam ## :count
       StackModType .DROP opPos preOpStackMod state appendOp
       return
-    else $ "import*":s string.eq _if =:: opName
-      fileState nextToken
-        fileState program wordPos =:: importPos
-        64 sb.create
-          opName "import":s string.eq if
-            "the keyword `" sb.appendS
-            opName sb.appendStr
-            "` will change its behavior in a future version.\n":s sb.appendStr
-          else
-            "the use of `" sb.appendS
-            opName sb.appendStr
-            "` is deprecated and will be removed in a future version.\n":s sb.appendStr
-          end
-          "Use `*import` instead":s sb.appendStr
-        importPos errors appendWarning
-      .String .if ## local file
-        false importPos state prepareImport
-        return
-      else .Identifier ._if ## library file
-        true importPos state prepareImport return
-      end
-      64 sb.create
-        "invalid parameter for " sb.appendS
-        opName sb.appendStr
-        ':' sb.appendC
-        >$ sb.appendToken
-        " expected identifier or string" sb.appendS
-      importPos errors appendError
-      return
-    else $ "import":s string.eq  or $ "*import":s string.eq _if =:: opName
+    else $ "import":s string.eq _if =:: opName
       fileState program wordPos preOpImport state appendOp
       return
     else $ "using":s string.eq or $ "using:":s string.eq _if =:: opName
@@ -2121,15 +2092,6 @@ proc(
   true pos state importFile
 end
 proc(
-  string : fileName
-  bool : isLibImport
-  FilePosition ptr : pos
-  ParserState ptr.mut : state
--> ) =>: prepareImport
-  state [] .program .idContext .typeContext .nameContext =:: nameContext
-  fileName nameContext id.copyString isLibImport pos preOpImportFile state appendOp
-end
-proc(
   string #+fileName+#
   FilePosition ptr : pos
   ProgramContext ptr.mut : program
@@ -2190,33 +2152,6 @@ proc(
   parserState cleanupParserState
 end
 
-proc(
-  string : fileName
-  bool : isLibImport
-  FileId : hostFile
-  FilePosition ptr : pos
-  ProgramContext ptr.mut : program
-  TypeCheckState ptr.mut : typeChecker
--> ) =>: export: parseImportFileOld
-  ## ParserState
-    program
-    typeChecker
-    64  BlockInfo               list.create
-    PreOperation list.empty
-    0:i32
-    hostFile
-    32  ProcId                  list.create
-  ParserState new =:: mut: parserState
-    isLibImport if
-      fileName pos parserState@ importLibraryFile
-    else
-      program [] .basePath .length fileName .length + sb.create
-        program [] .basePath sb.appendStr
-        fileName sb.appendStr
-      program [] .inLibFile pos parserState@ importFile
-    end
-  parserState cleanupParserState
-end
 proc(
   stringBuilder : fileName
   bool : isLibImport

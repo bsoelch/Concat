@@ -350,8 +350,6 @@ union(
      TypeMemoryInfo : TypeInfo
                   _ : Panic
                   _ : Import
-             string : FileImport
-             string : LibImport
        CompilerInfo : shadow: CompilerInfo
 ) =:: export: PreOpValue
 struct( FilePosition ptr : pos PreOpValue : val ) =:: export: PreOperation
@@ -571,16 +569,6 @@ proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> PreOperati
   pos
     src alias UsingNameInfo new PreOpValue .UsingIdentifier
  PreOperation new return
-end
-proc( string : path bool : isLibFile FilePosition ptr : pos -> PreOperation ) =>: export: preOpImportFile
-  pos
-    path
-      isLibFile if
-        PreOpValue .LibImport
-      else
-        PreOpValue .FileImport
-      end
-  PreOperation new return
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpImport
   pos PreOpValue .Import PreOperation new return
@@ -1206,16 +1194,6 @@ namespace: sb
       break
       Import case
         "import" sb.appendS
-      break
-      FileImport .case =:: path
-        "import \"" sb.appendS
-        path sb.appendEscapedStr
-        '"' sb.appendC
-      break
-      LibImport .case =:: path
-        "lib-import \"" sb.appendS
-        path sb.appendEscapedStr
-        '"' sb.appendC
       break
       CompilerInfo .case nameContext sb.appendCompilerInfo break
     end
