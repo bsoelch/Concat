@@ -5786,7 +5786,7 @@ proc(
           op .pos
         state pushConstant
         continue.opLoop
-      Import case
+      Import CheckImport case
         state popTypedValue .else
           "missing value for import, expected constant" sb.copyPtr op .pos errors appendError
           continue.opLoop
@@ -5801,7 +5801,17 @@ proc(
           op .pos program state resolveLocalImportPath false
         else ## lib import
           op .pos program state resolveLibImportPath true
-        end op .pos program state parseImportFile
+        end op .val .CheckImport ? if ..drop
+          $ sb.asStr
+            program program.hasImportFile
+              ConstValue .Bool
+              types.primitive.BOOL
+              op .pos
+            state pushConstant
+          ..drop
+        else
+          op .pos program state parseImportFile
+        end
       continue.opLoop
       CompilerInfo .case =:: compilerInfo
         state isGlobal ! if

@@ -193,7 +193,8 @@
                   info    |
                   flag.([^[:space:]\.]+) |
                   version |
-                  return
+                  return  |
+                  hasImport
                 ) |
                 file |
                 line

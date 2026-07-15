@@ -350,6 +350,7 @@ union(
      TypeMemoryInfo : TypeInfo
                   _ : Panic
                   _ : Import
+                  _ : CheckImport
        CompilerInfo : shadow: CompilerInfo
 ) =:: export: PreOpValue
 struct( FilePosition ptr : pos PreOpValue : val ) =:: export: PreOperation
@@ -572,6 +573,9 @@ proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> PreOperati
 end
 proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpImport
   pos PreOpValue .Import PreOperation new return
+end
+proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpCheckImport
+  pos PreOpValue .CheckImport PreOperation new return
 end
 
 proc( -> OpValue ) =>: export: opValNOP
@@ -840,6 +844,17 @@ namespace: program
     .nextLabelId $
       [] $ i64 cast.u 1 + LocalLabelId cast.u
     >>$ =[]
+  end
+  proc(
+    string
+    ProgramContext ptr : program
+  -> bool ) =>: export: hasImportFile
+    0:iSize while $ program [] .progFiles .length u< do
+      program [] .progFiles $1 [] .fileName sb.asStr $2 string.eq if
+        ..drop.2 true return
+      end
+    finally 1:iSize + end ..drop.2
+    false return
   end
 end
 
@@ -1194,6 +1209,9 @@ namespace: sb
       break
       Import case
         "import" sb.appendS
+      break
+      CheckImport case
+        "..compiler.hasImport" sb.appendS
       break
       CompilerInfo .case nameContext sb.appendCompilerInfo break
     end

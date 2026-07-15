@@ -1873,6 +1873,9 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "import":s string.eq _if =:: opName
       fileState program wordPos preOpImport state appendOp
       return
+    else $ "..compiler.hasImport":s string.eq _if =:: opName
+      fileState program wordPos preOpCheckImport state appendOp
+      return
     else $ "using":s string.eq or $ "using:":s string.eq _if =:: opName
       opName "using:":s string.eq =:: isAlias
       isAlias if
