@@ -712,4 +712,4 @@ overload: export: <round> float.round  end
 overload: export: <floor> float.floor  end
 overload: export: <ceil>  float.ceil  end
 
-io.print:? if "printFloat" import end
+"../print" ..compiler.hasImport if "printFloat" import end

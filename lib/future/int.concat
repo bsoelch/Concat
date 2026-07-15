@@ -2014,4 +2014,4 @@ overload: export: <max>  int.max  end
 overload: export: <umin> int.umin end
 overload: export: <umax> int.umax end
 
-io.print:? if "printInt" import end
+"../print" ..compiler.hasImport if "printInt" import end

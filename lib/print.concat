@@ -343,5 +343,5 @@ namespace: io
   overload: export: printUln printUln8 printUln16 printUln32 printUln64 printUlnZ printUln128 end
 end
 
-int:? if "future/printInt" import end
-float:? if "future/printFloat" import end
+"future/int" ..compiler.hasImport if "future/printInt" import end
+"future/float" ..compiler.hasImport  if "future/printFloat" import end
