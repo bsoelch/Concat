@@ -20,6 +20,7 @@ namespace: i128
   proc( i64 : low i64 : hi -> i128 ) =>: export: inline: create
     low hi i128 new
   end
+## conversions
   proc( i32 -> i128 ) =>: export: fromI32
     i64 cast.s $ 0 < if -1:i64 else 0:i64 end i128.create
   end
@@ -32,7 +33,33 @@ namespace: i128
   proc( i64 -> i128 ) =>: export: fromU64
     0 i128.create
   end
+  proc( i8 oneOf( i128 ) : static: _ -> i128 ) =>: i8AsI128
+    i64 cast.s fromI64
+  end
+  proc( i16 oneOf( i128 ) : static: _ -> i128 ) =>: i16AsI128
+    i64 cast.s fromI64
+  end
+  proc( i32 oneOf( i128 ) : static: _ -> i128 ) =>: i32AsI128
+    fromI32
+  end
+  proc( i64 oneOf( i128 ) : static: _ -> i128 ) =>: i64AsI128
+    fromI64
+  end
+  proc( i8 oneOf( i128 ) : static: _ -> i128 ) =>: i8AsI128u
+    i64 cast.u fromU64
+  end
+  proc( i16 oneOf( i128 ) : static: _ -> i128 ) =>: i16AsI128u
+    i64 cast.u fromU64
+  end
+  proc( i32 oneOf( i128 ) : static: _ -> i128 ) =>: i32AsI128u
+    fromU32
+  end
+  proc( i64 oneOf( i128 ) : static: _ -> i128 ) =>: i64AsI128u
+    fromU64
+  end
+  ## TODO: conversion i128ToI... i128AsI...
 
+## bitwise operations
   proc( i128 : a -> i128 ) =>: export: flip
     ## i128
       a .low i64.flip
@@ -126,6 +153,7 @@ namespace: i128
     end
     x .hi i64.highestSetBit 64 + return
   end
+## comparisons
   proc( i128 : a i128 : b -> i32 ) =>: export: ucmp
     a .hi b .hi u< if
       -1 return
@@ -193,6 +221,7 @@ namespace: i128
   proc( i128 : a -> bool ) =>: export: toBool
     a .hi ? a .low ? |
   end
+## airthmetic
   proc( i128 : a -> i128 ) =>: export: neg
     ## i128
       a .low i64.neg
@@ -202,7 +231,7 @@ namespace: i128
   proc( i128 -> i128 ) =>: export: abs
     $ .hi 0 < if neg end
   end
-  ## XXX? use i64.addc for add
+  ## TODO? use i64.addc for add
   proc( i128 : a i128 : b -> i128 ) =>: export: add
     a .low b .low i64.add =:: lowSum
     ## i128
@@ -457,3 +486,11 @@ overload: export: <min>  i128.min  end
 overload: export: <max>  i128.max  end
 overload: export: <umin> i128.umin end
 overload: export: <umax> i128.umax end
+overload: export: as
+  i128.i8AsI128 i128.i16AsI128 i128.i32AsI128 i128.i64AsI128
+end
+namespace: as
+  overload: export: u
+    i128.i8AsI128u i128.i16AsI128u i128.i32AsI128u i128.i64AsI128u
+  end
+end

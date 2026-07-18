@@ -288,6 +288,36 @@ namespace: int
   2 fromI32 =:: export: TWO
   3 fromI32 =:: export: THREE
   -1 fromI32 =:: export: MINUS_ONE
+  proc( i8 oneOf( int ) : static: _ -> int ) =>: i8AsInt
+    i32 cast.s fromI32
+  end
+  proc( i16 oneOf( int ) : static: _ -> int ) =>: i16AsInt
+    i32 cast.s fromI32
+  end
+  proc( i32 oneOf( int ) : static: _ -> int ) =>: i32AsInt
+    fromI32
+  end
+  proc( i64 oneOf( int ) : static: _ -> int ) =>: i64AsInt
+    fromI64
+  end
+  proc( i128 oneOf( int ) : static: _ -> int ) =>: i128AsInt
+    fromI128
+  end
+  proc( i8 oneOf( int ) : static: _ -> int ) =>: i8AsIntU
+    i32 cast.u fromU32
+  end
+  proc( i16 oneOf( int ) : static: _ -> int ) =>: i16AsIntU
+    i64 cast.u fromU32
+  end
+  proc( i32 oneOf( int ) : static: _ -> int ) =>: i32AsIntU
+    fromU32
+  end
+  proc( i64 oneOf( int ) : static: _ -> int ) =>: i64AsIntU
+    fromU64
+  end
+  proc( i128 oneOf( int ) : static: _ -> int ) =>: i128AsIntU
+    fromU128
+  end
   ( type : I -> type ) =>: export: IntConversionResult
     union(
       I : Ok
@@ -2013,5 +2043,14 @@ overload: export: <min>  int.min  end
 overload: export: <max>  int.max  end
 overload: export: <umin> int.umin end
 overload: export: <umax> int.umax end
+
+overload: export: as
+  int.i8AsInt int.i16AsInt int.i32AsInt int.i64AsInt int.i128AsInt
+end
+namespace: as
+  overload: export: u
+    int.i8AsIntU int.i16AsIntU int.i32AsIntU int.i64AsIntU int.i128AsIntU
+  end
+end
 
 "../print" ..compiler.hasImport if "printInt" import end

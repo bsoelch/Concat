@@ -128,6 +128,8 @@
           &gt;&gt;            |
           &gt;&gt;&gt;        |
           new                 |
+          as                  |
+          as\.u               |
           cast                |
           cast\.u             |
           cast\.s             |
