@@ -149,9 +149,9 @@ namespace: std.literals
   ( char8 ptr.raw iSize -> char8 ) : static: export: alias: :c8 :char8
   ( char8 ptr.raw iSize -> char16 ) : static: export: alias: :c16 :char16
   ( char8 ptr.raw iSize -> char32 ) : static: export: alias: :c32 :char32
-  ( char8 ptr.raw iSize -> string8 ) : static: export: alias: :s8 :string8
-  ( char8 ptr.raw iSize -> string16 ) : static: export: alias: :s16 :string16
-  ( char8 ptr.raw iSize -> string32 ) : static: export: alias: :s32 :string32
+  ( char8 ptr.raw iSize -> string8 ) : static: export: alias: :u8 :string8
+  ( char8 ptr.raw iSize -> string16 ) : static: export: alias: :u16 :string16
+  ( char8 ptr.raw iSize -> string32 ) : static: export: alias: :u32 :string32
 end
 
 namespace: unicode
