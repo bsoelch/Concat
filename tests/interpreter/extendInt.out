@@ -1,18 +1,18 @@
 types:
 -----------------
-..intLiteral.s8
+1 ..literal.int
 -----------------
 types:
 -----------------
-..intLiteral.u53
+33 ..literal.int
 -----------------
 types:
 -----------------
-..intLiteral.u31
+32 ..literal.int
 -----------------
 types:
 -----------------
-..intLiteral.s8
+1 ..literal.int
 -----------------
 types:
 -----------------
@@ -20,11 +20,11 @@ i32
 -----------------
 types:
 -----------------
-..intLiteral.u53
+33 ..literal.int
 -----------------
 types:
 -----------------
-..intLiteral.s8
+1 ..literal.int
 -----------------
 types:
 -----------------

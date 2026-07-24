@@ -179,7 +179,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
         F64 case ValType .DOUBLE return
       end
       break
-    IntLiteral .case types.intLiteralAsInt context toValType return
+    IntLiteral .case typeContext types.intLiteralAsInt context toValType return
     Enum case t typeContext types.enumTagInfo ..drop context toValType return
     CType .case types.cTypeAsType context toValType return
     Pointer MutablePointer RawPointer MutableRawPointer case
@@ -285,7 +285,7 @@ proc( Type : t CompilerContext ptr.mut : context -> bool ) =>: referenceOnly
   t typeContext types.unwrapNamed
     typeContext types.unwrapRefinement
     .CType .if types.cTypeAsType else
-    .IntLiteral ._if types.intLiteralAsInt end
+    .IntLiteral ._if typeContext types.intLiteralAsInt end
   =:: baseType
   baseType types.isPrimitive if
     false return
@@ -584,7 +584,7 @@ namespace: sb
         break
       IntLiteral .case
         sb
-          >$ types.intLiteralAsInt storeType pos context
+          >$ typeContext types.intLiteralAsInt storeType pos context
         appendTypeNameQBE return
       CType .case
         sb
@@ -829,7 +829,7 @@ namespace: sb
                 typeContext types.enumTagInfo ..drop
               end
             .CType .if types.cTypeAsType else
-            .IntLiteral ._if types.intLiteralAsInt end
+            .IntLiteral ._if typeContext types.intLiteralAsInt end
           end =:: numType
           numType types.isPrimitive if
             numType typeContext types.primitiveValue switch
@@ -855,7 +855,7 @@ namespace: sb
         Float .case =:: floatValue
           t
             .CType .if types.cTypeAsType else
-            .IntLiteral ._if types.intLiteralAsInt end
+            .IntLiteral ._if typeContext types.intLiteralAsInt end
           =:: numType
           numType types.primitive.F32 types.typeEquals if
             floatValue f32 cast f32.bits sb.appendI
@@ -1821,7 +1821,7 @@ proc(
     extendArguments return
   else .IntLiteral ._if =:: intLiteral
     sb
-      intLiteral types.intLiteralAsInt
+      intLiteral typeContext types.intLiteralAsInt
       signed
       pos
       context
@@ -2655,12 +2655,12 @@ proc(
   src0 typeContext types.unwrapNamed
     typeContext types.unwrapRefinement
     .CType .if types.cTypeAsType else
-    .IntLiteral ._if types.intLiteralAsInt end
+    .IntLiteral ._if typeContext types.intLiteralAsInt end
   =:: src
   target0 typeContext types.unwrapNamed
     typeContext types.unwrapRefinement
     .CType .if types.cTypeAsType else
-    .IntLiteral ._if types.intLiteralAsInt end
+    .IntLiteral ._if typeContext types.intLiteralAsInt end
   =:: target
   src target types.typeEquals if
     sb return ## nothing to do

@@ -48,15 +48,15 @@ namespace: types
     ## TODO? add support for long double
     STRUCT UNION
   ) =:: CType
-  enum(
-    U7  S8  U8  ## largest numbers castable to i8;  -> i32 by default
-    ## TODO? add U/S values for largest value fitting in f16
-    U15 S16 U16 ## largest numbers castable to i16; -> i32 by default
-    U24 S25   ## largest numbers castable to f32 ( -2^24 <= k <= 2^24 ); -> i32 by default
-    U31 S32 U32 ## -> i32
-    U53 S54   ## largest numbers castable to f64 ( -2^53 <= k <= 2^53 ); -> i64 by default
-    U63 S64 U64 ## -> i64
-  ) =:: IntLiteral
+  struct( i64 : bits ) =:: IntLiteral
+  namespace: IntLiteral
+    proc( IntLiteral IntLiteral -> i32 ) =>: cmp
+      >$ .bits >$ .bits i64.cmp
+    end
+  end
+  proc( i64 -> Type ) =>: export: intLiteral
+    IntLiteral new Type .IntLiteral
+  end
 end
 
 union(
@@ -81,8 +81,8 @@ union(
        types.ProcTypeId : Procedure
         types.SetTypeId : SetType
  types.RefinementTypeId : RefinementType
-                NameId : GenericType
-                NameId : NamedType
+                 NameId : GenericType
+                 NameId : NamedType
   types.GeneratedTypeId : GeneratedType
 ) =:: export: Type
 
@@ -262,7 +262,7 @@ namespace: types
       PrimitiveType .case
         primitiveId b .PrimitiveType unionElement.unwrap primitiveId i32.cmp return
       IntLiteral .case
-        intLiteralId b .IntLiteral unionElement.unwrap intLiteralId i32.cmp return
+        b .IntLiteral unionElement.unwrap IntLiteral.cmp return
       CType .case
         cTypeId b .CType unionElement.unwrap cTypeId i32.cmp return
       Align .case
@@ -318,26 +318,6 @@ namespace: types
       TYPE case 9 return
     end
   end
-  proc( IntLiteral -> i32 ) =>: intLiteralId
-    switch
-      U7  case  1 return
-      S8  case  2 return
-      U8  case  3 return
-      U15 case  4 return
-      S16 case  5 return
-      U16 case  6 return
-      U24 case  7 return
-      S25 case  8 return
-      U31 case  9 return
-      S32 case 10 return
-      U32 case 11 return
-      U53 case 12 return
-      S54 case 13 return
-      U63 case 14 return
-      S64 case 15 return
-      U64 case 16 return
-    end
-  end
   proc( CType -> i32 ) =>: cTypeId
     switch
       VOID case 0 return
@@ -368,7 +348,7 @@ namespace: types
       Empty case
         1 return ## there is only one empty type
       PrimitiveType .case primitiveId 1 + 2 * return
-      IntLiteral .case intLiteralId 1 + 3 * return
+      IntLiteral .case .bits i32 cast.u 1 + 3 * return
       CType .case cTypeId 1 + 5 * return
       Align .case 1 + 7 * return
       NamedType .case NameId.hash 1 + 11 * return
@@ -413,24 +393,6 @@ namespace: types
   end
   primitive.I_SIZE =:: mut: export: I_SIZE
   primitive.CHAR8  =:: mut: export: CHAR8
-  namespace: intLiteral
-    IntLiteral .U7  Type .IntLiteral Type =: export: U7
-    IntLiteral .S8  Type .IntLiteral Type =: export: S8
-    IntLiteral .U8  Type .IntLiteral Type =: export: U8
-    IntLiteral .U15 Type .IntLiteral Type =: export: U15
-    IntLiteral .S16 Type .IntLiteral Type =: export: S16
-    IntLiteral .U16 Type .IntLiteral Type =: export: U16
-    IntLiteral .U24 Type .IntLiteral Type =: export: U24
-    IntLiteral .S25 Type .IntLiteral Type =: export: S25
-    IntLiteral .U31 Type .IntLiteral Type =: export: U31
-    IntLiteral .S32 Type .IntLiteral Type =: export: S32
-    IntLiteral .U32 Type .IntLiteral Type =: export: U32
-    IntLiteral .U53 Type .IntLiteral Type =: export: U53
-    IntLiteral .S54 Type .IntLiteral Type =: export: S54
-    IntLiteral .U63 Type .IntLiteral Type =: export: U63
-    IntLiteral .S64 Type .IntLiteral Type =: export: S64
-    IntLiteral .U64 Type .IntLiteral Type =: export: U64
-  end
   proc( Type -> bool ) =>: export: isPrimitive
     .PrimitiveType ? return
   end
@@ -494,11 +456,6 @@ namespace: types
           VOID BOOL CHAR U_CHAR U_SHORT U_INT U_LONG U_LONGLONG SIZE
             FLOAT DOUBLE STRUCT UNION case false return
         end
-      else .IntLiteral ._if
-        switch
-          U7 U15 U24 U31 U53 U63 S8 S16 S25 S32 S54 S64 case true return
-          U8 U16 U32 U64 case false return
-        end
       else ..drop end
     false return
   end
@@ -509,11 +466,6 @@ namespace: types
           U_CHAR U_SHORT U_INT U_LONG U_LONGLONG SIZE case true return
           VOID BOOL CHAR S_CHAR SHORT INT LONG LONGLONG
             FLOAT DOUBLE STRUCT UNION case false return
-        end
-      else .IntLiteral ._if
-        switch
-          U7 U8 U15 U16 U24 U31 U32 U53 U63 U64 case true return
-          S8 S16 S25 S32 S54 S64 case false return
         end
       else ..drop end
     false return
@@ -589,7 +541,7 @@ namespace: types
   end
   proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: literalToType
     t switch
-       IntLiteral .case intLiteralAsInt return
+       IntLiteral .case context intLiteralAsInt return
        Initializer .case InitializerInfo ptr.mut cast =:: initInfo
         ## TODO? store initialiter elements directly in initialiter data
         initInfo .asTuple TupleInfo ptr cast =:: tupleInfo
@@ -728,34 +680,17 @@ namespace: types
   proc( Type : src Type : target TypeContext ptr : context -> bool ) =>: canAutoCastIntLiteral
     target context types.isNumber ! or src .IntLiteral ! .if
       true return
-    end switch
-      U7  case false  7:i64 break
-      S8  case true   8:i64 break
-      U8  case false  8:i64 break
-      U15 case false 15:i64 break
-      S16 case true  16:i64 break
-      U16 case false 16:i64 break
-      U24 case false 24:i64 break
-      S25 case true  24:i64 break
-      U31 case false 31:i64 break
-      S32 case true  32:i64 break
-      U32 case false 32:i64 break
-      U53 case false 53:i64 break
-      S54 case true  53:i64 break
-      U63 case false 63:i64 break
-      S64 case true  64:i64 break
-      U64 case false 64:i64 break
-    end =:: srcBits =:: srcSigned
+    end =:: srcLiteral
     target context primitiveValue =:: targetPrimitive
     targetPrimitive isIntPrimitive if
       targetPrimitive sizeOfPrimitive 8 * =:: targetBits
-      srcBits targetBits <= return
+      srcLiteral .bits i64 cast.u targetBits <= return
     else targetPrimitive .F16 _if
-      true return ## TODO support cast to F16
+      srcLiteral .bits 11 <= return
     else targetPrimitive .F32 _if
-      srcBits 24 <= return
+      srcLiteral .bits 24 <= return
     else targetPrimitive .F64 _if
-      srcBits 53 <= return
+      srcLiteral .bits 53 <= return
     end
     ..unreachable
   end
@@ -808,11 +743,16 @@ namespace: types
       DOUBLE case primitive.F64 return
     end
   end
-  proc( types.IntLiteral -> Type ) =>: export: intLiteralAsInt
-    switch
-      U7 S8 U8 U15 S16 U16 case primitive.I32 return
-      U24 S25 U31 S32 U32  case primitive.I32 return
-      U53 S54 U63 S64 U64  case primitive.I64 return
+  proc( types.IntLiteral TypeContext ptr.mut : context -> Type ) =>: export: intLiteralAsInt
+    $ .bits 32 u<= if ..drop
+      primitive.I32 return
+    else $ .bits 64 u<= _if ..drop
+      primitive.I64 return
+    else
+      primitive.I64
+        ArrayType .ARRAY
+        >>$ .bits i64 cast.u 63 + 64 u/ ArraySize .Int
+      context newArrayType return
     end
   end
 
@@ -837,20 +777,25 @@ namespace: types
     end
   end
   proc( IntLiteral -> i64 ) =>: intLiteralBytes
-    switch
-      U7 S8 U8            case 1 return
-      U15 S16 U16         case 2 return
-      U24 S25 U31 S32 U32 case 4 return
-      U53 S54 U63 S64 U64 case 8 return
-    end
+    .bits i64 cast.u 7 + 8 u/
   end
   proc( IntLiteral -> i64 ) =>: export: sizeOfIntLiteral
-    switch
-      U7 S8 U8 U15 S16 U16 case 4 return
-      U24 S25 U31 S32 U32  case 4 return
-      U53 S54 U63 S64 U64  case 8 return
+    $ .bits 32 u<= if ..drop
+      4
+    else
+      .bits i64 cast.u 7 + 8 u/ i64 cast.u
     end
   end
+  proc( IntLiteral -> i64 ) =>: export: alignOfIntLiteral
+    $ .bits 32 u<= if ..drop
+      4
+    else .bits 64 u<= _if
+      8
+    else
+      16
+    end
+  end
+
   proc( CType -> i64 ) =>: sizeOfCType
     switch ## sizes for linux-x86-gcc
       BOOL CHAR S_CHAR U_CHAR VOID case 1 return
@@ -968,7 +913,7 @@ namespace: types
         1 TypeSize .Fixed return
       Align .case i64 cast.u TypeSize .Fixed return
       PrimitiveType .case sizeOfPrimitive TypeSize .Fixed return
-      IntLiteral .case sizeOfIntLiteral TypeSize .Fixed return
+      IntLiteral .case alignOfIntLiteral TypeSize .Fixed return
       CType .case sizeOfCType TypeSize .Fixed return
       Pointer MutablePointer RawPointer MutableRawPointer Procedure Quotation case
         PTR_SIZE TypeSize .Fixed return
@@ -2713,14 +2658,18 @@ namespace: types
       a optional.wrap return
     end
     a .IntLiteral .and =:: aLiteral b .IntLiteral .if =:: bLiteral
-      ## TODO directly merge literal types?
-      a bLiteral intLiteralAsInt context mergeTypes $ ? if
-        return
-      else ..drop
-        aLiteral intLiteralAsInt b context mergeTypes return
-      end
+      aLiteral .bits bLiteral .bits i64.umax types.intLiteral optional.wrap return
     end
-    ## TODO handle initializer types
+    a .Initializer ? and a b context canAutoCastInitializer if
+      b optional.wrap return
+    end
+    b .Initializer ? and b a context canAutoCastInitializer if
+      a optional.wrap return
+    end
+    a .Initializer .and =:: aInit b .Initializer .if =:: bInit
+      ## TODO merging initializer types
+      Type optional.empty return
+    end
     Type optional.empty return
   end
 end
@@ -2746,6 +2695,11 @@ namespace: types
     return
   end
 end
+namespace: IntLiteral
+  proc( stringBuilder types.IntLiteral -> stringBuilder ) =>: sbAppend
+    .bits sb.appendI " ..literal.int":s sb.appendStr
+  end
+end
 namespace: sb
   proc( stringBuilder types.PrimitiveType -> stringBuilder ) =>: appendPrimitiveType
     switch
@@ -2758,26 +2712,6 @@ namespace: sb
       F32  case "f32"  appendS return
       F64  case "f64"  appendS return
       TYPE case "type" appendS return
-    end
-  end
-  proc( stringBuilder types.IntLiteral -> stringBuilder ) =>: appendIntLiteralType
-    switch
-      U7  case "..intLiteral.u7"   appendS return
-      S8  case "..intLiteral.s8"   appendS return
-      U8  case "..intLiteral.u8"   appendS return
-      U15 case "..intLiteral.u15"  appendS return
-      S16 case "..intLiteral.s16"  appendS return
-      U16 case "..intLiteral.u16"  appendS return
-      U24 case "..intLiteral.u24"  appendS return
-      S25 case "..intLiteral.s25"  appendS return
-      U31 case "..intLiteral.u31"  appendS return
-      S32 case "..intLiteral.s32"  appendS return
-      U32 case "..intLiteral.u32"  appendS return
-      U53 case "..intLiteral.u53"  appendS return
-      S54 case "..intLiteral.s54"  appendS return
-      U63 case "..intLiteral.u63"  appendS return
-      S64 case "..intLiteral.s64"  appendS return
-      U64 case "..intLiteral.u64"  appendS return
     end
   end
   proc( stringBuilder types.CType -> stringBuilder ) =>: appendCType
@@ -2855,7 +2789,7 @@ namespace: sb
       PrimitiveType .case =:: primitive
         sb primitive appendPrimitiveType return
       IntLiteral .case =:: literal
-        sb literal appendIntLiteralType return
+        sb literal IntLiteral.sbAppend return
       CType .case =:: CType
         sb CType appendCType return
       ArrayType Pointer MutablePointer RawPointer MutableRawPointer .case =:: arrayData
