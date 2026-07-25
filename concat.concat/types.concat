@@ -2615,6 +2615,61 @@ namespace: types
         primitive.I_MAX context primitiveValue sizeOfPrimitive targetSize >= end
     return
   end
+  proc( InitializerId : a InitializerId : b TypeContext ptr.mut : context -> Type optional ) =>: mergeIntializers
+    a InitializerInfo ptr cast .asTuple .compositeInfo =:: aInfo
+    b InitializerInfo ptr cast .asTuple .compositeInfo =:: bInfo
+    aInfo [] .elements =:: aElts
+    bInfo [] .elements =:: bElts
+    aElts .length bElts .length != if
+      Type optional.empty return
+    end
+    context .nameContext [] .allocator
+      $ mixedArena.offset =:: allocOffset
+    context .nameContext .allocator=
+    aInfo [] .eltNames .if
+      bInfo [] .eltNames .if
+        $1 $1 NameId.cmpNameO@ slice.cmp ? if ## not equal
+          context .nameContext [] .allocator
+            aElts .length i32 cast.u NameId optional mixedArena.allocSlice <<<$
+          context .nameContext .allocator=
+          aElts .length for
+            ## newNames aNames bNames index | aElt bElt -- newElt
+            $2 $1 slice.get optional.flat $2 $2 slice.get optional.flat .if
+              >$ .if
+                $1 NameId.eq ! if
+                  context .nameContext [] .allocator
+                    allocOffset mixedArena.reset
+                  context .nameContext .allocator=
+                  ..drop.5 Type optional.empty return
+                end
+              end optional.wrap
+            end $4 >>$ =[]
+          end ..drop.2 slice.freeze
+        else ..drop end
+      end optional.wrap
+    else
+      bInfo [] .eltNames .if
+        optional.wrap
+      else
+        NameId optional slice optional.empty
+      end
+    end =:: newNames
+    aElts bElts typeEquals@ slice.eq if
+      aElts
+    else
+      context .nameContext [] .allocator
+        aElts .length i32 cast.u Type mixedArena.allocSlice <$
+      context .nameContext .allocator=
+      aElts .length for
+        aElts $1 [] bElts $2 [] context mergeTypes .else
+          context .nameContext [] .allocator
+            allocOffset mixedArena.reset
+          context .nameContext .allocator=
+          ..drop.2 Type optional.empty return
+        end $2 >>$ =[]
+      end slice.freeze
+    end newNames context newInitializerType optional.wrap
+  end
   proc( Type : a Type : b TypeContext ptr.mut : context -> Type optional ) =>: export: mergeTypes
     a b types.typeEquals if
       a optional.wrap return
@@ -2666,9 +2721,8 @@ namespace: types
     b .Initializer ? and b a context canAutoCastInitializer if
       a optional.wrap return
     end
-    a .Initializer .and =:: aInit b .Initializer .if =:: bInit
-      ## TODO merging initializer types
-      Type optional.empty return
+    a .Initializer .and =:: aInit b .Initializer .if
+      aInit context mergeIntializers return
     end
     Type optional.empty return
   end
