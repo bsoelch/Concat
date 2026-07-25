@@ -1,0 +1,10 @@
+'map' import
+'print' import
+proc( -> ) =>: export: main
+  @{ } i32.eq@ 128 i32 map.create =:: mut: aMap
+    aMap@ 2 @{ .if 1 + else 1 end } map.update
+    aMap@ 3 @{ .if 1 + else 1 end } map.update
+    aMap@ 0 @{ .if 1 + else 1 end } map.update
+    aMap@ 2 @{ .if 1 + else 1 end } map.update
+  aMap@ for io.print " -> ":s io.print io.println end
+end

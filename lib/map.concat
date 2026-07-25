@@ -263,6 +263,32 @@ namespace: map
   proc(
     type : auto: K
     type : auto: V
+    type : auto: C
+    K V hashMap ptr.mut : data
+    K : key
+    ( V optional C -> V ) ptr : updateFunc
+    C : curry
+  -> ) =>: export: update
+    data key FindOperation .CREATE find =:: nodeId
+      nodeId iSize cast.u data [] .nodeBuffer .length u> if
+        data [] .nodeBuffer
+          key
+            V optional.empty curry updateFunc ()
+          NO_NODE false K V Node new list.append
+        data .nodeBuffer=
+        return
+      end
+    data [] .nodeBuffer nodeId i32 cast 1 - @[]
+      $ [] .value optional.wrap curry updateFunc () $1 .value=
+    =:: nodeData
+    nodeData [] .isEmpty if
+      false nodeData .isEmpty=
+      key nodeData .key=
+    end
+  end
+  proc(
+    type : auto: K
+    type : auto: V
     K V hashMap ptr.mut : data
     K : key
   -> V optional ) =>: export: remove
