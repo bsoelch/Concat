@@ -193,13 +193,14 @@
                   error   |
                   warning |
                   info    |
-                  flag.([^[:space:]\.]+) |
+                  flag\.([^[:space:]\.]+) |
                   version |
                   return  |
                   hasImport
                 ) |
                 file |
-                line
+                line |
+                include(\.(c|asm|o))?
              )
            )
           )(\Z|(?=[[:space:]])) # end of file or white-space

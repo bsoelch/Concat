@@ -1869,6 +1869,24 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "..compiler.hasImport":s string.eq _if =:: opName
       fileState program wordPos preOpCheckImport state appendOp
       return
+    else $ "..include.":s string.startsWith _if =:: opName
+      opName "..include" ..length string.tail =:: includeType
+      includeType .length 0 == if
+        IncludeType .ANY
+      else includeType ".c":s string.eq _if
+        IncludeType .C
+      else includeType ".asm":s string.eq _if
+        IncludeType .ASM
+      else includeType ".o":s string.eq _if
+        IncludeType .OBJECT
+      else
+        "unsupported `..include` type '" sb.copyPtr
+          includeType sb.appendStr
+          "'" sb.appendS
+        fileState program wordPos errors appendError
+        return
+      end fileState program wordPos preOpInclude state appendOp
+      return
     else $ "using":s string.eq or $ "using:":s string.eq _if =:: opName
       opName "using:":s string.eq =:: isAlias
       isAlias if

@@ -5792,7 +5792,7 @@ proc(
           continue.opLoop
         end
           $ .value .Array8 .else ..drop
-            "unexpected value for 'location,' import expected string got: " sb.copyPtr
+            "unexpected value for import location, expected string got: " sb.copyPtr
               >$ .value typeContext sb.appendConstant
             op .pos errors appendError
             continue.opLoop
@@ -5813,6 +5813,23 @@ proc(
           op .pos program state parseImportFile
         end
       continue.opLoop
+      Include .case =:: includeType
+        state popTypedValue .else
+          "missing value for `..include`, expected constant" sb.copyPtr op .pos errors appendError
+          continue.opLoop
+        end
+          $ .value .Array8 .else ..drop
+            "unexpected value for include location, expected string got: " sb.copyPtr
+              >$ .value typeContext sb.appendConstant
+            op .pos errors appendError
+            continue.opLoop
+          end string.fromBytes <$
+        .valType typeContext types.isPointer if ## local include
+          op .pos program state resolveLocalImportPath
+        else ## lib include
+          op .pos program state resolveLibImportPath
+        end =:: includePath
+      break
       CompilerInfo .case =:: compilerInfo
         state isGlobal ! if
           ## remember operation for interpreter

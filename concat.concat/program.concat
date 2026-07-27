@@ -304,6 +304,7 @@ struct(
   f64 : value
   Type : valType
 ) =:: FloatConstant
+enum( ANY C ASM OBJECT ) =:: export: IncludeType
 
 union(
             NopType : NOP
@@ -351,6 +352,7 @@ union(
                   _ : Panic
                   _ : Import
                   _ : CheckImport
+        IncludeType : Include
        CompilerInfo : shadow: CompilerInfo
 ) =:: export: PreOpValue
 struct( FilePosition ptr : pos PreOpValue : val ) =:: export: PreOperation
@@ -571,11 +573,14 @@ proc( NameId : src NameId optional : alias FilePosition ptr : pos  -> PreOperati
     src alias UsingNameInfo new PreOpValue .UsingIdentifier
  PreOperation new return
 end
-proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpImport
-  pos PreOpValue .Import PreOperation new return
+proc( FilePosition ptr -> PreOperation ) =>: export: preOpImport
+  PreOpValue .Import PreOperation new return
 end
-proc( FilePosition ptr : pos -> PreOperation ) =>: export: preOpCheckImport
-  pos PreOpValue .CheckImport PreOperation new return
+proc( FilePosition ptr -> PreOperation ) =>: export: preOpCheckImport
+  PreOpValue .CheckImport PreOperation new return
+end
+proc( IncludeType FilePosition ptr -> PreOperation ) =>: export: preOpInclude
+  >$ PreOpValue .Include PreOperation new return
 end
 
 proc( -> OpValue ) =>: export: opValNOP
@@ -1196,23 +1201,29 @@ namespace: sb
         end
       break
       Assert case
-        "assert" sb.appendS
+        "assert":s sb.appendStr
       break
       Error .case switch
-          ERROR case "..compiler.error" sb.appendS break
-          WARNING case "..compiler.warning" sb.appendS break
-          INFO case "..compiler.info" sb.appendS break
+          ERROR case "..compiler.error":s sb.appendStr break
+          WARNING case "..compiler.warning":s sb.appendStr break
+          INFO case "..compiler.info":s sb.appendStr break
         end
       break
       Panic case
-        "..panic" sb.appendS
+        "..panic":s sb.appendStr
       break
       Import case
-        "import" sb.appendS
+        "import":s sb.appendStr
       break
       CheckImport case
-        "..compiler.hasImport" sb.appendS
+        "..compiler.hasImport":s sb.appendStr
       break
+      Include .case switch
+        ANY case "..include":s sb.appendStr break
+        C case "..include.c":s sb.appendStr break
+        ASM case "..include.asm":s sb.appendStr break
+        OBJECT case "..include.o":s sb.appendStr break
+      end break
       CompilerInfo .case nameContext sb.appendCompilerInfo break
     end
       " at " sb.appendS
