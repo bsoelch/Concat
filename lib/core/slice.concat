@@ -1066,3 +1066,6 @@ overload: export: ..itr.prepare
   slice.getItr
   slice.getItrMut
 end
+overload: export: <map>
+  slice.map
+end

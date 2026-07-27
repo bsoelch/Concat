@@ -1,8 +1,0 @@
-"core/optional" import
-namespace: optional
-  proc( type : auto: S type : auto: T
-    S optional ( S -> T ) ptr : f
-  -> T optional ) =>: export: map
-    .if f () optional.wrap else T optional.empty end
-  end
-end

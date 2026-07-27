@@ -1,4 +1,3 @@
-'optional' import
 proc( -> i32 optional ) =>: getOption
   i32 optional.empty
 end

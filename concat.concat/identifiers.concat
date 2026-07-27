@@ -1,7 +1,6 @@
 'string' import
 'stringBuilder' import
 'map' import
-'optional' import
 
 "constants" import
 "types" import

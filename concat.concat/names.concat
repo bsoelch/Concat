@@ -2,7 +2,6 @@
 'string' import
 'stringBuilder' import
 'list' import
-'optional' import
 'arenaAlloc' import
 
 "files" import

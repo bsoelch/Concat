@@ -56,8 +56,16 @@ namespace: optional
     end
   end
   overload: export: unwrap unwrapV unwrapP end
+  proc( type : auto: T T optional T : defaultVal -> T ) =>: export: unwrapOr
+    .else defaultVal end
+  end
   proc( type : auto: T T optional optional -> T optional ) =>: export: flat
     .else T optional.empty end
+  end
+  proc( type : auto: S type : auto: T
+    S optional ( S -> T ) ptr : f
+  -> T optional ) =>: export: map
+    .if f () optional.wrap else T optional.empty end
   end
 
   proc( type : auto: T  T optional -> T optional ) =>: prepareIf end
@@ -80,6 +88,9 @@ namespace: optional
   end
 end
 
+overload: export: <map>
+  optional.map
+end
 overload: export: <unwrap>
   optional.unwrap
 end

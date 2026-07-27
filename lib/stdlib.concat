@@ -7,7 +7,6 @@
 "mem" import
 "print" import
 "numbers" import
-"optional" import
 "string" import
 "stringBuilder" import
 "sys" import
