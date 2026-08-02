@@ -1869,23 +1869,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "..compiler.hasImport":s string.eq _if =:: opName
       fileState program wordPos preOpCheckImport state appendOp
       return
-    else $ "..include.":s string.startsWith _if =:: opName
-      opName "..include" ..length string.tail =:: includeType
-      includeType .length 0 == if
-        IncludeType .ANY
-      else includeType ".c":s string.eq _if
-        IncludeType .C
-      else includeType ".asm":s string.eq _if
-        IncludeType .ASM
-      else includeType ".o":s string.eq _if
-        IncludeType .OBJECT
-      else
-        "unsupported `..include` type '" sb.copyPtr
-          includeType sb.appendStr
-          "'" sb.appendS
-        fileState program wordPos errors appendError
-        return
-      end fileState program wordPos preOpInclude state appendOp
+    else $ "..include":s string.eq _if =:: opName
+      fileState program wordPos preOpInclude state appendOp
       return
     else $ "using":s string.eq or $ "using:":s string.eq _if =:: opName
       opName "using:":s string.eq =:: isAlias
@@ -2107,6 +2092,7 @@ proc(
 end
 proc(
   string #+fileName+#
+  bool : isConcatFile
   FilePosition ptr : pos
   ProgramContext ptr.mut : program
   TypeCheckState ptr.mut : typeChecker
@@ -2128,13 +2114,14 @@ proc(
       >$ '/' sb.appendC <$
     sb.appendStr
     ## TODO? do not add extension if file already uses different extension
-    $ sb.asStr ".concat":s string.endsWith ! if
+    isConcatFile and $ sb.asStr ".concat":s string.endsWith ! if
       ".concat":s sb.appendStr
     end
   return
 end
 proc(
   string : fileName
+  bool : isConcatFile
   FilePosition ptr : pos
   ProgramContext ptr.mut : program
   TypeCheckState ptr.mut : typeChecker
@@ -2143,7 +2130,7 @@ proc(
   program [] .libPath .length fileName .length + ".concat" ..length + sb.create
     program [] .libPath sb.appendStr
     fileName sb.appendStr
-    ".concat" sb.appendS
+    isConcatFile if ".concat" sb.appendS end
   return
 end
 proc(

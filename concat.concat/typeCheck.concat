@@ -5798,9 +5798,9 @@ proc(
             continue.opLoop
           end string.fromBytes <$
         .valType typeContext types.isPointer if ## local import
-          op .pos program state resolveLocalImportPath false
+          true op .pos program state resolveLocalImportPath false
         else ## lib import
-          op .pos program state resolveLibImportPath true
+          true op .pos program state resolveLibImportPath true
         end op .val .CheckImport ? if ..drop
           $ sb.asStr
             program program.hasImportFile
@@ -5813,7 +5813,7 @@ proc(
           op .pos program state parseImportFile
         end
       continue.opLoop
-      Include .case =:: includeType
+      Include case
         state popTypedValue .else
           "missing value for `..include`, expected constant" sb.copyPtr op .pos errors appendError
           continue.opLoop
@@ -5825,11 +5825,14 @@ proc(
             continue.opLoop
           end string.fromBytes <$
         .valType typeContext types.isPointer if ## local include
-          op .pos program state resolveLocalImportPath
+          false op .pos program state resolveLocalImportPath
         else ## lib include
-          op .pos program state resolveLibImportPath
+          false op .pos program state resolveLibImportPath
         end =:: includePath
-      break
+        program [] .includedFiles
+          includePath list.append
+        program .includedFiles=
+      continue.opLoop
       CompilerInfo .case =:: compilerInfo
         state isGlobal ! if
           ## remember operation for interpreter

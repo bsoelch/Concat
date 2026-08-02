@@ -323,7 +323,6 @@ proc( -> ) =>: main ## TODO check return value of fopen
   file.close
   prog@ .errors checkErrors
   prog .mainProcId ? =:: hasMain
-  prog freeProgramContext ..drop
   0 =:: mut: retCode
   compileGeneratedCode if
     ## call compiler on generated code in sub-process
@@ -353,6 +352,10 @@ proc( -> ) =>: main ## TODO check return value of fopen
         end
         "gcc":s exec.build
           tmpPath sb.asStr exec.add
+          ## TODO? compile include files seperately and only link with resulting object (check if object-file already exists and skip recompile)
+          prog .includedFiles for
+            sb.asStr exec.add
+          end
           hasMain if
             tmpPath sb.clear
               libPath sb.appendStr
@@ -386,6 +389,9 @@ proc( -> ) =>: main ## TODO check return value of fopen
         tmpPath=
         "gcc":s exec.build
           outPath sb.asStr exec.add
+          prog .includedFiles for
+            sb.asStr exec.add
+          end
           hasMain if
             tmpPath sb.asStr exec.add
             linkTo for exec.add end
@@ -405,6 +411,7 @@ proc( -> ) =>: main ## TODO check return value of fopen
         end
       break
     end
+    prog freeProgramContext ..drop
     hasMain ! and runCompiledProgram if
       "cannot run program without a main procedure":s io.print
       baseName io.println
