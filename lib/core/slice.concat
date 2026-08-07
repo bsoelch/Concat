@@ -869,6 +869,11 @@ namespace: slice
       elts offset head
     return
   end
+  proc( type : auto: T
+    T slice ( T -> bool ) ptr : f
+  -> T slice T slice ) =>: export: takeWhile
+    0:iSize while $1 $1 get .and f () do 1 + end cutIndex
+  end
 
   proc( type.pointerValue : auto: V  V optional slice : elt -> V slice optional ) =>: export: unwrapAll
     elt for

@@ -47,6 +47,20 @@ namespace: string
     charAt_32
     charAt_64
   end
+  proc( string iSize -> char8 optional ) =>: export: getZ
+    >$ char8 slice cast <$ slice.get return
+  end
+  proc( string i32 -> char8 optional ) =>: export: get32
+    >$ char8 slice cast <$ slice.get return
+  end
+  proc( string i64 -> char8 optional ) =>: export: get64
+    >$ char8 slice cast <$ slice.get return
+  end
+  overload: export: get
+    getZ
+    get32
+    get64
+  end
 
   proc( string : a string : b -> i32 ) =>: export: compare
     a chars b chars slice.simpleLexCmp
@@ -152,6 +166,9 @@ namespace: string
   end
   proc( string : str string : substr -> string string ) =>: export: splitStr
     str char8 slice cast substr char8 slice cast slice.splitSeq >$ string cast >$ string cast return
+  end
+  proc( string ( char8 -> bool ) ptr -> string string ) =>: export: takeWhile
+    >$ char8 slice cast <$ slice.takeWhile >$ string cast >$ string cast return
   end
   proc( string ( char8 -> bool ) ptr : f -> string ) =>: trimLeftF
     0:iSize while $ $2 .length u< and $1 $1 [] f () do 1 + end tail
