@@ -89,7 +89,7 @@
     <context id="declaration" style-ref="keyword">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          ( : | =&gt;: | =: | =:: | overload\: ) ([[:space:]]+[^#][^[:space:]]+:)*
+          ( \: | =&gt;\: | =\: | =\:\: | overload\: ) ([[:space:]]+[^#[:space:]][^[:space:]]*\:)*
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -346,7 +346,7 @@
     <context id="binary" style-ref="binary">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?0[bB][01]([_']*[0-1])*(\:[^[:space:]]*)?
+          -?0[bB][01]([_']*[0-1])*(\:[^[:space:]]+)?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -354,7 +354,7 @@
     <context id="hexadecimal" style-ref="hexadecimal">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?0[xX][a-fA-F0-9]([_']*[a-fA-F0-9])*(\:[^[:space:]]*)?
+          -?0[xX][a-fA-F0-9]([_']*[a-fA-F0-9])*(\:[^[:space:]]+)?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -362,7 +362,7 @@
     <context id="decimal" style-ref="decimal">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?[0-9]([_']*[0-9])*(\:[^[:space:]]*)?
+          -?[0-9]([_']*[0-9])*(\:[^[:space:]]+)?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -370,7 +370,7 @@
     <context id="baseN" style-ref="baseN">
       <match extended="true">
         (\A|(?&lt;=[[:space:]]))( # start of file or white-space
-          -?([2-9]|([0-9][0-9]))b[0-9a-zA-Z]([_']*[0-9a-zA-Z])*(\:[^[:space:]]*)?
+          -?([2-9]|([0-9][0-9]))b[0-9a-zA-Z]([_']*[0-9a-zA-Z])*(\:[^[:space:]]+)?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -381,7 +381,7 @@
         [+-]?(
           [0-9]+ \. [0-9]+ ([eE\#][+-]?[0-9]+)?
           | [0-9]+ [eE\#][+-]?[0-9]+
-        ) (\:[^[:space:]]*)?
+        ) (\:[^[:space:]]+)?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
@@ -396,7 +396,7 @@
           |
           [eExX\#][+-]?[0-9a-zA-Z]([_']*[0-9a-zA-Z])*
           )
-        ))|(0x[0-9a-fA-F]([_']*[0-9a-fA-F])*(\.[0-9a-fA-F]([_']*[0-9a-fA-F])*)?[pP][+-]?[0-9]([_']*[0-9])*)) (\:[^[:space:]]*)?
+        ))|(0x[0-9a-fA-F]([_']*[0-9a-fA-F])*(\.[0-9a-fA-F]([_']*[0-9a-fA-F])*)?[pP][+-]?[0-9]([_']*[0-9])*)) (\:[^[:space:]]+)?
         )(\Z|(?=[[:space:]])) # end of file or white-space
       </match>
     </context>
