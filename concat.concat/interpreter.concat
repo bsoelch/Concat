@@ -491,6 +491,12 @@ namespace: interpreter
     else ..drop end
     ## TODO? special handling for int <-> pointer
     ## TODO? convert primitive arrays to correct array type?
+    srcType .Initializer ? and targetType typeContext types.isTuple if
+      ## TODO: correctly convert individual element values
+      ## reorder elements if neccessary
+    else srcType .Initializer ? and targetType typeContext types.isUnion _if
+      "unimplemented: initializer to union" ..panic
+    end
     oldValue return
   end
   proc(

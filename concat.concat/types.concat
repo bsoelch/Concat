@@ -2435,6 +2435,52 @@ namespace: types
     end
     true return
   end
+  proc( Type : src Type : target TypeContext ptr.mut : context -> iSize optional ) =>: canCastUnionInitializer
+    context .nameContext =:: nameContext
+    src context unwrapNamed =:: srcBase
+    target context unwrapNamed =:: targetBase
+    srcBase .Initializer .if
+      InitializerInfo ptr cast .asTuple
+    else ..drop
+      iSize optional.empty return
+    end =:: srcInfo
+    srcInfo .compositeInfo [] .elements =:: srcElts
+    srcElts .length 1 u> if
+      iSize optional.empty return
+    end
+    targetBase context asRawUnion .if
+      .RawUnion <unwrap>
+    else targetBase .RawUnion ._else ..drop
+      iSize optional.empty return
+    end UnionInfo ptr cast =:: targetInfo
+    targetInfo .compositeInfo [] .elements =:: targetElts
+    srcElts .length 0 == if
+      ## return index if there is a unique empty element
+      iSize optional.empty
+        targetElts .length for
+          targetElts $1 [] context isEmpty if
+            ## if multiple empty elements return false
+            >$ ? if ..drop iSize optional.empty return end
+            optional.wrap
+          else ..drop end
+        end
+      return
+    else
+      srcInfo .compositeInfo .eltNames [] .else
+        iSize optional.empty return
+      end 0 [] =:: srcName
+      targetInfo .compositeInfo .eltNames [] <unwrap>
+        srcName
+        @{ NameId.cmpNameO 0 == }
+      slice.indexOfEq .if
+        srcElts 0 [] targetElts $2 [] context canAutoCast ! if
+          ..drop iSize optional.empty return
+        end
+        optional.wrap return
+      end
+    end
+    iSize optional.empty
+  end
   proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canAutoCastInitializer
     target context unwrapNamed =:: shadow: target
     src context compositeEltCount =:: srcSize
@@ -2461,11 +2507,16 @@ namespace: types
     end
     target context types.isTuple if
       src target context canCastTupleInitializer return
+    else target context types.isUnion _if
+      src target context canCastUnionInitializer ? return
     else target context types.getPointerBaseType .and =:: targetBase
-        target context getArraySize .None ? and
-        targetBase context unwrapNamed =:: shadow: targetBase
-        targetBase context types.isTuple _if
-      src targetBase context canCastTupleInitializer return
+        target context getArraySize .None ? _if
+      targetBase context unwrapNamed
+        $ context types.isTuple if
+          src >$ context canCastTupleInitializer return
+        else $ context types.isUnion _if
+          src >$ context canCastUnionInitializer ? return
+      else ..drop end
     end
     false return
   end
