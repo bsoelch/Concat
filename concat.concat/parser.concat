@@ -480,58 +480,68 @@ proc(
   else
     id.FLAG_NONE
   end =:: mut: flags
-  false =:: mut: isModifier
   code start
     while
-      false isModifier=
-      ..dup "mut:":s string.eq if
+      $ "mut:":s string.eq if
         id.FLAG_MUTABLE flags | flags=
-        true isModifier=
-      else ..dup "auto:":s string.eq _if
+        continue
+      else $ "auto:":s string.eq _if
         id.FLAG_AUTO flags | flags=
         id.FLAG_STATIC flags | flags=
         ## TODO? allow auto-args to be non-static
-        true isModifier=
-      else ..dup "static:":s string.eq _if
+        continue
+      else $ "static:":s string.eq _if
         id.FLAG_STATIC flags | flags=
-        true isModifier=
-      else ..dup "extern:":s string.eq _if
+        continue
+      else $ "extern:":s string.eq _if
         id.FLAG_EXTERN flags | flags=
-        true isModifier=
-      else ..dup "export:":s string.eq _if
+        continue
+      else $ "export:":s string.eq _if
         id.FLAG_EXPORT flags | flags=
-        true isModifier=
-      else ..dup "inline:":s string.eq _if
+        continue
+      else $ "inline:":s string.eq _if
         id.FLAG_INLINE flags | flags=
-        true isModifier=
-      else ..dup "inline.never:":s string.eq _if
+        continue
+      else $ "inline.never:":s string.eq _if
         id.FLAG_NO_INLINE flags | flags=
-        true isModifier=
-      else ..dup "#:experimental:":s string.eq _if
-        id.FLAG_EXPERIMENTAL flags | flags=
-        true isModifier=
-      else ..dup "shadow:":s string.eq _if
+        continue
+      else $ "shadow:":s string.eq _if
         id.FLAG_SHADOW flags | flags=
-        true isModifier=
-      else ..dup "alias:":s string.eq _if
+        continue
+      else $ "alias:":s string.eq _if
         id.FLAG_ALIAS flags | flags=
-        true isModifier=
-      else ..dup "merge:":s string.eq _if
+        continue
+      else $ "merge:":s string.eq _if
         id.FLAG_MERGE flags | flags=
-        true isModifier=
-      else ..dup "ignoreUnused:":s string.eq _if
+        continue
+      else $ "ignoreUnused:":s string.eq _if
         id.FLAG_IGNORE_UNUSED flags | flags=
-        true isModifier=
-      else ..dup "nowrap:":s string.eq _if
+        continue
+      else $ "nowrap:":s string.eq _if
         id.FLAG_NO_WRAP flags | flags=
-        true isModifier=
-      else ..dup ":":s string.endsWith _if
-        true isModifier=
+        continue
+      else $ ":":s string.endsWith _if
+        $ $ .length 1 - string.head 10 i32.parse switch
+          Err .case .Overflow ? if
+            0 false break
+          end continue
+          Unsigned case 0 false break
+          Ok .case
+            $ -63 >= and $ 63 <= end
+          break
+        end if
+          $ 0 == if ..drop
+            id.BIT_FIELD_ANY
+          else
+            id.SHIFT_BIT_FIELD << IdentifierFlag cast.u id.MASK_BIT_FIELD &
+          end flags | flags=
+        else ..drop
+          $ sb.fromStr
+            " exceeds the maximum allow size for a bit-field":s sb.appendStr
+          fileState program wordPos errors appendError
+        end continue
       end
-      isModifier ! if
-        break
-      end
-    isModifier do ..drop
+    false finally ..drop
       fileState program nextIdentifier
     end
   flags initFlags | fileState program wordPos state [] .program .idContext .typeContext .nameContext id.newIdentifier return

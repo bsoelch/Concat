@@ -36,33 +36,34 @@ namespace: id
   overload: merge: ~  flagFlip   end
   overload: merge: ?  flagToBool end
 
-  0x0000:IdentifierFlag =:: export: FLAG_NONE
-  0x0001:IdentifierFlag =:: export: FLAG_MUTABLE
-  0x0002:IdentifierFlag =:: export: FLAG_AUTO
-  0x0004:IdentifierFlag =:: export: FLAG_EXTERN
-  0x0008:IdentifierFlag =:: export: FLAG_EXPORT
-  0x0010:IdentifierFlag =:: export: FLAG_STATIC
-  0x0020:IdentifierFlag =:: export: FLAG_INLINE
-  0x0040:IdentifierFlag =:: export: FLAG_NO_INLINE
-  0x0080:IdentifierFlag =:: export: FLAG_EMPTY
-  0x0100:IdentifierFlag =:: export: FLAG_BUILT_IN
-  0x0200:IdentifierFlag =:: export: FLAG_DUMMY
-  0x0400:IdentifierFlag =:: export: FLAG_ITR_VAR
-  0x0800:IdentifierFlag =:: export: FLAG_SHADOW
-  0x1000:IdentifierFlag =:: export: FLAG_ALIAS
-  0x2000:IdentifierFlag =:: export: FLAG_MERGE
-  0x4000:IdentifierFlag =:: export: FLAG_LAMBDA
-  0x8000:IdentifierFlag =:: export: FLAG_MERGEABLE
-  0x10000:IdentifierFlag =:: export: FLAG_IGNORE_UNUSED
-  0x20000:IdentifierFlag =:: export: FLAG_NO_WRAP
-  0x40000:IdentifierFlag =:: export: FLAG_IS_READ
-  0x80000:IdentifierFlag =:: export: FLAG_IS_WRITTEN
-  0x100000:IdentifierFlag =:: export: FLAG_HAS_POINTER
-  0x200000:IdentifierFlag =:: export: FLAG_IS_REFERENCE
-
- ## 0x20000000:IdentifierFlag FLAG_IGNORE_UNUSED | =:: export: FLAG_LIB_FILE ## in library file
-  0x20010000:IdentifierFlag =:: export: FLAG_LIB_FILE ## XXX temporary until renamed built-ins are supported
-  0x40000000:IdentifierFlag =:: export: FLAG_EXPERIMENTAL
+  0x00000000:IdentifierFlag =:: export: FLAG_NONE
+  0x00000001:IdentifierFlag =:: export: FLAG_MUTABLE
+  0x00000002:IdentifierFlag =:: export: FLAG_AUTO
+  0x00000004:IdentifierFlag =:: export: FLAG_EXTERN
+  0x00000008:IdentifierFlag =:: export: FLAG_EXPORT
+  0x00000010:IdentifierFlag =:: export: FLAG_STATIC
+  0x00000020:IdentifierFlag =:: export: FLAG_INLINE
+  0x00000040:IdentifierFlag =:: export: FLAG_NO_INLINE
+  0x00000080:IdentifierFlag =:: export: FLAG_EMPTY
+  0x00000100:IdentifierFlag =:: export: FLAG_BUILT_IN
+  0x00000200:IdentifierFlag =:: export: FLAG_DUMMY
+  0x00000400:IdentifierFlag =:: export: FLAG_ITR_VAR
+  0x00000800:IdentifierFlag =:: export: FLAG_SHADOW
+  0x00001000:IdentifierFlag =:: export: FLAG_ALIAS
+  0x00002000:IdentifierFlag =:: export: FLAG_MERGE
+  0x00004000:IdentifierFlag =:: export: FLAG_LAMBDA
+  0x00008000:IdentifierFlag =:: export: FLAG_MERGEABLE
+  0x00010000:IdentifierFlag =:: export: FLAG_IGNORE_UNUSED
+  0x00020000:IdentifierFlag =:: export: FLAG_NO_WRAP
+  0x00040000:IdentifierFlag =:: export: FLAG_IS_READ
+  0x00080000:IdentifierFlag =:: export: FLAG_IS_WRITTEN
+  0x00100000:IdentifierFlag =:: export: FLAG_HAS_POINTER
+  0x00200000:IdentifierFlag =:: export: FLAG_IS_REFERENCE
+  0x00400000:IdentifierFlag FLAG_IGNORE_UNUSED | =:: export: FLAG_LIB_FILE ## in library file
+  0xfe000000:IdentifierFlag =:: export: MASK_BIT_FIELD ## -64 .. 63
+  0x00000000:IdentifierFlag =:: export: BIT_FIELD_NONE
+  0x80000000:IdentifierFlag =:: export: BIT_FIELD_ANY
+  25 =:: export: SHIFT_BIT_FIELD
 end
 
 struct( string : name NamespaceId list : children NamespaceId : parent ) =:: Namespace
