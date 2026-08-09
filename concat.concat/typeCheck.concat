@@ -431,28 +431,35 @@ proc(
   TypeInfo : src
   Type : mut: target
   SignType : signType
-  FilePosition ptr : pos
   TypeCheckState ptr.mut : state
--> bool ) =>: tryCastConstant
-  state [] .program .errors =:: errors
-  state [] .program .idContext =:: idContext
-  idContext .constContext =:: constContext
-  idContext .typeContext =:: typeContext
-  src .value .None ? if
-    true return
-  end
+-> bool ) =>: castConstant
   src .opIndex 0 < if
     true return
   end
-  src .opIndex state canDeleteOp ! if
-    true return
-  end
+  state [] .program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
   state [] .compiledOps src .opIndex @[] =:: srcOp
   target typeContext types.unwrapRefinement =:: targetBase
   ## TODO! check refinement-types
   src .valueType signType src .value targetBase constContext typeContext interpreter.castConstant srcOp .val .Constant=
   target srcOp .dataType=
   false return
+end
+proc(
+  TypeInfo : src
+  Type : mut: target
+  SignType : signType
+  TypeCheckState ptr.mut : state
+-> bool ) =>: tryCastConstant
+  state [] .program .errors =:: errors
+  src .value .None ? if
+    true return
+  end
+  src .opIndex state canDeleteOp ! if
+    true return
+  end
+  src target signType state castConstant return
 end
 proc( ProcId : procId i32 : opIndex Type : expectedType FilePosition ptr : pos TypeCheckState ptr.mut : state -> ConstValue ) =>: initializeQuotation
   state [] .program =:: program
@@ -554,7 +561,7 @@ proc(
     end
     typeInfo .valueType expectedType typeContext types.canAutoCast or
         typeInfo .valueType typeInfo .value expectedType pos state typeChecker.canRefineType if
-      typeInfo expectedType SignType .NONE pos state tryCastConstant ! if
+      typeInfo expectedType SignType .NONE state tryCastConstant ! if
         ## update constant value
         popConstants and isConstant and state [] .compiledOps typeInfo .opIndex list.at .and
             .val [] .Constant .if
@@ -965,7 +972,7 @@ proc(
         elt@ .valueType=
         state [] .compiledOps elt .opIndex list.at .if
           $ .val .Constant ? if
-            ## TODO? cast constant value
+            ## TODO cast constant value
             elt .valueType >$ .dataType=
           else
             "expected literal to be constant" ..panic
@@ -973,7 +980,9 @@ proc(
         end
       end
     end
-    OP_UNLINKED elt@ .opIndex= ## TODO! is this line necessary
+    elt .valueType types.isLiteral ! if
+      OP_UNLINKED elt@ .opIndex= ## TODO? is this line necessary
+    end
     state .stack
       elt
     branchTree.push
@@ -1074,21 +1083,33 @@ proc(
   noError if ## don't try casting values if merging types failed
     0:i32 while $ iSize cast.u toMerge .length u< do =:: i
       toMerge i [] =:: current
-        current [] .valueType
-          $ types.isLiteral if typeContext types.literalToType end
-        =:: currentType
-        currentType mergedType types.typeEquals ! and current [] .valueType  mergedType types.typeEquals ! if
+        current [] .valueType types.isLiteral if
+          current []
+            mergedType
+            SignType .NONE
+            mergePoint .state
+          castConstant if
+            current [] .valueType .Initializer ? if
+              ## TODO temporary fix: ignore failed cast for number literals until there is support for casting literal constants resulting from merged branches
+              "failed to cast literal constant":s mergePoint .mergePoint ..line internalErrorNoOp ..unreachable
+            end
+          else
+            continue
+          end
+        end
+        current [] .valueType mergedType types.typeEquals ! if
           mergePoint .castPointOffsets i [] =:: castRoot
           castRoot 0 >= if
             mergePoint .state [] .compiledOps castRoot offset + @[] =:: castPoint
             castPoint [] .val .NOP .and .RESERVED if
               ## opAutoCast
-                currentType
+                ## TODO: tmp decay type in auto-cast until all literal-casts can be handled
+                current [] .valueType typeContext types.literalToType
                 offset i32 cast
                 mergedType
                 mergePoint .mergePoint
               opAutoCast castPoint =[]
-              i 1 + continue
+              continue
             end
             "operation is not a NO-OP: " sb.copyPtr
               castPoint [] program sb.appendOp
@@ -1101,8 +1122,7 @@ proc(
             "th branch" sb.appendS
           mergePoint .mergePoint errors appendError
         end
-      i 1 +
-    end ..drop
+    finally i 1 + end ..drop
   end
   ## TypeInfo
     ConstValue .None ## TODO? merge constants
@@ -3547,7 +3567,7 @@ proc(
           else $ types.isLiteral _if
             typeContext types.literalToType
               $ srcType=
-            container $1 SignType .NONE op .pos state tryCastConstant if
+            container $1 SignType .NONE state tryCastConstant if
               "could not convert literal to type: " sb.copyPtr
                 srcType typeContext sb.appendType
               op .pos errors appendError
@@ -3858,7 +3878,6 @@ proc(
             value
             castTarget
             op .val .Cast .else ..drop SignType .NONE end
-            op .pos
             state
           tryCastConstant ! if
             state [] .compiledOps value .opIndex @[] =:: srcOp
