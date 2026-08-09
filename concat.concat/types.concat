@@ -1007,6 +1007,48 @@ namespace: types
   proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: strideOf
     t true context computeSize
   end
+  union( _ : Ok _ : InvalidType ( i16 i16 ) : InvalidCount ) =:: BitCheckResult
+  proc( i32 : bits Type TypeContext ptr.mut : context -> BitCheckResult ) =>: export: checkBitFieldBits
+    context unwrapNamed
+      $ types.primitive.BOOL typeEquals if ..drop
+        bits 0 < or bits 1 > if
+          0 1 ( i16 i16 ) new BitCheckResult .InvalidCount return
+        end
+        BitCheckResult .Ok return
+      end
+      $ context isInt if
+        context sizeOf .Fixed <unwrap> 8 *
+          bits i64 cast.s $1 > or bits -_ i64 cast.s $1 >= if
+            $ -_ 1 + i16 cast.u >$ i16 cast.u ( i16 i16 ) new BitCheckResult .InvalidCount return
+          end
+        ..drop BitCheckResult .Ok return
+      end
+      $ context getPointerBaseType .if >$ ..drop
+        context alignOf .Fixed <unwrap> i64.highestSetBit
+          bits 0 > or bits -_ $1 > if
+            i16 cast.u -_ 0 ( i16 i16 ) new BitCheckResult .InvalidCount return
+          end
+        ..drop BitCheckResult .Ok return
+      end
+      $ context isEnum if
+        bits 0 == if ..drop BitCheckResult .Ok return end
+        ## get min bits needed to represet all possible tag-values
+        context types.compositeEltCount
+          $ 1 u<= if ..drop 0 else 1 - i32.highestSetBit 1 + end
+        bits $ < if
+          i16 cast.u 0 ( i16 i16 ) new BitCheckResult .InvalidCount return
+        end
+        ..drop BitCheckResult .Ok return
+      end
+      $ context isUnion or $ context isTuple if ..drop
+        bits 0 != if
+          ## TODO: allow negative bit-counts fitting into space after bit-packed content (includig tagged-union size)
+          { 0 0 } BitCheckResult .InvalidCount return
+        end
+        BitCheckResult .Ok return
+      end
+    ..drop BitCheckResult .InvalidType return
+  end
 
   ## array & pointer types
   union( _ : None i64 : Int NameId : GenericArg ) =:: export: ArraySize

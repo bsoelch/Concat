@@ -3275,7 +3275,33 @@ proc(
                 else .TypeId ._else ..drop
                   stackVal [] .valueType
                 end idData .valueType=
-                idInfo .nameId id.identifierFlags id.FLAG_STATIC & ? if
+                idInfo .nameId id.identifierFlags =:: idFlags
+                idFlags id.MASK_BIT_FIELD & id.BIT_FIELD_NONE != if
+                  idFlags id.MASK_BIT_FIELD &
+                    $ id.BIT_FIELD_ANY == if ..drop
+                      0
+                    else
+                      i32 cast.u id.SHIFT_BIT_FIELD >>
+                    end
+                  $ idData [] .valueType typeContext types.checkBitFieldBits switch
+                    Ok case ..drop break
+                    InvalidType case ..drop
+                      "bit-fields are only allowed for ints for pointers got: " sb.copyPtr
+                        idData [] .valueType typeContext sb.appendType
+                      op .pos errors appendError
+                    break
+                    InvalidCount .case
+                      "bit-field size ( " sb.copyPtr
+                        >>$ sb.appendI
+                        " ) outside allowed range ( ":s sb.appendStr
+                        $1 .0 sb.appendI " to ":s sb.appendStr >$ .1 sb.appendI
+                        " ) for type ":s sb.appendStr
+                        idData [] .valueType typeContext sb.appendType
+                      op .pos errors appendError
+                    break
+                  end
+                end
+                idFlags id.FLAG_STATIC & ? if
                   stackVal [] .valueType typeContext types.isType if
                     idInfo .nameId types.newGenericType ConstValue .TypeId
                   else
